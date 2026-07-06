@@ -36,6 +36,9 @@ import {
   JSONPreviewOverlay,
   DocumentFormattedMarkdownOverlay,
   detectLanguage,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
   type ActivityItem,
   type FileChange,
   type DiffViewerSettings,
@@ -2227,12 +2230,33 @@ function RoutingMetaBadge({ message }: { message: Message }) {
   if (!provider && !model) return null
 
   const label = [provider, model].filter(Boolean).join(' · ')
-  const title = meta.reason ? `Route: ${meta.reason}` : 'Route'
+  const reason = meta.reason ?? 'session-connection'
+  const policyRuleIds = meta.policyRuleIds?.filter(Boolean) ?? []
 
   return (
-    <div className="mt-2 text-[10px] text-foreground/35 select-none" title={title}>
-      {label}
-    </div>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div className="mt-2 inline-flex max-w-full cursor-help select-none items-center gap-1 truncate rounded-sm text-[10px] text-foreground/35 hover:text-foreground/55">
+          <span className="truncate">{label}</span>
+          {reason === 'router' && <span className="shrink-0 text-foreground/30">policy</span>}
+        </div>
+      </TooltipTrigger>
+      <TooltipContent side="bottom" sideOffset={4} className="max-w-sm text-left">
+        <div className="space-y-1 text-xs">
+          <div className="font-medium text-foreground">Routage IA</div>
+          {meta.connectionSlug && <div><span className="text-muted-foreground">Connexion:</span> {meta.connectionSlug}</div>}
+          {meta.providerType && <div><span className="text-muted-foreground">Provider:</span> {meta.providerType}</div>}
+          {meta.model && <div className="break-all"><span className="text-muted-foreground">Modèle:</span> {meta.model}</div>}
+          <div><span className="text-muted-foreground">Raison:</span> {reason}</div>
+          {meta.sensitivity && <div><span className="text-muted-foreground">Sensibilité:</span> {meta.sensitivity}</div>}
+          {policyRuleIds.length > 0 && (
+            <div className="break-words">
+              <span className="text-muted-foreground">Règles:</span> {policyRuleIds.join(', ')}
+            </div>
+          )}
+        </div>
+      </TooltipContent>
+    </Tooltip>
   )
 }
 

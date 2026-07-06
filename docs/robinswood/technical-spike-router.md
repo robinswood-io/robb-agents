@@ -109,7 +109,7 @@ Premier changement de code :
   - le prochain message recréera un backend sur la nouvelle connexion.
 - `derivePickerMode(...)` garde maintenant le switcher visible dès qu’il y a plusieurs connexions, y compris en session non vide.
 - Les messages assistant portent désormais un `routingMeta` persistant avec `connectionSlug`, `providerType`, `model` et `reason` (`session-connection` ou `manual-handoff`).
-- Le renderer reçoit aussi `routingMeta` via `text_complete` et affiche un badge discret provider/modèle.
+- Le renderer reçoit aussi `routingMeta` via `text_complete` et affiche un badge discret provider/modèle avec tooltip d’explication (`reason`, `sensitivity`, `policyRuleIds`).
 - Le schema `routingPolicy` est branché au runtime pour les workspaces qui l’activent explicitement.
 - Les réponses routées automatiquement portent `routingMeta.reason = 'router'`, `sensitivity` et `policyRuleIds`.
 - Les sources supportent désormais un hint manuel `routingSensitivity`, validé par le schema source.
@@ -124,5 +124,5 @@ Un utilisateur doit pouvoir :
 2. envoyer plusieurs messages ;
 3. basculer vers provider B ;
 4. continuer avec le contexte utile ;
-5. voir clairement quel provider a répondu ;
+5. voir clairement quel provider a répondu et pourquoi (`reason`, sensibilité, règles policy) ;
 6. ne pas casser sources, outils, permissions, streaming, reprise session.

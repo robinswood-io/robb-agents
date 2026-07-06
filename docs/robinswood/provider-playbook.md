@@ -176,13 +176,17 @@ Allowed values are `public`, `internal`, `confidential`, `restricted`. When mult
 
 ## UI requirements
 
-Each assistant response should eventually display or expose:
+Each assistant response now displays/exposes:
 
 - connection/provider used;
 - model used;
 - routing reason;
-- fallback reason if any;
 - sensitivity tier;
+- matched policy rule IDs.
+
+Still to add:
+
+- fallback reason if any;
 - estimated/actual cost if available.
 
 ## Next engineering steps
