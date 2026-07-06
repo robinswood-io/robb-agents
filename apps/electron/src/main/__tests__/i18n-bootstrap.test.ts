@@ -63,7 +63,7 @@ describe('main-process i18n bootstrap', () => {
     }
   })
 
-  it('returns undefined when no language is persisted (no hydration step)', () => {
+  it('defaults to French when no language is persisted (Robinswood fork)', () => {
     const configDir = mkdtempSync(join(tmpdir(), 'i18n-bootstrap-'))
     try {
       const r = runScript(
@@ -79,9 +79,9 @@ describe('main-process i18n bootstrap', () => {
       expect(r.exitCode).toBe(0)
       const { persisted, resolved } = JSON.parse(r.stdout)
       expect(persisted).toBeNull()
-      // Without LanguageDetector and without a hydration call, main-process i18n
-      // sits at fallbackLng — which is what made title generation default to English.
-      expect(resolved).toBe('en')
+      // Robinswood fork: without LanguageDetector and without a hydration call,
+      // main-process i18n sits at the French fallback.
+      expect(resolved).toBe('fr')
     } finally {
       rmSync(configDir, { recursive: true, force: true })
     }

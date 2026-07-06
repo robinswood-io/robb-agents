@@ -68,6 +68,20 @@ def check_french_locale() -> None:
     print(f"✓ French locale parity ({len(fr)} keys)")
 
 
+def check_french_default() -> None:
+    setup_path = ROOT / "packages" / "shared" / "src" / "i18n" / "setupI18n.ts"
+    setup = setup_path.read_text(encoding="utf-8")
+    required = [
+        'export const DEFAULT_UI_LANGUAGE = "fr"',
+        'fallbackLng: DEFAULT_UI_LANGUAGE',
+        'order: ["localStorage"]',
+    ]
+    missing = [token for token in required if token not in setup]
+    if missing:
+        fail("French-first i18n defaults missing from setupI18n.ts: " + ", ".join(missing))
+    print("✓ French-first UI default")
+
+
 def check_robinswood_docs() -> None:
     required = [
         ROOT / "docs" / "robinswood" / "README.md",
@@ -83,6 +97,7 @@ def check_robinswood_docs() -> None:
 def main() -> None:
     check_windows_filenames()
     check_french_locale()
+    check_french_default()
     check_robinswood_docs()
     print("Robinswood lightweight validation passed")
 

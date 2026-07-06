@@ -2,6 +2,11 @@ import i18n, { type i18n as I18nInstance, type InitOptions } from "i18next";
 import { LOCALE_REGISTRY } from "./registry";
 import { SUPPORTED_LANGUAGE_CODES } from "./languages";
 
+// Robinswood fork: French-first distribution. Users can still override this
+// through Appearance → Language; the selection is cached in localStorage and
+// mirrored to preferences.json by the Electron main process.
+export const DEFAULT_UI_LANGUAGE = "fr";
+
 // Build i18next resources from the locale registry.
 const resources = Object.fromEntries(
   Object.entries(LOCALE_REGISTRY).map(([code, entry]) => [
@@ -32,12 +37,15 @@ export function setupI18n(
 
   instance.init({
     resources,
-    fallbackLng: "en",
+    fallbackLng: DEFAULT_UI_LANGUAGE,
     supportedLngs: [...SUPPORTED_LANGUAGE_CODES],
     interpolation: { escapeValue: false },
     initImmediate: false, // synchronous init — resources are bundled inline
     detection: {
-      order: ["localStorage", "navigator"],
+      // Robinswood fork: do not auto-switch based on OS/browser locale. Fresh
+      // client installs should start in French; explicit user selections still
+      // win through the localStorage cache.
+      order: ["localStorage"],
       caches: ["localStorage"],
       lookupLocalStorage: "i18nextLng",
     },

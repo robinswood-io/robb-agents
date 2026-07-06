@@ -86,7 +86,7 @@ Exemples :
 
 ### Phase 1 — Distribution française
 
-- [ ] Français par défaut.
+- [x] Français par défaut pour les nouvelles installations Robinswood, avec override utilisateur persistant.
 - [ ] Onboarding simplifié pour clients français.
 - [ ] Presets LLM : local, OVH/custom endpoint, OpenRouter, Anthropic/OpenAI si autorisé.
 - [ ] Templates workspace Robinswood.

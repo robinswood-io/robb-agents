@@ -61,8 +61,8 @@ Sentry.init({
 // Initialize i18n for main process (menus, dialogs, etc.)
 //
 // The main-process i18n instance has no detection plugin (no localStorage in Node)
-// — it always starts at `fallbackLng: 'en'`. We hydrate it here from the persisted
-// `uiLanguage` preference, which is maintained by the `i18n:changeLanguage` IPC
+// — in the Robinswood fork it starts at the French fallback. We hydrate it here
+// from the persisted `uiLanguage` preference, which is maintained by the `i18n:changeLanguage` IPC
 // handler whenever the user changes Appearance → Language. Without this, the
 // renderer would restore its language from localStorage on every restart while
 // the main process silently stayed at English — breaking session title language,
