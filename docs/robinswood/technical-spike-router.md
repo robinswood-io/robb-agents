@@ -35,25 +35,49 @@ Avantage : plus rapide.
 
 Risque : continuité imparfaite si le backend précédent avait un contexte natif non reconstructible.
 
-## Option cible : RouterBackend
+## Option cible : policy-first router
 
-Créer une abstraction de backend routeur :
+Le router doit rester **policy-first** : confidentialité/sensibilité et allow-lists avant coût, performance ou préférence utilisateur.
 
-```ts
-providerType: 'router'
-```
+Socle ajouté le 2026-07-06 :
 
-ou une politique attachée au workspace/session :
+- `packages/shared/src/config/routing-policy.ts`
+  - schema `RoutingPolicy` versionné ;
+  - `RoutingSensitivity = 'public' | 'internal' | 'confidential' | 'restricted'` ;
+  - règles `allowConnectionSlugs`, `denyConnectionSlugs`, `allowProviderTypes` ;
+  - préférences non contraignantes `preferConnectionSlugs` et fallbacks ;
+  - `validateRoutingPolicy(...)` ;
+  - `resolveRoutingPolicy(...)` pur et testable.
+- `WorkspaceConfig.routingPolicy?: RoutingPolicy`
+- `packages/shared/tests/routing-policy.test.ts`
+
+Exemple cible :
 
 ```ts
 routingPolicy: {
-  mode: 'auto' | 'manual' | 'privacy' | 'cost' | 'quality',
-  allowedConnections: string[],
-  defaultConnection: string,
-  classifierConnection?: string,
-  rules: RoutingRule[]
+  version: 1,
+  enabled: true,
+  defaultSensitivity: 'internal',
+  requireExplicitAllowFor: ['confidential', 'restricted'],
+  rules: [
+    {
+      id: 'confidential-local-or-sovereign',
+      when: { sensitivity: ['confidential', 'restricted'] },
+      allowConnectionSlugs: ['local-ollama', 'ovh-sovereign'],
+      allowProviderTypes: ['pi_compat'],
+      preferConnectionSlugs: ['ovh-sovereign', 'local-ollama']
+    },
+    {
+      id: 'public-fast',
+      when: { sensitivity: ['public'] },
+      allowConnectionSlugs: ['openrouter-balanced', 'anthropic-direct'],
+      preferConnectionSlugs: ['openrouter-balanced']
+    }
+  ]
 }
 ```
+
+Prochaine intégration runtime : appeler `resolveRoutingPolicy(...)` avant création/réutilisation du backend pour sélectionner une connexion autorisée, puis renseigner `routingMeta.reason = 'router'` avec les règles appliquées.
 
 Le router conserve le transcript canonique et délègue chaque tour au backend cible.
 
@@ -83,8 +107,10 @@ Premier changement de code :
   - le prochain message recréera un backend sur la nouvelle connexion.
 - `derivePickerMode(...)` garde maintenant le switcher visible dès qu’il y a plusieurs connexions, y compris en session non vide.
 - Les messages assistant portent désormais un `routingMeta` persistant avec `connectionSlug`, `providerType`, `model` et `reason` (`session-connection` ou `manual-handoff`).
+- Le renderer reçoit aussi `routingMeta` via `text_complete` et affiche un badge discret provider/modèle.
+- Le schema `routingPolicy` est prêt mais pas encore branché au runtime automatique.
 
-Ce MVP reste volontairement un **handoff entre tours**, pas un routage automatique ni un transfert parfait de contexte natif SDK.
+Ce MVP reste volontairement un **handoff entre tours**, pas encore un routage automatique ni un transfert parfait de contexte natif SDK.
 
 ## Critère de succès du spike
 

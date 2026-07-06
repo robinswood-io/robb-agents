@@ -129,28 +129,38 @@ Connection names should be readable by non-technical users:
 
 Avoid exposing raw provider slugs in client-facing labels.
 
-## Router policy draft
+## Router policy schema
 
-Future `routingPolicy` should support:
+Implemented foundation: `WorkspaceConfig.routingPolicy?: RoutingPolicy`.
+
+The schema is deliberately policy-first: hard allow/deny constraints are evaluated before preferences/fallbacks.
 
 ```ts
 {
-  mode: 'manual' | 'auto' | 'privacy' | 'cost' | 'quality',
-  allowedConnections: string[],
-  defaultConnection: string,
-  classifierConnection?: string,
+  version: 1,
+  enabled: true,
+  defaultSensitivity: 'internal',
+  requireExplicitAllowFor: ['confidential', 'restricted'],
   rules: [
     {
-      when: { sensitivity: 'high' },
-      allowOnly: ['local-fast', 'sovereign-standard']
+      id: 'confidential-local-or-sovereign',
+      when: { sensitivity: ['confidential', 'restricted'] },
+      allowConnectionSlugs: ['local-fast', 'sovereign-standard'],
+      allowProviderTypes: ['pi_compat'],
+      preferConnectionSlugs: ['sovereign-standard', 'local-fast']
     },
     {
-      when: { difficulty: 'high', sensitivity: 'low' },
-      prefer: ['premium-complex']
+      id: 'public-complex',
+      when: { sensitivity: ['public'] },
+      allowConnectionSlugs: ['premium-complex', 'openrouter-experimentation'],
+      preferConnectionSlugs: ['premium-complex']
     }
-  ]
+  ],
+  fallbackConnectionSlug: 'sovereign-standard'
 }
 ```
+
+Current implementation lives in `packages/shared/src/config/routing-policy.ts` with validation and pure resolution helpers. Runtime automatic routing is the next step.
 
 ## UI requirements
 
@@ -167,6 +177,7 @@ Each assistant response should eventually display or expose:
 
 1. Verify OVHcloud AI Endpoints current OpenAI-compatible base URL format and authentication.
 2. Add a branded OVH/custom endpoint preset only after verification.
-3. Persist provider/model metadata per assistant response.
-4. Add manual policy labels to sources/workspaces.
-5. Implement router policy schema.
+3. Persist provider/model metadata per assistant response. ✅
+4. Implement router policy schema. ✅
+5. Add manual policy labels to sources/workspaces.
+6. Wire `resolveRoutingPolicy(...)` into runtime turn creation.

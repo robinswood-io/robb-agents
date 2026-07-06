@@ -13,6 +13,7 @@
 
 import type { PermissionMode } from '../agent/mode-manager.ts';
 import type { ThinkingLevel } from '../agent/thinking-levels.ts';
+import type { RoutingPolicy } from '../config/routing-policy.ts';
 
 /**
  * Local MCP server configuration
@@ -56,6 +57,13 @@ export interface WorkspaceConfig {
    * Resolution order: ENV (CRAFT_LOCAL_MCP_ENABLED) > workspace config > default (true)
    */
   localMcpServers?: LocalMcpConfig;
+
+  /**
+   * Optional policy-first LLM routing configuration.
+   * Robinswood fork foundation: confidentiality/allow-lists are evaluated before
+   * provider preference, cost, or performance.
+   */
+  routingPolicy?: RoutingPolicy;
 
   createdAt: number;
   updatedAt: number;
