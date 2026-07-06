@@ -1,11 +1,14 @@
-import { afterEach, beforeEach, describe, expect, it, jest } from 'bun:test'
-import { mkdtempSync, rmSync } from 'fs'
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, jest } from 'bun:test'
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
-import { resolveBackendContext } from '@craft-agent/shared/agent/backend'
-import { loadWorkspaceConfig } from '@craft-agent/shared/workspaces'
-import { SessionManager, createManagedSession } from './SessionManager.ts'
-import { buildRestartRequiredSignature } from './runtime-config.ts'
+
+let resolveBackendContext: typeof import('@craft-agent/shared/agent/backend')['resolveBackendContext']
+let loadWorkspaceConfig: typeof import('@craft-agent/shared/workspaces')['loadWorkspaceConfig']
+let SessionManager: typeof import('./SessionManager.ts')['SessionManager']
+let createManagedSession: typeof import('./SessionManager.ts')['createManagedSession']
+let buildRestartRequiredSignature: typeof import('./runtime-config.ts')['buildRestartRequiredSignature']
+let tmpConfigRoot: string
 
 // Regression coverage for the stale-Pi-subprocess bug where toggling
 // `supportsImages` on a custom-endpoint model wrote to disk but never reached
@@ -19,6 +22,59 @@ import { buildRestartRequiredSignature } from './runtime-config.ts'
 //   2. Saving a connection had no notification path to active sessions, so
 //      capability changes only propagated lazily after the next send.
 //      `refreshConnectionRuntime` now pushes updates from the SAVE handler.
+
+function writeTestConfig(): void {
+  mkdirSync(tmpConfigRoot, { recursive: true })
+  writeFileSync(join(tmpConfigRoot, 'config.json'), JSON.stringify({
+    workspaces: [],
+    activeWorkspaceId: null,
+    activeSessionId: null,
+    defaultLlmConnection: 'slug-A',
+    llmConnections: [
+      {
+        slug: 'slug-A',
+        name: 'Test Compat A',
+        providerType: 'pi_compat',
+        baseUrl: 'http://localhost:11434/v1',
+        authType: 'none',
+        defaultModel: 'test-text',
+        models: [
+          { id: 'test-text', supportsImages: false },
+          { id: 'test-vision', supportsImages: true },
+        ],
+        customEndpoint: { api: 'openai-completions' },
+        createdAt: 1,
+      },
+      {
+        slug: 'slug-B',
+        name: 'Test Compat B',
+        providerType: 'pi_compat',
+        baseUrl: 'http://localhost:11435/v1',
+        authType: 'none',
+        defaultModel: 'test-b',
+        models: ['test-b'],
+        customEndpoint: { api: 'openai-completions' },
+        createdAt: 2,
+      },
+    ],
+  }, null, 2))
+}
+
+beforeAll(async () => {
+  tmpConfigRoot = mkdtempSync(join(tmpdir(), 'sm-refresh-config-'))
+  process.env.CRAFT_CONFIG_DIR = tmpConfigRoot
+
+  ;({ resolveBackendContext } = await import('@craft-agent/shared/agent/backend'))
+  ;({ loadWorkspaceConfig } = await import('@craft-agent/shared/workspaces'))
+  ;({ SessionManager, createManagedSession } = await import('./SessionManager.ts'))
+  ;({ buildRestartRequiredSignature } = await import('./runtime-config.ts'))
+})
+
+afterAll(() => {
+  if (tmpConfigRoot) {
+    rmSync(tmpConfigRoot, { recursive: true, force: true })
+  }
+})
 
 interface AgentStub {
   isProcessing: () => boolean
@@ -45,7 +101,7 @@ function createAgentStub(opts: {
 }
 
 function injectSession(
-  sm: SessionManager,
+  sm: InstanceType<typeof SessionManager>,
   id: string,
   workspaceRoot: string,
   llmConnection: string,
@@ -94,9 +150,10 @@ function injectSession(
 
 describe('refreshConnectionRuntime', () => {
   let tmpRoot: string
-  let sm: SessionManager
+  let sm: InstanceType<typeof SessionManager>
 
   beforeEach(() => {
+    writeTestConfig()
     tmpRoot = mkdtempSync(join(tmpdir(), 'sm-refresh-'))
     sm = new SessionManager()
   })
