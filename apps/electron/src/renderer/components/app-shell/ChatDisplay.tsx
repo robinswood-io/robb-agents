@@ -2218,6 +2218,24 @@ function ErrorMessage({ message, onOpenUrl, sessionId, onRetry }: { message: Mes
   )
 }
 
+function RoutingMetaBadge({ message }: { message: Message }) {
+  const meta = message.routingMeta
+  if (!meta || message.isStreaming) return null
+
+  const provider = meta.providerType ?? meta.connectionSlug
+  const model = meta.model
+  if (!provider && !model) return null
+
+  const label = [provider, model].filter(Boolean).join(' · ')
+  const title = meta.reason ? `Route: ${meta.reason}` : 'Route'
+
+  return (
+    <div className="mt-2 text-[10px] text-foreground/35 select-none" title={title}>
+      {label}
+    </div>
+  )
+}
+
 function MessageBubble({
   message,
   onOpenFile,
@@ -2285,6 +2303,7 @@ function MessageBubble({
               </Markdown>
             </CollapsibleMarkdownProvider>
           )}
+          <RoutingMetaBadge message={message} />
         </div>
       </div>
     )

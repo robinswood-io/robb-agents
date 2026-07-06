@@ -20,6 +20,7 @@ import type {
   ContentBadge,
   ToolDisplayMeta,
   AnnotationV1,
+  RoutingMeta,
 } from '@craft-agent/core/types';
 
 // Mode types from dedicated subpath export (avoids pulling in SDK)
@@ -44,6 +45,7 @@ export type {
   ContentBadge,
   ToolDisplayMeta,
   AnnotationV1,
+  RoutingMeta,
 };
 
 // Auth types for onboarding

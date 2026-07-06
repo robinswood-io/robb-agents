@@ -63,6 +63,27 @@ describe('handleTextComplete messageId synchronization', () => {
     expect((next.session.messages[0] as any).id).toBe('msg-main-race')
   })
 
+  it('preserves routing metadata from main process', () => {
+    const state = makeState([])
+
+    const event: TextCompleteEvent = {
+      type: 'text_complete',
+      sessionId: 'session-1',
+      text: 'routed response',
+      turnId: 'turn-routed',
+      messageId: 'msg-routed',
+      routingMeta: {
+        connectionSlug: 'premium-complex',
+        providerType: 'pi_compat',
+        model: 'openrouter/anthropic/claude-sonnet-4',
+        reason: 'manual-handoff',
+      },
+    }
+
+    const next = handleTextComplete(state, event)
+    expect((next.session.messages[0] as any).routingMeta).toEqual(event.routingMeta)
+  })
+
   it('keeps backward compatibility when messageId is missing', () => {
     const state = makeState([])
 
