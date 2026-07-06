@@ -30,7 +30,7 @@ import { PERMISSION_MODE_CONFIG } from '@craft-agent/shared/agent/mode-types'
 import type { DetailsPageMeta } from '@/lib/navigation-registry'
 import { SourceAvatar } from '@/components/ui/source-avatar'
 import { toast } from 'sonner'
-import { validateRoutingPolicy, type RoutingPolicy } from '@craft-agent/shared/config/routing-policy'
+import { parseRoutingPolicyText } from './routing-policy-editor'
 
 import {
   SettingsSection,
@@ -204,28 +204,8 @@ export default function WorkspaceSettingsPage() {
     [activeWorkspaceId, t]
   )
 
-  const validateRoutingPolicyText = useCallback((text: string): { policy?: RoutingPolicy; errors: string[]; warnings: string[] } => {
-    const trimmed = text.trim()
-    if (!trimmed) {
-      return { policy: undefined, errors: [], warnings: [] }
-    }
-
-    let parsed: unknown
-    try {
-      parsed = JSON.parse(trimmed)
-    } catch (error) {
-      return {
-        errors: [error instanceof Error ? error.message : 'Invalid JSON'],
-        warnings: [],
-      }
-    }
-
-    const validation = validateRoutingPolicy(parsed as RoutingPolicy, llmConnectionSlugs)
-    return {
-      policy: parsed as RoutingPolicy,
-      errors: validation.errors,
-      warnings: validation.warnings,
-    }
+  const validateRoutingPolicyText = useCallback((text: string) => {
+    return parseRoutingPolicyText(text, llmConnectionSlugs)
   }, [llmConnectionSlugs])
 
   const handleValidateRoutingPolicy = useCallback(() => {
@@ -233,9 +213,9 @@ export default function WorkspaceSettingsPage() {
     setRoutingPolicyErrors(result.errors)
     setRoutingPolicyWarnings(result.warnings)
     if (result.errors.length === 0) {
-      toast.success('routingPolicy valide')
+      toast.success(t('settings.workspace.routingPolicyValid'))
     }
-  }, [routingPolicyText, validateRoutingPolicyText])
+  }, [routingPolicyText, validateRoutingPolicyText, t])
 
   const handleSaveRoutingPolicy = useCallback(async () => {
     const result = validateRoutingPolicyText(routingPolicyText)
@@ -250,12 +230,12 @@ export default function WorkspaceSettingsPage() {
         if (result.policy) {
           setRoutingPolicyText(JSON.stringify(result.policy, null, 2))
         }
-        toast.success(result.policy ? 'routingPolicy enregistrée' : 'routingPolicy supprimée')
+        toast.success(result.policy ? t('settings.workspace.routingPolicySaved') : t('settings.workspace.routingPolicyCleared'))
       }
     } finally {
       setIsSavingRoutingPolicy(false)
     }
-  }, [routingPolicyText, updateWorkspaceSetting, validateRoutingPolicyText])
+  }, [routingPolicyText, updateWorkspaceSetting, validateRoutingPolicyText, t])
 
   // Workspace icon upload handler
   const handleIconUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -584,16 +564,18 @@ export default function WorkspaceSettingsPage() {
 
             {/* AI Router Policy */}
             <SettingsSection
-              title="Router IA"
-              description="Politique workspace appliquée avant coût/performance pour choisir les connexions IA autorisées. Laisser vide pour désactiver."
+              title={t('settings.workspace.routingPolicyTitle')}
+              description={t('settings.workspace.routingPolicyDesc')}
             >
               <SettingsCard>
                 <div className="p-4 space-y-3">
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <div className="text-sm font-medium">routingPolicy JSON</div>
+                      <div className="text-sm font-medium">{t('settings.workspace.routingPolicyJson')}</div>
                       <p className="text-xs text-muted-foreground mt-1">
-                        Slugs IA connus : {llmConnectionSlugs.length > 0 ? llmConnectionSlugs.join(', ') : 'aucune connexion chargée'}
+                        {t('settings.workspace.routingPolicyKnownConnections', {
+                          connections: llmConnectionSlugs.length > 0 ? llmConnectionSlugs.join(', ') : t('settings.workspace.routingPolicyNoConnections'),
+                        })}
                       </p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
@@ -602,7 +584,7 @@ export default function WorkspaceSettingsPage() {
                         onClick={handleValidateRoutingPolicy}
                         className="inline-flex items-center h-8 px-3 text-sm rounded-lg bg-background shadow-minimal hover:bg-foreground/[0.02] transition-colors"
                       >
-                        Valider
+                        {t('settings.workspace.routingPolicyValidate')}
                       </button>
                       <button
                         type="button"
@@ -610,7 +592,7 @@ export default function WorkspaceSettingsPage() {
                         disabled={isSavingRoutingPolicy}
                         className="inline-flex items-center h-8 px-3 text-sm rounded-lg bg-background shadow-minimal hover:bg-foreground/[0.02] transition-colors disabled:opacity-50"
                       >
-                        {isSavingRoutingPolicy ? 'Enregistrement…' : 'Enregistrer'}
+                        {isSavingRoutingPolicy ? t('common.saving') : t('common.save')}
                       </button>
                     </div>
                   </div>
