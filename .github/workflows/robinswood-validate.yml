@@ -33,6 +33,7 @@ jobs:
 
   optional-upstream-validation:
     name: Optional upstream validation
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     continue-on-error: true

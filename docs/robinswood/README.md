@@ -80,7 +80,7 @@ Exemples :
 - [x] Créer repo privé `robinswood-io/robinswood-agents`.
 - [x] Ajouter upstream Craft Agents OSS.
 - [x] Intégrer la locale française.
-- [x] Ajouter CI minimale (`Robinswood Validate`).
+- [x] Ajouter CI minimale (`Robinswood Validate`) ; validation upstream lourde disponible en manuel.
 - [ ] Rebrand app, bundle ID, icône, docs, installer. Inventaire initial documenté dans `rebrand-inventory.md`.
 - [x] Clarifier obligations Apache 2.0 / trademark au niveau inventaire initial.
 
