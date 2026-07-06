@@ -48,7 +48,7 @@ interface CompactModelSelectorProps {
   currentModel: string
   currentConnection?: string
   onModelChange: (model: string, connection?: string) => void
-  onConnectionChange?: (connectionSlug: string) => void
+  onConnectionChange?: (connectionSlug: string) => void | Promise<void>
   thinkingLevel?: ThinkingLevel
   onThinkingLevelChange?: (level: ThinkingLevel) => void
   isEmptySession?: boolean
@@ -154,10 +154,10 @@ export function CompactModelSelector({
   )
 
   const handlePickSwitcherModel = React.useCallback(
-    (connSlug: string, modelId: string) => {
+    async (connSlug: string, modelId: string) => {
       const isCurrentConnection = effectiveConnection === connSlug
       if (!isCurrentConnection && onConnectionChange) {
-        onConnectionChange(connSlug)
+        await onConnectionChange(connSlug)
       }
       onModelChange(modelId, connSlug)
       setOpen(false)

@@ -77,10 +77,10 @@ describe('derivePickerMode', () => {
   })
 
   // -------------------------------------------------------------------------
-  // Mid-session lock preserved: switcher off, locked-single still rendered
+  // Robinswood fork: mid-session provider handoff remains available
   // -------------------------------------------------------------------------
 
-  test('non-empty session + single-model pi_compat default → locked-single (lock preserved)', () => {
+  test('non-empty session + ≥2 connections + single-model pi_compat default → switcher (Robinswood handoff)', () => {
     expect(
       derivePickerMode(
         input({
@@ -89,7 +89,7 @@ describe('derivePickerMode', () => {
           connectionCount: 5,
         }),
       ),
-    ).toBe('locked-single')
+    ).toBe('switcher')
   })
 
   test('empty session + only 1 connection + single-model pi_compat default → locked-single (no switcher possible)', () => {
@@ -110,7 +110,7 @@ describe('derivePickerMode', () => {
   // Flat list: the unremarkable "list models for the active connection" case
   // -------------------------------------------------------------------------
 
-  test('non-empty session + multi-model connection → flat', () => {
+  test('non-empty session + ≥2 connections + multi-model connection → switcher (Robinswood handoff)', () => {
     expect(
       derivePickerMode(
         input({
@@ -119,7 +119,7 @@ describe('derivePickerMode', () => {
           connectionCount: 3,
         }),
       ),
-    ).toBe('flat')
+    ).toBe('switcher')
   })
 
   test('empty session + only 1 multi-model connection → flat', () => {

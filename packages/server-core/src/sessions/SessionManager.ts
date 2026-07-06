@@ -4394,8 +4394,12 @@ export class SessionManager implements ISessionManager {
 
   /**
    * Set the LLM connection for a session.
-   * Can only be changed before the first message is sent (connection is locked after).
-   * This determines which LLM provider/backend will be used for this session.
+   *
+   * Upstream locks the provider after the first message. Robinswood keeps that
+   * safety while a turn is running, but allows an explicit provider handoff
+   * between turns: summarize context best-effort, dispose the current backend,
+   * clear provider-native resume state, and let the next send create a fresh
+   * backend on the selected connection with a one-shot summary injection.
    */
   async setSessionConnection(sessionId: string, connectionSlug: string): Promise<void> {
     const managed = this.sessions.get(sessionId)
@@ -4404,13 +4408,7 @@ export class SessionManager implements ISessionManager {
       throw new Error(`Session ${sessionId} not found`)
     }
 
-    // Only allow changing connection before first message (session hasn't started)
-    if (managed.messages && managed.messages.length > 0) {
-      sessionLog.warn(`setSessionConnection: cannot change connection after session has started (${sessionId})`)
-      throw new Error('Cannot change connection after session has started')
-    }
-
-    // Validate connection exists
+    // Validate connection exists before mutating runtime state.
     const { getLlmConnection } = await import('@craft-agent/shared/config/storage')
     const connection = getLlmConnection(connectionSlug)
     if (!connection) {
@@ -4418,11 +4416,48 @@ export class SessionManager implements ISessionManager {
       throw new Error(`LLM connection "${connectionSlug}" not found`)
     }
 
+    const hasStarted = (managed.messages?.length ?? 0) > 0
+    const isSameConnection = managed.llmConnection === connectionSlug
+
+    if (hasStarted && (managed.isProcessing || managed.agent?.isProcessing())) {
+      sessionLog.warn(`setSessionConnection: cannot hand off provider while session is processing (${sessionId})`)
+      throw new Error('Cannot change connection while session is processing')
+    }
+
+    if (hasStarted && !isSameConnection) {
+      sessionLog.info(`Provider handoff for session ${sessionId}: ${managed.llmConnection ?? '(default)'} -> ${connectionSlug}`)
+
+      try {
+        const summary = await this.generateRemoteTransferSummary(managed)
+        if (summary?.trim()) {
+          managed.transferredSessionSummary = [
+            'Context summary from before a manual provider handoff:',
+            summary.trim(),
+          ].join('\n\n')
+          managed.transferredSessionSummaryApplied = false
+          sessionLog.info(`Provider handoff summary prepared for session ${sessionId}: ${summary.length} chars`)
+        }
+      } catch (error) {
+        sessionLog.warn(`Provider handoff summary failed for session ${sessionId}: ${error instanceof Error ? error.message : error}`)
+      }
+
+      // Provider-native SDK session ids are not portable across backends. Clear
+      // them so the next agent starts cleanly and uses the one-shot handoff
+      // summary instead of attempting an incompatible resume.
+      managed.sdkSessionId = undefined
+      managed.branchFromSdkSessionId = undefined
+      managed.branchFromSdkCwd = undefined
+      managed.branchFromSdkTurnId = undefined
+
+      await this.disposeManagedAgentRuntime(managed, 'manual provider handoff')
+    }
+
     managed.llmConnection = connectionSlug
-    // Persist in-memory state directly to avoid race with pending queue writes
+    managed.connectionLocked = true
+    // Persist in-memory state directly to avoid race with pending queue writes.
     this.persistSession(managed)
     await this.flushSession(managed.id)
-    sessionLog.info(`Set LLM connection for session ${sessionId} to ${connectionSlug}`)
+    sessionLog.info(`Set LLM connection for session ${sessionId} to ${connectionSlug}${hasStarted ? ' (handoff)' : ''}`)
 
     // Notify UI that connection changed (triggers capabilities refresh)
     this.sendEvent({

@@ -68,6 +68,23 @@ Le router conserve le transcript canonique et délègue chaque tour au backend c
 - fallback éventuel ;
 - policy appliquée.
 
+## MVP implémenté — 2026-07-06
+
+Premier changement de code :
+
+- `SessionManager.setSessionConnection(...)` autorise maintenant un changement de connexion après démarrage **uniquement si la session est idle**.
+- Si le provider change après le premier message :
+  - un résumé de continuité est généré best-effort via `generateRemoteTransferSummary(...)` ;
+  - l’agent courant est disposé via `disposeManagedAgentRuntime(...)` ;
+  - les métadonnées SDK natives non portables (`sdkSessionId`, fork SDK ids) sont effacées ;
+  - le résumé est injecté une fois au prochain backend via `transferredSessionSummary` ;
+  - `llmConnection` est persisté ;
+  - l’UI reçoit l’événement existant `connection_changed` ;
+  - le prochain message recréera un backend sur la nouvelle connexion.
+- `derivePickerMode(...)` garde maintenant le switcher visible dès qu’il y a plusieurs connexions, y compris en session non vide.
+
+Ce MVP reste volontairement un **handoff entre tours**, pas un routage automatique ni un transfert parfait de contexte natif SDK.
+
 ## Critère de succès du spike
 
 Un utilisateur doit pouvoir :

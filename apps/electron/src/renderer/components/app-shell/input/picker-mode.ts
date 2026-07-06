@@ -7,18 +7,20 @@
  *
  * Precedence (highest first):
  *   1. unavailable     — current connection is gone / error state
- *   2. switcher        — empty session AND multiple connections configured
- *                        (lets the user pick a different connection BEFORE
- *                        the first message locks the session to one)
+ *   2. switcher        — multiple connections configured
+ *                        (Robinswood fork: users can hand off to another
+ *                        provider between turns, not only before the first
+ *                        message)
  *   3. locked-single   — `pi_compat` connection with ≤1 model and no
- *                        switcher available (mid-session, or only one
- *                        connection configured)
+ *                        switcher available (only one connection configured)
  *   4. flat            — fall-through: list models for the active connection
  *
  * Note: `switcher` deliberately wins over `locked-single`. Before #727 they
  * were checked in the opposite order, which trapped users whose default was
  * a single-model `pi_compat` connection — they could never reach the
- * switcher even on a fresh chat.
+ * switcher even on a fresh chat. In the Robinswood fork, the switcher remains
+ * available after the session starts so a provider handoff can happen while
+ * the session is idle.
  */
 
 export type PickerMode = 'unavailable' | 'switcher' | 'locked-single' | 'flat'
@@ -35,7 +37,7 @@ export interface PickerModeInput {
 
 export function derivePickerMode(input: PickerModeInput): PickerMode {
   if (input.connectionUnavailable) return 'unavailable'
-  if (input.isEmptySession && input.connectionCount > 1) return 'switcher'
+  if (input.connectionCount > 1) return 'switcher'
   if (input.connectionDefaultModel != null) return 'locked-single'
   return 'flat'
 }
