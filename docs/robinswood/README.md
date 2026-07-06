@@ -88,7 +88,8 @@ Exemples :
 
 - [x] Français par défaut pour les nouvelles installations Robinswood, avec override utilisateur persistant.
 - [ ] Onboarding simplifié pour clients français.
-- [ ] Presets LLM : local, OVH/custom endpoint, OpenRouter, Anthropic/OpenAI si autorisé.
+- [x] Playbook providers documenté : local, souverain/OVH custom endpoint, OpenRouter, Anthropic/OpenAI.
+- [ ] Presets LLM codés : local, OVH/custom endpoint, OpenRouter, Anthropic/OpenAI si autorisé.
 - [ ] Templates workspace Robinswood.
 - [ ] Permissions par défaut adaptées client.
 

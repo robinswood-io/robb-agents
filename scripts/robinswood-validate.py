@@ -87,6 +87,7 @@ def check_robinswood_docs() -> None:
         ROOT / "docs" / "robinswood" / "README.md",
         ROOT / "docs" / "robinswood" / "technical-spike-router.md",
         ROOT / "docs" / "robinswood" / "rebrand-inventory.md",
+        ROOT / "docs" / "robinswood" / "provider-playbook.md",
     ]
     missing = [path.relative_to(ROOT).as_posix() for path in required if not path.exists()]
     if missing:
