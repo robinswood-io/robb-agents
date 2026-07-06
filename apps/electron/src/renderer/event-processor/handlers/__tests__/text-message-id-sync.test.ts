@@ -76,7 +76,9 @@ describe('handleTextComplete messageId synchronization', () => {
         connectionSlug: 'premium-complex',
         providerType: 'pi_compat',
         model: 'openrouter/anthropic/claude-sonnet-4',
-        reason: 'manual-handoff',
+        reason: 'router',
+        sensitivity: 'confidential',
+        policyRuleIds: ['confidential-local-or-sovereign'],
       },
     }
 

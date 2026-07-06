@@ -160,7 +160,7 @@ The schema is deliberately policy-first: hard allow/deny constraints are evaluat
 }
 ```
 
-Current implementation lives in `packages/shared/src/config/routing-policy.ts` with validation and pure resolution helpers. Runtime automatic routing is the next step.
+Current implementation lives in `packages/shared/src/config/routing-policy.ts` with validation and pure resolution helpers. `SessionManager` now applies the policy before backend creation/reuse when a workspace explicitly enables `routingPolicy`.
 
 ## UI requirements
 
@@ -179,5 +179,6 @@ Each assistant response should eventually display or expose:
 2. Add a branded OVH/custom endpoint preset only after verification.
 3. Persist provider/model metadata per assistant response. ✅
 4. Implement router policy schema. ✅
-5. Add manual policy labels to sources/workspaces.
-6. Wire `resolveRoutingPolicy(...)` into runtime turn creation.
+5. Wire `resolveRoutingPolicy(...)` into runtime turn creation. ✅
+6. Add manual policy labels to sources/workspaces.
+7. Add UI/settings editor for workspace `routingPolicy`.

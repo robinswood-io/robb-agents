@@ -261,6 +261,10 @@ export interface RoutingMeta {
   model?: string;
   /** Why this route was selected. MVP values are intentionally simple. */
   reason?: 'session-connection' | 'manual-handoff' | 'router' | string;
+  /** Sensitivity tier used by a policy-first router, when available. */
+  sensitivity?: string;
+  /** IDs of routingPolicy rules that matched the turn, when available. */
+  policyRuleIds?: string[];
 }
 
 /**

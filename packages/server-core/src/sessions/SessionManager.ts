@@ -20,7 +20,7 @@ import {
   type BackendHostRuntimeContext,
   type PostInitResult,
 } from '@craft-agent/shared/agent/backend'
-import { getLlmConnection, getLlmConnections, getDefaultLlmConnection, getDefaultThinkingLevel, resetManagedAnthropicAuthEnvVars, resolveMidStreamBehavior, getPersistedUiLanguage, resolveTitleLanguageName } from '@craft-agent/shared/config'
+import { getLlmConnection, getLlmConnections, getDefaultLlmConnection, getDefaultThinkingLevel, resetManagedAnthropicAuthEnvVars, resolveMidStreamBehavior, getPersistedUiLanguage, resolveTitleLanguageName, resolveRoutingPolicy } from '@craft-agent/shared/config'
 import { PrivilegedExecutionBroker } from '@craft-agent/server-core/services'
 import { isValidWorkingDirectory } from '../utils/path-validation'
 import { InitGate } from '@craft-agent/server-core/domain'
@@ -82,7 +82,7 @@ import { restoreFiles } from '@craft-agent/shared/utils/bundle-files'
 import { getCredentialManager } from '@craft-agent/shared/credentials'
 import { CraftMcpClient, McpClientPool, McpPoolServer } from '@craft-agent/shared/mcp'
 import { type Session, type SessionEvent, type FileAttachment, type SendMessageOptions, type UnreadSummary, type RemoteSessionTransferPayload, type ImportRemoteSessionTransferResult, RPC_CHANNELS, generateMessageId } from '@craft-agent/shared/protocol'
-import { messageToStored, storedToMessage, type Message, type StoredAttachment, type ToolDisplayMeta } from '@craft-agent/core/types'
+import { messageToStored, storedToMessage, type Message, type StoredAttachment, type ToolDisplayMeta, type RoutingMeta } from '@craft-agent/core/types'
 import { formatPathsToRelative, formatToolInputPaths, perf, encodeIconToDataUrlAsync, getEmojiIcon, resetSummarizationClient, resolveToolIcon, readFileAttachment, selectSpreadMessages, normalizePath } from '@craft-agent/shared/utils'
 import { loadAllSkills, loadSkillBySlug, invalidateSkillsCache, type LoadedSkill } from '@craft-agent/shared/skills'
 import { invalidateContextFileCache } from '@craft-agent/shared/prompts/system'
@@ -941,6 +941,8 @@ interface ManagedSession {
   piSdkMessageToCraftMessage?: Map<string, string>
   // Runtime-only: annotate the next assistant response with why a route changed.
   pendingRoutingReason?: 'manual-handoff' | 'session-connection' | 'router' | string
+  // Runtime-only: extra routing audit details for the next assistant response.
+  pendingRoutingMeta?: Partial<RoutingMeta>
   // Source-activation auto-retry (craft-agents-oss#804). When a source activates
   // mid-turn, we re-send the original message with a "[<slug> activated]" suffix
   // after a short delay. The pending slot lets `sendMessage` dedup a duplicate
@@ -3099,6 +3101,94 @@ export class SessionManager implements ISessionManager {
     }
   }
 
+  private async applyRoutingPolicyForNextTurn(
+    managed: ManagedSession,
+    workspaceConfig: ReturnType<typeof loadWorkspaceConfig>,
+  ): Promise<void> {
+    const policy = workspaceConfig?.routingPolicy
+    if (!policy || policy.enabled === false) return
+
+    const connections = getLlmConnections()
+    if (connections.length === 0) return
+
+    const requestedConnectionSlug = managed.llmConnection
+      ?? workspaceConfig?.defaults?.defaultLlmConnection
+      ?? getDefaultLlmConnection()
+      ?? undefined
+
+    const decision = resolveRoutingPolicy(policy, connections, {
+      requestedConnectionSlug,
+      sourceSlugs: managed.enabledSourceSlugs ?? [],
+      tags: managed.labels ?? [],
+    })
+
+    for (const warning of decision.warnings) {
+      sessionLog.warn(`routingPolicy warning for session ${managed.id}: ${warning}`)
+    }
+
+    if (decision.errors.length > 0 || !decision.selectedConnectionSlug) {
+      const message = decision.errors.join('; ') || 'routingPolicy did not select a connection'
+      sessionLog.warn(`routingPolicy blocked session ${managed.id}: ${message}`)
+      throw new Error(`Routing policy blocked this turn: ${message}`)
+    }
+
+    const selectedSlug = decision.selectedConnectionSlug
+    const isSameConnection = managed.llmConnection === selectedSlug
+    const hasPriorAssistantResponse = (managed.messages ?? []).some(message =>
+      (message.role === 'assistant' || message.role === 'plan') && !message.isIntermediate
+    )
+
+    managed.pendingRoutingReason = 'router'
+    managed.pendingRoutingMeta = {
+      reason: 'router',
+      sensitivity: decision.sensitivity,
+      policyRuleIds: decision.matchedRuleIds,
+    }
+
+    if (isSameConnection) return
+
+    sessionLog.info(`routingPolicy selected connection for session ${managed.id}: ${managed.llmConnection ?? '(default)'} -> ${selectedSlug}`, {
+      sensitivity: decision.sensitivity,
+      matchedRuleIds: decision.matchedRuleIds,
+      reason: decision.reason,
+    })
+
+    if (hasPriorAssistantResponse) {
+      try {
+        const summary = await this.generateRemoteTransferSummary(managed)
+        if (summary?.trim()) {
+          managed.transferredSessionSummary = [
+            'Context summary from before an automatic policy router handoff:',
+            summary.trim(),
+          ].join('\n\n')
+          managed.transferredSessionSummaryApplied = false
+          sessionLog.info(`Policy router handoff summary prepared for session ${managed.id}: ${summary.length} chars`)
+        }
+      } catch (error) {
+        sessionLog.warn(`Policy router handoff summary failed for session ${managed.id}: ${error instanceof Error ? error.message : error}`)
+      }
+
+      managed.sdkSessionId = undefined
+      managed.branchFromSdkSessionId = undefined
+      managed.branchFromSdkCwd = undefined
+      managed.branchFromSdkTurnId = undefined
+
+      if (managed.agent) {
+        await this.disposeManagedAgentRuntime(managed, 'policy router handoff')
+      }
+    }
+
+    managed.llmConnection = selectedSlug
+    managed.connectionLocked = true
+    this.persistSession(managed)
+    this.sendEvent({
+      type: 'connection_changed',
+      sessionId: managed.id,
+      connectionSlug: selectedSlug,
+      supportsBranching: resolveSupportsBranching(managed),
+    }, managed.workspace.id)
+  }
+
   /**
    * Get or create agent for a session (lazy loading)
    * Creates the appropriate backend agent based on LLM connection.
@@ -3110,12 +3200,14 @@ export class SessionManager implements ISessionManager {
    * 4. fallback: no connection configured
    */
   private async getOrCreateAgent(managed: ManagedSession): Promise<AgentInstance> {
+    const workspaceConfig = loadWorkspaceConfig(managed.workspace.rootPath)
+    await this.applyRoutingPolicyForNextTurn(managed, workspaceConfig)
+
     // Refresh runtime config in-place when the connection has drifted since
     // the agent was created. May null out `managed.agent` if the in-place
     // refresh fails, in which case the create branch below rebuilds it.
     await this.tryRefreshAgentRuntime(managed, 'send-path refresh')
 
-    const workspaceConfig = loadWorkspaceConfig(managed.workspace.rootPath)
     const backendContext = resolveBackendContext({
       sessionConnectionSlug: managed.llmConnection,
       workspaceDefaultConnectionSlug: workspaceConfig?.defaults?.defaultLlmConnection,
@@ -6870,10 +6962,11 @@ export class SessionManager implements ISessionManager {
           turnId: event.turnId,
           parentToolUseId: event.parentToolUseId,
           routingMeta: {
+            ...managed.pendingRoutingMeta,
             connectionSlug: managed.llmConnection,
             providerType: routingConnection?.providerType,
             model: managed.agent?.getModel() ?? managed.model,
-            reason: managed.pendingRoutingReason ?? 'session-connection',
+            reason: managed.pendingRoutingReason ?? managed.pendingRoutingMeta?.reason ?? 'session-connection',
           },
         }
         managed.messages.push(assistantMessage)
@@ -6900,8 +6993,9 @@ export class SessionManager implements ISessionManager {
           // assistant message id mapping. The actual anchor arrives as a
           // separate `pi_turn_anchor` event one microtask later — the SDK
           // updates its leaf only AFTER firing message_end (see #782).
-          if (managed.pendingRoutingReason) {
+          if (managed.pendingRoutingReason || managed.pendingRoutingMeta) {
             managed.pendingRoutingReason = undefined
+            managed.pendingRoutingMeta = undefined
           }
 
           if (event.sdkMessageId) {
