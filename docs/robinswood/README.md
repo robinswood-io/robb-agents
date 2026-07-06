@@ -73,6 +73,19 @@ Exemples :
 - action destructive → modèle fort + permission + audit ;
 - production client-facing → modèle fort + validation humaine si nécessaire.
 
+## Dossiers de travail
+
+- [`provider-playbook.md`](./provider-playbook.md) — stratégie providers, policy-first router, statuts livrés.
+- [`manual-e2e.md`](./manual-e2e.md) — checklist de validation Electron réelle avant pilote client.
+- [`client-workspace-template.md`](./client-workspace-template.md) — template workspace client Robinswood.
+- [`router-fallback-spec.md`](./router-fallback-spec.md) — spécification du fallback router policy-aware.
+- [`audit-and-cost-spec.md`](./audit-and-cost-spec.md) — spécification audit provider/modèle/coûts.
+- [`rebrand-inventory.md`](./rebrand-inventory.md) — inventaire initial des surfaces à rebrander.
+- [`rebrand-implementation-plan.md`](./rebrand-implementation-plan.md) — plan rebrand minimal sans renommage massif.
+- [`ovh-ai-endpoints-verification.md`](./ovh-ai-endpoints-verification.md) — checklist de vérification OVHcloud AI Endpoints avant preset.
+- [`routing-policy.example.json`](./routing-policy.example.json) — exemple policy validé par tests.
+- [`technical-spike-router.md`](./technical-spike-router.md) — notes techniques switch provider / router.
+
 ## Roadmap initiale
 
 ### Phase 0 — Fork propre
@@ -81,7 +94,7 @@ Exemples :
 - [x] Ajouter upstream Craft Agents OSS.
 - [x] Intégrer la locale française.
 - [x] Ajouter CI Robinswood (`Robinswood Validate`) avec install gelée, typechecks ciblés et tests router/runtime ; validation upstream lourde disponible en manuel.
-- [ ] Rebrand app, bundle ID, icône, docs, installer. Inventaire initial documenté dans `rebrand-inventory.md`.
+- [ ] Rebrand app, bundle ID, icône, docs, installer. Inventaire initial documenté dans `rebrand-inventory.md`, plan minimal dans `rebrand-implementation-plan.md`.
 - [x] Clarifier obligations Apache 2.0 / trademark au niveau inventaire initial.
 
 ### Phase 1 — Distribution française
@@ -90,7 +103,7 @@ Exemples :
 - [ ] Onboarding simplifié pour clients français.
 - [x] Playbook providers documenté : local, souverain/OVH custom endpoint, OpenRouter, Anthropic/OpenAI.
 - [ ] Presets LLM codés : local, OVH/custom endpoint, OpenRouter, Anthropic/OpenAI si autorisé.
-- [ ] Templates workspace Robinswood.
+- [x] Template workspace Robinswood documenté dans `client-workspace-template.md`.
 - [ ] Permissions par défaut adaptées client.
 
 ### Phase 2 — Switch manuel provider
@@ -108,8 +121,8 @@ Exemples :
 - [x] Sensibilité manuelle par source via `routingSensitivity`, éditable depuis la page Source.
 - [ ] Classifier léger de difficulté/sensibilité.
 - [x] Sélecteur de provider et modèle par tour lorsque `routingPolicy.enabled=true`.
-- [ ] Fallbacks si provider indisponible.
-- [ ] Budget et métriques coût.
+- [ ] Fallbacks si provider indisponible. Spécification prête dans `router-fallback-spec.md`.
+- [ ] Budget et métriques coût. Spécification prête dans `audit-and-cost-spec.md`.
 
 ## Règles de maintenance du fork
 
