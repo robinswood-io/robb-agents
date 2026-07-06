@@ -246,6 +246,24 @@ export interface StoredAttachment {
 }
 
 /**
+ * Provider/model routing audit metadata.
+ *
+ * Robinswood fork: this is the foundation for manual provider handoff and the
+ * future policy-first router. It is intentionally persisted per assistant
+ * message so audits can answer which provider/model produced each response.
+ */
+export interface RoutingMeta {
+  /** LLM connection slug selected for this turn, when known. */
+  connectionSlug?: string;
+  /** Backend/provider type, e.g. anthropic, pi, pi_compat, router. */
+  providerType?: string;
+  /** Effective model ID used by the backend for this turn. */
+  model?: string;
+  /** Why this route was selected. MVP values are intentionally simple. */
+  reason?: 'session-connection' | 'manual-handoff' | 'router' | string;
+}
+
+/**
  * Runtime message type (includes transient fields like isStreaming)
  */
 export interface Message {
@@ -291,6 +309,8 @@ export interface Message {
   turnId?: string;
   // Status type for special status messages (e.g., compacting)
   statusType?: 'compacting' | 'compaction_complete';
+  /** Provider/model routing audit metadata for assistant messages. */
+  routingMeta?: RoutingMeta;
   // Info level for info messages (determines icon/color)
   infoLevel?: 'info' | 'warning' | 'error' | 'success';
   // Error-specific fields (for typed errors with diagnostics)
@@ -370,6 +390,8 @@ export interface StoredMessage {
   turnId?: string;
   // Status type for compaction messages (persisted for reload)
   statusType?: 'compacting' | 'compaction_complete';
+  /** Provider/model routing audit metadata for assistant messages. */
+  routingMeta?: RoutingMeta;
   // Info level for info messages (persisted for reload)
   infoLevel?: 'info' | 'warning' | 'error' | 'success';
   // Error display fields

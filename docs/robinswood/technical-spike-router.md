@@ -82,6 +82,7 @@ Premier changement de code :
   - l’UI reçoit l’événement existant `connection_changed` ;
   - le prochain message recréera un backend sur la nouvelle connexion.
 - `derivePickerMode(...)` garde maintenant le switcher visible dès qu’il y a plusieurs connexions, y compris en session non vide.
+- Les messages assistant portent désormais un `routingMeta` persistant avec `connectionSlug`, `providerType`, `model` et `reason` (`session-connection` ou `manual-handoff`).
 
 Ce MVP reste volontairement un **handoff entre tours**, pas un routage automatique ni un transfert parfait de contexte natif SDK.
 

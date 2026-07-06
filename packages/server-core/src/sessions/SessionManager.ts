@@ -939,6 +939,8 @@ interface ManagedSession {
    * Capped at PI_SDK_MESSAGE_ID_CACHE_LIMIT to bound memory in long sessions.
    */
   piSdkMessageToCraftMessage?: Map<string, string>
+  // Runtime-only: annotate the next assistant response with why a route changed.
+  pendingRoutingReason?: 'manual-handoff' | 'session-connection' | 'router' | string
   // Source-activation auto-retry (craft-agents-oss#804). When a source activates
   // mid-turn, we re-send the original message with a "[<slug> activated]" suffix
   // after a short delay. The pending slot lets `sendMessage` dedup a duplicate
@@ -4449,6 +4451,7 @@ export class SessionManager implements ISessionManager {
       managed.branchFromSdkCwd = undefined
       managed.branchFromSdkTurnId = undefined
 
+      managed.pendingRoutingReason = 'manual-handoff'
       await this.disposeManagedAgentRuntime(managed, 'manual provider handoff')
     }
 
@@ -6857,6 +6860,7 @@ export class SessionManager implements ISessionManager {
         // Flush any pending deltas before sending complete (ensures renderer has all content)
         this.flushDelta(sessionId, workspaceId)
 
+        const routingConnection = managed.llmConnection ? getLlmConnection(managed.llmConnection) : undefined
         const assistantMessage: Message = {
           id: generateMessageId(),
           role: 'assistant',
@@ -6865,6 +6869,12 @@ export class SessionManager implements ISessionManager {
           isIntermediate: event.isIntermediate,
           turnId: event.turnId,
           parentToolUseId: event.parentToolUseId,
+          routingMeta: {
+            connectionSlug: managed.llmConnection,
+            providerType: routingConnection?.providerType,
+            model: managed.agent?.getModel() ?? managed.model,
+            reason: managed.pendingRoutingReason ?? 'session-connection',
+          },
         }
         managed.messages.push(assistantMessage)
         managed.streamingText = ''
@@ -6890,6 +6900,10 @@ export class SessionManager implements ISessionManager {
           // assistant message id mapping. The actual anchor arrives as a
           // separate `pi_turn_anchor` event one microtask later — the SDK
           // updates its leaf only AFTER firing message_end (see #782).
+          if (managed.pendingRoutingReason) {
+            managed.pendingRoutingReason = undefined
+          }
+
           if (event.sdkMessageId) {
             let cache = managed.piSdkMessageToCraftMessage
             if (!cache) {
