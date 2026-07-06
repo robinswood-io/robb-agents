@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 import {
+  maxRoutingSensitivity,
   resolveRoutingPolicy,
   validateRoutingPolicy,
   type RoutingPolicy,
@@ -16,6 +17,14 @@ const connections = [
   connection('openrouter-balanced', 'pi'),
   connection('anthropic-direct', 'anthropic'),
 ];
+
+describe('routing sensitivity helpers', () => {
+  it('returns the highest sensitivity from enabled source hints', () => {
+    expect(maxRoutingSensitivity(['public', 'confidential', 'internal'])).toBe('confidential');
+    expect(maxRoutingSensitivity(['restricted', 'confidential'])).toBe('restricted');
+    expect(maxRoutingSensitivity([undefined])).toBeUndefined();
+  });
+});
 
 describe('routing policy validation', () => {
   it('warns on unknown referenced connections without failing schema validation', () => {

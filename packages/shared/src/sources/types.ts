@@ -10,6 +10,8 @@
  *   └── guide.md      - Usage guidelines + cached data (in YAML frontmatter)
  */
 
+import type { RoutingSensitivity } from '../config/routing-policy.ts';
+
 /**
  * Source types - how we connect to the source
  */
@@ -467,6 +469,13 @@ export interface FolderSourceConfig {
   // Brand theming for this source's UI elements
   brand?: SourceBrand;
 
+  /**
+   * Optional policy hint consumed by Robinswood's policy-first LLM router.
+   * When several enabled sources are present, the runtime uses the highest
+   * sensitivity among them for the turn.
+   */
+  routingSensitivity?: RoutingSensitivity;
+
   // Status tracking
   isAuthenticated?: boolean;
   connectionStatus?: SourceConnectionStatus;
@@ -539,6 +548,7 @@ export interface CreateSourceInput {
   local?: LocalSourceConfig;
   icon?: string; // Emoji or URL (auto-downloaded)
   enabled?: boolean;
+  routingSensitivity?: RoutingSensitivity;
 }
 
 /**

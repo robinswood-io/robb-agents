@@ -164,6 +164,16 @@ Current implementation lives in `packages/shared/src/config/routing-policy.ts` w
 
 A complete JSON example for client workspaces is maintained at `docs/robinswood/routing-policy.example.json` and covered by `packages/shared/tests/routing-policy-example.test.ts`.
 
+Sources can also declare a manual sensitivity hint in their `config.json`:
+
+```json
+{
+  "routingSensitivity": "confidential"
+}
+```
+
+Allowed values are `public`, `internal`, `confidential`, `restricted`. When multiple sources are enabled for a session, the runtime uses the highest configured source sensitivity for the turn before resolving `routingPolicy`.
+
 ## UI requirements
 
 Each assistant response should eventually display or expose:
@@ -183,5 +193,5 @@ Each assistant response should eventually display or expose:
 4. Implement router policy schema. ✅
 5. Wire `resolveRoutingPolicy(...)` into runtime turn creation. ✅
 6. Add validated example `routing-policy.example.json`. ✅
-7. Add manual policy labels to sources/workspaces.
-8. Add UI/settings editor for workspace `routingPolicy`.
+7. Add manual policy labels to sources/workspaces. ✅ (`routingSensitivity` on sources)
+8. Add UI/settings editor for workspace `routingPolicy` and source sensitivity.

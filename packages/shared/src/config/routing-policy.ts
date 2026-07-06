@@ -96,7 +96,19 @@ export interface RoutingPolicyValidationResult {
 }
 
 const DEFAULT_EXPLICIT_ALLOW_SENSITIVITIES: RoutingSensitivity[] = ['confidential', 'restricted'];
-const ALL_SENSITIVITIES: RoutingSensitivity[] = ['public', 'internal', 'confidential', 'restricted'];
+export const ALL_ROUTING_SENSITIVITIES: RoutingSensitivity[] = ['public', 'internal', 'confidential', 'restricted'];
+const ROUTING_SENSITIVITY_RANK: Record<RoutingSensitivity, number> = {
+  public: 0,
+  internal: 1,
+  confidential: 2,
+  restricted: 3,
+};
+
+export function maxRoutingSensitivity(values: Array<RoutingSensitivity | undefined>): RoutingSensitivity | undefined {
+  return values
+    .filter((value): value is RoutingSensitivity => !!value)
+    .sort((left, right) => ROUTING_SENSITIVITY_RANK[right] - ROUTING_SENSITIVITY_RANK[left])[0];
+}
 
 function unique(values: string[] | undefined): string[] {
   return Array.from(new Set((values ?? []).filter(Boolean)));
@@ -161,7 +173,7 @@ export function validateRoutingPolicy(policy: RoutingPolicy, knownConnectionSlug
     errors.push(`Unsupported routingPolicy.version: ${String(policy.version)}`);
   }
 
-  if (policy.defaultSensitivity && !ALL_SENSITIVITIES.includes(policy.defaultSensitivity)) {
+  if (policy.defaultSensitivity && !ALL_ROUTING_SENSITIVITIES.includes(policy.defaultSensitivity)) {
     errors.push(`Invalid routingPolicy.defaultSensitivity: ${policy.defaultSensitivity}`);
   }
 
@@ -177,7 +189,7 @@ export function validateRoutingPolicy(policy: RoutingPolicy, knownConnectionSlug
     ruleIds.add(rule.id);
 
     for (const sensitivity of rule.when?.sensitivity ?? []) {
-      if (!ALL_SENSITIVITIES.includes(sensitivity)) {
+      if (!ALL_ROUTING_SENSITIVITIES.includes(sensitivity)) {
         errors.push(`Invalid sensitivity '${sensitivity}' in routingPolicy rule '${rule.id}'`);
       }
     }

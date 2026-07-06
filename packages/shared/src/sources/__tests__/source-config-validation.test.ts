@@ -7,6 +7,7 @@
  */
 
 import { describe, test, expect } from 'bun:test';
+import { validateSourceConfig } from '../../config/validators.ts';
 import type { ApiSourceConfig, FolderSourceConfig } from '../types.ts';
 
 /**
@@ -238,5 +239,43 @@ describe('Real-world API config examples', () => {
 
     const result = validateMultiHeaderConfig(cloudflareConfig);
     expect(result.valid).toBe(true);
+  });
+});
+
+describe('routingSensitivity source metadata', () => {
+  test('accepts valid routingSensitivity values', () => {
+    const config: FolderSourceConfig = {
+      id: 'test-id',
+      slug: 'client-drive',
+      name: 'Client Drive',
+      type: 'api',
+      enabled: true,
+      provider: 'google',
+      routingSensitivity: 'confidential',
+      api: {
+        baseUrl: 'https://www.googleapis.com/drive/v3',
+        authType: 'oauth',
+      },
+    };
+
+    expect(validateSourceConfig(config).valid).toBe(true);
+  });
+
+  test('rejects invalid routingSensitivity values', () => {
+    const config = {
+      id: 'test-id',
+      slug: 'client-drive',
+      name: 'Client Drive',
+      type: 'api',
+      enabled: true,
+      provider: 'google',
+      routingSensitivity: 'secret',
+      api: {
+        baseUrl: 'https://www.googleapis.com/drive/v3',
+        authType: 'oauth',
+      },
+    };
+
+    expect(validateSourceConfig(config).valid).toBe(false);
   });
 });

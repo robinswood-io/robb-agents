@@ -20,7 +20,7 @@ import {
   type BackendHostRuntimeContext,
   type PostInitResult,
 } from '@craft-agent/shared/agent/backend'
-import { getLlmConnection, getLlmConnections, getDefaultLlmConnection, getDefaultThinkingLevel, resetManagedAnthropicAuthEnvVars, resolveMidStreamBehavior, getPersistedUiLanguage, resolveTitleLanguageName, resolveRoutingPolicy } from '@craft-agent/shared/config'
+import { getLlmConnection, getLlmConnections, getDefaultLlmConnection, getDefaultThinkingLevel, resetManagedAnthropicAuthEnvVars, resolveMidStreamBehavior, getPersistedUiLanguage, resolveTitleLanguageName, resolveRoutingPolicy, maxRoutingSensitivity } from '@craft-agent/shared/config'
 import { PrivilegedExecutionBroker } from '@craft-agent/server-core/services'
 import { isValidWorkingDirectory } from '../utils/path-validation'
 import { InitGate } from '@craft-agent/server-core/domain'
@@ -3116,9 +3116,18 @@ export class SessionManager implements ISessionManager {
       ?? getDefaultLlmConnection()
       ?? undefined
 
+    const enabledSourceSlugs = managed.enabledSourceSlugs ?? []
+    const enabledSources = enabledSourceSlugs.length > 0
+      ? getSourcesBySlugs(managed.workspace.rootPath, enabledSourceSlugs)
+      : []
+    const sourceSensitivity = maxRoutingSensitivity(
+      enabledSources.map(source => source.config.routingSensitivity)
+    )
+
     const decision = resolveRoutingPolicy(policy, connections, {
       requestedConnectionSlug,
-      sourceSlugs: managed.enabledSourceSlugs ?? [],
+      sensitivity: sourceSensitivity,
+      sourceSlugs: enabledSourceSlugs,
       tags: managed.labels ?? [],
     })
 

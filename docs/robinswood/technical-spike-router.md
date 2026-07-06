@@ -79,6 +79,8 @@ routingPolicy: {
 
 Intégration runtime ajoutée : `SessionManager.getOrCreateAgent(...)` appelle maintenant `resolveRoutingPolicy(...)` avant création/réutilisation du backend lorsqu’une `routingPolicy` workspace est activée. La sélection reste entre deux tours : si la policy choisit une autre connexion, le runtime courant est disposé, l’état SDK natif non portable est effacé, et un résumé de continuité best-effort est préparé.
 
+Les sources peuvent porter `routingSensitivity?: 'public' | 'internal' | 'confidential' | 'restricted'`. Quand plusieurs sources sont activées, le runtime utilise la sensibilité la plus élevée comme contexte de décision pour `resolveRoutingPolicy(...)`.
+
 Le router conserve le transcript canonique et délègue chaque tour au backend cible.
 
 ## Données à persister par message
@@ -110,6 +112,7 @@ Premier changement de code :
 - Le renderer reçoit aussi `routingMeta` via `text_complete` et affiche un badge discret provider/modèle.
 - Le schema `routingPolicy` est branché au runtime pour les workspaces qui l’activent explicitement.
 - Les réponses routées automatiquement portent `routingMeta.reason = 'router'`, `sensitivity` et `policyRuleIds`.
+- Les sources supportent désormais un hint manuel `routingSensitivity`, validé par le schema source.
 
 Ce MVP reste volontairement un **handoff entre tours**, pas un routage mid-stream ni un transfert parfait de contexte natif SDK.
 

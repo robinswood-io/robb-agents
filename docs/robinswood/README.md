@@ -104,6 +104,7 @@ Exemples :
 
 - [x] Définir `routingPolicy` par workspace/client.
 - [x] Ajouter un exemple client validé : `routing-policy.example.json`.
+- [x] Sensibilité manuelle par source via `routingSensitivity`.
 - [ ] Classifier léger de difficulté/sensibilité.
 - [x] Sélecteur de provider et modèle par tour lorsque `routingPolicy.enabled=true`.
 - [ ] Fallbacks si provider indisponible.
