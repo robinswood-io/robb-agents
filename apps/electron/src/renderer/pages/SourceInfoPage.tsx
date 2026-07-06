@@ -28,6 +28,7 @@ import {
   type ToolRow,
 } from '@/components/info'
 import type { LoadedSource, McpToolWithPermission } from '../../shared/types'
+import type { RoutingSensitivity } from '@craft-agent/shared/config'
 import type { PermissionsConfigFile } from '@craft-agent/shared/agent/modes'
 
 interface SourceInfoPageProps {
@@ -179,6 +180,7 @@ export default function SourceInfoPage({ sourceSlug, workspaceId, onDelete }: So
   const [mcpToolsLoading, setMcpToolsLoading] = useState(false)
   const [mcpToolsError, setMcpToolsError] = useState<string | null>(null)
   const [localMcpEnabled, setLocalMcpEnabled] = useState(true)
+  const [savingSensitivity, setSavingSensitivity] = useState(false)
 
 
   // Load source data
@@ -326,6 +328,35 @@ export default function SourceInfoPage({ sourceSlug, workspaceId, onDelete }: So
     }
   }, [source, sourceUrl])
 
+  const handleRoutingSensitivityChange = useCallback(async (value: string) => {
+    if (!source || savingSensitivity) return
+
+    const routingSensitivity = value === 'default' ? undefined : value as RoutingSensitivity
+    const updateValue = value === 'default' ? null : routingSensitivity
+    setSavingSensitivity(true)
+    const previous = source
+    setSource({
+      ...source,
+      config: {
+        ...source.config,
+        routingSensitivity,
+      },
+    })
+
+    try {
+      const updatedConfig = await window.electronAPI.updateSourceConfig(workspaceId, sourceSlug, { routingSensitivity: updateValue })
+      setSource(current => current ? { ...current, config: { ...current.config, ...updatedConfig } } : current)
+      toast.success('Sensibilité router mise à jour')
+    } catch (err) {
+      setSource(previous)
+      toast.error('Échec de la mise à jour de la sensibilité', {
+        description: err instanceof Error ? err.message : undefined,
+      })
+    } finally {
+      setSavingSensitivity(false)
+    }
+  }, [source, savingSensitivity, workspaceId, sourceSlug])
+
   // Handle opening source folder
   const handleOpenSourceFolder = useCallback(async () => {
     if (!source) return
@@ -433,6 +464,21 @@ export default function SourceInfoPage({ sourceSlug, workspaceId, onDelete }: So
                 </Info_Table.Row>
               )}
               <Info_Table.Row label={t('sourceInfo.lastTested')} value={formatRelativeTime(source.config.lastTestedAt, t)} />
+              <Info_Table.Row label="Sensibilité router">
+                <select
+                  value={source.config.routingSensitivity ?? 'default'}
+                  disabled={savingSensitivity}
+                  onChange={(event) => handleRoutingSensitivityChange(event.target.value)}
+                  className="w-full max-w-[220px] rounded-md border border-border bg-background px-2 py-1 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+                  title="Utilisée par la routingPolicy Robinswood pour choisir le provider autorisé"
+                >
+                  <option value="default">Défaut workspace</option>
+                  <option value="public">Public</option>
+                  <option value="internal">Interne</option>
+                  <option value="confidential">Confidentiel</option>
+                  <option value="restricted">Restreint</option>
+                </select>
+              </Info_Table.Row>
             </Info_Table>
           </Info_Section>
 

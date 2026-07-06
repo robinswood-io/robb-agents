@@ -453,6 +453,7 @@ export interface ElectronAPI {
   // Sources
   getSources(workspaceId: string): Promise<LoadedSource[]>
   createSource(workspaceId: string, config: Partial<FolderSourceConfig>): Promise<FolderSourceConfig>
+  updateSourceConfig(workspaceId: string, sourceSlug: string, updates: Omit<Partial<FolderSourceConfig>, 'routingSensitivity'> & { routingSensitivity?: FolderSourceConfig['routingSensitivity'] | null }): Promise<FolderSourceConfig>
   deleteSource(workspaceId: string, sourceSlug: string): Promise<void>
   startSourceOAuth(workspaceId: string, sourceSlug: string): Promise<{ success: boolean; error?: string }>
   saveSourceCredentials(workspaceId: string, sourceSlug: string, credential: string): Promise<void>

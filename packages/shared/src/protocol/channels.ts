@@ -232,6 +232,7 @@ export const RPC_CHANNELS = {
   sources: {
     GET: 'sources:get',
     CREATE: 'sources:create',
+    UPDATE_CONFIG: 'sources:updateConfig',
     DELETE: 'sources:delete',
     START_OAUTH: 'sources:startOAuth',
     SAVE_CREDENTIALS: 'sources:saveCredentials',

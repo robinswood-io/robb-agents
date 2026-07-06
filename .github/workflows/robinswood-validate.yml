@@ -47,12 +47,17 @@ jobs:
       - name: Typecheck server-core package
         run: cd packages/server-core && bun run tsc --noEmit
 
+      - name: Typecheck Electron app
+        run: bun run typecheck:electron
+
       - name: Run focused fork tests
         run: |
           bun test \
             packages/shared/tests/routing-policy.test.ts \
             packages/shared/tests/routing-policy-example.test.ts \
             packages/shared/src/sources/__tests__/source-config-validation.test.ts \
+            apps/electron/src/shared/__tests__/ipc-channels.test.ts \
+            apps/electron/src/main/handlers/__tests__/registration.test.ts \
             apps/electron/src/renderer/event-processor/handlers/__tests__/text-message-id-sync.test.ts \
             apps/electron/src/renderer/components/app-shell/input/__tests__/picker-mode.test.ts \
             packages/server-core/src/sessions/refresh-connection-runtime.test.ts \

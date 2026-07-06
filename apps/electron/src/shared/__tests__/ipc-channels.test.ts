@@ -264,6 +264,7 @@ const EXPECTED_CHANNELS: string[] = [
   'sources:getPermissions',
   'sources:saveCredentials',
   'sources:startOAuth',
+  'sources:updateConfig',
   'statuses:changed',
   'statuses:list',
   'statuses:reorder',

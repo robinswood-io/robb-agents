@@ -1,6 +1,7 @@
 import { RPC_CHANNELS } from '@craft-agent/shared/protocol'
 import { getWorkspaceByNameOrId } from '@craft-agent/shared/config'
 import { loadWorkspaceSources } from '@craft-agent/shared/sources'
+import { pushTyped } from '@craft-agent/server-core/transport'
 import { safeJsonParse } from '@craft-agent/shared/utils/files'
 import { getCredentialManager } from '@craft-agent/shared/credentials'
 import type { RpcServer } from '@craft-agent/server-core/transport'
@@ -9,6 +10,7 @@ import type { HandlerDeps } from '../handler-deps'
 export const HANDLED_CHANNELS = [
   RPC_CHANNELS.sources.GET,
   RPC_CHANNELS.sources.CREATE,
+  RPC_CHANNELS.sources.UPDATE_CONFIG,
   RPC_CHANNELS.sources.DELETE,
   RPC_CHANNELS.sources.START_OAUTH,
   RPC_CHANNELS.sources.SAVE_CREDENTIALS,
@@ -44,7 +46,35 @@ export function registerSourcesHandlers(server: RpcServer, deps: HandlerDeps): v
       mcp: config.mcp,
       api: config.api,
       local: config.local,
+      routingSensitivity: config.routingSensitivity,
     })
+  })
+
+  // Update an existing source config
+  server.handle(RPC_CHANNELS.sources.UPDATE_CONFIG, async (_ctx, workspaceId: string, sourceSlug: string, updates: Omit<Partial<import('@craft-agent/shared/sources').FolderSourceConfig>, 'routingSensitivity'> & { routingSensitivity?: import('@craft-agent/shared/sources').FolderSourceConfig['routingSensitivity'] | null }) => {
+    const workspace = getWorkspaceByNameOrId(workspaceId)
+    if (!workspace) throw new Error(`Workspace not found: ${workspaceId}`)
+    const { loadSourceConfig, saveSourceConfig } = await import('@craft-agent/shared/sources')
+    const existing = loadSourceConfig(workspace.rootPath, sourceSlug)
+    if (!existing) throw new Error(`Source not found: ${sourceSlug}`)
+
+    const next = {
+      ...existing,
+      ...updates,
+      routingSensitivity: updates.routingSensitivity === null ? undefined : updates.routingSensitivity ?? existing.routingSensitivity,
+      id: existing.id,
+      slug: existing.slug,
+      type: existing.type,
+      provider: updates.provider ?? existing.provider,
+      mcp: updates.mcp ?? existing.mcp,
+      api: updates.api ?? existing.api,
+      local: updates.local ?? existing.local,
+    }
+
+    saveSourceConfig(workspace.rootPath, next)
+    const sources = loadWorkspaceSources(workspace.rootPath)
+    pushTyped(server, RPC_CHANNELS.sources.CHANGED, { to: 'workspace', workspaceId }, workspaceId, sources)
+    return sources.find(source => source.config.slug === sourceSlug)?.config ?? next
   })
 
   // Delete a source
