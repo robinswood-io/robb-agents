@@ -162,6 +162,8 @@ The schema is deliberately policy-first: hard allow/deny constraints are evaluat
 
 Current implementation lives in `packages/shared/src/config/routing-policy.ts` with validation and pure resolution helpers. `SessionManager` now applies the policy before backend creation/reuse when a workspace explicitly enables `routingPolicy`.
 
+A complete JSON example for client workspaces is maintained at `docs/robinswood/routing-policy.example.json` and covered by `packages/shared/tests/routing-policy-example.test.ts`.
+
 ## UI requirements
 
 Each assistant response should eventually display or expose:
@@ -180,5 +182,6 @@ Each assistant response should eventually display or expose:
 3. Persist provider/model metadata per assistant response. ✅
 4. Implement router policy schema. ✅
 5. Wire `resolveRoutingPolicy(...)` into runtime turn creation. ✅
-6. Add manual policy labels to sources/workspaces.
-7. Add UI/settings editor for workspace `routingPolicy`.
+6. Add validated example `routing-policy.example.json`. ✅
+7. Add manual policy labels to sources/workspaces.
+8. Add UI/settings editor for workspace `routingPolicy`.

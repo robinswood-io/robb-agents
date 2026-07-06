@@ -80,7 +80,7 @@ Exemples :
 - [x] Créer repo privé `robinswood-io/robinswood-agents`.
 - [x] Ajouter upstream Craft Agents OSS.
 - [x] Intégrer la locale française.
-- [x] Ajouter CI minimale (`Robinswood Validate`) ; validation upstream lourde disponible en manuel.
+- [x] Ajouter CI Robinswood (`Robinswood Validate`) avec install gelée, typechecks ciblés et tests router/runtime ; validation upstream lourde disponible en manuel.
 - [ ] Rebrand app, bundle ID, icône, docs, installer. Inventaire initial documenté dans `rebrand-inventory.md`.
 - [x] Clarifier obligations Apache 2.0 / trademark au niveau inventaire initial.
 
@@ -95,16 +95,17 @@ Exemples :
 
 ### Phase 2 — Switch manuel provider
 
-- [ ] Permettre un handoff provider après un tour, quand l’agent est idle.
-- [ ] Afficher provider/modèle par réponse.
-- [ ] Journaliser les changements.
-- [ ] Préserver le contexte via transcript/résumé canonique.
+- [x] Permettre un handoff provider après un tour, quand l’agent est idle.
+- [x] Afficher provider/modèle par réponse.
+- [x] Journaliser les changements via `routingMeta` persistant.
+- [x] Préserver le contexte via transcript/résumé canonique best-effort.
 
 ### Phase 3 — Router automatique
 
-- [ ] Définir `routingPolicy` par workspace/client.
+- [x] Définir `routingPolicy` par workspace/client.
+- [x] Ajouter un exemple client validé : `routing-policy.example.json`.
 - [ ] Classifier léger de difficulté/sensibilité.
-- [ ] Sélecteur de provider et modèle par tour.
+- [x] Sélecteur de provider et modèle par tour lorsque `routingPolicy.enabled=true`.
 - [ ] Fallbacks si provider indisponible.
 - [ ] Budget et métriques coût.
 

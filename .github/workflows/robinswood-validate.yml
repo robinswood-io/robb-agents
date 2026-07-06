@@ -51,6 +51,7 @@ jobs:
         run: |
           bun test \
             packages/shared/tests/routing-policy.test.ts \
+            packages/shared/tests/routing-policy-example.test.ts \
             apps/electron/src/renderer/event-processor/handlers/__tests__/text-message-id-sync.test.ts \
             apps/electron/src/renderer/components/app-shell/input/__tests__/picker-mode.test.ts \
             packages/server-core/src/sessions/refresh-connection-runtime.test.ts \

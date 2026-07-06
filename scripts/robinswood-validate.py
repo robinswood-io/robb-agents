@@ -88,10 +88,17 @@ def check_robinswood_docs() -> None:
         ROOT / "docs" / "robinswood" / "technical-spike-router.md",
         ROOT / "docs" / "robinswood" / "rebrand-inventory.md",
         ROOT / "docs" / "robinswood" / "provider-playbook.md",
+        ROOT / "docs" / "robinswood" / "routing-policy.example.json",
     ]
     missing = [path.relative_to(ROOT).as_posix() for path in required if not path.exists()]
     if missing:
         fail("Missing Robinswood documentation files: " + ", ".join(missing))
+    try:
+        example = json.loads((ROOT / "docs" / "robinswood" / "routing-policy.example.json").read_text(encoding="utf-8"))
+    except Exception as exc:  # noqa: BLE001 - validation script
+        fail(f"Failed to read routing-policy.example.json: {exc}")
+    if example.get("version") != 1 or not isinstance(example.get("rules"), list):
+        fail("routing-policy.example.json must include version: 1 and a rules array")
     print("✓ Robinswood memory docs")
 
 
