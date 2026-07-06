@@ -60,6 +60,8 @@ jobs:
             apps/electron/src/main/handlers/__tests__/registration.test.ts \
             apps/electron/src/renderer/event-processor/handlers/__tests__/text-message-id-sync.test.ts \
             apps/electron/src/renderer/components/app-shell/input/__tests__/picker-mode.test.ts \
+            apps/electron/src/renderer/hooks/__tests__/useOnboarding.test.ts \
+            apps/electron/src/main/__tests__/connection-setup-logic.test.ts \
             packages/server-core/src/sessions/refresh-connection-runtime.test.ts \
             packages/server-core/src/sessions/runtime-config.test.ts
 

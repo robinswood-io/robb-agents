@@ -98,7 +98,7 @@ Candidate providers:
 
 - Anthropic;
 - OpenAI;
-- Google AI Studio;
+- Google AI Studio / Gemini;
 - Azure/OpenAI EU where available and approved.
 
 Policy:
@@ -116,6 +116,7 @@ For each client workspace, configure at least three connections:
    - OVH or client EU endpoint once validated.
 3. **Premium / Complex**
    - OpenRouter or direct premium provider, only if allowed by policy.
+   - Google Gemini can now be added directly from the AI connection flow (`Google Gemini`, backed by `piAuthProvider: google`).
 
 ## Naming convention
 
@@ -199,4 +200,5 @@ Still to add:
 6. Add validated example `routing-policy.example.json`. ✅
 7. Add manual policy labels to sources/workspaces. ✅ (`routingSensitivity` on sources)
 8. Add source sensitivity UI. ✅
-9. Add UI/settings editor for workspace `routingPolicy`.
+9. Add explicit Google Gemini connection flow for agentic AI. ✅
+10. Add UI/settings editor for workspace `routingPolicy`.
