@@ -163,6 +163,8 @@ The schema is deliberately policy-first: hard allow/deny constraints are evaluat
 
 Current implementation lives in `packages/shared/src/config/routing-policy.ts` with validation and pure resolution helpers. `SessionManager` now applies the policy before backend creation/reuse when a workspace explicitly enables `routingPolicy`.
 
+`routingPolicy` can be edited from Workspace Settings → Router IA, or directly in workspace `config.json`.
+
 A complete JSON example for client workspaces is maintained at `docs/robinswood/routing-policy.example.json` and covered by `packages/shared/tests/routing-policy-example.test.ts`.
 
 Sources can also declare a manual sensitivity hint from the Source detail page UI, or directly in their `config.json`:
@@ -201,4 +203,4 @@ Still to add:
 7. Add manual policy labels to sources/workspaces. ✅ (`routingSensitivity` on sources)
 8. Add source sensitivity UI. ✅
 9. Add explicit Google Gemini connection flow for agentic AI. ✅
-10. Add UI/settings editor for workspace `routingPolicy`.
+10. Add UI/settings editor for workspace `routingPolicy`. ✅

@@ -30,6 +30,7 @@ import { PERMISSION_MODE_CONFIG } from '@craft-agent/shared/agent/mode-types'
 import type { DetailsPageMeta } from '@/lib/navigation-registry'
 import { SourceAvatar } from '@/components/ui/source-avatar'
 import { toast } from 'sonner'
+import { validateRoutingPolicy, type RoutingPolicy } from '@craft-agent/shared/config/routing-policy'
 
 import {
   SettingsSection,
@@ -66,6 +67,11 @@ export default function WorkspaceSettingsPage() {
   const [workingDirectory, setWorkingDirectory] = useState('')
   const [localMcpEnabled, setLocalMcpEnabled] = useState(true)
   const [isLoadingWorkspace, setIsLoadingWorkspace] = useState(true)
+  const [routingPolicyText, setRoutingPolicyText] = useState('')
+  const [routingPolicyErrors, setRoutingPolicyErrors] = useState<string[]>([])
+  const [routingPolicyWarnings, setRoutingPolicyWarnings] = useState<string[]>([])
+  const [isSavingRoutingPolicy, setIsSavingRoutingPolicy] = useState(false)
+  const [llmConnectionSlugs, setLlmConnectionSlugs] = useState<string[]>([])
 
   // Default sources state
   const [availableSources, setAvailableSources] = useState<LoadedSource[]>([])
@@ -92,6 +98,9 @@ export default function WorkspaceSettingsPage() {
           setPermissionMode(settings.permissionMode || 'ask')
           setWorkingDirectory(settings.workingDirectory || '')
           setLocalMcpEnabled(settings.localMcpEnabled ?? true)
+          setRoutingPolicyText(settings.routingPolicy ? JSON.stringify(settings.routingPolicy, null, 2) : '')
+          setRoutingPolicyErrors([])
+          setRoutingPolicyWarnings([])
           // Load cyclable permission modes from workspace settings
           if (settings.cyclablePermissionModes && settings.cyclablePermissionModes.length >= 2) {
             setEnabledModes(settings.cyclablePermissionModes)
@@ -99,6 +108,14 @@ export default function WorkspaceSettingsPage() {
 
           // Load default source slugs
           const savedSlugs = settings.enabledSourceSlugs ?? []
+
+          try {
+            const connections = await window.electronAPI.listLlmConnections()
+            setLlmConnectionSlugs(connections.map(connection => connection.slug))
+          } catch (error) {
+            console.error('Failed to load LLM connections for routingPolicy validation:', error)
+            setLlmConnectionSlugs([])
+          }
 
           // Load available sources and auto-heal stale slugs
           const sources = await window.electronAPI.getSources(activeWorkspaceId)
@@ -186,6 +203,59 @@ export default function WorkspaceSettingsPage() {
     },
     [activeWorkspaceId, t]
   )
+
+  const validateRoutingPolicyText = useCallback((text: string): { policy?: RoutingPolicy; errors: string[]; warnings: string[] } => {
+    const trimmed = text.trim()
+    if (!trimmed) {
+      return { policy: undefined, errors: [], warnings: [] }
+    }
+
+    let parsed: unknown
+    try {
+      parsed = JSON.parse(trimmed)
+    } catch (error) {
+      return {
+        errors: [error instanceof Error ? error.message : 'Invalid JSON'],
+        warnings: [],
+      }
+    }
+
+    const validation = validateRoutingPolicy(parsed as RoutingPolicy, llmConnectionSlugs)
+    return {
+      policy: parsed as RoutingPolicy,
+      errors: validation.errors,
+      warnings: validation.warnings,
+    }
+  }, [llmConnectionSlugs])
+
+  const handleValidateRoutingPolicy = useCallback(() => {
+    const result = validateRoutingPolicyText(routingPolicyText)
+    setRoutingPolicyErrors(result.errors)
+    setRoutingPolicyWarnings(result.warnings)
+    if (result.errors.length === 0) {
+      toast.success('routingPolicy valide')
+    }
+  }, [routingPolicyText, validateRoutingPolicyText])
+
+  const handleSaveRoutingPolicy = useCallback(async () => {
+    const result = validateRoutingPolicyText(routingPolicyText)
+    setRoutingPolicyErrors(result.errors)
+    setRoutingPolicyWarnings(result.warnings)
+    if (result.errors.length > 0) return
+
+    setIsSavingRoutingPolicy(true)
+    try {
+      const saved = await updateWorkspaceSetting('routingPolicy', result.policy)
+      if (saved) {
+        if (result.policy) {
+          setRoutingPolicyText(JSON.stringify(result.policy, null, 2))
+        }
+        toast.success(result.policy ? 'routingPolicy enregistrée' : 'routingPolicy supprimée')
+      }
+    } finally {
+      setIsSavingRoutingPolicy(false)
+    }
+  }, [routingPolicyText, updateWorkspaceSetting, validateRoutingPolicyText])
 
   // Workspace icon upload handler
   const handleIconUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -510,6 +580,63 @@ export default function WorkspaceSettingsPage() {
               ) : (
                 <p className="text-sm text-muted-foreground">{t("settings.workspace.noSourcesConfigured")}</p>
               )}
+            </SettingsSection>
+
+            {/* AI Router Policy */}
+            <SettingsSection
+              title="Router IA"
+              description="Politique workspace appliquée avant coût/performance pour choisir les connexions IA autorisées. Laisser vide pour désactiver."
+            >
+              <SettingsCard>
+                <div className="p-4 space-y-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <div className="text-sm font-medium">routingPolicy JSON</div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Slugs IA connus : {llmConnectionSlugs.length > 0 ? llmConnectionSlugs.join(', ') : 'aucune connexion chargée'}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={handleValidateRoutingPolicy}
+                        className="inline-flex items-center h-8 px-3 text-sm rounded-lg bg-background shadow-minimal hover:bg-foreground/[0.02] transition-colors"
+                      >
+                        Valider
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleSaveRoutingPolicy}
+                        disabled={isSavingRoutingPolicy}
+                        className="inline-flex items-center h-8 px-3 text-sm rounded-lg bg-background shadow-minimal hover:bg-foreground/[0.02] transition-colors disabled:opacity-50"
+                      >
+                        {isSavingRoutingPolicy ? 'Enregistrement…' : 'Enregistrer'}
+                      </button>
+                    </div>
+                  </div>
+                  <textarea
+                    value={routingPolicyText}
+                    onChange={(event) => {
+                      setRoutingPolicyText(event.target.value)
+                      setRoutingPolicyErrors([])
+                      setRoutingPolicyWarnings([])
+                    }}
+                    spellCheck={false}
+                    placeholder={'{\n  "version": 1,\n  "defaultSensitivity": "internal",\n  "rules": []\n}'}
+                    className="min-h-[220px] w-full resize-y rounded-lg bg-foreground-2 px-3 py-2 font-mono text-xs text-foreground outline-none shadow-minimal focus:bg-background focus:ring-2 focus:ring-ring"
+                  />
+                  {routingPolicyErrors.length > 0 && (
+                    <div className="rounded-lg bg-destructive/10 p-3 text-xs text-destructive space-y-1">
+                      {routingPolicyErrors.map((error) => <div key={error}>• {error}</div>)}
+                    </div>
+                  )}
+                  {routingPolicyWarnings.length > 0 && (
+                    <div className="rounded-lg bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-300 space-y-1">
+                      {routingPolicyWarnings.map((warning) => <div key={warning}>• {warning}</div>)}
+                    </div>
+                  )}
+                </div>
+              </SettingsCard>
             </SettingsSection>
 
             {/* Advanced */}

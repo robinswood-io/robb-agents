@@ -18,6 +18,7 @@ import type {
 import type { PermissionMode } from '../agent/mode-types'
 import type { ThinkingLevel } from '../agent/thinking-levels'
 import type { CustomEndpointConfig } from '../config/llm-connections'
+import type { RoutingPolicy } from '../config/routing-policy'
 import type {
   AuthRequest as SharedAuthRequest,
   CredentialInputMode as SharedCredentialInputMode,
@@ -525,6 +526,7 @@ export interface WorkspaceSettings {
   localMcpEnabled?: boolean
   defaultLlmConnection?: string
   enabledSourceSlugs?: string[]
+  routingPolicy?: RoutingPolicy
 }
 
 // ---------------------------------------------------------------------------

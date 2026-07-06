@@ -10,6 +10,8 @@ import type { RpcServer } from '@craft-agent/server-core/transport'
 import type { HandlerDeps } from '../handler-deps'
 import { requestClientOpenFileDialog } from '@craft-agent/server-core/transport'
 import { isValidWorkingDirectory } from '../../utils/path-validation'
+import { getLlmConnections } from '@craft-agent/shared/config/storage'
+import { validateRoutingPolicy } from '@craft-agent/shared/config/routing-policy'
 
 export const HANDLED_CHANNELS = [
   RPC_CHANNELS.workspace.SETTINGS_GET,
@@ -118,6 +120,7 @@ export function registerSettingsHandlers(server: RpcServer, deps: HandlerDeps): 
       localMcpEnabled: config?.localMcpServers?.enabled ?? true,
       defaultLlmConnection: config?.defaults?.defaultLlmConnection,
       enabledSourceSlugs: config?.defaults?.enabledSourceSlugs ?? [],
+      routingPolicy: config?.routingPolicy,
     }
   })
 
@@ -129,7 +132,7 @@ export function registerSettingsHandlers(server: RpcServer, deps: HandlerDeps): 
       : value
 
     // Validate key is a known workspace setting
-    const validKeys = ['name', 'model', 'enabledSourceSlugs', 'permissionMode', 'cyclablePermissionModes', 'thinkingLevel', 'workingDirectory', 'localMcpEnabled', 'defaultLlmConnection']
+    const validKeys = ['name', 'model', 'enabledSourceSlugs', 'permissionMode', 'cyclablePermissionModes', 'thinkingLevel', 'workingDirectory', 'localMcpEnabled', 'defaultLlmConnection', 'routingPolicy']
     if (!validKeys.includes(key)) {
       throw new Error(`Invalid workspace setting key: ${key}. Valid keys: ${validKeys.join(', ')}`)
     }
@@ -139,6 +142,14 @@ export function registerSettingsHandlers(server: RpcServer, deps: HandlerDeps): 
       const { getLlmConnection } = await import('@craft-agent/shared/config/storage')
       if (!getLlmConnection(normalizedValue as string)) {
         throw new Error(`LLM connection "${normalizedValue}" not found`)
+      }
+    }
+
+    if (key === 'routingPolicy' && normalizedValue !== undefined && normalizedValue !== null) {
+      const knownSlugs = getLlmConnections().map(connection => connection.slug)
+      const validation = validateRoutingPolicy(normalizedValue as any, knownSlugs)
+      if (!validation.valid) {
+        throw new Error(validation.errors.join('; '))
       }
     }
 
@@ -158,6 +169,10 @@ export function registerSettingsHandlers(server: RpcServer, deps: HandlerDeps): 
     // Handle 'name' specially - it's a top-level config property, not in defaults
     if (key === 'name') {
       config.name = String(normalizedValue).trim()
+    } else if (key === 'routingPolicy') {
+      config.routingPolicy = normalizedValue === undefined || normalizedValue === null
+        ? undefined
+        : normalizedValue as any
     } else if (key === 'localMcpEnabled') {
       // Store in localMcpServers.enabled (top-level, not in defaults)
       config.localMcpServers = config.localMcpServers || { enabled: true }
