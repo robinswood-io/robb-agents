@@ -1,6 +1,7 @@
 # Plan d’implémentation rebrand minimal — Robinswood Agents
 
 Date de référence : 2026-07-06
+Statut : Phase 1 partielle implémentée le 2026-07-07 — nom app/menu `Robinswood Agents`, NOTICE/fork attribution, garde-fou CI. Icône et metadata packaging restent à faire.
 
 ## Objectif
 
@@ -76,11 +77,11 @@ Créer une distribution privée clairement Robinswood, tout en :
 
 ## Ordre de commits recommandé
 
-1. `chore: add Robinswood NOTICE attribution`
-2. `feat: brand app shell as Robinswood Agents`
-3. `chore: add Robinswood app icons`
-4. `build: configure Robinswood Electron bundle metadata`
-5. `test: add Robinswood branding checks`
+1. `chore: add Robinswood NOTICE attribution` — fait dans `feat: brand visible app as Robinswood Agents`.
+2. `feat: brand app shell as Robinswood Agents` — fait pour app name/menu macOS.
+3. `test: add Robinswood branding checks` — fait (`robinswood-branding.test.ts`).
+4. `chore: add Robinswood app icons` — à faire.
+5. `build: configure Robinswood Electron bundle metadata` — à faire après icônes.
 
 ## Critère de sortie
 
