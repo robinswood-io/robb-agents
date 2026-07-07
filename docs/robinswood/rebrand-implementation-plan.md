@@ -83,6 +83,22 @@ Résultat :
 - Liquid Glass : `robinswood-Assets.car` absent, fallback attendu vers `robinswood-icon.icns` ; catalogue source Robinswood présent dans `resources/robinswood-icon.icon/` ;
 - smoke launch : binaire packagé démarré et stable pendant 12s avec `CRAFT_CONFIG_DIR` isolé.
 
+### Préflight signature/notarisation
+
+Commande non-bloquante : `python3 scripts/robinswood-signing-preflight.py`.
+
+Commande release stricte : `python3 scripts/robinswood-signing-preflight.py --strict`.
+
+État au 2026-07-07 :
+
+- `xcrun notarytool` disponible via Xcode ;
+- metadata `electron-builder.yml` Robinswood OK ;
+- aucun certificat `Developer ID Application` détecté dans le keychain ;
+- variables requises absentes : `APPLE_ID`, `APPLE_TEAM_ID`, `APPLE_APP_SPECIFIC_PASSWORD` ;
+- matériau de signature absent : `APPLE_SIGNING_IDENTITY` ou `CSC_LINK`.
+
+Conclusion : distribution externe macOS bloquée tant que les credentials Apple Developer / certificat Developer ID ne sont pas installés. Les builds locaux restent possibles en signature ad-hoc.
+
 ## Risques
 
 | Risque | Mitigation |
