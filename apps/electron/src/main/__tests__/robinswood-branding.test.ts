@@ -67,6 +67,11 @@ describe('Robinswood visible branding', () => {
     }
   })
 
+  it('uses Robinswood Agents in renderer document titles', () => {
+    expect(readRepoFile('apps/electron/src/renderer/index.html')).toContain('<title>Robinswood Agents</title>')
+    expect(readRepoFile('apps/electron/src/renderer/playground.html')).toContain('Design System Playground - Robinswood Agents')
+  })
+
   it('keeps fork attribution and upstream trademark clarity in NOTICE', () => {
     const notice = readRepoFile('NOTICE')
     expect(notice).toContain('Robinswood Agents')
