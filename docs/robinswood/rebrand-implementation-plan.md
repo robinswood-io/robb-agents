@@ -63,7 +63,7 @@ Créer une distribution privée clairement Robinswood, tout en :
 - vérification nom dans menu app — couvert par `robinswood-branding.test.ts` ;
 - vérification titres renderer — couvert par `robinswood-branding.test.ts` et Vite dev (`<title>Robinswood Agents</title>`) ;
 - vérification icône bundle — SHA-256 de l’`icon.icns` packagé identique à `resources/robinswood-icon.icns` ;
-- vérification chemin config si changé — non changé volontairement hors env de smoke-test ;
+- vérification chemin config si changé — `window-state.json` utilise maintenant le `CONFIG_DIR` centralisé et respecte `CRAFT_CONFIG_DIR`; le chemin config global par défaut reste à décider pour une migration Robinswood complète ;
 - vérification onboarding — reste dans l’E2E fonctionnel complet ;
 - validation CI Robinswood — verte jusqu’à `Robinswood Validate #28856581945`.
 

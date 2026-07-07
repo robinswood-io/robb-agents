@@ -103,6 +103,12 @@ describe('Robinswood visible branding', () => {
     expect(readRepoFile('apps/viewer/src/components/Header.tsx')).toContain('https://agents.robinswood.io')
   })
 
+  it('keeps window-state storage on the centralized config path for Robinswood/dev isolation', () => {
+    const windowState = readRepoFile('apps/electron/src/main/window-state.ts')
+    expect(windowState).toContain("@craft-agent/shared/config/paths")
+    expect(windowState).not.toContain("join(homedir(), '.craft-agent')")
+  })
+
   it('uses Robinswood Agents in visible runtime guidance outside the desktop shell', () => {
     expect(readRepoFile('packages/messaging-gateway/src/access-control.ts')).toContain('Robinswood Agents app')
     expect(readRepoFile('packages/messaging-gateway/src/commands.ts')).toContain('Robinswood Agents app')
