@@ -91,7 +91,7 @@ import { sessionMetaMapAtom, sendToWorkspaceAtom, type SessionMeta } from "@/ato
 import { sourcesAtom } from "@/atoms/sources"
 import { skillsAtom } from "@/atoms/skills"
 import { panelStackAtom, panelCountAtom, focusedPanelIdAtom, focusedSessionIdAtom, focusNextPanelAtom, focusPrevPanelAtom, parseSessionIdFromRoute } from "@/atoms/panel-stack"
-import { type SessionStatusId, type SessionStatus, statusConfigsToSessionStatuses } from "@/config/session-status-config"
+import { type SessionStatusId, type SessionStatus, statusConfigsToSessionStatuses, resolveLabelDisplayName, resolveStatusDisplayLabel } from "@/config/session-status-config"
 import { useStatuses } from "@/hooks/useStatuses"
 import { useLabels } from "@/hooks/useLabels"
 import { useViews } from "@/hooks/useViews"
@@ -314,6 +314,8 @@ function FilterLabelItems({
   pinnedLabelId?: string | null
   altHeld?: boolean
 }) {
+  const { t } = useTranslation()
+
   /** Toggle a label filter: if active → remove, if inactive → add as 'include' (or 'exclude' with Alt) */
   const toggleLabel = (id: string, altKey = false) => {
     setLabelFilter(prev => {
@@ -360,7 +362,7 @@ function FilterLabelItems({
               <StyledDropdownMenuSubTrigger>
                 <FilterMenuRow
                   icon={<LabelIcon label={label} size="lg" hasChildren />}
-                  label={label.name}
+                  label={resolveLabelDisplayName(label, t)}
                   accessory={
                     showIndicator ? <Check className="h-3 w-3 text-muted-foreground" /> : undefined
                   }
@@ -375,7 +377,7 @@ function FilterLabelItems({
                       <StyledDropdownMenuSubTrigger onClick={(e) => { e.preventDefault(); toggleLabel(label.id, e.altKey) }}>
                         <FilterMenuRow
                           icon={<LabelIcon label={label} size="lg" hasChildren />}
-                          label={label.name}
+                          label={resolveLabelDisplayName(label, t)}
                           accessory={<FilterModeBadge mode={mode} />}
                         />
                       </StyledDropdownMenuSubTrigger>
@@ -406,7 +408,7 @@ function FilterLabelItems({
                       >
                         <FilterMenuRow
                           icon={<LabelIcon label={label} size="lg" hasChildren />}
-                          label={label.name}
+                          label={resolveLabelDisplayName(label, t)}
                           accessory={isPinned ? <Check className="h-3 w-3 text-muted-foreground" /> : undefined}
                         />
                       </StyledDropdownMenuItem>
@@ -434,7 +436,7 @@ function FilterLabelItems({
               <StyledDropdownMenuSubTrigger onClick={(e) => { e.preventDefault(); toggleLabel(label.id, e.altKey) }}>
                 <FilterMenuRow
                   icon={<LabelIcon label={label} size="lg" />}
-                  label={label.name}
+                  label={resolveLabelDisplayName(label, t)}
                   accessory={<FilterModeBadge mode={mode} />}
                 />
               </StyledDropdownMenuSubTrigger>
@@ -458,7 +460,7 @@ function FilterLabelItems({
             >
               <FilterMenuRow
                 icon={<LabelIcon label={label} size="lg" />}
-                label={label.name}
+                label={resolveLabelDisplayName(label, t)}
                 accessory={isPinned ? <Check className="h-3 w-3 text-muted-foreground" /> : undefined}
               />
             </StyledDropdownMenuItem>
@@ -2689,7 +2691,7 @@ function AppShellContent({
                                     <StyledDropdownMenuItem disabled key={`pinned-status-${state.id}`}>
                                       <FilterMenuRow
                                         icon={state.icon}
-                                        label={state.label}
+                                        label={resolveStatusDisplayLabel(state, t)}
                                         accessory={<Check className="h-3 w-3 text-muted-foreground" />}
                                         iconStyle={state.iconColorable ? { color: state.resolvedColor } : undefined}
                                         noIconContainer
@@ -2706,7 +2708,7 @@ function AppShellContent({
                                     <StyledDropdownMenuItem disabled key={`pinned-label-${label.id}`}>
                                       <FilterMenuRow
                                         icon={<LabelIcon label={label} size="lg" />}
-                                        label={label.name}
+                                        label={resolveLabelDisplayName(label, t)}
                                         accessory={<Check className="h-3 w-3 text-muted-foreground" />}
                                       />
                                     </StyledDropdownMenuItem>
@@ -2721,7 +2723,7 @@ function AppShellContent({
                                       <StyledDropdownMenuSubTrigger onClick={(e) => { e.preventDefault(); setListFilter(prev => { const next = new Map(prev); next.delete(state.id); return next }) }}>
                                         <FilterMenuRow
                                           icon={state.icon}
-                                          label={state.label}
+                                          label={resolveStatusDisplayLabel(state, t)}
                                           accessory={<FilterModeBadge mode={mode} />}
                                           iconStyle={applyColor ? { color: state.resolvedColor } : undefined}
                                           noIconContainer
@@ -2754,7 +2756,7 @@ function AppShellContent({
                                       <StyledDropdownMenuSubTrigger onClick={(e) => { e.preventDefault(); setLabelFilter(prev => { const next = new Map(prev); next.delete(labelId); return next }) }}>
                                         <FilterMenuRow
                                           icon={<LabelIcon label={label} size="lg" />}
-                                          label={label.name}
+                                          label={resolveLabelDisplayName(label, t)}
                                           accessory={<FilterModeBadge mode={mode} />}
                                         />
                                       </StyledDropdownMenuSubTrigger>
@@ -2799,7 +2801,7 @@ function AppShellContent({
                                         <StyledDropdownMenuSubTrigger onClick={(e) => { e.preventDefault(); setListFilter(prev => { const next = new Map(prev); next.delete(state.id); return next }) }}>
                                           <FilterMenuRow
                                             icon={state.icon}
-                                            label={state.label}
+                                            label={resolveStatusDisplayLabel(state, t)}
                                             accessory={<FilterModeBadge mode={currentMode} />}
                                             iconStyle={applyColor ? { color: state.resolvedColor } : undefined}
                                             noIconContainer
@@ -2841,7 +2843,7 @@ function AppShellContent({
                                       >
                                         <FilterMenuRow
                                           icon={state.icon}
-                                          label={state.label}
+                                          label={resolveStatusDisplayLabel(state, t)}
                                           accessory={isPinned ? <Check className="h-3 w-3 text-muted-foreground" /> : null}
                                           iconStyle={applyColor ? { color: state.resolvedColor } : undefined}
                                           noIconContainer
@@ -2952,7 +2954,7 @@ function AppShellContent({
                                             >
                                               <FilterMenuRow
                                                 icon={state.icon}
-                                                label={state.label}
+                                                label={resolveStatusDisplayLabel(state, t)}
                                                 accessory={<FilterModeBadge mode={currentMode} />}
                                                 iconStyle={applyColor ? { color: state.resolvedColor } : undefined}
                                                 noIconContainer
@@ -3001,7 +3003,7 @@ function AppShellContent({
                                           >
                                             <FilterMenuRow
                                               icon={state.icon}
-                                              label={state.label}
+                                              label={resolveStatusDisplayLabel(state, t)}
                                               accessory={isPinned ? <Check className="h-3 w-3 text-muted-foreground" /> : null}
                                               iconStyle={applyColor ? { color: state.resolvedColor } : undefined}
                                               noIconContainer
