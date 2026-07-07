@@ -82,6 +82,50 @@ def check_french_default() -> None:
     print("✓ French-first UI default")
 
 
+def check_robinswood_packaging() -> None:
+    builder_path = ROOT / "apps" / "electron" / "electron-builder.yml"
+    builder = builder_path.read_text(encoding="utf-8")
+    required = [
+        "appId: io.robinswood.agents",
+        "productName: Robinswood Agents",
+        "copyright: Copyright © 2026 Robinswood",
+        "url: https://agents.robinswood.io/electron/latest",
+        "artifactName: \"Robinswood-Agents-${arch}.dmg\"",
+        "artifactName: \"Robinswood-Agents-${arch}.${ext}\"",
+        "icon: resources/robinswood-icon.icns",
+        "icon: resources/robinswood-icon.ico",
+        "icon: resources/robinswood-icon.png",
+    ]
+    missing = [token for token in required if token not in builder]
+    if missing:
+        fail("Robinswood Electron packaging metadata missing: " + ", ".join(missing))
+    forbidden = [
+        "appId: com.lukilabs.craft-agent",
+        "productName: Craft Agents",
+        "url: https://agents.craft.do/electron/latest",
+        "artifactName: \"Craft-Agents-",
+    ]
+    present_forbidden = [token for token in forbidden if token in builder]
+    if present_forbidden:
+        fail("Official Craft packaging metadata still present in electron-builder.yml: " + ", ".join(present_forbidden))
+
+    for rel in [
+        "apps/electron/resources/robinswood-icon.svg",
+        "apps/electron/resources/robinswood-icon.png",
+        "apps/electron/resources/robinswood-icon.icns",
+        "apps/electron/resources/robinswood-icon.ico",
+    ]:
+        path = ROOT / rel
+        if not path.exists() or path.stat().st_size < 100:
+            fail(f"Missing or empty Robinswood icon asset: {rel}")
+
+    after_pack = (ROOT / "apps" / "electron" / "scripts" / "afterPack.cjs").read_text(encoding="utf-8")
+    if "robinswood-Assets.car" not in after_pack or "'Craft Agents.app'" in after_pack:
+        fail("afterPack.cjs must use Robinswood icon assets and avoid hardcoded Craft Agents.app")
+
+    print("✓ Robinswood packaging metadata")
+
+
 def check_robinswood_docs() -> None:
     required = [
         ROOT / "docs" / "robinswood" / "README.md",
@@ -107,6 +151,7 @@ def main() -> None:
     check_french_locale()
     check_french_default()
     check_robinswood_docs()
+    check_robinswood_packaging()
     print("Robinswood lightweight validation passed")
 
 
