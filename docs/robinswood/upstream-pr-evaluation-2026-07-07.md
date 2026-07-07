@@ -8,6 +8,28 @@ Objectif : identifier les PR upstream intéressantes à intégrer dans le fork p
 
 Priorité recommandée : intégrer d’abord les petits correctifs mergeables qui réduisent les risques client sans toucher au cœur Robb router/Gemini/rebrand.
 
+## Statut d’intégration — 2026-07-07 15:37 Europe/Paris
+
+Intégré dans `robinswood/main` :
+
+| PR upstream | Statut Robb | Commit Robb |
+|---|---|---|
+| #822 — masked API key not sent to backend | Intégré | `623fb292` |
+| #865 — sanitize MCP source proxy tool names | Intégré | `623fb292` |
+| #889 — confirm before deleting workspace | Intégré | `623fb292` |
+| #945 — percent-encoded file path links | Intégré | `623fb292` |
+| #821 — refresh models after LLM reauth | Intégré | `ca521ab2` |
+| #836 — keep macOS Dock icon consistent | Intégré | `ca521ab2` |
+| #871 — inherit Windows system proxy | Intégré | `ca521ab2` |
+| #789 — symlinked skills discovery | Intégré | `ca521ab2` |
+| #890 — per-group pagination status/unread | Intégré | `ca521ab2` |
+| #939 — persisted gitBashPath envOverrides | Intégré | `ca521ab2` |
+| #918 — relative + multiplatform source paths | Intégré avec couverture Robb `CONFIG_DIR` | `e46a9252` |
+| #893 — persist auto-update diagnostics | Déjà présent dans la base upstream (`556c59a7`) ; adaptation Robb ajoutée | `8cb426f3` |
+| #952 — i18n built-in status/label names | Intégré avec traductions FR et tests de non-régression | `9096940f` |
+
+Validation locale après intégration : Robinswood validator, typechecks `shared`/`server-core`/`electron`, 227 tests ciblés, build subprocess, et smoke-test DMG `Robb-Agents-arm64.dmg`.
+
 ### Lot A — À intégrer en premier
 
 | PR | Intérêt Robb | Applicabilité locale | Recommandation |
