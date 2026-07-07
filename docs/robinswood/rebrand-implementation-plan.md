@@ -1,7 +1,7 @@
 # Plan d’implémentation rebrand minimal — Robinswood Agents
 
-Date de référence : 2026-07-06
-Statut : Phase 1 + metadata packaging implémentés le 2026-07-07 — nom app/menu `Robinswood Agents`, NOTICE/fork attribution, icônes Robinswood, bundle id `io.robinswood.agents`, artefacts `Robinswood-Agents-*`, update endpoint Robinswood, garde-fous CI. Build packagé/notarisation restent à valider.
+Date de référence : 2026-07-07
+Statut : Rebrand minimal + packaging Electron validés le 2026-07-07 — nom app/menu/titres renderer `Robinswood Agents`, NOTICE/fork attribution, icônes Robinswood, bundle id `io.robinswood.agents`, artefacts `Robinswood-Agents-*`, update endpoint Robinswood, garde-fous CI. Build DMG ARM64 réel validé localement ; notarisation/signature Developer ID restent à faire avant distribution externe.
 
 ## Objectif
 
@@ -58,13 +58,28 @@ Créer une distribution privée clairement Robinswood, tout en :
 
 ## Tests rebrand
 
-- build Electron macOS ;
-- lancement app ;
-- vérification nom dans menu app ;
-- vérification icône dock/app switcher ;
-- vérification chemin config si changé ;
-- vérification onboarding ;
-- validation CI Robinswood.
+- build Electron macOS — validé le 2026-07-07 avec `Robinswood-Agents-arm64.dmg` ;
+- lancement app — smoke-test packagé validé avec config isolée ;
+- vérification nom dans menu app — couvert par `robinswood-branding.test.ts` ;
+- vérification titres renderer — couvert par `robinswood-branding.test.ts` et Vite dev (`<title>Robinswood Agents</title>`) ;
+- vérification icône bundle — SHA-256 de l’`icon.icns` packagé identique à `resources/robinswood-icon.icns` ;
+- vérification chemin config si changé — non changé volontairement hors env de smoke-test ;
+- vérification onboarding — reste dans l’E2E fonctionnel complet ;
+- validation CI Robinswood — verte jusqu’à `Robinswood Validate #28856581945`.
+
+### Validation packaging du 2026-07-07
+
+Commande : `apps/electron/scripts/build-dmg.sh arm64`.
+
+Résultat :
+
+- DMG : `apps/electron/release/Robinswood-Agents-arm64.dmg` (`256M`) ;
+- app montée : `Robinswood Agents.app` ;
+- bundle id : `io.robinswood.agents` ;
+- exécutable : Mach-O `arm64` ;
+- signature : ad-hoc, notarisation non effectuée faute certificat Developer ID ;
+- Liquid Glass : `robinswood-Assets.car` absent, fallback attendu vers `robinswood-icon.icns` ;
+- smoke launch : binaire packagé démarré et stable pendant 12s avec `CRAFT_CONFIG_DIR` isolé.
 
 ## Risques
 
