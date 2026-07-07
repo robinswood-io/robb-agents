@@ -269,6 +269,12 @@ export interface RoutingMeta {
   fallbackFromConnectionSlug?: string;
   /** Classified reason for using a policy-authorized fallback. */
   fallbackReason?: 'connection-unavailable' | 'backend-create-failed' | 'auth-failed' | 'provider-error' | 'model-unavailable' | string;
+  /** Estimated cost in EUR for this assistant turn, when sourced. */
+  estimatedCostEur?: number;
+  /** Actual provider-reported cost in EUR for this assistant turn, when available. */
+  actualCostEur?: number;
+  /** Provenance of the token/cost data; never imply a real cost without a source. */
+  tokenUsageSource?: 'sdk' | 'provider' | 'estimated' | 'unavailable' | string;
 }
 
 /**

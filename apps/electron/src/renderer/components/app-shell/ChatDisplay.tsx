@@ -2232,6 +2232,9 @@ function RoutingMetaBadge({ message }: { message: Message }) {
   const label = [provider, model].filter(Boolean).join(' · ')
   const reason = meta.reason ?? 'session-connection'
   const policyRuleIds = meta.policyRuleIds?.filter(Boolean) ?? []
+  const estimatedCost = typeof meta.estimatedCostEur === 'number' ? meta.estimatedCostEur : undefined
+  const actualCost = typeof meta.actualCostEur === 'number' ? meta.actualCostEur : undefined
+  const hasCost = estimatedCost !== undefined || actualCost !== undefined
 
   return (
     <Tooltip>
@@ -2252,6 +2255,13 @@ function RoutingMetaBadge({ message }: { message: Message }) {
           {meta.sensitivity && <div><span className="text-muted-foreground">Sensibilité:</span> {meta.sensitivity}</div>}
           {meta.fallbackFromConnectionSlug && <div><span className="text-muted-foreground">Fallback depuis:</span> {meta.fallbackFromConnectionSlug}</div>}
           {meta.fallbackReason && <div><span className="text-muted-foreground">Raison fallback:</span> {meta.fallbackReason}</div>}
+          {hasCost && (
+            <div>
+              <span className="text-muted-foreground">Coût:</span>{' '}
+              {actualCost !== undefined ? `${actualCost.toFixed(6)} € réel` : `${estimatedCost!.toFixed(6)} € estimé`}
+            </div>
+          )}
+          {meta.tokenUsageSource && meta.tokenUsageSource !== 'unavailable' && <div><span className="text-muted-foreground">Source coût:</span> {meta.tokenUsageSource}</div>}
           {policyRuleIds.length > 0 && (
             <div className="break-words">
               <span className="text-muted-foreground">Règles:</span> {policyRuleIds.join(', ')}

@@ -97,6 +97,7 @@ import { ensureLabelsExist } from '@craft-agent/shared/labels/crud'
 import { loadStatusConfig } from '@craft-agent/shared/statuses/storage'
 import { AutomationSystem, createPromptHistoryEntry, appendAutomationHistoryEntry, type AutomationSystemMetadataSnapshot } from '@craft-agent/shared/automations'
 import { buildBackendRuntimeSignature, buildRestartRequiredSignature, filterAttachmentsForModelInput } from './runtime-config'
+import { buildRoutingCostMeta, applyRoutingCostMetaToLatestAssistantMessage } from './routing-audit'
 import { classifyRoutingFallbackReason, selectRoutingFallbackCandidate } from './routing-fallback'
 
 // Import from server-core domain utilities
@@ -7647,6 +7648,24 @@ export class SessionManager implements ISessionManager {
           // Update context window (use latest value - may change if model switches)
           if (event.usage.contextWindow) {
             managed.tokenUsage.contextWindow = event.usage.contextWindow
+          }
+
+          const updatedMessage = applyRoutingCostMetaToLatestAssistantMessage(
+            managed.messages,
+            buildRoutingCostMeta(event.usage),
+          )
+          if (updatedMessage?.routingMeta) {
+            this.sendEvent({
+              type: 'text_complete',
+              sessionId,
+              text: updatedMessage.content,
+              isIntermediate: updatedMessage.isIntermediate,
+              turnId: updatedMessage.turnId,
+              parentToolUseId: updatedMessage.parentToolUseId,
+              timestamp: updatedMessage.timestamp,
+              messageId: updatedMessage.id,
+              routingMeta: updatedMessage.routingMeta,
+            }, workspaceId)
           }
         }
         break
