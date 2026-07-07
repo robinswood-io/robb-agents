@@ -113,6 +113,11 @@ describe('Robinswood visible branding', () => {
     expect(windowState).toContain("@craft-agent/shared/config/paths")
     expect(windowState).not.toContain("join(homedir(), '.craft-agent')")
 
+    const logger = readRepoFile('apps/electron/src/main/logger.ts')
+    expect(logger).toContain("join(CONFIG_DIR, 'logs', 'messaging-gateway.log')")
+    expect(logger).toContain("join(CONFIG_DIR, 'logs', 'auto-update.log')")
+    expect(logger).not.toContain("join(homedir(), '.craft-agent', 'logs'")
+
     const electronDev = readRepoFile('scripts/electron-dev.ts')
     expect(electronDev).toContain('Robb Agents')
     expect(electronDev).toContain('.robb-agents-${instanceNum}')
