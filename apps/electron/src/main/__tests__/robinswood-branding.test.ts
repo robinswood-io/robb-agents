@@ -93,9 +93,22 @@ describe('Robinswood visible branding', () => {
     expect(readRepoFile('apps/electron/src/renderer/lib/provider-icons.ts')).toContain('ROBINSWOOD_BACKEND_NAME')
   })
 
-  it('uses Robinswood Agents in renderer document titles', () => {
+  it('uses Robinswood Agents in renderer, WebUI, and viewer document titles', () => {
     expect(readRepoFile('apps/electron/src/renderer/index.html')).toContain('<title>Robinswood Agents</title>')
     expect(readRepoFile('apps/electron/src/renderer/playground.html')).toContain('Design System Playground - Robinswood Agents')
+    expect(readRepoFile('apps/webui/src/index.html')).toContain('<title>Robinswood Agents</title>')
+    expect(readRepoFile('apps/webui/src/login.html')).toContain('<title>Robinswood Agents — Login</title>')
+    expect(readRepoFile('apps/webui/src/login.html')).toContain('<h1>Robinswood Agents</h1>')
+    expect(readRepoFile('apps/viewer/index.html')).toContain('<title>Robinswood Agents Session Viewer</title>')
+    expect(readRepoFile('apps/viewer/src/components/Header.tsx')).toContain('https://agents.robinswood.io')
+  })
+
+  it('uses Robinswood Agents in visible runtime guidance outside the desktop shell', () => {
+    expect(readRepoFile('packages/messaging-gateway/src/access-control.ts')).toContain('Robinswood Agents app')
+    expect(readRepoFile('packages/messaging-gateway/src/commands.ts')).toContain('Robinswood Agents app')
+    expect(readRepoFile('packages/messaging-whatsapp-worker/src/worker.ts')).toContain("Browsers.macOS('Robinswood Agents')")
+    expect(readRepoFile('packages/server-core/src/sessions/RemoteBrowserPaneManager.ts')).toContain('Robinswood Agents desktop app')
+    expect(readRepoFile('packages/shared/src/sources/builtin-sources.ts')).toContain('Upstream Craft Agents OSS Docs')
   })
 
   it('keeps fork attribution and upstream trademark clarity in NOTICE', () => {

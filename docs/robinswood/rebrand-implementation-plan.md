@@ -1,7 +1,7 @@
 # Plan d’implémentation rebrand minimal — Robinswood Agents
 
 Date de référence : 2026-07-07
-Statut : Rebrand minimal + packaging Electron validés le 2026-07-07 — nom app/menu/titres renderer/onboarding/settings visibles `Robinswood Agents`, backend visible `Robinswood Agents Backend`, NOTICE/fork attribution, icônes Robinswood, catalogue source `.icon` Robinswood, bundle id `io.robinswood.agents`, artefacts `Robinswood-Agents-*`, update endpoint Robinswood, garde-fous CI. Build DMG ARM64 réel validé localement ; notarisation/signature Developer ID et compilation Liquid Glass `robinswood-Assets.car` prouvée restent à faire avant distribution externe.
+Statut : Rebrand minimal + packaging Electron validés le 2026-07-07 — nom app/menu/titres renderer/WebUI/viewer/onboarding/settings visibles `Robinswood Agents`, backend visible `Robinswood Agents Backend`, NOTICE/fork attribution, icônes Robinswood, catalogue source `.icon` Robinswood, bundle id `io.robinswood.agents`, artefacts `Robinswood-Agents-*`, update endpoint Robinswood, garde-fous CI. Build DMG ARM64 réel validé localement ; notarisation/signature Developer ID et compilation Liquid Glass `robinswood-Assets.car` prouvée restent à faire avant distribution externe.
 
 ## Objectif
 
@@ -28,7 +28,7 @@ Créer une distribution privée clairement Robinswood, tout en :
 - titre fenêtre ;
 - icône app ;
 - écran onboarding — rebrandé dans les valeurs i18n visibles ;
-- textes client-facing qui disent encore `Craft Agents` hors attribution — nettoyés pour les principales surfaces app/onboarding/settings/provider labels.
+- textes client-facing qui disent encore `Craft Agents` hors attribution — nettoyés pour les principales surfaces app/onboarding/settings/provider labels/WebUI/viewer/messages de passerelle.
 
 À ne pas modifier en Phase 1 :
 

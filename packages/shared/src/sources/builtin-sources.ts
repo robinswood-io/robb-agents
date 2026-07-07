@@ -37,7 +37,7 @@ export function getDocsSource(workspaceId: string, workspaceRootPath: string): L
   // Return a placeholder - this shouldn't be called anymore
   const placeholderConfig: FolderSourceConfig = {
     id: 'builtin-craft-agents-docs',
-    name: 'Craft Agents Docs',
+    name: 'Upstream Craft Agents OSS Docs',
     slug: 'craft-agents-docs',
     enabled: false,
     provider: 'mintlify',
@@ -47,7 +47,7 @@ export function getDocsSource(workspaceId: string, workspaceRootPath: string): L
       url: 'https://agents.craft.do/docs/mcp',
       authType: 'none',
     },
-    tagline: 'Search Craft Agents documentation and source setup guides',
+    tagline: 'Search upstream Craft Agents OSS documentation and source setup guides',
     icon: '📚',
     isAuthenticated: true,
     connectionStatus: 'connected',

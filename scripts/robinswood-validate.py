@@ -134,6 +134,21 @@ def check_robinswood_packaging() -> None:
     if "robinswood-Assets.car" not in after_pack or "'Craft Agents.app'" in after_pack:
         fail("afterPack.cjs must use Robinswood icon assets and avoid hardcoded Craft Agents.app")
 
+    web_surfaces = {
+        "apps/electron/src/renderer/index.html": "<title>Robinswood Agents</title>",
+        "apps/webui/src/index.html": "<title>Robinswood Agents</title>",
+        "apps/webui/src/login.html": "<title>Robinswood Agents — Login</title>",
+        "apps/webui/src/public/manifest.json": "Robinswood Agents",
+        "apps/viewer/index.html": "Robinswood Agents Session Viewer",
+        "apps/viewer/src/components/Header.tsx": "https://agents.robinswood.io",
+    }
+    missing_web = []
+    for rel, token in web_surfaces.items():
+        if token not in (ROOT / rel).read_text(encoding="utf-8"):
+            missing_web.append(f"{rel}: {token}")
+    if missing_web:
+        fail("Robinswood web/viewer branding metadata missing: " + ", ".join(missing_web))
+
     print("✓ Robinswood packaging metadata")
 
 

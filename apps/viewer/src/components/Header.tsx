@@ -6,9 +6,9 @@ import { Sun, Moon, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 /**
- * CraftAgentLogo - The Craft Agent "C" logo
+ * RobinswoodLogo - compact Robinswood Agents monogram
  */
-function CraftAgentLogo({ className }: { className?: string }) {
+function RobinswoodLogo({ className }: { className?: string }) {
   return (
     <svg
       className={className}
@@ -16,12 +16,12 @@ function CraftAgentLogo({ className }: { className?: string }) {
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <g transform="translate(3.4502, 3)" fill="currentColor">
-        <path
-          d="M3.17890888,3.6 L3.17890888,0 L16,0 L16,3.6 L3.17890888,3.6 Z M9.642,7.2 L9.64218223,10.8 L0,10.8 L0,3.6 L16,3.6 L16,7.2 L9.642,7.2 Z M3.17890888,18 L3.178,14.4 L0,14.4 L0,10.8 L16,10.8 L16,18 L3.17890888,18 Z"
-          fillRule="nonzero"
-        />
-      </g>
+      <rect x="2" y="2" width="20" height="20" rx="5" fill="#08033A" />
+      <path
+        d="M6.4 16.6V7.4h6.2c2.35 0 4.05 1.28 4.05 3.28 0 1.36-.74 2.39-1.95 2.92l2.85 3h-3.4l-2.48-2.66H9.2v2.66H6.4Zm2.8-4.96h3.02c.85 0 1.4-.39 1.4-1.06s-.55-1.06-1.4-1.06H9.2v2.12Z"
+        fill="#F7F3ED"
+      />
+      <path d="M5.9 17.7c3.1-.7 5.45-.62 7.25-.08 1.86.56 3.34.48 5.85-.86" stroke="#E0796B" strokeWidth="1.4" strokeLinecap="round" />
     </svg>
   )
 }
@@ -40,11 +40,11 @@ export function Header({ hasSession, sessionTitle, isDark, onToggleTheme, onClea
     <header className="shrink-0 grid grid-cols-[auto_1fr_auto] items-center px-4 py-3">
       {/* Logo - links to main site */}
       <a
-        href="https://agents.craft.do"
+        href="https://agents.robinswood.io"
         className="hover:opacity-80 transition-opacity"
-        title="Craft Agent"
+        title="Robinswood Agents"
       >
-        <CraftAgentLogo className="w-6 h-6 text-[#9570BE]" />
+        <RobinswoodLogo className="w-6 h-6" />
       </a>
 
       {/* Session title - centered */}
