@@ -1,4 +1,4 @@
-import { validateRoutingPolicy, type RoutingPolicy } from '@craft-agent/shared/config/routing-policy'
+import { validateRoutingPolicy, type RoutingPolicy } from '@config/routing-policy'
 
 export interface ParsedRoutingPolicyText {
   policy?: RoutingPolicy
