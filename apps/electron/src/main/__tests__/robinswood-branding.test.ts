@@ -2,7 +2,7 @@ import { describe, expect, it } from 'bun:test'
 import { createHash } from 'node:crypto'
 import { existsSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
-import { ROBINSWOOD_APP_NAME, ROBINSWOOD_NOTICE } from '@craft-agent/shared/robinswood-branding'
+import { ROBINSWOOD_APP_NAME, ROBINSWOOD_BACKEND_NAME, ROBINSWOOD_NOTICE } from '@craft-agent/shared/robinswood-branding'
 
 const repoRoot = join(import.meta.dir, '..', '..', '..', '..', '..')
 
@@ -17,6 +17,7 @@ function sha256(relativePath: string): string {
 describe('Robinswood visible branding', () => {
   it('defines the Robinswood app name in shared branding constants', () => {
     expect(ROBINSWOOD_APP_NAME).toBe('Robinswood Agents')
+    expect(ROBINSWOOD_BACKEND_NAME).toBe('Robinswood Agents Backend')
     expect(ROBINSWOOD_NOTICE).toContain('private Robinswood distribution')
   })
 
@@ -79,6 +80,17 @@ describe('Robinswood visible branding', () => {
     if (existsSync(robinswoodAssetsCar)) {
       expect(sha256('apps/electron/resources/robinswood-Assets.car')).not.toEqual(sha256('apps/electron/resources/Assets.car'))
     }
+  })
+
+  it('uses Robinswood labels in visible locale values and provider labels', () => {
+    const en = readRepoFile('packages/shared/src/i18n/locales/en.json')
+    const fr = readRepoFile('packages/shared/src/i18n/locales/fr.json')
+    expect(en).toContain('Welcome to Robinswood Agents')
+    expect(fr).toContain('Bienvenue dans Robinswood Agents')
+    expect(en).toContain('Robinswood Agents Backend')
+    expect(fr).toContain('Robinswood Agents Backend')
+    expect(readRepoFile('apps/electron/src/renderer/components/app-shell/input/model-picker-helpers.ts')).toContain('ROBINSWOOD_BACKEND_NAME')
+    expect(readRepoFile('apps/electron/src/renderer/lib/provider-icons.ts')).toContain('ROBINSWOOD_BACKEND_NAME')
   })
 
   it('uses Robinswood Agents in renderer document titles', () => {

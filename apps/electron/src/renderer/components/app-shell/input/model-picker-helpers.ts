@@ -2,6 +2,7 @@ import {
   isLocalConnection,
   type LlmConnection,
 } from '@config/llm-connections'
+import { ROBINSWOOD_BACKEND_NAME } from '@craft-agent/shared/robinswood-branding'
 
 /**
  * Format token count for display (e.g., 1500 -> "1.5k", 200000 -> "200k").
@@ -30,7 +31,7 @@ export type ConnectionGroup = [groupName: string, connections: LlmConnection[]]
 /**
  * Group connections by provider type for hierarchical picker rendering.
  * Each provider section can contain multiple connections (API Key, OAuth, …).
- * Order is significant for UI: Anthropic, Local, Craft Agents Backend.
+ * Order is significant for UI: Anthropic, Local, Robinswood backend.
  * Empty groups are dropped.
  */
 export function groupConnectionsByProvider<T extends LlmConnection>(
@@ -39,7 +40,7 @@ export function groupConnectionsByProvider<T extends LlmConnection>(
   const groups: Record<string, T[]> = {
     'Anthropic': [],
     'Local': [],
-    'Craft Agents Backend': [],
+    [ROBINSWOOD_BACKEND_NAME]: [],
   }
   for (const conn of connections) {
     const provider = conn.providerType || 'anthropic'
@@ -48,7 +49,7 @@ export function groupConnectionsByProvider<T extends LlmConnection>(
     } else if (provider === 'pi_compat' && isLocalConnection(conn)) {
       groups['Local'].push(conn)
     } else if (provider === 'pi' || provider === 'pi_compat') {
-      groups['Craft Agents Backend'].push(conn)
+      groups[ROBINSWOOD_BACKEND_NAME].push(conn)
     }
   }
   return Object.entries(groups).filter(([, conns]) => conns.length > 0)

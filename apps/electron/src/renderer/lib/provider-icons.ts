@@ -21,6 +21,7 @@ import piIcon from '@/assets/provider-icons/pi.svg'
 import vercelIcon from '@/assets/provider-icons/vercel.svg'
 
 import type { LlmProviderType } from '@craft-agent/shared/config/llm-connections'
+import { ROBINSWOOD_BACKEND_NAME } from '@craft-agent/shared/robinswood-branding'
 
 /**
  * Icon URLs for each provider
@@ -55,8 +56,8 @@ const providerDisplayNames: Record<string, string> = {
   minimax: 'Minimax',
   ollama: 'Ollama',
   openrouter: 'OpenRouter',
-  pi: 'Craft Agents Backend',
-  pi_compat: 'Craft Agents Backend',
+  pi: ROBINSWOOD_BACKEND_NAME,
+  pi_compat: ROBINSWOOD_BACKEND_NAME,
   vercel: 'Vercel',
 }
 

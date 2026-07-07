@@ -1,6 +1,6 @@
 {
-  "name": "Craft Agents",
-  "short_name": "Craft Agents",
+  "name": "Robinswood Agents",
+  "short_name": "Robinswood Agents",
   "description": "AI agent interface",
   "start_url": "./",
   "display": "standalone",
