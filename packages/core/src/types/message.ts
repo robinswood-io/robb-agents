@@ -265,6 +265,10 @@ export interface RoutingMeta {
   sensitivity?: string;
   /** IDs of routingPolicy rules that matched the turn, when available. */
   policyRuleIds?: string[];
+  /** Primary connection that failed before streaming, when a policy-authorized fallback was used. */
+  fallbackFromConnectionSlug?: string;
+  /** Classified reason for using a policy-authorized fallback. */
+  fallbackReason?: 'connection-unavailable' | 'backend-create-failed' | 'auth-failed' | 'provider-error' | 'model-unavailable' | string;
 }
 
 /**

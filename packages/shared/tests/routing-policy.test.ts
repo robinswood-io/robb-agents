@@ -149,4 +149,97 @@ describe('resolveRoutingPolicy()', () => {
     expect(decision.selectedConnectionSlug).toBe('anthropic-direct');
     expect(decision.reason).toBe('requested-connection-allowed');
   });
+
+  it('prefers rule-local fallback order after the selected primary connection', () => {
+    const policy: RoutingPolicy = {
+      version: 1,
+      enabled: true,
+      rules: [
+        {
+          id: 'confidential-sovereign-first',
+          when: { sensitivity: ['confidential'] },
+          allowConnectionSlugs: ['local-ollama', 'ovh-sovereign'],
+          preferConnectionSlugs: ['ovh-sovereign'],
+          fallbackConnectionSlugs: ['openrouter-balanced', 'local-ollama'],
+        },
+      ],
+    };
+
+    const decision = resolveRoutingPolicy(policy, connections, { sensitivity: 'confidential' });
+
+    expect(decision.selectedConnectionSlug).toBe('ovh-sovereign');
+    expect(decision.fallbackConnectionSlugs).toEqual(['local-ollama']);
+  });
+
+  it('uses the global fallback when the rule has no authorized fallback', () => {
+    const policy: RoutingPolicy = {
+      version: 1,
+      enabled: true,
+      defaultAllowConnectionSlugs: ['local-ollama', 'openrouter-balanced'],
+      fallbackConnectionSlug: 'local-ollama',
+      rules: [
+        {
+          id: 'internal-openrouter-first',
+          when: { sensitivity: ['internal'] },
+          preferConnectionSlugs: ['openrouter-balanced'],
+        },
+      ],
+    };
+
+    const decision = resolveRoutingPolicy(policy, connections, { sensitivity: 'internal' });
+
+    expect(decision.selectedConnectionSlug).toBe('openrouter-balanced');
+    expect(decision.fallbackConnectionSlugs[0]).toBe('local-ollama');
+  });
+
+  it('does not expose fallback candidates outside the effective allow-list', () => {
+    const policy: RoutingPolicy = {
+      version: 1,
+      enabled: true,
+      rules: [
+        {
+          id: 'confidential-local-only',
+          when: { sensitivity: ['confidential'] },
+          allowConnectionSlugs: ['local-ollama'],
+          preferConnectionSlugs: ['local-ollama'],
+          fallbackConnectionSlugs: ['anthropic-direct', 'openrouter-balanced'],
+        },
+      ],
+      fallbackConnectionSlug: 'anthropic-direct',
+    };
+
+    const decision = resolveRoutingPolicy(policy, connections, { sensitivity: 'confidential' });
+
+    expect(decision.selectedConnectionSlug).toBe('local-ollama');
+    expect(decision.fallbackConnectionSlugs).toEqual([]);
+  });
+
+  it('keeps restricted turns away from premium/Gemini-style providers when only local routes are allowed', () => {
+    const restrictedConnections = [
+      connection('local-rapide', 'pi_compat'),
+      connection('souverain-standard', 'pi_compat'),
+      connection('google-gemini', 'pi'),
+      connection('premium-claude', 'anthropic'),
+    ];
+    const policy: RoutingPolicy = {
+      version: 1,
+      enabled: true,
+      rules: [
+        {
+          id: 'restricted-local-only',
+          when: { sensitivity: ['restricted'] },
+          allowConnectionSlugs: ['local-rapide', 'souverain-standard'],
+          preferConnectionSlugs: ['souverain-standard'],
+          fallbackConnectionSlugs: ['google-gemini', 'premium-claude', 'local-rapide'],
+        },
+      ],
+    };
+
+    const decision = resolveRoutingPolicy(policy, restrictedConnections, { sensitivity: 'restricted' });
+
+    expect(decision.selectedConnectionSlug).toBe('souverain-standard');
+    expect(decision.fallbackConnectionSlugs).toEqual(['local-rapide']);
+    expect(decision.allowedConnectionSlugs).not.toContain('google-gemini');
+    expect(decision.allowedConnectionSlugs).not.toContain('premium-claude');
+  });
 });

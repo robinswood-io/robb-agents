@@ -2239,6 +2239,7 @@ function RoutingMetaBadge({ message }: { message: Message }) {
         <div className="mt-2 inline-flex max-w-full cursor-help select-none items-center gap-1 truncate rounded-sm text-[10px] text-foreground/35 hover:text-foreground/55">
           <span className="truncate">{label}</span>
           {reason === 'router' && <span className="shrink-0 text-foreground/30">policy</span>}
+          {meta.fallbackFromConnectionSlug && <span className="shrink-0 text-foreground/30">fallback</span>}
         </div>
       </TooltipTrigger>
       <TooltipContent side="bottom" sideOffset={4} className="max-w-sm text-left">
@@ -2249,6 +2250,8 @@ function RoutingMetaBadge({ message }: { message: Message }) {
           {meta.model && <div className="break-all"><span className="text-muted-foreground">Modèle:</span> {meta.model}</div>}
           <div><span className="text-muted-foreground">Raison:</span> {reason}</div>
           {meta.sensitivity && <div><span className="text-muted-foreground">Sensibilité:</span> {meta.sensitivity}</div>}
+          {meta.fallbackFromConnectionSlug && <div><span className="text-muted-foreground">Fallback depuis:</span> {meta.fallbackFromConnectionSlug}</div>}
+          {meta.fallbackReason && <div><span className="text-muted-foreground">Raison fallback:</span> {meta.fallbackReason}</div>}
           {policyRuleIds.length > 0 && (
             <div className="break-words">
               <span className="text-muted-foreground">Règles:</span> {policyRuleIds.join(', ')}

@@ -82,6 +82,8 @@ export interface RoutingPolicyContext {
 export interface RoutingPolicyDecision {
   selectedConnectionSlug?: string;
   allowedConnectionSlugs: string[];
+  /** Policy-authorized fallback order, excluding the selected primary connection. */
+  fallbackConnectionSlugs: string[];
   matchedRuleIds: string[];
   reason: RoutingPolicyReason;
   sensitivity: RoutingSensitivity;
@@ -141,6 +143,22 @@ function hasExplicitAllow(policy: RoutingPolicy, matchedRules: RoutingPolicyRule
 
 function firstAllowedInOrder(order: string[] | undefined, allowed: Set<string>): string | undefined {
   return order?.find(slug => allowed.has(slug));
+}
+
+function buildFallbackConnectionSlugs(
+  policy: RoutingPolicy | undefined,
+  matchedRules: RoutingPolicyRule[],
+  allowedConnectionSlugs: string[],
+  selectedConnectionSlug?: string,
+): string[] {
+  const allowed = new Set(allowedConnectionSlugs);
+  const ordered = [
+    ...matchedRules.flatMap(rule => rule.fallbackConnectionSlugs ?? []),
+    ...(policy?.fallbackConnectionSlug ? [policy.fallbackConnectionSlug] : []),
+    ...allowedConnectionSlugs,
+  ];
+
+  return unique(ordered).filter(slug => slug !== selectedConnectionSlug && allowed.has(slug));
 }
 
 function collectReferencedSlugs(policy: RoutingPolicy): Record<string, string[]> {
@@ -228,6 +246,7 @@ export function resolveRoutingPolicy(
     return {
       selectedConnectionSlug: selected,
       allowedConnectionSlugs: allSlugs,
+      fallbackConnectionSlugs: buildFallbackConnectionSlugs(policy, [], allSlugs, selected),
       matchedRuleIds: [],
       reason: 'policy-disabled',
       sensitivity,
@@ -283,6 +302,7 @@ export function resolveRoutingPolicy(
     return {
       selectedConnectionSlug: undefined,
       allowedConnectionSlugs,
+      fallbackConnectionSlugs: [],
       matchedRuleIds,
       reason: 'first-allowed',
       sensitivity,
@@ -295,6 +315,7 @@ export function resolveRoutingPolicy(
     return {
       selectedConnectionSlug: context.requestedConnectionSlug,
       allowedConnectionSlugs,
+      fallbackConnectionSlugs: buildFallbackConnectionSlugs(policy, matchedRules, allowedConnectionSlugs, context.requestedConnectionSlug),
       matchedRuleIds,
       reason: 'requested-connection-allowed',
       sensitivity,
@@ -310,6 +331,7 @@ export function resolveRoutingPolicy(
       return {
         selectedConnectionSlug: preferred,
         allowedConnectionSlugs,
+        fallbackConnectionSlugs: buildFallbackConnectionSlugs(policy, matchedRules, allowedConnectionSlugs, preferred),
         matchedRuleIds,
         reason: 'rule-preference',
         sensitivity,
@@ -323,6 +345,7 @@ export function resolveRoutingPolicy(
     return {
       selectedConnectionSlug: policy.fallbackConnectionSlug,
       allowedConnectionSlugs,
+      fallbackConnectionSlugs: buildFallbackConnectionSlugs(policy, matchedRules, allowedConnectionSlugs, policy.fallbackConnectionSlug),
       matchedRuleIds,
       reason: 'policy-fallback',
       sensitivity,
@@ -334,6 +357,7 @@ export function resolveRoutingPolicy(
   return {
     selectedConnectionSlug: allowedConnectionSlugs[0],
     allowedConnectionSlugs,
+    fallbackConnectionSlugs: buildFallbackConnectionSlugs(policy, matchedRules, allowedConnectionSlugs, allowedConnectionSlugs[0]),
     matchedRuleIds,
     reason: 'first-allowed',
     sensitivity,

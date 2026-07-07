@@ -1,6 +1,7 @@
 # Spécification — fallback router policy-aware
 
 Date de référence : 2026-07-06
+Statut : MVP implémenté le 2026-07-07 (`routingPolicy` expose l’ordre de fallback autorisé, retry unique avant streaming, audit `routingMeta`).
 
 ## Problème
 
@@ -21,6 +22,7 @@ Le fallback doit rester **policy-first** : ne jamais basculer vers une connexion
 - Classification automatique de difficulté.
 - Retry infini ou multi-provider complexe.
 - Fallback pendant un stream déjà partiellement envoyé au renderer.
+- Retry multi-hop après échec du fallback MVP.
 
 ## Modèle de données proposé
 
@@ -96,3 +98,11 @@ interface RoutingMeta {
 - Un provider indisponible ne bloque pas les cas où un fallback autorisé existe.
 - L’utilisateur/admin voit clairement que la réponse vient d’un fallback.
 - CI Robinswood couvre les scénarios critiques.
+
+## Notes d’implémentation MVP
+
+- `resolveRoutingPolicy(...)` retourne désormais `fallbackConnectionSlugs`, déjà filtré par l’allow-list effective et excluant la route primaire.
+- `SessionManager.sendMessage(...)` retry une seule fois si `getOrCreateAgent(...)` échoue avant `agent.ready` / avant tout streaming utilisateur.
+- Le retry nettoie les métadonnées SDK non portables (`sdkSessionId`, `branchFromSdkSessionId`, `branchFromSdkCwd`, `branchFromSdkTurnId`) avant de créer le fallback.
+- `routingMeta` persiste `fallbackFromConnectionSlug` et `fallbackReason` sur le message assistant final.
+- Le tooltip assistant affiche `Fallback depuis` et `Raison fallback`.

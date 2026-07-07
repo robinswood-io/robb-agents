@@ -97,6 +97,7 @@ import { ensureLabelsExist } from '@craft-agent/shared/labels/crud'
 import { loadStatusConfig } from '@craft-agent/shared/statuses/storage'
 import { AutomationSystem, createPromptHistoryEntry, appendAutomationHistoryEntry, type AutomationSystemMetadataSnapshot } from '@craft-agent/shared/automations'
 import { buildBackendRuntimeSignature, buildRestartRequiredSignature, filterAttachmentsForModelInput } from './runtime-config'
+import { classifyRoutingFallbackReason, selectRoutingFallbackCandidate } from './routing-fallback'
 
 // Import from server-core domain utilities
 import { sanitizeForTitle, shouldActivateBrowserOverlay, normalizeBrowserToolName, rollbackFailedBranchCreation, releaseBrowserOwnershipOnForcedStop } from '@craft-agent/server-core/domain'
@@ -943,6 +944,8 @@ interface ManagedSession {
   pendingRoutingReason?: 'manual-handoff' | 'session-connection' | 'router' | string
   // Runtime-only: extra routing audit details for the next assistant response.
   pendingRoutingMeta?: Partial<RoutingMeta>
+  // Runtime-only: policy-authorized fallback candidates for the current turn.
+  pendingRoutingFallbackConnectionSlugs?: string[]
   // Source-activation auto-retry (craft-agents-oss#804). When a source activates
   // mid-turn, we re-send the original message with a "[<slug> activated]" suffix
   // after a short delay. The pending slot lets `sendMessage` dedup a duplicate
@@ -3147,12 +3150,19 @@ export class SessionManager implements ISessionManager {
       (message.role === 'assistant' || message.role === 'plan') && !message.isIntermediate
     )
 
+    const previousFallbackMeta = {
+      fallbackFromConnectionSlug: managed.pendingRoutingMeta?.fallbackFromConnectionSlug,
+      fallbackReason: managed.pendingRoutingMeta?.fallbackReason,
+    }
+
     managed.pendingRoutingReason = 'router'
     managed.pendingRoutingMeta = {
       reason: 'router',
       sensitivity: decision.sensitivity,
       policyRuleIds: decision.matchedRuleIds,
+      ...(previousFallbackMeta.fallbackFromConnectionSlug ? previousFallbackMeta : {}),
     }
+    managed.pendingRoutingFallbackConnectionSlugs = decision.fallbackConnectionSlugs
 
     if (isSameConnection) return
 
@@ -3196,6 +3206,48 @@ export class SessionManager implements ISessionManager {
       connectionSlug: selectedSlug,
       supportsBranching: resolveSupportsBranching(managed),
     }, managed.workspace.id)
+  }
+
+  private async tryApplyRoutingFallbackAfterAgentFailure(managed: ManagedSession, error: unknown): Promise<boolean> {
+    const primarySlug = managed.llmConnection
+    const candidates = (managed.pendingRoutingFallbackConnectionSlugs ?? []).filter(slug => slug && slug !== primarySlug)
+    const fallbackSlug = selectRoutingFallbackCandidate(primarySlug, candidates, slug => !!getLlmConnection(slug))
+    if (!primarySlug || !fallbackSlug) return false
+
+    const fallbackReason = classifyRoutingFallbackReason(error)
+    sessionLog.warn(`routingPolicy fallback for session ${managed.id}: ${primarySlug} -> ${fallbackSlug} (${fallbackReason})`, {
+      primarySlug,
+      fallbackSlug,
+      fallbackReason,
+      error: error instanceof Error ? error.message : String(error),
+    })
+
+    await this.disposeManagedAgentRuntime(managed, 'routing policy fallback')
+
+    managed.sdkSessionId = undefined
+    managed.branchFromSdkSessionId = undefined
+    managed.branchFromSdkCwd = undefined
+    managed.branchFromSdkTurnId = undefined
+    managed.llmConnection = fallbackSlug
+    managed.connectionLocked = true
+    managed.pendingRoutingReason = 'router'
+    managed.pendingRoutingMeta = {
+      ...managed.pendingRoutingMeta,
+      reason: 'router',
+      fallbackFromConnectionSlug: primarySlug,
+      fallbackReason,
+    }
+    managed.pendingRoutingFallbackConnectionSlugs = candidates.filter(slug => slug !== fallbackSlug)
+
+    this.persistSession(managed)
+    this.sendEvent({
+      type: 'connection_changed',
+      sessionId: managed.id,
+      connectionSlug: fallbackSlug,
+      supportsBranching: resolveSupportsBranching(managed),
+    }, managed.workspace.id)
+
+    return true
   }
 
   /**
@@ -5890,7 +5942,14 @@ export class SessionManager implements ISessionManager {
     // Get or create the agent (lazy loading). Its internal cold-session build at
     // ~L2956 now sees fresh tokens (or correctly-needs_auth failed sources, since
     // ensureFreshToken mirrors the disk write to source.config in-memory).
-    const agent = await this.getOrCreateAgent(managed)
+    let agent: AgentInstance
+    try {
+      agent = await this.getOrCreateAgent(managed)
+    } catch (error) {
+      const didFallback = await this.tryApplyRoutingFallbackAfterAgentFailure(managed, error)
+      if (!didFallback) throw error
+      agent = await this.getOrCreateAgent(managed)
+    }
     sendSpan.mark('agent.ready')
 
     // Always set all sources for context (even if none are enabled), including built-ins
@@ -7002,9 +7061,10 @@ export class SessionManager implements ISessionManager {
           // assistant message id mapping. The actual anchor arrives as a
           // separate `pi_turn_anchor` event one microtask later — the SDK
           // updates its leaf only AFTER firing message_end (see #782).
-          if (managed.pendingRoutingReason || managed.pendingRoutingMeta) {
+          if (managed.pendingRoutingReason || managed.pendingRoutingMeta || managed.pendingRoutingFallbackConnectionSlugs) {
             managed.pendingRoutingReason = undefined
             managed.pendingRoutingMeta = undefined
+            managed.pendingRoutingFallbackConnectionSlugs = undefined
           }
 
           if (event.sdkMessageId) {
