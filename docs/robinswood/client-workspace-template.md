@@ -4,6 +4,15 @@ Date de référence : 2026-07-06
 
 Ce template décrit la configuration cible d’un workspace client Robinswood prêt pour pilote.
 
+Artefacts prêts à copier :
+
+- `docs/robinswood/templates/client-workspace/README.md`
+- `docs/robinswood/templates/client-workspace/routing-policy.standard.json`
+- `docs/robinswood/templates/client-workspace/routing-policy.no-external-premium.json`
+- `docs/robinswood/templates/client-workspace/source-sensitivity-matrix.csv`
+
+Ces artefacts sont validés par `packages/shared/tests/client-workspace-template.test.ts`.
+
 ## Objectif
 
 Déployer un workspace français, policy-first, avec :
@@ -171,7 +180,9 @@ Pour un client interdisant Google/OpenAI/Anthropic/OpenRouter :
 | Confidential | souverain/local explicite |  |
 | Restricted | local uniquement |  |
 | Fail-closed | aucune route silencieuse si interdit |  |
-| Audit | tooltip provider/model/reason/sensitivity/rules visible |  |
+| Fallback | uniquement vers connexion autorisée, visible dans tooltip |  |
+| Audit message | tooltip provider/model/reason/sensitivity/rules/fallback/coût si disponible |  |
+| Audit session | panneau `Audit IA` + export JSON/Markdown fonctionnels |  |
 
 ## Notes d’installation client
 

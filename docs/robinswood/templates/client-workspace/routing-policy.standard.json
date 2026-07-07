@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "enabled": true,
+  "defaultSensitivity": "internal",
+  "requireExplicitAllowFor": ["confidential", "restricted"],
+  "fallbackConnectionSlug": "souverain-standard",
+  "rules": [
+    {
+      "id": "restricted-local-only",
+      "description": "Les contenus restreints restent locaux uniquement.",
+      "when": { "sensitivity": ["restricted"] },
+      "allowConnectionSlugs": ["local-rapide"],
+      "allowProviderTypes": ["pi_compat"],
+      "preferConnectionSlugs": ["local-rapide"]
+    },
+    {
+      "id": "confidential-sovereign-or-local",
+      "description": "Les contenus confidentiels restent sur connexions souveraines/locales.",
+      "when": { "sensitivity": ["confidential"] },
+      "allowConnectionSlugs": ["souverain-standard", "local-rapide"],
+      "allowProviderTypes": ["pi_compat"],
+      "preferConnectionSlugs": ["souverain-standard", "local-rapide"],
+      "fallbackConnectionSlugs": ["local-rapide"]
+    },
+    {
+      "id": "internal-sovereign-first",
+      "description": "Les contenus internes privilégient le souverain/client, avec fallback local.",
+      "when": { "sensitivity": ["internal"] },
+      "allowConnectionSlugs": ["souverain-standard", "local-rapide"],
+      "preferConnectionSlugs": ["souverain-standard"],
+      "fallbackConnectionSlugs": ["local-rapide"]
+    },
+    {
+      "id": "public-premium-or-gemini",
+      "description": "Les contenus publics peuvent utiliser les providers premium autorisés.",
+      "when": { "sensitivity": ["public"] },
+      "allowConnectionSlugs": ["premium-analyse-complexe", "google-gemini", "souverain-standard", "local-rapide"],
+      "preferConnectionSlugs": ["premium-analyse-complexe", "google-gemini", "souverain-standard"],
+      "fallbackConnectionSlugs": ["souverain-standard", "local-rapide"]
+    }
+  ]
+}

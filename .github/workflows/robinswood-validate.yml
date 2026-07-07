@@ -55,6 +55,7 @@ jobs:
           bun test \
             packages/shared/tests/routing-policy.test.ts \
             packages/shared/tests/routing-policy-example.test.ts \
+            packages/shared/tests/client-workspace-template.test.ts \
             packages/shared/src/sources/__tests__/source-config-validation.test.ts \
             apps/electron/src/shared/__tests__/ipc-channels.test.ts \
             apps/electron/src/main/handlers/__tests__/registration.test.ts \

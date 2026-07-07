@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "enabled": true,
+  "defaultSensitivity": "internal",
+  "defaultDenyConnectionSlugs": ["google-gemini", "premium-analyse-complexe", "openrouter-experimentation"],
+  "requireExplicitAllowFor": ["confidential", "restricted"],
+  "fallbackConnectionSlug": "souverain-standard",
+  "rules": [
+    {
+      "id": "restricted-local-only",
+      "description": "Les contenus restreints restent locaux uniquement.",
+      "when": { "sensitivity": ["restricted"] },
+      "allowConnectionSlugs": ["local-rapide"],
+      "allowProviderTypes": ["pi_compat"],
+      "preferConnectionSlugs": ["local-rapide"]
+    },
+    {
+      "id": "confidential-sovereign-or-local",
+      "description": "Les contenus confidentiels restent sur connexions souveraines/locales.",
+      "when": { "sensitivity": ["confidential"] },
+      "allowConnectionSlugs": ["souverain-standard", "local-rapide"],
+      "allowProviderTypes": ["pi_compat"],
+      "preferConnectionSlugs": ["souverain-standard", "local-rapide"],
+      "fallbackConnectionSlugs": ["local-rapide"]
+    },
+    {
+      "id": "internal-sovereign-or-local",
+      "description": "Les contenus internes restent sur souverain/local pour ce client.",
+      "when": { "sensitivity": ["internal"] },
+      "allowConnectionSlugs": ["souverain-standard", "local-rapide"],
+      "allowProviderTypes": ["pi_compat"],
+      "preferConnectionSlugs": ["souverain-standard", "local-rapide"],
+      "fallbackConnectionSlugs": ["local-rapide"]
+    },
+    {
+      "id": "public-sovereign-or-local",
+      "description": "Même les contenus publics évitent les providers externes premium.",
+      "when": { "sensitivity": ["public"] },
+      "allowConnectionSlugs": ["souverain-standard", "local-rapide"],
+      "allowProviderTypes": ["pi_compat"],
+      "preferConnectionSlugs": ["souverain-standard", "local-rapide"],
+      "fallbackConnectionSlugs": ["local-rapide"]
+    }
+  ]
+}
