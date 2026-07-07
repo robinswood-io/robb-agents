@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { ROBINSWOOD_APP_NAME, ROBINSWOOD_NOTICE } from '@craft-agent/shared/robinswood-branding'
 
@@ -27,6 +27,44 @@ describe('Robinswood visible branding', () => {
     expect(menu).toContain('About ${ROBINSWOOD_APP_NAME}')
     expect(menu).toContain('Hide ${ROBINSWOOD_APP_NAME}')
     expect(menu).toContain('Quit ${ROBINSWOOD_APP_NAME}')
+  })
+
+  it('uses Robinswood packaging metadata and does not publish against official Craft endpoints', () => {
+    const builder = readRepoFile('apps/electron/electron-builder.yml')
+    expect(builder).toContain('appId: io.robinswood.agents')
+    expect(builder).toContain('productName: Robinswood Agents')
+    expect(builder).toContain('artifactName: "Robinswood-Agents-${arch}.dmg"')
+    expect(builder).toContain('artifactName: "Robinswood-Agents-${arch}.${ext}"')
+    expect(builder).toContain('icon: resources/robinswood-icon.icns')
+    expect(builder).toContain('icon: resources/robinswood-icon.ico')
+    expect(builder).toContain('icon: resources/robinswood-icon.png')
+    expect(builder).toContain('https://agents.robinswood.io/electron/latest')
+    expect(builder).not.toContain('https://agents.craft.do/electron/latest')
+    expect(builder).not.toContain('productName: Craft Agents')
+  })
+
+  it('uses Robinswood artifact names in release scripts and dynamic bundle name in afterPack', () => {
+    expect(readRepoFile('apps/electron/scripts/build-dmg.sh')).toContain('Robinswood-Agents-${ARCH}.dmg')
+    expect(readRepoFile('apps/electron/scripts/build-linux.sh')).toContain('Robinswood-Agents-${ARCH}.AppImage')
+    expect(readRepoFile('apps/electron/scripts/build-win.ps1')).toContain('Building Robinswood Agents Windows Installer')
+    const afterPack = readRepoFile('apps/electron/scripts/afterPack.cjs')
+    expect(afterPack).toContain('productFilename')
+    expect(afterPack).toContain('robinswood-Assets.car')
+    expect(afterPack).not.toContain("'Craft Agents.app'")
+    expect(afterPack).not.toContain("resources', 'Assets.car'")
+  })
+
+  it('ships Robinswood icon assets for packaged builds', () => {
+    for (const relativePath of [
+      'apps/electron/resources/robinswood-icon.svg',
+      'apps/electron/resources/robinswood-icon.png',
+      'apps/electron/resources/robinswood-icon.icns',
+      'apps/electron/resources/robinswood-icon.ico',
+    ]) {
+      const absolutePath = join(repoRoot, relativePath)
+      expect(existsSync(absolutePath)).toBe(true)
+      expect(statSync(absolutePath).size).toBeGreaterThan(100)
+    }
   })
 
   it('keeps fork attribution and upstream trademark clarity in NOTICE', () => {
