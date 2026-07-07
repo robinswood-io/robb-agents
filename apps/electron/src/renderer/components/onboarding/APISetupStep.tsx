@@ -4,7 +4,6 @@ import { cn } from "@/lib/utils"
 import { Check, CreditCard, Key, Cpu } from "lucide-react"
 import { StepFormLayout, BackButton, ContinueButton } from "./primitives"
 import type { LlmAuthType, LlmProviderType } from "@craft-agent/shared/config/llm-connections"
-import googleIcon from "@/assets/provider-icons/google.svg"
 
 /** Provider segment for the segmented control */
 export type ProviderSegment = 'anthropic' | 'pi'
@@ -23,7 +22,6 @@ const BetaBadge = ({ label }: { label: string }) => (
  * - 'anthropic_api_key' → anthropic + api_key
  * - 'pi_chatgpt_oauth' → pi + oauth
  * - 'pi_copilot_oauth' → pi + oauth
- * - 'pi_google_api_key' → pi + api_key + piAuthProvider google
  * - 'pi_api_key' → pi + api_key
  */
 export type ApiSetupMethod =
@@ -31,7 +29,6 @@ export type ApiSetupMethod =
   | 'claude_oauth'
   | 'pi_chatgpt_oauth'
   | 'pi_copilot_oauth'
-  | 'pi_google_api_key'
   | 'pi_api_key'
 
 /**
@@ -50,7 +47,6 @@ export function apiSetupMethodToConnectionTypes(method: ApiSetupMethod): {
       return { providerType: 'pi', authType: 'oauth' };
     case 'pi_copilot_oauth':
       return { providerType: 'pi', authType: 'oauth' };
-    case 'pi_google_api_key':
     case 'pi_api_key':
       return { providerType: 'pi', authType: 'api_key' };
   }
@@ -69,7 +65,6 @@ const API_SETUP_ICONS: Record<ApiSetupMethod, React.ReactNode> = {
   anthropic_api_key: <Key className="size-4" />,
   pi_chatgpt_oauth: <Cpu className="size-4" />,
   pi_copilot_oauth: <Cpu className="size-4" />,
-  pi_google_api_key: <img src={googleIcon} alt="" className="size-4 rounded-[3px]" />,
   pi_api_key: <Key className="size-4" />,
 }
 
@@ -230,13 +225,6 @@ export function APISetupStep({
       name: 'GitHub Copilot',
       description: t("onboarding.apiSetup.githubCopilotDesc"),
       icon: API_SETUP_ICONS.pi_copilot_oauth,
-      providerType: 'pi',
-    },
-    {
-      id: 'pi_google_api_key',
-      name: t("onboarding.apiSetup.googleGemini"),
-      description: t("onboarding.apiSetup.googleGeminiDesc"),
-      icon: API_SETUP_ICONS.pi_google_api_key,
       providerType: 'pi',
     },
     {

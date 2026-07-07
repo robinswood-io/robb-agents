@@ -615,7 +615,6 @@ function WorkspaceOverrideCard({ workspace, llmConnections, onSettingsChange }: 
 /** Map a connection's provider type to the corresponding API key setup method. */
 function getApiKeyMethodForConnection(conn: LlmConnectionWithStatus): ApiSetupMethod {
   const provider = conn.providerType || conn.type
-  if (provider === 'pi' && conn.piAuthProvider === 'google' && !conn.baseUrl) return 'pi_google_api_key'
   if (provider === 'pi' || provider === 'pi_compat') return 'pi_api_key'
   return 'anthropic_api_key'
 }

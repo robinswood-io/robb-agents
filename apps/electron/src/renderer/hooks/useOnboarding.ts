@@ -96,7 +96,6 @@ export const BASE_SLUG_FOR_METHOD: Record<ApiSetupMethod, string> = {
   claude_oauth: 'claude-max',
   pi_chatgpt_oauth: 'chatgpt-plus',
   pi_copilot_oauth: 'github-copilot',
-  pi_google_api_key: 'google-gemini',
   pi_api_key: 'pi-api-key',
 }
 
@@ -176,13 +175,6 @@ export function apiSetupMethodToConnectionSetup(
       return {
         slug,
         credential: options.credential,
-      }
-    case 'pi_google_api_key':
-      return {
-        slug,
-        credential: options.credential,
-        piAuthProvider: 'google',
-        modelSelectionMode: options.modelSelectionMode ?? 'automaticallySyncedFromProvider',
       }
     case 'pi_api_key':
       return {
@@ -392,7 +384,7 @@ export function useOnboarding({
   const handleSubmitCredential = useCallback(async (data: ApiKeySubmitData) => {
     setState(s => ({ ...s, credentialStatus: 'validating', errorMessage: undefined }))
 
-    const isPiApiKeyFlow = state.apiSetupMethod === 'pi_api_key' || state.apiSetupMethod === 'pi_google_api_key'
+    const isPiApiKeyFlow = state.apiSetupMethod === 'pi_api_key'
 
     try {
       // Bedrock (Pi+amazon-bedrock) — skip API key validation and connection test
@@ -460,7 +452,7 @@ export function useOnboarding({
       // Validate connection by spawning a lightweight subprocess test.
       // Custom endpoint protocol routes through PiAgent at runtime, so test with Pi too.
       const setupTestProvider = data.customEndpoint ? 'pi' : (isPiApiKeyFlow ? 'pi' : 'anthropic')
-      const effectivePiAuthProvider = state.apiSetupMethod === 'pi_google_api_key' ? 'google' : data.piAuthProvider
+      const effectivePiAuthProvider = data.piAuthProvider
       const testResult = await window.electronAPI.testLlmConnectionSetup({
         provider: setupTestProvider,
         apiKey: data.apiKey,
@@ -648,7 +640,6 @@ export function useOnboarding({
       claude: 'claude_oauth',
       chatgpt: 'pi_chatgpt_oauth',
       copilot: 'pi_copilot_oauth',
-      google: 'pi_google_api_key',
       api_key: 'pi_api_key',
     }
 

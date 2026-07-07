@@ -132,14 +132,8 @@ describe('createBuiltInConnection', () => {
     expect(conn.piAuthProvider).toBe('github-copilot')
   })
 
-  it('creates google-gemini as a Pi Google API key connection', () => {
-    const conn = createBuiltInConnection('google-gemini')
-    expect(conn.slug).toBe('google-gemini')
-    expect(conn.name).toBe('Google Gemini (AI Studio)')
-    expect(conn.providerType).toBe('pi')
-    expect(conn.authType).toBe('api_key')
-    expect(conn.piAuthProvider).toBe('google')
-    expect(conn.modelSelectionMode).toBe('automaticallySyncedFromProvider')
+  it('does not expose Google Gemini as a subscription-style built-in connection', () => {
+    expect(() => createBuiltInConnection('google-gemini')).toThrow('Unknown built-in connection slug')
   })
 })
 

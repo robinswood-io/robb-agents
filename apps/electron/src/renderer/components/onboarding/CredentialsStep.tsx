@@ -63,8 +63,7 @@ export function CredentialsStep({
   const isChatGptOAuth = apiSetupMethod === 'pi_chatgpt_oauth'
   const isCopilotOAuth = apiSetupMethod === 'pi_copilot_oauth'
   const isAnthropicApiKey = apiSetupMethod === 'anthropic_api_key'
-  const isGoogleApiKey = apiSetupMethod === 'pi_google_api_key'
-  const isPiApiKey = apiSetupMethod === 'pi_api_key' || isGoogleApiKey
+  const isPiApiKey = apiSetupMethod === 'pi_api_key'
   const isApiKey = isAnthropicApiKey || isPiApiKey
 
   // Copilot device code clipboard handling
@@ -262,11 +261,9 @@ export function CredentialsStep({
   // --- API Key flow ---
   // Determine provider type and description based on selected method
   const providerType = isPiApiKey ? 'pi_api_key' : 'anthropic'
-  const apiKeyDescription = isGoogleApiKey
-    ? "Enter your Google AI Studio API key to use Gemini as an agentic AI connection."
-    : isPiApiKey
-      ? "Select a provider preset and enter the API key. For arbitrary Anthropic-compatible endpoints, use Anthropic API Key mode."
-      : "Enter your API key. Optionally configure a custom endpoint for OpenRouter, Ollama, or compatible APIs."
+  const apiKeyDescription = isPiApiKey
+    ? "Select a provider preset and enter the API key. For arbitrary Anthropic-compatible endpoints, use Anthropic API Key mode."
+    : "Enter your API key. Optionally configure a custom endpoint for OpenRouter, Ollama, or compatible APIs."
 
   const apiKeyInputKey = [
     apiSetupMethod,
@@ -300,10 +297,7 @@ export function CredentialsStep({
         errorMessage={errorMessage}
         onSubmit={onSubmit}
         providerType={providerType}
-        initialValues={isGoogleApiKey && !editInitialValues
-          ? { activePreset: 'google' }
-          : editInitialValues
-        }
+        initialValues={editInitialValues}
       />
     </StepFormLayout>
   )

@@ -23,7 +23,6 @@ Les slugs ci-dessous doivent être utilisés dans les policies et templates.
 | `local-rapide` | Local — rapide | tâches simples, brouillons, données restreintes | public, internal, confidential, restricted |
 | `souverain-standard` | Souverain — standard | endpoint EU/client/OVH validé | internal, confidential |
 | `premium-analyse-complexe` | Premium — analyse complexe | forte synthèse, raisonnement complexe | public, internal si autorisé |
-| `google-gemini` | Google Gemini | Gemini via Google AI Studio | public, internal si autorisé explicitement |
 
 Important : ces slugs sont fonctionnels. Les libellés visibles peuvent être plus client-friendly, mais la policy doit référencer les slugs exacts.
 
@@ -70,11 +69,11 @@ Recommandation pilote :
   "requireExplicitAllowFor": ["confidential", "restricted"],
   "rules": [
     {
-      "id": "public-premium-or-gemini",
+      "id": "public-premium-authorized",
       "description": "Les contenus publics peuvent utiliser les providers premium autorisés.",
       "when": { "sensitivity": ["public"] },
-      "allowConnectionSlugs": ["premium-analyse-complexe", "google-gemini", "souverain-standard", "local-rapide"],
-      "preferConnectionSlugs": ["premium-analyse-complexe", "google-gemini"]
+      "allowConnectionSlugs": ["premium-analyse-complexe", "souverain-standard", "local-rapide"],
+      "preferConnectionSlugs": ["premium-analyse-complexe"]
     },
     {
       "id": "internal-sovereign-first",
@@ -111,7 +110,7 @@ Pour un client interdisant Google/OpenAI/Anthropic/OpenRouter :
   "version": 1,
   "enabled": true,
   "defaultSensitivity": "internal",
-  "defaultDenyConnectionSlugs": ["google-gemini", "premium-analyse-complexe"],
+  "defaultDenyConnectionSlugs": ["premium-analyse-complexe"],
   "requireExplicitAllowFor": ["confidential", "restricted"],
   "rules": [
     {
@@ -148,8 +147,7 @@ Pour un client interdisant Google/OpenAI/Anthropic/OpenRouter :
 3. Créer/renommer les connexions IA :
    - `local-rapide` ;
    - `souverain-standard` ;
-   - `premium-analyse-complexe` si autorisé ;
-   - `google-gemini` si autorisé.
+   - `premium-analyse-complexe` si autorisé.
 4. Tester chaque connexion.
 5. Configurer les sources.
 6. Renseigner `routingSensitivity` sur chaque source.
@@ -166,7 +164,7 @@ Pour un client interdisant Google/OpenAI/Anthropic/OpenRouter :
 | Connexions | slugs conventionnels disponibles |  |
 | Sources | toutes classées par sensibilité |  |
 | Policy | JSON valide, enregistrée top-level |  |
-| Public | premium/Gemini autorisé seulement si client OK |  |
+| Public | premium autorisé seulement si client OK |  |
 | Internal | souverain/local |  |
 | Confidential | souverain/local explicite |  |
 | Restricted | local uniquement |  |

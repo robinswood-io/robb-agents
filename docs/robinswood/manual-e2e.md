@@ -43,7 +43,6 @@ Créer ou vérifier les connexions suivantes dans Settings → AI :
 | `local-rapide` | tâches peu sensibles / rapides | local ou endpoint compatible |
 | `souverain-standard` | données internes/confidentielles | endpoint EU/souverain validé |
 | `premium-analyse-complexe` | raisonnement complexe autorisé | provider premium autorisé |
-| `google-gemini` | Gemini via Google AI Studio | `providerType: pi`, `piAuthProvider: google` |
 
 Notes credentials :
 
@@ -53,20 +52,23 @@ Notes credentials :
 
 ## Scénario A — Création de connexions
 
-### A1. Google Gemini
+### A1. Connexion API key générique
 
 1. Ouvrir Settings → AI.
 2. Cliquer Add connection.
-3. Sélectionner Google Gemini.
-4. Entrer une clé Google AI Studio valide.
-5. Valider.
+3. Sélectionner Other provider / API key.
+4. Sélectionner un preset provider explicite (ex. OpenRouter, Google AI Studio si une clé API est disponible, ou autre provider validé).
+5. Entrer la clé API correspondante.
+6. Valider.
 
 Résultat attendu :
 
-- connexion créée sous slug `google-gemini` ou variante unique si slug déjà pris ;
-- provider affiché comme Google AI Studio / Gemini ;
-- modèle par défaut Gemini résolu ;
+- connexion créée sous slug `pi-api-key` ou variante unique si slug déjà pris ;
+- provider affiché selon le preset choisi ;
+- modèle par défaut résolu selon le provider ;
 - validation de connexion OK.
+
+Note produit : une clé Google AI Studio n’est pas un abonnement Google Gemini. Aucun flux OAuth/abonnement Gemini ne doit être affiché tant qu’il n’est pas supporté et validé côté backend Pi.
 
 Statut : `[ ] PASS` `[ ] FAIL` `[ ] BLOCKED`
 
@@ -157,7 +159,7 @@ Dans Workspace Settings → Router IA, coller une policy minimale adaptée aux s
     {
       "id": "public-premium-ok",
       "when": { "sensitivity": ["public"] },
-      "allowConnectionSlugs": ["premium-analyse-complexe", "google-gemini"],
+      "allowConnectionSlugs": ["premium-analyse-complexe"],
       "preferConnectionSlugs": ["premium-analyse-complexe"]
     },
     {

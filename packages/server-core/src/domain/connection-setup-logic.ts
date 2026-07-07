@@ -159,12 +159,6 @@ export const BUILT_IN_CONNECTION_TEMPLATES: Record<string, {
     authType: 'oauth',
     piAuthProvider: 'github-copilot',
   },
-  'google-gemini': {
-    name: 'Google Gemini (AI Studio)',
-    providerType: 'pi',
-    authType: 'api_key',
-    piAuthProvider: 'google',
-  },
   'pi-api-key': {
     name: 'Craft Agents Backend (API Key)',
     providerType: 'pi',
