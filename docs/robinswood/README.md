@@ -77,6 +77,7 @@ Exemples :
 
 - [`provider-playbook.md`](./provider-playbook.md) — stratégie providers, policy-first router, statuts livrés.
 - [`manual-e2e.md`](./manual-e2e.md) — checklist de validation Electron réelle avant pilote client.
+- [`upstream-pr-evaluation-2026-07-07.md`](./upstream-pr-evaluation-2026-07-07.md) — évaluation des PR Craft Agents OSS à intégrer dans Robb Agents.
 - [`client-workspace-template.md`](./client-workspace-template.md) — template workspace client Robinswood.
 - [`router-fallback-spec.md`](./router-fallback-spec.md) — spécification du fallback router policy-aware.
 - [`audit-and-cost-spec.md`](./audit-and-cost-spec.md) — spécification audit provider/modèle/coûts.
