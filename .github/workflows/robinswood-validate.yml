@@ -63,6 +63,7 @@ jobs:
             apps/electron/src/renderer/hooks/__tests__/useOnboarding.test.ts \
             apps/electron/src/renderer/pages/settings/__tests__/routing-policy-editor.test.ts \
             apps/electron/src/main/__tests__/connection-setup-logic.test.ts \
+            packages/pi-agent-server/src/google-code-assist-provider.test.ts \
             packages/server-core/src/sessions/refresh-connection-runtime.test.ts \
             packages/server-core/src/sessions/runtime-config.test.ts
 
