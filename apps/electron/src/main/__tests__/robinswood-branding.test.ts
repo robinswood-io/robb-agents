@@ -103,10 +103,20 @@ describe('Robinswood visible branding', () => {
     expect(readRepoFile('apps/viewer/src/components/Header.tsx')).toContain('https://agents.robinswood.io')
   })
 
-  it('keeps window-state storage on the centralized config path for Robinswood/dev isolation', () => {
+  it('uses an isolated Robinswood config directory while preserving explicit env overrides', () => {
+    const paths = readRepoFile('packages/shared/src/config/paths.ts')
+    expect(paths).toContain('process.env.CRAFT_CONFIG_DIR')
+    expect(paths).toContain("'.robinswood-agents'")
+    expect(paths).not.toContain("join(homedir(), '.craft-agent')")
+
     const windowState = readRepoFile('apps/electron/src/main/window-state.ts')
     expect(windowState).toContain("@craft-agent/shared/config/paths")
     expect(windowState).not.toContain("join(homedir(), '.craft-agent')")
+
+    const electronDev = readRepoFile('scripts/electron-dev.ts')
+    expect(electronDev).toContain('Robinswood Agents')
+    expect(electronDev).toContain('.robinswood-agents-${instanceNum}')
+    expect(electronDev).toContain('CRAFT_DEEPLINK_SCHEME: process.env.CRAFT_DEEPLINK_SCHEME || "craftagents"')
   })
 
   it('uses Robinswood Agents in visible runtime guidance outside the desktop shell', () => {

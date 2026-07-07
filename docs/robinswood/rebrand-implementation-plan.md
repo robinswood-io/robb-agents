@@ -1,7 +1,7 @@
 # Plan d’implémentation rebrand minimal — Robinswood Agents
 
 Date de référence : 2026-07-07
-Statut : Rebrand minimal + packaging Electron validés le 2026-07-07 — nom app/menu/titres renderer/WebUI/viewer/onboarding/settings visibles `Robinswood Agents`, backend visible `Robinswood Agents Backend`, NOTICE/fork attribution, icônes Robinswood, catalogue source `.icon` Robinswood, bundle id `io.robinswood.agents`, artefacts `Robinswood-Agents-*`, update endpoint Robinswood, garde-fous CI. Build DMG ARM64 réel validé localement ; notarisation/signature Developer ID et compilation Liquid Glass `robinswood-Assets.car` prouvée restent à faire avant distribution externe.
+Statut : Rebrand minimal + packaging Electron validés le 2026-07-07 — nom app/menu/titres renderer/WebUI/viewer/onboarding/settings visibles `Robinswood Agents`, backend visible `Robinswood Agents Backend`, config par défaut isolée `~/.robinswood-agents`, NOTICE/fork attribution, icônes Robinswood, catalogue source `.icon` Robinswood, bundle id `io.robinswood.agents`, artefacts `Robinswood-Agents-*`, update endpoint Robinswood, garde-fous CI. Build DMG ARM64 réel validé localement ; notarisation/signature Developer ID et compilation Liquid Glass `robinswood-Assets.car` prouvée restent à faire avant distribution externe.
 
 ## Objectif
 
@@ -35,7 +35,7 @@ Créer une distribution privée clairement Robinswood, tout en :
 - noms de packages npm ;
 - imports internes `@craft-agent/*` ;
 - chemins techniques si non visibles ;
-- nom du protocole deeplink sauf nécessité packaging.
+- nom du protocole deeplink sauf nécessité packaging — conservé à `craftagents` pour éviter une migration risquée.
 
 ## Phase 2 — Packaging
 
@@ -63,7 +63,7 @@ Créer une distribution privée clairement Robinswood, tout en :
 - vérification nom dans menu app — couvert par `robinswood-branding.test.ts` ;
 - vérification titres renderer — couvert par `robinswood-branding.test.ts` et Vite dev (`<title>Robinswood Agents</title>`) ;
 - vérification icône bundle — SHA-256 de l’`icon.icns` packagé identique à `resources/robinswood-icon.icns` ;
-- vérification chemin config si changé — `window-state.json` utilise maintenant le `CONFIG_DIR` centralisé et respecte `CRAFT_CONFIG_DIR`; le chemin config global par défaut reste à décider pour une migration Robinswood complète ;
+- vérification chemin config si changé — `CONFIG_DIR` conserve l’override `CRAFT_CONFIG_DIR` mais utilise désormais `~/.robinswood-agents` par défaut; `window-state.json` utilise le `CONFIG_DIR` centralisé ;
 - vérification onboarding — reste dans l’E2E fonctionnel complet ;
 - validation CI Robinswood — verte jusqu’à `Robinswood Validate #28856581945`.
 

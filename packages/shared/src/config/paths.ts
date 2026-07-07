@@ -1,19 +1,15 @@
 /**
- * Centralized path configuration for Craft Agent.
+ * Centralized path configuration for Robinswood Agents.
  *
- * Supports multi-instance development via CRAFT_CONFIG_DIR environment variable.
- * When running from a numbered folder (e.g., craft-tui-agent-1), the detect-instance.sh
- * script sets CRAFT_CONFIG_DIR to ~/.craft-agent-1, allowing multiple instances to run
- * simultaneously with separate configurations.
- *
- * Default (non-numbered folders): ~/.craft-agent/
- * Instance 1 (-1 suffix): ~/.craft-agent-1/
- * Instance 2 (-2 suffix): ~/.craft-agent-2/
+ * Keeps the historical CRAFT_CONFIG_DIR environment variable for compatibility
+ * and multi-instance development, but defaults Robinswood builds to an isolated
+ * ~/.robinswood-agents directory so the private distribution does not share
+ * configuration or credentials with upstream Craft Agents installs.
  */
 
 import { homedir } from 'os';
 import { join } from 'path';
 
-// Allow override via environment variable for multi-instance dev
-// Falls back to default ~/.craft-agent/ for production and non-numbered dev folders
-export const CONFIG_DIR = process.env.CRAFT_CONFIG_DIR || join(homedir(), '.craft-agent');
+// Allow override via environment variable for multi-instance dev and explicit migrations.
+// Falls back to isolated ~/.robinswood-agents/ for Robinswood production builds.
+export const CONFIG_DIR = process.env.CRAFT_CONFIG_DIR || join(homedir(), '.robinswood-agents');

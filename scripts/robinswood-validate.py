@@ -134,6 +134,15 @@ def check_robinswood_packaging() -> None:
     if "robinswood-Assets.car" not in after_pack or "'Craft Agents.app'" in after_pack:
         fail("afterPack.cjs must use Robinswood icon assets and avoid hardcoded Craft Agents.app")
 
+    paths = (ROOT / "packages/shared/src/config/paths.ts").read_text(encoding="utf-8")
+    if "process.env.CRAFT_CONFIG_DIR" not in paths or "'.robinswood-agents'" not in paths:
+        fail("Default CONFIG_DIR must preserve CRAFT_CONFIG_DIR override and fall back to ~/.robinswood-agents")
+    electron_dev = (ROOT / "scripts/electron-dev.ts").read_text(encoding="utf-8")
+    if "Robinswood Agents" not in electron_dev or ".robinswood-agents-${instanceNum}" not in electron_dev:
+        fail("electron-dev.ts must default to Robinswood app/config naming")
+    if 'CRAFT_DEEPLINK_SCHEME: process.env.CRAFT_DEEPLINK_SCHEME || "craftagents"' not in electron_dev:
+        fail("electron-dev.ts must preserve the craftagents deeplink scheme default until migration is explicit")
+
     web_surfaces = {
         "apps/electron/src/renderer/index.html": "<title>Robinswood Agents</title>",
         "apps/webui/src/index.html": "<title>Robinswood Agents</title>",
