@@ -43,6 +43,7 @@ Créer ou vérifier les connexions suivantes dans Settings → AI :
 | `local-rapide` | tâches peu sensibles / rapides | local ou endpoint compatible |
 | `souverain-standard` | données internes/confidentielles | endpoint EU/souverain validé |
 | `premium-analyse-complexe` | raisonnement complexe autorisé | provider premium autorisé |
+| `google-gemini` | Gemini via compte Google / abonnement | `providerType: pi`, `authType: oauth`, `piAuthProvider: google-gemini-code-assist` |
 
 Notes credentials :
 
@@ -52,23 +53,22 @@ Notes credentials :
 
 ## Scénario A — Création de connexions
 
-### A1. Connexion API key générique
+### A1. Google Gemini OAuth
 
 1. Ouvrir Settings → AI.
 2. Cliquer Add connection.
-3. Sélectionner Other provider / API key.
-4. Sélectionner un preset provider explicite (ex. OpenRouter, Google AI Studio si une clé API est disponible, ou autre provider validé).
-5. Entrer la clé API correspondante.
-6. Valider.
+3. Sélectionner Google Gemini.
+4. Se connecter au compte Google dans le navigateur.
+5. Valider la connexion.
 
 Résultat attendu :
 
-- connexion créée sous slug `pi-api-key` ou variante unique si slug déjà pris ;
-- provider affiché selon le preset choisi ;
-- modèle par défaut résolu selon le provider ;
+- connexion créée sous slug `google-gemini` ou variante unique si slug déjà pris ;
+- `authType: oauth` ;
+- `piAuthProvider: google-gemini-code-assist` ;
+- aucun champ clé API Google AI Studio n’est demandé ;
+- modèle par défaut Gemini résolu ;
 - validation de connexion OK.
-
-Note produit : une clé Google AI Studio n’est pas un abonnement Google Gemini. Aucun flux OAuth/abonnement Gemini ne doit être affiché tant qu’il n’est pas supporté et validé côté backend Pi.
 
 Statut : `[ ] PASS` `[ ] FAIL` `[ ] BLOCKED`
 
@@ -159,7 +159,7 @@ Dans Workspace Settings → Router IA, coller une policy minimale adaptée aux s
     {
       "id": "public-premium-ok",
       "when": { "sensitivity": ["public"] },
-      "allowConnectionSlugs": ["premium-analyse-complexe"],
+      "allowConnectionSlugs": ["premium-analyse-complexe", "google-gemini"],
       "preferConnectionSlugs": ["premium-analyse-complexe"]
     },
     {

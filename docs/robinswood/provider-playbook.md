@@ -98,7 +98,8 @@ Candidate providers:
 
 - Anthropic;
 - OpenAI;
-- Google AI Studio / Gemini API key only, not subscription/OAuth;
+- Google Gemini via Google account / Gemini Code Assist OAuth;
+- Google AI Studio API key for API-key use cases;
 - Azure/OpenAI EU where available and approved.
 
 Policy:
@@ -116,7 +117,8 @@ For each client workspace, configure at least three connections:
    - OVH or client EU endpoint once validated.
 3. **Premium / Complex**
    - OpenRouter or direct premium provider, only if allowed by policy.
-   - Google AI Studio / Gemini can be configured only through the generic API-key provider preset (`piAuthProvider: google`). This is not a Google Gemini subscription/consumer-account OAuth flow.
+   - Google Gemini can be configured through the first-class Google OAuth flow (`google-gemini`, backed by `piAuthProvider: google-gemini-code-assist`).
+   - Google AI Studio API keys remain available through the generic API-key provider preset (`piAuthProvider: google`) and are separate from the subscription/account OAuth path.
 
 ## Naming convention
 
@@ -203,4 +205,4 @@ Still to add:
 7. Add manual policy labels to sources/workspaces. ✅ (`routingSensitivity` on sources)
 8. Add source sensitivity UI. ✅
 9. Add UI/settings editor for workspace `routingPolicy`. ✅
-10. Validate whether a real Google Gemini subscription/OAuth flow is available in the backend Pi stack; keep it out of first-class onboarding until supported. ⏳
+10. Add Google Gemini account/subscription OAuth flow via Gemini Code Assist. ✅

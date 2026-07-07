@@ -21,6 +21,36 @@ import type { ModelDefinition } from './models.ts';
 // PI MODEL DISCOVERY
 // ============================================
 
+const GOOGLE_GEMINI_CODE_ASSIST_MODELS: ModelDefinition[] = [
+  {
+    id: 'pi/gemini-2.5-flash',
+    name: 'Gemini 2.5 Flash',
+    shortName: 'Flash',
+    description: 'Google Gemini model via Google account / Gemini Code Assist',
+    provider: 'pi',
+    contextWindow: 1048576,
+    supportsThinking: true,
+  },
+  {
+    id: 'pi/gemini-2.5-pro',
+    name: 'Gemini 2.5 Pro',
+    shortName: 'Pro',
+    description: 'Google Gemini model via Google account / Gemini Code Assist',
+    provider: 'pi',
+    contextWindow: 1048576,
+    supportsThinking: true,
+  },
+  {
+    id: 'pi/gemini-3-flash-preview',
+    name: 'Gemini 3 Flash Preview',
+    shortName: '3 Flash',
+    description: 'Google Gemini model via Google account / Gemini Code Assist',
+    provider: 'pi',
+    contextWindow: 1048576,
+    supportsThinking: true,
+  },
+];
+
 /**
  * Convert a Pi SDK Model to our ModelDefinition format.
  */
@@ -98,6 +128,10 @@ function isBareBedrockClaudeModel(modelId: string): boolean {
  * Get Pi models for a specific auth provider directly from the Pi SDK.
  */
 export function getPiModelsForAuthProvider(piAuthProvider: string): ModelDefinition[] {
+  if (piAuthProvider === 'google-gemini-code-assist') {
+    return [...GOOGLE_GEMINI_CODE_ASSIST_MODELS];
+  }
+
   try {
     const models = getModels(piAuthProvider as KnownProvider);
     if (models.length > 0) {

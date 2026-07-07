@@ -96,6 +96,7 @@ export const BASE_SLUG_FOR_METHOD: Record<ApiSetupMethod, string> = {
   claude_oauth: 'claude-max',
   pi_chatgpt_oauth: 'chatgpt-plus',
   pi_copilot_oauth: 'github-copilot',
+  pi_gemini_oauth: 'google-gemini',
   pi_api_key: 'pi-api-key',
 }
 
@@ -172,6 +173,11 @@ export function apiSetupMethodToConnectionSetup(
       }
     case 'pi_chatgpt_oauth':
     case 'pi_copilot_oauth':
+      return {
+        slug,
+        credential: options.credential,
+      }
+    case 'pi_gemini_oauth':
       return {
         slug,
         credential: options.credential,
@@ -571,6 +577,25 @@ export function useOnboarding({
         return
       }
 
+      // Google Gemini OAuth (browser flow — Google account / Gemini Code Assist)
+      if (effectiveMethod === 'pi_gemini_oauth') {
+        const effectiveEditingSlug = connectionSlugOverride ?? editingSlug
+        const isReauth = !!effectiveEditingSlug
+        const connectionSlug = apiSetupMethodToConnectionSetup(effectiveMethod, {}, effectiveEditingSlug, existingSlugs).slug
+        const result = await window.electronAPI.startGeminiOAuth(connectionSlug)
+
+        if (result.success) {
+          await saveAndValidateConnection(connectionSlug, effectiveMethod, undefined, isReauth)
+        } else {
+          setState(s => ({
+            ...s,
+            credentialStatus: 'error',
+            errorMessage: result.error || 'Google authentication failed',
+          }))
+        }
+        return
+      }
+
       // Copilot OAuth (device flow — polls for token after user enters code on GitHub)
       if (effectiveMethod === 'pi_copilot_oauth') {
         const effectiveEditingSlug = connectionSlugOverride ?? editingSlug
@@ -640,6 +665,7 @@ export function useOnboarding({
       claude: 'claude_oauth',
       chatgpt: 'pi_chatgpt_oauth',
       copilot: 'pi_copilot_oauth',
+      google: 'pi_gemini_oauth',
       api_key: 'pi_api_key',
     }
 
@@ -659,7 +685,7 @@ export function useOnboarding({
     }))
 
     // OAuth methods start immediately
-    if (choice === 'claude' || choice === 'chatgpt' || choice === 'copilot') {
+    if (choice === 'claude' || choice === 'chatgpt' || choice === 'copilot' || choice === 'google') {
       // Defer to next tick so state is updated before handleStartOAuth reads it
       setTimeout(() => handleStartOAuth(method), 0)
     }

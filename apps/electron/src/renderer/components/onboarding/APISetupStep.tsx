@@ -2,6 +2,7 @@ import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import { cn } from "@/lib/utils"
 import { Check, CreditCard, Key, Cpu } from "lucide-react"
+import googleIcon from "@/assets/provider-icons/google.svg"
 import { StepFormLayout, BackButton, ContinueButton } from "./primitives"
 import type { LlmAuthType, LlmProviderType } from "@craft-agent/shared/config/llm-connections"
 
@@ -22,6 +23,7 @@ const BetaBadge = ({ label }: { label: string }) => (
  * - 'anthropic_api_key' → anthropic + api_key
  * - 'pi_chatgpt_oauth' → pi + oauth
  * - 'pi_copilot_oauth' → pi + oauth
+ * - 'pi_gemini_oauth' → pi + oauth + piAuthProvider google-gemini-code-assist
  * - 'pi_api_key' → pi + api_key
  */
 export type ApiSetupMethod =
@@ -29,6 +31,7 @@ export type ApiSetupMethod =
   | 'claude_oauth'
   | 'pi_chatgpt_oauth'
   | 'pi_copilot_oauth'
+  | 'pi_gemini_oauth'
   | 'pi_api_key'
 
 /**
@@ -46,6 +49,8 @@ export function apiSetupMethodToConnectionTypes(method: ApiSetupMethod): {
     case 'pi_chatgpt_oauth':
       return { providerType: 'pi', authType: 'oauth' };
     case 'pi_copilot_oauth':
+      return { providerType: 'pi', authType: 'oauth' };
+    case 'pi_gemini_oauth':
       return { providerType: 'pi', authType: 'oauth' };
     case 'pi_api_key':
       return { providerType: 'pi', authType: 'api_key' };
@@ -65,6 +70,7 @@ const API_SETUP_ICONS: Record<ApiSetupMethod, React.ReactNode> = {
   anthropic_api_key: <Key className="size-4" />,
   pi_chatgpt_oauth: <Cpu className="size-4" />,
   pi_copilot_oauth: <Cpu className="size-4" />,
+  pi_gemini_oauth: <img src={googleIcon} alt="" className="size-4 rounded-[3px]" />,
   pi_api_key: <Key className="size-4" />,
 }
 
@@ -225,6 +231,13 @@ export function APISetupStep({
       name: 'GitHub Copilot',
       description: t("onboarding.apiSetup.githubCopilotDesc"),
       icon: API_SETUP_ICONS.pi_copilot_oauth,
+      providerType: 'pi',
+    },
+    {
+      id: 'pi_gemini_oauth',
+      name: t("onboarding.apiSetup.googleGemini"),
+      description: t("onboarding.apiSetup.googleGeminiDesc"),
+      icon: API_SETUP_ICONS.pi_gemini_oauth,
       providerType: 'pi',
     },
     {

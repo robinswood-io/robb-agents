@@ -34,7 +34,7 @@ describe('resolveSlugForMethod', () => {
   it('works for all setup methods', () => {
     const methods: ApiSetupMethod[] = [
       'anthropic_api_key', 'claude_oauth',
-      'pi_chatgpt_oauth', 'pi_copilot_oauth', 'pi_api_key',
+      'pi_chatgpt_oauth', 'pi_copilot_oauth', 'pi_gemini_oauth', 'pi_api_key',
     ]
     for (const method of methods) {
       const slug = resolveSlugForMethod(method, null, new Set())
@@ -82,6 +82,11 @@ describe('apiSetupMethodToConnectionSetup', () => {
   it('pi_copilot_oauth maps to github-copilot slug', () => {
     const setup = apiSetupMethodToConnectionSetup('pi_copilot_oauth', {}, null, new Set())
     expect(setup.slug).toBe('github-copilot')
+  })
+
+  it('pi_gemini_oauth maps to google-gemini slug', () => {
+    const setup = apiSetupMethodToConnectionSetup('pi_gemini_oauth', {}, null, new Set())
+    expect(setup.slug).toBe('google-gemini')
   })
 
   it('pi_api_key includes piAuthProvider and modelSelectionMode', () => {

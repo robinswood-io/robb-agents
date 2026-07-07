@@ -145,6 +145,12 @@ export const CHANNEL_MAP = {
   copilotLogout: invoke(RPC_CHANNELS.copilot.LOGOUT),
   onCopilotDeviceCode: listener(RPC_CHANNELS.copilot.DEVICE_CODE),
 
+  // Google Gemini OAuth
+  startGeminiOAuth: invoke(RPC_CHANNELS.gemini.START_OAUTH),
+  cancelGeminiOAuth: invoke(RPC_CHANNELS.gemini.CANCEL_OAUTH),
+  getGeminiAuthStatus: invoke(RPC_CHANNELS.gemini.GET_AUTH_STATUS),
+  geminiLogout: invoke(RPC_CHANNELS.gemini.LOGOUT),
+
   // Server info (REMOTE_ELIGIBLE)
   getServerHomeDir: invoke(RPC_CHANNELS.server.HOME_DIR),
 

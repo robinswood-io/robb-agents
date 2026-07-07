@@ -328,6 +328,16 @@ export function createWebApi(options: WebApiOptions): {
         error: i18n.t('errors.chatGptOAuthNotAvailable'),
       }
     },
+    // Google Gemini OAuth — requires localhost callback server, not possible in browser
+    startGeminiOAuth: async () => {
+      return {
+        success: false,
+        error: 'Google Gemini OAuth is only available in the desktop app.',
+      }
+    },
+    cancelGeminiOAuth: async () => ({ success: true }),
+    getGeminiAuthStatus: async () => ({ authenticated: false }),
+    geminiLogout: async () => ({ success: true }),
   }
 
   const api = { ...baseApi, ...webOverrides, ...oauthOverrides } as ElectronAPI

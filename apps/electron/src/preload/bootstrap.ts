@@ -24,6 +24,7 @@ import { buildClientApi } from '../transport/build-api'
 import { CHANNEL_MAP } from '../transport/channel-map'
 import { createCallbackServer } from '@craft-agent/shared/auth/callback-server'
 import { CHATGPT_OAUTH_CONFIG } from '@craft-agent/shared/auth/chatgpt-oauth-config'
+import { GOOGLE_GEMINI_OAUTH_CONFIG } from '@craft-agent/shared/auth/google-gemini-oauth'
 import {
   CLIENT_OPEN_EXTERNAL,
   CLIENT_OPEN_PATH,
@@ -404,6 +405,59 @@ client.onConnectionStateChanged((state) => {
     return {
       success: false,
       error: err instanceof Error ? err.message : 'ChatGPT OAuth flow failed',
+    }
+  } finally {
+    callbackServer?.close()
+  }
+}
+
+// ── performGeminiOAuth ───────────────────────────────────────────────────
+// Google account / Gemini Code Assist OAuth. Uses a loopback callback, then
+// stores tokens in the LLM connection credential store on the server.
+;(api as any).startGeminiOAuth = async (
+  connectionSlug: string,
+): Promise<{ success: boolean; error?: string }> => {
+  let callbackServer: Awaited<ReturnType<typeof createCallbackServer>> | null = null
+  let flowId: string | undefined
+  let state: string | undefined
+
+  try {
+    callbackServer = await createCallbackServer({
+      appType: 'electron',
+      port: GOOGLE_GEMINI_OAUTH_CONFIG.CALLBACK_PORT,
+      callbackPaths: [GOOGLE_GEMINI_OAUTH_CONFIG.CALLBACK_PATH],
+      host: '127.0.0.1',
+    })
+    const redirectUri = `${callbackServer.url}${GOOGLE_GEMINI_OAUTH_CONFIG.CALLBACK_PATH}`
+
+    const startResult = await client.invoke('gemini:startOAuth', { connectionSlug, redirectUri })
+    flowId = startResult.flowId
+    state = startResult.state
+
+    await shell.openExternal(startResult.authUrl)
+
+    const callback = await callbackServer.promise
+    if (callback.query.error) {
+      const error = callback.query.error_description || callback.query.error
+      await client.invoke('gemini:cancelOAuth', { state })
+      return { success: false, error }
+    }
+
+    const code = callback.query.code
+    if (!code) {
+      await client.invoke('gemini:cancelOAuth', { state })
+      return { success: false, error: 'No authorization code received' }
+    }
+
+    const result = await client.invoke('gemini:completeOAuth', { flowId, code, state })
+    return { success: result.success, error: result.error }
+  } catch (err) {
+    if (state) {
+      client.invoke('gemini:cancelOAuth', { state }).catch(() => {})
+    }
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Google Gemini OAuth flow failed',
     }
   } finally {
     callbackServer?.close()

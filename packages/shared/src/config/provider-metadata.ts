@@ -32,6 +32,11 @@ const PROVIDER_METADATA: Record<string, ProviderMetadata> = {
     statusPageUrl: 'https://status.cloud.google.com',
     dashboardUrl: 'https://aistudio.google.com',
   },
+  'google-gemini-code-assist': {
+    name: 'Google Gemini',
+    statusPageUrl: 'https://status.cloud.google.com',
+    dashboardUrl: 'https://gemini.google.com',
+  },
   'amazon-bedrock': {
     name: 'Amazon Bedrock',
     statusPageUrl: 'https://health.aws.amazon.com',

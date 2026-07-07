@@ -200,6 +200,13 @@ export const RPC_CHANNELS = {
     LOGOUT: 'copilot:logout',
     DEVICE_CODE: 'copilot:deviceCode',
   },
+  gemini: {
+    START_OAUTH: 'gemini:startOAuth',
+    COMPLETE_OAUTH: 'gemini:completeOAuth',
+    CANCEL_OAUTH: 'gemini:cancelOAuth',
+    GET_AUTH_STATUS: 'gemini:getAuthStatus',
+    LOGOUT: 'gemini:logout',
+  },
   settings: {
     SETUP_LLM_CONNECTION: 'settings:setupLlmConnection',
     TEST_LLM_CONNECTION_SETUP: 'settings:testLlmConnectionSetup',

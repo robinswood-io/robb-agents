@@ -422,14 +422,14 @@ export class PiAgent extends BaseAgent {
     // Resolve credentials before spawning so we can derive AWS env vars
     // from the same fetch that produces piAuth (single source of truth).
 
-    // For Copilot OAuth: preemptively refresh the short-lived Copilot token
+    // For OAuth providers with short-lived access tokens: preemptively refresh
     // before fetching credentials, so getPiAuth() picks up a fresh token.
     // refreshAndPushTokens guards this.subprocess internally — safe to call pre-spawn.
-    if (this.config.authType === 'oauth' && runtime.piAuthProvider === 'github-copilot') {
+    if (this.config.authType === 'oauth' && (runtime.piAuthProvider === 'github-copilot' || runtime.piAuthProvider === 'google-gemini-code-assist')) {
       const slug = this.config.connectionSlug || 'pi';
       const stored = await getCredentialManager().getLlmOAuth(slug);
       if (stored?.refreshToken && (!stored.expiresAt || stored.expiresAt < Date.now() + 5 * 60_000)) {
-        this.debug('Copilot token expired or expiring soon — refreshing before session start');
+        this.debug(`${runtime.piAuthProvider} token expired or expiring soon — refreshing before session start`);
         await this.refreshAndPushTokens();
       }
     }
@@ -765,6 +765,15 @@ export class PiAgent extends BaseAgent {
             accessToken: newCreds.access,
             refreshToken: newCreds.refresh,
             expiresAt: newCreds.expires,
+          });
+        } else if (piAuthProvider === 'google-gemini-code-assist') {
+          const { refreshGoogleGeminiTokens } = await import('@craft-agent/shared/auth');
+          const newTokens = await refreshGoogleGeminiTokens(stored.refreshToken);
+          await credentialManager.setLlmOAuth(slug, {
+            accessToken: newTokens.accessToken,
+            idToken: newTokens.idToken,
+            refreshToken: newTokens.refreshToken ?? stored.refreshToken,
+            expiresAt: newTokens.expiresAt,
           });
         } else {
           // ChatGPT Plus: use existing refresh utility
