@@ -1,7 +1,7 @@
 # Plan d’implémentation rebrand minimal — Robinswood Agents
 
 Date de référence : 2026-07-07
-Statut : Rebrand minimal + packaging Electron validés le 2026-07-07 — nom app/menu/titres renderer `Robinswood Agents`, NOTICE/fork attribution, icônes Robinswood, bundle id `io.robinswood.agents`, artefacts `Robinswood-Agents-*`, update endpoint Robinswood, garde-fous CI. Build DMG ARM64 réel validé localement ; notarisation/signature Developer ID restent à faire avant distribution externe.
+Statut : Rebrand minimal + packaging Electron validés le 2026-07-07 — nom app/menu/titres renderer `Robinswood Agents`, NOTICE/fork attribution, icônes Robinswood, catalogue source `.icon` Robinswood, bundle id `io.robinswood.agents`, artefacts `Robinswood-Agents-*`, update endpoint Robinswood, garde-fous CI. Build DMG ARM64 réel validé localement ; notarisation/signature Developer ID et compilation Liquid Glass `robinswood-Assets.car` prouvée restent à faire avant distribution externe.
 
 ## Objectif
 
@@ -80,7 +80,7 @@ Résultat :
 - bundle id : `io.robinswood.agents` ;
 - exécutable : Mach-O `arm64` ;
 - signature : ad-hoc, notarisation non effectuée faute certificat Developer ID ;
-- Liquid Glass : `robinswood-Assets.car` absent, fallback attendu vers `robinswood-icon.icns` ;
+- Liquid Glass : `robinswood-Assets.car` absent, fallback attendu vers `robinswood-icon.icns` ; catalogue source Robinswood présent dans `resources/robinswood-icon.icon/` ;
 - smoke launch : binaire packagé démarré et stable pendant 12s avec `CRAFT_CONFIG_DIR` isolé.
 
 ## Risques

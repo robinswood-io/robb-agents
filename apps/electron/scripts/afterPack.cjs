@@ -2,16 +2,13 @@
  * electron-builder afterPack hook
  *
  * Copies the pre-compiled macOS 26+ Liquid Glass icon (robinswood-Assets.car) into the
- * app bundle when present. The Assets.car file is compiled locally using actool with the
- * macOS 26 SDK (not available in CI), then committed to the repo.
+ * app bundle when present. The Robinswood .icon source catalog lives in
+ * resources/robinswood-icon.icon/, but the local actool CLI does not currently emit a
+ * new Assets.car from that input in CI/dev smoke-tests. Do not commit a
+ * robinswood-Assets.car unless it is verified to differ from the upstream Assets.car.
  *
- * To regenerate robinswood-Assets.car after icon changes:
- *   cd apps/electron
- *   xcrun actool "resources/robinswood-icon.icon" --compile "resources" \
- *     --app-icon AppIcon --minimum-deployment-target 26.0 \
- *     --platform macosx --output-partial-info-plist /dev/null
- *
- * For older macOS versions, the app falls back to robinswood-icon.icns which is
+ * Until a verified Robinswood Assets.car is available, the app falls back to
+ * robinswood-icon.icns which is
  * included separately by electron-builder.
  */
 

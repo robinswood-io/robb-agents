@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'bun:test'
+import { createHash } from 'node:crypto'
 import { existsSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { ROBINSWOOD_APP_NAME, ROBINSWOOD_NOTICE } from '@craft-agent/shared/robinswood-branding'
@@ -7,6 +8,10 @@ const repoRoot = join(import.meta.dir, '..', '..', '..', '..', '..')
 
 function readRepoFile(relativePath: string): string {
   return readFileSync(join(repoRoot, relativePath), 'utf-8')
+}
+
+function sha256(relativePath: string): string {
+  return createHash('sha256').update(readFileSync(join(repoRoot, relativePath))).digest('hex')
 }
 
 describe('Robinswood visible branding', () => {
@@ -60,10 +65,19 @@ describe('Robinswood visible branding', () => {
       'apps/electron/resources/robinswood-icon.png',
       'apps/electron/resources/robinswood-icon.icns',
       'apps/electron/resources/robinswood-icon.ico',
+      'apps/electron/resources/robinswood-icon.icon/icon.json',
+      'apps/electron/resources/robinswood-icon.icon/Assets/icon.svg',
     ]) {
       const absolutePath = join(repoRoot, relativePath)
       expect(existsSync(absolutePath)).toBe(true)
       expect(statSync(absolutePath).size).toBeGreaterThan(100)
+    }
+  })
+
+  it('does not ship a Robinswood Assets.car that is just the upstream Craft asset catalog', () => {
+    const robinswoodAssetsCar = join(repoRoot, 'apps/electron/resources/robinswood-Assets.car')
+    if (existsSync(robinswoodAssetsCar)) {
+      expect(sha256('apps/electron/resources/robinswood-Assets.car')).not.toEqual(sha256('apps/electron/resources/Assets.car'))
     }
   })
 

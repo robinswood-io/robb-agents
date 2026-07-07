@@ -6,6 +6,7 @@ has a stable baseline even when upstream's heavier CI is temporarily broken.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import pathlib
 import re
@@ -114,10 +115,20 @@ def check_robinswood_packaging() -> None:
         "apps/electron/resources/robinswood-icon.png",
         "apps/electron/resources/robinswood-icon.icns",
         "apps/electron/resources/robinswood-icon.ico",
+        "apps/electron/resources/robinswood-icon.icon/icon.json",
+        "apps/electron/resources/robinswood-icon.icon/Assets/icon.svg",
     ]:
         path = ROOT / rel
         if not path.exists() or path.stat().st_size < 100:
             fail(f"Missing or empty Robinswood icon asset: {rel}")
+
+    upstream_assets_car = ROOT / "apps/electron/resources/Assets.car"
+    robinswood_assets_car = ROOT / "apps/electron/resources/robinswood-Assets.car"
+    if robinswood_assets_car.exists():
+        upstream_hash = hashlib.sha256(upstream_assets_car.read_bytes()).hexdigest()
+        robinswood_hash = hashlib.sha256(robinswood_assets_car.read_bytes()).hexdigest()
+        if upstream_hash == robinswood_hash:
+            fail("robinswood-Assets.car must not be byte-identical to the upstream Craft Assets.car")
 
     after_pack = (ROOT / "apps" / "electron" / "scripts" / "afterPack.cjs").read_text(encoding="utf-8")
     if "robinswood-Assets.car" not in after_pack or "'Craft Agents.app'" in after_pack:
