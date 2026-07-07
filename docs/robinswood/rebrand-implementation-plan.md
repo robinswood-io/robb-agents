@@ -69,7 +69,9 @@ Créer une distribution privée clairement Robinswood, tout en :
 
 ### Validation packaging du 2026-07-07
 
-Commande : `apps/electron/scripts/build-dmg.sh arm64`.
+Commande build : `apps/electron/scripts/build-dmg.sh arm64`.
+
+Commande smoke reproductible : `python3 scripts/robinswood-packaged-smoke.py --launch --launch-seconds 8`.
 
 Résultat :
 
