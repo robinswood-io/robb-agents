@@ -78,6 +78,7 @@ import { CHAT_LAYOUT } from "@/config/layout"
 import { collectFileChangesFromActivities, getFirstFileChangeIdForActivity } from "@/lib/file-changes"
 import { resolveBranchNewPanelOption } from "./branching"
 import { handleErrorMessageAction } from "./error-message-actions"
+import { RoutingAuditPanel } from "./RoutingAuditPanel"
 
 // ============================================================================
 // CSS Custom Highlight API helper
@@ -1585,6 +1586,7 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
                       skipSmoothScrollUntilRef.current = Date.now() + 500
                     }}
                   />
+                  {!compactMode && <RoutingAuditPanel session={session} />}
                   {/* Empty state for compact mode - inviting conversational prompt, centered in full popover */}
                   {compactMode && turns.length === 0 && (
                     <div className="absolute inset-0 flex flex-col items-center justify-center select-none gap-1 pointer-events-none">

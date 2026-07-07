@@ -32,8 +32,8 @@ describe('applyRoutingCostMetaToLatestAssistantMessage', () => {
     const updated = applyRoutingCostMetaToLatestAssistantMessage(messages, { estimatedCostEur: 0.12, tokenUsageSource: 'sdk' })
 
     expect(updated?.id).toBe('a2')
-    expect(messages[1].routingMeta).toMatchObject({ connectionSlug: 'gemini', estimatedCostEur: 0.12, tokenUsageSource: 'sdk' })
-    expect(messages[0].routingMeta).toEqual({ connectionSlug: 'draft' })
+    expect(messages[1]!.routingMeta).toMatchObject({ connectionSlug: 'gemini', estimatedCostEur: 0.12, tokenUsageSource: 'sdk' })
+    expect(messages[0]!.routingMeta).toEqual({ connectionSlug: 'draft' })
   })
 })
 
@@ -94,7 +94,7 @@ describe('buildSessionRoutingAuditSummary', () => {
 
     expect(summary.totalEstimatedCostEur).toBe(0.2)
     expect(summary.totalActualCostEur).toBe(0.15)
-    expect(summary.byConnectionSlug.provider.estimatedCostEur).toBe(0.2)
-    expect(summary.byConnectionSlug.provider.actualCostEur).toBe(0.15)
+    expect(summary.byConnectionSlug.provider!.estimatedCostEur).toBe(0.2)
+    expect(summary.byConnectionSlug.provider!.actualCostEur).toBe(0.15)
   })
 })

@@ -97,7 +97,7 @@ import { ensureLabelsExist } from '@craft-agent/shared/labels/crud'
 import { loadStatusConfig } from '@craft-agent/shared/statuses/storage'
 import { AutomationSystem, createPromptHistoryEntry, appendAutomationHistoryEntry, type AutomationSystemMetadataSnapshot } from '@craft-agent/shared/automations'
 import { buildBackendRuntimeSignature, buildRestartRequiredSignature, filterAttachmentsForModelInput } from './runtime-config'
-import { buildRoutingCostMeta, applyRoutingCostMetaToLatestAssistantMessage } from './routing-audit'
+import { buildRoutingCostMeta, applyRoutingCostMetaToLatestAssistantMessage } from '@craft-agent/shared/audit'
 import { classifyRoutingFallbackReason, selectRoutingFallbackCandidate } from './routing-fallback'
 
 // Import from server-core domain utilities

@@ -1,7 +1,7 @@
 # Spécification — audit provider, modèle et coûts
 
 Date de référence : 2026-07-06
-Statut : MVP partiel implémenté le 2026-07-07 — coût par message sourcé (`sdk` ou `unavailable`), agrégat session pur/testé, tooltip message enrichi.
+Statut : MVP implémenté le 2026-07-07 — coût par message sourcé (`sdk` ou `unavailable`), agrégat session pur/testé, tooltip message enrichi, panneau `Audit IA` et exports JSON/Markdown presse-papiers.
 
 ## Objectif
 
@@ -31,13 +31,15 @@ Ajouté en MVP :
 - coût estimé par message quand le SDK expose `costUsd > 0` ;
 - source explicite `sdk` ou `unavailable` ;
 - résumé agrégé session via helper pur ;
-- tooltip message avec coût/source quand disponible.
+- tooltip message avec coût/source quand disponible ;
+- panneau audit session `Audit IA` dans le chat ;
+- export JSON/Markdown client via presse-papiers.
 
 Reste à ajouter :
 
 - coût réel provider si API disponible ;
-- panneau audit session dans l’UI ;
-- export/audit client accessible depuis l’app.
+- export fichier téléchargeable/signé si besoin client ;
+- taux EUR configurable/daté.
 
 ## Modèle de données proposé
 
@@ -148,3 +150,4 @@ Format minimal Markdown/JSON :
 - Taux MVP figé dans le helper : 1 USD = 0,92 EUR. À remplacer par une config/taux daté avant usage financier strict.
 - Les providers qui retournent zéro ou aucun coût restent marqués `unavailable`; aucun coût n’est inventé.
 - `buildSessionRoutingAuditSummary(...)` agrège par connexion, sensibilité et règles policy, en séparant estimation et réel.
+- `RoutingAuditPanel` expose l’agrégat dans le chat et copie un export JSON/Markdown sans secrets.
