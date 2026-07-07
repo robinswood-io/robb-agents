@@ -136,7 +136,7 @@ function getProviderLabelFromType(providerType?: LlmProviderType, baseUrl?: stri
     switch (providerType) {
       case 'anthropic': return 'Anthropic';
       case 'pi':
-      case 'pi_compat': return 'Robinswood Agents Backend';
+      case 'pi_compat': return 'Robb Agents Backend';
     }
   }
   // Fallback: derive from base URL or default

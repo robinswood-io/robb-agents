@@ -117,7 +117,7 @@ describe('groupConnectionsByProvider', () => {
     const piConn = conn('pi-1', 'pi')
     const anth = conn('anthropic-1', 'anthropic')
     const result = groupConnectionsByProvider([piConn, anth])
-    expect(result.map(([k]) => k)).toEqual(['Anthropic', 'Robinswood Agents Backend'])
+    expect(result.map(([k]) => k)).toEqual(['Anthropic', 'Robb Agents Backend'])
   })
 
   test('"pi_compat" with localhost baseUrl goes to "Local"', () => {
@@ -126,16 +126,16 @@ describe('groupConnectionsByProvider', () => {
     expect(result).toEqual([['Local', [local]]])
   })
 
-  test('"pi_compat" with remote baseUrl goes to "Robinswood Agents Backend"', () => {
+  test('"pi_compat" with remote baseUrl goes to "Robb Agents Backend"', () => {
     const remote = conn('openrouter', 'pi_compat', { baseUrl: 'https://openrouter.ai/api/v1' })
     const result = groupConnectionsByProvider([remote])
-    expect(result).toEqual([['Robinswood Agents Backend', [remote]]])
+    expect(result).toEqual([['Robb Agents Backend', [remote]]])
   })
 
   test('drops empty groups from the output', () => {
     const a = conn('a', 'anthropic')
     const result = groupConnectionsByProvider([a])
-    // Only "Anthropic" appears; "Local" and "Robinswood Agents Backend" are dropped.
+    // Only "Anthropic" appears; "Local" and "Robb Agents Backend" are dropped.
     expect(result.length).toBe(1)
     expect(result[0][0]).toBe('Anthropic')
   })
@@ -149,7 +149,7 @@ describe('groupConnectionsByProvider', () => {
     expect(result.map(([k, conns]) => [k, conns.map(c => c.slug)])).toEqual([
       ['Anthropic', ['a']],
       ['Local', ['ollama']],
-      ['Robinswood Agents Backend', ['or', 'p']],
+      ['Robb Agents Backend', ['or', 'p']],
     ])
   })
 })

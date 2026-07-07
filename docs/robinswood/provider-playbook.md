@@ -1,4 +1,4 @@
-# Provider playbook — Robinswood Agents
+# Provider playbook — Robb Agents
 
 Date: 2026-07-06
 
@@ -6,7 +6,7 @@ This document defines the target provider strategy for French client deployments
 
 ## Principle
 
-Robinswood Agents should not push every task to the strongest cloud model. Provider choice must be policy-first:
+Robb Agents should not push every task to the strongest cloud model. Provider choice must be policy-first:
 
 1. client confidentiality policy;
 2. source/data sensitivity;

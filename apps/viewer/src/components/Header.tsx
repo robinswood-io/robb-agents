@@ -6,7 +6,7 @@ import { Sun, Moon, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 /**
- * RobinswoodLogo - compact Robinswood Agents monogram
+ * RobinswoodLogo - compact Robb Agents monogram
  */
 function RobinswoodLogo({ className }: { className?: string }) {
   return (
@@ -42,7 +42,7 @@ export function Header({ hasSession, sessionTitle, isDark, onToggleTheme, onClea
       <a
         href="https://agents.robinswood.io"
         className="hover:opacity-80 transition-opacity"
-        title="Robinswood Agents"
+        title="Robb Agents"
       >
         <RobinswoodLogo className="w-6 h-6" />
       </a>

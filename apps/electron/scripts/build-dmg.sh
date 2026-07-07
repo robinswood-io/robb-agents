@@ -80,7 +80,7 @@ done
 # Configuration
 BUN_VERSION="bun-v1.3.9"  # Pinned version for reproducible builds
 
-echo "=== Building Robinswood Agents DMG (${ARCH}) using electron-builder ==="
+echo "=== Building Robb Agents DMG (${ARCH}) using electron-builder ==="
 if [ "$UPLOAD" = true ]; then
     echo "Will upload to S3 after build"
 fi
@@ -245,8 +245,8 @@ fi
 npx electron-builder $BUILDER_ARGS
 
 # 8. Verify the DMG was built
-# electron-builder.yml uses artifactName to output: Robinswood-Agents-${arch}.dmg
-DMG_NAME="Robinswood-Agents-${ARCH}.dmg"
+# electron-builder.yml uses artifactName to output: Robb-Agents-${arch}.dmg
+DMG_NAME="Robb-Agents-${ARCH}.dmg"
 DMG_PATH="$ELECTRON_DIR/release/$DMG_NAME"
 
 if [ ! -f "$DMG_PATH" ]; then

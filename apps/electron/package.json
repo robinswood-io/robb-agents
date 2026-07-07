@@ -1,7 +1,7 @@
 {
   "name": "@craft-agent/electron",
   "version": "0.10.5",
-  "description": "Electron desktop app for Robinswood Agents",
+  "description": "Electron desktop app for Robb Agents",
   "main": "dist/main.cjs",
   "private": true,
   "author": {

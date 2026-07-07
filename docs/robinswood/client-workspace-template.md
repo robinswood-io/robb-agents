@@ -1,4 +1,4 @@
-# Template workspace client — Robinswood Agents
+# Template workspace client — Robb Agents
 
 Date de référence : 2026-07-06
 

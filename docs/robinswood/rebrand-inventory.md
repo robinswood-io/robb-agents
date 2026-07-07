@@ -1,4 +1,4 @@
-# Rebrand inventory — Robinswood Agents
+# Rebrand inventory — Robb Agents
 
 Date: 2026-07-06
 
@@ -10,7 +10,7 @@ The upstream project is Apache 2.0, but `Craft` and `Craft Agents` are trademark
 
 Recommended public phrasing:
 
-> Robinswood Agents is based on the open-source Craft Agents project.
+> Robb Agents is based on the open-source Craft Agents project.
 
 Avoid product names such as `Craft Agents Pro`, `Better Craft Agents`, or anything implying an official Craft product.
 
@@ -34,7 +34,7 @@ Need detailed verification in Electron config before release:
 - Log folder names such as `@craft-agent/electron`.
 - Config directory `~/.craft-agent`.
 
-Decision required: whether Robinswood client distribution should use a separate config dir, e.g. `~/.robinswood-agents`, to avoid collision with upstream Craft Agents.
+Decision required: whether Robinswood client distribution should use a separate config dir, e.g. `~/.robb-agents`, to avoid collision with upstream Craft Agents.
 
 ### Visual identity
 
@@ -73,8 +73,8 @@ Important: storage paths are product behavior, not just branding.
 
 Questions to answer before distribution:
 
-1. Should Robinswood Agents share existing `~/.craft-agent` workspaces for internal users?
-2. Should client builds use separate `~/.robinswood-agents` storage?
+1. Should Robb Agents share existing `~/.craft-agent` workspaces for internal users?
+2. Should client builds use separate `~/.robb-agents` storage?
 3. Do we need migration/import from upstream Craft Agents?
 4. Should source credentials be isolated from upstream?
 5. How do we label sessions/files created by Robinswood vs upstream?
@@ -96,7 +96,7 @@ Instead:
 
 Before any external client distribution:
 
-- App visible name is `Robinswood Agents` or selected final name.
+- App visible name is `Robb Agents` or selected final name.
 - Bundle/package IDs are Robinswood-owned.
 - Icons are Robinswood-owned.
 - Config/log directories are intentionally chosen and documented.

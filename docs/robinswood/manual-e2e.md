@@ -1,4 +1,4 @@
-# Validation manuelle E2E — Robinswood Agents
+# Validation manuelle E2E — Robb Agents
 
 Date de référence : 2026-07-06
 

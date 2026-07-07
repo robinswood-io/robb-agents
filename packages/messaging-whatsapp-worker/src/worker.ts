@@ -268,7 +268,7 @@ async function startSession(
     const sock = makeWASocket({
       auth: state,
       printQRInTerminal: false,
-      browser: baileys.Browsers.macOS('Robinswood Agents'),
+      browser: baileys.Browsers.macOS('Robb Agents'),
       version,
       logger: silentLogger,
     }) as BaileysSock

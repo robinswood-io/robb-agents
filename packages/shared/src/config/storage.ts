@@ -113,7 +113,7 @@ let configDefaultsSynced = false;
 /** Minimal config-defaults used when bundled assets aren't available (CI, standalone server). */
 const FALLBACK_CONFIG_DEFAULTS: ConfigDefaults = {
   version: '1.0',
-  description: 'Default configuration values for Robinswood Agents',
+  description: 'Default configuration values for Robb Agents',
   defaults: {
     notificationsEnabled: true,
     colorTheme: 'default',
@@ -164,12 +164,17 @@ function syncConfigDefaults(): void {
 }
 
 /**
- * Load config defaults from ~/.craft-agent/config-defaults.json
- * This file is synced from bundled assets on every launch.
+ * Load config defaults from CONFIG_DIR/config-defaults.json.
+ * This file is synced from bundled assets on launch; if a test or early runtime
+ * path reads it before ensureConfigDir(), create the Robb fallback defaults so
+ * fresh ~/.robb-agents directories do not fail first-use reads.
  */
 export function loadConfigDefaults(): ConfigDefaults {
   if (!existsSync(CONFIG_DEFAULTS_FILE)) {
-    throw new Error('config-defaults.json not found at ' + CONFIG_DEFAULTS_FILE + '. Ensure ensureConfigDir() was called at startup.');
+    if (!existsSync(CONFIG_DIR)) {
+      mkdirSync(CONFIG_DIR, { recursive: true });
+    }
+    writeFileSync(CONFIG_DEFAULTS_FILE, JSON.stringify(FALLBACK_CONFIG_DEFAULTS, null, 2), 'utf-8');
   }
 
   const defaults = readJsonFileSync<ConfigDefaults>(CONFIG_DEFAULTS_FILE);

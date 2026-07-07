@@ -1,6 +1,6 @@
 {
-  "name": "Robinswood Agents",
-  "short_name": "Robinswood Agents",
+  "name": "Robb Agents",
+  "short_name": "Robb Agents",
   "description": "AI agent interface",
   "start_url": "./",
   "display": "standalone",

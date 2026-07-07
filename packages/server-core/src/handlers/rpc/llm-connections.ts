@@ -143,7 +143,7 @@ export function registerLlmConnectionsHandlers(server: RpcServer, deps: HandlerD
       // Skip when custom endpoint protocol is driving routing.
       if (setup.piAuthProvider && !isCustomEndpointCompat) {
         updates.piAuthProvider = setup.piAuthProvider
-        // Update connection name to show the actual provider (e.g. "Robinswood Agents Backend (Google AI Studio)")
+        // Update connection name to show the actual provider (e.g. "Robb Agents Backend (Google AI Studio)")
         const providerName = piAuthProviderDisplayName(setup.piAuthProvider)
         if (providerName) {
           updates.name = `${ROBINSWOOD_BACKEND_NAME} (${providerName})`

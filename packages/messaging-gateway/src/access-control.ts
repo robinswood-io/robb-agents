@@ -232,7 +232,7 @@ export function buildRejectionReply(reason: AccessRejectReason): string | null {
     case 'bot-sender':
       return null
     case 'not-owner':
-      return 'This bot is private. Ask the owner to invite you in the Robinswood Agents app.'
+      return 'This bot is private. Ask the owner to invite you in the Robb Agents app.'
     case 'not-on-binding-allowlist':
       return "You're not on the allow-list for this conversation. Ask the owner to add you."
   }

@@ -2,7 +2,7 @@
 """Robinswood macOS signing/notarization preflight.
 
 This script checks whether the local machine has the inputs required for an
-externally distributable Robinswood Agents macOS build. It never prints secret
+externally distributable Robb Agents macOS build. It never prints secret
 values; it only reports whether they are present.
 
 Usage:
@@ -26,8 +26,8 @@ from dataclasses import dataclass
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 ELECTRON_BUILDER = ROOT / "apps/electron/electron-builder.yml"
-APP_ID = "io.robinswood.agents"
-PRODUCT_NAME = "Robinswood Agents"
+APP_ID = "io.robinswood.robbagents"
+PRODUCT_NAME = "Robb Agents"
 REQUIRED_ENV = [
     "APPLE_ID",
     "APPLE_TEAM_ID",
@@ -66,7 +66,7 @@ def check_builder_metadata() -> list[Check]:
         Check("electron-builder productName", f"productName: {PRODUCT_NAME}" in text, PRODUCT_NAME),
         Check("mac hardenedRuntime", "hardenedRuntime: true" in text, "required for notarized macOS distribution"),
         Check("mac entitlements", "entitlements: build/entitlements.mac.plist" in text, "build/entitlements.mac.plist"),
-        Check("Robinswood artifact names", "Robinswood-Agents-${arch}" in text, "Robinswood-Agents-*"),
+        Check("Robinswood artifact names", "Robb-Agents-${arch}" in text, "Robb-Agents-*"),
     ]
 
 

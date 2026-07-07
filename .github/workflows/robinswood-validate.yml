@@ -68,8 +68,12 @@ jobs:
             packages/pi-agent-server/src/google-code-assist-provider.test.ts \
             packages/shared/src/audit/routing-audit.test.ts \
             packages/server-core/src/sessions/routing-fallback.test.ts \
-            packages/server-core/src/sessions/refresh-connection-runtime.test.ts \
             packages/server-core/src/sessions/runtime-config.test.ts
+
+      - name: Run config-dir-sensitive runtime refresh test
+        run: bun test packages/server-core/src/sessions/refresh-connection-runtime.test.ts
+        env:
+          CRAFT_CONFIG_DIR: ${{ runner.temp }}/robb-agents-refresh-runtime
 
   optional-upstream-validation:
     name: Optional upstream validation

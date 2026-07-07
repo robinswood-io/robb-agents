@@ -87,12 +87,12 @@ def check_robinswood_packaging() -> None:
     builder_path = ROOT / "apps" / "electron" / "electron-builder.yml"
     builder = builder_path.read_text(encoding="utf-8")
     required = [
-        "appId: io.robinswood.agents",
-        "productName: Robinswood Agents",
+        "appId: io.robinswood.robbagents",
+        "productName: Robb Agents",
         "copyright: Copyright © 2026 Robinswood",
         "url: https://agents.robinswood.io/electron/latest",
-        "artifactName: \"Robinswood-Agents-${arch}.dmg\"",
-        "artifactName: \"Robinswood-Agents-${arch}.${ext}\"",
+        "artifactName: \"Robb-Agents-${arch}.dmg\"",
+        "artifactName: \"Robb-Agents-${arch}.${ext}\"",
         "icon: resources/robinswood-icon.icns",
         "icon: resources/robinswood-icon.ico",
         "icon: resources/robinswood-icon.png",
@@ -135,20 +135,20 @@ def check_robinswood_packaging() -> None:
         fail("afterPack.cjs must use Robinswood icon assets and avoid hardcoded Craft Agents.app")
 
     paths = (ROOT / "packages/shared/src/config/paths.ts").read_text(encoding="utf-8")
-    if "process.env.CRAFT_CONFIG_DIR" not in paths or "'.robinswood-agents'" not in paths:
-        fail("Default CONFIG_DIR must preserve CRAFT_CONFIG_DIR override and fall back to ~/.robinswood-agents")
+    if "process.env.CRAFT_CONFIG_DIR" not in paths or "'.robb-agents'" not in paths:
+        fail("Default CONFIG_DIR must preserve CRAFT_CONFIG_DIR override and fall back to ~/.robb-agents")
     electron_dev = (ROOT / "scripts/electron-dev.ts").read_text(encoding="utf-8")
-    if "Robinswood Agents" not in electron_dev or ".robinswood-agents-${instanceNum}" not in electron_dev:
+    if "Robb Agents" not in electron_dev or ".robb-agents-${instanceNum}" not in electron_dev:
         fail("electron-dev.ts must default to Robinswood app/config naming")
     if 'CRAFT_DEEPLINK_SCHEME: process.env.CRAFT_DEEPLINK_SCHEME || "craftagents"' not in electron_dev:
         fail("electron-dev.ts must preserve the craftagents deeplink scheme default until migration is explicit")
 
     web_surfaces = {
-        "apps/electron/src/renderer/index.html": "<title>Robinswood Agents</title>",
-        "apps/webui/src/index.html": "<title>Robinswood Agents</title>",
-        "apps/webui/src/login.html": "<title>Robinswood Agents — Login</title>",
-        "apps/webui/src/public/manifest.json": "Robinswood Agents",
-        "apps/viewer/index.html": "Robinswood Agents Session Viewer",
+        "apps/electron/src/renderer/index.html": "<title>Robb Agents</title>",
+        "apps/webui/src/index.html": "<title>Robb Agents</title>",
+        "apps/webui/src/login.html": "<title>Robb Agents — Login</title>",
+        "apps/webui/src/public/manifest.json": "Robb Agents",
+        "apps/viewer/index.html": "Robb Agents Session Viewer",
         "apps/viewer/src/components/Header.tsx": "https://agents.robinswood.io",
     }
     missing_web = []

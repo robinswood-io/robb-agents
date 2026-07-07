@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Smoke-test a locally packaged Robinswood Agents macOS build.
+"""Smoke-test a locally packaged Robb Agents macOS build.
 
 Run after:
 
@@ -25,13 +25,13 @@ import time
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 ELECTRON_DIR = ROOT / "apps" / "electron"
 RELEASE_DIR = ELECTRON_DIR / "release"
-APP_NAME = "Robinswood Agents.app"
+APP_NAME = "Robb Agents.app"
 APP_DIR = RELEASE_DIR / "mac-arm64" / APP_NAME
-APP_BIN = APP_DIR / "Contents" / "MacOS" / "Robinswood Agents"
+APP_BIN = APP_DIR / "Contents" / "MacOS" / "Robb Agents"
 PLIST = APP_DIR / "Contents" / "Info.plist"
 PACKAGED_ICON = APP_DIR / "Contents" / "Resources" / "icon.icns"
 SOURCE_ICON = ELECTRON_DIR / "resources" / "robinswood-icon.icns"
-DMG = RELEASE_DIR / "Robinswood-Agents-arm64.dmg"
+DMG = RELEASE_DIR / "Robb-Agents-arm64.dmg"
 
 
 def fail(message: str) -> None:
@@ -67,10 +67,10 @@ def check_bundle() -> None:
         plist = plistlib.load(handle)
 
     expected = {
-        "CFBundleName": "Robinswood Agents",
-        "CFBundleDisplayName": "Robinswood Agents",
-        "CFBundleExecutable": "Robinswood Agents",
-        "CFBundleIdentifier": "io.robinswood.agents",
+        "CFBundleName": "Robb Agents",
+        "CFBundleDisplayName": "Robb Agents",
+        "CFBundleExecutable": "Robb Agents",
+        "CFBundleIdentifier": "io.robinswood.robbagents",
         "CFBundleShortVersionString": "0.10.5",
         "CFBundleVersion": "0.10.5",
         "CFBundleIconFile": "icon.icns",
@@ -90,8 +90,8 @@ def check_bundle() -> None:
     code_text = code_result.stdout + code_result.stderr
     if code_result.returncode != 0:
         fail(f"codesign inspection failed: {code_text}")
-    if "Identifier=io.robinswood.agents" not in code_text:
-        fail("Packaged app signature does not expose io.robinswood.agents identifier")
+    if "Identifier=io.robinswood.robbagents" not in code_text:
+        fail("Packaged app signature does not expose io.robinswood.robbagents identifier")
 
     print("✓ packaged app bundle metadata")
     print("✓ packaged app architecture arm64")
@@ -114,17 +114,17 @@ def check_dmg() -> None:
         try:
             mounted_app = mount / APP_NAME
             mounted_plist = mounted_app / "Contents" / "Info.plist"
-            require(mounted_app, "DMG Robinswood Agents.app")
+            require(mounted_app, "DMG Robb Agents.app")
             with mounted_plist.open("rb") as handle:
                 plist = plistlib.load(handle)
-            if plist.get("CFBundleName") != "Robinswood Agents" or plist.get("CFBundleIdentifier") != "io.robinswood.agents":
+            if plist.get("CFBundleName") != "Robb Agents" or plist.get("CFBundleIdentifier") != "io.robinswood.robbagents":
                 fail("DMG-mounted app has invalid Robinswood metadata")
         finally:
             detach = run(["hdiutil", "detach", str(mount)], timeout=60)
             if detach.returncode != 0:
                 print(f"Warning: could not detach DMG mount: {detach.stdout}{detach.stderr}", file=sys.stderr)
 
-    print("✓ DMG mounts with Robinswood Agents.app")
+    print("✓ DMG mounts with Robb Agents.app")
 
 
 def pids_for_packaged_app() -> set[int]:
@@ -168,7 +168,7 @@ def terminate_pids(pids: set[int]) -> None:
 def launch_smoke(seconds: int) -> None:
     existing = pids_for_packaged_app()
     if existing:
-        fail("Packaged Robinswood Agents is already running; close it before --launch smoke-test. PIDs: " + ", ".join(map(str, sorted(existing))))
+        fail("Packaged Robb Agents is already running; close it before --launch smoke-test. PIDs: " + ", ".join(map(str, sorted(existing))))
 
     smoke_dir = pathlib.Path.home() / ".craft-agent-robinswood-packaged-smoke"
     if smoke_dir.exists():
@@ -180,7 +180,7 @@ def launch_smoke(seconds: int) -> None:
         {
             "CRAFT_CONFIG_DIR": str(smoke_dir),
             "CRAFT_INSTANCE_NUMBER": "robinswood-packaged-smoke",
-            "CRAFT_DEEPLINK_SCHEME": "robinswoodagentssmoke",
+            "CRAFT_DEEPLINK_SCHEME": "robbagentssmoke",
         }
     )
     proc = subprocess.Popen([str(APP_BIN)], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=env)

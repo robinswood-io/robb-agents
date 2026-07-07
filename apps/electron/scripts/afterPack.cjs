@@ -23,7 +23,7 @@ module.exports = async function afterPack(context) {
   }
 
   const appPath = context.appOutDir;
-  const productFilename = context.packager?.appInfo?.productFilename || context.packager?.appInfo?.productName || 'Robinswood Agents';
+  const productFilename = context.packager?.appInfo?.productFilename || context.packager?.appInfo?.productName || 'Robb Agents';
   const resourcesDir = path.join(appPath, `${productFilename}.app`, 'Contents', 'Resources');
   const precompiledAssets = path.join(context.packager.projectDir, 'resources', 'robinswood-Assets.car');
 

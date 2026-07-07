@@ -75,7 +75,7 @@ export class RemoteBrowserPaneManager implements IBrowserPaneManager {
       throw new CodedError(
         'BROWSER_NO_CAPABLE_CLIENT',
         'No connected desktop client supports browser tools for this session. ' +
-        'Open this workspace from the Robinswood Agents desktop app and try again.',
+        'Open this workspace from the Robb Agents desktop app and try again.',
       )
     }
     if (!this.rpcServer.hasClientCapability(clientId, CLIENT_BROWSER_INVOKE)) {

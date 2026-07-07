@@ -1,4 +1,4 @@
-# Robinswood Agents — mémoire de fork
+# Robb Agents — mémoire de fork
 
 Date de décision : 2026-07-06
 
@@ -39,7 +39,7 @@ Le switch provider dans un chat existant est donc un vrai chantier produit/archi
 
 ## Orientation produit
 
-Nom de travail : **Robinswood Agents**.
+Nom de travail : **Robb Agents**.
 
 Positionnement : poste de travail IA français pour clients PME/ETI/cabinets/directions métiers, connecté aux sources internes et gouverné par politiques.
 

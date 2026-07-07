@@ -63,13 +63,13 @@ export async function packageDarwin(config: BuildConfig): Promise<string> {
 
   // Verify SDK is bundled in the .app before checking artifacts
   const macDir = arch === 'arm64' ? 'mac-arm64' : 'mac';
-  const appPath = join(electronDir, 'release', macDir, 'Robinswood Agents.app');
+  const appPath = join(electronDir, 'release', macDir, 'Robb Agents.app');
   console.log('Verifying SDK in packaged app...');
   verifyPackagedSDK(appPath, arch);
 
   // Verify the DMG and ZIP were built (ZIP is used by electron-updater for auto-updates)
-  const dmgName = `Robinswood-Agents-${arch}.dmg`;
-  const zipName = `Robinswood-Agents-${arch}.zip`;
+  const dmgName = `Robb-Agents-${arch}.dmg`;
+  const zipName = `Robb-Agents-${arch}.zip`;
   const dmgPath = join(electronDir, 'release', dmgName);
   const zipPath = join(electronDir, 'release', zipName);
 

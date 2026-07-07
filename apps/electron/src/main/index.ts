@@ -226,7 +226,7 @@ let messagingHandle: MessagingBootstrapHandle | null = null
 let pendingDeepLink: string | null = null
 
 // Set app name early (before app.whenReady) to ensure correct macOS menu bar title
-// Supports multi-instance dev: CRAFT_APP_NAME env var (e.g., "Robinswood Agents [1]")
+// Supports multi-instance dev: CRAFT_APP_NAME env var (e.g., "Robb Agents [1]")
 app.setName(process.env.CRAFT_APP_NAME || ROBINSWOOD_APP_NAME)
 
 // Register as default protocol client for craftagents:// URLs

@@ -1,7 +1,7 @@
-# Plan d’implémentation rebrand minimal — Robinswood Agents
+# Plan d’implémentation rebrand minimal — Robb Agents
 
 Date de référence : 2026-07-07
-Statut : Rebrand minimal + packaging Electron validés le 2026-07-07 — nom app/menu/titres renderer/WebUI/viewer/onboarding/settings visibles `Robinswood Agents`, backend visible `Robinswood Agents Backend`, config par défaut isolée `~/.robinswood-agents`, NOTICE/fork attribution, icônes Robinswood, catalogue source `.icon` Robinswood, bundle id `io.robinswood.agents`, artefacts `Robinswood-Agents-*`, update endpoint Robinswood, garde-fous CI. Build DMG ARM64 réel validé localement ; notarisation/signature Developer ID et compilation Liquid Glass `robinswood-Assets.car` prouvée restent à faire avant distribution externe.
+Statut : Rebrand minimal + packaging Electron validés le 2026-07-07 — nom app/menu/titres renderer/WebUI/viewer/onboarding/settings visibles `Robb Agents`, backend visible `Robb Agents Backend`, config par défaut isolée `~/.robb-agents`, NOTICE/fork attribution, icônes Robinswood, catalogue source `.icon` Robinswood, bundle id `io.robinswood.robbagents`, artefacts `Robb-Agents-*`, update endpoint Robinswood, garde-fous CI. Build DMG ARM64 réel validé localement ; notarisation/signature Developer ID et compilation Liquid Glass `robinswood-Assets.car` prouvée restent à faire avant distribution externe.
 
 ## Objectif
 
@@ -24,7 +24,7 @@ Créer une distribution privée clairement Robinswood, tout en :
 
 À modifier en premier :
 
-- nom app affiché : `Robinswood Agents` ;
+- nom app affiché : `Robb Agents` ;
 - titre fenêtre ;
 - icône app ;
 - écran onboarding — rebrandé dans les valeurs i18n visibles ;
@@ -53,17 +53,17 @@ Créer une distribution privée clairement Robinswood, tout en :
 
 - conserver LICENSE Apache 2.0 ;
 - ajouter/mettre à jour NOTICE Robinswood ;
-- mentionner que Robinswood Agents est un fork privé basé sur Craft Agents OSS ;
+- mentionner que Robb Agents est un fork privé basé sur Craft Agents OSS ;
 - vérifier absence d’usage trompeur des marques Craft/Craft Agents dans surfaces commerciales.
 
 ## Tests rebrand
 
-- build Electron macOS — validé le 2026-07-07 avec `Robinswood-Agents-arm64.dmg` ;
+- build Electron macOS — validé le 2026-07-07 avec `Robb-Agents-arm64.dmg` ;
 - lancement app — smoke-test packagé validé avec config isolée ;
 - vérification nom dans menu app — couvert par `robinswood-branding.test.ts` ;
-- vérification titres renderer — couvert par `robinswood-branding.test.ts` et Vite dev (`<title>Robinswood Agents</title>`) ;
+- vérification titres renderer — couvert par `robinswood-branding.test.ts` et Vite dev (`<title>Robb Agents</title>`) ;
 - vérification icône bundle — SHA-256 de l’`icon.icns` packagé identique à `resources/robinswood-icon.icns` ;
-- vérification chemin config si changé — `CONFIG_DIR` conserve l’override `CRAFT_CONFIG_DIR` mais utilise désormais `~/.robinswood-agents` par défaut; `window-state.json` utilise le `CONFIG_DIR` centralisé ;
+- vérification chemin config si changé — `CONFIG_DIR` conserve l’override `CRAFT_CONFIG_DIR` mais utilise désormais `~/.robb-agents` par défaut; `window-state.json` utilise le `CONFIG_DIR` centralisé ;
 - vérification onboarding — reste dans l’E2E fonctionnel complet ;
 - validation CI Robinswood — verte jusqu’à `Robinswood Validate #28856581945`.
 
@@ -75,9 +75,9 @@ Commande smoke reproductible : `python3 scripts/robinswood-packaged-smoke.py --l
 
 Résultat :
 
-- DMG : `apps/electron/release/Robinswood-Agents-arm64.dmg` (`256M`) ;
-- app montée : `Robinswood Agents.app` ;
-- bundle id : `io.robinswood.agents` ;
+- DMG : `apps/electron/release/Robb-Agents-arm64.dmg` (`256M`) ;
+- app montée : `Robb Agents.app` ;
+- bundle id : `io.robinswood.robbagents` ;
 - exécutable : Mach-O `arm64` ;
 - signature : ad-hoc, notarisation non effectuée faute certificat Developer ID ;
 - Liquid Glass : `robinswood-Assets.car` absent, fallback attendu vers `robinswood-icon.icns` ; catalogue source Robinswood présent dans `resources/robinswood-icon.icon/` ;
@@ -110,8 +110,8 @@ Conclusion : distribution externe macOS bloquée tant que les credentials Apple 
 
 ## Ordre de commits recommandé
 
-1. `chore: add Robinswood NOTICE attribution` — fait dans `feat: brand visible app as Robinswood Agents`.
-2. `feat: brand app shell as Robinswood Agents` — fait pour app name/menu macOS.
+1. `chore: add Robinswood NOTICE attribution` — fait dans `feat: brand visible app as Robb Agents`.
+2. `feat: brand app shell as Robb Agents` — fait pour app name/menu macOS.
 3. `test: add Robinswood branding checks` — fait (`robinswood-branding.test.ts`).
 4. `chore: add Robinswood app icons` — fait (SVG/PNG/ICNS/ICO Robinswood).
 5. `build: configure Robinswood Electron bundle metadata` — fait (bundle id, productName, artifactName, maintainer, update URL).
@@ -120,7 +120,7 @@ Conclusion : distribution externe macOS bloquée tant que les credentials Apple 
 
 Le rebrand minimal est terminé quand :
 
-- l’utilisateur voit `Robinswood Agents` dans les surfaces principales ;
+- l’utilisateur voit `Robb Agents` dans les surfaces principales ;
 - LICENSE/NOTICE sont propres ;
 - l’app packagée démarre ;
 - upstream reste mergeable sans renommage interne massif.
