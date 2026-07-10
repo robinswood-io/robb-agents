@@ -1,7 +1,7 @@
 {
   "name": "@craft-agent/messaging-gateway",
-  "version": "0.10.5",
-  "license": "Apache-2.0",
+  "version": "0.11.0",
+  "license": "MIT",
   "description": "Messaging gateway for Craft Agent — Telegram & WhatsApp",
   "type": "module",
   "main": "src/index.ts",

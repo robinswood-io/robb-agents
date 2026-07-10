@@ -2,7 +2,7 @@
 
 Date de référence : 2026-07-07 14:27 Europe/Paris
 
-Objectif : identifier les PR upstream intéressantes à intégrer dans le fork privé Robinswood / Robb Agents, en privilégiant les fonctionnalités utiles pour un pilote client français : sécurité, stabilité des sources, UX de distribution, gouvernance, compatibilité Windows/macOS, et faible risque de merge.
+Objectif : identifier les PR upstream intéressantes à intégrer dans Robb Agents, distribution OSS Robinswood, en privilégiant les fonctionnalités utiles pour un pilote client français : sécurité, stabilité des sources, UX de distribution, gouvernance, compatibilité Windows/macOS, et faible risque de merge.
 
 ## Synthèse exécutive
 

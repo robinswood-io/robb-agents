@@ -92,8 +92,8 @@ export function InlineLabelMenu({
   activeStateId,
   onSelectState,
 }: InlineLabelMenuProps) {
-  const menuRef = React.useRef<HTMLDivElement>(null)
   const { t } = useTranslation()
+  const menuRef = React.useRef<HTMLDivElement>(null)
   const listRef = React.useRef<HTMLDivElement>(null)
   const [selectedIndex, setSelectedIndex] = React.useState(0)
   const filteredItems = filterItems(items, filter)
@@ -215,7 +215,7 @@ export function InlineLabelMenu({
             <div className="shrink-0 text-muted-foreground">
               <Plus className="h-3.5 w-3.5" />
             </div>
-            <span className="text-[13px]">Add New Label</span>
+            <span className="text-[13px]">{t('sidebarMenu.addNewLabel')}</span>
           </div>
         ) : (
           <>

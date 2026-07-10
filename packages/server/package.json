@@ -1,6 +1,6 @@
 {
   "name": "@craft-agent/server",
-  "version": "0.10.5",
+  "version": "0.11.0",
   "description": "Standalone headless Craft Agent server (Bun runtime)",
   "type": "module",
   "main": "src/index.ts",
@@ -17,7 +17,7 @@
     "name": "Craft Docs Ltd.",
     "email": "support@craft.do"
   },
-  "license": "Apache-2.0",
+  "license": "MIT",
   "homepage": "https://agents.craft.do",
   "scripts": {
     "start": "bun run src/index.ts",

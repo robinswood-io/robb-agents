@@ -4,8 +4,15 @@
  * Focuses on getMiniModel() / findSmallModel() — the provider-aware small
  * model resolution used for title generation, summarization, and call_llm.
  */
-import { describe, it, expect } from 'bun:test';
-import { getMiniModel, getSummarizationModel, isDeniedMiniModelId } from '../src/config/llm-connections.ts';
+import { afterEach, describe, it, expect } from 'bun:test';
+import {
+  getDefaultModelForConnection,
+  getDefaultModelsForConnection,
+  getMiniModel,
+  getSummarizationModel,
+  isDeniedMiniModelId,
+  registerPiModelResolver,
+} from '../src/config/llm-connections.ts';
 import type { LlmProviderType } from '../src/config/llm-connections.ts';
 
 // ============================================================
@@ -15,6 +22,10 @@ import type { LlmProviderType } from '../src/config/llm-connections.ts';
 function makeConnection(providerType: LlmProviderType, models: string[], piAuthProvider?: string) {
   return { providerType, models, piAuthProvider };
 }
+
+afterEach(() => {
+  registerPiModelResolver(() => []);
+});
 
 // ============================================================
 // getMiniModel / findSmallModel
@@ -185,6 +196,46 @@ describe('getMiniModel() — auth-flavor awareness', () => {
     // No remaining mini/flash candidate after filtering → falls back to last
     // allowed model (gpt-5.2-codex).
     expect(getMiniModel(conn)).toBe('pi/gpt-5.2-codex');
+  });
+});
+
+// ============================================================
+// Preferred Pi defaults
+// ============================================================
+
+describe('getDefaultModelsForConnection() — GPT-5.6 OpenAI defaults', () => {
+  it('uses GPT-5.6 Sol/Terra/Luna first for regular OpenAI API auth', () => {
+    registerPiModelResolver((provider) => provider === 'openai' ? [
+      { id: 'pi/gpt-5.5', name: 'GPT 5.5', shortName: '5.5', provider: 'pi', contextWindow: 1048576, supportsThinking: true },
+      { id: 'pi/gpt-5.6-luna', name: 'GPT-5.6 Luna', shortName: 'Luna', provider: 'pi', contextWindow: 1048576, supportsThinking: true },
+      { id: 'pi/gpt-5.6-sol', name: 'GPT-5.6 Sol', shortName: 'Sol', provider: 'pi', contextWindow: 1048576, supportsThinking: true },
+      { id: 'pi/gpt-5.6-terra', name: 'GPT-5.6 Terra', shortName: 'Terra', provider: 'pi', contextWindow: 1048576, supportsThinking: true },
+    ] : []);
+
+    expect(getDefaultModelsForConnection('pi', 'openai').slice(0, 4).map(m => typeof m === 'string' ? m : m.id)).toEqual([
+      'pi/gpt-5.6-sol',
+      'pi/gpt-5.6-terra',
+      'pi/gpt-5.6-luna',
+      'pi/gpt-5.5',
+    ]);
+    expect(getDefaultModelForConnection('pi', 'openai')).toBe('pi/gpt-5.6-sol');
+  });
+
+  it('uses GPT-5.6 Sol/Terra/Luna first for ChatGPT account / Codex auth', () => {
+    registerPiModelResolver((provider) => provider === 'openai-codex' ? [
+      { id: 'pi/gpt-5.2', name: 'GPT 5.2', shortName: '5.2', provider: 'pi', contextWindow: 1048576, supportsThinking: true },
+      { id: 'pi/gpt-5.6-terra', name: 'GPT-5.6 Terra', shortName: 'Terra', provider: 'pi', contextWindow: 1048576, supportsThinking: true },
+      { id: 'pi/gpt-5.6-luna', name: 'GPT-5.6 Luna', shortName: 'Luna', provider: 'pi', contextWindow: 1048576, supportsThinking: true },
+      { id: 'pi/gpt-5.6-sol', name: 'GPT-5.6 Sol', shortName: 'Sol', provider: 'pi', contextWindow: 1048576, supportsThinking: true },
+    ] : []);
+
+    expect(getDefaultModelsForConnection('pi', 'openai-codex').slice(0, 4).map(m => typeof m === 'string' ? m : m.id)).toEqual([
+      'pi/gpt-5.6-sol',
+      'pi/gpt-5.6-terra',
+      'pi/gpt-5.6-luna',
+      'pi/gpt-5.2',
+    ]);
+    expect(getDefaultModelForConnection('pi', 'openai-codex')).toBe('pi/gpt-5.6-sol');
   });
 });
 

@@ -2,9 +2,9 @@
 
 Date de décision : 2026-07-06
 
-Ce dépôt est le fork privé Robinswood de `craft-ai-agents/craft-agents-oss`.
+Ce dépôt est la distribution open-source Robb Agents maintenue par Robinswood, basée sur `craft-ai-agents/craft-agents-oss`.
 
-Objectif : construire une distribution française, client-ready, de Craft Agents OSS, orientée usages métier, gouvernance IA, sources Robinswood et routage intelligent des modèles.
+Objectif : construire une distribution française, client-ready et open-source de Craft Agents OSS, orientée usages métier, gouvernance IA et routage intelligent des modèles, sans embarquer de proxy ou endpoint privé Robinswood dans l’arbre OSS.
 
 ## Décision
 
@@ -12,7 +12,7 @@ Nous ne forkons pas uniquement pour obtenir la langue française. Le français e
 
 - interface française native ;
 - app rebrandée, sans usage de la marque Craft en distribution client ;
-- connecteurs métiers français et Robinswood ;
+- connecteurs métiers français et intégrations configurables par déploiement ;
 - workspaces préconfigurés par client ;
 - politiques de confidentialité et de routage IA ;
 - audit des actions et des providers utilisés ;
@@ -91,12 +91,12 @@ Exemples :
 
 ### Phase 0 — Fork propre
 
-- [x] Créer repo privé `robinswood-io/robinswood-agents`.
+- [x] Créer le fork Robinswood initial, puis préparer la distribution OSS `robb-agents`.
 - [x] Ajouter upstream Craft Agents OSS.
 - [x] Intégrer la locale française.
 - [x] Ajouter CI Robinswood (`Robinswood Validate`) avec install gelée, typechecks ciblés et tests router/runtime ; validation upstream lourde disponible en manuel.
 - [ ] Rebrand app, bundle ID, icône, docs, installer. Inventaire initial documenté dans `rebrand-inventory.md`, plan minimal dans `rebrand-implementation-plan.md`.
-- [x] Clarifier obligations Apache 2.0 / trademark au niveau inventaire initial.
+- [x] Clarifier obligations MIT / Apache 2.0 upstream / trademark au niveau inventaire initial.
 
 ### Phase 1 — Distribution française
 
@@ -135,4 +135,4 @@ Exemples :
 
 ## Notes légales
 
-Craft Agents OSS est sous Apache 2.0, mais “Craft” et “Craft Agents” sont des marques. Une distribution client Robinswood doit donc être rebrandée et ne pas être présentée comme une app officielle Craft.
+Robb Agents est publié sous licence MIT pour les modifications Robb, avec conservation de `LICENSE-APACHE` et du `NOTICE` upstream pour les portions dérivées de Craft Agents OSS. “Craft” et “Craft Agents” sont des marques de Craft Docs Ltd. ; Robb Agents n’est pas une distribution officielle Craft. L’arbre OSS ne doit pas embarquer d’endpoint/proxy privé Robinswood ; ces déploiements doivent rester dans des overlays privés.

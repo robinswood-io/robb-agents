@@ -55,7 +55,10 @@ const IGNORED_CONSOLE_PATTERNS = [
 // NOTE: Source map upload is intentionally disabled — see main/index.ts for details.
 sentryInit(
   {
-    integrations: [captureConsoleIntegration({ levels: ['error'] })],
+    // @sentry/electron and @sentry/react can resolve separate @sentry/core copies;
+    // the integration object is runtime-compatible, but TypeScript treats the
+    // protected Client types as nominal. Cast locally to keep renderer init typed.
+    integrations: [captureConsoleIntegration({ levels: ['error'] }) as never],
 
     beforeSend(event) {
       // Drop events matching known-harmless console patterns to avoid Sentry quota waste
@@ -88,7 +91,7 @@ sentryInit(
       return event
     },
   },
-  Sentry.init,
+  Sentry.init as never,
 )
 
 /**
@@ -98,13 +101,13 @@ sentryInit(
 function CrashFallback() {
   return (
     <div className="flex flex-col items-center justify-center h-screen font-sans text-foreground/50 gap-3">
-      <p className="text-base font-medium">Something went wrong</p>
-      <p className="text-[13px]">Please restart the app. The error has been reported.</p>
+      <p className="text-base font-medium">{i18n.t('crash.somethingWentWrong')}</p>
+      <p className="text-[13px]">{i18n.t('crash.restartPrompt')}</p>
       <button
         onClick={() => window.location.reload()}
         className="mt-2 px-4 py-1.5 rounded-md bg-background shadow-minimal text-[13px] text-foreground/70 cursor-pointer"
       >
-        Reload
+        {i18n.t('crash.reload')}
       </button>
     </div>
   )

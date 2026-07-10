@@ -13,7 +13,7 @@
  * NEVER import this file from renderer components or from files that the renderer imports.
  */
 
-import { getProviders, getModels } from '@earendil-works/pi-ai';
+import { getProviders, getModels } from '@earendil-works/pi-ai/compat';
 import type { KnownProvider, Model, Api } from '@earendil-works/pi-ai';
 import type { ModelDefinition } from './models.ts';
 
@@ -50,6 +50,53 @@ const GOOGLE_GEMINI_CODE_ASSIST_MODELS: ModelDefinition[] = [
     supportsThinking: true,
   },
 ];
+
+const OPENAI_GPT_56_MODELS: ModelDefinition[] = [
+  {
+    id: 'pi/gpt-5.6-sol',
+    name: 'GPT-5.6 Sol',
+    shortName: 'Sol',
+    description: 'OpenAI GPT-5.6 flagship model via Robb Agents Backend',
+    provider: 'pi',
+    contextWindow: 1048576,
+    supportsThinking: true,
+  },
+  {
+    id: 'pi/gpt-5.6-terra',
+    name: 'GPT-5.6 Terra',
+    shortName: 'Terra',
+    description: 'OpenAI GPT-5.6 balanced model via Robb Agents Backend',
+    provider: 'pi',
+    contextWindow: 1048576,
+    supportsThinking: true,
+  },
+  {
+    id: 'pi/gpt-5.6-luna',
+    name: 'GPT-5.6 Luna',
+    shortName: 'Luna',
+    description: 'OpenAI GPT-5.6 cost-efficient model via Robb Agents Backend',
+    provider: 'pi',
+    contextWindow: 1048576,
+    supportsThinking: true,
+  },
+];
+
+const PI_MODEL_SUPPLEMENTS: Record<string, ModelDefinition[]> = {
+  // Pi SDK 0.80.3 predates OpenAI's GPT-5.6 launch. Keep Robb current by
+  // injecting the official model IDs until the upstream SDK catalog catches up.
+  openai: OPENAI_GPT_56_MODELS,
+  'openai-codex': OPENAI_GPT_56_MODELS,
+};
+
+function withSupplementalPiModels(piAuthProvider: string, models: ModelDefinition[]): ModelDefinition[] {
+  const supplements = PI_MODEL_SUPPLEMENTS[piAuthProvider] ?? [];
+  if (supplements.length === 0) return models;
+  const seenBareIds = new Set(models.map(m => m.id.replace(/^pi\//, '')));
+  return [
+    ...supplements.filter(m => !seenBareIds.has(m.id.replace(/^pi\//, ''))),
+    ...models,
+  ];
+}
 
 /**
  * Convert a Pi SDK Model to our ModelDefinition format.
@@ -135,18 +182,21 @@ export function getPiModelsForAuthProvider(piAuthProvider: string): ModelDefinit
   try {
     const models = getModels(piAuthProvider as KnownProvider);
     if (models.length > 0) {
-      return models
-        .filter(m => !isExcludedPiModel(m.id))
-        // Bedrock: exclude bare Claude models without region prefix — they're
-        // always rejected by Bedrock which requires inference profiles (us.*/eu.*/global.*).
-        // Regional variants from the same catalog are kept.
-        .filter(m => piAuthProvider !== 'amazon-bedrock' || !isBareBedrockClaudeModel(m.id))
-        .map(piModelToDefinition);
+      return withSupplementalPiModels(
+        piAuthProvider,
+        models
+          .filter(m => !isExcludedPiModel(m.id))
+          // Bedrock: exclude bare Claude models without region prefix — they're
+          // always rejected by Bedrock which requires inference profiles (us.*/eu.*/global.*).
+          // Regional variants from the same catalog are kept.
+          .filter(m => piAuthProvider !== 'amazon-bedrock' || !isBareBedrockClaudeModel(m.id))
+          .map(piModelToDefinition),
+      );
     }
   } catch {
     // Provider not recognized by SDK — fall through
   }
-  return [];
+  return withSupplementalPiModels(piAuthProvider, []);
 }
 
 /**
@@ -157,10 +207,12 @@ export function getAllPiModels(): ModelDefinition[] {
   for (const provider of getProviders()) {
     try {
       const models = getModels(provider);
-      allModels.push(...models
-        .filter(m => !isExcludedPiModel(m.id))
-        .map(piModelToDefinition)
-      );
+      allModels.push(...withSupplementalPiModels(
+        provider,
+        models
+          .filter(m => !isExcludedPiModel(m.id))
+          .map(piModelToDefinition),
+      ));
     } catch {
       // Skip providers that fail
     }

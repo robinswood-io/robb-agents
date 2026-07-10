@@ -14,6 +14,17 @@ describe('models-pi filtering', () => {
     expect(ids.some(id => id.startsWith('pi/gpt-4'))).toBe(false);
   });
 
+  it('exposes GPT-5.6 Sol, Terra, and Luna for OpenAI API and ChatGPT account auth', () => {
+    for (const provider of ['openai', 'openai-codex']) {
+      const ids = getPiModelsForAuthProvider(provider).map(m => m.id);
+      expect(ids.slice(0, 3)).toEqual([
+        'pi/gpt-5.6-sol',
+        'pi/gpt-5.6-terra',
+        'pi/gpt-5.6-luna',
+      ]);
+    }
+  });
+
   it('excludes deprecated Claude Opus 4.6 models from Anthropic catalogs', () => {
     const anthropicIds = getPiModelsForAuthProvider('anthropic').map(m => m.id);
     expect(anthropicIds).not.toContain('pi/claude-opus-4-6');

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Robinswood fork lightweight validation.
+"""Robb Agents lightweight validation.
 
-This intentionally avoids installing the full JS workspace so the private fork
-has a stable baseline even when upstream's heavier CI is temporarily broken.
+This intentionally avoids installing the full JS workspace so the OSS fork has
+a stable baseline even when upstream's heavier CI is temporarily broken.
 """
 from __future__ import annotations
 
@@ -69,6 +69,63 @@ def check_french_locale() -> None:
     print(f"✓ French locale parity ({len(fr)} keys)")
 
 
+def check_oss_license() -> None:
+    license_text = (ROOT / "LICENSE").read_text(encoding="utf-8")
+    apache_text = (ROOT / "LICENSE-APACHE").read_text(encoding="utf-8")
+    notice = (ROOT / "NOTICE").read_text(encoding="utf-8")
+    if "MIT License" not in license_text:
+        fail("Root LICENSE must be MIT for Robb OSS")
+    if "Apache License" not in apache_text:
+        fail("LICENSE-APACHE must preserve upstream Apache 2.0 text")
+    for token in ["open-source Robinswood distribution", "MIT License", "LICENSE-APACHE", "not an official Craft Docs Ltd. distribution"]:
+        if token not in notice:
+            fail(f"NOTICE missing OSS/upstream attribution token: {token}")
+
+    package_paths = [ROOT / "package.json", *sorted((ROOT / "apps").glob("*/package.json")), *sorted((ROOT / "packages").glob("*/package.json"))]
+    non_mit: list[str] = []
+    for path in package_paths:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        if data.get("license") != "MIT":
+            non_mit.append(f"{path.relative_to(ROOT)}:{data.get('license')}")
+    if non_mit:
+        fail("Package license fields must be MIT: " + ", ".join(non_mit))
+    print("✓ Robb OSS MIT licensing")
+
+
+def check_no_private_runtime_endpoints() -> None:
+    forbidden = [
+        "https://agents.robinswood.io",
+        "https://robinswood.io",
+        "contact@robinswood.io",
+    ]
+    allowed_paths = {
+        "scripts/robinswood-validate.py",
+        "apps/electron/src/main/__tests__/robinswood-branding.test.ts",
+        "docs/robinswood/rebrand-implementation-plan.md",
+        "docs/robinswood/upstream-pr-evaluation-2026-07-07.md",
+    }
+    offenders: list[str] = []
+    scan_roots = [ROOT / "apps", ROOT / "packages", ROOT / "package.json", ROOT / "README.md", ROOT / "NOTICE"]
+    for root in scan_roots:
+        paths = [root] if root.is_file() else [p for p in root.rglob("*") if p.is_file()]
+        for path in paths:
+            if "release" in path.parts or "dist" in path.parts or "node_modules" in path.parts:
+                continue
+            rel = path.relative_to(ROOT).as_posix()
+            if rel in allowed_paths:
+                continue
+            try:
+                text = path.read_text(encoding="utf-8")
+            except UnicodeDecodeError:
+                continue
+            for token in forbidden:
+                if token in text:
+                    offenders.append(f"{rel}: {token}")
+    if offenders:
+        fail("Private Robinswood endpoint/contact leaked into OSS runtime files: " + "; ".join(offenders[:20]))
+    print("✓ No private Robinswood proxy/update endpoints in OSS runtime")
+
+
 def check_french_default() -> None:
     setup_path = ROOT / "packages" / "shared" / "src" / "i18n" / "setupI18n.ts"
     setup = setup_path.read_text(encoding="utf-8")
@@ -90,7 +147,6 @@ def check_robinswood_packaging() -> None:
         "appId: io.robinswood.robbagents",
         "productName: Robb Agents",
         "copyright: Copyright © 2026 Robinswood",
-        "url: https://agents.robinswood.io/electron/latest",
         "artifactName: \"Robb-Agents-${arch}.dmg\"",
         "artifactName: \"Robb-Agents-${arch}.${ext}\"",
         "icon: resources/robinswood-icon.icns",
@@ -104,6 +160,7 @@ def check_robinswood_packaging() -> None:
         "appId: com.lukilabs.craft-agent",
         "productName: Craft Agents",
         "url: https://agents.craft.do/electron/latest",
+        "url: https://agents.robinswood.io/electron/latest",
         "artifactName: \"Craft-Agents-",
     ]
     present_forbidden = [token for token in forbidden if token in builder]
@@ -149,7 +206,7 @@ def check_robinswood_packaging() -> None:
         "apps/webui/src/login.html": "<title>Robb Agents — Login</title>",
         "apps/webui/src/public/manifest.json": "Robb Agents",
         "apps/viewer/index.html": "Robb Agents Session Viewer",
-        "apps/viewer/src/components/Header.tsx": "https://agents.robinswood.io",
+        "apps/viewer/src/components/Header.tsx": "https://github.com/robinswood-io/robb-agents",
     }
     missing_web = []
     for rel, token in web_surfaces.items():
@@ -183,6 +240,8 @@ def check_robinswood_docs() -> None:
 
 def main() -> None:
     check_windows_filenames()
+    check_oss_license()
+    check_no_private_runtime_endpoints()
     check_french_locale()
     check_french_default()
     check_robinswood_docs()

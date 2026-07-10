@@ -1,8 +1,14 @@
 Robb Agents
 Copyright 2026 Robinswood
 
-Robb Agents is a private Robinswood distribution based on Craft Agents OSS.
-It includes software developed by Craft Docs Ltd. under the Apache License 2.0.
+Robb Agents is an open-source Robinswood distribution based on Craft Agents OSS.
+Robb-specific modifications are released under the MIT License. Portions derived
+from Craft Agents OSS retain the upstream Apache License 2.0 notices and patent
+license terms; see LICENSE-APACHE.
+
+The Robb Agents Open Source tree intentionally does not include or depend on any
+private Robinswood-hosted proxy/update endpoint. Distributors may configure their
+own endpoints outside this public tree.
 
 Craft, Craft Agents, and related Craft logos are trademarks of Craft Docs Ltd.
 Robb Agents is not an official Craft Docs Ltd. distribution.

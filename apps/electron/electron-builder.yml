@@ -73,11 +73,9 @@ files:
 extraMetadata:
   main: dist/main.cjs
 
-# Auto-update: electron-updater fetches from this URL for update manifests (.yml files).
-# Robinswood distributions must not publish/check against official Craft update endpoints.
-publish:
-  provider: generic
-  url: https://agents.robinswood.io/electron/latest
+# Auto-update is intentionally not hardcoded in the Open Source build.
+# Distributors may configure their own electron-updater endpoint in a private overlay.
+# Do not publish/check against Craft or Robinswood private endpoints from the OSS tree.
 
 # Disable ASAR to avoid decompression overhead and click delays
 asar: false
@@ -85,6 +83,14 @@ asar: false
 mac:
   category: public.app-category.productivity
   icon: resources/robinswood-icon.icns
+  # macOS 26+ Liquid Glass: Tell macOS to look for icon in Assets.car
+  # The value must match --app-icon used in actool (see afterPack.cjs)
+  extendInfo:
+    CFBundleIconName: AppIcon
+    # Required for macOS to list the app under Privacy & Security > Local Network
+    # and prompt for permission. Without it the app is silently denied LAN access
+    # and never appears in the privacy pane (craft-agents-oss#938).
+    NSLocalNetworkUsageDescription: "Robb Agents uses your local network to reach LAN addresses and devices you ask an agent to access, such as local servers or APIs."
   target:
     - target: dmg
       arch:
@@ -190,7 +196,7 @@ nsis:
 linux:
   icon: resources/robinswood-icon.png
   category: Utility
-  maintainer: "Robinswood <contact@robinswood.io>"
+  maintainer: "Robb Agents Contributors"
   target:
     - target: AppImage
       arch:

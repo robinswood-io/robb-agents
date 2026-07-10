@@ -1,13 +1,13 @@
 # Plan d’implémentation rebrand minimal — Robb Agents
 
 Date de référence : 2026-07-07
-Statut : Rebrand minimal + packaging Electron validés le 2026-07-07 — nom app/menu/titres renderer/WebUI/viewer/onboarding/settings visibles `Robb Agents`, backend visible `Robb Agents Backend`, config par défaut isolée `~/.robb-agents`, NOTICE/fork attribution, icônes Robinswood, catalogue source `.icon` Robinswood, bundle id `io.robinswood.robbagents`, artefacts `Robb-Agents-*`, update endpoint Robinswood, garde-fous CI. Build DMG ARM64 réel validé localement ; notarisation/signature Developer ID et compilation Liquid Glass `robinswood-Assets.car` prouvée restent à faire avant distribution externe.
+Statut : Rebrand minimal + packaging Electron validés le 2026-07-07, puis préparation OSS le 2026-07-10 — nom app/menu/titres renderer/WebUI/viewer/onboarding/settings visibles `Robb Agents`, backend visible `Robb Agents Backend`, config par défaut isolée `~/.robb-agents`, NOTICE/fork attribution, icônes Robb/Robinswood, catalogue source `.icon`, bundle id `io.robinswood.robbagents`, artefacts `Robb-Agents-*`, aucun endpoint/proxy privé Robinswood dans l’arbre OSS, garde-fous CI. Build DMG ARM64 réel validé localement ; notarisation/signature Developer ID et compilation Liquid Glass `robinswood-Assets.car` prouvée restent à faire avant distribution externe.
 
 ## Objectif
 
-Créer une distribution privée clairement Robinswood, tout en :
+Créer une distribution open-source clairement Robb/Robinswood, tout en :
 
-- respectant Apache 2.0 ;
+- publiant les modifications Robb sous MIT et en conservant les obligations Apache 2.0 upstream ;
 - évitant toute confusion avec les marques Craft/Craft Agents ;
 - minimisant les conflits avec upstream ;
 - évitant un renommage interne massif des packages.
@@ -17,7 +17,7 @@ Créer une distribution privée clairement Robinswood, tout en :
 1. Rebrand visible utilisateur d’abord.
 2. Pas de renommage des packages internes sauf nécessité build/legal.
 3. Garder les mentions d’attribution upstream dans NOTICE/LICENSE.
-4. Documenter les écarts Robinswood.
+4. Documenter les écarts Robb/Robinswood et garder les overlays privés hors OSS.
 5. Tester packaging Electron après chaque petit changement.
 
 ## Phase 1 — Surface visible
@@ -51,9 +51,11 @@ Créer une distribution privée clairement Robinswood, tout en :
 
 À livrer :
 
-- conserver LICENSE Apache 2.0 ;
-- ajouter/mettre à jour NOTICE Robinswood ;
-- mentionner que Robb Agents est un fork privé basé sur Craft Agents OSS ;
+- publier `LICENSE` en MIT pour Robb OSS ;
+- conserver `LICENSE-APACHE` pour l’attribution upstream ;
+- ajouter/mettre à jour NOTICE Robb OSS ;
+- mentionner que Robb Agents est une distribution open-source basée sur Craft Agents OSS ;
+- vérifier qu’aucun endpoint/proxy privé Robinswood n’est embarqué dans l’arbre OSS ;
 - vérifier absence d’usage trompeur des marques Craft/Craft Agents dans surfaces commerciales.
 
 ## Tests rebrand

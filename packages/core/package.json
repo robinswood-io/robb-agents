@@ -1,7 +1,7 @@
 {
   "name": "@craft-agent/core",
-  "version": "0.10.5",
-  "license": "Apache-2.0",
+  "version": "0.11.0",
+  "license": "MIT",
   "description": "Core types, storage, and agent logic for Craft Agents",
   "type": "module",
   "main": "src/index.ts",

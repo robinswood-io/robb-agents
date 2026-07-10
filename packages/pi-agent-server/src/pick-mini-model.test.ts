@@ -43,10 +43,20 @@ describe('pickProviderAppropriateMiniModel', () => {
     expect(result).toBe('claude-opus-4-8');
   });
 
-  it('openai-codex: skips denied codex-mini variants, returns first resolvable candidate', () => {
-    // PI_PREFERRED_DEFAULTS['openai-codex'] = ['gpt-5.5', 'gpt-5.2', ...].
-    // None of these are *codex-mini*, so isDeniedMiniModelId won't filter any.
-    // But we verify the filter works by registering only gpt-5.2 as resolvable.
+  it('openai-codex: returns GPT-5.6 Sol when it is resolvable', () => {
+    const registry = createMockRegistry({
+      'openai-codex': [
+        { id: 'gpt-5.6-sol', name: 'GPT-5.6 Sol' },
+        { id: 'gpt-5.6-terra', name: 'GPT-5.6 Terra' },
+        { id: 'gpt-5.6-luna', name: 'GPT-5.6 Luna' },
+      ],
+    });
+
+    const result = pickProviderAppropriateMiniModel('openai-codex', registry, false);
+    expect(result).toBe('gpt-5.6-sol');
+  });
+
+  it('openai-codex: falls back to older GPT when GPT-5.6 is unavailable', () => {
     const registry = createMockRegistry({
       'openai-codex': [{ id: 'gpt-5.2', name: 'GPT 5.2' }],
     });
@@ -65,23 +75,22 @@ describe('pickProviderAppropriateMiniModel', () => {
     expect(result).toBeUndefined();
   });
 
-  it('openai: returns first resolvable candidate from preferred list', () => {
-    // PI_PREFERRED_DEFAULTS.openai = ['gpt-5.5', 'gpt-5.2', 'gpt-5.1', ...].
-    // gpt-5.5 is resolvable → returned first.
+  it('openai: returns GPT-5.6 Sol from the preferred list', () => {
     const registry = createMockRegistry({
       openai: [
+        { id: 'gpt-5.6-sol', name: 'GPT-5.6 Sol' },
         { id: 'gpt-5.5', name: 'GPT 5.5' },
         { id: 'gpt-5.2', name: 'GPT 5.2' },
       ],
     });
 
     const result = pickProviderAppropriateMiniModel('openai', registry, false);
-    expect(result).toBe('gpt-5.5');
+    expect(result).toBe('gpt-5.6-sol');
   });
 
   it('unknown provider: returns undefined', () => {
     const registry = createMockRegistry({
-      openai: [{ id: 'gpt-5.5', name: 'GPT 5.5' }],
+      openai: [{ id: 'gpt-5.6-sol', name: 'GPT-5.6 Sol' }],
     });
 
     const result = pickProviderAppropriateMiniModel('made-up-provider', registry, false);

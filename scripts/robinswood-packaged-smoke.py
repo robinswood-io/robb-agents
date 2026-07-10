@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import json
 import os
 import pathlib
 import plistlib
@@ -32,6 +33,16 @@ PLIST = APP_DIR / "Contents" / "Info.plist"
 PACKAGED_ICON = APP_DIR / "Contents" / "Resources" / "icon.icns"
 SOURCE_ICON = ELECTRON_DIR / "resources" / "robinswood-icon.icns"
 DMG = RELEASE_DIR / "Robb-Agents-arm64.dmg"
+PACKAGE_JSON = ELECTRON_DIR / "package.json"
+
+
+def expected_app_version() -> str:
+    with PACKAGE_JSON.open("r", encoding="utf-8") as handle:
+        package = json.load(handle)
+    version = package.get("version")
+    if not isinstance(version, str) or not version:
+        fail(f"Invalid Electron package version in {PACKAGE_JSON}")
+    return version
 
 
 def fail(message: str) -> None:
@@ -66,13 +77,14 @@ def check_bundle() -> None:
     with PLIST.open("rb") as handle:
         plist = plistlib.load(handle)
 
+    version = expected_app_version()
     expected = {
         "CFBundleName": "Robb Agents",
         "CFBundleDisplayName": "Robb Agents",
         "CFBundleExecutable": "Robb Agents",
         "CFBundleIdentifier": "io.robinswood.robbagents",
-        "CFBundleShortVersionString": "0.10.5",
-        "CFBundleVersion": "0.10.5",
+        "CFBundleShortVersionString": version,
+        "CFBundleVersion": version,
         "CFBundleIconFile": "icon.icns",
     }
     mismatches = [f"{key}={plist.get(key)!r} (expected {value!r})" for key, value in expected.items() if plist.get(key) != value]
@@ -90,13 +102,16 @@ def check_bundle() -> None:
     code_text = code_result.stdout + code_result.stderr
     if code_result.returncode != 0:
         fail(f"codesign inspection failed: {code_text}")
-    if "Identifier=io.robinswood.robbagents" not in code_text:
+    if "Signature=adhoc" in code_text or "TeamIdentifier=not set" in code_text:
+        print("- packaged app uses ad-hoc signature; skipping Developer ID signature identifier check")
+    elif "Identifier=io.robinswood.robbagents" not in code_text:
         fail("Packaged app signature does not expose io.robinswood.robbagents identifier")
+    else:
+        print("✓ packaged signature identifier")
 
     print("✓ packaged app bundle metadata")
     print("✓ packaged app architecture arm64")
     print("✓ packaged Robinswood icon")
-    print("✓ packaged signature identifier")
 
 
 def check_dmg() -> None:

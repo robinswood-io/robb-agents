@@ -18,7 +18,7 @@ describe('Robinswood visible branding', () => {
   it('defines the Robinswood app name in shared branding constants', () => {
     expect(ROBINSWOOD_APP_NAME).toBe('Robb Agents')
     expect(ROBINSWOOD_BACKEND_NAME).toBe('Robb Agents Backend')
-    expect(ROBINSWOOD_NOTICE).toContain('private Robinswood distribution')
+    expect(ROBINSWOOD_NOTICE).toContain('open-source Robinswood distribution')
   })
 
   it('uses Robb Agents as the default Electron app name', () => {
@@ -35,7 +35,7 @@ describe('Robinswood visible branding', () => {
     expect(menu).toContain('Quit ${ROBINSWOOD_APP_NAME}')
   })
 
-  it('uses Robinswood packaging metadata and does not publish against official Craft endpoints', () => {
+  it('uses Robb packaging metadata without private update endpoints', () => {
     const builder = readRepoFile('apps/electron/electron-builder.yml')
     expect(builder).toContain('appId: io.robinswood.robbagents')
     expect(builder).toContain('productName: Robb Agents')
@@ -44,7 +44,7 @@ describe('Robinswood visible branding', () => {
     expect(builder).toContain('icon: resources/robinswood-icon.icns')
     expect(builder).toContain('icon: resources/robinswood-icon.ico')
     expect(builder).toContain('icon: resources/robinswood-icon.png')
-    expect(builder).toContain('https://agents.robinswood.io/electron/latest')
+    expect(builder).not.toContain('https://agents.robinswood.io/electron/latest')
     expect(builder).not.toContain('https://agents.craft.do/electron/latest')
     expect(builder).not.toContain('productName: Craft Agents')
   })
@@ -100,7 +100,8 @@ describe('Robinswood visible branding', () => {
     expect(readRepoFile('apps/webui/src/login.html')).toContain('<title>Robb Agents — Login</title>')
     expect(readRepoFile('apps/webui/src/login.html')).toContain('<h1>Robb Agents</h1>')
     expect(readRepoFile('apps/viewer/index.html')).toContain('<title>Robb Agents Session Viewer</title>')
-    expect(readRepoFile('apps/viewer/src/components/Header.tsx')).toContain('https://agents.robinswood.io')
+    expect(readRepoFile('apps/viewer/src/components/Header.tsx')).toContain('https://github.com/robinswood-io/robb-agents')
+    expect(readRepoFile('apps/viewer/src/components/Header.tsx')).not.toContain('https://agents.robinswood.io')
   })
 
   it('uses an isolated Robinswood config directory while preserving explicit env overrides', () => {
@@ -132,10 +133,18 @@ describe('Robinswood visible branding', () => {
     expect(readRepoFile('packages/shared/src/sources/builtin-sources.ts')).toContain('Upstream Craft Agents OSS Docs')
   })
 
-  it('keeps fork attribution and upstream trademark clarity in NOTICE', () => {
+  it('keeps MIT licensing, Apache upstream attribution, and trademark clarity', () => {
+    const license = readRepoFile('LICENSE')
+    const apache = readRepoFile('LICENSE-APACHE')
     const notice = readRepoFile('NOTICE')
+    expect(license).toContain('MIT License')
+    expect(apache).toContain('Apache License')
     expect(notice).toContain('Robb Agents')
+    expect(notice).toContain('open-source Robinswood distribution')
+    expect(notice).toContain('MIT License')
+    expect(notice).toContain('LICENSE-APACHE')
     expect(notice).toContain('not an official Craft Docs Ltd. distribution')
     expect(notice).toContain('Craft, Craft Agents')
+    expect(notice).toContain('private Robinswood-hosted proxy/update endpoint')
   })
 })

@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   lightweight:
-    name: Robinswood fork validation
+    name: Robb OSS validation
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -57,16 +57,35 @@ jobs:
             packages/shared/tests/routing-policy-example.test.ts \
             packages/shared/tests/client-workspace-template.test.ts \
             packages/shared/src/sources/__tests__/source-config-validation.test.ts \
+            packages/shared/src/utils/__tests__/paths.test.ts \
+            packages/shared/src/tasks/schema.test.ts \
+            packages/shared/src/projects/__tests__/storage.test.ts \
+            packages/shared/src/labels/__tests__/filter.test.ts \
             apps/electron/src/shared/__tests__/ipc-channels.test.ts \
+            apps/electron/src/shared/__tests__/route-parser-label-filter.test.ts \
             apps/electron/src/main/handlers/__tests__/registration.test.ts \
             apps/electron/src/main/__tests__/robinswood-branding.test.ts \
             apps/electron/src/renderer/event-processor/handlers/__tests__/text-message-id-sync.test.ts \
             apps/electron/src/renderer/components/app-shell/input/__tests__/picker-mode.test.ts \
+            apps/electron/src/renderer/components/app-shell/kanban/__tests__/node-state-pill.test.ts \
+            apps/electron/src/renderer/components/app-shell/kanban/__tests__/subtask-merge.test.ts \
+            apps/electron/src/renderer/components/app-shell/kanban/__tests__/task-spec-form.test.ts \
+            apps/electron/src/renderer/config/__tests__/session-status-config.test.ts \
             apps/electron/src/renderer/hooks/__tests__/useOnboarding.test.ts \
+            apps/electron/src/renderer/hooks/__tests__/useSessionSearch.test.ts \
             apps/electron/src/renderer/pages/settings/__tests__/routing-policy-editor.test.ts \
             apps/electron/src/main/__tests__/connection-setup-logic.test.ts \
             packages/pi-agent-server/src/google-code-assist-provider.test.ts \
             packages/shared/src/audit/routing-audit.test.ts \
+            packages/server-core/src/tasks/TaskRunner.test.ts \
+            packages/server-core/src/sessions/background-task-surface.test.ts \
+            packages/server-core/src/sessions/workflow-task-progress.test.ts \
+            packages/server-core/src/sessions/adopt-task-draft.test.ts \
+            packages/server-core/src/sessions/session-created-notify.test.ts \
+            packages/server-core/src/sessions/execute-prompt-automation-test-mode.test.ts \
+            packages/session-tools-core/src/handlers/list-background-tasks.test.ts \
+            packages/session-tools-core/src/handlers/send-agent-message.test.ts \
+            packages/session-tools-core/src/handlers/set-session-status.test.ts \
             packages/server-core/src/sessions/routing-fallback.test.ts \
             packages/server-core/src/sessions/runtime-config.test.ts
 
