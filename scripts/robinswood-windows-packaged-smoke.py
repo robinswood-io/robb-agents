@@ -59,9 +59,9 @@ def main() -> None:
     if expected_line not in lines:
         fail("SHA-256 checksum file does not match installer")
 
-    print("✓ Windows installer name and size")
-    print("✓ Windows PE/NSIS header and Robb artifact identity")
-    print("✓ Windows installer SHA-256 checksum")
+    print("OK: Windows installer name and size")
+    print("OK: Windows PE/NSIS header and Robb artifact identity")
+    print("OK: Windows installer SHA-256 checksum")
 
 
 if __name__ == "__main__":
