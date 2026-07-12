@@ -47,4 +47,14 @@ describe('models-pi filtering', () => {
     expect(ids).toContain('pi/deepseek-v4-flash');
     expect(ids).toContain('pi/deepseek-v4-pro');
   });
+
+  it('exposes Mistral as a native Pi API-key provider with its agentic model family', () => {
+    const providers = getPiApiKeyProviders();
+    expect(providers.some(provider => provider.key === 'mistral' && provider.label === 'Mistral')).toBe(true);
+
+    const ids = getPiModelsForAuthProvider('mistral').map(m => m.id);
+    expect(ids).toContain('pi/mistral-medium-3.5');
+    expect(ids).toContain('pi/mistral-small-latest');
+    expect(ids).toContain('pi/devstral-latest');
+  });
 });

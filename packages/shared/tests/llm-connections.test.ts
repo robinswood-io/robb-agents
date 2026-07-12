@@ -237,6 +237,25 @@ describe('getDefaultModelsForConnection() — GPT-5.6 OpenAI defaults', () => {
     ]);
     expect(getDefaultModelForConnection('pi', 'openai-codex')).toBe('pi/gpt-5.6-sol');
   });
+
+  it('uses current agentic Mistral models before legacy catalog entries', () => {
+    registerPiModelResolver((provider) => provider === 'mistral' ? [
+      { id: 'pi/codestral-latest', name: 'Codestral', shortName: 'Codestral', provider: 'pi', contextWindow: 256000, supportsThinking: false },
+      { id: 'pi/mistral-small-latest', name: 'Mistral Small 4', shortName: 'Small 4', provider: 'pi', contextWindow: 256000, supportsThinking: true },
+      { id: 'pi/ministral-3b-latest', name: 'Ministral 3B', shortName: '3B', provider: 'pi', contextWindow: 128000, supportsThinking: false },
+      { id: 'pi/mistral-medium-3.5', name: 'Mistral Medium 3.5', shortName: 'Medium 3.5', provider: 'pi', contextWindow: 262144, supportsThinking: true },
+      { id: 'pi/devstral-latest', name: 'Devstral 2', shortName: 'Devstral', provider: 'pi', contextWindow: 262144, supportsThinking: false },
+    ] : []);
+
+    expect(getDefaultModelsForConnection('pi', 'mistral').map(m => typeof m === 'string' ? m : m.id)).toEqual([
+      'pi/mistral-medium-3.5',
+      'pi/mistral-small-latest',
+      'pi/ministral-3b-latest',
+      'pi/devstral-latest',
+      'pi/codestral-latest',
+    ]);
+    expect(getDefaultModelForConnection('pi', 'mistral')).toBe('pi/mistral-medium-3.5');
+  });
 });
 
 // ============================================================

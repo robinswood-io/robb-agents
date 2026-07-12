@@ -151,6 +151,15 @@ const COMPAT_OPENAI_DEFAULTS = 'openai/gpt-5.2-codex, openai/gpt-5.1-codex-mini'
 const COMPAT_MINIMAX_DEFAULTS = 'MiniMax-M2.5, MiniMax-M2.5-highspeed'
 const COMPAT_KIMI_DEFAULTS = 'k2p5, kimi-k2-thinking'
 
+// These are recommendations, not a restriction: all native Mistral models
+// remain selectable in the tier dropdowns. The order is frontier agentic,
+// efficient general-purpose agentic, then utility/summarization.
+const MISTRAL_AGENTIC_TIER_RECOMMENDATIONS = [
+  'pi/mistral-medium-3.5',
+  'pi/mistral-small-latest',
+  'pi/ministral-3b-latest',
+]
+
 function getPresetsForProvider(providerType: 'anthropic' | 'openai' | 'pi' | 'google' | 'pi_api_key'): Preset[] {
   if (providerType === 'pi_api_key') return ANTHROPIC_PRESETS
   if (providerType === 'google') return GOOGLE_PRESETS
@@ -189,14 +198,15 @@ export function ApiKeyInput({
   const presets = getPresetsForProvider(providerType)
   const defaultPreset = presets[0]
 
-  // Compute initial preset: explicit (Pi piAuthProvider), derived from URL, or default
+  // Compute initial preset: explicit (Pi piAuthProvider), derived from URL, or default.
   const initialPreset = initialValues?.activePreset
     ?? (initialValues?.baseUrl ? getPresetForUrl(initialValues.baseUrl, presets) : defaultPreset.key)
+  const initialPresetDefinition = presets.find(preset => preset.key === initialPreset) ?? defaultPreset
 
   const { t } = useTranslation()
   const [apiKey, setApiKey] = useState(initialValues?.apiKey ?? '')
   const [showValue, setShowValue] = useState(false)
-  const [baseUrl, setBaseUrl] = useState(initialValues?.baseUrl ?? defaultPreset.url)
+  const [baseUrl, setBaseUrl] = useState(initialValues?.baseUrl ?? initialPresetDefinition.url)
   const [activePreset, setActivePreset] = useState<PresetKey>(initialPreset)
   const [lastNonCustomPreset, setLastNonCustomPreset] = useState<PresetKey | null>(
     initialPreset !== 'custom' ? initialPreset : defaultPreset.key
@@ -228,9 +238,17 @@ export function ApiKeyInput({
 
   const isPiApiKeyFlow = providerType === 'pi_api_key'
   const isBedrock = activePreset === 'amazon-bedrock'
-  // Hide endpoint/model fields for providers with well-known endpoints handled by the SDK
+  // Hide endpoint/model fields for providers with well-known endpoints handled by the SDK.
   const DEFAULT_ENDPOINT_PROVIDERS = new Set(['anthropic', 'openai', 'pi', 'google'])
   const isDefaultProviderPreset = DEFAULT_ENDPOINT_PROVIDERS.has(activePreset)
+  // Branded Pi providers (including Mistral) must use the SDK's native
+  // provider endpoint rather than persist a user-visible default URL as a
+  // custom endpoint override.
+  const isNativePiProvider = isPiApiKeyFlow
+    && activePreset !== 'custom'
+    && !isBedrock
+    && !OPENAI_COMPAT_CUSTOM_URL_PRESETS.has(activePreset)
+  const usesManagedProviderEndpoint = isDefaultProviderPreset || isNativePiProvider
 
   // Provider-specific placeholders from the active preset
   const activePresetObj = presets.find(p => p.key === activePreset)
@@ -253,7 +271,11 @@ export function ApiKeyInput({
       setPiModels(result.models)
 
       if (hydratedTierProviderRef.current !== provider) {
-        const tiers = resolveTierModels(result.models, provider === initialPreset ? initialValues?.models : undefined)
+        const tiers = resolveTierModels(
+          result.models,
+          provider === initialPreset ? initialValues?.models : undefined,
+          provider === 'mistral' ? MISTRAL_AGENTIC_TIER_RECOMMENDATIONS : undefined,
+        )
         setBestModel(tiers.best)
         setDefaultModel(tiers.default_)
         setCheapModel(tiers.cheap)
@@ -348,7 +370,9 @@ export function ApiKeyInput({
       const models: string[] = [bestModel, defaultModel, cheapModel]
       onSubmit({
         apiKey: apiKey.trim(),
-        baseUrl: baseUrl.trim() || undefined,
+        // Native Pi providers resolve their API endpoint from the SDK catalog.
+        // Persisting the branded URL here would incorrectly turn it into an override.
+        baseUrl: undefined,
         connectionDefaultModel: bestModel,
         models,
         piAuthProvider: effectivePiAuthProvider,
@@ -391,8 +415,8 @@ export function ApiKeyInput({
 
     const parsedModels = parseModelList(connectionDefaultModel)
 
-    const isUsingDefaultEndpoint = isDefaultProviderPreset || !effectiveBaseUrl
-    const requiresModel = !isDefaultProviderPreset && !!effectiveBaseUrl
+    const isUsingDefaultEndpoint = usesManagedProviderEndpoint || !effectiveBaseUrl
+    const requiresModel = !usesManagedProviderEndpoint && !!effectiveBaseUrl
     if (requiresModel && parsedModels.length === 0) {
       setModelError('Default model is required for custom endpoints.')
       return
@@ -493,8 +517,8 @@ export function ApiKeyInput({
             </StyledDropdownMenuContent>
           </DropdownMenu>
         </div>
-        {/* Base URL input - hidden for default provider presets (Anthropic/OpenAI) and Bedrock */}
-        {!isDefaultProviderPreset && !isBedrock && (
+        {/* Native Pi providers resolve their endpoint internally; only custom/compat flows expose a URL. */}
+        {!usesManagedProviderEndpoint && !isBedrock && (
           <div className={cn(
             "rounded-md shadow-minimal transition-colors",
             "bg-foreground-2 focus-within:bg-background"
@@ -514,7 +538,7 @@ export function ApiKeyInput({
       )}
 
       {/* Protocol Toggle — visible as soon as Custom preset is selected */}
-      {activePreset === 'custom' && !isDefaultProviderPreset && (
+      {activePreset === 'custom' && !usesManagedProviderEndpoint && (
         <div className="space-y-2">
           <Label>Protocol</Label>
           <div className={cn(
@@ -783,7 +807,7 @@ export function ApiKeyInput({
             </>
           )}
         </div>
-      ) : !isDefaultProviderPreset && (
+      ) : !usesManagedProviderEndpoint && (
         <div className="space-y-2">
           <Label htmlFor="connection-default-model" className="text-muted-foreground font-normal">
             Default Model{' '}

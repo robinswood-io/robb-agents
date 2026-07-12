@@ -382,7 +382,7 @@ export function useOnboarding({
 
   // Select API setup method (legacy — kept for direct edit flows)
   const handleSelectApiSetupMethod = useCallback((method: ApiSetupMethod) => {
-    setState(s => ({ ...s, apiSetupMethod: method }))
+    setState(s => ({ ...s, apiSetupMethod: method, preferredPiPreset: undefined }))
   }, [])
 
   // Submit credential (API key + optional endpoint config)
@@ -666,6 +666,7 @@ export function useOnboarding({
       chatgpt: 'pi_chatgpt_oauth',
       copilot: 'pi_copilot_oauth',
       google: 'pi_gemini_oauth',
+      mistral: 'pi_api_key',
       api_key: 'pi_api_key',
     }
 
@@ -679,6 +680,7 @@ export function useOnboarding({
     setState(s => ({
       ...s,
       apiSetupMethod: method,
+      preferredPiPreset: choice === 'mistral' ? 'mistral' : undefined,
       step: 'credentials',
       credentialStatus: 'idle',
       errorMessage: undefined,

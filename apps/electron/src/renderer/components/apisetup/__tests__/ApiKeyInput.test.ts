@@ -45,6 +45,20 @@ describe('ApiKeyInput tier hydration helpers', () => {
       cheap: defaults.cheap,
     })
   })
+
+  it('uses valid provider recommendations before generic cost-based defaults', () => {
+    const resolved = resolveTierModels(MODELS, undefined, [
+      'pi/zai-balanced',
+      'pi/zai-fast',
+      'pi/zai-best',
+    ])
+
+    expect(resolved).toEqual({
+      best: 'pi/zai-balanced',
+      default_: 'pi/zai-fast',
+      cheap: 'pi/zai-best',
+    })
+  })
 })
 
 describe('resolvePiAuthProviderForSubmit', () => {

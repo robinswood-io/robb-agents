@@ -24,6 +24,7 @@ const CHOICE_TO_METHOD: Record<Exclude<ProviderChoice, 'local'>, ApiSetupMethod>
   chatgpt: 'pi_chatgpt_oauth',
   copilot: 'pi_copilot_oauth',
   google: 'pi_gemini_oauth',
+  mistral: 'pi_api_key',
   api_key: 'pi_api_key',
 }
 
@@ -174,6 +175,7 @@ export function OnboardingFlowDemo() {
             isWaitingForCode={false}
             onSubmitAuthCode={() => simulateOAuthSuccess()}
             onCancelOAuth={handleBack}
+            initialPiPreset={providerChoice === 'mistral' ? 'mistral' : undefined}
             copilotDeviceCode={
               method === 'pi_copilot_oauth' && credStatus === 'validating'
                 ? { userCode: 'DEMO-1234', verificationUri: 'https://github.com/login/device' }

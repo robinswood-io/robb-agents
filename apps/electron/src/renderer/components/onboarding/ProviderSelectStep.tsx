@@ -8,12 +8,13 @@ import claudeIcon from "@/assets/provider-icons/claude.svg"
 import openaiIcon from "@/assets/provider-icons/openai.svg"
 import copilotIcon from "@/assets/provider-icons/copilot.svg"
 import googleIcon from "@/assets/provider-icons/google.svg"
+import mistralIcon from "@/assets/provider-icons/mistral.svg"
 
 /**
  * The high-level provider choice the user makes on first launch.
  * This maps to one or more ApiSetupMethods downstream.
  */
-export type ProviderChoice = 'claude' | 'chatgpt' | 'copilot' | 'google' | 'api_key' | 'local'
+export type ProviderChoice = 'claude' | 'chatgpt' | 'copilot' | 'google' | 'mistral' | 'api_key' | 'local'
 
 interface ProviderOption {
   id: ProviderChoice
@@ -27,6 +28,7 @@ const PROVIDER_ICONS: Record<ProviderChoice, React.ReactNode> = {
   chatgpt: <img src={openaiIcon} alt="" className="size-5 rounded-[3px]" />,
   copilot: <img src={copilotIcon} alt="" className="size-5 rounded-[3px]" />,
   google: <img src={googleIcon} alt="" className="size-5 rounded-[3px]" />,
+  mistral: <img src={mistralIcon} alt="" className="size-5 rounded-[3px]" />,
   api_key: <Key className="size-5" />,
   local: <Monitor className="size-5" />,
 }
@@ -71,6 +73,12 @@ export function ProviderSelectStep({ onSelect, onSkip }: ProviderSelectStepProps
       name: t("onboarding.providerSelect.googleGemini"),
       description: t("onboarding.providerSelect.googleGeminiDesc"),
       icon: PROVIDER_ICONS.google,
+    },
+    {
+      id: 'mistral',
+      name: t("onboarding.providerSelect.mistralAi"),
+      description: t("onboarding.providerSelect.mistralAiDesc"),
+      icon: PROVIDER_ICONS.mistral,
     },
     {
       id: 'api_key',

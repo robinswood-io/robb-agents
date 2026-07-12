@@ -19,12 +19,22 @@ export function pickTierDefaults(models: PiModelInfo[]): { best: string; default
   return { best, default_, cheap }
 }
 
-export function resolveTierModels(models: PiModelInfo[], savedModels?: string[]): { best: string; default_: string; cheap: string } {
-  const defaults = pickTierDefaults(models)
+export function resolveTierModels(
+  models: PiModelInfo[],
+  savedModels?: string[],
+  recommendedModels?: string[],
+): { best: string; default_: string; cheap: string } {
+  const costDefaults = pickTierDefaults(models)
+  const valid = new Set(models.map(m => m.id))
+  const recommended = (recommendedModels ?? []).filter(id => valid.has(id))
+  const defaults = {
+    best: recommended[0] ?? costDefaults.best,
+    default_: recommended[1] ?? costDefaults.default_,
+    cheap: recommended[2] ?? costDefaults.cheap,
+  }
   const saved = (savedModels ?? []).filter(Boolean)
   if (saved.length === 0) return defaults
 
-  const valid = new Set(models.map(m => m.id))
   const best = saved[0] && valid.has(saved[0]) ? saved[0] : defaults.best
   const default_ = saved[1] && valid.has(saved[1]) ? saved[1] : defaults.default_
   const cheap = saved[2] && valid.has(saved[2]) ? saved[2] : defaults.cheap

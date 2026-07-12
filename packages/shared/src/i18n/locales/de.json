@@ -688,6 +688,8 @@
   "onboarding.providerSelect.googleGemini": "Google Gemini",
   "onboarding.providerSelect.googleGeminiDesc": "Sign in with Google to use Gemini via your account/subscription.",
   "onboarding.providerSelect.localModel": "Lokales Modell",
+  "onboarding.providerSelect.mistralAi": "Mistral AI",
+  "onboarding.providerSelect.mistralAiDesc": "Verwenden Sie einen Mistral-API-Schlüssel mit der nativen agentischen Verbindung.",
   "onboarding.providerSelect.otherProvider": "Ich verwende einen anderen Anbieter",
   "onboarding.providerSelect.setupLater": "Später einrichten",
   "onboarding.providerSelect.title": "Willkommen bei Robb Agents",

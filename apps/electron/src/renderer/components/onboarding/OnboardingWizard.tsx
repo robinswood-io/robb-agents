@@ -25,6 +25,8 @@ export interface OnboardingState {
   credentialStatus: CredentialStatus
   completionStatus: 'saving' | 'complete'
   apiSetupMethod: ApiSetupMethod | null
+  /** Provider preset preselected by a first-class API-key onboarding choice. */
+  preferredPiPreset?: string
   isExistingUser: boolean
   errorMessage?: string
   gitBashStatus?: GitBashStatus
@@ -171,6 +173,7 @@ export function OnboardingWizard({
             isWaitingForCode={isWaitingForCode}
             onSubmitAuthCode={onSubmitAuthCode}
             editInitialValues={editInitialValues}
+            initialPiPreset={state.preferredPiPreset}
             onCancelOAuth={onCancelOAuth}
             copilotDeviceCode={copilotDeviceCode}
           />

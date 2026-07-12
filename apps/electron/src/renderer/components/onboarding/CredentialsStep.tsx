@@ -43,6 +43,8 @@ interface CredentialsStepProps {
     models?: string[]
     customApi?: CustomEndpointApi
   }
+  /** Pi preset selected from the first-level onboarding screen. */
+  initialPiPreset?: string
 }
 
 export function CredentialsStep({
@@ -57,6 +59,7 @@ export function CredentialsStep({
   onCancelOAuth,
   copilotDeviceCode,
   editInitialValues,
+  initialPiPreset,
 }: CredentialsStepProps) {
   const { t } = useTranslation()
   const isClaudeOAuth = apiSetupMethod === 'claude_oauth'
@@ -306,13 +309,19 @@ export function CredentialsStep({
     ? "Select a provider preset and enter the API key. For arbitrary Anthropic-compatible endpoints, use Anthropic API Key mode."
     : "Enter your API key. Optionally configure a custom endpoint for OpenRouter, Ollama, or compatible APIs."
 
+  // An existing connection's saved preset always takes precedence over an
+  // onboarding suggestion. New Mistral connections arrive preselected here.
+  const effectiveInitialValues = {
+    ...editInitialValues,
+    activePreset: editInitialValues?.activePreset ?? initialPiPreset,
+  }
   const apiKeyInputKey = [
     apiSetupMethod,
-    editInitialValues?.activePreset ?? '',
-    editInitialValues?.baseUrl ?? '',
-    editInitialValues?.connectionDefaultModel ?? '',
-    (editInitialValues?.models ?? []).join('|'),
-    editInitialValues?.customApi ?? '',
+    effectiveInitialValues.activePreset ?? '',
+    effectiveInitialValues.baseUrl ?? '',
+    effectiveInitialValues.connectionDefaultModel ?? '',
+    (effectiveInitialValues.models ?? []).join('|'),
+    effectiveInitialValues.customApi ?? '',
   ].join('::')
 
   return (
@@ -338,7 +347,7 @@ export function CredentialsStep({
         errorMessage={errorMessage}
         onSubmit={onSubmit}
         providerType={providerType}
-        initialValues={editInitialValues}
+        initialValues={effectiveInitialValues}
       />
     </StepFormLayout>
   )

@@ -100,6 +100,7 @@ Candidate providers:
 - OpenAI;
 - Google Gemini via Google account / Gemini Code Assist OAuth;
 - Google AI Studio API key for API-key use cases;
+- Mistral AI via its native Pi API-key provider;
 - Azure/OpenAI EU where available and approved.
 
 Policy:
@@ -119,6 +120,7 @@ For each client workspace, configure at least three connections:
    - OpenRouter or direct premium provider, only if allowed by policy.
    - Google Gemini can be configured through the first-class Google OAuth flow (`google-gemini`, backed by `piAuthProvider: google-gemini-code-assist`).
    - Google AI Studio API keys remain available through the generic API-key provider preset (`piAuthProvider: google`) and are separate from the subscription/account OAuth path.
+   - Mistral uses the same native Pi agent backend as Gemini and Codex (`piAuthProvider: mistral`), not an OpenAI-compatible custom endpoint. Recommended initial tiers are Mistral Medium 3.5 (complex/agentic), Mistral Small 4 (standard), and Ministral 3B (utility); Devstral and Codestral can be selected for coding-focused work.
 
 ## Naming convention
 
@@ -129,6 +131,7 @@ Connection names should be readable by non-technical users:
 - `Premium — analyse complexe`
 - `OpenRouter — expérimentation`
 - `Claude — haute qualité`
+- `Mistral — agentique`
 
 Avoid exposing raw provider slugs in client-facing labels.
 
