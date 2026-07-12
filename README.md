@@ -33,7 +33,7 @@ Get-FileHash .\Robb-Agents-x64-Setup.exe -Algorithm SHA256
 
 ### Signing status
 
-Official public builds are intended to be signed with Developer ID + Apple notarization (macOS) and Authenticode (Windows). GitHub Release notes state when release credentials were unavailable and an artifact is unsigned. Do not treat a local/ad-hoc build as a public release.
+Public GitHub Releases are fail-closed: they are created only after Developer ID + Apple notarization (macOS) and Authenticode verification (Windows). If signing credentials are unavailable, CI may retain unsigned test artifacts privately but cannot publish a release. Do not treat a local/ad-hoc build as a public release.
 
 ## Install
 
@@ -70,7 +70,7 @@ bash apps/electron/scripts/build-dmg.sh arm64
 powershell -ExecutionPolicy Bypass -File apps/electron/scripts/build-win.ps1
 ```
 
-Maintainers use `--release` / `-Release` only with externally supplied signing credentials. See [the distribution guide](docs/robinswood/open-source-distribution.md).
+Maintainers use `--release` / `-Release` only with externally supplied signing credentials. Tags must match the Electron version, and releases include checksum plus provenance evidence. See [the distribution guide](docs/robinswood/open-source-distribution.md).
 
 ## Providers
 

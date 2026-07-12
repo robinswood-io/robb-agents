@@ -141,7 +141,13 @@ CHECKSUM_PATH="$ELECTRON_DIR/release/SHA256SUMS-macos-${ARCH}.txt"
 
 cd "$ROOT_DIR"
 if [[ "$RELEASE_BUILD" == true ]]; then
-  python3 scripts/robinswood-packaged-smoke.py --require-release-signing
+  if [[ "${ROBB_PACKAGE_LAUNCH_SMOKE:-0}" == "1" ]]; then
+    python3 scripts/robinswood-packaged-smoke.py --require-release-signing --launch --launch-seconds 12
+  else
+    python3 scripts/robinswood-packaged-smoke.py --require-release-signing
+  fi
+elif [[ "${ROBB_PACKAGE_LAUNCH_SMOKE:-0}" == "1" ]]; then
+  python3 scripts/robinswood-packaged-smoke.py --launch --launch-seconds 12
 else
   python3 scripts/robinswood-packaged-smoke.py
 fi

@@ -33,7 +33,8 @@ Installer changes must preserve these OSS rules:
 
 - no private updater, proxy, analytics, bucket, or password-manager dependency;
 - release signing credentials remain external CI/operator secrets;
-- release artifacts ship checksums and have an actual package/smoke validation;
+- release tags fail closed until required signing/notarization secrets are available; unsigned builds stay private CI test artifacts;
+- release artifacts ship checksums, provenance evidence, and actual macOS/Windows package journey validation;
 - do not claim signed/notarized distribution unless the release verification has passed.
 
 Read [the distribution guide](docs/robinswood/open-source-distribution.md) before changing macOS, Windows, or GitHub Release workflows.

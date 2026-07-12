@@ -4,7 +4,7 @@ Robb Agents is an MIT-licensed desktop application distributed from [GitHub Rele
 
 ## Release artifacts
 
-A version tag (`vX.Y.Z`) starts the public release workflow. It builds:
+A version tag (`vX.Y.Z`) starts the **signed public release** workflow. It first checks that the tag exactly matches the Electron version, that no release already exists, and that all required signing secrets are available. If any check fails, no public GitHub Release is created. It then builds:
 
 - macOS Apple Silicon DMG + ZIP;
 - macOS Intel DMG + ZIP;
@@ -23,7 +23,9 @@ bash apps/electron/scripts/build-dmg.sh arm64
 powershell -ExecutionPolicy Bypass -File apps/electron/scripts/build-win.ps1
 ```
 
-These are intentionally unsigned local builds. The macOS build runs `robinswood-packaged-smoke.py`; the Windows build runs `robinswood-windows-packaged-smoke.py`.
+These are intentionally unsigned local builds. The macOS build runs `robinswood-packaged-smoke.py`; the Windows build runs `robinswood-windows-packaged-smoke.py`. They are development artifacts, not public releases.
+
+A manual GitHub Actions run in `test-artifacts` mode may build unsigned CI artifacts for verification, but it cannot publish a GitHub Release. This is intentional.
 
 ## Public release signing
 
@@ -57,12 +59,14 @@ The installer is per-user by default, supports a selectable install directory, a
 
 ## CI release secrets
 
-GitHub Actions only signs when corresponding secrets are configured:
+GitHub Actions refuses to publish a version tag until all corresponding secrets are configured:
 
 - macOS: `MAC_CSC_LINK`, `MAC_CSC_KEY_PASSWORD` plus Apple notarization secrets;
 - Windows: `WINDOWS_CSC_LINK`, `WINDOWS_CSC_KEY_PASSWORD`.
 
-If secrets are unavailable, CI can still create unsigned artifacts for testing, but maintainers must clearly label them as unsigned and must not present them as production releases.
+Store these values only as repository or organization Actions secrets. Never add a certificate, password, token, or API-key file to Git, a pull request, an issue, or an agent prompt.
+
+The release workflow publishes provenance evidence (tag, commit SHA, platform and verified signing state) plus `SHA256SUMS.txt`. Its Windows validation performs a real isolated install/uninstall and verifies that the installed Mistral Vibe ACP bridge is present.
 
 ## Verification checklist
 

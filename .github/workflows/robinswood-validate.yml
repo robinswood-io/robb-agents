@@ -118,6 +118,12 @@ jobs:
         run: |
           powershell -ExecutionPolicy Bypass -File apps/electron/scripts/build-win.ps1
 
+      - name: Exercise isolated install and uninstall
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem apps/electron/release -Filter 'Robb-Agents-x64*.exe' | Sort-Object Length -Descending | Select-Object -First 1
+          powershell -ExecutionPolicy Bypass -File scripts/robinswood-windows-installer-e2e.ps1 -Installer $installer.FullName
+
   optional-upstream-validation:
     name: Optional upstream validation
     if: github.event_name == 'workflow_dispatch'

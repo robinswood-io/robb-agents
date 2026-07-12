@@ -6,7 +6,7 @@ This file accumulates release notes for the next unreleased version. PRs that ad
 
 ## Improvements
 
-- **Public installers and verification** — Robb Agents releases are published through GitHub Releases with SHA-256 checksums, an improved per-user Windows installer, and macOS release checks for Developer ID signing/notarization. Unsigned local builds are now explicitly distinguished from public release artifacts.
+- **Public installers and verification** — Robb Agents releases are published through GitHub Releases with SHA-256 checksums, an improved per-user Windows installer, and macOS release checks for Developer ID signing/notarization. Public version tags now fail closed without verified signing credentials; unsigned local/CI builds remain test artifacts only. Windows CI also performs an isolated install/uninstall journey and verifies the bundled Mistral Vibe bridge.
 
 ## Bug Fixes
 
