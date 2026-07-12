@@ -113,6 +113,7 @@ jobs:
           APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
           APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
           APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          GITHUB_TOKEN: ${{ github.token }}
           ROBB_PACKAGE_LAUNCH_SMOKE: "1"
         run: |
           args=("${{ matrix.arch }}")
@@ -153,6 +154,7 @@ jobs:
         env:
           CSC_LINK: ${{ secrets.WINDOWS_CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CSC_KEY_PASSWORD }}
+          GITHUB_TOKEN: ${{ github.token }}
         shell: pwsh
         run: |
           $args = @('-ExecutionPolicy', 'Bypass', '-File', 'apps/electron/scripts/build-win.ps1')
