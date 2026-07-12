@@ -16,7 +16,7 @@ $RootDir = Split-Path -Parent (Split-Path -Parent $ElectronDir)
 $BunVersion = "bun-v1.3.9"
 
 function Require-Path([string]$Path, [string]$Description) {
-    if (-not (Test-Path $Path)) { throw "Missing $Description: $Path" }
+    if (-not (Test-Path $Path)) { throw "Missing ${Description}: $Path" }
 }
 
 function Require-Environment([string]$Name) {
@@ -37,7 +37,7 @@ foreach ($command in @("bun", "node", "npx", "python")) {
     }
 }
 
-Write-Host "=== Building Robb Agents Windows $Arch (release=$Release) ===" -ForegroundColor Cyan
+Write-Host "=== Building Robb Agents Windows Installer ($Arch, release=$Release) ===" -ForegroundColor Cyan
 
 # Clean exclusively generated/staged paths. Do not terminate unrelated tools.
 foreach ($path in @(
