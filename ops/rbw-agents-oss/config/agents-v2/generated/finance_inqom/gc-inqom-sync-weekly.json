@@ -1,0 +1,69 @@
+{
+  "schema_version": "agent-spec-v2",
+  "id": "gc-inqom-sync-weekly",
+  "name": "Synchronisation hebdomadaire GoCardless → Inqom",
+  "lane": "finance_inqom",
+  "owner": "finance_inqom",
+  "runtime_version": "v2",
+  "risk_class": "unclassified",
+  "side_effects": [],
+  "execution": {
+    "backend": "argv",
+    "timeout_seconds": 600,
+    "argv": [
+      "/srv/rbw-agents-oss/.venv/bin/python",
+      "/srv/rbw-agents-oss/scripts/gc_inqom_sync_real.py"
+    ],
+    "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+    "env": {}
+  },
+  "contract": {
+    "version": "runtime-v2-execution-report-v1",
+    "expects_report": true,
+    "json_path": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/gc-inqom-sync-weekly-last.json",
+    "markdown_path": null
+  },
+  "policy": {
+    "classified": true,
+    "policy_class": "classified",
+    "mutation_mode": "prepare_only_or_read_only",
+    "schedule_allowed": true,
+    "requires_human_approval_for_apply": false,
+    "requires_human_approval_for_external_send": false,
+    "requires_explicit_review_before_risk_increase": true,
+    "source": "/srv/rbw-agents-oss/config/registry/side-effects-policy.json"
+  },
+  "schedules": [
+    {
+      "schedule_id": "sched.gc-inqom-sync-weekly",
+      "workflow_id": "rbw.gc-inqom-sync-weekly",
+      "task_queue": "sync",
+      "cron": "0 8 * * 1",
+      "timezone": "Europe/Paris",
+      "enabled": true
+    }
+  ],
+  "trigger_types": [
+    "SchedulerTick"
+  ],
+  "task_queues": [
+    "sync"
+  ],
+  "workflow_ids": [
+    "rbw.gc-inqom-sync-weekly"
+  ],
+  "source_status": {
+    "in_manifest": true,
+    "in_mapping": true,
+    "in_schedules": true,
+    "in_ready_schedules": true,
+    "manifest_section": "wave1"
+  },
+  "provenance": {
+    "manifest": "/srv/rbw-agents-oss/config/command-manifest.json",
+    "mapping": "/srv/rbw-agents-oss/config/automation-mapping.json",
+    "schedules": "/srv/rbw-agents-oss/config/temporal/schedules.json",
+    "sideEffectsPolicy": "/srv/rbw-agents-oss/config/registry/side-effects-policy.json",
+    "manifestUpdatedAt": "2026-07-12T21:02:50.005345Z"
+  }
+}

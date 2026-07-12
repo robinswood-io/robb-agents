@@ -1,0 +1,925 @@
+{
+  "schemaVersion": "manifest-only-policy-v1",
+  "updatedAt": "2026-07-12T17:38:30.034327Z",
+  "updatedBy": "oss-architecture-v2-install",
+  "description": "Explicit allowlist for command-manifest rows intentionally absent from automation-mapping because they are manual, test, one-shot, or human-approved wrappers. This prevents false drift while keeping any new unclassified manifest-only row visible.",
+  "defaults": {
+    "mappingExpectation": "mapped_or_scheduled_unless_accepted_here",
+    "scheduleAllowed": false,
+    "temporalMappingRequired": false,
+    "requiresExplicitReviewBeforeScheduling": true
+  },
+  "counts": {
+    "acceptedManifestOnly": 51,
+    "currentManifestOnly": 51,
+    "staleRetainedForAudit": 0
+  },
+  "acceptedManifestOnly": [
+    {
+      "legacy_id": "ao-day-ops-reconciliation-tests",
+      "accepted": true,
+      "mappingExpectation": "manifest_only_manual_or_test",
+      "temporalMappingRequired": false,
+      "scheduleAllowed": false,
+      "requiresExplicitReviewBeforeScheduling": true,
+      "reviewAfter": "2026-09-30",
+      "updatedAt": "2026-06-27T09:48:44.243144Z",
+      "updatedBy": "oss-p6-manifest-only-policy",
+      "policyClass": "test_wrapper",
+      "riskClass": "low_manual_test",
+      "allowedInvocation": [
+        "manual_direct",
+        "ci_or_guard_harness"
+      ],
+      "rationale": "Regression/smoke test wrapper; intentionally absent from Temporal automation mapping to avoid scheduled test noise."
+    },
+    {
+      "legacy_id": "ao-response-quality-guard-tests",
+      "accepted": true,
+      "mappingExpectation": "manifest_only_manual_or_test",
+      "temporalMappingRequired": false,
+      "scheduleAllowed": false,
+      "requiresExplicitReviewBeforeScheduling": true,
+      "reviewAfter": "2026-09-30",
+      "updatedAt": "2026-06-27T09:48:44.243179Z",
+      "updatedBy": "oss-p6-manifest-only-policy",
+      "policyClass": "test_wrapper",
+      "riskClass": "low_manual_test",
+      "allowedInvocation": [
+        "manual_direct",
+        "ci_or_guard_harness"
+      ],
+      "rationale": "Regression/smoke test wrapper; intentionally absent from Temporal automation mapping to avoid scheduled test noise."
+    },
+    {
+      "legacy_id": "blog-publish-indexability-guard",
+      "accepted": true,
+      "mappingExpectation": "manifest_only_manual_or_test",
+      "temporalMappingRequired": false,
+      "scheduleAllowed": false,
+      "requiresExplicitReviewBeforeScheduling": true,
+      "reviewAfter": "2026-09-30",
+      "updatedAt": "2026-06-27T09:48:44.243188Z",
+      "updatedBy": "oss-p6-manifest-only-policy",
+      "policyClass": "manual_content_quality_tool",
+      "riskClass": "low_prepare_only",
+      "allowedInvocation": [
+        "manual_direct",
+        "parent_content_pipeline"
+      ],
+      "rationale": "Content QA/benchmark helper; manifest-addressable but not a recurring Temporal automation."
+    },
+    {
+      "legacy_id": "inqom-accountant-response-intake",
+      "accepted": true,
+      "mappingExpectation": "manifest_only_manual_or_test",
+      "temporalMappingRequired": false,
+      "scheduleAllowed": false,
+      "requiresExplicitReviewBeforeScheduling": true,
+      "reviewAfter": "2026-09-30",
+      "updatedAt": "2026-06-27T09:48:44.243198Z",
+      "updatedBy": "oss-p6-manifest-only-policy",
+      "policyClass": "manual_finance_analysis",
+      "riskClass": "medium_prepare_only",
+      "allowedInvocation": [
+        "manual_direct",
+        "parent_finance_pipeline"
+      ],
+      "rationale": "Finance/Inqom board, intake, evidence, or analysis wrapper; intentionally manual or parent-invoked rather than directly scheduled."
+    },
+    {
+      "legacy_id": "inqom-accountant-response-intake-tests",
+      "accepted": true,
+      "mappingExpectation": "manifest_only_manual_or_test",
+      "temporalMappingRequired": false,
+      "scheduleAllowed": false,
+      "requiresExplicitReviewBeforeScheduling": true,
+      "reviewAfter": "2026-09-30",
+      "updatedAt": "2026-06-27T09:48:44.243202Z",
+      "updatedBy": "oss-p6-manifest-only-policy",
+      "policyClass": "test_wrapper",
+      "riskClass": "low_manual_test",
+      "allowedInvocation": [
+        "manual_direct",
+        "ci_or_guard_harness"
+      ],
+      "rationale": "Regression/smoke test wrapper; intentionally absent from Temporal automation mapping to avoid scheduled test noise."
+    },
+    {
+      "legacy_id": "inqom-accounting-action-dispatcher",
+      "accepted": true,
+      "mappingExpectation": "manifest_only_manual_or_test",
+      "temporalMappingRequired": false,
+      "scheduleAllowed": false,
+      "requiresExplicitReviewBeforeScheduling": true,
+      "reviewAfter": "2026-09-30",
+      "updatedAt": "2026-06-27T09:48:44.243207Z",
+      "updatedBy": "oss-p6-manifest-only-policy",
+      "policyClass": "human_approved_finance_operation",
+      "riskClass": "high_human_approval_required",
+      "allowedInvocation": [
+        "manual_direct_after_accountant_or_operator_validation"
+      ],
+      "rationale": "Finance/accounting execution or closure wrapper; kept manifest-addressable but excluded from schedules until human validation gates are explicit."
+    },
+    {
+      "legacy_id": "inqom-accounting-action-dispatcher-tests",
+      "accepted": true,
+      "mappingExpectation": "manifest_only_manual_or_test",
+      "temporalMappingRequired": false,
+      "scheduleAllowed": false,
+      "requiresExplicitReviewBeforeScheduling": true,
+      "reviewAfter": "2026-09-30",
+      "updatedAt": "2026-06-27T09:48:44.243211Z",
+      "updatedBy": "oss-p6-manifest-only-policy",
+      "policyClass": "test_wrapper",
+      "riskClass": "low_manual_test",
+      "allowedInvocation": [
+        "manual_direct",
+        "ci_or_guard_harness"
+      ],
+      "rationale": "Regression/smoke test wrapper; intentionally absent from Temporal automation mapping to avoid scheduled test noise."
+    },
+    {
+      "legacy_id": "inqom-accounting-agent-copilot-audit",
+      "accepted": true,
+      "mappingExpectation": "manifest_only_manual_or_test",
+      "temporalMappingRequired": false,
+      "scheduleAllowed": false,
+      "requiresExplicitReviewBeforeScheduling": true,
+      "reviewAfter": "2026-09-30",
+      "updatedAt": "2026-06-27T09:48:44.243215Z",
+      "updatedBy": "oss-p6-manifest-only-policy",
+      "policyClass": "manual_finance_analysis",
+      "riskClass": "medium_prepare_only",
+      "allowedInvocation": [
+        "manual_direct",
+        "parent_finance_pipeline"
+      ],
+      "rationale": "Finance/Inqom board, intake, evidence, or analysis wrapper; intentionally manual or parent-invoked rather than directly scheduled."
+    },
+    {
+      "legacy_id": "inqom-accounting-decision-closure",
+      "accepted": true,
+      "mappingExpectation": "manifest_only_manual_or_test",
+      "temporalMappingRequired": false,
+      "scheduleAllowed": false,
+      "requiresExplicitReviewBeforeScheduling": true,
+      "reviewAfter": "2026-09-30",
+      "updatedAt": "2026-06-27T09:48:44.243219Z",
+      "updatedBy": "oss-p6-manifest-only-policy",
+      "policyClass": "human_approved_finance_operation",
+      "riskClass": "high_human_approval_required",
+      "allowedInvocation": [
+        "manual_direct_after_accountant_or_operator_validation"
+      ],
+      "rationale": "Finance/accounting execution or closure wrapper; kept manifest-addressable but excluded from schedules until human validation gates are explicit."
+    },
+    {
+      "legacy_id": "inqom-accounting-decision-closure-tests",
+      "accepted": true,
+      "mappingExpectation": "manifest_only_manual_or_test",
+      "temporalMappingRequired": false,
+      "scheduleAllowed": false,
+      "requiresExplicitReviewBeforeScheduling": true,
+      "reviewAfter": "2026-09-30",
+      "updatedAt": "2026-06-27T09:48:44.243222Z",
+      "updatedBy": "oss-p6-manifest-only-policy",
+      "policyClass": "test_wrapper",
+      "riskClass": "low_manual_test",
+      "allowedInvocation": [
+        "manual_direct",
+        "ci_or_guard_harness"
+      ],
+      "rationale": "Regression/smoke test wrapper; intentionally absent from Temporal automation mapping to avoid scheduled test noise."
+    },
+    {
+      "legacy_id": "inqom-bank-reconciliation-autonomy",
+      "accepted": true,
+      "mappingExpectation": "manifest_only_manual_or_test",
+      "temporalMappingRequired": false,
+      "scheduleAllowed": false,
+      "requiresExplicitReviewBeforeScheduling": true,
+      "reviewAfter": "2026-09-30",
+      "updatedAt": "2026-06-27T09:48:44.243226Z",
+      "updatedBy": "oss-p6-manifest-only-policy",
+      "policyClass": "manual_finance_analysis",
+      "riskClass": "medium_prepare_only",
+      "allowedInvocation": [
+        "manual_direct",
+        "parent_finance_pipeline"
+      ],
+      "rationale": "Finance/Inqom board, intake, evidence, or analysis wrapper; intentionally manual or parent-invoked rather than directly scheduled."
+    },
+    {
+      "legacy_id": "inqom-bank-reconciliation-guard-tests",
+      "accepted": true,
+      "mappingExpectation": "manifest_only_manual_or_test",
+      "temporalMappingRequired": false,
+      "scheduleAllowed": false,
+      "requiresExplicitReviewBeforeScheduling": true,
+      "reviewAfter": "2026-09-30",
+      "updatedAt": "2026-06-27T09:48:44.243229Z",
+      "updatedBy": "oss-p6-manifest-only-policy",
+      "policyClass": "test_wrapper",
+      "riskClass": "low_manual_test",
+      "allowedInvocation": [
+        "manual_direct",
+        "ci_or_guard_harness"
+      ],
+      "rationale": "Regression/smoke test wrapper; intentionally absent from Temporal automation mapping to avoid scheduled test noise."
+    },
+    {
+      "legacy_id": "inqom-confidence-lettering-executor",
+      "accepted": true,
+      "mappingExpectation": "manifest_only_manual_or_test",
+      "temporalMappingRequired": false,
+      "scheduleAllowed": false,
+      "requiresExplicitReviewBeforeScheduling": true,
+      "reviewAfter": "2026-09-30",
+      "updatedAt": "2026-06-27T09:48:44.243233Z",
+      "updatedBy": "oss-p6-manifest-only-policy",
+      "policyClass": "human_approved_finance_operation",
+      "riskClass": "high_human_approval_required",
+      "allowedInvocation": [
+        "manual_direct_after_accountant_or_operator_validation"
+      ],
+      "rationale": "Finance/accounting execution or closure wrapper; kept manifest-addressable but excluded from schedules until human validation gates are explicit."
+    },
+    {
+      "legacy_id": "inqom-group-accounting-order-board",
+      "accepted": true,
+      "mappingExpectation": "manifest_only_manual_or_test",
+      "temporalMappingRequired": false,
+      "scheduleAllowed": false,
+      "requiresExplicitReviewBeforeScheduling": true,
+      "reviewAfter": "2026-09-30",
+      "updatedAt": "2026-06-27T09:48:44.243237Z",
+      "updatedBy": "oss-p6-manifest-only-policy",
+      "policyClass": "manual_finance_analysis",
+      "riskClass": "medium_prepare_only",
+      "allowedInvocation": [
+        "manual_direct",
+        "parent_finance_pipeline"
+      ],
+      "rationale": "Finance/Inqom board, intake, evidence, or analysis wrapper; intentionally manual or parent-invoked rather than directly scheduled."
+    },
+    {
+      "legacy_id": "inqom-group-accounting-order-guard-tests",
+      "accepted": true,
+      "mappingExpectation": "manifest_only_manual_or_test",
+      "temporalMappingRequired": false,
+      "scheduleAllowed": false,
+      "requiresExplicitReviewBeforeScheduling": true,
+      "reviewAfter": "2026-09-30",
+      "updatedAt": "2026-06-27T09:48:44.243240Z",
+      "updatedBy": "oss-p6-manifest-only-policy",
+      "policyClass": "test_wrapper",
+      "riskClass": "low_manual_test",
+      "allowedInvocation": [
+        "manual_direct",
+        "ci_or_guard_harness"
+      ],
+      "rationale": "Regression/smoke test wrapper; intentionally absent from Temporal automation mapping to avoid scheduled test noise."
+    },
+    {
+      "legacy_id": "inqom-intercompany-reconciliation-board",
+      "accepted": true,
+      "mappingExpectation": "manifest_only_manual_or_test",
+      "temporalMappingRequired": false,
+      "scheduleAllowed": false,
+      "requiresExplicitReviewBeforeScheduling": true,
+      "reviewAfter": "2026-09-30",
+      "updatedAt": "2026-06-27T09:48:44.243244Z",
+      "updatedBy": "oss-p6-manifest-only-policy",
+      "policyClass": "manual_finance_analysis",
+      "riskClass": "medium_prepare_only",
+      "allowedInvocation": [
+        "manual_direct",
+        "parent_finance_pipeline"
+      ],
+      "rationale": "Finance/Inqom board, intake, evidence, or analysis wrapper; intentionally manual or parent-invoked rather than directly scheduled."
+    },
+    {
+      "legacy_id": "inqom-intercompany-reconciliation-guard-tests",
+      "accepted": true,
+      "mappingExpectation": "manifest_only_manual_or_test",
+      "temporalMappingRequired": false,
+      "scheduleAllowed": false,
+      "requiresExplicitReviewBeforeScheduling": true,
+      "reviewAfter": "2026-09-30",
+      "updatedAt": "2026-06-27T09:48:44.243247Z",
+      "updatedBy": "oss-p6-manifest-only-policy",
+      "policyClass": "test_wrapper",
+      "riskClass": "low_manual_test",
+      "allowedInvocation": [
+        "manual_direct",
+        "ci_or_guard_harness"
+      ],
+      "rationale": "Regression/smoke test wrapper; intentionally absent from Temporal automation mapping to avoid scheduled test noise."
+    },
+    {
+      "legacy_id": "inqom-lettering-confidence-guard-tests",
+      "accepted": true,
+      "mappingExpectation": "manifest_only_manual_or_test",
+      "temporalMappingRequired": false,
+      "scheduleAllowed": false,
+      "requiresExplicitReviewBeforeScheduling": true,
+      "reviewAfter": "2026-09-30",
+      "updatedAt": "2026-06-27T09:48:44.243250Z",
+      "updatedBy": "oss-p6-manifest-only-policy",
+      "policyClass": "test_wrapper",
+      "riskClass": "low_manual_test",
+      "allowedInvocation": [
+        "manual_direct",
+        "ci_or_guard_harness"
+      ],
+      "rationale": "Regression/smoke test wrapper; intentionally absent from Temporal automation mapping to avoid scheduled test noise."
+    },
+    {
+      "legacy_id": "inqom-lettering-evidence-research-queue",
+      "accepted": true,
+      "mappingExpectation": "manifest_only_manual_or_test",
+      "temporalMappingRequired": false,
+      "scheduleAllowed": false,
+      "requiresExplicitReviewBeforeScheduling": true,
+      "reviewAfter": "2026-09-30",
+      "updatedAt": "2026-06-27T09:48:44.243254Z",
+      "updatedBy": "oss-p6-manifest-only-policy",
+      "policyClass": "manual_finance_analysis",
+      "riskClass": "medium_prepare_only",
+      "allowedInvocation": [
+        "manual_direct",
+        "parent_finance_pipeline"
+      ],
+      "rationale": "Finance/Inqom board, intake, evidence, or analysis wrapper; intentionally manual or parent-invoked rather than directly scheduled."
+    },
+    {
+      "legacy_id": "inqom-lettering-execution-guard-filter",
+      "accepted": true,
+      "mappingExpectation": "manifest_only_manual_or_test",
+      "temporalMappingRequired": false,
+      "scheduleAllowed": false,
+      "requiresExplicitReviewBeforeScheduling": true,
+      "reviewAfter": "2026-09-30",
+      "updatedAt": "2026-06-27T09:48:44.243258Z",
+      "updatedBy": "oss-p6-manifest-only-policy",
+      "policyClass": "manual_finance_analysis",
+      "riskClass": "medium_prepare_only",
+      "allowedInvocation": [
+        "manual_direct",
+        "parent_finance_pipeline"
+      ],
+      "rationale": "Finance/Inqom board, intake, evidence, or analysis wrapper; intentionally manual or parent-invoked rather than directly scheduled."
+    },
+    {
+      "legacy_id": "inqom-line-transfer-engine",
+      "accepted": true,
+      "mappingExpectation": "manifest_only_manual_or_test",
+      "temporalMappingRequired": false,
+      "scheduleAllowed": false,
+      "requiresExplicitReviewBeforeScheduling": true,
+      "reviewAfter": "2026-09-30",
+      "updatedAt": "2026-06-27T09:48:44.243261Z",
+      "updatedBy": "oss-p6-manifest-only-policy",
+      "policyClass": "human_approved_finance_operation",
+      "riskClass": "high_human_approval_required",
+      "allowedInvocation": [
+        "manual_direct_after_accountant_or_operator_validation"
+      ],
+      "rationale": "Finance/accounting execution or closure wrapper; kept manifest-addressable but excluded from schedules until human validation gates are explicit."
+    },
+    {
+      "legacy_id": "inqom-manual-reconciliation-packs",
+      "accepted": true,
+      "mappingExpectation": "manifest_only_manual_or_test",
+      "temporalMappingRequired": false,
+      "scheduleAllowed": false,
+      "requiresExplicitReviewBeforeScheduling": true,
+      "reviewAfter": "2026-09-30",
+      "updatedAt": "2026-06-27T09:48:44.243265Z",
+      "updatedBy": "oss-p6-manifest-only-policy",
+      "policyClass": "manual_finance_analysis",
+      "riskClass": "medium_prepare_only",
+      "allowedInvocation": [
+        "manual_direct",
+        "parent_finance_pipeline"
+      ],
+      "rationale": "Finance/Inqom board, intake, evidence, or analysis wrapper; intentionally manual or parent-invoked rather than directly scheduled."
+    },
+    {
+      "legacy_id": "inqom-manual-reconciliation-packs-tests",
+      "accepted": true,
+      "mappingExpectation": "manifest_only_manual_or_test",
+      "temporalMappingRequired": false,
+      "scheduleAllowed": false,
+      "requiresExplicitReviewBeforeScheduling": true,
+      "reviewAfter": "2026-09-30",
+      "updatedAt": "2026-06-27T09:48:44.243269Z",
+      "updatedBy": "oss-p6-manifest-only-policy",
+      "policyClass": "test_wrapper",
+      "riskClass": "low_manual_test",
+      "allowedInvocation": [
+        "manual_direct",
+        "ci_or_guard_harness"
+      ],
+      "rationale": "Regression/smoke test wrapper; intentionally absent from Temporal automation mapping to avoid scheduled test noise."
+    },
+    {
+      "legacy_id": "oss-autonomy-quality-board",
+      "accepted": true,
+      "mappingExpectation": "manifest_only_manual_or_test",
+      "temporalMappingRequired": false,
+      "scheduleAllowed": false,
+      "requiresExplicitReviewBeforeScheduling": true,
+      "reviewAfter": "2026-09-30",
+      "updatedAt": "2026-06-27T09:48:44.243273Z",
+      "updatedBy": "oss-p6-manifest-only-policy",
+      "policyClass": "manual_observability_quality_tool",
+      "riskClass": "low_prepare_only",
+      "allowedInvocation": [
+        "manual_direct",
+        "parent_quality_guard"
+      ],
+      "rationale": "Autonomy quality board/test wrapper; retained as manual quality evidence, not a standalone schedule."
+    },
+    {
+      "legacy_id": "oss-autonomy-quality-guard-tests",
+      "accepted": true,
+      "mappingExpectation": "manifest_only_manual_or_test",
+      "temporalMappingRequired": false,
+      "scheduleAllowed": false,
+      "requiresExplicitReviewBeforeScheduling": true,
+      "reviewAfter": "2026-09-30",
+      "updatedAt": "2026-06-27T09:48:44.243276Z",
+      "updatedBy": "oss-p6-manifest-only-policy",
+      "policyClass": "test_wrapper",
+      "riskClass": "low_manual_test",
+      "allowedInvocation": [
+        "manual_direct",
+        "ci_or_guard_harness"
+      ],
+      "rationale": "Regression/smoke test wrapper; intentionally absent from Temporal automation mapping to avoid scheduled test noise."
+    },
+    {
+      "legacy_id": "oss-p0-structural-fix",
+      "accepted": true,
+      "mappingExpectation": "manifest_only_manual_or_test",
+      "temporalMappingRequired": false,
+      "scheduleAllowed": false,
+      "requiresExplicitReviewBeforeScheduling": true,
+      "reviewAfter": "2026-09-30",
+      "updatedAt": "2026-06-27T09:48:44.243279Z",
+      "updatedBy": "oss-p6-manifest-only-policy",
+      "policyClass": "one_shot_structural_migration",
+      "riskClass": "medium_admin_manual",
+      "allowedInvocation": [
+        "manual_direct"
+      ],
+      "rationale": "One-shot structural migration/repair command retained for audit and rollback; must not be scheduled."
+    },
+    {
+      "legacy_id": "oss-p1-structural-cleanup",
+      "accepted": true,
+      "mappingExpectation": "manifest_only_manual_or_test",
+      "temporalMappingRequired": false,
+      "scheduleAllowed": false,
+      "requiresExplicitReviewBeforeScheduling": true,
+      "reviewAfter": "2026-09-30",
+      "updatedAt": "2026-06-27T09:48:44.243283Z",
+      "updatedBy": "oss-p6-manifest-only-policy",
+      "policyClass": "one_shot_structural_migration",
+      "riskClass": "medium_admin_manual",
+      "allowedInvocation": [
+        "manual_direct"
+      ],
+      "rationale": "One-shot structural migration/repair command retained for audit and rollback; must not be scheduled."
+    },
+    {
+      "legacy_id": "podcast-audio-benchmark-scorecard",
+      "accepted": true,
+      "mappingExpectation": "manifest_only_manual_or_test",
+      "temporalMappingRequired": false,
+      "scheduleAllowed": false,
+      "requiresExplicitReviewBeforeScheduling": true,
+      "reviewAfter": "2026-09-30",
+      "updatedAt": "2026-06-27T09:48:44.243286Z",
+      "updatedBy": "oss-p6-manifest-only-policy",
+      "policyClass": "manual_content_quality_tool",
+      "riskClass": "low_prepare_only",
+      "allowedInvocation": [
+        "manual_direct",
+        "parent_content_pipeline"
+      ],
+      "rationale": "Content QA/benchmark helper; manifest-addressable but not a recurring Temporal automation."
+    },
+    {
+      "legacy_id": "podcast-audio-market-benchmark",
+      "accepted": true,
+      "mappingExpectation": "manifest_only_manual_or_test",
+      "temporalMappingRequired": false,
+      "scheduleAllowed": false,
+      "requiresExplicitReviewBeforeScheduling": true,
+      "reviewAfter": "2026-09-30",
+      "updatedAt": "2026-06-27T09:48:44.243290Z",
+      "updatedBy": "oss-p6-manifest-only-policy",
+      "policyClass": "manual_content_quality_tool",
+      "riskClass": "low_prepare_only",
+      "allowedInvocation": [
+        "manual_direct",
+        "parent_content_pipeline"
+      ],
+      "rationale": "Content QA/benchmark helper; manifest-addressable but not a recurring Temporal automation."
+    },
+    {
+      "legacy_id": "reseau-entreprendre-source-backfill",
+      "accepted": true,
+      "mappingExpectation": "manifest_only_manual_or_test",
+      "temporalMappingRequired": false,
+      "scheduleAllowed": false,
+      "requiresExplicitReviewBeforeScheduling": true,
+      "reviewAfter": "2026-09-30",
+      "updatedAt": "2026-06-27T09:48:44.243293Z",
+      "updatedBy": "oss-p6-manifest-only-policy",
+      "policyClass": "manual_crm_backfill",
+      "riskClass": "medium_manual_backfill",
+      "allowedInvocation": [
+        "manual_direct"
+      ],
+      "rationale": "CRM source backfill is dry-run/read-only by default and any mutation requires explicit flags; not part of recurring Temporal mapping."
+    },
+    {
+      "legacy_id": "reseau-entreprendre-source-backfill-tests",
+      "accepted": true,
+      "mappingExpectation": "manifest_only_manual_or_test",
+      "temporalMappingRequired": false,
+      "scheduleAllowed": false,
+      "requiresExplicitReviewBeforeScheduling": true,
+      "reviewAfter": "2026-09-30",
+      "updatedAt": "2026-06-27T09:48:44.243296Z",
+      "updatedBy": "oss-p6-manifest-only-policy",
+      "policyClass": "test_wrapper",
+      "riskClass": "low_manual_test",
+      "allowedInvocation": [
+        "manual_direct",
+        "ci_or_guard_harness"
+      ],
+      "rationale": "Regression/smoke test wrapper; intentionally absent from Temporal automation mapping to avoid scheduled test noise."
+    },
+    {
+      "legacy_id": "robinswood-media-authority-2026-replenisher-tests",
+      "accepted": true,
+      "mappingExpectation": "manifest_only_manual_or_test",
+      "temporalMappingRequired": false,
+      "scheduleAllowed": false,
+      "requiresExplicitReviewBeforeScheduling": true,
+      "reviewAfter": "2026-10-31",
+      "updatedAt": "2026-07-12T17:38:30.034240Z",
+      "updatedBy": "oss-architecture-v2-install",
+      "policyClass": "test_wrapper",
+      "riskClass": "low_manual_test",
+      "allowedInvocation": [
+        "manual_direct",
+        "ci_or_guard_harness"
+      ],
+      "rationale": "Explicitly classified during runtime-v2 migration; no schedule or mapping is added."
+    },
+    {
+      "legacy_id": "robinswood-media-authority-2026-tests",
+      "accepted": true,
+      "mappingExpectation": "manifest_only_manual_or_test",
+      "temporalMappingRequired": false,
+      "scheduleAllowed": false,
+      "requiresExplicitReviewBeforeScheduling": true,
+      "reviewAfter": "2026-10-31",
+      "updatedAt": "2026-07-12T17:38:30.034225Z",
+      "updatedBy": "oss-architecture-v2-install",
+      "policyClass": "test_wrapper",
+      "riskClass": "low_manual_test",
+      "allowedInvocation": [
+        "manual_direct",
+        "ci_or_guard_harness"
+      ],
+      "rationale": "Explicitly classified during runtime-v2 migration; no schedule or mapping is added."
+    },
+    {
+      "legacy_id": "robinswood-media-contact-base-2026",
+      "accepted": true,
+      "mappingExpectation": "manifest_only_manual_or_test",
+      "temporalMappingRequired": false,
+      "scheduleAllowed": false,
+      "requiresExplicitReviewBeforeScheduling": true,
+      "reviewAfter": "2026-10-31",
+      "updatedAt": "2026-07-12T17:38:30.034246Z",
+      "updatedBy": "oss-architecture-v2-install",
+      "policyClass": "manual_prepare_only_tool",
+      "riskClass": "medium_prepare_only",
+      "allowedInvocation": [
+        "manual_direct",
+        "parent_pipeline"
+      ],
+      "rationale": "Explicitly classified during runtime-v2 migration; no schedule or mapping is added."
+    },
+    {
+      "legacy_id": "robinswood-media-contact-base-2026-tests",
+      "accepted": true,
+      "mappingExpectation": "manifest_only_manual_or_test",
+      "temporalMappingRequired": false,
+      "scheduleAllowed": false,
+      "requiresExplicitReviewBeforeScheduling": true,
+      "reviewAfter": "2026-10-31",
+      "updatedAt": "2026-07-12T17:38:30.034250Z",
+      "updatedBy": "oss-architecture-v2-install",
+      "policyClass": "test_wrapper",
+      "riskClass": "low_manual_test",
+      "allowedInvocation": [
+        "manual_direct",
+        "ci_or_guard_harness"
+      ],
+      "rationale": "Explicitly classified during runtime-v2 migration; no schedule or mapping is added."
+    },
+    {
+      "legacy_id": "robinswood-media-contact-enrichment-2026-tests",
+      "accepted": true,
+      "mappingExpectation": "manifest_only_manual_or_test",
+      "temporalMappingRequired": false,
+      "scheduleAllowed": false,
+      "requiresExplicitReviewBeforeScheduling": true,
+      "reviewAfter": "2026-10-31",
+      "updatedAt": "2026-07-12T17:38:30.034254Z",
+      "updatedBy": "oss-architecture-v2-install",
+      "policyClass": "test_wrapper",
+      "riskClass": "low_manual_test",
+      "allowedInvocation": [
+        "manual_direct",
+        "ci_or_guard_harness"
+      ],
+      "rationale": "Explicitly classified during runtime-v2 migration; no schedule or mapping is added."
+    },
+    {
+      "legacy_id": "robinswood-pme-hdf-contact-review-pipeline",
+      "accepted": true,
+      "mappingExpectation": "manifest_only_manual_or_test",
+      "temporalMappingRequired": false,
+      "scheduleAllowed": false,
+      "requiresExplicitReviewBeforeScheduling": true,
+      "reviewAfter": "2026-09-30",
+      "updatedAt": "2026-06-27T09:48:44.243300Z",
+      "updatedBy": "oss-p6-manifest-only-policy",
+      "policyClass": "manual_campaign_enrichment_tool",
+      "riskClass": "medium_campaign_manual",
+      "allowedInvocation": [
+        "manual_direct",
+        "parent_campaign_pipeline"
+      ],
+      "rationale": "Campaign enrichment/review helper; excluded from direct schedules to avoid uncontrolled outbound/enrichment loops."
+    },
+    {
+      "legacy_id": "robinswood-pme-hdf-domain-context-verifier",
+      "accepted": true,
+      "mappingExpectation": "manifest_only_manual_or_test",
+      "temporalMappingRequired": false,
+      "scheduleAllowed": false,
+      "requiresExplicitReviewBeforeScheduling": true,
+      "reviewAfter": "2026-09-30",
+      "updatedAt": "2026-06-27T09:48:44.243303Z",
+      "updatedBy": "oss-p6-manifest-only-policy",
+      "policyClass": "manual_campaign_enrichment_tool",
+      "riskClass": "medium_campaign_manual",
+      "allowedInvocation": [
+        "manual_direct",
+        "parent_campaign_pipeline"
+      ],
+      "rationale": "Campaign enrichment/review helper; excluded from direct schedules to avoid uncontrolled outbound/enrichment loops."
+    },
+    {
+      "legacy_id": "robinswood-pme-hdf-hunter-batch-discovery",
+      "accepted": true,
+      "mappingExpectation": "manifest_only_manual_or_test",
+      "temporalMappingRequired": false,
+      "scheduleAllowed": false,
+      "requiresExplicitReviewBeforeScheduling": true,
+      "reviewAfter": "2026-09-30",
+      "updatedAt": "2026-06-27T09:48:44.243306Z",
+      "updatedBy": "oss-p6-manifest-only-policy",
+      "policyClass": "manual_campaign_enrichment_tool",
+      "riskClass": "medium_campaign_manual",
+      "allowedInvocation": [
+        "manual_direct",
+        "parent_campaign_pipeline"
+      ],
+      "rationale": "Campaign enrichment/review helper; excluded from direct schedules to avoid uncontrolled outbound/enrichment loops."
+    },
+    {
+      "legacy_id": "rubypayeur-recouvrement-auth-check",
+      "accepted": true,
+      "mappingExpectation": "manifest_only_manual_or_test",
+      "temporalMappingRequired": false,
+      "scheduleAllowed": false,
+      "requiresExplicitReviewBeforeScheduling": true,
+      "reviewAfter": "2026-09-30",
+      "updatedAt": "2026-06-27T09:48:44.243309Z",
+      "updatedBy": "oss-p6-manifest-only-policy",
+      "policyClass": "human_approved_finance_operation",
+      "riskClass": "high_human_approval_required",
+      "allowedInvocation": [
+        "manual_direct_after_explicit_approval"
+      ],
+      "rationale": "Rubypayeur debt-recovery operations require explicit human approval and queue payloads; never schedule automatically."
+    },
+    {
+      "legacy_id": "rubypayeur-recouvrement-candidate-scan",
+      "accepted": true,
+      "mappingExpectation": "manifest_only_manual_or_test",
+      "temporalMappingRequired": false,
+      "scheduleAllowed": false,
+      "requiresExplicitReviewBeforeScheduling": true,
+      "reviewAfter": "2026-09-30",
+      "updatedAt": "2026-06-27T09:48:44.243312Z",
+      "updatedBy": "oss-p6-manifest-only-policy",
+      "policyClass": "human_approved_finance_operation",
+      "riskClass": "high_human_approval_required",
+      "allowedInvocation": [
+        "manual_direct_after_explicit_approval"
+      ],
+      "rationale": "Rubypayeur debt-recovery operations require explicit human approval and queue payloads; never schedule automatically."
+    },
+    {
+      "legacy_id": "rubypayeur-recouvrement-queue",
+      "accepted": true,
+      "mappingExpectation": "manifest_only_manual_or_test",
+      "temporalMappingRequired": false,
+      "scheduleAllowed": false,
+      "requiresExplicitReviewBeforeScheduling": true,
+      "reviewAfter": "2026-09-30",
+      "updatedAt": "2026-06-27T09:48:44.243316Z",
+      "updatedBy": "oss-p6-manifest-only-policy",
+      "policyClass": "human_approved_finance_operation",
+      "riskClass": "high_human_approval_required",
+      "allowedInvocation": [
+        "manual_direct_after_explicit_approval"
+      ],
+      "rationale": "Rubypayeur debt-recovery operations require explicit human approval and queue payloads; never schedule automatically."
+    },
+    {
+      "legacy_id": "sellsy-cash-collection-board-tests",
+      "accepted": true,
+      "mappingExpectation": "manifest_only_manual_or_test",
+      "temporalMappingRequired": false,
+      "scheduleAllowed": false,
+      "requiresExplicitReviewBeforeScheduling": true,
+      "reviewAfter": "2026-09-30",
+      "updatedAt": "2026-06-27T09:48:44.243319Z",
+      "updatedBy": "oss-p6-manifest-only-policy",
+      "policyClass": "test_wrapper",
+      "riskClass": "low_manual_test",
+      "allowedInvocation": [
+        "manual_direct",
+        "ci_or_guard_harness"
+      ],
+      "rationale": "Regression/smoke test wrapper; intentionally absent from Temporal automation mapping to avoid scheduled test noise."
+    },
+    {
+      "legacy_id": "sellsy-linkedin-connection-dispatch",
+      "accepted": true,
+      "mappingExpectation": "manifest_only_manual_or_test",
+      "temporalMappingRequired": false,
+      "scheduleAllowed": false,
+      "requiresExplicitReviewBeforeScheduling": true,
+      "reviewAfter": "2026-10-31",
+      "updatedAt": "2026-07-12T17:38:30.034261Z",
+      "updatedBy": "oss-architecture-v2-install",
+      "policyClass": "manual_guarded_outbound_tool",
+      "riskClass": "high_human_approval_required",
+      "allowedInvocation": [
+        "manual_direct_after_explicit_review"
+      ],
+      "rationale": "Explicitly classified during runtime-v2 migration; no schedule or mapping is added."
+    },
+    {
+      "legacy_id": "sellsy-linkedin-connection-enrichment",
+      "accepted": true,
+      "mappingExpectation": "manifest_only_manual_or_test",
+      "temporalMappingRequired": false,
+      "scheduleAllowed": false,
+      "requiresExplicitReviewBeforeScheduling": true,
+      "reviewAfter": "2026-10-31",
+      "updatedAt": "2026-07-12T17:38:30.034258Z",
+      "updatedBy": "oss-architecture-v2-install",
+      "policyClass": "manual_guarded_outbound_tool",
+      "riskClass": "high_human_approval_required",
+      "allowedInvocation": [
+        "manual_direct_after_explicit_review"
+      ],
+      "rationale": "Explicitly classified during runtime-v2 migration; no schedule or mapping is added."
+    },
+    {
+      "legacy_id": "sellsy-linkedin-connection-tests",
+      "accepted": true,
+      "mappingExpectation": "manifest_only_manual_or_test",
+      "temporalMappingRequired": false,
+      "scheduleAllowed": false,
+      "requiresExplicitReviewBeforeScheduling": true,
+      "reviewAfter": "2026-10-31",
+      "updatedAt": "2026-07-12T17:38:30.034265Z",
+      "updatedBy": "oss-architecture-v2-install",
+      "policyClass": "test_wrapper",
+      "riskClass": "low_manual_test",
+      "allowedInvocation": [
+        "manual_direct",
+        "ci_or_guard_harness"
+      ],
+      "rationale": "Explicitly classified during runtime-v2 migration; no schedule or mapping is added."
+    },
+    {
+      "legacy_id": "sellsy-pipeline-hygiene-board-tests",
+      "accepted": true,
+      "mappingExpectation": "manifest_only_manual_or_test",
+      "temporalMappingRequired": false,
+      "scheduleAllowed": false,
+      "requiresExplicitReviewBeforeScheduling": true,
+      "reviewAfter": "2026-09-30",
+      "updatedAt": "2026-06-27T09:48:44.243321Z",
+      "updatedBy": "oss-p6-manifest-only-policy",
+      "policyClass": "test_wrapper",
+      "riskClass": "low_manual_test",
+      "allowedInvocation": [
+        "manual_direct",
+        "ci_or_guard_harness"
+      ],
+      "rationale": "Regression/smoke test wrapper; intentionally absent from Temporal automation mapping to avoid scheduled test noise."
+    },
+    {
+      "legacy_id": "sellsy-revenue-operator-approval-pack-tests",
+      "accepted": true,
+      "mappingExpectation": "manifest_only_manual_or_test",
+      "temporalMappingRequired": false,
+      "scheduleAllowed": false,
+      "requiresExplicitReviewBeforeScheduling": true,
+      "reviewAfter": "2026-09-30",
+      "updatedAt": "2026-06-27T09:48:44.243324Z",
+      "updatedBy": "oss-p6-manifest-only-policy",
+      "policyClass": "test_wrapper",
+      "riskClass": "low_manual_test",
+      "allowedInvocation": [
+        "manual_direct",
+        "ci_or_guard_harness"
+      ],
+      "rationale": "Regression/smoke test wrapper; intentionally absent from Temporal automation mapping to avoid scheduled test noise."
+    },
+    {
+      "legacy_id": "sellsy-revenue-operator-decision-brief",
+      "accepted": true,
+      "mappingExpectation": "manifest_only_manual_or_test",
+      "temporalMappingRequired": false,
+      "scheduleAllowed": false,
+      "requiresExplicitReviewBeforeScheduling": true,
+      "reviewAfter": "2026-09-30",
+      "updatedAt": "2026-06-27T09:48:44.243328Z",
+      "updatedBy": "oss-p6-manifest-only-policy",
+      "policyClass": "manual_revenue_operator_brief",
+      "riskClass": "medium_prepare_only",
+      "allowedInvocation": [
+        "manual_direct",
+        "parent_revenue_ops_pipeline"
+      ],
+      "rationale": "Decision brief is prepare-only and must not write live approval inbox automatically."
+    },
+    {
+      "legacy_id": "sellsy-revenue-operator-decision-brief-tests",
+      "accepted": true,
+      "mappingExpectation": "manifest_only_manual_or_test",
+      "temporalMappingRequired": false,
+      "scheduleAllowed": false,
+      "requiresExplicitReviewBeforeScheduling": true,
+      "reviewAfter": "2026-09-30",
+      "updatedAt": "2026-06-27T09:48:44.243331Z",
+      "updatedBy": "oss-p6-manifest-only-policy",
+      "policyClass": "test_wrapper",
+      "riskClass": "low_manual_test",
+      "allowedInvocation": [
+        "manual_direct",
+        "ci_or_guard_harness"
+      ],
+      "rationale": "Regression/smoke test wrapper; intentionally absent from Temporal automation mapping to avoid scheduled test noise."
+    },
+    {
+      "legacy_id": "sellsy-revenue-operator-dispatcher-tests",
+      "accepted": true,
+      "mappingExpectation": "manifest_only_manual_or_test",
+      "temporalMappingRequired": false,
+      "scheduleAllowed": false,
+      "requiresExplicitReviewBeforeScheduling": true,
+      "reviewAfter": "2026-09-30",
+      "updatedAt": "2026-06-27T09:48:44.243334Z",
+      "updatedBy": "oss-p6-manifest-only-policy",
+      "policyClass": "test_wrapper",
+      "riskClass": "low_manual_test",
+      "allowedInvocation": [
+        "manual_direct",
+        "ci_or_guard_harness"
+      ],
+      "rationale": "Regression/smoke test wrapper; intentionally absent from Temporal automation mapping to avoid scheduled test noise."
+    }
+  ]
+}

@@ -1,0 +1,88 @@
+{
+  "schema_version": "agent-spec-v2",
+  "id": "robinswood-pme-hdf-sellsy-crm-sync",
+  "name": "Robinswood PME HDF — Sellsy CRM sync contacts/actions",
+  "lane": "revenue_ops",
+  "owner": "revenue_ops",
+  "runtime_version": "v2",
+  "risk_class": "bounded_crm_write_no_outbound",
+  "side_effects": [
+    "read_hdf_campaign_contact_artifacts",
+    "read_hdf_mailer_and_reply_ledgers",
+    "find_or_create_sellsy_company",
+    "find_or_create_sellsy_contact",
+    "create_sellsy_crm_task_notes",
+    "write_sync_state_and_report",
+    "no_external_outbound_message"
+  ],
+  "execution": {
+    "backend": "argv",
+    "timeout_seconds": 1800,
+    "argv": [
+      "/srv/rbw-agents-oss/.venv/bin/python",
+      "/srv/rbw-agents-oss/scripts/robinswood_pme_hdf_sellsy_crm_sync.py",
+      "--apply",
+      "--max-contacts",
+      "5000",
+      "--max-actions",
+      "500",
+      "--cache-pages",
+      "12",
+      "--continue-on-error"
+    ],
+    "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+    "env": {
+      "RBW_HDF_SELLSY_SYNC_APPLY": "1"
+    }
+  },
+  "contract": {
+    "version": "runtime-v2-execution-report-v1",
+    "expects_report": true,
+    "json_path": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/robinswood-pme-hdf-sellsy-crm-sync-last.json",
+    "markdown_path": null
+  },
+  "policy": {
+    "classified": true,
+    "policy_class": "outbound_governance",
+    "mutation_mode": "guarded_external_prepare_or_send",
+    "schedule_allowed": true,
+    "requires_human_approval_for_apply": true,
+    "requires_human_approval_for_external_send": true,
+    "requires_explicit_review_before_risk_increase": true,
+    "source": "/srv/rbw-agents-oss/config/registry/side-effects-policy.json"
+  },
+  "schedules": [
+    {
+      "schedule_id": "sched.robinswood-pme-hdf-sellsy-crm-sync",
+      "workflow_id": "rbw.robinswood-pme-hdf-sellsy-crm-sync",
+      "task_queue": "campaigns",
+      "cron": "40 9,13,17 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true
+    }
+  ],
+  "trigger_types": [
+    "Schedule",
+    "SchedulerTick"
+  ],
+  "task_queues": [
+    "campaigns"
+  ],
+  "workflow_ids": [
+    "rbw.robinswood-pme-hdf-sellsy-crm-sync"
+  ],
+  "source_status": {
+    "in_manifest": true,
+    "in_mapping": true,
+    "in_schedules": true,
+    "in_ready_schedules": true,
+    "manifest_section": "wave1"
+  },
+  "provenance": {
+    "manifest": "/srv/rbw-agents-oss/config/command-manifest.json",
+    "mapping": "/srv/rbw-agents-oss/config/automation-mapping.json",
+    "schedules": "/srv/rbw-agents-oss/config/temporal/schedules.json",
+    "sideEffectsPolicy": "/srv/rbw-agents-oss/config/registry/side-effects-policy.json",
+    "manifestUpdatedAt": "2026-07-12T21:02:50.005345Z"
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "version": "runtime-status-policy-v1",
+  "updatedAt": "2026-07-12T21:02:50.005512Z",
+  "description": "Auditable policy for scheduled wrappers whose latest report may be ok=false because a deliberate guard/gate blocked side effects. Entries must be specific to a legacy_id and status; unclassified ok=false reports stay errors.",
+  "acceptedNonOkReports": [
+    {
+      "legacy_id": "robinswood-linkedin-weekly-thought-leadership",
+      "statuses": [
+        "quality_blocked"
+      ],
+      "severity": "warning",
+      "requiredBlockingReasonContains": [
+        "visual_system_not_approved"
+      ],
+      "reason": "Human visual-system approval gate intentionally blocks LinkedIn publication while the visual redesign is in progress; the wrapper is healthy if the report is fresh and the visual-system blocking reason is present.",
+      "owner": "robinswood-editorial-governance",
+      "reviewTrigger": "Remove or revise after the new Robinswood visual system is approved for autonomous publication."
+    },
+    {
+      "legacy_id": "temporal-rtk-regression-guard",
+      "statuses": [
+        "business_failed"
+      ],
+      "severity": "warning",
+      "requiredReasonContains": [
+        "business_result_non_ok"
+      ],
+      "reason": "The argv process completed and emitted an explicit business/evidence regression result; Temporal SLO excludes business failures while the dedicated business report remains preserved.",
+      "owner": "oss-runtime-governance",
+      "reviewTrigger": "Resolve the underlying RTK business regression; do not classify technical failures."
+    }
+  ],
+  "updatedBy": "oss-architecture-v2-runtime-business-contract-split"
+}

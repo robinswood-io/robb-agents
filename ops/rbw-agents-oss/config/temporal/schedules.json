@@ -1,0 +1,1950 @@
+{
+  "schedules": [
+    {
+      "schedule_id": "sched.scraper-trigger-hebdo",
+      "workflow_id": "rbw.scraper-trigger-hebdo",
+      "task_queue": "default",
+      "cron": "0 0 * * 2,4",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "scraper-trigger-hebdo",
+        "name": "Déclenchement hebdomadaire des scrapers",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.gc-inqom-sync-weekly",
+      "workflow_id": "rbw.gc-inqom-sync-weekly",
+      "task_queue": "sync",
+      "cron": "0 8 * * 1",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "gc-inqom-sync-weekly",
+        "name": "Synchronisation hebdomadaire GoCardless → Inqom",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.night-agent-daily-report",
+      "workflow_id": "rbw.night-agent-daily-report",
+      "task_queue": "default",
+      "cron": "30 8 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "night-agent-daily-report",
+        "name": "Rapport quotidien Night Agent",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.night-agent-alerts",
+      "workflow_id": "rbw.night-agent-alerts",
+      "task_queue": "default",
+      "cron": "0 8,16 * * *",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "night-agent-alerts",
+        "name": "Alertes Night Agent",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.shared-memory-sync",
+      "workflow_id": "rbw.shared-memory-sync",
+      "task_queue": "sync",
+      "cron": "0 7 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "shared-memory-sync",
+        "name": "Synchronisation de la mémoire partagée",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.pr-campaign-avant-le-flow",
+      "workflow_id": "rbw.pr-campaign-avant-le-flow",
+      "task_queue": "campaigns",
+      "cron": "0 9,14,19 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "pr-campaign-avant-le-flow",
+        "name": "Suivi de la campagne PR Avant le Flow",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.conference-prospection-daily",
+      "workflow_id": "rbw.conference-prospection-daily",
+      "task_queue": "default",
+      "cron": "15 9 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "conference-prospection-daily",
+        "name": "Suivi quotidien des prises de parole & conférences",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.memory-freshness-check",
+      "workflow_id": "rbw.memory-freshness-check",
+      "task_queue": "default",
+      "cron": "30 7 * * 1",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "memory-freshness-check",
+        "name": "Maintenance de fraîcheur de la mémoire",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.blog-seo-matomo-learning",
+      "workflow_id": "rbw.blog-seo-matomo-learning",
+      "task_queue": "default",
+      "cron": "30 5 * * *",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "blog-seo-matomo-learning",
+        "name": "Apprentissage SEO Matomo du blog Robinswood",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.blog-rss-generation",
+      "workflow_id": "rbw.blog-rss-generation",
+      "task_queue": "default",
+      "cron": "0 6 * * *",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "blog-rss-generation",
+        "name": "Génération RSS du blog Robinswood",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.auth-watchdog",
+      "workflow_id": "rbw.auth-watchdog",
+      "task_queue": "watchdog",
+      "cron": "0 */4 * * *",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "auth-watchdog",
+        "name": "Surveillance de l’authentification Claude Max",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.triage-emails-multi-sources-master",
+      "workflow_id": "rbw.triage-emails-multi-sources-master",
+      "task_queue": "campaigns",
+      "cron": "5 9,14,19 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "triage-emails-multi-sources-master",
+        "name": "Triage multi-sources des emails",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.campaign-governance-master",
+      "workflow_id": "rbw.campaign-governance-master",
+      "task_queue": "campaigns",
+      "cron": "25 9,17 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "campaign-governance-master",
+        "name": "Gouvernance transversale des campagnes",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.sellsy-tenders-sync-master",
+      "workflow_id": "rbw.sellsy-tenders-sync-master",
+      "task_queue": "ao",
+      "cron": "20 8,13,18 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "sellsy-tenders-sync-master",
+        "name": "Synchronisation Sellsy ↔ AO",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.campaigns-multichannel-master",
+      "workflow_id": "rbw.campaigns-multichannel-master",
+      "task_queue": "campaigns",
+      "cron": "20 9,10,11,16,17 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "campaigns-multichannel-master",
+        "name": "Exécution multicanale des campagnes",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.ao-day-ops-master",
+      "workflow_id": "rbw.ao-day-ops-master",
+      "task_queue": "ao",
+      "cron": "5 8,12,16 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "ao-day-ops-master",
+        "name": "Pilotage quotidien des AO",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.2bfe5f",
+      "workflow_id": "rbw.2bfe5f",
+      "task_queue": "default",
+      "cron": "30 8 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "2bfe5f",
+        "name": "Pilotage speaker & CFP Europe",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.server-daily-digest",
+      "workflow_id": "rbw.server-daily-digest",
+      "task_queue": "default",
+      "cron": "0 9 * * 0,2-6",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "server-daily-digest",
+        "name": "Digest quotidien du serveur OSS",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.server-weekly-digest",
+      "workflow_id": "rbw.server-weekly-digest",
+      "task_queue": "default",
+      "cron": "0 9 * * 1",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "server-weekly-digest",
+        "name": "Digest hebdomadaire du serveur OSS",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.ao-sellsy-review-watch",
+      "workflow_id": "rbw.ao-sellsy-review-watch",
+      "task_queue": "ao",
+      "cron": "0 9,14 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "ao-sellsy-review-watch",
+        "name": "Surveillance des revues AO dans Sellsy",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.web-form-submitter",
+      "workflow_id": "rbw.web-form-submitter",
+      "task_queue": "default",
+      "cron": "30 10,15 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "web-form-submitter",
+        "name": "Pilotage des formulaires web des campagnes",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.source-connectionstatus-watchdog",
+      "workflow_id": "rbw.source-connectionstatus-watchdog",
+      "task_queue": "watchdog",
+      "cron": "0 * * * *",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "source-connectionstatus-watchdog",
+        "name": "Surveillance des connexions des sources",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.marketing-autonomy-kpi-monitor-48h",
+      "workflow_id": "rbw.marketing-autonomy-kpi-monitor-48h",
+      "task_queue": "default",
+      "cron": "0 */4 * * *",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "marketing-autonomy-kpi-monitor-48h",
+        "name": "Suivi des KPI d’autonomie marketing sur 48h",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.officer-weekend-optimizer",
+      "workflow_id": "rbw.officer-weekend-optimizer",
+      "task_queue": "default",
+      "cron": "30 10 * * 6,0",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "officer-weekend-optimizer",
+        "name": "Optimisation Officer du week-end",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.officer-friday-adjustments",
+      "workflow_id": "rbw.officer-friday-adjustments",
+      "task_queue": "default",
+      "cron": "30 17 * * 5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "officer-friday-adjustments",
+        "name": "Ajustements Officer du vendredi",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.officer-monday-launch-planner",
+      "workflow_id": "rbw.officer-monday-launch-planner",
+      "task_queue": "default",
+      "cron": "40 7 * * 1",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "officer-monday-launch-planner",
+        "name": "Plan de lancement Officer du lundi",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.officer-preflight-healthcheck",
+      "workflow_id": "rbw.officer-preflight-healthcheck",
+      "task_queue": "default",
+      "cron": "35 7 * * 1",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "officer-preflight-healthcheck",
+        "name": "Pré-vérification Officer",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.langfuse-runs-export-hourly",
+      "workflow_id": "rbw.langfuse-runs-export-hourly",
+      "task_queue": "default",
+      "cron": "10 * * * *",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "langfuse-runs-export-hourly",
+        "name": "Export horaire des runs Langfuse",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.langfuse-kpi-dashboard-7d",
+      "workflow_id": "rbw.langfuse-kpi-dashboard-7d",
+      "task_queue": "default",
+      "cron": "20 */6 * * *",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "langfuse-kpi-dashboard-7d",
+        "name": "Tableau de bord Langfuse sur 7 jours",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.langfuse-kpi-threshold-alerts",
+      "workflow_id": "rbw.langfuse-kpi-threshold-alerts",
+      "task_queue": "default",
+      "cron": "30 */6 * * *",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "langfuse-kpi-threshold-alerts",
+        "name": "Alertes de seuils Langfuse",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.schedule-drift-watchdog",
+      "workflow_id": "rbw.schedule-drift-watchdog",
+      "task_queue": "watchdog",
+      "cron": "50 7,11,15,19 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "schedule-drift-watchdog",
+        "name": "Surveillance de dérive des schedules Temporal",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.operator-escalation-watcher",
+      "workflow_id": "rbw.operator-escalation-watcher",
+      "task_queue": "campaigns",
+      "cron": "*/30 8-19 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "operator-escalation-watcher",
+        "name": "Traitement des réponses opérateur OSS",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.contact-enrichment-autopilot",
+      "workflow_id": "rbw.contact-enrichment-autopilot",
+      "task_queue": "campaigns",
+      "cron": "45 8,9,14,19 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "contact-enrichment-autopilot",
+        "name": "Enrichissement autonome des contacts",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.provider-routing-guard",
+      "workflow_id": "rbw.provider-routing-guard",
+      "task_queue": "watchdog",
+      "cron": "*/30 * * * *",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "provider-routing-guard",
+        "name": "Guard routage providers LLM",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.campaigns-autonomy-loop",
+      "workflow_id": "rbw.campaigns-autonomy-loop",
+      "task_queue": "campaigns",
+      "cron": "10,40 8-19 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "campaigns-autonomy-loop",
+        "name": "Boucle d’autonomie des campagnes OSS",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.temporal-stuck-workflow-watchdog",
+      "workflow_id": "rbw.temporal-stuck-workflow-watchdog",
+      "task_queue": "watchdog",
+      "cron": "*/10 * * * *",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "temporal-stuck-workflow-watchdog",
+        "name": "Temporal Stuck Workflow Watchdog",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.business-autonomy-queue-governor",
+      "workflow_id": "rbw.business-autonomy-queue-governor",
+      "task_queue": "campaigns",
+      "cron": "*/30 8-19 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "business-autonomy-queue-governor",
+        "name": "Business Autonomy Queue Governor",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.oss-lock-watchdog",
+      "workflow_id": "rbw.oss-lock-watchdog",
+      "task_queue": "watchdog",
+      "cron": "*/30 8-19 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "oss-lock-watchdog",
+        "name": "OSS Lock Watchdog",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.autonomy-queue-owner-governor",
+      "workflow_id": "rbw.autonomy-queue-owner-governor",
+      "task_queue": "watchdog",
+      "cron": "*/20 8-19 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "autonomy-queue-owner-governor",
+        "name": "Autonomy Queue Owner Governor",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.oss-capability-performance-knowledge-auditor",
+      "workflow_id": "rbw.oss-capability-performance-knowledge-auditor",
+      "task_queue": "watchdog",
+      "cron": "15 8,12,16,20 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "oss-capability-performance-knowledge-auditor",
+        "name": "OSS Capability Performance Knowledge Auditor",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.oss-ops-report-indexer",
+      "workflow_id": "rbw.oss-ops-report-indexer",
+      "task_queue": "watchdog",
+      "cron": "*/30 8-20 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "oss-ops-report-indexer",
+        "name": "OSS Ops Report Indexer",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.oss-operational-knowledge-synthesizer",
+      "workflow_id": "rbw.oss-operational-knowledge-synthesizer",
+      "task_queue": "watchdog",
+      "cron": "20 8,12,16,20 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "oss-operational-knowledge-synthesizer",
+        "name": "OSS Operational Knowledge Synthesizer",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.business-target-reconsideration",
+      "workflow_id": "rbw.business-target-reconsideration",
+      "task_queue": "campaigns",
+      "cron": "55 8,14,19 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "business-target-reconsideration",
+        "name": "Reconsidération autonome du ciblage dirigeants PME/ETI",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.langfuse-business-cost-export",
+      "workflow_id": "rbw.langfuse-business-cost-export",
+      "task_queue": "campaigns",
+      "cron": "25 0-23/6 * * *",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "langfuse-business-cost-export",
+        "name": "Export coût LLM business Langfuse",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.sellsy-business-kpi-export",
+      "workflow_id": "rbw.sellsy-business-kpi-export",
+      "task_queue": "campaigns",
+      "cron": "5 7 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "sellsy-business-kpi-export",
+        "name": "Export KPI business Sellsy",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.gtm-autonomous-decision-governor",
+      "workflow_id": "rbw.gtm-autonomous-decision-governor",
+      "task_queue": "campaigns",
+      "cron": "25 9,15,17 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "gtm-autonomous-decision-governor",
+        "name": "GTM Autonomous Decision Governor",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.gtm-autonomous-execution-materializer",
+      "workflow_id": "rbw.gtm-autonomous-execution-materializer",
+      "task_queue": "campaigns",
+      "cron": "40 9,15,17 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "gtm-autonomous-execution-materializer",
+        "name": "GTM Autonomous Execution Materializer",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.business-acquisition-enhanced-dashboard",
+      "workflow_id": "rbw.business-acquisition-enhanced-dashboard",
+      "task_queue": "campaigns",
+      "cron": "45 17 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "business-acquisition-enhanced-dashboard",
+        "name": "Business Acquisition Enhanced Dashboard",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.oss-gtm-coherence-report",
+      "workflow_id": "rbw.oss-gtm-coherence-report",
+      "task_queue": "campaigns",
+      "cron": "10 18 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "oss-gtm-coherence-report",
+        "name": "OSS GTM Coherence Report",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.auto-ads-bmw-i4-night-watch",
+      "workflow_id": "rbw.auto-ads-bmw-i4-night-watch",
+      "task_queue": "campaigns",
+      "cron": "15 2 * * 2,5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "auto-ads-bmw-i4-night-watch",
+        "name": "BMW i4 Watch annonces+enchères (email Listmonk)",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.temporal-history-audit",
+      "workflow_id": "rbw.temporal-history-audit",
+      "task_queue": "watchdog",
+      "cron": "12 * * * *",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "temporal-history-audit",
+        "name": "Temporal History Audit",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.ovh-domain-sentinel",
+      "workflow_id": "rbw.ovh-domain-sentinel",
+      "task_queue": "watchdog",
+      "cron": "17 */4 * * *",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "ovh-domain-sentinel",
+        "name": "Surveillance OVH Domain Sentinel",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.ovh-domain-registry-refresh",
+      "workflow_id": "rbw.ovh-domain-registry-refresh",
+      "task_queue": "watchdog",
+      "cron": "7 6 * * *",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "ovh-domain-registry-refresh",
+        "name": "Rafraîchissement registre domaines OVH",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.ovh-domain-remediation",
+      "workflow_id": "rbw.ovh-domain-remediation",
+      "task_queue": "watchdog",
+      "cron": "22 */4 * * *",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "ovh-domain-remediation",
+        "name": "Planner remédiation safe domaines OVH",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.temporal-rtk-token-optimization-report",
+      "workflow_id": "rbw.temporal-rtk-token-optimization-report",
+      "task_queue": "watchdog",
+      "cron": "37 * * * *",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "temporal-rtk-token-optimization-report",
+        "name": "Temporal RTK Token Optimization Report V3",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.temporal-rtk-regression-guard",
+      "workflow_id": "rbw.temporal-rtk-regression-guard",
+      "task_queue": "watchdog",
+      "cron": "22,52 * * * *",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "temporal-rtk-regression-guard",
+        "name": "Temporal RTK Regression Guard",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.inbound-email-sellsy-task-sync",
+      "workflow_id": "rbw.inbound-email-sellsy-task-sync",
+      "task_queue": "campaigns",
+      "cron": "10,40 8-19 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "inbound-email-sellsy-task-sync",
+        "name": "Synchronisation réponses email entrantes vers tâches Sellsy",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.mail-autonomy-guard",
+      "workflow_id": "rbw.mail-autonomy-guard",
+      "task_queue": "campaigns",
+      "cron": "15,45 8-19 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "mail-autonomy-guard",
+        "name": "Garde-fou autonomie mail entrant",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.mail-autonomy-regression-tests",
+      "workflow_id": "rbw.mail-autonomy-regression-tests",
+      "task_queue": "campaigns",
+      "cron": "25 8,12,16,19 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "mail-autonomy-regression-tests",
+        "name": "Tests anti-régression autonomie mail",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.ovh-domain-dns-diagnostics",
+      "workflow_id": "rbw.ovh-domain-dns-diagnostics",
+      "task_queue": "watchdog",
+      "cron": "19 */4 * * *",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "ovh-domain-dns-diagnostics",
+        "name": "Diagnostics DNS OVH Domain Sentinel",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.ovh-domain-http-tls-diagnostics",
+      "workflow_id": "rbw.ovh-domain-http-tls-diagnostics",
+      "task_queue": "watchdog",
+      "cron": "27 */4 * * *",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "ovh-domain-http-tls-diagnostics",
+        "name": "Diagnostics HTTP/TLS OVH Domain Sentinel",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.ovh-domain-action-matrix",
+      "workflow_id": "rbw.ovh-domain-action-matrix",
+      "task_queue": "watchdog",
+      "cron": "35 */4 * * *",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "ovh-domain-action-matrix",
+        "name": "Matrice actions domaines OVH",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.oss-agent-method-evidence-builder",
+      "workflow_id": "rbw.oss-agent-method-evidence-builder",
+      "task_queue": "watchdog",
+      "cron": "12 * * * *",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "oss-agent-method-evidence-builder",
+        "name": "OSS Agent Method Evidence Builder",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.oss-agent-autonomy-governor",
+      "workflow_id": "rbw.oss-agent-autonomy-governor",
+      "task_queue": "watchdog",
+      "cron": "17,47 * * * *",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "oss-agent-autonomy-governor",
+        "name": "OSS Agent Autonomy Governor",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.temporal-performance-slo-guard",
+      "workflow_id": "rbw.temporal-performance-slo-guard",
+      "task_queue": "watchdog",
+      "cron": "7,37 * * * *",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "temporal-performance-slo-guard",
+        "name": "Temporal Performance SLO Guard",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.contact-source-catalog-expander",
+      "workflow_id": "rbw.contact-source-catalog-expander",
+      "task_queue": "campaigns",
+      "cron": "12 7,13,17 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "contact-source-catalog-expander",
+        "name": "Expansion autonome du catalogue sources contact",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.oss-agent-card-builder",
+      "workflow_id": "rbw.oss-agent-card-builder",
+      "task_queue": "watchdog",
+      "cron": "23 * * * *",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "oss-agent-card-builder",
+        "name": "Construction des Agent Cards OSS",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.oss-agent-frontier-method-radar",
+      "workflow_id": "rbw.oss-agent-frontier-method-radar",
+      "task_queue": "watchdog",
+      "cron": "28 * * * *",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "oss-agent-frontier-method-radar",
+        "name": "Radar méthodes agentiques frontier",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.report-envelope-standardizer",
+      "workflow_id": "rbw.report-envelope-standardizer",
+      "task_queue": "watchdog",
+      "cron": "9,39 * * * *",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "report-envelope-standardizer",
+        "name": "Report Envelope Standardizer",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.campaign-impact-events",
+      "workflow_id": "rbw.campaign-impact-events",
+      "task_queue": "campaigns",
+      "cron": "0 8-19/2 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "campaign-impact-events",
+        "name": "Campaign Impact Events Normalizer",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.campaign-impact-autonomy-guard",
+      "workflow_id": "rbw.campaign-impact-autonomy-guard",
+      "task_queue": "campaigns",
+      "cron": "5 8-19/2 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "campaign-impact-autonomy-guard",
+        "name": "Campaign Impact Autonomy Guard",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.finance-inqom-close-readiness",
+      "workflow_id": "rbw.finance-inqom-close-readiness",
+      "task_queue": "sync",
+      "cron": "20 8 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "finance-inqom-close-readiness",
+        "name": "Finance Inqom — readiness situation intermédiaire Robinswood",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.qualified-opportunity-quote-guard",
+      "workflow_id": "rbw.qualified-opportunity-quote-guard",
+      "task_queue": "campaigns",
+      "cron": "58 7-19/2 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "qualified-opportunity-quote-guard",
+        "name": "Qualified Opportunity Quote Guard",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.source-lane-learning-governor",
+      "workflow_id": "rbw.source-lane-learning-governor",
+      "task_queue": "campaigns",
+      "cron": "12 8-19/2 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "source-lane-learning-governor",
+        "name": "Source Lane Learning Governor",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.oss-industrialization-dashboard",
+      "workflow_id": "rbw.oss-industrialization-dashboard",
+      "task_queue": "watchdog",
+      "cron": "7 7-19/2 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "oss-industrialization-dashboard",
+        "name": "OSS Industrialization Dashboard",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.oss-release-gate",
+      "workflow_id": "rbw.oss-release-gate",
+      "task_queue": "watchdog",
+      "cron": "37 7,13,19 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "oss-release-gate",
+        "name": "OSS Release Gate",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.oss-self-healing-candidate-queue",
+      "workflow_id": "rbw.oss-self-healing-candidate-queue",
+      "task_queue": "watchdog",
+      "cron": "27 7-19/2 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "oss-self-healing-candidate-queue",
+        "name": "OSS Self-Healing Candidate Queue",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.oss-agent-control-plane",
+      "workflow_id": "rbw.oss-agent-control-plane",
+      "task_queue": "watchdog",
+      "cron": "47 7-19/2 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "oss-agent-control-plane",
+        "name": "OSS Agent Control Plane",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.agent-task-inbox-router",
+      "workflow_id": "rbw.agent-task-inbox-router",
+      "task_queue": "watchdog",
+      "cron": "5 9,13,17,19 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "agent-task-inbox-router",
+        "name": "Agent Task Inbox Router",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.agent-task-google-tasks-intake-day",
+      "workflow_id": "rbw.agent-task-google-tasks-intake-day",
+      "task_queue": "watchdog",
+      "cron": "0 9,13,17 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "agent-task-google-tasks-intake-day",
+        "name": "Agent Task Google Tasks Intake — Day Cadence",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.agent-task-google-tasks-intake-evening",
+      "workflow_id": "rbw.agent-task-google-tasks-intake-evening",
+      "task_queue": "watchdog",
+      "cron": "0 19 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "agent-task-google-tasks-intake-evening",
+        "name": "Agent Task Google Tasks Intake — Evening Boundary",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.agent-task-google-tasks-intake-overnight",
+      "workflow_id": "rbw.agent-task-google-tasks-intake-overnight",
+      "task_queue": "watchdog",
+      "cron": "0 3 * * 2-6",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "agent-task-google-tasks-intake-overnight",
+        "name": "Agent Task Google Tasks Intake — Overnight Cadence",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.agent-task-temporal-openrouter-executor",
+      "workflow_id": "rbw.agent-task-temporal-openrouter-executor",
+      "task_queue": "watchdog",
+      "cron": "10 9,13,17,19 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "agent-task-temporal-openrouter-executor",
+        "name": "Agent Task Temporal OpenRouter Executor",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.agent-task-inbox-router-overnight",
+      "workflow_id": "rbw.agent-task-inbox-router-overnight",
+      "task_queue": "watchdog",
+      "cron": "5 3 * * 2-6",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "agent-task-inbox-router-overnight",
+        "name": "Agent Task Inbox Router — Overnight",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.agent-task-temporal-openrouter-executor-overnight",
+      "workflow_id": "rbw.agent-task-temporal-openrouter-executor-overnight",
+      "task_queue": "watchdog",
+      "cron": "10 3 * * 2-6",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "agent-task-temporal-openrouter-executor-overnight",
+        "name": "Agent Task Temporal OpenRouter Executor — Overnight",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.agent-task-context-enriched-campaign-executor",
+      "workflow_id": "rbw.agent-task-context-enriched-campaign-executor",
+      "task_queue": "watchdog",
+      "cron": "10 9,13,17,19 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "agent-task-context-enriched-campaign-executor",
+        "name": "Agent Task Context-Enriched Campaign Executor",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.agent-task-context-enriched-campaign-executor-overnight",
+      "workflow_id": "rbw.agent-task-context-enriched-campaign-executor-overnight",
+      "task_queue": "watchdog",
+      "cron": "10 3 * * 2-6",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "agent-task-context-enriched-campaign-executor-overnight",
+        "name": "Agent Task Context-Enriched Campaign Executor — Overnight",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.agent-task-campaign-activation-loop",
+      "workflow_id": "rbw.agent-task-campaign-activation-loop",
+      "task_queue": "watchdog",
+      "cron": "15 9,13,17,19 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "agent-task-campaign-activation-loop",
+        "name": "Agent Task Campaign Activation Loop",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.agent-task-campaign-activation-loop-overnight",
+      "workflow_id": "rbw.agent-task-campaign-activation-loop-overnight",
+      "task_queue": "watchdog",
+      "cron": "15 3 * * 2-6",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "agent-task-campaign-activation-loop-overnight",
+        "name": "Agent Task Campaign Activation Loop — Overnight",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.contact-quality-audit",
+      "workflow_id": "rbw.contact-quality-audit",
+      "task_queue": "watchdog",
+      "cron": "25 9,13,17,19 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "contact-quality-audit",
+        "name": "Contact Quality Audit",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.contact-quality-audit-overnight",
+      "workflow_id": "rbw.contact-quality-audit-overnight",
+      "task_queue": "watchdog",
+      "cron": "25 3 * * 2-6",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "contact-quality-audit-overnight",
+        "name": "Contact Quality Audit — Overnight",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.linkedin-editorial-regression-tests",
+      "workflow_id": "rbw.linkedin-editorial-regression-tests",
+      "task_queue": "watchdog",
+      "cron": "35 8 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "linkedin-editorial-regression-tests",
+        "name": "Contrôle éditorial LinkedIn Robinswood 80/20",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.drive-audio-transcription-autopilot",
+      "workflow_id": "rbw.drive-audio-transcription-autopilot",
+      "task_queue": "watchdog",
+      "cron": "*/15 * * * *",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "drive-audio-transcription-autopilot",
+        "name": "Drive Audio Transcription Autopilot",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.blog-topicality-regression-tests",
+      "workflow_id": "rbw.blog-topicality-regression-tests",
+      "task_queue": "watchdog",
+      "cron": "42 8 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "blog-topicality-regression-tests",
+        "name": "Contrôle topicalité articles blog Robinswood",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.campaign-agent-source-rebuild",
+      "workflow_id": "rbw.campaign-agent-source-rebuild",
+      "task_queue": "campaigns",
+      "cron": "45 8,13 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "campaign-agent-source-rebuild",
+        "name": "Campaign Agent Source Rebuild — evidence-first prepare-only packs",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.inqom-accounting-autonomy-pipeline",
+      "workflow_id": "rbw.inqom-accounting-autonomy-pipeline",
+      "task_queue": "sync",
+      "cron": "35 8 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "inqom-accounting-autonomy-pipeline",
+        "name": "Pipeline autonomie comptable Inqom — qualité courante",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.oss-campaign-agent-memory-fabric",
+      "workflow_id": "rbw.oss-campaign-agent-memory-fabric",
+      "task_queue": "watchdog",
+      "cron": "10,40 8-20 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "oss-campaign-agent-memory-fabric",
+        "name": "OSS Campaign + Agent Memory Fabric",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.monthly-podcast-generation",
+      "workflow_id": "rbw.monthly-podcast-generation",
+      "task_queue": "default",
+      "cron": "0 8 1 * *",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "monthly-podcast-generation",
+        "name": "Génération mensuelle podcast Robinswood",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.sellsy-cash-collection-board",
+      "workflow_id": "rbw.sellsy-cash-collection-board",
+      "task_queue": "sync",
+      "cron": "10 8 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "sellsy-cash-collection-board",
+        "name": "Sellsy — cash collection board prepare-only",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.sellsy-pipeline-hygiene-board",
+      "workflow_id": "rbw.sellsy-pipeline-hygiene-board",
+      "task_queue": "sync",
+      "cron": "15 8 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "sellsy-pipeline-hygiene-board",
+        "name": "Sellsy — pipeline hygiene board prepare-only",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.sellsy-revenue-operator-approval-pack",
+      "workflow_id": "rbw.sellsy-revenue-operator-approval-pack",
+      "task_queue": "sync",
+      "cron": "18 8 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "sellsy-revenue-operator-approval-pack",
+        "name": "Sellsy — approval pack opérateur revenue/cash",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.prospect-research-sellsy-intake",
+      "workflow_id": "rbw.prospect-research-sellsy-intake-day",
+      "task_queue": "sync",
+      "cron": "12 9,13,17,19 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "prospect-research-sellsy-intake",
+        "name": "Prospect Research → Sellsy Intake — Day Cadence",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.sellsy-revenue-operator-dispatcher",
+      "workflow_id": "rbw.sellsy-revenue-operator-dispatcher",
+      "task_queue": "sync",
+      "cron": "19 8 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "sellsy-revenue-operator-dispatcher",
+        "name": "Sellsy — dispatcher opérateur revenue ultra-gardé",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.afnor-book-launch-controller",
+      "workflow_id": "rbw.afnor-book-launch-controller-day",
+      "task_queue": "campaigns",
+      "cron": "6 9,13,17,19 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "afnor-book-launch-controller",
+        "name": "AFNOR Book Launch Controller - Day Cadence",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.robinswood-pme-hdf-full-pilot-enrichment-loop",
+      "workflow_id": "rbw.robinswood-pme-hdf-full-pilot-enrichment-loop",
+      "task_queue": "campaigns",
+      "cron": "3 9,13,17 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "robinswood-pme-hdf-full-pilot-enrichment-loop",
+        "name": "Robinswood PME HDF — full enrichment loop",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.robinswood-pme-hdf-launch-readiness",
+      "workflow_id": "rbw.robinswood-pme-hdf-launch-readiness",
+      "task_queue": "campaigns",
+      "cron": "14 9,13,17 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "robinswood-pme-hdf-launch-readiness",
+        "name": "Robinswood PME HDF — autonomous launch readiness",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.robinswood-pme-hdf-pre-send-gate",
+      "workflow_id": "rbw.robinswood-pme-hdf-pre-send-gate",
+      "task_queue": "campaigns",
+      "cron": "16 9,13,17 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "robinswood-pme-hdf-pre-send-gate",
+        "name": "Robinswood PME HDF — autonomous pre-send gate",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.robinswood-pme-hdf-audited-mailer",
+      "workflow_id": "rbw.robinswood-pme-hdf-audited-mailer",
+      "task_queue": "campaigns",
+      "cron": "18 9,13,17 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "robinswood-pme-hdf-audited-mailer",
+        "name": "Robinswood PME HDF — audited autonomous Gmail mailer",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.robinswood-pme-hdf-campaign-safety-guard",
+      "workflow_id": "rbw.robinswood-pme-hdf-campaign-safety-guard",
+      "task_queue": "campaigns",
+      "cron": "22 9,13,17 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "robinswood-pme-hdf-campaign-safety-guard",
+        "name": "Robinswood PME HDF — autonomous safety guard",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.robinswood-pme-hdf-reply-unsubscribe-loop",
+      "workflow_id": "rbw.robinswood-pme-hdf-reply-unsubscribe-loop",
+      "task_queue": "campaigns",
+      "cron": "5,20,35,50 8-19 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "robinswood-pme-hdf-reply-unsubscribe-loop",
+        "name": "Robinswood PME HDF — Gmail reply loop HITL interest",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.robinswood-linkedin-weekly-thought-leadership",
+      "workflow_id": "rbw.robinswood-linkedin-weekly-thought-leadership",
+      "task_queue": "default",
+      "cron": "0 9 * * 2",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "robinswood-linkedin-weekly-thought-leadership",
+        "name": "Robinswood LinkedIn — thought leadership hebdomadaire IA/contraintes",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.client-incident-autonomy-loop",
+      "workflow_id": "rbw.client-incident-autonomy-loop",
+      "task_queue": "campaigns",
+      "cron": "0 9,14,20 * * *",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "client-incident-autonomy-loop",
+        "name": "Client Incident Autonomy — email → diagnostic → réparation → réponse contrôlée",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.client-incident-autonomy-tests",
+      "workflow_id": "rbw.client-incident-autonomy-tests",
+      "task_queue": "campaigns",
+      "cron": "28 8,12,16,19 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "client-incident-autonomy-tests",
+        "name": "Client Incident Autonomy — guardrail tests",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.client-incident-autonomy-guard",
+      "workflow_id": "rbw.client-incident-autonomy-guard",
+      "task_queue": "campaigns",
+      "cron": "35 9,14,20 * * *",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "client-incident-autonomy-guard",
+        "name": "Client Incident Autonomy — guard de fraîcheur, cadence et secrets",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.bmb-wordpress-structural-audit",
+      "workflow_id": "rbw.bmb-wordpress-structural-audit",
+      "task_queue": "campaigns",
+      "cron": "45 9,14,20 * * *",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "bmb-wordpress-structural-audit",
+        "name": "BMB WordPress — audit structurel read-only",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.robinswood-pme-hdf-performance-optimizer",
+      "workflow_id": "rbw.robinswood-pme-hdf-performance-optimizer",
+      "task_queue": "campaigns",
+      "cron": "36 9,13,17 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "robinswood-pme-hdf-performance-optimizer",
+        "name": "Robinswood PME HDF — performance optimizer",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.oss-structural-guard",
+      "workflow_id": "rbw.oss-structural-guard",
+      "task_queue": "watchdog",
+      "cron": "42 7,15 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "oss-structural-guard",
+        "name": "OSS — structural guard registry/cadence validator",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.robinswood-pme-hdf-company-brief-generator",
+      "workflow_id": "rbw.robinswood-pme-hdf-company-brief-generator",
+      "task_queue": "campaigns",
+      "cron": "26 9,13,17 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "robinswood-pme-hdf-company-brief-generator",
+        "name": "Robinswood PME HDF — company brief generator",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.oss-runtime-freshness-guard",
+      "workflow_id": "rbw.oss-runtime-freshness-guard",
+      "task_queue": "watchdog",
+      "cron": "44 7,15 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "oss-runtime-freshness-guard",
+        "name": "OSS — runtime freshness and artifact guard",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.oss-backup-hygiene-guard",
+      "workflow_id": "rbw.oss-backup-hygiene-guard",
+      "task_queue": "watchdog",
+      "cron": "46 7,15 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "oss-backup-hygiene-guard",
+        "name": "OSS — backup hygiene guard",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.traid-agent-managed-prod-readiness",
+      "workflow_id": "rbw.traid-agent-managed-prod-readiness",
+      "task_queue": "watchdog",
+      "cron": "40 8,13,17 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "traid-agent-managed-prod-readiness",
+        "name": "TRAID — agent-managed production readiness gate (sandbox fail-closed)",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.traid-signed-decision-intake",
+      "workflow_id": "rbw.traid-signed-decision-intake",
+      "task_queue": "watchdog",
+      "cron": "45 8,13,17 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "traid-signed-decision-intake",
+        "name": "TRAID — signed decision intake and validation (fail-closed)",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.traid-decision-sync-rerun",
+      "workflow_id": "rbw.traid-decision-sync-rerun",
+      "task_queue": "watchdog",
+      "cron": "50 8,13,17 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "traid-decision-sync-rerun",
+        "name": "TRAID — decision input sync and P39 rerun (fail-closed)",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.traid-failclosed-regression-guard",
+      "workflow_id": "rbw.traid-failclosed-regression-guard",
+      "task_queue": "watchdog",
+      "cron": "55 8,13,17 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "traid-failclosed-regression-guard",
+        "name": "TRAID — fail-closed regression guard",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.oss-config-mutation-guard",
+      "workflow_id": "rbw.oss-config-mutation-guard",
+      "task_queue": "watchdog",
+      "cron": "48 7,15 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "oss-config-mutation-guard",
+        "name": "OSS — config mutation guard",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.oss-report-contract-coverage-guard",
+      "workflow_id": "rbw.oss-report-contract-coverage-guard",
+      "task_queue": "watchdog",
+      "cron": "50 7,15 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "oss-report-contract-coverage-guard",
+        "name": "OSS — report contract coverage guard",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.oss-temporal-execution-slo-guard",
+      "workflow_id": "rbw.oss-temporal-execution-slo-guard",
+      "task_queue": "watchdog",
+      "cron": "11,41 * * * *",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "oss-temporal-execution-slo-guard",
+        "name": "OSS — Temporal execution SLO guard",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.oss-security-audit-guard",
+      "workflow_id": "rbw.oss-security-audit-guard",
+      "task_queue": "watchdog",
+      "cron": "33 7,19 * * *",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "oss-security-audit-guard",
+        "name": "OSS — security audit guard",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.oss-security-firewall-guard",
+      "workflow_id": "rbw.oss-security-firewall-guard",
+      "task_queue": "watchdog",
+      "cron": "34 7,19 * * *",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "oss-security-firewall-guard",
+        "name": "OSS — security firewall guard",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.traid-reliability-training",
+      "workflow_id": "rbw.traid-reliability-training",
+      "task_queue": "watchdog",
+      "cron": "0 9,14,18 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "traid-reliability-training",
+        "name": "TRAID — sandbox reliability training (fail-closed)",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.traid-paper-research-loop",
+      "workflow_id": "rbw.traid-paper-research-loop",
+      "task_queue": "watchdog",
+      "cron": "30 9,14,18 * * *",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "traid-paper-research-loop",
+        "name": "TRAID — causal regime mixture P41-P920 v109 (sandbox fail-closed)",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.afnor-bookstore-retail-audit",
+      "workflow_id": "rbw.afnor-bookstore-retail-audit-day",
+      "task_queue": "campaigns",
+      "cron": "18 10,16 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "afnor-bookstore-retail-audit",
+        "name": "AFNOR Bookstore Retail Audit - Day Cadence",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.afnor-bookstore-candidate-verifier",
+      "workflow_id": "rbw.afnor-bookstore-candidate-verifier-day",
+      "task_queue": "campaigns",
+      "cron": "24 10,16 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "afnor-bookstore-candidate-verifier",
+        "name": "AFNOR Bookstore Candidate Verifier - Day Cadence",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.robinswood-pme-hdf-sellsy-crm-sync",
+      "workflow_id": "rbw.robinswood-pme-hdf-sellsy-crm-sync",
+      "task_queue": "campaigns",
+      "cron": "40 9,13,17 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "robinswood-pme-hdf-sellsy-crm-sync",
+        "name": "Robinswood PME HDF — sync contacts/actions to Sellsy",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.campaign-history-sellsy-company-sync",
+      "workflow_id": "rbw.campaign-history-sellsy-company-sync",
+      "task_queue": "campaigns",
+      "cron": "45 8 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "campaign-history-sellsy-company-sync",
+        "name": "Campaign history — sync companies/contacts to Sellsy",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.robinswood-media-authority-2026",
+      "workflow_id": "rbw.robinswood-media-authority-2026",
+      "task_queue": "campaigns",
+      "cron": "35 9 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "robinswood-media-authority-2026",
+        "name": "Robinswood Media Authority 2026",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.robinswood-media-authority-2026-replenisher",
+      "workflow_id": "rbw.robinswood-media-authority-2026-replenisher",
+      "task_queue": "campaigns",
+      "cron": "20 9 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "robinswood-media-authority-2026-replenisher",
+        "name": "Robinswood Media Authority 2026 Replenisher",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.robinswood-media-authority-2026-reply-scan",
+      "workflow_id": "rbw.robinswood-media-authority-2026-reply-scan",
+      "task_queue": "campaigns",
+      "cron": "20 12,16 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "robinswood-media-authority-2026-reply-scan",
+        "name": "Robinswood Media Authority 2026 Reply/Bounce Scan",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    },
+    {
+      "schedule_id": "sched.robinswood-media-contact-enrichment-2026",
+      "workflow_id": "rbw.robinswood-media-contact-enrichment-2026",
+      "task_queue": "campaigns",
+      "cron": "15 9-18/2 * * 1-5",
+      "timezone": "Europe/Paris",
+      "enabled": true,
+      "payload": {
+        "legacy_id": "robinswood-media-contact-enrichment-2026",
+        "name": "Robinswood Media Contact Enrichment 2026",
+        "llm_connection": "openrouter",
+        "model": "nvidia/nemotron-3-super-120b-a12b:free"
+      }
+    }
+  ]
+}
