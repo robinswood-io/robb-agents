@@ -8,6 +8,13 @@
     "name": "Robb Agents Contributors"
   },
   "homepage": "https://github.com/robinswood-io/robinswood-agents",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/robinswood-io/robinswood-agents.git"
+  },
+  "bugs": {
+    "url": "https://github.com/robinswood-io/robinswood-agents/issues"
+  },
   "license": "MIT",
   "type": "module",
   "engines": {

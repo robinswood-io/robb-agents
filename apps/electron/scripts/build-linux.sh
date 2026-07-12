@@ -169,7 +169,9 @@ cd "$ELECTRON_DIR"
 
 # Run electron-builder
 # Note: electron-builder may build both archs due to config, but we only use the requested one
-npx electron-builder --linux --${ARCH}
+# Publishing is handled only by an explicit release workflow, never by
+# electron-builder's CI auto-detection.
+npx electron-builder --linux --${ARCH} --publish never
 
 # 8. Verify the AppImage was built
 # electron-builder uses Linux-style arch names: x86_64 for x64, aarch64 for arm64

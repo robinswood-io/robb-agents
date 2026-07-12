@@ -105,7 +105,9 @@ try {
 
 Push-Location $ElectronDir
 try {
-    npx electron-builder --config electron-builder.yml --win --x64
+    # Publishing is handled only by the verified GitHub Release job, never by
+    # electron-builder's CI auto-detection.
+    npx electron-builder --config electron-builder.yml --win --x64 --publish never
     if ($LASTEXITCODE -ne 0) { throw "electron-builder failed" }
 } finally {
     Pop-Location
