@@ -100,7 +100,8 @@ Candidate providers:
 - OpenAI;
 - Google Gemini via Google account / Gemini Code Assist OAuth;
 - Google AI Studio API key for API-key use cases;
-- Mistral AI via its native Pi API-key provider;
+- Mistral Vibe via the official subscription-backed ACP agent;
+- Mistral AI Studio API key only where pay-as-you-go API access is explicitly desired;
 - Azure/OpenAI EU where available and approved.
 
 Policy:
@@ -120,7 +121,8 @@ For each client workspace, configure at least three connections:
    - OpenRouter or direct premium provider, only if allowed by policy.
    - Google Gemini can be configured through the first-class Google OAuth flow (`google-gemini`, backed by `piAuthProvider: google-gemini-code-assist`).
    - Google AI Studio API keys remain available through the generic API-key provider preset (`piAuthProvider: google`) and are separate from the subscription/account OAuth path.
-   - Mistral uses the same native Pi agent backend as Gemini and Codex (`piAuthProvider: mistral`), not an OpenAI-compatible custom endpoint. Recommended initial tiers are Mistral Medium 3.5 (complex/agentic), Mistral Small 4 (standard), and Ministral 3B (utility); Devstral and Codestral can be selected for coding-focused work.
+   - Mistral Vibe uses the official local `vibe-acp` agent after a browser sign-in to the user’s Mistral plan. Robb stores no Mistral credential and never extracts Vibe’s local token. This is the primary Mistral route for subscription use; it is not an OpenAI-compatible custom endpoint.
+   - Mistral AI Studio/API-key access (`piAuthProvider: mistral`) remains a separate, explicit pay-as-you-go option. Its recommended API tiers are Mistral Medium 3.5 (complex/agentic), Mistral Small 4 (standard), and Ministral 3B (utility); Devstral and Codestral can be selected for coding-focused work.
 
 ## Naming convention
 
@@ -131,7 +133,8 @@ Connection names should be readable by non-technical users:
 - `Premium — analyse complexe`
 - `OpenRouter — expérimentation`
 - `Claude — haute qualité`
-- `Mistral — agentique`
+- `Mistral Vibe — abonnement`
+- `Mistral API — pay-as-you-go`
 
 Avoid exposing raw provider slugs in client-facing labels.
 

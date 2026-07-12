@@ -31,6 +31,10 @@ APP_DIR = RELEASE_DIR / "mac-arm64" / APP_NAME
 APP_BIN = APP_DIR / "Contents" / "MacOS" / "Robb Agents"
 PLIST = APP_DIR / "Contents" / "Info.plist"
 PACKAGED_ICON = APP_DIR / "Contents" / "Resources" / "icon.icns"
+# Pi providers run as explicit resource subprocesses. In particular, this is
+# the credential-free ACP bridge for Mistral Vibe subscriptions.
+PACKAGED_PI_AGENT_SERVER = APP_DIR / "Contents" / "Resources" / "app" / "dist" / "resources" / "pi-agent-server" / "index.js"
+PACKAGED_VIBE_ACP_BRIDGE = APP_DIR / "Contents" / "Resources" / "app" / "dist" / "resources" / "pi-agent-server" / "vibe-acp-server.js"
 SOURCE_ICON = ELECTRON_DIR / "resources" / "robinswood-icon.icns"
 DMG = RELEASE_DIR / "Robb-Agents-arm64.dmg"
 PACKAGE_JSON = ELECTRON_DIR / "package.json"
@@ -72,6 +76,8 @@ def check_bundle() -> None:
     require(APP_BIN, "packaged app executable")
     require(PLIST, "Info.plist")
     require(PACKAGED_ICON, "packaged app icon")
+    require(PACKAGED_PI_AGENT_SERVER, "packaged Pi agent server")
+    require(PACKAGED_VIBE_ACP_BRIDGE, "packaged Mistral Vibe ACP bridge")
     require(SOURCE_ICON, "Robinswood source icon")
 
     with PLIST.open("rb") as handle:
@@ -112,6 +118,7 @@ def check_bundle() -> None:
     print("✓ packaged app bundle metadata")
     print("✓ packaged app architecture arm64")
     print("✓ packaged Robinswood icon")
+    print("✓ packaged Pi agent server and Mistral Vibe ACP bridge")
 
 
 def check_dmg() -> None:
@@ -130,6 +137,7 @@ def check_dmg() -> None:
             mounted_app = mount / APP_NAME
             mounted_plist = mounted_app / "Contents" / "Info.plist"
             require(mounted_app, "DMG Robb Agents.app")
+            require(mounted_app / "Contents" / "Resources" / "app" / "dist" / "resources" / "pi-agent-server" / "vibe-acp-server.js", "DMG Mistral Vibe ACP bridge")
             with mounted_plist.open("rb") as handle:
                 plist = plistlib.load(handle)
             if plist.get("CFBundleName") != "Robb Agents" or plist.get("CFBundleIdentifier") != "io.robinswood.robbagents":

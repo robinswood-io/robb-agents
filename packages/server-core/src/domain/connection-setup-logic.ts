@@ -137,6 +137,9 @@ export const BUILT_IN_CONNECTION_TEMPLATES: Record<string, {
   providerType: LlmConnection['providerType'] | ((hasCustomEndpoint: boolean) => LlmConnection['providerType'])
   authType: LlmConnection['authType'] | ((hasCustomEndpoint: boolean) => LlmConnection['authType'])
   piAuthProvider?: string
+  /** Explicit catalog for providers whose models are not exposed by Pi's API registry. */
+  models?: LlmConnection['models']
+  defaultModel?: string
 }> = {
   'anthropic-api': {
     name: (h) => h ? 'Custom Anthropic-Compatible' : 'Anthropic (API Key)',
@@ -166,6 +169,16 @@ export const BUILT_IN_CONNECTION_TEMPLATES: Record<string, {
     authType: 'oauth',
     piAuthProvider: 'google-gemini-code-assist',
   },
+  'mistral-vibe': {
+    name: 'Mistral Vibe',
+    providerType: 'pi',
+    // Vibe owns the locally stored browser-login credential. Robb never
+    // reads, stores, or transmits the Mistral subscription token.
+    authType: 'none',
+    piAuthProvider: 'mistral-vibe',
+    defaultModel: 'pi/mistral-vibe',
+    models: ['pi/mistral-vibe'],
+  },
   'pi-api-key': {
     name: `${ROBINSWOOD_BACKEND_NAME} (API Key)`,
     providerType: 'pi',
@@ -184,6 +197,7 @@ const PI_AUTH_PROVIDER_DISPLAY_NAMES: Record<string, string> = {
   'openai-codex': 'OpenAI',
   google: 'Google AI Studio',
   'google-gemini-code-assist': 'Google Gemini',
+  'mistral-vibe': 'Mistral Vibe',
   openrouter: 'OpenRouter',
   'azure-openai-responses': 'Azure OpenAI',
   'amazon-bedrock': 'Amazon Bedrock',
@@ -243,8 +257,8 @@ export function createBuiltInConnection(slug: string, baseUrl?: string | null): 
     name,
     providerType,
     authType,
-    models: getDefaultModelsForConnection(providerType, template.piAuthProvider),
-    defaultModel: getDefaultModelForConnection(providerType, template.piAuthProvider),
+    models: template.models ?? getDefaultModelsForConnection(providerType, template.piAuthProvider),
+    defaultModel: template.defaultModel ?? getDefaultModelForConnection(providerType, template.piAuthProvider),
     modelSelectionMode: providerType === 'pi' ? 'automaticallySyncedFromProvider' : undefined,
     piAuthProvider: template.piAuthProvider,
     midStreamBehavior: defaultMidStreamBehavior(providerType),

@@ -8,6 +8,7 @@ import { getCredentialManager } from '@craft-agent/shared/credentials'
 import { setSetupDeferred } from '@craft-agent/shared/config'
 import { prepareClaudeOAuth, exchangeClaudeCode, hasValidOAuthState, clearOAuthState, prepareMcpOAuth } from '@craft-agent/shared/auth'
 import { validateMcpConnection } from '@craft-agent/shared/mcp'
+import { spawn } from 'node:child_process'
 import { RPC_CHANNELS } from '@craft-agent/shared/protocol'
 import type { RpcServer } from '@craft-agent/server-core/transport'
 import type { HandlerDeps } from '../handler-deps'
@@ -24,6 +25,7 @@ export const HANDLED_CHANNELS = [
   RPC_CHANNELS.onboarding.EXCHANGE_CLAUDE_CODE,
   RPC_CHANNELS.onboarding.HAS_CLAUDE_OAUTH_STATE,
   RPC_CHANNELS.onboarding.CLEAR_CLAUDE_OAUTH_STATE,
+  RPC_CHANNELS.onboarding.START_MISTRAL_VIBE_SETUP,
   RPC_CHANNELS.onboarding.DEFER_SETUP,
 ] as const
 
@@ -165,6 +167,32 @@ export function registerOnboardingHandlers(server: RpcServer, deps: HandlerDeps)
   server.handle(RPC_CHANNELS.onboarding.CLEAR_CLAUDE_OAUTH_STATE, async () => {
     clearOAuthState()
     return { success: true }
+  })
+
+  // Mistral Vibe subscription setup. Vibe owns its browser-login credential
+  // in ~/.vibe; Robb only launches the official setup command and never reads
+  // or persists the resulting secret.
+  server.handle(RPC_CHANNELS.onboarding.START_MISTRAL_VIBE_SETUP, async () => {
+    const command = process.env.ROBB_VIBE_ACP_COMMAND || 'vibe-acp'
+    try {
+      const result = await new Promise<{ code: number | null; stderr: string }>((resolve, reject) => {
+        const child = spawn(command, ['--setup'], { stdio: ['ignore', 'ignore', 'pipe'], env: process.env })
+        let stderr = ''
+        child.stderr?.on('data', (chunk: Buffer) => { stderr = (stderr + chunk.toString()).slice(-4000) })
+        child.once('error', reject)
+        child.once('exit', (code) => resolve({ code, stderr }))
+      })
+      if (result.code !== 0) {
+        return { success: false, error: `${command} --setup exited with code ${result.code ?? 'unknown'}: ${result.stderr || 'No diagnostic output'}` }
+      }
+      return { success: true }
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error)
+      return {
+        success: false,
+        error: `Mistral Vibe is not available (${detail}). Install it with \`uv tool install mistral-vibe\`, then retry.`,
+      }
+    }
   })
 
   // User chose "Setup later" — persist so onboarding doesn't re-show on next launch

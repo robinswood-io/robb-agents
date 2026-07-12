@@ -81,11 +81,26 @@ const OPENAI_GPT_56_MODELS: ModelDefinition[] = [
   },
 ];
 
+const MISTRAL_VIBE_SUBSCRIPTION_MODELS: ModelDefinition[] = [
+  {
+    id: 'pi/mistral-vibe',
+    name: 'Mistral Vibe',
+    shortName: 'Vibe',
+    description: 'Mistral Vibe subscription agent via the official ACP bridge',
+    provider: 'pi',
+    contextWindow: 262144,
+    supportsThinking: true,
+  },
+];
+
 const PI_MODEL_SUPPLEMENTS: Record<string, ModelDefinition[]> = {
   // Pi SDK 0.80.3 predates OpenAI's GPT-5.6 launch. Keep Robb current by
   // injecting the official model IDs until the upstream SDK catalog catches up.
   openai: OPENAI_GPT_56_MODELS,
   'openai-codex': OPENAI_GPT_56_MODELS,
+  // Vibe is an ACP agent, not a Pi API provider. The single selector entry
+  // delegates model choice to the authenticated Vibe profile.
+  'mistral-vibe': MISTRAL_VIBE_SUBSCRIPTION_MODELS,
 };
 
 function withSupplementalPiModels(piAuthProvider: string, models: ModelDefinition[]): ModelDefinition[] {

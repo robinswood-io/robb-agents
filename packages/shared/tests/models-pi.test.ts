@@ -57,4 +57,12 @@ describe('models-pi filtering', () => {
     expect(ids).toContain('pi/mistral-small-latest');
     expect(ids).toContain('pi/devstral-latest');
   });
+
+  it('exposes Mistral Vibe as a separate subscription agent without an API-key catalog', () => {
+    const models = getPiModelsForAuthProvider('mistral-vibe');
+    expect(models).toEqual([expect.objectContaining({
+      id: 'pi/mistral-vibe',
+      name: 'Mistral Vibe',
+    })]);
+  });
 });

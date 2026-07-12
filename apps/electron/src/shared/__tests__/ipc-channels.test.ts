@@ -188,6 +188,7 @@ const EXPECTED_CHANNELS: string[] = [
   'onboarding:hasClaudeOAuthState',
   'onboarding:startClaudeOAuth',
   'onboarding:startMcpOAuth',
+  'onboarding:startMistralVibeSetup',
   'onboarding:validateMcp',
   'permissions:defaultsChanged',
   'permissions:getDefaults',

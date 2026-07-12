@@ -141,6 +141,15 @@ describe('createBuiltInConnection', () => {
     expect(conn.piAuthProvider).toBe('google-gemini-code-assist')
     expect(conn.modelSelectionMode).toBe('automaticallySyncedFromProvider')
   })
+
+  it('creates mistral-vibe as a credential-free Vibe subscription connection', () => {
+    const conn = createBuiltInConnection('mistral-vibe')
+    expect(conn.name).toBe('Mistral Vibe')
+    expect(conn.providerType).toBe('pi')
+    expect(conn.authType).toBe('none')
+    expect(conn.piAuthProvider).toBe('mistral-vibe')
+    expect(conn.defaultModel).toBe('pi/mistral-vibe')
+  })
 })
 
 // ============================================================

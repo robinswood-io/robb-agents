@@ -187,6 +187,7 @@ export const RPC_CHANNELS = {
     EXCHANGE_CLAUDE_CODE: 'onboarding:exchangeClaudeCode',
     HAS_CLAUDE_OAUTH_STATE: 'onboarding:hasClaudeOAuthState',
     CLEAR_CLAUDE_OAUTH_STATE: 'onboarding:clearClaudeOAuthState',
+    START_MISTRAL_VIBE_SETUP: 'onboarding:startMistralVibeSetup',
     DEFER_SETUP: 'onboarding:deferSetup',
   },
   llmConnections: {

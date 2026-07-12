@@ -550,6 +550,10 @@ export class PiAgent extends BaseAgent {
       thinkingLevel: this._thinkingLevel,
       workspaceRootPath: this.config.workspace.rootPath,
       sessionId,
+      // Provider session IDs are persisted conversation metadata, never auth
+      // credentials. ACP-backed providers such as Mistral Vibe use this only
+      // when they advertise official session restoration support.
+      sdkSessionId: this.piSessionId,
       sessionPath,
       workingDirectory,
       plansFolderPath,

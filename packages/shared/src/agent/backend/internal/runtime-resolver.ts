@@ -29,6 +29,8 @@ export interface ResolvedBackendRuntimePaths {
   sessionServerPath?: string;
   bridgeServerPath?: string;
   piServerPath?: string;
+  /** ACP-to-Robb bridge for Mistral Vibe subscription sessions. */
+  vibeAcpServerPath?: string;
   nodeRuntimePath?: string;
   bundledRuntimePath?: string;
 }
@@ -225,6 +227,12 @@ export function resolveBackendRuntimePaths(hostRuntime: BackendHostRuntimeContex
     sessionServerPath: resolveServerPath(hostRuntime, 'session-mcp-server'),
     bridgeServerPath: resolveServerPath(hostRuntime, 'bridge-mcp-server'),
     piServerPath: resolveServerPath(hostRuntime, 'pi-agent-server'),
+    vibeAcpServerPath: hostRuntime.isPackaged
+      ? firstExistingPath([
+          join(hostRuntime.appRootPath, 'resources', 'pi-agent-server', 'vibe-acp-server.js'),
+          join(hostRuntime.appRootPath, 'dist', 'resources', 'pi-agent-server', 'vibe-acp-server.js'),
+        ])
+      : resolveUpwards(hostRuntime.appRootPath, join('packages', 'pi-agent-server', 'dist', 'vibe-acp-server.js')),
     nodeRuntimePath: hostRuntime.nodeRuntimePath || bundledRuntimePath || process.execPath,
     bundledRuntimePath,
   };

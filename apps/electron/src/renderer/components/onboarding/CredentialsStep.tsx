@@ -66,6 +66,7 @@ export function CredentialsStep({
   const isChatGptOAuth = apiSetupMethod === 'pi_chatgpt_oauth'
   const isCopilotOAuth = apiSetupMethod === 'pi_copilot_oauth'
   const isGeminiOAuth = apiSetupMethod === 'pi_gemini_oauth'
+  const isMistralVibeSubscription = apiSetupMethod === 'pi_mistral_vibe_subscription'
   const isAnthropicApiKey = apiSetupMethod === 'anthropic_api_key'
   const isPiApiKey = apiSetupMethod === 'pi_api_key'
   const isApiKey = isAnthropicApiKey || isPiApiKey
@@ -191,6 +192,46 @@ export function CredentialsStep({
           {status === 'success' && (
             <div className="rounded-lg bg-success/10 text-success text-sm p-3 text-center">
               {t("onboarding.credentials.copilotConnected")}
+            </div>
+          )}
+        </div>
+      </StepFormLayout>
+    )
+  }
+
+  // --- Mistral Vibe subscription flow ---
+  if (isMistralVibeSubscription) {
+    return (
+      <StepFormLayout
+        title={t("onboarding.credentials.connectMistralVibe")}
+        description={t("onboarding.credentials.connectMistralVibeDesc")}
+        actions={
+          <>
+            <BackButton onClick={onBack} disabled={status === 'validating'} />
+            <ContinueButton
+              onClick={() => onStartOAuth?.()}
+              className="gap-2"
+              loading={status === 'validating'}
+              loadingText={t("common.connecting")}
+            >
+              <ExternalLink className="size-4" />
+              {t("onboarding.credentials.signInMistralVibe")}
+            </ContinueButton>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div className="rounded-xl bg-foreground-2 p-4 text-sm text-muted-foreground">
+            <p>{t("onboarding.credentials.mistralVibeInstructions")}</p>
+          </div>
+          {status === 'error' && errorMessage && (
+            <div className="rounded-lg bg-destructive/10 text-destructive text-sm p-3">
+              {errorMessage}
+            </div>
+          )}
+          {status === 'success' && (
+            <div className="rounded-lg bg-success/10 text-success text-sm p-3">
+              {t("onboarding.credentials.mistralVibeConnected")}
             </div>
           )}
         </div>

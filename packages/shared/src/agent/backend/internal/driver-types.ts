@@ -18,6 +18,7 @@ export interface BackendRuntimePaths {
   node?: string;
   bridgeServer?: string;
   piServer?: string;
+  vibeAcpServer?: string;
 }
 
 export interface BackendRuntimePayload extends Record<string, unknown> {

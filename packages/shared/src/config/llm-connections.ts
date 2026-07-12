@@ -618,6 +618,9 @@ export const PI_PREFERRED_DEFAULTS: Record<string, string[]> = {
   // is its efficient unified instruct/reasoning/coding alternative. Keep a
   // lightweight Ministral option last for mini/summarization work.
   mistral: ['mistral-medium-3.5', 'mistral-small-latest', 'ministral-3b-latest', 'devstral-latest', 'codestral-latest'],
+  // Mistral Vibe manages the selected model inside the authenticated Vibe
+  // profile. Robb intentionally stores no token or model API credential.
+  'mistral-vibe': ['mistral-vibe'],
   deepseek: ['deepseek-v4-pro', 'deepseek-v4-flash'],
   'github-copilot': ['claude-sonnet-4-6', 'gpt-5', 'o4-mini', 'claude-haiku-4-5'],
   'amazon-bedrock': ['claude-opus-4-8', 'claude-opus-4-7', 'claude-sonnet-5', 'claude-sonnet-4-6', 'claude-haiku-4-5'],

@@ -9,16 +9,17 @@
     "pi-agent-server": "./dist/index.js"
   },
   "scripts": {
-    "build": "bun build src/index.ts --outdir=dist --target=bun --format=esm --external koffi",
+    "build": "bun build src/index.ts src/vibe-acp-server.ts --outdir=dist --target=bun --format=esm --external koffi",
     "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
     "validate": "bun run typecheck && bun run build"
   },
   "dependencies": {
-    "@earendil-works/pi-coding-agent": "0.80.3",
+    "@agentclientprotocol/sdk": "1.2.1",
     "@earendil-works/pi-agent-core": "0.80.3",
     "@earendil-works/pi-ai": "0.80.3",
-    "duck-duck-scrape": "^2.2.7",
+    "@earendil-works/pi-coding-agent": "0.80.3",
     "@sinclair/typebox": "^0.34.0",
+    "duck-duck-scrape": "^2.2.7",
     "node-html-parser": "^6.1.0",
     "pdfjs-dist": "^5.4.0",
     "turndown": "^7.2.0"

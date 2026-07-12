@@ -97,6 +97,7 @@ export const BASE_SLUG_FOR_METHOD: Record<ApiSetupMethod, string> = {
   pi_chatgpt_oauth: 'chatgpt-plus',
   pi_copilot_oauth: 'github-copilot',
   pi_gemini_oauth: 'google-gemini',
+  pi_mistral_vibe_subscription: 'mistral-vibe',
   pi_api_key: 'pi-api-key',
 }
 
@@ -182,6 +183,8 @@ export function apiSetupMethodToConnectionSetup(
         slug,
         credential: options.credential,
       }
+    case 'pi_mistral_vibe_subscription':
+      return { slug }
     case 'pi_api_key':
       return {
         slug,
@@ -578,6 +581,19 @@ export function useOnboarding({
       }
 
       // Google Gemini OAuth (browser flow — Google account / Gemini Code Assist)
+      if (effectiveMethod === 'pi_mistral_vibe_subscription') {
+        const effectiveEditingSlug = connectionSlugOverride ?? editingSlug
+        const isReauth = !!effectiveEditingSlug
+        const connectionSlug = apiSetupMethodToConnectionSetup(effectiveMethod, {}, effectiveEditingSlug, existingSlugs).slug
+        const result = await window.electronAPI.startMistralVibeSetup()
+        if (result.success) {
+          await saveAndValidateConnection(connectionSlug, effectiveMethod, undefined, isReauth)
+        } else {
+          setState(s => ({ ...s, credentialStatus: 'error', errorMessage: result.error || 'Mistral Vibe setup failed' }))
+        }
+        return
+      }
+
       if (effectiveMethod === 'pi_gemini_oauth') {
         const effectiveEditingSlug = connectionSlugOverride ?? editingSlug
         const isReauth = !!effectiveEditingSlug
@@ -666,7 +682,7 @@ export function useOnboarding({
       chatgpt: 'pi_chatgpt_oauth',
       copilot: 'pi_copilot_oauth',
       google: 'pi_gemini_oauth',
-      mistral: 'pi_api_key',
+      mistral: 'pi_mistral_vibe_subscription',
       api_key: 'pi_api_key',
     }
 
@@ -680,7 +696,7 @@ export function useOnboarding({
     setState(s => ({
       ...s,
       apiSetupMethod: method,
-      preferredPiPreset: choice === 'mistral' ? 'mistral' : undefined,
+      preferredPiPreset: undefined,
       step: 'credentials',
       credentialStatus: 'idle',
       errorMessage: undefined,

@@ -227,13 +227,20 @@ async function testAnthropicCompatible(
 
 export const piDriver: ProviderDriver = {
   provider: 'pi',
-  buildRuntime: ({ context, providerOptions, resolvedPaths }) => ({
-    paths: {
-      piServer: resolvedPaths.piServerPath,
-      interceptor: resolvedPaths.interceptorBundlePath,
-      node: resolvedPaths.nodeRuntimePath,
-    },
-    piAuthProvider: providerOptions?.piAuthProvider || context.connection?.piAuthProvider,
+  buildRuntime: ({ context, providerOptions, resolvedPaths }) => {
+    const piAuthProvider = providerOptions?.piAuthProvider || context.connection?.piAuthProvider;
+    return {
+      paths: {
+        // Vibe uses the official ACP bridge but deliberately reuses PiAgent's
+        // established JSONL lifecycle and permission plumbing.
+        piServer: piAuthProvider === 'mistral-vibe'
+          ? resolvedPaths.vibeAcpServerPath
+          : resolvedPaths.piServerPath,
+        vibeAcpServer: resolvedPaths.vibeAcpServerPath,
+        interceptor: piAuthProvider === 'mistral-vibe' ? undefined : resolvedPaths.interceptorBundlePath,
+        node: resolvedPaths.nodeRuntimePath,
+      },
+      piAuthProvider,
     baseUrl: context.connection?.baseUrl,
     customEndpoint: context.connection?.customEndpoint,
     customModels: context.connection?.models?.map(m => {
@@ -250,7 +257,8 @@ export const piDriver: ProviderDriver = {
       }
       return m.id;
     }),
-  }),
+  };
+  },
   fetchModels: async ({ connection, credentials, timeoutMs }) => {
     // Copilot OAuth: fetch models directly from the Copilot API via HTTP.
     // Uses the GitHub OAuth token (our refreshToken) to exchange for a
