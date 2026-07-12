@@ -117,8 +117,15 @@ jobs:
           ROBB_PACKAGE_LAUNCH_SMOKE: "1"
         run: |
           args=("${{ matrix.arch }}")
-          [[ "${{ needs.preflight.outputs.publish }}" == "true" ]] && args+=(--release)
-          bash apps/electron/scripts/build-dmg.sh "${args[@]}"
+          if [[ "${{ needs.preflight.outputs.publish }}" == "true" ]]; then
+            args+=(--release)
+            bash apps/electron/scripts/build-dmg.sh "${args[@]}"
+          else
+            # Empty CI secret variables can be misread by electron-builder as
+            # signing paths. Explicitly remove them for an unsigned test build.
+            env -u CSC_LINK -u CSC_KEY_PASSWORD -u APPLE_ID -u APPLE_APP_SPECIFIC_PASSWORD -u APPLE_TEAM_ID -u APPLE_API_KEY -u APPLE_API_KEY_ID -u APPLE_API_ISSUER \
+              bash apps/electron/scripts/build-dmg.sh "${args[@]}"
+          fi
           cat > "apps/electron/release/PROVENANCE-macos-${{ matrix.arch }}.txt" <<EOF
           product=Robb Agents
           version=${{ needs.preflight.outputs.version }}
@@ -158,7 +165,13 @@ jobs:
         shell: pwsh
         run: |
           $args = @('-ExecutionPolicy', 'Bypass', '-File', 'apps/electron/scripts/build-win.ps1')
-          if ('${{ needs.preflight.outputs.publish }}' -eq 'true') { $args += '-Release' }
+          if ('${{ needs.preflight.outputs.publish }}' -eq 'true') {
+            $args += '-Release'
+          } else {
+            # Avoid treating an empty Actions secret as a certificate location.
+            Remove-Item Env:CSC_LINK -ErrorAction SilentlyContinue
+            Remove-Item Env:CSC_KEY_PASSWORD -ErrorAction SilentlyContinue
+          }
           & powershell @args
           $installer = Get-ChildItem apps/electron/release -Filter 'Robb-Agents-x64*.exe' | Sort-Object Length -Descending | Select-Object -First 1
           if ('${{ needs.preflight.outputs.publish }}' -eq 'true') {
