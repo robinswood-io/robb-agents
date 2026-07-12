@@ -6,6 +6,8 @@ This file accumulates release notes for the next unreleased version. PRs that ad
 
 ## Improvements
 
+- **Public installers and verification** — Robb Agents releases are published through GitHub Releases with SHA-256 checksums, an improved per-user Windows installer, and macOS release checks for Developer ID signing/notarization. Unsigned local builds are now explicitly distinguished from public release artifacts.
+
 ## Bug Fixes
 
 ## Breaking Changes

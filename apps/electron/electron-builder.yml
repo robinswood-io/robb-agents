@@ -100,6 +100,9 @@ mac:
       arch:
         - arm64
         - x64
+  # `notarize: true` is activated only when standard Apple credentials are
+  # supplied by the release operator/CI; local developer builds remain usable.
+  notarize: true
   hardenedRuntime: true
   gatekeeperAssess: false
   entitlements: build/entitlements.mac.plist
@@ -126,10 +129,9 @@ mac:
     - "!**/resources/bin/linux-*/**"
   # Use predictable naming for macOS packages (applies to zip; dmg uses its own config below)
   artifactName: "Robb-Agents-${arch}.${ext}"
-  # Code signing & notarization (disabled by default for local builds)
-  # To enable: set CSC_LINK, APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD, APPLE_TEAM_ID
-  # notarize:
-  #   teamId: ${APPLE_TEAM_ID}
+  # Supply CSC_LINK/CSC_KEY_PASSWORD (or CSC_NAME) and standard Apple
+  # notarization credentials only in the release environment. No account,
+  # certificate, endpoint or update server is embedded in this OSS project.
 
 dmg:
   # Use predictable naming: Robb-Agents-arm64.dmg, Robb-Agents-x64.dmg
@@ -187,11 +189,19 @@ win:
       to: messaging-whatsapp-worker/worker.cjs
 
 nsis:
-  oneClick: true
-  # Per-user install to %LOCALAPPDATA%\Programs\ (not Program Files).
-  # Bun subprocess cannot read/write files in Program Files due to Windows permissions.
+  # Per-user installation avoids elevation and keeps Bun/Pi subprocess files
+  # writable. The assisted flow makes the install location and uninstall
+  # behavior visible to the user rather than silently changing their machine.
+  oneClick: false
   perMachine: false
-  deleteAppDataOnUninstall: true
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Robb Agents
+  runAfterFinish: true
+  deleteAppDataOnUninstall: false
+  displayLanguageSelector: true
+  multiLanguageInstaller: true
 
 linux:
   icon: resources/robinswood-icon.png

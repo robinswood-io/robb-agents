@@ -71,7 +71,7 @@ def sha256(path: pathlib.Path) -> str:
     return h.hexdigest()
 
 
-def check_bundle() -> None:
+def check_bundle(require_release_signing: bool = False) -> None:
     require(APP_DIR, "packaged app bundle")
     require(APP_BIN, "packaged app executable")
     require(PLIST, "Info.plist")
@@ -108,12 +108,28 @@ def check_bundle() -> None:
     code_text = code_result.stdout + code_result.stderr
     if code_result.returncode != 0:
         fail(f"codesign inspection failed: {code_text}")
-    if "Signature=adhoc" in code_text or "TeamIdentifier=not set" in code_text:
+    is_adhoc = "Signature=adhoc" in code_text or "TeamIdentifier=not set" in code_text
+    if is_adhoc:
+        if require_release_signing:
+            fail("Release validation requires a Developer ID signature, but the packaged app is ad-hoc signed")
         print("- packaged app uses ad-hoc signature; skipping Developer ID signature identifier check")
     elif "Identifier=io.robinswood.robbagents" not in code_text:
         fail("Packaged app signature does not expose io.robinswood.robbagents identifier")
     else:
         print("✓ packaged signature identifier")
+
+    if require_release_signing:
+        verify_result = run(["codesign", "--verify", "--deep", "--strict", "--verbose=2", str(APP_DIR)])
+        if verify_result.returncode != 0:
+            fail(f"Developer ID signature verification failed: {verify_result.stdout}{verify_result.stderr}")
+        gatekeeper_result = run(["spctl", "--assess", "--verbose", "--type", "exec", str(APP_DIR)])
+        gatekeeper_text = gatekeeper_result.stdout + gatekeeper_result.stderr
+        if gatekeeper_result.returncode != 0 or "Notarized Developer ID" not in gatekeeper_text:
+            fail(f"Notarization assessment failed: {gatekeeper_text}")
+        stapler_result = run(["xcrun", "stapler", "validate", str(APP_DIR)])
+        if stapler_result.returncode != 0:
+            fail(f"Notarization ticket validation failed: {stapler_result.stdout}{stapler_result.stderr}")
+        print("✓ Developer ID signature, Gatekeeper assessment and notarization ticket")
 
     print("✓ packaged app bundle metadata")
     print("✓ packaged app architecture arm64")
@@ -229,9 +245,10 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--launch", action="store_true", help="also launch the packaged app briefly with an isolated config directory")
     parser.add_argument("--launch-seconds", type=int, default=12, help="duration for --launch smoke-test")
+    parser.add_argument("--require-release-signing", action="store_true", help="require Developer ID signing plus a stapled notarization ticket")
     args = parser.parse_args()
 
-    check_bundle()
+    check_bundle(require_release_signing=args.require_release_signing)
     check_dmg()
     if args.launch:
         launch_smoke(args.launch_seconds)

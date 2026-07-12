@@ -1,121 +1,50 @@
-# Contributing to Craft Agents
+# Contributing to Robb Agents
 
-Thank you for your interest in contributing to Craft Agents! This document provides guidelines and instructions for contributing.
+Thank you for contributing to **Robb Agents**, an MIT-licensed, French-first open-source distribution maintained by Robinswood.
 
-## Getting Started
-
-### Prerequisites
-
-- [Bun](https://bun.sh/) runtime
-- Node.js 18+ (for some tooling)
-- macOS, Linux, or Windows
-
-### Development Setup
-
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/lukilabs/craft-agents-oss.git
-   cd craft-agents-oss
-   ```
-
-2. Install dependencies:
-   ```bash
-   bun install
-   ```
-
-3. Set up environment variables:
-   ```bash
-   cp .env.example .env
-   # Edit .env with your credentials
-   ```
-
-4. Run in development mode:
-   ```bash
-   bun run electron:dev
-   ```
-
-## Development Workflow
-
-### Branch Naming
-
-Use descriptive branch names:
-- `feature/add-new-tool` - New features
-- `fix/resolve-auth-issue` - Bug fixes
-- `refactor/simplify-agent-loop` - Code refactoring
-- `docs/update-readme` - Documentation updates
-
-### Making Changes
-
-1. Create a feature branch from `main`
-2. Make your changes
-3. Run type checking: `bun run typecheck:all`
-4. Commit your changes with clear, descriptive messages
-5. Push to your fork and create a pull request
-
-### Code Style
-
-- We use TypeScript throughout the codebase
-- Follow existing patterns in the codebase
-- Use meaningful variable and function names
-- Add comments for complex logic
-
-### Type Checking
-
-Before submitting a PR, ensure all type checks pass:
+## Start here
 
 ```bash
-bun run typecheck:all
+git clone https://github.com/robinswood-io/robinswood-agents.git
+cd robinswood-agents
+bun install --frozen-lockfile
+bun run electron:dev
 ```
 
-## Pull Request Process
+Prerequisites: Bun 1.3.9+, Node.js 20+, and platform tooling appropriate to the component you are changing.
 
-1. **Title**: Use a clear, descriptive title
-2. **Description**: Explain what the PR does and why
-3. **Testing**: Describe how you tested the changes
-4. **Screenshots**: Include screenshots for UI changes
+## Pull requests
 
-### PR Template
+1. Branch from `robinswood/main`.
+2. Keep changes focused and avoid committing generated artifacts, `.env` files, credentials, certificates, or tokens.
+3. Run relevant checks before opening a pull request:
 
-```markdown
-## Summary
-Brief description of changes
+   ```bash
+   bun run typecheck:shared
+   bun run typecheck:electron
+   python3 scripts/robinswood-validate.py
+   ```
 
-## Changes
-- Change 1
-- Change 2
+4. Explain the user outcome, tests run, and any platform-specific limitation in the pull request.
 
-## Testing
-How you tested these changes
+## Distribution changes
 
-## Screenshots (if applicable)
-```
+Installer changes must preserve these OSS rules:
 
-## Project Structure
+- no private updater, proxy, analytics, bucket, or password-manager dependency;
+- release signing credentials remain external CI/operator secrets;
+- release artifacts ship checksums and have an actual package/smoke validation;
+- do not claim signed/notarized distribution unless the release verification has passed.
 
-```
-craft-agents/
-├── apps/
-│   ├── electron/    # Desktop GUI (primary interface)
-│   └── tui/         # Terminal CLI (deprecated)
-└── packages/
-    ├── core/        # @craft-agent/core - Shared types
-    ├── shared/      # @craft-agent/shared - Business logic
-    └── ui/          # @craft-agent/ui - React components
-```
+Read [the distribution guide](docs/robinswood/open-source-distribution.md) before changing macOS, Windows, or GitHub Release workflows.
 
-## Key Areas
+## Code conventions
 
-- **Agent Logic**: `packages/shared/src/agent/`
-- **Authentication**: `packages/shared/src/auth/`
-- **MCP Integration**: `packages/shared/src/mcp/`
-- **UI Components**: `packages/ui/src/`
-- **Electron App**: `apps/electron/`
-
-## Questions?
-
-- Open an issue for bugs or feature requests
-- Start a discussion for questions or ideas
+- TypeScript is the primary implementation language.
+- Follow existing local patterns and add focused tests for behavior changes.
+- Preserve the `@craft-agent/*` internal package names and `craftagents://` deep link for upstream mergeability.
+- Keep provider and routing behavior policy-first and fail-closed.
 
 ## License
 
-By contributing, you agree that your contributions will be licensed under the Apache License 2.0.
+By contributing, you agree that your contribution is licensed under the [MIT License](LICENSE). Upstream Craft Agents attribution remains in [NOTICE](NOTICE) and [LICENSE-APACHE](LICENSE-APACHE).

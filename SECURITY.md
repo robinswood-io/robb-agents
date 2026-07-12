@@ -1,58 +1,39 @@
-# Security Policy
+# Security policy
 
-## Reporting a Vulnerability
+## Reporting a vulnerability
 
-We take security seriously. If you discover a security vulnerability in Craft Agents, please report it responsibly.
+Please **do not** disclose security vulnerabilities in public issues.
 
-### How to Report
+Use [GitHub private vulnerability reporting](https://github.com/robinswood-io/robinswood-agents/security/advisories/new) for this repository. If that facility is unavailable, open a minimal public issue asking maintainers for a private reporting channel; do not include exploit details.
 
-**Please do NOT report security vulnerabilities through public GitHub issues.**
+Include:
 
-Instead, please send an email to: **security@craft.do**
+- a clear description and affected version/commit;
+- reproduction steps or a proof of concept;
+- impact and any mitigations you identified.
 
-Include the following information:
-- Description of the vulnerability
-- Steps to reproduce the issue
-- Potential impact
-- Any suggested fixes (optional)
+We aim to acknowledge reports within 7 days and will coordinate a fix and disclosure timeline with the reporter.
 
-### What to Expect
+## Scope
 
-- **Acknowledgment**: We will acknowledge receipt within 48 hours
-- **Initial Assessment**: We will provide an initial assessment within 7 days
-- **Resolution Timeline**: We aim to resolve critical issues within 30 days
+This policy covers the Robb Agents desktop application, its `@craft-agent/*` packages in this repository, official GitHub Release artifacts, and the documented installer workflows.
 
-### Scope
+Out of scope: third-party services/dependencies, social engineering, and attacks requiring a user to deliberately bypass platform security warnings.
 
-This policy applies to:
-- The Craft Agents desktop application
-- The `@craft-agent/*` npm packages
-- Official Craft Agents repositories
+## Supported versions
 
-### Out of Scope
+| Version | Supported |
+| --- | --- |
+| Latest release | ✅ |
+| Older releases | ❌ |
 
-- Third-party dependencies (report to their maintainers)
-- Social engineering attacks
-- Denial of service attacks
+## User security guidance
 
-## Supported Versions
+- Download installers only from the official GitHub Release and verify `SHA256SUMS.txt`.
+- Check whether the release is explicitly marked signed/notarized; local/ad-hoc artifacts are not production installers.
+- Keep credentials in provider/OS credential stores; never commit `.env`, signing certificates, API keys, or tokens.
+- Review tool permissions before switching to Execute mode.
 
-| Version | Supported          |
-| ------- | ------------------ |
-| Latest  | :white_check_mark: |
-| < Latest | :x:               |
+## License
 
-We only provide security updates for the latest version. Please keep your installation up to date.
-
-## Security Best Practices
-
-When using Craft Agents:
-
-1. **Keep credentials secure**: Never commit `.env` files or credentials
-2. **Use environment variables**: Store secrets in environment variables
-3. **Review permissions**: Be cautious with "Execute" permission mode
-4. **Update regularly**: Keep the application updated
-
-## Acknowledgments
-
-We appreciate responsible disclosure and will acknowledge security researchers who report valid vulnerabilities (with their permission).
+Security fixes and reports are handled under the repository's [MIT License](LICENSE).

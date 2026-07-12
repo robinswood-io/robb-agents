@@ -18,31 +18,15 @@ require_path() {
     fi
 }
 
-# Load environment variables from .env
-if [ -f "$ROOT_DIR/.env" ]; then
-    set -a
-    source "$ROOT_DIR/.env"
-    set +a
-fi
-
-# Parse arguments
+# Parse arguments. Public artifacts are published by GitHub Releases; this
+# repository intentionally has no private bucket/upload integration.
 ARCH="x64"
-UPLOAD=false
-UPLOAD_LATEST=false
-UPLOAD_SCRIPT=false
 
 show_help() {
     cat << EOF
-Usage: build-linux.sh [x64|arm64] [--upload] [--latest] [--script]
+Usage: build-linux.sh [x64|arm64]
 
-Arguments:
-  x64|arm64    Target architecture (default: x64)
-  --upload     Upload AppImage to S3 after building
-  --latest     Also update electron/latest (requires --upload)
-  --script     Also upload install-app.sh (requires --upload)
-
-Environment variables (from .env or environment):
-  S3_VERSIONS_BUCKET_*      - S3 credentials (for --upload)
+Builds a local Robb Agents AppImage and SHA-256 checksum.
 EOF
     exit 0
 }
@@ -50,9 +34,6 @@ EOF
 while [[ $# -gt 0 ]]; do
     case $1 in
         x64|arm64)     ARCH="$1"; shift ;;
-        --upload)      UPLOAD=true; shift ;;
-        --latest)      UPLOAD_LATEST=true; shift ;;
-        --script)      UPLOAD_SCRIPT=true; shift ;;
         -h|--help)     show_help ;;
         *)
             echo "Unknown option: $1"
@@ -66,9 +47,6 @@ done
 BUN_VERSION="bun-v1.3.9"  # Pinned version for reproducible builds
 
 echo "=== Building Robb Agents AppImage (${ARCH}) using electron-builder ==="
-if [ "$UPLOAD" = true ]; then
-    echo "Will upload to S3 after build"
-fi
 
 # 1. Clean previous build artifacts
 echo "Cleaning previous builds..."
@@ -223,39 +201,9 @@ echo "=== Build Complete ==="
 echo "AppImage: $ELECTRON_DIR/release/${APPIMAGE_NAME}"
 echo "Size: $(du -h "$ELECTRON_DIR/release/${APPIMAGE_NAME}" | cut -f1)"
 
-# 9. Create manifest.json for upload script
-# Read version from package.json
-ELECTRON_VERSION=$(cat "$ELECTRON_DIR/package.json" | grep '"version"' | head -1 | sed 's/.*"version": *"\([^"]*\)".*/\1/')
-echo "Creating manifest.json (version: $ELECTRON_VERSION)..."
-mkdir -p "$ROOT_DIR/.build/upload"
-echo "{\"version\": \"$ELECTRON_VERSION\"}" > "$ROOT_DIR/.build/upload/manifest.json"
-
-# 10. Upload to S3 (if --upload flag is set)
-if [ "$UPLOAD" = true ]; then
-    echo ""
-    echo "=== Uploading to S3 ==="
-
-    # Check for S3 credentials
-    if [ -z "$S3_VERSIONS_BUCKET_ENDPOINT" ] || [ -z "$S3_VERSIONS_BUCKET_ACCESS_KEY_ID" ] || [ -z "$S3_VERSIONS_BUCKET_SECRET_ACCESS_KEY" ]; then
-        cat << EOF
-ERROR: Missing S3 credentials. Set these environment variables:
-  S3_VERSIONS_BUCKET_ENDPOINT
-  S3_VERSIONS_BUCKET_ACCESS_KEY_ID
-  S3_VERSIONS_BUCKET_SECRET_ACCESS_KEY
-
-You can add them to .env or export them directly.
-EOF
-        exit 1
-    fi
-
-    # Build upload flags
-    UPLOAD_FLAGS="--electron"
-    [ "$UPLOAD_LATEST" = true ] && UPLOAD_FLAGS="$UPLOAD_FLAGS --latest"
-    [ "$UPLOAD_SCRIPT" = true ] && UPLOAD_FLAGS="$UPLOAD_FLAGS --script"
-
-    cd "$ROOT_DIR"
-    bun run scripts/upload.ts $UPLOAD_FLAGS
-
-    echo ""
-    echo "=== Upload Complete ==="
-fi
+# Publish the checksum with the AppImage on GitHub Releases or your own fork.
+(
+    cd "$ELECTRON_DIR/release"
+    sha256sum "$(basename "$APPIMAGE_PATH")" > "SHA256SUMS-linux-${ARCH}.txt"
+)
+echo "Checksums: $ELECTRON_DIR/release/SHA256SUMS-linux-${ARCH}.txt"
