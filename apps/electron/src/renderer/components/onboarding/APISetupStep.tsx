@@ -103,7 +103,9 @@ function OptionButton({
 }) {
   return (
     <button
+      type="button"
       onClick={() => onSelect(option.id)}
+      aria-pressed={isSelected}
       className={cn(
         "flex w-full items-start gap-4 rounded-xl p-4 text-left transition-all",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
@@ -155,18 +157,22 @@ function ProviderSegmentedControl({
   activeSegment,
   onSegmentChange,
   segmentLabels,
+  ariaLabel,
 }: {
   activeSegment: ProviderSegment
   onSegmentChange: (segment: ProviderSegment) => void
   segmentLabels: Record<ProviderSegment, string>
+  ariaLabel: string
 }) {
   const segments: ProviderSegment[] = ['anthropic', 'pi']
 
   return (
-    <div className="flex rounded-xl bg-foreground/[0.03] p-1 mb-4">
+    <div className="flex rounded-xl bg-foreground/[0.03] p-1 mb-4" role="group" aria-label={ariaLabel}>
       {segments.map((segment) => (
         <button
           key={segment}
+          type="button"
+          aria-pressed={activeSegment === segment}
           onClick={() => onSegmentChange(segment)}
           className={cn(
             "flex-1 px-4 py-2 text-sm font-medium rounded-lg transition-all",
@@ -288,6 +294,7 @@ export function APISetupStep({
         activeSegment={activeSegment}
         onSegmentChange={handleSegmentChange}
         segmentLabels={SEGMENT_LABELS}
+        ariaLabel={t("onboarding.apiSetup.providerSelector")}
       />
 
       {/* Segment description */}

@@ -205,7 +205,11 @@ export function OnboardingWizard({
 
       {/* Main content — min-h-full + flex center means: center when content fits,
           natural flow + scroll when content is taller than the viewport (mobile). */}
-      <main className="flex min-h-full items-center justify-center p-4 sm:p-8">
+      <main
+        className="flex min-h-full items-center justify-center p-4 sm:p-8"
+        aria-live="polite"
+        aria-busy={state.loginStatus === 'waiting' || state.credentialStatus === 'validating' || state.completionStatus === 'saving'}
+      >
         {renderStep()}
       </main>
     </div>

@@ -347,8 +347,8 @@ export function CredentialsStep({
   // Determine provider type and description based on selected method
   const providerType = isPiApiKey ? 'pi_api_key' : 'anthropic'
   const apiKeyDescription = isPiApiKey
-    ? "Select a provider preset and enter the API key. For arbitrary Anthropic-compatible endpoints, use Anthropic API Key mode."
-    : "Enter your API key. Optionally configure a custom endpoint for OpenRouter, Ollama, or compatible APIs."
+    ? t("onboarding.credentials.piApiKeyDescription")
+    : t("onboarding.credentials.anthropicApiKeyDescription")
 
   // An existing connection's saved preset always takes precedence over an
   // onboarding suggestion. New Mistral connections arrive preselected here.

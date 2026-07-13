@@ -83,13 +83,13 @@ export function ProviderSelectStep({ onSelect, onSkip }: ProviderSelectStepProps
     {
       id: 'api_key',
       name: t("onboarding.providerSelect.otherProvider"),
-      description: 'Anthropic, AWS Bedrock, OpenRouter, Google or any compatible provider.',
+      description: t("onboarding.providerSelect.otherProviderDesc"),
       icon: PROVIDER_ICONS.api_key,
     },
     {
       id: 'local',
       name: t("onboarding.providerSelect.localModel"),
-      description: 'Run models locally with Ollama.',
+      description: t("onboarding.providerSelect.localModelDesc"),
       icon: PROVIDER_ICONS.local,
     },
   ]
@@ -108,7 +108,9 @@ export function ProviderSelectStep({ onSelect, onSkip }: ProviderSelectStepProps
         {PROVIDER_OPTIONS.map((option) => (
           <button
             key={option.id}
+            type="button"
             onClick={() => onSelect(option.id)}
+            aria-label={`${option.name}. ${option.description}`}
             className={cn(
               "flex w-full items-center gap-3 rounded-xl bg-foreground-2 p-3 text-left transition-all",
               "sm:items-start sm:gap-4 sm:p-4",
@@ -135,6 +137,7 @@ export function ProviderSelectStep({ onSelect, onSkip }: ProviderSelectStepProps
       {onSkip && (
         <div className="mt-4 text-center">
           <button
+            type="button"
             onClick={onSkip}
             className="text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
