@@ -346,6 +346,7 @@ const EXPECTED_CHANNELS: string[] = [
   'workspace:readImage',
   'workspace:writeImage',
   'workspaceSettings:get',
+  'workspaceSettings:simulateRouting',
   'workspaceSettings:update',
   'workspaces:checkSlug',
   'workspaces:create',

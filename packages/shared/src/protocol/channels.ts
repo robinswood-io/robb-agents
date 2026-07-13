@@ -276,6 +276,8 @@ export const RPC_CHANNELS = {
     WRITE_IMAGE: 'workspace:writeImage',
     SETTINGS_GET: 'workspaceSettings:get',
     SETTINGS_UPDATE: 'workspaceSettings:update',
+    /** Explain a routing decision without running a provider or mutating state. */
+    ROUTING_SIMULATE: 'workspaceSettings:simulateRouting',
   },
   permissions: {
     GET_DEFAULTS: 'permissions:getDefaults',

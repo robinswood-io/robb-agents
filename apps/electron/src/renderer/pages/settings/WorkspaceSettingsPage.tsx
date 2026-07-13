@@ -31,6 +31,7 @@ import type { DetailsPageMeta } from '@/lib/navigation-registry'
 import { SourceAvatar } from '@/components/ui/source-avatar'
 import { toast } from 'sonner'
 import { parseRoutingPolicyText } from './routing-policy-editor'
+import type { RoutingPolicySimulation, RoutingSensitivity } from '@craft-agent/shared/config'
 
 import {
   SettingsSection,
@@ -72,6 +73,9 @@ export default function WorkspaceSettingsPage() {
   const [routingPolicyWarnings, setRoutingPolicyWarnings] = useState<string[]>([])
   const [isSavingRoutingPolicy, setIsSavingRoutingPolicy] = useState(false)
   const [llmConnectionSlugs, setLlmConnectionSlugs] = useState<string[]>([])
+  const [simulationSensitivity, setSimulationSensitivity] = useState<RoutingSensitivity>('internal')
+  const [routingSimulation, setRoutingSimulation] = useState<RoutingPolicySimulation | null>(null)
+  const [isSimulatingRouting, setIsSimulatingRouting] = useState(false)
 
   // Default sources state
   const [availableSources, setAvailableSources] = useState<LoadedSource[]>([])
@@ -227,6 +231,7 @@ export default function WorkspaceSettingsPage() {
     try {
       const saved = await updateWorkspaceSetting('routingPolicy', result.policy)
       if (saved) {
+        setRoutingSimulation(null)
         if (result.policy) {
           setRoutingPolicyText(JSON.stringify(result.policy, null, 2))
         }
@@ -236,6 +241,22 @@ export default function WorkspaceSettingsPage() {
       setIsSavingRoutingPolicy(false)
     }
   }, [routingPolicyText, updateWorkspaceSetting, validateRoutingPolicyText, t])
+
+  const handleSimulateRoutingPolicy = useCallback(async () => {
+    if (!window.electronAPI || !activeWorkspaceId) return
+    setIsSimulatingRouting(true)
+    try {
+      const simulation = await window.electronAPI.simulateRoutingPolicy(activeWorkspaceId, {
+        sensitivity: simulationSensitivity,
+      })
+      setRoutingSimulation(simulation)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error'
+      toast.error(t('settings.workspace.routingPolicySimulationFailed'), { description: message })
+    } finally {
+      setIsSimulatingRouting(false)
+    }
+  }, [activeWorkspaceId, simulationSensitivity, t])
 
   // Workspace icon upload handler
   const handleIconUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -617,6 +638,57 @@ export default function WorkspaceSettingsPage() {
                       {routingPolicyWarnings.map((warning) => <div key={warning}>• {warning}</div>)}
                     </div>
                   )}
+                  <div className="border-t border-border/60 pt-3 space-y-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <label htmlFor="routing-policy-simulation-sensitivity" className="text-xs font-medium">
+                        {t('settings.workspace.routingPolicySimulationSensitivity')}
+                      </label>
+                      <select
+                        id="routing-policy-simulation-sensitivity"
+                        value={simulationSensitivity}
+                        onChange={(event) => setSimulationSensitivity(event.target.value as RoutingSensitivity)}
+                        className="h-8 rounded-lg bg-background px-2 text-xs shadow-minimal outline-none focus:ring-2 focus:ring-ring"
+                      >
+                        {(['public', 'internal', 'confidential', 'restricted'] as const).map((sensitivity) => (
+                          <option key={sensitivity} value={sensitivity}>{t(`settings.workspace.routingSensitivity.${sensitivity}`)}</option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={handleSimulateRoutingPolicy}
+                        disabled={isSimulatingRouting}
+                        className="inline-flex items-center h-8 px-3 text-sm rounded-lg bg-background shadow-minimal hover:bg-foreground/[0.02] transition-colors disabled:opacity-50"
+                      >
+                        {isSimulatingRouting ? t('settings.workspace.routingPolicySimulating') : t('settings.workspace.routingPolicySimulate')}
+                      </button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">{t('settings.workspace.routingPolicySimulationDesc')}</p>
+                    {routingSimulation && (
+                      <div className="rounded-lg bg-foreground/[0.03] p-3 text-xs space-y-3">
+                        <div className="flex flex-wrap gap-x-4 gap-y-1">
+                          <span><strong>{t('settings.workspace.routingPolicySimulationSelected')}:</strong> {routingSimulation.decision.selectedConnectionSlug ?? t('settings.workspace.routingPolicySimulationNone')}</span>
+                          <span><strong>{t('settings.workspace.routingPolicySimulationReason')}:</strong> {routingSimulation.decision.reason}</span>
+                        </div>
+                        {routingSimulation.decision.errors.length > 0 && (
+                          <div className="text-destructive space-y-1">
+                            {routingSimulation.decision.errors.map((error) => <div key={error}>• {error}</div>)}
+                          </div>
+                        )}
+                        <div className="space-y-1">
+                          {routingSimulation.candidates.map((candidate) => (
+                            <div key={candidate.slug} className="flex flex-wrap gap-x-2">
+                              <span className={candidate.allowed ? 'text-emerald-700 dark:text-emerald-300' : 'text-muted-foreground'}>
+                                {candidate.slug} — {candidate.allowed ? t('settings.workspace.routingPolicySimulationAllowed') : t('settings.workspace.routingPolicySimulationBlocked')}
+                              </span>
+                              {!candidate.allowed && candidate.exclusionReasons.length > 0 && (
+                                <span className="text-muted-foreground">({candidate.exclusionReasons.join(', ')})</span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </SettingsCard>
             </SettingsSection>

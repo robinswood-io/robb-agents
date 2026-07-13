@@ -462,6 +462,11 @@ export interface ElectronAPI {
   // Workspace Settings (per-workspace configuration)
   getWorkspaceSettings(workspaceId: string): Promise<WorkspaceSettings | null>
   updateWorkspaceSetting<K extends keyof WorkspaceSettings>(workspaceId: string, key: K, value: WorkspaceSettings[K]): Promise<void>
+  /** Read-only policy explanation. It never invokes a model or touches credentials. */
+  simulateRoutingPolicy(
+    workspaceId: string,
+    context?: import('@craft-agent/shared/config').RoutingPolicyContext,
+  ): Promise<import('@craft-agent/shared/config').RoutingPolicySimulation>
 
   // Folder dialog
   openFolderDialog(): Promise<string | null>

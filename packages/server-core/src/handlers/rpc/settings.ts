@@ -11,11 +11,12 @@ import type { HandlerDeps } from '../handler-deps'
 import { requestClientOpenFileDialog } from '@craft-agent/server-core/transport'
 import { isValidWorkingDirectory } from '../../utils/path-validation'
 import { getLlmConnections } from '@craft-agent/shared/config/storage'
-import { validateRoutingPolicy } from '@craft-agent/shared/config/routing-policy'
+import { ALL_ROUTING_SENSITIVITIES, simulateRoutingPolicy, validateRoutingPolicy, type RoutingPolicyContext } from '@craft-agent/shared/config/routing-policy'
 
 export const HANDLED_CHANNELS = [
   RPC_CHANNELS.workspace.SETTINGS_GET,
   RPC_CHANNELS.workspace.SETTINGS_UPDATE,
+  RPC_CHANNELS.workspace.ROUTING_SIMULATE,
   RPC_CHANNELS.preferences.READ,
   RPC_CHANNELS.preferences.WRITE,
   RPC_CHANNELS.drafts.GET,
@@ -126,6 +127,30 @@ export function registerSettingsHandlers(server: RpcServer, deps: HandlerDeps): 
       enabledSourceSlugs: config?.defaults?.enabledSourceSlugs ?? [],
       routingPolicy: config?.routingPolicy,
     }
+  })
+
+  // Explain the current persisted policy without starting a provider, checking a
+  // credential, or writing any workspace/session state.
+  server.handle(RPC_CHANNELS.workspace.ROUTING_SIMULATE, async (_ctx, workspaceId: string, context: RoutingPolicyContext = {}) => {
+    const workspace = getWorkspaceOrThrow(workspaceId)
+    const { loadWorkspaceConfig } = await import('@craft-agent/shared/workspaces')
+    const config = loadWorkspaceConfig(workspace.rootPath)
+    if (!config) throw new Error(`Failed to load workspace config: ${workspaceId}`)
+
+    if (context.sensitivity && !ALL_ROUTING_SENSITIVITIES.includes(context.sensitivity)) {
+      throw new Error(`Invalid routing sensitivity: ${context.sensitivity}`)
+    }
+    const sanitizeStrings = (value: unknown): string[] | undefined => Array.isArray(value)
+      ? value.filter((item): item is string => typeof item === 'string')
+      : undefined
+    const safeContext: RoutingPolicyContext = {
+      sensitivity: context.sensitivity,
+      requestedConnectionSlug: typeof context.requestedConnectionSlug === 'string' ? context.requestedConnectionSlug : undefined,
+      tags: sanitizeStrings(context.tags),
+      sourceSlugs: sanitizeStrings(context.sourceSlugs),
+    }
+    const connections = getLlmConnections().map(({ slug, providerType }) => ({ slug, providerType }))
+    return simulateRoutingPolicy(config.routingPolicy, connections, safeContext)
   })
 
   // Update a workspace setting
