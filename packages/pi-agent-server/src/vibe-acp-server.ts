@@ -50,12 +50,32 @@ let activePrompt = false;
 let promptQueue: Promise<void> = Promise.resolve();
 const pendingPermissions = new Map<string, (action: PermissionAction) => void>();
 
+const VIBE_SETUP_GUIDANCE = 'Install Mistral Vibe, then run vibe-acp --setup to sign in with your Mistral plan.';
+
 function send(message: Record<string, unknown>): void {
   process.stdout.write(`${JSON.stringify(message)}\n`);
 }
 
 function debug(message: string): void {
   process.stderr.write(`[vibe-acp-server] ${message}\n`);
+}
+
+/**
+ * Vibe owns authentication and may include sensitive context in its own errors.
+ * Bridge diagnostics therefore use only static, actionable messages.
+ */
+function reportVibeError(code: string, message: string): void {
+  send({ type: 'error', code, message });
+}
+
+function clearVibeState(): void {
+  for (const resolve of pendingPermissions.values()) resolve('block');
+  pendingPermissions.clear();
+  activePrompt = false;
+  acpSession = null;
+  acpConnection = null;
+  bridgeSessionId = null;
+  vibeProcess = null;
 }
 
 function randomId(prefix: string): string {
@@ -104,7 +124,7 @@ async function startVibe(init: InitMessage): Promise<void> {
 
   const command = process.env.ROBB_VIBE_ACP_COMMAND || 'vibe-acp';
   const cwd = init.workingDirectory || init.cwd || process.cwd();
-  debug(`Launching official Vibe ACP command: ${command}`);
+  debug('Launching official Vibe ACP command.');
 
   const child = spawn(command, [], {
     cwd,
@@ -112,24 +132,29 @@ async function startVibe(init: InitMessage): Promise<void> {
     env: process.env,
   });
   vibeProcess = child;
-
-  child.once('error', (error) => {
-    send({
-      type: 'error',
-      code: 'MISTRAL_VIBE_UNAVAILABLE',
-      message: `Cannot launch ${command}: ${error.message}. Install Mistral Vibe, then run vibe-acp --setup to sign in with your Mistral plan.`,
-    });
+  const launched = new Promise<boolean>((resolve) => {
+    child.once('spawn', () => resolve(true));
+    child.once('error', () => resolve(false));
   });
-  child.stderr?.on('data', (chunk: Buffer) => debug(chunk.toString().trim()));
-  child.on('exit', (code, signal) => {
-    if (activePrompt) {
-      send({ type: 'error', code: 'MISTRAL_VIBE_EXITED', message: `Mistral Vibe exited unexpectedly (code=${code ?? 'none'}, signal=${signal ?? 'none'}).` });
+
+  child.once('error', () => {
+    reportVibeError('MISTRAL_VIBE_UNAVAILABLE', `Mistral Vibe ACP could not launch. ${VIBE_SETUP_GUIDANCE}`);
+    clearVibeState();
+  });
+  // Do not relay Vibe stderr: it is Vibe-owned and may contain sensitive context.
+  child.stderr?.on('data', () => debug('Official Vibe ACP emitted stderr; details remain in Vibe-owned logs.'));
+  child.on('exit', () => {
+    const wasActive = activePrompt;
+    clearVibeState();
+    if (wasActive) {
+      reportVibeError('MISTRAL_VIBE_EXITED', 'Mistral Vibe stopped before the turn completed. Start a new turn after Vibe is available again.');
       emitEvent({ type: 'agent_end' });
     }
-    activePrompt = false;
-    acpSession = null;
-    acpConnection = null;
   });
+
+  // Do not start ACP negotiation until the OS has confirmed the executable.
+  // This prevents a launch failure from also surfacing as a second protocol error.
+  if (!await launched) return;
 
   const app: any = client({ name: 'Robb Agents' });
   app.onRequest(methods.client.session.requestPermission, async ({ params }: any) => waitForPermission(params));
@@ -212,6 +237,7 @@ function emitToolUpdate(update: any): void {
 async function runPrompt(message: string): Promise<void> {
   if (!acpSession) throw new Error('Mistral Vibe ACP session is not initialized');
   activePrompt = true;
+  try {
   let text = '';
   let sdkMessageId: string | undefined;
   emitEvent({ type: 'agent_start' });
@@ -253,7 +279,9 @@ async function runPrompt(message: string): Promise<void> {
   });
   emitEvent({ type: 'turn_end' });
   emitEvent({ type: 'agent_end' });
-  activePrompt = false;
+  } finally {
+    activePrompt = false;
+  }
 }
 
 async function handle(message: InboundMessage): Promise<void> {
@@ -262,8 +290,8 @@ async function handle(message: InboundMessage): Promise<void> {
       await startVibe(message);
       return;
     case 'prompt':
-      promptQueue = promptQueue.then(() => runPrompt(message.message)).catch((error) => {
-        send({ type: 'error', message: error instanceof Error ? error.message : String(error) });
+      promptQueue = promptQueue.then(() => runPrompt(message.message)).catch(() => {
+        reportVibeError('MISTRAL_VIBE_PROMPT_FAILED', 'Mistral Vibe could not complete this turn. Confirm that Vibe is available and start a new turn.');
         emitEvent({ type: 'agent_end' });
       });
       return;
@@ -312,6 +340,7 @@ async function handle(message: InboundMessage): Promise<void> {
     case 'shutdown':
       acpConnection?.close();
       vibeProcess?.kill();
+      clearVibeState();
       process.exit(0);
       return;
     case 'register_tools':
@@ -325,8 +354,10 @@ async function handle(message: InboundMessage): Promise<void> {
 const readline = createInterface({ input: process.stdin, crlfDelay: Infinity });
 readline.on('line', (line) => {
   try {
-    void handle(JSON.parse(line) as InboundMessage);
-  } catch (error) {
-    send({ type: 'error', message: error instanceof Error ? error.message : String(error) });
+    void handle(JSON.parse(line) as InboundMessage).catch(() => {
+      reportVibeError('MISTRAL_VIBE_BRIDGE_ERROR', 'Mistral Vibe ACP could not process this request. Confirm its setup, then try again.');
+    });
+  } catch {
+    reportVibeError('MISTRAL_VIBE_INVALID_MESSAGE', 'Robb received an invalid Mistral Vibe bridge message. Start a new session and try again.');
   }
 });
