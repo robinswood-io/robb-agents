@@ -1,0 +1,154 @@
+name: Robinswood Validate
+
+on:
+  pull_request:
+    branches:
+      - robinswood/main
+  push:
+    branches:
+      - robinswood/main
+  workflow_dispatch:
+
+concurrency:
+  group: robinswood-validate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lightweight:
+    name: Robb OSS validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.8"
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run Robinswood checks
+        run: python3 scripts/robinswood-validate.py
+
+      - name: Typecheck shared package
+        run: bun run typecheck:shared
+
+      - name: Typecheck server-core package
+        run: cd packages/server-core && bun run tsc --noEmit
+
+      - name: Typecheck Electron app
+        run: bun run typecheck:electron
+
+      - name: Run focused fork tests
+        run: |
+          bun test \
+            packages/shared/tests/routing-policy.test.ts \
+            packages/shared/tests/routing-policy-example.test.ts \
+            packages/shared/tests/client-workspace-template.test.ts \
+            packages/shared/src/sources/__tests__/source-config-validation.test.ts \
+            packages/shared/src/utils/__tests__/paths.test.ts \
+            packages/shared/src/tasks/schema.test.ts \
+            packages/shared/src/projects/__tests__/storage.test.ts \
+            packages/shared/src/labels/__tests__/filter.test.ts \
+            apps/electron/src/shared/__tests__/ipc-channels.test.ts \
+            apps/electron/src/shared/__tests__/route-parser-label-filter.test.ts \
+            apps/electron/src/main/handlers/__tests__/registration.test.ts \
+            apps/electron/src/main/__tests__/robinswood-branding.test.ts \
+            apps/electron/src/renderer/event-processor/handlers/__tests__/text-message-id-sync.test.ts \
+            apps/electron/src/renderer/components/app-shell/input/__tests__/picker-mode.test.ts \
+            apps/electron/src/renderer/components/app-shell/kanban/__tests__/node-state-pill.test.ts \
+            apps/electron/src/renderer/components/app-shell/kanban/__tests__/subtask-merge.test.ts \
+            apps/electron/src/renderer/components/app-shell/kanban/__tests__/task-spec-form.test.ts \
+            apps/electron/src/renderer/config/__tests__/session-status-config.test.ts \
+            apps/electron/src/renderer/hooks/__tests__/useOnboarding.test.ts \
+            apps/electron/src/renderer/hooks/__tests__/useSessionSearch.test.ts \
+            apps/electron/src/renderer/pages/settings/__tests__/routing-policy-editor.test.ts \
+            apps/electron/src/main/__tests__/connection-setup-logic.test.ts \
+            packages/pi-agent-server/src/google-code-assist-provider.test.ts \
+            packages/shared/src/audit/routing-audit.test.ts \
+            packages/server-core/src/tasks/TaskRunner.test.ts \
+            packages/server-core/src/sessions/background-task-surface.test.ts \
+            packages/server-core/src/sessions/workflow-task-progress.test.ts \
+            packages/server-core/src/sessions/adopt-task-draft.test.ts \
+            packages/server-core/src/sessions/session-created-notify.test.ts \
+            packages/server-core/src/sessions/execute-prompt-automation-test-mode.test.ts \
+            packages/session-tools-core/src/handlers/list-background-tasks.test.ts \
+            packages/session-tools-core/src/handlers/send-agent-message.test.ts \
+            packages/session-tools-core/src/handlers/set-session-status.test.ts \
+            packages/server-core/src/sessions/routing-fallback.test.ts \
+            packages/server-core/src/sessions/runtime-config.test.ts
+
+      - name: Run config-dir-sensitive runtime refresh test
+        run: bun test packages/server-core/src/sessions/refresh-connection-runtime.test.ts
+        env:
+          CRAFT_CONFIG_DIR: ${{ runner.temp }}/robb-agents-refresh-runtime
+
+  windows-installer:
+    name: Windows installer validation
+    runs-on: windows-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.9"
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Build and validate unsigned NSIS installer
+        shell: pwsh
+        run: |
+          powershell -ExecutionPolicy Bypass -File apps/electron/scripts/build-win.ps1
+
+      - name: Exercise isolated install and uninstall
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem apps/electron/release -Filter 'Robb-Agents-x64*.exe' | Sort-Object Length -Descending | Select-Object -First 1
+          powershell -ExecutionPolicy Bypass -File scripts/robinswood-windows-installer-e2e.ps1 -Installer $installer.FullName
+
+  optional-upstream-validation:
+    name: Optional upstream validation
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    continue-on-error: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.10"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run upstream i18n checks
+        run: |
+          bun run lint:i18n:parity
+          bun run lint:i18n:sorted

@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "enabled": true,
+  "defaultSensitivity": "internal",
+  "requireExplicitAllowFor": ["confidential", "restricted"],
+  "defaultDenyConnectionSlugs": ["openrouter-experimentation"],
+  "fallbackConnectionSlug": "souverain-standard",
+  "rules": [
+    {
+      "id": "restricted-local-only",
+      "description": "Highly restricted data must stay on the local endpoint unless a human changes the workspace policy.",
+      "when": {
+        "sensitivity": ["restricted"]
+      },
+      "allowConnectionSlugs": ["local-rapide"],
+      "allowProviderTypes": ["pi_compat"],
+      "preferConnectionSlugs": ["local-rapide"]
+    },
+    {
+      "id": "confidential-local-or-sovereign",
+      "description": "Confidential client data can use local or sovereign/EU compute, never marketplace routing by default.",
+      "when": {
+        "sensitivity": ["confidential"]
+      },
+      "allowConnectionSlugs": ["local-rapide", "souverain-standard"],
+      "allowProviderTypes": ["pi_compat"],
+      "preferConnectionSlugs": ["souverain-standard", "local-rapide"]
+    },
+    {
+      "id": "internal-sovereign-default",
+      "description": "Internal business work defaults to the sovereign endpoint, with premium fallback only if explicitly listed.",
+      "when": {
+        "sensitivity": ["internal"]
+      },
+      "allowConnectionSlugs": ["local-rapide", "souverain-standard", "premium-analyse-complexe"],
+      "preferConnectionSlugs": ["souverain-standard", "premium-analyse-complexe", "local-rapide"]
+    },
+    {
+      "id": "public-fast-or-premium",
+      "description": "Public/non-sensitive content may use faster marketplace or premium providers.",
+      "when": {
+        "sensitivity": ["public"]
+      },
+      "allowConnectionSlugs": ["openrouter-experimentation", "premium-analyse-complexe", "souverain-standard"],
+      "preferConnectionSlugs": ["openrouter-experimentation", "premium-analyse-complexe", "souverain-standard"]
+    }
+  ]
+}

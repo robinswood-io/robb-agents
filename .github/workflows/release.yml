@@ -1,0 +1,262 @@
+name: Build signed desktop release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      release_mode:
+        description: "test-artifacts uploads unsigned CI artifacts only; publish-signed creates a public signed GitHub Release"
+        required: true
+        default: test-artifacts
+        type: choice
+        options: [test-artifacts, publish-signed]
+      tag:
+        description: "Existing vX.Y.Z tag; required only for publish-signed"
+        required: false
+        type: string
+
+permissions:
+  contents: write
+  attestations: write
+  id-token: write
+
+concurrency:
+  group: robb-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  preflight:
+    name: Release policy preflight
+    runs-on: ubuntu-latest
+    outputs:
+      publish: ${{ steps.policy.outputs.publish }}
+      tag: ${{ steps.policy.outputs.tag }}
+      version: ${{ steps.policy.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - id: policy
+        name: Validate tag, version and signing material
+        env:
+          REQUESTED_MODE: ${{ inputs.release_mode || '' }}
+          REQUESTED_TAG: ${{ inputs.tag || '' }}
+          MAC_CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
+          MAC_CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          WINDOWS_CSC_LINK: ${{ secrets.WINDOWS_CSC_LINK }}
+          WINDOWS_CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CSC_KEY_PASSWORD }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          version="$(node -p "require('./apps/electron/package.json').version")"
+          tag="${REQUESTED_TAG:-${GITHUB_REF_NAME}}"
+          mode="${REQUESTED_MODE:-publish-signed}"
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then mode="publish-signed"; fi
+          if [[ "$mode" != "test-artifacts" && "$mode" != "publish-signed" ]]; then
+            echo "::error::Unknown release mode: $mode"; exit 1
+          fi
+          if [[ "$mode" == "publish-signed" ]]; then
+            [[ "$tag" == "v${version}" ]] || { echo "::error::Tag $tag must match Electron version v${version}"; exit 1; }
+            missing=()
+            for name in MAC_CSC_LINK MAC_CSC_KEY_PASSWORD WINDOWS_CSC_LINK WINDOWS_CSC_KEY_PASSWORD APPLE_TEAM_ID; do
+              [[ -n "${!name:-}" ]] || missing+=("$name")
+            done
+            if [[ -z "${APPLE_ID:-}" || -z "${APPLE_APP_SPECIFIC_PASSWORD:-}" ]]; then
+              if [[ -z "${APPLE_API_KEY:-}" || -z "${APPLE_API_KEY_ID:-}" || -z "${APPLE_API_ISSUER:-}" ]]; then
+                missing+=("Apple notarization credentials (Apple ID or API key route)")
+              fi
+            fi
+            ((${#missing[@]} == 0)) || { printf '::error::Public signed release blocked; missing: %s\n' "${missing[*]}"; exit 1; }
+            python3 scripts/robinswood-signing-preflight.py --ci --strict
+            if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+              echo "::error::GitHub Release $tag already exists; refusing to overwrite it"; exit 1
+            fi
+            publish=true
+          else
+            publish=false
+            tag="test-${GITHUB_SHA::12}"
+            echo "::notice::Unsigned test artifacts will be retained in CI only; no GitHub Release will be created."
+          fi
+          echo "publish=$publish" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+  macos:
+    name: macOS ${{ matrix.arch }}
+    needs: preflight
+    runs-on: macos-14
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [arm64, x64]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.9"
+      - name: Build and validate macOS artifact
+        env:
+          CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          GITHUB_TOKEN: ${{ github.token }}
+          ROBB_PACKAGE_LAUNCH_SMOKE: "1"
+        run: |
+          args=("${{ matrix.arch }}")
+          if [[ "${{ needs.preflight.outputs.publish }}" == "true" ]]; then
+            args+=(--release)
+            bash apps/electron/scripts/build-dmg.sh "${args[@]}"
+          else
+            # Empty CI secret variables can be misread by electron-builder as
+            # signing paths. Explicitly remove them for an unsigned test build.
+            env -u CSC_LINK -u CSC_KEY_PASSWORD -u APPLE_ID -u APPLE_APP_SPECIFIC_PASSWORD -u APPLE_TEAM_ID -u APPLE_API_KEY -u APPLE_API_KEY_ID -u APPLE_API_ISSUER \
+              bash apps/electron/scripts/build-dmg.sh "${args[@]}"
+          fi
+          cat > "apps/electron/release/PROVENANCE-macos-${{ matrix.arch }}.txt" <<EOF
+          product=Robb Agents
+          version=${{ needs.preflight.outputs.version }}
+          source_commit=${GITHUB_SHA}
+          release_tag=${{ needs.preflight.outputs.tag }}
+          platform=macos-${{ matrix.arch }}
+          signing=$([[ "${{ needs.preflight.outputs.publish }}" == "true" ]] && echo verified-developer-id-and-notarized || echo unsigned-test-artifact)
+          EOF
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-${{ matrix.arch }}
+          retention-days: 14
+          path: |
+            apps/electron/release/Robb-Agents-${{ matrix.arch }}.dmg
+            apps/electron/release/Robb-Agents-${{ matrix.arch }}.zip
+            apps/electron/release/SHA256SUMS-macos-${{ matrix.arch }}.txt
+            apps/electron/release/PROVENANCE-macos-${{ matrix.arch }}.txt
+          if-no-files-found: error
+
+  windows:
+    name: Windows x64
+    needs: preflight
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.9"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build and validate Windows installer
+        env:
+          CSC_LINK: ${{ secrets.WINDOWS_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CSC_KEY_PASSWORD }}
+          GITHUB_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: |
+          $args = @('-ExecutionPolicy', 'Bypass', '-File', 'apps/electron/scripts/build-win.ps1')
+          if ('${{ needs.preflight.outputs.publish }}' -eq 'true') {
+            $args += '-Release'
+          } else {
+            # Avoid treating an empty Actions secret as a certificate location.
+            Remove-Item Env:CSC_LINK -ErrorAction SilentlyContinue
+            Remove-Item Env:CSC_KEY_PASSWORD -ErrorAction SilentlyContinue
+          }
+          & powershell @args
+          $installer = Get-ChildItem apps/electron/release -Filter 'Robb-Agents-x64*.exe' | Sort-Object Length -Descending | Select-Object -First 1
+          if ('${{ needs.preflight.outputs.publish }}' -eq 'true') {
+            if ((Get-AuthenticodeSignature $installer.FullName).Status -ne 'Valid') { throw 'Authenticode verification failed for public release installer' }
+            $signing = 'verified-authenticode'
+          } else { $signing = 'unsigned-test-artifact' }
+          @(
+            'product=Robb Agents',
+            'version=${{ needs.preflight.outputs.version }}',
+            'source_commit=${{ github.sha }}',
+            'release_tag=${{ needs.preflight.outputs.tag }}',
+            'platform=windows-x64',
+            "signing=$signing"
+          ) | Set-Content apps/electron/release/PROVENANCE-windows-x64.txt
+      - name: Exercise isolated installer journey
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem apps/electron/release -Filter 'Robb-Agents-x64*.exe' | Sort-Object Length -Descending | Select-Object -First 1
+          powershell -ExecutionPolicy Bypass -File scripts/robinswood-windows-installer-e2e.ps1 -Installer $installer.FullName
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-x64
+          retention-days: 14
+          path: |
+            apps/electron/release/Robb-Agents-x64*.exe
+            apps/electron/release/SHA256SUMS-windows-x64.txt
+            apps/electron/release/PROVENANCE-windows-x64.txt
+          if-no-files-found: error
+
+  publish:
+    name: Publish signed GitHub Release
+    if: needs.preflight.outputs.publish == 'true'
+    needs: [preflight, macos, windows]
+    runs-on: ubuntu-latest
+    # This environment is intentionally the single publication boundary. Configure
+    # required reviewers once the repository is public or on a GitHub plan that
+    # supports protected private environments.
+    environment:
+      name: release
+      url: https://github.com/${{ github.repository }}/releases/tag/${{ needs.preflight.outputs.tag }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          merge-multiple: true
+      - name: Consolidate release evidence
+        run: |
+          set -euo pipefail
+          cat release-assets/SHA256SUMS-*.txt > release-assets/SHA256SUMS.txt
+          {
+            echo '## Verified release evidence'
+            echo
+            echo 'Every artifact was produced from the commit and tag listed below, checksum-verified, and signed as stated.'
+            echo
+            echo '```text'
+            cat release-assets/PROVENANCE-*.txt
+            echo '```'
+            echo
+            echo '## Verification'
+            echo 'Verify downloaded artifacts against SHA256SUMS.txt before installation.'
+          } > release-assets/RELEASE-STATUS.md
+      - name: Generate release SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          path: release-assets
+          format: spdx-json
+          output-file: release-assets/SBOM.spdx.json
+          artifact-name: robb-agents-${{ needs.preflight.outputs.tag }}.spdx.json
+          upload-artifact: false
+          upload-release-assets: false
+      # GitHub Free publishes attestations only for public repositories. Keep the
+      # workflow fail-closed for signing; this step becomes mandatory evidence as
+      # soon as the intended public OSS visibility is enabled.
+      - name: Attest public release artifacts
+        if: github.event.repository.private == false
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-checksums: release-assets/SHA256SUMS.txt
+      - name: Create immutable public GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ needs.preflight.outputs.tag }}" release-assets/* \
+            --repo "${{ github.repository }}" \
+            --title "Robb Agents ${{ needs.preflight.outputs.version }}" \
+            --notes-file release-assets/RELEASE-STATUS.md

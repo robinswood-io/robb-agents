@@ -1,0 +1,7 @@
+source_type,default_routing_sensitivity,examples,notes
+Documentation publique,public,"site web, docs marketing publiques, FAQ publique",Peut utiliser premium/Gemini si autorisé par la policy
+Travail interne courant,internal,"notes projet, backlog, CRM non sensible",Souverain/local par défaut
+Documents client,confidential,"contrats, livrables, emails client, dossiers Drive",Explicit allow-list requise
+RH / finance / juridique,confidential,"paie agrégée, comptabilité, contentieux courant",Monter en restricted si données nominatives sensibles ou secret fort
+Très sensible,restricted,"secrets, M&A, santé, contentieux critique, paie détaillée",Local uniquement par défaut
+Inconnu / doute,confidential,"source nouvellement ajoutée",Choisir la sensibilité supérieure jusqu'à revue humaine

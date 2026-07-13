@@ -1,0 +1,29 @@
+Robb Agents
+Copyright 2026 Robinswood
+
+Robb Agents is an open-source Robinswood distribution based on Craft Agents OSS.
+Robb-specific modifications are released under the MIT License. Portions derived
+from Craft Agents OSS retain the upstream Apache License 2.0 notices and patent
+license terms; see LICENSE-APACHE.
+
+The Robb Agents Open Source tree intentionally does not include or depend on any
+private Robinswood-hosted proxy/update endpoint. Distributors may configure their
+own endpoints outside this public tree.
+
+Craft, Craft Agents, and related Craft logos are trademarks of Craft Docs Ltd.
+Robb Agents is not an official Craft Docs Ltd. distribution.
+
+Upstream project attribution:
+Craft Agents
+Copyright 2026 Craft Docs Ltd.
+https://craft.do
+
+---
+
+This project uses the Claude Agent SDK, which is subject to Anthropic's
+Commercial Terms of Service: https://www.anthropic.com/legal/commercial-terms
+
+---
+
+Third-party dependencies are listed in package.json files and are subject
+to their respective licenses.
