@@ -136,7 +136,7 @@ jobs:
           platform=macos-${{ matrix.arch }}
           signing=$([[ "${{ needs.preflight.outputs.publish }}" == "true" ]] && echo verified-developer-id-and-notarized || echo unsigned-test-artifact)
           EOF
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: macos-${{ matrix.arch }}
           retention-days: 14
@@ -193,7 +193,7 @@ jobs:
         run: |
           $installer = Get-ChildItem apps/electron/release -Filter 'Robb-Agents-x64*.exe' | Sort-Object Length -Descending | Select-Object -First 1
           powershell -ExecutionPolicy Bypass -File scripts/robinswood-windows-installer-e2e.ps1 -Installer $installer.FullName
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: windows-x64
           retention-days: 14
