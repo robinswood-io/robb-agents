@@ -13,7 +13,7 @@ import type { BackendConfig, PostInitResult, PermissionRequestType, SdkMcpServer
 // Plan types are used by UI components; not needed in craft-agent.ts since Safe Mode is user-controlled
 import { parseError, type AgentError } from './errors.ts';
 import { mapClaudeSdkAssistantError, type ClaudeSdkApiError } from './claude-sdk-error-mapper.ts';
-import { runErrorDiagnostics } from './diagnostics.ts';
+import { redactDiagnosticText, runErrorDiagnostics } from './diagnostics.ts';
 import { loadStoredConfig, loadConfigDefaults, type Workspace, type AuthType, getDefaultLlmConnection, getLlmConnection } from '../config/storage.ts';
 import { getValidClaudeOAuthToken } from '../auth/state.ts';
 import {
@@ -2295,20 +2295,22 @@ This is a branched conversation. All prior messages in this conversation are par
                 { key: 's', label: 'Check settings', command: '/settings', action: 'settings' as const },
               ];
 
+          const safeStderrContext = stderrContext ? redactDiagnosticText(stderrContext) : undefined;
+          const safeRawErrorMessage = redactDiagnosticText(rawErrorMsg);
           yield {
             type: 'typed_error',
             error: {
               code: diagnostics.code,
               title: diagnostics.title,
               message: diagnostics.message,
-              // Include stderr in details if we captured any useful output
-              details: stderrContext
-                ? [...(diagnostics.details || []), `SDK stderr: ${stderrContext}`]
+              // Subprocess stderr is useful, but must never become a credential channel.
+              details: safeStderrContext
+                ? [...(diagnostics.details || []), `SDK stderr: ${safeStderrContext}`]
                 : diagnostics.details,
               actions,
               canRetry: diagnostics.code !== 'billing_error' && diagnostics.code !== 'invalid_credentials',
               retryDelayMs: 1000,
-              originalError: stderrContext || rawErrorMsg,
+              originalError: safeStderrContext || safeRawErrorMessage,
             },
           };
           yield { type: 'complete' };

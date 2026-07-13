@@ -48,6 +48,22 @@ interface CheckResult {
   failMessage?: string;
 }
 
+/**
+ * Remove credential-shaped values before diagnostics are stored or returned to
+ * the renderer. Diagnostics remain actionable but never become a credential
+ * transport channel through provider errors or subprocess stderr.
+ */
+export function redactDiagnosticText(value: string): string {
+  return value
+    .replace(/(authorization\s*:\s*bearer\s+)[^\s,;]+/gi, '$1[REDACTED]')
+    .replace(/(bearer\s+)[^\s,;]+/gi, '$1[REDACTED]')
+    .replace(/(authorization\s*:\s*(?!bearer\s+))[^\s,"'};]+/gi, '$1[REDACTED]')
+    .replace(/((?:api[_-]?key|access[_-]?token|refresh[_-]?token|token|secret|password)\s*[=:]\s*["']?)[^\s,"'};]+/gi, '$1[REDACTED]')
+    .replace(/\b(?:sk|rk|pk)_[A-Za-z0-9_-]{12,}\b/g, '[REDACTED]')
+    .replace(/\bop:\/\/[^\s,"'}]+/gi, '[REDACTED]')
+    .replace(/(https?:\/\/)[^\s/@:]+:[^\s/@]+@/gi, '$1[REDACTED]@')
+}
+
 /** Run a check with a timeout, returns default result if times out */
 async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, defaultValue: T): Promise<T> {
   const timeoutPromise = new Promise<T>((resolve) => setTimeout(() => resolve(defaultValue), timeoutMs));
@@ -430,21 +446,22 @@ export async function runErrorDiagnostics(config: DiagnosticConfig): Promise<Dia
   // Collect details and find first failure
   let firstFailure: CheckResult | null = null;
   for (const result of results) {
-    details.push(result.detail);
+    details.push(redactDiagnosticText(result.detail));
     if (!result.ok && !firstFailure) {
       firstFailure = result;
     }
   }
 
-  // Add raw error to details
-  details.push(`Raw error: ${rawError.slice(0, 200)}${rawError.length > 200 ? '...' : ''}`);
+  // Retain a short, redacted error signature for support diagnosis.
+  const safeRawError = redactDiagnosticText(rawError)
+  details.push(`Raw error: ${safeRawError.slice(0, 200)}${safeRawError.length > 200 ? '...' : ''}`);
 
   // Return specific issue if found
   if (firstFailure && firstFailure.failCode && firstFailure.failTitle && firstFailure.failMessage) {
     return {
       code: firstFailure.failCode,
       title: firstFailure.failTitle,
-      message: firstFailure.failMessage,
+      message: redactDiagnosticText(firstFailure.failMessage),
       details,
     };
   }

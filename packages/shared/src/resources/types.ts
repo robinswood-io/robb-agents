@@ -45,7 +45,7 @@ export interface SourceBundleEntry {
   slug: string
   /** Sanitized source config — no credentials, auth state reset */
   config: FolderSourceConfig
-  /** All non-hidden regular files except config.json (guide.md, icons, permissions, docs, etc.) */
+  /** Portable non-hidden files except config.json and credential/private-key shaped files. */
   files: BundleFile[]
 }
 
@@ -57,7 +57,7 @@ export interface SourceBundleEntry {
 export interface SkillBundleEntry {
   /** Skill slug (folder name) */
   slug: string
-  /** All non-hidden regular files in the skill directory */
+  /** Portable non-hidden files, excluding credential/private-key shaped files. */
   files: BundleFile[]
 }
 

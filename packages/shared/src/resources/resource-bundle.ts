@@ -110,6 +110,43 @@ function sanitizeSourceConfig(config: FolderSourceConfig): { config: FolderSourc
 // ============================================================
 
 /**
+ * Portable resource bundles must not carry credential stores or private keys.
+ * Hidden files are already skipped by collectDirectoryFiles; this list covers
+ * common non-hidden filenames that may otherwise be accidentally committed.
+ */
+const SENSITIVE_RESOURCE_FILE_NAMES = new Set([
+  'credentials.json',
+  'credential.json',
+  'secrets.json',
+  'secret.json',
+  'tokens.json',
+  'token.json',
+  'auth.json',
+  'oauth.json',
+])
+const SENSITIVE_RESOURCE_FILE_EXTENSIONS = ['.pem', '.key', '.p12', '.pfx', '.kdbx']
+
+export function isSensitiveResourceBundleFile(relativePath: string): boolean {
+  const fileName = basename(relativePath).toLowerCase()
+  if (SENSITIVE_RESOURCE_FILE_NAMES.has(fileName)) return true
+  if (SENSITIVE_RESOURCE_FILE_EXTENSIONS.some(extension => fileName.endsWith(extension))) return true
+  return /(?:credential|secret|token|oauth|auth)(?:[-_.][\w-]+)?\.(?:json|ya?ml|toml|ini)$/i.test(fileName)
+}
+
+function collectPortableResourceFiles(
+  directory: string,
+  label: string,
+  warnings: string[],
+  options?: { skipFiles?: Set<string> },
+): BundleFile[] {
+  return collectDirectoryFiles(directory, options).filter((file) => {
+    if (!isSensitiveResourceBundleFile(file.relativePath)) return true
+    warnings.push(`${label}: excluded sensitive file '${file.relativePath}' from export`)
+    return false
+  })
+}
+
+/**
  * Export workspace resources to a portable ResourceBundle.
  *
  * @param workspaceRootPath - Absolute path to workspace root
@@ -204,7 +241,7 @@ function exportSources(
     warnings.push(...sanitizeWarnings)
 
     // Collect all files except config.json (which travels as structured data)
-    const files = collectDirectoryFiles(sourcePath, {
+    const files = collectPortableResourceFiles(sourcePath, `Source '${slug}'`, warnings, {
       skipFiles: new Set(['config.json']),
     })
 
@@ -246,7 +283,7 @@ function exportSkills(
     }
 
     // Collect all files in the skill directory
-    const files = collectDirectoryFiles(skillDir)
+    const files = collectPortableResourceFiles(skillDir, `Skill '${slug}'`, warnings)
 
     // Validate that SKILL.md is present
     const hasSkillMd = files.some(f => f.relativePath === 'SKILL.md')
@@ -605,6 +642,8 @@ function validateFileEntries(files: BundleFile[], prefix: string, errors: string
     const fileError = validateBundleFile(file)
     if (fileError) {
       errors.push(`${prefix}.files[${j}]: ${fileError}`)
+    } else if (isSensitiveResourceBundleFile(file.relativePath)) {
+      errors.push(`${prefix}.files[${j}]: sensitive file '${file.relativePath}' is not allowed in a resource bundle`)
     }
   }
 }

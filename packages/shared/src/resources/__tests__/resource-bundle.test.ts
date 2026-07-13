@@ -208,6 +208,27 @@ describe('resource-bundle', () => {
       expect(paths).not.toContain('config.json')
     })
 
+    it('excludes non-hidden credential and private-key files from exports', () => {
+      const wsDir = createTestWorkspace(tmpDir)
+      createTestSource(wsDir, 'safe-source')
+      createTestSkill(wsDir, 'safe-skill', {
+        'credentials.json': '{"token":"must-not-export"}',
+        'keys/client.pem': 'private-key-material',
+        'guide.md': '# Extra guide',
+      })
+      writeFileSync(join(wsDir, 'sources', 'safe-source', 'oauth-token.yaml'), 'access_token: must-not-export')
+
+      const { bundle, warnings } = exportResources(wsDir, { sources: 'all', skills: 'all' })
+      const sourcePaths = bundle.resources.sources![0]!.files.map(file => file.relativePath)
+      const skillPaths = bundle.resources.skills![0]!.files.map(file => file.relativePath)
+
+      expect(sourcePaths).not.toContain('oauth-token.yaml')
+      expect(skillPaths).not.toContain('credentials.json')
+      expect(skillPaths).not.toContain('keys/client.pem')
+      expect(skillPaths).toContain('SKILL.md')
+      expect(warnings.filter(warning => warning.includes('excluded sensitive file'))).toHaveLength(3)
+    })
+
     it('exports skills with all auxiliary files', () => {
       const wsDir = createTestWorkspace(tmpDir)
       createTestSkill(wsDir, 'pdf', {
@@ -437,6 +458,23 @@ describe('resource-bundle', () => {
       const { valid, errors } = validateResourceBundle({ version: 2, exportedAt: 1, resources: {} })
       expect(valid).toBe(false)
       expect(errors.some(e => e.includes('version'))).toBe(true)
+    })
+
+    it('rejects sensitive files before import', () => {
+      const bundle: ResourceBundle = {
+        version: 1,
+        exportedAt: Date.now(),
+        resources: {
+          skills: [{ slug: 'unsafe-skill', files: [
+            makeBundleFile('SKILL.md', '# Safe-looking skill'),
+            makeBundleFile('credentials.json', '{"token":"must-not-import"}'),
+          ] }],
+        },
+      }
+
+      const { valid, errors } = validateResourceBundle(bundle)
+      expect(valid).toBe(false)
+      expect(errors.some(error => error.includes("sensitive file 'credentials.json'"))).toBe(true)
     })
 
     it('rejects duplicate source slugs', () => {
