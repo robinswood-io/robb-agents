@@ -11,7 +11,7 @@ A version tag (`vX.Y.Z`) starts the **signed public release** workflow. It first
 - Windows x64 NSIS installer;
 - SHA-256 checksums for every artifact.
 
-Artifacts are attached to the GitHub Release. Consumers should obtain `SHA256SUMS.txt` from the same release and compare hashes before opening an installer.
+Artifacts are attached to the GitHub Release together with `SHA256SUMS.txt`, a release SBOM (`SBOM.spdx.json`), and platform provenance records. Consumers should obtain checksums from the same release and compare hashes before opening an installer. When the repository is public, GitHub also publishes Sigstore-backed build provenance attestations for the checksum subjects.
 
 ## Local builds
 
@@ -49,11 +49,13 @@ The release smoke test requires a valid Developer ID signature, a successful Gat
 
 ### Windows
 
-A distributable Windows release needs a valid Authenticode certificate provided as `CSC_LINK` with `CSC_KEY_PASSWORD`, or a configured `CSC_NAME` certificate:
+The current release workflow supports a valid Authenticode certificate provided as `CSC_LINK` with `CSC_KEY_PASSWORD`, or a configured `CSC_NAME` certificate:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File apps/electron/scripts/build-win.ps1 -Release
 ```
+
+Robb Agents is also prepared for the SignPath Foundation trusted-build route. It remains **inactive** until SignPath approves the project and provides the organization, project, policy, and artifact-configuration values. The official preparation checklist is in [`.signpath/README.md`](../../.signpath/README.md); do not add placeholder secrets or represent an unsigned installer as SignPath-signed.
 
 The installer is per-user by default, supports a selectable install directory, and preserves user data on uninstall unless the user explicitly removes it.
 
@@ -66,7 +68,13 @@ GitHub Actions refuses to publish a version tag until all corresponding secrets 
 
 Store these values only as repository or organization Actions secrets. Never add a certificate, password, token, or API-key file to Git, a pull request, an issue, or an agent prompt.
 
-The release workflow publishes provenance evidence (tag, commit SHA, platform and verified signing state) plus `SHA256SUMS.txt`. Its Windows validation performs a real isolated install/uninstall and verifies that the installed Mistral Vibe ACP bridge is present.
+The release workflow publishes provenance evidence (tag, commit SHA, platform and verified signing state), `SHA256SUMS.txt`, and an SPDX SBOM. Public repositories also publish GitHub/Sigstore build provenance attestations. Its Windows validation performs a real isolated install/uninstall and verifies that the installed Mistral Vibe ACP bridge is present.
+
+## Public visibility and protected publication
+
+Robb Agents is designed as a public open-source project. SignPath Foundation verification, GitHub Free branch protection, public GitHub artifact attestations, and public GitHub Release distribution all require the repository to be public. Until then, the release workflow remains technically fail-closed for unsigned publication but protected-environment reviewer rules and public attestations are unavailable.
+
+The workflow declares a single `release` deployment environment. Once public visibility (or a GitHub plan supporting protected private environments) is available, configure it with at least one required reviewer and scope signing secrets to that environment rather than repository-wide secrets.
 
 ## Verification checklist
 
@@ -76,4 +84,5 @@ Before publishing a signed release:
 2. SHA-256 checksums match the released binaries.
 3. macOS `codesign --verify`, `spctl --assess`, and `xcrun stapler validate` pass.
 4. Windows installer starts successfully in a clean Windows environment and passes SmartScreen/Authenticode checks.
-5. The release contains no credentials, private endpoints, or duplicate/ambiguous artifacts.
+5. `SBOM.spdx.json` is present and `gh attestation verify` succeeds for public release artifacts.
+6. The release contains no credentials, private endpoints, or duplicate/ambiguous artifacts.

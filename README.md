@@ -82,6 +82,8 @@ Robb keeps billing/authentication modes explicit:
 
 ## Privacy and distribution policy
 
+Read the complete [Privacy Policy](PRIVACY.md).
+
 - Robb does **not** ship a Robinswood private updater, proxy, telemetry endpoint, credential service, or required cloud account.
 - `CRAFT_CONFIG_DIR` remains available for isolated/local configuration.
 - GitHub Releases and self-hosted forks are the OSS distribution mechanism. Auto-update is deliberately disabled in this repository.

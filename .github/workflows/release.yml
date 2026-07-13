@@ -18,6 +18,8 @@ on:
 
 permissions:
   contents: write
+  attestations: write
+  id-token: write
 
 concurrency:
   group: robb-release-${{ github.ref }}
@@ -206,6 +208,12 @@ jobs:
     if: needs.preflight.outputs.publish == 'true'
     needs: [preflight, macos, windows]
     runs-on: ubuntu-latest
+    # This environment is intentionally the single publication boundary. Configure
+    # required reviewers once the repository is public or on a GitHub plan that
+    # supports protected private environments.
+    environment:
+      name: release
+      url: https://github.com/${{ github.repository }}/releases/tag/${{ needs.preflight.outputs.tag }}
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -227,6 +235,23 @@ jobs:
             echo '## Verification'
             echo 'Verify downloaded artifacts against SHA256SUMS.txt before installation.'
           } > release-assets/RELEASE-STATUS.md
+      - name: Generate release SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          path: release-assets
+          format: spdx-json
+          output-file: release-assets/SBOM.spdx.json
+          artifact-name: robb-agents-${{ needs.preflight.outputs.tag }}.spdx.json
+          upload-artifact: false
+          upload-release-assets: false
+      # GitHub Free publishes attestations only for public repositories. Keep the
+      # workflow fail-closed for signing; this step becomes mandatory evidence as
+      # soon as the intended public OSS visibility is enabled.
+      - name: Attest public release artifacts
+        if: github.event.repository.private == false
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-checksums: release-assets/SHA256SUMS.txt
       - name: Create immutable public GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
