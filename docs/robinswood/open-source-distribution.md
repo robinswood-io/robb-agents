@@ -74,6 +74,14 @@ The release workflow publishes provenance evidence (tag, commit SHA, platform an
 
 Robb Agents is designed as a public open-source project. SignPath Foundation verification, GitHub Free branch protection, public GitHub artifact attestations, and public GitHub Release distribution all require the repository to be public. Until then, the release workflow remains technically fail-closed for unsigned publication but protected-environment reviewer rules and public attestations are unavailable.
 
+Before changing repository visibility, run the explicit preflight against the candidate public ref:
+
+```bash
+python3 scripts/robinswood-public-preflight.py --ref robinswood/main
+```
+
+It checks current tracked content and all history reachable from that ref for known legacy private-distribution markers and common secret patterns. It complements, but does not replace, a dedicated history-aware secret scanner. If it fails, remediate or replace the reachable history before publishing.
+
 The workflow declares a single `release` deployment environment. Once public visibility (or a GitHub plan supporting protected private environments) is available, configure it with at least one required reviewer and scope signing secrets to that environment rather than repository-wide secrets.
 
 ## Verification checklist

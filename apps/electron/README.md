@@ -130,34 +130,16 @@ This means:
 
 ## Environment Variables
 
-### Gmail OAuth (via 1Password CLI)
+### Gmail OAuth (local development only)
 
-Gmail OAuth credentials are synced from 1Password to a local `.env` file.
-
-**One-time setup:**
-```bash
-# 1. Install 1Password CLI
-brew install 1password-cli
-
-# 2. Enable CLI integration: 1Password app → Settings → Developer → CLI Integration
-
-# 3. Sync secrets (requires Touch ID once)
-bun run sync-secrets
-```
-
-**That's it!** Now `bun run electron:dev` and `bun run electron:start` work without prompts.
-
-**How it works:**
-- `.env.1password` contains `op://` references to the `Dev_Craft_Agents` vault
-- `bun run sync-secrets` resolves references → writes `.env` (gitignored)
-- Secrets are baked into the build at compile time via esbuild `--define` flags
+For local development, copy `.env.example` to a gitignored `.env` file and supply credentials that you control. Do not commit OAuth credentials, use a shared password-manager reference in this repository, or bake private credentials into distributable builds.
 
 **Creating your own OAuth credentials:**
-1. Go to [Google Cloud Console](https://console.cloud.google.com/) → APIs & Services → Credentials
-2. Create OAuth Client ID (Desktop app type)
-3. Enable required scopes in OAuth consent screen:
-   - `https://www.googleapis.com/auth/gmail.readonly`
-   - `https://www.googleapis.com/auth/userinfo.email`
+1. Go to [Google Cloud Console](https://console.cloud.google.com/) → APIs & Services → Credentials.
+2. Create an OAuth Client ID for a desktop application.
+3. Configure only the scopes required by your local test scenario.
+
+Production users configure their own source credentials through the app’s normal connection setup. Robb Agents must not depend on a maintainer’s private vault, proxy, or OAuth application for normal OSS operation.
 
 ## Build Process
 

@@ -1,0 +1,22 @@
+# Robb Agents ownership boundaries. GitHub rulesets enforce this file once the
+# public OSS repository has required code-owner review enabled.
+
+* @Aoleon
+
+# Release integrity and installer supply chain
+/.github/workflows/release.yml @Aoleon
+/.github/workflows/codeql.yml @Aoleon
+/.github/dependabot.yml @Aoleon
+/.signpath/ @Aoleon
+/apps/electron/scripts/build-dmg.sh @Aoleon
+/apps/electron/scripts/build-linux.sh @Aoleon
+/apps/electron/scripts/build-win.ps1 @Aoleon
+/scripts/robinswood-signing-preflight.py @Aoleon
+/scripts/robinswood-packaged-smoke.py @Aoleon
+/scripts/robinswood-windows-packaged-smoke.py @Aoleon
+
+# Public governance and user data boundary
+/PRIVACY.md @Aoleon
+/SECURITY.md @Aoleon
+/TRADEMARK.md @Aoleon
+/docs/robinswood/open-source-distribution.md @Aoleon
