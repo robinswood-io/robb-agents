@@ -97,6 +97,27 @@ export interface RoutingPolicyValidationResult {
   warnings: string[];
 }
 
+/** Read-only explanation for one connection in a policy simulation. */
+export interface RoutingPolicySimulationCandidate {
+  slug: string;
+  providerType: LlmProviderType;
+  allowed: boolean;
+  /** Deterministic policy constraints which excluded this candidate. */
+  exclusionReasons: string[];
+}
+
+/**
+ * Explain a prospective policy decision without starting an agent, checking a
+ * credential, or mutating workspace/session state. Safe to expose in a UI.
+ */
+export interface RoutingPolicySimulation {
+  context: Required<Pick<RoutingPolicyContext, 'sensitivity'>> & Omit<RoutingPolicyContext, 'sensitivity'>;
+  decision: RoutingPolicyDecision;
+  matchedRuleIds: string[];
+  unmatchedRuleIds: string[];
+  candidates: RoutingPolicySimulationCandidate[];
+}
+
 const DEFAULT_EXPLICIT_ALLOW_SENSITIVITIES: RoutingSensitivity[] = ['confidential', 'restricted'];
 export const ALL_ROUTING_SENSITIVITIES: RoutingSensitivity[] = ['public', 'internal', 'confidential', 'restricted'];
 const ROUTING_SENSITIVITY_RANK: Record<RoutingSensitivity, number> = {
@@ -224,6 +245,61 @@ export function validateRoutingPolicy(policy: RoutingPolicy, knownConnectionSlug
   }
 
   return { valid: errors.length === 0, errors, warnings };
+}
+
+export function simulateRoutingPolicy(
+  policy: RoutingPolicy | undefined,
+  connections: Array<Pick<LlmConnection, 'slug' | 'providerType'>>,
+  context: RoutingPolicyContext = {},
+): RoutingPolicySimulation {
+  const sensitivity = context.sensitivity ?? policy?.defaultSensitivity ?? 'internal';
+  const enrichedContext = { ...context, sensitivity };
+  const matchedRules = policy?.enabled === false || !policy
+    ? []
+    : (policy.rules ?? []).filter(rule => ruleMatches(rule, enrichedContext));
+  const matchedRuleIds = matchedRules.map(rule => rule.id);
+  const unmatchedRuleIds = policy?.enabled === false || !policy
+    ? []
+    : (policy.rules ?? []).filter(rule => !matchedRules.includes(rule)).map(rule => rule.id);
+  const decision = resolveRoutingPolicy(policy, connections, enrichedContext);
+  const explicitAllowRequired = Boolean(
+    policy
+    && policy.enabled !== false
+    && (policy.requireExplicitAllowFor ?? DEFAULT_EXPLICIT_ALLOW_SENSITIVITIES).includes(sensitivity)
+    && !hasExplicitAllow(policy, matchedRules),
+  );
+
+  const candidates = connections.map((connection): RoutingPolicySimulationCandidate => {
+    const exclusionReasons: string[] = [];
+    if (policy?.enabled !== false && policy) {
+      if ((policy.defaultAllowConnectionSlugs?.length ?? 0) > 0 && !policy.defaultAllowConnectionSlugs!.includes(connection.slug)) {
+        exclusionReasons.push('not-in-default-allow-list');
+      }
+      for (const rule of matchedRules) {
+        if ((rule.allowConnectionSlugs?.length ?? 0) > 0 && !rule.allowConnectionSlugs!.includes(connection.slug)) {
+          exclusionReasons.push(`rule:${rule.id}:not-in-connection-allow-list`);
+        }
+        if ((rule.allowProviderTypes?.length ?? 0) > 0 && !rule.allowProviderTypes!.includes(connection.providerType)) {
+          exclusionReasons.push(`rule:${rule.id}:provider-not-allowed`);
+        }
+        if (rule.denyConnectionSlugs?.includes(connection.slug)) {
+          exclusionReasons.push(`rule:${rule.id}:connection-denied`);
+        }
+      }
+      if (policy.defaultDenyConnectionSlugs?.includes(connection.slug)) {
+        exclusionReasons.push('default-connection-denied');
+      }
+      if (explicitAllowRequired) exclusionReasons.push('explicit-allow-required-for-sensitivity');
+    }
+    return {
+      slug: connection.slug,
+      providerType: connection.providerType,
+      allowed: decision.allowedConnectionSlugs.includes(connection.slug),
+      exclusionReasons: unique(exclusionReasons),
+    };
+  });
+
+  return { context: enrichedContext, decision, matchedRuleIds, unmatchedRuleIds, candidates };
 }
 
 export function resolveRoutingPolicy(

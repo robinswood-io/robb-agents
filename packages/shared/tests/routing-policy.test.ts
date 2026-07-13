@@ -2,6 +2,7 @@ import { describe, expect, it } from 'bun:test';
 import {
   maxRoutingSensitivity,
   resolveRoutingPolicy,
+  simulateRoutingPolicy,
   validateRoutingPolicy,
   type RoutingPolicy,
 } from '../src/config/routing-policy.ts';
@@ -56,6 +57,48 @@ describe('routing policy validation', () => {
     const result = validateRoutingPolicy(policy);
     expect(result.valid).toBe(false);
     expect(result.errors).toContain('Duplicate routingPolicy rule id: same');
+  });
+});
+
+describe('simulateRoutingPolicy()', () => {
+  it('explains matching rules and exclusions without mutating routing state', () => {
+    const policy: RoutingPolicy = {
+      version: 1,
+      enabled: true,
+      defaultAllowConnectionSlugs: ['local-ollama', 'ovh-sovereign', 'anthropic-direct'],
+      defaultDenyConnectionSlugs: ['anthropic-direct'],
+      rules: [{
+        id: 'confidential-sovereign',
+        when: { sensitivity: ['confidential'] },
+        allowProviderTypes: ['pi_compat'],
+        preferConnectionSlugs: ['ovh-sovereign'],
+      }],
+    };
+
+    const simulation = simulateRoutingPolicy(policy, connections, {
+      sensitivity: 'confidential',
+      requestedConnectionSlug: 'anthropic-direct',
+    });
+
+    expect(simulation.context.sensitivity).toBe('confidential');
+    expect(simulation.decision.selectedConnectionSlug).toBe('ovh-sovereign');
+    expect(simulation.matchedRuleIds).toEqual(['confidential-sovereign']);
+    expect(simulation.unmatchedRuleIds).toEqual([]);
+    expect(simulation.candidates.find(candidate => candidate.slug === 'openrouter-balanced')).toMatchObject({
+      allowed: false,
+      exclusionReasons: ['not-in-default-allow-list', 'rule:confidential-sovereign:provider-not-allowed'],
+    });
+    expect(simulation.candidates.find(candidate => candidate.slug === 'anthropic-direct')).toMatchObject({
+      allowed: false,
+      exclusionReasons: ['rule:confidential-sovereign:provider-not-allowed', 'default-connection-denied'],
+    });
+  });
+
+  it('explains default-deny when a sensitive turn lacks an explicit allow-list', () => {
+    const simulation = simulateRoutingPolicy({ version: 1, enabled: true }, connections, { sensitivity: 'restricted' });
+
+    expect(simulation.decision.selectedConnectionSlug).toBeUndefined();
+    expect(simulation.candidates.every(candidate => candidate.exclusionReasons.includes('explicit-allow-required-for-sensitivity'))).toBe(true);
   });
 });
 
