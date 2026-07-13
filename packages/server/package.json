@@ -31,8 +31,8 @@
     "@craft-agent/shared": "workspace:*"
   },
   "devDependencies": {
-    "typescript": "^5.8.2",
-    "@types/node": "^22.0.0",
+    "typescript": "^7.0.2",
+    "@types/node": "^26.1.1",
     "ws": "^8.16.0"
   }
 }
