@@ -249,7 +249,7 @@ jobs:
       # soon as the intended public OSS visibility is enabled.
       - name: Attest public release artifacts
         if: github.event.repository.private == false
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@v4
         with:
           subject-checksums: release-assets/SHA256SUMS.txt
       - name: Create immutable public GitHub Release
