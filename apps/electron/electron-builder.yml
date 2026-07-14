@@ -207,6 +207,9 @@ linux:
   # Do not inherit the monorepo workspace package name (@craft-agent/electron):
   # AppImage requires a filesystem-safe executable name.
   executableName: robb-agents
+  # Keep the desktop filename and StartupWMClass aligned with package.json's
+  # desktopName instead of the monorepo workspace package name.
+  syncDesktopName: true
   icon: resources/robinswood-icon.png
   category: Utility
   maintainer: "Robb Agents Contributors"
