@@ -79,7 +79,7 @@ def main() -> None:
         require(root / "AppRun", "AppImage launcher")
         desktop = find_one(root, "*.desktop", "desktop entry")
         desktop_text = desktop.read_text(encoding="utf-8", errors="replace")
-        if "Name=Robb Agents" not in desktop_text or "io.robinswood.robbagents" not in desktop_text:
+        if "Name=Robb Agents" not in desktop_text or "Exec=robb-agents" not in desktop_text:
             fail(f"Invalid desktop metadata in {desktop.relative_to(root)}")
 
         find_one(root, "resources/app/dist/resources/pi-agent-server/index.js", "Pi agent server")
