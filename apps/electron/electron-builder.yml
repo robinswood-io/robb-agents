@@ -204,6 +204,10 @@ nsis:
   multiLanguageInstaller: true
 
 linux:
+  # Do not inherit the monorepo workspace package name (@craft-agent/electron):
+  # AppImage requires a filesystem-safe executable name.
+  executableName: robb-agents
+  desktopName: Robb Agents
   icon: resources/robinswood-icon.png
   category: Utility
   maintainer: "Robb Agents Contributors"
