@@ -1,0 +1,36 @@
+name: Upstream review watch
+
+on:
+  schedule:
+    - cron: "30 6 * * 3"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  report:
+    name: Report upstream changes
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Fetch upstream main without changing Robb history
+        run: |
+          set -euo pipefail
+          git remote add craft-upstream https://github.com/craft-ai-agents/craft-agents-oss.git
+          git fetch --no-tags --depth=200 craft-upstream main
+          git update-ref refs/remotes/upstream/main FETCH_HEAD
+      - name: Generate non-mutating review report
+        run: |
+          python3 scripts/robinswood-upstream-watch.py \
+            --baseline docs/robinswood/upstream-watch-baseline.json \
+            --upstream-ref upstream/main \
+            --output upstream-watch-report.md
+          cat upstream-watch-report.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: upstream-watch-report
+          retention-days: 30
+          path: upstream-watch-report.md

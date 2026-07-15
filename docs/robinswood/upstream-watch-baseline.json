@@ -1,0 +1,7 @@
+{
+  "upstreamRepository": "https://github.com/craft-ai-agents/craft-agents-oss",
+  "upstreamRef": "main",
+  "reviewedUpstreamSha": "4289b16097322e9911d3078d8a64bd8c830717c3",
+  "reviewedAt": "2026-07-15T07:30:00Z",
+  "policy": "report-only; no automatic merge, rebase, cherry-pick, force-push, issue creation, or pull request creation"
+}
