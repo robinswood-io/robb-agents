@@ -192,8 +192,10 @@ def check_robinswood_packaging() -> None:
         fail("afterPack.cjs must use Robinswood icon assets and avoid hardcoded Craft Agents.app")
 
     paths = (ROOT / "packages/shared/src/config/paths.ts").read_text(encoding="utf-8")
-    if "process.env.CRAFT_CONFIG_DIR" not in paths or "'.robb-agents'" not in paths:
-        fail("Default CONFIG_DIR must preserve CRAFT_CONFIG_DIR override and fall back to ~/.robb-agents")
+    if "process.env.CRAFT_CONFIG_DIR" not in paths or "join(home, '.craft-agent')" not in paths:
+        fail("Default CONFIG_DIR must preserve CRAFT_CONFIG_DIR override and use existing ~/.craft-agent data without migration")
+    if "'.robb-agents'" in paths:
+        fail("Default CONFIG_DIR must not isolate Robb from existing Craft Agents data")
     electron_dev = (ROOT / "scripts/electron-dev.ts").read_text(encoding="utf-8")
     if "Robb Agents" not in electron_dev or ".robb-agents-${instanceNum}" not in electron_dev:
         fail("electron-dev.ts must default to Robinswood app/config naming")
