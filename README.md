@@ -85,7 +85,7 @@ Robb keeps billing/authentication modes explicit:
 Read the complete [Privacy Policy](PRIVACY.md).
 
 - Robb does **not** ship a Robinswood private updater, proxy, telemetry endpoint, credential service, or required cloud account.
-- `CRAFT_CONFIG_DIR` remains available for isolated/local configuration.
+- On first launch Robb uses the existing `~/.craft-agent` data root directly, so Craft Agents workspaces, sessions, sources, skills, projects, preferences and locally stored credentials remain available without copying or migration. Set `CRAFT_CONFIG_DIR` only when you deliberately want an isolated/local profile.
 - GitHub Releases and self-hosted forks are the OSS distribution mechanism. Auto-update is deliberately disabled in this repository.
 - Credentials remain in the selected provider’s normal local storage/OS keychain flow. Never commit `.env`, certificates, API keys, or tokens.
 

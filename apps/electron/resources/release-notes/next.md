@@ -10,6 +10,7 @@ This file accumulates release notes for the next unreleased version. PRs that ad
 - **Safer workspace sharing and diagnostics** — Resource bundles exclude credential- and private-key-shaped files, reject them on import, and report every excluded file. Provider error and SDK-stderr diagnostics redact credential-shaped values before they reach the UI.
 - **French-first, more accessible onboarding** — Remaining provider/API-key guidance is localized in French and English. Provider selection now exposes explicit selected states and live setup progress to assistive technologies.
 - **Linux AppImage release parity** — Signed-release validation now also builds, extracts and checks the Linux x64 AppImage, publishes its checksum/provenance, and verifies the bundled desktop entry plus Pi and Mistral Vibe subprocesses.
+- **Open Craft Agents data directly** — Robb now uses the existing Craft Agents data root by default, so sessions, sources, skills, projects, preferences and local credentials are available immediately without a migration or copy. Use `CRAFT_CONFIG_DIR` only for an intentionally isolated profile.
 
 ## Bug Fixes
 

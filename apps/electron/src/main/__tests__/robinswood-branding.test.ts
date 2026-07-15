@@ -104,11 +104,12 @@ describe('Robinswood visible branding', () => {
     expect(readRepoFile('apps/viewer/src/components/Header.tsx')).not.toContain('https://agents.robinswood.io')
   })
 
-  it('uses an isolated Robinswood config directory while preserving explicit env overrides', () => {
+  it('uses existing Craft Agent data by default while preserving explicit isolated-profile overrides', () => {
     const paths = readRepoFile('packages/shared/src/config/paths.ts')
     expect(paths).toContain('process.env.CRAFT_CONFIG_DIR')
-    expect(paths).toContain("'.robb-agents'")
-    expect(paths).not.toContain("join(homedir(), '.craft-agent')")
+    expect(paths).toContain("join(home, '.craft-agent')")
+    expect(paths).toContain('without copying or migrating any user data')
+    expect(paths).not.toContain("join(homedir(), '.robb-agents')")
 
     const windowState = readRepoFile('apps/electron/src/main/window-state.ts')
     expect(windowState).toContain("@craft-agent/shared/config/paths")
