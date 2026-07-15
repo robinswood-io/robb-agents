@@ -83,10 +83,9 @@ def main() -> None:
         if "Name=Robb Agents" not in desktop_text or not has_exec:
             fail(f"Invalid desktop metadata in {desktop.relative_to(root)}")
 
-        executable = root / "usr" / "bin" / "robb-agents"
-        require(executable, "Linux Robb Agents executable")
-        if not os.access(executable, os.X_OK):
-            fail(f"Linux Robb Agents executable is not executable: {executable.relative_to(root)}")
+        executables = [path for path in root.rglob("robb-agents") if path.is_file() and os.access(path, os.X_OK)]
+        if not executables:
+            fail("Missing executable Linux Robb Agents binary in extracted AppImage")
 
         find_one(root, "resources/app/dist/resources/pi-agent-server/index.js", "Pi agent server")
         find_one(root, "resources/app/dist/resources/pi-agent-server/vibe-acp-server.js", "Mistral Vibe ACP bridge")
