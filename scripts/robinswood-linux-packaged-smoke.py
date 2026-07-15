@@ -79,8 +79,14 @@ def main() -> None:
         require(root / "AppRun", "AppImage launcher")
         desktop = find_one(root, "*.desktop", "desktop entry")
         desktop_text = desktop.read_text(encoding="utf-8", errors="replace")
-        if "Name=Robb Agents" not in desktop_text or "Exec=robb-agents" not in desktop_text:
+        has_exec = any(line.startswith("Exec=") and len(line) > len("Exec=") for line in desktop_text.splitlines())
+        if "Name=Robb Agents" not in desktop_text or not has_exec:
             fail(f"Invalid desktop metadata in {desktop.relative_to(root)}")
+
+        executable = root / "usr" / "bin" / "robb-agents"
+        require(executable, "Linux Robb Agents executable")
+        if not os.access(executable, os.X_OK):
+            fail(f"Linux Robb Agents executable is not executable: {executable.relative_to(root)}")
 
         find_one(root, "resources/app/dist/resources/pi-agent-server/index.js", "Pi agent server")
         find_one(root, "resources/app/dist/resources/pi-agent-server/vibe-acp-server.js", "Mistral Vibe ACP bridge")
