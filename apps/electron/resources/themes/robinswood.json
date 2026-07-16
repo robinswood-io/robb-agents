@@ -1,0 +1,35 @@
+{
+  "name": "Robinswood",
+  "description": "Warm ivory surfaces, midnight structure, and coral momentum",
+  "author": "Robinswood",
+  "license": "MIT",
+  "supportedModes": ["light", "dark"],
+  "shikiTheme": {
+    "light": "github-light",
+    "dark": "github-dark"
+  },
+  "background": "#030116",
+  "foreground": "#FFF9F2",
+  "accent": "#F6A59B",
+  "info": "#E7BE6B",
+  "success": "#6DC9B2",
+  "destructive": "#FF9CA4",
+  "paper": "#09052C",
+  "navigator": "#01000B",
+  "input": "#0E0938",
+  "popover": "#0C0630",
+  "popoverSolid": "#0C0630",
+  "dark": {
+    "background": "#02010F",
+    "foreground": "#FFF9F2",
+    "accent": "#F6A59B",
+    "info": "#E7BE6B",
+    "success": "#6DC9B2",
+    "destructive": "#FF9CA4",
+    "paper": "#070322",
+    "navigator": "#000009",
+    "input": "#0B072E",
+    "popover": "#090429",
+    "popoverSolid": "#090429"
+  }
+}

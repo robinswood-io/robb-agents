@@ -41,6 +41,8 @@ export interface SessionItemProps {
   isSelected: boolean
   isFirstInGroup: boolean
   isInMultiSelect: boolean
+  /** Visual nesting level in the sidebar tree. 0 = top-level chat. */
+  hierarchyDepth?: number
   onSelect: () => void
   onToggleSelect?: () => void
   onRangeSelect?: () => void
@@ -52,6 +54,7 @@ export function SessionItem({
   isSelected,
   isFirstInGroup,
   isInMultiSelect,
+  hierarchyDepth = 0,
   onSelect,
   onToggleSelect,
   onRangeSelect,
@@ -59,6 +62,8 @@ export function SessionItem({
   const ctx = useSessionListContext()
   const { workspaces, isCompactMode } = useAppShellContext()
   const hasRemoteWorkspaces = workspaces?.some(w => w.remoteServer) ?? false
+  const isVisualChild = hierarchyDepth > 0
+  const childIndentPx = Math.min(hierarchyDepth, 3) * 18
   const { hotkey: nextHotkey } = useActionLabel('chat.nextSearchMatch')
   const { hotkey: prevHotkey } = useActionLabel('chat.prevSearchMatch')
   const title = getSessionTitle(item)
@@ -118,10 +123,16 @@ export function SessionItem({
   return (
     <SessionProjectColorWrapper color={projectColor} treatment={projectColorTreatment}>
     <EntityRow
-      className="session-item"
-      dataAttributes={{ 'data-session-id': item.id }}
+      className={cn(
+        "session-item relative",
+        isVisualChild && "before:absolute before:left-[18px] before:top-0 before:bottom-0 before:w-px before:bg-border/60"
+      )}
+      dataAttributes={{
+        'data-session-id': item.id,
+        'data-parent-session-id': item.parentSessionId,
+      }}
       showSeparator={!isFirstInGroup}
-      separatorClassName="pl-[38px] pr-4"
+      separatorClassName={cn("pr-4", isVisualChild ? "pl-[56px]" : "pl-[38px]")}
       isSelected={isSelected}
       isInMultiSelect={isInMultiSelect}
       // When a project stripe is drawn at the leading edge, suppress EntityRow's
@@ -129,13 +140,6 @@ export function SessionItem({
       // continues to convey "selected".
       suppressSelectionBar={!!projectColor}
       onMouseDown={handleClick}
-      buttonProps={{
-        ...itemProps,
-        onKeyDown: (e: React.KeyboardEvent) => {
-          ;(itemProps as { onKeyDown: (event: React.KeyboardEvent) => void }).onKeyDown(e)
-          ctx.onKeyDown(e, item)
-        },
-      }}
       menuContent={
         <SessionMenu
           item={item}
@@ -159,6 +163,21 @@ export function SessionItem({
       }
       contextMenuContent={ctx.isMultiSelectActive && isInMultiSelect ? <BatchSessionMenu /> : undefined}
       isCompactMode={isCompactMode}
+      buttonProps={{
+        ...itemProps,
+        className: cn(
+          (itemProps as Record<string, unknown>)?.className as string | undefined,
+          isVisualChild && "border-l border-border/60 bg-foreground/[0.012]"
+        ),
+        style: {
+          ...((itemProps as { style?: React.CSSProperties }).style ?? {}),
+          ...(isVisualChild ? { marginLeft: childIndentPx } : {}),
+        },
+        onKeyDown: (e: React.KeyboardEvent) => {
+          ;(itemProps as { onKeyDown: (event: React.KeyboardEvent) => void }).onKeyDown(e)
+          ctx.onKeyDown(e, item)
+        },
+      }}
       compactMenu={({ open, onOpenChange }) => (
         <CompactSessionMenu
           open={open}

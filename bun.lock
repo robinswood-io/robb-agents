@@ -82,7 +82,6 @@
         "@types/react-dom": "^18.3.0",
         "@types/semver": "^7.7.1",
         "@types/shell-quote": "^1.7.5",
-        "@types/uuid": "^11.0.0",
         "@typescript-eslint/eslint-plugin": "^8.52.0",
         "@typescript-eslint/parser": "^8.52.0",
         "@vitejs/plugin-react": "^5.1.2",
@@ -226,9 +225,6 @@
     "packages/core": {
       "name": "@craft-agent/core",
       "version": "0.11.0",
-      "devDependencies": {
-        "@types/uuid": "^11.0.0",
-      },
       "peerDependencies": {
         "@anthropic-ai/claude-agent-sdk": "0.3.197",
         "@modelcontextprotocol/sdk": ">=1.29.0",
@@ -368,7 +364,6 @@
       },
       "devDependencies": {
         "@types/shell-quote": "^1.7.5",
-        "@types/uuid": "^11.0.0",
       },
       "peerDependencies": {
         "@anthropic-ai/claude-agent-sdk": "0.3.197",
@@ -1410,8 +1405,6 @@
     "@types/unist": ["@types/unist@3.0.3", "", {}, "sha512-ko/gIFJRv177XgZsZcBwnqJN5x/Gien8qNOn0D5bQU/zAzVf9Zt3BlcUiLqhV9y4ARk0GbT3tnUiPNgnTXzc/Q=="],
 
     "@types/use-sync-external-store": ["@types/use-sync-external-store@0.0.6", "", {}, "sha512-zFDAD+tlpf2r4asuHEj0XH6pY6i0g5NeAHPn+15wk3BV6JA69eERFXC1gyGThDkVa1zCyKr5jox1+2LbV/AMLg=="],
-
-    "@types/uuid": ["@types/uuid@11.0.0", "", { "dependencies": { "uuid": "*" } }, "sha512-HVyk8nj2m+jcFRNazzqyVKiZezyhDKrGUA3jlEcg/nZ6Ms+qHwocba1Y/AaVaznJTAM9xpdFSh+ptbNrhOGvZA=="],
 
     "@types/ws": ["@types/ws@8.18.1", "", { "dependencies": { "@types/node": "*" } }, "sha512-ThVF6DCVhA8kUGy+aazFQ4kXQ7E1Ty7A3ypFOe0IcJV8O/M511G99AW24irKrW56Wt44yG9+ij8FaqoBGkuBXg=="],
 

@@ -63,6 +63,7 @@ describe('Robinswood visible branding', () => {
   it('ships Robinswood icon assets for packaged builds', () => {
     for (const relativePath of [
       'apps/electron/resources/robinswood-icon.svg',
+      'apps/electron/resources/robinswood-icon-monochrome.svg',
       'apps/electron/resources/robinswood-icon.png',
       'apps/electron/resources/robinswood-icon.icns',
       'apps/electron/resources/robinswood-icon.ico',

@@ -89,9 +89,18 @@ def main() -> None:
 
         find_one(root, "resources/app/dist/resources/pi-agent-server/index.js", "Pi agent server")
         find_one(root, "resources/app/dist/resources/pi-agent-server/vibe-acp-server.js", "Mistral Vibe ACP bridge")
+        bundled_bun = find_one(root, "resources/app/vendor/bun/bun", "bundled Bun runtime")
+        if not os.access(bundled_bun, os.X_OK):
+            fail(f"Bundled Bun runtime is not executable: {bundled_bun}")
+        claude = find_one(root, "resources/app/node_modules/@anthropic-ai/claude-agent-sdk-binary/claude", "Claude native runtime")
+        if not os.access(claude, os.X_OK):
+            fail(f"Claude native runtime is not executable: {claude}")
+        ripgrep = find_one(root, "resources/app/node_modules/@vscode/ripgrep/bin/rg", "ripgrep runtime")
+        if not os.access(ripgrep, os.X_OK):
+            fail(f"ripgrep runtime is not executable: {ripgrep}")
 
     print(f"✓ Linux AppImage metadata for Robb Agents {expected_version()}")
-    print("✓ Linux desktop entry, Pi agent server and Mistral Vibe ACP bridge")
+    print("✓ Linux desktop entry and bundled Bun, Claude, ripgrep and Pi/Vibe runtimes")
 
 
 if __name__ == "__main__":

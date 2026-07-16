@@ -62,7 +62,11 @@ def check_local_identity() -> Check:
     configured = os.environ.get("APPLE_SIGNING_IDENTITY", "").replace("Developer ID Application: ", "").strip()
     if configured:
         return Check("Developer ID Application identity", any(configured in line for line in identities), "configured APPLE_SIGNING_IDENTITY found in Keychain")
-    return Check("Developer ID Application identity", bool(identities), "Developer ID Application identity found in Keychain")
+    return Check(
+        "Developer ID Application identity",
+        bool(identities),
+        "Developer ID Application identity found in Keychain" if identities else "no valid Developer ID Application identity found in Keychain",
+    )
 
 
 def check_signing_material(ci: bool) -> Check:

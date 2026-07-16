@@ -99,7 +99,7 @@ import { setSearchPlatform, setImageProcessor } from '@craft-agent/server-core/s
 import { createApplicationMenu } from './menu'
 import { WindowManager } from './window-manager'
 import { loadWindowState, saveWindowState } from './window-state'
-import { getWorkspaces, getWorkspaceByNameOrId, loadStoredConfig, addWorkspace, saveConfig } from '@craft-agent/shared/config'
+import { CONFIG_DIR, getWorkspaces, getWorkspaceByNameOrId, loadStoredConfig, addWorkspace, saveConfig } from '@craft-agent/shared/config'
 import { getDefaultWorkspacesDir } from '@craft-agent/shared/workspaces'
 import { initializeDocs } from '@craft-agent/shared/docs'
 import { initializeReleaseNotes } from '@craft-agent/shared/release-notes'
@@ -229,6 +229,14 @@ let pendingDeepLink: string | null = null
 // Supports multi-instance dev: CRAFT_APP_NAME env var (e.g., "Robb Agents [1]")
 app.setName(process.env.CRAFT_APP_NAME || ROBINSWOOD_APP_NAME)
 
+// Share the established Craft data root (sessions, sources, projects and
+// credentials) while isolating Electron's cache, single-instance lock and
+// local server runtime lock. This lets Craft Agents and Robb run side-by-side
+// without a data migration.
+const robbRuntimeDir = join(CONFIG_DIR, 'robb-electron')
+app.setPath('userData', robbRuntimeDir)
+process.env.CRAFT_SERVER_LOCK_DIR = robbRuntimeDir
+
 // Register as default protocol client for craftagents:// URLs
 // This must be done before app.whenReady() on some platforms
 if (process.defaultApp) {
@@ -301,8 +309,10 @@ app.on('open-url', (event, url) => {
   }
 })
 
-// Handle deeplink on Windows/Linux (single instance check)
-const gotTheLock = app.requestSingleInstanceLock()
+// Only Windows/Linux need Electron's single-instance lock for command-line
+// deeplinks. On macOS, keeping this lock would make Robb quit when Craft
+// Agents is already open, despite the apps intentionally sharing data.
+const gotTheLock = process.platform === 'darwin' || app.requestSingleInstanceLock()
 if (!gotTheLock) {
   app.quit()
 } else {
@@ -381,6 +391,7 @@ async function createInitialWindows(): Promise<void> {
 }
 
 app.whenReady().then(async () => {
+  console.error('[Robb startup] Electron ready')
   // Export packaged state as env var so logger.ts (and headless Bun) don't need 'electron'
   process.env.CRAFT_IS_PACKAGED = app.isPackaged ? 'true' : 'false'
 
@@ -403,25 +414,32 @@ app.whenReady().then(async () => {
 
   // Initialize bundled docs
   initializeDocs()
+  console.error('[Robb startup] docs initialized')
 
   // Initialize bundled release notes
   initializeReleaseNotes()
+  console.error('[Robb startup] release notes initialized')
 
   // Ensure default permissions file exists (copies bundled default.json on first run)
   ensureDefaultPermissions()
+  console.error('[Robb startup] permissions initialized')
 
   // Seed tool icons to ~/.craft-agent/tool-icons/ (copies bundled SVGs on first run)
   ensureToolIcons()
+  console.error('[Robb startup] tool icons initialized')
 
   // Seed preset themes to ~/.craft-agent/themes/ (copies bundled theme JSONs on first run)
   ensurePresetThemes()
+  console.error('[Robb startup] themes initialized')
 
   // Register thumbnail:// protocol handler (scheme was registered earlier, before app.whenReady)
   registerThumbnailHandler()
+  console.error('[Robb startup] thumbnail protocol initialized')
 
   // Re-apply proxy settings now that Electron sessions are available
   // (first call before app.whenReady only configured Node-level proxy)
   await applyConfiguredProxySettings()
+  console.error('[Robb startup] proxy settings applied')
 
   // Note: electron-updater handles pending updates internally via autoInstallOnAppQuit
 
@@ -432,8 +450,8 @@ app.whenReady().then(async () => {
     // In packaged app, resources are at dist/resources/ (same level as __dirname)
     // In dev, resources are at ../resources/ (sibling of dist/)
     const dockIconPath = [
-      join(__dirname, 'resources/icon.png'),
-      join(__dirname, '../resources/icon.png'),
+      join(__dirname, 'resources/robinswood-icon.png'),
+      join(__dirname, '../resources/robinswood-icon.png'),
     ].find(p => existsSync(p))
 
     if (dockIconPath) {
@@ -456,11 +474,14 @@ app.whenReady().then(async () => {
   }
 
   try {
+    console.error('[Robb startup] initializing window manager')
     // Initialize window manager
     windowManager = new WindowManager()
+    console.error('[Robb startup] window manager initialized')
 
     // Create the application menu (needs windowManager for New Window action)
     createApplicationMenu(windowManager)
+    console.error('[Robb startup] application menu initialized')
 
     // When CRAFT_SERVER_URL is set, this Electron instance is a thin client —
     // it only creates windows whose preload connects to the remote server.
@@ -1135,6 +1156,8 @@ app.whenReady().then(async () => {
       }
     }
   })
+}).catch((error) => {
+  console.error('[Robb startup] initialization failed:', error)
 })
 
 app.on('window-all-closed', () => {

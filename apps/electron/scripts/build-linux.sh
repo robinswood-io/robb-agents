@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ELECTRON_DIR="$(dirname "$SCRIPT_DIR")"
@@ -48,6 +48,10 @@ BUN_VERSION="bun-v1.3.9"  # Pinned version for reproducible builds
 
 echo "=== Building Robb Agents AppImage (${ARCH}) using electron-builder ==="
 
+for command in bun node npx curl unzip sha256sum python3; do
+    command -v "$command" >/dev/null || { echo "ERROR: required command not found: $command" >&2; exit 1; }
+done
+
 # 1. Clean previous build artifacts
 echo "Cleaning previous builds..."
 rm -rf "$ELECTRON_DIR/vendor"
@@ -58,7 +62,7 @@ rm -rf "$ELECTRON_DIR/release"
 # 2. Install dependencies
 echo "Installing dependencies..."
 cd "$ROOT_DIR"
-bun install
+bun install --frozen-lockfile
 
 # 3. Download Bun binary with checksum verification
 echo "Downloading Bun ${BUN_VERSION} for linux-${ARCH}..."
@@ -108,7 +112,6 @@ if [ ! -d "$SDK_BIN_SOURCE" ]; then
     echo "Cross-arch build: ${SDK_BIN_PKG} not in node_modules — fetching from npm..."
     SDK_VERSION=$(node -p "require('$ROOT_DIR/package.json').dependencies['@anthropic-ai/claude-agent-sdk']" | tr -d '"')
     PKG_TMP=$(mktemp -d)
-    trap "rm -rf $PKG_TMP" RETURN
     (
         cd "$PKG_TMP"
         npm pack "@anthropic-ai/${SDK_BIN_PKG}@${SDK_VERSION}" >/dev/null
@@ -117,6 +120,7 @@ if [ ! -d "$SDK_BIN_SOURCE" ]; then
     )
     mkdir -p "$SDK_BIN_SOURCE"
     cp -r "$PKG_TMP/package/." "$SDK_BIN_SOURCE/"
+    rm -rf "$PKG_TMP"
 fi
 
 require_path "$SDK_BIN_SOURCE" "SDK native binary package (${SDK_BIN_PKG})" \
@@ -171,7 +175,7 @@ cd "$ELECTRON_DIR"
 # Note: electron-builder may build both archs due to config, but we only use the requested one
 # Publishing is handled only by an explicit release workflow, never by
 # electron-builder's CI auto-detection.
-npx electron-builder --linux --${ARCH} --publish never
+npx electron-builder --config electron-builder.yml --linux --${ARCH} --publish never
 
 # 8. Verify the AppImage was built
 # electron-builder uses Linux-style arch names: x86_64 for x64, aarch64 for arm64
@@ -209,3 +213,8 @@ echo "Size: $(du -h "$ELECTRON_DIR/release/${APPIMAGE_NAME}" | cut -f1)"
     sha256sum "$(basename "$APPIMAGE_PATH")" > "SHA256SUMS-linux-${ARCH}.txt"
 )
 echo "Checksums: $ELECTRON_DIR/release/SHA256SUMS-linux-${ARCH}.txt"
+
+# Run the same archive-level contract check locally and in CI. It does not
+# need a display server or FUSE and verifies desktop metadata plus bundled
+# Pi/Vibe subprocesses.
+python3 "$ROOT_DIR/scripts/robinswood-linux-packaged-smoke.py" --appimage "$APPIMAGE_PATH"

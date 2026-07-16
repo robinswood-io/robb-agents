@@ -4,7 +4,7 @@
  */
 
 import { spawn, type Subprocess } from "bun";
-import { existsSync, rmSync, cpSync, readFileSync, statSync, mkdirSync } from "fs";
+import { existsSync, rmSync, cpSync, readFileSync, statSync, mkdirSync, writeFileSync } from "fs";
 import { join, basename } from "path";
 import * as esbuild from "esbuild";
 import { downloadUv, type Platform, type Arch } from "./build/common";
@@ -36,6 +36,10 @@ const IS_WINDOWS = process.platform === "win32";
 const BIN_EXT = IS_WINDOWS ? ".exe" : "";
 const VITE_BIN = join(ROOT_DIR, `node_modules/.bin/vite${BIN_EXT}`);
 const ELECTRON_BIN = join(ROOT_DIR, `node_modules/.bin/electron${BIN_EXT}`);
+const ELECTRON_MAC_APP = join(ROOT_DIR, "node_modules/electron/dist/Electron.app");
+// Keep the runnable development bundle outside `apps/electron/`: electron-
+// builder's Bun collector can otherwise include it in a production payload.
+const ROBB_MAC_APP = join(ROOT_DIR, ".robb-dev-runtime", "Robb Agents.app");
 
 function resolveBuildPlatform(): Platform {
   if (process.platform === "darwin") return "darwin";
@@ -271,6 +275,37 @@ function getOAuthDefines(): Record<string, string> {
     defines[`process.env.${varName}`] = JSON.stringify(value);
   }
   return defines;
+}
+
+function ensureMacRobbElectronApp(): string {
+  if (process.platform !== "darwin") return ELECTRON_BIN;
+
+  const sourceStat = statSync(ELECTRON_MAC_APP);
+  const needsCopy = !existsSync(ROBB_MAC_APP) || statSync(ROBB_MAC_APP).mtimeMs < sourceStat.mtimeMs;
+
+  if (needsCopy) {
+    rmSync(ROBB_MAC_APP, { recursive: true, force: true });
+    cpSync(ELECTRON_MAC_APP, ROBB_MAC_APP, { recursive: true });
+
+    const infoPlistPath = join(ROBB_MAC_APP, "Contents/Info.plist");
+    const iconSource = join(ELECTRON_DIR, "resources/robinswood-icon.icns");
+    const iconTarget = join(ROBB_MAC_APP, "Contents/Resources/robb-agents.icns");
+    if (existsSync(iconSource)) {
+      cpSync(iconSource, iconTarget, { force: true });
+    }
+
+    let plist = readFileSync(infoPlistPath, "utf-8");
+    plist = plist
+      .replace(/<key>CFBundleDisplayName<\/key>\s*<string>[^<]*<\/string>/, "<key>CFBundleDisplayName</key>\n\t<string>Robb Agents</string>")
+      .replace(/<key>CFBundleName<\/key>\s*<string>[^<]*<\/string>/, "<key>CFBundleName</key>\n\t<string>Robb Agents</string>")
+      .replace(/<key>CFBundleIdentifier<\/key>\s*<string>[^<]*<\/string>/, "<key>CFBundleIdentifier</key>\n\t<string>io.robinswood.robbagents</string>")
+      .replace(/<key>CFBundleIconFile<\/key>\s*<string>[^<]*<\/string>/, "<key>CFBundleIconFile</key>\n\t<string>robb-agents.icns</string>");
+    writeFileSync(infoPlistPath, plist, "utf-8");
+
+    console.log(`🍎 Prepared macOS Robb Agents bundle: ${ROBB_MAC_APP}`);
+  }
+
+  return join(ROBB_MAC_APP, "Contents/MacOS/Electron");
 }
 
 // Get environment variables for electron process
@@ -594,8 +629,15 @@ async function main(): Promise<void> {
   // 5. Start Electron (build already verified)
   console.log("🚀 Starting Electron...\n");
 
+  const electronBinary = ensureMacRobbElectronApp();
+  const remoteDebuggingPort = process.env.CRAFT_ELECTRON_REMOTE_DEBUGGING_PORT;
+  const electronArgs = [electronBinary];
+  if (remoteDebuggingPort) {
+    electronArgs.push(`--remote-debugging-port=${remoteDebuggingPort}`);
+  }
+  electronArgs.push("apps/electron");
   const electronProc = spawn({
-    cmd: [ELECTRON_BIN, "apps/electron"],
+    cmd: electronArgs,
     cwd: ROOT_DIR,
     stdin: "ignore",
     stdout: "inherit",

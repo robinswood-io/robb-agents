@@ -31,9 +31,14 @@ import { sendToWorkspaceAtom, type SessionMeta } from "@/atoms/sessions"
 import type { ViewConfig } from "@craft-agent/shared/views"
 import type { SessionStatusId, SessionStatus } from "@/config/session-status-config"
 import { buildCollapsedGroupsScopeSuffix } from "@/utils/session-list-collapse"
+import { arrangeRowsAsVisualSessionTree } from "@/utils/session-visual-hierarchy"
 
 export interface SessionListRow {
   item: SessionMeta
+  /** Visual nesting level in the sidebar session tree. 0 = top-level chat. */
+  hierarchyDepth?: number
+  /** Visible parent row this session is displayed under, when any. */
+  visualParentSessionId?: string
 }
 
 /** Grouping mode for chat list */
@@ -267,8 +272,8 @@ export function SessionList({
 
   const rowData = useMemo(() => {
     if (isSearchMode) {
-      const matchingRows: SessionListRow[] = matchingFilterItems.map(item => ({ item }))
-      const otherRows: SessionListRow[] = otherResultItems.map(item => ({ item }))
+      const matchingRows = arrangeRowsAsVisualSessionTree(matchingFilterItems.map(item => ({ item })))
+      const otherRows = arrangeRowsAsVisualSessionTree(otherResultItems.map(item => ({ item })))
 
       const groups: EntityListGroup<SessionListRow>[] = []
       if (matchingRows.length > 0) {
@@ -279,7 +284,7 @@ export function SessionList({
       }
 
       return {
-        rows: [...matchingRows, ...otherRows],
+        rows: groups.flatMap(g => g.items),
         groups,
       }
     }
@@ -303,6 +308,8 @@ export function SessionList({
       }
       unreadRows.sort((a, b) => (b.item.lastMessageAt || 0) - (a.item.lastMessageAt || 0))
       readRows.sort((a, b) => (b.item.lastMessageAt || 0) - (a.item.lastMessageAt || 0))
+      const arrangedUnreadRows = arrangeRowsAsVisualSessionTree(unreadRows)
+      const arrangedReadRows = arrangeRowsAsVisualSessionTree(readRows)
 
       const collapsedUnread = collapsedGroupsMeta.find(m => m.key === 'unread-yes')
       const collapsedRead = collapsedGroupsMeta.find(m => m.key === 'unread-no')
@@ -316,16 +323,16 @@ export function SessionList({
         {
           key: 'unread-yes',
           label: t('session.unreadGroup', { count: unreadCount }),
-          items: unreadRows,
+          items: arrangedUnreadRows,
           // Empty groups have nothing to collapse into; suppress the caret.
-          collapsible: unreadRows.length > 0 || !!collapsedUnread,
+          collapsible: arrangedUnreadRows.length > 0 || !!collapsedUnread,
           ...(collapsedUnread ? { collapsedCount: collapsedUnread.count } : {}),
         },
         {
           key: 'unread-no',
           label: t('session.readGroup', { count: readCount }),
-          items: readRows,
-          collapsible: readRows.length > 0 || !!collapsedRead,
+          items: arrangedReadRows,
+          collapsible: arrangedReadRows.length > 0 || !!collapsedRead,
           ...(collapsedRead ? { collapsedCount: collapsedRead.count } : {}),
         },
       ]
@@ -362,11 +369,12 @@ export function SessionList({
         const state = sessionStatuses.find(s => s.id === statusId)
         if (!state) continue
         groupRows.sort((a, b) => (b.item.lastMessageAt || 0) - (a.item.lastMessageAt || 0))
+        const arrangedGroupRows = arrangeRowsAsVisualSessionTree(groupRows)
         const collapsedMeta = collapsedGroupsMeta.find(m => m.key === key)
         orderedGroups.push({
           key,
           label: t(`status.${state.id}`, state.label),
-          items: groupRows,
+          items: arrangedGroupRows,
           collapsible: true,
           ...(collapsedMeta ? { collapsedCount: collapsedMeta.count } : {}),
         })
@@ -418,6 +426,7 @@ export function SessionList({
       const orderedGroups: EntityListGroup<SessionListRow>[] = []
       for (const [key, { rows: groupRows, projectId }] of groupsByKey) {
         groupRows.sort((a, b) => (b.item.lastMessageAt || 0) - (a.item.lastMessageAt || 0))
+        const arrangedGroupRows = arrangeRowsAsVisualSessionTree(groupRows)
         const collapsedMeta = collapsedGroupsMeta.find(m => m.key === key)
         const label = projectId
           ? (projectNameById.get(projectId) ?? t('sidebar.unknownProject', { defaultValue: 'Unknown project' }))
@@ -425,7 +434,7 @@ export function SessionList({
         orderedGroups.push({
           key,
           label,
-          items: groupRows,
+          items: arrangedGroupRows,
           collapsible: true,
           ...(collapsedMeta ? { collapsedCount: collapsedMeta.count } : {}),
         })
@@ -496,11 +505,15 @@ export function SessionList({
       orderedGroups[0].collapsible = false
     }
 
+    for (const group of orderedGroups) {
+      group.items = arrangeRowsAsVisualSessionTree(group.items)
+    }
+
     return {
-      rows,
+      rows: orderedGroups.flatMap(g => g.items),
       groups: orderedGroups,
     }
-  }, [isSearchMode, matchingFilterItems, otherResultItems, flatItems, groupingMode, sessionStatuses, projects, collapsedGroupsMeta, t])
+  }, [isSearchMode, matchingFilterItems, otherResultItems, flatItems, groupingMode, sessionStatuses, projects, collapsedGroupsMeta, t, i18n.resolvedLanguage])
 
   const flatRows = rowData.rows
 
@@ -781,6 +794,7 @@ export function SessionList({
               isSelected={rowProps.isSelected}
               isFirstInGroup={isFirstInGroup}
               isInMultiSelect={rowProps.isInMultiSelect ?? false}
+              hierarchyDepth={row.hierarchyDepth ?? 0}
               onSelect={() => handleSelectSession(row, flatIndex)}
               onToggleSelect={() => handleToggleSelect(row, flatIndex)}
               onRangeSelect={() => handleRangeSelect(flatIndex)}

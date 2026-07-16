@@ -24,7 +24,7 @@ setupI18n([initReactI18next])
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <JotaiProvider>
-      <ThemeProvider>
+      <ThemeProvider defaultColorTheme="robinswood">
         <EscapeInterruptProvider>
           <PlaygroundAppShellProvider>
             <PlaygroundApp />

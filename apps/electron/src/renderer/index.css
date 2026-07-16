@@ -1487,3 +1487,16 @@ html.dark[data-scenic] .fullscreen-overlay-background {
   min-height: 31px;
   padding: 6px 8px;
 }
+
+/* Robinswood: denser midnight surfaces with a restrained coral focus cue.
+   Scoped to the brand preset; custom/user themes are unaffected. */
+:root[data-theme="robinswood"] {
+  --radius: 0.625rem;
+  --background-elevated: color-mix(in srgb, var(--accent) 4%, var(--background));
+  --user-message-bubble: color-mix(in srgb, var(--accent) 12%, var(--paper));
+  --user-message-bubble-dimmed: color-mix(in srgb, var(--accent) 6%, var(--paper));
+  --border: color-mix(in srgb, var(--foreground) 16%, var(--background));
+  --ring: color-mix(in srgb, var(--accent) 70%, var(--background));
+  --shadow-border-opacity: 0.16;
+  --shadow-blur-opacity: 0.18;
+}

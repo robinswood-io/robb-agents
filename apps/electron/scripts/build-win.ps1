@@ -122,6 +122,13 @@ Push-Location $RootDir
 try {
     python scripts/robinswood-windows-packaged-smoke.py --installer $Installer.FullName --checksums $ChecksumPath
     if ($LASTEXITCODE -ne 0) { throw "Windows installer validation failed" }
+    if ($Release) {
+        $signature = Get-AuthenticodeSignature $Installer.FullName
+        if ($signature.Status -ne 'Valid') {
+            throw "Release installer Authenticode verification failed: $($signature.Status) $($signature.StatusMessage)"
+        }
+        Write-Host "Verified Authenticode signature: $($signature.SignerCertificate.Subject)" -ForegroundColor Green
+    }
 } finally {
     Pop-Location
 }

@@ -199,9 +199,9 @@ export class WindowManager {
     // In packaged app, resources are at dist/resources/ (same level as __dirname)
     // In dev, resources are at ../resources/ (sibling of dist/)
     const getIconPath = () => {
-      const iconName = process.platform === 'darwin' ? 'icon.icns'
-        : process.platform === 'win32' ? 'icon.ico'
-        : 'icon.png'
+      const iconName = process.platform === 'darwin' ? 'robinswood-icon.icns'
+        : process.platform === 'win32' ? 'robinswood-icon.ico'
+        : 'robinswood-icon.png'
       return [
         join(__dirname, 'resources', iconName),
         join(__dirname, '../resources', iconName),

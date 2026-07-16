@@ -122,7 +122,7 @@ function Root() {
   const workspaceId = useAtomValue(windowWorkspaceIdAtom)
 
   return (
-    <ThemeProvider activeWorkspaceId={workspaceId}>
+    <ThemeProvider activeWorkspaceId={workspaceId} defaultColorTheme="robinswood">
       <App />
       <Toaster />
     </ThemeProvider>

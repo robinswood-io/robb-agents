@@ -119,7 +119,14 @@ export function generateServerToken(): string {
 // Startup lock file
 // ---------------------------------------------------------------------------
 
-const LOCK_FILE = join(CONFIG_DIR, '.server.lock')
+/**
+ * The application data root may be shared by compatible desktop distributions.
+ * Keep the runtime server lock independently configurable so those apps can run
+ * side-by-side without duplicating workspaces, sessions or credentials.
+ */
+function getLockFile(): string {
+  return join(process.env.CRAFT_SERVER_LOCK_DIR || CONFIG_DIR, '.server.lock')
+}
 
 interface LockPayload {
   pid: number
@@ -169,9 +176,10 @@ function isLockFromPreviousBoot(startedAt: number): boolean {
 }
 
 function acquireServerLock(logger: PlatformServices['logger']): void {
-  if (existsSync(LOCK_FILE)) {
+  const lockFile = getLockFile()
+  if (existsSync(lockFile)) {
     try {
-      const content = readFileSync(LOCK_FILE, 'utf-8')
+      const content = readFileSync(lockFile, 'utf-8')
       const lock = parseLockContent(content)
 
       if (lock) {
@@ -188,7 +196,7 @@ function acquireServerLock(logger: PlatformServices['logger']): void {
           } else {
             throw new Error(
               `Another server instance is already running (PID ${lock.pid}). ` +
-              `If this is stale, delete ${LOCK_FILE} and retry. ` +
+              `If this is stale, delete ${lockFile} and retry. ` +
               `To run a parallel instance (e.g. for dev), set CRAFT_CONFIG_DIR to a different path.`
             )
           }
@@ -205,7 +213,7 @@ function acquireServerLock(logger: PlatformServices['logger']): void {
   }
 
   const payload: LockPayload = { pid: process.pid, startedAt: Date.now() }
-  writeFileSync(LOCK_FILE, JSON.stringify(payload), 'utf-8')
+  writeFileSync(lockFile, JSON.stringify(payload), 'utf-8')
 
   // Safety net: release the lock on unexpected exits (SIGKILL, uncaught exceptions, etc.).
   // process.on('exit') only allows synchronous code — releaseServerLock is fully sync.
@@ -219,11 +227,12 @@ function acquireServerLock(logger: PlatformServices['logger']): void {
  */
 export function releaseServerLock(): void {
   try {
-    if (existsSync(LOCK_FILE)) {
-      const lock = parseLockContent(readFileSync(LOCK_FILE, 'utf-8'))
+    const lockFile = getLockFile()
+    if (existsSync(lockFile)) {
+      const lock = parseLockContent(readFileSync(lockFile, 'utf-8'))
       // Only delete if it's our lock
       if (lock && lock.pid === process.pid) {
-        unlinkSync(LOCK_FILE)
+        unlinkSync(lockFile)
       }
     }
   } catch {

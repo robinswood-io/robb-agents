@@ -13,6 +13,15 @@ directories:
 
 files:
   - dist/**/*
+  # The macOS dev launcher materializes `dist/Robb Agents.app`. It is a
+  # runnable Electron bundle, not application payload, and must never be
+  # nested inside a distributable app (its framework symlinks break packaging).
+  # Exclude the legacy dev app too: it may still exist locally from releases
+  # before the launcher moved to `dev-runtime/`.
+  - "!dist/Robb Agents.app"
+  - "!dist/Robb Agents.app/**"
+  - "!dist/**/*.app"
+  - "!dist/**/*.app/**"
   - "!dist/renderer/src/**"
   - "!**/*.map"
   - package.json
