@@ -40,8 +40,10 @@ describe('handleSendAgentMessage delivery ack', () => {
     const { ctx, calls } = createCtx({ delivery: 'delivered', targetBusy: false }, { name: 'Monitor' });
     await handleSendAgentMessage(ctx, { sessionId: 'target-9', message: 'ping' });
     expect(calls).toHaveLength(1);
-    expect(calls[0].message).toContain('sender-1');
-    expect(calls[0].message).toContain('ping');
+    const call = calls[0];
+    if (call == null) throw new Error('Expected exactly one delivered message');
+    expect(call.message).toContain('sender-1');
+    expect(call.message).toContain('ping');
   });
 
   it('rejects a self-send', async () => {
