@@ -6,11 +6,11 @@ interface RobbAgentsSymbolProps {
 }
 
 /**
- * Robb Agents product symbol: a deliberate R with a coral agent trajectory.
- * The R follows the surrounding UI color while the trajectory keeps the
- * Robinswood coral recognition cue at every size.
+ * Robb Agents product symbol. It inherits the surrounding UI color so it can
+ * sit quietly in Craft Agent surfaces; the trajectory is a lower-contrast
+ * detail rather than a permanent brand-colour treatment.
  */
-export function RobbAgentsSymbol({ className, title, monochrome = false }: RobbAgentsSymbolProps) {
+export function RobbAgentsSymbol({ className, title, monochrome = true }: RobbAgentsSymbolProps) {
   return (
     <svg
       viewBox="0 0 64 64"
@@ -28,10 +28,11 @@ export function RobbAgentsSymbol({ className, title, monochrome = false }: RobbA
       <path
         d="M10 53.5c12.7-4.3 23.2-4.1 32-.8 7.7 2.9 14.5 2.1 20.5-2.8"
         stroke={monochrome ? 'currentColor' : '#E0796B'}
+        strokeOpacity={monochrome ? 0.55 : 0.7}
         strokeWidth="5"
         strokeLinecap="round"
       />
-      <circle cx="47.5" cy="12.5" r="4.5" fill={monochrome ? 'currentColor' : '#E0796B'} />
+      <circle cx="47.5" cy="12.5" r="4.5" fill={monochrome ? 'currentColor' : '#E0796B'} fillOpacity={monochrome ? 0.55 : 0.7} />
     </svg>
   )
 }
