@@ -1,24 +1,25 @@
 /**
  * RTK binary detector.
  *
- * Resolves the path to the rtk binary (https://github.com/rtk-ai/rtk) by
- * looking it up on the user's PATH, then verifies it meets the minimum
- * version required by `rtk rewrite` (added in 0.23.0).
+ * Resolves the RTK binary (https://github.com/rtk-ai/rtk) from the bundled
+ * platform resources first, then from the user's PATH. Every candidate must
+ * meet the `rtk rewrite` minimum version and expose `rtk gain`, so a same-name
+ * non-optimizer binary is never used.
  *
- * Result is cached per process — restart the app to pick up an install
- * or upgrade.
- *
- * Bundling rtk in `apps/electron/resources/bin/` is a separate concern
- * (see plans/rtk-integration-path-a.md); this MVP detects only.
+ * Result is cached per process; resetRtkPathCache() supports explicit recheck.
  */
 
 import { execFileSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
+import { getBundledAssetsDir } from '../../utils/paths.ts';
 
 const REQUIRED_MIN_VERSION = { major: 0, minor: 23, patch: 0 } as const;
 
 interface CachedStatus {
   path: string | null;
   version: string | null;
+  source: 'bundled' | 'path' | null;
 }
 
 let cachedStatus: CachedStatus | undefined = undefined;
@@ -30,6 +31,8 @@ export interface RtkStatus {
   installed: boolean;
   path: string | null;
   version: string | null;
+  /** Whether Robb Agents shipped RTK or resolved a user-managed PATH binary. */
+  source: 'bundled' | 'path' | null;
 }
 
 /**
@@ -46,8 +49,8 @@ export function getRtkPath(): string | null {
  */
 export function getRtkStatus(opts?: { forceRecheck?: boolean }): RtkStatus {
   if (opts?.forceRecheck) resetRtkPathCache();
-  const { path, version } = resolveStatus();
-  return { installed: path !== null, path, version };
+  const { path, version, source } = resolveStatus();
+  return { installed: path !== null, path, version, source };
 }
 
 /**
@@ -100,20 +103,37 @@ export function resetRtkPathCache(): void {
 function resolveStatus(): CachedStatus {
   if (cachedStatus !== undefined) return cachedStatus;
 
+  const bundledPath = findBundledRtk();
+  if (bundledPath) {
+    const version = readRtkVersion(bundledPath);
+    if (version && meetsMinVersion(version) && supportsTokenOptimization(bundledPath)) {
+      cachedStatus = { path: bundledPath, version, source: 'bundled' };
+      return cachedStatus;
+    }
+  }
+
   const rtkPath = findRtkOnPath();
   if (!rtkPath) {
-    cachedStatus = { path: null, version: null };
+    cachedStatus = { path: null, version: null, source: null };
     return cachedStatus;
   }
 
   const version = readRtkVersion(rtkPath);
-  if (!version || !meetsMinVersion(version)) {
-    cachedStatus = { path: null, version };
+  if (!version || !meetsMinVersion(version) || !supportsTokenOptimization(rtkPath)) {
+    cachedStatus = { path: null, version, source: null };
     return cachedStatus;
   }
 
-  cachedStatus = { path: rtkPath, version };
+  cachedStatus = { path: rtkPath, version, source: 'path' };
   return cachedStatus;
+}
+
+function findBundledRtk(): string | null {
+  const binDir = getBundledAssetsDir('bin');
+  if (!binDir) return null;
+  const binary = process.platform === 'win32' ? 'rtk.exe' : 'rtk';
+  const candidate = join(binDir, `${process.platform}-${process.arch}`, binary);
+  return existsSync(candidate) ? candidate : null;
 }
 
 function findRtkOnPath(): string | null {
@@ -133,6 +153,20 @@ function readRtkVersion(rtkPath: string): string | null {
     return out.match(/\d+\.\d+\.\d+/)?.[0] ?? null;
   } catch {
     return null;
+  }
+}
+
+function supportsTokenOptimization(rtkPath: string): boolean {
+  try {
+    execFileSync(rtkPath, ['gain', '--format', 'json'], {
+      encoding: 'utf-8',
+      timeout: 2_000,
+      env: { ...process.env, RTK_TELEMETRY_DISABLED: '1' },
+      stdio: 'pipe',
+    });
+    return true;
+  } catch {
+    return false;
   }
 }
 

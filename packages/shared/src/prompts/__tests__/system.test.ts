@@ -36,6 +36,15 @@ describe('system prompt guidance', () => {
     expect(prompt).toContain('The subtask needs file/shell tools (for example, Read or Bash)')
     expect(prompt).not.toContain('The subtask needs tools (Read, Bash, Grep)')
   })
+
+  it('requires independent diagnostics and browser fallback before human escalation', () => {
+    const prompt = getSystemPrompt(undefined, undefined, '/tmp/workspace', '/tmp/workspace')
+
+    expect(prompt).toContain('## Operational Autonomy')
+    expect(prompt).toContain('Default to completing the requested outcome end-to-end.')
+    expect(prompt).toContain('use the integrated browser')
+    expect(prompt).toContain('Escalate only for a genuinely human-only input')
+  })
 })
 
 describe('includeCoAuthoredBy handling', () => {

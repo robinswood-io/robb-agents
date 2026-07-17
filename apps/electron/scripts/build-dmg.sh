@@ -78,6 +78,9 @@ rm -rf "$ELECTRON_DIR/vendor" "$ELECTRON_DIR/node_modules/@anthropic-ai" "$ELECT
 cd "$ROOT_DIR"
 bun install --frozen-lockfile
 
+# Bundle the pinned, checksum-verified RTK token optimizer for this artifact.
+bun run scripts/prepare-rtk.ts --platform darwin --arch "$ARCH"
+
 # Bundle a verified, architecture-specific Bun runtime for Pi/Vibe subprocesses.
 BUN_DOWNLOAD="bun-darwin-$([[ "$ARCH" == arm64 ]] && echo aarch64 || echo x64)"
 TEMP_DIR="$(mktemp -d)"

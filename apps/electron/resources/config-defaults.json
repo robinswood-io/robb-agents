@@ -11,12 +11,13 @@
     "richToolDescriptions": true,
     "extendedPromptCache": false,
     "browserToolEnabled": true,
+    "rtkEnabled": true,
     "allowRemoteEvaluate": true
   },
   "workspaceDefaults": {
-    "thinkingLevel": "think",
-    "permissionMode": "safe",
-    "cyclablePermissionModes": ["safe", "allow-all"],
+    "thinkingLevel": "high",
+    "permissionMode": "allow-all",
+    "cyclablePermissionModes": ["allow-all", "ask", "safe"],
     "localMcpServers": {
       "enabled": true
     }

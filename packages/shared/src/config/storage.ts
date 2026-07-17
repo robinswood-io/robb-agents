@@ -82,7 +82,7 @@ export interface StoredConfig {
   extendedPromptCache?: boolean;  // Use 1h prompt cache TTL instead of 5m (default: false)
   enable1MContext?: boolean;  // Enable 1M context window for supported models (default: false — opt-in; requires Anthropic Tier 4+)
   // Token optimization
-  rtkEnabled?: boolean;  // Route Bash commands through rtk to compress tool output (default: false). https://github.com/rtk-ai/rtk
+  rtkEnabled?: boolean;  // Route Bash commands through bundled RTK to compress tool output (default: true). https://github.com/rtk-ai/rtk
   // Network proxy
   networkProxy?: import('./types.ts').NetworkProxySettings;
   // Windows: path to Git Bash (bash.exe) for the SDK subprocess
@@ -124,12 +124,13 @@ const FALLBACK_CONFIG_DEFAULTS: ConfigDefaults = {
     richToolDescriptions: true,
     extendedPromptCache: false,
     browserToolEnabled: true,
+    rtkEnabled: true,
     allowRemoteEvaluate: true,
   },
   workspaceDefaults: {
-    thinkingLevel: 'medium',
-    permissionMode: 'ask',
-    cyclablePermissionModes: ['safe', 'ask', 'allow-all'],
+    thinkingLevel: 'high',
+    permissionMode: 'allow-all',
+    cyclablePermissionModes: ['allow-all', 'ask', 'safe'],
     localMcpServers: { enabled: true },
   },
 };
@@ -574,20 +575,26 @@ export function setEnable1MContext(enabled: boolean): void {
  * Get whether rtk Bash-output compression is enabled.
  * When enabled, the PreToolUse pipeline rewrites Bash commands to their `rtk` equivalents
  * to reduce token consumption on common dev commands (git, ls, grep, test runners, etc.).
- * Defaults to false — opt-in. Requires the `rtk` binary on PATH or bundled with the app.
+ * Defaults to the bundled product configuration. An explicit user choice
+ * always wins, including a deliberate `false` opt-out.
  * https://github.com/rtk-ai/rtk
  */
 export function getRtkEnabled(): boolean {
   const config = loadStoredConfig();
-  return config?.rtkEnabled === true;
+  return config?.rtkEnabled ?? loadConfigDefaults().defaults.rtkEnabled;
 }
 
 /**
  * Set whether rtk Bash-output compression is enabled.
  */
 export function setRtkEnabled(enabled: boolean): void {
-  const config = loadStoredConfig();
-  if (!config) return;
+  // A first-run profile may not have config.json yet. Persist the explicit
+  // choice instead of silently reverting to the product default on restart.
+  const config = loadStoredConfig() ?? {
+    workspaces: [],
+    activeWorkspaceId: null,
+    activeSessionId: null,
+  };
   config.rtkEnabled = enabled;
   saveConfig(config);
 }

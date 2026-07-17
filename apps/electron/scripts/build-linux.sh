@@ -64,6 +64,9 @@ echo "Installing dependencies..."
 cd "$ROOT_DIR"
 bun install --frozen-lockfile
 
+# Bundle the pinned, checksum-verified RTK token optimizer for this artifact.
+bun run scripts/prepare-rtk.ts --platform linux --arch "$ARCH"
+
 # 3. Download Bun binary with checksum verification
 echo "Downloading Bun ${BUN_VERSION} for linux-${ARCH}..."
 mkdir -p "$ELECTRON_DIR/vendor/bun"

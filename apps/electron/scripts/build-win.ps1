@@ -52,6 +52,8 @@ Push-Location $RootDir
 try {
     bun install --frozen-lockfile
     if ($LASTEXITCODE -ne 0) { throw "bun install failed" }
+    bun scripts/prepare-rtk.ts --platform win32 --arch $Arch
+    if ($LASTEXITCODE -ne 0) { throw "RTK preparation failed" }
 } finally {
     Pop-Location
 }
