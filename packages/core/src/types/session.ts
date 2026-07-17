@@ -6,6 +6,7 @@
  */
 
 import type { StoredMessage, TokenUsage } from './message.ts';
+import type { AutonomyEvent } from './autonomy.ts';
 
 /**
  * Session status for workflow tracking
@@ -29,6 +30,8 @@ export interface Session {
   status?: SessionStatus;        // Workflow status (todo, in_progress, needs_review, done, cancelled)
   // Read/unread tracking
   lastReadMessageId?: string;    // ID of the last message the user has read
+  /** Structured runtime evidence of agent self-resolution and human-only blockers. */
+  autonomyEvents?: AutonomyEvent[];
 }
 
 /**

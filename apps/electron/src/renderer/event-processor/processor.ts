@@ -106,6 +106,18 @@ export function processEvent(
       return { state: newState, effects: [] }
     }
 
+    case 'autonomy_event':
+      return {
+        state: {
+          ...state,
+          session: {
+            ...state.session,
+            autonomyEvents: [...(state.session.autonomyEvents ?? []), event.event].slice(-50),
+          },
+        },
+        effects: [],
+      }
+
     case 'workflow_agent_completed':
       // Live workflow fan-out progress — the chip counter is updated in App.tsx's
       // handleBackgroundTaskEvent; nothing to change in message/session state here.

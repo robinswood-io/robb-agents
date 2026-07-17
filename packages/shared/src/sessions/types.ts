@@ -11,7 +11,7 @@
 
 import type { PermissionMode } from '../agent/mode-manager.ts';
 import type { ThinkingLevel } from '../agent/thinking-levels.ts';
-import type { StoredAttachment, MessageRole, ToolStatus, AuthRequestType, AuthStatus, CredentialInputMode, StoredMessage } from '@craft-agent/core/types';
+import type { StoredAttachment, MessageRole, ToolStatus, AuthRequestType, AuthStatus, CredentialInputMode, StoredMessage, AutonomyEvent } from '@craft-agent/core/types';
 
 /**
  * Session fields that persist to disk.
@@ -64,6 +64,8 @@ export const SESSION_PERSISTENT_FIELDS = [
   'taskNodeId',
   'taskNodeCount',
   'taskDraft',
+  // Runtime evidence of autonomous resolution and human-only blockers
+  'autonomyEvents',
 ] as const;
 
 export type SessionPersistentField = typeof SESSION_PERSISTENT_FIELDS[number];
@@ -144,6 +146,8 @@ export interface SessionConfig {
   workingDirectory?: string;
   /** SDK cwd for session storage - set once at creation, never changes. Ensures SDK can find session transcripts regardless of workingDirectory changes. */
   sdkCwd?: string;
+  /** Recent structured resolution/fallback evidence, capped by SessionManager. */
+  autonomyEvents?: AutonomyEvent[];
   /** Shared viewer URL (if shared via viewer) */
   sharedUrl?: string;
   /** Shared session ID in viewer (for revoke) */

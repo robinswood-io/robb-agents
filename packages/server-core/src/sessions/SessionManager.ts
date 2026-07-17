@@ -8,6 +8,7 @@ import { basename, dirname, join } from 'path'
 import { existsSync } from 'fs'
 import { readFile, writeFile, mkdir } from 'fs/promises'
 import { randomUUID } from 'node:crypto'
+import type { AutonomyEvent } from '@craft-agent/core/types'
 import { type AgentEvent, setPermissionMode, hydratePreviousPermissionMode, getPermissionModeDiagnostics, type PermissionMode, unregisterSessionScopedToolCallbacks, mergeSessionScopedToolCallbacks, AbortReason, type AuthRequest, type AuthResult, type CredentialAuthRequest, type BrowserPaneFns, generateConversationSummary, resolveKeepBackgroundTasksAlive } from '@craft-agent/shared/agent'
 import {
   resolveSessionConnection,
@@ -20,7 +21,7 @@ import {
   type BackendHostRuntimeContext,
   type PostInitResult,
 } from '@craft-agent/shared/agent/backend'
-import { getLlmConnection, getLlmConnections, getDefaultLlmConnection, getDefaultThinkingLevel, resetManagedAnthropicAuthEnvVars, resolveMidStreamBehavior, getPersistedUiLanguage, resolveTitleLanguageName, resolveRoutingPolicy, maxRoutingSensitivity } from '@craft-agent/shared/config'
+import { getLlmConnection, getLlmConnections, getDefaultLlmConnection, getDefaultThinkingLevel, getBrowserToolEnabled, resetManagedAnthropicAuthEnvVars, resolveMidStreamBehavior, getPersistedUiLanguage, resolveTitleLanguageName, resolveRoutingPolicy, maxRoutingSensitivity } from '@craft-agent/shared/config'
 import { PrivilegedExecutionBroker } from '@craft-agent/server-core/services'
 import { isValidWorkingDirectory } from '../utils/path-validation'
 import { InitGate } from '@craft-agent/server-core/domain'
@@ -816,6 +817,8 @@ interface ManagedSession {
   isFlagged: boolean
   /** Whether this session is archived */
   isArchived?: boolean
+  /** Recent autonomous-resolution evidence, persisted with the session. */
+  autonomyEvents?: AutonomyEvent[]
   /** Timestamp when session was archived (for retention policy) */
   archivedAt?: number
   /** Permission mode for this session ('safe', 'ask', 'allow-all') */
@@ -7694,6 +7697,13 @@ export class SessionManager implements ISessionManager {
     }
   }
 
+  private recordAutonomyEvent(managed: ManagedSession, event: Omit<AutonomyEvent, 'id' | 'timestamp'>): void {
+    const recorded: AutonomyEvent = { id: randomUUID(), timestamp: Date.now(), ...event }
+    managed.autonomyEvents = [...(managed.autonomyEvents ?? []), recorded].slice(-50)
+    this.persistSession(managed)
+    this.sendEvent({ type: 'autonomy_event', sessionId: managed.id, event: recorded }, managed.workspace.id)
+  }
+
   private async processEvent(managed: ManagedSession, event: AgentEvent): Promise<void> {
     const sessionId = managed.id
     const workspaceId = managed.workspace.id
@@ -7946,6 +7956,40 @@ export class SessionManager implements ISessionManager {
 
         // Some backends omit explicit isError but still prefix with [ERROR].
         const inferredError = event.isError === true || /^\s*(\[ERROR\]|Error:|error:)/.test(formattedResult)
+
+        if (inferredError) {
+          const evidence = formattedResult.slice(0, 1_000)
+          const authBlocked = /oauth|mfa|authentication|credential|api key|token.*expired|unauthori[sz]ed/i.test(formattedResult)
+          const isBrowserTool = /browser_tool|browser:|browser\b/i.test(toolName)
+          const fallbackAlreadyAttempted = managed.autonomyEvents?.some(item => item.phase === 'fallback') ?? false
+
+          this.recordAutonomyEvent(managed, {
+            phase: 'diagnosis', toolName,
+            message: `Diagnosed tool failure in ${toolName}.`, evidence,
+          })
+
+          if (authBlocked) {
+            this.recordAutonomyEvent(managed, {
+              phase: 'escalated', toolName,
+              message: 'Human authentication or credential input is required.', evidence,
+              escalationReason: /oauth|mfa/i.test(formattedResult) ? 'oauth_or_mfa' : 'credential_required',
+            })
+          } else if (isBrowserTool || !getBrowserToolEnabled()) {
+            this.recordAutonomyEvent(managed, {
+              phase: 'escalated', toolName,
+              message: 'Access remained unavailable after the safe fallback path.', evidence,
+              escalationReason: 'access_unavailable_after_fallback',
+            })
+          } else if (!fallbackAlreadyAttempted) {
+            this.recordAutonomyEvent(managed, {
+              phase: 'fallback', toolName,
+              message: 'Trying the integrated browser as a safe alternative.', evidence,
+            })
+            // The agent receives the failed tool result in its current context. The
+            // system autonomy contract now directs the next action to browser_tool;
+            // do not abort Claude turns merely to inject a duplicate reminder.
+          }
+        }
 
         // Update existing tool message (created on tool_start) instead of creating new one
         const existingToolMsg = managed.messages.find(m => m.toolUseId === event.toolUseId)

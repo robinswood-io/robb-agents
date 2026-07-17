@@ -13,6 +13,7 @@ import type {
   ToolDisplayMeta,
   AnnotationV1,
   RoutingMeta,
+  AutonomyEvent,
   PermissionRequest as BasePermissionRequest,
 } from '@craft-agent/core/types'
 import type { PermissionMode } from '../agent/mode-types'
@@ -79,6 +80,7 @@ export interface Session {
   lastMessageRole?: 'user' | 'assistant' | 'plan' | 'tool' | 'error'
   lastFinalMessageId?: string
   isAsyncOperationOngoing?: boolean
+  autonomyEvents?: AutonomyEvent[]
   /** @deprecated Use isAsyncOperationOngoing instead */
   isRegeneratingTitle?: boolean
   currentStatus?: {
@@ -421,6 +423,7 @@ export type SessionEvent =
   | { type: 'usage_update'; sessionId: string; tokenUsage: { inputTokens: number; contextWindow?: number } }
   | { type: 'message_annotations_updated'; sessionId: string; messageId: string; annotations: AnnotationV1[] }
   | { type: 'working_directory_error'; sessionId: string; error: string }
+  | { type: 'autonomy_event'; sessionId: string; event: AutonomyEvent }
 
 export interface SendMessageOptions {
   skillSlugs?: string[]

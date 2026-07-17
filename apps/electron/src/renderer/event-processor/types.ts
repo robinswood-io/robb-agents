@@ -5,7 +5,7 @@
  * All agent events flow through a single pure function for consistent state transitions.
  */
 
-import type { Session, Message, PermissionRequest, CredentialRequest, TypedError, PermissionMode, SessionStatus, AuthRequest, ToolDisplayMeta, RoutingMeta } from '../../shared/types'
+import type { Session, Message, PermissionRequest, CredentialRequest, TypedError, PermissionMode, SessionStatus, AuthRequest, ToolDisplayMeta, RoutingMeta, AutonomyEvent } from '../../shared/types'
 
 /**
  * Streaming state for a session - replaces streamingTextRef
@@ -504,6 +504,12 @@ export interface SourceActivatedEvent {
  * Usage update event - real-time context usage during processing
  * Allows UI to show growing context as agent processes, not just on complete
  */
+export interface AutonomyEventUpdate {
+  type: 'autonomy_event'
+  sessionId: string
+  event: AutonomyEvent
+}
+
 export interface UsageUpdateEvent {
   type: 'usage_update'
   sessionId: string
@@ -561,6 +567,7 @@ export type AgentEvent =
   | AuthCompletedEvent
   | SourceActivatedEvent
   | UsageUpdateEvent
+  | AutonomyEventUpdate
 
 /**
  * Side effects that need to be handled outside the pure processor

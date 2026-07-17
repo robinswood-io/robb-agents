@@ -21,6 +21,7 @@ import type {
   ToolDisplayMeta,
   AnnotationV1,
   RoutingMeta,
+  AutonomyEvent,
 } from '@craft-agent/core/types';
 
 // Mode types from dedicated subpath export (avoids pulling in SDK)
@@ -46,6 +47,7 @@ export type {
   ToolDisplayMeta,
   AnnotationV1,
   RoutingMeta,
+  AutonomyEvent,
 };
 
 // Auth types for onboarding

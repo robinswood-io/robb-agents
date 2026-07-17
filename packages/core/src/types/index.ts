@@ -55,6 +55,8 @@ export type {
 } from './message.ts';
 export { generateMessageId } from './message.ts';
 
+export type { AutonomyEvent, AutonomyPhase, HumanEscalationReason } from './autonomy.ts';
+
 // Message persistence mappers
 export { messageToStored, storedToMessage } from './message-mapper.ts';
 
