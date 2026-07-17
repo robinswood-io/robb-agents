@@ -2059,6 +2059,7 @@ export class SessionManager implements ISessionManager {
       if (managed.sharedId === undefined) managed.sharedId = stored.sharedId
       if (managed.transferredSessionSummary === undefined) managed.transferredSessionSummary = stored.transferredSessionSummary
       if (managed.transferredSessionSummaryApplied === undefined) managed.transferredSessionSummaryApplied = stored.transferredSessionSummaryApplied
+      if (managed.autonomyEvents === undefined) managed.autonomyEvents = stored.autonomyEvents
 
       // Queue recovery: find orphaned queued messages from crash/restart and re-queue them.
       const orphanedQueued = managed.messages.filter(m =>
@@ -2538,6 +2539,7 @@ export class SessionManager implements ISessionManager {
       // Sync transferred session summary state from disk
       managed.transferredSessionSummary = storedSession.transferredSessionSummary
       managed.transferredSessionSummaryApplied = storedSession.transferredSessionSummaryApplied
+      managed.autonomyEvents = storedSession.autonomyEvents
       sessionLog.debug(`Lazy-loaded ${managed.messages.length} messages for session ${managed.id}`)
 
       // Queue recovery: find orphaned queued messages from crash/restart and re-queue them
