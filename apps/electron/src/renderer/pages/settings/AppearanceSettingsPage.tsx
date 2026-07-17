@@ -47,17 +47,17 @@ import { Info_Badge } from '@/components/info/Info_Badge'
 import type { PresetTheme, ThemeOverrides } from '@config/theme'
 
 const PALETTE_FIELDS = [
-  { key: 'background', label: 'Background' },
-  { key: 'paper', label: 'Content surface' },
-  { key: 'navigator', label: 'Navigation surface' },
-  { key: 'foreground', label: 'Text' },
-  { key: 'accent', label: 'Accent' },
-  { key: 'info', label: 'Information' },
-  { key: 'success', label: 'Success' },
-  { key: 'destructive', label: 'Error' },
+  'background',
+  'paper',
+  'navigator',
+  'foreground',
+  'accent',
+  'info',
+  'success',
+  'destructive',
 ] as const
 
-type PaletteField = typeof PALETTE_FIELDS[number]['key']
+type PaletteField = typeof PALETTE_FIELDS[number]
 
 export const meta: DetailsPageMeta = {
   navigator: 'settings',
@@ -421,7 +421,7 @@ export default function AppearanceSettingsPage() {
                 )}
               </SettingsSection>
 
-              <SettingsSection title="Theme gallery" description="Preview a suggested theme before selecting it.">
+              <SettingsSection title={t('settings.appearance.themeGallery')} description={t('settings.appearance.themeGalleryDesc')}>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                   {presetThemes
                     .filter(({ id }) => ['default', 'robinswood', 'nord', 'tokyo-night', 'catppuccin', 'gruvbox', 'pierre'].includes(id))
@@ -457,21 +457,22 @@ export default function AppearanceSettingsPage() {
 
               {/* Global custom palette — persisted as ~/.craft-agent/theme.json */}
               <SettingsSection
-                title="Custom palette"
-                description="Fine-tune the active theme. Changes apply across Robb Agents immediately."
+                title={t('settings.appearance.customPalette')}
+                description={t('settings.appearance.customPaletteDesc')}
               >
                 <SettingsCard>
-                  <SettingsRow label="Palette mode">
+                  <SettingsRow label={t('settings.appearance.paletteMode')}>
                     <SettingsSegmentedControl
                       value={paletteMode}
                       onValueChange={(value) => setPaletteMode(value as 'light' | 'dark')}
                       options={[
-                        { value: 'light', label: 'Light', icon: <Sun className="w-4 h-4" /> },
-                        { value: 'dark', label: 'Dark', icon: <Moon className="w-4 h-4" /> },
+                        { value: 'light', label: t('settings.appearance.light'), icon: <Sun className="w-4 h-4" /> },
+                        { value: 'dark', label: t('settings.appearance.dark'), icon: <Moon className="w-4 h-4" /> },
                       ]}
                     />
                   </SettingsRow>
-                  {PALETTE_FIELDS.map(({ key, label }) => {
+                  {PALETTE_FIELDS.map((key) => {
+                    const label = t(`settings.appearance.palette${key.charAt(0).toUpperCase()}${key.slice(1)}`)
                     const override = paletteMode === 'dark' ? customTheme?.dark?.[key] : customTheme?.[key]
                     const fallback = paletteMode === 'dark' ? resolvedTheme.dark?.[key] : resolvedTheme[key]
                     return (
@@ -481,9 +482,9 @@ export default function AppearanceSettingsPage() {
                           fallbackColor={paletteMode === 'dark' ? '#1E1D21' : '#FAF9FB'}
                           onChange={(color) => updatePaletteColor(key, color)}
                           onClear={override ? () => clearPaletteColor(key) : undefined}
-                          clearLabel="Restore theme color"
+                          clearLabel={t('settings.appearance.paletteRestoreColor')}
                           presets={PROJECT_COLOR_PALETTE}
-                          ariaLabel={`${label} color`}
+                          ariaLabel={t('settings.appearance.paletteColorAria', { label })}
                           align="end"
                         />
                       </SettingsRow>
@@ -496,7 +497,7 @@ export default function AppearanceSettingsPage() {
                         onClick={resetCustomPalette}
                         className="text-xs text-foreground/50 hover:text-foreground transition-colors"
                       >
-                        Reset custom palette
+                        {t('settings.appearance.paletteReset')}
                       </button>
                     </div>
                   )}
