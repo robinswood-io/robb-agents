@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useTheme } from '@/hooks/useTheme'
-import type { ThemeOverrides } from '@config/theme'
+import { themeToCSS, type ThemeOverrides } from '@config/theme'
 import { useSetAtom, useStore, useAtomValue, useAtom } from 'jotai'
 import type { Session, Workspace, SessionEvent, Message, FileAttachment, StoredAttachment, PermissionRequest, CredentialRequest, CredentialResponse, SetupNeeds, SessionStatus, NewChatActionParams, ContentBadge, LlmConnectionWithStatus, PermissionModeState } from '../shared/types'
 import type { SessionDraft, DraftAttachmentRef } from '@craft-agent/shared/config'
@@ -406,7 +406,20 @@ export default function App() {
   // Apply theme via hook (injects CSS variables)
   // shikiTheme is passed to ShikiThemeProvider to ensure correct syntax highlighting
   // theme for dark-only themes in light system mode
-  const { shikiTheme, isDark } = useTheme({ appTheme })
+  const { shikiTheme, isDark, theme } = useTheme({ appTheme })
+
+  // App-level overrides are persisted separately from presets. Apply their
+  // merged variables after ThemeContext so palette edits take effect live.
+  useEffect(() => {
+    const styleId = 'app-theme-override-vars'
+    document.getElementById(styleId)?.remove()
+    if (!appTheme) return
+    const style = document.createElement('style')
+    style.id = styleId
+    style.textContent = `:root {\n  ${themeToCSS(theme, isDark)}\n}`
+    document.head.appendChild(style)
+    return () => style.remove()
+  }, [appTheme, theme, isDark])
 
   // Ref for sessionOptions to access current value in event handlers without re-registering
   const sessionOptionsRef = useRef(sessionOptions)

@@ -7,6 +7,7 @@ import { perf } from '@craft-agent/shared/utils'
 import { pushTyped, type RpcServer } from '@craft-agent/server-core/transport'
 import type { HandlerDeps } from '../handler-deps'
 import { isValidWorkspaceRootPath } from '../../utils/path-validation'
+import type { ThemeOverrides } from '@craft-agent/shared/config/theme'
 
 export const CORE_HANDLED_CHANNELS = [
   RPC_CHANNELS.workspaces.GET,
@@ -19,6 +20,8 @@ export const CORE_HANDLED_CHANNELS = [
   RPC_CHANNELS.workspace.READ_IMAGE,
   RPC_CHANNELS.workspace.WRITE_IMAGE,
   RPC_CHANNELS.theme.GET_APP,
+  RPC_CHANNELS.theme.SET_APP,
+  RPC_CHANNELS.theme.CLEAR_APP,
   RPC_CHANNELS.theme.GET_PRESETS,
   RPC_CHANNELS.theme.LOAD_PRESET,
   RPC_CHANNELS.theme.GET_COLOR_THEME,
@@ -33,6 +36,35 @@ export const CORE_HANDLED_CHANNELS = [
   RPC_CHANNELS.toolIcons.GET_MAPPINGS,
   RPC_CHANNELS.logo.GET_URL,
 ] as const
+
+const THEME_COLOR_KEYS = ['background', 'foreground', 'accent', 'info', 'success', 'destructive', 'paper', 'navigator', 'input', 'popover', 'popoverSolid'] as const
+const HEX_COLOR = /^#[0-9a-fA-F]{6}$/
+
+function sanitizeThemeOverride(value: unknown): ThemeOverrides {
+  if (value == null || typeof value !== 'object' || Array.isArray(value)) throw new Error('Theme override must be an object')
+  const input = value as Record<string, unknown>
+  const output: ThemeOverrides = {}
+  const allowed = new Set([...THEME_COLOR_KEYS, 'dark'])
+  for (const key of Object.keys(input)) {
+    if (!allowed.has(key)) throw new Error(`Unsupported theme override key: ${key}`)
+  }
+  const copyColors = (source: Record<string, unknown>, target: Record<string, string>) => {
+    for (const key of THEME_COLOR_KEYS) {
+      const color = source[key]
+      if (color === undefined) continue
+      if (typeof color !== 'string' || !HEX_COLOR.test(color)) throw new Error(`Theme color ${key} must be a six-digit hex value`)
+      target[key] = color.toUpperCase()
+    }
+  }
+  copyColors(input, output as Record<string, string>)
+  if (input.dark !== undefined) {
+    if (input.dark == null || typeof input.dark !== 'object' || Array.isArray(input.dark)) throw new Error('Dark theme override must be an object')
+    const dark: Record<string, string> = {}
+    copyColors(input.dark as Record<string, unknown>, dark)
+    output.dark = dark
+  }
+  return output
+}
 
 export function registerWorkspaceCoreHandlers(server: RpcServer, deps: HandlerDeps): void {
   const { sessionManager } = deps
@@ -280,6 +312,19 @@ export function registerWorkspaceCoreHandlers(server: RpcServer, deps: HandlerDe
   server.handle(RPC_CHANNELS.theme.GET_APP, async () => {
     const { loadAppTheme } = await import('@craft-agent/shared/config/storage')
     return loadAppTheme()
+  })
+
+  server.handle(RPC_CHANNELS.theme.SET_APP, async (_ctx, theme: unknown) => {
+    const { saveAppTheme } = await import('@craft-agent/shared/config/storage')
+    const sanitized = sanitizeThemeOverride(theme)
+    saveAppTheme(sanitized)
+    pushTyped(server, RPC_CHANNELS.theme.APP_CHANGED, { to: 'all' }, sanitized)
+  })
+
+  server.handle(RPC_CHANNELS.theme.CLEAR_APP, async () => {
+    const { clearAppTheme } = await import('@craft-agent/shared/config/storage')
+    clearAppTheme()
+    pushTyped(server, RPC_CHANNELS.theme.APP_CHANGED, { to: 'all' }, null)
   })
 
   // Preset themes (app-level)

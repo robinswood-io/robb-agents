@@ -12,6 +12,7 @@ import type { ColumnDef } from '@tanstack/react-table'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { HeaderMenu } from '@/components/ui/HeaderMenu'
+import { cn } from '@/lib/utils'
 import { EditPopover, EditButton, getEditConfig } from '@/components/ui/EditPopover'
 import { useTheme } from '@/context/ThemeContext'
 import { useAppShellContext } from '@/context/AppShellContext'
@@ -43,7 +44,20 @@ import { setProjectColorTreatment, useProjectColorTreatment } from '@/hooks/useP
 import { PROJECT_COLOR_PALETTE, type ProjectColorTreatment } from '@/utils/project-colors'
 import { Info_DataTable, SortableHeader } from '@/components/info/Info_DataTable'
 import { Info_Badge } from '@/components/info/Info_Badge'
-import type { PresetTheme } from '@config/theme'
+import type { PresetTheme, ThemeOverrides } from '@config/theme'
+
+const PALETTE_FIELDS = [
+  { key: 'background', label: 'Background' },
+  { key: 'paper', label: 'Content surface' },
+  { key: 'navigator', label: 'Navigation surface' },
+  { key: 'foreground', label: 'Text' },
+  { key: 'accent', label: 'Accent' },
+  { key: 'info', label: 'Information' },
+  { key: 'success', label: 'Success' },
+  { key: 'destructive', label: 'Error' },
+] as const
+
+type PaletteField = typeof PALETTE_FIELDS[number]['key']
 
 export const meta: DetailsPageMeta = {
   navigator: 'settings',
@@ -120,6 +134,8 @@ export default function AppearanceSettingsPage() {
     setWorkspaceColorTheme,
     themeLoadError,
     themeResolvedFrom,
+    resolvedTheme,
+    setPreviewColorTheme,
   } = useTheme()
   const { workspaces, sessionStatuses } = useAppShellContext()
 
@@ -128,6 +144,8 @@ export default function AppearanceSettingsPage() {
 
   // Preset themes for the color theme dropdown
   const [presetThemes, setPresetThemes] = useState<PresetTheme[]>([])
+  const [customTheme, setCustomTheme] = useState<ThemeOverrides | null>(null)
+  const [paletteMode, setPaletteMode] = useState<'light' | 'dark'>('dark')
 
   // Per-workspace theme overrides (workspaceId -> themeId or undefined)
   const [workspaceThemes, setWorkspaceThemes] = useState<Record<string, string | undefined>>({})
@@ -221,14 +239,45 @@ export default function AppearanceSettingsPage() {
         return
       }
       try {
-        const themes = await window.electronAPI.loadPresetThemes()
+        const [themes, override] = await Promise.all([
+          window.electronAPI.loadPresetThemes(),
+          window.electronAPI.getAppTheme(),
+        ])
         setPresetThemes(themes)
+        setCustomTheme(override)
       } catch (error) {
-        console.error('Failed to load preset themes:', error)
+        console.error('Failed to load theme settings:', error)
         setPresetThemes([])
       }
     }
     loadThemes()
+  }, [])
+
+  const updatePaletteColor = useCallback((field: PaletteField, color: string) => {
+    const next: ThemeOverrides = paletteMode === 'dark'
+      ? { ...(customTheme ?? {}), dark: { ...(customTheme?.dark ?? {}), [field]: color } }
+      : { ...(customTheme ?? {}), [field]: color }
+    setCustomTheme(next)
+    void window.electronAPI?.setAppTheme(next)
+  }, [customTheme, paletteMode])
+
+  const clearPaletteColor = useCallback((field: PaletteField) => {
+    const next: ThemeOverrides = { ...(customTheme ?? {}) }
+    if (paletteMode === 'dark') {
+      const dark = { ...(next.dark ?? {}) }
+      delete dark[field]
+      if (Object.keys(dark).length > 0) next.dark = dark
+      else delete next.dark
+    } else {
+      delete next[field]
+    }
+    setCustomTheme(next)
+    void window.electronAPI?.setAppTheme(next)
+  }, [customTheme, paletteMode])
+
+  const resetCustomPalette = useCallback(() => {
+    setCustomTheme(null)
+    void window.electronAPI?.clearAppTheme()
   }, [])
 
   // Load workspace themes on mount
@@ -370,6 +419,88 @@ export default function AppearanceSettingsPage() {
                     {t("settings.appearance.themeWarning")} {themeLoadError} ({themeResolvedFrom === 'fallback' ? t("settings.appearance.usingBundledFallback") : t("settings.appearance.usingDefaultTheme")})
                   </p>
                 )}
+              </SettingsSection>
+
+              <SettingsSection title="Theme gallery" description="Preview a suggested theme before selecting it.">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  {presetThemes
+                    .filter(({ id }) => ['default', 'robinswood', 'nord', 'tokyo-night', 'catppuccin', 'gruvbox', 'pierre'].includes(id))
+                    .map(({ id, theme }) => {
+                      const preview = theme.dark?.background ?? theme.background ?? '#1E1D21'
+                      const accent = theme.dark?.accent ?? theme.accent ?? '#A78BFA'
+                      const selected = colorTheme === id
+                      return (
+                        <button
+                          key={id}
+                          type="button"
+                          onClick={() => setColorTheme(id)}
+                          onMouseEnter={() => setPreviewColorTheme(id)}
+                          onMouseLeave={() => setPreviewColorTheme(null)}
+                          onFocus={() => setPreviewColorTheme(id)}
+                          onBlur={() => setPreviewColorTheme(null)}
+                          className={cn(
+                            'rounded-md border p-3 text-left transition-colors',
+                            selected ? 'border-accent ring-1 ring-accent' : 'border-foreground/10 hover:border-foreground/30',
+                          )}
+                          aria-pressed={selected}
+                        >
+                          <div className="mb-2 flex h-8 overflow-hidden rounded-sm" style={{ backgroundColor: preview }}>
+                            <span className="w-2/3" />
+                            <span className="w-1/3" style={{ backgroundColor: accent }} />
+                          </div>
+                          <span className="text-xs font-medium">{theme.name || id}</span>
+                        </button>
+                      )
+                    })}
+                </div>
+              </SettingsSection>
+
+              {/* Global custom palette — persisted as ~/.craft-agent/theme.json */}
+              <SettingsSection
+                title="Custom palette"
+                description="Fine-tune the active theme. Changes apply across Robb Agents immediately."
+              >
+                <SettingsCard>
+                  <SettingsRow label="Palette mode">
+                    <SettingsSegmentedControl
+                      value={paletteMode}
+                      onValueChange={(value) => setPaletteMode(value as 'light' | 'dark')}
+                      options={[
+                        { value: 'light', label: 'Light', icon: <Sun className="w-4 h-4" /> },
+                        { value: 'dark', label: 'Dark', icon: <Moon className="w-4 h-4" /> },
+                      ]}
+                    />
+                  </SettingsRow>
+                  {PALETTE_FIELDS.map(({ key, label }) => {
+                    const override = paletteMode === 'dark' ? customTheme?.dark?.[key] : customTheme?.[key]
+                    const fallback = paletteMode === 'dark' ? resolvedTheme.dark?.[key] : resolvedTheme[key]
+                    return (
+                      <SettingsRow key={key} label={label}>
+                        <ColorPicker
+                          value={override ?? fallback ?? ''}
+                          fallbackColor={paletteMode === 'dark' ? '#1E1D21' : '#FAF9FB'}
+                          onChange={(color) => updatePaletteColor(key, color)}
+                          onClear={override ? () => clearPaletteColor(key) : undefined}
+                          clearLabel="Restore theme color"
+                          presets={PROJECT_COLOR_PALETTE}
+                          ariaLabel={`${label} color`}
+                          align="end"
+                        />
+                      </SettingsRow>
+                    )
+                  })}
+                  {customTheme && (
+                    <div className="flex justify-end pt-2">
+                      <button
+                        type="button"
+                        onClick={resetCustomPalette}
+                        className="text-xs text-foreground/50 hover:text-foreground transition-colors"
+                      >
+                        Reset custom palette
+                      </button>
+                    </div>
+                  )}
+                </SettingsCard>
               </SettingsSection>
 
               {/* Workspace Themes */}

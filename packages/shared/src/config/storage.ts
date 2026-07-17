@@ -1288,6 +1288,10 @@ export function saveAppTheme(theme: ThemeOverrides): void {
   writeFileSync(APP_THEME_FILE, JSON.stringify(theme, null, 2), 'utf-8');
 }
 
+/** Remove only the global user palette override; preset themes are untouched. */
+export function clearAppTheme(): void {
+  if (existsSync(APP_THEME_FILE)) rmSync(APP_THEME_FILE);
+}
 
 // ============================================
 // Preset Themes (app-level)
