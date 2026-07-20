@@ -39,9 +39,18 @@ try {
     $bundledBun = Join-Path $InstallDir 'resources\vendor\bun\bun.exe'
     $claudeRuntime = Join-Path $InstallDir 'resources\app\node_modules\@anthropic-ai\claude-agent-sdk-binary\claude.exe'
     $ripgrep = Join-Path $InstallDir 'resources\app\node_modules\@vscode\ripgrep\bin\rg.exe'
-    foreach ($required in @($app, $vibeBridge, $bundledBun, $claudeRuntime, $ripgrep)) {
+    $rtk = Join-Path $InstallDir 'resources\app\dist\resources\bin\win32-x64\rtk.exe'
+    foreach ($required in @($app, $vibeBridge, $bundledBun, $claudeRuntime, $ripgrep, $rtk)) {
         if (-not (Test-Path $required)) { throw "Installed runtime missing: $required" }
     }
+
+    $rtkVersion = & $rtk --version
+    if ($LASTEXITCODE -ne 0 -or -not ($rtkVersion -match '^rtk ')) { throw "Bundled RTK version check failed: $rtkVersion" }
+    $rtkGain = & $rtk gain --format json
+    if ($LASTEXITCODE -ne 0) { throw 'Bundled RTK gain command failed' }
+    try { $rtkGainJson = $rtkGain | ConvertFrom-Json -ErrorAction Stop } catch { throw 'Bundled RTK gain did not return JSON' }
+    if ($null -eq $rtkGainJson.summary) { throw 'Bundled RTK gain JSON has no summary' }
+    Write-Output 'OK: installed RTK is executable and returns gain JSON'
 
     # Exercise the installed app with an isolated Craft profile and prove that
     # its renderer is live, rather than merely checking that files were copied.

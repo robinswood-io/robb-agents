@@ -98,9 +98,22 @@ def main() -> None:
         ripgrep = find_one(root, "resources/app/node_modules/@vscode/ripgrep/bin/rg", "ripgrep runtime")
         if not os.access(ripgrep, os.X_OK):
             fail(f"ripgrep runtime is not executable: {ripgrep}")
+        rtk = find_one(root, "resources/app/dist/resources/bin/linux-x64/rtk", "bundled RTK")
+        if not os.access(rtk, os.X_OK):
+            fail(f"Bundled RTK is not executable: {rtk}")
+        version = subprocess.run([str(rtk), "--version"], text=True, capture_output=True, check=False, timeout=10)
+        if version.returncode != 0 or not version.stdout.strip().startswith("rtk "):
+            fail(f"Bundled RTK version check failed: {version.stdout}{version.stderr}")
+        gain = subprocess.run([str(rtk), "gain", "--format", "json"], text=True, capture_output=True, check=False, timeout=10)
+        try:
+            parsed_gain = json.loads(gain.stdout) if gain.returncode == 0 else None
+        except json.JSONDecodeError:
+            parsed_gain = None
+        if not isinstance(parsed_gain, dict) or not isinstance(parsed_gain.get("summary"), dict):
+            fail(f"Bundled RTK gain JSON check failed: {gain.stdout}{gain.stderr}")
 
     print(f"✓ Linux AppImage metadata for Robb Agents {expected_version()}")
-    print("✓ Linux desktop entry and bundled Bun, Claude, ripgrep and Pi/Vibe runtimes")
+    print("✓ Linux desktop entry and bundled Bun, Claude, ripgrep, RTK and Pi/Vibe runtimes")
 
 
 if __name__ == "__main__":
