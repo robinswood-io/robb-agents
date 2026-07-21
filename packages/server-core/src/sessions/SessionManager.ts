@@ -9,7 +9,7 @@ import { existsSync } from 'fs'
 import { readFile, writeFile, mkdir } from 'fs/promises'
 import { randomUUID } from 'node:crypto'
 import type { AutonomyEvent } from '@craft-agent/core/types'
-import { type AgentEvent, setPermissionMode, hydratePreviousPermissionMode, getPermissionModeDiagnostics, type PermissionMode, unregisterSessionScopedToolCallbacks, mergeSessionScopedToolCallbacks, AbortReason, type AuthRequest, type AuthResult, type CredentialAuthRequest, type BrowserPaneFns, generateConversationSummary, resolveKeepBackgroundTasksAlive } from '@craft-agent/shared/agent'
+import { type AgentEvent, setPermissionMode, hydratePreviousPermissionMode, getPermissionModeDiagnostics, type PermissionMode, unregisterSessionScopedToolCallbacks, mergeSessionScopedToolCallbacks, AbortReason, type AuthRequest, type AuthResult, type CredentialAuthRequest, type BrowserPaneFns, generateConversationSummary, resolveKeepBackgroundTasksAlive, decideAutonomyRecovery } from '@craft-agent/shared/agent'
 import {
   resolveSessionConnection,
   createBackendFromConnection,
@@ -7961,35 +7961,34 @@ export class SessionManager implements ISessionManager {
 
         if (inferredError) {
           const evidence = formattedResult.slice(0, 1_000)
-          const authBlocked = /oauth|mfa|authentication|credential|api key|token.*expired|unauthori[sz]ed/i.test(formattedResult)
-          const isBrowserTool = /browser_tool|browser:|browser\b/i.test(toolName)
-          const fallbackAlreadyAttempted = managed.autonomyEvents?.some(item => item.phase === 'fallback') ?? false
+          const decision = decideAutonomyRecovery({
+            toolName,
+            result: formattedResult,
+            browserEnabled: getBrowserToolEnabled(),
+            fallbackAlreadyAttempted: managed.autonomyEvents?.some(item => item.phase === 'fallback') ?? false,
+          })
 
           this.recordAutonomyEvent(managed, {
             phase: 'diagnosis', toolName,
             message: `Diagnosed tool failure in ${toolName}.`, evidence,
           })
 
-          if (authBlocked) {
+          if (decision.kind === 'escalate') {
             this.recordAutonomyEvent(managed, {
               phase: 'escalated', toolName,
-              message: 'Human authentication or credential input is required.', evidence,
-              escalationReason: /oauth|mfa/i.test(formattedResult) ? 'oauth_or_mfa' : 'credential_required',
+              message: decision.reason === 'oauth_or_mfa'
+                ? 'Human authentication or MFA is required.'
+                : decision.reason === 'credential_required'
+                  ? 'Human credential input is required.'
+                  : 'Access remained unavailable after the safe fallback path.',
+              evidence,
+              escalationReason: decision.reason,
             })
-          } else if (isBrowserTool || !getBrowserToolEnabled()) {
-            this.recordAutonomyEvent(managed, {
-              phase: 'escalated', toolName,
-              message: 'Access remained unavailable after the safe fallback path.', evidence,
-              escalationReason: 'access_unavailable_after_fallback',
-            })
-          } else if (!fallbackAlreadyAttempted) {
+          } else if (decision.kind === 'fallback_browser') {
             this.recordAutonomyEvent(managed, {
               phase: 'fallback', toolName,
               message: 'Trying the integrated browser as a safe alternative.', evidence,
             })
-            // The agent receives the failed tool result in its current context. The
-            // system autonomy contract now directs the next action to browser_tool;
-            // do not abort Claude turns merely to inject a duplicate reminder.
           }
         }
 
