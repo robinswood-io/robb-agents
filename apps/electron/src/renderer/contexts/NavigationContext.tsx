@@ -713,6 +713,9 @@ export function NavigationProvider({
           if (parsed.params.project) {
             createOptions.projectId = parsed.params.project
           }
+          if (parsed.params.playbook) {
+            createOptions.playbookSlug = parsed.params.playbook
+          }
           const session = await onCreateSession(workspaceId, createOptions)
 
           if (parsed.params.name) {
