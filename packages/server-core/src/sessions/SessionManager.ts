@@ -7815,6 +7815,10 @@ export class SessionManager implements ISessionManager {
       case 'tool_start': {
         // Format tool input paths to relative for better readability
         const formattedToolInput = formatToolInputPaths(event.input)
+        this.recordAutonomyEvent(managed, {
+          phase: 'attempt', toolName: event.toolName,
+          message: `Attempting ${event.toolName}.`,
+        })
 
         // Resolve call_llm model for TurnCard badge display.
         // Resolve call_llm model short names to full IDs for display.
@@ -7958,6 +7962,13 @@ export class SessionManager implements ISessionManager {
 
         // Some backends omit explicit isError but still prefix with [ERROR].
         const inferredError = event.isError === true || /^\s*(\[ERROR\]|Error:|error:)/.test(formattedResult)
+
+        if (!inferredError) {
+          this.recordAutonomyEvent(managed, {
+            phase: 'verified', toolName,
+            message: `${toolName} completed successfully.`,
+          })
+        }
 
         if (inferredError) {
           const evidence = formattedResult.slice(0, 1_000)
