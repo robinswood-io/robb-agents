@@ -5,7 +5,7 @@ Thank you for contributing to **Robb Agents**, an MIT-licensed, French-first ope
 ## Start here
 
 ```bash
-git clone https://github.com/robinswood-io/robinswood-agents.git
+git clone https://github.com/robinswood-io/robb-agents.git
 cd robinswood-agents
 bun install --frozen-lockfile
 bun run electron:dev

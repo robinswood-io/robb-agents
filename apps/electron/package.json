@@ -9,13 +9,13 @@
   "author": {
     "name": "Robb Agents Contributors"
   },
-  "homepage": "https://github.com/robinswood-io/robinswood-agents",
+  "homepage": "https://github.com/robinswood-io/robb-agents",
   "repository": {
     "type": "git",
-    "url": "https://github.com/robinswood-io/robinswood-agents.git"
+    "url": "https://github.com/robinswood-io/robb-agents.git"
   },
   "bugs": {
-    "url": "https://github.com/robinswood-io/robinswood-agents/issues"
+    "url": "https://github.com/robinswood-io/robb-agents/issues"
   },
   "license": "MIT",
   "type": "module",

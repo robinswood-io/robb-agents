@@ -1,21 +1,33 @@
 # Robb Agents
 
+> **A local-first desktop workspace for autonomous AI agents.**
+>
+> Plan, run, verify and supervise long-running agent work — with your data, providers and tools under your control.
+
+[![Validate](https://github.com/robinswood-io/robb-agents/actions/workflows/robinswood-validate.yml/badge.svg)](https://github.com/robinswood-io/robb-agents/actions/workflows/robinswood-validate.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Validate](https://github.com/robinswood-io/robinswood-agents/actions/workflows/robinswood-validate.yml/badge.svg)](https://github.com/robinswood-io/robinswood-agents/actions/workflows/robinswood-validate.yml)
+[![Platforms](https://img.shields.io/badge/platforms-macOS%20%7C%20Windows%20%7C%20Linux-08033A)](#downloads)
 
-**Robb Agents** is a French-first, local-first desktop workspace for long-running AI agents. It is maintained by Robinswood as an independent **MIT-licensed** open-source distribution of Craft Agents OSS.
+**Robb Agents** is an open-source desktop workspace maintained by Robinswood. It combines multi-session agent work, projects and task workflows with local MCP/API sources, provider routing and an integrated browser fallback.
 
-It includes multi-session workspaces, project/Kanban/task workflows, policy-first provider routing, local MCP/API sources, background agents, Gemini subscription OAuth, ChatGPT/Codex, Claude, Mistral API models, and Mistral Vibe subscription support.
+## Why Robb Agents
+
+- **Autonomous by default** — agents diagnose tool failures, use safe alternatives such as the integrated browser, and surface only genuinely human-only blockers.
+- **Local-first** — existing Craft Agents data in `~/.craft-agent` remains available; no migration or copy is required.
+- **Provider freedom** — use ChatGPT/Codex, Claude, Gemini, GitHub Copilot, Mistral API or Mistral Vibe with explicit billing and authentication modes.
+- **Built for durable work** — sessions, projects, Kanban, background agents, source connections and operational evidence stay together.
+- **Efficient runtime** — the checksum-verified RTK optimizer is bundled into supported desktop builds.
 
 ## Downloads
 
-Download the matching artifact from [GitHub Releases](https://github.com/robinswood-io/robinswood-agents/releases):
+Download the matching verified artifact from [GitHub Releases](https://github.com/robinswood-io/robb-agents/releases):
 
 | Platform | Artifact |
 | --- | --- |
 | macOS Apple Silicon | `Robb-Agents-arm64.dmg` |
 | macOS Intel | `Robb-Agents-x64.dmg` |
 | Windows x64 | `Robb-Agents-x64-Setup.exe` |
+| Linux x64 | `Robb-Agents-x64.AppImage` |
 
 Every release provides a `SHA256SUMS.txt` file. Verify it before opening an installer:
 
@@ -49,12 +61,18 @@ Public GitHub Releases are fail-closed: they are created only after Developer ID
 2. Choose the per-user install directory if needed.
 3. The installer creates Start Menu and desktop shortcuts and does not require administrator access.
 
+### Linux
+
+1. Download `Robb-Agents-x64.AppImage` and its matching checksum.
+2. Make it executable: `chmod +x Robb-Agents-x64.AppImage`.
+3. Run it locally; no system-wide installation is required.
+
 ### Build from source
 
 Requirements: [Bun](https://bun.sh/) 1.3.9+, Node.js 20+, and platform build tooling (Xcode command-line tools on macOS; PowerShell 7/Windows build tools on Windows).
 
 ```bash
-git clone https://github.com/robinswood-io/robinswood-agents.git
+git clone https://github.com/robinswood-io/robb-agents.git
 cd robinswood-agents
 bun install --frozen-lockfile
 bun run electron:start

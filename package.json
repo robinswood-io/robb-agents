@@ -1,8 +1,8 @@
 {
-  "name": "craft-agent",
+  "name": "robb-agents",
   "version": "0.11.0",
   "license": "MIT",
-  "description": "Claude Code-like agent for Craft documents",
+  "description": "Robb Agents — local-first desktop workspace for autonomous AI agents",
   "type": "module",
   "private": true,
   "trustedDependencies": [

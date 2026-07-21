@@ -6,7 +6,7 @@ Robb Agents intends to use [SignPath Foundation](https://signpath.org/) for Wind
 
 ## Required SignPath setup after approval
 
-1. Install the [SignPath GitHub App](https://github.com/apps/signpath) and grant it access only to `robinswood-io/robinswood-agents`.
+1. Install the [SignPath GitHub App](https://github.com/apps/signpath) and grant it access only to `robinswood-io/robb-agents`.
 2. Add the predefined **GitHub.com** Trusted Build System to the SignPath organization and link it to the Robb Agents project.
 3. Create a signing policy and artifact configuration for the Windows NSIS installer.
 4. Store only `SIGNPATH_API_TOKEN` as a GitHub Actions secret in the protected `release` environment. Configure the organization ID, project slug, signing-policy slug, and artifact-configuration slug as environment variables after approval.

@@ -4,7 +4,7 @@
 
 Please **do not** disclose security vulnerabilities in public issues.
 
-Use [GitHub private vulnerability reporting](https://github.com/robinswood-io/robinswood-agents/security/advisories/new) for this repository. If that facility is unavailable, open a minimal public issue asking maintainers for a private reporting channel; do not include exploit details.
+Use [GitHub private vulnerability reporting](https://github.com/robinswood-io/robb-agents/security/advisories/new) for this repository. If that facility is unavailable, open a minimal public issue asking maintainers for a private reporting channel; do not include exploit details.
 
 Include:
 
