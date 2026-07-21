@@ -1,3 +1,5 @@
 export * from './types.ts'
 export { validatePlaybookManifest } from './validation.ts'
 export { getWorkspacePlaybooksPath, invalidatePlaybooksCache, loadWorkspacePlaybook, loadWorkspacePlaybooks } from './storage.ts'
+export { BUILTIN_PLAYBOOKS, getBuiltinPlaybook } from './builtins.ts'
+export { formatPlaybookPrompt } from './prompt.ts'
