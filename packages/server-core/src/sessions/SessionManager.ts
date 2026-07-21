@@ -22,6 +22,7 @@ import {
   type PostInitResult,
 } from '@craft-agent/shared/agent/backend'
 import { getLlmConnection, getLlmConnections, getDefaultLlmConnection, getDefaultThinkingLevel, getBrowserToolEnabled, resetManagedAnthropicAuthEnvVars, resolveMidStreamBehavior, getPersistedUiLanguage, resolveTitleLanguageName, resolveRoutingPolicy, maxRoutingSensitivity } from '@craft-agent/shared/config'
+import { formatPlaybookPrompt, getBuiltinPlaybook, loadWorkspacePlaybook } from '@craft-agent/shared/playbooks'
 import { PrivilegedExecutionBroker } from '@craft-agent/server-core/services'
 import { isValidWorkingDirectory } from '../utils/path-validation'
 import { InitGate } from '@craft-agent/server-core/domain'
@@ -819,6 +820,8 @@ interface ManagedSession {
   isArchived?: boolean
   /** Recent autonomous-resolution evidence, persisted with the session. */
   autonomyEvents?: AutonomyEvent[]
+  /** Optional validated operational playbook bound to the session. */
+  playbookSlug?: string
   /** Timestamp when session was archived (for retention policy) */
   archivedAt?: number
   /** Permission mode for this session ('safe', 'ask', 'allow-all') */
@@ -2595,6 +2598,12 @@ export class SessionManager implements ISessionManager {
     // Get new session defaults from workspace config (with global fallback)
     // Options.permissionMode overrides the workspace default (used by EditPopover for auto-execute)
     const workspaceRootPath = workspace.rootPath
+    const selectedPlaybook = options?.playbookSlug
+      ? loadWorkspacePlaybook(workspaceRootPath, options.playbookSlug) ?? getBuiltinPlaybook(options.playbookSlug)
+      : null
+    if (options?.playbookSlug && !selectedPlaybook) {
+      throw new Error(`Unknown playbook: ${options.playbookSlug}`)
+    }
     const wsConfig = loadWorkspaceConfig(workspaceRootPath)
     const globalDefaults = loadConfigDefaults()
 
@@ -2893,6 +2902,7 @@ export class SessionManager implements ISessionManager {
       taskRunId: options?.taskRunId,
       taskNodeId: options?.taskNodeId,
       taskDraft: options?.taskDraft,
+      playbookSlug: selectedPlaybook?.manifest.slug,
       // Persist only an EXPLICIT selection (e.g. a task's spec.sources on its subtasks).
       // The workspace-default fallback stays dynamic — freezing it into the header would
       // pin every ordinary session to the defaults as of its creation time.
@@ -6277,6 +6287,10 @@ export class SessionManager implements ISessionManager {
       // rather than part of the user's message content. The original message is stored
       // in session JSONL (line ~3952); this only affects the SDK's in-process context.
       let effectiveMessage = message
+      if (managed.playbookSlug) {
+        const playbook = loadWorkspacePlaybook(workspaceRootPath, managed.playbookSlug) ?? getBuiltinPlaybook(managed.playbookSlug)
+        if (playbook) effectiveMessage = `${formatPlaybookPrompt(playbook)}\n\n${effectiveMessage}`
+      }
       if (managed.wasInterrupted) {
         effectiveMessage = `${message}\n\n<system-reminder>The previous assistant response was interrupted by the user and may be incomplete. Do not repeat or continue the interrupted response unless asked. Focus on the new message above.</system-reminder>`
         managed.wasInterrupted = false

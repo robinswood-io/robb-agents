@@ -81,6 +81,7 @@ export interface Session {
   lastFinalMessageId?: string
   isAsyncOperationOngoing?: boolean
   autonomyEvents?: AutonomyEvent[]
+  playbookSlug?: string
   /** @deprecated Use isAsyncOperationOngoing instead */
   isRegeneratingTitle?: boolean
   currentStatus?: {
@@ -148,6 +149,8 @@ export interface CreateSessionOptions {
   labels?: string[]
   isFlagged?: boolean
   enabledSourceSlugs?: string[]
+  /** Operational playbook to bind to this session. */
+  playbookSlug?: string
   /**
    * Message ID to branch from. This is a hard context cutoff:
    * the new session must not include model context from later parent messages.

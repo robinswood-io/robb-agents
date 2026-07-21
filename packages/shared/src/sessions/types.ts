@@ -66,6 +66,7 @@ export const SESSION_PERSISTENT_FIELDS = [
   'taskDraft',
   // Runtime evidence of autonomous resolution and human-only blockers
   'autonomyEvents',
+  'playbookSlug',
 ] as const;
 
 export type SessionPersistentField = typeof SESSION_PERSISTENT_FIELDS[number];
@@ -148,6 +149,8 @@ export interface SessionConfig {
   sdkCwd?: string;
   /** Recent structured resolution/fallback evidence, capped by SessionManager. */
   autonomyEvents?: AutonomyEvent[];
+  /** Optional operational playbook bound to this session. */
+  playbookSlug?: string;
   /** Shared viewer URL (if shared via viewer) */
   sharedUrl?: string;
   /** Shared session ID in viewer (for revoke) */

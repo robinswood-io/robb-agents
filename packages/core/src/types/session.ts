@@ -32,6 +32,8 @@ export interface Session {
   lastReadMessageId?: string;    // ID of the last message the user has read
   /** Structured runtime evidence of agent self-resolution and human-only blockers. */
   autonomyEvents?: AutonomyEvent[];
+  /** Optional operational playbook bound to this session. */
+  playbookSlug?: string;
 }
 
 /**
