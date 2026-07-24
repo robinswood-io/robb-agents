@@ -1919,6 +1919,9 @@ export class SessionManager implements ISessionManager {
       const slug = connectionSlug || getDefaultLlmConnection()
       if (!slug) {
         sessionLog.warn('No LLM connection slug available for reinitializeAuth')
+        resetManagedAnthropicAuthEnvVars()
+        resetSummarizationClient()
+        return
       }
       const connection = slug ? getLlmConnection(slug) : null
 
