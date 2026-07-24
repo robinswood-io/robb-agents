@@ -116,7 +116,10 @@ class InstallerContractTests(unittest.TestCase):
         for token in forbidden:
             self.assertNotIn(token, source)
 
-    @unittest.skipUnless(shutil.which("bash"), "bash is not installed")
+    @unittest.skipUnless(
+        shutil.which("bash") and platform.system() in {"Darwin", "Linux"},
+        "Bash syntax validation requires macOS or Linux with bash",
+    )
     def test_shell_installer_has_valid_bash_syntax(self) -> None:
         result = subprocess.run(
             ["bash", "-n", str(SHELL_INSTALLER)],
