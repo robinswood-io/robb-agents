@@ -87,6 +87,7 @@ Exemples :
 - [`routing-policy.example.json`](./routing-policy.example.json) — exemple policy validé par tests.
 - [`technical-spike-router.md`](./technical-spike-router.md) — notes techniques switch provider / router.
 - [`market-roadmap-execution-plan-2026.md`](./market-roadmap-execution-plan-2026.md) — plan d’exécution consolidé face au marché, dépendances, SLO et critères d’acceptation.
+- [`security-robustness-assessment-2026-07-24.md`](./security-robustness-assessment-2026-07-24.md) — audit vérifié, correctifs intégrés et risques résiduels priorisés.
 
 ## Roadmap initiale
 
