@@ -110,10 +110,23 @@ export default function AppSettingsPage() {
   const [proxyError, setProxyError] = useState<string | undefined>()
   const [isSavingProxy, setIsSavingProxy] = useState(false)
 
-  // Auto-update state (Check Now / Update Ready only shown in Electron, not WebUI)
+  // Stable updates are exposed only by this Settings flow in packaged
+  // production. Development and WebUI keep the control hidden.
   const isElectron = window.electronAPI.getRuntimeEnvironment() === 'electron'
   const updateChecker = useUpdateChecker()
   const [isCheckingForUpdates, setIsCheckingForUpdates] = useState(false)
+  const [updatesEnabled, setUpdatesEnabled] = useState(false)
+
+  useEffect(() => {
+    if (!isElectron) return
+    let active = true
+    void window.electronAPI.isDebugMode().then((debugMode) => {
+      if (active) setUpdatesEnabled(!debugMode)
+    })
+    return () => {
+      active = false
+    }
+  }, [isElectron])
 
   const handleCheckForUpdates = useCallback(async () => {
     setIsCheckingForUpdates(true)
@@ -316,7 +329,7 @@ export default function AppSettingsPage() {
                       <span className="text-muted-foreground">
                         {updateChecker.updateInfo?.currentVersion ?? t("common.loading")}
                       </span>
-                      {isElectron && updateChecker.isDownloading && updateChecker.updateInfo?.latestVersion && (
+                      {updatesEnabled && updateChecker.isDownloading && updateChecker.updateInfo?.latestVersion && (
                         <div className="flex items-center gap-2 text-muted-foreground text-sm">
                           <Spinner className="w-3 h-3" />
                           <span>{t("settings.about.downloading", { version: updateChecker.updateInfo.latestVersion, percent: updateChecker.downloadProgress })}</span>
@@ -324,7 +337,7 @@ export default function AppSettingsPage() {
                       )}
                     </div>
                   </SettingsRow>
-                  {isElectron && (
+                  {updatesEnabled && (
                     <SettingsRow label={t("settings.about.checkForUpdates")}>
                       <Button
                         variant="outline"
@@ -343,7 +356,7 @@ export default function AppSettingsPage() {
                       </Button>
                     </SettingsRow>
                   )}
-                  {isElectron && updateChecker.isReadyToInstall && updateChecker.updateInfo?.latestVersion && (
+                  {updatesEnabled && updateChecker.isReadyToInstall && updateChecker.updateInfo?.latestVersion && (
                     <SettingsRow label={t("settings.about.updateReady")}>
                       <Button
                         size="sm"

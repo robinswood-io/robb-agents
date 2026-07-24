@@ -7,7 +7,14 @@ import { app, BrowserWindow, dialog, ipcMain, nativeImage, nativeTheme, shell } 
 import { createHash, randomUUID } from 'crypto'
 import { hostname, homedir } from 'os'
 import * as Sentry from '@sentry/electron/main'
-import { ROBINSWOOD_APP_NAME } from '@craft-agent/shared/robinswood-branding'
+import {
+  getDefaultAppName,
+  getDefaultDeepLinkScheme,
+  resolveAppChannel,
+} from './app-channel'
+
+const APP_CHANNEL = resolveAppChannel(app.isPackaged)
+const IS_DEVELOPMENT_CHANNEL = APP_CHANNEL === 'development'
 
 // Initialize Sentry error tracking as early as possible after app import.
 // Only enabled in production (packaged) builds to avoid noise during development.
@@ -20,7 +27,7 @@ import { ROBINSWOOD_APP_NAME } from '@craft-agent/shared/robinswood-branding'
 //   3. Add @sentry/esbuild-plugin to scripts/electron-build-main.ts (handles main process maps)
 Sentry.init({
   dsn: process.env.SENTRY_ELECTRON_INGEST_URL,
-  environment: app.isPackaged ? 'production' : 'development',
+  environment: APP_CHANNEL,
   release: app.getVersion(),
   // Enabled whenever the ingest URL is available — works in both production (baked via CI)
   // and development (injected via .env / 1Password). Filter by environment in Sentry dashboard.
@@ -103,6 +110,7 @@ import { CONFIG_DIR, getWorkspaces, getWorkspaceByNameOrId, loadStoredConfig, ad
 import { getDefaultWorkspacesDir } from '@craft-agent/shared/workspaces'
 import { initializeDocs } from '@craft-agent/shared/docs'
 import { initializeReleaseNotes } from '@craft-agent/shared/release-notes'
+import { validateBundle, type SessionBundle } from '@craft-agent/shared/sessions'
 import { ensureDefaultPermissions } from '@craft-agent/shared/agent/permissions-config'
 import { ensureToolIcons, ensurePresetThemes } from '@craft-agent/shared/config'
 import { setBundledAssetsRoot } from '@craft-agent/shared/utils'
@@ -117,7 +125,7 @@ import { setPerfEnabled, enableDebug } from '@craft-agent/shared/utils'
 import { registerPiModelResolver } from '@craft-agent/shared/config'
 import { getPiModelsForAuthProvider, getAllPiModels } from '@craft-agent/shared/config'
 import { initNotificationService, initBadgeIcon, initInstanceBadge, updateBadgeCount } from './notifications'
-import { checkForUpdatesOnLaunch, setAutoUpdateEventSink, isUpdating, setBeforeUpdateQuitHook } from './auto-update'
+import { setAutoUpdateEventSink, isUpdating, setBeforeUpdateQuitHook } from './auto-update'
 import type { EventSink } from '@craft-agent/server-core/transport'
 import { validateGitBashPath, checkVCRedistInstalled } from '@craft-agent/server-core/services'
 
@@ -206,7 +214,7 @@ registerPiModelResolver((piAuthProvider) =>
 
 // Custom URL scheme for deeplinks (e.g., craftagents://auth-complete)
 // Supports multi-instance dev: CRAFT_DEEPLINK_SCHEME env var (craftagents1, craftagents2, etc.)
-const DEEPLINK_SCHEME = process.env.CRAFT_DEEPLINK_SCHEME || 'craftagents'
+const DEEPLINK_SCHEME = process.env.CRAFT_DEEPLINK_SCHEME || getDefaultDeepLinkScheme(APP_CHANNEL)
 
 let windowManager: WindowManager | null = null
 let sessionManager: SessionManager | null = null
@@ -222,12 +230,18 @@ let moduleClientResolver: ((webContentsId: number) => string | undefined) | null
 // directly.
 let messagingHandle: MessagingBootstrapHandle | null = null
 
+function hasTransferSummary(value: unknown): value is { summary: string } {
+  if (typeof value !== 'object' || value === null || !('summary' in value)) return false
+  return typeof value.summary === 'string' && value.summary.length > 0
+}
+
 // Store pending deep link if app not ready yet (cold start)
 let pendingDeepLink: string | null = null
 
 // Set app name early (before app.whenReady) to ensure correct macOS menu bar title
-// Supports multi-instance dev: CRAFT_APP_NAME env var (e.g., "Robb Agents [1]")
-app.setName(process.env.CRAFT_APP_NAME || ROBINSWOOD_APP_NAME)
+// Supports isolated development instances while preserving the stable
+// production identity in release builds.
+app.setName(process.env.CRAFT_APP_NAME || getDefaultAppName(APP_CHANNEL))
 
 // Share the established Craft data root (sessions, sources, projects and
 // credentials) while isolating Electron's cache, single-instance lock and
@@ -236,6 +250,7 @@ app.setName(process.env.CRAFT_APP_NAME || ROBINSWOOD_APP_NAME)
 const robbRuntimeDir = join(CONFIG_DIR, 'robb-electron')
 app.setPath('userData', robbRuntimeDir)
 process.env.CRAFT_SERVER_LOCK_DIR = robbRuntimeDir
+process.env.CRAFT_CONFIG_DIR = CONFIG_DIR
 
 // Register as default protocol client for craftagents:// URLs
 // This must be done before app.whenReady() on some platforms
@@ -509,7 +524,7 @@ app.whenReady().then(async () => {
       shell,
       nativeTheme,
       logger: log,
-      isDebugMode,
+      isDebugMode: IS_DEVELOPMENT_CHANNEL || isDebugMode,
       getLogFilePath,
       captureError: (err) => Sentry.captureException(err),
     })
@@ -826,7 +841,7 @@ app.whenReady().then(async () => {
         const sourceWorkspace = getWorkspaceByNameOrId(sourceWorkspaceLocalId)
         if (!sourceWorkspace) throw new Error(`Source workspace ${sourceWorkspaceLocalId} not found`)
 
-        let bundle: any = null
+        let bundle: SessionBundle | null = null
 
         if (sourceWorkspace.remoteServer) {
           const { url: sourceUrl, token: sourceToken, remoteWorkspaceId: sourceRemoteWorkspaceId } = sourceWorkspace.remoteServer
@@ -835,15 +850,18 @@ app.whenReady().then(async () => {
           if (!sourceClient) throw new Error(sourceError ?? 'Connection failed to source remote server')
 
           try {
-            bundle = await sourceClient.invoke('sessions:export', sessionId)
-            if (!bundle) throw new Error(`Failed to export session ${sessionId}`)
+            const exportedBundle: unknown = await sourceClient.invoke('sessions:export', sessionId)
+            if (!validateBundle(exportedBundle)) {
+              throw new Error(`Failed to export a valid session bundle for ${sessionId}`)
+            }
+            bundle = exportedBundle
 
             try {
               console.log('[Transfer] Generating conversation summary on source server...')
-              const transferPayload = await sourceClient.invoke('sessions:exportRemoteTransfer', sessionId)
-              if (transferPayload?.summary && bundle.session?.header) {
-                ;(bundle.session.header as any).transferredSessionSummary = transferPayload.summary
-                ;(bundle.session.header as any).transferredSessionSummaryApplied = false
+              const transferPayload: unknown = await sourceClient.invoke('sessions:exportRemoteTransfer', sessionId)
+              if (hasTransferSummary(transferPayload)) {
+                bundle.session.header.transferredSessionSummary = transferPayload.summary
+                bundle.session.header.transferredSessionSummaryApplied = false
                 console.log(`[Transfer] Summary generated: ${transferPayload.summary.length} chars`)
               }
             } catch (err) {
@@ -860,9 +878,9 @@ app.whenReady().then(async () => {
           try {
             console.log('[Transfer] Generating conversation summary...')
             const transferPayload = await sessionManager.exportRemoteSessionTransfer(sessionId, sourceWorkspace.id)
-            if (transferPayload?.summary && bundle.session?.header) {
-              ;(bundle.session.header as any).transferredSessionSummary = transferPayload.summary
-              ;(bundle.session.header as any).transferredSessionSummaryApplied = false
+            if (hasTransferSummary(transferPayload)) {
+              bundle.session.header.transferredSessionSummary = transferPayload.summary
+              bundle.session.header.transferredSessionSummaryApplied = false
               console.log(`[Transfer] Summary generated: ${transferPayload.summary.length} chars`)
             }
           } catch (err) {
@@ -870,7 +888,8 @@ app.whenReady().then(async () => {
           }
         }
 
-        console.log(`[Transfer] Export complete: ${bundle.session?.messages?.length ?? 0} messages, ${bundle.files?.length ?? 0} files`)
+        if (!bundle) throw new Error(`Failed to export session ${sessionId}`)
+        console.log(`[Transfer] Export complete: ${bundle.session.messages.length} messages, ${bundle.files.length} files`)
 
         const { url, token, remoteWorkspaceId } = targetWorkspace.remoteServer
         console.log(`[Transfer] Connecting to target remote server: ${url}`)
@@ -1106,21 +1125,20 @@ app.whenReady().then(async () => {
       mainLog.warn('Failed to set Sentry context tags:', err)
     }
 
-    // Initialize auto-update (check immediately on launch)
-    // Skip in dev mode to avoid replacing /Applications app and launching it instead
+    // Register the update bridge without making a network request. Production
+    // checks and downloads are initiated exclusively by the Settings button.
+    // Development builds are rejected by the updater itself.
     if (moduleSink) setAutoUpdateEventSink(moduleSink)
     // Snapshot multi-window state BEFORE quitAndInstall. electron-updater
     // (Squirrel.Mac) destroys BrowserWindows between quitAndInstall and
     // before-quit firing; saving from before-quit alone would overwrite
     // window-state.json with an empty array.
     setBeforeUpdateQuitHook(() => captureAndSaveWindowState('pre-update'))
-    if (app.isPackaged) {
-      checkForUpdatesOnLaunch().catch(err => {
-        mainLog.error('[auto-update] Launch check failed:', err)
-      })
-    } else {
-      mainLog.info('[auto-update] Skipping auto-update in dev mode')
-    }
+    mainLog.info(
+      APP_CHANNEL === 'production'
+        ? '[auto-update] Stable updates are available only from the Settings button'
+        : '[auto-update] Disabled for the development channel',
+    )
 
     // Process pending deep link from cold start
     if (pendingDeepLink) {
@@ -1135,7 +1153,8 @@ app.whenReady().then(async () => {
     }
     mainLog.info('Messaging gateway log path:', getMessagingGatewayLogFilePath())
   } catch (error) {
-    mainLog.error('Failed to initialize app:', error instanceof Error ? error.message : error, (error as any)?.stack)
+    const stack = error instanceof Error ? error.stack : undefined
+    mainLog.error('Failed to initialize app:', error instanceof Error ? error.message : error, stack)
     // Continue anyway - the app will show errors in the UI
   }
 

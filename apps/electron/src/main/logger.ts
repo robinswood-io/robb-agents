@@ -13,12 +13,14 @@ import type {
  *
  * Priority:
  * 1) --debug flag always enables debug mode
- * 2) CRAFT_IS_PACKAGED env (when explicitly set)
- * 3) Electron runtime heuristic (defaultApp => dev, otherwise packaged)
- * 4) Non-Electron runtimes default to debug mode (headless Bun / node --check)
+ * 2) Development channel always enables debug mode, including packaged Dev builds
+ * 3) CRAFT_IS_PACKAGED env (when explicitly set)
+ * 4) Electron runtime heuristic (defaultApp => dev, otherwise packaged)
+ * 5) Non-Electron runtimes default to debug mode (headless Bun / node --check)
  */
 function resolveDebugMode(): boolean {
   if (process.argv.includes('--debug')) return true
+  if (process.env.ROBB_BUILD_CHANNEL === 'development') return true
 
   const packagedEnv = process.env.CRAFT_IS_PACKAGED
   if (packagedEnv === 'true') return false
@@ -37,6 +39,11 @@ export const isDebugMode = resolveDebugMode()
 
 // Configure transports based on debug mode
 if (isDebugMode) {
+  // Keep the Electron main log inside the active channel profile. Relying on
+  // Electron's default Logs directory can make a Dev runtime write under the
+  // production product name before app.setName() has been applied.
+  log.transports.file.resolvePathFn = () => join(CONFIG_DIR, 'logs', 'main.log')
+
   // JSON format for file (agent-parseable)
   // Note: format expects (params: FormatParams) => any[], where params.message has the LogMessage fields
   log.transports.file.format = ({ message }) => [

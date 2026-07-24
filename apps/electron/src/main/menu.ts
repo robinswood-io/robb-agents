@@ -5,8 +5,7 @@ import { EDIT_MENU, VIEW_MENU, WINDOW_MENU } from '../shared/menu-schema'
 import type { MenuItem } from '../shared/menu-schema'
 import type { WindowManager } from './window-manager'
 import type { EventSink } from '@craft-agent/server-core/transport'
-import { mainLog, isDebugMode } from './logger'
-import { ROBINSWOOD_APP_NAME } from '@craft-agent/shared/robinswood-branding'
+import { isDebugMode } from './logger'
 
 type ClientResolver = (webContentsId: number) => string | undefined
 
@@ -19,7 +18,6 @@ let cachedClientResolver: ClientResolver | null = null
  * Creates and sets the application menu for macOS.
  * Includes only relevant items for the Craft Agents app.
  *
- * Call rebuildMenu() when update state changes to refresh the menu.
  */
 export function createApplicationMenu(windowManager: WindowManager, sink?: EventSink, resolver?: ClientResolver): void {
   cachedWindowManager = windowManager
@@ -38,8 +36,7 @@ export function setMenuEventSink(sink: EventSink, resolver: ClientResolver): voi
 }
 
 /**
- * Rebuilds the application menu with current update state.
- * Call this when update availability changes.
+ * Rebuilds the application menu.
  *
  * On Windows/Linux: Menu is hidden - all functionality is in the Craft logo menu.
  * On macOS: Native menu is required by Apple guidelines, so we keep it synced.
@@ -57,34 +54,14 @@ export async function rebuildMenu(): Promise<void> {
     return
   }
 
-  // Get current update state
-  const { getUpdateInfo, installUpdate, checkForUpdates } = await import('./auto-update')
-  const updateInfo = getUpdateInfo()
-  const updateReady = updateInfo.available && updateInfo.downloadState === 'ready'
-
-  // Build the update menu item based on state
-  const updateMenuItem: Electron.MenuItemConstructorOptions = updateReady
-    ? {
-        label: i18n.t("menu.installUpdateVersion", { version: updateInfo.latestVersion }),
-        click: async () => {
-          await installUpdate()
-        }
-      }
-    : {
-        label: i18n.t("menu.checkForUpdatesEllipsis"),
-        click: async () => {
-          await checkForUpdates({ autoDownload: true })
-        }
-      }
+  const appName = app.getName()
 
   const template: Electron.MenuItemConstructorOptions[] = [
     // App menu (macOS only)
     ...(isMac ? [{
-      label: ROBINSWOOD_APP_NAME,
+      label: appName,
       submenu: [
-        { role: 'about' as const, label: `About ${ROBINSWOOD_APP_NAME}` },
-        updateMenuItem,
-        { type: 'separator' as const },
+        { role: 'about' as const, label: `About ${appName}` },
         {
           label: i18n.t("menu.settings"),
           accelerator: 'CmdOrCtrl+,',
@@ -92,11 +69,11 @@ export async function rebuildMenu(): Promise<void> {
           click: () => sendToRenderer(RPC_CHANNELS.menu.OPEN_SETTINGS)
         },
         { type: 'separator' as const },
-        { role: 'hide' as const, label: `Hide ${ROBINSWOOD_APP_NAME}` },
+        { role: 'hide' as const, label: `Hide ${appName}` },
         { role: 'hideOthers' as const },
         { role: 'unhide' as const },
         { type: 'separator' as const },
-        { role: 'quit' as const, label: `Quit ${ROBINSWOOD_APP_NAME}` }
+        { role: 'quit' as const, label: `Quit ${appName}` }
       ]
     }] : []),
 
@@ -194,26 +171,6 @@ export async function rebuildMenu(): Promise<void> {
     ...(!app.isPackaged ? [{
       label: i18n.t("menu.debug"),
       submenu: [
-        {
-          label: i18n.t("menu.checkForUpdates"),
-          click: async () => {
-            const { checkForUpdates } = await import('./auto-update')
-            const info = await checkForUpdates({ autoDownload: true })
-            mainLog.info('[debug-menu] Update check result:', info)
-          }
-        },
-        {
-          label: i18n.t("menu.installUpdate"),
-          click: async () => {
-            const { installUpdate } = await import('./auto-update')
-            try {
-              await installUpdate()
-            } catch (err) {
-              mainLog.error('[debug-menu] Install failed:', err)
-            }
-          }
-        },
-        { type: 'separator' as const },
         {
           label: i18n.t("menu.resetToDefaults"),
           click: async () => {

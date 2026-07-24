@@ -75,17 +75,22 @@ Requirements: [Bun](https://bun.sh/) 1.3.9+, Node.js 20+, and platform build too
 git clone https://github.com/robinswood-io/robb-agents.git
 cd robinswood-agents
 bun install --frozen-lockfile
-bun run electron:start
+bun run electron:dev
 ```
 
-Build a local distribution artifact:
+This starts **Robb Agents Dev**, with its own macOS/application identity,
+deep-link scheme and `~/.craft-agent-dev` data profile. Starting, stopping or
+restarting it does not stop **Robb Agents** or modify its production profile.
+
+Build an isolated local development artifact:
 
 ```bash
-# macOS (unsigned local smoke build)
-bash apps/electron/scripts/build-dmg.sh arm64
+# macOS (unsigned Robb Agents Dev artifact)
+bun run electron:dist:dev:mac
 
-# Windows PowerShell (unsigned local smoke build)
-powershell -ExecutionPolicy Bypass -File apps/electron/scripts/build-win.ps1
+# Windows / Linux
+bun run electron:dist:dev:win
+bun run electron:dist:dev:linux
 ```
 
 Maintainers use `--release` / `-Release` only with externally supplied signing credentials. Tags must match the Electron version, and releases include checksum plus provenance evidence. See [the distribution guide](docs/robinswood/open-source-distribution.md).
@@ -103,8 +108,8 @@ Robb keeps billing/authentication modes explicit:
 Read the complete [Privacy Policy](PRIVACY.md).
 
 - Robb does **not** ship a Robinswood private updater, proxy, telemetry endpoint, credential service, or required cloud account.
-- On first launch Robb uses the existing `~/.craft-agent` data root directly, so Craft Agents workspaces, sessions, sources, skills, projects, preferences and locally stored credentials remain available without copying or migration. Set `CRAFT_CONFIG_DIR` only when you deliberately want an isolated/local profile.
-- GitHub Releases and self-hosted forks are the OSS distribution mechanism. Auto-update is deliberately disabled in this repository.
+- The installed production app uses the existing `~/.craft-agent` data root directly. Source and development builds are forced onto `~/.craft-agent-dev`; `CRAFT_CONFIG_DIR=~/.craft-agent` is refused by the development launcher.
+- Signed, notarized GitHub Releases are the stable production distribution mechanism. Production never checks or downloads in the background: the update button in Settings is the only way to check, download and install a stable release. The updater is disabled in Robb Agents Dev.
 - Credentials remain in the selected provider’s normal local storage/OS keychain flow. Never commit `.env`, certificates, API keys, or tokens.
 
 ## Contributing

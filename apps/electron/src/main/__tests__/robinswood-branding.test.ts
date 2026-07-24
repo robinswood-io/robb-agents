@@ -21,21 +21,22 @@ describe('Robinswood visible branding', () => {
     expect(ROBINSWOOD_NOTICE).toContain('open-source Robinswood distribution')
   })
 
-  it('uses Robb Agents as the default Electron app name', () => {
+  it('selects the Electron app name from the isolated runtime channel', () => {
     const main = readRepoFile('apps/electron/src/main/index.ts')
-    expect(main).toContain('app.setName(process.env.CRAFT_APP_NAME || ROBINSWOOD_APP_NAME)')
+    expect(main).toContain('app.setName(process.env.CRAFT_APP_NAME || getDefaultAppName(APP_CHANNEL))')
     expect(main).not.toContain("app.setName(process.env.CRAFT_APP_NAME || 'Craft Agents')")
   })
 
-  it('uses Robb Agents in the visible macOS app menu', () => {
+  it('uses the active production or development name in the macOS app menu', () => {
     const menu = readRepoFile('apps/electron/src/main/menu.ts')
-    expect(menu).toContain('label: ROBINSWOOD_APP_NAME')
-    expect(menu).toContain('About ${ROBINSWOOD_APP_NAME}')
-    expect(menu).toContain('Hide ${ROBINSWOOD_APP_NAME}')
-    expect(menu).toContain('Quit ${ROBINSWOOD_APP_NAME}')
+    expect(menu).toContain('const appName = app.getName()')
+    expect(menu).toContain('label: appName')
+    expect(menu).toContain('About ${appName}')
+    expect(menu).toContain('Hide ${appName}')
+    expect(menu).toContain('Quit ${appName}')
   })
 
-  it('uses Robb packaging metadata without private update endpoints', () => {
+  it('uses production packaging metadata and the public stable GitHub update feed', () => {
     const builder = readRepoFile('apps/electron/electron-builder.yml')
     expect(builder).toContain('appId: io.robinswood.robbagents')
     expect(builder).toContain('productName: Robb Agents')
@@ -44,9 +45,23 @@ describe('Robinswood visible branding', () => {
     expect(builder).toContain('icon: resources/robinswood-icon.icns')
     expect(builder).toContain('icon: resources/robinswood-icon.ico')
     expect(builder).toContain('icon: resources/robinswood-icon.png')
+    expect(builder).toContain('provider: github')
+    expect(builder).toContain('owner: robinswood-io')
+    expect(builder).toContain('repo: robb-agents')
+    expect(builder).toContain('channel: latest')
+    expect(builder).toContain('releaseType: release')
     expect(builder).not.toContain('https://agents.robinswood.io/electron/latest')
     expect(builder).not.toContain('https://agents.craft.do/electron/latest')
     expect(builder).not.toContain('productName: Craft Agents')
+  })
+
+  it('packages development with a disjoint name and bundle identifier', () => {
+    const builder = readRepoFile('apps/electron/electron-builder.dev.yml')
+    expect(builder).toContain('appId: io.robinswood.robbagents.dev')
+    expect(builder).toContain('productName: Robb Agents Dev')
+    expect(builder).toContain('publish: null')
+    expect(builder).toContain('output: release-dev')
+    expect(builder).toContain('Robb-Agents-Dev-${arch}')
   })
 
   it('uses Robinswood artifact names in release scripts and dynamic bundle name in afterPack', () => {
@@ -105,11 +120,12 @@ describe('Robinswood visible branding', () => {
     expect(readRepoFile('apps/viewer/src/components/Header.tsx')).not.toContain('https://agents.robinswood.io')
   })
 
-  it('uses existing Craft Agent data by default while preserving explicit isolated-profile overrides', () => {
+  it('keeps production data compatible and isolates every development launch', () => {
     const paths = readRepoFile('packages/shared/src/config/paths.ts')
     expect(paths).toContain('process.env.CRAFT_CONFIG_DIR')
-    expect(paths).toContain("join(home, '.craft-agent')")
-    expect(paths).toContain('without copying or migrating any user data')
+    expect(paths).toContain("PRODUCTION_CONFIG_DIR_NAME = '.craft-agent'")
+    expect(paths).toContain("DEVELOPMENT_CONFIG_DIR_NAME = '.craft-agent-dev'")
+    expect(paths).toContain("channel === 'development'")
     expect(paths).not.toContain("join(homedir(), '.robb-agents')")
 
     const windowState = readRepoFile('apps/electron/src/main/window-state.ts')
@@ -122,9 +138,31 @@ describe('Robinswood visible branding', () => {
     expect(logger).not.toContain("join(homedir(), '.craft-agent', 'logs'")
 
     const electronDev = readRepoFile('scripts/electron-dev.ts')
-    expect(electronDev).toContain('Robb Agents')
-    expect(electronDev).toContain('.robb-agents-${instanceNum}')
-    expect(electronDev).toContain('CRAFT_DEEPLINK_SCHEME: process.env.CRAFT_DEEPLINK_SCHEME || "craftagents"')
+    expect(electronDev).toContain('Robb Agents Dev.app')
+    expect(electronDev).toContain('io.robinswood.robbagents.dev')
+    expect(electronDev).toContain('.craft-agent-dev')
+    expect(electronDev).toContain('CRAFT_DEEPLINK_SCHEME: process.env.CRAFT_DEEPLINK_SCHEME || "robbagentsdev"')
+    expect(electronDev).toContain('Development profile isolation refused')
+  })
+
+  it('keeps update checks manual and removes every menu shortcut', () => {
+    const updater = readRepoFile('apps/electron/src/main/auto-update.ts')
+    expect(updater).toContain('autoUpdater.autoDownload = false')
+    expect(updater).toContain('autoUpdater.autoInstallOnAppQuit = false')
+    expect(updater).toContain('autoUpdater.allowPrerelease = false')
+    expect(updater).toContain('await autoUpdater.downloadUpdate()')
+    expect(updater).not.toContain('checkForUpdatesOnLaunch')
+
+    const menu = readRepoFile('apps/electron/src/main/menu.ts')
+    const menuSchema = readRepoFile('apps/electron/src/shared/menu-schema.ts')
+    expect(menu).not.toContain("import('./auto-update')")
+    expect(menuSchema).not.toContain("id: 'checkForUpdates'")
+    expect(menuSchema).not.toContain("id: 'installUpdate'")
+
+    const workflow = readRepoFile('.github/workflows/release.yml')
+    expect(workflow).toContain('generate-github-update-manifests.ts')
+    expect(workflow).toContain('--verify-tag')
+    expect(workflow).toContain('--latest')
   })
 
   it('uses Robb Agents in visible runtime guidance outside the desktop shell', () => {

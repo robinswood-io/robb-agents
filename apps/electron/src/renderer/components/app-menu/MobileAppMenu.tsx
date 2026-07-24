@@ -165,8 +165,6 @@ export function MobileAppMenu(props: AppMenuProps) {
         return
       case 'electronApi':
         switch (row.action.method) {
-          case 'checkForUpdates': window.electronAPI.checkForUpdates(); break
-          case 'installUpdate': window.electronAPI.installUpdate(); break
           case 'menuToggleDevTools': window.electronAPI.menuToggleDevTools(); break
         }
         return

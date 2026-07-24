@@ -20,7 +20,7 @@ export type MobileMenuAction =
   | { kind: 'callback'; key: 'newChat' | 'newWindow' | 'openSettings' }
   | { kind: 'settingsSubpage'; subpage: SettingsMenuItem['id'] }
   | { kind: 'url'; url: string }
-  | { kind: 'electronApi'; method: 'checkForUpdates' | 'installUpdate' | 'menuToggleDevTools' }
+  | { kind: 'electronApi'; method: 'menuToggleDevTools' }
 
 export interface MobileMenuRow {
   id: string
@@ -130,10 +130,7 @@ export function buildMobileMenuPages({ hasNewWindow, isDebugMode }: BuildOptions
         labelKey: action.labelKey,
         action: {
           kind: 'electronApi',
-          method:
-            action.id === 'checkForUpdates' ? 'checkForUpdates' :
-            action.id === 'installUpdate' ? 'installUpdate' :
-            'menuToggleDevTools',
+          method: 'menuToggleDevTools',
         },
       }
     })

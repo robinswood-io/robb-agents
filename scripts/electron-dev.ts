@@ -5,7 +5,8 @@
 
 import { spawn, type Subprocess } from "bun";
 import { existsSync, rmSync, cpSync, readFileSync, statSync, mkdirSync, writeFileSync } from "fs";
-import { join, basename } from "path";
+import { homedir } from "os";
+import { join, basename, resolve } from "path";
 import * as esbuild from "esbuild";
 import { downloadUv, type Platform, type Arch } from "./build/common";
 
@@ -39,7 +40,9 @@ const ELECTRON_BIN = join(ROOT_DIR, `node_modules/.bin/electron${BIN_EXT}`);
 const ELECTRON_MAC_APP = join(ROOT_DIR, "node_modules/electron/dist/Electron.app");
 // Keep the runnable development bundle outside `apps/electron/`: electron-
 // builder's Bun collector can otherwise include it in a production payload.
-const ROBB_MAC_APP = join(ROOT_DIR, ".robb-dev-runtime", "Robb Agents.app");
+const ROBB_MAC_APP = join(ROOT_DIR, ".robb-dev-runtime", "Robb Agents Dev.app");
+const PRODUCTION_CONFIG_DIR = join(homedir(), ".craft-agent");
+const DEVELOPMENT_CONFIG_DIR = join(homedir(), ".craft-agent-dev");
 
 function resolveBuildPlatform(): Platform {
   if (process.platform === "darwin") return "darwin";
@@ -91,10 +94,7 @@ function detectInstance(): void {
     const instanceNum = match[1];
     process.env.CRAFT_INSTANCE_NUMBER = instanceNum;
     process.env.CRAFT_VITE_PORT = `${instanceNum}173`;
-    process.env.CRAFT_APP_NAME = `Robb Agents [${instanceNum}]`;
-    process.env.CRAFT_CONFIG_DIR = join(process.env.HOME || "", `.robb-agents-${instanceNum}`);
-    process.env.CRAFT_DEEPLINK_SCHEME = `craftagents${instanceNum}`;
-    console.log(`🔢 Instance ${instanceNum} detected: port=${process.env.CRAFT_VITE_PORT}, config=${process.env.CRAFT_CONFIG_DIR}`);
+    console.log(`🔢 Development instance ${instanceNum} detected: port=${process.env.CRAFT_VITE_PORT}`);
   }
 }
 
@@ -115,12 +115,42 @@ function loadEnvFile(): void {
               (value.startsWith("'") && value.endsWith("'"))) {
             value = value.slice(1, -1);
           }
-          process.env[key] = value;
+          if (process.env[key] === undefined) {
+            process.env[key] = value;
+          }
         }
       }
     }
     console.log("📄 Loaded .env file");
   }
+}
+
+function configureDevelopmentIdentity(): void {
+  const instance = process.env.CRAFT_INSTANCE_NUMBER;
+  const suffix = instance ? ` [${instance}]` : "";
+  const profileSuffix = instance && instance !== "e2e" ? `-${instance}` : "";
+  const schemeSuffix = instance && instance !== "e2e" ? instance : "";
+
+  process.env.ROBB_BUILD_CHANNEL = "development";
+  process.env.CRAFT_APP_NAME ||= `Robb Agents Dev${suffix}`;
+  process.env.CRAFT_CONFIG_DIR ||= `${DEVELOPMENT_CONFIG_DIR}${profileSuffix}`;
+  process.env.CRAFT_DEEPLINK_SCHEME ||= `robbagentsdev${schemeSuffix}`;
+
+  if (resolve(process.env.CRAFT_CONFIG_DIR) === resolve(PRODUCTION_CONFIG_DIR)) {
+    throw new Error(
+      `Development profile isolation refused: CRAFT_CONFIG_DIR cannot target production (${PRODUCTION_CONFIG_DIR})`,
+    );
+  }
+  if (process.env.CRAFT_APP_NAME === "Robb Agents") {
+    throw new Error("Development identity isolation refused: CRAFT_APP_NAME cannot be Robb Agents");
+  }
+  if (process.env.CRAFT_DEEPLINK_SCHEME === "craftagents") {
+    throw new Error("Development deep-link isolation refused: CRAFT_DEEPLINK_SCHEME cannot be craftagents");
+  }
+
+  console.log(
+    `🧪 Development identity: app="${process.env.CRAFT_APP_NAME}", config=${process.env.CRAFT_CONFIG_DIR}, scheme=${process.env.CRAFT_DEEPLINK_SCHEME}`,
+  );
 }
 
 // Kill any process using the specified port
@@ -274,6 +304,7 @@ function getOAuthDefines(): Record<string, string> {
     const value = process.env[varName] || "";
     defines[`process.env.${varName}`] = JSON.stringify(value);
   }
+  defines["process.env.ROBB_BUILD_CHANNEL"] = JSON.stringify("development");
   return defines;
 }
 
@@ -296,13 +327,13 @@ function ensureMacRobbElectronApp(): string {
 
     let plist = readFileSync(infoPlistPath, "utf-8");
     plist = plist
-      .replace(/<key>CFBundleDisplayName<\/key>\s*<string>[^<]*<\/string>/, "<key>CFBundleDisplayName</key>\n\t<string>Robb Agents</string>")
-      .replace(/<key>CFBundleName<\/key>\s*<string>[^<]*<\/string>/, "<key>CFBundleName</key>\n\t<string>Robb Agents</string>")
-      .replace(/<key>CFBundleIdentifier<\/key>\s*<string>[^<]*<\/string>/, "<key>CFBundleIdentifier</key>\n\t<string>io.robinswood.robbagents</string>")
+      .replace(/<key>CFBundleDisplayName<\/key>\s*<string>[^<]*<\/string>/, "<key>CFBundleDisplayName</key>\n\t<string>Robb Agents Dev</string>")
+      .replace(/<key>CFBundleName<\/key>\s*<string>[^<]*<\/string>/, "<key>CFBundleName</key>\n\t<string>Robb Agents Dev</string>")
+      .replace(/<key>CFBundleIdentifier<\/key>\s*<string>[^<]*<\/string>/, "<key>CFBundleIdentifier</key>\n\t<string>io.robinswood.robbagents.dev</string>")
       .replace(/<key>CFBundleIconFile<\/key>\s*<string>[^<]*<\/string>/, "<key>CFBundleIconFile</key>\n\t<string>robb-agents.icns</string>");
     writeFileSync(infoPlistPath, plist, "utf-8");
 
-    console.log(`🍎 Prepared macOS Robb Agents bundle: ${ROBB_MAC_APP}`);
+    console.log(`🍎 Prepared macOS Robb Agents Dev bundle: ${ROBB_MAC_APP}`);
   }
 
   return join(ROBB_MAC_APP, "Contents/MacOS/Electron");
@@ -319,9 +350,10 @@ function getElectronEnv(): Record<string, string> {
   return {
     ...process.env as Record<string, string>,
     VITE_DEV_SERVER_URL: `http://localhost:${vitePort}`,
-    CRAFT_CONFIG_DIR: process.env.CRAFT_CONFIG_DIR || "",
-    CRAFT_APP_NAME: process.env.CRAFT_APP_NAME || "Robb Agents",
-    CRAFT_DEEPLINK_SCHEME: process.env.CRAFT_DEEPLINK_SCHEME || "craftagents",
+    ROBB_BUILD_CHANNEL: "development",
+    CRAFT_CONFIG_DIR: process.env.CRAFT_CONFIG_DIR || DEVELOPMENT_CONFIG_DIR,
+    CRAFT_APP_NAME: process.env.CRAFT_APP_NAME || "Robb Agents Dev",
+    CRAFT_DEEPLINK_SCHEME: process.env.CRAFT_DEEPLINK_SCHEME || "robbagentsdev",
     CRAFT_INSTANCE_NUMBER: process.env.CRAFT_INSTANCE_NUMBER || "",
   };
 }
@@ -453,8 +485,9 @@ async function main(): Promise<void> {
   console.log("🚀 Starting Electron dev environment...\n");
 
   // Setup
-  detectInstance();
   loadEnvFile();
+  detectInstance();
+  configureDevelopmentIdentity();
   cleanViteCache();
 
   // Ensure dist directory exists

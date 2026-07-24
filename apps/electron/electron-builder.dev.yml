@@ -1,0 +1,26 @@
+extends: electron-builder.yml
+
+appId: io.robinswood.robbagents.dev
+productName: Robb Agents Dev
+publish: null
+
+directories:
+  output: release-dev
+  buildResources: resources
+
+mac:
+  artifactName: "Robb-Agents-Dev-${arch}.${ext}"
+
+dmg:
+  artifactName: "Robb-Agents-Dev-${arch}.dmg"
+  title: "Robb Agents Dev"
+
+win:
+  artifactName: "Robb-Agents-Dev-${arch}.${ext}"
+
+nsis:
+  shortcutName: Robb Agents Dev
+
+linux:
+  executableName: robb-agents-dev
+  artifactName: "Robb-Agents-Dev-${arch}.${ext}"

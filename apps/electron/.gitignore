@@ -2,6 +2,7 @@
 vendor/
 packages/
 release/
+release-dev/
 node_modules/@anthropic-ai/
 
 # Platform-specific uv binaries (downloaded during build)

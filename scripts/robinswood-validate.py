@@ -95,7 +95,6 @@ def check_oss_license() -> None:
 def check_no_private_runtime_endpoints() -> None:
     forbidden = [
         "https://agents.robinswood.io",
-        "https://robinswood.io",
         "contact@robinswood.io",
     ]
     allowed_paths = {
@@ -152,6 +151,11 @@ def check_robinswood_packaging() -> None:
         "icon: resources/robinswood-icon.icns",
         "icon: resources/robinswood-icon.ico",
         "icon: resources/robinswood-icon.png",
+        "provider: github",
+        "owner: robinswood-io",
+        "repo: robb-agents",
+        "channel: latest",
+        "releaseType: release",
     ]
     missing = [token for token in required if token not in builder]
     if missing:
@@ -192,15 +196,42 @@ def check_robinswood_packaging() -> None:
         fail("afterPack.cjs must use Robinswood icon assets and avoid hardcoded Craft Agents.app")
 
     paths = (ROOT / "packages/shared/src/config/paths.ts").read_text(encoding="utf-8")
-    if "process.env.CRAFT_CONFIG_DIR" not in paths or "join(home, '.craft-agent')" not in paths:
-        fail("Default CONFIG_DIR must preserve CRAFT_CONFIG_DIR override and use existing ~/.craft-agent data without migration")
+    if "process.env.CRAFT_CONFIG_DIR" not in paths or "PRODUCTION_CONFIG_DIR_NAME = '.craft-agent'" not in paths:
+        fail("Production CONFIG_DIR must preserve its existing ~/.craft-agent data root")
+    if "DEVELOPMENT_CONFIG_DIR_NAME = '.craft-agent-dev'" not in paths:
+        fail("Development CONFIG_DIR must be isolated in ~/.craft-agent-dev")
     if "'.robb-agents'" in paths:
         fail("Default CONFIG_DIR must not isolate Robb from existing Craft Agents data")
     electron_dev = (ROOT / "scripts/electron-dev.ts").read_text(encoding="utf-8")
-    if "Robb Agents" not in electron_dev or ".robb-agents-${instanceNum}" not in electron_dev:
-        fail("electron-dev.ts must default to Robinswood app/config naming")
-    if 'CRAFT_DEEPLINK_SCHEME: process.env.CRAFT_DEEPLINK_SCHEME || "craftagents"' not in electron_dev:
-        fail("electron-dev.ts must preserve the craftagents deeplink scheme default until migration is explicit")
+    for token in [
+        "Robb Agents Dev.app",
+        "io.robinswood.robbagents.dev",
+        ".craft-agent-dev",
+        'CRAFT_DEEPLINK_SCHEME: process.env.CRAFT_DEEPLINK_SCHEME || "robbagentsdev"',
+        "Development profile isolation refused",
+    ]:
+        if token not in electron_dev:
+            fail(f"electron-dev.ts is missing development isolation marker: {token}")
+
+    dev_builder = (ROOT / "apps/electron/electron-builder.dev.yml").read_text(encoding="utf-8")
+    for token in [
+        "appId: io.robinswood.robbagents.dev",
+        "productName: Robb Agents Dev",
+        "output: release-dev",
+    ]:
+        if token not in dev_builder:
+            fail(f"Development packaging metadata missing: {token}")
+
+    updater = (ROOT / "apps/electron/src/main/auto-update.ts").read_text(encoding="utf-8")
+    for token in [
+        "autoUpdater.autoDownload = false",
+        "autoUpdater.autoInstallOnAppQuit = false",
+        "autoUpdater.allowPrerelease = false",
+    ]:
+        if token not in updater:
+            fail(f"Manual stable updater policy missing: {token}")
+    if "checkForUpdatesOnLaunch" in updater:
+        fail("Production updater must never check on application launch")
 
     web_surfaces = {
         "apps/electron/src/renderer/index.html": "<title>Robb Agents</title>",

@@ -12,6 +12,15 @@ function unique(values) {
   return [...new Set(values)];
 }
 
+async function navigateToRoute(page, route) {
+  await page.evaluate((nextRoute) => {
+    const target = new URL(window.location.href);
+    target.searchParams.set('route', nextRoute);
+    window.history.pushState({ route: nextRoute }, '', target);
+    window.dispatchEvent(new PopStateEvent('popstate', { state: window.history.state }));
+  }, route);
+}
+
 (async () => {
   console.log('=== robb-agents — Electron UI Validation ===\n');
 
@@ -52,9 +61,7 @@ function unique(values) {
       });
     });
 
-    const target = new URL(page.url());
-    target.searchParams.set('route', 'settings/governance');
-    await page.goto(target.toString(), { waitUntil: 'domcontentloaded', timeout: 30_000 });
+    await navigateToRoute(page, 'settings/governance');
     await page.waitForSelector('#root:not(:empty)', { timeout: 20_000 });
     await page.waitForFunction(
       () => document.documentElement.classList.contains('dark'),
@@ -124,6 +131,17 @@ function unique(values) {
     await page.getByText(/Supervision distante révoquée|Remote supervision revoked/i).last().waitFor({ timeout: 10_000 });
     await remoteSection.getByText(/Local uniquement|Local only/i).waitFor({ timeout: 10_000 });
 
+    await navigateToRoute(page, 'settings/app');
+    await page.getByText(/À propos|About/i).first().waitFor({ timeout: 20_000 });
+    await page.waitForTimeout(500);
+    const developmentUpdateButtons = page.getByRole('button', {
+      name: /Vérifier maintenant|Check now|Buscar actualizaciones|Jetzt prüfen/i,
+    });
+    const devUpdaterHidden = await developmentUpdateButtons.count() === 0;
+
+    await navigateToRoute(page, 'settings/governance');
+    await page.getByText(/Gouvernance|Governance/i).first().waitFor({ timeout: 20_000 });
+
     const title = await page.title();
     const rootText = (await page.locator('#root').innerText()).trim();
     const bodyText = await page.locator('body').innerText();
@@ -164,6 +182,7 @@ function unique(values) {
     console.log(`Brand:    ${brandVisible && !legacyBrandVisible ? 'Robb Agents' : 'invalid'}`);
     console.log(`Theme:    ${darkThemeApplied ? 'dark Robinswood with custom accent' : `invalid (${JSON.stringify(themeProbe)})`}`);
     console.log('Remote:   grant/revoke verified; final state local-only');
+    console.log(`Updater:  ${devUpdaterHidden ? 'hidden in development' : 'unexpectedly visible'}`);
     console.log(`Overflow: ${overflow ? 'horizontal overflow detected' : 'none'}`);
     console.log(`Console errors: ${filteredConsoleErrors.length}`);
     console.log(`Page errors: ${filteredPageErrors.length}`);
@@ -179,6 +198,7 @@ function unique(values) {
       && brandVisible
       && !legacyBrandVisible
       && darkThemeApplied
+      && devUpdaterHidden
       && !overflow
       && filteredConsoleErrors.length === 0
       && filteredPageErrors.length === 0

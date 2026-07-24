@@ -90,7 +90,7 @@ export function registerSystemCoreHandlers(server: RpcServer, deps: HandlerDeps)
 
   // Check if running in debug mode (from source)
   server.handle(RPC_CHANNELS.system.IS_DEBUG_MODE, async () => {
-    return !deps.platform.isPackaged
+    return deps.platform.isDebugMode
   })
 
   // Release notes
@@ -271,7 +271,7 @@ export function registerSystemGuiHandlers(server: RpcServer, deps: HandlerDeps):
   // Auto-update handlers
   server.handle(RPC_CHANNELS.update.CHECK, async () => {
     const { checkForUpdates } = await import('../auto-update')
-    return checkForUpdates({ autoDownload: true })
+    return checkForUpdates()
   })
 
   server.handle(RPC_CHANNELS.update.GET_INFO, async () => {

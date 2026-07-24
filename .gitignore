@@ -7,6 +7,7 @@ dist
 *.tgz
 .build
 apps/electron/release
+apps/electron/release-dev
 # Local macOS launcher bundle; kept outside apps/electron so it cannot be
 # collected into distributable payloads.
 .robb-dev-runtime/

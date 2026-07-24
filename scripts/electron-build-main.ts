@@ -37,7 +37,9 @@ function loadEnvFile(): void {
               (value.startsWith("'") && value.endsWith("'"))) {
             value = value.slice(1, -1);
           }
-          process.env[key] = value;
+          if (process.env[key] === undefined) {
+            process.env[key] = value;
+          }
         }
       }
     }
@@ -50,6 +52,10 @@ function loadEnvFile(): void {
 // NOTE: Google OAuth credentials are NOT baked into the build - users provide their own
 // via source config. See README_FOR_OSS.md for setup instructions.
 function getBuildDefines(): string[] {
+  const buildChannel = process.env.CRAFT_DEV_RUNTIME === "1"
+    || process.env.ROBB_BUILD_CHANNEL === "development"
+    ? "development"
+    : "production";
   const definedVars = [
     "SLACK_OAUTH_CLIENT_ID",
     "SLACK_OAUTH_CLIENT_SECRET",
@@ -57,10 +63,13 @@ function getBuildDefines(): string[] {
     "MICROSOFT_OAUTH_CLIENT_SECRET",
     "SENTRY_ELECTRON_INGEST_URL",
     "CRAFT_DEV_RUNTIME",
+    "ROBB_BUILD_CHANNEL",
   ];
 
   return definedVars.map((varName) => {
-    const value = process.env[varName] || "";
+    const value = varName === "ROBB_BUILD_CHANNEL"
+      ? buildChannel
+      : process.env[varName] || "";
     return `--define:process.env.${varName}="${value}"`;
   });
 }

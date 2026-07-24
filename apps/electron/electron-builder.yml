@@ -13,6 +13,17 @@ directories:
 
 files:
   - dist/**/*
+  # Build outputs and local launcher bundles may contain complete macOS apps.
+  # They must never be nested into a new package: framework-relative symlinks
+  # in those apps are invalid when electron-builder copies them as payload.
+  - "!release"
+  - "!release/**"
+  - "!release-dev"
+  - "!release-dev/**"
+  - "!.robb-dev-runtime"
+  - "!.robb-dev-runtime/**"
+  - "!dev-runtime"
+  - "!dev-runtime/**"
   # The macOS dev launcher materializes `dist/Robb Agents.app`. It is a
   # runnable Electron bundle, not application payload, and must never be
   # nested inside a distributable app (its framework symlinks break packaging).
@@ -56,13 +67,9 @@ files:
   - resources/bin/pptx-tool.cmd
   - resources/bin/ical-tool
   - resources/bin/ical-tool.cmd
-  # Include bundled uv binary (platform-specific, only the relevant one ships per build)
-  - resources/bin/darwin-arm64/**/*
-  - resources/bin/darwin-x64/**/*
-  - resources/bin/win32-x64/**/*
-  - resources/bin/linux-x64/**/*
-  # Include bundled Bun runtime (platform-specific, set by build script)
-  - vendor/bun/**/*
+  # Platform-native uv and Bun binaries are copied through each platform's
+  # extraResources block. Keeping them out of the generic file collector
+  # prevents Windows executable locks and guarantees one target architecture.
   # Exclude everything from node_modules (will use extraResources for SDK)
   - "!node_modules/**/*"
 
@@ -82,9 +89,16 @@ files:
 extraMetadata:
   main: dist/main.cjs
 
-# Auto-update is intentionally not hardcoded in the Open Source build.
-# Distributors may configure their own electron-updater endpoint in a private overlay.
-# Do not publish/check against Craft or Robinswood private endpoints from the OSS tree.
+# Stable production updates are published as signed public GitHub Releases.
+# The application never checks or downloads automatically: the Settings button
+# is the sole update entry point.
+publish:
+  provider: github
+  owner: robinswood-io
+  repo: robb-agents
+  channel: latest
+  releaseType: release
+  publishAutoUpdate: true
 
 # Disable ASAR to avoid decompression overhead and click delays
 asar: false
@@ -123,13 +137,14 @@ mac:
     # ripgrep (used by packages/server-core/src/services/search.ts).
     - from: node_modules/@vscode/ripgrep
       to: app/node_modules/@vscode/ripgrep
+    # Bun and uv are read below process.resourcesPath/app at runtime.
+    - from: vendor/bun
+      to: app/vendor/bun
+    - from: resources/bin/${platform}-${arch}
+      to: app/resources/bin/${platform}-${arch}
     # WhatsApp worker subprocess (self-contained; Baileys bundled in).
     - from: ../../packages/messaging-whatsapp-worker/dist/worker.cjs
       to: messaging-whatsapp-worker/worker.cjs
-  # Exclude binaries for other platforms
-  files:
-    - "!**/resources/bin/win32-*/**"
-    - "!**/resources/bin/linux-*/**"
   # Use predictable naming for macOS packages (applies to zip; dmg uses its own config below)
   artifactName: "Robb-Agents-${arch}.${ext}"
   # Supply CSC_LINK/CSC_KEY_PASSWORD (or CSC_NAME) and standard Apple
@@ -164,17 +179,6 @@ win:
         - x64
   # Use predictable naming: Robb-Agents-x64.exe
   artifactName: "Robb-Agents-${arch}.${ext}"
-  files:
-    # Exclude binaries for other platforms
-    - "!**/resources/bin/darwin-*/**"
-    - "!**/resources/bin/linux-*/**"
-    # WORKAROUND: Exclude bun and uv from regular files on Windows.
-    # electron-builder's npm node module collector causes EBUSY errors when copying
-    # .exe files because it scans/locks files while simultaneously trying to copy them.
-    # Moving them to extraResources avoids this by copying before the collector runs.
-    # See: https://github.com/electron-userland/electron-builder/issues/8250
-    - "!vendor/bun/**/*"
-    - "!**/resources/bin/win32-x64/**"
   # Copy executables as extraResources to avoid EBUSY file locking (see comment above)
   extraResources:
     - from: node_modules/@anthropic-ai/claude-agent-sdk
@@ -184,7 +188,7 @@ win:
     - from: node_modules/@vscode/ripgrep
       to: app/node_modules/@vscode/ripgrep
     - from: vendor/bun/bun.exe
-      to: vendor/bun/bun.exe
+      to: app/vendor/bun/bun.exe
     - from: resources/bin/win32-x64
       to: app/resources/bin/win32-x64
     # WhatsApp worker subprocess (self-contained; Baileys bundled in).
@@ -226,10 +230,10 @@ linux:
       to: app/node_modules/@anthropic-ai/claude-agent-sdk-binary
     - from: node_modules/@vscode/ripgrep
       to: app/node_modules/@vscode/ripgrep
+    - from: vendor/bun
+      to: app/vendor/bun
+    - from: resources/bin/${platform}-${arch}
+      to: app/resources/bin/${platform}-${arch}
     # WhatsApp worker subprocess (self-contained; Baileys bundled in).
     - from: ../../packages/messaging-whatsapp-worker/dist/worker.cjs
       to: messaging-whatsapp-worker/worker.cjs
-  # Exclude binaries for other platforms
-  files:
-    - "!**/resources/bin/darwin-*/**"
-    - "!**/resources/bin/win32-*/**"

@@ -308,41 +308,12 @@ export const HELP_LINKS: MenuItemUrl[] = [
 // Debug menu (dev-only)
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * Debug submenu — only rendered when `window.electronAPI.isDebugMode()` resolves true.
- *
- * `checkForUpdates` and `installUpdate` invoke renderer-only electronAPI methods
- * (`checkForUpdates()` / `installUpdate()`) that bypass the menu IPC channels, so
- * their `ipcChannel` field is intentionally empty.
- */
+/** Debug submenu — only rendered in the development channel. */
 export const DEBUG_MENU: MenuSection = {
   id: 'debug',
   labelKey: 'menu.debug',
   icon: 'Bug',
   items: [
-    {
-      type: 'action',
-      id: 'checkForUpdates',
-      actionId: 'app.checkForUpdates',
-      labelKey: 'menu.checkForUpdates',
-      shortcut: '',
-      shortcutDisplayMac: '',
-      shortcutDisplayOther: '',
-      ipcChannel: '',
-      icon: 'Download',
-    },
-    {
-      type: 'action',
-      id: 'installUpdate',
-      actionId: 'app.installUpdate',
-      labelKey: 'menu.installUpdate',
-      shortcut: '',
-      shortcutDisplayMac: '',
-      shortcutDisplayOther: '',
-      ipcChannel: '',
-      icon: 'Download',
-    },
-    { type: 'separator' },
     {
       type: 'action',
       id: 'toggleDevTools',
