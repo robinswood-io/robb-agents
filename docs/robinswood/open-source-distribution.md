@@ -25,6 +25,19 @@ powershell -ExecutionPolicy Bypass -File apps/electron/scripts/build-win.ps1
 
 These are intentionally unsigned local builds. The macOS build runs `robinswood-packaged-smoke.py`; the Windows build runs `robinswood-windows-packaged-smoke.py`. They are development artifacts, not public releases.
 
+Every packaged build also runs `scripts/robb_package_audit.py`. The audit fails
+when a payload contains `release-artifacts`, an embedded
+`apps/electron/release` tree, or a nested Robb installer. The current guardrails
+are 900 MiB for an unpacked application and 450 MiB per compressed installer.
+The smoke output includes a size inventory so increases are visible in CI.
+The architecture is supplied by the platform build script; a single CI matrix
+job builds only its requested architecture.
+
+A verified macOS arm64 development build on 2026-07-23 measured 708.2 MiB
+unpacked, including 447.2 MiB of application resources and 254.8 MiB of
+frameworks. Its DMG measured 230.9 MiB and its ZIP 232.1 MiB. These values are a
+measured baseline, not a cross-platform guarantee.
+
 A manual GitHub Actions run in `test-artifacts` mode may build unsigned CI artifacts for verification, but it cannot publish a GitHub Release. This is intentional.
 
 ## Public release signing

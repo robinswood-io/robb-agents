@@ -142,6 +142,32 @@ describe('task-spec-form round-trip', () => {
     expect(spec.max_iterations).toBe(MAX_REPAIR_ATTEMPTS_CAP)
   })
 
+  it('authors every editor task as a replay-safe mission with a declared deliverable', () => {
+    const spec = buildSpec(
+      {
+        title: 'Ship the release',
+        goal: 'Produce a verified release candidate',
+        projectId: '',
+        orchModel: '',
+        subtasks: [{ uid: 'a', title: 'Build', prompt: 'Build it', dependsOn: [] }],
+      },
+      noConn,
+    )
+    expect(spec.mission).toEqual({
+      inputs: [],
+      deliverables: [{
+        name: 'result',
+        description: 'Produce a verified release candidate',
+        format: 'markdown',
+      }],
+      policy: {
+        impact_level: 'medium',
+        require_high_impact_approval: true,
+        replay_external_mutations: false,
+      },
+    })
+  })
+
   it('omits acceptance_criteria and max_iterations when unset', () => {
     const spec = buildSpec(
       {

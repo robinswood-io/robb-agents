@@ -43,7 +43,7 @@ describe('resolveNodeStatePill', () => {
   })
 
   it('maps every NodeRunState literal to an existing en.json label', () => {
-    for (const state of ['pending', 'running', 'done', 'failed', 'cancelled', 'skipped']) {
+    for (const state of ['pending', 'waiting-approval', 'running', 'done', 'failed', 'cancelled', 'skipped']) {
       const { labelKey } = resolveNodeStatePill(state)
       expect(labelKey).not.toBeNull()
       expect(messages[labelKey!]).toBeTruthy()

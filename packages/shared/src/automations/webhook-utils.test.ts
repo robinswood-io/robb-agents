@@ -2,8 +2,12 @@
  * Tests for webhook utility functions (expandWebhookAction, etc.)
  */
 
-import { describe, it, expect } from 'bun:test';
-import { expandWebhookAction } from './webhook-utils.ts';
+import { describe, it, expect, mock } from 'bun:test';
+import {
+  executeWebhookRequest,
+  expandWebhookAction,
+  prepareWebhookActionForDeferredRetry,
+} from './webhook-utils.ts';
 import type { WebhookAction } from './types.ts';
 
 const env = {
@@ -86,5 +90,103 @@ describe('expandWebhookAction', () => {
     expect(result.method).toBe('PUT');
     expect(result.bodyFormat).toBe('json');
     expect(result.captureResponse).toBe(true);
+  });
+});
+
+describe('prepareWebhookActionForDeferredRetry', () => {
+  it('expands event values but keeps scoped secret references out of persisted JSON', () => {
+    const action: WebhookAction = {
+      type: 'webhook',
+      url: 'https://api.example.com/hook/${CRAFT_EVENT_ID}',
+      headers: { Authorization: 'Bearer ${CRAFT_WH_API_TOKEN}' },
+      body: { event: '${CRAFT_EVENT_ID}', secret: '${CRAFT_WH_API_TOKEN}' },
+      auth: { type: 'bearer', token: '${CRAFT_WH_API_TOKEN}' },
+    };
+    const prepared = prepareWebhookActionForDeferredRetry(action, {
+      CRAFT_EVENT_ID: 'event-123',
+      CRAFT_WH_API_TOKEN: 'super-secret-value',
+    });
+    const serialized = JSON.stringify(prepared);
+
+    expect(prepared.url).toBe('https://api.example.com/hook/event-123');
+    expect(serialized).toContain('${CRAFT_WH_API_TOKEN}');
+    expect(serialized).not.toContain('super-secret-value');
+  });
+
+  it('rejects literal bearer tokens and sensitive headers', () => {
+    expect(() => prepareWebhookActionForDeferredRetry({
+      type: 'webhook',
+      url: 'https://api.example.com',
+      auth: { type: 'bearer', token: 'literal-secret' },
+    }, {})).toThrow('must reference a CRAFT_WH_* variable');
+    expect(() => prepareWebhookActionForDeferredRetry({
+      type: 'webhook',
+      url: 'https://api.example.com',
+      headers: { 'X-API-Key': 'literal-secret' },
+    }, {})).toThrow('must reference a CRAFT_WH_* variable');
+  });
+});
+
+describe('executeWebhookRequest destination policy', () => {
+  it.each([
+    'http://127.0.0.1/admin',
+    'http://10.0.0.12/internal',
+    'http://169.254.169.254/latest/meta-data',
+    'http://[::1]/admin',
+  ])('blocks private address %s before fetch', async (url) => {
+    const fetchStub = mock(async () => new Response(null, { status: 204 }));
+    const result = await executeWebhookRequest(
+      { type: 'webhook', url },
+      { fetch: fetchStub },
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('private-network policy');
+    expect(fetchStub).not.toHaveBeenCalled();
+  });
+
+  it('blocks hostnames that resolve to private addresses', async () => {
+    const fetchStub = mock(async () => new Response(null, { status: 204 }));
+    const result = await executeWebhookRequest(
+      { type: 'webhook', url: 'https://hooks.example.com' },
+      {
+        fetch: fetchStub,
+        resolveHostname: async () => ['192.168.1.10'],
+      },
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('private-network policy');
+    expect(fetchStub).not.toHaveBeenCalled();
+  });
+
+  it('rejects embedded URL credentials', async () => {
+    const fetchStub = mock(async () => new Response(null, { status: 204 }));
+    const result = await executeWebhookRequest(
+      { type: 'webhook', url: 'https://user:password@hooks.example.com' },
+      {
+        fetch: fetchStub,
+        resolveHostname: async () => ['93.184.216.34'],
+      },
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.error).toBe('Webhook URL credentials are not allowed');
+    expect(fetchStub).not.toHaveBeenCalled();
+  });
+
+  it('allows public destinations and refuses redirects', async () => {
+    const fetchStub = mock(async () => new Response(null, { status: 204 }));
+    const result = await executeWebhookRequest(
+      { type: 'webhook', url: 'https://hooks.example.com/events' },
+      {
+        fetch: fetchStub,
+        resolveHostname: async () => ['93.184.216.34'],
+      },
+    );
+
+    expect(result.success).toBe(true);
+    expect(fetchStub).toHaveBeenCalledTimes(1);
+    expect(fetchStub.mock.calls[0]?.[1]?.redirect).toBe('error');
   });
 });

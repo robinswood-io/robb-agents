@@ -38,6 +38,8 @@ export type {
   AnnotationSelector,
   AnnotationTarget,
   AnnotationV1,
+  RoutingCostSource,
+  RoutingCostProvenance,
   RoutingMeta,
   Message,
   StoredMessage,
@@ -56,6 +58,17 @@ export type {
 export { generateMessageId } from './message.ts';
 
 export type { AutonomyEvent, AutonomyPhase, HumanEscalationReason } from './autonomy.ts';
+export type {
+  ExecutionTelemetryEventName,
+  ExecutionTelemetryCorrelation,
+  ExecutionTelemetryEvent,
+  SessionTelemetryEvent,
+  TurnTelemetryEvent,
+  ToolTelemetryEvent,
+  RoutingTelemetryEvent,
+  PermissionTelemetryEvent,
+  CostTelemetryEvent,
+} from './execution-telemetry.ts';
 
 // Message persistence mappers
 export { messageToStored, storedToMessage } from './message-mapper.ts';
@@ -67,4 +80,3 @@ export type {
   SessionProcessingStatus,
   ActiveSessionInfo,
 } from './server.ts';
-

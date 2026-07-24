@@ -14,6 +14,8 @@
 import type { PermissionMode } from '../agent/mode-manager.ts';
 import type { ThinkingLevel } from '../agent/thinking-levels.ts';
 import type { RoutingPolicy } from '../config/routing-policy.ts';
+import type { WorkspaceGovernanceProfile } from '../governance/workspace-governance.ts';
+import type { RemoteSupervisionProfile } from '../remote-supervision/remote-supervision.ts';
 
 /**
  * Local MCP server configuration
@@ -64,6 +66,12 @@ export interface WorkspaceConfig {
    * provider preference, cost, or performance.
    */
   routingPolicy?: RoutingPolicy;
+
+  /** Workspace-scoped RBAC, memory retention, mission budgets, and hash-chained audit. */
+  governance?: WorkspaceGovernanceProfile;
+
+  /** Opt-in remote metadata consent and its tamper-evident local audit history. */
+  remoteSupervision?: RemoteSupervisionProfile;
 
   createdAt: number;
   updatedAt: number;

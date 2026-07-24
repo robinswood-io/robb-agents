@@ -252,6 +252,27 @@ export interface StoredAttachment {
  * future policy-first router. It is intentionally persisted per assistant
  * message so audits can answer which provider/model produced each response.
  */
+export type RoutingCostSource = 'sdk' | 'provider' | 'estimated' | 'unavailable' | string;
+
+export interface RoutingCostProvenance {
+  /** Version of this provenance envelope for backward-compatible exports. */
+  schemaVersion: 1;
+  /** Origin of the cost value before any display-currency conversion. */
+  source: RoutingCostSource;
+  /** Currency reported by the source, normally USD for SDK estimates. */
+  sourceCurrency?: string;
+  /** Version/date of the provider pricing catalog used by the source. */
+  pricingCatalogVersion?: string;
+  /** Currency used for the optional converted display value. */
+  displayCurrency?: string;
+  /** Explicit conversion rate applied from sourceCurrency to displayCurrency. */
+  exchangeRate?: number;
+  /** ISO date associated with the exchange rate. */
+  exchangeRateAsOf?: string;
+  /** Human-readable or URL source for the exchange rate. */
+  exchangeRateSource?: string;
+}
+
 export interface RoutingMeta {
   /** LLM connection slug selected for this turn, when known. */
   connectionSlug?: string;
@@ -265,16 +286,40 @@ export interface RoutingMeta {
   sensitivity?: string;
   /** IDs of routingPolicy rules that matched the turn, when available. */
   policyRuleIds?: string[];
+  /** Local-only difficulty label used by the policy router. */
+  routingDifficulty?: 'simple' | 'standard' | 'complex' | string;
+  /** Capabilities required by the turn without retaining prompt content. */
+  requiredCapabilities?: string[];
+  /** Reader-facing explanation of the selected route. */
+  routingExplanation?: string;
+  /** Exact hard-policy reasons why configured alternatives were rejected. */
+  rejectedConnections?: Array<{ slug: string; reasons: string[] }>;
+  /** Cost guardrail result evaluated before route selection. */
+  budgetDecision?: {
+    status: 'within-budget' | 'blocked' | 'approval-required' | string;
+    exceededScopes: string[];
+    projectedUsd: {
+      session?: number;
+      mission?: number;
+      workspace?: number;
+    };
+  };
   /** Primary connection that failed before streaming, when a policy-authorized fallback was used. */
   fallbackFromConnectionSlug?: string;
   /** Classified reason for using a policy-authorized fallback. */
   fallbackReason?: 'connection-unavailable' | 'backend-create-failed' | 'auth-failed' | 'provider-error' | 'model-unavailable' | string;
+  /** Estimated cost in the source currency reported by the SDK, when available. */
+  estimatedCostUsd?: number;
+  /** Actual provider-reported cost in USD for this assistant turn, when available. */
+  actualCostUsd?: number;
   /** Estimated cost in EUR for this assistant turn, when sourced. */
   estimatedCostEur?: number;
   /** Actual provider-reported cost in EUR for this assistant turn, when available. */
   actualCostEur?: number;
-  /** Provenance of the token/cost data; never imply a real cost without a source. */
-  tokenUsageSource?: 'sdk' | 'provider' | 'estimated' | 'unavailable' | string;
+  /** Versioned provenance for source values and optional currency conversion. */
+  costProvenance?: RoutingCostProvenance;
+  /** @deprecated Read costProvenance.source when present. Kept for stored-session compatibility. */
+  tokenUsageSource?: RoutingCostSource;
 }
 
 /**

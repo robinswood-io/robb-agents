@@ -88,7 +88,7 @@ import { AutonomyPanel } from "./AutonomyPanel"
 /** Access CSS.highlights lazily — avoids stale ref from module-init / HMR timing */
 function getCSSHighlights(): Map<string, Highlight> | undefined {
   try {
-    return (CSS as any).highlights as Map<string, Highlight> | undefined
+    return (CSS as unknown as { highlights?: Map<string, Highlight> }).highlights
   } catch {
     return undefined
   }
@@ -2235,9 +2235,21 @@ function RoutingMetaBadge({ message }: { message: Message }) {
   const label = [provider, model].filter(Boolean).join(' · ')
   const reason = meta.reason ?? 'session-connection'
   const policyRuleIds = meta.policyRuleIds?.filter(Boolean) ?? []
-  const estimatedCost = typeof meta.estimatedCostEur === 'number' ? meta.estimatedCostEur : undefined
-  const actualCost = typeof meta.actualCostEur === 'number' ? meta.actualCostEur : undefined
-  const hasCost = estimatedCost !== undefined || actualCost !== undefined
+  const estimatedCostEur = typeof meta.estimatedCostEur === 'number' ? meta.estimatedCostEur : undefined
+  const estimatedCostUsd = typeof meta.estimatedCostUsd === 'number' ? meta.estimatedCostUsd : undefined
+  const actualCostEur = typeof meta.actualCostEur === 'number' ? meta.actualCostEur : undefined
+  const actualCostUsd = typeof meta.actualCostUsd === 'number' ? meta.actualCostUsd : undefined
+  const hasCost = estimatedCostEur !== undefined || estimatedCostUsd !== undefined || actualCostEur !== undefined || actualCostUsd !== undefined
+  const actualCostLabel = actualCostEur !== undefined
+    ? `${actualCostEur.toFixed(6)} € réel`
+    : actualCostUsd !== undefined
+      ? `$${actualCostUsd.toFixed(6)} réel`
+      : undefined
+  const estimatedCostLabel = estimatedCostEur !== undefined
+    ? `${estimatedCostEur.toFixed(6)} € estimé`
+    : estimatedCostUsd !== undefined
+      ? `$${estimatedCostUsd.toFixed(6)} estimé`
+      : undefined
 
   return (
     <Tooltip>
@@ -2256,15 +2268,47 @@ function RoutingMetaBadge({ message }: { message: Message }) {
           {meta.model && <div className="break-all"><span className="text-muted-foreground">Modèle:</span> {meta.model}</div>}
           <div><span className="text-muted-foreground">Raison:</span> {reason}</div>
           {meta.sensitivity && <div><span className="text-muted-foreground">Sensibilité:</span> {meta.sensitivity}</div>}
+          {meta.routingDifficulty && <div><span className="text-muted-foreground">Difficulté:</span> {meta.routingDifficulty}</div>}
+          {(meta.requiredCapabilities?.length ?? 0) > 0 && (
+            <div><span className="text-muted-foreground">Capacités:</span> {meta.requiredCapabilities?.join(', ')}</div>
+          )}
+          {meta.routingExplanation && (
+            <div className="break-words"><span className="text-muted-foreground">Pourquoi:</span> {meta.routingExplanation}</div>
+          )}
           {meta.fallbackFromConnectionSlug && <div><span className="text-muted-foreground">Fallback depuis:</span> {meta.fallbackFromConnectionSlug}</div>}
           {meta.fallbackReason && <div><span className="text-muted-foreground">Raison fallback:</span> {meta.fallbackReason}</div>}
+          {meta.budgetDecision && (
+            <div>
+              <span className="text-muted-foreground">Budget:</span>{' '}
+              {meta.budgetDecision.status}
+              {meta.budgetDecision.exceededScopes.length > 0
+                ? ` (${meta.budgetDecision.exceededScopes.join(', ')})`
+                : ''}
+            </div>
+          )}
+          {(meta.rejectedConnections?.length ?? 0) > 0 && (
+            <div className="space-y-0.5 break-words">
+              <span className="text-muted-foreground">Alternatives rejetées:</span>
+              {meta.rejectedConnections?.map(candidate => (
+                <div key={candidate.slug} className="pl-2">
+                  {candidate.slug}: {candidate.reasons.join(', ')}
+                </div>
+              ))}
+            </div>
+          )}
           {hasCost && (
             <div>
               <span className="text-muted-foreground">Coût:</span>{' '}
-              {actualCost !== undefined ? `${actualCost.toFixed(6)} € réel` : `${estimatedCost!.toFixed(6)} € estimé`}
+              {actualCostLabel ?? estimatedCostLabel}
             </div>
           )}
-          {meta.tokenUsageSource && meta.tokenUsageSource !== 'unavailable' && <div><span className="text-muted-foreground">Source coût:</span> {meta.tokenUsageSource}</div>}
+          {meta.costProvenance?.source && meta.costProvenance.source !== 'unavailable' && <div><span className="text-muted-foreground">Source coût:</span> {meta.costProvenance.source}</div>}
+          {meta.costProvenance?.exchangeRateAsOf && (
+            <div>
+              <span className="text-muted-foreground">Conversion:</span>{' '}
+              {meta.costProvenance.exchangeRateSource} · {meta.costProvenance.exchangeRateAsOf}
+            </div>
+          )}
           {policyRuleIds.length > 0 && (
             <div className="break-words">
               <span className="text-muted-foreground">Règles:</span> {policyRuleIds.join(', ')}

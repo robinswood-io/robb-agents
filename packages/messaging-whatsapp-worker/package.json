@@ -13,7 +13,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@whiskeysockets/baileys": "^6.7.0"
+    "@whiskeysockets/baileys": "6.7.23",
+    "sharp": "0.35.3"
   },
   "devDependencies": {
     "typescript": "^5.8.2",

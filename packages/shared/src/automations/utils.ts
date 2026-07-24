@@ -300,7 +300,12 @@ export function buildEnvFromPayload(event: AutomationEvent, payload: BaseEventPa
  */
 export function buildWebhookEnv(event: AutomationEvent, payload: BaseEventPayload): Record<string, string> {
   const env = buildBaseEventEnv(event, payload);
+  return { ...env, ...buildWebhookSecretEnv() };
+}
 
+/** Resolve only explicitly-scoped webhook secrets for just-in-time execution. */
+export function buildWebhookSecretEnv(): Record<string, string> {
+  const env: Record<string, string> = {};
   // User-defined webhook secrets: only CRAFT_WH_* from process.env
   for (const [key, value] of Object.entries(process.env)) {
     if (key.startsWith('CRAFT_WH_') && value !== undefined) {

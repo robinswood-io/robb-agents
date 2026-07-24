@@ -5,19 +5,8 @@
  * the mention menu vs when it's part of an email address or other text.
  */
 
-import { describe, it, expect, mock, beforeAll } from 'bun:test';
-
-// mention-menu.tsx transitively imports pdfjs-dist via renderer component chain.
-// Vite's ?url suffix isn't supported by bun — mock before dynamic import.
-mock.module('pdfjs-dist/build/pdf.worker.min.mjs?url', () => ({ default: '' }));
-mock.module('pdfjs-dist', () => ({ GlobalWorkerOptions: { workerSrc: '' }, getDocument: () => ({}) }));
-
-let isValidMentionTrigger: (text: string, position: number) => boolean;
-
-beforeAll(async () => {
-  const mod = await import('../mention-menu');
-  isValidMentionTrigger = mod.isValidMentionTrigger;
-});
+import { describe, it, expect } from 'bun:test';
+import { isValidMentionTrigger } from '../mention-trigger';
 
 describe('isValidMentionTrigger', () => {
   describe('valid triggers (should open menu)', () => {

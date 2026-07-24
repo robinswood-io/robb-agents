@@ -27,7 +27,12 @@ import { getWorkspaceSourcesPath, getWorkspaceSkillsPath } from '../workspaces/s
 import { loadSourceConfig, getSourcePath } from '../sources/storage.ts'
 import { isBuiltinSource } from '../sources/builtin-sources.ts'
 import { validateSourceConfig } from '../config/validators.ts'
-import { AUTOMATIONS_CONFIG_FILE, AUTOMATIONS_HISTORY_FILE, AUTOMATIONS_RETRY_QUEUE_FILE } from '../automations/constants.ts'
+import {
+  AUTOMATIONS_CONFIG_FILE,
+  AUTOMATIONS_DEAD_LETTER_FILE,
+  AUTOMATIONS_HISTORY_FILE,
+  AUTOMATIONS_RETRY_QUEUE_FILE,
+} from '../automations/constants.ts'
 import { validateAutomationsConfig } from '../automations/validation.ts'
 import { generateShortId } from '../automations/resolve-config-path.ts'
 import { VALID_EVENTS } from '../automations/schemas.ts'
@@ -1035,9 +1040,11 @@ function importAutomations(
   if (overwrittenIds.size > 0) {
     const historyPath = join(workspaceRootPath, AUTOMATIONS_HISTORY_FILE)
     const retryPath = join(workspaceRootPath, AUTOMATIONS_RETRY_QUEUE_FILE)
+    const deadLetterPath = join(workspaceRootPath, AUTOMATIONS_DEAD_LETTER_FILE)
     filterJsonlByMatcherIds(historyPath, overwrittenIds)
     filterJsonlByMatcherIds(retryPath, overwrittenIds)
-    result.warnings.push(`Cleared history/retry entries for ${overwrittenIds.size} overwritten automation(s)`)
+    filterJsonlByMatcherIds(deadLetterPath, overwrittenIds)
+    result.warnings.push(`Cleared history/retry/dead-letter entries for ${overwrittenIds.size} overwritten automation(s)`)
   }
 
   return result

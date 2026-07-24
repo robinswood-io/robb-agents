@@ -73,6 +73,48 @@ function normalizeHeaderPermissionModes<T extends SessionHeader>(header: T): T {
   return header;
 }
 
+function isErrnoException(error: unknown): error is NodeJS.ErrnoException {
+  return error instanceof Error && 'code' in error;
+}
+
+function replaceFileAtomicallySync(tmpFile: string, finalFile: string): void {
+  try {
+    renameSync(tmpFile, finalFile);
+    return;
+  } catch (error) {
+    // POSIX rename replaces the destination atomically. Some Windows handles can
+    // reject replacement while the destination exists; keep a recoverable backup
+    // instead of deleting the primary before the tmp has been promoted.
+    if (!isErrnoException(error) || (error.code !== 'EEXIST' && error.code !== 'EPERM')) {
+      throw error;
+    }
+  }
+
+  const backupFile = `${finalFile}.bak`;
+  try { unlinkSync(backupFile); } catch { /* ignore stale backup */ }
+
+  let backupCreated = false;
+  try {
+    renameSync(finalFile, backupFile);
+    backupCreated = true;
+  } catch {
+    // Destination may not exist; continue with tmp promotion.
+  }
+
+  try {
+    renameSync(tmpFile, finalFile);
+  } catch (error) {
+    if (backupCreated) {
+      try { renameSync(backupFile, finalFile); } catch { /* leave backup for startup recovery */ }
+    }
+    throw error;
+  }
+
+  if (backupCreated) {
+    try { unlinkSync(backupFile); } catch { /* ignore stale backup cleanup */ }
+  }
+}
+
 /**
  * Read only the header (first line) from a session.jsonl file.
  * Uses low-level fs to read minimal bytes for fast list loading.
@@ -158,9 +200,7 @@ export function writeSessionJsonl(sessionFile: string, session: StoredSession): 
 
   const tmpFile = sessionFile + '.tmp';
   writeFileSync(tmpFile, lines.join('\n') + '\n');
-  // On Windows, rename fails if target exists. Delete first for cross-platform compatibility.
-  try { unlinkSync(sessionFile); } catch { /* ignore if doesn't exist */ }
-  renameSync(tmpFile, sessionFile);
+  replaceFileAtomicallySync(tmpFile, sessionFile);
 }
 
 /**

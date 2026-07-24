@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'bun:test'
-import { classifyRoutingFallbackReason, selectRoutingFallbackCandidate } from './routing-fallback'
+import {
+  classifyRoutingFallbackReason,
+  isRoutingCircuitOpen,
+  recordRoutingCircuitFailure,
+  selectRoutingFallbackCandidate,
+} from './routing-fallback'
 
 describe('classifyRoutingFallbackReason', () => {
   it('classifies auth failures', () => {
@@ -35,5 +40,32 @@ describe('selectRoutingFallbackCandidate', () => {
 
   it('does not select the primary as its own fallback', () => {
     expect(selectRoutingFallbackCandidate('local-rapide', ['local-rapide'], () => true)).toBeUndefined()
+  })
+
+  it('skips candidates with an open circuit', () => {
+    expect(selectRoutingFallbackCandidate(
+      'primary',
+      ['open-circuit', 'healthy'],
+      () => true,
+      slug => slug === 'open-circuit',
+    )).toBe('healthy')
+  })
+})
+
+describe('routing circuit breaker', () => {
+  it('opens after the configured number of consecutive failures', () => {
+    const first = recordRoutingCircuitFailure(undefined, 1_000, {
+      failureThreshold: 2,
+      cooldownMs: 500,
+    })
+    const second = recordRoutingCircuitFailure(first, 1_100, {
+      failureThreshold: 2,
+      cooldownMs: 500,
+    })
+
+    expect(isRoutingCircuitOpen(first, 1_100)).toBe(false)
+    expect(second).toEqual({ consecutiveFailures: 2, openUntil: 1_600 })
+    expect(isRoutingCircuitOpen(second, 1_599)).toBe(true)
+    expect(isRoutingCircuitOpen(second, 1_600)).toBe(false)
   })
 })

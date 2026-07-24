@@ -188,6 +188,19 @@ export function buildSpec(form: SpecForm, modelToConnection: Map<string, string>
     id: form.fixedId || slugify(form.title) || 'untitled-task',
     title: form.title.trim() || 'Untitled task',
     goal: form.goal.trim() || form.title.trim() || 'Untitled task',
+    mission: {
+      inputs: [],
+      deliverables: [{
+        name: 'result',
+        description: acceptanceCriteria || form.goal.trim() || form.title.trim() || 'Completed task result',
+        format: 'markdown',
+      }],
+      policy: {
+        impact_level: 'medium',
+        require_high_impact_approval: true,
+        replay_external_mutations: false,
+      },
+    },
     ...(acceptanceCriteria ? { acceptance_criteria: acceptanceCriteria } : {}),
     // Persist max_iterations only when set to a non-default; omit lets the runner use its default.
     ...(form.maxRepairs !== undefined && Number.isFinite(form.maxRepairs)

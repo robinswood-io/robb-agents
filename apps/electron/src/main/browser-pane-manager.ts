@@ -21,6 +21,7 @@ import {
 import { DEFAULT_THEME, loadAppTheme, getAllowRemoteEvaluate } from '@craft-agent/shared/config'
 import { CodedError } from '@craft-agent/shared/protocol'
 import { getBrowserLiveFxCornerRadii } from '../shared/browser-live-fx'
+import { isBrowserPanePermissionAllowed } from './browser-pane-permissions'
 import type {
   IBrowserPaneManager,
   BrowserInstanceSnapshot,
@@ -2102,11 +2103,19 @@ export class BrowserPaneManager implements IBrowserPaneManager {
       return
     }
 
+    const runCleanup = (label: string, action: () => void): void => {
+      try {
+        action()
+      } catch (error) {
+        mainLog.warn(`[browser-pane] finalize cleanup failed id=${instance.id} source=${source} step=${label} error=${error instanceof Error ? error.message : String(error)}`)
+      }
+    }
+
     this.destroyingIds.delete(instance.id)
-    this.closePopupsForParent(instance.id, 'parent_destroy')
-    this.applyAgentControlLock(instance, false)
-    this.updateNativeOverlayState(instance)
-    instance.cdp.detach()
+    runCleanup('closePopupsForParent', () => this.closePopupsForParent(instance.id, 'parent_destroy'))
+    runCleanup('applyAgentControlLock', () => this.applyAgentControlLock(instance, false))
+    runCleanup('updateNativeOverlayState', () => this.updateNativeOverlayState(instance))
+    runCleanup('cdp.detach', () => instance.cdp.detach())
     this.instances.delete(instance.id)
     this.removedCallback?.(instance.id)
     mainLog.info(`[browser-pane] Destroyed instance: ${instance.id} (${source})`)
@@ -3252,22 +3261,9 @@ export class BrowserPaneManager implements IBrowserPaneManager {
     if (this.partitionPermissionsInitialized) return
     this.partitionPermissionsInitialized = true
 
-    const allow = new Set([
-      'fullscreen',
-      'pointerLock',
-      'window-management',
-      'notifications',
-      'geolocation',
-      'media',
-      'clipboard-read',
-      'clipboard-sanitized-write',
-      'idle-detection',
-    ])
-
     if (typeof ses.setPermissionCheckHandler === 'function') {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ses.setPermissionCheckHandler((_webContents, permission: string, requestingOrigin: string, _details: any) => {
-        const allowed = allow.has(permission)
+      ses.setPermissionCheckHandler((_webContents, permission, requestingOrigin) => {
+        const allowed = isBrowserPanePermissionAllowed(permission)
         if (!allowed) {
           this.logPermissionDecision('check', permission, requestingOrigin)
         }
@@ -3276,11 +3272,14 @@ export class BrowserPaneManager implements IBrowserPaneManager {
     }
 
     if (typeof ses.setPermissionRequestHandler === 'function') {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ses.setPermissionRequestHandler((_webContents, permission: string, callback: (allow: boolean) => void, details: any) => {
-        const allowed = allow.has(permission)
+      ses.setPermissionRequestHandler((_webContents, permission, callback, details) => {
+        const allowed = isBrowserPanePermissionAllowed(permission)
         if (!allowed) {
-          this.logPermissionDecision('request', permission, details?.requestingOrigin ?? 'unknown')
+          const requestingOrigin = 'requestingOrigin' in details
+            && typeof details.requestingOrigin === 'string'
+            ? details.requestingOrigin
+            : 'unknown'
+          this.logPermissionDecision('request', permission, requestingOrigin)
         }
         callback(allowed)
       })
@@ -3322,6 +3321,10 @@ export class BrowserPaneManager implements IBrowserPaneManager {
 
     instance.window.on('resize', () => {
       this.layoutAllViews(instance)
+    })
+
+    instance.window.on('ready-to-show', () => {
+      this.markToolbarReady(instance, 'ready-to-show')
     })
 
     toolbarWc.on('did-finish-load', () => {
@@ -3506,7 +3509,7 @@ export class BrowserPaneManager implements IBrowserPaneManager {
     })
 
     pageWc.on('did-create-window', (popupWindow, details) => {
-      const popupUrl = details?.url || popupWindow.webContents.getURL?.() || 'about:blank'
+      const popupUrl = details?.url || popupWindow?.webContents?.getURL?.() || 'about:blank'
       this.registerPopupWindow(instance, popupWindow, popupUrl)
     })
 

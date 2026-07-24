@@ -4,9 +4,28 @@ import type { Session } from '../../../shared/types'
 import { buildSessionRoutingAuditSummary } from '@craft-agent/shared/audit'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@craft-agent/ui'
 
-function formatCurrency(value: number | undefined): string {
+function formatEur(value: number | undefined): string {
   if (typeof value !== 'number') return '—'
   return `${value.toFixed(6)} €`
+}
+
+function formatUsd(value: number | undefined): string {
+  if (typeof value !== 'number') return '—'
+  return `$${value.toFixed(6)}`
+}
+
+function formatPreferredCost(eur: number | undefined, usd: number | undefined): string {
+  return typeof eur === 'number' ? formatEur(eur) : formatUsd(usd)
+}
+
+function buildRoutingDecisionExport(session: Session) {
+  return session.messages
+    .filter(message => message.role === 'assistant' && !message.isIntermediate && message.routingMeta)
+    .map(message => ({
+      messageId: message.id,
+      timestamp: message.timestamp,
+      ...message.routingMeta,
+    }))
 }
 
 function buildAuditExportJson(session: Session): string {
@@ -14,18 +33,21 @@ function buildAuditExportJson(session: Session): string {
   return JSON.stringify({
     sessionId: session.id,
     generatedAt: new Date().toISOString(),
+    totalEstimatedCostUsd: summary.totalEstimatedCostUsd,
+    totalActualCostUsd: summary.totalActualCostUsd,
     totalEstimatedCostEur: summary.totalEstimatedCostEur,
     totalActualCostEur: summary.totalActualCostEur,
     providers: summary.byConnectionSlug,
     sensitivities: summary.bySensitivity,
     policyRuleHits: summary.policyRuleHits,
+    routingDecisions: buildRoutingDecisionExport(session),
   }, null, 2)
 }
 
 function buildAuditExportMarkdown(session: Session): string {
   const summary = buildSessionRoutingAuditSummary(session.messages)
   const providerRows = Object.entries(summary.byConnectionSlug)
-    .map(([slug, value]) => `| ${slug} | ${value.turns} | ${formatCurrency(value.estimatedCostEur)} | ${formatCurrency(value.actualCostEur)} |`)
+    .map(([slug, value]) => `| ${slug} | ${value.turns} | ${formatPreferredCost(value.estimatedCostEur, value.estimatedCostUsd)} | ${formatPreferredCost(value.actualCostEur, value.actualCostUsd)} |`)
     .join('\n') || '| — | 0 | — | — |'
   const sensitivityRows = Object.entries(summary.bySensitivity)
     .map(([sensitivity, value]) => `| ${sensitivity} | ${value.turns} |`)
@@ -33,14 +55,24 @@ function buildAuditExportMarkdown(session: Session): string {
   const ruleRows = Object.entries(summary.policyRuleHits)
     .map(([ruleId, hits]) => `| ${ruleId} | ${hits} |`)
     .join('\n') || '| — | 0 |'
+  const routingDecisionRows = buildRoutingDecisionExport(session)
+    .map(decision => {
+      const rejected = decision.rejectedConnections
+        ?.map(candidate => `${candidate.slug}: ${candidate.reasons.join(', ')}`)
+        .join('; ')
+        .replaceAll('|', '\\|') ?? '—'
+      const explanation = decision.routingExplanation?.replaceAll('|', '\\|') ?? '—'
+      return `| ${decision.messageId} | ${decision.connectionSlug ?? '—'} | ${decision.routingDifficulty ?? '—'} | ${explanation} | ${rejected} |`
+    })
+    .join('\n') || '| — | — | — | — | — |'
 
   return [
     `# Audit IA — session ${session.id}`,
     '',
     `Généré le ${new Date().toISOString()}`,
     '',
-    `- Coût estimé total : ${formatCurrency(summary.totalEstimatedCostEur)}`,
-    `- Coût réel total : ${formatCurrency(summary.totalActualCostEur)}`,
+    `- Coût estimé total : ${formatPreferredCost(summary.totalEstimatedCostEur, summary.totalEstimatedCostUsd)}`,
+    `- Coût réel total : ${formatPreferredCost(summary.totalActualCostEur, summary.totalActualCostUsd)}`,
     '',
     '## Providers / connexions',
     '',
@@ -59,6 +91,12 @@ function buildAuditExportMarkdown(session: Session): string {
     '| Règle | Hits |',
     '|---|---:|',
     ruleRows,
+    '',
+    '## Décisions de routage',
+    '',
+    '| Message | Connexion | Difficulté | Explication | Alternatives rejetées |',
+    '|---|---|---|---|---|',
+    routingDecisionRows,
   ].join('\n')
 }
 
@@ -97,15 +135,17 @@ export function RoutingAuditPanel({ session }: { session: Session }) {
           </span>
           <span className="truncate">
             {providerEntries.length} connexion{providerEntries.length > 1 ? 's' : ''}
-            {summary.totalEstimatedCostEur !== undefined ? ` · ${formatCurrency(summary.totalEstimatedCostEur)} estimé` : ''}
+            {summary.totalEstimatedCostEur !== undefined || summary.totalEstimatedCostUsd !== undefined
+              ? ` · ${formatPreferredCost(summary.totalEstimatedCostEur, summary.totalEstimatedCostUsd)} estimé`
+              : ''}
           </span>
         </button>
 
         {open && (
           <div className="space-y-3 border-t border-border/60 px-3 py-3">
             <div className="grid gap-2 sm:grid-cols-3">
-              <div><span className="text-foreground/60">Coût estimé</span><div className="text-foreground">{formatCurrency(summary.totalEstimatedCostEur)}</div></div>
-              <div><span className="text-foreground/60">Coût réel</span><div className="text-foreground">{formatCurrency(summary.totalActualCostEur)}</div></div>
+              <div><span className="text-foreground/60">Coût estimé</span><div className="text-foreground">{formatPreferredCost(summary.totalEstimatedCostEur, summary.totalEstimatedCostUsd)}</div></div>
+              <div><span className="text-foreground/60">Coût réel</span><div className="text-foreground">{formatPreferredCost(summary.totalActualCostEur, summary.totalActualCostUsd)}</div></div>
               <div><span className="text-foreground/60">Tours audités</span><div className="text-foreground">{providerEntries.reduce((sum, [, value]) => sum + value.turns, 0)}</div></div>
             </div>
 
@@ -114,7 +154,7 @@ export function RoutingAuditPanel({ session }: { session: Session }) {
               {providerEntries.map(([slug, value]) => (
                 <div key={slug} className="flex justify-between gap-3">
                   <span className="truncate">{slug}</span>
-                  <span className="shrink-0">{value.turns} tour{value.turns > 1 ? 's' : ''} · {formatCurrency(value.estimatedCostEur)}</span>
+                  <span className="shrink-0">{value.turns} tour{value.turns > 1 ? 's' : ''} · {formatPreferredCost(value.estimatedCostEur, value.estimatedCostUsd)}</span>
                 </div>
               ))}
             </div>

@@ -11,6 +11,7 @@ export { default as AppearanceSettingsPage, meta as AppearanceMeta } from './App
 export { default as InputSettingsPage, meta as InputMeta } from './InputSettingsPage'
 export { default as WorkspaceSettingsPage, meta as WorkspaceSettingsMeta } from './WorkspaceSettingsPage'
 export { default as PermissionsSettingsPage, meta as PermissionsMeta } from './PermissionsSettingsPage'
+export { default as GovernanceSettingsPage, meta as GovernanceMeta } from './GovernanceSettingsPage'
 export { default as LabelsSettingsPage, meta as LabelsMeta } from './LabelsSettingsPage'
 export { default as ShortcutsPage, meta as ShortcutsMeta } from './ShortcutsPage'
 export { default as PreferencesPage, meta as PreferencesMeta } from './PreferencesPage'

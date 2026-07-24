@@ -21,6 +21,7 @@ import {
   rmSync,
   statSync,
   unlinkSync,
+  renameSync,
 } from 'fs';
 import { join, basename } from 'path';
 import { getWorkspaceSessionsPath } from '../workspaces/storage.ts';
@@ -78,6 +79,46 @@ export function getSessionPath(workspaceRootPath: string, sessionId: string): st
  */
 export function getSessionFilePath(workspaceRootPath: string, sessionId: string): string {
   return join(getSessionPath(workspaceRootPath, sessionId), 'session.jsonl');
+}
+
+/**
+ * Recover from an interrupted atomic session write.
+ *
+ * Older writes used `unlink(session.jsonl)` before renaming `session.jsonl.tmp`.
+ * If Robb was quit in that small window, the UI could no longer list the chat
+ * on restart even though the complete tmp file was still present. Prefer the
+ * tmp file when the primary file is absent; otherwise remove stale sidecars.
+ */
+function recoverInterruptedSessionWrite(sessionFile: string): void {
+  const tmpFile = `${sessionFile}.tmp`;
+  const backupFile = `${sessionFile}.bak`;
+
+  if (!existsSync(sessionFile)) {
+    if (existsSync(tmpFile)) {
+      try {
+        renameSync(tmpFile, sessionFile);
+        return;
+      } catch {
+        // Fall through to backup recovery if tmp cannot be promoted.
+      }
+    }
+
+    if (existsSync(backupFile)) {
+      try {
+        renameSync(backupFile, sessionFile);
+      } catch {
+        // Leave sidecars in place; the next startup can retry recovery.
+      }
+    }
+    return;
+  }
+
+  if (existsSync(tmpFile)) {
+    try { unlinkSync(tmpFile); } catch { /* ignore stale sidecar cleanup */ }
+  }
+  if (existsSync(backupFile)) {
+    try { unlinkSync(backupFile); } catch { /* ignore stale sidecar cleanup */ }
+  }
 }
 
 /**
@@ -336,6 +377,7 @@ export function loadSession(workspaceRootPath: string, sessionId: string): Store
   const end = perf.start('session.loadSession', { sessionId });
 
   const jsonlPath = getSessionFilePath(workspaceRootPath, sessionId);
+  recoverInterruptedSessionWrite(jsonlPath);
   if (existsSync(jsonlPath)) {
     const session = readSessionJsonl(jsonlPath);
     if (session) {
@@ -371,13 +413,7 @@ export function listSessions(workspaceRootPath: string): SessionMetadata[] {
       const sessionId = entry.name;
       const sessionDir = join(sessionsDir, sessionId);
       const jsonlFile = join(sessionDir, 'session.jsonl');
-
-      // Clean up orphaned .tmp files from crashed atomic writes.
-      // These are harmless but waste disk space.
-      const tmpFile = jsonlFile + '.tmp';
-      if (existsSync(tmpFile)) {
-        try { unlinkSync(tmpFile); } catch { /* ignore */ }
-      }
+      recoverInterruptedSessionWrite(jsonlFile);
 
       if (existsSync(jsonlFile)) {
         const header = readSessionHeader(jsonlFile);

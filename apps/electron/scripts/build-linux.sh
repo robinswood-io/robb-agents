@@ -217,7 +217,10 @@ echo "Size: $(du -h "$ELECTRON_DIR/release/${APPIMAGE_NAME}" | cut -f1)"
 )
 echo "Checksums: $ELECTRON_DIR/release/SHA256SUMS-linux-${ARCH}.txt"
 
-# Run the same archive-level contract check locally and in CI. It does not
-# need a display server or FUSE and verifies desktop metadata plus bundled
-# Pi/Vibe subprocesses.
-python3 "$ROOT_DIR/scripts/robinswood-linux-packaged-smoke.py" --appimage "$APPIMAGE_PATH"
+# Run the same archive-level contract check locally and in CI. CI can opt into
+# a real headless renderer launch with ROBB_PACKAGE_LAUNCH_SMOKE=1.
+SMOKE_ARGS=(--appimage "$APPIMAGE_PATH")
+if [[ "${ROBB_PACKAGE_LAUNCH_SMOKE:-0}" == "1" ]]; then
+    SMOKE_ARGS+=(--launch --launch-timeout 45)
+fi
+python3 "$ROOT_DIR/scripts/robinswood-linux-packaged-smoke.py" "${SMOKE_ARGS[@]}"

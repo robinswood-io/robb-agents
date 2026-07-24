@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="light">
+<html lang="fr" class="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,8 +11,10 @@
 </head>
 <body>
   <script>
-    // React DevTools - only in development (when running via Vite dev server)
-    if (location.protocol === 'file:' || location.hostname === 'localhost') {
+    // React DevTools are opt-in. Loading port 8097 unconditionally produced a
+    // console/network error whenever the standalone DevTools server was absent,
+    // and `file:` also matched packaged releases.
+    if (new URLSearchParams(location.search).get('reactDevTools') === '1') {
       const s = document.createElement('script');
       s.src = 'http://localhost:8097';
       document.head.appendChild(s);

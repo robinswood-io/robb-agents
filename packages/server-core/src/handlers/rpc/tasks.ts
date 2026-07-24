@@ -24,8 +24,12 @@ import type {
   TaskGetResult,
   TaskResultsDto,
   TaskResultNodeDto,
+  TaskApprovalRequestDto,
+  TaskApprovalDecisionRequest,
 } from '@craft-agent/shared/protocol'
 import { getWorkspaceByNameOrId } from '@craft-agent/shared/config'
+import { loadWorkspaceConfig } from '@craft-agent/shared/workspaces'
+import { WorkspaceGovernanceProfileSchema } from '@craft-agent/shared/governance'
 import {
   parseTaskYaml,
   saveTaskSpec,
@@ -40,6 +44,9 @@ import {
   nodeTitle,
   DEFAULT_REPAIR_ATTEMPTS,
   MAX_REPAIR_ATTEMPTS_CAP,
+  buildMissionControlSnapshot,
+  planMissionReplay,
+  exportMissionReportMarkdown,
 } from '@craft-agent/shared/tasks'
 import { createLogger } from '@craft-agent/shared/utils'
 import { pushTyped, type RpcServer } from '@craft-agent/server-core/transport'
@@ -56,6 +63,8 @@ export const HANDLED_CHANNELS = [
   RPC_CHANNELS.tasks.PAUSE,
   RPC_CHANNELS.tasks.RESUME,
   RPC_CHANNELS.tasks.STOP,
+  RPC_CHANNELS.tasks.LIST_APPROVALS,
+  RPC_CHANNELS.tasks.RESOLVE_APPROVAL,
   RPC_CHANNELS.tasks.GET,
   RPC_CHANNELS.tasks.LIST,
   RPC_CHANNELS.tasks.GET_RESULTS,
@@ -352,6 +361,27 @@ export function registerTasksHandlers(server: RpcServer, deps: HandlerDeps): voi
     await runnerFor(workspaceId).stop(slug, runId)
   })
 
+  server.handle(
+    RPC_CHANNELS.tasks.LIST_APPROVALS,
+    async (_ctx, workspaceId: string, slug?: string, runId?: string): Promise<TaskApprovalRequestDto[]> => {
+      return runnerFor(workspaceId).listPendingApprovals(slug, runId)
+    },
+  )
+
+  server.handle(
+    RPC_CHANNELS.tasks.RESOLVE_APPROVAL,
+    async (_ctx, workspaceId: string, req: TaskApprovalDecisionRequest) => {
+      return runnerFor(workspaceId).resolveApproval(
+        req.slug,
+        req.runId,
+        req.requestId,
+        req.decision,
+        req.actor,
+        req.comment,
+      )
+    },
+  )
+
   // tasks:get — spec + (optional) active run-state.
   server.handle(RPC_CHANNELS.tasks.GET, async (_ctx, workspaceId: string, slug: string, runId?: string): Promise<TaskGetResult> => {
     const ws = workspaceOrThrow(workspaceId)
@@ -403,11 +433,21 @@ export function registerTasksHandlers(server: RpcServer, deps: HandlerDeps): voi
     for (const entry of log) {
       if (entry.kind === 'node-scheduled' || entry.kind === 'node-spawned') {
         const e = ensure(entry.nodeId)
+        e.state = 'running'
         if (entry.kind === 'node-spawned') e.sessionId = entry.sessionId
       } else if (entry.kind === 'node-finished') {
         const e = ensure(entry.nodeId)
         e.state = entry.state
         if (entry.sessionId) e.sessionId = entry.sessionId
+      } else if (entry.kind === 'approval-requested') {
+        ensure(entry.nodeId).state = 'waiting-approval'
+        runStatus = 'waiting-approval'
+      } else if (entry.kind === 'approval-resolved') {
+        const e = ensure(entry.nodeId)
+        e.state = entry.decision === 'approved' ? 'pending' : 'failed'
+        runStatus = entry.decision === 'approved' ? 'running' : 'failed'
+      } else if (entry.kind === 'node-reused') {
+        ensure(entry.nodeId).state = 'done'
       } else if (entry.kind === 'verdict') {
         verdicts.push({
           result: entry.result,
@@ -440,6 +480,29 @@ export function registerTasksHandlers(server: RpcServer, deps: HandlerDeps): voi
     // snapshot's max_iterations clamped to the shared bound (default when omitted).
     const repairUsed = verdicts.filter((v) => v.result === 'fail').length
     const repairMax = Math.min(snapshot?.max_iterations ?? DEFAULT_REPAIR_ATTEMPTS, MAX_REPAIR_ATTEMPTS_CAP)
+    const reportSpec = snapshot ?? loadTaskSpec(root, slug)?.spec
+    const lastUsage = [...log].reverse().find((entry) => entry.kind === 'usage-updated')
+    const governanceResult = WorkspaceGovernanceProfileSchema.safeParse(loadWorkspaceConfig(root)?.governance)
+    const governanceBudgets = governanceResult.success ? governanceResult.data.budgets : undefined
+    const usageCurrency = lastUsage?.kind === 'usage-updated' ? lastUsage.currency : undefined
+    const workspaceMaxCost = usageCurrency == null || usageCurrency === 'USD'
+      ? governanceBudgets?.missionMaxCostUsd
+      : undefined
+    const controlRoom = reportSpec
+      ? buildMissionControlSnapshot(reportSpec, chosen, log, {
+          ...(lastUsage?.kind === 'usage-updated' ? {
+            tokensUsed: lastUsage.tokensUsed,
+            ...(lastUsage.costUsed != null ? { costUsed: lastUsage.costUsed } : {}),
+            ...(lastUsage.currency ? { currency: lastUsage.currency } : {}),
+          } : {}),
+          ...(governanceBudgets?.missionMaxTokens != null ? { maxTokens: governanceBudgets.missionMaxTokens } : {}),
+          ...(workspaceMaxCost != null ? { maxCost: workspaceMaxCost, currency: 'USD' as const } : {}),
+          ...(governanceBudgets?.warningPercent != null ? { warningPercent: governanceBudgets.warningPercent } : {}),
+        })
+      : undefined
+    const replayPlan = reportSpec
+      ? planMissionReplay(reportSpec, chosen, log, (nodeId) => readNodeOutput(root, slug, chosen, nodeId))
+      : undefined
 
     return {
       slug,
@@ -450,6 +513,8 @@ export function registerTasksHandlers(server: RpcServer, deps: HandlerDeps): voi
       repair: { used: repairUsed, max: repairMax },
       ...(runStatus ? { runStatus } : {}),
       ...(snapshot?.acceptance_criteria ? { acceptanceCriteria: snapshot.acceptance_criteria } : {}),
+      ...(controlRoom ? { controlRoom, reportMarkdown: exportMissionReportMarkdown(controlRoom) } : {}),
+      ...(replayPlan ? { replayPlan } : {}),
       nodes,
     }
   })

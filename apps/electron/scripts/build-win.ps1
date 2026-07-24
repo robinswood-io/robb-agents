@@ -83,6 +83,7 @@ $SdkSource = "$RootDir\node_modules\@anthropic-ai\claude-agent-sdk"
 $SdkBinarySource = "$RootDir\node_modules\@anthropic-ai\claude-agent-sdk-win32-x64"
 $RipgrepSource = "$RootDir\node_modules\@vscode\ripgrep"
 Require-Path $SdkSource "Claude Agent SDK core"
+Require-Path "$RootDir\packages\shared\src\interceptor-request-utils.ts" "network interceptor request utilities"
 Require-Path "$SdkBinarySource\claude.exe" "Claude Agent SDK native binary"
 Require-Path "$RipgrepSource\bin\rg.exe" "ripgrep binary"
 

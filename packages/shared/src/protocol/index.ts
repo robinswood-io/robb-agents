@@ -1,5 +1,6 @@
 export * from './types'
 export * from './channels'
 export * from './dto'
+export * from './dto-contracts'
 export * from './events'
 export * from './routing'

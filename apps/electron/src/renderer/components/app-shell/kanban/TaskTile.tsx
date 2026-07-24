@@ -142,17 +142,11 @@ export function TaskTile({
         }
       }}
       className={cn(
-        'group relative overflow-hidden rounded-lg border border-border/60 bg-card shadow-minimal',
+        'group relative overflow-hidden rounded-lg border border-border/60 bg-card',
+        isLive ? 'shadow-tinted ring-1 ring-accent/40' : 'shadow-minimal',
         'cursor-pointer transition-colors hover:border-border focus-visible:outline-none',
         'focus-visible:ring-2 focus-visible:ring-ring/50'
       )}
-      style={
-        isLive
-          ? {
-              boxShadow: `0 0 0 1px ${accent}, 0 4px 16px -4px color-mix(in srgb, ${accent} 40%, transparent)`,
-            }
-          : undefined
-      }
     >
       {showTint && color && (
         <div

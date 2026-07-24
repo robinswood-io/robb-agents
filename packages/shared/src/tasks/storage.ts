@@ -29,18 +29,48 @@ const NODES_DIR = 'nodes';
 // ---------------------------------------------------------------------------
 
 /** Per-node lifecycle state recorded in the run log. Richer than the board's SubtaskRunState. */
-export type NodeRunState = 'pending' | 'running' | 'done' | 'failed' | 'cancelled' | 'skipped';
+export type NodeRunState = 'pending' | 'waiting-approval' | 'running' | 'done' | 'failed' | 'cancelled' | 'skipped';
 
 /** Append-only run-log event. `t` is an ISO-8601 timestamp. */
 export type RunLogEntry =
   | { t: string; kind: 'run-started'; taskId: string; runId: string; orchestratorSessionId?: string }
   | { t: string; kind: 'node-scheduled'; nodeId: string }
   | { t: string; kind: 'node-spawned'; nodeId: string; sessionId: string }
+  | {
+      t: string;
+      kind: 'node-checkpoint';
+      nodeId: string;
+      idempotencyKey: string;
+      status: 'prepared' | 'executing' | 'confirmed';
+      proofHash?: string;
+    }
   | { t: string; kind: 'node-finished'; nodeId: string; sessionId: string; state: NodeRunState; reason?: string }
   | { t: string; kind: 'node-retry'; nodeId: string; attempt: number; reason: string }
   | { t: string; kind: 'run-paused' | 'run-resumed' | 'run-stopped' | 'run-completed' | 'run-failed' | 'run-verifying' }
   | { t: string; kind: 'verdict'; result: 'pass' | 'fail' | 'unparsed'; reason?: string; nodes?: string[] }
-  | { t: string; kind: 'budget-breach'; metric: 'tokens' | 'parallel' | 'iterations'; value: number; limit: number };
+  | {
+      t: string;
+      kind: 'approval-requested';
+      requestId: string;
+      nodeId: string;
+      reason: string;
+      impact: 'low' | 'medium' | 'high' | 'critical';
+      owner?: string;
+    }
+  | {
+      t: string;
+      kind: 'approval-resolved';
+      requestId: string;
+      nodeId: string;
+      decision: 'approved' | 'rejected';
+      actor: string;
+      comment?: string;
+    }
+  | { t: string; kind: 'run-replayed'; sourceRunId: string; externalMutationsApproved: boolean }
+  | { t: string; kind: 'node-reused'; nodeId: string; sourceRunId: string; proofHash?: string }
+  | { t: string; kind: 'usage-updated'; tokensUsed: number; costUsed?: number; currency?: 'USD' | 'EUR' }
+  | { t: string; kind: 'budget-breach'; metric: 'tokens' | 'parallel' | 'iterations'; value: number; limit: number }
+  | { t: string; kind: 'kill-switch'; scope: 'global' | 'workspace' | 'mission'; reason: string };
 
 // ---------------------------------------------------------------------------
 // Path helpers

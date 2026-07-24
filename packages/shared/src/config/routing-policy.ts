@@ -11,6 +11,8 @@
 import type { LlmConnection, LlmProviderType } from './llm-connections.ts';
 
 export type RoutingSensitivity = 'public' | 'internal' | 'confidential' | 'restricted';
+export type RoutingDifficulty = 'simple' | 'standard' | 'complex';
+export type RoutingCapability = 'tools' | 'vision' | 'large-context';
 
 export type RoutingPolicyReason =
   | 'policy-disabled'
@@ -26,6 +28,8 @@ export interface RoutingPolicyWhen {
   tagsAny?: string[];
   /** Future hook: match enabled source slugs. */
   sourcesAny?: string[];
+  /** Match a locally classified turn difficulty. */
+  difficulty?: RoutingDifficulty[];
 }
 
 export interface RoutingPolicyRule {
@@ -47,6 +51,22 @@ export interface RoutingPolicyRule {
   fallbackConnectionSlugs?: string[];
 }
 
+export interface RoutingConnectionProfile {
+  /** Explicit capabilities. Missing capabilities fail closed when required. */
+  capabilities?: RoutingCapability[];
+  /** Optional context limit used by the local requirements classifier. */
+  maxContextTokens?: number;
+  /** Lower values are preferred after hard policy and rule preferences. */
+  priority?: number;
+}
+
+export interface RoutingBudgetPolicy {
+  sessionUsd?: number;
+  missionUsd?: number;
+  workspaceUsd?: number;
+  onExceed?: 'block' | 'require-approval';
+}
+
 export interface RoutingPolicy {
   version: 1;
   /** Disabled policies leave current session/default connection behavior untouched. */
@@ -66,7 +86,18 @@ export interface RoutingPolicy {
 
   /** Final global fallback considered after rule preferences and rule fallbacks. */
   fallbackConnectionSlug?: string;
+  /** Explicit runtime capability metadata by connection slug. */
+  connectionProfiles?: Record<string, RoutingConnectionProfile>;
+  /** Hard cost guardrails evaluated before a connection is selected. */
+  budgets?: RoutingBudgetPolicy;
   rules?: RoutingPolicyRule[];
+}
+
+export interface RoutingBudgetUsage {
+  sessionUsd?: number;
+  missionUsd?: number;
+  workspaceUsd?: number;
+  projectedTurnUsd?: number;
 }
 
 export interface RoutingPolicyContext {
@@ -77,6 +108,29 @@ export interface RoutingPolicyContext {
   tags?: string[];
   /** Future hook: enabled source slugs. */
   sourceSlugs?: string[];
+  /** Local-only classification; prompt content is never persisted in the decision. */
+  difficulty?: RoutingDifficulty;
+  requiredCapabilities?: RoutingCapability[];
+  /** Current context size used to enforce explicit per-connection limits. */
+  contextTokens?: number;
+  /** Runtime-unavailable connections, for example while a circuit breaker is open. */
+  unavailableConnectionSlugs?: string[];
+  budgetUsage?: RoutingBudgetUsage;
+}
+
+export interface RoutingRejectedCandidate {
+  slug: string;
+  reasons: string[];
+}
+
+export interface RoutingBudgetDecision {
+  status: 'within-budget' | 'blocked' | 'approval-required';
+  exceededScopes: Array<'session' | 'mission' | 'workspace'>;
+  projectedUsd: {
+    session?: number;
+    mission?: number;
+    workspace?: number;
+  };
 }
 
 export interface RoutingPolicyDecision {
@@ -89,6 +143,10 @@ export interface RoutingPolicyDecision {
   sensitivity: RoutingSensitivity;
   errors: string[];
   warnings: string[];
+  /** Human-readable reason plus exact alternatives excluded by hard constraints. */
+  explanation?: string;
+  rejectedCandidates?: RoutingRejectedCandidate[];
+  budget?: RoutingBudgetDecision;
 }
 
 export interface RoutingPolicyValidationResult {
@@ -120,6 +178,8 @@ export interface RoutingPolicySimulation {
 
 const DEFAULT_EXPLICIT_ALLOW_SENSITIVITIES: RoutingSensitivity[] = ['confidential', 'restricted'];
 export const ALL_ROUTING_SENSITIVITIES: RoutingSensitivity[] = ['public', 'internal', 'confidential', 'restricted'];
+export const ALL_ROUTING_DIFFICULTIES: RoutingDifficulty[] = ['simple', 'standard', 'complex'];
+export const ALL_ROUTING_CAPABILITIES: RoutingCapability[] = ['tools', 'vision', 'large-context'];
 const ROUTING_SENSITIVITY_RANK: Record<RoutingSensitivity, number> = {
   public: 0,
   internal: 1,
@@ -133,7 +193,7 @@ export function maxRoutingSensitivity(values: Array<RoutingSensitivity | undefin
     .sort((left, right) => ROUTING_SENSITIVITY_RANK[right] - ROUTING_SENSITIVITY_RANK[left])[0];
 }
 
-function unique(values: string[] | undefined): string[] {
+function unique<T extends string>(values: T[] | undefined): T[] {
   return Array.from(new Set((values ?? []).filter(Boolean)));
 }
 
@@ -150,8 +210,84 @@ function ruleMatches(rule: RoutingPolicyRule, context: Required<Pick<RoutingPoli
   if (when.sensitivity && !when.sensitivity.includes(context.sensitivity)) return false;
   if (when.tagsAny && when.tagsAny.length > 0 && !intersects(when.tagsAny, context.tags)) return false;
   if (when.sourcesAny && when.sourcesAny.length > 0 && !intersects(when.sourcesAny, context.sourceSlugs)) return false;
+  if (when.difficulty && context.difficulty && !when.difficulty.includes(context.difficulty)) return false;
+  if (when.difficulty && !context.difficulty) return false;
 
   return true;
+}
+
+export interface LocalRoutingClassificationInput {
+  text: string;
+  hasImages?: boolean;
+  requestedToolNames?: string[];
+  contextTokens?: number;
+}
+
+/**
+ * Conservative, local-only requirements classifier.
+ *
+ * It returns labels and capabilities only; input text is never included in the
+ * decision or telemetry.
+ */
+export function classifyLocalRoutingRequirements(
+  input: LocalRoutingClassificationInput,
+): Pick<RoutingPolicyContext, 'difficulty' | 'requiredCapabilities'> {
+  const normalized = input.text.trim();
+  const wordCount = normalized ? normalized.split(/\s+/).length : 0;
+  const complexSignals = [
+    /architecture/i,
+    /migration/i,
+    /audit/i,
+    /analyse approfondie/i,
+    /multi[- ]?étapes?/i,
+    /refactor/i,
+  ];
+  const difficulty: RoutingDifficulty =
+    wordCount > 180 || complexSignals.some(pattern => pattern.test(normalized))
+      ? 'complex'
+      : wordCount < 30
+        ? 'simple'
+        : 'standard';
+  const requiredCapabilities: RoutingCapability[] = [];
+
+  if (input.hasImages) requiredCapabilities.push('vision');
+  if ((input.requestedToolNames?.length ?? 0) > 0) requiredCapabilities.push('tools');
+  if ((input.contextTokens ?? 0) >= 100_000) requiredCapabilities.push('large-context');
+
+  return { difficulty, requiredCapabilities };
+}
+
+function evaluateRoutingBudget(
+  policy: RoutingBudgetPolicy | undefined,
+  usage: RoutingBudgetUsage | undefined,
+): RoutingBudgetDecision | undefined {
+  if (!policy) return undefined;
+  const projectedTurnUsd = Math.max(0, usage?.projectedTurnUsd ?? 0);
+  const projectedUsd = {
+    ...(typeof usage?.sessionUsd === 'number'
+      ? { session: usage.sessionUsd + projectedTurnUsd }
+      : {}),
+    ...(typeof usage?.missionUsd === 'number'
+      ? { mission: usage.missionUsd + projectedTurnUsd }
+      : {}),
+    ...(typeof usage?.workspaceUsd === 'number'
+      ? { workspace: usage.workspaceUsd + projectedTurnUsd }
+      : {}),
+  };
+  const exceededScopes: Array<'session' | 'mission' | 'workspace'> = [];
+  if (typeof policy.sessionUsd === 'number' && (projectedUsd.session ?? 0) > policy.sessionUsd) exceededScopes.push('session');
+  if (typeof policy.missionUsd === 'number' && (projectedUsd.mission ?? 0) > policy.missionUsd) exceededScopes.push('mission');
+  if (typeof policy.workspaceUsd === 'number' && (projectedUsd.workspace ?? 0) > policy.workspaceUsd) exceededScopes.push('workspace');
+
+  return {
+    status: exceededScopes.length === 0
+      ? 'within-budget'
+      : policy.onExceed === 'require-approval'
+        ? 'approval-required'
+        : 'blocked',
+    exceededScopes,
+    projectedUsd,
+  };
 }
 
 function hasExplicitAllow(policy: RoutingPolicy, matchedRules: RoutingPolicyRule[]): boolean {
@@ -232,6 +368,32 @@ export function validateRoutingPolicy(policy: RoutingPolicy, knownConnectionSlug
         errors.push(`Invalid sensitivity '${sensitivity}' in routingPolicy rule '${rule.id}'`);
       }
     }
+    for (const difficulty of rule.when?.difficulty ?? []) {
+      if (!ALL_ROUTING_DIFFICULTIES.includes(difficulty)) {
+        errors.push(`Invalid difficulty '${difficulty}' in routingPolicy rule '${rule.id}'`);
+      }
+    }
+  }
+
+  for (const [slug, profile] of Object.entries(policy.connectionProfiles ?? {})) {
+    for (const capability of profile.capabilities ?? []) {
+      if (!ALL_ROUTING_CAPABILITIES.includes(capability)) {
+        errors.push(`Invalid capability '${capability}' in routingPolicy connectionProfiles.${slug}`);
+      }
+    }
+    if (profile.maxContextTokens !== undefined && (!Number.isFinite(profile.maxContextTokens) || profile.maxContextTokens <= 0)) {
+      errors.push(`Invalid maxContextTokens in routingPolicy connectionProfiles.${slug}`);
+    }
+    if (profile.priority !== undefined && !Number.isFinite(profile.priority)) {
+      errors.push(`Invalid priority in routingPolicy connectionProfiles.${slug}`);
+    }
+  }
+
+  for (const [scope, value] of Object.entries(policy.budgets ?? {})) {
+    if (scope === 'onExceed') continue;
+    if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) {
+      errors.push(`Invalid routingPolicy.budgets.${scope}`);
+    }
   }
 
   if (knownConnectionSlugs.length > 0) {
@@ -240,6 +402,11 @@ export function validateRoutingPolicy(policy: RoutingPolicy, knownConnectionSlug
     for (const [slug, fields] of Object.entries(refs)) {
       if (!known.has(slug)) {
         warnings.push(`routingPolicy references unknown connection '${slug}' in ${fields.join(', ')}`);
+      }
+    }
+    for (const slug of Object.keys(policy.connectionProfiles ?? {})) {
+      if (!known.has(slug)) {
+        warnings.push(`routingPolicy references unknown connection '${slug}' in connectionProfiles`);
       }
     }
   }
@@ -291,6 +458,9 @@ export function simulateRoutingPolicy(
       }
       if (explicitAllowRequired) exclusionReasons.push('explicit-allow-required-for-sensitivity');
     }
+    exclusionReasons.push(
+      ...(decision.rejectedCandidates?.find(candidate => candidate.slug === connection.slug)?.reasons ?? []),
+    );
     return {
       slug: connection.slug,
       providerType: connection.providerType,
@@ -328,6 +498,10 @@ export function resolveRoutingPolicy(
       sensitivity,
       errors,
       warnings,
+      explanation: selected
+        ? `Policy disabled; kept requested/default connection '${selected}'.`
+        : 'Policy disabled; no configured connection was available.',
+      rejectedCandidates: [],
     };
   }
 
@@ -340,15 +514,25 @@ export function resolveRoutingPolicy(
   const matchedRuleIds = matchedRules.map(rule => rule.id);
 
   let allowed = new Set(allSlugs);
+  const rejectionReasons = new Map<string, string[]>();
+  const reject = (slug: string, reason: string) => {
+    rejectionReasons.set(slug, unique([...(rejectionReasons.get(slug) ?? []), reason]));
+  };
 
   if ((policy.defaultAllowConnectionSlugs?.length ?? 0) > 0) {
     const allowedDefaults = new Set(policy.defaultAllowConnectionSlugs);
+    for (const slug of allowed) {
+      if (!allowedDefaults.has(slug)) reject(slug, 'not-in-default-allow-list');
+    }
     allowed = new Set([...allowed].filter(slug => allowedDefaults.has(slug)));
   }
 
   for (const rule of matchedRules) {
     if ((rule.allowConnectionSlugs?.length ?? 0) > 0) {
       const ruleAllow = new Set(rule.allowConnectionSlugs);
+      for (const slug of allowed) {
+        if (!ruleAllow.has(slug)) reject(slug, `rule:${rule.id}:not-in-connection-allow-list`);
+      }
       allowed = new Set([...allowed].filter(slug => ruleAllow.has(slug)));
     }
 
@@ -356,23 +540,88 @@ export function resolveRoutingPolicy(
       const allowedProviders = new Set(rule.allowProviderTypes);
       allowed = new Set([...allowed].filter(slug => {
         const connection = connections.find(candidate => candidate.slug === slug);
-        return !!connection && allowedProviders.has(connection.providerType);
+        const isAllowed = !!connection && allowedProviders.has(connection.providerType);
+        if (!isAllowed) reject(slug, `rule:${rule.id}:provider-not-allowed`);
+        return isAllowed;
       }));
     }
   }
 
-  for (const denied of unique(policy.defaultDenyConnectionSlugs)) allowed.delete(denied);
+  for (const denied of unique(policy.defaultDenyConnectionSlugs)) {
+    if (allowed.has(denied)) reject(denied, 'default-connection-denied');
+    allowed.delete(denied);
+  }
   for (const rule of matchedRules) {
-    for (const denied of unique(rule.denyConnectionSlugs)) allowed.delete(denied);
+    for (const denied of unique(rule.denyConnectionSlugs)) {
+      if (allowed.has(denied)) reject(denied, `rule:${rule.id}:connection-denied`);
+      allowed.delete(denied);
+    }
+  }
+  for (const unavailable of unique(context.unavailableConnectionSlugs)) {
+    if (allowed.has(unavailable)) reject(unavailable, 'runtime-unavailable');
+    allowed.delete(unavailable);
   }
 
   const explicitAllowSensitivities = policy.requireExplicitAllowFor ?? DEFAULT_EXPLICIT_ALLOW_SENSITIVITIES;
   if (explicitAllowSensitivities.includes(sensitivity) && !hasExplicitAllow(policy, matchedRules)) {
     errors.push(`routingPolicy requires an explicit allow-list for '${sensitivity}' sensitivity`);
+    for (const slug of allowed) reject(slug, 'explicit-allow-required-for-sensitivity');
     allowed = new Set();
   }
 
-  const allowedConnectionSlugs = allSlugs.filter(slug => allowed.has(slug));
+  for (const slug of [...allowed]) {
+    const profile = policy.connectionProfiles?.[slug];
+    for (const capability of unique(context.requiredCapabilities)) {
+      if (!profile?.capabilities?.includes(capability)) {
+        reject(slug, `missing-capability:${capability}`);
+        allowed.delete(slug);
+      }
+    }
+    if (
+      allowed.has(slug)
+      && typeof context.contextTokens === 'number'
+      && typeof profile?.maxContextTokens === 'number'
+      && context.contextTokens > profile.maxContextTokens
+    ) {
+      reject(slug, `context-window-exceeded:${profile.maxContextTokens}`);
+      allowed.delete(slug);
+    }
+  }
+
+  const allowedConnectionSlugs = allSlugs
+    .filter(slug => allowed.has(slug))
+    .sort((left, right) =>
+      (policy.connectionProfiles?.[left]?.priority ?? 0)
+      - (policy.connectionProfiles?.[right]?.priority ?? 0)
+    );
+  const rejectedCandidates: RoutingRejectedCandidate[] = allSlugs
+    .filter(slug => !allowed.has(slug))
+    .map(slug => ({
+      slug,
+      reasons: rejectionReasons.get(slug) ?? ['excluded-by-policy'],
+    }));
+  const budget = evaluateRoutingBudget(policy.budgets, context.budgetUsage);
+
+  if (budget && budget.status !== 'within-budget') {
+    const action = budget.status === 'approval-required'
+      ? 'requires explicit approval'
+      : 'is blocked';
+    errors.push(`routingPolicy ${action}: ${budget.exceededScopes.join(', ')} budget exceeded`);
+    return {
+      selectedConnectionSlug: undefined,
+      allowedConnectionSlugs,
+      fallbackConnectionSlugs: [],
+      matchedRuleIds,
+      reason: 'first-allowed',
+      sensitivity,
+      errors,
+      warnings,
+      explanation: `No route selected because the projected cost ${action}.`,
+      rejectedCandidates,
+      budget,
+    };
+  }
+
   if (allowedConnectionSlugs.length === 0) {
     errors.push(`routingPolicy leaves no allowed LLM connection for '${sensitivity}' sensitivity`);
     return {
@@ -384,6 +633,9 @@ export function resolveRoutingPolicy(
       sensitivity,
       errors,
       warnings,
+      explanation: `No configured connection satisfies the '${sensitivity}' policy and required capabilities.`,
+      rejectedCandidates,
+      budget,
     };
   }
 
@@ -397,6 +649,9 @@ export function resolveRoutingPolicy(
       sensitivity,
       errors,
       warnings,
+      explanation: `Requested connection '${context.requestedConnectionSlug}' is allowed by the effective policy.`,
+      rejectedCandidates,
+      budget,
     };
   }
 
@@ -413,6 +668,9 @@ export function resolveRoutingPolicy(
         sensitivity,
         errors,
         warnings,
+        explanation: `Connection '${preferred}' is the first allowed preference from matched policy rules.`,
+        rejectedCandidates,
+        budget,
       };
     }
   }
@@ -427,17 +685,24 @@ export function resolveRoutingPolicy(
       sensitivity,
       errors,
       warnings,
+      explanation: `Connection '${policy.fallbackConnectionSlug}' is the configured policy fallback and remains allowed.`,
+      rejectedCandidates,
+      budget,
     };
   }
 
+  const selected = allowedConnectionSlugs[0];
   return {
-    selectedConnectionSlug: allowedConnectionSlugs[0],
+    selectedConnectionSlug: selected,
     allowedConnectionSlugs,
-    fallbackConnectionSlugs: buildFallbackConnectionSlugs(policy, matchedRules, allowedConnectionSlugs, allowedConnectionSlugs[0]),
+    fallbackConnectionSlugs: buildFallbackConnectionSlugs(policy, matchedRules, allowedConnectionSlugs, selected),
     matchedRuleIds,
     reason: 'first-allowed',
     sensitivity,
     errors,
     warnings,
+    explanation: `Connection '${selected}' is the highest-priority remaining allowed candidate.`,
+    rejectedCandidates,
+    budget,
   };
 }

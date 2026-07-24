@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
-import { mkdtempSync, rmSync } from 'fs';
+import { mkdirSync, mkdtempSync, rmSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import type { TokenUsage } from '@craft-agent/core/types';
@@ -128,16 +128,16 @@ describe('TaskRunner (Conductor)', () => {
     await tick();
 
     expect(host.dispatchedNames()).toEqual(['audit']);
-    expect(host.promptFor('audit')).toBe('Audit the code');
+    expect(host.promptFor('audit')?.endsWith('Audit the code')).toBe(true);
 
     host.complete('audit', { finalText: 'AUDIT', tokenUsage: tu(10, 5) });
     await tick();
     expect(host.dispatchedNames()).toEqual(['audit', 'design']);
-    expect(host.promptFor('design')).toBe('Design using AUDIT');
+    expect(host.promptFor('design')?.endsWith('Design using AUDIT')).toBe(true);
 
     host.complete('design', { finalText: 'DESIGN', tokenUsage: tu(20, 10) });
     await tick();
-    expect(host.promptFor('impl')).toBe('Implement DESIGN');
+    expect(host.promptFor('impl')?.endsWith('Implement DESIGN')).toBe(true);
 
     host.complete('impl', { finalText: 'IMPL', tokenUsage: tu(5, 5) });
     await tick();
@@ -209,9 +209,8 @@ describe('TaskRunner (Conductor)', () => {
     expect(host.created.find((c) => c.options.name === 'b')?.options.permissionMode).toBe('ask')
   })
 
-  it('defaults an omitted permission mode to allow-all (unattended-safe), not undefined/ask', async () => {
-    // A hand-authored spec that sets no permission mode must NOT fall through to the workspace default
-    // (which could be `ask` → the unattended child would hang). The runner supplies an explicit default.
+  it('defaults an omitted permission mode to safe for fail-closed autonomy', async () => {
+    // A hand-authored spec must opt in explicitly before an unattended child can mutate state.
     saveTaskSpec(
       root,
       specOf({ id: 'perm2', title: 'Perm2', goal: 'g', nodes: [{ id: 'c', prompt: 'c' }] }),
@@ -220,8 +219,144 @@ describe('TaskRunner (Conductor)', () => {
     runner.run('perm2', { runId: 'r1' })
     await tick()
 
-    expect(host.created.find((c) => c.options.name === 'c')?.options.permissionMode).toBe('allow-all')
+    expect(host.created.find((c) => c.options.name === 'c')?.options.permissionMode).toBe('safe')
   })
+
+  it('injects a stable idempotency key and isolation envelope into the child prompt', async () => {
+    saveTaskSpec(
+      root,
+      specOf({
+        id: 'guarded',
+        title: 'Guarded',
+        goal: 'g',
+        execution: {
+          root_path: root,
+          allowed_write_paths: ['artifacts'],
+          network_access: 'allow-list',
+          allowed_hosts: ['api.example.com'],
+          timeout_ms: 60_000,
+        },
+        nodes: [{ id: 'publish', prompt: 'Publish once' }],
+      }),
+    );
+    const runner = makeRunner();
+    runner.run('guarded', { runId: 'r1' });
+    await tick();
+
+    const prompt = host.promptFor('publish') ?? '';
+    expect(prompt).toContain('Idempotency key: ws:guarded:r1:publish:attempt-1');
+    expect(prompt).toContain('Write paths: artifacts');
+    expect(prompt).toContain('Network: allow-list (api.example.com)');
+    expect(readRunLog(root, 'guarded', 'r1').some((entry) => entry.kind === 'node-checkpoint' && entry.status === 'executing')).toBe(true);
+  });
+
+  it('rejects a task working directory outside the workspace', () => {
+    saveTaskSpec(
+      root,
+      specOf({
+        id: 'escape',
+        title: 'Escape',
+        goal: 'g',
+        cwd: join(root, '..'),
+        execution: { root_path: root },
+        nodes: [{ id: 'a', prompt: 'a' }],
+      }),
+    );
+    expect(() => makeRunner().run('escape', { runId: 'r1' })).toThrow('Path escapes the workspace root');
+  });
+
+  it('rejects an isolation root outside the host workspace even without a task cwd', () => {
+    saveTaskSpec(
+      root,
+      specOf({
+        id: 'root-escape',
+        title: 'Root escape',
+        goal: 'g',
+        execution: { root_path: join(root, '..') },
+        nodes: [{ id: 'a', prompt: 'a' }],
+      }),
+    );
+    expect(() => makeRunner().run('root-escape', { runId: 'r1' })).toThrow('Isolation root rejected');
+    expect(host.created).toHaveLength(0);
+  });
+
+  it('blocks a mission before dispatch when its kill switch is active', () => {
+    saveTaskSpec(root, specOf({ id: 'stopped', title: 'Stopped', goal: 'g', nodes: [{ id: 'a', prompt: 'a' }] }));
+    const runner = new TaskRunner({
+      host,
+      workspaceId: 'ws',
+      workspaceRoot: root,
+      getKillSwitch: () => ({ global: false, workspaceIds: [], missionIds: ['stopped'] }),
+    });
+    expect(() => runner.run('stopped', { runId: 'r1' })).toThrow('Mission kill switch is active');
+    expect(host.created).toHaveLength(0);
+  });
+
+  it('holds an external mutation in the approval inbox until a validator approves it', async () => {
+    saveTaskSpec(
+      root,
+      specOf({
+        id: 'approve-mutation',
+        title: 'Approve mutation',
+        goal: 'Publish safely',
+        mission: {
+          deliverables: [{ name: 'publication' }],
+          policy: {
+            impact_level: 'high',
+            require_high_impact_approval: true,
+            replay_external_mutations: false,
+            owner: 'alice',
+            validator: 'bob',
+          },
+        },
+        nodes: [{ id: 'publish', prompt: 'Publish now', effect: 'external-mutation', approval: true }],
+      }),
+    );
+    const runner = makeRunner();
+    const started = runner.run('approve-mutation', { runId: 'r1', verifyOnComplete: false });
+    await tick();
+
+    expect(runner.getRunState('approve-mutation', started.runId)?.status).toBe('waiting-approval');
+    expect(host.created).toHaveLength(0);
+    const approval = runner.listPendingApprovals('approve-mutation', 'r1')[0];
+    expect(approval).toMatchObject({ nodeId: 'publish', impact: 'high', owner: 'bob' });
+
+    runner.resolveApproval('approve-mutation', 'r1', approval!.requestId, 'approved', 'bob');
+    await tick();
+    expect(host.created).toHaveLength(1);
+    host.complete('publish', { finalText: 'published' });
+    await tick();
+    expect(runner.getRunState('approve-mutation', 'r1')?.status).toBe('completed');
+  });
+
+  it('fails a mission when its high-impact approval is rejected', async () => {
+    saveTaskSpec(
+      root,
+      specOf({
+        id: 'reject-mutation',
+        title: 'Reject mutation',
+        goal: 'Publish safely',
+        mission: {
+          deliverables: [{ name: 'publication' }],
+          policy: {
+            impact_level: 'critical',
+            require_high_impact_approval: true,
+            replay_external_mutations: false,
+          },
+        },
+        nodes: [{ id: 'publish', prompt: 'Publish now', effect: 'external-mutation', approval: true }],
+      }),
+    );
+    const runner = makeRunner();
+    runner.run('reject-mutation', { runId: 'r1', verifyOnComplete: false });
+    await tick();
+    const approval = runner.listPendingApprovals('reject-mutation', 'r1')[0]!;
+
+    runner.resolveApproval('reject-mutation', 'r1', approval.requestId, 'rejected', 'validator', 'Not authorized');
+    await tick();
+    expect(runner.getRunState('reject-mutation', 'r1')?.status).toBe('failed');
+    expect(host.created).toHaveLength(0);
+  });
 
   it('stamps task/run/node linkage on each dispatched child session', async () => {
     // The manual subtask composer skips Conductor-owned children by checking taskRunId.
@@ -254,16 +389,20 @@ describe('TaskRunner (Conductor)', () => {
   })
 
   it("children inherit the orchestrator's working directory (falling back to spec.cwd)", async () => {
+    const specDir = join(root, 'spec-dir')
+    const parentDir = join(root, 'parent-dir')
+    mkdirSync(specDir)
+    mkdirSync(parentDir)
     saveTaskSpec(
       root,
-      specOf({ id: 'cwd', title: 'Cwd', goal: 'g', cwd: '/spec/dir', nodes: [{ id: 'a', prompt: 'a' }] }),
+      specOf({ id: 'cwd', title: 'Cwd', goal: 'g', cwd: specDir, nodes: [{ id: 'a', prompt: 'a' }] }),
     )
-    host.workingDirById.set('orch', '/parent/dir')
+    host.workingDirById.set('orch', parentDir)
     const runner = makeRunner()
     runner.run('cwd', { runId: 'r1', orchestratorSessionId: 'orch' })
     await tick()
     // Orchestrator cwd wins over the spec default.
-    expect(host.created.find((c) => c.options.name === 'a')?.options.workingDirectory).toBe('/parent/dir')
+    expect(host.created.find((c) => c.options.name === 'a')?.options.workingDirectory).toBe(parentDir)
 
     // With no orchestrator cwd, the spec's declared cwd is used.
     host.created.length = 0
@@ -271,7 +410,7 @@ describe('TaskRunner (Conductor)', () => {
     const runner2 = makeRunner()
     runner2.run('cwd', { runId: 'r2', orchestratorSessionId: 'orch' })
     await tick()
-    expect(host.created.find((c) => c.options.name === 'a')?.options.workingDirectory).toBe('/spec/dir')
+    expect(host.created.find((c) => c.options.name === 'a')?.options.workingDirectory).toBe(specDir)
   })
 
   it('moves the orchestrator tile to in-progress on start and done on completion', async () => {
@@ -318,7 +457,7 @@ describe('TaskRunner (Conductor)', () => {
 
     host.complete('impl-b', { finalText: 'B' });
     await tick();
-    expect(host.promptFor('review')).toBe('review A B');
+    expect(host.promptFor('review')?.endsWith('review A B')).toBe(true);
 
     host.complete('review', { finalText: 'R' });
     await tick();
@@ -410,7 +549,7 @@ describe('TaskRunner (Conductor)', () => {
 
     runner.resume('pz', 'r1');
     await tick();
-    expect(host.promptFor('b')).toBe('b A');
+    expect(host.promptFor('b')?.endsWith('b A')).toBe(true);
 
     host.complete('b', { finalText: 'B' });
     await tick();
@@ -471,7 +610,7 @@ describe('TaskRunner (Conductor)', () => {
 
     // 'a' is reused from disk (NOT re-spawned); only 'b' dispatches, seeded with a's recovered output.
     expect(host2.dispatchedNames()).toEqual(['b']);
-    expect(host2.promptFor('b')).toBe('b A');
+    expect(host2.promptFor('b')?.endsWith('b A')).toBe(true);
     // The orchestrator linkage is recovered from the run-log.
     expect(host2.created.find((c) => c.options.name === 'b')?.options.parentSessionId).toBe('orch');
 
@@ -482,6 +621,77 @@ describe('TaskRunner (Conductor)', () => {
     host2.completeSession('orch', { finalText: 'VERDICT: PASS' });
     await tick();
     expect(r2.getRunState('res', 'r1')!.status).toBe('completed');
+  });
+
+  it('does not replay an in-flight node after a crash without operator review', async () => {
+    saveTaskSpec(
+      root,
+      specOf({ id: 'ambiguous', title: 'Ambiguous', goal: 'g', nodes: [{ id: 'mutate', prompt: 'mutate once' }] }),
+    );
+    const first = makeRunner();
+    first.run('ambiguous', { runId: 'r1' });
+    await tick();
+    expect(readRunLog(root, 'ambiguous', 'r1').some(
+      (entry) => entry.kind === 'node-checkpoint' && entry.status === 'executing',
+    )).toBe(true);
+
+    // Simulate a process crash before a completion/proof checkpoint.
+    const host2 = new MockHost();
+    const resumed = new TaskRunner({ host: host2, workspaceId: 'ws', workspaceRoot: root });
+    resumed.resume('ambiguous', 'r1');
+    await tick();
+
+    expect(host2.created).toHaveLength(0);
+    expect(resumed.getRunState('ambiguous', 'r1')?.status).toBe('failed');
+    expect(resumed.getRunState('ambiguous', 'r1')?.nodes[0]?.state).toBe('failed');
+  });
+
+  it('enforces the task timeout and cancels the child session', async () => {
+    saveTaskSpec(
+      root,
+      specOf({
+        id: 'deadline',
+        title: 'Deadline',
+        goal: 'g',
+        execution: { timeout_ms: 5 },
+        nodes: [{ id: 'slow', prompt: 'wait' }],
+      }),
+    );
+    const runner = makeRunner();
+    runner.run('deadline', { runId: 'r1' });
+    await new Promise<void>((resolve) => setTimeout(resolve, 20));
+
+    expect(host.cancelled).toContain('sess-slow');
+    expect(runner.getRunState('deadline', 'r1')?.status).toBe('failed');
+  });
+
+  it('uses the host execution guard as the authoritative admission boundary', async () => {
+    saveTaskSpec(
+      root,
+      specOf({
+        id: 'admission',
+        title: 'Admission',
+        goal: 'g',
+        execution: { max_cpu_percent: 50, max_memory_mb: 256 },
+        nodes: [{ id: 'a', prompt: 'a' }],
+      }),
+    );
+    const observed: number[] = [];
+    const runner = new TaskRunner({
+      host,
+      workspaceId: 'ws',
+      workspaceRoot: root,
+      executionGuard: (context) => {
+        observed.push(context.policy.maxCpuPercent, context.policy.maxMemoryMb);
+        return { allowed: false, reason: 'sandbox unavailable' };
+      },
+    });
+    runner.run('admission', { runId: 'r1' });
+    await tick();
+
+    expect(observed).toEqual([50, 256]);
+    expect(host.created).toHaveLength(0);
+    expect(runner.getRunState('admission', 'r1')?.status).toBe('failed');
   });
 
   it('retries a failed node up to retry.limit, then fails', async () => {
@@ -767,6 +977,9 @@ describe('TaskRunner (Conductor)', () => {
     host.completeSession('orch', { finalText: 'VERDICT: FAIL — redo' }); // consumes the one repair
     await tick();
     expect(r1.getRunState('hyd', 'r1')!.status).toBe('running');
+    host.complete('a', { finalText: 'repaired' });
+    await tick();
+    expect(r1.getRunState('hyd', 'r1')!.status).toBe('verifying');
 
     // Restart: fresh host + runner with empty in-memory state, resume from the run-log.
     const host2 = new MockHost();

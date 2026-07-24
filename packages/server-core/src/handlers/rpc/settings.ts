@@ -1,4 +1,5 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs'
+import { randomUUID } from 'node:crypto'
 import { dirname } from 'path'
 import { RPC_CHANNELS } from '@craft-agent/shared/protocol'
 import { getPreferencesPath, getSessionDraft, setSessionDraft, deleteSessionDraft, getAllSessionDrafts, getWorkspaceByNameOrId, getDefaultThinkingLevel, setDefaultThinkingLevel } from '@craft-agent/shared/config'
@@ -11,12 +12,64 @@ import type { HandlerDeps } from '../handler-deps'
 import { requestClientOpenFileDialog } from '@craft-agent/server-core/transport'
 import { isValidWorkingDirectory } from '../../utils/path-validation'
 import { getLlmConnections } from '@craft-agent/shared/config/storage'
-import { ALL_ROUTING_SENSITIVITIES, simulateRoutingPolicy, validateRoutingPolicy, type RoutingPolicyContext } from '@craft-agent/shared/config/routing-policy'
+import {
+  ALL_ROUTING_SENSITIVITIES,
+  simulateRoutingPolicy,
+  validateRoutingPolicy,
+  type RoutingPolicy,
+  type RoutingPolicyContext,
+} from '@craft-agent/shared/config/routing-policy'
+import {
+  createDefaultWorkspaceGovernance,
+  parseWorkspaceGovernanceProfile,
+  WorkspaceGovernanceStore,
+  WorkspaceGovernanceProfileSchema,
+  type WorkspaceGovernanceMutable,
+  type WorkspaceGovernanceProfile,
+} from '@craft-agent/shared/governance'
+import {
+  createDefaultRemoteSupervisionProfile,
+  type RemoteAction,
+  type RemoteSupervisorIdentity,
+  type RemoteSyncField,
+} from '@craft-agent/shared/remote-supervision'
+import type {
+  RemoteSupervisionGrantRequest,
+  RemoteSupervisionRevokeRequest,
+  WorkspaceGovernanceUpdateRequest,
+} from '@craft-agent/shared/protocol'
+import { RemoteSupervisionService } from '../../services/remote-supervision-service'
+
+const REMOTE_SYNC_FIELDS = [
+  'task.status',
+  'task.progress',
+  'task.blockers',
+  'task.approvals',
+  'task.cost',
+  'task.timestamps',
+] as const satisfies readonly RemoteSyncField[]
+
+const REMOTE_ACTIONS = [
+  'task.pause',
+  'task.cancel',
+  'approval.resolve',
+] as const satisfies readonly RemoteAction[]
+
+function governanceMutableFromProfile(profile: WorkspaceGovernanceProfile): WorkspaceGovernanceMutable {
+  return {
+    members: profile.space.members,
+    memory: profile.space.memory,
+    budgets: profile.budgets,
+  }
+}
 
 export const HANDLED_CHANNELS = [
   RPC_CHANNELS.workspace.SETTINGS_GET,
   RPC_CHANNELS.workspace.SETTINGS_UPDATE,
+  RPC_CHANNELS.workspace.GOVERNANCE_UPDATE,
   RPC_CHANNELS.workspace.ROUTING_SIMULATE,
+  RPC_CHANNELS.workspace.REMOTE_SUPERVISION_GRANT,
+  RPC_CHANNELS.workspace.REMOTE_SUPERVISION_REVOKE,
   RPC_CHANNELS.preferences.READ,
   RPC_CHANNELS.preferences.WRITE,
   RPC_CHANNELS.drafts.GET,
@@ -55,6 +108,40 @@ export const HANDLED_CHANNELS = [
 ] as const
 
 export function registerSettingsHandlers(server: RpcServer, deps: HandlerDeps): void {
+  const remoteSupervisionContext = async (workspaceId: string) => {
+    const workspace = getWorkspaceOrThrow(workspaceId)
+    const { loadWorkspaceConfig, saveWorkspaceConfig } = await import('@craft-agent/shared/workspaces')
+    const loadConfig = () => {
+      const config = loadWorkspaceConfig(workspace.rootPath)
+      if (!config) throw new Error(`Failed to load workspace config: ${workspaceId}`)
+      return config
+    }
+    const service = new RemoteSupervisionService({
+      load: () => loadConfig().remoteSupervision,
+      save: (profile) => {
+        const config = loadConfig()
+        config.remoteSupervision = profile
+        saveWorkspaceConfig(workspace.rootPath, config)
+      },
+    })
+    const config = loadConfig()
+    const initialGovernance = config.governance
+      ? parseWorkspaceGovernanceProfile(config.governance)
+      : createDefaultWorkspaceGovernance({
+          workspaceId: config.id,
+          workspaceName: config.name,
+          createdAt: new Date(config.createdAt).toISOString(),
+        })
+    const governance = (await new WorkspaceGovernanceStore(workspace.rootPath)
+      .loadOrCreate(initialGovernance)).profile
+    const identity: RemoteSupervisorIdentity = {
+      subjectId: governance.space.createdBy,
+      role: 'owner',
+      allowedActions: [...REMOTE_ACTIONS],
+    }
+    return { service, identity }
+  }
+
   // ============================================================
   // Settings - Default Thinking Level (App-Level)
   // ============================================================
@@ -114,20 +201,110 @@ export function registerSettingsHandlers(server: RpcServer, deps: HandlerDeps): 
     // Load workspace config
     const { loadWorkspaceConfig } = await import('@craft-agent/shared/workspaces')
     const config = loadWorkspaceConfig(workspace.rootPath)
+    if (!config) {
+      deps.platform.logger.error(`Workspace config not found: ${workspace.rootPath}`)
+      return null
+    }
+
+    const initialGovernance = config.governance
+      ? parseWorkspaceGovernanceProfile(config.governance)
+      : createDefaultWorkspaceGovernance({
+          workspaceId: config.id,
+          workspaceName: config.name,
+          createdAt: new Date(config.createdAt).toISOString(),
+        })
+    const governanceDocument = await new WorkspaceGovernanceStore(workspace.rootPath)
+      .loadOrCreate(initialGovernance)
 
     return {
-      name: config?.name,
-      model: config?.defaults?.model,
-      permissionMode: config?.defaults?.permissionMode,
-      cyclablePermissionModes: config?.defaults?.cyclablePermissionModes,
-      thinkingLevel: normalizeThinkingLevel(config?.defaults?.thinkingLevel),
-      workingDirectory: config?.defaults?.workingDirectory,
-      localMcpEnabled: config?.localMcpServers?.enabled ?? true,
-      defaultLlmConnection: config?.defaults?.defaultLlmConnection,
-      enabledSourceSlugs: config?.defaults?.enabledSourceSlugs ?? [],
-      routingPolicy: config?.routingPolicy,
+      name: config.name,
+      model: config.defaults?.model,
+      permissionMode: config.defaults?.permissionMode,
+      cyclablePermissionModes: config.defaults?.cyclablePermissionModes,
+      thinkingLevel: normalizeThinkingLevel(config.defaults?.thinkingLevel),
+      workingDirectory: config.defaults?.workingDirectory,
+      localMcpEnabled: config.localMcpServers?.enabled ?? true,
+      defaultLlmConnection: config.defaults?.defaultLlmConnection,
+      enabledSourceSlugs: config.defaults?.enabledSourceSlugs ?? [],
+      routingPolicy: config.routingPolicy,
+      governance: governanceDocument.profile,
+      governanceRevision: governanceDocument.revision,
+      governanceUpdatedAt: governanceDocument.updatedAt,
+      governanceUpdatedBy: governanceDocument.updatedBy,
+      remoteSupervision: config.remoteSupervision ?? createDefaultRemoteSupervisionProfile(),
     }
   })
+
+  server.handle(
+    RPC_CHANNELS.workspace.GOVERNANCE_UPDATE,
+    async (_ctx, workspaceId: string, request: WorkspaceGovernanceUpdateRequest) => {
+      if (!Number.isInteger(request?.expectedRevision) || request.expectedRevision < 0) {
+        throw new Error('Governance update requires a non-negative expected revision')
+      }
+      if (!request.actorId?.trim()) {
+        throw new Error('Governance update requires an actor identifier')
+      }
+      const submittedProfile = WorkspaceGovernanceProfileSchema.parse(request.profile)
+      const workspace = getWorkspaceOrThrow(workspaceId)
+      const { loadWorkspaceConfig, saveWorkspaceConfig } = await import('@craft-agent/shared/workspaces')
+      const config = loadWorkspaceConfig(workspace.rootPath)
+      if (!config) throw new Error(`Failed to load workspace config: ${workspaceId}`)
+      const initialGovernance = config.governance
+        ? parseWorkspaceGovernanceProfile(config.governance)
+        : createDefaultWorkspaceGovernance({
+            workspaceId: config.id,
+            workspaceName: config.name,
+            createdAt: new Date(config.createdAt).toISOString(),
+          })
+      const store = new WorkspaceGovernanceStore(workspace.rootPath)
+      await store.loadOrCreate(initialGovernance)
+      const updated = await store.update(
+        request.expectedRevision,
+        request.actorId.trim(),
+        governanceMutableFromProfile(submittedProfile),
+      )
+      config.governance = updated.profile
+      saveWorkspaceConfig(workspace.rootPath, config)
+      return {
+        governance: updated.profile,
+        governanceRevision: updated.revision,
+        governanceUpdatedAt: updated.updatedAt,
+        governanceUpdatedBy: updated.updatedBy,
+      }
+    },
+  )
+
+  server.handle(
+    RPC_CHANNELS.workspace.REMOTE_SUPERVISION_GRANT,
+    async (_ctx, workspaceId: string, request: RemoteSupervisionGrantRequest) => {
+      if (!request || !Array.isArray(request.fields) || !Array.isArray(request.actions)) {
+        throw new Error('Remote supervision consent requires fields and actions')
+      }
+      const invalidFields = request.fields.filter((field) => !REMOTE_SYNC_FIELDS.includes(field))
+      const invalidActions = request.actions.filter((action) => !REMOTE_ACTIONS.includes(action))
+      if (invalidFields.length > 0 || invalidActions.length > 0) {
+        throw new Error(`Invalid remote supervision consent: ${[...invalidFields, ...invalidActions].join(', ')}`)
+      }
+      if (!request.purpose?.trim()) throw new Error('Remote supervision purpose is required')
+      const { service, identity } = await remoteSupervisionContext(workspaceId)
+      return service.grant(identity, {
+        consentId: randomUUID(),
+        fields: request.fields,
+        actions: request.actions,
+        purpose: request.purpose.trim(),
+        expiresAt: request.expiresAt,
+      })
+    },
+  )
+
+  server.handle(
+    RPC_CHANNELS.workspace.REMOTE_SUPERVISION_REVOKE,
+    async (_ctx, workspaceId: string, request: RemoteSupervisionRevokeRequest) => {
+      if (!request?.reason?.trim()) throw new Error('Remote supervision revocation reason is required')
+      const { service, identity } = await remoteSupervisionContext(workspaceId)
+      return service.revoke(identity, request.reason.trim())
+    },
+  )
 
   // Explain the current persisted policy without starting a provider, checking a
   // credential, or writing any workspace/session state.
@@ -161,7 +338,7 @@ export function registerSettingsHandlers(server: RpcServer, deps: HandlerDeps): 
       : value
 
     // Validate key is a known workspace setting
-    const validKeys = ['name', 'model', 'enabledSourceSlugs', 'permissionMode', 'cyclablePermissionModes', 'thinkingLevel', 'workingDirectory', 'localMcpEnabled', 'defaultLlmConnection', 'routingPolicy']
+    const validKeys = ['name', 'model', 'enabledSourceSlugs', 'permissionMode', 'cyclablePermissionModes', 'thinkingLevel', 'workingDirectory', 'localMcpEnabled', 'defaultLlmConnection', 'routingPolicy', 'governance']
     if (!validKeys.includes(key)) {
       throw new Error(`Invalid workspace setting key: ${key}. Valid keys: ${validKeys.join(', ')}`)
     }
@@ -176,7 +353,7 @@ export function registerSettingsHandlers(server: RpcServer, deps: HandlerDeps): 
 
     if (key === 'routingPolicy' && normalizedValue !== undefined && normalizedValue !== null) {
       const knownSlugs = getLlmConnections().map(connection => connection.slug)
-      const validation = validateRoutingPolicy(normalizedValue as any, knownSlugs)
+      const validation = validateRoutingPolicy(normalizedValue as RoutingPolicy, knownSlugs)
       if (!validation.valid) {
         throw new Error(validation.errors.join('; '))
       }
@@ -201,7 +378,27 @@ export function registerSettingsHandlers(server: RpcServer, deps: HandlerDeps): 
     } else if (key === 'routingPolicy') {
       config.routingPolicy = normalizedValue === undefined || normalizedValue === null
         ? undefined
-        : normalizedValue as any
+        : normalizedValue as RoutingPolicy
+    } else if (key === 'governance') {
+      const initialGovernance = config.governance
+        ? parseWorkspaceGovernanceProfile(config.governance)
+        : createDefaultWorkspaceGovernance({
+            workspaceId: config.id,
+            workspaceName: config.name,
+            createdAt: new Date(config.createdAt).toISOString(),
+          })
+      const submittedProfile = WorkspaceGovernanceProfileSchema.safeParse(normalizedValue)
+      const governanceUpdate = submittedProfile.success
+        ? governanceMutableFromProfile(submittedProfile.data)
+        : normalizedValue as WorkspaceGovernanceMutable
+      const store = new WorkspaceGovernanceStore(workspace.rootPath)
+      const current = await store.loadOrCreate(initialGovernance)
+      const updated = await store.update(
+        current.revision,
+        current.profile.space.createdBy,
+        governanceUpdate,
+      )
+      config.governance = updated.profile
     } else if (key === 'localMcpEnabled') {
       // Store in localMcpServers.enabled (top-level, not in defaults)
       config.localMcpServers = config.localMcpServers || { enabled: true }

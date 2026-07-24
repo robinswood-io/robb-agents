@@ -100,6 +100,7 @@ chmod +x "$ELECTRON_DIR/vendor/bun/bun"
 # explicitly packages as extra resources.
 SDK_SOURCE="$ROOT_DIR/node_modules/@anthropic-ai/claude-agent-sdk"
 require_path "$SDK_SOURCE" "Claude Agent SDK core"
+require_path "$ROOT_DIR/packages/shared/src/interceptor-request-utils.ts" "network interceptor request utilities"
 mkdir -p "$ELECTRON_DIR/node_modules/@anthropic-ai"
 cp -R "$SDK_SOURCE" "$ELECTRON_DIR/node_modules/@anthropic-ai/"
 
@@ -147,14 +148,14 @@ CHECKSUM_PATH="$ELECTRON_DIR/release/SHA256SUMS-macos-${ARCH}.txt"
 cd "$ROOT_DIR"
 if [[ "$RELEASE_BUILD" == true ]]; then
   if [[ "${ROBB_PACKAGE_LAUNCH_SMOKE:-0}" == "1" ]]; then
-    python3 scripts/robinswood-packaged-smoke.py --require-release-signing --launch --launch-seconds 12
+    python3 scripts/robinswood-packaged-smoke.py --arch "$ARCH" --require-release-signing --launch --launch-seconds 12
   else
-    python3 scripts/robinswood-packaged-smoke.py --require-release-signing
+    python3 scripts/robinswood-packaged-smoke.py --arch "$ARCH" --require-release-signing
   fi
 elif [[ "${ROBB_PACKAGE_LAUNCH_SMOKE:-0}" == "1" ]]; then
-  python3 scripts/robinswood-packaged-smoke.py --launch --launch-seconds 12
+  python3 scripts/robinswood-packaged-smoke.py --arch "$ARCH" --launch --launch-seconds 12
 else
-  python3 scripts/robinswood-packaged-smoke.py
+  python3 scripts/robinswood-packaged-smoke.py --arch "$ARCH"
 fi
 
 echo "=== Build complete ==="

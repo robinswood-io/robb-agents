@@ -94,6 +94,37 @@ describe('schema', () => {
     expect(parseTaskSpec({ ...CHAIN, sources: [''] }).success).toBe(false);
   });
 
+  it('models mission deliverables, budget, deadline, and high-impact approval policy', () => {
+    const mission = {
+      inputs: [{ name: 'brief', sensitivity: 'confidential' }],
+      deliverables: [{ name: 'report', format: 'markdown', path: 'reports/final.md' }],
+      budget: { max_tokens: 20_000, max_cost: 12, currency: 'EUR' },
+      deadline: '2026-08-01T12:00:00+02:00',
+      policy: {
+        impact_level: 'high',
+        require_high_impact_approval: true,
+        replay_external_mutations: false,
+        owner: 'operator@example.test',
+      },
+    } as const;
+    const accepted = parseTaskSpec({
+      ...CHAIN,
+      mission,
+      nodes: [{ id: 'publish', prompt: 'Publish', effect: 'external-mutation', approval: true }],
+    });
+    expect(accepted.success).toBe(true);
+    if (!accepted.success) return;
+    expect(accepted.data.mission?.budget?.currency).toBe('EUR');
+    expect(accepted.data.nodes[0]?.effect).toBe('external-mutation');
+
+    const rejected = parseTaskSpec({
+      ...CHAIN,
+      mission,
+      nodes: [{ id: 'publish', prompt: 'Publish', effect: 'external-mutation' }],
+    });
+    expect(rejected.success).toBe(false);
+  });
+
   it('rejects duplicate node ids', () => {
     const r = parseTaskSpec({
       id: 'x',

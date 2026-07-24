@@ -23,6 +23,13 @@ import sys
 import tempfile
 import time
 
+from robb_package_audit import (
+    audit_package,
+    artifact_size_finding,
+    format_bytes,
+    print_report,
+)
+
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 ELECTRON_DIR = ROOT / "apps" / "electron"
 RELEASE_DIR = ELECTRON_DIR / "release"
@@ -37,7 +44,36 @@ PACKAGED_PI_AGENT_SERVER = APP_DIR / "Contents" / "Resources" / "app" / "dist" /
 PACKAGED_VIBE_ACP_BRIDGE = APP_DIR / "Contents" / "Resources" / "app" / "dist" / "resources" / "pi-agent-server" / "vibe-acp-server.js"
 SOURCE_ICON = ELECTRON_DIR / "resources" / "robinswood-icon.icns"
 DMG = RELEASE_DIR / "Robb-Agents-arm64.dmg"
+ZIP = RELEASE_DIR / "Robb-Agents-arm64.zip"
 PACKAGE_JSON = ELECTRON_DIR / "package.json"
+ARCH = "arm64"
+
+
+def configure_arch(arch: str) -> None:
+    global APP_DIR, APP_BIN, PLIST, PACKAGED_ICON, PACKAGED_PI_AGENT_SERVER
+    global PACKAGED_VIBE_ACP_BRIDGE, DMG, ZIP, ARCH
+
+    ARCH = arch
+    app_output_directory = "mac-arm64" if arch == "arm64" else "mac"
+    APP_DIR = RELEASE_DIR / app_output_directory / APP_NAME
+    APP_BIN = APP_DIR / "Contents" / "MacOS" / "Robb Agents"
+    PLIST = APP_DIR / "Contents" / "Info.plist"
+    PACKAGED_ICON = APP_DIR / "Contents" / "Resources" / "icon.icns"
+    PACKAGED_PI_AGENT_SERVER = (
+        APP_DIR / "Contents" / "Resources" / "app" / "dist" / "resources" / "pi-agent-server" / "index.js"
+    )
+    PACKAGED_VIBE_ACP_BRIDGE = (
+        APP_DIR
+        / "Contents"
+        / "Resources"
+        / "app"
+        / "dist"
+        / "resources"
+        / "pi-agent-server"
+        / "vibe-acp-server.js"
+    )
+    DMG = RELEASE_DIR / f"Robb-Agents-{arch}.dmg"
+    ZIP = RELEASE_DIR / f"Robb-Agents-{arch}.zip"
 
 
 def expected_app_version() -> str:
@@ -98,11 +134,17 @@ def check_bundle(require_release_signing: bool = False) -> None:
         fail("Invalid packaged Info.plist: " + "; ".join(mismatches))
 
     file_result = run(["file", str(APP_BIN)])
-    if file_result.returncode != 0 or "Mach-O 64-bit executable arm64" not in file_result.stdout:
-        fail(f"Packaged executable is not arm64: {file_result.stdout}{file_result.stderr}")
+    expected_architecture = "arm64" if ARCH == "arm64" else "x86_64"
+    if file_result.returncode != 0 or f"Mach-O 64-bit executable {expected_architecture}" not in file_result.stdout:
+        fail(f"Packaged executable is not {expected_architecture}: {file_result.stdout}{file_result.stderr}")
 
     if sha256(PACKAGED_ICON) != sha256(SOURCE_ICON):
         fail("Packaged icon.icns does not match resources/robinswood-icon.icns")
+
+    package_report = audit_package(APP_DIR)
+    print_report(package_report)
+    if not package_report.ok:
+        fail("Packaged app failed recursive release or unpacked size audit")
 
     code_result = run(["codesign", "-dv", str(APP_DIR)])
     code_text = code_result.stdout + code_result.stderr
@@ -132,13 +174,19 @@ def check_bundle(require_release_signing: bool = False) -> None:
         print("✓ Developer ID signature, Gatekeeper assessment and notarization ticket")
 
     print("✓ packaged app bundle metadata")
-    print("✓ packaged app architecture arm64")
+    print(f"✓ packaged app architecture {expected_architecture}")
     print("✓ packaged Robinswood icon")
     print("✓ packaged Pi agent server and Mistral Vibe ACP bridge")
 
 
 def check_dmg() -> None:
-    require(DMG, "Robinswood ARM64 DMG")
+    require(DMG, f"Robinswood {ARCH} DMG")
+    require(ZIP, f"Robinswood {ARCH} ZIP")
+    for artifact in (DMG, ZIP):
+        finding = artifact_size_finding(artifact)
+        if finding is not None:
+            fail(f"{finding.path}: {finding.reason}")
+        print(f"✓ {artifact.name} size {format_bytes(artifact.stat().st_size)}")
     if shutil.which("hdiutil") is None:
         print("- hdiutil unavailable; skipping DMG mount check")
         return
@@ -243,11 +291,13 @@ def launch_smoke(seconds: int) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--arch", choices=("arm64", "x64"), default="arm64", help="packaged macOS architecture")
     parser.add_argument("--launch", action="store_true", help="also launch the packaged app briefly with an isolated config directory")
     parser.add_argument("--launch-seconds", type=int, default=12, help="duration for --launch smoke-test")
     parser.add_argument("--require-release-signing", action="store_true", help="require Developer ID signing plus a stapled notarization ticket")
     args = parser.parse_args()
 
+    configure_arch(args.arch)
     check_bundle(require_release_signing=args.require_release_signing)
     check_dmg()
     if args.launch:

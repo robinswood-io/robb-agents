@@ -92,6 +92,10 @@ function makeCtx(clientId: string, workspaceId = 'ws-1'): RequestContext {
   return { clientId, workspaceId, webContentsId: null }
 }
 
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -119,12 +123,13 @@ describe('session file watcher isolation', () => {
     // Client A watches session s1, Client B watches session s2
     await watchHandler(makeCtx('client-a'), 's1')
     await watchHandler(makeCtx('client-b'), 's2')
+    await wait(50)
 
     // Trigger a change in s1
     writeFileSync(join(dir1, 'output.txt'), 'hello')
 
     // Wait for debounce + fs.watch delay
-    await new Promise(r => setTimeout(r, 300))
+    await wait(300)
 
     // Only client-a should have received the notification
     const clientAPushes = pushCalls.filter(p => p.target?.clientId === 'client-a')
@@ -144,7 +149,7 @@ describe('session file watcher isolation', () => {
 
     // Trigger a change in s2
     writeFileSync(join(dir2, 'data.json'), '{}')
-    await new Promise(r => setTimeout(r, 300))
+    await wait(300)
 
     // Client B should still receive notifications
     const clientBAfter = pushCalls.filter(p => p.target?.clientId === 'client-b')
@@ -170,13 +175,15 @@ describe('session file watcher isolation', () => {
 
     // Client A watches s1
     await watchHandler(makeCtx('client-a'), 's1')
+    await wait(50)
 
     // Client A switches to s2 — old watcher should be cleaned up
     await watchHandler(makeCtx('client-a'), 's2')
+    await wait(50)
 
     // Write to s1 — should NOT trigger notification (old watcher closed)
     writeFileSync(join(dir1, 'old.txt'), 'stale')
-    await new Promise(r => setTimeout(r, 300))
+    await wait(300)
 
     const s1Pushes = pushCalls.filter(p =>
       p.args[0] === 's1' && p.channel === RPC_CHANNELS.sessions.FILES_CHANGED
@@ -185,7 +192,7 @@ describe('session file watcher isolation', () => {
 
     // Write to s2 — should trigger notification
     writeFileSync(join(dir2, 'new.txt'), 'fresh')
-    await new Promise(r => setTimeout(r, 300))
+    await wait(300)
 
     const s2Pushes = pushCalls.filter(p =>
       p.args[0] === 's2' && p.channel === RPC_CHANNELS.sessions.FILES_CHANGED
@@ -205,17 +212,18 @@ describe('session file watcher isolation', () => {
 
     const watchHandler = handlers.get(RPC_CHANNELS.sessions.WATCH_FILES)!
     await watchHandler(makeCtx('client-a'), 's1')
+    await wait(50)
 
     // Write internal files — should be ignored
     writeFileSync(join(dir, 'session.jsonl'), 'log entry')
     writeFileSync(join(dir, '.hidden'), 'secret')
-    await new Promise(r => setTimeout(r, 300))
+    await wait(300)
 
     expect(pushCalls.length).toBe(0)
 
     // Write a normal file — should trigger notification
     writeFileSync(join(dir, 'result.txt'), 'output')
-    await new Promise(r => setTimeout(r, 300))
+    await wait(300)
 
     expect(pushCalls.length).toBeGreaterThanOrEqual(1)
 

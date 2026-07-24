@@ -44,6 +44,12 @@ try {
         if (-not (Test-Path $required)) { throw "Installed runtime missing: $required" }
     }
 
+    $packageAudit = Join-Path (Get-Location) 'scripts\robb_package_audit.py'
+    if (-not (Test-Path $packageAudit)) { throw "Missing package audit script: $packageAudit" }
+    & python $packageAudit --root $InstallDir
+    if ($LASTEXITCODE -ne 0) { throw 'Installed app failed recursive release or unpacked size audit' }
+    Write-Output 'OK: installed payload passes package hygiene and size audit'
+
     $rtkVersion = & $rtk --version
     if ($LASTEXITCODE -ne 0 -or -not ($rtkVersion -match '^rtk ')) { throw "Bundled RTK version check failed: $rtkVersion" }
     $rtkGain = & $rtk gain --format json

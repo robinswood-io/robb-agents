@@ -1,7 +1,22 @@
-import { describe, expect, it } from 'bun:test'
+import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
 import { resolveConfigDir } from '../paths.ts'
 
 describe('resolveConfigDir()', () => {
+  let originalCraftConfigDir: string | undefined
+
+  beforeEach(() => {
+    originalCraftConfigDir = process.env.CRAFT_CONFIG_DIR
+    delete process.env.CRAFT_CONFIG_DIR
+  })
+
+  afterEach(() => {
+    if (originalCraftConfigDir === undefined) {
+      delete process.env.CRAFT_CONFIG_DIR
+    } else {
+      process.env.CRAFT_CONFIG_DIR = originalCraftConfigDir
+    }
+  })
+
   it('uses the established Craft Agents root by default so no data migration is needed', () => {
     expect(resolveConfigDir(undefined, '/Users/example')).toBe('/Users/example/.craft-agent')
   })

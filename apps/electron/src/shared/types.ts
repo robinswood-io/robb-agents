@@ -193,6 +193,8 @@ import type {
   TaskGenerateResult,
   TaskRunRequest,
   TaskRunSnapshotDto,
+  TaskApprovalRequestDto,
+  TaskApprovalDecisionRequest,
   TaskGetResult,
   TaskResultsDto,
   FileAttachment,
@@ -216,6 +218,10 @@ import type {
   ClaudeOAuthResult,
   UpdateInfo,
   WorkspaceSettings,
+  WorkspaceGovernanceUpdateRequest,
+  WorkspaceGovernanceUpdateResult,
+  RemoteSupervisionGrantRequest,
+  RemoteSupervisionRevokeRequest,
   PermissionModeState,
   BrowserInstanceInfo,
   DeepLinkNavigation,
@@ -250,6 +256,11 @@ export interface ElectronAPI {
   pauseTask(workspaceId: string, slug: string, runId: string): Promise<void>
   resumeTask(workspaceId: string, slug: string, runId: string): Promise<void>
   stopTask(workspaceId: string, slug: string, runId: string): Promise<void>
+  listTaskApprovals(workspaceId: string, slug?: string, runId?: string): Promise<TaskApprovalRequestDto[]>
+  resolveTaskApproval(
+    workspaceId: string,
+    req: TaskApprovalDecisionRequest,
+  ): Promise<TaskRunSnapshotDto>
   getTask(workspaceId: string, slug: string, runId?: string): Promise<TaskGetResult>
   listTasks(workspaceId: string): Promise<string[]>
   getTaskResults(workspaceId: string, slug: string, runId?: string): Promise<TaskResultsDto>
@@ -464,6 +475,18 @@ export interface ElectronAPI {
   // Workspace Settings (per-workspace configuration)
   getWorkspaceSettings(workspaceId: string): Promise<WorkspaceSettings | null>
   updateWorkspaceSetting<K extends keyof WorkspaceSettings>(workspaceId: string, key: K, value: WorkspaceSettings[K]): Promise<void>
+  updateWorkspaceGovernance(
+    workspaceId: string,
+    request: WorkspaceGovernanceUpdateRequest,
+  ): Promise<WorkspaceGovernanceUpdateResult>
+  grantRemoteSupervision(
+    workspaceId: string,
+    request: RemoteSupervisionGrantRequest,
+  ): Promise<NonNullable<WorkspaceSettings['remoteSupervision']>>
+  revokeRemoteSupervision(
+    workspaceId: string,
+    request: RemoteSupervisionRevokeRequest,
+  ): Promise<NonNullable<WorkspaceSettings['remoteSupervision']>>
   /** Read-only policy explanation. It never invokes a model or touches credentials. */
   simulateRoutingPolicy(
     workspaceId: string,

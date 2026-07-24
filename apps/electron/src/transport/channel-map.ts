@@ -37,6 +37,8 @@ export const CHANNEL_MAP = {
   pauseTask: invoke(RPC_CHANNELS.tasks.PAUSE),
   resumeTask: invoke(RPC_CHANNELS.tasks.RESUME),
   stopTask: invoke(RPC_CHANNELS.tasks.STOP),
+  listTaskApprovals: invoke(RPC_CHANNELS.tasks.LIST_APPROVALS),
+  resolveTaskApproval: invoke(RPC_CHANNELS.tasks.RESOLVE_APPROVAL),
   getTask: invoke(RPC_CHANNELS.tasks.GET),
   listTasks: invoke(RPC_CHANNELS.tasks.LIST),
   getTaskResults: invoke(RPC_CHANNELS.tasks.GET_RESULTS),
@@ -194,6 +196,9 @@ export const CHANNEL_MAP = {
   // Workspace Settings
   getWorkspaceSettings: invoke(RPC_CHANNELS.workspace.SETTINGS_GET),
   updateWorkspaceSetting: invoke(RPC_CHANNELS.workspace.SETTINGS_UPDATE),
+  updateWorkspaceGovernance: invoke(RPC_CHANNELS.workspace.GOVERNANCE_UPDATE),
+  grantRemoteSupervision: invoke(RPC_CHANNELS.workspace.REMOTE_SUPERVISION_GRANT),
+  revokeRemoteSupervision: invoke(RPC_CHANNELS.workspace.REMOTE_SUPERVISION_REVOKE),
   simulateRoutingPolicy: invoke(RPC_CHANNELS.workspace.ROUTING_SIMULATE),
 
   // Folder dialog

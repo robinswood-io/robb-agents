@@ -47,6 +47,9 @@ export const OUTPUT_KINDS = ['param', 'artifact'] as const;
 export const RETRY_WHEN = ['error', 'empty', 'invalid'] as const;
 export const CACHE_MODES = ['pure', 'off'] as const;
 export const TASK_RUNNERS = ['conduct', 'orchestrate'] as const;
+export const MISSION_INPUT_SENSITIVITY = ['public', 'internal', 'confidential', 'restricted'] as const;
+export const MISSION_IMPACT_LEVELS = ['low', 'medium', 'high', 'critical'] as const;
+export const NODE_EFFECTS = ['read', 'workspace-write', 'external-mutation'] as const;
 
 // ---------------------------------------------------------------------------
 // Repair (verification-loop) bounds — SINGLE SOURCE OF TRUTH.
@@ -128,6 +131,61 @@ export const TaskDefaultsSchema = z.object({
   permissionMode: z.enum(PERMISSION_MODES).optional(),
 });
 
+/** Resource and access envelope for autonomous task execution. */
+export const TaskExecutionSchema = z.object({
+  /** Absolute sandbox root. Defaults to the resolved task working directory. */
+  root_path: z.string().min(1).optional(),
+  /** Workspace-relative paths. `.` means the workspace root. */
+  allowed_read_paths: z.array(z.string().min(1)).default(['.']),
+  /** Empty by default: a task must explicitly opt in to filesystem writes. */
+  allowed_write_paths: z.array(z.string().min(1)).default([]),
+  network_access: z.enum(['disabled', 'allow-list']).default('disabled'),
+  /** Exact hosts or `*.example.com` wildcard subdomains. */
+  allowed_hosts: z.array(z.string().min(1)).default([]),
+  max_cpu_percent: z.number().positive().max(100).default(100),
+  max_memory_mb: z.number().int().positive().default(1024),
+  timeout_ms: z.number().int().positive().default(30 * 60 * 1000),
+});
+
+/** Product-level mission contract layered over the executable task DAG. */
+export const MissionSchema = z.object({
+  inputs: z
+    .array(
+      z.object({
+        name: ident('mission input name'),
+        description: z.string().min(1).optional(),
+        required: z.boolean().default(true),
+        sensitivity: z.enum(MISSION_INPUT_SENSITIVITY).default('internal'),
+      }),
+    )
+    .default([]),
+  deliverables: z
+    .array(
+      z.object({
+        name: ident('mission deliverable name'),
+        description: z.string().min(1).optional(),
+        format: z.string().min(1).optional(),
+        path: z.string().min(1).optional(),
+      }),
+    )
+    .min(1, 'A mission must declare at least one deliverable'),
+  budget: z
+    .object({
+      max_tokens: z.number().int().positive().optional(),
+      max_cost: z.number().nonnegative().optional(),
+      currency: z.enum(['USD', 'EUR']).default('USD'),
+    })
+    .optional(),
+  deadline: z.string().datetime({ offset: true }).optional(),
+  policy: z.object({
+    impact_level: z.enum(MISSION_IMPACT_LEVELS).default('medium'),
+    require_high_impact_approval: z.boolean().default(true),
+    replay_external_mutations: z.boolean().default(false),
+    owner: z.string().min(1).optional(),
+    validator: z.string().min(1).optional(),
+  }),
+});
+
 // ---------------------------------------------------------------------------
 // Node schema
 // ---------------------------------------------------------------------------
@@ -164,6 +222,8 @@ const TaskNodeObject = z.object({
   retry: RetrySchema.optional(),
   timeout: z.number().positive().optional(),
   cache: z.enum(CACHE_MODES).optional(),
+  /** Declares the strongest side effect this node may cause; replay defaults depend on it. */
+  effect: z.enum(NODE_EFFECTS).default('read'),
   approval: z.boolean().optional(),
 });
 
@@ -206,6 +266,10 @@ export const TaskSpecSchema = z
      *  agent pipeline resolves each SKILL.md and blocks tools until it is read. */
     skills: z.array(z.string().min(1)).optional(),
     defaults: TaskDefaultsSchema.optional(),
+    /** Fail-closed isolation envelope used by the runner and connector workers. */
+    execution: TaskExecutionSchema.optional(),
+    /** Mission metadata used by the Control Room and auditable export. */
+    mission: MissionSchema.optional(),
     params: z.array(TaskParamSchema).optional(),
     /** Total (input+output) token budget across all node sessions; USD is a derived display only. */
     token_budget: z.number().int().positive().optional(),
@@ -236,6 +300,16 @@ export const TaskSpecSchema = z
           path: ['nodes', i, 'prompt'],
         });
       }
+      const missionRequiresApproval =
+        spec.mission?.policy.require_high_impact_approval === true &&
+        (spec.mission.policy.impact_level === 'high' || spec.mission.policy.impact_level === 'critical');
+      if (missionRequiresApproval && node.effect === 'external-mutation' && node.approval !== true) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Node "${node.id}" performs an external mutation and must set approval: true for this mission policy`,
+          path: ['nodes', i, 'approval'],
+        });
+      }
     });
   });
 
@@ -249,6 +323,8 @@ export type Loop = z.infer<typeof LoopSchema>;
 export type Retry = z.infer<typeof RetrySchema>;
 export type TaskParam = z.infer<typeof TaskParamSchema>;
 export type TaskDefaults = z.infer<typeof TaskDefaultsSchema>;
+export type TaskExecution = z.infer<typeof TaskExecutionSchema>;
+export type Mission = z.infer<typeof MissionSchema>;
 export type TaskNode = z.infer<typeof TaskNodeSchema>;
 export type TaskSpec = z.infer<typeof TaskSpecSchema>;
 

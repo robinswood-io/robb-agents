@@ -19,6 +19,7 @@
  * SessionManager structurally satisfies) so it is unit-testable with a mock.
  */
 import type { CreateSessionOptions } from '@craft-agent/shared/protocol';
+import { createHash } from 'node:crypto';
 import type { SessionCompletionEvent } from '../sessions/SessionManager';
 import {
   type TaskSpec,
@@ -37,6 +38,12 @@ import {
   writeRunSpecSnapshot,
   DEFAULT_REPAIR_ATTEMPTS,
   MAX_REPAIR_ATTEMPTS_CAP,
+  authorizeWorkspacePath,
+  evaluateKillSwitch,
+  validateExecutionIsolationPolicy,
+  type ExecutionIsolationPolicy,
+  type GuardDecision,
+  type KillSwitchSnapshot,
 } from '@craft-agent/shared/tasks';
 
 // ---------------------------------------------------------------------------
@@ -70,6 +77,23 @@ export interface TaskRunnerDeps {
   /** Injectable clock (run-log timestamps) + run-id generator, for determinism in tests. */
   now?: () => string;
   genRunId?: () => string;
+  /** Live kill-switch state. Evaluated before every scheduling pass. */
+  getKillSwitch?: () => KillSwitchSnapshot;
+  /**
+   * Host-side admission hook for connector/sandbox enforcement. The prompt
+   * receives the same policy, but this hook is the authoritative boundary.
+   */
+  executionGuard?: (context: TaskExecutionGuardContext) => GuardDecision | Promise<GuardDecision>;
+}
+
+export interface TaskExecutionGuardContext {
+  workspaceId: string;
+  missionId: string;
+  runId: string;
+  nodeId: string;
+  idempotencyKey: string;
+  workingDirectory?: string;
+  policy: ExecutionIsolationPolicy;
 }
 
 export interface RunOptions {
@@ -83,7 +107,7 @@ export interface RunOptions {
   verifyOnComplete?: boolean;
 }
 
-export type RunStatus = 'running' | 'paused' | 'verifying' | 'stopped' | 'completed' | 'failed';
+export type RunStatus = 'running' | 'paused' | 'waiting-approval' | 'verifying' | 'stopped' | 'completed' | 'failed';
 
 export interface NodeRunStatus {
   id: string;
@@ -103,17 +127,24 @@ export interface RunSnapshot {
   tokensUsed: number;
 }
 
+export interface PendingTaskApproval {
+  requestId: string;
+  missionId: string;
+  runId: string;
+  nodeId: string;
+  reason: string;
+  impact: 'low' | 'medium' | 'high' | 'critical';
+  owner?: string;
+}
+
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
 const DEFAULT_MAX_PARALLEL = 4;
-// Explicit, unattended-safe default for a subtask's permission mode when neither the node nor the task
-// defaults set one. Conductor children run with no human to answer an `ask` prompt, so we must NOT fall
-// through to the workspace default (which may be `ask` → the child hangs, or read-only `safe` → it
-// silently produces nothing). The task editor now persists an explicit `defaults.permissionMode`, so
-// this constant only governs hand-authored specs that omit it — and it is never `ask`.
-const AUTONOMOUS_DEFAULT_MODE = 'allow-all' as const;
+// Explicit fail-closed default for a subtask's permission mode when neither the node nor the task
+// defaults set one. Mutating autonomy must be an intentional, reviewable opt-in in task.yaml.
+const AUTONOMOUS_DEFAULT_MODE = 'safe' as const;
 const RUNNING_STATUS = 'in-progress';
 const DONE_STATUS = 'done';
 // There is no 'failed' session status (the fixed set is todo|in-progress|needs-review|done|cancelled).
@@ -153,6 +184,9 @@ class ActiveRun {
   private tokensUsed = 0;
   /** Last observed cumulative (input+output) tokens per child session — for delta accounting. */
   private readonly sessionTokens = new Map<string, number>();
+  private readonly nodeTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
+  private readonly approvedNodes = new Set<string>();
+  private readonly pendingApprovals = new Map<string, PendingTaskApproval>();
   private runStatus: RunStatus = 'running';
   private unsubscribe?: () => void;
   /** Detaches the one-shot orchestrator-verdict listener while a run is `verifying`. */
@@ -230,6 +264,8 @@ class ActiveRun {
    * re-dispatch. A done node whose output file is missing also falls back to pending.
    */
   hydrate(log: RunLogEntry[], loadOutput: (nodeId: string) => NodeOutput | null): void {
+    const ambiguousNodes = new Set<string>();
+    const unresolvedApprovals = new Map<string, PendingTaskApproval>();
     for (const e of log) {
       if (e.kind === 'node-spawned') {
         const st = this.state.get(e.nodeId);
@@ -239,10 +275,29 @@ class ActiveRun {
         }
       } else if (e.kind === 'node-scheduled') {
         const st = this.state.get(e.nodeId);
-        if (st) st.attempt += 1;
+        if (st) {
+          st.attempt += 1;
+          st.state = 'running';
+        }
       } else if (e.kind === 'node-finished') {
         const st = this.state.get(e.nodeId);
         if (st) st.state = e.state;
+      } else if (e.kind === 'node-checkpoint') {
+        if (e.status === 'executing') ambiguousNodes.add(e.nodeId);
+        else if (e.status === 'confirmed') ambiguousNodes.delete(e.nodeId);
+      } else if (e.kind === 'approval-requested') {
+        unresolvedApprovals.set(e.requestId, {
+          requestId: e.requestId,
+          missionId: this.spec.id,
+          runId: this.runId,
+          nodeId: e.nodeId,
+          reason: e.reason,
+          impact: e.impact,
+          owner: e.owner,
+        });
+      } else if (e.kind === 'approval-resolved') {
+        unresolvedApprovals.delete(e.requestId);
+        if (e.decision === 'approved') this.approvedNodes.add(e.nodeId);
       } else if (e.kind === 'verdict') {
         // Reconstruct the durable repair counters so a cross-restart resume honors the cap rather
         // than restarting the budget from zero (the in-memory counters reset on a fresh process).
@@ -257,17 +312,35 @@ class ActiveRun {
         if (out) this.outputs[nodeId] = out;
         else st.state = 'pending'; // recorded output missing → must re-run
       } else if (st.state === 'running' || st.state === 'cancelled') {
-        st.state = 'pending'; // in-flight at shutdown / cancelled → re-dispatch on resume
+        if (ambiguousNodes.has(nodeId)) {
+          // A child may have completed an external side effect before the
+          // process stopped. Replaying it blindly could duplicate a mutation.
+          st.state = 'failed';
+          st.lastFailure = 'Interrupted after execution began; inspect provider state and approve a replay.';
+        } else {
+          st.state = 'pending';
+        }
       }
     }
+    for (const approval of unresolvedApprovals.values()) {
+      const st = this.state.get(approval.nodeId);
+      if (!st || st.state === 'done' || st.state === 'failed') continue;
+      st.state = 'waiting-approval';
+      this.pendingApprovals.set(approval.requestId, approval);
+    }
+    if (this.pendingApprovals.size > 0) this.runStatus = 'waiting-approval';
     this.inFlight = 0;
   }
 
   /** Resume a hydrated run: subscribe, log, and schedule the ready set (finished nodes are skipped). */
   resumeFromHydrated(): void {
     if (this.unsubscribe) return;
-    this.runStatus = 'running';
     this.unsubscribe = this.deps.host.onSessionComplete((evt) => this.onSessionComplete(evt));
+    if (this.pendingApprovals.size > 0) {
+      this.runStatus = 'waiting-approval';
+      return;
+    }
+    this.runStatus = 'running';
     this.log({ kind: 'run-resumed' });
     this.scheduleReady();
   }
@@ -277,7 +350,11 @@ class ActiveRun {
     this.runStatus = 'stopped';
     this.log({ kind: 'run-stopped' });
     for (const [nodeId, st] of this.state) {
-      if (st.state === 'running') {
+      if (st.state === 'waiting-approval') {
+        st.state = 'cancelled';
+        this.log({ kind: 'node-finished', nodeId, sessionId: '', state: 'cancelled', reason: 'stopped before approval' });
+      } else if (st.state === 'running') {
+        this.clearNodeTimeout(nodeId);
         st.state = 'cancelled';
         this.log({ kind: 'node-finished', nodeId, sessionId: st.sessionId ?? '', state: 'cancelled', reason: 'stopped' });
         if (st.sessionId) {
@@ -314,12 +391,25 @@ class ActiveRun {
 
   private scheduleReady(): void {
     if (this.runStatus !== 'running') return;
+    const killSwitch = this.currentKillSwitch();
+    if (!killSwitch.allowed) {
+      this.stopForKillSwitch(killSwitch.reason ?? 'Execution stopped by kill switch');
+      return;
+    }
     for (const node of this.spec.nodes) {
       if (this.inFlight >= this.maxParallel) break;
       if (!this.isReady(node)) continue;
       if (this.isOverBudget()) {
         this.pauseForBudget();
         return;
+      }
+      if (this.requiresApproval(node) && !this.approvedNodes.has(node.id)) {
+        this.requestApproval(node);
+        return;
+      }
+      if (node.kind === 'approval') {
+        this.completeApprovalNode(node);
+        continue;
       }
       this.markRunning(node);
       void this.dispatch(node);
@@ -341,13 +431,94 @@ class ActiveRun {
     st.attempt += 1;
     this.inFlight += 1;
     this.log({ kind: 'node-scheduled', nodeId: node.id });
+    this.log({
+      kind: 'node-checkpoint',
+      nodeId: node.id,
+      idempotencyKey: this.idempotencyKey(node.id, st.attempt),
+      status: 'prepared',
+    });
+  }
+
+  private requiresApproval(node: TaskNode): boolean {
+    return node.kind === 'approval' || node.approval === true;
+  }
+
+  private requestApproval(node: TaskNode): void {
+    const requestId = `${this.runId}:${node.id}:approval-${this.state.get(node.id)!.attempt + 1}`;
+    if (this.pendingApprovals.has(requestId)) return;
+    const impact = this.spec.mission?.policy.impact_level ?? (node.effect === 'external-mutation' ? 'high' : 'medium');
+    const request: PendingTaskApproval = {
+      requestId,
+      missionId: this.spec.id,
+      runId: this.runId,
+      nodeId: node.id,
+      reason: node.prompt?.trim() || `Approve mission step "${nodeTitle(node)}"`,
+      impact,
+      ...((this.spec.mission?.policy.validator ?? this.spec.mission?.policy.owner)
+        ? { owner: this.spec.mission?.policy.validator ?? this.spec.mission?.policy.owner }
+        : {}),
+    };
+    this.state.get(node.id)!.state = 'waiting-approval';
+    this.pendingApprovals.set(requestId, request);
+    this.runStatus = 'waiting-approval';
+    this.log({
+      kind: 'approval-requested',
+      requestId,
+      nodeId: node.id,
+      reason: request.reason,
+      impact,
+      ...(request.owner ? { owner: request.owner } : {}),
+    });
+  }
+
+  private completeApprovalNode(node: TaskNode): void {
+    const st = this.state.get(node.id)!;
+    st.state = 'done';
+    st.attempt += 1;
+    const output: NodeOutput = { text: `Approved mission gate: ${nodeTitle(node)}` };
+    this.outputs[node.id] = output;
+    writeNodeOutput(this.deps.workspaceRoot, this.slug, this.runId, node.id, output);
+    this.log({ kind: 'node-finished', nodeId: node.id, sessionId: '', state: 'done' });
+  }
+
+  pendingApprovalList(): PendingTaskApproval[] {
+    return [...this.pendingApprovals.values()];
+  }
+
+  resolveApproval(requestId: string, decision: 'approved' | 'rejected', actor: string, comment?: string): void {
+    const request = this.pendingApprovals.get(requestId);
+    if (!request) throw new Error(`Approval request "${requestId}" is not pending`);
+    const node = this.spec.nodes.find((candidate) => candidate.id === request.nodeId);
+    if (!node) throw new Error(`Approval node "${request.nodeId}" no longer exists`);
+    this.pendingApprovals.delete(requestId);
+    this.log({
+      kind: 'approval-resolved',
+      requestId,
+      nodeId: node.id,
+      decision,
+      actor,
+      ...(comment ? { comment } : {}),
+    });
+    const st = this.state.get(node.id)!;
+    if (decision === 'rejected') {
+      st.state = 'failed';
+      st.lastFailure = comment || 'High-impact action rejected by validator.';
+      this.log({ kind: 'node-finished', nodeId: node.id, sessionId: '', state: 'failed', reason: st.lastFailure });
+    } else {
+      this.approvedNodes.add(node.id);
+      st.state = 'pending';
+    }
+    if (this.pendingApprovals.size > 0) return;
+    this.runStatus = 'running';
+    this.scheduleReady();
   }
 
   private async dispatch(node: TaskNode): Promise<void> {
     try {
       // Task-level skills ride as [skill:slug] mentions on every child prompt — the agent
       // pipeline resolves each SKILL.md and blocks tools until it is read (skills-as-context).
-      const prompt = skillsPreamble(this.spec.skills) + (await this.buildPrompt(node));
+      const st = this.state.get(node.id)!;
+      const idempotencyKey = this.idempotencyKey(node.id, st.attempt);
       // Children run where the parent runs: inherit the orchestrator's resolved working directory,
       // falling back to the spec's declared `cwd`. Without this they default to the workspace cwd
       // rather than the parent session's (project) directory.
@@ -355,6 +526,33 @@ class ActiveRun {
         (this.opts.orchestratorSessionId
           ? this.deps.host.getSessionWorkingDirectory(this.opts.orchestratorSessionId)
           : undefined) ?? this.spec.cwd;
+      const policy = resolveIsolationPolicy(this.spec, cwd ?? this.deps.workspaceRoot);
+      const isolationDecision = validateExecutionIsolationPolicy(policy, this.deps.workspaceRoot);
+      if (!isolationDecision.allowed) {
+        throw new Error(`execution isolation rejected node: ${isolationDecision.reason ?? 'blocked'}`);
+      }
+      if (cwd) {
+        const cwdDecision = authorizeWorkspacePath(policy.workspaceRoot, cwd, ['.']);
+        if (!cwdDecision.allowed) {
+          throw new Error(`working directory rejected: ${cwdDecision.reason}`);
+        }
+      }
+      const guardDecision = await this.deps.executionGuard?.({
+        workspaceId: this.deps.workspaceId,
+        missionId: this.spec.id,
+        runId: this.runId,
+        nodeId: node.id,
+        idempotencyKey,
+        workingDirectory: cwd,
+        policy,
+      });
+      if (guardDecision && !guardDecision.allowed) {
+        throw new Error(`execution guard rejected node: ${guardDecision.reason ?? 'blocked'}`);
+      }
+      const prompt =
+        skillsPreamble(this.spec.skills) +
+        executionPreamble(policy, idempotencyKey) +
+        (await this.buildPrompt(node));
       const options: CreateSessionOptions = {
         parentSessionId: this.opts.orchestratorSessionId,
         // Link the child back to the task / run / node so the manual subtask composer can
@@ -382,12 +580,13 @@ class ActiveRun {
       // createSession announces the child to the renderer by default, so it nests under the task
       // tile with its real title instead of a fabricated "New Chat" (or never appearing).
       const child = await this.deps.host.createSession(this.deps.workspaceId, options);
-      const st = this.state.get(node.id)!;
       st.sessionId = child.id;
       this.sessionToNode.set(child.id, node.id);
       this.log({ kind: 'node-spawned', nodeId: node.id, sessionId: child.id });
       await this.deps.host.setKanbanColumn(child.id, 'in-progress');
+      this.log({ kind: 'node-checkpoint', nodeId: node.id, idempotencyKey, status: 'executing' });
       await this.deps.host.sendMessage(child.id, prompt);
+      this.armNodeTimeout(node.id, child.id, policy.timeoutMs);
     } catch (err) {
       this.failNode(node.id, `dispatch failed: ${(err as Error).message}`);
     }
@@ -422,6 +621,7 @@ class ActiveRun {
     if (!nodeId) return; // not one of our child nodes
     const st = this.state.get(nodeId);
     if (!st || st.state !== 'running') return; // already settled/cancelled
+    this.clearNodeTimeout(nodeId);
 
     if (evt.tokenUsage) {
       // `tokenUsage` is cumulative-per-session; add only the delta since this session's last
@@ -430,6 +630,7 @@ class ActiveRun {
       const prev = this.sessionTokens.get(evt.sessionId) ?? 0;
       this.tokensUsed += Math.max(0, cumulative - prev);
       this.sessionTokens.set(evt.sessionId, cumulative);
+      this.log({ kind: 'usage-updated', tokensUsed: this.tokensUsed });
     }
 
     // Completion-time budget check: pause immediately on breach (not only at schedule-time), but
@@ -455,6 +656,13 @@ class ActiveRun {
       st.state = 'done';
       this.inFlight = Math.max(0, this.inFlight - 1);
       writeNodeOutput(this.deps.workspaceRoot, this.slug, this.runId, nodeId, output);
+      this.log({
+        kind: 'node-checkpoint',
+        nodeId,
+        idempotencyKey: this.idempotencyKey(nodeId, st.attempt),
+        status: 'confirmed',
+        proofHash: createHash('sha256').update(text, 'utf8').digest('hex'),
+      });
       this.log({ kind: 'node-finished', nodeId, sessionId: evt.sessionId, state: 'done' });
       void this.deps.host.setSessionStatus(evt.sessionId, DONE_STATUS);
       void this.deps.host.setKanbanColumn(evt.sessionId, 'done');
@@ -474,6 +682,7 @@ class ActiveRun {
   }
 
   private failNode(nodeId: string, reason: string, sessionId?: string): void {
+    this.clearNodeTimeout(nodeId);
     const st = this.state.get(nodeId)!;
     const wasRunning = st.state === 'running';
     if (wasRunning) this.inFlight = Math.max(0, this.inFlight - 1);
@@ -546,6 +755,8 @@ class ActiveRun {
   }
 
   private finalize(): void {
+    for (const timeout of this.nodeTimeouts.values()) clearTimeout(timeout);
+    this.nodeTimeouts.clear();
     this.unsubscribe?.();
     this.unsubscribe = undefined;
     this.verdictOff?.();
@@ -758,6 +969,51 @@ class ActiveRun {
     return this.runStatus === 'completed' || this.runStatus === 'failed' || this.runStatus === 'stopped';
   }
 
+  private idempotencyKey(nodeId: string, attempt: number): string {
+    return `${this.deps.workspaceId}:${this.spec.id}:${this.runId}:${nodeId}:attempt-${attempt}`;
+  }
+
+  private currentKillSwitch(): GuardDecision {
+    const snapshot = this.deps.getKillSwitch?.();
+    return snapshot
+      ? evaluateKillSwitch(snapshot, this.deps.workspaceId, this.spec.id)
+      : { allowed: true };
+  }
+
+  private stopForKillSwitch(reason: string): void {
+    const scope = reason.startsWith('Global')
+      ? 'global'
+      : reason.startsWith('Workspace')
+        ? 'workspace'
+        : 'mission';
+    this.log({ kind: 'kill-switch', scope, reason });
+    this.runStatus = 'stopped';
+    for (const [nodeId, st] of this.state) {
+      if (st.state !== 'running') continue;
+      this.clearNodeTimeout(nodeId);
+      st.state = 'cancelled';
+      if (st.sessionId) void this.deps.host.cancelProcessing(st.sessionId, true);
+    }
+    this.finalize();
+  }
+
+  private armNodeTimeout(nodeId: string, sessionId: string, timeoutMs: number): void {
+    this.clearNodeTimeout(nodeId);
+    const timer = setTimeout(() => {
+      const st = this.state.get(nodeId);
+      if (!st || st.state !== 'running') return;
+      void this.deps.host.cancelProcessing(sessionId, true);
+      this.failNode(nodeId, `execution timeout after ${timeoutMs}ms`, sessionId);
+    }, timeoutMs);
+    this.nodeTimeouts.set(nodeId, timer);
+  }
+
+  private clearNodeTimeout(nodeId: string): void {
+    const timeout = this.nodeTimeouts.get(nodeId);
+    if (timeout) clearTimeout(timeout);
+    this.nodeTimeouts.delete(nodeId);
+  }
+
   private log(entry: RunLogEntryInput): void {
     const t = this.deps.now ? this.deps.now() : new Date().toISOString();
     appendRunLog(this.deps.workspaceRoot, this.slug, this.runId, { ...entry, t } as RunLogEntry);
@@ -777,6 +1033,34 @@ class ActiveRun {
 function skillsPreamble(skills: string[] | undefined): string {
   if (!skills?.length) return '';
   return `Apply these skills: ${skills.map((s) => `[skill:${s}]`).join(' ')}\n\n`;
+}
+
+function resolveIsolationPolicy(spec: TaskSpec, defaultRoot: string): ExecutionIsolationPolicy {
+  const configured = spec.execution;
+  return {
+    workspaceRoot: configured?.root_path ?? defaultRoot,
+    allowedReadPaths: configured?.allowed_read_paths ?? ['.'],
+    allowedWritePaths: configured?.allowed_write_paths ?? [],
+    networkAccess: configured?.network_access ?? 'disabled',
+    allowedHosts: configured?.allowed_hosts ?? [],
+    maxCpuPercent: configured?.max_cpu_percent ?? 100,
+    maxMemoryMb: configured?.max_memory_mb ?? 1024,
+    timeoutMs: configured?.timeout_ms ?? 30 * 60 * 1000,
+  };
+}
+
+function executionPreamble(policy: ExecutionIsolationPolicy, idempotencyKey: string): string {
+  return [
+    '[Execution policy]',
+    `Idempotency key: ${idempotencyKey}`,
+    `Read paths: ${policy.allowedReadPaths.join(', ') || '(none)'}`,
+    `Write paths: ${policy.allowedWritePaths.join(', ') || '(none)'}`,
+    `Network: ${policy.networkAccess}${policy.allowedHosts.length ? ` (${policy.allowedHosts.join(', ')})` : ''}`,
+    `Resource envelope: CPU ${policy.maxCpuPercent}%, memory ${policy.maxMemoryMb} MiB, timeout ${policy.timeoutMs} ms`,
+    'Reuse the idempotency key for every external mutation. Never persist secret values in output, logs, or checkpoints.',
+    '',
+    '',
+  ].join('\n');
 }
 
 /**
@@ -843,6 +1127,27 @@ export class TaskRunner {
     if (!loaded?.spec) throw new Error(`Task "${slug}" not found or has no valid task.yaml`);
     if (!loaded.valid) {
       throw new Error(`Refusing to run invalid task "${slug}": ${loaded.errors.map((e) => e.message).join('; ')}`);
+    }
+    const isolationPolicy = resolveIsolationPolicy(
+      loaded.spec,
+      loaded.spec.cwd ?? this.deps.workspaceRoot,
+    );
+    const isolationDecision = validateExecutionIsolationPolicy(isolationPolicy, this.deps.workspaceRoot);
+    if (!isolationDecision.allowed) {
+      throw new Error(`Refusing to run task "${slug}": ${isolationDecision.reason}`);
+    }
+    if (loaded.spec.cwd) {
+      const cwdDecision = authorizeWorkspacePath(isolationPolicy.workspaceRoot, loaded.spec.cwd, ['.']);
+      if (!cwdDecision.allowed) {
+        throw new Error(`Refusing to run task "${slug}": ${cwdDecision.reason}`);
+      }
+    }
+    const killSwitch = this.deps.getKillSwitch?.();
+    if (killSwitch) {
+      const decision = evaluateKillSwitch(killSwitch, this.deps.workspaceId, loaded.spec.id);
+      if (!decision.allowed) {
+        throw new Error(`Refusing to run task "${slug}": ${decision.reason}`);
+      }
     }
     // One active run per orchestrator: a second concurrent run would race the same parent session's
     // verdict listener (two runs attaching onSessionComplete on the same orchestrator would cross
@@ -911,6 +1216,35 @@ export class TaskRunner {
 
   async stop(slug: string, runId: string): Promise<void> {
     await this.runs.get(this.key(slug, runId))?.stop();
+  }
+
+  listPendingApprovals(slug?: string, runId?: string): PendingTaskApproval[] {
+    const approvals: PendingTaskApproval[] = [];
+    for (const run of this.runs.values()) {
+      const snapshot = run.snapshot();
+      if (slug && snapshot.slug !== slug) continue;
+      if (runId && snapshot.runId !== runId) continue;
+      approvals.push(...run.pendingApprovalList());
+    }
+    return approvals.sort((a, b) => a.requestId.localeCompare(b.requestId));
+  }
+
+  resolveApproval(
+    slug: string,
+    runId: string,
+    requestId: string,
+    decision: 'approved' | 'rejected',
+    actor: string,
+    comment?: string,
+  ): RunSnapshot {
+    let run = this.runs.get(this.key(slug, runId));
+    if (!run) {
+      this.rehydrate(slug, runId);
+      run = this.runs.get(this.key(slug, runId));
+    }
+    if (!run) throw new Error(`No mission run ${slug}:${runId}`);
+    run.resolveApproval(requestId, decision, actor, comment);
+    return run.snapshot();
   }
 
   getRunState(slug: string, runId: string): RunSnapshot | null {

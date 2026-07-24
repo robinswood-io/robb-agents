@@ -7,6 +7,9 @@ export const AUTOMATIONS_HISTORY_FILE = 'automations-history.jsonl';
 /** Persistent retry queue filename */
 export const AUTOMATIONS_RETRY_QUEUE_FILE = 'automations-retry-queue.jsonl';
 
+/** Inspectable terminal failures. Entries keep secret references, never resolved values. */
+export const AUTOMATIONS_DEAD_LETTER_FILE = 'automations-dead-letter.jsonl';
+
 /** Default HTTP method for webhook actions */
 export const DEFAULT_WEBHOOK_METHOD = 'POST';
 

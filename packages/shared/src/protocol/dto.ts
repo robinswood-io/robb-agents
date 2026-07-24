@@ -20,6 +20,12 @@ import type { PermissionMode } from '../agent/mode-types'
 import type { ThinkingLevel } from '../agent/thinking-levels'
 import type { CustomEndpointConfig } from '../config/llm-connections'
 import type { RoutingPolicy } from '../config/routing-policy'
+import type { WorkspaceGovernanceProfile } from '../governance/workspace-governance'
+import type {
+  RemoteAction,
+  RemoteSupervisionProfile,
+  RemoteSyncField,
+} from '../remote-supervision/remote-supervision'
 import type {
   AuthRequest as SharedAuthRequest,
   CredentialInputMode as SharedCredentialInputMode,
@@ -319,6 +325,25 @@ export interface TaskRunSnapshotDto {
   tokensUsed: number
 }
 
+export interface TaskApprovalRequestDto {
+  requestId: string
+  missionId: string
+  runId: string
+  nodeId: string
+  reason: string
+  impact: 'low' | 'medium' | 'high' | 'critical'
+  owner?: string
+}
+
+export interface TaskApprovalDecisionRequest {
+  slug: string
+  runId: string
+  requestId: string
+  decision: 'approved' | 'rejected'
+  actor: string
+  comment?: string
+}
+
 export interface TaskGetResult {
   slug: string
   validation: TaskValidationResultDto
@@ -338,6 +363,91 @@ export interface TaskResultNodeDto {
   sessionId?: string
   /** The node's recorded final output text (from nodes/<id>.json), when present. */
   output?: string
+}
+
+export interface MissionBlockerDto {
+  id: string
+  cause: string
+  owner: string
+  resolution: string
+  status: 'open' | 'resolved'
+  nodeId?: string
+}
+
+export interface MissionApprovalDto {
+  requestId: string
+  nodeId: string
+  reason: string
+  impact: 'low' | 'medium' | 'high' | 'critical'
+  owner: string
+  status: 'pending' | 'approved' | 'rejected'
+  actor?: string
+  comment?: string
+  requestedAt: string
+  resolvedAt?: string
+}
+
+export interface MissionControlSnapshotDto {
+  schemaVersion: 1
+  missionId: string
+  runId: string
+  title: string
+  objective: string
+  status: 'not-started' | 'running' | 'paused' | 'waiting-approval' | 'verifying' | 'completed' | 'failed' | 'stopped'
+  progress: {
+    total: number
+    completed: number
+    failed: number
+    running: number
+    pending: number
+    percent: number
+  }
+  budget: {
+    maxTokens?: number
+    maxCost?: number
+    currency?: 'USD' | 'EUR'
+    tokensUsed?: number
+    costUsed?: number
+  }
+  evaluation: {
+    status: 'not-evaluated' | 'pending' | 'passing' | 'failing'
+    acceptance: 'not-evaluated' | 'pass' | 'fail' | 'unparsed'
+    evaluatedNodes: number
+    successfulNodes: number
+    failedNodes: number
+    nodeSuccessRate?: number
+    safetyIssueCount: number
+    evidenceCount: number
+    failures: string[]
+  }
+  cost: {
+    status: 'untracked' | 'tracking' | 'within-budget' | 'warning' | 'exceeded'
+    currency: 'USD' | 'EUR'
+    used?: number
+    limit?: number
+    remaining?: number
+    percentUsed?: number
+    warningPercent: number
+  }
+  deadline?: string
+  approvals: MissionApprovalDto[]
+  blockers: MissionBlockerDto[]
+  nextActions: string[]
+  eventCount: number
+  latestEventAt?: string
+}
+
+export interface MissionReplayPlanDto {
+  sourceRunId: string
+  safeByDefault: boolean
+  nodes: Array<{
+    nodeId: string
+    action: 'reuse' | 'retry' | 'block'
+    reason: string
+    effect: 'read' | 'workspace-write' | 'external-mutation'
+  }>
+  requiresApproval: boolean
+  blockedNodeIds: string[]
 }
 
 /**
@@ -361,6 +471,12 @@ export interface TaskResultsDto {
   runStatus?: string
   /** The run's acceptance criteria (from the per-run spec snapshot), shown above the verdict. */
   acceptanceCriteria?: string
+  /** Mission-level operational projection, durable across application restarts. */
+  controlRoom?: MissionControlSnapshotDto
+  /** Fail-safe checkpoint replay plan; external mutations are blocked by default. */
+  replayPlan?: MissionReplayPlanDto
+  /** Portable, auditable Markdown report generated from the same durable projection. */
+  reportMarkdown?: string
   nodes: TaskResultNodeDto[]
 }
 
@@ -752,6 +868,35 @@ export interface WorkspaceSettings {
   defaultLlmConnection?: string
   enabledSourceSlugs?: string[]
   routingPolicy?: RoutingPolicy
+  governance?: WorkspaceGovernanceProfile
+  governanceRevision?: number
+  governanceUpdatedAt?: string
+  governanceUpdatedBy?: string
+  remoteSupervision?: RemoteSupervisionProfile
+}
+
+export interface WorkspaceGovernanceUpdateRequest {
+  expectedRevision: number
+  actorId: string
+  profile: WorkspaceGovernanceProfile
+}
+
+export interface WorkspaceGovernanceUpdateResult {
+  governance: WorkspaceGovernanceProfile
+  governanceRevision: number
+  governanceUpdatedAt: string
+  governanceUpdatedBy: string
+}
+
+export interface RemoteSupervisionGrantRequest {
+  fields: RemoteSyncField[]
+  actions: RemoteAction[]
+  purpose: string
+  expiresAt: string
+}
+
+export interface RemoteSupervisionRevokeRequest {
+  reason: string
 }
 
 // ---------------------------------------------------------------------------

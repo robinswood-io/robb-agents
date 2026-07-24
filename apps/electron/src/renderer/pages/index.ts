@@ -15,6 +15,7 @@ export {
   InputSettingsPage,
   WorkspaceSettingsPage,
   PermissionsSettingsPage,
+  GovernanceSettingsPage,
   LabelsSettingsPage,
   ShortcutsPage,
   PreferencesPage,

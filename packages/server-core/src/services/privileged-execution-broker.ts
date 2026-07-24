@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { appendFile, mkdir } from 'node:fs/promises'
+import { appendFile, chmod, mkdir } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { homedir } from 'node:os'
 import type { Logger } from '../runtime/platform'
@@ -22,7 +22,12 @@ interface PendingPrivilegedRequest extends PrivilegedExecutionRequest {
 }
 
 const DEFAULT_APPROVAL_TTL_SECONDS = 120
+const MIN_APPROVAL_TTL_SECONDS = 10
+const MAX_APPROVAL_TTL_SECONDS = 600
 const AUDIT_LOG_PATH = join(homedir(), '.craft-agent', 'logs', 'privileged-actions.jsonl')
+const FORBIDDEN_SHELL_SYNTAX = /[\0\r\n;&|<>`$\\]/
+const BREW_CASK_COMMAND = /^brew\s+(?:install|upgrade)\s+--cask\s+[a-z0-9][a-z0-9+._@/-]*$/i
+const INSTALLER_COMMAND = /^installer\s+-pkg\s+(?:"[^"\r\n]+"|'[^'\r\n]+'|[a-z0-9_./][a-z0-9_./+@%:,=-]*)\s+-target\s+\/$/i
 
 /**
  * PrivilegedExecutionBroker
@@ -33,7 +38,10 @@ const AUDIT_LOG_PATH = join(homedir(), '.craft-agent', 'logs', 'privileged-actio
 export class PrivilegedExecutionBroker {
   private pending = new Map<string, PendingPrivilegedRequest>()
 
-  constructor(private logger: Logger) {}
+  constructor(
+    private logger: Logger,
+    private readonly auditLogPath = AUDIT_LOG_PATH,
+  ) {}
 
   createRequest(input: {
     requestId: string
@@ -43,8 +51,21 @@ export class PrivilegedExecutionBroker {
     impact?: string
     approvalTtlSeconds?: number
   }): PrivilegedExecutionRequest {
+    if (this.pending.has(input.requestId)) {
+      throw new Error('A privileged approval request with this ID is already pending')
+    }
+
     const now = Date.now()
     const ttl = input.approvalTtlSeconds ?? DEFAULT_APPROVAL_TTL_SECONDS
+    if (
+      !Number.isInteger(ttl)
+      || ttl < MIN_APPROVAL_TTL_SECONDS
+      || ttl > MAX_APPROVAL_TTL_SECONDS
+    ) {
+      throw new Error(
+        `Privileged approval TTL must be an integer between ${MIN_APPROVAL_TTL_SECONDS} and ${MAX_APPROVAL_TTL_SECONDS} seconds`,
+      )
+    }
     const policy = this.validatePolicy(input.command)
 
     const request: PendingPrivilegedRequest = {
@@ -67,7 +88,6 @@ export class PrivilegedExecutionBroker {
       requestId: request.requestId,
       sessionId: request.sessionId,
       commandHash: request.commandHash,
-      command: request.command,
       policyAllowed: request.policyAllowed,
       policyReason: request.policyReason,
       createdAt: request.createdAt,
@@ -80,7 +100,10 @@ export class PrivilegedExecutionBroker {
   resolveApproval(
     requestId: string,
     approved: boolean,
-    options?: { expectedCommandHash?: string },
+    options?: {
+      expectedCommandHash?: string
+      expectedSessionId?: string
+    },
   ): {
     ok: boolean
     reason?: string
@@ -91,7 +114,15 @@ export class PrivilegedExecutionBroker {
       return { ok: false, reason: 'No pending privileged request found' }
     }
 
-    this.pending.delete(requestId)
+    if (options?.expectedSessionId && options.expectedSessionId !== request.sessionId) {
+      void this.appendAudit({
+        event: 'privileged_request_session_mismatch',
+        requestId: request.requestId,
+        expectedSessionId: options.expectedSessionId,
+        actualSessionId: request.sessionId,
+      })
+      return { ok: false, reason: 'Session mismatch for privileged approval request' }
+    }
 
     if (options?.expectedCommandHash && options.expectedCommandHash !== request.commandHash) {
       void this.appendAudit({
@@ -103,6 +134,8 @@ export class PrivilegedExecutionBroker {
       })
       return { ok: false, reason: 'Command hash mismatch for privileged approval request' }
     }
+
+    this.pending.delete(requestId)
 
     if (!request.policyAllowed) {
       void this.appendAudit({
@@ -155,11 +188,17 @@ export class PrivilegedExecutionBroker {
   }
 
   private validatePolicy(command: string): { allowed: boolean; reason?: string } {
-    const normalized = command.trim().toLowerCase()
+    const normalized = command.trim()
+    if (FORBIDDEN_SHELL_SYNTAX.test(normalized)) {
+      return {
+        allowed: false,
+        reason: 'Privileged execution policy rejects shell control and expansion syntax',
+      }
+    }
+
     const allowlisted =
-      /^brew\s+install\s+--cask\s+/.test(normalized) ||
-      /^brew\s+upgrade\s+--cask\s+/.test(normalized) ||
-      /^installer\s+-pkg\s+.+\s+-target\s+\//.test(normalized)
+      BREW_CASK_COMMAND.test(normalized)
+      || INSTALLER_COMMAND.test(normalized)
 
     if (!allowlisted) {
       return {
@@ -177,8 +216,13 @@ export class PrivilegedExecutionBroker {
 
   private async appendAudit(payload: Record<string, unknown>): Promise<void> {
     try {
-      await mkdir(dirname(AUDIT_LOG_PATH), { recursive: true })
-      await appendFile(AUDIT_LOG_PATH, `${JSON.stringify({ timestamp: new Date().toISOString(), ...payload })}\n`, 'utf8')
+      await mkdir(dirname(this.auditLogPath), { recursive: true, mode: 0o700 })
+      await appendFile(
+        this.auditLogPath,
+        `${JSON.stringify({ timestamp: new Date().toISOString(), ...payload })}\n`,
+        { encoding: 'utf8', mode: 0o600 },
+      )
+      await chmod(this.auditLogPath, 0o600)
     } catch (error) {
       this.logger.warn('[PrivilegedExecutionBroker] Failed to write audit log:', error)
     }

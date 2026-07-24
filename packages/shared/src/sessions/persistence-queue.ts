@@ -47,6 +47,48 @@ function mergeHeaderWithExternalMetadata(localHeader: SessionHeader, diskHeader:
   }
 }
 
+function isErrnoException(error: unknown): error is NodeJS.ErrnoException {
+  return error instanceof Error && 'code' in error
+}
+
+async function replaceFileAtomically(tmpFile: string, finalFile: string): Promise<void> {
+  try {
+    await rename(tmpFile, finalFile)
+    return
+  } catch (error) {
+    // POSIX rename replaces the destination atomically. Some Windows handles can
+    // reject replacement while the destination exists; keep a recoverable backup
+    // instead of deleting the primary before the tmp has been promoted.
+    if (!isErrnoException(error) || (error.code !== 'EEXIST' && error.code !== 'EPERM')) {
+      throw error
+    }
+  }
+
+  const backupFile = `${finalFile}.bak`
+  try { await unlink(backupFile) } catch { /* ignore stale backup */ }
+
+  let backupCreated = false
+  try {
+    await rename(finalFile, backupFile)
+    backupCreated = true
+  } catch {
+    // Destination may not exist; continue with tmp promotion.
+  }
+
+  try {
+    await rename(tmpFile, finalFile)
+  } catch (error) {
+    if (backupCreated) {
+      try { await rename(backupFile, finalFile) } catch { /* leave backup for startup recovery */ }
+    }
+    throw error
+  }
+
+  if (backupCreated) {
+    try { await unlink(backupFile) } catch { /* ignore stale backup cleanup */ }
+  }
+}
+
 /**
  * Debounced async session persistence queue.
  * Prevents main thread blocking by using async writes and coalescing
@@ -156,9 +198,7 @@ class SessionPersistenceQueue {
 
       const tmpFile = filePath + '.tmp'
       await writeFile(tmpFile, lines.join('\n') + '\n', 'utf-8')
-      // On Windows, rename fails if target exists. Delete first for cross-platform compatibility.
-      try { await unlink(filePath) } catch { /* ignore if doesn't exist */ }
-      await rename(tmpFile, filePath)
+      await replaceFileAtomically(tmpFile, filePath)
       debug(`[PersistenceQueue] Wrote session ${sessionId}`)
     } catch (error) {
       console.error(`[PersistenceQueue] Failed to write session ${sessionId}:`, error)

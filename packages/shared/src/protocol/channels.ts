@@ -67,6 +67,8 @@ export const RPC_CHANNELS = {
     PAUSE: 'tasks:pause',
     RESUME: 'tasks:resume',
     STOP: 'tasks:stop',
+    LIST_APPROVALS: 'tasks:listApprovals',
+    RESOLVE_APPROVAL: 'tasks:resolveApproval',
     GET: 'tasks:get',
     LIST: 'tasks:list',
     // Storage-backed read of a run's outcome (verdict + per-node output). Survives restart.
@@ -278,8 +280,11 @@ export const RPC_CHANNELS = {
     WRITE_IMAGE: 'workspace:writeImage',
     SETTINGS_GET: 'workspaceSettings:get',
     SETTINGS_UPDATE: 'workspaceSettings:update',
+    GOVERNANCE_UPDATE: 'workspaceSettings:governanceUpdate',
     /** Explain a routing decision without running a provider or mutating state. */
     ROUTING_SIMULATE: 'workspaceSettings:simulateRouting',
+    REMOTE_SUPERVISION_GRANT: 'workspaceSettings:remoteSupervisionGrant',
+    REMOTE_SUPERVISION_REVOKE: 'workspaceSettings:remoteSupervisionRevoke',
   },
   permissions: {
     GET_DEFAULTS: 'permissions:getDefaults',

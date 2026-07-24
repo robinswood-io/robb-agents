@@ -86,6 +86,7 @@ Exemples :
 - [`ovh-ai-endpoints-verification.md`](./ovh-ai-endpoints-verification.md) — checklist de vérification OVHcloud AI Endpoints avant preset.
 - [`routing-policy.example.json`](./routing-policy.example.json) — exemple policy validé par tests.
 - [`technical-spike-router.md`](./technical-spike-router.md) — notes techniques switch provider / router.
+- [`market-roadmap-execution-plan-2026.md`](./market-roadmap-execution-plan-2026.md) — plan d’exécution consolidé face au marché, dépendances, SLO et critères d’acceptation.
 
 ## Roadmap initiale
 

@@ -25,6 +25,7 @@ import { CHANNEL_MAP } from '../transport/channel-map'
 import { createCallbackServer } from '@craft-agent/shared/auth/callback-server'
 import { CHATGPT_OAUTH_CONFIG } from '@craft-agent/shared/auth/chatgpt-oauth-config'
 import { GOOGLE_GEMINI_OAUTH_CONFIG } from '@craft-agent/shared/auth/google-gemini-oauth'
+import { openSafeExternalUrl } from './safe-external-url'
 import {
   CLIENT_OPEN_EXTERNAL,
   CLIENT_OPEN_PATH,
@@ -123,7 +124,6 @@ if (isClientOnly) {
       autoReconnect: true,
       mode: 'remote',
       clientCapabilities: [...LOCAL_CLIENT_CAPABILITIES],
-      tlsRejectUnauthorized: false,
     })
     initialWorkspaceClient.connect()
   } else {
@@ -147,7 +147,6 @@ if (isClientOnly) {
       autoReconnect: true,
       mode: 'remote',
       clientCapabilities: [...LOCAL_CLIENT_CAPABILITIES],
-      tlsRejectUnauthorized: false,
     })
   })
 
@@ -159,7 +158,9 @@ if (isClientOnly) {
 // Register client-side capability handlers (server can invoke these)
 // ---------------------------------------------------------------------------
 
-client.handleCapability(CLIENT_OPEN_EXTERNAL, (url: string) => shell.openExternal(url))
+client.handleCapability(CLIENT_OPEN_EXTERNAL, async (url: string) =>
+  openSafeExternalUrl(url, (safeUrl) => shell.openExternal(safeUrl))
+)
 
 client.handleCapability(CLIENT_OPEN_PATH, async (path: string) => {
   const error = await shell.openPath(path)
@@ -294,7 +295,7 @@ client.onConnectionStateChanged((state) => {
     state = startResult.state
 
     // 3. Open browser for user consent (local — must open on the user's machine, not remote server)
-    await shell.openExternal(startResult.authUrl)
+    await openSafeExternalUrl(startResult.authUrl, (safeUrl) => shell.openExternal(safeUrl))
 
     // 4. Wait for OAuth provider to redirect to our callback server
     const callback = await callbackServer.promise
@@ -341,7 +342,7 @@ client.onConnectionStateChanged((state) => {
   try {
     const result = await client.invoke('onboarding:startClaudeOAuth')
     if (result.success && result.authUrl) {
-      await shell.openExternal(result.authUrl)
+      await openSafeExternalUrl(result.authUrl, (safeUrl) => shell.openExternal(safeUrl))
     }
     return result
   } catch (err) {
@@ -377,7 +378,7 @@ client.onConnectionStateChanged((state) => {
     state = startResult.state
 
     // 3. Open browser for user consent
-    await shell.openExternal(startResult.authUrl)
+    await openSafeExternalUrl(startResult.authUrl, (safeUrl) => shell.openExternal(safeUrl))
 
     // 4. Wait for OpenAI to redirect to our callback server
     const callback = await callbackServer.promise
@@ -434,7 +435,7 @@ client.onConnectionStateChanged((state) => {
     flowId = startResult.flowId
     state = startResult.state
 
-    await shell.openExternal(startResult.authUrl)
+    await openSafeExternalUrl(startResult.authUrl, (safeUrl) => shell.openExternal(safeUrl))
 
     const callback = await callbackServer.promise
     if (callback.query.error) {

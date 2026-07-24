@@ -101,14 +101,8 @@ mac:
     # and never appears in the privacy pane (craft-agents-oss#938).
     NSLocalNetworkUsageDescription: "Robb Agents uses your local network to reach LAN addresses and devices you ask an agent to access, such as local servers or APIs."
   target:
-    - target: dmg
-      arch:
-        - arm64
-        - x64
-    - target: zip
-      arch:
-        - arm64
-        - x64
+    - dmg
+    - zip
   # `notarize: true` is activated only when standard Apple credentials are
   # supplied by the release operator/CI; local developer builds remain usable.
   notarize: true
@@ -223,9 +217,7 @@ linux:
   category: Utility
   maintainer: "Robb Agents Contributors"
   target:
-    - target: AppImage
-      arch:
-        - x64
+    - AppImage
   artifactName: "Robb-Agents-${arch}.${ext}"
   extraResources:
     - from: node_modules/@anthropic-ai/claude-agent-sdk

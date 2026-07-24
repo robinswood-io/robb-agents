@@ -11,7 +11,13 @@ import type { EventBus, BaseEventPayload } from '../event-bus.ts';
 import type { AutomationHandler, AutomationsConfigProvider } from './types.ts';
 import { APP_EVENTS, type AutomationEvent, type WebhookAction, type WebhookActionResult, type AppEvent } from '../types.ts';
 import { matcherMatches, buildWebhookEnv, expandEnvVars } from '../utils.ts';
-import { executeWithRetry, redactUrl, isTransientFailure, createWebhookHistoryEntry, expandWebhookAction } from '../webhook-utils.ts';
+import {
+  executeWithRetry,
+  redactUrl,
+  isTransientFailure,
+  createWebhookHistoryEntry,
+  prepareWebhookActionForDeferredRetry,
+} from '../webhook-utils.ts';
 import { RetryScheduler } from '../retry-scheduler.ts';
 import { appendAutomationHistoryEntry } from '../history-store.ts';
 
@@ -241,12 +247,16 @@ export class WebhookHandler implements AutomationHandler {
 
       // Enqueue for deferred retry if it's a transient failure (5xx / timeout)
       // and immediate retries were exhausted (attempts > 1 means retries ran).
-      // Pre-expand the action so retries don't need the original event env.
+      // Expand event data but keep secret references for just-in-time retry.
       if (isTransientFailure(result)) {
         if (result.attempts && result.attempts > 1) {
-          const expandedAction = expandWebhookAction(task.action, env);
-          this.retryScheduler.enqueue(task.matcherId, expandedAction, result.url, result.error)
-            .catch(e => log.debug(`[WebhookHandler] Failed to enqueue for deferred retry: ${e}`));
+          try {
+            const deferredAction = prepareWebhookActionForDeferredRetry(task.action, env);
+            this.retryScheduler.enqueue(task.matcherId, deferredAction, redactUrl(result.url), result.error)
+              .catch(e => log.debug(`[WebhookHandler] Failed to enqueue for deferred retry: ${e}`));
+          } catch (e) {
+            log.debug(`[WebhookHandler] Deferred retry rejected by secret policy: ${e}`);
+          }
         }
       }
     }

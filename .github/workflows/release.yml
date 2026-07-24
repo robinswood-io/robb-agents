@@ -215,15 +215,18 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: "1.3.9"
+      - name: Install Linux desktop smoke dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes xvfb libgtk-3-0 libnss3 libasound2t64 libxss1 libgbm1
       - name: Build and validate Linux AppImage
         env:
           # Public Linux artifacts are checksum/provenance verified. They do
           # not claim macOS/Windows code-signing status.
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
+          ROBB_PACKAGE_LAUNCH_SMOKE: "1"
         run: |
           bash apps/electron/scripts/build-linux.sh x64
-          python3 scripts/robinswood-linux-packaged-smoke.py \
-            --appimage apps/electron/release/Robb-Agents-x64.AppImage
           cat > apps/electron/release/PROVENANCE-linux-x64.txt <<EOF
           product=Robb Agents
           version=${{ needs.preflight.outputs.version }}

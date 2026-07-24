@@ -21,7 +21,7 @@
     "!apps/online-docs"
   ],
   "scripts": {
-    "test": "bun test && for f in $(find . -name '*.isolated.ts' -not -path './node_modules/*'); do bun test \"$f\" || exit 1; done",
+    "test": "bash scripts/run-workspace-tests.sh",
     "typecheck": "bun run typecheck:shared",
     "typecheck:shared": "cd packages/shared && bun run tsc --noEmit",
     "typecheck:staged": "bash scripts/typecheck-staged.sh",
@@ -41,8 +41,9 @@
     "test:shared:playbooks": "cd packages/shared && bun test src/playbooks/validation.test.ts src/playbooks/storage.test.ts src/playbooks/builtins.test.ts",
     "test:shared:automations": "cd packages/shared && bun test src/automations/execution-policy.test.ts",
     "test:shared:all": "bun run test:shared:llm-connections && bun run test:shared:models-pi && bun run test:shared:config && bun run test:shared:autonomy && bun run test:shared:playbooks && bun run test:shared:automations",
+    "test:package-audit": "python3 scripts/tests/test_robb_package_audit.py",
     "test:doc-tools": "python3 -m unittest apps.electron.resources.scripts.tests.test_pdf_tool_smoke apps.electron.resources.scripts.tests.test_xlsx_tool_smoke apps.electron.resources.scripts.tests.test_docx_tool_smoke apps.electron.resources.scripts.tests.test_pptx_tool_smoke apps.electron.resources.scripts.tests.test_img_tool_smoke apps.electron.resources.scripts.tests.test_ical_tool_smoke apps.electron.resources.scripts.tests.test_doc_diff_smoke apps.electron.resources.scripts.tests.test_markitdown_smoke",
-    "validate:dev": "bun run typecheck:all && bun run test:shared:all && bun run test:doc-tools",
+    "validate:dev": "bun run typecheck:all && bun run test:shared:all && bun run test:package-audit && bun run test:doc-tools",
     "validate:ci": "bun run validate:dev && bun run lint:i18n:parity && bun run lint:i18n:sorted && bun run lint:i18n:coverage",
     "lint:ipc-sends": "bash scripts/check-raw-sends.sh",
     "lint:tool-name-checks": "bash scripts/check-task-tool-checks.sh",
@@ -68,6 +69,13 @@
     "electron:build": "bun run electron:build:main && bun run electron:build:preload && bun run electron:build:renderer && bun run electron:build:resources && bun run electron:build:assets",
     "electron:start": "bun run electron:build && electron apps/electron",
     "electron:dev": "bun run rtk:prepare && bun run scripts/electron-dev.ts",
+    "electron:dev:playwright": "mkdir -p /tmp/robb-agents-playwright && CRAFT_VITE_PORT=6173 CRAFT_INSTANCE_NUMBER=e2e CRAFT_APP_NAME='Robb Agents E2E' CRAFT_CONFIG_DIR=/tmp/robb-agents-playwright CRAFT_DEEPLINK_SCHEME=robbagentse2e CRAFT_ELECTRON_REMOTE_DEBUGGING_PORT=9333 bun run electron:dev",
+    "test:ui:robb": "bun run scripts/run-robb-playwright-validation.ts",
+    "test:connectors:sandbox": "bun run scripts/robb-connector-sandbox-e2e.ts",
+    "test:interop:external": "bun run scripts/robb-interop-conformance.ts",
+    "test:evals:providers": "bun run scripts/robb-provider-evals.ts",
+    "test:otlp:collector": "bun run scripts/robb-otlp-collector-smoke.ts",
+    "test:recovery:campaign": "bun run scripts/robb-recovery-campaign.ts --runs 1000 --min-safe-rate 0.99",
     "electron:dev:terminal": "bun run scripts/electron-dev.ts --terminal",
     "electron:dev:menu": "bash scripts/electron-dev.sh",
     "electron:dev:logs": "pgrep -f 'tail -f.*@craft-agent/electron/main.log' > /dev/null || osascript -e \"tell application \\\"Terminal\\\" to do script \\\"$PWD/scripts/tail-electron-logs.sh\\\"\"",
@@ -185,7 +193,6 @@
     "linkify-it": "^5.0.0",
     "lucide-react": "^0.561.0",
     "marked": "^17.0.1",
-    "markitdown-js": "^0.0.14",
     "open": "^11.0.0",
     "prosemirror-highlight": "^0.15.0",
     "react": "^18.3.1",
@@ -203,14 +210,22 @@
     "tiptap-markdown": "^0.9.0",
     "zod": "^4.0.0"
   },
+  "overrides": {
+    "@hono/node-server": "2.0.11",
+    "axios": "1.18.1",
+    "fast-uri": "3.1.4",
+    "music-metadata": "11.14.0",
+    "shell-quote": "1.10.0",
+    "uuid": "11.1.1"
+  },
   "optionalDependencies": {
-    "@img/sharp-darwin-arm64": "0.34.5",
-    "@img/sharp-darwin-x64": "0.34.5",
-    "@img/sharp-linux-arm64": "0.34.5",
-    "@img/sharp-linux-x64": "0.34.5",
-    "@img/sharp-libvips-darwin-arm64": "1.2.4",
-    "@img/sharp-libvips-darwin-x64": "1.2.4",
-    "@img/sharp-libvips-linux-arm64": "1.2.4",
-    "@img/sharp-libvips-linux-x64": "1.2.4"
+    "@img/sharp-darwin-arm64": "0.35.3",
+    "@img/sharp-darwin-x64": "0.35.3",
+    "@img/sharp-linux-arm64": "0.35.3",
+    "@img/sharp-linux-x64": "0.35.3",
+    "@img/sharp-libvips-darwin-arm64": "1.3.2",
+    "@img/sharp-libvips-darwin-x64": "1.3.2",
+    "@img/sharp-libvips-linux-arm64": "1.3.2",
+    "@img/sharp-libvips-linux-x64": "1.3.2"
   }
 }

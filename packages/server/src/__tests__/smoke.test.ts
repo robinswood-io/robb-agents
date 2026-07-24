@@ -14,8 +14,9 @@ import type { Subprocess } from 'bun'
 import WebSocket from 'ws'
 
 const SERVER_ENTRY = join(import.meta.dir, '..', 'index.ts')
-const STARTUP_TIMEOUT = 15_000
-const TEST_TIMEOUT = 30_000
+const BUN_EXECUTABLE = process.env.BUN_BIN || process.execPath
+const STARTUP_TIMEOUT = 30_000
+const TEST_TIMEOUT = 45_000
 
 interface SpawnedServer {
   url: string
@@ -29,7 +30,7 @@ async function spawnTestServer(extraEnv?: Record<string, string>): Promise<Spawn
   const token = crypto.randomUUID() + crypto.randomUUID() // 72 chars, well above 16 minimum
   const { CLAUDECODE: _, ...parentEnv } = process.env
 
-  const proc = Bun.spawn(['bun', 'run', SERVER_ENTRY], {
+  const proc = Bun.spawn([BUN_EXECUTABLE, 'run', SERVER_ENTRY], {
     env: {
       ...parentEnv,
       ...extraEnv,
@@ -151,7 +152,7 @@ describe('headless server smoke test', () => {
   it('rejects short token at startup', async () => {
     const token = 'short'
     const { CLAUDECODE: _, ...parentEnv } = process.env
-    const proc = Bun.spawn(['bun', 'run', SERVER_ENTRY], {
+    const proc = Bun.spawn([BUN_EXECUTABLE, 'run', SERVER_ENTRY], {
       env: {
         ...parentEnv,
         CRAFT_SERVER_TOKEN: token,

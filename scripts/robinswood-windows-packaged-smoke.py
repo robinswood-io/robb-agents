@@ -12,6 +12,8 @@ import hashlib
 from pathlib import Path
 import sys
 
+from robb_package_audit import artifact_size_finding, format_bytes
+
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_INSTALLER = ROOT / "apps" / "electron" / "release" / "Robb-Agents-x64.exe"
 DEFAULT_CHECKSUMS = ROOT / "apps" / "electron" / "release" / "SHA256SUMS-windows-x64.txt"
@@ -46,6 +48,9 @@ def main() -> None:
         fail(f"Unexpected installer name: {installer.name}")
     if installer.stat().st_size < 1_000_000:
         fail(f"Installer is implausibly small: {installer.stat().st_size} bytes")
+    size_finding = artifact_size_finding(installer)
+    if size_finding is not None:
+        fail(f"{size_finding.path}: {size_finding.reason}")
 
     with installer.open("rb") as handle:
         if handle.read(2) != b"MZ":
@@ -59,7 +64,7 @@ def main() -> None:
     if expected_line not in lines:
         fail("SHA-256 checksum file does not match installer")
 
-    print("OK: Windows installer name and size")
+    print(f"OK: Windows installer name and size ({format_bytes(installer.stat().st_size)})")
     print("OK: Windows PE/NSIS header and Robb artifact identity")
     print("OK: Windows installer SHA-256 checksum")
 

@@ -24,10 +24,15 @@
     "./config": "./src/config/index.ts",
     "./docs": "./src/docs/index.ts",
     "./docs/doc-links": "./src/docs/doc-links.ts",
+    "./evals": "./src/evals/index.ts",
     "./config/types": "./src/config/types.ts",
+    "./connectors": "./src/connectors/index.ts",
     "./credentials": "./src/credentials/index.ts",
+    "./governance": "./src/governance/index.ts",
+    "./interop": "./src/interop/index.ts",
     "./mcp": "./src/mcp/index.ts",
     "./prompts": "./src/prompts/index.ts",
+    "./remote-supervision": "./src/remote-supervision/index.ts",
     "./sessions": "./src/sessions/index.ts",
     "./projects": "./src/projects/index.ts",
     "./projects/types": "./src/projects/types.ts",
@@ -65,6 +70,7 @@
     "./automations/resolve-config-path": "./src/automations/resolve-config-path.ts",
     "./protocol": "./src/protocol/index.ts",
     "./tasks": "./src/tasks/index.ts",
+    "./telemetry": "./src/telemetry/index.ts",
     "./i18n": "./src/i18n/index.ts",
     "./resources": "./src/resources/index.ts",
     "./robinswood-branding": "./src/robinswood-branding.ts"
@@ -84,7 +90,7 @@
     "glob": "^13.0.0",
     "i18next": "^26.0.3",
     "incr-regex-package": "^1.0.4",
-    "shell-quote": "^1.8.3",
+    "shell-quote": "^1.10.0",
     "yaml": "^2.8.2"
   },
   "peerDependencies": {

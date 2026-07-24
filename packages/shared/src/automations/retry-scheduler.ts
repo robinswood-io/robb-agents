@@ -15,8 +15,9 @@
 import { readFile, writeFile, appendFile } from 'fs/promises';
 import { join } from 'path';
 import { createLogger } from '../utils/debug.ts';
-import { executeWebhookRequest, createWebhookHistoryEntry } from './webhook-utils.ts';
-import { AUTOMATIONS_RETRY_QUEUE_FILE } from './constants.ts';
+import { executeWebhookRequest, createWebhookHistoryEntry, redactUrl } from './webhook-utils.ts';
+import { buildWebhookSecretEnv } from './utils.ts';
+import { AUTOMATIONS_DEAD_LETTER_FILE, AUTOMATIONS_RETRY_QUEUE_FILE } from './constants.ts';
 import { appendAutomationHistoryEntry } from './history-store.ts';
 import type { WebhookAction, WebhookActionResult } from './types.ts';
 
@@ -43,10 +44,10 @@ export interface RetryQueueEntry {
   id: string;
   /** Matcher ID (for history correlation) */
   matcherId: string;
-  /** The webhook action with expanded values (no env vars needed at retry time) */
+  /** Event values expanded, CRAFT_WH_* secret references deliberately preserved. */
   action: WebhookAction;
-  /** Expanded URL (post-env-expansion) for safe logging */
-  expandedUrl: string;
+  /** Redacted URL only; never persist an expanded webhook URL. */
+  redactedUrl: string;
   /** Number of deferred attempts already made (0 = first deferred pending) */
   deferredAttempt: number;
   /** Timestamp when the next retry should happen */
@@ -55,6 +56,17 @@ export interface RetryQueueEntry {
   createdAt: number;
   /** Last error message */
   lastError?: string;
+}
+
+export interface DeadLetterEntry extends RetryQueueEntry {
+  deadLetteredAt: number;
+  finalError: string;
+}
+
+export interface DeadLetterReplayApproval {
+  approved: boolean;
+  approvedBy: string;
+  approvedAt: number;
 }
 
 // ============================================================================
@@ -103,14 +115,14 @@ export class RetryScheduler {
   async enqueue(
     matcherId: string,
     action: WebhookAction,
-    expandedUrl: string,
+    redactedUrl: string,
     lastError?: string,
   ): Promise<void> {
     const entry: RetryQueueEntry = {
       id: `${matcherId}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       matcherId,
       action,
-      expandedUrl,
+      redactedUrl: redactUrl(redactedUrl),
       deferredAttempt: 0,
       nextRetryAt: Date.now() + DEFERRED_DELAYS_MS[0]!,
       createdAt: Date.now(),
@@ -169,11 +181,14 @@ export class RetryScheduler {
         log.debug(`[RetryScheduler] Retrying ${entry.id} (deferred attempt ${entry.deferredAttempt + 1}/${MAX_DEFERRED_ATTEMPTS})`);
         let result: WebhookActionResult;
         try {
-          result = await executeWebhookRequest(entry.action, { timeoutMs: 30_000 });
+          result = await executeWebhookRequest(entry.action, {
+            timeoutMs: 30_000,
+            env: buildWebhookSecretEnv(),
+          });
         } catch (err) {
           result = {
             type: 'webhook',
-            url: entry.expandedUrl,
+            url: entry.redactedUrl,
             statusCode: 0,
             success: false,
             error: err instanceof Error ? err.message : 'Unknown error',
@@ -187,7 +202,7 @@ export class RetryScheduler {
             matcherId: entry.matcherId,
             ok: true,
             method: entry.action.method,
-            url: entry.expandedUrl,
+            url: entry.redactedUrl,
             statusCode: result.statusCode,
             durationMs: result.durationMs ?? 0,
             attempts: entry.deferredAttempt + 1,
@@ -205,7 +220,7 @@ export class RetryScheduler {
             matcherId: entry.matcherId,
             ok: false,
             method: entry.action.method,
-            url: entry.expandedUrl,
+            url: entry.redactedUrl,
             statusCode: result.statusCode,
             durationMs: result.durationMs ?? 0,
             attempts: entry.deferredAttempt + 1,
@@ -216,6 +231,17 @@ export class RetryScheduler {
           } catch (e) {
             log.debug(`[RetryScheduler] Failed to write history: ${e}`);
           }
+          const deadLetter: DeadLetterEntry = {
+            ...entry,
+            redactedUrl: redactUrl(entry.redactedUrl),
+            deadLetteredAt: Date.now(),
+            finalError: result.error ?? 'Unknown error',
+          };
+          await appendFile(
+            join(this.workspaceRootPath, AUTOMATIONS_DEAD_LETTER_FILE),
+            JSON.stringify(deadLetter) + '\n',
+            'utf-8',
+          );
           // Don't add to remaining — drop from queue
         } else {
           // Still retryable — schedule next deferred attempt
@@ -244,4 +270,61 @@ export class RetryScheduler {
     }
   }
 
+}
+
+export async function listDeadLetters(workspaceRootPath: string): Promise<DeadLetterEntry[]> {
+  try {
+    const raw = await readFile(join(workspaceRootPath, AUTOMATIONS_DEAD_LETTER_FILE), 'utf-8');
+    const entries: DeadLetterEntry[] = [];
+    for (const line of raw.split('\n')) {
+      if (!line.trim()) continue;
+      try {
+        entries.push(JSON.parse(line) as DeadLetterEntry);
+      } catch {
+        // Keep other valid entries inspectable if one append was interrupted.
+      }
+    }
+    return entries;
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Move one dead letter back to the durable retry queue. Replays are explicit
+ * human decisions and therefore require approval metadata.
+ */
+export async function replayDeadLetter(
+  workspaceRootPath: string,
+  entryId: string,
+  approval: DeadLetterReplayApproval,
+): Promise<void> {
+  if (!approval.approved || approval.approvedBy.trim() === '' || approval.approvedAt <= 0) {
+    throw new Error('Dead-letter replay requires explicit approval metadata');
+  }
+  const entries = await listDeadLetters(workspaceRootPath);
+  const target = entries.find((entry) => entry.id === entryId);
+  if (!target) throw new Error(`Dead-letter entry "${entryId}" not found`);
+
+  const replay: RetryQueueEntry = {
+    id: target.id,
+    matcherId: target.matcherId,
+    action: target.action,
+    redactedUrl: target.redactedUrl,
+    deferredAttempt: 0,
+    nextRetryAt: Date.now(),
+    createdAt: target.createdAt,
+    lastError: `Replay approved by ${approval.approvedBy} at ${new Date(approval.approvedAt).toISOString()}`,
+  };
+  await appendFile(
+    join(workspaceRootPath, AUTOMATIONS_RETRY_QUEUE_FILE),
+    JSON.stringify(replay) + '\n',
+    'utf-8',
+  );
+  const remaining = entries.filter((entry) => entry.id !== entryId);
+  await writeFile(
+    join(workspaceRootPath, AUTOMATIONS_DEAD_LETTER_FILE),
+    remaining.length ? remaining.map((entry) => JSON.stringify(entry)).join('\n') + '\n' : '',
+    'utf-8',
+  );
 }

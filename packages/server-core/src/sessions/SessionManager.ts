@@ -9,6 +9,7 @@ import { existsSync } from 'fs'
 import { readFile, writeFile, mkdir } from 'fs/promises'
 import { randomUUID } from 'node:crypto'
 import type { AutonomyEvent } from '@craft-agent/core/types'
+import type { ExecutionTelemetryEvent } from '@craft-agent/core/types'
 import { type AgentEvent, setPermissionMode, hydratePreviousPermissionMode, getPermissionModeDiagnostics, type PermissionMode, unregisterSessionScopedToolCallbacks, mergeSessionScopedToolCallbacks, AbortReason, type AuthRequest, type AuthResult, type CredentialAuthRequest, type BrowserPaneFns, generateConversationSummary, resolveKeepBackgroundTasksAlive, decideAutonomyRecovery } from '@craft-agent/shared/agent'
 import {
   resolveSessionConnection,
@@ -21,7 +22,7 @@ import {
   type BackendHostRuntimeContext,
   type PostInitResult,
 } from '@craft-agent/shared/agent/backend'
-import { getLlmConnection, getLlmConnections, getDefaultLlmConnection, getDefaultThinkingLevel, getBrowserToolEnabled, resetManagedAnthropicAuthEnvVars, resolveMidStreamBehavior, getPersistedUiLanguage, resolveTitleLanguageName, resolveRoutingPolicy, maxRoutingSensitivity } from '@craft-agent/shared/config'
+import { getLlmConnection, getLlmConnections, getDefaultLlmConnection, getDefaultThinkingLevel, getBrowserToolEnabled, resetManagedAnthropicAuthEnvVars, resolveMidStreamBehavior, getPersistedUiLanguage, resolveTitleLanguageName, resolveRoutingPolicy, maxRoutingSensitivity, classifyLocalRoutingRequirements } from '@craft-agent/shared/config'
 import { formatPlaybookPrompt, getBuiltinPlaybook, loadWorkspacePlaybook } from '@craft-agent/shared/playbooks'
 import { PrivilegedExecutionBroker } from '@craft-agent/server-core/services'
 import { isValidWorkingDirectory } from '../utils/path-validation'
@@ -99,8 +100,15 @@ import { ensureLabelsExist, ensureTaskItemLabel } from '@craft-agent/shared/labe
 import { loadStatusConfig } from '@craft-agent/shared/statuses/storage'
 import { AutomationSystem, createPromptHistoryEntry, appendAutomationHistoryEntry, type AutomationSystemMetadataSnapshot } from '@craft-agent/shared/automations'
 import { buildBackendRuntimeSignature, buildRestartRequiredSignature, filterAttachmentsForModelInput } from './runtime-config'
-import { buildRoutingCostMeta, applyRoutingCostMetaToLatestAssistantMessage } from '@craft-agent/shared/audit'
-import { classifyRoutingFallbackReason, selectRoutingFallbackCandidate } from './routing-fallback'
+import { buildRoutingCostMeta, applyRoutingCostMetaToLatestAssistantMessage, resolveRoutingCostOptions } from '@craft-agent/shared/audit'
+import { OtlpHttpTelemetrySink, resolveOtlpTelemetryConfig, type ExecutionTelemetrySink } from '@craft-agent/shared/telemetry'
+import {
+  classifyRoutingFallbackReason,
+  isRoutingCircuitOpen,
+  recordRoutingCircuitFailure,
+  selectRoutingFallbackCandidate,
+  type RoutingCircuitState,
+} from './routing-fallback'
 
 // Import from server-core domain utilities
 import { sanitizeForTitle, shouldActivateBrowserOverlay, normalizeBrowserToolName, rollbackFailedBranchCreation, releaseBrowserOwnershipOnForcedStop } from '@craft-agent/server-core/domain'
@@ -1011,6 +1019,11 @@ interface ManagedSession {
   pendingRoutingMeta?: Partial<RoutingMeta>
   // Runtime-only: policy-authorized fallback candidates for the current turn.
   pendingRoutingFallbackConnectionSlugs?: string[]
+  // Runtime-only: bounded fallback attempts and per-turn loop prevention.
+  routingFallbackAttempts?: number
+  routingAttemptedConnectionSlugs?: Set<string>
+  // Runtime-only: consecutive connection failures and cooldown windows.
+  routingCircuitStates?: Map<string, RoutingCircuitState>
   // Source-activation auto-retry (craft-agents-oss#804). When a source activates
   // mid-turn, we re-send the original message with a "[<slug> activated]" suffix
   // after a short delay. The pending slot lets `sendMessage` dedup a duplicate
@@ -1025,6 +1038,7 @@ interface ManagedSession {
 }
 
 const PI_SDK_MESSAGE_ID_CACHE_LIMIT = 256
+const MAX_ROUTING_FALLBACKS_PER_TURN = 2
 
 export interface AutoRetryPendingHost {
   autoRetryPending?: {
@@ -1209,7 +1223,11 @@ export class SessionManager implements ISessionManager {
     sessionId: string
     type?: 'bash' | 'file_write' | 'mcp_mutation' | 'api_mutation' | 'admin_approval'
     commandHash?: string
+    toolName?: string
+    requestedAt: number
   }> = new Map()
+  // Workspace-scoped OTLP sinks. A sink is created only after explicit workspace opt-in.
+  private telemetrySinks: Map<string, ExecutionTelemetrySink> = new Map()
   // Privileged approval binding + audit logger
   private privilegedExecutionBroker = new PrivilegedExecutionBroker(sessionLog)
   // Session-local admin remember windows (exact command hash binding)
@@ -1279,6 +1297,29 @@ export class SessionManager implements ISessionManager {
     } else if (was && !processing) {
       sessionRuntimeHooks.onSessionStopped()
     }
+  }
+
+  private emitExecutionTelemetry(
+    managed: ManagedSession,
+    event: ExecutionTelemetryEvent,
+  ): void {
+    const workspaceId = managed.workspace.id
+    const config = resolveOtlpTelemetryConfig(process.env, workspaceId)
+    if (!config.enabled) return
+
+    let sink = this.telemetrySinks.get(workspaceId)
+    if (!sink) {
+      sink = new OtlpHttpTelemetrySink(config)
+      this.telemetrySinks.set(workspaceId, sink)
+    }
+
+    void sink.emit(event).catch(error => {
+      sessionLog.warn('OTLP telemetry export failed', {
+        workspaceId,
+        eventName: event.name,
+        message: error instanceof Error ? error.message : String(error),
+      })
+    })
   }
 
   /** Wait until initialize() has completed (sessions loaded from disk).
@@ -3339,12 +3380,38 @@ export class SessionManager implements ISessionManager {
     const sourceSensitivity = maxRoutingSensitivity(
       enabledSources.map(source => source.config.routingSensitivity)
     )
+    const latestUserMessage = [...(managed.messages ?? [])]
+      .reverse()
+      .find(message => message.role === 'user')
+    const classification = classifyLocalRoutingRequirements({
+      text: latestUserMessage?.content ?? '',
+      hasImages: latestUserMessage?.attachments?.some(attachment => attachment.type === 'image') ?? false,
+      requestedToolNames: enabledSourceSlugs,
+      contextTokens: managed.tokenUsage?.contextTokens,
+    })
+    const completedAssistantTurns = (managed.messages ?? []).filter(message =>
+      message.role === 'assistant' && !message.isIntermediate
+    ).length
+    const projectedTurnUsd = completedAssistantTurns > 0 && typeof managed.tokenUsage?.costUsd === 'number'
+      ? managed.tokenUsage.costUsd / completedAssistantTurns
+      : 0
+    const unavailableConnectionSlugs = connections
+      .filter(connection => isRoutingCircuitOpen(managed.routingCircuitStates?.get(connection.slug)))
+      .map(connection => connection.slug)
 
     const decision = resolveRoutingPolicy(policy, connections, {
       requestedConnectionSlug,
       sensitivity: sourceSensitivity,
       sourceSlugs: enabledSourceSlugs,
       tags: managed.labels ?? [],
+      difficulty: classification.difficulty,
+      requiredCapabilities: classification.requiredCapabilities,
+      contextTokens: managed.tokenUsage?.contextTokens,
+      unavailableConnectionSlugs,
+      budgetUsage: {
+        sessionUsd: managed.tokenUsage?.costUsd ?? 0,
+        projectedTurnUsd,
+      },
     })
 
     for (const warning of decision.warnings) {
@@ -3373,6 +3440,11 @@ export class SessionManager implements ISessionManager {
       reason: 'router',
       sensitivity: decision.sensitivity,
       policyRuleIds: decision.matchedRuleIds,
+      routingDifficulty: classification.difficulty,
+      requiredCapabilities: classification.requiredCapabilities,
+      routingExplanation: decision.explanation,
+      rejectedConnections: decision.rejectedCandidates,
+      budgetDecision: decision.budget,
       ...(previousFallbackMeta.fallbackFromConnectionSlug ? previousFallbackMeta : {}),
     }
     managed.pendingRoutingFallbackConnectionSlugs = decision.fallbackConnectionSlugs
@@ -3423,9 +3495,34 @@ export class SessionManager implements ISessionManager {
 
   private async tryApplyRoutingFallbackAfterAgentFailure(managed: ManagedSession, error: unknown): Promise<boolean> {
     const primarySlug = managed.llmConnection
+    if (!primarySlug) return false
+    const attempted = managed.routingAttemptedConnectionSlugs ?? new Set<string>()
+    attempted.add(primarySlug)
+    managed.routingAttemptedConnectionSlugs = attempted
+
+    const circuitStates = managed.routingCircuitStates ?? new Map<string, RoutingCircuitState>()
+    circuitStates.set(
+      primarySlug,
+      recordRoutingCircuitFailure(circuitStates.get(primarySlug)),
+    )
+    managed.routingCircuitStates = circuitStates
+
+    const fallbackAttempts = managed.routingFallbackAttempts ?? 0
+    if (fallbackAttempts >= MAX_ROUTING_FALLBACKS_PER_TURN) {
+      sessionLog.warn(`routingPolicy stopped fallback loop for session ${managed.id} after ${fallbackAttempts} attempts`)
+      return false
+    }
+
     const candidates = (managed.pendingRoutingFallbackConnectionSlugs ?? []).filter(slug => slug && slug !== primarySlug)
-    const fallbackSlug = selectRoutingFallbackCandidate(primarySlug, candidates, slug => !!getLlmConnection(slug))
-    if (!primarySlug || !fallbackSlug) return false
+    const fallbackSlug = selectRoutingFallbackCandidate(
+      primarySlug,
+      candidates,
+      slug => !!getLlmConnection(slug),
+      slug => attempted.has(slug) || isRoutingCircuitOpen(circuitStates.get(slug)),
+    )
+    if (!fallbackSlug) return false
+    attempted.add(fallbackSlug)
+    managed.routingFallbackAttempts = fallbackAttempts + 1
 
     const fallbackReason = classifyRoutingFallbackReason(error)
     sessionLog.warn(`routingPolicy fallback for session ${managed.id}: ${primarySlug} -> ${fallbackSlug} (${fallbackReason})`, {
@@ -4173,11 +4270,25 @@ export class SessionManager implements ISessionManager {
           sessionId: managed.id,
           type: request.type,
           commandHash: effectiveCommandHash,
+          toolName: request.toolName,
+          requestedAt: Date.now(),
+        })
+        this.emitExecutionTelemetry(managed, {
+          schemaVersion: 1,
+          eventId: randomUUID(),
+          timestamp: Date.now(),
+          name: 'permission.requested',
+          correlation: {
+            workspaceId: managed.workspace.id,
+            sessionId: managed.id,
+          },
+          permissionKind: request.type ?? request.toolName,
         })
 
         if (request.type === 'admin_approval' && effectiveCommandHash && this.hasActiveAdminRememberApproval(managed.id, effectiveCommandHash)) {
           const brokerResult = this.privilegedExecutionBroker.resolveApproval(request.requestId, true, {
             expectedCommandHash: effectiveCommandHash,
+            expectedSessionId: managed.id,
           })
 
           this.pendingPermissionRequests.delete(request.requestId)
@@ -4190,6 +4301,19 @@ export class SessionManager implements ISessionManager {
             })
             const liveAgent = managed.agent
             if (liveAgent) {
+              this.emitExecutionTelemetry(managed, {
+                schemaVersion: 1,
+                eventId: randomUUID(),
+                timestamp: Date.now(),
+                name: 'permission.resolved',
+                correlation: {
+                  workspaceId: managed.workspace.id,
+                  sessionId: managed.id,
+                },
+                permissionKind: request.type ?? request.toolName,
+                resolution: 'approved',
+                durationMs: 0,
+              })
               liveAgent.respondToPermission(request.requestId, true, false)
               return
             }
@@ -6223,13 +6347,17 @@ export class SessionManager implements ISessionManager {
     // Get or create the agent (lazy loading). Its internal cold-session build at
     // ~L2956 now sees fresh tokens (or correctly-needs_auth failed sources, since
     // ensureFreshToken mirrors the disk write to source.config in-memory).
+    managed.routingFallbackAttempts = 0
+    managed.routingAttemptedConnectionSlugs = new Set()
     let agent: AgentInstance
-    try {
-      agent = await this.getOrCreateAgent(managed)
-    } catch (error) {
-      const didFallback = await this.tryApplyRoutingFallbackAfterAgentFailure(managed, error)
-      if (!didFallback) throw error
-      agent = await this.getOrCreateAgent(managed)
+    while (true) {
+      try {
+        agent = await this.getOrCreateAgent(managed)
+        break
+      } catch (error) {
+        const didFallback = await this.tryApplyRoutingFallbackAfterAgentFailure(managed, error)
+        if (!didFallback) throw error
+      }
     }
     sendSpan.mark('agent.ready')
 
@@ -7108,10 +7236,24 @@ export class SessionManager implements ISessionManager {
       if (requestMeta?.type === 'admin_approval') {
         const brokerResult = this.privilegedExecutionBroker.resolveApproval(requestId, allowed, {
           expectedCommandHash: requestMeta.commandHash,
+          expectedSessionId: sessionId,
         })
         if (!brokerResult.ok) {
           sessionLog.warn(`Admin approval rejected by broker for ${requestId}: ${brokerResult.reason}`)
           // Broker rejection should fail closed.
+          this.emitExecutionTelemetry(managed, {
+            schemaVersion: 1,
+            eventId: randomUUID(),
+            timestamp: Date.now(),
+            name: 'permission.resolved',
+            correlation: {
+              workspaceId: managed.workspace.id,
+              sessionId,
+            },
+            permissionKind: requestMeta.type ?? requestMeta.toolName ?? 'unknown',
+            resolution: 'denied',
+            durationMs: Math.max(0, Date.now() - requestMeta.requestedAt),
+          })
           managed.agent.respondToPermission(requestId, false, false)
           return false
         }
@@ -7122,6 +7264,21 @@ export class SessionManager implements ISessionManager {
       }
 
       sessionLog.info(`Permission response for ${requestId}: allowed=${allowed}, alwaysAllow=${alwaysAllow}`)
+      if (requestMeta) {
+        this.emitExecutionTelemetry(managed, {
+          schemaVersion: 1,
+          eventId: randomUUID(),
+          timestamp: Date.now(),
+          name: 'permission.resolved',
+          correlation: {
+            workspaceId: managed.workspace.id,
+            sessionId,
+          },
+          permissionKind: requestMeta.type ?? requestMeta.toolName ?? 'unknown',
+          resolution: allowed ? 'approved' : 'denied',
+          durationMs: Math.max(0, Date.now() - requestMeta.requestedAt),
+        })
+      }
       managed.agent.respondToPermission(requestId, allowed, alwaysAllow)
       return true
     } else {
@@ -7781,6 +7938,11 @@ export class SessionManager implements ISessionManager {
             managed.pendingRoutingMeta = undefined
             managed.pendingRoutingFallbackConnectionSlugs = undefined
           }
+          managed.routingFallbackAttempts = undefined
+          managed.routingAttemptedConnectionSlugs = undefined
+          if (managed.llmConnection) {
+            managed.routingCircuitStates?.delete(managed.llmConnection)
+          }
 
           if (event.sdkMessageId) {
             let cache = managed.piSdkMessageToCraftMessage
@@ -7796,6 +7958,29 @@ export class SessionManager implements ISessionManager {
               if (oldest !== undefined) cache.delete(oldest)
             }
           }
+        }
+
+        if (!event.isIntermediate) {
+          const routingMeta = assistantMessage.routingMeta
+          this.emitExecutionTelemetry(managed, {
+            schemaVersion: 1,
+            eventId: randomUUID(),
+            timestamp: assistantMessage.timestamp,
+            name: routingMeta?.fallbackFromConnectionSlug
+              ? 'routing.fallback'
+              : 'routing.selected',
+            correlation: {
+              workspaceId,
+              sessionId,
+              ...(event.turnId ? { turnId: event.turnId } : {}),
+            },
+            connectionSlug: routingMeta?.connectionSlug,
+            providerType: routingMeta?.providerType,
+            model: routingMeta?.model,
+            sensitivity: routingMeta?.sensitivity,
+            policyRuleIds: routingMeta?.policyRuleIds,
+            fallbackReason: routingMeta?.fallbackReason,
+          })
         }
 
         this.sendEvent({ type: 'text_complete', sessionId, text: event.text, isIntermediate: event.isIntermediate, turnId: event.turnId, parentToolUseId: event.parentToolUseId, timestamp: assistantMessage.timestamp, messageId: assistantMessage.id, routingMeta: assistantMessage.routingMeta }, workspaceId)
@@ -7916,6 +8101,25 @@ export class SessionManager implements ISessionManager {
             parentToolUseId,
           }
           managed.messages.push(toolStartMessage)
+        }
+
+        if (!isDuplicateEvent) {
+          const toolStartTimestamp = managed.messages.find(message =>
+            message.toolUseId === event.toolUseId
+          )?.timestamp ?? this.monotonic()
+          this.emitExecutionTelemetry(managed, {
+            schemaVersion: 1,
+            eventId: randomUUID(),
+            timestamp: toolStartTimestamp,
+            name: 'tool.started',
+            correlation: {
+              workspaceId,
+              sessionId,
+              ...(event.turnId ? { turnId: event.turnId } : {}),
+              toolCallId: event.toolUseId,
+            },
+            toolName: event.toolName,
+          })
         }
 
         // Activate browser agent control overlay on actionable browser tool starts.
@@ -8081,6 +8285,28 @@ export class SessionManager implements ISessionManager {
           }, workspaceId)
         }
 
+        if (!wasAlreadyComplete) {
+          const completedAt = Date.now()
+          this.emitExecutionTelemetry(managed, {
+            schemaVersion: 1,
+            eventId: randomUUID(),
+            timestamp: completedAt,
+            name: inferredError ? 'tool.failed' : 'tool.completed',
+            correlation: {
+              workspaceId,
+              sessionId,
+              ...(event.turnId ? { turnId: event.turnId } : {}),
+              toolCallId: event.toolUseId,
+            },
+            toolName,
+            outcome: inferredError ? 'failed' : 'success',
+            ...(existingToolMsg
+              ? { durationMs: Math.max(0, completedAt - existingToolMsg.timestamp) }
+              : {}),
+            ...(inferredError ? { errorCode: 'tool_error' } : {}),
+          })
+        }
+
         // Safety net: when a parent Task completes, mark all its still-pending child tools as completed.
         // This handles the case where child tool_result events never arrive (e.g., subagent internal tools
         // whose results aren't surfaced through the parent stream).
@@ -8103,6 +8329,21 @@ export class SessionManager implements ISessionManager {
               turnId: child.turnId,
               parentToolUseId: event.toolUseId,
             }, workspaceId)
+            this.emitExecutionTelemetry(managed, {
+              schemaVersion: 1,
+              eventId: randomUUID(),
+              timestamp: Date.now(),
+              name: 'tool.completed',
+              correlation: {
+                workspaceId,
+                sessionId,
+                ...(child.turnId ? { turnId: child.turnId } : {}),
+                ...(child.toolUseId ? { toolCallId: child.toolUseId } : {}),
+              },
+              toolName: child.toolName || 'unknown',
+              outcome: 'success',
+              durationMs: Math.max(0, Date.now() - child.timestamp),
+            })
           }
         }
 
@@ -8538,10 +8779,33 @@ export class SessionManager implements ISessionManager {
             managed.tokenUsage.contextWindow = event.usage.contextWindow
           }
 
+          const costMeta = buildRoutingCostMeta(
+            event.usage,
+            resolveRoutingCostOptions(process.env),
+          )
           const updatedMessage = applyRoutingCostMetaToLatestAssistantMessage(
             managed.messages,
-            buildRoutingCostMeta(event.usage),
+            costMeta,
           )
+          this.emitExecutionTelemetry(managed, {
+            schemaVersion: 1,
+            eventId: randomUUID(),
+            timestamp: Date.now(),
+            name: 'cost.recorded',
+            correlation: {
+              workspaceId,
+              sessionId,
+              ...(updatedMessage?.turnId ? { turnId: updatedMessage.turnId } : {}),
+            },
+            source: costMeta.costProvenance?.source ?? costMeta.tokenUsageSource ?? 'unavailable',
+            estimatedCostUsd: costMeta.estimatedCostUsd,
+            actualCostUsd: costMeta.actualCostUsd,
+            estimatedCostEur: costMeta.estimatedCostEur,
+            actualCostEur: costMeta.actualCostEur,
+            pricingCatalogVersion: costMeta.costProvenance?.pricingCatalogVersion,
+            exchangeRateAsOf: costMeta.costProvenance?.exchangeRateAsOf,
+            exchangeRateSource: costMeta.costProvenance?.exchangeRateSource,
+          })
           if (updatedMessage?.routingMeta) {
             this.sendEvent({
               type: 'text_complete',

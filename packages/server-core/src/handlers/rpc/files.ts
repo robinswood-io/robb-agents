@@ -8,9 +8,12 @@ import type { StoredAttachment } from '@craft-agent/core/types'
 import { readFileAttachment, validateImageForClaudeAPI, IMAGE_LIMITS } from '@craft-agent/shared/utils'
 import { getSessionAttachmentsPath, validateSessionId } from '@craft-agent/shared/sessions'
 import { getWorkspaceByNameOrId } from '@craft-agent/shared/config'
-import { resizeImageForAPI, inspectImageBuffer } from '@craft-agent/server-core/services'
+import {
+  convertDocumentToMarkdown,
+  resizeImageForAPI,
+  inspectImageBuffer,
+} from '@craft-agent/server-core/services'
 import { sanitizeFilename, validateFilePath, getWorkspaceAllowedDirs } from '@craft-agent/server-core/handlers'
-import { MarkItDown } from 'markitdown-js'
 import type { RpcServer } from '@craft-agent/server-core/transport'
 import type { HandlerDeps } from '../handler-deps'
 import { requestClientOpenFileDialog } from '@craft-agent/server-core/transport'
@@ -389,12 +392,11 @@ export function registerFilesHandlers(server: RpcServer, deps: HandlerDeps): voi
         const mdFileName = `${id}_${safeName}.md`
         const mdPath = join(attachmentsDir, mdFileName)
         try {
-          const markitdown = new MarkItDown()
-          const result = await markitdown.convert(storedPath)
-          if (!result || !result.textContent) {
-            throw new Error('Conversion returned empty result')
-          }
-          await writeFile(mdPath, result.textContent, 'utf-8')
+          const markdown = await convertDocumentToMarkdown(storedPath, {
+            appRootPath: deps.platform.appRootPath,
+            resourcesPath: deps.platform.resourcesPath,
+          })
+          await writeFile(mdPath, markdown, 'utf-8')
           markdownPath = mdPath
           filesToCleanup.push(mdPath)
           deps.platform.logger.info(`Converted Office file to markdown: ${mdPath}`)
