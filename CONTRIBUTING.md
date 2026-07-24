@@ -22,6 +22,9 @@ Prerequisites: Bun 1.3.9+, Node.js 20+, and platform tooling appropriate to the 
    ```bash
    bun run typecheck:shared
    bun run typecheck:electron
+   bun run typecheck:release-contract
+   bun run test:release-contract
+   bun run test:installer-contract
    python3 scripts/robinswood-validate.py
    ```
 
@@ -34,7 +37,8 @@ Installer changes must preserve these OSS rules:
 - no private updater, proxy, analytics, bucket, or password-manager dependency;
 - release signing credentials remain external CI/operator secrets;
 - release tags fail closed until required signing/notarization secrets are available; unsigned builds stay private CI test artifacts;
-- release artifacts ship checksums, provenance evidence, and actual macOS/Windows package journey validation;
+- release artifacts ship checksums, provenance evidence, verified installer helpers, and actual macOS/Windows package journey validation;
+- manifest, installer and complete-bundle contracts pass on macOS, Windows and Linux CI;
 - do not claim signed/notarized distribution unless the release verification has passed.
 
 Read [the distribution guide](docs/robinswood/open-source-distribution.md) before changing macOS, Windows, or GitHub Release workflows.

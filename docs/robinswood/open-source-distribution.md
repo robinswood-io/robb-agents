@@ -9,13 +9,31 @@ A version tag (`vX.Y.Z`) starts the **signed public release** workflow. It first
 - macOS Apple Silicon DMG + ZIP;
 - macOS Intel DMG + ZIP;
 - Windows x64 NSIS installer;
+- Linux x64 AppImage;
 - SHA-256 checksums for every artifact.
 
 Artifacts are attached to the GitHub Release together with `SHA256SUMS.txt`, a release SBOM (`SBOM.spdx.json`), platform provenance records and the updater metadata `latest.yml`, `latest-mac.yml` and `latest-linux.yml`. The macOS manifest contains both x64 and arm64 ZIP entries. Consumers should obtain checksums from the same release and compare hashes before opening an installer. When the repository is public, GitHub also publishes Sigstore-backed build provenance attestations for the checksum subjects.
 
+Each release also contains `install-app.sh` and `install-app.ps1`. They read the
+same updater manifests as the desktop app, require one unambiguous artifact for
+the detected platform, verify the declared byte size and SHA-512, and then:
+
+- validate Developer ID/Gatekeeper before replacing the macOS application;
+- validate Authenticode before launching the Windows per-user installer;
+- install the Linux AppImage and launcher under the current user's home.
+
+The helpers accept a pinned stable `X.Y.Z` version and never use a private
+Robinswood or legacy Craft distribution endpoint.
+
 The workflow accepts only stable `X.Y.Z` versions, checks out the immutable
 matching tag for every platform, and marks the created release as GitHub's
 latest stable release. Drafts and prereleases are not updater sources.
+
+Before publication, CI reconstructs one canonical checksum inventory after all
+artifacts, manifests, provenance files, installer helpers and the SBOM exist.
+`scripts/validate-release-bundle.ts` then rejects missing, duplicate,
+ambiguous, tampered, unsigned or cross-version content. Pull requests also run
+the manifest and installer contracts on macOS, Windows and Linux.
 
 ## Development and production isolation
 
@@ -119,10 +137,11 @@ The workflow declares a single `release` deployment environment. Once public vis
 
 Before publishing a signed release:
 
-1. GitHub validation passes on the tagged commit.
+1. GitHub validation and the macOS/Windows/Linux release-contract matrix pass on the tagged commit.
 2. SHA-256 checksums match the released binaries.
 3. macOS `codesign --verify`, `spctl --assess`, and `xcrun stapler validate` pass.
 4. Windows installer starts successfully in a clean Windows environment and passes SmartScreen/Authenticode checks.
 5. `SBOM.spdx.json` is present and `gh attestation verify` succeeds for public release artifacts.
 6. The release contains no credentials, private endpoints, or duplicate/ambiguous artifacts.
 7. `latest.yml`, `latest-mac.yml` and `latest-linux.yml` reference only the signed stable release artifacts.
+8. `install-app.sh` and `install-app.ps1` are present in the canonical checksum inventory.

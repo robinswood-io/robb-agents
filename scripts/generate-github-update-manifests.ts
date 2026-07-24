@@ -28,18 +28,18 @@ function getArtifact(releaseDir: string, fileName: string): ManifestArtifact {
   }
 }
 
-function findLargestMatchingFile(releaseDir: string, pattern: RegExp, description: string): string {
+function findUniqueMatchingFile(releaseDir: string, pattern: RegExp, description: string): string {
   const matches = readdirSync(releaseDir)
     .filter((fileName) => pattern.test(fileName))
-    .map((fileName) => ({
-      fileName,
-      size: statSync(join(releaseDir, fileName)).size,
-    }))
-    .sort((left, right) => right.size - left.size)
+    .sort()
 
-  const selected = matches[0]
-  if (!selected) throw new Error(`Missing ${description} in ${releaseDir}`)
-  return selected.fileName
+  if (matches.length === 0) throw new Error(`Missing ${description} in ${releaseDir}`)
+  if (matches.length > 1) {
+    throw new Error(`Ambiguous ${description} in ${releaseDir}: ${matches.join(', ')}`)
+  }
+  const [match] = matches
+  if (match === undefined) throw new Error(`Missing ${description} in ${releaseDir}`)
+  return match
 }
 
 function renderManifest(
@@ -71,13 +71,16 @@ export function generateUpdateManifests(options: GenerateUpdateManifestsOptions)
   }
 
   const releaseDate = options.releaseDate ?? new Date().toISOString()
+  if (Number.isNaN(Date.parse(releaseDate))) {
+    throw new Error(`Invalid updater release date: ${releaseDate}`)
+  }
   const macArtifacts = [
     getArtifact(options.releaseDir, 'Robb-Agents-x64.zip'),
     getArtifact(options.releaseDir, 'Robb-Agents-arm64.zip'),
   ]
   const windowsArtifact = getArtifact(
     options.releaseDir,
-    findLargestMatchingFile(
+    findUniqueMatchingFile(
       options.releaseDir,
       /^Robb-Agents-x64.*\.exe$/,
       'Windows x64 installer',

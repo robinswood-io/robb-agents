@@ -59,4 +59,23 @@ describe('GitHub updater manifest generation', () => {
       version: '1.2.3-beta.1',
     })).toThrow('Only stable X.Y.Z versions')
   })
+
+  it('rejects ambiguous Windows installers instead of selecting one by size', () => {
+    const releaseDir = prepareArtifacts()
+    writeFileSync(join(releaseDir, 'Robb-Agents-x64-Setup.exe'), 'second-installer')
+
+    expect(() => generateUpdateManifests({
+      releaseDir,
+      version: '1.2.3',
+    })).toThrow('Ambiguous Windows x64 installer')
+  })
+
+  it('rejects an invalid release date', () => {
+    const releaseDir = prepareArtifacts()
+    expect(() => generateUpdateManifests({
+      releaseDir,
+      version: '1.2.3',
+      releaseDate: 'not-a-date',
+    })).toThrow('Invalid updater release date')
+  })
 })

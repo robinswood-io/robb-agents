@@ -101,9 +101,32 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "source_commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
+  quality:
+    name: Release source quality gate
+    needs: preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.preflight.outputs.source_commit }}
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.9"
+      - uses: astral-sh/setup-uv@v5
+      - name: Install immutable workspace dependencies
+        run: bun install --frozen-lockfile
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+      - name: Validate source, updater and installer contracts
+        run: bun run validate:ci
+
   macos:
     name: macOS ${{ matrix.arch }}
-    needs: preflight
+    needs: [preflight, quality]
     runs-on: macos-14
     strategy:
       fail-fast: false
@@ -119,6 +142,8 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: "1.3.9"
+      - name: Exercise macOS installer update contract
+        run: python3 scripts/tests/test_installers.py
       - name: Build and validate macOS artifact
         env:
           CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
@@ -163,7 +188,7 @@ jobs:
 
   windows:
     name: Windows x64
-    needs: preflight
+    needs: [preflight, quality]
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -175,6 +200,8 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
+      - name: Exercise Windows installer update contract
+        run: python3 scripts/tests/test_installers.py
       - name: Build and validate Windows installer
         env:
           CSC_LINK: ${{ secrets.WINDOWS_CSC_LINK }}
@@ -221,7 +248,7 @@ jobs:
 
   linux:
     name: Linux x64
-    needs: preflight
+    needs: [preflight, quality]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -233,6 +260,8 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: "1.3.9"
+      - name: Exercise Linux installer update contract
+        run: python3 scripts/tests/test_installers.py
       - name: Install Linux desktop smoke dependencies
         run: |
           sudo apt-get update
@@ -288,7 +317,8 @@ jobs:
       - name: Consolidate release evidence
         run: |
           set -euo pipefail
-          cat release-assets/SHA256SUMS-*.txt > release-assets/SHA256SUMS.txt
+          install -m 0755 scripts/install-app.sh release-assets/install-app.sh
+          install -m 0644 scripts/install-app.ps1 release-assets/install-app.ps1
           {
             echo '## Verified release evidence'
             echo
@@ -306,8 +336,6 @@ jobs:
           bun run scripts/generate-github-update-manifests.ts \
             --release-dir release-assets \
             --version "${{ needs.preflight.outputs.version }}"
-          sha256sum release-assets/latest.yml release-assets/latest-mac.yml release-assets/latest-linux.yml \
-            >> release-assets/SHA256SUMS.txt
       - name: Generate release SBOM
         uses: anchore/sbom-action@v0
         with:
@@ -317,6 +345,19 @@ jobs:
           artifact-name: robb-agents-${{ needs.preflight.outputs.tag }}.spdx.json
           upload-artifact: false
           upload-release-assets: false
+      - name: Validate the complete publication bundle
+        run: |
+          set -euo pipefail
+          find release-assets -maxdepth 1 -type f ! -name SHA256SUMS.txt -print0 \
+            | sort -z \
+            | xargs -0 sha256sum > release-assets/SHA256SUMS.txt
+          bun run scripts/validate-release-bundle.ts \
+            --release-dir release-assets \
+            --version "${{ needs.preflight.outputs.version }}" \
+            --source-commit "${{ needs.preflight.outputs.source_commit }}" \
+            --tag "${{ needs.preflight.outputs.tag }}" \
+            --require-signed \
+            --require-sbom
       # GitHub Free publishes attestations only for public repositories. Keep the
       # workflow fail-closed for signing; this step becomes mandatory evidence as
       # soon as the intended public OSS visibility is enabled.

@@ -1,0 +1,14 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "allowJs": false,
+    "baseUrl": "..",
+    "types": ["bun"]
+  },
+  "include": [
+    "generate-github-update-manifests.ts",
+    "validate-release-bundle.ts",
+    "tests/generate-github-update-manifests.test.ts",
+    "tests/validate-release-bundle.test.ts"
+  ]
+}

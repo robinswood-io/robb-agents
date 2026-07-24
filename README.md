@@ -26,7 +26,7 @@ Download the matching verified artifact from [GitHub Releases](https://github.co
 | --- | --- |
 | macOS Apple Silicon | `Robb-Agents-arm64.dmg` |
 | macOS Intel | `Robb-Agents-x64.dmg` |
-| Windows x64 | `Robb-Agents-x64-Setup.exe` |
+| Windows x64 | `Robb-Agents-x64.exe` |
 | Linux x64 | `Robb-Agents-x64.AppImage` |
 
 Every release provides a `SHA256SUMS.txt` file. Verify it before opening an installer:
@@ -39,7 +39,7 @@ shasum -a 256 Robb-Agents-arm64.dmg
 
 ```powershell
 # Windows PowerShell
-Get-FileHash .\Robb-Agents-x64-Setup.exe -Algorithm SHA256
+Get-FileHash .\Robb-Agents-x64.exe -Algorithm SHA256
 # Compare the Hash value with SHA256SUMS.txt from the same release.
 ```
 
@@ -49,6 +49,25 @@ Public GitHub Releases are fail-closed: they are created only after Developer ID
 
 ## Install
 
+The release includes installation/update helpers which resolve the correct
+artifact, validate its declared size and SHA-512, and verify the platform
+signature where supported:
+
+```bash
+# macOS Apple Silicon/Intel or Linux x64
+curl -fsSL https://github.com/robinswood-io/robb-agents/releases/latest/download/install-app.sh | bash
+```
+
+```powershell
+# Windows x64 PowerShell
+irm https://github.com/robinswood-io/robb-agents/releases/latest/download/install-app.ps1 | iex
+```
+
+For maximum assurance, download the helper first and compare it with the same
+release's `SHA256SUMS.txt` before running it. A pinned stable version can be
+installed with `bash install-app.sh --version X.Y.Z` or
+`.\install-app.ps1 -Version X.Y.Z`.
+
 ### macOS
 
 1. Open the verified DMG.
@@ -57,7 +76,7 @@ Public GitHub Releases are fail-closed: they are created only after Developer ID
 
 ### Windows
 
-1. Run the verified `Robb-Agents-x64-Setup.exe`.
+1. Run the verified `Robb-Agents-x64.exe`.
 2. Choose the per-user install directory if needed.
 3. The installer creates Start Menu and desktop shortcuts and does not require administrator access.
 

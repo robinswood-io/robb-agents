@@ -104,7 +104,14 @@ def check_no_private_runtime_endpoints() -> None:
         "docs/robinswood/upstream-pr-evaluation-2026-07-07.md",
     }
     offenders: list[str] = []
-    scan_roots = [ROOT / "apps", ROOT / "packages", ROOT / "package.json", ROOT / "README.md", ROOT / "NOTICE"]
+    scan_roots = [
+        ROOT / "apps",
+        ROOT / "packages",
+        ROOT / "scripts",
+        ROOT / "package.json",
+        ROOT / "README.md",
+        ROOT / "NOTICE",
+    ]
     for root in scan_roots:
         paths = [root] if root.is_file() else [p for p in root.rglob("*") if p.is_file()]
         for path in paths:
@@ -232,6 +239,37 @@ def check_robinswood_packaging() -> None:
             fail(f"Manual stable updater policy missing: {token}")
     if "checkForUpdatesOnLaunch" in updater:
         fail("Production updater must never check on application launch")
+
+    public_installers = {
+        "scripts/install-app.sh": [
+            "robinswood-io/robb-agents",
+            "releases/latest/download",
+            'EXPECTED_ARTIFACT="Robb-Agents-${ARCH}.zip"',
+            'EXPECTED_ARTIFACT="Robb-Agents-x64.AppImage"',
+            "openssl dgst -sha512 -binary",
+            "codesign --verify --deep --strict",
+            "spctl --assess --type execute",
+        ],
+        "scripts/install-app.ps1": [
+            "robinswood-io/robb-agents",
+            "releases/latest/download",
+            "latest.yml",
+            "Get-AuthenticodeSignature",
+            "Robb Agents.exe",
+        ],
+    }
+    for rel, tokens in public_installers.items():
+        source = (ROOT / rel).read_text(encoding="utf-8")
+        missing_tokens = [token for token in tokens if token not in source]
+        if missing_tokens:
+            fail(f"{rel} is missing public release installer tokens: {', '.join(missing_tokens)}")
+        stale_tokens = [
+            token
+            for token in ["agents.craft.do", "Craft-Agents-", "com.lukilabs.craft-agent"]
+            if token in source
+        ]
+        if stale_tokens:
+            fail(f"{rel} still contains stale/private distribution tokens: {', '.join(stale_tokens)}")
 
     web_surfaces = {
         "apps/electron/src/renderer/index.html": "<title>Robb Agents</title>",
