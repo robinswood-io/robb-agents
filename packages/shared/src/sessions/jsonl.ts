@@ -21,6 +21,8 @@ import { pickSessionFields } from './utils.ts';
 // ============================================================
 
 const SESSION_PATH_TOKEN = '{{SESSION_PATH}}';
+const SESSION_HEADER_READ_CHUNK_BYTES = 8192;
+const SESSION_HEADER_MAX_BYTES = 1024 * 1024;
 
 /**
  * Replace absolute session directory paths with a portable token.
@@ -120,21 +122,41 @@ function replaceFileAtomicallySync(tmpFile: string, finalFile: string): void {
  * Uses low-level fs to read minimal bytes for fast list loading.
  */
 export function readSessionHeader(sessionFile: string): SessionHeader | null {
+  let fd: number | null = null;
   try {
-    const fd = openSync(sessionFile, 'r');
-    const buffer = Buffer.alloc(8192); // 8KB is plenty for metadata header
-    const bytesRead = readSync(fd, buffer, 0, 8192, 0);
-    closeSync(fd);
+    fd = openSync(sessionFile, 'r');
+    const chunks: Buffer[] = [];
+    let totalBytesRead = 0;
+    let newlineIndex = -1;
 
-    const content = buffer.toString('utf-8', 0, bytesRead);
+    while (totalBytesRead < SESSION_HEADER_MAX_BYTES && newlineIndex === -1) {
+      const buffer = Buffer.alloc(SESSION_HEADER_READ_CHUNK_BYTES);
+      const bytesRead = readSync(fd, buffer, 0, SESSION_HEADER_READ_CHUNK_BYTES, totalBytesRead);
+      if (bytesRead <= 0) break;
+
+      const chunk = buffer.subarray(0, bytesRead);
+      const chunkNewlineIndex = chunk.indexOf(0x0a);
+      if (chunkNewlineIndex !== -1) {
+        newlineIndex = totalBytesRead + chunkNewlineIndex;
+      }
+      chunks.push(chunk);
+      totalBytesRead += bytesRead;
+    }
+
+    const content = Buffer.concat(chunks, totalBytesRead).toString('utf-8');
     const firstNewline = content.indexOf('\n');
-    const firstLine = firstNewline > 0 ? content.slice(0, firstNewline) : content;
+    const firstLine = firstNewline >= 0 ? content.slice(0, firstNewline) : content;
+    if (!firstLine) return null;
 
     const parsed = safeJsonParse(expandSessionPath(firstLine, dirname(sessionFile))) as SessionHeader;
     return normalizeHeaderPermissionModes(parsed);
   } catch (error) {
     debug('[jsonl] Failed to read session header:', sessionFile, error);
     return null;
+  } finally {
+    if (fd !== null) {
+      try { closeSync(fd); } catch { /* ignore close errors */ }
+    }
   }
 }
 

@@ -1,10 +1,16 @@
 @import "tailwindcss" source(none);
 @plugin "@tailwindcss/typography";
 
+/* Robb Agents drives color mode with an html.light/html.dark class.
+   Tailwind v4 defaults `dark:` to media-query behavior unless the variant is
+   declared in CSS, which makes class-driven dark mode lose utility styles. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* Tell Tailwind where to scan for utility classes */
 @source "../renderer/App.tsx";
 @source "../renderer/main.tsx";
 @source "../renderer/components/**/*.{ts,tsx,jsx}";
+@source "../renderer/context/**/*.{ts,tsx,jsx}";
 @source "../renderer/contexts/**/*.{ts,tsx,jsx}";
 @source "../renderer/hooks/**/*.{ts,tsx,jsx}";
 @source "../renderer/pages/**/*.{ts,tsx,jsx}";

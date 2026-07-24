@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'bun:test'
-import { existsSync, mkdirSync, renameSync, rmSync } from 'node:fs'
+import { existsSync, mkdirSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { StoredSession } from '../types'
@@ -76,5 +76,40 @@ describe('session storage interrupted write recovery', () => {
     expect(sessions.map(session => session.id)).toContain('session-2')
     expect(existsSync(sessionFile)).toBe(true)
     expect(existsSync(tmpFile)).toBe(false)
+  })
+
+  it('keeps sessions visible when the JSONL header exceeds the first read chunk', () => {
+    workspaceRoot = makeTmpDir()
+    const sessionFile = getSessionFilePath(workspaceRoot, 'session-large-header')
+    mkdirSync(join(workspaceRoot, 'sessions', 'session-large-header'), { recursive: true })
+
+    const header = {
+      id: 'session-large-header',
+      workspaceRootPath: workspaceRoot,
+      createdAt: 1000,
+      lastUsedAt: 2000,
+      messageCount: 1,
+      preview: 'large metadata session',
+      transferredSessionSummary: 'x'.repeat(12_000),
+      tokenUsage: {
+        inputTokens: 0,
+        outputTokens: 0,
+        totalTokens: 0,
+        contextTokens: 0,
+        costUsd: 0,
+      },
+    }
+    const message = {
+      id: 'msg-1',
+      type: 'user',
+      content: 'this chat must remain visible',
+      timestamp: 1000,
+    }
+    writeFileSync(sessionFile, `${JSON.stringify(header)}\n${JSON.stringify(message)}\n`, 'utf-8')
+
+    const sessions = listSessions(workspaceRoot)
+
+    expect(sessions.map(session => session.id)).toContain('session-large-header')
+    expect(sessions.find(session => session.id === 'session-large-header')?.preview).toBe('large metadata session')
   })
 })
