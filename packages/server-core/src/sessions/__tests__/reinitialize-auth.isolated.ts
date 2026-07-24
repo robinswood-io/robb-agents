@@ -50,7 +50,7 @@ describe('SessionManager reinitializeAuth', () => {
       logger,
       isDebugMode: false,
     }
-    const { SessionManager, setSessionPlatform } = await import('./SessionManager.ts')
+    const { SessionManager, setSessionPlatform } = await import('../SessionManager.ts')
     setSessionPlatform(platform)
 
     const sm = new SessionManager()

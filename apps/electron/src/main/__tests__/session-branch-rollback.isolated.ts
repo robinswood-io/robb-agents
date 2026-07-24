@@ -13,6 +13,7 @@ const deletedIds: string[] = []
 let mockedProvider: 'anthropic' | 'pi' = 'anthropic'
 
 // Partial-mock baseline: import real modules via file paths (avoids recursive mock imports)
+const actualSharedConfigModule = await import('../../../../../packages/shared/src/config/index.ts')
 const actualSharedAgentModule = await import('../../../../../packages/shared/src/agent/index.ts')
 const actualSharedAgentBackendModule = await import('../../../../../packages/shared/src/agent/backend/index.ts')
 
@@ -57,6 +58,7 @@ mock.module('../logger', () => {
 })
 
 mock.module('@craft-agent/shared/config', () => ({
+  ...actualSharedConfigModule,
   getWorkspaceByNameOrId: (id: string) => (id === workspace.id ? workspace : null),
   getWorkspaces: () => [workspace],
   loadConfigDefaults: () => ({
@@ -85,6 +87,9 @@ mock.module('@craft-agent/shared/config', () => ({
   DEFAULT_THEME: { mode: 'system' },
   getDefaultModelsForConnection: () => ({ default: 'claude-sonnet-4-20250514', mini: 'claude-haiku-4-5-20251001' }),
   getDefaultModelForConnection: () => 'claude-sonnet-4-20250514',
+  defaultMidStreamBehavior: (providerType: 'anthropic' | 'pi' | 'pi_compat') =>
+    providerType === 'anthropic' ? 'queue' : 'steer',
+  modelSupportsImages: () => false,
   setGitBashPath: () => {},
   clearGitBashPath: () => {},
   setActiveWorkspace: () => {},

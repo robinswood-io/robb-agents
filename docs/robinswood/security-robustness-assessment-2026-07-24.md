@@ -50,6 +50,14 @@ vulnérabilités (2 critiques, 22 hautes, 22 modérées et 1 faible) à 0.
 - contrôle des messages de supervision distante : HMAC, rejeu, expiration,
   taille, compression, limitation de débit et HTTPS hors boucle locale.
 
+### Fiabilité de la validation
+
+- exécution de chaque workspace de test dans un processus Bun frais afin
+  d’isoler les modules, watchers et variables d’environnement ;
+- isolation des suites dépendantes de la configuration globale ;
+- correction des mocks de configuration et de système de fichiers qui rendaient
+  le résultat dépendant de l’ordre d’exécution.
+
 ## Preuves de vérification
 
 | Contrôle | Résultat |
@@ -58,26 +66,16 @@ vulnérabilités (2 critiques, 22 hautes, 22 modérées et 1 faible) à 0.
 | `npm run typecheck:all` | exit 0 |
 | `npm run validate:dev` | exit 0 |
 | Tests ciblés sécurité, documents, navigateur, transferts, sessions et thème | 103 réussis, 0 échec |
-| Suite complète | 5 121 réussis, 12 ignorés, 0 échec d’assertion |
+| Suite complète | exit 0, tous les workspaces et les 6 suites isolées réussissent |
 | `npm run electron:build` | exit 0 |
 | `npm run lint` | exit 0, 133 avertissements |
 | `git diff --check` | exit 0 |
 
-La suite complète termine toutes ses assertions, mais le processus Bun conserve
-au moins une ressource ouverte et doit être interrompu par le timeout du runner
-(exit 143). Ce résultat n’est donc pas considéré comme un passage CI totalement
-vert.
-
-La validation UI réelle a été exécutée via le template officiel Robb Agents du
-skill Playwright : page chargée, titre `Robb Agents`, 0 erreur console, 0 page
-error, 0 requête échouée et capture générée.
+La validation UI officielle n’a pas été exécutée : aucun template Robb Agents ou
+Craft n’est présent dans le skill Playwright officiel. Le script propre au dépôt
+ne constitue pas un substitut accepté par le protocole de validation.
 
 ## Risques résiduels priorisés
-
-### P0 — Arrêt incomplet du runner de tests
-
-Identifier la ressource ouverte après la suite (watcher, client HTTP, worker ou
-timer), ajouter une détection de fuite et exiger un exit 0 dans la CI.
 
 ### P1 — Absence de validation UI officielle
 
