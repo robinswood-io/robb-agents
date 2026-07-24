@@ -34,6 +34,14 @@ vulnérabilités (2 critiques, 22 hautes, 22 modérées et 1 faible) à 0.
 - rafraîchissement de la durée de vie avant et après les écritures disque ;
 - test de non-régression sur les fragments reçus près de la limite d’expiration.
 
+### Persistance des sessions et thème
+
+- lecture incrémentale des en-têtes JSONL jusqu’à 1 Mio, au lieu de masquer les
+  sessions dont les métadonnées dépassent le premier bloc de 8 Kio ;
+- fermeture garantie du descripteur de fichier, y compris en cas d’erreur ;
+- liaison explicite des variantes Tailwind sombres à la classe `html.dark` ;
+- tests de non-régression sur les gros en-têtes et les sources CSS du thème.
+
 ### Dépendances et surfaces Electron
 
 - mises à jour et overrides des dépendances signalées par l’audit ;
@@ -49,7 +57,7 @@ vulnérabilités (2 critiques, 22 hautes, 22 modérées et 1 faible) à 0.
 | `bun audit` | 0 vulnérabilité |
 | `npm run typecheck:all` | exit 0 |
 | `npm run validate:dev` | exit 0 |
-| Tests ciblés sécurité, documents, navigateur et transferts | 98 réussis, 0 échec |
+| Tests ciblés sécurité, documents, navigateur, transferts, sessions et thème | 103 réussis, 0 échec |
 | Suite complète | 5 121 réussis, 12 ignorés, 0 échec d’assertion |
 | `npm run electron:build` | exit 0 |
 | `npm run lint` | exit 0, 133 avertissements |
