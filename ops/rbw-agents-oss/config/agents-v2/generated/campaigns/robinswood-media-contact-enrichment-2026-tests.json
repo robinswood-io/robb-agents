@@ -1,0 +1,62 @@
+{
+  "schema_version": "agent-spec-v2",
+  "id": "robinswood-media-contact-enrichment-2026-tests",
+  "name": "Robinswood Media Contact Enrichment 2026 — guardrail tests",
+  "lane": "campaigns",
+  "owner": "campaigns",
+  "runtime_version": "v2",
+  "risk_class": "guardrail_tests_no_outbound",
+  "side_effects": [
+    "run_zero_hunter_prepare_only_enrichment_test",
+    "write_test_report",
+    "no_external_outbound_message"
+  ],
+  "execution": {
+    "backend": "argv",
+    "timeout_seconds": 60,
+    "argv": [
+      "/srv/rbw-agents-oss/.venv/bin/python",
+      "/srv/rbw-agents-oss/scripts/robinswood_media_contact_enrichment_2026_tests.py"
+    ],
+    "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+    "env": {}
+  },
+  "contract": {
+    "version": "runtime-v2-execution-report-v1",
+    "expects_report": true,
+    "json_path": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/robinswood-media-contact-enrichment-2026-tests-last.json",
+    "markdown_path": null
+  },
+  "policy": {
+    "classified": true,
+    "policy_class": "test_guardrail",
+    "mutation_mode": "observability_report_only",
+    "schedule_allowed": false,
+    "requires_human_approval_for_apply": false,
+    "requires_human_approval_for_external_send": false,
+    "requires_explicit_review_before_risk_increase": true,
+    "source": "/srv/rbw-agents-oss/config/registry/side-effects-policy.json"
+  },
+  "schedules": [],
+  "trigger_types": [
+    "ManualDirectOnly"
+  ],
+  "task_queues": [
+    "campaigns"
+  ],
+  "workflow_ids": [],
+  "source_status": {
+    "in_manifest": true,
+    "in_mapping": false,
+    "in_schedules": false,
+    "in_ready_schedules": false,
+    "manifest_section": "wave1"
+  },
+  "provenance": {
+    "manifest": "/srv/rbw-agents-oss/config/command-manifest.json",
+    "mapping": "/srv/rbw-agents-oss/config/automation-mapping.json",
+    "schedules": "/srv/rbw-agents-oss/config/temporal/schedules.json",
+    "sideEffectsPolicy": "/srv/rbw-agents-oss/config/registry/side-effects-policy.json",
+    "manifestUpdatedAt": "2026-07-12T21:02:50.005345Z"
+  }
+}

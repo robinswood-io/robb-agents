@@ -1,0 +1,73 @@
+{
+  "schema_version": "agent-spec-v2",
+  "id": "oss-temporal-execution-slo-guard",
+  "name": "OSS — Temporal execution SLO guard",
+  "lane": "observability",
+  "owner": "ops",
+  "runtime_version": "v2",
+  "risk_class": "low_observability_or_guardrail",
+  "side_effects": [
+    "temporal-read:workflow-list",
+    "filesystem-write:ops-report"
+  ],
+  "execution": {
+    "backend": "argv",
+    "timeout_seconds": 240,
+    "argv": [
+      "/srv/rbw-agents-oss/.venv/bin/python",
+      "/srv/rbw-agents-oss/scripts/oss_temporal_execution_slo_guard.py"
+    ],
+    "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+    "env": {}
+  },
+  "contract": {
+    "version": "runtime-v2-execution-report-v1",
+    "expects_report": true,
+    "json_path": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/oss-temporal-execution-slo-guard-last.json",
+    "markdown_path": null
+  },
+  "policy": {
+    "classified": true,
+    "policy_class": "oss_governance_guard",
+    "mutation_mode": "observability_report_only",
+    "schedule_allowed": true,
+    "requires_human_approval_for_apply": false,
+    "requires_human_approval_for_external_send": false,
+    "requires_explicit_review_before_risk_increase": true,
+    "source": "/srv/rbw-agents-oss/config/registry/side-effects-policy.json"
+  },
+  "schedules": [
+    {
+      "schedule_id": "sched.oss-temporal-execution-slo-guard",
+      "workflow_id": "rbw.oss-temporal-execution-slo-guard",
+      "task_queue": "watchdog",
+      "cron": "11,41 * * * *",
+      "timezone": "Europe/Paris",
+      "enabled": true
+    }
+  ],
+  "trigger_types": [
+    "SchedulerTick",
+    "scheduled"
+  ],
+  "task_queues": [
+    "watchdog"
+  ],
+  "workflow_ids": [
+    "rbw.oss-temporal-execution-slo-guard"
+  ],
+  "source_status": {
+    "in_manifest": true,
+    "in_mapping": true,
+    "in_schedules": true,
+    "in_ready_schedules": true,
+    "manifest_section": "wave1"
+  },
+  "provenance": {
+    "manifest": "/srv/rbw-agents-oss/config/command-manifest.json",
+    "mapping": "/srv/rbw-agents-oss/config/automation-mapping.json",
+    "schedules": "/srv/rbw-agents-oss/config/temporal/schedules.json",
+    "sideEffectsPolicy": "/srv/rbw-agents-oss/config/registry/side-effects-policy.json",
+    "manifestUpdatedAt": "2026-07-12T21:02:50.005345Z"
+  }
+}

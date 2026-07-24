@@ -1,0 +1,77 @@
+{
+  "schema_version": "agent-spec-v2",
+  "id": "bmb-wordpress-structural-audit",
+  "name": "BMB WordPress — audit structurel read-only",
+  "lane": "campaigns",
+  "owner": "campaigns",
+  "runtime_version": "v2",
+  "risk_class": "read_only_client_wordpress_structural_monitoring",
+  "side_effects": [
+    "ssh_read_only_bmb_wordpress",
+    "wpcli_read_only_audit",
+    "writes_ops_report",
+    "no_database_mutation",
+    "no_plugin_update",
+    "no_external_message"
+  ],
+  "execution": {
+    "backend": "argv",
+    "timeout_seconds": 180,
+    "argv": [
+      "/srv/rbw-agents-oss/.venv/bin/python",
+      "/srv/rbw-agents-oss/scripts/bmb_wordpress_structural_audit.py"
+    ],
+    "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+    "env": {}
+  },
+  "contract": {
+    "version": "runtime-v2-execution-report-v1",
+    "expects_report": true,
+    "json_path": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/bmb-wordpress-structural-audit-last.json",
+    "markdown_path": null
+  },
+  "policy": {
+    "classified": true,
+    "policy_class": "classified",
+    "mutation_mode": "prepare_only_or_read_only",
+    "schedule_allowed": true,
+    "requires_human_approval_for_apply": false,
+    "requires_human_approval_for_external_send": false,
+    "requires_explicit_review_before_risk_increase": true,
+    "source": "/srv/rbw-agents-oss/config/registry/side-effects-policy.json"
+  },
+  "schedules": [
+    {
+      "schedule_id": "sched.bmb-wordpress-structural-audit",
+      "workflow_id": "rbw.bmb-wordpress-structural-audit",
+      "task_queue": "campaigns",
+      "cron": "45 9,14,20 * * *",
+      "timezone": "Europe/Paris",
+      "enabled": true
+    }
+  ],
+  "trigger_types": [
+    "ScheduleStep",
+    "SchedulerTick"
+  ],
+  "task_queues": [
+    "campaigns"
+  ],
+  "workflow_ids": [
+    "rbw.bmb-wordpress-structural-audit"
+  ],
+  "source_status": {
+    "in_manifest": true,
+    "in_mapping": true,
+    "in_schedules": true,
+    "in_ready_schedules": true,
+    "manifest_section": "wave1"
+  },
+  "provenance": {
+    "manifest": "/srv/rbw-agents-oss/config/command-manifest.json",
+    "mapping": "/srv/rbw-agents-oss/config/automation-mapping.json",
+    "schedules": "/srv/rbw-agents-oss/config/temporal/schedules.json",
+    "sideEffectsPolicy": "/srv/rbw-agents-oss/config/registry/side-effects-policy.json",
+    "manifestUpdatedAt": "2026-07-12T21:02:50.005345Z"
+  }
+}

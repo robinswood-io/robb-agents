@@ -1,0 +1,3181 @@
+{
+  "schemaVersion": "side-effects-policy-v1",
+  "updatedAt": "2026-07-12T20:49:57.333080Z",
+  "updatedBy": "oss-runtime-v2-queue-canary-cleanup",
+  "description": "Explicit side-effects and risk policy for every command-manifest row. New manifest rows must be classified before promotion/cadence change.",
+  "counts": {
+    "manifestRows": 193,
+    "classifiedCapabilities": 193,
+    "highRisk": 15,
+    "requiresHumanApprovalForApply": 15
+  },
+  "capabilities": [
+    {
+      "legacy_id": "2bfe5f",
+      "accepted": true,
+      "riskClass": "low_observability_or_prepare_only",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.314780Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "afnor-book-launch-controller",
+      "accepted": true,
+      "riskClass": "medium_campaign_or_contact_ops",
+      "sideEffects": [
+        "business-state:campaign-or-contact",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.316656Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "afnor-bookstore-candidate-verifier",
+      "accepted": true,
+      "policyClass": "business_or_observability_wrapper",
+      "riskClass": "prepare_only_no_outbound_bookstore_candidate_verification",
+      "mutationMode": "prepare_only_or_read_only",
+      "scheduleAllowed": true,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "sideEffects": [
+        "read_campaign_ops_artifacts",
+        "write_campaign_ops_reports",
+        "write_prepare_only_verification_queue",
+        "write_preliminary_unverified_shortlist",
+        "no_external_outbound_message",
+        "no_physical_copy_shipment"
+      ],
+      "updatedAt": "2026-07-12T17:38:30.031843Z",
+      "updatedBy": "oss-architecture-v2-install",
+      "rationale": "Conservative runtime-v2 classification generated from live manifest metadata; external, CRM, LinkedIn and finance effects remain gated."
+    },
+    {
+      "legacy_id": "afnor-bookstore-retail-audit",
+      "accepted": true,
+      "policyClass": "business_or_observability_wrapper",
+      "riskClass": "prepare_only_no_outbound_retail_audit",
+      "mutationMode": "prepare_only_or_read_only",
+      "scheduleAllowed": true,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "sideEffects": [
+        "read_campaign_ops_artifacts",
+        "write_campaign_ops_reports",
+        "refresh_prepare_only_action_queue",
+        "no_external_outbound_message",
+        "no_physical_copy_shipment"
+      ],
+      "updatedAt": "2026-07-12T17:38:30.031834Z",
+      "updatedBy": "oss-architecture-v2-install",
+      "rationale": "Conservative runtime-v2 classification generated from live manifest metadata; external, CRM, LinkedIn and finance effects remain gated."
+    },
+    {
+      "legacy_id": "agent-task-campaign-activation-loop",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "business-state:campaign-or-contact",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.317510Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "agent-task-campaign-activation-loop-overnight",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "business-state:campaign-or-contact",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.317531Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "agent-task-context-enriched-campaign-executor",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "business-state:campaign-or-contact",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.316683Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "agent-task-context-enriched-campaign-executor-overnight",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "business-state:campaign-or-contact",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.317492Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "agent-task-google-tasks-intake-day",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.317356Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "agent-task-google-tasks-intake-evening",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.317378Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "agent-task-google-tasks-intake-overnight",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.317399Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "agent-task-inbox-router",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.316929Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "agent-task-inbox-router-overnight",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.317427Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "agent-task-temporal-openrouter-executor",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.317445Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "agent-task-temporal-openrouter-executor-overnight",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.317468Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "ao-day-ops-master",
+      "accepted": true,
+      "riskClass": "low_observability_or_prepare_only",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.314587Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "ao-day-ops-reconciliation-tests",
+      "accepted": true,
+      "riskClass": "low_test_guardrail",
+      "sideEffects": [
+        "filesystem-write:test-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.314764Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "ao-response-quality-guard-tests",
+      "accepted": true,
+      "riskClass": "low_test_guardrail",
+      "sideEffects": [
+        "filesystem-write:test-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.314739Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "ao-sellsy-review-watch",
+      "accepted": true,
+      "riskClass": "medium_business_data_read_or_prepare",
+      "sideEffects": [
+        "external-api:sellsy-or-crm",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.314717Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "auth-watchdog",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.314455Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "auto-ads-bmw-i4-night-watch",
+      "accepted": true,
+      "riskClass": "high_external_communication_guarded",
+      "sideEffects": [
+        "external-communication",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "guarded_external_prepare_or_send",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.315584Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "autonomy-queue-owner-governor",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.315696Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "blog-publish-indexability-guard",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.314662Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "blog-rss-generation",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.314679Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "blog-seo-matomo-learning",
+      "accepted": true,
+      "riskClass": "low_observability_or_prepare_only",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.316788Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "blog-topicality-regression-tests",
+      "accepted": true,
+      "riskClass": "low_test_guardrail",
+      "sideEffects": [
+        "filesystem-write:test-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.317334Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "bmb-wordpress-structural-audit",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "business-state:campaign-or-contact",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.316951Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "business-acquisition-enhanced-dashboard",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "business-state:campaign-or-contact",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.317982Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "business-autonomy-queue-governor",
+      "accepted": true,
+      "riskClass": "medium_campaign_or_contact_ops",
+      "sideEffects": [
+        "business-state:campaign-or-contact",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.317867Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "business-target-reconsideration",
+      "accepted": true,
+      "riskClass": "medium_campaign_or_contact_ops",
+      "sideEffects": [
+        "business-state:campaign-or-contact",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.317945Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "campaign-agent-source-rebuild",
+      "accepted": true,
+      "riskClass": "medium_campaign_or_contact_ops",
+      "sideEffects": [
+        "business-state:campaign-or-contact",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.317828Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "campaign-governance-master",
+      "accepted": true,
+      "riskClass": "medium_campaign_or_contact_ops",
+      "sideEffects": [
+        "business-state:campaign-or-contact",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.314852Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "campaign-history-sellsy-company-sync",
+      "accepted": true,
+      "policyClass": "business_or_observability_wrapper",
+      "riskClass": "bounded_crm_write_no_outbound",
+      "mutationMode": "prepare_only_or_read_only",
+      "scheduleAllowed": true,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "sideEffects": [
+        "read_historical_campaign_artifacts",
+        "find_or_create_sellsy_company",
+        "find_or_create_sellsy_contact",
+        "create_sellsy_campaign_history_tasks",
+        "write_sync_state_and_report",
+        "no_external_outbound_message"
+      ],
+      "updatedAt": "2026-07-12T17:38:30.031799Z",
+      "updatedBy": "oss-architecture-v2-install",
+      "rationale": "Conservative runtime-v2 classification generated from live manifest metadata; external, CRM, LinkedIn and finance effects remain gated."
+    },
+    {
+      "legacy_id": "campaign-impact-autonomy-guard",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "business-state:campaign-or-contact",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.317667Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "campaign-impact-events",
+      "accepted": true,
+      "riskClass": "medium_campaign_or_contact_ops",
+      "sideEffects": [
+        "business-state:campaign-or-contact",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.317704Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "campaigns-autonomy-loop",
+      "accepted": true,
+      "riskClass": "medium_campaign_or_contact_ops",
+      "sideEffects": [
+        "business-state:campaign-or-contact",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.315532Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "campaigns-multichannel-master",
+      "accepted": true,
+      "riskClass": "medium_campaign_or_contact_ops",
+      "sideEffects": [
+        "business-state:campaign-or-contact",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.314569Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "cb77bc",
+      "accepted": true,
+      "riskClass": "low_observability_or_prepare_only",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.315045Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "client-incident-autonomy-guard",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "business-state:campaign-or-contact",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.316907Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "client-incident-autonomy-loop",
+      "accepted": true,
+      "riskClass": "medium_campaign_or_contact_ops",
+      "sideEffects": [
+        "business-state:campaign-or-contact",
+        "external-communication",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "guarded_external_prepare_or_send",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.316863Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "client-incident-autonomy-tests",
+      "accepted": true,
+      "riskClass": "low_test_guardrail",
+      "sideEffects": [
+        "filesystem-write:test-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.316885Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "conference-prospection-daily",
+      "accepted": true,
+      "riskClass": "medium_campaign_or_contact_ops",
+      "sideEffects": [
+        "business-state:campaign-or-contact",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.314960Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "contact-enrichment-autopilot",
+      "accepted": true,
+      "riskClass": "medium_campaign_or_contact_ops",
+      "sideEffects": [
+        "business-state:campaign-or-contact",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.315510Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "contact-quality-audit",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "business-state:campaign-or-contact",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.317738Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "contact-quality-audit-overnight",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "business-state:campaign-or-contact",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.317760Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "contact-source-catalog-expander",
+      "accepted": true,
+      "riskClass": "medium_campaign_or_contact_ops",
+      "sideEffects": [
+        "business-state:campaign-or-contact",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.317802Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "drive-audio-transcription-autopilot",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.315829Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "finance-inqom-close-readiness",
+      "accepted": true,
+      "riskClass": "medium_finance_prepare_only",
+      "sideEffects": [
+        "external-api:inqom-or-finance",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.315657Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "gc-inqom-sync-weekly",
+      "accepted": true,
+      "riskClass": "medium_finance_prepare_only",
+      "sideEffects": [
+        "external-api:inqom-or-finance",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.315007Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "gtm-autonomous-decision-governor",
+      "accepted": true,
+      "riskClass": "medium_campaign_or_contact_ops",
+      "sideEffects": [
+        "business-state:campaign-or-contact",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.317964Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "gtm-autonomous-execution-materializer",
+      "accepted": true,
+      "riskClass": "medium_campaign_or_contact_ops",
+      "sideEffects": [
+        "business-state:campaign-or-contact",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.317848Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "inbound-email-sellsy-task-sync",
+      "accepted": true,
+      "riskClass": "medium_campaign_or_contact_ops",
+      "sideEffects": [
+        "business-state:campaign-or-contact",
+        "external-api:sellsy-or-crm",
+        "external-communication",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "guarded_external_prepare_or_send",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.317890Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "inqom-accountant-response-intake",
+      "accepted": true,
+      "riskClass": "medium_finance_prepare_only",
+      "sideEffects": [
+        "external-api:inqom-or-finance",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.316033Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "inqom-accountant-response-intake-tests",
+      "accepted": true,
+      "riskClass": "low_test_guardrail",
+      "sideEffects": [
+        "filesystem-write:test-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.316065Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "inqom-accounting-action-dispatcher",
+      "accepted": true,
+      "riskClass": "high_human_approval_required",
+      "sideEffects": [
+        "external-api:inqom-or-finance",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "human_approved_apply_only",
+      "requiresHumanApprovalForApply": true,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.315448Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "inqom-accounting-action-dispatcher-tests",
+      "accepted": true,
+      "riskClass": "low_test_guardrail",
+      "sideEffects": [
+        "filesystem-write:test-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.315360Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "inqom-accounting-agent-copilot-audit",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "external-api:inqom-or-finance",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.315428Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "inqom-accounting-autonomy-pipeline",
+      "accepted": true,
+      "riskClass": "medium_finance_prepare_only",
+      "sideEffects": [
+        "external-api:inqom-or-finance",
+        "external-api:sellsy-or-crm",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.315124Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "inqom-accounting-decision-closure",
+      "accepted": true,
+      "riskClass": "medium_finance_prepare_only",
+      "sideEffects": [
+        "external-api:inqom-or-finance",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.315381Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "inqom-accounting-decision-closure-tests",
+      "accepted": true,
+      "riskClass": "low_test_guardrail",
+      "sideEffects": [
+        "filesystem-write:test-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.315409Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "inqom-bank-reconciliation-autonomy",
+      "accepted": true,
+      "riskClass": "medium_finance_prepare_only",
+      "sideEffects": [
+        "external-api:inqom-or-finance",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.315145Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "inqom-bank-reconciliation-guard-tests",
+      "accepted": true,
+      "riskClass": "low_test_guardrail",
+      "sideEffects": [
+        "filesystem-write:test-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.315162Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "inqom-confidence-lettering-executor",
+      "accepted": true,
+      "riskClass": "high_human_approval_required",
+      "sideEffects": [
+        "external-api:inqom-or-finance",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "human_approved_apply_only",
+      "requiresHumanApprovalForApply": true,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.315470Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "inqom-group-accounting-order-board",
+      "accepted": true,
+      "riskClass": "medium_finance_prepare_only",
+      "sideEffects": [
+        "external-api:inqom-or-finance",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.315321Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "inqom-group-accounting-order-guard-tests",
+      "accepted": true,
+      "riskClass": "low_test_guardrail",
+      "sideEffects": [
+        "filesystem-write:test-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.315340Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "inqom-intercompany-reconciliation-board",
+      "accepted": true,
+      "riskClass": "medium_finance_prepare_only",
+      "sideEffects": [
+        "external-api:inqom-or-finance",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.315183Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "inqom-intercompany-reconciliation-guard-tests",
+      "accepted": true,
+      "riskClass": "low_test_guardrail",
+      "sideEffects": [
+        "filesystem-write:test-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.315202Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "inqom-lettering-confidence-guard-tests",
+      "accepted": true,
+      "riskClass": "low_test_guardrail",
+      "sideEffects": [
+        "filesystem-write:test-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.315302Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "inqom-lettering-evidence-research-queue",
+      "accepted": true,
+      "riskClass": "medium_finance_prepare_only",
+      "sideEffects": [
+        "external-api:inqom-or-finance",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.315262Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "inqom-lettering-execution-guard-filter",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "external-api:inqom-or-finance",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.315283Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "inqom-line-transfer-engine",
+      "accepted": true,
+      "riskClass": "high_human_approval_required",
+      "sideEffects": [
+        "external-api:inqom-or-finance",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "human_approved_apply_only",
+      "requiresHumanApprovalForApply": true,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.315102Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "inqom-manual-reconciliation-packs",
+      "accepted": true,
+      "riskClass": "medium_finance_prepare_only",
+      "sideEffects": [
+        "external-api:inqom-or-finance",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.315222Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "inqom-manual-reconciliation-packs-tests",
+      "accepted": true,
+      "riskClass": "low_test_guardrail",
+      "sideEffects": [
+        "filesystem-write:test-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.315241Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "langfuse-business-cost-export",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "business-state:campaign-or-contact",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.317084Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "langfuse-kpi-dashboard-7d",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.314353Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "langfuse-kpi-threshold-alerts",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.314378Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "langfuse-runs-export-hourly",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.314333Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "linkedin-editorial-regression-tests",
+      "accepted": true,
+      "riskClass": "low_test_guardrail",
+      "sideEffects": [
+        "filesystem-write:test-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.317314Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "mail-autonomy-guard",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "business-state:campaign-or-contact",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.317906Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "mail-autonomy-regression-tests",
+      "accepted": true,
+      "riskClass": "low_test_guardrail",
+      "sideEffects": [
+        "filesystem-write:test-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.317782Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "marketing-autonomy-kpi-monitor-48h",
+      "accepted": true,
+      "riskClass": "low_observability_or_prepare_only",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.314439Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "memory-capture-post-session",
+      "accepted": true,
+      "riskClass": "low_observability_or_prepare_only",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.314698Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "memory-freshness-check",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.314543Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "monthly-podcast-generation",
+      "accepted": true,
+      "riskClass": "high_external_communication_guarded",
+      "sideEffects": [
+        "external-communication",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "guarded_external_prepare_or_send",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.315611Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "night-agent-alerts",
+      "accepted": true,
+      "riskClass": "low_observability_or_prepare_only",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.314887Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "night-agent-daily-report",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.314869Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "officer-friday-adjustments",
+      "accepted": true,
+      "riskClass": "low_observability_or_prepare_only",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.314816Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "officer-monday-launch-planner",
+      "accepted": true,
+      "riskClass": "low_observability_or_prepare_only",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.314833Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "officer-preflight-healthcheck",
+      "accepted": true,
+      "riskClass": "low_observability_or_prepare_only",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.314399Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "officer-weekend-optimizer",
+      "accepted": true,
+      "riskClass": "low_observability_or_prepare_only",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.314799Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "operator-escalation-watcher",
+      "accepted": true,
+      "riskClass": "low_observability_or_prepare_only",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.315490Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "oss-agent-autonomy-governor",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.315730Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "oss-agent-card-builder",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.317210Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "oss-agent-control-plane",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.317273Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "oss-agent-frontier-method-radar",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.317228Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "oss-agent-method-evidence-builder",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.317922Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "oss-autonomy-quality-board",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.315788Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "oss-autonomy-quality-guard-tests",
+      "accepted": true,
+      "riskClass": "low_test_guardrail",
+      "sideEffects": [
+        "filesystem-write:test-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.315809Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "oss-backup-hygiene-guard",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.318058Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "oss-campaign-agent-memory-fabric",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "business-state:campaign-or-contact",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.318018Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "oss-capability-performance-knowledge-auditor",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.317594Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "oss-config-mutation-guard",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "filesystem-read:oss-config-and-scripts",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "observability_report_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T19:15:02.848772Z",
+      "updatedBy": "oss-p14-p16-governance",
+      "policyClass": "oss_governance_guard",
+      "rationale": "Detects active-tree backups and new config-mutating scripts that bypass scripts/lib/config_mutation.py."
+    },
+    {
+      "legacy_id": "oss-gtm-coherence-report",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "business-state:campaign-or-contact",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.317649Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "oss-industrialization-dashboard",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.317244Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "oss-lock-watchdog",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.317570Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "oss-operational-knowledge-synthesizer",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.317064Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "oss-ops-report-indexer",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.317048Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "oss-p0-structural-fix",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.316994Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "oss-p1-structural-cleanup",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.317033Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "oss-release-gate",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.317258Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "oss-report-contract-coverage-guard",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "filesystem-read:oss-config",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "observability_report_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T19:15:02.848772Z",
+      "updatedBy": "oss-p14-p16-governance",
+      "policyClass": "oss_governance_guard",
+      "rationale": "Prevents new scheduled automations from running without declared report artifacts; existing gaps are policy-baselined debt."
+    },
+    {
+      "legacy_id": "oss-runtime-freshness-guard",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.318039Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "oss-security-audit-guard",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "filesystem-read:security-metadata",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "observability_report_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T22:17:22.726980Z",
+      "updatedBy": "oss-security-hardening-20260629",
+      "policyClass": "security_governance_guard",
+      "rationale": "Defensive security audit guard: permissions, secret exposure candidates, unsafe public ports and active sensitive backups."
+    },
+    {
+      "legacy_id": "oss-security-firewall-guard",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "filesystem-read:security-metadata",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "observability_report_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T22:17:22.726980Z",
+      "updatedBy": "oss-security-hardening-20260629",
+      "policyClass": "security_governance_guard",
+      "rationale": "Verifies firewall drop rules for unsafe public service ports."
+    },
+    {
+      "legacy_id": "oss-self-healing-candidate-queue",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.317611Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "oss-structural-guard",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.317013Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "oss-temporal-execution-slo-guard",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "temporal-read:workflow-list",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "observability_report_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T19:15:02.848772Z",
+      "updatedBy": "oss-p14-p16-governance",
+      "policyClass": "oss_governance_guard",
+      "rationale": "Checks Temporal runtime execution health: old running workflows, recent failures/timeouts/terminations, and SDK connectivity."
+    },
+    {
+      "legacy_id": "ovh-domain-action-matrix",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.317195Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "ovh-domain-dns-diagnostics",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.317164Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "ovh-domain-http-tls-diagnostics",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.317180Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "ovh-domain-registry-refresh",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.317131Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "ovh-domain-remediation",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.317148Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "ovh-domain-sentinel",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.317114Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "podcast-audio-benchmark-scorecard",
+      "accepted": true,
+      "riskClass": "low_observability_or_prepare_only",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.315914Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "podcast-audio-market-benchmark",
+      "accepted": true,
+      "riskClass": "low_observability_or_prepare_only",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.315849Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "post-flag-auto-review",
+      "accepted": true,
+      "riskClass": "low_observability_or_prepare_only",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.315064Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "pr-campaign-avant-le-flow",
+      "accepted": true,
+      "riskClass": "medium_campaign_or_contact_ops",
+      "sideEffects": [
+        "business-state:campaign-or-contact",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.314938Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "prospect-research-sellsy-intake",
+      "accepted": true,
+      "riskClass": "medium_campaign_or_contact_ops",
+      "sideEffects": [
+        "business-state:campaign-or-contact",
+        "external-api:sellsy-or-crm",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.316451Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "provider-routing-guard",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.315556Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "qualified-opportunity-quote-guard",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "business-state:campaign-or-contact",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.317721Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "report-envelope-standardizer",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.315762Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "reseau-entreprendre-source-backfill",
+      "accepted": true,
+      "riskClass": "medium_business_data_read_or_prepare",
+      "sideEffects": [
+        "external-api:sellsy-or-crm",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.316742Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "reseau-entreprendre-source-backfill-tests",
+      "accepted": true,
+      "riskClass": "low_test_guardrail",
+      "sideEffects": [
+        "filesystem-write:test-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.316769Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "robinswood-linkedin-weekly-thought-leadership",
+      "accepted": true,
+      "riskClass": "medium_campaign_or_contact_ops",
+      "sideEffects": [
+        "business-state:campaign-or-contact",
+        "external-communication",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "guarded_external_prepare_or_send",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.316714Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "robinswood-media-authority-2026",
+      "accepted": true,
+      "policyClass": "business_or_observability_wrapper",
+      "riskClass": "bounded_autonomous_media_first_send_low_volume",
+      "mutationMode": "prepare_only_or_read_only",
+      "scheduleAllowed": true,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "sideEffects": [
+        "read_media_seeds",
+        "read_legacy_pr_database_for_exclusion",
+        "read_suppression_list",
+        "gmail_send_bounded_first_touch",
+        "gmail_read_sent_threads_for_replies",
+        "write_candidates_queue_ledger_reports",
+        "write_reply_action_queue",
+        "no_paid_submission",
+        "no_legacy_pr_relaunch",
+        "no_auto_reply_to_positive_media_interest"
+      ],
+      "updatedAt": "2026-07-12T17:38:30.031860Z",
+      "updatedBy": "oss-architecture-v2-install",
+      "rationale": "Conservative runtime-v2 classification generated from live manifest metadata; external, CRM, LinkedIn and finance effects remain gated."
+    },
+    {
+      "legacy_id": "robinswood-media-authority-2026-replenisher",
+      "accepted": true,
+      "policyClass": "business_or_observability_wrapper",
+      "riskClass": "prepare_only_seed_replenishment_no_outbound",
+      "mutationMode": "prepare_only_or_read_only",
+      "scheduleAllowed": true,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "sideEffects": [
+        "read_pr_topup_seeds",
+        "read_legacy_pr_database_for_exclusion",
+        "write_media_authority_seeds",
+        "write_replenisher_report",
+        "no_external_outbound_message"
+      ],
+      "updatedAt": "2026-07-12T17:38:30.031877Z",
+      "updatedBy": "oss-architecture-v2-install",
+      "rationale": "Conservative runtime-v2 classification generated from live manifest metadata; external, CRM, LinkedIn and finance effects remain gated."
+    },
+    {
+      "legacy_id": "robinswood-media-authority-2026-replenisher-tests",
+      "accepted": true,
+      "policyClass": "test_guardrail",
+      "riskClass": "low_test_guardrail",
+      "mutationMode": "observability_report_only",
+      "scheduleAllowed": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "sideEffects": [
+        "run_replenisher_dry_run",
+        "write_test_report",
+        "no_external_outbound_message"
+      ],
+      "updatedAt": "2026-07-12T17:38:30.031889Z",
+      "updatedBy": "oss-architecture-v2-install",
+      "rationale": "Conservative runtime-v2 classification generated from live manifest metadata; external, CRM, LinkedIn and finance effects remain gated."
+    },
+    {
+      "legacy_id": "robinswood-media-authority-2026-reply-scan",
+      "accepted": true,
+      "policyClass": "outbound_governance",
+      "riskClass": "high_guarded_campaign_or_outbound",
+      "mutationMode": "guarded_external_prepare_or_send",
+      "scheduleAllowed": true,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "requiresHumanApprovalForApply": true,
+      "requiresHumanApprovalForExternalSend": true,
+      "sideEffects": [
+        "read_gmail_threads_for_sent_media_authority_messages",
+        "write_reply_action_queue",
+        "write_bounces_artifact",
+        "may_mark_media_seed_bounced",
+        "may_append_global_contact_suppression_for_bounces",
+        "no_external_outbound_message"
+      ],
+      "updatedAt": "2026-07-12T17:38:30.031901Z",
+      "updatedBy": "oss-architecture-v2-install",
+      "rationale": "Conservative runtime-v2 classification generated from live manifest metadata; external, CRM, LinkedIn and finance effects remain gated."
+    },
+    {
+      "legacy_id": "robinswood-media-authority-2026-tests",
+      "accepted": true,
+      "policyClass": "test_guardrail",
+      "riskClass": "low_test_guardrail",
+      "mutationMode": "observability_report_only",
+      "scheduleAllowed": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "sideEffects": [
+        "read_policy_seeds_legacy_pr_database",
+        "run_dry_run_no_send",
+        "write_test_report",
+        "no_external_outbound_message"
+      ],
+      "updatedAt": "2026-07-12T17:38:30.031868Z",
+      "updatedBy": "oss-architecture-v2-install",
+      "rationale": "Conservative runtime-v2 classification generated from live manifest metadata; external, CRM, LinkedIn and finance effects remain gated."
+    },
+    {
+      "legacy_id": "robinswood-media-contact-base-2026",
+      "accepted": true,
+      "policyClass": "business_or_observability_wrapper",
+      "riskClass": "prepare_only_contact_database_no_outbound",
+      "mutationMode": "prepare_only_or_read_only",
+      "scheduleAllowed": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "sideEffects": [
+        "read_existing_oss_contact_sources",
+        "read_public_wikipedia_categories",
+        "write_contact_base_json_csv_md",
+        "no_external_outbound_message",
+        "no_crm_mutation"
+      ],
+      "updatedAt": "2026-07-12T17:38:30.031910Z",
+      "updatedBy": "oss-architecture-v2-install",
+      "rationale": "Conservative runtime-v2 classification generated from live manifest metadata; external, CRM, LinkedIn and finance effects remain gated."
+    },
+    {
+      "legacy_id": "robinswood-media-contact-base-2026-tests",
+      "accepted": true,
+      "policyClass": "test_guardrail",
+      "riskClass": "low_test_guardrail",
+      "mutationMode": "observability_report_only",
+      "scheduleAllowed": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "sideEffects": [
+        "rebuild_contact_base_prepare_only",
+        "write_test_report",
+        "no_external_outbound_message"
+      ],
+      "updatedAt": "2026-07-12T17:38:30.031917Z",
+      "updatedBy": "oss-architecture-v2-install",
+      "rationale": "Conservative runtime-v2 classification generated from live manifest metadata; external, CRM, LinkedIn and finance effects remain gated."
+    },
+    {
+      "legacy_id": "robinswood-media-contact-enrichment-2026",
+      "accepted": true,
+      "policyClass": "business_or_observability_wrapper",
+      "riskClass": "prepare_only_contact_enrichment_no_outbound",
+      "mutationMode": "prepare_only_or_read_only",
+      "scheduleAllowed": true,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "sideEffects": [
+        "read_media_contact_base",
+        "read_public_wikipedia_pages",
+        "bounded_hunter_lookup_or_verify",
+        "write_enriched_contact_base",
+        "write_review_queue",
+        "no_external_outbound_message",
+        "no_crm_mutation"
+      ],
+      "updatedAt": "2026-07-12T17:38:30.031927Z",
+      "updatedBy": "oss-architecture-v2-install",
+      "rationale": "Conservative runtime-v2 classification generated from live manifest metadata; external, CRM, LinkedIn and finance effects remain gated."
+    },
+    {
+      "legacy_id": "robinswood-media-contact-enrichment-2026-tests",
+      "accepted": true,
+      "policyClass": "test_guardrail",
+      "riskClass": "low_test_guardrail",
+      "mutationMode": "observability_report_only",
+      "scheduleAllowed": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "sideEffects": [
+        "run_zero_hunter_prepare_only_enrichment_test",
+        "write_test_report",
+        "no_external_outbound_message"
+      ],
+      "updatedAt": "2026-07-12T17:38:30.031934Z",
+      "updatedBy": "oss-architecture-v2-install",
+      "rationale": "Conservative runtime-v2 classification generated from live manifest metadata; external, CRM, LinkedIn and finance effects remain gated."
+    },
+    {
+      "legacy_id": "robinswood-pme-hdf-audited-mailer",
+      "accepted": true,
+      "riskClass": "high_guarded_campaign_or_outbound",
+      "sideEffects": [
+        "business-state:campaign-or-contact",
+        "external-communication",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "human_approved_apply_only",
+      "requiresHumanApprovalForApply": true,
+      "requiresHumanApprovalForExternalSend": true,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.316580Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "robinswood-pme-hdf-campaign-safety-guard",
+      "accepted": true,
+      "riskClass": "medium_campaign_or_contact_ops",
+      "sideEffects": [
+        "business-state:campaign-or-contact",
+        "external-communication",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "human_approved_apply_only",
+      "requiresHumanApprovalForApply": true,
+      "requiresHumanApprovalForExternalSend": true,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.316385Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "robinswood-pme-hdf-company-brief-generator",
+      "accepted": true,
+      "riskClass": "medium_campaign_or_contact_ops",
+      "sideEffects": [
+        "business-state:campaign-or-contact",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.317555Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "robinswood-pme-hdf-contact-review-pipeline",
+      "accepted": true,
+      "riskClass": "medium_campaign_or_contact_ops",
+      "sideEffects": [
+        "business-state:campaign-or-contact",
+        "external-api:sellsy-or-crm",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.315895Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "robinswood-pme-hdf-domain-context-verifier",
+      "accepted": true,
+      "riskClass": "medium_campaign_or_contact_ops",
+      "sideEffects": [
+        "business-state:campaign-or-contact",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.316001Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "robinswood-pme-hdf-full-pilot-enrichment-loop",
+      "accepted": true,
+      "riskClass": "medium_campaign_or_contact_ops",
+      "sideEffects": [
+        "business-state:campaign-or-contact",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.315965Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "robinswood-pme-hdf-hunter-batch-discovery",
+      "accepted": true,
+      "riskClass": "medium_campaign_or_contact_ops",
+      "sideEffects": [
+        "business-state:campaign-or-contact",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.315939Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "robinswood-pme-hdf-launch-readiness",
+      "accepted": true,
+      "riskClass": "medium_campaign_or_contact_ops",
+      "sideEffects": [
+        "business-state:campaign-or-contact",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.316480Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "robinswood-pme-hdf-performance-optimizer",
+      "accepted": true,
+      "riskClass": "medium_campaign_or_contact_ops",
+      "sideEffects": [
+        "business-state:campaign-or-contact",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.316976Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "robinswood-pme-hdf-pre-send-gate",
+      "accepted": true,
+      "riskClass": "high_guarded_campaign_or_outbound",
+      "sideEffects": [
+        "business-state:campaign-or-contact",
+        "external-communication",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "human_approved_apply_only",
+      "requiresHumanApprovalForApply": true,
+      "requiresHumanApprovalForExternalSend": true,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.316560Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "robinswood-pme-hdf-reply-unsubscribe-loop",
+      "accepted": true,
+      "riskClass": "high_guarded_campaign_or_outbound",
+      "sideEffects": [
+        "business-state:campaign-or-contact",
+        "external-communication",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "guarded_external_prepare_or_send",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.316611Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "robinswood-pme-hdf-sellsy-crm-sync",
+      "accepted": true,
+      "policyClass": "outbound_governance",
+      "riskClass": "high_guarded_campaign_or_outbound",
+      "mutationMode": "guarded_external_prepare_or_send",
+      "scheduleAllowed": true,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "requiresHumanApprovalForApply": true,
+      "requiresHumanApprovalForExternalSend": true,
+      "sideEffects": [
+        "read_hdf_campaign_contact_artifacts",
+        "read_hdf_mailer_and_reply_ledgers",
+        "find_or_create_sellsy_company",
+        "find_or_create_sellsy_contact",
+        "create_sellsy_crm_task_notes",
+        "write_sync_state_and_report",
+        "no_external_outbound_message"
+      ],
+      "updatedAt": "2026-07-12T17:38:30.031771Z",
+      "updatedBy": "oss-architecture-v2-install",
+      "rationale": "Conservative runtime-v2 classification generated from live manifest metadata; external, CRM, LinkedIn and finance effects remain gated."
+    },
+    {
+      "legacy_id": "rubypayeur-recouvrement-auth-check",
+      "accepted": true,
+      "riskClass": "medium_finance_prepare_only",
+      "sideEffects": [
+        "external-api:inqom-or-finance",
+        "external-api:rubypayeur",
+        "filesystem-write:ops-report",
+        "finance-operation"
+      ],
+      "mutationMode": "human_approved_apply_only",
+      "requiresHumanApprovalForApply": true,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.316094Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "rubypayeur-recouvrement-candidate-scan",
+      "accepted": true,
+      "riskClass": "medium_finance_prepare_only",
+      "sideEffects": [
+        "external-api:inqom-or-finance",
+        "external-api:rubypayeur",
+        "external-api:sellsy-or-crm",
+        "filesystem-write:ops-report",
+        "finance-operation"
+      ],
+      "mutationMode": "human_approved_apply_only",
+      "requiresHumanApprovalForApply": true,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.316154Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "rubypayeur-recouvrement-queue",
+      "accepted": true,
+      "riskClass": "high_human_approval_required",
+      "sideEffects": [
+        "external-api:inqom-or-finance",
+        "external-api:rubypayeur",
+        "filesystem-write:ops-report",
+        "finance-operation"
+      ],
+      "mutationMode": "human_approved_apply_only",
+      "requiresHumanApprovalForApply": true,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.316123Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "schedule-drift-watchdog",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.315082Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "scraper-trigger-hebdo",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.314265Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "sellsy-business-kpi-export",
+      "accepted": true,
+      "riskClass": "medium_campaign_or_contact_ops",
+      "sideEffects": [
+        "business-state:campaign-or-contact",
+        "external-api:sellsy-or-crm",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.317686Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "sellsy-cash-collection-board",
+      "accepted": true,
+      "riskClass": "medium_finance_prepare_only",
+      "sideEffects": [
+        "external-api:inqom-or-finance",
+        "external-api:rubypayeur",
+        "external-api:sellsy-or-crm",
+        "filesystem-write:ops-report",
+        "finance-operation"
+      ],
+      "mutationMode": "human_approved_apply_only",
+      "requiresHumanApprovalForApply": true,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.316289Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "sellsy-cash-collection-board-tests",
+      "accepted": true,
+      "riskClass": "low_test_guardrail",
+      "sideEffects": [
+        "filesystem-write:test-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.316315Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "sellsy-linkedin-connection-dispatch",
+      "accepted": true,
+      "policyClass": "outbound_governance",
+      "riskClass": "high_guarded_campaign_or_outbound",
+      "mutationMode": "guarded_external_prepare_or_send",
+      "scheduleAllowed": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "requiresHumanApprovalForApply": true,
+      "requiresHumanApprovalForExternalSend": true,
+      "sideEffects": [
+        "read_oss_action_queue",
+        "write_ledger",
+        "no_linkedin_invites_unless_contract_allows"
+      ],
+      "updatedAt": "2026-07-12T17:38:30.031951Z",
+      "updatedBy": "oss-architecture-v2-install",
+      "rationale": "Conservative runtime-v2 classification generated from live manifest metadata; external, CRM, LinkedIn and finance effects remain gated."
+    },
+    {
+      "legacy_id": "sellsy-linkedin-connection-enrichment",
+      "accepted": true,
+      "policyClass": "outbound_governance",
+      "riskClass": "high_guarded_campaign_or_outbound",
+      "mutationMode": "guarded_external_prepare_or_send",
+      "scheduleAllowed": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "requiresHumanApprovalForApply": true,
+      "requiresHumanApprovalForExternalSend": true,
+      "sideEffects": [
+        "read_sellsy_companies_contacts",
+        "hunter_limited_enrichment",
+        "write_oss_action_queue",
+        "no_linkedin_invites",
+        "no_company_follow"
+      ],
+      "updatedAt": "2026-07-12T17:38:30.031941Z",
+      "updatedBy": "oss-architecture-v2-install",
+      "rationale": "Conservative runtime-v2 classification generated from live manifest metadata; external, CRM, LinkedIn and finance effects remain gated."
+    },
+    {
+      "legacy_id": "sellsy-linkedin-connection-tests",
+      "accepted": true,
+      "policyClass": "test_guardrail",
+      "riskClass": "low_test_guardrail",
+      "mutationMode": "observability_report_only",
+      "scheduleAllowed": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "requiresHumanApprovalForApply": true,
+      "requiresHumanApprovalForExternalSend": true,
+      "sideEffects": [
+        "read_linkedin_contract",
+        "write_report"
+      ],
+      "updatedAt": "2026-07-12T17:38:30.031957Z",
+      "updatedBy": "oss-architecture-v2-install",
+      "rationale": "Conservative runtime-v2 classification generated from live manifest metadata; external, CRM, LinkedIn and finance effects remain gated."
+    },
+    {
+      "legacy_id": "sellsy-pipeline-hygiene-board",
+      "accepted": true,
+      "riskClass": "medium_business_data_read_or_prepare",
+      "sideEffects": [
+        "external-api:sellsy-or-crm",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.316339Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "sellsy-pipeline-hygiene-board-tests",
+      "accepted": true,
+      "riskClass": "low_test_guardrail",
+      "sideEffects": [
+        "filesystem-write:test-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.316360Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "sellsy-revenue-operator-approval-pack",
+      "accepted": true,
+      "riskClass": "medium_business_data_read_or_prepare",
+      "sideEffects": [
+        "external-api:sellsy-or-crm",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.316408Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "sellsy-revenue-operator-approval-pack-tests",
+      "accepted": true,
+      "riskClass": "low_test_guardrail",
+      "sideEffects": [
+        "filesystem-write:test-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.316428Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "sellsy-revenue-operator-decision-brief",
+      "accepted": true,
+      "riskClass": "medium_business_data_read_or_prepare",
+      "sideEffects": [
+        "external-api:sellsy-or-crm",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.316813Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "sellsy-revenue-operator-decision-brief-tests",
+      "accepted": true,
+      "riskClass": "low_test_guardrail",
+      "sideEffects": [
+        "filesystem-write:test-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.316836Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "sellsy-revenue-operator-dispatcher",
+      "accepted": true,
+      "riskClass": "medium_business_data_read_or_prepare",
+      "sideEffects": [
+        "external-api:sellsy-or-crm",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.316503Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "sellsy-revenue-operator-dispatcher-tests",
+      "accepted": true,
+      "riskClass": "low_test_guardrail",
+      "sideEffects": [
+        "filesystem-write:test-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.316532Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "sellsy-tenders-sync-master",
+      "accepted": true,
+      "riskClass": "medium_business_data_read_or_prepare",
+      "sideEffects": [
+        "external-api:sellsy-or-crm",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.314641Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "server-daily-digest",
+      "accepted": true,
+      "riskClass": "low_observability_or_prepare_only",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.314904Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "server-weekly-digest",
+      "accepted": true,
+      "riskClass": "low_observability_or_prepare_only",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.314921Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "shared-memory-sync",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.314474Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "source-connectionstatus-watchdog",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.314300Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "source-lane-learning-governor",
+      "accepted": true,
+      "riskClass": "medium_campaign_or_contact_ops",
+      "sideEffects": [
+        "business-state:campaign-or-contact",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.318001Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "temporal-history-audit",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.317099Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "temporal-performance-slo-guard",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.315746Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "temporal-rtk-regression-guard",
+      "accepted": true,
+      "riskClass": "low_test_guardrail",
+      "sideEffects": [
+        "filesystem-write:test-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.315714Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "temporal-rtk-token-optimization-report",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.315867Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "temporal-stuck-workflow-watchdog",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "prepare_only_or_read_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.315679Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "traid-agent-managed-prod-readiness",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "filesystem-write:ops-report",
+        "filesystem-write:agent-action-queue",
+        "remote-dev-filesystem-write:traid-sandbox-report"
+      ],
+      "mutationMode": "sandbox_fail_closed_governance_prepare_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T12:23:51.512584Z",
+      "updatedBy": "oss-p9-p13-followup-traid-hygiene",
+      "policyClass": "investment_lab_governance_fail_closed",
+      "rationale": "TRAID governance wrapper writes only OSS/dev-sandbox evidence and must keep production/live trading/capital fail-closed; no broker/live/prod mutation allowed.",
+      "guardrails": {
+        "sandboxOnly": true,
+        "noLiveTrading": true,
+        "noBrokerLiveConnector": true,
+        "noBrokerSecrets": true,
+        "noRealOrders": true,
+        "noProdDeployment": true,
+        "noNightAgent": true
+      }
+    },
+    {
+      "legacy_id": "traid-decision-sync-rerun",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "filesystem-write:ops-report",
+        "remote-dev-filesystem-write:traid-decision-input-artifacts",
+        "remote-dev-filesystem-write:traid-sandbox-report"
+      ],
+      "mutationMode": "sandbox_fail_closed_governance_prepare_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T12:23:51.512584Z",
+      "updatedBy": "oss-p9-p13-followup-traid-hygiene",
+      "policyClass": "investment_lab_governance_fail_closed",
+      "rationale": "TRAID governance wrapper writes only OSS/dev-sandbox evidence and must keep production/live trading/capital fail-closed; no broker/live/prod mutation allowed.",
+      "guardrails": {
+        "noApprovalFabrication": true,
+        "noLiveTrading": true,
+        "noBrokerSecrets": true,
+        "noBrokerConnector": true,
+        "noProdDeployment": true,
+        "validationDoesNotActivateProd": true
+      }
+    },
+    {
+      "legacy_id": "traid-failclosed-regression-guard",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "filesystem-write:ops-report",
+        "remote-dev-readonly:traid-p39-report"
+      ],
+      "mutationMode": "sandbox_fail_closed_governance_prepare_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T12:23:51.512584Z",
+      "updatedBy": "oss-p9-p13-followup-traid-hygiene",
+      "policyClass": "investment_lab_governance_fail_closed",
+      "rationale": "TRAID governance wrapper writes only OSS/dev-sandbox evidence and must keep production/live trading/capital fail-closed; no broker/live/prod mutation allowed.",
+      "guardrails": {
+        "noApprovalFabrication": true,
+        "noLiveTrading": true,
+        "noBrokerSecrets": true,
+        "noBrokerConnector": true,
+        "noProdDeployment": true,
+        "guardFailsIfProdOrLiveAllowed": true
+      }
+    },
+    {
+      "legacy_id": "traid-paper-research-loop",
+      "accepted": true,
+      "policyClass": "investment_lab_governance_fail_closed",
+      "riskClass": "medium_sandbox_fail_closed",
+      "mutationMode": "sandbox_fail_closed_governance_prepare_only",
+      "scheduleAllowed": true,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "sideEffects": [
+        "filesystem-write:ops-report",
+        "remote-dev-filesystem-write:traid-paper-research-artifacts"
+      ],
+      "updatedAt": "2026-07-12T17:38:30.031822Z",
+      "updatedBy": "oss-architecture-v2-install",
+      "rationale": "Conservative runtime-v2 classification generated from live manifest metadata; external, CRM, LinkedIn and finance effects remain gated."
+    },
+    {
+      "legacy_id": "traid-reliability-training",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "filesystem-write:ops-report",
+        "remote-dev-filesystem-write:traid-sandbox-reliability-report"
+      ],
+      "mutationMode": "sandbox_fail_closed_governance_prepare_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T22:19:19.886756Z",
+      "updatedBy": "security-hardening-traid-reliability-followup",
+      "policyClass": "investment_lab_governance_fail_closed",
+      "rationale": "TRAID sandbox reliability training writes only OSS/dev-sandbox evidence and preserves prod/live fail-closed invariants; no broker/live/prod mutation allowed.",
+      "guardrails": {
+        "sandboxOnly": true,
+        "noApprovalFabrication": true,
+        "noLiveTrading": true,
+        "noBrokerSecrets": true,
+        "noBrokerConnector": true,
+        "noProdDeployment": true,
+        "validationDoesNotActivateProd": true
+      }
+    },
+    {
+      "legacy_id": "traid-signed-decision-intake",
+      "accepted": true,
+      "riskClass": "low_observability_or_guardrail",
+      "sideEffects": [
+        "filesystem-write:ops-report",
+        "filesystem-write:decision-request-pack",
+        "filesystem-write:decision-inbox-template"
+      ],
+      "mutationMode": "sandbox_fail_closed_governance_prepare_only",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T12:23:51.512584Z",
+      "updatedBy": "oss-p9-p13-followup-traid-hygiene",
+      "policyClass": "investment_lab_governance_fail_closed",
+      "rationale": "TRAID governance wrapper writes only OSS/dev-sandbox evidence and must keep production/live trading/capital fail-closed; no broker/live/prod mutation allowed.",
+      "guardrails": {
+        "noApprovalFabrication": true,
+        "missingKeepsFailClosed": true,
+        "noLiveTrading": true,
+        "noBrokerSecrets": true,
+        "noBrokerConnector": true,
+        "noProdDeployment": true
+      }
+    },
+    {
+      "legacy_id": "triage-emails-multi-sources-master",
+      "accepted": true,
+      "riskClass": "high_external_communication_guarded",
+      "sideEffects": [
+        "external-communication",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "guarded_external_prepare_or_send",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.314981Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    },
+    {
+      "legacy_id": "web-form-submitter",
+      "accepted": true,
+      "riskClass": "high_external_communication_guarded",
+      "sideEffects": [
+        "external-communication",
+        "filesystem-write:ops-report"
+      ],
+      "mutationMode": "guarded_external_prepare_or_send",
+      "requiresHumanApprovalForApply": false,
+      "requiresHumanApprovalForExternalSend": false,
+      "requiresExplicitReviewBeforeRiskIncrease": true,
+      "scheduleAllowed": true,
+      "updatedAt": "2026-06-28T07:37:38.315027Z",
+      "updatedBy": "oss-p9-p13-improvements"
+    }
+  ]
+}

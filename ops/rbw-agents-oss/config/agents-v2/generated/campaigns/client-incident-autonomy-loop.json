@@ -1,0 +1,77 @@
+{
+  "schema_version": "agent-spec-v2",
+  "id": "client-incident-autonomy-loop",
+  "name": "Client Incident Autonomy — email → diagnostic → réparation → réponse contrôlée",
+  "lane": "campaigns",
+  "owner": "campaigns",
+  "runtime_version": "v2",
+  "risk_class": "bounded_client_incident_remediation_with_controlled_reply",
+  "side_effects": [
+    "gmail_read_allowlisted_client_incidents",
+    "ssh_wpcli_bmb_shared_hosting_repair_known_ticket_placeholders",
+    "wordpress_ticket_code_generation_with_backup",
+    "generate_wordpress_password_reset_link",
+    "gmail_reply_after_successful_controls",
+    "write_reports_and_ledger"
+  ],
+  "execution": {
+    "backend": "argv",
+    "timeout_seconds": 300,
+    "argv": [
+      "/srv/rbw-agents-oss/.venv/bin/python",
+      "/srv/rbw-agents-oss/scripts/client_incident_autonomy_loop.py"
+    ],
+    "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+    "env": {}
+  },
+  "contract": {
+    "version": "runtime-v2-execution-report-v1",
+    "expects_report": true,
+    "json_path": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/client-incident-autonomy-loop-last.json",
+    "markdown_path": null
+  },
+  "policy": {
+    "classified": true,
+    "policy_class": "classified",
+    "mutation_mode": "guarded_external_prepare_or_send",
+    "schedule_allowed": true,
+    "requires_human_approval_for_apply": false,
+    "requires_human_approval_for_external_send": false,
+    "requires_explicit_review_before_risk_increase": true,
+    "source": "/srv/rbw-agents-oss/config/registry/side-effects-policy.json"
+  },
+  "schedules": [
+    {
+      "schedule_id": "sched.client-incident-autonomy-loop",
+      "workflow_id": "rbw.client-incident-autonomy-loop",
+      "task_queue": "campaigns",
+      "cron": "0 9,14,20 * * *",
+      "timezone": "Europe/Paris",
+      "enabled": true
+    }
+  ],
+  "trigger_types": [
+    "Schedule",
+    "SchedulerTick"
+  ],
+  "task_queues": [
+    "campaigns"
+  ],
+  "workflow_ids": [
+    "rbw.client-incident-autonomy-loop"
+  ],
+  "source_status": {
+    "in_manifest": true,
+    "in_mapping": true,
+    "in_schedules": true,
+    "in_ready_schedules": true,
+    "manifest_section": "wave1"
+  },
+  "provenance": {
+    "manifest": "/srv/rbw-agents-oss/config/command-manifest.json",
+    "mapping": "/srv/rbw-agents-oss/config/automation-mapping.json",
+    "schedules": "/srv/rbw-agents-oss/config/temporal/schedules.json",
+    "sideEffectsPolicy": "/srv/rbw-agents-oss/config/registry/side-effects-policy.json",
+    "manifestUpdatedAt": "2026-07-12T21:02:50.005345Z"
+  }
+}

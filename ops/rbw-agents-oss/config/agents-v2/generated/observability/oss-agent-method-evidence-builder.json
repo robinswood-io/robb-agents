@@ -1,0 +1,73 @@
+{
+  "schema_version": "agent-spec-v2",
+  "id": "oss-agent-method-evidence-builder",
+  "name": "OSS Agent Method Evidence Builder",
+  "lane": "observability",
+  "owner": "ops",
+  "runtime_version": "v2",
+  "risk_class": "observability_evidence_report",
+  "side_effects": [
+    "reads_capability_registry",
+    "writes_method_evidence_report",
+    "no_external_outbound_message"
+  ],
+  "execution": {
+    "backend": "argv",
+    "timeout_seconds": 300,
+    "argv": [
+      "/srv/rbw-agents-oss/.venv/bin/python",
+      "/srv/rbw-agents-oss/scripts/oss_agent_method_evidence_builder.py"
+    ],
+    "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+    "env": {}
+  },
+  "contract": {
+    "version": "runtime-v2-execution-report-v1",
+    "expects_report": true,
+    "json_path": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/oss-agent-method-evidence-builder-last.json",
+    "markdown_path": null
+  },
+  "policy": {
+    "classified": true,
+    "policy_class": "classified",
+    "mutation_mode": "prepare_only_or_read_only",
+    "schedule_allowed": true,
+    "requires_human_approval_for_apply": false,
+    "requires_human_approval_for_external_send": false,
+    "requires_explicit_review_before_risk_increase": true,
+    "source": "/srv/rbw-agents-oss/config/registry/side-effects-policy.json"
+  },
+  "schedules": [
+    {
+      "schedule_id": "sched.oss-agent-method-evidence-builder",
+      "workflow_id": "rbw.oss-agent-method-evidence-builder",
+      "task_queue": "watchdog",
+      "cron": "12 * * * *",
+      "timezone": "Europe/Paris",
+      "enabled": true
+    }
+  ],
+  "trigger_types": [
+    "SchedulerTick"
+  ],
+  "task_queues": [
+    "watchdog"
+  ],
+  "workflow_ids": [
+    "rbw.oss-agent-method-evidence-builder"
+  ],
+  "source_status": {
+    "in_manifest": true,
+    "in_mapping": true,
+    "in_schedules": true,
+    "in_ready_schedules": true,
+    "manifest_section": "wave1"
+  },
+  "provenance": {
+    "manifest": "/srv/rbw-agents-oss/config/command-manifest.json",
+    "mapping": "/srv/rbw-agents-oss/config/automation-mapping.json",
+    "schedules": "/srv/rbw-agents-oss/config/temporal/schedules.json",
+    "sideEffectsPolicy": "/srv/rbw-agents-oss/config/registry/side-effects-policy.json",
+    "manifestUpdatedAt": "2026-07-12T21:02:50.005345Z"
+  }
+}

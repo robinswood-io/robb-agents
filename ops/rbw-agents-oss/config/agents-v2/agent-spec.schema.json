@@ -1,0 +1,350 @@
+{
+  "$defs": {
+    "ExecutionBackend": {
+      "enum": [
+        "argv"
+      ],
+      "title": "ExecutionBackend",
+      "type": "string"
+    },
+    "ExecutionSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "backend": {
+          "$ref": "#/$defs/ExecutionBackend"
+        },
+        "timeout_seconds": {
+          "default": 600,
+          "maximum": 7200,
+          "minimum": 1,
+          "title": "Timeout Seconds",
+          "type": "integer"
+        },
+        "argv": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Argv",
+          "type": "array"
+        },
+        "cwd": {
+          "default": "/home/craft/.craft-agent/workspaces/my-workspace-2",
+          "title": "Cwd",
+          "type": "string"
+        },
+        "env": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Env",
+          "type": "object"
+        }
+      },
+      "required": [
+        "backend",
+        "argv"
+      ],
+      "title": "ExecutionSpec",
+      "type": "object"
+    },
+    "PolicySpec": {
+      "additionalProperties": true,
+      "properties": {
+        "classified": {
+          "default": false,
+          "title": "Classified",
+          "type": "boolean"
+        },
+        "policy_class": {
+          "default": "unclassified",
+          "title": "Policy Class",
+          "type": "string"
+        },
+        "mutation_mode": {
+          "default": "unclassified",
+          "title": "Mutation Mode",
+          "type": "string"
+        },
+        "schedule_allowed": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Schedule Allowed"
+        },
+        "requires_human_approval_for_apply": {
+          "default": false,
+          "title": "Requires Human Approval For Apply",
+          "type": "boolean"
+        },
+        "requires_human_approval_for_external_send": {
+          "default": false,
+          "title": "Requires Human Approval For External Send",
+          "type": "boolean"
+        },
+        "requires_explicit_review_before_risk_increase": {
+          "default": true,
+          "title": "Requires Explicit Review Before Risk Increase",
+          "type": "boolean"
+        },
+        "source": {
+          "default": "manifest-fallback",
+          "title": "Source",
+          "type": "string"
+        }
+      },
+      "title": "PolicySpec",
+      "type": "object"
+    },
+    "ReportContract": {
+      "additionalProperties": false,
+      "properties": {
+        "version": {
+          "default": "observed-v0",
+          "title": "Version",
+          "type": "string"
+        },
+        "expects_report": {
+          "default": false,
+          "title": "Expects Report",
+          "type": "boolean"
+        },
+        "json_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Json Path"
+        },
+        "markdown_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Markdown Path"
+        }
+      },
+      "title": "ReportContract",
+      "type": "object"
+    },
+    "ScheduleInstance": {
+      "additionalProperties": true,
+      "properties": {
+        "schedule_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Schedule Id"
+        },
+        "workflow_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Workflow Id"
+        },
+        "task_queue": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Task Queue"
+        },
+        "cron": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cron"
+        },
+        "timezone": {
+          "default": "Europe/Paris",
+          "title": "Timezone",
+          "type": "string"
+        },
+        "enabled": {
+          "default": true,
+          "title": "Enabled",
+          "type": "boolean"
+        }
+      },
+      "title": "ScheduleInstance",
+      "type": "object"
+    },
+    "SourceStatus": {
+      "additionalProperties": false,
+      "properties": {
+        "in_manifest": {
+          "title": "In Manifest",
+          "type": "boolean"
+        },
+        "in_mapping": {
+          "title": "In Mapping",
+          "type": "boolean"
+        },
+        "in_schedules": {
+          "title": "In Schedules",
+          "type": "boolean"
+        },
+        "in_ready_schedules": {
+          "title": "In Ready Schedules",
+          "type": "boolean"
+        },
+        "manifest_section": {
+          "title": "Manifest Section",
+          "type": "string"
+        }
+      },
+      "required": [
+        "in_manifest",
+        "in_mapping",
+        "in_schedules",
+        "in_ready_schedules",
+        "manifest_section"
+      ],
+      "title": "SourceStatus",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "agent-spec-v2",
+      "default": "agent-spec-v2",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "id": {
+      "minLength": 1,
+      "pattern": "^[a-z0-9][a-z0-9._-]*$",
+      "title": "Id",
+      "type": "string"
+    },
+    "name": {
+      "minLength": 1,
+      "title": "Name",
+      "type": "string"
+    },
+    "lane": {
+      "minLength": 1,
+      "title": "Lane",
+      "type": "string"
+    },
+    "owner": {
+      "minLength": 1,
+      "title": "Owner",
+      "type": "string"
+    },
+    "runtime_version": {
+      "const": "v2",
+      "title": "Runtime Version",
+      "type": "string"
+    },
+    "risk_class": {
+      "title": "Risk Class",
+      "type": "string"
+    },
+    "side_effects": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Side Effects",
+      "type": "array"
+    },
+    "execution": {
+      "$ref": "#/$defs/ExecutionSpec"
+    },
+    "contract": {
+      "$ref": "#/$defs/ReportContract"
+    },
+    "policy": {
+      "$ref": "#/$defs/PolicySpec"
+    },
+    "schedules": {
+      "items": {
+        "$ref": "#/$defs/ScheduleInstance"
+      },
+      "title": "Schedules",
+      "type": "array"
+    },
+    "trigger_types": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Trigger Types",
+      "type": "array"
+    },
+    "task_queues": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Task Queues",
+      "type": "array"
+    },
+    "workflow_ids": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Workflow Ids",
+      "type": "array"
+    },
+    "source_status": {
+      "$ref": "#/$defs/SourceStatus"
+    },
+    "provenance": {
+      "additionalProperties": true,
+      "title": "Provenance",
+      "type": "object"
+    }
+  },
+  "required": [
+    "id",
+    "name",
+    "lane",
+    "owner",
+    "runtime_version",
+    "risk_class",
+    "execution",
+    "contract",
+    "policy",
+    "source_status"
+  ],
+  "title": "AgentSpec",
+  "type": "object"
+}

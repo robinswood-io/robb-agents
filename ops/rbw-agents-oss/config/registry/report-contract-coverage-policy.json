@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "report-contract-coverage-policy-v1",
+  "updatedAt": "2026-07-12T20:45:02.585870Z",
+  "updatedBy": "oss-architecture-v2-debt-zero-migrate",
+  "description": "P15 no-new-debt policy. Existing schedules without declared report artifacts are accepted debt; future schedules without report contracts fail the guard.",
+  "rules": {
+    "newScheduledAutomationRequiresReportContract": true,
+    "acceptedDebtReviewAfter": "2026-09-30"
+  },
+  "acceptedScheduledWithoutReport": [],
+  "counts": {
+    "acceptedScheduledWithoutReport": 0
+  },
+  "debtClosure": {
+    "closedAt": "2026-07-12T20:45:02.585873Z",
+    "reason": "All scheduled manifest entries now declare either a business report or a canonical runtime-v2 execution report.",
+    "previousAcceptedScheduleEntries": 96,
+    "remainingAcceptedScheduleEntries": 0
+  }
+}
