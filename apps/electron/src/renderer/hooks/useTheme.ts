@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import {
   resolveTheme,
+  mergeThemeOverrides,
   DEFAULT_THEME,
   type ThemeOverrides,
   type ThemeFile,
@@ -53,8 +54,9 @@ export function useTheme({ appTheme }: UseThemeOptions = {}): UseThemeResult {
   // Otherwise just use the resolved theme from context
   const theme = useMemo(() => {
     if (appTheme && context.presetTheme) {
-      // Merge: preset + appTheme
-      return resolveTheme({ ...context.presetTheme, ...appTheme })
+      // Keep all preset dark colors when the app override changes only one of
+      // them (for example ~/.craft-agent/theme.json overriding just accent).
+      return resolveTheme(mergeThemeOverrides(context.presetTheme, appTheme))
     }
     if (appTheme) {
       // No preset, just appTheme

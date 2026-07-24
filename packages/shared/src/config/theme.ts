@@ -94,7 +94,7 @@ const SURFACE_KEYS: (keyof SurfaceColors)[] = [
 // Combined keys for merging (all color properties)
 const ALL_COLOR_KEYS = [...COLOR_KEYS, ...SURFACE_KEYS] as const;
 
-function mergeThemes(
+export function mergeThemeOverrides(
   base: ThemeOverrides | undefined,
   override: ThemeOverrides | undefined
 ): ThemeOverrides {
@@ -135,7 +135,7 @@ function mergeThemes(
 export function resolveTheme(
   app?: ThemeOverrides
 ): ThemeOverrides {
-  return mergeThemes(undefined, app) || {};
+  return mergeThemeOverrides(undefined, app) || {};
 }
 
 /**

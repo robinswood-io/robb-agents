@@ -38,10 +38,28 @@ function unique(values) {
   });
 
   try {
+    await page.evaluate(async () => {
+      localStorage.setItem('craft-theme', JSON.stringify({
+        mode: 'dark',
+        colorTheme: 'robinswood',
+        font: 'system',
+        isUserOverride: true,
+      }));
+      await window.electronAPI.setAppTheme({
+        dark: {
+          accent: '#A855F7',
+        },
+      });
+    });
+
     const target = new URL(page.url());
     target.searchParams.set('route', 'settings/governance');
     await page.goto(target.toString(), { waitUntil: 'domcontentloaded', timeout: 30_000 });
     await page.waitForSelector('#root:not(:empty)', { timeout: 20_000 });
+    await page.waitForFunction(
+      () => document.documentElement.classList.contains('dark'),
+      { timeout: 20_000 },
+    );
 
     const deferSetup = page.getByRole('button', {
       name: /Configurer plus tard|Setup later|Más adelante|Später einrichten/i,
@@ -114,6 +132,20 @@ function unique(values) {
       || await page.locator('img[alt*="Robb"]').count() > 0;
     const legacyBrandVisible = /\bCraft Agents?\b/i.test(bodyText);
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
+    const themeProbe = await page.evaluate(() => {
+      const rootStyle = getComputedStyle(document.documentElement);
+      return {
+        isDark: document.documentElement.classList.contains('dark'),
+        background: rootStyle.getPropertyValue('--background').trim().toLowerCase(),
+        foreground: rootStyle.getPropertyValue('--foreground').trim().toLowerCase(),
+        accent: rootStyle.getPropertyValue('--accent').trim().toLowerCase(),
+      };
+    });
+    const matchesColor = (actual, hex, rgb) => actual === hex || actual === rgb;
+    const darkThemeApplied = themeProbe.isDark
+      && matchesColor(themeProbe.background, '#1e1d21', 'rgb(30, 29, 33)')
+      && matchesColor(themeProbe.foreground, '#f5f5f7', 'rgb(245, 245, 247)')
+      && matchesColor(themeProbe.accent, '#a855f7', 'rgb(168, 85, 247)');
 
     const screenshotDir = '/tmp/playwright-screenshots';
     fs.mkdirSync(screenshotDir, { recursive: true });
@@ -130,6 +162,7 @@ function unique(values) {
     console.log(`Title:    ${title}`);
     console.log(`Root:     ${rootText.length > 0 ? 'visible and non-empty' : 'empty'}`);
     console.log(`Brand:    ${brandVisible && !legacyBrandVisible ? 'Robb Agents' : 'invalid'}`);
+    console.log(`Theme:    ${darkThemeApplied ? 'dark Robinswood with custom accent' : `invalid (${JSON.stringify(themeProbe)})`}`);
     console.log('Remote:   grant/revoke verified; final state local-only');
     console.log(`Overflow: ${overflow ? 'horizontal overflow detected' : 'none'}`);
     console.log(`Console errors: ${filteredConsoleErrors.length}`);
@@ -145,6 +178,7 @@ function unique(values) {
       && rootText.length > 0
       && brandVisible
       && !legacyBrandVisible
+      && darkThemeApplied
       && !overflow
       && filteredConsoleErrors.length === 0
       && filteredPageErrors.length === 0
@@ -153,6 +187,9 @@ function unique(values) {
     console.log(`\n=== RESULT: ${ok ? 'FONCTIONNEL' : 'DÉGRADÉ'} ===`);
     process.exitCode = ok ? 0 : 1;
   } finally {
+    await page.evaluate(async () => {
+      await window.electronAPI.clearAppTheme();
+    }).catch(() => {});
     await browser.close();
   }
 })().catch((error) => {
