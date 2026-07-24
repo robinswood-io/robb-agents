@@ -64,11 +64,17 @@ function resolveUpwards(base: string, relativePath: string, maxLevels = 4): stri
 
 function resolveBundledRuntimePath(hostRuntime: BackendHostRuntimeContext): string | undefined {
   const bunBinary = process.platform === 'win32' ? 'bun.exe' : 'bun';
-  const bunBasePath = process.platform === 'win32'
-    ? (hostRuntime.resourcesPath || hostRuntime.appRootPath)
-    : hostRuntime.appRootPath;
-  const bunPath = join(bunBasePath, 'vendor', 'bun', bunBinary);
-  if (existsSync(bunPath)) return bunPath;
+  const bundledCandidates = [
+    join(hostRuntime.appRootPath, 'vendor', 'bun', bunBinary),
+    ...(hostRuntime.resourcesPath
+      ? [
+          join(hostRuntime.resourcesPath, 'app', 'vendor', 'bun', bunBinary),
+          join(hostRuntime.resourcesPath, 'vendor', 'bun', bunBinary),
+        ]
+      : []),
+  ];
+  const bundledRuntime = firstExistingPath(bundledCandidates);
+  if (bundledRuntime) return bundledRuntime;
 
   // Non-packaged (headless server, dev mode): fall back to system bun via PATH.
   // Packaged apps must ship their own bundled bun — never resolve from PATH

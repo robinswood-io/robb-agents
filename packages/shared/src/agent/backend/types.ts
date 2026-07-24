@@ -152,7 +152,7 @@ export interface BridgeUpdateContext {
 export interface BackendHostRuntimeContext {
   /** App root path (packaged app path or repository root in development) */
   appRootPath: string;
-  /** Optional resources path (needed for packaged Windows runtime resolution) */
+  /** Optional resources path for packaged runtime compatibility fallbacks */
   resourcesPath?: string;
   /** Whether the host app is running as a packaged build */
   isPackaged: boolean;
