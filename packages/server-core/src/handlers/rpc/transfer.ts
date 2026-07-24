@@ -32,6 +32,7 @@ interface TransferState {
   largeArgIndex: number
   checksum?: string
   timer: ReturnType<typeof setTimeout> | null
+  timerGeneration: number
 }
 
 const DEFAULT_TRANSFER_TTL_MS = 5 * 60 * 1000
@@ -59,6 +60,7 @@ async function cleanupTransfer(transferId: string): Promise<void> {
     clearTimeout(transfer.timer)
     transfer.timer = null
   }
+  transfer.timerGeneration += 1
   activeTransfers.delete(transferId)
 
   try {
@@ -72,7 +74,16 @@ async function cleanupTransfer(transferId: string): Promise<void> {
 
 function rescheduleTransferCleanup(transfer: TransferState): void {
   if (transfer.timer) clearTimeout(transfer.timer)
+  const generation = transfer.timerGeneration + 1
+  transfer.timerGeneration = generation
   transfer.timer = setTimeout(() => {
+    if (
+      activeTransfers.get(transfer.id) !== transfer
+      || transfer.timerGeneration !== generation
+    ) {
+      return
+    }
+    transfer.timer = null
     console.warn(`[Transfer:server] TTL expired for transfer ${transfer.id} — cleaning up`)
     void cleanupTransfer(transfer.id)
   }, getTransferTtlMs())
@@ -140,6 +151,7 @@ export function registerTransferHandlers(server: RpcServer): void {
       largeArgIndex: opts.largeArgIndex,
       checksum: opts.checksum,
       timer: null,
+      timerGeneration: 0,
     }
     activeTransfers.set(transferId, transfer)
     rescheduleTransferCleanup(transfer)
@@ -169,6 +181,9 @@ export function registerTransferHandlers(server: RpcServer): void {
       throw new Error('Missing chunk data')
     }
 
+    // Refresh before I/O so a slow filesystem write cannot race the previous
+    // expiry callback. The generation guard makes already-queued callbacks inert.
+    rescheduleTransferCleanup(transfer)
     const chunkPath = join(transfer.dir, `chunk-${String(opts.index).padStart(6, '0')}`)
     await writeFile(chunkPath, opts.data, 'utf-8')
     transfer.received.add(opts.index)
