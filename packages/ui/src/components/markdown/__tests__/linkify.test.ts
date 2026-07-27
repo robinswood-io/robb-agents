@@ -44,6 +44,16 @@ describe('preprocessLinks', () => {
       const input = '- [stackoverflow.com - How to fix React hydration errors](https://stackoverflow.com/questions/123)'
       expect(preprocessLinks(input)).toBe(input)
     })
+
+    it('preserves escaped brackets in link labels', () => {
+      const input = '[docs \\[secure\\].example.com](https://example.com/security)'
+      expect(preprocessLinks(input)).toBe(input)
+    })
+
+    it('handles a long malformed link candidate in linear time', () => {
+      const input = `[${'a'.repeat(100_000)} https://example.com`
+      expect(preprocessLinks(input)).toContain('[https://example.com](https://example.com)')
+    })
   })
 
   describe('still wraps bare URLs that are not already linked', () => {

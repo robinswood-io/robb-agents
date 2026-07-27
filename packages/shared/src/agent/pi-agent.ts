@@ -106,6 +106,7 @@ import { extractWorkspaceSlug } from '../utils/workspace.ts';
 import { LLM_QUERY_TIMEOUT_MS, type LLMQueryRequest, type LLMQueryResult } from './llm-tool.ts';
 import { executeBrowserToolCommand } from './browser-tool-runtime.ts';
 import { saveBinaryResponse } from '../utils/binary-detection.ts';
+import { parseCompactCommand } from './compact-command.ts';
 
 // ============================================================
 // PiAgent Implementation
@@ -2026,9 +2027,9 @@ export class PiAgent extends BaseAgent {
       }
 
       const trimmedMessage = message.trim();
-      const compactMatch = trimmedMessage.match(/^\/compact(?:\s+([\s\S]+))?$/i);
-      if (compactMatch) {
-        const customInstructions = compactMatch[1]?.trim() || undefined;
+      const compactCommand = parseCompactCommand(trimmedMessage);
+      if (compactCommand) {
+        const { customInstructions } = compactCommand;
         const compactResult = await this.requestCompact(customInstructions);
         if (compactResult) {
           yield {

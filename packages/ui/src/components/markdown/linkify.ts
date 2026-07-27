@@ -152,25 +152,46 @@ function isInsideCode(pos: number, ranges: CodeRange[]): boolean {
 function findMarkdownLinkRanges(text: string): CodeRange[] {
   const ranges: CodeRange[] = []
 
-  // Match [text](url) — inline links
-  const inlineLinkRegex = /\[(?:[^\[\]]|\\\[|\\\])*\]\([^)]*\)/g
-  let match
-  while ((match = inlineLinkRegex.exec(text)) !== null) {
-    ranges.push({ start: match.index, end: match.index + match[0].length })
-  }
+  for (let start = 0; start < text.length; start += 1) {
+    if (text[start] !== '[') continue
 
-  // Match [text][ref] — reference links
-  const refLinkRegex = /\[(?:[^\[\]]|\\\[|\\\])*\]\[[^\]]*\]/g
-  while ((match = refLinkRegex.exec(text)) !== null) {
-    // Avoid duplicates with inline links that already matched
-    const r = { start: match.index, end: match.index + match[0].length }
-    const alreadyCovered = ranges.some(existing => rangesOverlap(existing, r))
-    if (!alreadyCovered) {
-      ranges.push(r)
-    }
+    const labelEnd = findMarkdownLabelEnd(text, start + 1)
+    if (labelEnd === -1) continue
+
+    const destinationStart = labelEnd + 1
+    const destinationOpener = text[destinationStart]
+    if (destinationOpener !== '(' && destinationOpener !== '[') continue
+
+    const destinationCloser = destinationOpener === '(' ? ')' : ']'
+    const destinationEnd = text.indexOf(destinationCloser, destinationStart + 1)
+    if (destinationEnd === -1) continue
+
+    ranges.push({ start, end: destinationEnd + 1 })
+    start = destinationEnd
   }
 
   return ranges
+}
+
+/**
+ * Find the unescaped closing bracket of a Markdown link label.
+ * Unescaped nested opening brackets invalidate the candidate, matching the
+ * deliberately conservative behavior of the previous expression.
+ */
+function findMarkdownLabelEnd(text: string, from: number): number {
+  for (let index = from; index < text.length; index += 1) {
+    const current = text[index]
+    const next = text[index + 1]
+
+    if (current === '\\' && (next === '[' || next === ']')) {
+      index += 1
+      continue
+    }
+    if (current === '[') return -1
+    if (current === ']') return index
+  }
+
+  return -1
 }
 
 /**
@@ -180,9 +201,7 @@ function isInsideMarkdownLink(pos: number, ranges: CodeRange[]): boolean {
   return ranges.some(r => pos >= r.start && pos < r.end)
 }
 
-/**
- * Check if ranges overlap
- */
+/** Check whether two detected spans overlap. */
 function rangesOverlap(a: { start: number; end: number }, b: { start: number; end: number }): boolean {
   return a.start < b.end && b.start < a.end
 }

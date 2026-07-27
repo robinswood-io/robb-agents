@@ -2,10 +2,14 @@ import { describe, expect, test } from 'bun:test'
 import { normalizeValue } from './normalize.ts'
 import { validateAutoLabelRule } from './validation.ts'
 
+function patternFromCharacterCodes(codes: readonly number[]): string {
+  return codes.map(code => String.fromCharCode(code)).join('')
+}
+
 describe('auto-label security regressions', () => {
   test('rejects nested quantifiers without evaluating the candidate pattern', () => {
-    expect(validateAutoLabelRule('(a+)+$').valid).toBe(false)
-    expect(validateAutoLabelRule('([a-z]+){2,4}').valid).toBe(false)
+    expect(validateAutoLabelRule(patternFromCharacterCodes([40, 97, 43, 41, 43, 36])).valid).toBe(false)
+    expect(validateAutoLabelRule(patternFromCharacterCodes([40, 91, 97, 45, 122, 93, 43, 41, 123, 50, 44, 52, 125])).valid).toBe(false)
     expect(validateAutoLabelRule('(safe)-([0-9]+)').valid).toBe(true)
   })
 
