@@ -163,6 +163,11 @@ describe('Robinswood visible branding', () => {
     expect(workflow).toContain('generate-github-update-manifests.ts')
     expect(workflow).toContain('--verify-tag')
     expect(workflow).toContain('--latest')
+
+    const validationWorkflow = readRepoFile('.github/workflows/robinswood-validate.yml')
+    expect(validationWorkflow).toContain(`      - name: Build and validate unsigned NSIS installer
+        env:
+          GITHUB_TOKEN: \${{ github.token }}`)
   })
 
   it('uses Robb Agents in visible runtime guidance outside the desktop shell', () => {
