@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'bun:test';
+import { ExecutionProofIssuer, operationValueHash } from '../governance/index.ts';
 import { buildMissionControlSnapshot, exportMissionReportMarkdown, planMissionReplay } from './mission-control.ts';
 import { parseTaskSpec } from './schema.ts';
 import type { RunLogEntry } from './storage.ts';
@@ -177,5 +178,78 @@ describe('mission control', () => {
     ]);
     expect(plan.safeByDefault).toBe(true);
     expect(plan.blockedNodeIds).toEqual(['publish']);
+  });
+
+  it('reuses an external mutation only when its signed reconciliation proof matches the exact task binding', () => {
+    const issuer = new ExecutionProofIssuer({
+      signingKey: 'mission-control-test-signing-key-32-bytes',
+      now: () => '2026-07-23T08:03:00.000Z',
+      generateId: () => 'proof-publish',
+    });
+    const executionProof = issuer.issue({
+      clientId: 'client-1',
+      workspaceId: 'workspace-1',
+      missionId: 'launch',
+      nodeId: 'publish',
+      agentId: 'agent-1',
+      connectorId: 'connector-1',
+      operationId: 'campaign.publish',
+      idempotencyKey: 'publish-1',
+      payloadHash: operationValueHash({ campaign: 'launch' }),
+      resultHash: operationValueHash({ status: 'published' }),
+      providerRequestId: 'provider-request-1',
+      policyVersion: 1,
+      authorizationGeneration: 1,
+      connectorManifestHash: operationValueHash({ connector: 'v1' }),
+      reconciliation: {
+        status: 'confirmed',
+        observedAt: '2026-07-23T08:02:00.000Z',
+        providerStateHash: operationValueHash({ remoteStatus: 'published' }),
+      },
+    });
+    const log: RunLogEntry[] = [{
+      t: '2026-07-23T08:03:00.000Z',
+      kind: 'node-checkpoint',
+      nodeId: 'publish',
+      idempotencyKey: 'publish-1',
+      status: 'confirmed',
+      proofHash: operationValueHash(executionProof),
+      executionProof,
+    }];
+
+    const withoutVerifier = planMissionReplay(
+      missionSpec(),
+      'r1',
+      log,
+      (nodeId) => (nodeId === 'publish' ? { text: 'published' } : null),
+    );
+    expect(withoutVerifier.nodes.find((node) => node.nodeId === 'publish')?.action).toBe('block');
+
+    const verified = planMissionReplay(
+      missionSpec(),
+      'r1',
+      log,
+      (nodeId) => (nodeId === 'publish' ? { text: 'published' } : null),
+      {
+        workspaceId: 'workspace-1',
+        verifyExecutionProof: (proof, binding) => issuer.verifyForTask(proof, binding),
+      },
+    );
+    expect(verified.nodes.find((node) => node.nodeId === 'publish')).toMatchObject({
+      action: 'reuse',
+      effect: 'external-mutation',
+    });
+
+    const wrongWorkspace = planMissionReplay(
+      missionSpec(),
+      'r1',
+      log,
+      (nodeId) => (nodeId === 'publish' ? { text: 'published' } : null),
+      {
+        workspaceId: 'workspace-2',
+        verifyExecutionProof: (proof, binding) => issuer.verifyForTask(proof, binding),
+      },
+    );
+    expect(wrongWorkspace.nodes.find((node) => node.nodeId === 'publish')?.action).toBe('block');
   });
 });

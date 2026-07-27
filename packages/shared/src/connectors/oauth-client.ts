@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from 'node:crypto'
 
 import type { ConnectorSecretLease } from './http-drivers'
+import type { SecretLeaseGrant } from '../credentials/secret-lease-broker'
 
 export type ConnectorOAuthProvider =
   | 'microsoft365'
@@ -71,6 +72,7 @@ export class ConnectorOAuthError extends Error {
       | 'TOKEN_EXCHANGE_FAILED'
       | 'INVALID_TOKEN_RESPONSE'
       | 'MISSING_CLIENT_SECRET'
+      | 'SECRET_LEASE_INVALID'
       | 'SCOPE_DENIED',
     message: string,
   ) {
@@ -439,7 +441,7 @@ export async function refreshConnectorOAuthToken(input: {
 }
 
 export function createConnectorSecretLeaseFromOAuth(input: {
-  reference: string
+  grant: SecretLeaseGrant
   profile: ConnectorOAuthProfile
   tokenSet: ConnectorOAuthTokenSet
   requestedConnectorScopes: string[]
@@ -461,12 +463,24 @@ export function createConnectorSecretLeaseFromOAuth(input: {
     )
   }
   const now = input.now?.() ?? new Date().toISOString()
+  const tokenExpiresAt = input.tokenSet.expiresAt
+    ?? new Date(Date.parse(now) + (input.fallbackLifetimeMs ?? 5 * 60_000)).toISOString()
+  if (Date.parse(input.grant.expiresAt) > Date.parse(tokenExpiresAt)) {
+    throw new ConnectorOAuthError(
+      'SECRET_LEASE_INVALID',
+      'Secret lease cannot outlive the OAuth access token',
+    )
+  }
+  const ungrantedLeaseScopes = connectorScopes.filter((scope) => !input.grant.scopes.includes(scope))
+  if (ungrantedLeaseScopes.length > 0) {
+    throw new ConnectorOAuthError(
+      'SECRET_LEASE_INVALID',
+      `Secret lease is missing connector scopes: ${ungrantedLeaseScopes.join(', ')}`,
+    )
+  }
   return {
-    reference: input.reference,
+    grant: input.grant,
     value: input.tokenSet.accessToken,
-    scopes: connectorScopes,
-    expiresAt: input.tokenSet.expiresAt
-      ?? new Date(Date.parse(now) + (input.fallbackLifetimeMs ?? 5 * 60_000)).toISOString(),
   }
 }
 

@@ -1,5 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { CapabilityBroker, type CapabilityOperationRequest } from '../governance/capability-broker'
+import { ExecutionProofIssuer } from '../governance/execution-proof'
+import { SecretLeaseBroker } from '../credentials/secret-lease-broker'
 import {
   ConnectorDriverError,
   createPriorityConnectorDriver,
@@ -7,30 +9,24 @@ import {
   type ConnectorDriverOptions,
   type ConnectorHttpRequest,
   type ConnectorHttpResponse,
-  type ConnectorSecretLease,
   type PriorityConnectorPack,
 } from './http-drivers'
-import { connectorPackTemplates, runConnectorPackContract } from './pack-manifest'
-import { connectorPackManifestHash } from './pack-manifest'
+import { connectorPackManifestHash, connectorPackTemplates, runConnectorPackContract } from './pack-manifest'
 
 const now = '2026-07-23T12:00:00.000Z'
-const lease: ConnectorSecretLease = {
-  reference: 'secret://connector/oauth',
-  value: 'test-token-not-persisted',
-  scopes: [
-    'Files.Read',
-    'Files.ReadWrite',
-    'drive.readonly',
-    'drive.file',
-    'channels.history',
-    'chat.write',
-    'crm.objects.read',
-    'crm.objects.write',
-    'erp.records.read',
-    'erp.records.write',
-  ],
-  expiresAt: '2026-07-23T13:00:00.000Z',
-}
+const secretReference = 'secret://connector/oauth'
+const connectorScopes = [
+  'Files.Read',
+  'Files.ReadWrite',
+  'drive.readonly',
+  'drive.file',
+  'channels.history',
+  'chat.write',
+  'crm.objects.read',
+  'crm.objects.write',
+  'erp.records.read',
+  'erp.records.write',
+]
 
 const AUTONOMY_BY_RISK = {
   R0: 'A0',
@@ -43,7 +39,7 @@ const AUTONOMY_BY_RISK = {
 function createHarness(
   pack: PriorityConnectorPack,
   requests: ConnectorHttpRequest[],
-  customLease: ConnectorSecretLease = lease,
+  grantedScopes: string[] = connectorScopes,
   respond: (request: ConnectorHttpRequest) => ConnectorHttpResponse = () => ({
     status: 200,
     body: { ok: true },
@@ -51,6 +47,13 @@ function createHarness(
   }),
 ) {
   const manifest = connectorPackTemplates[pack]
+  let leaseSequence = 0
+  const secretLeaseBroker = new SecretLeaseBroker({
+    signingKey: 'abcdef0123456789abcdef0123456789',
+    currentAuthorizationGeneration: () => 1,
+    nowMs: () => Date.parse(now),
+    generateId: () => `lease-${++leaseSequence}`,
+  })
   const broker = new CapabilityBroker({
     policy: {
       schemaVersion: 1,
@@ -70,6 +73,11 @@ function createHarness(
     signingKey: '0123456789abcdef0123456789abcdef',
     nowMs: () => Date.parse(now),
   })
+  const executionProofIssuer = new ExecutionProofIssuer({
+    signingKey: 'execution-proof-test-key-material-32-bytes-minimum',
+    now: () => now,
+    generateId: () => 'execution-proof-1',
+  })
 
   const authorize = (
     operationId: string,
@@ -88,6 +96,7 @@ function createHarness(
         clientId: 'client-1',
         workspaceId: 'workspace-1',
         missionId: 'mission-1',
+        nodeId: 'node-1',
         agentId: 'agent-1',
         actorId: 'operator-1',
         connectorId: manifest.id,
@@ -117,13 +126,25 @@ function createHarness(
 
   const options: ConnectorDriverOptions = {
     baseUrl: manifest.allowedOrigins[0],
-    secretReference: customLease.reference,
-    resolveSecret: async () => customLease,
+    secretReference,
+    resolveSecret: async (reference, leaseRequest) => ({
+      value: 'test-token-not-persisted',
+      grant: secretLeaseBroker.issue({
+        secretReference: reference,
+        secretName: 'connector-oauth-access-token',
+        identity: leaseRequest.identity,
+        operationId: leaseRequest.operationId,
+        scopes: grantedScopes,
+        authorizationGeneration: leaseRequest.authorizationGeneration,
+        ttlMs: 60_000,
+      }),
+    }),
     transport: async (request) => {
       requests.push(request)
       return respond(request)
     },
     consumeCapability: (capability, operationRequest) => broker.consume(capability, operationRequest),
+    consumeSecretLease: (grant, leaseRequest) => secretLeaseBroker.consume(grant, leaseRequest),
     assertRuntimeAdmission: (packId, operationId, expectedManifestHash) => {
       if (packId !== manifest.id || expectedManifestHash !== connectorPackManifestHash(manifest)) {
         throw new Error('Connector runtime manifest mismatch')
@@ -138,6 +159,12 @@ function createHarness(
         operation,
       }
     },
+    reconcileMutation: async ({ providerResponse }) => ({
+      status: 'confirmed',
+      observedAt: now,
+      providerState: providerResponse.body,
+    }),
+    issueExecutionProof: (request) => executionProofIssuer.issue(request),
     createHealthAuthorization: () => authorize('health.read'),
     now: () => now,
   }
@@ -145,6 +172,7 @@ function createHarness(
   return {
     authorize,
     broker,
+    executionProofIssuer,
     driver: createPriorityConnectorDriver(pack, options),
     options,
   }
@@ -168,10 +196,7 @@ describe('priority connector HTTP drivers', () => {
 
   test('fails closed before transport when a secret lease lacks the operation scope', async () => {
     const requests: ConnectorHttpRequest[] = []
-    const harness = createHarness('microsoft365', requests, {
-      ...lease,
-      scopes: ['Files.Read'],
-    })
+    const harness = createHarness('microsoft365', requests, ['Files.Read'])
     const payload = { name: 'Renamed.txt' }
     const authorization = harness.authorize('files.update', payload, 'file-1', 'mutation-1')
 
@@ -222,7 +247,20 @@ describe('priority connector HTTP drivers', () => {
       reconciliationReceipt: {
         providerRequestId: 'provider-request-1',
       },
+      executionProof: {
+        missionId: 'mission-1',
+        nodeId: 'node-1',
+        idempotencyKey: 'mutation-2',
+        reconciliation: { status: 'confirmed' },
+      },
     })
+    const proof = result.executionProof
+    expect(harness.executionProofIssuer.verifyForTask(proof, {
+      workspaceId: 'workspace-1',
+      missionId: 'mission-1',
+      nodeId: 'node-1',
+      idempotencyKey: 'mutation-2',
+    })).toMatchObject({ allowed: true })
     expect(requests[0]?.url).toBe('https://www.googleapis.com/drive/v3/files/file%2Fwith%20spaces')
 
     await expect(harness.driver.invoke('drive.update', {
@@ -236,7 +274,7 @@ describe('priority connector HTTP drivers', () => {
 
   test('requires idempotency and a provider reconciliation receipt for mutations', async () => {
     const requests: ConnectorHttpRequest[] = []
-    const noReceipt = createHarness('googleWorkspace', requests, lease, () => ({
+    const noReceipt = createHarness('googleWorkspace', requests, connectorScopes, () => ({
       status: 200,
       body: { ok: true },
     }))
@@ -256,9 +294,46 @@ describe('priority connector HTTP drivers', () => {
     })).rejects.toMatchObject({ code: 'RECONCILIATION_REQUIRED' })
   })
 
+  test('returns signed divergence evidence without presenting it as confirmed execution', async () => {
+    const requests: ConnectorHttpRequest[] = []
+    const harness = createHarness('googleWorkspace', requests)
+    const driver = createPriorityConnectorDriver('googleWorkspace', {
+      ...harness.options,
+      reconcileMutation: async () => ({
+        status: 'diverged',
+        observedAt: now,
+        providerState: { exists: false },
+        detailCode: 'PROVIDER_STATE_MISSING',
+      }),
+    })
+    const payload = { name: 'Validated report' }
+    const authorization = harness.authorize('drive.update', payload, 'file-1', 'mutation-diverged')
+    const result = await driver.invoke('drive.update', {
+      resourceId: 'file-1',
+      payload,
+      idempotencyKey: 'mutation-diverged',
+      authorization,
+    })
+
+    expect(result).toMatchObject({
+      executionProof: {
+        reconciliation: {
+          status: 'diverged',
+          detailCode: 'PROVIDER_STATE_MISSING',
+        },
+      },
+    })
+    expect(harness.executionProofIssuer.verifyForTask(result.executionProof, {
+      workspaceId: 'workspace-1',
+      missionId: 'mission-1',
+      nodeId: 'node-1',
+      idempotencyKey: 'mutation-diverged',
+    })).toMatchObject({ allowed: false, code: 'RECONCILIATION_DIVERGED' })
+  })
+
   test('rejects untrusted origins and credentialed redirects', async () => {
     const requests: ConnectorHttpRequest[] = []
-    const harness = createHarness('microsoft365', requests, lease, () => ({
+    const harness = createHarness('microsoft365', requests, connectorScopes, () => ({
       status: 307,
       body: {},
       redirected: true,

@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test'
+import { SecretLeaseBroker } from '../credentials/secret-lease-broker'
 
 import {
   ConnectorOAuthError,
@@ -157,8 +158,30 @@ describe('connector OAuth client', () => {
 
   test('maps granted vendor scopes to a short-lived secret lease', () => {
     const profile = createConnectorOAuthProfile('googleWorkspace')
+    const broker = new SecretLeaseBroker({
+      signingKey: '0123456789abcdef0123456789abcdef',
+      currentAuthorizationGeneration: () => 3,
+      nowMs: () => Date.parse(now),
+      generateId: () => 'lease-google-1',
+    })
+    const grant = broker.issue({
+      secretReference: 'secret://connectors/google',
+      secretName: 'google-oauth-access-token',
+      identity: {
+        clientId: 'client-1',
+        workspaceId: 'workspace-1',
+        sourceId: 'io.robb-agents.google-workspace',
+        missionId: 'mission-1',
+        agentId: 'agent-1',
+        connectorId: 'io.robb-agents.google-workspace',
+      },
+      operationId: 'drive.update',
+      scopes: ['drive.readonly', 'drive.file'],
+      authorizationGeneration: 3,
+      ttlMs: 60_000,
+    })
     const lease = createConnectorSecretLeaseFromOAuth({
-      reference: 'secret://connectors/google',
+      grant,
       profile,
       tokenSet: {
         accessToken: 'access-token',
@@ -172,10 +195,8 @@ describe('connector OAuth client', () => {
       requestedConnectorScopes: ['drive.readonly', 'drive.file'],
     })
     expect(lease).toEqual({
-      reference: 'secret://connectors/google',
+      grant,
       value: 'access-token',
-      scopes: ['drive.readonly', 'drive.file'],
-      expiresAt: '2026-07-23T13:00:00.000Z',
     })
   })
 })

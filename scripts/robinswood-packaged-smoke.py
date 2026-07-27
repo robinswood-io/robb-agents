@@ -107,6 +107,37 @@ def sha256(path: pathlib.Path) -> str:
     return h.hexdigest()
 
 
+def validate_codesign_inspection(
+    returncode: int,
+    code_text: str,
+    *,
+    require_release_signing: bool,
+) -> str:
+    """Validate codesign metadata and return the observed signing mode.
+
+    Cross-architecture macOS test builds can be genuinely unsigned instead of
+    receiving electron-builder's host-architecture ad-hoc signature. That is
+    acceptable only for the explicitly unsigned smoke-build path. Stable
+    release validation remains fail-closed and requires Developer ID metadata.
+    """
+    if returncode != 0:
+        is_unsigned = "code object is not signed at all" in code_text
+        if is_unsigned and not require_release_signing:
+            return "unsigned"
+        fail(f"codesign inspection failed: {code_text}")
+
+    is_adhoc = "Signature=adhoc" in code_text or "TeamIdentifier=not set" in code_text
+    if is_adhoc:
+        if require_release_signing:
+            fail("Release validation requires a Developer ID signature, but the packaged app is ad-hoc signed")
+        return "adhoc"
+
+    if "Identifier=io.robinswood.robbagents" not in code_text:
+        fail("Packaged app signature does not expose io.robinswood.robbagents identifier")
+
+    return "developer-id"
+
+
 def check_bundle(require_release_signing: bool = False) -> None:
     require(APP_DIR, "packaged app bundle")
     require(APP_BIN, "packaged app executable")
@@ -148,15 +179,15 @@ def check_bundle(require_release_signing: bool = False) -> None:
 
     code_result = run(["codesign", "-dv", str(APP_DIR)])
     code_text = code_result.stdout + code_result.stderr
-    if code_result.returncode != 0:
-        fail(f"codesign inspection failed: {code_text}")
-    is_adhoc = "Signature=adhoc" in code_text or "TeamIdentifier=not set" in code_text
-    if is_adhoc:
-        if require_release_signing:
-            fail("Release validation requires a Developer ID signature, but the packaged app is ad-hoc signed")
+    signing_mode = validate_codesign_inspection(
+        code_result.returncode,
+        code_text,
+        require_release_signing=require_release_signing,
+    )
+    if signing_mode == "unsigned":
+        print("- packaged app is unsigned; accepted only for this local/CI smoke build")
+    elif signing_mode == "adhoc":
         print("- packaged app uses ad-hoc signature; skipping Developer ID signature identifier check")
-    elif "Identifier=io.robinswood.robbagents" not in code_text:
-        fail("Packaged app signature does not expose io.robinswood.robbagents identifier")
     else:
         print("✓ packaged signature identifier")
 

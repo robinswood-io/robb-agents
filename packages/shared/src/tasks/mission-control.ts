@@ -2,6 +2,11 @@ import { createHash } from 'node:crypto';
 import type { TaskSpec } from './schema.ts';
 import type { NodeOutput } from './refs.ts';
 import type { RunLogEntry, NodeRunState } from './storage.ts';
+import type {
+  ExecutionProofVerificationDecision,
+  SignedExecutionProof,
+  TaskExecutionProofBinding,
+} from '../governance/execution-proof.ts';
 
 export type MissionBlockerStatus = 'open' | 'resolved';
 
@@ -366,14 +371,39 @@ export function planMissionReplay(
   sourceRunId: string,
   log: RunLogEntry[],
   loadOutput: (nodeId: string) => NodeOutput | null,
-  options: { approveExternalMutations?: boolean } = {},
+  options: {
+    approveExternalMutations?: boolean;
+    workspaceId?: string;
+    verifyExecutionProof?: (
+      proof: SignedExecutionProof,
+      binding: TaskExecutionProofBinding,
+    ) => ExecutionProofVerificationDecision;
+  } = {},
 ): MissionReplayPlan {
   const confirmed = new Map<string, string | undefined>();
   const ambiguous = new Set<string>();
+  const externalMutationIds = new Set(
+    spec.nodes.filter((node) => node.effect === 'external-mutation').map((node) => node.id),
+  );
   for (const entry of log) {
     if (entry.kind !== 'node-checkpoint') continue;
     if (entry.status === 'executing') ambiguous.add(entry.nodeId);
     else if (entry.status === 'confirmed') {
+      if (externalMutationIds.has(entry.nodeId)) {
+        const decision = entry.executionProof && options.workspaceId && options.verifyExecutionProof
+          ? options.verifyExecutionProof(entry.executionProof, {
+              workspaceId: options.workspaceId,
+              missionId: spec.id,
+              nodeId: entry.nodeId,
+              idempotencyKey: entry.idempotencyKey,
+            })
+          : undefined;
+        if (!decision?.allowed) {
+          confirmed.delete(entry.nodeId);
+          ambiguous.add(entry.nodeId);
+          continue;
+        }
+      }
       ambiguous.delete(entry.nodeId);
       confirmed.set(entry.nodeId, entry.proofHash);
     }

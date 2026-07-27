@@ -1230,6 +1230,8 @@ export interface SessionCompletionEvent {
   finalText?: string
   /** The session's cumulative token usage, so the Conductor can meter token_budget without re-fetching. */
   tokenUsage?: TokenUsage
+  /** Host-collected, signed proof for a reconciled external mutation, never model-authored text. */
+  executionProof?: import('@craft-agent/shared/governance').SignedExecutionProof
 }
 
 export class SessionManager implements ISessionManager {

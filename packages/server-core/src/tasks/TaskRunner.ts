@@ -20,6 +20,12 @@
  */
 import type { CreateSessionOptions } from '@craft-agent/shared/protocol';
 import { createHash } from 'node:crypto';
+import {
+  operationValueHash,
+  type ExecutionProofVerificationDecision,
+  type SignedExecutionProof,
+  type TaskExecutionProofBinding,
+} from '@craft-agent/shared/governance';
 import type { SessionCompletionEvent } from '../sessions/SessionManager';
 import {
   type TaskSpec,
@@ -92,6 +98,11 @@ export interface TaskRunnerDeps {
    * receives the same policy, but this hook is the authoritative boundary.
    */
   executionGuard?: (context: TaskExecutionGuardContext) => GuardDecision | Promise<GuardDecision>;
+  /** Authoritative verification seam for provider-reconciled external mutations. */
+  verifyExecutionProof?: (
+    proof: SignedExecutionProof,
+    binding: TaskExecutionProofBinding,
+  ) => ExecutionProofVerificationDecision;
 }
 
 export interface TaskExecutionGuardContext {
@@ -298,6 +309,7 @@ class ActiveRun {
    */
   hydrate(log: RunLogEntry[], loadOutput: (nodeId: string) => NodeOutput | null): void {
     const ambiguousNodes = new Set<string>();
+    const verifiedMutationNodes = new Set<string>();
     const unresolvedApprovals = new Map<string, PendingTaskApproval>();
     let persistedStatus: RunStatus = 'running';
     for (const e of log) {
@@ -326,7 +338,27 @@ class ActiveRun {
         }
       } else if (e.kind === 'node-checkpoint') {
         if (e.status === 'executing') ambiguousNodes.add(e.nodeId);
-        else if (e.status === 'confirmed') ambiguousNodes.delete(e.nodeId);
+        else if (e.status === 'confirmed') {
+          const checkpointNode = this.spec.nodes.find((node) => node.id === e.nodeId);
+          if (checkpointNode?.effect === 'external-mutation') {
+            const decision = e.executionProof && this.deps.verifyExecutionProof
+              ? this.deps.verifyExecutionProof(e.executionProof, {
+                  workspaceId: this.deps.workspaceId,
+                  missionId: this.spec.id,
+                  nodeId: e.nodeId,
+                  idempotencyKey: e.idempotencyKey,
+                })
+              : undefined;
+            if (decision?.allowed) {
+              verifiedMutationNodes.add(e.nodeId);
+              ambiguousNodes.delete(e.nodeId);
+            } else {
+              ambiguousNodes.add(e.nodeId);
+            }
+          } else {
+            ambiguousNodes.delete(e.nodeId);
+          }
+        }
       } else if (e.kind === 'approval-requested') {
         unresolvedApprovals.set(e.requestId, {
           requestId: e.requestId,
@@ -365,9 +397,15 @@ class ActiveRun {
     }
     for (const [nodeId, st] of this.state) {
       if (st.state === 'done') {
-        const out = loadOutput(nodeId);
-        if (out) this.outputs[nodeId] = out;
-        else st.state = 'pending'; // recorded output missing → must re-run
+        const node = this.spec.nodes.find((candidate) => candidate.id === nodeId);
+        if (node?.effect === 'external-mutation' && !verifiedMutationNodes.has(nodeId)) {
+          st.state = 'failed';
+          st.lastFailure = 'External mutation lacks a valid provider-reconciled execution proof.';
+        } else {
+          const out = loadOutput(nodeId);
+          if (out) this.outputs[nodeId] = out;
+          else st.state = 'pending'; // recorded output missing → must re-run
+        }
       } else if (st.state === 'running' || st.state === 'cancelled') {
         if (ambiguousNodes.has(nodeId)) {
           // A child may have completed an external side effect before the
@@ -764,6 +802,35 @@ class ActiveRun {
         return;
       }
 
+      let executionProof: SignedExecutionProof | undefined;
+      if (node?.effect === 'external-mutation') {
+        if (!evt.executionProof || !this.deps.verifyExecutionProof) {
+          this.failNode(
+            nodeId,
+            'external mutation completed without an authoritative provider-reconciled execution proof',
+            evt.sessionId,
+            false,
+          );
+          return;
+        }
+        const proofDecision = this.deps.verifyExecutionProof(evt.executionProof, {
+          workspaceId: this.deps.workspaceId,
+          missionId: this.spec.id,
+          nodeId,
+          idempotencyKey: this.idempotencyKey(nodeId),
+        });
+        if (!proofDecision.allowed) {
+          this.failNode(
+            nodeId,
+            `external mutation proof rejected: ${proofDecision.code}: ${proofDecision.reason}`,
+            evt.sessionId,
+            false,
+          );
+          return;
+        }
+        executionProof = proofDecision.proof;
+      }
+
       const output: NodeOutput = { text };
       this.outputs[nodeId] = output;
       st.state = 'done';
@@ -774,7 +841,10 @@ class ActiveRun {
         nodeId,
         idempotencyKey: this.idempotencyKey(nodeId),
         status: 'confirmed',
-        proofHash: createHash('sha256').update(text, 'utf8').digest('hex'),
+        proofHash: executionProof
+          ? operationValueHash(executionProof)
+          : createHash('sha256').update(text, 'utf8').digest('hex'),
+        ...(executionProof ? { executionProof } : {}),
       });
       this.log({ kind: 'node-finished', nodeId, sessionId: evt.sessionId, state: 'done' });
       void this.deps.host.setSessionStatus(evt.sessionId, DONE_STATUS);
@@ -794,7 +864,7 @@ class ActiveRun {
     }
   }
 
-  private failNode(nodeId: string, reason: string, sessionId?: string): void {
+  private failNode(nodeId: string, reason: string, sessionId?: string, allowRetry = true): void {
     this.clearNodeTimeout(nodeId);
     const st = this.state.get(nodeId)!;
     const wasRunning = st.state === 'running';
@@ -805,7 +875,7 @@ class ActiveRun {
     // to the `error` retry trigger (empty/invalid detection is deferred).
     const node = this.spec.nodes.find((n) => n.id === nodeId);
     const retry = node?.retry;
-    if (retry && st.attempt <= retry.limit && retryMatches(retry.when, 'error')) {
+    if (allowRetry && retry && st.attempt <= retry.limit && retryMatches(retry.when, 'error')) {
       st.lastFailure = `Previous attempt failed: ${reason}. Address the cause before retrying.`;
       st.state = 'pending';
       const sid = sessionId ?? st.sessionId;

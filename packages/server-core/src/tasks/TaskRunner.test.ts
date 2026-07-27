@@ -5,6 +5,11 @@ import { join } from 'path';
 import type { TokenUsage } from '@craft-agent/core/types';
 import type { CreateSessionOptions } from '@craft-agent/shared/protocol';
 import {
+  ExecutionProofIssuer,
+  operationValueHash,
+  type SignedExecutionProof,
+} from '@craft-agent/shared/governance';
+import {
   appendRunLog,
   parseTaskSpec,
   saveTaskSpec,
@@ -93,17 +98,28 @@ class MockHost implements ConductorSessionHost {
   dispatchedNames(): string[] {
     return this.created.map((c) => c.options.name!).filter(Boolean);
   }
-  complete(nodeId: string, opts: { reason?: SessionCompletionEvent['reason']; finalText?: string; tokenUsage?: TokenUsage } = {}): void {
+  complete(nodeId: string, opts: {
+    reason?: SessionCompletionEvent['reason'];
+    finalText?: string;
+    tokenUsage?: TokenUsage;
+    executionProof?: SignedExecutionProof;
+  } = {}): void {
     this.completeSession(this.sessionIdFor(nodeId), opts);
   }
   /** Fire a completion for an arbitrary session id (e.g. the orchestrator's verification verdict). */
-  completeSession(sessionId: string, opts: { reason?: SessionCompletionEvent['reason']; finalText?: string; tokenUsage?: TokenUsage } = {}): void {
+  completeSession(sessionId: string, opts: {
+    reason?: SessionCompletionEvent['reason'];
+    finalText?: string;
+    tokenUsage?: TokenUsage;
+    executionProof?: SignedExecutionProof;
+  } = {}): void {
     const evt: SessionCompletionEvent = {
       sessionId,
       workspaceId: 'ws',
       reason: opts.reason ?? 'complete',
       finalText: opts.finalText,
       tokenUsage: opts.tokenUsage,
+      executionProof: opts.executionProof,
     };
     for (const listener of [...this.listeners]) listener(evt);
   }
@@ -120,8 +136,47 @@ describe('TaskRunner (Conductor)', () => {
     rmSync(root, { recursive: true, force: true });
   });
 
-  function makeRunner() {
-    return new TaskRunner({ host, workspaceId: 'ws', workspaceRoot: root, now: () => '2026-06-07T00:00:00.000Z' });
+  function makeRunner(executionProofIssuer?: ExecutionProofIssuer) {
+    return new TaskRunner({
+      host,
+      workspaceId: 'ws',
+      workspaceRoot: root,
+      now: () => '2026-06-07T00:00:00.000Z',
+      ...(executionProofIssuer ? {
+        verifyExecutionProof: (proof, binding) => executionProofIssuer.verifyForTask(proof, binding),
+      } : {}),
+    });
+  }
+
+  function issueTaskProof(
+    issuer: ExecutionProofIssuer,
+    missionId: string,
+    nodeId: string,
+    idempotencyKey: string,
+    reconciliationStatus: 'confirmed' | 'diverged' = 'confirmed',
+  ): SignedExecutionProof {
+    return issuer.issue({
+      clientId: 'client-1',
+      workspaceId: 'ws',
+      missionId,
+      nodeId,
+      agentId: 'agent-1',
+      connectorId: 'connector-1',
+      operationId: 'records.upsert',
+      idempotencyKey,
+      payloadHash: operationValueHash({ record: 'input' }),
+      resultHash: operationValueHash({ record: 'output' }),
+      providerRequestId: 'provider-request-1',
+      policyVersion: 1,
+      authorizationGeneration: 1,
+      connectorManifestHash: operationValueHash({ manifest: 'v1' }),
+      reconciliation: {
+        status: reconciliationStatus,
+        observedAt: '2026-06-07T00:00:01.000Z',
+        providerStateHash: operationValueHash({ present: reconciliationStatus === 'confirmed' }),
+        ...(reconciliationStatus === 'diverged' ? { detailCode: 'PROVIDER_STATE_MISSING' } : {}),
+      },
+    });
   }
 
   it('runs a dependency chain, feeding each output into the next', async () => {
@@ -357,7 +412,12 @@ describe('TaskRunner (Conductor)', () => {
         nodes: [{ id: 'publish', prompt: 'Publish now', effect: 'external-mutation', approval: true }],
       }),
     );
-    const runner = makeRunner();
+    const issuer = new ExecutionProofIssuer({
+      signingKey: 'task-runner-execution-proof-key-32-bytes-minimum',
+      now: () => '2026-06-07T00:00:01.000Z',
+      generateId: () => 'proof-publish',
+    });
+    const runner = makeRunner(issuer);
     const started = runner.run('approve-mutation', { runId: 'r1', verifyOnComplete: false });
     await tick();
 
@@ -369,9 +429,55 @@ describe('TaskRunner (Conductor)', () => {
     runner.resolveApproval('approve-mutation', 'r1', approval!.requestId, 'approved', 'bob');
     await tick();
     expect(host.created).toHaveLength(1);
-    host.complete('publish', { finalText: 'published' });
+    host.complete('publish', {
+      finalText: 'published',
+      executionProof: issueTaskProof(issuer, 'approve-mutation', 'publish', 'ws:approve-mutation:r1:publish'),
+    });
     await tick();
     expect(runner.getRunState('approve-mutation', 'r1')?.status).toBe('completed');
+    expect(readRunLog(root, 'approve-mutation', 'r1')).toContainEqual(expect.objectContaining({
+      kind: 'node-checkpoint',
+      nodeId: 'publish',
+      status: 'confirmed',
+      executionProof: expect.objectContaining({ proofId: 'proof-publish' }),
+    }));
+  });
+
+  it('never accepts model text as proof of an external mutation and does not retry ambiguously', async () => {
+    saveTaskSpec(
+      root,
+      specOf({
+        id: 'mutation-without-proof',
+        title: 'Mutation without proof',
+        goal: 'Reject unverifiable completion',
+        nodes: [{
+          id: 'publish',
+          prompt: 'Publish now',
+          effect: 'external-mutation',
+          retry: { limit: 3 },
+        }],
+      }),
+    );
+    const runner = makeRunner();
+    runner.run('mutation-without-proof', { runId: 'r1', verifyOnComplete: false });
+    await tick();
+
+    host.complete('publish', { finalText: 'published successfully' });
+    await tick();
+
+    expect(runner.getRunState('mutation-without-proof', 'r1')?.status).toBe('failed');
+    expect(host.created).toHaveLength(1);
+    expect(readRunLog(root, 'mutation-without-proof', 'r1')).not.toContainEqual(expect.objectContaining({
+      kind: 'node-checkpoint',
+      nodeId: 'publish',
+      status: 'confirmed',
+    }));
+    expect(readRunLog(root, 'mutation-without-proof', 'r1')).toContainEqual(expect.objectContaining({
+      kind: 'node-finished',
+      nodeId: 'publish',
+      state: 'failed',
+      reason: expect.stringContaining('without an authoritative provider-reconciled execution proof'),
+    }));
   });
 
   it('fails a mission when its high-impact approval is rejected', async () => {
@@ -762,6 +868,54 @@ describe('TaskRunner (Conductor)', () => {
     expect(host2.created).toHaveLength(0);
     expect(resumed.getRunState('ambiguous', 'r1')?.status).toBe('failed');
     expect(resumed.getRunState('ambiguous', 'r1')?.nodes[0]?.state).toBe('failed');
+  });
+
+  it('recovers a proven external mutation without dispatching it twice', async () => {
+    const issuer = new ExecutionProofIssuer({
+      signingKey: 'task-runner-recovery-proof-key-32-bytes',
+      now: () => '2026-06-07T00:00:01.000Z',
+      generateId: () => 'proof-recovered-mutation',
+    });
+    saveTaskSpec(
+      root,
+      specOf({
+        id: 'proven-recovery',
+        title: 'Proven recovery',
+        goal: 'reuse a reconciled mutation',
+        nodes: [
+          { id: 'publish', prompt: 'publish once', effect: 'external-mutation' },
+          { id: 'report', prompt: 'report ${nodes.publish.output}', depends_on: ['publish'] },
+        ],
+      }),
+    );
+
+    const first = makeRunner(issuer);
+    first.run('proven-recovery', { runId: 'r1', verifyOnComplete: false });
+    await tick();
+    first.pause('proven-recovery', 'r1');
+    host.complete('publish', {
+      finalText: 'provider confirmed',
+      executionProof: issueTaskProof(
+        issuer,
+        'proven-recovery',
+        'publish',
+        'ws:proven-recovery:r1:publish',
+      ),
+    });
+    await tick();
+
+    const recoveredHost = new MockHost();
+    const recovered = new TaskRunner({
+      host: recoveredHost,
+      workspaceId: 'ws',
+      workspaceRoot: root,
+      verifyExecutionProof: (proof, binding) => issuer.verifyForTask(proof, binding),
+    });
+    recovered.resume('proven-recovery', 'r1');
+    await tick();
+
+    expect(recoveredHost.dispatchedNames()).toEqual(['report']);
+    expect(recoveredHost.promptFor('report')?.endsWith('report provider confirmed')).toBe(true);
   });
 
   it('enforces the task timeout and cancels the child session', async () => {

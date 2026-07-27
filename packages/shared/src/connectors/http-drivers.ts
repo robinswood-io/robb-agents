@@ -5,6 +5,11 @@ import type {
 } from './pack-manifest'
 import { connectorPackManifestHash, connectorPackTemplates } from './pack-manifest'
 import type { ConnectorRuntimeAdmission } from './durable-pack-registry'
+import type {
+  SecretLeaseConsumptionDecision,
+  SecretLeaseConsumptionRequest,
+  SecretLeaseGrant,
+} from '../credentials/secret-lease-broker'
 import {
   operationValueHash,
   parseCapabilityOperationRequest,
@@ -13,14 +18,16 @@ import {
   type CapabilityOperationRequest,
   type OperationCapability,
 } from '../governance/capability-broker'
+import type {
+  ExecutionProofIssueRequest,
+  SignedExecutionProof,
+} from '../governance/execution-proof'
 
 export type PriorityConnectorPack = keyof typeof connectorPackTemplates
 
 export interface ConnectorSecretLease {
-  reference: string
+  grant: SecretLeaseGrant
   value: string
-  scopes: string[]
-  expiresAt: string
 }
 
 export interface ConnectorApprovalReceipt {
@@ -61,13 +68,42 @@ export interface ConnectorHttpResponse {
   redirected?: boolean
 }
 
-export type ConnectorSecretResolver = (reference: string) => Promise<ConnectorSecretLease | null>
+export type ConnectorSecretResolver = (
+  reference: string,
+  request: SecretLeaseConsumptionRequest,
+) => Promise<ConnectorSecretLease | null>
 export type ConnectorHttpTransport = (request: ConnectorHttpRequest) => Promise<ConnectorHttpResponse>
+export type ConnectorSecretLeaseConsumer = (
+  grant: SecretLeaseGrant,
+  request: SecretLeaseConsumptionRequest,
+) => SecretLeaseConsumptionDecision
 export type ConnectorRuntimeAdmissionVerifier = (
   packId: string,
   operationId: string,
   expectedManifestHash: string,
 ) => ConnectorRuntimeAdmission
+
+export interface ConnectorMutationReconciliationObservation {
+  status: 'confirmed' | 'diverged'
+  observedAt: string
+  providerState: unknown
+  detailCode?: string
+}
+
+export interface ConnectorMutationReconciliationRequest {
+  operation: ConnectorPackOperation
+  capabilityRequest: CapabilityOperationRequest
+  providerResponse: ConnectorHttpResponse
+  resourceId?: string
+}
+
+export type ConnectorMutationReconciler = (
+  request: ConnectorMutationReconciliationRequest,
+) => Promise<ConnectorMutationReconciliationObservation>
+
+export type ConnectorExecutionProofIssuer = (
+  request: ExecutionProofIssueRequest,
+) => SignedExecutionProof
 
 export class ConnectorDriverError extends Error {
   constructor(
@@ -152,7 +188,10 @@ export interface ConnectorDriverOptions {
   resolveSecret: ConnectorSecretResolver
   transport: ConnectorHttpTransport
   consumeCapability: ConnectorCapabilityConsumer
+  consumeSecretLease: ConnectorSecretLeaseConsumer
   assertRuntimeAdmission: ConnectorRuntimeAdmissionVerifier
+  reconcileMutation: ConnectorMutationReconciler
+  issueExecutionProof: ConnectorExecutionProofIssuer
   createHealthAuthorization: () => ConnectorCapabilityAuthorization
   now?: () => string
 }
@@ -245,7 +284,10 @@ export class HttpConnectorPackDriver implements ConnectorPackDriver {
     private readonly resolveSecret: ConnectorSecretResolver,
     private readonly transport: ConnectorHttpTransport,
     private readonly consumeCapability: ConnectorCapabilityConsumer,
+    private readonly consumeSecretLease: ConnectorSecretLeaseConsumer,
     private readonly assertRuntimeAdmission: ConnectorRuntimeAdmissionVerifier,
+    private readonly reconcileMutation: ConnectorMutationReconciler,
+    private readonly issueExecutionProof: ConnectorExecutionProofIssuer,
     private readonly createHealthAuthorization: () => ConnectorCapabilityAuthorization,
     private readonly now: () => string = () => new Date().toISOString(),
   ) {
@@ -301,17 +343,37 @@ export class HttpConnectorPackDriver implements ConnectorPackDriver {
     const envelope = readInvocationEnvelope(input)
     this.authorizeOperation(operation, envelope)
     return this.limiter.run(async () => {
-      const lease = await this.resolveSecret(this.secretReference)
+      const capabilityRequest = envelope.authorization?.request
+      if (!capabilityRequest) {
+        throw new ConnectorDriverError('CAPABILITY_REQUIRED', `Broker capability required for ${operation.id}`)
+      }
+      const secretLeaseRequest: SecretLeaseConsumptionRequest = {
+        secretReference: this.secretReference,
+        identity: {
+          clientId: capabilityRequest.identity.clientId,
+          workspaceId: capabilityRequest.identity.workspaceId,
+          sourceId: this.manifest.id,
+          missionId: capabilityRequest.identity.missionId,
+          nodeId: capabilityRequest.identity.nodeId,
+          agentId: capabilityRequest.identity.agentId,
+          connectorId: capabilityRequest.identity.connectorId,
+        },
+        operationId,
+        scopes: operation.requiredScopes,
+        authorizationGeneration: capabilityRequest.authorizationGeneration,
+      }
+      const lease = await this.resolveSecret(this.secretReference, secretLeaseRequest)
       if (!lease) {
         throw new ConnectorDriverError('SECRET_UNAVAILABLE', `Secret reference ${this.secretReference} is unavailable`)
       }
-      const now = this.now()
-      if (Date.parse(lease.expiresAt) <= Date.parse(now)) {
-        throw new ConnectorDriverError('SECRET_EXPIRED', `Secret reference ${this.secretReference} has expired`)
-      }
-      const missingScopes = operation.requiredScopes.filter((scope) => !lease.scopes.includes(scope))
-      if (missingScopes.length > 0) {
-        throw new ConnectorDriverError('SCOPE_DENIED', `Missing connector scopes: ${missingScopes.join(', ')}`)
+      const leaseDecision = this.consumeSecretLease(lease.grant, secretLeaseRequest)
+      if (!leaseDecision.allowed) {
+        const code = leaseDecision.code === 'LEASE_EXPIRED'
+          ? 'SECRET_EXPIRED'
+          : leaseDecision.code === 'LEASE_SCOPE_DENIED'
+            ? 'SCOPE_DENIED'
+            : 'SECRET_UNAVAILABLE'
+        throw new ConnectorDriverError(code, leaseDecision.reason)
       }
 
       const binding = this.definition.bindings[operationId]
@@ -362,14 +424,49 @@ export class HttpConnectorPackDriver implements ConnectorPackDriver {
           `Connector ${operation.id} did not return a provider request identifier`,
         )
       }
+      if (!capabilityRequest.identity.nodeId || !envelope.idempotencyKey) {
+        throw new ConnectorDriverError(
+          'RECONCILIATION_REQUIRED',
+          `Connector ${operation.id} requires task-node and idempotency bindings for execution proof`,
+        )
+      }
+      const observation = await this.reconcileMutation({
+        operation,
+        capabilityRequest,
+        providerResponse: response,
+        ...(envelope.resourceId ? { resourceId: envelope.resourceId } : {}),
+      })
+      const executionProof = this.issueExecutionProof({
+        clientId: capabilityRequest.identity.clientId,
+        workspaceId: capabilityRequest.identity.workspaceId,
+        missionId: capabilityRequest.identity.missionId,
+        nodeId: capabilityRequest.identity.nodeId,
+        agentId: capabilityRequest.identity.agentId,
+        connectorId: this.manifest.id,
+        operationId,
+        idempotencyKey: envelope.idempotencyKey,
+        payloadHash: operationValueHash(envelope.payload),
+        resultHash: operationValueHash(response.body),
+        providerRequestId: response.requestId,
+        policyVersion: capabilityRequest.policyVersion,
+        authorizationGeneration: capabilityRequest.authorizationGeneration,
+        connectorManifestHash: this.manifestHash,
+        reconciliation: {
+          status: observation.status,
+          observedAt: observation.observedAt,
+          providerStateHash: operationValueHash(observation.providerState),
+          ...(observation.detailCode ? { detailCode: observation.detailCode } : {}),
+        },
+      })
       return {
         ...baseResult,
         reconciliationReceipt: {
           providerRequestId: response.requestId,
-          observedAt: now,
+          observedAt: observation.observedAt,
           payloadHash: operationValueHash(envelope.payload),
           ...(envelope.resourceId ? { resourceId: envelope.resourceId } : {}),
         },
+        executionProof,
       }
     })
   }
@@ -436,7 +533,10 @@ export function createPriorityConnectorDriver(
     options.resolveSecret,
     options.transport,
     options.consumeCapability,
+    options.consumeSecretLease,
     options.assertRuntimeAdmission,
+    options.reconcileMutation,
+    options.issueExecutionProof,
     options.createHealthAuthorization,
     options.now,
   )

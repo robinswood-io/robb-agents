@@ -30,6 +30,7 @@ const OperationIdentitySchema = z.object({
   clientId: z.string().trim().min(1),
   workspaceId: z.string().trim().min(1),
   missionId: z.string().trim().min(1),
+  nodeId: z.string().trim().min(1).optional(),
   agentId: z.string().trim().min(1),
   actorId: z.string().trim().min(1),
   connectorId: z.string().trim().min(1).optional(),

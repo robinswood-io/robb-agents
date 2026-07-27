@@ -30,6 +30,7 @@ import { validateTaskInput } from './validate.ts';
 import { TaskSpecSchema, type TaskSpec } from './schema.ts';
 import type { NodeOutput } from './refs.ts';
 import type { ValidationResult } from '../config/validators.ts';
+import type { SignedExecutionProof } from '../governance/execution-proof.ts';
 
 const TASKS_DIR = 'tasks';
 const TASK_FILE = 'task.yaml';
@@ -56,6 +57,7 @@ export type RunLogEntry =
       idempotencyKey: string;
       status: 'prepared' | 'executing' | 'confirmed';
       proofHash?: string;
+      executionProof?: SignedExecutionProof;
     }
   | { t: string; kind: 'node-finished'; nodeId: string; sessionId: string; state: NodeRunState; reason?: string }
   | {
