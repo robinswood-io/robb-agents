@@ -323,7 +323,11 @@ export class DurableConnectorPackRegistry {
       packId,
       operationId,
       manifestHash: installed.manifestHash,
-      authorizationGeneration: installed.authorizationGeneration,
+      // Authorization is a workspace-wide epoch. Returning the current journal
+      // generation ensures that installing, rotating, revoking, or uninstalling
+      // each pack change invalidates every capability and lease issued against an older
+      // connector topology.
+      authorizationGeneration: this.snapshotCache.generation,
       operation: structuredClone(operation),
     }
   }

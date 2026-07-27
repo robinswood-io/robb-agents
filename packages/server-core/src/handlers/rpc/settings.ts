@@ -411,26 +411,6 @@ export function registerSettingsHandlers(server: RpcServer, deps: HandlerDeps): 
       config.routingPolicy = normalizedValue === undefined || normalizedValue === null
         ? undefined
         : normalizedValue as RoutingPolicy
-    } else if (key === 'governance') {
-      const initialGovernance = config.governance
-        ? parseWorkspaceGovernanceProfile(config.governance)
-        : createDefaultWorkspaceGovernance({
-            workspaceId: config.id,
-            workspaceName: config.name,
-            createdAt: new Date(config.createdAt).toISOString(),
-          })
-      const submittedProfile = WorkspaceGovernanceProfileSchema.safeParse(normalizedValue)
-      const governanceUpdate = submittedProfile.success
-        ? governanceMutableFromProfile(submittedProfile.data)
-        : normalizedValue as WorkspaceGovernanceMutable
-      const store = new WorkspaceGovernanceStore(workspace.rootPath)
-      const current = await store.loadOrCreate(initialGovernance)
-      const updated = await store.update(
-        current.revision,
-        current.profile.space.createdBy,
-        governanceUpdate,
-      )
-      config.governance = updated.profile
     } else if (key === 'localMcpEnabled') {
       // Store in localMcpServers.enabled (top-level, not in defaults)
       config.localMcpServers = config.localMcpServers || { enabled: true }

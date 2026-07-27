@@ -91,8 +91,8 @@ export interface TaskRunnerDeps {
   /** Injectable wall clock for deadlines and retry scheduling. */
   nowMs?: () => number;
   genRunId?: () => string;
-  /** Live kill-switch state. Evaluated before every scheduling pass. */
-  getKillSwitch?: () => KillSwitchSnapshot;
+  /** Live kill-switch state. Evaluated before every scheduling pass and required fail-closed. */
+  getKillSwitch: () => KillSwitchSnapshot;
   /**
    * Host-side admission hook for connector/sandbox enforcement. The prompt
    * receives the same policy, but this hook is the authoritative boundary.
@@ -284,7 +284,28 @@ class ActiveRun {
     if (this.runStatus !== 'running') return;
     this.runStatus = 'paused';
     this.log({ kind: 'run-paused' });
-    // In-flight children keep running; their completions still record output but won't schedule.
+    for (const [nodeId, st] of this.state) {
+      if (st.state !== 'running') continue;
+      this.clearNodeTimeout(nodeId);
+      const node = this.spec.nodes.find((candidate) => candidate.id === nodeId);
+      const replayWouldBeAmbiguous = node?.effect !== 'read';
+      st.state = replayWouldBeAmbiguous ? 'failed' : 'cancelled';
+      st.lastFailure = replayWouldBeAmbiguous
+        ? 'Mutation interrupted by pause; reconcile durable state before an explicit replay.'
+        : 'Interrupted by mission pause.';
+      this.log({
+        kind: 'node-finished',
+        nodeId,
+        sessionId: st.sessionId ?? '',
+        state: st.state,
+        reason: st.lastFailure,
+      });
+      if (st.sessionId) {
+        void this.deps.host.cancelProcessing(st.sessionId, true);
+        void this.deps.host.setKanbanColumn(st.sessionId, 'todo');
+      }
+    }
+    this.inFlight = 0;
   }
 
   resume(): void {
@@ -407,7 +428,8 @@ class ActiveRun {
           else st.state = 'pending'; // recorded output missing → must re-run
         }
       } else if (st.state === 'running' || st.state === 'cancelled') {
-        if (ambiguousNodes.has(nodeId)) {
+        const node = this.spec.nodes.find((candidate) => candidate.id === nodeId);
+        if (node?.effect !== 'read' && ambiguousNodes.has(nodeId)) {
           // A child may have completed an external side effect before the
           // process stopped. Replaying it blindly could duplicate a mutation.
           st.state = 'failed';
@@ -851,13 +873,22 @@ class ActiveRun {
       void this.deps.host.setKanbanColumn(evt.sessionId, 'done');
       this.scheduleReady();
     } else if (evt.reason === 'interrupted') {
-      // Externally aborted while running → cancelled (re-dispatched on resume). We do not
-      // auto-retry here to avoid a stop/retry loop.
-      st.state = 'cancelled';
-      this.inFlight = Math.max(0, this.inFlight - 1);
-      this.log({ kind: 'node-finished', nodeId, sessionId: evt.sessionId, state: 'cancelled', reason: 'interrupted' });
-      void this.deps.host.setKanbanColumn(evt.sessionId, 'todo');
-      this.scheduleReady();
+      const interruptedNode = this.spec.nodes.find((candidate) => candidate.id === nodeId);
+      if (interruptedNode?.effect !== 'read') {
+        this.failNode(
+          nodeId,
+          'mutation interrupted after execution began; reconcile durable state before an explicit replay',
+          evt.sessionId,
+          false,
+        );
+      } else {
+        // Read-only and workspace-local work can be explicitly resumed from pending state.
+        st.state = 'cancelled';
+        this.inFlight = Math.max(0, this.inFlight - 1);
+        this.log({ kind: 'node-finished', nodeId, sessionId: evt.sessionId, state: 'cancelled', reason: 'interrupted' });
+        void this.deps.host.setKanbanColumn(evt.sessionId, 'todo');
+        this.scheduleReady();
+      }
     } else {
       // 'error' | 'timeout'
       this.failNode(nodeId, evt.reason, evt.sessionId);
@@ -1271,10 +1302,11 @@ class ActiveRun {
   }
 
   private currentKillSwitch(): GuardDecision {
-    const snapshot = this.deps.getKillSwitch?.();
-    return snapshot
-      ? evaluateKillSwitch(snapshot, this.deps.workspaceId, this.spec.id)
-      : { allowed: true };
+    try {
+      return evaluateKillSwitch(this.deps.getKillSwitch(), this.deps.workspaceId, this.spec.id);
+    } catch {
+      return { allowed: false, reason: 'Kill-switch state is unavailable' };
+    }
   }
 
   private stopForKillSwitch(reason: string): void {
@@ -1653,12 +1685,15 @@ export class TaskRunner {
         `Refusing to run task "${slug}": hard cost budgets require USD provider measurements; ${spec.mission.budget.currency} conversion is unavailable`,
       );
     }
-    const killSwitch = this.deps.getKillSwitch?.();
-    if (killSwitch) {
-      const decision = evaluateKillSwitch(killSwitch, this.deps.workspaceId, spec.id);
-      if (!decision.allowed) {
-        throw new Error(`Refusing to run task "${slug}": ${decision.reason}`);
-      }
+    let killSwitch: KillSwitchSnapshot;
+    try {
+      killSwitch = this.deps.getKillSwitch();
+    } catch {
+      throw new Error(`Refusing to run task "${slug}": kill-switch state is unavailable`);
+    }
+    const decision = evaluateKillSwitch(killSwitch, this.deps.workspaceId, spec.id);
+    if (!decision.allowed) {
+      throw new Error(`Refusing to run task "${slug}": ${decision.reason}`);
     }
   }
 }

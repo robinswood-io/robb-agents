@@ -23,6 +23,7 @@ import { TaskRunner, type ConductorSessionHost } from './TaskRunner';
 
 // Flush pending microtasks so the runner's async dispatch (create → column → send) settles.
 const tick = () => new Promise<void>((r) => setTimeout(r, 0));
+const inactiveKillSwitch = () => ({ global: false, workspaceIds: [], missionIds: [] });
 
 async function waitUntil(predicate: () => boolean, timeoutMs = 500): Promise<void> {
   const deadline = Date.now() + timeoutMs;
@@ -141,6 +142,7 @@ describe('TaskRunner (Conductor)', () => {
       host,
       workspaceId: 'ws',
       workspaceRoot: root,
+      getKillSwitch: inactiveKillSwitch,
       now: () => '2026-06-07T00:00:00.000Z',
       ...(executionProofIssuer ? {
         verifyExecutionProof: (proof, binding) => executionProofIssuer.verifyForTask(proof, binding),
@@ -359,6 +361,20 @@ describe('TaskRunner (Conductor)', () => {
       getKillSwitch: () => ({ global: false, workspaceIds: [], missionIds: ['stopped'] }),
     });
     expect(() => runner.run('stopped', { runId: 'r1' })).toThrow('Mission kill switch is active');
+    expect(host.created).toHaveLength(0);
+  });
+
+  it('fails closed before dispatch when kill-switch state is unavailable', () => {
+    saveTaskSpec(root, specOf({ id: 'switch-unavailable', title: 'Switch unavailable', goal: 'g', nodes: [{ id: 'a', prompt: 'a' }] }));
+    const runner = new TaskRunner({
+      host,
+      workspaceId: 'ws',
+      workspaceRoot: root,
+      getKillSwitch: () => {
+        throw new Error('registry offline');
+      },
+    });
+    expect(() => runner.run('switch-unavailable', { runId: 'r1' })).toThrow('kill-switch state is unavailable');
     expect(host.created).toHaveLength(0);
   });
 
@@ -693,12 +709,17 @@ describe('TaskRunner (Conductor)', () => {
     await tick();
 
     runner.pause('pz', 'r1');
+    expect(host.cancelled).toEqual(['sess-a']);
     host.complete('a', { finalText: 'A' });
     await tick();
     expect(host.promptFor('b')).toBeUndefined(); // paused → no scheduling
     expect(runner.getRunState('pz', 'r1')!.status).toBe('paused');
+    expect(runner.getRunState('pz', 'r1')!.nodes.find((node) => node.id === 'a')?.state).toBe('cancelled');
 
     runner.resume('pz', 'r1');
+    await tick();
+    expect(host.created.filter((entry) => entry.options.name === 'a')).toHaveLength(2);
+    host.complete('a', { finalText: 'A' });
     await tick();
     expect(host.promptFor('b')?.endsWith('b A')).toBe(true);
 
@@ -748,14 +769,14 @@ describe('TaskRunner (Conductor)', () => {
     const r1 = makeRunner();
     r1.run('res', { runId: 'r1', orchestratorSessionId: 'orch' });
     await tick();
-    r1.pause('res', 'r1'); // so completing 'a' does not dispatch 'b'
     host.complete('a', { finalText: 'A', tokenUsage: tu(3, 4) });
     await tick();
+    r1.pause('res', 'r1'); // cancel the newly dispatched 'b' before simulating the restart
     expect(readNodeOutput(root, 'res', 'r1', 'a')).toEqual({ text: 'A' });
 
     // Simulate an app restart: a brand-new runner + host with empty in-memory state.
     const host2 = new MockHost();
-    const r2 = new TaskRunner({ host: host2, workspaceId: 'ws', workspaceRoot: root, now: () => '2026-06-07T00:00:00.000Z' });
+    const r2 = new TaskRunner({ host: host2, workspaceId: 'ws', workspaceRoot: root, getKillSwitch: inactiveKillSwitch, now: () => '2026-06-07T00:00:00.000Z' });
     r2.resume('res', 'r1'); // not in memory → rehydrate from the run-log
     await tick();
 
@@ -788,9 +809,9 @@ describe('TaskRunner (Conductor)', () => {
     const first = makeRunner();
     first.run('snapshot-resume', { runId: 'r1', verifyOnComplete: false });
     await tick();
-    first.pause('snapshot-resume', 'r1');
     host.complete('a', { finalText: 'A' });
     await tick();
+    first.pause('snapshot-resume', 'r1');
 
     saveTaskSpec(
       root,
@@ -803,7 +824,7 @@ describe('TaskRunner (Conductor)', () => {
     );
 
     const resumedHost = new MockHost();
-    const resumed = new TaskRunner({ host: resumedHost, workspaceId: 'ws', workspaceRoot: root });
+    const resumed = new TaskRunner({ host: resumedHost, workspaceId: 'ws', workspaceRoot: root, getKillSwitch: inactiveKillSwitch });
     resumed.resume('snapshot-resume', 'r1');
     await tick();
 
@@ -832,12 +853,12 @@ describe('TaskRunner (Conductor)', () => {
       verifyOnComplete: false,
     });
     await tick();
-    first.pause('context-resume', 'r1');
     host.complete('a', { finalText: 'A' });
     await tick();
+    first.pause('context-resume', 'r1');
 
     const recoveredHost = new MockHost();
-    const recovered = new TaskRunner({ host: recoveredHost, workspaceId: 'ws', workspaceRoot: root });
+    const recovered = new TaskRunner({ host: recoveredHost, workspaceId: 'ws', workspaceRoot: root, getKillSwitch: inactiveKillSwitch });
     recovered.resume('context-resume', 'r1');
     await tick();
 
@@ -850,7 +871,12 @@ describe('TaskRunner (Conductor)', () => {
   it('does not replay an in-flight node after a crash without operator review', async () => {
     saveTaskSpec(
       root,
-      specOf({ id: 'ambiguous', title: 'Ambiguous', goal: 'g', nodes: [{ id: 'mutate', prompt: 'mutate once' }] }),
+      specOf({
+        id: 'ambiguous',
+        title: 'Ambiguous',
+        goal: 'g',
+        nodes: [{ id: 'mutate', prompt: 'mutate once', effect: 'external-mutation' }],
+      }),
     );
     const first = makeRunner();
     first.run('ambiguous', { runId: 'r1' });
@@ -861,7 +887,7 @@ describe('TaskRunner (Conductor)', () => {
 
     // Simulate a process crash before a completion/proof checkpoint.
     const host2 = new MockHost();
-    const resumed = new TaskRunner({ host: host2, workspaceId: 'ws', workspaceRoot: root });
+    const resumed = new TaskRunner({ host: host2, workspaceId: 'ws', workspaceRoot: root, getKillSwitch: inactiveKillSwitch });
     resumed.resume('ambiguous', 'r1');
     await tick();
 
@@ -892,7 +918,6 @@ describe('TaskRunner (Conductor)', () => {
     const first = makeRunner(issuer);
     first.run('proven-recovery', { runId: 'r1', verifyOnComplete: false });
     await tick();
-    first.pause('proven-recovery', 'r1');
     host.complete('publish', {
       finalText: 'provider confirmed',
       executionProof: issueTaskProof(
@@ -903,12 +928,14 @@ describe('TaskRunner (Conductor)', () => {
       ),
     });
     await tick();
+    first.pause('proven-recovery', 'r1');
 
     const recoveredHost = new MockHost();
     const recovered = new TaskRunner({
       host: recoveredHost,
       workspaceId: 'ws',
       workspaceRoot: root,
+      getKillSwitch: inactiveKillSwitch,
       verifyExecutionProof: (proof, binding) => issuer.verifyForTask(proof, binding),
     });
     recovered.resume('proven-recovery', 'r1');
@@ -953,6 +980,7 @@ describe('TaskRunner (Conductor)', () => {
       host,
       workspaceId: 'ws',
       workspaceRoot: root,
+      getKillSwitch: inactiveKillSwitch,
       executionGuard: (context) => {
         observed.push(context.policy.maxCpuPercent, context.policy.maxMemoryMb);
         return { allowed: false, reason: 'sandbox unavailable' };
@@ -980,7 +1008,7 @@ describe('TaskRunner (Conductor)', () => {
         }],
       }),
     );
-    const runner = new TaskRunner({ host, workspaceId: 'ws', workspaceRoot: root });
+    const runner = new TaskRunner({ host, workspaceId: 'ws', workspaceRoot: root, getKillSwitch: inactiveKillSwitch });
     runner.run('backoff', { runId: 'r1', verifyOnComplete: false });
     await tick();
     host.complete('a', { reason: 'error' });
@@ -1016,7 +1044,7 @@ describe('TaskRunner (Conductor)', () => {
     first.pause('backoff-restart', 'r1');
 
     const recoveredHost = new MockHost();
-    const recovered = new TaskRunner({ host: recoveredHost, workspaceId: 'ws', workspaceRoot: root });
+    const recovered = new TaskRunner({ host: recoveredHost, workspaceId: 'ws', workspaceRoot: root, getKillSwitch: inactiveKillSwitch });
     recovered.resume('backoff-restart', 'r1');
     await tick();
     expect(recoveredHost.created).toHaveLength(0);
@@ -1044,6 +1072,7 @@ describe('TaskRunner (Conductor)', () => {
       host,
       workspaceId: 'ws',
       workspaceRoot: root,
+      getKillSwitch: inactiveKillSwitch,
       nowMs: () => Date.parse('2026-06-02T00:00:00.000Z'),
     });
     runner.run('expired', { runId: 'r1', verifyOnComplete: false });
@@ -1149,12 +1178,12 @@ describe('TaskRunner (Conductor)', () => {
     const first = makeRunner();
     first.run('auto-recover', { runId: 'r1', verifyOnComplete: false });
     await tick();
-    first.pause('auto-recover', 'r1');
     host.complete('a', { finalText: 'A' });
     await tick();
+    first.pause('auto-recover', 'r1');
 
     const recoveredHost = new MockHost();
-    const recovered = new TaskRunner({ host: recoveredHost, workspaceId: 'ws', workspaceRoot: root });
+    const recovered = new TaskRunner({ host: recoveredHost, workspaceId: 'ws', workspaceRoot: root, getKillSwitch: inactiveKillSwitch });
     const snapshots = recovered.recoverNonTerminalRuns();
 
     expect(snapshots).toHaveLength(1);
@@ -1182,13 +1211,13 @@ describe('TaskRunner (Conductor)', () => {
     const first = makeRunner();
     first.run('deleted-live-spec', { runId: 'r1', verifyOnComplete: false });
     await tick();
-    first.pause('deleted-live-spec', 'r1');
     host.complete('a', { finalText: 'A' });
     await tick();
+    first.pause('deleted-live-spec', 'r1');
     rmSync(join(root, 'tasks', 'deleted-live-spec', 'task.yaml'));
 
     const recoveredHost = new MockHost();
-    const recovered = new TaskRunner({ host: recoveredHost, workspaceId: 'ws', workspaceRoot: root });
+    const recovered = new TaskRunner({ host: recoveredHost, workspaceId: 'ws', workspaceRoot: root, getKillSwitch: inactiveKillSwitch });
     const snapshots = recovered.recoverNonTerminalRuns();
 
     expect(snapshots).toHaveLength(1);
@@ -1239,7 +1268,7 @@ describe('TaskRunner (Conductor)', () => {
     }
 
     const recoveredHost = new MockHost();
-    const recovered = new TaskRunner({ host: recoveredHost, workspaceId: 'ws', workspaceRoot: root });
+    const recovered = new TaskRunner({ host: recoveredHost, workspaceId: 'ws', workspaceRoot: root, getKillSwitch: inactiveKillSwitch });
     const snapshots = recovered.recoverNonTerminalRuns();
 
     expect(snapshots).toHaveLength(checkpointCount);
@@ -1549,7 +1578,7 @@ describe('TaskRunner (Conductor)', () => {
 
     // Restart: fresh host + runner with empty in-memory state, resume from the run-log.
     const host2 = new MockHost();
-    const r2 = new TaskRunner({ host: host2, workspaceId: 'ws', workspaceRoot: root, now: () => '2026-06-07T00:00:00.000Z' });
+    const r2 = new TaskRunner({ host: host2, workspaceId: 'ws', workspaceRoot: root, getKillSwitch: inactiveKillSwitch, now: () => '2026-06-07T00:00:00.000Z' });
     r2.resume('hyd', 'r1');
     await tick();
     expect(r2.getRunState('hyd', 'r1')!.status).toBe('verifying');

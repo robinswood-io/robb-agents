@@ -1,6 +1,10 @@
 import { describe, expect, test } from 'bun:test'
 import { CapabilityBroker, type CapabilityOperationRequest } from '../governance/capability-broker'
-import { ExecutionProofIssuer } from '../governance/execution-proof'
+import {
+  ExecutionProofIssuer,
+  SignedExecutionProofSchema,
+  type SignedExecutionProof,
+} from '../governance/execution-proof'
 import { SecretLeaseBroker } from '../credentials/secret-lease-broker'
 import {
   ConnectorDriverError,
@@ -78,6 +82,7 @@ function createHarness(
     now: () => now,
     generateId: () => 'execution-proof-1',
   })
+  const recordedExecutionProofs: SignedExecutionProof[] = []
 
   const authorize = (
     operationId: string,
@@ -165,6 +170,9 @@ function createHarness(
       providerState: providerResponse.body,
     }),
     issueExecutionProof: (request) => executionProofIssuer.issue(request),
+    recordExecutionProof: (proof) => {
+      recordedExecutionProofs.push(proof)
+    },
     createHealthAuthorization: () => authorize('health.read'),
     now: () => now,
   }
@@ -173,6 +181,7 @@ function createHarness(
     authorize,
     broker,
     executionProofIssuer,
+    recordedExecutionProofs,
     driver: createPriorityConnectorDriver(pack, options),
     options,
   }
@@ -254,13 +263,14 @@ describe('priority connector HTTP drivers', () => {
         reconciliation: { status: 'confirmed' },
       },
     })
-    const proof = result.executionProof
+    const proof = SignedExecutionProofSchema.parse(result.executionProof)
     expect(harness.executionProofIssuer.verifyForTask(proof, {
       workspaceId: 'workspace-1',
       missionId: 'mission-1',
       nodeId: 'node-1',
       idempotencyKey: 'mutation-2',
     })).toMatchObject({ allowed: true })
+    expect(harness.recordedExecutionProofs).toEqual([proof])
     expect(requests[0]?.url).toBe('https://www.googleapis.com/drive/v3/files/file%2Fwith%20spaces')
 
     await expect(harness.driver.invoke('drive.update', {

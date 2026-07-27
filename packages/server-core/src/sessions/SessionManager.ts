@@ -100,6 +100,7 @@ import { ensureLabelsExist, ensureTaskItemLabel } from '@craft-agent/shared/labe
 import { loadStatusConfig } from '@craft-agent/shared/statuses/storage'
 import { AutomationSystem, createPromptHistoryEntry, appendAutomationHistoryEntry, type AutomationSystemMetadataSnapshot } from '@craft-agent/shared/automations'
 import { buildBackendRuntimeSignature, buildRestartRequiredSignature, filterAttachmentsForModelInput } from './runtime-config'
+import { ExecutionProofCollector } from './execution-proof-collector'
 import { buildRoutingCostMeta, applyRoutingCostMetaToLatestAssistantMessage, resolveRoutingCostOptions } from '@craft-agent/shared/audit'
 import {
   GenerationTelemetryLifecycle,
@@ -1236,6 +1237,7 @@ export interface SessionCompletionEvent {
 
 export class SessionManager implements ISessionManager {
   private sessions: Map<string, ManagedSession> = new Map()
+  private readonly executionProofCollector = new ExecutionProofCollector()
   // Delta batching for performance - reduces IPC events from 50+/sec to ~20/sec
   private pendingDeltas: Map<string, PendingDelta> = new Map()
   private deltaFlushTimers: Map<string, NodeJS.Timeout> = new Map()
@@ -6180,6 +6182,7 @@ export class SessionManager implements ISessionManager {
     }
     managed.autoRetryPending = undefined
 
+    this.executionProofCollector.discard(sessionId)
     this.sessions.delete(sessionId)
 
     // Clean up session metadata in AutomationSystem (prevents memory leak)
@@ -7041,6 +7044,26 @@ export class SessionManager implements ISessionManager {
     }
   }
 
+  /**
+   * Trusted connector-runtime seam. This method is intentionally not exposed by
+   * RPC or renderer protocols, so model-authored text cannot become execution proof.
+   */
+  recordExecutionProof(
+    sessionId: string,
+    proof: import('@craft-agent/shared/governance').SignedExecutionProof,
+  ): void {
+    const managed = this.sessions.get(sessionId)
+    if (!managed?.taskSlug || !managed.taskNodeId) {
+      throw new Error('Execution proof can only be recorded for a bound task node session')
+    }
+    this.executionProofCollector.record({
+      sessionId,
+      workspaceId: managed.workspace.id,
+      missionId: managed.taskSlug,
+      nodeId: managed.taskNodeId,
+    }, proof)
+  }
+
   private emitSessionComplete(evt: SessionCompletionEvent): void {
     if (this.sessionCompletionListeners.size === 0) return
     for (const listener of this.sessionCompletionListeners) {
@@ -7186,6 +7209,7 @@ export class SessionManager implements ISessionManager {
       // Tasks Conductor seam: signal true completion (queue empty) with the stop
       // reason + this turn's final assistant message, so the Conductor can advance
       // the corresponding node. In-process only; never sent to the renderer/agents.
+      const executionProof = this.executionProofCollector.take(sessionId)
       this.emitSessionComplete({
         sessionId,
         workspaceId: managed.workspace.id,
@@ -7195,6 +7219,7 @@ export class SessionManager implements ISessionManager {
           ? managed.messages.find(m => m.id === currentFinalMessageId)?.content
           : undefined,
         tokenUsage: managed.tokenUsage,
+        ...(reason === 'complete' && executionProof ? { executionProof } : {}),
       })
     }
 

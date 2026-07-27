@@ -69,6 +69,14 @@ function createBroker(now: { value: number }, configuredPolicy = policy()): Capa
 }
 
 describe('CapabilityBroker', () => {
+  test('returns an isolated policy snapshot', () => {
+    const now = { value: startMs }
+    const broker = createBroker(now)
+    const snapshot = broker.snapshotPolicy()
+    snapshot.allowedOperations.push('forged.operation')
+    expect(broker.snapshotPolicy().allowedOperations).not.toContain('forged.operation')
+  })
+
   test('issues a payload-bound capability and consumes it exactly once', () => {
     const now = { value: startMs }
     const broker = createBroker(now)

@@ -192,6 +192,7 @@ export interface ConnectorDriverOptions {
   assertRuntimeAdmission: ConnectorRuntimeAdmissionVerifier
   reconcileMutation: ConnectorMutationReconciler
   issueExecutionProof: ConnectorExecutionProofIssuer
+  recordExecutionProof: (proof: SignedExecutionProof) => void
   createHealthAuthorization: () => ConnectorCapabilityAuthorization
   now?: () => string
 }
@@ -288,6 +289,7 @@ export class HttpConnectorPackDriver implements ConnectorPackDriver {
     private readonly assertRuntimeAdmission: ConnectorRuntimeAdmissionVerifier,
     private readonly reconcileMutation: ConnectorMutationReconciler,
     private readonly issueExecutionProof: ConnectorExecutionProofIssuer,
+    private readonly recordExecutionProof: (proof: SignedExecutionProof) => void,
     private readonly createHealthAuthorization: () => ConnectorCapabilityAuthorization,
     private readonly now: () => string = () => new Date().toISOString(),
   ) {
@@ -458,6 +460,7 @@ export class HttpConnectorPackDriver implements ConnectorPackDriver {
           ...(observation.detailCode ? { detailCode: observation.detailCode } : {}),
         },
       })
+      this.recordExecutionProof(executionProof)
       return {
         ...baseResult,
         reconciliationReceipt: {
@@ -537,6 +540,7 @@ export function createPriorityConnectorDriver(
     options.assertRuntimeAdmission,
     options.reconcileMutation,
     options.issueExecutionProof,
+    options.recordExecutionProof,
     options.createHealthAuthorization,
     options.now,
   )

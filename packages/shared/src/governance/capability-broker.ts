@@ -286,6 +286,10 @@ export class CapabilityBroker {
   private readonly generateId: () => string
   private readonly onEvent: ((event: CapabilityBrokerEvent) => void) | undefined
 
+  snapshotPolicy(): CapabilityPolicy {
+    return structuredClone(this.policy)
+  }
+
   updatePolicy(nextValue: CapabilityPolicy): CapabilityPolicy {
     const next = CapabilityPolicySchema.parse(nextValue)
     if (next.workspaceId !== this.policy.workspaceId) {

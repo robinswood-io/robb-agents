@@ -6,6 +6,7 @@
  * SessionManager completion/output seams.
  */
 export { TaskRunner } from './TaskRunner';
+export { loadWorkspaceExecutionProofIssuer } from './execution-proof-runtime';
 export type {
   ConductorSessionHost,
   TaskRunnerDeps,
@@ -15,3 +16,4 @@ export type {
   NodeRunStatus,
   TaskExecutionGuardContext,
 } from './TaskRunner';
+export type { GovernanceCredentialStore } from './execution-proof-runtime';

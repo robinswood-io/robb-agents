@@ -119,4 +119,27 @@ describe('DurableConnectorPackRegistry', () => {
     appendFileSync(harness.journalPath, '{"forged":true}\n', 'utf8')
     expect(() => registry.snapshot()).toThrow()
   })
+
+  test('uses the global registry epoch for every active pack admission', async () => {
+    const harness = createRegistryHarness()
+    const registry = harness.createRegistry()
+    await registry.install(harness.signed, {
+      actorId: 'security-admin-1',
+      reason: 'Install Google Workspace',
+    })
+    const microsoft = signConnectorPackManifest(
+      connectorPackTemplates.microsoft365,
+      'publisher-key-1',
+      harness.privateKey,
+      '2026-07-27T09:05:00.000Z',
+    )
+    await registry.install(microsoft, {
+      actorId: 'security-admin-1',
+      reason: 'Install Microsoft 365',
+      expectedGeneration: 1,
+    })
+
+    expect(registry.assertOperationAllowed(harness.signed.id, 'drive.list').authorizationGeneration).toBe(2)
+    expect(registry.assertOperationAllowed(microsoft.id, 'files.list').authorizationGeneration).toBe(2)
+  })
 })

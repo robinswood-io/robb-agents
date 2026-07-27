@@ -68,7 +68,11 @@ import {
   type RpcServer,
 } from '@craft-agent/server-core/transport'
 import type { HandlerDeps } from '../handler-deps'
-import { TaskRunner, type TaskExecutionGuardContext } from '../../tasks'
+import {
+  TaskRunner,
+  loadWorkspaceExecutionProofIssuer,
+  type TaskExecutionGuardContext,
+} from '../../tasks'
 
 const tasksLog = createLogger('tasks-generate')
 
@@ -172,6 +176,7 @@ function extractYaml(text: string): string {
 export function registerTasksHandlers(server: RpcServer, deps: HandlerDeps): void {
   // One Conductor per workspace, created on demand. Holds active runs in memory.
   const runners = new Map<string, TaskRunner>()
+  const runnerPromises = new Map<string, Promise<TaskRunner>>()
   const killSwitchRegistry = new DurableKillSwitchRegistry(
     join(resolveConfigDir(), 'governance', 'kill-switches.jsonl'),
   )
@@ -202,16 +207,22 @@ export function registerTasksHandlers(server: RpcServer, deps: HandlerDeps): voi
     return workspace
   }
 
-  function runnerFor(workspaceId: string): TaskRunner {
+  async function runnerFor(workspaceId: string): Promise<TaskRunner> {
     let runner = runners.get(workspaceId)
-    if (!runner) {
+    if (runner) return runner
+    const pending = runnerPromises.get(workspaceId)
+    if (pending) return pending
+
+    const creation = (async () => {
       const ws = workspaceOrThrow(workspaceId)
+      const proofIssuer = await loadWorkspaceExecutionProofIssuer(ws.id)
       runner = new TaskRunner({
         host: deps.sessionManager,
         workspaceId: ws.id,
         workspaceRoot: ws.rootPath,
         getKillSwitch: () => killSwitchRegistry.taskSnapshot(),
         executionGuard: createProductionTaskExecutionGuard(ws.rootPath),
+        verifyExecutionProof: (proof, binding) => proofIssuer.verifyForTask(proof, binding),
       })
       runners.set(workspaceId, runner)
       try {
@@ -228,8 +239,14 @@ export function registerTasksHandlers(server: RpcServer, deps: HandlerDeps): voi
           error: err instanceof Error ? err.message : String(err),
         })
       }
+      return runner
+    })()
+    runnerPromises.set(workspaceId, creation)
+    try {
+      return await creation
+    } finally {
+      runnerPromises.delete(workspaceId)
     }
-    return runner
   }
 
   // tasks:validate — lint/dry-run; no side effects.
@@ -456,7 +473,7 @@ export function registerTasksHandlers(server: RpcServer, deps: HandlerDeps): voi
   // tasks:run — start a run.
   server.handle(RPC_CHANNELS.tasks.RUN, async (ctx, workspaceId: string, req: TaskRunRequest) => {
     authorizeTaskAction(ctx, workspaceId, 'mission.run')
-    return runnerFor(workspaceId).run(req.slug, {
+    return (await runnerFor(workspaceId)).run(req.slug, {
       runId: req.runId,
       orchestratorSessionId: req.orchestratorSessionId,
       params: req.params,
@@ -465,24 +482,24 @@ export function registerTasksHandlers(server: RpcServer, deps: HandlerDeps): voi
 
   server.handle(RPC_CHANNELS.tasks.PAUSE, async (ctx, workspaceId: string, slug: string, runId: string) => {
     authorizeTaskAction(ctx, workspaceId, 'mission.cancel')
-    runnerFor(workspaceId).pause(slug, runId)
+    ;(await runnerFor(workspaceId)).pause(slug, runId)
   })
 
   server.handle(RPC_CHANNELS.tasks.RESUME, async (ctx, workspaceId: string, slug: string, runId: string) => {
     authorizeTaskAction(ctx, workspaceId, 'mission.run')
-    runnerFor(workspaceId).resume(slug, runId)
+    ;(await runnerFor(workspaceId)).resume(slug, runId)
   })
 
   server.handle(RPC_CHANNELS.tasks.STOP, async (ctx, workspaceId: string, slug: string, runId: string) => {
     authorizeTaskAction(ctx, workspaceId, 'mission.cancel')
-    await runnerFor(workspaceId).stop(slug, runId)
+    await (await runnerFor(workspaceId)).stop(slug, runId)
   })
 
   server.handle(
     RPC_CHANNELS.tasks.LIST_APPROVALS,
     async (ctx, workspaceId: string, slug?: string, runId?: string): Promise<TaskApprovalRequestDto[]> => {
       authorizeTaskAction(ctx, workspaceId, 'mission.read')
-      return runnerFor(workspaceId).listPendingApprovals(slug, runId)
+      return (await runnerFor(workspaceId)).listPendingApprovals(slug, runId)
     },
   )
 
@@ -490,7 +507,7 @@ export function registerTasksHandlers(server: RpcServer, deps: HandlerDeps): voi
     RPC_CHANNELS.tasks.RESOLVE_APPROVAL,
     async (ctx, workspaceId: string, req: TaskApprovalDecisionRequest) => {
       authorizeTaskAction(ctx, workspaceId, 'mission.approve')
-      return runnerFor(workspaceId).resolveApproval(
+      return (await runnerFor(workspaceId)).resolveApproval(
         req.slug,
         req.runId,
         req.requestId,
@@ -559,7 +576,7 @@ export function registerTasksHandlers(server: RpcServer, deps: HandlerDeps): voi
         run: null,
       }
     }
-    const run = runId ? runnerFor(workspaceId).getRunState(slug, runId) : null
+    const run = runId ? (await runnerFor(workspaceId)).getRunState(slug, runId) : null
     return { slug, validation: toValidationDto(loaded), spec: loaded.spec, run }
   })
 
