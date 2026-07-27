@@ -706,14 +706,46 @@ async function loadIconFile(
  * Removes script tags, event handlers, and JavaScript URLs.
  * Also strips width/height attributes so SVG fills its container.
  */
-function sanitizeSvgForInline(svg: string): string {
-  return svg
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-    .replace(/on\w+="[^"]*"/gi, '')
-    .replace(/on\w+='[^']*'/gi, '')
-    .replace(/javascript:/gi, '')
-    .replace(/\s+width="[^"]*"/gi, '')
-    .replace(/\s+height="[^"]*"/gi, '')
+export function sanitizeSvgForInline(svg: string): string {
+  const document = new DOMParser().parseFromString(svg, 'image/svg+xml')
+  if (document.querySelector('parsererror') || document.documentElement.localName !== 'svg') {
+    return ''
+  }
+
+  const forbiddenElements = [
+    'script',
+    'foreignObject',
+    'iframe',
+    'object',
+    'embed',
+    'link',
+    'style',
+    'animate',
+    'animateMotion',
+    'animateTransform',
+    'set',
+  ]
+  for (const selector of forbiddenElements) {
+    document.querySelectorAll(selector).forEach(element => element.remove())
+  }
+
+  document.querySelectorAll('*').forEach(element => {
+    for (const attribute of Array.from(element.attributes)) {
+      const name = attribute.name.toLowerCase()
+      if (name.startsWith('on') || name === 'style') {
+        element.removeAttribute(attribute.name)
+        continue
+      }
+      if (name === 'href' || name === 'xlink:href') {
+        const value = attribute.value.trim()
+        if (!value.startsWith('#')) element.removeAttribute(attribute.name)
+      }
+    }
+  })
+
+  document.documentElement.removeAttribute('width')
+  document.documentElement.removeAttribute('height')
+  return new XMLSerializer().serializeToString(document.documentElement)
 }
 
 /**

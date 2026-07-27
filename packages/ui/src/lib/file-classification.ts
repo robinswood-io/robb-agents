@@ -66,8 +66,8 @@ const PDF_EXTENSIONS = new Set(['pdf'])
 
 /**
  * External-only file extensions — recognized as file links but opened externally.
- * These are included in FILE_EXTENSIONS_PATTERN so linkify.ts detects them as file paths,
- * but classifyFile() returns canPreview: false so they route to the system opener.
+ * Link detection shares the same registry, while classifyFile() returns
+ * canPreview: false so these files route to the system opener.
  */
 const EXTERNAL_EXTENSIONS = new Set([
   'xlsx', 'xls', 'xlsm',   // Spreadsheets
@@ -78,6 +78,16 @@ const EXTERNAL_EXTENSIONS = new Set([
   'mp3', 'wav', 'flac', 'aac',      // Audio
   'mp4', 'mov', 'avi', 'mkv',       // Video
   'heic', 'heif', 'tiff', 'tif',    // Images Chromium can't decode
+])
+
+const ALL_FILE_EXTENSIONS = new Set([
+  ...IMAGE_EXTENSIONS,
+  ...CODE_EXTENSIONS,
+  ...MARKDOWN_EXTENSIONS,
+  ...JSON_EXTENSIONS,
+  ...TEXT_EXTENSIONS,
+  ...PDF_EXTENSIONS,
+  ...EXTERNAL_EXTENSIONS,
 ])
 
 /**
@@ -111,17 +121,15 @@ export function classifyFile(filePath: string): FileClassification {
   return { type: null, canPreview: false }
 }
 
-/**
- * Regex alternation of all known file extensions (e.g. "ts|tsx|js|...").
- * Derived from the classification sets above so link detection stays in sync
- * with preview support automatically.
- */
-export const FILE_EXTENSIONS_PATTERN = [
-  ...IMAGE_EXTENSIONS,
-  ...CODE_EXTENSIONS,
-  ...MARKDOWN_EXTENSIONS,
-  ...JSON_EXTENSIONS,
-  ...TEXT_EXTENSIONS,
-  ...PDF_EXTENSIONS,
-  ...EXTERNAL_EXTENSIONS,
-].join('|')
+/** Check a filename/path against the same extension registry used for previews. */
+export function hasKnownFileExtension(filePath: string): boolean {
+  const basename = filePath.split('/').pop()?.toLowerCase() ?? ''
+  const lastDot = basename.lastIndexOf('.')
+  if (lastDot <= 0) return false
+
+  const extension = basename.slice(lastDot + 1)
+  if (ALL_FILE_EXTENSIONS.has(extension)) return true
+
+  const previousDot = basename.lastIndexOf('.', lastDot - 1)
+  return previousDot >= 0 && ALL_FILE_EXTENSIONS.has(basename.slice(previousDot + 1))
+}

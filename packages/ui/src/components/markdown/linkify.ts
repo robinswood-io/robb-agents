@@ -1,5 +1,5 @@
 import LinkifyIt from 'linkify-it'
-import { FILE_EXTENSIONS_PATTERN } from '../../lib/file-classification'
+import { hasKnownFileExtension } from '../../lib/file-classification'
 
 /**
  * Linkify - URL and file path detection for markdown preprocessing
@@ -11,25 +11,52 @@ import { FILE_EXTENSIONS_PATTERN } from '../../lib/file-classification'
 // Initialize linkify-it with default settings (fuzzy URLs, emails enabled)
 const linkify = new LinkifyIt()
 
-// A single path-segment unit: a normal file-path character, or a percent-encoded
-// octet (%XX). The %XX form is the only CommonMark-valid way to carry a literal
-// space (or other reserved character) inside a bare, non-angle-bracketed link
-// destination, so real-world paths with spaces rely on it (see #944).
-const PATH_CHAR = `(?:[\\w\\-./@]|%[0-9A-Fa-f]{2})`
+function isAsciiLetterOrDigit(character: string): boolean {
+  return (character >= 'a' && character <= 'z')
+    || (character >= 'A' && character <= 'Z')
+    || (character >= '0' && character <= '9')
+}
 
-// File path regex - detects absolute/home/explicit-relative/bare-relative paths with common extensions
-// Examples: /Users/foo.ts, ~/src/app.tsx, ./README.md, ../guide.md, apps/electron/src/main.ts
-// Extensions derived from file-classification.ts to stay in sync with preview support
-const FILE_PATH_REGEX_SOURCE = `(?:^|[\\s([\\{<])((?:/|~/|\\./|\\.\\./|[A-Za-z0-9_]${PATH_CHAR}*)${PATH_CHAR}*\\.(?:${FILE_EXTENSIONS_PATTERN}))(?=[\\s)\\]}\\.,:;!?>]|$)`
-const FILE_PATH_REGEX = new RegExp(FILE_PATH_REGEX_SOURCE, 'gi')
-const FILE_PATH_PRETEST_REGEX = new RegExp(FILE_PATH_REGEX_SOURCE, 'i')
+function isHexDigit(character: string | undefined): boolean {
+  return character !== undefined && (
+    (character >= '0' && character <= '9')
+    || (character.toLowerCase() >= 'a' && character.toLowerCase() <= 'f')
+  )
+}
 
-// File-path regex for markdown anchor targets (entire href/text value)
-// Used by Markdown.tsx click handler to route file links to onFileClick.
-const FILE_PATH_TARGET_REGEX = new RegExp(
-  `^(?!https?://|mailto:|ftp://|data:)(?:/|~/|\./|\.\./|[A-Za-z0-9_]${PATH_CHAR}*)${PATH_CHAR}*\\.(?:${FILE_EXTENSIONS_PATTERN})$`,
-  'i'
-)
+function pathCharacterWidth(text: string, index: number): number {
+  const character = text[index]
+  if (!character) return 0
+  if (isAsciiLetterOrDigit(character) || ['_', '-', '.', '/', '@', '~'].includes(character)) return 1
+  if (character === '%' && isHexDigit(text[index + 1]) && isHexDigit(text[index + 2])) return 3
+  return 0
+}
+
+function isPathStart(text: string, index: number): boolean {
+  const character = text[index]
+  if (!character) return false
+  if (character === '/' || isAsciiLetterOrDigit(character) || character === '_') return true
+  if (character === '~') return text[index + 1] === '/'
+  if (character === '.') {
+    return text[index + 1] === '/'
+      || (text[index + 1] === '.' && text[index + 2] === '/')
+  }
+  return false
+}
+
+function isPathStartBoundary(character: string | undefined): boolean {
+  return character === undefined || character.trim().length === 0 || ['(', '[', '{', '<'].includes(character)
+}
+
+function isPathEndBoundary(character: string | undefined): boolean {
+  return character === undefined || character.trim().length === 0 || [')', ']', '}', '.', ',', ':', ';', '!', '?', '>'].includes(character)
+}
+
+function trimPathEnd(text: string, start: number, end: number): number {
+  let candidateEnd = end
+  while (candidateEnd > start && text[candidateEnd - 1] === '.') candidateEnd -= 1
+  return candidateEnd
+}
 
 interface DetectedLink {
   type: 'url' | 'email' | 'file'
@@ -42,6 +69,43 @@ interface DetectedLink {
 interface CodeRange {
   start: number
   end: number
+}
+
+function findFilePathCandidates(text: string): DetectedLink[] {
+  const paths: DetectedLink[] = []
+  let cursor = 0
+
+  while (cursor < text.length) {
+    if (!isPathStartBoundary(text[cursor - 1]) || !isPathStart(text, cursor)) {
+      cursor += 1
+      continue
+    }
+
+    let end = cursor
+    while (end < text.length) {
+      const consumed = pathCharacterWidth(text, end)
+      if (consumed === 0) break
+      end += consumed
+    }
+
+    const candidateEnd = hasKnownFileExtension(text.slice(cursor, end))
+      ? end
+      : trimPathEnd(text, cursor, end)
+    const candidate = text.slice(cursor, candidateEnd)
+    if (hasKnownFileExtension(candidate) && isPathEndBoundary(text[candidateEnd])) {
+      paths.push({
+        type: 'file',
+        text: candidate,
+        url: candidate,
+        start: cursor,
+        end: candidateEnd,
+      })
+    }
+
+    cursor = Math.max(end, cursor + 1)
+  }
+
+  return paths
 }
 
 /**
@@ -157,31 +221,12 @@ export function detectLinks(text: string): DetectedLink[] {
     })
   }
 
-  // 2. Detect file paths with custom regex
-  // Reset regex state
-  FILE_PATH_REGEX.lastIndex = 0
-  let fileMatch
-  while ((fileMatch = FILE_PATH_REGEX.exec(text)) !== null) {
-    const path = fileMatch[1]
-    if (!path) continue // Skip if no capture group
-
-    // Calculate actual start position (after any leading whitespace/punctuation)
-    const fullMatch = fileMatch[0]
-    const pathOffset = fullMatch.indexOf(path)
-    const start = fileMatch.index + pathOffset
-
+  // 2. Detect file paths with a linear scanner.
+  for (const path of findFilePathCandidates(text)) {
     // Check for overlaps with URL matches (URLs take precedence)
-    const pathRange = { start, end: start + path.length }
-    const overlapsUrl = links.some(link => rangesOverlap(pathRange, link))
+    const overlapsUrl = links.some(link => rangesOverlap(path, link))
     if (overlapsUrl) continue
-
-    links.push({
-      type: 'file',
-      text: path,
-      url: path, // File paths are passed as-is to onFileClick handler
-      start,
-      end: start + path.length
-    })
+    links.push(path)
   }
 
   // Sort by position
@@ -210,21 +255,36 @@ export function isPlaceholderUrl(url: string): boolean {
  */
 function stripPlaceholderLinks(text: string): string {
   const codeRanges = findCodeRanges(text)
-  // Match markdown links [text](url) where url contains placeholder patterns
-  return text.replace(
-    /\[([^\[\]]*)\]\(([^)]*)\)/g,
-    (fullMatch, linkText: string, url: string, offset: number) => {
-      // Don't modify links inside code blocks
-      if (isInsideCode(offset, codeRanges)) return fullMatch
+  let result = ''
+  let cursor = 0
 
-      if (isPlaceholderUrl(url)) {
-        // Strip the link, keep just the display text as plain text
-        if (!linkText.trim()) return fullMatch
-        return linkText
-      }
-      return fullMatch
+  while (cursor < text.length) {
+    const openingBracket = text.indexOf('[', cursor)
+    if (openingBracket === -1) return result + text.slice(cursor)
+    const closingBracket = text.indexOf(']', openingBracket + 1)
+    if (closingBracket === -1 || text[closingBracket + 1] !== '(') {
+      result += text.slice(cursor, openingBracket + 1)
+      cursor = openingBracket + 1
+      continue
     }
-  )
+    const linkText = text.slice(openingBracket + 1, closingBracket)
+    const closingParenthesis = text.indexOf(')', closingBracket + 2)
+    if (linkText.includes('[') || linkText.includes(']') || closingParenthesis === -1) {
+      result += text.slice(cursor, openingBracket + 1)
+      cursor = openingBracket + 1
+      continue
+    }
+
+    const url = text.slice(closingBracket + 2, closingParenthesis)
+    const shouldStrip = !isInsideCode(openingBracket, codeRanges)
+      && Boolean(linkText.trim())
+      && isPlaceholderUrl(url)
+    result += text.slice(cursor, openingBracket)
+    result += shouldStrip ? linkText : text.slice(openingBracket, closingParenthesis + 1)
+    cursor = closingParenthesis + 1
+  }
+
+  return result
 }
 
 /**
@@ -237,7 +297,7 @@ export function preprocessLinks(text: string): string {
   text = stripPlaceholderLinks(text)
 
   // Quick check - if no potential links, return early
-  if (!linkify.pretest(text) && !FILE_PATH_PRETEST_REGEX.test(text)) {
+  if (!linkify.pretest(text) && findFilePathCandidates(text).length === 0) {
     return text
   }
 
@@ -278,7 +338,7 @@ export function preprocessLinks(text: string): string {
  * Useful for optimization - skip preprocessing if no links present
  */
 export function hasLinks(text: string): boolean {
-  return linkify.pretest(text) || FILE_PATH_PRETEST_REGEX.test(text)
+  return linkify.pretest(text) || findFilePathCandidates(text).length > 0
 }
 
 /**
@@ -286,5 +346,11 @@ export function hasLinks(text: string): boolean {
  * Used by click handlers to route local paths to onFileClick instead of onUrlClick.
  */
 export function isFilePathTarget(target: string): boolean {
-  return FILE_PATH_TARGET_REGEX.test(target.trim())
+  const trimmed = target.trim()
+  if (!trimmed || ['http:', 'https:', 'mailto:', 'ftp:', 'data:', 'file:'].some(scheme => (
+    trimmed.toLowerCase().startsWith(scheme)
+  ))) return false
+
+  const candidates = findFilePathCandidates(trimmed)
+  return candidates.length === 1 && candidates[0]?.start === 0 && candidates[0]?.end === trimmed.length
 }

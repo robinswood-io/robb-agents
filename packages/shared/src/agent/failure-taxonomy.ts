@@ -149,38 +149,49 @@ export function classifyAgentFailure(signal: AgentFailureSignal): AgentFailureCl
   if (structured) return structured
 
   const text = `${signal.code ?? ''} ${signal.message}`.toLowerCase()
+  const words = new Set(text.split(/[^a-z0-9]+/).filter(Boolean))
+  const containsAny = (terms: readonly string[]): boolean => terms.some(term => text.includes(term))
   if (
-    /\bmfa\b|multi[ -]?factor|two[ -]?factor|\boauth\b.*(?:required|login|sign[ -]?in|consent)|(?:required|login|sign[ -]?in|consent).*\boauth\b/.test(
-      text,
-    )
+    words.has('mfa')
+    || containsAny(['multi-factor', 'multi factor', 'multifactor', 'two-factor', 'two factor', 'twofactor'])
+    || (words.has('oauth') && containsAny(['required', 'login', 'sign-in', 'sign in', 'consent']))
   ) {
     return result('interactive-auth-required', 'never', 'request-authentication', 'heuristic')
   }
-  if (/credential|api key|access token|token.*expired|unauthori[sz]ed/.test(text)) {
+  if (
+    containsAny(['credential', 'api key', 'access token', 'unauthorized', 'unauthorised'])
+    || (words.has('token') && words.has('expired'))
+  ) {
     return result('credential-required', 'never', 'request-authentication', 'heuristic')
   }
-  if (/forbidden|permission denied|not allowed|authorization required/.test(text)) {
+  if (containsAny(['forbidden', 'permission denied', 'not allowed', 'authorization required'])) {
     return result('permission-denied', 'never', 'request-authorization', 'heuristic')
   }
-  if (/sandbox|policy denied|operation denied by policy/.test(text)) {
+  if (containsAny(['sandbox', 'policy denied', 'operation denied by policy'])) {
     return result('sandbox-denied', 'never', 'request-authorization', 'heuristic')
   }
-  if (/invalid argument|validation failed|bad request|malformed|schema error/.test(text)) {
+  if (containsAny(['invalid argument', 'validation failed', 'bad request', 'malformed', 'schema error'])) {
     return result('invalid-input', 'never', 'fix-input', 'heuristic')
   }
-  if (/rate limit|too many requests|\b429\b|quota exceeded/.test(text)) {
+  if (containsAny(['rate limit', 'too many requests', 'quota exceeded']) || words.has('429')) {
     return result('rate-limited', 'safe', 'provider-fallback', 'heuristic', signal.retryAfterMs)
   }
-  if (/deadline exceeded|timed? ?out|\b408\b|\b504\b/.test(text)) {
+  if (containsAny(['deadline exceeded', 'timed out', 'timeout']) || words.has('408') || words.has('504')) {
     return result('timeout', 'safe', 'retry', 'heuristic', signal.retryAfterMs)
   }
-  if (/econnrefused|econnreset|enotfound|network error|fetch failed|connection refused/.test(text)) {
+  if (containsAny(['econnrefused', 'econnreset', 'enotfound', 'network error', 'fetch failed', 'connection refused'])) {
     return result('network-unavailable', 'safe', 'browser-fallback', 'heuristic', signal.retryAfterMs)
   }
-  if (/model.+(not found|unavailable|unsupported)|unsupported model/.test(text)) {
+  if (
+    text.includes('unsupported model')
+    || (text.includes('model') && ['not found', 'unavailable', 'unsupported'].some(term => text.includes(term)))
+  ) {
     return result('model-unavailable', 'conditional', 'provider-fallback', 'heuristic')
   }
-  if (/backend.+(create|creation|init)|spawn.+failed|failed.+spawn/.test(text)) {
+  if (
+    (text.includes('backend') && ['create', 'creation', 'init'].some(term => text.includes(term)))
+    || (text.includes('spawn') && text.includes('failed'))
+  ) {
     return result('backend-init-failed', 'conditional', 'provider-fallback', 'heuristic')
   }
   if (/out of memory|resource exhausted|disk full|no space left/.test(text)) {

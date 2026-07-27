@@ -24,7 +24,7 @@ export function tableToMarkdown(columns: ExportColumn[], rows: Record<string, un
     columns.map((col) => {
       const v = row[col.key]
       if (v === null || v === undefined) return ''
-      return String(v).replace(/\|/g, '\\|')
+      return String(v).replace(/\\/g, '\\\\').replace(/\|/g, '\\|')
     })
   )
 

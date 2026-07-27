@@ -30,21 +30,32 @@ export function buildBackendHostRuntimeContext(platform: PlatformServices) {
  * Removes dangerous characters and limits length.
  */
 export function sanitizeFilename(name: string): string {
-  return name
-    // Remove path separators and traversal patterns
-    .replace(/[/\\]/g, '_')
-    // Remove Windows-forbidden characters: < > : " | ? *
-    .replace(/[<>:"|?*]/g, '_')
-    // Remove control characters (ASCII 0-31)
-    .replace(/[\x00-\x1f]/g, '')
-    // Collapse multiple dots (prevent hidden files and extension tricks)
-    .replace(/\.{2,}/g, '.')
-    // Remove leading/trailing dots and spaces (Windows issues)
-    .replace(/^[.\s]+|[.\s]+$/g, '')
-    // Limit length (200 chars is safe for all filesystems)
-    .slice(0, 200)
-    // Fallback if name is empty after sanitization
-    || 'unnamed'
+  const forbidden = new Set(['/', '\\', '<', '>', ':', '"', '|', '?', '*'])
+  let sanitized = ''
+  let previousWasDot = false
+
+  for (const character of name) {
+    const codePoint = character.codePointAt(0) ?? 0
+    if (codePoint <= 31) continue
+    if (forbidden.has(character)) {
+      sanitized += '_'
+      previousWasDot = false
+      continue
+    }
+    if (character === '.') {
+      if (!previousWasDot) sanitized += character
+      previousWasDot = true
+      continue
+    }
+    sanitized += character
+    previousWasDot = false
+  }
+
+  let start = 0
+  let end = sanitized.length
+  while (start < end && (sanitized[start] === '.' || sanitized[start] === ' ')) start++
+  while (end > start && (sanitized[end - 1] === '.' || sanitized[end - 1] === ' ')) end--
+  return sanitized.slice(start, end).slice(0, 200) || 'unnamed'
 }
 
 /**

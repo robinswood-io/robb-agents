@@ -381,7 +381,9 @@ export class HttpConnectorPackDriver implements ConnectorPackDriver {
       const binding = this.definition.bindings[operationId]
       if (!binding) throw new ConnectorDriverError('UNKNOWN_OPERATION', `No HTTP binding for ${operationId}`)
       const path = renderPath(binding.path, envelope.resourceId)
-      const url = new URL(path, `${this.baseUrl.replace(/\/+$/, '')}/`)
+      let normalizedBaseUrl = this.baseUrl
+      while (normalizedBaseUrl.endsWith('/')) normalizedBaseUrl = normalizedBaseUrl.slice(0, -1)
+      const url = new URL(path, `${normalizedBaseUrl}/`)
       if (binding.method === 'GET') {
         for (const [key, value] of Object.entries(envelope.payload)) {
           if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {

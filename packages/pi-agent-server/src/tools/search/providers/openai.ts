@@ -66,7 +66,21 @@ export class ResponsesApiSearchProvider implements WebSearchProvider {
 export const OpenAISearchProvider = ResponsesApiSearchProvider;
 
 function deriveDisplayName(apiBase: string): string {
-  if (apiBase.includes('openrouter')) return 'OpenRouter';
-  if (apiBase.includes('openai.com')) return 'OpenAI';
+  const hostname = parseHostname(apiBase);
+  if (hostname && matchesHostname(hostname, 'openrouter.ai')) return 'OpenRouter';
+  if (hostname && matchesHostname(hostname, 'openai.com')) return 'OpenAI';
   return 'Web Search';
+}
+
+function parseHostname(value: string): string | undefined {
+  try {
+    const candidate = value.includes('://') ? value : `https://${value}`;
+    return new URL(candidate).hostname.toLowerCase();
+  } catch {
+    return undefined;
+  }
+}
+
+function matchesHostname(hostname: string, expected: string): boolean {
+  return hostname === expected || hostname.endsWith(`.${expected}`);
 }

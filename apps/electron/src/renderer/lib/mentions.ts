@@ -15,16 +15,15 @@ import { AGENTS_PLUGIN_NAME } from '@craft-agent/shared/skills/types'
 import { getSourceIconSync, getSkillIconSync } from './icon-cache'
 
 // Import and re-export parsing functions from shared (pure string operations, no renderer deps)
-import { parseMentions, stripAllMentions, resolveSkillMentions, resolveSourceMentions, type ParsedMentions } from '@craft-agent/shared/mentions'
+import {
+  findMentionTokens,
+  parseMentions,
+  stripAllMentions,
+  resolveSkillMentions,
+  resolveSourceMentions,
+  type ParsedMentions,
+} from '@craft-agent/shared/mentions'
 export { parseMentions, stripAllMentions, resolveSkillMentions, resolveSourceMentions, type ParsedMentions }
-
-// ============================================================================
-// Constants
-// ============================================================================
-
-// Workspace ID character class for regex: word chars, spaces (NOT newlines), hyphens, dots
-// Using literal space instead of \s to avoid matching newlines which would break parsing
-const WS_ID_CHARS = '[\\w .-]'
 
 // ============================================================================
 // Types
@@ -58,56 +57,19 @@ export function findMentionMatches(
 ): MentionMatch[] {
   const matches: MentionMatch[] = []
 
-  // Match source mentions: [source:slug]
-  const sourcePattern = /(\[source:([\w-]+)\])/g
-  let match
-  while ((match = sourcePattern.exec(text)) !== null) {
-    const slug = match[2]
-    if (availableSourceSlugs.includes(slug)) {
-      matches.push({
-        type: 'source',
-        id: slug,
-        fullMatch: match[1],
-        startIndex: match.index,
-      })
-    }
-  }
+  for (const mention of findMentionTokens(text)) {
+    const isAvailable = mention.type === 'skill'
+      ? availableSkillSlugs.includes(mention.value)
+      : mention.type === 'source'
+        ? availableSourceSlugs.includes(mention.value)
+        : true
+    if (!isAvailable) continue
 
-  // Match skill mentions: [skill:slug] or [skill:workspaceId:slug]
-  // The pattern captures the full match and extracts the slug (last component)
-  // Workspace IDs can contain spaces, hyphens, underscores, and dots
-  const skillPattern = new RegExp(`(\\[skill:(?:${WS_ID_CHARS}+:)?([\\w-]+)\\])`, 'g')
-  while ((match = skillPattern.exec(text)) !== null) {
-    const slug = match[2]
-    if (availableSkillSlugs.includes(slug)) {
-      matches.push({
-        type: 'skill',
-        id: slug,
-        fullMatch: match[1],
-        startIndex: match.index,
-      })
-    }
-  }
-
-  // Match file mentions: [file:path]
-  const filePattern = /(\[file:([^\]]+)\])/g
-  while ((match = filePattern.exec(text)) !== null) {
     matches.push({
-      type: 'file',
-      id: match[2],
-      fullMatch: match[1],
-      startIndex: match.index,
-    })
-  }
-
-  // Match folder mentions: [folder:path]
-  const folderPattern = /(\[folder:([^\]]+)\])/g
-  while ((match = folderPattern.exec(text)) !== null) {
-    matches.push({
-      type: 'folder',
-      id: match[2],
-      fullMatch: match[1],
-      startIndex: match.index,
+      type: mention.type,
+      id: mention.value,
+      fullMatch: text.slice(mention.start, mention.end),
+      startIndex: mention.start,
     })
   }
 
@@ -124,28 +86,16 @@ export function findMentionMatches(
  * @returns Text with the mention removed
  */
 export function removeMention(text: string, type: MentionItemType, id: string): string {
-  let pattern: RegExp
+  let result = ''
+  let cursor = 0
 
-  switch (type) {
-    case 'source':
-      pattern = new RegExp(`\\[source:${escapeRegExp(id)}\\]`, 'g')
-      break
-    case 'file':
-      pattern = new RegExp(`\\[file:${escapeRegExp(id)}\\]`, 'g')
-      break
-    case 'folder':
-      pattern = new RegExp(`\\[folder:${escapeRegExp(id)}\\]`, 'g')
-      break
-    case 'skill':
-    default:
-      // Match both [skill:slug] and [skill:workspaceId:slug]
-      // Workspace IDs can contain spaces, hyphens, underscores, and dots
-      pattern = new RegExp(`\\[skill:(?:${WS_ID_CHARS}+:)?${escapeRegExp(id)}\\]`, 'g')
-      break
+  for (const mention of findMentionTokens(text)) {
+    if (mention.type !== type || mention.value !== id) continue
+    result += text.slice(cursor, mention.start)
+    cursor = mention.end
   }
 
-  return text
-    .replace(pattern, '')
+  return (result + text.slice(cursor))
     .replace(/\s+/g, ' ')
     .trim()
 }
@@ -261,12 +211,4 @@ export function extractBadges(
       end: match.startIndex + match.fullMatch.length,
     }
   })
-}
-
-// ============================================================================
-// Helpers
-// ============================================================================
-
-function escapeRegExp(string: string): string {
-  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }

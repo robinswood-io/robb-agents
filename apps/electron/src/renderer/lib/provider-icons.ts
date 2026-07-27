@@ -61,17 +61,34 @@ const providerDisplayNames: Record<string, string> = {
   vercel: 'Vercel',
 }
 
+function parseProviderHostname(baseUrl: string): string | null {
+  try {
+    const candidate = baseUrl.includes('://') ? baseUrl : `http://${baseUrl}`
+    return new URL(candidate).hostname.toLowerCase()
+  } catch {
+    return null
+  }
+}
+
+function matchesProviderHostname(hostname: string, ...domains: string[]): boolean {
+  return domains.some(domain => hostname === domain || hostname.endsWith(`.${domain}`))
+}
+
+function hostnameHasSegment(hostname: string, segment: string): boolean {
+  return hostname.split('.').some(part => part === segment || part.startsWith(`${segment}-`))
+}
+
 /** Get a human-readable provider name from provider type and optional base URL */
 export function getProviderDisplayName(providerType: string, baseUrl?: string | null): string {
   // Try URL detection first for compat providers
   if (baseUrl) {
-    const url = baseUrl.toLowerCase()
-    if (url.includes('openrouter.ai')) return 'OpenRouter'
-    if (url.includes('ollama')) return 'Ollama'
-    if (url.includes('kimi.com')) return 'Kimi'
-    if (url.includes('minimax.io') || url.includes('minimaxi.com')) return 'Minimax'
-    if (url.includes('v0.dev') || url.includes('vercel')) return 'Vercel'
-    if (url.includes('manifest.build')) return 'Manifest'
+    const hostname = parseProviderHostname(baseUrl)
+    if (hostname && matchesProviderHostname(hostname, 'openrouter.ai')) return 'OpenRouter'
+    if (hostname && (hostname === 'ollama' || hostname.endsWith('.ollama'))) return 'Ollama'
+    if (hostname && matchesProviderHostname(hostname, 'kimi.com')) return 'Kimi'
+    if (hostname && matchesProviderHostname(hostname, 'minimax.io', 'minimaxi.com')) return 'Minimax'
+    if (hostname && matchesProviderHostname(hostname, 'v0.dev', 'vercel.app', 'vercel.com')) return 'Vercel'
+    if (hostname && matchesProviderHostname(hostname, 'manifest.build')) return 'Manifest'
   }
   return providerDisplayNames[providerType] || providerType
 }
@@ -80,19 +97,20 @@ export function getProviderDisplayName(providerType: string, baseUrl?: string | 
  * Detect provider from base URL
  */
 function detectProviderFromUrl(baseUrl: string): ProviderIconKey | null {
-  const url = baseUrl.toLowerCase()
+  const hostname = parseProviderHostname(baseUrl)
+  if (!hostname) return null
 
-  if (url.includes('openrouter.ai')) return 'openrouter'
-  if (url.includes('ollama')) return 'ollama'
-  if (url.includes('api.anthropic.com')) return 'anthropic'
-  if (url.includes('api.openai.com')) return 'openai'
-  if (url.includes('v0.dev') || url.includes('vercel')) return 'vercel'
-  if (url.includes('generativelanguage.googleapis.com') || url.includes('ai.google')) return 'google'
-  if (url.includes('kimi.com')) return 'kimi'
-  if (url.includes('minimax.io') || url.includes('minimaxi.com')) return 'minimax'
-  if (url.includes('mistral.ai')) return 'mistral'
-  if (url.includes('bedrock')) return 'aws'
-  if (url.includes('huggingface.co')) return 'huggingface'
+  if (matchesProviderHostname(hostname, 'openrouter.ai')) return 'openrouter'
+  if (hostname === 'ollama' || hostname.endsWith('.ollama')) return 'ollama'
+  if (matchesProviderHostname(hostname, 'api.anthropic.com')) return 'anthropic'
+  if (matchesProviderHostname(hostname, 'api.openai.com')) return 'openai'
+  if (matchesProviderHostname(hostname, 'v0.dev', 'vercel.app', 'vercel.com')) return 'vercel'
+  if (matchesProviderHostname(hostname, 'generativelanguage.googleapis.com', 'ai.google')) return 'google'
+  if (matchesProviderHostname(hostname, 'kimi.com')) return 'kimi'
+  if (matchesProviderHostname(hostname, 'minimax.io', 'minimaxi.com')) return 'minimax'
+  if (matchesProviderHostname(hostname, 'mistral.ai')) return 'mistral'
+  if (hostnameHasSegment(hostname, 'bedrock')) return 'aws'
+  if (matchesProviderHostname(hostname, 'huggingface.co')) return 'huggingface'
 
   return null
 }
@@ -170,7 +188,8 @@ export function getProviderIcon(
       return providerIcons[detectedProvider]
     }
     // Manifest has no bundled SVG — fall back to Google Favicon V2 (same trick used for groq/xai elsewhere).
-    if (baseUrl.toLowerCase().includes('manifest.build')) {
+    const hostname = parseProviderHostname(baseUrl)
+    if (hostname && matchesProviderHostname(hostname, 'manifest.build')) {
       return 'https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&size=128&url=https://app.manifest.build'
     }
   }

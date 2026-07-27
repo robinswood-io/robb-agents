@@ -971,10 +971,10 @@ function toDisplayName(token: string): string {
 function classifyAdminApproval(command: string): PromptInfo | null {
   const trimmed = command.trim();
   const normalized = trimmed.toLowerCase();
+  const tokens = normalized.split(/\s+/);
 
-  const brewInstallCask = normalized.match(/^brew\s+install\s+--cask\s+([^\s]+).*$/);
-  if (brewInstallCask) {
-    const appToken = brewInstallCask[1] ?? 'application';
+  if (tokens[0] === 'brew' && tokens[1] === 'install' && tokens[2] === '--cask' && tokens[3]) {
+    const appToken = tokens[3];
     return {
       promptType: 'admin_approval',
       description: `Admin approval required for cask install: ${appToken}`,
@@ -989,9 +989,8 @@ function classifyAdminApproval(command: string): PromptInfo | null {
     };
   }
 
-  const brewUpgradeCask = normalized.match(/^brew\s+upgrade\s+--cask\s+([^\s]+).*$/);
-  if (brewUpgradeCask) {
-    const appToken = brewUpgradeCask[1] ?? 'application';
+  if (tokens[0] === 'brew' && tokens[1] === 'upgrade' && tokens[2] === '--cask' && tokens[3]) {
+    const appToken = tokens[3];
     return {
       promptType: 'admin_approval',
       description: `Admin approval required for cask upgrade: ${appToken}`,
@@ -1006,7 +1005,15 @@ function classifyAdminApproval(command: string): PromptInfo | null {
     };
   }
 
-  if (/^installer\s+-pkg\s+.+\s+-target\s+\//.test(normalized)) {
+  const packageFlagIndex = tokens.indexOf('-pkg');
+  const targetFlagIndex = tokens.indexOf('-target');
+  if (
+    tokens[0] === 'installer'
+    && packageFlagIndex >= 0
+    && Boolean(tokens[packageFlagIndex + 1])
+    && targetFlagIndex > packageFlagIndex
+    && tokens[targetFlagIndex + 1] === '/'
+  ) {
     return {
       promptType: 'admin_approval',
       description: 'Admin approval required for macOS installer package',

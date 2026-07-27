@@ -8,6 +8,32 @@ import { CRAFT_LOGO_HTML } from '../branding.ts';
 
 export type AppType = 'terminal' | 'electron';
 
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function safeDeepLink(value?: string): string | undefined {
+  if (!value) return undefined;
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === 'craftagents:' ? parsed.toString() : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function javascriptStringLiteral(value: string): string {
+  return JSON.stringify(value)
+    .replace(/</g, '\\u003c')
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029');
+}
+
 /**
  * Generate a minimal, clean callback page matching the app's design system.
  * Logo at top, status message in a card below.
@@ -19,7 +45,8 @@ export function generateCallbackPage(options: {
   appType?: AppType;
   deeplinkUrl?: string;
 }): string {
-  const { title, isSuccess, errorDetail, deeplinkUrl } = options;
+  const { title, isSuccess, errorDetail } = options;
+  const deeplinkUrl = safeDeepLink(options.deeplinkUrl);
 
   // Status message based on success/error
   const statusMessage = isSuccess
@@ -32,7 +59,7 @@ export function generateCallbackPage(options: {
   const autoCloseScript = isSuccess
     ? `
     setTimeout(() => {
-      ${deeplinkUrl ? `window.location.href = '${deeplinkUrl}';` : ''}
+      ${deeplinkUrl ? `window.location.href = ${javascriptStringLiteral(deeplinkUrl)};` : ''}
       window.close();
     }, 1500);`
     : '';
@@ -43,7 +70,7 @@ export function generateCallbackPage(options: {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Craft - ${title}</title>
+  <title>Robb Agents - ${escapeHtml(title)}</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -172,10 +199,10 @@ export function generateCallbackPage(options: {
   <div class="content">
     <pre class="logo">${CRAFT_LOGO_HTML}</pre>
     <div class="card">
-      <div class="status">${statusMessage}</div>
+      <div class="status">${escapeHtml(statusMessage)}</div>
     </div>
     <div class="hint">${isSuccess ? 'You can now return to the application.' : 'Please close this window and try again.'}</div>
-    ${deeplinkUrl ? `<a href="${deeplinkUrl}" class="return-link">Robb Agents</a>` : ''}
+    ${deeplinkUrl ? `<a href="${escapeHtml(deeplinkUrl)}" class="return-link">Robb Agents</a>` : ''}
   </div>
   <script>${autoCloseScript}</script>
 </body>

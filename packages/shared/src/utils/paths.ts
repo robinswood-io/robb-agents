@@ -19,6 +19,33 @@ export interface PathVars {
   [key: string]: string;
 }
 
+function replaceDollarVariable(input: string, key: string, value: string): string {
+  const token = `$${key}`;
+  let result = '';
+  let cursor = 0;
+
+  while (cursor < input.length) {
+    const matchIndex = input.indexOf(token, cursor);
+    if (matchIndex === -1) return result + input.slice(cursor);
+
+    const nextCharacter = input[matchIndex + token.length];
+    result += input.slice(cursor, matchIndex);
+    if (nextCharacter === undefined || nextCharacter === '/') {
+      result += value;
+      cursor = matchIndex + token.length;
+    } else {
+      result += '$';
+      cursor = matchIndex + 1;
+    }
+  }
+
+  return result;
+}
+
+function replacePathVariable(input: string, key: string, value: string): string {
+  return replaceDollarVariable(input.replaceAll(`\${${key}}`, value), key, value);
+}
+
 /**
  * Expand ONLY variable references (~, ${HOME}, ${CRAFT_CONFIG_DIR}, caller vars)
  * without converting relative paths to absolute.
@@ -54,18 +81,16 @@ export function expandVars(input: string, extraVars?: PathVars): string {
   }
 
   // Handle ${HOME} and $HOME variables
-  result = result.replace(/\$\{HOME\}/g, home);
-  result = result.replace(/\$HOME(?=\/|$)/g, home);
+  result = replacePathVariable(result, 'HOME', home);
 
   // Handle ${CRAFT_CONFIG_DIR} — centralized config directory
-  result = result.replace(/\$\{CRAFT_CONFIG_DIR\}/g, CONFIG_DIR);
+  result = replacePathVariable(result, 'CRAFT_CONFIG_DIR', CONFIG_DIR);
 
   // Handle caller-provided extra variables
   if (extraVars) {
     for (const [key, value] of Object.entries(extraVars)) {
       if (!value) continue;
-      result = result.replace(new RegExp(`\\$\{${key}\}`, 'g'), value);
-      result = result.replace(new RegExp(`\\$${key}(?=/|$)`, 'g'), value);
+      result = replacePathVariable(result, key, value);
     }
   }
 

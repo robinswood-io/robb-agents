@@ -119,9 +119,24 @@ export class GenerationTelemetryLifecycle {
 }
 
 export function parseCompactionInputTokens(message: string): number | undefined {
-  const match = message.match(/\bfrom\s+~?([\d,\s]+)\s+tokens?\b/i)
-  if (!match?.[1]) return undefined
-  const normalized = match[1].replace(/[,\s]/g, '')
+  const lowerMessage = message.toLowerCase()
+  const markerIndex = lowerMessage.indexOf('from')
+  if (markerIndex === -1) return undefined
+
+  let cursor = markerIndex + 'from'.length
+  if (cursor < message.length && message[cursor]?.trim().length !== 0) return undefined
+  while (cursor < message.length && message[cursor]?.trim().length === 0) cursor++
+  if (message[cursor] === '~') cursor++
+
+  let normalized = ''
+  while (cursor < message.length) {
+    const character = message[cursor]!
+    if (character >= '0' && character <= '9') normalized += character
+    else if (character !== ',' && character.trim().length !== 0) break
+    cursor++
+  }
+  while (cursor < message.length && message[cursor]?.trim().length === 0) cursor++
+  if (!lowerMessage.startsWith('token', cursor) || normalized.length === 0) return undefined
   const parsed = Number.parseInt(normalized, 10)
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined
 }

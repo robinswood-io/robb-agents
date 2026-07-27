@@ -119,7 +119,7 @@ export async function createCallbackServer(options?: CreateCallbackServerOptions
       const html = generateCallbackPage({
         title: 'Error',
         isSuccess: false,
-        errorDetail: error instanceof Error ? error.message : 'Internal Server Error',
+        errorDetail: 'Internal Server Error',
         appType,
       });
 

@@ -135,7 +135,13 @@ export function isSensitiveResourceBundleFile(relativePath: string): boolean {
   const fileName = basename(relativePath).toLowerCase()
   if (SENSITIVE_RESOURCE_FILE_NAMES.has(fileName)) return true
   if (SENSITIVE_RESOURCE_FILE_EXTENSIONS.some(extension => fileName.endsWith(extension))) return true
-  return /(?:credential|secret|token|oauth|auth)(?:[-_.][\w-]+)?\.(?:json|ya?ml|toml|ini)$/i.test(fileName)
+  const metadataExtensions = ['.json', '.yaml', '.yml', '.toml', '.ini']
+  const extension = metadataExtensions.find(candidate => fileName.endsWith(candidate))
+  if (!extension) return false
+  const stem = fileName.slice(0, -extension.length)
+  const firstSeparator = [...stem].findIndex(character => character === '-' || character === '_' || character === '.')
+  const category = firstSeparator === -1 ? stem : stem.slice(0, firstSeparator)
+  return ['credential', 'secret', 'token', 'oauth', 'auth'].includes(category)
 }
 
 function collectPortableResourceFiles(

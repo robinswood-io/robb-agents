@@ -12,3 +12,4 @@ export * from './title-generator.ts';
 export * from './toolNames.ts';
 export * from './workspace.ts';
 export * from './redaction.ts';
+export * from './text-sanitization.ts';

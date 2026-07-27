@@ -100,9 +100,8 @@ import {
  * Code block content is preserved as plain text.
  */
 function stripMarkdown(text: string): string {
-  return text
+  return stripFencedCodeMarkers(text)
     // Extract content from fenced code blocks (remove ``` and optional language)
-    .replace(/```(?:\w+)?\n?([\s\S]*?)```/g, '$1')
     // Extract content from inline code
     .replace(/`([^`]+)`/g, '$1')
     // Remove headers
@@ -123,6 +122,36 @@ function stripMarkdown(text: string): string {
     // Collapse whitespace
     .replace(/\s+/g, ' ')
     .trim()
+}
+
+function stripFencedCodeMarkers(text: string): string {
+  let result = ''
+  let cursor = 0
+
+  while (cursor < text.length) {
+    const openingFence = text.indexOf('```', cursor)
+    if (openingFence === -1) return result + text.slice(cursor)
+    const closingFence = text.indexOf('```', openingFence + 3)
+    if (closingFence === -1) return result + text.slice(cursor)
+
+    const markerEnd = openingFence + 3
+    const firstNewline = text.indexOf('\n', markerEnd)
+    const languageMarker = firstNewline !== -1 && firstNewline < closingFence
+      ? text.slice(markerEnd, firstNewline)
+      : ''
+    const hasLanguageMarker = [...languageMarker].every(character => (
+      (character >= 'a' && character <= 'z')
+      || (character >= 'A' && character <= 'Z')
+      || (character >= '0' && character <= '9')
+      || character === '_'
+    ))
+    const contentStart = hasLanguageMarker && firstNewline !== -1 ? firstNewline + 1 : markerEnd
+
+    result += text.slice(cursor, openingFence) + text.slice(contentStart, closingFence)
+    cursor = closingFence + 3
+  }
+
+  return result
 }
 
 /**
@@ -426,11 +455,28 @@ function hasStructure(text: string): boolean {
   // Sentence ending (period, exclamation, question mark, colon)
   if (/[.!?:]\s*$/.test(text.trimEnd())) return true
   // Paragraph breaks
-  if (/\n\s*\n/.test(text)) return true
-  // Headers anywhere
-  if (/\n\s*#{1,4}\s/.test(text)) return true
+  if (hasParagraphBreakOrHeader(text)) return true
   // Code blocks
   if (hasCodeBlock(text)) return true
+  return false
+}
+
+function hasParagraphBreakOrHeader(text: string): boolean {
+  for (let index = 0; index < text.length; index += 1) {
+    if (text[index] !== '\n') continue
+
+    let cursor = index + 1
+    while (cursor < text.length && (text[cursor] === ' ' || text[cursor] === '\t' || text[cursor] === '\r')) {
+      cursor += 1
+    }
+    if (text[cursor] === '\n') return true
+
+    let headerMarkers = 0
+    while (headerMarkers < 4 && text[cursor + headerMarkers] === '#') headerMarkers += 1
+    const characterAfterHeader = text[cursor + headerMarkers]
+    if (headerMarkers > 0 && characterAfterHeader !== undefined && /\s/.test(characterAfterHeader)) return true
+  }
+
   return false
 }
 

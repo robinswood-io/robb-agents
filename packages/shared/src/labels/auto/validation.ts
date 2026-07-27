@@ -21,10 +21,78 @@ export interface AutoLabelValidationResult {
  *
  * Matches patterns like: (a+)+, (a*)+, (\w+)*, ([a-z]+)+
  */
-const CATASTROPHIC_BACKTRACKING_PATTERNS = [
-  /\([^)]*[+*][^)]*\)[+*]/, // (x+)+ or (x*)+ or (x+)* etc.
-  /\([^)]*[+*][^)]*\)\{/,   // (x+){n} quantified groups with inner quantifier
-]
+function containsNestedQuantifier(pattern: string): boolean {
+  const groupQuantifiers: boolean[] = []
+  let inCharacterClass = false
+  let escaped = false
+
+  for (let index = 0; index < pattern.length; index += 1) {
+    const character = pattern[index]!
+    if (escaped) {
+      escaped = false
+      continue
+    }
+    if (character === '\\') {
+      escaped = true
+      continue
+    }
+    if (character === '[') {
+      inCharacterClass = true
+      continue
+    }
+    if (character === ']' && inCharacterClass) {
+      inCharacterClass = false
+      continue
+    }
+    if (inCharacterClass) continue
+
+    if (character === '(') {
+      groupQuantifiers.push(false)
+      continue
+    }
+    if ((character === '+' || character === '*' || character === '{') && groupQuantifiers.length > 0) {
+      groupQuantifiers[groupQuantifiers.length - 1] = true
+      continue
+    }
+    if (character !== ')' || groupQuantifiers.length === 0) continue
+
+    const containsQuantifier = groupQuantifiers.pop() ?? false
+    if (containsQuantifier && ['+', '*', '{'].includes(pattern[index + 1] ?? '')) return true
+  }
+
+  return false
+}
+
+function hasCapturingGroup(pattern: string): boolean {
+  let inCharacterClass = false
+  let escaped = false
+
+  for (let index = 0; index < pattern.length; index += 1) {
+    const character = pattern[index]!
+    if (escaped) {
+      escaped = false
+      continue
+    }
+    if (character === '\\') {
+      escaped = true
+      continue
+    }
+    if (character === '[') {
+      inCharacterClass = true
+      continue
+    }
+    if (character === ']' && inCharacterClass) {
+      inCharacterClass = false
+      continue
+    }
+    if (inCharacterClass || character !== '(') continue
+
+    if (pattern[index + 1] !== '?') return true
+    if (pattern[index + 2] === '<' && !['=', '!'].includes(pattern[index + 3] ?? '')) return true
+  }
+
+  return false
+}
 
 /**
  * Validate a single auto-label rule.
@@ -50,18 +118,15 @@ export function validateAutoLabelRule(pattern: string, flags?: string): AutoLabe
   }
 
   // 2. Check for catastrophic backtracking patterns (nested quantifiers)
-  for (const badPattern of CATASTROPHIC_BACKTRACKING_PATTERNS) {
-    if (badPattern.test(pattern)) {
-      errors.push(
-        `Pattern contains nested quantifiers which can cause catastrophic backtracking (ReDoS). ` +
-        `Simplify the pattern to avoid nested repetition like (a+)+.`
-      )
-      break
-    }
+  if (containsNestedQuantifier(pattern)) {
+    errors.push(
+      `Pattern contains nested quantifiers which can cause catastrophic backtracking (ReDoS). ` +
+      `Simplify the pattern to avoid nested repetition like (a+)+.`
+    )
   }
 
   // 3. Warn about missing capture groups when no valueTemplate could use $1
-  if (!pattern.includes('(') || pattern.replace(/\(\?[:<!=]/g, '').indexOf('(') === -1) {
+  if (!hasCapturingGroup(pattern)) {
     warnings.push(
       'Pattern has no capture groups. The entire match will be used as the label value. ' +
       'Add capture groups (parentheses) to extract specific parts.'

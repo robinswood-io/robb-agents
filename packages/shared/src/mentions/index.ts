@@ -18,6 +18,92 @@ function joinPath(base: string, relative: string): string {
   return base.endsWith(sep) ? base + relative : base + sep + relative
 }
 
+export type MentionTokenType = 'skill' | 'source' | 'file' | 'folder'
+
+export interface MentionToken {
+  type: MentionTokenType
+  value: string
+  start: number
+  end: number
+}
+
+function isMentionSlug(value: string): boolean {
+  return value.length > 0 && [...value].every(character => (
+    (character >= 'a' && character <= 'z')
+    || (character >= 'A' && character <= 'Z')
+    || (character >= '0' && character <= '9')
+    || character === '_'
+    || character === '-'
+  ))
+}
+
+function isWorkspaceId(value: string): boolean {
+  return value.length > 0 && [...value].every(character => (
+    isMentionSlug(character) || character === ' ' || character === '.'
+  ))
+}
+
+function parseBracketMention(content: string, start: number, end: number): MentionToken | null {
+  const separator = content.indexOf(':')
+  if (separator === -1) return null
+
+  const type = content.slice(0, separator)
+  const body = content.slice(separator + 1)
+  if (type === 'source' && isMentionSlug(body)) return { type, value: body, start, end }
+  if ((type === 'file' || type === 'folder') && body.length > 0) return { type, value: body, start, end }
+  if (type !== 'skill') return null
+
+  const workspaceSeparator = body.lastIndexOf(':')
+  const slug = workspaceSeparator === -1 ? body : body.slice(workspaceSeparator + 1)
+  const workspaceId = workspaceSeparator === -1 ? null : body.slice(0, workspaceSeparator)
+  if (!isMentionSlug(slug)) return null
+  if (workspaceId !== null && (!isWorkspaceId(workspaceId) || workspaceId.includes(':'))) return null
+  return { type, value: slug, start, end }
+}
+
+export function findMentionTokens(text: string): MentionToken[] {
+  const mentions: MentionToken[] = []
+  let cursor = 0
+
+  while (cursor < text.length) {
+    const openingBracket = text.indexOf('[', cursor)
+    if (openingBracket === -1) break
+    const closingBracket = text.indexOf(']', openingBracket + 1)
+    if (closingBracket === -1) break
+
+    const mention = parseBracketMention(
+      text.slice(openingBracket + 1, closingBracket),
+      openingBracket,
+      closingBracket + 1,
+    )
+    if (mention) {
+      mentions.push(mention)
+      cursor = closingBracket + 1
+    } else {
+      cursor = openingBracket + 1
+    }
+  }
+
+  return mentions
+}
+
+function replaceBracketMentions(
+  text: string,
+  replace: (mention: MentionToken) => string | null,
+): string {
+  let result = ''
+  let cursor = 0
+
+  for (const mention of findMentionTokens(text)) {
+    const replacement = replace(mention)
+    if (replacement === null) continue
+    result += text.slice(cursor, mention.start) + replacement
+    cursor = mention.end
+  }
+
+  return result + text.slice(cursor)
+}
+
 // ============================================================================
 // Constants
 // ============================================================================
@@ -72,48 +158,18 @@ export function parseMentions(
     folders: [],
   }
 
-  // Match source mentions: [source:slug]
-  const sourcePattern = /\[source:([\w-]+)\]/g
-  let match: RegExpExecArray | null
-  while ((match = sourcePattern.exec(text)) !== null) {
-    const slug = match[1]!
-    if (availableSourceSlugs.includes(slug) && !result.sources.includes(slug)) {
-      result.sources.push(slug)
-    }
-  }
-
-  // Match skill mentions: [skill:slug] or [skill:workspaceId:slug]
-  // The pattern captures the last component (slug) after any number of colons
-  // Workspace IDs can contain spaces, hyphens, underscores, and dots
-  const skillPattern = new RegExp(`\\[skill:(?:${WS_ID_CHARS}+:)?([\\w-]+)\\]`, 'g')
-  while ((match = skillPattern.exec(text)) !== null) {
-    const slug = match[1]!
-    if (availableSkillSlugs.includes(slug)) {
-      if (!result.skills.includes(slug)) {
-        result.skills.push(slug)
+  for (const mention of findMentionTokens(text)) {
+    if (mention.type === 'source') {
+      if (availableSourceSlugs.includes(mention.value) && !result.sources.includes(mention.value)) {
+        result.sources.push(mention.value)
       }
-    } else {
-      if (!result.invalidSkills.includes(slug)) {
-        result.invalidSkills.push(slug)
-      }
-    }
-  }
-
-  // Match file mentions: [file:path] (path can contain any chars except ])
-  const filePattern = /\[file:([^\]]+)\]/g
-  while ((match = filePattern.exec(text)) !== null) {
-    const filePath = match[1]!
-    if (!result.files.includes(filePath)) {
-      result.files.push(filePath)
-    }
-  }
-
-  // Match folder mentions: [folder:path]
-  const folderPattern = /\[folder:([^\]]+)\]/g
-  while ((match = folderPattern.exec(text)) !== null) {
-    const folderPath = match[1]!
-    if (!result.folders.includes(folderPath)) {
-      result.folders.push(folderPath)
+    } else if (mention.type === 'skill') {
+      const target = availableSkillSlugs.includes(mention.value) ? result.skills : result.invalidSkills
+      if (!target.includes(mention.value)) target.push(mention.value)
+    } else if (mention.type === 'file' && !result.files.includes(mention.value)) {
+      result.files.push(mention.value)
+    } else if (mention.type === 'folder' && !result.folders.includes(mention.value)) {
+      result.folders.push(mention.value)
     }
   }
 
@@ -129,11 +185,9 @@ export function parseMentions(
  * @deprecated Prefer resolveSkillMentions + resolveSourceMentions for richer output.
  */
 export function stripAllMentions(text: string): string {
-  return text
-    // Replace [source:slug] with just the slug
-    .replace(/\[source:([\w-]+)\]/g, '$1')
-    // Replace [skill:slug] or [skill:workspaceId:slug] with just the slug
-    .replace(new RegExp(`\\[skill:(?:${WS_ID_CHARS}+:)?([\\w-]+)\\]`, 'g'), '$1')
+  return replaceBracketMentions(text, mention => (
+    mention.type === 'source' || mention.type === 'skill' ? mention.value : null
+  ))
     // Note: [file:...] and [folder:...] are NOT stripped — they are content
     // that gets resolved to absolute paths by resolveFileMentions().
     .replace(/\s+/g, ' ')
@@ -155,13 +209,11 @@ export function resolveSkillMentions(
   text: string,
   skillNames: Map<string, string>
 ): string {
-  return text.replace(
-    new RegExp(`\\[skill:(?:${WS_ID_CHARS}+:)?([\\w-]+)\\]`, 'g'),
-    (_match, slug: string) => {
-      const name = skillNames.get(slug) || slug
-      return `[Mentioned skill: ${name} (slug: ${slug})]`
-    }
-  )
+  return replaceBracketMentions(text, mention => {
+    if (mention.type !== 'skill') return null
+    const name = skillNames.get(mention.value) || mention.value
+    return `[Mentioned skill: ${name} (slug: ${mention.value})]`
+  })
 }
 
 /**
@@ -172,10 +224,9 @@ export function resolveSkillMentions(
  * @param text - The message text with source mentions
  */
 export function resolveSourceMentions(text: string): string {
-  return text.replace(
-    /\[source:([\w-]+)\]/g,
-    (_match, slug: string) => `[Mentioned source: ${slug}]`
-  )
+  return replaceBracketMentions(text, mention => (
+    mention.type === 'source' ? `[Mentioned source: ${mention.value}]` : null
+  ))
 }
 
 /**
@@ -192,19 +243,12 @@ export function resolveSourceMentions(text: string): string {
  * Leaves other mention types ([skill:...], [source:...]) untouched.
  */
 export function resolveFileMentions(text: string, workingDirectory: string): string {
-  return text
-    .replace(/\[file:([^\]]+)\]/g, (_match, filePath: string) => {
-      const resolved = filePath.startsWith('/') || filePath.startsWith('~')
-        ? filePath
-        : joinPath(workingDirectory, filePath)
-      const name = filePath.split('/').pop() || filePath
-      return `[Mentioned file: ${name} (at ${resolved})]`
-    })
-    .replace(/\[folder:([^\]]+)\]/g, (_match, folderPath: string) => {
-      const resolved = folderPath.startsWith('/') || folderPath.startsWith('~')
-        ? folderPath
-        : joinPath(workingDirectory, folderPath)
-      const name = folderPath.split('/').pop() || folderPath
-      return `[Mentioned folder: ${name} (at ${resolved})]`
-    })
+  return replaceBracketMentions(text, mention => {
+    if (mention.type !== 'file' && mention.type !== 'folder') return null
+    const resolved = mention.value.startsWith('/') || mention.value.startsWith('~')
+      ? mention.value
+      : joinPath(workingDirectory, mention.value)
+    const name = mention.value.split('/').pop() || mention.value
+    return `[Mentioned ${mention.type}: ${name} (at ${resolved})]`
+  })
 }

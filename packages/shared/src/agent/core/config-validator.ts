@@ -192,7 +192,7 @@ export class ConfigValidator {
       if (line.startsWith('#') || line === '') continue;
 
       // Check for unclosed brackets in section headers
-      if (line.startsWith('[') && !line.match(/^\[+[^\]]+\]+$/)) {
+      if (line.startsWith('[') && !isTomlSectionHeader(line)) {
         warnings.push(`Line ${i + 1}: Possibly malformed section header: ${line}`);
       }
 
@@ -297,4 +297,16 @@ export class ConfigValidator {
 
     return parts.join('\n');
   }
+}
+
+function isTomlSectionHeader(line: string): boolean {
+  let openingBrackets = 0;
+  while (line[openingBrackets] === '[') openingBrackets += 1;
+
+  let closingBrackets = 0;
+  while (line[line.length - closingBrackets - 1] === ']') closingBrackets += 1;
+
+  if (openingBrackets === 0 || openingBrackets !== closingBrackets) return false;
+  const sectionName = line.slice(openingBrackets, line.length - closingBrackets);
+  return sectionName.length > 0 && !sectionName.includes(']');
 }

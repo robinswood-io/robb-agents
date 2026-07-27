@@ -356,7 +356,7 @@ describe('CliRpcClient', () => {
     await expect(client.invoke('system:homeDir')).rejects.toThrow('Not connected')
   })
 
-  it('connects over wss:// with TLS', async () => {
+  it('rejects an untrusted self-signed wss:// certificate', async () => {
     const tls = generateSelfSignedCert()
     if (!tls) {
       // openssl not available — skip TLS test
@@ -365,21 +365,10 @@ describe('CliRpcClient', () => {
     }
     server = createMockServer({ tls })
 
-    const prev = process.env.NODE_TLS_REJECT_UNAUTHORIZED
-    process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
-    try {
-      const client = new CliRpcClient(server.url)
-      const clientId = await client.connect()
-      expect(clientId).toBe('test-client-001')
-      expect(server.url.startsWith('wss://')).toBe(true)
-      client.destroy()
-    } finally {
-      if (prev === undefined) {
-        delete process.env.NODE_TLS_REJECT_UNAUTHORIZED
-      } else {
-        process.env.NODE_TLS_REJECT_UNAUTHORIZED = prev
-      }
-    }
+    const client = new CliRpcClient(server.url)
+    expect(server.url.startsWith('wss://')).toBe(true)
+    await expect(client.connect()).rejects.toThrow('WebSocket connection error')
+    client.destroy()
   })
 })
 

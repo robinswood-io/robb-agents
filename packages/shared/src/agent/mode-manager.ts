@@ -1610,30 +1610,22 @@ export function extractBashWriteTarget(command: string): string | null {
     return quotedPathMatch[1];
   }
 
-  // Pattern 2: shell -c/-lc with inner redirect (Codex pattern, unquoted paths)
-  // Match: /bin/zsh -lc "... > /path/to/file ..." or bash -c '... > /path ...'
-  const shellExecMatch = command.match(
-    /(?:\/bin\/)?(?:zsh|bash|sh)\s+(?:-\w+\s+)*["'].*?>\s*([^\s'"\\]+)/
-  );
-  if (shellExecMatch?.[1] && shellExecMatch[1] !== '/dev/null') {
-    return shellExecMatch[1];
-  }
-
-  // Pattern 3: Direct redirect - extract path after > or >>
+  // Pattern 2: Direct redirect - extract path after > or >>. This also
+  // covers redirects nested in shell -c/-lc command strings.
   // Guard against non-shell uses like JavaScript arrow functions (=>).
   const directRedirectMatch = command.match(/(?:^|[^=<>])>{1,2}\s*([^\s;|&"'>=][^\s;|&"'>]*)/);
   if (directRedirectMatch?.[1] && directRedirectMatch[1] !== '/dev/null') {
     return directRedirectMatch[1];
   }
 
-  // Pattern 4: PowerShell Out-File with -FilePath or -Path parameter
+  // Pattern 3: PowerShell Out-File with -FilePath or -Path parameter
   // Matches: | Out-File -FilePath 'path' or | Out-File -Path "path"
   const outFileParamMatch = command.match(/Out-File\s+-(?:File)?Path\s+['"]([^'"]+)['"]/i);
   if (outFileParamMatch?.[1]) {
     return outFileParamMatch[1];
   }
 
-  // Pattern 5: PowerShell Out-File with positional path (no -FilePath flag)
+  // Pattern 4: PowerShell Out-File with positional path (no -FilePath flag)
   // Matches: | Out-File 'path' or | Out-File "path"
   // Must not match -FilePath or -Encoding etc.
   const outFilePosMatch = command.match(/Out-File\s+['"]([^'"]+)['"]/i);
@@ -1641,14 +1633,14 @@ export function extractBashWriteTarget(command: string): string | null {
     return outFilePosMatch[1];
   }
 
-  // Pattern 6: PowerShell Set-Content or Add-Content with -Path parameter
+  // Pattern 5: PowerShell Set-Content or Add-Content with -Path parameter
   // Matches: | Set-Content -Path 'path' or | Add-Content -Path "path"
   const setContentMatch = command.match(/(?:Set|Add)-Content\s+-Path\s+['"]([^'"]+)['"]/i);
   if (setContentMatch?.[1]) {
     return setContentMatch[1];
   }
 
-  // Pattern 7: PowerShell Set-Content/Add-Content with escaped quotes (inside powershell.exe -Command "...")
+  // Pattern 6: PowerShell Set-Content/Add-Content with escaped quotes (inside powershell.exe -Command "...")
   // When Codex wraps PS commands: powershell.exe -Command "Set-Content -Path \"C:\path\file\" -Value ..."
   // The -Path value uses escaped quotes \" which don't match Pattern 6's ['"] anchors.
   // This is a REQUIRED fallback: in the Codex agent context, PowerShell AST parsing

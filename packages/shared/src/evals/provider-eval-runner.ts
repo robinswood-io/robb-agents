@@ -405,10 +405,16 @@ export class ProviderEvalHttpClient {
 }
 
 function extractJsonObject(value: string): Record<string, unknown> {
-  const normalized = value
-    .replace(/^```(?:json)?\s*/i, '')
-    .replace(/\s*```$/i, '')
-    .trim();
+  let normalized = value.trim();
+  if (normalized.startsWith('```')) {
+    const firstLineEnd = normalized.indexOf('\n');
+    const fenceLabel = firstLineEnd === -1 ? normalized.slice(3) : normalized.slice(3, firstLineEnd);
+    if (fenceLabel.trim().toLowerCase() === 'json' || fenceLabel.trim() === '') {
+      normalized = firstLineEnd === -1 ? '' : normalized.slice(firstLineEnd + 1);
+    }
+  }
+  normalized = normalized.trimEnd();
+  if (normalized.endsWith('```')) normalized = normalized.slice(0, -3).trimEnd();
   const parsed: unknown = JSON.parse(normalized);
   const record = recordValue(parsed);
   if (!record) throw new Error('Provider judge response is not a JSON object');

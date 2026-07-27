@@ -50,10 +50,12 @@ function normalizeNumber(raw: string): string {
   cleaned = cleaned.replace(/,/g, '')
 
   // Expand suffixes (case-insensitive)
-  const suffixMatch = cleaned.match(/^(-?\d+\.?\d*)\s*([kKmMbB])$/)
-  if (suffixMatch) {
-    const num = parseFloat(suffixMatch[1]!)
-    const suffix = suffixMatch[2]!.toLowerCase()
+  const suffix = cleaned.at(-1)?.toLowerCase()
+  const numericPart = suffix && ['k', 'm', 'b'].includes(suffix)
+    ? cleaned.slice(0, -1).trimEnd()
+    : ''
+  if (suffix && isDecimalLiteral(numericPart)) {
+    const num = Number(numericPart)
     const multiplier = suffix === 'k' ? 1_000 : suffix === 'm' ? 1_000_000 : 1_000_000_000
     const result = num * multiplier
     // Avoid floating point artifacts: use integer if whole number
@@ -68,4 +70,25 @@ function normalizeNumber(raw: string): string {
 
   // Fallback: return cleaned string if it doesn't parse as a number
   return cleaned
+}
+
+function isDecimalLiteral(value: string): boolean {
+  if (!value || value.trimStart() !== value) return false
+
+  let index = value[0] === '-' ? 1 : 0
+  let digitCount = 0
+  let decimalPoints = 0
+
+  for (; index < value.length; index += 1) {
+    const character = value[index]!
+    if (character >= '0' && character <= '9') {
+      digitCount += 1
+    } else if (character === '.' && decimalPoints === 0) {
+      decimalPoints += 1
+    } else {
+      return false
+    }
+  }
+
+  return digitCount > 0
 }

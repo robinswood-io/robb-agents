@@ -164,18 +164,38 @@ export function zodErrorToIssues(error: z.ZodError, filePath: string): Validatio
 /**
  * Regex for valid slugs: lowercase alphanumeric with hyphens
  */
-export const SLUG_REGEX = /^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$/;
+function hasValidSlugFormat(slug: string): boolean {
+  if (slug.length === 0 || slug.startsWith('-') || slug.endsWith('-')) return false;
+  for (const character of slug) {
+    const isLowercaseLetter = character >= 'a' && character <= 'z';
+    const isDigit = character >= '0' && character <= '9';
+    if (!isLowercaseLetter && !isDigit && character !== '-') return false;
+  }
+  return true;
+}
+
+/** Backwards-compatible matcher surface for callers that use `.test()`. */
+export const SLUG_REGEX: Pick<RegExp, 'test'> = Object.freeze({ test: hasValidSlugFormat });
 
 /**
  * Validate a slug format
  */
 export function validateSlug(slug: string): ValidationResult {
   if (!SLUG_REGEX.test(slug)) {
-    const suggestedSlug = slug
-      .toLowerCase()
-      .replace(/[^a-z0-9-]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .replace(/-+/g, '-');
+    let suggestedSlug = '';
+    let previousWasHyphen = false;
+    for (const character of slug.toLowerCase()) {
+      const isLowercaseLetter = character >= 'a' && character <= 'z';
+      const isDigit = character >= '0' && character <= '9';
+      if (isLowercaseLetter || isDigit) {
+        suggestedSlug += character;
+        previousWasHyphen = false;
+      } else if (!previousWasHyphen && suggestedSlug.length > 0) {
+        suggestedSlug += '-';
+        previousWasHyphen = true;
+      }
+    }
+    while (suggestedSlug.endsWith('-')) suggestedSlug = suggestedSlug.slice(0, -1);
 
     return invalidResult(
       'slug',

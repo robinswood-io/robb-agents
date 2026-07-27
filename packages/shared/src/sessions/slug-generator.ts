@@ -26,7 +26,17 @@ export function generateDatePrefix(date: Date = new Date()): string {
  * Get a random element from an array using crypto.getRandomValues
  */
 function getRandomElement<T>(array: readonly T[]): T {
-  const randomIndex = crypto.getRandomValues(new Uint32Array(1))[0]! % array.length;
+  if (array.length === 0) throw new Error('Cannot select a random element from an empty array');
+
+  // Rejection sampling avoids modulo bias when 2^32 is not evenly divisible by
+  // the number of candidate words.
+  const uint32Range = 0x1_0000_0000;
+  const acceptedRange = Math.floor(uint32Range / array.length) * array.length;
+  let randomValue = uint32Range;
+  while (randomValue >= acceptedRange) {
+    randomValue = crypto.getRandomValues(new Uint32Array(1))[0]!;
+  }
+  const randomIndex = randomValue % array.length;
   return array[randomIndex]!;
 }
 

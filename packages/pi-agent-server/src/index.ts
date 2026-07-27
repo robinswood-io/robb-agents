@@ -333,7 +333,7 @@ async function startCallbackServer(): Promise<void> {
       const msg = error instanceof Error ? error.message : String(error);
       debugLog(`call_llm via callback failed: ${msg}`);
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: msg }));
+      res.end(JSON.stringify({ error: 'LLM callback failed' }));
     }
   });
 

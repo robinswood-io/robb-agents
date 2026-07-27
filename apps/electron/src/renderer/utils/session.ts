@@ -3,6 +3,7 @@ import i18next from "i18next"
 import type { Session, Message } from "../../shared/types"
 import type { SessionMeta } from "../atoms/sessions"
 import type { SessionStatusId } from "../config/session-status-config"
+import { sanitizeMessagePreviewText } from "@craft-agent/shared/utils/text-sanitization"
 
 /** Common session fields used by getSessionTitle */
 type SessionLike = Pick<Session, 'name' | 'preview'> & { messages?: Session['messages'] }
@@ -12,11 +13,7 @@ type SessionLike = Pick<Session, 'name' | 'preview'> & { messages?: Session['mes
  * Strips XML blocks (e.g. <edit_request>) and normalizes whitespace.
  */
 function sanitizePreview(content: string): string {
-  return content
-    .replace(/<edit_request>[\s\S]*?<\/edit_request>/g, '') // Strip entire edit_request blocks
-    .replace(/<[^>]+>/g, '')     // Strip remaining XML/HTML tags
-    .replace(/\s+/g, ' ')        // Collapse whitespace
-    .trim()
+  return sanitizeMessagePreviewText(content)
 }
 
 /**

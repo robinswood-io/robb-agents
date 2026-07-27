@@ -35,11 +35,47 @@ export function toSnakeCase(str: string): string {
  * expandEnvVars('${GREETING} World', { GREETING: 'Hi' }) // 'Hi World'
  */
 export function expandEnvVars(str: string, env: Record<string, string>): string {
-  return str
-    // Replace ${VAR} syntax
-    .replace(/\$\{([^}]+)\}/g, (_, varName) => env[varName] ?? '')
-    // Replace $VAR syntax (word boundary)
-    .replace(/\$([A-Z_][A-Z0-9_]*)/gi, (_, varName) => env[varName] ?? '');
+  let expanded = '';
+
+  for (let index = 0; index < str.length;) {
+    if (str[index] !== '$') {
+      expanded += str[index];
+      index += 1;
+      continue;
+    }
+
+    if (str[index + 1] === '{') {
+      const closingBrace = str.indexOf('}', index + 2);
+      if (closingBrace === -1) {
+        expanded += '$';
+        index += 1;
+        continue;
+      }
+
+      const variableName = str.slice(index + 2, closingBrace);
+      expanded += env[variableName] ?? '';
+      index = closingBrace + 1;
+      continue;
+    }
+
+    const firstCharacter = str[index + 1];
+    if (!firstCharacter || !/[A-Z_]/i.test(firstCharacter)) {
+      expanded += '$';
+      index += 1;
+      continue;
+    }
+
+    let end = index + 2;
+    while (end < str.length && /[A-Z0-9_]/i.test(str[end]!)) {
+      end += 1;
+    }
+
+    const variableName = str.slice(index + 1, end);
+    expanded += env[variableName] ?? '';
+    index = end;
+  }
+
+  return expanded;
 }
 
 // ============================================================================

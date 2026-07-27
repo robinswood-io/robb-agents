@@ -162,6 +162,11 @@ describe('preprocessLinks — placeholder URL stripping', () => {
     const input = '[](https://github.com/...)'
     expect(preprocessLinks(input)).toBe(input)
   })
+
+  it('preserves a large malformed markdown link without backtracking', () => {
+    const input = `[${'x'.repeat(100_000)}`
+    expect(preprocessLinks(input)).toBe(input)
+  })
 })
 
 // ============================================================================
@@ -256,6 +261,10 @@ describe('isFilePathTarget', () => {
 
   it('accepts parent-relative image paths', () => {
     expect(isFilePathTarget('../downloads/assets/screenshot.png')).toBe(true)
+  })
+
+  it('accepts current-directory relative paths', () => {
+    expect(isFilePathTarget('./screenshots/theme.png')).toBe(true)
   })
 
   it('accepts repo-relative markdown paths', () => {

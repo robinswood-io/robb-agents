@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'bun:test'
 import type { ActivityItem } from '../../components/chat/TurnCard'
-import { extractOverlayCards } from '../tool-parsers'
+import { extractOverlayCards, parseWebSearchResult } from '../tool-parsers'
 import type { OverlayData } from '../tool-parsers'
 
 function makeActivity(overrides: Partial<ActivityItem>): ActivityItem {
@@ -89,5 +89,24 @@ describe('extractOverlayCards', () => {
     if (output?.data.type === 'generic') {
       expect(output.data.content).toBe(markdownText)
     }
+  })
+})
+
+describe('parseWebSearchResult', () => {
+  it('parses nested JSON content and multiple link sections', () => {
+    const input = [
+      'Links: [{"title":"One [nested]","url":"https://www.example.com/a"}]',
+      'Other',
+      'Links: [{"title":"Two","url":"https://docs.example.org/b"}]',
+    ].join('\n')
+
+    const result = parseWebSearchResult(input)
+    expect(result).toContain('- [example.com - One [nested]](https://www.example.com/a)')
+    expect(result).toContain('- [docs.example.org - Two](https://docs.example.org/b)')
+  })
+
+  it('preserves a large unterminated links payload', () => {
+    const input = `Links: [${'x'.repeat(100_000)}`
+    expect(parseWebSearchResult(input)).toBe(input)
   })
 })

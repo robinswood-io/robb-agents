@@ -212,10 +212,12 @@ function parseGuideMarkdown(raw: string): SourceGuide {
         break;
       case 'cache':
         // Parse JSON from code block: ```json ... ```
-        const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/);
-        if (jsonMatch && jsonMatch[1]) {
+        const openingFence = content.indexOf('```json\n');
+        const jsonStart = openingFence === -1 ? -1 : openingFence + '```json\n'.length;
+        const closingFence = jsonStart === -1 ? -1 : content.indexOf('\n```', jsonStart);
+        if (jsonStart !== -1 && closingFence !== -1) {
           try {
-            guide.cache = JSON.parse(jsonMatch[1]);
+            guide.cache = JSON.parse(content.slice(jsonStart, closingFence));
           } catch {
             // Invalid JSON, ignore
           }
@@ -625,4 +627,3 @@ export function sourceExists(workspaceRootPath: string, sourceSlug: string): boo
 // ============================================================
 
 export { parseGuideMarkdown };
-

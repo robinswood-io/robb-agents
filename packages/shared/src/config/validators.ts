@@ -790,12 +790,8 @@ export function validateSkillContent(markdownContent: string, slug: string): Val
   const errors: ValidationIssue[] = [];
 
   // 1. Validate slug format
-  if (!/^[a-z0-9-]+$/.test(slug)) {
-    const suggestedSlug = slug
-      .toLowerCase()
-      .replace(/[^a-z0-9-]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .replace(/-+/g, '-');
+  if (!isLowercaseSlug(slug)) {
+    const suggestedSlug = suggestLowercaseSlug(slug);
     errors.push({
       file: `skills/${slug}`,
       path: 'slug',
@@ -848,6 +844,32 @@ export function validateSkillContent(markdownContent: string, slug: string): Val
     errors,
     warnings: [],  // Icon/folder warnings skipped in content-only validation
   };
+}
+
+function isLowercaseSlug(slug: string): boolean {
+  return slug.length > 0 && [...slug].every(character => (
+    (character >= 'a' && character <= 'z')
+    || (character >= '0' && character <= '9')
+    || character === '-'
+  ));
+}
+
+function suggestLowercaseSlug(value: string): string {
+  let suggestion = '';
+  let previousWasHyphen = false;
+
+  for (const character of value.toLowerCase()) {
+    const allowed = (character >= 'a' && character <= 'z') || (character >= '0' && character <= '9');
+    if (allowed) {
+      suggestion += character;
+      previousWasHyphen = false;
+    } else if (!previousWasHyphen && suggestion.length > 0) {
+      suggestion += '-';
+      previousWasHyphen = true;
+    }
+  }
+
+  return suggestion.endsWith('-') ? suggestion.slice(0, -1) : suggestion;
 }
 
 /**

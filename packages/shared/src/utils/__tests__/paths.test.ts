@@ -9,6 +9,11 @@ describe('path variable expansion', () => {
     expect(expandVars('production')).toBe('production');
   });
 
+  test('expands caller variables literally and respects bare-variable boundaries', () => {
+    expect(expandVars('${A+B}/$A+B/$A+BETA', { 'A+B': '/literal' }))
+      .toBe('/literal//literal/$A+BETA');
+  });
+
   test('resolves stdio config with current-platform overrides and source variables', () => {
     const platform = process.platform as 'darwin' | 'linux' | 'win32';
     const resolved = resolveStdioConfig(

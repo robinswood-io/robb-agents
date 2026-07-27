@@ -149,24 +149,85 @@ export function parseGlobResult(
  * Handles multiple Links sections in a single result.
  */
 export function parseWebSearchResult(rawContent: string): string {
-  // Find all Links: [...] patterns (may span multiple lines)
-  // Use a function replacer to process each match individually
-  return rawContent.replace(/Links: (\[[\s\S]*?\])(?=\n|$)/g, (match, jsonArray) => {
+  let result = ''
+  let cursor = 0
+  const marker = 'Links: '
+
+  while (cursor < rawContent.length) {
+    const markerIndex = rawContent.indexOf(marker, cursor)
+    if (markerIndex === -1) return result + rawContent.slice(cursor)
+    const arrayStart = markerIndex + marker.length
+    if (rawContent[arrayStart] !== '[') {
+      result += rawContent.slice(cursor, arrayStart)
+      cursor = arrayStart
+      continue
+    }
+
+    const arrayEnd = findJsonArrayEnd(rawContent, arrayStart)
+    if (arrayEnd === -1 || (rawContent[arrayEnd] !== '\n' && arrayEnd !== rawContent.length)) {
+      result += rawContent.slice(cursor, arrayStart + 1)
+      cursor = arrayStart + 1
+      continue
+    }
+
+    const jsonArray = rawContent.slice(arrayStart, arrayEnd)
+    let replacement: string
     try {
-      const links = JSON.parse(jsonArray) as Array<{ title: string; url: string }>
+      const parsed: unknown = JSON.parse(jsonArray)
+      if (!isWebSearchLinkArray(parsed)) throw new Error('Invalid links payload')
 
       // Format as markdown list with domain prefix
-      const linksList = links.map(link => {
+      const linksList = parsed.map(link => {
         const domain = new URL(link.url).hostname.replace(/^www\./, '')
         return `- [${domain} - ${link.title}](${link.url})`
       }).join('\n')
 
-      return `**Links:**\n${linksList}`
+      replacement = `**Links:**\n${linksList}`
     } catch {
       // If JSON parsing fails, wrap in code block instead
-      return `Links:\n\`\`\`json\n${jsonArray}\n\`\`\``
+      replacement = `Links:\n\`\`\`json\n${jsonArray}\n\`\`\``
     }
-  })
+
+    result += rawContent.slice(cursor, markerIndex) + replacement
+    cursor = arrayEnd
+  }
+
+  return result
+}
+
+function findJsonArrayEnd(value: string, start: number): number {
+  let depth = 0
+  let inString = false
+  let escaped = false
+
+  for (let index = start; index < value.length; index += 1) {
+    const character = value[index]!
+    if (inString) {
+      if (escaped) escaped = false
+      else if (character === '\\') escaped = true
+      else if (character === '"') inString = false
+      continue
+    }
+    if (character === '"') inString = true
+    else if (character === '[') depth += 1
+    else if (character === ']') {
+      depth -= 1
+      if (depth === 0) return index + 1
+    }
+  }
+
+  return -1
+}
+
+function isWebSearchLinkArray(value: unknown): value is Array<{ title: string; url: string }> {
+  return Array.isArray(value) && value.every(link => (
+    typeof link === 'object'
+    && link !== null
+    && 'title' in link
+    && typeof link.title === 'string'
+    && 'url' in link
+    && typeof link.url === 'string'
+  ))
 }
 
 // ============================================================================

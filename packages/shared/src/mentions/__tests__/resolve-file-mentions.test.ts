@@ -43,6 +43,11 @@ describe('resolveFileMentions', () => {
       expect(resolveFileMentions('[file:/Users/me/My Project/file.ts] update', WORK_DIR))
         .toBe('[Mentioned file: file.ts (at /Users/me/My Project/file.ts)] update')
     })
+
+    it('handles a large unterminated mention without dropping preceding text', () => {
+      const input = `before [file:${'x'.repeat(100_000)}`
+      expect(resolveFileMentions(input, WORK_DIR)).toBe(input)
+    })
   })
 
   describe('folder mentions', () => {
