@@ -59,7 +59,7 @@ export async function packageDarwin(config: BuildConfig): Promise<string> {
   }
 
   // Run electron-builder
-  await $`cd ${electronDir} && npx electron-builder ${builderArgs}`;
+  await $`cd ${electronDir} && bun x --bun electron-builder ${builderArgs}`;
 
   // Verify SDK is bundled in the .app before checking artifacts
   const macDir = arch === 'arm64' ? 'mac-arm64' : 'mac';

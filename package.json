@@ -140,10 +140,10 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "husky": "^9.1.7",
     "openai": "^6.18.0",
-    "postcss": "^8.5.23",
+    "postcss": "8.5.23",
     "react-devtools-core": "^6.1.1",
     "tailwindcss": "^4.1.18",
-    "tar": "^7.5.22",
+    "tar": "7.5.22",
     "typescript": "^5.0.0",
     "vite": "^6.2.4"
   },

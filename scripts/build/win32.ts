@@ -247,7 +247,7 @@ export async function packageWindows(config: BuildConfig): Promise<string> {
 
     try {
       // Run electron-builder from electronDir using npx (npx traverses up to find it in root node_modules)
-      run('npx electron-builder --win --x64', electronDir);
+      run('bun x --bun electron-builder --win --x64', electronDir);
       console.log(`  electron-builder succeeded on attempt ${attempt} ✓`);
       lastError = null;
       break;

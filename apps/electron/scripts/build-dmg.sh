@@ -133,7 +133,7 @@ bun run electron:build
 cd "$ELECTRON_DIR"
 # Publishing is handled only by the verified GitHub Release job, never by
 # electron-builder's CI auto-detection.
-npx electron-builder --config electron-builder.yml --mac --"$ARCH" --publish never
+bun x --bun electron-builder --config electron-builder.yml --mac --"$ARCH" --publish never
 
 DMG_PATH="$ELECTRON_DIR/release/Robb-Agents-${ARCH}.dmg"
 ZIP_PATH="$ELECTRON_DIR/release/Robb-Agents-${ARCH}.zip"

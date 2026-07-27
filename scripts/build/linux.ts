@@ -39,7 +39,7 @@ export async function packageLinux(config: BuildConfig): Promise<string> {
   console.log('Packaging app with electron-builder...');
 
   // Run electron-builder
-  await $`cd ${electronDir} && npx electron-builder --linux --${arch}`;
+  await $`cd ${electronDir} && bun x --bun electron-builder --linux --${arch}`;
 
   // Verify SDK is bundled in the unpacked app before checking artifacts
   const unpackedPath = join(electronDir, 'release', 'linux-unpacked');

@@ -5,6 +5,7 @@ from __future__ import annotations
 import contextlib
 import functools
 import http.server
+import json
 import os
 import pathlib
 import platform
@@ -21,6 +22,14 @@ SHELL_INSTALLER = ROOT / "scripts" / "install-app.sh"
 POWERSHELL_INSTALLER = ROOT / "scripts" / "install-app.ps1"
 VERSION = "1.2.3"
 SHA512_FIXTURE = f"{'A' * 86}=="
+PLATFORM_BUILD_SCRIPTS = (
+    ROOT / "apps" / "electron" / "scripts" / "build-dmg.sh",
+    ROOT / "apps" / "electron" / "scripts" / "build-linux.sh",
+    ROOT / "apps" / "electron" / "scripts" / "build-win.ps1",
+    ROOT / "scripts" / "build" / "darwin.ts",
+    ROOT / "scripts" / "build" / "linux.ts",
+    ROOT / "scripts" / "build" / "win32.ts",
+)
 
 
 class QuietRequestHandler(http.server.SimpleHTTPRequestHandler):
@@ -63,6 +72,20 @@ def write_manifest(path: pathlib.Path, artifact: str) -> None:
 
 
 class InstallerContractTests(unittest.TestCase):
+    def test_platform_builds_use_the_bun_workspace_executor(self) -> None:
+        for script in PLATFORM_BUILD_SCRIPTS:
+            source = script.read_text(encoding="utf-8")
+            self.assertIn("bun x --bun electron-builder", source, str(script))
+            self.assertNotIn("npx electron-builder", source, str(script))
+
+        package = json.loads((ROOT / "package.json").read_text(encoding="utf-8"))
+        for dependency in ("postcss", "tar"):
+            self.assertEqual(
+                package["devDependencies"][dependency],
+                package["overrides"][dependency],
+                f"{dependency} must be pinned to the same spec as its npm override",
+            )
+
     def test_shell_installer_uses_public_robb_release_contract(self) -> None:
         source = SHELL_INSTALLER.read_text(encoding="utf-8")
         required = [

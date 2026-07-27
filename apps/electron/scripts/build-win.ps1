@@ -31,7 +31,7 @@ if ($Release) {
     }
 }
 
-foreach ($command in @("bun", "node", "npx", "python")) {
+foreach ($command in @("bun", "node", "python")) {
     if (-not (Get-Command $command -ErrorAction SilentlyContinue)) {
         throw "Required command not found on PATH: $command"
     }
@@ -110,7 +110,7 @@ Push-Location $ElectronDir
 try {
     # Publishing is handled only by the verified GitHub Release job, never by
     # electron-builder's CI auto-detection.
-    npx electron-builder --config electron-builder.yml --win --x64 --publish never
+    bun x --bun electron-builder --config electron-builder.yml --win --x64 --publish never
     if ($LASTEXITCODE -ne 0) { throw "electron-builder failed" }
 } finally {
     Pop-Location
