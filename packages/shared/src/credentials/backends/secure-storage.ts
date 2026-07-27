@@ -206,6 +206,22 @@ export class SecureStorageBackend implements CredentialBackend {
     });
   }
 
+  async getOrCreate(id: CredentialId, create: () => StoredCredential): Promise<StoredCredential> {
+    const key = credentialIdToAccount(id);
+    return this.enqueueMutation(() => this.withFileLockSync(() => {
+      this.clearCache();
+      const store = this.loadStoreSync() ?? this.createEmptyStore();
+      const existing = store.credentials[key];
+      if (existing) return existing;
+
+      const credential = create();
+      store.credentials[key] = credential;
+      store.metadata.updatedAt = Date.now();
+      this.saveStoreSync(store);
+      return credential;
+    }));
+  }
+
   async delete(id: CredentialId): Promise<boolean> {
     const key = credentialIdToAccount(id);
     return this.enqueueMutation(() => this.withFileLockSync(() => this.deleteByKeySync(key)));

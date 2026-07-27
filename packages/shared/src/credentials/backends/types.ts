@@ -23,6 +23,9 @@ export interface CredentialBackend {
   /** Set/update a credential */
   set(id: CredentialId, credential: StoredCredential): Promise<void>;
 
+  /** Atomically return an existing credential or create it once under the backend lock. */
+  getOrCreate?(id: CredentialId, create: () => StoredCredential): Promise<StoredCredential>;
+
   /** Delete a credential */
   delete(id: CredentialId): Promise<boolean>;
 

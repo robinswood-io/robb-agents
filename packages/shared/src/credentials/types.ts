@@ -33,7 +33,9 @@ export type CredentialType =
   | 'source_apikey'      // API keys
   | 'source_basic'       // Basic auth (base64 encoded user:pass)
   // Messaging gateway credentials (keyed by workspaceId + platform)
-  | 'messaging_bearer';  // Platform tokens (e.g., Telegram bot token)
+  | 'messaging_bearer'   // Platform tokens (e.g., Telegram bot token)
+  // Governance secrets (keyed by workspaceId + purpose; never exposed to agents)
+  | 'governance_signing_key';
 
 /** Valid credential types for validation */
 const VALID_CREDENTIAL_TYPES: readonly CredentialType[] = [
@@ -49,6 +51,7 @@ const VALID_CREDENTIAL_TYPES: readonly CredentialType[] = [
   'source_apikey',
   'source_basic',
   'messaging_bearer',
+  'governance_signing_key',
 ] as const;
 
 /** Check if a string is a valid CredentialType */
@@ -153,6 +156,14 @@ function isMessagingCredential(type: CredentialType): type is MessagingCredentia
   return (MESSAGING_CREDENTIAL_TYPES as readonly string[]).includes(type);
 }
 
+/** Workspace-scoped, host-only governance credential types. */
+const GOVERNANCE_CREDENTIAL_TYPES = ['governance_signing_key'] as const;
+type GovernanceCredentialType = (typeof GOVERNANCE_CREDENTIAL_TYPES)[number];
+
+function isGovernanceCredential(type: CredentialType): type is GovernanceCredentialType {
+  return (GOVERNANCE_CREDENTIAL_TYPES as readonly string[]).includes(type);
+}
+
 /** LLM connection credential types */
 const LLM_CREDENTIAL_TYPES = [
   'llm_api_key',
@@ -208,6 +219,16 @@ export function credentialIdToAccount(id: CredentialId): string {
   // Messaging-scoped format:
   // messaging_bearer::{workspaceId}::{platform}
   if (isMessagingCredential(id.type)) {
+    return [
+      id.type,
+      assertComponent('workspaceId', id.workspaceId),
+      assertComponent('name', id.name),
+    ].join(CREDENTIAL_DELIMITER);
+  }
+
+  // Host-only governance format:
+  // governance_signing_key::{workspaceId}::{purpose}
+  if (isGovernanceCredential(id.type)) {
     return [
       id.type,
       assertComponent('workspaceId', id.workspaceId),
@@ -287,6 +308,11 @@ export function accountToCredentialId(account: string): CredentialId | null {
   // Messaging-scoped format:
   // messaging_bearer::{workspaceId}::{platform}
   if (isMessagingCredential(type) && parts.length === 3) {
+    return parts[1] && parts[2] ? { type, workspaceId: parts[1], name: parts[2] } : null;
+  }
+
+
+  if (isGovernanceCredential(type) && parts.length === 3) {
     return parts[1] && parts[2] ? { type, workspaceId: parts[1], name: parts[2] } : null;
   }
 

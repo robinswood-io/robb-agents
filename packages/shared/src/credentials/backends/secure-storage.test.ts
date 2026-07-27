@@ -35,6 +35,25 @@ describe('SecureStorageBackend', () => {
     expect(readdirSync(root).filter((name) => name.endsWith('.tmp'))).toEqual([]);
   });
 
+  it('creates a host signing key exactly once across concurrent backend instances', async () => {
+    const first = new SecureStorageBackend({ credentialsFile, machineId: 'machine-a' });
+    const second = new SecureStorageBackend({ credentialsFile, machineId: 'machine-a' });
+    let createCount = 0;
+    const id = {
+      type: 'governance_signing_key' as const,
+      workspaceId: 'workspace-a',
+      name: 'execution-proof-v1',
+    };
+
+    const [left, right] = await Promise.all([
+      first.getOrCreate(id, () => ({ value: `key-${++createCount}` })),
+      second.getOrCreate(id, () => ({ value: `key-${++createCount}` })),
+    ]);
+
+    expect(left.value).toBe(right.value);
+    expect(createCount).toBe(1);
+  });
+
   it('preserves encrypted bytes when machine-bound decryption fails', async () => {
     const writer = new SecureStorageBackend({ credentialsFile, machineId: 'machine-a' });
     await writer.set({ type: 'llm_api_key', connectionSlug: 'primary' }, { value: 'secret-value' });

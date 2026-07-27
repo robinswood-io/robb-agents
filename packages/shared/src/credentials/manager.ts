@@ -144,6 +144,23 @@ export class CredentialManager {
     debug(`[CredentialManager] Saved ${id.type} to ${this.writeBackend.name}`);
   }
 
+  /** Atomically load or create a secret when the active backend supports it. */
+  async getOrCreate(id: CredentialId, create: () => StoredCredential): Promise<StoredCredential> {
+    await this.ensureInitialized();
+    if (!this.writeBackend) {
+      throw new Error('No writable credential backend available');
+    }
+    if (this.writeBackend.getOrCreate) {
+      return this.writeBackend.getOrCreate(id, create);
+    }
+
+    const existing = await this.get(id);
+    if (existing) return existing;
+    const credential = create();
+    await this.writeBackend.set(id, credential);
+    return credential;
+  }
+
   /**
    * Delete a credential from all backends.
    * Automatically initializes if needed.

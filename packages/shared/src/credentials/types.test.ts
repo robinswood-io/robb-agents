@@ -11,12 +11,23 @@ describe('credential identifiers', () => {
       workspaceId: 'workspace-a',
       sourceId: 'crm',
     })).toBe('source_bearer::workspace-a::crm');
+    expect(credentialIdToAccount({
+      type: 'governance_signing_key',
+      workspaceId: 'workspace-a',
+      name: 'execution-proof-v1',
+    })).toBe('governance_signing_key::workspace-a::execution-proof-v1');
+    expect(accountToCredentialId('governance_signing_key::workspace-a::execution-proof-v1')).toEqual({
+      type: 'governance_signing_key',
+      workspaceId: 'workspace-a',
+      name: 'execution-proof-v1',
+    });
   });
 
   it('fails closed instead of collapsing an incomplete scope to global', () => {
     expect(() => credentialIdToAccount({ type: 'llm_api_key' })).toThrow('connectionSlug is required');
     expect(() => credentialIdToAccount({ type: 'workspace_oauth' })).toThrow('workspaceId is required');
     expect(() => credentialIdToAccount({ type: 'source_oauth', workspaceId: 'workspace-a' })).toThrow('sourceId is required');
+    expect(() => credentialIdToAccount({ type: 'governance_signing_key', workspaceId: 'workspace-a' })).toThrow('name is required');
     expect(() => credentialIdToAccount({
       type: 'messaging_bearer',
       workspaceId: 'workspace-a',
