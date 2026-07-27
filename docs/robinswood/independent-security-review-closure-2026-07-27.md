@@ -33,7 +33,7 @@ certificats de signature/notarisation et pilote client.
 | 6 | élevée | Idempotence liée à une tentative et preuve déclarative du modèle | Idempotency key stable par opération logique, preuve signée liée au payload et au reçu fournisseur, rapprochement obligatoire; aucun retry automatique d'une mutation ambiguë | `packages/shared/src/governance/execution-proof.test.ts`, `packages/shared/src/tasks/mission-control.test.ts`, `packages/server-core/src/tasks/TaskRunner.test.ts` | Le `TaskRunner` refuse encore les mutations externes au lieu de les router implicitement |
 | 7 | élevée | Kill switches optionnels et absence de drain déterministe | Registre durable global/workspace/mission, vérification avant dispatch et interruption d'un travail en vol | `packages/shared/src/governance/kill-switch-registry.test.ts`, `packages/server-core/src/tasks/TaskRunner.test.ts` | La diffusion multi-hôte relève du futur service managé |
 | 8 | élevée | Credentials globaux, collisions, courses et suppression après erreur de déchiffrement | Clés segmentées par workspace et finalité, création atomique, permissions `0600`, verrou de writer et quarantaine du fichier illisible sans destruction de l'original | `packages/shared/src/credentials/backends/secure-storage.test.ts`, `packages/shared/src/governance/workspace-governance-store.test.ts`, `packages/server-core/src/tasks/execution-proof-runtime.test.ts` | La rotation d'un coffre central externe n'est pas testable sans ce coffre |
-| 9 | élevée | Secrets et contenus externes bruts dans sessions, résultats ou exports | Les leases ne contiennent pas de valeur, les preuves ne contiennent que des hashes et reçus bornés, les événements utilisent des références, et l'isolation de session persiste l'enveloppe de confiance | `packages/shared/src/credentials/secret-lease-broker.test.ts`, `packages/shared/src/governance/execution-proof.test.ts`, `packages/shared/src/sessions/__tests__/execution-isolation-persistence.test.ts` | Les scans sur exports de tenants réels restent une gate de qualification |
+| 9 | élevée | Secrets et contenus externes bruts dans sessions, résultats ou exports | Les leases ne contiennent pas de valeur, les preuves ne contiennent que des hashes et reçus bornés, les événements utilisent des références, et l'isolation de session persiste l'enveloppe de confiance. Un bundle portable retire les droits liés à l'hôte ; une session de tâche importée est placée en quarantaine jusqu'à une nouvelle admission par le `TaskRunner`. | `packages/shared/src/credentials/secret-lease-broker.test.ts`, `packages/shared/src/governance/execution-proof.test.ts`, `packages/shared/src/sessions/__tests__/execution-isolation-persistence.test.ts`, `packages/shared/src/sessions/__tests__/bundle.test.ts` | Les scans sur exports de tenants réels restent une gate de qualification |
 
 ## Invariants de sécurité vérifiés localement
 
@@ -58,6 +58,8 @@ certificats de signature/notarisation et pilote client.
     OS capable de l'imposer.
 17. Une mutation externe du `TaskRunner` est refusée tant que le runtime
     connecteur hôte n'est pas raccordé par un contrat structuré.
+18. Un export portable ne transporte aucun droit d'exécution lié à l'hôte ;
+    une tâche restaurée reste en quarantaine jusqu'à réautorisation locale.
 
 ## Campagne de reprise
 

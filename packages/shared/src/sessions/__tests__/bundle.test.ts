@@ -2,8 +2,14 @@ import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
 import { mkdirSync, writeFileSync, rmSync, existsSync, readFileSync } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
-import { serializeSession, validateBundle, MAX_BUNDLE_SIZE_BYTES } from '../bundle'
-import { writeSessionJsonl } from '../jsonl'
+import {
+  createImportedSessionIsolation,
+  serializeSession,
+  validateBundle,
+  MAX_BUNDLE_SIZE_BYTES,
+} from '../bundle'
+import { readSessionJsonl, writeSessionJsonl } from '../jsonl'
+import { restoreFiles } from '../../utils/bundle-files'
 import type { StoredSession, SessionHeader } from '../types'
 
 // ============================================================
@@ -169,6 +175,72 @@ describe('serializeSession', () => {
     expect(bundle!.files.some((file) => file.relativePath.endsWith('credentials.json'))).toBe(false)
     expect(bundle!.security?.trust).toBe('portable-redacted')
     expect(bundle!.security?.excludedSensitiveFiles).toContain('data/credentials.json')
+  })
+
+  it('round-trips portable data while stripping host-bound task execution rights', () => {
+    const session = makeStoredSession({
+      taskRunId: 'run-1',
+      taskNodeId: 'node-1',
+      executionIsolation: {
+        effect: 'workspace-write',
+        policy: {
+          workspaceRoot: tmpDir,
+          allowedReadPaths: ['private-source'],
+          allowedWritePaths: ['artifacts'],
+          networkAccess: 'disabled',
+          allowedHosts: [],
+          maxCpuPercent: 80,
+          maxMemoryMb: 1024,
+          timeoutMs: 60_000,
+        },
+      },
+    })
+    const sourceDir = setupSessionDir(tmpDir, session)
+    mkdirSync(join(sourceDir, 'artifacts'), { recursive: true })
+    writeFileSync(join(sourceDir, 'artifacts', 'report.txt'), 'portable report')
+
+    const bundle = serializeSession(tmpDir, session.id)
+
+    expect(bundle).not.toBeNull()
+    expect(bundle!.session.header.executionIsolation).toBeUndefined()
+    expect(JSON.stringify(bundle)).not.toContain('private-source')
+
+    const restoredWorkspace = makeTmpDir()
+    try {
+      const restoredDir = join(restoredWorkspace, 'sessions', session.id)
+      mkdirSync(restoredDir, { recursive: true })
+      const quarantinedIsolation = createImportedSessionIsolation(
+        bundle!.session.header,
+        restoredWorkspace,
+      )
+      expect(quarantinedIsolation).toEqual({
+        effect: 'read',
+        policy: {
+          workspaceRoot: restoredWorkspace,
+          allowedReadPaths: [],
+          allowedWritePaths: [],
+          networkAccess: 'disabled',
+          allowedHosts: [],
+          maxCpuPercent: 100,
+          maxMemoryMb: 512,
+          timeoutMs: 30_000,
+        },
+      })
+
+      writeSessionJsonl(join(restoredDir, 'session.jsonl'), {
+        ...session,
+        workspaceRootPath: restoredWorkspace,
+        executionIsolation: quarantinedIsolation,
+        messages: bundle!.session.messages,
+      })
+      restoreFiles(restoredDir, bundle!.files)
+
+      const restored = readSessionJsonl(join(restoredDir, 'session.jsonl'))
+      expect(restored?.executionIsolation).toEqual(quarantinedIsolation)
+      expect(readFileSync(join(restoredDir, 'artifacts', 'report.txt'), 'utf8')).toBe('portable report')
+    } finally {
+      rmSync(restoredWorkspace, { recursive: true, force: true })
+    }
   })
 
   it('skips tmp/ directory', () => {

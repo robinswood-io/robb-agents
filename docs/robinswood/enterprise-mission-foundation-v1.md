@@ -8,34 +8,43 @@ Statut : contrat de migration validable ; ne constitue pas à lui seul une preuv
 
 | Domaine | Briques existantes | Maturité observée |
 |---|---|---|
-| Interfaces | Electron, WebUI, CLI, kanban de tâches, menus d’approbation | produit local réel, Control Room mission encore partielle |
+| Interfaces | Electron, WebUI, CLI, Control Room, kanban de tâches, inbox d’approbation | produit local réel ; parcours de gouvernance et supervision vérifié dans le navigateur officiel |
 | Sessions et providers | `SessionManager`, backends Claude/Pi, connexions multi-provider | réel, responsabilités encore concentrées |
-| Missions et durabilité | `tasks/schema`, `storage`, `durable-execution`, `mission-control`, `TaskRunner` | journal/checkpoints/idempotence partiels ; plusieurs nœuds du schéma ne sont pas exécutés |
+| Missions et durabilité | `tasks/schema`, `storage`, `durable-execution`, `mission-control`, `TaskRunner` | sessions, journal, checkpoints, reprise et isolation persistée réels ; les mutations externes restent refusées tant que le worker connecteur structuré n’est pas raccordé au runner |
 | Routage | `routing-policy`, `routing-fallback`, `routing-audit`, evals providers | policy-first partiel, preuves de promotion réelle à compléter |
-| Credentials | `credentials/manager` et backends secure storage/env | coffre machine réel ; segmentation client/workspace, leases et génération d’autorisation incomplets |
-| Connecteurs | manifeste Ed25519, registre, drivers HTTP bornés, OAuth, tests sandbox | contrat et drivers réels limités ; broker, payload binding, receipts et réconciliation incomplets |
-| Gouvernance | espaces personal/team/client, rôles, ressources versionnées, mémoire et audit chaîné | contrats et stockage local ; identité entreprise et PDP commun incomplets |
-| Télémétrie | événements corrélés, OTLP opt-in, redaction, coût avec provenance | fondation exécutable ; registre de preuves commun encore à unifier |
+| Credentials | secure storage atomique et segmenté, clés de gouvernance par finalité, `SecretLeaseBroker` | qualifié localement sans exposition de valeur ; coffre central/HYOK et rotation distante non qualifiés |
+| Connecteurs | manifeste Ed25519, registre durable, broker, leases, drivers HTTP bornés, reçus et rapprochement | runtime hôte gouverné réel et testé localement ; raccord `TaskRunner` et sandboxes fournisseurs externes encore requis |
+| Gouvernance | espaces, rôles, `CapabilityBroker`, taxonomie R0–W3, mandats A0–A4, audit et kill switches | PDP/PEP local deny-by-default réel ; fédération OIDC/SAML/SCIM et diffusion multi-hôte non qualifiées |
+| Télémétrie | événements corrélés, OTLP opt-in, redaction, coût et preuves signées | smoke collector local vert ; backend opéré et conservation externe non qualifiés |
 | Interop | contrats internes et projections MCP Tasks/A2A/AG-UI | adaptateurs de bordure, conformité externe partielle |
 | Supervision | profils locaux, transport signé, HTTP loopback et actions bornées | opt-in local/sandbox ; service managé et consentement UX à prouver |
 | Evals | corpus français, gate, canary, runner provider | tests locaux ; qualification sur providers/tenants réels à compléter |
 | Supply chain | audits paquet, SBOM/provenance, manifests update, installateurs multi-OS | CI réelle ; signatures/notarisation et tests installés réels selon OS restent des gates externes |
 
-### Baseline du 27 juillet 2026
+### Baseline et clôture du 27 juillet 2026
 
-La cartographie a volontairement commencé avant toute modification fonctionnelle.
-La baseline n’est pas verte :
+La cartographie a volontairement commencé avant toute modification
+fonctionnelle. La baseline initiale échouait sur le typage du contexte de
+routage, la classification OAuth/MFA et deux scénarios de reprise/échéance du
+`TaskRunner`. Ces régressions ont été corrigées avant la clôture.
 
-- le typecheck monorepo échoue sur le contexte `RoutingDifficulty` du test
-  `routing-outcome-adapter.test.ts` ;
-- le test de classification OAuth/MFA choisit `credential_required` au lieu de
-  `oauth_or_mfa` ;
-- deux tests `TaskRunner` échouent sur la restauration d’un délai de retry et
-  l’annulation d’un travail qui franchit l’échéance ;
-- les contrôles i18n de parité, tri et couverture passent.
+État local vérifié après implémentation :
 
-Ces échecs sont des bloquants de fondation. Ils doivent être corrigés et
-retestés avant toute affirmation de complétion.
+- `bun run typecheck:all` : code retour 0 ;
+- `npm test` : code retour 0, toutes les suites workspace exécutées passent ;
+- `bun run validate:ci` : code retour 0 ;
+- `bun run lint` : code retour 0, zéro erreur et 133 avertissements existants ;
+- campagne de reprise : 1 000/1 000 décisions sûres, zéro violation ;
+- smoke OTLP : logs, métriques et traces corrélés reçus ;
+- export/restauration portable : 20 tests ciblés passent, secrets textuels
+  redacted, fichiers credentials exclus et droits d’exécution importés mis en
+  quarantaine ;
+- validation Playwright officielle : page chargée, titre `Robb Agents`, thème,
+  gouvernance et grant/revoke de supervision vérifiés, zéro erreur console,
+  zéro erreur page, zéro requête échouée et aucune overflow horizontale.
+
+Ces résultats qualifient la fondation locale. Ils ne qualifient pas les tenants
+fournisseurs, les signatures de release ni un pilote client.
 
 ## 2. Carte des flux de confiance
 
@@ -111,25 +120,25 @@ autorisés, mémoire dérivée et artefacts de mission.
 
 | Exigence | État | Action v1 |
 |---|---|---|
-| Mission durable et rapport | partiel | aligner états, checkpoints, preuves et rapport sur un contrat unique |
-| Broker commun à toutes les exécutions | manquant | créer PDP/PEP provider-agnostic et migrer RPC, runner, outils et connecteurs |
-| Approbation payload-bound, single-use | partiel | remplacer les reçus déclaratifs par des capabilities consommables |
-| Taxonomie R0/R1/W1/W2/W3 | manquant | la rendre centrale et signée par les packs |
-| Mandats A0–A4 | manquant | projeter les modes historiques sans élargissement |
-| Révocation inter-processus | partiel | génération monotone + bus local + vérification à chaque admission |
-| Queue durable et dead-letter | partiel | persister retry deadline, statut et raisons ; index SQLite progressif |
-| Isolation commune multi-OS | partiel | contrat worker unique, puis adapters macOS/Linux/Windows |
-| Secret lease segmenté | partiel | enveloppe client/workspace/source et résolution dans le worker |
-| Registre de preuves unifié | partiel | événement v1 append-only, projections audit/OTLP/UI |
+| Mission durable et rapport | existant local | achever l’exécution structurée des nœuds non-session et connecteur |
+| Broker commun à toutes les exécutions | existant local | raccorder le dernier chemin connecteur au `TaskRunner`, sans fallback permissif |
+| Approbation payload-bound, single-use | existant local | qualifier MFA/double contrôle avec une identité externe réelle |
+| Taxonomie R0/R1/W1/W2/W3 | existant local | maintenir le risque signé dans les packs qualifiés |
+| Mandats A0–A4 | existant local | qualifier les policies client sur tenants de test |
+| Révocation inter-processus | existant local/partiel multi-hôte | conserver la génération monotone ; ajouter la diffusion du control plane futur |
+| Queue durable et dead-letter | existant local | ajouter métriques de durée et exercice de charge prolongé |
+| Isolation commune multi-OS | partiel | chemins/outils/egress imposés ; ajouter workers OS pour CPU, mémoire et disque |
+| Secret lease segmenté | existant local | qualifier rotation et révocation contre le coffre cible |
+| Registre de preuves unifié | existant local | projeter vers le backend d’observabilité retenu sans payload sensible |
 | Router policy-first | partiel | lier classification, budgets, eval fingerprint et canary |
-| Connector Pack installable | partiel | schémas I/O, origines, risques, reçus, reconciliation et store durable |
+| Connector Pack installable | existant local/partiel fournisseur | raccorder au runner puis qualifier Microsoft et un système non-Microsoft |
 | Données permission-aware | partiel | catalogue, ACL source, provenance fragment, invalidation dérivée |
 | Identité OIDC/SAML et séparation opérateur/validateur | manquant | ajouter une couche d’identité vérifiée optionnelle |
-| Control Room sans terminal | partiel | projection Mission, inbox, budgets, permissions, preuves et kill switch |
+| Control Room sans terminal | existant local | compléter les parcours provider après disponibilité des tenants de test |
 | OTLP désactivable | existant | raccorder au registre commun sans contenu sensible |
 | Interop opt-in | existant/partiel | conserver comme adaptateurs et ajouter conformance externe |
 | Supervision distante opt-in | partiel | consentement champ par champ, service et exercice de révocation |
-| Exports et sortie sans Robinswood | partiel | JSON/JSONL/CSV, sauvegarde et restauration automatisées |
+| Exports et sortie sans Robinswood | existant local/partiel managé | bundles redacted et restore local testés ; exercer le control plane managé futur |
 | HTTP générique mutatif en production | à retirer/interdire | seules les opérations signées d’un pack peuvent muter |
 | `allow-all` implicite | à retirer des profils client | activation explicite, bornée, jamais W3 |
 | Token partagé comme identité entreprise | à retirer | identités humaine et machine vérifiées |
@@ -299,3 +308,16 @@ release signés selon la plateforme. Les éléments nécessitant un tenant, une
 signature, un service distant ou un pilote ne peuvent pas être remplacés par un
 mock ni déclarés terminés localement.
 
+## 13. Qualification datée et décision de mise en service
+
+La preuve consolidée de cette livraison est publiée dans
+`docs/robinswood/qualification-status-2026-07-27.md`. Elle distingue trois
+états sans ambiguïté : vérifié localement, refusé de façon sûre, et non exécuté
+faute de dépendance externe. La clôture indépendante des constats de sécurité
+est détaillée dans
+`docs/robinswood/independent-security-review-closure-2026-07-27.md`.
+
+Une décision de mise en service ne peut être déduite de la seule réussite
+locale. Elle exige les gates fournisseur, interopérabilité, signature,
+installation et pilote listées dans le statut de qualification, avec preuves
+datées et identité de l'approbateur humain.

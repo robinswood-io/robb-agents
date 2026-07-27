@@ -11,6 +11,7 @@ import { existsSync, readFileSync } from 'fs'
 import { basename, extname } from 'path'
 import type { SessionHeader, StoredMessage, SessionConfig } from './types.ts'
 import type { StoredSession } from './types.ts'
+import type { SessionExecutionIsolation } from '../tasks/durable-execution.ts'
 import { readSessionJsonl } from './jsonl.ts'
 import { getSessionPath, getSessionFilePath } from './storage.ts'
 import { validateSessionId } from './validation.ts'
@@ -99,6 +100,38 @@ export interface SessionBundle {
     excludedSensitiveFiles: string[]
     /** Binary attachments are preserved byte-for-byte and require destination-side policy review. */
     binaryFilesUninspected: string[]
+  }
+}
+
+/**
+ * Portable bundles are intentionally unsigned. A task execution envelope from
+ * another host can therefore never be trusted or rebound implicitly. Imported
+ * task sessions receive a local quarantine envelope and must be re-authorized
+ * by the TaskRunner before they can inspect or mutate workspace files.
+ */
+export function createImportedSessionIsolation(
+  header: SessionHeader,
+  workspaceRootPath: string,
+): SessionExecutionIsolation | undefined {
+  const isTaskSession = Boolean(
+    header.taskRunId ||
+    header.taskNodeId ||
+    header.executionIsolation,
+  )
+  if (!isTaskSession) return undefined
+
+  return {
+    effect: 'read',
+    policy: {
+      workspaceRoot: workspaceRootPath,
+      allowedReadPaths: [],
+      allowedWritePaths: [],
+      networkAccess: 'disabled',
+      allowedHosts: [],
+      maxCpuPercent: 100,
+      maxMemoryMb: 512,
+      timeoutMs: 30_000,
+    },
   }
 }
 
@@ -202,6 +235,9 @@ export function serializeSession(
     sharedUrl: undefined,
     sharedId: undefined,
     pendingPlanExecution: undefined,
+    // Host-bound execution rights are never portable. The importer recreates
+    // a deny-by-default quarantine envelope for task sessions.
+    executionIsolation: undefined,
   })
 
   return {

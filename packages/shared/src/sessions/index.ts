@@ -122,9 +122,9 @@ export type {
   DispatchMode,
 } from './bundle.ts';
 export {
+  createImportedSessionIsolation,
   serializeSession,
   validateBundle,
   MAX_BUNDLE_SIZE_BYTES,
 } from './bundle.ts';
-
 

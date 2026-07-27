@@ -65,6 +65,7 @@ import {
   sessionPersistenceQueue,
   getHeaderMetadataSignature,
   writeSessionJsonl,
+  createImportedSessionIsolation,
   serializeSession,
   validateBundle,
   type SessionBundle,
@@ -9588,6 +9589,14 @@ export class SessionManager implements ISessionManager {
 
     const warnings: string[] = []
     const workspaceRootPath = workspace.rootPath
+    const header = bundle.session.header
+    const importedExecutionIsolation = createImportedSessionIsolation(
+      header,
+      workspaceRootPath,
+    )
+    if (importedExecutionIsolation) {
+      warnings.push('Imported task execution is quarantined until re-authorized by the TaskRunner')
+    }
 
     // Determine session ID
     const sessionId = mode === 'move'
@@ -9603,7 +9612,6 @@ export class SessionManager implements ISessionManager {
     const sessionDir = ensureSessionDir(workspaceRootPath, sessionId)
 
     // Build the stored session from bundle data
-    const header = bundle.session.header
     const storedSession: StoredSession = {
       id: sessionId,
       workspaceRootPath,
@@ -9630,6 +9638,12 @@ export class SessionManager implements ISessionManager {
       connectionLocked: false,
       thinkingLevel: header.thinkingLevel,
       hidden: header.hidden,
+      taskSlug: header.taskSlug,
+      taskRunId: header.taskRunId,
+      taskNodeId: header.taskNodeId,
+      taskNodeCount: header.taskNodeCount,
+      taskDraft: header.taskDraft,
+      executionIsolation: importedExecutionIsolation,
       transferredSessionSummary: header.transferredSessionSummary,
       transferredSessionSummaryApplied: header.transferredSessionSummaryApplied,
       messages: bundle.session.messages,
