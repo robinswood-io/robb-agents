@@ -48,6 +48,8 @@ import {
 import { permissionsConfigCache, type PermissionsContext } from '../permissions-config.ts';
 import type { PrerequisiteCheckResult } from './prerequisite-manager.ts';
 import { rewriteBashWithRtk } from './rtk-rewrite.ts';
+import { enforceTaskToolIsolation } from './task-tool-isolation.ts';
+import type { SessionExecutionIsolation } from '../../tasks/durable-execution.ts';
 
 // ============================================================
 // TYPES
@@ -624,6 +626,8 @@ export interface PreToolUseInput {
   dataFolderPath?: string;
   /** Working directory override (for skill resolution) */
   workingDirectory?: string;
+  /** Persisted host-enforced isolation for a Conductor child session. */
+  executionIsolation?: SessionExecutionIsolation;
   /** Currently active source slugs */
   activeSourceSlugs: string[];
   /** All available sources (for source-exists check) */
@@ -708,6 +712,7 @@ export function runPreToolUseChecks(ctx: PreToolUseInput): PreToolUseCheckResult
     plansFolderPath,
     dataFolderPath,
     workingDirectory,
+    executionIsolation,
     activeSourceSlugs,
     allSourceSlugs,
     hasSourceActivation,
@@ -752,7 +757,26 @@ export function runPreToolUseChecks(ctx: PreToolUseInput): PreToolUseCheckResult
   }
 
   // ============================================================
-  // 2. SOURCE BLOCKING (inactive MCP sources)
+  // 2. TASK TOOL ISOLATION (persistent host-side boundary)
+  // ============================================================
+  if (executionIsolation) {
+    const isolationInput = expandToolPaths(toolName, input, onDebug).input;
+    const isolationDecision = enforceTaskToolIsolation({
+      toolName,
+      input: isolationInput,
+      workspaceRootPath,
+      workingDirectory,
+      isolation: executionIsolation,
+    });
+    if (!isolationDecision.allowed) {
+      const reason = `Task execution isolation: ${isolationDecision.reason ?? 'blocked'}`;
+      onDebug?.(`Task isolation: blocking ${toolName} — ${reason}`);
+      return { type: 'block', reason };
+    }
+  }
+
+  // ============================================================
+  // 3. SOURCE BLOCKING (inactive MCP sources)
   // ============================================================
   if (toolName.startsWith('mcp__')) {
     const parts = toolName.split('__');
@@ -772,7 +796,7 @@ export function runPreToolUseChecks(ctx: PreToolUseInput): PreToolUseCheckResult
   }
 
   // ============================================================
-  // 3. PREREQUISITE CHECK (guide.md before source tools)
+  // 4. PREREQUISITE CHECK (guide.md before source tools)
   // ============================================================
   if (prerequisiteManager) {
     // Allow Bash through if it's reading a pending skill file (clears the prerequisite)
@@ -787,7 +811,7 @@ export function runPreToolUseChecks(ctx: PreToolUseInput): PreToolUseCheckResult
   }
 
   // ============================================================
-  // 4. CALL_LLM / SPAWN_SESSION INTERCEPTION
+  // 5. CALL_LLM / SPAWN_SESSION INTERCEPTION
   // ============================================================
   if (toolName === 'mcp__session__call_llm') {
     return { type: 'call_llm_intercept', input };
@@ -797,7 +821,7 @@ export function runPreToolUseChecks(ctx: PreToolUseInput): PreToolUseCheckResult
   }
 
   // ============================================================
-  // 5. INPUT TRANSFORMS
+  // 6. INPUT TRANSFORMS
   // ============================================================
   let currentInput = input;
   let wasModified = false;
@@ -873,7 +897,7 @@ export function runPreToolUseChecks(ctx: PreToolUseInput): PreToolUseCheckResult
   }
 
   // ============================================================
-  // 6. ASK MODE PROMPT DECISION
+  // 7. ASK MODE PROMPT DECISION
   // ============================================================
   if (effectivePermissionMode === 'ask') {
     const promptInfo = shouldPromptInAskMode(

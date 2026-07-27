@@ -696,6 +696,12 @@ class ActiveRun {
       }
       const permissionMode =
         node.permissionMode ?? this.spec.defaults?.permissionMode ?? AUTONOMOUS_DEFAULT_MODE;
+      const sessionPolicy: ExecutionIsolationPolicy = {
+        ...policy,
+        allowedReadPaths: [...policy.allowedReadPaths],
+        allowedWritePaths: node.effect === 'workspace-write' ? [...policy.allowedWritePaths] : [],
+        allowedHosts: [...policy.allowedHosts],
+      };
       const guardDecision = await this.deps.executionGuard?.({
         workspaceId: this.deps.workspaceId,
         missionId: this.spec.id,
@@ -715,7 +721,7 @@ class ActiveRun {
       }
       const prompt =
         skillsPreamble(this.spec.skills) +
-        executionPreamble(policy, idempotencyKey) +
+        executionPreamble(sessionPolicy, idempotencyKey) +
         (await this.buildPrompt(node));
       const options: CreateSessionOptions = {
         parentSessionId: this.opts.orchestratorSessionId,
@@ -724,6 +730,10 @@ class ActiveRun {
         taskSlug: this.slug,
         taskRunId: this.runId,
         taskNodeId: node.id,
+        executionIsolation: {
+          effect: node.effect,
+          policy: sessionPolicy,
+        },
         name: nodeTitle(node),
         model: node.model ?? this.spec.defaults?.model,
         // Required for non-default (e.g. pi/*) models to resolve a backend — without it the

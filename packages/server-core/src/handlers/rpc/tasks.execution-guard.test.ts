@@ -28,16 +28,13 @@ function context(root: string, overrides: Partial<TaskExecutionGuardContext> = {
 }
 
 describe('production task execution guard', () => {
-  it('fails closed for a read-only profile whose path and egress controls are not enforced', () => {
+  it('admits a read-only profile enforced by the persistent tool gateway', () => {
     const root = process.cwd()
     const decision = createProductionTaskExecutionGuard(root)(context(root))
-    expect(decision.allowed).toBe(false)
-    if (!decision.allowed) {
-      expect(decision.reason).toContain('Path-scoped read')
-    }
+    expect(decision.allowed).toBe(true)
   })
 
-  it('fails closed for write, egress, resource, and path policies not enforced by the local host', () => {
+  it('admits path-scoped writes only in an executable permission mode', () => {
     const root = process.cwd()
     const guard = createProductionTaskExecutionGuard(root)
 
@@ -45,6 +42,26 @@ describe('production task execution guard', () => {
       effect: 'workspace-write',
       permissionMode: 'allow-all',
       policy: { ...context(root).policy, allowedWritePaths: ['artifacts'] },
+    })).allowed).toBe(true)
+    expect(guard(context(root, {
+      effect: 'workspace-write',
+      permissionMode: 'ask',
+      policy: { ...context(root).policy, allowedWritePaths: ['artifacts'] },
+    })).allowed).toBe(true)
+    expect(guard(context(root, {
+      effect: 'workspace-write',
+      permissionMode: 'safe',
+      policy: { ...context(root).policy, allowedWritePaths: ['artifacts'] },
+    })).allowed).toBe(false)
+  })
+
+  it('fails closed for external mutation, egress, resource, and invalid path policies', () => {
+    const root = process.cwd()
+    const guard = createProductionTaskExecutionGuard(root)
+
+    expect(guard(context(root, {
+      effect: 'external-mutation',
+      permissionMode: 'allow-all',
     })).allowed).toBe(false)
     expect(guard(context(root, {
       policy: {

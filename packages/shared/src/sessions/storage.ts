@@ -234,6 +234,7 @@ export async function createSession(
     taskRunId?: string;
     taskNodeId?: string;
     taskDraft?: boolean;
+    executionIsolation?: SessionConfig['executionIsolation'];
     playbookSlug?: string;
   }
 ): Promise<SessionConfig> {
@@ -272,6 +273,7 @@ export async function createSession(
     taskRunId: options?.taskRunId,
     taskNodeId: options?.taskNodeId,
     taskDraft: options?.taskDraft,
+    executionIsolation: options?.executionIsolation,
     playbookSlug: options?.playbookSlug,
   };
 

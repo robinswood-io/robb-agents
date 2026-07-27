@@ -1340,6 +1340,7 @@ export class ClaudeAgent extends BaseAgent {
                 plansFolderPath: sessionId ? getSessionPlansPath(this.workspaceRootPath, sessionId) : undefined,
                 dataFolderPath: sessionId ? getSessionDataPath(this.workspaceRootPath, sessionId) : undefined,
                 workingDirectory: this.config.session?.workingDirectory,
+                executionIsolation: this.config.session?.executionIsolation,
                 activeSourceSlugs: Array.from(this.sourceManager.getActiveSlugs()),
                 allSourceSlugs: this.sourceManager.getAllSources().map(s => s.config.slug),
                 hasSourceActivation: !!this.onSourceActivationRequest,

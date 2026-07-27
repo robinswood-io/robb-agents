@@ -21,6 +21,19 @@ export interface ExecutionIsolationPolicy {
   timeoutMs: number;
 }
 
+export type ExecutionEffect = 'read' | 'workspace-write' | 'external-mutation';
+
+/**
+ * Immutable-by-contract execution envelope persisted with every Conductor
+ * child session. The effect is kept alongside the path/network policy so the
+ * central tool gateway can reject a write even when a task-level policy has a
+ * broader write allow-list for another DAG node.
+ */
+export interface SessionExecutionIsolation {
+  policy: ExecutionIsolationPolicy;
+  effect: ExecutionEffect;
+}
+
 export interface GuardDecision {
   allowed: boolean;
   reason?: string;
@@ -328,6 +341,17 @@ export function validateExecutionIsolationPolicy(
   }
 
   return { allowed: true };
+}
+
+/** Validate the complete per-session envelope before it is persisted or used. */
+export function validateSessionExecutionIsolation(
+  isolation: SessionExecutionIsolation,
+  hostWorkspaceRoot: string,
+): GuardDecision {
+  if (!['read', 'workspace-write', 'external-mutation'].includes(isolation.effect)) {
+    return { allowed: false, reason: 'Execution effect is invalid' };
+  }
+  return validateExecutionIsolationPolicy(isolation.policy, hostWorkspaceRoot);
 }
 
 /** Authorize a short-lived, scoped secret lease without reading its value. */

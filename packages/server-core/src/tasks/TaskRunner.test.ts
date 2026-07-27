@@ -317,9 +317,37 @@ describe('TaskRunner (Conductor)', () => {
 
     const prompt = host.promptFor('publish') ?? '';
     expect(prompt).toContain('Idempotency key: ws:guarded:r1:publish');
-    expect(prompt).toContain('Write paths: artifacts');
+    expect(prompt).toContain('Write paths: (none)');
     expect(prompt).toContain('Network: allow-list (api.example.com)');
+    const created = host.created.find((entry) => entry.options.name === 'publish')?.options;
+    expect(created?.executionIsolation).toMatchObject({
+      effect: 'read',
+      policy: { allowedWritePaths: [] },
+    });
     expect(readRunLog(root, 'guarded', 'r1').some((entry) => entry.kind === 'node-checkpoint' && entry.status === 'executing')).toBe(true);
+  });
+
+  it('persists write paths only for nodes that declare workspace-write', async () => {
+    saveTaskSpec(
+      root,
+      specOf({
+        id: 'workspace-writer',
+        title: 'Workspace writer',
+        goal: 'g',
+        execution: { root_path: root, allowed_write_paths: ['artifacts'] },
+        nodes: [{ id: 'report', prompt: 'Write report', effect: 'workspace-write', permissionMode: 'allow-all' }],
+      }),
+    );
+    const runner = makeRunner();
+    runner.run('workspace-writer', { runId: 'r1' });
+    await tick();
+
+    const created = host.created.find((entry) => entry.options.name === 'report')?.options;
+    expect(created?.executionIsolation).toMatchObject({
+      effect: 'workspace-write',
+      policy: { allowedWritePaths: ['artifacts'] },
+    });
+    expect(host.promptFor('report')).toContain('Write paths: artifacts');
   });
 
   it('rejects a task working directory outside the workspace', () => {

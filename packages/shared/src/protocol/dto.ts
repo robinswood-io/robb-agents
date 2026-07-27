@@ -20,6 +20,7 @@ import type { PermissionMode } from '../agent/mode-types'
 import type { ThinkingLevel } from '../agent/thinking-levels'
 import type { CustomEndpointConfig } from '../config/llm-connections'
 import type { RoutingPolicy } from '../config/routing-policy'
+import type { SessionExecutionIsolation } from '../tasks/durable-execution'
 import type { WorkspaceGovernanceProfile } from '../governance/workspace-governance'
 import type {
   RemoteAction,
@@ -128,6 +129,8 @@ export interface Session {
   taskNodeCount?: number
   /** Tasks Conductor: generate-time draft orchestrator, hidden from the board until adopted by createTask. */
   taskDraft?: boolean
+  /** Host-enforced tool isolation envelope for a Conductor child session. */
+  executionIsolation?: SessionExecutionIsolation
 }
 
 export interface CreateSessionOptions {
@@ -176,6 +179,8 @@ export interface CreateSessionOptions {
   taskNodeId?: string
   /** Tasks Conductor: mark the orchestrator as a generate-time draft (hidden until adopted by createTask). */
   taskDraft?: boolean
+  /** Host-enforced tool isolation envelope for a Conductor child session. */
+  executionIsolation?: SessionExecutionIsolation
   /**
    * Apply the reserved "Task" label (valueType 'number') after creation. Top-level sessions
    * allocate the next task number; sessions with a `parentSessionId` inherit the parent's

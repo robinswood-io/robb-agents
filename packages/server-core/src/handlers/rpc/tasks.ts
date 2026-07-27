@@ -78,12 +78,11 @@ const tasksLog = createLogger('tasks-generate')
 
 /**
  * Admission boundary for the capabilities the local SessionManager can
- * actually enforce today.
+ * actually enforce today. File access and disabled egress are enforced again
+ * before every tool call by the persisted task isolation envelope.
  *
- * It deliberately rejects every profile the current SessionManager cannot
- * enforce. Safe mode blocks most mutation tools, but it does not implement
- * path-scoped reads or disabled egress (web/browser reads remain available).
- * Admitting that profile would therefore treat a prompt preamble as a sandbox.
+ * External mutations remain broker-only and explicit CPU/memory envelopes
+ * remain unavailable until a dedicated worker runtime enforces them.
  */
 export function createProductionTaskExecutionGuard(
   hostWorkspaceRoot: string,
@@ -102,10 +101,10 @@ export function createProductionTaskExecutionGuard(
       return { allowed: false, reason: `Working directory is not sandbox-authorized: ${pathDecision.reason}` }
     }
 
-    if (context.effect !== 'read' || context.permissionMode !== 'safe' || context.policy.allowedWritePaths.length > 0) {
+    if (context.effect === 'external-mutation') {
       return {
         allowed: false,
-        reason: 'Workspace mutation requested without an enforceable path-scoped write sandbox',
+        reason: 'External mutation nodes require a broker-backed connector worker',
       }
     }
     if (context.policy.networkAccess !== 'disabled' || context.policy.allowedHosts.length > 0) {
@@ -120,10 +119,15 @@ export function createProductionTaskExecutionGuard(
         reason: 'CPU or memory isolation requested without an enforceable per-task OS resource sandbox',
       }
     }
-    return {
-      allowed: false,
-      reason: 'Path-scoped read and disabled-egress isolation require a per-task tool gateway or OS sandbox',
+
+    if (context.effect === 'workspace-write' && context.permissionMode === 'safe') {
+      return {
+        allowed: false,
+        reason: 'A workspace-write node cannot run in safe permission mode',
+      }
     }
+
+    return { allowed: true }
   }
 }
 

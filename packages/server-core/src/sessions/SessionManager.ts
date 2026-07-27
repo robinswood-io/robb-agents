@@ -24,6 +24,7 @@ import {
 } from '@craft-agent/shared/agent/backend'
 import { getLlmConnection, getLlmConnections, getDefaultLlmConnection, getDefaultThinkingLevel, getBrowserToolEnabled, resetManagedAnthropicAuthEnvVars, resolveMidStreamBehavior, getPersistedUiLanguage, resolveTitleLanguageName, resolveRoutingPolicy } from '@craft-agent/shared/config'
 import { formatPlaybookPrompt, getBuiltinPlaybook, loadWorkspacePlaybook } from '@craft-agent/shared/playbooks'
+import { validateSessionExecutionIsolation } from '@craft-agent/shared/tasks'
 import { PrivilegedExecutionBroker } from '@craft-agent/server-core/services'
 import { isValidWorkingDirectory } from '../utils/path-validation'
 import { InitGate } from '@craft-agent/server-core/domain'
@@ -911,6 +912,8 @@ interface ManagedSession {
   taskNodeCount?: number
   // Tasks Conductor: hidden generate-time orchestrator awaiting validated adoption (off the board)
   taskDraft?: boolean
+  // Host-enforced tool isolation envelope for a Conductor child session
+  executionIsolation?: import('@craft-agent/shared/tasks').SessionExecutionIsolation
   // Working directory for this session (used by agent for bash commands)
   workingDirectory?: string
   // SDK cwd for session storage - set once at creation, never changes.
@@ -2914,6 +2917,16 @@ export class SessionManager implements ISessionManager {
       resolvedWorkingDir = options.workingDirectory
     }
 
+    if (options?.executionIsolation) {
+      const isolationDecision = validateSessionExecutionIsolation(
+        options.executionIsolation,
+        workspaceRootPath,
+      )
+      if (!isolationDecision.allowed) {
+        throw new Error(`Invalid session execution isolation: ${isolationDecision.reason ?? 'blocked'}`)
+      }
+    }
+
     // Resolve project binding. When a projectId is provided and the project has a
     // workingDirectory configured, inherit it (only when the caller didn't pass an
     // explicit override). This lets "+ New session in {project}" reuse the project's
@@ -3150,6 +3163,7 @@ export class SessionManager implements ISessionManager {
       taskRunId: options?.taskRunId,
       taskNodeId: options?.taskNodeId,
       taskDraft: options?.taskDraft,
+      executionIsolation: options?.executionIsolation,
       playbookSlug: selectedPlaybook?.manifest.slug,
       // Persist only an EXPLICIT selection (e.g. a task's spec.sources on its subtasks).
       // The workspace-default fallback stays dynamic — freezing it into the header would
@@ -3889,6 +3903,7 @@ export class SessionManager implements ISessionManager {
         permissionMode: managed.permissionMode,
         previousPermissionMode: managed.previousPermissionMode,
         projectId: managed.projectId,
+        executionIsolation: managed.executionIsolation,
       }
 
       const onSdkSessionIdUpdate = (sdkSessionId: string) => {

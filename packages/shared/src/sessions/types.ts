@@ -12,6 +12,7 @@
 import type { PermissionMode } from '../agent/mode-manager.ts';
 import type { ThinkingLevel } from '../agent/thinking-levels.ts';
 import type { StoredAttachment, MessageRole, ToolStatus, AuthRequestType, AuthStatus, CredentialInputMode, StoredMessage, AutonomyEvent } from '@craft-agent/core/types';
+import type { SessionExecutionIsolation } from '../tasks/durable-execution.ts';
 
 /**
  * Session fields that persist to disk.
@@ -64,6 +65,7 @@ export const SESSION_PERSISTENT_FIELDS = [
   'taskNodeId',
   'taskNodeCount',
   'taskDraft',
+  'executionIsolation',
   // Runtime evidence of autonomous resolution and human-only blockers
   'autonomyEvents',
   'playbookSlug',
@@ -231,6 +233,8 @@ export interface SessionConfig {
   taskNodeCount?: number;
   /** Tasks Conductor: generate-time draft orchestrator. Hidden from the board until adopted (promoted) by createTask. */
   taskDraft?: boolean;
+  /** Host-enforced tool isolation envelope for a Conductor child session. */
+  executionIsolation?: SessionExecutionIsolation;
 }
 
 /**
@@ -338,6 +342,8 @@ export interface SessionHeader {
   taskNodeCount?: number;
   /** Tasks Conductor: generate-time draft orchestrator. Hidden from the board until adopted (promoted) by createTask. */
   taskDraft?: boolean;
+  /** Host-enforced tool isolation envelope for a Conductor child session. */
+  executionIsolation?: SessionExecutionIsolation;
   // Pre-computed fields for fast list loading
   /** Number of messages in session */
   messageCount: number;
@@ -434,4 +440,6 @@ export interface SessionMetadata {
   taskNodeCount?: number;
   /** Tasks Conductor: generate-time draft orchestrator. Hidden from the board until adopted (promoted) by createTask. */
   taskDraft?: boolean;
+  /** Host-enforced tool isolation envelope for a Conductor child session. */
+  executionIsolation?: SessionExecutionIsolation;
 }
