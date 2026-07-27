@@ -195,6 +195,8 @@ import type {
   TaskRunSnapshotDto,
   TaskApprovalRequestDto,
   TaskApprovalDecisionRequest,
+  TaskKillSwitchSnapshotDto,
+  TaskKillSwitchUpdateRequest,
   TaskGetResult,
   TaskResultsDto,
   FileAttachment,
@@ -261,6 +263,11 @@ export interface ElectronAPI {
     workspaceId: string,
     req: TaskApprovalDecisionRequest,
   ): Promise<TaskRunSnapshotDto>
+  getTaskKillSwitches(workspaceId: string): Promise<TaskKillSwitchSnapshotDto>
+  setTaskKillSwitch(
+    workspaceId: string,
+    request: TaskKillSwitchUpdateRequest,
+  ): Promise<TaskKillSwitchSnapshotDto>
   getTask(workspaceId: string, slug: string, runId?: string): Promise<TaskGetResult>
   listTasks(workspaceId: string): Promise<string[]>
   getTaskResults(workspaceId: string, slug: string, runId?: string): Promise<TaskResultsDto>

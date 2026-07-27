@@ -34,7 +34,13 @@ import {
   writeNodeOutput,
   readNodeOutput,
   readRunLog,
+  readRunContextSnapshot,
+  readRunSpecSnapshot,
   loadTaskSpec,
+  listRunIds,
+  listTaskRunSlugs,
+  listTaskSlugs,
+  writeRunContextSnapshot,
   writeRunSpecSnapshot,
   DEFAULT_REPAIR_ATTEMPTS,
   MAX_REPAIR_ATTEMPTS_CAP,
@@ -76,6 +82,8 @@ export interface TaskRunnerDeps {
   defaultMaxParallel?: number;
   /** Injectable clock (run-log timestamps) + run-id generator, for determinism in tests. */
   now?: () => string;
+  /** Injectable wall clock for deadlines and retry scheduling. */
+  nowMs?: () => number;
   genRunId?: () => string;
   /** Live kill-switch state. Evaluated before every scheduling pass. */
   getKillSwitch?: () => KillSwitchSnapshot;
@@ -94,6 +102,12 @@ export interface TaskExecutionGuardContext {
   idempotencyKey: string;
   workingDirectory?: string;
   policy: ExecutionIsolationPolicy;
+  /** Strongest side effect declared by the node. */
+  effect: TaskNode['effect'];
+  /** Effective child permission mode after node/task/default resolution. */
+  permissionMode: 'safe' | 'ask' | 'allow-all';
+  /** True when the spec explicitly requested host CPU or memory isolation. */
+  resourceLimitsExplicit: boolean;
 }
 
 export interface RunOptions {
@@ -125,6 +139,8 @@ export interface RunSnapshot {
   nodes: NodeRunStatus[];
   /** Sum of each child's (input + output) tokens observed at completion. */
   tokensUsed: number;
+  /** Sum of each child's measured cumulative USD cost observed at completion. */
+  costUsed: number;
 }
 
 export interface PendingTaskApproval {
@@ -166,6 +182,8 @@ interface NodeStateEntry {
   state: NodeRunState;
   sessionId?: string;
   attempt: number;
+  /** Durable not-before timestamp for the next retry attempt. */
+  retryAtMs?: number;
   /** Reason the previous attempt failed, fed back into the retry prompt (failure-aware retry). */
   lastFailure?: string;
 }
@@ -182,9 +200,14 @@ class ActiveRun {
   private readonly maxParallel: number;
   private inFlight = 0;
   private tokensUsed = 0;
+  private costUsed = 0;
   /** Last observed cumulative (input+output) tokens per child session — for delta accounting. */
   private readonly sessionTokens = new Map<string, number>();
+  /** Last observed cumulative USD cost per child session — for delta accounting. */
+  private readonly sessionCosts = new Map<string, number>();
   private readonly nodeTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
+  private readonly retryTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
+  private deadlineTimeout?: ReturnType<typeof setTimeout>;
   private readonly approvedNodes = new Set<string>();
   private readonly pendingApprovals = new Map<string, PendingTaskApproval>();
   private runStatus: RunStatus = 'running';
@@ -220,14 +243,14 @@ class ActiveRun {
   // --- lifecycle ---
 
   start(): void {
+    // The immutable run snapshot is part of the durability contract. Starting
+    // without it would make recovery depend on a later-edited task.yaml.
+    writeRunSpecSnapshot(this.deps.workspaceRoot, this.slug, this.runId, this.spec);
+    writeRunContextSnapshot(this.deps.workspaceRoot, this.slug, this.runId, {
+      params: this.opts.params ?? {},
+      verifyOnComplete: this.opts.verifyOnComplete,
+    });
     this.unsubscribe = this.deps.host.onSessionComplete((evt) => this.onSessionComplete(evt));
-    // Snapshot the spec for this run so the Results view labels nodes by run-time titles even after
-    // the live task.yaml is edited. Best-effort: a snapshot failure must not abort the run.
-    try {
-      writeRunSpecSnapshot(this.deps.workspaceRoot, this.slug, this.runId, this.spec);
-    } catch {
-      // ignore — Results falls back to run-log node ids when no snapshot exists
-    }
     this.log({ kind: 'run-started', taskId: this.spec.id, runId: this.runId, orchestratorSessionId: this.opts.orchestratorSessionId });
     this.runStatus = 'running';
     // Move the task tile to the in-progress column for the duration of the run.
@@ -238,6 +261,11 @@ class ActiveRun {
       // rather than growing as children are spawned lazily at dispatch.
       void this.deps.host.setTaskNodeCount(this.opts.orchestratorSessionId, this.spec.nodes.length);
     }
+    if (this.deadlineExpired()) {
+      this.failForDeadline();
+      return;
+    }
+    this.armDeadline();
     this.scheduleReady();
   }
 
@@ -255,6 +283,11 @@ class ActiveRun {
     for (const [, st] of this.state) if (st.state === 'cancelled') st.state = 'pending';
     this.runStatus = 'running';
     this.log({ kind: 'run-resumed' });
+    if (this.deadlineExpired()) {
+      this.failForDeadline();
+      return;
+    }
+    this.armDeadline();
     this.scheduleReady();
   }
 
@@ -266,6 +299,7 @@ class ActiveRun {
   hydrate(log: RunLogEntry[], loadOutput: (nodeId: string) => NodeOutput | null): void {
     const ambiguousNodes = new Set<string>();
     const unresolvedApprovals = new Map<string, PendingTaskApproval>();
+    let persistedStatus: RunStatus = 'running';
     for (const e of log) {
       if (e.kind === 'node-spawned') {
         const st = this.state.get(e.nodeId);
@@ -278,10 +312,18 @@ class ActiveRun {
         if (st) {
           st.attempt += 1;
           st.state = 'running';
+          st.retryAtMs = undefined;
         }
       } else if (e.kind === 'node-finished') {
         const st = this.state.get(e.nodeId);
         if (st) st.state = e.state;
+      } else if (e.kind === 'node-retry') {
+        const st = this.state.get(e.nodeId);
+        if (st) {
+          st.state = 'pending';
+          st.lastFailure = `Previous attempt failed: ${e.reason}. Address the cause before retrying.`;
+          st.retryAtMs = e.retryAt ? Date.parse(e.retryAt) : undefined;
+        }
       } else if (e.kind === 'node-checkpoint') {
         if (e.status === 'executing') ambiguousNodes.add(e.nodeId);
         else if (e.status === 'confirmed') ambiguousNodes.delete(e.nodeId);
@@ -304,6 +346,21 @@ class ActiveRun {
         if (e.result === 'fail') this.repairsUsed += 1;
         else if (e.result === 'unparsed') this.unparsedReAsks += 1;
         else if (e.result === 'pass') this.unparsedReAsks = 0;
+      } else if (e.kind === 'usage-updated') {
+        this.tokensUsed = e.tokensUsed;
+        this.costUsed = e.costUsed ?? this.costUsed;
+      } else if (e.kind === 'run-paused') {
+        persistedStatus = 'paused';
+      } else if (e.kind === 'run-resumed' || e.kind === 'run-started') {
+        persistedStatus = 'running';
+      } else if (e.kind === 'run-verifying') {
+        persistedStatus = 'verifying';
+      } else if (e.kind === 'run-completed') {
+        persistedStatus = 'completed';
+      } else if (e.kind === 'run-failed') {
+        persistedStatus = 'failed';
+      } else if (e.kind === 'run-stopped' || e.kind === 'kill-switch') {
+        persistedStatus = 'stopped';
       }
     }
     for (const [nodeId, st] of this.state) {
@@ -328,16 +385,30 @@ class ActiveRun {
       st.state = 'waiting-approval';
       this.pendingApprovals.set(approval.requestId, approval);
     }
-    if (this.pendingApprovals.size > 0) this.runStatus = 'waiting-approval';
+    this.runStatus = this.pendingApprovals.size > 0 ? 'waiting-approval' : persistedStatus;
     this.inFlight = 0;
   }
 
-  /** Resume a hydrated run: subscribe, log, and schedule the ready set (finished nodes are skipped). */
-  resumeFromHydrated(): void {
+  /**
+   * Activate a hydrated run. Paused runs can be registered without scheduling,
+   * while previously-running/verifying runs resume after process restart.
+   */
+  activateHydrated(shouldResume: boolean): void {
     if (this.unsubscribe) return;
     this.unsubscribe = this.deps.host.onSessionComplete((evt) => this.onSessionComplete(evt));
     if (this.pendingApprovals.size > 0) {
       this.runStatus = 'waiting-approval';
+      return;
+    }
+    if (!shouldResume) return;
+    if (this.deadlineExpired()) {
+      this.failForDeadline();
+      return;
+    }
+    this.armDeadline();
+    if (this.runStatus === 'verifying') {
+      this.log({ kind: 'run-resumed' });
+      this.enterVerifying();
       return;
     }
     this.runStatus = 'running';
@@ -380,6 +451,7 @@ class ActiveRun {
       status: this.runStatus,
       orchestratorSessionId: this.opts.orchestratorSessionId,
       tokensUsed: this.tokensUsed,
+      costUsed: this.costUsed,
       nodes: this.spec.nodes.map((n) => {
         const st = this.state.get(n.id)!;
         return { id: n.id, state: st.state, sessionId: st.sessionId, attempt: st.attempt };
@@ -387,10 +459,23 @@ class ActiveRun {
     };
   }
 
+  /** Apply a newly published kill switch immediately to this active run. */
+  enforceKillSwitch(): boolean {
+    if (this.isTerminal()) return false;
+    const decision = this.currentKillSwitch();
+    if (decision.allowed) return false;
+    this.stopForKillSwitch(decision.reason ?? 'Execution stopped by kill switch');
+    return true;
+  }
+
   // --- scheduling ---
 
   private scheduleReady(): void {
     if (this.runStatus !== 'running') return;
+    if (this.deadlineExpired()) {
+      this.failForDeadline();
+      return;
+    }
     const killSwitch = this.currentKillSwitch();
     if (!killSwitch.allowed) {
       this.stopForKillSwitch(killSwitch.reason ?? 'Execution stopped by kill switch');
@@ -399,8 +484,9 @@ class ActiveRun {
     for (const node of this.spec.nodes) {
       if (this.inFlight >= this.maxParallel) break;
       if (!this.isReady(node)) continue;
-      if (this.isOverBudget()) {
-        this.pauseForBudget();
+      const budget = this.schedulingBudgetBreach();
+      if (budget) {
+        this.failForBudget(budget.metric, budget.value, budget.limit);
         return;
       }
       if (this.requiresApproval(node) && !this.approvedNodes.has(node.id)) {
@@ -418,7 +504,16 @@ class ActiveRun {
   }
 
   private isReady(node: TaskNode): boolean {
-    if (this.state.get(node.id)!.state !== 'pending') return false;
+    const st = this.state.get(node.id)!;
+    if (st.state !== 'pending') return false;
+    if (st.retryAtMs !== undefined) {
+      if (st.retryAtMs > this.currentTimeMs()) {
+        this.armRetry(node.id, st.retryAtMs);
+        return false;
+      }
+      st.retryAtMs = undefined;
+      this.clearRetryTimeout(node.id);
+    }
     for (const dep of this.edges.get(node.id) ?? []) {
       if (this.state.get(dep)?.state !== 'done') return false;
     }
@@ -428,13 +523,15 @@ class ActiveRun {
   private markRunning(node: TaskNode): void {
     const st = this.state.get(node.id)!;
     st.state = 'running';
+    st.retryAtMs = undefined;
+    this.clearRetryTimeout(node.id);
     st.attempt += 1;
     this.inFlight += 1;
     this.log({ kind: 'node-scheduled', nodeId: node.id });
     this.log({
       kind: 'node-checkpoint',
       nodeId: node.id,
-      idempotencyKey: this.idempotencyKey(node.id, st.attempt),
+      idempotencyKey: this.idempotencyKey(node.id),
       status: 'prepared',
     });
   }
@@ -518,7 +615,7 @@ class ActiveRun {
       // Task-level skills ride as [skill:slug] mentions on every child prompt — the agent
       // pipeline resolves each SKILL.md and blocks tools until it is read (skills-as-context).
       const st = this.state.get(node.id)!;
-      const idempotencyKey = this.idempotencyKey(node.id, st.attempt);
+      const idempotencyKey = this.idempotencyKey(node.id);
       // Children run where the parent runs: inherit the orchestrator's resolved working directory,
       // falling back to the spec's declared `cwd`. Without this they default to the workspace cwd
       // rather than the parent session's (project) directory.
@@ -537,6 +634,8 @@ class ActiveRun {
           throw new Error(`working directory rejected: ${cwdDecision.reason}`);
         }
       }
+      const permissionMode =
+        node.permissionMode ?? this.spec.defaults?.permissionMode ?? AUTONOMOUS_DEFAULT_MODE;
       const guardDecision = await this.deps.executionGuard?.({
         workspaceId: this.deps.workspaceId,
         missionId: this.spec.id,
@@ -545,6 +644,11 @@ class ActiveRun {
         idempotencyKey,
         workingDirectory: cwd,
         policy,
+        effect: node.effect,
+        permissionMode,
+        resourceLimitsExplicit:
+          this.spec.execution?.max_cpu_percent !== undefined ||
+          this.spec.execution?.max_memory_mb !== undefined,
       });
       if (guardDecision && !guardDecision.allowed) {
         throw new Error(`execution guard rejected node: ${guardDecision.reason ?? 'blocked'}`);
@@ -567,7 +671,7 @@ class ActiveRun {
         llmConnection: node.llmConnection ?? this.spec.defaults?.llmConnection,
         // Node override → task default (persisted by the editor, visible to the user) → explicit
         // unattended-safe fallback. Never the workspace default (which could be `ask` → hang).
-        permissionMode: node.permissionMode ?? this.spec.defaults?.permissionMode ?? AUTONOMOUS_DEFAULT_MODE,
+        permissionMode,
         labels: node.labels,
         // Inherit the orchestrator's task number (task::N) so the whole run filters as one task.
         applyTaskLabel: true,
@@ -586,7 +690,7 @@ class ActiveRun {
       await this.deps.host.setKanbanColumn(child.id, 'in-progress');
       this.log({ kind: 'node-checkpoint', nodeId: node.id, idempotencyKey, status: 'executing' });
       await this.deps.host.sendMessage(child.id, prompt);
-      this.armNodeTimeout(node.id, child.id, policy.timeoutMs);
+      this.armNodeTimeout(node.id, child.id, node.timeout ?? policy.timeoutMs);
     } catch (err) {
       this.failNode(node.id, `dispatch failed: ${(err as Error).message}`);
     }
@@ -630,13 +734,22 @@ class ActiveRun {
       const prev = this.sessionTokens.get(evt.sessionId) ?? 0;
       this.tokensUsed += Math.max(0, cumulative - prev);
       this.sessionTokens.set(evt.sessionId, cumulative);
-      this.log({ kind: 'usage-updated', tokensUsed: this.tokensUsed });
-    }
+      const cumulativeCost = Math.max(0, evt.tokenUsage.costUsd ?? 0);
+      const previousCost = this.sessionCosts.get(evt.sessionId) ?? 0;
+      this.costUsed += Math.max(0, cumulativeCost - previousCost);
+      this.sessionCosts.set(evt.sessionId, cumulativeCost);
+      this.log({
+        kind: 'usage-updated',
+        tokensUsed: this.tokensUsed,
+        costUsed: this.costUsed,
+        currency: 'USD',
+      });
 
-    // Completion-time budget check: pause immediately on breach (not only at schedule-time), but
-    // only while pending work remains — never block a run that is about to finish.
-    if (this.isOverBudget() && this.runStatus === 'running' && this.hasPendingNodes()) {
-      this.pauseForBudget();
+      const measuredBreach = this.measuredBudgetBreach();
+      if (measuredBreach && this.runStatus === 'running') {
+        this.failForBudget(measuredBreach.metric, measuredBreach.value, measuredBreach.limit);
+        return;
+      }
     }
 
     if (evt.reason === 'complete') {
@@ -659,7 +772,7 @@ class ActiveRun {
       this.log({
         kind: 'node-checkpoint',
         nodeId,
-        idempotencyKey: this.idempotencyKey(nodeId, st.attempt),
+        idempotencyKey: this.idempotencyKey(nodeId),
         status: 'confirmed',
         proofHash: createHash('sha256').update(text, 'utf8').digest('hex'),
       });
@@ -697,8 +810,22 @@ class ActiveRun {
       st.state = 'pending';
       const sid = sessionId ?? st.sessionId;
       if (sid) void this.deps.host.setKanbanColumn(sid, 'todo');
-      this.log({ kind: 'node-retry', nodeId, attempt: st.attempt, reason });
-      this.scheduleReady();
+      const delayMs = retryDelayMs(retry.backoff, st.attempt);
+      if (delayMs > 0) {
+        st.retryAtMs = this.currentTimeMs() + delayMs;
+        this.log({
+          kind: 'node-retry',
+          nodeId,
+          attempt: st.attempt,
+          reason,
+          delayMs,
+          retryAt: new Date(st.retryAtMs).toISOString(),
+        });
+        this.armRetry(nodeId, st.retryAtMs);
+      } else {
+        this.log({ kind: 'node-retry', nodeId, attempt: st.attempt, reason, delayMs: 0 });
+        this.scheduleReady();
+      }
       return;
     }
 
@@ -713,6 +840,7 @@ class ActiveRun {
     if (this.runStatus !== 'running') return;
     if (this.inFlight > 0) return;
     if (this.spec.nodes.some((n) => this.isReady(n))) return; // more to dispatch
+    if (this.hasDeferredRetry()) return;
     const allGood = this.spec.nodes.every((n) => {
       const s = this.state.get(n.id)!.state;
       return s === 'done' || s === 'skipped';
@@ -757,6 +885,10 @@ class ActiveRun {
   private finalize(): void {
     for (const timeout of this.nodeTimeouts.values()) clearTimeout(timeout);
     this.nodeTimeouts.clear();
+    for (const timeout of this.retryTimeouts.values()) clearTimeout(timeout);
+    this.retryTimeouts.clear();
+    if (this.deadlineTimeout) clearTimeout(this.deadlineTimeout);
+    this.deadlineTimeout = undefined;
     this.unsubscribe?.();
     this.unsubscribe = undefined;
     this.verdictOff?.();
@@ -862,9 +994,9 @@ class ActiveRun {
       this.finish('failed');
       return;
     }
-    if (this.isOverBudget()) {
-      this.log({ kind: 'budget-breach', metric: 'tokens', value: this.tokensUsed, limit: this.spec.token_budget! });
-      this.finish('failed');
+    const budget = this.schedulingBudgetBreach();
+    if (budget) {
+      this.failForBudget(budget.metric, budget.value, budget.limit);
       return;
     }
     this.repairsUsed += 1;
@@ -946,20 +1078,110 @@ class ActiveRun {
     return map;
   }
 
-  // --- budget ---
+  // --- hard limits ---
 
-  private isOverBudget(): boolean {
-    return this.spec.token_budget !== undefined && this.tokensUsed >= this.spec.token_budget;
+  private tokenBudgetLimit(): number | undefined {
+    const candidates = [
+      this.spec.token_budget,
+      this.spec.mission?.budget?.max_tokens,
+    ].filter((value): value is number => value !== undefined);
+    return candidates.length > 0 ? Math.min(...candidates) : undefined;
   }
 
-  private pauseForBudget(): void {
-    this.log({ kind: 'budget-breach', metric: 'tokens', value: this.tokensUsed, limit: this.spec.token_budget! });
-    this.pause();
+  private costBudgetLimit(): number | undefined {
+    return this.spec.mission?.budget?.max_cost;
   }
 
-  /** True if any node is still waiting to be dispatched (used to avoid pausing a finishable run). */
-  private hasPendingNodes(): boolean {
-    for (const st of this.state.values()) if (st.state === 'pending') return true;
+  /** A limit reached before a new dispatch is fail-closed: no unbudgeted work starts. */
+  private schedulingBudgetBreach(): { metric: 'tokens' | 'cost'; value: number; limit: number } | null {
+    const tokenLimit = this.tokenBudgetLimit();
+    if (tokenLimit !== undefined && this.tokensUsed >= tokenLimit) {
+      return { metric: 'tokens', value: this.tokensUsed, limit: tokenLimit };
+    }
+    const costLimit = this.costBudgetLimit();
+    if (costLimit !== undefined && this.costUsed >= costLimit) {
+      return { metric: 'cost', value: this.costUsed, limit: costLimit };
+    }
+    return null;
+  }
+
+  /** Measured usage may overshoot between provider reports; overshoot immediately fails the run. */
+  private measuredBudgetBreach(): { metric: 'tokens' | 'cost'; value: number; limit: number } | null {
+    const tokenLimit = this.tokenBudgetLimit();
+    if (tokenLimit !== undefined && this.tokensUsed > tokenLimit) {
+      return { metric: 'tokens', value: this.tokensUsed, limit: tokenLimit };
+    }
+    const costLimit = this.costBudgetLimit();
+    if (costLimit !== undefined && this.costUsed > costLimit) {
+      return { metric: 'cost', value: this.costUsed, limit: costLimit };
+    }
+    return null;
+  }
+
+  private failForBudget(metric: 'tokens' | 'cost', value: number, limit: number): void {
+    if (this.isTerminal()) return;
+    this.log({ kind: 'budget-breach', metric, value, limit });
+    this.cancelRunningNodes(`hard ${metric} budget breached`);
+    this.finish('failed');
+  }
+
+  private deadlineExpired(): boolean {
+    const deadline = this.spec.mission?.deadline;
+    return deadline !== undefined && this.currentTimeMs() >= Date.parse(deadline);
+  }
+
+  private armDeadline(): void {
+    const deadline = this.spec.mission?.deadline;
+    if (!deadline || this.isTerminal()) return;
+    if (this.deadlineTimeout) clearTimeout(this.deadlineTimeout);
+    const remainingMs = Date.parse(deadline) - this.currentTimeMs();
+    if (remainingMs <= 0) {
+      this.failForDeadline();
+      return;
+    }
+    // Node timers cap at a signed 32-bit delay. Re-arm long deadlines safely.
+    this.deadlineTimeout = setTimeout(
+      () => {
+        this.deadlineTimeout = undefined;
+        if (this.deadlineExpired()) this.failForDeadline();
+        else this.armDeadline();
+      },
+      Math.min(remainingMs, 2_147_483_647),
+    );
+  }
+
+  private failForDeadline(): void {
+    if (this.isTerminal()) return;
+    const deadline = this.spec.mission?.deadline;
+    if (!deadline) return;
+    this.log({ kind: 'deadline-breach', deadline });
+    this.cancelRunningNodes('mission deadline breached');
+    this.finish('failed');
+  }
+
+  private cancelRunningNodes(reason: string): void {
+    for (const [nodeId, st] of this.state) {
+      if (st.state !== 'running') continue;
+      this.clearNodeTimeout(nodeId);
+      st.state = 'cancelled';
+      this.log({
+        kind: 'node-finished',
+        nodeId,
+        sessionId: st.sessionId ?? '',
+        state: 'cancelled',
+        reason,
+      });
+      if (st.sessionId) void this.deps.host.cancelProcessing(st.sessionId, true);
+    }
+    this.inFlight = 0;
+  }
+
+  private hasDeferredRetry(): boolean {
+    for (const st of this.state.values()) {
+      if (st.state === 'pending' && st.retryAtMs !== undefined && st.retryAtMs > this.currentTimeMs()) {
+        return true;
+      }
+    }
     return false;
   }
 
@@ -969,8 +1191,13 @@ class ActiveRun {
     return this.runStatus === 'completed' || this.runStatus === 'failed' || this.runStatus === 'stopped';
   }
 
-  private idempotencyKey(nodeId: string, attempt: number): string {
-    return `${this.deps.workspaceId}:${this.spec.id}:${this.runId}:${nodeId}:attempt-${attempt}`;
+  private currentTimeMs(): number {
+    if (this.deps.nowMs) return this.deps.nowMs();
+    return Date.now();
+  }
+
+  private idempotencyKey(nodeId: string): string {
+    return `${this.deps.workspaceId}:${this.spec.id}:${this.runId}:${nodeId}`;
   }
 
   private currentKillSwitch(): GuardDecision {
@@ -1012,6 +1239,29 @@ class ActiveRun {
     const timeout = this.nodeTimeouts.get(nodeId);
     if (timeout) clearTimeout(timeout);
     this.nodeTimeouts.delete(nodeId);
+  }
+
+  private armRetry(nodeId: string, retryAtMs: number): void {
+    if (this.retryTimeouts.has(nodeId)) return;
+    const delayMs = Math.max(0, retryAtMs - this.currentTimeMs());
+    const timer = setTimeout(() => {
+      this.retryTimeouts.delete(nodeId);
+      const st = this.state.get(nodeId);
+      if (!st || st.state !== 'pending') return;
+      if (st.retryAtMs !== undefined && st.retryAtMs > this.currentTimeMs()) {
+        this.armRetry(nodeId, st.retryAtMs);
+        return;
+      }
+      st.retryAtMs = undefined;
+      this.scheduleReady();
+    }, Math.min(delayMs, 2_147_483_647));
+    this.retryTimeouts.set(nodeId, timer);
+  }
+
+  private clearRetryTimeout(nodeId: string): void {
+    const timeout = this.retryTimeouts.get(nodeId);
+    if (timeout) clearTimeout(timeout);
+    this.retryTimeouts.delete(nodeId);
   }
 
   private log(entry: RunLogEntryInput): void {
@@ -1072,6 +1322,18 @@ function retryMatches(when: 'error' | 'empty' | 'invalid' | undefined, failure: 
   return (when ?? 'error') === failure;
 }
 
+/** Resolve exponential retry delay in milliseconds; an omitted backoff keeps legacy immediate retry. */
+function retryDelayMs(
+  backoff: { base?: number; factor?: number; max?: number } | undefined,
+  failedAttempt: number,
+): number {
+  if (!backoff) return 0;
+  const base = backoff.base ?? 1_000;
+  const factor = backoff.factor ?? 2;
+  const maximum = backoff.max ?? 30_000;
+  return Math.min(maximum, base * factor ** Math.max(0, failedAttempt - 1));
+}
+
 /**
  * Parse the orchestrator's machine-readable verdict line. Tolerant of surrounding prose: the last
  * `VERDICT: PASS|FAIL [— [nodes=a,b — ]reason]` occurrence wins. A missing/garbled line is `unparsed`
@@ -1106,6 +1368,21 @@ function isTerminalRunStatus(status: RunStatus): boolean {
   return status === 'completed' || status === 'failed' || status === 'stopped';
 }
 
+function persistedRunStatus(log: RunLogEntry[]): RunStatus {
+  let status: RunStatus = 'running';
+  for (const entry of log) {
+    if (entry.kind === 'run-paused') status = 'paused';
+    else if (entry.kind === 'run-resumed' || entry.kind === 'run-started') status = 'running';
+    else if (entry.kind === 'run-verifying') status = 'verifying';
+    else if (entry.kind === 'approval-requested') status = 'waiting-approval';
+    else if (entry.kind === 'approval-resolved') status = 'running';
+    else if (entry.kind === 'run-completed') status = 'completed';
+    else if (entry.kind === 'run-failed') status = 'failed';
+    else if (entry.kind === 'run-stopped' || entry.kind === 'kill-switch') status = 'stopped';
+  }
+  return status;
+}
+
 function resolveParams(spec: TaskSpec, provided?: Record<string, unknown>): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const p of spec.params ?? []) if (p.default !== undefined) out[p.name] = p.default;
@@ -1128,27 +1405,7 @@ export class TaskRunner {
     if (!loaded.valid) {
       throw new Error(`Refusing to run invalid task "${slug}": ${loaded.errors.map((e) => e.message).join('; ')}`);
     }
-    const isolationPolicy = resolveIsolationPolicy(
-      loaded.spec,
-      loaded.spec.cwd ?? this.deps.workspaceRoot,
-    );
-    const isolationDecision = validateExecutionIsolationPolicy(isolationPolicy, this.deps.workspaceRoot);
-    if (!isolationDecision.allowed) {
-      throw new Error(`Refusing to run task "${slug}": ${isolationDecision.reason}`);
-    }
-    if (loaded.spec.cwd) {
-      const cwdDecision = authorizeWorkspacePath(isolationPolicy.workspaceRoot, loaded.spec.cwd, ['.']);
-      if (!cwdDecision.allowed) {
-        throw new Error(`Refusing to run task "${slug}": ${cwdDecision.reason}`);
-      }
-    }
-    const killSwitch = this.deps.getKillSwitch?.();
-    if (killSwitch) {
-      const decision = evaluateKillSwitch(killSwitch, this.deps.workspaceId, loaded.spec.id);
-      if (!decision.allowed) {
-        throw new Error(`Refusing to run task "${slug}": ${decision.reason}`);
-      }
-    }
+    this.assertSpecAdmissible(loaded.spec, slug);
     // One active run per orchestrator: a second concurrent run would race the same parent session's
     // verdict listener (two runs attaching onSessionComplete on the same orchestrator would cross
     // their verifications). Block it. NOTE: this does not guard against a human typing into the
@@ -1173,7 +1430,12 @@ export class TaskRunner {
       this.deps,
     );
     this.runs.set(this.key(slug, runId), run);
-    run.start();
+    try {
+      run.start();
+    } catch (error) {
+      this.runs.delete(this.key(slug, runId));
+      throw error;
+    }
     return run.snapshot();
   }
 
@@ -1188,34 +1450,80 @@ export class TaskRunner {
       return;
     }
     // Not in memory (e.g. after an app restart): reconstruct from the persisted run-log.
-    this.rehydrate(slug, runId);
+    this.rehydrate(slug, runId, true);
   }
 
   /** Reconstruct an in-memory run from its persisted run-log + node outputs, then resume it. */
-  private rehydrate(slug: string, runId: string): RunSnapshot {
-    const loaded = loadTaskSpec(this.deps.workspaceRoot, slug);
-    if (!loaded?.spec || !loaded.valid) {
-      throw new Error(`Cannot resume "${slug}:${runId}": task.yaml is missing or invalid`);
-    }
+  private rehydrate(slug: string, runId: string, shouldResume: boolean): RunSnapshot {
     const log = readRunLog(this.deps.workspaceRoot, slug, runId);
     if (log.length === 0) throw new Error(`Cannot resume "${slug}:${runId}": no run-log found`);
+    const snapshottedSpec = readRunSpecSnapshot(this.deps.workspaceRoot, slug, runId);
+    const loaded = snapshottedSpec ? null : loadTaskSpec(this.deps.workspaceRoot, slug);
+    const spec = snapshottedSpec ?? loaded?.spec;
+    if (!spec || (loaded !== null && !loaded.valid)) {
+      throw new Error(`Cannot resume "${slug}:${runId}": immutable run snapshot and valid task.yaml are both unavailable`);
+    }
+    this.assertSpecAdmissible(spec, slug);
+    const persistedStatus = persistedRunStatus(log);
+    if (isTerminalRunStatus(persistedStatus)) {
+      throw new Error(`Cannot resume terminal run "${slug}:${runId}" (${persistedStatus})`);
+    }
     const started = log.find((e) => e.kind === 'run-started');
     const orchestratorSessionId = started && started.kind === 'run-started' ? started.orchestratorSessionId : undefined;
+    const context = readRunContextSnapshot(this.deps.workspaceRoot, slug, runId);
     const run = new ActiveRun(
-      loaded.spec,
+      spec,
       slug,
       runId,
-      { orchestratorSessionId, params: resolveParams(loaded.spec), verifyOnComplete: true },
+      {
+        orchestratorSessionId,
+        params: context?.params ?? resolveParams(spec),
+        verifyOnComplete: context?.verifyOnComplete ?? true,
+      },
       this.deps,
     );
     run.hydrate(log, (nodeId) => readNodeOutput(this.deps.workspaceRoot, slug, runId, nodeId));
     this.runs.set(this.key(slug, runId), run);
-    run.resumeFromHydrated();
+    run.activateHydrated(shouldResume);
     return run.snapshot();
+  }
+
+  /**
+   * Rebuild every non-terminal persisted run known to this workspace.
+   *
+   * Paused runs are registered but remain paused. Runs that were actively
+   * running/verifying resume automatically; approval-gated runs remain waiting.
+   */
+  recoverNonTerminalRuns(): RunSnapshot[] {
+    const recovered: RunSnapshot[] = [];
+    const durableSlugs = new Set([
+      ...listTaskSlugs(this.deps.workspaceRoot),
+      ...listTaskRunSlugs(this.deps.workspaceRoot),
+    ]);
+    for (const slug of [...durableSlugs].sort()) {
+      for (const runId of listRunIds(this.deps.workspaceRoot, slug)) {
+        if (this.runs.has(this.key(slug, runId))) continue;
+        const log = readRunLog(this.deps.workspaceRoot, slug, runId);
+        if (log.length === 0) continue;
+        const status = persistedRunStatus(log);
+        if (isTerminalRunStatus(status)) continue;
+        recovered.push(this.rehydrate(slug, runId, status !== 'paused'));
+      }
+    }
+    return recovered;
   }
 
   async stop(slug: string, runId: string): Promise<void> {
     await this.runs.get(this.key(slug, runId))?.stop();
+  }
+
+  /** Drain every active run now denied by the current durable switch state. */
+  enforceKillSwitches(): number {
+    let stopped = 0;
+    for (const run of this.runs.values()) {
+      if (run.enforceKillSwitch()) stopped += 1;
+    }
+    return stopped;
   }
 
   listPendingApprovals(slug?: string, runId?: string): PendingTaskApproval[] {
@@ -1239,7 +1547,7 @@ export class TaskRunner {
   ): RunSnapshot {
     let run = this.runs.get(this.key(slug, runId));
     if (!run) {
-      this.rehydrate(slug, runId);
+      this.rehydrate(slug, runId, false);
       run = this.runs.get(this.key(slug, runId));
     }
     if (!run) throw new Error(`No mission run ${slug}:${runId}`);
@@ -1256,5 +1564,31 @@ export class TaskRunner {
     const run = this.runs.get(this.key(slug, runId));
     if (!run) return Promise.reject(new Error(`No active run ${slug}:${runId}`));
     return run.waitUntilSettled();
+  }
+
+  private assertSpecAdmissible(spec: TaskSpec, slug: string): void {
+    const isolationPolicy = resolveIsolationPolicy(spec, spec.cwd ?? this.deps.workspaceRoot);
+    const isolationDecision = validateExecutionIsolationPolicy(isolationPolicy, this.deps.workspaceRoot);
+    if (!isolationDecision.allowed) {
+      throw new Error(`Refusing to run task "${slug}": ${isolationDecision.reason}`);
+    }
+    if (spec.cwd) {
+      const cwdDecision = authorizeWorkspacePath(isolationPolicy.workspaceRoot, spec.cwd, ['.']);
+      if (!cwdDecision.allowed) {
+        throw new Error(`Refusing to run task "${slug}": ${cwdDecision.reason}`);
+      }
+    }
+    if (spec.mission?.budget?.max_cost !== undefined && spec.mission.budget.currency !== 'USD') {
+      throw new Error(
+        `Refusing to run task "${slug}": hard cost budgets require USD provider measurements; ${spec.mission.budget.currency} conversion is unavailable`,
+      );
+    }
+    const killSwitch = this.deps.getKillSwitch?.();
+    if (killSwitch) {
+      const decision = evaluateKillSwitch(killSwitch, this.deps.workspaceId, spec.id);
+      if (!decision.allowed) {
+        throw new Error(`Refusing to run task "${slug}": ${decision.reason}`);
+      }
+    }
   }
 }

@@ -44,6 +44,7 @@ import {
   PERMISSION_MODE_ORDER,
   PERMISSION_MODE_CONFIG,
   SAFE_MODE_CONFIG,
+  permissionModeAfterPlanApproval,
   type PermissionModeCanonical,
   toCanonicalPermissionMode,
   parsePermissionMode,
@@ -65,6 +66,7 @@ export {
   PERMISSION_MODE_ORDER,
   PERMISSION_MODE_CONFIG,
   SAFE_MODE_CONFIG,
+  permissionModeAfterPlanApproval,
   toCanonicalPermissionMode,
   parsePermissionMode,
 };

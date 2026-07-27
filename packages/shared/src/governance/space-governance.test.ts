@@ -35,6 +35,7 @@ describe('space governance', () => {
     expect(authorizeSpaceAction(space, 'adam', 'policy.update')).toBe(true);
     expect(authorizeSpaceAction(space, 'adam', 'space.manage-members')).toBe(false);
     expect(authorizeSpaceAction(space, 'olivia', 'mission.run')).toBe(true);
+    expect(authorizeSpaceAction(space, 'olivia', 'mission.kill-switch')).toBe(true);
     expect(authorizeSpaceAction(space, 'olivia', 'mission.approve')).toBe(false);
     expect(authorizeSpaceAction(space, 'victor', 'mission.approve')).toBe(true);
     expect(authorizeSpaceAction(space, 'riley', 'memory.export')).toBe(false);

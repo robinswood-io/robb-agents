@@ -329,15 +329,22 @@ export function EntityRow({
                     onMouseDown={(e) => e.stopPropagation()}
                   >
                     {useCompactMenu ? (
-                      <button
-                        type="button"
+                      <div
+                        role="button"
+                        tabIndex={0}
                         onClick={() => setCompactMenuOpen(true)}
+                        onKeyDown={(event) => {
+                          if (event.key !== 'Enter' && event.key !== ' ') return
+                          event.preventDefault()
+                          event.stopPropagation()
+                          setCompactMenuOpen(true)
+                        }}
                         className="p-1 rounded-[6px] hover:bg-foreground/10 data-[state=open]:bg-foreground/10 cursor-pointer"
                         aria-haspopup="dialog"
                         aria-expanded={compactMenuOpen}
                       >
                         <MoreHorizontal className="h-3.5 w-3.5 text-foreground/40" />
-                      </button>
+                      </div>
                     ) : (
                       <DropdownMenu modal={true} open={menuOpen} onOpenChange={setMenuOpen}>
                         <DropdownMenuTrigger asChild>

@@ -24,9 +24,15 @@ describe('connector pack contract', () => {
         id: 'contacts.delete',
         title: 'Delete contact',
         effect: 'external-mutation',
+        risk: 'W3',
         requiredScopes: ['crm.admin'],
+        allowedOrigins: ['https://crm.example.com'],
+        targetResourceTypes: ['crm-record'],
+        inputSchema: { type: 'object' },
+        outputSchema: { type: 'object' },
         approval: 'never',
         idempotent: false,
+        reconciliation: { required: false, receiptFields: [] },
       }],
       healthCheck: { operationId: 'contacts.delete', timeoutMs: 1_000 },
     };
@@ -35,6 +41,7 @@ describe('connector pack contract', () => {
     expect(validation.errors).toContain('contacts.delete uses undeclared scope crm.admin');
     expect(validation.errors).toContain('contacts.delete mutating operation must require an approval policy');
     expect(validation.errors).toContain('contacts.delete external mutation requires a compensation strategy');
+    expect(validation.errors).toContain('contacts.delete external mutation requires reconciliation');
   });
 
   test('verifies publisher signatures and revokes installed packs', () => {

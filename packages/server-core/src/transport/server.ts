@@ -23,7 +23,14 @@ import {
   type PushTarget,
   type ErrorCode,
 } from '@craft-agent/shared/protocol'
-import type { RpcServer, HandlerFn, RequestContext } from './types'
+import type {
+  RpcServer,
+  HandlerFn,
+  RequestContext,
+  AuthenticatedPrincipal,
+  AuthenticationResult,
+  ConnectedClientInfo,
+} from './types'
 import { serializeEnvelope, deserializeEnvelope } from './codec'
 import { createLogger } from '@craft-agent/shared/utils'
 
@@ -44,6 +51,10 @@ interface ClientConnection {
   workspaceId: string | null
   webContentsId: number | null
   capabilities: Set<string>
+  actorId: string
+  roles: readonly string[]
+  authorizationGeneration: number
+  allowedWorkspaceIds: ReadonlySet<string> | '*'
   missedPongs: number
   alive: boolean
   /** Ring buffer of recent events for replay on reconnect. */
@@ -59,6 +70,58 @@ interface PendingInvoke {
   resolve: (value: any) => void
   reject: (error: Error) => void
   timeout: ReturnType<typeof setTimeout>
+}
+
+function parseAuthenticatedPrincipal(value: AuthenticationResult): AuthenticatedPrincipal | null {
+  if (typeof value !== 'object' || value === null) return null
+  if (typeof value.actorId !== 'string' || value.actorId.trim() === '') return null
+  if (!Number.isInteger(value.authorizationGeneration) || value.authorizationGeneration < 0) return null
+  const workspaceIdsValid = value.allowedWorkspaceIds === '*'
+    || (Array.isArray(value.allowedWorkspaceIds)
+      && value.allowedWorkspaceIds.every((workspaceId) => typeof workspaceId === 'string' && workspaceId.trim() !== ''))
+  const capabilitiesValid = value.capabilities === '*'
+    || (Array.isArray(value.capabilities)
+      && value.capabilities.every((capability) => typeof capability === 'string' && capability.trim() !== ''))
+  const rolesValid = Array.isArray(value.roles)
+    && value.roles.every((role) => typeof role === 'string' && role.trim() !== '')
+  return workspaceIdsValid && capabilitiesValid && rolesValid ? value : null
+}
+
+function principalAllowsWorkspace(principal: AuthenticatedPrincipal, workspaceId: string | null): boolean {
+  if (workspaceId === null || principal.allowedWorkspaceIds === '*') return true
+  return principal.allowedWorkspaceIds.includes(workspaceId)
+}
+
+function authorizedCapabilities(
+  principal: AuthenticatedPrincipal,
+  requestedCapabilities: readonly string[],
+): Set<string> {
+  if (principal.capabilities === '*') return new Set(requestedCapabilities)
+  const allowed = new Set(principal.capabilities)
+  return new Set(requestedCapabilities.filter((capability) => allowed.has(capability)))
+}
+
+function localPrincipal(): AuthenticatedPrincipal {
+  return {
+    actorId: 'local-owner',
+    allowedWorkspaceIds: '*',
+    capabilities: '*',
+    roles: ['owner'],
+    authorizationGeneration: 0,
+  }
+}
+
+function legacyAuthenticatedPrincipal(
+  workspaceId: string | null,
+  requestedCapabilities: readonly string[],
+): AuthenticatedPrincipal {
+  return {
+    actorId: 'legacy-authenticated',
+    allowedWorkspaceIds: workspaceId === null ? [] : [workspaceId],
+    capabilities: [...requestedCapabilities],
+    roles: [],
+    authorizationGeneration: 0,
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -83,14 +146,16 @@ export interface WsRpcServerOptions {
   port?: number
   /** Whether to require a bearer token on handshake. Default: false */
   requireAuth?: boolean
-  /** Token validator. Called when requireAuth is true. */
-  validateToken?: (token: string) => Promise<boolean>
+  /** Token validator. Authoritative deployments return a server-issued principal. */
+  validateToken?: (token: string) => Promise<AuthenticationResult>
   /**
    * Optional cookie-based session validator (for web UI auth).
    * Called with the Cookie header from the HTTP upgrade request.
    * If provided, a valid session cookie is accepted as an alternative to a bearer token.
    */
-  validateSessionCookie?: (cookieHeader: string | null) => Promise<boolean>
+  validateSessionCookie?: (cookieHeader: string | null) => Promise<AuthenticationResult>
+  /** Reject legacy boolean authentication results when true. */
+  requireAuthoritativePrincipal?: boolean
   /** Server identity stamp on outgoing events. Default: 'local' */
   serverId?: string
   /** TLS configuration. When provided, the server listens on wss:// instead of ws://. */
@@ -100,7 +165,7 @@ export interface WsRpcServerOptions {
   /** Maximum concurrent clients. 0 = unlimited. Default: 50 */
   maxClients?: number
   /** Called when a client completes handshake. */
-  onClientConnected?: (info: { clientId: string; webContentsId: number | null; workspaceId: string | null; capabilities: string[] }) => void
+  onClientConnected?: (info: ConnectedClientInfo) => void
   /** Called when a client disconnects. */
   onClientDisconnected?: (clientId: string) => void
   /**
@@ -136,8 +201,9 @@ export class WsRpcServer implements RpcServer {
   private readonly host: string
   private readonly requestedPort: number
   private readonly requireAuth: boolean
-  private readonly validateToken: ((token: string) => Promise<boolean>) | null
-  private readonly validateSessionCookie: ((cookieHeader: string | null) => Promise<boolean>) | null
+  private readonly validateToken: ((token: string) => Promise<AuthenticationResult>) | null
+  private readonly validateSessionCookie: ((cookieHeader: string | null) => Promise<AuthenticationResult>) | null
+  private readonly requireAuthoritativePrincipal: boolean
   private readonly serverId: string
   private readonly tlsOptions: WsRpcTlsOptions | null
   private readonly serverVersion: string
@@ -152,6 +218,7 @@ export class WsRpcServer implements RpcServer {
     this.requireAuth = opts?.requireAuth ?? false
     this.validateToken = opts?.validateToken ?? null
     this.validateSessionCookie = opts?.validateSessionCookie ?? null
+    this.requireAuthoritativePrincipal = opts?.requireAuthoritativePrincipal ?? false
     this.serverId = opts?.serverId ?? 'local'
     this.serverVersion = opts?.serverVersion ?? ''
     this.tlsOptions = opts?.tls ?? null
@@ -426,27 +493,56 @@ export class WsRpcServer implements RpcServer {
           return
         }
 
+        const requestedWorkspaceId = envelope.workspaceId ?? null
+        const requestedCapabilities = envelope.clientCapabilities ?? []
+        let principal = localPrincipal()
+
         // Auth check — bearer token OR session cookie (web UI)
         if (this.requireAuth) {
-          let authenticated = false
+          let authenticationResult: AuthenticationResult = false
 
           // 1. Try bearer token (standard path)
           if (envelope.token && this.validateToken) {
-            authenticated = await this.validateToken(envelope.token)
+            try {
+              authenticationResult = await this.validateToken(envelope.token)
+            } catch (error) {
+              transportLog.warn('Bearer token validation failed', {
+                error: error instanceof Error ? error.message : String(error),
+              })
+            }
           }
 
           // 2. Fallback: try session cookie from HTTP upgrade request (web UI path)
-          if (!authenticated && this.validateSessionCookie && upgradeRequestCookie) {
-            authenticated = await this.validateSessionCookie(upgradeRequestCookie)
+          if (authenticationResult === false && this.validateSessionCookie && upgradeRequestCookie) {
+            try {
+              authenticationResult = await this.validateSessionCookie(upgradeRequestCookie)
+            } catch (error) {
+              transportLog.warn('Session cookie validation failed', {
+                error: error instanceof Error ? error.message : String(error),
+              })
+            }
           }
 
-          if (!authenticated) {
+          const authoritativePrincipal = parseAuthenticatedPrincipal(authenticationResult)
+          if (authoritativePrincipal) {
+            principal = authoritativePrincipal
+          } else if (authenticationResult === true && !this.requireAuthoritativePrincipal) {
+            principal = legacyAuthenticatedPrincipal(requestedWorkspaceId, requestedCapabilities)
+          } else {
             const reason = envelope.token ? 'Invalid token' : 'Token required'
             this.sendError(ws, envelope.id, 'AUTH_FAILED', reason)
             ws.close(4005, 'Auth failed')
             return
           }
+
+          if (!principalAllowsWorkspace(principal, requestedWorkspaceId)) {
+            this.sendError(ws, envelope.id, 'AUTH_FAILED', 'Workspace access denied')
+            ws.close(4005, 'Auth failed')
+            return
+          }
         }
+
+        const capabilities = authorizedCapabilities(principal, requestedCapabilities)
 
         // ── Reconnect attempt ──
         if (envelope.reconnectClientId && envelope.lastSeq != null) {
@@ -454,10 +550,12 @@ export class WsRpcServer implements RpcServer {
           if (entry) {
             const prevClient = entry.client
 
-            // Identity must match (workspace + webContentsId)
+            // Identity must match the server-authorized actor and scope generation.
             const identityMatch =
-              prevClient.workspaceId === (envelope.workspaceId ?? null) &&
-              prevClient.webContentsId === (envelope.webContentsId ?? null)
+              prevClient.workspaceId === requestedWorkspaceId &&
+              prevClient.webContentsId === (envelope.webContentsId ?? null) &&
+              prevClient.actorId === principal.actorId &&
+              prevClient.authorizationGeneration === principal.authorizationGeneration
 
             if (identityMatch) {
               // Valid reconnect — prepare client state but do NOT add to
@@ -471,6 +569,11 @@ export class WsRpcServer implements RpcServer {
               prevClient.ws = ws
               prevClient.alive = true
               prevClient.missedPongs = 0
+              prevClient.capabilities = capabilities
+              prevClient.roles = [...principal.roles]
+              prevClient.allowedWorkspaceIds = principal.allowedWorkspaceIds === '*'
+                ? '*'
+                : new Set(principal.allowedWorkspaceIds)
               handshakeCompleted = true
 
               // Determine replay vs stale using the per-client delivery sequence.
@@ -542,6 +645,12 @@ export class WsRpcServer implements RpcServer {
                 webContentsId: prevClient.webContentsId,
                 workspaceId: prevClient.workspaceId,
                 capabilities: [...prevClient.capabilities],
+                actorId: prevClient.actorId,
+                roles: [...prevClient.roles],
+                authorizationGeneration: prevClient.authorizationGeneration,
+                allowedWorkspaceIds: prevClient.allowedWorkspaceIds === '*'
+                  ? '*'
+                  : [...prevClient.allowedWorkspaceIds],
               })
               return
             }
@@ -559,9 +668,15 @@ export class WsRpcServer implements RpcServer {
         const client: ClientConnection = {
           id: clientId,
           ws,
-          workspaceId: envelope.workspaceId ?? null,
+          workspaceId: requestedWorkspaceId,
           webContentsId: envelope.webContentsId ?? null,
-          capabilities: new Set(envelope.clientCapabilities ?? []),
+          capabilities,
+          actorId: principal.actorId,
+          roles: [...principal.roles],
+          authorizationGeneration: principal.authorizationGeneration,
+          allowedWorkspaceIds: principal.allowedWorkspaceIds === '*'
+            ? '*'
+            : new Set(principal.allowedWorkspaceIds),
           missedPongs: 0,
           alive: true,
           eventBuffer: [],
@@ -593,6 +708,12 @@ export class WsRpcServer implements RpcServer {
           webContentsId: client.webContentsId,
           workspaceId: client.workspaceId,
           capabilities: [...client.capabilities],
+          actorId: client.actorId,
+          roles: [...client.roles],
+          authorizationGeneration: client.authorizationGeneration,
+          allowedWorkspaceIds: client.allowedWorkspaceIds === '*'
+            ? '*'
+            : [...client.allowedWorkspaceIds],
         })
 
         this.setupClientHandlers(ws, client)
@@ -657,6 +778,12 @@ export class WsRpcServer implements RpcServer {
       clientId: client.id,
       workspaceId: client.workspaceId,
       webContentsId: client.webContentsId,
+      actorId: client.actorId,
+      roles: client.roles,
+      authorizationGeneration: client.authorizationGeneration,
+      allowedWorkspaceIds: client.allowedWorkspaceIds === '*'
+        ? '*'
+        : [...client.allowedWorkspaceIds],
     }
 
     try {
@@ -816,6 +943,9 @@ export class WsRpcServer implements RpcServer {
   updateClientWorkspace(clientId: string, workspaceId: string): void {
     const client = this.clients.get(clientId)
     if (client) {
+      if (client.allowedWorkspaceIds !== '*' && !client.allowedWorkspaceIds.has(workspaceId)) {
+        throw new Error(`Workspace access denied for \"${workspaceId}\"`)
+      }
       client.workspaceId = workspaceId
     }
   }

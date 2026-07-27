@@ -2,10 +2,10 @@ import { describe, it, expect } from 'bun:test'
 import type { ElectronAPI } from '../../shared/types'
 import { CHANNEL_MAP } from '../channel-map'
 
-type AnyFn = (...args: any[]) => any
+type Callable = (...args: never[]) => unknown
 
 type FunctionKeys<T> = {
-  [K in keyof T]-?: Extract<T[K], AnyFn> extends never ? never : K
+  [K in keyof T]-?: Extract<T[K], Callable> extends never ? never : K
 }[keyof T] & string
 
 type BrowserPaneKeys = `browserPane.${FunctionKeys<ElectronAPI['browserPane']>}`
@@ -49,7 +49,7 @@ describe('CHANNEL_MAP runtime contract', () => {
       expect(entry.channel.length).toBeGreaterThan(0)
 
       if (entry.type === 'listener') {
-        expect((entry as any).transform).toBeUndefined()
+        expect('transform' in entry).toBe(false)
       }
     }
   })

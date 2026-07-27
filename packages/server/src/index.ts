@@ -173,7 +173,15 @@ const instance = await (async () => {
       validateSessionCookie: webuiEnabled && serverToken
         ? async (cookieHeader) => {
             const session = await validateSession(cookieHeader, serverToken)
-            return session !== null
+            return session === null
+              ? false
+              : {
+                  actorId: 'local-owner',
+                  allowedWorkspaceIds: '*' as const,
+                  capabilities: '*' as const,
+                  roles: ['owner'],
+                  authorizationGeneration: session.iat,
+                }
           }
         : undefined,
       // Embed the WebUI HTTP handler on the WS server's port

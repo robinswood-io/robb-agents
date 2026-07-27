@@ -70,7 +70,10 @@ import { ConnectionIcon } from '@/components/icons/ConnectionIcon'
 import { FreeFormInputContextBadge } from './FreeFormInputContextBadge'
 import { derivePickerMode } from './picker-mode'
 import type { FileAttachment, LoadedSource, LoadedSkill } from '../../../../shared/types'
-import type { PermissionMode } from '@craft-agent/shared/agent/modes'
+import {
+  permissionModeAfterPlanApproval,
+  type PermissionMode,
+} from '@craft-agent/shared/agent/modes'
 import { type ThinkingLevel, THINKING_LEVELS, getThinkingLevelNameKey } from '@craft-agent/shared/agent/thinking-levels'
 import { useEscapeInterrupt } from '@/context/EscapeInterruptContext'
 import { hasOpenOverlay } from '@/lib/overlay-detection'
@@ -663,7 +666,7 @@ export function FreeFormInput({
   }
 
   // Listen for craft:approve-plan events (used by ResponseCard's Accept Plan button)
-  // This disables safe mode AND submits the message in one action
+  // This leaves Explore mode while preserving per-operation approval.
   // Only process events for this session (sessionId must match)
   React.useEffect(() => {
     const handleApprovePlan = (e: CustomEvent<PlanApprovalEventDetail>) => {
@@ -679,10 +682,9 @@ export function FreeFormInput({
         draftInput,
       })
 
-      // Switch to allow-all (Auto) mode if in Explore mode (allow execution without prompts)
-      // Only switch if currently in safe mode - if user is in 'ask' mode, respect their choice
-      if (permissionMode === 'safe') {
-        onPermissionModeChange?.('allow-all')
+      const approvedMode = permissionModeAfterPlanApproval(permissionMode)
+      if (approvedMode !== permissionMode) {
+        onPermissionModeChange?.(approvedMode)
       }
 
       onSubmit(text, undefined)
@@ -706,9 +708,9 @@ export function FreeFormInput({
       const shouldIncludeDraft = e.detail?.includeDraftInput !== false
       const draftInputSnapshot = shouldIncludeDraft ? consumeInputDraftSnapshot() : ''
 
-      // Switch to allow-all (Auto) mode if in Explore mode
-      if (permissionMode === 'safe') {
-        onPermissionModeChange?.('allow-all')
+      const approvedMode = permissionModeAfterPlanApproval(permissionMode)
+      if (approvedMode !== permissionMode) {
+        onPermissionModeChange?.(approvedMode)
       }
 
       // Persist the pending plan execution state BEFORE sending /compact.

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
-import { mkdtempSync, rmSync } from 'fs';
+import { appendFileSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 
@@ -17,6 +17,12 @@ import {
   writeNodeOutput,
   readNodeOutput,
   listTaskSlugs,
+  listTaskRunSlugs,
+  writeRunContextSnapshot,
+  readRunContextSnapshot,
+  writeRunSpecSnapshot,
+  readRunSpecSnapshot,
+  runDir,
   type RunLogEntry,
 } from './storage.ts';
 
@@ -330,6 +336,99 @@ describe('storage', () => {
     ];
     for (const e of entries) appendRunLog(root, 'demo', 'r1', e);
     expect(readRunLog(root, 'demo', 'r1')).toEqual(entries);
+  });
+
+  it('detects tampering in the checksummed run log', () => {
+    appendRunLog(root, 'demo', 'r1', {
+      t: '2026-06-01T00:00:00.000Z',
+      kind: 'run-started',
+      taskId: 'demo',
+      runId: 'r1',
+    });
+    appendRunLog(root, 'demo', 'r1', {
+      t: '2026-06-01T00:00:01.000Z',
+      kind: 'run-paused',
+    });
+
+    const path = join(runDir(root, 'demo', 'r1'), 'run-log.jsonl');
+    const lines = readFileSync(path, 'utf8').trimEnd().split('\n');
+    const first = JSON.parse(lines[0]!) as Record<string, unknown>;
+    first.kind = 'run-stopped';
+    lines[0] = JSON.stringify(first);
+    writeFileSync(path, `${lines.join('\n')}\n`, 'utf8');
+
+    expect(() => readRunLog(root, 'demo', 'r1')).toThrow('integrity');
+  });
+
+  it('recovers valid entries when only the final JSONL record is partial', () => {
+    const entry: RunLogEntry = {
+      t: '2026-06-01T00:00:00.000Z',
+      kind: 'run-started',
+      taskId: 'demo',
+      runId: 'r1',
+    };
+    appendRunLog(root, 'demo', 'r1', entry);
+    appendFileSync(join(runDir(root, 'demo', 'r1'), 'run-log.jsonl'), '{"t":"partial"', 'utf8');
+
+    expect(readRunLog(root, 'demo', 'r1')).toEqual([entry]);
+    const resumed: RunLogEntry = { t: '2026-06-01T00:00:01.000Z', kind: 'run-paused' };
+    appendRunLog(root, 'demo', 'r1', resumed);
+    expect(readRunLog(root, 'demo', 'r1')).toEqual([entry, resumed]);
+  });
+
+  it('recovers an orphaned run-log lock left by a crashed writer', () => {
+    const first: RunLogEntry = {
+      t: '2026-06-01T00:00:00.000Z',
+      kind: 'run-started',
+      taskId: 'demo',
+      runId: 'r1',
+    };
+    appendRunLog(root, 'demo', 'r1', first);
+    const lockPath = join(runDir(root, 'demo', 'r1'), 'run-log.jsonl.lock');
+    writeFileSync(lockPath, JSON.stringify({ pid: 99_999_999, createdAt: '2026-06-01T00:00:00.000Z' }), 'utf8');
+
+    const resumed: RunLogEntry = { t: '2026-06-01T00:00:01.000Z', kind: 'run-resumed' };
+    appendRunLog(root, 'demo', 'r1', resumed);
+
+    expect(readRunLog(root, 'demo', 'r1')).toEqual([first, resumed]);
+  });
+
+  it('keeps a run spec snapshot immutable once created', () => {
+    const original = parsed();
+    writeRunSpecSnapshot(root, 'demo', 'r1', original);
+    const edited = { ...original, title: 'Edited after start' };
+
+    expect(() => writeRunSpecSnapshot(root, 'demo', 'r1', edited)).toThrow('immutable');
+    expect(readRunSpecSnapshot(root, 'demo', 'r1')).toEqual(original);
+  });
+
+  it('keeps JSON-safe run parameters immutable for exact recovery', () => {
+    const context = { params: { env: 'prod', limit: 3, flags: ['safe'] }, verifyOnComplete: false };
+    writeRunContextSnapshot(root, 'demo', 'r1', context);
+
+    expect(readRunContextSnapshot(root, 'demo', 'r1')).toEqual(context);
+    expect(() => writeRunContextSnapshot(root, 'demo', 'r1', {
+      params: { env: 'staging' },
+      verifyOnComplete: false,
+    })).toThrow('immutable');
+    expect(() => writeRunContextSnapshot(root, 'demo', 'r2', {
+      params: { invalid: undefined },
+      verifyOnComplete: true,
+    })).toThrow('corrupt');
+  });
+
+  it('discovers retained run directories after task.yaml removal', () => {
+    saveTaskSpec(root, parsed());
+    appendRunLog(root, 'demo', 'r1', {
+      t: '2026-06-01T00:00:00.000Z',
+      kind: 'run-started',
+      taskId: 'demo',
+      runId: 'r1',
+    });
+    rmSync(join(root, 'tasks', 'demo', 'task.yaml'));
+
+    expect(listTaskSlugs(root)).toEqual([]);
+    expect(listTaskRunSlugs(root)).toEqual(['demo']);
   });
 
   it('writes and reads per-node output', () => {

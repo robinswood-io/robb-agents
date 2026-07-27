@@ -13,4 +13,5 @@ export type {
   RunSnapshot,
   RunStatus,
   NodeRunStatus,
+  TaskExecutionGuardContext,
 } from './TaskRunner';

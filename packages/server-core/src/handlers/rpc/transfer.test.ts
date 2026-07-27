@@ -42,6 +42,10 @@ function ctx(clientId: string): RequestContext {
     clientId,
     workspaceId: 'ws-1',
     webContentsId: 1,
+    actorId: 'test-owner',
+    roles: ['owner'],
+    authorizationGeneration: 0,
+    allowedWorkspaceIds: ['ws-1'],
   }
 }
 

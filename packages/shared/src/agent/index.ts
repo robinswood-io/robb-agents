@@ -2,6 +2,7 @@
 export * from './claude-agent.ts';
 export * from './conversation-summary.ts';
 export * from './autonomy-decision.ts';
+export * from './failure-taxonomy.ts';
 
 // Export PiAgent for direct use
 export { PiAgent, PiBackend } from './pi-agent.ts';
@@ -46,6 +47,7 @@ export {
   subscribeModeChanges,
   PERMISSION_MODE_ORDER,
   PERMISSION_MODE_CONFIG,
+  permissionModeAfterPlanApproval,
   type PermissionMode,
   getModeState,
   hydratePreviousPermissionMode,

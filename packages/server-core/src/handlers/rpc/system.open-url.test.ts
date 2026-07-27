@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 import { RPC_CHANNELS } from '@craft-agent/shared/protocol'
+import type { PushTarget } from '@craft-agent/shared/protocol'
 import { CLIENT_OPEN_EXTERNAL } from '@craft-agent/server-core/transport'
 import type { RpcServer, HandlerFn, RequestContext } from '@craft-agent/server-core/transport'
 import type { HandlerDeps } from '../handler-deps'
@@ -7,8 +8,8 @@ import { registerSystemCoreHandlers } from './system'
 
 function createTestHarness(overrides?: { workspaceId?: string | null }) {
   const handlers = new Map<string, HandlerFn>()
-  const invokeClientCalls: Array<{ clientId: string; channel: string; args: any[] }> = []
-  const pushCalls: Array<{ channel: string; target: any; args: any[] }> = []
+  const invokeClientCalls: Array<{ clientId: string; channel: string; args: unknown[] }> = []
+  const pushCalls: Array<{ channel: string; target: PushTarget; args: unknown[] }> = []
 
   const server: RpcServer = {
     handle(channel, handler) {
@@ -58,6 +59,10 @@ function createTestHarness(overrides?: { workspaceId?: string | null }) {
     clientId: 'client-1',
     workspaceId: overrides?.workspaceId ?? 'ws-1',
     webContentsId: 101,
+    actorId: 'test-owner',
+    roles: ['owner'],
+    authorizationGeneration: 0,
+    allowedWorkspaceIds: ['ws-1'],
   }
 
   return { openUrl, ctx, invokeClientCalls, pushCalls }

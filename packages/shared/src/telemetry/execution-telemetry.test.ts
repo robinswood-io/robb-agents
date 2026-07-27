@@ -1,9 +1,13 @@
 import { describe, expect, it } from 'bun:test'
+import { mkdtemp, readFile, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import type { CostTelemetryEvent, ToolTelemetryEvent } from '@craft-agent/core/types'
 import {
   buildOtlpPayloads,
   DisabledTelemetrySink,
   OtlpHttpTelemetrySink,
+  type GenerationTelemetryEvent,
   type OtlpTelemetryConfig,
   type TelemetryFetch,
   resolveOtlpTelemetryConfig,
@@ -84,6 +88,61 @@ describe('buildOtlpPayloads', () => {
     expect(serialized).toContain('2026-07-23')
     expect(serialized).toContain('robb.cost.estimated')
   })
+
+  it('builds an explicit run/session/turn/generation/tool trace hierarchy', () => {
+    const generationEvent: GenerationTelemetryEvent = {
+      schemaVersion: 1,
+      eventId: 'generation-completed-1',
+      timestamp: 1_753_286_400_000,
+      name: 'generation.completed',
+      correlation: {
+        workspaceId: 'workspace-1',
+        runId: 'run-1',
+        sessionId: 'session-1',
+        turnId: 'turn-1',
+        generationId: 'generation-1',
+        traceId: '0123456789abcdef0123456789abcdef',
+        spanId: '1111111111111111',
+        parentSpanId: '2222222222222222',
+      },
+      providerType: 'openai',
+      model: 'gpt-test',
+      outcome: 'success',
+      durationMs: 120,
+      inputTokens: 100,
+      outputTokens: 40,
+      cachedInputTokens: 30,
+      reasoningTokens: 10,
+      cacheHit: true,
+    }
+    const serialized = JSON.stringify(buildOtlpPayloads(generationEvent, config))
+
+    expect(serialized).toContain('"traceId":"0123456789abcdef0123456789abcdef"')
+    expect(serialized).toContain('"spanId":"1111111111111111"')
+    expect(serialized).toContain('"parentSpanId":"2222222222222222"')
+    expect(serialized).toContain('gen_ai.client.token.usage')
+    expect(serialized).toContain('cache_read')
+    expect(serialized).toContain('reasoning')
+    expect(serialized).toContain('robb.generation.cache_hit')
+  })
+
+  it('infers a tool parent from generation correlation without serializing payload data', () => {
+    const event = {
+      ...toolEvent,
+      correlation: {
+        ...toolEvent.correlation,
+        runId: 'run-1',
+        generationId: 'generation-1',
+      },
+      prompt: 'private prompt',
+      toolInput: { password: 'private-password' },
+    }
+    const serialized = JSON.stringify(buildOtlpPayloads(event, config))
+
+    expect(serialized).toContain('parentSpanId')
+    expect(serialized).not.toContain('private prompt')
+    expect(serialized).not.toContain('private-password')
+  })
 })
 
 describe('telemetry sinks', () => {
@@ -115,6 +174,104 @@ describe('telemetry sinks', () => {
       'https://collector.example.test/v1/traces',
     ])
   })
+
+  it('batches multiple events into one request per signal', async () => {
+    const bodies: string[] = []
+    const fetchFn: TelemetryFetch = async (_input, init) => {
+      bodies.push(String(init?.body))
+      return new Response(null, { status: 200 })
+    }
+    const sink = new OtlpHttpTelemetrySink({
+      ...config,
+      batch: {
+        enabled: true,
+        maxBatchSize: 2,
+        flushIntervalMs: 60_000,
+        maxRetries: 0,
+      },
+    }, fetchFn)
+
+    await sink.emit(toolEvent)
+    expect(bodies).toHaveLength(0)
+    await sink.emit({
+      ...toolEvent,
+      eventId: 'event-2',
+      timestamp: toolEvent.timestamp + 1,
+    })
+
+    expect(bodies).toHaveLength(3)
+    expect(bodies.join(' ')).toContain('event-1')
+    expect(bodies.join(' ')).toContain('event-2')
+    expect(sink.getStats()).toMatchObject({ queued: 0, exported: 2 })
+    await sink.shutdown()
+  })
+
+  it('retries failed exports with bounded exponential backoff', async () => {
+    let calls = 0
+    const fetchFn: TelemetryFetch = async () => {
+      calls += 1
+      return new Response(null, { status: calls <= 3 ? 503 : 200 })
+    }
+    const sink = new OtlpHttpTelemetrySink({
+      ...config,
+      batch: {
+        enabled: false,
+        maxRetries: 1,
+        retryBaseMs: 1,
+      },
+    }, fetchFn)
+
+    await sink.emit(toolEvent)
+
+    expect(calls).toBe(6)
+    expect(sink.getStats()).toMatchObject({
+      exported: 1,
+      exportFailures: 1,
+    })
+  })
+
+  it('spools whitelisted payloads under backpressure and replays them', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'robb-telemetry-'))
+    const spoolPath = join(directory, 'otlp.jsonl')
+    const urls: string[] = []
+    const fetchFn: TelemetryFetch = async (input) => {
+      urls.push(String(input))
+      return new Response(null, { status: 200 })
+    }
+    const sink = new OtlpHttpTelemetrySink({
+      ...config,
+      batch: {
+        enabled: true,
+        maxBatchSize: 100,
+        flushIntervalMs: 60_000,
+        maxQueueSize: 1,
+        maxRetries: 0,
+        spoolPath,
+      },
+    }, fetchFn)
+    try {
+      await sink.emit(toolEvent)
+      const runtimeEvent: ToolTelemetryEvent & { secretSentinel: string } = {
+        ...toolEvent,
+        eventId: 'event-spooled',
+        secretSentinel: 'must-not-be-spooled',
+      }
+      await sink.emit(runtimeEvent)
+
+      const spooled = await readFile(spoolPath, 'utf8')
+      expect(spooled).toContain('event-spooled')
+      expect(spooled).not.toContain('must-not-be-spooled')
+      expect(sink.getStats()).toMatchObject({ queued: 1, spooled: 1 })
+
+      await sink.flush()
+      expect(urls).toHaveLength(6)
+      expect(await readFile(spoolPath, 'utf8')).toBe('')
+      expect(sink.getStats()).toMatchObject({ queued: 0, exported: 2 })
+    } finally {
+      await sink.shutdown()
+      await rm(directory, { recursive: true, force: true })
+    }
+  })
 })
 
 describe('resolveOtlpTelemetryConfig', () => {
@@ -134,6 +291,15 @@ describe('resolveOtlpTelemetryConfig', () => {
       serviceVersion: '1.2.3',
       headers: { authorization: 'Bearer test' },
       signals: { logs: true, traces: false, metrics: true },
+      batch: {
+        enabled: true,
+        maxBatchSize: 32,
+        flushIntervalMs: 1_000,
+        maxQueueSize: 512,
+        maxRetries: 3,
+        retryBaseMs: 250,
+        maxSpoolBytes: 5 * 1024 * 1024,
+      },
     })
     expect(resolveOtlpTelemetryConfig(environment, 'workspace-3').enabled).toBe(false)
   })

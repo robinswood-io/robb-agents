@@ -139,13 +139,17 @@ export const SOURCE_CREDENTIAL_TYPES = [
   'source_basic',
 ] as const;
 
+type SourceCredentialType = (typeof SOURCE_CREDENTIAL_TYPES)[number];
+
 /** Messaging credential types */
 const MESSAGING_CREDENTIAL_TYPES = [
   'messaging_bearer',
 ] as const;
 
+type MessagingCredentialType = (typeof MESSAGING_CREDENTIAL_TYPES)[number];
+
 /** Check if type is a messaging credential */
-function isMessagingCredential(type: CredentialType): boolean {
+function isMessagingCredential(type: CredentialType): type is MessagingCredentialType {
   return (MESSAGING_CREDENTIAL_TYPES as readonly string[]).includes(type);
 }
 
@@ -157,53 +161,69 @@ const LLM_CREDENTIAL_TYPES = [
   'llm_service_account',
 ] as const;
 
+type LlmCredentialType = (typeof LLM_CREDENTIAL_TYPES)[number];
+
 /** Check if type is a source credential */
-function isSourceCredential(type: CredentialType): boolean {
+function isSourceCredential(type: CredentialType): type is SourceCredentialType {
   return (SOURCE_CREDENTIAL_TYPES as readonly string[]).includes(type);
 }
 
 /** Check if type is an LLM connection credential */
-function isLlmCredential(type: CredentialType): boolean {
+function isLlmCredential(type: CredentialType): type is LlmCredentialType {
   return (LLM_CREDENTIAL_TYPES as readonly string[]).includes(type);
 }
 
 /** Convert CredentialId to credential store account string */
 export function credentialIdToAccount(id: CredentialId): string {
-  const parts: string[] = [id.type];
+  const assertComponent = (name: string, value: string | undefined): string => {
+    if (!value || value.includes(CREDENTIAL_DELIMITER)) {
+      throw new Error(`Invalid credential identifier: ${name} is required and must not contain "${CREDENTIAL_DELIMITER}"`);
+    }
+    return value;
+  };
 
   // LLM connection-scoped format:
   // llm_api_key::{connectionSlug}
   // llm_oauth::{connectionSlug}
-  if (isLlmCredential(id.type) && id.connectionSlug) {
-    parts.push(id.connectionSlug);
-    return parts.join(CREDENTIAL_DELIMITER);
+  if (isLlmCredential(id.type)) {
+    return [id.type, assertComponent('connectionSlug', id.connectionSlug)].join(CREDENTIAL_DELIMITER);
   }
 
   // Workspace-scoped format (no source):
   // workspace_oauth::{workspaceId}
-  if (id.type === 'workspace_oauth' && id.workspaceId) {
-    parts.push(id.workspaceId);
-    return parts.join(CREDENTIAL_DELIMITER);
+  if (id.type === 'workspace_oauth') {
+    return [id.type, assertComponent('workspaceId', id.workspaceId)].join(CREDENTIAL_DELIMITER);
   }
 
   // Source-scoped format:
   // Source credentials: source_oauth::{workspaceId}::{sourceId}
-  if (isSourceCredential(id.type) && id.workspaceId && id.sourceId) {
-    parts.push(id.workspaceId);
-    parts.push(id.sourceId);
-    return parts.join(CREDENTIAL_DELIMITER);
+  if (isSourceCredential(id.type)) {
+    return [
+      id.type,
+      assertComponent('workspaceId', id.workspaceId),
+      assertComponent('sourceId', id.sourceId),
+    ].join(CREDENTIAL_DELIMITER);
   }
 
   // Messaging-scoped format:
   // messaging_bearer::{workspaceId}::{platform}
-  if (isMessagingCredential(id.type) && id.workspaceId && id.name) {
-    parts.push(id.workspaceId);
-    parts.push(id.name);
-    return parts.join(CREDENTIAL_DELIMITER);
+  if (isMessagingCredential(id.type)) {
+    return [
+      id.type,
+      assertComponent('workspaceId', id.workspaceId),
+      assertComponent('name', id.name),
+    ].join(CREDENTIAL_DELIMITER);
   }
 
-  parts.push('global');
-  return parts.join(CREDENTIAL_DELIMITER);
+  if (id.type === 'anthropic_api_key' || id.type === 'claude_oauth') {
+    if (id.connectionSlug || id.workspaceId || id.sourceId || id.name) {
+      throw new Error(`Invalid credential identifier: ${id.type} is global and cannot carry a scope`);
+    }
+    return [id.type, 'global'].join(CREDENTIAL_DELIMITER);
+  }
+
+  const exhaustiveType: never = id.type;
+  throw new Error(`Unsupported credential type: ${String(exhaustiveType)}`);
 }
 
 // ============================================================
@@ -249,25 +269,25 @@ export function accountToCredentialId(account: string): CredentialId | null {
   // llm_api_key::{connectionSlug}
   // llm_oauth::{connectionSlug}
   if (isLlmCredential(type) && parts.length === 2) {
-    return { type, connectionSlug: parts[1] };
+    return parts[1] ? { type, connectionSlug: parts[1] } : null;
   }
 
   // Workspace-scoped format (no source):
   // workspace_oauth::{workspaceId}
   if (type === 'workspace_oauth' && parts.length === 2) {
-    return { type, workspaceId: parts[1] };
+    return parts[1] ? { type, workspaceId: parts[1] } : null;
   }
 
   // Source-scoped format:
   // Source credentials: source_oauth::{workspaceId}::{sourceId}
   if (isSourceCredential(type) && parts.length === 3) {
-    return { type, workspaceId: parts[1], sourceId: parts[2] };
+    return parts[1] && parts[2] ? { type, workspaceId: parts[1], sourceId: parts[2] } : null;
   }
 
   // Messaging-scoped format:
   // messaging_bearer::{workspaceId}::{platform}
   if (isMessagingCredential(type) && parts.length === 3) {
-    return { type, workspaceId: parts[1], name: parts[2] };
+    return parts[1] && parts[2] ? { type, workspaceId: parts[1], name: parts[2] } : null;
   }
 
   if (parts.length === 2 && parts[1] === 'global') {

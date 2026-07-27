@@ -8,6 +8,28 @@ export type EvalCategory =
   | 'destructive-action'
   | 'provider-error';
 
+export type EvalJsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | EvalJsonValue[]
+  | { [key: string]: EvalJsonValue };
+
+export interface EvalTrajectoryExpectation {
+  requiredTools?: string[];
+  forbiddenTools?: string[];
+  maxSteps?: number;
+  requireSuccessfulTools?: boolean;
+}
+
+export interface EvalGradingSpec {
+  requiredTerms?: string[];
+  forbiddenTerms?: string[];
+  expectedState?: Record<string, EvalJsonValue>;
+  trajectory?: EvalTrajectoryExpectation;
+}
+
 export interface EvalCase {
   id: string;
   language: 'fr';
@@ -15,6 +37,23 @@ export interface EvalCase {
   prompt: string;
   expectedBehavior: string;
   requiredTool?: string;
+  grading?: EvalGradingSpec;
+}
+
+export type EvalGraderKind =
+  | 'llm'
+  | 'deterministic'
+  | 'state'
+  | 'trajectory'
+  | 'custom';
+
+export interface EvalGraderResult {
+  graderId: string;
+  kind: EvalGraderKind;
+  passed: boolean;
+  score: number;
+  required: boolean;
+  evidenceSummary: string;
 }
 
 export interface EvalCaseResult {
@@ -24,11 +63,18 @@ export interface EvalCaseResult {
   policyCompliant: boolean;
   factualityScore: number;
   latencyMs: number;
+  targetLatencyMs?: number;
+  judgeLatencyMs?: number;
   costUsd: number | null;
   humanInterventionRequired: boolean;
   toolSucceeded?: boolean;
   destructiveActionSafe?: boolean;
   providerErrorRecovered?: boolean;
+  repetition?: number;
+  deterministicCriteriaPassed?: boolean;
+  stateMatched?: boolean;
+  trajectorySucceeded?: boolean;
+  graderResults?: EvalGraderResult[];
   evidence: string[];
 }
 
@@ -57,15 +103,37 @@ export interface EvalThresholds {
 
 export interface EvalSummary {
   total: number;
+  uniqueCases: number;
+  averageRunsPerCase: number;
   passRate: number;
+  passRateConfidence95: EvalConfidenceInterval;
   toolSuccessRate: number;
   policyComplianceRate: number;
   factualityScore: number;
+  factualityConfidence95: EvalConfidenceInterval;
   p95LatencyMs: number;
   averageCostUsd: number;
   humanInterventionRate: number;
   destructiveActionSafetyRate: number;
   providerErrorRecoveryRate: number;
+}
+
+export interface EvalConfidenceInterval {
+  lower: number;
+  upper: number;
+  confidence: 0.95;
+  method: 'wilson' | 'normal-mean';
+}
+
+export interface EvalCaseAggregate {
+  caseId: string;
+  runs: number;
+  passRate: number;
+  passRateConfidence95: EvalConfidenceInterval;
+  factualityScore: number;
+  factualityConfidence95: EvalConfidenceInterval;
+  p95LatencyMs: number;
+  averageCostUsd: number;
 }
 
 export interface EvalReport {
@@ -78,6 +146,7 @@ export interface EvalReport {
   fingerprint: string;
   results: EvalCaseResult[];
   summary: EvalSummary;
+  aggregates: EvalCaseAggregate[];
 }
 
 export interface EvalGateResult {
@@ -101,6 +170,71 @@ function percentile95(values: number[]): number {
   return sorted[Math.min(sorted.length - 1, Math.ceil(sorted.length * 0.95) - 1)] ?? 0;
 }
 
+export function wilsonConfidenceInterval(
+  successes: number,
+  total: number,
+): EvalConfidenceInterval {
+  if (total <= 0) {
+    return {
+      lower: 0,
+      upper: 1,
+      confidence: 0.95,
+      method: 'wilson',
+    };
+  }
+  const boundedSuccesses = Math.min(total, Math.max(0, successes));
+  const proportion = boundedSuccesses / total;
+  const z = 1.959963984540054;
+  const denominator = 1 + ((z * z) / total);
+  const center = (proportion + ((z * z) / (2 * total))) / denominator;
+  const margin = (
+    z
+    * Math.sqrt(
+      (proportion * (1 - proportion) / total)
+      + ((z * z) / (4 * total * total)),
+    )
+  ) / denominator;
+  return {
+    lower: Math.max(0, center - margin),
+    upper: Math.min(1, center + margin),
+    confidence: 0.95,
+    method: 'wilson',
+  };
+}
+
+export function meanConfidenceInterval(
+  values: number[],
+): EvalConfidenceInterval {
+  if (values.length === 0) {
+    return {
+      lower: 0,
+      upper: 1,
+      confidence: 0.95,
+      method: 'normal-mean',
+    };
+  }
+  const mean = average(values);
+  if (values.length === 1) {
+    return {
+      lower: Math.max(0, mean),
+      upper: Math.min(1, mean),
+      confidence: 0.95,
+      method: 'normal-mean',
+    };
+  }
+  const variance = values.reduce(
+    (sum, value) => sum + ((value - mean) ** 2),
+    0,
+  ) / (values.length - 1);
+  const margin = 1.959963984540054 * Math.sqrt(variance / values.length);
+  return {
+    lower: Math.max(0, mean - margin),
+    upper: Math.min(1, mean + margin),
+    confidence: 0.95,
+    method: 'normal-mean',
+  };
+}
+
 export function evaluationFingerprint(versions: EvalRuntimeVersions): string {
   const connectors = Object.entries(versions.connectors)
     .sort(([left], [right]) => left.localeCompare(right))
@@ -120,18 +254,57 @@ export function summarizeEvalResults(results: EvalCaseResult[]): EvalSummary {
     result.providerErrorRecovered === undefined ? [] : [result.providerErrorRecovered],
   );
   const knownCosts = results.flatMap((result) => result.costUsd === null ? [] : [result.costUsd]);
+  const uniqueCases = new Set(results.map((result) => result.caseId)).size;
+  const passCount = results.filter((result) => result.passed).length;
+  const factualityScores = results.map((result) => result.factualityScore);
   return {
     total: results.length,
+    uniqueCases,
+    averageRunsPerCase: uniqueCases === 0 ? 0 : results.length / uniqueCases,
     passRate: rate(results.map((result) => result.passed)),
+    passRateConfidence95: wilsonConfidenceInterval(passCount, results.length),
     toolSuccessRate: rate(toolResults),
     policyComplianceRate: rate(results.map((result) => result.policyCompliant)),
-    factualityScore: average(results.map((result) => result.factualityScore)),
+    factualityScore: average(factualityScores),
+    factualityConfidence95: meanConfidenceInterval(factualityScores),
     p95LatencyMs: percentile95(results.map((result) => result.latencyMs)),
     averageCostUsd: average(knownCosts),
     humanInterventionRate: rate(results.map((result) => result.humanInterventionRequired)),
     destructiveActionSafetyRate: rate(destructiveResults),
     providerErrorRecoveryRate: rate(providerResults),
   };
+}
+
+export function aggregateEvalResults(results: EvalCaseResult[]): EvalCaseAggregate[] {
+  const grouped = new Map<string, EvalCaseResult[]>();
+  for (const result of results) {
+    const existing = grouped.get(result.caseId) ?? [];
+    existing.push(result);
+    grouped.set(result.caseId, existing);
+  }
+
+  return [...grouped.entries()]
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([caseId, caseResults]) => {
+      const passCount = caseResults.filter((result) => result.passed).length;
+      const factualityScores = caseResults.map((result) => result.factualityScore);
+      const knownCosts = caseResults.flatMap((result) =>
+        result.costUsd === null ? [] : [result.costUsd],
+      );
+      return {
+        caseId,
+        runs: caseResults.length,
+        passRate: rate(caseResults.map((result) => result.passed)),
+        passRateConfidence95: wilsonConfidenceInterval(
+          passCount,
+          caseResults.length,
+        ),
+        factualityScore: average(factualityScores),
+        factualityConfidence95: meanConfidenceInterval(factualityScores),
+        p95LatencyMs: percentile95(caseResults.map((result) => result.latencyMs)),
+        averageCostUsd: average(knownCosts),
+      };
+    });
 }
 
 export function createEvalReport(input: {
@@ -152,6 +325,7 @@ export function createEvalReport(input: {
     fingerprint: evaluationFingerprint(input.versions),
     results: input.results,
     summary: summarizeEvalResults(input.results),
+    aggregates: aggregateEvalResults(input.results),
   };
 }
 
@@ -168,7 +342,9 @@ export function evaluateEvalGate(
   const maximum = (name: string, value: number, threshold: number) => {
     if (value > threshold) failures.push(`${name} ${value.toFixed(4)} exceeds ${threshold.toFixed(4)}`);
   };
-  if (summary.total < thresholds.minCases) failures.push(`cases ${summary.total} is below ${thresholds.minCases}`);
+  if (summary.uniqueCases < thresholds.minCases) {
+    failures.push(`cases ${summary.uniqueCases} is below ${thresholds.minCases}`);
+  }
   minimum('passRate', summary.passRate, thresholds.minPassRate);
   minimum('toolSuccessRate', summary.toolSuccessRate, thresholds.minToolSuccessRate);
   minimum('policyComplianceRate', summary.policyComplianceRate, thresholds.minPolicyComplianceRate);
@@ -221,6 +397,8 @@ export function exportEvalReportMarkdown(gate: EvalGateResult): string {
     '## Scores',
     '',
     `- Pass rate: ${(summary.passRate * 100).toFixed(1)}%`,
+    `- Pass rate 95% CI: ${(summary.passRateConfidence95.lower * 100).toFixed(1)}–${(summary.passRateConfidence95.upper * 100).toFixed(1)}%`,
+    `- Cases / runs: ${summary.uniqueCases} / ${summary.total}`,
     `- Tool success: ${(summary.toolSuccessRate * 100).toFixed(1)}%`,
     `- Policy compliance: ${(summary.policyComplianceRate * 100).toFixed(1)}%`,
     `- Factuality: ${(summary.factualityScore * 100).toFixed(1)}%`,

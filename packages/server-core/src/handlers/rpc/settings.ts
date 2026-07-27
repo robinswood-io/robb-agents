@@ -7,7 +7,11 @@ import { isValidThinkingLevel, normalizeThinkingLevel, THINKING_LEVEL_IDS } from
 
 const VALID_THINKING_LEVELS_LIST = THINKING_LEVEL_IDS.map(id => `'${id}'`).join(', ')
 import { getWorkspaceOrThrow } from '@craft-agent/server-core/handlers'
-import type { RpcServer } from '@craft-agent/server-core/transport'
+import {
+  assertRequestWorkspace,
+  type RequestContext,
+  type RpcServer,
+} from '@craft-agent/server-core/transport'
 import type { HandlerDeps } from '../handler-deps'
 import { requestClientOpenFileDialog } from '@craft-agent/server-core/transport'
 import { isValidWorkingDirectory } from '../../utils/path-validation'
@@ -24,6 +28,8 @@ import {
   parseWorkspaceGovernanceProfile,
   WorkspaceGovernanceStore,
   WorkspaceGovernanceProfileSchema,
+  assertSpaceAction,
+  type SpaceAction,
   type WorkspaceGovernanceMutable,
   type WorkspaceGovernanceProfile,
 } from '@craft-agent/shared/governance'
@@ -108,6 +114,29 @@ export const HANDLED_CHANNELS = [
 ] as const
 
 export function registerSettingsHandlers(server: RpcServer, deps: HandlerDeps): void {
+  const authorizeWorkspaceAction = async (
+    context: RequestContext,
+    workspaceId: string,
+    action: SpaceAction,
+  ) => {
+    assertRequestWorkspace(context, workspaceId)
+    const workspace = getWorkspaceOrThrow(workspaceId)
+    const { loadWorkspaceConfig } = await import('@craft-agent/shared/workspaces')
+    const config = loadWorkspaceConfig(workspace.rootPath)
+    if (!config) throw new Error(`Failed to load workspace config: ${workspaceId}`)
+    const initialGovernance = config.governance
+      ? parseWorkspaceGovernanceProfile(config.governance)
+      : createDefaultWorkspaceGovernance({
+          workspaceId: config.id,
+          workspaceName: config.name,
+          createdAt: new Date(config.createdAt).toISOString(),
+        })
+    const governance = (await new WorkspaceGovernanceStore(workspace.rootPath)
+      .loadOrCreate(initialGovernance)).profile
+    assertSpaceAction(governance.space, context.actorId, action)
+    return workspace
+  }
+
   const remoteSupervisionContext = async (workspaceId: string) => {
     const workspace = getWorkspaceOrThrow(workspaceId)
     const { loadWorkspaceConfig, saveWorkspaceConfig } = await import('@craft-agent/shared/workspaces')
@@ -191,7 +220,8 @@ export function registerSettingsHandlers(server: RpcServer, deps: HandlerDeps): 
   // ============================================================
 
   // Get workspace settings (model, permission mode, working directory, credential strategy)
-  server.handle(RPC_CHANNELS.workspace.SETTINGS_GET, async (_ctx, workspaceId: string) => {
+  server.handle(RPC_CHANNELS.workspace.SETTINGS_GET, async (ctx, workspaceId: string) => {
+    await authorizeWorkspaceAction(ctx, workspaceId, 'policy.read')
     const workspace = getWorkspaceByNameOrId(workspaceId)
     if (!workspace) {
       deps.platform.logger.error(`Workspace not found: ${workspaceId}`)
@@ -237,12 +267,10 @@ export function registerSettingsHandlers(server: RpcServer, deps: HandlerDeps): 
 
   server.handle(
     RPC_CHANNELS.workspace.GOVERNANCE_UPDATE,
-    async (_ctx, workspaceId: string, request: WorkspaceGovernanceUpdateRequest) => {
+    async (ctx, workspaceId: string, request: WorkspaceGovernanceUpdateRequest) => {
+      await authorizeWorkspaceAction(ctx, workspaceId, 'policy.update')
       if (!Number.isInteger(request?.expectedRevision) || request.expectedRevision < 0) {
         throw new Error('Governance update requires a non-negative expected revision')
-      }
-      if (!request.actorId?.trim()) {
-        throw new Error('Governance update requires an actor identifier')
       }
       const submittedProfile = WorkspaceGovernanceProfileSchema.parse(request.profile)
       const workspace = getWorkspaceOrThrow(workspaceId)
@@ -260,7 +288,7 @@ export function registerSettingsHandlers(server: RpcServer, deps: HandlerDeps): 
       await store.loadOrCreate(initialGovernance)
       const updated = await store.update(
         request.expectedRevision,
-        request.actorId.trim(),
+        ctx.actorId,
         governanceMutableFromProfile(submittedProfile),
       )
       config.governance = updated.profile
@@ -276,7 +304,8 @@ export function registerSettingsHandlers(server: RpcServer, deps: HandlerDeps): 
 
   server.handle(
     RPC_CHANNELS.workspace.REMOTE_SUPERVISION_GRANT,
-    async (_ctx, workspaceId: string, request: RemoteSupervisionGrantRequest) => {
+    async (ctx, workspaceId: string, request: RemoteSupervisionGrantRequest) => {
+      await authorizeWorkspaceAction(ctx, workspaceId, 'policy.update')
       if (!request || !Array.isArray(request.fields) || !Array.isArray(request.actions)) {
         throw new Error('Remote supervision consent requires fields and actions')
       }
@@ -299,7 +328,8 @@ export function registerSettingsHandlers(server: RpcServer, deps: HandlerDeps): 
 
   server.handle(
     RPC_CHANNELS.workspace.REMOTE_SUPERVISION_REVOKE,
-    async (_ctx, workspaceId: string, request: RemoteSupervisionRevokeRequest) => {
+    async (ctx, workspaceId: string, request: RemoteSupervisionRevokeRequest) => {
+      await authorizeWorkspaceAction(ctx, workspaceId, 'policy.update')
       if (!request?.reason?.trim()) throw new Error('Remote supervision revocation reason is required')
       const { service, identity } = await remoteSupervisionContext(workspaceId)
       return service.revoke(identity, request.reason.trim())
@@ -308,7 +338,8 @@ export function registerSettingsHandlers(server: RpcServer, deps: HandlerDeps): 
 
   // Explain the current persisted policy without starting a provider, checking a
   // credential, or writing any workspace/session state.
-  server.handle(RPC_CHANNELS.workspace.ROUTING_SIMULATE, async (_ctx, workspaceId: string, context: RoutingPolicyContext = {}) => {
+  server.handle(RPC_CHANNELS.workspace.ROUTING_SIMULATE, async (ctx, workspaceId: string, context: RoutingPolicyContext = {}) => {
+    await authorizeWorkspaceAction(ctx, workspaceId, 'policy.read')
     const workspace = getWorkspaceOrThrow(workspaceId)
     const { loadWorkspaceConfig } = await import('@craft-agent/shared/workspaces')
     const config = loadWorkspaceConfig(workspace.rootPath)
@@ -331,14 +362,15 @@ export function registerSettingsHandlers(server: RpcServer, deps: HandlerDeps): 
   })
 
   // Update a workspace setting
-  server.handle(RPC_CHANNELS.workspace.SETTINGS_UPDATE, async (_ctx, workspaceId: string, key: string, value: unknown) => {
+  server.handle(RPC_CHANNELS.workspace.SETTINGS_UPDATE, async (ctx, workspaceId: string, key: string, value: unknown) => {
+    await authorizeWorkspaceAction(ctx, workspaceId, 'policy.update')
     const workspace = getWorkspaceOrThrow(workspaceId)
     const normalizedValue = key === 'workingDirectory' && typeof value === 'string'
       ? value.trim()
       : value
 
     // Validate key is a known workspace setting
-    const validKeys = ['name', 'model', 'enabledSourceSlugs', 'permissionMode', 'cyclablePermissionModes', 'thinkingLevel', 'workingDirectory', 'localMcpEnabled', 'defaultLlmConnection', 'routingPolicy', 'governance']
+    const validKeys = ['name', 'model', 'enabledSourceSlugs', 'permissionMode', 'cyclablePermissionModes', 'thinkingLevel', 'workingDirectory', 'localMcpEnabled', 'defaultLlmConnection', 'routingPolicy']
     if (!validKeys.includes(key)) {
       throw new Error(`Invalid workspace setting key: ${key}. Valid keys: ${validKeys.join(', ')}`)
     }

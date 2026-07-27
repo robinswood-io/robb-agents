@@ -1,4 +1,8 @@
 import type { HumanEscalationReason } from '@craft-agent/core/types'
+import {
+  classifyAgentFailure,
+  type AgentFailureSignal,
+} from './failure-taxonomy.ts'
 
 export type AutonomyDecision =
   | { kind: 'fallback_browser' }
@@ -10,6 +14,10 @@ export interface AutonomyDecisionInput {
   result: string
   browserEnabled: boolean
   fallbackAlreadyAttempted: boolean
+  /** Structured provider/MCP fields. Prefer these over parsing result text. */
+  errorCode?: string
+  httpStatus?: number
+  retryAfterMs?: number
 }
 
 /**
@@ -17,17 +25,31 @@ export interface AutonomyDecisionInput {
  * This is deliberately pure: SessionManager owns persistence, prompts and UI.
  */
 export function decideAutonomyRecovery(input: AutonomyDecisionInput): AutonomyDecision {
-  const text = input.result.toLowerCase()
   const isBrowserTool = /browser_tool|browser:|\bbrowser\b/i.test(input.toolName)
+  const signal: AgentFailureSignal = {
+    toolName: input.toolName,
+    message: input.result,
+    ...(input.errorCode ? { code: input.errorCode } : {}),
+    ...(typeof input.httpStatus === 'number' ? { httpStatus: input.httpStatus } : {}),
+    ...(typeof input.retryAfterMs === 'number' ? { retryAfterMs: input.retryAfterMs } : {}),
+  }
+  const failure = classifyAgentFailure(signal)
 
-  if (/\boauth\b|\bmfa\b|multi.factor|two.factor/.test(text)) {
+  if (failure.failureClass === 'interactive-auth-required') {
     return { kind: 'escalate', reason: 'oauth_or_mfa' }
   }
-  if (/credential|api key|access token|token.*expired|unauthori[sz]ed/.test(text)) {
+  if (failure.failureClass === 'credential-required') {
     return { kind: 'escalate', reason: 'credential_required' }
   }
   if (isBrowserTool || !input.browserEnabled) {
     return { kind: 'escalate', reason: 'access_unavailable_after_fallback' }
+  }
+  if (
+    failure.recovery === 'fix-input'
+    || failure.recovery === 'request-authorization'
+    || failure.recovery === 'stop'
+  ) {
+    return { kind: 'none' }
   }
   if (input.fallbackAlreadyAttempted) return { kind: 'none' }
   return { kind: 'fallback_browser' }

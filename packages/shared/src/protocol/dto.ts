@@ -191,6 +191,10 @@ export interface RemoteSessionTransferPayload {
   labels?: string[]
   permissionMode?: PermissionMode
   summary: string
+  /** Remote summaries are data, never executable instructions. */
+  trust?: 'external-untrusted'
+  /** True when credential-shaped material was removed before summarization and transfer. */
+  secretLikeTextRedacted?: true
 }
 
 export interface ImportRemoteSessionTransferResult {
@@ -342,6 +346,26 @@ export interface TaskApprovalDecisionRequest {
   decision: 'approved' | 'rejected'
   actor: string
   comment?: string
+}
+
+export interface TaskKillSwitchSnapshotDto {
+  schemaVersion: 1
+  generation: number
+  global: boolean
+  workspaceIds: readonly string[]
+  missionIds: readonly string[]
+  connectorIds: readonly string[]
+  updatedAt?: string
+  updatedBy?: string
+  lastEventHash?: string
+}
+
+export interface TaskKillSwitchUpdateRequest {
+  scope: 'global' | 'workspace' | 'mission' | 'connector'
+  active: boolean
+  id?: string
+  reason: string
+  expectedGeneration?: number
 }
 
 export interface TaskGetResult {

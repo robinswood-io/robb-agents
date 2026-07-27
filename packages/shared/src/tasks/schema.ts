@@ -108,6 +108,7 @@ export const LoopSchema = z.object({
 
 export const RetrySchema = z.object({
   limit: z.number().int().min(0),
+  /** Exponential backoff values are milliseconds. */
   backoff: z
     .object({
       base: z.number().positive().optional(),
@@ -142,9 +143,10 @@ export const TaskExecutionSchema = z.object({
   network_access: z.enum(['disabled', 'allow-list']).default('disabled'),
   /** Exact hosts or `*.example.com` wildcard subdomains. */
   allowed_hosts: z.array(z.string().min(1)).default([]),
-  max_cpu_percent: z.number().positive().max(100).default(100),
-  max_memory_mb: z.number().int().positive().default(1024),
-  timeout_ms: z.number().int().positive().default(30 * 60 * 1000),
+  /** Optional host-enforced limits. Omitted values use runner defaults. */
+  max_cpu_percent: z.number().positive().max(100).optional(),
+  max_memory_mb: z.number().int().positive().optional(),
+  timeout_ms: z.number().int().positive().optional(),
 });
 
 /** Product-level mission contract layered over the executable task DAG. */

@@ -47,6 +47,10 @@ async function navigateToRoute(page, route) {
   });
 
   try {
+    if (new URL(page.url()).pathname !== '/') {
+      await page.goto(`${RENDERER_ORIGIN}/`);
+    }
+
     await page.evaluate(async () => {
       localStorage.setItem('craft-theme', JSON.stringify({
         mode: 'dark',
@@ -143,13 +147,15 @@ async function navigateToRoute(page, route) {
     await page.getByText(/Gouvernance|Governance/i).first().waitFor({ timeout: 20_000 });
 
     const title = await page.title();
-    const rootText = (await page.locator('#root').innerText()).trim();
-    const bodyText = await page.locator('body').innerText();
+    const governanceRootText = (await page.locator('#root').innerText()).trim();
+    const governanceBodyText = await page.locator('body').innerText();
     const brandVisible = title === 'Robb Agents'
-      || bodyText.includes('Robb Agents')
+      || governanceBodyText.includes('Robb Agents')
       || await page.locator('img[alt*="Robb"]').count() > 0;
-    const legacyBrandVisible = /\bCraft Agents?\b/i.test(bodyText);
-    const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
+    const legacyBrandVisible = /\bCraft Agents?\b/i.test(governanceBodyText);
+    const governanceOverflow = await page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
+    );
     const themeProbe = await page.evaluate(() => {
       const rootStyle = getComputedStyle(document.documentElement);
       return {
@@ -165,9 +171,28 @@ async function navigateToRoute(page, route) {
       && matchesColor(themeProbe.foreground, '#f5f5f7', 'rgb(245, 245, 247)')
       && matchesColor(themeProbe.accent, '#a855f7', 'rgb(168, 85, 247)');
 
+    await page.goto(`${RENDERER_ORIGIN}/playground.html`);
+    await page.evaluate(() => {
+      localStorage.setItem('playground-selected-component', 'session-item-search');
+      localStorage.setItem('playground-variants-sidebar-open', 'true');
+    });
+    await page.reload();
+    await page.getByText('SessionItem States', { exact: true }).first().waitFor({ timeout: 20_000 });
+    await page.getByRole('button', { name: /Hidden Sub-agents Running/i }).click();
+
+    const subagentSummary = page.getByTestId('session-subagent-summary');
+    await subagentSummary.waitFor({ timeout: 10_000 });
+    const subagentCount = await subagentSummary.getAttribute('data-subagent-count');
+    const runningSubagentCount = await subagentSummary.getAttribute('data-running-subagent-count');
+    const summaryIsNonInteractive = await subagentSummary.locator('button, a').count() === 0;
+    const childSessionRows = await page.locator('[data-parent-session-id]').count();
+    const playgroundOverflow = await page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
+    );
+
     const screenshotDir = '/tmp/playwright-screenshots';
     fs.mkdirSync(screenshotDir, { recursive: true });
-    const screenshotPath = path.join(screenshotDir, `${PROJECT}-${Date.now()}.png`);
+    const screenshotPath = path.join(screenshotDir, `${PROJECT}-subagents-${Date.now()}.png`);
     await page.screenshot({ path: screenshotPath, fullPage: true });
 
     const filteredConsoleErrors = unique(consoleErrors).filter((message) =>
@@ -178,12 +203,15 @@ async function navigateToRoute(page, route) {
 
     console.log(`Renderer: ${page.url()}`);
     console.log(`Title:    ${title}`);
-    console.log(`Root:     ${rootText.length > 0 ? 'visible and non-empty' : 'empty'}`);
+    console.log(`Root:     ${governanceRootText.length > 0 ? 'visible and non-empty' : 'empty'}`);
     console.log(`Brand:    ${brandVisible && !legacyBrandVisible ? 'Robb Agents' : 'invalid'}`);
     console.log(`Theme:    ${darkThemeApplied ? 'dark Robinswood with custom accent' : `invalid (${JSON.stringify(themeProbe)})`}`);
     console.log('Remote:   grant/revoke verified; final state local-only');
     console.log(`Updater:  ${devUpdaterHidden ? 'hidden in development' : 'unexpectedly visible'}`);
-    console.log(`Overflow: ${overflow ? 'horizontal overflow detected' : 'none'}`);
+    console.log(`Subagents: ${subagentCount} total, ${runningSubagentCount} running`);
+    console.log(`Summary:  ${summaryIsNonInteractive ? 'non-interactive' : 'unexpected interactive control'}`);
+    console.log(`Children: ${childSessionRows === 0 ? 'not directly navigable' : `${childSessionRows} exposed rows`}`);
+    console.log(`Overflow: ${governanceOverflow || playgroundOverflow ? 'horizontal overflow detected' : 'none'}`);
     console.log(`Console errors: ${filteredConsoleErrors.length}`);
     console.log(`Page errors: ${filteredPageErrors.length}`);
     console.log(`Failed requests: ${filteredFailedRequests.length}`);
@@ -194,12 +222,17 @@ async function navigateToRoute(page, route) {
     for (const error of filteredFailedRequests) console.log(`  request · ${error}`);
 
     const ok = title === 'Robb Agents'
-      && rootText.length > 0
+      && governanceRootText.length > 0
       && brandVisible
       && !legacyBrandVisible
       && darkThemeApplied
       && devUpdaterHidden
-      && !overflow
+      && subagentCount === '4'
+      && runningSubagentCount === '2'
+      && summaryIsNonInteractive
+      && childSessionRows === 0
+      && !governanceOverflow
+      && !playgroundOverflow
       && filteredConsoleErrors.length === 0
       && filteredPageErrors.length === 0
       && filteredFailedRequests.length === 0;

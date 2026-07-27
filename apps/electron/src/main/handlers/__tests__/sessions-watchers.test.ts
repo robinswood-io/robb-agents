@@ -4,18 +4,29 @@ import { join } from 'path'
 import { tmpdir } from 'os'
 import { RPC_CHANNELS } from '../../../shared/types'
 import { registerSessionsHandlers, cleanupSessionFileWatchForClient } from '@craft-agent/server-core/handlers/rpc'
-import type { RpcServer } from '@craft-agent/server-core/transport'
+import type { HandlerFn, RequestContext, RpcServer } from '@craft-agent/server-core/transport'
+import type { PushTarget } from '@craft-agent/shared/protocol'
 import type { HandlerDeps } from '../handler-deps'
-
-type HandlerFn = (ctx: { clientId: string }, ...args: any[]) => Promise<any> | any
 
 function wait(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
+function makeCtx(clientId: string): RequestContext {
+  return {
+    clientId,
+    workspaceId: 'ws-1',
+    webContentsId: null,
+    actorId: 'test-owner',
+    roles: ['owner'],
+    authorizationGeneration: 0,
+    allowedWorkspaceIds: ['ws-1'],
+  }
+}
+
 describe('sessions file watchers', () => {
   const handlers = new Map<string, HandlerFn>()
-  const pushed: Array<{ channel: string; target: any; args: any[] }> = []
+  const pushed: Array<{ channel: string; target: PushTarget; args: unknown[] }> = []
 
   let tempRoot = ''
   let sessionDirA = ''
@@ -33,7 +44,7 @@ describe('sessions file watchers', () => {
 
     const server: RpcServer = {
       handle(channel, handler) {
-        handlers.set(channel, handler as HandlerFn)
+        handlers.set(channel, handler)
       },
       push(channel, target, ...args) {
         pushed.push({ channel, target, args })
@@ -47,6 +58,11 @@ describe('sessions file watchers', () => {
 
     const deps: HandlerDeps = {
       sessionManager: {
+        getSession: async (sessionId: string) => (
+          sessionId === 'session-a' || sessionId === 'session-b'
+            ? { id: sessionId, workspaceId: 'ws-1' }
+            : undefined
+        ),
         getSessionPath: (sessionId: string) => {
           if (sessionId === 'session-a') return sessionDirA
           if (sessionId === 'session-b') return sessionDirB
@@ -97,8 +113,8 @@ describe('sessions file watchers', () => {
     expect(watch).toBeTruthy()
     expect(unwatch).toBeTruthy()
 
-    await watch!({ clientId: 'client-a' }, 'session-a')
-    await watch!({ clientId: 'client-b' }, 'session-b')
+    await watch!(makeCtx('client-a'), 'session-a')
+    await watch!(makeCtx('client-b'), 'session-b')
     await wait(50)
 
     writeFileSync(join(sessionDirA, 'a.txt'), `a-${Date.now()}`)
@@ -112,14 +128,14 @@ describe('sessions file watchers', () => {
     expect(bEvents.some((evt) => evt.channel === RPC_CHANNELS.sessions.FILES_CHANGED && evt.args[0] === 'session-b')).toBe(true)
 
     pushed.length = 0
-    await unwatch!({ clientId: 'client-a' })
+    await unwatch!(makeCtx('client-a'))
 
     writeFileSync(join(sessionDirA, 'a.txt'), `a2-${Date.now()}`)
     writeFileSync(join(sessionDirB, 'b.txt'), `b2-${Date.now()}`)
     await wait(300)
 
-    const aEventsAfter = pushed.filter((evt) => evt.target?.clientId === 'client-a')
-    const bEventsAfter = pushed.filter((evt) => evt.target?.clientId === 'client-b')
+    const aEventsAfter = pushed.filter((evt) => evt.target.to === 'client' && evt.target.clientId === 'client-a')
+    const bEventsAfter = pushed.filter((evt) => evt.target.to === 'client' && evt.target.clientId === 'client-b')
 
     expect(aEventsAfter.length).toBe(0)
     expect(bEventsAfter.some((evt) => evt.channel === RPC_CHANNELS.sessions.FILES_CHANGED && evt.args[0] === 'session-b')).toBe(true)
@@ -129,7 +145,7 @@ describe('sessions file watchers', () => {
     const watch = handlers.get(RPC_CHANNELS.sessions.WATCH_FILES)
     expect(watch).toBeTruthy()
 
-    await watch!({ clientId: 'client-a' }, 'session-a')
+    await watch!(makeCtx('client-a'), 'session-a')
     await wait(50)
 
     cleanupSessionFileWatchForClient('client-a')

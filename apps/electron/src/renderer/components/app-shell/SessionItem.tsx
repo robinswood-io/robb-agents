@@ -1,6 +1,7 @@
 import { formatDistanceToNowStrict } from "date-fns"
 import type { Locale } from "date-fns"
-import { Flag, ShieldAlert } from "lucide-react"
+import { Bot, Flag, ShieldAlert } from "lucide-react"
+import { useTranslation } from "react-i18next"
 import { useActionLabel } from "@/actions"
 import { cn } from "@/lib/utils"
 import { rendererPerf } from "@/lib/perf"
@@ -22,6 +23,7 @@ import type { SessionMeta } from "@/atoms/sessions"
 import { messagingBindingsBySessionAtom } from "@/atoms/messaging"
 import { useAtomValue } from "jotai"
 import { extractLabelId } from "@craft-agent/shared/labels"
+import type { SessionSubagentSummary } from "@/utils/session-subagent-summary"
 
 const PLATFORM_PILL: Record<'telegram' | 'whatsapp', { label: string; colorClass: string }> = {
   telegram: {
@@ -41,8 +43,8 @@ export interface SessionItemProps {
   isSelected: boolean
   isFirstInGroup: boolean
   isInMultiSelect: boolean
-  /** Visual nesting level in the sidebar tree. 0 = top-level chat. */
-  hierarchyDepth?: number
+  /** Aggregated descendants hidden from direct sidebar navigation. */
+  subagentSummary?: SessionSubagentSummary
   onSelect: () => void
   onToggleSelect?: () => void
   onRangeSelect?: () => void
@@ -54,16 +56,25 @@ export function SessionItem({
   isSelected,
   isFirstInGroup,
   isInMultiSelect,
-  hierarchyDepth = 0,
+  subagentSummary,
   onSelect,
   onToggleSelect,
   onRangeSelect,
 }: SessionItemProps) {
+  const { t } = useTranslation()
   const ctx = useSessionListContext()
   const { workspaces, isCompactMode } = useAppShellContext()
   const hasRemoteWorkspaces = workspaces?.some(w => w.remoteServer) ?? false
-  const isVisualChild = hierarchyDepth > 0
-  const childIndentPx = Math.min(hierarchyDepth, 3) * 18
+  const hasSubagents = (subagentSummary?.totalCount ?? 0) > 0
+  const hasRunningSubagents = (subagentSummary?.runningCount ?? 0) > 0
+  const subagentTooltip = subagentSummary
+    ? hasRunningSubagents
+      ? t('session.subagentsRunning', {
+        running: subagentSummary.runningCount,
+        count: subagentSummary.totalCount,
+      })
+      : t('session.subagentsSummary', { count: subagentSummary.totalCount })
+    : undefined
   const { hotkey: nextHotkey } = useActionLabel('chat.nextSearchMatch')
   const { hotkey: prevHotkey } = useActionLabel('chat.prevSearchMatch')
   const title = getSessionTitle(item)
@@ -123,16 +134,12 @@ export function SessionItem({
   return (
     <SessionProjectColorWrapper color={projectColor} treatment={projectColorTreatment}>
     <EntityRow
-      className={cn(
-        "session-item relative",
-        isVisualChild && "before:absolute before:left-[18px] before:top-0 before:bottom-0 before:w-px before:bg-border/60"
-      )}
+      className="session-item relative"
       dataAttributes={{
         'data-session-id': item.id,
-        'data-parent-session-id': item.parentSessionId,
       }}
       showSeparator={!isFirstInGroup}
-      separatorClassName={cn("pr-4", isVisualChild ? "pl-[56px]" : "pl-[38px]")}
+      separatorClassName="pr-4 pl-[38px]"
       isSelected={isSelected}
       isInMultiSelect={isInMultiSelect}
       // When a project stripe is drawn at the leading edge, suppress EntityRow's
@@ -165,14 +172,7 @@ export function SessionItem({
       isCompactMode={isCompactMode}
       buttonProps={{
         ...itemProps,
-        className: cn(
-          (itemProps as Record<string, unknown>)?.className as string | undefined,
-          isVisualChild && "border-l border-border/60 bg-foreground/[0.012]"
-        ),
-        style: {
-          ...((itemProps as { style?: React.CSSProperties }).style ?? {}),
-          ...(isVisualChild ? { marginLeft: childIndentPx } : {}),
-        },
+        className: (itemProps as Record<string, unknown>)?.className as string | undefined,
         onKeyDown: (e: React.KeyboardEvent) => {
           ;(itemProps as { onKeyDown: (event: React.KeyboardEvent) => void }).onKeyDown(e)
           ctx.onKeyDown(e, item)
@@ -232,8 +232,27 @@ export function SessionItem({
       titleClassName={cn("text-[13px]", item.isAsyncOperationOngoing && "animate-shimmer-text")}
       subtitle={previewText}
       titleSuffix={
-        (projectName || hasMessagingBinding) ? (
+        (hasSubagents || projectName || hasMessagingBinding) ? (
           <div className="flex items-center gap-1">
+            {hasSubagents && subagentSummary && (
+              <span
+                data-testid="session-subagent-summary"
+                data-subagent-count={subagentSummary.totalCount}
+                data-running-subagent-count={subagentSummary.runningCount}
+              >
+                <EntityListBadge
+                  colorClass={hasRunningSubagents
+                    ? "bg-info/10 text-info"
+                    : "bg-foreground/[0.06] text-foreground/55"}
+                  tooltip={subagentTooltip}
+                  className="gap-1 cursor-default"
+                >
+                  <Bot className="h-3 w-3" />
+                  <span className="tabular-nums">{subagentSummary.totalCount}</span>
+                  {hasRunningSubagents && <Spinner className="text-[8px]" />}
+                </EntityListBadge>
+              </span>
+            )}
             {projectName && (
               <span
                 className="text-[11px] text-foreground/40 whitespace-nowrap truncate max-w-[120px] opacity-0 group-hover:opacity-100 transition-opacity duration-150"

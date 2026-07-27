@@ -13,6 +13,7 @@
  * and intentionally left untouched; retiring it is a separate cleanup.
  */
 import { RPC_CHANNELS } from '@craft-agent/shared/protocol'
+import { join } from 'node:path'
 import type {
   TaskCreateRequest,
   TaskCreateResult,
@@ -26,10 +27,18 @@ import type {
   TaskResultNodeDto,
   TaskApprovalRequestDto,
   TaskApprovalDecisionRequest,
+  TaskKillSwitchSnapshotDto,
+  TaskKillSwitchUpdateRequest,
 } from '@craft-agent/shared/protocol'
-import { getWorkspaceByNameOrId } from '@craft-agent/shared/config'
+import { getWorkspaceByNameOrId, resolveConfigDir } from '@craft-agent/shared/config'
 import { loadWorkspaceConfig } from '@craft-agent/shared/workspaces'
-import { WorkspaceGovernanceProfileSchema } from '@craft-agent/shared/governance'
+import {
+  WorkspaceGovernanceProfileSchema,
+  assertSpaceAction,
+  createDefaultWorkspaceGovernance,
+  DurableKillSwitchRegistry,
+  type SpaceAction,
+} from '@craft-agent/shared/governance'
 import {
   parseTaskYaml,
   saveTaskSpec,
@@ -47,13 +56,72 @@ import {
   buildMissionControlSnapshot,
   planMissionReplay,
   exportMissionReportMarkdown,
+  authorizeWorkspacePath,
+  validateExecutionIsolationPolicy,
+  type GuardDecision,
 } from '@craft-agent/shared/tasks'
 import { createLogger } from '@craft-agent/shared/utils'
-import { pushTyped, type RpcServer } from '@craft-agent/server-core/transport'
+import {
+  assertRequestWorkspace,
+  pushTyped,
+  type RequestContext,
+  type RpcServer,
+} from '@craft-agent/server-core/transport'
 import type { HandlerDeps } from '../handler-deps'
-import { TaskRunner } from '../../tasks'
+import { TaskRunner, type TaskExecutionGuardContext } from '../../tasks'
 
 const tasksLog = createLogger('tasks-generate')
+
+/**
+ * Admission boundary for the capabilities the local SessionManager can
+ * actually enforce today.
+ *
+ * It deliberately rejects every profile the current SessionManager cannot
+ * enforce. Safe mode blocks most mutation tools, but it does not implement
+ * path-scoped reads or disabled egress (web/browser reads remain available).
+ * Admitting that profile would therefore treat a prompt preamble as a sandbox.
+ */
+export function createProductionTaskExecutionGuard(
+  hostWorkspaceRoot: string,
+): (context: TaskExecutionGuardContext) => GuardDecision {
+  return (context) => {
+    const policyDecision = validateExecutionIsolationPolicy(context.policy, hostWorkspaceRoot)
+    if (!policyDecision.allowed) return policyDecision
+
+    const workingDirectory = context.workingDirectory ?? context.policy.workspaceRoot
+    const pathDecision = authorizeWorkspacePath(
+      context.policy.workspaceRoot,
+      workingDirectory,
+      context.policy.allowedReadPaths,
+    )
+    if (!pathDecision.allowed) {
+      return { allowed: false, reason: `Working directory is not sandbox-authorized: ${pathDecision.reason}` }
+    }
+
+    if (context.effect !== 'read' || context.permissionMode !== 'safe' || context.policy.allowedWritePaths.length > 0) {
+      return {
+        allowed: false,
+        reason: 'Workspace mutation requested without an enforceable path-scoped write sandbox',
+      }
+    }
+    if (context.policy.networkAccess !== 'disabled' || context.policy.allowedHosts.length > 0) {
+      return {
+        allowed: false,
+        reason: 'Network access requested without an enforceable per-task egress proxy',
+      }
+    }
+    if (context.resourceLimitsExplicit) {
+      return {
+        allowed: false,
+        reason: 'CPU or memory isolation requested without an enforceable per-task OS resource sandbox',
+      }
+    }
+    return {
+      allowed: false,
+      reason: 'Path-scoped read and disabled-egress isolation require a per-task tool gateway or OS sandbox',
+    }
+  }
+}
 
 export const HANDLED_CHANNELS = [
   RPC_CHANNELS.tasks.VALIDATE,
@@ -65,6 +133,8 @@ export const HANDLED_CHANNELS = [
   RPC_CHANNELS.tasks.STOP,
   RPC_CHANNELS.tasks.LIST_APPROVALS,
   RPC_CHANNELS.tasks.RESOLVE_APPROVAL,
+  RPC_CHANNELS.tasks.GET_KILL_SWITCHES,
+  RPC_CHANNELS.tasks.SET_KILL_SWITCH,
   RPC_CHANNELS.tasks.GET,
   RPC_CHANNELS.tasks.LIST,
   RPC_CHANNELS.tasks.GET_RESULTS,
@@ -102,6 +172,9 @@ function extractYaml(text: string): string {
 export function registerTasksHandlers(server: RpcServer, deps: HandlerDeps): void {
   // One Conductor per workspace, created on demand. Holds active runs in memory.
   const runners = new Map<string, TaskRunner>()
+  const killSwitchRegistry = new DurableKillSwitchRegistry(
+    join(resolveConfigDir(), 'governance', 'kill-switches.jsonl'),
+  )
 
   function workspaceOrThrow(workspaceId: string) {
     const ws = getWorkspaceByNameOrId(workspaceId)
@@ -109,12 +182,52 @@ export function registerTasksHandlers(server: RpcServer, deps: HandlerDeps): voi
     return ws
   }
 
+  function authorizeTaskAction(
+    context: RequestContext,
+    workspaceId: string,
+    action: SpaceAction,
+  ) {
+    assertRequestWorkspace(context, workspaceId)
+    const workspace = workspaceOrThrow(workspaceId)
+    const config = loadWorkspaceConfig(workspace.rootPath)
+    if (!config) throw new Error(`Failed to load workspace config: ${workspaceId}`)
+    const governance = config.governance
+      ? WorkspaceGovernanceProfileSchema.parse(config.governance)
+      : createDefaultWorkspaceGovernance({
+          workspaceId: config.id,
+          workspaceName: config.name,
+          createdAt: new Date(config.createdAt).toISOString(),
+        })
+    assertSpaceAction(governance.space, context.actorId, action)
+    return workspace
+  }
+
   function runnerFor(workspaceId: string): TaskRunner {
     let runner = runners.get(workspaceId)
     if (!runner) {
       const ws = workspaceOrThrow(workspaceId)
-      runner = new TaskRunner({ host: deps.sessionManager, workspaceId: ws.id, workspaceRoot: ws.rootPath })
+      runner = new TaskRunner({
+        host: deps.sessionManager,
+        workspaceId: ws.id,
+        workspaceRoot: ws.rootPath,
+        getKillSwitch: () => killSwitchRegistry.taskSnapshot(),
+        executionGuard: createProductionTaskExecutionGuard(ws.rootPath),
+      })
       runners.set(workspaceId, runner)
+      try {
+        const recovered = runner.recoverNonTerminalRuns()
+        if (recovered.length > 0) {
+          tasksLog.info('recovered durable task runs', {
+            workspaceId: ws.id,
+            runs: recovered.map((snapshot) => `${snapshot.slug}:${snapshot.runId}:${snapshot.status}`),
+          })
+        }
+      } catch (err) {
+        tasksLog.error('durable task recovery failed closed', {
+          workspaceId: ws.id,
+          error: err instanceof Error ? err.message : String(err),
+        })
+      }
     }
     return runner
   }
@@ -125,8 +238,8 @@ export function registerTasksHandlers(server: RpcServer, deps: HandlerDeps): voi
   })
 
   // tasks:create — write task.yaml + create the orchestrator parent session.
-  server.handle(RPC_CHANNELS.tasks.CREATE, async (_ctx, workspaceId: string, req: TaskCreateRequest): Promise<TaskCreateResult> => {
-    const ws = workspaceOrThrow(workspaceId)
+  server.handle(RPC_CHANNELS.tasks.CREATE, async (ctx, workspaceId: string, req: TaskCreateRequest): Promise<TaskCreateResult> => {
+    const ws = authorizeTaskAction(ctx, workspaceId, 'playbook.update')
     const parsed = parseTaskYaml(req.yaml)
     const validation = toValidationDto(parsed)
     if (!parsed.valid || !parsed.spec) {
@@ -223,8 +336,8 @@ export function registerTasksHandlers(server: RpcServer, deps: HandlerDeps): voi
   // session is a hidden taskDraft (off the board) until adopted by tasks:create; the editor
   // discards an unadopted draft on close, and because drafts are hidden a give-up-early client
   // never leaves a visible orphan tile.
-  server.handle(RPC_CHANNELS.tasks.GENERATE, async (_ctx, workspaceId: string, req: TaskGenerateRequest): Promise<TaskGenerateAck> => {
-    workspaceOrThrow(workspaceId) // validate the workspace exists; generate no longer writes task.yaml
+  server.handle(RPC_CHANNELS.tasks.GENERATE, async (ctx, workspaceId: string, req: TaskGenerateRequest): Promise<TaskGenerateAck> => {
+    authorizeTaskAction(ctx, workspaceId, 'playbook.update')
     const orchestrator = await deps.sessionManager.createSession(workspaceId, {
       name: req.title?.trim() || 'New task',
       sessionStatus: 'todo',
@@ -341,7 +454,8 @@ export function registerTasksHandlers(server: RpcServer, deps: HandlerDeps): voi
   })
 
   // tasks:run — start a run.
-  server.handle(RPC_CHANNELS.tasks.RUN, async (_ctx, workspaceId: string, req: TaskRunRequest) => {
+  server.handle(RPC_CHANNELS.tasks.RUN, async (ctx, workspaceId: string, req: TaskRunRequest) => {
+    authorizeTaskAction(ctx, workspaceId, 'mission.run')
     return runnerFor(workspaceId).run(req.slug, {
       runId: req.runId,
       orchestratorSessionId: req.orchestratorSessionId,
@@ -349,42 +463,94 @@ export function registerTasksHandlers(server: RpcServer, deps: HandlerDeps): voi
     })
   })
 
-  server.handle(RPC_CHANNELS.tasks.PAUSE, async (_ctx, workspaceId: string, slug: string, runId: string) => {
+  server.handle(RPC_CHANNELS.tasks.PAUSE, async (ctx, workspaceId: string, slug: string, runId: string) => {
+    authorizeTaskAction(ctx, workspaceId, 'mission.cancel')
     runnerFor(workspaceId).pause(slug, runId)
   })
 
-  server.handle(RPC_CHANNELS.tasks.RESUME, async (_ctx, workspaceId: string, slug: string, runId: string) => {
+  server.handle(RPC_CHANNELS.tasks.RESUME, async (ctx, workspaceId: string, slug: string, runId: string) => {
+    authorizeTaskAction(ctx, workspaceId, 'mission.run')
     runnerFor(workspaceId).resume(slug, runId)
   })
 
-  server.handle(RPC_CHANNELS.tasks.STOP, async (_ctx, workspaceId: string, slug: string, runId: string) => {
+  server.handle(RPC_CHANNELS.tasks.STOP, async (ctx, workspaceId: string, slug: string, runId: string) => {
+    authorizeTaskAction(ctx, workspaceId, 'mission.cancel')
     await runnerFor(workspaceId).stop(slug, runId)
   })
 
   server.handle(
     RPC_CHANNELS.tasks.LIST_APPROVALS,
-    async (_ctx, workspaceId: string, slug?: string, runId?: string): Promise<TaskApprovalRequestDto[]> => {
+    async (ctx, workspaceId: string, slug?: string, runId?: string): Promise<TaskApprovalRequestDto[]> => {
+      authorizeTaskAction(ctx, workspaceId, 'mission.read')
       return runnerFor(workspaceId).listPendingApprovals(slug, runId)
     },
   )
 
   server.handle(
     RPC_CHANNELS.tasks.RESOLVE_APPROVAL,
-    async (_ctx, workspaceId: string, req: TaskApprovalDecisionRequest) => {
+    async (ctx, workspaceId: string, req: TaskApprovalDecisionRequest) => {
+      authorizeTaskAction(ctx, workspaceId, 'mission.approve')
       return runnerFor(workspaceId).resolveApproval(
         req.slug,
         req.runId,
         req.requestId,
         req.decision,
-        req.actor,
+        ctx.actorId,
         req.comment,
       )
     },
   )
 
+  server.handle(
+    RPC_CHANNELS.tasks.GET_KILL_SWITCHES,
+    async (ctx, workspaceId: string): Promise<TaskKillSwitchSnapshotDto> => {
+      authorizeTaskAction(ctx, workspaceId, 'mission.read')
+      return killSwitchRegistry.snapshot()
+    },
+  )
+
+  server.handle(
+    RPC_CHANNELS.tasks.SET_KILL_SWITCH,
+    async (
+      ctx,
+      workspaceId: string,
+      request: TaskKillSwitchUpdateRequest,
+    ): Promise<TaskKillSwitchSnapshotDto> => {
+      authorizeTaskAction(ctx, workspaceId, 'mission.kill-switch')
+      if (request.scope === 'workspace' && request.id !== workspaceId) {
+        throw new Error('Workspace kill switch must target the authenticated workspace')
+      }
+      if (request.scope === 'global' && (ctx.allowedWorkspaceIds !== '*' || !ctx.roles.includes('owner'))) {
+        throw new Error('Global kill switch requires an authoritative global owner')
+      }
+      const snapshot = killSwitchRegistry.set({
+        scope: request.scope,
+        active: request.active,
+        ...(request.id ? { id: request.id } : {}),
+        reason: request.reason,
+        actorId: ctx.actorId,
+        ...(request.expectedGeneration !== undefined
+          ? { expectedGeneration: request.expectedGeneration }
+          : {}),
+      })
+      if (request.active) {
+        let stopped = 0
+        for (const runner of runners.values()) stopped += runner.enforceKillSwitches()
+        tasksLog.warn('kill switch activated', {
+          scope: request.scope,
+          id: request.id,
+          actorId: ctx.actorId,
+          generation: snapshot.generation,
+          stoppedRuns: stopped,
+        })
+      }
+      return snapshot
+    },
+  )
+
   // tasks:get — spec + (optional) active run-state.
-  server.handle(RPC_CHANNELS.tasks.GET, async (_ctx, workspaceId: string, slug: string, runId?: string): Promise<TaskGetResult> => {
-    const ws = workspaceOrThrow(workspaceId)
+  server.handle(RPC_CHANNELS.tasks.GET, async (ctx, workspaceId: string, slug: string, runId?: string): Promise<TaskGetResult> => {
+    const ws = authorizeTaskAction(ctx, workspaceId, 'playbook.read')
     const loaded = loadTaskSpec(ws.rootPath, slug)
     if (!loaded) {
       return {
@@ -398,15 +564,15 @@ export function registerTasksHandlers(server: RpcServer, deps: HandlerDeps): voi
   })
 
   // tasks:list — slugs with a task.yaml.
-  server.handle(RPC_CHANNELS.tasks.LIST, async (_ctx, workspaceId: string): Promise<string[]> => {
-    return listTaskSlugs(workspaceOrThrow(workspaceId).rootPath)
+  server.handle(RPC_CHANNELS.tasks.LIST, async (ctx, workspaceId: string): Promise<string[]> => {
+    return listTaskSlugs(authorizeTaskAction(ctx, workspaceId, 'playbook.read').rootPath)
   })
 
   // tasks:getResults — storage-backed read of a run's outcome (verdict + per-node output).
   // Reads the durable artifacts (run-log.jsonl, nodes/<id>.json, per-run spec.json snapshot), so it
   // works after restart and without an active in-memory run — unlike tasks:get's run snapshot.
-  server.handle(RPC_CHANNELS.tasks.GET_RESULTS, async (_ctx, workspaceId: string, slug: string, runId?: string): Promise<TaskResultsDto> => {
-    const root = workspaceOrThrow(workspaceId).rootPath
+  server.handle(RPC_CHANNELS.tasks.GET_RESULTS, async (ctx, workspaceId: string, slug: string, runId?: string): Promise<TaskResultsDto> => {
+    const root = authorizeTaskAction(ctx, workspaceId, 'mission.read').rootPath
     const runIds = listRunIds(root, slug)
     const chosen = runId ?? runIds.at(-1) ?? null
     if (!chosen) return { slug, runId: null, runIds, nodes: [] }

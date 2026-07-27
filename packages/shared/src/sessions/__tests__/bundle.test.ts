@@ -144,6 +144,33 @@ describe('serializeSession', () => {
     expect(Buffer.from(notesFile!.contentBase64, 'base64').toString()).toBe('# My Notes\nSome notes here.')
   })
 
+  it('redacts credential-shaped text and excludes credential files from portable exports', () => {
+    const session = makeStoredSession({
+      messages: [{
+        id: 'secret-message',
+        type: 'user',
+        content: 'Authorization: Bearer abcdefghijklmnopqrstuvwxyz',
+        timestamp: 1000,
+        toolInput: { apiKey: 'api_key=abcdefghijklmnop' },
+      }],
+    })
+    const sessionDir = setupSessionDir(tmpDir, session)
+    mkdirSync(join(sessionDir, 'data'), { recursive: true })
+    writeFileSync(join(sessionDir, 'data', 'result.json'), '{"token":"token=abcdefghijklmnop"}')
+    writeFileSync(join(sessionDir, 'data', 'credentials.json'), '{"password":"do-not-export"}')
+
+    const bundle = serializeSession(tmpDir, session.id)
+
+    expect(bundle).not.toBeNull()
+    expect(bundle!.session.messages[0]!.content).not.toContain('abcdefghijklmnopqrstuvwxyz')
+    expect(JSON.stringify(bundle!.session.messages[0]!.toolInput)).not.toContain('abcdefghijklmnop')
+    const result = bundle!.files.find((file) => file.relativePath === 'data/result.json')
+    expect(Buffer.from(result!.contentBase64, 'base64').toString()).not.toContain('abcdefghijklmnop')
+    expect(bundle!.files.some((file) => file.relativePath.endsWith('credentials.json'))).toBe(false)
+    expect(bundle!.security?.trust).toBe('portable-redacted')
+    expect(bundle!.security?.excludedSensitiveFiles).toContain('data/credentials.json')
+  })
+
   it('skips tmp/ directory', () => {
     const session = makeStoredSession()
     const sessionDir = setupSessionDir(tmpDir, session)
@@ -192,7 +219,7 @@ describe('serializeSession', () => {
       isFlagged: true,
       sessionStatus: 'in-progress',
       labels: ['bug', 'priority::high'],
-      permissionMode: 'ask' as any,
+      permissionMode: 'ask',
     })
     setupSessionDir(tmpDir, session)
 

@@ -3,7 +3,16 @@ import type {
   ConnectorPackDriver,
   ConnectorPackOperation,
 } from './pack-manifest'
-import { connectorPackTemplates } from './pack-manifest'
+import { connectorPackManifestHash, connectorPackTemplates } from './pack-manifest'
+import type { ConnectorRuntimeAdmission } from './durable-pack-registry'
+import {
+  operationValueHash,
+  parseCapabilityOperationRequest,
+  parseOperationCapability,
+  type CapabilityConsumptionDecision,
+  type CapabilityOperationRequest,
+  type OperationCapability,
+} from '../governance/capability-broker'
 
 export type PriorityConnectorPack = keyof typeof connectorPackTemplates
 
@@ -22,21 +31,43 @@ export interface ConnectorApprovalReceipt {
   expiresAt: string
 }
 
+export interface ConnectorCapabilityAuthorization {
+  request: CapabilityOperationRequest
+  capability: OperationCapability
+}
+
+export type ConnectorCapabilityConsumer = (
+  capability: OperationCapability,
+  request: CapabilityOperationRequest,
+) => CapabilityConsumptionDecision
+
 export interface ConnectorHttpRequest {
   method: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE'
   url: string
   headers: Record<string, string>
   body?: Record<string, unknown>
   timeoutMs: number
+  redirect: 'manual'
+  security: {
+    allowedOrigins: string[]
+    blockPrivateAddresses: true
+  }
 }
 
 export interface ConnectorHttpResponse {
   status: number
   body: unknown
+  requestId?: string
+  redirected?: boolean
 }
 
 export type ConnectorSecretResolver = (reference: string) => Promise<ConnectorSecretLease | null>
 export type ConnectorHttpTransport = (request: ConnectorHttpRequest) => Promise<ConnectorHttpResponse>
+export type ConnectorRuntimeAdmissionVerifier = (
+  packId: string,
+  operationId: string,
+  expectedManifestHash: string,
+) => ConnectorRuntimeAdmission
 
 export class ConnectorDriverError extends Error {
   constructor(
@@ -46,9 +77,15 @@ export class ConnectorDriverError extends Error {
       | 'SECRET_EXPIRED'
       | 'SCOPE_DENIED'
       | 'APPROVAL_REQUIRED'
+      | 'CAPABILITY_REQUIRED'
+      | 'CAPABILITY_DENIED'
       | 'IDEMPOTENCY_REQUIRED'
+      | 'ORIGIN_DENIED'
+      | 'REDIRECT_DENIED'
+      | 'RECONCILIATION_REQUIRED'
       | 'RATE_LIMITED'
       | 'CONCURRENCY_LIMIT'
+      | 'CONNECTOR_NOT_ACTIVE'
       | 'INVALID_INPUT'
       | 'UPSTREAM_ERROR',
     message: string,
@@ -86,11 +123,11 @@ export const priorityConnectorDriverDefinitions: Record<PriorityConnectorPack, P
     },
   },
   slackTeams: {
-    defaultBaseUrl: 'https://slack.com/api',
+    defaultBaseUrl: 'https://slack.com',
     bindings: {
-      'health.read': { method: 'GET', path: '/auth.test' },
-      'messages.list': { method: 'GET', path: '/conversations.history' },
-      'messages.send': { method: 'POST', path: '/chat.postMessage' },
+      'health.read': { method: 'GET', path: '/api/auth.test' },
+      'messages.list': { method: 'GET', path: '/api/conversations.history' },
+      'messages.send': { method: 'POST', path: '/api/chat.postMessage' },
     },
   },
   crm: {
@@ -109,19 +146,22 @@ export const priorityConnectorDriverDefinitions: Record<PriorityConnectorPack, P
   },
 }
 
-interface ConnectorDriverOptions {
+export interface ConnectorDriverOptions {
   baseUrl?: string
   secretReference: string
   resolveSecret: ConnectorSecretResolver
   transport: ConnectorHttpTransport
+  consumeCapability: ConnectorCapabilityConsumer
+  assertRuntimeAdmission: ConnectorRuntimeAdmissionVerifier
+  createHealthAuthorization: () => ConnectorCapabilityAuthorization
   now?: () => string
 }
 
 interface InvocationEnvelope {
   payload: Record<string, unknown>
   resourceId?: string
-  approval?: ConnectorApprovalReceipt
   idempotencyKey?: string
+  authorization?: ConnectorCapabilityAuthorization
 }
 
 function readInvocationEnvelope(input: Record<string, unknown>): InvocationEnvelope {
@@ -135,24 +175,19 @@ function readInvocationEnvelope(input: Record<string, unknown>): InvocationEnvel
   const idempotencyKey = typeof input.idempotencyKey === 'string' && input.idempotencyKey.trim()
     ? input.idempotencyKey.trim()
     : undefined
-  const rawApproval = input.approval
-  const approval = rawApproval
-    && typeof rawApproval === 'object'
-    && !Array.isArray(rawApproval)
-    && typeof Reflect.get(rawApproval, 'approvalId') === 'string'
-    && typeof Reflect.get(rawApproval, 'operationId') === 'string'
-    && Reflect.get(rawApproval, 'decision') === 'approved'
-    && typeof Reflect.get(rawApproval, 'approvedBy') === 'string'
-    && typeof Reflect.get(rawApproval, 'expiresAt') === 'string'
-    ? {
-        approvalId: Reflect.get(rawApproval, 'approvalId') as string,
-        operationId: Reflect.get(rawApproval, 'operationId') as string,
-        decision: 'approved' as const,
-        approvedBy: Reflect.get(rawApproval, 'approvedBy') as string,
-        expiresAt: Reflect.get(rawApproval, 'expiresAt') as string,
+  const rawAuthorization = input.authorization
+  let authorization: ConnectorCapabilityAuthorization | undefined
+  if (rawAuthorization && typeof rawAuthorization === 'object' && !Array.isArray(rawAuthorization)) {
+    try {
+      authorization = {
+        request: parseCapabilityOperationRequest(Reflect.get(rawAuthorization, 'request')),
+        capability: parseOperationCapability(Reflect.get(rawAuthorization, 'capability')),
       }
-    : undefined
-  return { payload, resourceId, approval, idempotencyKey }
+    } catch {
+      authorization = undefined
+    }
+  }
+  return { payload, resourceId, idempotencyKey, authorization }
 }
 
 function renderPath(path: string, resourceId?: string): string {
@@ -199,6 +234,8 @@ class ConnectorRequestLimiter {
 
 export class HttpConnectorPackDriver implements ConnectorPackDriver {
   private readonly limiter: ConnectorRequestLimiter
+  private readonly baseOrigin: string
+  private readonly manifestHash: string
 
   constructor(
     private readonly manifest: ConnectorPackDefinition,
@@ -207,8 +244,22 @@ export class HttpConnectorPackDriver implements ConnectorPackDriver {
     private readonly secretReference: string,
     private readonly resolveSecret: ConnectorSecretResolver,
     private readonly transport: ConnectorHttpTransport,
+    private readonly consumeCapability: ConnectorCapabilityConsumer,
+    private readonly assertRuntimeAdmission: ConnectorRuntimeAdmissionVerifier,
+    private readonly createHealthAuthorization: () => ConnectorCapabilityAuthorization,
     private readonly now: () => string = () => new Date().toISOString(),
   ) {
+    const parsedBaseUrl = new URL(baseUrl)
+    if (
+      parsedBaseUrl.protocol !== 'https:'
+      || parsedBaseUrl.username
+      || parsedBaseUrl.password
+      || !manifest.allowedOrigins.includes(parsedBaseUrl.origin)
+    ) {
+      throw new ConnectorDriverError('ORIGIN_DENIED', `Connector origin is not allowed: ${parsedBaseUrl.origin}`)
+    }
+    this.baseOrigin = parsedBaseUrl.origin
+    this.manifestHash = connectorPackManifestHash(manifest)
     this.limiter = new ConnectorRequestLimiter(
       manifest.rateLimit.requests,
       manifest.rateLimit.windowMs,
@@ -220,7 +271,9 @@ export class HttpConnectorPackDriver implements ConnectorPackDriver {
   async healthCheck(): Promise<{ healthy: boolean; latencyMs: number }> {
     const startedAt = Date.parse(this.now())
     try {
-      await this.invoke(this.manifest.healthCheck.operationId, {})
+      await this.invoke(this.manifest.healthCheck.operationId, {
+        authorization: this.createHealthAuthorization(),
+      })
       return {
         healthy: true,
         latencyMs: Math.max(0, Date.parse(this.now()) - startedAt),
@@ -234,15 +287,19 @@ export class HttpConnectorPackDriver implements ConnectorPackDriver {
   }
 
   async invoke(operationId: string, input: Record<string, unknown>): Promise<Record<string, unknown>> {
-    const operation = this.operation(operationId)
     if (input.contractProbe === true) {
+      const operation = this.staticOperation(operationId)
       return {
         operationId,
         effect: operation.effect,
+        risk: operation.risk,
         requiredScopes: [...operation.requiredScopes],
       }
     }
 
+    const operation = this.runtimeOperation(operationId)
+    const envelope = readInvocationEnvelope(input)
+    this.authorizeOperation(operation, envelope)
     return this.limiter.run(async () => {
       const lease = await this.resolveSecret(this.secretReference)
       if (!lease) {
@@ -257,8 +314,6 @@ export class HttpConnectorPackDriver implements ConnectorPackDriver {
         throw new ConnectorDriverError('SCOPE_DENIED', `Missing connector scopes: ${missingScopes.join(', ')}`)
       }
 
-      const envelope = readInvocationEnvelope(input)
-      this.authorizeMutation(operation, envelope, now)
       const binding = this.definition.bindings[operationId]
       if (!binding) throw new ConnectorDriverError('UNKNOWN_OPERATION', `No HTTP binding for ${operationId}`)
       const path = renderPath(binding.path, envelope.resourceId)
@@ -270,6 +325,7 @@ export class HttpConnectorPackDriver implements ConnectorPackDriver {
           }
         }
       }
+      this.runtimeOperation(operationId)
       const response = await this.transport({
         method: binding.method,
         url: url.toString(),
@@ -281,39 +337,84 @@ export class HttpConnectorPackDriver implements ConnectorPackDriver {
         },
         ...(binding.method === 'GET' ? {} : { body: envelope.payload }),
         timeoutMs: this.manifest.healthCheck.timeoutMs,
+        redirect: 'manual',
+        security: {
+          allowedOrigins: [...operation.allowedOrigins],
+          blockPrivateAddresses: true,
+        },
       })
+      if (response.redirected || (response.status >= 300 && response.status < 400)) {
+        throw new ConnectorDriverError('REDIRECT_DENIED', 'Connector redirects are forbidden for credentialed requests')
+      }
       if (response.status < 200 || response.status >= 300) {
         throw new ConnectorDriverError('UPSTREAM_ERROR', `Connector upstream returned HTTP ${response.status}`)
       }
-      return {
+      const baseResult: Record<string, unknown> = {
         operationId,
         status: response.status,
         data: response.body,
+        trust: 'external-untrusted',
+      }
+      if (!operation.reconciliation.required) return baseResult
+      if (!response.requestId) {
+        throw new ConnectorDriverError(
+          'RECONCILIATION_REQUIRED',
+          `Connector ${operation.id} did not return a provider request identifier`,
+        )
+      }
+      return {
+        ...baseResult,
+        reconciliationReceipt: {
+          providerRequestId: response.requestId,
+          observedAt: now,
+          payloadHash: operationValueHash(envelope.payload),
+          ...(envelope.resourceId ? { resourceId: envelope.resourceId } : {}),
+        },
       }
     })
   }
 
-  private operation(operationId: string): ConnectorPackOperation {
+  private staticOperation(operationId: string): ConnectorPackOperation {
     const operation = this.manifest.operations.find((candidate) => candidate.id === operationId)
     if (!operation) throw new ConnectorDriverError('UNKNOWN_OPERATION', `Unknown connector operation ${operationId}`)
     return operation
   }
 
-  private authorizeMutation(
+  private runtimeOperation(operationId: string): ConnectorPackOperation {
+    try {
+      return this.assertRuntimeAdmission(this.manifest.id, operationId, this.manifestHash).operation
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      throw new ConnectorDriverError('CONNECTOR_NOT_ACTIVE', message)
+    }
+  }
+
+  private authorizeOperation(
     operation: ConnectorPackOperation,
     envelope: InvocationEnvelope,
-    now: string,
   ): void {
-    if (operation.effect === 'read') return
-    if (
-      !envelope.approval
-      || envelope.approval.operationId !== operation.id
-      || Date.parse(envelope.approval.expiresAt) <= Date.parse(now)
-    ) {
-      throw new ConnectorDriverError('APPROVAL_REQUIRED', `Approved receipt required for ${operation.id}`)
+    if (!envelope.authorization) {
+      throw new ConnectorDriverError('CAPABILITY_REQUIRED', `Broker capability required for ${operation.id}`)
     }
     if (!operation.idempotent && !envelope.idempotencyKey) {
       throw new ConnectorDriverError('IDEMPOTENCY_REQUIRED', `Idempotency key required for ${operation.id}`)
+    }
+    const request = envelope.authorization.request
+    if (
+      request.operationId !== operation.id
+      || request.risk !== operation.risk
+      || request.identity.connectorId !== this.manifest.id
+      || request.target.origin !== this.baseOrigin
+      || !operation.targetResourceTypes.includes(request.target.resourceType)
+      || (request.target.resourceId ?? '') !== (envelope.resourceId ?? '')
+      || operationValueHash(request.payload) !== operationValueHash(envelope.payload)
+      || (request.idempotencyKey ?? '') !== (envelope.idempotencyKey ?? '')
+    ) {
+      throw new ConnectorDriverError('CAPABILITY_DENIED', `Capability context mismatch for ${operation.id}`)
+    }
+    const consumed = this.consumeCapability(envelope.authorization.capability, request)
+    if (!consumed.allowed) {
+      throw new ConnectorDriverError('CAPABILITY_DENIED', `${consumed.code}: ${consumed.reason}`)
     }
   }
 }
@@ -334,6 +435,9 @@ export function createPriorityConnectorDriver(
     options.secretReference,
     options.resolveSecret,
     options.transport,
+    options.consumeCapability,
+    options.assertRuntimeAdmission,
+    options.createHealthAuthorization,
     options.now,
   )
 }

@@ -1,4 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
+import { redactSecretLikeMaterial } from '../utils/redaction.ts';
+
+export { redactSecretLikeMaterial } from '../utils/redaction.ts';
 
 export const SPACE_KINDS = ['personal', 'team', 'client'] as const;
 export type SpaceKind = (typeof SPACE_KINDS)[number];
@@ -19,6 +22,7 @@ export const SPACE_ACTIONS = [
   'mission.run',
   'mission.approve',
   'mission.cancel',
+  'mission.kill-switch',
   'memory.read',
   'memory.write',
   'memory.export',
@@ -40,7 +44,7 @@ const READER_ACTIONS = new Set<SpaceAction>([
 const ROLE_ACTIONS: Record<SpaceRole, ReadonlySet<SpaceAction>> = {
   reader: READER_ACTIONS,
   validator: new Set([...READER_ACTIONS, 'mission.approve']),
-  operator: new Set([...READER_ACTIONS, 'mission.run', 'mission.cancel', 'memory.write']),
+  operator: new Set([...READER_ACTIONS, 'mission.run', 'mission.cancel', 'mission.kill-switch', 'memory.write']),
   admin: new Set([
     ...SPACE_ACTIONS.filter((action) => action !== 'space.manage-members'),
   ]),
@@ -141,17 +145,6 @@ export interface SpaceMemoryEntry {
   retentionUntil: string;
   /** Opaque credential references only. Secret values are never part of the memory model. */
   secretReferenceIds: string[];
-}
-
-const SECRET_PATTERNS = [
-  /\b(?:sk|sk-proj|sk-ant|ghp|github_pat)_[A-Za-z0-9_-]{12,}\b/g,
-  /\bBearer\s+[A-Za-z0-9._~+/-]{12,}\b/gi,
-  /\b(?:password|passwd|secret|api[_-]?key|token)\s*[:=]\s*\S+/gi,
-  /\b(?:postgres|postgresql|mysql|mongodb):\/\/[^@\s]+@/gi,
-] as const;
-
-export function redactSecretLikeMaterial(content: string): string {
-  return SECRET_PATTERNS.reduce((redacted, pattern) => redacted.replace(pattern, '[REDACTED]'), content);
 }
 
 export function createSpaceMemoryEntry(input: {

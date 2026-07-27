@@ -24,6 +24,15 @@ import { z } from 'zod';
 export type PermissionMode = 'safe' | 'ask' | 'allow-all';
 
 /**
+ * Accepting a plan approves the plan text, not every future side effect.
+ * Explore sessions move to Ask so each mutation still crosses an explicit
+ * permission boundary; existing Ask/Execute choices remain unchanged.
+ */
+export function permissionModeAfterPlanApproval(mode: PermissionMode): PermissionMode {
+  return mode === 'safe' ? 'ask' : mode;
+}
+
+/**
  * Canonical mode names used in user-facing/session-state surfaces.
  */
 export type PermissionModeCanonical = 'explore' | 'ask' | 'execute';

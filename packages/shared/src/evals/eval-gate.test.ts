@@ -4,7 +4,9 @@ import {
   createEvalReport,
   evaluateEvalGate,
   exportEvalReportMarkdown,
+  meanConfidenceInterval,
   shouldRunContinuousEvals,
+  wilsonConfidenceInterval,
   type EvalCaseResult,
   type EvalThresholds,
   type EvalRuntimeVersions,
@@ -108,5 +110,60 @@ describe('continuous evaluation gate', () => {
       ...versions,
       connectors: { ...versions.connectors, github: '1.5.0' },
     })).toBe(true);
+  });
+
+  it('aggregates repeated samples and reports bounded confidence intervals', () => {
+    const report = createEvalReport({
+      corpusId: 'fr-repeated',
+      corpusVersion: '2.0.0',
+      runId: 'repeated',
+      versions,
+      results: [
+        result('case-a', 'policy', { repetition: 1 }),
+        result('case-a', 'policy', { repetition: 2 }),
+        result('case-a', 'policy', {
+          repetition: 3,
+          passed: false,
+          factualityScore: 0.5,
+        }),
+        result('case-b', 'factuality', { repetition: 1 }),
+        result('case-b', 'factuality', { repetition: 2 }),
+        result('case-b', 'factuality', { repetition: 3 }),
+      ],
+    });
+
+    expect(report.summary).toMatchObject({
+      total: 6,
+      uniqueCases: 2,
+      averageRunsPerCase: 3,
+    });
+    expect(report.aggregates).toHaveLength(2);
+    expect(report.aggregates[0]).toMatchObject({
+      caseId: 'case-a',
+      runs: 3,
+      passRate: 2 / 3,
+    });
+    expect(report.summary.passRateConfidence95.lower).toBeGreaterThanOrEqual(0);
+    expect(report.summary.passRateConfidence95.upper).toBeLessThanOrEqual(1);
+    expect(evaluateEvalGate(report, thresholds).failures).toContain(
+      'cases 2 is below 6',
+    );
+    expect(exportEvalReportMarkdown({
+      passed: true,
+      failures: [],
+      report,
+    })).toContain('Pass rate 95% CI');
+  });
+
+  it('uses Wilson for binary rates and a mean interval for bounded scores', () => {
+    const wilson = wilsonConfidenceInterval(8, 10);
+    expect(wilson.method).toBe('wilson');
+    expect(wilson.lower).toBeLessThan(0.8);
+    expect(wilson.upper).toBeGreaterThan(0.8);
+
+    const mean = meanConfidenceInterval([0.8, 0.9, 1]);
+    expect(mean.method).toBe('normal-mean');
+    expect(mean.lower).toBeLessThan(0.9);
+    expect(mean.upper).toBeGreaterThan(0.9);
   });
 });

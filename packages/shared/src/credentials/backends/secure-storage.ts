@@ -32,7 +32,18 @@ import {
   createHash,
 } from 'crypto';
 import { execSync } from 'child_process';
-import { existsSync, readFileSync, writeFileSync, mkdirSync, unlinkSync } from 'fs';
+import {
+  chmodSync,
+  closeSync,
+  existsSync,
+  fsyncSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  renameSync,
+  unlinkSync,
+  writeFileSync,
+} from 'fs';
 import { hostname, userInfo, homedir } from 'os';
 import { join, dirname } from 'path';
 
@@ -44,7 +55,7 @@ import { CONFIG_DIR } from '../../config/paths.ts';
 // File location — shared with existing Craft Agents installs by default, unless
 // CRAFT_CONFIG_DIR explicitly selects an isolated profile.
 const CREDENTIALS_DIR = CONFIG_DIR;
-const CREDENTIALS_FILE = join(CREDENTIALS_DIR, 'credentials.enc');
+const DEFAULT_CREDENTIALS_FILE = join(CREDENTIALS_DIR, 'credentials.enc');
 
 // File format constants
 const MAGIC_BYTES = Buffer.from('CRAFT01\0');
@@ -110,6 +121,48 @@ interface CredentialStore {
   };
 }
 
+export type CredentialStoreErrorCode =
+  | 'read_failed'
+  | 'corrupted'
+  | 'decryption_failed'
+  | 'write_conflict';
+
+export class CredentialStoreError extends Error {
+  constructor(
+    readonly code: CredentialStoreErrorCode,
+    message: string,
+    options?: { cause?: unknown },
+  ) {
+    super(message, options);
+    this.name = 'CredentialStoreError';
+  }
+}
+
+export interface SecureStorageOptions {
+  /** Override used by isolated profiles and tests. */
+  credentialsFile?: string;
+  /** Deterministic machine binding used by tests; production resolves the OS machine ID. */
+  machineId?: string;
+}
+
+const mutationQueues = new Map<string, Promise<void>>();
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isCredentialStore(value: unknown): value is CredentialStore {
+  if (!isRecord(value) || value.version !== 1 || !isRecord(value.credentials) || !isRecord(value.metadata)) {
+    return false;
+  }
+  if (typeof value.metadata.createdAt !== 'number' || typeof value.metadata.updatedAt !== 'number') {
+    return false;
+  }
+  return Object.values(value.credentials).every(
+    (credential) => isRecord(credential) && typeof credential.value === 'string',
+  );
+}
+
 export class SecureStorageBackend implements CredentialBackend {
   readonly name = 'secure-storage';
   readonly priority = 100;
@@ -117,6 +170,15 @@ export class SecureStorageBackend implements CredentialBackend {
   private cachedStore: CredentialStore | null = null;
   private encryptionKey: Buffer | null = null;
   private salt: Buffer | null = null;
+  private readonly credentialsFile: string;
+  private readonly credentialsDir: string;
+  private readonly machineId: string;
+
+  constructor(options: SecureStorageOptions = {}) {
+    this.credentialsFile = options.credentialsFile ?? DEFAULT_CREDENTIALS_FILE;
+    this.credentialsDir = dirname(this.credentialsFile);
+    this.machineId = options.machineId ?? getStableMachineId();
+  }
 
   async isAvailable(): Promise<boolean> {
     // File backend is always available - we can always write to filesystem
@@ -132,43 +194,32 @@ export class SecureStorageBackend implements CredentialBackend {
   }
 
   async set(id: CredentialId, credential: StoredCredential): Promise<void> {
-    let store = await this.loadStore();
-
-    if (!store) {
-      // Initialize new store
-      store = {
-        version: 1,
-        credentials: {},
-        metadata: {
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-        },
-      };
-    }
-
     const key = credentialIdToAccount(id);
-    store.credentials[key] = credential;
-    store.metadata.updatedAt = Date.now();
-
-    await this.saveStore(store);
+    await this.enqueueMutation(() => {
+      this.withFileLockSync(() => {
+        this.clearCache();
+        const store = this.loadStoreSync() ?? this.createEmptyStore();
+        store.credentials[key] = credential;
+        store.metadata.updatedAt = Date.now();
+        this.saveStoreSync(store);
+      });
+    });
   }
 
   async delete(id: CredentialId): Promise<boolean> {
-    return this.deleteSync(id);
+    const key = credentialIdToAccount(id);
+    return this.enqueueMutation(() => this.withFileLockSync(() => this.deleteByKeySync(key)));
   }
 
   deleteSync(id: CredentialId): boolean {
-    const store = this.loadStoreSync();
-    if (!store) return false;
-
     const key = credentialIdToAccount(id);
-    if (!(key in store.credentials)) return false;
-
-    delete store.credentials[key];
-    store.metadata.updatedAt = Date.now();
-
-    this.saveStoreSync(store);
-    return true;
+    if (mutationQueues.has(this.credentialsFile)) {
+      throw new CredentialStoreError(
+        'write_conflict',
+        'Credential store has a pending write; synchronous deletion was refused',
+      );
+    }
+    return this.withFileLockSync(() => this.deleteByKeySync(key));
   }
 
   async list(filter?: Partial<CredentialId>): Promise<CredentialId[]> {
@@ -201,26 +252,23 @@ export class SecureStorageBackend implements CredentialBackend {
     // Return cached store if available
     if (this.cachedStore) return this.cachedStore;
 
-    if (!existsSync(CREDENTIALS_FILE)) return null;
+    if (!existsSync(this.credentialsFile)) return null;
 
     let fileData: Buffer;
     try {
-      fileData = readFileSync(CREDENTIALS_FILE);
-    } catch {
-      return null;
+      fileData = readFileSync(this.credentialsFile);
+    } catch (error) {
+      throw new CredentialStoreError('read_failed', 'Credential store could not be read', { cause: error });
     }
 
     // Validate minimum size
     if (fileData.length < HEADER_SIZE + IV_SIZE + AUTH_TAG_SIZE) {
-      // File is corrupted, delete and return null
-      this.handleCorruptedFile();
-      return null;
+      throw new CredentialStoreError('corrupted', 'Credential store is truncated');
     }
 
     // Validate magic bytes
     if (!fileData.subarray(0, MAGIC_SIZE).equals(MAGIC_BYTES)) {
-      this.handleCorruptedFile();
-      return null;
+      throw new CredentialStoreError('corrupted', 'Credential store header is invalid');
     }
 
     // Parse header
@@ -252,9 +300,13 @@ export class SecureStorageBackend implements CredentialBackend {
       return store;
     }
 
-    // Both keys failed - file is truly corrupted
-    this.handleCorruptedFile();
-    return null;
+    // Preserve the original bytes for recovery. Authentication failure can be
+    // caused by a machine migration and must never be treated as permission to
+    // delete the only copy of the user's credentials.
+    throw new CredentialStoreError(
+      'decryption_failed',
+      'Credential store authentication failed; the encrypted file was preserved',
+    );
   }
 
   /**
@@ -270,20 +322,17 @@ export class SecureStorageBackend implements CredentialBackend {
       const decipher = createDecipheriv('aes-256-gcm', key, iv);
       decipher.setAuthTag(authTag);
       const decrypted = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
-      return JSON.parse(decrypted.toString('utf8'));
+      const parsed: unknown = JSON.parse(decrypted.toString('utf8'));
+      return isCredentialStore(parsed) ? parsed : null;
     } catch {
       return null;
     }
   }
 
-  private async saveStore(store: CredentialStore): Promise<void> {
-    this.saveStoreSync(store);
-  }
-
   private saveStoreSync(store: CredentialStore): void {
     // Ensure directory exists
-    if (!existsSync(CREDENTIALS_DIR)) {
-      mkdirSync(CREDENTIALS_DIR, { recursive: true, mode: 0o700 });
+    if (!existsSync(this.credentialsDir)) {
+      mkdirSync(this.credentialsDir, { recursive: true, mode: 0o700 });
     }
 
     // Use existing salt or generate new one
@@ -313,8 +362,23 @@ export class SecureStorageBackend implements CredentialBackend {
     // Combine all parts
     const fileData = Buffer.concat([header, iv, authTag, ciphertext]);
 
-    // Write with restrictive permissions (owner read/write only)
-    writeFileSync(CREDENTIALS_FILE, fileData, { mode: 0o600 });
+    // Write atomically with restrictive permissions so a crash cannot leave a
+    // partially-written primary file. rename() is atomic on the same volume.
+    const tempFile = `${this.credentialsFile}.${process.pid}.${randomBytes(8).toString('hex')}.tmp`;
+    let tempFd: number | null = null;
+    try {
+      tempFd = openSync(tempFile, 'wx', 0o600);
+      writeFileSync(tempFd, fileData);
+      fsyncSync(tempFd);
+      closeSync(tempFd);
+      tempFd = null;
+      renameSync(tempFile, this.credentialsFile);
+      chmodSync(this.credentialsFile, 0o600);
+    } catch (error) {
+      if (tempFd !== null) closeSync(tempFd);
+      if (existsSync(tempFile)) unlinkSync(tempFile);
+      throw error;
+    }
     this.cachedStore = store;
   }
 
@@ -324,7 +388,7 @@ export class SecureStorageBackend implements CredentialBackend {
     // New stable machine ID using hardware UUID (v2)
     // This is far more stable than hostname which can change with network/DHCP
     const stableMachineId = createHash('sha256')
-      .update(getStableMachineId())
+      .update(this.machineId)
       .update('craft-agent-v2') // Bumped version for new key derivation
       .digest();
 
@@ -349,18 +413,65 @@ export class SecureStorageBackend implements CredentialBackend {
     return pbkdf2Sync(legacyMachineId, salt, PBKDF2_ITERATIONS, KEY_SIZE, 'sha256');
   }
 
-  private handleCorruptedFile(): void {
-    // Delete corrupted file - user will need to re-enter credentials
-    try {
-      if (existsSync(CREDENTIALS_FILE)) {
-        unlinkSync(CREDENTIALS_FILE);
+  private createEmptyStore(): CredentialStore {
+    const now = Date.now();
+    return {
+      version: 1,
+      credentials: {},
+      metadata: { createdAt: now, updatedAt: now },
+    };
+  }
+
+  private deleteByKeySync(key: string): boolean {
+    this.clearCache();
+    const store = this.loadStoreSync();
+    if (!store || !(key in store.credentials)) return false;
+    delete store.credentials[key];
+    store.metadata.updatedAt = Date.now();
+    this.saveStoreSync(store);
+    return true;
+  }
+
+  private enqueueMutation<T>(operation: () => T): Promise<T> {
+    const previous = mutationQueues.get(this.credentialsFile) ?? Promise.resolve();
+    const result = previous.then(operation);
+    const tail = result.then(
+      () => undefined,
+      () => undefined,
+    );
+    mutationQueues.set(this.credentialsFile, tail);
+    void tail.finally(() => {
+      if (mutationQueues.get(this.credentialsFile) === tail) {
+        mutationQueues.delete(this.credentialsFile);
       }
-    } catch {
-      // Ignore deletion errors
+    });
+    return result;
+  }
+
+  private withFileLockSync<T>(operation: () => T): T {
+    if (!existsSync(this.credentialsDir)) {
+      mkdirSync(this.credentialsDir, { recursive: true, mode: 0o700 });
     }
-    this.cachedStore = null;
-    this.encryptionKey = null;
-    this.salt = null;
+    const lockFile = `${this.credentialsFile}.lock`;
+    let lockFd: number;
+    try {
+      lockFd = openSync(lockFile, 'wx', 0o600);
+    } catch (error) {
+      throw new CredentialStoreError(
+        'write_conflict',
+        'Credential store is locked by another writer; mutation was refused',
+        { cause: error },
+      );
+    }
+
+    try {
+      writeFileSync(lockFd, `${process.pid}\n`, 'utf8');
+      fsyncSync(lockFd);
+      return operation();
+    } finally {
+      closeSync(lockFd);
+      if (existsSync(lockFile)) unlinkSync(lockFile);
+    }
   }
 
   /** Clear cached data (for testing or forced refresh) */

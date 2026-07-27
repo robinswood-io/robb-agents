@@ -12,7 +12,8 @@ import { describe, it, expect, beforeEach, afterEach, mock } from 'bun:test'
 import { mkdtempSync, writeFileSync, rmSync } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
-import type { RpcServer, RequestContext } from '@craft-agent/server-core/transport'
+import type { HandlerFn, RpcServer, RequestContext } from '@craft-agent/server-core/transport'
+import type { PushTarget } from '@craft-agent/shared/protocol'
 import type { HandlerDeps } from '../handler-deps'
 import { RPC_CHANNELS } from '../../../shared/types'
 
@@ -37,8 +38,8 @@ mock.module('electron', () => ({
 
 interface PushCall {
   channel: string
-  target: any
-  args: any[]
+  target: PushTarget
+  args: unknown[]
 }
 
 let tempDirs: string[] = []
@@ -50,14 +51,14 @@ function makeTempSessionDir(): string {
 }
 
 function createTestHarness(sessionPaths: Map<string, string>) {
-  const handlers = new Map<string, Function>()
+  const handlers = new Map<string, HandlerFn>()
   const pushCalls: PushCall[] = []
 
   const server: RpcServer = {
-    handle(channel: string, handler: Function) {
-      handlers.set(channel, handler as any)
+    handle(channel: string, handler: HandlerFn) {
+      handlers.set(channel, handler)
     },
-    push(channel: string, target: any, ...args: any[]) {
+    push(channel: string, target: PushTarget, ...args: unknown[]) {
       pushCalls.push({ channel, target, args })
     },
     async invokeClient() {},
@@ -68,6 +69,9 @@ function createTestHarness(sessionPaths: Map<string, string>) {
   const deps: HandlerDeps = {
     sessionManager: {
       getSessionPath: (sessionId: string) => sessionPaths.get(sessionId) ?? null,
+      getSession: async (sessionId: string) => sessionPaths.has(sessionId)
+        ? { id: sessionId, workspaceId: 'ws-1' }
+        : undefined,
       waitForInit: async () => {},
       getSessions: () => [],
     } as unknown as HandlerDeps['sessionManager'],
@@ -89,7 +93,15 @@ function createTestHarness(sessionPaths: Map<string, string>) {
 }
 
 function makeCtx(clientId: string, workspaceId = 'ws-1'): RequestContext {
-  return { clientId, workspaceId, webContentsId: null }
+  return {
+    clientId,
+    workspaceId,
+    webContentsId: null,
+    actorId: 'test-owner',
+    roles: ['owner'],
+    authorizationGeneration: 0,
+    allowedWorkspaceIds: [workspaceId],
+  }
 }
 
 function wait(ms: number): Promise<void> {
@@ -132,8 +144,8 @@ describe('session file watcher isolation', () => {
     await wait(300)
 
     // Only client-a should have received the notification
-    const clientAPushes = pushCalls.filter(p => p.target?.clientId === 'client-a')
-    const clientBPushes = pushCalls.filter(p => p.target?.clientId === 'client-b')
+    const clientAPushes = pushCalls.filter(p => p.target.to === 'client' && p.target.clientId === 'client-a')
+    const clientBPushes = pushCalls.filter(p => p.target.to === 'client' && p.target.clientId === 'client-b')
     expect(clientAPushes.length).toBeGreaterThanOrEqual(1)
     expect(clientBPushes.length).toBe(0)
 
@@ -152,7 +164,7 @@ describe('session file watcher isolation', () => {
     await wait(300)
 
     // Client B should still receive notifications
-    const clientBAfter = pushCalls.filter(p => p.target?.clientId === 'client-b')
+    const clientBAfter = pushCalls.filter(p => p.target.to === 'client' && p.target.clientId === 'client-b')
     expect(clientBAfter.length).toBeGreaterThanOrEqual(1)
 
     // Disconnect cleanup for client B

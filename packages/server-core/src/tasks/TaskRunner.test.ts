@@ -4,15 +4,30 @@ import { tmpdir } from 'os';
 import { join } from 'path';
 import type { TokenUsage } from '@craft-agent/core/types';
 import type { CreateSessionOptions } from '@craft-agent/shared/protocol';
-import { parseTaskSpec, saveTaskSpec, readRunLog, readNodeOutput, type TaskSpec } from '@craft-agent/shared/tasks';
+import {
+  appendRunLog,
+  parseTaskSpec,
+  saveTaskSpec,
+  readRunLog,
+  readNodeOutput,
+  writeRunSpecSnapshot,
+  type TaskSpec,
+} from '@craft-agent/shared/tasks';
 import type { SessionCompletionEvent } from '../sessions/SessionManager';
 import { TaskRunner, type ConductorSessionHost } from './TaskRunner';
 
 // Flush pending microtasks so the runner's async dispatch (create → column → send) settles.
 const tick = () => new Promise<void>((r) => setTimeout(r, 0));
 
-function tu(inputTokens: number, outputTokens: number): TokenUsage {
-  return { inputTokens, outputTokens, totalTokens: inputTokens + outputTokens, contextTokens: 0, costUsd: 0 };
+async function waitUntil(predicate: () => boolean, timeoutMs = 500): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (!predicate() && Date.now() < deadline) {
+    await new Promise<void>((resolve) => setTimeout(resolve, 5));
+  }
+}
+
+function tu(inputTokens: number, outputTokens: number, costUsd = 0): TokenUsage {
+  return { inputTokens, outputTokens, totalTokens: inputTokens + outputTokens, contextTokens: 0, costUsd };
 }
 
 function specOf(raw: unknown): TaskSpec {
@@ -244,7 +259,7 @@ describe('TaskRunner (Conductor)', () => {
     await tick();
 
     const prompt = host.promptFor('publish') ?? '';
-    expect(prompt).toContain('Idempotency key: ws:guarded:r1:publish:attempt-1');
+    expect(prompt).toContain('Idempotency key: ws:guarded:r1:publish');
     expect(prompt).toContain('Write paths: artifacts');
     expect(prompt).toContain('Network: allow-list (api.example.com)');
     expect(readRunLog(root, 'guarded', 'r1').some((entry) => entry.kind === 'node-checkpoint' && entry.status === 'executing')).toBe(true);
@@ -290,6 +305,36 @@ describe('TaskRunner (Conductor)', () => {
     });
     expect(() => runner.run('stopped', { runId: 'r1' })).toThrow('Mission kill switch is active');
     expect(host.created).toHaveLength(0);
+  });
+
+  it('drains an in-flight mission immediately when a kill switch is activated', async () => {
+    saveTaskSpec(root, specOf({ id: 'live', title: 'Live', goal: 'g', nodes: [{ id: 'a', prompt: 'a' }] }));
+    let missionStopped = false;
+    const runner = new TaskRunner({
+      host,
+      workspaceId: 'ws',
+      workspaceRoot: root,
+      getKillSwitch: () => ({
+        global: false,
+        workspaceIds: [],
+        missionIds: missionStopped ? ['live'] : [],
+      }),
+    });
+    runner.run('live', { runId: 'r1', verifyOnComplete: false });
+    await tick();
+
+    expect(host.dispatchedNames()).toEqual(['a']);
+    missionStopped = true;
+    expect(runner.enforceKillSwitches()).toBe(1);
+    await tick();
+
+    expect(runner.getRunState('live', 'r1')).toMatchObject({
+      status: 'stopped',
+      nodes: [{ id: 'a', state: 'cancelled' }],
+    });
+    expect(host.cancelled).toEqual(['sess-a']);
+    expect(readRunLog(root, 'live', 'r1').some((entry) => entry.kind === 'kill-switch')).toBe(true);
+    expect(runner.enforceKillSwitches()).toBe(0);
   });
 
   it('holds an external mutation in the approval inbox until a validator approves it', async () => {
@@ -623,6 +668,79 @@ describe('TaskRunner (Conductor)', () => {
     expect(r2.getRunState('res', 'r1')!.status).toBe('completed');
   });
 
+  it('resumes against the immutable run snapshot after task.yaml is edited', async () => {
+    const original = specOf({
+      id: 'snapshot-resume',
+      title: 'Snapshot resume',
+      goal: 'g',
+      nodes: [
+        { id: 'a', prompt: 'original a' },
+        { id: 'b', depends_on: ['a'], prompt: 'original b uses ${nodes.a.output}' },
+      ],
+    });
+    saveTaskSpec(root, original);
+    const first = makeRunner();
+    first.run('snapshot-resume', { runId: 'r1', verifyOnComplete: false });
+    await tick();
+    first.pause('snapshot-resume', 'r1');
+    host.complete('a', { finalText: 'A' });
+    await tick();
+
+    saveTaskSpec(
+      root,
+      specOf({
+        id: 'snapshot-resume',
+        title: 'Mutated live spec',
+        goal: 'different',
+        nodes: [{ id: 'replacement', prompt: 'must never run' }],
+      }),
+    );
+
+    const resumedHost = new MockHost();
+    const resumed = new TaskRunner({ host: resumedHost, workspaceId: 'ws', workspaceRoot: root });
+    resumed.resume('snapshot-resume', 'r1');
+    await tick();
+
+    expect(resumedHost.dispatchedNames()).toEqual(['b']);
+    expect(resumedHost.promptFor('b')?.endsWith('original b uses A')).toBe(true);
+  });
+
+  it('recovers resolved run params and verification behavior exactly after restart', async () => {
+    saveTaskSpec(
+      root,
+      specOf({
+        id: 'context-resume',
+        title: 'Context resume',
+        goal: 'g',
+        params: [{ name: 'env', default: 'dev' }],
+        nodes: [
+          { id: 'a', prompt: 'a' },
+          { id: 'b', depends_on: ['a'], prompt: 'deploy ${params.env} using ${nodes.a.output}' },
+        ],
+      }),
+    );
+    const first = makeRunner();
+    first.run('context-resume', {
+      runId: 'r1',
+      params: { env: 'prod' },
+      verifyOnComplete: false,
+    });
+    await tick();
+    first.pause('context-resume', 'r1');
+    host.complete('a', { finalText: 'A' });
+    await tick();
+
+    const recoveredHost = new MockHost();
+    const recovered = new TaskRunner({ host: recoveredHost, workspaceId: 'ws', workspaceRoot: root });
+    recovered.resume('context-resume', 'r1');
+    await tick();
+
+    expect(recoveredHost.promptFor('b')?.endsWith('deploy prod using A')).toBe(true);
+    recoveredHost.complete('b', { finalText: 'B' });
+    await tick();
+    expect(recovered.getRunState('context-resume', 'r1')?.status).toBe('completed');
+  });
+
   it('does not replay an in-flight node after a crash without operator review', async () => {
     saveTaskSpec(
       root,
@@ -659,7 +777,7 @@ describe('TaskRunner (Conductor)', () => {
     );
     const runner = makeRunner();
     runner.run('deadline', { runId: 'r1' });
-    await new Promise<void>((resolve) => setTimeout(resolve, 20));
+    await waitUntil(() => host.cancelled.includes('sess-slow'));
 
     expect(host.cancelled).toContain('sess-slow');
     expect(runner.getRunState('deadline', 'r1')?.status).toBe('failed');
@@ -694,6 +812,296 @@ describe('TaskRunner (Conductor)', () => {
     expect(runner.getRunState('admission', 'r1')?.status).toBe('failed');
   });
 
+  it('applies retry backoff before dispatching the next attempt', async () => {
+    saveTaskSpec(
+      root,
+      specOf({
+        id: 'backoff',
+        title: 'Backoff',
+        goal: 'g',
+        nodes: [{
+          id: 'a',
+          prompt: 'a',
+          retry: { limit: 1, backoff: { base: 30, factor: 2, max: 100 } },
+        }],
+      }),
+    );
+    const runner = new TaskRunner({ host, workspaceId: 'ws', workspaceRoot: root });
+    runner.run('backoff', { runId: 'r1', verifyOnComplete: false });
+    await tick();
+    host.complete('a', { reason: 'error' });
+    await tick();
+
+    expect(host.created.filter((entry) => entry.options.name === 'a')).toHaveLength(1);
+    const retry = readRunLog(root, 'backoff', 'r1').find((entry) => entry.kind === 'node-retry');
+    expect(retry).toMatchObject({ kind: 'node-retry', delayMs: 30 });
+
+    await new Promise<void>((resolve) => setTimeout(resolve, 40));
+    expect(host.created.filter((entry) => entry.options.name === 'a')).toHaveLength(2);
+  });
+
+  it('restores the durable retry deadline after a process restart', async () => {
+    saveTaskSpec(
+      root,
+      specOf({
+        id: 'backoff-restart',
+        title: 'Backoff restart',
+        goal: 'g',
+        nodes: [{
+          id: 'a',
+          prompt: 'a',
+          retry: { limit: 1, backoff: { base: 300, factor: 2, max: 600 } },
+        }],
+      }),
+    );
+    const first = makeRunner();
+    first.run('backoff-restart', { runId: 'r1', verifyOnComplete: false });
+    await tick();
+    host.complete('a', { reason: 'error' });
+    await tick();
+    first.pause('backoff-restart', 'r1');
+
+    const recoveredHost = new MockHost();
+    const recovered = new TaskRunner({ host: recoveredHost, workspaceId: 'ws', workspaceRoot: root });
+    recovered.resume('backoff-restart', 'r1');
+    await tick();
+    expect(recoveredHost.created).toHaveLength(0);
+
+    await new Promise<void>((resolve) => setTimeout(resolve, 340));
+    expect(recoveredHost.dispatchedNames()).toEqual(['a']);
+  });
+
+  it('fails without dispatch when the mission deadline is already expired', async () => {
+    saveTaskSpec(
+      root,
+      specOf({
+        id: 'expired',
+        title: 'Expired',
+        goal: 'g',
+        mission: {
+          deliverables: [{ name: 'result' }],
+          deadline: '2026-06-01T00:00:00.000Z',
+          policy: { impact_level: 'medium', require_high_impact_approval: true, replay_external_mutations: false },
+        },
+        nodes: [{ id: 'a', prompt: 'a' }],
+      }),
+    );
+    const runner = new TaskRunner({
+      host,
+      workspaceId: 'ws',
+      workspaceRoot: root,
+      nowMs: () => Date.parse('2026-06-02T00:00:00.000Z'),
+    });
+    runner.run('expired', { runId: 'r1', verifyOnComplete: false });
+    await tick();
+
+    expect(host.created).toHaveLength(0);
+    expect(runner.getRunState('expired', 'r1')?.status).toBe('failed');
+    expect(readRunLog(root, 'expired', 'r1').some((entry) => entry.kind === 'deadline-breach')).toBe(true);
+  });
+
+  it('cancels in-flight work when a future mission deadline is crossed', async () => {
+    const deadline = new Date(Date.now() + 200).toISOString();
+    saveTaskSpec(
+      root,
+      specOf({
+        id: 'deadline-crossing',
+        title: 'Deadline crossing',
+        goal: 'g',
+        mission: {
+          deliverables: [{ name: 'result' }],
+          deadline,
+          policy: { impact_level: 'medium', require_high_impact_approval: true, replay_external_mutations: false },
+        },
+        nodes: [{ id: 'slow', prompt: 'wait beyond deadline' }],
+      }),
+    );
+    const runner = makeRunner();
+    runner.run('deadline-crossing', { runId: 'r1', verifyOnComplete: false });
+    await tick();
+    expect(host.dispatchedNames()).toEqual(['slow']);
+
+    await new Promise<void>((resolve) => setTimeout(resolve, 250));
+    expect(host.cancelled).toContain('sess-slow');
+    expect(runner.getRunState('deadline-crossing', 'r1')?.status).toBe('failed');
+    expect(readRunLog(root, 'deadline-crossing', 'r1').some(
+      (entry) => entry.kind === 'deadline-breach' && entry.deadline === deadline,
+    )).toBe(true);
+  });
+
+  it('fails immediately when measured usage overshoots the hard token budget', async () => {
+    saveTaskSpec(
+      root,
+      specOf({
+        id: 'token-budget',
+        title: 'Token budget',
+        goal: 'g',
+        token_budget: 2,
+        nodes: [{ id: 'a', prompt: 'a' }],
+      }),
+    );
+    const runner = makeRunner();
+    runner.run('token-budget', { runId: 'r1', verifyOnComplete: false });
+    await tick();
+    host.complete('a', { finalText: 'done', tokenUsage: tu(2, 1) });
+    await tick();
+
+    expect(runner.getRunState('token-budget', 'r1')).toMatchObject({ status: 'failed', tokensUsed: 3 });
+    expect(readRunLog(root, 'token-budget', 'r1').some(
+      (entry) => entry.kind === 'budget-breach' && entry.metric === 'tokens',
+    )).toBe(true);
+  });
+
+  it('fails the run when the measured USD cost reaches the hard mission budget', async () => {
+    saveTaskSpec(
+      root,
+      specOf({
+        id: 'cost-budget',
+        title: 'Cost budget',
+        goal: 'g',
+        mission: {
+          deliverables: [{ name: 'result' }],
+          budget: { max_cost: 0.01, currency: 'USD' },
+          policy: { impact_level: 'medium', require_high_impact_approval: true, replay_external_mutations: false },
+        },
+        nodes: [{ id: 'a', prompt: 'a' }],
+      }),
+    );
+    const runner = makeRunner();
+    runner.run('cost-budget', { runId: 'r1', verifyOnComplete: false });
+    await tick();
+    host.complete('a', { finalText: 'done', tokenUsage: tu(1, 1, 0.02) });
+    await tick();
+
+    expect(runner.getRunState('cost-budget', 'r1')).toMatchObject({ status: 'failed', costUsed: 0.02 });
+    expect(readRunLog(root, 'cost-budget', 'r1').some(
+      (entry) => entry.kind === 'budget-breach' && entry.metric === 'cost',
+    )).toBe(true);
+  });
+
+  it('recovers non-terminal paused runs after restart without scheduling until resumed', async () => {
+    saveTaskSpec(
+      root,
+      specOf({
+        id: 'auto-recover',
+        title: 'Auto recover',
+        goal: 'g',
+        nodes: [
+          { id: 'a', prompt: 'a' },
+          { id: 'b', depends_on: ['a'], prompt: 'b' },
+        ],
+      }),
+    );
+    const first = makeRunner();
+    first.run('auto-recover', { runId: 'r1', verifyOnComplete: false });
+    await tick();
+    first.pause('auto-recover', 'r1');
+    host.complete('a', { finalText: 'A' });
+    await tick();
+
+    const recoveredHost = new MockHost();
+    const recovered = new TaskRunner({ host: recoveredHost, workspaceId: 'ws', workspaceRoot: root });
+    const snapshots = recovered.recoverNonTerminalRuns();
+
+    expect(snapshots).toHaveLength(1);
+    expect(snapshots[0]?.status).toBe('paused');
+    expect(recoveredHost.created).toHaveLength(0);
+
+    recovered.resume('auto-recover', 'r1');
+    await tick();
+    expect(recoveredHost.dispatchedNames()).toEqual(['b']);
+  });
+
+  it('recovers a snapshotted run after its live task.yaml is deleted', async () => {
+    saveTaskSpec(
+      root,
+      specOf({
+        id: 'deleted-live-spec',
+        title: 'Deleted live spec',
+        goal: 'g',
+        nodes: [
+          { id: 'a', prompt: 'a' },
+          { id: 'b', depends_on: ['a'], prompt: 'b ${nodes.a.output}' },
+        ],
+      }),
+    );
+    const first = makeRunner();
+    first.run('deleted-live-spec', { runId: 'r1', verifyOnComplete: false });
+    await tick();
+    first.pause('deleted-live-spec', 'r1');
+    host.complete('a', { finalText: 'A' });
+    await tick();
+    rmSync(join(root, 'tasks', 'deleted-live-spec', 'task.yaml'));
+
+    const recoveredHost = new MockHost();
+    const recovered = new TaskRunner({ host: recoveredHost, workspaceId: 'ws', workspaceRoot: root });
+    const snapshots = recovered.recoverNonTerminalRuns();
+
+    expect(snapshots).toHaveLength(1);
+    expect(snapshots[0]?.status).toBe('paused');
+    recovered.resume('deleted-live-spec', 'r1');
+    await tick();
+    expect(recoveredHost.promptFor('b')?.endsWith('b A')).toBe(true);
+  });
+
+  it('recovers 1,000 ambiguous mutation checkpoints with zero duplicate dispatches', () => {
+    const spec = specOf({
+      id: 'recovery-scale',
+      title: 'Recovery scale',
+      goal: 'prove exactly-once recovery admission',
+      nodes: [{ id: 'mutate', prompt: 'perform one external mutation', effect: 'external-mutation' }],
+    });
+    saveTaskSpec(root, spec);
+
+    const checkpointCount = 1_000;
+    for (let index = 0; index < checkpointCount; index += 1) {
+      const runId = `run-${String(index).padStart(4, '0')}`;
+      const sessionId = `original-session-${index}`;
+      writeRunSpecSnapshot(root, spec.id, runId, spec);
+      appendRunLog(root, spec.id, runId, {
+        t: '2026-06-07T00:00:00.000Z',
+        kind: 'run-started',
+        taskId: spec.id,
+        runId,
+      });
+      appendRunLog(root, spec.id, runId, {
+        t: '2026-06-07T00:00:01.000Z',
+        kind: 'node-scheduled',
+        nodeId: 'mutate',
+      });
+      appendRunLog(root, spec.id, runId, {
+        t: '2026-06-07T00:00:02.000Z',
+        kind: 'node-spawned',
+        nodeId: 'mutate',
+        sessionId,
+      });
+      appendRunLog(root, spec.id, runId, {
+        t: '2026-06-07T00:00:03.000Z',
+        kind: 'node-checkpoint',
+        nodeId: 'mutate',
+        idempotencyKey: `key-${index}`,
+        status: 'executing',
+      });
+    }
+
+    const recoveredHost = new MockHost();
+    const recovered = new TaskRunner({ host: recoveredHost, workspaceId: 'ws', workspaceRoot: root });
+    const snapshots = recovered.recoverNonTerminalRuns();
+
+    expect(snapshots).toHaveLength(checkpointCount);
+    expect(snapshots.every((snapshot) => snapshot.status === 'failed')).toBe(true);
+    expect(snapshots.every((snapshot) => snapshot.nodes[0]?.state === 'failed')).toBe(true);
+    expect(recoveredHost.created).toHaveLength(0);
+
+    let originalSpawnCount = 0;
+    for (let index = 0; index < checkpointCount; index += 1) {
+      const runId = `run-${String(index).padStart(4, '0')}`;
+      originalSpawnCount += readRunLog(root, spec.id, runId)
+        .filter((entry) => entry.kind === 'node-spawned').length;
+    }
+    expect(originalSpawnCount).toBe(checkpointCount);
+  }, 60_000);
+
   it('retries a failed node up to retry.limit, then fails', async () => {
     saveTaskSpec(
       root,
@@ -710,6 +1118,10 @@ describe('TaskRunner (Conductor)', () => {
     let snap = runner.getRunState('rt', 'r1')!;
     expect(snap.nodes[0]!.state).toBe('running');
     expect(snap.nodes[0]!.attempt).toBe(2);
+    const checkpointKeys = readRunLog(root, 'rt', 'r1')
+      .filter((entry) => entry.kind === 'node-checkpoint')
+      .map((entry) => entry.idempotencyKey);
+    expect(new Set(checkpointKeys)).toEqual(new Set(['ws:rt:r1:a']));
 
     // Second failure → budget exhausted → failed.
     host.complete('a', { reason: 'error' });

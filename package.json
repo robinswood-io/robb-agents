@@ -84,8 +84,6 @@
     "electron:dev:menu": "bash scripts/electron-dev.sh",
     "electron:dev:logs": "pgrep -f 'tail -f.*@craft-agent/electron/main.log' > /dev/null || osascript -e \"tell application \\\"Terminal\\\" to do script \\\"$PWD/scripts/tail-electron-logs.sh\\\"\"",
     "sync-secrets": "bash scripts/sync-secrets.sh",
-    "fresh-start": "bun run scripts/fresh-start.ts",
-    "fresh-start:token": "bun run scripts/fresh-start.ts --token-only",
     "print:system-prompt": "bun run packages/shared/src/prompts/print-system-prompt.ts",
     "browser-tool": "bun run scripts/browser-tool.ts",
     "electron:dist": "bun run rtk:prepare && bun run electron:build && cd apps/electron && electron-builder --config electron-builder.yml",
@@ -111,10 +109,7 @@
     "marketing:build": "vite build --config apps/marketing/vite.config.ts",
     "marketing:preview": "vite preview --config apps/marketing/vite.config.ts",
     "docs:dev": "cd apps/online-docs && npm install && npx mintlify dev",
-    "build": "bun run scripts/build.ts",
-    "release": "bun run scripts/release.ts",
-    "check-version": "bun run scripts/check-version.ts",
-    "oss:sync": "bun run scripts/oss-sync.ts",
+    "build": "bun run electron:build",
     "prepare": "husky"
   },
   "devDependencies": {

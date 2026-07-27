@@ -120,6 +120,7 @@ export interface ISessionManager {
   ): Promise<void>
   cancelProcessing(sessionId: string, silent?: boolean): Promise<void>
   killShell(sessionId: string, shellId: string): Promise<{ success: boolean; error?: string }>
+  getTaskSessionId(taskId: string): string | undefined
   getTaskOutput(taskId: string): Promise<string | null>
 
   // --- Tasks Conductor seams (in-process; not renderer events, not agent-facing) ---
@@ -169,8 +170,8 @@ export interface ISessionManager {
   /**
    * Send the plan-approval "I approve this plan, please execute it" message
    * to the session as if the user had clicked "Accept plan" in the desktop UI.
-   * If the session is in Explore (safe) mode, also switches it to allow-all
-   * so the plan can actually run without per-tool prompts.
+   * If the session is in Explore (safe) mode, switches it to Ask so plan
+   * approval cannot silently authorize every later mutation.
    *
    * Used by the messaging gateway so Telegram/WhatsApp accept buttons produce
    * the same server-side effect as the desktop accept button.

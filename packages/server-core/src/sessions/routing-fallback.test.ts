@@ -26,6 +26,10 @@ describe('classifyRoutingFallbackReason', () => {
   it('falls back to provider-error for unknown failures', () => {
     expect(classifyRoutingFallbackReason(new Error('rate limited by upstream'))).toBe('provider-error')
   })
+
+  it('uses the shared taxonomy for upstream service failures', () => {
+    expect(classifyRoutingFallbackReason(new Error('503 service unavailable'))).toBe('connection-unavailable')
+  })
 })
 
 describe('selectRoutingFallbackCandidate', () => {

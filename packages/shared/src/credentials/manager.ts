@@ -110,6 +110,7 @@ export class CredentialManager {
    */
   async get(id: CredentialId): Promise<StoredCredential | null> {
     await this.ensureInitialized();
+    let firstError: unknown;
 
     for (const backend of this.backends) {
       try {
@@ -119,10 +120,12 @@ export class CredentialManager {
           return cred;
         }
       } catch (err) {
+        firstError ??= err;
         debug(`[CredentialManager] Error reading from ${backend.name}:`, err);
       }
     }
 
+    if (firstError) throw firstError;
     return null;
   }
 
@@ -149,6 +152,7 @@ export class CredentialManager {
     await this.ensureInitialized();
 
     let deleted = false;
+    let firstError: unknown;
     for (const backend of this.backends) {
       try {
         if (await backend.delete(id)) {
@@ -156,10 +160,12 @@ export class CredentialManager {
           debug(`[CredentialManager] Deleted ${id.type} from ${backend.name}`);
         }
       } catch (err) {
+        firstError ??= err;
         debug(`[CredentialManager] Error deleting from ${backend.name}:`, err);
       }
     }
 
+    if (!deleted && firstError) throw firstError;
     return deleted;
   }
 
@@ -167,6 +173,7 @@ export class CredentialManager {
     this.ensureInitializedSync();
 
     let deleted = false;
+    let firstError: unknown;
     for (const backend of this.backends) {
       if (!backend.deleteSync) {
         debug(`[CredentialManager] Backend ${backend.name} does not support synchronous delete`);
@@ -179,10 +186,12 @@ export class CredentialManager {
           debug(`[CredentialManager] Deleted ${id.type} from ${backend.name}`);
         }
       } catch (err) {
+        firstError ??= err;
         debug(`[CredentialManager] Error deleting from ${backend.name}:`, err);
       }
     }
 
+    if (!deleted && firstError) throw firstError;
     return deleted;
   }
 
@@ -195,6 +204,7 @@ export class CredentialManager {
 
     const seen = new Set<string>();
     const results: CredentialId[] = [];
+    let firstError: unknown;
 
     for (const backend of this.backends) {
       try {
@@ -207,10 +217,12 @@ export class CredentialManager {
           }
         }
       } catch (err) {
+        firstError ??= err;
         debug(`[CredentialManager] Error listing from ${backend.name}:`, err);
       }
     }
 
+    if (firstError) throw firstError;
     return results;
   }
 

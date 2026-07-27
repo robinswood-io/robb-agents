@@ -39,6 +39,8 @@ export const CHANNEL_MAP = {
   stopTask: invoke(RPC_CHANNELS.tasks.STOP),
   listTaskApprovals: invoke(RPC_CHANNELS.tasks.LIST_APPROVALS),
   resolveTaskApproval: invoke(RPC_CHANNELS.tasks.RESOLVE_APPROVAL),
+  getTaskKillSwitches: invoke(RPC_CHANNELS.tasks.GET_KILL_SWITCHES),
+  setTaskKillSwitch: invoke(RPC_CHANNELS.tasks.SET_KILL_SWITCH),
   getTask: invoke(RPC_CHANNELS.tasks.GET),
   listTasks: invoke(RPC_CHANNELS.tasks.LIST),
   getTaskResults: invoke(RPC_CHANNELS.tasks.GET_RESULTS),

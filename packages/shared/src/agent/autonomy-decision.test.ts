@@ -26,4 +26,20 @@ describe('decideAutonomyRecovery', () => {
     expect(decideAutonomyRecovery({ ...sourceFailure, toolName: 'mcp__session__browser_tool' }))
       .toEqual({ kind: 'escalate', reason: 'access_unavailable_after_fallback' })
   })
+
+  it('uses structured provider status before legacy text parsing', () => {
+    expect(decideAutonomyRecovery({
+      ...sourceFailure,
+      result: 'generic failure',
+      httpStatus: 401,
+    })).toEqual({ kind: 'escalate', reason: 'credential_required' })
+  })
+
+  it('does not waste a browser fallback on invalid input', () => {
+    expect(decideAutonomyRecovery({
+      ...sourceFailure,
+      result: 'generic failure',
+      errorCode: 'INVALID_ARGUMENT',
+    })).toEqual({ kind: 'none' })
+  })
 })

@@ -8,11 +8,14 @@
  */
 
 import { existsSync, readFileSync } from 'fs'
+import { basename, extname } from 'path'
 import type { SessionHeader, StoredMessage, SessionConfig } from './types.ts'
 import type { StoredSession } from './types.ts'
 import { readSessionJsonl } from './jsonl.ts'
 import { getSessionPath, getSessionFilePath } from './storage.ts'
+import { validateSessionId } from './validation.ts'
 import { debug } from '../utils/debug.ts'
+import { redactSecretLikeMaterial, redactStructuredSecrets } from '../utils/redaction.ts'
 import {
   type BundleFile,
   MAX_BUNDLE_SIZE_BYTES,
@@ -33,6 +36,24 @@ const SKIP_DIRS = new Set(['tmp'])
  * session.jsonl is in the bundle as structured data.
  */
 const SKIP_SESSION_FILES = new Set(['session.jsonl', 'session.jsonl.tmp'])
+
+const SENSITIVE_FILE_NAMES = new Set([
+  '.env',
+  '.npmrc',
+  '.pypirc',
+  'credentials.json',
+  'credentials.enc',
+  'token.json',
+  'tokens.json',
+  'id_rsa',
+  'id_ed25519',
+])
+
+const SENSITIVE_FILE_EXTENSIONS = new Set(['.key', '.pem', '.p12', '.pfx', '.kdbx'])
+const REDACTABLE_TEXT_EXTENSIONS = new Set([
+  '.conf', '.css', '.csv', '.env', '.html', '.ini', '.js', '.json', '.jsonl', '.jsx',
+  '.log', '.md', '.sql', '.sh', '.toml', '.ts', '.tsx', '.txt', '.xml', '.yaml', '.yml',
+])
 
 /**
  * Dispatch mode determines how the imported session relates to the original.
@@ -71,6 +92,51 @@ export interface SessionBundle {
   files: BundleFile[]
   /** Branch info for fork operations (populated by the exporter when forking) */
   branchInfo?: BundleBranchInfo
+  /** Security posture of this portable payload. Legacy bundles may omit it. */
+  security?: {
+    trust: 'portable-redacted'
+    secretLikeTextRedacted: true
+    excludedSensitiveFiles: string[]
+    /** Binary attachments are preserved byte-for-byte and require destination-side policy review. */
+    binaryFilesUninspected: string[]
+  }
+}
+
+function sanitizePortableFiles(files: BundleFile[]): {
+  files: BundleFile[]
+  excludedSensitiveFiles: string[]
+  binaryFilesUninspected: string[]
+} {
+  const excludedSensitiveFiles: string[] = []
+  const binaryFilesUninspected: string[] = []
+  const sanitized: BundleFile[] = []
+
+  for (const file of files) {
+    const fileName = basename(file.relativePath).toLowerCase()
+    const extension = extname(fileName)
+    if (SENSITIVE_FILE_NAMES.has(fileName) || SENSITIVE_FILE_EXTENSIONS.has(extension)) {
+      excludedSensitiveFiles.push(file.relativePath)
+      continue
+    }
+
+    if (!REDACTABLE_TEXT_EXTENSIONS.has(extension)) {
+      binaryFilesUninspected.push(file.relativePath)
+      sanitized.push(file)
+      continue
+    }
+
+    const redacted = Buffer.from(
+      redactSecretLikeMaterial(Buffer.from(file.contentBase64, 'base64').toString('utf8')),
+      'utf8',
+    )
+    sanitized.push({
+      relativePath: file.relativePath,
+      contentBase64: redacted.toString('base64'),
+      size: redacted.length,
+    })
+  }
+
+  return { files: sanitized, excludedSensitiveFiles, binaryFilesUninspected }
 }
 
 /**
@@ -103,10 +169,12 @@ export function serializeSession(
   }
 
   // Collect all files from session directory (except session.jsonl and tmp/)
-  const files = collectDirectoryFiles(sessionDir, {
+  const collectedFiles = collectDirectoryFiles(sessionDir, {
     skipDirs: SKIP_DIRS,
     skipFiles: SKIP_SESSION_FILES,
   })
+  const sanitizedFiles = sanitizePortableFiles(collectedFiles)
+  const files = sanitizedFiles.files
 
   // Validate total bundle size
   const totalSize = files.reduce((sum, f) => sum + f.size, 0)
@@ -122,18 +190,33 @@ export function serializeSession(
   if (!firstLine) return null
 
   // Strip server-internal fields that shouldn't travel with the bundle
-  const header: SessionHeader = {
+  const rawHeader: SessionHeader = {
     ...JSON.parse(firstLine) as SessionHeader,
     // workspaceRootPath will be set by the importing server
   }
+  const header = redactStructuredSecrets<SessionHeader>({
+    ...rawHeader,
+    workspaceRootPath: '',
+    workingDirectory: undefined,
+    sdkCwd: undefined,
+    sharedUrl: undefined,
+    sharedId: undefined,
+    pendingPlanExecution: undefined,
+  })
 
   return {
     version: 1,
     session: {
       header,
-      messages: stored.messages,
+      messages: redactStructuredSecrets(stored.messages),
     },
     files,
+    security: {
+      trust: 'portable-redacted',
+      secretLikeTextRedacted: true,
+      excludedSensitiveFiles: sanitizedFiles.excludedSensitiveFiles,
+      binaryFilesUninspected: sanitizedFiles.binaryFilesUninspected,
+    },
   }
 }
 
@@ -155,8 +238,22 @@ export function validateBundle(bundle: unknown): bundle is SessionBundle {
   const header = session.header as Record<string, unknown>
   if (typeof header.id !== 'string') return false
   if (typeof header.createdAt !== 'number') return false
+  try {
+    validateSessionId(header.id)
+  } catch {
+    return false
+  }
 
   if (!Array.isArray(b.files)) return false
+
+  if (b.security !== undefined) {
+    if (!b.security || typeof b.security !== 'object') return false
+    const security = b.security as Record<string, unknown>
+    if (security.trust !== 'portable-redacted' || security.secretLikeTextRedacted !== true) return false
+    if (!Array.isArray(security.excludedSensitiveFiles) || !Array.isArray(security.binaryFilesUninspected)) return false
+    if (!security.excludedSensitiveFiles.every((path) => typeof path === 'string')) return false
+    if (!security.binaryFilesUninspected.every((path) => typeof path === 'string')) return false
+  }
 
   return true
 }

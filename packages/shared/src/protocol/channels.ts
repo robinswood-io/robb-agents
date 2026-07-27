@@ -69,6 +69,8 @@ export const RPC_CHANNELS = {
     STOP: 'tasks:stop',
     LIST_APPROVALS: 'tasks:listApprovals',
     RESOLVE_APPROVAL: 'tasks:resolveApproval',
+    GET_KILL_SWITCHES: 'tasks:getKillSwitches',
+    SET_KILL_SWITCH: 'tasks:setKillSwitch',
     GET: 'tasks:get',
     LIST: 'tasks:list',
     // Storage-backed read of a run's outcome (verdict + per-node output). Survives restart.

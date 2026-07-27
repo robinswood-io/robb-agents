@@ -6,28 +6,35 @@
  */
 
 import { describe, it, expect, afterEach } from 'bun:test'
-import WebSocket from 'ws'
+import WebSocket, { type RawData } from 'ws'
 import { WsRpcServer } from '../server'
 import { PROTOCOL_VERSION } from '@craft-agent/shared/protocol'
+import type { AuthenticationResult } from '../types'
 
 const TEST_TOKEN = 'test-token-with-enough-entropy-to-pass'
 
 function createServer(opts?: {
   maxClients?: number
   requireAuth?: boolean
-  validateToken?: (token: string) => Promise<boolean>
+  requireAuthoritativePrincipal?: boolean
+  validateToken?: (token: string) => Promise<AuthenticationResult>
 }) {
   return new WsRpcServer({
     host: '127.0.0.1',
     port: 0,
     requireAuth: opts?.requireAuth ?? true,
     validateToken: opts?.validateToken ?? (async (t) => t === TEST_TOKEN),
+    requireAuthoritativePrincipal: opts?.requireAuthoritativePrincipal,
     maxClients: opts?.maxClients,
     serverId: 'test',
   })
 }
 
-function handshake(url: string, token: string): Promise<{ ws: WebSocket; clientId: string }> {
+function handshake(
+  url: string,
+  token: string,
+  options: { workspaceId?: string; clientCapabilities?: string[] } = {},
+): Promise<{ ws: WebSocket; clientId: string }> {
   return new Promise((resolve, reject) => {
     const ws = new WebSocket(url)
     const timeout = setTimeout(() => {
@@ -41,6 +48,8 @@ function handshake(url: string, token: string): Promise<{ ws: WebSocket; clientI
         type: 'handshake',
         protocolVersion: PROTOCOL_VERSION,
         token,
+        workspaceId: options.workspaceId,
+        clientCapabilities: options.clientCapabilities,
       }))
     })
     ws.on('message', (data) => {
@@ -62,6 +71,27 @@ function handshake(url: string, token: string): Promise<{ ws: WebSocket; clientI
       clearTimeout(timeout)
       reject(err)
     })
+  })
+}
+
+function invoke(ws: WebSocket, channel: string, args: readonly unknown[] = []): Promise<unknown> {
+  return new Promise((resolve, reject) => {
+    const id = crypto.randomUUID()
+    const onMessage = (data: RawData) => {
+      const parsed: unknown = JSON.parse(data.toString())
+      if (typeof parsed !== 'object' || parsed === null) return
+      const message = parsed as Record<string, unknown>
+      if (message.id !== id || message.type !== 'response') return
+      ws.off('message', onMessage)
+      if (typeof message.error === 'object' && message.error !== null) {
+        const error = message.error as Record<string, unknown>
+        reject(new Error(typeof error.message === 'string' ? error.message : 'RPC failed'))
+        return
+      }
+      resolve(message.result)
+    }
+    ws.on('message', onMessage)
+    ws.send(JSON.stringify({ id, type: 'request', channel, args }))
   })
 }
 
@@ -102,6 +132,59 @@ describe('WsRpcServer lifecycle', () => {
 
     await expect(handshake(url, 'wrong-token')).rejects.toThrow()
     expect(server.getConnectedClientCount()).toBe(0)
+  })
+
+  it('requires a server-issued principal when authoritative auth is enabled', async () => {
+    server = createServer({
+      requireAuthoritativePrincipal: true,
+      validateToken: async (token) => token === TEST_TOKEN,
+    })
+    await server.listen()
+
+    await expect(handshake(`ws://127.0.0.1:${server.port}`, TEST_TOKEN))
+      .rejects.toThrow('Auth error')
+  })
+
+  it('binds workspace and client capabilities to the authenticated principal', async () => {
+    server = createServer({
+      requireAuthoritativePrincipal: true,
+      validateToken: async (token) => token !== TEST_TOKEN
+        ? false
+        : {
+            actorId: 'operator-1',
+            allowedWorkspaceIds: ['ws-allowed'],
+            capabilities: ['browser.invoke'],
+            roles: ['operator'],
+            authorizationGeneration: 4,
+          },
+    })
+    server.handle('identity', async (context) => ({
+      actorId: context.actorId,
+      workspaceId: context.workspaceId,
+      roles: context.roles,
+      authorizationGeneration: context.authorizationGeneration,
+    }))
+    await server.listen()
+    const url = `ws://127.0.0.1:${server.port}`
+
+    await expect(handshake(url, TEST_TOKEN, { workspaceId: 'ws-forged' }))
+      .rejects.toThrow('Workspace access denied')
+
+    const { ws, clientId } = await handshake(url, TEST_TOKEN, {
+      workspaceId: 'ws-allowed',
+      clientCapabilities: ['browser.invoke', 'admin.forged'],
+    })
+    openSockets.push(ws)
+
+    expect(server.hasClientCapability(clientId, 'browser.invoke')).toBe(true)
+    expect(server.hasClientCapability(clientId, 'admin.forged')).toBe(false)
+    expect(await invoke(ws, 'identity')).toEqual({
+      actorId: 'operator-1',
+      workspaceId: 'ws-allowed',
+      roles: ['operator'],
+      authorizationGeneration: 4,
+    })
+    expect(() => server?.updateClientWorkspace(clientId, 'ws-forged')).toThrow('Workspace access denied')
   })
 
   it('rejects missing token', async () => {

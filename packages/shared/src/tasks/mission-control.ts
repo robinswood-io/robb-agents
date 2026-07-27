@@ -212,7 +212,8 @@ function buildMissionEvaluation(
   const failedNodes = terminalStates.filter((state) => state === 'failed' || state === 'cancelled').length;
   const verdicts = log.filter((entry): entry is Extract<RunLogEntry, { kind: 'verdict' }> => entry.kind === 'verdict');
   const latestVerdict = verdicts.at(-1);
-  const safetyEntries = log.filter((entry) => entry.kind === 'budget-breach' || entry.kind === 'kill-switch');
+  const safetyEntries = log.filter((entry) =>
+    entry.kind === 'budget-breach' || entry.kind === 'deadline-breach' || entry.kind === 'kill-switch');
   const failures: string[] = [];
 
   if (latestVerdict?.result === 'fail' || latestVerdict?.result === 'unparsed') {
@@ -223,6 +224,8 @@ function buildMissionEvaluation(
       failures.push(`${entry.nodeId}: ${entry.reason ?? `node ${entry.state}`}`);
     } else if (entry.kind === 'budget-breach') {
       failures.push(`Budget ${entry.metric} exceeded: ${entry.value} > ${entry.limit}`);
+    } else if (entry.kind === 'deadline-breach') {
+      failures.push(`Mission deadline breached: ${entry.deadline}`);
     } else if (entry.kind === 'kill-switch') {
       failures.push(`Kill switch (${entry.scope}): ${entry.reason}`);
     }

@@ -221,6 +221,8 @@ interface SessionItemPreviewProps {
   isSelected?: boolean
   searchQuery?: string
   chatMatchCount?: number
+  subagentCount?: number
+  runningSubagentCount?: number
   state?: 'none' | 'loading' | 'plan' | 'new'
   flagged?: boolean
 }
@@ -230,6 +232,8 @@ function SessionItemPreview({
   isSelected = false,
   searchQuery = '',
   chatMatchCount,
+  subagentCount = 0,
+  runningSubagentCount = 0,
   state = 'none',
   flagged = false,
 }: SessionItemPreviewProps) {
@@ -264,6 +268,10 @@ function SessionItemPreview({
           isSelected={isSelected}
           isFirstInGroup
           isInMultiSelect={false}
+          subagentSummary={subagentCount > 0 ? {
+            totalCount: subagentCount,
+            runningCount: Math.min(runningSubagentCount, subagentCount),
+          } : undefined}
           onSelect={() => {}}
         />
       </SessionListProvider>
@@ -431,6 +439,18 @@ export const sessionListComponents: ComponentEntry[] = [
         control: { type: 'boolean' },
         defaultValue: false,
       },
+      {
+        name: 'subagentCount',
+        description: 'Total hidden sub-agents linked to this parent session',
+        control: { type: 'number', min: 0, max: 99, step: 1 },
+        defaultValue: 0,
+      },
+      {
+        name: 'runningSubagentCount',
+        description: 'Hidden sub-agents currently running',
+        control: { type: 'number', min: 0, max: 99, step: 1 },
+        defaultValue: 0,
+      },
     ],
     variants: [
       {
@@ -489,6 +509,15 @@ export const sessionListComponents: ComponentEntry[] = [
           searchQuery: 'auth',
           isSelected: true,
           chatMatchCount: 5,
+        },
+      },
+      {
+        name: 'Hidden Sub-agents Running',
+        description: 'Parent-only navigation with a count and running indicator',
+        props: {
+          item: sampleSessions[0],
+          subagentCount: 4,
+          runningSubagentCount: 2,
         },
       },
     ],
