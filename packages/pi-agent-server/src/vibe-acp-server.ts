@@ -174,7 +174,7 @@ async function startVibe(init: InitMessage): Promise<void> {
       session: {},
       plan: {},
     },
-    clientInfo: { name: 'Robb Agents', version: '0.11.0' },
+    clientInfo: { name: 'Robb Agents', version: '0.11.3' },
   });
 
   // ACP session IDs are non-secret conversation metadata. Reuse the existing
