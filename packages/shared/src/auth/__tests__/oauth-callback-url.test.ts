@@ -5,7 +5,12 @@ import { describe, it, expect } from 'bun:test'
  * as an alternative to callbackPort for WebUI deployments.
  */
 
-import { prepareGoogleOAuth } from '../google-oauth'
+import {
+  buildGoogleAuthorizationCodeTokenParams,
+  buildGoogleRefreshTokenParams,
+  isGoogleOAuthConfigured,
+  prepareGoogleOAuth,
+} from '../google-oauth'
 
 // Google and Slack accept credentials via options, so we can test them directly.
 // Microsoft reads MICROSOFT_OAUTH_CLIENT_ID from env at module load — skip if not set.
@@ -17,6 +22,34 @@ const TEST_CREDS = {
 
 describe('callbackUrl support in OAuth prepare functions', () => {
   describe('Google OAuth', () => {
+    it('configures public desktop clients from a client ID alone', () => {
+      expect(isGoogleOAuthConfigured('public-client-id')).toBe(true)
+      const result = prepareGoogleOAuth({
+        callbackPort: 6477,
+        clientId: 'public-client-id',
+      })
+      expect(result.clientSecret).toBeUndefined()
+      expect(result.authUrl).not.toContain('client_secret')
+    })
+
+    it('omits client_secret from public-client token requests', () => {
+      const exchange = buildGoogleAuthorizationCodeTokenParams({
+        client_id: 'public-client-id',
+        code: 'authorization-code',
+        code_verifier: 'pkce-verifier',
+        grant_type: 'authorization_code',
+        redirect_uri: 'http://127.0.0.1:6477/callback',
+      })
+      const refresh = buildGoogleRefreshTokenParams({
+        client_id: 'public-client-id',
+        grant_type: 'refresh_token',
+        refresh_token: 'refresh-token',
+      })
+
+      expect(exchange.has('client_secret')).toBe(false)
+      expect(refresh.has('client_secret')).toBe(false)
+    })
+
     it('uses callbackUrl when provided', () => {
       const result = prepareGoogleOAuth({
         callbackUrl: 'https://my-server.com/api/oauth/callback',

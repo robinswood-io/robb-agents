@@ -152,6 +152,10 @@ describe('Robinswood visible branding', () => {
     expect(updater).toContain('autoUpdater.allowPrerelease = false')
     expect(updater).toContain('await autoUpdater.downloadUpdate()')
     expect(updater).not.toContain('checkForUpdatesOnLaunch')
+    expect(updater).toContain('/usr/sbin/spctl --assess --type execute')
+    expect(updater).toContain('source=Notarized Developer ID')
+    expect(updater).toContain('^Authority=Developer ID Application: .+$')
+    expect(updater).toContain('^TeamIdentifier=[A-Z0-9]{10}$')
 
     const menu = readRepoFile('apps/electron/src/main/menu.ts')
     const menuSchema = readRepoFile('apps/electron/src/shared/menu-schema.ts')
@@ -168,6 +172,16 @@ describe('Robinswood visible branding', () => {
     expect(validationWorkflow).toContain(`      - name: Build and validate unsigned NSIS installer
         env:
           GITHUB_TOKEN: \${{ github.token }}`)
+  })
+
+  it('never embeds a Google OAuth client secret in desktop build commands', () => {
+    for (const path of [
+      'apps/electron/package.json',
+      'scripts/electron-dev.ts',
+      'scripts/build/win32.ts',
+    ]) {
+      expect(readRepoFile(path)).not.toContain('define:process.env.GOOGLE_OAUTH_CLIENT_SECRET')
+    }
   })
 
   it('uses Robb Agents in visible runtime guidance outside the desktop shell', () => {

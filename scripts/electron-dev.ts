@@ -292,7 +292,6 @@ async function buildMcpServers(): Promise<void> {
 function getOAuthDefines(): Record<string, string> {
   const oauthVars = [
     "GOOGLE_OAUTH_CLIENT_ID",
-    "GOOGLE_OAUTH_CLIENT_SECRET",
     "SLACK_OAUTH_CLIENT_ID",
     "SLACK_OAUTH_CLIENT_SECRET",
     "MICROSOFT_OAUTH_CLIENT_ID",

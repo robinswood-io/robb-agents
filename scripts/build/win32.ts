@@ -143,7 +143,6 @@ function buildMainProcess(config: BuildConfig): void {
   // Add OAuth defines if env vars are set
   const oauthDefines = [
     ['GOOGLE_OAUTH_CLIENT_ID', process.env.GOOGLE_OAUTH_CLIENT_ID],
-    ['GOOGLE_OAUTH_CLIENT_SECRET', process.env.GOOGLE_OAUTH_CLIENT_SECRET],
     ['SLACK_OAUTH_CLIENT_ID', process.env.SLACK_OAUTH_CLIENT_ID],
     ['SLACK_OAUTH_CLIENT_SECRET', process.env.SLACK_OAUTH_CLIENT_SECRET],
     ['MICROSOFT_OAUTH_CLIENT_ID', process.env.MICROSOFT_OAUTH_CLIENT_ID],

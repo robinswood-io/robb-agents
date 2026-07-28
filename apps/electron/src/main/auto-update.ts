@@ -21,6 +21,7 @@ import type { EventSink } from '@craft-agent/server-core/transport'
 import { RPC_CHANNELS, type UpdateInfo } from '../shared/types'
 import {
   canUseStableUpdater,
+  isDeveloperIdApplicationSignature,
   isStableReleaseVersion,
   resolveAppChannel,
 } from './app-channel'
@@ -227,7 +228,7 @@ function currentMacAppUsesDeveloperIdSignature(): boolean {
     encoding: 'utf8',
   })
   const output = `${result.stdout ?? ''}\n${result.stderr ?? ''}`
-  return output.includes('Authority=Developer ID Application')
+  return result.status === 0 && isDeveloperIdApplicationSignature(output)
 }
 
 function writeDetachedMacInstallerScript(): string {
@@ -248,6 +249,29 @@ echo "expectedVersion=$EXPECTED_VERSION"
 TMP_DIR="$(mktemp -d "\${TMPDIR:-/tmp}/robb-agents-update.XXXXXX")"
 cleanup() { rm -rf "$TMP_DIR"; }
 trap cleanup EXIT
+
+validate_notarized_app() {
+  local bundle="$1"
+  local signature_details
+  local assessment
+  if ! /usr/bin/codesign --verify --deep --strict --verbose=2 "$bundle"; then
+    return 1
+  fi
+  signature_details="$(/usr/bin/codesign -dv --verbose=4 "$bundle" 2>&1)"
+  printf '%s\n' "$signature_details"
+  if ! printf '%s\n' "$signature_details" | /usr/bin/grep -Eq '^Authority=Developer ID Application: .+$'; then
+    return 1
+  fi
+  if ! printf '%s\n' "$signature_details" | /usr/bin/grep -Eq '^TeamIdentifier=[A-Z0-9]{10}$'; then
+    return 1
+  fi
+  if ! assessment="$(/usr/sbin/spctl --assess --type execute --verbose=4 "$bundle" 2>&1)"; then
+    printf '%s\n' "$assessment"
+    return 1
+  fi
+  printf '%s\n' "$assessment"
+  printf '%s\n' "$assessment" | /usr/bin/grep -Eq 'source=Notarized Developer ID'
+}
 
 for _ in {1..60}; do
   if ! pgrep -f "$APP_PATH/Contents/MacOS" >/dev/null 2>&1; then
@@ -270,7 +294,10 @@ if [ ! -d "$SRC" ]; then
 fi
 find "$SRC" -name '._*' -delete
 xattr -cr "$SRC" || true
-/usr/bin/codesign --verify --deep --strict --verbose=2 "$SRC"
+if ! validate_notarized_app "$SRC"; then
+  echo 'Downloaded update is not signed and notarized with Apple Developer ID; refusing installation.'
+  exit 1
+fi
 ACTUAL_VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$SRC/Contents/Info.plist")"
 if [ "$ACTUAL_VERSION" != "$EXPECTED_VERSION" ]; then
   echo "Unexpected update version: $ACTUAL_VERSION"
@@ -278,6 +305,7 @@ if [ "$ACTUAL_VERSION" != "$EXPECTED_VERSION" ]; then
 fi
 
 mkdir -p "$BACKUP_DIR"
+BACKUP_PATH=''
 if [ -d "$APP_PATH" ]; then
   BACKUP_PATH="$BACKUP_DIR/Robb Agents.app.pre-update-$(date +%Y%m%d-%H%M%S)"
   echo "Backing up current app to $BACKUP_PATH"
@@ -288,8 +316,25 @@ echo 'Replacing installed application...'
 rm -rf "$APP_PATH"
 ditto "$SRC" "$APP_PATH"
 xattr -cr "$APP_PATH" || true
-/usr/bin/codesign --verify --deep --strict --verbose=2 "$APP_PATH"
+if ! validate_notarized_app "$APP_PATH"; then
+  echo 'Installed application failed signature verification; restoring the previous version.'
+  rm -rf "$APP_PATH"
+  if [ -n "$BACKUP_PATH" ] && [ -d "$BACKUP_PATH" ]; then
+    ditto "$BACKUP_PATH" "$APP_PATH"
+    /usr/bin/codesign --verify --deep --strict --verbose=2 "$APP_PATH"
+  fi
+  exit 1
+fi
 INSTALLED_VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP_PATH/Contents/Info.plist")"
+if [ "$INSTALLED_VERSION" != "$EXPECTED_VERSION" ]; then
+  echo "Installed application has unexpected version $INSTALLED_VERSION; restoring the previous version."
+  rm -rf "$APP_PATH"
+  if [ -n "$BACKUP_PATH" ] && [ -d "$BACKUP_PATH" ]; then
+    ditto "$BACKUP_PATH" "$APP_PATH"
+    /usr/bin/codesign --verify --deep --strict --verbose=2 "$APP_PATH"
+  fi
+  exit 1
+fi
 echo "Installed version=$INSTALLED_VERSION"
 
 rm -rf "$CACHE_ROOT/pending" "$CACHE_ROOT/update.zip" "$HOME/Library/Caches/io.robinswood.robbagents.ShipIt"

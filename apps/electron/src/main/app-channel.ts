@@ -34,3 +34,9 @@ export function canUseStableUpdater(isPackaged: boolean, channel: RobbAppChannel
 export function isStableReleaseVersion(version: string): boolean {
   return /^\d+\.\d+\.\d+$/.test(version)
 }
+
+export function isDeveloperIdApplicationSignature(details: string): boolean {
+  const hasDeveloperIdAuthority = /^Authority=Developer ID Application: .+$/m.test(details)
+  const hasAppleTeamIdentifier = /^TeamIdentifier=[A-Z0-9]{10}$/m.test(details)
+  return hasDeveloperIdAuthority && hasAppleTeamIdentifier
+}

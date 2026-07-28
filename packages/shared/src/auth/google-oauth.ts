@@ -22,12 +22,24 @@ import type { PreparedOAuthFlow, OAuthExchangeParams, OAuthExchangeResult } from
 // Re-export GoogleService type for convenient access
 export type { GoogleService };
 
-// Google OAuth configuration - environment variables used as fallback
-// Users can provide their own credentials via source config (preferred for OSS)
-// These env vars are only used if credentials are not provided explicitly
-// Note: Google requires client_secret for Desktop apps despite PKCE support
+// Google OAuth configuration - environment variables used as fallback.
+// Installed apps are public OAuth clients and authenticate with PKCE, not an
+// embedded secret. A client secret remains optional for confidential WebUI
+// deployments or explicit user-owned source configurations.
 const GOOGLE_CLIENT_ID_ENV = process.env.GOOGLE_OAUTH_CLIENT_ID || '';
 const GOOGLE_CLIENT_SECRET_ENV = process.env.GOOGLE_OAUTH_CLIENT_SECRET || '';
+
+function resolveGoogleOAuthClient(
+  clientId?: string,
+  clientSecret?: string,
+): { clientId: string; clientSecret?: string } {
+  const explicitClientId = clientId?.trim();
+  const explicitClientSecret = clientSecret?.trim();
+  return {
+    clientId: explicitClientId || GOOGLE_CLIENT_ID_ENV.trim(),
+    clientSecret: explicitClientSecret || (explicitClientId ? undefined : GOOGLE_CLIENT_SECRET_ENV.trim() || undefined),
+  };
+}
 
 // Google OAuth endpoints
 const GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
@@ -82,7 +94,7 @@ export interface GoogleOAuthOptions {
   appType?: AppType;
   /** OAuth client ID (user-provided, falls back to env var) */
   clientId?: string;
-  /** OAuth client secret (user-provided, falls back to env var) */
+  /** Optional OAuth client secret for confidential WebUI clients */
   clientSecret?: string;
   /** Session context for building deeplink back to chat after OAuth */
   sessionContext?: OAuthSessionContext;
@@ -100,7 +112,7 @@ export interface GoogleOAuthResult {
   error?: string;
   /** OAuth client ID used (for storage alongside tokens) */
   clientId?: string;
-  /** OAuth client secret used (for storage alongside tokens - needed for refresh) */
+  /** Optional confidential-client secret used by WebUI deployments */
   clientSecret?: string;
 }
 
@@ -128,15 +140,15 @@ async function exchangeCodeForTokens(
   codeVerifier: string,
   redirectUri: string,
   clientId: string,
-  clientSecret: string
+  clientSecret?: string
 ): Promise<{ accessToken: string; refreshToken?: string; expiresIn?: number }> {
-  const params = new URLSearchParams({
+  const params = buildGoogleAuthorizationCodeTokenParams({
     client_id: clientId,
-    client_secret: clientSecret,
     code,
     code_verifier: codeVerifier,
     grant_type: 'authorization_code',
     redirect_uri: redirectUri,
+    client_secret: clientSecret,
   });
 
   const response = await fetch(GOOGLE_TOKEN_URL, {
@@ -163,6 +175,46 @@ async function exchangeCodeForTokens(
   };
 }
 
+interface GoogleAuthorizationCodeTokenInput {
+  client_id: string;
+  code: string;
+  code_verifier: string;
+  grant_type: 'authorization_code';
+  redirect_uri: string;
+  client_secret?: string;
+}
+
+interface GoogleRefreshTokenInput {
+  client_id: string;
+  grant_type: 'refresh_token';
+  refresh_token: string;
+  client_secret?: string;
+}
+
+export function buildGoogleAuthorizationCodeTokenParams(
+  input: GoogleAuthorizationCodeTokenInput,
+): URLSearchParams {
+  const params = new URLSearchParams({
+    client_id: input.client_id,
+    code: input.code,
+    code_verifier: input.code_verifier,
+    grant_type: input.grant_type,
+    redirect_uri: input.redirect_uri,
+  });
+  if (input.client_secret?.trim()) params.set('client_secret', input.client_secret.trim());
+  return params;
+}
+
+export function buildGoogleRefreshTokenParams(input: GoogleRefreshTokenInput): URLSearchParams {
+  const params = new URLSearchParams({
+    client_id: input.client_id,
+    grant_type: input.grant_type,
+    refresh_token: input.refresh_token,
+  });
+  if (input.client_secret?.trim()) params.set('client_secret', input.client_secret.trim());
+  return params;
+}
+
 /**
  * Get user email from access token
  */
@@ -184,7 +236,7 @@ async function getUserEmail(accessToken: string): Promise<string> {
  *
  * @param refreshToken - The refresh token from initial OAuth
  * @param clientId - OAuth client ID (falls back to env var if not provided)
- * @param clientSecret - OAuth client secret (falls back to env var if not provided)
+ * @param clientSecret - Optional secret for confidential WebUI clients
  */
 export async function refreshGoogleToken(
   refreshToken: string,
@@ -194,21 +246,22 @@ export async function refreshGoogleToken(
   accessToken: string;
   expiresAt?: number;
 }> {
-  const id = clientId || GOOGLE_CLIENT_ID_ENV;
-  const secret = clientSecret || GOOGLE_CLIENT_SECRET_ENV;
+  const resolvedClient = resolveGoogleOAuthClient(clientId, clientSecret);
+  const id = resolvedClient.clientId;
+  const secret = resolvedClient.clientSecret;
 
-  if (!id || !secret) {
+  if (!id) {
     throw new Error(
-      'Google OAuth credentials not available for token refresh. ' +
-        'Credentials must be stored with the token or set via environment variables.'
+      'Google OAuth client ID not available for token refresh. ' +
+        'The client ID must be stored with the token or set via GOOGLE_OAUTH_CLIENT_ID.'
     );
   }
 
-  const params = new URLSearchParams({
+  const params = buildGoogleRefreshTokenParams({
     client_id: id,
-    client_secret: secret,
     grant_type: 'refresh_token',
     refresh_token: refreshToken,
+    client_secret: secret,
   });
 
   const response = await fetch(GOOGLE_TOKEN_URL, {
@@ -233,16 +286,14 @@ export async function refreshGoogleToken(
 }
 
 /**
- * Check if Google OAuth is configured (client ID and secret are available)
+ * Check if Google OAuth is configured (a public client ID is available)
  *
  * @param clientId - Optional user-provided client ID
- * @param clientSecret - Optional user-provided client secret
- * @returns true if credentials are available (either provided or from env vars)
+ * @param _clientSecret - Kept for source-config API compatibility; not required for PKCE
+ * @returns true if a client ID is available (provided or from the environment)
  */
-export function isGoogleOAuthConfigured(clientId?: string, clientSecret?: string): boolean {
-  const id = clientId || GOOGLE_CLIENT_ID_ENV;
-  const secret = clientSecret || GOOGLE_CLIENT_SECRET_ENV;
-  return Boolean(id && secret);
+export function isGoogleOAuthConfigured(clientId?: string, _clientSecret?: string): boolean {
+  return Boolean(resolveGoogleOAuthClient(clientId).clientId);
 }
 
 /**
@@ -287,13 +338,14 @@ export interface PrepareGoogleOAuthOptions {
  * Returns everything needed to construct the auth URL and later exchange the code.
  */
 export function prepareGoogleOAuth(options: PrepareGoogleOAuthOptions): PreparedOAuthFlow {
-  const clientId = options.clientId || GOOGLE_CLIENT_ID_ENV;
-  const clientSecret = options.clientSecret || GOOGLE_CLIENT_SECRET_ENV;
+  const resolvedClient = resolveGoogleOAuthClient(options.clientId, options.clientSecret);
+  const clientId = resolvedClient.clientId;
+  const clientSecret = resolvedClient.clientSecret;
 
-  if (!isGoogleOAuthConfigured(clientId, clientSecret)) {
+  if (!isGoogleOAuthConfigured(clientId)) {
     throw new Error(
-      'Google OAuth not configured. Provide clientId and clientSecret in source config, ' +
-      'or set GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET environment variables.'
+      'Google OAuth not configured. Provide clientId in source config or set ' +
+      'GOOGLE_OAUTH_CLIENT_ID. Desktop clients use PKCE and must not embed a client secret.'
     );
   }
 
@@ -337,7 +389,7 @@ export async function exchangeGoogleOAuth(params: OAuthExchangeParams): Promise<
       params.codeVerifier,
       params.redirectUri,
       params.clientId,
-      params.clientSecret || ''
+      params.clientSecret
     );
 
     const email = await getUserEmail(tokens.accessToken);
@@ -384,16 +436,17 @@ export async function startGoogleOAuth(
 ): Promise<GoogleOAuthResult> {
   try {
     // Resolve credentials: use provided values or fall back to env vars
-    const clientId = options.clientId || GOOGLE_CLIENT_ID_ENV;
-    const clientSecret = options.clientSecret || GOOGLE_CLIENT_SECRET_ENV;
+    const resolvedClient = resolveGoogleOAuthClient(options.clientId, options.clientSecret);
+    const clientId = resolvedClient.clientId;
+    const clientSecret = resolvedClient.clientSecret;
 
-    // Verify OAuth credentials are configured
-    if (!isGoogleOAuthConfigured(clientId, clientSecret)) {
+    // Verify the public OAuth client ID is configured.
+    if (!isGoogleOAuthConfigured(clientId)) {
       return {
         success: false,
         error:
-          'Google OAuth not configured. Provide clientId and clientSecret in source config, ' +
-          'or set GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET environment variables.',
+          'Google OAuth not configured. Provide clientId in source config or set ' +
+          'GOOGLE_OAUTH_CLIENT_ID. Desktop clients use PKCE and must not embed a client secret.',
       };
     }
 
@@ -444,8 +497,7 @@ export async function startGoogleOAuth(
       const error = isAccessBlocked
         ? 'Google has blocked this app (not yet verified).\n\n' +
           'To fix this, add your own Google OAuth credentials to the source config:\n' +
-          '  "googleOAuthClientId": "...",\n' +
-          '  "googleOAuthClientSecret": "..."\n\n' +
+          '  "googleOAuthClientId": "..."\n\n' +
           'See: https://console.cloud.google.com/apis/credentials'
         : callback.query.error_description || callback.query.error;
       return { success: false, error };
@@ -460,7 +512,8 @@ export async function startGoogleOAuth(
       };
     }
 
-    // Exchange code for tokens (pass credentials for token exchange)
+    // Exchange the code with PKCE. A secret is sent only for an explicitly
+    // configured confidential WebUI client, never from the desktop build.
     const tokens = await exchangeCodeForTokens(code, pkce.verifier, redirectUri, clientId, clientSecret);
 
     // Get user email

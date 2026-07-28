@@ -1,6 +1,10 @@
 import { generatePKCE, generateState } from './pkce.ts';
 
 export const GOOGLE_GEMINI_OAUTH_CONFIG = {
+  // Google Gemini CLI is an installed application (a public OAuth client):
+  // https://developers.google.com/identity/protocols/oauth2/native-app
+  // Installed apps cannot keep a client secret, so PKCE is the credential.
+  PUBLIC_CLIENT_ID: '681255809395-oo8ft2oprdrnp9e3aqf6av3hmdib135j.apps.googleusercontent.com',
   AUTH_URL: 'https://accounts.google.com/o/oauth2/v2/auth',
   TOKEN_URL: 'https://oauth2.googleapis.com/token',
   CALLBACK_PORT: 1457,
@@ -14,7 +18,6 @@ export const GOOGLE_GEMINI_OAUTH_CONFIG = {
 
 export interface GoogleGeminiOAuthCredentials {
   clientId: string;
-  clientSecret: string;
 }
 
 type GoogleGeminiOAuthEnvironment = Readonly<Record<string, string | undefined>>;
@@ -22,16 +25,10 @@ type GoogleGeminiOAuthEnvironment = Readonly<Record<string, string | undefined>>
 export function loadGoogleGeminiOAuthCredentials(
   environment: GoogleGeminiOAuthEnvironment = process.env,
 ): GoogleGeminiOAuthCredentials {
-  const clientId = environment.GOOGLE_OAUTH_CLIENT_ID?.trim();
-  const clientSecret = environment.GOOGLE_OAUTH_CLIENT_SECRET?.trim();
+  const clientId = environment.GOOGLE_OAUTH_CLIENT_ID?.trim()
+    || GOOGLE_GEMINI_OAUTH_CONFIG.PUBLIC_CLIENT_ID;
 
-  if (!clientId || !clientSecret) {
-    throw new Error(
-      'Google Gemini OAuth requires GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET',
-    );
-  }
-
-  return { clientId, clientSecret };
+  return { clientId };
 }
 
 export interface PreparedGoogleGeminiOAuth {
@@ -106,30 +103,51 @@ async function exchangeTokenRequest(params: URLSearchParams): Promise<GoogleGemi
   };
 }
 
+export function buildGoogleGeminiCodeExchangeParams(
+  code: string,
+  codeVerifier: string,
+  redirectUri: string,
+  credentials: GoogleGeminiOAuthCredentials,
+): URLSearchParams {
+  return new URLSearchParams({
+    client_id: credentials.clientId,
+    code,
+    code_verifier: codeVerifier,
+    redirect_uri: redirectUri,
+    grant_type: 'authorization_code',
+  });
+}
+
+export function buildGoogleGeminiRefreshParams(
+  refreshToken: string,
+  credentials: GoogleGeminiOAuthCredentials,
+): URLSearchParams {
+  return new URLSearchParams({
+    client_id: credentials.clientId,
+    refresh_token: refreshToken,
+    grant_type: 'refresh_token',
+  });
+}
+
 export async function exchangeGoogleGeminiTokens(
   code: string,
   codeVerifier: string,
   redirectUri?: string,
   credentials: GoogleGeminiOAuthCredentials = loadGoogleGeminiOAuthCredentials(),
 ): Promise<GoogleGeminiTokens> {
-  return exchangeTokenRequest(new URLSearchParams({
-    client_id: credentials.clientId,
-    client_secret: credentials.clientSecret,
+  const finalRedirectUri = redirectUri
+    ?? `http://127.0.0.1:${GOOGLE_GEMINI_OAUTH_CONFIG.CALLBACK_PORT}${GOOGLE_GEMINI_OAUTH_CONFIG.CALLBACK_PATH}`;
+  return exchangeTokenRequest(buildGoogleGeminiCodeExchangeParams(
     code,
-    code_verifier: codeVerifier,
-    redirect_uri: redirectUri ?? `http://127.0.0.1:${GOOGLE_GEMINI_OAUTH_CONFIG.CALLBACK_PORT}${GOOGLE_GEMINI_OAUTH_CONFIG.CALLBACK_PATH}`,
-    grant_type: 'authorization_code',
-  }));
+    codeVerifier,
+    finalRedirectUri,
+    credentials,
+  ));
 }
 
 export async function refreshGoogleGeminiTokens(
   refreshToken: string,
   credentials: GoogleGeminiOAuthCredentials = loadGoogleGeminiOAuthCredentials(),
 ): Promise<GoogleGeminiTokens> {
-  return exchangeTokenRequest(new URLSearchParams({
-    client_id: credentials.clientId,
-    client_secret: credentials.clientSecret,
-    refresh_token: refreshToken,
-    grant_type: 'refresh_token',
-  }));
+  return exchangeTokenRequest(buildGoogleGeminiRefreshParams(refreshToken, credentials));
 }

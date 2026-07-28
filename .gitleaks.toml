@@ -19,7 +19,7 @@ paths = [
 [[allowlists]]
 description = "Generated agent catalog contains SHA-256 integrity digests only"
 paths = [
-  '''^ops/rbw-agents-oss/config/agents-v2/catalog-v2\.lock\.json$''',
+  '''(?:^|/)ops/rbw-agents-oss/config/agents-v2/catalog-v2\.lock\.json$''',
 ]
 
 [[allowlists]]

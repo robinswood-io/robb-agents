@@ -20,7 +20,7 @@ export interface PreparedOAuthFlow {
   codeVerifier: string       // PKCE verifier (empty string for providers that don't use PKCE)
   tokenEndpoint: string
   clientId: string
-  clientSecret?: string      // Google requires client_secret for Desktop apps
+  clientSecret?: string      // Optional for confidential clients; public desktop clients use PKCE
   redirectUri: string        // provider-specific redirect URI used in auth URL + token exchange
   provider: OAuthProvider
 }
@@ -51,7 +51,7 @@ export interface OAuthExchangeResult {
   email?: string
   /** OAuth client_id for storage (MCP dynamic registration) */
   oauthClientId?: string
-  /** OAuth client_secret for storage (Google needs it for refresh) */
+  /** Optional OAuth client_secret for confidential-client refresh */
   oauthClientSecret?: string
   error?: string
 }

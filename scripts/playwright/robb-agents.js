@@ -1,8 +1,10 @@
-'use strict';
+import fs from 'node:fs';
+import { createRequire } from 'node:module';
+import path from 'node:path';
 
-const fs = require('node:fs');
-const path = require('node:path');
-const { chromium } = require('playwright');
+const require = createRequire(import.meta.url);
+const playwrightModule = process.env.ROBB_PLAYWRIGHT_MODULE || 'playwright';
+const { chromium } = require(playwrightModule);
 
 const PROJECT = 'robb-agents';
 const CDP_URL = process.env.ROBB_PLAYWRIGHT_CDP_URL || 'http://127.0.0.1:9333';

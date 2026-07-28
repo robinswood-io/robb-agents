@@ -10,6 +10,7 @@ import {
   getDefaultAppId,
   getDefaultAppName,
   getDefaultDeepLinkScheme,
+  isDeveloperIdApplicationSignature,
   isStableReleaseVersion,
   resolveAppChannel,
 } from '../app-channel'
@@ -48,5 +49,18 @@ describe('Robb application channels', () => {
     expect(isStableReleaseVersion('1.2.3')).toBe(true)
     expect(isStableReleaseVersion('1.2.3-beta.1')).toBe(false)
     expect(isStableReleaseVersion('v1.2.3')).toBe(false)
+  })
+
+  it('accepts only a Developer ID Application signature with an Apple team identifier', () => {
+    expect(isDeveloperIdApplicationSignature(`
+Authority=Developer ID Application: Robinswood SAS (A1B2C3D4E5)
+TeamIdentifier=A1B2C3D4E5
+`)).toBe(true)
+
+    expect(isDeveloperIdApplicationSignature(`
+Signature=adhoc
+TeamIdentifier=not set
+`)).toBe(false)
+    expect(isDeveloperIdApplicationSignature('Authority=Developer ID Application: Forged label')).toBe(false)
   })
 })
