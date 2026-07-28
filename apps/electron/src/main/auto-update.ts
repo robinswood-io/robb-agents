@@ -9,6 +9,10 @@
  * - The Settings update button is the only caller that starts the flow.
  */
 
+import { spawn, spawnSync } from 'node:child_process'
+import { homedir } from 'node:os'
+import { dirname, join } from 'node:path'
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { app, BrowserWindow } from 'electron'
 import { autoUpdater } from 'electron-updater'
 import { clearDismissedUpdateVersion } from '@craft-agent/shared/config'
@@ -169,6 +173,169 @@ export function getUpdateInfo(): UpdateInfo {
   return { ...updateInfo }
 }
 
+function resolveMacAppBundlePath(): string {
+  return dirname(dirname(dirname(process.execPath)))
+}
+
+function readUpdaterCacheDirName(): string {
+  const updateConfigPath = join(process.resourcesPath, 'app-update.yml')
+  try {
+    const config = readFileSync(updateConfigPath, 'utf8')
+    const match = config.match(/^updaterCacheDirName:\s*['"]?([^'"\n]+)['"]?\s*$/m)
+    if (match?.[1]) return match[1].trim()
+  } catch (error) {
+    autoUpdateLog.warn('Could not read updater cache directory name; using bundled default', error)
+  }
+  return '@craft-agentelectron-updater'
+}
+
+function resolveMacUpdaterCacheRoot(): string {
+  return join(homedir(), 'Library', 'Caches', readUpdaterCacheDirName())
+}
+
+function resolvePendingMacUpdateZip(): string {
+  const cacheRoot = resolveMacUpdaterCacheRoot()
+  const pendingDir = join(cacheRoot, 'pending')
+  const updateInfoPath = join(pendingDir, 'update-info.json')
+
+  try {
+    const info = JSON.parse(readFileSync(updateInfoPath, 'utf8')) as { fileName?: string; path?: string }
+    const configuredPath = info.path ?? info.fileName
+    if (configuredPath) {
+      const candidate = join(pendingDir, configuredPath)
+      if (existsSync(candidate)) return candidate
+    }
+  } catch {
+    // Older/broken caches can be missing update-info.json; fall through to file discovery.
+  }
+
+  try {
+    const zip = readdirSync(pendingDir).find((entry) => entry.endsWith('.zip'))
+    if (zip) return join(pendingDir, zip)
+  } catch {
+    // Fall through to the compatibility path used by electron-updater on macOS.
+  }
+
+  const compatibilityZip = join(cacheRoot, 'update.zip')
+  if (existsSync(compatibilityZip)) return compatibilityZip
+  throw new Error(`Downloaded macOS update zip not found in ${cacheRoot}`)
+}
+
+function currentMacAppUsesDeveloperIdSignature(): boolean {
+  if (process.platform !== 'darwin') return false
+  const result = spawnSync('/usr/bin/codesign', ['-dv', '--verbose=4', process.execPath], {
+    encoding: 'utf8',
+  })
+  const output = `${result.stdout ?? ''}\n${result.stderr ?? ''}`
+  return output.includes('Authority=Developer ID Application')
+}
+
+function writeDetachedMacInstallerScript(): string {
+  const scriptPath = join(app.getPath('temp'), `robb-agents-detached-update-${Date.now()}.sh`)
+  const script = `#!/usr/bin/env bash
+set -euo pipefail
+ZIP_PATH="$1"
+APP_PATH="$2"
+EXPECTED_VERSION="$3"
+CACHE_ROOT="$4"
+LOG_PATH="$5"
+BACKUP_DIR="$6"
+exec >>"$LOG_PATH" 2>&1
+printf '\n==== Robb detached macOS update started %s ====\n' "$(date -Iseconds)"
+echo "zip=$ZIP_PATH"
+echo "app=$APP_PATH"
+echo "expectedVersion=$EXPECTED_VERSION"
+TMP_DIR="$(mktemp -d "\${TMPDIR:-/tmp}/robb-agents-update.XXXXXX")"
+cleanup() { rm -rf "$TMP_DIR"; }
+trap cleanup EXIT
+
+for _ in {1..60}; do
+  if ! pgrep -f "$APP_PATH/Contents/MacOS" >/dev/null 2>&1; then
+    break
+  fi
+  sleep 1
+done
+if pgrep -f "$APP_PATH/Contents/MacOS" >/dev/null 2>&1; then
+  echo 'Robb Agents did not quit in time; stopping remaining app processes.'
+  pkill -f "$APP_PATH/Contents/MacOS" || true
+  sleep 2
+fi
+
+echo 'Extracting downloaded update...'
+unzip -q "$ZIP_PATH" -d "$TMP_DIR"
+SRC="$TMP_DIR/Robb Agents.app"
+if [ ! -d "$SRC" ]; then
+  echo 'Archive does not contain Robb Agents.app'
+  exit 1
+fi
+find "$SRC" -name '._*' -delete
+xattr -cr "$SRC" || true
+/usr/bin/codesign --verify --deep --strict --verbose=2 "$SRC"
+ACTUAL_VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$SRC/Contents/Info.plist")"
+if [ "$ACTUAL_VERSION" != "$EXPECTED_VERSION" ]; then
+  echo "Unexpected update version: $ACTUAL_VERSION"
+  exit 1
+fi
+
+mkdir -p "$BACKUP_DIR"
+if [ -d "$APP_PATH" ]; then
+  BACKUP_PATH="$BACKUP_DIR/Robb Agents.app.pre-update-$(date +%Y%m%d-%H%M%S)"
+  echo "Backing up current app to $BACKUP_PATH"
+  ditto "$APP_PATH" "$BACKUP_PATH"
+fi
+
+echo 'Replacing installed application...'
+rm -rf "$APP_PATH"
+ditto "$SRC" "$APP_PATH"
+xattr -cr "$APP_PATH" || true
+/usr/bin/codesign --verify --deep --strict --verbose=2 "$APP_PATH"
+INSTALLED_VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP_PATH/Contents/Info.plist")"
+echo "Installed version=$INSTALLED_VERSION"
+
+rm -rf "$CACHE_ROOT/pending" "$CACHE_ROOT/update.zip" "$HOME/Library/Caches/io.robinswood.robbagents.ShipIt"
+
+echo 'Relaunching Robb Agents...'
+open "$APP_PATH"
+printf '==== Robb detached macOS update finished %s ====\n' "$(date -Iseconds)"
+`
+  writeFileSync(scriptPath, script, { mode: 0o755 })
+  return scriptPath
+}
+
+function installMacUpdateWithDetachedInstaller(): void {
+  if (process.platform !== 'darwin') {
+    throw new Error('Detached update installer is macOS-only')
+  }
+  const latestVersion = updateInfo.latestVersion
+  if (!latestVersion || !isStableReleaseVersion(latestVersion)) {
+    throw new Error('No stable macOS update version is ready to install')
+  }
+
+  const zipPath = resolvePendingMacUpdateZip()
+  const appBundlePath = resolveMacAppBundlePath()
+  const cacheRoot = resolveMacUpdaterCacheRoot()
+  const logDir = join(app.getPath('userData'), 'logs')
+  mkdirSync(logDir, { recursive: true })
+  const logPath = join(logDir, 'detached-macos-update.log')
+  const backupDir = join(app.getPath('userData'), 'Backups')
+  const scriptPath = writeDetachedMacInstallerScript()
+
+  autoUpdateLog.warn('Installing macOS update with detached installer fallback', {
+    appBundlePath,
+    cacheRoot,
+    latestVersion,
+    logPath,
+    zipPath,
+  })
+
+  const child = spawn('/bin/bash', [scriptPath, zipPath, appBundlePath, latestVersion, cacheRoot, logPath, backupDir], {
+    detached: true,
+    stdio: 'ignore',
+  })
+  child.unref()
+  app.quit()
+}
+
 /**
  * Run the complete check-and-download flow after an explicit Settings click.
  */
@@ -235,6 +402,10 @@ export async function installUpdate(): Promise<void> {
 
   try {
     beforeUpdateQuitHook?.()
+    if (process.platform === 'darwin' && !currentMacAppUsesDeveloperIdSignature()) {
+      installMacUpdateWithDetachedInstaller()
+      return
+    }
     autoUpdater.quitAndInstall(false, true)
   } catch (error) {
     updateInProgress = false
