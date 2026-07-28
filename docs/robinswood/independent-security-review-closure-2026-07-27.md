@@ -73,6 +73,27 @@ Références :
 - `packages/shared/src/tasks/durable-execution.test.ts`
 - `packages/server-core/src/tasks/TaskRunner.test.ts`
 
+## Complément de scan de secrets
+
+Après la clôture des neuf constats, Gitleaks 8.30.1 a été exécuté sur l'arbre
+actif et l'historique. Un client secret OAuth Google codé en dur dans le module
+Gemini a été supprimé. Le module exige désormais un identifiant et un secret
+injectés par configuration et refuse l'initialisation si l'un des deux manque ;
+un test de régression couvre ce comportement.
+
+Le scan de l'arbre actif retourne zéro fuite. Le scan historique conserve deux
+constats dans deux commits antérieurs. Ils ne sont pas placés en baseline : la
+rotation du secret côté Google et une éventuelle réécriture coordonnée de
+l'historique restent des actions externes soumises à l'autorité du propriétaire
+du dépôt.
+
+Références :
+
+- `.gitleaks.toml`
+- `packages/shared/src/auth/google-gemini-oauth.ts`
+- `packages/shared/src/auth/google-gemini-oauth.test.ts`
+- `.github/workflows/robinswood-validate.yml`
+
 ## Limites de qualification
 
 Les éléments suivants ne sont pas déclarés « terminés en production » :

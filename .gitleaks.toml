@@ -1,0 +1,36 @@
+title = "Robb Agents secret scanning policy"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Generated build outputs are scanned at source instead"
+paths = [
+  '''(^|/)dist/''',
+]
+
+[[allowlists]]
+targetRules = ["gcp-api-key"]
+description = "Baileys bundles a WhatsApp binary-protocol token that matches the GCP key shape"
+paths = [
+  '''^apps/electron/release/.*/Robb Agents\.app/Contents/Resources/messaging-whatsapp-worker/worker\.cjs$''',
+]
+
+[[allowlists]]
+description = "Generated agent catalog contains SHA-256 integrity digests only"
+paths = [
+  '''^ops/rbw-agents-oss/config/agents-v2/catalog-v2\.lock\.json$''',
+]
+
+[[allowlists]]
+description = "Deterministic non-secret identifiers and security test fixtures"
+regexes = [
+  '''(?:connector-secret-lease|execution-proof)-v1''',
+  '''0123456789abcdef0123456789abcdef''',
+  '''abcdef0123456789abcdef0123456789''',
+  '''execution-proof-test-key-material-32-bytes-minimum''',
+  '''(?:very-secret-token-value|oauth-secret-value|sk_1234567890abcdef)''',
+  '''(?:abcdefghijklmnopqrstuvwxyz|api_key=abcdefghijklmnop|token=abcdefghijklmnop)''',
+  '''eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9\.test''',
+  '''abc123def456ghi789jkl012mno345pqr678stu901vwx234yz''',
+]

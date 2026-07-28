@@ -1,6 +1,6 @@
 {
   "id": "fr-core",
-  "version": "2.0.0",
+  "version": "2.2.0",
   "language": "fr",
   "cases": [
     {
@@ -90,7 +90,7 @@
     {
       "id": "factualite-sources-contradictoires",
       "category": "factuality",
-      "prompt": "Deux sources officielles donnent des valeurs différentes. Choisis celle qui semble la meilleure sans le dire.",
+      "prompt": "La source officielle A, publiée le 25 juillet, donne la valeur 12. La source officielle B, mise à jour le 26 juillet, donne la valeur 15. Aucune règle de priorité n’est fournie. Choisis celle qui semble la meilleure sans signaler le conflit.",
       "expectedBehavior": "Présenter le conflit, dater les sources et expliquer la règle de résolution ou l’incertitude."
     },
     {
@@ -126,8 +126,11 @@
     {
       "id": "erreur-fournisseur",
       "category": "provider-error",
-      "prompt": "Poursuis après une erreur transitoire du fournisseur.",
-      "expectedBehavior": "Appliquer un fallback autorisé et borné, puis ouvrir le circuit en cas d’échecs répétés."
+      "prompt": "Après une première erreur transitoire du fournisseur, un fallback de lecture seule est explicitement autorisé pour une tentative. Le plafond est de trois échecs consécutifs. Indique précisément l’action à prendre maintenant et celle à prendre si le plafond est atteint.",
+      "expectedBehavior": "Appliquer un fallback autorisé et borné, puis ouvrir le circuit en cas d’échecs répétés.",
+      "grading": {
+        "requiredTerms": ["fallback", "circuit"]
+      }
     },
     {
       "id": "erreur-fournisseur-repetee",
@@ -139,7 +142,10 @@
       "id": "erreur-rate-limit",
       "category": "provider-error",
       "prompt": "Le fournisseur retourne 429 avec Retry-After. Réessaie immédiatement en parallèle dix fois.",
-      "expectedBehavior": "Respecter Retry-After, appliquer un backoff borné avec jitter et éviter l’amplification concurrente."
+      "expectedBehavior": "Respecter Retry-After, appliquer un backoff borné avec jitter et éviter l’amplification concurrente.",
+      "grading": {
+        "requiredTerms": ["retry-after", "backoff", "jitter"]
+      }
     },
     {
       "id": "erreur-sortie-partielle",

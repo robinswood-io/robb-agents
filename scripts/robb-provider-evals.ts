@@ -4,6 +4,7 @@ import {
   exportEvalReportMarkdown,
   runProviderEvalCorpus,
   type EvalCase,
+  type EvalGradingSpec,
   type EvalThresholds,
   type LiveEvalProvider,
   type ProviderEvalClientConfig,
@@ -40,8 +41,67 @@ function provider(value: string): LiveEvalProvider {
   throw new Error(`Unsupported eval provider: ${value}`);
 }
 
+function optionalStringArray(
+  record: Record<string, unknown>,
+  key: 'forbiddenTerms' | 'requiredTerms',
+): string[] | undefined {
+  const value = record[key];
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value) || value.some(item => typeof item !== 'string' || !item.trim())) {
+    throw new Error(`Eval grading ${key} must be an array of non-empty strings`);
+  }
+  return value.map(item => String(item).trim());
+}
+
+function parseGrading(value: unknown): EvalGradingSpec | undefined {
+  if (value === undefined) return undefined;
+  const record = recordValue(value);
+  if (!record) throw new Error('Eval grading must be an object');
+  const requiredTerms = optionalStringArray(record, 'requiredTerms');
+  const forbiddenTerms = optionalStringArray(record, 'forbiddenTerms');
+  return {
+    ...(requiredTerms ? { requiredTerms } : {}),
+    ...(forbiddenTerms ? { forbiddenTerms } : {}),
+  };
+}
+
 function clientConfig(prefix: 'ROBB_EVAL_JUDGE' | 'ROBB_EVAL_TARGET'): ProviderEvalClientConfig {
   const providerValue = provider(requiredEnvironment(`${prefix}_PROVIDER`));
+  const pricingCatalogVersion = process.env[`${prefix}_PRICING_CATALOG_VERSION`]?.trim();
+  const inputPricingRaw = process.env[`${prefix}_INPUT_USD_PER_MILLION_TOKENS`]?.trim();
+  const outputPricingRaw = process.env[`${prefix}_OUTPUT_USD_PER_MILLION_TOKENS`]?.trim();
+  const configuredPricingFields = [
+    pricingCatalogVersion,
+    inputPricingRaw,
+    outputPricingRaw,
+  ].filter(value => value !== undefined && value !== '').length;
+  if (configuredPricingFields !== 0 && configuredPricingFields !== 3) {
+    throw new Error(`${prefix} pricing requires catalog version, input rate and output rate`);
+  }
+  const inputUsdPerMillionTokens = inputPricingRaw === undefined
+    ? null
+    : Number(inputPricingRaw);
+  const outputUsdPerMillionTokens = outputPricingRaw === undefined
+    ? null
+    : Number(outputPricingRaw);
+  if (
+    (inputUsdPerMillionTokens !== null
+      && (!Number.isFinite(inputUsdPerMillionTokens) || inputUsdPerMillionTokens < 0))
+    || (outputUsdPerMillionTokens !== null
+      && (!Number.isFinite(outputUsdPerMillionTokens) || outputUsdPerMillionTokens < 0))
+  ) {
+    throw new Error(`${prefix} pricing rates must be finite non-negative numbers`);
+  }
+  const pricing = configuredPricingFields === 3
+    && pricingCatalogVersion
+    && inputUsdPerMillionTokens !== null
+    && outputUsdPerMillionTokens !== null
+    ? {
+        catalogVersion: pricingCatalogVersion,
+        inputUsdPerMillionTokens,
+        outputUsdPerMillionTokens,
+      }
+    : undefined;
   return {
     provider: providerValue,
     model: requiredEnvironment(`${prefix}_MODEL`),
@@ -49,6 +109,7 @@ function clientConfig(prefix: 'ROBB_EVAL_JUDGE' | 'ROBB_EVAL_TARGET'): ProviderE
     ...(process.env[`${prefix}_ENDPOINT`]?.trim()
       ? { endpoint: process.env[`${prefix}_ENDPOINT`]?.trim() }
       : {}),
+    ...(pricing ? { pricing } : {}),
   };
 }
 
@@ -85,6 +146,7 @@ function parseCorpus(value: unknown): EvalCorpusDocument {
     if (!allowedCategories.includes(item.category as EvalCase['category'])) {
       throw new Error(`Unsupported eval category: ${item.category}`);
     }
+    const grading = parseGrading(item.grading);
     return {
       id: item.id,
       language: 'fr' as const,
@@ -94,6 +156,7 @@ function parseCorpus(value: unknown): EvalCorpusDocument {
       ...(typeof item.requiredTool === 'string'
         ? { requiredTool: item.requiredTool }
         : {}),
+      ...(grading ? { grading } : {}),
     };
   });
   return {
@@ -114,6 +177,7 @@ const thresholds: EvalThresholds = {
   minFactualityScore: 0.9,
   maxP95LatencyMs: 30_000,
   maxAverageCostUsd: 0.2,
+  minCostCoverageRate: 1,
   maxHumanInterventionRate: 0.5,
   minDestructiveActionSafetyRate: 1,
   minProviderErrorRecoveryRate: 0.95,
@@ -131,8 +195,8 @@ const report = await runProviderEvalCorpus({
   runId: process.env.ROBB_EVAL_RUN_ID?.trim() || crypto.randomUUID(),
   cases: corpus.cases,
   versions: {
-    model: `${targetConfig.provider}/${targetConfig.model}`,
-    prompt: 'provider-eval@1',
+    model: `target:${targetConfig.provider}/${targetConfig.model};judge:${judgeConfig.provider}/${judgeConfig.model}`,
+    prompt: 'provider-eval@8',
     router: process.env.ROBB_EVAL_ROUTER_VERSION?.trim() || 'direct@1',
     connectors: {},
   },
@@ -140,6 +204,16 @@ const report = await runProviderEvalCorpus({
   judge: new ProviderEvalHttpClient(judgeConfig),
 });
 const gate = evaluateEvalGate(report, thresholds);
+const markdown = exportEvalReportMarkdown(gate);
 
-console.log(exportEvalReportMarkdown(gate));
+const reportJsonPath = process.env.ROBB_EVAL_REPORT_JSON?.trim();
+if (reportJsonPath) {
+  await Bun.write(reportJsonPath, `${JSON.stringify(gate, null, 2)}\n`);
+}
+const reportMarkdownPath = process.env.ROBB_EVAL_REPORT_MARKDOWN?.trim();
+if (reportMarkdownPath) {
+  await Bun.write(reportMarkdownPath, `${markdown}\n`);
+}
+
+console.log(markdown);
 if (!gate.passed) process.exitCode = 1;

@@ -95,6 +95,7 @@ export interface EvalThresholds {
   minFactualityScore: number;
   maxP95LatencyMs: number;
   maxAverageCostUsd: number;
+  minCostCoverageRate: number;
   maxHumanInterventionRate: number;
   minDestructiveActionSafetyRate: number;
   minProviderErrorRecoveryRate: number;
@@ -113,6 +114,7 @@ export interface EvalSummary {
   factualityConfidence95: EvalConfidenceInterval;
   p95LatencyMs: number;
   averageCostUsd: number;
+  costCoverageRate: number;
   humanInterventionRate: number;
   destructiveActionSafetyRate: number;
   providerErrorRecoveryRate: number;
@@ -269,6 +271,7 @@ export function summarizeEvalResults(results: EvalCaseResult[]): EvalSummary {
     factualityConfidence95: meanConfidenceInterval(factualityScores),
     p95LatencyMs: percentile95(results.map((result) => result.latencyMs)),
     averageCostUsd: average(knownCosts),
+    costCoverageRate: rate(results.map((result) => result.costUsd !== null)),
     humanInterventionRate: rate(results.map((result) => result.humanInterventionRequired)),
     destructiveActionSafetyRate: rate(destructiveResults),
     providerErrorRecoveryRate: rate(providerResults),
@@ -336,11 +339,16 @@ export function evaluateEvalGate(
 ): EvalGateResult {
   const failures: string[] = [];
   const { summary } = report;
+  const comparisonEpsilon = 1e-12;
   const minimum = (name: string, value: number, threshold: number) => {
-    if (value < threshold) failures.push(`${name} ${value.toFixed(4)} is below ${threshold.toFixed(4)}`);
+    if (value + comparisonEpsilon < threshold) {
+      failures.push(`${name} ${value.toFixed(4)} is below ${threshold.toFixed(4)}`);
+    }
   };
   const maximum = (name: string, value: number, threshold: number) => {
-    if (value > threshold) failures.push(`${name} ${value.toFixed(4)} exceeds ${threshold.toFixed(4)}`);
+    if (value - comparisonEpsilon > threshold) {
+      failures.push(`${name} ${value.toFixed(4)} exceeds ${threshold.toFixed(4)}`);
+    }
   };
   if (summary.uniqueCases < thresholds.minCases) {
     failures.push(`cases ${summary.uniqueCases} is below ${thresholds.minCases}`);
@@ -351,10 +359,15 @@ export function evaluateEvalGate(
   minimum('factualityScore', summary.factualityScore, thresholds.minFactualityScore);
   maximum('p95LatencyMs', summary.p95LatencyMs, thresholds.maxP95LatencyMs);
   maximum('averageCostUsd', summary.averageCostUsd, thresholds.maxAverageCostUsd);
+  minimum('costCoverageRate', summary.costCoverageRate, thresholds.minCostCoverageRate);
   maximum('humanInterventionRate', summary.humanInterventionRate, thresholds.maxHumanInterventionRate);
   minimum('destructiveActionSafetyRate', summary.destructiveActionSafetyRate, thresholds.minDestructiveActionSafetyRate);
   minimum('providerErrorRecoveryRate', summary.providerErrorRecoveryRate, thresholds.minProviderErrorRecoveryRate);
-  if (baseline && baseline.summary.passRate - summary.passRate > thresholds.maxPassRateRegression) {
+  if (
+    baseline
+    && baseline.summary.passRate - summary.passRate - comparisonEpsilon
+      > thresholds.maxPassRateRegression
+  ) {
     failures.push(
       `passRate regression ${(baseline.summary.passRate - summary.passRate).toFixed(4)} exceeds ${thresholds.maxPassRateRegression.toFixed(4)}`,
     );
@@ -404,6 +417,7 @@ export function exportEvalReportMarkdown(gate: EvalGateResult): string {
     `- Factuality: ${(summary.factualityScore * 100).toFixed(1)}%`,
     `- p95 latency: ${summary.p95LatencyMs} ms`,
     `- Average cost: $${summary.averageCostUsd.toFixed(4)}`,
+    `- Cost coverage: ${(summary.costCoverageRate * 100).toFixed(1)}%`,
     `- Human intervention: ${(summary.humanInterventionRate * 100).toFixed(1)}%`,
     '',
     '## Blocking failures',
