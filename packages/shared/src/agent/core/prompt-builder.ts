@@ -17,6 +17,7 @@ import { formatPreferencesForPrompt } from '../../config/preferences.ts';
 import { formatSessionState } from '../mode-manager.ts';
 import { getDateTimeContext, getWorkingDirectoryContext } from '../../prompts/system.ts';
 import { getSessionPlansPath, getSessionDataPath, getSessionPath } from '../../sessions/storage.ts';
+import { formatAutonomyContract } from '../autonomy-decision.ts';
 import type {
   PromptBuilderConfig,
   ContextBlockOptions,
@@ -66,7 +67,8 @@ export class PromptBuilder {
    * signal is consumed exactly once per turn (only the volatile builder consumes
    * it). Callers that place volatile vs stable context in different locations
    * (e.g. the Pi adapter, to preserve prompt caching — issue #862) should call
-   * the two halves directly instead of this method.
+   * the two halves directly instead of this method. New session-invariant
+   * policies belong in the stable half so they preserve this cache boundary.
    *
    * @param options - Context building options
    * @param sourceStateBlock - Pre-formatted source state (from SourceManager)
@@ -138,7 +140,8 @@ export class PromptBuilder {
    *
    * Blocks (in order):
    *  1. workspace capabilities
-   *  2. working directory, when available
+   *  2. autonomy contract
+   *  3. working directory, when available
    *
    * Pure and idempotent: holds no one-shot state, so it is safe to call any
    * number of times per turn.
@@ -148,6 +151,10 @@ export class PromptBuilder {
 
     // Workspace capabilities
     parts.push(this.formatWorkspaceCapabilities());
+
+    // Stable operating policy shared by Claude and Pi agents. Authoritative
+    // permission and isolation checks are still enforced by the host runtime.
+    parts.push(formatAutonomyContract());
 
     // Working directory context
     const workingDirContext = this.getWorkingDirectoryContext();

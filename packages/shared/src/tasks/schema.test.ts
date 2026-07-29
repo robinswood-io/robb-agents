@@ -100,6 +100,20 @@ describe('schema', () => {
     expect(parseTaskSpec({ ...CHAIN, sources: [''] }).success).toBe(false);
   });
 
+  it('accepts shared and per-node retry policies with multiple failure classes', () => {
+    const result = parseTaskSpec({
+      ...CHAIN,
+      defaults: { retry: { limit: 2, when: ['error', 'empty'] } },
+      nodes: [
+        { id: 'audit', prompt: 'Audit', retry: { limit: 1, when: 'invalid' } },
+      ],
+    });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.defaults?.retry?.when).toEqual(['error', 'empty']);
+    expect(result.data.nodes[0]?.retry?.when).toBe('invalid');
+  });
+
   it('models mission deliverables, budget, deadline, and high-impact approval policy', () => {
     const mission = {
       inputs: [{ name: 'brief', sensitivity: 'confidential' }],
@@ -442,6 +456,8 @@ describe('generator-prompt', () => {
   it('instructs the model that every reference must resolve to a declared node', () => {
     const prompt = buildGeneratorPrompt('Decompose the goal', 'My task');
     expect(prompt).toContain('${nodes.<id>.output} reference MUST point to an `id` that you actually declare');
+    expect(prompt).toContain('one clear specialist responsibility');
+    expect(prompt).toContain('work autonomously through completion');
     expect(prompt).toContain('Goal: Decompose the goal');
     expect(prompt).toContain('Working title: My task');
   });

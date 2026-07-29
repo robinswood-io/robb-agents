@@ -9,10 +9,10 @@
  * tail (where the Claude path already puts everything).
  *
  * These tests pin three invariants:
- *  1. buildContextParts === [...volatile, ...stable] — the Claude path output is
- *     unchanged (same blocks, same order).
+ *  1. buildContextParts === [...volatile, ...stable] — both adapters receive
+ *     the same blocks in the same order.
  *  2. Blocks are routed correctly: session_state + sources are volatile;
- *     workspace capabilities is stable.
+ *     workspace capabilities and the autonomy contract are stable.
  *  3. The one-shot mode-change signal is consumed exactly once, and only by the
  *     volatile builder — never by the stable builder.
  */
@@ -32,7 +32,7 @@ function makeBuilder() {
 describe('PromptBuilder volatile/stable context split (issue #862)', () => {
   afterEach(() => cleanupModeState(SESSION_ID))
 
-  it('buildContextParts equals [...volatile, ...stable] (Claude path stays byte-identical)', () => {
+  it('buildContextParts equals [...volatile, ...stable]', () => {
     // No pending one-shot signal → consume is a no-op → repeated calls are stable.
     cleanupModeState(SESSION_ID)
     const builder = makeBuilder()
@@ -44,7 +44,7 @@ describe('PromptBuilder volatile/stable context split (issue #862)', () => {
     expect(combined).toEqual(composed)
   })
 
-  it('routes session_state + sources to volatile and workspace capabilities to stable', () => {
+  it('routes session_state + sources to volatile and stable policies to the cached prefix', () => {
     cleanupModeState(SESSION_ID)
     const builder = makeBuilder()
     const volatileText = builder.buildVolatileContextParts(OPTS, SOURCE_BLOCK).join('\n')
@@ -55,9 +55,12 @@ describe('PromptBuilder volatile/stable context split (issue #862)', () => {
     expect(volatileText).toContain(SOURCE_BLOCK)
     // workspace capabilities is stable
     expect(stableText).toContain('<workspace_capabilities>')
+    expect(stableText).toContain('<autonomy_contract>')
+    expect(stableText).toContain('Never repeat the same action unchanged')
 
     // The halves must not bleed into each other
     expect(volatileText).not.toContain('<workspace_capabilities>')
+    expect(volatileText).not.toContain('<autonomy_contract>')
     expect(stableText).not.toContain('permissionMode:')
   })
 

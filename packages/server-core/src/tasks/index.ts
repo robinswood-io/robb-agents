@@ -5,7 +5,12 @@
  * validation, and storage primitives in @craft-agent/shared/tasks and the
  * SessionManager completion/output seams.
  */
-export { TaskRunner } from './TaskRunner';
+export { TaskRunner, DEFAULT_AUTONOMOUS_RETRY_POLICY } from './TaskRunner';
+export {
+  inferTaskNodeProfile,
+  resolveTaskNodeExecutionRoute,
+  taskNodeSpecialistPreamble,
+} from './task-node-routing';
 export { loadWorkspaceExecutionProofIssuer } from './execution-proof-runtime';
 export type {
   ConductorSessionHost,
@@ -15,5 +20,15 @@ export type {
   RunStatus,
   NodeRunStatus,
   TaskExecutionGuardContext,
+  TaskFailureClass,
+  TaskRetryPolicy,
 } from './TaskRunner';
+export type {
+  TaskNodeSpecialty,
+  TaskModelTier,
+  TaskNodeProfile,
+  TaskNodeRouteContext,
+  TaskNodeExecutionRoute,
+  ResolveTaskNodeExecutionRouteInput,
+} from './task-node-routing';
 export type { GovernanceCredentialStore } from './execution-proof-runtime';

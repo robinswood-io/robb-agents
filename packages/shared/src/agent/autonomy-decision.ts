@@ -21,6 +21,27 @@ export interface AutonomyDecisionInput {
 }
 
 /**
+ * Stable operating contract injected into every agent session.
+ *
+ * Runtime guards remain authoritative. This block aligns model behavior with
+ * those guards so routine failures are recovered autonomously instead of being
+ * surfaced as premature questions or repeated unchanged attempts.
+ */
+export function formatAutonomyContract(): string {
+  return [
+    '<autonomy_contract>',
+    'Continue through all safe, reversible, in-scope work until the requested outcome is complete and verified.',
+    'Make routine implementation choices from repository evidence; ask only when a missing choice would materially change the result or requires new authority.',
+    'After a failure, inspect and classify the exact cause. Never repeat the same action unchanged.',
+    'Recovery order: repair invalid input or local configuration; retry transient read-only work with bounded backoff; use a policy-authorized provider or tool fallback; use the integrated browser only for an equivalent safe access path.',
+    'Never broaden permissions, bypass policy, expose secrets, or automatically replay an external mutation whose outcome is ambiguous.',
+    'Escalate only for interactive authentication or MFA, missing credentials, an external authorization, a material business decision, a destructive action outside the request, or exhausted safe recovery paths.',
+    'Completion requires executed verification. Report exact evidence and name every remaining unverified item or blocker.',
+    '</autonomy_contract>',
+  ].join('\n')
+}
+
+/**
  * Decide the next autonomous recovery action for a failed tool result.
  * This is deliberately pure: SessionManager owns persistence, prompts and UI.
  */

@@ -49,6 +49,15 @@ export type NodeRunState = 'pending' | 'waiting-approval' | 'running' | 'done' |
 export type RunLogEntry =
   | { t: string; kind: 'run-started'; taskId: string; runId: string; orchestratorSessionId?: string }
   | { t: string; kind: 'node-scheduled'; nodeId: string }
+  | {
+      t: string;
+      kind: 'node-routed';
+      nodeId: string;
+      attempt: number;
+      connectionSlug?: string;
+      model?: string;
+      strategy: 'primary' | 'retry-fallback' | 'pinned';
+    }
   | { t: string; kind: 'node-spawned'; nodeId: string; sessionId: string }
   | {
       t: string;
