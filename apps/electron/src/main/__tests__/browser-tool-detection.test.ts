@@ -29,6 +29,7 @@ describe('browser-tool-detection', () => {
       expect(getBrowserToolCommandVerb({ command: '  SNAPSHOT   ' })).toBe('snapshot')
       expect(getBrowserToolCommandVerb({ command: '--help' })).toBe('--help')
       expect(getBrowserToolCommandVerb({ command: 'navigate https://example.com' })).toBe('navigate')
+      expect(getBrowserToolCommandVerb({ command: ['CLICK', '@e1'] })).toBe('click')
     })
 
     it('returns empty string for invalid inputs', () => {
@@ -46,11 +47,13 @@ describe('browser-tool-detection', () => {
       expect(shouldActivateBrowserOverlay('write', {})).toBe(false)
     })
 
-    it('does not activate for browser_tool help/open/release/teardown commands', () => {
+    it('does not activate for browser_tool help/open/resume/release/teardown commands', () => {
       expect(shouldActivateBrowserOverlay('browser_tool', { command: '--help' })).toBe(false)
       expect(shouldActivateBrowserOverlay('browser_tool', { command: 'help' })).toBe(false)
       expect(shouldActivateBrowserOverlay('browser_tool', { command: 'open' })).toBe(false)
       expect(shouldActivateBrowserOverlay('browser_tool', { command: 'open --foreground' })).toBe(false)
+      expect(shouldActivateBrowserOverlay('browser_tool', { command: 'resume 120000' })).toBe(false)
+      expect(shouldActivateBrowserOverlay('browser_tool', { command: ['resume', '120000'] })).toBe(false)
       expect(shouldActivateBrowserOverlay('mcp__session__browser_tool', { command: 'release' })).toBe(false)
       expect(shouldActivateBrowserOverlay('browser_tool', { command: 'close' })).toBe(false)
       expect(shouldActivateBrowserOverlay('browser_tool', { command: 'hide' })).toBe(false)
@@ -64,6 +67,7 @@ describe('browser-tool-detection', () => {
     it('activates for browser_tool actionable commands', () => {
       expect(shouldActivateBrowserOverlay('browser_tool', { command: 'snapshot' })).toBe(true)
       expect(shouldActivateBrowserOverlay('mcp__session__browser_tool', { command: 'navigate https://linear.app' })).toBe(true)
+      expect(shouldActivateBrowserOverlay('browser_tool', { command: ['click', '@e1'] })).toBe(true)
     })
   })
 })

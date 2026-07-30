@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, beforeEach } from 'bun:test'
-import { createBrowserTools, type BrowserPaneFns } from '../browser-tools'
+import { createBrowserTools, type BrowserPaneFns, type BrowserWaitArgs } from '../browser-tools'
 
 // ============================================================================
 // Mock BrowserPaneFns
@@ -127,6 +127,7 @@ describe('createBrowserTools', () => {
       expect(result.content[0].text).toContain('screenshot [--annotated|-a]')
       expect(result.content[0].text).toContain('focus [windowId]')
       expect(result.content[0].text).toContain('windows')
+      expect(result.content[0].text).toContain('resume [timeoutMs]')
       expect(result.content[0].text).toContain('Array mode (JSON array input, no batch splitting/tokenization):')
       expect(result.content[0].text).not.toContain('When you are done using the browser')
     })
@@ -152,6 +153,7 @@ describe('createBrowserTools', () => {
       const result = await executeTool(tools, 'browser_tool', { command: 'navigate example.com' })
       expect(releaseCalls).toBe(1)
       expect(result.content[0].text).toContain('Security verification detected (cloudflare).')
+      expect(result.content[0].text).toContain('resume 120000')
       expect(result.content[0].text).not.toContain('When you are done using the browser')
     })
 
@@ -775,6 +777,21 @@ describe('createBrowserTools', () => {
     it('routes wait command', async () => {
       const result = await executeTool(tools, 'browser_tool', { command: 'wait network-idle 5000' })
       expect(result.content[0].text).toContain('Wait succeeded')
+    })
+
+    it('routes resume as a challenge-clear wait with a human-friendly timeout', async () => {
+      let waitArgs: BrowserWaitArgs | undefined
+      mockFns.waitFor = async (args) => {
+        waitArgs = args
+        return { ok: true as const, kind: args.kind, elapsedMs: 321, detail: 'security challenge cleared' }
+      }
+
+      const result = await executeTool(tools, 'browser_tool', { command: 'resume 45000' })
+
+      expect(waitArgs).toEqual({ kind: 'challenge-clear', timeoutMs: 45000 })
+      expect(result.content[0].text).toContain('Security verification cleared')
+      expect(result.content[0].text).toContain('snapshot')
+      expect(result.content[0].text).not.toContain('When you are done using the browser')
     })
 
     it('parses quoted wait text values with spaces', async () => {

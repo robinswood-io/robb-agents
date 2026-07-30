@@ -6,6 +6,8 @@ This file accumulates release notes for the next unreleased version. PRs that ad
 
 ## Improvements
 
+- **Faster, self-healing interactive browser** — Text entry now uses a single CDP insertion, fast click navigations are observed without race conditions, stale accessibility refs recover once by semantics, and post-action diagnostics run concurrently. Security challenges no longer trigger on sparse pages alone and can be handed to the user with a non-blocking `resume` wait.
+
 ## Bug Fixes
 
 ## Breaking Changes

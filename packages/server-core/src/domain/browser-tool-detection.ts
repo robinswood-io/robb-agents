@@ -13,6 +13,7 @@ const BROWSER_TOOL_OVERLAY_EXCLUDED_COMMANDS = new Set([
   '-h',
   'help',
   'open',
+  'resume',
   'release',
   'close',
   'hide',
@@ -26,9 +27,14 @@ export function getBrowserToolCommandVerb(toolInput: unknown): string {
   if (!toolInput || typeof toolInput !== 'object') return ''
 
   const command = (toolInput as { command?: unknown }).command
-  if (typeof command !== 'string') return ''
+  const commandVerbSource = typeof command === 'string'
+    ? command
+    : Array.isArray(command) && typeof command[0] === 'string'
+      ? command[0]
+      : ''
+  if (!commandVerbSource) return ''
 
-  return command.trim().toLowerCase().split(/\s+/)[0] || ''
+  return commandVerbSource.trim().toLowerCase().split(/\s+/)[0] || ''
 }
 
 export function shouldActivateBrowserOverlay(toolName: string, toolInput: unknown): boolean {
@@ -40,4 +46,3 @@ export function shouldActivateBrowserOverlay(toolName: string, toolInput: unknow
 
   return !BROWSER_TOOL_OVERLAY_EXCLUDED_COMMANDS.has(verb)
 }
-

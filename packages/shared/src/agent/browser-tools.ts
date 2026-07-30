@@ -94,7 +94,7 @@ export interface BrowserNetworkArgs {
 }
 
 export interface BrowserWaitArgs {
-  kind: 'selector' | 'text' | 'url' | 'network-idle'
+  kind: 'selector' | 'text' | 'url' | 'network-idle' | 'challenge-clear'
   value?: string
   timeoutMs?: number
   pollMs?: number

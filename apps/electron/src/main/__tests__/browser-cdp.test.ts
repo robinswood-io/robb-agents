@@ -341,13 +341,73 @@ describe('BrowserCDP', () => {
       expect(boxModelIndex).toBeGreaterThan(-1)
       expect(scrollIndex).toBeLessThan(boxModelIndex)
     })
+
+    it('recovers a stale ref from matching accessibility semantics before clicking', async () => {
+      let snapshotCalls = 0
+      const resolvedBackendNodeIds: number[] = []
+      const wc = createMockWebContents(async (method, params) => {
+        if (method === 'Accessibility.getFullAXTree') {
+          snapshotCalls += 1
+          return {
+            nodes: [
+              {
+                role: { value: 'button' },
+                name: { value: 'Continue' },
+                backendDOMNodeId: snapshotCalls === 1 ? 42 : 84,
+              },
+            ],
+          }
+        }
+        if (method === 'DOM.resolveNode') {
+          const backendNodeId = Number(params?.backendNodeId)
+          resolvedBackendNodeIds.push(backendNodeId)
+          if (backendNodeId === 42) throw new Error('No node with given id found')
+          return { object: { objectId: 'obj-84' } }
+        }
+        if (method === 'DOM.getBoxModel') {
+          return { model: { content: [10, 10, 50, 10, 50, 50, 10, 50] } }
+        }
+        return {}
+      })
+
+      const cdp = new BrowserCDP(
+        wc as unknown as ConstructorParameters<typeof BrowserCDP>[0],
+      )
+      await cdp.getAccessibilitySnapshot()
+
+      const geometry = await cdp.clickElement('@e1')
+
+      expect(snapshotCalls).toBe(2)
+      expect(resolvedBackendNodeIds).toEqual([42, 84])
+      expect(geometry.ref).toBe('@e2')
+    })
+  })
+
+  describe('typeText', () => {
+    it('inserts the full text with one CDP command', async () => {
+      const calls: Array<{ method: string; params?: Record<string, unknown> }> = []
+      const wc = createMockWebContents(async (method, params) => {
+        calls.push({ method, params })
+        return {}
+      })
+
+      const cdp = new BrowserCDP(
+        wc as unknown as ConstructorParameters<typeof BrowserCDP>[0],
+      )
+      await cdp.typeText('a long value')
+
+      expect(calls.filter(call => call.method === 'Input.insertText')).toEqual([
+        { method: 'Input.insertText', params: { text: 'a long value' } },
+      ])
+      expect(calls.some(call => call.method === 'Input.dispatchKeyEvent')).toBe(false)
+    })
   })
 
   describe('fillElement', () => {
-    it('focuses, clears, and types characters', async () => {
-      const sentCommands: string[] = []
-      const wc = createMockWebContents(async (method) => {
-        sentCommands.push(method)
+    it('focuses, clears, and inserts the full value with one CDP command', async () => {
+      const calls: Array<{ method: string; params?: Record<string, unknown> }> = []
+      const wc = createMockWebContents(async (method, params) => {
+        calls.push({ method, params })
         if (method === 'Accessibility.getFullAXTree') {
           return {
             nodes: [
@@ -369,11 +429,12 @@ describe('BrowserCDP', () => {
 
       await cdp.fillElement('@e1', 'ab')
 
-      expect(sentCommands).toContain('DOM.focus')
-      expect(sentCommands).toContain('Runtime.callFunctionOn')
-      // Two characters typed: 2 keyDown + 2 keyUp = 4 key events
-      const keyEvents = sentCommands.filter(c => c === 'Input.dispatchKeyEvent')
-      expect(keyEvents.length).toBe(4)
+      expect(calls.some(call => call.method === 'DOM.focus')).toBe(true)
+      expect(calls.some(call => call.method === 'Runtime.callFunctionOn')).toBe(true)
+      expect(calls.filter(call => call.method === 'Input.insertText')).toEqual([
+        { method: 'Input.insertText', params: { text: 'ab' } },
+      ])
+      expect(calls.some(call => call.method === 'Input.dispatchKeyEvent')).toBe(false)
     })
   })
 
