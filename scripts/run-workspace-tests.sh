@@ -35,7 +35,10 @@ find . \
     -path './packages/*/dist' -o \
     -path './coverage' \
   \) -prune -o \
-  \( -name '*.test.ts' -o -name '*.test.tsx' \) -print \
+  \( -name '*.test.ts' -o -name '*.test.tsx' \) \
+  ! -name '*.e2e.test.ts' \
+  ! -name '*.e2e.test.tsx' \
+  -print \
   | sort > "$TEST_LIST"
 
 find . \

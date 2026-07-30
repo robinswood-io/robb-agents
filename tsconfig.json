@@ -25,6 +25,15 @@
       "@/*": ["src/*"]
     }
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules"]
+  "files": [],
+  "references": [
+    { "path": "./packages/core" },
+    { "path": "./packages/shared" },
+    { "path": "./packages/server-core" },
+    { "path": "./packages/server" },
+    { "path": "./packages/session-tools-core" },
+    { "path": "./packages/pi-agent-server" },
+    { "path": "./packages/ui" },
+    { "path": "./apps/electron" }
+  ]
 }

@@ -114,6 +114,12 @@ export const HANDLED_CHANNELS = [
 ] as const
 
 export function registerSettingsHandlers(server: RpcServer, deps: HandlerDeps): void {
+  const assertSessionAccess = async (context: RequestContext, sessionId: string): Promise<void> => {
+    const session = await deps.sessionManager.getSession(sessionId)
+    if (!session) throw new Error(`Session not found: ${sessionId}`)
+    assertRequestWorkspace(context, session.workspaceId)
+  }
+
   const authorizeWorkspaceAction = async (
     context: RequestContext,
     workspaceId: string,
@@ -195,7 +201,8 @@ export function registerSettingsHandlers(server: RpcServer, deps: HandlerDeps): 
   // ============================================================
 
   // Get session-specific model
-  server.handle(RPC_CHANNELS.sessions.GET_MODEL, async (_ctx, sessionId: string, _workspaceId: string): Promise<string | null> => {
+  server.handle(RPC_CHANNELS.sessions.GET_MODEL, async (ctx, sessionId: string, _workspaceId: string): Promise<string | null> => {
+    await assertSessionAccess(ctx, sessionId)
     const session = await deps.sessionManager.getSession(sessionId)
     return session?.model ?? null
   })
@@ -457,17 +464,20 @@ export function registerSettingsHandlers(server: RpcServer, deps: HandlerDeps): 
   // ============================================================
 
   // Get draft for a session (text + attachment refs)
-  server.handle(RPC_CHANNELS.drafts.GET, async (_ctx, sessionId: string) => {
+  server.handle(RPC_CHANNELS.drafts.GET, async (ctx, sessionId: string) => {
+    await assertSessionAccess(ctx, sessionId)
     return getSessionDraft(sessionId)
   })
 
   // Set draft for a session (empty drafts are cleared)
-  server.handle(RPC_CHANNELS.drafts.SET, async (_ctx, sessionId: string, draft: import('@craft-agent/shared/config').SessionDraft) => {
+  server.handle(RPC_CHANNELS.drafts.SET, async (ctx, sessionId: string, draft: import('@craft-agent/shared/config').SessionDraft) => {
+    await assertSessionAccess(ctx, sessionId)
     setSessionDraft(sessionId, draft)
   })
 
   // Delete draft for a session
-  server.handle(RPC_CHANNELS.drafts.DELETE, async (_ctx, sessionId: string) => {
+  server.handle(RPC_CHANNELS.drafts.DELETE, async (ctx, sessionId: string) => {
+    await assertSessionAccess(ctx, sessionId)
     deleteSessionDraft(sessionId)
   })
 

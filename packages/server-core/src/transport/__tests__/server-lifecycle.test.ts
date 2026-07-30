@@ -9,7 +9,7 @@ import { describe, it, expect, afterEach } from 'bun:test'
 import WebSocket, { type RawData } from 'ws'
 import { WsRpcServer } from '../server'
 import { PROTOCOL_VERSION } from '@craft-agent/shared/protocol'
-import type { AuthenticationResult } from '../types'
+import type { AuthenticationResult, RequestContext } from '../types'
 
 const TEST_TOKEN = 'test-token-with-enough-entropy-to-pass'
 
@@ -18,6 +18,11 @@ function createServer(opts?: {
   requireAuth?: boolean
   requireAuthoritativePrincipal?: boolean
   validateToken?: (token: string) => Promise<AuthenticationResult>
+  authorizeRequest?: (
+    context: RequestContext,
+    channel: string,
+    args: readonly unknown[],
+  ) => boolean | Promise<boolean>
 }) {
   return new WsRpcServer({
     host: '127.0.0.1',
@@ -26,6 +31,7 @@ function createServer(opts?: {
     validateToken: opts?.validateToken ?? (async (t) => t === TEST_TOKEN),
     requireAuthoritativePrincipal: opts?.requireAuthoritativePrincipal,
     maxClients: opts?.maxClients,
+    authorizeRequest: opts?.authorizeRequest,
     serverId: 'test',
   })
 }
@@ -112,6 +118,23 @@ describe('WsRpcServer lifecycle', () => {
 
   // -- Auth tests --
 
+  it('rejects a channel before dispatch when the principal is not authorized', async () => {
+    server = createServer({
+      authorizeRequest: (_context, channel, args) => (
+        channel === 'allowed:channel' && args[0] === 'expected-argument'
+      ),
+    })
+    server.handle('allowed:channel', async (_context, value: string) => value)
+    server.handle('denied:channel', async () => 'must-not-run')
+    await server.listen()
+    const { ws } = await handshake(`ws://127.0.0.1:${server.port}`, TEST_TOKEN)
+    openSockets.push(ws)
+
+    expect(await invoke(ws, 'allowed:channel', ['expected-argument'])).toBe('expected-argument')
+    await expect(invoke(ws, 'allowed:channel', ['forged-argument'])).rejects.toThrow('RPC channel denied')
+    await expect(invoke(ws, 'denied:channel')).rejects.toThrow('RPC channel denied')
+  })
+
   it('accepts valid token', async () => {
     server = createServer()
     await server.listen()
@@ -185,6 +208,38 @@ describe('WsRpcServer lifecycle', () => {
       authorizationGeneration: 4,
     })
     expect(() => server?.updateClientWorkspace(clientId, 'ws-forged')).toThrow('Workspace access denied')
+  })
+
+  it('disconnects every active client for a revoked actor', async () => {
+    server = createServer({
+      requireAuthoritativePrincipal: true,
+      validateToken: async (token) => token !== TEST_TOKEN
+        ? false
+        : {
+            actorId: 'remote-device:device-1',
+            allowedWorkspaceIds: ['ws-allowed'],
+            capabilities: [],
+            roles: ['remote-device'],
+            authorizationGeneration: 7,
+          },
+    })
+    await server.listen()
+    const { ws } = await handshake(`ws://127.0.0.1:${server.port}`, TEST_TOKEN, {
+      workspaceId: 'ws-allowed',
+    })
+    openSockets.push(ws)
+
+    const closed = new Promise<number>((resolve) => {
+      ws.once('close', (code) => resolve(code))
+    })
+    expect(server.disconnectClientsByActor('remote-device:device-1')).toBe(1)
+    expect(await closed).toBe(4005)
+
+    for (let attempt = 0; attempt < 40; attempt++) {
+      if (server.getConnectedClientCount() === 0) break
+      await new Promise((resolve) => setTimeout(resolve, 25))
+    }
+    expect(server.getConnectedClientCount()).toBe(0)
   })
 
   it('rejects missing token', async () => {

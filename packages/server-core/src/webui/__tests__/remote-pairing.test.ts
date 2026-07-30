@@ -35,7 +35,7 @@ describe('RemotePairingManager', () => {
 
     const expired = manager.issue()
     now = 5_501
-    expect(manager.consume({ ticket: expired.ticket })).toEqual({ ok: false, reason: 'invalid' })
+    expect(manager.consume({ ticket: expired.ticket })).toEqual({ ok: false, reason: 'expired' })
   })
 
   it('invalidates the previous ticket when a new pairing starts', () => {

@@ -1,4 +1,4 @@
-import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 
 const repositoryRoot = resolve(import.meta.dir, '..');
@@ -8,30 +8,29 @@ const skillDirectory = join(rulebookRoot, 'skills', 'playwright-skill');
 const officialTemplate = join(skillDirectory, 'templates', 'robb-agents.js');
 const sourceTemplate = join(repositoryRoot, 'scripts', 'playwright', 'robb-agents.js');
 const verifier = join(rulebookRoot, 'scripts', 'playwright-verify.sh');
-const providerPaths = join(rulebookRoot, 'scripts', 'lib', 'provider-paths.sh');
 
-for (const required of [sourceTemplate, verifier, providerPaths]) {
+for (const required of [sourceTemplate, verifier]) {
   if (!existsSync(required)) throw new Error(`Required Playwright validation file is missing: ${required}`);
 }
-
-// The macOS system Bash is 3.2 and does not support ${value,,}. Rulebook can be
-// refreshed independently of this repository, so enforce the portable form at
-// the validation boundary before invoking its official launcher.
-const providerSource = readFileSync(providerPaths, 'utf8');
-const portableProviderSource = providerSource.replace(
-  'raw="${raw,,}"',
-  'raw="$(printf \'%s\' "$raw" | tr \'[:upper:]\' \'[:lower:]\')"',
-);
-if (portableProviderSource !== providerSource) writeFileSync(providerPaths, portableProviderSource, 'utf8');
 
 mkdirSync(dirname(officialTemplate), { recursive: true });
 copyFileSync(sourceTemplate, officialTemplate);
 
-const verification = Bun.spawn([verifier, 'robb-agents'], {
+// Rulebook's provider resolver uses Bash 4 lowercase expansion while macOS
+// still ships Bash 3.2. Provide the one resolver function needed by the
+// official verifier, then source that verifier unchanged in the same shell.
+const verification = Bun.spawn([
+  '/bin/bash',
+  '-c',
+  `rb_skills_dir() { printf '%s\\n' "$PLAYWRIGHT_SKILL_DIR"; }
+export RB_PROVIDER_PATHS_LOADED=1
+source "$PLAYWRIGHT_VERIFIER" robb-agents`,
+], {
   cwd: repositoryRoot,
   env: {
     ...process.env,
     PLAYWRIGHT_SKILL_DIR: skillDirectory,
+    PLAYWRIGHT_VERIFIER: verifier,
     PLAYWRIGHT_AUTO_E2E: '0',
   },
   stdin: 'inherit',

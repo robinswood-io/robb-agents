@@ -13,7 +13,7 @@ $ErrorActionPreference = "Stop"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $ElectronDir = Split-Path -Parent $ScriptDir
 $RootDir = Split-Path -Parent (Split-Path -Parent $ElectronDir)
-$BunVersion = "bun-v1.3.9"
+$BunVersion = "bun-v1.3.10"
 
 function Require-Path([string]$Path, [string]$Description) {
     if (-not (Test-Path $Path)) { throw "Missing ${Description}: $Path" }

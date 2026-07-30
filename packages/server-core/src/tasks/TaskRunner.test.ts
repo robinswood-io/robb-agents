@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
-import { mkdirSync, mkdtempSync, rmSync } from 'fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import type { TokenUsage } from '@craft-agent/core/types';
@@ -1264,6 +1264,35 @@ describe('TaskRunner (Conductor)', () => {
     recovered.resume('auto-recover', 'r1');
     await tick();
     expect(recoveredHost.dispatchedNames()).toEqual(['b']);
+  });
+
+  it('quarantines a corrupt run log and continues recovering valid runs', async () => {
+    for (const id of ['corrupt-run', 'valid-run']) {
+      saveTaskSpec(root, specOf({ id, title: id, goal: 'g', nodes: [{ id: 'a', prompt: 'a' }] }));
+      const runner = makeRunner();
+      runner.run(id, { runId: 'r1', verifyOnComplete: false });
+      await tick();
+      runner.pause(id, 'r1');
+    }
+    const corruptPath = join(root, 'tasks', 'corrupt-run', 'runs', 'r1', 'run-log.jsonl');
+    const corruptLines = readFileSync(corruptPath, 'utf8').trimEnd().split('\n');
+    const firstRecord = JSON.parse(corruptLines[0]!) as Record<string, unknown>;
+    firstRecord.kind = 'run-stopped';
+    corruptLines[0] = JSON.stringify(firstRecord);
+    writeFileSync(corruptPath, `${corruptLines.join('\n')}\n`, 'utf8');
+
+    const failures: string[] = [];
+    const recovered = new TaskRunner({
+      host: new MockHost(),
+      workspaceId: 'ws',
+      workspaceRoot: root,
+      getKillSwitch: inactiveKillSwitch,
+      onRecoveryError: ({ slug, error }) => failures.push(`${slug}:${error.message}`),
+    }).recoverNonTerminalRuns();
+
+    expect(recovered.map((snapshot) => snapshot.slug)).toEqual(['valid-run']);
+    expect(failures).toHaveLength(1);
+    expect(failures[0]).toContain('corrupt-run');
   });
 
   it('recovers a snapshotted run after its live task.yaml is deleted', async () => {

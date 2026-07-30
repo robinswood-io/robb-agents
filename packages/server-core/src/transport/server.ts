@@ -154,6 +154,12 @@ export interface WsRpcServerOptions {
    * If provided, a valid session cookie is accepted as an alternative to a bearer token.
    */
   validateSessionCookie?: (cookieHeader: string | null) => Promise<AuthenticationResult>
+  /** Authoritative per-channel authorization invoked before every RPC handler. */
+  authorizeRequest?: (
+    context: RequestContext,
+    channel: string,
+    args: readonly unknown[],
+  ) => boolean | Promise<boolean>
   /** Reject legacy boolean authentication results when true. */
   requireAuthoritativePrincipal?: boolean
   /** Server identity stamp on outgoing events. Default: 'local' */
@@ -203,6 +209,7 @@ export class WsRpcServer implements RpcServer {
   private readonly requireAuth: boolean
   private readonly validateToken: ((token: string) => Promise<AuthenticationResult>) | null
   private readonly validateSessionCookie: ((cookieHeader: string | null) => Promise<AuthenticationResult>) | null
+  private readonly authorizeRequest: WsRpcServerOptions['authorizeRequest']
   private readonly requireAuthoritativePrincipal: boolean
   private readonly serverId: string
   private readonly tlsOptions: WsRpcTlsOptions | null
@@ -218,6 +225,7 @@ export class WsRpcServer implements RpcServer {
     this.requireAuth = opts?.requireAuth ?? false
     this.validateToken = opts?.validateToken ?? null
     this.validateSessionCookie = opts?.validateSessionCookie ?? null
+    this.authorizeRequest = opts?.authorizeRequest
     this.requireAuthoritativePrincipal = opts?.requireAuthoritativePrincipal ?? false
     this.serverId = opts?.serverId ?? 'local'
     this.serverVersion = opts?.serverVersion ?? ''
@@ -787,6 +795,10 @@ export class WsRpcServer implements RpcServer {
     }
 
     try {
+      if (this.authorizeRequest && !await this.authorizeRequest(ctx, channel, args ?? [])) {
+        this.sendResponseError(client.ws, id, channel, 'AUTH_FAILED', `RPC channel denied: ${channel}`)
+        return
+      }
       const result = await Promise.race([
         handler(ctx, ...(args ?? [])),
         new Promise<never>((_, reject) =>
@@ -948,6 +960,17 @@ export class WsRpcServer implements RpcServer {
       }
       client.workspaceId = workspaceId
     }
+  }
+
+  /** Close every active connection for an actor whose authorization was revoked. */
+  disconnectClientsByActor(actorId: string): number {
+    let disconnected = 0
+    for (const client of this.clients.values()) {
+      if (client.actorId !== actorId) continue
+      disconnected++
+      client.ws.close(4005, 'Authorization revoked')
+    }
+    return disconnected
   }
 
   private findClientByWs(ws: WebSocket): ClientConnection | undefined {

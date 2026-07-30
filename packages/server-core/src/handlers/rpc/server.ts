@@ -21,7 +21,7 @@ export const HANDLED_CHANNELS = [
 export function registerServerHandlers(
   server: RpcServer,
   deps: HandlerDeps,
-  ctx: ServerHandlerContext,
+  serverCtx: ServerHandlerContext,
 ): void {
   const { sessionManager } = deps
 
@@ -29,8 +29,11 @@ export function registerServerHandlers(
   // Workspace discovery (moved from workspace.ts — server-level, no workspace context)
   // -----------------------------------------------------------------------
 
-  server.handle(RPC_CHANNELS.server.GET_WORKSPACES, async () => {
-    const workspaces = sessionManager.getWorkspacesInfo()
+  server.handle(RPC_CHANNELS.server.GET_WORKSPACES, async (requestContext) => {
+    const allWorkspaces = sessionManager.getWorkspacesInfo()
+    const workspaces = requestContext.allowedWorkspaceIds === '*'
+      ? allWorkspaces
+      : allWorkspaces.filter((workspace) => requestContext.allowedWorkspaceIds.includes(workspace.id))
     deps.platform.logger.info(`[server:getWorkspaces] returning ${workspaces.length} workspaces: ${JSON.stringify(workspaces.map(w => ({ id: w.id, name: w.name })))}`)
     return workspaces
   })
@@ -67,8 +70,11 @@ export function registerServerHandlers(
   // Server Status
   // -----------------------------------------------------------------------
 
-  server.handle(RPC_CHANNELS.server.GET_STATUS, async () => {
-    const workspaces = sessionManager.getWorkspacesInfo()
+  server.handle(RPC_CHANNELS.server.GET_STATUS, async (requestContext) => {
+    const allWorkspaces = sessionManager.getWorkspacesInfo()
+    const workspaces = requestContext.allowedWorkspaceIds === '*'
+      ? allWorkspaces
+      : allWorkspaces.filter((workspace) => requestContext.allowedWorkspaceIds.includes(workspace.id))
     const workspaceStatuses = workspaces.map(ws => {
       const summary = sessionManager.getWorkspaceAutomationSummary(ws.id)
       return {
@@ -83,10 +89,10 @@ export function registerServerHandlers(
 
     const mem = process.memoryUsage()
     const status: ServerStatus = {
-      serverId: ctx.serverId,
+      serverId: serverCtx.serverId,
       version: deps.platform.appVersion,
-      uptime: Math.round((Date.now() - ctx.startedAt) / 1000),
-      connectedClients: ctx.getConnectedClientCount(),
+      uptime: Math.round((Date.now() - serverCtx.startedAt) / 1000),
+      connectedClients: serverCtx.getConnectedClientCount(),
       workspaces: workspaceStatuses,
       memory: {
         heapUsed: mem.heapUsed,
@@ -110,8 +116,11 @@ export function registerServerHandlers(
   // Active Session Discovery
   // -----------------------------------------------------------------------
 
-  server.handle(RPC_CHANNELS.server.GET_ACTIVE_SESSIONS, async () => {
-    return sessionManager.getActiveSessionsInfo()
+  server.handle(RPC_CHANNELS.server.GET_ACTIVE_SESSIONS, async (requestContext) => {
+    const sessions = sessionManager.getActiveSessionsInfo()
+    return requestContext.allowedWorkspaceIds === '*'
+      ? sessions
+      : sessions.filter((session) => requestContext.allowedWorkspaceIds.includes(session.workspaceId))
   })
 
   // -----------------------------------------------------------------------
@@ -127,7 +136,9 @@ export function registerServerHandlers(
 // Health check logic (reusable by both RPC handler and HTTP endpoint)
 // ---------------------------------------------------------------------------
 
-export function getHealthCheck(deps: Pick<HandlerDeps, 'sessionManager'>): ServerHealth {
+export function getHealthCheck(deps: {
+  sessionManager: { getWorkspaces(): readonly unknown[] }
+}): ServerHealth {
   const checks: ServerHealth['checks'] = []
 
   // Check 1: SessionManager is operational (has loaded workspaces)

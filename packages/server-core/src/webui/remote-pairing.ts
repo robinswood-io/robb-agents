@@ -85,8 +85,6 @@ export class RemotePairingManager {
   }
 
   consume(input: { ticket?: string; code?: string }): RemotePairingConsumeResult {
-    this.cleanup()
-
     const normalizedCode = input.code ? normalizeCode(input.code) : ''
     const presentedDigest = input.ticket
       ? digest(input.ticket)
@@ -107,22 +105,20 @@ export class RemotePairingManager {
     const matches = presentedDigest === record.ticketDigest || presentedDigest === record.codeDigest
     if (!matches) return { ok: false, reason: 'invalid' }
 
+    if (record.expiresAtMs <= this.now()) {
+      this.active = null
+      return { ok: false, reason: 'expired' }
+    }
+
     this.active = null
     this.consumed.set(record.ticketDigest, record.expiresAtMs)
     this.consumed.set(record.codeDigest, record.expiresAtMs)
-
-    if (record.expiresAtMs <= this.now()) {
-      return { ok: false, reason: 'expired' }
-    }
 
     return { ok: true }
   }
 
   cleanup(): void {
     const now = this.now()
-    if (this.active && this.active.expiresAtMs <= now) {
-      this.active = null
-    }
     for (const [valueDigest, expiresAtMs] of this.consumed) {
       if (expiresAtMs <= now) this.consumed.delete(valueDigest)
     }

@@ -71,8 +71,11 @@ export function registerWorkspaceCoreHandlers(server: RpcServer, deps: HandlerDe
   const windowManager = deps.windowManager
 
   // Get workspaces (LOCAL_ONLY — includes rootPath for local Electron renderer)
-  server.handle(RPC_CHANNELS.workspaces.GET, async () => {
-    return sessionManager.getWorkspaces()
+  server.handle(RPC_CHANNELS.workspaces.GET, async (ctx) => {
+    const workspaces = sessionManager.getWorkspaces()
+    return ctx.allowedWorkspaceIds === '*'
+      ? workspaces
+      : workspaces.filter((workspace) => ctx.allowedWorkspaceIds.includes(workspace.id))
   })
 
   // Create a new workspace at a folder path (Obsidian-style: folder IS the workspace)
@@ -372,10 +375,13 @@ export function registerWorkspaceCoreHandlers(server: RpcServer, deps: HandlerDe
     setWorkspaceColorTheme(workspace.rootPath, themeId ?? undefined)
   })
 
-  server.handle(RPC_CHANNELS.theme.GET_ALL_WORKSPACE_THEMES, async () => {
+  server.handle(RPC_CHANNELS.theme.GET_ALL_WORKSPACE_THEMES, async (ctx) => {
     const { getWorkspaces } = await import('@craft-agent/shared/config/storage')
     const { getWorkspaceColorTheme } = await import('@craft-agent/shared/workspaces/storage')
-    const workspaces = getWorkspaces()
+    const allWorkspaces = getWorkspaces()
+    const workspaces = ctx.allowedWorkspaceIds === '*'
+      ? allWorkspaces
+      : allWorkspaces.filter((workspace) => ctx.allowedWorkspaceIds.includes(workspace.id))
     const themes: Record<string, string | undefined> = {}
     for (const ws of workspaces) {
       themes[ws.id] = getWorkspaceColorTheme(ws.rootPath)
