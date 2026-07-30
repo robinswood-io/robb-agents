@@ -16,7 +16,7 @@ export default defineConfig({
     tailwindcss(),
   ],
   root: resolve(__dirname, 'src'),
-  base: './',
+  base: '/',
   build: {
     outDir: resolve(__dirname, 'dist'),
     emptyDirBeforeWrite: true,

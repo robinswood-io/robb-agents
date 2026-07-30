@@ -49,4 +49,11 @@ body {
   html {
     zoom: 1.2;
   }
+
+  /* Remote pairing is a purpose-built phone layout and already sizes text and
+   * controls for touch. Keep it at its authored scale so the complete trust
+   * context remains visible on common 390×844 screens. */
+  html:has(.remote-access-page) {
+    zoom: 1;
+  }
 }

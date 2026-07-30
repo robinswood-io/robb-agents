@@ -21,6 +21,8 @@
  *   CRAFT_WEBUI_PASSWORD       — optional shorter password for web login (falls back to CRAFT_SERVER_TOKEN)
  *   CRAFT_WEBUI_SECURE_COOKIE  — optional true/false override for the session cookie Secure flag
  *   CRAFT_WEBUI_WS_URL         — optional browser-facing ws:// or wss:// URL returned by /api/config
+ *   CRAFT_WEBUI_PUBLIC_URL     — optional public https:// URL used in mobile Remote pairing links
+ *   CRAFT_WEBUI_HOST_LABEL     — optional friendly host name shown on paired mobile devices
  *   CRAFT_MESSAGING_WA_WORKER  — absolute path to worker.cjs (default: packages/messaging-whatsapp-worker/dist/worker.cjs)
  *   CRAFT_MESSAGING_NODE_BIN   — Node binary used to spawn the WhatsApp worker (default: node)
  */
@@ -90,6 +92,24 @@ function parseOptionalWebSocketUrl(name: string, value: string | undefined): str
   }
 }
 
+function parseOptionalHttpUrl(name: string, value: string | undefined): string | undefined {
+  if (value == null || value.trim() === '') return undefined
+
+  try {
+    const url = new URL(value)
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+      throw new Error('must use http:// or https://')
+    }
+    url.search = ''
+    url.hash = ''
+    return url.toString().replace(/\/$/, '')
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    console.error(`Invalid ${name}: ${message}`)
+    process.exit(1)
+  }
+}
+
 // In dev (monorepo), bundled assets root is the repo root (4 levels up from this file).
 // In packaged mode, use CRAFT_BUNDLED_ASSETS_ROOT env or cwd.
 const bundledAssetsRoot = process.env.CRAFT_BUNDLED_ASSETS_ROOT
@@ -116,6 +136,7 @@ const webuiDir = process.env.CRAFT_WEBUI_DIR || undefined
 const webuiEnabled = webuiDir && existsSync(webuiDir)
 const webuiSecureCookies = parseOptionalBooleanEnv('CRAFT_WEBUI_SECURE_COOKIE', process.env.CRAFT_WEBUI_SECURE_COOKIE)
 const webuiWsUrl = parseOptionalWebSocketUrl('CRAFT_WEBUI_WS_URL', process.env.CRAFT_WEBUI_WS_URL)
+const webuiPublicUrl = parseOptionalHttpUrl('CRAFT_WEBUI_PUBLIC_URL', process.env.CRAFT_WEBUI_PUBLIC_URL)
 const serverToken = process.env.CRAFT_SERVER_TOKEN
 
 // ---------------------------------------------------------------------------
@@ -141,6 +162,8 @@ if (webuiEnabled && serverToken) {
     password: process.env.CRAFT_WEBUI_PASSWORD || undefined,
     secureCookies: webuiSecureCookies,
     publicWsUrl: webuiWsUrl,
+    publicWebuiUrl: webuiPublicUrl,
+    hostLabel: process.env.CRAFT_WEBUI_HOST_LABEL || undefined,
     wsProtocol: rpcProtocol,
     // WebUI is served on the same port as WS — wsPort matches the RPC port
     wsPort: rpcPort,
@@ -176,7 +199,9 @@ const instance = await (async () => {
             return session === null
               ? false
               : {
-                  actorId: 'local-owner',
+                  actorId: session.kind === 'remote-device' && session.deviceId
+                    ? `remote-device:${session.deviceId}`
+                    : 'local-owner',
                   allowedWorkspaceIds: '*' as const,
                   capabilities: '*' as const,
                   roles: ['owner'],

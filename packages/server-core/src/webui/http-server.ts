@@ -11,15 +11,19 @@
  */
 
 import { join, extname } from 'node:path'
+import { randomUUID } from 'node:crypto'
 import {
   RateLimiter,
   initPasswordHash,
   verifyPassword,
   createSessionToken,
+  createRemoteSessionToken,
+  REMOTE_SESSION_EXPIRY_SECONDS,
   validateSession,
   buildSessionCookie,
   buildLogoutCookie,
 } from './auth'
+import { RemotePairingManager, formatPairingCode } from './remote-pairing'
 import { generateCallbackPage } from '@craft-agent/shared/auth'
 import type { PlatformServices } from '../runtime/platform'
 
@@ -129,6 +133,10 @@ export interface WebuiHandlerOptions {
   secureCookies?: boolean
   /** Optional browser-facing WebSocket URL override for reverse-proxy deployments. */
   publicWsUrl?: string
+  /** Optional browser-facing Web UI URL used in Remote pairing links. */
+  publicWebuiUrl?: string
+  /** Human-readable host label shown on paired mobile devices. */
+  hostLabel?: string
   /** RPC WebSocket protocol used when building a browser-facing fallback URL. */
   wsProtocol: 'ws' | 'wss'
   /** RPC WebSocket port used when building a browser-facing fallback URL. */
@@ -173,6 +181,8 @@ export function createWebuiHandler(options: WebuiHandlerOptions): WebuiHandler {
     password,
     secureCookies,
     publicWsUrl,
+    publicWebuiUrl,
+    hostLabel,
     wsProtocol,
     wsPort,
     getHealthCheck,
@@ -181,7 +191,13 @@ export function createWebuiHandler(options: WebuiHandlerOptions): WebuiHandler {
   } = options
 
   const rateLimiter = new RateLimiter(5, 60_000)
-  const cleanupTimer = setInterval(() => rateLimiter.cleanup(), 120_000)
+  const pairingRateLimiter = new RateLimiter(10, 60_000, 100)
+  const pairingManager = new RemotePairingManager()
+  const cleanupTimer = setInterval(() => {
+    rateLimiter.cleanup()
+    pairingRateLimiter.cleanup()
+    pairingManager.cleanup()
+  }, 120_000)
 
   const loginPassword = password || secret
   const trustedProxySet = new Set(trustedProxies ?? [])
@@ -197,6 +213,38 @@ export function createWebuiHandler(options: WebuiHandlerOptions): WebuiHandler {
         ?? 'direct'
     }
     return 'direct'
+  }
+
+  function getPublicWebuiBaseUrl(req: Request): string {
+    if (publicWebuiUrl) return publicWebuiUrl.replace(/\/$/, '')
+    const requestHost = getRequestHost(req)
+    if (requestHost) return `${getRequestProto(req)}://${requestHost}`
+    return `${getRequestProto(req)}://127.0.0.1:${wsPort}`
+  }
+
+  function getHostLabel(req: Request): string {
+    if (hostLabel?.trim()) return hostLabel.trim().slice(0, 80)
+    const requestHost = getRequestHost(req)
+    if (!requestHost) return 'Robb Agents host'
+    try {
+      return new URL(`http://${requestHost}`).hostname
+    } catch {
+      return requestHost.slice(0, 80)
+    }
+  }
+
+  async function serveSpaIndex(headers: Record<string, string> = {}): Promise<Response> {
+    const indexFile = Bun.file(join(webuiDir, 'index.html'))
+    if (await indexFile.exists()) {
+      return new Response(indexFile, {
+        headers: {
+          'Content-Type': 'text/html; charset=utf-8',
+          'Referrer-Policy': 'no-referrer',
+          ...headers,
+        },
+      })
+    }
+    return new Response('Not Found', { status: 404 })
   }
 
   async function fetch(req: Request): Promise<Response> {
@@ -223,8 +271,20 @@ export function createWebuiHandler(options: WebuiHandlerOptions): WebuiHandler {
       return new Response('Login page not found', { status: 404 })
     }
 
-    // ── Static assets that login page needs (no auth) ──
-    if (path === '/favicon.ico' || path.startsWith('/login-assets/')) {
+    // ── Mobile Remote pairing page (public; ticket exchange is rate-limited) ──
+    if ((path === '/remote' || path === '/remote/') && req.method === 'GET') {
+      return serveSpaIndex({ 'Cache-Control': 'no-store' })
+    }
+
+    // ── Public static assets used by login and Remote pairing pages ──
+    if (
+      path === '/favicon.ico'
+      || path === '/favicon.svg'
+      || path === '/apple-touch-icon.png'
+      || path === '/manifest.json'
+      || path.startsWith('/login-assets/')
+      || path.startsWith('/assets/')
+    ) {
       const file = Bun.file(join(webuiDir, path))
       if (await file.exists()) {
         return new Response(file, {
@@ -232,6 +292,52 @@ export function createWebuiHandler(options: WebuiHandlerOptions): WebuiHandler {
         })
       }
       return new Response('Not Found', { status: 404 })
+    }
+
+    // ── Exchange a one-time ticket for a device-scoped Remote session ──
+    if (path === '/api/remote/pair' && req.method === 'POST') {
+      const ip = getClientIp(req)
+      if (!pairingRateLimiter.check(ip)) {
+        logger.warn(`[webui] Rate limited Remote pairing attempt from ${ip}`)
+        return Response.json({ error: 'Too many pairing attempts. Try again later.' }, { status: 429 })
+      }
+
+      let body: { ticket?: string; code?: string; deviceName?: string }
+      try {
+        body = await req.json() as { ticket?: string; code?: string; deviceName?: string }
+      } catch {
+        return Response.json({ error: 'Invalid request body' }, { status: 400 })
+      }
+
+      const ticket = typeof body.ticket === 'string' && body.ticket.length <= 256 ? body.ticket : undefined
+      const code = typeof body.code === 'string' && body.code.length <= 16 ? body.code : undefined
+      if (!ticket && !code) {
+        return Response.json({ error: 'A pairing ticket or code is required' }, { status: 400 })
+      }
+
+      const result = pairingManager.consume({ ticket, code })
+      if (!result.ok) {
+        const status = result.reason === 'used' ? 409 : result.reason === 'expired' ? 410 : 401
+        return Response.json({ error: `Pairing ${result.reason}` }, { status })
+      }
+
+      const deviceId = randomUUID()
+      const deviceName = typeof body.deviceName === 'string' && body.deviceName.trim()
+        ? body.deviceName.trim().slice(0, 80)
+        : 'Mobile device'
+      const jwt = await createRemoteSessionToken(secret, deviceId)
+      logger.info(`[webui] Paired Remote device ${deviceId} (${deviceName}) from ${ip}`)
+
+      return Response.json({
+        ok: true,
+        deviceId,
+        hostLabel: getHostLabel(req),
+      }, {
+        headers: {
+          'Cache-Control': 'no-store',
+          'Set-Cookie': buildSessionCookie(jwt, useSecureCookies, REMOTE_SESSION_EXPIRY_SECONDS),
+        },
+      })
     }
 
     // ── Auth endpoint ──
@@ -281,6 +387,41 @@ export function createWebuiHandler(options: WebuiHandlerOptions): WebuiHandler {
         headers: {
           'Set-Cookie': buildLogoutCookie(useSecureCookies),
         },
+      })
+    }
+
+    // ── Create a one-time pairing link (owner session only) ──
+    if (path === '/api/remote/pairing' && req.method === 'POST') {
+      const ownerSession = await validateSession(req.headers.get('cookie'), secret)
+      if (!ownerSession) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+      if (ownerSession.kind !== 'owner') {
+        return Response.json({ error: 'Only the host owner can pair another device' }, { status: 403 })
+      }
+
+      const pairing = pairingManager.issue()
+      const pairingUrl = new URL('/remote', getPublicWebuiBaseUrl(req))
+      pairingUrl.searchParams.set('pairing', pairing.ticket)
+
+      return Response.json({
+        pairingUrl: pairingUrl.toString(),
+        code: formatPairingCode(pairing.code),
+        expiresAt: pairing.expiresAt,
+        hostLabel: getHostLabel(req),
+      }, {
+        headers: { 'Cache-Control': 'no-store' },
+      })
+    }
+
+    if (path === '/api/remote/status' && req.method === 'GET') {
+      const remoteSession = await validateSession(req.headers.get('cookie'), secret)
+      if (!remoteSession) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+      return Response.json({
+        kind: remoteSession.kind,
+        deviceId: remoteSession.deviceId ?? null,
+        expiresAt: new Date(remoteSession.exp * 1000).toISOString(),
+        hostLabel: getHostLabel(req),
+      }, {
+        headers: { 'Cache-Control': 'no-store' },
       })
     }
 
@@ -353,6 +494,12 @@ export function createWebuiHandler(options: WebuiHandlerOptions): WebuiHandler {
       }
       return Response.json({
         wsUrl: resolveWebSocketUrl(req, { publicWsUrl, wsProtocol, wsPort }),
+        session: {
+          kind: configSession.kind,
+          deviceId: configSession.deviceId ?? null,
+          expiresAt: new Date(configSession.exp * 1000).toISOString(),
+        },
+        hostLabel: getHostLabel(req),
       })
     }
 
@@ -376,7 +523,8 @@ export function createWebuiHandler(options: WebuiHandlerOptions): WebuiHandler {
     if (!session) {
       const accept = req.headers.get('accept') ?? ''
       if (accept.includes('text/html') || path === '/' || path === '') {
-        return Response.redirect('/login', 302)
+        const next = path.startsWith('/remote/setup') ? `?next=${encodeURIComponent(path)}` : ''
+        return Response.redirect(`/login${next}`, 302)
       }
       return Response.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -392,14 +540,7 @@ export function createWebuiHandler(options: WebuiHandlerOptions): WebuiHandler {
     }
 
     // SPA fallback — serve index.html for all non-file routes
-    const indexFile = Bun.file(join(webuiDir, 'index.html'))
-    if (await indexFile.exists()) {
-      return new Response(indexFile, {
-        headers: { 'Content-Type': 'text/html; charset=utf-8' },
-      })
-    }
-
-    return new Response('Not Found', { status: 404 })
+    return serveSpaIndex()
   }
 
   return {

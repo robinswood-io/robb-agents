@@ -181,6 +181,58 @@
 
     .error.visible { display: block; }
 
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 22px 0 14px;
+      color: var(--subtitle);
+      font-size: 11px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .divider::before,
+    .divider::after {
+      content: '';
+      height: 1px;
+      flex: 1;
+      background: var(--card-border);
+    }
+
+    .remote-link,
+    .setup-link {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      border-radius: 8px;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .remote-link {
+      min-height: 42px;
+      border: 1px solid var(--input-border);
+      background: var(--input-bg);
+      color: var(--page-fg);
+      transition: border-color 0.15s, background 0.15s;
+    }
+
+    .remote-link:hover {
+      border-color: var(--accent);
+      background: var(--card-bg);
+    }
+
+    .setup-link {
+      margin-top: 13px;
+      color: var(--subtitle);
+    }
+
+    .setup-link:hover { color: var(--accent); }
+
     @keyframes drift {
       from { transform: scale(1.08) translate3d(-2%, -1%, 0); }
       to { transform: scale(1.12) translate3d(2%, 1.5%, 0); }
@@ -226,7 +278,7 @@
 <body>
   <div class="card">
     <h1>Robb Agents</h1>
-    <p class="subtitle">Enter your server token to continue</p>
+    <p class="subtitle">Sign in on this host, or pair a mobile device with Remote.</p>
 
     <form id="login-form">
       <label for="password">Server Token</label>
@@ -243,6 +295,10 @@
     </form>
 
     <div id="error" class="error"></div>
+
+    <div class="divider">Remote</div>
+    <a class="remote-link" href="/remote">Enter a one-time pairing code</a>
+    <a class="setup-link" href="/remote/setup">Show a QR code for my phone</a>
   </div>
 
   <script>
@@ -265,8 +321,12 @@
         });
 
         if (res.ok) {
-          // Cookie is set by the response — redirect to app
-          window.location.href = '/';
+          // Cookie is set by the response — return only to a local path.
+          const requestedNext = new URLSearchParams(window.location.search).get('next');
+          const safeNext = requestedNext && requestedNext.startsWith('/') && !requestedNext.startsWith('//')
+            ? requestedNext
+            : '/';
+          window.location.href = safeNext;
           return;
         }
 

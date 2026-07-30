@@ -14,16 +14,25 @@ import { SignJWT, jwtVerify } from 'jose'
 // ---------------------------------------------------------------------------
 
 const JWT_EXPIRY_SECONDS = 86_400 // 24 hours
+export const REMOTE_SESSION_EXPIRY_SECONDS = 30 * 24 * 60 * 60 // 30 days
+
+export type WebuiSessionKind = 'owner' | 'remote-device'
 
 export interface JwtPayload {
   sub: string
   iat: number
   exp: number
+  kind: WebuiSessionKind
+  deviceId?: string
 }
 
 export async function signJwt(payload: JwtPayload, secret: string): Promise<string> {
   const key = new TextEncoder().encode(secret)
-  return new SignJWT({ sub: payload.sub } as Record<string, unknown>)
+  return new SignJWT({
+    sub: payload.sub,
+    kind: payload.kind,
+    ...(payload.deviceId ? { deviceId: payload.deviceId } : {}),
+  })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt(payload.iat)
     .setExpirationTime(payload.exp)
@@ -34,11 +43,15 @@ export async function verifyJwt(token: string, secret: string): Promise<JwtPaylo
   try {
     const key = new TextEncoder().encode(secret)
     const { payload } = await jwtVerify(token, key, { algorithms: ['HS256'] })
-    return {
-      sub: payload.sub as string,
-      iat: payload.iat as number,
-      exp: payload.exp as number,
+    if (typeof payload.sub !== 'string' || typeof payload.iat !== 'number' || typeof payload.exp !== 'number') {
+      return null
     }
+
+    const kind = payload.kind === 'remote-device' ? 'remote-device' : 'owner'
+    const deviceId = typeof payload.deviceId === 'string' ? payload.deviceId : undefined
+    if (kind === 'remote-device' && !deviceId) return null
+
+    return { sub: payload.sub, iat: payload.iat, exp: payload.exp, kind, deviceId }
   } catch {
     return null
   }
@@ -46,7 +59,18 @@ export async function verifyJwt(token: string, secret: string): Promise<JwtPaylo
 
 export async function createSessionToken(secret: string): Promise<string> {
   const now = Math.floor(Date.now() / 1000)
-  return signJwt({ sub: 'webui', iat: now, exp: now + JWT_EXPIRY_SECONDS }, secret)
+  return signJwt({ sub: 'webui', iat: now, exp: now + JWT_EXPIRY_SECONDS, kind: 'owner' }, secret)
+}
+
+export async function createRemoteSessionToken(secret: string, deviceId: string): Promise<string> {
+  const now = Math.floor(Date.now() / 1000)
+  return signJwt({
+    sub: `remote-device:${deviceId}`,
+    iat: now,
+    exp: now + REMOTE_SESSION_EXPIRY_SECONDS,
+    kind: 'remote-device',
+    deviceId,
+  }, secret)
 }
 
 // ---------------------------------------------------------------------------
@@ -55,13 +79,13 @@ export async function createSessionToken(secret: string): Promise<string> {
 
 const SESSION_COOKIE_NAME = 'craft_session'
 
-export function buildSessionCookie(jwt: string, secure: boolean): string {
+export function buildSessionCookie(jwt: string, secure: boolean, maxAgeSeconds = JWT_EXPIRY_SECONDS): string {
   const parts = [
     `${SESSION_COOKIE_NAME}=${jwt}`,
     'HttpOnly',
     'SameSite=Strict',
     'Path=/',
-    `Max-Age=${JWT_EXPIRY_SECONDS}`,
+    `Max-Age=${maxAgeSeconds}`,
   ]
   if (secure) parts.push('Secure')
   return parts.join('; ')

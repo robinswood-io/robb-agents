@@ -122,6 +122,24 @@ Robb keeps billing/authentication modes explicit:
 - **Mistral API**: use the separate generic API-key provider only for Mistral AI Studio pay-as-you-go access.
 - **Gemini, ChatGPT/Codex, Claude, GitHub Copilot**: connect using their respective provider setup paths.
 
+## Remote access from a phone
+
+The standalone WebUI can pair a phone with the Robb Agents host using a short-lived QR code or an 8-character one-time code:
+
+```bash
+bun run webui:build
+CRAFT_SERVER_TOKEN="replace-with-a-long-random-secret" \
+CRAFT_WEBUI_PASSWORD="replace-with-a-separate-login-password" \
+CRAFT_WEBUI_DIR=apps/webui/dist \
+CRAFT_WEBUI_PUBLIC_URL="https://robb.example.com" \
+CRAFT_WEBUI_HOST_LABEL="My Mac" \
+bun run packages/server/src/index.ts
+```
+
+Sign in to the host WebUI, open `/remote/setup`, then scan the QR code from the phone or enter the displayed code at `/remote`. The resulting device session lasts 30 days; pairing codes expire after five minutes and can be used only once.
+
+Remote access is a direct connection to your host, not a hosted relay. The host must remain online and reachable. Expose it only behind HTTPS or a trusted private network/VPN; files and provider credentials remain on the host.
+
 ## Privacy and distribution policy
 
 Read the complete [Privacy Policy](PRIVACY.md).
