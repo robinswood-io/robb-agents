@@ -12,7 +12,7 @@ ROOT_DIR="$(dirname "$(dirname "$ELECTRON_DIR")")"
 
 ARCH="arm64"
 RELEASE_BUILD=false
-BUN_VERSION="bun-v1.3.9"
+BUN_VERSION="bun-v1.3.10"
 
 usage() {
   cat <<'EOF'

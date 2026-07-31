@@ -30,7 +30,12 @@ import type {
   TaskKillSwitchSnapshotDto,
   TaskKillSwitchUpdateRequest,
 } from '@craft-agent/shared/protocol'
-import { getWorkspaceByNameOrId, resolveConfigDir } from '@craft-agent/shared/config'
+import {
+  getDefaultLlmConnection,
+  getLlmConnections,
+  getWorkspaceByNameOrId,
+  resolveConfigDir,
+} from '@craft-agent/shared/config'
 import { loadWorkspaceConfig } from '@craft-agent/shared/workspaces'
 import {
   WorkspaceGovernanceProfileSchema,
@@ -70,7 +75,9 @@ import {
 import type { HandlerDeps } from '../handler-deps'
 import {
   TaskRunner,
+  DEFAULT_AUTONOMOUS_RETRY_POLICY,
   loadWorkspaceExecutionProofIssuer,
+  resolveTaskNodeExecutionRoute,
   type TaskExecutionGuardContext,
 } from '../../tasks'
 
@@ -226,6 +233,17 @@ export function registerTasksHandlers(server: RpcServer, deps: HandlerDeps): voi
         workspaceRoot: ws.rootPath,
         getKillSwitch: () => killSwitchRegistry.taskSnapshot(),
         executionGuard: createProductionTaskExecutionGuard(ws.rootPath),
+        defaultRetry: DEFAULT_AUTONOMOUS_RETRY_POLICY,
+        resolveNodeRoute: (context) => {
+          const workspaceConfig = loadWorkspaceConfig(ws.rootPath)
+          return resolveTaskNodeExecutionRoute({
+            ...context,
+            connections: getLlmConnections(),
+            routingPolicy: workspaceConfig?.routingPolicy,
+            defaultConnectionSlug:
+              workspaceConfig?.defaults?.defaultLlmConnection ?? getDefaultLlmConnection() ?? undefined,
+          })
+        },
         verifyExecutionProof: (proof, binding) => proofIssuer.verifyForTask(proof, binding),
       })
       runners.set(workspaceId, runner)

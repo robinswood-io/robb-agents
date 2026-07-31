@@ -12,6 +12,8 @@ import React, { useState, useEffect, useRef, lazy, Suspense } from 'react'
 import { useTranslation } from 'react-i18next'
 import { createWebApi } from './adapter/web-api'
 import type { WsRpcClient } from '../../electron/src/transport/client'
+import { RemoteAccessScreen } from './components/RemoteAccessScreen'
+import { RemoteConnectionBadge } from './components/RemoteConnectionBadge'
 
 // Lazy-load the Electron App after window.electronAPI is set up.
 // This prevents any Electron component from accessing window.electronAPI
@@ -19,6 +21,16 @@ import type { WsRpcClient } from '../../electron/src/transport/client'
 const ElectronApp = lazy(() => import('@/App'))
 
 type Phase = 'loading' | 'error' | 'ready'
+
+interface WebuiConfig {
+  wsUrl: string
+  hostLabel: string
+  session: {
+    kind: 'owner' | 'remote-device'
+    deviceId: string | null
+    expiresAt: string
+  }
+}
 
 function LoadingScreen() {
   const { t } = useTranslation()
@@ -63,8 +75,11 @@ function ErrorScreen({ message, onRetry }: { message: string; onRetry: () => voi
 export default function App() {
   const [phase, setPhase] = useState<Phase>('loading')
   const [error, setError] = useState('')
+  const [config, setConfig] = useState<WebuiConfig | null>(null)
   const clientRef = useRef<WsRpcClient | null>(null)
   const initRef = useRef(false)
+  const isRemotePairing = window.location.pathname === '/remote' || window.location.pathname === '/remote/'
+  const isRemoteSetup = window.location.pathname === '/remote/setup' || window.location.pathname === '/remote/setup/'
 
   const initialize = async () => {
     setPhase('loading')
@@ -82,8 +97,9 @@ export default function App() {
         throw new Error(`Failed to fetch config: ${configRes.status}`)
       }
 
-      const { wsUrl } = await configRes.json() as { wsUrl: string }
-      if (!wsUrl) throw new Error('Server did not return a WebSocket URL')
+      const nextConfig = await configRes.json() as WebuiConfig
+      if (!nextConfig.wsUrl) throw new Error('Server did not return a WebSocket URL')
+      setConfig(nextConfig)
 
       // 2. Determine workspace — check URL params first
       const params = new URLSearchParams(window.location.search)
@@ -109,11 +125,11 @@ export default function App() {
         clientRef.current.destroy()
       }
 
-      const { api, client } = createWebApi({ serverUrl: wsUrl, workspaceId })
+      const { api, client } = createWebApi({ serverUrl: nextConfig.wsUrl, workspaceId })
       clientRef.current = client
 
       // 4. Set window.electronAPI — must happen before any Electron component mounts
-      ;(window as any).electronAPI = api
+      window.electronAPI = api
 
       // 5. Connect the WebSocket client
       client.connect()
@@ -127,6 +143,7 @@ export default function App() {
   }
 
   useEffect(() => {
+    if (isRemotePairing || isRemoteSetup) return
     if (!initRef.current) {
       initRef.current = true
       initialize()
@@ -136,14 +153,22 @@ export default function App() {
       // Cleanup on unmount
       clientRef.current?.destroy()
     }
-  }, [])
+  }, [isRemotePairing, isRemoteSetup])
+
+  if (isRemotePairing) return <RemoteAccessScreen mode="pair" />
+  if (isRemoteSetup) return <RemoteAccessScreen mode="setup" />
 
   if (phase === 'loading') return <LoadingScreen />
   if (phase === 'error') return <ErrorScreen message={error} onRetry={initialize} />
 
   return (
-    <Suspense fallback={<LoadingScreen />}>
-      <ElectronApp />
-    </Suspense>
+    <>
+      {config?.session.kind === 'remote-device' && clientRef.current && (
+        <RemoteConnectionBadge client={clientRef.current} hostLabel={config.hostLabel} />
+      )}
+      <Suspense fallback={<LoadingScreen />}>
+        <ElectronApp />
+      </Suspense>
+    </>
   )
 }

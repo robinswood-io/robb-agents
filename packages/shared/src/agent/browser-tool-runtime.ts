@@ -73,6 +73,7 @@ export function getBrowserToolHelp(): string {
     '  evaluate <expression>',
     '  focus [windowId]                               focus existing browser window (no new window)',
     '  windows',
+    '  resume [timeoutMs]                            wait for manual security verification, then continue',
     '  release [windowId|all]                         dismiss agent overlay (user keeps browsing)',
     '  close [windowId]                               close & destroy the browser window',
     '  hide [windowId]                                hide the window (keeps state, "open" re-shows)',
@@ -746,11 +747,11 @@ async function executeSingleCommand(args: {
     const started = Date.now();
     const result = await fns.navigate(url);
     const elapsedMs = Date.now() - started;
-    const after = await getPageMetrics(fns);
-    const failed = await fns.getNetworkLogs({ limit: 200, status: 'failed' });
-
-    // Check for security challenge after navigation
-    const challenge = await fns.detectChallenge();
+    const [after, failed, challenge] = await Promise.all([
+      getPageMetrics(fns),
+      fns.getNetworkLogs({ limit: 200, status: 'failed' }),
+      fns.detectChallenge(),
+    ]);
     if (challenge.detected) {
       await fns.releaseControl();
       return {
@@ -760,7 +761,7 @@ async function executeSingleCommand(args: {
           `URL: ${result.url}`,
           '',
           'Browser shown — please complete the verification check.',
-          'After verification, run "snapshot" to continue.',
+          'After verification, run "resume 120000"; it will wait without blocking your clicks.',
         ].join('\n'),
         appendReleaseHint: false,
       };
@@ -842,7 +843,7 @@ async function executeSingleCommand(args: {
           `Detected only ${actionableCount} actionable element(s) out of ${snapshot.nodes.length} accessibility nodes.`,
           'This is consistent with a security challenge page blocking normal interaction.',
           'Browser shown — please complete the verification check.',
-          'After verification, run "snapshot" to continue.',
+          'After verification, run "resume 120000"; it will wait without blocking your clicks.',
         ];
 
         return {
@@ -928,12 +929,13 @@ async function executeSingleCommand(args: {
     const started = Date.now();
     await fns.click(ref, { waitFor, timeoutMs });
     const elapsedMs = Date.now() - started;
-    const after = await getPageMetrics(fns);
+    const [after, challenge] = await Promise.all([
+      getPageMetrics(fns),
+      fns.detectChallenge(),
+    ]);
 
     const urlChanged = before && after ? before.url !== after.url : false;
 
-    // Check challenge after click regardless of URL change (same-URL challenges are common)
-    const challenge = await fns.detectChallenge();
     if (challenge.detected) {
       await fns.releaseControl();
       return {
@@ -943,7 +945,7 @@ async function executeSingleCommand(args: {
           `Signals: ${challenge.signals.join(', ')}`,
           '',
           'Browser shown — please complete the verification check.',
-          'After verification, run "snapshot" to continue.',
+          'After verification, run "resume 120000"; it will wait without blocking your clicks.',
         ].join('\n'),
         appendReleaseHint: false,
       };
@@ -1450,6 +1452,24 @@ async function executeSingleCommand(args: {
         `Configured timeout: ${timeoutMs ?? 'default'}, wall time: ${totalElapsed}ms`,
       ].join('\n'),
       appendReleaseHint: true,
+    };
+  }
+
+  if (cmd === 'resume') {
+    const timeoutRaw = parts[1];
+    const requestedTimeout = timeoutRaw ? Number(timeoutRaw) : 120_000;
+    if (!Number.isFinite(requestedTimeout)) {
+      throw new Error(`Invalid resume timeout "${String(timeoutRaw)}". Expected a number.`);
+    }
+    const timeoutMs = Math.max(1_000, Math.min(300_000, requestedTimeout));
+    const result = await fns.waitFor({ kind: 'challenge-clear', timeoutMs });
+
+    return {
+      output: [
+        `Security verification cleared after ${result.elapsedMs}ms.`,
+        'Run "snapshot" to refresh element refs and continue.',
+      ].join('\n'),
+      appendReleaseHint: false,
     };
   }
 

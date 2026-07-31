@@ -21,6 +21,8 @@
  *   CRAFT_WEBUI_PASSWORD       — optional shorter password for web login (falls back to CRAFT_SERVER_TOKEN)
  *   CRAFT_WEBUI_SECURE_COOKIE  — optional true/false override for the session cookie Secure flag
  *   CRAFT_WEBUI_WS_URL         — optional browser-facing ws:// or wss:// URL returned by /api/config
+ *   CRAFT_WEBUI_PUBLIC_URL     — optional public https:// URL used in mobile Remote pairing links
+ *   CRAFT_WEBUI_HOST_LABEL     — optional friendly host name shown on paired mobile devices
  *   CRAFT_MESSAGING_WA_WORKER  — absolute path to worker.cjs (default: packages/messaging-whatsapp-worker/dist/worker.cjs)
  *   CRAFT_MESSAGING_NODE_BIN   — Node binary used to spawn the WhatsApp worker (default: node)
  */
@@ -31,10 +33,17 @@ import { readFileSync, existsSync } from 'node:fs'
 import { version as packageVersion } from '../package.json'
 import { enableDebug } from '@craft-agent/shared/utils/debug'
 import { bootstrapServer, startHealthHttpServer, generateServerToken } from '@craft-agent/server-core/bootstrap'
-import { validateSession, createWebuiHandler, nodeHttpAdapter } from '@craft-agent/server-core/webui'
+import {
+  validateSession,
+  createWebuiHandler,
+  nodeHttpAdapter,
+  RemoteDeviceRegistry,
+  createWebuiRpcAuthorizer,
+} from '@craft-agent/server-core/webui'
 import type { WebuiHandler } from '@craft-agent/server-core/webui'
 import { getCredentialManager } from '@craft-agent/shared/credentials'
-import { getWorkspaces } from '@craft-agent/shared/config'
+import { getActiveWorkspace, getWorkspaces } from '@craft-agent/shared/config'
+import { CONFIG_DIR } from '@craft-agent/shared/config/paths'
 import { createMessagingBootstrap, type MessagingBootstrapHandle } from '@craft-agent/messaging-gateway'
 
 // --generate-token: print a crypto-random token and exit
@@ -90,6 +99,24 @@ function parseOptionalWebSocketUrl(name: string, value: string | undefined): str
   }
 }
 
+function parseOptionalHttpUrl(name: string, value: string | undefined): string | undefined {
+  if (value == null || value.trim() === '') return undefined
+
+  try {
+    const url = new URL(value)
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+      throw new Error('must use http:// or https://')
+    }
+    url.search = ''
+    url.hash = ''
+    return url.toString().replace(/\/$/, '')
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    console.error(`Invalid ${name}: ${message}`)
+    process.exit(1)
+  }
+}
+
 // In dev (monorepo), bundled assets root is the repo root (4 levels up from this file).
 // In packaged mode, use CRAFT_BUNDLED_ASSETS_ROOT env or cwd.
 const bundledAssetsRoot = process.env.CRAFT_BUNDLED_ASSETS_ROOT
@@ -116,7 +143,12 @@ const webuiDir = process.env.CRAFT_WEBUI_DIR || undefined
 const webuiEnabled = webuiDir && existsSync(webuiDir)
 const webuiSecureCookies = parseOptionalBooleanEnv('CRAFT_WEBUI_SECURE_COOKIE', process.env.CRAFT_WEBUI_SECURE_COOKIE)
 const webuiWsUrl = parseOptionalWebSocketUrl('CRAFT_WEBUI_WS_URL', process.env.CRAFT_WEBUI_WS_URL)
+const webuiPublicUrl = parseOptionalHttpUrl('CRAFT_WEBUI_PUBLIC_URL', process.env.CRAFT_WEBUI_PUBLIC_URL)
 const serverToken = process.env.CRAFT_SERVER_TOKEN
+const remoteDeviceRegistry = new RemoteDeviceRegistry({
+  filePath: join(CONFIG_DIR, 'remote-devices.json'),
+})
+const authorizeWebuiRpcRequest = createWebuiRpcAuthorizer(remoteDeviceRegistry)
 
 // ---------------------------------------------------------------------------
 // Create WebUI handler early so it can be embedded in the WsRpcServer.
@@ -126,6 +158,7 @@ const serverToken = process.env.CRAFT_SERVER_TOKEN
 
 let webuiHandler: WebuiHandler | null = null
 let webuiNodeHandler: ReturnType<typeof nodeHttpAdapter> | undefined
+let disconnectRemoteDevice: ((deviceId: string) => void) | null = null
 
 // Health check is injected lazily — the session manager isn't ready until
 // after bootstrap completes, but the handler captures the closure.
@@ -141,11 +174,19 @@ if (webuiEnabled && serverToken) {
     password: process.env.CRAFT_WEBUI_PASSWORD || undefined,
     secureCookies: webuiSecureCookies,
     publicWsUrl: webuiWsUrl,
+    publicWebuiUrl: webuiPublicUrl,
+    hostLabel: process.env.CRAFT_WEBUI_HOST_LABEL || undefined,
     wsProtocol: rpcProtocol,
     // WebUI is served on the same port as WS — wsPort matches the RPC port
     wsPort: rpcPort,
     getHealthCheck: () => healthCheckFn?.() ?? { status: 'starting' },
-    logger: { info: console.log, warn: console.warn, error: console.error } as any,
+    logger: { info: console.log, warn: console.warn, error: console.error, debug: console.debug },
+    remoteDeviceRegistry,
+    getRemoteWorkspaceIds: () => {
+      const active = getActiveWorkspace()
+      return active ? [active.id] : []
+    },
+    onRemoteDeviceRevoked: (deviceId) => disconnectRemoteDevice?.(deviceId),
   })
 
   webuiNodeHandler = nodeHttpAdapter(webuiHandler.fetch)
@@ -173,17 +214,32 @@ const instance = await (async () => {
       validateSessionCookie: webuiEnabled && serverToken
         ? async (cookieHeader) => {
             const session = await validateSession(cookieHeader, serverToken)
-            return session === null
-              ? false
-              : {
-                  actorId: 'local-owner',
-                  allowedWorkspaceIds: '*' as const,
-                  capabilities: '*' as const,
-                  roles: ['owner'],
-                  authorizationGeneration: session.iat,
-                }
+            if (!session) return false
+            if (session.kind === 'remote-device') {
+              if (!session.deviceId) return false
+              const device = remoteDeviceRegistry.authorize(
+                session.deviceId,
+                session.authorizationGeneration,
+              )
+              if (!device) return false
+              return {
+                actorId: `remote-device:${session.deviceId}`,
+                allowedWorkspaceIds: device.allowedWorkspaceIds,
+                capabilities: [],
+                roles: ['remote-device'],
+                authorizationGeneration: device.authorizationGeneration,
+              }
+            }
+            return {
+              actorId: 'local-owner',
+              allowedWorkspaceIds: '*',
+              capabilities: '*',
+              roles: ['owner'],
+              authorizationGeneration: session.authorizationGeneration,
+            }
           }
         : undefined,
+      authorizeRequest: authorizeWebuiRpcRequest,
       // Embed the WebUI HTTP handler on the WS server's port
       httpHandler: webuiNodeHandler,
       applyPlatformToSubsystems: (platform) => {
@@ -262,6 +318,10 @@ const instance = await (async () => {
   }
 })()
 
+disconnectRemoteDevice = (deviceId) => {
+  instance.wsServer.disconnectClientsByActor(`remote-device:${deviceId}`)
+}
+
 // ---------------------------------------------------------------------------
 // Messaging post-bootstrap: bind the WS publisher and initialize local
 // workspaces. Remote-owned workspaces are skipped because their messaging
@@ -288,8 +348,7 @@ if (messagingHandle !== null && !messagingDisabled) {
 // Wire up the lazy health check now that the session manager is ready
 if (webuiHandler) {
   const { getHealthCheck } = await import('@craft-agent/server-core/handlers/rpc/server')
-  const depsLike = { sessionManager: instance.sessionManager } as any
-  healthCheckFn = () => getHealthCheck(depsLike)
+  healthCheckFn = () => getHealthCheck({ sessionManager: instance.sessionManager })
 
   // Wire up OAuth callback deps so /api/oauth/callback works
   const { getSourceCredentialManager, loadWorkspaceSources } = await import('@craft-agent/shared/sources')

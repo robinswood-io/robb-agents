@@ -116,7 +116,8 @@ export const RetrySchema = z.object({
       max: z.number().positive().optional(),
     })
     .optional(),
-  when: z.enum(RETRY_WHEN).optional(),
+  /** One or more retryable failure classes. A scalar remains accepted for backwards compatibility. */
+  when: z.union([z.enum(RETRY_WHEN), z.array(z.enum(RETRY_WHEN)).min(1)]).optional(),
 });
 
 export const TaskParamSchema = z.object({
@@ -130,6 +131,8 @@ export const TaskDefaultsSchema = z.object({
   model: z.string().min(1).optional(),
   llmConnection: z.string().min(1).optional(),
   permissionMode: z.enum(PERMISSION_MODES).optional(),
+  /** Shared retry policy for nodes that do not declare an override. */
+  retry: RetrySchema.optional(),
 });
 
 /** Resource and access envelope for autonomous task execution. */

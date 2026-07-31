@@ -242,7 +242,7 @@ export interface BrowserNetworkOptions {
 }
 
 export interface BrowserWaitArgs {
-  kind: 'selector' | 'text' | 'url' | 'network-idle'
+  kind: 'selector' | 'text' | 'url' | 'network-idle' | 'challenge-clear'
   value?: string
   timeoutMs?: number
   pollMs?: number
@@ -942,9 +942,41 @@ export class BrowserPaneManager implements IBrowserPaneManager {
     options?: { waitFor?: 'none' | 'navigation' | 'network-idle'; timeoutMs?: number }
   ): Promise<void> {
     const instance = this.requireAliveInstance(id)
+    const waitFor = options?.waitFor ?? 'none'
+    let cleanupNavigationWait: (() => void) | undefined
+    let navigationWait: Promise<void> | undefined
+
+    if (waitFor === 'navigation') {
+      const timeoutMs = Math.max(100, options?.timeoutMs ?? DEFAULT_WAIT_TIMEOUT_MS)
+      navigationWait = new Promise<void>((resolve, reject) => {
+        const onNav = () => {
+          cleanup()
+          resolve()
+        }
+        const timer = setTimeout(() => {
+          cleanup()
+          reject(new Error(
+            `Click navigation wait timed out after ${timeoutMs}ms (no navigation event observed). `
+            + `Tip: retry with "click ${ref}" (no navigation wait), then use "wait url <pattern>" or "wait network-idle".`
+          ))
+        }, timeoutMs)
+        const cleanup = () => {
+          clearTimeout(timer)
+          instance.pageView.webContents.removeListener('did-navigate', onNav)
+          instance.pageView.webContents.removeListener('did-navigate-in-page', onNav)
+        }
+
+        cleanupNavigationWait = cleanup
+        instance.pageView.webContents.once('did-navigate', onNav)
+        instance.pageView.webContents.once('did-navigate-in-page', onNav)
+      })
+    }
 
     try {
-      const geometry = await instance.cdp.clickElement(ref)
+      const clickPromise = instance.cdp.clickElement(ref)
+      const geometry = navigationWait
+        ? (await Promise.all([clickPromise, navigationWait]))[0]
+        : await clickPromise
       instance.lastAction = {
         tool: 'browser_click',
         ref,
@@ -953,33 +985,7 @@ export class BrowserPaneManager implements IBrowserPaneManager {
         timestamp: Date.now(),
       }
 
-      const waitFor = options?.waitFor ?? 'none'
-      if (waitFor === 'navigation') {
-        const timeoutMs = Math.max(100, options?.timeoutMs ?? DEFAULT_WAIT_TIMEOUT_MS)
-        await new Promise<void>((resolve, reject) => {
-          const timer = setTimeout(() => {
-            cleanup()
-            reject(new Error(
-              `Click navigation wait timed out after ${timeoutMs}ms (no navigation event observed). `
-              + `Tip: retry with "click ${ref}" (no navigation wait), then use "wait url <pattern>" or "wait network-idle".`
-            ))
-          }, timeoutMs)
-
-          const onNav = () => {
-            cleanup()
-            resolve()
-          }
-
-          const cleanup = () => {
-            clearTimeout(timer)
-            instance.pageView.webContents.removeListener('did-navigate', onNav)
-            instance.pageView.webContents.removeListener('did-navigate-in-page', onNav)
-          }
-
-          instance.pageView.webContents.once('did-navigate', onNav)
-          instance.pageView.webContents.once('did-navigate-in-page', onNav)
-        })
-      } else if (waitFor === 'network-idle') {
+      if (waitFor === 'network-idle') {
         await this.waitFor(id, { kind: 'network-idle', timeoutMs: options?.timeoutMs })
       }
     } catch (error) {
@@ -990,6 +996,8 @@ export class BrowserPaneManager implements IBrowserPaneManager {
         timestamp: Date.now(),
       }
       throw error
+    } finally {
+      cleanupNavigationWait?.()
     }
   }
 
@@ -1527,6 +1535,13 @@ export class BrowserPaneManager implements IBrowserPaneManager {
       throw new Error(`Wait timed out after ${timeoutMs}ms (${args.kind})`)
     }
 
+    if (args.kind === 'challenge-clear') {
+      return until(async () => {
+        const challenge = await this.detectSecurityChallenge(id)
+        return !challenge.detected
+      }, 'security challenge cleared')
+    }
+
     if (args.kind === 'selector') {
       const selector = args.value?.trim()
       if (!selector) throw new Error('browser_wait selector requires value')
@@ -1676,6 +1691,10 @@ export class BrowserPaneManager implements IBrowserPaneManager {
         if (document.querySelector('#turnstile-wrapper')) signals.push('dom:turnstile-wrapper');
         if (document.querySelector('.cf-turnstile')) signals.push('dom:cf-turnstile');
         if (document.querySelector('iframe[src*="challenges.cloudflare.com"]')) signals.push('dom:cf-challenge-iframe');
+        if (document.querySelector('.h-captcha, iframe[src*="hcaptcha.com"]')) signals.push('dom:hcaptcha');
+        if (document.querySelector('.g-recaptcha, iframe[src*="recaptcha"]')) signals.push('dom:recaptcha');
+        if (document.querySelector('iframe[src*="captcha-delivery.com"], [data-captcha-provider="datadome"]')) signals.push('dom:datadome');
+        if (document.querySelector('iframe[src*="arkoselabs.com"], [data-callback*="arkose"]')) signals.push('dom:arkose');
         return signals;
       })()`) as string[]
 
@@ -1686,29 +1705,42 @@ export class BrowserPaneManager implements IBrowserPaneManager {
       // JS evaluation can fail if page is in a weird state — don't block on it
     }
 
-    try {
-      const snapshot = await instance.cdp.getAccessibilitySnapshot()
-      const actionableRoles = new Set([
-        'button', 'link', 'textbox', 'searchbox', 'combobox', 'checkbox', 'radio', 'switch',
-        'menuitem', 'menuitemcheckbox', 'menuitemradio', 'tab', 'option', 'slider', 'spinbutton', 'listbox',
-      ])
-      const actionableCount = snapshot.nodes.filter((node) => {
-        const role = (node.role || '').toLowerCase()
-        return actionableRoles.has(role) && !node.disabled
-      }).length
+    // Sparse pages are common in normal applications. Only pay for an AX snapshot
+    // after a strong title/URL/DOM signal, and use sparsity as supporting evidence.
+    if (signals.length > 0) {
+      try {
+        const snapshot = await instance.cdp.getAccessibilitySnapshot()
+        const actionableRoles = new Set([
+          'button', 'link', 'textbox', 'searchbox', 'combobox', 'checkbox', 'radio', 'switch',
+          'menuitem', 'menuitemcheckbox', 'menuitemradio', 'tab', 'option', 'slider', 'spinbutton', 'listbox',
+        ])
+        const actionableCount = snapshot.nodes.filter((node) => {
+          const role = (node.role || '').toLowerCase()
+          return actionableRoles.has(role) && !node.disabled
+        }).length
 
-      if (snapshot.nodes.length > 0 && actionableCount <= 2) {
-        signals.push(`ax:near-empty(${actionableCount}/${snapshot.nodes.length})`)
+        if (snapshot.nodes.length > 0 && actionableCount <= 2) {
+          signals.push(`ax:near-empty(${actionableCount}/${snapshot.nodes.length})`)
+        }
+      } catch {
+        // AX snapshot can fail transiently during navigation; ignore
       }
-    } catch {
-      // AX snapshot can fail transiently during navigation; ignore
     }
 
     const detected = signals.length > 0
-    const isCloudflare = signals.some(s =>
-      s.includes('cf-') || s.includes('challenge') || s.includes('turnstile') || s === 'title:just-a-moment'
-    )
-    const provider = detected ? (isCloudflare ? 'cloudflare' : 'unknown') : 'none'
+    const provider = !detected
+      ? 'none'
+      : signals.some(signal => /(?:cf-|cloudflare|turnstile|cdn-cgi|just-a-moment)/i.test(signal))
+        ? 'cloudflare'
+        : signals.some(signal => /hcaptcha/i.test(signal))
+          ? 'hcaptcha'
+          : signals.some(signal => /recaptcha/i.test(signal))
+            ? 'recaptcha'
+            : signals.some(signal => /datadome|captcha-delivery/i.test(signal))
+              ? 'datadome'
+              : signals.some(signal => /arkose/i.test(signal))
+                ? 'arkose'
+                : 'unknown'
 
     if (detected) {
       mainLog.info(`[browser-pane] security challenge detected id=${id} provider=${provider} signals=[${signals.join(', ')}]`)

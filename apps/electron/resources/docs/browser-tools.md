@@ -123,6 +123,8 @@ Performs keyword search over the snapshot accessibility nodes (`role`, `name`, `
 ### `click <ref> [waitFor] [timeoutMs]`
 Click an element ref from `snapshot`. Optional wait modes: `none`, `navigation`, `network-idle`.
 
+Navigation listeners are armed before the click, so fast redirects are not missed. When a page re-renders a referenced element, `click`, `fill`, `select`, and `upload` attempt one semantic ref recovery (role/name/value) before asking for a fresh `snapshot`.
+
 ### `click-at <x> <y>`
 Click at raw pixel coordinates. Use this for **canvas-based UIs** (e.g., Google Sheets cells, map elements, chart data points) where `snapshot` can't produce element refs. Get coordinates from `screenshot` or `screenshot-region`.
 
@@ -154,7 +156,7 @@ Notes:
 - Files must exist and pass safety validation (sensitive paths are blocked).
 
 ### `type <text>`
-Type text character-by-character into the **currently focused element** without needing a ref. Use this when:
+Insert text into the **currently focused element** without needing a ref. The full value is sent in one CDP round-trip. Use this when:
 - The target is a canvas-based input (no DOM ref available)
 - You've already focused an element via `click` or `click-at`
 - The application uses a custom input mechanism
@@ -184,6 +186,11 @@ Debug runtime issues, requests, synchronization points, and download progress.
 
 ### `focus [windowId]` / `windows`
 Manage and inspect browser window ownership and visibility.
+
+### `resume [timeoutMs]`
+After a genuine security verification is detected, the browser releases the interaction overlay so the user can complete it. `resume` waits (120 seconds by default, maximum 300 seconds) without re-blocking user input, then tells the agent to refresh refs with `snapshot`.
+
+Sparse normal pages are not considered challenges on their own. Detection requires a concrete title, URL, text, or provider DOM signal and recognizes Cloudflare, hCaptcha, reCAPTCHA, DataDome, and Arkose.
 
 ### Lifecycle commands
 - `release` — dismiss agent overlay, keep window visible for user

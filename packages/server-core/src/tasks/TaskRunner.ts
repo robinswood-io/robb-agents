@@ -28,6 +28,12 @@ import {
 } from '@craft-agent/shared/governance';
 import type { SessionCompletionEvent } from '../sessions/SessionManager';
 import {
+  inferTaskNodeProfile,
+  taskNodeSpecialistPreamble,
+  type TaskNodeExecutionRoute,
+  type TaskNodeRouteContext,
+} from './task-node-routing';
+import {
   type TaskSpec,
   type TaskNode,
   type NodeOutput,
@@ -93,16 +99,35 @@ export interface TaskRunnerDeps {
   genRunId?: () => string;
   /** Live kill-switch state. Evaluated before every scheduling pass and required fail-closed. */
   getKillSwitch: () => KillSwitchSnapshot;
+  /** Reports one corrupt/unrecoverable durable run without aborting recovery of the others. */
+  onRecoveryError?: (context: { slug: string; runId: string; error: Error }) => void;
   /**
    * Host-side admission hook for connector/sandbox enforcement. The prompt
    * receives the same policy, but this hook is the authoritative boundary.
    */
   executionGuard?: (context: TaskExecutionGuardContext) => GuardDecision | Promise<GuardDecision>;
+  /**
+   * Selects the connection, model, and reasoning level for each attempt. Production uses
+   * policy-aware adaptive routing; tests and embedders may omit it to preserve explicit settings.
+   */
+  resolveNodeRoute?: (
+    context: TaskNodeRouteContext,
+  ) => TaskNodeExecutionRoute | Promise<TaskNodeExecutionRoute>;
+  /** Bounded fallback retry used when neither the node nor task defaults declare one. */
+  defaultRetry?: TaskRetryPolicy;
   /** Authoritative verification seam for provider-reconciled external mutations. */
   verifyExecutionProof?: (
     proof: SignedExecutionProof,
     binding: TaskExecutionProofBinding,
   ) => ExecutionProofVerificationDecision;
+}
+
+export type TaskFailureClass = 'error' | 'empty' | 'invalid';
+
+export interface TaskRetryPolicy {
+  limit: number;
+  backoff?: { base?: number; factor?: number; max?: number };
+  when?: TaskFailureClass | TaskFailureClass[];
 }
 
 export interface TaskExecutionGuardContext {
@@ -169,6 +194,12 @@ export interface PendingTaskApproval {
 // ---------------------------------------------------------------------------
 
 const DEFAULT_MAX_PARALLEL = 4;
+/** Production default: two fresh attempts after a transient error or empty declared output. */
+export const DEFAULT_AUTONOMOUS_RETRY_POLICY: TaskRetryPolicy = {
+  limit: 2,
+  backoff: { base: 250, factor: 2, max: 2_000 },
+  when: ['error', 'empty'],
+};
 // Explicit fail-closed default for a subtask's permission mode when neither the node nor the task
 // defaults set one. Mutating autonomy must be an intentional, reviewable opt-in in task.yaml.
 const AUTONOMOUS_DEFAULT_MODE = 'safe' as const;
@@ -197,6 +228,8 @@ interface NodeStateEntry {
   retryAtMs?: number;
   /** Reason the previous attempt failed, fed back into the retry prompt (failure-aware retry). */
   lastFailure?: string;
+  /** Last dispatched route, used to avoid repeating a failed provider path after restart. */
+  lastRoute?: Pick<TaskNodeExecutionRoute, 'llmConnection' | 'model'>;
 }
 
 // ---------------------------------------------------------------------------
@@ -339,6 +372,14 @@ class ActiveRun {
         if (st) {
           st.sessionId = e.sessionId;
           this.sessionToNode.set(e.sessionId, e.nodeId);
+        }
+      } else if (e.kind === 'node-routed') {
+        const st = this.state.get(e.nodeId);
+        if (st) {
+          st.lastRoute = {
+            ...(e.connectionSlug ? { llmConnection: e.connectionSlug } : {}),
+            ...(e.model ? { model: e.model } : {}),
+          };
         }
       } else if (e.kind === 'node-scheduled') {
         const st = this.state.get(e.nodeId);
@@ -686,12 +727,20 @@ class ActiveRun {
       const policy = resolveIsolationPolicy(this.spec, cwd ?? this.deps.workspaceRoot);
       const isolationDecision = validateExecutionIsolationPolicy(policy, this.deps.workspaceRoot);
       if (!isolationDecision.allowed) {
-        throw new Error(`execution isolation rejected node: ${isolationDecision.reason ?? 'blocked'}`);
+        this.failNode(
+          node.id,
+          `execution isolation rejected node: ${isolationDecision.reason ?? 'blocked'}`,
+          undefined,
+          false,
+          'invalid',
+        );
+        return;
       }
       if (cwd) {
         const cwdDecision = authorizeWorkspacePath(policy.workspaceRoot, cwd, ['.']);
         if (!cwdDecision.allowed) {
-          throw new Error(`working directory rejected: ${cwdDecision.reason}`);
+          this.failNode(node.id, `working directory rejected: ${cwdDecision.reason}`, undefined, false, 'invalid');
+          return;
         }
       }
       const permissionMode =
@@ -717,11 +766,56 @@ class ActiveRun {
           this.spec.execution?.max_memory_mb !== undefined,
       });
       if (guardDecision && !guardDecision.allowed) {
-        throw new Error(`execution guard rejected node: ${guardDecision.reason ?? 'blocked'}`);
+        this.failNode(
+          node.id,
+          `execution guard rejected node: ${guardDecision.reason ?? 'blocked'}`,
+          undefined,
+          false,
+          'invalid',
+        );
+        return;
       }
+      const inferredProfile = inferTaskNodeProfile(node, st.attempt);
+      const route = this.deps.resolveNodeRoute
+        ? await this.deps.resolveNodeRoute({
+            node,
+            spec: this.spec,
+            attempt: st.attempt,
+            lastFailure: st.lastFailure,
+            previousRoute: st.lastRoute,
+          })
+        : {
+            profile: inferredProfile,
+            model: node.model ?? this.spec.defaults?.model,
+            llmConnection: node.llmConnection ?? this.spec.defaults?.llmConnection,
+            thinkingLevel: inferredProfile.thinkingLevel,
+            strategy: node.model
+              || node.llmConnection
+              || this.spec.defaults?.model
+              || this.spec.defaults?.llmConnection
+              ? 'pinned' as const
+              : 'primary' as const,
+          };
+      if (route.blockedReason) {
+        this.failNode(node.id, `model routing blocked node: ${route.blockedReason}`, undefined, false, 'invalid');
+        return;
+      }
+      st.lastRoute = {
+        ...(route.llmConnection ? { llmConnection: route.llmConnection } : {}),
+        ...(route.model ? { model: route.model } : {}),
+      };
+      this.log({
+        kind: 'node-routed',
+        nodeId: node.id,
+        attempt: st.attempt,
+        ...(route.llmConnection ? { connectionSlug: route.llmConnection } : {}),
+        ...(route.model ? { model: route.model } : {}),
+        strategy: route.strategy,
+      });
       const prompt =
         skillsPreamble(this.spec.skills) +
         executionPreamble(sessionPolicy, idempotencyKey) +
+        taskNodeSpecialistPreamble(route.profile, st.attempt) +
         (await this.buildPrompt(node));
       const options: CreateSessionOptions = {
         parentSessionId: this.opts.orchestratorSessionId,
@@ -735,10 +829,11 @@ class ActiveRun {
           policy: sessionPolicy,
         },
         name: nodeTitle(node),
-        model: node.model ?? this.spec.defaults?.model,
+        model: route.model,
         // Required for non-default (e.g. pi/*) models to resolve a backend — without it the
         // child session completes instantly with no output.
-        llmConnection: node.llmConnection ?? this.spec.defaults?.llmConnection,
+        llmConnection: route.llmConnection,
+        thinkingLevel: route.thinkingLevel,
         // Node override → task default (persisted by the editor, visible to the user) → explicit
         // unattended-safe fallback. Never the workspace default (which could be `ask` → hang).
         permissionMode,
@@ -795,6 +890,7 @@ class ActiveRun {
     if (!nodeId) return; // not one of our child nodes
     const st = this.state.get(nodeId);
     if (!st || st.state !== 'running') return; // already settled/cancelled
+    if (st.sessionId !== evt.sessionId) return; // stale completion from an earlier retry attempt
     this.clearNodeTimeout(nodeId);
 
     if (evt.tokenUsage) {
@@ -830,7 +926,7 @@ class ActiveRun {
       // of silently marking it done. Nodes with no declared outputs keep the lenient behavior.
       const node = this.spec.nodes.find((n) => n.id === nodeId);
       if ((node?.outputs?.length ?? 0) > 0 && text.trim() === '') {
-        this.failNode(nodeId, 'completed without producing declared output', evt.sessionId);
+        this.failNode(nodeId, 'completed without producing declared output', evt.sessionId, true, 'empty');
         return;
       }
 
@@ -879,6 +975,7 @@ class ActiveRun {
         ...(executionProof ? { executionProof } : {}),
       });
       this.log({ kind: 'node-finished', nodeId, sessionId: evt.sessionId, state: 'done' });
+      this.sessionToNode.delete(evt.sessionId);
       void this.deps.host.setSessionStatus(evt.sessionId, DONE_STATUS);
       void this.deps.host.setKanbanColumn(evt.sessionId, 'done');
       this.scheduleReady();
@@ -905,22 +1002,37 @@ class ActiveRun {
     }
   }
 
-  private failNode(nodeId: string, reason: string, sessionId?: string, allowRetry = true): void {
+  private failNode(
+    nodeId: string,
+    reason: string,
+    sessionId?: string,
+    allowRetry = true,
+    failureClass: TaskFailureClass = 'error',
+  ): void {
     this.clearNodeTimeout(nodeId);
     const st = this.state.get(nodeId)!;
     const wasRunning = st.state === 'running';
     if (wasRunning) this.inFlight = Math.max(0, this.inFlight - 1);
 
-    // Bounded, failure-aware retry: re-dispatch the node when its `retry` policy still
-    // has budget and matches this failure class. error/timeout/dispatch failures all map
-    // to the `error` retry trigger (empty/invalid detection is deferred).
+    // Bounded, failure-aware retry: node override → task default → production fallback.
+    // Invalid policy/permission/isolation failures remain fail-closed and are never retried.
     const node = this.spec.nodes.find((n) => n.id === nodeId);
-    const retry = node?.retry;
-    if (allowRetry && retry && st.attempt <= retry.limit && retryMatches(retry.when, 'error')) {
-      st.lastFailure = `Previous attempt failed: ${reason}. Address the cause before retrying.`;
+    const retry = node?.retry ?? this.spec.defaults?.retry ?? this.deps.defaultRetry;
+    const autoRetrySafe = node?.effect !== 'external-mutation';
+    if (
+      allowRetry
+      && autoRetrySafe
+      && retry
+      && st.attempt <= retry.limit
+      && retryMatches(retry.when, failureClass)
+    ) {
+      st.lastFailure = `Previous attempt failed: ${reason} (${failureClass}). Address the cause before retrying with a different approach.`;
       st.state = 'pending';
       const sid = sessionId ?? st.sessionId;
-      if (sid) void this.deps.host.setKanbanColumn(sid, 'todo');
+      if (sid) {
+        this.sessionToNode.delete(sid);
+        void this.deps.host.setKanbanColumn(sid, 'todo');
+      }
       const delayMs = retryDelayMs(retry.backoff, st.attempt);
       if (delayMs > 0) {
         st.retryAtMs = this.currentTimeMs() + delayMs;
@@ -942,6 +1054,7 @@ class ActiveRun {
 
     st.state = 'failed';
     const sid = sessionId ?? st.sessionId;
+    if (sid) this.sessionToNode.delete(sid);
     this.log({ kind: 'node-finished', nodeId, sessionId: sid ?? '', state: 'failed', reason });
     if (sid) void this.deps.host.setSessionStatus(sid, FAILED_STATUS);
     this.scheduleReady();
@@ -1430,8 +1543,12 @@ function executionPreamble(policy: ExecutionIsolationPolicy, idempotencyKey: str
  * defaults to retrying on `error` (the common "transient failure" case); `empty`/`invalid`
  * triggers are opt-in and not yet produced by the runner, so they never match here.
  */
-function retryMatches(when: 'error' | 'empty' | 'invalid' | undefined, failure: 'error'): boolean {
-  return (when ?? 'error') === failure;
+function retryMatches(
+  when: TaskFailureClass | TaskFailureClass[] | undefined,
+  failure: TaskFailureClass,
+): boolean {
+  const configured = when ?? 'error';
+  return Array.isArray(configured) ? configured.includes(failure) : configured === failure;
 }
 
 /** Resolve exponential retry delay in milliseconds; an omitted backoff keeps legacy immediate retry. */
@@ -1615,11 +1732,19 @@ export class TaskRunner {
     for (const slug of [...durableSlugs].sort()) {
       for (const runId of listRunIds(this.deps.workspaceRoot, slug)) {
         if (this.runs.has(this.key(slug, runId))) continue;
-        const log = readRunLog(this.deps.workspaceRoot, slug, runId);
-        if (log.length === 0) continue;
-        const status = persistedRunStatus(log);
-        if (isTerminalRunStatus(status)) continue;
-        recovered.push(this.rehydrate(slug, runId, status !== 'paused'));
+        try {
+          const log = readRunLog(this.deps.workspaceRoot, slug, runId);
+          if (log.length === 0) continue;
+          const status = persistedRunStatus(log);
+          if (isTerminalRunStatus(status)) continue;
+          recovered.push(this.rehydrate(slug, runId, status !== 'paused'));
+        } catch (error) {
+          this.deps.onRecoveryError?.({
+            slug,
+            runId,
+            error: error instanceof Error ? error : new Error(String(error)),
+          });
+        }
       }
     }
     return recovered;

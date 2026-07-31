@@ -23,14 +23,120 @@ async function navigateToRoute(page, route) {
   }, route);
 }
 
+async function validateRemoteMobileFlow() {
+  const origin = process.env.ROBB_REMOTE_WEBUI_ORIGIN;
+  if (!origin) return { ok: true, skipped: true };
+
+  const password = process.env.ROBB_REMOTE_WEBUI_PASSWORD;
+  if (!password) throw new Error('ROBB_REMOTE_WEBUI_PASSWORD is required when validating the Remote WebUI.');
+
+  const remoteBrowser = await chromium.launch({
+    headless: true,
+    executablePath: process.env.ROBB_PLAYWRIGHT_CHROMIUM_EXECUTABLE,
+  });
+  const page = await remoteBrowser.newPage();
+  const errors = [];
+  const pageErrors = [];
+  const failedRequests = [];
+  page.on('console', (message) => {
+    if (message.type() === 'error') errors.push(message.text());
+  });
+  page.on('pageerror', (error) => pageErrors.push(error.message));
+  page.on('requestfailed', (request) => {
+    const failure = request.failure();
+    failedRequests.push(`${request.method()} ${request.url()} — ${failure?.errorText || 'unknown failure'}`);
+  });
+
+  try {
+    await page.setViewportSize({ width: 1100, height: 840 });
+    await page.goto(`${origin}/login?next=%2Fremote%2Fsetup`, { waitUntil: 'networkidle' });
+    await page.locator('#password').fill(password);
+    const authResponsePromise = page.waitForResponse((response) => (
+      response.url() === `${origin}/api/auth`
+      && response.request().method() === 'POST'
+    ));
+    await page.locator('#submit-btn').click();
+    const authResponse = await authResponsePromise;
+    if (!authResponse.ok()) {
+      throw new Error(`Remote host authentication failed with HTTP ${authResponse.status()}.`);
+    }
+    await page.waitForTimeout(750);
+    if (new URL(page.url()).pathname !== '/remote/setup') {
+      await page.goto(`${origin}/remote/setup`, { waitUntil: 'networkidle' });
+    }
+    await page.getByTestId('remote-setup-screen').waitFor({ timeout: 20_000 });
+    const qrCode = page.getByRole('img', { name: /Remote pairing QR code|QR code d.appairage Remote/i });
+    await qrCode.waitFor({ timeout: 20_000 });
+    const pairingCodeControl = page.locator('button').filter({ hasText: /^[A-Z2-9]{4}-[A-Z2-9]{4}$/ }).first();
+    const pairingCode = (await pairingCodeControl.innerText()).trim();
+
+    const screenshotDir = '/tmp/playwright-screenshots';
+    fs.mkdirSync(screenshotDir, { recursive: true });
+    const setupScreenshot = path.join(screenshotDir, `${PROJECT}-remote-setup-${Date.now()}.png`);
+    await page.screenshot({ path: setupScreenshot, fullPage: true });
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`${origin}/remote`, { waitUntil: 'networkidle' });
+    await page.getByTestId('remote-pairing-screen').waitFor({ timeout: 20_000 });
+    const pairingScreenshot = path.join(screenshotDir, `${PROJECT}-remote-pairing-${Date.now()}.png`);
+    await page.screenshot({ path: pairingScreenshot, fullPage: true });
+    const pairingOverflow = await page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
+    );
+    await page.locator('#remote-pairing-code').fill(pairingCode);
+    await page.getByRole('button', { name: /Connect securely|Connexion sécurisée/i }).click();
+    await page.getByTestId('remote-pairing-success').waitFor({ timeout: 20_000 });
+
+    const mobileScreenshot = path.join(screenshotDir, `${PROJECT}-remote-mobile-${Date.now()}.png`);
+    await page.screenshot({ path: mobileScreenshot, fullPage: true });
+    const successOverflow = await page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
+    );
+    const overflow = pairingOverflow || successOverflow;
+    const successText = await page.getByTestId('remote-pairing-success').innerText();
+    const hasRemoteSuccess = /Remote connected|Remote connecté/i.test(successText);
+
+    const filteredErrors = unique(errors).filter((message) => !message.includes('favicon.ico'));
+    const filteredPageErrors = unique(pageErrors);
+    const filteredFailedRequests = unique(failedRequests).filter((message) => !message.includes('favicon.ico'));
+    const ok = pairingCode.length === 9
+      && hasRemoteSuccess
+      && !overflow
+      && filteredErrors.length === 0
+      && filteredPageErrors.length === 0
+      && filteredFailedRequests.length === 0;
+
+    console.log('\nRemote Mobile:');
+    console.log(`Pairing:  one-time code ${pairingCode.length === 9 ? 'accepted' : 'invalid'}`);
+    console.log(`Success:  ${hasRemoteSuccess ? 'visible' : 'missing'}`);
+    console.log(`Overflow: ${overflow ? 'horizontal overflow detected' : 'none'}`);
+    console.log(`Console errors: ${filteredErrors.length}`);
+    console.log(`Page errors: ${filteredPageErrors.length}`);
+    console.log(`Failed requests: ${filteredFailedRequests.length}`);
+    console.log(`Setup screenshot: ${setupScreenshot}`);
+    console.log(`Pairing screenshot: ${pairingScreenshot}`);
+    console.log(`Mobile screenshot: ${mobileScreenshot}`);
+    for (const error of filteredErrors) console.log(`  remote console · ${error}`);
+    for (const error of filteredPageErrors) console.log(`  remote page · ${error}`);
+    for (const error of filteredFailedRequests) console.log(`  remote request · ${error}`);
+
+    return { ok, skipped: false };
+  } finally {
+    await remoteBrowser.close();
+  }
+}
+
 (async () => {
   console.log('=== robb-agents — Electron UI Validation ===\n');
 
   const browser = await chromium.connectOverCDP(CDP_URL);
   const pages = browser.contexts().flatMap((context) => context.pages());
-  const page = pages.find((candidate) => candidate.url().startsWith(RENDERER_ORIGIN));
+  const page = pages.find((candidate) => candidate.url().startsWith(RENDERER_ORIGIN)) || pages[0];
   if (!page) {
-    throw new Error(`No Electron renderer connected at ${RENDERER_ORIGIN}. Start "bun run electron:dev:playwright" first.`);
+    throw new Error('No Electron renderer page is connected. Start "bun run electron:dev:playwright" first.');
+  }
+  if (!page.url().startsWith(RENDERER_ORIGIN)) {
+    await page.goto(`${RENDERER_ORIGIN}/playground.html`, { waitUntil: 'domcontentloaded' });
   }
 
   const consoleErrors = [];
@@ -49,6 +155,7 @@ async function navigateToRoute(page, route) {
   });
 
   try {
+    await page.setViewportSize({ width: 1440, height: 1000 });
     if (new URL(page.url()).pathname !== '/') {
       await page.goto(`${RENDERER_ORIGIN}/`);
     }
@@ -77,7 +184,11 @@ async function navigateToRoute(page, route) {
     const deferSetup = page.getByRole('button', {
       name: /Configurer plus tard|Setup later|Más adelante|Später einrichten/i,
     });
-    if (await deferSetup.isVisible().catch(() => false)) {
+    const deferSetupVisible = await deferSetup
+      .waitFor({ state: 'visible', timeout: 5_000 })
+      .then(() => true)
+      .catch(() => false);
+    if (deferSetupVisible) {
       console.log('Onboarding detected: deferring provider setup for UI validation.');
       await deferSetup.click();
       await page.waitForTimeout(1_000);
@@ -177,9 +288,11 @@ async function navigateToRoute(page, route) {
     await page.evaluate(() => {
       localStorage.setItem('playground-selected-component', 'session-item-search');
       localStorage.setItem('playground-variants-sidebar-open', 'true');
+      localStorage.setItem('playground-expanded-categories', JSON.stringify(['Session List']));
     });
     await page.reload();
-    await page.getByText('SessionItem States', { exact: true }).first().waitFor({ timeout: 20_000 });
+    await page.locator('nav button:visible').filter({ hasText: /^SessionItem States$/ }).first().click();
+    await page.locator('h2:visible').filter({ hasText: /^SessionItem States$/ }).first().waitFor({ timeout: 20_000 });
     await page.getByRole('button', { name: /Hidden Sub-agents Running/i }).click();
 
     const subagentSummary = page.getByTestId('session-subagent-summary');
@@ -191,11 +304,6 @@ async function navigateToRoute(page, route) {
     const playgroundOverflow = await page.evaluate(
       () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
     );
-
-    const screenshotDir = '/tmp/playwright-screenshots';
-    fs.mkdirSync(screenshotDir, { recursive: true });
-    const screenshotPath = path.join(screenshotDir, `${PROJECT}-subagents-${Date.now()}.png`);
-    await page.screenshot({ path: screenshotPath, fullPage: true });
 
     const filteredConsoleErrors = unique(consoleErrors).filter((message) =>
       !message.includes('net::ERR_ABORTED') && !message.includes('favicon.ico'));
@@ -217,11 +325,11 @@ async function navigateToRoute(page, route) {
     console.log(`Console errors: ${filteredConsoleErrors.length}`);
     console.log(`Page errors: ${filteredPageErrors.length}`);
     console.log(`Failed requests: ${filteredFailedRequests.length}`);
-    console.log(`Screenshot: ${screenshotPath}`);
-
     for (const error of filteredConsoleErrors) console.log(`  console · ${error}`);
     for (const error of filteredPageErrors) console.log(`  page · ${error}`);
     for (const error of filteredFailedRequests) console.log(`  request · ${error}`);
+
+    const remoteValidation = await validateRemoteMobileFlow();
 
     const ok = title === 'Robb Agents'
       && governanceRootText.length > 0
@@ -237,7 +345,8 @@ async function navigateToRoute(page, route) {
       && !playgroundOverflow
       && filteredConsoleErrors.length === 0
       && filteredPageErrors.length === 0
-      && filteredFailedRequests.length === 0;
+      && filteredFailedRequests.length === 0
+      && remoteValidation.ok;
 
     console.log(`\n=== RESULT: ${ok ? 'FONCTIONNEL' : 'DÉGRADÉ'} ===`);
     process.exitCode = ok ? 0 : 1;

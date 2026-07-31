@@ -70,6 +70,7 @@ const CONTENT_ROLES = new Set([
 ])
 
 const MAX_AX_SNAPSHOT_NODES = 500
+const MAX_REF_DETAIL_HISTORY = 1_500
 const FALLBACK_EXCLUDED_ROLES = new Set(['none', 'generic', 'rootwebarea', 'webarea'])
 
 function normalizeAxText(value: unknown): string {
@@ -88,7 +89,21 @@ function summarizeTopCounts(map: Map<string, number>, maxEntries = 8): string {
     .join(', ')
 }
 
-const CDP_IDLE_DETACH_MS = 5_000
+const CDP_IDLE_DETACH_MS = 30_000
+
+interface ElementRefDetails {
+  role: string
+  name: string
+  pageUrl: string
+  value?: string
+  description?: string
+}
+
+interface ResolvedElementRef {
+  ref: string
+  backendNodeId: number
+  objectId: string
+}
 
 export class BrowserCDP {
   private webContents: WebContents
@@ -98,7 +113,7 @@ export class BrowserCDP {
   // Map from "@eN" refs to backend node IDs for the current snapshot.
   private refMap: Map<string, number> = new Map()
   // Map from "@eN" refs to semantic details captured during snapshot.
-  private refDetails: Map<string, { role: string; name: string }> = new Map()
+  private refDetails: Map<string, ElementRefDetails> = new Map()
   // Stable mapping for backend DOM nodes across snapshots.
   private backendNodeRefMap: Map<number, string> = new Map()
   private nextRefCounter = 0
@@ -182,6 +197,85 @@ export class BrowserCDP {
     return ref
   }
 
+  private trimRefDetailHistory(): void {
+    while (this.refDetails.size > MAX_REF_DETAIL_HISTORY) {
+      const oldestRef = this.refDetails.keys().next().value
+      if (typeof oldestRef !== 'string') break
+      this.refDetails.delete(oldestRef)
+    }
+  }
+
+  private async recoverRef(ref: string): Promise<string> {
+    const previous = this.refDetails.get(ref)
+    if (!previous) {
+      throw new Error(`Element ${ref} not found. Run browser_snapshot first to get current element refs.`)
+    }
+
+    if (previous.pageUrl !== this.webContents.getURL()) {
+      throw new Error(
+        `Element ${ref} belongs to a previous page. `
+        + 'Run browser_snapshot to inspect the current page state.'
+      )
+    }
+
+    const snapshot = await this.getAccessibilitySnapshot()
+    const semanticMatches = snapshot.nodes.filter((node) => (
+      node.role === previous.role
+      && node.name === previous.name
+      && !node.disabled
+    ))
+    const valueMatches = previous.value === undefined
+      ? []
+      : semanticMatches.filter((node) => node.value === previous.value)
+    const candidates = valueMatches.length > 0 ? valueMatches : semanticMatches
+
+    if (candidates.length !== 1) {
+      const detail = candidates.length === 0
+        ? 'no semantic match remains'
+        : `${candidates.length} semantic matches are ambiguous`
+      throw new Error(
+        `Element ${ref} became stale and could not be recovered (${detail}). `
+        + 'Run browser_snapshot to inspect the current page state.'
+      )
+    }
+
+    const recoveredRef = candidates[0]!.ref
+    mainLog.info(
+      `[browser-cdp] recovered stale ref ${ref} -> ${recoveredRef} `
+      + `role=${previous.role} name=${JSON.stringify(previous.name)}`
+    )
+    return recoveredRef
+  }
+
+  private async resolveElementRef(ref: string): Promise<ResolvedElementRef> {
+    let resolvedRef = ref
+    let backendNodeId = this.refMap.get(resolvedRef)
+
+    if (!backendNodeId) {
+      resolvedRef = await this.recoverRef(ref)
+      backendNodeId = this.refMap.get(resolvedRef)
+    }
+
+    if (!backendNodeId) {
+      throw new Error(`Element ${ref} not found. Run browser_snapshot first to get current element refs.`)
+    }
+
+    try {
+      const { object } = await this.send('DOM.resolveNode', { backendNodeId })
+      return { ref: resolvedRef, backendNodeId, objectId: object.objectId }
+    } catch (error) {
+      const recoveredRef = await this.recoverRef(ref)
+      const recoveredBackendNodeId = this.refMap.get(recoveredRef)
+      if (!recoveredBackendNodeId) throw error
+      const { object } = await this.send('DOM.resolveNode', { backendNodeId: recoveredBackendNodeId })
+      return {
+        ref: recoveredRef,
+        backendNodeId: recoveredBackendNodeId,
+        objectId: object.objectId,
+      }
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // Accessibility Snapshot
   // ---------------------------------------------------------------------------
@@ -189,9 +283,9 @@ export class BrowserCDP {
   async getAccessibilitySnapshot(): Promise<AccessibilitySnapshot> {
     const tree = await this.send('Accessibility.getFullAXTree')
     const nodes = Array.isArray(tree?.nodes) ? tree.nodes as any[] : []
+    const snapshotUrl = this.webContents.getURL()
 
     this.refMap.clear()
-    this.refDetails.clear()
     const result: AccessibilityNode[] = []
     const fallbackCandidates: Array<{
       backendDOMNodeId: number
@@ -233,7 +327,13 @@ export class BrowserCDP {
       if (entry.backendDOMNodeId !== undefined) {
         this.refMap.set(ref, entry.backendDOMNodeId)
       }
-      this.refDetails.set(ref, { role: entry.role, name: entry.name })
+      this.refDetails.set(ref, {
+        role: entry.role,
+        name: entry.name,
+        pageUrl: snapshotUrl,
+        value: entry.value,
+        description: entry.description,
+      })
 
       const accessNode: AccessibilityNode = {
         ref,
@@ -333,18 +433,20 @@ export class BrowserCDP {
       }
 
       mainLog.info(
-        `[browser-cdp] snapshot fallback engaged url=${this.webContents.getURL()} raw=${nodes.length} kept=${result.length} fallbackKept=${fallbackKept} roles=[${summarizeTopCounts(rawRoleCounts)}] dropped=[${summarizeTopCounts(droppedReasonCounts)}]`,
+        `[browser-cdp] snapshot fallback engaged url=${snapshotUrl} raw=${nodes.length} kept=${result.length} fallbackKept=${fallbackKept} roles=[${summarizeTopCounts(rawRoleCounts)}] dropped=[${summarizeTopCounts(droppedReasonCounts)}]`,
       )
     }
 
+    this.trimRefDetailHistory()
+
     if (result.length === 0 && nodes.length > 0) {
       mainLog.warn(
-        `[browser-cdp] snapshot produced zero nodes url=${this.webContents.getURL()} raw=${nodes.length} roles=[${summarizeTopCounts(rawRoleCounts)}] dropped=[${summarizeTopCounts(droppedReasonCounts)}]`,
+        `[browser-cdp] snapshot produced zero nodes url=${snapshotUrl} raw=${nodes.length} roles=[${summarizeTopCounts(rawRoleCounts)}] dropped=[${summarizeTopCounts(droppedReasonCounts)}]`,
       )
     }
 
     return {
-      url: this.webContents.getURL(),
+      url: snapshotUrl,
       title: this.webContents.getTitle(),
       nodes: result,
     }
@@ -751,10 +853,8 @@ export class BrowserCDP {
   }
 
   async typeText(text: string): Promise<void> {
-    for (const char of text) {
-      await this.send('Input.dispatchKeyEvent', { type: 'keyDown', text: char })
-      await this.send('Input.dispatchKeyEvent', { type: 'keyUp', text: char })
-    }
+    if (!text) return
+    await this.send('Input.insertText', { text })
   }
 
   async setClipboard(text: string): Promise<void> {
@@ -775,23 +875,17 @@ export class BrowserCDP {
   }
 
   async clickElement(ref: string): Promise<ElementGeometry> {
-    const backendNodeId = this.refMap.get(ref)
-    if (!backendNodeId) {
-      throw new Error(`Element ${ref} not found. Run browser_snapshot first to get current element refs.`)
-    }
-
     try {
-      // Resolve node to get objectId
-      const { object } = await this.send('DOM.resolveNode', { backendNodeId })
+      const resolved = await this.resolveElementRef(ref)
 
       // Scroll element into view first
       await this.send('Runtime.callFunctionOn', {
-        objectId: object.objectId,
+        objectId: resolved.objectId,
         functionDeclaration: 'function() { this.scrollIntoViewIfNeeded(); }',
       })
 
       // Get element box model after scroll for up-to-date click coordinates
-      const geometry = await this.getElementGeometry(ref)
+      const geometry = await this.getElementGeometry(resolved.ref)
       const x = geometry.clickPoint.x
       const y = geometry.clickPoint.y
 
@@ -806,46 +900,35 @@ export class BrowserCDP {
   }
 
   async fillElement(ref: string, value: string): Promise<ElementGeometry> {
-    const backendNodeId = this.refMap.get(ref)
-    if (!backendNodeId) {
-      throw new Error(`Element ${ref} not found. Run browser_snapshot first to get current element refs.`)
-    }
-
     try {
+      const resolved = await this.resolveElementRef(ref)
+
       // Focus the element first
-      await this.send('DOM.focus', { backendNodeId })
+      await this.send('DOM.focus', { backendNodeId: resolved.backendNodeId })
 
       // Clear existing content
-      const { object } = await this.send('DOM.resolveNode', { backendNodeId })
       await this.send('Runtime.callFunctionOn', {
-        objectId: object.objectId,
+        objectId: resolved.objectId,
         functionDeclaration: `function() {
           this.value = '';
           this.dispatchEvent(new Event('input', { bubbles: true }));
         }`,
       })
 
-      // Type the new value character by character for realistic input
-      for (const char of value) {
-        await this.send('Input.dispatchKeyEvent', {
-          type: 'keyDown',
-          text: char,
-        })
-        await this.send('Input.dispatchKeyEvent', {
-          type: 'keyUp',
-          text: char,
-        })
+      // Insert the full value in one CDP round-trip while preserving input semantics.
+      if (value) {
+        await this.send('Input.insertText', { text: value })
       }
 
       // Dispatch change event
       await this.send('Runtime.callFunctionOn', {
-        objectId: object.objectId,
+        objectId: resolved.objectId,
         functionDeclaration: `function() {
           this.dispatchEvent(new Event('change', { bubbles: true }));
         }`,
       })
 
-      return await this.getElementGeometry(ref)
+      return await this.getElementGeometry(resolved.ref)
     } catch (err) {
       mainLog.error(`[browser-cdp] Fill failed for ${ref}:`, err)
       throw new Error(`Failed to fill ${ref}: ${err}`)
@@ -853,15 +936,10 @@ export class BrowserCDP {
   }
 
   async selectOption(ref: string, value: string): Promise<ElementGeometry> {
-    const backendNodeId = this.refMap.get(ref)
-    if (!backendNodeId) {
-      throw new Error(`Element ${ref} not found. Run browser_snapshot first to get current element refs.`)
-    }
-
     try {
-      const { object } = await this.send('DOM.resolveNode', { backendNodeId })
+      const resolved = await this.resolveElementRef(ref)
       const result = await this.send('Runtime.callFunctionOn', {
-        objectId: object.objectId,
+        objectId: resolved.objectId,
         returnByValue: true,
         functionDeclaration: `function(val) {
           const normalize = (input) => String(input ?? '').trim().toLowerCase()
@@ -1033,7 +1111,7 @@ export class BrowserCDP {
         )
       }
 
-      return await this.getElementGeometry(ref)
+      return await this.getElementGeometry(resolved.ref)
     } catch (err) {
       mainLog.error(`[browser-cdp] Select failed for ${ref}:`, err)
       throw new Error(`Failed to select option in ${ref}: ${err}`)
@@ -1041,18 +1119,14 @@ export class BrowserCDP {
   }
 
   async setFileInputFiles(ref: string, filePaths: string[]): Promise<ElementGeometry> {
-    const backendNodeId = this.refMap.get(ref)
-    if (!backendNodeId) {
-      throw new Error(`Element ${ref} not found. Run browser_snapshot first to get current element refs.`)
-    }
-
     try {
+      const resolved = await this.resolveElementRef(ref)
       await this.send('DOM.setFileInputFiles', {
         files: filePaths,
-        backendNodeId,
+        backendNodeId: resolved.backendNodeId,
       })
 
-      return await this.getElementGeometry(ref)
+      return await this.getElementGeometry(resolved.ref)
     } catch (err) {
       mainLog.error(`[browser-cdp] setFileInputFiles failed for ${ref}:`, err)
       throw new Error(`Failed to set files on ${ref}: ${err}`)

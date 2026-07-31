@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
-import { mkdirSync, mkdtempSync, rmSync } from 'fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import type { TokenUsage } from '@craft-agent/core/types';
@@ -20,6 +20,7 @@ import {
 } from '@craft-agent/shared/tasks';
 import type { SessionCompletionEvent } from '../sessions/SessionManager';
 import { TaskRunner, type ConductorSessionHost } from './TaskRunner';
+import { inferTaskNodeProfile, type TaskNodeRouteContext } from './task-node-routing';
 
 // Flush pending microtasks so the runner's async dispatch (create → column → send) settles.
 const tick = () => new Promise<void>((r) => setTimeout(r, 0));
@@ -123,6 +124,17 @@ class MockHost implements ConductorSessionHost {
       executionProof: opts.executionProof,
     };
     for (const listener of [...this.listeners]) listener(evt);
+  }
+}
+
+class UniqueSessionHost extends MockHost {
+  private sequence = 0;
+
+  override async createSession(_workspaceId: string, options: CreateSessionOptions): Promise<{ id: string }> {
+    this.sequence += 1;
+    const id = `sess-${options.name}-${this.sequence}`;
+    this.created.push({ id, options });
+    return { id };
   }
 }
 
@@ -1064,7 +1076,19 @@ describe('TaskRunner (Conductor)', () => {
         }],
       }),
     );
-    const first = makeRunner();
+    const first = new TaskRunner({
+      host,
+      workspaceId: 'ws',
+      workspaceRoot: root,
+      getKillSwitch: inactiveKillSwitch,
+      resolveNodeRoute: (context) => ({
+        profile: inferTaskNodeProfile(context.node, context.attempt),
+        llmConnection: 'primary',
+        model: 'primary-model',
+        thinkingLevel: 'low',
+        strategy: 'primary',
+      }),
+    });
     first.run('backoff-restart', { runId: 'r1', verifyOnComplete: false });
     await tick();
     host.complete('a', { reason: 'error' });
@@ -1072,13 +1096,32 @@ describe('TaskRunner (Conductor)', () => {
     first.pause('backoff-restart', 'r1');
 
     const recoveredHost = new MockHost();
-    const recovered = new TaskRunner({ host: recoveredHost, workspaceId: 'ws', workspaceRoot: root, getKillSwitch: inactiveKillSwitch });
+    const recoveredPreviousRoutes: Array<TaskNodeRouteContext['previousRoute']> = [];
+    const recovered = new TaskRunner({
+      host: recoveredHost,
+      workspaceId: 'ws',
+      workspaceRoot: root,
+      getKillSwitch: inactiveKillSwitch,
+      resolveNodeRoute: (context) => {
+        recoveredPreviousRoutes.push(context.previousRoute);
+        return {
+          profile: inferTaskNodeProfile(context.node, context.attempt),
+          llmConnection: 'secondary',
+          model: 'fallback-model',
+          thinkingLevel: 'high',
+          strategy: 'retry-fallback',
+        };
+      },
+    });
     recovered.resume('backoff-restart', 'r1');
     await tick();
     expect(recoveredHost.created).toHaveLength(0);
 
     await new Promise<void>((resolve) => setTimeout(resolve, 340));
     expect(recoveredHost.dispatchedNames()).toEqual(['a']);
+    expect(recoveredPreviousRoutes).toEqual([{ llmConnection: 'primary', model: 'primary-model' }]);
+    expect(readRunLog(root, 'backoff-restart', 'r1').filter((entry) => entry.kind === 'node-routed').at(-1))
+      .toMatchObject({ connectionSlug: 'secondary', model: 'fallback-model', strategy: 'retry-fallback' });
   });
 
   it('fails without dispatch when the mission deadline is already expired', async () => {
@@ -1223,6 +1266,35 @@ describe('TaskRunner (Conductor)', () => {
     expect(recoveredHost.dispatchedNames()).toEqual(['b']);
   });
 
+  it('quarantines a corrupt run log and continues recovering valid runs', async () => {
+    for (const id of ['corrupt-run', 'valid-run']) {
+      saveTaskSpec(root, specOf({ id, title: id, goal: 'g', nodes: [{ id: 'a', prompt: 'a' }] }));
+      const runner = makeRunner();
+      runner.run(id, { runId: 'r1', verifyOnComplete: false });
+      await tick();
+      runner.pause(id, 'r1');
+    }
+    const corruptPath = join(root, 'tasks', 'corrupt-run', 'runs', 'r1', 'run-log.jsonl');
+    const corruptLines = readFileSync(corruptPath, 'utf8').trimEnd().split('\n');
+    const firstRecord = JSON.parse(corruptLines[0]!) as Record<string, unknown>;
+    firstRecord.kind = 'run-stopped';
+    corruptLines[0] = JSON.stringify(firstRecord);
+    writeFileSync(corruptPath, `${corruptLines.join('\n')}\n`, 'utf8');
+
+    const failures: string[] = [];
+    const recovered = new TaskRunner({
+      host: new MockHost(),
+      workspaceId: 'ws',
+      workspaceRoot: root,
+      getKillSwitch: inactiveKillSwitch,
+      onRecoveryError: ({ slug, error }) => failures.push(`${slug}:${error.message}`),
+    }).recoverNonTerminalRuns();
+
+    expect(recovered.map((snapshot) => snapshot.slug)).toEqual(['valid-run']);
+    expect(failures).toHaveLength(1);
+    expect(failures[0]).toContain('corrupt-run');
+  });
+
   it('recovers a snapshotted run after its live task.yaml is deleted', async () => {
     saveTaskSpec(
       root,
@@ -1355,6 +1427,135 @@ describe('TaskRunner (Conductor)', () => {
     await tick();
     expect(runner.getRunState('rt0', 'r1')!.status).toBe('failed');
     expect(host.created.filter((c) => c.options.name === 'a')).toHaveLength(1);
+  });
+
+  it('automatically retries transient errors when the runner provides a default policy', async () => {
+    saveTaskSpec(root, specOf({ id: 'auto-retry', title: 'Auto retry', goal: 'g', nodes: [{ id: 'a', prompt: 'a' }] }));
+    const runner = new TaskRunner({
+      host,
+      workspaceId: 'ws',
+      workspaceRoot: root,
+      getKillSwitch: inactiveKillSwitch,
+      defaultRetry: { limit: 2, when: ['error', 'empty'] },
+    });
+    runner.run('auto-retry', { runId: 'r1' });
+    await tick();
+
+    host.complete('a', { reason: 'error' });
+    await tick();
+    host.complete('a', { reason: 'timeout' });
+    await tick();
+    host.complete('a', { finalText: 'recovered' });
+    await tick();
+
+    expect(host.created.filter((created) => created.options.name === 'a')).toHaveLength(3);
+    expect(runner.getRunState('auto-retry', 'r1')!.status).toBe('completed');
+  });
+
+  it('persists the selected route and passes it to the next retry attempt', async () => {
+    saveTaskSpec(root, specOf({ id: 'route-retry', title: 'Route retry', goal: 'g', nodes: [{ id: 'a', prompt: 'a' }] }));
+    const previousRoutes: Array<TaskNodeRouteContext['previousRoute']> = [];
+    const runner = new TaskRunner({
+      host,
+      workspaceId: 'ws',
+      workspaceRoot: root,
+      getKillSwitch: inactiveKillSwitch,
+      defaultRetry: { limit: 1, when: 'error' },
+      resolveNodeRoute: (context) => {
+        previousRoutes.push(context.previousRoute);
+        const useFallback = context.attempt > 1;
+        return {
+          profile: inferTaskNodeProfile(context.node, context.attempt),
+          llmConnection: useFallback ? 'secondary' : 'primary',
+          model: useFallback ? 'fallback-model' : 'primary-model',
+          thinkingLevel: useFallback ? 'high' : 'low',
+          strategy: useFallback ? 'retry-fallback' : 'primary',
+        };
+      },
+    });
+    runner.run('route-retry', { runId: 'r1' });
+    await tick();
+    host.complete('a', { reason: 'error' });
+    await tick();
+
+    expect(previousRoutes).toEqual([
+      undefined,
+      { llmConnection: 'primary', model: 'primary-model' },
+    ]);
+    expect(readRunLog(root, 'route-retry', 'r1').filter((entry) => entry.kind === 'node-routed'))
+      .toEqual([
+        expect.objectContaining({ connectionSlug: 'primary', strategy: 'primary' }),
+        expect.objectContaining({ connectionSlug: 'secondary', strategy: 'retry-fallback' }),
+      ]);
+  });
+
+  it('ignores a stale completion emitted by an earlier retry attempt', async () => {
+    const uniqueHost = new UniqueSessionHost();
+    saveTaskSpec(root, specOf({ id: 'stale-retry', title: 'Stale retry', goal: 'g', nodes: [{ id: 'a', prompt: 'a' }] }));
+    const runner = new TaskRunner({
+      host: uniqueHost,
+      workspaceId: 'ws',
+      workspaceRoot: root,
+      getKillSwitch: inactiveKillSwitch,
+      defaultRetry: { limit: 1, when: 'error' },
+    });
+    runner.run('stale-retry', { runId: 'r1' });
+    await tick();
+    const firstSessionId = uniqueHost.created[0]!.id;
+
+    uniqueHost.completeSession(firstSessionId, { reason: 'error' });
+    await tick();
+    const secondSessionId = uniqueHost.created[1]!.id;
+    uniqueHost.completeSession(firstSessionId, { finalText: 'stale success' });
+    await tick();
+
+    expect(runner.getRunState('stale-retry', 'r1')!.nodes[0]).toMatchObject({ state: 'running', attempt: 2 });
+    uniqueHost.completeSession(secondSessionId, { finalText: 'fresh success' });
+    await tick();
+    expect(runner.getRunState('stale-retry', 'r1')!.status).toBe('completed');
+  });
+
+  it('automatically retries an empty declared output but not an invalid execution policy', async () => {
+    saveTaskSpec(root, specOf({
+      id: 'auto-empty',
+      title: 'Auto empty',
+      goal: 'g',
+      nodes: [{ id: 'a', prompt: 'a', outputs: [{ name: 'result' }] }],
+    }));
+    const retryRunner = new TaskRunner({
+      host,
+      workspaceId: 'ws',
+      workspaceRoot: root,
+      getKillSwitch: inactiveKillSwitch,
+      defaultRetry: { limit: 1, when: ['error', 'empty'] },
+    });
+    retryRunner.run('auto-empty', { runId: 'r1' });
+    await tick();
+    host.complete('a', { finalText: ' ' });
+    await tick();
+    host.complete('a', { finalText: 'recovered' });
+    await tick();
+    expect(retryRunner.getRunState('auto-empty', 'r1')!.status).toBe('completed');
+
+    const blockedHost = new MockHost();
+    saveTaskSpec(root, specOf({
+      id: 'invalid-policy',
+      title: 'Invalid policy',
+      goal: 'g',
+      nodes: [{ id: 'a', prompt: 'a' }],
+    }));
+    const blockedRunner = new TaskRunner({
+      host: blockedHost,
+      workspaceId: 'ws',
+      workspaceRoot: root,
+      getKillSwitch: inactiveKillSwitch,
+      defaultRetry: { limit: 2, when: ['error', 'empty', 'invalid'] },
+      executionGuard: () => ({ allowed: false, reason: 'permission denied' }),
+    });
+    blockedRunner.run('invalid-policy', { runId: 'r1' });
+    await tick();
+    expect(blockedHost.created).toHaveLength(0);
+    expect(blockedRunner.getRunState('invalid-policy', 'r1')!.status).toBe('failed');
   });
 
   it('feeds the prior failure into the retried prompt and can then succeed', async () => {
