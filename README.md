@@ -88,7 +88,7 @@ installed with `bash install-app.sh --version X.Y.Z` or
 
 ### Build from source
 
-Requirements: [Bun](https://bun.sh/) 1.3.9+, Node.js 20+, and platform build tooling (Xcode command-line tools on macOS; PowerShell 7/Windows build tools on Windows).
+Requirements: [Bun](https://bun.sh/) 1.3.10+, Node.js 20+, and platform build tooling (Xcode command-line tools on macOS; PowerShell 7/Windows build tools on Windows).
 
 ```bash
 git clone https://github.com/robinswood-io/robb-agents.git
@@ -136,7 +136,7 @@ CRAFT_WEBUI_HOST_LABEL="My Mac" \
 bun run packages/server/src/index.ts
 ```
 
-Sign in to the host WebUI, open `/remote/setup`, then scan the QR code from the phone or enter the displayed code at `/remote`. The resulting device session lasts 30 days; pairing codes expire after five minutes and can be used only once.
+Sign in to the host WebUI, open `/remote/setup`, then scan the QR code from the phone or enter the displayed code at `/remote`. The resulting device session is limited to the active workspace, lasts seven days, and can be revoked by the host; pairing codes expire after five minutes and can be used only once.
 
 Remote access is a direct connection to your host, not a hosted relay. The host must remain online and reachable. Expose it only behind HTTPS or a trusted private network/VPN; files and provider credentials remain on the host.
 
