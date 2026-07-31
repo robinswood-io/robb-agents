@@ -14,7 +14,7 @@ import { SignJWT, jwtVerify } from 'jose'
 // ---------------------------------------------------------------------------
 
 const JWT_EXPIRY_SECONDS = 86_400 // 24 hours
-export const REMOTE_SESSION_EXPIRY_SECONDS = 30 * 24 * 60 * 60 // 30 days
+export const REMOTE_SESSION_EXPIRY_SECONDS = 7 * 24 * 60 * 60 // 7 days
 
 export type WebuiSessionKind = 'owner' | 'remote-device'
 
@@ -24,6 +24,8 @@ export interface JwtPayload {
   exp: number
   kind: WebuiSessionKind
   deviceId?: string
+  allowedWorkspaceIds: readonly string[] | '*'
+  authorizationGeneration: number
 }
 
 export async function signJwt(payload: JwtPayload, secret: string): Promise<string> {
@@ -32,6 +34,8 @@ export async function signJwt(payload: JwtPayload, secret: string): Promise<stri
     sub: payload.sub,
     kind: payload.kind,
     ...(payload.deviceId ? { deviceId: payload.deviceId } : {}),
+    allowedWorkspaceIds: payload.allowedWorkspaceIds,
+    authorizationGeneration: payload.authorizationGeneration,
   })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt(payload.iat)
@@ -47,11 +51,30 @@ export async function verifyJwt(token: string, secret: string): Promise<JwtPaylo
       return null
     }
 
-    const kind = payload.kind === 'remote-device' ? 'remote-device' : 'owner'
+    if (payload.kind !== 'owner' && payload.kind !== 'remote-device') return null
+    const kind = payload.kind
     const deviceId = typeof payload.deviceId === 'string' ? payload.deviceId : undefined
-    if (kind === 'remote-device' && !deviceId) return null
+    const authorizationGeneration = typeof payload.authorizationGeneration === 'number'
+      ? payload.authorizationGeneration
+      : null
+    const rawWorkspaceIds = payload.allowedWorkspaceIds
+    const allowedWorkspaceIds = rawWorkspaceIds === '*'
+      ? '*'
+      : Array.isArray(rawWorkspaceIds) && rawWorkspaceIds.every((value) => typeof value === 'string')
+        ? rawWorkspaceIds
+        : null
+    if (authorizationGeneration === null || allowedWorkspaceIds === null) return null
+    if (kind === 'remote-device' && (!deviceId || allowedWorkspaceIds === '*')) return null
 
-    return { sub: payload.sub, iat: payload.iat, exp: payload.exp, kind, deviceId }
+    return {
+      sub: payload.sub,
+      iat: payload.iat,
+      exp: payload.exp,
+      kind,
+      ...(deviceId ? { deviceId } : {}),
+      allowedWorkspaceIds,
+      authorizationGeneration,
+    }
   } catch {
     return null
   }
@@ -59,17 +82,30 @@ export async function verifyJwt(token: string, secret: string): Promise<JwtPaylo
 
 export async function createSessionToken(secret: string): Promise<string> {
   const now = Math.floor(Date.now() / 1000)
-  return signJwt({ sub: 'webui', iat: now, exp: now + JWT_EXPIRY_SECONDS, kind: 'owner' }, secret)
+  return signJwt({
+    sub: 'webui',
+    iat: now,
+    exp: now + JWT_EXPIRY_SECONDS,
+    kind: 'owner',
+    allowedWorkspaceIds: '*',
+    authorizationGeneration: 0,
+  }, secret)
 }
 
-export async function createRemoteSessionToken(secret: string, deviceId: string): Promise<string> {
+export async function createRemoteSessionToken(secret: string, input: {
+  deviceId: string
+  allowedWorkspaceIds: readonly string[]
+  authorizationGeneration: number
+}): Promise<string> {
   const now = Math.floor(Date.now() / 1000)
   return signJwt({
-    sub: `remote-device:${deviceId}`,
+    sub: `remote-device:${input.deviceId}`,
     iat: now,
     exp: now + REMOTE_SESSION_EXPIRY_SECONDS,
     kind: 'remote-device',
-    deviceId,
+    deviceId: input.deviceId,
+    allowedWorkspaceIds: input.allowedWorkspaceIds,
+    authorizationGeneration: input.authorizationGeneration,
   }, secret)
 }
 

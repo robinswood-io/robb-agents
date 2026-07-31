@@ -5,7 +5,7 @@ import { OAuthFlowStore } from '@craft-agent/shared/auth'
 import { ensureConfigDir, loadStoredConfig, saveConfig } from '@craft-agent/shared/config'
 import { CONFIG_DIR } from '@craft-agent/shared/config/paths'
 import { setBundledAssetsRoot } from '@craft-agent/shared/utils'
-import { WsRpcServer, type WsRpcTlsOptions } from '../transport/server'
+import { WsRpcServer, type WsRpcServerOptions, type WsRpcTlsOptions } from '../transport/server'
 import type {
   EventSink,
   RpcServer,
@@ -54,6 +54,8 @@ export interface ServerBootstrapOptions<TSessionManager, THandlerDeps> {
   tls?: WsRpcTlsOptions
   /** Cookie-based session validator for web UI auth on WebSocket upgrade. */
   validateSessionCookie?: (cookieHeader: string | null) => Promise<AuthenticationResult>
+  /** Authoritative per-channel request authorization. */
+  authorizeRequest?: WsRpcServerOptions['authorizeRequest']
   /**
    * Optional HTTP request handler for non-WebSocket requests on the RPC port.
    * When provided, the WsRpcServer serves HTTP (e.g. WebUI) on the same port.
@@ -324,6 +326,7 @@ export async function bootstrapServer<TSessionManager, THandlerDeps>(
     requireAuthoritativePrincipal: true,
     validateToken: async (t) => t === serverToken ? serverOwnerPrincipal : false,
     validateSessionCookie: options.validateSessionCookie,
+    authorizeRequest: options.authorizeRequest,
     serverId: options.serverId ?? 'headless',
     serverVersion: options.serverVersion,
     tls: options.tls,
@@ -455,8 +458,6 @@ export async function startHealthHttpServer(options: HealthHttpServerOptions): P
   // Dynamic import — getHealthCheck uses HandlerDeps shape
   const { getHealthCheck } = await import('../handlers/rpc/server')
 
-  const depsLike = { sessionManager: options.deps.sessionManager } as any
-
   // Use Bun.serve if available, otherwise skip (Node.js/Electron doesn't need HTTP health)
   if (typeof globalThis.Bun !== 'undefined') {
     const server = Bun.serve({
@@ -464,7 +465,7 @@ export async function startHealthHttpServer(options: HealthHttpServerOptions): P
       fetch(req: Request) {
         const path = new URL(req.url).pathname
         if (path === '/health') {
-          const health = getHealthCheck(depsLike)
+          const health = getHealthCheck({ sessionManager: options.deps.sessionManager })
           return Response.json(health, {
             status: health.status === 'ok' ? 200 : 503,
           })

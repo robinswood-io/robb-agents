@@ -24,8 +24,11 @@ import {
   buildLogoutCookie,
 } from './auth'
 import { RemotePairingManager, formatPairingCode } from './remote-pairing'
+import { RemoteDeviceRegistry } from './remote-device-registry'
 import { generateCallbackPage } from '@craft-agent/shared/auth'
 import type { PlatformServices } from '../runtime/platform'
+import type { completeOAuthFlow } from '../handlers/rpc/oauth'
+import type { JwtPayload } from './auth'
 
 // ---------------------------------------------------------------------------
 // MIME types for static file serving
@@ -114,13 +117,13 @@ export function resolveWebSocketUrl(
 // Handler options (shared between embedded and standalone modes)
 // ---------------------------------------------------------------------------
 
+type CompleteOAuthFlowOptions = Parameters<typeof completeOAuthFlow>[0]
+
 /** Dependencies for the /api/oauth/callback HTTP route (server-side OAuth completion). */
-export interface OAuthCallbackDeps {
-  flowStore: { getByState: (state: string) => any; remove: (state: string) => void }
-  credManager: { exchangeAndStore: (...args: any[]) => Promise<any> }
-  sessionManager: { completeAuthRequest: (...args: any[]) => Promise<void> }
-  pushSourcesChanged: (workspaceId: string) => void
-}
+export type OAuthCallbackDeps = Pick<
+  CompleteOAuthFlowOptions,
+  'flowStore' | 'credManager' | 'sessionManager' | 'pushSourcesChanged'
+>
 
 export interface WebuiHandlerOptions {
   /** Path to built web UI dist/ directory. */
@@ -145,6 +148,12 @@ export interface WebuiHandlerOptions {
   getHealthCheck: () => { status: string }
   /** Logger. */
   logger: PlatformServices['logger']
+  /** Durable authorization store for paired Remote devices. */
+  remoteDeviceRegistry?: RemoteDeviceRegistry
+  /** Workspace scope granted to a newly paired Remote device. */
+  getRemoteWorkspaceIds?: () => readonly string[]
+  /** Disconnects an active Remote transport immediately after host revocation. */
+  onRemoteDeviceRevoked?: (deviceId: string) => void
   /** OAuth callback deps — when provided, enables /api/oauth/callback route. */
   oauthCallbackDeps?: OAuthCallbackDeps
   /**
@@ -188,11 +197,13 @@ export function createWebuiHandler(options: WebuiHandlerOptions): WebuiHandler {
     getHealthCheck,
     logger,
     trustedProxies,
+    getRemoteWorkspaceIds,
   } = options
 
   const rateLimiter = new RateLimiter(5, 60_000)
   const pairingRateLimiter = new RateLimiter(10, 60_000, 100)
   const pairingManager = new RemotePairingManager()
+  const remoteDeviceRegistry = options.remoteDeviceRegistry ?? new RemoteDeviceRegistry()
   const cleanupTimer = setInterval(() => {
     rateLimiter.cleanup()
     pairingRateLimiter.cleanup()
@@ -201,6 +212,14 @@ export function createWebuiHandler(options: WebuiHandlerOptions): WebuiHandler {
 
   const loginPassword = password || secret
   const trustedProxySet = new Set(trustedProxies ?? [])
+
+  async function validateAuthorizedSession(cookieHeader: string | null): Promise<JwtPayload | null> {
+    const session = await validateSession(cookieHeader, secret)
+    if (!session || session.kind === 'owner') return session
+    if (!session.deviceId) return null
+    const device = remoteDeviceRegistry.authorize(session.deviceId, session.authorizationGeneration)
+    return device ? { ...session, allowedWorkspaceIds: device.allowedWorkspaceIds } : null
+  }
 
   // Hash the login password at startup (async, but resolves before first auth attempt in practice)
   const passwordReady = initPasswordHash(loginPassword)
@@ -325,7 +344,24 @@ export function createWebuiHandler(options: WebuiHandlerOptions): WebuiHandler {
       const deviceName = typeof body.deviceName === 'string' && body.deviceName.trim()
         ? body.deviceName.trim().slice(0, 80)
         : 'Mobile device'
-      const jwt = await createRemoteSessionToken(secret, deviceId)
+      const allowedWorkspaceIds = [...new Set(getRemoteWorkspaceIds?.() ?? [])]
+      if (allowedWorkspaceIds.length === 0) {
+        return Response.json({ error: 'No active workspace is available for Remote pairing' }, { status: 409 })
+      }
+      const authorizationGeneration = Date.now()
+      const expiresAt = new Date(Date.now() + REMOTE_SESSION_EXPIRY_SECONDS * 1000).toISOString()
+      remoteDeviceRegistry.register({
+        id: deviceId,
+        name: deviceName,
+        allowedWorkspaceIds,
+        expiresAt,
+        authorizationGeneration,
+      })
+      const jwt = await createRemoteSessionToken(secret, {
+        deviceId,
+        allowedWorkspaceIds,
+        authorizationGeneration,
+      })
       logger.info(`[webui] Paired Remote device ${deviceId} (${deviceName}) from ${ip}`)
 
       return Response.json({
@@ -392,7 +428,7 @@ export function createWebuiHandler(options: WebuiHandlerOptions): WebuiHandler {
 
     // ── Create a one-time pairing link (owner session only) ──
     if (path === '/api/remote/pairing' && req.method === 'POST') {
-      const ownerSession = await validateSession(req.headers.get('cookie'), secret)
+      const ownerSession = await validateAuthorizedSession(req.headers.get('cookie'))
       if (!ownerSession) return Response.json({ error: 'Unauthorized' }, { status: 401 })
       if (ownerSession.kind !== 'owner') {
         return Response.json({ error: 'Only the host owner can pair another device' }, { status: 403 })
@@ -412,8 +448,34 @@ export function createWebuiHandler(options: WebuiHandlerOptions): WebuiHandler {
       })
     }
 
+    if (path === '/api/remote/devices' && req.method === 'GET') {
+      const ownerSession = await validateAuthorizedSession(req.headers.get('cookie'))
+      if (!ownerSession) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+      if (ownerSession.kind !== 'owner') {
+        return Response.json({ error: 'Only the host owner can list paired devices' }, { status: 403 })
+      }
+      return Response.json({ devices: remoteDeviceRegistry.list() }, {
+        headers: { 'Cache-Control': 'no-store' },
+      })
+    }
+
+    const remoteDeviceRoute = path.match(/^\/api\/remote\/devices\/([^/]+)$/)
+    if (remoteDeviceRoute && req.method === 'DELETE') {
+      const ownerSession = await validateAuthorizedSession(req.headers.get('cookie'))
+      if (!ownerSession) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+      if (ownerSession.kind !== 'owner') {
+        return Response.json({ error: 'Only the host owner can revoke paired devices' }, { status: 403 })
+      }
+      const deviceId = decodeURIComponent(remoteDeviceRoute[1] ?? '')
+      if (!remoteDeviceRegistry.revoke(deviceId)) {
+        return Response.json({ error: 'Remote device not found' }, { status: 404 })
+      }
+      options.onRemoteDeviceRevoked?.(deviceId)
+      return Response.json({ ok: true }, { headers: { 'Cache-Control': 'no-store' } })
+    }
+
     if (path === '/api/remote/status' && req.method === 'GET') {
-      const remoteSession = await validateSession(req.headers.get('cookie'), secret)
+      const remoteSession = await validateAuthorizedSession(req.headers.get('cookie'))
       if (!remoteSession) return Response.json({ error: 'Unauthorized' }, { status: 401 })
       return Response.json({
         kind: remoteSession.kind,
@@ -458,7 +520,7 @@ export function createWebuiHandler(options: WebuiHandlerOptions): WebuiHandler {
           code,
           state,
           flowStore: options.oauthCallbackDeps.flowStore,
-          credManager: options.oauthCallbackDeps.credManager as any,
+          credManager: options.oauthCallbackDeps.credManager,
           sessionManager: options.oauthCallbackDeps.sessionManager,
           pushSourcesChanged: options.oauthCallbackDeps.pushSourcesChanged,
           logger,
@@ -488,7 +550,7 @@ export function createWebuiHandler(options: WebuiHandlerOptions): WebuiHandler {
 
     // ── Config endpoint (requires session cookie) ──
     if (path === '/api/config' && req.method === 'GET') {
-      const configSession = await validateSession(req.headers.get('cookie'), secret)
+      const configSession = await validateAuthorizedSession(req.headers.get('cookie'))
       if (!configSession) {
         return Response.json({ error: 'Unauthorized' }, { status: 401 })
       }
@@ -505,20 +567,23 @@ export function createWebuiHandler(options: WebuiHandlerOptions): WebuiHandler {
 
     // Return the default workspace ID so the webui can include it in the WS handshake
     if (path === '/api/config/workspaces' && req.method === 'GET') {
-      const configSession = await validateSession(req.headers.get('cookie'), secret)
+      const configSession = await validateAuthorizedSession(req.headers.get('cookie'))
       if (!configSession) {
         return Response.json({ error: 'Unauthorized' }, { status: 401 })
       }
       const { getActiveWorkspace } = await import('@craft-agent/shared/config/storage')
       const active = getActiveWorkspace()
+      const defaultWorkspaceId = configSession.allowedWorkspaceIds === '*'
+        ? active?.id ?? null
+        : configSession.allowedWorkspaceIds[0] ?? null
       return Response.json({
-        defaultWorkspaceId: active?.id ?? null,
+        defaultWorkspaceId,
       })
     }
 
     // ── Everything below requires a valid session cookie ──
     const cookieHeader = req.headers.get('cookie')
-    const session = await validateSession(cookieHeader, secret)
+    const session = await validateAuthorizedSession(cookieHeader)
 
     if (!session) {
       const accept = req.headers.get('accept') ?? ''

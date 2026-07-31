@@ -32,6 +32,7 @@ async function createServer(overrides?: {
   hostLabel?: string
   wsProtocol?: 'ws' | 'wss'
   wsPort?: number
+  onRemoteDeviceRevoked?: (deviceId: string) => void
 }) {
   const server = await startWebuiHttpServer({
     port: 0,
@@ -46,6 +47,8 @@ async function createServer(overrides?: {
     wsPort: overrides?.wsPort ?? 9100,
     getHealthCheck: () => ({ status: 'ok' }),
     logger,
+    getRemoteWorkspaceIds: () => ['workspace-1'],
+    onRemoteDeviceRevoked: overrides?.onRemoteDeviceRevoked,
   })
 
   SERVERS.push(server)
@@ -199,11 +202,13 @@ describe('startWebuiHttpServer', () => {
   })
 
   it('pairs a mobile device with a one-time ticket and returns a device session', async () => {
+    const revokedDevices: string[] = []
     const { baseUrl } = await createServer({
       publicWebuiUrl: 'https://remote.example.com',
       hostLabel: 'Studio Mac',
       wsProtocol: 'wss',
       wsPort: 9100,
+      onRemoteDeviceRevoked: (deviceId) => revokedDevices.push(deviceId),
     })
     const login = await fetch(`${baseUrl}/api/auth`, {
       method: 'POST',
@@ -236,7 +241,7 @@ describe('startWebuiHttpServer', () => {
       body: JSON.stringify({ ticket: pairingTicket, deviceName: 'Test Phone' }),
     })
     expect(paired.status).toBe(200)
-    expect(paired.headers.get('set-cookie')).toContain('Max-Age=2592000')
+    expect(paired.headers.get('set-cookie')).toContain('Max-Age=604800')
     const remoteCookie = extractSessionCookie(paired)
 
     const configRes = await fetch(`${baseUrl}/api/config`, {
@@ -248,7 +253,19 @@ describe('startWebuiHttpServer', () => {
     }
     expect(config.hostLabel).toBe('Studio Mac')
     expect(config.session.kind).toBe('remote-device')
-    expect(config.session.deviceId).toBeTruthy()
+    const remoteDeviceId = config.session.deviceId
+    expect(remoteDeviceId).toBeTruthy()
+    if (!remoteDeviceId) throw new Error('Pairing response did not include a Remote device ID')
+
+    const devicesRes = await fetch(`${baseUrl}/api/remote/devices`, {
+      headers: { cookie: ownerCookie },
+    })
+    expect(devicesRes.status).toBe(200)
+    const devices = await devicesRes.json() as {
+      devices: Array<{ id: string; allowedWorkspaceIds: string[] }>
+    }
+    expect(devices.devices).toHaveLength(1)
+    expect(devices.devices[0]?.allowedWorkspaceIds).toEqual(['workspace-1'])
 
     const remoteCannotPair = await fetch(`${baseUrl}/api/remote/pairing`, {
       method: 'POST',
@@ -262,6 +279,14 @@ describe('startWebuiHttpServer', () => {
       body: JSON.stringify({ ticket: pairingTicket }),
     })
     expect(replay.status).toBe(409)
+
+    const revoke = await fetch(`${baseUrl}/api/remote/devices/${remoteDeviceId}`, {
+      method: 'DELETE',
+      headers: { cookie: ownerCookie },
+    })
+    expect(revoke.status).toBe(200)
+    expect(revokedDevices).toEqual([remoteDeviceId])
+    expect((await fetch(`${baseUrl}/api/config`, { headers: { cookie: remoteCookie } })).status).toBe(401)
   })
 
   it('supports a manual pairing code and serves the mobile route without authentication', async () => {

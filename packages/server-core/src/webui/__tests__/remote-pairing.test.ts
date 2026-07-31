@@ -22,6 +22,14 @@ describe('RemotePairingManager', () => {
     expect(manager.consume({ ticket: pairing.ticket })).toEqual({ ok: false, reason: 'used' })
   })
 
+  it('maps the full random-byte range uniformly onto the power-of-two alphabet', () => {
+    const manager = new RemotePairingManager({
+      random: (size) => new Uint8Array(size).fill(255),
+    })
+
+    expect(manager.issue().code).toBe('99999999')
+  })
+
   it('accepts a normalized manual code and no longer accepts an expired ticket', () => {
     let now = 5_000
     const manager = new RemotePairingManager({
@@ -35,7 +43,7 @@ describe('RemotePairingManager', () => {
 
     const expired = manager.issue()
     now = 5_501
-    expect(manager.consume({ ticket: expired.ticket })).toEqual({ ok: false, reason: 'invalid' })
+    expect(manager.consume({ ticket: expired.ticket })).toEqual({ ok: false, reason: 'expired' })
   })
 
   it('invalidates the previous ticket when a new pairing starts', () => {
