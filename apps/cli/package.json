@@ -1,6 +1,6 @@
 {
   "name": "@craft-agent/cli",
-  "version": "0.11.4",
+  "version": "0.11.5",
   "license": "MIT",
   "description": "Terminal client for Craft Agent server",
   "type": "module",

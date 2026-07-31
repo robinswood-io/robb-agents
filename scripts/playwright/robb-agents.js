@@ -304,6 +304,10 @@ async function validateRemoteMobileFlow() {
     const playgroundOverflow = await page.evaluate(
       () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
     );
+    const screenshotDir = '/tmp/playwright-screenshots';
+    fs.mkdirSync(screenshotDir, { recursive: true });
+    const screenshotPath = path.join(screenshotDir, `${PROJECT}-${Date.now()}.png`);
+    await page.screenshot({ path: screenshotPath, fullPage: true });
 
     const filteredConsoleErrors = unique(consoleErrors).filter((message) =>
       !message.includes('net::ERR_ABORTED') && !message.includes('favicon.ico'));
@@ -325,6 +329,7 @@ async function validateRemoteMobileFlow() {
     console.log(`Console errors: ${filteredConsoleErrors.length}`);
     console.log(`Page errors: ${filteredPageErrors.length}`);
     console.log(`Failed requests: ${filteredFailedRequests.length}`);
+    console.log(`Screenshot: ${screenshotPath}`);
     for (const error of filteredConsoleErrors) console.log(`  console · ${error}`);
     for (const error of filteredPageErrors) console.log(`  page · ${error}`);
     for (const error of filteredFailedRequests) console.log(`  request · ${error}`);
