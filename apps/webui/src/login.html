@@ -323,9 +323,7 @@
         if (res.ok) {
           // Cookie is set by the response — return only to a local path.
           const requestedNext = new URLSearchParams(window.location.search).get('next');
-          const safeNext = requestedNext && requestedNext.startsWith('/') && !requestedNext.startsWith('//')
-            ? requestedNext
-            : '/';
+          const safeNext = requestedNext === '/remote/setup' ? '/remote/setup' : '/';
           window.location.href = safeNext;
           return;
         }

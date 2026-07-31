@@ -4,6 +4,11 @@ const DEFAULT_PAIRING_TTL_MS = 5 * 60 * 1000
 const PAIRING_TOKEN_BYTES = 32
 const PAIRING_CODE_LENGTH = 8
 const PAIRING_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+const PAIRING_CODE_MASK = PAIRING_CODE_ALPHABET.length - 1
+
+if ((PAIRING_CODE_ALPHABET.length & PAIRING_CODE_MASK) !== 0) {
+  throw new Error('Pairing code alphabet length must be a power of two')
+}
 
 export interface RemotePairingTicket {
   ticket: string
@@ -40,7 +45,7 @@ function createPairingCode(bytes: Uint8Array): string {
   for (let index = 0; index < PAIRING_CODE_LENGTH; index++) {
     const value = bytes[index]
     if (value == null) throw new Error('Insufficient randomness for pairing code')
-    code += PAIRING_CODE_ALPHABET[value % PAIRING_CODE_ALPHABET.length]
+    code += PAIRING_CODE_ALPHABET[value & PAIRING_CODE_MASK]
   }
   return code
 }
