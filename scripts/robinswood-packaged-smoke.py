@@ -288,36 +288,45 @@ def launch_smoke(seconds: int) -> None:
     if existing:
         fail("Packaged Robb Agents is already running; close it before --launch smoke-test. PIDs: " + ", ".join(map(str, sorted(existing))))
 
-    smoke_dir = pathlib.Path.home() / ".craft-agent-robinswood-packaged-smoke"
-    if smoke_dir.exists():
-        shutil.rmtree(smoke_dir)
-    smoke_dir.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="robb-macos-runtime-") as runtime:
+        runtime_dir = pathlib.Path(runtime)
+        smoke_dir = runtime_dir / "craft"
+        smoke_dir.mkdir()
 
-    env = os.environ.copy()
-    env.update(
-        {
-            "CRAFT_CONFIG_DIR": str(smoke_dir),
-            "CRAFT_INSTANCE_NUMBER": "robinswood-packaged-smoke",
-            "CRAFT_DEEPLINK_SCHEME": "robbagentssmoke",
-        }
-    )
-    proc = subprocess.Popen([str(APP_BIN)], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=env)
-    launched_pids: set[int] = set()
-    try:
-        time.sleep(seconds)
-        launched_pids = pids_for_packaged_app()
-        if proc.poll() is not None and not launched_pids:
-            output = proc.stdout.read() if proc.stdout else ""
-            fail(f"Packaged app exited during launch smoke-test with code {proc.returncode}:\n{output[-4000:]}")
-        print(f"✓ packaged app launch smoke-test ({seconds}s)")
-    finally:
-        if proc.poll() is None:
-            proc.send_signal(signal.SIGTERM)
-            try:
-                proc.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                proc.kill()
-        terminate_pids(launched_pids)
+        env = os.environ.copy()
+        env.update(
+            {
+                "CRAFT_CONFIG_DIR": str(smoke_dir),
+                "CRAFT_INSTANCE_NUMBER": "robinswood-packaged-smoke",
+                "CRAFT_DEEPLINK_SCHEME": "robbagentssmoke",
+                "XDG_CACHE_HOME": str(runtime_dir / "cache"),
+                "XDG_CONFIG_HOME": str(runtime_dir / "config"),
+                "XDG_DATA_HOME": str(runtime_dir / "data"),
+            }
+        )
+        proc = subprocess.Popen(
+            [str(APP_BIN)],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            env=env,
+        )
+        launched_pids: set[int] = set()
+        try:
+            time.sleep(seconds)
+            launched_pids = pids_for_packaged_app()
+            if proc.poll() is not None and not launched_pids:
+                output = proc.stdout.read() if proc.stdout else ""
+                fail(f"Packaged app exited during launch smoke-test with code {proc.returncode}:\n{output[-4000:]}")
+            print(f"✓ packaged app launch smoke-test ({seconds}s)")
+        finally:
+            if proc.poll() is None:
+                proc.send_signal(signal.SIGTERM)
+                try:
+                    proc.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    proc.kill()
+            terminate_pids(launched_pids)
 
 
 def main() -> None:
