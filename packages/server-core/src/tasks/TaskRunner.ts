@@ -99,6 +99,8 @@ export interface TaskRunnerDeps {
   genRunId?: () => string;
   /** Live kill-switch state. Evaluated before every scheduling pass and required fail-closed. */
   getKillSwitch: () => KillSwitchSnapshot;
+  /** Reports one corrupt/unrecoverable durable run without aborting recovery of the others. */
+  onRecoveryError?: (context: { slug: string; runId: string; error: Error }) => void;
   /**
    * Host-side admission hook for connector/sandbox enforcement. The prompt
    * receives the same policy, but this hook is the authoritative boundary.
@@ -1730,11 +1732,19 @@ export class TaskRunner {
     for (const slug of [...durableSlugs].sort()) {
       for (const runId of listRunIds(this.deps.workspaceRoot, slug)) {
         if (this.runs.has(this.key(slug, runId))) continue;
-        const log = readRunLog(this.deps.workspaceRoot, slug, runId);
-        if (log.length === 0) continue;
-        const status = persistedRunStatus(log);
-        if (isTerminalRunStatus(status)) continue;
-        recovered.push(this.rehydrate(slug, runId, status !== 'paused'));
+        try {
+          const log = readRunLog(this.deps.workspaceRoot, slug, runId);
+          if (log.length === 0) continue;
+          const status = persistedRunStatus(log);
+          if (isTerminalRunStatus(status)) continue;
+          recovered.push(this.rehydrate(slug, runId, status !== 'paused'));
+        } catch (error) {
+          this.deps.onRecoveryError?.({
+            slug,
+            runId,
+            error: error instanceof Error ? error : new Error(String(error)),
+          });
+        }
       }
     }
     return recovered;

@@ -57,42 +57,55 @@ export interface ResolveTaskNodeExecutionRouteInput extends TaskNodeRouteContext
 
 const SPECIALTY_SIGNALS: ReadonlyArray<{
   specialty: Exclude<TaskNodeSpecialty, 'general'>;
+  intentPatterns: readonly RegExp[];
   patterns: readonly RegExp[];
 }> = [
   {
     specialty: 'security',
+    intentPatterns: [/security (?:review|audit)/i, /audit(?:er)? (?:la )?s[ée]curit/i, /threat model/i],
     patterns: [/security/i, /sécurit/i, /owasp/i, /vulnérabil/i, /threat/i, /auth(?:entication|orization)?/i],
   },
   {
     specialty: 'coding',
+    intentPatterns: [/\b(?:implement|build|code|fix|refactor)(?:ing)?\b/i, /\b(?:impl[ée]ment|corrig|d[ée]velop)/i],
     patterns: [/\bcode\b/i, /implement/i, /impl[ée]ment/i, /corrig/i, /\bfix\b/i, /refactor/i, /typescript/i, /react/i, /api\b/i],
   },
   {
     specialty: 'testing',
+    intentPatterns: [
+      /\b(?:write|add|create|run|execute|fix)(?:ing)?\b.{0,40}\btests?\b/i,
+      /\b(?:test|verify|validate)(?:ing)?\b/i,
+    ],
     patterns: [/\btest(?:s|ing)?\b/i, /vitest/i, /jest/i, /playwright/i, /e2e/i, /regression/i, /qa\b/i],
   },
   {
     specialty: 'review',
+    intentPatterns: [/\b(?:review|inspect|assess)(?:ing)?\b/i, /revue de code/i, /relire/i],
     patterns: [/\breview\b/i, /revue de code/i, /code review/i, /relire/i, /inspecter/i, /quality check/i],
   },
   {
     specialty: 'data',
+    intentPatterns: [/\b(?:query|migrate|analyse|analyze)\b.{0,40}\b(?:data|database|sql|metrics?)\b/i],
     patterns: [/\bdata\b/i, /donn[ée]es?/i, /sql/i, /database/i, /postgres/i, /migration/i, /analytics?/i, /m[ée]trique/i],
   },
   {
     specialty: 'operations',
+    intentPatterns: [/\b(?:deploy|operate|restart|monitor)(?:ing)?\b/i, /d[ée]ploiement/i],
     patterns: [/docker/i, /deploy/i, /d[ée]ploiement/i, /infrastructure/i, /ci\/?cd/i, /github actions/i, /nginx/i, /logs?/i],
   },
   {
     specialty: 'documentation',
+    intentPatterns: [/\b(?:document|write|update)(?:ing)?\b.{0,40}\b(?:docs?|readme|guide|runbook)\b/i],
     patterns: [/documentation/i, /\bdocs?\b/i, /readme/i, /guide/i, /runbook/i, /changelog/i],
   },
   {
     specialty: 'research',
+    intentPatterns: [/\b(?:research|benchmark|source)(?:ing)?\b/i, /recherche/i, /[ée]tat de l['’]art/i],
     patterns: [/research/i, /recherche/i, /benchmark/i, /sources?/i, /literature/i, /[ée]tat de l['’]art/i],
   },
   {
     specialty: 'analysis',
+    intentPatterns: [/\b(?:analyze|analyse|diagnose|investigate|audit)(?:r|ing)?\b/i, /cause racine/i],
     patterns: [/analysis/i, /analyse/i, /diagnos/i, /root cause/i, /cause racine/i, /investig/i, /audit/i],
   },
 ];
@@ -121,10 +134,25 @@ const STANDARD_SIGNALS = [
 ] as const;
 
 function inferSpecialty(text: string): TaskNodeSpecialty {
-  for (const signal of SPECIALTY_SIGNALS) {
-    if (signal.patterns.some((pattern) => pattern.test(text))) return signal.specialty;
+  const trimmed = text.trim();
+  if (/^(?:review|inspect|assess|relire)\b/i.test(trimmed)) return 'review';
+  if (/^(?:write|add|create|run|execute|test|verify|validate|fix)\b.{0,80}\btests?\b/i.test(trimmed)) {
+    return 'testing';
   }
-  return 'general';
+  let best: { specialty: TaskNodeSpecialty; score: number } = { specialty: 'general', score: 0 };
+  for (const signal of SPECIALTY_SIGNALS) {
+    const intentScore = signal.intentPatterns.reduce(
+      (score, pattern) => score + (pattern.test(text) ? 4 : 0),
+      0,
+    );
+    const contextScore = signal.patterns.reduce(
+      (score, pattern) => score + (pattern.test(text) ? 1 : 0),
+      0,
+    );
+    const score = intentScore + contextScore;
+    if (score > best.score) best = { specialty: signal.specialty, score };
+  }
+  return best.specialty;
 }
 
 function inferDifficulty(text: string): RoutingDifficulty {

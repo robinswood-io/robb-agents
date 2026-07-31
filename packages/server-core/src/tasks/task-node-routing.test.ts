@@ -47,6 +47,23 @@ describe('task node adaptive routing', () => {
     expect(inferTaskNodeProfile(node, 3)).toMatchObject({ modelTier: 'best', thinkingLevel: 'xhigh' });
   });
 
+  it('prioritizes the requested work over incidental technology keywords', () => {
+    const spec = task({
+      id: 'multi-intent',
+      title: 'Multi intent',
+      goal: 'Route by requested work',
+      nodes: [
+        { id: 'tests', prompt: 'Write TypeScript tests for the React API client.' },
+        { id: 'review', prompt: 'Review the TypeScript API implementation for maintainability.' },
+        { id: 'fix-test', prompt: 'Fix the failing Playwright regression test.' },
+      ],
+    });
+
+    expect(inferTaskNodeProfile(spec.nodes[0]!).specialty).toBe('testing');
+    expect(inferTaskNodeProfile(spec.nodes[1]!).specialty).toBe('review');
+    expect(inferTaskNodeProfile(spec.nodes[2]!).specialty).toBe('testing');
+  });
+
   it('routes simple, standard, and retried work to fast, balanced, and best models', () => {
     const spec = task({
       id: 'adaptive',
