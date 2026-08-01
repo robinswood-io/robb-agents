@@ -167,6 +167,14 @@ describe('Robinswood visible branding', () => {
     expect(workflow).toContain('generate-github-update-manifests.ts')
     expect(workflow).toContain('--verify-tag')
     expect(workflow).toContain('--latest')
+    expect(workflow).toContain('APPLE_API_KEY_BASE64')
+    expect(workflow).toContain('base64.b64decode')
+    expect(workflow).toContain(`trap 'rm -f "$APPLE_API_KEY"' EXIT`)
+    expect(workflow).toContain('WINDOWS_SIGNING_MODE')
+
+    const azureSigning = readRepoFile('apps/electron/electron-builder.azure.yml')
+    expect(azureSigning).toContain('azureSignOptions:')
+    expect(azureSigning).toContain('WINDOWS_AZURE_CERTIFICATE_PROFILE_NAME')
 
     const validationWorkflow = readRepoFile('.github/workflows/robinswood-validate.yml')
     expect(validationWorkflow).toContain(`      - name: Build and validate unsigned NSIS installer

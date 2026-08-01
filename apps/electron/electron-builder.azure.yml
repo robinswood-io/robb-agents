@@ -1,0 +1,16 @@
+# Microsoft Artifact Signing overlay for Windows public releases.
+#
+# electron-builder still calls this integration "Azure Trusted Signing". The
+# certificate itself stays in Microsoft's managed service; only short-lived
+# signing requests are made during the Windows build.
+extends: ./electron-builder.yml
+
+win:
+  azureSignOptions:
+    endpoint: ${env.WINDOWS_AZURE_ENDPOINT}
+    codeSigningAccountName: ${env.WINDOWS_AZURE_ACCOUNT_NAME}
+    certificateProfileName: ${env.WINDOWS_AZURE_CERTIFICATE_PROFILE_NAME}
+    publisherName: ${env.WINDOWS_AZURE_PUBLISHER_NAME}
+    fileDigest: SHA256
+    timestampDigest: SHA256
+    timestampRfc3161: http://timestamp.acs.microsoft.com

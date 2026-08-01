@@ -26,9 +26,32 @@ function Require-Environment([string]$Name) {
 }
 
 if ($Release) {
-    if ([string]::IsNullOrWhiteSpace($env:CSC_LINK) -and [string]::IsNullOrWhiteSpace($env:CSC_NAME)) {
-        throw "-Release requires CSC_LINK or CSC_NAME for Authenticode signing."
+    $SigningMode = if ([string]::IsNullOrWhiteSpace($env:WINDOWS_SIGNING_MODE)) { "pfx" } else { $env:WINDOWS_SIGNING_MODE.ToLowerInvariant() }
+    if ($SigningMode -notin @("pfx", "azure")) {
+        throw "Unsupported WINDOWS_SIGNING_MODE '$SigningMode'. Expected 'pfx' or 'azure'."
     }
+    if ($SigningMode -eq "pfx") {
+        if ([string]::IsNullOrWhiteSpace($env:CSC_LINK) -and [string]::IsNullOrWhiteSpace($env:CSC_NAME)) {
+            throw "PFX release signing requires CSC_LINK or CSC_NAME."
+        }
+        if (-not [string]::IsNullOrWhiteSpace($env:CSC_LINK)) {
+            Require-Environment "CSC_KEY_PASSWORD"
+        }
+    } else {
+        foreach ($name in @(
+            "WINDOWS_AZURE_ENDPOINT",
+            "WINDOWS_AZURE_ACCOUNT_NAME",
+            "WINDOWS_AZURE_CERTIFICATE_PROFILE_NAME",
+            "WINDOWS_AZURE_PUBLISHER_NAME",
+            "AZURE_TENANT_ID",
+            "AZURE_CLIENT_ID",
+            "AZURE_CLIENT_SECRET"
+        )) {
+            Require-Environment $name
+        }
+    }
+} else {
+    $SigningMode = "unsigned"
 }
 
 foreach ($command in @("bun", "node", "python")) {
@@ -110,7 +133,14 @@ Push-Location $ElectronDir
 try {
     # Publishing is handled only by the verified GitHub Release job, never by
     # electron-builder's CI auto-detection.
-    bun x --bun electron-builder --config electron-builder.yml --win --x64 --publish never
+    $BuilderConfig = if ($SigningMode -eq "azure") { "electron-builder.azure.yml" } else { "electron-builder.yml" }
+    if ($SigningMode -eq "azure") {
+        Remove-Item Env:CSC_LINK -ErrorAction SilentlyContinue
+        Remove-Item Env:CSC_KEY_PASSWORD -ErrorAction SilentlyContinue
+        Remove-Item Env:CSC_NAME -ErrorAction SilentlyContinue
+    }
+    Write-Host "Windows signing mode: $SigningMode" -ForegroundColor Cyan
+    bun x --bun electron-builder --config $BuilderConfig --win --x64 --publish never
     if ($LASTEXITCODE -ne 0) { throw "electron-builder failed" }
 } finally {
     Pop-Location

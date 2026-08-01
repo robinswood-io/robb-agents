@@ -28,6 +28,8 @@ Options:
 Release credentials (provided by the operator/CI; never committed):
   CSC_LINK + CSC_KEY_PASSWORD, or CSC_NAME
   APPLE_ID + APPLE_APP_SPECIFIC_PASSWORD + APPLE_TEAM_ID
+  or APPLE_API_KEY (absolute .p8 path) + APPLE_API_KEY_ID +
+     APPLE_API_ISSUER + APPLE_TEAM_ID
 
 Without --release, the artifact is intentionally an unsigned local smoke build.
 Distribute only a --release artifact to end users.

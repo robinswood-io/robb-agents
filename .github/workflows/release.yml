@@ -52,11 +52,19 @@ jobs:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_KEY_BASE64: ${{ secrets.APPLE_API_KEY_BASE64 }}
           APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
           APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          WINDOWS_SIGNING_MODE: ${{ vars.WINDOWS_SIGNING_MODE || 'pfx' }}
           WINDOWS_CSC_LINK: ${{ secrets.WINDOWS_CSC_LINK }}
           WINDOWS_CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CSC_KEY_PASSWORD }}
+          WINDOWS_AZURE_ENDPOINT: ${{ vars.WINDOWS_AZURE_ENDPOINT }}
+          WINDOWS_AZURE_ACCOUNT_NAME: ${{ vars.WINDOWS_AZURE_ACCOUNT_NAME }}
+          WINDOWS_AZURE_CERTIFICATE_PROFILE_NAME: ${{ vars.WINDOWS_AZURE_CERTIFICATE_PROFILE_NAME }}
+          WINDOWS_AZURE_PUBLISHER_NAME: ${{ vars.WINDOWS_AZURE_PUBLISHER_NAME }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
@@ -76,16 +84,6 @@ jobs:
               echo "::error::Checked-out source $checked_out_commit does not match immutable tag $tag ($tag_commit)"
               exit 1
             }
-            missing=()
-            for name in MAC_CSC_LINK MAC_CSC_KEY_PASSWORD WINDOWS_CSC_LINK WINDOWS_CSC_KEY_PASSWORD APPLE_TEAM_ID; do
-              [[ -n "${!name:-}" ]] || missing+=("$name")
-            done
-            if [[ -z "${APPLE_ID:-}" || -z "${APPLE_APP_SPECIFIC_PASSWORD:-}" ]]; then
-              if [[ -z "${APPLE_API_KEY:-}" || -z "${APPLE_API_KEY_ID:-}" || -z "${APPLE_API_ISSUER:-}" ]]; then
-                missing+=("Apple notarization credentials (Apple ID or API key route)")
-              fi
-            fi
-            ((${#missing[@]} == 0)) || { printf '::error::Public signed release blocked; missing: %s\n' "${missing[*]}"; exit 1; }
             python3 scripts/robinswood-signing-preflight.py --ci --strict
             if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
               echo "::error::GitHub Release $tag already exists; refusing to overwrite it"; exit 1
@@ -151,7 +149,7 @@ jobs:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_KEY_BASE64: ${{ secrets.APPLE_API_KEY_BASE64 }}
           APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
           APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
           GITHUB_TOKEN: ${{ github.token }}
@@ -159,12 +157,26 @@ jobs:
         run: |
           args=("${{ matrix.arch }}")
           if [[ "${{ needs.preflight.outputs.publish }}" == "true" ]]; then
+            if [[ -n "${APPLE_API_KEY_BASE64:-}" ]]; then
+              export APPLE_API_KEY="$RUNNER_TEMP/AuthKey_${APPLE_API_KEY_ID}.p8"
+              python3 - <<'PY'
+          import base64
+          import os
+          from pathlib import Path
+
+          Path(os.environ["APPLE_API_KEY"]).write_bytes(
+              base64.b64decode(os.environ["APPLE_API_KEY_BASE64"], validate=True)
+          )
+          PY
+              chmod 600 "$APPLE_API_KEY"
+              trap 'rm -f "$APPLE_API_KEY"' EXIT
+            fi
             args+=(--release)
             bash apps/electron/scripts/build-dmg.sh "${args[@]}"
           else
             # Empty CI secret variables can be misread by electron-builder as
             # signing paths. Explicitly remove them for an unsigned test build.
-            env -u CSC_LINK -u CSC_KEY_PASSWORD -u APPLE_ID -u APPLE_APP_SPECIFIC_PASSWORD -u APPLE_TEAM_ID -u APPLE_API_KEY -u APPLE_API_KEY_ID -u APPLE_API_ISSUER \
+            env -u CSC_LINK -u CSC_KEY_PASSWORD -u APPLE_ID -u APPLE_APP_SPECIFIC_PASSWORD -u APPLE_TEAM_ID -u APPLE_API_KEY -u APPLE_API_KEY_BASE64 -u APPLE_API_KEY_ID -u APPLE_API_ISSUER \
               bash apps/electron/scripts/build-dmg.sh "${args[@]}"
           fi
           cat > "apps/electron/release/PROVENANCE-macos-${{ matrix.arch }}.txt" <<EOF
@@ -204,8 +216,16 @@ jobs:
         run: python3 scripts/tests/test_installers.py
       - name: Build and validate Windows installer
         env:
+          WINDOWS_SIGNING_MODE: ${{ vars.WINDOWS_SIGNING_MODE || 'pfx' }}
           CSC_LINK: ${{ secrets.WINDOWS_CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CSC_KEY_PASSWORD }}
+          WINDOWS_AZURE_ENDPOINT: ${{ vars.WINDOWS_AZURE_ENDPOINT }}
+          WINDOWS_AZURE_ACCOUNT_NAME: ${{ vars.WINDOWS_AZURE_ACCOUNT_NAME }}
+          WINDOWS_AZURE_CERTIFICATE_PROFILE_NAME: ${{ vars.WINDOWS_AZURE_CERTIFICATE_PROFILE_NAME }}
+          WINDOWS_AZURE_PUBLISHER_NAME: ${{ vars.WINDOWS_AZURE_PUBLISHER_NAME }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
           GITHUB_TOKEN: ${{ github.token }}
         shell: pwsh
         run: |

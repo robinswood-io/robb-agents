@@ -43,7 +43,7 @@
     "test:shared:playbooks": "cd packages/shared && bun test src/playbooks/validation.test.ts src/playbooks/storage.test.ts src/playbooks/builtins.test.ts",
     "test:shared:automations": "cd packages/shared && bun test src/automations/execution-policy.test.ts",
     "test:shared:all": "bun run test:shared:llm-connections && bun run test:shared:models-pi && bun run test:shared:config && bun run test:shared:autonomy && bun run test:shared:playbooks && bun run test:shared:automations",
-    "test:package-audit": "python3 -m unittest scripts.tests.test_robb_package_audit scripts.tests.test_robb_packaged_smoke",
+    "test:package-audit": "python3 -m unittest scripts.tests.test_robb_package_audit scripts.tests.test_robb_packaged_smoke scripts.tests.test_robb_signing_preflight",
     "test:doc-tools": "python3 -m unittest apps.electron.resources.scripts.tests.test_pdf_tool_smoke apps.electron.resources.scripts.tests.test_xlsx_tool_smoke apps.electron.resources.scripts.tests.test_docx_tool_smoke apps.electron.resources.scripts.tests.test_pptx_tool_smoke apps.electron.resources.scripts.tests.test_img_tool_smoke apps.electron.resources.scripts.tests.test_ical_tool_smoke apps.electron.resources.scripts.tests.test_doc_diff_smoke apps.electron.resources.scripts.tests.test_markitdown_smoke",
     "validate:dev": "bun run typecheck:all && bun run typecheck:release-contract && bun run test:shared:all && bun run test:package-audit && bun run test:doc-tools && bun run test:release-contract && bun run test:installer-contract",
     "validate:ci": "bun run validate:dev && bun run lint:i18n:parity && bun run lint:i18n:sorted && bun run lint:i18n:coverage",
