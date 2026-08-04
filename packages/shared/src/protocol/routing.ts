@@ -91,6 +91,7 @@ export const LOCAL_ONLY_CHANNELS = new Set<string>([
   // update — local auto-update
   RPC_CHANNELS.update.CHECK,
   RPC_CHANNELS.update.GET_INFO,
+  RPC_CHANNELS.update.DOWNLOAD,
   RPC_CHANNELS.update.INSTALL,
   RPC_CHANNELS.update.DISMISS,
   RPC_CHANNELS.update.GET_DISMISSED,
@@ -217,6 +218,9 @@ export const LOCAL_ONLY_CHANNELS = new Set<string>([
   RPC_CHANNELS.settings.GET_SERVER_CONFIG,
   RPC_CHANNELS.settings.SET_SERVER_CONFIG,
   RPC_CHANNELS.settings.GET_SERVER_STATUS,
+  RPC_CHANNELS.settings.CREATE_REMOTE_PAIRING,
+  RPC_CHANNELS.settings.LIST_REMOTE_DEVICES,
+  RPC_CHANNELS.settings.REVOKE_REMOTE_DEVICE,
 ])
 
 // ---------------------------------------------------------------------------

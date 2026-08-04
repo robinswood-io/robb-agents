@@ -5,7 +5,7 @@ loadShellEnv()
 
 import { app, BrowserWindow, dialog, ipcMain, nativeImage, nativeTheme, shell } from 'electron'
 import { createHash, randomUUID } from 'crypto'
-import { hostname, homedir } from 'os'
+import { hostname, homedir, networkInterfaces } from 'os'
 import * as Sentry from '@sentry/electron/main'
 import {
   getDefaultAppName,
@@ -128,6 +128,14 @@ import { initNotificationService, initBadgeIcon, initInstanceBadge, updateBadgeC
 import { setAutoUpdateEventSink, isUpdating, setBeforeUpdateQuitHook } from './auto-update'
 import type { EventSink } from '@craft-agent/server-core/transport'
 import { validateGitBashPath, checkVCRedistInstalled } from '@craft-agent/server-core/services'
+import {
+  createWebuiHandler,
+  nodeHttpAdapter,
+  RemoteDeviceRegistry,
+  createWebuiRpcAuthorizer,
+  validateSession,
+  type WebuiHandler,
+} from '@craft-agent/server-core/webui'
 
 // Initialize electron-log for renderer process support
 log.initialize()
@@ -222,6 +230,7 @@ let browserPaneManager: BrowserPaneManager | null = null
 let oauthFlowStore: OAuthFlowStore | null = null
 let moduleSink: EventSink | null = null
 let moduleClientResolver: ((webContentsId: number) => string | undefined) | null = null
+let embeddedWebuiHandler: WebuiHandler | null = null
 
 // Messaging gateway: the bootstrap handle is created once sessionManager is
 // available (inside createHandlerDeps) and populated with the WS publisher
@@ -662,12 +671,77 @@ app.whenReady().then(async () => {
         mainLog.info(`[server-mode] Enabled — binding ${rpcHost}:${rpcPort}${tls ? ' (TLS)' : ''}`)
       }
 
+      // Remote mobile UI is served by the embedded server itself. The phone
+      // receives only a short-lived one-time ticket; the durable server token
+      // never leaves the host UI or appears in the QR code.
+      const webuiDir = app.isPackaged
+        ? join(process.resourcesPath, 'app', 'webui')
+        : join(process.cwd(), 'apps', 'webui', 'dist')
+      const remoteDeviceRegistry = new RemoteDeviceRegistry({
+        filePath: join(CONFIG_DIR, 'remote-devices.json'),
+      })
+      const authorizeWebuiRpcRequest = createWebuiRpcAuthorizer(remoteDeviceRegistry)
+      let disconnectRemoteDevice: ((deviceId: string) => void) | null = null
+      let webuiNodeHandler: ReturnType<typeof nodeHttpAdapter> | undefined
+
+      if (serverModeEnabled && existsSync(webuiDir)) {
+        embeddedWebuiHandler = createWebuiHandler({
+          webuiDir,
+          secret: serverToken,
+          secureCookies: tls ? true : false,
+          wsProtocol: tls ? 'wss' : 'ws',
+          wsPort: rpcPort,
+          hostLabel: hostname(),
+          getHealthCheck: () => ({ status: sessionManager ? 'ok' : 'starting' }),
+          logger: mainLog,
+          remoteDeviceRegistry,
+          getRemoteWorkspaceIds: () => getWorkspaces()
+            .filter((workspace) => !workspace.remoteServer)
+            .map((workspace) => workspace.id),
+          onRemoteDeviceRevoked: (deviceId) => disconnectRemoteDevice?.(deviceId),
+        })
+        webuiNodeHandler = nodeHttpAdapter(embeddedWebuiHandler.fetch)
+        mainLog.info(`[server-mode] Remote mobile UI enabled from ${webuiDir}`)
+      } else if (serverModeEnabled) {
+        mainLog.error(`[server-mode] Remote mobile UI assets are missing from ${webuiDir}`)
+      }
+
       // Bootstrap the WS RPC server via shared bootstrap function.
       const instance = await bootstrapServer<SessionManager, HandlerDeps>({
         serverToken,
         rpcHost,
         rpcPort,
         tls,
+        validateSessionCookie: embeddedWebuiHandler
+          ? async (cookieHeader) => {
+              const remoteSession = await validateSession(cookieHeader, serverToken)
+              if (!remoteSession) return false
+              if (remoteSession.kind === 'remote-device') {
+                if (!remoteSession.deviceId) return false
+                const device = remoteDeviceRegistry.authorize(
+                  remoteSession.deviceId,
+                  remoteSession.authorizationGeneration,
+                )
+                if (!device) return false
+                return {
+                  actorId: `remote-device:${remoteSession.deviceId}`,
+                  allowedWorkspaceIds: device.allowedWorkspaceIds,
+                  capabilities: [],
+                  roles: ['remote-device'],
+                  authorizationGeneration: device.authorizationGeneration,
+                }
+              }
+              return {
+                actorId: 'local-owner',
+                allowedWorkspaceIds: '*',
+                capabilities: '*',
+                roles: ['owner'],
+                authorizationGeneration: remoteSession.authorizationGeneration,
+              }
+            }
+          : undefined,
+        authorizeRequest: embeddedWebuiHandler ? authorizeWebuiRpcRequest : undefined,
+        httpHandler: webuiNodeHandler,
         bundledAssetsRoot: __dirname,
         serverId: 'local',
         serverVersion: app.getVersion(),
@@ -983,6 +1057,26 @@ app.whenReady().then(async () => {
         enabled: serverModeEnabled,
       }
 
+      disconnectRemoteDevice = (deviceId) => {
+        instance.wsServer.disconnectClientsByActor(`remote-device:${deviceId}`)
+      }
+
+      const getDisplayHost = (): string => {
+        if (runningServerState.host !== '0.0.0.0' && runningServerState.host !== '::') {
+          return runningServerState.host
+        }
+        for (const addresses of Object.values(networkInterfaces())) {
+          const address = addresses?.find((candidate) => candidate.family === 'IPv4' && !candidate.internal)
+          if (address) return address.address
+        }
+        return '127.0.0.1'
+      }
+
+      const getWebUrl = (): string => {
+        const protocol = runningServerState.tls ? 'https' : 'http'
+        return `${protocol}://${getDisplayHost()}:${runningServerState.port}`
+      }
+
       instance.wsServer.handle(RPC_CHANNELS.settings.GET_SERVER_CONFIG, async () => {
         const { getServerConfig: getConfig } = await import('@craft-agent/shared/config')
         return getConfig()
@@ -1011,20 +1105,7 @@ app.whenReady().then(async () => {
         const protocol = runningServerState.tls ? 'wss' : 'ws'
 
         // Determine display host (LAN IP if bound to 0.0.0.0)
-        let displayHost = runningServerState.host
-        if (displayHost === '0.0.0.0' || displayHost === '::') {
-          const os = await import('os')
-          const nets = os.networkInterfaces()
-          for (const name of Object.keys(nets)) {
-            for (const net of nets[name] ?? []) {
-              if (net.family === 'IPv4' && !net.internal) {
-                displayHost = net.address
-                break
-              }
-            }
-            if (displayHost !== '0.0.0.0' && displayHost !== '::') break
-          }
-        }
+        const displayHost = getDisplayHost()
 
         // Only compare port/tls/token when at least one side has server mode enabled.
         // When both are disabled, the running port is random — comparing it to the
@@ -1042,10 +1123,27 @@ app.whenReady().then(async () => {
           port: runningServerState.port,
           tls: runningServerState.tls,
           url: `${protocol}://${displayHost}:${runningServerState.port}`,
+          webUrl: embeddedWebuiHandler ? getWebUrl() : undefined,
           token: runningServerState.token,
           needsRestart,
           insecureWarning: isInsecureBind,
         }
+      })
+
+      instance.wsServer.handle(RPC_CHANNELS.settings.CREATE_REMOTE_PAIRING, async () => {
+        if (!serverModeEnabled || !embeddedWebuiHandler) {
+          throw new Error('Enable Remote access and restart Robb Agents before pairing a phone')
+        }
+        return embeddedWebuiHandler.createRemotePairing(getWebUrl(), hostname())
+      })
+
+      instance.wsServer.handle(RPC_CHANNELS.settings.LIST_REMOTE_DEVICES, async () => {
+        return embeddedWebuiHandler?.listRemoteDevices() ?? []
+      })
+
+      instance.wsServer.handle(RPC_CHANNELS.settings.REVOKE_REMOTE_DEVICE, async (_ctx: unknown, deviceId: string) => {
+        if (!embeddedWebuiHandler) return false
+        return embeddedWebuiHandler.revokeRemoteDevice(deviceId)
       })
 
       // TLS enforcement — warn when server mode binds to a network address without TLS
@@ -1283,6 +1381,9 @@ app.on('before-quit', async (event) => {
         mainLog.error('[messaging] dispose failed:', err)
       }
     }
+
+    embeddedWebuiHandler?.dispose()
+    embeddedWebuiHandler = null
 
     // Clean up power manager (release power blocker)
     const { cleanup: cleanupPowerManager } = await import('./power-manager')

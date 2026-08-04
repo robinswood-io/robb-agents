@@ -69,7 +69,7 @@
     "build:wa-worker": "bun run scripts/build-wa-worker.ts",
     "electron:build:assets": "cd apps/electron && bun scripts/copy-assets.ts",
     "rtk:prepare": "bun scripts/prepare-rtk.ts",
-    "electron:build": "bun run electron:build:main && bun run electron:build:preload && bun run electron:build:renderer && bun run electron:build:resources && bun run electron:build:assets",
+    "electron:build": "bun run webui:build && bun run electron:build:main && bun run electron:build:preload && bun run electron:build:renderer && bun run electron:build:resources && bun run electron:build:assets",
     "electron:start": "bun run electron:dev",
     "electron:dev": "bun run rtk:prepare && bun run scripts/electron-dev.ts",
     "electron:dev:playwright": "mkdir -p /tmp/robb-agents-playwright && CRAFT_VITE_PORT=6173 CRAFT_INSTANCE_NUMBER=e2e CRAFT_APP_NAME='Robb Agents Dev E2E' CRAFT_CONFIG_DIR=/tmp/robb-agents-playwright CRAFT_DEEPLINK_SCHEME=robbagentsdeve2e CRAFT_ELECTRON_REMOTE_DEBUGGING_PORT=9333 bun run electron:dev",

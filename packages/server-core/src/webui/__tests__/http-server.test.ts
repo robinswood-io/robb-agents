@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'bun:test'
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { startWebuiHttpServer } from '../http-server'
+import { createWebuiHandler, startWebuiHttpServer } from '../http-server'
 import type { Logger } from '../../runtime/platform'
 
 const SECRET = 'test-server-secret'
@@ -77,6 +77,38 @@ afterEach(() => {
 })
 
 describe('startWebuiHttpServer', () => {
+  it('lets the trusted desktop owner issue and revoke a device-scoped pairing', async () => {
+    const revoked: string[] = []
+    const handler = createWebuiHandler({
+      webuiDir: createTestWebuiDir(),
+      secret: SECRET,
+      wsProtocol: 'ws',
+      wsPort: 9100,
+      getHealthCheck: () => ({ status: 'ok' }),
+      logger,
+      getRemoteWorkspaceIds: () => ['workspace-1', 'workspace-2'],
+      onRemoteDeviceRevoked: (deviceId) => revoked.push(deviceId),
+    })
+    SERVERS.push({ stop: handler.dispose })
+
+    const pairing = handler.createRemotePairing('http://192.168.1.20:9100', 'Studio Mac')
+    expect(pairing.pairingUrl.startsWith('http://192.168.1.20:9100/remote?pairing=')).toBe(true)
+    expect(pairing.pairingUrl).not.toContain(SECRET)
+    expect(pairing.code).toMatch(/^[A-Z2-9]{4}-[A-Z2-9]{4}$/)
+
+    const ticket = new URL(pairing.pairingUrl).searchParams.get('pairing')
+    const paired = await handler.fetch(new Request('http://192.168.1.20:9100/api/remote/pair', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ticket, deviceName: 'iPhone' }),
+    }))
+    expect(paired.status).toBe(200)
+    const device = (await paired.json()) as { deviceId: string }
+    expect(handler.listRemoteDevices()[0]?.allowedWorkspaceIds).toEqual(['workspace-1', 'workspace-2'])
+    expect(handler.revokeRemoteDevice(device.deviceId)).toBe(true)
+    expect(revoked).toEqual([device.deviceId])
+  })
+
   it('allows plain-http login even when the RPC transport is wss', async () => {
     const { baseUrl } = await createServer({ wsProtocol: 'wss', wsPort: 9100 })
 

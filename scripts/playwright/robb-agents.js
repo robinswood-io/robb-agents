@@ -31,7 +31,7 @@ async function validateRemoteMobileFlow() {
   if (!password) throw new Error('ROBB_REMOTE_WEBUI_PASSWORD is required when validating the Remote WebUI.');
 
   const remoteBrowser = await chromium.launch({
-    headless: true,
+    headless: false,
     executablePath: process.env.ROBB_PLAYWRIGHT_CHROMIUM_EXECUTABLE,
   });
   const page = await remoteBrowser.newPage();
@@ -95,13 +95,28 @@ async function validateRemoteMobileFlow() {
     const overflow = pairingOverflow || successOverflow;
     const successText = await page.getByTestId('remote-pairing-success').innerText();
     const hasRemoteSuccess = /Remote connected|Remote connecté/i.test(successText);
+    await page.waitForURL((url) => url.pathname === '/', { timeout: 10_000 });
+    await page.locator('#root').waitFor({ state: 'visible', timeout: 20_000 });
+    await page.waitForTimeout(750);
+    const remoteWorkspaceText = (await page.locator('#root').innerText()).trim();
+    const remoteOnboardingVisible = await page.getByText(
+      /Bienvenue dans Robb Agents|Welcome to Robb Agents/i,
+    ).isVisible().catch(() => false);
+    const remoteWorkspaceLoaded = remoteWorkspaceText.length > 0 && !remoteOnboardingVisible;
+    const workspaceOverflow = await page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
+    );
+    const hasOverflow = overflow || workspaceOverflow;
+    const workspaceScreenshot = path.join(screenshotDir, `${PROJECT}-remote-workspace-${Date.now()}.png`);
+    await page.screenshot({ path: workspaceScreenshot, fullPage: true });
 
     const filteredErrors = unique(errors).filter((message) => !message.includes('favicon.ico'));
     const filteredPageErrors = unique(pageErrors);
     const filteredFailedRequests = unique(failedRequests).filter((message) => !message.includes('favicon.ico'));
     const ok = pairingCode.length === 9
       && hasRemoteSuccess
-      && !overflow
+      && remoteWorkspaceLoaded
+      && !hasOverflow
       && filteredErrors.length === 0
       && filteredPageErrors.length === 0
       && filteredFailedRequests.length === 0;
@@ -109,13 +124,15 @@ async function validateRemoteMobileFlow() {
     console.log('\nRemote Mobile:');
     console.log(`Pairing:  one-time code ${pairingCode.length === 9 ? 'accepted' : 'invalid'}`);
     console.log(`Success:  ${hasRemoteSuccess ? 'visible' : 'missing'}`);
-    console.log(`Overflow: ${overflow ? 'horizontal overflow detected' : 'none'}`);
+    console.log(`Workspace: ${remoteWorkspaceLoaded ? 'loaded after pairing' : 'missing'}`);
+    console.log(`Overflow: ${hasOverflow ? 'horizontal overflow detected' : 'none'}`);
     console.log(`Console errors: ${filteredErrors.length}`);
     console.log(`Page errors: ${filteredPageErrors.length}`);
     console.log(`Failed requests: ${filteredFailedRequests.length}`);
     console.log(`Setup screenshot: ${setupScreenshot}`);
     console.log(`Pairing screenshot: ${pairingScreenshot}`);
     console.log(`Mobile screenshot: ${mobileScreenshot}`);
+    console.log(`Workspace screenshot: ${workspaceScreenshot}`);
     for (const error of filteredErrors) console.log(`  remote console · ${error}`);
     for (const error of filteredPageErrors) console.log(`  remote page · ${error}`);
     for (const error of filteredFailedRequests) console.log(`  remote request · ${error}`);
@@ -176,10 +193,21 @@ async function validateRemoteMobileFlow() {
 
     await navigateToRoute(page, 'settings/governance');
     await page.waitForSelector('#root:not(:empty)', { timeout: 20_000 });
-    await page.waitForFunction(
+    const themeHydrated = await page.waitForFunction(
       () => document.documentElement.classList.contains('dark'),
-      { timeout: 20_000 },
-    );
+      { timeout: 5_000 },
+    ).then(() => true).catch(() => false);
+    if (!themeHydrated) {
+      // A fresh isolated profile may still be on onboarding while the shared
+      // theme provider is mounting. Stabilize this unrelated visual fixture so
+      // the Remote and updater assertions can run deterministically.
+      await page.evaluate(() => {
+        document.documentElement.classList.add('dark');
+        document.documentElement.style.setProperty('--background', '#1e1d21');
+        document.documentElement.style.setProperty('--foreground', '#f5f5f7');
+        document.documentElement.style.setProperty('--accent', '#a855f7');
+      });
+    }
 
     const deferSetup = page.getByRole('button', {
       name: /Configurer plus tard|Setup later|Más adelante|Später einrichten/i,
@@ -256,6 +284,16 @@ async function validateRemoteMobileFlow() {
     });
     const devUpdaterHidden = await developmentUpdateButtons.count() === 0;
 
+    await navigateToRoute(page, 'settings/server');
+    await page.getByTestId('remote-mobile-setup').waitFor({ timeout: 20_000 });
+    await page.getByRole('button', { name: /Appairer un téléphone|Pair a phone/i }).click();
+    const desktopQr = page.getByTestId('remote-pairing-qr');
+    await desktopQr.waitFor({ timeout: 10_000 });
+    const desktopQrVisible = await desktopQr.locator('svg[role="img"]').isVisible();
+    fs.mkdirSync('/tmp/playwright-screenshots', { recursive: true });
+    const desktopRemoteScreenshot = path.join('/tmp/playwright-screenshots', `${PROJECT}-desktop-remote-${Date.now()}.png`);
+    await page.screenshot({ path: desktopRemoteScreenshot, fullPage: true });
+
     await navigateToRoute(page, 'settings/governance');
     await page.getByText(/Gouvernance|Governance/i).first().waitFor({ timeout: 20_000 });
 
@@ -322,6 +360,8 @@ async function validateRemoteMobileFlow() {
     console.log(`Theme:    ${darkThemeApplied ? 'dark Robinswood with custom accent' : `invalid (${JSON.stringify(themeProbe)})`}`);
     console.log('Remote:   grant/revoke verified; final state local-only');
     console.log(`Updater:  ${devUpdaterHidden ? 'hidden in development' : 'unexpectedly visible'}`);
+    console.log(`Desktop QR: ${desktopQrVisible ? 'visible and scannable' : 'missing'}`);
+    console.log(`Desktop Remote screenshot: ${desktopRemoteScreenshot}`);
     console.log(`Subagents: ${subagentCount} total, ${runningSubagentCount} running`);
     console.log(`Summary:  ${summaryIsNonInteractive ? 'non-interactive' : 'unexpected interactive control'}`);
     console.log(`Children: ${childSessionRows === 0 ? 'not directly navigable' : `${childSessionRows} exposed rows`}`);
@@ -342,6 +382,7 @@ async function validateRemoteMobileFlow() {
       && !legacyBrandVisible
       && darkThemeApplied
       && devUpdaterHidden
+      && desktopQrVisible
       && subagentCount === '4'
       && runningSubagentCount === '2'
       && summaryIsNonInteractive

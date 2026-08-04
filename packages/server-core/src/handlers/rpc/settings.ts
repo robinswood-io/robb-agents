@@ -127,6 +127,13 @@ export function registerSettingsHandlers(server: RpcServer, deps: HandlerDeps): 
   ) => {
     assertRequestWorkspace(context, workspaceId)
     const workspace = getWorkspaceOrThrow(workspaceId)
+    // A paired Remote device is a server-issued, workspace-scoped reader. It is
+    // intentionally not persisted as a governance member, so allow only the
+    // read action needed to hydrate the mobile workspace UI. Mutations still
+    // pass through the durable governance membership checks below.
+    if (context.roles.includes('remote-device') && action === 'policy.read') {
+      return workspace
+    }
     const { loadWorkspaceConfig } = await import('@craft-agent/shared/workspaces')
     const config = loadWorkspaceConfig(workspace.rootPath)
     if (!config) throw new Error(`Failed to load workspace config: ${workspaceId}`)
@@ -482,8 +489,18 @@ export function registerSettingsHandlers(server: RpcServer, deps: HandlerDeps): 
   })
 
   // Get all drafts (for loading on app start)
-  server.handle(RPC_CHANNELS.drafts.GET_ALL, async () => {
-    return getAllSessionDrafts()
+  server.handle(RPC_CHANNELS.drafts.GET_ALL, async (ctx) => {
+    const drafts = getAllSessionDrafts()
+    if (ctx.allowedWorkspaceIds === '*') return drafts
+
+    const allowedDrafts: typeof drafts = {}
+    await Promise.all(Object.entries(drafts).map(async ([sessionId, draft]) => {
+      const session = await deps.sessionManager.getSession(sessionId)
+      if (session && ctx.allowedWorkspaceIds.includes(session.workspaceId)) {
+        allowedDrafts[sessionId] = draft
+      }
+    }))
+    return allowedDrafts
   })
 
   // ============================================================

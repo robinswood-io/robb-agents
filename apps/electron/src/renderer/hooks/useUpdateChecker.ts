@@ -27,12 +27,15 @@ interface UseUpdateCheckerResult {
   downloadProgress: number
   /** Check for updates manually */
   checkForUpdates: () => Promise<void>
+  /** Download the update after explicit confirmation */
+  downloadUpdate: () => Promise<void>
   /** Install the downloaded update and restart */
   installUpdate: () => Promise<void>
 }
 
 // Toast ID for update notification (allows dismiss/update)
 const UPDATE_TOAST_ID = 'update-available'
+let automaticCheckStarted = false
 
 export function useUpdateChecker(): UseUpdateCheckerResult {
   const { t } = useTranslation()
@@ -63,6 +66,21 @@ export function useUpdateChecker(): UseUpdateCheckerResult {
     })
   }, [t])
 
+  const showAvailableToast = useCallback((version: string, onDownload: () => void) => {
+    if (shownToastVersionRef.current === version) return
+    shownToastVersionRef.current = version
+    toast.info(t('toast.updateAvailable', { version }), {
+      id: UPDATE_TOAST_ID,
+      description: t('toast.downloadUpdateDescription'),
+      duration: 15000,
+      action: {
+        label: t('toast.downloadUpdate'),
+        onClick: onDownload,
+      },
+      onDismiss: () => window.electronAPI.dismissUpdate(version),
+    })
+  }, [t])
+
   // Install the update
   const installUpdate = useCallback(async () => {
     try {
@@ -81,11 +99,26 @@ export function useUpdateChecker(): UseUpdateCheckerResult {
     }
   }, [])
 
+  const downloadUpdate = useCallback(async () => {
+    try {
+      shownToastVersionRef.current = null
+      const info = await window.electronAPI.downloadUpdate()
+      setUpdateInfo(info)
+      if (info.downloadState === 'ready' && info.latestVersion) {
+        showUpdateToast(info.latestVersion, installUpdate)
+      }
+    } catch (error) {
+      console.error('[useUpdateChecker] Download failed:', error)
+      toast.error(t('toast.failedToDownloadUpdate'), {
+        description: error instanceof Error ? error.message : 'Unknown error',
+      })
+    }
+  }, [showUpdateToast, installUpdate, t])
+
   // Load initial state and check if update ready
   useEffect(() => {
     const checkAndNotify = async (info: UpdateInfo) => {
       if (!info.available || !info.latestVersion) return
-      if (info.downloadState !== 'ready') return
 
       // Check if this version was dismissed
       const dismissedVersion = await window.electronAPI.getDismissedUpdateVersion()
@@ -93,8 +126,11 @@ export function useUpdateChecker(): UseUpdateCheckerResult {
         return
       }
 
-      // Show toast for ready update
-      showUpdateToast(info.latestVersion, installUpdate)
+      if (info.downloadState === 'ready') {
+        showUpdateToast(info.latestVersion, installUpdate)
+      } else if (info.downloadState === 'idle') {
+        showAvailableToast(info.latestVersion, downloadUpdate)
+      }
     }
 
     // Get initial update info
@@ -114,11 +150,23 @@ export function useUpdateChecker(): UseUpdateCheckerResult {
       setUpdateInfo((prev) => prev ? { ...prev, downloadProgress: progress } : prev)
     })
 
+    if (!automaticCheckStarted && window.electronAPI.getRuntimeEnvironment() === 'electron') {
+      automaticCheckStarted = true
+      void window.electronAPI.isDebugMode().then(async (debugMode) => {
+        if (debugMode) return
+        const info = await window.electronAPI.checkForUpdates()
+        setUpdateInfo(info)
+        await checkAndNotify(info)
+      }).catch((error) => {
+        console.error('[useUpdateChecker] Automatic check failed:', error)
+      })
+    }
+
     return () => {
       cleanupAvailable()
       cleanupProgress()
     }
-  }, [showUpdateToast, installUpdate])
+  }, [showUpdateToast, showAvailableToast, installUpdate, downloadUpdate])
 
   // Check for updates manually
   const checkForUpdates = useCallback(async () => {
@@ -135,6 +183,9 @@ export function useUpdateChecker(): UseUpdateCheckerResult {
         // If already ready, show toast (clear any previous dismissal since user explicitly checked)
         shownToastVersionRef.current = null // Reset so toast can show again
         showUpdateToast(info.latestVersion, installUpdate)
+      } else if (info.latestVersion) {
+        shownToastVersionRef.current = null
+        showAvailableToast(info.latestVersion, downloadUpdate)
       }
     } catch (error) {
       console.error('[useUpdateChecker] Check failed:', error)
@@ -142,7 +193,7 @@ export function useUpdateChecker(): UseUpdateCheckerResult {
         description: error instanceof Error ? error.message : 'Unknown error',
       })
     }
-  }, [showUpdateToast, installUpdate])
+  }, [showUpdateToast, showAvailableToast, installUpdate, downloadUpdate])
 
   return {
     updateInfo,
@@ -151,6 +202,7 @@ export function useUpdateChecker(): UseUpdateCheckerResult {
     isReadyToInstall: updateInfo?.downloadState === 'ready',
     downloadProgress: updateInfo?.downloadProgress ?? 0,
     checkForUpdates,
+    downloadUpdate,
     installUpdate,
   }
 }

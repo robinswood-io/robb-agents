@@ -145,13 +145,16 @@ describe('Robinswood visible branding', () => {
     expect(electronDev).toContain('Development profile isolation refused')
   })
 
-  it('keeps update checks manual and removes every menu shortcut', () => {
+  it('detects stable updates at launch but requires consent before download', () => {
     const updater = readRepoFile('apps/electron/src/main/auto-update.ts')
+    const updateHook = readRepoFile('apps/electron/src/renderer/hooks/useUpdateChecker.ts')
     expect(updater).toContain('autoUpdater.autoDownload = false')
     expect(updater).toContain('autoUpdater.autoInstallOnAppQuit = false')
     expect(updater).toContain('autoUpdater.allowPrerelease = false')
     expect(updater).toContain('await autoUpdater.downloadUpdate()')
-    expect(updater).not.toContain('checkForUpdatesOnLaunch')
+    expect(updateHook).toContain('automaticCheckStarted')
+    expect(updateHook).toContain('await window.electronAPI.checkForUpdates()')
+    expect(updateHook).toContain('onClick: onDownload')
     expect(updater).toContain('/usr/sbin/spctl --assess --type execute')
     expect(updater).toContain('source=Notarized Developer ID')
     expect(updater).toContain('^Authority=Developer ID Application: .+$')

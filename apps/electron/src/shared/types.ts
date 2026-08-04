@@ -285,6 +285,9 @@ export interface ElectronAPI {
   getServerConfig(): Promise<import('@craft-agent/shared/config/server-config').ServerConfig>
   setServerConfig(config: import('@craft-agent/shared/config/server-config').ServerConfig): Promise<void>
   getServerStatus(): Promise<import('@craft-agent/shared/config/server-config').ServerStatus>
+  createRemotePairing(): Promise<import('@craft-agent/shared/config/server-config').RemotePairingDetails>
+  listRemoteDevices(): Promise<import('@craft-agent/shared/config/server-config').RemoteDeviceInfo[]>
+  revokeRemoteDevice(deviceId: string): Promise<boolean>
 
   // App lifecycle
   relaunchApp(): Promise<void>
@@ -396,6 +399,7 @@ export interface ElectronAPI {
   // Auto-update
   checkForUpdates(): Promise<UpdateInfo>
   getUpdateInfo(): Promise<UpdateInfo>
+  downloadUpdate(): Promise<UpdateInfo>
   installUpdate(): Promise<void>
   dismissUpdate(version: string): Promise<void>
   getDismissedUpdateVersion(): Promise<string | null>

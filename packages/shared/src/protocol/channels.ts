@@ -141,6 +141,7 @@ export const RPC_CHANNELS = {
   update: {
     CHECK: 'update:check',
     GET_INFO: 'update:getInfo',
+    DOWNLOAD: 'update:download',
     INSTALL: 'update:install',
     DISMISS: 'update:dismiss',
     GET_DISMISSED: 'update:getDismissed',
@@ -240,6 +241,9 @@ export const RPC_CHANNELS = {
     GET_SERVER_CONFIG: 'settings:getServerConfig',
     SET_SERVER_CONFIG: 'settings:setServerConfig',
     GET_SERVER_STATUS: 'settings:getServerStatus',
+    CREATE_REMOTE_PAIRING: 'settings:createRemotePairing',
+    LIST_REMOTE_DEVICES: 'settings:listRemoteDevices',
+    REVOKE_REMOTE_DEVICE: 'settings:revokeRemoteDevice',
   },
   pi: {
     GET_API_KEY_PROVIDERS: 'pi:getApiKeyProviders',

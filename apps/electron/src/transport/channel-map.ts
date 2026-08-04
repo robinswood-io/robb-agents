@@ -108,6 +108,7 @@ export const CHANNEL_MAP = {
   // Auto-update
   checkForUpdates: invoke(RPC_CHANNELS.update.CHECK),
   getUpdateInfo: invoke(RPC_CHANNELS.update.GET_INFO),
+  downloadUpdate: invoke(RPC_CHANNELS.update.DOWNLOAD),
   installUpdate: invoke(RPC_CHANNELS.update.INSTALL),
   dismissUpdate: invoke(RPC_CHANNELS.update.DISMISS),
   getDismissedUpdateVersion: invoke(RPC_CHANNELS.update.GET_DISMISSED),
@@ -177,6 +178,9 @@ export const CHANNEL_MAP = {
   getServerConfig: invoke(RPC_CHANNELS.settings.GET_SERVER_CONFIG),
   setServerConfig: invoke(RPC_CHANNELS.settings.SET_SERVER_CONFIG),
   getServerStatus: invoke(RPC_CHANNELS.settings.GET_SERVER_STATUS),
+  createRemotePairing: invoke(RPC_CHANNELS.settings.CREATE_REMOTE_PAIRING),
+  listRemoteDevices: invoke(RPC_CHANNELS.settings.LIST_REMOTE_DEVICES),
+  revokeRemoteDevice: invoke(RPC_CHANNELS.settings.REVOKE_REMOTE_DEVICE),
 
   // Settings - API Setup
   setupLlmConnection: invoke(RPC_CHANNELS.settings.SETUP_LLM_CONNECTION),

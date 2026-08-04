@@ -14,6 +14,12 @@ import './index.css'
 // Initialize i18n before any React rendering
 setupI18n([LanguageDetector, initReactI18next])
 
+if ('serviceWorker' in navigator && window.isSecureContext) {
+  window.addEventListener('load', () => {
+    void navigator.serviceWorker.register('/sw.js')
+  })
+}
+
 function CrashFallback() {
   const { t } = useTranslation()
   return (

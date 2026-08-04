@@ -30,12 +30,30 @@ export interface ServerStatus {
   tls: boolean
   /** Full connection URL (ws:// or wss://) */
   url: string
+  /** Browser/PWA URL served on the same port when Remote is available. */
+  webUrl?: string
   /** Current auth token */
   token: string
   /** Whether saved config differs from running config (restart needed) */
   needsRestart: boolean
   /** True when server is bound to a network address without TLS */
   insecureWarning: boolean
+}
+
+export interface RemotePairingDetails {
+  pairingUrl: string
+  code: string
+  expiresAt: string
+  hostLabel: string
+}
+
+export interface RemoteDeviceInfo {
+  id: string
+  name: string
+  allowedWorkspaceIds: readonly string[]
+  pairedAt: string
+  expiresAt: string
+  revokedAt?: string
 }
 
 export const DEFAULT_SERVER_CONFIG: ServerConfig = {

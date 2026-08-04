@@ -5,8 +5,8 @@
  * - GitHub Releases is the only feed configured by electron-builder.
  * - Development and unpackaged runtimes are rejected.
  * - Prerelease versions are rejected.
- * - No launch check, background download or install-on-quit is allowed.
- * - The Settings update button is the only caller that starts the flow.
+ * - A lightweight launch check is allowed, but downloads always require user consent.
+ * - No background download or install-on-quit is allowed.
  */
 
 import { spawn, spawnSync } from 'node:child_process'
@@ -38,7 +38,7 @@ let updateInfo: UpdateInfo = {
 let eventSink: EventSink | null = null
 let beforeUpdateQuitHook: (() => void) | null = null
 let updateInProgress = false
-let manualCheckInProgress = false
+let updateCheckInProgress = false
 
 autoUpdater.autoDownload = false
 autoUpdater.autoInstallOnAppQuit = false
@@ -74,8 +74,8 @@ autoUpdater.on('checking-for-update', () => {
 })
 
 autoUpdater.on('update-available', (info) => {
-  if (!manualCheckInProgress) {
-    autoUpdateLog.error('Ignored update event outside a manual Settings request')
+  if (!updateCheckInProgress) {
+    autoUpdateLog.error('Ignored update event outside an application update check')
     return
   }
   if (!isStableReleaseVersion(info.version)) {
@@ -382,13 +382,16 @@ function installMacUpdateWithDetachedInstaller(): void {
 }
 
 /**
- * Run the complete check-and-download flow after an explicit Settings click.
+ * Check the stable feed after an explicit Settings click.
+ *
+ * Downloading is deliberately a separate action: finding a release must not
+ * consume bandwidth or disk space until the user accepts it in Settings.
  */
 export async function checkForUpdates(): Promise<UpdateInfo> {
   assertUpdaterIsAllowed()
-  if (manualCheckInProgress) return getUpdateInfo()
+  if (updateCheckInProgress) return getUpdateInfo()
 
-  manualCheckInProgress = true
+  updateCheckInProgress = true
   updateInfo = {
     ...updateInfo,
     downloadState: 'idle',
@@ -398,22 +401,7 @@ export async function checkForUpdates(): Promise<UpdateInfo> {
   broadcastUpdateInfo()
 
   try {
-    const result = await autoUpdater.checkForUpdates()
-    const candidateVersion = result?.updateInfo.version
-    if (
-      updateInfo.available
-      && candidateVersion
-      && isStableReleaseVersion(candidateVersion)
-      && updateInfo.downloadState !== 'ready'
-    ) {
-      updateInfo = {
-        ...updateInfo,
-        downloadState: 'downloading',
-        downloadProgress: 0,
-      }
-      broadcastUpdateInfo()
-      await autoUpdater.downloadUpdate()
-    }
+    await autoUpdater.checkForUpdates()
   } catch (error) {
     autoUpdateLog.error('Manual update request failed', error)
     updateInfo = {
@@ -423,7 +411,41 @@ export async function checkForUpdates(): Promise<UpdateInfo> {
     }
     broadcastUpdateInfo()
   } finally {
-    manualCheckInProgress = false
+    updateCheckInProgress = false
+  }
+
+  return getUpdateInfo()
+}
+
+/** Download the stable release previously discovered by checkForUpdates(). */
+export async function downloadUpdate(): Promise<UpdateInfo> {
+  assertUpdaterIsAllowed()
+  if (updateInfo.downloadState === 'ready') return getUpdateInfo()
+  if (!updateInfo.available || !updateInfo.latestVersion) {
+    throw new Error('No stable update is available to download')
+  }
+  if (!isStableReleaseVersion(updateInfo.latestVersion)) {
+    throw new Error(`Refused non-stable release ${updateInfo.latestVersion}`)
+  }
+
+  updateInfo = {
+    ...updateInfo,
+    downloadState: 'downloading',
+    downloadProgress: 0,
+    error: undefined,
+  }
+  broadcastUpdateInfo()
+
+  try {
+    await autoUpdater.downloadUpdate()
+  } catch (error) {
+    updateInfo = {
+      ...updateInfo,
+      downloadState: 'error',
+      error: error instanceof Error ? error.message : 'Update download failed',
+    }
+    broadcastUpdateInfo()
+    throw error
   }
 
   return getUpdateInfo()

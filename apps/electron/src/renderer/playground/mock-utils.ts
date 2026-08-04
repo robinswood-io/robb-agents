@@ -284,6 +284,13 @@ export const mockElectronAPI = {
   checkForUpdates: () => {
     console.log('[Playground] checkForUpdates called')
   },
+  downloadUpdate: async () => ({
+    available: false,
+    currentVersion: '0.0.0-playground',
+    latestVersion: null,
+    downloadState: 'idle',
+    downloadProgress: 0,
+  }),
   installUpdate: () => {
     console.log('[Playground] installUpdate called')
   },

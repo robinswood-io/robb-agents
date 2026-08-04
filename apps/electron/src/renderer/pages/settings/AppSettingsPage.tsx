@@ -110,8 +110,8 @@ export default function AppSettingsPage() {
   const [proxyError, setProxyError] = useState<string | undefined>()
   const [isSavingProxy, setIsSavingProxy] = useState(false)
 
-  // Stable updates are exposed only by this Settings flow in packaged
-  // production. Development and WebUI keep the control hidden.
+  // Stable downloads are exposed only in packaged production. A lightweight
+  // launch check may populate this UI; development and WebUI keep it hidden.
   const isElectron = window.electronAPI.getRuntimeEnvironment() === 'electron'
   const updateChecker = useUpdateChecker()
   const [isCheckingForUpdates, setIsCheckingForUpdates] = useState(false)
@@ -353,6 +353,13 @@ export default function AppSettingsPage() {
                         ) : (
                           t("settings.about.checkNow")
                         )}
+                      </Button>
+                    </SettingsRow>
+                  )}
+                  {updatesEnabled && updateChecker.updateAvailable && !updateChecker.isDownloading && !updateChecker.isReadyToInstall && updateChecker.updateInfo?.latestVersion && (
+                    <SettingsRow label={t("settings.about.updateAvailable", { version: updateChecker.updateInfo.latestVersion })}>
+                      <Button size="sm" onClick={updateChecker.downloadUpdate}>
+                        {t("settings.about.downloadUpdate", { version: updateChecker.updateInfo.latestVersion })}
                       </Button>
                     </SettingsRow>
                   )}

@@ -20,6 +20,10 @@ describe('Remote RPC policy', () => {
   it('allows supervision operations but denies credential, shell, and governance mutations', () => {
     const remote = context('remote-device')
     expect(authorizeWebuiRpcRequest(remote, RPC_CHANNELS.sessions.SEND_MESSAGE)).toBe(true)
+    expect(authorizeWebuiRpcRequest(remote, RPC_CHANNELS.onboarding.GET_AUTH_STATE)).toBe(true)
+    expect(authorizeWebuiRpcRequest(remote, RPC_CHANNELS.llmConnections.LIST_WITH_STATUS)).toBe(true)
+    expect(authorizeWebuiRpcRequest(remote, RPC_CHANNELS.releaseNotes.GET_LATEST_VERSION)).toBe(true)
+    expect(authorizeWebuiRpcRequest(remote, RPC_CHANNELS.drafts.GET_ALL)).toBe(true)
     expect(authorizeWebuiRpcRequest(
       remote,
       RPC_CHANNELS.tasks.RESOLVE_APPROVAL,

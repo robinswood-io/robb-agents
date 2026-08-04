@@ -12,6 +12,7 @@
 
 import { join, extname } from 'node:path'
 import { randomUUID } from 'node:crypto'
+import { readFile } from 'node:fs/promises'
 import {
   RateLimiter,
   initPasswordHash,
@@ -175,6 +176,19 @@ export interface WebuiHandler {
   dispose: () => void
   /** Inject OAuth callback deps after bootstrap (lazy wiring). */
   setOAuthCallbackDeps: (deps: OAuthCallbackDeps) => void
+  /** Issue a short-lived one-time ticket for a trusted local owner UI. */
+  createRemotePairing: (publicBaseUrl: string, hostLabel?: string) => RemotePairingDetails
+  /** List durable device grants for the trusted local owner UI. */
+  listRemoteDevices: () => ReturnType<RemoteDeviceRegistry['list']>
+  /** Revoke a durable device grant from the trusted local owner UI. */
+  revokeRemoteDevice: (deviceId: string) => boolean
+}
+
+export interface RemotePairingDetails {
+  pairingUrl: string
+  code: string
+  expiresAt: string
+  hostLabel: string
 }
 
 /**
@@ -252,18 +266,38 @@ export function createWebuiHandler(options: WebuiHandlerOptions): WebuiHandler {
     }
   }
 
-  async function serveSpaIndex(headers: Record<string, string> = {}): Promise<Response> {
-    const indexFile = Bun.file(join(webuiDir, 'index.html'))
-    if (await indexFile.exists()) {
-      return new Response(indexFile, {
+  async function serveFile(path: string, headers: Record<string, string> = {}): Promise<Response | null> {
+    try {
+      const contents = await readFile(path)
+      return new Response(contents, {
         headers: {
-          'Content-Type': 'text/html; charset=utf-8',
-          'Referrer-Policy': 'no-referrer',
           ...headers,
         },
       })
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null
+      throw error
     }
-    return new Response('Not Found', { status: 404 })
+  }
+
+  async function serveSpaIndex(headers: Record<string, string> = {}): Promise<Response> {
+    return await serveFile(join(webuiDir, 'index.html'), {
+      'Content-Type': 'text/html; charset=utf-8',
+      'Referrer-Policy': 'no-referrer',
+      ...headers,
+    }) ?? new Response('Not Found', { status: 404 })
+  }
+
+  function issueRemotePairing(publicBaseUrl: string, displayHostLabel: string): RemotePairingDetails {
+    const pairing = pairingManager.issue()
+    const pairingUrl = new URL('/remote', publicBaseUrl)
+    pairingUrl.searchParams.set('pairing', pairing.ticket)
+    return {
+      pairingUrl: pairingUrl.toString(),
+      code: formatPairingCode(pairing.code),
+      expiresAt: pairing.expiresAt,
+      hostLabel: displayHostLabel,
+    }
   }
 
   async function fetch(req: Request): Promise<Response> {
@@ -281,13 +315,9 @@ export function createWebuiHandler(options: WebuiHandlerOptions): WebuiHandler {
 
     // ── Login page (no auth) ──
     if (path === '/login' || path === '/login/') {
-      const loginFile = Bun.file(join(webuiDir, 'login.html'))
-      if (await loginFile.exists()) {
-        return new Response(loginFile, {
-          headers: { 'Content-Type': 'text/html; charset=utf-8' },
-        })
-      }
-      return new Response('Login page not found', { status: 404 })
+      return await serveFile(join(webuiDir, 'login.html'), {
+        'Content-Type': 'text/html; charset=utf-8',
+      }) ?? new Response('Login page not found', { status: 404 })
     }
 
     // ── Mobile Remote pairing page (public; ticket exchange is rate-limited) ──
@@ -301,16 +331,13 @@ export function createWebuiHandler(options: WebuiHandlerOptions): WebuiHandler {
       || path === '/favicon.svg'
       || path === '/apple-touch-icon.png'
       || path === '/manifest.json'
+      || path === '/sw.js'
       || path.startsWith('/login-assets/')
       || path.startsWith('/assets/')
     ) {
-      const file = Bun.file(join(webuiDir, path))
-      if (await file.exists()) {
-        return new Response(file, {
-          headers: { 'Content-Type': getMimeType(path) },
-        })
-      }
-      return new Response('Not Found', { status: 404 })
+      return await serveFile(join(webuiDir, path), {
+        'Content-Type': getMimeType(path),
+      }) ?? new Response('Not Found', { status: 404 })
     }
 
     // ── Exchange a one-time ticket for a device-scoped Remote session ──
@@ -434,16 +461,7 @@ export function createWebuiHandler(options: WebuiHandlerOptions): WebuiHandler {
         return Response.json({ error: 'Only the host owner can pair another device' }, { status: 403 })
       }
 
-      const pairing = pairingManager.issue()
-      const pairingUrl = new URL('/remote', getPublicWebuiBaseUrl(req))
-      pairingUrl.searchParams.set('pairing', pairing.ticket)
-
-      return Response.json({
-        pairingUrl: pairingUrl.toString(),
-        code: formatPairingCode(pairing.code),
-        expiresAt: pairing.expiresAt,
-        hostLabel: getHostLabel(req),
-      }, {
+      return Response.json(issueRemotePairing(getPublicWebuiBaseUrl(req), getHostLabel(req)), {
         headers: { 'Cache-Control': 'no-store' },
       })
     }
@@ -596,12 +614,8 @@ export function createWebuiHandler(options: WebuiHandlerOptions): WebuiHandler {
 
     // ── Serve SPA static files ──
     if (path !== '/') {
-      const file = Bun.file(join(webuiDir, path))
-      if (await file.exists()) {
-        return new Response(file, {
-          headers: { 'Content-Type': getMimeType(path) },
-        })
-      }
+      const file = await serveFile(join(webuiDir, path), { 'Content-Type': getMimeType(path) })
+      if (file) return file
     }
 
     // SPA fallback — serve index.html for all non-file routes
@@ -613,6 +627,15 @@ export function createWebuiHandler(options: WebuiHandlerOptions): WebuiHandler {
     dispose: () => clearInterval(cleanupTimer),
     setOAuthCallbackDeps: (deps: OAuthCallbackDeps) => {
       options.oauthCallbackDeps = deps
+    },
+    createRemotePairing: (publicBaseUrl, displayHostLabel = hostLabel || 'Robb Agents host') => (
+      issueRemotePairing(publicBaseUrl, displayHostLabel.trim().slice(0, 80))
+    ),
+    listRemoteDevices: () => remoteDeviceRegistry.list(),
+    revokeRemoteDevice: (deviceId) => {
+      const revoked = remoteDeviceRegistry.revoke(deviceId)
+      if (revoked) options.onRemoteDeviceRevoked?.(deviceId)
+      return revoked
     },
   }
 }
