@@ -116,6 +116,13 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           ROBB_PACKAGE_LAUNCH_SMOKE: "1"
         run: |
+          if [[ -n "${APPLE_API_KEY:-}" && "${APPLE_API_KEY}" == *"BEGIN PRIVATE KEY"* ]]; then
+            api_key_path="${RUNNER_TEMP}/AuthKey_${APPLE_API_KEY_ID}.p8"
+            printf "%s\n" "${APPLE_API_KEY}" > "${api_key_path}"
+            chmod 600 "${api_key_path}"
+            export APPLE_API_KEY="${api_key_path}"
+          fi
+
           args=("${{ matrix.arch }}")
           if [[ "${{ needs.preflight.outputs.publish }}" == "true" ]]; then
             args+=(--release)
