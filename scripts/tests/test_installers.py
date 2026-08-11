@@ -124,6 +124,8 @@ class InstallerContractTests(unittest.TestCase):
             "^Robb-Agents-x64[^/\\\\]*\\.exe$",
             "SHA512",
             "Get-AuthenticodeSignature",
+            "PROVENANCE-windows-x64.txt",
+            "unsigned-github-release",
             "Programs\\Robb Agents",
             "Robb Agents.exe",
             "robb-agents.cmd",

@@ -1,4 +1,4 @@
-name: Build signed desktop release
+name: Build desktop release
 
 on:
   push:
@@ -6,13 +6,13 @@ on:
   workflow_dispatch:
     inputs:
       release_mode:
-        description: "test-artifacts uploads unsigned CI artifacts only; publish-signed creates a public signed GitHub Release"
+        description: "test-artifacts uploads CI artifacts only; publish-unsigned creates a public GitHub Release with an explicitly unsigned Windows installer; publish-signed requires Authenticode"
         required: true
         default: test-artifacts
         type: choice
-        options: [test-artifacts, publish-signed]
+        options: [test-artifacts, publish-unsigned, publish-signed]
       tag:
-        description: "Existing vX.Y.Z tag; required only for publish-signed"
+        description: "Existing vX.Y.Z tag; required for publish modes"
         required: false
         type: string
 
@@ -34,6 +34,8 @@ jobs:
       tag: ${{ steps.policy.outputs.tag }}
       version: ${{ steps.policy.outputs.version }}
       source_commit: ${{ steps.policy.outputs.source_commit }}
+      release_mode: ${{ steps.policy.outputs.release_mode }}
+      windows_require_authenticode: ${{ steps.policy.outputs.windows_require_authenticode }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -70,12 +72,19 @@ jobs:
           set -euo pipefail
           version="$(node -p "require('./apps/electron/package.json').version")"
           tag="${REQUESTED_TAG:-${GITHUB_REF_NAME}}"
-          mode="${REQUESTED_MODE:-publish-signed}"
-          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then mode="publish-signed"; fi
-          if [[ "$mode" != "test-artifacts" && "$mode" != "publish-signed" ]]; then
+          mode="${REQUESTED_MODE:-test-artifacts}"
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then mode="${REQUESTED_MODE:-publish-unsigned}"; fi
+          if [[ "$mode" != "test-artifacts" && "$mode" != "publish-unsigned" && "$mode" != "publish-signed" ]]; then
             echo "::error::Unknown release mode: $mode"; exit 1
           fi
+
+          publish=false
+          windows_require_authenticode=false
           if [[ "$mode" == "publish-signed" ]]; then
+            windows_require_authenticode=true
+          fi
+
+          if [[ "$mode" == publish-* ]]; then
             [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::Only stable X.Y.Z versions can be published: $version"; exit 1; }
             [[ "$tag" == "v${version}" ]] || { echo "::error::Tag $tag must match Electron version v${version}"; exit 1; }
             tag_commit="$(git rev-list -n 1 "$tag")"
@@ -84,20 +93,45 @@ jobs:
               echo "::error::Checked-out source $checked_out_commit does not match immutable tag $tag ($tag_commit)"
               exit 1
             }
-            python3 scripts/robinswood-signing-preflight.py --ci --strict
+            preflight_args=(--ci --strict)
+            if [[ "$windows_require_authenticode" != "true" ]]; then
+              preflight_args+=(--allow-unsigned-windows)
+            fi
+            python3 scripts/robinswood-signing-preflight.py "${preflight_args[@]}"
+
+            if [[ "$windows_require_authenticode" == "true" ]]; then
+              if [[ "${WINDOWS_SIGNING_MODE}" == "pfx" ]]; then
+                [[ -n "${WINDOWS_CSC_LINK:-}" && -n "${WINDOWS_CSC_KEY_PASSWORD:-}" ]] || {
+                  echo "::error::publish-signed requires WINDOWS_CSC_LINK and WINDOWS_CSC_KEY_PASSWORD when WINDOWS_SIGNING_MODE=pfx"
+                  exit 1
+                }
+              elif [[ "${WINDOWS_SIGNING_MODE}" == "azure" ]]; then
+                missing=()
+                for name in WINDOWS_AZURE_ENDPOINT WINDOWS_AZURE_ACCOUNT_NAME WINDOWS_AZURE_CERTIFICATE_PROFILE_NAME WINDOWS_AZURE_PUBLISHER_NAME AZURE_TENANT_ID AZURE_CLIENT_ID AZURE_CLIENT_SECRET; do
+                  [[ -n "${!name:-}" ]] || missing+=("$name")
+                done
+                ((${#missing[@]} == 0)) || { printf "::error::publish-signed Azure signing is missing: %s\n" "${missing[*]}"; exit 1; }
+              else
+                echo "::error::Unsupported WINDOWS_SIGNING_MODE: ${WINDOWS_SIGNING_MODE}"; exit 1
+              fi
+            else
+              echo "::notice::publish-unsigned/test mode will build Windows without Authenticode; release notes and provenance will state this explicitly."
+            fi
+
             if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
               echo "::error::GitHub Release $tag already exists; refusing to overwrite it"; exit 1
             fi
             publish=true
           else
-            publish=false
             tag="test-${GITHUB_SHA::12}"
-            echo "::notice::Unsigned test artifacts will be retained in CI only; no GitHub Release will be created."
+            echo "::notice::Test artifacts will be retained in CI only; no GitHub Release will be created."
           fi
           echo "publish=$publish" >> "$GITHUB_OUTPUT"
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "source_commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "release_mode=$mode" >> "$GITHUB_OUTPUT"
+          echo "windows_require_authenticode=$windows_require_authenticode" >> "$GITHUB_OUTPUT"
 
   quality:
     name: Release source quality gate
@@ -230,7 +264,7 @@ jobs:
         shell: pwsh
         run: |
           $args = @('-ExecutionPolicy', 'Bypass', '-File', 'apps/electron/scripts/build-win.ps1')
-          if ('${{ needs.preflight.outputs.publish }}' -eq 'true') {
+          if ('${{ needs.preflight.outputs.windows_require_authenticode }}' -eq 'true') {
             $args += '-Release'
           } else {
             # Avoid treating an empty Actions secret as a certificate location.
@@ -239,9 +273,11 @@ jobs:
           }
           & powershell @args
           $installer = Get-ChildItem apps/electron/release -Filter 'Robb-Agents-x64*.exe' | Sort-Object Length -Descending | Select-Object -First 1
-          if ('${{ needs.preflight.outputs.publish }}' -eq 'true') {
+          if ('${{ needs.preflight.outputs.windows_require_authenticode }}' -eq 'true') {
             if ((Get-AuthenticodeSignature $installer.FullName).Status -ne 'Valid') { throw 'Authenticode verification failed for public release installer' }
             $signing = 'verified-authenticode'
+          } elseif ('${{ needs.preflight.outputs.publish }}' -eq 'true') {
+            $signing = 'unsigned-github-release'
           } else { $signing = 'unsigned-test-artifact' }
           @(
             'product=Robb Agents',
@@ -313,7 +349,7 @@ jobs:
           if-no-files-found: error
 
   publish:
-    name: Publish signed GitHub Release
+    name: Publish GitHub Release
     if: needs.preflight.outputs.publish == 'true'
     needs: [preflight, macos, windows, linux]
     runs-on: ubuntu-latest
@@ -344,6 +380,10 @@ jobs:
             echo
             echo 'Every artifact was produced from the commit and tag listed below, checksum-verified, and signed as stated.'
             echo
+            if [[ '${{ needs.preflight.outputs.release_mode }}' == 'publish-unsigned' ]]; then
+              echo '> **Windows notice:** the Windows `.exe` installer in this release is intentionally **not Authenticode-signed**. Windows may show an “Unknown publisher” or SmartScreen warning. Verify `SHA256SUMS.txt` and the GitHub provenance before installation.'
+              echo
+            fi
             echo '```text'
             cat release-assets/PROVENANCE-*.txt
             echo '```'
@@ -371,15 +411,21 @@ jobs:
           find release-assets -maxdepth 1 -type f ! -name SHA256SUMS.txt -print0 \
             | sort -z \
             | xargs -0 sha256sum > release-assets/SHA256SUMS.txt
-          bun run scripts/validate-release-bundle.ts \
-            --release-dir release-assets \
-            --version "${{ needs.preflight.outputs.version }}" \
-            --source-commit "${{ needs.preflight.outputs.source_commit }}" \
-            --tag "${{ needs.preflight.outputs.tag }}" \
-            --require-signed \
+          validate_args=(
+            --release-dir release-assets
+            --version "${{ needs.preflight.outputs.version }}"
+            --source-commit "${{ needs.preflight.outputs.source_commit }}"
+            --tag "${{ needs.preflight.outputs.tag }}"
+            --require-signed
             --require-sbom
-      # GitHub Free publishes attestations only for public repositories. Keep the
-      # workflow fail-closed for signing; this step becomes mandatory evidence as
+          )
+          if [[ '${{ needs.preflight.outputs.release_mode }}' == 'publish-unsigned' ]]; then
+            validate_args+=(--allow-unsigned-windows)
+          fi
+          bun run scripts/validate-release-bundle.ts "${validate_args[@]}"
+      # GitHub Free publishes attestations only for public repositories. The
+      # release validator remains fail-closed except for the explicit Windows
+      # unsigned-github-release state; attestations become mandatory evidence as
       # soon as the intended public OSS visibility is enabled.
       - name: Attest public release artifacts
         if: github.event.repository.private == false

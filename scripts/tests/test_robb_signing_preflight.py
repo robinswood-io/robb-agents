@@ -62,6 +62,15 @@ class SigningPreflightTests(unittest.TestCase):
         encoding = next(check for check in checks if check.name == "App Store Connect private key encoding")
         self.assertFalse(encoding.ok)
 
+
+    def test_windows_signing_accepts_explicit_unsigned_release_mode(self) -> None:
+        with patch.dict(os.environ, {"WINDOWS_SIGNING_MODE": "pfx"}, clear=True):
+            checks = MODULE.check_windows_signing(ci=True, allow_unsigned_windows=True)
+
+        self.assertEqual(len(checks), 1)
+        self.assertTrue(checks[0].ok)
+        self.assertIn("unsigned GitHub Release mode allowed", checks[0].detail)
+
     def test_windows_pfx_route_requires_link_and_password_in_ci(self) -> None:
         with patch.dict(
             os.environ,

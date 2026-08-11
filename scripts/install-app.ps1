@@ -103,15 +103,35 @@ if ($ActualHash -ne $Entry.Sha512) {
 Move-Item $PartialPath $InstallerPath -Force
 Write-Success 'Installer size and SHA-512 verified.'
 
-$Signature = Get-AuthenticodeSignature $InstallerPath
-if ($Signature.Status -ne 'Valid' -and $env:ROBB_ALLOW_UNSIGNED -ne '1') {
-    Remove-Item $InstallerPath -Force
-    throw "Authenticode verification failed: $($Signature.Status) $($Signature.StatusMessage)"
+$ProvenancePath = Join-Path $DownloadDir 'PROVENANCE-windows-x64.txt'
+Write-Info 'Fetching Windows provenance...'
+Invoke-WebRequest -Uri "$ReleaseBaseUrl/PROVENANCE-windows-x64.txt" -OutFile $ProvenancePath -UseBasicParsing
+$Provenance = @{}
+foreach ($Line in (Get-Content $ProvenancePath)) {
+    if ($Line -match '^([^=]+)=(.*)$') {
+        $Provenance[$Matches[1]] = $Matches[2]
+    }
 }
-if ($Signature.Status -eq 'Valid') {
+if ($Provenance.product -ne 'Robb Agents') { throw 'Windows provenance has invalid product.' }
+if ($Provenance.version -ne $ManifestVersion) { throw "Windows provenance version $($Provenance.version) does not match manifest version $ManifestVersion." }
+if ($Provenance.platform -ne 'windows-x64') { throw 'Windows provenance has invalid platform.' }
+$DeclaredSigning = $Provenance.signing
+if ($DeclaredSigning -notin @('verified-authenticode', 'unsigned-github-release')) {
+    throw "Windows provenance has unsupported signing state: $DeclaredSigning"
+}
+
+$Signature = Get-AuthenticodeSignature $InstallerPath
+if ($DeclaredSigning -eq 'verified-authenticode') {
+    if ($Signature.Status -ne 'Valid') {
+        Remove-Item $InstallerPath -Force
+        throw "Authenticode verification failed: $($Signature.Status) $($Signature.StatusMessage)"
+    }
     Write-Success "Authenticode signature verified: $($Signature.SignerCertificate.Subject)"
+} elseif ($Signature.Status -eq 'Valid') {
+    Write-Success "Authenticode signature verified despite unsigned-release provenance: $($Signature.SignerCertificate.Subject)"
 } else {
-    Write-Info 'Unsigned installer accepted only because ROBB_ALLOW_UNSIGNED=1.'
+    Write-Info 'This GitHub Release explicitly declares the Windows installer as unsigned.'
+    Write-Info 'Windows may show an unknown-publisher or SmartScreen warning. Continue only if SHA-512 and GitHub provenance verification match your trust policy.'
 }
 
 $Running = @(Get-Process -Name 'Robb Agents' -ErrorAction SilentlyContinue)

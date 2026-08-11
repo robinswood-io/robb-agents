@@ -34,6 +34,7 @@ export interface ValidateReleaseBundleOptions {
   sourceCommit?: string
   tag?: string
   requireSigned?: boolean
+  allowUnsignedWindows?: boolean
   requireSbom?: boolean
 }
 
@@ -289,8 +290,13 @@ export function validateReleaseBundle(
     if (options.sourceCommit && provenance.source_commit !== options.sourceCommit) {
       throw new Error(`${contract.fileName} has invalid source_commit ${provenance.source_commit}`)
     }
-    if (options.requireSigned && provenance.signing !== contract.signing) {
-      throw new Error(`${contract.fileName} has invalid signing state ${provenance.signing}`)
+    if (options.requireSigned) {
+      const allowedSigningStates = options.allowUnsignedWindows && contract.platform === 'windows-x64'
+        ? [contract.signing, 'unsigned-github-release']
+        : [contract.signing]
+      if (!allowedSigningStates.includes(provenance.signing)) {
+        throw new Error(`${contract.fileName} has invalid signing state ${provenance.signing}`)
+      }
     }
   }
 
@@ -336,7 +342,7 @@ if (import.meta.main) {
   if (!releaseDir || !version) {
     throw new Error(
       'Usage: bun scripts/validate-release-bundle.ts --release-dir <dir> --version <X.Y.Z> '
-      + '[--source-commit <sha>] [--tag <vX.Y.Z>] [--require-signed] [--require-sbom]',
+      + '[--source-commit <sha>] [--tag <vX.Y.Z>] [--require-signed] [--allow-unsigned-windows] [--require-sbom]',
     )
   }
 
@@ -346,6 +352,7 @@ if (import.meta.main) {
     sourceCommit: readArgument('--source-commit'),
     tag: readArgument('--tag'),
     requireSigned: process.argv.includes('--require-signed'),
+    allowUnsignedWindows: process.argv.includes('--allow-unsigned-windows'),
     requireSbom: process.argv.includes('--require-sbom'),
   })
   console.log(
