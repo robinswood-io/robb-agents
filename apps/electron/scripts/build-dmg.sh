@@ -129,6 +129,10 @@ require_path "$RG_SOURCE/bin/rg" "ripgrep binary"
 mkdir -p "$ELECTRON_DIR/node_modules/@vscode"
 cp -R "$RG_SOURCE" "$ELECTRON_DIR/node_modules/@vscode/"
 
+# Vite can exceed Node's default old-space limit on macOS runners while
+# rendering production chunks for the full desktop UI bundle.
+export NODE_OPTIONS="${NODE_OPTIONS:+$NODE_OPTIONS }--max-old-space-size=${ROBB_NODE_MAX_OLD_SPACE_SIZE:-8192}"
+
 # The shared Electron build stages Pi/Vibe subprocesses and all bundled assets.
 bun run electron:build
 
