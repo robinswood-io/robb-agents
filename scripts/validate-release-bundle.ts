@@ -294,8 +294,9 @@ export function validateReleaseBundle(
       const allowedSigningStates = options.allowUnsignedWindows && contract.platform === 'windows-x64'
         ? [contract.signing, 'unsigned-github-release']
         : [contract.signing]
-      if (!allowedSigningStates.includes(provenance.signing)) {
-        throw new Error(`${contract.fileName} has invalid signing state ${provenance.signing}`)
+      const signingState = provenance.signing
+      if (typeof signingState !== 'string' || !allowedSigningStates.includes(signingState)) {
+        throw new Error(`${contract.fileName} has invalid signing state ${signingState}`)
       }
     }
   }
