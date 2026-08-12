@@ -118,6 +118,8 @@
   "browser.closeWindowEntirely": "Fenster vollständig schließen",
   "browser.hideWindow": "Fenster ausblenden",
   "browser.newWindow": "Neues Browserfenster",
+  "browser.passkeyAccountFallback": "Passkey {{number}}",
+  "browser.passkeyAccountPrompt": "Passkey für {{relyingPartyId}} auswählen",
   "browser.readyDescription": "Jede Sitzung kann diesen Browser nutzen (oder einen weiteren öffnen), um Aufgaben wie Recherche, Formularausfüllung, QA-Prüfungen oder Datenextraktion durchzuführen.",
   "browser.readyTitle": "Dieser Browser ist bereit für Ihre Agents – und für Sie ;)",
   "browser.safetyHint": "Robb Agents steuert Browserfenster nur, wenn du es verlangst.",

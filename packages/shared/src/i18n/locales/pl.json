@@ -118,6 +118,8 @@
   "browser.closeWindowEntirely": "Zamknij okno całkowicie",
   "browser.hideWindow": "Ukryj okno",
   "browser.newWindow": "Nowe okno przeglądarki",
+  "browser.passkeyAccountFallback": "Klucz dostępu {{number}}",
+  "browser.passkeyAccountPrompt": "Wybierz klucz dostępu dla {{relyingPartyId}}",
   "browser.readyDescription": "Poproś dowolną sesję, aby użyła tej przeglądarki (lub otwórz kolejną), by wykonywać zadania takie jak badania, wypełnianie formularzy, sprawdzanie QA czy ekstrakcja danych.",
   "browser.readyTitle": "Ta przeglądarka jest gotowa dla Robb Agents – i dla ciebie ;)",
   "browser.safetyHint": "Robb Agents kontroluje okna przeglądarki tylko gdy o to poprosisz.",

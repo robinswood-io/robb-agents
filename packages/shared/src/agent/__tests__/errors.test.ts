@@ -36,6 +36,17 @@ describe('parseError proxy interception handling', () => {
   })
 })
 
+describe('parseError Codex service errors', () => {
+  it('maps the generic Codex request-ID response to a retryable service error', () => {
+    const message = 'Codex error: An error occurred while processing your request. You can retry your request. Please include the request ID fdb04312-4a3f-4a21-8053-6e000f6f549c in your message.'
+    const parsed = parseError(new Error(message))
+
+    expect(parsed.code).toBe('service_error')
+    expect(parsed.canRetry).toBe(true)
+    expect(parsed.originalError).toBe(message)
+  })
+})
+
 describe('parseError tool-support classification', () => {
   // Regression for the misclassification in the screenshot: an Anthropic
   // cache_control TTL ordering error mentioning `tools` in its hint string

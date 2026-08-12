@@ -12,6 +12,7 @@ import {
   getDefaultDeepLinkScheme,
   resolveAppChannel,
 } from './app-channel'
+import { configurePlatformWebAuthn } from './webauthn'
 
 const APP_CHANNEL = resolveAppChannel(app.isPackaged)
 const IS_DEVELOPMENT_CHANNEL = APP_CHANNEL === 'development'
@@ -418,6 +419,16 @@ app.whenReady().then(async () => {
   console.error('[Robb startup] Electron ready')
   // Export packaged state as env var so logger.ts (and headless Bun) don't need 'electron'
   process.env.CRAFT_IS_PACKAGED = app.isPackaged ? 'true' : 'false'
+
+  const webAuthnConfiguration = configurePlatformWebAuthn(app, {
+    platform: process.platform,
+    channel: APP_CHANNEL,
+  })
+  if (webAuthnConfiguration.enabled) {
+    mainLog.info('[webauthn] Touch ID platform authenticator enabled')
+  } else if (webAuthnConfiguration.reason === 'configuration-failed') {
+    mainLog.warn('[webauthn] Touch ID platform authenticator configuration failed', webAuthnConfiguration.error)
+  }
 
   // Register bundled assets root so all seeding functions can find their files
   // (docs, permissions, themes, tool-icons resolve via getBundledAssetsDir)
@@ -1414,6 +1425,12 @@ process.on('uncaughtException', (error) => {
 })
 
 process.on('unhandledRejection', (reason, promise) => {
-  mainLog.error('Unhandled rejection at:', promise, 'reason:', reason)
-  Sentry.captureException(reason instanceof Error ? reason : new Error(String(reason)))
+  const error = reason instanceof Error ? reason : new Error(String(reason))
+  mainLog.error('Unhandled rejection:', {
+    name: error.name,
+    message: error.message,
+    stack: error.stack,
+    promise: String(promise),
+  })
+  Sentry.captureException(error)
 })

@@ -10,6 +10,8 @@ directories:
 
 mac:
   artifactName: "Robb-Agents-Dev-${arch}.${ext}"
+  entitlements: build/entitlements.mac.inherit.plist
+  entitlementsInherit: build/entitlements.mac.inherit.plist
 
 dmg:
   artifactName: "Robb-Agents-Dev-${arch}.dmg"

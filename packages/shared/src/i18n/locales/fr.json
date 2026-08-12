@@ -118,6 +118,8 @@
   "browser.closeWindowEntirely": "Fermer complètement la fenêtre",
   "browser.hideWindow": "Masquer la fenêtre",
   "browser.newWindow": "Nouvelle fenêtre de navigateur",
+  "browser.passkeyAccountFallback": "Clé d'accès {{number}}",
+  "browser.passkeyAccountPrompt": "Choisissez une clé d'accès pour {{relyingPartyId}}",
   "browser.readyDescription": "Demandez à n'importe quelle session d'utiliser ce navigateur (ou d'en ouvrir un autre) pour effectuer des tâches telles que la recherche, le remplissage de formulaires, les contrôles QA ou l'extraction de données.",
   "browser.readyTitle": "Ce navigateur est prêt pour vos Agents - et pour vous ;)",
   "browser.safetyHint": "Robb Agents ne contrôlent les fenêtres du navigateur que lorsque vous le leur demandez.",

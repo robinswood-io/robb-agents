@@ -493,95 +493,67 @@ describe('PiEventAdapter', () => {
   // ============================================================
 
   describe('error surfacing', () => {
-    it('should emit plain error for unclassified error messages', () => {
-      const events = collect(adapter.adaptEvent({
+    function terminateAssistantError(errorMessage: string): any[] {
+      const attemptEvents = collect(adapter.adaptEvent({
         type: 'message_end',
         message: {
           role: 'assistant',
           stopReason: 'error',
-          errorMessage: 'Something went wrong internally',
+          errorMessage,
         },
       } as any));
+      expect(attemptEvents).toHaveLength(0);
+      return collect(adapter.adaptEvent({ type: 'agent_end', willRetry: false } as any));
+    }
 
-      expect(events).toHaveLength(1);
+    it('should emit plain error for unclassified error messages', () => {
+      const events = terminateAssistantError('Something went wrong internally');
+
+      expect(events).toHaveLength(2);
       expect(events[0]).toMatchObject({
         type: 'error',
         message: 'Something went wrong internally',
       });
+      expect(events[1]).toEqual({ type: 'complete' });
     });
 
     it('should emit typed_error for raw HTML proxy pages', () => {
-      const events = collect(adapter.adaptEvent({
-        type: 'message_end',
-        message: {
-          role: 'assistant',
-          stopReason: 'error',
-          errorMessage: '<html><head><title>400 Bad Request</title></head><body><center><h1>400 Bad Request</h1></center><hr><center>cloudflare</center></body></html>',
-        },
-      } as any));
+      const events = terminateAssistantError('<html><head><title>400 Bad Request</title></head><body><center><h1>400 Bad Request</h1></center><hr><center>cloudflare</center></body></html>');
 
-      expect(events).toHaveLength(1);
+      expect(events).toHaveLength(2);
       expect(events[0].type).toBe('typed_error');
       expect((events[0] as any).error.code).toBe('proxy_error');
       expect((events[0] as any).error.message.toLowerCase()).not.toContain('<html');
     });
 
     it('should emit typed_error for auth-expiry error messages', () => {
-      const events = collect(adapter.adaptEvent({
-        type: 'message_end',
-        message: {
-          role: 'assistant',
-          stopReason: 'error',
-          errorMessage: 'Provided authentication token is expired. Please try signing in again.',
-        },
-      } as any));
+      const events = terminateAssistantError('Provided authentication token is expired. Please try signing in again.');
 
-      expect(events).toHaveLength(1);
+      expect(events).toHaveLength(2);
       expect(events[0].type).toBe('typed_error');
       expect(events[0].error.code).toBe('expired_oauth_token');
     });
 
     it('should emit typed_error for 401 unauthorized errors', () => {
-      const events = collect(adapter.adaptEvent({
-        type: 'message_end',
-        message: {
-          role: 'assistant',
-          stopReason: 'error',
-          errorMessage: '401 Unauthorized',
-        },
-      } as any));
+      const events = terminateAssistantError('401 Unauthorized');
 
-      expect(events).toHaveLength(1);
+      expect(events).toHaveLength(2);
       expect(events[0].type).toBe('typed_error');
       expect(events[0].error.code).toBe('invalid_api_key');
     });
 
     it('should emit typed_error for billing/402 errors', () => {
-      const events = collect(adapter.adaptEvent({
-        type: 'message_end',
-        message: {
-          role: 'assistant',
-          stopReason: 'error',
-          errorMessage: '402 Payment required',
-        },
-      } as any));
+      const events = terminateAssistantError('402 Payment required');
 
-      expect(events).toHaveLength(1);
+      expect(events).toHaveLength(2);
       expect(events[0].type).toBe('typed_error');
       expect(events[0].error.code).toBe('billing_error');
     });
 
     it('should emit typed_error for rate limit errors', () => {
-      const events = collect(adapter.adaptEvent({
-        type: 'message_end',
-        message: {
-          role: 'assistant',
-          stopReason: 'error',
-          errorMessage: '429 Too many requests - rate limit exceeded',
-        },
-      } as any));
+      const events = terminateAssistantError('429 Too many requests - rate limit exceeded');
 
-      expect(events).toHaveLength(1);
+      expect(events).toHaveLength(2);
       expect(events[0].type).toBe('typed_error');
       expect(events[0].error.code).toBe('rate_limited');
     });
@@ -1052,18 +1024,20 @@ describe('PiEventAdapter', () => {
       });
     });
 
-    it('should emit error for failed auto_retry_end', () => {
+    it('should terminate the queue for a retry cancelled during backoff', () => {
       const events = collect(adapter.adaptEvent({
         type: 'auto_retry_end',
         success: false,
         finalError: 'Max retries exceeded',
       } as any));
 
-      expect(events).toHaveLength(1);
+      expect(events).toHaveLength(2);
       expect(events[0]).toMatchObject({
         type: 'error',
         message: 'Retry failed: Max retries exceeded',
       });
+      expect(events[1]).toEqual({ type: 'complete' });
+      expect(adapter.shouldCompleteQueue(false)).toBe(true);
     });
 
     it('should emit nothing for successful auto_retry_end', () => {
@@ -1153,6 +1127,85 @@ describe('PiEventAdapter', () => {
       expect(intermediateEvents[0].turnId).toMatch(/^pi-turn-1/);
       expect(toolStartEvents[0].turnId).toMatch(/^pi-turn-1/);
       expect(finalEvents[0].turnId).toMatch(/^pi-turn-1/);
+    });
+  });
+
+  // ============================================================
+  // Provider retry recovery state machine
+  // ============================================================
+
+  describe('provider retry recovery', () => {
+    const firstError = 'Codex error: An error occurred while processing your request. Please include the request ID first-request-id in your message.';
+    const finalError = 'Codex error: An error occurred while processing your request. Please include the request ID final-request-id in your message.';
+
+    it('keeps the queue open and suppresses an attempt error when a retry succeeds', () => {
+      collect(adapter.adaptEvent({ type: 'turn_start' } as any));
+
+      const attemptError = collect(adapter.adaptEvent({
+        type: 'message_end',
+        message: { role: 'assistant', stopReason: 'error', errorMessage: firstError },
+      } as any));
+      expect(attemptError).toHaveLength(0);
+
+      const retryingAgentEnd = collect(adapter.adaptEvent({
+        type: 'agent_end',
+        willRetry: true,
+      } as any));
+      expect(retryingAgentEnd).toHaveLength(0);
+      expect(adapter.shouldCompleteQueue(true)).toBe(false);
+
+      const retryStatus = collect(adapter.adaptEvent({
+        type: 'auto_retry_start',
+        attempt: 1,
+        maxAttempts: 3,
+        delayMs: 2_000,
+        errorMessage: firstError,
+      } as any));
+      expect(retryStatus).toMatchObject([{ type: 'status', message: 'Retrying (attempt 1/3)...' }]);
+
+      const recovered = collect(adapter.adaptEvent({
+        type: 'message_end',
+        message: { role: 'assistant', stopReason: 'stop', content: 'Recovered answer' },
+      } as any));
+      expect(recovered).toMatchObject([{ type: 'text_complete', text: 'Recovered answer' }]);
+      expect(collect(adapter.adaptEvent({ type: 'auto_retry_end', success: true, attempt: 1 } as any))).toHaveLength(0);
+
+      const completed = collect(adapter.adaptEvent({ type: 'agent_end', willRetry: false } as any));
+      expect(completed).toMatchObject([{ type: 'complete' }]);
+      expect(adapter.shouldCompleteQueue(true)).toBe(true);
+
+      const allEvents = [...attemptError, ...retryingAgentEnd, ...retryStatus, ...recovered, ...completed];
+      expect(allEvents.filter(event => event.type === 'error' || event.type === 'typed_error')).toHaveLength(0);
+    });
+
+    it('surfaces only the final Codex request ID after retries are exhausted', () => {
+      collect(adapter.adaptEvent({ type: 'turn_start' } as any));
+
+      collect(adapter.adaptEvent({
+        type: 'message_end',
+        message: { role: 'assistant', stopReason: 'error', errorMessage: firstError },
+      } as any));
+      collect(adapter.adaptEvent({ type: 'agent_end', willRetry: true } as any));
+      expect(adapter.shouldCompleteQueue(true)).toBe(false);
+
+      collect(adapter.adaptEvent({
+        type: 'message_end',
+        message: { role: 'assistant', stopReason: 'error', errorMessage: finalError },
+      } as any));
+      const terminal = collect(adapter.adaptEvent({ type: 'agent_end', willRetry: false } as any));
+
+      expect(terminal).toHaveLength(2);
+      expect(terminal[0]).toMatchObject({
+        type: 'typed_error',
+        error: {
+          code: 'service_error',
+          canRetry: true,
+          originalError: finalError,
+        },
+      });
+      expect(terminal[1]).toEqual({ type: 'complete' });
+      expect(JSON.stringify(terminal)).not.toContain('first-request-id');
+      expect(adapter.shouldCompleteQueue(true)).toBe(true);
     });
   });
 
@@ -1267,7 +1320,7 @@ describe('PiEventAdapter', () => {
       }
     });
 
-    it('non-overflow regression: rate-limit error preserves existing behavior', () => {
+    it('non-overflow regression: rate-limit error is emitted at terminal agent_end', () => {
       collect(adapter.adaptEvent({ type: 'turn_start' } as any));
 
       const events = collect(adapter.adaptEvent({
@@ -1279,13 +1332,13 @@ describe('PiEventAdapter', () => {
         },
       } as any));
 
-      // Rate-limit yields a typed_error (not held) — overflow state stays 'none'
-      // so a subsequent agent_end completes the queue normally.
-      expect(events).toHaveLength(1);
-      expect(events[0].type).toMatch(/^(error|typed_error)$/);
+      expect(events).toHaveLength(0);
 
-      const agentEndEvents = collect(adapter.adaptEvent({ type: 'agent_end' } as any));
-      expect(agentEndEvents).toMatchObject([{ type: 'complete' }]);
+      const agentEndEvents = collect(adapter.adaptEvent({ type: 'agent_end', willRetry: false } as any));
+      expect(agentEndEvents).toMatchObject([
+        { type: 'typed_error', error: { code: 'rate_limited' } },
+        { type: 'complete' },
+      ]);
       expect(adapter.shouldCompleteQueue(true)).toBe(true);
     });
 

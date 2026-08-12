@@ -35,7 +35,7 @@ class SigningPreflightTests(unittest.TestCase):
         with patch.dict(
             os.environ,
             {
-                "APPLE_TEAM_ID": "ABCDE12345",
+                "APPLE_TEAM_ID": MODULE.APPLE_TEAM_ID,
                 "APPLE_API_KEY_BASE64": private_key,
                 "APPLE_API_KEY_ID": "A1B2C3D4E5",
                 "APPLE_API_ISSUER": "11111111-2222-3333-4444-555555555555",
@@ -50,7 +50,7 @@ class SigningPreflightTests(unittest.TestCase):
         with patch.dict(
             os.environ,
             {
-                "APPLE_TEAM_ID": "ABCDE12345",
+                "APPLE_TEAM_ID": MODULE.APPLE_TEAM_ID,
                 "APPLE_API_KEY_BASE64": "not-base64",
                 "APPLE_API_KEY_ID": "A1B2C3D4E5",
                 "APPLE_API_ISSUER": "11111111-2222-3333-4444-555555555555",

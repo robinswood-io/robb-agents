@@ -9,8 +9,11 @@ import { describe, it, expect, beforeEach, mock } from 'bun:test'
 
 const createdWindows: any[] = []
 let toolbarLoadFailuresRemaining = 0
+let emptyStateLoadError: Error | null = null
 const mockShellOpenExternal = mock(async () => {})
 const mockIpcMainHandle = mock(() => {})
+const mockDialogShowMessageBox = mock(async () => ({ response: 0, checkboxChecked: false }))
+const mockSessionListeners: Record<string, Function[]> = {}
 
 function createMockWebContents() {
   const listeners: Record<string, Function[]> = {}
@@ -36,6 +39,11 @@ function createMockWebContents() {
     },
     loadURL: mock(async (url: string) => {
       currentUrl = url
+      if (url.includes('browser-empty-state.html') && emptyStateLoadError) {
+        const error = emptyStateLoadError
+        emptyStateLoadError = null
+        throw error
+      }
       const isToolbarUrl = typeof url === 'string' && url.includes('browser-toolbar.html')
       if (isToolbarUrl && toolbarLoadFailuresRemaining > 0) {
         toolbarLoadFailuresRemaining--
@@ -155,6 +163,7 @@ function createMockWindow(opts?: { width?: number; height?: number; minWidth?: n
 
 mock.module('electron', () => ({
   app: {
+    getName: mock(() => 'Robb Agents'),
     getPath: mock((name: string) => name === 'downloads' ? '/tmp/mock-downloads' : `/tmp/mock-${name}`),
   },
   BrowserWindow: class MockBrowserWindow {
@@ -172,6 +181,9 @@ mock.module('electron', () => ({
       this.webContents = view.webContents
       Object.assign(this, view)
     }
+  },
+  dialog: {
+    showMessageBox: mockDialogShowMessageBox,
   },
   ipcMain: {
     handle: mockIpcMainHandle,
@@ -196,7 +208,10 @@ mock.module('electron', () => ({
         onCompleted: mock((_cb: any) => {}),
         onErrorOccurred: mock((_cb: any) => {}),
       },
-      on: mock((_event: string, _cb: any) => {}),
+      on: mock((event: string, cb: any) => {
+        if (!mockSessionListeners[event]) mockSessionListeners[event] = []
+        mockSessionListeners[event].push(cb)
+      }),
     })),
   },
 }))
@@ -296,8 +311,11 @@ describe('BrowserPaneManager', () => {
   beforeEach(() => {
     createdWindows.length = 0
     toolbarLoadFailuresRemaining = 0
+    emptyStateLoadError = null
     mockShellOpenExternal.mockClear()
     mockIpcMainHandle.mockClear()
+    mockDialogShowMessageBox.mockClear()
+    for (const event of Object.keys(mockSessionListeners)) delete mockSessionListeners[event]
     manager = new BrowserPaneManager()
   })
 
@@ -318,6 +336,20 @@ describe('BrowserPaneManager', () => {
     expect(manager.listInstances()).toHaveLength(1)
   })
 
+  it('does not replace an immediate navigation when the empty state load is aborted', async () => {
+    emptyStateLoadError = Object.assign(new Error("ERR_ABORTED (-3) loading 'https://example.com/'"), {
+      code: 'ERR_ABORTED',
+      errno: -3,
+    })
+
+    manager.createInstance('empty-state-aborted')
+    await Bun.sleep(0)
+
+    const instance = (manager as any).instances.get('empty-state-aborted')
+    const loadedUrls = instance.pageView.webContents.loadURL.mock.calls.map((call: [string]) => call[0])
+    expect(loadedUrls).not.toContain('about:blank')
+  })
+
   it('allows http(s) popups with shared browser partition', () => {
     manager.createInstance('popup-allow')
     const instance = (manager as any).instances.get('popup-allow')
@@ -333,6 +365,52 @@ describe('BrowserPaneManager', () => {
     expect(result.overrideBrowserWindowOptions?.webPreferences?.partition).toBe('persist:browser-pane')
     expect(result.overrideBrowserWindowOptions?.webPreferences?.nodeIntegration).toBe(false)
     expect(result.overrideBrowserWindowOptions?.webPreferences?.contextIsolation).toBe(true)
+  })
+
+  it('prompts the user when WebAuthn returns multiple discoverable accounts', async () => {
+    manager.createInstance('passkey-select')
+    const listener = mockSessionListeners['select-webauthn-account']?.[0]
+    let resolveSelection!: (credentialId: string | undefined) => void
+    const selection = new Promise<string | undefined>((resolve) => {
+      resolveSelection = resolve
+    })
+    const callback = mock((credentialId?: string) => resolveSelection(credentialId))
+    expect(listener).toBeDefined()
+
+    listener({}, {
+      relyingPartyId: 'example.com',
+      accounts: [
+        { credentialId: 'credential-1', name: 'alice@example.com', displayName: 'Alice' },
+        { credentialId: 'credential-2', name: 'bob@example.com', displayName: 'Bob' },
+      ],
+      frame: null,
+    }, callback)
+    const credentialId = await selection
+
+    expect(credentialId).toBe('credential-1')
+  })
+
+  it('cancels WebAuthn account selection when the native dialog is dismissed', async () => {
+    mockDialogShowMessageBox.mockResolvedValueOnce({ response: 2, checkboxChecked: false })
+    manager.createInstance('passkey-cancel')
+    const listener = mockSessionListeners['select-webauthn-account']?.[0]
+    let resolveSelection!: (credentialId: string | undefined) => void
+    const selection = new Promise<string | undefined>((resolve) => {
+      resolveSelection = resolve
+    })
+    const callback = mock((credentialId?: string) => resolveSelection(credentialId))
+
+    listener({}, {
+      relyingPartyId: 'example.com',
+      accounts: [
+        { credentialId: 'credential-1', name: 'alice@example.com' },
+        { credentialId: 'credential-2', name: 'bob@example.com' },
+      ],
+      frame: null,
+    }, callback)
+    const credentialId = await selection
+
+    expect(credentialId).toBeUndefined()
   })
 
   it('denies app deep-link popups and forwards to deep-link handler', async () => {
@@ -735,6 +813,23 @@ describe('BrowserPaneManager', () => {
 
     expect(totalAttempts).toBe(3)
     expect(toolbarWebContents.loadURL).not.toHaveBeenCalledWith(expect.stringContaining('data:text/html'))
+  })
+
+  it('stops toolbar retries when the instance is destroyed during its initial load', async () => {
+    toolbarLoadFailuresRemaining = 20
+    manager.createInstance('destroy-during-toolbar-load')
+    const instance = (manager as any).instances.get('destroy-during-toolbar-load')
+
+    manager.destroyInstance('destroy-during-toolbar-load')
+    await Bun.sleep(600)
+
+    const fileAttempts = instance.toolbarView.webContents.loadFile.mock.calls.length
+    const toolbarUrlAttempts = instance.toolbarView.webContents.loadURL.mock.calls
+      .filter((args: [string]) => args[0]?.includes('browser-toolbar.html')).length
+
+    expect(fileAttempts + toolbarUrlAttempts).toBe(1)
+    expect(instance.toolbarView.webContents.loadURL).not.toHaveBeenCalledWith(expect.stringContaining('data:text/html'))
+    expect(instance.toolbarReady).toBe(false)
   })
 
   it('loads toolbar fallback page after retry exhaustion', async () => {

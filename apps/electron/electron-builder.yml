@@ -2,7 +2,7 @@ appId: io.robinswood.robbagents
 productName: Robb Agents
 copyright: Copyright © 2026 Robinswood
 
-electronVersion: "39.2.7"
+electronVersion: "43.4.0"
 
 # Hook to compile macOS 26+ Liquid Glass icon after packaging
 afterPack: scripts/afterPack.cjs
@@ -126,7 +126,7 @@ mac:
   hardenedRuntime: true
   gatekeeperAssess: false
   entitlements: build/entitlements.mac.plist
-  entitlementsInherit: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.inherit.plist
   extraResources:
     # Thin core SDK (sdk.mjs + types). ~4 MB — present on every platform.
     - from: node_modules/@anthropic-ai/claude-agent-sdk

@@ -331,7 +331,7 @@ export default function ServerSettingsPage() {
 
                   {pairing && (
                     <div className="mt-5 grid gap-5 rounded-2xl border border-border/70 bg-muted/20 p-5 sm:grid-cols-[184px_1fr]" data-testid="remote-pairing-qr">
-                      <div className="rounded-2xl bg-white p-3 shadow-sm">
+                      <div className="rounded-2xl bg-white p-3 shadow-xs">
                         <QRCodeSVG value={pairing.pairingUrl} size={160} level="M" title={t("settings.server.mobileQrAlt")} />
                       </div>
                       <div className="flex min-w-0 flex-col justify-center">

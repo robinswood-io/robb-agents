@@ -9,7 +9,7 @@
 import { join, parse as parsePath } from 'path'
 import { existsSync, mkdirSync } from 'fs'
 import { validateFilePath, getWorkspaceAllowedDirs } from '@craft-agent/server-core/handlers'
-import { BrowserView, BrowserWindow, app, ipcMain, nativeTheme, session, shell, type Session as ElectronSession } from 'electron'
+import { BrowserView, BrowserWindow, app, dialog, ipcMain, nativeTheme, session, shell, type Session as ElectronSession } from 'electron'
 import { mainLog } from './logger'
 import type { WindowManager } from './window-manager'
 import { BrowserCDP, type AccessibilitySnapshot, type ElementGeometry } from './browser-cdp'
@@ -19,6 +19,7 @@ import {
   type BrowserInstanceInfo,
 } from '../shared/types'
 import { DEFAULT_THEME, loadAppTheme, getAllowRemoteEvaluate } from '@craft-agent/shared/config'
+import { i18n } from '@craft-agent/shared/i18n'
 import { CodedError } from '@craft-agent/shared/protocol'
 import { getBrowserLiveFxCornerRadii } from '../shared/browser-live-fx'
 import { isBrowserPanePermissionAllowed } from './browser-pane-permissions'
@@ -510,11 +511,15 @@ export class BrowserPaneManager implements IBrowserPaneManager {
     void this.loadToolbarPage(instance)
       .finally(() => {
         // Safety net: if Electron never fires ready-to-show, still unblock focus/show behavior.
-        if (!instance.toolbarReady) {
+        if (this.isLiveToolbarInstance(instance) && !instance.toolbarReady) {
           this.markToolbarReady(instance, 'toolbar-load-finalized')
         }
       })
     void this.loadEmptyStatePage(instance).catch((error) => {
+      if (this.isAbortedNavigationError(error)) {
+        mainLog.info(`[browser-pane] empty-state load superseded by navigation id=${instance.id}`)
+        return
+      }
       mainLog.warn(`[browser-pane] empty-state load failed id=${instance.id}: ${error instanceof Error ? error.message : String(error)}`)
       void pageView.webContents.loadURL('about:blank')
     })
@@ -2204,6 +2209,14 @@ export class BrowserPaneManager implements IBrowserPaneManager {
     await instance.pageView.webContents.loadFile(join(__dirname, `renderer/${BROWSER_EMPTY_STATE_PAGE}`))
   }
 
+  private isAbortedNavigationError(error: unknown): boolean {
+    if (typeof error === 'object' && error !== null) {
+      const candidate = error as { code?: unknown; errno?: unknown }
+      if (candidate.code === 'ERR_ABORTED' || candidate.errno === -3) return true
+    }
+    return error instanceof Error && error.message.includes('ERR_ABORTED')
+  }
+
   private async handleDeepLinkUrl(url: string): Promise<void> {
     if (!url.startsWith(CRAFT_DEEPLINK_SCHEME_PREFIX)) return
 
@@ -2270,6 +2283,8 @@ export class BrowserPaneManager implements IBrowserPaneManager {
     let lastError: unknown = null
 
     for (let attempt = 0; attempt <= TOOLBAR_LOAD_MAX_RETRIES; attempt++) {
+      if (!this.isLiveToolbarInstance(instance)) return
+
       try {
         if (VITE_DEV_SERVER_URL) {
           await instance.toolbarView.webContents.loadURL(`${VITE_DEV_SERVER_URL}/browser-toolbar.html?${query}`)
@@ -2285,6 +2300,8 @@ export class BrowserPaneManager implements IBrowserPaneManager {
         }
         return
       } catch (error) {
+        if (!this.isLiveToolbarInstance(instance)) return
+
         lastError = error
         const retrying = attempt < TOOLBAR_LOAD_MAX_RETRIES
         mainLog.warn(
@@ -2297,8 +2314,16 @@ export class BrowserPaneManager implements IBrowserPaneManager {
       }
     }
 
+    if (!this.isLiveToolbarInstance(instance)) return
+
     const errorText = lastError instanceof Error ? lastError.message : String(lastError ?? 'unknown error')
     await this.loadToolbarFallback(instance, errorText)
+  }
+
+  private isLiveToolbarInstance(instance: BrowserInstance): boolean {
+    return this.instances.get(instance.id) === instance
+      && !instance.window.isDestroyed()
+      && !instance.toolbarView.webContents.isDestroyed()
   }
 
   private async loadToolbarFallback(instance: BrowserInstance, reason: string): Promise<void> {
@@ -3178,6 +3203,27 @@ export class BrowserPaneManager implements IBrowserPaneManager {
     if (this.partitionObserversInitialized) return
     this.partitionObserversInitialized = true
 
+    ses.on('select-webauthn-account', (_event, details, callback) => {
+      void (async () => {
+        let credentialId: string | undefined
+        try {
+          credentialId = await this.selectWebAuthnAccount(details)
+        } catch (error) {
+          mainLog.warn(
+            `[browser-pane] WebAuthn account selection failed rp=${details.relyingPartyId} error=${error instanceof Error ? error.message : String(error)}`,
+          )
+        }
+
+        try {
+          callback(credentialId)
+        } catch (error) {
+          mainLog.warn(
+            `[browser-pane] WebAuthn account callback failed rp=${details.relyingPartyId} error=${error instanceof Error ? error.message : String(error)}`,
+          )
+        }
+      })()
+    })
+
     ses.webRequest.onBeforeRequest((details, callback) => {
       const wcId = details.webContentsId
       if (typeof wcId === 'number' && wcId > 0) {
@@ -3276,6 +3322,43 @@ export class BrowserPaneManager implements IBrowserPaneManager {
         latest.state = state === 'completed' ? 'completed' : state === 'cancelled' ? 'cancelled' : 'interrupted'
       })
     })
+  }
+
+  private async selectWebAuthnAccount(details: {
+    relyingPartyId: string
+    accounts: Electron.WebAuthnAccount[]
+    frame: Electron.WebFrameMain | null
+  }): Promise<string | undefined> {
+    if (details.accounts.length === 0) return undefined
+    if (details.accounts.length === 1) return details.accounts[0]?.credentialId
+
+    const accountButtons = details.accounts.map((account, index) => (
+      account.displayName
+      || account.name
+      || i18n.t('browser.passkeyAccountFallback', { number: index + 1 })
+    ))
+    const cancelLabel = i18n.t('common.cancel')
+    const parentWindow = Array.from(this.instances.values()).find((instance) => (
+      !instance.window.isDestroyed()
+      && instance.pageView.webContents.mainFrame === details.frame?.top
+    ))?.window
+
+    const options: Electron.MessageBoxOptions = {
+      type: 'question',
+      title: app.getName(),
+      message: i18n.t('browser.passkeyAccountPrompt', {
+        relyingPartyId: details.relyingPartyId,
+      }),
+      buttons: [...accountButtons, cancelLabel],
+      defaultId: 0,
+      cancelId: accountButtons.length,
+      noLink: true,
+    }
+    const result = parentWindow
+      ? await dialog.showMessageBox(parentWindow, options)
+      : await dialog.showMessageBox(options)
+
+    return details.accounts[result.response]?.credentialId
   }
 
   private logPermissionDecision(kind: 'check' | 'request', permission: string, origin: string): void {

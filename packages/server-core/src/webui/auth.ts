@@ -8,6 +8,8 @@
  */
 
 import { SignJWT, jwtVerify } from 'jose'
+import { randomBytes, scrypt as scryptCallback, timingSafeEqual } from 'node:crypto'
+import { promisify } from 'node:util'
 
 // ---------------------------------------------------------------------------
 // JWT helpers (via jose library)
@@ -149,26 +151,30 @@ export function extractSessionCookie(cookieHeader: string | null): string | null
 }
 
 // ---------------------------------------------------------------------------
-// Password verification (argon2id via Bun.password)
+// Password verification (Node-compatible scrypt)
 // ---------------------------------------------------------------------------
 
-let hashedPassword: string | null = null
+const scrypt = promisify(scryptCallback)
+let hashedPassword: { salt: Buffer; hash: Buffer } | null = null
 
 /**
  * Hash the login password at startup. Must be called before any auth requests.
  * The hash is stored in memory — the raw password is not retained.
  */
 export async function initPasswordHash(plaintext: string): Promise<void> {
-  hashedPassword = await Bun.password.hash(plaintext, { algorithm: 'argon2id' })
+  const salt = randomBytes(16)
+  const hash = await scrypt(plaintext, salt, 64) as Buffer
+  hashedPassword = { salt, hash }
 }
 
 /**
  * Verify a user-supplied password against the pre-hashed password.
- * Uses Bun's built-in argon2id verification (constant-time).
+ * Uses a constant-time comparison and works in Bun, Node, and Electron.
  */
 export async function verifyPassword(input: string): Promise<boolean> {
   if (!hashedPassword) return false
-  return Bun.password.verify(input, hashedPassword)
+  const candidate = await scrypt(input, hashedPassword.salt, hashedPassword.hash.length) as Buffer
+  return timingSafeEqual(candidate, hashedPassword.hash)
 }
 
 // ---------------------------------------------------------------------------

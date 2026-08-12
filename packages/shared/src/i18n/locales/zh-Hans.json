@@ -118,6 +118,8 @@
   "browser.closeWindowEntirely": "完全关闭窗口",
   "browser.hideWindow": "隐藏窗口",
   "browser.newWindow": "新建浏览器窗口",
+  "browser.passkeyAccountFallback": "通行密钥 {{number}}",
+  "browser.passkeyAccountPrompt": "为 {{relyingPartyId}} 选择通行密钥",
   "browser.readyDescription": "让任何会话使用此浏览器（或打开另一个）来完成研究、填写表单、质检或数据提取等任务。",
   "browser.readyTitle": "浏览器已准备就绪 ;)",
   "browser.safetyHint": "Robb Agents 仅在您要求时才会控制浏览器窗口。",

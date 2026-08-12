@@ -422,7 +422,19 @@ export function parseError(
     }
   } else if (lowerMessage.includes('429') || lowerMessage.includes('rate limit') || lowerMessage.includes('too many requests')) {
     code = 'rate_limited';
-  } else if (lowerMessage.includes('500') || lowerMessage.includes('502') || lowerMessage.includes('503') || lowerMessage.includes('504') || lowerMessage.includes('internal server error') || lowerMessage.includes('service unavailable')) {
+  } else if (
+    lowerMessage.includes('500') ||
+    lowerMessage.includes('502') ||
+    lowerMessage.includes('503') ||
+    lowerMessage.includes('504') ||
+    lowerMessage.includes('internal server error') ||
+    lowerMessage.includes('service unavailable') ||
+    lowerMessage.includes('server_error') ||
+    (
+      lowerMessage.includes('an error occurred while processing your request') &&
+      lowerMessage.includes('request id')
+    )
+  ) {
     code = 'service_error';
   } else if (lowerMessage.includes('network') || lowerMessage.includes('econnrefused') || lowerMessage.includes('enotfound') || lowerMessage.includes('fetch failed') || lowerMessage.includes('connection')) {
     code = 'network_error';
