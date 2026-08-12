@@ -77,6 +77,8 @@ export { messageToStored, storedToMessage } from './message-mapper.ts';
 export type {
   ServerStatus,
   ServerHealth,
+  ServerLongRunningHealth,
+  ServerLongRunningProcess,
   SessionProcessingStatus,
   ActiveSessionInfo,
 } from './server.ts';

@@ -87,6 +87,8 @@ export interface EditorSubtask {
 
 export interface SpecForm {
   title: string
+  /** Canonical cockpit description; legacy/blank forms fall back to goal at read time. */
+  description?: string
   goal: string
   /** Checkable rubric the orchestrator grades the finished run against. Persisted to `acceptance_criteria`. */
   acceptanceCriteria?: string
@@ -175,6 +177,7 @@ export function buildSpec(form: SpecForm, modelToConnection: Map<string, string>
 
   const orchConn = form.orchConnection ?? (form.orchModel ? modelToConnection.get(form.orchModel) : undefined)
   const cwd = form.cwd?.trim()
+  const description = form.description?.trim()
   const acceptanceCriteria = form.acceptanceCriteria?.trim()
   // Task-family defaults: orchestrator model/connection + the explicit, persisted permission mode.
   const defaults: Record<string, unknown> = {}
@@ -187,6 +190,7 @@ export function buildSpec(form: SpecForm, modelToConnection: Map<string, string>
   return {
     id: form.fixedId || slugify(form.title) || 'untitled-task',
     title: form.title.trim() || 'Untitled task',
+    ...(description ? { description } : {}),
     goal: form.goal.trim() || form.title.trim() || 'Untitled task',
     mission: {
       inputs: [],

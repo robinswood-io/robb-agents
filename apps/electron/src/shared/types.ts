@@ -199,6 +199,10 @@ import type {
   TaskKillSwitchUpdateRequest,
   TaskGetResult,
   TaskResultsDto,
+  TaskRepairRequest,
+  DurableTaskSnapshotDto,
+  DurableTaskMetadataUpdateRequest,
+  DurableTaskCockpitProjectionsDto,
   FileAttachment,
   SendMessageOptions,
   SessionEvent,
@@ -258,6 +262,7 @@ export interface ElectronAPI {
   pauseTask(workspaceId: string, slug: string, runId: string): Promise<void>
   resumeTask(workspaceId: string, slug: string, runId: string): Promise<void>
   stopTask(workspaceId: string, slug: string, runId: string): Promise<void>
+  repairTask(workspaceId: string, req: TaskRepairRequest): Promise<TaskRunSnapshotDto>
   listTaskApprovals(workspaceId: string, slug?: string, runId?: string): Promise<TaskApprovalRequestDto[]>
   resolveTaskApproval(
     workspaceId: string,
@@ -270,6 +275,9 @@ export interface ElectronAPI {
   ): Promise<TaskKillSwitchSnapshotDto>
   getTask(workspaceId: string, slug: string, runId?: string): Promise<TaskGetResult>
   listTasks(workspaceId: string): Promise<string[]>
+  listDurableTasks(workspaceId: string, includeArchived?: boolean): Promise<DurableTaskSnapshotDto[]>
+  updateTaskMetadata(workspaceId: string, request: DurableTaskMetadataUpdateRequest): Promise<DurableTaskSnapshotDto>
+  getTaskCockpitProjections(workspaceId: string, slug: string): Promise<DurableTaskCockpitProjectionsDto>
   getTaskResults(workspaceId: string, slug: string, runId?: string): Promise<TaskResultsDto>
 
   respondToPermission(sessionId: string, requestId: string, allowed: boolean, alwaysAllow: boolean, options?: PermissionResponseOptions): Promise<boolean>

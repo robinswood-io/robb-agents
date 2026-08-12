@@ -5,6 +5,10 @@ import { OAuthFlowStore } from '@craft-agent/shared/auth'
 import { ensureConfigDir, loadStoredConfig, saveConfig } from '@craft-agent/shared/config'
 import { CONFIG_DIR } from '@craft-agent/shared/config/paths'
 import { setBundledAssetsRoot } from '@craft-agent/shared/utils'
+import {
+  shutdownLongRunningProcessSupervisor,
+  startLongRunningProcessSupervisor,
+} from '@craft-agent/shared/processes'
 import { WsRpcServer, type WsRpcServerOptions, type WsRpcTlsOptions } from '../transport/server'
 import type {
   EventSink,
@@ -347,7 +351,16 @@ export async function bootstrapServer<TSessionManager, THandlerDeps>(
     },
   })
 
-  await wsServer.listen()
+  try {
+    await wsServer.listen()
+  } catch (error) {
+    releaseServerLock()
+    throw error
+  }
+  startLongRunningProcessSupervisor({
+    healthReportPath: process.env.CRAFT_HEALTH_REPORT_PATH
+      ?? join(CONFIG_DIR, 'health', 'long-running.json'),
+  })
 
   options.bindRpcServer?.(sessionManager, wsServer)
 
@@ -370,9 +383,16 @@ export async function bootstrapServer<TSessionManager, THandlerDeps>(
 
   options.setSessionEventSink(sessionManager, wsServer.push.bind(wsServer))
 
-  await options.initializeSessionManager(sessionManager)
-
-  modelRefreshService.startAll()
+  try {
+    await options.initializeSessionManager(sessionManager)
+    modelRefreshService.startAll()
+  } catch (error) {
+    try { wsServer.close() } catch { /* best-effort startup rollback */ }
+    try { oauthFlowStore.dispose() } catch { /* best-effort startup rollback */ }
+    shutdownLongRunningProcessSupervisor('server startup failed')
+    releaseServerLock()
+    throw error
+  }
 
   platform.logger.info(`Craft Agent server listening on ${wsServer.protocol}://${rpcHost}:${wsServer.port}`)
 
@@ -419,6 +439,8 @@ export async function bootstrapServer<TSessionManager, THandlerDeps>(
     } catch (error) {
       platform.logger.error('[bootstrap] Failed to dispose OAuth flow store:', error)
     }
+
+    shutdownLongRunningProcessSupervisor('server shutdown')
 
     releaseServerLock()
   }

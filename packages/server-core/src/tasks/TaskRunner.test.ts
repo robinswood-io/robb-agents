@@ -1879,4 +1879,71 @@ describe('TaskRunner (Conductor)', () => {
 
     expect(host.nodeCounts).toContainEqual({ sessionId: 'orch', count: 3 });
   });
+
+  it('starts a targeted repair as a new run and reuses confirmed upstream evidence', async () => {
+    saveTaskSpec(
+      root,
+      specOf({
+        id: 'targeted-repair',
+        title: 'Targeted repair',
+        goal: 'g',
+        nodes: [
+          { id: 'collect', prompt: 'collect' },
+          { id: 'publish', depends_on: ['collect'], prompt: 'publish ${nodes.collect.output}' },
+        ],
+      }),
+    );
+    const runner = makeRunner();
+    runner.run('targeted-repair', { runId: 'source' });
+    await tick();
+    host.complete('collect', { finalText: 'CONFIRMED INPUT' });
+    await tick();
+    host.complete('publish', { finalText: 'OLD RESULT' });
+    await tick();
+    expect(runner.getRunState('targeted-repair', 'source')?.status).toBe('completed');
+
+    const repair = runner.repair('targeted-repair', 'source', ['publish'], { runId: 'repair-1' });
+    await tick();
+
+    expect(repair.runId).toBe('repair-1');
+    expect(host.dispatchedNames()).toEqual(['collect', 'publish', 'publish']);
+    const repairedPrompt = host.sent.filter((entry) => entry.sessionId === 'sess-publish').at(-1)?.message;
+    expect(repairedPrompt).toContain('publish CONFIRMED INPUT');
+    const repairLog = readRunLog(root, 'targeted-repair', 'repair-1');
+    expect(repairLog).toContainEqual(expect.objectContaining({ kind: 'run-replayed', sourceRunId: 'source' }));
+    expect(repairLog).toContainEqual(expect.objectContaining({ kind: 'node-reused', nodeId: 'collect' }));
+  });
+
+  it('refuses a targeted repair while the source run is still active', async () => {
+    saveTaskSpec(root, specOf({
+      id: 'active-repair',
+      title: 'Active repair',
+      goal: 'g',
+      nodes: [{ id: 'work', prompt: 'work' }],
+    }));
+    const runner = makeRunner();
+    runner.run('active-repair', { runId: 'source' });
+    await tick();
+
+    expect(() => runner.repair('active-repair', 'source', ['work'], { runId: 'repair' }))
+      .toThrow('Cannot repair non-terminal run');
+    expect(runner.getRunState('active-repair', 'repair')).toBeNull();
+  });
+
+  it('refuses to append a targeted repair into the immutable source run', async () => {
+    saveTaskSpec(root, specOf({
+      id: 'immutable-repair',
+      title: 'Immutable repair',
+      goal: 'g',
+      nodes: [{ id: 'work', prompt: 'work' }],
+    }));
+    const runner = makeRunner();
+    runner.run('immutable-repair', { runId: 'source' });
+    await tick();
+    host.complete('work', { finalText: 'done' });
+    await tick();
+
+    expect(() => runner.repair('immutable-repair', 'source', ['work'], { runId: 'source' }))
+      .toThrow('must create a new immutable run');
+  });
 });

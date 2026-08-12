@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { ChevronLeft, ChevronDown, Sparkles, Plus, Trash2, Check, X, ExternalLink, RefreshCw, CheckCircle2, XCircle, CircleSlash, DatabaseZap, Zap, Folder, Pause, Play, Square, ClipboardCopy, ShieldCheck, AlertTriangle } from 'lucide-react'
+import { ChevronLeft, ChevronDown, Sparkles, Plus, Trash2, Check, X, ExternalLink, RefreshCw, CheckCircle2, XCircle, CircleSlash, DatabaseZap, Zap, Folder, Pause, Play, Square, ClipboardCopy, ShieldCheck, AlertTriangle, Archive, Wrench, GitBranch, FileCheck2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
@@ -514,6 +514,7 @@ export function TaskEditor({
   const [tab, setTab] = React.useState<Tab>('definition')
   const [mode, setMode] = React.useState<Mode>('manual')
   const [title, setTitle] = React.useState('')
+  const [description, setDescription] = React.useState('')
   const [goal, setGoal] = React.useState('')
   const [acceptanceCriteria, setAcceptanceCriteria] = React.useState('')
   // Empty string = "use the runner default"; a number pins the spec's max_iterations.
@@ -586,8 +587,6 @@ export function TaskEditor({
         return quickAddChildToSubtask({ sessionId: child.id, title, model: child.model, llmConnection: child.llmConnection })
       })
     },
-    // fallbackModel is stable for the life of an open editor (same reasoning as the prefill effect).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [store, editSessionId],
   )
 
@@ -606,11 +605,12 @@ export function TaskEditor({
         .then((res) => {
           if (cancelled) return
           const spec = res.spec as
-            | { title?: string; goal?: string; acceptance_criteria?: string; max_iterations?: number; project?: string; cwd?: string; sources?: string[]; skills?: string[]; defaults?: { model?: string; llmConnection?: string; permissionMode?: TaskPermissionMode }; nodes?: Array<{ id: string; title?: string; prompt?: string; model?: string; llmConnection?: string; depends_on?: string[] }> }
+            | { title?: string; description?: string; goal?: string; acceptance_criteria?: string; max_iterations?: number; project?: string; cwd?: string; sources?: string[]; skills?: string[]; defaults?: { model?: string; llmConnection?: string; permissionMode?: TaskPermissionMode }; nodes?: Array<{ id: string; title?: string; prompt?: string; model?: string; llmConnection?: string; depends_on?: string[] }> }
             | undefined
           if (!spec) return
           if (spec.title) setTitle(spec.title)
           if (spec.goal) setGoal(spec.goal)
+          setDescription(spec.description ?? spec.goal ?? '')
           setAcceptanceCriteria(spec.acceptance_criteria ?? '')
           setMaxRepairs(spec.max_iterations != null ? String(spec.max_iterations) : '')
           // Bind from the spec, else the session's existing binding. Record it as the immutable floor.
@@ -697,6 +697,40 @@ export function TaskEditor({
     [editSlug, results?.runId, workspaceId, loadResults, t],
   )
 
+  const repairMissionNode = React.useCallback(
+    async (nodeId: string) => {
+      if (!editSlug || !results?.runId) return
+      try {
+        const repaired = await window.electronAPI.repairTask(workspaceId, {
+          slug: editSlug,
+          sourceRunId: results.runId,
+          nodeIds: [nodeId],
+          orchestratorSessionId: editSessionId,
+        })
+        toast.success(t('tasks.repairStarted'), { description: repaired.runId })
+        loadResults()
+      } catch (error) {
+        toast.error(t('tasks.controlActionFailed'), {
+          description: error instanceof Error ? error.message : String(error),
+        })
+      }
+    },
+    [editSlug, editSessionId, results?.runId, workspaceId, loadResults, t],
+  )
+
+  const archiveTask = React.useCallback(async () => {
+    if (!editSlug) return
+    try {
+      await window.electronAPI.updateTaskMetadata(workspaceId, { slug: editSlug, archived: true })
+      toast.success(t('tasks.archived'))
+      onClose()
+    } catch (error) {
+      toast.error(t('tasks.archiveTaskFailed'), {
+        description: error instanceof Error ? error.message : String(error),
+      })
+    }
+  }, [editSlug, workspaceId, onClose, t])
+
   // Load results when the Results tab is first opened (and there's a slug to read).
   React.useEffect(() => {
     if (tab === 'results' && editSlug && !results && !resultsLoading) loadResults()
@@ -759,7 +793,7 @@ export function TaskEditor({
         return
       }
       const spec = res.spec as
-        | { title?: string; goal?: string; acceptance_criteria?: string; max_iterations?: number; defaults?: { model?: string; llmConnection?: string; permissionMode?: TaskPermissionMode }; nodes?: Array<{ id: string; title?: string; prompt?: string; model?: string; llmConnection?: string; depends_on?: string[] }> }
+        | { title?: string; description?: string; goal?: string; acceptance_criteria?: string; max_iterations?: number; defaults?: { model?: string; llmConnection?: string; permissionMode?: TaskPermissionMode }; nodes?: Array<{ id: string; title?: string; prompt?: string; model?: string; llmConnection?: string; depends_on?: string[] }> }
         | undefined
       if (!spec || !res.validation.valid) {
         discardDraft(res.orchestratorSessionId)
@@ -769,6 +803,7 @@ export function TaskEditor({
       }
       if (spec.title) setTitle(spec.title)
       if (spec.goal) setGoal(spec.goal)
+      setDescription(spec.description ?? spec.goal ?? '')
       setAcceptanceCriteria(spec.acceptance_criteria ?? '')
       setMaxRepairs(spec.max_iterations != null ? String(spec.max_iterations) : '')
       // Adopt the generator's routing only when it explicitly authored it — don't wipe the user's picks.
@@ -783,7 +818,7 @@ export function TaskEditor({
       // the visible signal. A top-right toast would also overlap the editor's top-right
       // Cancel/Create/Create & Run buttons and swallow their clicks.
     },
-    [t, fallbackModel, discardDraft],
+    [t, discardDraft],
   )
 
   // Subscribe once for async generate results; ignore events for other generations/sessions.
@@ -869,6 +904,7 @@ export function TaskEditor({
     const spec = buildSpec(
       {
         title,
+        description,
         goal,
         acceptanceCriteria,
         maxRepairs: maxRepairs.trim() === '' ? undefined : Number(maxRepairs),
@@ -976,6 +1012,11 @@ export function TaskEditor({
               <ExternalLink className="h-3.5 w-3.5" strokeWidth={2} /> {t('tasks.openSession')}
             </Btn>
           )}
+          {isEdit && editSlug && (
+            <Btn variant="ghost" onClick={archiveTask} disabled={busy} title={t('tasks.archiveTask')}>
+              <Archive className="h-3.5 w-3.5" strokeWidth={2} /> {t('tasks.archiveTask')}
+            </Btn>
+          )}
           {tab === 'definition' && (
             <>
               <Btn variant="secondary" onClick={onClose} disabled={busy}>
@@ -1005,6 +1046,7 @@ export function TaskEditor({
           onOpenChildSession={onOpenChildSession}
           onControl={controlMission}
           onResolveApproval={resolveMissionApproval}
+          onRepairNode={repairMissionNode}
         />
       ) : (
       /* Body */
@@ -1036,6 +1078,17 @@ export function TaskEditor({
               onChange={(e) => setTitle(e.target.value)}
               placeholder={t('tasks.titlePlaceholder')}
               className="w-full rounded-lg border border-border bg-background px-3 py-2 text-[13.5px] font-semibold outline-none focus:border-foreground/25"
+            />
+          </div>
+
+          <div>
+            <div className="mb-1.5 text-[12px] font-semibold text-foreground/55">{t('common.description')}</div>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={2}
+              placeholder={t('common.description')}
+              className="w-full resize-none rounded-lg border border-border bg-background px-3 py-2 text-[12.5px] leading-relaxed outline-none focus:border-foreground/25 field-sizing-content max-h-36"
             />
           </div>
 
@@ -1263,12 +1316,14 @@ function ResultsPanel({
   onOpenChildSession,
   onControl,
   onResolveApproval,
+  onRepairNode,
 }: {
   results: TaskResults | null
   loading: boolean
   onOpenChildSession?: (sessionId: string) => void
   onControl: (action: 'pause' | 'resume' | 'stop') => void
   onResolveApproval: (requestId: string, decision: 'approved' | 'rejected') => void
+  onRepairNode: (nodeId: string) => void
 }) {
   const { t } = useTranslation()
 
@@ -1280,7 +1335,7 @@ function ResultsPanel({
     )
   }
 
-  if (!results || !results.runId || (results.nodes.length === 0 && !results.controlRoom)) {
+  if (!results) {
     return (
       <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 rounded-xl border border-border bg-card px-6 text-center text-foreground/50 shadow-minimal">
         <CircleSlash className="h-6 w-6 text-foreground/30" strokeWidth={2} />
@@ -1293,6 +1348,8 @@ function ResultsPanel({
   const verdicts = results.verdicts ?? (verdict ? [verdict] : [])
   const repair = results.repair
   const control = results.controlRoom
+  const task = results.task
+  const repairableRun = ['completed', 'failed', 'stopped'].includes(results.runStatus ?? '')
   const evaluationLabel = control?.evaluation.status === 'passing'
     ? t('tasks.evaluationPassing')
     : control?.evaluation.status === 'failing'
@@ -1311,6 +1368,55 @@ function ResultsPanel({
           : t('tasks.costUntracked')
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto rounded-xl border border-border bg-card p-4 shadow-minimal">
+      {task && (
+        <section data-testid="durable-task-overview" className="rounded-[12px] border border-border bg-background/60 p-3.5">
+          <div className="flex flex-wrap items-start gap-2">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <span className="truncate text-[14px] font-bold">{task.title}</span>
+                <span className="rounded-full border border-border bg-card px-2 py-0.5 text-[10.5px] font-semibold text-foreground/55">
+                  {task.visualState.label}
+                </span>
+                <span className="text-[10.5px] text-foreground/35">v{task.revision}</span>
+              </div>
+              <p className="mt-1 text-[12px] leading-relaxed text-foreground/65">{task.description}</p>
+            </div>
+            <div className="rounded-lg border border-border/70 bg-card px-2.5 py-1.5 text-[10.5px] text-foreground/55">
+              {task.executor.agent} · {task.executor.wrapper}
+              {task.executor.model ? ` · ${task.executor.model}` : ''}
+            </div>
+          </div>
+          <div className="mt-3 grid gap-2 md:grid-cols-3">
+            <div className="rounded-lg border border-border/60 bg-card/70 px-3 py-2">
+              <div className="text-[10px] font-bold uppercase tracking-wide text-foreground/40">{t('tasks.nextAction')}</div>
+              <div className="mt-1 text-[11.5px] leading-relaxed text-foreground/70">{task.nextAction}</div>
+            </div>
+            <div className="rounded-lg border border-border/60 bg-card/70 px-3 py-2">
+              <div className="text-[10px] font-bold uppercase tracking-wide text-foreground/40">{t('tasks.sources')}</div>
+              <div className="mt-1 text-[11.5px] text-foreground/70">{task.sources.join(', ') || t('tasks.noneSelected')}</div>
+            </div>
+            <div className="rounded-lg border border-border/60 bg-card/70 px-3 py-2">
+              <div className="text-[10px] font-bold uppercase tracking-wide text-foreground/40">{t('tasks.project')}</div>
+              <div className="mt-1 text-[11.5px] text-foreground/70">{task.projectId || t('tasks.noProject')}</div>
+            </div>
+          </div>
+          {(task.externalRefs.craftTaskId || task.externalRefs.googleTaskId || task.externalRefs.temporalWorkflowId) && (
+            <div className="mt-2 flex flex-wrap gap-1.5 text-[10.5px] text-foreground/50">
+              {task.externalRefs.craftTaskId && <span className="rounded bg-foreground/[0.05] px-1.5 py-0.5">Craft · {task.externalRefs.craftTaskId}</span>}
+              {task.externalRefs.googleTaskId && <span className="rounded bg-foreground/[0.05] px-1.5 py-0.5">Google Tasks · {task.externalRefs.googleTaskId}</span>}
+              {task.externalRefs.temporalWorkflowId && <span className="rounded bg-foreground/[0.05] px-1.5 py-0.5">Temporal · {task.externalRefs.temporalWorkflowId}</span>}
+            </div>
+          )}
+        </section>
+      )}
+
+      {!results.runId && (
+        <div className="flex min-h-36 flex-col items-center justify-center gap-2 rounded-xl border border-border bg-card px-6 text-center text-foreground/50">
+          <CircleSlash className="h-6 w-6 text-foreground/30" strokeWidth={2} />
+          <p className="text-[12.5px]">{t('tasks.resultsEmpty')}</p>
+        </div>
+      )}
+
       {control && (
         <section className="rounded-[12px] border border-indigo-500/20 bg-indigo-500/[0.035] p-3.5">
           <div className="flex flex-wrap items-center gap-2">
@@ -1471,6 +1577,28 @@ function ResultsPanel({
         </div>
       )}
 
+      {results.userEvidence && (
+        <section className="rounded-[10px] border border-border/70 bg-foreground/[0.015] px-3 py-2.5">
+          <div className="mb-2 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-foreground/45">
+            <FileCheck2 className="h-3.5 w-3.5" /> {t('tasks.userProof')}
+          </div>
+          <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-5">
+            {[
+              [t('tasks.actionRequested'), results.userEvidence.actionRequested],
+              [t('tasks.actionAttempted'), results.userEvidence.actionAttempted.join('; ') || t('tasks.noneRecorded')],
+              [t('tasks.mutationApplied'), results.userEvidence.mutationsApplied.join('; ') || t('tasks.noneRecorded')],
+              [t('tasks.realVerification'), results.userEvidence.userVerification],
+              [t('tasks.remainingLimitation'), results.userEvidence.remainingLimitations.join('; ') || t('tasks.noneRecorded')],
+            ].map(([label, value]) => (
+              <div key={label} className="rounded-lg border border-border/60 bg-card/70 px-2.5 py-2">
+                <div className="text-[10px] font-bold uppercase tracking-wide text-foreground/40">{label}</div>
+                <div className="mt-1 text-[11.5px] leading-relaxed text-foreground/70">{value}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       {verdict && (
         <div
           className={cn(
@@ -1535,6 +1663,7 @@ function ResultsPanel({
         return (
         <div key={node.id} className="rounded-[10px] border border-border/70 bg-foreground/[0.015] p-3">
           <div className="flex items-center gap-2">
+            <GitBranch className="h-3.5 w-3.5 shrink-0 text-foreground/35" />
             <span className="min-w-0 flex-1 truncate text-[13px] font-semibold">{node.title}</span>
             <span className={cn('shrink-0 rounded-full border px-2 py-0.5 text-[10.5px] font-bold', pill.className)}>
               {pill.labelKey ? t(pill.labelKey) : node.state}
@@ -1547,6 +1676,28 @@ function ResultsPanel({
               >
                 <ExternalLink className="h-3 w-3" strokeWidth={2.5} /> {t('tasks.openSession')}
               </button>
+            )}
+            <button
+              type="button"
+              disabled={!repairableRun || !node.repair?.allowed}
+              title={!repairableRun ? t('tasks.repairRunMustSettle') : node.repair?.reason}
+              onClick={() => onRepairNode(node.id)}
+              className="inline-flex shrink-0 items-center gap-1 rounded px-1.5 py-1 text-[11.5px] font-semibold text-indigo-500 hover:bg-indigo-500/10 disabled:cursor-not-allowed disabled:text-foreground/25 dark:text-indigo-300"
+            >
+              <Wrench className="h-3 w-3" strokeWidth={2.5} /> {t('tasks.repairNode')}
+            </button>
+          </div>
+          <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[10.5px] text-foreground/45">
+            <span>{t('tasks.attemptCount', { count: node.attempt ?? 0 })}</span>
+            <span>·</span>
+            <span>
+              {t('tasks.dependencies')}: {node.dependsOn?.length ? node.dependsOn.join(' → ') : t('tasks.noDependencies')}
+            </span>
+            {node.proofHash && (
+              <>
+                <span>·</span>
+                <span title={node.proofHash}>{t('tasks.proof')}: {node.proofHash.slice(0, 12)}…</span>
+              </>
             )}
           </div>
           {node.output ? (

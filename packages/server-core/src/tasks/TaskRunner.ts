@@ -59,6 +59,7 @@ import {
   authorizeWorkspacePath,
   evaluateKillSwitch,
   validateExecutionIsolationPolicy,
+  planMissionReplay,
   type ExecutionIsolationPolicy,
   type GuardDecision,
   type KillSwitchSnapshot,
@@ -155,6 +156,12 @@ export interface RunOptions {
   runId?: string;
   /** When the run completes, message the orchestrator to verify the result. Default true. */
   verifyOnComplete?: boolean;
+  /** Confirmed outputs copied from an earlier run before scheduling a targeted repair. */
+  replay?: {
+    sourceRunId: string;
+    externalMutationsApproved: boolean;
+    reusedNodes: Array<{ nodeId: string; proofHash?: string }>;
+  };
 }
 
 export type RunStatus = 'running' | 'paused' | 'waiting-approval' | 'verifying' | 'stopped' | 'completed' | 'failed';
@@ -296,6 +303,32 @@ class ActiveRun {
     });
     this.unsubscribe = this.deps.host.onSessionComplete((evt) => this.onSessionComplete(evt));
     this.log({ kind: 'run-started', taskId: this.spec.id, runId: this.runId, orchestratorSessionId: this.opts.orchestratorSessionId });
+    if (this.opts.replay) {
+      this.log({
+        kind: 'run-replayed',
+        sourceRunId: this.opts.replay.sourceRunId,
+        externalMutationsApproved: this.opts.replay.externalMutationsApproved,
+      });
+      for (const reused of this.opts.replay.reusedNodes) {
+        const output = readNodeOutput(
+          this.deps.workspaceRoot,
+          this.slug,
+          this.opts.replay.sourceRunId,
+          reused.nodeId,
+        );
+        const state = this.state.get(reused.nodeId);
+        if (!output || !state) continue;
+        state.state = 'done';
+        this.outputs[reused.nodeId] = output;
+        writeNodeOutput(this.deps.workspaceRoot, this.slug, this.runId, reused.nodeId, output);
+        this.log({
+          kind: 'node-reused',
+          nodeId: reused.nodeId,
+          sourceRunId: this.opts.replay.sourceRunId,
+          proofHash: reused.proofHash,
+        });
+      }
+    }
     this.runStatus = 'running';
     // Move the task tile to the in-progress column for the duration of the run.
     if (this.opts.orchestratorSessionId) {
@@ -1656,6 +1689,126 @@ export class TaskRunner {
       slug,
       runId,
       { ...opts, params: resolveParams(loaded.spec, opts.params), verifyOnComplete: opts.verifyOnComplete ?? true },
+      this.deps,
+    );
+    this.runs.set(this.key(slug, runId), run);
+    try {
+      run.start();
+    } catch (error) {
+      this.runs.delete(this.key(slug, runId));
+      throw error;
+    }
+    return run.snapshot();
+  }
+
+  /**
+   * Start a new run that reuses confirmed outputs outside the requested repair
+   * frontier. External mutations remain blocked unless the operator explicitly
+   * approves them and every reused mutation carries a valid reconciled proof.
+   */
+  repair(
+    slug: string,
+    sourceRunId: string,
+    nodeIds: string[],
+    opts: Omit<RunOptions, 'replay'> & { approveExternalMutations?: boolean } = {},
+  ): RunSnapshot {
+    if (nodeIds.length === 0) throw new Error('Targeted repair requires at least one node id');
+    const sourceLog = readRunLog(this.deps.workspaceRoot, slug, sourceRunId);
+    if (sourceLog.length === 0) throw new Error(`Repair source run "${slug}:${sourceRunId}" was not found`);
+    const sourceStatus = persistedRunStatus(sourceLog);
+    if (!isTerminalRunStatus(sourceStatus)) {
+      throw new Error(`Cannot repair non-terminal run "${slug}:${sourceRunId}" (${sourceStatus}); stop or settle it first`);
+    }
+    const sourceSpec = readRunSpecSnapshot(this.deps.workspaceRoot, slug, sourceRunId);
+    if (!sourceSpec) {
+      throw new Error(
+        `Repair source spec for "${slug}:${sourceRunId}" is unavailable; refusing to repair against a mutable live spec`,
+      );
+    }
+    this.assertSpecAdmissible(sourceSpec, slug);
+    const validIds = new Set(sourceSpec.nodes.map((node) => node.id));
+    const unknown = nodeIds.filter((nodeId) => !validIds.has(nodeId));
+    if (unknown.length > 0) throw new Error(`Unknown repair node(s): ${unknown.join(', ')}`);
+
+    const dependents = new Map<string, Set<string>>(sourceSpec.nodes.map((node) => [node.id, new Set()]));
+    for (const node of sourceSpec.nodes) {
+      for (const dependency of node.depends_on ?? []) dependents.get(dependency)?.add(node.id);
+    }
+    const frontier = new Set<string>();
+    const queue = [...nodeIds];
+    while (queue.length > 0) {
+      const nodeId = queue.shift()!;
+      if (frontier.has(nodeId)) continue;
+      frontier.add(nodeId);
+      for (const dependent of dependents.get(nodeId) ?? []) queue.push(dependent);
+    }
+
+    const { approveExternalMutations = false, ...runOptions } = opts;
+    const orchestrator = runOptions.orchestratorSessionId;
+    if (orchestrator) {
+      for (const existing of this.runs.values()) {
+        const snap = existing.snapshot();
+        if (snap.orchestratorSessionId === orchestrator && !isTerminalRunStatus(snap.status)) {
+          throw new Error(
+            `Task "${slug}" already has an active run (${snap.runId}) on this orchestrator; stop it before repairing.`,
+          );
+        }
+      }
+    }
+
+    const externalInFrontier = sourceSpec.nodes
+      .filter((node) => frontier.has(node.id) && node.effect === 'external-mutation')
+      .map((node) => node.id);
+    if (externalInFrontier.length > 0 && !approveExternalMutations) {
+      throw new Error(`Repair requires explicit approval for external mutation node(s): ${externalInFrontier.join(', ')}`);
+    }
+
+    const plan = planMissionReplay(
+      sourceSpec,
+      sourceRunId,
+      sourceLog,
+      (nodeId) => readNodeOutput(this.deps.workspaceRoot, slug, sourceRunId, nodeId),
+      {
+        approveExternalMutations,
+        workspaceId: this.deps.workspaceId,
+        verifyExecutionProof: this.deps.verifyExecutionProof,
+      },
+    );
+    const blocked = plan.nodes.filter((node) => node.action === 'block');
+    if (blocked.length > 0) {
+      throw new Error(`Repair is blocked pending reconciliation: ${blocked.map((node) => `${node.nodeId} (${node.reason})`).join('; ')}`);
+    }
+    const proofByNode = new Map<string, string | undefined>();
+    for (const entry of sourceLog) {
+      if (entry.kind === 'node-checkpoint' && entry.status === 'confirmed') {
+        proofByNode.set(entry.nodeId, entry.proofHash);
+      }
+    }
+    const reusedNodes = plan.nodes
+      .filter((node) => node.action === 'reuse' && !frontier.has(node.nodeId))
+      .map((node) => ({
+        nodeId: node.nodeId,
+        ...(proofByNode.get(node.nodeId) ? { proofHash: proofByNode.get(node.nodeId) } : {}),
+      }));
+    const runId = runOptions.runId ?? (this.deps.genRunId ? this.deps.genRunId() : `run-${Date.now()}`);
+    if (runId === sourceRunId || listRunIds(this.deps.workspaceRoot, slug).includes(runId)) {
+      throw new Error(`Repair run id "${slug}:${runId}" already exists; targeted repair must create a new immutable run`);
+    }
+    const run = new ActiveRun(
+      sourceSpec,
+      slug,
+      runId,
+      {
+        ...runOptions,
+        runId,
+        params: resolveParams(sourceSpec, runOptions.params),
+        verifyOnComplete: runOptions.verifyOnComplete ?? true,
+        replay: {
+          sourceRunId,
+          externalMutationsApproved: approveExternalMutations,
+          reusedNodes,
+        },
+      },
       this.deps,
     );
     this.runs.set(this.key(slug, runId), run);

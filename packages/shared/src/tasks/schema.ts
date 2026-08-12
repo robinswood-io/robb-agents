@@ -135,6 +135,17 @@ export const TaskDefaultsSchema = z.object({
   retry: RetrySchema.optional(),
 });
 
+/** Human-auditable executor identity exposed by the durable Task projection. */
+export const TaskExecutorSchema = z.object({
+  /** Logical agent identity (for example `conductor`, `finance-reconciler`). */
+  agent: z.string().min(1).optional(),
+  /** Host wrapper/workflow entrypoint used to execute the task. */
+  wrapper: z.string().min(1).optional(),
+  /** Optional executor-level route; node/default routes still take precedence at dispatch. */
+  model: z.string().min(1).optional(),
+  llmConnection: z.string().min(1).optional(),
+}).optional();
+
 /** Resource and access envelope for autonomous task execution. */
 export const TaskExecutionSchema = z.object({
   /** Absolute sandbox root. Defaults to the resolved task working directory. */
@@ -257,6 +268,8 @@ export const TaskSpecSchema = z
     id: slug('task id'),
     title: z.string().min(1),
     goal: z.string().min(1),
+    /** Canonical user-facing description. Legacy tasks fall back to `goal` in DurableTask. */
+    description: z.string().min(1).optional(),
     /** Freeform rubric the orchestrator grades the final result against (verification gate). Falls back to `goal`. */
     acceptance_criteria: z.string().min(1).optional(),
     project: z.string().min(1).optional(),
@@ -265,6 +278,7 @@ export const TaskSpecSchema = z
      *  children inherit it at dispatch. */
     cwd: z.string().min(1).optional(),
     runner: z.enum(TASK_RUNNERS).default('conduct'),
+    executor: TaskExecutorSchema,
     /** Source slugs enabled on the orchestrator and every child session (per-session enabled sources). */
     sources: z.array(z.string().min(1)).optional(),
     /** Skill slugs applied as context: dispatched child prompts carry [skill:slug] mentions, so the
@@ -328,6 +342,7 @@ export type Loop = z.infer<typeof LoopSchema>;
 export type Retry = z.infer<typeof RetrySchema>;
 export type TaskParam = z.infer<typeof TaskParamSchema>;
 export type TaskDefaults = z.infer<typeof TaskDefaultsSchema>;
+export type TaskExecutor = z.infer<typeof TaskExecutorSchema>;
 export type TaskExecution = z.infer<typeof TaskExecutionSchema>;
 export type Mission = z.infer<typeof MissionSchema>;
 export type TaskNode = z.infer<typeof TaskNodeSchema>;

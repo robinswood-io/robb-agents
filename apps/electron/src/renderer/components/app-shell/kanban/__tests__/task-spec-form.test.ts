@@ -14,6 +14,30 @@ import {
 const noConn = new Map<string, string>()
 
 describe('task-spec-form round-trip', () => {
+  it('persists a canonical description independently from the execution goal', () => {
+    const subtasks = specToSubtasks([{ id: 'a', title: 'A', prompt: 'p' }]);
+    const described = buildSpec({
+      title: 'T',
+      description: 'Cockpit summary',
+      goal: 'Detailed execution objective',
+      projectId: '',
+      orchModel: '',
+      subtasks,
+    }, noConn);
+    const blank = buildSpec({
+      title: 'T',
+      description: '   ',
+      goal: 'g',
+      projectId: '',
+      orchModel: '',
+      subtasks,
+    }, noConn);
+
+    expect(described.description).toBe('Cockpit summary');
+    expect(described.goal).toBe('Detailed execution objective');
+    expect('description' in blank).toBe(false);
+  });
+
   it('preserves generated node ids so ${nodes.<id>.output} references survive generate → edit → create', () => {
     // A generated spec where one node references another by its (non-title-slug) id.
     const generated: SpecNode[] = [

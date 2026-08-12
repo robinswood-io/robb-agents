@@ -18,6 +18,10 @@ import { createInterface, type Interface as ReadlineInterface } from 'node:readl
 import type { AgentEvent } from '@craft-agent/core/types';
 import type { FileAttachment } from '../utils/files.ts';
 import { getProxyEnvVars } from '../config/proxy-env.ts';
+import {
+  registerLongRunningProcess,
+  type LongRunningProcessHandle,
+} from '../processes/index.ts';
 
 import type {
   BackendConfig,
@@ -167,6 +171,7 @@ export class PiAgent extends BaseAgent {
 
   // Subprocess process handle
   private subprocess: ChildProcess | null = null;
+  private subprocessSupervisorHandle: LongRunningProcessHandle | null = null;
   private readline: ReadlineInterface | null = null;
   private subprocessReady: Promise<void> | null = null;
   private subprocessReadyResolve: (() => void) | null = null;
@@ -501,6 +506,19 @@ export class PiAgent extends BaseAgent {
     });
 
     this.subprocess = child;
+    const configuredIdleMs = Number(process.env.CRAFT_AGENT_PROCESS_IDLE_TIMEOUT_MS);
+    this.subprocessSupervisorHandle = registerLongRunningProcess(child, {
+      id: `pi-agent:${sessionId}:${child.pid ?? Date.now()}`,
+      kind: 'agent-runtime',
+      ownerId: sessionId,
+      maxIdleMs: Number.isFinite(configuredIdleMs) && configuredIdleMs > 0
+        ? configuredIdleMs
+        : 30 * 60 * 1000,
+      metadata: {
+        ...(this.config.providerType ? { provider: this.config.providerType } : {}),
+        workspaceId: this.config.workspace.id,
+      },
+    });
 
     // Set up readline for JSONL parsing from stdout
     this.readline = createInterface({
@@ -899,6 +917,7 @@ export class PiAgent extends BaseAgent {
       return;
     }
     const line = JSON.stringify(cmd);
+    this.subprocessSupervisorHandle?.touch();
     this.subprocess.stdin.write(line + '\n');
   }
 
@@ -1745,6 +1764,7 @@ export class PiAgent extends BaseAgent {
     this.debug(`Pi subprocess exited: code=${code}, signal=${signal}`);
 
     this.subprocess = null;
+    this.subprocessSupervisorHandle = null;
     this.readline = null;
     this.resetSubprocessErrorDedup();
     this.subprocessReady = null;
@@ -2450,7 +2470,11 @@ export class PiAgent extends BaseAgent {
       // stdin may already be closed
     }
 
-    child.kill('SIGTERM');
+    if (this.subprocessSupervisorHandle) {
+      this.subprocessSupervisorHandle.terminate('Pi agent graceful shutdown');
+    } else {
+      child.kill('SIGTERM');
+    }
     let result = await Promise.race([
       waitForExit,
       new Promise<null>(resolve => setTimeout(() => resolve(null), timeoutMs)),
@@ -2472,6 +2496,7 @@ export class PiAgent extends BaseAgent {
     if (this.subprocess === child) {
       this.subprocess = null;
     }
+    this.subprocessSupervisorHandle = null;
     this.subprocessReady = null;
     this.subprocessReadyResolve = null;
     this.callbackPort = 0;
@@ -2501,9 +2526,14 @@ export class PiAgent extends BaseAgent {
       } catch {
         // stdin may already be closed
       }
-      this.subprocess.kill('SIGTERM');
+      if (this.subprocessSupervisorHandle) {
+        this.subprocessSupervisorHandle.terminate('Pi agent reset');
+      } else {
+        this.subprocess.kill('SIGTERM');
+      }
       this.subprocess = null;
     }
+    this.subprocessSupervisorHandle = null;
 
     this.subprocessReady = null;
     this.subprocessReadyResolve = null;

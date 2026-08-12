@@ -21,6 +21,11 @@ import type { ThinkingLevel } from '../agent/thinking-levels'
 import type { CustomEndpointConfig } from '../config/llm-connections'
 import type { RoutingPolicy } from '../config/routing-policy'
 import type { SessionExecutionIsolation } from '../tasks/durable-execution'
+import type {
+  DurableTaskCockpitProjections,
+  DurableTaskExternalRefs,
+  DurableTaskSnapshot,
+} from '../tasks'
 import type { WorkspaceGovernanceProfile } from '../governance/workspace-governance'
 import type {
   RemoteAction,
@@ -314,9 +319,19 @@ export interface TaskRunRequest {
   params?: Record<string, unknown>
 }
 
+export interface TaskRepairRequest {
+  slug: string
+  sourceRunId: string
+  nodeIds: string[]
+  runId?: string
+  orchestratorSessionId?: string
+  /** Required before a repair frontier may execute an external-mutation node. */
+  approveExternalMutations?: boolean
+}
+
 export interface TaskNodeRunStateDto {
   id: string
-  /** pending | running | done | failed | cancelled | skipped */
+  /** pending | waiting-approval | running | done | failed | cancelled | skipped */
   state: string
   sessionId?: string
   attempt: number
@@ -380,6 +395,19 @@ export interface TaskGetResult {
   spec?: unknown
   /** Active run snapshot when a runId was supplied and known; otherwise null. */
   run?: TaskRunSnapshotDto | null
+  /** Canonical durable product object, materialized from spec + journal + task metadata. */
+  task?: DurableTaskSnapshotDto
+}
+
+export type DurableTaskSnapshotDto = DurableTaskSnapshot
+export type DurableTaskCockpitProjectionsDto = DurableTaskCockpitProjections
+
+export interface DurableTaskMetadataUpdateRequest {
+  slug: string
+  expectedRevision?: number
+  archived?: boolean
+  nextAction?: string | null
+  externalRefs?: Partial<DurableTaskExternalRefs>
 }
 
 /** One subtask's outcome in a completed/persisted run, for the editor's Results tab. */
@@ -392,6 +420,11 @@ export interface TaskResultNodeDto {
   sessionId?: string
   /** The node's recorded final output text (from nodes/<id>.json), when present. */
   output?: string
+  dependsOn?: string[]
+  attempt?: number
+  proofHash?: string
+  evidenceRefs?: string[]
+  repair?: { allowed: boolean; reason: string }
 }
 
 export interface MissionBlockerDto {
@@ -506,6 +539,15 @@ export interface TaskResultsDto {
   replayPlan?: MissionReplayPlanDto
   /** Portable, auditable Markdown report generated from the same durable projection. */
   reportMarkdown?: string
+  /** Canonical durable work object rendered above the run-level evidence. */
+  task?: DurableTaskSnapshotDto
+  userEvidence?: {
+    actionRequested: string
+    actionAttempted: string[]
+    mutationsApplied: string[]
+    userVerification: string
+    remainingLimitations: string[]
+  }
   nodes: TaskResultNodeDto[]
 }
 

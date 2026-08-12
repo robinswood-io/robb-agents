@@ -28,13 +28,48 @@ export interface ServerStatus {
     heapTotal: number
     rss: number
   }
+  /** Process-lifecycle telemetry for the server and its registered children. */
+  longRunning: ServerLongRunningHealth
+}
+
+export interface ServerLongRunningProcess {
+  id: string
+  kind: string
+  ownerId: string
+  pid?: number
+  status: 'running' | 'terminating' | 'exited' | 'failed'
+  idleForMs: number
+  maxIdleMs: number
+  cpuPercent?: number
+  rssBytes?: number
+  terminationReason?: string
+}
+
+export interface ServerLongRunningHealth {
+  status: 'ok' | 'degraded' | 'unhealthy'
+  parent: {
+    pid: number
+    cpuPercent: number
+    cpuCount: number
+    rssBytes: number
+  }
+  summary: {
+    tracked: number
+    running: number
+    terminating: number
+    failed: number
+    suspectedOrphans: number
+  }
+  processes: ServerLongRunningProcess[]
+  suspectedOrphanPids: number[]
+  reportError?: string
 }
 
 export interface ServerHealth {
   status: 'ok' | 'degraded' | 'unhealthy'
   checks: {
     name: string
-    status: 'pass' | 'fail'
+    status: 'pass' | 'warn' | 'fail'
     message?: string
   }[]
 }
@@ -64,4 +99,3 @@ export interface ActiveSessionInfo {
   }
   createdAt: number
 }
-

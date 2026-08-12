@@ -32,6 +32,7 @@
     "./interop": "./src/interop/index.ts",
     "./mcp": "./src/mcp/index.ts",
     "./prompts": "./src/prompts/index.ts",
+    "./processes": "./src/processes/index.ts",
     "./remote-supervision": "./src/remote-supervision/index.ts",
     "./sessions": "./src/sessions/index.ts",
     "./projects": "./src/projects/index.ts",
