@@ -176,56 +176,13 @@ export const messagingComponents: ComponentEntry[] = [
   },
   {
     id: 'messaging-settings-page',
-    name: 'Messaging Settings Page',
+    name: 'Mobile Access Settings',
     category: 'Messaging',
-    description: 'Telegram + WhatsApp settings page with inline bindings',
+    description: 'First-party secure web app with QR code, one-time link, and device revocation',
     component: MessagingSettingsPagePreview,
     layout: 'full',
-    props: [
-      {
-        name: 'telegramConnected',
-        description: 'Whether the Telegram bot is connected',
-        control: { type: 'boolean' },
-        defaultValue: false,
-      },
-      {
-        name: 'whatsappConnected',
-        description: 'Whether the WhatsApp adapter is connected',
-        control: { type: 'boolean' },
-        defaultValue: false,
-      },
-      {
-        name: 'bindings',
-        description: 'Bindings preset to show in the table',
-        control: {
-          type: 'select',
-          options: [
-            { label: 'None', value: 'none' },
-            { label: 'One binding', value: 'one' },
-            { label: 'Many bindings', value: 'many' },
-          ],
-        },
-        defaultValue: 'none',
-      },
-    ],
-    variants: [
-      {
-        name: 'Both disconnected',
-        props: { telegramConnected: false, whatsappConnected: false, bindings: 'none' },
-      },
-      {
-        name: 'Telegram only',
-        props: { telegramConnected: true, whatsappConnected: false, bindings: 'none' },
-      },
-      {
-        name: 'Both connected, no bindings',
-        props: { telegramConnected: true, whatsappConnected: true, bindings: 'none' },
-      },
-      {
-        name: 'Both connected, 3 bindings',
-        props: { telegramConnected: true, whatsappConnected: true, bindings: 'many' },
-      },
-    ],
+    props: [],
+    variants: [],
   },
   {
     id: 'messaging-pairing-code-dialog',

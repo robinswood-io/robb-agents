@@ -58,6 +58,8 @@ export interface ServerBootstrapOptions<TSessionManager, THandlerDeps> {
   tls?: WsRpcTlsOptions
   /** Cookie-based session validator for web UI auth on WebSocket upgrade. */
   validateSessionCookie?: (cookieHeader: string | null) => Promise<AuthenticationResult>
+  /** Browser origins allowed to use cookie-authenticated WebSocket upgrades. */
+  allowedSessionCookieOrigins?: readonly string[]
   /** Authoritative per-channel request authorization. */
   authorizeRequest?: WsRpcServerOptions['authorizeRequest']
   /**
@@ -330,6 +332,7 @@ export async function bootstrapServer<TSessionManager, THandlerDeps>(
     requireAuthoritativePrincipal: true,
     validateToken: async (t) => t === serverToken ? serverOwnerPrincipal : false,
     validateSessionCookie: options.validateSessionCookie,
+    allowedSessionCookieOrigins: options.allowedSessionCookieOrigins,
     authorizeRequest: options.authorizeRequest,
     serverId: options.serverId ?? 'headless',
     serverVersion: options.serverVersion,

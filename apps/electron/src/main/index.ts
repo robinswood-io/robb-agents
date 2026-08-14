@@ -108,6 +108,7 @@ import { createApplicationMenu } from './menu'
 import { WindowManager } from './window-manager'
 import { loadWindowState, saveWindowState } from './window-state'
 import { CONFIG_DIR, getWorkspaces, getWorkspaceByNameOrId, loadStoredConfig, addWorkspace, saveConfig } from '@craft-agent/shared/config'
+import { isLoopbackHost, resolveSecureRemoteHost } from './remote-access-security'
 import { getDefaultWorkspacesDir } from '@craft-agent/shared/workspaces'
 import { initializeDocs } from '@craft-agent/shared/docs'
 import { initializeReleaseNotes } from '@craft-agent/shared/release-notes'
@@ -658,7 +659,7 @@ app.whenReady().then(async () => {
       const serverToken = serverModeEnabled && embeddedServerConfig.token
         ? embeddedServerConfig.token
         : randomUUID()
-      const rpcHost = process.env.CRAFT_RPC_HOST
+      let rpcHost = process.env.CRAFT_RPC_HOST
         ?? (serverModeEnabled ? '0.0.0.0' : '127.0.0.1')
       const rpcPort = process.env.CRAFT_RPC_PORT
         ? parseInt(process.env.CRAFT_RPC_PORT, 10)
@@ -677,6 +678,15 @@ app.whenReady().then(async () => {
           mainLog.error('[server-mode] Failed to load TLS certificates:', err)
         }
       }
+
+      const secureHost = resolveSecureRemoteHost(rpcHost, Boolean(tls))
+      if (secureHost.networkBindRejected) {
+        mainLog.error(
+          '[server-mode] TLS is unavailable; refusing the network bind and falling back to 127.0.0.1. ' +
+          'Configure a certificate and private key, then restart to enable Remote access.'
+        )
+      }
+      rpcHost = secureHost.host
 
       if (serverModeEnabled) {
         mainLog.info(`[server-mode] Enabled — binding ${rpcHost}:${rpcPort}${tls ? ' (TLS)' : ''}`)
@@ -723,7 +733,7 @@ app.whenReady().then(async () => {
         rpcHost,
         rpcPort,
         tls,
-        validateSessionCookie: embeddedWebuiHandler
+        validateSessionCookie: embeddedWebuiHandler && tls
           ? async (cookieHeader) => {
               const remoteSession = await validateSession(cookieHeader, serverToken)
               if (!remoteSession) return false
@@ -1145,6 +1155,9 @@ app.whenReady().then(async () => {
         if (!serverModeEnabled || !embeddedWebuiHandler) {
           throw new Error('Enable Remote access and restart Robb Agents before pairing a phone')
         }
+        if (!tls) {
+          throw new Error('Configure TLS and restart Robb Agents before pairing a phone')
+        }
         return embeddedWebuiHandler.createRemotePairing(getWebUrl(), hostname())
       })
 
@@ -1157,11 +1170,10 @@ app.whenReady().then(async () => {
         return embeddedWebuiHandler.revokeRemoteDevice(deviceId)
       })
 
-      // TLS enforcement — warn when server mode binds to a network address without TLS
-      // Mirrors the hard guard in packages/server/src/index.ts but warns instead of blocking,
-      // since the user explicitly enabled server mode via UI (may be on a trusted LAN).
+      // Defensive status guard. Startup has already forced an insecure network
+      // bind back to loopback, so this should remain false in normal operation.
       const isInsecureBind = serverModeEnabled && !tls
-        && !['127.0.0.1', 'localhost', '::1'].includes(rpcHost)
+        && !isLoopbackHost(rpcHost)
       if (isInsecureBind) {
         mainLog.warn(
           '[server-mode] WARNING: Listening on a network address without TLS. ' +

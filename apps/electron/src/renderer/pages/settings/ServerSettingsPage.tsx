@@ -7,16 +7,14 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Copy, Eye, EyeOff, AlertTriangle, RotateCw, ShieldCheck, Smartphone, Trash2 } from 'lucide-react'
+import { Copy, Eye, EyeOff, AlertTriangle, RotateCw } from 'lucide-react'
 import { toast } from 'sonner'
-import { QRCodeSVG } from 'qrcode.react'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@craft-agent/ui'
 import type { DetailsPageMeta } from '@/lib/navigation-registry'
 import type { ServerConfig, ServerStatus } from '@craft-agent/shared/config/server-config'
-import type { RemoteDeviceInfo, RemotePairingDetails } from '@craft-agent/shared/config/server-config'
 
 import {
   SettingsSection,
@@ -76,9 +74,6 @@ export default function ServerSettingsPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [tokenVisible, setTokenVisible] = useState(false)
   const [error, setError] = useState<string>()
-  const [pairing, setPairing] = useState<RemotePairingDetails | null>(null)
-  const [remoteDevices, setRemoteDevices] = useState<RemoteDeviceInfo[]>([])
-  const [isCreatingPairing, setIsCreatingPairing] = useState(false)
 
   const isDirty = JSON.stringify(form) !== JSON.stringify(savedForm)
 
@@ -92,9 +87,6 @@ export default function ServerSettingsPage() {
       setForm(formState)
       setSavedForm(formState)
       setStatus(serverStatus)
-      if (serverStatus.webUrl) {
-        setRemoteDevices(await window.electronAPI.listRemoteDevices())
-      }
     } catch (err) {
       console.error('Failed to load server settings:', err)
     } finally {
@@ -160,28 +152,6 @@ export default function ServerSettingsPage() {
     if (paths.length > 0) {
       setForm(f => ({ ...f, tlsKeyPath: paths[0]! }))
     }
-  }
-
-  const handleCreatePairing = async () => {
-    setIsCreatingPairing(true)
-    setError(undefined)
-    try {
-      setPairing(await window.electronAPI.createRemotePairing())
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err)
-      setError(message)
-      toast.error(t('settings.server.mobilePairingFailed'))
-    } finally {
-      setIsCreatingPairing(false)
-    }
-  }
-
-  const handleRevokeDevice = async (deviceId: string) => {
-    if (!await window.electronAPI.revokeRemoteDevice(deviceId)) return
-    setRemoteDevices((devices) => devices.map((device) => (
-      device.id === deviceId ? { ...device, revokedAt: new Date().toISOString() } : device
-    )))
-    toast.success(t('settings.server.mobileDeviceRevoked'))
   }
 
   if (isLoading) {
@@ -302,79 +272,6 @@ export default function ServerSettingsPage() {
                   </span>
                 </div>
               )}
-            </SettingsSection>
-          )}
-
-          {status?.webUrl && form.enabled && !needsRestart && (
-            <SettingsSection title={t("settings.server.mobileApp")}>
-              <SettingsCard>
-                <div className="p-5" data-testid="remote-mobile-setup">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex gap-3">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent/12 text-accent">
-                        <Smartphone className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium">{t("settings.server.mobilePairTitle")}</p>
-                        <p className="mt-1 max-w-md text-xs leading-5 text-muted-foreground">
-                          {t("settings.server.mobilePairDescription")}
-                        </p>
-                      </div>
-                    </div>
-                    {!pairing && (
-                      <Button size="sm" onClick={handleCreatePairing} disabled={isCreatingPairing}>
-                        {isCreatingPairing ? <Spinner className="mr-1.5" /> : null}
-                        {t("settings.server.mobileGenerateQr")}
-                      </Button>
-                    )}
-                  </div>
-
-                  {pairing && (
-                    <div className="mt-5 grid gap-5 rounded-2xl border border-border/70 bg-muted/20 p-5 sm:grid-cols-[184px_1fr]" data-testid="remote-pairing-qr">
-                      <div className="rounded-2xl bg-white p-3 shadow-xs">
-                        <QRCodeSVG value={pairing.pairingUrl} size={160} level="M" title={t("settings.server.mobileQrAlt")} />
-                      </div>
-                      <div className="flex min-w-0 flex-col justify-center">
-                        <div className="flex items-center gap-2 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                          <ShieldCheck className="h-4 w-4" />
-                          {t("settings.server.mobileSecureTicket")}
-                        </div>
-                        <p className="mt-2 text-xs leading-5 text-muted-foreground">
-                          {t("settings.server.mobileInstallHint")}
-                        </p>
-                        <button
-                          type="button"
-                          className="mt-3 w-fit rounded-lg border border-border bg-background px-3 py-1.5 font-mono text-sm font-semibold tracking-[0.12em]"
-                          onClick={() => handleCopy(pairing.code, t("settings.server.mobilePairCode"))}
-                        >
-                          {pairing.code}
-                        </button>
-                        <Button variant="ghost" size="sm" className="mt-3 w-fit" onClick={handleCreatePairing} disabled={isCreatingPairing}>
-                          <RotateCw className="mr-1.5 h-3.5 w-3.5" />
-                          {t("settings.server.mobileNewQr")}
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {remoteDevices.filter((device) => !device.revokedAt && Date.parse(device.expiresAt) > Date.now()).map((device) => (
-                  <SettingsRow key={device.id} label={device.name}>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-muted-foreground">{t("settings.server.mobilePairedDevice")}</span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 px-2 text-destructive"
-                        onClick={() => handleRevokeDevice(device.id)}
-                        aria-label={t("settings.server.mobileRevokeDevice", { name: device.name })}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  </SettingsRow>
-                ))}
-              </SettingsCard>
             </SettingsSection>
           )}
 

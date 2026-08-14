@@ -15,8 +15,7 @@ import { randomUUID } from 'node:crypto'
 import { readFile } from 'node:fs/promises'
 import {
   RateLimiter,
-  initPasswordHash,
-  verifyPassword,
+  createPasswordVerifier,
   createSessionToken,
   createRemoteSessionToken,
   REMOTE_SESSION_EXPIRY_SECONDS,
@@ -26,6 +25,7 @@ import {
 } from './auth'
 import { RemotePairingManager, formatPairingCode } from './remote-pairing'
 import { RemoteDeviceRegistry } from './remote-device-registry'
+import { getNodeRequestRemoteAddress } from './node-adapter'
 import { generateCallbackPage } from '@craft-agent/shared/auth'
 import type { PlatformServices } from '../runtime/platform'
 import type { completeOAuthFlow } from '../handlers/rpc/oauth'
@@ -54,6 +54,53 @@ const MIME_TYPES: Record<string, string> = {
   '.map': 'application/json',
 }
 
+const MAX_API_JSON_BODY_BYTES = 16 * 1024
+
+class ApiRequestBodyError extends Error {
+  constructor(
+    message: string,
+    readonly status: 400 | 413 | 415,
+  ) {
+    super(message)
+  }
+}
+
+async function readApiJson<T>(req: Request): Promise<T> {
+  const contentType = req.headers.get('content-type')?.toLowerCase() ?? ''
+  if (!contentType.startsWith('application/json')) {
+    throw new ApiRequestBodyError('Content-Type must be application/json', 415)
+  }
+
+  const declaredLength = Number(req.headers.get('content-length'))
+  if (Number.isFinite(declaredLength) && declaredLength > MAX_API_JSON_BODY_BYTES) {
+    throw new ApiRequestBodyError('Request body is too large', 413)
+  }
+
+  const reader = req.body?.getReader()
+  if (!reader) throw new ApiRequestBodyError('Invalid request body', 400)
+
+  const decoder = new TextDecoder()
+  let text = ''
+  let totalBytes = 0
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    totalBytes += value.byteLength
+    if (totalBytes > MAX_API_JSON_BODY_BYTES) {
+      await reader.cancel()
+      throw new ApiRequestBodyError('Request body is too large', 413)
+    }
+    text += decoder.decode(value, { stream: true })
+  }
+  text += decoder.decode()
+
+  try {
+    return JSON.parse(text) as T
+  } catch {
+    throw new ApiRequestBodyError('Invalid request body', 400)
+  }
+}
+
 function getMimeType(path: string): string {
   return MIME_TYPES[extname(path).toLowerCase()] ?? 'application/octet-stream'
 }
@@ -64,12 +111,6 @@ function getForwardedValue(req: Request, key: 'proto' | 'host'): string | null {
 
   const match = forwarded.match(new RegExp(`${key}="?([^;,"]+)"?`, 'i'))
   return match?.[1]?.trim() || null
-}
-
-function getRequestProto(req: Request): string {
-  return req.headers.get('x-forwarded-proto')?.split(',')[0]?.trim()
-    || getForwardedValue(req, 'proto')
-    || new URL(req.url).protocol.replace(/:$/, '')
 }
 
 function getRequestHost(req: Request): string | null {
@@ -91,7 +132,46 @@ function formatHostWithPort(host: string, port: number): string {
 
 export function shouldUseSecureCookies(req: Request, secureCookies?: boolean): boolean {
   if (secureCookies != null) return secureCookies
-  return getRequestProto(req) === 'https'
+  // Forwarded headers are attacker-controlled unless the immediate proxy is
+  // authenticated. Reverse-proxy deployments must opt in explicitly instead.
+  return new URL(req.url).protocol === 'https:'
+}
+
+const BROWSER_SECURITY_HEADERS: Readonly<Record<string, string>> = {
+  'Content-Security-Policy': [
+    "default-src 'self'",
+    "base-uri 'none'",
+    "frame-ancestors 'none'",
+    "object-src 'none'",
+    "form-action 'self'",
+    "script-src 'self' 'unsafe-inline'",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com data:",
+    "img-src 'self' data:",
+    "connect-src 'self' ws: wss:",
+    "worker-src 'self'",
+    "manifest-src 'self'",
+  ].join('; '),
+  'Cross-Origin-Resource-Policy': 'same-origin',
+  'Permissions-Policy': 'camera=(), geolocation=(), microphone=(), payment=(), usb=()',
+  'Referrer-Policy': 'no-referrer',
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'DENY',
+}
+
+function withBrowserSecurityHeaders(response: Response, noStore = false): Response {
+  const headers = new Headers(response.headers)
+  for (const [name, value] of Object.entries(BROWSER_SECURITY_HEADERS)) {
+    if (!headers.has(name)) headers.set(name, value)
+  }
+  if ((noStore || headers.has('Set-Cookie')) && !headers.has('Cache-Control')) {
+    headers.set('Cache-Control', 'no-store')
+  }
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  })
 }
 
 export interface ResolveWebSocketUrlOptions {
@@ -135,6 +215,12 @@ export interface WebuiHandlerOptions {
   password?: string
   /** Explicit Secure-cookie override. When unset, infer from the request / proxy headers. */
   secureCookies?: boolean
+  /**
+   * Development/test escape hatch. Production pairing and cookie sessions are
+   * rejected unless they use direct HTTPS or an explicitly configured HTTPS
+   * reverse proxy with Secure cookies.
+   */
+  allowInsecureSessions?: boolean
   /** Optional browser-facing WebSocket URL override for reverse-proxy deployments. */
   publicWsUrl?: string
   /** Optional browser-facing Web UI URL used in Remote pairing links. */
@@ -158,9 +244,8 @@ export interface WebuiHandlerOptions {
   /** OAuth callback deps — when provided, enables /api/oauth/callback route. */
   oauthCallbackDeps?: OAuthCallbackDeps
   /**
-   * Trusted proxy IPs/CIDRs. When set, proxy headers (x-forwarded-for, x-forwarded-proto)
-   * are only trusted from these sources. When empty/unset, proxy headers are ignored
-   * and 'direct' is used as the rate-limit key.
+   * Exact trusted proxy IP addresses. Forwarded client IP headers are accepted
+   * only when the Node transport peer matches one of these addresses.
    */
   trustedProxies?: string[]
 }
@@ -212,6 +297,7 @@ export function createWebuiHandler(options: WebuiHandlerOptions): WebuiHandler {
     logger,
     trustedProxies,
     getRemoteWorkspaceIds,
+    allowInsecureSessions = false,
   } = options
 
   const rateLimiter = new RateLimiter(5, 60_000)
@@ -235,24 +321,70 @@ export function createWebuiHandler(options: WebuiHandlerOptions): WebuiHandler {
     return device ? { ...session, allowedWorkspaceIds: device.allowedWorkspaceIds } : null
   }
 
-  // Hash the login password at startup (async, but resolves before first auth attempt in practice)
-  const passwordReady = initPasswordHash(loginPassword)
+  // Derive a handler-local password verifier before accepting an auth attempt.
+  const passwordVerifierReady = createPasswordVerifier(loginPassword)
+
+  function hasSecureBrowserWebSocket(): boolean {
+    if (publicWsUrl) {
+      try {
+        return new URL(publicWsUrl).protocol === 'wss:'
+      } catch {
+        return false
+      }
+    }
+    return wsProtocol === 'wss'
+  }
+
+  function isConfiguredHttpsProxy(): boolean {
+    if (!publicWebuiUrl || secureCookies !== true || !hasSecureBrowserWebSocket()) return false
+    try {
+      return new URL(publicWebuiUrl).protocol === 'https:'
+    } catch {
+      return false
+    }
+  }
+
+  function isSecureSessionTransport(req: Request): boolean {
+    if (allowInsecureSessions) return true
+    const isDirectHttps = new URL(req.url).protocol === 'https:'
+      && secureCookies !== false
+      && hasSecureBrowserWebSocket()
+    return isDirectHttps || isConfiguredHttpsProxy()
+  }
+
+  function isAllowedBrowserMutation(req: Request): boolean {
+    const fetchSite = req.headers.get('sec-fetch-site')?.toLowerCase()
+    if (fetchSite && fetchSite !== 'same-origin' && fetchSite !== 'none') return false
+
+    const origin = req.headers.get('origin')
+    if (!origin) return true
+
+    try {
+      const expectedOrigin = publicWebuiUrl
+        ? new URL(publicWebuiUrl).origin
+        : new URL(req.url).origin
+      return new URL(origin).origin === expectedOrigin
+    } catch {
+      return false
+    }
+  }
 
   /** Extract client IP — only trusts proxy headers when trustedProxies is configured. */
   function getClientIp(req: Request): string {
-    if (trustedProxySet.size > 0) {
+    const transportPeer = getNodeRequestRemoteAddress(req)
+    if (transportPeer && trustedProxySet.has(transportPeer)) {
       return req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
         ?? req.headers.get('x-real-ip')
-        ?? 'direct'
+        ?? transportPeer
     }
-    return 'direct'
+    return transportPeer ?? 'direct'
   }
 
   function getPublicWebuiBaseUrl(req: Request): string {
     if (publicWebuiUrl) return publicWebuiUrl.replace(/\/$/, '')
-    const requestHost = getRequestHost(req)
-    if (requestHost) return `${getRequestProto(req)}://${requestHost}`
-    return `${getRequestProto(req)}://127.0.0.1:${wsPort}`
+    // Never build a credential-bearing link from spoofable proxy headers.
+    // Reverse proxies must provide the explicit browser-facing URL above.
+    return new URL(req.url).origin
   }
 
   function getHostLabel(req: Request): string {
@@ -289,9 +421,16 @@ export function createWebuiHandler(options: WebuiHandlerOptions): WebuiHandler {
   }
 
   function issueRemotePairing(publicBaseUrl: string, displayHostLabel: string): RemotePairingDetails {
-    const pairing = pairingManager.issue()
     const pairingUrl = new URL('/remote', publicBaseUrl)
-    pairingUrl.searchParams.set('pairing', pairing.ticket)
+    if (pairingUrl.username || pairingUrl.password) {
+      throw new Error('Remote pairing URL must not contain credentials')
+    }
+    if (!allowInsecureSessions && (pairingUrl.protocol !== 'https:' || !hasSecureBrowserWebSocket())) {
+      throw new Error('HTTPS and WSS are required before pairing a Remote device')
+    }
+
+    const pairing = pairingManager.issue()
+    pairingUrl.hash = new URLSearchParams({ pairing: pairing.ticket }).toString()
     return {
       pairingUrl: pairingUrl.toString(),
       code: formatPairingCode(pairing.code),
@@ -300,10 +439,31 @@ export function createWebuiHandler(options: WebuiHandlerOptions): WebuiHandler {
     }
   }
 
-  async function fetch(req: Request): Promise<Response> {
+  async function routeRequest(req: Request): Promise<Response> {
     const url = new URL(req.url)
     const path = url.pathname
-    const useSecureCookies = shouldUseSecureCookies(req, secureCookies)
+    const useSecureCookies = allowInsecureSessions
+      ? shouldUseSecureCookies(req, secureCookies)
+      : true
+
+    if (path.startsWith('/api/') && !isSecureSessionTransport(req)) {
+      return Response.json({ error: 'HTTPS is required' }, {
+        status: 426,
+        headers: { 'Cache-Control': 'no-store', Upgrade: 'TLS/1.2' },
+      })
+    }
+
+    if (
+      path.startsWith('/api/')
+      && !['GET', 'HEAD', 'OPTIONS'].includes(req.method.toUpperCase())
+      && !isAllowedBrowserMutation(req)
+    ) {
+      logger.warn('[webui] Rejected cross-origin state-changing request')
+      return Response.json({ error: 'Cross-origin request rejected' }, {
+        status: 403,
+        headers: { 'Cache-Control': 'no-store' },
+      })
+    }
 
     // ── Health endpoint (no auth) ──
     if (path === '/health') {
@@ -350,9 +510,12 @@ export function createWebuiHandler(options: WebuiHandlerOptions): WebuiHandler {
 
       let body: { ticket?: string; code?: string; deviceName?: string }
       try {
-        body = await req.json() as { ticket?: string; code?: string; deviceName?: string }
-      } catch {
-        return Response.json({ error: 'Invalid request body' }, { status: 400 })
+        body = await readApiJson(req)
+      } catch (error) {
+        const bodyError = error instanceof ApiRequestBodyError
+          ? error
+          : new ApiRequestBodyError('Invalid request body', 400)
+        return Response.json({ error: bodyError.message }, { status: bodyError.status })
       }
 
       const ticket = typeof body.ticket === 'string' && body.ticket.length <= 256 ? body.ticket : undefined
@@ -405,7 +568,7 @@ export function createWebuiHandler(options: WebuiHandlerOptions): WebuiHandler {
 
     // ── Auth endpoint ──
     if (path === '/api/auth' && req.method === 'POST') {
-      await passwordReady
+      const verifyPassword = await passwordVerifierReady
       const ip = getClientIp(req)
 
       if (!rateLimiter.check(ip)) {
@@ -418,9 +581,12 @@ export function createWebuiHandler(options: WebuiHandlerOptions): WebuiHandler {
 
       let body: { password?: string }
       try {
-        body = await req.json() as { password?: string }
-      } catch {
-        return Response.json({ error: 'Invalid request body' }, { status: 400 })
+        body = await readApiJson(req)
+      } catch (error) {
+        const bodyError = error instanceof ApiRequestBodyError
+          ? error
+          : new ApiRequestBodyError('Invalid request body', 400)
+        return Response.json({ error: bodyError.message }, { status: bodyError.status })
       }
 
       if (!body.password || typeof body.password !== 'string') {
@@ -620,6 +786,11 @@ export function createWebuiHandler(options: WebuiHandlerOptions): WebuiHandler {
 
     // SPA fallback — serve index.html for all non-file routes
     return serveSpaIndex()
+  }
+
+  async function fetch(req: Request): Promise<Response> {
+    const response = await routeRequest(req)
+    return withBrowserSecurityHeaders(response, new URL(req.url).pathname.startsWith('/api/'))
   }
 
   return {

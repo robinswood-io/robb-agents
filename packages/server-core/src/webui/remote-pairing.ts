@@ -1,4 +1,4 @@
-import { createHash, randomBytes } from 'node:crypto'
+import { createHash, randomBytes, timingSafeEqual } from 'node:crypto'
 
 const DEFAULT_PAIRING_TTL_MS = 5 * 60 * 1000
 const PAIRING_TOKEN_BYTES = 32
@@ -34,6 +34,10 @@ export interface RemotePairingManagerOptions {
 
 function digest(value: string): string {
   return createHash('sha256').update(value).digest('hex')
+}
+
+function digestsMatch(left: string, right: string): boolean {
+  return timingSafeEqual(Buffer.from(left, 'hex'), Buffer.from(right, 'hex'))
 }
 
 function normalizeCode(value: string): string {
@@ -107,7 +111,8 @@ export class RemotePairingManager {
     const record = this.active
     if (!record) return { ok: false, reason: 'invalid' }
 
-    const matches = presentedDigest === record.ticketDigest || presentedDigest === record.codeDigest
+    const matches = digestsMatch(presentedDigest, record.ticketDigest)
+      || digestsMatch(presentedDigest, record.codeDigest)
     if (!matches) return { ok: false, reason: 'invalid' }
 
     if (record.expiresAtMs <= this.now()) {

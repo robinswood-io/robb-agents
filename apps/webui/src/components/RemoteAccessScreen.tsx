@@ -67,6 +67,29 @@ function formatRemainingTime(expiresAt: string, now: number): string {
   return `${minutes}:${remainder}`
 }
 
+function readAndScrubPairingCredentials(): { ticket?: string; code: string } {
+  const searchParams = new URLSearchParams(window.location.search)
+  const fragmentParams = new URLSearchParams(window.location.hash.replace(/^#/, ''))
+  const ticket = fragmentParams.get('pairing') ?? searchParams.get('pairing') ?? undefined
+  const code = fragmentParams.get('code') ?? searchParams.get('code') ?? ''
+
+  if (ticket || code) {
+    // Fragments never reach the HTTP server. Remove both new fragment-based
+    // secrets and legacy query-string credentials before the exchange so they
+    // do not remain visible in browser history, screenshots, or copied URLs.
+    searchParams.delete('pairing')
+    searchParams.delete('code')
+    const remainingSearch = searchParams.toString()
+    window.history.replaceState(
+      null,
+      '',
+      `${window.location.pathname}${remainingSearch ? `?${remainingSearch}` : ''}`,
+    )
+  }
+
+  return { ticket, code }
+}
+
 function RemoteShell({ children }: { children: React.ReactNode }) {
   return (
     <main className="remote-access-page min-h-[100dvh] w-full overflow-y-auto bg-background text-foreground">
@@ -106,9 +129,9 @@ function BrandHeader({ onBack }: { onBack?: () => void }) {
 
 function PairDeviceScreen() {
   const { t } = useTranslation()
-  const params = useMemo(() => new URLSearchParams(window.location.search), [])
-  const ticket = params.get('pairing') ?? undefined
-  const [code, setCode] = useState(params.get('code') ?? '')
+  const initialCredentials = useMemo(readAndScrubPairingCredentials, [])
+  const ticket = initialCredentials.ticket
+  const [code, setCode] = useState(initialCredentials.code)
   const [phase, setPhase] = useState<PairingPhase>(ticket ? 'connecting' : 'idle')
   const [error, setError] = useState('')
   const [hostLabel, setHostLabel] = useState('')
@@ -122,6 +145,8 @@ function PairDeviceScreen() {
       const response = await fetch('/api/remote/pair', {
         method: 'POST',
         credentials: 'same-origin',
+        cache: 'no-store',
+        referrerPolicy: 'no-referrer',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...credentials, deviceName: inferDeviceName() }),
       })

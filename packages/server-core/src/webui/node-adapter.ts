@@ -10,6 +10,14 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
 
 type WebHandler = (req: Request) => Promise<Response> | Response
+const MAX_REQUEST_BODY_BYTES = 64 * 1024
+
+const nodeRequestRemoteAddresses = new WeakMap<Request, string>()
+
+/** Returns the transport peer captured by the Node adapter, if any. */
+export function getNodeRequestRemoteAddress(request: Request): string | null {
+  return nodeRequestRemoteAddresses.get(request) ?? null
+}
 
 /**
  * Wrap a web-standard fetch handler as a Node HTTP request listener.
@@ -50,8 +58,21 @@ async function handleRequest(
   let body: Buffer | null = null
   if (nodeReq.method !== 'GET' && nodeReq.method !== 'HEAD') {
     const chunks: Buffer[] = []
+    let totalBytes = 0
     for await (const chunk of nodeReq) {
-      chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk)
+      const buffer = typeof chunk === 'string' ? Buffer.from(chunk) : chunk
+      totalBytes += buffer.byteLength
+      if (totalBytes > MAX_REQUEST_BODY_BYTES) {
+        nodeRes.writeHead(413, {
+          'Cache-Control': 'no-store',
+          'Content-Type': 'text/plain; charset=utf-8',
+          'X-Content-Type-Options': 'nosniff',
+        })
+        nodeRes.end('Payload Too Large')
+        nodeReq.destroy()
+        return
+      }
+      chunks.push(buffer)
     }
     body = Buffer.concat(chunks)
   }
@@ -61,6 +82,8 @@ async function handleRequest(
     headers,
     body: body ? new Uint8Array(body) : null,
   })
+  const remoteAddress = nodeReq.socket.remoteAddress
+  if (remoteAddress) nodeRequestRemoteAddresses.set(request, remoteAddress)
 
   const response = await handler(request)
 

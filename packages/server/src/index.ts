@@ -144,6 +144,13 @@ const webuiEnabled = webuiDir && existsSync(webuiDir)
 const webuiSecureCookies = parseOptionalBooleanEnv('CRAFT_WEBUI_SECURE_COOKIE', process.env.CRAFT_WEBUI_SECURE_COOKIE)
 const webuiWsUrl = parseOptionalWebSocketUrl('CRAFT_WEBUI_WS_URL', process.env.CRAFT_WEBUI_WS_URL)
 const webuiPublicUrl = parseOptionalHttpUrl('CRAFT_WEBUI_PUBLIC_URL', process.env.CRAFT_WEBUI_PUBLIC_URL)
+const webuiBrowserWebSocketSecure = webuiWsUrl
+  ? webuiWsUrl.startsWith('wss://')
+  : Boolean(tls)
+const webuiSessionTransportSecure = webuiBrowserWebSocketSecure && (
+  (Boolean(tls) && webuiSecureCookies !== false)
+  || Boolean(webuiPublicUrl?.startsWith('https://') && webuiSecureCookies === true)
+)
 const serverToken = process.env.CRAFT_SERVER_TOKEN
 const remoteDeviceRegistry = new RemoteDeviceRegistry({
   filePath: join(CONFIG_DIR, 'remote-devices.json'),
@@ -211,7 +218,7 @@ const instance = await (async () => {
       serverVersion: process.env.CRAFT_VERSION ?? packageVersion,
       tls,
       // When web UI is enabled, accept JWT session cookies on WebSocket upgrade
-      validateSessionCookie: webuiEnabled && serverToken
+      validateSessionCookie: webuiEnabled && serverToken && webuiSessionTransportSecure
         ? async (cookieHeader) => {
             const session = await validateSession(cookieHeader, serverToken)
             if (!session) return false
@@ -238,6 +245,9 @@ const instance = await (async () => {
               authorizationGeneration: session.authorizationGeneration,
             }
           }
+        : undefined,
+      allowedSessionCookieOrigins: webuiPublicUrl
+        ? [new URL(webuiPublicUrl).origin]
         : undefined,
       authorizeRequest: authorizeWebuiRpcRequest,
       // Embed the WebUI HTTP handler on the WS server's port
