@@ -127,6 +127,7 @@ import {
   resolveImportedSessionAppProvenance,
   toRoutingMetaAppProvenance,
 } from './session-app-provenance'
+import { classifyLatestTurnTerminalState } from './turn-completion'
 
 // Import from server-core domain utilities
 import { sanitizeForTitle, shouldActivateBrowserOverlay, normalizeBrowserToolName, rollbackFailedBranchCreation, releaseBrowserOwnershipOnForcedStop } from '@craft-agent/server-core/domain'
@@ -6939,16 +6940,10 @@ export class SessionManager implements ISessionManager {
 
           sessionLog.info('Chat completed via complete event')
 
-          // Check if we got an assistant response in this turn
-          // If not, the SDK may have hit context limits or other issues
-          const lastAssistantMsg = [...managed.messages].reverse().find(m =>
-            m.role === 'assistant' && !m.isIntermediate
-          )
-          const lastUserMsg = [...managed.messages].reverse().find(m => m.role === 'user')
-
-          // If the last user message is newer than any assistant response, we got no reply
-          // This can happen due to context overflow or API issues
-          if (lastUserMsg && (!lastAssistantMsg || lastUserMsg.timestamp > lastAssistantMsg.timestamp)) {
+          // A complete event is valid only when this user turn produced either
+          // a final assistant response or a visible error. Commentary and tool
+          // results alone are progress, not completion.
+          if (classifyLatestTurnTerminalState(managed.messages) === 'incomplete') {
             sessionLog.warn(`Session ${sessionId} completed without assistant response - possible context overflow or API issue`)
 
             // Check if there's a captured API error that explains the silent failure.
@@ -6956,6 +6951,7 @@ export class SessionManager implements ISessionManager {
             // (_sessionDir singleton can be clobbered by concurrent sessions).
             const sessionErrorPath = getSessionStoragePath(managed.workspace.rootPath, managed.id)
             const apiError = getLastApiError(sessionErrorPath)
+            let surfacedSpecificError = false
 
             if (apiError && apiError.status === 400) {
               const isImageError = apiError.message?.includes('image exceeds')
@@ -6977,6 +6973,8 @@ export class SessionManager implements ISessionManager {
                 errorCanRetry: false,
               }
               managed.messages.push(errorMessage)
+              managed.terminalErrorGeneration = myGeneration
+              surfacedSpecificError = true
               this.sendEvent({
                 type: 'typed_error',
                 sessionId,
@@ -6989,6 +6987,13 @@ export class SessionManager implements ISessionManager {
                   details: errorMessage.errorDetails,
                 },
               }, managed.workspace.id)
+            }
+
+            if (!surfacedSpecificError) {
+              await this.processEvent(managed, {
+                type: 'error',
+                message: 'The agent stopped before producing a final response. Completed tool results were preserved; retry to resume safely.',
+              }, myGeneration)
             }
           }
 
@@ -7014,7 +7019,12 @@ export class SessionManager implements ISessionManager {
         sessionLog.info('Chat loop completed after stop request - events drained successfully')
         await this.onProcessingStopped(sessionId, 'interrupted', myGeneration)
       } else {
-        sessionLog.info('Chat loop exited unexpectedly')
+        sessionLog.warn('Chat loop exited unexpectedly')
+        await this.processEvent(managed, {
+          type: 'error',
+          message: 'The agent stream ended unexpectedly before completion. Completed work was preserved; retry to resume safely.',
+        }, myGeneration)
+        await this.onProcessingStopped(sessionId, 'error', myGeneration)
       }
     } catch (error) {
       // Check if this is an abort error (expected when interrupted)

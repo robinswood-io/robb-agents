@@ -94,6 +94,7 @@ import {
   OVERFLOW_RECOVERY_COMPACTION_INSTRUCTIONS,
   prepareMessagesForOverflowContinuation,
 } from './overflow-recovery.ts';
+import { IncompleteToolTailRecovery } from './incomplete-tool-tail-recovery.ts';
 
 // ============================================================
 // Types — JSONL Protocol
@@ -258,6 +259,7 @@ let initConfig: Extract<InboundMessage, { type: 'init' }> | null = null;
 
 // Mutable state
 let currentUserMessage = '';
+const incompleteToolTailRecovery = new IncompleteToolTailRecovery();
 
 // Pending promises for async handshakes
 const pendingPreToolUse = new Map<string, { resolve: (response: { action: string; input?: Record<string, unknown>; reason?: string }) => void }>();
@@ -1246,6 +1248,14 @@ function handleSessionEvent(event: AgentSessionEvent): void {
     }
   }
 
+  if (
+    event.type === 'agent_end'
+    && incompleteToolTailRecovery.shouldSuppressAgentEnd(event.messages)
+  ) {
+    debugLog('Held premature agent_end after tool result; scheduling bounded continuation');
+    return;
+  }
+
   // Forward all events to main process
   send({ type: 'event', event: forwardedEvent });
 }
@@ -1313,6 +1323,7 @@ async function waitForCompaction(session: { isCompacting: boolean }, timeoutMs =
 
 async function handlePrompt(msg: Extract<InboundMessage, { type: 'prompt' }>): Promise<void> {
   currentUserMessage = msg.message;
+  incompleteToolTailRecovery.beginPrompt();
 
   try {
     // If proxy tools changed since last session creation, dispose and recreate.
@@ -1352,6 +1363,22 @@ async function handlePrompt(msg: Extract<InboundMessage, { type: 'prompt' }>): P
       images: msg.images && msg.images.length > 0 ? msg.images : undefined,
       streamingBehavior: 'followUp',
     });
+
+    const recoveryResult = await incompleteToolTailRecovery.recover(async () => {
+      debugLog('Continuing Pi turn from persisted tool result after premature agent_end');
+      await session.agent.continue();
+    });
+
+    if (recoveryResult === 'exhausted') {
+      const message = 'The agent repeatedly stopped after a tool result before producing a final response. Completed tool results were preserved; retry to resume safely.';
+      debugLog('Incomplete tool-tail recovery exhausted');
+      send({ type: 'error', message, code: 'incomplete_tool_tail' });
+      send({ type: 'event', event: { type: 'agent_end', messages: [], willRetry: false } });
+    } else if (recoveryResult === 'aborted') {
+      // The original incomplete agent_end was withheld. Close the parent queue
+      // without surfacing an error because this path was explicitly cancelled.
+      send({ type: 'event', event: { type: 'agent_end', messages: [], willRetry: false } });
+    }
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
 
@@ -1369,6 +1396,8 @@ async function handlePrompt(msg: Extract<InboundMessage, { type: 'prompt' }>): P
     // Send synthetic agent_end so the main process event queue unblocks.
     // willRetry: false — this is the terminal error path, no retry follows.
     send({ type: 'event', event: { type: 'agent_end', messages: [], willRetry: false } });
+  } finally {
+    incompleteToolTailRecovery.endPrompt();
   }
 }
 
@@ -1410,6 +1439,7 @@ function handlePreToolUseResponse(msg: Extract<InboundMessage, { type: 'pre_tool
 }
 
 async function handleAbort(): Promise<void> {
+  incompleteToolTailRecovery.requestAbort();
   if (piSession) {
     try {
       await piSession.abort();

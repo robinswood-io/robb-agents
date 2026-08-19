@@ -8,4 +8,6 @@ This file accumulates release notes for the next unreleased version. PRs that ad
 
 ## Bug Fixes
 
+- Resume Codex/Pi turns that stop immediately after a tool result, and show an explicit retryable error instead of silently ending when recovery is exhausted.
+
 ## Breaking Changes
