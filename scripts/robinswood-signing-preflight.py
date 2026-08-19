@@ -32,7 +32,6 @@ MAC_ENTITLEMENTS = ROOT / "apps/electron/build/entitlements.mac.plist"
 APP_ID = "io.robinswood.robbagents"
 PRODUCT_NAME = "Robb Agents"
 APPLE_TEAM_ID = "4FWLQ2KVUY"
-WEBAUTHN_KEYCHAIN_ACCESS_GROUP = f"{APPLE_TEAM_ID}.{APP_ID}.webauthn"
 WINDOWS_SIGNING_MODES = {"pfx", "azure"}
 UUID_PATTERN = re.compile(
     r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
@@ -65,9 +64,9 @@ def check_builder_metadata() -> list[Check]:
         Check("mac notarization", "notarize: true" in text, "electron-builder notarization enabled"),
         Check("mac entitlements", "entitlements: build/entitlements.mac.plist" in text, "build/entitlements.mac.plist"),
         Check(
-            "mac WebAuthn Keychain entitlement",
-            WEBAUTHN_KEYCHAIN_ACCESS_GROUP in entitlements_text,
-            WEBAUTHN_KEYCHAIN_ACCESS_GROUP,
+            "mac restricted Keychain entitlement absent",
+            "keychain-access-groups" not in entitlements_text,
+            "requires an embedded Developer ID provisioning profile before it can be enabled",
         ),
         Check(
             "Windows Artifact Signing configuration",
@@ -123,7 +122,7 @@ def check_notarization(ci: bool) -> list[Check]:
     team = Check(
         "APPLE_TEAM_ID",
         team_id == APPLE_TEAM_ID,
-        f"must match the WebAuthn entitlement team ({APPLE_TEAM_ID})",
+        f"must match the Robinswood signing team ({APPLE_TEAM_ID})",
     )
     apple_id_route = present("APPLE_ID") and present("APPLE_APP_SPECIFIC_PASSWORD")
     api_key_name = "APPLE_API_KEY_BASE64" if ci else "APPLE_API_KEY"
