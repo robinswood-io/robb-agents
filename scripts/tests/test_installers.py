@@ -98,7 +98,10 @@ class InstallerContractTests(unittest.TestCase):
             source,
         )
 
-    @unittest.skipUnless(shutil.which("bash"), "Embedded updater syntax validation requires bash")
+    @unittest.skipUnless(
+        shutil.which("bash") and platform.system() in {"Darwin", "Linux"},
+        "Embedded macOS updater syntax validation requires macOS or Linux with bash",
+    )
     def test_embedded_macos_updater_has_valid_bash_syntax(self) -> None:
         source = ELECTRON_UPDATER.read_text(encoding="utf-8")
         prefix = "const script = `"
