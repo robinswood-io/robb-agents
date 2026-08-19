@@ -91,6 +91,20 @@ describe('schema', () => {
     expect(parseTaskSpec({ ...CHAIN, max_iterations: 11 }).success).toBe(false);
   });
 
+  it('applies bounded reflective-memory and stagnation defaults', () => {
+    const result = parseTaskSpec({ ...CHAIN, autonomy: {} });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.autonomy).toEqual({
+      reflection_memory_entries: 3,
+      reflection_output_chars: 1_500,
+      stagnation_limit: 2,
+    });
+    expect(parseTaskSpec({ ...CHAIN, autonomy: { reflection_memory_entries: 9 } }).success).toBe(false);
+    expect(parseTaskSpec({ ...CHAIN, autonomy: { reflection_output_chars: 4_001 } }).success).toBe(false);
+    expect(parseTaskSpec({ ...CHAIN, autonomy: { stagnation_limit: 6 } }).success).toBe(false);
+  });
+
   it('accepts optional task-level sources and skills, rejecting empty slugs', () => {
     const r = parseTaskSpec({ ...CHAIN, sources: ['github', 'linear'], skills: ['commit'] });
     expect(r.success).toBe(true);
@@ -339,6 +353,12 @@ describe('storage', () => {
     const res = parseTaskYaml(':\n  - [unbalanced');
     expect(res.valid).toBe(false);
     expect(res.errors[0]?.message).toContain('Invalid YAML');
+  });
+
+  it('rejects task, run, and node identifiers that escape their storage roots', () => {
+    expect(() => loadTaskSpec(root, '../outside')).toThrow(/Invalid task slug/);
+    expect(() => readRunLog(root, 'demo', '../outside')).toThrow(/Invalid task run id/);
+    expect(() => readNodeOutput(root, 'demo', 'r1', '../outside')).toThrow(/Invalid task node id/);
   });
 
   it('appends and reads the run log in order', () => {

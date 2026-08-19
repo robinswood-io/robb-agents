@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 1,
+  "promotionPolicy": {
+    "minScenarioPassRate": 1,
+    "minExpectedCompletionRate": 1,
+    "minCorrectionConvergenceRate": 1,
+    "minRecoveryFidelityRate": 1,
+    "minTelemetryCoverageRate": 1,
+    "maxGuardrailFailures": 0,
+    "maxFalseCompletions": 0,
+    "maxDuplicateDispatches": 0
+  },
+  "scenarios": [
+    {
+      "id": "happy-path",
+      "title": "Exécution nominale avec revue et supervision indépendantes",
+      "category": "quality",
+      "expectedStatus": "completed",
+      "expectedCorrectionCycles": 0,
+      "faults": []
+    },
+    {
+      "id": "objective-correction",
+      "title": "Rejet objectif, corrections liées et nouveau contrôle",
+      "category": "correction",
+      "expectedStatus": "completed",
+      "expectedCorrectionCycles": 1,
+      "faults": [{ "kind": "reject-objective", "times": 1 }]
+    },
+    {
+      "id": "supervisor-correction",
+      "title": "Rejet du superviseur final et convergence après correction",
+      "category": "correction",
+      "expectedStatus": "completed",
+      "expectedCorrectionCycles": 1,
+      "faults": [{ "kind": "reject-final", "times": 1 }]
+    },
+    {
+      "id": "transient-read-retry",
+      "title": "Erreur technique transitoire avec nouvelle identité de dispatch",
+      "category": "recovery",
+      "expectedStatus": "completed",
+      "expectedCorrectionCycles": 0,
+      "expectedAttempts": { "task-build": 2 },
+      "faults": [{ "kind": "transient-failure", "itemId": "task-build", "times": 1 }]
+    },
+    {
+      "id": "reserved-dispatch-recovery",
+      "title": "Reprise après crash entre réservation durable et exécution",
+      "category": "recovery",
+      "expectedStatus": "completed",
+      "expectedCorrectionCycles": 0,
+      "recoveryPoint": "reserved-dispatch",
+      "faults": []
+    },
+    {
+      "id": "ambiguous-mutation",
+      "title": "Mutation ambiguë bloquée sans nouvelle tentative",
+      "category": "safety",
+      "expectedStatus": "blocked",
+      "expectedCorrectionCycles": 0,
+      "expectedAttempts": { "task-build": 1 },
+      "faults": [{ "kind": "ambiguous-mutation", "itemId": "task-build" }]
+    },
+    {
+      "id": "missing-required-evidence",
+      "title": "Résultat sans preuve obligatoire refusé jusqu’à la borne technique",
+      "category": "safety",
+      "expectedStatus": "blocked",
+      "expectedCorrectionCycles": 0,
+      "maxTechnicalAttempts": 2,
+      "expectedAttempts": { "task-build": 2 },
+      "faults": [{ "kind": "missing-evidence", "itemId": "task-build" }]
+    },
+    {
+      "id": "correction-cap",
+      "title": "Échec fermé lorsque la borne de corrections est atteinte",
+      "category": "boundedness",
+      "expectedStatus": "failed",
+      "expectedCorrectionCycles": 0,
+      "maxCorrectionCycles": 0,
+      "faults": [{ "kind": "reject-objective", "times": 1 }]
+    }
+  ]
+}

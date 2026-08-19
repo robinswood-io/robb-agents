@@ -222,6 +222,38 @@ describe('task-spec-form round-trip', () => {
     expect(spec.max_iterations).toBe(0)
   })
 
+  it('preserves explicit reflective-repair overrides without copying backend defaults', () => {
+    const autonomy = {
+      reflection_memory_entries: 2,
+      reflection_output_chars: 750,
+      stagnation_limit: 1,
+    }
+    const spec = buildSpec(
+      {
+        title: 'T',
+        goal: 'g',
+        autonomy,
+        projectId: '',
+        orchModel: '',
+        subtasks: [{ uid: 'a', title: 'A', prompt: 'p', dependsOn: [] }],
+      },
+      noConn,
+    )
+    expect(spec.autonomy).toEqual(autonomy)
+
+    const defaulted = buildSpec(
+      {
+        title: 'T',
+        goal: 'g',
+        projectId: '',
+        orchModel: '',
+        subtasks: [{ uid: 'a', title: 'A', prompt: 'p', dependsOn: [] }],
+      },
+      noConn,
+    )
+    expect('autonomy' in defaulted).toBe(false)
+  })
+
   it('keeps a preserved id even when it collides with a manual subtask title slug', () => {
     const spec = buildSpec(
       {

@@ -49,6 +49,10 @@ import { permissionsConfigCache, type PermissionsContext } from '../permissions-
 import type { PrerequisiteCheckResult } from './prerequisite-manager.ts';
 import { rewriteBashWithRtk } from './rtk-rewrite.ts';
 import { enforceTaskToolIsolation } from './task-tool-isolation.ts';
+import {
+  classifySensitiveExternalAction,
+  isSensitiveExternalActionExplicitlyAuthorized,
+} from './sensitive-external-action.ts';
 import type { SessionExecutionIsolation } from '../../tasks/durable-execution.ts';
 
 // ============================================================
@@ -598,6 +602,8 @@ export type PreToolUseCheckResult =
       rememberForMinutes?: number;
       commandHash?: string;
       approvalTtlSeconds?: number;
+      /** Never auto-allow this prompt when the backend has no permission handler. */
+      requiresExplicitConfirmation?: true;
     }
   | { type: 'source_activation_needed'; sourceSlug: string; sourceExists: boolean }
   | { type: 'call_llm_intercept'; input: Record<string, unknown> }
@@ -640,6 +646,8 @@ export interface PreToolUseInput {
   prerequisiteManager?: PrerequisiteManagerLike;
   /** Backend metadata (e.g. Pi forwards intent / displayName via input.metadata) */
   backendMetadata?: { intent?: string; displayName?: string };
+  /** Raw current user request, used only for narrow action+target authorization matching. */
+  currentUserRequest?: string;
   /** RTK Bash-rewrite context (undefined when toggle is off or rtk binary missing) */
   rtkContext?: import('./rtk-rewrite.ts').RtkContext;
   /** Debug callback */
@@ -684,7 +692,8 @@ const FILE_WRITE_TOOLS = new Set(['Write', 'Edit', 'MultiEdit', 'NotebookEdit'])
  * 3. Prerequisite check (guide.md before source tools)
  * 4. call_llm interception
  * 5. Input transforms (paths, config validation, skills, metadata)
- * 6. Ask-mode prompt decision
+ * 6. Sensitive external-action confirmation (all non-safe modes, before whitelists)
+ * 7. Ask-mode prompt decision
  *
  * @returns A discriminated union that the agent translates to its SDK format
  */
@@ -719,6 +728,7 @@ export function runPreToolUseChecks(ctx: PreToolUseInput): PreToolUseCheckResult
     permissionManager,
     prerequisiteManager,
     backendMetadata,
+    currentUserRequest,
     onDebug,
   } = ctx;
 
@@ -897,7 +907,46 @@ export function runPreToolUseChecks(ctx: PreToolUseInput): PreToolUseCheckResult
   }
 
   // ============================================================
-  // 7. ASK MODE PROMPT DECISION
+  // 7. SENSITIVE EXTERNAL-ACTION CONFIRMATION
+  // ============================================================
+  // This authorization boundary is independent from permission mode. Safe mode
+  // remains non-interactive and blocks; Ask and Execute require a dedicated
+  // confirmation unless the current request names both the action and target.
+  // It deliberately runs before ask-mode/session whitelists.
+  const sensitiveAction = classifySensitiveExternalAction(toolName, input);
+  if (sensitiveAction) {
+    if (effectivePermissionMode === 'safe') {
+      const reason = withPermissionModeContext(
+        `${sensitiveAction.description}\n\nSensitive external actions are blocked in Explore mode.`,
+        sessionId,
+        effectivePermissionMode,
+      );
+      onDebug?.(`Sensitive external action: blocking ${toolName} in safe mode`);
+      return { type: 'block', reason };
+    }
+
+    const explicitlyAuthorized = isSensitiveExternalActionExplicitlyAuthorized(
+      sensitiveAction,
+      currentUserRequest,
+    );
+    if (!explicitlyAuthorized) {
+      onDebug?.(`Sensitive external action: confirmation required for ${sensitiveAction.category}`);
+      return {
+        type: 'prompt',
+        promptType: sensitiveAction.promptType,
+        description: sensitiveAction.description,
+        command: sensitiveAction.commandPreview,
+        modifiedInput: wasModified ? currentInput : undefined,
+        reason: sensitiveAction.reason,
+        impact: sensitiveAction.impact,
+        requiresExplicitConfirmation: true,
+      };
+    }
+    onDebug?.(`Sensitive external action: current request explicitly authorizes ${sensitiveAction.category} target`);
+  }
+
+  // ============================================================
+  // 8. ASK MODE PROMPT DECISION
   // ============================================================
   if (effectivePermissionMode === 'ask') {
     const promptInfo = shouldPromptInAskMode(

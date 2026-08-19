@@ -75,6 +75,7 @@ import {
   type SessionMetadata,
   type SessionStatus,
   type SessionHeader,
+  type SessionAppProvenance,
   pickSessionFields,
 } from '@craft-agent/shared/sessions'
 import { loadWorkspaceSources, loadAllSources, getSourcesBySlugs, isSourceUsable, type LoadedSource, type McpServerConfig, getSourcesNeedingAuth, getSourceCredentialManager, getSourceServerBuilder, type SourceWithCredential, isApiOAuthProvider, hasRenewEndpoint, SERVER_BUILD_ERRORS, TokenRefreshManager, createTokenGetter } from '@craft-agent/shared/sources'
@@ -121,6 +122,11 @@ import {
   type RoutingCircuitState,
 } from './routing-fallback'
 import { buildRoutingRuntimeContext } from './routing-runtime'
+import {
+  getPlatformSessionAppProvenance,
+  resolveImportedSessionAppProvenance,
+  toRoutingMetaAppProvenance,
+} from './session-app-provenance'
 
 // Import from server-core domain utilities
 import { sanitizeForTitle, shouldActivateBrowserOverlay, normalizeBrowserToolName, rollbackFailedBranchCreation, releaseBrowserOwnershipOnForcedStop } from '@craft-agent/server-core/domain'
@@ -837,10 +843,14 @@ interface ManagedSession {
   /** Set when user requests stop - allows event loop to drain before clearing isProcessing */
   stopRequested?: boolean
   lastMessageAt: number
+  /** Last time this process used the lazily-created agent/MCP runtime. */
+  runtimeLastActiveAt?: number
   streamingText: string
   // Incremented each time a new message starts processing.
   // Used to detect if a follow-up message has superseded the current one (stale-request guard).
   processingGeneration: number
+  /** Generation that emitted a terminal provider error before its trailing complete event. */
+  terminalErrorGeneration?: number
   /** Runtime-only generation telemetry refs, keyed by processingGeneration. */
   executionTelemetryGenerations?: Map<number, RuntimeGenerationTelemetryRef>
   /** Runtime-only compaction spans, keyed by processingGeneration. */
@@ -915,6 +925,11 @@ interface ManagedSession {
   taskDraft?: boolean
   // Host-enforced tool isolation envelope for a Conductor child session
   executionIsolation?: import('@craft-agent/shared/tasks').SessionExecutionIsolation
+  // Mission Orchestration v2 durable ownership and dispatch identity
+  missionId?: string
+  missionWorkItemId?: string
+  missionDispatchId?: string
+  missionRole?: 'planner' | 'worker' | 'reviewer' | 'supervisor'
   // Working directory for this session (used by agent for bash commands)
   workingDirectory?: string
   // SDK cwd for session storage - set once at creation, never changes.
@@ -952,6 +967,9 @@ interface ManagedSession {
   preview?: string
   // When the session was first created (ms timestamp from JSONL header)
   createdAt?: number
+  // App build provenance (optional for legacy sessions)
+  createdByApp?: SessionAppProvenance
+  lastUsedByApp?: SessionAppProvenance
   // Total message count (pre-computed in JSONL header for fast list loading)
   messageCount?: number
   // Message queue for handling new messages while processing
@@ -1210,6 +1228,45 @@ function managedToSession(m: ManagedSession, overrides?: Partial<Session>): Sess
 
 // Performance: Batch IPC delta events to reduce renderer load
 const DELTA_BATCH_INTERVAL_MS = 50  // Flush batched deltas every 50ms
+const DEFAULT_SESSION_RUNTIME_IDLE_TIMEOUT_MS = 30 * 60 * 1000
+const MIN_SESSION_RUNTIME_IDLE_TIMEOUT_MS = 60 * 1000
+const SESSION_RUNTIME_SWEEP_INTERVAL_MS = 5 * 60 * 1000
+const SESSION_RUNTIME_DISPOSE_TIMEOUT_MS = 5_000
+const SESSION_RUNTIME_EVICTION_CONCURRENCY = 4
+
+async function withRuntimeDisposeTimeout(operation: Promise<void>, label: string): Promise<void> {
+  let timer: NodeJS.Timeout | undefined
+  try {
+    await Promise.race([
+      operation,
+      new Promise<never>((_resolve, reject) => {
+        timer = setTimeout(() => {
+          reject(new Error(`${label} timed out after ${SESSION_RUNTIME_DISPOSE_TIMEOUT_MS}ms`))
+        }, SESSION_RUNTIME_DISPOSE_TIMEOUT_MS)
+        timer.unref?.()
+      }),
+    ])
+  } finally {
+    if (timer) clearTimeout(timer)
+  }
+}
+
+function resolveSessionRuntimeIdleTimeoutMs(): number {
+  const configured = process.env.CRAFT_SESSION_RUNTIME_IDLE_TIMEOUT_MS
+  if (configured === '0') return 0
+  if (!configured) return DEFAULT_SESSION_RUNTIME_IDLE_TIMEOUT_MS
+
+  const parsed = Number(configured)
+  if (Number.isFinite(parsed) && parsed >= MIN_SESSION_RUNTIME_IDLE_TIMEOUT_MS) {
+    return Math.floor(parsed)
+  }
+
+  sessionLog.warn('Ignoring invalid CRAFT_SESSION_RUNTIME_IDLE_TIMEOUT_MS', {
+    configured,
+    minimumMs: MIN_SESSION_RUNTIME_IDLE_TIMEOUT_MS,
+  })
+  return DEFAULT_SESSION_RUNTIME_IDLE_TIMEOUT_MS
+}
 
 interface PendingDelta {
   delta: string
@@ -1303,6 +1360,10 @@ export class SessionManager implements ISessionManager {
    * subprocess can race the resulting `chat` against the still-pending update.
    */
   private agentRefreshLocks: Map<string, Promise<void>> = new Map()
+  /** Periodically releases lazy per-session agents, MCP pools and subprocesses. */
+  private runtimeEvictionTimer: NodeJS.Timeout | null = null
+  private runtimeEvictionSweepInFlight = false
+  private readonly runtimeIdleTimeoutMs = resolveSessionRuntimeIdleTimeoutMs()
   /** Monotonic clock to ensure strictly increasing message timestamps */
   private lastTimestamp = 0
 
@@ -1327,6 +1388,7 @@ export class SessionManager implements ISessionManager {
   private setProcessing(managed: ManagedSession, processing: boolean): void {
     const was = managed.isProcessing
     managed.isProcessing = processing
+    managed.runtimeLastActiveAt = Date.now()
     if (!was && processing) {
       sessionRuntimeHooks.onSessionStarted()
     } else if (was && !processing) {
@@ -2192,6 +2254,8 @@ export class SessionManager implements ISessionManager {
       // Load existing sessions from disk
       this.loadSessionsFromDisk()
 
+      this.startRuntimeEvictionSweep()
+
       // Signal that initialization is complete — IPC handlers waiting on initGate will proceed
       this.initGate.markReady()
     } catch (error) {
@@ -2351,6 +2415,9 @@ export class SessionManager implements ISessionManager {
       const persistableMessages = managed.messages.filter(m =>
         m.role !== 'status'
       )
+
+      const currentApp = getPlatformSessionAppProvenance(_platform)
+      if (currentApp) managed.lastUsedByApp = currentApp
 
       const storedSession: StoredSession = {
         ...pickSessionFields(managed),
@@ -3150,6 +3217,7 @@ export class SessionManager implements ISessionManager {
     }
 
     // Use storage layer to create and persist the session
+    const currentApp = getPlatformSessionAppProvenance(_platform)
     const storedSession = await createStoredSession(workspaceRootPath, {
       name: options?.name,
       permissionMode: defaultPermissionMode,
@@ -3165,11 +3233,17 @@ export class SessionManager implements ISessionManager {
       taskNodeId: options?.taskNodeId,
       taskDraft: options?.taskDraft,
       executionIsolation: options?.executionIsolation,
+      missionId: options?.missionId,
+      missionWorkItemId: options?.missionWorkItemId,
+      missionDispatchId: options?.missionDispatchId,
+      missionRole: options?.missionRole,
       playbookSlug: selectedPlaybook?.manifest.slug,
       // Persist only an EXPLICIT selection (e.g. a task's spec.sources on its subtasks).
       // The workspace-default fallback stays dynamic — freezing it into the header would
       // pin every ordinary session to the defaults as of its creation time.
       enabledSourceSlugs: options?.enabledSourceSlugs,
+      createdByApp: currentApp,
+      lastUsedByApp: currentApp,
     })
 
     // Branch: copy messages from source session up to and including the branch point
@@ -3288,6 +3362,8 @@ export class SessionManager implements ISessionManager {
             error: error instanceof Error ? error.message : String(error),
           })
 
+          await this.disposeManagedAgentRuntime(managed, 'failed branch preflight')
+
           await rollbackFailedBranchCreation({
             managed,
             workspaceRootPath,
@@ -3378,34 +3454,13 @@ export class SessionManager implements ISessionManager {
   private async disposeManagedAgentRuntime(managed: ManagedSession, reason: string): Promise<void> {
     const sessionId = managed.id
 
-    if (managed.agent) {
-      try {
-        if (managed.agent.disposeForRestart) {
-          await managed.agent.disposeForRestart()
-        } else {
-          managed.agent.dispose()
-        }
-      } catch (error) {
-        sessionLog.warn(`Failed to dispose agent for ${sessionId} during ${reason}: ${error instanceof Error ? error.message : error}`)
-      }
-    }
-
-    if (managed.poolServer) {
-      try {
-        await managed.poolServer.stop()
-      } catch (error) {
-        sessionLog.warn(`Failed to stop pool server for ${sessionId} during ${reason}: ${error instanceof Error ? error.message : error}`)
-      }
-    }
-
-    if (managed.mcpPool) {
-      try {
-        await managed.mcpPool.disconnectAll()
-      } catch (error) {
-        sessionLog.warn(`Failed to disconnect MCP pool for ${sessionId} during ${reason}: ${error instanceof Error ? error.message : error}`)
-      }
-    }
-
+    // Detach the complete runtime synchronously before awaiting any shutdown
+    // hook. A message can arrive while an idle eviction is awaiting a slow
+    // subprocess; detaching first makes that message build a fresh runtime and
+    // prevents the old disposal from clearing the replacement afterwards.
+    const agent = managed.agent
+    const poolServer = managed.poolServer
+    const mcpPool = managed.mcpPool
     managed.agent = null
     managed.poolServer = undefined
     managed.mcpPool = undefined
@@ -3414,7 +3469,132 @@ export class SessionManager implements ISessionManager {
     managed.agentReadyResolve = undefined
     managed.backendRuntimeSignature = undefined
     managed.backendRestartSignature = undefined
+    managed.runtimeLastActiveAt = undefined
     unregisterSessionScopedToolCallbacks(sessionId)
+
+    if (agent) {
+      try {
+        if (agent.disposeForRestart) {
+          await withRuntimeDisposeTimeout(
+            agent.disposeForRestart(),
+            `Agent disposal for ${sessionId}`,
+          )
+        } else {
+          agent.dispose()
+        }
+      } catch (error) {
+        sessionLog.warn(`Failed to dispose agent for ${sessionId} during ${reason}: ${error instanceof Error ? error.message : error}`)
+      }
+    }
+
+    if (poolServer) {
+      try {
+        await withRuntimeDisposeTimeout(
+          poolServer.stop(),
+          `Pool server shutdown for ${sessionId}`,
+        )
+      } catch (error) {
+        sessionLog.warn(`Failed to stop pool server for ${sessionId} during ${reason}: ${error instanceof Error ? error.message : error}`)
+      }
+    }
+
+    if (mcpPool) {
+      try {
+        await withRuntimeDisposeTimeout(
+          mcpPool.disconnectAll(),
+          `MCP pool disconnect for ${sessionId}`,
+        )
+      } catch (error) {
+        sessionLog.warn(`Failed to disconnect MCP pool for ${sessionId} during ${reason}: ${error instanceof Error ? error.message : error}`)
+      }
+    }
+  }
+
+  private hasRunningBackgroundTasks(managed: ManagedSession): boolean {
+    for (const task of managed.backgroundTaskRegistry.values()) {
+      if (task.status === 'running') return true
+    }
+    return false
+  }
+
+  /**
+   * Release runtimes for sessions that have been idle long enough. Transcript
+   * state and provider session IDs remain persisted, so the next message lazily
+   * recreates a clean runtime and resumes the conversation.
+   */
+  private async evictIdleSessionRuntimes(now = Date.now()): Promise<number> {
+    if (this.runtimeIdleTimeoutMs === 0 || this.runtimeEvictionSweepInFlight) return 0
+    this.runtimeEvictionSweepInFlight = true
+    let evicted = 0
+
+    try {
+      const candidates = Array.from(this.sessions.values()).filter(managed => {
+        const hasRuntime = !!managed.agent || !!managed.poolServer || !!managed.mcpPool
+        if (!hasRuntime
+          || managed.isProcessing
+          || managed.messageQueue.length > 0
+          || this.hasRunningBackgroundTasks(managed)
+          || this.agentRefreshLocks.has(managed.id)) {
+          return false
+        }
+
+        const lastActiveAt = managed.runtimeLastActiveAt ?? managed.lastMessageAt
+        return now - lastActiveAt >= this.runtimeIdleTimeoutMs
+      })
+
+      // Bound teardown concurrency: serial cleanup is too slow when a leaked
+      // historical process has many runtimes, while unbounded Promise.all can
+      // overwhelm the machine with simultaneous subprocess shutdowns.
+      for (let offset = 0; offset < candidates.length; offset += SESSION_RUNTIME_EVICTION_CONCURRENCY) {
+        const batch = candidates.slice(offset, offset + SESSION_RUNTIME_EVICTION_CONCURRENCY)
+        const results = await Promise.all(batch.map(async managed => {
+          // Re-check immediately before detaching. A queued or active message
+          // may have arrived while an earlier batch was being disposed.
+          const hasRuntime = !!managed.agent || !!managed.poolServer || !!managed.mcpPool
+          const lastActiveAt = managed.runtimeLastActiveAt ?? managed.lastMessageAt
+          if (!hasRuntime
+            || managed.isProcessing
+            || managed.messageQueue.length > 0
+            || this.hasRunningBackgroundTasks(managed)
+            || this.agentRefreshLocks.has(managed.id)
+            || now - lastActiveAt < this.runtimeIdleTimeoutMs) {
+            return false
+          }
+
+          await this.disposeManagedAgentRuntime(managed, 'idle runtime eviction')
+          sessionLog.info('Evicted idle session runtime', {
+            sessionId: managed.id,
+            idleMs: now - lastActiveAt,
+          })
+          return true
+        }))
+        evicted += results.filter(Boolean).length
+      }
+    } finally {
+      this.runtimeEvictionSweepInFlight = false
+    }
+
+    return evicted
+  }
+
+  private startRuntimeEvictionSweep(): void {
+    if (this.runtimeIdleTimeoutMs === 0 || this.runtimeEvictionTimer) return
+    const intervalMs = Math.min(
+      SESSION_RUNTIME_SWEEP_INTERVAL_MS,
+      Math.max(MIN_SESSION_RUNTIME_IDLE_TIMEOUT_MS, Math.floor(this.runtimeIdleTimeoutMs / 3)),
+    )
+    this.runtimeEvictionTimer = setInterval(() => {
+      void this.evictIdleSessionRuntimes().catch(error => {
+        sessionLog.warn('Idle runtime eviction sweep failed', {
+          error: error instanceof Error ? error.message : String(error),
+        })
+      })
+    }, intervalMs)
+    this.runtimeEvictionTimer.unref?.()
+    sessionLog.info('Session runtime eviction enabled', {
+      idleTimeoutMs: this.runtimeIdleTimeoutMs,
+      intervalMs,
+    })
   }
 
   /**
@@ -4069,6 +4249,36 @@ export class SessionManager implements ISessionManager {
       // ============================================================
 
       managed.agent.onDebug = (msg: string) => {
+        // PiAgent is the sole producer. Requiring its exact prefix prevents a
+        // subprocess stderr line containing the marker from forging an error.
+        const runtimeErrorPrefix = '[pi] __RUNTIME_ERROR__'
+        if (msg.startsWith(runtimeErrorPrefix)) {
+          const payloadRaw = msg.slice(runtimeErrorPrefix.length)
+          try {
+            const payload = JSON.parse(payloadRaw) as {
+              kind?: string
+              code?: number | null
+              signal?: string | null
+              stderrTail?: string
+            }
+            sessionLog.error('Agent runtime subprocess failed', {
+              sessionId: managed.id,
+              kind: payload.kind ?? 'unknown',
+              code: payload.code,
+              signal: payload.signal,
+              ...(payload.stderrTail
+                ? { stderrTail: redactSecretLikeMaterial(payload.stderrTail).slice(-4_000) }
+                : {}),
+            })
+          } catch {
+            sessionLog.error('Agent runtime subprocess failed', {
+              sessionId: managed.id,
+              kind: 'invalid_runtime_diagnostic',
+            })
+          }
+          return
+        }
+
         const marker = '__PERMISSION_BLOCK__'
         if (msg.includes(marker)) {
           const idx = msg.indexOf(marker)
@@ -5056,6 +5266,7 @@ export class SessionManager implements ISessionManager {
       }
       managed.backendRuntimeSignature = runtimeSignature
       managed.backendRestartSignature = restartSignature
+      managed.runtimeLastActiveAt = Date.now()
       end()
     }
     return managed.agent
@@ -5910,14 +6121,11 @@ export class SessionManager implements ISessionManager {
         updates.llmConnection = connection
       }
       await updateSessionMetadata(managed.workspace.rootPath, sessionId, updates)
-      // Update agent model if it already exists (takes effect on next query)
+      // Refresh the live runtime through the acknowledged async config path.
+      // Calling agent.setModel() directly is fire-and-forget for Pi and can leave
+      // the persisted/UI model ahead of the subprocess's effective model.
       if (managed.agent) {
-        // Fallback chain: session model > workspace default > connection default
-        const wsConfig = loadWorkspaceConfig(managed.workspace.rootPath)
-        const sessionConn = resolveSessionConnection(managed.llmConnection, wsConfig?.defaults?.defaultLlmConnection)
-        const effectiveModel = model ?? wsConfig?.defaults?.model ?? sessionConn?.defaultModel!
-        sessionLog.info(`[updateSessionModel] Calling agent.setModel(${effectiveModel}) [agent exists=${!!managed.agent}, connectionLocked=${managed.connectionLocked}]`)
-        managed.agent.setModel(effectiveModel)
+        await this.tryRefreshAgentRuntime(managed, 'session model changed')
       } else {
         sessionLog.info(`[updateSessionModel] No agent yet, model will apply on next agent creation`)
       }
@@ -6179,17 +6387,8 @@ export class SessionManager implements ISessionManager {
     this.remoteBpms.delete(sessionId)
     this.browserHostByCanvas.delete(sessionId)
 
-    // Dispose agent to clean up ConfigWatchers, event listeners, MCP connections
-    if (managed.agent) {
-      managed.agent.dispose()
-    }
-
-    // Stop pool server (HTTP MCP server for external SDK subprocesses)
-    if (managed.poolServer) {
-      managed.poolServer.stop().catch(err => {
-        sessionLog.warn(`Failed to stop pool server for ${sessionId}: ${err instanceof Error ? err.message : err}`)
-      })
-    }
+    // Dispose the complete per-session runtime, including MCP pool clients.
+    await this.disposeManagedAgentRuntime(managed, 'session deletion')
 
     // Cancel any pending source-activation auto-retry timer (craft-agents-oss#804).
     if (managed.autoRetryTimer) {
@@ -6538,70 +6737,84 @@ export class SessionManager implements ISessionManager {
     const workspaceRootPath = managed.workspace.rootPath
     const enabledSlugs = managed.enabledSourceSlugs ?? []
     const hasSources = enabledSlugs.length > 0
-
-    // Load enabled sources up-front so we can refresh tokens BEFORE getOrCreateAgent
-    // runs its internal cold-session build. Otherwise that build sees stale tokens
-    // and emits AUTH_REQUIRED, causing a brief "needs_auth" UI flicker before the
-    // post-build refresh restores state (#710).
-    const sources: LoadedSource[] = hasSources
-      ? getSourcesBySlugs(workspaceRootPath, enabledSlugs)
-      : []
-
-    if (hasSources && managed.tokenRefreshManager) {
-      const refreshResult = await refreshExpiredCredentials(sources, managed.tokenRefreshManager)
-      if (refreshResult.failedSources.length > 0) {
-        sessionLog.warn('[OAuth] Some sources failed token refresh:', refreshResult.failedSources.map(f => f.slug))
-      }
-      if (refreshResult.refreshedCount > 0) {
-        sendSpan.mark('oauth.refreshed')
-      }
-    }
-
-    // Get or create the agent (lazy loading). Its internal cold-session build at
-    // ~L2956 now sees fresh tokens (or correctly-needs_auth failed sources, since
-    // ensureFreshToken mirrors the disk write to source.config in-memory).
-    managed.routingFallbackAttempts = 0
-    managed.routingAttemptedConnectionSlugs = new Set()
     let agent: AgentInstance
-    while (true) {
-      try {
-        agent = await this.getOrCreateAgent(managed)
-        break
-      } catch (error) {
-        const didFallback = await this.tryApplyRoutingFallbackAfterAgentFailure(
-          managed,
-          error,
-          userMessage.id,
-        )
-        if (!didFallback) throw error
-      }
-    }
-    sendSpan.mark('agent.ready')
+    try {
+      // Load enabled sources up-front so we can refresh tokens BEFORE getOrCreateAgent
+      // runs its internal cold-session build. Otherwise that build sees stale tokens
+      // and emits AUTH_REQUIRED, causing a brief "needs_auth" UI flicker before the
+      // post-build refresh restores state (#710).
+      const sources: LoadedSource[] = hasSources
+        ? getSourcesBySlugs(workspaceRootPath, enabledSlugs)
+        : []
 
-    // Always set all sources for context (even if none are enabled), including built-ins
-    const allSources = loadAllSources(workspaceRootPath)
-    agent.setAllSources(allSources)
-    sendSpan.mark('sources.loaded')
-
-    // Apply source servers if any are enabled
-    if (hasSources) {
-      const sessionPath = getSessionStoragePath(workspaceRootPath, sessionId)
-      // Single fresh build — tokens already refreshed above.
-      const { mcpServers, apiServers, errors } = await buildServersFromSources(sources, sessionPath, managed.tokenRefreshManager, agent.getSummarizeCallback())
-      if (errors.length > 0) {
-        sessionLog.warn(`Source build errors:`, errors)
+      if (hasSources && managed.tokenRefreshManager) {
+        const refreshResult = await refreshExpiredCredentials(sources, managed.tokenRefreshManager)
+        if (refreshResult.failedSources.length > 0) {
+          sessionLog.warn('[OAuth] Some sources failed token refresh:', refreshResult.failedSources.map(f => f.slug))
+        }
+        if (refreshResult.refreshedCount > 0) {
+          sendSpan.mark('oauth.refreshed')
+        }
       }
 
-      const mcpCount = Object.keys(mcpServers).length
-      const apiCount = Object.keys(apiServers).length
-      if (mcpCount > 0 || apiCount > 0 || enabledSlugs.length > 0) {
-        const usableSources = sources.filter(isSourceUsable)
-        const intendedSlugs = usableSources.map(s => s.config.slug)
-        await agent.setSourceServers(mcpServers, apiServers, intendedSlugs)
-        await applyBridgeUpdates(agent, sessionPath, usableSources, mcpServers, sessionId, workspaceRootPath, 'send message', managed.poolServer?.url)
-        sessionLog.info(`Applied ${mcpCount} MCP + ${apiCount} API sources to session ${sessionId} (${allSources.length} total)`)
+      // Get or create the agent (lazy loading). Its internal cold-session build
+      // now sees fresh tokens. Every preparation failure is handled here so a
+      // rejected postInit/source setup cannot leave the session stuck processing.
+      managed.routingFallbackAttempts = 0
+      managed.routingAttemptedConnectionSlugs = new Set()
+      while (true) {
+        try {
+          agent = await this.getOrCreateAgent(managed)
+          break
+        } catch (error) {
+          const didFallback = await this.tryApplyRoutingFallbackAfterAgentFailure(
+            managed,
+            error,
+            userMessage.id,
+          )
+          if (!didFallback) throw error
+        }
       }
-      sendSpan.mark('servers.applied')
+      sendSpan.mark('agent.ready')
+
+      // Always set all sources for context (even if none are enabled), including built-ins
+      const allSources = loadAllSources(workspaceRootPath)
+      agent.setAllSources(allSources)
+      sendSpan.mark('sources.loaded')
+
+      // Apply source servers if any are enabled
+      if (hasSources) {
+        const sessionPath = getSessionStoragePath(workspaceRootPath, sessionId)
+        // Single fresh build — tokens already refreshed above.
+        const { mcpServers, apiServers, errors } = await buildServersFromSources(sources, sessionPath, managed.tokenRefreshManager, agent.getSummarizeCallback())
+        if (errors.length > 0) {
+          sessionLog.warn(`Source build errors:`, errors)
+        }
+
+        const mcpCount = Object.keys(mcpServers).length
+        const apiCount = Object.keys(apiServers).length
+        if (mcpCount > 0 || apiCount > 0 || enabledSlugs.length > 0) {
+          const usableSources = sources.filter(isSourceUsable)
+          const intendedSlugs = usableSources.map(s => s.config.slug)
+          await agent.setSourceServers(mcpServers, apiServers, intendedSlugs)
+          await applyBridgeUpdates(agent, sessionPath, usableSources, mcpServers, sessionId, workspaceRootPath, 'send message', managed.poolServer?.url)
+          sessionLog.info(`Applied ${mcpCount} MCP + ${apiCount} API sources to session ${sessionId} (${allSources.length} total)`)
+        }
+        sendSpan.mark('servers.applied')
+      }
+    } catch (error) {
+      sessionLog.error(`Failed to prepare agent runtime for session ${sessionId}:`, error)
+      sessionRuntimeHooks.captureException(error, { errorSource: 'chat_setup', sessionId })
+      sendSpan.mark('agent.setup_error')
+      sendSpan.setMetadata('error', error instanceof Error ? error.message : String(error))
+      sendSpan.end()
+      this.sendEvent({
+        type: 'error',
+        sessionId,
+        error: error instanceof Error ? error.message : 'Agent runtime setup failed',
+      }, managed.workspace.id)
+      await this.onProcessingStopped(sessionId, 'error', myGeneration)
+      return
     }
 
     try {
@@ -6781,7 +6994,8 @@ export class SessionManager implements ISessionManager {
 
           sendSpan.mark('chat.complete')
           sendSpan.end()
-          this.onProcessingStopped(sessionId, 'complete', myGeneration)
+          const stopReason = managed.terminalErrorGeneration === myGeneration ? 'error' : 'complete'
+          await this.onProcessingStopped(sessionId, stopReason, myGeneration)
           return  // Exit function, skip finally block (onProcessingStopped handles cleanup)
         }
 
@@ -6798,7 +7012,7 @@ export class SessionManager implements ISessionManager {
         sendSpan.end()
       } else if (managed.stopRequested) {
         sessionLog.info('Chat loop completed after stop request - events drained successfully')
-        this.onProcessingStopped(sessionId, 'interrupted', myGeneration)
+        await this.onProcessingStopped(sessionId, 'interrupted', myGeneration)
       } else {
         sessionLog.info('Chat loop exited unexpectedly')
       }
@@ -6823,7 +7037,7 @@ export class SessionManager implements ISessionManager {
         // by setting isProcessing = false directly. All other abort reasons route
         // through onProcessingStopped for queue draining.
         if (reason === AbortReason.UserStop || reason === AbortReason.Redirect || reason === undefined) {
-          this.onProcessingStopped(sessionId, 'interrupted', myGeneration)
+          await this.onProcessingStopped(sessionId, 'interrupted', myGeneration)
         }
       } else {
         sessionLog.error('Error in chat:', error)
@@ -6842,7 +7056,7 @@ export class SessionManager implements ISessionManager {
           error: error instanceof Error ? error.message : 'Unknown error'
         }, managed.workspace.id)
         // Handle error via centralized handler
-        this.onProcessingStopped(sessionId, 'error', myGeneration)
+        await this.onProcessingStopped(sessionId, 'error', myGeneration)
       }
     } finally {
       // Only handle cleanup for unexpected exits (loop break without complete event)
@@ -6852,7 +7066,7 @@ export class SessionManager implements ISessionManager {
         sessionLog.info('Finally block cleanup - unexpected exit')
         sendSpan.mark('chat.unexpected_exit')
         sendSpan.end()
-        this.onProcessingStopped(sessionId, 'interrupted', myGeneration)
+        await this.onProcessingStopped(sessionId, 'interrupted', myGeneration)
       }
     }
   }
@@ -6927,7 +7141,12 @@ export class SessionManager implements ISessionManager {
     setTimeout(() => {
       if (managed.stopRequested && managed.isProcessing) {
         sessionLog.warn('Generator did not complete after stop request, forcing cleanup')
-        this.onProcessingStopped(sessionId, 'timeout')
+        void this.onProcessingStopped(sessionId, 'timeout').catch(error => {
+          sessionLog.error('Forced stop cleanup failed', {
+            sessionId,
+            error: error instanceof Error ? error.message : String(error),
+          })
+        })
       }
     }, 5000)
 
@@ -6950,6 +7169,9 @@ export class SessionManager implements ISessionManager {
     if (managed.authRetryAttempted || !managed.lastSentMessage) return false
 
     const generationKey = processingGeneration ?? managed.processingGeneration
+    if (managed.terminalErrorGeneration === generationKey) {
+      managed.terminalErrorGeneration = undefined
+    }
     const reasonCode = failureErrorCode ?? 'authentication_expired'
     this.recordRetryTelemetry(managed, {
       component: 'generation',
@@ -6982,9 +7204,10 @@ export class SessionManager implements ISessionManager {
         sessionLog.info(`[auth-retry] Resetting summarization client for session ${sessionId}`)
         resetSummarizationClient()
 
-        // 2. Destroy the agent — the new agent's postInit() will refresh auth
-        sessionLog.info(`[auth-retry] Destroying agent for session ${sessionId}`)
-        managed.agent = null
+        // 2. Destroy the complete runtime — the new agent's postInit() will
+        // refresh auth. Nulling only the agent leaked its subprocess and MCP pool.
+        sessionLog.info(`[auth-retry] Disposing runtime for session ${sessionId}`)
+        await this.disposeManagedAgentRuntime(managed, 'authentication refresh retry')
 
         // 3. Retry the message
         const retryMessage = managed.lastSentMessage
@@ -7036,7 +7259,7 @@ export class SessionManager implements ISessionManager {
           error: 'Authentication failed. Please check your credentials.',
           timestamp: failedMessage.timestamp,
         }, workspaceId)
-        this.onProcessingStopped(sessionId, 'error')
+        await this.onProcessingStopped(sessionId, 'error')
       }
     })
 
@@ -7069,14 +7292,16 @@ export class SessionManager implements ISessionManager {
     proof: import('@craft-agent/shared/governance').SignedExecutionProof,
   ): void {
     const managed = this.sessions.get(sessionId)
-    if (!managed?.taskSlug || !managed.taskNodeId) {
-      throw new Error('Execution proof can only be recorded for a bound task node session')
+    const missionId = managed?.missionId ?? managed?.taskSlug
+    const nodeId = managed?.missionWorkItemId ?? managed?.taskNodeId
+    if (!managed || !missionId || !nodeId) {
+      throw new Error('Execution proof can only be recorded for a bound task or mission work session')
     }
     this.executionProofCollector.record({
       sessionId,
       workspaceId: managed.workspace.id,
-      missionId: managed.taskSlug,
-      nodeId: managed.taskNodeId,
+      missionId,
+      nodeId,
     }, proof)
   }
 
@@ -7109,6 +7334,9 @@ export class SessionManager implements ISessionManager {
     sessionLog.info(`Processing stopped for session ${sessionId}: ${reason}`)
 
     const generationKey = processingGeneration ?? managed.processingGeneration
+    if (managed.terminalErrorGeneration === generationKey) {
+      managed.terminalErrorGeneration = undefined
+    }
     this.finishGenerationTelemetry(
       managed,
       generationKey,
@@ -7130,6 +7358,14 @@ export class SessionManager implements ISessionManager {
     // later "status?" query never reports a dead task as running. Suppressed
     // when WS2 keep-alive keeps the query alive across turns.
     this.markOrphanedBackgroundTasks(sessionId)
+
+    // A terminal runtime error can leave a provider subprocess or its MCP
+    // transport unusable even though the session state itself is recoverable.
+    // Recycle the complete runtime now so retrying starts cleanly. Preserve it
+    // only while a genuine background task is still running.
+    if ((reason === 'error' || reason === 'timeout') && !this.hasRunningBackgroundTasks(managed)) {
+      await this.disposeManagedAgentRuntime(managed, `${reason} recovery`)
+    }
 
     const turnStartFinalMessageId = managed.turnStartFinalMessageId
     managed.turnStartFinalMessageId = undefined
@@ -7308,7 +7544,12 @@ export class SessionManager implements ISessionManager {
           },
         }, managed.workspace.id)
         // Call onProcessingStopped to handle cleanup and check for more queued messages
-        this.onProcessingStopped(sessionId, 'error')
+        void this.onProcessingStopped(sessionId, 'error').catch(cleanupError => {
+          sessionLog.error('Queued message failure cleanup failed', {
+            sessionId,
+            error: cleanupError instanceof Error ? cleanupError.message : String(cleanupError),
+          })
+        })
       })
     })
   }
@@ -8177,6 +8418,10 @@ export class SessionManager implements ISessionManager {
         this.flushDelta(sessionId, workspaceId)
 
         const routingConnection = managed.llmConnection ? getLlmConnection(managed.llmConnection) : undefined
+        const modelProvenance = event.modelProvenance
+        const responseAppProvenance = toRoutingMetaAppProvenance(
+          getPlatformSessionAppProvenance(_platform),
+        )
         const assistantMessage: Message = {
           id: generateMessageId(),
           role: 'assistant',
@@ -8187,9 +8432,21 @@ export class SessionManager implements ISessionManager {
           parentToolUseId: event.parentToolUseId,
           routingMeta: {
             ...managed.pendingRoutingMeta,
+            ...responseAppProvenance,
             connectionSlug: managed.llmConnection,
             providerType: routingConnection?.providerType,
-            model: managed.agent?.getModel() ?? managed.model,
+            // Pi can resolve aliases/dynamic routes (for example OpenRouter
+            // `auto`) to a different model than the configured request. Prefer
+            // the identity reported by the completed provider message.
+            model: modelProvenance?.model ?? managed.agent?.getModel() ?? managed.model,
+            ...(modelProvenance?.requestedModel
+              ? { requestedModel: modelProvenance.requestedModel }
+              : {}),
+            ...(modelProvenance?.provider ? { provider: modelProvenance.provider } : {}),
+            ...(modelProvenance?.api ? { api: modelProvenance.api } : {}),
+            ...(modelProvenance?.contextWindow !== undefined
+              ? { contextWindow: modelProvenance.contextWindow }
+              : {}),
             reason: managed.pendingRoutingReason ?? managed.pendingRoutingMeta?.reason ?? 'session-connection',
           },
         }
@@ -8729,6 +8986,12 @@ export class SessionManager implements ISessionManager {
           break
         }
 
+        sessionLog.error('Agent event failed', {
+          sessionId,
+          generation: generationKey,
+          error: redactSecretLikeMaterial(event.message).slice(0, 4_000),
+        })
+
         // AgentEvent uses `message` not `error`
         const errorMessage: Message = {
           id: generateMessageId(),
@@ -8737,6 +9000,7 @@ export class SessionManager implements ISessionManager {
           timestamp: this.monotonic()
         }
         managed.messages.push(errorMessage)
+        managed.terminalErrorGeneration = generationKey
         this.sendEvent({ type: 'error', sessionId, error: event.message, timestamp: errorMessage.timestamp }, workspaceId)
         this.finishGenerationTelemetry(
           managed,
@@ -8760,9 +9024,6 @@ export class SessionManager implements ISessionManager {
           sessionLog.info('Skipping typed abort error event (expected during interrupt)')
           break
         }
-        // Typed errors have structured information - send both formats for compatibility
-        sessionLog.info('typed_error:', JSON.stringify(event.error, null, 2))
-
         // Check for auth errors that can be retried by refreshing the token
         // The SDK subprocess caches the token at startup, so if it expires mid-session,
         // we get invalid_api_key errors. We can fix this by:
@@ -8783,6 +9044,14 @@ export class SessionManager implements ISessionManager {
           break
         }
 
+        sessionLog.error('Typed agent event failed', {
+          sessionId,
+          generation: generationKey,
+          code: event.error.code,
+          title: redactSecretLikeMaterial(event.error.title ?? '').slice(0, 500),
+          error: redactSecretLikeMaterial(typedErrorMsg).slice(0, 4_000),
+        })
+
         // Build rich error message with all diagnostic fields for persistence and UI display
         const typedErrorMessage: Message = {
           id: generateMessageId(),
@@ -8798,6 +9067,7 @@ export class SessionManager implements ISessionManager {
           errorCanRetry: event.error.canRetry,
         }
         managed.messages.push(typedErrorMessage)
+        managed.terminalErrorGeneration = generationKey
         // Send typed_error event with full structure for renderer to handle
         this.sendEvent({
           type: 'typed_error',
@@ -9590,6 +9860,8 @@ export class SessionManager implements ISessionManager {
     const warnings: string[] = []
     const workspaceRootPath = workspace.rootPath
     const header = bundle.session.header
+    const currentApp = getPlatformSessionAppProvenance(_platform)
+    const importedAppProvenance = resolveImportedSessionAppProvenance(mode, header, currentApp)
     const importedExecutionIsolation = createImportedSessionIsolation(
       header,
       workspaceRootPath,
@@ -9625,6 +9897,7 @@ export class SessionManager implements ISessionManager {
       name: header.name,
       createdAt: header.createdAt,
       lastUsedAt: Date.now(),
+      ...importedAppProvenance,
       lastMessageAt: header.lastMessageAt,
       isFlagged: header.isFlagged,
       permissionMode: 'safe',
@@ -9644,6 +9917,11 @@ export class SessionManager implements ISessionManager {
       taskNodeCount: header.taskNodeCount,
       taskDraft: header.taskDraft,
       executionIsolation: importedExecutionIsolation,
+      // Imported sessions never retain local Mission v2 authority.
+      missionId: undefined,
+      missionWorkItemId: undefined,
+      missionDispatchId: undefined,
+      missionRole: undefined,
       transferredSessionSummary: header.transferredSessionSummary,
       transferredSessionSummaryApplied: header.transferredSessionSummaryApplied,
       messages: bundle.session.messages,
@@ -9782,8 +10060,26 @@ export class SessionManager implements ISessionManager {
    * Clean up all resources held by the SessionManager.
    * Should be called on app shutdown to prevent resource leaks.
    */
-  cleanup(): void {
+  async cleanup(): Promise<void> {
     sessionLog.info('Cleaning up resources...')
+
+    if (this.runtimeEvictionTimer) {
+      clearInterval(this.runtimeEvictionTimer)
+      this.runtimeEvictionTimer = null
+    }
+
+    // Dispose every lazy runtime before tearing down workspace services. Run in
+    // parallel so shutdown remains bounded even with many historical sessions.
+    await Promise.allSettled(Array.from(this.sessions.values(), async managed => {
+      if (managed.autoRetryTimer) {
+        clearTimeout(managed.autoRetryTimer)
+        managed.autoRetryTimer = undefined
+      }
+      managed.autoRetryPending = undefined
+      this.finishAllGenerationTelemetry(managed, 'session_manager_shutdown')
+      await this.disposeManagedAgentRuntime(managed, 'session manager shutdown')
+    }))
+    this.agentRefreshLocks.clear()
 
     // Stop all ConfigWatchers (file system watchers)
     for (const [path, watcher] of this.configWatchers) {
@@ -9814,11 +10110,6 @@ export class SessionManager implements ISessionManager {
     this.pendingCredentialResolvers.clear()
     this.pendingPermissionRequests.clear()
     this.adminRememberApprovals.clear()
-
-    // Clean up session-scoped tool callbacks for all sessions
-    for (const sessionId of this.sessions.keys()) {
-      unregisterSessionScopedToolCallbacks(sessionId)
-    }
 
     sessionLog.info('Cleanup complete')
   }

@@ -8,6 +8,7 @@ let loadWorkspaceConfig: typeof import('@craft-agent/shared/workspaces')['loadWo
 let SessionManager: typeof import('./SessionManager.ts')['SessionManager']
 let createManagedSession: typeof import('./SessionManager.ts')['createManagedSession']
 let buildRestartRequiredSignature: typeof import('./runtime-config.ts')['buildRestartRequiredSignature']
+let createStoredSession: typeof import('@craft-agent/shared/sessions')['createSession']
 let tmpConfigRoot: string
 
 // Regression coverage for the stale-Pi-subprocess bug where toggling
@@ -68,6 +69,7 @@ beforeAll(async () => {
   ;({ loadWorkspaceConfig } = await import('@craft-agent/shared/workspaces'))
   ;({ SessionManager, createManagedSession } = await import('./SessionManager.ts'))
   ;({ buildRestartRequiredSignature } = await import('./runtime-config.ts'))
+  ;({ createSession: createStoredSession } = await import('@craft-agent/shared/sessions'))
 })
 
 afterAll(() => {
@@ -79,6 +81,7 @@ afterAll(() => {
 interface AgentStub {
   isProcessing: () => boolean
   updateRuntimeConfig: jest.Mock
+  setModel: jest.Mock
   dispose: () => void
   disposeForRestart?: () => Promise<void>
 }
@@ -96,6 +99,7 @@ function createAgentStub(opts: {
       if (delay > 0) await new Promise(resolve => setTimeout(resolve, delay))
       return result
     }),
+    setModel: jest.fn(),
     dispose: () => { /* no-op for tests */ },
   }
 }
@@ -283,5 +287,24 @@ describe('refreshConnectionRuntime', () => {
         }
       }
     }
+  })
+
+  it('changes a live model through acknowledged runtime config instead of fire-and-forget setModel', async () => {
+    const stored = await createStoredSession(tmpRoot, {
+      model: 'test-text',
+      llmConnection: 'slug-A',
+    })
+    const agent = createAgentStub()
+    const managed = injectSession(sm, stored.id, tmpRoot, 'slug-A', agent)
+    const refreshRuntime = jest.fn().mockResolvedValue(undefined)
+    ;(sm as unknown as {
+      tryRefreshAgentRuntime: (session: unknown, reason: string) => Promise<void>
+    }).tryRefreshAgentRuntime = refreshRuntime
+
+    await sm.updateSessionModel(stored.id, 'ws_test', 'test-vision')
+
+    expect(agent.setModel).not.toHaveBeenCalled()
+    expect(refreshRuntime).toHaveBeenCalledTimes(1)
+    expect(refreshRuntime).toHaveBeenCalledWith(managed, 'session model changed')
   })
 })

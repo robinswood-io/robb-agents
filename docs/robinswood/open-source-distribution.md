@@ -27,7 +27,13 @@ Robinswood or legacy Craft distribution endpoint.
 
 The workflow accepts only stable `X.Y.Z` versions, checks out the immutable
 matching tag for every platform, and marks the created release as GitHub's
-latest stable release. Drafts and prereleases are not updater sources.
+latest stable release. While the release is still a non-public draft, it checks
+the complete remote asset inventory, upload state, byte size and GitHub-computed
+SHA-256 digest against the canonical local bundle. It then downloads the updater
+manifests again and compares them byte-for-byte with the validated local copies.
+Only after both checks does it publish the release and verify that GitHub's
+`latest` API resolves to the new tag. Drafts and prereleases are not updater
+sources.
 
 Before publication, CI reconstructs one canonical checksum inventory after all
 artifacts, manifests, provenance files, installer helpers and the SBOM exist.
@@ -39,8 +45,16 @@ the manifest and installer contracts on macOS, Windows and Linux.
 
 | Channel | Name | App ID | Data profile | Updates |
 | --- | --- | --- | --- | --- |
-| Production | Robb Agents | `io.robinswood.robbagents` | `~/.craft-agent` | Settings button, stable GitHub Release only |
+| Production | Robb Agents | `io.robinswood.robbagents` | `~/.craft-agent` | Bounded availability checks; confirmed download/install from stable GitHub Releases only |
 | Development | Robb Agents Dev | `io.robinswood.robbagents.dev` | `~/.craft-agent-dev` | Disabled |
+
+Production checks availability 30 seconds after launch, then every six hours;
+network failures retry with bounded exponential backoff. Concurrent manual and
+automatic checks share one request, as do repeated download actions. On macOS,
+the downloaded application is signature-, notarization- and version-checked,
+copied to a staging directory beside the installed bundle, then exchanged with
+an immediately restorable predecessor. Failed activation or post-copy validation
+restores the previous bundle; only the three newest user-data backups are kept.
 
 The development launcher also uses the `robbagentsdev` deep-link scheme and a
 dedicated local server lock. Restarting it cannot terminate or acquire the
@@ -59,7 +73,9 @@ bun run electron:dist:dev:linux
 
 These are intentionally unsigned **Robb Agents Dev** builds with a distinct
 application identity and output directory. They are development artifacts, not
-public releases and cannot use the production updater.
+public releases and cannot use the production updater. The default macOS build
+also disables certificate auto-discovery explicitly; only `--release` may use a
+Developer ID identity and notarization credentials.
 
 Every packaged build also runs `scripts/robb_package_audit.py`. The audit fails
 when a payload contains `release-artifacts`, an embedded

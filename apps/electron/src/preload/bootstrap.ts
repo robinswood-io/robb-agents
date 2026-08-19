@@ -22,6 +22,7 @@ import { WsRpcClient, type TransportConnectionState } from '../transport/client'
 import { RoutedClient } from '../transport/routed-client'
 import { buildClientApi } from '../transport/build-api'
 import { CHANNEL_MAP } from '../transport/channel-map'
+import type { LocalRpcEndpoint } from '../transport/local-rpc-endpoint'
 import { createCallbackServer } from '@craft-agent/shared/auth/callback-server'
 import { CHATGPT_OAUTH_CONFIG } from '@craft-agent/shared/auth/chatgpt-oauth-config'
 import { GOOGLE_GEMINI_OAUTH_CONFIG } from '@craft-agent/shared/auth/google-gemini-oauth'
@@ -98,16 +99,17 @@ if (isClientOnly) {
   // RoutedClient routes LOCAL_ONLY to local server, REMOTE_ELIGIBLE to
   // whichever server owns the workspace (local or remote).
 
-  const wsPort: number = ipcRenderer.sendSync('__get-ws-port')
+  const localEndpoint = ipcRenderer.sendSync('__get-ws-endpoint') as LocalRpcEndpoint
   const wsToken: string = ipcRenderer.sendSync('__get-ws-token')
   const workspaceId: string = ipcRenderer.sendSync('__get-workspace-id')
 
-  const localClient = new WsRpcClient(`ws://127.0.0.1:${wsPort}`, {
+  const localClient = new WsRpcClient(localEndpoint.url, {
     token: wsToken,
     workspaceId,
     webContentsId,
     autoReconnect: true,
     mode: 'local',
+    tlsRejectUnauthorized: localEndpoint.tlsRejectUnauthorized,
     clientCapabilities: [...LOCAL_CLIENT_CAPABILITIES],
   })
 

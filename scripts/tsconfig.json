@@ -8,7 +8,9 @@
   "include": [
     "generate-github-update-manifests.ts",
     "validate-release-bundle.ts",
+    "verify-github-release-assets.ts",
     "tests/generate-github-update-manifests.test.ts",
-    "tests/validate-release-bundle.test.ts"
+    "tests/validate-release-bundle.test.ts",
+    "tests/verify-github-release-assets.test.ts"
   ]
 }

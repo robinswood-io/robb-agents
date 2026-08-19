@@ -80,6 +80,18 @@ export const RPC_CHANNELS = {
     // Storage-backed read of a run's outcome (verdict + per-node output). Survives restart.
     GET_RESULTS: 'tasks:getResults',
   },
+  missions: {
+    PLAN: 'missions:plan',
+    GET_PLAN: 'missions:getPlan',
+    PLANNED: 'missions:planned',
+    CREATE_AND_START: 'missions:createAndStart',
+    GET: 'missions:get',
+    LIST: 'missions:list',
+    PAUSE: 'missions:pause',
+    RESUME: 'missions:resume',
+    CANCEL: 'missions:cancel',
+    CHANGED: 'missions:changed',
+  },
   workspaces: {
     GET: 'workspaces:get',
     CREATE: 'workspaces:create',

@@ -138,6 +138,29 @@ describe('mission control', () => {
     });
   });
 
+  it('surfaces repair stagnation as an actionable mission blocker', () => {
+    const log: RunLogEntry[] = [
+      { t: '2026-08-12T08:00:00.000Z', kind: 'run-started', taskId: 'launch', runId: 'r-stagnant' },
+      {
+        t: '2026-08-12T08:01:00.000Z',
+        kind: 'stagnation-detected',
+        fingerprint: 'abc123',
+        repetitions: 2,
+        limit: 2,
+        nodes: ['draft'],
+        reason: 'Verifier-driven repair revisited a previously rejected observable result.',
+      },
+      { t: '2026-08-12T08:02:00.000Z', kind: 'run-failed' },
+    ];
+
+    const snapshot = buildMissionControlSnapshot(missionSpec(), 'r-stagnant', log);
+    expect(snapshot.status).toBe('failed');
+    expect(snapshot.evaluation.status).toBe('failing');
+    expect(snapshot.evaluation.failures[0]).toContain('Repair stagnated');
+    expect(snapshot.blockers[0]?.resolution).toContain('change the task plan');
+    expect(snapshot.nextActions).toContain('Change the repair plan before starting a new run');
+  });
+
   it('reuses confirmed work and blocks ambiguous or external mutations by default', () => {
     const log: RunLogEntry[] = [
       {

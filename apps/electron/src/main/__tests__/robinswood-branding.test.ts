@@ -147,12 +147,14 @@ describe('Robinswood visible branding', () => {
 
   it('detects stable updates at launch but requires consent before download', () => {
     const updater = readRepoFile('apps/electron/src/main/auto-update.ts')
+    const main = readRepoFile('apps/electron/src/main/index.ts')
     const updateHook = readRepoFile('apps/electron/src/renderer/hooks/useUpdateChecker.ts')
     expect(updater).toContain('autoUpdater.autoDownload = false')
     expect(updater).toContain('autoUpdater.autoInstallOnAppQuit = false')
     expect(updater).toContain('autoUpdater.allowPrerelease = false')
     expect(updater).toContain('await autoUpdater.downloadUpdate()')
-    expect(updateHook).toContain('automaticCheckStarted')
+    expect(updater).toContain("void checkForUpdates('automatic')")
+    expect(main).toContain('startAutomaticUpdateChecks()')
     expect(updateHook).toContain('await window.electronAPI.checkForUpdates()')
     expect(updateHook).toContain('onClick: onDownload')
     expect(updater).toContain('/usr/sbin/spctl --assess --type execute')

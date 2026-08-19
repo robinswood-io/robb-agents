@@ -204,6 +204,16 @@ function foldBlockers(spec: TaskSpec, runId: string, log: RunLogEntry[], approva
       status: 'open',
     });
   }
+  const stagnation = [...log].reverse().find((entry) => entry.kind === 'stagnation-detected');
+  if (stagnation?.kind === 'stagnation-detected') {
+    blockers.push({
+      id: blockerId(runId, 'mission', `${stagnation.fingerprint}:${stagnation.repetitions}`),
+      cause: stagnation.reason,
+      owner: spec.mission?.policy.owner ?? 'operator',
+      resolution: 'Review the rejected evidence and change the task plan, tools, or acceptance criteria before retrying.',
+      status: 'open',
+    });
+  }
   return blockers;
 }
 
@@ -219,6 +229,7 @@ function buildMissionEvaluation(
   const latestVerdict = verdicts.at(-1);
   const safetyEntries = log.filter((entry) =>
     entry.kind === 'budget-breach' || entry.kind === 'deadline-breach' || entry.kind === 'kill-switch');
+  const stagnationEntries = log.filter((entry) => entry.kind === 'stagnation-detected');
   const failures: string[] = [];
 
   if (latestVerdict?.result === 'fail' || latestVerdict?.result === 'unparsed') {
@@ -233,6 +244,8 @@ function buildMissionEvaluation(
       failures.push(`Mission deadline breached: ${entry.deadline}`);
     } else if (entry.kind === 'kill-switch') {
       failures.push(`Kill switch (${entry.scope}): ${entry.reason}`);
+    } else if (entry.kind === 'stagnation-detected') {
+      failures.push(`Repair stagnated after ${entry.repetitions} repeated rejected results: ${entry.reason}`);
     }
   }
 
@@ -244,6 +257,7 @@ function buildMissionEvaluation(
     || latestVerdict?.result === 'unparsed'
     || failedNodes > 0
     || safetyEntries.length > 0
+    || stagnationEntries.length > 0
   ) {
     status = 'failing';
   } else if (terminalStates.length > 0 || verdicts.length > 0) {
@@ -260,7 +274,7 @@ function buildMissionEvaluation(
       ? { nodeSuccessRate: Math.round((successfulNodes / terminalStates.length) * 1_000) / 10 }
       : {}),
     safetyIssueCount: safetyEntries.length,
-    evidenceCount: terminalStates.length + verdicts.length + safetyEntries.length,
+    evidenceCount: terminalStates.length + verdicts.length + safetyEntries.length + stagnationEntries.length,
     failures: [...new Set(failures)],
   };
 }
@@ -325,6 +339,9 @@ export function buildMissionControlSnapshot(
   const nextActions: string[] = [];
   if (approvals.some((approval) => approval.status === 'pending')) nextActions.push('Resolve pending approval');
   if (failed > 0) nextActions.push('Review blockers and prepare a safe retry');
+  if (log.some((entry) => entry.kind === 'stagnation-detected')) {
+    nextActions.push('Change the repair plan before starting a new run');
+  }
   if (resolvedRunStatus(log) === 'paused') nextActions.push('Resume mission');
   if (resolvedRunStatus(log) === 'running' && running === 0 && completed < total) nextActions.push('Run next ready node');
   if (nextActions.length === 0 && resolvedRunStatus(log) === 'completed') nextActions.push('Export mission report');

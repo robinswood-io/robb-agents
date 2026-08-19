@@ -132,7 +132,10 @@ export function TopBar({
 
   return (
     <div
-      className="fixed top-0 left-0 right-0 z-panel titlebar-drag-region"
+      className={cn(
+        "fixed top-0 left-0 right-0 z-panel titlebar-drag-region",
+        isWebUI && "bg-background border-b border-border/70 shadow-sm"
+      )}
       style={{ height: 'var(--topbar-height)' }}
     >
       <div className="flex h-full w-full items-center justify-between gap-2">
@@ -142,7 +145,7 @@ export function TopBar({
           so the workspace pill doesn't run flush against the viewport edge. */}
       <div
         className="pointer-events-auto flex min-w-0 flex-1 items-center gap-0.5"
-        style={{ paddingLeft: menuLeftPadding, paddingRight: isCompact ? 12 : 0 }}
+        style={{ paddingLeft: menuLeftPadding, paddingRight: isCompact && isWebUI ? 98 : isCompact ? 12 : 0 }}
       >
         <div className="flex items-center gap-0.5">
         {!isCompact && (

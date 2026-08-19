@@ -44,6 +44,12 @@ export interface PlatformServices {
 
   // -- App metadata --
   appVersion: string
+  /** Source revision baked into canonical builds when available. */
+  buildCommit?: string
+  /** Distribution/runtime channel, for example production or development. */
+  buildChannel?: string
+  /** Whether the build was produced from a dirty working tree. */
+  buildDirty?: boolean
 
   // -- Image processing (nativeImage on Electron, sharp on headless) --
   imageProcessor: ImageProcessor

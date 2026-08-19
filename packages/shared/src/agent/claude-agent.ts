@@ -1346,6 +1346,7 @@ export class ClaudeAgent extends BaseAgent {
                 hasSourceActivation: !!this.onSourceActivationRequest,
                 permissionManager: this.permissionManager,
                 prerequisiteManager: this.prerequisiteManager,
+                currentUserRequest: this.getCurrentTurnUserMessage() ?? undefined,
                 rtkContext,
                 onDebug: (msg) => this.onDebug?.(msg),
               });

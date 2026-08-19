@@ -4,11 +4,13 @@
  */
 
 import { spawn, type Subprocess } from "bun";
+import { execFileSync } from "child_process";
 import { existsSync, rmSync, cpSync, readFileSync, statSync, mkdirSync, writeFileSync } from "fs";
 import { homedir } from "os";
 import { join, basename, resolve } from "path";
 import * as esbuild from "esbuild";
 import { downloadUv, type Platform, type Arch } from "./build/common";
+import { resolveBuildCommit, resolveBuildDirty } from "./build-provenance";
 
 const ROOT_DIR = join(import.meta.dir, "..");
 const ELECTRON_DIR = join(ROOT_DIR, "apps/electron");
@@ -151,6 +153,32 @@ function configureDevelopmentIdentity(): void {
   console.log(
     `🧪 Development identity: app="${process.env.CRAFT_APP_NAME}", config=${process.env.CRAFT_CONFIG_DIR}, scheme=${process.env.CRAFT_DEEPLINK_SCHEME}`,
   );
+}
+
+function configureDevelopmentBuildProvenance(): void {
+  let gitCommit: string | undefined;
+  let gitPorcelain: string | undefined;
+  try {
+    gitCommit = execFileSync("git", ["rev-parse", "HEAD"], {
+      cwd: ROOT_DIR,
+      encoding: "utf8",
+    });
+    gitPorcelain = execFileSync("git", ["status", "--porcelain"], {
+      cwd: ROOT_DIR,
+      encoding: "utf8",
+    });
+  } catch {
+    // Source archives may not include git metadata.
+  }
+
+  const buildCommit = resolveBuildCommit(
+    process.env.ROBB_BUILD_COMMIT,
+    gitCommit,
+    process.env.GITHUB_SHA,
+  );
+  const buildDirty = resolveBuildDirty(process.env.ROBB_BUILD_DIRTY, gitPorcelain);
+  if (buildCommit) process.env.ROBB_BUILD_COMMIT = buildCommit;
+  if (buildDirty !== undefined) process.env.ROBB_BUILD_DIRTY = String(buildDirty);
 }
 
 // Kill any process using the specified port
@@ -304,6 +332,8 @@ function getOAuthDefines(): Record<string, string> {
     defines[`process.env.${varName}`] = JSON.stringify(value);
   }
   defines["process.env.ROBB_BUILD_CHANNEL"] = JSON.stringify("development");
+  defines["process.env.ROBB_BUILD_COMMIT"] = JSON.stringify(process.env.ROBB_BUILD_COMMIT || "");
+  defines["process.env.ROBB_BUILD_DIRTY"] = JSON.stringify(process.env.ROBB_BUILD_DIRTY || "");
   return defines;
 }
 
@@ -487,6 +517,7 @@ async function main(): Promise<void> {
   loadEnvFile();
   detectInstance();
   configureDevelopmentIdentity();
+  configureDevelopmentBuildProvenance();
   cleanViteCache();
 
   // Ensure dist directory exists

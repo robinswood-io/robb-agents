@@ -29,6 +29,8 @@ export const SESSION_PERSISTENT_FIELDS = [
   'id', 'workspaceRootPath', 'sdkSessionId', 'sdkCwd',
   // Timestamps
   'createdAt', 'lastUsedAt', 'lastMessageAt',
+  // App build provenance
+  'createdByApp', 'lastUsedByApp',
   // Display
   'name', 'isFlagged', 'sessionStatus', 'labels', 'hidden',
   // Read tracking
@@ -66,6 +68,11 @@ export const SESSION_PERSISTENT_FIELDS = [
   'taskNodeCount',
   'taskDraft',
   'executionIsolation',
+  // Mission Orchestration v2: durable dispatch identity for crash recovery
+  'missionId',
+  'missionWorkItemId',
+  'missionDispatchId',
+  'missionRole',
   // Runtime evidence of autonomous resolution and human-only blockers
   'autonomyEvents',
   'playbookSlug',
@@ -104,6 +111,19 @@ export interface SessionTokenUsage {
 }
 
 /**
+ * App build that created or most recently persisted a session.
+ * Optional on sessions written before build provenance was introduced.
+ */
+export interface SessionAppProvenance {
+  appVersion: string;
+  buildCommit?: string;
+  buildChannel?: string;
+  /** Whether uncommitted changes were present when this build was produced. */
+  buildDirty?: boolean;
+  isPackaged: boolean;
+}
+
+/**
  * Stored message format (simplified for persistence)
  * Re-exported from @craft-agent/core for convenience
  */
@@ -122,6 +142,10 @@ export interface SessionConfig {
   name?: string;
   createdAt: number;
   lastUsedAt: number;
+  /** App build that created this session identity. Immutable after creation. */
+  createdByApp?: SessionAppProvenance;
+  /** App build that most recently persisted this session. */
+  lastUsedByApp?: SessionAppProvenance;
   /** Timestamp of last meaningful message (user or final assistant). Used for date grouping in session list.
    *  Separate from lastUsedAt which tracks any session access (auto-save, open to read, etc.). */
   lastMessageAt?: number;
@@ -235,6 +259,14 @@ export interface SessionConfig {
   taskDraft?: boolean;
   /** Host-enforced tool isolation envelope for a Conductor child session. */
   executionIsolation?: SessionExecutionIsolation;
+  /** Mission v2 owning this specialist session. */
+  missionId?: string;
+  /** Mission v2 work item executed by this session. */
+  missionWorkItemId?: string;
+  /** Stable dispatch identity used to find/recover this session after a crash. */
+  missionDispatchId?: string;
+  /** Mission role assigned to this session. */
+  missionRole?: 'planner' | 'worker' | 'reviewer' | 'supervisor';
 }
 
 /**
@@ -261,6 +293,10 @@ export interface SessionHeader {
   name?: string;
   createdAt: number;
   lastUsedAt: number;
+  /** App build that created this session identity. */
+  createdByApp?: SessionAppProvenance;
+  /** App build that most recently persisted this session. */
+  lastUsedByApp?: SessionAppProvenance;
   /** Timestamp of last meaningful message — persisted separately from lastUsedAt for stable date grouping across restarts. */
   lastMessageAt?: number;
   /** Whether this session is flagged */
@@ -344,6 +380,14 @@ export interface SessionHeader {
   taskDraft?: boolean;
   /** Host-enforced tool isolation envelope for a Conductor child session. */
   executionIsolation?: SessionExecutionIsolation;
+  /** Mission v2 owning this specialist session. */
+  missionId?: string;
+  /** Mission v2 work item executed by this session. */
+  missionWorkItemId?: string;
+  /** Stable dispatch identity used to find/recover this session after a crash. */
+  missionDispatchId?: string;
+  /** Mission role assigned to this session. */
+  missionRole?: 'planner' | 'worker' | 'reviewer' | 'supervisor';
   // Pre-computed fields for fast list loading
   /** Number of messages in session */
   messageCount: number;
@@ -366,6 +410,10 @@ export interface SessionMetadata {
   name?: string;
   createdAt: number;
   lastUsedAt: number;
+  /** App build that created this session identity. */
+  createdByApp?: SessionAppProvenance;
+  /** App build that most recently persisted this session. */
+  lastUsedByApp?: SessionAppProvenance;
   /** Timestamp of last meaningful message — used for date grouping. Falls back to lastUsedAt for pre-fix sessions. */
   lastMessageAt?: number;
   messageCount: number;
@@ -442,4 +490,12 @@ export interface SessionMetadata {
   taskDraft?: boolean;
   /** Host-enforced tool isolation envelope for a Conductor child session. */
   executionIsolation?: SessionExecutionIsolation;
+  /** Mission v2 owning this specialist session. */
+  missionId?: string;
+  /** Mission v2 work item executed by this session. */
+  missionWorkItemId?: string;
+  /** Stable dispatch identity used to find/recover this session after a crash. */
+  missionDispatchId?: string;
+  /** Mission role assigned to this session. */
+  missionRole?: 'planner' | 'worker' | 'reviewer' | 'supervisor';
 }

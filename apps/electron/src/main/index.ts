@@ -127,9 +127,16 @@ import { setPerfEnabled, enableDebug } from '@craft-agent/shared/utils'
 import { registerPiModelResolver } from '@craft-agent/shared/config'
 import { getPiModelsForAuthProvider, getAllPiModels } from '@craft-agent/shared/config'
 import { initNotificationService, initBadgeIcon, initInstanceBadge, updateBadgeCount } from './notifications'
-import { setAutoUpdateEventSink, isUpdating, setBeforeUpdateQuitHook } from './auto-update'
+import {
+  isUpdating,
+  setAutoUpdateEventSink,
+  setBeforeUpdateQuitHook,
+  startAutomaticUpdateChecks,
+  stopAutomaticUpdateChecks,
+} from './auto-update'
 import type { EventSink } from '@craft-agent/server-core/transport'
 import { validateGitBashPath, checkVCRedistInstalled } from '@craft-agent/server-core/services'
+import { createLocalRpcEndpoint } from '../transport/local-rpc-endpoint'
 import {
   createWebuiHandler,
   nodeHttpAdapter,
@@ -546,6 +553,13 @@ app.whenReady().then(async () => {
       nativeTheme,
       logger: log,
       isDebugMode: IS_DEVELOPMENT_CHANNEL || isDebugMode,
+      buildCommit: process.env.ROBB_BUILD_COMMIT,
+      buildChannel: APP_CHANNEL,
+      buildDirty: process.env.ROBB_BUILD_DIRTY === 'true'
+        ? true
+        : process.env.ROBB_BUILD_DIRTY === 'false'
+          ? false
+          : undefined,
       getLogFilePath,
       captureError: (err) => Sentry.captureException(err),
     })
@@ -1059,6 +1073,9 @@ app.whenReady().then(async () => {
       ipcMain.on('__get-ws-port', (e) => {
         e.returnValue = instance.port
       })
+      ipcMain.on('__get-ws-endpoint', (e) => {
+        e.returnValue = createLocalRpcEndpoint(instance.port, Boolean(tls))
+      })
       ipcMain.on('__get-ws-token', (e) => {
         e.returnValue = instance.token
       })
@@ -1246,8 +1263,8 @@ app.whenReady().then(async () => {
       mainLog.warn('Failed to set Sentry context tags:', err)
     }
 
-    // Register the update bridge without making a network request. Production
-    // checks and downloads are initiated exclusively by the Settings button.
+    // Register the update bridge, then schedule bounded availability checks in
+    // the main process. Downloads and installs always require explicit consent.
     // Development builds are rejected by the updater itself.
     if (moduleSink) setAutoUpdateEventSink(moduleSink)
     // Snapshot multi-window state BEFORE quitAndInstall. electron-updater
@@ -1255,9 +1272,10 @@ app.whenReady().then(async () => {
     // before-quit firing; saving from before-quit alone would overwrite
     // window-state.json with an empty array.
     setBeforeUpdateQuitHook(() => captureAndSaveWindowState('pre-update'))
+    startAutomaticUpdateChecks()
     mainLog.info(
       APP_CHANNEL === 'production'
-        ? '[auto-update] Stable updates are available only from the Settings button'
+        ? '[auto-update] Stable update checks enabled; downloads require confirmation'
         : '[auto-update] Disabled for the development channel',
     )
 
@@ -1338,6 +1356,7 @@ app.on('before-quit', async (event) => {
   // Avoid re-entry when we call app.exit()
   if (isQuitting) return
   isQuitting = true
+  stopAutomaticUpdateChecks()
 
   // Ensure Cmd+Q/app quit bypasses layered window close interception (Cmd+W behavior).
   windowManager?.setAppQuitting(true)
@@ -1381,7 +1400,7 @@ app.on('before-quit', async (event) => {
       mainLog.error('Failed to flush sessions:', error)
     }
     // Clean up SessionManager resources (file watchers, timers, etc.)
-    sessionManager.cleanup()
+    await sessionManager.cleanup()
 
     // Clean up browser pane instances
     if (browserPaneManager) {

@@ -274,12 +274,30 @@ export interface RoutingCostProvenance {
 }
 
 export interface RoutingMeta {
+  /** App version that produced this assistant response. */
+  appVersion?: string;
+  /** Source revision baked into the app build, when available. */
+  buildCommit?: string;
+  /** Distribution/runtime channel that produced the response. */
+  buildChannel?: string;
+  /** Whether the producing build came from a dirty working tree. */
+  buildDirty?: boolean;
+  /** Whether the producing runtime was a packaged application. */
+  isPackaged?: boolean;
   /** LLM connection slug selected for this turn, when known. */
   connectionSlug?: string;
   /** Backend/provider type, e.g. anthropic, pi, pi_compat, router. */
   providerType?: string;
   /** Effective model ID used by the backend for this turn. */
   model?: string;
+  /** Model ID requested before any provider-side aliasing or dynamic routing. */
+  requestedModel?: string;
+  /** Provider ID reported by the model backend (distinct from the Craft providerType). */
+  provider?: string;
+  /** Provider API/transport reported by the model backend. */
+  api?: string;
+  /** Context-window size associated with the model call, when known. */
+  contextWindow?: number;
   /** Why this route was selected. MVP values are intentionally simple. */
   reason?: 'session-connection' | 'manual-handoff' | 'router' | string;
   /** Sensitivity tier used by a policy-first router, when available. */
@@ -625,6 +643,21 @@ export interface AgentEventUsage {
 }
 
 /**
+ * Native model identity attached to a completed assistant message.
+ *
+ * All fields are optional so older backends and stored events remain valid.
+ * `model` is the effective provider-reported model, while `requestedModel`
+ * preserves the model sent to the provider before aliases/dynamic routing.
+ */
+export interface AgentModelProvenance {
+  model?: string;
+  requestedModel?: string;
+  provider?: string;
+  api?: string;
+  contextWindow?: number;
+}
+
+/**
  * Events emitted by CraftAgent during chat
  * turnId: Correlation ID from the API's message.id, groups all events in an assistant turn
  */
@@ -632,7 +665,7 @@ export type AgentEvent =
   | { type: 'status'; message: string }
   | { type: 'info'; message: string }
   | { type: 'text_delta'; text: string; turnId?: string; parentToolUseId?: string }
-  | { type: 'text_complete'; text: string; isIntermediate?: boolean; turnId?: string; parentToolUseId?: string; sdkMessageId?: string }
+  | { type: 'text_complete'; text: string; isIntermediate?: boolean; turnId?: string; parentToolUseId?: string; sdkMessageId?: string; modelProvenance?: AgentModelProvenance }
   | { type: 'pi_turn_anchor'; sdkMessageId: string; sdkTurnAnchor: string }
   | { type: 'tool_start'; toolName: string; toolUseId: string; input: Record<string, unknown>; intent?: string; displayName?: string; turnId?: string; parentToolUseId?: string; toolDisplayMeta?: ToolDisplayMeta }
   | { type: 'tool_result'; toolUseId: string; toolName?: string; result: string; isError: boolean; input?: Record<string, unknown>; turnId?: string; parentToolUseId?: string }

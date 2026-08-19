@@ -235,7 +235,13 @@ export async function createSession(
     taskNodeId?: string;
     taskDraft?: boolean;
     executionIsolation?: SessionConfig['executionIsolation'];
+    missionId?: string;
+    missionWorkItemId?: string;
+    missionDispatchId?: string;
+    missionRole?: SessionConfig['missionRole'];
     playbookSlug?: string;
+    createdByApp?: SessionConfig['createdByApp'];
+    lastUsedByApp?: SessionConfig['lastUsedByApp'];
   }
 ): Promise<SessionConfig> {
   ensureSessionsDir(workspaceRootPath);
@@ -257,6 +263,8 @@ export async function createSession(
     name: options?.name,
     createdAt: now,
     lastUsedAt: now,
+    createdByApp: options?.createdByApp,
+    lastUsedByApp: options?.lastUsedByApp,
     workingDirectory: options?.workingDirectory,
     sdkCwd,
     permissionMode: options?.permissionMode,
@@ -274,6 +282,10 @@ export async function createSession(
     taskNodeId: options?.taskNodeId,
     taskDraft: options?.taskDraft,
     executionIsolation: options?.executionIsolation,
+    missionId: options?.missionId,
+    missionWorkItemId: options?.missionWorkItemId,
+    missionDispatchId: options?.missionDispatchId,
+    missionRole: options?.missionRole,
     playbookSlug: options?.playbookSlug,
   };
 
@@ -311,6 +323,8 @@ export async function getOrCreateSessionById(
       name: existing.name,
       createdAt: existing.createdAt,
       lastUsedAt: existing.lastUsedAt,
+      createdByApp: existing.createdByApp,
+      lastUsedByApp: existing.lastUsedByApp,
       sdkCwd: existing.sdkCwd,
       workingDirectory: existing.workingDirectory,
     };
@@ -530,6 +544,8 @@ export async function getOrCreateLatestSession(workspaceRootPath: string): Promi
       name: latest.name,
       createdAt: latest.createdAt,
       lastUsedAt: latest.lastUsedAt,
+      createdByApp: latest.createdByApp,
+      lastUsedByApp: latest.lastUsedByApp,
     };
   }
   return createSession(workspaceRootPath);

@@ -1,16 +1,19 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Download, RefreshCw, Wifi, WifiOff } from 'lucide-react'
+import { Download, RefreshCw, Wifi, WifiOff, X } from 'lucide-react'
 import type { WsRpcClient, TransportConnectionState } from '../../../electron/src/transport/client'
+import {
+  clearInstallPrompt,
+  getInstallPrompt,
+  isAppleMobileDevice,
+  isRunningAsInstalledApp,
+  subscribeToInstallPrompt,
+  type BeforeInstallPromptEvent,
+} from '../pwa-install'
 
 export interface RemoteConnectionBadgeProps {
   client: WsRpcClient
   hostLabel: string
-}
-
-interface InstallPromptEvent extends Event {
-  prompt: () => Promise<void>
-  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
 }
 
 function statusTone(status: TransportConnectionState['status']): string {
@@ -22,16 +25,19 @@ function statusTone(status: TransportConnectionState['status']): string {
 export function RemoteConnectionBadge({ client, hostLabel }: RemoteConnectionBadgeProps) {
   const { t } = useTranslation()
   const [state, setState] = useState<TransportConnectionState>(() => client.getConnectionState())
-  const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null)
+  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(() => getInstallPrompt())
+  const [showInstallHelp, setShowInstallHelp] = useState(false)
+  const [installed, setInstalled] = useState(() => isRunningAsInstalledApp())
 
   useEffect(() => client.onConnectionStateChanged(setState), [client])
+  useEffect(() => subscribeToInstallPrompt(setInstallPrompt), [])
   useEffect(() => {
-    const onInstallPrompt = (event: Event) => {
-      event.preventDefault()
-      setInstallPrompt(event as InstallPromptEvent)
+    const onInstalled = () => {
+      setInstalled(true)
+      setShowInstallHelp(false)
     }
-    window.addEventListener('beforeinstallprompt', onInstallPrompt)
-    return () => window.removeEventListener('beforeinstallprompt', onInstallPrompt)
+    window.addEventListener('appinstalled', onInstalled)
+    return () => window.removeEventListener('appinstalled', onInstalled)
   }, [])
 
   const connected = state.status === 'connected'
@@ -43,32 +49,65 @@ export function RemoteConnectionBadge({ client, hostLabel }: RemoteConnectionBad
       : t('webui.remoteOffline', 'Remote offline')
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 top-[calc(8px+env(safe-area-inset-top))] z-[100] flex justify-center gap-2 px-3 md:hidden">
+    <div className="pointer-events-none fixed right-2 top-[calc(10px+env(safe-area-inset-top))] z-[100] flex items-center gap-1.5 sm:right-3">
       <button
         type="button"
         onClick={() => {
           if (!connected) client.reconnectNow()
         }}
         disabled={connected}
-        className={`pointer-events-auto flex max-w-full items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] font-medium shadow-lg shadow-black/8 backdrop-blur-xl ${statusTone(state.status)}`}
+        className={`pointer-events-auto flex h-9 w-9 items-center justify-center rounded-xl border text-[11px] font-medium shadow-sm backdrop-blur-xl sm:w-auto sm:max-w-[240px] sm:gap-2 sm:px-3 ${statusTone(state.status)}`}
         aria-live="polite"
+        aria-label={label}
+        title={label}
       >
-        {connected ? <Wifi className="h-3.5 w-3.5" /> : retrying ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <WifiOff className="h-3.5 w-3.5" />}
-        <span className="truncate">{label}</span>
+        {connected ? <Wifi className="h-4 w-4" /> : retrying ? <RefreshCw className="h-4 w-4 animate-spin" /> : <WifiOff className="h-4 w-4" />}
+        <span className="hidden truncate sm:inline">{label}</span>
       </button>
-      {installPrompt && (
+      {!installed && (
         <button
           type="button"
-          className="pointer-events-auto flex items-center gap-1.5 rounded-full border border-accent/25 bg-accent px-3 py-1.5 text-[11px] font-semibold text-accent-foreground shadow-lg"
+          data-testid="remote-install-app"
+          aria-label={t('webui.remoteInstall', 'Install')}
+          title={t('webui.remoteInstall', 'Install')}
+          className="pointer-events-auto flex h-9 w-9 items-center justify-center rounded-xl border border-accent/25 bg-accent text-[11px] font-semibold text-accent-foreground shadow-sm sm:w-auto sm:gap-1.5 sm:px-3"
           onClick={async () => {
+            if (!installPrompt) {
+              setShowInstallHelp(true)
+              return
+            }
             await installPrompt.prompt()
-            await installPrompt.userChoice
-            setInstallPrompt(null)
+            const choice = await installPrompt.userChoice
+            clearInstallPrompt()
+            if (choice.outcome === 'accepted') setInstalled(true)
           }}
         >
-          <Download className="h-3.5 w-3.5" />
-          {t('webui.remoteInstall', 'Install')}
+          <Download className="h-4 w-4" />
+          <span className="hidden sm:inline">{t('webui.remoteInstall', 'Install')}</span>
         </button>
+      )}
+      {showInstallHelp && (
+        <div
+          data-testid="remote-install-help"
+          className="pointer-events-auto fixed left-3 right-3 top-[calc(56px+env(safe-area-inset-top))] mx-auto max-w-sm rounded-2xl border border-border/70 bg-card/95 p-4 text-sm text-foreground shadow-2xl backdrop-blur-xl sm:left-auto sm:right-3"
+          role="dialog"
+          aria-label={t('webui.remoteInstallTitle')}
+        >
+          <button
+            type="button"
+            className="absolute right-3 top-3 rounded-full p-1 text-muted-foreground hover:bg-foreground/5"
+            onClick={() => setShowInstallHelp(false)}
+            aria-label={t('webui.remoteInstallDismiss')}
+          >
+            <X className="h-4 w-4" />
+          </button>
+          <p className="pr-7 font-semibold">{t('webui.remoteInstallTitle')}</p>
+          <p className="mt-2 text-xs leading-5 text-muted-foreground">
+            {isAppleMobileDevice()
+              ? t('webui.remoteInstallIosInstructions')
+              : t('webui.remoteInstallBrowserInstructions')}
+          </p>
+        </div>
       )}
     </div>
   )

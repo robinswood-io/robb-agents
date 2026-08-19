@@ -29,6 +29,9 @@ describe('Remote RPC policy', () => {
       RPC_CHANNELS.tasks.RESOLVE_APPROVAL,
       ['workspace-1'],
     )).toBe(true)
+    expect(authorizeWebuiRpcRequest(remote, RPC_CHANNELS.missions.GET, ['workspace-1'])).toBe(true)
+    expect(authorizeWebuiRpcRequest(remote, RPC_CHANNELS.missions.CANCEL, ['workspace-1'])).toBe(true)
+    expect(authorizeWebuiRpcRequest(remote, RPC_CHANNELS.missions.CREATE_AND_START, ['workspace-1'])).toBe(false)
     expect(authorizeWebuiRpcRequest(remote, RPC_CHANNELS.llmConnections.GET_API_KEY)).toBe(false)
     expect(authorizeWebuiRpcRequest(remote, RPC_CHANNELS.sessions.KILL_SHELL)).toBe(false)
     expect(authorizeWebuiRpcRequest(remote, RPC_CHANNELS.workspace.GOVERNANCE_UPDATE)).toBe(false)

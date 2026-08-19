@@ -49,6 +49,18 @@ export const CHANNEL_MAP = {
   getTaskCockpitProjections: invoke(RPC_CHANNELS.tasks.GET_COCKPIT_PROJECTIONS),
   getTaskResults: invoke(RPC_CHANNELS.tasks.GET_RESULTS),
   onTaskGenerated: listener(RPC_CHANNELS.tasks.GENERATED),
+
+  // Missions v2
+  planMission: invoke(RPC_CHANNELS.missions.PLAN),
+  getMissionPlan: invoke(RPC_CHANNELS.missions.GET_PLAN),
+  onMissionPlanned: listener(RPC_CHANNELS.missions.PLANNED),
+  startMission: invoke(RPC_CHANNELS.missions.CREATE_AND_START),
+  getMission: invoke(RPC_CHANNELS.missions.GET),
+  listMissions: invoke(RPC_CHANNELS.missions.LIST),
+  pauseMission: invoke(RPC_CHANNELS.missions.PAUSE),
+  resumeMission: invoke(RPC_CHANNELS.missions.RESUME),
+  cancelMission: invoke(RPC_CHANNELS.missions.CANCEL),
+  onMissionChanged: listener(RPC_CHANNELS.missions.CHANGED),
   respondToPermission: invoke(RPC_CHANNELS.sessions.RESPOND_TO_PERMISSION),
   respondToCredential: invoke(RPC_CHANNELS.sessions.RESPOND_TO_CREDENTIAL),
   sessionCommand: invoke(RPC_CHANNELS.sessions.COMMAND),

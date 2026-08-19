@@ -56,7 +56,18 @@ import { bedrockProviderModule } from '@earendil-works/pi-ai/bedrock-provider';
 setBedrockProviderModule(bedrockProviderModule);
 
 // Model resolution (extracted for testability + custom-endpoint precedence)
-import { resolvePiModel, isDeniedMiniModelId, isModelNotFoundError } from './model-resolution.ts';
+import {
+  requireExplicitPiModel,
+  resolvePiModel,
+  isDeniedMiniModelId,
+} from './model-resolution.ts';
+import { registerSupplementalCatalogModels } from './catalog-model-registration.ts';
+import {
+  activateEphemeralQueryModel,
+  selectCompatibleQueryModel,
+  shouldRetryQueryModel,
+} from './query-llm-model-policy.ts';
+import { applyTokenUpdate, type PiCredential } from './token-update.ts';
 import { pickProviderAppropriateMiniModel } from './pick-mini-model.ts';
 import {
   buildCustomEndpointModelDef,
@@ -79,16 +90,14 @@ import { createSearchTool } from './tools/search/create-search-tool.ts';
 import { allowCraftMetadataProperties, stripCraftMetadata } from './craft-metadata-schema.ts';
 import { applySystemPromptOverride } from './system-prompt-override.ts';
 import { registerGoogleCodeAssistProvider } from './google-code-assist-provider.ts';
+import {
+  OVERFLOW_RECOVERY_COMPACTION_INSTRUCTIONS,
+  prepareMessagesForOverflowContinuation,
+} from './overflow-recovery.ts';
 
 // ============================================================
 // Types — JSONL Protocol
 // ============================================================
-
-/** Credential union used in init and token_update messages */
-type PiCredential =
-  | { type: 'api_key'; key: string }
-  | { type: 'oauth'; access: string; refresh: string; expires: number }
-  | { type: 'iam'; accessKeyId: string; secretAccessKey: string; region?: string; sessionToken?: string };
 
 /** Custom endpoint protocol — determines which streaming adapter Pi SDK uses */
 type CustomEndpointApi = 'openai-completions' | 'anthropic-messages';
@@ -144,6 +153,7 @@ type InboundMessage =
   | { type: 'set_model'; model: string }
   | { type: 'set_thinking_level'; level: string }
   | { type: 'compact'; id: string; customInstructions?: string }
+  | { type: 'recover_overflow'; id: string }
   | { type: 'set_auto_compaction'; id: string; enabled: boolean }
   | RuntimeConfigUpdateMessage
   | { type: 'steer'; message: string }
@@ -497,6 +507,13 @@ function createAuthenticatedRegistry(): {
 
   const modelRegistry = PiModelRegistry.inMemory(authStorage);
 
+  if (initConfig?.piAuth?.provider) {
+    const registeredIds = registerSupplementalCatalogModels(modelRegistry, initConfig.piAuth.provider);
+    if (registeredIds.length > 0) {
+      debugLog(`Registered supplemental Pi models for ${initConfig.piAuth.provider}: ${registeredIds.join(', ')}`);
+    }
+  }
+
   if (initConfig?.piAuth?.provider === 'google-gemini-code-assist') {
     registerGoogleCodeAssistProvider(modelRegistry);
     debugLog('Registered Google Gemini Code Assist provider');
@@ -633,30 +650,14 @@ async function ensureSession(): Promise<AgentSession> {
 
   // Set model if specified
   if (initConfig.model) {
-    try {
-      const piModel = resolvePiModel(modelRegistry, initConfig.model, initConfig.piAuth?.provider, shouldPreferCustomEndpoint());
-      if (piModel) {
-        // Verify resolved model's provider is compatible with the authenticated provider.
-        // Without this, a model that resolves to a different provider (e.g. azure-openai-responses
-        // when authed as github-copilot) would cause "No API key found" at runtime.
-        const resolvedProvider = (piModel as any)?.provider;
-        const isCompatible = !initConfig.piAuth ||
-          resolvedProvider === initConfig.piAuth.provider ||
-          resolvedProvider === 'custom-endpoint';
-        if (isCompatible) {
-          sessionOptions.model = piModel;
-          setInterceptorApiHints(piModel as { api?: string; provider?: string; baseUrl?: string });
-        } else {
-          debugLog(`Model ${initConfig.model} resolved to incompatible provider ${resolvedProvider} (expected ${initConfig.piAuth!.provider}), skipping`);
-          setInterceptorApiHints(undefined);
-        }
-      } else {
-        setInterceptorApiHints(undefined);
-      }
-    } catch {
-      debugLog(`Could not resolve Pi model: ${initConfig.model}`);
-      setInterceptorApiHints(undefined);
-    }
+    const piModel = requireExplicitPiModel(
+      modelRegistry,
+      initConfig.model,
+      initConfig.piAuth?.provider,
+      shouldPreferCustomEndpoint(),
+    );
+    sessionOptions.model = piModel;
+    setInterceptorApiHints(piModel);
   } else {
     setInterceptorApiHints(undefined);
   }
@@ -899,6 +900,7 @@ async function queryLlm(request: LLMQueryRequest): Promise<LLMQueryResult> {
   // what the user authenticated with (e.g. gemini-2.5-pro when only anthropic
   // credentials exist), fall back to the default summarization model which uses
   // the same provider family.
+  const explicitlyRequestedModel = request.model !== undefined;
   let model = request.model ?? initConfig.miniModel ?? getDefaultSummarizationModel();
 
   // Create authenticated registry upfront — used by both the provider guard and the ephemeral session.
@@ -917,15 +919,24 @@ async function queryLlm(request: LLMQueryRequest): Promise<LLMQueryResult> {
     const resolvedProvider = (resolved as any)?.provider;
     const isCompatible = resolvedProvider === authProvider || resolvedProvider === 'custom-endpoint';
     if (!resolved || !isCompatible || isDeniedMiniModelId(model, piAuthProvider)) {
-      // Anthropic: keep Haiku (the cheap/fast mini). For every other provider
-      // Haiku is unresolvable, so walk PI_PREFERRED_DEFAULTS for a model that
-      // actually works under the user's auth.
-      const providerDefault = authProvider === 'anthropic'
-        ? undefined
-        : pickProviderAppropriateMiniModel(authProvider, modelRegistry, shouldPreferCustomEndpoint());
-      const fallback = providerDefault ?? getDefaultSummarizationModel();
-      debugLog(`[queryLlm] Model ${bareModel} incompatible with ${authProvider} (resolved: ${resolvedProvider}), falling back to ${fallback}`);
-      model = fallback;
+      model = selectCompatibleQueryModel({
+        modelId: model,
+        explicitlyRequested: explicitlyRequestedModel,
+        compatible: false,
+        authProvider,
+        resolvedProvider,
+        getFallbackModel: () => {
+          // Anthropic: keep Haiku (the cheap/fast mini). For every other provider
+          // Haiku is unresolvable, so walk PI_PREFERRED_DEFAULTS for a model that
+          // actually works under the user's auth.
+          const providerDefault = authProvider === 'anthropic'
+            ? undefined
+            : pickProviderAppropriateMiniModel(authProvider, modelRegistry, shouldPreferCustomEndpoint());
+          const fallback = providerDefault ?? getDefaultSummarizationModel();
+          debugLog(`[queryLlm] Model ${bareModel} incompatible with ${authProvider} (resolved: ${resolvedProvider}), falling back to ${fallback}`);
+          return fallback;
+        },
+      });
     }
   }
 
@@ -957,11 +968,7 @@ async function queryLlm(request: LLMQueryRequest): Promise<LLMQueryResult> {
 
     // Pi SDK ignores options.model for ephemeral sessions (same issue as options.tools).
     // Explicitly set the model after creation to ensure the mini model is used.
-    try {
-      await ephemeralSession.setModel(piModel);
-    } catch {
-      debugLog(`[queryLlm] Failed to set model on ephemeral session, proceeding with default`);
-    }
+    await activateEphemeralQueryModel(ephemeralSession, piModel, modelId);
 
     debugLog(`[queryLlm] Created ephemeral session: ${ephemeralSession.sessionId}`);
 
@@ -1048,8 +1055,7 @@ async function queryLlm(request: LLMQueryRequest): Promise<LLMQueryResult> {
       const text = await runQueryWithModel(currentModel);
       return { text, model: currentModel };
     } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : String(error);
-      const shouldRetry = isModelNotFoundError(errorMsg);
+      const shouldRetry = shouldRetryQueryModel(error, explicitlyRequestedModel);
 
       if (!shouldRetry) {
         throw error;
@@ -1288,20 +1294,21 @@ async function handleInit(msg: Extract<InboundMessage, { type: 'init' }>): Promi
  * in PiAgent.requestCompact (300 s), since GPT compactions can legitimately
  * take 60–120 s.
  */
-async function waitForCompaction(session: { isCompacting: boolean }, timeoutMs = 300_000): Promise<void> {
-  if (!session.isCompacting) return;
+async function waitForCompaction(session: { isCompacting: boolean }, timeoutMs = 300_000): Promise<boolean> {
+  if (!session.isCompacting) return true;
   debugLog('Waiting for in-flight compaction to finish before prompt...');
   const start = Date.now();
   while (session.isCompacting) {
     if (Date.now() - start > timeoutMs) {
       debugLog(`Compaction wait timed out after ${Math.floor(timeoutMs / 1000)}s, proceeding anyway`);
-      break;
+      return false;
     }
     await new Promise(resolve => setTimeout(resolve, 200));
   }
   if (Date.now() - start < timeoutMs) {
     debugLog('Compaction finished, proceeding with prompt');
   }
+  return true;
 }
 
 async function handlePrompt(msg: Extract<InboundMessage, { type: 'prompt' }>): Promise<void> {
@@ -1493,6 +1500,71 @@ async function handleCompact(msg: Extract<InboundMessage, { type: 'compact' }>):
       success: false,
       errorMessage: errorMsg,
     });
+  }
+}
+
+/**
+ * Last-resort recovery invoked only after PiEventAdapter confirms the SDK did
+ * not start its native overflow recovery, exhausted its retry, or hit the known
+ * auto-compaction race. The adapter allows this path once per user turn.
+ */
+async function handleRecoverOverflow(msg: Extract<InboundMessage, { type: 'recover_overflow' }>): Promise<void> {
+  let compactionStarted = false;
+  let compactionSucceeded = false;
+
+  try {
+    const session = await ensureSession();
+
+    // A late native compaction may still be unwinding when the main process
+    // sends this request. Serialize behind it before starting the manual pass.
+    const compactionSettled = await waitForCompaction(session, 15_000);
+    if (!compactionSettled) {
+      throw new Error('A previous compaction did not finish in time');
+    }
+    debugLog(`[${msg.id}] Starting guarded manual overflow compaction`);
+    compactionStarted = true;
+    await session.compact(OVERFLOW_RECOVERY_COMPACTION_INSTRUCTIONS);
+    compactionSucceeded = true;
+
+    const prepared = prepareMessagesForOverflowContinuation(session.agent.state.messages);
+    if (prepared.removedTrailingError) {
+      session.agent.state.messages = prepared.messages;
+      debugLog(`[${msg.id}] Removed trailing assistant overflow error before continuation`);
+    }
+
+    // Continue the already-persisted user turn instead of sending the prompt a
+    // second time. This avoids duplicating both text and image attachments.
+    await session.agent.continue();
+    debugLog(`[${msg.id}] Guarded overflow recovery completed`);
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    debugLog(`[${msg.id}] Guarded overflow recovery failed: ${errorMsg}`);
+
+    if (!compactionStarted) {
+      // No SDK compaction event exists to drain the adapter's held state.
+      send({
+        type: 'event',
+        event: {
+          type: 'compaction_end',
+          reason: 'overflow',
+          result: undefined,
+          aborted: false,
+          willRetry: false,
+          errorMessage: `Context overflow recovery failed: ${errorMsg}`,
+        },
+      });
+    } else if (compactionSucceeded) {
+      // The compaction succeeded but continuation failed. Surface one friendly
+      // terminal error and an agent_end so the main event queue cannot hang.
+      send({
+        type: 'error',
+        code: 'prompt_error',
+        message: `Context was compacted, but the response could not resume: ${errorMsg}`,
+      });
+      send({ type: 'event', event: { type: 'agent_end', messages: [], willRetry: false } });
+    }
+    // If session.compact() itself failed, it already emitted compaction_end
+    // with the detailed error and the adapter will close the held queue.
   }
 }
 
@@ -1716,6 +1788,10 @@ async function processMessage(msg: InboundMessage): Promise<void> {
       await handleCompact(msg);
       break;
 
+    case 'recover_overflow':
+      await handleRecoverOverflow(msg);
+      break;
+
     case 'set_auto_compaction':
       await handleSetAutoCompaction(msg);
       break;
@@ -1734,16 +1810,19 @@ async function processMessage(msg: InboundMessage): Promise<void> {
       break;
 
     case 'token_update':
-      if (moduleAuthStorage) {
-        const { provider, credential } = msg.piAuth;
-        // See ambient comment at the initial `authStorage.set` call — same shape reason.
-        moduleAuthStorage.set(provider, credential as unknown as AuthCredential);
-        if (initConfig) {
-          initConfig.piAuth = msg.piAuth;
-        }
-        debugLog(`Updated ${credential.type} credential for provider: ${provider}`);
+      if (applyTokenUpdate(
+        msg.piAuth,
+        initConfig,
+        moduleAuthStorage
+          ? (provider, credential) => {
+            // See ambient comment at the initial `authStorage.set` call — same shape reason.
+            moduleAuthStorage!.set(provider, credential as unknown as AuthCredential);
+          }
+          : undefined,
+      )) {
+        debugLog(`Updated ${msg.piAuth.credential.type} credential for provider: ${msg.piAuth.provider}`);
       } else {
-        debugLog('token_update received but no authStorage initialized');
+        debugLog('token_update stored for registry initialization');
       }
       break;
 

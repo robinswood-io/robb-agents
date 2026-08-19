@@ -183,9 +183,17 @@ function thinkingForTier(tier: TaskModelTier, attempt: number): ThinkingLevel {
 
 export function inferTaskNodeProfile(node: TaskNode, attempt = 1): TaskNodeProfile {
   const text = `${node.title ?? ''}\n${node.prompt ?? ''}`;
-  const specialty = inferSpecialty(text);
+  const specialty = node.kind === 'verify' || node.kind === 'judge'
+    ? 'review'
+    : node.kind === 'synthesize' || node.kind === 'aggregate' || node.kind === 'filter'
+      ? 'analysis'
+      : inferSpecialty(text);
   const difficulty = inferDifficulty(text);
-  const modelTier = promoteTier(baseTier(difficulty), attempt);
+  // A verifier is the acceptance boundary, not a cheap formatting pass. Route it
+  // at the strongest tier unless the task explicitly pins another model.
+  const modelTier = node.kind === 'verify' || node.kind === 'judge'
+    ? 'best'
+    : promoteTier(baseTier(difficulty), attempt);
   return {
     specialty,
     difficulty,

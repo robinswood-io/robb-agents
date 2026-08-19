@@ -6,12 +6,13 @@
  * the long-lived server token is never embedded in a QR code or shared link.
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   AlertTriangle,
   Copy,
   ExternalLink,
+  MonitorSmartphone,
   RotateCw,
   ShieldCheck,
   Smartphone,
@@ -27,23 +28,23 @@ import type {
   ServerStatus,
 } from '@craft-agent/shared/config/server-config'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'
-import { SettingsCard, SettingsRow, SettingsSection, SettingsToggle } from '@/components/settings'
+import { SettingsCard, SettingsSection, SettingsToggle } from '@/components/settings'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { navigate, routes } from '@/lib/navigate'
 import type { DetailsPageMeta } from '@/lib/navigation-registry'
+import {
+  getActiveRemoteDevices,
+  hasNewActiveRemoteDevice,
+} from '@/utils/remote-devices'
 
 export const meta: DetailsPageMeta = {
   navigator: 'settings',
   slug: 'messaging',
 }
 
-function isActiveDevice(device: RemoteDeviceInfo, now = Date.now()): boolean {
-  return !device.revokedAt && Date.parse(device.expiresAt) > now
-}
-
 export default function MessagingSettingsPage() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const [config, setConfig] = useState<ServerConfig | null>(null)
   const [status, setStatus] = useState<ServerStatus | null>(null)
   const [pairing, setPairing] = useState<RemotePairingDetails | null>(null)
@@ -51,14 +52,26 @@ export default function MessagingSettingsPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [isCreatingPairing, setIsCreatingPairing] = useState(false)
+  const [isRefreshingDevices, setIsRefreshingDevices] = useState(false)
   const [error, setError] = useState<string>()
+  const pairingKnownDeviceIdsRef = useRef<Set<string>>(new Set())
 
-  const loadRemoteDevices = useCallback(async (serverStatus: ServerStatus) => {
+  const loadRemoteDevices = useCallback(async (
+    serverStatus: ServerStatus,
+    silent = false,
+  ): Promise<RemoteDeviceInfo[] | null> => {
     if (!serverStatus.webUrl || serverStatus.needsRestart) {
       setRemoteDevices([])
-      return
+      return []
     }
-    setRemoteDevices(await window.electronAPI.listRemoteDevices())
+    try {
+      const devices = await window.electronAPI.listRemoteDevices()
+      setRemoteDevices(devices)
+      return devices
+    } catch (err) {
+      if (!silent) throw err
+      return null
+    }
   }, [])
 
   const loadSettings = useCallback(async () => {
@@ -82,6 +95,21 @@ export default function MessagingSettingsPage() {
   useEffect(() => {
     void loadSettings()
   }, [loadSettings])
+
+  useEffect(() => {
+    if (!config?.enabled || !status?.webUrl || status.needsRestart) return
+
+    const timer = window.setInterval(() => {
+      void loadRemoteDevices(status, true)
+    }, 3_000)
+    return () => window.clearInterval(timer)
+  }, [config?.enabled, loadRemoteDevices, status])
+
+  useEffect(() => {
+    if (!pairing || !hasNewActiveRemoteDevice(remoteDevices, pairingKnownDeviceIdsRef.current)) return
+    setPairing(null)
+    toast.success(t('settings.server.deviceConnected'))
+  }, [pairing, remoteDevices, t])
 
   const handleEnabledChange = async (enabled: boolean) => {
     if (!config) return
@@ -110,7 +138,11 @@ export default function MessagingSettingsPage() {
     setIsCreatingPairing(true)
     setError(undefined)
     try {
-      setPairing(await window.electronAPI.createRemotePairing())
+      pairingKnownDeviceIdsRef.current = new Set(
+        getActiveRemoteDevices(remoteDevices).map((device) => device.id),
+      )
+      const nextPairing = await window.electronAPI.createRemotePairing()
+      setPairing(nextPairing)
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
       setError(message)
@@ -130,17 +162,42 @@ export default function MessagingSettingsPage() {
   }
 
   const handleRevokeDevice = async (deviceId: string) => {
-    if (!await window.electronAPI.revokeRemoteDevice(deviceId)) return
-    setRemoteDevices((devices) => devices.map((device) => (
-      device.id === deviceId ? { ...device, revokedAt: new Date().toISOString() } : device
-    )))
-    toast.success(t('settings.server.mobileDeviceRevoked'))
+    setError(undefined)
+    try {
+      if (!await window.electronAPI.revokeRemoteDevice(deviceId)) {
+        if (status) await loadRemoteDevices(status, true)
+        return
+      }
+      setRemoteDevices((devices) => devices.map((device) => (
+        device.id === deviceId ? { ...device, revokedAt: new Date().toISOString() } : device
+      )))
+      toast.success(t('settings.server.mobileDeviceRevoked'))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err))
+    }
+  }
+
+  const handleRefreshDevices = async () => {
+    if (!status) return
+    setIsRefreshingDevices(true)
+    setError(undefined)
+    try {
+      await loadRemoteDevices(status)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setIsRefreshingDevices(false)
+    }
   }
 
   const activeDevices = useMemo(
-    () => remoteDevices.filter((device) => isActiveDevice(device)),
+    () => getActiveRemoteDevices(remoteDevices),
     [remoteDevices],
   )
+  const dateFormatter = useMemo(() => new Intl.DateTimeFormat(
+    i18n.resolvedLanguage || undefined,
+    { dateStyle: 'medium', timeStyle: 'short' },
+  ), [i18n.resolvedLanguage])
 
   if (isLoading) {
     return (
@@ -284,24 +341,77 @@ export default function MessagingSettingsPage() {
                   )}
                 </div>
 
-                {activeDevices.map((device) => (
-                  <SettingsRow key={device.id} label={device.name}>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-muted-foreground">
-                        {t('settings.server.mobilePairedDevice')}
+                <div className="border-t border-border/70 p-5" data-testid="remote-device-management">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex gap-3">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+                        <MonitorSmartphone className="h-4.5 w-4.5" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">{t('settings.server.devicesTitle')}</p>
+                        <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                          {t('settings.server.devicesDescription')}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <span className="rounded-full bg-muted px-2 py-1 text-[11px] font-medium text-muted-foreground">
+                        {t('settings.server.devicesCount', { count: activeDevices.length })}
                       </span>
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-7 px-2 text-destructive"
-                        onClick={() => void handleRevokeDevice(device.id)}
-                        aria-label={t('settings.server.mobileRevokeDevice', { name: device.name })}
+                        className="h-7 w-7 p-0"
+                        onClick={() => void handleRefreshDevices()}
+                        disabled={isRefreshingDevices}
+                        aria-label={t('common.refresh')}
                       >
-                        <Trash2 className="h-3.5 w-3.5" />
+                        <RotateCw className={`h-3.5 w-3.5 ${isRefreshingDevices ? 'animate-spin' : ''}`} />
                       </Button>
                     </div>
-                  </SettingsRow>
-                ))}
+                  </div>
+
+                  {activeDevices.length === 0 ? (
+                    <div className="mt-4 rounded-xl border border-dashed border-border px-4 py-5 text-center text-xs text-muted-foreground">
+                      {t('settings.server.devicesEmpty')}
+                    </div>
+                  ) : (
+                    <div className="mt-4 divide-y divide-border/70 overflow-hidden rounded-xl border border-border/70" data-testid="remote-device-list">
+                      {activeDevices.map((device) => (
+                        <div key={device.id} className="flex items-center gap-3 bg-background px-3 py-3">
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                            <MonitorSmartphone className="h-4 w-4" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="truncate text-sm font-medium">{device.name}</p>
+                              <span className="rounded-full bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-400">
+                                {t('settings.server.deviceActive')}
+                              </span>
+                            </div>
+                            <p className="mt-1 text-[11px] leading-4 text-muted-foreground">
+                              {t('settings.server.devicePairedAt', { date: dateFormatter.format(new Date(device.pairedAt)) })}
+                              <span aria-hidden="true"> · </span>
+                              {t('settings.server.deviceExpiresAt', { date: dateFormatter.format(new Date(device.expiresAt)) })}
+                              <span aria-hidden="true"> · </span>
+                              {t('settings.server.deviceWorkspaces', { count: device.allowedWorkspaceIds.length })}
+                            </p>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 shrink-0 px-2 text-destructive"
+                            onClick={() => void handleRevokeDevice(device.id)}
+                            aria-label={t('settings.server.mobileRevokeDevice', { name: device.name })}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            <span className="hidden sm:inline">{t('common.disconnect')}</span>
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </SettingsCard>
             )}
 

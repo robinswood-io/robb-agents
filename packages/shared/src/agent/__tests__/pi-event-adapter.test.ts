@@ -16,6 +16,29 @@ function collect(gen: Generator<any>): any[] {
   return [...gen];
 }
 
+function makeUsage(
+  input: number,
+  output: number,
+  cacheRead: number,
+  cacheWrite: number,
+  costTotal: number,
+) {
+  return {
+    input,
+    output,
+    cacheRead,
+    cacheWrite,
+    totalTokens: input + output + cacheRead + cacheWrite,
+    cost: {
+      input: 0,
+      output: 0,
+      cacheRead: 0,
+      cacheWrite: 0,
+      total: costTotal,
+    },
+  };
+}
+
 describe('PiEventAdapter', () => {
   let adapter: PiEventAdapter;
   let sessionDir: string;
@@ -47,6 +70,160 @@ describe('PiEventAdapter', () => {
       const events = collect(adapter.adaptEvent({ type: 'agent_end' } as any));
       expect(events).toHaveLength(1);
       expect(events[0]).toMatchObject({ type: 'complete' });
+    });
+  });
+
+  // ============================================================
+  // Turn usage aggregation
+  // ============================================================
+
+  describe('turn usage aggregation', () => {
+    it('sums every assistant call across tool turns while keeping usage_update per call', () => {
+      adapter.setContextWindow(200_000);
+      collect(adapter.adaptEvent({ type: 'turn_start' } as any));
+
+      const streamed = collect(adapter.adaptEvent({
+        type: 'message_update',
+        assistantMessageEvent: { type: 'text_delta', delta: 'Checking' },
+      } as any));
+      const firstCall = collect(adapter.adaptEvent({
+        type: 'message_end',
+        message: {
+          role: 'assistant',
+          stopReason: 'toolUse',
+          content: 'Checking the file',
+          usage: makeUsage(100, 20, 40, 10, 0.012),
+        },
+      } as any));
+
+      const toolStart = collect(adapter.adaptEvent({
+        type: 'tool_execution_start',
+        toolCallId: 'call_usage_read',
+        toolName: 'read',
+        args: { path: '/repo/file.ts' },
+      } as any));
+      const toolEnd = collect(adapter.adaptEvent({
+        type: 'tool_execution_end',
+        toolCallId: 'call_usage_read',
+        toolName: 'read',
+        result: { content: [{ type: 'text', text: 'file contents' }] },
+        isError: false,
+      } as any));
+
+      collect(adapter.adaptEvent({ type: 'turn_end' } as any));
+      collect(adapter.adaptEvent({ type: 'turn_start' } as any));
+      const secondCall = collect(adapter.adaptEvent({
+        type: 'message_end',
+        message: {
+          role: 'assistant',
+          stopReason: 'stop',
+          content: 'Done',
+          usage: makeUsage(250, 30, 150, 25, 0.045),
+        },
+      } as any));
+      const completed = collect(adapter.adaptEvent({ type: 'agent_end' } as any));
+
+      expect(streamed).toMatchObject([{ type: 'text_delta', text: 'Checking' }]);
+      expect(firstCall.map(event => event.type)).toEqual(['text_complete', 'usage_update']);
+      expect(firstCall[0].turnId).toBe(streamed[0].turnId);
+      expect(firstCall[1]).toEqual({
+        type: 'usage_update',
+        usage: { inputTokens: 140, contextWindow: 200_000 },
+      });
+      expect(toolStart).toMatchObject([{ type: 'tool_start', toolUseId: 'call_usage_read' }]);
+      expect(toolEnd).toMatchObject([{ type: 'tool_result', toolUseId: 'call_usage_read' }]);
+      expect(secondCall.map(event => event.type)).toEqual(['text_complete', 'usage_update']);
+      expect(secondCall[1]).toEqual({
+        type: 'usage_update',
+        usage: { inputTokens: 400, contextWindow: 200_000 },
+      });
+
+      expect(completed).toHaveLength(1);
+      expect(completed[0]).toMatchObject({
+        type: 'complete',
+        usage: {
+          inputTokens: 540,
+          outputTokens: 50,
+          cacheReadTokens: 190,
+          cacheCreationTokens: 35,
+          contextWindow: 200_000,
+        },
+      });
+      expect(completed[0].usage.costUsd).toBeCloseTo(0.057, 10);
+    });
+
+    it('resets accumulated usage at the next Craft turn boundary', () => {
+      collect(adapter.adaptEvent({
+        type: 'message_end',
+        message: {
+          role: 'assistant',
+          stopReason: 'stop',
+          content: 'First turn',
+          usage: makeUsage(500, 50, 100, 20, 0.08),
+        },
+      } as any));
+      collect(adapter.adaptEvent({ type: 'agent_end' } as any));
+
+      adapter.startTurn();
+      collect(adapter.adaptEvent({ type: 'turn_start' } as any));
+      collect(adapter.adaptEvent({
+        type: 'message_end',
+        message: {
+          role: 'assistant',
+          stopReason: 'stop',
+          content: 'Second turn',
+          usage: makeUsage(40, 5, 10, 2, 0.006),
+        },
+      } as any));
+      const completed = collect(adapter.adaptEvent({ type: 'agent_end' } as any));
+
+      expect(completed[0]).toEqual({
+        type: 'complete',
+        usage: {
+          inputTokens: 50,
+          outputTokens: 5,
+          cacheReadTokens: 10,
+          cacheCreationTokens: 2,
+          costUsd: 0.006,
+          contextWindow: undefined,
+        },
+      });
+    });
+
+    it('includes billed usage from a failed call that the SDK retries', () => {
+      collect(adapter.adaptEvent({
+        type: 'message_end',
+        message: {
+          role: 'assistant',
+          stopReason: 'error',
+          errorMessage: 'temporary provider failure',
+          usage: makeUsage(80, 3, 20, 0, 0.01),
+        },
+      } as any));
+      expect(collect(adapter.adaptEvent({ type: 'agent_end', willRetry: true } as any))).toEqual([]);
+
+      collect(adapter.adaptEvent({
+        type: 'message_end',
+        message: {
+          role: 'assistant',
+          stopReason: 'stop',
+          content: 'Recovered',
+          usage: makeUsage(90, 7, 30, 5, 0.02),
+        },
+      } as any));
+      const completed = collect(adapter.adaptEvent({ type: 'agent_end', willRetry: false } as any));
+
+      expect(completed).toEqual([{
+        type: 'complete',
+        usage: {
+          inputTokens: 220,
+          outputTokens: 10,
+          cacheReadTokens: 50,
+          cacheCreationTokens: 5,
+          costUsd: 0.03,
+          contextWindow: undefined,
+        },
+      }]);
     });
   });
 
@@ -178,6 +355,56 @@ describe('PiEventAdapter', () => {
       });
       // sdkTurnAnchor is delivered separately by a follow-up pi_turn_anchor event.
       expect((events[0] as { sdkTurnAnchor?: string }).sdkTurnAnchor).toBeUndefined();
+    });
+
+    it('should attach per-message native model provenance to text_complete', () => {
+      adapter.setContextWindow(1_000_000);
+      collect(adapter.adaptEvent({ type: 'turn_start' } as any));
+
+      const dynamicallyRouted = collect(adapter.adaptEvent({
+        type: 'message_end',
+        message: {
+          role: 'assistant',
+          stopReason: 'toolUse',
+          content: 'Checking with a tool',
+          model: 'openrouter/auto',
+          responseModel: 'anthropic/claude-sonnet-4.6',
+          provider: 'openrouter',
+          api: 'openai-completions',
+        },
+      } as any));
+      const directModel = collect(adapter.adaptEvent({
+        type: 'message_end',
+        message: {
+          role: 'assistant',
+          stopReason: 'stop',
+          content: 'Final answer',
+          model: 'openai-codex/gpt-5.6-sol',
+          provider: 'openai-codex',
+          api: 'openai-codex-responses',
+        },
+      } as any));
+
+      expect(dynamicallyRouted[0]).toMatchObject({
+        type: 'text_complete',
+        modelProvenance: {
+          model: 'anthropic/claude-sonnet-4.6',
+          requestedModel: 'openrouter/auto',
+          provider: 'openrouter',
+          api: 'openai-completions',
+          contextWindow: 1_000_000,
+        },
+      });
+      expect(directModel[0]).toMatchObject({
+        type: 'text_complete',
+        modelProvenance: {
+          model: 'openai-codex/gpt-5.6-sol',
+          requestedModel: 'openai-codex/gpt-5.6-sol',
+          provider: 'openai-codex',
+          api: 'openai-codex-responses',
+          contextWindow: 1_000_000,
+        },
+      });
     });
 
     it('should forward pi_turn_anchor events as Craft AgentEvents', () => {
@@ -1315,6 +1542,166 @@ describe('PiEventAdapter', () => {
 
         expect(enqueued).toEqual([{ type: 'error', message: overflowMessage.errorMessage }]);
         expect(completed).toBe(true);
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('skipped SDK recovery: requests one guarded fallback and keeps the queue open', async () => {
+      jest.useFakeTimers();
+      try {
+        const enqueued: any[] = [];
+        let completed = false;
+        let recoveryRequests = 0;
+        adapter.setOverflowFallbackHandlers(
+          (event) => enqueued.push(event),
+          () => { completed = true; },
+          () => { recoveryRequests += 1; },
+        );
+
+        collect(adapter.adaptEvent({ type: 'turn_start' } as any));
+        collect(adapter.adaptEvent({ type: 'message_end', message: overflowMessage } as any));
+        collect(adapter.adaptEvent({ type: 'agent_end' } as any));
+
+        jest.advanceTimersByTime(5_000);
+        await Promise.resolve();
+
+        expect(recoveryRequests).toBe(1);
+        expect(enqueued).toEqual([]);
+        expect(completed).toBe(false);
+
+        // The fallback's manual compaction starts before its second watchdog.
+        const startEvents = collect(adapter.adaptEvent({ type: 'compaction_start' } as any));
+        const endEvents = collect(adapter.adaptEvent({
+          type: 'compaction_end',
+          reason: 'manual',
+          result: { summary: 'bounded handoff' },
+          aborted: false,
+          willRetry: false,
+        } as any));
+        expect(startEvents).toMatchObject([{ type: 'status', message: 'Compacting context...' }]);
+        expect(endEvents).toMatchObject([{ type: 'info', message: 'Compacted context to fit within limits' }]);
+
+        const recoveredText = collect(adapter.adaptEvent({
+          type: 'message_end',
+          message: { role: 'assistant', stopReason: 'stop', content: 'Recovered by fallback' },
+        } as any));
+        const finalAgentEnd = collect(adapter.adaptEvent({ type: 'agent_end' } as any));
+
+        expect(recoveredText).toMatchObject([{ type: 'text_complete', text: 'Recovered by fallback' }]);
+        expect(finalAgentEnd).toMatchObject([{ type: 'complete' }]);
+        expect(adapter.shouldCompleteQueue(true)).toBe(true);
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('lost fallback command: stops after one request instead of hanging or looping', async () => {
+      jest.useFakeTimers();
+      try {
+        const enqueued: any[] = [];
+        let completed = false;
+        let recoveryRequests = 0;
+        adapter.setOverflowFallbackHandlers(
+          (event) => enqueued.push(event),
+          () => { completed = true; },
+          () => { recoveryRequests += 1; },
+        );
+
+        collect(adapter.adaptEvent({ type: 'message_end', message: overflowMessage } as any));
+        collect(adapter.adaptEvent({ type: 'agent_end' } as any));
+        jest.advanceTimersByTime(5_000);
+        await Promise.resolve();
+        jest.advanceTimersByTime(20_000);
+
+        expect(recoveryRequests).toBe(1);
+        expect(enqueued).toEqual([{
+          type: 'error',
+          message: expect.stringContaining('Start a new chat'),
+        }]);
+        expect(completed).toBe(true);
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('native retry exhaustion starts the guarded fallback without surfacing the provider error', async () => {
+      jest.useFakeTimers();
+      try {
+        let recoveryRequests = 0;
+        adapter.setOverflowFallbackHandlers(
+          () => {},
+          () => {},
+          () => { recoveryRequests += 1; },
+        );
+
+        collect(adapter.adaptEvent({ type: 'turn_start' } as any));
+        collect(adapter.adaptEvent({ type: 'message_end', message: overflowMessage } as any));
+        collect(adapter.adaptEvent({ type: 'agent_end' } as any));
+        collect(adapter.adaptEvent({ type: 'compaction_start' } as any));
+        collect(adapter.adaptEvent({
+          type: 'compaction_end',
+          reason: 'overflow',
+          result: { summary: 'first pass' },
+          aborted: false,
+          willRetry: true,
+        } as any));
+
+        // The SDK's recovered attempt also overflows.
+        collect(adapter.adaptEvent({ type: 'message_end', message: overflowMessage } as any));
+        collect(adapter.adaptEvent({ type: 'agent_end' } as any));
+        const exhaustedEvents = collect(adapter.adaptEvent({
+          type: 'compaction_end',
+          reason: 'overflow',
+          result: undefined,
+          aborted: false,
+          willRetry: false,
+          errorMessage: 'Context overflow recovery failed after one compact-and-retry attempt. Try reducing context.',
+        } as any));
+        await Promise.resolve();
+
+        expect(exhaustedEvents).toEqual([
+          { type: 'status', message: 'Context limit reached; compacting and retrying...' },
+        ]);
+        expect(recoveryRequests).toBe(1);
+        expect(adapter.shouldCompleteQueue(false)).toBe(false);
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('fallback exhaustion replaces the raw Codex overflow with actionable guidance', async () => {
+      jest.useFakeTimers();
+      try {
+        adapter.setOverflowFallbackHandlers(() => {}, () => {}, () => {});
+
+        collect(adapter.adaptEvent({ type: 'turn_start' } as any));
+        collect(adapter.adaptEvent({ type: 'message_end', message: overflowMessage } as any));
+        collect(adapter.adaptEvent({ type: 'agent_end' } as any));
+        jest.advanceTimersByTime(5_000);
+        await Promise.resolve();
+        collect(adapter.adaptEvent({ type: 'compaction_start' } as any));
+        collect(adapter.adaptEvent({
+          type: 'compaction_end',
+          reason: 'manual',
+          result: { summary: 'fallback pass' },
+          aborted: false,
+          willRetry: false,
+        } as any));
+
+        const secondOverflow = collect(adapter.adaptEvent({
+          type: 'message_end',
+          message: overflowMessage,
+        } as any));
+        const terminal = collect(adapter.adaptEvent({ type: 'agent_end' } as any));
+        const terminalText = terminal
+          .map((event: any) => event.message ?? event.error?.message ?? event.error?.originalError ?? '')
+          .join(' ');
+
+        expect(secondOverflow).toEqual([]);
+        expect(terminalText).toContain('Start a new chat');
+        expect(terminalText).not.toContain('Your input exceeds');
+        expect(terminal.some((event: any) => event.type === 'complete')).toBe(true);
       } finally {
         jest.useRealTimers();
       }
