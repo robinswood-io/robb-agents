@@ -14,4 +14,6 @@ This file accumulates release notes for the next unreleased version. PRs that ad
 
 ## Bug Fixes
 
+- **Sessions locales avec accès distant TLS** — l’app de bureau utilise désormais `wss://` pour son propre serveur lorsque le mode distant TLS est activé, au lieu d’échouer au chargement des sessions avec une connexion `ws://` incompatible.
+
 ## Breaking Changes

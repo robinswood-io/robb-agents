@@ -130,6 +130,7 @@ import { initNotificationService, initBadgeIcon, initInstanceBadge, updateBadgeC
 import { setAutoUpdateEventSink, isUpdating, setBeforeUpdateQuitHook } from './auto-update'
 import type { EventSink } from '@craft-agent/server-core/transport'
 import { validateGitBashPath, checkVCRedistInstalled } from '@craft-agent/server-core/services'
+import { createLocalRpcEndpoint } from '../transport/local-rpc-endpoint'
 import {
   createWebuiHandler,
   nodeHttpAdapter,
@@ -1058,6 +1059,9 @@ app.whenReady().then(async () => {
 
       ipcMain.on('__get-ws-port', (e) => {
         e.returnValue = instance.port
+      })
+      ipcMain.on('__get-ws-endpoint', (e) => {
+        e.returnValue = createLocalRpcEndpoint(instance.port, Boolean(tls))
       })
       ipcMain.on('__get-ws-token', (e) => {
         e.returnValue = instance.token
