@@ -15,6 +15,7 @@ import {
   saveTaskSpec,
   readRunLog,
   readNodeOutput,
+  writeNodeOutput,
   writeRunSpecSnapshot,
   type TaskSpec,
 } from '@craft-agent/shared/tasks';
@@ -936,6 +937,103 @@ describe('TaskRunner (Conductor)', () => {
     expect(resumed.getRunState('ambiguous', 'r1')?.nodes[0]?.state).toBe('failed');
   });
 
+  it('recovers a confirmed read checkpoint when the process died before node-finished', async () => {
+    const spec = specOf({
+      id: 'confirmed-before-finished',
+      title: 'Confirmed before finished',
+      goal: 'recover the committed output',
+      nodes: [{ id: 'inspect', prompt: 'inspect' }],
+    });
+    saveTaskSpec(root, spec);
+    writeRunSpecSnapshot(root, spec.id, 'r1', spec);
+    appendRunLog(root, spec.id, 'r1', {
+      t: '2026-06-07T00:00:00.000Z', kind: 'run-started', taskId: spec.id, runId: 'r1',
+    });
+    appendRunLog(root, spec.id, 'r1', {
+      t: '2026-06-07T00:00:01.000Z', kind: 'node-scheduled', nodeId: 'inspect',
+    });
+    appendRunLog(root, spec.id, 'r1', {
+      t: '2026-06-07T00:00:02.000Z', kind: 'node-spawned', nodeId: 'inspect', sessionId: 'old-session',
+    });
+    writeNodeOutput(root, spec.id, 'r1', 'inspect', { text: 'durable result' });
+    appendRunLog(root, spec.id, 'r1', {
+      t: '2026-06-07T00:00:03.000Z', kind: 'node-checkpoint', nodeId: 'inspect',
+      idempotencyKey: 'ws:confirmed-before-finished:r1:inspect', status: 'confirmed',
+      proofHash: operationValueHash('durable result'),
+    });
+
+    const recoveredHost = new MockHost();
+    const recovered = new TaskRunner({
+      host: recoveredHost, workspaceId: 'ws', workspaceRoot: root, getKillSwitch: inactiveKillSwitch,
+    });
+    const [snapshot] = recovered.recoverNonTerminalRuns();
+
+    expect(snapshot).toMatchObject({ status: 'completed', nodes: [{ id: 'inspect', state: 'done' }] });
+    expect(recoveredHost.created).toHaveLength(0);
+  });
+
+  it('recovers a rejected approval when the process died before node-finished', async () => {
+    const spec = specOf({
+      id: 'rejected-before-finished',
+      title: 'Rejected before finished',
+      goal: 'preserve the rejection',
+      nodes: [{ id: 'publish', prompt: 'publish', effect: 'external-mutation', approval: true }],
+    });
+    saveTaskSpec(root, spec);
+    writeRunSpecSnapshot(root, spec.id, 'r1', spec);
+    appendRunLog(root, spec.id, 'r1', {
+      t: '2026-06-07T00:00:00.000Z', kind: 'run-started', taskId: spec.id, runId: 'r1',
+    });
+    appendRunLog(root, spec.id, 'r1', {
+      t: '2026-06-07T00:00:01.000Z', kind: 'approval-requested', requestId: 'approval-1',
+      nodeId: 'publish', reason: 'high impact', impact: 'high',
+    });
+    appendRunLog(root, spec.id, 'r1', {
+      t: '2026-06-07T00:00:02.000Z', kind: 'approval-resolved', requestId: 'approval-1',
+      nodeId: 'publish', decision: 'rejected', actor: 'reviewer', comment: 'not authorized',
+    });
+
+    const recoveredHost = new MockHost();
+    const recovered = new TaskRunner({
+      host: recoveredHost, workspaceId: 'ws', workspaceRoot: root, getKillSwitch: inactiveKillSwitch,
+    });
+    const [snapshot] = recovered.recoverNonTerminalRuns();
+
+    expect(snapshot).toMatchObject({ status: 'failed', nodes: [{ id: 'publish', state: 'failed' }] });
+    expect(recovered.listPendingApprovals(spec.id, 'r1')).toHaveLength(0);
+    expect(recoveredHost.created).toHaveLength(0);
+  });
+
+  it('fences an asynchronous dispatch that resumes after the run was stopped', async () => {
+    saveTaskSpec(
+      root,
+      specOf({ id: 'fenced-stop', title: 'Fenced stop', goal: 'g', nodes: [{ id: 'a', prompt: 'a' }] }),
+    );
+    let releaseGuard!: () => void;
+    const guard = new Promise<{ allowed: true }>((resolve) => {
+      releaseGuard = () => resolve({ allowed: true });
+    });
+    const runner = new TaskRunner({
+      host,
+      workspaceId: 'ws',
+      workspaceRoot: root,
+      getKillSwitch: inactiveKillSwitch,
+      executionGuard: () => guard,
+    });
+    runner.run('fenced-stop', { runId: 'r1', verifyOnComplete: false });
+    await tick();
+    await runner.stop('fenced-stop', 'r1');
+    releaseGuard();
+    await tick();
+    await tick();
+
+    expect(runner.getRunState('fenced-stop', 'r1')).toMatchObject({
+      status: 'stopped', nodes: [{ id: 'a', state: 'cancelled' }],
+    });
+    expect(host.created).toHaveLength(0);
+    expect(host.sent).toHaveLength(0);
+  });
+
   it('recovers a proven external mutation without dispatching it twice', async () => {
     const issuer = new ExecutionProofIssuer({
       signingKey: 'task-runner-recovery-proof-key-32-bytes',
@@ -1646,6 +1744,105 @@ describe('TaskRunner (Conductor)', () => {
     host.completeSession('orch', { finalText: 'VERDICT: PASS' });
     await tick();
     expect(runner.getRunState('vf', 'r1')!.status).toBe('completed');
+  });
+
+  it('feeds bounded verifier reflections and the rejected output into the next attempt', async () => {
+    saveTaskSpec(root, specOf({
+      id: 'reflective-repair',
+      title: 'Reflective repair',
+      goal: 'Produce grounded evidence',
+      max_iterations: 3,
+      autonomy: { reflection_memory_entries: 2, reflection_output_chars: 200, stagnation_limit: 2 },
+      nodes: [{ id: 'a', prompt: 'Produce the report.' }],
+    }));
+    const runner = makeRunner();
+    runner.run('reflective-repair', { runId: 'r1', orchestratorSessionId: 'orch' });
+    await tick();
+    host.complete('a', { finalText: 'Claim without evidence' });
+    await tick();
+
+    host.completeSession('orch', { finalText: 'VERDICT: FAIL — missing executed evidence' });
+    await tick();
+    const retryPrompt = host.sent.filter((entry) => entry.sessionId === 'sess-a').at(-1)!.message;
+    expect(retryPrompt).toContain('<reflection_memory>');
+    expect(retryPrompt).toContain('missing executed evidence');
+    expect(retryPrompt).toContain('Claim without evidence');
+    expect(retryPrompt).toContain('changed hypothesis');
+  });
+
+  it('stops a verifier-repair loop when it repeats an already rejected result', async () => {
+    saveTaskSpec(root, specOf({
+      id: 'stagnant-repair',
+      title: 'Stagnant repair',
+      goal: 'Make observable progress',
+      max_iterations: 5,
+      autonomy: { stagnation_limit: 1 },
+      nodes: [{ id: 'a', prompt: 'Produce a result.' }],
+    }));
+    const runner = makeRunner();
+    runner.run('stagnant-repair', { runId: 'r1', orchestratorSessionId: 'orch' });
+    await tick();
+    host.complete('a', { finalText: 'unchanged result' });
+    await tick();
+    host.completeSession('orch', { finalText: 'VERDICT: FAIL — missing proof' });
+    await tick();
+    host.complete('a', { finalText: '  unchanged   result  ' });
+    await tick();
+    host.completeSession('orch', { finalText: 'VERDICT: FAIL — still missing proof' });
+    await tick();
+
+    expect(runner.getRunState('stagnant-repair', 'r1')!.status).toBe('failed');
+    expect(host.created.filter((entry) => entry.options.name === 'a')).toHaveLength(2);
+    expect(readRunLog(root, 'stagnant-repair', 'r1')).toContainEqual(expect.objectContaining({
+      kind: 'stagnation-detected',
+      repetitions: 1,
+      limit: 1,
+      nodes: ['a'],
+    }));
+  });
+
+  it('restores no-progress history before evaluating a post-restart verdict', async () => {
+    saveTaskSpec(root, specOf({
+      id: 'durable-stagnation',
+      title: 'Durable stagnation',
+      goal: 'Stop a repair cycle across restarts',
+      max_iterations: 5,
+      autonomy: { stagnation_limit: 2 },
+      nodes: [{ id: 'a', prompt: 'Produce a result.' }],
+    }));
+    const firstRunner = makeRunner();
+    firstRunner.run('durable-stagnation', { runId: 'r1', orchestratorSessionId: 'orch' });
+    await tick();
+    host.complete('a', { finalText: 'same' });
+    await tick();
+    host.completeSession('orch', { finalText: 'VERDICT: FAIL — first rejection' });
+    await tick();
+    host.complete('a', { finalText: 'same' });
+    await tick();
+    host.completeSession('orch', { finalText: 'VERDICT: FAIL — second rejection' });
+    await tick();
+    host.complete('a', { finalText: 'same' });
+    await tick();
+    expect(firstRunner.getRunState('durable-stagnation', 'r1')!.status).toBe('verifying');
+
+    const resumedHost = new MockHost();
+    const resumedRunner = new TaskRunner({
+      host: resumedHost,
+      workspaceId: 'ws',
+      workspaceRoot: root,
+      getKillSwitch: inactiveKillSwitch,
+    });
+    resumedRunner.resume('durable-stagnation', 'r1');
+    await tick();
+    resumedHost.completeSession('orch', { finalText: 'VERDICT: FAIL — third rejection' });
+    await tick();
+
+    expect(resumedRunner.getRunState('durable-stagnation', 'r1')!.status).toBe('failed');
+    expect(readRunLog(root, 'durable-stagnation', 'r1').at(-2)).toMatchObject({
+      kind: 'stagnation-detected',
+      repetitions: 2,
+      limit: 2,
+    });
   });
 
   it('fails the run when FAIL verdicts exhaust the repair budget (max_iterations)', async () => {

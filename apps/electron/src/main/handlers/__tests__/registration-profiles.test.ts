@@ -106,6 +106,7 @@ async function getExpectedCoreChannels(): Promise<Set<string>> {
     onboarding,
     resources,
     transfer,
+    missions,
   ] = await Promise.all([
     import('@craft-agent/server-core/handlers/rpc/auth'),
     import('@craft-agent/server-core/handlers/rpc/automations'),
@@ -125,6 +126,7 @@ async function getExpectedCoreChannels(): Promise<Set<string>> {
     import('@craft-agent/server-core/handlers/rpc/onboarding'),
     import('@craft-agent/server-core/handlers/rpc/resources'),
     import('@craft-agent/server-core/handlers/rpc/transfer'),
+    import('@craft-agent/server-core/handlers/rpc/missions'),
   ])
 
   return new Set([
@@ -146,6 +148,7 @@ async function getExpectedCoreChannels(): Promise<Set<string>> {
     ...onboarding.HANDLED_CHANNELS,
     ...resources.HANDLED_CHANNELS,
     ...transfer.HANDLED_CHANNELS,
+    ...missions.HANDLED_CHANNELS,
   ])
 }
 

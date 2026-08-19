@@ -64,6 +64,21 @@ describe('task node adaptive routing', () => {
     expect(inferTaskNodeProfile(spec.nodes[2]!).specialty).toBe('testing');
   });
 
+  it('routes explicit judge and verifier nodes as strongest-tier reviewers', () => {
+    const spec = task({
+      id: 'verify-outcome',
+      title: 'Verify outcome',
+      goal: 'Verify independently',
+      nodes: [{ id: 'judge', kind: 'judge', prompt: 'Check the observable result.' }],
+    });
+
+    expect(inferTaskNodeProfile(spec.nodes[0]!, 1)).toMatchObject({
+      specialty: 'review',
+      modelTier: 'best',
+      thinkingLevel: 'high',
+    });
+  });
+
   it('routes simple, standard, and retried work to fast, balanced, and best models', () => {
     const spec = task({
       id: 'adaptive',

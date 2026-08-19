@@ -66,6 +66,11 @@ export const SESSION_PERSISTENT_FIELDS = [
   'taskNodeCount',
   'taskDraft',
   'executionIsolation',
+  // Mission Orchestration v2: durable dispatch identity for crash recovery
+  'missionId',
+  'missionWorkItemId',
+  'missionDispatchId',
+  'missionRole',
   // Runtime evidence of autonomous resolution and human-only blockers
   'autonomyEvents',
   'playbookSlug',
@@ -235,6 +240,14 @@ export interface SessionConfig {
   taskDraft?: boolean;
   /** Host-enforced tool isolation envelope for a Conductor child session. */
   executionIsolation?: SessionExecutionIsolation;
+  /** Mission v2 owning this specialist session. */
+  missionId?: string;
+  /** Mission v2 work item executed by this session. */
+  missionWorkItemId?: string;
+  /** Stable dispatch identity used to find/recover this session after a crash. */
+  missionDispatchId?: string;
+  /** Mission role assigned to this session. */
+  missionRole?: 'planner' | 'worker' | 'reviewer' | 'supervisor';
 }
 
 /**
@@ -344,6 +357,14 @@ export interface SessionHeader {
   taskDraft?: boolean;
   /** Host-enforced tool isolation envelope for a Conductor child session. */
   executionIsolation?: SessionExecutionIsolation;
+  /** Mission v2 owning this specialist session. */
+  missionId?: string;
+  /** Mission v2 work item executed by this session. */
+  missionWorkItemId?: string;
+  /** Stable dispatch identity used to find/recover this session after a crash. */
+  missionDispatchId?: string;
+  /** Mission role assigned to this session. */
+  missionRole?: 'planner' | 'worker' | 'reviewer' | 'supervisor';
   // Pre-computed fields for fast list loading
   /** Number of messages in session */
   messageCount: number;
@@ -442,4 +463,12 @@ export interface SessionMetadata {
   taskDraft?: boolean;
   /** Host-enforced tool isolation envelope for a Conductor child session. */
   executionIsolation?: SessionExecutionIsolation;
+  /** Mission v2 owning this specialist session. */
+  missionId?: string;
+  /** Mission v2 work item executed by this session. */
+  missionWorkItemId?: string;
+  /** Stable dispatch identity used to find/recover this session after a crash. */
+  missionDispatchId?: string;
+  /** Mission role assigned to this session. */
+  missionRole?: 'planner' | 'worker' | 'reviewer' | 'supervisor';
 }

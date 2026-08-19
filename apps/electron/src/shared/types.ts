@@ -203,6 +203,13 @@ import type {
   DurableTaskSnapshotDto,
   DurableTaskMetadataUpdateRequest,
   DurableTaskCockpitProjectionsDto,
+  MissionPlanRequest,
+  MissionPlanAck,
+  MissionPlanResult,
+  MissionCreateAndStartRequest,
+  MissionControlRequest,
+  MissionResumeRequest,
+  MissionSnapshotDto,
   FileAttachment,
   SendMessageOptions,
   SessionEvent,
@@ -279,6 +286,18 @@ export interface ElectronAPI {
   updateTaskMetadata(workspaceId: string, request: DurableTaskMetadataUpdateRequest): Promise<DurableTaskSnapshotDto>
   getTaskCockpitProjections(workspaceId: string, slug: string): Promise<DurableTaskCockpitProjectionsDto>
   getTaskResults(workspaceId: string, slug: string, runId?: string): Promise<TaskResultsDto>
+
+  // Missions v2
+  planMission(workspaceId: string, request: MissionPlanRequest): Promise<MissionPlanAck>
+  getMissionPlan(workspaceId: string, plannerSessionId: string): Promise<MissionPlanResult>
+  onMissionPlanned(callback: (workspaceId: string, result: MissionPlanResult) => void): () => void
+  startMission(workspaceId: string, request: MissionCreateAndStartRequest): Promise<MissionSnapshotDto>
+  getMission(workspaceId: string, missionId: string): Promise<MissionSnapshotDto>
+  listMissions(workspaceId: string): Promise<MissionSnapshotDto[]>
+  pauseMission(workspaceId: string, request: MissionControlRequest): Promise<MissionSnapshotDto>
+  resumeMission(workspaceId: string, request: MissionResumeRequest): Promise<MissionSnapshotDto>
+  cancelMission(workspaceId: string, request: MissionControlRequest): Promise<MissionSnapshotDto>
+  onMissionChanged(callback: (workspaceId: string, snapshot: MissionSnapshotDto) => void): () => void
 
   respondToPermission(sessionId: string, requestId: string, allowed: boolean, alwaysAllow: boolean, options?: PermissionResponseOptions): Promise<boolean>
   respondToCredential(sessionId: string, requestId: string, response: CredentialResponse): Promise<boolean>

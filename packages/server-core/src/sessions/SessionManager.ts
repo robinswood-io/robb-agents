@@ -915,6 +915,11 @@ interface ManagedSession {
   taskDraft?: boolean
   // Host-enforced tool isolation envelope for a Conductor child session
   executionIsolation?: import('@craft-agent/shared/tasks').SessionExecutionIsolation
+  // Mission Orchestration v2 durable ownership and dispatch identity
+  missionId?: string
+  missionWorkItemId?: string
+  missionDispatchId?: string
+  missionRole?: 'planner' | 'worker' | 'reviewer' | 'supervisor'
   // Working directory for this session (used by agent for bash commands)
   workingDirectory?: string
   // SDK cwd for session storage - set once at creation, never changes.
@@ -3165,6 +3170,10 @@ export class SessionManager implements ISessionManager {
       taskNodeId: options?.taskNodeId,
       taskDraft: options?.taskDraft,
       executionIsolation: options?.executionIsolation,
+      missionId: options?.missionId,
+      missionWorkItemId: options?.missionWorkItemId,
+      missionDispatchId: options?.missionDispatchId,
+      missionRole: options?.missionRole,
       playbookSlug: selectedPlaybook?.manifest.slug,
       // Persist only an EXPLICIT selection (e.g. a task's spec.sources on its subtasks).
       // The workspace-default fallback stays dynamic — freezing it into the header would
@@ -7069,14 +7078,16 @@ export class SessionManager implements ISessionManager {
     proof: import('@craft-agent/shared/governance').SignedExecutionProof,
   ): void {
     const managed = this.sessions.get(sessionId)
-    if (!managed?.taskSlug || !managed.taskNodeId) {
-      throw new Error('Execution proof can only be recorded for a bound task node session')
+    const missionId = managed?.missionId ?? managed?.taskSlug
+    const nodeId = managed?.missionWorkItemId ?? managed?.taskNodeId
+    if (!managed || !missionId || !nodeId) {
+      throw new Error('Execution proof can only be recorded for a bound task or mission work session')
     }
     this.executionProofCollector.record({
       sessionId,
       workspaceId: managed.workspace.id,
-      missionId: managed.taskSlug,
-      nodeId: managed.taskNodeId,
+      missionId,
+      nodeId,
     }, proof)
   }
 
@@ -9644,6 +9655,11 @@ export class SessionManager implements ISessionManager {
       taskNodeCount: header.taskNodeCount,
       taskDraft: header.taskDraft,
       executionIsolation: importedExecutionIsolation,
+      // Imported sessions never retain local Mission v2 authority.
+      missionId: undefined,
+      missionWorkItemId: undefined,
+      missionDispatchId: undefined,
+      missionRole: undefined,
       transferredSessionSummary: header.transferredSessionSummary,
       transferredSessionSummaryApplied: header.transferredSessionSummaryApplied,
       messages: bundle.session.messages,

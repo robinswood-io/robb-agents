@@ -238,6 +238,12 @@ export function serializeSession(
     // Host-bound execution rights are never portable. The importer recreates
     // a deny-by-default quarantine envelope for task sessions.
     executionIsolation: undefined,
+    // Mission dispatch identities are local control-plane capabilities and
+    // must never attach an imported session to a mission on the target host.
+    missionId: undefined,
+    missionWorkItemId: undefined,
+    missionDispatchId: undefined,
+    missionRole: undefined,
   })
 
   return {

@@ -20,7 +20,7 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
 import type { KanbanModelProviderGroup, TaskEditorTarget } from './types'
-import { uid, buildSpec, specToSubtasks, canDependOn, quickAddNodeId, quickAddChildToSubtask, DEFAULT_REPAIR_ATTEMPTS, MAX_REPAIR_ATTEMPTS_CAP, type EditorSubtask, type TaskPermissionMode } from './task-spec-form'
+import { uid, buildSpec, specToSubtasks, canDependOn, quickAddNodeId, quickAddChildToSubtask, DEFAULT_REPAIR_ATTEMPTS, MAX_REPAIR_ATTEMPTS_CAP, type EditorSubtask, type TaskAutonomyPolicy, type TaskPermissionMode } from './task-spec-form'
 import { resolveNodeStatePill } from './node-state-pill'
 import { SourceAvatar } from '@/components/ui/source-avatar'
 import { SkillAvatar } from '@/components/ui/skill-avatar'
@@ -519,6 +519,9 @@ export function TaskEditor({
   const [acceptanceCriteria, setAcceptanceCriteria] = React.useState('')
   // Empty string = "use the runner default"; a number pins the spec's max_iterations.
   const [maxRepairs, setMaxRepairs] = React.useState('')
+  // The backend owns safe defaults. The editor keeps explicit YAML overrides lossless even though
+  // the compact UI does not expose three additional expert-only numeric controls.
+  const [autonomy, setAutonomy] = React.useState<TaskAutonomyPolicy | undefined>(undefined)
   // Create mode seeds the project from the board's active filter (so a new card stays
   // visible under that filter); edit mode starts empty and is prefilled from the spec below.
   const [projectId, setProjectId] = React.useState(target.mode === 'create' ? (target.initialProjectId ?? '') : '')
@@ -605,7 +608,7 @@ export function TaskEditor({
         .then((res) => {
           if (cancelled) return
           const spec = res.spec as
-            | { title?: string; description?: string; goal?: string; acceptance_criteria?: string; max_iterations?: number; project?: string; cwd?: string; sources?: string[]; skills?: string[]; defaults?: { model?: string; llmConnection?: string; permissionMode?: TaskPermissionMode }; nodes?: Array<{ id: string; title?: string; prompt?: string; model?: string; llmConnection?: string; depends_on?: string[] }> }
+            | { title?: string; description?: string; goal?: string; acceptance_criteria?: string; max_iterations?: number; autonomy?: TaskAutonomyPolicy; project?: string; cwd?: string; sources?: string[]; skills?: string[]; defaults?: { model?: string; llmConnection?: string; permissionMode?: TaskPermissionMode }; nodes?: Array<{ id: string; title?: string; prompt?: string; model?: string; llmConnection?: string; depends_on?: string[] }> }
             | undefined
           if (!spec) return
           if (spec.title) setTitle(spec.title)
@@ -613,6 +616,7 @@ export function TaskEditor({
           setDescription(spec.description ?? spec.goal ?? '')
           setAcceptanceCriteria(spec.acceptance_criteria ?? '')
           setMaxRepairs(spec.max_iterations != null ? String(spec.max_iterations) : '')
+          setAutonomy(spec.autonomy)
           // Bind from the spec, else the session's existing binding. Record it as the immutable floor.
           const bound = spec.project ?? sessionProjectId
           setProjectId(bound)
@@ -793,7 +797,7 @@ export function TaskEditor({
         return
       }
       const spec = res.spec as
-        | { title?: string; description?: string; goal?: string; acceptance_criteria?: string; max_iterations?: number; defaults?: { model?: string; llmConnection?: string; permissionMode?: TaskPermissionMode }; nodes?: Array<{ id: string; title?: string; prompt?: string; model?: string; llmConnection?: string; depends_on?: string[] }> }
+        | { title?: string; description?: string; goal?: string; acceptance_criteria?: string; max_iterations?: number; autonomy?: TaskAutonomyPolicy; defaults?: { model?: string; llmConnection?: string; permissionMode?: TaskPermissionMode }; nodes?: Array<{ id: string; title?: string; prompt?: string; model?: string; llmConnection?: string; depends_on?: string[] }> }
         | undefined
       if (!spec || !res.validation.valid) {
         discardDraft(res.orchestratorSessionId)
@@ -806,6 +810,7 @@ export function TaskEditor({
       setDescription(spec.description ?? spec.goal ?? '')
       setAcceptanceCriteria(spec.acceptance_criteria ?? '')
       setMaxRepairs(spec.max_iterations != null ? String(spec.max_iterations) : '')
+      setAutonomy(spec.autonomy)
       // Adopt the generator's routing only when it explicitly authored it — don't wipe the user's picks.
       if (spec.defaults?.model) setOrchModel(spec.defaults.model)
       if (spec.defaults?.llmConnection) setOrchConnection(spec.defaults.llmConnection)
@@ -908,6 +913,7 @@ export function TaskEditor({
         goal,
         acceptanceCriteria,
         maxRepairs: maxRepairs.trim() === '' ? undefined : Number(maxRepairs),
+        autonomy,
         projectId,
         orchModel,
         orchConnection,

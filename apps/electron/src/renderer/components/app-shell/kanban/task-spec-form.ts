@@ -64,6 +64,13 @@ export const slugify = (s: string): string =>
 /** Permission modes are fixed (safe|ask|allow-all); mirrored here to avoid a shared Node import in the renderer. */
 export type TaskPermissionMode = 'safe' | 'ask' | 'allow-all'
 
+/** Optional backend-validated reflective repair policy, preserved losslessly by the editor. */
+export interface TaskAutonomyPolicy {
+  reflection_memory_entries?: number
+  reflection_output_chars?: number
+  stagnation_limit?: number
+}
+
 export interface EditorSubtask {
   uid: string
   // Original node id from a generated/loaded spec, preserved across the editor round-trip so
@@ -94,6 +101,8 @@ export interface SpecForm {
   acceptanceCriteria?: string
   /** Max repair attempts on a FAIL verdict. Persisted to the spec's `max_iterations`. */
   maxRepairs?: number
+  /** Reflective repair overrides loaded from/generated into task.yaml. Defaults stay backend-owned. */
+  autonomy?: TaskAutonomyPolicy
   projectId: string
   orchModel: string
   /** Connection serving the orchestrator model; preserved from the loaded spec's `defaults` unless the
@@ -210,6 +219,7 @@ export function buildSpec(form: SpecForm, modelToConnection: Map<string, string>
     ...(form.maxRepairs !== undefined && Number.isFinite(form.maxRepairs)
       ? { max_iterations: Math.min(MAX_REPAIR_ATTEMPTS_CAP, Math.max(0, Math.floor(form.maxRepairs))) }
       : {}),
+    ...(form.autonomy && Object.keys(form.autonomy).length ? { autonomy: { ...form.autonomy } } : {}),
     ...(project ? { project } : {}),
     ...(cwd ? { cwd } : {}),
     // Empty selections are omitted (not persisted as []) so sessions keep workspace defaults.

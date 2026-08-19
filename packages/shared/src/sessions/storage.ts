@@ -235,6 +235,10 @@ export async function createSession(
     taskNodeId?: string;
     taskDraft?: boolean;
     executionIsolation?: SessionConfig['executionIsolation'];
+    missionId?: string;
+    missionWorkItemId?: string;
+    missionDispatchId?: string;
+    missionRole?: SessionConfig['missionRole'];
     playbookSlug?: string;
   }
 ): Promise<SessionConfig> {
@@ -274,6 +278,10 @@ export async function createSession(
     taskNodeId: options?.taskNodeId,
     taskDraft: options?.taskDraft,
     executionIsolation: options?.executionIsolation,
+    missionId: options?.missionId,
+    missionWorkItemId: options?.missionWorkItemId,
+    missionDispatchId: options?.missionDispatchId,
+    missionRole: options?.missionRole,
     playbookSlug: options?.playbookSlug,
   };
 

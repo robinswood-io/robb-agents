@@ -64,6 +64,25 @@ export const DEFAULT_REPAIR_ATTEMPTS = 3;
 export const MAX_REPAIR_ATTEMPTS_CAP = 10;
 
 // ---------------------------------------------------------------------------
+// Reflective repair policy — bounded episodic memory + no-progress detection.
+// These caps are intentionally small: verifier feedback should guide the next
+// attempt without turning the whole run trajectory into an unbounded prompt.
+// ---------------------------------------------------------------------------
+
+/** Verifier feedback entries retained when a task does not declare an override. */
+export const DEFAULT_REFLECTION_MEMORY_ENTRIES = 3;
+/** Maximum verifier feedback entries that may be injected into one repair prompt. */
+export const MAX_REFLECTION_MEMORY_ENTRIES_CAP = 8;
+/** Maximum characters retained from the immediately rejected node output. */
+export const DEFAULT_REFLECTION_OUTPUT_CHARS = 1_500;
+/** Hard prompt-size cap for a rejected output excerpt. */
+export const MAX_REFLECTION_OUTPUT_CHARS_CAP = 4_000;
+/** Repeated rejected-result fingerprints tolerated before the run stops early. */
+export const DEFAULT_STAGNATION_LIMIT = 2;
+/** Hard cap keeps cyclic exploration from silently replacing the iteration budget. */
+export const MAX_STAGNATION_LIMIT_CAP = 5;
+
+// ---------------------------------------------------------------------------
 // Primitive validators
 // ---------------------------------------------------------------------------
 
@@ -118,6 +137,34 @@ export const RetrySchema = z.object({
     .optional(),
   /** One or more retryable failure classes. A scalar remains accepted for backwards compatibility. */
   when: z.union([z.enum(RETRY_WHEN), z.array(z.enum(RETRY_WHEN)).min(1)]).optional(),
+});
+
+/**
+ * Policy for evaluator→optimizer repair turns.
+ *
+ * A value of zero disables the corresponding memory/excerpt feature. Stagnation
+ * detection remains mandatory once `stagnation_limit` is reached; tasks can set
+ * it as high as the cap when broader exploration is justified.
+ */
+export const TaskAutonomySchema = z.object({
+  reflection_memory_entries: z
+    .number()
+    .int()
+    .min(0)
+    .max(MAX_REFLECTION_MEMORY_ENTRIES_CAP)
+    .default(DEFAULT_REFLECTION_MEMORY_ENTRIES),
+  reflection_output_chars: z
+    .number()
+    .int()
+    .min(0)
+    .max(MAX_REFLECTION_OUTPUT_CHARS_CAP)
+    .default(DEFAULT_REFLECTION_OUTPUT_CHARS),
+  stagnation_limit: z
+    .number()
+    .int()
+    .positive()
+    .max(MAX_STAGNATION_LIMIT_CAP)
+    .default(DEFAULT_STAGNATION_LIMIT),
 });
 
 export const TaskParamSchema = z.object({
@@ -296,6 +343,8 @@ export const TaskSpecSchema = z
     /** Max repair attempts on a FAIL verdict (re-run the repair frontier). 0 disables repair;
      *  capped at MAX_REPAIR_ATTEMPTS_CAP. Omitted → runner uses DEFAULT_REPAIR_ATTEMPTS. */
     max_iterations: z.number().int().min(0).max(MAX_REPAIR_ATTEMPTS_CAP).optional(),
+    /** Bounded reflective memory and no-progress stop policy for verifier-driven repairs. */
+    autonomy: TaskAutonomySchema.optional(),
     nodes: z.array(TaskNodeSchema).min(1, 'A task must define at least one node'),
     /** Named task outputs → reference strings, e.g. { result: "${nodes.review.output}" }. */
     outputs: z.record(z.string(), z.string()).optional(),
@@ -340,6 +389,7 @@ export type InputRef = z.infer<typeof InputRefSchema>;
 export type OutputDecl = z.infer<typeof OutputDeclSchema>;
 export type Loop = z.infer<typeof LoopSchema>;
 export type Retry = z.infer<typeof RetrySchema>;
+export type TaskAutonomy = z.infer<typeof TaskAutonomySchema>;
 export type TaskParam = z.infer<typeof TaskParamSchema>;
 export type TaskDefaults = z.infer<typeof TaskDefaultsSchema>;
 export type TaskExecutor = z.infer<typeof TaskExecutorSchema>;
