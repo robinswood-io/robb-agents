@@ -5,7 +5,7 @@ import type { ModelRegistry as PiModelRegistry } from '@earendil-works/pi-coding
 export { isDeniedMiniModelId } from '../../shared/src/config/llm-connections.ts';
 
 // Re-export the PiModel type used by callers
-type PiModel<T = any> = ReturnType<PiModelRegistry['find']>;
+type PiModel = ReturnType<PiModelRegistry['find']>;
 
 /**
  * Resolve a Pi SDK model from the registry, with optional custom-endpoint precedence.
@@ -21,7 +21,7 @@ export function resolvePiModel(
   modelId: string,
   piAuthProvider?: string,
   preferCustomEndpoint?: boolean,
-): PiModel | undefined {
+): PiModel {
   // Strip Craft's pi/ prefix — Pi SDK uses bare model IDs (e.g. "claude-sonnet-4-6")
   const bareId = modelId.startsWith('pi/') ? modelId.slice(3) : modelId;
 
@@ -70,6 +70,39 @@ export function resolvePiModel(
   }
 
   return undefined;
+}
+
+/**
+ * Resolve a model that the user selected explicitly.
+ *
+ * Callers must not omit the model from session options when this fails: doing
+ * so makes Pi silently select its own default model, which can route a request
+ * to a provider/model the user did not choose.
+ */
+export function requireExplicitPiModel(
+  modelRegistry: PiModelRegistry,
+  modelId: string,
+  piAuthProvider?: string,
+  preferCustomEndpoint?: boolean,
+): NonNullable<PiModel> {
+  const model = resolvePiModel(modelRegistry, modelId, piAuthProvider, preferCustomEndpoint);
+  if (!model) {
+    throw new Error(
+      `Explicitly selected Pi model "${modelId}" could not be resolved for provider "${piAuthProvider ?? '(unknown)'}"`,
+    );
+  }
+
+  if (
+    piAuthProvider
+    && model.provider !== piAuthProvider
+    && model.provider !== 'custom-endpoint'
+  ) {
+    throw new Error(
+      `Explicitly selected Pi model "${modelId}" resolved to incompatible provider "${model.provider}" (expected "${piAuthProvider}")`,
+    );
+  }
+
+  return model;
 }
 
 /**

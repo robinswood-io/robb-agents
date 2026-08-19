@@ -9,6 +9,7 @@ import { execSync } from 'child_process';
 import { existsSync, mkdirSync, rmSync, readdirSync, statSync, cpSync } from 'fs';
 import { join } from 'path';
 import type { BuildConfig } from './common';
+import { resolveBuildCommit, resolveBuildDirty } from '../build-provenance';
 
 /**
  * Verify SDK native binary is bundled in the packaged Windows app.
@@ -153,6 +154,28 @@ function buildMainProcess(config: BuildConfig): void {
       mainArgs.push(`--define:process.env.${key}="'${value}'"`);
     }
   }
+
+  let gitCommit: string | undefined;
+  let gitPorcelain: string | undefined;
+  try {
+    gitCommit = execSync('git rev-parse HEAD', { cwd: rootDir, encoding: 'utf8' });
+    gitPorcelain = execSync('git status --porcelain', { cwd: rootDir, encoding: 'utf8' });
+  } catch {
+    // Source archives may not include git metadata.
+  }
+  const buildCommit = resolveBuildCommit(
+    process.env.ROBB_BUILD_COMMIT,
+    gitCommit,
+    process.env.GITHUB_SHA,
+  ) || '';
+  const buildDirty = resolveBuildDirty(process.env.ROBB_BUILD_DIRTY, gitPorcelain);
+  const buildChannel = process.env.CRAFT_DEV_RUNTIME === '1'
+    || process.env.ROBB_BUILD_CHANNEL === 'development'
+    ? 'development'
+    : 'production';
+  mainArgs.push(`--define:process.env.ROBB_BUILD_COMMIT="'${buildCommit}'"`);
+  mainArgs.push(`--define:process.env.ROBB_BUILD_DIRTY="'${buildDirty === undefined ? '' : String(buildDirty)}'"`);
+  mainArgs.push(`--define:process.env.ROBB_BUILD_CHANNEL="'${buildChannel}'"`);
 
   // Use node to run esbuild directly
   run(`node ./node_modules/esbuild/bin/esbuild ${mainArgs.join(' ')}`, rootDir);

@@ -14,6 +14,9 @@ export interface ElectronPlatformOptions {
   nativeTheme: typeof import('electron').nativeTheme
   logger: PlatformServices['logger']
   isDebugMode: boolean
+  buildCommit?: string
+  buildChannel?: string
+  buildDirty?: boolean
   getLogFilePath?: () => string | undefined
   captureError?: (error: Error) => void
 }
@@ -26,6 +29,9 @@ export function createElectronPlatform(opts: ElectronPlatformOptions): PlatformS
     resourcesPath: process.resourcesPath,
     isPackaged: app.isPackaged,
     appVersion: app.getVersion(),
+    buildCommit: opts.buildCommit?.trim() || undefined,
+    buildChannel: opts.buildChannel?.trim() || undefined,
+    buildDirty: opts.buildDirty,
     openExternal: (url) => shell.openExternal(url),
     openPath: (p) => shell.openPath(p).then(() => {}),
     showItemInFolder: (p) => shell.showItemInFolder(p),

@@ -92,10 +92,10 @@ export function PanelSlot({
   // back button (compact mode), and isFocusedPanel for input field appearance
   const contextOverride = useMemo(() => ({
     ...parentContext,
-    rightSidebarButton: closeButton,
+    rightSidebarButton: isCompact ? undefined : closeButton,
     leadingAction: backButton,
     isFocusedPanel,
-  }), [parentContext, closeButton, backButton, isFocusedPanel])
+  }), [parentContext, closeButton, backButton, isCompact, isFocusedPanel])
 
   const handlePointerDown = useCallback(() => {
     if (!isFocusedPanel) {

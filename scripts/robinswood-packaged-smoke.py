@@ -38,6 +38,7 @@ APP_DIR = RELEASE_DIR / "mac-arm64" / APP_NAME
 APP_BIN = APP_DIR / "Contents" / "MacOS" / "Robb Agents"
 PLIST = APP_DIR / "Contents" / "Info.plist"
 PACKAGED_ICON = APP_DIR / "Contents" / "Resources" / "icon.icns"
+PACKAGED_MAIN = APP_DIR / "Contents" / "Resources" / "app" / "dist" / "main.cjs"
 # Pi providers run as explicit resource subprocesses. In particular, this is
 # the credential-free ACP bridge for Mistral Vibe subscriptions.
 PACKAGED_PI_AGENT_SERVER = APP_DIR / "Contents" / "Resources" / "app" / "dist" / "resources" / "pi-agent-server" / "index.js"
@@ -50,7 +51,7 @@ ARCH = "arm64"
 
 
 def configure_arch(arch: str) -> None:
-    global APP_DIR, APP_BIN, PLIST, PACKAGED_ICON, PACKAGED_PI_AGENT_SERVER
+    global APP_DIR, APP_BIN, PLIST, PACKAGED_ICON, PACKAGED_MAIN, PACKAGED_PI_AGENT_SERVER
     global PACKAGED_VIBE_ACP_BRIDGE, DMG, ZIP, ARCH
 
     ARCH = arch
@@ -59,6 +60,7 @@ def configure_arch(arch: str) -> None:
     APP_BIN = APP_DIR / "Contents" / "MacOS" / "Robb Agents"
     PLIST = APP_DIR / "Contents" / "Info.plist"
     PACKAGED_ICON = APP_DIR / "Contents" / "Resources" / "icon.icns"
+    PACKAGED_MAIN = APP_DIR / "Contents" / "Resources" / "app" / "dist" / "main.cjs"
     PACKAGED_PI_AGENT_SERVER = (
         APP_DIR / "Contents" / "Resources" / "app" / "dist" / "resources" / "pi-agent-server" / "index.js"
     )
@@ -143,6 +145,7 @@ def check_bundle(require_release_signing: bool = False) -> None:
     require(APP_BIN, "packaged app executable")
     require(PLIST, "Info.plist")
     require(PACKAGED_ICON, "packaged app icon")
+    require(PACKAGED_MAIN, "packaged main-process bundle")
     require(PACKAGED_PI_AGENT_SERVER, "packaged Pi agent server")
     require(PACKAGED_VIBE_ACP_BRIDGE, "packaged Mistral Vibe ACP bridge")
     require(SOURCE_ICON, "Robinswood source icon")
@@ -171,6 +174,22 @@ def check_bundle(require_release_signing: bool = False) -> None:
 
     if sha256(PACKAGED_ICON) != sha256(SOURCE_ICON):
         fail("Packaged icon.icns does not match resources/robinswood-icon.icns")
+
+    main_bundle = PACKAGED_MAIN.read_text(encoding="utf-8")
+    required_runtime_markers = (
+        "Automatic stable update checks scheduled",
+        "Installing macOS update with verified detached installer",
+        "Replacing installed application transactionally",
+        "Evicted idle session runtime",
+        "Failed to prepare agent runtime",
+        "authentication refresh retry",
+    )
+    missing_runtime_markers = [marker for marker in required_runtime_markers if marker not in main_bundle]
+    if missing_runtime_markers:
+        fail(
+            "Packaged main process is missing recovery/update markers: "
+            + ", ".join(missing_runtime_markers)
+        )
 
     package_report = audit_package(APP_DIR)
     print_report(package_report)
@@ -208,6 +227,7 @@ def check_bundle(require_release_signing: bool = False) -> None:
     print(f"✓ packaged app architecture {expected_architecture}")
     print("✓ packaged Robinswood icon")
     print("✓ packaged Pi agent server and Mistral Vibe ACP bridge")
+    print("✓ packaged updater and session-runtime recovery contract")
 
 
 def check_dmg() -> None:

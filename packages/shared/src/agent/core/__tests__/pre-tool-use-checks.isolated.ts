@@ -283,7 +283,7 @@ describe('runPreToolUseChecks', () => {
 
     it('allows active MCP source tools', () => {
       const result = runPreToolUseChecks(createInput({
-        toolName: 'mcp__linear__createIssue',
+        toolName: 'mcp__linear__getIssue',
         input: {},
         activeSourceSlugs: ['linear'],
         allSourceSlugs: ['linear'],
@@ -338,7 +338,7 @@ describe('runPreToolUseChecks', () => {
       });
 
       const result = runPreToolUseChecks(createInput({
-        toolName: 'mcp__linear__createIssue',
+        toolName: 'mcp__linear__getIssue',
         input: {},
         activeSourceSlugs: ['linear'],
         allSourceSlugs: ['linear'],
@@ -357,7 +357,7 @@ describe('runPreToolUseChecks', () => {
       });
 
       const result = runPreToolUseChecks(createInput({
-        toolName: 'mcp__linear__createIssue',
+        toolName: 'mcp__linear__getIssue',
         input: {},
         activeSourceSlugs: ['linear'],
         allSourceSlugs: ['linear'],
@@ -369,7 +369,7 @@ describe('runPreToolUseChecks', () => {
 
     it('skips when no prerequisiteManager provided', () => {
       const result = runPreToolUseChecks(createInput({
-        toolName: 'mcp__linear__createIssue',
+        toolName: 'mcp__linear__getIssue',
         input: {},
         activeSourceSlugs: ['linear'],
         allSourceSlugs: ['linear'],
@@ -440,7 +440,7 @@ describe('runPreToolUseChecks', () => {
 
     it('strips _intent and _displayName metadata', () => {
       const result = runPreToolUseChecks(createInput({
-        toolName: 'mcp__linear__createIssue',
+        toolName: 'mcp__linear__getIssue',
         input: { title: 'Bug fix', _intent: 'create issue', _displayName: 'Create Issue' },
         activeSourceSlugs: ['linear'],
         allSourceSlugs: ['linear'],

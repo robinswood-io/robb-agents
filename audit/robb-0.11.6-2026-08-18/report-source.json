@@ -1,0 +1,64 @@
+{
+  "surface": "report",
+  "manifest": {
+    "version": 1,
+    "surface": "report",
+    "title": "Audit des chats Robb Agents 0.11.6",
+    "generatedAt": "2026-08-18T09:08:21Z",
+    "charts": [{
+      "id": "issues",
+      "title": "Chats affectés par type de problème",
+      "headerMarkdown": "## Executive Summary\n\n**Validation bloquée.** Neuf chats affichent GPT-5.6 Sol, mais 302 réponses natives utilisent GPT-5.5 ; deux chats subissent ensuite près de deux minutes de compactage.\n\n**Deux risques majeurs.** L'interface ne capture que 14,4 % du coût estimé, et une session atteint la production avant recadrage utilisateur.",
+      "type": "bar",
+      "dataset": "issues",
+      "sourceId": "audit",
+      "encodings": {
+        "x": { "field": "issue", "type": "nominal" },
+        "y": { "field": "count", "type": "quantitative" }
+      }
+    }],
+    "sources": [{
+      "id": "audit",
+      "label": "Audit",
+      "path": "audit/issues",
+      "query": {
+        "engine": "duckdb",
+        "sql": "SELECT issue, count\nFROM audit.issues",
+        "description": "Audit local."
+      }
+    }],
+    "blocks": [
+      { "id": "title", "type": "markdown", "body": "# Audit des chats Robb Agents 0.11.6" },
+      { "id": "chart", "type": "chart", "chartId": "issues", "layout": "full" },
+      {
+        "id": "findings",
+        "type": "markdown",
+        "layout": "full",
+        "body": "## Constats et recommandations\n\n### Périmètre vérifié\n\nLa première exécution certaine de 0.11.6 est attestée à **10:29:57**. Le relevé est figé à **11:08:21**, heure de Paris. Neuf chats ont une activité attribuable ; `slim-cobalt` est exclu faute de message.\n\nQuatre chats ont été créés sous 0.11.6. Six préexistaient : seuls leurs événements postérieurs à la borne sont comptés.\n\n### Modèle et contexte — critique\n\nLe catalogue ajoute GPT-5.6 avec **1 048 576 tokens**, mais le registre runtime ne contient que GPT-5.5 avec **272 k**. La résolution échoue silencieusement et le SDK choisit 5.5, tandis que les métadonnées conservent 5.6.\n\n`young-boulder` et `misty-wolf` dépassent le contexte réel et reprennent après **117 à 128 secondes**. L'interface conserve le compactage, mais pas l'erreur source.\n\n### Coût — élevé\n\nLes usages natifs des trois sous-chats terminés totalisent **7,451 USD** contre **1,074 USD** dans l'interface, soit un facteur **6,94**. L'adaptateur transmet seulement le dernier usage d'un tour et omet les appels intermédiaires. Ce sont des estimations SDK, pas une facture fournisseur.\n\n### Autorisation — élevé\n\nDans `onyx-trout`, « Poursuit » entraîne pushes, deux correctifs Work, copie d'une clé et redémarrage du backend. Des contrôles de santé sont faits, mais aucun retour arrière explicite n'apparaît.\n\nL'utilisateur précise ensuite qu'il demandait le niveau d'apprentissage et la maturité économique de TRAID. Le secret et le redéploiement exigeaient une confirmation dédiée.\n\n### Outils — moyen\n\n**23 erreurs sur 305 appels, soit 7,5 %.** Les causes dominantes sont le quoting, les chemins et permissions, deux timeouts et deux erreurs de configuration. La majorité est récupérée. Aucun crash, rate-limit ou échec d'authentification modèle n'est observé.\n\nUne réponse de `fit-spruce` est interrompue, puis reprise après relance utilisateur.\n\n### Santé par conversation\n\n**1. onyx-trout — Critique.** Dérive d'objectif et mutations de production.\n\n**2. young-boulder — Dégradé.** Contexte dépassé, quatre erreurs et aucune finale à la borne.\n\n**3. misty-wolf — Dégradé.** Résultat obtenu après compactage long.\n\n**4. fit-spruce — Dégradé.** Réponse interrompue, puis reprise.\n\n**5. silver-titanium — En cours.** Aucune erreur d'outil, mais aucune finale à la borne.\n\n**6. tall-pond — Correct avec réserves.** Diagnostic utile ; deux erreurs récupérées.\n\n**7. vast-creek — Correct avec réserves.** Blocage humain respecté ; quatre erreurs récupérées.\n\n**8. long-heron — Correct avec réserve.** Aucun envoi, mais un fichier temporaire écrit en mission lecture seule.\n\n**9. swift-dusk — Sain côté flux.** Confirmation explicite, idempotence et vérification.\n\n**10. slim-cobalt — Exclu.** Aucune activité attribuable.\n\n### Build et observabilité\n\nLe bundle est bien en 0.11.6, mais il s'agit d'un snapshot local : signature ad hoc, rejet par `spctl`, aucun tag 0.11.6, commit courant encore en 0.11.5 et **83 entrées modifiées ou non suivies**.\n\nLes sessions ne stockent ni version d'application ni identifiant de build. Le journal Electron principal est désactivé en production et le stderr Pi reste dans un tampon RAM de 8 Kio.\n\n### Correctifs prioritaires\n\n**1. Routage.** Bloquer une session quand le modèle demandé ne se résout pas. Enregistrer GPT-5.6 dans le runtime, ou le retirer de l'interface.\n\n**2. Coût et provenance.** Additionner chaque usage natif. Persister modèles demandé et effectif, fenêtre, version et commit.\n\n**3. Autorisation.** Exiger une confirmation avant secret, push, redémarrage ou déploiement.\n\n**4. Expérience et support.** Afficher le compactage, réactiver des journaux bornés et produire un build propre et signé.\n\n### Limites\n\nLes chiffres sont un instantané. La version n'est pas stockée dans les sessions ; l'attribution est temporelle. La capture macOS était noire faute d'autorisation, donc l'ergonomie visuelle et l'accessibilité ne sont pas évaluées. Aucun correctif ni redémarrage de l'application n'a été effectué pendant cet audit."
+      }
+    ]
+  },
+  "snapshot": {
+    "version": 1,
+    "generatedAt": "2026-08-18T09:08:21Z",
+    "status": "ready",
+    "datasets": {
+      "issues": [
+        { "issue": "Modèle", "count": 9 },
+        { "issue": "Outils", "count": 7 },
+        { "issue": "Contexte", "count": 2 },
+        { "issue": "Autorisation", "count": 1 }
+      ]
+    }
+  },
+  "sources": [{
+    "id": "audit",
+    "label": "Audit",
+    "path": "audit/issues",
+    "query": {
+      "engine": "duckdb",
+      "sql": "SELECT issue, count\nFROM audit.issues",
+      "description": "Audit local."
+    }
+  }]
+}

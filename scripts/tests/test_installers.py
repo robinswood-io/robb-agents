@@ -20,6 +20,7 @@ from collections.abc import Iterator
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 SHELL_INSTALLER = ROOT / "scripts" / "install-app.sh"
 POWERSHELL_INSTALLER = ROOT / "scripts" / "install-app.ps1"
+ELECTRON_UPDATER = ROOT / "apps" / "electron" / "src" / "main" / "auto-update.ts"
 VERSION = "1.2.3"
 SHA512_FIXTURE = f"{'A' * 86}=="
 PLATFORM_BUILD_SCRIPTS = (
@@ -72,11 +73,56 @@ def write_manifest(path: pathlib.Path, artifact: str) -> None:
 
 
 class InstallerContractTests(unittest.TestCase):
+    def test_electron_updater_uses_single_flight_download_and_transactional_macos_swap(self) -> None:
+        source = ELECTRON_UPDATER.read_text(encoding="utf-8")
+        required = [
+            "let updateDownloadPromise: Promise<UpdateInfo> | null = null",
+            "if (updateDownloadPromise) return updateDownloadPromise",
+            "basename(configuredPath)",
+            "right.modifiedAt - left.modifiedAt",
+            "Ignored unsafe updater cache directory name",
+            "Refusing unsafe macOS application replacement target",
+            "Unsafe application replacement target",
+            "Staging verified update beside installed application",
+            "Replacing installed application transactionally",
+            "restore_previous_app",
+            'mv "$APP_PATH" "$OLD_APP_PATH"',
+            'mv "$STAGED_APP" "$APP_PATH"',
+            'rm -f "$0"',
+        ]
+        for token in required:
+            self.assertIn(token, source)
+
+        self.assertNotIn(
+            'rm -rf "$APP_PATH"\nditto "$SRC" "$APP_PATH"',
+            source,
+        )
+
+    @unittest.skipUnless(shutil.which("bash"), "Embedded updater syntax validation requires bash")
+    def test_embedded_macos_updater_has_valid_bash_syntax(self) -> None:
+        source = ELECTRON_UPDATER.read_text(encoding="utf-8")
+        prefix = "const script = `"
+        start = source.index(prefix) + len(prefix)
+        end = source.index("`\n  writeFileSync", start)
+        script = source[start:end].replace(r"\${", "${")
+        result = subprocess.run(
+            ["bash", "-n"],
+            input=script,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_platform_builds_use_the_bun_workspace_executor(self) -> None:
         for script in PLATFORM_BUILD_SCRIPTS:
             source = script.read_text(encoding="utf-8")
             self.assertIn("bun x --bun electron-builder", source, str(script))
             self.assertNotIn("npx electron-builder", source, str(script))
+
+        mac_build = (ROOT / "apps" / "electron" / "scripts" / "build-dmg.sh").read_text(encoding="utf-8")
+        self.assertIn("export CSC_IDENTITY_AUTO_DISCOVERY=false", mac_build)
+        self.assertIn("unset CSC_LINK CSC_KEY_PASSWORD CSC_NAME", mac_build)
 
         package = json.loads((ROOT / "package.json").read_text(encoding="utf-8"))
         for dependency in ("postcss", "tar"):

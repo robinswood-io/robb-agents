@@ -240,6 +240,8 @@ export async function createSession(
     missionDispatchId?: string;
     missionRole?: SessionConfig['missionRole'];
     playbookSlug?: string;
+    createdByApp?: SessionConfig['createdByApp'];
+    lastUsedByApp?: SessionConfig['lastUsedByApp'];
   }
 ): Promise<SessionConfig> {
   ensureSessionsDir(workspaceRootPath);
@@ -261,6 +263,8 @@ export async function createSession(
     name: options?.name,
     createdAt: now,
     lastUsedAt: now,
+    createdByApp: options?.createdByApp,
+    lastUsedByApp: options?.lastUsedByApp,
     workingDirectory: options?.workingDirectory,
     sdkCwd,
     permissionMode: options?.permissionMode,
@@ -319,6 +323,8 @@ export async function getOrCreateSessionById(
       name: existing.name,
       createdAt: existing.createdAt,
       lastUsedAt: existing.lastUsedAt,
+      createdByApp: existing.createdByApp,
+      lastUsedByApp: existing.lastUsedByApp,
       sdkCwd: existing.sdkCwd,
       workingDirectory: existing.workingDirectory,
     };
@@ -538,6 +544,8 @@ export async function getOrCreateLatestSession(workspaceRootPath: string): Promi
       name: latest.name,
       createdAt: latest.createdAt,
       lastUsedAt: latest.lastUsedAt,
+      createdByApp: latest.createdByApp,
+      lastUsedByApp: latest.lastUsedByApp,
     };
   }
   return createSession(workspaceRootPath);

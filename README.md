@@ -146,7 +146,7 @@ Read the complete [Privacy Policy](PRIVACY.md).
 
 - Robb does **not** ship a Robinswood private updater, proxy, telemetry endpoint, credential service, or required cloud account.
 - The installed production app uses the existing `~/.craft-agent` data root directly. Source and development builds are forced onto `~/.craft-agent-dev`; `CRAFT_CONFIG_DIR=~/.craft-agent` is refused by the development launcher.
-- Signed, notarized GitHub Releases are the stable production distribution mechanism. Production never checks or downloads in the background: the update button in Settings is the only way to check, download and install a stable release. The updater is disabled in Robb Agents Dev.
+- Signed, notarized GitHub Releases are the stable production distribution mechanism. Production performs a bounded availability check after launch and periodically thereafter, but never downloads or installs in the background: both actions require explicit confirmation. The updater is disabled in Robb Agents Dev.
 - Credentials remain in the selected provider’s normal local storage/OS keychain flow. Never commit `.env`, certificates, API keys, or tokens.
 
 ## Contributing

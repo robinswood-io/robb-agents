@@ -71,6 +71,8 @@ jobs:
         run: |
           set -euo pipefail
           version="$(node -p "require('./apps/electron/package.json').version")"
+          root_version="$(node -p "require('./package.json').version")"
+          [[ "$version" == "$root_version" ]] || { echo "::error::Electron version $version must match root version $root_version"; exit 1; }
           tag="${REQUESTED_TAG:-${GITHUB_REF_NAME}}"
           mode="${REQUESTED_MODE:-test-artifacts}"
           if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then mode="${REQUESTED_MODE:-publish-unsigned}"; fi
@@ -435,7 +437,7 @@ jobs:
         uses: actions/attest-build-provenance@v2
         with:
           subject-checksums: release-assets/SHA256SUMS.txt
-      - name: Create immutable public GitHub Release
+      - name: Upload verified GitHub Release draft
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -444,4 +446,74 @@ jobs:
             --title "Robb Agents ${{ needs.preflight.outputs.version }}" \
             --notes-file release-assets/RELEASE-STATUS.md \
             --verify-tag \
+            --draft
+      - name: Verify the uploaded updater feed
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          published_assets="$RUNNER_TEMP/published-release-assets.json"
+          gh release view "${{ needs.preflight.outputs.tag }}" \
+            --repo "${{ github.repository }}" \
+            --json assets > "$published_assets"
+          bun run scripts/verify-github-release-assets.ts \
+            --release-dir release-assets \
+            --assets-json "$published_assets"
+
+          published_feed="$RUNNER_TEMP/published-updater-feed"
+          verified=false
+          for attempt in 1 2 3 4 5 6; do
+            rm -rf "$published_feed"
+            mkdir -p "$published_feed"
+            if gh release download "${{ needs.preflight.outputs.tag }}" \
+              --repo "${{ github.repository }}" \
+              --dir "$published_feed" \
+              --pattern 'latest*.yml' \
+              && cmp release-assets/latest.yml "$published_feed/latest.yml" \
+              && cmp release-assets/latest-mac.yml "$published_feed/latest-mac.yml" \
+              && cmp release-assets/latest-linux.yml "$published_feed/latest-linux.yml"; then
+              verified=true
+              break
+            fi
+            echo "Published updater feed not ready yet (attempt $attempt/6)"
+            sleep 5
+          done
+          [[ "$verified" == true ]] || { echo "::error::Published updater manifests do not match the validated release bundle"; exit 1; }
+
+      - name: Publish immutable latest release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release edit "${{ needs.preflight.outputs.tag }}" \
+            --repo "${{ github.repository }}" \
+            --draft=false \
             --latest
+      - name: Verify GitHub latest endpoint
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3 4 5 6; do
+            latest_tag="$(gh api "repos/${GITHUB_REPOSITORY}/releases/latest" --jq '.tag_name')"
+            if [[ "$latest_tag" == "${{ needs.preflight.outputs.tag }}" ]]; then
+              exit 0
+            fi
+            echo "GitHub latest is $latest_tag, waiting for ${{ needs.preflight.outputs.tag }} (attempt $attempt/6)"
+            sleep 5
+          done
+          echo "::error::GitHub latest endpoint did not resolve to ${{ needs.preflight.outputs.tag }}"
+          exit 1
+      - name: Remove failed draft release
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          is_draft="$(gh release view "${{ needs.preflight.outputs.tag }}" \
+            --repo "${{ github.repository }}" \
+            --json isDraft \
+            --jq '.isDraft' 2>/dev/null || true)"
+          if [[ "$is_draft" == true ]]; then
+            gh release delete "${{ needs.preflight.outputs.tag }}" \
+              --repo "${{ github.repository }}" \
+              --yes
+          fi

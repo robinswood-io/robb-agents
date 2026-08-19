@@ -96,6 +96,7 @@ export function CompactWorkingDirectorySelector({
         isExpanded={isEmptySession}
         hasSelection={hasFolder}
         showChevron={true}
+        iconOnly
         isOpen={open}
         onClick={() => setOpen((prev) => !prev)}
         tooltip={

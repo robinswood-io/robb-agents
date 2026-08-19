@@ -4,8 +4,13 @@
  */
 
 import { spawn } from "bun";
+import { execFileSync } from "child_process";
 import { existsSync, readFileSync, statSync, mkdirSync } from "fs";
 import { join } from "path";
+import {
+  resolveBuildCommit as chooseBuildCommit,
+  resolveBuildDirty,
+} from "./build-provenance";
 
 const ROOT_DIR = join(import.meta.dir, "..");
 const DIST_DIR = join(ROOT_DIR, "apps/electron/dist");
@@ -46,6 +51,37 @@ function loadEnvFile(): void {
   }
 }
 
+/** Resolve the source revision once at build time so packaged apps retain it. */
+function resolveBuildCommit(): string {
+  let gitCommit: string | undefined;
+  try {
+    gitCommit = execFileSync("git", ["rev-parse", "HEAD"], {
+      cwd: ROOT_DIR,
+      encoding: "utf8",
+    });
+  } catch {
+    // A source archive may not include .git; explicit/CI metadata still works.
+  }
+  return chooseBuildCommit(
+    process.env.ROBB_BUILD_COMMIT,
+    gitCommit,
+    process.env.GITHUB_SHA,
+  ) || "";
+}
+
+function resolveBuildDirtyFlag(): boolean | undefined {
+  let gitPorcelain: string | undefined
+  try {
+    gitPorcelain = execFileSync("git", ["status", "--porcelain"], {
+      cwd: ROOT_DIR,
+      encoding: "utf8",
+    })
+  } catch {
+    // A source archive may not include .git; explicit CI metadata still works.
+  }
+  return resolveBuildDirty(process.env.ROBB_BUILD_DIRTY, gitPorcelain)
+}
+
 // Get build-time defines for esbuild (OAuth, Sentry DSN, etc.)
 // NOTE: Sentry source map upload is intentionally disabled for the main process.
 // To enable in the future, add @sentry/esbuild-plugin. See apps/electron/CLAUDE.md.
@@ -56,6 +92,8 @@ function getBuildDefines(): string[] {
     || process.env.ROBB_BUILD_CHANNEL === "development"
     ? "development"
     : "production";
+  const buildCommit = resolveBuildCommit();
+  const buildDirty = resolveBuildDirtyFlag();
   const definedVars = [
     "SLACK_OAUTH_CLIENT_ID",
     "SLACK_OAUTH_CLIENT_SECRET",
@@ -64,12 +102,17 @@ function getBuildDefines(): string[] {
     "SENTRY_ELECTRON_INGEST_URL",
     "CRAFT_DEV_RUNTIME",
     "ROBB_BUILD_CHANNEL",
+    "ROBB_BUILD_COMMIT",
+    "ROBB_BUILD_DIRTY",
   ];
 
   return definedVars.map((varName) => {
-    const value = varName === "ROBB_BUILD_CHANNEL"
-      ? buildChannel
-      : process.env[varName] || "";
+    let value = process.env[varName] || "";
+    if (varName === "ROBB_BUILD_CHANNEL") value = buildChannel;
+    if (varName === "ROBB_BUILD_COMMIT") value = buildCommit;
+    if (varName === "ROBB_BUILD_DIRTY") {
+      value = buildDirty === undefined ? "" : String(buildDirty);
+    }
     return `--define:process.env.${varName}="${value}"`;
   });
 }
@@ -321,27 +364,30 @@ async function buildWhatsAppWorker(): Promise<void> {
 
 async function main(): Promise<void> {
   loadEnvFile();
+  const mainOnly = process.argv.includes("--main-only");
 
   // Ensure dist directory exists
   if (!existsSync(DIST_DIR)) {
     mkdirSync(DIST_DIR, { recursive: true });
   }
 
-  // Verify session tools core exists (shared utilities for session-scoped tools)
-  verifySessionToolsCore();
+  if (!mainOnly) {
+    // Verify session tools core exists (shared utilities for session-scoped tools)
+    verifySessionToolsCore();
 
-  // Build session server (provides session-scoped tools like SubmitPlan)
-  // Depends on session-tools-core being built first
-  await buildSessionServer();
+    // Build session server (provides session-scoped tools like SubmitPlan)
+    // Depends on session-tools-core being built first
+    await buildSessionServer();
 
-  // Build Pi agent server (subprocess for Pi SDK sessions)
-  await buildPiAgentServer();
+    // Build Pi agent server (subprocess for Pi SDK sessions)
+    await buildPiAgentServer();
 
-  // Build unified network interceptor (CJS bundle for Node.js --require)
-  await buildInterceptor();
+    // Build unified network interceptor (CJS bundle for Node.js --require)
+    await buildInterceptor();
 
-  // Build WhatsApp worker (Baileys subprocess — optional package)
-  await buildWhatsAppWorker();
+    // Build WhatsApp worker (Baileys subprocess — optional package)
+    await buildWhatsAppWorker();
+  }
 
   const buildDefines = getBuildDefines();
 

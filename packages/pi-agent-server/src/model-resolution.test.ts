@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'bun:test';
-import { resolvePiModel, isDeniedMiniModelId, isModelNotFoundError } from './model-resolution.ts';
+import {
+  requireExplicitPiModel,
+  resolvePiModel,
+  isDeniedMiniModelId,
+  isModelNotFoundError,
+} from './model-resolution.ts';
 
 /**
  * Minimal mock of PiModelRegistry.
@@ -199,6 +204,45 @@ describe('resolvePiModel', () => {
       const result = resolvePiModel(registry, 'gpt-5.4', 'github-copilot');
       expect(result).toBeUndefined();
     });
+  });
+});
+
+describe('requireExplicitPiModel', () => {
+  it('returns the explicitly selected model when it resolves', () => {
+    const registry = createMockRegistry({
+      openai: [{ id: 'gpt-5.6-sol', name: 'GPT-5.6 Sol', provider: 'openai' }],
+    });
+
+    expect(requireExplicitPiModel(registry, 'pi/gpt-5.6-sol', 'openai')).toMatchObject({
+      id: 'gpt-5.6-sol',
+      provider: 'openai',
+    });
+  });
+
+  it('throws instead of allowing the SDK default when the selection is unresolved', () => {
+    const registry = createMockRegistry({
+      openai: [{ id: 'gpt-5.5', name: 'GPT-5.5' }],
+    });
+
+    expect(() => requireExplicitPiModel(registry, 'pi/gpt-5.6-sol', 'openai')).toThrow(
+      'Explicitly selected Pi model "pi/gpt-5.6-sol" could not be resolved for provider "openai"',
+    );
+  });
+
+  it('throws if a registry returns an incompatible provider', () => {
+    const registry = {
+      find(provider: string, modelId: string) {
+        if (provider === 'openai' && modelId === 'gpt-5.6-sol') {
+          return { id: modelId, name: 'GPT-5.6 Sol', provider: 'anthropic' };
+        }
+        return undefined;
+      },
+      getAll() { return []; },
+    } as any;
+
+    expect(() => requireExplicitPiModel(registry, 'gpt-5.6-sol', 'openai')).toThrow(
+      'resolved to incompatible provider "anthropic"',
+    );
   });
 });
 

@@ -66,6 +66,12 @@ if [[ "$RELEASE_BUILD" == true ]]; then
     echo "ERROR: --release requires Apple ID, App Store Connect API-key, or keychain notarization credentials." >&2
     exit 1
   fi
+else
+  # The default contract is an unsigned local smoke artifact. Explicitly
+  # disable keychain auto-discovery so duplicate Apple Development identities
+  # cannot make a non-release build fail or accidentally sign it.
+  export CSC_IDENTITY_AUTO_DISCOVERY=false
+  unset CSC_LINK CSC_KEY_PASSWORD CSC_NAME
 fi
 
 command -v bun >/dev/null || { echo "ERROR: Bun is required to build Robb Agents." >&2; exit 1; }

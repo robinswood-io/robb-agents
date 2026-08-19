@@ -22,6 +22,7 @@ import type { CustomEndpointConfig } from '../config/llm-connections'
 import type { RoutingPolicy } from '../config/routing-policy'
 import type { SessionExecutionIsolation } from '../tasks/durable-execution'
 import type { MissionSnapshot, MissionSpec } from '../missions'
+import type { SessionAppProvenance } from '../sessions/types'
 import type {
   DurableTaskCockpitProjections,
   DurableTaskExternalRefs,
@@ -102,6 +103,10 @@ export interface Session {
     statusType?: string
   }
   createdAt?: number
+  /** App build that created this session identity. */
+  createdByApp?: SessionAppProvenance
+  /** App build that most recently persisted this session. */
+  lastUsedByApp?: SessionAppProvenance
   messageCount?: number
   tokenUsage?: {
     inputTokens: number

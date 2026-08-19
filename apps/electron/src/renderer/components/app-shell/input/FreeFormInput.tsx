@@ -1766,7 +1766,10 @@ export function FreeFormInput({
             sessionId={sessionId}
           />
 
-          <div className={cn("flex items-center gap-1 px-2 py-2", !compactMode && "border-t border-border/50")}>
+          <div className={cn(
+            "flex items-center gap-1",
+            compactMode ? "px-2.5 py-2" : "border-t border-border/50 px-2 py-2",
+          )}>
           {/* Hidden file input for attach button (shared by compact and desktop) */}
           <input
             ref={fileInputRef}
@@ -1780,7 +1783,7 @@ export function FreeFormInput({
               Wrapper absorbs all squeeze so the model label truncates first and the send button stays
               anchored to the right (craft-agents-oss#798). overflow-hidden is safe — Radix Drawer /
               dropdowns inside render via portals, so they aren't clipped. */}
-          {compactMode && (
+          {compactMode && !isCollapsedInCompact && (
           <div className="flex items-center gap-1 min-w-0 shrink overflow-hidden">
           {onPermissionModeChange && (
             <CompactPermissionModeSelector
@@ -1810,6 +1813,7 @@ export function FreeFormInput({
             isExpanded={false}
             hasSelection={attachments.length > 0}
             showChevron={false}
+            iconOnly
             onClick={handleAttachClick}
             tooltip={t("chat.attachFilesTooltip")}
             disabled={disabled}
@@ -1864,6 +1868,7 @@ export function FreeFormInput({
                 isExpanded={false}
                 hasSelection={optimisticSourceSlugs.length > 0}
                 showChevron={false}
+                iconOnly
                 isOpen={sourceDropdownOpen}
                 disabled={disabled}
                 onClick={() => setSourceDropdownOpen(prev => !prev)}
@@ -2014,9 +2019,10 @@ export function FreeFormInput({
               onClick={onRequestExpand}
               onMouseEnter={onRequestExpand}
               aria-label={t('chat.tapToType')}
-              className="flex-1 h-7 mx-1 flex items-center justify-center text-foreground/30 hover:text-foreground/60 transition-colors cursor-pointer rounded-[6px] hover:bg-foreground/5 focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              className="flex h-9 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl px-2 text-xs font-medium text-foreground/50 transition-colors hover:bg-foreground/5 hover:text-foreground/70 focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             >
-              <ChevronUp className="h-4 w-4" />
+              <ChevronUp className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">{t('chat.tapToType')}</span>
             </button>
           ) : (
             <div className="flex-1" />

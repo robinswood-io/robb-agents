@@ -57,6 +57,8 @@ describe('PromptBuilder volatile/stable context split (issue #862)', () => {
     expect(stableText).toContain('<workspace_capabilities>')
     expect(stableText).toContain('<autonomy_contract>')
     expect(stableText).toContain('Never repeat the same action unchanged')
+    expect(stableText).toContain('No permission mode expands the task scope')
+    expect(stableText).toContain('A generic continuation such as "continue", "proceed", or "poursuis" does not authorize')
 
     // The halves must not bleed into each other
     expect(volatileText).not.toContain('<workspace_capabilities>')

@@ -111,6 +111,61 @@ import { LLM_QUERY_TIMEOUT_MS, type LLMQueryRequest, type LLMQueryResult } from 
 import { executeBrowserToolCommand } from './browser-tool-runtime.ts';
 import { saveBinaryResponse } from '../utils/binary-detection.ts';
 import { parseCompactCommand } from './compact-command.ts';
+import { redactSecretLikeMaterial } from '../utils/redaction.ts';
+
+const RUNTIME_DIAGNOSTIC_MAX_CHARS = 4_000;
+
+type PiAuthPayload = {
+  provider: string;
+  credential:
+    | { type: 'api_key'; key: string }
+    | { type: 'oauth'; access: string; refresh: string; expires: number }
+    | { type: 'iam'; accessKeyId: string; secretAccessKey: string; region?: string; sessionToken?: string };
+};
+
+type TokenRefreshOutcome =
+  | { refreshed: false }
+  | { refreshed: true; piAuth: PiAuthPayload };
+
+// Supplement the shared free-text redactor with credential formats that can
+// appear in Pi/provider stderr without an `Authorization: Bearer` prefix.
+// Keep this narrow: stderr remains useful, while known credential material is
+// removed before it reaches either onDebug or a user-facing connection error.
+function redactRuntimeDiagnosticText(value: string): string {
+  const sensitiveKey = [
+    'authorization',
+    'proxy[_-]?authorization',
+    'api[_-]?key',
+    'access[_-]?token',
+    'refresh[_-]?token',
+    'session[_-]?token',
+    'password',
+    'passwd',
+    'passphrase',
+    'client[_-]?secret',
+    'secret[_-]?access[_-]?key',
+    'aws[_-]?secret[_-]?access[_-]?key',
+    'private[_-]?key',
+    'signing[_-]?key',
+  ].join('|');
+
+  return redactSecretLikeMaterial(value)
+    // Quoted JSON/logfmt keys and values.
+    .replace(
+      new RegExp(`(["'](?:${sensitiveKey})["']\\s*:\\s*)["'][^"'\\r\\n]*["']`, 'gi'),
+      '$1"[REDACTED]"',
+    )
+    // Environment variables and unquoted logfmt values.
+    .replace(
+      new RegExp(`(\\b(?:${sensitiveKey})\\b\\s*[=:]\\s*)[^\\s,;]+`, 'gi'),
+      '$1[REDACTED]',
+    )
+    // Common opaque credential formats when stderr prints only the value.
+    .replace(/\bsk-(?:(?:proj|ant(?:-api\d+)?)-)?[A-Za-z0-9_-]{12,}\b/g, '[REDACTED]')
+    .replace(/\b(?:AKIA|ASIA)[A-Z0-9]{16}\b/g, '[REDACTED]')
+    .replace(/\bAIza[0-9A-Za-z_-]{20,}\b/g, '[REDACTED]')
+    .replace(/\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b/g, '[REDACTED]');
+}
 
 // ============================================================
 // PiAgent Implementation
@@ -172,6 +227,8 @@ export class PiAgent extends BaseAgent {
   // Subprocess process handle
   private subprocess: ChildProcess | null = null;
   private subprocessSupervisorHandle: LongRunningProcessHandle | null = null;
+  /** Child processes whose next exit is owner-requested, not a runtime failure. */
+  private expectedSubprocessExits = new WeakSet<ChildProcess>();
   private readline: ReadlineInterface | null = null;
   private subprocessReady: Promise<void> | null = null;
   private subprocessReadyResolve: (() => void) | null = null;
@@ -260,9 +317,9 @@ export class PiAgent extends BaseAgent {
     }
   }
 
-  /** Returns the most recent subprocess stderr output (up to ~8KB). Empty string if nothing captured. */
+  /** Returns redacted recent subprocess stderr (up to ~8KB). Empty string if nothing captured. */
   getRecentStderr(): string {
-    return this.stderrBuffer.join('');
+    return redactRuntimeDiagnosticText(this.stderrBuffer.join(''));
   }
 
   // Pending permission requests (used by handlePreToolUseRequest for ask-mode prompting)
@@ -346,11 +403,11 @@ export class PiAgent extends BaseAgent {
   set onChatGptAuthRequired(cb: ((reason: string) => void) | null) {
     this.onBackendAuthRequired = cb;
   }
-  private tokenRefreshInProgress: Promise<void> | null = null;
+  private tokenRefreshInProgress: Promise<TokenRefreshOutcome> | null = null;
 
   // Global mutex: keyed by connectionSlug so multiple PiAgent instances
   // sharing the same connection don't race concurrent token refreshes.
-  private static globalRefreshMutex: Map<string, Promise<void>> = new Map();
+  private static globalRefreshMutex: Map<string, Promise<TokenRefreshOutcome>> = new Map();
 
   // ============================================================
   // Constructor
@@ -386,6 +443,7 @@ export class PiAgent extends BaseAgent {
     this.adapter.setOverflowFallbackHandlers(
       (event) => this.eventQueue.enqueue(event),
       () => this.eventQueue.complete(),
+      () => this.requestOverflowRecovery(),
     );
 
     if (!config.isHeadless) {
@@ -430,6 +488,11 @@ export class PiAgent extends BaseAgent {
    * Spawn the pi-agent-server subprocess and set up JSONL communication.
    */
   private async spawnSubprocess(): Promise<void> {
+    // Diagnostics belong to one subprocess generation. Do not attribute a
+    // previous runtime's stderr tail to a later failure after recreation.
+    this.stderrBuffer = [];
+    this.stderrBufferBytes = 0;
+
     const runtime = getBackendRuntime(this.config);
     const piServerPath = runtime.paths?.piServer;
     if (!piServerPath) {
@@ -532,19 +595,22 @@ export class PiAgent extends BaseAgent {
 
     // Always capture stderr into a bounded ring buffer so callers (e.g. the
     // connection-test timeout path in factory.ts) can surface it on failure.
-    // Keep the CRAFT_DEBUG-gated log for interactive dev work.
+    // Keep the CRAFT_DEBUG-gated log for interactive dev work. Production
+    // diagnostics are emitted once, on unexpected exit, from the bounded tail.
     child.stderr?.on('data', (data: Buffer) => {
       const text = data.toString();
       this.recordStderr(text);
       const trimmed = text.trim();
-      if (trimmed) {
-        this.debug(`[subprocess stderr] ${trimmed}`);
+      const debugEnabled = process.argv.includes('--debug') || process.env.CRAFT_DEBUG === '1';
+      if (trimmed && debugEnabled) {
+        const safeTail = redactRuntimeDiagnosticText(trimmed).slice(-RUNTIME_DIAGNOSTIC_MAX_CHARS);
+        this.debug(`[subprocess stderr] ${safeTail}`);
       }
     });
 
     // Handle subprocess exit
     child.on('exit', (code, signal) => {
-      this.handleSubprocessExit(code, signal);
+      this.handleSubprocessExit(code, signal, child);
     });
 
     child.on('error', (error) => {
@@ -660,13 +726,7 @@ export class PiAgent extends BaseAgent {
    * modules use directly. The OAuth exchange happens on the Craft side; by the time
    * it reaches Pi, it's just an access token.
    */
-  private async getPiAuth(): Promise<{
-    provider: string;
-    credential:
-      | { type: 'api_key'; key: string }
-      | { type: 'oauth'; access: string; refresh: string; expires: number }
-      | { type: 'iam'; accessKeyId: string; secretAccessKey: string; region?: string; sessionToken?: string }
-  } | null> {
+  private async getPiAuth(): Promise<PiAuthPayload | null> {
     const piAuthProvider = getBackendRuntime(this.config).piAuthProvider;
     if (!piAuthProvider) return null;
 
@@ -792,19 +852,17 @@ export class PiAgent extends BaseAgent {
     const existing = PiAgent.globalRefreshMutex.get(slug);
     if (existing) {
       this.debug(`Waiting on existing refresh for slug "${slug}"`);
-      await existing;
-      // The other instance refreshed the credential store — push to our subprocess
-      if (this.subprocess) {
-        const piAuth = await this.getPiAuth();
-        if (piAuth) {
-          this.send({ type: 'token_update', piAuth });
-          this.debug('Pushed credentials refreshed by sibling instance');
-        }
+      const outcome = await existing;
+      // Reuse the credential returned by the successful owner. Re-reading the
+      // store after a failed refresh could return and push the expired token.
+      if (outcome.refreshed && this.subprocess) {
+        this.send({ type: 'token_update', piAuth: outcome.piAuth });
+        this.debug('Pushed credentials refreshed by sibling instance');
       }
       return;
     }
 
-    const refreshPromise = (async () => {
+    const refreshPromise: Promise<TokenRefreshOutcome> = (async () => {
       const piAuthProvider = getBackendRuntime(this.config).piAuthProvider;
       const credentialManager = getCredentialManager();
       const stored = await credentialManager.getLlmOAuth(slug);
@@ -812,7 +870,7 @@ export class PiAgent extends BaseAgent {
       if (!stored?.refreshToken) {
         this.debug('No refresh token available — re-auth required');
         this.onBackendAuthRequired?.('No refresh token — please sign in again');
-        return;
+        return { refreshed: false };
       }
 
       try {
@@ -846,18 +904,25 @@ export class PiAgent extends BaseAgent {
         }
         this.debug('Token refresh successful');
 
-        // Push refreshed credentials to running subprocess
-        if (this.subprocess) {
-          const piAuth = await this.getPiAuth();
-          if (piAuth) {
-            this.send({ type: 'token_update', piAuth });
-            this.debug('Pushed refreshed credentials to subprocess');
-          }
+        // Read only after the credential write completed. The resulting
+        // payload is also handed to sibling waiters so none re-read stale data.
+        const piAuth = await this.getPiAuth();
+        if (!piAuth) {
+          this.debug('Token refresh completed but no fresh credential was available');
+          this.onBackendAuthRequired?.('Token refresh completed without a usable credential — please sign in again');
+          return { refreshed: false };
         }
+
+        if (this.subprocess) {
+          this.send({ type: 'token_update', piAuth });
+          this.debug('Pushed refreshed credentials to subprocess');
+        }
+        return { refreshed: true, piAuth };
       } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
         this.debug(`Token refresh failed: ${msg}`);
         this.onBackendAuthRequired?.(`Token refresh failed: ${msg}`);
+        return { refreshed: false };
       }
     })();
 
@@ -1281,6 +1346,7 @@ export class PiAgent extends BaseAgent {
       hasSourceActivation: !!this.onSourceActivationRequest,
       permissionManager: this.permissionManager,
       prerequisiteManager: this.prerequisiteManager,
+      currentUserRequest: this.getCurrentTurnUserMessage() ?? undefined,
       rtkContext,
       onDebug: (msg) => this.debug(`PreToolUse(sessionId=${sessionId}): ${msg}`),
     });
@@ -1355,6 +1421,7 @@ export class PiAgent extends BaseAgent {
           hasSourceActivation: !!this.onSourceActivationRequest,
           permissionManager: this.permissionManager,
           prerequisiteManager: this.prerequisiteManager,
+          currentUserRequest: this.getCurrentTurnUserMessage() ?? undefined,
           rtkContext,
           onDebug: (msg) => this.debug(`PreToolUse(sessionId=${sessionId}): ${msg}`),
         });
@@ -1363,6 +1430,8 @@ export class PiAgent extends BaseAgent {
           this.send({ type: 'pre_tool_use_response', requestId, action: 'modify', input: postResult.input });
         } else if (postResult.type === 'block') {
           this.send({ type: 'pre_tool_use_response', requestId, action: 'block', reason: postResult.reason });
+        } else if (postResult.type === 'prompt') {
+          await this.handlePreToolUsePrompt(requestId, toolName, sessionId, postResult);
         } else {
           this.send({ type: 'pre_tool_use_response', requestId, action: 'allow' });
         }
@@ -1376,57 +1445,69 @@ export class PiAgent extends BaseAgent {
         return;
 
       case 'prompt': {
-        if (!this.onPermissionRequest) {
-          // No permission handler — allow
-          if (checkResult.modifiedInput) {
-            this.send({ type: 'pre_tool_use_response', requestId, action: 'modify', input: checkResult.modifiedInput });
-          } else {
-            this.send({ type: 'pre_tool_use_response', requestId, action: 'allow' });
-          }
-          return;
-        }
-
-        const permRequestId = `pi-perm-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-        this.debug(`PreToolUse(sessionId=${sessionId}): Prompting user for ${toolName} - ${checkResult.description}`);
-
-        // Wait for user response via pendingPermissions
-        const permissionPromise = new Promise<boolean>((resolve) => {
-          this.pendingPermissions.set(permRequestId, {
-            resolve,
-            toolName,
-          });
-        });
-
-        this.onPermissionRequest({
-          requestId: permRequestId,
-          toolName,
-          command: checkResult.command,
-          description: checkResult.description,
-          type: checkResult.promptType,
-          appName: checkResult.appName,
-          reason: checkResult.reason,
-          impact: checkResult.impact,
-          requiresSystemPrompt: checkResult.requiresSystemPrompt,
-          rememberForMinutes: checkResult.rememberForMinutes,
-          commandHash: checkResult.commandHash,
-          approvalTtlSeconds: checkResult.approvalTtlSeconds,
-        });
-
-        const allowed = await permissionPromise;
-        this.pendingPermissions.delete(permRequestId);
-
-        if (!allowed) {
-          this.send({ type: 'pre_tool_use_response', requestId, action: 'block', reason: 'Permission denied by user.' });
-          return;
-        }
-
-        if (checkResult.modifiedInput) {
-          this.send({ type: 'pre_tool_use_response', requestId, action: 'modify', input: checkResult.modifiedInput });
-        } else {
-          this.send({ type: 'pre_tool_use_response', requestId, action: 'allow' });
-        }
+        await this.handlePreToolUsePrompt(requestId, toolName, sessionId, checkResult);
         return;
       }
+    }
+  }
+
+  private async handlePreToolUsePrompt(
+    requestId: string,
+    toolName: string,
+    sessionId: string,
+    checkResult: Extract<PreToolUseCheckResult, { type: 'prompt' }>,
+  ): Promise<void> {
+    if (!this.onPermissionRequest) {
+      if (checkResult.requiresExplicitConfirmation) {
+        this.send({
+          type: 'pre_tool_use_response',
+          requestId,
+          action: 'block',
+          reason: 'Explicit confirmation is required for this sensitive external action, but no permission handler is available.',
+        });
+      } else if (checkResult.modifiedInput) {
+        // Preserve the existing headless behavior for ordinary Ask-mode prompts.
+        this.send({ type: 'pre_tool_use_response', requestId, action: 'modify', input: checkResult.modifiedInput });
+      } else {
+        this.send({ type: 'pre_tool_use_response', requestId, action: 'allow' });
+      }
+      return;
+    }
+
+    const permRequestId = `pi-perm-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    this.debug(`PreToolUse(sessionId=${sessionId}): Prompting user for ${toolName} - ${checkResult.description}`);
+
+    const permissionPromise = new Promise<boolean>((resolve) => {
+      this.pendingPermissions.set(permRequestId, {
+        resolve,
+        toolName,
+      });
+    });
+
+    this.onPermissionRequest({
+      requestId: permRequestId,
+      toolName,
+      command: checkResult.command,
+      description: checkResult.description,
+      type: checkResult.promptType,
+      appName: checkResult.appName,
+      reason: checkResult.reason,
+      impact: checkResult.impact,
+      requiresSystemPrompt: checkResult.requiresSystemPrompt,
+      rememberForMinutes: checkResult.rememberForMinutes,
+      commandHash: checkResult.commandHash,
+      approvalTtlSeconds: checkResult.approvalTtlSeconds,
+    });
+
+    const allowed = await permissionPromise;
+    this.pendingPermissions.delete(permRequestId);
+
+    if (!allowed) {
+      this.send({ type: 'pre_tool_use_response', requestId, action: 'block', reason: 'Permission denied by user.' });
+    } else if (checkResult.modifiedInput) {
+      this.send({ type: 'pre_tool_use_response', requestId, action: 'modify', input: checkResult.modifiedInput });
+    } else {
+      this.send({ type: 'pre_tool_use_response', requestId, action: 'allow' });
     }
   }
 
@@ -1760,8 +1841,38 @@ export class PiAgent extends BaseAgent {
   /**
    * Handle subprocess exit.
    */
-  private handleSubprocessExit(code: number | null, signal: string | null): void {
+  private handleSubprocessExit(
+    code: number | null,
+    signal: string | null,
+    child?: ChildProcess,
+  ): void {
     this.debug(`Pi subprocess exited: code=${code}, signal=${signal}`);
+
+    const expectedExit = child ? this.expectedSubprocessExits.delete(child) : false;
+    const hadPendingWork = this._isProcessing
+      || this.pendingMiniCompletions.size > 0
+      || this.pendingLlmQueries.size > 0
+      || this.pendingEnsureSessionReady.size > 0
+      || this.pendingCompactions.size > 0
+      || this.pendingAutoCompactionToggles.size > 0
+      || this.pendingRuntimeConfigUpdates.size > 0
+      || this.pendingToolExecutions.size > 0;
+    // A signal-only idle exit can come from the long-running-process idle
+    // supervisor. Treat it as a failure only when work was active; explicit
+    // non-zero exit codes remain failures even while idle.
+    if (!expectedExit && (hadPendingWork || (code !== null && code !== 0))) {
+      // The normal debug callback is intentionally low-volume in production.
+      // Prefix unexpected exits with a structured marker so SessionManager can
+      // persist one bounded, redacted diagnostic at error level instead of
+      // losing the only useful stderr evidence with this in-memory ring buffer.
+      const stderrTail = this.getRecentStderr().trim().slice(-RUNTIME_DIAGNOSTIC_MAX_CHARS);
+      this.debug(`__RUNTIME_ERROR__${JSON.stringify({
+        kind: 'pi_subprocess_exit',
+        code,
+        signal,
+        ...(stderrTail ? { stderrTail } : {}),
+      })}`);
+    }
 
     this.subprocess = null;
     this.subprocessSupervisorHandle = null;
@@ -1888,6 +1999,18 @@ export class PiAgent extends BaseAgent {
 
       this.send({ type: 'compact', id, customInstructions });
     });
+  }
+
+  /**
+   * Ask the subprocess for one serialized manual compact-and-continue attempt
+   * after the Pi SDK's native overflow recovery was skipped or exhausted.
+   * Completion remains event-driven: compaction and recovered agent events flow
+   * through PiEventAdapter, which owns the bounded recovery state machine.
+   */
+  private requestOverflowRecovery(): void {
+    const id = `overflow-recovery-${++this.rpcIdCounter}`;
+    this.debug(`Requesting guarded overflow recovery (${id})`);
+    this.send({ type: 'recover_overflow', id });
   }
 
   /**
@@ -2455,6 +2578,8 @@ export class PiAgent extends BaseAgent {
       return;
     }
 
+    this.expectedSubprocessExits.add(child);
+
     const pid = child.pid;
     const waitForExit = new Promise<{ code: number | null; signal: string | null }>((resolve) => {
       if (child.exitCode !== null || child.signalCode) {
@@ -2520,6 +2645,8 @@ export class PiAgent extends BaseAgent {
     }
 
     if (this.subprocess) {
+      const child = this.subprocess;
+      this.expectedSubprocessExits.add(child);
       // Try graceful shutdown first
       try {
         this.send({ type: 'shutdown' });
@@ -2529,7 +2656,7 @@ export class PiAgent extends BaseAgent {
       if (this.subprocessSupervisorHandle) {
         this.subprocessSupervisorHandle.terminate('Pi agent reset');
       } else {
-        this.subprocess.kill('SIGTERM');
+        child.kill('SIGTERM');
       }
       this.subprocess = null;
     }
