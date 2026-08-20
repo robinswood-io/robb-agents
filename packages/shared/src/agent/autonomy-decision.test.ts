@@ -68,4 +68,12 @@ describe('formatAutonomyContract sensitive external action guard', () => {
   it('preserves safe and reversible local work without extra confirmation', () => {
     expect(contract).toContain('Continue safe, reversible local edits and local verification without extra confirmation')
   })
+
+  it('aligns the model with the explicit total-autonomy workspace policy', () => {
+    const executeContract = formatAutonomyContract('allow-in-execute')
+    expect(executeContract).toContain('standing authorization for in-scope sensitive external actions')
+    expect(executeContract).toContain('do not request an additional confirmation solely because an action is sensitive')
+    expect(executeContract).toContain('Ask and Safe remain confirmation-bound')
+    expect(executeContract).not.toContain('No permission mode expands the task scope or supplies business authorization')
+  })
 })

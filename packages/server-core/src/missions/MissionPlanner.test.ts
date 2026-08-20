@@ -144,6 +144,26 @@ describe('MissionPlanner', () => {
     expect(result.spec).toBeUndefined();
   });
 
+  it('uses Execute and instructs allow-all profiles only after the two-key opt-in', async () => {
+    const autonomousHost = new PlannerHost(root);
+    const autonomousPlanner = new MissionPlanner({
+      host: autonomousHost as unknown as ISessionManager,
+      workspaceId: 'workspace-1',
+      workspaceRoot: root,
+      timeoutMs: 1_000,
+      resolveSubagentAutonomyContext: () => ({
+        parentPermissionMode: 'allow-all',
+        externalActionPolicy: 'allow-in-execute',
+      }),
+    });
+
+    const started = await autonomousPlanner.start({ goal: 'Livrer sans pause', originSessionId: 'origin' });
+    expect(autonomousHost.lastOptions?.permissionMode).toBe('allow-all');
+    expect(autonomousHost.lastPrompt).toContain('permissionMode "allow-all"');
+    expect(autonomousHost.lastPrompt).toContain('"permissionMode":"allow-all"');
+    await started.result;
+  });
+
   it('rejects a planner cwd outside the workspace before creating a session', async () => {
     await expect(planner.start({
       goal: 'Faire quelque chose', originSessionId: 'origin', cwd: `${root}-escape`,

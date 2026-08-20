@@ -8,6 +8,8 @@ import { execFileSync } from "child_process";
 import { existsSync, readFileSync, statSync, mkdirSync } from "fs";
 import { join } from "path";
 import {
+  assertCleanProductionBuild,
+  resolveBuildChannel,
   resolveBuildCommit as chooseBuildCommit,
   resolveBuildDirty,
 } from "./build-provenance";
@@ -69,16 +71,17 @@ function resolveBuildCommit(): string {
   ) || "";
 }
 
-function resolveBuildDirtyFlag(): boolean | undefined {
+function resolveBuildDirtyFlag(buildChannel: 'development' | 'production'): boolean | undefined {
   let gitPorcelain: string | undefined
   try {
-    gitPorcelain = execFileSync("git", ["status", "--porcelain"], {
+    gitPorcelain = execFileSync("git", ["status", "--porcelain", "--untracked-files=all"], {
       cwd: ROOT_DIR,
       encoding: "utf8",
     })
   } catch {
     // A source archive may not include .git; explicit CI metadata still works.
   }
+  assertCleanProductionBuild(buildChannel, process.env.ROBB_BUILD_DIRTY, gitPorcelain)
   return resolveBuildDirty(process.env.ROBB_BUILD_DIRTY, gitPorcelain)
 }
 
@@ -88,12 +91,12 @@ function resolveBuildDirtyFlag(): boolean | undefined {
 // NOTE: Google OAuth credentials are NOT baked into the build - users provide their own
 // via source config. See README_FOR_OSS.md for setup instructions.
 function getBuildDefines(): string[] {
-  const buildChannel = process.env.CRAFT_DEV_RUNTIME === "1"
-    || process.env.ROBB_BUILD_CHANNEL === "development"
-    ? "development"
-    : "production";
+  const buildChannel = resolveBuildChannel(
+    process.env.ROBB_BUILD_CHANNEL,
+    process.env.CRAFT_DEV_RUNTIME,
+  );
   const buildCommit = resolveBuildCommit();
-  const buildDirty = resolveBuildDirtyFlag();
+  const buildDirty = resolveBuildDirtyFlag(buildChannel);
   const definedVars = [
     "SLACK_OAUTH_CLIENT_ID",
     "SLACK_OAUTH_CLIENT_SECRET",

@@ -213,6 +213,70 @@ describe('SourceManager', () => {
 
       expect(formatted).toContain('github (no tools)');
     });
+
+    it('preloads active guide contents with credential-shaped values redacted', () => {
+      const guided = createMockSource('github', { enabled: true });
+      guided.guide = {
+        raw: 'Use endpoint /v1/items\nAuthorization: Bearer abcdefghijklmnop',
+      };
+      sourceManager.setAllSources([guided]);
+      sourceManager.updateActiveState(['github'], [], ['github']);
+
+      const formatted = sourceManager.formatSourceState();
+
+      expect(formatted).toContain('<source_guide source="github"');
+      expect(formatted).toContain('Use endpoint /v1/items');
+      expect(formatted).toContain('[REDACTED]');
+      expect(formatted).not.toContain('abcdefghijklmnop');
+      expect(sourceManager.getPreloadedSourceGuidePaths()).toEqual([
+        '/test/sources/github/guide.md',
+      ]);
+    });
+
+    it('injects a guide once per context window and reinjects after reset', () => {
+      const guided = createMockSource('github', { enabled: true });
+      guided.guide = { raw: 'Always verify the returned status.' };
+      sourceManager.setAllSources([guided]);
+      sourceManager.updateActiveState(['github'], [], ['github']);
+
+      expect(sourceManager.formatSourceState()).toContain('Always verify the returned status.');
+      expect(sourceManager.formatSourceState()).not.toContain('Always verify the returned status.');
+
+      sourceManager.resetSeenSources();
+      expect(sourceManager.getPreloadedSourceGuidePaths()).toEqual([]);
+      expect(sourceManager.formatSourceState()).toContain('Always verify the returned status.');
+    });
+
+    it('invalidates preloaded state only when a guide is added, changed, or removed', () => {
+      const withoutGuide = createMockSource('github', { enabled: true });
+      sourceManager.setAllSources([withoutGuide]);
+      sourceManager.updateActiveState(['github'], [], ['github']);
+      expect(sourceManager.formatSourceState()).not.toContain('<source_guide');
+
+      const firstGuide = createMockSource('github', { enabled: true });
+      firstGuide.guide = { raw: 'Guide version one.' };
+      sourceManager.setAllSources([firstGuide]);
+      expect(sourceManager.formatSourceState()).toContain('Guide version one.');
+
+      const unchangedGuide = createMockSource('github', { enabled: true });
+      unchangedGuide.guide = { raw: 'Guide version one.' };
+      sourceManager.setAllSources([unchangedGuide]);
+      expect(sourceManager.formatSourceState()).not.toContain('Guide version one.');
+
+      const changedGuide = createMockSource('github', { enabled: true });
+      changedGuide.guide = { raw: 'Guide version two.' };
+      sourceManager.setAllSources([changedGuide]);
+      const changedContext = sourceManager.formatSourceState();
+      expect(changedContext).toContain('Guide version two.');
+      expect(changedContext).not.toContain('Guide version one.');
+
+      sourceManager.setAllSources([createMockSource('github', { enabled: true })]);
+      expect(sourceManager.getPreloadedSourceGuidePaths()).toEqual([]);
+      expect(sourceManager.formatSourceState()).not.toContain('<source_guide');
+
+      sourceManager.setAllSources([changedGuide]);
+      expect(sourceManager.formatSourceState()).toContain('Guide version two.');
+    });
   });
 
   describe('Authentication Utilities', () => {

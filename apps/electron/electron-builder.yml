@@ -6,6 +6,10 @@ electronVersion: "43.4.0"
 
 # Hook to compile macOS 26+ Liquid Glass icon after packaging
 afterPack: scripts/afterPack.cjs
+# Production macOS packaging fails closed on dirty source before packing and
+# verifies Developer ID signing plus notarization immediately after signing.
+beforePack: scripts/releaseIntegrity.cjs
+afterSign: scripts/afterSign.cjs
 
 directories:
   output: release
@@ -109,10 +113,16 @@ asar: false
 mac:
   category: public.app-category.productivity
   icon: resources/robinswood-icon.icns
+  # The production config must never silently fall back to unsigned/ad-hoc.
+  # electron-builder.dev.yml and build-dmg.sh's non-release path override this.
+  forceCodeSigning: true
   # macOS 26+ Liquid Glass: Tell macOS to look for icon in Assets.car
   # The value must match --app-icon used in actool (see afterPack.cjs)
   extendInfo:
     CFBundleIconName: AppIcon
+    NSCameraUsageDescription: "Robb Agents uses the camera only when an agent-controlled secure website you selected requires it."
+    NSMicrophoneUsageDescription: "Robb Agents uses the microphone only when an agent-controlled secure website you selected requires it."
+    NSLocationWhenInUseUsageDescription: "Robb Agents shares location only with an agent-controlled secure website while that session is actively running."
     # Required for macOS to list the app under Privacy & Security > Local Network
     # and prompt for permission. Without it the app is silently denied LAN access
     # and never appears in the privacy pane (craft-agents-oss#938).
@@ -124,6 +134,8 @@ mac:
   # supplied by the release operator/CI; local developer builds remain usable.
   notarize: true
   hardenedRuntime: true
+  # The strict afterSign hook and packaged smoke-test perform the assessment;
+  # electron-builder's legacy assessment is therefore left disabled.
   gatekeeperAssess: false
   entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.inherit.plist

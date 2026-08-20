@@ -264,6 +264,7 @@ export function registerSettingsHandlers(server: RpcServer, deps: HandlerDeps): 
       name: config.name,
       model: config.defaults?.model,
       permissionMode: config.defaults?.permissionMode,
+      externalActionPolicy: config.defaults?.externalActionPolicy ?? 'confirm',
       cyclablePermissionModes: config.defaults?.cyclablePermissionModes,
       thinkingLevel: normalizeThinkingLevel(config.defaults?.thinkingLevel),
       workingDirectory: config.defaults?.workingDirectory,
@@ -384,7 +385,7 @@ export function registerSettingsHandlers(server: RpcServer, deps: HandlerDeps): 
       : value
 
     // Validate key is a known workspace setting
-    const validKeys = ['name', 'model', 'enabledSourceSlugs', 'permissionMode', 'cyclablePermissionModes', 'thinkingLevel', 'workingDirectory', 'localMcpEnabled', 'defaultLlmConnection', 'routingPolicy']
+    const validKeys = ['name', 'model', 'enabledSourceSlugs', 'permissionMode', 'externalActionPolicy', 'cyclablePermissionModes', 'thinkingLevel', 'workingDirectory', 'localMcpEnabled', 'defaultLlmConnection', 'routingPolicy']
     if (!validKeys.includes(key)) {
       throw new Error(`Invalid workspace setting key: ${key}. Valid keys: ${validKeys.join(', ')}`)
     }
@@ -403,6 +404,10 @@ export function registerSettingsHandlers(server: RpcServer, deps: HandlerDeps): 
       if (!validation.valid) {
         throw new Error(validation.errors.join('; '))
       }
+    }
+
+    if (key === 'externalActionPolicy' && !['confirm', 'allow-in-execute'].includes(String(normalizedValue))) {
+      throw new Error('externalActionPolicy must be "confirm" or "allow-in-execute"')
     }
 
     if (key === 'workingDirectory' && normalizedValue !== undefined && normalizedValue !== null) {
@@ -437,6 +442,12 @@ export function registerSettingsHandlers(server: RpcServer, deps: HandlerDeps): 
 
     // Save the config
     saveWorkspaceConfig(workspace.rootPath, config)
+    if (key === 'externalActionPolicy') {
+      await deps.sessionManager.refreshWorkspaceExternalActionPolicy(
+        workspaceId,
+        normalizedValue as 'confirm' | 'allow-in-execute',
+      )
+    }
     deps.platform.logger.info(`Workspace setting updated: ${key} = ${JSON.stringify(normalizedValue)}`)
   })
 

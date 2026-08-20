@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { parseBuildDirty, resolveBuildCommit, resolveBuildDirty } from '../build-provenance'
+import {
+  assertCleanProductionBuild,
+  parseBuildDirty,
+  resolveBuildChannel,
+  resolveBuildCommit,
+  resolveBuildDirty,
+} from '../build-provenance'
 
 describe('build provenance dirty-state resolution', () => {
   it('classifies clean and dirty git worktrees', () => {
@@ -19,6 +25,37 @@ describe('build provenance dirty-state resolution', () => {
     expect(parseBuildDirty('unexpected')).toBeUndefined()
   })
 
+  it('makes production opt-in while preserving explicit development builds', () => {
+    expect(resolveBuildChannel(undefined, undefined)).toBe('development')
+    expect(resolveBuildChannel('development', undefined)).toBe('development')
+    expect(resolveBuildChannel(undefined, '1')).toBe('development')
+    expect(resolveBuildChannel('production', '1')).toBe('production')
+  })
+
+  it('fails closed when an explicit production build is dirty or unverifiable', () => {
+    expect(() => assertCleanProductionBuild('production', undefined, ' M tracked.ts\n')).toThrow(
+      'Git checkout has uncommitted or untracked changes',
+    )
+    expect(() => assertCleanProductionBuild('production', 'false', '?? untracked.txt\n')).toThrow(
+      'Git checkout has uncommitted or untracked changes',
+    )
+    expect(() => assertCleanProductionBuild('production', 'true', '')).toThrow(
+      'source is declared dirty',
+    )
+    expect(() => assertCleanProductionBuild('production', undefined, undefined)).toThrow(
+      'clean source state could not be verified',
+    )
+    expect(() => assertCleanProductionBuild('production', 'unknown', '')).toThrow(
+      'Invalid ROBB_BUILD_DIRTY value',
+    )
+  })
+
+  it('accepts verified clean production and any development checkout', () => {
+    expect(() => assertCleanProductionBuild('production', undefined, '')).not.toThrow()
+    expect(() => assertCleanProductionBuild('production', 'false', undefined)).not.toThrow()
+    expect(() => assertCleanProductionBuild('development', 'true', ' M tracked.ts\n')).not.toThrow()
+  })
+
   it('prefers an explicit revision, then the checkout, then CI', () => {
     expect(resolveBuildCommit(' explicit ', 'checkout', 'ci')).toBe('explicit')
     expect(resolveBuildCommit(undefined, ' checkout ', 'ci')).toBe('checkout')
@@ -32,7 +69,8 @@ describe('build provenance dirty-state resolution', () => {
     expect(buildScript).toContain('"ROBB_BUILD_CHANNEL"')
     expect(buildScript).toContain('"ROBB_BUILD_DIRTY"')
     expect(buildScript).toContain('git", ["rev-parse", "HEAD"]')
-    expect(buildScript).toContain('git", ["status", "--porcelain"]')
+    expect(buildScript).toContain('git", ["status", "--porcelain", "--untracked-files=all"]')
+    expect(buildScript).toContain('assertCleanProductionBuild')
   })
 
   it('covers development, direct package, and legacy Windows main builds', () => {

@@ -723,6 +723,8 @@ export class ClaudeAgent extends BaseAgent {
     rememberForMinutes?: number;
     commandHash?: string;
     approvalTtlSeconds?: number;
+    sensitiveActionCategory?: import('./core/sensitive-external-action.ts').SensitiveExternalActionCategory;
+    sensitiveActionTargets?: string[];
   }) => void) | null = null;
 
   // Debug callback for status messages
@@ -1346,7 +1348,9 @@ export class ClaudeAgent extends BaseAgent {
                 hasSourceActivation: !!this.onSourceActivationRequest,
                 permissionManager: this.permissionManager,
                 prerequisiteManager: this.prerequisiteManager,
+                preloadedSourceGuidePaths: this.sourceManager.getPreloadedSourceGuidePaths(),
                 currentUserRequest: this.getCurrentTurnUserMessage() ?? undefined,
+                externalActionPolicy: this.config.externalActionPolicy,
                 rtkContext,
                 onDebug: (msg) => this.onDebug?.(msg),
               });
@@ -1403,11 +1407,21 @@ export class ClaudeAgent extends BaseAgent {
                     try {
                       const activated = await this.onSourceActivationRequest(sourceSlug);
                       if (activated) {
-                        this.onDebug?.(`Source "${sourceSlug}" auto-enabled successfully, tools available next turn`);
+                        const currentUserMessage = this.getCurrentTurnUserMessage() ?? '';
+                        if (currentUserMessage) {
+                          // The current Claude query has a fixed tool catalogue. Queue
+                          // the existing host restart seam so the blocked tool result
+                          // triggers an automatic fresh turn with the source live.
+                          this.setPendingSourceActivationRestart({
+                            sourceSlug,
+                            userMessage: currentUserMessage,
+                          });
+                        }
+                        this.onDebug?.(`Source "${sourceSlug}" auto-enabled successfully; scheduling automatic fresh-turn retry`);
                         return {
                           continue: false,
                           decision: 'block' as const,
-                          reason: `STOP. Source "${sourceSlug}" has been activated successfully. The tools will be available on the next turn. Do NOT try other tool names or approaches. Respond to the user now: tell them the source is now active and ask them to send their request again.`,
+                          reason: `Source "${sourceSlug}" has been activated. This tool attempt is stopping so the host can retry the original request automatically in a fresh turn with the source available. Do not ask the user to resend it.`,
                         };
                       } else {
                         return {
@@ -1473,6 +1487,8 @@ export class ClaudeAgent extends BaseAgent {
                       rememberForMinutes: checkResult.rememberForMinutes,
                       commandHash: checkResult.commandHash,
                       approvalTtlSeconds: checkResult.approvalTtlSeconds,
+                      sensitiveActionCategory: checkResult.sensitiveActionCategory,
+                      sensitiveActionTargets: checkResult.sensitiveActionTargets,
                     });
                   } else {
                     this.pendingPermissions.delete(requestId);
@@ -2743,6 +2759,7 @@ This is a branched conversation. All prior messages in this conversation are par
     this.pinnedIncludeCoAuthoredBy = null;
     this.pinnedProjectContext = null;
     this.preferencesDriftNotified = false;
+    super.clearHistory();
   }
 
   /**

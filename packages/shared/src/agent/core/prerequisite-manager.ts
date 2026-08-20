@@ -12,7 +12,7 @@
 
 import { existsSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { resolve, join } from 'node:path';
+import { isAbsolute, join, relative, resolve } from 'node:path';
 import { expandPath } from './path-processor.ts';
 import { getBrowserToolEnabled } from '../../config/storage.ts';
 
@@ -140,6 +140,39 @@ export class PrerequisiteManager {
       const expanded = expandPath(path);
       this.pendingSkillPaths.add(expanded);
       this.onDebug?.(`Prerequisite: registered skill prerequisite ${expanded}`);
+    }
+  }
+
+  /**
+   * Mark source guides whose complete contents have already been injected into
+   * the model's current context.
+   *
+   * This is the host-side counterpart to preloading guides before a turn. It is
+   * deliberately limited to `sources/{slug}/guide.md`: callers cannot use this
+   * API to bypass strict browser or dynamic skill prerequisites. The state is
+   * cleared by {@link resetReadState}, so a compaction requires reinjection.
+   */
+  markSourceGuidesLoadedInContext(filePaths: readonly string[]): void {
+    const sourcesRoot = resolve(this.workspaceRootPath, 'sources');
+
+    for (const filePath of filePaths) {
+      const expanded = expandPath(filePath, this.workspaceRootPath);
+      const relativePath = relative(sourcesRoot, expanded);
+      const segments = relativePath.split(/[\\/]/).filter(Boolean);
+      const isSourceGuide = relativePath.length > 0
+        && !relativePath.startsWith('..')
+        && !isAbsolute(relativePath)
+        && segments.length === 2
+        && segments[1] === 'guide.md';
+
+      if (!isSourceGuide || !existsSync(expanded)) {
+        this.onDebug?.(`Prerequisite: ignored invalid preloaded source guide ${expanded}`);
+        continue;
+      }
+
+      this.readFiles.add(expanded);
+      this.rejectionCounts.delete(expanded);
+      this.onDebug?.(`Prerequisite: source guide already loaded in context ${expanded}`);
     }
   }
 

@@ -94,8 +94,11 @@ const tasksLog = createLogger('tasks-generate')
 
 /**
  * Admission boundary for the capabilities the local SessionManager can
- * actually enforce today. File access and disabled egress are enforced again
- * before every tool call by the persisted task isolation envelope.
+ * actually enforce today. Strict children enforce file access and disabled
+ * egress again before every tool call through the persisted isolation envelope.
+ * A fully inherited Execute child deliberately uses the ordinary session tool
+ * surface instead; the two-key inheritance resolver is authoritative for that
+ * exception.
  *
  * External mutations remain broker-only and explicit CPU/memory envelopes
  * remain unavailable until a dedicated worker runtime enforces them.
@@ -123,7 +126,10 @@ export function createProductionTaskExecutionGuard(
         reason: 'External mutation nodes require a broker-backed connector worker',
       }
     }
-    if (context.policy.networkAccess !== 'disabled' || context.policy.allowedHosts.length > 0) {
+    if (
+      !context.fullAutonomyInherited
+      && (context.policy.networkAccess !== 'disabled' || context.policy.allowedHosts.length > 0)
+    ) {
       return {
         allowed: false,
         reason: 'Network access requested without an enforceable per-task egress proxy',
@@ -246,6 +252,19 @@ export function registerTasksHandlers(server: RpcServer, deps: HandlerDeps): voi
         workspaceRoot: ws.rootPath,
         getKillSwitch: () => killSwitchRegistry.taskSnapshot(),
         executionGuard: createProductionTaskExecutionGuard(ws.rootPath),
+        resolveSubagentAutonomyContext: (parentSessionId) => {
+          const workspaceConfig = loadWorkspaceConfig(ws.rootPath)
+          const parent = parentSessionId
+            ? deps.sessionManager.getSessions(ws.id).find((session) => session.id === parentSessionId)
+            : undefined
+          return {
+            workspacePermissionMode: workspaceConfig?.defaults?.permissionMode,
+            // A supplied-but-missing parent is not permission to fall back to
+            // a more permissive workspace default.
+            parentPermissionMode: parentSessionId ? (parent?.permissionMode ?? 'safe') : undefined,
+            externalActionPolicy: workspaceConfig?.defaults?.externalActionPolicy,
+          }
+        },
         defaultRetry: DEFAULT_AUTONOMOUS_RETRY_POLICY,
         resolveNodeRoute: (context) => {
           const workspaceConfig = loadWorkspaceConfig(ws.rootPath)

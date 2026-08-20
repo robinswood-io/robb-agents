@@ -130,6 +130,7 @@ const FALLBACK_CONFIG_DEFAULTS: ConfigDefaults = {
   workspaceDefaults: {
     thinkingLevel: 'high',
     permissionMode: 'allow-all',
+    externalActionPolicy: 'confirm',
     cyclablePermissionModes: ['allow-all', 'ask', 'safe'],
     localMcpServers: { enabled: true },
   },
@@ -185,6 +186,10 @@ export function loadConfigDefaults(): ConfigDefaults {
       ? parsePermissionMode(defaults.workspaceDefaults.permissionMode)
       : null;
   defaults.workspaceDefaults.permissionMode = parsedPermissionMode ?? 'ask';
+  defaults.workspaceDefaults.externalActionPolicy =
+    defaults.workspaceDefaults.externalActionPolicy === 'allow-in-execute'
+      ? 'allow-in-execute'
+      : 'confirm';
 
   const rawCyclable = Array.isArray(defaults.workspaceDefaults?.cyclablePermissionModes)
     ? defaults.workspaceDefaults.cyclablePermissionModes

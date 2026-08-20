@@ -298,6 +298,7 @@ export abstract class BaseAgent implements AgentBackend {
       debugMode: config.debugMode,
       systemPromptPreset: config.systemPromptPreset,
       isHeadless: config.isHeadless,
+      externalActionPolicy: config.externalActionPolicy,
     });
 
     // PathProcessor: expands ~ and normalizes paths
@@ -510,6 +511,12 @@ export abstract class BaseAgent implements AgentBackend {
     this.onPermissionModeChange?.(mode);
   }
 
+  setExternalActionPolicy(policy: 'confirm' | 'allow-in-execute'): void {
+    this.config.externalActionPolicy = policy;
+    this.promptBuilder.setExternalActionPolicy(policy);
+    this.debug(`External action policy set to: ${policy}`);
+  }
+
   cyclePermissionMode(): PermissionMode {
     const newMode = this.permissionManager.cyclePermissionMode();
     this.onPermissionModeChange?.(newMode);
@@ -550,7 +557,7 @@ export abstract class BaseAgent implements AgentBackend {
    */
   clearHistory(): void {
     this.usageTracker.reset();
-    this.prerequisiteManager.resetReadState();
+    this.resetPrerequisiteState();
     this.debug('History cleared');
   }
 

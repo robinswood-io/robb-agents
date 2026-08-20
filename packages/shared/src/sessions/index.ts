@@ -19,6 +19,9 @@ export type {
   SessionMetadata,
   SessionHeader,
   SessionPersistentField,
+  PendingTurnRecovery,
+  ExternalActionAuthorization,
+  ExternalActionAuthorizationCategory,
 } from './types.ts';
 
 // Field constants

@@ -15,6 +15,10 @@ import {
   type MissionWorkExecutor,
 } from './MissionRuntime.ts';
 import { SessionMissionExecutor } from './SessionMissionExecutor.ts';
+import {
+  resolveSubagentAutonomy,
+  type SubagentAutonomyContext,
+} from '../subagents/autonomy-inheritance.ts';
 
 export interface MissionWorkspace {
   id: string;
@@ -35,6 +39,11 @@ export interface MissionRuntimeServiceOptions {
   onSnapshot?: (workspaceId: string, snapshot: MissionSnapshot) => void;
   onError?: (context: { workspaceId?: string; missionId?: string; workItemId?: string; error: Error }) => void;
   reportTimeoutMs?: number;
+  /** Live workspace/origin authority used by both admission and child creation. */
+  resolveSubagentAutonomyContext?: (
+    workspace: MissionWorkspace,
+    parentSessionId?: string,
+  ) => SubagentAutonomyContext;
 }
 
 const DEFAULT_REPORT_TIMEOUT_MS = 10 * 60 * 1000;
@@ -339,16 +348,47 @@ export class MissionRuntimeService {
       workspaceId: workspace.id,
       workspaceRoot: workspace.rootPath,
       verifyExecutionProof: (proof, binding) => proofIssuer.verifyForTask(proof, binding),
+      resolveSubagentAutonomyContext: (parentSessionId) =>
+        this.options.resolveSubagentAutonomyContext?.(workspace, parentSessionId) ?? {},
     });
   }
 
   private assertAdmissible(workspace: MissionWorkspace, spec: MissionSpec): void {
     const policies = [spec.execution, ...spec.workItems.map((item) => item.execution)].filter(Boolean);
+    const autonomyContext =
+      this.options.resolveSubagentAutonomyContext?.(workspace, spec.originSessionId) ?? {};
+    const profileAutonomy = new Map(spec.agentProfiles.map((profile) => [
+      profile.id,
+      resolveSubagentAutonomy({
+        ...autonomyContext,
+        requestedPermissionMode: profile.permissionMode,
+      }),
+    ]));
     if (spec.workItems.some((item) => item.effect === 'external-mutation')) {
       throw new Error('Mission external mutations require a broker-backed connector worker');
     }
-    if (policies.some((policy) => policy!.network_access !== 'disabled' || policy!.allowed_hosts.length > 0)) {
-      throw new Error('Mission network access requires an enforceable per-session egress proxy');
+    if (spec.execution && (
+      spec.execution.network_access !== 'disabled' || spec.execution.allowed_hosts.length > 0
+    )) {
+      const runtimeProfileIds = new Set([
+        spec.defaultWorkerProfileId,
+        spec.reviewerProfileId,
+        spec.supervisorProfileId,
+        ...spec.workItems.flatMap((item) => item.agentProfileId ? [item.agentProfileId] : []),
+      ]);
+      if ([...runtimeProfileIds].some((profileId) =>
+        !profileAutonomy.get(profileId)?.grantsFullToolAndNetworkAccess)) {
+        throw new Error('Mission-wide network access requires fully inherited Execute autonomy for every runtime profile');
+      }
+    }
+    for (const item of spec.workItems) {
+      if (!item.execution || (
+        item.execution.network_access === 'disabled' && item.execution.allowed_hosts.length === 0
+      )) continue;
+      const profileId = item.agentProfileId ?? spec.defaultWorkerProfileId;
+      if (!profileAutonomy.get(profileId)?.grantsFullToolAndNetworkAccess) {
+        throw new Error(`Mission network access for work item "${item.id}" requires fully inherited Execute autonomy`);
+      }
     }
     if (policies.some((policy) => policy!.max_cpu_percent !== undefined || policy!.max_memory_mb !== undefined)) {
       throw new Error('Mission CPU or memory limits require an enforceable worker sandbox');
@@ -369,7 +409,8 @@ export class MissionRuntimeService {
     for (const item of spec.workItems.filter((candidate) => candidate.effect === 'workspace-write')) {
       const profileId = item.agentProfileId ?? spec.defaultWorkerProfileId;
       const profile = spec.agentProfiles.find((candidate) => candidate.id === profileId);
-      if (!profile || profile.permissionMode === 'safe') {
+      const effectivePermissionMode = profileAutonomy.get(profileId)?.permissionMode ?? 'safe';
+      if (!profile || effectivePermissionMode === 'safe') {
         throw new Error(`Workspace-write work item "${item.id}" requires an ask or allow-all worker profile`);
       }
       const execution = item.execution ?? spec.execution;

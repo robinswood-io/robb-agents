@@ -367,6 +367,32 @@ describe('runPreToolUseChecks', () => {
       expect(result.type).toBe('allow');
     });
 
+    it('registers preloaded source guides before checking the first tool call', () => {
+      let guideLoaded = false;
+      const guidePath = '/test/workspace/sources/linear/guide.md';
+      const prereqManager = createMockPrerequisiteManager({
+        markSourceGuidesLoadedInContext: (paths) => {
+          guideLoaded = paths.includes(guidePath);
+        },
+        checkPrerequisites: () => ({
+          allowed: guideLoaded,
+          blockReason: guideLoaded ? undefined : 'Read guide.md first',
+        }),
+      });
+
+      const result = runPreToolUseChecks(createInput({
+        toolName: 'mcp__linear__getIssue',
+        input: {},
+        activeSourceSlugs: ['linear'],
+        allSourceSlugs: ['linear'],
+        prerequisiteManager: prereqManager,
+        preloadedSourceGuidePaths: [guidePath],
+      }));
+
+      expect(result.type).toBe('allow');
+      expect(guideLoaded).toBe(true);
+    });
+
     it('skips when no prerequisiteManager provided', () => {
       const result = runPreToolUseChecks(createInput({
         toolName: 'mcp__linear__getIssue',

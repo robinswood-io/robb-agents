@@ -28,6 +28,10 @@ import {
 } from '@craft-agent/shared/governance';
 import type { SessionCompletionEvent } from '../sessions/SessionManager';
 import {
+  resolveSubagentAutonomy,
+  type SubagentAutonomyContext,
+} from '../subagents/autonomy-inheritance.ts';
+import {
   inferTaskNodeProfile,
   taskNodeSpecialistPreamble,
   type TaskNodeExecutionRoute,
@@ -124,6 +128,13 @@ export interface TaskRunnerDeps {
     proof: SignedExecutionProof,
     binding: TaskExecutionProofBinding,
   ) => ExecutionProofVerificationDecision;
+  /**
+   * Live parent/workspace autonomy authority. Production resolves this from
+   * the orchestrator session plus workspace config; omission fails closed.
+   */
+  resolveSubagentAutonomyContext?: (
+    parentSessionId?: string,
+  ) => SubagentAutonomyContext;
 }
 
 export type TaskFailureClass = 'error' | 'empty' | 'invalid';
@@ -146,6 +157,8 @@ export interface TaskExecutionGuardContext {
   effect: TaskNode['effect'];
   /** Effective child permission mode after node/task/default resolution. */
   permissionMode: 'safe' | 'ask' | 'allow-all';
+  /** Deliberate Execute + allow-in-execute inheritance; never inferred from the task spec alone. */
+  fullAutonomyInherited: boolean;
   /** True when the spec explicitly requested host CPU or memory isolation. */
   resourceLimitsExplicit: boolean;
 }
@@ -210,9 +223,6 @@ export const DEFAULT_AUTONOMOUS_RETRY_POLICY: TaskRetryPolicy = {
   backoff: { base: 250, factor: 2, max: 2_000 },
   when: ['error', 'empty'],
 };
-// Explicit fail-closed default for a subtask's permission mode when neither the node nor the task
-// defaults set one. Mutating autonomy must be an intentional, reviewable opt-in in task.yaml.
-const AUTONOMOUS_DEFAULT_MODE = 'safe' as const;
 const RUNNING_STATUS = 'in-progress';
 const DONE_STATUS = 'done';
 // There is no 'failed' session status (the fixed set is todo|in-progress|needs-review|done|cancelled).
@@ -824,8 +834,12 @@ class ActiveRun {
           return;
         }
       }
-      const permissionMode =
-        node.permissionMode ?? this.spec.defaults?.permissionMode ?? AUTONOMOUS_DEFAULT_MODE;
+      const requestedPermissionMode = node.permissionMode ?? this.spec.defaults?.permissionMode;
+      const autonomy = resolveSubagentAutonomy({
+        ...(this.deps.resolveSubagentAutonomyContext?.(this.opts.orchestratorSessionId) ?? {}),
+        requestedPermissionMode,
+      });
+      const permissionMode = autonomy.permissionMode;
       const sessionPolicy: ExecutionIsolationPolicy = {
         ...policy,
         allowedReadPaths: [...policy.allowedReadPaths],
@@ -842,6 +856,7 @@ class ActiveRun {
         policy,
         effect: node.effect,
         permissionMode,
+        fullAutonomyInherited: autonomy.grantsFullToolAndNetworkAccess,
         resourceLimitsExplicit:
           this.spec.execution?.max_cpu_percent !== undefined ||
           this.spec.execution?.max_memory_mb !== undefined,
@@ -897,7 +912,9 @@ class ActiveRun {
       });
       const prompt =
         skillsPreamble(this.spec.skills) +
-        executionPreamble(sessionPolicy, idempotencyKey) +
+        (autonomy.grantsFullToolAndNetworkAccess
+          ? inheritedAutonomyPreamble(idempotencyKey)
+          : executionPreamble(sessionPolicy, idempotencyKey)) +
         taskNodeSpecialistPreamble(route.profile, st.attempt) +
         (await this.buildPrompt(node));
       if (!stillActive()) return;
@@ -908,18 +925,23 @@ class ActiveRun {
         taskSlug: this.slug,
         taskRunId: this.runId,
         taskNodeId: node.id,
-        executionIsolation: {
-          effect: node.effect,
-          policy: sessionPolicy,
-        },
+        // A fully opted-in Execute child uses the ordinary session tool surface:
+        // shell, browser, active MCP sources, and network remain available. Ask,
+        // Safe, and every missing-policy case retain the restrictive envelope.
+        ...(autonomy.grantsFullToolAndNetworkAccess ? {} : {
+          executionIsolation: {
+            effect: node.effect,
+            policy: sessionPolicy,
+          },
+        }),
         name: nodeTitle(node),
         model: route.model,
         // Required for non-default (e.g. pi/*) models to resolve a backend — without it the
         // child session completes instantly with no output.
         llmConnection: route.llmConnection,
         thinkingLevel: route.thinkingLevel,
-        // Node override → task default (persisted by the editor, visible to the user) → explicit
-        // unattended-safe fallback. Never the workspace default (which could be `ask` → hang).
+        // Explicit node/task modes remain strict. Omission inherits Execute only
+        // through the two-key parent/workspace policy; every other default is Safe.
         permissionMode,
         labels: node.labels,
         // Inherit the orchestrator's task number (task::N) so the whole run filters as one task.
@@ -1719,6 +1741,18 @@ function executionPreamble(policy: ExecutionIsolationPolicy, idempotencyKey: str
     `Write paths: ${policy.allowedWritePaths.join(', ') || '(none)'}`,
     `Network: ${policy.networkAccess}${policy.allowedHosts.length ? ` (${policy.allowedHosts.join(', ')})` : ''}`,
     `Resource envelope: CPU ${policy.maxCpuPercent}%, memory ${policy.maxMemoryMb} MiB, timeout ${policy.timeoutMs} ms`,
+    'Reuse the idempotency key for every external mutation. Never persist secret values in output, logs, or checkpoints.',
+    '',
+    '',
+  ].join('\n');
+}
+
+function inheritedAutonomyPreamble(idempotencyKey: string): string {
+  return [
+    '[Inherited execution policy]',
+    `Idempotency key: ${idempotencyKey}`,
+    'The parent is in Execute mode and this workspace explicitly allows external actions in Execute.',
+    'Use the ordinary session tools, active sources, browser, shell, and network needed to complete the assignment.',
     'Reuse the idempotency key for every external mutation. Never persist secret values in output, logs, or checkpoints.',
     '',
     '',

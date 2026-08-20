@@ -52,6 +52,11 @@ export class PromptBuilder {
     this.workspaceRootPath = config.workspace?.rootPath ?? '';
   }
 
+  /** Update the live sensitive-action policy for subsequent prompt builds. */
+  setExternalActionPolicy(policy: 'confirm' | 'allow-in-execute'): void {
+    this.config.externalActionPolicy = policy;
+  }
+
   // ============================================================
   // Context Building
   // ============================================================
@@ -154,7 +159,7 @@ export class PromptBuilder {
 
     // Stable operating policy shared by Claude and Pi agents. Authoritative
     // permission and isolation checks are still enforced by the host runtime.
-    parts.push(formatAutonomyContract());
+    parts.push(formatAutonomyContract(this.config.externalActionPolicy));
 
     // Working directory context
     const workingDirContext = this.getWorkingDirectoryContext();

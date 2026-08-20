@@ -1028,7 +1028,11 @@ export default function App() {
 
           // Show notification on complete (when window is not focused)
           // Skip hidden sessions (mini-agent sessions) - they shouldn't trigger notifications
-          if (event.type === 'complete' && !updatedSession.hidden) {
+          if (
+            event.type === 'complete'
+            && (event.reason === undefined || event.reason === 'complete')
+            && !updatedSession.hidden
+          ) {
             // Get the last assistant/plan message as preview
             const lastMessage = updatedSession.messages.findLast(
               m => (m.role === 'assistant' || m.role === 'plan') && !m.isIntermediate

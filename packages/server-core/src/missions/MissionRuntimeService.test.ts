@@ -17,6 +17,7 @@ import {
   type MissionWorkExecutor,
 } from './MissionRuntime.ts';
 import { MissionRuntimeService } from './MissionRuntimeService.ts';
+import type { SubagentAutonomyContext } from '../subagents/autonomy-inheritance.ts';
 
 function fixture(overrides: Record<string, unknown> = {}): MissionSpec {
   return MissionSpecSchema.parse({
@@ -102,12 +103,15 @@ describe('MissionRuntimeService', () => {
   });
   afterEach(() => { rmSync(root, { recursive: true, force: true }); });
 
-  function service(): MissionRuntimeService {
+  function service(autonomyContext?: SubagentAutonomyContext): MissionRuntimeService {
     return new MissionRuntimeService({
       sessionManager,
       resolveWorkspace: (id) => id === 'workspace-1' ? { id, rootPath: root } : null,
       listWorkspaces: () => [{ id: 'workspace-1', rootPath: root }],
       executorFactory: () => executor,
+      ...(autonomyContext ? {
+        resolveSubagentAutonomyContext: () => autonomyContext,
+      } : {}),
     });
   }
 
@@ -177,9 +181,42 @@ describe('MissionRuntimeService', () => {
         ? { ...item, effect: 'workspace-write', execution: { allowed_write_paths: ['.'] } }
         : item),
     });
-    const runtimeService = service();
+    const runtimeService = service({ workspacePermissionMode: 'ask', externalActionPolicy: 'confirm' });
     await runtimeService.createAndStart('workspace-1', spec);
     await eventually(async () => (await runtimeService.getMission('workspace-1', spec.id)).status === 'completed');
+  });
+
+  it('admits mission network access only for fully inherited Execute profiles', async () => {
+    const base = fixture();
+    const networkSpec = fixture({
+      id: 'network-valid',
+      agentProfiles: base.agentProfiles.map((profile) => ({
+        ...profile,
+        permissionMode: 'allow-all',
+      })),
+      workItems: base.workItems.map((item) => item.id === 'task-a'
+        ? {
+            ...item,
+            execution: {
+              network_access: 'allow-list',
+              allowed_hosts: ['api.example.com'],
+            },
+          }
+        : item),
+    });
+
+    await expect(service({
+      workspacePermissionMode: 'allow-all',
+      externalActionPolicy: 'confirm',
+    }).createAndStart('workspace-1', networkSpec)).rejects.toThrow(/fully inherited Execute autonomy/);
+
+    const runtimeService = service({
+      workspacePermissionMode: 'allow-all',
+      externalActionPolicy: 'allow-in-execute',
+    });
+    await runtimeService.createAndStart('workspace-1', networkSpec);
+    await eventually(async () =>
+      (await runtimeService.getMission('workspace-1', networkSpec.id)).status === 'completed');
   });
 
   it('delivers the supervisor report once to the origin chat and persists the receipt', async () => {

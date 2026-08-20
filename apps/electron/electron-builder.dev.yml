@@ -9,6 +9,8 @@ directories:
   buildResources: resources
 
 mac:
+  # Explicit development builds remain unsigned/ad-hoc capable.
+  forceCodeSigning: false
   artifactName: "Robb-Agents-Dev-${arch}.${ext}"
   entitlements: build/entitlements.mac.inherit.plist
   entitlementsInherit: build/entitlements.mac.inherit.plist

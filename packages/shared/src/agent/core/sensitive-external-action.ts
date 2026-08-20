@@ -621,11 +621,113 @@ function normalizedToolAction(toolName: string): string {
     .replace(/[^a-z0-9]+/g, '_');
 }
 
+const READ_ONLY_ACTION_TOKENS = new Set([
+  'check',
+  'count',
+  'describe',
+  'fetch',
+  'find',
+  'get',
+  'health',
+  'inspect',
+  'list',
+  'lookup',
+  'preflight',
+  'preview',
+  'query',
+  'read',
+  'resolve',
+  'search',
+  'status',
+  'validate',
+  'verify',
+]);
+
+const MUTATING_ACTION_TOKENS = new Set([
+  'add',
+  'buy',
+  'charge',
+  'checkout',
+  'copy',
+  'create',
+  'deliver',
+  'deploy',
+  'deployment',
+  'execute',
+  'forward',
+  'merge',
+  'pay',
+  'payment',
+  'place',
+  'post',
+  'publish',
+  'purchase',
+  'put',
+  'reply',
+  'restart',
+  'sell',
+  'send',
+  'set',
+  'share',
+  'store',
+  'submit',
+  'transfer',
+  'update',
+  'upload',
+]);
+
+const COMPOUND_ACTION_TOKENS = new Set(['after', 'and', 'before', 'then']);
+
+/**
+ * Detect explicit read-only semantics before looking for mutation keywords.
+ *
+ * Source tool names often include the operation they inspect, for example
+ * `gmail_send_preflight` or `get_send_status`. Looking for `send` alone turns
+ * those reads into false-positive external mutations. Preflight/dry-run names
+ * are unconditionally non-executing; otherwise the first semantic verb wins,
+ * except for explicit compound actions such as `verify_and_send`.
+ */
+function isClearlyReadOnlyToolAction(action: string): boolean {
+  const tokens = action.split('_').filter(Boolean);
+
+  const explicitReadOnlyIndex = tokens.findIndex((token, index) =>
+    token === 'preflight'
+    || token === 'dryrun'
+    || (token === 'dry' && tokens[index + 1] === 'run')
+  );
+  if (explicitReadOnlyIndex >= 0) {
+    const laterMutationIndex = tokens.findIndex((token, index) =>
+      index > explicitReadOnlyIndex && MUTATING_ACTION_TOKENS.has(token)
+    );
+    if (laterMutationIndex < 0) return true;
+    if (!tokens
+      .slice(explicitReadOnlyIndex + 1, laterMutationIndex)
+      .some(token => COMPOUND_ACTION_TOKENS.has(token))) return true;
+  }
+
+  const firstIntentIndex = tokens.findIndex(token =>
+    READ_ONLY_ACTION_TOKENS.has(token) || MUTATING_ACTION_TOKENS.has(token)
+  );
+  if (firstIntentIndex < 0 || !READ_ONLY_ACTION_TOKENS.has(tokens[firstIntentIndex]!)) return false;
+
+  const laterMutationIndex = tokens.findIndex((token, index) =>
+    index > firstIntentIndex && MUTATING_ACTION_TOKENS.has(token)
+  );
+  if (laterMutationIndex < 0) return true;
+
+  // `get_send_status` is a read, whereas `verify_and_send` is a compound
+  // mutation. Keep the latter fail-closed.
+  return !tokens
+    .slice(firstIntentIndex + 1, laterMutationIndex)
+    .some(token => COMPOUND_ACTION_TOKENS.has(token));
+}
+
 function classifyMcp(toolName: string, input: Record<string, unknown>): SensitiveExternalAction | null {
   if (toolName.startsWith('mcp__session__') || toolName.startsWith('mcp__craft-agents-docs__')) return null;
   if (toolName.includes('__api_')) return classifyApi(toolName, input);
 
   const action = normalizedToolAction(toolName.split('__').slice(2).join('_'));
+  if (isClearlyReadOnlyToolAction(action)) return null;
   const targets = extractInputTargets(input);
   const make = (category: SensitiveExternalActionCategory) =>
     makeAction(category, 'mcp_mutation', toolName, targets);
@@ -662,6 +764,7 @@ function classifyApi(toolName: string, input: Record<string, unknown>): Sensitiv
   if (['GET', 'HEAD', 'OPTIONS'].includes(method)) return null;
   const path = typeof input.path === 'string' ? input.path : '';
   const operation = typeof input.operation === 'string' ? input.operation : '';
+  if (path && isClearlyReadOnlyToolAction(normalizedToolAction(path))) return null;
   const semantic = normalizedToolAction(`${toolName}_${operation}_${path}`);
   const targets = uniqueTargets([...extractInputTargets(input), ...pathTargets(path)]);
   const preview = `${method} ${path || toolName}`;

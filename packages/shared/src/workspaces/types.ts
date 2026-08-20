@@ -17,6 +17,9 @@ import type { RoutingPolicy } from '../config/routing-policy.ts';
 import type { WorkspaceGovernanceProfile } from '../governance/workspace-governance.ts';
 import type { RemoteSupervisionProfile } from '../remote-supervision/remote-supervision.ts';
 
+/** Confirmation policy for externally visible/irreversible actions. */
+export type ExternalActionPolicy = 'confirm' | 'allow-in-execute';
+
 /**
  * Local MCP server configuration
  * Controls whether stdio-based (local subprocess) MCP servers can be spawned.
@@ -47,6 +50,8 @@ export interface WorkspaceConfig {
     defaultLlmConnection?: string;
     enabledSourceSlugs?: string[]; // Sources to enable by default
     permissionMode?: PermissionMode; // Default permission mode ('safe', 'ask', 'allow-all')
+    /** Opt-in: let Execute perform sensitive external actions without per-action prompts. */
+    externalActionPolicy?: ExternalActionPolicy;
     cyclablePermissionModes?: PermissionMode[]; // Which modes can be cycled with SHIFT+TAB (min 2, default: all 3)
     workingDirectory?: string;
     thinkingLevel?: ThinkingLevel; // Default thinking level for new sessions (default: 'medium')

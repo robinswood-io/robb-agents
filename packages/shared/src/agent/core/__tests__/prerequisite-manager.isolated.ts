@@ -179,6 +179,42 @@ describe('PrerequisiteManager', () => {
       expect(manager.checkPrerequisites('mcp__linear__createIssue').allowed).toBe(true);
       expect(manager.checkPrerequisites('mcp__slack__sendMessage').allowed).toBe(false);
     });
+
+    it('allows the first source tool call when its guide was preloaded into context', () => {
+      const guideFile = guidePath('linear');
+      mockExistsPaths.add(guideFile);
+
+      manager.markSourceGuidesLoadedInContext([guideFile]);
+
+      expect(manager.checkPrerequisites('mcp__linear__createIssue').allowed).toBe(true);
+      expect(debugMessages.some(message => message.includes('already loaded in context'))).toBe(true);
+    });
+
+    it('accepts workspace-relative paths for preloaded source guides', () => {
+      const guideFile = guidePath('linear');
+      mockExistsPaths.add(guideFile);
+
+      manager.markSourceGuidesLoadedInContext(['sources/linear/guide.md']);
+
+      expect(manager.checkPrerequisites('mcp__linear__createIssue').allowed).toBe(true);
+    });
+
+    it('does not let source-guide preloading bypass browser or skill prerequisites', () => {
+      const docsPath = browserDocPath();
+      const skillPath = '/test/workspace/skills/my-skill/SKILL.md';
+      mockExistsPaths.add(docsPath);
+      mockExistsPaths.add(skillPath);
+
+      manager.registerSkillPrerequisites([skillPath]);
+      manager.markSourceGuidesLoadedInContext([docsPath, skillPath]);
+
+      expect(manager.checkPrerequisites('WebSearch').allowed).toBe(false);
+
+      // Use a fresh manager so the skill gate does not mask the strict browser gate.
+      const browserManager = new PrerequisiteManager({ workspaceRootPath: WORKSPACE_ROOT });
+      browserManager.markSourceGuidesLoadedInContext([docsPath]);
+      expect(browserManager.checkPrerequisites('browser_tool').allowed).toBe(false);
+    });
   });
 
   // ============================================================
@@ -191,6 +227,17 @@ describe('PrerequisiteManager', () => {
       mockExistsPaths.add(guideFile);
 
       manager.trackReadTool({ file_path: guideFile });
+      expect(manager.checkPrerequisites('mcp__linear__createIssue').allowed).toBe(true);
+
+      manager.resetReadState();
+      expect(manager.checkPrerequisites('mcp__linear__createIssue').allowed).toBe(false);
+    });
+
+    it('clears preloaded source-guide state after compaction', () => {
+      const guideFile = guidePath('linear');
+      mockExistsPaths.add(guideFile);
+
+      manager.markSourceGuidesLoadedInContext([guideFile]);
       expect(manager.checkPrerequisites('mcp__linear__createIssue').allowed).toBe(true);
 
       manager.resetReadState();

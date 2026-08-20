@@ -6,8 +6,18 @@ This file accumulates release notes for the next unreleased version. PRs that ad
 
 ## Improvements
 
+- Let Task and Mission sub-agents inherit full Execute autonomy, including shell, browser, MCP, and network tools, only when their parent is in Execute and the workspace explicitly enables external actions in Execute; all other cases remain fail-closed.
+- Add a workspace-level “Full autonomy in Execute” policy that removes redundant sensitive-action confirmations for scoped work and grants required secure-site browser permissions only while an Execute agent is actively in control.
+- Preload active source guides into the agent context with credential-shaped values redacted, avoiding the first-call guide rejection while preserving strict browser and skill prerequisites.
+- Retry the original request automatically after a required source is activated instead of asking the user to send it again.
+- Expire invisible permission requests, replay still-live prompts after a renderer reload, and remember approved sensitive actions only for the same category and concrete target.
+- Make production packaging fail closed on dirty or unverifiable source provenance and require a strict Developer ID signature, notarization, and stapled ticket.
+
 ## Bug Fixes
 
-- Resume Codex/Pi turns that stop immediately after a tool result, and show an explicit retryable error instead of silently ending when recovery is exhausted.
+- Resume Codex/Pi turns that stop after a tool result or an unexpectedly aborted partial response, and durably continue interrupted turns after a provider failure or application restart with bounded retries.
+- Execute the integrated-browser fallback after a compatible tool failure instead of merely logging the intended recovery.
+- Redact OAuth callback codes, state, identity, verifier, and session artifacts before browser-console retention or file logging.
+- Harden local logs to owner-only access and scrub sensitive OAuth artifacts left by older builds on the next application start.
 
 ## Breaking Changes

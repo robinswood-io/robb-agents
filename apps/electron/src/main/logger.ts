@@ -1,6 +1,6 @@
 import log from 'electron-log/main'
-import { appendFileSync, existsSync, mkdirSync, renameSync, rmSync, statSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { appendFileSync, existsSync, renameSync, rmSync, statSync } from 'node:fs'
+import { join } from 'node:path'
 import { CONFIG_DIR } from '@craft-agent/shared/config'
 import type {
   MessagingLogContext,
@@ -13,6 +13,12 @@ import {
   safeSerializeLogValue,
   sanitizeLogValue,
 } from './log-sanitizer'
+import { redactSecretLikeMaterial } from '@craft-agent/shared/utils'
+import {
+  ensurePrivateLogDirectory,
+  ensurePrivateLogFilePath,
+  sanitizeExistingLogFile,
+} from './log-file-security'
 
 /**
  * Resolve debug mode deterministically across runtimes.
@@ -50,6 +56,15 @@ const mainLogPath = join(CONFIG_DIR, 'logs', 'main.log')
 const mainLogBackupPath = `${mainLogPath}.1`
 const MAIN_LOG_MAX_BYTES = 5 * 1024 * 1024 // 5MB
 const transportPolicy = resolveElectronLogTransportPolicy(isDebugMode)
+
+ensurePrivateLogDirectory(join(CONFIG_DIR, 'logs'))
+ensurePrivateLogFilePath(mainLogPath)
+ensurePrivateLogFilePath(mainLogBackupPath)
+// Upgrade migration: scrub OAuth/session artifacts written by older builds
+// before electron-log opens the active file. Future writes are sanitized by
+// the transport formatter below.
+sanitizeExistingLogFile(mainLogPath, redactSecretLikeMaterial)
+sanitizeExistingLogFile(mainLogBackupPath, redactSecretLikeMaterial)
 
 log.transports.file.resolvePathFn = () => mainLogPath
 log.transports.file.maxSize = MAIN_LOG_MAX_BYTES
@@ -113,8 +128,11 @@ export const messagingGatewayLogPath = join(CONFIG_DIR, 'logs', 'messaging-gatew
 const messagingGatewayBackupPath = `${messagingGatewayLogPath}.1`
 const MESSAGING_LOG_MAX_BYTES = 5 * 1024 * 1024 // 5MB
 
+ensurePrivateLogFilePath(messagingGatewayLogPath)
+ensurePrivateLogFilePath(messagingGatewayBackupPath)
+
 function ensureMessagingLogDir(): void {
-  mkdirSync(dirname(messagingGatewayLogPath), { recursive: true })
+  ensurePrivateLogFilePath(messagingGatewayLogPath)
 }
 
 function rotateMessagingLogIfNeeded(nextLineBytes: number): void {
@@ -158,7 +176,7 @@ function writeMessagingGatewayLog(
   try {
     ensureMessagingLogDir()
     rotateMessagingLogIfNeeded(Buffer.byteLength(line))
-    appendFileSync(messagingGatewayLogPath, line, 'utf8')
+    appendFileSync(messagingGatewayLogPath, line, { encoding: 'utf8', mode: 0o600 })
   } catch (error) {
     mainLog.warn('[messaging-gateway] failed to write dedicated log entry', {
       error: sanitizeLogValue(error),
@@ -214,6 +232,9 @@ export const autoUpdateLogPath = join(CONFIG_DIR, 'logs', 'auto-update.log')
 const autoUpdateBackupPath = `${autoUpdateLogPath}.1`
 const AUTO_UPDATE_LOG_MAX_BYTES = 2 * 1024 * 1024 // 2MB
 
+ensurePrivateLogFilePath(autoUpdateLogPath)
+ensurePrivateLogFilePath(autoUpdateBackupPath)
+
 function rotateAutoUpdateLogIfNeeded(nextLineBytes: number): void {
   if (!existsSync(autoUpdateLogPath)) return
   try {
@@ -239,9 +260,9 @@ function writeAutoUpdateLog(level: 'info' | 'warn' | 'error', message: string, m
 
   const line = safeSerializeLogValue(entry) + '\n'
   try {
-    mkdirSync(dirname(autoUpdateLogPath), { recursive: true })
+    ensurePrivateLogFilePath(autoUpdateLogPath)
     rotateAutoUpdateLogIfNeeded(Buffer.byteLength(line))
-    appendFileSync(autoUpdateLogPath, line, 'utf8')
+    appendFileSync(autoUpdateLogPath, line, { encoding: 'utf8', mode: 0o600 })
   } catch (error) {
     mainLog.warn('[auto-update] failed to write dedicated log entry', sanitizeLogValue(error))
   }

@@ -109,7 +109,7 @@ import { WindowManager } from './window-manager'
 import { loadWindowState, saveWindowState } from './window-state'
 import { CONFIG_DIR, getWorkspaces, getWorkspaceByNameOrId, loadStoredConfig, addWorkspace, saveConfig } from '@craft-agent/shared/config'
 import { isLoopbackHost, resolveSecureRemoteHost } from './remote-access-security'
-import { getDefaultWorkspacesDir } from '@craft-agent/shared/workspaces'
+import { getDefaultWorkspacesDir, loadWorkspaceConfig } from '@craft-agent/shared/workspaces'
 import { initializeDocs } from '@craft-agent/shared/docs'
 import { initializeReleaseNotes } from '@craft-agent/shared/release-notes'
 import { validateBundle, type SessionBundle } from '@craft-agent/shared/sessions'
@@ -877,6 +877,17 @@ app.whenReady().then(async () => {
 
       // Capture module-level references for before-quit cleanup and deep-link handlers
       sessionManager = instance.sessionManager
+      browserPaneManager?.setPermissionAutonomyResolver(({ sessionId, workspaceId }) => {
+        const permissionMode = sessionManager?.getSessionPermissionModeState(sessionId)?.permissionMode
+        const workspace = getWorkspaceByNameOrId(workspaceId)
+        const workspaceConfig = workspace ? loadWorkspaceConfig(workspace.rootPath) : null
+
+        if (!permissionMode || !workspaceConfig) return null
+        return {
+          permissionMode,
+          externalActionPolicy: workspaceConfig.defaults?.externalActionPolicy,
+        }
+      })
       oauthFlowStore = instance.oauthFlowStore
       moduleSink = instance.wsServer.push.bind(instance.wsServer)
       moduleClientResolver = resolveClientId

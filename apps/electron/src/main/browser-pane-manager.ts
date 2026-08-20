@@ -21,8 +21,12 @@ import {
 import { DEFAULT_THEME, loadAppTheme, getAllowRemoteEvaluate } from '@craft-agent/shared/config'
 import { i18n } from '@craft-agent/shared/i18n'
 import { CodedError } from '@craft-agent/shared/protocol'
+import { redactSecretLikeMaterial } from '@craft-agent/shared/utils'
 import { getBrowserLiveFxCornerRadii } from '../shared/browser-live-fx'
-import { isBrowserPanePermissionAllowed } from './browser-pane-permissions'
+import {
+  isBrowserPanePermissionAllowed,
+  type BrowserPanePermissionContext,
+} from './browser-pane-permissions'
 import type {
   IBrowserPaneManager,
   BrowserInstanceSnapshot,
@@ -192,6 +196,16 @@ interface CreateBrowserInstanceOptions {
   workspaceId?: string | null
 }
 
+interface BrowserPanePermissionAutonomyState {
+  permissionMode?: string
+  externalActionPolicy?: string
+}
+
+type BrowserPanePermissionAutonomyResolver = (input: {
+  sessionId: string
+  workspaceId: string
+}) => BrowserPanePermissionAutonomyState | null
+
 export interface BrowserScreenshotOptions {
   mode?: 'raw' | 'agent'
   refs?: string[]
@@ -341,6 +355,7 @@ export class BrowserPaneManager implements IBrowserPaneManager {
   private popupParentByWebContentsId = new Map<number, string>()
   private windowManager: WindowManager | null = null
   private sessionPathResolver: ((sessionId: string) => string | null) | null = null
+  private permissionAutonomyResolver: BrowserPanePermissionAutonomyResolver | null = null
 
   setWindowManager(windowManager: WindowManager): void {
     this.windowManager = windowManager
@@ -348,6 +363,14 @@ export class BrowserPaneManager implements IBrowserPaneManager {
 
   setSessionPathResolver(fn: (sessionId: string) => string | null): void {
     this.sessionPathResolver = fn
+  }
+
+  /**
+   * Resolve live session/workspace autonomy state without coupling this
+   * Electron-only manager to SessionManager internals.
+   */
+  setPermissionAutonomyResolver(fn: BrowserPanePermissionAutonomyResolver): void {
+    this.permissionAutonomyResolver = fn
   }
 
   onStateChange(callback: (info: BrowserInstanceInfo) => void): void {
@@ -3372,13 +3395,65 @@ export class BrowserPaneManager implements IBrowserPaneManager {
     mainLog.warn(message)
   }
 
+  private getPermissionInstance(webContents: { id: number } | null): BrowserInstance | undefined {
+    if (!webContents) return undefined
+
+    const directInstance = this.getInstanceByWebContentsId(webContents.id)
+    if (directInstance) return directInstance
+
+    const parentInstanceId = this.popupParentByWebContentsId.get(webContents.id)
+    return parentInstanceId ? this.instances.get(parentInstanceId) : undefined
+  }
+
+  private getPermissionContext(
+    webContents: { id: number } | null,
+    requestingOrigin: string,
+  ): BrowserPanePermissionContext | undefined {
+    const instance = this.getPermissionInstance(webContents)
+    const agentControl = instance?.agentControl
+    const workspaceId = instance?.workspaceId
+
+    if (!instance
+      || !agentControl?.active
+      || instance.boundSessionId !== agentControl.sessionId
+      || !workspaceId
+      || !this.permissionAutonomyResolver) {
+      return undefined
+    }
+
+    const autonomy = this.permissionAutonomyResolver({
+      sessionId: agentControl.sessionId,
+      workspaceId,
+    })
+    if (!autonomy) return undefined
+
+    return {
+      agentControlled: true,
+      permissionMode: autonomy.permissionMode,
+      externalActionPolicy: autonomy.externalActionPolicy,
+      requestingOrigin,
+      topLevelUrl: instance.currentUrl,
+    }
+  }
+
+  private isPermissionAllowed(
+    webContents: { id: number } | null,
+    permission: string,
+    requestingOrigin: string,
+  ): boolean {
+    return isBrowserPanePermissionAllowed(
+      permission,
+      this.getPermissionContext(webContents, requestingOrigin),
+    )
+  }
+
   private setupSessionPermissions(ses: ElectronSession): void {
     if (this.partitionPermissionsInitialized) return
     this.partitionPermissionsInitialized = true
 
     if (typeof ses.setPermissionCheckHandler === 'function') {
-      ses.setPermissionCheckHandler((_webContents, permission, requestingOrigin) => {
-        const allowed = isBrowserPanePermissionAllowed(permission)
+      ses.setPermissionCheckHandler((webContents, permission, requestingOrigin) => {
+        const allowed = this.isPermissionAllowed(webContents, permission, requestingOrigin)
         if (!allowed) {
           this.logPermissionDecision('check', permission, requestingOrigin)
         }
@@ -3387,13 +3462,10 @@ export class BrowserPaneManager implements IBrowserPaneManager {
     }
 
     if (typeof ses.setPermissionRequestHandler === 'function') {
-      ses.setPermissionRequestHandler((_webContents, permission, callback, details) => {
-        const allowed = isBrowserPanePermissionAllowed(permission)
+      ses.setPermissionRequestHandler((webContents, permission, callback, details) => {
+        const requestingOrigin = details.requestingUrl || 'unknown'
+        const allowed = this.isPermissionAllowed(webContents, permission, requestingOrigin)
         if (!allowed) {
-          const requestingOrigin = 'requestingOrigin' in details
-            && typeof details.requestingOrigin === 'string'
-            ? details.requestingOrigin
-            : 'unknown'
           this.logPermissionDecision('request', permission, requestingOrigin)
         }
         callback(allowed)
@@ -3602,17 +3674,21 @@ export class BrowserPaneManager implements IBrowserPaneManager {
       }
 
       const mappedLevel: BrowserConsoleEntry['level'] = level >= 3 ? 'error' : level === 2 ? 'warn' : level === 1 ? 'info' : 'log'
+      // Browser console messages can contain full OAuth callback URLs emitted
+      // by third-party pages. Redact before retaining the entry so neither the
+      // browser console tool nor the main logger receives raw callback data.
+      const sanitizedMessage = redactSecretLikeMaterial(message)
       instance.consoleLogs.push({
         timestamp: Date.now(),
         level: mappedLevel,
-        message,
+        message: sanitizedMessage,
       })
       if (instance.consoleLogs.length > MAX_CONSOLE_LOG_ENTRIES) {
         instance.consoleLogs.splice(0, instance.consoleLogs.length - MAX_CONSOLE_LOG_ENTRIES)
       }
 
       if (level >= 2) {
-        mainLog.warn(`[browser-pane] console id=${instance.id} level=${level}: ${message}`)
+        mainLog.warn(`[browser-pane] console id=${instance.id} level=${level}: ${sanitizedMessage}`)
       }
     })
 

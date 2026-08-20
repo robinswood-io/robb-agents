@@ -18,6 +18,10 @@ import type {
 } from '@craft-agent/shared/governance';
 import type { SessionCompletionEvent } from '../sessions/SessionManager.ts';
 import {
+  resolveSubagentAutonomy,
+  type SubagentAutonomyContext,
+} from '../subagents/autonomy-inheritance.ts';
+import {
   type MissionExecutionInput,
   type MissionExecutionLifecycle,
   type MissionExecutionResult,
@@ -54,6 +58,10 @@ export interface SessionMissionExecutorOptions {
     proof: SignedExecutionProof,
     binding: TaskExecutionProofBinding,
   ) => ExecutionProofVerificationDecision;
+  /** Live origin/workspace authority. Omission deliberately resolves to Safe. */
+  resolveSubagentAutonomyContext?: (
+    parentSessionId?: string,
+  ) => SubagentAutonomyContext;
 }
 
 function dispatchMarker(input: MissionExecutionInput): string {
@@ -255,17 +263,25 @@ export class SessionMissionExecutor implements MissionWorkExecutor {
     let session = collisions[0];
     if (!session) {
       try {
+        const autonomy = resolveSubagentAutonomy({
+          ...(this.options.resolveSubagentAutonomyContext?.(input.mission.originSessionId) ?? {}),
+          requestedPermissionMode: input.profile.permissionMode,
+        });
         session = await this.options.host.createSession(this.options.workspaceId, {
           name: `${input.profile.role}: ${input.item.title}`,
           parentSessionId: input.mission.originSessionId,
           projectId: input.mission.projectId,
           workingDirectory: input.mission.cwd,
-          permissionMode: input.profile.permissionMode,
+          permissionMode: autonomy.permissionMode,
           model: input.profile.model ?? (input.profile.modelTier === 'fast' ? 'fast' : 'default'),
           llmConnection: input.profile.llmConnection,
           enabledSourceSlugs: input.profile.sources.length > 0 ? input.profile.sources : undefined,
           sessionStatus: 'in-progress',
-          executionIsolation: buildExecutionIsolation(input, this.options.workspaceRoot),
+          // Full inherited Execute uses the ordinary session tool surface. Every
+          // Ask/Safe/default path keeps Mission's restrictive isolation envelope.
+          ...(autonomy.grantsFullToolAndNetworkAccess ? {} : {
+            executionIsolation: buildExecutionIsolation(input, this.options.workspaceRoot),
+          }),
           missionId: input.mission.id,
           missionWorkItemId: input.item.id,
           missionDispatchId: input.dispatchId,
