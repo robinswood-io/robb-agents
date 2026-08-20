@@ -21,6 +21,12 @@ SPEC.loader.exec_module(MODULE)
 
 
 class CodesignInspectionTests(unittest.TestCase):
+    def test_inspection_requests_full_certificate_metadata(self) -> None:
+        self.assertEqual(
+            MODULE.codesign_inspection_command(Path("/tmp/Robb Agents.app")),
+            ["codesign", "-dv", "--verbose=4", "/tmp/Robb Agents.app"],
+        )
+
     def test_unsigned_cross_architecture_smoke_build_is_accepted(self) -> None:
         mode = MODULE.validate_codesign_inspection(
             1,

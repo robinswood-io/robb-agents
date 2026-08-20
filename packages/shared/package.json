@@ -1,6 +1,6 @@
 {
   "name": "@craft-agent/shared",
-  "version": "0.12.1",
+  "version": "0.12.2",
   "license": "MIT",
   "description": "Shared business logic for Craft Agents - agent, auth, config, credentials, MCP integration",
   "type": "module",
