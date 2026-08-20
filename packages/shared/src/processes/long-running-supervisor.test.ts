@@ -39,6 +39,29 @@ describe('long-running process supervisor', () => {
     expect(snapshot.processes[0]?.terminationReason).toContain('idle timeout exceeded');
   });
 
+  it('does not terminate a silent child while its owner reports active work', async () => {
+    const supervisor = new LongRunningProcessSupervisor();
+    const child = fakeChild();
+    let isBusy = true;
+    supervisor.register(child, {
+      id: 'agent:session-busy',
+      kind: 'agent-runtime',
+      ownerId: 'session-busy',
+      maxIdleMs: 5,
+      isBusy: () => isBusy,
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    await supervisor.sweep();
+    expect(supervisor.snapshot().processes[0]?.status).toBe('running');
+
+    isBusy = false;
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    await supervisor.sweep();
+    expect(supervisor.snapshot().processes[0]?.status).toBe('exited');
+    expect(supervisor.snapshot().processes[0]?.terminationReason).toContain('idle timeout exceeded');
+  });
+
   it('writes a recurring-health compatible report with CPU, memory, and child summary', () => {
     const supervisor = new LongRunningProcessSupervisor();
     const root = mkdtempSync(join(tmpdir(), 'robb-health-'));
