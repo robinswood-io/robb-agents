@@ -410,23 +410,40 @@ function ProcessingIndicator({ startTime, statusMessage }: ProcessingIndicatorPr
 }
 
 /**
- * Scrolls to target element on mount, before browser paint.
- * Uses useLayoutEffect to ensure scroll happens before content is visible.
+ * Positions a loaded transcript at the bottom before browser paint.
+ * `resetKey` also covers compact layouts where the transcript wrapper stays
+ * mounted while the active session changes.
  */
 function ScrollOnMount({
-  targetRef,
+  viewportRef,
+  resetKey,
   onScroll,
   skip = false
 }: {
-  targetRef: React.RefObject<HTMLDivElement | null>
+  viewportRef: React.RefObject<HTMLDivElement | null>
+  resetKey: string
   onScroll?: () => void
   skip?: boolean
 }) {
+  const skippedResetKeyRef = React.useRef<string | null>(null)
+
   React.useLayoutEffect(() => {
-    if (skip) return
-    targetRef.current?.scrollIntoView({ behavior: 'instant' })
+    // If search consumed this session reset, a follow-up render where `skip`
+    // becomes false must not override the selected match. Normal resets remain
+    // repeatable so React StrictMode's second layout pass can settle at bottom.
+    if (skip) {
+      skippedResetKeyRef.current = resetKey
+      return
+    }
+    if (skippedResetKeyRef.current === resetKey) return
+    const viewport = viewportRef.current
+    if (!viewport) return
+
+    // Target the Radix viewport directly. scrollIntoView() can also move
+    // scrollable ancestors and is less reliable while mobile layout settles.
+    viewport.scrollTop = viewport.scrollHeight
     onScroll?.()
-  }, [skip])
+  }, [onScroll, resetKey, skip, viewportRef])
   return null
 }
 
@@ -523,6 +540,10 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
   isFocusedPanelRef.current = isFocusedPanel
   // Skip smooth scroll briefly after session switch (instant scroll already happened)
   const skipSmoothScrollUntilRef = React.useRef(0)
+  const handleInitialTranscriptScroll = React.useCallback(() => {
+    isStickToBottomRef.current = true
+    skipSmoothScrollUntilRef.current = Date.now() + 500
+  }, [])
   // Track message commit boundaries so we can auto-scroll when a new user message
   // actually lands in state (important when attachments delay optimistic insertion).
   const prevLastMessageIdRef = React.useRef<string | null>(null)
@@ -1170,13 +1191,24 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
       // Clear pending scroll and wait for layout to settle
       if (debounceTimer) clearTimeout(debounceTimer)
       debounceTimer = setTimeout(() => {
-        // Skip smooth scroll if we just did an instant scroll (session switch/lazy load)
-        if (Date.now() < skipSmoothScrollUntilRef.current) return
+        // The user may have scrolled up while this debounced callback was pending.
+        if (!isStickToBottomRef.current) return
+
+        // Layout commonly changes again just after the initial session scroll
+        // (input hydration, rich blocks, mobile safe areas). Keep the viewport
+        // pinned instantly during that settling window instead of dropping the
+        // only follow-up scroll.
+        if (Date.now() < skipSmoothScrollUntilRef.current) {
+          viewport.scrollTop = viewport.scrollHeight
+          return
+        }
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
       }, 200)
     })
 
-    // Observe the scroll content container (first child of viewport)
+    // Observe both the viewport (mobile keyboard/browser chrome/safe-area
+    // changes) and its content (streaming and late-rendered rich blocks).
+    resizeObserver.observe(viewport)
     const content = viewport.firstElementChild
     if (content) {
       resizeObserver.observe(content)
@@ -1581,11 +1613,10 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
                   {/* Scroll to bottom before paint - fires via useLayoutEffect */}
                   {/* Skip when search is active on session switch - scroll to first match instead */}
                   <ScrollOnMount
-                    targetRef={messagesEndRef}
+                    viewportRef={scrollViewportRef}
+                    resetKey={session.id}
                     skip={skipScrollToBottom}
-                    onScroll={() => {
-                      skipSmoothScrollUntilRef.current = Date.now() + 500
-                    }}
+                    onScroll={handleInitialTranscriptScroll}
                   />
                   {!compactMode && <><AutonomyPanel session={session} /><RoutingAuditPanel session={session} /></>}
                   {/* Empty state for compact mode - inviting conversational prompt, centered in full popover */}
