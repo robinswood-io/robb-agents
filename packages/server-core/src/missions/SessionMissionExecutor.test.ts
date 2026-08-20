@@ -189,6 +189,52 @@ describe('SessionMissionExecutor', () => {
     expect(lifecycle).toEqual(['bound:existing-session', 'accepted:existing-session:user-1']);
   });
 
+  it('removes the restrictive envelope only for an opted-in Execute child', async () => {
+    const host = new FakeHost();
+    const base = input();
+    const assignment: MissionExecutionInput = {
+      ...base,
+      profile: { ...base.profile, permissionMode: 'allow-all' },
+    };
+    const executor = new SessionMissionExecutor({
+      host,
+      workspaceId: 'workspace-1',
+      workspaceRoot: '/tmp',
+      resolveSubagentAutonomyContext: () => ({
+        parentPermissionMode: 'allow-all',
+        externalActionPolicy: 'allow-in-execute',
+      }),
+    });
+
+    const result = await executor.execute(assignment, await executor.prepare(assignment));
+    expect(result.status).toBe('submission');
+    expect(host.sessions[0]?.permissionMode).toBe('allow-all');
+    expect(host.sessions[0]?.executionIsolation).toBeUndefined();
+  });
+
+  it('clamps a requested Execute child to Ask and keeps isolation under an Ask parent', async () => {
+    const host = new FakeHost();
+    const base = input();
+    const assignment: MissionExecutionInput = {
+      ...base,
+      profile: { ...base.profile, permissionMode: 'allow-all' },
+    };
+    const executor = new SessionMissionExecutor({
+      host,
+      workspaceId: 'workspace-1',
+      workspaceRoot: '/tmp',
+      resolveSubagentAutonomyContext: () => ({
+        parentPermissionMode: 'ask',
+        externalActionPolicy: 'allow-in-execute',
+      }),
+    });
+
+    const result = await executor.execute(assignment, await executor.prepare(assignment));
+    expect(result.status).toBe('submission');
+    expect(host.sessions[0]?.permissionMode).toBe('ask');
+    expect(host.sessions[0]?.executionIsolation).toBeDefined();
+  });
+
   it('blocks an external mutation when the host provides no reconciled proof', async () => {
     const host = new FakeHost();
     const assignment = input('external-mutation');

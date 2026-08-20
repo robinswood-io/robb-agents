@@ -65,6 +65,7 @@ export default function WorkspaceSettingsPage() {
   const [wsIconUrl, setWsIconUrl] = useState<string | null>(null)
   const [isUploadingIcon, setIsUploadingIcon] = useState(false)
   const [permissionMode, setPermissionMode] = useState<PermissionMode>('ask')
+  const [externalActionPolicy, setExternalActionPolicy] = useState<'confirm' | 'allow-in-execute'>('confirm')
   const [workingDirectory, setWorkingDirectory] = useState('')
   const [localMcpEnabled, setLocalMcpEnabled] = useState(true)
   const [isLoadingWorkspace, setIsLoadingWorkspace] = useState(true)
@@ -100,6 +101,7 @@ export default function WorkspaceSettingsPage() {
           setWsName(settings.name || '')
           setWsNameEditing(settings.name || '')
           setPermissionMode(settings.permissionMode || 'ask')
+          setExternalActionPolicy(settings.externalActionPolicy === 'allow-in-execute' ? 'allow-in-execute' : 'confirm')
           setWorkingDirectory(settings.workingDirectory || '')
           setLocalMcpEnabled(settings.localMcpEnabled ?? true)
           setRoutingPolicyText(settings.routingPolicy ? JSON.stringify(settings.routingPolicy, null, 2) : '')
@@ -321,6 +323,15 @@ export default function WorkspaceSettingsPage() {
     [updateWorkspaceSetting]
   )
 
+  const handleTotalAutonomyChange = useCallback(
+    async (enabled: boolean) => {
+      const nextPolicy = enabled ? 'allow-in-execute' : 'confirm'
+      setExternalActionPolicy(nextPolicy)
+      await updateWorkspaceSetting('externalActionPolicy', nextPolicy)
+    },
+    [updateWorkspaceSetting]
+  )
+
   const handleWorkingDirectorySelected = useCallback(async (selectedPath: string) => {
     const saved = await updateWorkspaceSetting('workingDirectory', selectedPath)
     if (saved) {
@@ -513,6 +524,12 @@ export default function WorkspaceSettingsPage() {
                     { value: 'ask', label: t("mode.ask"), description: t("mode.askDesc") },
                     { value: 'allow-all', label: t("mode.execute"), description: t("mode.executeDesc") },
                   ]}
+                />
+                <SettingsToggle
+                  label={t("settings.workspace.totalAutonomy")}
+                  description={t("settings.workspace.totalAutonomyDesc")}
+                  checked={externalActionPolicy === 'allow-in-execute'}
+                  onCheckedChange={handleTotalAutonomyChange}
                 />
               </SettingsCard>
             </SettingsSection>

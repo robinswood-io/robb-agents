@@ -80,6 +80,8 @@ export type PermissionCallback = (request: {
   rememberForMinutes?: number;
   commandHash?: string;
   approvalTtlSeconds?: number;
+  sensitiveActionCategory?: import('../core/sensitive-external-action.ts').SensitiveExternalActionCategory;
+  sensitiveActionTargets?: string[];
 }) => void;
 
 /**
@@ -184,6 +186,13 @@ export interface CoreBackendConfig {
 
   /** Headless mode flag (disables interactive tools) */
   isHeadless?: boolean;
+
+  /**
+   * Confirmation policy for sensitive external actions. Defaults to `confirm`.
+   * `allow-in-execute` only takes effect when the session's effective permission
+   * mode is `allow-all`; Explore and Ask retain their existing safeguards.
+   */
+  externalActionPolicy?: 'confirm' | 'allow-in-execute';
 
   /** Skip agent-level config file watching (server already owns a workspace-level watcher) */
   skipConfigWatcher?: boolean;
@@ -489,6 +498,9 @@ export interface AgentBackend {
 
   /** Set permission mode */
   setPermissionMode(mode: PermissionMode): void;
+
+  /** Apply the workspace sensitive-action policy to subsequent tool checks and prompts. */
+  setExternalActionPolicy(policy: 'confirm' | 'allow-in-execute'): void;
 
   /** Cycle to next permission mode */
   cyclePermissionMode(): PermissionMode;

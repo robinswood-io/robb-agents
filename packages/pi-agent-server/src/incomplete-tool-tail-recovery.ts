@@ -2,7 +2,28 @@ const DEFAULT_MAX_RECOVERY_ATTEMPTS = 3;
 
 type AgentEndMessage = {
   role?: string;
+  stopReason?: string;
 };
+
+/**
+ * Pi's `Agent.continue()` accepts tool-result/user tails, but rejects an
+ * assistant tail even when that assistant was aborted mid-sentence. Remove
+ * only that known-incomplete tail before continuation; terminal assistant
+ * messages remain authoritative.
+ */
+export function prepareMessagesForIncompleteTailContinuation<T extends AgentEndMessage>(
+  messages: T[],
+): { messages: T[]; removedAbortedAssistant: boolean } {
+  const lastMessage = messages[messages.length - 1];
+  if (lastMessage?.role === 'assistant' && lastMessage.stopReason === 'aborted') {
+    return {
+      messages: messages.slice(0, -1),
+      removedAbortedAssistant: true,
+    };
+  }
+
+  return { messages, removedAbortedAssistant: false };
+}
 
 export type IncompleteToolTailRecoveryResult =
   | 'none'
@@ -11,19 +32,20 @@ export type IncompleteToolTailRecoveryResult =
   | 'exhausted';
 
 /**
- * Pi occasionally emits agent_end immediately after a successful tool result,
- * without asking the model for the final assistant response. The SDK considers
- * that a normal end, so the caller otherwise receives `complete` with neither a
- * final answer nor an error.
+ * Pi occasionally emits agent_end before the model has produced a final answer:
+ * either immediately after a successful tool result, or with an unexpectedly
+ * aborted assistant message containing only partial commentary. The SDK
+ * considers both runs complete, so the caller otherwise receives `complete`
+ * without a usable final answer.
  *
- * This state machine holds that premature agent_end and resumes from the
- * persisted tool result. Recovery is deliberately bounded so a broken provider
- * cannot create an infinite continuation loop.
+ * This state machine holds that premature agent_end and asks the caller to
+ * resume from the recoverable persisted tail. Recovery is deliberately bounded
+ * so a broken provider cannot create an infinite continuation loop.
  */
 export class IncompleteToolTailRecovery {
   private activePromptCalls = 0;
   private abortRequested = false;
-  private pendingToolTail = false;
+  private pendingIncompleteTail = false;
   private recoveryPromise: Promise<IncompleteToolTailRecoveryResult> | null = null;
 
   constructor(private readonly maxRecoveryAttempts = DEFAULT_MAX_RECOVERY_ATTEMPTS) {}
@@ -31,7 +53,7 @@ export class IncompleteToolTailRecovery {
   beginPrompt(): void {
     if (this.activePromptCalls === 0) {
       this.abortRequested = false;
-      this.pendingToolTail = false;
+      this.pendingIncompleteTail = false;
     }
     this.activePromptCalls += 1;
   }
@@ -40,7 +62,7 @@ export class IncompleteToolTailRecovery {
     this.activePromptCalls = Math.max(0, this.activePromptCalls - 1);
     if (this.activePromptCalls === 0) {
       this.abortRequested = false;
-      this.pendingToolTail = false;
+      this.pendingIncompleteTail = false;
     }
   }
 
@@ -58,17 +80,21 @@ export class IncompleteToolTailRecovery {
 
     if (this.abortRequested) {
       // The explicit abort's own agent_end is authoritative. If a premature
-      // tool-tail end was already held, this event replaces it.
-      this.pendingToolTail = false;
+      // incomplete end was already held, this event replaces it.
+      this.pendingIncompleteTail = false;
       return false;
     }
 
     const lastMessage = messages[messages.length - 1];
-    if (lastMessage?.role !== 'toolResult') {
+    const endedAfterToolResult = lastMessage?.role === 'toolResult';
+    const endedWithUnexpectedAssistantAbort =
+      lastMessage?.role === 'assistant' && lastMessage.stopReason === 'aborted';
+
+    if (!endedAfterToolResult && !endedWithUnexpectedAssistantAbort) {
       return false;
     }
 
-    this.pendingToolTail = true;
+    this.pendingIncompleteTail = true;
     return true;
   }
 
@@ -76,7 +102,7 @@ export class IncompleteToolTailRecovery {
     continueTurn: () => Promise<void>,
   ): Promise<IncompleteToolTailRecoveryResult> {
     if (this.recoveryPromise) return this.recoveryPromise;
-    if (!this.pendingToolTail) return 'none';
+    if (!this.pendingIncompleteTail) return 'none';
 
     this.recoveryPromise = this.runRecovery(continueTurn);
     try {
@@ -91,21 +117,22 @@ export class IncompleteToolTailRecovery {
   ): Promise<IncompleteToolTailRecoveryResult> {
     let attempts = 0;
 
-    while (this.pendingToolTail) {
+    while (this.pendingIncompleteTail) {
       if (this.abortRequested) {
-        this.pendingToolTail = false;
+        this.pendingIncompleteTail = false;
         return 'aborted';
       }
       if (attempts >= this.maxRecoveryAttempts) {
-        this.pendingToolTail = false;
+        this.pendingIncompleteTail = false;
         return 'exhausted';
       }
 
-      this.pendingToolTail = false;
+      this.pendingIncompleteTail = false;
       attempts += 1;
       await continueTurn();
-      // A second incomplete agent_end will set pendingToolTail again while
-      // continueTurn() is running. A normal final response leaves it false.
+      // A second incomplete agent_end will set pendingIncompleteTail again
+      // while continueTurn() is running. A normal final response leaves it
+      // false.
     }
 
     return attempts > 0 ? 'recovered' : 'none';

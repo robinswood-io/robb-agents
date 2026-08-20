@@ -643,7 +643,7 @@ export type SessionEvent =
   | { type: 'tool_result'; sessionId: string; toolUseId: string; toolName: string; result: string; turnId?: string; parentToolUseId?: string; isError?: boolean; timestamp?: number }
   | { type: 'error'; sessionId: string; error: string; timestamp?: number }
   | { type: 'typed_error'; sessionId: string; error: TypedError; timestamp?: number }
-  | { type: 'complete'; sessionId: string; tokenUsage?: Session['tokenUsage']; hasUnread?: boolean; backgroundTasksAlive?: boolean }
+  | { type: 'complete'; sessionId: string; reason?: 'complete' | 'interrupted' | 'error' | 'timeout'; tokenUsage?: Session['tokenUsage']; hasUnread?: boolean; backgroundTasksAlive?: boolean }
   | { type: 'interrupted'; sessionId: string; message?: Message; queuedMessages?: string[] }
   | { type: 'status'; sessionId: string; message: string; statusType?: 'compacting' }
   | { type: 'info'; sessionId: string; message: string; statusType?: 'compaction_complete'; level?: 'info' | 'warning' | 'error' | 'success'; timestamp?: number }
@@ -697,6 +697,15 @@ export interface SendMessageOptions {
    * surfacing) that should wake the agent without looking user-authored.
    */
   hidden?: boolean
+  /**
+   * Internal marker for a host-driven retry of an already-persisted user turn.
+   * The original visible message remains the durable recovery anchor; this
+   * hidden nudge must not replace it with a second user-authored turn.
+   */
+  automaticRecovery?: {
+    originalUserMessageId: string
+    cause: 'app_restart' | 'stream_ended' | 'runtime_error'
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -1003,6 +1012,7 @@ export interface WorkspaceSettings {
   name?: string
   model?: string
   permissionMode?: PermissionMode
+  externalActionPolicy?: 'confirm' | 'allow-in-execute'
   cyclablePermissionModes?: PermissionMode[]
   thinkingLevel?: ThinkingLevel
   workingDirectory?: string

@@ -14,6 +14,8 @@ const mockShellOpenExternal = mock(async () => {})
 const mockIpcMainHandle = mock(() => {})
 const mockDialogShowMessageBox = mock(async () => ({ response: 0, checkboxChecked: false }))
 const mockSessionListeners: Record<string, Function[]> = {}
+let mockPermissionCheckHandler: ((...args: any[]) => boolean) | null = null
+let mockPermissionRequestHandler: ((...args: any[]) => void) | null = null
 
 function createMockWebContents() {
   const listeners: Record<string, Function[]> = {}
@@ -201,8 +203,12 @@ mock.module('electron', () => ({
   },
   session: {
     fromPartition: mock(() => ({
-      setPermissionCheckHandler: mock(() => {}),
-      setPermissionRequestHandler: mock(() => {}),
+      setPermissionCheckHandler: mock((handler: (...args: any[]) => boolean) => {
+        mockPermissionCheckHandler = handler
+      }),
+      setPermissionRequestHandler: mock((handler: (...args: any[]) => void) => {
+        mockPermissionRequestHandler = handler
+      }),
       webRequest: {
         onBeforeRequest: mock((_cb: any) => {}),
         onCompleted: mock((_cb: any) => {}),
@@ -315,6 +321,8 @@ describe('BrowserPaneManager', () => {
     mockShellOpenExternal.mockClear()
     mockIpcMainHandle.mockClear()
     mockDialogShowMessageBox.mockClear()
+    mockPermissionCheckHandler = null
+    mockPermissionRequestHandler = null
     for (const event of Object.keys(mockSessionListeners)) delete mockSessionListeners[event]
     manager = new BrowserPaneManager()
   })
@@ -326,6 +334,64 @@ describe('BrowserPaneManager', () => {
     expect(list).toHaveLength(1)
     expect(list[0].id).toBe('test-1')
     expect(list[0].agentControlActive).toBe(false)
+  })
+
+  it('grants scoped browser permissions only with live autonomous session context', async () => {
+    const instanceId = manager.createForSession('session-autonomous', { workspaceId: 'workspace-autonomous' })
+    const instance = (manager as any).instances.get(instanceId)
+    await manager.navigate(instanceId, 'https://signup.microsoft.com/account')
+    instance.pageView.webContents._emit('did-navigate', 'https://signup.microsoft.com/account')
+    manager.setAgentControl('session-autonomous', {}, { workspaceId: 'workspace-autonomous' })
+    manager.setPermissionAutonomyResolver(() => ({
+      permissionMode: 'allow-all',
+      externalActionPolicy: 'allow-in-execute',
+    }))
+
+    expect((manager as any).getPermissionContext(
+      instance.pageView.webContents,
+      'https://microsoft-api.arkoselabs.com/',
+    )).toEqual({
+      agentControlled: true,
+      permissionMode: 'allow-all',
+      externalActionPolicy: 'allow-in-execute',
+      requestingOrigin: 'https://microsoft-api.arkoselabs.com/',
+      topLevelUrl: 'https://signup.microsoft.com/account',
+    })
+    expect(mockPermissionCheckHandler).not.toBeNull()
+    expect(mockPermissionCheckHandler!(
+      instance.pageView.webContents,
+      'sensors',
+      'https://microsoft-api.arkoselabs.com/',
+      {},
+    )).toBe(true)
+
+    let requestDecision: boolean | undefined
+    mockPermissionRequestHandler!(
+      instance.pageView.webContents,
+      'media',
+      (allowed: boolean) => { requestDecision = allowed },
+      { requestingUrl: 'https://microsoft-api.arkoselabs.com/challenge' },
+    )
+    expect(requestDecision).toBe(true)
+  })
+
+  it('keeps browser permissions denied when the live session is not autonomous', async () => {
+    const instanceId = manager.createForSession('session-ask', { workspaceId: 'workspace-ask' })
+    const instance = (manager as any).instances.get(instanceId)
+    await manager.navigate(instanceId, 'https://example.com/')
+    instance.pageView.webContents._emit('did-navigate', 'https://example.com/')
+    manager.setAgentControl('session-ask', {}, { workspaceId: 'workspace-ask' })
+    manager.setPermissionAutonomyResolver(() => ({
+      permissionMode: 'ask',
+      externalActionPolicy: 'allow-in-execute',
+    }))
+
+    expect(mockPermissionCheckHandler!(
+      instance.pageView.webContents,
+      'geolocation',
+      'https://example.com/',
+      {},
+    )).toBe(false)
   })
 
   it('is idempotent when explicit ID already exists', () => {
@@ -865,6 +931,25 @@ describe('BrowserPaneManager', () => {
     const warnEntries = manager.getConsoleLogs('console-1', { level: 'warn', limit: 10 })
     expect(warnEntries).toHaveLength(1)
     expect(warnEntries[0].message).toBe('warn message')
+  })
+
+  it('redacts OAuth callback artifacts before retaining browser console entries', () => {
+    manager.createInstance('console-oauth')
+    const instance = (manager as any).instances.get('console-oauth')
+    const authorizationCode = 'authorization-code-value'
+    const oauthState = 'oauth-state-value'
+    const clientInfo = 'client-identity-value'
+    const message = `navigation failed: https://login.example.test/callback#code=${authorizationCode}&state=${oauthState}&client_info=${clientInfo}`
+
+    instance.pageView.webContents._emit('console-message', 3, message)
+
+    const [entry] = manager.getConsoleLogs('console-oauth', { level: 'all', limit: 10 })
+    expect(entry.message).toContain('code=[REDACTED]')
+    expect(entry.message).toContain('state=[REDACTED]')
+    expect(entry.message).toContain('client_info=[REDACTED]')
+    expect(entry.message).not.toContain(authorizationCode)
+    expect(entry.message).not.toContain(oauthState)
+    expect(entry.message).not.toContain(clientInfo)
   })
 
   it('applies observer theme signal and skips regular console logging for it', () => {

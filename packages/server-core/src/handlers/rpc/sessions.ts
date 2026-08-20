@@ -284,7 +284,8 @@ export function registerSessionsHandlers(server: RpcServer, deps: HandlerDeps): 
           } as SessionEvent)
           pushTyped(server, RPC_CHANNELS.sessions.EVENT, { to: 'client', clientId: callerClientId }, {
             type: 'complete',
-            sessionId
+            sessionId,
+            reason: 'error',
           } as SessionEvent)
         })
     })

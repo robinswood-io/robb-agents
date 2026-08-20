@@ -41,8 +41,25 @@ export const HANDLED_CHANNELS = [
 
 export function registerMissionsHandlers(server: RpcServer, deps: HandlerDeps): void {
   const planners = new Map<string, MissionPlanner>()
+  const resolveSubagentAutonomyContext = (
+    workspace: { id: string; rootPath: string },
+    parentSessionId?: string,
+  ) => {
+    const workspaceConfig = loadWorkspaceConfig(workspace.rootPath)
+    const parent = parentSessionId
+      ? deps.sessionManager.getSessions(workspace.id).find((session) => session.id === parentSessionId)
+      : undefined
+    return {
+      workspacePermissionMode: workspaceConfig?.defaults?.permissionMode,
+      // Missing/stale parent references fail closed instead of inheriting a
+      // potentially more permissive workspace default.
+      parentPermissionMode: parentSessionId ? (parent?.permissionMode ?? 'safe') : undefined,
+      externalActionPolicy: workspaceConfig?.defaults?.externalActionPolicy,
+    }
+  }
   const service = new MissionRuntimeService({
     sessionManager: deps.sessionManager,
+    resolveSubagentAutonomyContext,
     onSnapshot: (workspaceId, snapshot) => {
       pushTyped(
         server,
@@ -102,6 +119,8 @@ export function registerMissionsHandlers(server: RpcServer, deps: HandlerDeps): 
       host: deps.sessionManager,
       workspaceId: workspace.id,
       workspaceRoot: workspace.rootPath,
+      resolveSubagentAutonomyContext: (parentSessionId) =>
+        resolveSubagentAutonomyContext(workspace, parentSessionId),
     })
     planners.set(workspace.id, planner)
     return planner

@@ -1384,6 +1384,8 @@
   "settings.workspace.routingSensitivity.public": "Public",
   "settings.workspace.routingSensitivity.restricted": "Restricted",
   "settings.workspace.title": "Workspace",
+  "settings.workspace.totalAutonomy": "実行モードで完全自律",
+  "settings.workspace.totalAutonomyDesc": "エージェントが操作中の場合、対象が明確な外部アクションと必要なウェブ権限を追加確認なしで許可します。確認モードと探索モードは引き続き保護されます。",
   "settings.workspace.untitled": "無題",
   "settings.workspace.workspaceInfo": "Workspace情報",
   "settings.workspace.workspaceSettings": "Workspace設定",

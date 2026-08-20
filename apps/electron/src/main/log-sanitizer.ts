@@ -29,6 +29,17 @@ export function isSensitiveLogKey(key: string): boolean {
   const normalized = key.replace(/[^a-z0-9]/gi, '').toLowerCase()
   return normalized === 'authorization'
     || normalized === 'proxyauthorization'
+    || normalized === 'authorizationcode'
+    || normalized === 'oauthcode'
+    || normalized === 'oauthstate'
+    || normalized === 'codeverifier'
+    || normalized === 'clientassertion'
+    || normalized === 'clientinfo'
+    || normalized === 'sessionstate'
+    || normalized === 'relaystate'
+    || normalized === 'loginhint'
+    || normalized === 'nonce'
+    || normalized === 'idtoken'
     || normalized.endsWith('token')
     || normalized.endsWith('password')
     || normalized.endsWith('passwd')

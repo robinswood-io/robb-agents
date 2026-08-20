@@ -67,6 +67,42 @@ describe('safeSerializeLogValue', () => {
     expect(parsed.self).toBe('[Circular]')
   })
 
+  it('redacts structured OAuth artifacts and callback URL parameters', () => {
+    const authorizationCode = 'authorization-code-value'
+    const oauthState = 'oauth-state-value'
+    const codeVerifier = 'oauth-code-verifier-value'
+    const idToken = 'oauth-id-token-value'
+    const clientInfo = 'oauth-client-identity-value'
+    const sessionState = 'oauth-session-state-value'
+    const serialized = safeSerializeLogValue({
+      callbackUrl: `robb://auth-callback?code=${authorizationCode}&state=${oauthState}&client_info=${clientInfo}&session_state=${sessionState}&workspace=workspace-a`,
+      authorizationCode,
+      oauthState,
+      codeVerifier,
+      idToken,
+      clientInfo,
+      sessionState,
+      state: 'ready',
+      code: 'ERR_CONNECTION_RESET',
+    })
+    const parsed = JSON.parse(serialized) as Record<string, unknown>
+
+    for (const secret of [authorizationCode, oauthState, codeVerifier, idToken, clientInfo, sessionState]) {
+      expect(serialized).not.toContain(secret)
+    }
+    expect(parsed.authorizationCode).toBe(REDACTED_LOG_VALUE)
+    expect(parsed.oauthState).toBe(REDACTED_LOG_VALUE)
+    expect(parsed.codeVerifier).toBe(REDACTED_LOG_VALUE)
+    expect(parsed.idToken).toBe(REDACTED_LOG_VALUE)
+    expect(parsed.clientInfo).toBe(REDACTED_LOG_VALUE)
+    expect(parsed.sessionState).toBe(REDACTED_LOG_VALUE)
+    expect(parsed.state).toBe('ready')
+    expect(parsed.code).toBe('ERR_CONNECTION_RESET')
+    expect(parsed.callbackUrl).toContain('code=[REDACTED]')
+    expect(parsed.callbackUrl).toContain('state=[REDACTED]')
+    expect(parsed.callbackUrl).toContain('workspace=workspace-a')
+  })
+
   it('does not invoke sensitive getters and survives throwing getters', () => {
     let passwordReads = 0
     const bearerToken = 'c'.repeat(24)
@@ -109,7 +145,18 @@ describe('isSensitiveLogKey', () => {
     expect(isSensitiveLogKey('x-api-key')).toBe(true)
     expect(isSensitiveLogKey('refresh_token')).toBe(true)
     expect(isSensitiveLogKey('clientSecret')).toBe(true)
+    expect(isSensitiveLogKey('authorizationCode')).toBe(true)
+    expect(isSensitiveLogKey('oauthState')).toBe(true)
+    expect(isSensitiveLogKey('codeVerifier')).toBe(true)
+    expect(isSensitiveLogKey('idToken')).toBe(true)
+    expect(isSensitiveLogKey('clientInfo')).toBe(true)
+    expect(isSensitiveLogKey('sessionState')).toBe(true)
+    expect(isSensitiveLogKey('relayState')).toBe(true)
+    expect(isSensitiveLogKey('loginHint')).toBe(true)
+    expect(isSensitiveLogKey('nonce')).toBe(true)
     expect(isSensitiveLogKey('tokenUsage')).toBe(false)
+    expect(isSensitiveLogKey('state')).toBe(false)
+    expect(isSensitiveLogKey('code')).toBe(false)
     expect(isSensitiveLogKey('inputTokens')).toBe(false)
     expect(isSensitiveLogKey('maxTokens')).toBe(false)
   })

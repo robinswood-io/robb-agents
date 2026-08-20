@@ -32,6 +32,7 @@ function checkBash(
   mode: PermissionMode,
   command: string,
   currentUserRequest?: string,
+  externalActionPolicy?: 'confirm' | 'allow-in-execute',
 ) {
   const sessionId = `sensitive-action-${randomUUID()}`;
   usedSessionIds.push(sessionId);
@@ -45,6 +46,32 @@ function checkBash(
     workspaceId: 'sensitive-action-test',
     activeSourceSlugs: [],
     allSourceSlugs: [],
+    hasSourceActivation: false,
+    externalActionPolicy,
+    permissionManager: whitelistedPermissionManager,
+    currentUserRequest,
+  });
+}
+
+function checkMcp(
+  mode: PermissionMode,
+  toolName: string,
+  input: Record<string, unknown>,
+  currentUserRequest?: string,
+) {
+  const sessionId = `sensitive-action-${randomUUID()}`;
+  usedSessionIds.push(sessionId);
+  initializeModeState(sessionId, mode);
+  const sourceSlug = toolName.split('__')[1] ?? '';
+  return runPreToolUseChecks({
+    toolName,
+    input,
+    sessionId,
+    permissionMode: mode,
+    workspaceRootPath: '/tmp/robb-sensitive-action-test',
+    workspaceId: 'sensitive-action-test',
+    activeSourceSlugs: [sourceSlug],
+    allSourceSlugs: [sourceSlug],
     hasSourceActivation: false,
     permissionManager: whitelistedPermissionManager,
     currentUserRequest,
@@ -94,6 +121,52 @@ PY"`,
     }
     expect(classifySensitiveExternalAction('mcp__gmail__search_messages', { query: 'invoice' })).toBeNull();
     expect(classifySensitiveExternalAction('api_github', { method: 'GET', path: '/repos/acme/widgets/issues' })).toBeNull();
+  });
+
+  it('never classifies explicit MCP preflight or read-only operations as mutations', () => {
+    const readOnlyCalls: Array<[string, Record<string, unknown>]> = [
+      ['mcp__google-contacts__gmail_send_preflight', { to: 'alice@example.com' }],
+      ['mcp__gmail__get_send_status', { message_id: 'msg-7' }],
+      ['mcp__broker__preview_buy_order', { account_id: 'acct-7', symbol: 'ACME' }],
+      ['mcp__cloud__check_deployment', { environment: 'prod' }],
+    ];
+
+    for (const [toolName, input] of readOnlyCalls) {
+      expect(classifySensitiveExternalAction(toolName, input)).toBeNull();
+    }
+  });
+
+  it('keeps compound mutations fail-closed despite a leading validation verb', () => {
+    expect(classifySensitiveExternalAction(
+      'mcp__gmail__verify_and_send_email',
+      { to: 'alice@example.com' },
+    )?.category).toBe('external_send');
+
+    // Tool arguments are model-controlled and cannot, on their own, downgrade
+    // a mutating tool contract to read-only.
+    expect(classifySensitiveExternalAction(
+      'mcp__gmail__send_email',
+      { to: 'alice@example.com', dry_run: true },
+    )?.category).toBe('external_send');
+
+    expect(classifySensitiveExternalAction(
+      'mcp__gmail__preflight_and_send_email',
+      { to: 'alice@example.com' },
+    )?.category).toBe('external_send');
+  });
+
+  it('honors explicit read-only API semantics even when POST is used as a transport', () => {
+    expect(classifySensitiveExternalAction('api_gmail', {
+      method: 'POST',
+      path: '/emails/send/preflight',
+      to: 'alice@example.com',
+    })).toBeNull();
+
+    expect(classifySensitiveExternalAction('api_broker', {
+      method: 'POST',
+      path: '/orders/preview-buy-order',
+      account_id: 'acct-7',
+    })).toBeNull();
   });
 
   it('classifies high-confidence MCP and API sends, publications, secrets, and payments', () => {
@@ -209,5 +282,54 @@ describe('sensitive external action gate across permission modes', () => {
 
   it('leaves ordinary local operations alone in Execute', () => {
     expect(checkBash('allow-all', 'bun test', 'Poursuis').type).toBe('allow');
+  });
+
+  it('allows Gmail preflight without a permission prompt but keeps the actual send gated', () => {
+    expect(checkMcp(
+      'allow-all',
+      'mcp__google-contacts__gmail_send_preflight',
+      { to: 'alice@example.com' },
+      'Poursuis',
+    ).type).toBe('allow');
+
+    expect(checkMcp(
+      'allow-all',
+      'mcp__google-contacts__gmail_send',
+      { to: 'alice@example.com' },
+      'Poursuis',
+    ).type).toBe('prompt');
+  });
+
+  it('allows an opt-in workspace policy to skip external confirmation only in Execute', () => {
+    expect(checkBash(
+      'allow-all',
+      'git push origin main',
+      'Poursuis',
+      'allow-in-execute',
+    ).type).toBe('allow');
+
+    expect(checkBash(
+      'ask',
+      'git push origin main',
+      'Poursuis',
+      'allow-in-execute',
+    ).type).toBe('prompt');
+
+    expect(checkBash(
+      'safe',
+      'git push origin main',
+      'Push origin main',
+      'allow-in-execute',
+    ).type).toBe('block');
+  });
+
+  it('keeps confirmation as the default and explicit policy', () => {
+    expect(checkBash('allow-all', 'git push origin main', 'Poursuis').type).toBe('prompt');
+    expect(checkBash(
+      'allow-all',
+      'git push origin main',
+      'Poursuis',
+      'confirm',
+    ).type).toBe('prompt');
   });
 });

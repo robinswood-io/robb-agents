@@ -22,6 +22,7 @@ import {
 import type { SessionCompletionEvent } from '../sessions/SessionManager';
 import { TaskRunner, type ConductorSessionHost } from './TaskRunner';
 import { inferTaskNodeProfile, type TaskNodeRouteContext } from './task-node-routing';
+import type { SubagentAutonomyContext } from '../subagents/autonomy-inheritance.ts';
 
 // Flush pending microtasks so the runner's async dispatch (create → column → send) settles.
 const tick = () => new Promise<void>((r) => setTimeout(r, 0));
@@ -150,13 +151,20 @@ describe('TaskRunner (Conductor)', () => {
     rmSync(root, { recursive: true, force: true });
   });
 
-  function makeRunner(executionProofIssuer?: ExecutionProofIssuer) {
+  function makeRunner(
+    executionProofIssuer?: ExecutionProofIssuer,
+    autonomyContext: SubagentAutonomyContext = {
+      workspacePermissionMode: 'allow-all',
+      externalActionPolicy: 'confirm',
+    },
+  ) {
     return new TaskRunner({
       host,
       workspaceId: 'ws',
       workspaceRoot: root,
       getKillSwitch: inactiveKillSwitch,
       now: () => '2026-06-07T00:00:00.000Z',
+      resolveSubagentAutonomyContext: () => autonomyContext,
       ...(executionProofIssuer ? {
         verifyExecutionProof: (proof, binding) => executionProofIssuer.verifyForTask(proof, binding),
       } : {}),
@@ -305,6 +313,51 @@ describe('TaskRunner (Conductor)', () => {
     await tick()
 
     expect(host.created.find((c) => c.options.name === 'c')?.options.permissionMode).toBe('safe')
+  })
+
+  it('inherits full tools and network only from an opted-in Execute parent', async () => {
+    saveTaskSpec(
+      root,
+      specOf({ id: 'autonomous', title: 'Autonomous', goal: 'g', nodes: [{ id: 'work', prompt: 'work' }] }),
+    )
+    const runner = makeRunner(undefined, {
+      workspacePermissionMode: 'allow-all',
+      parentPermissionMode: 'allow-all',
+      externalActionPolicy: 'allow-in-execute',
+    })
+    runner.run('autonomous', { runId: 'r1', orchestratorSessionId: 'orch' })
+    await tick()
+
+    const created = host.created.find((entry) => entry.options.name === 'work')?.options
+    expect(created?.permissionMode).toBe('allow-all')
+    expect(created?.executionIsolation).toBeUndefined()
+    expect(host.promptFor('work')).toContain('[Inherited execution policy]')
+    expect(host.promptFor('work')).toContain('browser, shell, and network')
+  })
+
+  it('keeps explicit Ask and a non-Execute parent inside the restrictive envelope', async () => {
+    saveTaskSpec(
+      root,
+      specOf({
+        id: 'strict-children', title: 'Strict children', goal: 'g',
+        nodes: [
+          { id: 'explicit-ask', prompt: 'ask', permissionMode: 'ask' },
+          { id: 'requested-execute', prompt: 'execute', permissionMode: 'allow-all' },
+        ],
+      }),
+    )
+    const runner = makeRunner(undefined, {
+      workspacePermissionMode: 'allow-all',
+      parentPermissionMode: 'ask',
+      externalActionPolicy: 'allow-in-execute',
+    })
+    runner.run('strict-children', { runId: 'r1', orchestratorSessionId: 'orch' })
+    await tick()
+
+    for (const child of host.created) {
+      expect(child.options.permissionMode).toBe('ask')
+      expect(child.options.executionIsolation).toBeDefined()
+    }
   })
 
   it('injects a stable idempotency key and isolation envelope into the child prompt', async () => {

@@ -76,6 +76,16 @@ describe('BaseAgent', () => {
       agent.setPermissionMode('ask');
       expect(agent.isInSafeMode()).toBe(false);
     });
+
+    it('updates the sensitive-action policy in subsequent prompt contracts', () => {
+      const before = agent.getPromptBuilder().buildStableContextParts().join('\n');
+      expect(before).toContain('require an explicit user instruction');
+
+      agent.setExternalActionPolicy('allow-in-execute');
+      const after = agent.getPromptBuilder().buildStableContextParts().join('\n');
+      expect(after).toContain('standing authorization');
+      expect(after).toContain('without another prompt');
+    });
   });
 
   describe('Workspace & Session', () => {
@@ -216,6 +226,25 @@ describe('BaseAgent', () => {
     it('should cleanup on dispose (alias)', () => {
       // Should not throw
       agent.dispose();
+    });
+
+    it('forgets preloaded source guides when conversation history is cleared', async () => {
+      agent.setAllSources([{
+        ...createMockSource({ slug: 'guided-source' }),
+        folderPath: '/tmp/guided-source',
+        guide: { raw: '# Guide\nUse the source carefully.' },
+      }]);
+      await agent.setSourceServers(
+        { 'guided-source': { type: 'http', url: 'http://test' } },
+        {},
+        ['guided-source'],
+      );
+
+      agent.getSourceManager().formatSourceState();
+      expect(agent.getSourceManager().getPreloadedSourceGuidePaths()).toHaveLength(1);
+
+      agent.clearHistory();
+      expect(agent.getSourceManager().getPreloadedSourceGuidePaths()).toEqual([]);
     });
   });
 

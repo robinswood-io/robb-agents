@@ -1384,6 +1384,8 @@
   "settings.workspace.routingSensitivity.public": "Public",
   "settings.workspace.routingSensitivity.restricted": "Restricted",
   "settings.workspace.title": "Workspace",
+  "settings.workspace.totalAutonomy": "Pełna autonomia w trybie Wykonaj",
+  "settings.workspace.totalAutonomyDesc": "Zezwala na zewnętrzne działania o określonym zakresie i wymagane uprawnienia sieciowe podczas aktywnej kontroli agenta bez dodatkowego potwierdzenia. Tryby Pytaj i Eksploruj pozostają chronione.",
   "settings.workspace.untitled": "Bez nazwy",
   "settings.workspace.workspaceInfo": "Informacje o Workspace",
   "settings.workspace.workspaceSettings": "Ustawienia Workspace",

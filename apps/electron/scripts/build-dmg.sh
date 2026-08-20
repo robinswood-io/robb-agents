@@ -22,8 +22,9 @@ Builds a local Robb Agents DMG and ZIP plus SHA-256 checksums.
 
 Options:
   arm64|x64  Target macOS architecture (default: arm64)
-  --release  Require Developer ID signing and Apple notarization, then verify
-             the final application with codesign, spctl and stapler.
+  --release  Require a clean, identifiable Git source plus Developer ID
+             signing and Apple notarization, then verify the final application
+             with codesign, spctl and stapler.
 
 Release credentials (provided by the operator/CI; never committed):
   CSC_LINK + CSC_KEY_PASSWORD, or CSC_NAME
@@ -57,6 +58,17 @@ while (($#)); do
 done
 
 if [[ "$RELEASE_BUILD" == true ]]; then
+  command -v git >/dev/null || { echo "ERROR: --release requires Git to verify source integrity." >&2; exit 1; }
+  command -v node >/dev/null || { echo "ERROR: --release requires Node.js to verify source integrity." >&2; exit 1; }
+  # Refuse dirty source before dependency installation or any generated-file
+  # cleanup. The Electron main build and electron-builder hook repeat this
+  # check so source cannot become dirty between preflight and packaging.
+  RELEASE_COMMIT="$(node "$SCRIPT_DIR/releaseIntegrity.cjs" --check-source "$ROOT_DIR")"
+  export ROBB_BUILD_CHANNEL=production
+  export ROBB_BUILD_COMMIT="$RELEASE_COMMIT"
+  export ROBB_BUILD_DIRTY=false
+  unset CRAFT_DEV_RUNTIME
+
   if [[ -z "${CSC_LINK:-}" && -z "${CSC_NAME:-}" ]]; then
     echo "ERROR: --release requires CSC_LINK or CSC_NAME for Developer ID signing." >&2
     exit 1
@@ -67,8 +79,9 @@ if [[ "$RELEASE_BUILD" == true ]]; then
     exit 1
   fi
 else
-  # The default contract is an unsigned local smoke artifact. Explicitly
-  # disable keychain auto-discovery so duplicate Apple Development identities
+  # The default contract is a development-channel local smoke artifact.
+  export ROBB_BUILD_CHANNEL=development
+  # Explicitly disable keychain auto-discovery so duplicate Apple Development identities
   # cannot make a non-release build fail or accidentally sign it.
   export CSC_IDENTITY_AUTO_DISCOVERY=false
   unset CSC_LINK CSC_KEY_PASSWORD CSC_NAME
@@ -145,7 +158,16 @@ bun run electron:build
 cd "$ELECTRON_DIR"
 # Publishing is handled only by the verified GitHub Release job, never by
 # electron-builder's CI auto-detection.
-bun x --bun electron-builder --config electron-builder.yml --mac --"$ARCH" --publish never
+BUILDER_ARGS=(--config electron-builder.yml --mac --"$ARCH" --publish never)
+if [[ "$RELEASE_BUILD" == true ]]; then
+  # Repeat the production config's fail-closed setting at the invocation
+  # boundary so a future config regression cannot silently disable it.
+  BUILDER_ARGS+=(--config.mac.forceCodeSigning=true)
+else
+  # Preserve explicitly non-release local smoke builds without a certificate.
+  BUILDER_ARGS+=(--config.mac.forceCodeSigning=false)
+fi
+bun x --bun electron-builder "${BUILDER_ARGS[@]}"
 
 DMG_PATH="$ELECTRON_DIR/release/Robb-Agents-${ARCH}.dmg"
 ZIP_PATH="$ELECTRON_DIR/release/Robb-Agents-${ARCH}.zip"

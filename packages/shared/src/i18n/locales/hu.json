@@ -1384,6 +1384,8 @@
   "settings.workspace.routingSensitivity.public": "Public",
   "settings.workspace.routingSensitivity.restricted": "Restricted",
   "settings.workspace.title": "Munkaterület",
+  "settings.workspace.totalAutonomy": "Teljes autonómia Végrehajtás módban",
+  "settings.workspace.totalAutonomyDesc": "Engedélyezi a célhoz kötött külső műveleteket és a szükséges webes engedélyeket aktív ügynökvezérlés közben további megerősítés nélkül. A Kérdezés és Felfedezés mód védett marad.",
   "settings.workspace.untitled": "Névtelen",
   "settings.workspace.workspaceInfo": "Munkaterület adatai",
   "settings.workspace.workspaceSettings": "Munkaterület-beállítások",

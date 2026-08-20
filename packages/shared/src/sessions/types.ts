@@ -76,9 +76,44 @@ export const SESSION_PERSISTENT_FIELDS = [
   // Runtime evidence of autonomous resolution and human-only blockers
   'autonomyEvents',
   'playbookSlug',
+  'externalActionAuthorizations',
+  // Durable in-flight turn marker used to recover after a host restart/stream loss
+  'pendingTurnRecovery',
 ] as const;
 
 export type SessionPersistentField = typeof SESSION_PERSISTENT_FIELDS[number];
+
+/**
+ * Durable marker for a user turn that has started but has not yet produced a
+ * terminal assistant response. It is written before model streaming begins so
+ * a host replacement/crash can resume the turn after restart.
+ */
+export interface PendingTurnRecovery {
+  userMessageId: string;
+  startedAt: number;
+  attempts: number;
+  lastAttemptAt?: number;
+  lastCause?: 'app_restart' | 'stream_ended' | 'runtime_error';
+  exhaustedAt?: number;
+}
+
+export type ExternalActionAuthorizationCategory =
+  | 'git_push'
+  | 'deployment'
+  | 'service_restart'
+  | 'secret_transfer'
+  | 'external_send'
+  | 'external_publication'
+  | 'payment';
+
+/** Durable grant scoped to one sensitive action category and concrete target. */
+export interface ExternalActionAuthorization {
+  category: ExternalActionAuthorizationCategory;
+  targetCandidates: string[];
+  toolName: string;
+  grantedAt: number;
+  expiresAt: number;
+}
 
 /**
  * Session status (user-controlled, never automatic)
@@ -177,6 +212,10 @@ export interface SessionConfig {
   autonomyEvents?: AutonomyEvent[];
   /** Optional operational playbook bound to this session. */
   playbookSlug?: string;
+  /** Unexpired sensitive-action grants, scoped to category + concrete target. */
+  externalActionAuthorizations?: ExternalActionAuthorization[];
+  /** In-flight user turn awaiting a final response; cleared on terminal completion or explicit stop. */
+  pendingTurnRecovery?: PendingTurnRecovery;
   /** Shared viewer URL (if shared via viewer) */
   sharedUrl?: string;
   /** Shared session ID in viewer (for revoke) */
@@ -388,6 +427,10 @@ export interface SessionHeader {
   missionDispatchId?: string;
   /** Mission role assigned to this session. */
   missionRole?: 'planner' | 'worker' | 'reviewer' | 'supervisor';
+  /** In-flight user turn awaiting automatic recovery after host/stream interruption. */
+  pendingTurnRecovery?: PendingTurnRecovery;
+  /** Unexpired sensitive-action grants, scoped to category + concrete target. */
+  externalActionAuthorizations?: ExternalActionAuthorization[];
   // Pre-computed fields for fast list loading
   /** Number of messages in session */
   messageCount: number;
@@ -498,4 +541,8 @@ export interface SessionMetadata {
   missionDispatchId?: string;
   /** Mission role assigned to this session. */
   missionRole?: 'planner' | 'worker' | 'reviewer' | 'supervisor';
+  /** In-flight user turn awaiting automatic recovery after host/stream interruption. */
+  pendingTurnRecovery?: PendingTurnRecovery;
+  /** Unexpired sensitive-action grants, scoped to category + concrete target. */
+  externalActionAuthorizations?: ExternalActionAuthorization[];
 }

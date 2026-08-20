@@ -94,7 +94,10 @@ import {
   OVERFLOW_RECOVERY_COMPACTION_INSTRUCTIONS,
   prepareMessagesForOverflowContinuation,
 } from './overflow-recovery.ts';
-import { IncompleteToolTailRecovery } from './incomplete-tool-tail-recovery.ts';
+import {
+  IncompleteToolTailRecovery,
+  prepareMessagesForIncompleteTailContinuation,
+} from './incomplete-tool-tail-recovery.ts';
 
 // ============================================================
 // Types — JSONL Protocol
@@ -1252,7 +1255,7 @@ function handleSessionEvent(event: AgentSessionEvent): void {
     event.type === 'agent_end'
     && incompleteToolTailRecovery.shouldSuppressAgentEnd(event.messages)
   ) {
-    debugLog('Held premature agent_end after tool result; scheduling bounded continuation');
+    debugLog('Held premature agent_end with an incomplete tail; scheduling bounded continuation');
     return;
   }
 
@@ -1365,12 +1368,17 @@ async function handlePrompt(msg: Extract<InboundMessage, { type: 'prompt' }>): P
     });
 
     const recoveryResult = await incompleteToolTailRecovery.recover(async () => {
-      debugLog('Continuing Pi turn from persisted tool result after premature agent_end');
+      const prepared = prepareMessagesForIncompleteTailContinuation(session.agent.state.messages);
+      if (prepared.removedAbortedAssistant) {
+        session.agent.state.messages = prepared.messages;
+        debugLog('Removed aborted assistant tail before incomplete-turn continuation');
+      }
+      debugLog('Continuing Pi turn from the last durable user/tool-result tail after premature agent_end');
       await session.agent.continue();
     });
 
     if (recoveryResult === 'exhausted') {
-      const message = 'The agent repeatedly stopped after a tool result before producing a final response. Completed tool results were preserved; retry to resume safely.';
+      const message = 'The agent repeatedly stopped with an incomplete turn before producing a final response. Completed tool results were preserved; retry to resume safely.';
       debugLog('Incomplete tool-tail recovery exhausted');
       send({ type: 'error', message, code: 'incomplete_tool_tail' });
       send({ type: 'event', event: { type: 'agent_end', messages: [], willRetry: false } });

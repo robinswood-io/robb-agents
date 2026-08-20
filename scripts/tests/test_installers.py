@@ -126,6 +126,18 @@ class InstallerContractTests(unittest.TestCase):
         mac_build = (ROOT / "apps" / "electron" / "scripts" / "build-dmg.sh").read_text(encoding="utf-8")
         self.assertIn("export CSC_IDENTITY_AUTO_DISCOVERY=false", mac_build)
         self.assertIn("unset CSC_LINK CSC_KEY_PASSWORD CSC_NAME", mac_build)
+        self.assertIn("export ROBB_BUILD_CHANNEL=production", mac_build)
+        self.assertIn("export ROBB_BUILD_CHANNEL=development", mac_build)
+        self.assertIn("releaseIntegrity.cjs", mac_build)
+        self.assertIn("--config.mac.forceCodeSigning=true", mac_build)
+        self.assertIn("--config.mac.forceCodeSigning=false", mac_build)
+
+        release_builder = (ROOT / "apps" / "electron" / "electron-builder.yml").read_text(encoding="utf-8")
+        development_builder = (ROOT / "apps" / "electron" / "electron-builder.dev.yml").read_text(encoding="utf-8")
+        self.assertIn("beforePack: scripts/releaseIntegrity.cjs", release_builder)
+        self.assertIn("afterSign: scripts/afterSign.cjs", release_builder)
+        self.assertIn("forceCodeSigning: true", release_builder)
+        self.assertIn("forceCodeSigning: false", development_builder)
 
         package = json.loads((ROOT / "package.json").read_text(encoding="utf-8"))
         for dependency in ("postcss", "tar"):

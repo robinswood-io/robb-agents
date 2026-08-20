@@ -141,6 +141,42 @@ export function buildHeaders(
 }
 
 /**
+ * Return value-free request metadata for diagnostics.
+ *
+ * Header values can contain bearer/basic/API-key credentials and must never be
+ * written to stderr before the Electron log sanitizer gets a chance to run.
+ */
+export function buildApiRequestDebugMetadata(options: RequestInit, requestUrl?: string): {
+  headerNames: string[];
+  bodyLength: number;
+  endpoint?: string;
+  queryParameterNames?: string[];
+} {
+  const headers = new Headers(options.headers);
+  const headerNames: string[] = [];
+  headers.forEach((_value, name) => headerNames.push(name));
+  let urlMetadata: { endpoint?: string; queryParameterNames?: string[] } = {};
+  if (requestUrl) {
+    try {
+      const parsed = new URL(requestUrl);
+      urlMetadata = {
+        endpoint: `${parsed.origin}${parsed.pathname}`,
+        queryParameterNames: [...new Set(parsed.searchParams.keys())].sort(),
+      };
+    } catch {
+      urlMetadata = { endpoint: '[invalid-url]' };
+    }
+  }
+  return {
+    headerNames: headerNames.sort(),
+    bodyLength: options.body === undefined || options.body === null
+      ? 0
+      : String(options.body).length,
+    ...urlMetadata,
+  };
+}
+
+/**
  * Build the full URL for an API request
  */
 function buildUrl(
@@ -261,8 +297,6 @@ export function createApiTool(
         const url = buildUrl(config.baseUrl, path, method, params, config.auth, resolvedCredential);
         const headers = buildHeaders(config.auth, resolvedCredential, config.defaultHeaders);
 
-        debug(`[api-tools] ${config.name}: ${method} ${url}`);
-
         const fetchOptions: RequestInit = {
           method,
           headers,
@@ -275,13 +309,13 @@ export function createApiTool(
             fetchOptions.body = params._rawBody;
             (fetchOptions.headers as Record<string, string>)['Content-Type'] =
               typeof params._contentType === 'string' ? params._contentType : 'text/plain';
-            debug(`[api-tools] ${config.name}: raw body (${(fetchOptions.headers as Record<string, string>)['Content-Type']}): ${params._rawBody.substring(0, 200)}`);
+            debug(`[api-tools] ${config.name}: raw body prepared (${(fetchOptions.headers as Record<string, string>)['Content-Type']}, ${params._rawBody.length} chars)`);
           } else {
             fetchOptions.body = JSON.stringify(params);
           }
         }
 
-        debug(`[api-tools] ${config.name}: headers=${JSON.stringify(fetchOptions.headers)}, bodyLength=${fetchOptions.body ? String(fetchOptions.body).length : 0}`);
+        debug(`[api-tools] ${config.name}: ${method} requestMetadata=${JSON.stringify(buildApiRequestDebugMetadata(fetchOptions, url))}`);
 
         const response = await fetch(url, fetchOptions);
 

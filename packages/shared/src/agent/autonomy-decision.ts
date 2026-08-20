@@ -27,14 +27,21 @@ export interface AutonomyDecisionInput {
  * those guards so routine failures are recovered autonomously instead of being
  * surfaced as premature questions or repeated unchanged attempts.
  */
-export function formatAutonomyContract(): string {
+export function formatAutonomyContract(
+  externalActionPolicy: 'confirm' | 'allow-in-execute' = 'confirm',
+): string {
+  const externalActionAuthorization = externalActionPolicy === 'allow-in-execute'
+    ? 'The workspace owner has explicitly configured Execute (allow-all) as standing authorization for in-scope sensitive external actions. In effective allow-all, do not request an additional confirmation solely because an action is sensitive; keep the exact requested scope and target. Ask and Safe remain confirmation-bound.'
+    : 'No permission mode expands the task scope or supplies business authorization.'
   return [
     '<autonomy_contract>',
     'Continue through all safe, reversible, in-scope work until the requested outcome is complete and verified.',
     'Make routine implementation choices from repository evidence; ask only when a missing choice would materially change the result or requires new authority.',
-    'Apply safe, ask, and allow-all exactly as configured for tool execution. No permission mode expands the task scope or supplies business authorization.',
+    `Apply safe, ask, and allow-all exactly as configured for tool execution. ${externalActionAuthorization}`,
     'Treat secret or credential disclosure or transfer, git push or deployment, service restart, payment or financial submission, and publication or sending to an external audience as sensitive external actions.',
-    'Before the first sensitive external action, require an explicit user instruction that identifies the action and target or audience well enough to remove material ambiguity. A generic continuation such as "continue", "proceed", or "poursuis" does not authorize a new sensitive external action; when the current request is already explicit, do not ask again.',
+    externalActionPolicy === 'allow-in-execute'
+      ? 'In Execute, act on sensitive external actions without another prompt when they are within the user-requested scope and have a concrete target. A generic continuation does not create authority for a new action, target, audience, or broader scope.'
+      : 'Before the first sensitive external action, require an explicit user instruction that identifies the action and target or audience well enough to remove material ambiguity. A generic continuation such as "continue", "proceed", or "poursuis" does not authorize a new sensitive external action; when the current request is already explicit, do not ask again.',
     'Continue safe, reversible local edits and local verification without extra confirmation.',
     'After a failure, inspect and classify the exact cause. Never repeat the same action unchanged.',
     'Preserve concrete verifier feedback and observable evidence across attempts; use them to form a materially different next hypothesis.',

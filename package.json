@@ -78,7 +78,7 @@
     "test:ui:robb": "bun run scripts/run-robb-playwright-validation.ts",
     "test:update-manifests": "bun test scripts/tests/generate-github-update-manifests.test.ts",
     "typecheck:release-contract": "bunx tsc --noEmit -p scripts/tsconfig.json",
-    "test:release-contract": "bun test scripts/tests/generate-github-update-manifests.test.ts scripts/tests/validate-release-bundle.test.ts scripts/tests/verify-github-release-assets.test.ts",
+    "test:release-contract": "bun test scripts/tests/generate-github-update-manifests.test.ts scripts/tests/validate-release-bundle.test.ts scripts/tests/verify-github-release-assets.test.ts scripts/tests/build-provenance.test.ts scripts/tests/release-integrity.test.ts",
     "test:installer-contract": "python3 scripts/tests/test_installers.py",
     "test:connectors:sandbox": "bun run scripts/robb-connector-sandbox-e2e.ts",
     "test:interop:external": "bun run scripts/robb-interop-conformance.ts",

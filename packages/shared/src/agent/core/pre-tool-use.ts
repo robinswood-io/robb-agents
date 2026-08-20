@@ -52,6 +52,7 @@ import { enforceTaskToolIsolation } from './task-tool-isolation.ts';
 import {
   classifySensitiveExternalAction,
   isSensitiveExternalActionExplicitlyAuthorized,
+  type SensitiveExternalActionCategory,
 } from './sensitive-external-action.ts';
 import type { SessionExecutionIsolation } from '../../tasks/durable-execution.ts';
 
@@ -602,6 +603,9 @@ export type PreToolUseCheckResult =
       rememberForMinutes?: number;
       commandHash?: string;
       approvalTtlSeconds?: number;
+      /** Scoped metadata used to remember this exact external authorization. */
+      sensitiveActionCategory?: SensitiveExternalActionCategory;
+      sensitiveActionTargets?: string[];
       /** Never auto-allow this prompt when the backend has no permission handler. */
       requiresExplicitConfirmation?: true;
     }
@@ -640,10 +644,21 @@ export interface PreToolUseInput {
   allSourceSlugs: string[];
   /** Whether the agent supports source activation (has onSourceActivationRequest callback) */
   hasSourceActivation: boolean;
+  /**
+   * Confirmation policy for sensitive external actions. Defaults to `confirm`.
+   * The opt-in bypass is honored only in the effective `allow-all` mode.
+   */
+  externalActionPolicy?: 'confirm' | 'allow-in-execute';
   /** PermissionManager for session-scoped whitelists */
   permissionManager: PermissionManagerLike;
   /** PrerequisiteManager for guide.md checking */
   prerequisiteManager?: PrerequisiteManagerLike;
+  /**
+   * Source guide files whose full contents were preloaded into the model's
+   * current context. Host-owned context builders may provide these to avoid a
+   * synthetic first-call rejection.
+   */
+  preloadedSourceGuidePaths?: readonly string[];
   /** Backend metadata (e.g. Pi forwards intent / displayName via input.metadata) */
   backendMetadata?: { intent?: string; displayName?: string };
   /** Raw current user request, used only for narrow action+target authorization matching. */
@@ -672,6 +687,7 @@ export interface PermissionManagerLike {
 export interface PrerequisiteManagerLike {
   checkPrerequisites(toolName: string): PrerequisiteCheckResult;
   trackBashSkillRead(input: Record<string, unknown>): boolean;
+  markSourceGuidesLoadedInContext?(filePaths: readonly string[]): void;
 }
 
 /** Built-in MCP servers that are always available (not user sources) */
@@ -725,8 +741,10 @@ export function runPreToolUseChecks(ctx: PreToolUseInput): PreToolUseCheckResult
     activeSourceSlugs,
     allSourceSlugs,
     hasSourceActivation,
+    externalActionPolicy = 'confirm',
     permissionManager,
     prerequisiteManager,
+    preloadedSourceGuidePaths,
     backendMetadata,
     currentUserRequest,
     onDebug,
@@ -809,6 +827,10 @@ export function runPreToolUseChecks(ctx: PreToolUseInput): PreToolUseCheckResult
   // 4. PREREQUISITE CHECK (guide.md before source tools)
   // ============================================================
   if (prerequisiteManager) {
+    if (preloadedSourceGuidePaths?.length) {
+      prerequisiteManager.markSourceGuidesLoadedInContext?.(preloadedSourceGuidePaths);
+    }
+
     // Allow Bash through if it's reading a pending skill file (clears the prerequisite)
     if (toolName === 'Bash' && prerequisiteManager.trackBashSkillRead(input)) {
       // Prerequisite cleared — fall through to remaining pipeline steps
@@ -909,10 +931,10 @@ export function runPreToolUseChecks(ctx: PreToolUseInput): PreToolUseCheckResult
   // ============================================================
   // 7. SENSITIVE EXTERNAL-ACTION CONFIRMATION
   // ============================================================
-  // This authorization boundary is independent from permission mode. Safe mode
-  // remains non-interactive and blocks; Ask and Execute require a dedicated
-  // confirmation unless the current request names both the action and target.
-  // It deliberately runs before ask-mode/session whitelists.
+  // Safe mode remains non-interactive and blocks. Ask always retains the
+  // dedicated confirmation boundary. Execute does too unless the host opts the
+  // workspace into `allow-in-execute`; the default remains fail-closed. This
+  // deliberately runs before ask-mode/session whitelists.
   const sensitiveAction = classifySensitiveExternalAction(toolName, input);
   if (sensitiveAction) {
     if (effectivePermissionMode === 'safe') {
@@ -925,24 +947,34 @@ export function runPreToolUseChecks(ctx: PreToolUseInput): PreToolUseCheckResult
       return { type: 'block', reason };
     }
 
-    const explicitlyAuthorized = isSensitiveExternalActionExplicitlyAuthorized(
-      sensitiveAction,
-      currentUserRequest,
-    );
-    if (!explicitlyAuthorized) {
-      onDebug?.(`Sensitive external action: confirmation required for ${sensitiveAction.category}`);
-      return {
-        type: 'prompt',
-        promptType: sensitiveAction.promptType,
-        description: sensitiveAction.description,
-        command: sensitiveAction.commandPreview,
-        modifiedInput: wasModified ? currentInput : undefined,
-        reason: sensitiveAction.reason,
-        impact: sensitiveAction.impact,
-        requiresExplicitConfirmation: true,
-      };
+    const policyAllowsExecute = effectivePermissionMode === 'allow-all'
+      && externalActionPolicy === 'allow-in-execute';
+    if (policyAllowsExecute) {
+      onDebug?.(
+        `Sensitive external action: workspace policy allows ${sensitiveAction.category} in Execute`,
+      );
+    } else {
+      const explicitlyAuthorized = isSensitiveExternalActionExplicitlyAuthorized(
+        sensitiveAction,
+        currentUserRequest,
+      );
+      if (!explicitlyAuthorized) {
+        onDebug?.(`Sensitive external action: confirmation required for ${sensitiveAction.category}`);
+        return {
+          type: 'prompt',
+          promptType: sensitiveAction.promptType,
+          description: sensitiveAction.description,
+          command: sensitiveAction.commandPreview,
+          modifiedInput: wasModified ? currentInput : undefined,
+          reason: sensitiveAction.reason,
+          impact: sensitiveAction.impact,
+          sensitiveActionCategory: sensitiveAction.category,
+          sensitiveActionTargets: sensitiveAction.targetCandidates,
+          requiresExplicitConfirmation: true,
+        };
+      }
+      onDebug?.(`Sensitive external action: current request explicitly authorizes ${sensitiveAction.category} target`);
     }
-    onDebug?.(`Sensitive external action: current request explicitly authorizes ${sensitiveAction.category} target`);
   }
 
   // ============================================================

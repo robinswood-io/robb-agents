@@ -42,7 +42,7 @@ import {
   type WorkspaceInfo,
 } from '@craft-agent/shared/config'
 import type { ActiveSessionInfo, SessionProcessingStatus } from '@craft-agent/core/types'
-import { loadWorkspaceConfig } from '@craft-agent/shared/workspaces'
+import { loadWorkspaceConfig, type ExternalActionPolicy } from '@craft-agent/shared/workspaces'
 import {
   // Session persistence functions
   listSessions as listStoredSessions,
@@ -76,6 +76,9 @@ import {
   type SessionStatus,
   type SessionHeader,
   type SessionAppProvenance,
+  type PendingTurnRecovery,
+  type ExternalActionAuthorization,
+  type ExternalActionAuthorizationCategory,
   pickSessionFields,
 } from '@craft-agent/shared/sessions'
 import { loadWorkspaceSources, loadAllSources, getSourcesBySlugs, isSourceUsable, type LoadedSource, type McpServerConfig, getSourcesNeedingAuth, getSourceCredentialManager, getSourceServerBuilder, type SourceWithCredential, isApiOAuthProvider, hasRenewEndpoint, SERVER_BUILD_ERRORS, TokenRefreshManager, createTokenGetter } from '@craft-agent/shared/sources'
@@ -87,7 +90,7 @@ import { isParentTaskTool } from '@craft-agent/shared/utils/toolNames'
 import { restoreFiles } from '@craft-agent/shared/utils/bundle-files'
 import { getCredentialManager } from '@craft-agent/shared/credentials'
 import { CraftMcpClient, McpClientPool, McpPoolServer } from '@craft-agent/shared/mcp'
-import { type Session, type SessionEvent, type FileAttachment, type SendMessageOptions, type UnreadSummary, type RemoteSessionTransferPayload, type ImportRemoteSessionTransferResult, RPC_CHANNELS, generateMessageId } from '@craft-agent/shared/protocol'
+import { type Session, type SessionEvent, type FileAttachment, type SendMessageOptions, type PermissionRequest, type UnreadSummary, type RemoteSessionTransferPayload, type ImportRemoteSessionTransferResult, RPC_CHANNELS, generateMessageId } from '@craft-agent/shared/protocol'
 import { messageToStored, storedToMessage, type Message, type StoredAttachment, type ToolDisplayMeta, type RoutingMeta, type TokenUsage } from '@craft-agent/core/types'
 import { formatPathsToRelative, formatToolInputPaths, perf, encodeIconToDataUrlAsync, getEmojiIcon, resetSummarizationClient, resolveToolIcon, readFileAttachment, selectSpreadMessages, normalizePath, redactSecretLikeMaterial } from '@craft-agent/shared/utils'
 import { loadAllSkills, loadSkillBySlug, invalidateSkillsCache, type LoadedSkill } from '@craft-agent/shared/skills'
@@ -128,6 +131,28 @@ import {
   toRoutingMetaAppProvenance,
 } from './session-app-provenance'
 import { classifyLatestTurnTerminalState } from './turn-completion'
+import {
+  advancePendingTurnRecovery,
+  buildAutomaticTurnRecoveryPrompt,
+  createPendingTurnRecovery,
+  exhaustPendingTurnRecovery,
+  turnStillNeedsRecovery,
+  type AutomaticTurnRecoveryCause,
+} from './turn-recovery'
+import {
+  hasMatchingExternalActionAuthorization,
+  providerAlwaysAllowForExternalAction,
+  pruneExternalActionAuthorizations,
+  rememberExternalActionAuthorization,
+} from './external-action-authorization'
+import {
+  pendingPermissionCanReplay,
+  resolvePermissionRequestTtlMs,
+} from './permission-request-lifecycle'
+import {
+  buildAutonomyBrowserFallbackPrompt,
+  isAutonomyBrowserFallbackPrompt,
+} from './autonomy-browser-fallback'
 
 // Import from server-core domain utilities
 import { sanitizeForTitle, shouldActivateBrowserOverlay, normalizeBrowserToolName, rollbackFailedBranchCreation, releaseBrowserOwnershipOnForcedStop } from '@craft-agent/server-core/domain'
@@ -856,6 +881,10 @@ interface ManagedSession {
   executionTelemetryGenerations?: Map<number, RuntimeGenerationTelemetryRef>
   /** Runtime-only compaction spans, keyed by processingGeneration. */
   executionTelemetryCompactions?: Map<number, RuntimeCompactionTelemetry>
+  /** Durable in-flight turn marker used for bounded automatic recovery. */
+  pendingTurnRecovery?: PendingTurnRecovery
+  /** Durable sensitive-action grants scoped to an exact category and target. */
+  externalActionAuthorizations?: ExternalActionAuthorization[]
   // NOTE: Parent-child tracking state (pendingTools, parentToolStack, toolToParentMap,
   // pendingTextParent) has been removed. CraftAgent now provides parentToolUseId
   // directly on all events using the SDK's authoritative parent_tool_use_id field.
@@ -867,6 +896,10 @@ interface ManagedSession {
   isArchived?: boolean
   /** Recent autonomous-resolution evidence, persisted with the session. */
   autonomyEvents?: AutonomyEvent[]
+  /** Browser fallback attempts already made during the current visible user turn. */
+  autonomyFallbackAttemptedTools?: Set<string>
+  /** Latest workspace policy waiting for the active provider stream to become idle. */
+  pendingExternalActionPolicy?: ExternalActionPolicy
   /** Optional validated operational playbook bound to the session. */
   playbookSlug?: string
   /** Timestamp when session was archived (for retention policy) */
@@ -1316,6 +1349,11 @@ export class SessionManager implements ISessionManager {
     commandHash?: string
     toolName?: string
     requestedAt: number
+    expiresAt: number
+    request: PermissionRequest
+    timeout: ReturnType<typeof setTimeout>
+    sensitiveActionCategory?: ExternalActionAuthorizationCategory
+    sensitiveActionTargets?: string[]
   }> = new Map()
   // Workspace-scoped OTLP sinks. A sink is created only after explicit workspace opt-in.
   private telemetrySinks: Map<string, ExecutionTelemetrySink> = new Map()
@@ -1784,10 +1822,74 @@ export class SessionManager implements ISessionManager {
   }
 
   private clearPendingPermissionRequestsForSession(sessionId: string): void {
+    const agent = this.sessions.get(sessionId)?.agent
     for (const [requestId, metadata] of this.pendingPermissionRequests.entries()) {
       if (metadata.sessionId === sessionId) {
+        clearTimeout(metadata.timeout)
         this.pendingPermissionRequests.delete(requestId)
+        this.rejectPendingPrivilegedApproval(requestId, metadata)
+        // Resolve the provider-side Promise before discarding host metadata so
+        // session deletion/runtime disposal cannot leave an agent hung forever.
+        agent?.respondToPermission(requestId, false, false)
       }
+    }
+  }
+
+  private rejectPendingPrivilegedApproval(
+    requestId: string,
+    metadata: {
+      sessionId: string
+      type?: string
+      commandHash?: string
+    },
+  ): void {
+    if (metadata.type !== 'admin_approval') return
+    const result = this.privilegedExecutionBroker.resolveApproval(requestId, false, {
+      expectedCommandHash: metadata.commandHash,
+      expectedSessionId: metadata.sessionId,
+    })
+    if (!result.ok) {
+      sessionLog.warn(`Could not close privileged approval ${requestId}: ${result.reason}`)
+    }
+  }
+
+  private expirePendingPermissionRequest(requestId: string): void {
+    const metadata = this.pendingPermissionRequests.get(requestId)
+    if (!metadata) return
+    this.pendingPermissionRequests.delete(requestId)
+    clearTimeout(metadata.timeout)
+    this.rejectPendingPrivilegedApproval(requestId, metadata)
+
+    const managed = this.sessions.get(metadata.sessionId)
+    if (!managed?.agent) return
+    sessionLog.warn('Permission request expired', {
+      sessionId: metadata.sessionId,
+      requestId,
+      toolName: metadata.toolName,
+    })
+    managed.agent.respondToPermission(requestId, false, false)
+    this.sendEvent({
+      type: 'info',
+      sessionId: metadata.sessionId,
+      message: 'The authorization request expired instead of leaving the agent blocked. The action was not executed.',
+      level: 'warning',
+      timestamp: this.monotonic(),
+    }, managed.workspace.id)
+  }
+
+  private replayPendingPermissionRequests(managed: ManagedSession): void {
+    const now = Date.now()
+    for (const [requestId, metadata] of this.pendingPermissionRequests.entries()) {
+      if (metadata.sessionId !== managed.id) continue
+      if (!pendingPermissionCanReplay(metadata.requestedAt, metadata.expiresAt, now)) {
+        this.expirePendingPermissionRequest(requestId)
+        continue
+      }
+      this.sendEvent({
+        type: 'permission_request',
+        sessionId: managed.id,
+        request: metadata.request,
+      }, managed.workspace.id)
     }
   }
 
@@ -2270,6 +2372,7 @@ export class SessionManager implements ISessionManager {
     try {
       const workspaces = getWorkspaces()
       let totalSessions = 0
+      const pendingRecoverySessionIds: string[] = []
 
       // Iterate over each workspace and load its sessions
       for (const workspace of workspaces) {
@@ -2310,6 +2413,9 @@ export class SessionManager implements ISessionManager {
           }
 
           this.sessions.set(meta.id, managed)
+          if (managed.pendingTurnRecovery && !managed.pendingTurnRecovery.exhaustedAt) {
+            pendingRecoverySessionIds.push(meta.id)
+          }
 
           // Initialize session metadata in AutomationSystem for diffing
           const automationSystem = this.automationSystems.get(workspaceRootPath)
@@ -2328,8 +2434,100 @@ export class SessionManager implements ISessionManager {
       }
 
       sessionLog.info(`Loaded ${totalSessions} sessions from disk (metadata only)`)
+
+      // A turn marker survives a host update/crash. Resume only after the
+      // complete session catalogue has been restored so source/session lookups
+      // behave exactly like a normal user send.
+      for (const sessionId of pendingRecoverySessionIds) {
+        setImmediate(() => {
+          void this.resumePendingTurnAfterRestart(sessionId).catch(error => {
+            sessionLog.error('Failed to resume interrupted turn after restart', {
+              sessionId,
+              error: error instanceof Error ? error.message : String(error),
+            })
+          })
+        })
+      }
     } catch (error) {
       sessionLog.error('Failed to load sessions from disk:', error)
+    }
+  }
+
+  private clearPendingTurnRecovery(managed: ManagedSession): void {
+    managed.pendingTurnRecovery = undefined
+  }
+
+  private async enqueueAutomaticTurnRecovery(
+    managed: ManagedSession,
+    cause: AutomaticTurnRecoveryCause,
+  ): Promise<boolean> {
+    const pending = managed.pendingTurnRecovery
+    if (!pending) return false
+
+    if (managed.messageQueue.some(item =>
+      item.options?.automaticRecovery?.originalUserMessageId === pending.userMessageId
+    )) {
+      return true
+    }
+
+    const advanced = advancePendingTurnRecovery(pending, cause)
+    if (!advanced) {
+      managed.pendingTurnRecovery = exhaustPendingTurnRecovery(pending)
+      this.persistSession(managed)
+      await this.flushSession(managed.id)
+      return false
+    }
+
+    managed.pendingTurnRecovery = advanced
+    managed.messageQueue.unshift({
+      message: buildAutomaticTurnRecoveryPrompt(pending, cause),
+      options: {
+        hidden: true,
+        automaticRecovery: {
+          originalUserMessageId: pending.userMessageId,
+          cause,
+        },
+      },
+    })
+    this.persistSession(managed)
+    await this.flushSession(managed.id)
+
+    this.sendEvent({
+      type: 'info',
+      sessionId: managed.id,
+      message: cause === 'app_restart'
+        ? 'The application restarted during this turn. Work is resuming automatically…'
+        : 'The agent connection ended before the final response. Work is resuming automatically…',
+      level: 'warning',
+      timestamp: this.monotonic(),
+    }, managed.workspace.id)
+    sessionLog.warn('Queued bounded automatic turn recovery', {
+      sessionId: managed.id,
+      originalUserMessageId: pending.userMessageId,
+      cause,
+      attempt: advanced.attempts,
+    })
+    return true
+  }
+
+  private async resumePendingTurnAfterRestart(sessionId: string): Promise<void> {
+    const managed = this.sessions.get(sessionId)
+    if (!managed?.pendingTurnRecovery || managed.isProcessing) return
+
+    await this.ensureMessagesLoaded(managed)
+    const pending = managed.pendingTurnRecovery
+    if (!pending || managed.isProcessing) return
+
+    if (!turnStillNeedsRecovery(managed.messages, pending.userMessageId)) {
+      this.clearPendingTurnRecovery(managed)
+      this.persistSession(managed)
+      await this.flushSession(managed.id)
+      return
+    }
+
+    const queued = await this.enqueueAutomaticTurnRecovery(managed, 'app_restart')
+    if (queued && !managed.isProcessing) {
+      this.processNextQueuedMessage(managed.id)
     }
   }
 
@@ -2808,6 +3006,9 @@ export class SessionManager implements ISessionManager {
 
     // Lazy-load messages from disk if not yet loaded
     await this.ensureMessagesLoaded(m)
+    // Renderer state is in-memory; re-emit any still-live request when a
+    // session is reopened/reloaded so the agent cannot wait on an invisible UI.
+    this.replayPendingPermissionRequests(m)
 
     return managedToSession(m, { messages: m.messages })
   }
@@ -3761,6 +3962,48 @@ export class SessionManager implements ISessionManager {
     }
   }
 
+  private applyExternalActionPolicyToRuntime(
+    managed: ManagedSession,
+    policy: ExternalActionPolicy,
+    reason: string,
+  ): boolean {
+    const agent = managed.agent
+    if (!agent) {
+      managed.pendingExternalActionPolicy = undefined
+      return true
+    }
+    if (agent.isProcessing()) {
+      managed.pendingExternalActionPolicy = policy
+      sessionLog.info(`External action policy changed for ${managed.id}; deferring until next turn (${reason})`)
+      return false
+    }
+
+    agent.setExternalActionPolicy(policy)
+    managed.pendingExternalActionPolicy = undefined
+    sessionLog.info(`Applied external action policy to live session ${managed.id} (${reason})`)
+    return true
+  }
+
+  /**
+   * Push a workspace policy change to live idle agents without interrupting a
+   * provider stream. Busy agents retain only the latest value and apply it on
+   * the next send path before chat() starts.
+   */
+  async refreshWorkspaceExternalActionPolicy(
+    workspaceId: string,
+    policy: ExternalActionPolicy,
+  ): Promise<void> {
+    for (const managed of this.sessions.values()) {
+      if (managed.workspace.id !== workspaceId) continue
+      try {
+        this.applyExternalActionPolicyToRuntime(managed, policy, 'workspace setting update')
+      } catch (error) {
+        sessionLog.warn(`External action policy refresh failed for ${managed.id}: ${error instanceof Error ? error.message : error}`)
+        managed.pendingExternalActionPolicy = policy
+      }
+    }
+  }
+
   private async applyRoutingPolicyForNextTurn(
     managed: ManagedSession,
     workspaceConfig: ReturnType<typeof loadWorkspaceConfig>,
@@ -3964,6 +4207,14 @@ export class SessionManager implements ISessionManager {
    */
   private async getOrCreateAgent(managed: ManagedSession): Promise<AgentInstance> {
     const workspaceConfig = loadWorkspaceConfig(managed.workspace.rootPath)
+    const externalActionPolicy = workspaceConfig?.defaults?.externalActionPolicy ?? 'confirm'
+    if (managed.agent) {
+      this.applyExternalActionPolicyToRuntime(
+        managed,
+        managed.pendingExternalActionPolicy ?? externalActionPolicy,
+        'send-path refresh',
+      )
+    }
     await this.applyRoutingPolicyForNextTurn(managed, workspaceConfig)
 
     // Refresh runtime config in-place when the connection has drifted since
@@ -4190,6 +4441,7 @@ export class SessionManager implements ISessionManager {
         hostRuntime: buildBackendHostRuntimeContext(),
         coreConfig: {
         workspace: managed.workspace,
+        externalActionPolicy,
         miniModel,
         thinkingLevel: managed.thinkingLevel,
         session: sessionConfig,
@@ -4664,6 +4916,8 @@ export class SessionManager implements ISessionManager {
         rememberForMinutes?: number;
         commandHash?: string;
         approvalTtlSeconds?: number;
+        sensitiveActionCategory?: ExternalActionAuthorizationCategory;
+        sensitiveActionTargets?: string[];
       }) => {
         sessionLog.info(`Permission request for session ${managed.id}:`, request.command)
         let brokerMetadata: {
@@ -4688,18 +4942,16 @@ export class SessionManager implements ISessionManager {
         }
 
         const effectiveCommandHash = brokerMetadata.commandHash ?? request.commandHash
-
-        this.pendingPermissionRequests.set(request.requestId, {
+        const requestedAt = Date.now()
+        const fullRequest: PermissionRequest = {
+          ...request,
+          ...brokerMetadata,
           sessionId: managed.id,
-          type: request.type,
-          commandHash: effectiveCommandHash,
-          toolName: request.toolName,
-          requestedAt: Date.now(),
-        })
+        }
         this.emitExecutionTelemetry(managed, {
           schemaVersion: 1,
           eventId: randomUUID(),
-          timestamp: Date.now(),
+          timestamp: requestedAt,
           name: 'permission.requested',
           correlation: {
             workspaceId: managed.workspace.id,
@@ -4708,13 +4960,46 @@ export class SessionManager implements ISessionManager {
           permissionKind: request.type ?? request.toolName,
         })
 
+        const activeExternalAuthorizations = pruneExternalActionAuthorizations(
+          managed.externalActionAuthorizations,
+          requestedAt,
+        )
+        if (activeExternalAuthorizations.length !== (managed.externalActionAuthorizations?.length ?? 0)) {
+          managed.externalActionAuthorizations = activeExternalAuthorizations
+          this.persistSession(managed)
+        }
+
+        if (hasMatchingExternalActionAuthorization(activeExternalAuthorizations, {
+          category: request.sensitiveActionCategory,
+          targetCandidates: request.sensitiveActionTargets,
+        }, requestedAt)) {
+          this.emitExecutionTelemetry(managed, {
+            schemaVersion: 1,
+            eventId: randomUUID(),
+            timestamp: Date.now(),
+            name: 'permission.resolved',
+            correlation: {
+              workspaceId: managed.workspace.id,
+              sessionId: managed.id,
+            },
+            permissionKind: request.type ?? request.toolName,
+            resolution: 'approved',
+            durationMs: 0,
+          })
+          sessionLog.info('Reused scoped sensitive-action authorization', {
+            sessionId: managed.id,
+            requestId: request.requestId,
+            category: request.sensitiveActionCategory,
+          })
+          managed.agent?.respondToPermission(request.requestId, true, false)
+          return
+        }
+
         if (request.type === 'admin_approval' && effectiveCommandHash && this.hasActiveAdminRememberApproval(managed.id, effectiveCommandHash)) {
           const brokerResult = this.privilegedExecutionBroker.resolveApproval(request.requestId, true, {
             expectedCommandHash: effectiveCommandHash,
             expectedSessionId: managed.id,
           })
-
-          this.pendingPermissionRequests.delete(request.requestId)
 
           if (brokerResult.ok) {
             this.privilegedExecutionBroker.auditEvent('privileged_auto_approved_remember_window', {
@@ -4745,14 +5030,29 @@ export class SessionManager implements ISessionManager {
           sessionLog.warn(`Remember-window auto-approval skipped for ${request.requestId}: ${brokerResult.reason}`)
         }
 
+        const ttlMs = resolvePermissionRequestTtlMs(fullRequest.approvalTtlSeconds)
+        const expiresAt = requestedAt + ttlMs
+        const timeout = setTimeout(() => {
+          this.expirePendingPermissionRequest(request.requestId)
+        }, ttlMs)
+        timeout.unref?.()
+        this.pendingPermissionRequests.set(request.requestId, {
+          sessionId: managed.id,
+          type: request.type,
+          commandHash: effectiveCommandHash,
+          toolName: request.toolName,
+          requestedAt,
+          expiresAt,
+          request: fullRequest,
+          timeout,
+          sensitiveActionCategory: request.sensitiveActionCategory,
+          sensitiveActionTargets: request.sensitiveActionTargets,
+        })
+
         this.sendEvent({
           type: 'permission_request',
           sessionId: managed.id,
-          request: {
-            ...request,
-            ...brokerMetadata,
-            sessionId: managed.id,
-          }
+          request: fullRequest,
         }, managed.workspace.id)
       }
 
@@ -4834,6 +5134,7 @@ export class SessionManager implements ISessionManager {
             sessionLog.info(`Interrupting for plan submission in session ${managed.id}`)
             managed.agent.interruptForHandoff(AbortReason.PlanSubmitted)
             this.setProcessing(managed, false)
+            this.clearPendingTurnRecovery(managed)
 
             // Release browser overlay + session binding because the agent is no longer running.
             // Plan submission pauses execution until user review, so browser ownership should not remain locked.
@@ -4843,10 +5144,11 @@ export class SessionManager implements ISessionManager {
             )
 
             // Send complete event so renderer knows processing stopped (include tokenUsage for real-time updates)
-            this.sendEvent({ type: 'complete', sessionId: managed.id, tokenUsage: managed.tokenUsage, backgroundTasksAlive: this.keepBackgroundTasksAlive }, managed.workspace.id)
+            this.sendEvent({ type: 'complete', sessionId: managed.id, reason: 'interrupted', tokenUsage: managed.tokenUsage, backgroundTasksAlive: this.keepBackgroundTasksAlive }, managed.workspace.id)
 
             // Persist session state
             this.persistSession(managed)
+            await this.flushSession(managed.id)
           }
         } catch (error) {
           sessionLog.error(`Failed to read plan file:`, error)
@@ -4893,6 +5195,7 @@ export class SessionManager implements ISessionManager {
           sessionLog.info(`Interrupting for auth request in session ${managed.id}`)
           managed.agent.interruptForHandoff(AbortReason.AuthRequest)
           this.setProcessing(managed, false)
+          this.clearPendingTurnRecovery(managed)
 
           // Release browser overlay + session binding because the agent is paused awaiting user auth.
           void releaseBrowserOwnershipOnForcedStop(
@@ -4901,7 +5204,7 @@ export class SessionManager implements ISessionManager {
           )
 
           // Send complete event so renderer knows processing stopped (include tokenUsage for real-time updates)
-          this.sendEvent({ type: 'complete', sessionId: managed.id, tokenUsage: managed.tokenUsage, backgroundTasksAlive: this.keepBackgroundTasksAlive }, managed.workspace.id)
+          this.sendEvent({ type: 'complete', sessionId: managed.id, reason: 'interrupted', tokenUsage: managed.tokenUsage, backgroundTasksAlive: this.keepBackgroundTasksAlive }, managed.workspace.id)
         }
 
         // Emit auth_request event to renderer
@@ -4914,6 +5217,7 @@ export class SessionManager implements ISessionManager {
 
         // Persist session state
         this.persistSession(managed)
+        void this.flushSession(managed.id)
 
         // OAuth flow is client-driven via performOAuth() (preload).
         // The UI calls window.electronAPI.performOAuth() when user clicks "Sign in".
@@ -5233,6 +5537,7 @@ export class SessionManager implements ISessionManager {
 
         // Persist session with updated enabled sources
         this.persistSession(managed)
+        await this.flushSession(managed.id)
 
         // Notify renderer of source change
         this.sendEvent({
@@ -6478,6 +6783,9 @@ export class SessionManager implements ISessionManager {
     //   to natural completion; replay as a new turn afterwards. NO call to
     //   `agent.redirect()`, NO forceAbort, NO interruption.
     if (managed.isProcessing) {
+      if (!options?.hidden) {
+        managed.autonomyFallbackAttemptedTools = new Set()
+      }
       const connection = resolveSessionConnection(managed.llmConnection, undefined)
       // Fallback to 'steer' when no connection is resolvable — preserves
       // today's exact behavior (call redirect, take whatever it returns).
@@ -6669,6 +6977,27 @@ export class SessionManager implements ISessionManager {
     managed.lastSentAttachments = attachments
     managed.lastSentStoredAttachments = storedAttachments
     managed.lastSentOptions = options
+
+    // Persist an in-flight marker before model streaming begins. A packaged-app
+    // replacement can terminate every subprocess cleanly (exit 0) without the
+    // normal completion path running; this marker is the durable resume seam.
+    if (options?.automaticRecovery) {
+      const originalUserMessageId = options.automaticRecovery.originalUserMessageId
+      if (managed.pendingTurnRecovery?.userMessageId !== originalUserMessageId) {
+        managed.pendingTurnRecovery = createPendingTurnRecovery(originalUserMessageId)
+        sessionLog.warn('Recreated missing automatic-recovery marker', {
+          sessionId,
+          originalUserMessageId,
+        })
+      }
+    } else if (!options?.hidden) {
+      managed.pendingTurnRecovery = createPendingTurnRecovery(userMessage.id)
+      managed.autonomyFallbackAttemptedTools = new Set()
+    }
+    if (managed.pendingTurnRecovery) {
+      this.persistSession(managed)
+      await this.flushSession(managed.id)
+    }
 
     // Capture the generation to detect if a new request supersedes this one.
     // This prevents the finally block from clobbering state when a follow-up message arrives.
@@ -6990,9 +7319,17 @@ export class SessionManager implements ISessionManager {
             }
 
             if (!surfacedSpecificError) {
+              const recoveryQueued = await this.enqueueAutomaticTurnRecovery(managed, 'stream_ended')
+              if (recoveryQueued) {
+                sendSpan.mark('chat.complete.auto_recovery')
+                sendSpan.end()
+                await this.onProcessingStopped(sessionId, 'error', myGeneration)
+                return
+              }
+
               await this.processEvent(managed, {
                 type: 'error',
-                message: 'The agent stopped before producing a final response. Completed tool results were preserved; retry to resume safely.',
+                message: 'The agent stopped before producing a final response after bounded automatic recovery. Completed tool results were preserved; retry to resume safely.',
               }, myGeneration)
             }
           }
@@ -7020,10 +7357,13 @@ export class SessionManager implements ISessionManager {
         await this.onProcessingStopped(sessionId, 'interrupted', myGeneration)
       } else {
         sessionLog.warn('Chat loop exited unexpectedly')
-        await this.processEvent(managed, {
-          type: 'error',
-          message: 'The agent stream ended unexpectedly before completion. Completed work was preserved; retry to resume safely.',
-        }, myGeneration)
+        const recoveryQueued = await this.enqueueAutomaticTurnRecovery(managed, 'stream_ended')
+        if (!recoveryQueued) {
+          await this.processEvent(managed, {
+            type: 'error',
+            message: 'The agent stream ended unexpectedly after bounded automatic recovery. Completed work was preserved; retry to resume safely.',
+          }, myGeneration)
+        }
         await this.onProcessingStopped(sessionId, 'error', myGeneration)
       }
     } catch (error) {
@@ -7060,11 +7400,14 @@ export class SessionManager implements ISessionManager {
         sendSpan.mark('chat.error')
         sendSpan.setMetadata('error', error instanceof Error ? error.message : String(error))
         sendSpan.end()
-        this.sendEvent({
-          type: 'error',
-          sessionId,
-          error: error instanceof Error ? error.message : 'Unknown error'
-        }, managed.workspace.id)
+        const recoveryQueued = await this.enqueueAutomaticTurnRecovery(managed, 'runtime_error')
+        if (!recoveryQueued) {
+          this.sendEvent({
+            type: 'error',
+            sessionId,
+            error: error instanceof Error ? error.message : 'Unknown error'
+          }, managed.workspace.id)
+        }
         // Handle error via centralized handler
         await this.onProcessingStopped(sessionId, 'error', myGeneration)
       }
@@ -7100,11 +7443,14 @@ export class SessionManager implements ISessionManager {
 
     // Clear queue - user explicitly stopped, don't process queued messages
     managed.messageQueue = []
+    this.clearPendingTurnRecovery(managed)
 
     // Remove queued user messages from the persisted messages array
     if (queuedMessageIds.size > 0) {
       managed.messages = managed.messages.filter(m => !queuedMessageIds.has(m.id))
     }
+    this.persistSession(managed)
+    await this.flushSession(managed.id)
 
     // Signal intent to stop - let the event loop drain remaining events before clearing isProcessing
     // This prevents losing in-flight messages after soft interrupt
@@ -7358,6 +7704,13 @@ export class SessionManager implements ISessionManager {
       reason === 'timeout' ? { errorCode: 'stop_timeout' } : undefined,
     )
 
+    const hasQueuedAutomaticRecovery = managed.messageQueue.some(item =>
+      !!item.options?.automaticRecovery
+    )
+    if (!hasQueuedAutomaticRecovery) {
+      this.clearPendingTurnRecovery(managed)
+    }
+
     // 1. Cleanup state
     this.setProcessing(managed, false)
     managed.stopRequested = false  // Reset for next turn
@@ -7459,6 +7812,7 @@ export class SessionManager implements ISessionManager {
       this.sendEvent({
         type: 'complete',
         sessionId,
+        reason,
         tokenUsage: managed.tokenUsage,
         hasUnread: managed.hasUnread,  // Propagate unread state to renderer
         // WS2: when keep-alive keeps the persistent query open across turns, the
@@ -7761,7 +8115,12 @@ export class SessionManager implements ISessionManager {
     const managed = this.sessions.get(sessionId)
     if (managed?.agent) {
       const requestMeta = this.pendingPermissionRequests.get(requestId)
+      if (requestMeta && requestMeta.sessionId !== sessionId) {
+        sessionLog.warn(`Permission response session mismatch for ${requestId}`)
+        return false
+      }
       this.pendingPermissionRequests.delete(requestId)
+      if (requestMeta) clearTimeout(requestMeta.timeout)
 
       if (requestMeta?.type === 'admin_approval') {
         const brokerResult = this.privilegedExecutionBroker.resolveApproval(requestId, allowed, {
@@ -7793,7 +8152,30 @@ export class SessionManager implements ISessionManager {
         }
       }
 
-      sessionLog.info(`Permission response for ${requestId}: allowed=${allowed}, alwaysAllow=${alwaysAllow}`)
+      if (allowed && requestMeta?.sensitiveActionCategory && requestMeta.sensitiveActionTargets?.length) {
+        managed.externalActionAuthorizations = rememberExternalActionAuthorization(
+          managed.externalActionAuthorizations,
+          {
+            category: requestMeta.sensitiveActionCategory,
+            targetCandidates: requestMeta.sensitiveActionTargets,
+            toolName: requestMeta.toolName,
+          },
+        )
+        this.persistSession(managed)
+        void this.flushSession(managed.id).catch(error => {
+          sessionLog.warn('Failed to persist scoped sensitive-action authorization', {
+            sessionId: managed.id,
+            requestId,
+            error: error instanceof Error ? error.message : String(error),
+          })
+        })
+      }
+
+      const providerAlwaysAllow = providerAlwaysAllowForExternalAction(
+        alwaysAllow,
+        requestMeta?.sensitiveActionCategory,
+      )
+      sessionLog.info(`Permission response for ${requestId}: allowed=${allowed}, alwaysAllow=${providerAlwaysAllow}`)
       if (requestMeta) {
         this.emitExecutionTelemetry(managed, {
           schemaVersion: 1,
@@ -7809,7 +8191,7 @@ export class SessionManager implements ISessionManager {
           durationMs: Math.max(0, Date.now() - requestMeta.requestedAt),
         })
       }
-      managed.agent.respondToPermission(requestId, allowed, alwaysAllow)
+      managed.agent.respondToPermission(requestId, allowed, providerAlwaysAllow)
       return true
     } else {
       sessionLog.warn(`Cannot respond to permission - no agent for session ${sessionId}`)
@@ -8745,7 +9127,7 @@ export class SessionManager implements ISessionManager {
             toolName,
             result: formattedResult,
             browserEnabled: getBrowserToolEnabled(),
-            fallbackAlreadyAttempted: managed.autonomyEvents?.some(item => item.phase === 'fallback') ?? false,
+            fallbackAlreadyAttempted: managed.autonomyFallbackAttemptedTools?.has(toolName) ?? false,
           })
 
           this.recordAutonomyEvent(managed, {
@@ -8765,9 +9147,34 @@ export class SessionManager implements ISessionManager {
               escalationReason: decision.reason,
             })
           } else if (decision.kind === 'fallback_browser') {
+            managed.autonomyFallbackAttemptedTools ??= new Set()
+            managed.autonomyFallbackAttemptedTools.add(toolName)
+            const fallbackPrompt = buildAutonomyBrowserFallbackPrompt(toolName)
+            const deliveredInCurrentTurn = managed.agent?.redirect(fallbackPrompt) ?? false
+
+            if (!deliveredInCurrentTurn && !managed.messageQueue.some(item =>
+              isAutonomyBrowserFallbackPrompt(item.message)
+            )) {
+              const originalUserMessageId = managed.pendingTurnRecovery?.userMessageId
+              managed.messageQueue.unshift({
+                message: fallbackPrompt,
+                options: {
+                  hidden: true,
+                  ...(originalUserMessageId ? {
+                    automaticRecovery: {
+                      originalUserMessageId,
+                      cause: 'runtime_error' as const,
+                    },
+                  } : {}),
+                },
+              })
+            }
             this.recordAutonomyEvent(managed, {
               phase: 'fallback', toolName,
-              message: 'Trying the integrated browser as a safe alternative.', evidence,
+              message: deliveredInCurrentTurn
+                ? 'Steered the active agent to the integrated browser as a materially different fallback.'
+                : 'Queued an immediate hidden continuation through the integrated browser.',
+              evidence,
             })
           }
         }
@@ -9455,7 +9862,23 @@ export class SessionManager implements ISessionManager {
         // Steer message was not delivered (no PreToolUse fired before turn ended).
         // Re-queue it so it's sent as a normal message on the next turn.
         sessionLog.info(`Steer message undelivered, re-queuing for session ${sessionId}`)
-        managed.messageQueue.push({ message: event.message })
+        if (isAutonomyBrowserFallbackPrompt(event.message)) {
+          const originalUserMessageId = managed.pendingTurnRecovery?.userMessageId
+          managed.messageQueue.push({
+            message: event.message,
+            options: {
+              hidden: true,
+              ...(originalUserMessageId ? {
+                automaticRecovery: {
+                  originalUserMessageId,
+                  cause: 'runtime_error' as const,
+                },
+              } : {}),
+            },
+          })
+        } else {
+          managed.messageQueue.push({ message: event.message })
+        }
         managed.wasInterrupted = true
         break
 
@@ -10118,6 +10541,11 @@ export class SessionManager implements ISessionManager {
 
     // Clear pending credential resolvers (they won't be resolved, but prevents memory leak)
     this.pendingCredentialResolvers.clear()
+    for (const [requestId, metadata] of this.pendingPermissionRequests.entries()) {
+      clearTimeout(metadata.timeout)
+      this.rejectPendingPrivilegedApproval(requestId, metadata)
+      this.sessions.get(metadata.sessionId)?.agent?.respondToPermission(requestId, false, false)
+    }
     this.pendingPermissionRequests.clear()
     this.adminRememberApprovals.clear()
 

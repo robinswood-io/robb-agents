@@ -1347,7 +1347,9 @@ export class PiAgent extends BaseAgent {
       hasSourceActivation: !!this.onSourceActivationRequest,
       permissionManager: this.permissionManager,
       prerequisiteManager: this.prerequisiteManager,
+      preloadedSourceGuidePaths: this.sourceManager.getPreloadedSourceGuidePaths(),
       currentUserRequest: this.getCurrentTurnUserMessage() ?? undefined,
+      externalActionPolicy: this.config.externalActionPolicy,
       rtkContext,
       onDebug: (msg) => this.debug(`PreToolUse(sessionId=${sessionId}): ${msg}`),
     });
@@ -1422,7 +1424,9 @@ export class PiAgent extends BaseAgent {
           hasSourceActivation: !!this.onSourceActivationRequest,
           permissionManager: this.permissionManager,
           prerequisiteManager: this.prerequisiteManager,
+          preloadedSourceGuidePaths: this.sourceManager.getPreloadedSourceGuidePaths(),
           currentUserRequest: this.getCurrentTurnUserMessage() ?? undefined,
+          externalActionPolicy: this.config.externalActionPolicy,
           rtkContext,
           onDebug: (msg) => this.debug(`PreToolUse(sessionId=${sessionId}): ${msg}`),
         });
@@ -1498,6 +1502,8 @@ export class PiAgent extends BaseAgent {
       rememberForMinutes: checkResult.rememberForMinutes,
       commandHash: checkResult.commandHash,
       approvalTtlSeconds: checkResult.approvalTtlSeconds,
+      sensitiveActionCategory: checkResult.sensitiveActionCategory,
+      sensitiveActionTargets: checkResult.sensitiveActionTargets,
     });
 
     const allowed = await permissionPromise;

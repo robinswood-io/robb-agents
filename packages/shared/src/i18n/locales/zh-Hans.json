@@ -1384,6 +1384,8 @@
   "settings.workspace.routingSensitivity.public": "Public",
   "settings.workspace.routingSensitivity.restricted": "Restricted",
   "settings.workspace.title": "Workspace",
+  "settings.workspace.totalAutonomy": "执行模式下完全自主",
+  "settings.workspace.totalAutonomyDesc": "代理主动控制期间，无需再次确认即可执行范围明确的外部操作并使用所需的网页权限。询问和探索模式仍受保护。",
   "settings.workspace.untitled": "无标题",
   "settings.workspace.workspaceInfo": "Workspace 信息",
   "settings.workspace.workspaceSettings": "Workspace 设置",

@@ -137,7 +137,28 @@ def validate_codesign_inspection(
     if "Identifier=io.robinswood.robbagents" not in code_text:
         fail("Packaged app signature does not expose io.robinswood.robbagents identifier")
 
-    return "developer-id"
+    has_developer_id = "Authority=Developer ID Application:" in code_text
+    if require_release_signing and not has_developer_id:
+        fail("Release validation requires an Apple Developer ID Application signature")
+
+    return "developer-id" if has_developer_id else "signed"
+
+
+def validate_release_verification_results(
+    codesign_returncode: int,
+    codesign_text: str,
+    gatekeeper_returncode: int,
+    gatekeeper_text: str,
+    stapler_returncode: int,
+    stapler_text: str,
+) -> None:
+    """Validate release command results without requiring a real certificate in tests."""
+    if codesign_returncode != 0:
+        fail(f"Developer ID signature verification failed: {codesign_text}")
+    if gatekeeper_returncode != 0 or "Notarized Developer ID" not in gatekeeper_text:
+        fail(f"Notarization assessment failed: {gatekeeper_text}")
+    if stapler_returncode != 0:
+        fail(f"Notarization ticket validation failed: {stapler_text}")
 
 
 def check_bundle(require_release_signing: bool = False) -> None:
@@ -212,15 +233,17 @@ def check_bundle(require_release_signing: bool = False) -> None:
 
     if require_release_signing:
         verify_result = run(["codesign", "--verify", "--deep", "--strict", "--verbose=2", str(APP_DIR)])
-        if verify_result.returncode != 0:
-            fail(f"Developer ID signature verification failed: {verify_result.stdout}{verify_result.stderr}")
         gatekeeper_result = run(["spctl", "--assess", "--verbose", "--type", "exec", str(APP_DIR)])
         gatekeeper_text = gatekeeper_result.stdout + gatekeeper_result.stderr
-        if gatekeeper_result.returncode != 0 or "Notarized Developer ID" not in gatekeeper_text:
-            fail(f"Notarization assessment failed: {gatekeeper_text}")
         stapler_result = run(["xcrun", "stapler", "validate", str(APP_DIR)])
-        if stapler_result.returncode != 0:
-            fail(f"Notarization ticket validation failed: {stapler_result.stdout}{stapler_result.stderr}")
+        validate_release_verification_results(
+            verify_result.returncode,
+            verify_result.stdout + verify_result.stderr,
+            gatekeeper_result.returncode,
+            gatekeeper_text,
+            stapler_result.returncode,
+            stapler_result.stdout + stapler_result.stderr,
+        )
         print("✓ Developer ID signature, Gatekeeper assessment and notarization ticket")
 
     print("✓ packaged app bundle metadata")

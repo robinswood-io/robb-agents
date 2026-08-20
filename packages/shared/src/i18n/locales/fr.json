@@ -1384,6 +1384,8 @@
   "settings.workspace.routingSensitivity.public": "Public",
   "settings.workspace.routingSensitivity.restricted": "Restreint",
   "settings.workspace.title": "Espace de travail",
+  "settings.workspace.totalAutonomy": "Autonomie totale en mode Exécuter",
+  "settings.workspace.totalAutonomyDesc": "Autoriser les actions externes ciblées et les permissions web requises pendant le contrôle actif, sans confirmation supplémentaire. Demander et Explorer restent protégés.",
   "settings.workspace.untitled": "Sans titre",
   "settings.workspace.workspaceInfo": "Informations sur l'espace de travail",
   "settings.workspace.workspaceSettings": "Paramètres de l'espace de travail",

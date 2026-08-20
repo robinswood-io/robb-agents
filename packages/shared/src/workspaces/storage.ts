@@ -113,6 +113,12 @@ export function loadWorkspaceConfig(rootPath: string): WorkspaceConfig | null {
       config.defaults.permissionMode = parsed ?? undefined;
     }
 
+    if (config.defaults) {
+      config.defaults.externalActionPolicy = config.defaults.externalActionPolicy === 'allow-in-execute'
+        ? 'allow-in-execute'
+        : 'confirm';
+    }
+
     if (Array.isArray(config.defaults?.cyclablePermissionModes)) {
       const normalized = config.defaults.cyclablePermissionModes
         .map(mode => (typeof mode === 'string' ? parsePermissionMode(mode) : null))
@@ -307,6 +313,7 @@ export function createWorkspaceAtPath(
     thinkingLevel: undefined,
     // defaultLlmConnection: undefined - falls back to app default
     permissionMode: globalDefaults.workspaceDefaults.permissionMode,
+    externalActionPolicy: globalDefaults.workspaceDefaults.externalActionPolicy,
     cyclablePermissionModes: globalDefaults.workspaceDefaults.cyclablePermissionModes,
     enabledSourceSlugs: [],
     workingDirectory: undefined,

@@ -626,6 +626,9 @@ export interface PermissionRequest {
   commandHash?: string;
   /** Approval validity window */
   approvalTtlSeconds?: number;
+  /** Scoped metadata for a sensitive external-action confirmation. */
+  sensitiveActionCategory?: 'git_push' | 'deployment' | 'service_restart' | 'secret_transfer' | 'external_send' | 'external_publication' | 'payment';
+  sensitiveActionTargets?: string[];
 }
 
 /**

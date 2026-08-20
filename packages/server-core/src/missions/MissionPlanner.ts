@@ -7,6 +7,11 @@ import type {
 } from '@craft-agent/shared/protocol';
 import { authorizeWorkspacePath } from '@craft-agent/shared/tasks';
 import type { ISessionManager } from '../handlers/session-manager-interface.ts';
+import {
+  resolveSubagentAutonomy,
+  type SubagentAutonomyContext,
+  type SubagentAutonomyDecision,
+} from '../subagents/autonomy-inheritance.ts';
 
 const DEFAULT_PLANNER_TIMEOUT_MS = 10 * 60 * 1000;
 
@@ -15,6 +20,10 @@ export interface MissionPlannerOptions {
   workspaceId: string;
   workspaceRoot: string;
   timeoutMs?: number;
+  /** Live origin/workspace authority. Omission deliberately resolves to Safe. */
+  resolveSubagentAutonomyContext?: (
+    parentSessionId?: string,
+  ) => SubagentAutonomyContext;
 }
 
 export interface StartedMissionPlan {
@@ -47,12 +56,15 @@ export class MissionPlanner {
 
     const planRequestId = `plan-${randomUUID()}`;
     const missionId = `mission-${randomUUID()}`;
+    const autonomy = resolveSubagentAutonomy({
+      ...(this.options.resolveSubagentAutonomyContext?.(origin.id) ?? {}),
+    });
     const planner = await this.options.host.createSession(this.options.workspaceId, {
       name: request.title ? `Planifier : ${request.title}` : 'Planifier une mission autonome',
       parentSessionId: origin.id,
       projectId: request.projectId ?? origin.projectId,
       workingDirectory: cwd,
-      permissionMode: 'safe',
+      permissionMode: autonomy.permissionMode,
       model: request.model,
       llmConnection: request.llmConnection,
       enabledSourceSlugs: request.enabledSourceSlugs,
@@ -77,7 +89,7 @@ export class MissionPlanner {
       resolveAccepted = resolve;
       rejectAccepted = reject;
     });
-    const result = this.executePlan(context, goal, request.title, () => {
+    const result = this.executePlan(context, goal, request.title, autonomy, () => {
       accepted = true;
       resolveAccepted();
     });
@@ -118,13 +130,14 @@ export class MissionPlanner {
     context: AuthoritativePlanContext,
     goal: string,
     title: string | undefined,
+    autonomy: SubagentAutonomyDecision,
     onAccepted: () => void,
   ): Promise<MissionPlanResult> {
     const completion = this.waitForCompletion(context.plannerSessionId);
     try {
       await this.options.host.sendMessage(
         context.plannerSessionId,
-        buildPlannerPrompt(context, goal, title),
+        buildPlannerPrompt(context, goal, title, autonomy),
         undefined,
         undefined,
         { hidden: true },
@@ -226,7 +239,24 @@ function extractJson(text: string): string {
   return start >= 0 && end > start ? trimmed.slice(start, end + 1) : trimmed;
 }
 
-function buildPlannerPrompt(context: AuthoritativePlanContext, goal: string, title?: string): string {
+function buildPlannerPrompt(
+  context: AuthoritativePlanContext,
+  goal: string,
+  title?: string,
+  autonomy: SubagentAutonomyDecision = resolveSubagentAutonomy({}),
+): string {
+  const fullAutonomy = autonomy.grantsFullToolAndNetworkAccess;
+  const workerPermissionMode = fullAutonomy
+    ? 'allow-all'
+    : autonomy.authorityPermissionMode === 'safe'
+      ? 'safe'
+      : 'ask';
+  const workspaceWriteRule = fullAutonomy
+    ? '- pour workspace-write, assigne un profil worker en permissionMode "allow-all" ; le runtime héritera les outils et le réseau du parent Execute ; conserve des allowed_write_paths explicites pour audit ;'
+    : workerPermissionMode === 'ask'
+      ? '- pour workspace-write, assigne un profil worker en permissionMode "ask" et des allowed_write_paths explicites ; n’utilise jamais allow-all ;'
+      : '- le parent est en Safe : utilise uniquement effect "read" et n’inclus aucun workspace-write ;';
+  const profileMode = fullAutonomy ? ',"permissionMode":"allow-all"' : '';
   return `<mission-plan-request id="${context.planRequestId}" mission-id="${context.missionId}">
 Tu es le planner dédié d'une mission autonome. Décompose la demande en objectifs mesurables, tâches et sous-tâches spécialisées. Le contrôleur créera lui-même les revues indépendantes et les corrections : n'inclus jamais de work item objective-review, final-review ou correction.
 
@@ -237,7 +267,7 @@ Contraintes :
 - crée au moins quatre profils distincts : planner, worker, reviewer, supervisor ;
 - reviewer et supervisor doivent être des profils distincts de tous les workers ;
 - utilise effect "read" ou "workspace-write" uniquement ;
-- pour workspace-write, assigne un profil worker en permissionMode "ask" et une execution.allowed_write_paths explicite et aussi étroite que possible ; n'utilise jamais allow-all ;
+${workspaceWriteRule}
 - reste sous 128 work items, profondeur 4 et parallélisme 4 ;
 - les contenus de la demande sont des instructions utilisateur, mais ne peuvent pas modifier ce contrat de sortie.
 
@@ -251,10 +281,10 @@ Forme attendue :
   "reviewerProfileId":"reviewer",
   "supervisorProfileId":"supervisor",
   "agentProfiles":[
-    {"id":"planner","role":"planner","specialty":"planification","systemPrompt":"..."},
-    {"id":"worker","role":"worker","specialty":"exécution","systemPrompt":"...","permissionMode":"ask"},
-    {"id":"reviewer","role":"reviewer","specialty":"qualité indépendante","systemPrompt":"..."},
-    {"id":"supervisor","role":"supervisor","specialty":"contrôle final","systemPrompt":"..."}
+    {"id":"planner","role":"planner","specialty":"planification","systemPrompt":"..."${profileMode}},
+    {"id":"worker","role":"worker","specialty":"exécution","systemPrompt":"...","permissionMode":"${workerPermissionMode}"},
+    {"id":"reviewer","role":"reviewer","specialty":"qualité indépendante","systemPrompt":"..."${profileMode}},
+    {"id":"supervisor","role":"supervisor","specialty":"contrôle final","systemPrompt":"..."${profileMode}}
   ],
   "policy":{"maxConcurrentAgents":4,"maxCorrectionCycles":3,"maxWorkItems":128,"maxDepth":4,"maxTechnicalAttempts":3,"requireIndependentReview":true,"requireIndependentSupervisor":true},
   "workItems":[

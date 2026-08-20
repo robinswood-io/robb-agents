@@ -12,6 +12,7 @@ function context(root: string, overrides: Partial<TaskExecutionGuardContext> = {
     workingDirectory: root,
     effect: 'read',
     permissionMode: 'safe',
+    fullAutonomyInherited: false,
     policy: {
       workspaceRoot: root,
       allowedReadPaths: ['.'],
@@ -72,5 +73,22 @@ describe('production task execution guard', () => {
     })).allowed).toBe(false)
     expect(guard(context(root, { resourceLimitsExplicit: true })).allowed).toBe(false)
     expect(guard(context(root, { workingDirectory: '../outside' })).allowed).toBe(false)
+  })
+
+  it('admits ordinary session egress and tools only after full autonomy inheritance', () => {
+    const root = process.cwd()
+    const guard = createProductionTaskExecutionGuard(root)
+    const autonomous = context(root, {
+      permissionMode: 'allow-all',
+      fullAutonomyInherited: true,
+      policy: {
+        ...context(root).policy,
+        networkAccess: 'allow-list',
+        allowedHosts: ['api.example.com'],
+      },
+    })
+
+    expect(guard(autonomous)).toEqual({ allowed: true })
+    expect(guard({ ...autonomous, fullAutonomyInherited: false }).allowed).toBe(false)
   })
 })
