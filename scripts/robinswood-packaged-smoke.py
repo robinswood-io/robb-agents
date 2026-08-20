@@ -144,6 +144,11 @@ def validate_codesign_inspection(
     return "developer-id" if has_developer_id else "signed"
 
 
+def codesign_inspection_command(app_dir: pathlib.Path) -> list[str]:
+    """Request the full certificate chain used by release validation."""
+    return ["codesign", "-dv", "--verbose=4", str(app_dir)]
+
+
 def validate_release_verification_results(
     codesign_returncode: int,
     codesign_text: str,
@@ -217,7 +222,7 @@ def check_bundle(require_release_signing: bool = False) -> None:
     if not package_report.ok:
         fail("Packaged app failed recursive release or unpacked size audit")
 
-    code_result = run(["codesign", "-dv", str(APP_DIR)])
+    code_result = run(codesign_inspection_command(APP_DIR))
     code_text = code_result.stdout + code_result.stderr
     signing_mode = validate_codesign_inspection(
         code_result.returncode,
