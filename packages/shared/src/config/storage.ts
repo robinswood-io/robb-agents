@@ -3035,7 +3035,11 @@ export function ensureToolIcons(): void {
 // Server Mode Configuration
 // ============================================
 
-import { DEFAULT_SERVER_CONFIG, type ServerConfig } from './server-config.ts';
+import {
+  DEFAULT_SERVER_CONFIG,
+  normalizeServerConfigPublicUrls,
+  type ServerConfig,
+} from './server-config.ts';
 import { randomUUID } from 'crypto';
 
 /**
@@ -3055,11 +3059,13 @@ export function setServerConfig(serverConfig: ServerConfig): void {
   const config = loadStoredConfig();
   if (!config) return;
 
+  const normalizedConfig = normalizeServerConfigPublicUrls(serverConfig);
+
   // Generate a stable token when first enabled (or if token is missing)
-  if (serverConfig.enabled && !serverConfig.token) {
-    serverConfig.token = randomUUID();
+  if (normalizedConfig.enabled && !normalizedConfig.token) {
+    normalizedConfig.token = randomUUID();
   }
 
-  config.serverConfig = serverConfig;
+  config.serverConfig = normalizedConfig;
   saveConfig(config);
 }

@@ -6,6 +6,7 @@ This file accumulates release notes for the next unreleased version. PRs that ad
 
 ## Improvements
 
+- Support validated public HTTPS/WSS endpoints for Remote reverse proxies so pairing links and browser sessions stay on the trusted public origin.
 - Let Task and Mission sub-agents inherit full Execute autonomy, including shell, browser, MCP, and network tools, only when their parent is in Execute and the workspace explicitly enables external actions in Execute; all other cases remain fail-closed.
 - Add a workspace-level “Full autonomy in Execute” policy that removes redundant sensitive-action confirmations for scoped work and grants required secure-site browser permissions only while an Execute agent is actively in control.
 - Preload active source guides into the agent context with credential-shaped values redacted, avoiding the first-call guide rejection while preserving strict browser and skill prerequisites.
@@ -15,6 +16,8 @@ This file accumulates release notes for the next unreleased version. PRs that ad
 
 ## Bug Fixes
 
+- Fix Remote openings that returned `Internal Server Error` after pairing or cookie loss by emitting Node-compatible same-origin login redirects.
+- Record sanitized Remote HTTP failure metadata without retaining URLs, queries, cookies, headers, request bodies, or exception messages.
 - Resume Codex/Pi turns that stop after a tool result or an unexpectedly aborted partial response, and durably continue interrupted turns after a provider failure or application restart with bounded retries.
 - Execute the integrated-browser fallback after a compatible tool failure instead of merely logging the intended recovery.
 - Redact OAuth callback codes, state, identity, verifier, and session artifacts before browser-console retention or file logging.

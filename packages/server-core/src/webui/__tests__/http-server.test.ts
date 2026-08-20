@@ -145,6 +145,27 @@ describe('startWebuiHttpServer', () => {
     expect(config.session).toMatchObject({ kind: 'owner', deviceId: null })
   })
 
+  it('emits a runtime-compatible relative login redirect without reflecting Host', async () => {
+    const { baseUrl } = await createServer()
+    const originalRedirect = Response.redirect
+    Response.redirect = () => { throw new TypeError('Node rejects relative redirect URLs') }
+
+    try {
+      const response = await fetch(`${baseUrl}/`, {
+        headers: {
+          Accept: 'text/html',
+          Host: 'attacker.example',
+        },
+        redirect: 'manual',
+      })
+
+      expect(response.status).toBe(302)
+      expect(response.headers.get('location')).toBe('/login')
+    } finally {
+      Response.redirect = originalRedirect
+    }
+  })
+
   it('rejects invalid credentials', async () => {
     const { baseUrl } = await createServer()
 

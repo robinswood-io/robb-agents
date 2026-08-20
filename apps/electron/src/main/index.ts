@@ -108,7 +108,13 @@ import { createApplicationMenu } from './menu'
 import { WindowManager } from './window-manager'
 import { loadWindowState, saveWindowState } from './window-state'
 import { CONFIG_DIR, getWorkspaces, getWorkspaceByNameOrId, loadStoredConfig, addWorkspace, saveConfig } from '@craft-agent/shared/config'
-import { isLoopbackHost, resolveSecureRemoteHost } from './remote-access-security'
+import {
+  isLoopbackHost,
+  remoteServerNeedsRestart,
+  resolveAllowedSessionCookieOrigins,
+  resolveRemoteServerUrls,
+  resolveSecureRemoteHost,
+} from './remote-access-security'
 import { getDefaultWorkspacesDir, loadWorkspaceConfig } from '@craft-agent/shared/workspaces'
 import { initializeDocs } from '@craft-agent/shared/docs'
 import { initializeReleaseNotes } from '@craft-agent/shared/release-notes'
@@ -665,8 +671,26 @@ app.whenReady().then(async () => {
       const resolveClientId = (wcId: number) => clientMap.get(wcId)
 
       // Read embedded server config (Server settings page)
-      const { getServerConfig } = await import('@craft-agent/shared/config')
-      const embeddedServerConfig = getServerConfig()
+      const {
+        getServerConfig,
+        normalizeServerConfigPublicUrls,
+      } = await import('@craft-agent/shared/config')
+      const persistedEmbeddedServerConfig = getServerConfig()
+      let embeddedServerConfig = persistedEmbeddedServerConfig
+      try {
+        embeddedServerConfig = normalizeServerConfigPublicUrls(persistedEmbeddedServerConfig)
+      } catch {
+        // A manually edited or corrupted public endpoint must never be trusted
+        // at startup. Keep the local app available and require the owner to
+        // correct the persisted settings before Remote can start again.
+        embeddedServerConfig = {
+          ...persistedEmbeddedServerConfig,
+          enabled: false,
+          publicWebuiUrl: undefined,
+          publicWsUrl: undefined,
+        }
+        mainLog.error('[server-mode] Invalid public Remote URL configuration; Remote access is disabled')
+      }
       const serverModeEnabled = embeddedServerConfig.enabled && !isClientOnly
 
       // Derive host/port/token from server config (or env overrides)
@@ -693,12 +717,23 @@ app.whenReady().then(async () => {
         }
       }
 
+      const hasPublicReverseProxy = Boolean(
+        embeddedServerConfig.publicWebuiUrl && embeddedServerConfig.publicWsUrl,
+      )
+      const hasSecureBrowserTransport = Boolean(tls) || hasPublicReverseProxy
+
       const secureHost = resolveSecureRemoteHost(rpcHost, Boolean(tls))
       if (secureHost.networkBindRejected) {
-        mainLog.error(
-          '[server-mode] TLS is unavailable; refusing the network bind and falling back to 127.0.0.1. ' +
-          'Configure a certificate and private key, then restart to enable Remote access.'
-        )
+        if (hasPublicReverseProxy) {
+          mainLog.info(
+            '[server-mode] TLS terminates at the configured reverse proxy; restricting its plaintext upstream to 127.0.0.1.',
+          )
+        } else {
+          mainLog.error(
+            '[server-mode] TLS is unavailable; refusing the network bind and falling back to 127.0.0.1. ' +
+            'Configure a certificate and private key, then restart to enable Remote access.'
+          )
+        }
       }
       rpcHost = secureHost.host
 
@@ -723,7 +758,9 @@ app.whenReady().then(async () => {
         embeddedWebuiHandler = createWebuiHandler({
           webuiDir,
           secret: serverToken,
-          secureCookies: tls ? true : false,
+          secureCookies: hasSecureBrowserTransport,
+          publicWebuiUrl: embeddedServerConfig.publicWebuiUrl,
+          publicWsUrl: embeddedServerConfig.publicWsUrl,
           wsProtocol: tls ? 'wss' : 'ws',
           wsPort: rpcPort,
           hostLabel: hostname(),
@@ -735,7 +772,11 @@ app.whenReady().then(async () => {
             .map((workspace) => workspace.id),
           onRemoteDeviceRevoked: (deviceId) => disconnectRemoteDevice?.(deviceId),
         })
-        webuiNodeHandler = nodeHttpAdapter(embeddedWebuiHandler.fetch)
+        webuiNodeHandler = nodeHttpAdapter(embeddedWebuiHandler.fetch, {
+          onError: (context) => {
+            mainLog.error('[server-mode] Remote mobile UI request failed', context)
+          },
+        })
         mainLog.info(`[server-mode] Remote mobile UI enabled from ${webuiDir}`)
       } else if (serverModeEnabled) {
         mainLog.error(`[server-mode] Remote mobile UI assets are missing from ${webuiDir}`)
@@ -747,7 +788,7 @@ app.whenReady().then(async () => {
         rpcHost,
         rpcPort,
         tls,
-        validateSessionCookie: embeddedWebuiHandler && tls
+        validateSessionCookie: embeddedWebuiHandler && hasSecureBrowserTransport
           ? async (cookieHeader) => {
               const remoteSession = await validateSession(cookieHeader, serverToken)
               if (!remoteSession) return false
@@ -775,6 +816,9 @@ app.whenReady().then(async () => {
               }
             }
           : undefined,
+        allowedSessionCookieOrigins: resolveAllowedSessionCookieOrigins(
+          embeddedServerConfig.publicWebuiUrl,
+        ),
         authorizeRequest: embeddedWebuiHandler ? authorizeWebuiRpcRequest : undefined,
         httpHandler: webuiNodeHandler,
         bundledAssetsRoot: __dirname,
@@ -1102,8 +1146,12 @@ app.whenReady().then(async () => {
         host: rpcHost,
         port: instance.port,
         tls: !!tls,
+        tlsCertPath: tls ? embeddedServerConfig.tlsCertPath : undefined,
+        tlsKeyPath: tls ? embeddedServerConfig.tlsKeyPath : undefined,
         token: serverToken,
         enabled: serverModeEnabled,
+        publicWebuiUrl: embeddedServerConfig.publicWebuiUrl,
+        publicWsUrl: embeddedServerConfig.publicWsUrl,
       }
 
       disconnectRemoteDevice = (deviceId) => {
@@ -1121,10 +1169,11 @@ app.whenReady().then(async () => {
         return '127.0.0.1'
       }
 
-      const getWebUrl = (): string => {
-        const protocol = runningServerState.tls ? 'https' : 'http'
-        return `${protocol}://${getDisplayHost()}:${runningServerState.port}`
-      }
+      const getRunningRemoteUrls = () => resolveRemoteServerUrls(
+        runningServerState,
+        getDisplayHost(),
+        Boolean(embeddedWebuiHandler),
+      )
 
       instance.wsServer.handle(RPC_CHANNELS.settings.GET_SERVER_CONFIG, async () => {
         const { getServerConfig: getConfig } = await import('@craft-agent/shared/config')
@@ -1151,28 +1200,19 @@ app.whenReady().then(async () => {
       instance.wsServer.handle(RPC_CHANNELS.settings.GET_SERVER_STATUS, async () => {
         const { getServerConfig: getConfig } = await import('@craft-agent/shared/config')
         const saved = getConfig()
-        const protocol = runningServerState.tls ? 'wss' : 'ws'
-
-        // Determine display host (LAN IP if bound to 0.0.0.0)
-        const displayHost = getDisplayHost()
-
         // Only compare port/tls/token when at least one side has server mode enabled.
         // When both are disabled, the running port is random — comparing it to the
         // saved default (9100) would always produce a false "restart required" banner.
-        const needsRestart = saved.enabled !== runningServerState.enabled
-          || ((saved.enabled || runningServerState.enabled) && (
-            saved.port !== runningServerState.port
-            || (!!saved.tlsCertPath) !== runningServerState.tls
-            || (saved.token ?? '') !== runningServerState.token
-          ))
+        const needsRestart = remoteServerNeedsRestart(saved, runningServerState)
+        const publicUrls = getRunningRemoteUrls()
 
         return {
           running: true,
           host: runningServerState.host,
           port: runningServerState.port,
-          tls: runningServerState.tls,
-          url: `${protocol}://${displayHost}:${runningServerState.port}`,
-          webUrl: embeddedWebuiHandler ? getWebUrl() : undefined,
+          tls: hasSecureBrowserTransport,
+          url: publicUrls.url,
+          webUrl: publicUrls.webUrl,
           token: runningServerState.token,
           needsRestart,
           insecureWarning: isInsecureBind,
@@ -1183,10 +1223,14 @@ app.whenReady().then(async () => {
         if (!serverModeEnabled || !embeddedWebuiHandler) {
           throw new Error('Enable Remote access and restart Robb Agents before pairing a phone')
         }
-        if (!tls) {
-          throw new Error('Configure TLS and restart Robb Agents before pairing a phone')
+        if (!hasSecureBrowserTransport) {
+          throw new Error('Configure TLS or an HTTPS/WSS reverse proxy, then restart Robb Agents before pairing a phone')
         }
-        return embeddedWebuiHandler.createRemotePairing(getWebUrl(), hostname())
+        const publicWebUrl = getRunningRemoteUrls().webUrl
+        if (!publicWebUrl) {
+          throw new Error('Remote Web UI is unavailable')
+        }
+        return embeddedWebuiHandler.createRemotePairing(publicWebUrl, hostname())
       })
 
       instance.wsServer.handle(RPC_CHANNELS.settings.LIST_REMOTE_DEVICES, async () => {

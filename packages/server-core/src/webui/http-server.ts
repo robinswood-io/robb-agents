@@ -773,7 +773,13 @@ export function createWebuiHandler(options: WebuiHandlerOptions): WebuiHandler {
       const accept = req.headers.get('accept') ?? ''
       if (accept.includes('text/html') || path === '/' || path === '') {
         const next = path.startsWith('/remote/setup') ? `?next=${encodeURIComponent(path)}` : ''
-        return Response.redirect(`/login${next}`, 302)
+        // Node's WHATWG Response.redirect rejects relative URLs even though Bun
+        // accepts them. Emit the relative Location header directly so Electron
+        // does not return a generic 500 and no untrusted Host value is reflected.
+        return new Response(null, {
+          status: 302,
+          headers: { Location: `/login${next}` },
+        })
       }
       return Response.json({ error: 'Unauthorized' }, { status: 401 })
     }

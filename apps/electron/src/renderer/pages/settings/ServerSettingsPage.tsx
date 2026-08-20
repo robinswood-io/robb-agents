@@ -36,6 +36,8 @@ interface ServerFormState {
   tlsCertPath: string
   tlsKeyPath: string
   token: string
+  publicWebuiUrl: string
+  publicWsUrl: string
 }
 
 function configToForm(config: ServerConfig): ServerFormState {
@@ -45,6 +47,8 @@ function configToForm(config: ServerConfig): ServerFormState {
     tlsCertPath: config.tlsCertPath ?? '',
     tlsKeyPath: config.tlsKeyPath ?? '',
     token: config.token ?? '',
+    publicWebuiUrl: config.publicWebuiUrl ?? '',
+    publicWsUrl: config.publicWsUrl ?? '',
   }
 }
 
@@ -55,7 +59,40 @@ function formToConfig(form: ServerFormState): ServerConfig {
     tlsCertPath: form.tlsCertPath.trim() || undefined,
     tlsKeyPath: form.tlsKeyPath.trim() || undefined,
     token: form.token || undefined,
+    publicWebuiUrl: form.publicWebuiUrl.trim() || undefined,
+    publicWsUrl: form.publicWsUrl.trim() || undefined,
   }
+}
+
+function arePublicProxyFieldsValid(form: ServerFormState): boolean {
+  const publicWebuiUrl = form.publicWebuiUrl.trim()
+  const publicWsUrl = form.publicWsUrl.trim()
+  if (!publicWebuiUrl && !publicWsUrl) return true
+  if (!publicWebuiUrl || !publicWsUrl) return false
+
+  try {
+    const webui = new URL(publicWebuiUrl)
+    const websocket = new URL(publicWsUrl)
+    return webui.protocol === 'https:'
+      && websocket.protocol === 'wss:'
+      && !webui.username
+      && !webui.password
+      && !websocket.username
+      && !websocket.password
+      && !publicWebuiUrl.includes('?')
+      && !publicWebuiUrl.includes('#')
+      && !publicWsUrl.includes('?')
+      && !publicWsUrl.includes('#')
+      && webui.pathname === '/'
+      && webui.hostname === websocket.hostname
+  } catch {
+    return false
+  }
+}
+
+function hasValidPublicProxy(form: ServerFormState): boolean {
+  return Boolean(form.publicWebuiUrl.trim() && form.publicWsUrl.trim())
+    && arePublicProxyFieldsValid(form)
 }
 
 export default function ServerSettingsPage() {
@@ -67,6 +104,8 @@ export default function ServerSettingsPage() {
     tlsCertPath: '',
     tlsKeyPath: '',
     token: '',
+    publicWebuiUrl: '',
+    publicWsUrl: '',
   })
   const [savedForm, setSavedForm] = useState<ServerFormState>(form)
   const [status, setStatus] = useState<ServerStatus | null>(null)
@@ -114,10 +153,18 @@ export default function ServerSettingsPage() {
       return
     }
 
+    if (!arePublicProxyFieldsValid(form)) {
+      setError(t('settings.server.publicUrlsValidation'))
+      return
+    }
+    const nextConfig = formToConfig(form)
+
     setIsSaving(true)
     try {
-      await window.electronAPI.setServerConfig(formToConfig(form))
-      setSavedForm(form)
+      await window.electronAPI.setServerConfig(nextConfig)
+      const normalizedForm = configToForm(nextConfig)
+      setForm(normalizedForm)
+      setSavedForm(normalizedForm)
       const newStatus = await window.electronAPI.getServerStatus()
       setStatus(newStatus)
       toast.success(t('settings.server.saved'))
@@ -163,6 +210,7 @@ export default function ServerSettingsPage() {
   }
 
   const hasTls = !!(form.tlsCertPath && form.tlsKeyPath)
+  const hasSecurePublicProxy = hasValidPublicProxy(form)
   const needsRestart = status?.needsRestart ?? false
   const showServerDetails = form.enabled || savedForm.enabled
 
@@ -208,6 +256,23 @@ export default function ServerSettingsPage() {
                   value={form.port}
                   onChange={(port) => setForm(f => ({ ...f, port }))}
                   placeholder="9100"
+                />
+
+                <SettingsInputRow
+                  label={t("settings.server.publicWebuiUrl")}
+                  description={t("settings.server.publicUrlsDescription")}
+                  value={form.publicWebuiUrl}
+                  onChange={(publicWebuiUrl) => setForm(f => ({ ...f, publicWebuiUrl }))}
+                  placeholder="https://remote.example.com"
+                  type="url"
+                />
+
+                <SettingsInputRow
+                  label={t("settings.server.publicWsUrl")}
+                  value={form.publicWsUrl}
+                  onChange={(publicWsUrl) => setForm(f => ({ ...f, publicWsUrl }))}
+                  placeholder="wss://remote.example.com/rpc"
+                  type="url"
                 />
 
                 {status && form.enabled && (
@@ -262,7 +327,7 @@ export default function ServerSettingsPage() {
                 </SettingsRow>
               </SettingsCard>
 
-              {form.enabled && !hasTls && (
+              {form.enabled && !hasTls && !hasSecurePublicProxy && (
                 <div className="flex items-start gap-2 px-3 py-2 rounded-lg bg-warning/10 border border-warning/20 text-xs text-warning">
                   <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
                   <span>
