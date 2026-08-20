@@ -577,6 +577,7 @@ export class PiAgent extends BaseAgent {
       maxIdleMs: Number.isFinite(configuredIdleMs) && configuredIdleMs > 0
         ? configuredIdleMs
         : 30 * 60 * 1000,
+      isBusy: () => this.hasPendingSubprocessWork(),
       metadata: {
         ...(this.config.providerType ? { provider: this.config.providerType } : {}),
         workspaceId: this.config.workspace.id,
@@ -1841,6 +1842,17 @@ export class PiAgent extends BaseAgent {
   /**
    * Handle subprocess exit.
    */
+  private hasPendingSubprocessWork(): boolean {
+    return this._isProcessing
+      || this.pendingMiniCompletions.size > 0
+      || this.pendingLlmQueries.size > 0
+      || this.pendingEnsureSessionReady.size > 0
+      || this.pendingCompactions.size > 0
+      || this.pendingAutoCompactionToggles.size > 0
+      || this.pendingRuntimeConfigUpdates.size > 0
+      || this.pendingToolExecutions.size > 0;
+  }
+
   private handleSubprocessExit(
     code: number | null,
     signal: string | null,
@@ -1849,14 +1861,7 @@ export class PiAgent extends BaseAgent {
     this.debug(`Pi subprocess exited: code=${code}, signal=${signal}`);
 
     const expectedExit = child ? this.expectedSubprocessExits.delete(child) : false;
-    const hadPendingWork = this._isProcessing
-      || this.pendingMiniCompletions.size > 0
-      || this.pendingLlmQueries.size > 0
-      || this.pendingEnsureSessionReady.size > 0
-      || this.pendingCompactions.size > 0
-      || this.pendingAutoCompactionToggles.size > 0
-      || this.pendingRuntimeConfigUpdates.size > 0
-      || this.pendingToolExecutions.size > 0;
+    const hadPendingWork = this.hasPendingSubprocessWork();
     // A signal-only idle exit can come from the long-running-process idle
     // supervisor. Treat it as a failure only when work was active; explicit
     // non-zero exit codes remain failures even while idle.

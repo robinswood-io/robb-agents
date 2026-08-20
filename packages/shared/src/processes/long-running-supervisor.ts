@@ -17,6 +17,8 @@ export interface LongRunningProcessRegistration {
   ownerId: string;
   /** Maximum silence before the supervisor terminates the process tree. */
   maxIdleMs?: number;
+  /** Active work may legitimately be silent; idle cleanup is deferred while busy. */
+  isBusy?: () => boolean;
   metadata?: Record<string, string | number | boolean>;
 }
 
@@ -281,7 +283,18 @@ export class LongRunningProcessSupervisor {
       for (const [id, record] of this.records) {
         if (record.status === 'running') {
           const maxIdleMs = record.registration.maxIdleMs ?? DEFAULT_IDLE_TIMEOUT_MS;
-          if (now - record.lastActivityAtMs >= maxIdleMs) {
+          let isBusy = false;
+          try {
+            isBusy = record.registration.isBusy?.() === true;
+          } catch {
+            // A faulty owner callback must not break supervision for every
+            // other registered process. Fall back to normal idle handling.
+          }
+          if (isBusy) {
+            // Reset the idle baseline while active work is in flight so the
+            // process also receives a full idle window after that work ends.
+            record.lastActivityAtMs = now;
+          } else if (now - record.lastActivityAtMs >= maxIdleMs) {
             this.terminateRecord(record, `idle timeout exceeded (${maxIdleMs} ms)`);
           }
         }
