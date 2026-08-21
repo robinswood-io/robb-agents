@@ -57,6 +57,46 @@ describe('resolveServerPath fallback', () => {
     const paths = resolveBackendRuntimePaths(hostRuntime);
     expect(paths.piServerPath).toBe(join(primaryDir, 'index.js'));
   });
+
+  it('resolves every spawned runtime outside app.asar', () => {
+    const resourcesPath = join(tmpBase, 'asar-package', 'Resources');
+    const externalRoot = join(resourcesPath, 'app');
+    const appRoot = join(resourcesPath, 'app.asar');
+    const binaryName = process.platform === 'win32' ? 'claude.exe' : 'claude';
+    const claudePath = join(
+      externalRoot,
+      'node_modules',
+      '@anthropic-ai',
+      'claude-agent-sdk-binary',
+      binaryName,
+    );
+    const interceptorPath = join(externalRoot, 'dist', 'interceptor.cjs');
+    const serverNames = ['pi-agent-server', 'session-mcp-server', 'bridge-mcp-server'];
+    for (const serverName of serverNames) {
+      const serverDir = join(externalRoot, 'resources', serverName);
+      mkdirSync(serverDir, { recursive: true });
+      writeFileSync(join(serverDir, 'index.js'), '// external server');
+    }
+    const vibePath = join(externalRoot, 'resources', 'pi-agent-server', 'vibe-acp-server.js');
+    writeFileSync(vibePath, '// external ACP bridge');
+    mkdirSync(join(externalRoot, 'dist'), { recursive: true });
+    writeFileSync(interceptorPath, '// external interceptor');
+    mkdirSync(join(claudePath, '..'), { recursive: true });
+    writeFileSync(claudePath, '');
+
+    const paths = resolveBackendRuntimePaths({
+      appRootPath: appRoot,
+      resourcesPath,
+      isPackaged: true,
+    });
+
+    expect(paths.piServerPath).toBe(join(externalRoot, 'resources', 'pi-agent-server', 'index.js'));
+    expect(paths.sessionServerPath).toBe(join(externalRoot, 'resources', 'session-mcp-server', 'index.js'));
+    expect(paths.bridgeServerPath).toBe(join(externalRoot, 'resources', 'bridge-mcp-server', 'index.js'));
+    expect(paths.vibeAcpServerPath).toBe(vibePath);
+    expect(paths.interceptorBundlePath).toBe(interceptorPath);
+    expect(paths.claudeCliPath).toBe(claudePath);
+  });
 });
 
 describe('resolveBundledRuntimePath', () => {

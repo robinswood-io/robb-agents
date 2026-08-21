@@ -1,30 +1,35 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import babel from '@rolldown/plugin-babel'
 import tailwindcss from '@tailwindcss/vite'
 import { resolve } from 'path'
 
+const configDir = import.meta.dirname
+const webBaselineTargets = ['chrome111', 'edge111', 'firefox114', 'safari16.4']
+
 export default defineConfig({
   plugins: [
-    react({
-      babel: {
-        plugins: [
-          'jotai/babel/plugin-debug-label',
-          ['jotai/babel/plugin-react-refresh', { customAtomNames: ['atomFamily'] }],
-        ],
-      },
+    react(),
+    babel({
+      plugins: [
+        'jotai-babel/plugin-debug-label',
+        ['jotai-babel/plugin-react-refresh', { customAtomNames: ['atomFamily'] }],
+      ],
     }),
     tailwindcss(),
   ],
-  root: resolve(__dirname, 'src'),
+  root: resolve(configDir, 'src'),
   base: '/',
   build: {
-    outDir: resolve(__dirname, 'dist'),
+    // Vite 8's Baseline Widely Available target set, expressed for Oxc/Rolldown.
+    target: webBaselineTargets,
+    outDir: resolve(configDir, 'dist'),
     emptyOutDir: true,
     sourcemap: true,
-    rollupOptions: {
+    rolldownOptions: {
       input: {
-        main: resolve(__dirname, 'src/index.html'),
-        login: resolve(__dirname, 'src/login.html'),
+        main: resolve(configDir, 'src/index.html'),
+        login: resolve(configDir, 'src/login.html'),
       },
       // Suppress warnings for Node.js externalized modules — these are
       // referenced by shared code but only used in server/Electron codepaths.
@@ -37,21 +42,22 @@ export default defineConfig({
   resolve: {
     alias: {
       // Reuse the Electron renderer's components, hooks, pages, etc.
-      '@': resolve(__dirname, '../electron/src/renderer'),
+      '@': resolve(configDir, '../electron/src/renderer'),
       // Web-specific overrides
-      '@webui': resolve(__dirname, 'src'),
+      '@webui': resolve(configDir, 'src'),
       // Config alias (same as Electron)
-      '@config': resolve(__dirname, '../../packages/shared/src/config'),
+      '@config': resolve(configDir, '../../packages/shared/src/config'),
       // Force single React copy from root node_modules
-      'react': resolve(__dirname, '../../node_modules/react'),
-      'react-dom': resolve(__dirname, '../../node_modules/react-dom'),
+      'react': resolve(configDir, '../../node_modules/react'),
+      'react-dom': resolve(configDir, '../../node_modules/react-dom'),
       // Electron-specific modules → empty shims for browser builds
-      'electron-log/renderer': resolve(__dirname, 'src/shims/electron-log.ts'),
-      'electron-log': resolve(__dirname, 'src/shims/electron-log.ts'),
-      '@sentry/electron/renderer': resolve(__dirname, 'src/shims/sentry-electron.ts'),
-      '@sentry/electron': resolve(__dirname, 'src/shims/sentry-electron.ts'),
+      'electron-log/renderer': resolve(configDir, 'src/shims/electron-log.ts'),
+      'electron-log/main': resolve(configDir, 'src/shims/electron-log.ts'),
+      'electron-log': resolve(configDir, 'src/shims/electron-log.ts'),
+      '@sentry/electron/renderer': resolve(configDir, 'src/shims/sentry-electron.ts'),
+      '@sentry/electron': resolve(configDir, 'src/shims/sentry-electron.ts'),
       // Node.js 'ws' library → browser uses native WebSocket
-      'ws': resolve(__dirname, 'src/shims/ws.ts'),
+      'ws': resolve(configDir, 'src/shims/ws.ts'),
       // Node.js builtins → browser-safe shims (shared code imports these
       // but the codepaths aren't reached in browser — web API adapter intercepts)
       // Node.js builtins → browser-safe shims (shared code imports these
@@ -63,12 +69,12 @@ export default defineConfig({
         'crypto', 'https', 'http', 'net', 'events', 'util', 'buffer', 'stream',
         'node:stream', 'tls', 'node:tls', 'url', 'zlib', 'node:zlib',
         'string_decoder', 'node:string_decoder', 'assert', 'node:assert',
-      ].map(m => [m, resolve(__dirname, 'src/shims/node-builtins.ts')])),
+      ].map(m => [m, resolve(configDir, 'src/shims/node-builtins.ts')])),
       // fs/promises and node:fs/promises need a separate shim file to avoid path confusion
-      'fs/promises': resolve(__dirname, 'src/shims/fs-promises.ts'),
-      'node:fs/promises': resolve(__dirname, 'src/shims/fs-promises.ts'),
+      'fs/promises': resolve(configDir, 'src/shims/fs-promises.ts'),
+      'node:fs/promises': resolve(configDir, 'src/shims/fs-promises.ts'),
       // 'open' npm package (Node.js shell utility) — no-op in browser
-      'open': resolve(__dirname, 'src/shims/open.ts'),
+      'open': resolve(configDir, 'src/shims/open.ts'),
     },
     dedupe: ['react', 'react-dom'],
   },
@@ -79,9 +85,8 @@ export default defineConfig({
   optimizeDeps: {
     include: ['react', 'react-dom', 'jotai'],
     exclude: ['@craft-agent/ui'],
-    esbuildOptions: {
-      supported: { 'top-level-await': true },
-      target: 'esnext',
+    rolldownOptions: {
+      transform: { target: webBaselineTargets },
     },
   },
   server: {

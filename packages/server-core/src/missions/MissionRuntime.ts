@@ -27,6 +27,13 @@ type MissionExecutionOutcome =
   | { status: 'submission'; submission: WorkSubmission }
   | { status: 'verdict'; verdict: StructuredMissionVerdict }
   | {
+      status: 'approval-required';
+      approvalId: string;
+      requestHash: string;
+      expiresAt: string;
+      operationId: string;
+    }
+  | {
       status: 'failed';
       reason: string;
       retryable: boolean;
@@ -195,7 +202,14 @@ export class MissionRuntime {
         this.emit(accepted);
       },
     });
-    if (result.status === 'failed') {
+    if (result.status === 'approval-required') {
+      snapshot = this.options.controller.waitForWorkItemApproval(
+        missionId,
+        workItemId,
+        runtime.dispatchId,
+        `Connector approval ${result.approvalId} is required for ${result.operationId}`,
+      );
+    } else if (result.status === 'failed') {
       snapshot = this.options.controller.failWorkItemAttempt(missionId, workItemId, runtime.dispatchId, result);
     } else if (isReview(runtime.definition)) {
       if (result.status !== 'verdict') throw new Error(`Review "${workItemId}" returned a worker submission`);

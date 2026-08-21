@@ -9,6 +9,8 @@ export * from './preferences.ts';
 export * from './routing-policy.ts';
 export * from './routing-outcome-adapter.ts';
 export * from './routing-outcomes.ts';
+export * from './routing-shadow.ts';
+export * from './routing-outcome-store.ts';
 export * from './storage.ts';
 export * from './theme.ts';
 export * from './server-config.ts';

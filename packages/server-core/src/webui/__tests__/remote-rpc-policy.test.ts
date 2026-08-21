@@ -30,6 +30,30 @@ describe('Remote RPC policy', () => {
       ['workspace-1'],
     )).toBe(true)
     expect(authorizeWebuiRpcRequest(remote, RPC_CHANNELS.missions.GET, ['workspace-1'])).toBe(true)
+    expect(authorizeWebuiRpcRequest(
+      remote,
+      RPC_CHANNELS.missions.GET_PASSPORT_TRUST_ANCHOR,
+      ['workspace-1'],
+    )).toBe(true)
+    expect(authorizeWebuiRpcRequest(
+      remote,
+      RPC_CHANNELS.missions.GET_PASSPORT_TRUST_ANCHOR,
+      ['workspace-2'],
+    )).toBe(false)
+    expect(authorizeWebuiRpcRequest(remote, RPC_CHANNELS.missions.PREFLIGHT, ['workspace-1'])).toBe(true)
+    expect(authorizeWebuiRpcRequest(remote, RPC_CHANNELS.missions.PREVIEW_REPLAN, ['workspace-1'])).toBe(true)
+    expect(authorizeWebuiRpcRequest(remote, RPC_CHANNELS.missions.REPLAN, ['workspace-1'])).toBe(true)
+    expect(authorizeWebuiRpcRequest(remote, RPC_CHANNELS.missions.REPLAN, ['workspace-2'])).toBe(false)
+    expect(authorizeWebuiRpcRequest(
+      remote,
+      RPC_CHANNELS.missions.RESOLVE_CONNECTOR_APPROVAL,
+      ['workspace-1'],
+    )).toBe(true)
+    expect(authorizeWebuiRpcRequest(
+      remote,
+      RPC_CHANNELS.missions.RESOLVE_CONNECTOR_APPROVAL,
+      ['workspace-2'],
+    )).toBe(false)
     expect(authorizeWebuiRpcRequest(remote, RPC_CHANNELS.missions.CANCEL, ['workspace-1'])).toBe(true)
     expect(authorizeWebuiRpcRequest(remote, RPC_CHANNELS.missions.CREATE_AND_START, ['workspace-1'])).toBe(false)
     expect(authorizeWebuiRpcRequest(remote, RPC_CHANNELS.llmConnections.GET_API_KEY)).toBe(false)

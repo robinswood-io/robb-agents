@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "policyId": "financial-reconciliation-crm-v1",
+  "allowedOrigins": ["https://crm.example.com"],
+  "purpose": "Publier la correction CRM explicitement approuvée pour la période qualifiée",
+  "unmatchedAction": "block",
+  "piiAction": "pseudonymize",
+  "rules": [
+    { "path": "recordId", "classification": "business-sensitive", "action": "allow" },
+    { "path": "period", "classification": "business-sensitive", "action": "allow" },
+    { "path": "correction.amount", "classification": "business-sensitive", "action": "allow" },
+    { "path": "correction.currency", "classification": "public", "action": "allow" },
+    { "path": "correction.reasonCode", "classification": "business-sensitive", "action": "allow" },
+    { "path": "proposalSha256", "classification": "business-sensitive", "action": "allow" },
+    { "path": "approvalRef", "classification": "business-sensitive", "action": "allow" }
+  ]
+}

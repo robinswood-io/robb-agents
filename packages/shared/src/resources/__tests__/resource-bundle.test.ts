@@ -703,6 +703,39 @@ describe('resource-bundle', () => {
       expect(readFileSync(join(wsDir, 'sources', 'imported-api', 'guide.md'), 'utf-8')).toBe('# Imported\n\nGuide content.')
     })
 
+    it('rejects new legacy SSE sources from resource bundles', async () => {
+      const wsDir = createTestWorkspace(tmpDir)
+      const bundle: ResourceBundle = {
+        version: 1,
+        exportedAt: Date.now(),
+        resources: {
+          sources: [{
+            slug: 'legacy-sse',
+            config: {
+              id: 'legacy-sse_abc',
+              name: 'Legacy SSE',
+              slug: 'legacy-sse',
+              enabled: true,
+              provider: 'custom',
+              type: 'mcp',
+              mcp: {
+                transport: 'sse',
+                url: 'https://legacy.example.com/sse',
+                authType: 'none',
+              },
+            },
+            files: [],
+          }],
+        },
+      }
+
+      const result = await importResources(wsDir, bundle, 'skip', noopDeps)
+
+      expect(result.sources.imported).toEqual([])
+      expect(result.sources.failed[0]?.error).toContain('Legacy MCP SSE transport')
+      expect(existsSync(join(wsDir, 'sources', 'legacy-sse'))).toBe(false)
+    })
+
     it('imports skills with auxiliary files', async () => {
       const wsDir = createTestWorkspace(tmpDir)
 

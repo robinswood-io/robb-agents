@@ -6,8 +6,8 @@ electronVersion: "43.4.0"
 
 # Hook to compile macOS 26+ Liquid Glass icon after packaging
 afterPack: scripts/afterPack.cjs
-# Production macOS packaging fails closed on dirty source before packing and
-# verifies Developer ID signing plus notarization immediately after signing.
+# Every production package fails closed on dirty source before packing. macOS
+# additionally verifies Developer ID signing plus notarization after signing.
 beforePack: scripts/releaseIntegrity.cjs
 afterSign: scripts/afterSign.cjs
 
@@ -80,6 +80,23 @@ files:
   # Exclude everything from node_modules (will use extraResources for SDK)
   - "!node_modules/**/*"
 
+# Runtime subprocesses cannot execute files through Electron's virtual ASAR
+# filesystem. Keep the immutable Electron entrypoint in app.asar while staging
+# the explicitly spawned servers, tooling and WebUI under Resources/app/.
+# Platform-native binaries are copied by the platform blocks below.
+extraResources:
+  - from: dist/resources
+    to: app/resources
+    filter:
+      - "**/*"
+      - "!bin/darwin-*/**"
+      - "!bin/linux-*/**"
+      - "!bin/win32-*/**"
+  - from: dist/interceptor.cjs
+    to: app/dist/interceptor.cjs
+  - from: ../webui/dist
+    to: app/webui
+
 # Since SDK 0.2.113 the SDK ships a thin core (`@anthropic-ai/claude-agent-sdk`)
 # and a per-platform optional dependency (`-darwin-arm64`, `-darwin-x64`, etc.)
 # containing the ~210 MB native `claude` binary. We bundle both as extraResources
@@ -107,8 +124,12 @@ publish:
   releaseType: release
   publishAutoUpdate: true
 
-# Disable ASAR to avoid decompression overhead and click delays
-asar: false
+# Production code is loaded only from the integrity-protected ASAR. The
+# development overlay disables ASAR and these fuses for local iteration.
+asar: true
+electronFuses:
+  enableEmbeddedAsarIntegrityValidation: true
+  onlyLoadAppFromAsar: true
 
 mac:
   category: public.app-category.productivity

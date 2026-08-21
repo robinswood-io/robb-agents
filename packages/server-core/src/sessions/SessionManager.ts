@@ -22,7 +22,7 @@ import {
   type BackendHostRuntimeContext,
   type PostInitResult,
 } from '@craft-agent/shared/agent/backend'
-import { getLlmConnection, getLlmConnections, getDefaultLlmConnection, getDefaultThinkingLevel, getBrowserToolEnabled, resetManagedAnthropicAuthEnvVars, resolveMidStreamBehavior, getPersistedUiLanguage, resolveTitleLanguageName, resolveRoutingPolicy } from '@craft-agent/shared/config'
+import { getLlmConnection, getLlmConnections, getDefaultLlmConnection, getDefaultThinkingLevel, getBrowserToolEnabled, resetManagedAnthropicAuthEnvVars, resolveMidStreamBehavior, getPersistedUiLanguage, resolveTitleLanguageName, resolveRoutingPolicy, RoutingOutcomeStore, telemetryToRoutingOutcome, ALL_ROUTING_CAPABILITIES, ALL_ROUTING_DIFFICULTIES, type RoutingOutcomeAdapterContext } from '@craft-agent/shared/config'
 import { formatPlaybookPrompt, getBuiltinPlaybook, loadWorkspacePlaybook } from '@craft-agent/shared/playbooks'
 import { validateSessionExecutionIsolation } from '@craft-agent/shared/tasks'
 import { PrivilegedExecutionBroker } from '@craft-agent/server-core/services'
@@ -851,6 +851,8 @@ interface RunningBackgroundTask {
 interface RuntimeGenerationTelemetryRef {
   generationId: string
   turnId: string
+  /** Captured before routing metadata is cleared by the completed message. */
+  routingOutcome?: RoutingOutcomeAdapterContext
 }
 
 interface RuntimeCompactionTelemetry {
@@ -1357,6 +1359,8 @@ export class SessionManager implements ISessionManager {
   }> = new Map()
   // Workspace-scoped OTLP sinks. A sink is created only after explicit workspace opt-in.
   private telemetrySinks: Map<string, ExecutionTelemetrySink> = new Map()
+  // Local privacy-minimal routing observations. They never contain prompt/response bodies.
+  private routingOutcomeStores: Map<string, RoutingOutcomeStore> = new Map()
   // Enforces active → exactly-one-terminal generation telemetry transitions.
   private generationTelemetryLifecycle = new GenerationTelemetryLifecycle()
   // Privileged approval binding + audit logger
@@ -1483,8 +1487,36 @@ export class SessionManager implements ISessionManager {
       inputTokens: input.inputTokens,
     })
 
+    const routingDifficulty = managed.pendingRoutingMeta?.routingDifficulty
+    const requiredCapabilities = managed.pendingRoutingMeta?.requiredCapabilities
+    const resolvedDifficulty = ALL_ROUTING_DIFFICULTIES.find(
+      (difficulty) => difficulty === routingDifficulty,
+    )
+    const resolvedCapabilities = (requiredCapabilities ?? []).flatMap((required) => {
+      const capability = ALL_ROUTING_CAPABILITIES.find((candidate) => candidate === required)
+      return capability ? [capability] : []
+    })
+    const routingOutcome = managed.pendingRoutingReason === 'router'
+      && !!managed.llmConnection
+      && !!resolvedDifficulty
+      && resolvedCapabilities.length === (requiredCapabilities ?? []).length
+      ? {
+          connectionSlug: managed.llmConnection,
+          difficulty: resolvedDifficulty,
+          requiredCapabilities: resolvedCapabilities,
+          retryCount: managed.routingFallbackAttempts ?? 0,
+          workspaceId: managed.workspace.id,
+          sessionId: managed.id,
+          ...(managed.missionId ? { missionId: managed.missionId } : {}),
+        }
+      : undefined
+
     const generations = managed.executionTelemetryGenerations ?? new Map()
-    generations.set(processingGeneration, { generationId, turnId: input.turnId })
+    generations.set(processingGeneration, {
+      generationId,
+      turnId: input.turnId,
+      ...(routingOutcome ? { routingOutcome } : {}),
+    })
     managed.executionTelemetryGenerations = generations
     this.emitExecutionTelemetry(managed, event)
   }
@@ -1519,6 +1551,29 @@ export class SessionManager implements ISessionManager {
     managed.executionTelemetryGenerations?.delete(processingGeneration)
     if (managed.executionTelemetryGenerations?.size === 0) {
       managed.executionTelemetryGenerations = undefined
+    }
+    if (event && reference.routingOutcome) {
+      const outcome = telemetryToRoutingOutcome(event, {
+        ...reference.routingOutcome,
+        ...(typeof usage?.costUsd === 'number' ? { costUsd: usage.costUsd } : {}),
+      })
+      if (outcome) {
+        try {
+          let store = this.routingOutcomeStores.get(managed.workspace.id)
+          if (!store) {
+            store = new RoutingOutcomeStore(managed.workspace.rootPath)
+            this.routingOutcomeStores.set(managed.workspace.id, store)
+          }
+          store.record(outcome)
+        } catch (error) {
+          // Feedback must never affect the user-visible provider result.
+          sessionLog.warn('Failed to persist local routing outcome', {
+            workspaceId: managed.workspace.id,
+            sessionId: managed.id,
+            message: error instanceof Error ? error.message : String(error),
+          })
+        }
+      }
     }
     if (event) this.emitExecutionTelemetry(managed, event)
   }

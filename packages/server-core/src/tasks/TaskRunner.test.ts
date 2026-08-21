@@ -534,7 +534,12 @@ describe('TaskRunner (Conductor)', () => {
     expect(runner.getRunState('approve-mutation', started.runId)?.status).toBe('waiting-approval');
     expect(host.created).toHaveLength(0);
     const approval = runner.listPendingApprovals('approve-mutation', 'r1')[0];
-    expect(approval).toMatchObject({ nodeId: 'publish', impact: 'high', owner: 'bob' });
+    expect(approval).toMatchObject({
+      slug: 'approve-mutation',
+      nodeId: 'publish',
+      impact: 'high',
+      owner: 'bob',
+    });
 
     runner.resolveApproval('approve-mutation', 'r1', approval!.requestId, 'approved', 'bob');
     await tick();

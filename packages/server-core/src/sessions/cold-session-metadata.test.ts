@@ -69,6 +69,13 @@ describe('cold-session metadata persistence', () => {
       createdAt: Date.now(),
       lastUsedAt: Date.now(),
       messages: opts.messages ?? [],
+      tokenUsage: {
+        inputTokens: 0,
+        outputTokens: 0,
+        totalTokens: 0,
+        contextTokens: 0,
+        costUsd: 0,
+      },
     } as StoredSession
     writeSessionJsonl(filePath, stored)
 

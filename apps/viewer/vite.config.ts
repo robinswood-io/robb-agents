@@ -3,22 +3,25 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { resolve } from 'path'
 
+const configDir = import.meta.dirname
+
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss()],
-  root: __dirname,
+  root: configDir,
   // Base path for production - assets go to /s/assets/* to avoid conflict with marketing site
   base: '/s/',
   resolve: {
     alias: {
-      '@': resolve(__dirname, './src'),
+      '@': resolve(configDir, './src'),
       // Ensure all React imports resolve to the hoisted root node_modules
-      'react': resolve(__dirname, '../../node_modules/react'),
-      'react-dom': resolve(__dirname, '../../node_modules/react-dom'),
+      'react': resolve(configDir, '../../node_modules/react'),
+      'react-dom': resolve(configDir, '../../node_modules/react-dom'),
     },
     dedupe: ['react', 'react-dom'],
   },
   build: {
+    target: 'baseline-widely-available',
     outDir: 'dist',
     emptyOutDir: true,
     sourcemap: true,

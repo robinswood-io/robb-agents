@@ -409,7 +409,7 @@ async function main(): Promise<void> {
       // at module init. esbuild's CJS bundling leaves the synthesized `import_meta.url`
       // undefined for inner ESM modules, which throws ERR_INVALID_ARG_VALUE on load.
       // Externalize so Node loads the SDK natively as ESM (with a real import.meta.url).
-      // Electron 39 ships Node 22.x which supports require() of ESM without TLA, so the
+      // Electron 43 ships Node 24.x which supports require() of ESM without TLA, so the
       // bundled main.cjs's `require('@anthropic-ai/claude-agent-sdk')` works.
       "--external:@anthropic-ai/claude-agent-sdk",
       // Replace grammY's bundled polyfills (node-fetch@2 + abort-controller@3)

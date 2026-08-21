@@ -10,14 +10,14 @@
     "./worker": "./src/worker.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "node ../../scripts/run-typescript.mjs native --noEmit"
   },
   "dependencies": {
     "@whiskeysockets/baileys": "6.7.23",
     "sharp": "0.35.3"
   },
   "devDependencies": {
-    "typescript": "^5.8.2",
-    "@types/node": "^22.0.0"
+    "typescript": "~6.0.3",
+    "@types/node": "^24.13.3"
   }
 }

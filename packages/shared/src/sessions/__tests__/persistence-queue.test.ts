@@ -4,6 +4,7 @@ import { getHeaderMetadataSignature, mergeHeaderWithExternalMetadata } from '../
 
 function makeHeader(overrides: Partial<SessionHeader> = {}): SessionHeader {
   return {
+    schemaVersion: 1,
     id: 's1',
     workspaceRootPath: '~/.craft-agent/workspaces/ws',
     createdAt: 1,

@@ -13,10 +13,14 @@
  * - Runtime source switching without session restart
  */
 
-import { CraftMcpClient, type McpClientConfig, type PoolClient } from './client.ts';
+import {
+  CraftMcpClient,
+  type McpClientConfig,
+  type PoolClient,
+  type PoolTool,
+} from './client.ts';
 import { ApiSourcePoolClient } from './api-source-pool-client.ts';
 import type { SdkMcpServerConfig } from '../agent/backend/types.ts';
-import type { Tool } from '@modelcontextprotocol/sdk/types.js';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { isLocalMcpEnabled } from '../workspaces/storage.ts';
 import { guardLargeResult } from '../utils/large-response.ts';
@@ -138,7 +142,7 @@ export class McpClientPool {
   protected activeConfigs = new Map<string, SdkMcpServerConfig>();
 
   /** Cached tool lists keyed by source slug */
-  private toolCache = new Map<string, Tool[]>();
+  private toolCache = new Map<string, PoolTool[]>();
 
   /** Proxy tool name → { slug, originalName } (e.g., "mcp__linear__createIssue" → { slug: "linear", originalName: "createIssue" }) */
   private proxyTools = new Map<string, { slug: string; originalName: string }>();
@@ -356,7 +360,7 @@ export class McpClientPool {
   /**
    * Get cached tools for a source. Returns empty array if not connected.
    */
-  getTools(slug: string): Tool[] {
+  getTools(slug: string): PoolTool[] {
     return this.toolCache.get(slug) || [];
   }
 

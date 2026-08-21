@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "workspaceId": "qualification-workspace",
+  "policyVersion": 1,
+  "authorizationGeneration": 1,
+  "enabled": true,
+  "maxRisk": "W3",
+  "allowedOperations": ["records.upsert", "entries.post", "drive.update"],
+  "allowedOrigins": [
+    "https://crm.example.com",
+    "https://erp.example.com",
+    "https://www.googleapis.com"
+  ],
+  "allowedResourceTypes": ["crm-record", "erp-entry", "file"],
+  "approvalRequiredFor": ["W2", "W3"],
+  "maxRequestAgeMs": 300000,
+  "capabilityTtlMs": 60000,
+  "approvalTtlMs": 300000,
+  "budgets": {
+    "maxCostUsd": 30,
+    "maxWallTimeMs": 1800000
+  }
+}

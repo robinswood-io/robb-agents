@@ -200,6 +200,40 @@ Still to add:
 - fallback reason if any;
 - estimated/actual cost if available.
 
+## Private provider contract controls
+
+Three subscription-backed paths depend on endpoints that are not public API
+contracts. Their endpoint, headers, exact Pi SDK version, fallback and canary
+requirements are centralized in
+`packages/core/src/provider-contracts.ts`:
+
+- ChatGPT Codex backend (`/backend-api/codex/responses`): search falls back to
+  DuckDuckGo when disabled; an OpenAI API-key connection continues to use the
+  official Responses API.
+- GitHub Copilot `proxy-ep`: model discovery falls back to the exact Pi SDK
+  static catalog when disabled.
+- Google Code Assist `v1internal`: requests fail closed when disabled because a
+  Code Assist OAuth token cannot be moved transparently to the public Gemini
+  API. Configure a separate Google AI Studio connection for that official path.
+
+Emergency controls preserve the existing behavior when unset. Values `1` and
+`true` disable; `0` and `false` explicitly enable. Any other non-empty value is
+treated as malformed and disables the private path:
+
+- `ROBB_DISABLE_UNSTABLE_PROVIDERS` (master);
+- `ROBB_DISABLE_CHATGPT_CODEX_BACKEND`;
+- `ROBB_DISABLE_GITHUB_COPILOT_PROXY`;
+- `ROBB_DISABLE_GOOGLE_CODE_ASSIST_V1INTERNAL`.
+
+The scheduled `Provider contract canaries` workflow checks auth, model listing,
+search and tool calls where each contract supports them. Configure repository
+secrets `ROBB_CANARY_CHATGPT_ACCESS_TOKEN`, `ROBB_CANARY_GITHUB_TOKEN`, and
+`ROBB_CANARY_GOOGLE_CODE_ASSIST_ACCESS_TOKEN`. Reports contain only redacted
+diagnostics. Set repository variable `ROBB_PROVIDER_CANARIES_REQUIRED=1` after
+the secrets are installed to make skipped required checks fail the workflow.
+Optional model overrides are `ROBB_CANARY_COPILOT_MODEL` and
+`ROBB_CANARY_GOOGLE_CODE_ASSIST_MODEL`.
+
 ## Next engineering steps
 
 1. Verify OVHcloud AI Endpoints current OpenAI-compatible base URL format and authentication.

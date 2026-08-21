@@ -53,6 +53,22 @@ const OperationCompensationSchema = z.object({
   operationId: z.string().trim().min(1).optional(),
 }).strict()
 
+/**
+ * Bounded, value-free context shown to a human before a connector operation.
+ * It is part of CapabilityOperationRequestSchema so every field below is
+ * covered by the canonical requestHash without exposing the request payload or
+ * a provider resource identifier to approval clients.
+ */
+export const OperationApprovalContextSchema = z.object({
+  provider: z.string().trim().min(1).max(128),
+  connectorId: z.string().trim().min(1).max(128),
+  origin: z.string().url().max(2_048),
+  resourceClass: z.string().trim().min(1).max(128),
+  purpose: z.string().trim().min(1).max(256),
+  effect: z.enum(['read', 'write', 'external-mutation']),
+  method: z.enum(['GET', 'POST', 'PATCH', 'PUT', 'DELETE']),
+}).strict()
+
 export const CapabilityOperationRequestSchema = z.object({
   schemaVersion: z.literal(1),
   operationId: z.string().trim().min(1),
@@ -64,10 +80,34 @@ export const CapabilityOperationRequestSchema = z.object({
   policyVersion: z.number().int().positive(),
   authorizationGeneration: z.number().int().nonnegative(),
   requestedAt: z.string().datetime(),
+  approvalContext: OperationApprovalContextSchema.optional(),
   idempotencyKey: z.string().trim().min(1).optional(),
   budget: OperationBudgetEstimateSchema.optional(),
   compensation: OperationCompensationSchema.optional(),
-}).strict()
+}).strict().superRefine((request, ctx) => {
+  if (!request.approvalContext) return
+  if (request.approvalContext.connectorId !== request.identity.connectorId) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['approvalContext', 'connectorId'],
+      message: 'Approval connector must match the authorized connector identity',
+    })
+  }
+  if (request.approvalContext.origin !== request.target.origin) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['approvalContext', 'origin'],
+      message: 'Approval origin must match the authorized target origin',
+    })
+  }
+  if (request.approvalContext.resourceClass !== request.target.resourceType) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['approvalContext', 'resourceClass'],
+      message: 'Approval resource class must match the authorized target resource type',
+    })
+  }
+})
 
 export const CapabilityPolicySchema = z.object({
   schemaVersion: z.literal(1),
@@ -95,6 +135,7 @@ export type OperationIdentity = z.infer<typeof OperationIdentitySchema>
 export type OperationTarget = z.infer<typeof OperationTargetSchema>
 export type OperationBudgetEstimate = z.infer<typeof OperationBudgetEstimateSchema>
 export type OperationCompensation = z.infer<typeof OperationCompensationSchema>
+export type OperationApprovalContext = z.infer<typeof OperationApprovalContextSchema>
 export type CapabilityOperationRequest = z.infer<typeof CapabilityOperationRequestSchema>
 export type CapabilityPolicy = z.infer<typeof CapabilityPolicySchema>
 
@@ -106,6 +147,7 @@ export interface CapabilityApprovalRequest {
   actorId: string
   workspaceId: string
   missionId: string
+  approvalContext?: OperationApprovalContext
   createdAt: string
   expiresAt: string
 }
@@ -549,6 +591,7 @@ export class CapabilityBroker {
       actorId: request.identity.actorId,
       workspaceId: request.identity.workspaceId,
       missionId: request.identity.missionId,
+      ...(request.approvalContext ? { approvalContext: structuredClone(request.approvalContext) } : {}),
       createdAt,
       expiresAt: new Date(this.nowMs() + this.policy.approvalTtlMs).toISOString(),
     }

@@ -6,6 +6,7 @@ import {
 } from './routing-policy.ts'
 
 export type RoutingOutcomeStatus = 'success' | 'partial' | 'failure' | 'cancelled'
+export type RoutingOutcomeEvidenceKind = 'runtime' | 'eval' | 'mission'
 
 /**
  * Privacy-minimal observation emitted after a routed turn or evaluation case.
@@ -24,6 +25,16 @@ export interface RoutingOutcome {
   outputTokens?: number
   retryCount?: number
   requiredCapabilities?: RoutingCapability[]
+  /**
+   * Runtime observations are useful for drift, but are not ground truth and can
+   * never authorize a routing-policy promotion. Older entries without this
+   * field are deliberately treated as runtime observations.
+   */
+  evidenceKind?: RoutingOutcomeEvidenceKind
+  /** Privacy-minimal correlation. No prompt, response, or tool payload is stored. */
+  workspaceId?: string
+  missionId?: string
+  sessionId?: string
 }
 
 export interface RoutingOutcomeSummary {
@@ -91,6 +102,11 @@ const ROUTING_OUTCOME_STATUSES = new Set<RoutingOutcomeStatus>([
   'failure',
   'cancelled',
 ])
+const ROUTING_OUTCOME_EVIDENCE_KINDS = new Set<RoutingOutcomeEvidenceKind>([
+  'runtime',
+  'eval',
+  'mission',
+])
 
 function finiteNonNegative(value: number | undefined): boolean {
   return value === undefined || (Number.isFinite(value) && value >= 0)
@@ -105,6 +121,12 @@ export function validateRoutingOutcome(outcome: RoutingOutcome): RoutingOutcomeV
   }
   if (!ROUTING_OUTCOME_STATUSES.has(outcome.status)) {
     errors.push('status must be success, partial, failure or cancelled')
+  }
+  if (
+    outcome.evidenceKind !== undefined
+    && !ROUTING_OUTCOME_EVIDENCE_KINDS.has(outcome.evidenceKind)
+  ) {
+    errors.push('evidenceKind must be runtime, eval or mission')
   }
   if (
     outcome.requiredCapabilities
@@ -127,6 +149,9 @@ export function validateRoutingOutcome(outcome: RoutingOutcome): RoutingOutcomeV
   if (!finiteNonNegative(outcome.inputTokens)) errors.push('inputTokens must be a finite non-negative number')
   if (!finiteNonNegative(outcome.outputTokens)) errors.push('outputTokens must be a finite non-negative number')
   if (!finiteNonNegative(outcome.retryCount)) errors.push('retryCount must be a finite non-negative number')
+  for (const field of ['workspaceId', 'missionId', 'sessionId'] as const) {
+    if (outcome[field] !== undefined && !outcome[field]!.trim()) errors.push(`${field} must be non-empty when provided`)
+  }
   return { valid: errors.length === 0, errors }
 }
 

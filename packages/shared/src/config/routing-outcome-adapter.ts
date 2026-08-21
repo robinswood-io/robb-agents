@@ -19,6 +19,9 @@ export interface RoutingOutcomeAdapterContext {
   retryCount?: number
   costUsd?: number
   qualityScore?: number
+  workspaceId?: string
+  missionId?: string
+  sessionId?: string
 }
 
 type TerminalGenerationTelemetryEvent = GenerationTelemetryEvent & {
@@ -77,11 +80,15 @@ export function telemetryToRoutingOutcome(
     ...(typeof context.costUsd === 'number'
       ? { costUsd: context.costUsd }
       : {}),
+    ...(context.workspaceId ? { workspaceId: context.workspaceId } : {}),
+    ...(context.missionId ? { missionId: context.missionId } : {}),
+    ...(context.sessionId ? { sessionId: context.sessionId } : {}),
   }
 
   if (isTerminalGeneration(event)) {
     return {
       ...shared,
+      evidenceKind: 'runtime',
       status: generationStatus(event),
       ...(typeof context.qualityScore === 'number'
         ? { qualityScore: context.qualityScore }
@@ -98,6 +105,7 @@ export function telemetryToRoutingOutcome(
   if (event.name === 'eval.recorded') {
     return {
       ...shared,
+      evidenceKind: 'eval',
       status: evalStatus(event),
       ...(typeof event.score === 'number'
         ? { qualityScore: event.score }

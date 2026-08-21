@@ -10,6 +10,8 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
+    "rootDir": "../..",
+    "types": ["node", "vite/client"],
     "jsx": "react-jsx",
     "strict": true,
     "noUnusedLocals": false,

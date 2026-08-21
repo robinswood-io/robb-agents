@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "policyId": "financial-reconciliation-erp-v1",
+  "allowedOrigins": ["https://erp.example.com"],
+  "purpose": "Comptabiliser l'écriture corrective explicitement approuvée et réconciliée",
+  "unmatchedAction": "block",
+  "piiAction": "pseudonymize",
+  "rules": [
+    { "path": "entryId", "classification": "business-sensitive", "action": "allow" },
+    { "path": "period", "classification": "business-sensitive", "action": "allow" },
+    { "path": "debitAccount", "classification": "business-sensitive", "action": "allow" },
+    { "path": "creditAccount", "classification": "business-sensitive", "action": "allow" },
+    { "path": "amount", "classification": "business-sensitive", "action": "allow" },
+    { "path": "currency", "classification": "public", "action": "allow" },
+    { "path": "proposalSha256", "classification": "business-sensitive", "action": "allow" },
+    { "path": "approvalRef", "classification": "business-sensitive", "action": "allow" }
+  ]
+}

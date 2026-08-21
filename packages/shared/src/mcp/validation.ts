@@ -6,7 +6,10 @@
  * by Electron's macOS sandbox — see issue #697).
  */
 
-import { CraftMcpClient } from './client.js';
+import {
+  CraftMcpClient,
+  buildStdioMcpSubprocessEnvironment,
+} from './client.js';
 import { debug } from '../utils/debug.ts';
 import { normalizeMcpUrl } from '../sources/server-builder.ts';
 import type { McpTransport } from '../sources/types.ts';
@@ -332,10 +335,8 @@ export async function validateStdioMcpConnection(
 
   debug(`[stdio-validation] Spawning: ${command} ${args.join(' ')}`);
 
-  const { Client } = await import('@modelcontextprotocol/sdk/client/index.js');
-  const { StdioClientTransport } = await import(
-    '@modelcontextprotocol/sdk/client/stdio.js'
-  );
+  const { Client } = await import('@modelcontextprotocol/client');
+  const { StdioClientTransport } = await import('@modelcontextprotocol/client/stdio');
 
   let client: InstanceType<typeof Client> | null = null;
   let transport: InstanceType<typeof StdioClientTransport> | null = null;
@@ -362,14 +363,6 @@ export async function validateStdioMcpConnection(
     }
   };
 
-  // Filter out undefined entries from process.env before merging.
-  const processEnv: Record<string, string> = {};
-  for (const [key, value] of Object.entries(process.env)) {
-    if (value !== undefined) {
-      processEnv[key] = value;
-    }
-  }
-
   const withTimeout = <T>(p: Promise<T>, ms: number, label: string): Promise<T> => {
     return new Promise<T>((resolve, reject) => {
       const id = setTimeout(() => {
@@ -392,7 +385,7 @@ export async function validateStdioMcpConnection(
     transport = new StdioClientTransport({
       command,
       args,
-      env: { ...processEnv, ...env },
+      env: buildStdioMcpSubprocessEnvironment(env),
       cwd,
       stderr: 'pipe',
     });
@@ -413,7 +406,19 @@ export async function validateStdioMcpConnection(
 
     client = new Client(
       { name: 'craft-agent-validator', version: '1.0.0' },
-      { capabilities: {} }
+      {
+        capabilities: {},
+        versionNegotiation: {
+          mode: 'auto',
+          // The v2 SDK probes stdio on a disposable sibling. Keep that probe
+          // bounded so the real child starts soon enough for this validator's
+          // stderr-aware idle watchdog to observe cold-start activity. A
+          // silent/unknown probe falls back to the unchanged 2025 handshake.
+          probe: {
+            timeoutMs: Math.max(500, Math.min(2000, Math.floor(connectIdleMs / 3))),
+          },
+        },
+      }
     );
 
     phase = 'connect';

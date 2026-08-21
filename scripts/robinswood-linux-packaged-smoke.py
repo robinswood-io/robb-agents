@@ -203,8 +203,11 @@ def main() -> None:
         if not executables:
             fail("Missing executable Linux Robb Agents binary in extracted AppImage")
 
-        find_one(root, "resources/app/dist/resources/pi-agent-server/index.js", "Pi agent server")
-        find_one(root, "resources/app/dist/resources/pi-agent-server/vibe-acp-server.js", "Mistral Vibe ACP bridge")
+        find_one(root, "resources/app.asar", "integrity-protected ASAR")
+        find_one(root, "resources/app/resources/pi-agent-server/index.js", "Pi agent server")
+        find_one(root, "resources/app/resources/pi-agent-server/vibe-acp-server.js", "Mistral Vibe ACP bridge")
+        if (root.joinpath("resources/app/dist/main.cjs").exists()):
+            fail("Electron main entrypoint escaped the integrity-protected app.asar")
         bundled_bun = find_one(root, "resources/app/vendor/bun/bun", "bundled Bun runtime")
         if not os.access(bundled_bun, os.X_OK):
             fail(f"Bundled Bun runtime is not executable: {bundled_bun}")
@@ -214,7 +217,7 @@ def main() -> None:
         ripgrep = find_one(root, "resources/app/node_modules/@vscode/ripgrep/bin/rg", "ripgrep runtime")
         if not os.access(ripgrep, os.X_OK):
             fail(f"ripgrep runtime is not executable: {ripgrep}")
-        rtk = find_one(root, "resources/app/dist/resources/bin/linux-x64/rtk", "bundled RTK")
+        rtk = find_one(root, "resources/app/resources/bin/linux-x64/rtk", "bundled RTK")
         if not os.access(rtk, os.X_OK):
             fail(f"Bundled RTK is not executable: {rtk}")
         version = subprocess.run([str(rtk), "--version"], text=True, capture_output=True, check=False, timeout=10)

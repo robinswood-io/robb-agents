@@ -90,6 +90,7 @@ import { createSearchTool } from './tools/search/create-search-tool.ts';
 import { allowCraftMetadataProperties, stripCraftMetadata } from './craft-metadata-schema.ts';
 import { applySystemPromptOverride } from './system-prompt-override.ts';
 import { registerGoogleCodeAssistProvider } from './google-code-assist-provider.ts';
+import { assertPiAuthProviderContractEnabled } from './provider-contract-guard.ts';
 import {
   OVERFLOW_RECOVERY_COMPACTION_INSTRUCTIONS,
   prepareMessagesForOverflowContinuation,
@@ -544,8 +545,9 @@ function createAuthenticatedRegistry(): {
 }
 
 async function ensureSession(): Promise<AgentSession> {
-  if (piSession) return piSession;
   if (!initConfig) throw new Error('Cannot create session: init not received');
+  assertPiAuthProviderContractEnabled(initConfig.piAuth?.provider, process.env);
+  if (piSession) return piSession;
 
   const cwd = resolvedCwd();
 
@@ -898,6 +900,7 @@ function buildProxyTools(): ToolDefinition<any, any>[] {
 
 async function queryLlm(request: LLMQueryRequest): Promise<LLMQueryResult> {
   if (!initConfig) throw new Error('Cannot run queryLlm: init not received');
+  assertPiAuthProviderContractEnabled(initConfig.piAuth?.provider, process.env);
 
   debugLog('[queryLlm] Starting');
 

@@ -22,6 +22,11 @@ import { THINKING_LEVEL_IDS } from '../agent/thinking-levels.ts';
 import { isValidProviderAuthCombination } from './llm-connections.ts';
 import { SUPPORTED_LANGUAGE_CODES } from '../i18n/languages.ts';
 import type { LanguageCode } from '../i18n/languages.ts';
+import {
+  evaluateMcpTransportWrite,
+  LEGACY_SSE_TRANSPORT_ERROR,
+} from '../sources/mcp-transport-policy.ts';
+import type { FolderSourceConfig } from '../sources/types.ts';
 
 // ============================================================
 // Config Directory
@@ -58,11 +63,12 @@ export interface ValidationResult {
 const WorkspaceSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
+  rootPath: z.string().min(1),
   slug: z.string().optional(),
   createdAt: z.number().int().positive(),
   sessionId: z.string().optional(),
   iconUrl: z.string().optional(),
-});
+}).passthrough();
 
 // --- LLM Connection schema for config validation ---
 
@@ -97,6 +103,7 @@ const LlmConnectionSchema = z.object({
 }).passthrough();
 
 export const StoredConfigSchema = z.object({
+  schemaVersion: z.literal(1),
   workspaces: z.array(WorkspaceSchema).min(0),
   activeWorkspaceId: z.string().nullable(),
   activeSessionId: z.string().nullable(),
@@ -105,7 +112,7 @@ export const StoredConfigSchema = z.object({
   defaultThinkingLevel: z.enum([...THINKING_LEVEL_IDS, 'think'] as [string, ...string[]]).transform(v => v === 'think' ? 'medium' : v).optional(),
   // Note: tokenDisplay, showCost, cumulativeUsage, defaultPermissionMode removed
   // Permission mode and cyclable modes are now per-workspace in workspace config.json
-});
+}).passthrough();
 
 // --- preferences.json ---
 
@@ -377,12 +384,12 @@ import { getWorkspaceSourcesPath } from '../workspaces/storage.ts';
 const SourceTypeSchema = z.enum(['mcp', 'api', 'local']);
 const RoutingSensitivitySchema = z.enum(['public', 'internal', 'confidential', 'restricted']);
 
-// MCP source supports two transport types:
-// - HTTP/SSE: requires url and authType
+// MCP source supports current transports plus legacy persisted SSE:
+// - Streamable HTTP / legacy SSE: requires url and authType
 // - Stdio: requires command (and optional args, env)
 const McpSourceConfigSchema = z.object({
   transport: z.enum(['http', 'sse', 'stdio']).optional(),
-  // HTTP/SSE fields
+  // Remote transport fields
   url: z.string().url().optional(),
   authType: z.enum(['oauth', 'bearer', 'none']).optional(),
   clientId: z.string().optional(),
@@ -390,7 +397,7 @@ const McpSourceConfigSchema = z.object({
   command: z.string().optional(),
   args: z.array(z.string()).optional(),
   env: z.record(z.string(), z.string()).optional(),
-  // Custom headers for HTTP/SSE transport (e.g., API keys, custom auth)
+  // Custom headers for remote transport (e.g., API keys, custom auth)
   headers: z.record(z.string(), z.string()).optional(),
   // Header names for credential-store auth (values stored in credential store as JSON)
   headerNames: z.array(z.string()).optional(),
@@ -400,12 +407,12 @@ const McpSourceConfigSchema = z.object({
       // Stdio transport requires command
       return !!data.command;
     } else {
-      // HTTP/SSE transport (default) requires url and authType
+      // Remote transport (default HTTP or persisted SSE) requires url and authType
       return !!data.url && !!data.authType;
     }
   },
   {
-    message: 'MCP config requires either (url + authType) for HTTP/SSE or (command) for stdio transport',
+    message: 'MCP config requires either (url + authType) for remote transport or (command) for stdio transport',
   }
 );
 
@@ -493,7 +500,17 @@ export function validateSourceConfig(config: unknown): ValidationResult {
   const result = FolderSourceConfigSchema.safeParse(config);
 
   if (result.success) {
-    return { valid: true, errors: [], warnings: [] };
+    const warnings: ValidationIssue[] = [];
+    if (result.data.type === 'mcp' && result.data.mcp?.transport === 'sse') {
+      warnings.push({
+        file: 'config.json',
+        path: 'mcp.transport',
+        message: 'Legacy SSE transport is retained only for persisted configurations',
+        severity: 'warning',
+        suggestion: 'Migrate this source to Streamable HTTP or stdio',
+      });
+    }
+    return { valid: true, errors: [], warnings };
   }
 
   return {
@@ -507,7 +524,13 @@ export function validateSourceConfig(config: unknown): ValidationResult {
  * Validate source config from a JSON string.
  * Used by PreToolUse hook to validate before writing to disk.
  */
-export function validateSourceConfigContent(jsonString: string): ValidationResult {
+export function validateSourceConfigContent(
+  jsonString: string,
+  options?: {
+    enforceMcpTransportWrite?: boolean;
+    previousJsonString?: string;
+  },
+): ValidationResult {
   let content: unknown;
   try {
     content = safeJsonParse(jsonString);
@@ -524,7 +547,29 @@ export function validateSourceConfigContent(jsonString: string): ValidationResul
     };
   }
 
-  return validateSourceConfig(content);
+  const validation = validateSourceConfig(content);
+  if (!validation.valid || !options?.enforceMcpTransportWrite) return validation;
+
+  let previous: FolderSourceConfig | null = null;
+  if (options.previousJsonString) {
+    try {
+      previous = safeJsonParse(options.previousJsonString) as FolderSourceConfig;
+    } catch {
+      // An invalid prior file must not weaken policy for the replacement write.
+    }
+  }
+  const decision = evaluateMcpTransportWrite(content as FolderSourceConfig, previous);
+  if (!decision.allowed) {
+    validation.valid = false;
+    validation.errors.push({
+      file: 'config.json',
+      path: 'mcp.transport',
+      message: LEGACY_SSE_TRANSPORT_ERROR,
+      severity: 'error',
+      suggestion: 'Set mcp.transport to "http" (Streamable HTTP) or "stdio"',
+    });
+  }
+  return validation;
 }
 
 /**
@@ -2093,11 +2138,15 @@ export function detectAppConfigFileType(filePath: string): ConfigFileDetection |
  */
 export function validateConfigFileContent(
   detection: ConfigFileDetection,
-  content: string
+  content: string,
+  previousContent?: string,
 ): ValidationResult | null {
   switch (detection.type) {
     case 'source':
-      return validateSourceConfigContent(content);
+      return validateSourceConfigContent(content, {
+        enforceMcpTransportWrite: true,
+        previousJsonString: previousContent,
+      });
     case 'skill':
       return validateSkillContent(content, detection.slug || 'unknown');
     case 'statuses':

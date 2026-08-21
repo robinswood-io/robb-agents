@@ -10,11 +10,12 @@
   },
   "scripts": {
     "build": "bun build src/index.ts src/vibe-acp-server.ts --outdir=dist --target=bun --format=esm --external koffi",
-    "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
+    "typecheck": "node ../../scripts/run-typescript.mjs native --noEmit -p tsconfig.typecheck.json",
     "validate": "bun run typecheck && bun run build"
   },
   "dependencies": {
     "@agentclientprotocol/sdk": "1.2.1",
+    "@craft-agent/core": "workspace:*",
     "@earendil-works/pi-agent-core": "0.80.3",
     "@earendil-works/pi-ai": "0.80.3",
     "@earendil-works/pi-coding-agent": "0.80.3",
@@ -25,6 +26,6 @@
     "turndown": "^7.2.0"
   },
   "devDependencies": {
-    "@types/node": "^22.0.0"
+    "@types/node": "^24.13.3"
   }
 }

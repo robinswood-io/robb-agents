@@ -36,6 +36,7 @@ describe('telemetryToRoutingOutcome', () => {
       id: 'generation-terminal-1',
       connectionSlug: 'openai-primary',
       difficulty: 'complex',
+      evidenceKind: 'runtime',
       status: 'success',
       durationMs: 120,
       timestamp: '2025-07-23T16:00:00.000Z',
@@ -84,6 +85,7 @@ describe('telemetryToRoutingOutcome', () => {
       name: 'generation.cancelled',
     }, context)?.status).toBe('cancelled')
     expect(telemetryToRoutingOutcome(evaluation, context)).toMatchObject({
+      evidenceKind: 'eval',
       status: 'partial',
       qualityScore: 0.75,
     })

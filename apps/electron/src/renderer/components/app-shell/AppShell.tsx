@@ -33,6 +33,7 @@ import {
   Info,
   MailOpen,
   FolderKanban,
+  Workflow,
 } from "lucide-react"
 // SessionStatusIcons no longer used - icons come from dynamic sessionStatuses
 import { SourceAvatar } from "@/components/ui/source-avatar"
@@ -116,6 +117,7 @@ import {
   isSkillsNavigation,
   isAutomationsNavigation,
   isProjectsNavigation,
+  isMissionsNavigation,
   type NavigationState,
 } from "@/contexts/NavigationContext"
 import type { SettingsSubpage } from "../../../shared/types"
@@ -634,6 +636,8 @@ function AppShellContent({
   // Board view replaces the session-list navigator with the full-width Kanban panel,
   // so the navigator (and its resize handle) collapse to zero width while it's active.
   const isBoardView = isSessionsNavigation(navState) && navState.viewMode === 'board'
+  const isMissionControlView = isMissionsNavigation(navState)
+  const isFullWidthView = isBoardView || isMissionControlView
 
   // Derive source filter from navigation state (only when in sources navigator)
   const sourceFilter: SourceFilter | null = isSourcesNavigation(navState) ? navState.filter ?? null : null
@@ -1832,6 +1836,10 @@ function AppShellContent({
     navigate(routes.view.projects())
   }, [])
 
+  const handleMissionsClick = useCallback(() => {
+    navigate(routes.view.missions())
+  }, [])
+
   const handleAutomationsScheduledClick = useCallback(() => {
     navigate(routes.view.automationsScheduled())
   }, [])
@@ -2138,12 +2146,14 @@ function AppShellContent({
     // 3. Sources, Skills, Settings
     result.push({ id: 'nav:sources', type: 'nav', action: handleSourcesClick })
     result.push({ id: 'nav:skills', type: 'nav', action: handleSkillsClick })
+    result.push({ id: 'nav:projects', type: 'nav', action: handleProjectsClick })
+    result.push({ id: 'nav:missions', type: 'nav', action: handleMissionsClick })
     result.push({ id: 'nav:automations', type: 'nav', action: handleAutomationsClick })
     result.push({ id: 'nav:settings', type: 'nav', action: () => handleSettingsClick() })
     result.push({ id: 'nav:whats-new', type: 'nav', action: handleWhatsNewClick })
 
     return result
-  }, [handleAllSessionsClick, handleFlaggedClick, handleArchivedClick, handleSessionStatusClick, effectiveSessionStatuses, handleLabelClick, labelConfigs, labelTree, viewConfigs, handleViewClick, handleSourcesClick, handleSkillsClick, handleAutomationsClick, handleSettingsClick, handleWhatsNewClick])
+  }, [handleAllSessionsClick, handleFlaggedClick, handleArchivedClick, handleSessionStatusClick, effectiveSessionStatuses, handleLabelClick, labelConfigs, labelTree, viewConfigs, handleViewClick, handleSourcesClick, handleSkillsClick, handleProjectsClick, handleMissionsClick, handleAutomationsClick, handleSettingsClick, handleWhatsNewClick])
 
   // Toggle folder expanded state
   const handleToggleFolder = React.useCallback((path: string) => {
@@ -2265,6 +2275,10 @@ function AppShellContent({
     // Projects navigator
     if (isProjectsNavigation(navState)) {
       return t("sidebar.allProjects")
+    }
+
+    if (isMissionsNavigation(navState)) {
+      return t("sidebar.missions")
     }
 
     // Automations navigator
@@ -2630,6 +2644,13 @@ function AppShellContent({
                         variant: (sessionFilter?.kind === 'allSessions' && projectFilter.get(p.config.id) === 'include') ? "default" as const : "ghost" as const,
                         onClick: () => handleJumpToProjectSessions(p.config.id),
                       })),
+                    },
+                    {
+                      id: "nav:missions",
+                      title: t("sidebar.missions"),
+                      icon: Workflow,
+                      variant: isMissionsNavigation(navState) ? "default" : "ghost",
+                      onClick: handleMissionsClick,
                     },
                     {
                       id: "nav:automations",
@@ -3603,7 +3624,7 @@ function AppShellContent({
             )}
             </div>
           }
-          navigatorWidth={isAutoCompact ? sessionListWidth : (effectiveSidebarAndNavigatorHidden || isBoardView ? 0 : sessionListWidth)}
+          navigatorWidth={isAutoCompact ? sessionListWidth : (effectiveSidebarAndNavigatorHidden || isFullWidthView ? 0 : sessionListWidth)}
           isSidebarAndNavigatorHidden={effectiveSidebarAndNavigatorHidden}
           isRightSidebarVisible={false}
           isCompact={isAutoCompact}
@@ -3644,7 +3665,7 @@ function AppShellContent({
         )}
 
         {/* Session List Resize Handle (absolute, hidden in focused mode and board view) */}
-        {!effectiveSidebarAndNavigatorHidden && !isBoardView && (
+        {!effectiveSidebarAndNavigatorHidden && !isFullWidthView && (
         <div
           ref={sessionListHandleRef}
           onMouseDown={(e) => { e.preventDefault(); setIsResizing('session-list') }}

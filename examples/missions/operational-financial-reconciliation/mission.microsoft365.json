@@ -1,0 +1,453 @@
+{
+  "schemaVersion": 2,
+  "id": "operational-financial-reconciliation-microsoft365",
+  "title": "Rapprochement financier gouverné — Microsoft 365",
+  "objective": "Expliquer l'écart de juillet 2026, faire approuver la correction, la publier une fois dans le CRM, l'ERP et Microsoft 365, réconcilier chaque état fournisseur et produire les preuves nécessaires au Proof Passport.",
+  "cwd": ".",
+  "execution": {
+    "allowed_read_paths": [".", "fixtures", "artifacts", "missions"],
+    "allowed_write_paths": ["artifacts", "missions"],
+    "network_access": "allow-list",
+    "allowed_hosts": [
+      "crm.example.com",
+      "erp.example.com",
+      "graph.microsoft.com"
+    ],
+    "max_cpu_percent": 80,
+    "max_memory_mb": 2048,
+    "timeout_ms": 1800000
+  },
+  "acceptanceCriteria": [
+    {
+      "id": "all-differences-explained",
+      "description": "Chaque écart du périmètre est chiffré, classé et relié à une provenance vérifiable."
+    },
+    {
+      "id": "mutations-approved-once",
+      "description": "Chaque mutation est explicitement approuvée, exécutée au plus une fois et liée à sa clé d'idempotence."
+    },
+    {
+      "id": "provider-states-reconciled",
+      "description": "Les états CRM, ERP et Microsoft 365 sont confirmés par une réconciliation indépendante et une preuve hôte signée."
+    },
+    {
+      "id": "passport-ready",
+      "description": "Le rapport final couvre tous les critères et toutes les preuves requises sans secret ni donnée brute non nécessaire."
+    }
+  ],
+  "plannerProfileId": "finance-planner",
+  "defaultWorkerProfileId": "finance-worker",
+  "reviewerProfileId": "finance-reviewer",
+  "supervisorProfileId": "risk-supervisor",
+  "agentProfiles": [
+    {
+      "id": "finance-planner",
+      "role": "planner",
+      "specialty": "décomposition financière et dépendances transactionnelles",
+      "systemPrompt": "Planifier sans muter. Conserver les gates d'approbation, de réconciliation et de preuve.",
+      "skills": ["financial-reconciliation"],
+      "tools": [],
+      "sources": [],
+      "permissionMode": "safe",
+      "modelTier": "balanced"
+    },
+    {
+      "id": "finance-worker",
+      "role": "worker",
+      "specialty": "normalisation comptable et production d'artefacts",
+      "systemPrompt": "Produire uniquement des artefacts traçables. Ne jamais effectuer directement une mutation externe.",
+      "skills": ["financial-reconciliation", "structured-egress"],
+      "tools": [],
+      "sources": ["io.robb-agents.crm", "io.robb-agents.erp", "io.robb-agents.microsoft-365"],
+      "permissionMode": "ask",
+      "modelTier": "balanced"
+    },
+    {
+      "id": "finance-reviewer",
+      "role": "reviewer",
+      "specialty": "contrôle indépendant des montants et des preuves",
+      "systemPrompt": "Recalculer les montants, vérifier les provenances et refuser toute preuve non résolue par l'hôte.",
+      "skills": ["financial-audit"],
+      "tools": [],
+      "sources": [],
+      "permissionMode": "safe",
+      "modelTier": "best"
+    },
+    {
+      "id": "risk-supervisor",
+      "role": "supervisor",
+      "specialty": "risque, approbations, idempotence et confidentialité",
+      "systemPrompt": "Rendre PASS seulement si chaque mutation est approuvée, réconciliée, compensable et prouvée.",
+      "skills": ["risk-governance", "proof-passport"],
+      "tools": [],
+      "sources": [],
+      "permissionMode": "safe",
+      "modelTier": "best"
+    }
+  ],
+  "policy": {
+    "maxConcurrentAgents": 3,
+    "maxCorrectionCycles": 2,
+    "maxWorkItems": 32,
+    "maxDepth": 4,
+    "maxTechnicalAttempts": 2,
+    "requireIndependentReview": true,
+    "requireIndependentSupervisor": true
+  },
+  "workItems": [
+    {
+      "id": "analysis-objective",
+      "kind": "objective",
+      "title": "Établir et faire valider la correction canonique",
+      "acceptanceCriteria": [
+        {
+          "id": "analysis-complete",
+          "description": "Les trois sources sont normalisées et chaque différence possède une cause et une correction minimale."
+        },
+        {
+          "id": "proposal-frozen",
+          "description": "La proposition publiée dans le workspace est immuable, hachée et prête pour approbation."
+        }
+      ]
+    },
+    {
+      "id": "collect-operational",
+      "kind": "task",
+      "title": "Collecter le snapshot CRM",
+      "prompt": "Collecter uniquement l'enregistrement CRM qualifié pour 2026-07. Produire un snapshot canonique avec provenance et empreinte, sans secret.",
+      "objectiveId": "analysis-objective",
+      "dependsOn": [],
+      "acceptanceCriteria": [
+        {
+          "id": "operational-scope-exact",
+          "description": "Le snapshot ne contient que crm-record-2026-07-0042 et ses champs nécessaires au rapprochement."
+        }
+      ],
+      "requiredEvidence": [
+        {
+          "id": "operational-snapshot",
+          "description": "Snapshot CRM résolu et haché par l'hôte.",
+          "kind": "source"
+        }
+      ],
+      "agentProfileId": "finance-worker",
+      "effect": "read"
+    },
+    {
+      "id": "collect-financial",
+      "kind": "task",
+      "title": "Collecter le snapshot ERP",
+      "prompt": "Collecter uniquement l'écriture ERP qualifiée pour 2026-07. Produire un snapshot canonique avec provenance et empreinte, sans secret.",
+      "objectiveId": "analysis-objective",
+      "dependsOn": [],
+      "acceptanceCriteria": [
+        {
+          "id": "financial-scope-exact",
+          "description": "Le snapshot ne contient que erp-entry-2026-07-0042 et ses champs nécessaires au rapprochement."
+        }
+      ],
+      "requiredEvidence": [
+        {
+          "id": "financial-snapshot",
+          "description": "Snapshot ERP résolu et haché par l'hôte.",
+          "kind": "source"
+        }
+      ],
+      "agentProfileId": "finance-worker",
+      "effect": "read"
+    },
+    {
+      "id": "collect-documents",
+      "kind": "task",
+      "title": "Collecter le justificatif Microsoft 365",
+      "prompt": "Lire le justificatif supporting-document-2026-07-0042 via Microsoft Graph. Conserver uniquement les métadonnées et l'empreinte nécessaires.",
+      "objectiveId": "analysis-objective",
+      "dependsOn": [],
+      "acceptanceCriteria": [
+        {
+          "id": "document-provenance-captured",
+          "description": "Le justificatif Microsoft 365 possède une provenance et une empreinte vérifiables."
+        }
+      ],
+      "requiredEvidence": [
+        {
+          "id": "document-snapshot",
+          "description": "Métadonnées du justificatif Microsoft 365 résolues par l'hôte.",
+          "kind": "source"
+        }
+      ],
+      "agentProfileId": "finance-worker",
+      "effect": "read"
+    },
+    {
+      "id": "build-canonical-ledger",
+      "kind": "integration",
+      "title": "Construire le registre canonique",
+      "prompt": "Normaliser les snapshots CRM, ERP et Microsoft 365 dans artifacts/canonical-ledger.json. Préserver la provenance champ par champ.",
+      "objectiveId": "analysis-objective",
+      "dependsOn": ["collect-operational", "collect-financial", "collect-documents"],
+      "acceptanceCriteria": [
+        {
+          "id": "canonical-schema-complete",
+          "description": "Le registre canonique contient identifiants, période, montants, devise, provenance et empreintes."
+        }
+      ],
+      "requiredEvidence": [
+        {
+          "id": "canonical-ledger",
+          "description": "Registre canonique produit dans le workspace.",
+          "kind": "artifact"
+        }
+      ],
+      "agentProfileId": "finance-worker",
+      "effect": "workspace-write"
+    },
+    {
+      "id": "analyze-divergences",
+      "kind": "task",
+      "title": "Analyser les divergences",
+      "prompt": "Recalculer les différences et produire artifacts/divergence-analysis.json. Distinguer doublon, montant, période, absence et incertitude.",
+      "objectiveId": "analysis-objective",
+      "dependsOn": ["build-canonical-ledger"],
+      "acceptanceCriteria": [
+        {
+          "id": "difference-recomputed",
+          "description": "L'écart de 1 250 EUR est recalculé indépendamment et classé TIMING_CUTOFF."
+        }
+      ],
+      "requiredEvidence": [
+        {
+          "id": "divergence-analysis",
+          "description": "Analyse chiffrée des divergences.",
+          "kind": "artifact"
+        }
+      ],
+      "agentProfileId": "finance-worker",
+      "effect": "workspace-write"
+    },
+    {
+      "id": "prepare-correction",
+      "kind": "task",
+      "title": "Figer la proposition de correction",
+      "prompt": "Produire artifacts/correction-proposal.json pour exactement 1 250 EUR, avec les trois cibles, les impacts, les stratégies de compensation et l'empreinte attendue. Ne rien muter.",
+      "objectiveId": "analysis-objective",
+      "dependsOn": ["analyze-divergences"],
+      "acceptanceCriteria": [
+        {
+          "id": "correction-minimal",
+          "description": "La proposition est limitée aux trois mutations nécessaires et n'inclut aucune donnée non requise."
+        },
+        {
+          "id": "correction-hash-fixed",
+          "description": "L'empreinte de proposition utilisée par chaque invocation est figée avant approbation."
+        }
+      ],
+      "requiredEvidence": [
+        {
+          "id": "correction-proposal",
+          "description": "Proposition de correction figée et hachée.",
+          "kind": "artifact"
+        }
+      ],
+      "agentProfileId": "finance-worker",
+      "effect": "workspace-write"
+    },
+    {
+      "id": "transaction-objective",
+      "kind": "objective",
+      "title": "Appliquer, réconcilier et prouver la correction",
+      "acceptanceCriteria": [
+        {
+          "id": "three-mutations-confirmed",
+          "description": "Les mutations CRM, ERP et Microsoft 365 sont toutes confirmées par leur état fournisseur."
+        },
+        {
+          "id": "transaction-evidence-complete",
+          "description": "Les trois reçus hôte et le rapport croisé couvrent l'idempotence, les approbations et les preuves."
+        }
+      ]
+    },
+    {
+      "id": "mutate-operational",
+      "kind": "task",
+      "title": "Publier la correction CRM",
+      "prompt": "Faire exécuter par le broker hôte la mutation CRM structurée et explicitement approuvée. Aucune session agent ne doit appeler le fournisseur directement.",
+      "objectiveId": "transaction-objective",
+      "dependsOn": ["analysis-objective"],
+      "acceptanceCriteria": [
+        {
+          "id": "crm-reconciled-once",
+          "description": "Le CRM confirme exactement une mutation avec la clé d'idempotence et l'empreinte attendues."
+        }
+      ],
+      "requiredEvidence": [
+        {
+          "id": "crm-mutation-receipt",
+          "description": "Reçu hôte signé de mutation et réconciliation CRM.",
+          "kind": "receipt"
+        }
+      ],
+      "agentProfileId": "finance-worker",
+      "effect": "external-mutation",
+      "connectorInvocation": {
+        "schemaVersion": 1,
+        "pack": "crm",
+        "operationId": "records.upsert",
+        "resourceType": "crm-record",
+        "resourceId": "crm-record-2026-07-0042",
+        "payload": {
+          "recordId": "crm-record-2026-07-0042",
+          "period": "2026-07",
+          "correction": {
+            "amount": 1250,
+            "currency": "EUR",
+            "reasonCode": "TIMING_CUTOFF"
+          },
+          "proposalSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "approvalRef": "approval-bundle-2026-07-0042"
+        },
+        "autonomy": "A3",
+        "receiptRequirementId": "crm-mutation-receipt",
+        "compensation": { "strategy": "manual" }
+      }
+    },
+    {
+      "id": "mutate-financial",
+      "kind": "task",
+      "title": "Publier l'écriture ERP",
+      "prompt": "Faire exécuter par le broker hôte l'écriture ERP structurée et explicitement approuvée. Aucune session agent ne doit appeler le fournisseur directement.",
+      "objectiveId": "transaction-objective",
+      "dependsOn": ["analysis-objective"],
+      "acceptanceCriteria": [
+        {
+          "id": "erp-reconciled-once",
+          "description": "L'ERP confirme exactement une écriture avec la clé d'idempotence et l'empreinte attendues."
+        }
+      ],
+      "requiredEvidence": [
+        {
+          "id": "erp-mutation-receipt",
+          "description": "Reçu hôte signé de mutation et réconciliation ERP.",
+          "kind": "receipt"
+        }
+      ],
+      "agentProfileId": "finance-worker",
+      "effect": "external-mutation",
+      "connectorInvocation": {
+        "schemaVersion": 1,
+        "pack": "erp",
+        "operationId": "entries.post",
+        "resourceType": "erp-entry",
+        "resourceId": "erp-entry-2026-07-0042",
+        "payload": {
+          "entryId": "erp-entry-2026-07-0042",
+          "period": "2026-07",
+          "debitAccount": "471000",
+          "creditAccount": "706000",
+          "amount": 1250,
+          "currency": "EUR",
+          "proposalSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "approvalRef": "approval-bundle-2026-07-0042"
+        },
+        "autonomy": "A4",
+        "receiptRequirementId": "erp-mutation-receipt",
+        "compensation": { "strategy": "manual" }
+      }
+    },
+    {
+      "id": "annotate-document",
+      "kind": "task",
+      "title": "Annoter le justificatif Microsoft 365",
+      "prompt": "Faire exécuter par le broker hôte l'annotation structurée du justificatif Microsoft 365 après approbation explicite.",
+      "objectiveId": "transaction-objective",
+      "dependsOn": ["analysis-objective"],
+      "acceptanceCriteria": [
+        {
+          "id": "document-reconciled-once",
+          "description": "Microsoft Graph confirme exactement une annotation et l'approbateur est pseudonymisé à l'egress."
+        }
+      ],
+      "requiredEvidence": [
+        {
+          "id": "document-mutation-receipt",
+          "description": "Reçu hôte signé de mutation et réconciliation Microsoft 365.",
+          "kind": "receipt"
+        }
+      ],
+      "agentProfileId": "finance-worker",
+      "effect": "external-mutation",
+      "connectorInvocation": {
+        "schemaVersion": 1,
+        "pack": "microsoft365",
+        "operationId": "files.update",
+        "resourceType": "file",
+        "resourceId": "supporting-document-2026-07-0042",
+        "payload": {
+          "reconciliationStatus": "approved-and-reconciled",
+          "reconciliationId": "reconciliation-2026-07-0042",
+          "correctionAmount": 1250,
+          "currency": "EUR",
+          "approvedBy": "finance.validator@example.test",
+          "proposalSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "autonomy": "A3",
+        "receiptRequirementId": "document-mutation-receipt",
+        "compensation": { "strategy": "manual" }
+      }
+    },
+    {
+      "id": "reconcile-provider-state",
+      "kind": "integration",
+      "title": "Réconcilier les trois états fournisseurs",
+      "prompt": "Vérifier les trois reçus hôte, leurs preuves signées, leurs clés d'idempotence, leurs epochs d'autorisation et leurs états fournisseur. Produire artifacts/reconciliation-report.json.",
+      "objectiveId": "transaction-objective",
+      "dependsOn": ["mutate-operational", "mutate-financial", "annotate-document"],
+      "acceptanceCriteria": [
+        {
+          "id": "receipts-cross-checked",
+          "description": "Les trois reçus correspondent à la mission, au nœud, au payload, à l'autorisation et au fournisseur attendus."
+        },
+        {
+          "id": "no-duplicate-observed",
+          "description": "Aucune seconde mutation n'est observée pour les trois clés d'idempotence."
+        }
+      ],
+      "requiredEvidence": [
+        {
+          "id": "cross-reconciliation-report",
+          "description": "Rapport de réconciliation croisée des trois systèmes.",
+          "kind": "artifact"
+        }
+      ],
+      "agentProfileId": "finance-worker",
+      "effect": "workspace-write"
+    },
+    {
+      "id": "publish-evidence-report",
+      "kind": "task",
+      "title": "Produire le rapport de preuve",
+      "prompt": "Si toutes les réconciliations sont confirmées, produire artifacts/evidence-report.md avec les références de preuve et sans valeur secrète. Sinon produire un rapport d'échec.",
+      "objectiveId": "transaction-objective",
+      "dependsOn": ["reconcile-provider-state"],
+      "acceptanceCriteria": [
+        {
+          "id": "report-covers-all-gates",
+          "description": "Le rapport couvre écarts, approbations, idempotence, réconciliation, confidentialité et compensation."
+        },
+        {
+          "id": "report-is-passport-ready",
+          "description": "Toutes les preuves sont des fichiers hôte résolvables et le rapport ne contient aucun secret."
+        }
+      ],
+      "requiredEvidence": [
+        {
+          "id": "final-evidence-report",
+          "description": "Rapport final prêt pour émission du Proof Passport.",
+          "kind": "artifact"
+        }
+      ],
+      "agentProfileId": "finance-worker",
+      "effect": "workspace-write"
+    }
+  ]
+}

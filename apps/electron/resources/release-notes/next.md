@@ -5,16 +5,27 @@ This file accumulates release notes for the next unreleased version. PRs that ad
 ## Features
 
 - Make Remote tunnel setup provider-agnostic with manual HTTPS/WSS fields and selectable pairing-code, server-token, tunnel email-code, or external OAuth/SAML authentication modes; one-time pairing no longer requires an extra owner login by default.
+- Add a workspace-wide Mission Control Room with portfolio filters, freshness and risk signals, costs, evidence coverage, deep links, controls, host-only preflight, reviewed replan diffs, Proof Passport verification, and one approval inbox for Conductor and brokered connector work.
+- Add signed, offline-verifiable Proof-of-Outcome Passports with copyable public workspace trust anchors and optional confined journal/artifact revalidation, plus a durable Mission connector broker that binds approvals to exact requests, reconciles idempotency after crashes, and requires explicit compensation on divergence.
+- Add mutation-free Mission preflight and versioned replanning that preserve independent accepted work, invalidate affected descendants, and recover without duplicate dispatch.
+- Add an offline-qualified financial reconciliation pack for Microsoft 365 and Google Workspace variants, with fail-closed capability/egress policies and explicit real-tenant qualification gates.
 
 ## Improvements
 
 - Support validated public HTTPS/WSS endpoints for Remote reverse proxies so pairing links and browser sessions stay on the trusted public origin.
+- Negotiate MCP 2026-07-28 or the established 2025 flow automatically on local HTTP and stdio servers, add modern/legacy Tasks conformance, and keep existing SSE sources readable while preventing new legacy SSE transports.
 - Let Task and Mission sub-agents inherit full Execute autonomy, including shell, browser, MCP, and network tools, only when their parent is in Execute and the workspace explicitly enables external actions in Execute; all other cases remain fail-closed.
 - Add a workspace-level “Full autonomy in Execute” policy that removes redundant sensitive-action confirmations for scoped work and grants required secure-site browser permissions only while an Execute agent is actively in control.
 - Preload active source guides into the agent context with credential-shaped values redacted, avoiding the first-call guide rejection while preserving strict browser and skill prerequisites.
 - Retry the original request automatically after a required source is activated instead of asking the user to send it again.
 - Expire invisible permission requests, replay still-live prompts after a renderer reload, and remember approved sensitive actions only for the same category and concrete target.
 - Make production packaging fail closed on dirty or unverifiable source provenance and require a strict Developer ID signature, notarization, and stapled ticket.
+- Require verified macOS and Windows signatures for every public release, keep unsigned packages local/CI-only and never publish them, force the production channel in Windows/Linux release wrappers, load production Electron code from an integrity-checked ASAR, and verify explicitly staged JavaScript agent runtimes against a protected SHA-256 manifest before bootstrap.
+- Migrate embedded browser panes from the deprecated BrowserView host to WebContentsView while preserving their navigation and permission behavior.
+- Centralize provider contracts and kill switches for ChatGPT Codex, the Copilot proxy, and Google Code Assist v1internal, with safe fallbacks and daily redacted canaries.
+- Move the supported runtime to Node 24 LTS, TypeScript 7 and Vite 8, while retaining a TypeScript 6 API compatibility lane and replacing deprecated Vite/esbuild and TypeScript path settings.
+- Add structured connector egress minimization and signed privacy receipts, ground-truth-gated routing recommendations with runtime drift warnings in workspace settings, a signed and human-reviewed organizational-learning foundation, and a sovereign Mission Mesh foundation with host-bound capability attestations; the Learning and Mesh foundations are not yet product-wired.
+- Version global, workspace, and session persistence envelopes, preserve rollback copies for migrated configuration, reject future schemas, and keep writes atomic.
 
 ## Bug Fixes
 

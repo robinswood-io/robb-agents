@@ -7,6 +7,7 @@ import {
   loadMissionSnapshot,
   readMissionEvents,
   reduceMissionEvents,
+  previewMissionReplan,
   type MissionEvent,
   type MissionExecutionBinding,
   type MissionAttemptTelemetry,
@@ -16,6 +17,7 @@ import {
   type MissionWorkItemRuntime,
   type StructuredMissionVerdict,
   type WorkSubmission,
+  type MissionReplanPreview,
 } from '@craft-agent/shared/missions';
 
 const EXECUTION_KINDS = new Set(['task', 'subtask', 'integration', 'correction']);
@@ -25,6 +27,8 @@ const TERMINAL_MISSION_STATUSES = new Set(['completed', 'failed', 'cancelled']);
 export interface MissionControllerOptions {
   workspaceRoot: string;
   now?: () => Date;
+  /** Optional host boundary that resolves and hashes model-authored evidence. */
+  resolveSubmissionEvidence?: (item: MissionWorkItem, submission: WorkSubmission) => WorkSubmission;
 }
 
 export interface ReadyMissionWork {
@@ -35,6 +39,13 @@ export interface ReadyMissionWork {
 export interface MissionDispatchReservation {
   dispatchId: string;
   binding: MissionExecutionBinding;
+}
+
+export interface MissionReplanInput {
+  expectedRevision: number;
+  proposedWorkItems: MissionWorkItem[];
+  actorId: string;
+  reason: string;
 }
 
 function runtimeItems(snapshot: MissionSnapshot): MissionWorkItemRuntime[] {
@@ -107,13 +118,83 @@ function uniqueId(snapshot: MissionSnapshot, base: string, reserved: Set<string>
   return candidate;
 }
 
+function hasReconciledMutationReceipt(runtime: MissionWorkItemRuntime): boolean {
+  const requirementId = runtime.definition.connectorInvocation?.receiptRequirementId;
+  if (!requirementId || !runtime.submission) return false;
+  return runtime.submission.evidence.some((evidence) =>
+    evidence.requirementId === requirementId
+    && evidence.kind === 'receipt'
+    && typeof evidence.sha256 === 'string'
+    && /^[a-f0-9]{64}$/.test(evidence.sha256));
+}
+
+function sameConnectorInvocation(left: MissionWorkItem, right: MissionWorkItem): boolean {
+  return JSON.stringify(left.connectorInvocation) === JSON.stringify(right.connectorInvocation);
+}
+
+/**
+ * Side-effect-free admission check shared by replan preview and commit.
+ *
+ * Keeping this check outside MissionController lets host RPC preview a plan
+ * without constructing an executor or any connector transport.
+ */
+export function previewAdmissibleMissionReplan(input: {
+  snapshot: MissionSnapshot;
+  expectedRevision: number;
+  proposedWorkItems: MissionWorkItem[];
+}): MissionReplanPreview {
+  const { snapshot, expectedRevision, proposedWorkItems } = input;
+  const missionId = snapshot.spec.id;
+  if (!Number.isInteger(expectedRevision) || expectedRevision < 1) {
+    throw new Error('Mission replan expectedRevision must be a positive integer');
+  }
+  if (TERMINAL_MISSION_STATUSES.has(snapshot.status)) {
+    throw new Error(`Mission "${missionId}" is terminal and cannot be replanned`);
+  }
+  const active = runtimeItems(snapshot).filter((runtime) =>
+    runtime.status === 'reserved' || runtime.status === 'running');
+  if (active.length > 0) {
+    throw new Error(
+      `Mission replan refused while work leases are active: ${active.map(({ definition }) => definition.id).sort().join(', ')}`,
+    );
+  }
+
+  const preview = previewMissionReplan({
+    snapshot,
+    expectedRevision,
+    currentPlanVersion: snapshot.planVersion,
+    proposedWorkItems,
+  });
+  const proposed = new Map(proposedWorkItems.map((item) => [item.id, item]));
+  const invalidated = new Set(preview.invalidatedWorkItemIds);
+  for (const runtime of runtimeItems(snapshot)) {
+    if (runtime.definition.effect !== 'external-mutation' || runtime.attempt === 0) continue;
+    if (!hasReconciledMutationReceipt(runtime)) {
+      if (runtime.lastAttemptAmbiguousMutation === false) continue;
+      throw new Error(
+        `Mission replan refused: external mutation "${runtime.definition.id}" is not durably reconciled`,
+      );
+    }
+    if (!invalidated.has(runtime.definition.id)) continue;
+    const replacement = proposed.get(runtime.definition.id);
+    if (!replacement || !sameConnectorInvocation(runtime.definition, replacement)) {
+      throw new Error(
+        `Mission replan refused: reconciled mutation "${runtime.definition.id}" requires explicit compensation before removal or invocation change`,
+      );
+    }
+  }
+  return preview;
+}
+
 export class MissionController {
   private readonly workspaceRoot: string;
   private readonly now: () => Date;
+  private readonly resolveSubmissionEvidence?: MissionControllerOptions['resolveSubmissionEvidence'];
 
   constructor(options: MissionControllerOptions) {
     this.workspaceRoot = options.workspaceRoot;
     this.now = options.now ?? (() => new Date());
+    this.resolveSubmissionEvidence = options.resolveSubmissionEvidence;
   }
 
   private at(): string {
@@ -161,6 +242,38 @@ export class MissionController {
     return this.requireMission(missionId);
   }
 
+  previewReplan(
+    missionId: string,
+    expectedRevision: number,
+    proposedWorkItems: MissionWorkItem[],
+  ): MissionReplanPreview {
+    const snapshot = this.requireMission(missionId);
+    return previewAdmissibleMissionReplan({
+      snapshot,
+      expectedRevision,
+      proposedWorkItems,
+    });
+  }
+
+  replanMission(missionId: string, input: MissionReplanInput): MissionSnapshot {
+    const snapshot = this.requireMission(missionId);
+    if (!input.actorId.trim()) throw new Error('Mission replan actor identity is required');
+    if (!input.reason.trim()) throw new Error('Mission replan reason is required');
+    const preview = previewAdmissibleMissionReplan({
+      snapshot,
+      expectedRevision: input.expectedRevision,
+      proposedWorkItems: input.proposedWorkItems,
+    });
+
+    return this.commit(missionId, snapshot.revision, [this.event({
+      kind: 'mission-replanned',
+      actorId: input.actorId.trim(),
+      reason: input.reason.trim(),
+      proposedWorkItems: input.proposedWorkItems,
+      preview,
+    })]);
+  }
+
   startMission(missionId: string): MissionSnapshot {
     const snapshot = this.requireMission(missionId);
     if (snapshot.status !== 'draft' && snapshot.status !== 'paused') {
@@ -174,6 +287,34 @@ export class MissionController {
     if (TERMINAL_MISSION_STATUSES.has(snapshot.status)) throw new Error(`Mission "${missionId}" is terminal`);
     return this.commit(missionId, snapshot.revision, [
       this.event({ kind: 'mission-status-changed', status: 'paused', reason }),
+    ]);
+  }
+
+  waitForWorkItemApproval(
+    missionId: string,
+    workItemId: string,
+    dispatchId: string,
+    reason: string,
+  ): MissionSnapshot {
+    const snapshot = this.requireMission(missionId);
+    const runtime = snapshot.workItems[workItemId];
+    if (!runtime || runtime.status !== 'running' || runtime.dispatchId !== dispatchId ||
+        runtime.definition.effect !== 'external-mutation') {
+      throw new Error(`Work item "${workItemId}" has no matching brokered mutation awaiting approval`);
+    }
+    if (snapshot.status === 'waiting-approval' && snapshot.statusReason === reason) return snapshot;
+    return this.commit(missionId, snapshot.revision, [
+      this.event({ kind: 'mission-status-changed', status: 'waiting-approval', reason }),
+    ]);
+  }
+
+  resumeAfterApproval(missionId: string): MissionSnapshot {
+    const snapshot = this.requireMission(missionId);
+    if (snapshot.status !== 'waiting-approval') {
+      throw new Error(`Mission "${missionId}" is not waiting for approval`);
+    }
+    return this.commit(missionId, snapshot.revision, [
+      this.event({ kind: 'mission-status-changed', status: 'running', reason: 'Host approval resolved' }),
     ]);
   }
 
@@ -454,11 +595,16 @@ export class MissionController {
     if (runtime.status !== 'running' || runtime.sessionId !== sessionId) {
       throw new Error(`Work item "${workItemId}" is not running in session "${sessionId}"`);
     }
-    const submission = WorkSubmissionSchema.parse(input);
+    let submission = WorkSubmissionSchema.parse(input);
     const required = new Set(runtime.definition.requiredEvidence.map((requirement) => requirement.id));
     const supplied = new Set(submission.evidence.map((evidence) => evidence.requirementId));
     const missing = [...required].filter((id) => !supplied.has(id));
     if (missing.length > 0) throw new Error(`Missing required evidence: ${missing.join(', ')}`);
+    if (this.resolveSubmissionEvidence) {
+      submission = WorkSubmissionSchema.parse(
+        this.resolveSubmissionEvidence(runtime.definition, submission),
+      );
+    }
 
     const events: MissionEvent[] = [
       ...this.telemetryEvent(workItemId, runtime.dispatchId!, telemetry),

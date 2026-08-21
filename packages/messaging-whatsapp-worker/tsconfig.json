@@ -6,6 +6,8 @@
     "lib": ["ES2022"],
     "strict": true,
     "noEmit": true,
+    "rootDir": "src",
+    "types": ["bun", "node"],
     "esModuleInterop": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,

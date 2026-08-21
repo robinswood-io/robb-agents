@@ -1,5 +1,17 @@
-import { existsSync, readFileSync, statSync, writeFileSync, unlinkSync, mkdtempSync, renameSync } from 'fs';
-import { extname, basename, resolve, join, relative } from 'path';
+import {
+  closeSync,
+  existsSync,
+  fsyncSync,
+  openSync,
+  readFileSync,
+  statSync,
+  writeFileSync,
+  unlinkSync,
+  mkdtempSync,
+  renameSync,
+} from 'fs';
+import { extname, basename, dirname, resolve, join, relative } from 'path';
+import { randomUUID } from 'crypto';
 import { execSync } from 'child_process';
 import { tmpdir } from 'os';
 
@@ -34,10 +46,19 @@ export function readJsonFileSync<T = unknown>(filePath: string): T {
  * Uses write-to-temp-then-rename pattern which is atomic on POSIX systems.
  */
 export function atomicWriteFileSync(filePath: string, data: string): void {
-  const tmpPath = filePath + '.tmp';
+  const tmpPath = `${filePath}.${process.pid}.${randomUUID()}.tmp`;
   try {
-    writeFileSync(tmpPath, data);
+    const mode = existsSync(filePath) ? statSync(filePath).mode & 0o777 : 0o600;
+    writeFileSync(tmpPath, data, { encoding: 'utf8', mode, flag: 'wx' });
+    const fileDescriptor = openSync(tmpPath, 'r');
+    try { fsyncSync(fileDescriptor); } finally { closeSync(fileDescriptor); }
     renameSync(tmpPath, filePath);
+    // Make the rename durable where directory fsync is supported. Windows and
+    // some virtual filesystems reject directory descriptors, so this is best effort.
+    try {
+      const directoryDescriptor = openSync(dirname(filePath), 'r');
+      try { fsyncSync(directoryDescriptor); } finally { closeSync(directoryDescriptor); }
+    } catch { /* atomic rename still protects against partial JSON */ }
   } catch (error) {
     // Clean up temp file if rename failed
     try { unlinkSync(tmpPath); } catch {}

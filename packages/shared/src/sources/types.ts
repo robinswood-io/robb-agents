@@ -240,7 +240,7 @@ export function isRefreshableSource(source: LoadedSource): boolean {
 /**
  * MCP transport type for sources
  * - 'http': HTTP-based MCP server (URL endpoint)
- * - 'sse': Server-Sent Events MCP server (URL endpoint)
+ * - 'sse': Deprecated legacy Server-Sent Events transport (persisted configs only)
  * - 'stdio': Local subprocess MCP server (spawned command)
  */
 export type McpTransport = 'http' | 'sse' | 'stdio';
@@ -283,6 +283,7 @@ export interface McpPlatformOverride {
 export interface McpSourceConfig {
   /**
    * Transport type. Defaults to 'http' if not specified.
+   * The 'sse' value is retained only to read and migrate existing configs.
    */
   transport?: McpTransport;
 

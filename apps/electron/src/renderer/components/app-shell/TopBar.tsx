@@ -134,7 +134,7 @@ export function TopBar({
     <div
       className={cn(
         "fixed top-0 left-0 right-0 z-panel titlebar-drag-region",
-        isWebUI && "bg-background border-b border-border/70 shadow-sm"
+        isWebUI && "bg-background border-b border-border/70 shadow-xs"
       )}
       style={{ height: 'var(--topbar-height)' }}
     >

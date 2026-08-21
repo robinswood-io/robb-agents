@@ -21,7 +21,7 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false,
-    "baseUrl": ".",
+    "rootDir": "..",
     "paths": {
       "@craft-agent/core": ["../core/src/index.ts"],
       "@craft-agent/core/*": ["../core/src/*"],

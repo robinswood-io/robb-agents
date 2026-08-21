@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync } from 'fs';
+import { mkdtempSync, rmSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import {
@@ -26,6 +26,7 @@ import {
   type MissionEvaluationCheck,
   type MissionJournalEvaluation,
 } from './MissionEvaluation.ts';
+import corpusV1 from './corpus.v1.json';
 
 export interface MissionScenarioEvaluation {
   id: string;
@@ -232,8 +233,25 @@ function missionFor(scenario: MissionEvaluationScenario): MissionSpec {
         parentId: 'objective-delivery',
         objectiveId: 'objective-delivery',
         acceptanceCriteria: [{ id: 'build-ok', description: 'Le livrable est produit.' }],
-        requiredEvidence: [{ id: 'build-proof', description: 'Preuve de production', kind: 'artifact' }],
+        requiredEvidence: [{
+          id: 'build-proof',
+          description: 'Preuve de production',
+          kind: externalMutation ? 'receipt' : 'artifact',
+        }],
         effect: externalMutation ? 'external-mutation' : 'read',
+        ...(externalMutation ? {
+          connectorInvocation: {
+            schemaVersion: 1 as const,
+            pack: 'googleWorkspace',
+            operationId: 'drive.update',
+            resourceType: 'file',
+            resourceId: 'evaluation-artifact',
+            payload: { scenarioId: scenario.id },
+            autonomy: 'A3' as const,
+            receiptRequirementId: 'build-proof',
+            compensation: { strategy: 'manual' as const },
+          },
+        } : {}),
       },
       {
         id: 'task-validate',
@@ -351,8 +369,9 @@ function promotionGates(
 }
 
 export function loadMissionEvaluationCorpus(): MissionEvaluationCorpus {
-  const raw: unknown = JSON.parse(readFileSync(new URL('./corpus.v1.json', import.meta.url), 'utf-8'));
-  return MissionEvaluationCorpusSchema.parse(raw);
+  // Static JSON import keeps the deterministic corpus available in both ESM
+  // tests/CLI and the Electron main-process CJS bundle.
+  return MissionEvaluationCorpusSchema.parse(structuredClone(corpusV1));
 }
 
 export async function runMissionEvaluationCampaign(
