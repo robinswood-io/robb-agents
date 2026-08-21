@@ -40,7 +40,7 @@ import { TopBar } from "./TopBar"
 import { SquarePenRounded } from "../icons/SquarePenRounded"
 import { McpIcon } from "../icons/McpIcon"
 import { cn } from "@/lib/utils"
-import { isMac } from "@/lib/platform"
+import { isMac, isWebUI } from "@/lib/platform"
 import { Button } from "@/components/ui/button"
 import { HeaderIconButton } from "@/components/ui/HeaderIconButton"
 import { Separator } from "@/components/ui/separator"
@@ -562,8 +562,12 @@ function AppShellContent({
   // desktop (narrow window or small screen).
   const shellRef = useRef<HTMLDivElement>(null)
   const shellWidth = useContainerWidth(shellRef)
-  const MOBILE_THRESHOLD = 768
-  const isAutoCompact = shellWidth > 0 && shellWidth < MOBILE_THRESHOLD
+  // Touch tablets need the same single-panel navigation as phones. Three
+  // columns at 800–1024px leave the chat below its usable minimum width.
+  // Keep Electron's established breakpoint while giving the browser PWA a
+  // tablet-aware threshold.
+  const MOBILE_THRESHOLD = isWebUI ? 1024 : 768
+  const isAutoCompact = shellWidth > 0 && shellWidth <= MOBILE_THRESHOLD
 
   const effectiveSidebarAndNavigatorHidden = isSidebarAndNavigatorHidden || isAutoCompact
 
