@@ -9483,6 +9483,22 @@ export class SessionManager implements ISessionManager {
         break
       }
 
+      case 'runtime_interrupted': {
+        // This event deliberately does not create a terminal error message.
+        // The trailing complete keeps the latest turn "incomplete", which
+        // routes through enqueueAutomaticTurnRecovery: durable marker, bounded
+        // attempts, clean runtime disposal, and side-effect-aware continuation.
+        sessionLog.warn('Agent runtime interrupted; deferring to durable recovery', {
+          sessionId,
+          generation: generationKey,
+          code: event.code,
+          exitCode: event.exitCode,
+          signal: event.signal,
+          message: redactSecretLikeMaterial(event.message).slice(0, 4_000),
+        })
+        break
+      }
+
       case 'typed_error':
         // Skip errors after handoff (plan submission, auth request)
         if (!managed.isProcessing) {

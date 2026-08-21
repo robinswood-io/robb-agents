@@ -13,7 +13,7 @@ import type { BackendConfig, PostInitResult, PermissionRequestType, SdkMcpServer
 // Plan types are used by UI components; not needed in craft-agent.ts since Safe Mode is user-controlled
 import { parseError, type AgentError } from './errors.ts';
 import { mapClaudeSdkAssistantError, type ClaudeSdkApiError } from './claude-sdk-error-mapper.ts';
-import { redactDiagnosticText, runErrorDiagnostics } from './diagnostics.ts';
+import { redactDiagnosticText, runErrorDiagnostics, type DiagnosticCode } from './diagnostics.ts';
 import { loadStoredConfig, loadConfigDefaults, type Workspace, type AuthType, getDefaultLlmConnection, getLlmConnection } from '../config/storage.ts';
 import { getValidClaudeOAuthToken } from '../auth/state.ts';
 import {
@@ -94,6 +94,19 @@ import {
   isSpawnEnoent as detectSpawnEnoent,
 } from './spawn-helpers.ts';
 import { IMAGE_LIMITS } from '../utils/files.ts';
+
+/**
+ * Only infrastructure-shaped Claude subprocess failures enter automatic turn
+ * recovery. Credentials, billing, rate limits, and invalid input remain
+ * terminal so a process relaunch cannot create a hot retry loop.
+ */
+export function shouldAutomaticallyRecoverClaudeProcessInterruption(
+  code: DiagnosticCode,
+): boolean {
+  return code === 'service_unavailable'
+    || code === 'mcp_unreachable'
+    || code === 'unknown_error';
+}
 
 /** Image extensions that may need size-guard in PreToolUse (matches Read tool's image detection) */
 const IMAGE_READ_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'tiff']);
@@ -2315,6 +2328,15 @@ This is a branched conversation. All prior messages in this conversation are par
 
           const safeStderrContext = stderrContext ? redactDiagnosticText(stderrContext) : undefined;
           const safeRawErrorMessage = redactDiagnosticText(rawErrorMsg);
+          if (shouldAutomaticallyRecoverClaudeProcessInterruption(diagnostics.code)) {
+            yield {
+              type: 'runtime_interrupted',
+              message: diagnostics.message,
+              code: 'process_exit',
+            };
+            yield { type: 'complete' };
+            return;
+          }
           yield {
             type: 'typed_error',
             error: {

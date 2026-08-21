@@ -115,6 +115,28 @@ import { parseCompactCommand } from './compact-command.ts';
 import { redactSecretLikeMaterial } from '../utils/redaction.ts';
 
 const RUNTIME_DIAGNOSTIC_MAX_CHARS = 4_000;
+const DEFAULT_SUBPROCESS_STARTUP_TIMEOUT_MS = 20_000;
+const MAX_SUBPROCESS_STARTUP_TIMEOUT_MS = 120_000;
+
+type PiRuntimeInterruptionCode = Extract<AgentEvent, { type: 'runtime_interrupted' }>['code'];
+
+class PiRuntimeInterruptedError extends Error {
+  readonly interruptionCode: PiRuntimeInterruptionCode;
+
+  constructor(message: string, interruptionCode: PiRuntimeInterruptionCode) {
+    super(message);
+    this.name = 'PiRuntimeInterruptedError';
+    this.interruptionCode = interruptionCode;
+  }
+}
+
+export function resolvePiSubprocessStartupTimeoutMs(value: string | undefined): number {
+  if (value === undefined) return DEFAULT_SUBPROCESS_STARTUP_TIMEOUT_MS;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0
+    ? Math.min(Math.floor(parsed), MAX_SUBPROCESS_STARTUP_TIMEOUT_MS)
+    : DEFAULT_SUBPROCESS_STARTUP_TIMEOUT_MS;
+}
 
 /** Inputs intentionally granted to one Pi subprocess generation. */
 export interface PiSubprocessEnvironmentOptions {
@@ -339,11 +361,15 @@ export class PiAgent extends BaseAgent {
   // Subprocess process handle
   private subprocess: ChildProcess | null = null;
   private subprocessSupervisorHandle: LongRunningProcessHandle | null = null;
+  /** Deduplicates concurrent cold-start callers into one process generation. */
+  private subprocessSpawnInFlight: Promise<void> | null = null;
   /** Child processes whose next exit is owner-requested, not a runtime failure. */
   private expectedSubprocessExits = new WeakSet<ChildProcess>();
   private readline: ReadlineInterface | null = null;
   private subprocessReady: Promise<void> | null = null;
   private subprocessReadyResolve: (() => void) | null = null;
+  private subprocessReadyReject: ((error: Error) => void) | null = null;
+  private subprocessReadyTimer: ReturnType<typeof setTimeout> | null = null;
 
   // Pi session ID (managed by subprocess, reported back)
   private piSessionId: string | null = null;
@@ -593,7 +619,20 @@ export class PiAgent extends BaseAgent {
       return;
     }
 
-    await this.spawnSubprocess();
+    if (this.subprocessSpawnInFlight) {
+      await this.subprocessSpawnInFlight;
+      return;
+    }
+
+    const spawnAttempt = this.spawnSubprocess();
+    this.subprocessSpawnInFlight = spawnAttempt;
+    try {
+      await spawnAttempt;
+    } finally {
+      if (this.subprocessSpawnInFlight === spawnAttempt) {
+        this.subprocessSpawnInFlight = null;
+      }
+    }
   }
 
   /**
@@ -616,11 +655,6 @@ export class PiAgent extends BaseAgent {
 
     this.debug(`Spawning Pi subprocess: ${nodePath} ${piServerPath}`);
     this.resetSubprocessErrorDedup();
-
-    // Set up ready promise before spawning
-    this.subprocessReady = new Promise<void>((resolve) => {
-      this.subprocessReadyResolve = resolve;
-    });
 
     // Build session ID and session dir path upfront (used for spawn env + init command)
     const sessionId = this.config.session?.id || `agent-${Date.now()}`;
@@ -665,21 +699,39 @@ export class PiAgent extends BaseAgent {
     const awsEnv = this.buildAwsEnv(piAuth, runtime);
     const providerEnv = this.buildProviderEnv(runtime);
 
-    // Spawn the subprocess
-    const child = spawn(nodePath, args, {
-      cwd,
-      stdio: ['pipe', 'pipe', 'pipe'],
-      env: buildPiSubprocessEnvironment({
-        proxyEnv: getProxyEnvVars(),
-        envOverrides: this.config.envOverrides,
-        providerEnv,
-        awsEnv,
-        // Pass session dir for cross-process toolMetadataStore.
-        sessionDir,
-        // Propagate debug mode without inheriting the rest of process.env.
-        debugEnabled: process.argv.includes('--debug') || process.env.CRAFT_DEBUG === '1',
-      }),
+    // Set up the handshake only after all pre-spawn async work succeeded. This
+    // avoids leaving an unreachable pending promise when credential resolution
+    // fails before a child process exists.
+    this.subprocessReady = new Promise<void>((resolve, reject) => {
+      this.subprocessReadyResolve = resolve;
+      this.subprocessReadyReject = reject;
     });
+
+    // Spawn the subprocess
+    let child: ChildProcess;
+    try {
+      child = spawn(nodePath, args, {
+        cwd,
+        stdio: ['pipe', 'pipe', 'pipe'],
+        env: buildPiSubprocessEnvironment({
+          proxyEnv: getProxyEnvVars(),
+          envOverrides: this.config.envOverrides,
+          providerEnv,
+          awsEnv,
+          // Pass session dir for cross-process toolMetadataStore.
+          sessionDir,
+          // Propagate debug mode without inheriting the rest of process.env.
+          debugEnabled: process.argv.includes('--debug') || process.env.CRAFT_DEBUG === '1',
+        }),
+      });
+    } catch (error) {
+      // No consumer can be awaiting the private ready promise yet; discard it
+      // and let spawnSubprocess's own rejection reach every deduplicated caller.
+      this.subprocessReady = null;
+      this.subprocessReadyResolve = null;
+      this.subprocessReadyReject = null;
+      throw error;
+    }
 
     this.subprocess = child;
     const configuredIdleMs = Number(process.env.CRAFT_AGENT_PROCESS_IDLE_TIMEOUT_MS);
@@ -728,11 +780,28 @@ export class PiAgent extends BaseAgent {
     });
 
     child.on('error', (error) => {
-      this.debug(`Subprocess error: ${error.message}`);
-      this.resetSubprocessErrorDedup();
-      this.eventQueue.enqueue({ type: 'error', message: `Pi subprocess error: ${error.message}` });
-      this.eventQueue.complete();
+      this.handleSubprocessError(error, child);
     });
+
+    const startupTimeoutMs = resolvePiSubprocessStartupTimeoutMs(
+      process.env.CRAFT_AGENT_PROCESS_STARTUP_TIMEOUT_MS,
+    );
+    this.subprocessReadyTimer = setTimeout(() => {
+      if (this.subprocess !== child || !this.subprocessReadyReject) return;
+      const error = new PiRuntimeInterruptedError(
+        `Pi subprocess did not become ready within ${startupTimeoutMs} ms`,
+        'startup_timeout',
+      );
+      this.debug(error.message);
+      this.rejectSubprocessReady(error);
+      this.expectedSubprocessExits.add(child);
+      if (this.subprocessSupervisorHandle) {
+        this.subprocessSupervisorHandle.terminate('Pi agent startup timeout');
+      } else {
+        child.kill('SIGTERM');
+      }
+    }, startupTimeoutMs);
+    this.subprocessReadyTimer.unref?.();
 
     const sessionPath = this.config.session
       ? getSessionPath(this.config.workspace.rootPath, sessionId)
@@ -1142,7 +1211,7 @@ export class PiAgent extends BaseAgent {
           this.piSessionId = msg.sessionId as string;
           this.config.onSdkSessionIdUpdate?.(this.piSessionId!);
         }
-        this.subprocessReadyResolve?.();
+        this.resolveSubprocessReady();
         break;
 
       case 'event':
@@ -1986,15 +2055,65 @@ export class PiAgent extends BaseAgent {
       || this.pendingToolExecutions.size > 0;
   }
 
+  private clearSubprocessReadyTimer(): void {
+    if (this.subprocessReadyTimer) clearTimeout(this.subprocessReadyTimer);
+    this.subprocessReadyTimer = null;
+  }
+
+  private resolveSubprocessReady(): void {
+    const resolve = this.subprocessReadyResolve;
+    this.clearSubprocessReadyTimer();
+    this.subprocessReadyResolve = null;
+    this.subprocessReadyReject = null;
+    resolve?.();
+  }
+
+  private rejectSubprocessReady(error: Error): void {
+    const reject = this.subprocessReadyReject;
+    this.clearSubprocessReadyTimer();
+    this.subprocessReadyResolve = null;
+    this.subprocessReadyReject = null;
+    reject?.(error);
+  }
+
+  private handleSubprocessError(error: Error, child: ChildProcess): void {
+    if (this.subprocess !== child) {
+      this.debug(`Ignoring error from stale Pi subprocess: ${error.message}`);
+      return;
+    }
+    this.handleSubprocessExit(null, null, child, error);
+  }
+
   private handleSubprocessExit(
     code: number | null,
     signal: string | null,
     child?: ChildProcess,
+    processError?: Error,
   ): void {
-    this.debug(`Pi subprocess exited: code=${code}, signal=${signal}`);
+    // A terminated generation may emit its exit after its replacement is
+    // already live. Never let that late event tear down the new generation.
+    if (child && this.subprocess !== child) {
+      this.expectedSubprocessExits.delete(child);
+      this.debug('Ignoring termination from stale Pi subprocess generation');
+      return;
+    }
+
+    this.debug(processError
+      ? `Pi subprocess error: ${processError.message}`
+      : `Pi subprocess exited: code=${code}, signal=${signal}`);
 
     const expectedExit = child ? this.expectedSubprocessExits.delete(child) : false;
     const hadPendingWork = this.hasPendingSubprocessWork();
+    const interruptionCode: PiRuntimeInterruptionCode = processError
+      ? 'process_error'
+      : 'process_exit';
+    const exitReason = processError?.message
+      ?? (signal ? `signal ${signal}` : `code ${code}`);
+    const interruptionError = new PiRuntimeInterruptedError(
+      `Pi subprocess exited unexpectedly (${exitReason})`,
+      interruptionCode,
+    );
+    this.rejectSubprocessReady(interruptionError);
     // A signal-only idle exit can come from the long-running-process idle
     // supervisor. Treat it as a failure only when work was active; explicit
     // non-zero exit codes remain failures even while idle.
@@ -2018,20 +2137,23 @@ export class PiAgent extends BaseAgent {
     this.resetSubprocessErrorDedup();
     this.subprocessReady = null;
     this.subprocessReadyResolve = null;
+    this.subprocessReadyReject = null;
 
-    // If we were processing, emit error + complete
-    if (this._isProcessing) {
-      const exitReason = signal ? `signal ${signal}` : `code ${code}`;
+    // Runtime loss is progress interruption, not a terminal provider error.
+    // SessionManager owns the durable retry budget and process recreation.
+    if (this._isProcessing && !expectedExit) {
       this.eventQueue.enqueue({
-        type: 'error',
-        message: `Pi subprocess exited unexpectedly (${exitReason})`,
+        type: 'runtime_interrupted',
+        message: interruptionError.message,
+        code: interruptionCode,
+        exitCode: code,
+        signal,
       });
       this.eventQueue.complete();
     }
 
     // Reject pending mini completions with error (not null) so callers
     // get a meaningful error instead of silently returning "no response"
-    const exitReason = signal ? `signal ${signal}` : `code ${code}`;
     for (const [, pending] of this.pendingMiniCompletions) {
       pending.reject(new Error(`Pi subprocess exited unexpectedly (${exitReason})`));
     }
@@ -2461,6 +2583,15 @@ export class PiAgent extends BaseAgent {
       }
 
       const errorObj = error instanceof Error ? error : new Error(String(error));
+      if (errorObj instanceof PiRuntimeInterruptedError) {
+        yield {
+          type: 'runtime_interrupted',
+          message: errorObj.message,
+          code: errorObj.interruptionCode,
+        };
+        yield { type: 'complete' };
+        return;
+      }
       const typedError = this.parsePiError(errorObj);
 
       if (typedError.code !== 'unknown_error') {
@@ -2762,6 +2893,8 @@ export class PiAgent extends BaseAgent {
     this.subprocessSupervisorHandle = null;
     this.subprocessReady = null;
     this.subprocessReadyResolve = null;
+    this.subprocessReadyReject = null;
+    this.clearSubprocessReadyTimer();
     this.callbackPort = 0;
     this.preToolMetadataByCallId.clear();
     this.adapter.resetOverflowState();
@@ -2802,6 +2935,8 @@ export class PiAgent extends BaseAgent {
 
     this.subprocessReady = null;
     this.subprocessReadyResolve = null;
+    this.subprocessReadyReject = null;
+    this.clearSubprocessReadyTimer();
     this.callbackPort = 0;
     this.preToolMetadataByCallId.clear();
 

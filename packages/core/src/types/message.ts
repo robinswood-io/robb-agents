@@ -688,6 +688,19 @@ export type AgentEvent =
       approvalTtlSeconds?: number;
     }
   | { type: 'error'; message: string }
+  | {
+      /**
+       * The provider runtime disappeared before the turn reached a terminal
+       * response. SessionManager treats this as a resumable interruption, not
+       * as a user-visible provider error, and applies its durable bounded
+       * recovery policy before surfacing a terminal failure.
+       */
+      type: 'runtime_interrupted';
+      message: string;
+      code: 'process_exit' | 'process_error' | 'startup_timeout';
+      exitCode?: number | null;
+      signal?: string | null;
+    }
   | { type: 'typed_error'; error: TypedError }
   | { type: 'complete'; usage?: AgentEventUsage }
   | { type: 'working_directory_changed'; workingDirectory: string }
