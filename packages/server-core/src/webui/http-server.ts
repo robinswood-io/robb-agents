@@ -30,6 +30,7 @@ import { generateCallbackPage } from '@craft-agent/shared/auth'
 import type { PlatformServices } from '../runtime/platform'
 import type { completeOAuthFlow } from '../handlers/rpc/oauth'
 import type { JwtPayload } from './auth'
+import type { RemoteAuthMode } from '@craft-agent/shared/config/server-config'
 
 // ---------------------------------------------------------------------------
 // MIME types for static file serving
@@ -225,6 +226,8 @@ export interface WebuiHandlerOptions {
   publicWsUrl?: string
   /** Optional browser-facing Web UI URL used in Remote pairing links. */
   publicWebuiUrl?: string
+  /** Gate applied before a browser can bootstrap the one-time pairing flow. */
+  remoteAuthMode?: RemoteAuthMode
   /** Human-readable host label shown on paired mobile devices. */
   hostLabel?: string
   /** RPC WebSocket protocol used when building a browser-facing fallback URL. */
@@ -290,6 +293,7 @@ export function createWebuiHandler(options: WebuiHandlerOptions): WebuiHandler {
     secureCookies,
     publicWsUrl,
     publicWebuiUrl,
+    remoteAuthMode = 'pairing-code',
     hostLabel,
     wsProtocol,
     wsPort,
@@ -732,11 +736,27 @@ export function createWebuiHandler(options: WebuiHandlerOptions): WebuiHandler {
       }
     }
 
-    // ── Config endpoint (requires session cookie) ──
+    // ── Config endpoint ──
     if (path === '/api/config' && req.method === 'GET') {
       const configSession = await validateAuthorizedSession(req.headers.get('cookie'))
       if (!configSession) {
-        return Response.json({ error: 'Unauthorized' }, { status: 401 })
+        // Pairing-code and tunnel-provider modes intentionally expose only the
+        // public WSS endpoint. The one-time ticket/code remains the credential.
+        // Legacy server-token mode keeps the historical owner login gate.
+        if (remoteAuthMode === 'server-token') {
+          return Response.json({ error: 'Unauthorized' }, { status: 401 })
+        }
+        return Response.json({
+          wsUrl: resolveWebSocketUrl(req, { publicWsUrl, wsProtocol, wsPort }),
+          session: {
+            kind: 'pairing',
+            deviceId: null,
+            expiresAt: null,
+          },
+          hostLabel: getHostLabel(req),
+        }, {
+          headers: { 'Cache-Control': 'no-store' },
+        })
       }
       return Response.json({
         wsUrl: resolveWebSocketUrl(req, { publicWsUrl, wsProtocol, wsPort }),

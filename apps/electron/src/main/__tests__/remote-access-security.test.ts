@@ -15,6 +15,8 @@ const RUNNING_SERVER: RunningRemoteServerState = {
   token: 'server-token',
   publicWebuiUrl: 'https://remote.example.com/',
   publicWsUrl: 'wss://remote.example.com/rpc',
+  tunnelProvider: 'ssh-reverse',
+  remoteAuthMode: 'pairing-code',
 }
 
 describe('resolveSecureRemoteHost', () => {
@@ -69,6 +71,8 @@ describe('remoteServerNeedsRestart', () => {
     token: 'server-token',
     publicWebuiUrl: 'https://remote.example.com/',
     publicWsUrl: 'wss://remote.example.com/rpc',
+    tunnelProvider: 'ssh-reverse',
+    remoteAuthMode: 'pairing-code',
   }
 
   it('does not request a restart for the running public endpoints', () => {
@@ -91,6 +95,17 @@ describe('remoteServerNeedsRestart', () => {
     expect(remoteServerNeedsRestart({
       ...matchingSaved,
       publicWsUrl: 'wss://other.example.com/rpc',
+    }, RUNNING_SERVER)).toBe(true)
+  })
+
+  it('requests a restart when tunnel or authentication mode changes', () => {
+    expect(remoteServerNeedsRestart({
+      ...matchingSaved,
+      tunnelProvider: 'cloudflare',
+    }, RUNNING_SERVER)).toBe(true)
+    expect(remoteServerNeedsRestart({
+      ...matchingSaved,
+      remoteAuthMode: 'server-token',
     }, RUNNING_SERVER)).toBe(true)
   })
 

@@ -24,6 +24,8 @@ export interface RunningRemoteServerState {
   token: string
   publicWebuiUrl?: string
   publicWsUrl?: string
+  tunnelProvider?: string
+  remoteAuthMode?: string
 }
 
 export interface SavedRemoteServerState {
@@ -34,6 +36,8 @@ export interface SavedRemoteServerState {
   token?: string
   publicWebuiUrl?: string
   publicWsUrl?: string
+  tunnelProvider?: string
+  remoteAuthMode?: string
 }
 
 /** Resolve only browser-facing URLs; local bind details remain available separately. */
@@ -66,6 +70,8 @@ export function remoteServerNeedsRestart(
     || (saved.token ?? '') !== running.token
     || comparablePublicUrl(saved.publicWebuiUrl) !== comparablePublicUrl(running.publicWebuiUrl)
     || comparablePublicUrl(saved.publicWsUrl) !== comparablePublicUrl(running.publicWsUrl)
+    || (saved.tunnelProvider ?? 'manual') !== (running.tunnelProvider ?? 'manual')
+    || (saved.remoteAuthMode ?? 'pairing-code') !== (running.remoteAuthMode ?? 'pairing-code')
 }
 
 function comparablePublicUrl(value: string | undefined): string {

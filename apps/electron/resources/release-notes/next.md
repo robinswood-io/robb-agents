@@ -4,6 +4,8 @@ This file accumulates release notes for the next unreleased version. PRs that ad
 
 ## Features
 
+- Make Remote tunnel setup provider-agnostic with manual HTTPS/WSS fields and selectable pairing-code, server-token, tunnel email-code, or external OAuth/SAML authentication modes; one-time pairing no longer requires an extra owner login by default.
+
 ## Improvements
 
 - Support validated public HTTPS/WSS endpoints for Remote reverse proxies so pairing links and browser sessions stay on the trusted public origin.
