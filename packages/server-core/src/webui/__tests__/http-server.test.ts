@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createWebuiHandler, startWebuiHttpServer } from '../http-server'
 import type { Logger } from '../../runtime/platform'
+import type { RemoteAuthMode } from '@craft-agent/shared/config/server-config'
 
 const SECRET = 'test-server-secret'
 const PASSWORD = 'test-password'
@@ -34,6 +35,7 @@ async function createServer(overrides?: {
   wsPort?: number
   onRemoteDeviceRevoked?: (deviceId: string) => void
   allowInsecureSessions?: boolean
+  remoteAuthMode?: RemoteAuthMode
 }) {
   const server = await startWebuiHttpServer({
     port: 0,
@@ -43,6 +45,7 @@ async function createServer(overrides?: {
     secureCookies: overrides?.secureCookies,
     publicWsUrl: overrides?.publicWsUrl,
     publicWebuiUrl: overrides?.publicWebuiUrl,
+    remoteAuthMode: overrides?.remoteAuthMode,
     hostLabel: overrides?.hostLabel,
     wsProtocol: overrides?.wsProtocol ?? 'wss',
     wsPort: overrides?.wsPort ?? 9100,
@@ -79,6 +82,31 @@ afterEach(() => {
 })
 
 describe('startWebuiHttpServer', () => {
+  it('bootstraps one-time pairing without an owner login by default', async () => {
+    const { baseUrl } = await createServer({ publicWsUrl: 'wss://remote.example.com/rpc' })
+    const response = await fetch(`${baseUrl}/api/config`)
+    expect(response.status).toBe(200)
+    expect(await response.json()).toMatchObject({
+      wsUrl: 'wss://remote.example.com/rpc',
+      session: { kind: 'pairing', deviceId: null, expiresAt: null },
+    })
+  })
+
+  it('keeps the historical owner login gate in server-token mode', async () => {
+    const { baseUrl } = await createServer({ remoteAuthMode: 'server-token' })
+    expect((await fetch(`${baseUrl}/api/config`)).status).toBe(401)
+  })
+
+  it.each(['email-code', 'external-provider'] as const)(
+    'allows tunnel-provider authentication to precede %s pairing',
+    async (remoteAuthMode) => {
+      const { baseUrl } = await createServer({ remoteAuthMode })
+      const response = await fetch(`${baseUrl}/api/config`)
+      expect(response.status).toBe(200)
+      expect(await response.json()).toMatchObject({ session: { kind: 'pairing' } })
+    },
+  )
+
   it('lets the trusted desktop owner issue and revoke a device-scoped pairing', async () => {
     const revoked: string[] = []
     const handler = createWebuiHandler({
@@ -362,7 +390,9 @@ describe('startWebuiHttpServer', () => {
     })
     expect(revoke.status).toBe(200)
     expect(revokedDevices).toEqual([remoteDeviceId])
-    expect((await fetch(`${baseUrl}/api/config`, { headers: { cookie: remoteCookie } })).status).toBe(401)
+    const revokedConfig = await fetch(`${baseUrl}/api/config`, { headers: { cookie: remoteCookie } })
+    expect(revokedConfig.status).toBe(200)
+    expect(await revokedConfig.json()).toMatchObject({ session: { kind: 'pairing' } })
   })
 
   it('supports a manual pairing code and serves the mobile route without authentication', async () => {

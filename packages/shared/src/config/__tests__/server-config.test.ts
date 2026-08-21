@@ -21,6 +21,22 @@ describe('normalizeServerConfigPublicUrls', () => {
     }))
   })
 
+  it('defaults manual tunnel setup to one-time pairing without an extra login', () => {
+    const normalized = normalizeServerConfigPublicUrls({ enabled: true, port: 9100 })
+    expect(normalized.tunnelProvider).toBe('manual')
+    expect(normalized.remoteAuthMode).toBe('pairing-code')
+  })
+
+  it('preserves an explicit tunnel provider and authentication mode', () => {
+    expect(normalizeServerConfigPublicUrls(config({
+      tunnelProvider: 'ssh-reverse',
+      remoteAuthMode: 'email-code',
+    }))).toMatchObject({
+      tunnelProvider: 'ssh-reverse',
+      remoteAuthMode: 'email-code',
+    })
+  })
+
   it('normalizes a complete HTTPS and WSS pair without mutating its input', () => {
     const input = config({
       publicWebuiUrl: ' https://remote.example.com ',

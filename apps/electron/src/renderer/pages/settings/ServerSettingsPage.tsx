@@ -14,7 +14,12 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@craft-agent/ui'
 import type { DetailsPageMeta } from '@/lib/navigation-registry'
-import type { ServerConfig, ServerStatus } from '@craft-agent/shared/config/server-config'
+import {
+  type RemoteAuthMode,
+  type RemoteTunnelProvider,
+  type ServerConfig,
+  type ServerStatus,
+} from '@craft-agent/shared/config/server-config'
 
 import {
   SettingsSection,
@@ -23,6 +28,7 @@ import {
   SettingsRow,
   SettingsToggle,
   SettingsInputRow,
+  SettingsMenuSelectRow,
 } from '@/components/settings'
 
 export const meta: DetailsPageMeta = {
@@ -36,6 +42,8 @@ interface ServerFormState {
   tlsCertPath: string
   tlsKeyPath: string
   token: string
+  tunnelProvider: RemoteTunnelProvider
+  remoteAuthMode: RemoteAuthMode
   publicWebuiUrl: string
   publicWsUrl: string
 }
@@ -47,6 +55,8 @@ function configToForm(config: ServerConfig): ServerFormState {
     tlsCertPath: config.tlsCertPath ?? '',
     tlsKeyPath: config.tlsKeyPath ?? '',
     token: config.token ?? '',
+    tunnelProvider: config.tunnelProvider ?? 'manual',
+    remoteAuthMode: config.remoteAuthMode ?? 'pairing-code',
     publicWebuiUrl: config.publicWebuiUrl ?? '',
     publicWsUrl: config.publicWsUrl ?? '',
   }
@@ -59,6 +69,8 @@ function formToConfig(form: ServerFormState): ServerConfig {
     tlsCertPath: form.tlsCertPath.trim() || undefined,
     tlsKeyPath: form.tlsKeyPath.trim() || undefined,
     token: form.token || undefined,
+    tunnelProvider: form.tunnelProvider,
+    remoteAuthMode: form.remoteAuthMode,
     publicWebuiUrl: form.publicWebuiUrl.trim() || undefined,
     publicWsUrl: form.publicWsUrl.trim() || undefined,
   }
@@ -104,6 +116,8 @@ export default function ServerSettingsPage() {
     tlsCertPath: '',
     tlsKeyPath: '',
     token: '',
+    tunnelProvider: 'manual',
+    remoteAuthMode: 'pairing-code',
     publicWebuiUrl: '',
     publicWsUrl: '',
   })
@@ -213,6 +227,20 @@ export default function ServerSettingsPage() {
   const hasSecurePublicProxy = hasValidPublicProxy(form)
   const needsRestart = status?.needsRestart ?? false
   const showServerDetails = form.enabled || savedForm.enabled
+  const tunnelProviderOptions = [
+    { value: 'manual', label: t('settings.server.tunnelManual'), description: t('settings.server.tunnelManualDescription') },
+    { value: 'ssh-reverse', label: t('settings.server.tunnelSshReverse'), description: t('settings.server.tunnelSshReverseDescription') },
+    { value: 'cloudflare', label: 'Cloudflare Tunnel', description: t('settings.server.tunnelCloudflareDescription') },
+    { value: 'tailscale', label: 'Tailscale', description: t('settings.server.tunnelTailscaleDescription') },
+    { value: 'ngrok', label: 'ngrok', description: t('settings.server.tunnelNgrokDescription') },
+    { value: 'other', label: t('settings.server.tunnelOther'), description: t('settings.server.tunnelOtherDescription') },
+  ]
+  const remoteAuthModeOptions = [
+    { value: 'pairing-code', label: t('settings.server.authPairingCode'), description: t('settings.server.authPairingCodeDescription') },
+    { value: 'server-token', label: t('settings.server.authServerToken'), description: t('settings.server.authServerTokenDescription') },
+    { value: 'email-code', label: t('settings.server.authEmailCode'), description: t('settings.server.authEmailCodeDescription') },
+    { value: 'external-provider', label: t('settings.server.authExternalProvider'), description: t('settings.server.authExternalProviderDescription') },
+  ]
 
   return (
     <div className="flex flex-col h-full">
@@ -256,6 +284,22 @@ export default function ServerSettingsPage() {
                   value={form.port}
                   onChange={(port) => setForm(f => ({ ...f, port }))}
                   placeholder="9100"
+                />
+
+                <SettingsMenuSelectRow
+                  label={t('settings.server.tunnelProvider')}
+                  description={t('settings.server.tunnelProviderDescription')}
+                  value={form.tunnelProvider}
+                  onValueChange={(value) => setForm(f => ({ ...f, tunnelProvider: value as RemoteTunnelProvider }))}
+                  options={tunnelProviderOptions}
+                />
+
+                <SettingsMenuSelectRow
+                  label={t('settings.server.authMode')}
+                  description={t('settings.server.authModeDescription')}
+                  value={form.remoteAuthMode}
+                  onValueChange={(value) => setForm(f => ({ ...f, remoteAuthMode: value as RemoteAuthMode }))}
+                  options={remoteAuthModeOptions}
                 />
 
                 <SettingsInputRow

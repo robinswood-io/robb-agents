@@ -761,6 +761,7 @@ app.whenReady().then(async () => {
           secureCookies: hasSecureBrowserTransport,
           publicWebuiUrl: embeddedServerConfig.publicWebuiUrl,
           publicWsUrl: embeddedServerConfig.publicWsUrl,
+          remoteAuthMode: embeddedServerConfig.remoteAuthMode,
           wsProtocol: tls ? 'wss' : 'ws',
           wsPort: rpcPort,
           hostLabel: hostname(),
@@ -1152,6 +1153,8 @@ app.whenReady().then(async () => {
         enabled: serverModeEnabled,
         publicWebuiUrl: embeddedServerConfig.publicWebuiUrl,
         publicWsUrl: embeddedServerConfig.publicWsUrl,
+        tunnelProvider: embeddedServerConfig.tunnelProvider,
+        remoteAuthMode: embeddedServerConfig.remoteAuthMode,
       }
 
       disconnectRemoteDevice = (deviceId) => {
@@ -1182,7 +1185,7 @@ app.whenReady().then(async () => {
 
       instance.wsServer.handle(RPC_CHANNELS.settings.SET_SERVER_CONFIG, async (_ctx: unknown, config: unknown) => {
         const { setServerConfig: setConfig } = await import('@craft-agent/shared/config')
-        const cfg = config as import('@craft-agent/shared/config/server-config').ServerConfig
+        const cfg = config as import('@craft-agent/shared/config').ServerConfig
         // Validate port range
         if (cfg.port < 1024 || cfg.port > 65535) {
           throw new Error(`Port must be between 1024 and 65535, got ${cfg.port}`)

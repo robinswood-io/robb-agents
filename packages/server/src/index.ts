@@ -22,6 +22,7 @@
  *   CRAFT_WEBUI_SECURE_COOKIE  — optional true/false override for the session cookie Secure flag
  *   CRAFT_WEBUI_WS_URL         — optional browser-facing ws:// or wss:// URL returned by /api/config
  *   CRAFT_WEBUI_PUBLIC_URL     — optional public https:// URL used in mobile Remote pairing links
+ *   CRAFT_WEBUI_REMOTE_AUTH_MODE — pairing-code | server-token | email-code | external-provider
  *   CRAFT_WEBUI_HOST_LABEL     — optional friendly host name shown on paired mobile devices
  *   CRAFT_MESSAGING_WA_WORKER  — absolute path to worker.cjs (default: packages/messaging-whatsapp-worker/dist/worker.cjs)
  *   CRAFT_MESSAGING_NODE_BIN   — Node binary used to spawn the WhatsApp worker (default: node)
@@ -43,6 +44,7 @@ import {
 import type { WebuiHandler } from '@craft-agent/server-core/webui'
 import { getCredentialManager } from '@craft-agent/shared/credentials'
 import { getActiveWorkspace, getWorkspaces } from '@craft-agent/shared/config'
+import { REMOTE_AUTH_MODES, type RemoteAuthMode } from '@craft-agent/shared/config/server-config'
 import { CONFIG_DIR } from '@craft-agent/shared/config/paths'
 import { createMessagingBootstrap, type MessagingBootstrapHandle } from '@craft-agent/messaging-gateway'
 
@@ -144,6 +146,12 @@ const webuiEnabled = webuiDir && existsSync(webuiDir)
 const webuiSecureCookies = parseOptionalBooleanEnv('CRAFT_WEBUI_SECURE_COOKIE', process.env.CRAFT_WEBUI_SECURE_COOKIE)
 const webuiWsUrl = parseOptionalWebSocketUrl('CRAFT_WEBUI_WS_URL', process.env.CRAFT_WEBUI_WS_URL)
 const webuiPublicUrl = parseOptionalHttpUrl('CRAFT_WEBUI_PUBLIC_URL', process.env.CRAFT_WEBUI_PUBLIC_URL)
+const webuiRemoteAuthModeRaw = process.env.CRAFT_WEBUI_REMOTE_AUTH_MODE?.trim()
+if (webuiRemoteAuthModeRaw && !REMOTE_AUTH_MODES.includes(webuiRemoteAuthModeRaw as RemoteAuthMode)) {
+  console.error(`Invalid CRAFT_WEBUI_REMOTE_AUTH_MODE: ${webuiRemoteAuthModeRaw}`)
+  process.exit(1)
+}
+const webuiRemoteAuthMode = (webuiRemoteAuthModeRaw || 'pairing-code') as RemoteAuthMode
 const webuiBrowserWebSocketSecure = webuiWsUrl
   ? webuiWsUrl.startsWith('wss://')
   : Boolean(tls)
@@ -182,6 +190,7 @@ if (webuiEnabled && serverToken) {
     secureCookies: webuiSecureCookies,
     publicWsUrl: webuiWsUrl,
     publicWebuiUrl: webuiPublicUrl,
+    remoteAuthMode: webuiRemoteAuthMode,
     hostLabel: process.env.CRAFT_WEBUI_HOST_LABEL || undefined,
     wsProtocol: rpcProtocol,
     // WebUI is served on the same port as WS — wsPort matches the RPC port
