@@ -11,6 +11,11 @@
 
 import type { WebSearchProvider, WebSearchResult } from '../types.ts';
 import { parseResponsesApiResults, type ResponsesApiResponse } from './responses-api-parser.ts';
+import {
+  assertUnstableProviderContractEnabled,
+  getUnstableProviderContract,
+  redactProviderDiagnostic,
+} from '@craft-agent/core';
 
 /**
  * Codex backend request contract (search path):
@@ -24,8 +29,9 @@ import { parseResponsesApiResults, type ResponsesApiResponse } from './responses
  *   - ./chatgpt.test.ts
  *   - ../SEARCH_PAYLOAD_CONTRACT.md
  */
-const DEFAULT_SEARCH_MODEL = 'gpt-5.3-codex';
-const API_BASE = 'https://chatgpt.com/backend-api/codex';
+const PROVIDER_CONTRACT = getUnstableProviderContract('chatgpt-codex-backend');
+const DEFAULT_SEARCH_MODEL = PROVIDER_CONTRACT.defaultModel!;
+const API_BASE = PROVIDER_CONTRACT.endpoint.origin!;
 const JWT_CLAIM_PATH = 'https://api.openai.com/auth';
 const ERROR_TEXT_LIMIT = 600;
 const SEARCH_INSTRUCTIONS = 'You are a web search assistant. Return concise, factual search results with source citations when available.';
@@ -69,6 +75,7 @@ export class ChatGPTBackendSearchProvider implements WebSearchProvider {
   ) {}
 
   async search(query: string, count: number): Promise<WebSearchResult[]> {
+    assertUnstableProviderContractEnabled('chatgpt-codex-backend', process.env);
     const attemptErrors: string[] = [];
 
     for (const attempt of SEARCH_ATTEMPTS) {
@@ -103,7 +110,7 @@ export class ChatGPTBackendSearchProvider implements WebSearchProvider {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${this.accessToken}`,
           'chatgpt-account-id': this.accountId,
-          'OpenAI-Beta': 'responses=experimental',
+          ...PROVIDER_CONTRACT.staticHeaders,
         },
         body: JSON.stringify(requestBody),
         signal: AbortSignal.timeout(30_000),
@@ -118,7 +125,7 @@ export class ChatGPTBackendSearchProvider implements WebSearchProvider {
         } catch (parseError) {
           const parseMessage = parseError instanceof Error ? parseError.message : String(parseError);
           attemptErrors.push(
-            `${attempt.label} parse failed [${requestFingerprint}, content-type=${contentType}]: ${compactErrorText(parseMessage)}`,
+            `${attempt.label} parse failed [${requestFingerprint}, content-type=${contentType}]: ${compactErrorText(parseMessage, [this.accessToken])}`,
           );
 
           if (hasMoreAttempts) {
@@ -130,7 +137,7 @@ export class ChatGPTBackendSearchProvider implements WebSearchProvider {
       }
 
       const errorText = await response.text();
-      const compactError = compactErrorText(errorText);
+      const compactError = compactErrorText(errorText, [this.accessToken]);
       attemptErrors.push(
         `${attempt.label} failed (HTTP ${response.status}) [${requestFingerprint}, content-type=${contentType}]: ${compactError}`,
       );
@@ -216,8 +223,8 @@ function buildRequestFingerprint(body: {
   return `tool=${toolType}, model=${body.model}, store=${String(body.store)}, stream=${String(body.stream)}, tool_choice=${body.tool_choice}, text.verbosity=${verbosity}`;
 }
 
-function compactErrorText(text: string): string {
-  const normalized = text.replace(/\s+/g, ' ').trim();
+function compactErrorText(text: string, secrets: readonly string[] = []): string {
+  const normalized = redactProviderDiagnostic(text, secrets).replace(/\s+/g, ' ').trim();
   if (!normalized) return 'Bad Request';
   return normalized.slice(0, ERROR_TEXT_LIMIT);
 }

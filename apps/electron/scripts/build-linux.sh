@@ -21,12 +21,18 @@ require_path() {
 # Parse arguments. Public artifacts are published by GitHub Releases; this
 # repository intentionally has no private bucket/upload integration.
 ARCH="x64"
+RELEASE_BUILD=false
 
 show_help() {
     cat << EOF
-Usage: build-linux.sh [x64|arm64]
+Usage: build-linux.sh [x64|arm64] [--release]
 
-Builds a local Robb Agents AppImage and SHA-256 checksum.
+Builds a Robb Agents AppImage and SHA-256 checksum.
+
+  --release  Build the public production-channel Linux x64 artifact from an
+             exactly verified clean commit.
+
+Linux arm64 is intentionally local-only and cannot be built with --release.
 EOF
     exit 0
 }
@@ -34,6 +40,7 @@ EOF
 while [[ $# -gt 0 ]]; do
     case $1 in
         x64|arm64)     ARCH="$1"; shift ;;
+        --release)     RELEASE_BUILD=true; shift ;;
         -h|--help)     show_help ;;
         *)
             echo "Unknown option: $1"
@@ -46,11 +53,30 @@ done
 # Configuration
 BUN_VERSION="bun-v1.3.10"  # Pinned version for reproducible builds
 
-echo "=== Building Robb Agents AppImage (${ARCH}) using electron-builder ==="
+if [[ "$RELEASE_BUILD" == true && "$ARCH" != "x64" ]]; then
+    echo "ERROR: Linux arm64 is a local development artifact only; public --release supports x64." >&2
+    exit 1
+fi
 
 for command in bun node npx curl unzip sha256sum python3; do
     command -v "$command" >/dev/null || { echo "ERROR: required command not found: $command" >&2; exit 1; }
 done
+
+if [[ "$RELEASE_BUILD" == true ]]; then
+    command -v git >/dev/null || { echo "ERROR: --release requires Git to verify source integrity." >&2; exit 1; }
+    # Refuse dirty source before dependency installation or generated cleanup.
+    # The electron-builder beforePack hook repeats this check.
+    RELEASE_COMMIT="$(node "$SCRIPT_DIR/releaseIntegrity.cjs" --check-source "$ROOT_DIR")"
+    export ROBB_BUILD_CHANNEL=production
+    export ROBB_BUILD_COMMIT="$RELEASE_COMMIT"
+    export ROBB_BUILD_DIRTY=false
+    unset CRAFT_DEV_RUNTIME
+else
+    # Local and unsigned CI smoke artifacts must never advertise production.
+    export ROBB_BUILD_CHANNEL=development
+fi
+
+echo "=== Building Robb Agents AppImage (${ARCH}, release=${RELEASE_BUILD}) using electron-builder ==="
 
 # 1. Clean previous build artifacts
 echo "Cleaning previous builds..."
@@ -179,6 +205,10 @@ cd "$ELECTRON_DIR"
 # Publishing is handled only by an explicit release workflow, never by
 # electron-builder's CI auto-detection.
 bun x --bun electron-builder --config electron-builder.yml --linux --${ARCH} --publish never
+
+bun "$ROOT_DIR/scripts/validate-electron-package-security.ts" \
+    --binary "$ELECTRON_DIR/release/linux-unpacked/robb-agents" \
+    --resources-dir "$ELECTRON_DIR/release/linux-unpacked/resources"
 
 # 8. Verify the AppImage was built
 # electron-builder uses Linux-style arch names: x86_64 for x64, aarch64 for arm64

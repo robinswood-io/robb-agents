@@ -204,6 +204,8 @@ export interface RunSnapshot {
 
 export interface PendingTaskApproval {
   requestId: string;
+  /** Durable task folder identifier required to resolve from a global inbox. */
+  slug: string;
   missionId: string;
   runId: string;
   nodeId: string;
@@ -487,6 +489,7 @@ class ActiveRun {
       } else if (e.kind === 'approval-requested') {
         unresolvedApprovals.set(e.requestId, {
           requestId: e.requestId,
+          slug: this.slug,
           missionId: this.spec.id,
           runId: this.runId,
           nodeId: e.nodeId,
@@ -733,6 +736,7 @@ class ActiveRun {
     const impact = this.spec.mission?.policy.impact_level ?? (node.effect === 'external-mutation' ? 'high' : 'medium');
     const request: PendingTaskApproval = {
       requestId,
+      slug: this.slug,
       missionId: this.spec.id,
       runId: this.runId,
       nodeId: node.id,

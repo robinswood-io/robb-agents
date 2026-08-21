@@ -2,15 +2,20 @@
   "extends": "../tsconfig.json",
   "compilerOptions": {
     "allowJs": false,
-    "baseUrl": "..",
+    "rootDir": "..",
     "types": ["bun"]
   },
   "include": [
     "generate-github-update-manifests.ts",
+    "robb-provider-canaries.ts",
+    "validate-electron-package-security.ts",
     "validate-release-bundle.ts",
+    "verify-proof-passport.ts",
     "verify-github-release-assets.ts",
     "tests/generate-github-update-manifests.test.ts",
+    "tests/provider-canaries.test.ts",
     "tests/validate-release-bundle.test.ts",
+    "tests/verify-proof-passport.test.ts",
     "tests/verify-github-release-assets.test.ts"
   ]
 }

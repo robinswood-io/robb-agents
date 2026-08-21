@@ -27,6 +27,7 @@ import { getWorkspaceSourcesPath } from '../workspaces/storage.ts';
 // getSourceCredentialManager is only referenced lazily inside saveSourceConfig,
 // not at module-eval time.
 import { getSourceCredentialManager } from './credential-manager.ts';
+import { assertMcpTransportWriteAllowed } from './mcp-transport-policy.ts';
 import {
   validateIconValue,
   findIconFile,
@@ -121,6 +122,18 @@ export function saveSourceConfig(
   workspaceRootPath: string,
   config: FolderSourceConfig
 ): void {
+  const dir = getSourcePath(workspaceRootPath, config.slug);
+  const configPath = join(dir, 'config.json');
+  let previous: FolderSourceConfig | null = null;
+  if (existsSync(configPath)) {
+    try {
+      previous = readJsonFileSync<FolderSourceConfig>(configPath);
+    } catch {
+      // Validation below remains authoritative for the replacement config.
+    }
+  }
+  assertMcpTransportWriteAllowed(config, previous);
+
   // Validate config before writing
   const validation = validateSourceConfig(config);
   if (!validation.valid) {
@@ -129,7 +142,6 @@ export function saveSourceConfig(
     throw new Error(`Invalid source config: ${errorMessages}`);
   }
 
-  const dir = getSourcePath(workspaceRootPath, config.slug);
   if (!existsSync(dir)) {
     mkdirSync(dir, { recursive: true });
   }
@@ -143,7 +155,7 @@ export function saveSourceConfig(
     };
   }
 
-  writeFileSync(join(dir, 'config.json'), JSON.stringify(storageConfig, null, 2));
+  writeFileSync(configPath, JSON.stringify(storageConfig, null, 2));
 
   // Orphan-credential cleanup: when an API source is set to authType:'none',
   // any credential previously stored for this slug (e.g. from authType:'header')

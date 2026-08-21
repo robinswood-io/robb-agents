@@ -1,7 +1,10 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import babel from '@rolldown/plugin-babel'
 import tailwindcss from '@tailwindcss/vite'
 import { resolve } from 'path'
+
+const configDir = import.meta.dirname
 
 // NOTE: Source map upload to Sentry is intentionally disabled.
 // To re-enable, uncomment the sentryVitePlugin below and add SENTRY_AUTH_TOKEN,
@@ -10,16 +13,15 @@ import { resolve } from 'path'
 
 export default defineConfig({
   plugins: [
-    react({
-      babel: {
-        plugins: [
-          // Jotai HMR support: caches atom instances in globalThis.jotaiAtomCache
-          // so that HMR module re-execution returns stable atom references
-          // instead of creating new (empty) atoms that orphan existing data.
-          'jotai/babel/plugin-debug-label',
-          ['jotai/babel/plugin-react-refresh', { customAtomNames: ['atomFamily'] }],
-        ],
-      },
+    react(),
+    babel({
+      plugins: [
+        // Jotai HMR support: caches atom instances in globalThis.jotaiAtomCache
+        // so that HMR module re-execution returns stable atom references
+        // instead of creating new (empty) atoms that orphan existing data.
+        'jotai-babel/plugin-debug-label',
+        ['jotai-babel/plugin-react-refresh', { customAtomNames: ['atomFamily'] }],
+      ],
     }),
     tailwindcss(),
     // Sentry source map upload — intentionally disabled. See CLAUDE.md for re-enabling instructions.
@@ -33,39 +35,40 @@ export default defineConfig({
     //   },
     // }),
   ],
-  root: resolve(__dirname, 'src/renderer'),
+  root: resolve(configDir, 'src/renderer'),
   base: './',
   build: {
-    outDir: resolve(__dirname, 'dist/renderer'),
+    // Electron 43 embeds Chromium 150. Keep Oxc output aligned with that runtime.
+    target: 'chrome150',
+    outDir: resolve(configDir, 'dist/renderer'),
     emptyOutDir: true,
     sourcemap: true,  // Source maps generated for debugging. Not uploaded to Sentry (see CLAUDE.md).
-    rollupOptions: {
+    rolldownOptions: {
       input: {
-        main: resolve(__dirname, 'src/renderer/index.html'),
-        playground: resolve(__dirname, 'src/renderer/playground.html'),
-        'browser-toolbar': resolve(__dirname, 'src/renderer/browser-toolbar.html'),
-        'browser-empty-state': resolve(__dirname, 'src/renderer/browser-empty-state.html'),
+        main: resolve(configDir, 'src/renderer/index.html'),
+        playground: resolve(configDir, 'src/renderer/playground.html'),
+        'browser-toolbar': resolve(configDir, 'src/renderer/browser-toolbar.html'),
+        'browser-empty-state': resolve(configDir, 'src/renderer/browser-empty-state.html'),
       }
     }
   },
   resolve: {
     alias: {
-      '@': resolve(__dirname, 'src/renderer'),
-      '@config': resolve(__dirname, '../../packages/shared/src/config'),
+      '@': resolve(configDir, 'src/renderer'),
+      '@config': resolve(configDir, '../../packages/shared/src/config'),
       // Force all React imports to use the root node_modules React
       // Bun hoists deps to root. This prevents "multiple React copies" error from @craft-agent/ui
-      'react': resolve(__dirname, '../../node_modules/react'),
-      'react-dom': resolve(__dirname, '../../node_modules/react-dom'),
+      'react': resolve(configDir, '../../node_modules/react'),
+      'react-dom': resolve(configDir, '../../node_modules/react-dom'),
     },
     dedupe: ['react', 'react-dom']
   },
   optimizeDeps: {
     include: ['react', 'react-dom', 'jotai', 'pdfjs-dist'],
     exclude: ['@craft-agent/ui'],
-    esbuildOptions: {
-      supported: { 'top-level-await': true },
-      target: 'esnext'
-    }
+    rolldownOptions: {
+      transform: { target: 'chrome150' },
+    },
   },
   server: {
     port: 5173,

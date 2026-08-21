@@ -73,6 +73,11 @@ export type ConnectorSecretResolver = (
   request: SecretLeaseConsumptionRequest,
 ) => Promise<ConnectorSecretLease | null>
 export type ConnectorHttpTransport = (request: ConnectorHttpRequest) => Promise<ConnectorHttpResponse>
+export interface ConnectorEgressObservation {
+  operationId: string
+  destinationOrigin: string
+  payload: Record<string, unknown>
+}
 export type ConnectorSecretLeaseConsumer = (
   grant: SecretLeaseGrant,
   request: SecretLeaseConsumptionRequest,
@@ -194,6 +199,8 @@ export interface ConnectorDriverOptions {
   issueExecutionProof: ConnectorExecutionProofIssuer
   recordExecutionProof: (proof: SignedExecutionProof) => void
   createHealthAuthorization: () => ConnectorCapabilityAuthorization
+  /** Last synchronous boundary before the credentialed HTTP transport is invoked. */
+  onEgress?: (observation: ConnectorEgressObservation) => void
   now?: () => string
 }
 
@@ -228,6 +235,35 @@ function readInvocationEnvelope(input: Record<string, unknown>): InvocationEnvel
     }
   }
   return { payload, resourceId, idempotencyKey, authorization }
+}
+
+/**
+ * Materialize the exact structured value released to the HTTP transport.
+ * GET has no JSON body in this driver, so only one scalar per query key is
+ * representable. Values are canonicalized to their wire strings before
+ * authorization and receipting; arrays, objects, nulls and non-finite numbers
+ * fail closed instead of being silently omitted from the request URL.
+ */
+export function materializeConnectorHttpPayload(
+  method: ConnectorHttpRequest['method'],
+  payload: Record<string, unknown>,
+): Record<string, unknown> {
+  if (method !== 'GET') return structuredClone(payload)
+  const entries: Array<[string, string]> = []
+  for (const [key, value] of Object.entries(payload)) {
+    if (
+      typeof value !== 'string'
+      && typeof value !== 'boolean'
+      && !(typeof value === 'number' && Number.isFinite(value))
+    ) {
+      throw new ConnectorDriverError(
+        'INVALID_INPUT',
+        `GET connector query field "${key}" is not representable as one scalar value`,
+      )
+    }
+    entries.push([key, String(value)])
+  }
+  return Object.fromEntries(entries)
 }
 
 function renderPath(path: string, resourceId?: string): string {
@@ -291,6 +327,7 @@ export class HttpConnectorPackDriver implements ConnectorPackDriver {
     private readonly issueExecutionProof: ConnectorExecutionProofIssuer,
     private readonly recordExecutionProof: (proof: SignedExecutionProof) => void,
     private readonly createHealthAuthorization: () => ConnectorCapabilityAuthorization,
+    private readonly onEgress?: (observation: ConnectorEgressObservation) => void,
     private readonly now: () => string = () => new Date().toISOString(),
   ) {
     const parsedBaseUrl = new URL(baseUrl)
@@ -342,7 +379,13 @@ export class HttpConnectorPackDriver implements ConnectorPackDriver {
     }
 
     const operation = this.runtimeOperation(operationId)
-    const envelope = readInvocationEnvelope(input)
+    const binding = this.definition.bindings[operationId]
+    if (!binding) throw new ConnectorDriverError('UNKNOWN_OPERATION', `No HTTP binding for ${operationId}`)
+    const rawEnvelope = readInvocationEnvelope(input)
+    const envelope: InvocationEnvelope = {
+      ...rawEnvelope,
+      payload: materializeConnectorHttpPayload(binding.method, rawEnvelope.payload),
+    }
     this.authorizeOperation(operation, envelope)
     return this.limiter.run(async () => {
       const capabilityRequest = envelope.authorization?.request
@@ -378,20 +421,21 @@ export class HttpConnectorPackDriver implements ConnectorPackDriver {
         throw new ConnectorDriverError(code, leaseDecision.reason)
       }
 
-      const binding = this.definition.bindings[operationId]
-      if (!binding) throw new ConnectorDriverError('UNKNOWN_OPERATION', `No HTTP binding for ${operationId}`)
       const path = renderPath(binding.path, envelope.resourceId)
       let normalizedBaseUrl = this.baseUrl
       while (normalizedBaseUrl.endsWith('/')) normalizedBaseUrl = normalizedBaseUrl.slice(0, -1)
       const url = new URL(path, `${normalizedBaseUrl}/`)
       if (binding.method === 'GET') {
         for (const [key, value] of Object.entries(envelope.payload)) {
-          if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
-            url.searchParams.set(key, String(value))
-          }
+          url.searchParams.set(key, String(value))
         }
       }
       this.runtimeOperation(operationId)
+      this.onEgress?.({
+        operationId,
+        destinationOrigin: url.origin,
+        payload: structuredClone(envelope.payload),
+      })
       const response = await this.transport({
         method: binding.method,
         url: url.toString(),
@@ -544,6 +588,7 @@ export function createPriorityConnectorDriver(
     options.issueExecutionProof,
     options.recordExecutionProof,
     options.createHealthAuthorization,
+    options.onEgress,
     options.now,
   )
 }

@@ -50,6 +50,82 @@ export const AGENT_MODEL_TIERS = ['fast', 'balanced', 'best'] as const;
 export const EVIDENCE_KINDS = ['test', 'artifact', 'state', 'receipt', 'source', 'diff', 'other'] as const;
 export const WORK_ITEM_EFFECTS = ['read', 'workspace-write', 'external-mutation'] as const;
 
+const MAX_CONNECTOR_PAYLOAD_BYTES = 64 * 1024;
+const MAX_CONNECTOR_PAYLOAD_DEPTH = 12;
+const MAX_CONNECTOR_PAYLOAD_FIELDS = 512;
+const FORBIDDEN_STRUCTURED_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+
+function validateStructuredConnectorPayload(
+  value: unknown,
+  ctx: z.RefinementCtx,
+  path: Array<string | number> = [],
+  depth = 0,
+  counter = { fields: 0 },
+): void {
+  if (depth > MAX_CONNECTOR_PAYLOAD_DEPTH) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path, message: `Connector payload exceeds depth ${MAX_CONNECTOR_PAYLOAD_DEPTH}` });
+    return;
+  }
+  if (value === null || typeof value === 'string' || typeof value === 'boolean') return;
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path, message: 'Connector payload numbers must be finite' });
+    }
+    return;
+  }
+  if (Array.isArray(value)) {
+    value.forEach((child, index) => validateStructuredConnectorPayload(child, ctx, [...path, index], depth + 1, counter));
+    return;
+  }
+  if (!value || typeof value !== 'object' || Object.getPrototypeOf(value) !== Object.prototype) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path, message: 'Connector payload must contain JSON values only' });
+    return;
+  }
+  for (const [key, child] of Object.entries(value)) {
+    counter.fields += 1;
+    if (counter.fields > MAX_CONNECTOR_PAYLOAD_FIELDS) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path, message: `Connector payload exceeds ${MAX_CONNECTOR_PAYLOAD_FIELDS} fields` });
+      return;
+    }
+    if (FORBIDDEN_STRUCTURED_KEYS.has(key)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: [...path, key], message: `Forbidden connector payload key "${key}"` });
+      continue;
+    }
+    validateStructuredConnectorPayload(child, ctx, [...path, key], depth + 1, counter);
+  }
+}
+
+const StructuredConnectorPayloadSchema = z.record(z.string().min(1).max(128), z.unknown())
+  .superRefine((payload, ctx) => {
+    validateStructuredConnectorPayload(payload, ctx);
+    if (new TextEncoder().encode(JSON.stringify(payload)).byteLength > MAX_CONNECTOR_PAYLOAD_BYTES) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: `Connector payload exceeds ${MAX_CONNECTOR_PAYLOAD_BYTES} bytes` });
+    }
+  });
+
+export const MissionConnectorInvocationSchema = z.object({
+  schemaVersion: z.literal(1),
+  pack: z.string().trim().min(1).max(128).regex(/^[A-Za-z0-9][A-Za-z0-9.-]*$/),
+  operationId: z.string().trim().min(1).max(128).regex(/^[a-z0-9][a-z0-9._-]*$/),
+  resourceType: z.string().trim().min(1).max(128).regex(/^[A-Za-z0-9][A-Za-z0-9._-]*$/),
+  resourceId: z.string().trim().min(1).max(512).optional(),
+  payload: StructuredConnectorPayloadSchema,
+  autonomy: z.enum(['A0', 'A1', 'A2', 'A3', 'A4']),
+  receiptRequirementId: slug('connector receipt requirement id'),
+  compensation: z.object({
+    strategy: z.enum(['inverse-operation', 'restore-snapshot', 'manual']),
+    operationId: z.string().trim().min(1).max(128).regex(/^[a-z0-9][a-z0-9._-]*$/).optional(),
+  }).strict().superRefine((compensation, ctx) => {
+    if (compensation.strategy !== 'manual' && !compensation.operationId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['operationId'],
+        message: `${compensation.strategy} compensation requires an operationId`,
+      });
+    }
+  }),
+}).strict();
+
 export const MissionCriterionSchema = z.object({
   id: slug('criterion id'),
   description: z.string().min(1),
@@ -132,6 +208,7 @@ export const MissionWorkItemSchema = z.object({
   requiredEvidence: z.array(EvidenceRequirementSchema).default([]),
   agentProfileId: slug('agent profile id').optional(),
   effect: z.enum(WORK_ITEM_EFFECTS).default('read'),
+  connectorInvocation: MissionConnectorInvocationSchema.optional(),
   execution: TaskExecutionSchema.optional(),
 }).superRefine((item, ctx) => {
   const executing = ['task', 'subtask', 'integration', 'correction'].includes(item.kind);
@@ -167,6 +244,44 @@ export const MissionWorkItemSchema = z.object({
   const evidenceIds = item.requiredEvidence.map((requirement) => requirement.id);
   if (new Set(evidenceIds).size !== evidenceIds.length) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['requiredEvidence'], message: 'Evidence requirement ids must be unique per work item' });
+  }
+  if (item.effect === 'external-mutation') {
+    if (!executing) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['effect'],
+        message: 'Only executable work may declare an external mutation',
+      });
+    }
+    if (item.execution) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['execution'],
+        message: 'Brokered connector mutations cannot use the generic session execution envelope',
+      });
+    }
+    if (!item.connectorInvocation) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['connectorInvocation'],
+        message: 'External mutation work requires a structured brokered connector invocation',
+      });
+    } else {
+      const receipt = item.requiredEvidence.find(({ id }) => id === item.connectorInvocation!.receiptRequirementId);
+      if (!receipt || receipt.kind !== 'receipt') {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['requiredEvidence'],
+          message: `External mutation work requires receipt evidence "${item.connectorInvocation.receiptRequirementId}"`,
+        });
+      }
+    }
+  } else if (item.connectorInvocation) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['connectorInvocation'],
+      message: 'Only external mutation work may declare a connector invocation',
+    });
   }
 });
 
@@ -433,6 +548,7 @@ export type EvidenceRef = z.infer<typeof EvidenceRefSchema>;
 export type WorkSubmission = z.infer<typeof WorkSubmissionSchema>;
 export type MissionAttemptTelemetry = z.infer<typeof MissionAttemptTelemetrySchema>;
 export type MissionExecutionBinding = z.infer<typeof MissionExecutionBindingSchema>;
+export type MissionConnectorInvocation = z.infer<typeof MissionConnectorInvocationSchema>;
 export type AgentProfile = z.infer<typeof AgentProfileSchema>;
 export type MissionWorkItem = z.infer<typeof MissionWorkItemSchema>;
 export type MissionPolicy = z.infer<typeof MissionPolicySchema>;

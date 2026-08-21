@@ -8,6 +8,21 @@ const FIXTURE = (name: string) => join(HERE, 'fixtures', name)
 
 describe('validateStdioMcpConnection', () => {
   it(
+    'negotiates a 2026-07-28-only stdio server automatically',
+    async () => {
+      const result = await validateStdioMcpConnection({
+        command: 'node',
+        args: [FIXTURE('mcp-server-modern.mjs')],
+        timeout: 8000,
+      })
+      expect(result.success).toBe(true)
+      expect(result.tools).toEqual(['modern_echo'])
+      expect(result.error).toBeUndefined()
+    },
+    15000,
+  )
+
+  it(
     'returns success and tool list for a spec-compliant stdio server',
     async () => {
       const result = await validateStdioMcpConnection({

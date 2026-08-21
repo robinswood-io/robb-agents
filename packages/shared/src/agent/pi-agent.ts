@@ -19,6 +19,7 @@ import type { AgentEvent } from '@craft-agent/core/types';
 import type { FileAttachment } from '../utils/files.ts';
 import { getProxyEnvVars } from '../config/proxy-env.ts';
 import {
+  buildRestrictedSubprocessEnvironment,
   registerLongRunningProcess,
   type LongRunningProcessHandle,
 } from '../processes/index.ts';
@@ -114,6 +115,117 @@ import { parseCompactCommand } from './compact-command.ts';
 import { redactSecretLikeMaterial } from '../utils/redaction.ts';
 
 const RUNTIME_DIAGNOSTIC_MAX_CHARS = 4_000;
+
+/** Inputs intentionally granted to one Pi subprocess generation. */
+export interface PiSubprocessEnvironmentOptions {
+  proxyEnv?: Record<string, string>;
+  envOverrides?: Record<string, string>;
+  providerEnv?: Record<string, string>;
+  awsEnv?: Record<string, string>;
+  sessionDir?: string;
+  debugEnabled: boolean;
+}
+
+/**
+ * Build Pi's child environment without inheriting unrelated host credentials.
+ * Provider credentials and per-session values must arrive through an explicit
+ * input map, making the privilege boundary reviewable at the call site.
+ */
+export function buildPiSubprocessEnvironment(
+  options: PiSubprocessEnvironmentOptions,
+  baseEnv: NodeJS.ProcessEnv = process.env,
+): Record<string, string> {
+  return buildRestrictedSubprocessEnvironment(
+    {
+      ...options.proxyEnv,
+      ...options.envOverrides,
+      ...options.providerEnv,
+      ...options.awsEnv,
+      ...(options.sessionDir ? { CRAFT_SESSION_DIR: options.sessionDir } : {}),
+      CRAFT_DEBUG: options.debugEnabled ? '1' : '0',
+    },
+    baseEnv,
+  );
+}
+
+const BEDROCK_ENVIRONMENT_AUTH_KEYS = [
+  // Static/session credentials. These are copied only when the user selected
+  // the Bedrock environment credential chain for this connection.
+  'AWS_ACCESS_KEY_ID',
+  'AWS_SECRET_ACCESS_KEY',
+  'AWS_SESSION_TOKEN',
+  'AWS_SECURITY_TOKEN',
+  'AWS_BEARER_TOKEN_BEDROCK',
+
+  // Profile, region and shared credential/config file routing.
+  'AWS_REGION',
+  'AWS_DEFAULT_REGION',
+  'AWS_PROFILE',
+  'AWS_DEFAULT_PROFILE',
+  'AWS_CONFIG_FILE',
+  'AWS_SHARED_CREDENTIALS_FILE',
+  'AWS_SDK_LOAD_CONFIG',
+  'AWS_CA_BUNDLE',
+
+  // Workload identity / container / instance role credential chain.
+  'AWS_WEB_IDENTITY_TOKEN_FILE',
+  'AWS_ROLE_ARN',
+  'AWS_ROLE_SESSION_NAME',
+  'AWS_CONTAINER_CREDENTIALS_RELATIVE_URI',
+  'AWS_CONTAINER_CREDENTIALS_FULL_URI',
+  'AWS_CONTAINER_AUTHORIZATION_TOKEN',
+  'AWS_CONTAINER_AUTHORIZATION_TOKEN_FILE',
+  'AWS_EC2_METADATA_DISABLED',
+  'AWS_EC2_METADATA_SERVICE_ENDPOINT',
+  'AWS_EC2_METADATA_SERVICE_ENDPOINT_MODE',
+
+  // Explicit Bedrock endpoint/runtime controls.
+  'AWS_ENDPOINT_URL',
+  'AWS_ENDPOINT_URL_BEDROCK',
+  'AWS_BEDROCK_FORCE_HTTP1',
+] as const;
+
+function pickExplicitEnvironment(
+  keys: readonly string[],
+  baseEnv: NodeJS.ProcessEnv = process.env,
+): Record<string, string> {
+  const env: Record<string, string> = {};
+  for (const key of keys) {
+    const value = baseEnv[key];
+    if (typeof value === 'string') env[key] = value;
+  }
+  return env;
+}
+
+const PROVIDER_CONTRACT_ENVIRONMENT_KEYS = [
+  'ROBB_DISABLE_UNSTABLE_PROVIDERS',
+  'ROBB_DISABLE_CHATGPT_CODEX_BACKEND',
+  'ROBB_DISABLE_GITHUB_COPILOT_PROXY',
+  'ROBB_DISABLE_GOOGLE_CODE_ASSIST_V1INTERNAL',
+] as const;
+
+/**
+ * Grant only non-secret bootstrap and emergency contract controls to Pi.
+ * Scoped switches are limited to the selected provider; the master switch is
+ * intentionally common to every Pi subprocess.
+ */
+export function buildPiProviderEnvironment(
+  piAuthProvider: string | undefined,
+  baseEnv: NodeJS.ProcessEnv = process.env,
+): Record<string, string> {
+  const keys: string[] = [PROVIDER_CONTRACT_ENVIRONMENT_KEYS[0]];
+  if (piAuthProvider === 'openai-codex') keys.push(PROVIDER_CONTRACT_ENVIRONMENT_KEYS[1]);
+  if (piAuthProvider === 'github-copilot') keys.push(PROVIDER_CONTRACT_ENVIRONMENT_KEYS[2]);
+  if (piAuthProvider === 'google-gemini-code-assist') {
+    keys.push(
+      PROVIDER_CONTRACT_ENVIRONMENT_KEYS[3],
+      'GOOGLE_CLOUD_PROJECT',
+      'GOOGLE_CLOUD_PROJECT_ID',
+    );
+  }
+  if (piAuthProvider === 'mistral-vibe') keys.push('ROBB_VIBE_ACP_COMMAND');
+  return pickExplicitEnvironment(keys, baseEnv);
+}
 
 type PiAuthPayload = {
   provider: string;
@@ -551,21 +663,22 @@ export class PiAgent extends BaseAgent {
 
     // Derive AWS env vars from the piAuth credential (single fetch, no race).
     const awsEnv = this.buildAwsEnv(piAuth, runtime);
+    const providerEnv = this.buildProviderEnv(runtime);
 
     // Spawn the subprocess
     const child = spawn(nodePath, args, {
       cwd,
       stdio: ['pipe', 'pipe', 'pipe'],
-      env: {
-        ...process.env,
-        ...getProxyEnvVars(),
-        ...this.config.envOverrides,
-        ...awsEnv,
-        // Pass session dir for cross-process toolMetadataStore
-        ...(sessionDir ? { CRAFT_SESSION_DIR: sessionDir } : {}),
-        // Propagate debug mode
-        CRAFT_DEBUG: (process.argv.includes('--debug') || process.env.CRAFT_DEBUG === '1') ? '1' : '0',
-      },
+      env: buildPiSubprocessEnvironment({
+        proxyEnv: getProxyEnvVars(),
+        envOverrides: this.config.envOverrides,
+        providerEnv,
+        awsEnv,
+        // Pass session dir for cross-process toolMetadataStore.
+        sessionDir,
+        // Propagate debug mode without inheriting the rest of process.env.
+        debugEnabled: process.argv.includes('--debug') || process.env.CRAFT_DEBUG === '1',
+      }),
     });
 
     this.subprocess = child;
@@ -783,7 +896,8 @@ export class PiAgent extends BaseAgent {
         // API key-based connections.
         // NOTE: authType === 'environment' (e.g. Bedrock with ~/.aws/credentials)
         // intentionally falls through here, finds no API key, and returns null.
-        // The subprocess inherits process.env which contains the AWS credential chain.
+        // buildAwsEnv() grants the AWS credential chain only to the selected
+        // Bedrock subprocess; it is not part of generic process.env inheritance.
         const apiKey = await credentialManager.getLlmApiKey(slug);
         if (apiKey) {
           this.debug(`Retrieved API key credential for Pi provider: ${piAuthProvider}`);
@@ -819,7 +933,12 @@ export class PiAgent extends BaseAgent {
   ): Record<string, string> {
     if (runtime.piAuthProvider !== 'amazon-bedrock') return {};
 
-    const env: Record<string, string> = {};
+    // Environment auth is an explicit user choice for this one Bedrock
+    // connection. Preserve the AWS default credential chain without exposing
+    // cloud credentials to any other Pi provider.
+    const env: Record<string, string> = this.config.authType === 'environment'
+      ? pickExplicitEnvironment(BEDROCK_ENVIRONMENT_AUTH_KEYS)
+      : {};
 
     if (piAuth?.credential.type === 'iam') {
       env.AWS_ACCESS_KEY_ID = piAuth.credential.accessKeyId;
@@ -831,11 +950,19 @@ export class PiAgent extends BaseAgent {
 
     // Defensive: force HTTP/1.1 for Bedrock. AWS SDK v3 defaults to HTTP/2
     // (NodeHttp2Handler) which can be incompatible with Bun/Electron runtimes.
-    if (!process.env.AWS_BEDROCK_FORCE_HTTP1) {
-      env.AWS_BEDROCK_FORCE_HTTP1 = '1';
-    }
+    env.AWS_BEDROCK_FORCE_HTTP1 = process.env.AWS_BEDROCK_FORCE_HTTP1
+      || env.AWS_BEDROCK_FORCE_HTTP1
+      || '1';
 
     return env;
+  }
+
+  /**
+   * Preserve non-secret provider bootstrap values only for the provider that
+   * consumes them. They are deliberately not part of the generic host env.
+   */
+  private buildProviderEnv(runtime: { piAuthProvider?: string }): Record<string, string> {
+    return buildPiProviderEnvironment(runtime.piAuthProvider);
   }
 
   /**

@@ -1,5 +1,7 @@
 /**
- * Fail-closed integrity checks shared by the macOS production packaging flow.
+ * Fail-closed source-integrity checks shared by every production packaging
+ * flow. macOS signature/notarization verification remains platform-specific
+ * in afterSign.cjs.
  *
  * The default export is an electron-builder beforePack hook. The CLI mode is
  * used by build-dmg.sh to reject a dirty checkout before expensive build work.
@@ -72,6 +74,17 @@ function requiresMacReleaseIntegrity(context) {
   return context?.packager?.config?.forceCodeSigning === true
 }
 
+function requiresReleaseSourceIntegrity(context, env = process.env) {
+  const channel = env.ROBB_BUILD_CHANNEL?.trim().toLowerCase()
+  if (channel === 'production') return true
+  if (channel === 'development') return false
+
+  // Keep the historical fail-closed macOS behavior for callers which have not
+  // yet supplied explicit build-channel metadata. Windows and Linux release
+  // wrappers always set the channel before electron-builder starts.
+  return requiresMacReleaseIntegrity(context)
+}
+
 function resolveRepositoryRoot(projectDir) {
   try {
     return execFileSync('git', ['-C', projectDir, 'rev-parse', '--show-toplevel'], {
@@ -86,18 +99,19 @@ function resolveRepositoryRoot(projectDir) {
 }
 
 async function beforePack(context) {
-  if (!requiresMacReleaseIntegrity(context)) return
+  if (!requiresReleaseSourceIntegrity(context)) return
   const projectDir = context.packager?.projectDir
   if (!projectDir) throw new Error('Release build refused: electron-builder project directory is unavailable')
   const rootDir = resolveRepositoryRoot(projectDir)
   const commit = inspectReleaseSource(rootDir)
-  console.log(`release integrity: verified clean source ${commit}`)
+  console.log(`release integrity: verified clean ${context.electronPlatformName || 'unknown'} source ${commit}`)
 }
 
 module.exports = beforePack
 module.exports.inspectReleaseSource = inspectReleaseSource
 module.exports.parseDirtyFlag = parseDirtyFlag
 module.exports.requiresMacReleaseIntegrity = requiresMacReleaseIntegrity
+module.exports.requiresReleaseSourceIntegrity = requiresReleaseSourceIntegrity
 module.exports.resolveRepositoryRoot = resolveRepositoryRoot
 module.exports.validateReleaseSourceState = validateReleaseSourceState
 

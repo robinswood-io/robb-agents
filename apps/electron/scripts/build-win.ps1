@@ -25,7 +25,35 @@ function Require-Environment([string]$Name) {
     }
 }
 
+function Require-ValidAuthenticodeSignature([string]$Path, [string]$Description) {
+    Require-Path $Path $Description
+    $Signature = Get-AuthenticodeSignature $Path
+    if ($Signature.Status -ne 'Valid') {
+        throw "Release $Description Authenticode verification failed: $($Signature.Status) $($Signature.StatusMessage)"
+    }
+    Write-Host "Verified Authenticode signature for ${Description}: $($Signature.SignerCertificate.Subject)" -ForegroundColor Green
+}
+
+foreach ($command in @("bun", "node", "python")) {
+    if (-not (Get-Command $command -ErrorAction SilentlyContinue)) {
+        throw "Required command not found on PATH: $command"
+    }
+}
+
 if ($Release) {
+    # Verify the exact clean source before any generated-path cleanup, then
+    # force production provenance for both the build and beforePack hook.
+    $ReleaseCommitOutput = & node "$ScriptDir\releaseIntegrity.cjs" --check-source "$RootDir"
+    if ($LASTEXITCODE -ne 0) { throw "Release source integrity validation failed" }
+    $ReleaseCommit = ($ReleaseCommitOutput | Select-Object -Last 1).Trim()
+    if ($ReleaseCommit -notmatch '^[0-9a-fA-F]{40}$') {
+        throw "Release source integrity returned an invalid commit: $ReleaseCommit"
+    }
+    $env:ROBB_BUILD_CHANNEL = "production"
+    $env:ROBB_BUILD_COMMIT = $ReleaseCommit
+    $env:ROBB_BUILD_DIRTY = "false"
+    Remove-Item Env:CRAFT_DEV_RUNTIME -ErrorAction SilentlyContinue
+
     $SigningMode = if ([string]::IsNullOrWhiteSpace($env:WINDOWS_SIGNING_MODE)) { "pfx" } else { $env:WINDOWS_SIGNING_MODE.ToLowerInvariant() }
     if ($SigningMode -notin @("pfx", "azure")) {
         throw "Unsupported WINDOWS_SIGNING_MODE '$SigningMode'. Expected 'pfx' or 'azure'."
@@ -51,13 +79,9 @@ if ($Release) {
         }
     }
 } else {
+    # The default wrapper remains an explicit local/CI development artifact.
+    $env:ROBB_BUILD_CHANNEL = "development"
     $SigningMode = "unsigned"
-}
-
-foreach ($command in @("bun", "node", "python")) {
-    if (-not (Get-Command $command -ErrorAction SilentlyContinue)) {
-        throw "Required command not found on PATH: $command"
-    }
 }
 
 Write-Host "=== Building Robb Agents Windows Installer ($Arch, release=$Release) ===" -ForegroundColor Cyan
@@ -146,8 +170,22 @@ try {
     Pop-Location
 }
 
+$UnpackedApp = "$ElectronDir\release\win-unpacked"
+$UnpackedBinary = "$UnpackedApp\Robb Agents.exe"
+Require-Path $UnpackedBinary "unpacked Electron binary"
+bun "$RootDir\scripts\validate-electron-package-security.ts" --binary $UnpackedBinary --resources-dir "$UnpackedApp\resources"
+if ($LASTEXITCODE -ne 0) { throw "Electron ASAR/fuse security validation failed" }
+
 $Installer = Get-ChildItem -Path "$ElectronDir\release" -Filter "Robb-Agents-x64*.exe" | Sort-Object Length -Descending | Select-Object -First 1
 if (-not $Installer) { throw "Expected Robb Agents NSIS installer was not produced" }
+
+if ($Release) {
+    # A public release is valid only when electron-builder signed both the
+    # packaged application executable and its NSIS installer.
+    Require-ValidAuthenticodeSignature $UnpackedBinary "unpacked Electron binary"
+    Require-ValidAuthenticodeSignature $Installer.FullName "NSIS installer"
+}
+
 $ChecksumPath = "$ElectronDir\release\SHA256SUMS-windows-x64.txt"
 "$((Get-FileHash $Installer.FullName -Algorithm SHA256).Hash.ToLower())  $($Installer.Name)" | Set-Content -NoNewline $ChecksumPath
 
@@ -155,13 +193,6 @@ Push-Location $RootDir
 try {
     python scripts/robinswood-windows-packaged-smoke.py --installer $Installer.FullName --checksums $ChecksumPath
     if ($LASTEXITCODE -ne 0) { throw "Windows installer validation failed" }
-    if ($Release) {
-        $signature = Get-AuthenticodeSignature $Installer.FullName
-        if ($signature.Status -ne 'Valid') {
-            throw "Release installer Authenticode verification failed: $($signature.Status) $($signature.StatusMessage)"
-        }
-        Write-Host "Verified Authenticode signature: $($signature.SignerCertificate.Subject)" -ForegroundColor Green
-    }
 } finally {
     Pop-Location
 }

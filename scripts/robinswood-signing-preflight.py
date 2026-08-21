@@ -11,7 +11,6 @@ Usage:
     python3 scripts/robinswood-signing-preflight.py
     python3 scripts/robinswood-signing-preflight.py --strict
     python3 scripts/robinswood-signing-preflight.py --ci --strict
-    python3 scripts/robinswood-signing-preflight.py --ci --strict --allow-unsigned-windows
 """
 from __future__ import annotations
 
@@ -180,16 +179,7 @@ def missing(names: tuple[str, ...]) -> list[str]:
     return [name for name in names if not present(name)]
 
 
-def check_windows_signing(ci: bool, allow_unsigned_windows: bool = False) -> list[Check]:
-    if allow_unsigned_windows:
-        return [
-            Check(
-                "Windows signing mode",
-                True,
-                "unsigned GitHub Release mode allowed; Authenticode material intentionally not required",
-            )
-        ]
-
+def check_windows_signing(ci: bool) -> list[Check]:
     mode = os.environ.get("WINDOWS_SIGNING_MODE", "pfx").strip().lower()
     mode_ok = mode in WINDOWS_SIGNING_MODES
     checks = [
@@ -274,11 +264,6 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--strict", action="store_true", help="exit non-zero if any public-release requirement is missing")
     parser.add_argument("--ci", action="store_true", help="validate GitHub Actions secret names instead of local Keychain material")
-    parser.add_argument(
-        "--allow-unsigned-windows",
-        action="store_true",
-        help="permit the explicit publish-unsigned Windows GitHub Release route without Authenticode material",
-    )
     args = parser.parse_args()
 
     checks = check_builder_metadata()
@@ -287,7 +272,7 @@ def main() -> None:
     checks.append(check_signing_material(args.ci))
     checks.extend(check_notarization(args.ci))
     checks.append(check_notarytool(args.ci))
-    checks.extend(check_windows_signing(args.ci, args.allow_unsigned_windows))
+    checks.extend(check_windows_signing(args.ci))
 
     ok = True
     for check in checks:

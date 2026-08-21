@@ -2,6 +2,12 @@ import type { ProviderDriver, DriverTestConnectionArgs } from '../driver-types.t
 import type { ModelDefinition } from '../../../../config/models.ts';
 import { getAllPiModels, getPiModelsForAuthProvider, isDeprecatedClaudeOpus46Model } from '../../../../config/models-pi.ts';
 import { getPiProviderBaseUrl } from '../../../../config/models-pi.ts';
+import {
+  deriveGitHubCopilotApiBaseUrl,
+  getUnstableProviderContract,
+  getUnstableProviderContractStatus,
+  redactProviderDiagnostic,
+} from '@craft-agent/core';
 
 // ── Copilot model types ────────────────────────────────────────────────
 type RawCopilotModel = {
@@ -14,21 +20,10 @@ type RawCopilotModel = {
 
 // ── Direct HTTP approach ─────────────────────────────────────────────
 
-/** Headers that identify us as a VS Code Copilot client (same as Pi SDK). */
-const COPILOT_HEADERS = {
-  'User-Agent': 'GitHubCopilotChat/0.35.0',
-  'Editor-Version': 'vscode/1.107.0',
-  'Editor-Plugin-Version': 'copilot-chat/0.35.0',
-  'Copilot-Integration-Id': 'vscode-chat',
-} as const;
+const COPILOT_PROVIDER_CONTRACT = getUnstableProviderContract('github-copilot-proxy');
 
-/** Extract API base URL from a Copilot API token's proxy-ep field. */
-function getBaseUrlFromToken(token: string): string | null {
-  const match = token.match(/proxy-ep=([^;]+)/);
-  if (!match?.[1]) return null;
-  const apiHost = match[1].replace(/^proxy\./, 'api.');
-  return `https://${apiHost}`;
-}
+/** Headers versioned alongside the exact Pi SDK contract. */
+const COPILOT_HEADERS = COPILOT_PROVIDER_CONTRACT.staticHeaders;
 
 /**
  * Fetch models directly from the Copilot API via HTTP.
@@ -50,7 +45,7 @@ async function listModelsViaHttp(
   const copilotToken = creds.access;
 
   // Step 2: Extract base URL from token
-  const baseUrl = getBaseUrlFromToken(copilotToken);
+  const baseUrl = deriveGitHubCopilotApiBaseUrl(copilotToken);
   if (!baseUrl) {
     throw new Error('Could not extract API base URL from Copilot token (missing proxy-ep)');
   }
@@ -62,18 +57,23 @@ async function listModelsViaHttp(
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    const res = await fetch(`${baseUrl}/models`, {
-      method: 'GET',
-      signal: controller.signal,
-      headers: {
-        'Authorization': `Bearer ${copilotToken}`,
-        ...COPILOT_HEADERS,
+    const res = await fetch(
+      `${baseUrl}${COPILOT_PROVIDER_CONTRACT.endpoint.operationPaths!.listModels}`,
+      {
+        method: 'GET',
+        signal: controller.signal,
+        headers: {
+          'Authorization': `Bearer ${copilotToken}`,
+          ...COPILOT_HEADERS,
+        },
       },
-    });
+    );
 
     if (!res.ok) {
       const text = await res.text().catch(() => '');
-      throw new Error(`Copilot API ${res.status}: ${text.slice(0, 300)}`);
+      throw new Error(
+        `Copilot API ${res.status}: ${redactProviderDiagnostic(text, [copilotToken, githubToken]).slice(0, 300)}`,
+      );
     }
 
     const data = await res.json() as Record<string, unknown>;
@@ -153,21 +153,34 @@ async function fetchCopilotModels(
   timeoutMs: number,
 ): Promise<ModelDefinition[]> {
 
+  const contractStatus = getUnstableProviderContractStatus(
+    'github-copilot-proxy',
+    process.env,
+  );
+
   // ── Tier 1: Direct HTTP API ──────────────────────────────────────
-  try {
-    const raw = await listModelsViaHttp(piSdkGitHubToken, timeoutMs);
-    if (raw.length > 0) {
-      logModelBreakdown('tier1-httpApi', raw);
-      const enabled = filterEnabledModels(raw);
-      if (enabled.length > 0) {
-        return toModelDefinitions(enabled);
+  if (contractStatus.enabled) {
+    try {
+      const raw = await listModelsViaHttp(piSdkGitHubToken, timeoutMs);
+      if (raw.length > 0) {
+        logModelBreakdown('tier1-httpApi', raw);
+        const enabled = filterEnabledModels(raw);
+        if (enabled.length > 0) {
+          return toModelDefinitions(enabled);
+        }
+        // All models disabled by policy — unusual but possible.
+        // Log it clearly and fall through to static catalog.
+        console.warn(`[fetchCopilotModels] tier1-httpApi: ${raw.length} models returned but 0 enabled by policy`);
       }
-      // All models disabled by policy — unusual but possible.
-      // Log it clearly and fall through to static catalog.
-      console.warn(`[fetchCopilotModels] tier1-httpApi: ${raw.length} models returned but 0 enabled by policy`);
+    } catch (err) {
+      console.warn(
+        `[fetchCopilotModels] tier1-httpApi failed: ${redactProviderDiagnostic(err, [piSdkGitHubToken])}`,
+      );
     }
-  } catch (err) {
-    console.warn(`[fetchCopilotModels] tier1-httpApi failed: ${(err as Error).message}`);
+  } else {
+    console.warn(
+      `[fetchCopilotModels] tier1-httpApi disabled by provider contract (${contractStatus.source ?? contractStatus.reason})`,
+    );
   }
 
   // ── Tier 2: Pi SDK static catalog (last resort) ──────────────────

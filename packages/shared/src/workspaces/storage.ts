@@ -8,6 +8,8 @@
 
 import {
   existsSync,
+  copyFileSync,
+  constants,
   mkdirSync,
   readFileSync,
   writeFileSync,
@@ -17,6 +19,7 @@ import {
 } from 'fs';
 import { join } from 'path';
 import { randomUUID } from 'crypto';
+import { z } from 'zod';
 import { expandPath, toPortablePath } from '../utils/paths.ts';
 import { atomicWriteFileSync, readJsonFileSync } from '../utils/files.ts';
 import { getDefaultStatusConfig, saveStatusConfig, ensureDefaultIconFiles } from '../statuses/storage.ts';
@@ -33,6 +36,38 @@ import type {
 } from './types.ts';
 
 const DEFAULT_WORKSPACES_DIR = join(CONFIG_DIR, 'workspaces');
+export const WORKSPACE_CONFIG_SCHEMA_VERSION = 1 as const;
+
+const WorkspaceConfigStorageSchema = z.object({
+  schemaVersion: z.literal(WORKSPACE_CONFIG_SCHEMA_VERSION),
+  id: z.string().trim().min(1),
+  name: z.string().trim().min(1),
+  slug: z.string().trim().min(1),
+  defaults: z.object({
+    model: z.string().optional(),
+    defaultLlmConnection: z.string().optional(),
+    enabledSourceSlugs: z.array(z.string()).optional(),
+    permissionMode: z.enum(['safe', 'ask', 'allow-all']).optional(),
+    externalActionPolicy: z.enum(['confirm', 'allow-in-execute']).optional(),
+    cyclablePermissionModes: z.array(z.enum(['safe', 'ask', 'allow-all'])).optional(),
+    workingDirectory: z.string().optional(),
+    thinkingLevel: z.string().optional(),
+    colorTheme: z.string().optional(),
+  }).passthrough().optional(),
+  localMcpServers: z.object({ enabled: z.boolean() }).strict().optional(),
+  routingPolicy: z.unknown().optional(),
+  governance: z.unknown().optional(),
+  remoteSupervision: z.unknown().optional(),
+  createdAt: z.number().int().nonnegative(),
+  updatedAt: z.number().int().nonnegative(),
+}).passthrough();
+
+export class UnsupportedWorkspaceConfigVersionError extends Error {
+  constructor(readonly version: unknown) {
+    super(`Unsupported workspace config schema version: ${String(version)}`);
+    this.name = 'UnsupportedWorkspaceConfigVersionError';
+  }
+}
 
 // ============================================================
 // Path Utilities
@@ -100,7 +135,17 @@ export function loadWorkspaceConfig(rootPath: string): WorkspaceConfig | null {
   if (!existsSync(configPath)) return null;
 
   try {
-    const config = readJsonFileSync<WorkspaceConfig>(configPath);
+    const raw = readJsonFileSync<unknown>(configPath);
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+    const record = raw as Record<string, unknown>;
+    if (record.schemaVersion !== undefined && record.schemaVersion !== WORKSPACE_CONFIG_SCHEMA_VERSION) {
+      throw new UnsupportedWorkspaceConfigVersionError(record.schemaVersion);
+    }
+    const migrated = record.schemaVersion === undefined;
+    const config = {
+      ...record,
+      schemaVersion: WORKSPACE_CONFIG_SCHEMA_VERSION,
+    } as WorkspaceConfig;
 
     // Expand path variables in defaults for portability
     if (config.defaults?.workingDirectory) {
@@ -136,8 +181,26 @@ export function loadWorkspaceConfig(rootPath: string): WorkspaceConfig | null {
       config.defaults.thinkingLevel = normalizeThinkingLevel(config.defaults.thinkingLevel);
     }
 
-    return config;
-  } catch {
+    const parsed = WorkspaceConfigStorageSchema.parse(config) as WorkspaceConfig;
+    if (migrated) {
+      const backupPath = join(rootPath, 'config.pre-schema-v1.json.bak');
+      try { copyFileSync(configPath, backupPath, constants.COPYFILE_EXCL); } catch (error) {
+        if (!(error instanceof Error && 'code' in error && error.code === 'EEXIST')) throw error;
+      }
+      const migrationStorage = parsed.defaults?.workingDirectory
+        ? {
+            ...parsed,
+            defaults: {
+              ...parsed.defaults,
+              workingDirectory: toPortablePath(parsed.defaults.workingDirectory),
+            },
+          }
+        : parsed;
+      atomicWriteFileSync(configPath, `${JSON.stringify(migrationStorage, null, 2)}\n`);
+    }
+    return parsed;
+  } catch (error) {
+    if (error instanceof UnsupportedWorkspaceConfigVersionError) throw error;
     return null;
   }
 }
@@ -147,6 +210,17 @@ export function loadWorkspaceConfig(rootPath: string): WorkspaceConfig | null {
  * @param rootPath - Absolute path to workspace root folder
  */
 export function saveWorkspaceConfig(rootPath: string, config: WorkspaceConfig): void {
+  const configPath = join(rootPath, 'config.json');
+  if (existsSync(configPath)) {
+    // A failed load is ambiguous: the file may be malformed or may belong to a
+    // newer application version. Never turn an ordinary settings update into
+    // destructive recovery. Explicit recovery must move/remove the file first.
+    const existing = loadWorkspaceConfig(rootPath);
+    if (!existing) {
+      throw new Error('Refusing to overwrite an existing incompatible workspace config');
+    }
+  }
+
   if (!existsSync(rootPath)) {
     mkdirSync(rootPath, { recursive: true });
   }
@@ -154,6 +228,7 @@ export function saveWorkspaceConfig(rootPath: string, config: WorkspaceConfig): 
   // Convert paths to portable form for cross-machine compatibility
   const storageConfig: WorkspaceConfig = {
     ...config,
+    schemaVersion: WORKSPACE_CONFIG_SCHEMA_VERSION,
     updatedAt: Date.now(),
   };
 
@@ -165,7 +240,8 @@ export function saveWorkspaceConfig(rootPath: string, config: WorkspaceConfig): 
   }
 
   // Use atomic write to prevent corruption on crash/interrupt
-  atomicWriteFileSync(join(rootPath, 'config.json'), JSON.stringify(storageConfig, null, 2));
+  const parsed = WorkspaceConfigStorageSchema.parse(storageConfig);
+  atomicWriteFileSync(configPath, `${JSON.stringify(parsed, null, 2)}\n`);
 }
 
 // ============================================================
@@ -321,6 +397,7 @@ export function createWorkspaceAtPath(
   };
 
   const config: WorkspaceConfig = {
+    schemaVersion: WORKSPACE_CONFIG_SCHEMA_VERSION,
     id: `ws_${randomUUID().slice(0, 8)}`,
     name,
     slug,

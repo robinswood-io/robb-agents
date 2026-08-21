@@ -2,9 +2,15 @@ import { afterEach, describe, expect, it } from 'bun:test';
 import { ChatGPTBackendSearchProvider, extractChatGptAccountId } from './chatgpt.ts';
 
 const originalFetch = globalThis.fetch;
+const originalKillSwitch = process.env.ROBB_DISABLE_CHATGPT_CODEX_BACKEND;
 
 afterEach(() => {
   globalThis.fetch = originalFetch;
+  if (originalKillSwitch === undefined) {
+    delete process.env.ROBB_DISABLE_CHATGPT_CODEX_BACKEND;
+  } else {
+    process.env.ROBB_DISABLE_CHATGPT_CODEX_BACKEND = originalKillSwitch;
+  }
 });
 
 /** Build a minimal JWT with the given claims payload. */
@@ -52,6 +58,21 @@ describe('extractChatGptAccountId', () => {
 });
 
 describe('ChatGPTBackendSearchProvider', () => {
+  it('fails closed before fetch when the contract kill switch is active', async () => {
+    let fetched = false;
+    globalThis.fetch = (async () => {
+      fetched = true;
+      return new Response('{}');
+    }) as typeof fetch;
+    process.env.ROBB_DISABLE_CHATGPT_CODEX_BACKEND = '1';
+
+    const provider = new ChatGPTBackendSearchProvider('must-not-leak', 'acc_123');
+    await expect(provider.search('test query', 5)).rejects.toThrow(
+      'ChatGPT Codex backend is disabled by provider contract',
+    );
+    expect(fetched).toBe(false);
+  });
+
   it('calls ChatGPT backend endpoint with correct auth headers', async () => {
     let calledUrl = '';
     let calledHeaders: Record<string, string> = {};

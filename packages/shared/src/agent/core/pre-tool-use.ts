@@ -383,14 +383,21 @@ export function validateConfigWrite(
   }
 
   let contentToValidate: string | null = null;
+  let previousContent: string | undefined;
 
   if (toolName === 'Write') {
     // For Write, the full file content is in input.content
     contentToValidate = input.content as string;
+    try {
+      previousContent = readFileSync(filePath, 'utf-8');
+    } catch {
+      // A missing file is a new write and intentionally has no legacy allowance.
+    }
   } else if (toolName === 'Edit') {
     // For Edit, simulate the replacement on the current file content
     try {
       const currentContent = readFileSync(filePath, 'utf-8');
+      previousContent = currentContent;
       const oldString = input.old_string as string;
       const newString = input.new_string as string;
       const replaceAll = input.replace_all as boolean | undefined;
@@ -408,7 +415,7 @@ export function validateConfigWrite(
     return { valid: true };
   }
 
-  const validationResult = validateConfigFileContent(detection, contentToValidate);
+  const validationResult = validateConfigFileContent(detection, contentToValidate, previousContent);
 
   if (validationResult && !validationResult.valid) {
     onDebug?.(

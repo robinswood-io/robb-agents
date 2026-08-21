@@ -102,12 +102,11 @@ function createMockWebContents() {
   }
 }
 
-function createMockBrowserView() {
+function createMockWebContentsView() {
   const webContents = createMockWebContents()
   return {
     webContents,
     setBounds: mock(() => {}),
-    setAutoResize: mock(() => {}),
   }
 }
 
@@ -118,9 +117,23 @@ function createMockWindow(opts?: { width?: number; height?: number; minWidth?: n
   let contentHeight = opts?.height ?? 900
   const minWidth = opts?.minWidth ?? 0
   const minHeight = opts?.minHeight ?? 0
+  const childViews: any[] = []
 
   const win = {
     webContents,
+    contentView: {
+      children: childViews,
+      addChildView: mock((view: any, index?: number) => {
+        const existingIndex = childViews.indexOf(view)
+        if (existingIndex >= 0) childViews.splice(existingIndex, 1)
+        if (typeof index === 'number') childViews.splice(index, 0, view)
+        else childViews.push(view)
+      }),
+      removeChildView: mock((view: any) => {
+        const existingIndex = childViews.indexOf(view)
+        if (existingIndex >= 0) childViews.splice(existingIndex, 1)
+      }),
+    },
     on: (event: string, cb: Function) => {
       if (!listeners[event]) listeners[event] = []
       listeners[event].push(cb)
@@ -149,9 +162,6 @@ function createMockWindow(opts?: { width?: number; height?: number; minWidth?: n
     destroy: mock(() => {
       win._emit('closed')
     }),
-    setBrowserView: mock((_view: any) => {}),
-    addBrowserView: mock((_view: any) => {}),
-    setTopBrowserView: mock((_view: any) => {}),
     getContentSize: mock(() => [contentWidth, contentHeight]),
     setContentSize: mock((width: number, height: number) => {
       contentWidth = Math.max(minWidth, Math.floor(width))
@@ -176,10 +186,10 @@ mock.module('electron', () => ({
       Object.assign(this, win)
     }
   },
-  BrowserView: class MockBrowserView {
+  WebContentsView: class MockWebContentsView {
     webContents: any
     constructor(_opts?: any) {
-      const view = createMockBrowserView()
+      const view = createMockWebContentsView()
       this.webContents = view.webContents
       Object.assign(this, view)
     }
@@ -334,6 +344,22 @@ describe('BrowserPaneManager', () => {
     expect(list).toHaveLength(1)
     expect(list[0].id).toBe('test-1')
     expect(list[0].agentControlActive).toBe(false)
+  })
+
+  it('composes page, overlay, and toolbar as ordered WebContentsView children', () => {
+    manager.createInstance('web-contents-views')
+    const instance = (manager as any).instances.get('web-contents-views')
+
+    expect(instance.window.contentView.children).toHaveLength(3)
+    expect(instance.window.contentView.children[0]).toBe(instance.pageView)
+    expect(instance.window.contentView.children[1]).toBe(instance.nativeOverlayView)
+    expect(instance.window.contentView.children[2]).toBe(instance.toolbarView)
+
+    instance.window._emit('resize')
+    expect(instance.pageView.setBounds).toHaveBeenCalled()
+    expect(instance.nativeOverlayView.setBounds).toHaveBeenCalled()
+    expect(instance.toolbarView.setBounds).toHaveBeenCalled()
+    expect(instance.window.contentView.children[2]).toBe(instance.toolbarView)
   })
 
   it('grants scoped browser permissions only with live autonomous session context', async () => {
@@ -868,7 +894,7 @@ describe('BrowserPaneManager', () => {
     await Bun.sleep(1400)
 
     const instance = (manager as unknown as {
-      instances: Map<string, { toolbarView: ReturnType<typeof createMockBrowserView> }>
+      instances: Map<string, { toolbarView: ReturnType<typeof createMockWebContentsView> }>
     }).instances.get('retry-toolbar')
     if (!instance) throw new Error('retry-toolbar instance was not created')
     const toolbarWebContents = instance.toolbarView.webContents
@@ -905,7 +931,7 @@ describe('BrowserPaneManager', () => {
     await Bun.sleep(3200)
 
     const instance = (manager as unknown as {
-      instances: Map<string, { toolbarView: ReturnType<typeof createMockBrowserView> }>
+      instances: Map<string, { toolbarView: ReturnType<typeof createMockWebContentsView> }>
     }).instances.get('fallback-toolbar')
     if (!instance) throw new Error('fallback-toolbar instance was not created')
     const toolbarWebContents = instance.toolbarView.webContents

@@ -97,7 +97,7 @@ import { SessionManager, setSessionPlatform, setSessionRuntimeHooks } from '@cra
 import { registerAllRpcHandlers } from './handlers/index'
 import { registerCoreRpcHandlers, cleanupSessionFileWatchForClient } from '@craft-agent/server-core/handlers/rpc'
 import type { PlatformServices } from '../runtime/platform'
-import { createElectronPlatform } from './platform'
+import { createElectronPlatform, resolveElectronRuntimeAppRoot } from './platform'
 import type { HandlerDeps } from './handlers/handler-deps'
 import { bootstrapServer, releaseServerLock } from '@craft-agent/server-core/bootstrap'
 import { createMessagingBootstrap, type MessagingBootstrapHandle } from '@craft-agent/messaging-gateway'
@@ -163,6 +163,8 @@ if (isDebugMode) {
   setPerfEnabled(true)
 }
 
+const runtimeAppRoot = resolveElectronRuntimeAppRoot(app)
+
 // Bundle CLI tools: resolve platform-specific uv binary and wrapper scripts.
 // These are available to all agent Bash sessions via CRAFT_UV, CRAFT_SCRIPTS env vars
 // and PATH prepend. uv auto-downloads Python 3.12 on first use (~5s, then cached).
@@ -184,7 +186,7 @@ if (isDebugMode) {
   // Runtime resolver hints for shared session tools
   process.env.CRAFT_IS_PACKAGED = app.isPackaged ? '1' : '0'
   process.env.CRAFT_RESOURCES_BASE = resourcesBase
-  process.env.CRAFT_APP_ROOT = app.isPackaged ? app.getAppPath() : process.cwd()
+  process.env.CRAFT_APP_ROOT = runtimeAppRoot
 
   process.env.CRAFT_UV = bundledUvExists ? uvBinary : (fallbackUv ?? uvBinary)
 
@@ -196,10 +198,10 @@ if (isDebugMode) {
 
   process.env.CRAFT_SCRIPTS = scriptsDir
   process.env.CRAFT_COMMANDS_ENTRY = app.isPackaged
-    ? join(app.getAppPath(), 'packages', 'craft-agents-commands', 'src', 'main.ts')
+    ? join(runtimeAppRoot, 'packages', 'craft-agents-commands', 'src', 'main.ts')
     : join(process.cwd(), 'packages', 'craft-agents-commands', 'src', 'main.ts')
   process.env.CRAFT_CLI_ENTRY = app.isPackaged
-    ? join(app.getAppPath(), 'packages', 'craft-cli', 'src', 'cli.ts')
+    ? join(runtimeAppRoot, 'packages', 'craft-cli', 'src', 'cli.ts')
     : join(process.cwd(), 'packages', 'craft-cli', 'src', 'cli.ts')
   process.env.CRAFT_COMMANDS_DOC_PATH = app.isPackaged
     ? join(resourcesBase, 'resources', 'docs', 'craft-cli.md')
@@ -440,12 +442,12 @@ app.whenReady().then(async () => {
 
   // Register bundled assets root so all seeding functions can find their files
   // (docs, permissions, themes, tool-icons resolve via getBundledAssetsDir)
-  setBundledAssetsRoot(__dirname)
+  setBundledAssetsRoot(app.isPackaged ? runtimeAppRoot : __dirname)
 
   // Initialize backend runtime bootstrapping (Codex vendor root, Claude SDK runtime paths).
   initializeBackendHostRuntime({
     hostRuntime: {
-      appRootPath: app.isPackaged ? app.getAppPath() : process.cwd(),
+      appRootPath: runtimeAppRoot,
       resourcesPath: process.resourcesPath,
       isPackaged: app.isPackaged,
     },
@@ -453,7 +455,7 @@ app.whenReady().then(async () => {
 
   // Register PowerShell validator root so it can find the bundled parser script
   // (Windows only: validates PowerShell commands in Explore mode using AST analysis)
-  setPowerShellValidatorRoot(join(__dirname, 'resources'))
+  setPowerShellValidatorRoot(join(app.isPackaged ? runtimeAppRoot : __dirname, 'resources'))
 
   // Initialize bundled docs
   initializeDocs()
@@ -560,6 +562,7 @@ app.whenReady().then(async () => {
         : process.env.ROBB_BUILD_DIRTY === 'false'
           ? false
           : undefined,
+      runtimeAppRoot,
       getLogFilePath,
       captureError: (err) => Sentry.captureException(err),
     })

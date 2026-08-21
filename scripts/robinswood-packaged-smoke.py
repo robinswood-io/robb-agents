@@ -38,11 +38,11 @@ APP_DIR = RELEASE_DIR / "mac-arm64" / APP_NAME
 APP_BIN = APP_DIR / "Contents" / "MacOS" / "Robb Agents"
 PLIST = APP_DIR / "Contents" / "Info.plist"
 PACKAGED_ICON = APP_DIR / "Contents" / "Resources" / "icon.icns"
-PACKAGED_MAIN = APP_DIR / "Contents" / "Resources" / "app" / "dist" / "main.cjs"
+PACKAGED_ASAR = APP_DIR / "Contents" / "Resources" / "app.asar"
 # Pi providers run as explicit resource subprocesses. In particular, this is
 # the credential-free ACP bridge for Mistral Vibe subscriptions.
-PACKAGED_PI_AGENT_SERVER = APP_DIR / "Contents" / "Resources" / "app" / "dist" / "resources" / "pi-agent-server" / "index.js"
-PACKAGED_VIBE_ACP_BRIDGE = APP_DIR / "Contents" / "Resources" / "app" / "dist" / "resources" / "pi-agent-server" / "vibe-acp-server.js"
+PACKAGED_PI_AGENT_SERVER = APP_DIR / "Contents" / "Resources" / "app" / "resources" / "pi-agent-server" / "index.js"
+PACKAGED_VIBE_ACP_BRIDGE = APP_DIR / "Contents" / "Resources" / "app" / "resources" / "pi-agent-server" / "vibe-acp-server.js"
 SOURCE_ICON = ELECTRON_DIR / "resources" / "robinswood-icon.icns"
 DMG = RELEASE_DIR / "Robb-Agents-arm64.dmg"
 ZIP = RELEASE_DIR / "Robb-Agents-arm64.zip"
@@ -51,7 +51,7 @@ ARCH = "arm64"
 
 
 def configure_arch(arch: str) -> None:
-    global APP_DIR, APP_BIN, PLIST, PACKAGED_ICON, PACKAGED_MAIN, PACKAGED_PI_AGENT_SERVER
+    global APP_DIR, APP_BIN, PLIST, PACKAGED_ICON, PACKAGED_ASAR, PACKAGED_PI_AGENT_SERVER
     global PACKAGED_VIBE_ACP_BRIDGE, DMG, ZIP, ARCH
 
     ARCH = arch
@@ -60,16 +60,15 @@ def configure_arch(arch: str) -> None:
     APP_BIN = APP_DIR / "Contents" / "MacOS" / "Robb Agents"
     PLIST = APP_DIR / "Contents" / "Info.plist"
     PACKAGED_ICON = APP_DIR / "Contents" / "Resources" / "icon.icns"
-    PACKAGED_MAIN = APP_DIR / "Contents" / "Resources" / "app" / "dist" / "main.cjs"
+    PACKAGED_ASAR = APP_DIR / "Contents" / "Resources" / "app.asar"
     PACKAGED_PI_AGENT_SERVER = (
-        APP_DIR / "Contents" / "Resources" / "app" / "dist" / "resources" / "pi-agent-server" / "index.js"
+        APP_DIR / "Contents" / "Resources" / "app" / "resources" / "pi-agent-server" / "index.js"
     )
     PACKAGED_VIBE_ACP_BRIDGE = (
         APP_DIR
         / "Contents"
         / "Resources"
         / "app"
-        / "dist"
         / "resources"
         / "pi-agent-server"
         / "vibe-acp-server.js"
@@ -99,6 +98,20 @@ def run(cmd: list[str], *, env: dict[str, str] | None = None, timeout: int = 60)
 def require(path: pathlib.Path, label: str) -> None:
     if not path.exists():
         fail(f"Missing {label}: {path}")
+
+
+def read_asar_entry(archive: pathlib.Path, entry: str) -> str:
+    script = (
+        "import { extractFile } from '@electron/asar';"
+        "process.stdout.write(extractFile(process.argv[1], process.argv[2]));"
+    )
+    result = run(
+        ["node", "--input-type=module", "--eval", script, str(archive), entry],
+        timeout=60,
+    )
+    if result.returncode != 0:
+        fail(f"Cannot read {entry} from {archive}: {result.stdout}{result.stderr}")
+    return result.stdout
 
 
 def sha256(path: pathlib.Path) -> str:
@@ -171,7 +184,7 @@ def check_bundle(require_release_signing: bool = False) -> None:
     require(APP_BIN, "packaged app executable")
     require(PLIST, "Info.plist")
     require(PACKAGED_ICON, "packaged app icon")
-    require(PACKAGED_MAIN, "packaged main-process bundle")
+    require(PACKAGED_ASAR, "integrity-protected app.asar")
     require(PACKAGED_PI_AGENT_SERVER, "packaged Pi agent server")
     require(PACKAGED_VIBE_ACP_BRIDGE, "packaged Mistral Vibe ACP bridge")
     require(SOURCE_ICON, "Robinswood source icon")
@@ -201,7 +214,7 @@ def check_bundle(require_release_signing: bool = False) -> None:
     if sha256(PACKAGED_ICON) != sha256(SOURCE_ICON):
         fail("Packaged icon.icns does not match resources/robinswood-icon.icns")
 
-    main_bundle = PACKAGED_MAIN.read_text(encoding="utf-8")
+    main_bundle = read_asar_entry(PACKAGED_ASAR, "dist/main.cjs")
     required_runtime_markers = (
         "Automatic stable update checks scheduled",
         "Installing macOS update with verified detached installer",
@@ -280,7 +293,8 @@ def check_dmg() -> None:
             mounted_app = mount / APP_NAME
             mounted_plist = mounted_app / "Contents" / "Info.plist"
             require(mounted_app, "DMG Robb Agents.app")
-            require(mounted_app / "Contents" / "Resources" / "app" / "dist" / "resources" / "pi-agent-server" / "vibe-acp-server.js", "DMG Mistral Vibe ACP bridge")
+            require(mounted_app / "Contents" / "Resources" / "app.asar", "DMG integrity-protected app.asar")
+            require(mounted_app / "Contents" / "Resources" / "app" / "resources" / "pi-agent-server" / "vibe-acp-server.js", "DMG Mistral Vibe ACP bridge")
             with mounted_plist.open("rb") as handle:
                 plist = plistlib.load(handle)
             if plist.get("CFBundleName") != "Robb Agents" or plist.get("CFBundleIdentifier") != "io.robinswood.robbagents":

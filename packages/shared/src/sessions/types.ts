@@ -323,6 +323,7 @@ export interface StoredSession extends SessionConfig {
  * This enables fast session listing without parsing message content.
  */
 export interface SessionHeader {
+  schemaVersion: 1;
   id: string;
   /** SDK session ID (captured after first message) */
   sdkSessionId?: string;

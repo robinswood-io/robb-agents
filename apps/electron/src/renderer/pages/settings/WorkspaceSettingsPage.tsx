@@ -15,6 +15,7 @@ import * as React from 'react'
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'motion/react'
+import { AlertTriangle, CheckCircle2 } from 'lucide-react'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { HeaderMenu } from '@/components/ui/HeaderMenu'
@@ -31,7 +32,11 @@ import type { DetailsPageMeta } from '@/lib/navigation-registry'
 import { SourceAvatar } from '@/components/ui/source-avatar'
 import { toast } from 'sonner'
 import { parseRoutingPolicyText } from './routing-policy-editor'
-import type { RoutingPolicySimulation, RoutingSensitivity } from '@craft-agent/shared/config'
+import type {
+  RoutingPolicySimulation,
+  RoutingSensitivity,
+  RoutingShadowReport,
+} from '@craft-agent/shared/config'
 
 import {
   SettingsSection,
@@ -57,6 +62,9 @@ export default function WorkspaceSettingsPage() {
   const appShellContext = useAppShellContext()
   const activeWorkspaceId = appShellContext.activeWorkspaceId
   const onRefreshWorkspaces = appShellContext.onRefreshWorkspaces
+  const activeWorkspaceRef = React.useRef(activeWorkspaceId)
+  const routingShadowSequence = React.useRef(0)
+  activeWorkspaceRef.current = activeWorkspaceId
 
   // Workspace settings state
   const [wsName, setWsName] = useState('')
@@ -77,6 +85,8 @@ export default function WorkspaceSettingsPage() {
   const [simulationSensitivity, setSimulationSensitivity] = useState<RoutingSensitivity>('internal')
   const [routingSimulation, setRoutingSimulation] = useState<RoutingPolicySimulation | null>(null)
   const [isSimulatingRouting, setIsSimulatingRouting] = useState(false)
+  const [routingShadowReport, setRoutingShadowReport] = useState<RoutingShadowReport | null>(null)
+  const [isAnalyzingRoutingShadow, setIsAnalyzingRoutingShadow] = useState(false)
 
   // Default sources state
   const [availableSources, setAvailableSources] = useState<LoadedSource[]>([])
@@ -88,6 +98,9 @@ export default function WorkspaceSettingsPage() {
 
   // Load workspace settings when active workspace changes
   useEffect(() => {
+    routingShadowSequence.current += 1
+    setIsAnalyzingRoutingShadow(false)
+    setRoutingShadowReport(null)
     const loadWorkspaceSettings = async () => {
       if (!window.electronAPI || !activeWorkspaceId) {
         setIsLoadingWorkspace(false)
@@ -95,6 +108,7 @@ export default function WorkspaceSettingsPage() {
       }
 
       setIsLoadingWorkspace(true)
+      setRoutingSimulation(null)
       try {
         const settings = await window.electronAPI.getWorkspaceSettings(activeWorkspaceId)
         if (settings) {
@@ -234,6 +248,7 @@ export default function WorkspaceSettingsPage() {
       const saved = await updateWorkspaceSetting('routingPolicy', result.policy)
       if (saved) {
         setRoutingSimulation(null)
+        setRoutingShadowReport(null)
         if (result.policy) {
           setRoutingPolicyText(JSON.stringify(result.policy, null, 2))
         }
@@ -251,7 +266,7 @@ export default function WorkspaceSettingsPage() {
       const simulation = await window.electronAPI.simulateRoutingPolicy(activeWorkspaceId, {
         sensitivity: simulationSensitivity,
       })
-      setRoutingSimulation(simulation)
+      if (activeWorkspaceRef.current === activeWorkspaceId) setRoutingSimulation(simulation)
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error'
       toast.error(t('settings.workspace.routingPolicySimulationFailed'), { description: message })
@@ -259,6 +274,27 @@ export default function WorkspaceSettingsPage() {
       setIsSimulatingRouting(false)
     }
   }, [activeWorkspaceId, simulationSensitivity, t])
+
+  const handleAnalyzeRoutingShadow = useCallback(async () => {
+    if (!window.electronAPI || !activeWorkspaceId) return
+    const workspaceId = activeWorkspaceId
+    const sequence = ++routingShadowSequence.current
+    setIsAnalyzingRoutingShadow(true)
+    setRoutingShadowReport(null)
+    try {
+      const report = await window.electronAPI.analyzeRoutingShadow(workspaceId)
+      if (sequence === routingShadowSequence.current
+        && activeWorkspaceRef.current === workspaceId) setRoutingShadowReport(report)
+    } catch (error) {
+      if (sequence !== routingShadowSequence.current
+        || activeWorkspaceRef.current !== workspaceId) return
+      const message = error instanceof Error ? error.message : 'Unknown error'
+      toast.error(t('settings.workspace.routingShadowFailed'), { description: message })
+    } finally {
+      if (sequence === routingShadowSequence.current
+        && activeWorkspaceRef.current === workspaceId) setIsAnalyzingRoutingShadow(false)
+    }
+  }, [activeWorkspaceId, t])
 
   // Workspace icon upload handler
   const handleIconUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -703,6 +739,101 @@ export default function WorkspaceSettingsPage() {
                             </div>
                           ))}
                         </div>
+                      </div>
+                    )}
+                  </div>
+                  <div className="border-t border-border/60 pt-3 space-y-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <div className="text-xs font-medium">{t('settings.workspace.routingShadowTitle')}</div>
+                        <p id="routing-shadow-description" className="mt-1 text-xs text-muted-foreground">
+                          {t('settings.workspace.routingShadowDesc')}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleAnalyzeRoutingShadow}
+                        disabled={isAnalyzingRoutingShadow}
+                        aria-busy={isAnalyzingRoutingShadow}
+                        aria-describedby="routing-shadow-description"
+                        className="inline-flex h-8 items-center rounded-lg bg-background px-3 text-sm shadow-minimal transition-colors hover:bg-foreground/[0.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                      >
+                        {isAnalyzingRoutingShadow
+                          ? t('settings.workspace.routingShadowAnalyzing')
+                          : t('settings.workspace.routingShadowAnalyze')}
+                      </button>
+                    </div>
+                    {routingShadowReport && (
+                      <div
+                        className="space-y-3 rounded-lg bg-foreground/[0.03] p-3 text-xs"
+                        role="status"
+                        aria-live="polite"
+                      >
+                        <div className="flex flex-wrap gap-x-4 gap-y-1">
+                          <span>
+                            <strong>{t('settings.workspace.routingShadowSamples')}:</strong>{' '}
+                            {routingShadowReport.sampleCount}
+                          </span>
+                          <span>
+                            <strong>{t('settings.workspace.routingShadowGroundTruth')}:</strong>{' '}
+                            {routingShadowReport.groundTruthSampleCount}
+                          </span>
+                          <span>
+                            <strong>{t('settings.workspace.routingShadowMinimumSamples')}:</strong>{' '}
+                            {routingShadowReport.minSamples}
+                          </span>
+                          <span className="text-muted-foreground">
+                            {t('settings.workspace.routingShadowAutomaticMutationDisabled')}
+                          </span>
+                        </div>
+                        {routingShadowReport.promotionCandidates.length === 0 && routingShadowReport.driftWarnings.length === 0 && (
+                          <p className="text-muted-foreground">{t('settings.workspace.routingShadowEmpty')}</p>
+                        )}
+                        {routingShadowReport.promotionCandidates.map((candidate) => (
+                          <div
+                            key={`${candidate.difficulty}:${candidate.baselineConnectionSlug}:${candidate.proposedConnectionSlug}`}
+                            className="space-y-2 rounded-md bg-background/70 p-3"
+                          >
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <strong>
+                                {t('settings.workspace.routingShadowCandidate')}: {candidate.baselineConnectionSlug} → {candidate.proposedConnectionSlug}
+                              </strong>
+                              <span className={candidate.eligible ? 'text-emerald-700 dark:text-emerald-300' : 'text-amber-700 dark:text-amber-300'}>
+                                {candidate.difficulty} · {candidate.eligible
+                                  ? t('settings.workspace.routingShadowEligible')
+                                  : t('settings.workspace.routingShadowNotEligible')}
+                              </span>
+                            </div>
+                            <ul className="space-y-1 text-muted-foreground">
+                              {candidate.gates.map((gate) => (
+                                <li
+                                  key={gate.id}
+                                  className={cn(
+                                    'flex items-start gap-1.5',
+                                    !gate.passed && 'text-amber-700 dark:text-amber-300',
+                                  )}
+                                >
+                                  {gate.passed
+                                    ? <CheckCircle2 aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
+                                    : <AlertTriangle aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />}
+                                  <span>{gate.id}: {gate.detail}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        ))}
+                        {routingShadowReport.driftWarnings.length > 0 && (
+                          <div className="space-y-1 text-amber-700 dark:text-amber-300">
+                            <strong>{t('settings.workspace.routingShadowDrift')}</strong>
+                            <ul className="list-disc space-y-1 pl-4">
+                              {routingShadowReport.driftWarnings.map((warning) => (
+                                <li key={`${warning.difficulty}:${warning.connectionSlug}:${warning.detail}`}>
+                                  {warning.connectionSlug} · {warning.difficulty}: {warning.detail}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

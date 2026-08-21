@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "policyId": "financial-reconciliation-microsoft365-v1",
+  "allowedOrigins": ["https://graph.microsoft.com"],
+  "purpose": "Annoter le justificatif Microsoft 365 avec le statut de rapprochement approuvé",
+  "unmatchedAction": "block",
+  "piiAction": "pseudonymize",
+  "rules": [
+    { "path": "reconciliationStatus", "classification": "public", "action": "allow" },
+    { "path": "reconciliationId", "classification": "business-sensitive", "action": "allow" },
+    { "path": "correctionAmount", "classification": "business-sensitive", "action": "allow" },
+    { "path": "currency", "classification": "public", "action": "allow" },
+    { "path": "approvedBy", "classification": "pii", "action": "pseudonymize" },
+    { "path": "proposalSha256", "classification": "business-sensitive", "action": "allow" }
+  ]
+}

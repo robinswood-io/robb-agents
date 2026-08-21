@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
+import { generateKeyPairSync } from 'node:crypto';
 import { mkdtempSync, rmSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
@@ -17,6 +18,7 @@ import {
   type MissionWorkExecutor,
 } from './MissionRuntime.ts';
 import { MissionRuntimeService } from './MissionRuntimeService.ts';
+import { MissionProofPassportService } from './MissionProofPassportService.ts';
 import type { SubagentAutonomyContext } from '../subagents/autonomy-inheritance.ts';
 
 function fixture(overrides: Record<string, unknown> = {}): MissionSpec {
@@ -103,12 +105,16 @@ describe('MissionRuntimeService', () => {
   });
   afterEach(() => { rmSync(root, { recursive: true, force: true }); });
 
-  function service(autonomyContext?: SubagentAutonomyContext): MissionRuntimeService {
+  function service(
+    autonomyContext?: SubagentAutonomyContext,
+    proofPassports?: MissionProofPassportService,
+  ): MissionRuntimeService {
     return new MissionRuntimeService({
       sessionManager,
       resolveWorkspace: (id) => id === 'workspace-1' ? { id, rootPath: root } : null,
       listWorkspaces: () => [{ id: 'workspace-1', rootPath: root }],
       executorFactory: () => executor,
+      ...(proofPassports ? { proofPassportFactory: () => proofPassports } : {}),
       ...(autonomyContext ? {
         resolveSubagentAutonomyContext: () => autonomyContext,
       } : {}),
@@ -125,6 +131,19 @@ describe('MissionRuntimeService', () => {
     expect(completed.status).toBe('completed');
     expect(executor.executed).toEqual(['task-a', 'review-objective-one-0', 'final-review-0']);
     expect((await runtimeService.listMissions('workspace-1')).map((mission) => mission.spec.id)).toEqual(['service-demo']);
+  });
+
+  it('issues and verifies the completion passport before reporting PASS', async () => {
+    const { privateKey } = generateKeyPairSync('ed25519');
+    const passports = new MissionProofPassportService({
+      workspaceId: 'workspace-1', workspaceRoot: root, privateKey,
+    });
+    const runtimeService = service(undefined, passports);
+    await runtimeService.createAndStart('workspace-1', fixture({ cwd: root }));
+    await eventually(async () => (await runtimeService.getMission('workspace-1', 'service-demo')).status === 'completed');
+    expect((await runtimeService.getProofPassport('workspace-1', 'service-demo'))?.outcome).toBe('pass');
+    expect(await runtimeService.verifyProofPassport('workspace-1', 'service-demo'))
+      .toMatchObject({ valid: true });
   });
 
   it('recovers an active reserved dispatch after startup hydration', async () => {
@@ -146,7 +165,22 @@ describe('MissionRuntimeService', () => {
     const runtimeService = service();
     const external = fixture({
       workItems: fixture().workItems.map((item) => item.id === 'task-a'
-        ? { ...item, effect: 'external-mutation' }
+        ? {
+            ...item,
+            effect: 'external-mutation',
+            requiredEvidence: [{ id: 'mutation-receipt', description: 'Host receipt', kind: 'receipt' }],
+            connectorInvocation: {
+              schemaVersion: 1,
+              pack: 'googleWorkspace',
+              operationId: 'drive.update',
+              resourceType: 'file',
+              resourceId: 'file-42',
+              payload: { name: 'approved-report.xlsx' },
+              autonomy: 'A3',
+              receiptRequirementId: 'mutation-receipt',
+              compensation: { strategy: 'manual' },
+            },
+          }
         : item),
     });
     await expect(runtimeService.createAndStart('workspace-1', external)).rejects.toThrow(/broker-backed/);

@@ -1,10 +1,16 @@
 import type { Context, Model, SimpleStreamOptions, Tool, AssistantMessage, Usage, AssistantMessageEventStream } from '@earendil-works/pi-ai';
 import { createAssistantMessageEventStream } from '@earendil-works/pi-ai';
 import type { ModelRegistry } from '@earendil-works/pi-coding-agent';
+import {
+  assertUnstableProviderContractEnabled,
+  getUnstableProviderContract,
+  redactProviderDiagnostic,
+} from '@craft-agent/core';
 
 const PROVIDER = 'google-gemini-code-assist';
 const API = 'google-code-assist';
-const CODE_ASSIST_BASE = 'https://cloudcode-pa.googleapis.com/v1internal';
+const CODE_ASSIST_PROVIDER_CONTRACT = getUnstableProviderContract('google-code-assist-v1internal');
+const CODE_ASSIST_BASE = CODE_ASSIST_PROVIDER_CONTRACT.endpoint.origin!;
 const METADATA = {
   ideType: 'IDE_UNSPECIFIED',
   platform: 'PLATFORM_UNSPECIFIED',
@@ -35,7 +41,7 @@ async function codeAssistFetch<T>(method: string, accessToken: string, body: unk
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${accessToken}`,
-      'User-Agent': 'RobinswoodAgents/1.0 (gemini-code-assist)',
+      ...CODE_ASSIST_PROVIDER_CONTRACT.staticHeaders,
     },
     body: JSON.stringify(body),
     signal,
@@ -43,7 +49,9 @@ async function codeAssistFetch<T>(method: string, accessToken: string, body: unk
 
   if (!res.ok) {
     const text = await res.text().catch(() => res.statusText);
-    throw new Error(`Google Gemini Code Assist ${method} failed (${res.status}): ${text.slice(0, 800)}`);
+    throw new Error(
+      `Google Gemini Code Assist ${method} failed (${res.status}): ${redactProviderDiagnostic(text, [accessToken]).slice(0, 800)}`,
+    );
   }
 
   return (sse ? res as T : await res.json() as T);
@@ -53,13 +61,15 @@ async function codeAssistGet<T>(operationName: string, accessToken: string, sign
   const res = await fetch(`${CODE_ASSIST_BASE}/${operationName}`, {
     headers: {
       'Authorization': `Bearer ${accessToken}`,
-      'User-Agent': 'RobinswoodAgents/1.0 (gemini-code-assist)',
+      ...CODE_ASSIST_PROVIDER_CONTRACT.staticHeaders,
     },
     signal,
   });
   if (!res.ok) {
     const text = await res.text().catch(() => res.statusText);
-    throw new Error(`Google Gemini Code Assist operation failed (${res.status}): ${text.slice(0, 800)}`);
+    throw new Error(
+      `Google Gemini Code Assist operation failed (${res.status}): ${redactProviderDiagnostic(text, [accessToken]).slice(0, 800)}`,
+    );
   }
   return await res.json() as T;
 }
@@ -253,6 +263,7 @@ export function streamGoogleCodeAssist(model: Model<any>, context: Context, opti
     };
 
     try {
+      assertUnstableProviderContractEnabled('google-code-assist-v1internal', process.env);
       const accessToken = options?.apiKey;
       if (!accessToken) throw new Error('No Google OAuth access token for Gemini subscription connection.');
       const { projectId } = await ensureCodeAssistUser(accessToken, options?.signal);

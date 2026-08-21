@@ -15,11 +15,34 @@ import {
   type WorkItemStatus,
   type WorkSubmission,
 } from './schema.ts';
+import { previewMissionReplan, type MissionReplanPreview } from './digital-twin.ts';
 
 const EventBaseSchema = z.object({ at: z.string().datetime() });
 
+const MissionReplanPreviewSchema = z.object({
+  schemaVersion: z.literal(1),
+  missionId: z.string().min(1),
+  baseRevision: z.number().int().positive(),
+  previousPlanVersion: z.number().int().positive(),
+  nextPlanVersion: z.number().int().positive(),
+  previousFingerprint: z.string().regex(/^[a-f0-9]{64}$/),
+  proposedFingerprint: z.string().regex(/^[a-f0-9]{64}$/),
+  addedWorkItemIds: z.array(z.string().min(1)),
+  removedWorkItemIds: z.array(z.string().min(1)),
+  changedWorkItemIds: z.array(z.string().min(1)),
+  invalidatedWorkItemIds: z.array(z.string().min(1)),
+  preservedAcceptedWorkItemIds: z.array(z.string().min(1)),
+}).strict();
+
 export const MissionEventSchema = z.discriminatedUnion('kind', [
   EventBaseSchema.extend({ kind: z.literal('mission-created'), spec: MissionSpecSchema }),
+  EventBaseSchema.extend({
+    kind: z.literal('mission-replanned'),
+    actorId: z.string().trim().min(1),
+    reason: z.string().trim().min(1),
+    proposedWorkItems: z.array(MissionWorkItemSchema).min(2),
+    preview: MissionReplanPreviewSchema,
+  }),
   EventBaseSchema.extend({
     kind: z.literal('mission-status-changed'),
     status: z.enum([
@@ -123,6 +146,12 @@ export const MissionEventSchema = z.discriminatedUnion('kind', [
 
 export type MissionEvent = z.infer<typeof MissionEventSchema>;
 
+export interface MissionReplanJournalRecord extends MissionReplanPreview {
+  actorId: string;
+  reason: string;
+  at: string;
+}
+
 export interface MissionWorkItemRuntime {
   definition: MissionWorkItem;
   status: WorkItemStatus;
@@ -139,6 +168,8 @@ export interface MissionWorkItemRuntime {
   submission?: WorkSubmission;
   verdict?: StructuredMissionVerdict;
   statusReason?: string;
+  /** Host failure classification used to gate safe replanning of connector work. */
+  lastAttemptAmbiguousMutation?: boolean;
 }
 
 export interface MissionSnapshot {
@@ -155,6 +186,8 @@ export interface MissionSnapshot {
   };
   workItems: Record<string, MissionWorkItemRuntime>;
   correctionCycles: Record<string, number>;
+  planVersion: number;
+  replans: MissionReplanJournalRecord[];
   revision: number;
   createdAt: string;
   updatedAt: string;
@@ -190,6 +223,8 @@ export function reduceMissionEvents(events: readonly MissionEvent[]): MissionSna
     status: 'draft',
     workItems,
     correctionCycles: {},
+    planVersion: 1,
+    replans: [],
     revision: 1,
     createdAt: first.at,
     updatedAt: first.at,
@@ -208,6 +243,59 @@ export function reduceMissionEvents(events: readonly MissionEvent[]): MissionSna
     snapshot.updatedAt = event.at;
 
     switch (event.kind) {
+      case 'mission-replanned': {
+        const beforeRevision = snapshot.revision - 1;
+        if (event.preview.baseRevision !== beforeRevision) {
+          throw new Error(
+            `Mission replan base revision mismatch: expected ${beforeRevision}, found ${event.preview.baseRevision}`,
+          );
+        }
+        const expected = previewMissionReplan({
+          snapshot: { ...snapshot, revision: beforeRevision },
+          expectedRevision: beforeRevision,
+          currentPlanVersion: snapshot.planVersion,
+          proposedWorkItems: event.proposedWorkItems,
+        });
+        assertExactReplanPreview(event.preview, expected);
+
+        const previousPlanIds = new Set(snapshot.spec.workItems.map((item) => item.id));
+        const proposed = new Map(event.proposedWorkItems.map((item) => [item.id, item]));
+        const invalidated = new Set(event.preview.invalidatedWorkItemIds);
+        const nextWorkItems: Record<string, MissionWorkItemRuntime> = {};
+
+        for (const [id, definition] of proposed) {
+          const current = snapshot.workItems[id];
+          if (current && !invalidated.has(id)) {
+            nextWorkItems[id] = { ...current, definition };
+            continue;
+          }
+          nextWorkItems[id] = resetRuntimeForReplan(definition, current);
+        }
+        // Controller-owned reviews/corrections are not members of spec.workItems.
+        // Preserve only those whose derivation remains valid; impacted derived
+        // work is removed so the controller can deterministically recreate it.
+        for (const [id, current] of Object.entries(snapshot.workItems)) {
+          if (previousPlanIds.has(id) || proposed.has(id) || invalidated.has(id)) continue;
+          nextWorkItems[id] = current;
+        }
+
+        snapshot.spec = MissionSpecSchema.parse({
+          ...snapshot.spec,
+          workItems: event.proposedWorkItems,
+        });
+        snapshot.workItems = nextWorkItems;
+        snapshot.planVersion = event.preview.nextPlanVersion;
+        snapshot.replans.push({
+          ...event.preview,
+          actorId: event.actorId,
+          reason: event.reason,
+          at: event.at,
+        });
+        for (const objectiveId of Object.keys(snapshot.correctionCycles)) {
+          if (invalidated.has(objectiveId)) delete snapshot.correctionCycles[objectiveId];
+        }
+        break;
+      }
       case 'mission-status-changed':
         snapshot.status = event.status;
         snapshot.statusReason = event.reason;
@@ -307,6 +395,7 @@ export function reduceMissionEvents(events: readonly MissionEvent[]): MissionSna
           throw new Error(`Failure for "${event.workItemId}" does not match its active dispatch`);
         }
         item.statusReason = event.reason;
+        item.lastAttemptAmbiguousMutation = event.ambiguousMutation;
         break;
       }
       case 'work-item-attempt-metered': {
@@ -366,4 +455,53 @@ export function reduceMissionEvents(events: readonly MissionEvent[]): MissionSna
     }
   }
   return snapshot;
+}
+
+function resetRuntimeForReplan(
+  definition: MissionWorkItem,
+  current?: MissionWorkItemRuntime,
+): MissionWorkItemRuntime {
+  return {
+    definition,
+    status: 'pending',
+    attempt: current?.attempt ?? 0,
+    executionHistory: current?.executionHistory ?? [],
+    externalSessionHistory: current?.externalSessionHistory ?? [],
+    attemptTelemetry: current?.attemptTelemetry ?? [],
+    statusReason: current ? 'Invalidated by a journaled Mission replan' : undefined,
+    lastAttemptAmbiguousMutation: undefined,
+  };
+}
+
+function assertExactReplanPreview(
+  actual: MissionReplanPreview,
+  expected: MissionReplanPreview,
+): void {
+  const scalarKeys = [
+    'schemaVersion',
+    'missionId',
+    'baseRevision',
+    'previousPlanVersion',
+    'nextPlanVersion',
+    'previousFingerprint',
+    'proposedFingerprint',
+  ] as const;
+  for (const key of scalarKeys) {
+    if (actual[key] !== expected[key]) {
+      throw new Error(`Mission replan preview drift at ${key}`);
+    }
+  }
+  const listKeys = [
+    'addedWorkItemIds',
+    'removedWorkItemIds',
+    'changedWorkItemIds',
+    'invalidatedWorkItemIds',
+    'preservedAcceptedWorkItemIds',
+  ] as const;
+  for (const key of listKeys) {
+    if (actual[key].length !== expected[key].length
+        || actual[key].some((value, index) => value !== expected[key][index])) {
+      throw new Error(`Mission replan preview drift at ${key}`);
+    }
+  }
 }

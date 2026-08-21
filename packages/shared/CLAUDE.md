@@ -17,7 +17,7 @@ Core business logic package for Craft Agent:
 ## Commands
 From repo root:
 ```bash
-cd packages/shared && bun run tsc --noEmit
+node scripts/run-typescript.mjs native --noEmit -p packages/shared/tsconfig.json
 ```
 
 ## Hard rules

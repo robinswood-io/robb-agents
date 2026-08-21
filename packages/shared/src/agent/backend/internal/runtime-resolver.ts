@@ -46,6 +46,14 @@ function firstExistingPath(candidates: string[]): string | undefined {
   return undefined;
 }
 
+function externalPackagedAppRoot(
+  hostRuntime: BackendHostRuntimeContext,
+): string | undefined {
+  return hostRuntime.isPackaged && hostRuntime.resourcesPath
+    ? join(hostRuntime.resourcesPath, 'app')
+    : undefined;
+}
+
 /**
  * Walk up from `base` checking `join(ancestor, relativePath)` at each level.
  * Stops after `maxLevels` ancestors or when hitting the filesystem root.
@@ -131,14 +139,17 @@ function resolveClaudeBinaryPath(hostRuntime: BackendHostRuntimeContext): string
   const platformRel = pkg
     ? join('node_modules', '@anthropic-ai', pkg, binaryName)
     : undefined;
+  const externalRoot = externalPackagedAppRoot(hostRuntime);
 
   const candidates: string[] = [
     join(hostRuntime.appRootPath, aliasRel),
+    ...(externalRoot ? [join(externalRoot, aliasRel)] : []),
     join(hostRuntime.appRootPath, '..', '..', aliasRel),
   ];
   if (platformRel) {
     candidates.push(
       join(hostRuntime.appRootPath, platformRel),
+      ...(externalRoot ? [join(externalRoot, platformRel)] : []),
       join(hostRuntime.appRootPath, '..', '..', platformRel),
     );
   }
@@ -172,13 +183,24 @@ function resolveInterceptorBundlePath(hostRuntime: BackendHostRuntimeContext): s
     if (source) return source;
   }
 
-  return resolveUpwards(hostRuntime.appRootPath, join('dist', 'interceptor.cjs'))
+  const externalRoot = externalPackagedAppRoot(hostRuntime);
+  return (externalRoot
+    ? firstExistingPath([join(externalRoot, 'dist', 'interceptor.cjs')])
+    : undefined)
+    ?? resolveUpwards(hostRuntime.appRootPath, join('dist', 'interceptor.cjs'))
     ?? resolveUpwards(hostRuntime.appRootPath, join('apps', 'electron', 'dist', 'interceptor.cjs'));
 }
 
 function resolveServerPath(hostRuntime: BackendHostRuntimeContext, serverName: string): string | undefined {
   if (hostRuntime.isPackaged) {
+    const externalRoot = externalPackagedAppRoot(hostRuntime);
     return firstExistingPath([
+      ...(externalRoot
+        ? [
+            join(externalRoot, 'resources', serverName, 'index.js'),
+            join(externalRoot, 'dist', 'resources', serverName, 'index.js'),
+          ]
+        : []),
       join(hostRuntime.appRootPath, 'resources', serverName, 'index.js'),
       join(hostRuntime.appRootPath, 'dist', 'resources', serverName, 'index.js'),
     ]);
@@ -200,8 +222,12 @@ function resolveRipgrepPath(hostRuntime: BackendHostRuntimeContext): string | un
   const ripgrepRelative = join('node_modules', '@vscode', 'ripgrep', 'bin', binaryName);
 
   if (hostRuntime.isPackaged) {
-    const packaged = join(hostRuntime.appRootPath, ripgrepRelative);
-    if (existsSync(packaged)) return packaged;
+    const externalRoot = externalPackagedAppRoot(hostRuntime);
+    const packaged = firstExistingPath([
+      ...(externalRoot ? [join(externalRoot, ripgrepRelative)] : []),
+      join(hostRuntime.appRootPath, ripgrepRelative),
+    ]);
+    if (packaged) return packaged;
   }
 
   const fromHostRoot = resolveUpwards(hostRuntime.appRootPath, ripgrepRelative, 10);
@@ -226,6 +252,7 @@ function resolveRipgrepPath(hostRuntime: BackendHostRuntimeContext): string | un
 
 export function resolveBackendRuntimePaths(hostRuntime: BackendHostRuntimeContext): ResolvedBackendRuntimePaths {
   const bundledRuntimePath = hostRuntime.nodeRuntimePath || resolveBundledRuntimePath(hostRuntime);
+  const externalRoot = externalPackagedAppRoot(hostRuntime);
 
   return {
     claudeCliPath: resolveClaudeBinaryPath(hostRuntime),
@@ -235,6 +262,12 @@ export function resolveBackendRuntimePaths(hostRuntime: BackendHostRuntimeContex
     piServerPath: resolveServerPath(hostRuntime, 'pi-agent-server'),
     vibeAcpServerPath: hostRuntime.isPackaged
       ? firstExistingPath([
+          ...(externalRoot
+            ? [
+                join(externalRoot, 'resources', 'pi-agent-server', 'vibe-acp-server.js'),
+                join(externalRoot, 'dist', 'resources', 'pi-agent-server', 'vibe-acp-server.js'),
+              ]
+            : []),
           join(hostRuntime.appRootPath, 'resources', 'pi-agent-server', 'vibe-acp-server.js'),
           join(hostRuntime.appRootPath, 'dist', 'resources', 'pi-agent-server', 'vibe-acp-server.js'),
         ])
