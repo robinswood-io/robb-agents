@@ -88,7 +88,7 @@ installed with `bash install-app.sh --version X.Y.Z` or
 
 ### Build from source
 
-Requirements: [Bun](https://bun.sh/) 1.3.10+, Node.js 20+, and platform build tooling (Xcode command-line tools on macOS; PowerShell 7/Windows build tools on Windows).
+Requirements: [Bun](https://bun.sh/) 1.3.14+, Node.js 20+, and platform build tooling (Xcode command-line tools on macOS; PowerShell 7/Windows build tools on Windows).
 
 ```bash
 git clone https://github.com/robinswood-io/robb-agents.git

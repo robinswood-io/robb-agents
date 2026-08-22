@@ -139,16 +139,8 @@ class InstallerContractTests(unittest.TestCase):
         self.assertIn('$env:ROBB_BUILD_CHANNEL = "production"', windows_build)
         self.assertIn('$env:ROBB_BUILD_CHANNEL = "development"', windows_build)
         self.assertIn("releaseIntegrity.cjs", windows_build)
-        self.assertIn("ROBB_BUN_INSTALL_CACHE_DIR", windows_build)
-        self.assertIn("bun install --frozen-lockfile --cache-dir $InstallCacheDir", windows_build)
-        self.assertIn(
-            'bun install --frozen-lockfile --cache-dir "${{ runner.temp }}/robb-bun-install-cache-${{ github.job }}-${{ github.run_attempt }}"',
-            validation_workflow,
-        )
-        self.assertIn(
-            "ROBB_BUN_INSTALL_CACHE_DIR: ${{ runner.temp }}/robb-bun-install-cache-${{ github.job }}-${{ github.run_attempt }}",
-            validation_workflow,
-        )
+        self.assertIn('$BunVersion = "bun-v1.3.14"', windows_build)
+        self.assertIn('bun-version: "1.3.14"', validation_workflow)
         self.assertIn("export ROBB_BUILD_CHANNEL=production", linux_build)
         self.assertIn("export ROBB_BUILD_CHANNEL=development", linux_build)
         self.assertIn("Linux arm64 is a local development artifact only", linux_build)

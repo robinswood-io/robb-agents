@@ -51,7 +51,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Configuration
-BUN_VERSION="bun-v1.3.10"  # Pinned version for reproducible builds
+BUN_VERSION="bun-v1.3.14"  # Pinned version for reproducible builds
 
 if [[ "$RELEASE_BUILD" == true && "$ARCH" != "x64" ]]; then
     echo "ERROR: Linux arm64 is a local development artifact only; public --release supports x64." >&2

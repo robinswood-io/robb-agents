@@ -13,7 +13,7 @@ $ErrorActionPreference = "Stop"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $ElectronDir = Split-Path -Parent $ScriptDir
 $RootDir = Split-Path -Parent (Split-Path -Parent $ElectronDir)
-$BunVersion = "bun-v1.3.10"
+$BunVersion = "bun-v1.3.14"
 
 function Require-Path([string]$Path, [string]$Description) {
     if (-not (Test-Path $Path)) { throw "Missing ${Description}: $Path" }
@@ -86,20 +86,6 @@ if ($Release) {
 
 Write-Host "=== Building Robb Agents Windows Installer ($Arch, release=$Release) ===" -ForegroundColor Cyan
 
-# Bun 1.3.10 can leave a partially materialized patched-package directory in
-# its shared Windows cache. A later install then fails before compilation with
-# ENOTEMPTY/ENOENT while applying patches/minimatch@3.1.5.patch. Keep the
-# immutable lockfile contract, but isolate the package cache per build. CI may
-# provide a stable per-job path; local builds get a disposable unique path.
-$ConfiguredInstallCache = [Environment]::GetEnvironmentVariable("ROBB_BUN_INSTALL_CACHE_DIR")
-$OwnInstallCache = [string]::IsNullOrWhiteSpace($ConfiguredInstallCache)
-$InstallCacheDir = if ($OwnInstallCache) {
-    Join-Path ([System.IO.Path]::GetTempPath()) "robb-agents-bun-install-cache-$([guid]::NewGuid())"
-} else {
-    $ConfiguredInstallCache
-}
-New-Item -ItemType Directory -Force -Path $InstallCacheDir | Out-Null
-
 # Clean exclusively generated/staged paths. Do not terminate unrelated tools.
 foreach ($path in @(
     "$ElectronDir\vendor",
@@ -111,15 +97,12 @@ foreach ($path in @(
 
 Push-Location $RootDir
 try {
-    bun install --frozen-lockfile --cache-dir $InstallCacheDir
+    bun install --frozen-lockfile
     if ($LASTEXITCODE -ne 0) { throw "bun install failed" }
     bun scripts/prepare-rtk.ts --platform win32 --arch $Arch
     if ($LASTEXITCODE -ne 0) { throw "RTK preparation failed" }
 } finally {
     Pop-Location
-    if ($OwnInstallCache) {
-        Remove-Item -Recurse -Force $InstallCacheDir -ErrorAction SilentlyContinue
-    }
 }
 
 # Bundle a checksum-verified baseline Bun runtime for every x64 CPU.
