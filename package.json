@@ -28,6 +28,7 @@
     "test": "bash scripts/run-workspace-tests.sh",
     "test:e2e:live": "bash scripts/run-live-e2e-tests.sh",
     "typecheck": "bun run typecheck:all",
+    "postinstall": "bun run scripts/apply-minimatch-compat.ts",
     "typecheck:shared": "node scripts/run-typescript.mjs native --noEmit -p packages/shared/tsconfig.json",
     "typecheck:staged": "bash scripts/typecheck-staged.sh",
     "typecheck:all": "node scripts/run-typescript.mjs native --noEmit -p packages/core/tsconfig.json && node scripts/run-typescript.mjs native --noEmit -p packages/shared/tsconfig.json && node scripts/run-typescript.mjs native --noEmit -p packages/server-core/tsconfig.json && node scripts/run-typescript.mjs native --noEmit -p packages/server/tsconfig.json && node scripts/run-typescript.mjs native --noEmit -p packages/session-tools-core/tsconfig.json && node scripts/run-typescript.mjs native --noEmit -p packages/session-mcp-server/tsconfig.json && node scripts/run-typescript.mjs native --noEmit -p packages/messaging-gateway/tsconfig.json && node scripts/run-typescript.mjs native --noEmit -p packages/messaging-whatsapp-worker/tsconfig.json && node scripts/run-typescript.mjs native --noEmit -p packages/pi-agent-server/tsconfig.typecheck.json && node scripts/run-typescript.mjs native --noEmit -p packages/ui/tsconfig.json && node scripts/run-typescript.mjs native --noEmit -p apps/cli/tsconfig.json && node scripts/run-typescript.mjs native --noEmit -p apps/electron/tsconfig.json && node scripts/run-typescript.mjs native --noEmit -p apps/viewer/tsconfig.json && node scripts/run-typescript.mjs native --noEmit -p apps/viewer/tsconfig.node.json && node scripts/run-typescript.mjs native --noEmit -p apps/webui/tsconfig.json && node scripts/run-typescript.mjs native --noEmit -p scripts/tsconfig.json",
@@ -82,7 +83,7 @@
     "test:ui:robb": "bun run scripts/run-robb-playwright-validation.ts",
     "test:update-manifests": "bun test scripts/tests/generate-github-update-manifests.test.ts",
     "typecheck:release-contract": "node scripts/run-typescript.mjs native --noEmit -p scripts/tsconfig.json",
-    "test:release-contract": "bun test scripts/tests/generate-github-update-manifests.test.ts scripts/tests/validate-release-bundle.test.ts scripts/tests/verify-github-release-assets.test.ts scripts/tests/build-provenance.test.ts scripts/tests/release-integrity.test.ts scripts/tests/verify-proof-passport.test.ts",
+    "test:release-contract": "bun test scripts/tests/apply-minimatch-compat.test.ts scripts/tests/generate-github-update-manifests.test.ts scripts/tests/validate-release-bundle.test.ts scripts/tests/verify-github-release-assets.test.ts scripts/tests/build-provenance.test.ts scripts/tests/release-integrity.test.ts scripts/tests/verify-proof-passport.test.ts",
     "test:installer-contract": "python3 scripts/tests/test_installers.py",
     "test:connectors:sandbox": "bun run scripts/robb-connector-sandbox-e2e.ts",
     "test:interop:external": "bun run scripts/robb-interop-conformance.ts",
@@ -245,8 +246,5 @@
     "@img/sharp-libvips-darwin-x64": "1.3.2",
     "@img/sharp-libvips-linux-arm64": "1.3.2",
     "@img/sharp-libvips-linux-x64": "1.3.2"
-  },
-  "patchedDependencies": {
-    "minimatch@3.1.5": "patches/minimatch@3.1.5.patch"
   }
 }

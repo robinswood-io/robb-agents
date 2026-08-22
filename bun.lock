@@ -446,9 +446,6 @@
     "electron",
     "@sentry/cli",
   ],
-  "patchedDependencies": {
-    "minimatch@3.1.5": "patches/minimatch@3.1.5.patch",
-  },
   "overrides": {
     "@hono/node-server": "2.0.11",
     "axios": "1.18.1",
