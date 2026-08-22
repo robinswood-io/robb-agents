@@ -112,6 +112,18 @@ bun run electron:dist:dev:win
 bun run electron:dist:dev:linux
 ```
 
+To replace an installed macOS application while retaining its existing
+production chats, credentials and MCP configuration, use the explicit local
+production-profile mode from a clean commit:
+
+```bash
+bash apps/electron/scripts/build-dmg.sh arm64 --local-production
+```
+
+This package uses `~/.craft-agent` and the production application identity, but
+is only ad-hoc signed and is not notarized. It is suitable for installation on
+the maintainer's own Mac and must not be distributed.
+
 Maintainers use `--release` / `-Release` only with externally supplied signing credentials. Tags must match the Electron version, and releases include checksum plus provenance evidence. See [the distribution guide](docs/robinswood/open-source-distribution.md).
 
 ## Providers

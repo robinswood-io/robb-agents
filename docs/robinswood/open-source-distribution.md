@@ -97,6 +97,19 @@ production updater. The default macOS build disables certificate auto-discovery
 explicitly; only `--release` may use a Developer ID identity and notarization
 credentials.
 
+A maintainer who needs to replace the application on their own Mac without
+switching away from the existing `~/.craft-agent` chats, credentials and MCP
+configuration can use:
+
+```bash
+bash apps/electron/scripts/build-dmg.sh arm64 --local-production
+```
+
+This mode requires a clean, identifiable Git commit and uses the production
+profile and application identity. Its ad-hoc signature is deliberately not
+release-grade: the resulting package must remain local and must never be
+published or distributed.
+
 Linux arm64 is available only as a local development-channel build with
 `bash apps/electron/scripts/build-linux.sh arm64`. It has no public updater or
 GitHub Release contract, and the script rejects `arm64 --release`; public Linux
