@@ -65,7 +65,8 @@ function Write-StartupDiagnostics([string]$InstalledRoot, [string]$ProfileRoot) 
             Write-Output
     }
 
-    $logs = @(Get-ChildItem -Path $ProfileRoot -Recurse -File -Filter '*.log' -ErrorAction SilentlyContinue)
+    $logsRoot = Join-Path $ProfileRoot 'logs'
+    $logs = @(Get-ChildItem -Path $logsRoot -Recurse -File -Filter '*.log' -ErrorAction SilentlyContinue)
     if ($logs.Count -eq 0) {
         Write-Output 'Startup logs: <none>'
         return

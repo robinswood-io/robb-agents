@@ -50,7 +50,10 @@ export function atomicWriteFileSync(filePath: string, data: string): void {
   try {
     const mode = existsSync(filePath) ? statSync(filePath).mode & 0o777 : 0o600;
     writeFileSync(tmpPath, data, { encoding: 'utf8', mode, flag: 'wx' });
-    const fileDescriptor = openSync(tmpPath, 'r');
+    // Windows FlushFileBuffers (used by fsyncSync) requires a handle opened
+    // with write access. A read-only descriptor works on POSIX but fails with
+    // EPERM on Windows, aborting first-run configuration before the rename.
+    const fileDescriptor = openSync(tmpPath, 'r+');
     try { fsyncSync(fileDescriptor); } finally { closeSync(fileDescriptor); }
     renameSync(tmpPath, filePath);
     // Make the rename durable where directory fsync is supported. Windows and
