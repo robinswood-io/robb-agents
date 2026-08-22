@@ -879,6 +879,8 @@ interface ManagedSession {
   processingGeneration: number
   /** Generation that emitted a terminal provider error before its trailing complete event. */
   terminalErrorGeneration?: number
+  /** Generation intentionally ended so a newly activated source can restart the turn. */
+  sourceActivationRestartGeneration?: number
   /** Runtime-only generation telemetry refs, keyed by processingGeneration. */
   executionTelemetryGenerations?: Map<number, RuntimeGenerationTelemetryRef>
   /** Runtime-only compaction spans, keyed by processingGeneration. */
@@ -1153,6 +1155,23 @@ export function claimAutoRetryPending(
   }
 
   return 'send'
+}
+
+export interface SourceActivationRestartHost {
+  sourceActivationRestartGeneration?: number
+}
+
+/**
+ * Consume the one-shot marker that distinguishes an intentional source
+ * activation restart from a broken provider stream.
+ */
+export function consumeSourceActivationRestart(
+  host: SourceActivationRestartHost,
+  generation: number,
+): boolean {
+  if (host.sourceActivationRestartGeneration !== generation) return false
+  host.sourceActivationRestartGeneration = undefined
+  return true
 }
 
 /**
@@ -7410,8 +7429,25 @@ export class SessionManager implements ISessionManager {
       } else if (managed.stopRequested) {
         sessionLog.info('Chat loop completed after stop request - events drained successfully')
         await this.onProcessingStopped(sessionId, 'interrupted', myGeneration)
+      } else if (consumeSourceActivationRestart(managed, myGeneration)) {
+        sessionLog.info('Chat loop exited for scheduled source activation restart', {
+          sessionId,
+          generation: myGeneration,
+        })
+        sendSpan.mark('chat.exit.source_activation_restart')
+        sendSpan.end()
+        await this.onProcessingStopped(sessionId, 'interrupted', myGeneration)
       } else {
-        sessionLog.warn('Chat loop exited unexpectedly')
+        sessionLog.warn('Chat loop exited unexpectedly', {
+          sessionId,
+          generation: myGeneration,
+          pendingTurnRecovery: managed.pendingTurnRecovery
+            ? {
+                userMessageId: managed.pendingTurnRecovery.userMessageId,
+                attempts: managed.pendingTurnRecovery.attempts,
+              }
+            : undefined,
+        })
         const recoveryQueued = await this.enqueueAutomaticTurnRecovery(managed, 'stream_ended')
         if (!recoveryQueued) {
           await this.processEvent(managed, {
@@ -9532,6 +9568,25 @@ export class SessionManager implements ISessionManager {
           break
         }
 
+        // A transient network failure is safe to route through the existing
+        // bounded, side-effect-aware continuation path. The hidden recovery
+        // prompt requires state verification before repeating mutations, and
+        // exhaustion still falls through to the original typed error.
+        if (
+          event.error.code === 'network_error' &&
+          event.error.canRetry &&
+          managed.pendingTurnRecovery &&
+          turnStillNeedsRecovery(managed.messages, managed.pendingTurnRecovery.userMessageId) &&
+          await this.enqueueAutomaticTurnRecovery(managed, 'runtime_error')
+        ) {
+          sessionLog.warn('Queued bounded automatic recovery for transient network error', {
+            sessionId,
+            generation: generationKey,
+            attempt: managed.pendingTurnRecovery?.attempts,
+          })
+          break
+        }
+
         sessionLog.error('Typed agent event failed', {
           sessionId,
           generation: generationKey,
@@ -9786,6 +9841,12 @@ export class SessionManager implements ISessionManager {
 
         const messageWithSuffix = `${originalMessage}\n\n[${event.sourceSlug} activated]`
         const messageCountAtSchedule = managed.messages.length
+
+        // Pi and Claude intentionally end the current generator after emitting
+        // source_activated. Mark this generation so sendMessage does not also
+        // classify that planned boundary as stream loss and enqueue a competing
+        // automatic recovery.
+        managed.sourceActivationRestartGeneration = generationKey
 
         // Stash the retry payload so a duplicate sendMessage from a legacy renderer
         // (mixed-version rollout: new server + v0.9.5 Electron client) gets deduped.

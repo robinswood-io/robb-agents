@@ -38,6 +38,18 @@ import type {
 const DEFAULT_WORKSPACES_DIR = join(CONFIG_DIR, 'workspaces');
 export const WORKSPACE_CONFIG_SCHEMA_VERSION = 1 as const;
 
+const LEGACY_NULLABLE_WORKSPACE_DEFAULT_KEYS = [
+  'model',
+  'defaultLlmConnection',
+  'enabledSourceSlugs',
+  'permissionMode',
+  'externalActionPolicy',
+  'cyclablePermissionModes',
+  'workingDirectory',
+  'thinkingLevel',
+  'colorTheme',
+] as const;
+
 const WorkspaceConfigStorageSchema = z.object({
   schemaVersion: z.literal(WORKSPACE_CONFIG_SCHEMA_VERSION),
   id: z.string().trim().min(1),
@@ -142,8 +154,23 @@ export function loadWorkspaceConfig(rootPath: string): WorkspaceConfig | null {
       throw new UnsupportedWorkspaceConfigVersionError(record.schemaVersion);
     }
     const migrated = record.schemaVersion === undefined;
+    let normalizedDefaults: unknown = record.defaults;
+    if (record.defaults && typeof record.defaults === 'object' && !Array.isArray(record.defaults)) {
+      const defaultsRecord: Record<string, unknown> = {
+        ...(record.defaults as Record<string, unknown>),
+      };
+      // Pre-schema configs used JSON null for optional settings. Preserve the
+      // strict v1 write contract while accepting and removing those legacy
+      // sentinels during the one-time read migration.
+      for (const key of LEGACY_NULLABLE_WORKSPACE_DEFAULT_KEYS) {
+        if (defaultsRecord[key] === null) delete defaultsRecord[key];
+      }
+      normalizedDefaults = defaultsRecord;
+    }
+
     const config = {
       ...record,
+      defaults: normalizedDefaults,
       schemaVersion: WORKSPACE_CONFIG_SCHEMA_VERSION,
     } as WorkspaceConfig;
 

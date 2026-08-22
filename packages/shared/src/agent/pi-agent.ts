@@ -261,6 +261,37 @@ type TokenRefreshOutcome =
   | { refreshed: false }
   | { refreshed: true; piAuth: PiAuthPayload };
 
+const PREEMPTIVE_PI_OAUTH_PROVIDERS = new Set([
+  'openai-codex',
+  'github-copilot',
+  'google-gemini-code-assist',
+]);
+
+/**
+ * Decide whether a cold Pi runtime must join/start OAuth refresh before it
+ * reads credentials. Joining an in-flight refresh closes the race where an
+ * auth-failed runtime is disposed while its replacement still sees the stale
+ * token.
+ */
+export function shouldRefreshPiOAuthBeforeSpawn(input: {
+  authType?: string;
+  piAuthProvider?: string;
+  refreshToken?: string;
+  expiresAt?: number;
+  refreshInFlight: boolean;
+  nowMs?: number;
+}): boolean {
+  if (input.authType !== 'oauth') return false;
+  if (!input.piAuthProvider || !PREEMPTIVE_PI_OAUTH_PROVIDERS.has(input.piAuthProvider)) {
+    return false;
+  }
+  if (input.refreshInFlight) return true;
+  if (!input.refreshToken) return false;
+
+  const nowMs = input.nowMs ?? Date.now();
+  return !input.expiresAt || input.expiresAt < nowMs + 5 * 60_000;
+}
+
 // Supplement the shared free-text redactor with credential formats that can
 // appear in Pi/provider stderr without an `Authorization: Bearer` prefix.
 // Keep this narrow: stderr remains useful, while known credential material is
@@ -674,12 +705,19 @@ export class PiAgent extends BaseAgent {
     // from the same fetch that produces piAuth (single source of truth).
 
     // For OAuth providers with short-lived access tokens: preemptively refresh
-    // before fetching credentials, so getPiAuth() picks up a fresh token.
+    // before fetching credentials, so getPiAuth() picks up a fresh token. Also
+    // join a refresh started by the auth-failed runtime being replaced.
     // refreshAndPushTokens guards this.subprocess internally — safe to call pre-spawn.
-    if (this.config.authType === 'oauth' && (runtime.piAuthProvider === 'github-copilot' || runtime.piAuthProvider === 'google-gemini-code-assist')) {
+    if (this.config.authType === 'oauth' && runtime.piAuthProvider) {
       const slug = this.config.connectionSlug || 'pi';
       const stored = await getCredentialManager().getLlmOAuth(slug);
-      if (stored?.refreshToken && (!stored.expiresAt || stored.expiresAt < Date.now() + 5 * 60_000)) {
+      if (shouldRefreshPiOAuthBeforeSpawn({
+        authType: this.config.authType,
+        piAuthProvider: runtime.piAuthProvider,
+        refreshToken: stored?.refreshToken,
+        expiresAt: stored?.expiresAt,
+        refreshInFlight: PiAgent.globalRefreshMutex.has(slug),
+      })) {
         this.debug(`${runtime.piAuthProvider} token expired or expiring soon — refreshing before session start`);
         await this.refreshAndPushTokens();
       }
@@ -1441,6 +1479,19 @@ export class PiAgent extends BaseAgent {
     // The event adapter expects typed PiAgentEvent/AgentSessionEvent objects,
     // but since we're receiving plain JSON, we cast through unknown.
     for (const agentEvent of this.adapter.adaptEvent(adaptedEvent as any)) {
+      if (
+        agentEvent.type === 'typed_error' &&
+        this.config.authType === 'oauth' &&
+        (agentEvent.error.code === 'expired_oauth_token' || agentEvent.error.code === 'invalid_api_key')
+      ) {
+        // Provider message_end failures do not necessarily arrive through the
+        // generic subprocess `error` envelope. Start refresh here as well so
+        // SessionManager's replacement runtime can join the same global mutex.
+        void this.refreshAndPushTokens().catch(error => {
+          this.debug(`Token refresh from typed auth error failed: ${error}`);
+        });
+      }
+
       // Track Read tool calls for prerequisite checking
       if (agentEvent.type === 'tool_start' && agentEvent.toolName === 'Read') {
         this.prerequisiteManager.trackReadTool(agentEvent.input as Record<string, unknown>);

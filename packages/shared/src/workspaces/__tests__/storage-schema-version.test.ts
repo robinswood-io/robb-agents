@@ -43,6 +43,31 @@ describe('workspace config schema envelope', () => {
     expect(JSON.parse(readFileSync(join(workspaceRoot, 'config.json'), 'utf8'))).toMatchObject({ schemaVersion: 1 });
   });
 
+  it('migrates legacy null sentinels for optional defaults', () => {
+    const workspaceRoot = root();
+    writeFileSync(join(workspaceRoot, 'config.json'), JSON.stringify({
+      ...legacyConfig(),
+      defaults: {
+        ...legacyConfig().defaults,
+        model: null,
+        defaultLlmConnection: null,
+        workingDirectory: null,
+      },
+    }));
+
+    const loaded = loadWorkspaceConfig(workspaceRoot);
+    expect(loaded).not.toBeNull();
+    expect(loaded?.defaults?.model).toBeUndefined();
+    expect(loaded?.defaults?.defaultLlmConnection).toBeUndefined();
+    expect(loaded?.defaults?.workingDirectory).toBeUndefined();
+
+    const migrated = JSON.parse(readFileSync(join(workspaceRoot, 'config.json'), 'utf8'));
+    expect(migrated.schemaVersion).toBe(1);
+    expect(migrated.defaults).not.toHaveProperty('model');
+    expect(migrated.defaults).not.toHaveProperty('defaultLlmConnection');
+    expect(migrated.defaults).not.toHaveProperty('workingDirectory');
+  });
+
   it('fails closed on a future schema instead of treating it as a missing workspace', () => {
     const workspaceRoot = root();
     writeFileSync(join(workspaceRoot, 'config.json'), JSON.stringify({ ...legacyConfig(), schemaVersion: 2 }));
