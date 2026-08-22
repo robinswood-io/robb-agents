@@ -10,6 +10,7 @@ let createManagedSession: typeof import('./SessionManager.ts')['createManagedSes
 let buildRestartRequiredSignature: typeof import('./runtime-config.ts')['buildRestartRequiredSignature']
 let createStoredSession: typeof import('@craft-agent/shared/sessions')['createSession']
 let tmpConfigRoot: string
+const originalCraftConfigDir = process.env.CRAFT_CONFIG_DIR
 
 // Regression coverage for the stale-Pi-subprocess bug where toggling
 // `supportsImages` on a custom-endpoint model wrote to disk but never reached
@@ -75,6 +76,11 @@ beforeAll(async () => {
 afterAll(() => {
   if (tmpConfigRoot) {
     rmSync(tmpConfigRoot, { recursive: true, force: true })
+  }
+  if (originalCraftConfigDir === undefined) {
+    delete process.env.CRAFT_CONFIG_DIR
+  } else {
+    process.env.CRAFT_CONFIG_DIR = originalCraftConfigDir
   }
 })
 
