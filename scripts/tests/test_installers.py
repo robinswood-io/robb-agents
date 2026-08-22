@@ -127,6 +127,7 @@ class InstallerContractTests(unittest.TestCase):
         mac_build = (ROOT / "apps" / "electron" / "scripts" / "build-dmg.sh").read_text(encoding="utf-8")
         windows_build = (ROOT / "apps" / "electron" / "scripts" / "build-win.ps1").read_text(encoding="utf-8")
         linux_build = (ROOT / "apps" / "electron" / "scripts" / "build-linux.sh").read_text(encoding="utf-8")
+        validation_workflow = (ROOT / ".github" / "workflows" / "robinswood-validate.yml").read_text(encoding="utf-8")
         self.assertIn("export CSC_IDENTITY_AUTO_DISCOVERY=false", mac_build)
         self.assertIn("unset CSC_LINK CSC_KEY_PASSWORD CSC_NAME", mac_build)
         self.assertIn("export ROBB_BUILD_CHANNEL=production", mac_build)
@@ -138,6 +139,16 @@ class InstallerContractTests(unittest.TestCase):
         self.assertIn('$env:ROBB_BUILD_CHANNEL = "production"', windows_build)
         self.assertIn('$env:ROBB_BUILD_CHANNEL = "development"', windows_build)
         self.assertIn("releaseIntegrity.cjs", windows_build)
+        self.assertIn("ROBB_BUN_INSTALL_CACHE_DIR", windows_build)
+        self.assertIn("bun install --frozen-lockfile --cache-dir $InstallCacheDir", windows_build)
+        self.assertIn(
+            'bun install --frozen-lockfile --cache-dir "${{ runner.temp }}/robb-bun-install-cache-${{ github.job }}-${{ github.run_attempt }}"',
+            validation_workflow,
+        )
+        self.assertIn(
+            "ROBB_BUN_INSTALL_CACHE_DIR: ${{ runner.temp }}/robb-bun-install-cache-${{ github.job }}-${{ github.run_attempt }}",
+            validation_workflow,
+        )
         self.assertIn("export ROBB_BUILD_CHANNEL=production", linux_build)
         self.assertIn("export ROBB_BUILD_CHANNEL=development", linux_build)
         self.assertIn("Linux arm64 is a local development artifact only", linux_build)
