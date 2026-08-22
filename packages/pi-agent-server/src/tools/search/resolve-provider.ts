@@ -15,6 +15,7 @@ import { ResponsesApiSearchProvider } from './providers/openai.ts';
 import { ChatGPTBackendSearchProvider, extractChatGptAccountId } from './providers/chatgpt.ts';
 import { GoogleSearchProvider } from './providers/google.ts';
 import { DDGSearchProvider } from './providers/ddg.ts';
+import { getUnstableProviderContractStatus } from '@craft-agent/core';
 
 export type SearchProviderCredential =
   | { type: 'api_key'; key: string }
@@ -65,6 +66,13 @@ export function resolveSearchProvider(piAuth?: SearchProviderAuthConfig): WebSea
   // ChatGPT Plus (OpenAI OAuth bearer token) → ChatGPT backend endpoint
   // Supports both oauth.access and api_key.key token shapes.
   if (provider === 'openai-codex' && openAiCodexAccess) {
+    const contractStatus = getUnstableProviderContractStatus(
+      'chatgpt-codex-backend',
+      process.env,
+    );
+    if (!contractStatus.enabled) {
+      return new DDGSearchProvider();
+    }
     const accountId = extractChatGptAccountId(openAiCodexAccess);
     if (accountId) {
       return new ChatGPTBackendSearchProvider(openAiCodexAccess, accountId);

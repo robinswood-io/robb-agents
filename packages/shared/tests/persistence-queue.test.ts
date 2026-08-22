@@ -24,6 +24,13 @@ function createTestSession(
     lastUsedAt: Date.now(),
     lastMessageAt: Date.now(),
     messages: [],
+    tokenUsage: {
+      inputTokens: 0,
+      outputTokens: 0,
+      totalTokens: 0,
+      contextTokens: 0,
+      costUsd: 0,
+    },
     sdkSessionId,
   };
 }

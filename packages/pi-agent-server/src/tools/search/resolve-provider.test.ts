@@ -1,9 +1,19 @@
-import { describe, expect, it } from 'bun:test';
+import { afterEach, describe, expect, it } from 'bun:test';
 import { resolveSearchProvider } from './resolve-provider.ts';
 import { ResponsesApiSearchProvider } from './providers/openai.ts';
 import { ChatGPTBackendSearchProvider } from './providers/chatgpt.ts';
 import { GoogleSearchProvider } from './providers/google.ts';
 import { DDGSearchProvider } from './providers/ddg.ts';
+
+const originalChatGptKillSwitch = process.env.ROBB_DISABLE_CHATGPT_CODEX_BACKEND;
+
+afterEach(() => {
+  if (originalChatGptKillSwitch === undefined) {
+    delete process.env.ROBB_DISABLE_CHATGPT_CODEX_BACKEND;
+  } else {
+    process.env.ROBB_DISABLE_CHATGPT_CODEX_BACKEND = originalChatGptKillSwitch;
+  }
+});
 
 /** Build a minimal JWT with a chatgpt_account_id claim. */
 function makeJwt(accountId: string): string {
@@ -54,6 +64,16 @@ describe('resolveSearchProvider', () => {
 
     expect(provider).toBeInstanceOf(ChatGPTBackendSearchProvider);
     expect(provider.name).toBe('ChatGPT');
+  });
+
+  it('routes directly to DDG when the private ChatGPT backend is disabled', () => {
+    process.env.ROBB_DISABLE_CHATGPT_CODEX_BACKEND = '1';
+    const provider = resolveSearchProvider({
+      provider: 'openai-codex',
+      credential: { type: 'api_key', key: makeJwt('acc_disabled') },
+    });
+
+    expect(provider).toBeInstanceOf(DDGSearchProvider);
   });
 
   it('falls back to DDG for openai-codex + oauth with malformed JWT', () => {

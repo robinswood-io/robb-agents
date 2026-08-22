@@ -1,6 +1,6 @@
 {
   "name": "@craft-agent/messaging-gateway",
-  "version": "0.12.3",
+  "version": "0.12.4",
   "license": "MIT",
   "description": "Messaging gateway for Craft Agent — Telegram & WhatsApp",
   "type": "module",
@@ -10,7 +10,7 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "node ../../scripts/run-typescript.mjs native --noEmit"
   },
   "dependencies": {
     "@craft-agent/core": "workspace:*",
@@ -21,7 +21,7 @@
     "grammy": "^1.35.0"
   },
   "devDependencies": {
-    "typescript": "^5.8.2",
-    "@types/node": "^22.0.0"
+    "typescript": "~6.0.3",
+    "@types/node": "^24.13.3"
   }
 }

@@ -93,4 +93,42 @@ describe('Google Code Assist provider', () => {
       globalThis.fetch = originalFetch;
     }
   });
+
+  it('fails closed before fetch when the v1internal kill switch is active', async () => {
+    const originalFetch = globalThis.fetch;
+    const originalKillSwitch = process.env.ROBB_DISABLE_GOOGLE_CODE_ASSIST_V1INTERNAL;
+    const fetchMock = mock(async () => new Response('{}'));
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+    process.env.ROBB_DISABLE_GOOGLE_CODE_ASSIST_V1INTERNAL = '1';
+
+    try {
+      const auth = AuthStorage.inMemory({
+        'google-gemini-code-assist': { type: 'api_key', key: 'must-not-leak' },
+      });
+      const registry = ModelRegistry.inMemory(auth);
+      registerGoogleCodeAssistProvider(registry);
+      const model = registry.find('google-gemini-code-assist', 'gemini-2.5-flash');
+      const stream = streamGoogleCodeAssist(
+        model!,
+        { messages: [{ role: 'user', content: 'healthcheck', timestamp: Date.now() }] },
+        { apiKey: 'must-not-leak' },
+      );
+      const events: AssistantMessageEvent[] = [];
+      for await (const event of stream) events.push(event);
+
+      const error = events.find(
+        (event): event is Extract<AssistantMessageEvent, { type: 'error' }> => event.type === 'error',
+      );
+      expect(error?.error.errorMessage).toContain('disabled by provider contract');
+      expect(error?.error.errorMessage).not.toContain('must-not-leak');
+      expect(fetchMock).not.toHaveBeenCalled();
+    } finally {
+      globalThis.fetch = originalFetch;
+      if (originalKillSwitch === undefined) {
+        delete process.env.ROBB_DISABLE_GOOGLE_CODE_ASSIST_V1INTERNAL;
+      } else {
+        process.env.ROBB_DISABLE_GOOGLE_CODE_ASSIST_V1INTERNAL = originalKillSwitch;
+      }
+    }
+  });
 });

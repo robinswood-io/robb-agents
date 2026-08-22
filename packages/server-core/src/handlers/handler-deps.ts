@@ -4,6 +4,8 @@ import type { IOAuthFlowStore } from './oauth-flow-store-interface'
 import type { IBrowserPaneManager } from './browser-pane-manager-interface'
 import type { IWindowManager } from './window-manager-interface'
 import type { IMessagingGatewayRegistry } from './messaging-registry-interface'
+import type { MissionRuntimeServiceOptions } from '../missions/MissionRuntimeService'
+import type { ThinkingLevel } from '@craft-agent/shared/agent/thinking-levels'
 
 /**
  * Generic handler dependency bag.
@@ -27,4 +29,17 @@ export interface HandlerDeps<
   browserPaneManager?: TBrowserPaneManager
   oauthFlowStore: TOAuthFlowStore
   messagingRegistry?: IMessagingGatewayRegistry
+  /** Optional host bootstrap for certified, brokered Mission connector packs. */
+  missionConnectorExecutorFactory?: MissionRuntimeServiceOptions['connectorExecutorFactory']
+  /** Read-only/static connector qualification used by Mission dry-runs. */
+  missionConnectorReadiness?: MissionRuntimeServiceOptions['connectorReadiness']
+  /** Host-owned cost model used by Mission dry-runs. */
+  missionPreflightCostEstimator?: MissionRuntimeServiceOptions['preflightCostEstimator']
+  /** Read-only connection catalogue used by Mission dry-runs. */
+  missionPreflightConnections?: MissionRuntimeServiceOptions['preflightConnections']
+  /** Injectable app-level preference boundary for deterministic hosts and tests. */
+  defaultThinkingLevelStore?: {
+    get(): ThinkingLevel
+    set(level: ThinkingLevel): boolean
+  }
 }

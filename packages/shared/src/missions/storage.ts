@@ -1,20 +1,24 @@
 import {
-  closeSync,
-  existsSync,
+  constants,
+  ftruncateSync,
   fsyncSync,
-  mkdirSync,
-  openSync,
+  lstatSync,
   readFileSync,
   readdirSync,
-  statSync,
-  truncateSync,
-  unlinkSync,
   writeSync,
-} from 'fs';
-import { createHash } from 'crypto';
-import { join } from 'path';
+} from 'node:fs';
+import { createHash } from 'node:crypto';
+import { join } from 'node:path';
 import { MissionEventSchema, reduceMissionEvents, type MissionEvent, type MissionSnapshot } from './events.ts';
 import { MISSION_ID_RE } from './schema.ts';
+import {
+  canonicalConfinementRoot,
+  ensureConfinedDirectory,
+  openConfinedRegularFile,
+  pathIsWithinRoot,
+  unlinkConfinedRegularFile,
+  type ConfinedRegularFile,
+} from './confined-file.ts';
 
 const MISSIONS_DIR = 'missions';
 const JOURNAL_FILE = 'events.jsonl';
@@ -146,40 +150,60 @@ function processIsAlive(pid: number): boolean {
   try { process.kill(pid, 0); return true; } catch (error) { return errnoCode(error) !== 'ESRCH'; }
 }
 
-function removeStaleLock(lockPath: string): boolean {
-  let initial: ReturnType<typeof statSync>;
-  try { initial = statSync(lockPath); } catch (error) { if (errnoCode(error) === 'ENOENT') return true; throw error; }
-  let ownerDead = false;
+function removeStaleLock(workspaceRoot: string, lockPath: string): boolean {
+  let handle: ConfinedRegularFile;
   try {
-    const raw: unknown = JSON.parse(readFileSync(lockPath, 'utf-8'));
-    ownerDead = isRecord(raw) && typeof raw.pid === 'number' && !processIsAlive(raw.pid);
-  } catch { /* age is the fallback proof */ }
-  if (!ownerDead && Date.now() - initial.mtimeMs <= STALE_LOCK_MAX_AGE_MS) return false;
+    handle = openConfinedRegularFile(workspaceRoot, lockPath, { flags: constants.O_RDONLY });
+  } catch (error) {
+    if (errnoCode(error) === 'ENOENT') return true;
+    throw error;
+  }
   try {
-    const current = statSync(lockPath);
-    if (current.dev !== initial.dev || current.ino !== initial.ino) return false;
-    unlinkSync(lockPath);
+    const initial = handle.initialStat;
+    let ownerDead = false;
+    try {
+      const raw: unknown = JSON.parse(readFileSync(handle.descriptor, 'utf-8'));
+      ownerDead = isRecord(raw) && typeof raw.pid === 'number' && !processIsAlive(raw.pid);
+    } catch { /* age is the fallback proof */ }
+    handle.assertStillBound();
+    if (!ownerDead && Date.now() - initial.mtimeMs <= STALE_LOCK_MAX_AGE_MS) return false;
+    unlinkConfinedRegularFile(handle);
     return true;
-  } catch (error) { if (errnoCode(error) === 'ENOENT') return true; throw error; }
+  } finally {
+    handle.close();
+  }
 }
 
-function withJournalLock<T>(lockPath: string, operation: () => T): T {
-  let fd: number | undefined;
+function withJournalLock<T>(workspaceRoot: string, lockPath: string, operation: () => T): T {
+  let handle: ConfinedRegularFile | undefined;
   for (let attempt = 0; attempt < 50; attempt += 1) {
-    try { fd = openSync(lockPath, 'wx', 0o600); break; } catch (error) {
+    try {
+      handle = openConfinedRegularFile(workspaceRoot, lockPath, {
+        flags: constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL,
+        mode: 0o600,
+        allowCreate: true,
+      });
+      break;
+    } catch (error) {
       if (errnoCode(error) !== 'EEXIST') throw error;
-      if (removeStaleLock(lockPath)) continue;
+      if (removeStaleLock(workspaceRoot, lockPath)) continue;
       Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 2);
     }
   }
-  if (fd === undefined) throw new Error(`Mission journal lock unavailable: ${lockPath}`);
+  if (handle === undefined) throw new Error(`Mission journal lock unavailable: ${lockPath}`);
   try {
-    writeSync(fd, JSON.stringify({ pid: process.pid, createdAt: new Date().toISOString() }), undefined, 'utf-8');
-    fsyncSync(fd);
+    writeSync(handle.descriptor, JSON.stringify({ pid: process.pid, createdAt: new Date().toISOString() }), undefined, 'utf-8');
+    fsyncSync(handle.descriptor);
+    handle.assertStillBound();
     return operation();
   } finally {
-    closeSync(fd);
-    try { unlinkSync(lockPath); } catch (error) { if (errnoCode(error) !== 'ENOENT') throw error; }
+    try {
+      unlinkConfinedRegularFile(handle);
+    } catch (error) {
+      if (errnoCode(error) !== 'ENOENT') throw error;
+    } finally {
+      handle.close();
+    }
   }
 }
 
@@ -199,56 +223,77 @@ export function appendMissionEvents(
 ): void {
   if (input.length === 0) return;
   const events = input.map((event) => MissionEventSchema.parse(event));
-  const dir = missionDir(workspaceRoot, missionId);
-  mkdirSync(dir, { recursive: true });
-  const path = missionJournalPath(workspaceRoot, missionId);
-  withJournalLock(join(dir, LOCK_FILE), () => {
-    let text = existsSync(path) ? readFileSync(path, 'utf-8') : '';
-    const parsed = parseJournal(text);
-    if (expectedRevision !== undefined && parsed.lastRevision !== expectedRevision) {
-      throw new Error(
-        `Mission journal revision conflict for "${missionId}": expected ${expectedRevision}, found ${parsed.lastRevision}`,
-      );
-    }
-    if (finalRecordIsMalformed(text)) {
-      const validCharacterLength = text.lastIndexOf('\n') + 1;
-      const validText = text.slice(0, validCharacterLength);
-      truncateSync(path, Buffer.byteLength(validText));
-      text = validText;
-    }
-    const batchSequence = parsed.lastBatchSequence + 1;
-    const fromRevision = parsed.lastRevision + 1;
-    const toRevision = parsed.lastRevision + events.length;
-    const previousChecksum = parsed.lastChecksum;
-    const checksum = checksumFor(events, batchSequence, fromRevision, toRevision, previousChecksum);
-    const stored: StoredBatch = {
-      events,
-      _integrity: {
-        version: INTEGRITY_VERSION,
-        batchSequence,
-        fromRevision,
-        toRevision,
-        previousChecksum,
-        checksum,
-      },
-    };
-    const separator = text.length > 0 && !text.endsWith('\n') ? '\n' : '';
-    const fd = openSync(path, 'a', 0o600);
+  if (!MISSION_ID_RE.test(missionId)) throw new Error(`Invalid mission id "${missionId}"`);
+  const canonicalWorkspace = canonicalConfinementRoot(workspaceRoot);
+  const dir = ensureConfinedDirectory(canonicalWorkspace, MISSIONS_DIR, missionId);
+  const path = join(dir, JOURNAL_FILE);
+  withJournalLock(canonicalWorkspace, join(dir, LOCK_FILE), () => {
+    const handle = openConfinedRegularFile(canonicalWorkspace, path, {
+      flags: constants.O_RDWR | constants.O_APPEND | constants.O_CREAT,
+      mode: 0o600,
+      allowCreate: true,
+    });
     try {
+      let text = readFileSync(handle.descriptor, 'utf-8');
+      const parsed = parseJournal(text);
+      if (expectedRevision !== undefined && parsed.lastRevision !== expectedRevision) {
+        throw new Error(
+          `Mission journal revision conflict for "${missionId}": expected ${expectedRevision}, found ${parsed.lastRevision}`,
+        );
+      }
+      if (finalRecordIsMalformed(text)) {
+        const validCharacterLength = text.lastIndexOf('\n') + 1;
+        const validText = text.slice(0, validCharacterLength);
+        ftruncateSync(handle.descriptor, Buffer.byteLength(validText));
+        text = validText;
+      }
+      const batchSequence = parsed.lastBatchSequence + 1;
+      const fromRevision = parsed.lastRevision + 1;
+      const toRevision = parsed.lastRevision + events.length;
+      const previousChecksum = parsed.lastChecksum;
+      const checksum = checksumFor(events, batchSequence, fromRevision, toRevision, previousChecksum);
+      const stored: StoredBatch = {
+        events,
+        _integrity: {
+          version: INTEGRITY_VERSION,
+          batchSequence,
+          fromRevision,
+          toRevision,
+          previousChecksum,
+          checksum,
+        },
+      };
+      const separator = text.length > 0 && !text.endsWith('\n') ? '\n' : '';
       const payload = Buffer.from(`${separator}${JSON.stringify(stored)}\n`, 'utf-8');
       let offset = 0;
-      while (offset < payload.length) offset += writeSync(fd, payload, offset, payload.length - offset);
-      fsyncSync(fd);
+      while (offset < payload.length) {
+        offset += writeSync(handle.descriptor, payload, offset, payload.length - offset);
+      }
+      fsyncSync(handle.descriptor);
+      handle.assertStillBound();
     } finally {
-      closeSync(fd);
+      handle.close();
     }
   });
 }
 
 export function readMissionEvents(workspaceRoot: string, missionId: string): MissionEvent[] {
-  const path = missionJournalPath(workspaceRoot, missionId);
-  if (!existsSync(path)) return [];
-  return parseJournal(readFileSync(path, 'utf-8')).events;
+  const canonicalWorkspace = canonicalConfinementRoot(workspaceRoot);
+  const path = missionJournalPath(canonicalWorkspace, missionId);
+  let handle: ConfinedRegularFile;
+  try {
+    handle = openConfinedRegularFile(canonicalWorkspace, path, { flags: constants.O_RDONLY });
+  } catch (error) {
+    if (errnoCode(error) === 'ENOENT') return [];
+    throw error;
+  }
+  try {
+    const text = readFileSync(handle.descriptor, 'utf-8');
+    handle.assertStillBound();
+    return parseJournal(text).events;
+  } finally {
+    handle.close();
+  }
 }
 
 export function loadMissionSnapshot(workspaceRoot: string, missionId: string): MissionSnapshot | null {
@@ -257,10 +302,45 @@ export function loadMissionSnapshot(workspaceRoot: string, missionId: string): M
 }
 
 export function listMissionIds(workspaceRoot: string): string[] {
-  const root = missionsRoot(workspaceRoot);
-  if (!existsSync(root)) return [];
-  return readdirSync(root, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory() && existsSync(join(root, entry.name, JOURNAL_FILE)))
-    .map((entry) => entry.name)
-    .sort();
+  const canonicalWorkspace = canonicalConfinementRoot(workspaceRoot);
+  const root = missionsRoot(canonicalWorkspace);
+  let initial: ReturnType<typeof lstatSync>;
+  try {
+    initial = lstatSync(root);
+  } catch (error) {
+    if (errnoCode(error) === 'ENOENT') return [];
+    throw error;
+  }
+  if (!initial.isDirectory() || initial.isSymbolicLink()) {
+    throw new Error(`Mission root is not a real directory: ${root}`);
+  }
+  const canonicalRoot = canonicalConfinementRoot(root);
+  if (!pathIsWithinRoot(canonicalWorkspace, canonicalRoot) || canonicalRoot !== root) {
+    throw new Error(`Mission root escapes its workspace: ${root}`);
+  }
+  const entries = readdirSync(root, { withFileTypes: true });
+  const current = lstatSync(root);
+  if (current.dev !== initial.dev || current.ino !== initial.ino || !current.isDirectory() || current.isSymbolicLink()) {
+    throw new Error(`Mission root changed while it was listed: ${root}`);
+  }
+  const missionIds: string[] = [];
+  for (const entry of entries) {
+    if (!entry.isDirectory() || !MISSION_ID_RE.test(entry.name)) continue;
+    let handle: ConfinedRegularFile;
+    try {
+      handle = openConfinedRegularFile(canonicalWorkspace, join(root, entry.name, JOURNAL_FILE), {
+        flags: constants.O_RDONLY,
+      });
+    } catch (error) {
+      if (errnoCode(error) === 'ENOENT') continue;
+      throw error;
+    }
+    try {
+      handle.assertStillBound();
+      missionIds.push(entry.name);
+    } finally {
+      handle.close();
+    }
+  }
+  return missionIds.sort();
 }

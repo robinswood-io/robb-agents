@@ -207,9 +207,20 @@ import type {
   MissionPlanAck,
   MissionPlanResult,
   MissionCreateAndStartRequest,
+  MissionPreflightRequest,
+  MissionPreflightResult,
+  MissionReplanPreviewDto,
+  MissionReplanPreviewRequest,
+  MissionReplanRequest,
   MissionControlRequest,
+  MissionConnectorApprovalDecisionRequest,
+  MissionConnectorApprovalRefreshRequest,
+  MissionConnectorApprovalRequestDto,
   MissionResumeRequest,
   MissionSnapshotDto,
+  MissionProofPassportDto,
+  MissionProofPassportTrustAnchorDto,
+  MissionProofPassportVerificationDto,
   FileAttachment,
   SendMessageOptions,
   SessionEvent,
@@ -292,8 +303,23 @@ export interface ElectronAPI {
   getMissionPlan(workspaceId: string, plannerSessionId: string): Promise<MissionPlanResult>
   onMissionPlanned(callback: (workspaceId: string, result: MissionPlanResult) => void): () => void
   startMission(workspaceId: string, request: MissionCreateAndStartRequest): Promise<MissionSnapshotDto>
+  preflightMission(workspaceId: string, request: MissionPreflightRequest): Promise<MissionPreflightResult>
+  previewMissionReplan(workspaceId: string, request: MissionReplanPreviewRequest): Promise<MissionReplanPreviewDto>
+  replanMission(workspaceId: string, request: MissionReplanRequest): Promise<MissionSnapshotDto>
   getMission(workspaceId: string, missionId: string): Promise<MissionSnapshotDto>
   listMissions(workspaceId: string): Promise<MissionSnapshotDto[]>
+  listMissionConnectorApprovals(workspaceId: string): Promise<MissionConnectorApprovalRequestDto[]>
+  resolveMissionConnectorApproval(
+    workspaceId: string,
+    request: MissionConnectorApprovalDecisionRequest,
+  ): Promise<MissionSnapshotDto>
+  refreshMissionConnectorApproval(
+    workspaceId: string,
+    request: MissionConnectorApprovalRefreshRequest,
+  ): Promise<MissionSnapshotDto>
+  getMissionProofPassport(workspaceId: string, missionId: string): Promise<MissionProofPassportDto | null>
+  getMissionProofPassportTrustAnchor(workspaceId: string): Promise<MissionProofPassportTrustAnchorDto>
+  verifyMissionProofPassport(workspaceId: string, missionId: string): Promise<MissionProofPassportVerificationDto>
   pauseMission(workspaceId: string, request: MissionControlRequest): Promise<MissionSnapshotDto>
   resumeMission(workspaceId: string, request: MissionResumeRequest): Promise<MissionSnapshotDto>
   cancelMission(workspaceId: string, request: MissionControlRequest): Promise<MissionSnapshotDto>
@@ -530,6 +556,10 @@ export interface ElectronAPI {
     workspaceId: string,
     context?: import('@craft-agent/shared/config').RoutingPolicyContext,
   ): Promise<import('@craft-agent/shared/config').RoutingPolicySimulation>
+  /** Read-only outcome report; this method has no policy mutation capability. */
+  analyzeRoutingShadow(
+    workspaceId: string,
+  ): Promise<import('@craft-agent/shared/config').RoutingShadowReport>
 
   // Folder dialog
   openFolderDialog(): Promise<string | null>
@@ -985,6 +1015,18 @@ export interface ProjectsNavigationState {
 }
 
 /**
+ * Workspace-wide Mission OS navigation state.
+ *
+ * Mission detail remains part of the Control Room instead of opening a chat or
+ * introducing another scheduler/source of truth.
+ */
+export interface MissionsNavigationState {
+  navigator: 'missions'
+  details: { type: 'mission'; missionId: string } | null
+  rightSidebar?: RightSidebarPanel
+}
+
+/**
  * Unified navigation state
  */
 export type NavigationState =
@@ -994,6 +1036,7 @@ export type NavigationState =
   | SkillsNavigationState
   | AutomationsNavigationState
   | ProjectsNavigationState
+  | MissionsNavigationState
 
 export const isSessionsNavigation = (
   state: NavigationState
@@ -1018,6 +1061,10 @@ export const isAutomationsNavigation = (
 export const isProjectsNavigation = (
   state: NavigationState
 ): state is ProjectsNavigationState => state.navigator === 'projects'
+
+export const isMissionsNavigation = (
+  state: NavigationState
+): state is MissionsNavigationState => state.navigator === 'missions'
 
 export const DEFAULT_NAVIGATION_STATE: NavigationState = {
   navigator: 'sessions',
@@ -1049,6 +1096,12 @@ export const getNavigationStateKey = (state: NavigationState): string => {
       return `projects/project/${state.details.projectSlug}`
     }
     return 'projects'
+  }
+  if (state.navigator === 'missions') {
+    if (state.details?.type === 'mission') {
+      return `missions/mission/${state.details.missionId}`
+    }
+    return 'missions'
   }
   if (state.navigator === 'settings') {
     if (state.subpage === null) return 'settings'
@@ -1106,6 +1159,16 @@ export const parseNavigationStateKey = (key: string): NavigationState | null => 
       return { navigator: 'projects', details: { type: 'project', projectSlug } }
     }
     return { navigator: 'projects', details: null }
+  }
+
+  // Handle missions
+  if (key === 'missions') return { navigator: 'missions', details: null }
+  if (key.startsWith('missions/mission/')) {
+    const missionId = key.slice(17)
+    if (missionId) {
+      return { navigator: 'missions', details: { type: 'mission', missionId } }
+    }
+    return { navigator: 'missions', details: null }
   }
 
   // Handle settings

@@ -1,6 +1,6 @@
 {
   "name": "@craft-agent/viewer",
-  "version": "0.12.3",
+  "version": "0.12.4",
   "license": "MIT",
   "description": "Web viewer for Craft Agents sessions - upload and share session transcripts",
   "private": true,
@@ -9,7 +9,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "node ../../scripts/run-typescript.mjs native --noEmit"
   },
   "dependencies": {
     "@craft-agent/core": "workspace:*",
@@ -21,7 +21,7 @@
   "devDependencies": {
     "@tailwindcss/typography": "^0.5.16",
     "@tailwindcss/vite": "^4.0.0",
-    "@vitejs/plugin-react": "^4.4.1",
+    "@vitejs/plugin-react": "^6.1.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.501.0",
@@ -32,7 +32,7 @@
     "shiki": "^3.0.0",
     "tailwind-merge": "^2.6.0",
     "tailwindcss": "^4.0.0",
-    "typescript": "^5.7.3",
-    "vite": "^6.2.5"
+    "typescript": "~6.0.3",
+    "vite": "^8.2.2"
   }
 }

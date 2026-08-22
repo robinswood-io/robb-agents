@@ -190,6 +190,12 @@ export const routes = {
         ? `projects/project/${projectSlug}` as const
         : 'projects' as const,
 
+    /** Workspace-wide Mission OS / Control Room view. */
+    missions: (missionId?: string) =>
+      missionId
+        ? `missions/mission/${encodeURIComponent(missionId)}` as const
+        : 'missions' as const,
+
     /** Kanban board view (sessions navigator, board view mode, all sessions) */
     board: () => 'board' as const,
   },

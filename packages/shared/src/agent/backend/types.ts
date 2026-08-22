@@ -211,7 +211,8 @@ export interface CoreBackendConfig {
 
   /**
    * Per-session environment variable overrides for the SDK subprocess.
-   * Spread after process.env in backend-specific option builders.
+   * Layered after the backend's inherited/restricted environment in
+   * backend-specific option builders.
    */
   envOverrides?: Record<string, string>;
 

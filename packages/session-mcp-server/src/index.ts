@@ -21,15 +21,13 @@
  *   --plans-folder: Path to session's plans folder
  */
 
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
+import { Server } from '@modelcontextprotocol/server';
+import { serveStdio } from '@modelcontextprotocol/server/stdio';
 import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
+  Client,
+  StreamableHTTPClientTransport,
   type Tool,
-} from '@modelcontextprotocol/sdk/types.js';
+} from '@modelcontextprotocol/client';
 import { existsSync, readFileSync, readdirSync, statSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { isDeveloperFeedbackEnabled } from '@craft-agent/shared/feature-flags';
@@ -286,7 +284,12 @@ async function connectDocsUpstream(): Promise<void> {
   try {
     const client = new Client(
       { name: 'craft-agent-session-proxy', version: '1.0.0' },
-      { capabilities: {} }
+      {
+        capabilities: {},
+        // Probe 2026-07-28 first and fall back byte-compatibly to the 2025
+        // initialize flow when the upstream server is still legacy.
+        versionNegotiation: { mode: 'auto' },
+      }
     );
 
     const transport = new StreamableHTTPClientTransport(new URL(DOCS_MCP_URL));
@@ -508,66 +511,72 @@ async function main() {
   const includeDeveloperFeedback = isDeveloperFeedbackEnabled();
   const sessionToolRegistry = getSessionToolRegistry({ includeDeveloperFeedback });
 
-  // Create MCP server
-  const server = new Server(
-    {
-      name: 'craft-agent-session',
-      version: '0.3.1',
-    },
-    {
-      capabilities: {
-        tools: {},
-      },
-    }
-  );
-
   // Connect to upstream docs server (non-blocking, best-effort)
   await connectDocsUpstream();
 
-  // Handle tool listing — session tools + docs upstream tools
-  server.setRequestHandler(ListToolsRequestSchema, async () => ({
-    tools: [...createSessionTools(includeDeveloperFeedback), ...docsTools],
-  }));
+  const createServer = (): Server => {
+    const server = new Server(
+      {
+        name: 'craft-agent-session',
+        version: '0.3.1',
+      },
+      {
+        capabilities: {
+          tools: {},
+        },
+      },
+    );
 
-  // Handle tool calls — route via canonical registry, call_llm, or docs upstream
-  server.setRequestHandler(CallToolRequestSchema, async (request) => {
-    const { name, arguments: toolArgs } = request.params;
+    // Handle tool listing — session tools + docs upstream tools
+    server.setRequestHandler('tools/list', async () => ({
+      tools: [...createSessionTools(includeDeveloperFeedback), ...docsTools],
+    }));
 
-    try {
-      // call_llm has backend-specific execution (precomputed result / HTTP callback)
-      if (name === 'call_llm') {
-        return await handleCallLlm(toolArgs as Record<string, unknown>, config);
+    // Handle tool calls — route via canonical registry, call_llm, or docs upstream
+    server.setRequestHandler('tools/call', async (request) => {
+      const { name, arguments: toolArgs } = request.params;
+
+      try {
+        // call_llm has backend-specific execution (precomputed result / HTTP callback)
+        if (name === 'call_llm') {
+          return await handleCallLlm(toolArgs as Record<string, unknown>, config);
+        }
+
+        // spawn_session has backend-specific execution (precomputed result / HTTP callback)
+        if (name === 'spawn_session') {
+          return await handleSpawnSession(toolArgs as Record<string, unknown>, config);
+        }
+
+        // Check canonical session tool registry first (feature-filtered)
+        const def = sessionToolRegistry.get(name);
+        if (def?.handler) {
+          return await def.handler(ctx, toolArgs);
+        }
+
+        // Route to docs upstream if it's a docs tool
+        if (isDocsUpstreamTool(name)) {
+          return await callDocsUpstream(name, toolArgs as Record<string, unknown>);
+        }
+
+        return errorResponse(`Unknown tool: ${name}`);
+      } catch (error) {
+        return errorResponse(
+          `Tool '${name}' failed: ${error instanceof Error ? error.message : String(error)}`
+        );
       }
+    });
 
-      // spawn_session has backend-specific execution (precomputed result / HTTP callback)
-      if (name === 'spawn_session') {
-        return await handleSpawnSession(toolArgs as Record<string, unknown>, config);
-      }
+    return server;
+  };
 
-      // Check canonical session tool registry first (feature-filtered)
-      const def = sessionToolRegistry.get(name);
-      if (def?.handler) {
-        return await def.handler(ctx, toolArgs);
-      }
-
-      // Route to docs upstream if it's a docs tool
-      if (isDocsUpstreamTool(name)) {
-        return await callDocsUpstream(name, toolArgs as Record<string, unknown>);
-      }
-
-      return errorResponse(`Unknown tool: ${name}`);
-    } catch (error) {
-      return errorResponse(
-        `Tool '${name}' failed: ${error instanceof Error ? error.message : String(error)}`
-      );
-    }
+  // `serveStdio` owns era negotiation. A `server/discover` opening selects
+  // 2026-07-28; an `initialize` opening keeps the established 2025 behavior.
+  serveStdio(() => createServer(), {
+    legacy: 'serve',
+    onerror: (error) => console.error(`Session MCP protocol error: ${error.message}`),
   });
 
-  // Start server with stdio transport
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
-
-  console.error(`Session MCP Server started for session ${sessionId} (developerFeedback=${includeDeveloperFeedback})`);
+  console.error(`Session MCP Server started for session ${sessionId} (MCP 2025/2026, developerFeedback=${includeDeveloperFeedback})`);
 }
 
 main().catch((error) => {

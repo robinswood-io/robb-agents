@@ -1,20 +1,43 @@
-import { getWorkspaceByNameOrId, getWorkspaces } from '@craft-agent/shared/config';
+import {
+  getLlmConnections,
+  getWorkspaceByNameOrId,
+  getWorkspaces,
+  resolveRoutingPolicy,
+  type RoutingCapability,
+} from '@craft-agent/shared/config';
 import {
   MissionSpecSchema,
   listMissionIds,
+  loadMissionSnapshot,
+  simulateMissionDigitalTwin,
+  type MissionConnectorPreflight,
+  type MissionDigitalTwinReport,
+  type MissionReplanPreview,
   type MissionSnapshot,
   type MissionSpec,
+  type MissionWorkItem,
 } from '@craft-agent/shared/missions';
+import { WorkspaceGovernanceProfileSchema } from '@craft-agent/shared/governance';
 import type { Session } from '@craft-agent/shared/protocol';
 import { authorizeWorkspacePath } from '@craft-agent/shared/tasks';
+import { loadWorkspaceConfig } from '@craft-agent/shared/workspaces';
 import type { ISessionManager } from '../handlers/session-manager-interface.ts';
 import { loadWorkspaceExecutionProofIssuer } from '../tasks/execution-proof-runtime.ts';
-import { MissionController } from './MissionController.ts';
+import { MissionController, previewAdmissibleMissionReplan } from './MissionController.ts';
 import {
   MissionRuntime,
   type MissionWorkExecutor,
 } from './MissionRuntime.ts';
 import { SessionMissionExecutor } from './SessionMissionExecutor.ts';
+import {
+  BrokeredMissionConnectorExecutor,
+  EffectRoutingMissionExecutor,
+  type PendingMissionConnectorApproval,
+} from './BrokeredMissionConnectorExecutor.ts';
+import { resolveMissionSubmissionEvidence } from './MissionEvidenceResolver.ts';
+import { MissionProofPassportService } from './MissionProofPassportService.ts';
+import { loadMissionProofPassportService } from './proof-passport-runtime.ts';
+import { recordMissionRoutingGroundTruth } from './mission-routing-ground-truth.ts';
 import {
   resolveSubagentAutonomy,
   type SubagentAutonomyContext,
@@ -25,10 +48,41 @@ export interface MissionWorkspace {
   rootPath: string;
 }
 
+export interface MissionConnectorReadinessResolver {
+  /** Static/read-only qualification. Implementations must not acquire credentials or call a transport. */
+  inspect(input: {
+    workspace: MissionWorkspace;
+    missionId: string;
+    workItemId: string;
+    connectorPack: string;
+    operationId: string;
+    resourceType: string;
+  }): Promise<MissionConnectorPreflight> | MissionConnectorPreflight;
+}
+
+export interface MissionPreflightCostEstimator {
+  /** Host-owned estimate only. Model-authored cost values are never accepted by this boundary. */
+  estimateUsd(input: {
+    workspace: MissionWorkspace;
+    spec: MissionSpec;
+    item: MissionWorkItem;
+    connectionSlug: string;
+  }): Promise<number | undefined> | number | undefined;
+}
+
+export type MissionPreflightTarget =
+  | { missionId: string; spec?: never }
+  | { missionId?: never; spec: MissionSpec };
+
+type ConfiguredLlmConnection = ReturnType<typeof getLlmConnections>[number];
+export type MissionPreflightConnection = Pick<ConfiguredLlmConnection, 'slug' | 'providerType'>;
+
 interface WorkspaceMissionRuntime {
   workspace: MissionWorkspace;
   controller: MissionController;
   runtime: MissionRuntime;
+  proofPassports?: MissionProofPassportService;
+  connectorExecutor?: BrokeredMissionConnectorExecutor;
 }
 
 export interface MissionRuntimeServiceOptions {
@@ -36,6 +90,17 @@ export interface MissionRuntimeServiceOptions {
   resolveWorkspace?: (workspaceId: string) => MissionWorkspace | null;
   listWorkspaces?: () => MissionWorkspace[];
   executorFactory?: (workspace: MissionWorkspace) => Promise<MissionWorkExecutor> | MissionWorkExecutor;
+  /** Host-only factory. Its executor must route every mutation through ConnectorExecutionRuntime. */
+  connectorExecutorFactory?: (
+    workspace: MissionWorkspace,
+  ) => Promise<BrokeredMissionConnectorExecutor> | BrokeredMissionConnectorExecutor;
+  proofPassportFactory?: (
+    workspace: MissionWorkspace,
+  ) => Promise<MissionProofPassportService | null> | MissionProofPassportService | null;
+  connectorReadiness?: MissionConnectorReadinessResolver;
+  preflightCostEstimator?: MissionPreflightCostEstimator;
+  preflightConnections?: () => MissionPreflightConnection[];
+  preflightNow?: () => Date;
   onSnapshot?: (workspaceId: string, snapshot: MissionSnapshot) => void;
   onError?: (context: { workspaceId?: string; missionId?: string; workItemId?: string; error: Error }) => void;
   reportTimeoutMs?: number;
@@ -81,13 +146,194 @@ export class MissionRuntimeService {
         recovered.push(...context.runtime.recoverNonTerminalMissions()
           .map((missionId) => `${workspace.id}:${missionId}`));
         for (const missionId of listMissionIds(workspace.rootPath)) {
-          this.scheduleReport(context, context.controller.getMission(missionId));
+          let snapshot = context.controller.getMission(missionId);
+          if (snapshot.status === 'waiting-approval' && context.connectorExecutor) {
+            const hasDurablyResolvedApproval = Object.values(snapshot.workItems).some((runtime) =>
+              runtime.status === 'running'
+              && runtime.definition.effect === 'external-mutation'
+              && (
+                context.connectorExecutor!.resolvedApproval(missionId, runtime.definition.id) !== null
+                || context.connectorExecutor!.approvalExpired(missionId, runtime.definition.id)
+              ));
+            if (hasDurablyResolvedApproval) {
+              snapshot = context.controller.resumeAfterApproval(missionId);
+              this.options.onSnapshot?.(workspace.id, snapshot);
+              context.runtime.startMission(missionId);
+              recovered.push(`${workspace.id}:${missionId}`);
+            }
+          }
+          if (this.ensureCompletionPassport(context, snapshot)) this.scheduleReport(context, snapshot);
         }
       } catch (error) {
         this.reportError({ workspaceId: workspace.id, error: normalizedError(error) });
       }
     }
     return recovered;
+  }
+
+  /**
+   * Host-resolved dry-run. This path deliberately bypasses contextFor(): it
+   * cannot construct a Mission executor, connector worker, credential lease or
+   * transport as a side effect of simulation.
+   */
+  async preflightMission(
+    workspaceId: string,
+    target: MissionPreflightTarget,
+  ): Promise<MissionDigitalTwinReport> {
+    const workspace = this.resolveWorkspace(workspaceId);
+    if (!workspace) throw new Error(`Workspace ${workspaceId} not found`);
+    const snapshot = 'missionId' in target && target.missionId
+      ? loadMissionSnapshot(workspace.rootPath, target.missionId)
+      : null;
+    if ('missionId' in target && target.missionId && !snapshot) {
+      throw new Error(`Unknown mission "${target.missionId}"`);
+    }
+    const spec = MissionSpecSchema.parse(snapshot?.spec ?? target.spec);
+    const config = loadWorkspaceConfig(workspace.rootPath);
+    if (!config) throw new Error(`Failed to load workspace config: ${workspaceId}`);
+    const connections = (this.options.preflightConnections?.() ?? getLlmConnections())
+      .map(({ slug, providerType }) => ({ slug, providerType }));
+    const executing = spec.workItems.filter((item) =>
+      ['task', 'subtask', 'integration', 'correction'].includes(item.kind));
+    const profileIds = new Set([
+      ...executing.map((item) => item.agentProfileId ?? spec.defaultWorkerProfileId),
+      spec.reviewerProfileId,
+      spec.supervisorProfileId,
+    ]);
+    const routeByProfileId: NonNullable<Parameters<typeof simulateMissionDigitalTwin>[0]['routeByProfileId']> = {};
+    const resolveRoutes = (projectedMissionUsd?: number) => {
+      for (const profileId of [...profileIds].sort()) {
+        const profile = spec.agentProfiles.find((candidate) => candidate.id === profileId);
+        if (!profile) continue;
+        const requiredCapabilities: RoutingCapability[] =
+          profile.tools.length > 0 || profile.sources.length > 0 ? ['tools'] : [];
+        const decision = resolveRoutingPolicy(config.routingPolicy, connections, {
+          requestedConnectionSlug: profile.llmConnection,
+          requiredCapabilities,
+          budgetUsage: {
+            missionUsd: snapshot ? measuredMissionCostUsd(snapshot) : 0,
+            ...(projectedMissionUsd === undefined ? {} : { projectedTurnUsd: projectedMissionUsd }),
+          },
+        });
+        const budgetAllowed = !decision.budget || decision.budget.status === 'within-budget';
+        routeByProfileId[profileId] = {
+          policyAllowed: decision.errors.length === 0 && budgetAllowed && !!decision.selectedConnectionSlug,
+          ...(decision.selectedConnectionSlug ? { connectionSlug: decision.selectedConnectionSlug } : {}),
+          explanation: decision.explanation
+            || decision.errors.join('; ')
+            || 'No host-authorized route is available',
+        };
+      }
+    };
+    // Resolve once to select the host connection needed by the cost estimator.
+    // Once every cost is known, resolve again with the aggregate projection so
+    // routingPolicy mission/workspace budget gates are evaluated before launch.
+    resolveRoutes();
+
+    const pathPolicyAllowedByWorkItemId = Object.fromEntries(executing.map((item) => [
+      item.id,
+      this.workItemPathsAreAuthorized(workspace, spec, item),
+    ]));
+    const connectorByWorkItemId: Record<string, MissionConnectorPreflight> = {};
+    for (const item of executing.filter((candidate) => candidate.effect === 'external-mutation')) {
+      const invocation = item.connectorInvocation!;
+      if (!this.options.connectorExecutorFactory) {
+        connectorByWorkItemId[item.id] = unavailableConnectorReadiness();
+        continue;
+      }
+      if (!this.options.connectorReadiness) continue;
+      try {
+        connectorByWorkItemId[item.id] = await this.options.connectorReadiness.inspect({
+          workspace,
+          missionId: spec.id,
+          workItemId: item.id,
+          connectorPack: invocation.pack,
+          operationId: invocation.operationId,
+          resourceType: invocation.resourceType,
+        });
+      } catch (error) {
+        this.reportError({
+          workspaceId,
+          missionId: spec.id,
+          workItemId: item.id,
+          error: normalizedError(error),
+        });
+        connectorByWorkItemId[item.id] = unavailableConnectorReadiness();
+      }
+    }
+
+    const estimatedCostUsdByWorkItemId: Record<string, number> = {};
+    if (this.options.preflightCostEstimator) {
+      for (const item of executing) {
+        const profileId = item.agentProfileId ?? spec.defaultWorkerProfileId;
+        const connectionSlug = routeByProfileId[profileId]?.connectionSlug;
+        if (!connectionSlug) continue;
+        const estimate = await this.options.preflightCostEstimator.estimateUsd({
+          workspace,
+          spec,
+          item,
+          connectionSlug,
+        });
+        if (estimate === undefined) continue;
+        if (!Number.isFinite(estimate) || estimate < 0) {
+          throw new Error(`Invalid host cost estimate for work item "${item.id}"`);
+        }
+        estimatedCostUsdByWorkItemId[item.id] = estimate;
+      }
+    }
+    if (Object.keys(estimatedCostUsdByWorkItemId).length === executing.length) {
+      resolveRoutes(Object.values(estimatedCostUsdByWorkItemId).reduce((sum, value) => sum + value, 0));
+    }
+
+    return simulateMissionDigitalTwin({
+      spec,
+      routeByProfileId,
+      pathPolicyAllowedByWorkItemId,
+      ...(Object.keys(connectorByWorkItemId).length > 0 ? { connectorByWorkItemId } : {}),
+      ...(Object.keys(estimatedCostUsdByWorkItemId).length > 0 ? { estimatedCostUsdByWorkItemId } : {}),
+      ...remainingMissionBudgetUsd(config.governance, snapshot),
+      generatedAt: (this.options.preflightNow?.() ?? new Date()).toISOString(),
+    });
+  }
+
+  async previewReplan(
+    workspaceId: string,
+    missionId: string,
+    expectedRevision: number,
+    proposedWorkItems: MissionWorkItem[],
+  ): Promise<MissionReplanPreview> {
+    const workspace = this.resolveWorkspace(workspaceId);
+    if (!workspace) throw new Error(`Workspace ${workspaceId} not found`);
+    const snapshot = loadMissionSnapshot(workspace.rootPath, missionId);
+    if (!snapshot) throw new Error(`Unknown mission "${missionId}"`);
+    return previewAdmissibleMissionReplan({
+      snapshot,
+      expectedRevision,
+      proposedWorkItems,
+    });
+  }
+
+  async replanMission(input: {
+    workspaceId: string;
+    missionId: string;
+    expectedRevision: number;
+    proposedWorkItems: MissionWorkItem[];
+    actorId: string;
+    reason: string;
+  }): Promise<MissionSnapshot> {
+    await this.start();
+    const context = await this.contextFor(input.workspaceId);
+    const snapshot = context.controller.replanMission(input.missionId, {
+      expectedRevision: input.expectedRevision,
+      proposedWorkItems: input.proposedWorkItems,
+      actorId: input.actorId,
+      reason: input.reason,
+    });
+    this.options.onSnapshot?.(input.workspaceId, snapshot);
+    if (!['draft', 'paused', 'blocked', 'waiting-approval'].includes(snapshot.status)) {
+      context.runtime.startMission(input.missionId);
+    }
+    return snapshot;
   }
 
   async createAndStart(workspaceId: string, input: MissionSpec): Promise<MissionSnapshot> {
@@ -115,6 +361,118 @@ export class MissionRuntimeService {
     return listMissionIds(context.workspace.rootPath)
       .map((missionId) => context.controller.getMission(missionId))
       .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
+  }
+
+  async getProofPassport(workspaceId: string, missionId: string) {
+    await this.start();
+    const context = await this.contextFor(workspaceId);
+    context.controller.getMission(missionId);
+    return context.proofPassports?.read(missionId) ?? null;
+  }
+
+  async getProofPassportTrustAnchor(workspaceId: string) {
+    await this.start();
+    const context = await this.contextFor(workspaceId);
+    if (!context.proofPassports) {
+      throw new Error('Proof Passport issuance is disabled for this runtime');
+    }
+    return context.proofPassports.getTrustAnchor();
+  }
+
+  async verifyProofPassport(workspaceId: string, missionId: string) {
+    await this.start();
+    const context = await this.contextFor(workspaceId);
+    context.controller.getMission(missionId);
+    return context.proofPassports?.verify(missionId) ?? {
+      valid: false as const,
+      reason: 'Proof Passport issuance is disabled for this runtime',
+    };
+  }
+
+  async getPendingConnectorApproval(
+    workspaceId: string,
+    missionId: string,
+    workItemId: string,
+  ): Promise<PendingMissionConnectorApproval | null> {
+    await this.start();
+    const context = await this.contextFor(workspaceId);
+    const snapshot = context.controller.getMission(missionId);
+    if (!snapshot.workItems[workItemId]) throw new Error(`Unknown mission work item "${workItemId}"`);
+    return context.connectorExecutor?.pendingApproval(missionId, workItemId) ?? null;
+  }
+
+  /**
+   * Workspace-wide, value-free connector approval inbox. The raw invocation
+   * payload and provider resource id never cross this API boundary; approvers
+   * receive bounded consent metadata bound to the canonical request hash.
+   */
+  async listPendingConnectorApprovals(
+    workspaceId: string,
+  ): Promise<PendingMissionConnectorApproval[]> {
+    await this.start();
+    const context = await this.contextFor(workspaceId);
+    if (!context.connectorExecutor) return [];
+    const approvals: PendingMissionConnectorApproval[] = [];
+    for (const missionId of listMissionIds(context.workspace.rootPath)) {
+      const snapshot = context.controller.getMission(missionId);
+      for (const runtime of Object.values(snapshot.workItems)) {
+        if (runtime.definition.effect !== 'external-mutation') continue;
+        const pending = context.connectorExecutor.pendingApproval(missionId, runtime.definition.id);
+        if (pending) approvals.push(pending);
+      }
+    }
+    return approvals.sort((left, right) =>
+      left.expiresAt.localeCompare(right.expiresAt)
+      || left.missionId.localeCompare(right.missionId)
+      || left.workItemId.localeCompare(right.workItemId));
+  }
+
+  async resolveConnectorApproval(input: {
+    workspaceId: string;
+    missionId: string;
+    workItemId: string;
+    approvalId: string;
+    requestHash: string;
+    decision: 'approved' | 'denied';
+    resolvedBy: string;
+  }): Promise<MissionSnapshot> {
+    await this.start();
+    const context = await this.contextFor(input.workspaceId);
+    if (!context.connectorExecutor) throw new Error('Mission connector broker is unavailable');
+    const before = context.controller.getMission(input.missionId);
+    const workItem = before.workItems[input.workItemId];
+    if (!workItem || workItem.definition.effect !== 'external-mutation') {
+      throw new Error(`Unknown external-mutation work item "${input.workItemId}"`);
+    }
+    context.connectorExecutor.resolveApproval(input);
+    const current = context.controller.getMission(input.missionId);
+    const resumed = current.status === 'waiting-approval'
+      ? context.controller.resumeAfterApproval(input.missionId)
+      : current;
+    if (resumed !== current) this.options.onSnapshot?.(input.workspaceId, resumed);
+    return context.runtime.startMission(input.missionId);
+  }
+
+  async refreshExpiredConnectorApproval(
+    workspaceId: string,
+    missionId: string,
+    workItemId: string,
+  ): Promise<MissionSnapshot> {
+    await this.start();
+    const context = await this.contextFor(workspaceId);
+    const before = context.controller.getMission(missionId);
+    const workItem = before.workItems[workItemId];
+    if (!workItem || workItem.definition.effect !== 'external-mutation') {
+      throw new Error(`Unknown external-mutation work item "${workItemId}"`);
+    }
+    if (!context.connectorExecutor?.approvalExpired(missionId, workItemId)) {
+      throw new Error('Mission connector approval is not expired');
+    }
+    const snapshot = context.controller.getMission(missionId);
+    if (snapshot.status !== 'waiting-approval') throw new Error('Mission is not waiting for connector approval');
+    const resumed = context.controller.resumeAfterApproval(missionId);
+    this.options.onSnapshot?.(workspaceId, resumed);
+    return context.runtime.startMission(missionId);
   }
 
   async pauseMission(workspaceId: string, missionId: string, reason: string): Promise<MissionSnapshot> {
@@ -161,10 +519,28 @@ export class MissionRuntimeService {
   private async createContext(workspaceId: string): Promise<WorkspaceMissionRuntime> {
     const workspace = this.resolveWorkspace(workspaceId);
     if (!workspace) throw new Error(`Workspace ${workspaceId} not found`);
-    const controller = new MissionController({ workspaceRoot: workspace.rootPath });
-    const executor = this.options.executorFactory
+    const controller = new MissionController({
+      workspaceRoot: workspace.rootPath,
+      resolveSubmissionEvidence: (item, submission) => resolveMissionSubmissionEvidence({
+        workspaceRoot: workspace.rootPath,
+        item,
+        submission,
+      }).submission,
+    });
+    const ordinaryExecutor = this.options.executorFactory
       ? await this.options.executorFactory(workspace)
       : await this.createProductionExecutor(workspace);
+    const connectorExecutor = this.options.connectorExecutorFactory
+      ? await this.options.connectorExecutorFactory(workspace)
+      : undefined;
+    const executor = connectorExecutor
+      ? new EffectRoutingMissionExecutor(ordinaryExecutor, connectorExecutor)
+      : ordinaryExecutor;
+    const proofPassports = this.options.proofPassportFactory
+      ? await this.options.proofPassportFactory(workspace) ?? undefined
+      : this.options.executorFactory
+        ? undefined
+        : await loadMissionProofPassportService(workspace.id, workspace.rootPath);
     let context: WorkspaceMissionRuntime;
     const runtime = new MissionRuntime({
       workspaceRoot: workspace.rootPath,
@@ -172,13 +548,39 @@ export class MissionRuntimeService {
       executor,
       onSnapshot: (snapshot) => {
         this.options.onSnapshot?.(workspace.id, snapshot);
-        this.scheduleReport(context, snapshot);
+        if (this.ensureCompletionPassport(context, snapshot)) this.scheduleReport(context, snapshot);
       },
       onError: ({ missionId, workItemId, error }) =>
         this.reportError({ workspaceId: workspace.id, missionId, workItemId, error }),
     });
-    context = { workspace, controller, runtime };
+    context = { workspace, controller, runtime, proofPassports, connectorExecutor };
     return context;
+  }
+
+  private ensureCompletionPassport(context: WorkspaceMissionRuntime, snapshot: MissionSnapshot): boolean {
+    if (snapshot.status !== 'completed' || !context.proofPassports) return true;
+    try {
+      context.proofPassports.issue(snapshot);
+    } catch (error) {
+      this.reportError({
+        workspaceId: context.workspace.id,
+        missionId: snapshot.spec.id,
+        error: normalizedError(error),
+      });
+      return false;
+    }
+    try {
+      recordMissionRoutingGroundTruth(context.workspace.rootPath, snapshot);
+    } catch (error) {
+      // Outcome feedback is local analytics and must not invalidate a genuine,
+      // already-issued Proof Passport or suppress the user-facing final report.
+      this.reportError({
+        workspaceId: context.workspace.id,
+        missionId: snapshot.spec.id,
+        error: normalizedError(error),
+      });
+    }
+    return true;
   }
 
   private scheduleReport(context: WorkspaceMissionRuntime, snapshot: MissionSnapshot): void {
@@ -365,7 +767,9 @@ export class MissionRuntimeService {
       }),
     ]));
     if (spec.workItems.some((item) => item.effect === 'external-mutation')) {
-      throw new Error('Mission external mutations require a broker-backed connector worker');
+      if (!this.options.connectorExecutorFactory) {
+        throw new Error('Mission external mutations require a broker-backed connector worker');
+      }
     }
     if (spec.execution && (
       spec.execution.network_access !== 'disabled' || spec.execution.allowed_hosts.length > 0
@@ -426,6 +830,53 @@ export class MissionRuntimeService {
     }
   }
 
+  private workItemPathsAreAuthorized(
+    workspace: MissionWorkspace,
+    spec: MissionSpec,
+    item: MissionWorkItem,
+  ): boolean {
+    const execution = item.execution ?? spec.execution;
+    const autonomyContext =
+      this.options.resolveSubagentAutonomyContext?.(workspace, spec.originSessionId) ?? {};
+    const resolveProfileAutonomy = (profileId: string) => {
+      const profile = spec.agentProfiles.find((candidate) => candidate.id === profileId);
+      return profile
+        ? resolveSubagentAutonomy({
+            ...autonomyContext,
+            requestedPermissionMode: profile.permissionMode,
+          })
+        : null;
+    };
+    const profileId = item.agentProfileId ?? spec.defaultWorkerProfileId;
+    const profileAutonomy = resolveProfileAutonomy(profileId);
+    if (!profileAutonomy) return false;
+    if (item.effect === 'workspace-write' && profileAutonomy.permissionMode === 'safe') return false;
+    if (execution && (
+      execution.network_access !== 'disabled' || execution.allowed_hosts.length > 0
+    ) && !profileAutonomy.grantsFullToolAndNetworkAccess) return false;
+    if (execution?.max_cpu_percent !== undefined || execution?.max_memory_mb !== undefined) return false;
+    if (spec.execution && (
+      spec.execution.network_access !== 'disabled' || spec.execution.allowed_hosts.length > 0
+    )) {
+      const runtimeProfileIds = new Set([
+        spec.defaultWorkerProfileId,
+        spec.reviewerProfileId,
+        spec.supervisorProfileId,
+        ...spec.workItems.flatMap((candidate) => candidate.agentProfileId ? [candidate.agentProfileId] : []),
+      ]);
+      if ([...runtimeProfileIds].some((runtimeProfileId) =>
+        !resolveProfileAutonomy(runtimeProfileId)?.grantsFullToolAndNetworkAccess)) return false;
+    }
+    const rootPath = execution?.root_path ?? spec.cwd ?? workspace.rootPath;
+    if (!authorizeWorkspacePath(workspace.rootPath, rootPath, ['.']).allowed) return false;
+    if (!execution) return item.effect !== 'workspace-write';
+    const candidates = [...execution.allowed_read_paths, ...execution.allowed_write_paths];
+    if (candidates.some((candidate) => !authorizeWorkspacePath(rootPath, candidate, ['.']).allowed)) {
+      return false;
+    }
+    return item.effect !== 'workspace-write' || execution.allowed_write_paths.length > 0;
+  }
+
   private resolveWorkspace(workspaceId: string): MissionWorkspace | null {
     return this.options.resolveWorkspace?.(workspaceId) ?? getWorkspaceByNameOrId(workspaceId);
   }
@@ -437,6 +888,35 @@ export class MissionRuntimeService {
   private reportError(context: { workspaceId?: string; missionId?: string; workItemId?: string; error: Error }): void {
     this.options.onError?.(context);
   }
+}
+
+function measuredMissionCostUsd(snapshot: MissionSnapshot): number {
+  return Object.values(snapshot.workItems).reduce((total, runtime) =>
+    total + runtime.attemptTelemetry.reduce((itemTotal, attempt) =>
+      itemTotal + (attempt.tokenUsage?.costUsd ?? 0), 0), 0);
+}
+
+function remainingMissionBudgetUsd(
+  governance: unknown,
+  snapshot: MissionSnapshot | null,
+): { availableBudgetUsd?: number } {
+  const parsed = WorkspaceGovernanceProfileSchema.safeParse(governance);
+  const limit = parsed.success ? parsed.data.budgets.missionMaxCostUsd : undefined;
+  if (limit === undefined) return {};
+  const spent = snapshot ? measuredMissionCostUsd(snapshot) : 0;
+  return { availableBudgetUsd: Math.max(0, limit - spent) };
+}
+
+function unavailableConnectorReadiness(): MissionConnectorPreflight {
+  return {
+    installed: false,
+    contractTestsPassed: false,
+    supportsIdempotency: false,
+    supportsReconciliation: false,
+    supportsCompensation: false,
+    structuredEgressPolicyReady: false,
+    approvalPathReady: false,
+  };
 }
 
 function findMessageContaining(

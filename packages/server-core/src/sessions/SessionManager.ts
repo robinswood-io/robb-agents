@@ -22,7 +22,7 @@ import {
   type BackendHostRuntimeContext,
   type PostInitResult,
 } from '@craft-agent/shared/agent/backend'
-import { getLlmConnection, getLlmConnections, getDefaultLlmConnection, getDefaultThinkingLevel, getBrowserToolEnabled, resetManagedAnthropicAuthEnvVars, resolveMidStreamBehavior, getPersistedUiLanguage, resolveTitleLanguageName, resolveRoutingPolicy } from '@craft-agent/shared/config'
+import { getLlmConnection, getLlmConnections, getDefaultLlmConnection, getDefaultThinkingLevel, getBrowserToolEnabled, resetManagedAnthropicAuthEnvVars, resolveMidStreamBehavior, getPersistedUiLanguage, resolveTitleLanguageName, resolveRoutingPolicy, RoutingOutcomeStore, telemetryToRoutingOutcome, ALL_ROUTING_CAPABILITIES, ALL_ROUTING_DIFFICULTIES, type RoutingOutcomeAdapterContext } from '@craft-agent/shared/config'
 import { formatPlaybookPrompt, getBuiltinPlaybook, loadWorkspacePlaybook } from '@craft-agent/shared/playbooks'
 import { validateSessionExecutionIsolation } from '@craft-agent/shared/tasks'
 import { PrivilegedExecutionBroker } from '@craft-agent/server-core/services'
@@ -851,6 +851,8 @@ interface RunningBackgroundTask {
 interface RuntimeGenerationTelemetryRef {
   generationId: string
   turnId: string
+  /** Captured before routing metadata is cleared by the completed message. */
+  routingOutcome?: RoutingOutcomeAdapterContext
 }
 
 interface RuntimeCompactionTelemetry {
@@ -877,6 +879,8 @@ interface ManagedSession {
   processingGeneration: number
   /** Generation that emitted a terminal provider error before its trailing complete event. */
   terminalErrorGeneration?: number
+  /** Generation intentionally ended so a newly activated source can restart the turn. */
+  sourceActivationRestartGeneration?: number
   /** Runtime-only generation telemetry refs, keyed by processingGeneration. */
   executionTelemetryGenerations?: Map<number, RuntimeGenerationTelemetryRef>
   /** Runtime-only compaction spans, keyed by processingGeneration. */
@@ -1153,6 +1157,23 @@ export function claimAutoRetryPending(
   return 'send'
 }
 
+export interface SourceActivationRestartHost {
+  sourceActivationRestartGeneration?: number
+}
+
+/**
+ * Consume the one-shot marker that distinguishes an intentional source
+ * activation restart from a broken provider stream.
+ */
+export function consumeSourceActivationRestart(
+  host: SourceActivationRestartHost,
+  generation: number,
+): boolean {
+  if (host.sourceActivationRestartGeneration !== generation) return false
+  host.sourceActivationRestartGeneration = undefined
+  return true
+}
+
 /**
  * Create a ManagedSession from any session-like source (SessionMetadata, SessionConfig, StoredSession).
  * Spreads all matching fields from the source so new persistent fields automatically propagate.
@@ -1357,6 +1378,8 @@ export class SessionManager implements ISessionManager {
   }> = new Map()
   // Workspace-scoped OTLP sinks. A sink is created only after explicit workspace opt-in.
   private telemetrySinks: Map<string, ExecutionTelemetrySink> = new Map()
+  // Local privacy-minimal routing observations. They never contain prompt/response bodies.
+  private routingOutcomeStores: Map<string, RoutingOutcomeStore> = new Map()
   // Enforces active → exactly-one-terminal generation telemetry transitions.
   private generationTelemetryLifecycle = new GenerationTelemetryLifecycle()
   // Privileged approval binding + audit logger
@@ -1483,8 +1506,36 @@ export class SessionManager implements ISessionManager {
       inputTokens: input.inputTokens,
     })
 
+    const routingDifficulty = managed.pendingRoutingMeta?.routingDifficulty
+    const requiredCapabilities = managed.pendingRoutingMeta?.requiredCapabilities
+    const resolvedDifficulty = ALL_ROUTING_DIFFICULTIES.find(
+      (difficulty) => difficulty === routingDifficulty,
+    )
+    const resolvedCapabilities = (requiredCapabilities ?? []).flatMap((required) => {
+      const capability = ALL_ROUTING_CAPABILITIES.find((candidate) => candidate === required)
+      return capability ? [capability] : []
+    })
+    const routingOutcome = managed.pendingRoutingReason === 'router'
+      && !!managed.llmConnection
+      && !!resolvedDifficulty
+      && resolvedCapabilities.length === (requiredCapabilities ?? []).length
+      ? {
+          connectionSlug: managed.llmConnection,
+          difficulty: resolvedDifficulty,
+          requiredCapabilities: resolvedCapabilities,
+          retryCount: managed.routingFallbackAttempts ?? 0,
+          workspaceId: managed.workspace.id,
+          sessionId: managed.id,
+          ...(managed.missionId ? { missionId: managed.missionId } : {}),
+        }
+      : undefined
+
     const generations = managed.executionTelemetryGenerations ?? new Map()
-    generations.set(processingGeneration, { generationId, turnId: input.turnId })
+    generations.set(processingGeneration, {
+      generationId,
+      turnId: input.turnId,
+      ...(routingOutcome ? { routingOutcome } : {}),
+    })
     managed.executionTelemetryGenerations = generations
     this.emitExecutionTelemetry(managed, event)
   }
@@ -1519,6 +1570,29 @@ export class SessionManager implements ISessionManager {
     managed.executionTelemetryGenerations?.delete(processingGeneration)
     if (managed.executionTelemetryGenerations?.size === 0) {
       managed.executionTelemetryGenerations = undefined
+    }
+    if (event && reference.routingOutcome) {
+      const outcome = telemetryToRoutingOutcome(event, {
+        ...reference.routingOutcome,
+        ...(typeof usage?.costUsd === 'number' ? { costUsd: usage.costUsd } : {}),
+      })
+      if (outcome) {
+        try {
+          let store = this.routingOutcomeStores.get(managed.workspace.id)
+          if (!store) {
+            store = new RoutingOutcomeStore(managed.workspace.rootPath)
+            this.routingOutcomeStores.set(managed.workspace.id, store)
+          }
+          store.record(outcome)
+        } catch (error) {
+          // Feedback must never affect the user-visible provider result.
+          sessionLog.warn('Failed to persist local routing outcome', {
+            workspaceId: managed.workspace.id,
+            sessionId: managed.id,
+            message: error instanceof Error ? error.message : String(error),
+          })
+        }
+      }
     }
     if (event) this.emitExecutionTelemetry(managed, event)
   }
@@ -7355,8 +7429,25 @@ export class SessionManager implements ISessionManager {
       } else if (managed.stopRequested) {
         sessionLog.info('Chat loop completed after stop request - events drained successfully')
         await this.onProcessingStopped(sessionId, 'interrupted', myGeneration)
+      } else if (consumeSourceActivationRestart(managed, myGeneration)) {
+        sessionLog.info('Chat loop exited for scheduled source activation restart', {
+          sessionId,
+          generation: myGeneration,
+        })
+        sendSpan.mark('chat.exit.source_activation_restart')
+        sendSpan.end()
+        await this.onProcessingStopped(sessionId, 'interrupted', myGeneration)
       } else {
-        sessionLog.warn('Chat loop exited unexpectedly')
+        sessionLog.warn('Chat loop exited unexpectedly', {
+          sessionId,
+          generation: myGeneration,
+          pendingTurnRecovery: managed.pendingTurnRecovery
+            ? {
+                userMessageId: managed.pendingTurnRecovery.userMessageId,
+                attempts: managed.pendingTurnRecovery.attempts,
+              }
+            : undefined,
+        })
         const recoveryQueued = await this.enqueueAutomaticTurnRecovery(managed, 'stream_ended')
         if (!recoveryQueued) {
           await this.processEvent(managed, {
@@ -9428,6 +9519,22 @@ export class SessionManager implements ISessionManager {
         break
       }
 
+      case 'runtime_interrupted': {
+        // This event deliberately does not create a terminal error message.
+        // The trailing complete keeps the latest turn "incomplete", which
+        // routes through enqueueAutomaticTurnRecovery: durable marker, bounded
+        // attempts, clean runtime disposal, and side-effect-aware continuation.
+        sessionLog.warn('Agent runtime interrupted; deferring to durable recovery', {
+          sessionId,
+          generation: generationKey,
+          code: event.code,
+          exitCode: event.exitCode,
+          signal: event.signal,
+          message: redactSecretLikeMaterial(event.message).slice(0, 4_000),
+        })
+        break
+      }
+
       case 'typed_error':
         // Skip errors after handoff (plan submission, auth request)
         if (!managed.isProcessing) {
@@ -9458,6 +9565,25 @@ export class SessionManager implements ISessionManager {
           generationKey,
         )) {
           // Don't add error message or send to renderer - we're handling it via retry
+          break
+        }
+
+        // A transient network failure is safe to route through the existing
+        // bounded, side-effect-aware continuation path. The hidden recovery
+        // prompt requires state verification before repeating mutations, and
+        // exhaustion still falls through to the original typed error.
+        if (
+          event.error.code === 'network_error' &&
+          event.error.canRetry &&
+          managed.pendingTurnRecovery &&
+          turnStillNeedsRecovery(managed.messages, managed.pendingTurnRecovery.userMessageId) &&
+          await this.enqueueAutomaticTurnRecovery(managed, 'runtime_error')
+        ) {
+          sessionLog.warn('Queued bounded automatic recovery for transient network error', {
+            sessionId,
+            generation: generationKey,
+            attempt: managed.pendingTurnRecovery?.attempts,
+          })
           break
         }
 
@@ -9715,6 +9841,12 @@ export class SessionManager implements ISessionManager {
 
         const messageWithSuffix = `${originalMessage}\n\n[${event.sourceSlug} activated]`
         const messageCountAtSchedule = managed.messages.length
+
+        // Pi and Claude intentionally end the current generator after emitting
+        // source_activated. Mark this generation so sendMessage does not also
+        // classify that planned boundary as stream loss and enqueue a competing
+        // automatic recovery.
+        managed.sourceActivationRestartGeneration = generationKey
 
         // Stash the retry payload so a duplicate sendMessage from a legacy renderer
         // (mixed-version rollout: new server + v0.9.5 Electron client) gets deduped.

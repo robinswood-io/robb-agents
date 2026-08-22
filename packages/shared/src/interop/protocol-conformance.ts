@@ -1,7 +1,22 @@
 import { randomUUID } from 'node:crypto'
 
-export const MCP_TASKS_PROTOCOL_VERSION = '2025-11-25'
+import {
+  MCP_LEGACY_PROTOCOL_VERSION,
+  MCP_MODERN_PROTOCOL_VERSION,
+  MCP_TASKS_EXTENSION,
+  type McpWireEra,
+} from '../mcp/protocol-eras.ts'
+
+export {
+  MCP_LEGACY_PROTOCOL_VERSION,
+  MCP_MODERN_PROTOCOL_VERSION,
+  MCP_TASKS_EXTENSION,
+} from '../mcp/protocol-eras.ts'
+/** @deprecated Use MCP_LEGACY_PROTOCOL_VERSION or MCP_MODERN_PROTOCOL_VERSION explicitly. */
+export const MCP_TASKS_PROTOCOL_VERSION = MCP_LEGACY_PROTOCOL_VERSION
 export const A2A_PROTOCOL_VERSION = '1.0'
+
+export type McpConformanceEra = 'auto' | McpWireEra
 
 export type ExternalInteropProtocol = 'mcp-tasks' | 'a2a' | 'ag-ui'
 
@@ -34,6 +49,9 @@ export interface InteropConformanceReport {
   implementation: string
   passed: boolean
   checks: InteropConformanceCheck[]
+  /** Present for MCP reports so CI records the actually exercised wire era. */
+  protocolEra?: Exclude<McpConformanceEra, 'auto'>
+  protocolVersion?: string
 }
 
 function endpointUrl(value: string): URL {
@@ -95,12 +113,17 @@ function report(
   protocol: ExternalInteropProtocol,
   implementation: string,
   checks: InteropConformanceCheck[],
+  mcp?: {
+    protocolEra: Exclude<McpConformanceEra, 'auto'>
+    protocolVersion: string
+  },
 ): InteropConformanceReport {
   return {
     protocol,
     implementation,
     passed: checks.every((check) => check.passed),
     checks,
+    ...mcp,
   }
 }
 
@@ -123,24 +146,59 @@ function jsonRpcResult(value: unknown): Record<string, unknown> | null {
   return recordValue(envelope.result)
 }
 
+const mcpTaskStatuses = new Set(['working', 'input_required', 'completed', 'failed', 'cancelled'])
+
 function mcpTask(value: unknown): Record<string, unknown> | null {
   const candidate = recordValue(value)
   if (!candidate) return null
   const status = stringValue(candidate.status)
-  const statuses = new Set(['working', 'input_required', 'completed', 'failed', 'cancelled'])
-  return stringValue(candidate.taskId) && status && statuses.has(status) ? candidate : null
+  return stringValue(candidate.taskId) && status && mcpTaskStatuses.has(status) ? candidate : null
 }
 
-export async function runMcpTasksConformance(input: {
+function jsonRpcError(value: unknown): Record<string, unknown> | null {
+  const envelope = recordValue(value)
+  return envelope?.jsonrpc === '2.0' ? recordValue(envelope.error) : null
+}
+
+function isSuccessfulHttpStatus(status: number): boolean {
+  return status >= 200 && status < 300
+}
+
+function hasModernCacheContract(value: Record<string, unknown> | null): boolean {
+  return Boolean(
+    value
+    && Number.isSafeInteger(value.ttlMs)
+    && Number(value.ttlMs) >= 0
+    && (value.cacheScope === 'public' || value.cacheScope === 'private'),
+  )
+}
+
+function hasTaskTtl(value: Record<string, unknown> | null, property: 'ttl' | 'ttlMs'): boolean {
+  if (!value || !Reflect.has(value, property)) return false
+  const ttl = value[property]
+  return property === 'ttlMs'
+    ? ttl === null || (Number.isSafeInteger(ttl) && Number(ttl) >= 0)
+    : Number.isSafeInteger(ttl) && Number(ttl) >= 0
+}
+
+export interface McpTasksConformanceInput {
   endpoint: string
   authorization?: string
   transport: InteropConformanceTransport
+  /** Auto probes 2026-07-28 and uses the legacy initialize flow only without modern evidence. */
+  era?: McpConformanceEra
   toolName?: string
   toolArguments?: Record<string, unknown>
+  /** Responses keyed by tasks/get inputRequests keys, used only by the 2026 Tasks extension. */
+  taskInputResponses?: Record<string, unknown>
   timeoutMs?: number
-}): Promise<InteropConformanceReport> {
-  const endpoint = endpointUrl(input.endpoint).toString()
-  const timeoutMs = input.timeoutMs ?? 15_000
+}
+
+async function runLegacyMcpTasksConformance(
+  input: McpTasksConformanceInput,
+  endpoint: string,
+  timeoutMs: number,
+): Promise<InteropConformanceReport> {
   const checks: InteropConformanceCheck[] = []
   let requestId = 0
   let sessionId: string | undefined
@@ -167,7 +225,9 @@ export async function runMcpTasksConformance(input: {
       body: JSON.stringify(payload),
       timeoutMs,
     })
-    sessionId = response.headers['mcp-session-id'] ?? sessionId
+    sessionId = response.headers['mcp-session-id']
+      ?? response.headers['Mcp-Session-Id']
+      ?? sessionId
     return {
       response,
       value: response.body.trim() ? parseJsonOrSse(response.body) : null,
@@ -176,7 +236,7 @@ export async function runMcpTasksConformance(input: {
 
   try {
     const initialized = await send('initialize', {
-      protocolVersion: MCP_TASKS_PROTOCOL_VERSION,
+      protocolVersion: MCP_LEGACY_PROTOCOL_VERSION,
       capabilities: {
         tasks: {
           list: {},
@@ -192,9 +252,8 @@ export async function runMcpTasksConformance(input: {
     check(
       checks,
       'initialize',
-      initialized.response.status >= 200
-        && initialized.response.status < 300
-        && initializeResult?.protocolVersion === MCP_TASKS_PROTOCOL_VERSION,
+      isSuccessfulHttpStatus(initialized.response.status)
+        && initializeResult?.protocolVersion === MCP_LEGACY_PROTOCOL_VERSION,
       'server negotiates MCP 2025-11-25',
     )
     const capabilities = recordValue(initializeResult?.capabilities)
@@ -262,7 +321,7 @@ export async function runMcpTasksConformance(input: {
           check(
             checks,
             'tasks/get',
-            Boolean(fetchedTask && fetchedTask.taskId === taskId && Reflect.has(fetchedTask, 'ttl')),
+            Boolean(fetchedTask && fetchedTask.taskId === taskId && hasTaskTtl(fetchedTask, 'ttl')),
             'tasks/get returns the same task with an explicit TTL',
           )
           if (fetchedTask?.status === 'completed') {
@@ -292,7 +351,354 @@ export async function runMcpTasksConformance(input: {
   } catch (error) {
     check(checks, 'transport', false, error instanceof Error ? error.message : String(error))
   }
-  return report('mcp-tasks', endpoint, checks)
+  return report('mcp-tasks', endpoint, checks, {
+    protocolEra: 'legacy',
+    protocolVersion: MCP_LEGACY_PROTOCOL_VERSION,
+  })
+}
+
+function modernRequestMeta(): Record<string, unknown> {
+  return {
+    'io.modelcontextprotocol/protocolVersion': MCP_MODERN_PROTOCOL_VERSION,
+    'io.modelcontextprotocol/clientInfo': {
+      name: 'Robb Agents external conformance',
+      version: '1.0.0',
+    },
+    'io.modelcontextprotocol/clientCapabilities': {
+      extensions: {
+        [MCP_TASKS_EXTENSION]: {},
+      },
+    },
+  }
+}
+
+function modernMcpHeaders(
+  method: string,
+  params: Record<string, unknown>,
+  authorization?: string,
+): Record<string, string> {
+  const routingName = method === 'tools/call'
+    ? stringValue(params.name)
+    : method.startsWith('tasks/')
+      ? stringValue(params.taskId)
+      : null
+  return {
+    Accept: 'application/json, text/event-stream',
+    'Content-Type': 'application/json',
+    'MCP-Protocol-Version': MCP_MODERN_PROTOCOL_VERSION,
+    'Mcp-Method': method,
+    ...(routingName ? { 'Mcp-Name': routingName } : {}),
+    ...authorizationHeaders(authorization),
+  }
+}
+
+async function sendModernProbe(
+  input: McpTasksConformanceInput,
+  endpoint: string,
+  timeoutMs: number,
+): Promise<InteropConformanceHttpResponse> {
+  const params = { _meta: modernRequestMeta() }
+  return input.transport({
+    method: 'POST',
+    url: endpoint,
+    headers: modernMcpHeaders('server/discover', params, input.authorization),
+    body: JSON.stringify({
+      jsonrpc: '2.0',
+      id: 1,
+      method: 'server/discover',
+      params,
+    }),
+    timeoutMs,
+  })
+}
+
+/**
+ * Mirror the official v2 client's conservative auto negotiation: valid modern
+ * discovery is positive evidence; an ordinary RPC/4xx response without that
+ * evidence falls back to 2025, while authentication, 5xx and network failures
+ * remain real failures rather than being hidden by a legacy retry.
+ */
+async function negotiateMcpEra(
+  input: McpTasksConformanceInput,
+  endpoint: string,
+  timeoutMs: number,
+): Promise<Exclude<McpConformanceEra, 'auto'>> {
+  let correctiveUsed = false
+  for (;;) {
+    const response = await sendModernProbe(input, endpoint, timeoutMs)
+    if (response.status === 401 || response.status === 403) {
+      throw new Error(`MCP version negotiation requires authorization (HTTP ${response.status})`)
+    }
+    if (response.status >= 500) {
+      throw new Error(`MCP version negotiation failed with HTTP ${response.status}`)
+    }
+    if (!response.body.trim()) return 'legacy'
+
+    let value: unknown
+    try {
+      value = parseJsonOrSse(response.body)
+    } catch {
+      return 'legacy'
+    }
+    const result = jsonRpcResult(value)
+    const supportedVersions = Array.isArray(result?.supportedVersions)
+      ? result.supportedVersions.filter((version): version is string => typeof version === 'string')
+      : []
+    if (
+      result?.resultType === 'complete'
+      && supportedVersions.includes(MCP_MODERN_PROTOCOL_VERSION)
+      && hasModernCacheContract(result)
+    ) {
+      return 'modern'
+    }
+
+    const rpcError = jsonRpcError(value)
+    if (rpcError?.code !== -32022) return 'legacy'
+
+    const data = recordValue(rpcError.data)
+    const supported = Array.isArray(data?.supported)
+      ? data.supported.filter((version): version is string => typeof version === 'string')
+      : []
+    if (supported.includes(MCP_MODERN_PROTOCOL_VERSION)) {
+      // The 2026 negotiation contract permits one select-and-continue retry
+      // after UnsupportedProtocolVersion advertises a mutual revision.
+      if (correctiveUsed) {
+        throw new Error('Server rejected the corrective MCP 2026-07-28 probe')
+      }
+      correctiveUsed = true
+      continue
+    }
+    if (supported.some((version) => version >= MCP_MODERN_PROTOCOL_VERSION)) {
+      throw new Error(
+        `Server offers modern MCP revisions without a mutual version: ${supported.join(', ')}`,
+      )
+    }
+    return 'legacy'
+  }
+}
+
+async function runModernMcpTasksConformance(
+  input: McpTasksConformanceInput,
+  endpoint: string,
+  timeoutMs: number,
+): Promise<InteropConformanceReport> {
+  const checks: InteropConformanceCheck[] = []
+  let requestId = 0
+  const send = async (
+    method: string,
+    params: Record<string, unknown>,
+  ): Promise<{ response: InteropConformanceHttpResponse; value: unknown }> => {
+    const existingMeta = recordValue(params._meta) ?? {}
+    const modernParams = {
+      ...params,
+      _meta: {
+        ...existingMeta,
+        ...modernRequestMeta(),
+      },
+    }
+    const response = await input.transport({
+      method: 'POST',
+      url: endpoint,
+      headers: modernMcpHeaders(method, modernParams, input.authorization),
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: ++requestId,
+        method,
+        params: modernParams,
+      }),
+      timeoutMs,
+    })
+    return {
+      response,
+      value: response.body.trim() ? parseJsonOrSse(response.body) : null,
+    }
+  }
+
+  const cancelTask = async (taskId: string): Promise<void> => {
+    const cancelled = await send('tasks/cancel', { taskId })
+    const cancelResult = jsonRpcResult(cancelled.value)
+    check(
+      checks,
+      'tasks/cancel',
+      isSuccessfulHttpStatus(cancelled.response.status)
+        && cancelResult?.resultType === 'complete',
+      'cooperative cancellation is acknowledged with an empty complete result',
+    )
+  }
+
+  try {
+    const discovered = await send('server/discover', {})
+    const discoverResult = jsonRpcResult(discovered.value)
+    const supportedVersions = Array.isArray(discoverResult?.supportedVersions)
+      ? discoverResult.supportedVersions
+      : []
+    check(
+      checks,
+      'server/discover',
+      isSuccessfulHttpStatus(discovered.response.status)
+        && discoverResult?.resultType === 'complete'
+        && supportedVersions.includes(MCP_MODERN_PROTOCOL_VERSION),
+      'server advertises MCP 2026-07-28 without an initialize session',
+    )
+    check(
+      checks,
+      'discover cache contract',
+      hasModernCacheContract(discoverResult),
+      'cacheable discovery result carries ttlMs and cacheScope',
+    )
+    const capabilities = recordValue(discoverResult?.capabilities)
+    const extensions = recordValue(capabilities?.extensions)
+    check(
+      checks,
+      'tasks extension capability',
+      Boolean(recordValue(extensions?.[MCP_TASKS_EXTENSION])),
+      `server advertises ${MCP_TASKS_EXTENSION}`,
+    )
+
+    const listedTools = await send('tools/list', {})
+    const toolsResult = jsonRpcResult(listedTools.value)
+    const toolList = Array.isArray(toolsResult?.tools) ? toolsResult.tools : []
+    check(
+      checks,
+      'tools/list',
+      isSuccessfulHttpStatus(listedTools.response.status)
+        && toolsResult?.resultType === 'complete'
+        && toolList.length > 0,
+      'server returns at least one tool using a complete result',
+    )
+    check(
+      checks,
+      'tools/list cache contract',
+      hasModernCacheContract(toolsResult),
+      'cacheable tool list carries ttlMs and cacheScope',
+    )
+
+    if (input.toolName) {
+      const configuredTool = toolList
+        .map(recordValue)
+        .find((tool) => tool?.name === input.toolName)
+      check(
+        checks,
+        'configured task tool',
+        Boolean(configuredTool),
+        `configured safe tool ${input.toolName} is discoverable (2026 removes taskSupport)`,
+      )
+      if (configuredTool) {
+        const created = await send('tools/call', {
+          name: input.toolName,
+          arguments: input.toolArguments ?? {},
+        })
+        const createResult = jsonRpcResult(created.value)
+        const createdTask = createResult?.resultType === 'task'
+          ? mcpTask(createResult)
+          : null
+        check(
+          checks,
+          'task creation',
+          Boolean(createdTask && hasTaskTtl(createdTask, 'ttlMs')),
+          'tools/call may return a flat io.modelcontextprotocol/tasks task result',
+        )
+
+        const taskId = stringValue(createdTask?.taskId)
+        if (taskId) {
+          const fetched = await send('tasks/get', { taskId })
+          const fetchedResult = jsonRpcResult(fetched.value)
+          const fetchedTask = fetchedResult?.resultType === 'complete'
+            ? mcpTask(fetchedResult)
+            : null
+          check(
+            checks,
+            'tasks/get',
+            Boolean(
+              fetchedTask
+              && fetchedTask.taskId === taskId
+              && hasTaskTtl(fetchedTask, 'ttlMs'),
+            ),
+            'tasks/get returns the same detailed task with resultType complete and ttlMs',
+          )
+
+          if (fetchedTask?.status === 'completed') {
+            check(
+              checks,
+              'completed task result',
+              Reflect.has(fetchedTask, 'result'),
+              'completed task embeds the original result (no tasks/result request)',
+            )
+          } else if (fetchedTask?.status === 'failed') {
+            const taskError = recordValue(fetchedTask.error)
+            check(
+              checks,
+              'failed task error',
+              typeof taskError?.code === 'number' && Boolean(stringValue(taskError?.message)),
+              'failed task embeds a JSON-RPC error',
+            )
+          } else if (fetchedTask?.status === 'input_required') {
+            const inputRequests = recordValue(fetchedTask.inputRequests)
+            check(
+              checks,
+              'task input requests',
+              Boolean(inputRequests && Object.keys(inputRequests).length > 0),
+              'input_required task exposes keyed inputRequests',
+            )
+            if (input.taskInputResponses) {
+              const updated = await send('tasks/update', {
+                taskId,
+                inputResponses: input.taskInputResponses,
+              })
+              const updateResult = jsonRpcResult(updated.value)
+              check(
+                checks,
+                'tasks/update',
+                isSuccessfulHttpStatus(updated.response.status)
+                  && updateResult?.resultType === 'complete',
+                'input responses are acknowledged with an empty complete result',
+              )
+            } else {
+              await cancelTask(taskId)
+            }
+          } else if (fetchedTask?.status === 'working') {
+            await cancelTask(taskId)
+          }
+        }
+      }
+    }
+  } catch (error) {
+    check(checks, 'transport', false, error instanceof Error ? error.message : String(error))
+  }
+
+  return report('mcp-tasks', endpoint, checks, {
+    protocolEra: 'modern',
+    protocolVersion: MCP_MODERN_PROTOCOL_VERSION,
+  })
+}
+
+export async function runMcpTasksConformance(
+  input: McpTasksConformanceInput,
+): Promise<InteropConformanceReport> {
+  const endpoint = endpointUrl(input.endpoint).toString()
+  const timeoutMs = input.timeoutMs ?? 15_000
+  const requestedEra = input.era ?? 'auto'
+  if (requestedEra === 'legacy') {
+    return runLegacyMcpTasksConformance(input, endpoint, timeoutMs)
+  }
+  if (requestedEra === 'modern') {
+    return runModernMcpTasksConformance(input, endpoint, timeoutMs)
+  }
+  try {
+    const negotiatedEra = await negotiateMcpEra(input, endpoint, timeoutMs)
+    return negotiatedEra === 'modern'
+      ? runModernMcpTasksConformance(input, endpoint, timeoutMs)
+      : runLegacyMcpTasksConformance(input, endpoint, timeoutMs)
+  } catch (error) {
+    const checks: InteropConformanceCheck[] = []
+    check(
+      checks,
+      'version negotiation',
+      false,
+      error instanceof Error ? error.message : String(error),
+    )
+    return report('mcp-tasks', endpoint, checks)
+  }
 }
 
 const a2aTaskStates = new Set([

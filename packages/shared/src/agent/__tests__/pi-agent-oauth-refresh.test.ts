@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'bun:test';
 
-import { PiAgent } from '../pi-agent.ts';
+import { PiAgent, shouldRefreshPiOAuthBeforeSpawn } from '../pi-agent.ts';
 import type { BackendConfig } from '../backend/types.ts';
 
 function createAgent(slug: string): PiAgent {
@@ -31,6 +31,58 @@ afterEach(() => {
 });
 
 describe('PiAgent OAuth refresh mutex', () => {
+  it('preemptively refreshes expired ChatGPT tokens and joins an in-flight refresh', () => {
+    const nowMs = 1_000_000;
+
+    expect(shouldRefreshPiOAuthBeforeSpawn({
+      authType: 'oauth',
+      piAuthProvider: 'openai-codex',
+      refreshToken: 'refresh-token',
+      expiresAt: nowMs - 1,
+      refreshInFlight: false,
+      nowMs,
+    })).toBe(true);
+
+    expect(shouldRefreshPiOAuthBeforeSpawn({
+      authType: 'oauth',
+      piAuthProvider: 'openai-codex',
+      expiresAt: nowMs + 60 * 60_000,
+      refreshInFlight: true,
+      nowMs,
+    })).toBe(true);
+
+    expect(shouldRefreshPiOAuthBeforeSpawn({
+      authType: 'oauth',
+      piAuthProvider: 'openai-codex',
+      refreshToken: 'refresh-token',
+      expiresAt: nowMs + 60 * 60_000,
+      refreshInFlight: false,
+      nowMs,
+    })).toBe(false);
+  });
+
+  it('starts refresh for typed auth errors emitted as provider events', async () => {
+    const agent = createAgent('typed-auth-refresh-test');
+    let refreshAttempts = 0;
+    (agent as any).refreshAndPushTokens = async () => {
+      refreshAttempts += 1;
+    };
+
+    (agent as any).handleSubprocessEvent({
+      type: 'message_end',
+      message: {
+        role: 'assistant',
+        stopReason: 'error',
+        errorMessage: 'Provided authentication token is expired. Please try signing in again.',
+      },
+    });
+    (agent as any).handleSubprocessEvent({ type: 'agent_end', willRetry: false });
+    await Promise.resolve();
+
+    expect(refreshAttempts).toBe(1);
+    agent.destroy();
+  });
+
   it('does not push a stored stale credential when the concurrent owner failed', async () => {
     const slug = 'oauth-refresh-failure-test';
     const agent = createAgent(slug);

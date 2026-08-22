@@ -1,5 +1,15 @@
-import { describe, expect, it } from 'bun:test';
+import { afterEach, describe, expect, it } from 'bun:test';
 import { piDriver } from './pi.ts';
+
+const originalCopilotKillSwitch = process.env.ROBB_DISABLE_GITHUB_COPILOT_PROXY;
+
+afterEach(() => {
+  if (originalCopilotKillSwitch === undefined) {
+    delete process.env.ROBB_DISABLE_GITHUB_COPILOT_PROXY;
+  } else {
+    process.env.ROBB_DISABLE_GITHUB_COPILOT_PROXY = originalCopilotKillSwitch;
+  }
+});
 
 describe('piDriver.buildRuntime custom endpoint models', () => {
   it('preserves explicit per-model supportsImages values', () => {
@@ -38,5 +48,33 @@ describe('piDriver.buildRuntime custom endpoint models', () => {
       { id: 'text-only-model', supportsImages: false },
       'plain-model',
     ]);
+  });
+});
+
+describe('piDriver GitHub Copilot contract', () => {
+  it('uses the exact SDK static catalog without network when the proxy is disabled', async () => {
+    process.env.ROBB_DISABLE_GITHUB_COPILOT_PROXY = '1';
+    const result = await piDriver.fetchModels!({
+      connection: {
+        slug: 'github-copilot',
+        name: 'GitHub Copilot',
+        providerType: 'pi',
+        authType: 'oauth',
+        piAuthProvider: 'github-copilot',
+        createdAt: Date.now(),
+      } as any,
+      credentials: { oauthRefreshToken: 'must-not-be-exchanged' },
+      timeoutMs: 100,
+      hostRuntime: {} as any,
+      resolvedPaths: {
+        piServerPath: '/tmp/pi-agent-server.js',
+        vibeAcpServerPath: '/tmp/vibe-acp-server.js',
+        interceptorBundlePath: '/tmp/interceptor.cjs',
+        nodeRuntimePath: '/usr/bin/node',
+      },
+    });
+
+    expect(result.models.length).toBeGreaterThan(0);
+    expect(result.models.every(model => model.provider === 'pi')).toBe(true);
   });
 });

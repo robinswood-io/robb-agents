@@ -4,13 +4,20 @@ appId: io.robinswood.robbagents.dev
 productName: Robb Agents Dev
 publish: null
 
+# Development distributions remain unpacked and debuggable. Production's
+# OnlyLoadAppFromAsar/integrity fuses must not leak through this overlay.
+asar: false
+electronFuses: null
+
 directories:
   output: release-dev
   buildResources: resources
 
 mac:
-  # Explicit development builds remain unsigned/ad-hoc capable.
+  # Explicit development packages use an untrusted ad-hoc identity so macOS
+  # can launch them without introducing a public-release certificate path.
   forceCodeSigning: false
+  identity: "-"
   artifactName: "Robb-Agents-Dev-${arch}.${ext}"
   entitlements: build/entitlements.mac.inherit.plist
   entitlementsInherit: build/entitlements.mac.inherit.plist

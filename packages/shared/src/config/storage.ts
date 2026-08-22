@@ -14,7 +14,7 @@ import { extractWorkspaceSlugFromPath } from '../utils/workspace-slug.ts';
 import { initializeDocs } from '../docs/index.ts';
 import { expandPath, toPortablePath, getBundledAssetsDir } from '../utils/paths.ts';
 import { debug } from '../utils/debug.ts';
-import { readJsonFileSync } from '../utils/files.ts';
+import { atomicWriteFileSync, readJsonFileSync } from '../utils/files.ts';
 import { CONFIG_DIR } from './paths.ts';
 import type { StoredAttachment, StoredMessage } from '@craft-agent/core/types';
 import type { Plan } from '../agent/plan-types.ts';
@@ -23,7 +23,7 @@ import type { ThinkingLevel } from '../agent/thinking-levels.ts';
 import { isValidThinkingLevel, normalizeThinkingLevel } from '../agent/thinking-levels.ts';
 import { parsePermissionMode, PERMISSION_MODE_ORDER } from '../agent/mode-types.ts';
 import { type ConfigDefaults } from './config-defaults-schema.ts';
-import { isValidThemeFile } from './validators.ts';
+import { isValidThemeFile, StoredConfigSchema } from './validators.ts';
 
 // Re-export CONFIG_DIR for convenience (centralized in paths.ts)
 export { CONFIG_DIR } from './paths.ts';
@@ -53,6 +53,8 @@ import {
 
 // Config stored in JSON file (credentials stored in encrypted file, not here)
 export interface StoredConfig {
+  /** Forward-only envelope version for config migrations. */
+  schemaVersion?: typeof STORED_CONFIG_SCHEMA_VERSION;
   // LLM Connections (authoritative source for auth and model config)
   llmConnections?: LlmConnection[];
   defaultLlmConnection?: string;  // Slug of default connection for new sessions
@@ -96,6 +98,8 @@ export interface StoredConfig {
   // lists without re-adding it if the user later removes it deliberately).
   migrationsApplied?: string[];
 }
+
+export const STORED_CONFIG_SCHEMA_VERSION = 1 as const;
 
 const CONFIG_FILE = join(CONFIG_DIR, 'config.json');
 const CONFIG_DEFAULTS_FILE = join(CONFIG_DIR, 'config-defaults.json');
@@ -280,11 +284,18 @@ export function loadStoredConfig(): StoredConfig | null {
     if (!existsSync(CONFIG_FILE)) {
       return null;
     }
-    const config = readJsonFileSync<StoredConfig>(CONFIG_FILE);
-
-    // Must have workspaces array
-    if (!Array.isArray(config.workspaces)) {
+    const raw = readJsonFileSync<unknown>(CONFIG_FILE);
+    const migrated = migrateStoredConfig(raw);
+    const parsed = StoredConfigSchema.safeParse(migrated);
+    if (!parsed.success) {
+      debug('[config] Stored config validation failed:', parsed.error.issues.map((issue) =>
+        `${issue.path.join('.') || 'root'}: ${issue.message}`).join('; '));
       return null;
+    }
+    const config = parsed.data as StoredConfig;
+    if ((raw as { schemaVersion?: unknown }).schemaVersion !== STORED_CONFIG_SCHEMA_VERSION) {
+      backupConfigFile();
+      atomicWriteFileSync(CONFIG_FILE, `${JSON.stringify(config, null, 2)}\n`);
     }
 
     // Expand path variables (~ and ${HOME}) for portability
@@ -323,18 +334,48 @@ export function loadStoredConfig(): StoredConfig | null {
 // - getClaudeOAuthToken() → credentialManager.getLlmOAuth(connectionSlug)
 
 export function saveConfig(config: StoredConfig): void {
+  // A null result from loadStoredConfig() is deliberately ambiguous: it can
+  // mean first run, but it can also mean that an existing file was produced by
+  // a newer app version or is otherwise invalid. Never let a first-run fallback
+  // silently replace such a file. Explicit recovery remains possible through
+  // clearAllConfig(), which removes the incompatible file before saving again.
+  if (existsSync(CONFIG_FILE)) {
+    try {
+      StoredConfigSchema.parse(migrateStoredConfig(readJsonFileSync<unknown>(CONFIG_FILE)));
+    } catch (error) {
+      throw new Error('Refusing to overwrite an existing incompatible stored config', { cause: error });
+    }
+  }
   ensureConfigDir();
 
   // Convert paths to portable form (~ prefix) for cross-machine compatibility
   const storageConfig: StoredConfig = {
     ...config,
+    schemaVersion: STORED_CONFIG_SCHEMA_VERSION,
     workspaces: config.workspaces.map(ws => ({
       ...ws,
       rootPath: toPortablePath(ws.rootPath),
     })),
   };
 
-  writeFileSync(CONFIG_FILE, JSON.stringify(storageConfig, null, 2), 'utf-8');
+  const parsed = StoredConfigSchema.parse(storageConfig);
+  atomicWriteFileSync(CONFIG_FILE, `${JSON.stringify(parsed, null, 2)}\n`);
+}
+
+function migrateStoredConfig(value: unknown): StoredConfig {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw new Error('Stored config root must be an object');
+  }
+  const config = { ...(value as Record<string, unknown>) };
+  const version = config.schemaVersion;
+  if (version !== undefined && version !== STORED_CONFIG_SCHEMA_VERSION) {
+    throw new Error(`Unsupported stored config schemaVersion: ${String(version)}`);
+  }
+  if (!Array.isArray(config.workspaces)) throw new Error('Stored config workspaces must be an array');
+  config.schemaVersion = STORED_CONFIG_SCHEMA_VERSION;
+  if (!('activeWorkspaceId' in config)) config.activeWorkspaceId = null;
+  if (!('activeSessionId' in config)) config.activeSessionId = null;
+  return config as unknown as StoredConfig;
 }
 
 // Legacy updateApiKey() removed - use setupLlmConnection IPC handler instead.

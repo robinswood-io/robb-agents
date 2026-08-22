@@ -12,7 +12,7 @@ ROOT_DIR="$(dirname "$(dirname "$ELECTRON_DIR")")"
 
 ARCH="arm64"
 RELEASE_BUILD=false
-BUN_VERSION="bun-v1.3.10"
+BUN_VERSION="bun-v1.3.14"
 
 usage() {
   cat <<'EOF'
@@ -32,7 +32,8 @@ Release credentials (provided by the operator/CI; never committed):
   or APPLE_API_KEY (absolute .p8 path) + APPLE_API_KEY_ID +
      APPLE_API_ISSUER + APPLE_TEAM_ID
 
-Without --release, the artifact is intentionally an unsigned local smoke build.
+Without --release, the artifact is ad-hoc signed only so macOS can launch the
+local smoke build. It remains an unsigned-test artifact for trust purposes.
 Distribute only a --release artifact to end users.
 EOF
 }
@@ -165,9 +166,17 @@ if [[ "$RELEASE_BUILD" == true ]]; then
   BUILDER_ARGS+=(--config.mac.forceCodeSigning=true)
 else
   # Preserve explicitly non-release local smoke builds without a certificate.
-  BUILDER_ARGS+=(--config.mac.forceCodeSigning=false)
+  # Apple Silicon refuses to launch a mutated Electron bundle without a valid
+  # code directory, so use the explicit untrusted ad-hoc identity before DMG
+  # and ZIP creation. Public provenance still classifies this as unsigned.
+  BUILDER_ARGS+=(--config.mac.forceCodeSigning=false --config.mac.identity=-)
 fi
 bun x --bun electron-builder "${BUILDER_ARGS[@]}"
+
+PACKAGED_APP_DIR="$ELECTRON_DIR/release/$([[ "$ARCH" == arm64 ]] && echo mac-arm64 || echo mac)/Robb Agents.app"
+bun "$ROOT_DIR/scripts/validate-electron-package-security.ts" \
+  --binary "$PACKAGED_APP_DIR/Contents/MacOS/Robb Agents" \
+  --resources-dir "$PACKAGED_APP_DIR/Contents/Resources"
 
 DMG_PATH="$ELECTRON_DIR/release/Robb-Agents-${ARCH}.dmg"
 ZIP_PATH="$ELECTRON_DIR/release/Robb-Agents-${ARCH}.zip"

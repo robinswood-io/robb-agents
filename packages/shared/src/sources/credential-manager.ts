@@ -1226,7 +1226,7 @@ export class SourceCredentialManager {
     }
 
     try {
-      // Only HTTP/SSE transport can refresh tokens - stdio doesn't use OAuth
+      // Only remote transport can refresh tokens - stdio doesn't use OAuth
       if (!source.config.mcp?.url) {
         // This is expected for stdio transport - not an error
         debug(`[SourceCredentialManager] No URL for MCP token refresh (stdio transport)`);

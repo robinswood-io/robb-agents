@@ -5,19 +5,8 @@ import type { HandlerDeps } from '../handler-deps'
 
 type HandlerFn = (ctx: { clientId: string }, ...args: any[]) => Promise<any> | any
 
-const getDefaultThinkingLevelMock = mock(() => 'think')
+const getDefaultThinkingLevelMock = mock((): 'medium' => 'medium')
 const setDefaultThinkingLevelMock = mock((_level: string) => true)
-
-mock.module('@craft-agent/shared/config', () => ({
-  getPreferencesPath: () => '/tmp/preferences.json',
-  getSessionDraft: () => null,
-  setSessionDraft: () => {},
-  deleteSessionDraft: () => {},
-  getAllSessionDrafts: () => ({}),
-  getWorkspaceByNameOrId: () => null,
-  getDefaultThinkingLevel: getDefaultThinkingLevelMock,
-  setDefaultThinkingLevel: setDefaultThinkingLevelMock,
-}))
 
 describe('settings default thinking RPC handlers', () => {
   const handlers = new Map<string, HandlerFn>()
@@ -66,6 +55,10 @@ describe('settings default thinking RPC handlers', () => {
         dispose: () => {},
         get size() { return 0 },
       } as unknown as HandlerDeps['oauthFlowStore'],
+      defaultThinkingLevelStore: {
+        get: getDefaultThinkingLevelMock,
+        set: setDefaultThinkingLevelMock,
+      },
     }
 
     const { registerSettingsHandlers } = await import('@craft-agent/server-core/handlers/rpc/settings')
@@ -77,7 +70,7 @@ describe('settings default thinking RPC handlers', () => {
     expect(getHandler).toBeTruthy()
 
     const result = await getHandler!({ clientId: 'client-1' })
-    expect(result).toBe('think')
+    expect(result).toBe('medium')
     expect(getDefaultThinkingLevelMock).toHaveBeenCalledTimes(1)
   })
 

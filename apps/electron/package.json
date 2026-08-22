@@ -2,7 +2,7 @@
   "name": "@craft-agent/electron",
   "productName": "Robb Agents",
   "desktopName": "Robb Agents",
-  "version": "0.12.3",
+  "version": "0.12.4",
   "description": "Electron desktop app for Robb Agents",
   "main": "dist/main.cjs",
   "private": true,
@@ -20,7 +20,7 @@
   "license": "MIT",
   "type": "module",
   "engines": {
-    "node": ">=20.9.0"
+    "node": ">=24.0.0"
   },
   "scripts": {
     "build:main": "bun run ../../scripts/electron-build-main.ts --main-only",
@@ -36,7 +36,7 @@
     "start": "bun run build && electron .",
     "start:win": "bun run build:win && electron .",
     "dev": "vite dev",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "node ../../scripts/run-typescript.mjs native --noEmit",
     "dist:mac": "bash scripts/build-dmg.sh arm64",
     "dist:mac:x64": "bash scripts/build-dmg.sh x64",
     "dist:win": "powershell -ExecutionPolicy Bypass -File scripts/build-win.ps1",

@@ -203,6 +203,34 @@ describe('priority connector HTTP drivers', () => {
     expect(results.every(({ requests }) => requests[0]?.security.blockPrivateAddresses === true)).toBe(true)
   })
 
+  test('sends and observes the same canonical scalar payload for GET query parameters', async () => {
+    const requests: ConnectorHttpRequest[] = []
+    const observations: Array<Record<string, unknown>> = []
+    const harness = createHarness('googleWorkspace', requests)
+    const driver = createPriorityConnectorDriver('googleWorkspace', {
+      ...harness.options,
+      onEgress: ({ payload }) => observations.push(payload),
+    })
+    const payload = { pageSize: '25', includeItemsFromAllDrives: 'true' }
+    const authorization = harness.authorize('drive.list', payload)
+    await driver.invoke('drive.list', { payload, authorization })
+
+    const url = new URL(requests[0]!.url)
+    expect(Object.fromEntries(url.searchParams.entries())).toEqual(payload)
+    expect(observations).toEqual([payload])
+    expect(requests[0]?.body).toBeUndefined()
+  })
+
+  test('rejects structured GET query values instead of silently dropping them', async () => {
+    const requests: ConnectorHttpRequest[] = []
+    const harness = createHarness('googleWorkspace', requests)
+    const payload = { pageSize: [25], filter: { owner: 'finance' }, nullable: null }
+    const authorization = harness.authorize('drive.list', payload)
+    await expect(harness.driver.invoke('drive.list', { payload, authorization }))
+      .rejects.toMatchObject({ code: 'INVALID_INPUT' })
+    expect(requests).toHaveLength(0)
+  })
+
   test('fails closed before transport when a secret lease lacks the operation scope', async () => {
     const requests: ConnectorHttpRequest[] = []
     const harness = createHarness('microsoft365', requests, ['Files.Read'])

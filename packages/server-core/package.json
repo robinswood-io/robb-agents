@@ -1,6 +1,6 @@
 {
   "name": "@craft-agent/server-core",
-  "version": "0.12.3",
+  "version": "0.12.4",
   "license": "MIT",
   "description": "Reusable headless server infrastructure for Craft Agent",
   "type": "module",
@@ -23,7 +23,7 @@
     "./webui": "./src/webui/index.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "node ../../scripts/run-typescript.mjs native --noEmit"
   },
   "dependencies": {
     "@craft-agent/core": "workspace:*",
@@ -34,7 +34,7 @@
     "@earendil-works/pi-ai": "0.80.3"
   },
   "devDependencies": {
-    "typescript": "^5.8.2",
-    "@types/node": "^22.0.0"
+    "typescript": "~6.0.3",
+    "@types/node": "^24.13.3"
   }
 }

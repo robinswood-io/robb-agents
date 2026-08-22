@@ -8,10 +8,11 @@
  * subscription credential; this bridge never reads or forwards it.
  */
 
-import { spawn, type ChildProcess } from 'node:child_process';
+import type { ChildProcess } from 'node:child_process';
 import { createInterface } from 'node:readline';
 import { Readable, Writable } from 'node:stream';
 import { client, methods, ndJsonStream, PROTOCOL_VERSION } from '@agentclientprotocol/sdk';
+import { spawnVibeSubprocess } from './vibe-subprocess.ts';
 
 interface InitMessage {
   type: 'init';
@@ -126,11 +127,7 @@ async function startVibe(init: InitMessage): Promise<void> {
   const cwd = init.workingDirectory || init.cwd || process.cwd();
   debug('Launching official Vibe ACP command.');
 
-  const child = spawn(command, [], {
-    cwd,
-    stdio: ['pipe', 'pipe', 'pipe'],
-    env: process.env,
-  });
+  const child = spawnVibeSubprocess(command, cwd);
   vibeProcess = child;
   const launched = new Promise<boolean>((resolve) => {
     child.once('spawn', () => resolve(true));

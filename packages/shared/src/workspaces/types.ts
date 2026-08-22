@@ -37,6 +37,7 @@ export interface LocalMcpConfig {
  * Workspace configuration (stored in config.json)
  */
 export interface WorkspaceConfig {
+  schemaVersion: 1;
   id: string;
   name: string;
   slug: string; // Folder name (URL-safe)

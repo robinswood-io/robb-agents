@@ -21,7 +21,15 @@ import type { ThinkingLevel } from '../agent/thinking-levels'
 import type { CustomEndpointConfig } from '../config/llm-connections'
 import type { RoutingPolicy } from '../config/routing-policy'
 import type { SessionExecutionIsolation } from '../tasks/durable-execution'
-import type { MissionSnapshot, MissionSpec } from '../missions'
+import type {
+  MissionDigitalTwinReport,
+  MissionReplanPreview,
+  MissionSnapshot,
+  MissionSpec,
+  MissionWorkItem,
+  ProofPassportTrustAnchor,
+  SignedProofPassport,
+} from '../missions'
 import type { SessionAppProvenance } from '../sessions/types'
 import type {
   DurableTaskCockpitProjections,
@@ -29,6 +37,10 @@ import type {
   DurableTaskSnapshot,
 } from '../tasks'
 import type { WorkspaceGovernanceProfile } from '../governance/workspace-governance'
+import type {
+  OperationApprovalContext,
+  OperationRiskLevel,
+} from '../governance/capability-broker'
 import type {
   RemoteAction,
   RemoteSupervisionProfile,
@@ -373,6 +385,8 @@ export interface TaskRunSnapshotDto {
 
 export interface TaskApprovalRequestDto {
   requestId: string
+  /** Durable task folder identifier; do not infer it from missionId. */
+  slug: string
   missionId: string
   runId: string
   nodeId: string
@@ -426,6 +440,12 @@ export interface TaskGetResult {
 // ---------------------------------------------------------------------------
 
 export type MissionSnapshotDto = MissionSnapshot
+export type MissionProofPassportDto = SignedProofPassport
+export type MissionProofPassportTrustAnchorDto = ProofPassportTrustAnchor
+
+export type MissionProofPassportVerificationDto =
+  | { valid: true; passport: SignedProofPassport }
+  | { valid: false; reason: string }
 
 export interface MissionPlanRequest {
   goal: string
@@ -461,6 +481,25 @@ export interface MissionCreateAndStartRequest {
   spec: MissionSpec
 }
 
+/** Client supplies only a Mission identity/spec; every policy observation is host-resolved. */
+export type MissionPreflightRequest =
+  | { missionId: string; spec?: never }
+  | { missionId?: never; spec: MissionSpec }
+
+export type MissionPreflightResult = MissionDigitalTwinReport
+
+export interface MissionReplanPreviewRequest {
+  missionId: string
+  expectedRevision: number
+  proposedWorkItems: MissionWorkItem[]
+}
+
+export interface MissionReplanRequest extends MissionReplanPreviewRequest {
+  reason: string
+}
+
+export type MissionReplanPreviewDto = MissionReplanPreview
+
 export interface MissionControlRequest {
   missionId: string
   reason: string
@@ -468,6 +507,32 @@ export interface MissionControlRequest {
 
 export interface MissionResumeRequest {
   missionId: string
+}
+
+/** Value-free durable approval request for one brokered connector mutation. */
+export interface MissionConnectorApprovalRequestDto {
+  workspaceId: string
+  missionId: string
+  workItemId: string
+  approvalId: string
+  requestHash: string
+  operationId: string
+  risk: OperationRiskLevel
+  approvalContext: OperationApprovalContext
+  expiresAt: string
+}
+
+export interface MissionConnectorApprovalDecisionRequest {
+  missionId: string
+  workItemId: string
+  approvalId: string
+  requestHash: string
+  decision: 'approved' | 'denied'
+}
+
+export interface MissionConnectorApprovalRefreshRequest {
+  missionId: string
+  workItemId: string
 }
 
 export type DurableTaskSnapshotDto = DurableTaskSnapshot

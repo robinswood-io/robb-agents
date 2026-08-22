@@ -9,7 +9,7 @@
 import { join, parse as parsePath } from 'path'
 import { existsSync, mkdirSync } from 'fs'
 import { validateFilePath, getWorkspaceAllowedDirs } from '@craft-agent/server-core/handlers'
-import { BrowserView, BrowserWindow, app, dialog, ipcMain, nativeTheme, session, shell, type Session as ElectronSession } from 'electron'
+import { BrowserWindow, WebContentsView, app, dialog, ipcMain, nativeTheme, session, shell, type Session as ElectronSession } from 'electron'
 import { mainLog } from './logger'
 import type { WindowManager } from './window-manager'
 import { BrowserCDP, type AccessibilitySnapshot, type ElementGeometry } from './browser-cdp'
@@ -146,9 +146,9 @@ interface AgentControlLockState {
 interface BrowserInstance {
   id: string
   window: BrowserWindow
-  toolbarView: BrowserView
-  pageView: BrowserView
-  nativeOverlayView: BrowserView
+  toolbarView: WebContentsView
+  pageView: WebContentsView
+  nativeOverlayView: WebContentsView
   cdp: BrowserCDP
   currentUrl: string
   title: string
@@ -411,7 +411,7 @@ export class BrowserPaneManager implements IBrowserPaneManager {
       minHeight: 500,
       show: false, // Always hidden until toolbar is painted (ready-to-show)
       backgroundColor: bgColor,
-      // Fully chromeless — toolbar is rendered in a dedicated BrowserView
+      // Fully chromeless — toolbar is rendered in a dedicated WebContentsView
       frame: false,
       webPreferences: {
         partition: SESSION_PARTITION,
@@ -422,7 +422,7 @@ export class BrowserPaneManager implements IBrowserPaneManager {
       },
     })
 
-    const toolbarView = new BrowserView({
+    const toolbarView = new WebContentsView({
       webPreferences: {
         preload: join(__dirname, 'browser-toolbar-preload.cjs'),
         partition: SESSION_PARTITION,
@@ -433,7 +433,7 @@ export class BrowserPaneManager implements IBrowserPaneManager {
       },
     })
 
-    const pageView = new BrowserView({
+    const pageView = new WebContentsView({
       webPreferences: {
         partition: SESSION_PARTITION,
         session: ses,
@@ -443,12 +443,7 @@ export class BrowserPaneManager implements IBrowserPaneManager {
       },
     })
 
-    const supportsMultiView = typeof window.addBrowserView === 'function' && typeof window.setTopBrowserView === 'function'
-    if (!supportsMultiView) {
-      throw new Error('[browser-pane] Native overlay requires BrowserWindow.addBrowserView + setTopBrowserView')
-    }
-
-    const nativeOverlayView = new BrowserView({
+    const nativeOverlayView = new WebContentsView({
       webPreferences: {
         partition: SESSION_PARTITION,
         session: ses,
@@ -458,7 +453,7 @@ export class BrowserPaneManager implements IBrowserPaneManager {
       },
     })
 
-    // Set BrowserView backgrounds to match theme so about:blank doesn't flash white
+    // Set WebContentsView backgrounds to match theme so about:blank doesn't flash white
     const toolbarWcWithBg = toolbarView.webContents as typeof toolbarView.webContents & { setBackgroundColor?: (color: string) => void }
     toolbarWcWithBg.setBackgroundColor?.('#00000000')
     const pageWcWithBg = pageView.webContents as typeof pageView.webContents & { setBackgroundColor?: (color: string) => void }
@@ -517,10 +512,11 @@ export class BrowserPaneManager implements IBrowserPaneManager {
       pageView.webContents.setUserAgent(sanitizedUa)
     }
 
-    window.addBrowserView(pageView)
-    window.addBrowserView(nativeOverlayView)
-    window.addBrowserView(toolbarView)
-    window.setTopBrowserView(toolbarView)
+    // Child view order is the z-order. Re-adding an existing child later brings it
+    // to the front, which replaces BrowserWindow.setTopBrowserView.
+    window.contentView.addChildView(pageView)
+    window.contentView.addChildView(nativeOverlayView)
+    window.contentView.addChildView(toolbarView)
     void this.loadNativeOverlayPage(instance)
 
     this.layoutAllViews(instance)
@@ -849,7 +845,7 @@ export class BrowserPaneManager implements IBrowserPaneManager {
 
     // Re-entrancy guard: bail if a hide is already in progress. Prevents the
     // 'close' listener from re-entering hide() during teardown, which can crash
-    // Chromium's compositor when the BrowserView is mid-load.
+    // Chromium's compositor when the embedded WebContentsView is mid-load.
     if (instance.isHiding) return
 
     const win = instance.window
@@ -866,7 +862,7 @@ export class BrowserPaneManager implements IBrowserPaneManager {
     this.forceCloseToolbarMenu(instance, 'window-hide')
 
     // Cancel an in-flight page load before hiding. Hiding the window while the
-    // BrowserView is still loading can trigger a Chromium compositor assertion
+    // WebContentsView is still loading can trigger a Chromium compositor assertion
     // and kill the main process.
     if (instance.isLoading) {
       try {
@@ -882,7 +878,7 @@ export class BrowserPaneManager implements IBrowserPaneManager {
     instance.isVisible = false
 
     // Defer the state-change callback so native window teardown completes before
-    // listeners (which may touch BrowserView/Chromium internals) run.
+    // listeners (which may touch WebContentsView/Chromium internals) run.
     queueMicrotask(() => {
       instance.isHiding = false
       this.emitStateChange(instance)
@@ -2064,7 +2060,12 @@ export class BrowserPaneManager implements IBrowserPaneManager {
     const toolbarHeight = this.getToolbarEffectiveHeight(instance)
 
     instance.toolbarView.setBounds({ x: 0, y: 0, width, height: toolbarHeight })
-    instance.toolbarView.setAutoResize({ width: true, height: false })
+  }
+
+  private bringToolbarToFront(instance: BrowserInstance): void {
+    if (instance.window.isDestroyed()) return
+    // View.addChildView reorders an existing child to the top of the z-stack.
+    instance.window.contentView.addChildView(instance.toolbarView)
   }
 
   private updateNativeOverlayState(instance: BrowserInstance): void {
@@ -2075,17 +2076,14 @@ export class BrowserPaneManager implements IBrowserPaneManager {
 
     if (!shouldShow || !instance.nativeOverlayReady || instance.window.isDestroyed()) {
       instance.nativeOverlayView.setBounds({ x: 0, y: 0, width: 0, height: 0 })
-      if (!instance.window.isDestroyed()) {
-        instance.window.setTopBrowserView(instance.toolbarView)
-      }
+      this.bringToolbarToFront(instance)
       return
     }
 
     const [width, height] = instance.window.getContentSize()
     const overlayHeight = Math.max(100, height - TOOLBAR_HEIGHT)
     instance.nativeOverlayView.setBounds({ x: 0, y: TOOLBAR_HEIGHT, width, height: overlayHeight })
-    instance.nativeOverlayView.setAutoResize({ width: true, height: true })
-    instance.window.setTopBrowserView(instance.toolbarView)
+    this.bringToolbarToFront(instance)
 
     if (agentActive) {
       const label = this.getAgentControlLabel(control)
@@ -2184,16 +2182,13 @@ export class BrowserPaneManager implements IBrowserPaneManager {
   private layoutPageView(instance: BrowserInstance): void {
     const [width, height] = instance.window.getContentSize()
     instance.pageView.setBounds({ x: 0, y: TOOLBAR_HEIGHT, width, height: Math.max(100, height - TOOLBAR_HEIGHT) })
-    instance.pageView.setAutoResize({ width: true, height: true })
     this.updateNativeOverlayState(instance)
   }
 
   private layoutAllViews(instance: BrowserInstance): void {
     this.layoutToolbarView(instance)
     this.layoutPageView(instance)
-    if (!instance.window.isDestroyed()) {
-      instance.window.setTopBrowserView(instance.toolbarView)
-    }
+    this.bringToolbarToFront(instance)
   }
 
   private forceCloseToolbarMenu(instance: BrowserInstance, reason: string): void {
@@ -2553,7 +2548,7 @@ export class BrowserPaneManager implements IBrowserPaneManager {
    * Extract a plain {@link BrowserInstanceSnapshot} from a live `BrowserInstance`.
    *
    * `this.getInstance(id)` returns the full instance, which has non-cloneable
-   * Electron native references (`window: BrowserWindow`, `pageView: BrowserView`,
+   * Electron native references (`window: BrowserWindow`, `pageView: WebContentsView`,
    * `toolbarView`, ...). When we ship the result back over the `__browser:invoke`
    * IPC channel, Electron's structured-clone serializer throws
    * "An object could not be cloned" — see the user-reported bug on the remote

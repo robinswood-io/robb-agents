@@ -32,5 +32,9 @@ export function isDetailNavState(navState: NavigationState | null): boolean {
     case 'automations':
     case 'projects':
       return navState.details !== null
+    case 'missions':
+      // Mission OS is itself a full content view; selecting one mission only
+      // expands its journal-backed detail inside the same Control Room.
+      return true
   }
 }

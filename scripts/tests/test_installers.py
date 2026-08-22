@@ -21,6 +21,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[2]
 SHELL_INSTALLER = ROOT / "scripts" / "install-app.sh"
 POWERSHELL_INSTALLER = ROOT / "scripts" / "install-app.ps1"
 ELECTRON_UPDATER = ROOT / "apps" / "electron" / "src" / "main" / "auto-update.ts"
+WINDOWS_INSTALLER_E2E = ROOT / "scripts" / "robinswood-windows-installer-e2e.ps1"
 VERSION = "1.2.3"
 SHA512_FIXTURE = f"{'A' * 86}=="
 PLATFORM_BUILD_SCRIPTS = (
@@ -124,6 +125,9 @@ class InstallerContractTests(unittest.TestCase):
             self.assertNotIn("npx electron-builder", source, str(script))
 
         mac_build = (ROOT / "apps" / "electron" / "scripts" / "build-dmg.sh").read_text(encoding="utf-8")
+        windows_build = (ROOT / "apps" / "electron" / "scripts" / "build-win.ps1").read_text(encoding="utf-8")
+        linux_build = (ROOT / "apps" / "electron" / "scripts" / "build-linux.sh").read_text(encoding="utf-8")
+        validation_workflow = (ROOT / ".github" / "workflows" / "robinswood-validate.yml").read_text(encoding="utf-8")
         self.assertIn("export CSC_IDENTITY_AUTO_DISCOVERY=false", mac_build)
         self.assertIn("unset CSC_LINK CSC_KEY_PASSWORD CSC_NAME", mac_build)
         self.assertIn("export ROBB_BUILD_CHANNEL=production", mac_build)
@@ -131,6 +135,15 @@ class InstallerContractTests(unittest.TestCase):
         self.assertIn("releaseIntegrity.cjs", mac_build)
         self.assertIn("--config.mac.forceCodeSigning=true", mac_build)
         self.assertIn("--config.mac.forceCodeSigning=false", mac_build)
+        self.assertIn("--config.mac.identity=-", mac_build)
+        self.assertIn('$env:ROBB_BUILD_CHANNEL = "production"', windows_build)
+        self.assertIn('$env:ROBB_BUILD_CHANNEL = "development"', windows_build)
+        self.assertIn("releaseIntegrity.cjs", windows_build)
+        self.assertIn('$BunVersion = "bun-v1.3.14"', windows_build)
+        self.assertIn('bun-version: "1.3.14"', validation_workflow)
+        self.assertIn("export ROBB_BUILD_CHANNEL=production", linux_build)
+        self.assertIn("export ROBB_BUILD_CHANNEL=development", linux_build)
+        self.assertIn("Linux arm64 is a local development artifact only", linux_build)
 
         release_builder = (ROOT / "apps" / "electron" / "electron-builder.yml").read_text(encoding="utf-8")
         development_builder = (ROOT / "apps" / "electron" / "electron-builder.dev.yml").read_text(encoding="utf-8")
@@ -138,6 +151,19 @@ class InstallerContractTests(unittest.TestCase):
         self.assertIn("afterSign: scripts/afterSign.cjs", release_builder)
         self.assertIn("forceCodeSigning: true", release_builder)
         self.assertIn("forceCodeSigning: false", development_builder)
+        self.assertIn("asar: true", release_builder)
+        self.assertIn("enableEmbeddedAsarIntegrityValidation: true", release_builder)
+        self.assertIn("onlyLoadAppFromAsar: true", release_builder)
+        self.assertIn("asar: false", development_builder)
+        self.assertIn("electronFuses: null", development_builder)
+        self.assertIn('identity: "-"', development_builder)
+
+        for script in PLATFORM_BUILD_SCRIPTS[:3]:
+            self.assertIn(
+                "validate-electron-package-security.ts",
+                script.read_text(encoding="utf-8"),
+                str(script),
+            )
 
         package = json.loads((ROOT / "package.json").read_text(encoding="utf-8"))
         for dependency in ("postcss", "tar"):
@@ -146,6 +172,66 @@ class InstallerContractTests(unittest.TestCase):
                 package["overrides"][dependency],
                 f"{dependency} must be pinned to the same spec as its npm override",
             )
+
+    def test_windows_installer_e2e_uses_packaged_paths_and_ephemeral_cdp_port(self) -> None:
+        source = WINDOWS_INSTALLER_E2E.read_text(encoding="utf-8")
+        self.assertIn(
+            r"resources\app\resources\pi-agent-server\vibe-acp-server.js",
+            source,
+        )
+        self.assertIn(r"resources\app\resources\bin\win32-x64\rtk.exe", source)
+        self.assertIn("[System.Net.Sockets.TcpListener]::new", source)
+        self.assertIn("Get-AvailableLoopbackPort", source)
+        self.assertIn("Get-InstalledAppProcesses", source)
+        self.assertIn("[System.StringComparison]::OrdinalIgnoreCase", source)
+        self.assertIn("Write-StartupDiagnostics $InstallDir $SmokeConfig", source)
+        self.assertIn("[switch]$RequireAuthenticode", source)
+        self.assertIn("Get-AuthenticodeSignature $app", source)
+        self.assertIn("Installed executable Authenticode verification failed", source)
+        self.assertIn("[int]$MaxInstalledMiB = 1024", source)
+        self.assertIn("--max-mib $MaxInstalledMiB", source)
+        self.assertNotIn(r"resources\app\dist\resources", source)
+        self.assertNotIn("$DebugPort = 9229", source)
+        self.assertNotIn('Win32_Process -Filter "ParentProcessId =', source)
+
+    def test_windows_release_requires_dual_authenticode_proof_before_provenance(self) -> None:
+        windows_build = (ROOT / "apps" / "electron" / "scripts" / "build-win.ps1").read_text(
+            encoding="utf-8"
+        )
+        workflow = (ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
+
+        unpacked_build_check = (
+            'Require-ValidAuthenticodeSignature $UnpackedBinary "unpacked Electron binary"'
+        )
+        installer_build_check = (
+            'Require-ValidAuthenticodeSignature $Installer.FullName "NSIS installer"'
+        )
+        self.assertIn("Get-AuthenticodeSignature $Path", windows_build)
+        self.assertIn(unpacked_build_check, windows_build)
+        self.assertIn(installer_build_check, windows_build)
+        self.assertLess(windows_build.index(unpacked_build_check), windows_build.index(installer_build_check))
+        self.assertLess(windows_build.index(installer_build_check), windows_build.index("=== Build complete ==="))
+
+        unpacked_workflow_path = (
+            "$unpackedBinary = 'apps/electron/release/win-unpacked/Robb Agents.exe'"
+        )
+        installer_workflow_check = (
+            "Assert-ValidAuthenticodeSignature $installer.FullName 'installer'"
+        )
+        unpacked_workflow_check = (
+            "Assert-ValidAuthenticodeSignature $unpackedBinary 'unpacked executable'"
+        )
+        signed_provenance = "$signing = 'verified-authenticode'"
+        for token in (
+            unpacked_workflow_path,
+            installer_workflow_check,
+            unpacked_workflow_check,
+            signed_provenance,
+            "$e2eArgs += '-RequireAuthenticode'",
+        ):
+            self.assertIn(token, workflow)
+        self.assertLess(workflow.index(installer_workflow_check), workflow.index(unpacked_workflow_check))
+        self.assertLess(workflow.index(unpacked_workflow_check), workflow.index(signed_provenance))
 
     def test_shell_installer_uses_public_robb_release_contract(self) -> None:
         source = SHELL_INSTALLER.read_text(encoding="utf-8")
@@ -186,7 +272,7 @@ class InstallerContractTests(unittest.TestCase):
             "SHA512",
             "Get-AuthenticodeSignature",
             "PROVENANCE-windows-x64.txt",
-            "unsigned-github-release",
+            "verified-authenticode",
             "Programs\\Robb Agents",
             "Robb Agents.exe",
             "robb-agents.cmd",
@@ -201,6 +287,7 @@ class InstallerContractTests(unittest.TestCase):
         ]
         for token in forbidden:
             self.assertNotIn(token, source)
+        self.assertNotIn("unsigned-github-release", source)
 
     @unittest.skipUnless(
         shutil.which("bash") and platform.system() in {"Darwin", "Linux"},

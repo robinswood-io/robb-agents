@@ -19,6 +19,7 @@ import type { AgentEvent } from '@craft-agent/core/types';
 import type { FileAttachment } from '../utils/files.ts';
 import { getProxyEnvVars } from '../config/proxy-env.ts';
 import {
+  buildRestrictedSubprocessEnvironment,
   registerLongRunningProcess,
   type LongRunningProcessHandle,
 } from '../processes/index.ts';
@@ -114,6 +115,139 @@ import { parseCompactCommand } from './compact-command.ts';
 import { redactSecretLikeMaterial } from '../utils/redaction.ts';
 
 const RUNTIME_DIAGNOSTIC_MAX_CHARS = 4_000;
+const DEFAULT_SUBPROCESS_STARTUP_TIMEOUT_MS = 20_000;
+const MAX_SUBPROCESS_STARTUP_TIMEOUT_MS = 120_000;
+
+type PiRuntimeInterruptionCode = Extract<AgentEvent, { type: 'runtime_interrupted' }>['code'];
+
+class PiRuntimeInterruptedError extends Error {
+  readonly interruptionCode: PiRuntimeInterruptionCode;
+
+  constructor(message: string, interruptionCode: PiRuntimeInterruptionCode) {
+    super(message);
+    this.name = 'PiRuntimeInterruptedError';
+    this.interruptionCode = interruptionCode;
+  }
+}
+
+export function resolvePiSubprocessStartupTimeoutMs(value: string | undefined): number {
+  if (value === undefined) return DEFAULT_SUBPROCESS_STARTUP_TIMEOUT_MS;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0
+    ? Math.min(Math.floor(parsed), MAX_SUBPROCESS_STARTUP_TIMEOUT_MS)
+    : DEFAULT_SUBPROCESS_STARTUP_TIMEOUT_MS;
+}
+
+/** Inputs intentionally granted to one Pi subprocess generation. */
+export interface PiSubprocessEnvironmentOptions {
+  proxyEnv?: Record<string, string>;
+  envOverrides?: Record<string, string>;
+  providerEnv?: Record<string, string>;
+  awsEnv?: Record<string, string>;
+  sessionDir?: string;
+  debugEnabled: boolean;
+}
+
+/**
+ * Build Pi's child environment without inheriting unrelated host credentials.
+ * Provider credentials and per-session values must arrive through an explicit
+ * input map, making the privilege boundary reviewable at the call site.
+ */
+export function buildPiSubprocessEnvironment(
+  options: PiSubprocessEnvironmentOptions,
+  baseEnv: NodeJS.ProcessEnv = process.env,
+): Record<string, string> {
+  return buildRestrictedSubprocessEnvironment(
+    {
+      ...options.proxyEnv,
+      ...options.envOverrides,
+      ...options.providerEnv,
+      ...options.awsEnv,
+      ...(options.sessionDir ? { CRAFT_SESSION_DIR: options.sessionDir } : {}),
+      CRAFT_DEBUG: options.debugEnabled ? '1' : '0',
+    },
+    baseEnv,
+  );
+}
+
+const BEDROCK_ENVIRONMENT_AUTH_KEYS = [
+  // Static/session credentials. These are copied only when the user selected
+  // the Bedrock environment credential chain for this connection.
+  'AWS_ACCESS_KEY_ID',
+  'AWS_SECRET_ACCESS_KEY',
+  'AWS_SESSION_TOKEN',
+  'AWS_SECURITY_TOKEN',
+  'AWS_BEARER_TOKEN_BEDROCK',
+
+  // Profile, region and shared credential/config file routing.
+  'AWS_REGION',
+  'AWS_DEFAULT_REGION',
+  'AWS_PROFILE',
+  'AWS_DEFAULT_PROFILE',
+  'AWS_CONFIG_FILE',
+  'AWS_SHARED_CREDENTIALS_FILE',
+  'AWS_SDK_LOAD_CONFIG',
+  'AWS_CA_BUNDLE',
+
+  // Workload identity / container / instance role credential chain.
+  'AWS_WEB_IDENTITY_TOKEN_FILE',
+  'AWS_ROLE_ARN',
+  'AWS_ROLE_SESSION_NAME',
+  'AWS_CONTAINER_CREDENTIALS_RELATIVE_URI',
+  'AWS_CONTAINER_CREDENTIALS_FULL_URI',
+  'AWS_CONTAINER_AUTHORIZATION_TOKEN',
+  'AWS_CONTAINER_AUTHORIZATION_TOKEN_FILE',
+  'AWS_EC2_METADATA_DISABLED',
+  'AWS_EC2_METADATA_SERVICE_ENDPOINT',
+  'AWS_EC2_METADATA_SERVICE_ENDPOINT_MODE',
+
+  // Explicit Bedrock endpoint/runtime controls.
+  'AWS_ENDPOINT_URL',
+  'AWS_ENDPOINT_URL_BEDROCK',
+  'AWS_BEDROCK_FORCE_HTTP1',
+] as const;
+
+function pickExplicitEnvironment(
+  keys: readonly string[],
+  baseEnv: NodeJS.ProcessEnv = process.env,
+): Record<string, string> {
+  const env: Record<string, string> = {};
+  for (const key of keys) {
+    const value = baseEnv[key];
+    if (typeof value === 'string') env[key] = value;
+  }
+  return env;
+}
+
+const PROVIDER_CONTRACT_ENVIRONMENT_KEYS = [
+  'ROBB_DISABLE_UNSTABLE_PROVIDERS',
+  'ROBB_DISABLE_CHATGPT_CODEX_BACKEND',
+  'ROBB_DISABLE_GITHUB_COPILOT_PROXY',
+  'ROBB_DISABLE_GOOGLE_CODE_ASSIST_V1INTERNAL',
+] as const;
+
+/**
+ * Grant only non-secret bootstrap and emergency contract controls to Pi.
+ * Scoped switches are limited to the selected provider; the master switch is
+ * intentionally common to every Pi subprocess.
+ */
+export function buildPiProviderEnvironment(
+  piAuthProvider: string | undefined,
+  baseEnv: NodeJS.ProcessEnv = process.env,
+): Record<string, string> {
+  const keys: string[] = [PROVIDER_CONTRACT_ENVIRONMENT_KEYS[0]];
+  if (piAuthProvider === 'openai-codex') keys.push(PROVIDER_CONTRACT_ENVIRONMENT_KEYS[1]);
+  if (piAuthProvider === 'github-copilot') keys.push(PROVIDER_CONTRACT_ENVIRONMENT_KEYS[2]);
+  if (piAuthProvider === 'google-gemini-code-assist') {
+    keys.push(
+      PROVIDER_CONTRACT_ENVIRONMENT_KEYS[3],
+      'GOOGLE_CLOUD_PROJECT',
+      'GOOGLE_CLOUD_PROJECT_ID',
+    );
+  }
+  if (piAuthProvider === 'mistral-vibe') keys.push('ROBB_VIBE_ACP_COMMAND');
+  return pickExplicitEnvironment(keys, baseEnv);
+}
 
 type PiAuthPayload = {
   provider: string;
@@ -126,6 +260,37 @@ type PiAuthPayload = {
 type TokenRefreshOutcome =
   | { refreshed: false }
   | { refreshed: true; piAuth: PiAuthPayload };
+
+const PREEMPTIVE_PI_OAUTH_PROVIDERS = new Set([
+  'openai-codex',
+  'github-copilot',
+  'google-gemini-code-assist',
+]);
+
+/**
+ * Decide whether a cold Pi runtime must join/start OAuth refresh before it
+ * reads credentials. Joining an in-flight refresh closes the race where an
+ * auth-failed runtime is disposed while its replacement still sees the stale
+ * token.
+ */
+export function shouldRefreshPiOAuthBeforeSpawn(input: {
+  authType?: string;
+  piAuthProvider?: string;
+  refreshToken?: string;
+  expiresAt?: number;
+  refreshInFlight: boolean;
+  nowMs?: number;
+}): boolean {
+  if (input.authType !== 'oauth') return false;
+  if (!input.piAuthProvider || !PREEMPTIVE_PI_OAUTH_PROVIDERS.has(input.piAuthProvider)) {
+    return false;
+  }
+  if (input.refreshInFlight) return true;
+  if (!input.refreshToken) return false;
+
+  const nowMs = input.nowMs ?? Date.now();
+  return !input.expiresAt || input.expiresAt < nowMs + 5 * 60_000;
+}
 
 // Supplement the shared free-text redactor with credential formats that can
 // appear in Pi/provider stderr without an `Authorization: Bearer` prefix.
@@ -227,11 +392,15 @@ export class PiAgent extends BaseAgent {
   // Subprocess process handle
   private subprocess: ChildProcess | null = null;
   private subprocessSupervisorHandle: LongRunningProcessHandle | null = null;
+  /** Deduplicates concurrent cold-start callers into one process generation. */
+  private subprocessSpawnInFlight: Promise<void> | null = null;
   /** Child processes whose next exit is owner-requested, not a runtime failure. */
   private expectedSubprocessExits = new WeakSet<ChildProcess>();
   private readline: ReadlineInterface | null = null;
   private subprocessReady: Promise<void> | null = null;
   private subprocessReadyResolve: (() => void) | null = null;
+  private subprocessReadyReject: ((error: Error) => void) | null = null;
+  private subprocessReadyTimer: ReturnType<typeof setTimeout> | null = null;
 
   // Pi session ID (managed by subprocess, reported back)
   private piSessionId: string | null = null;
@@ -481,7 +650,20 @@ export class PiAgent extends BaseAgent {
       return;
     }
 
-    await this.spawnSubprocess();
+    if (this.subprocessSpawnInFlight) {
+      await this.subprocessSpawnInFlight;
+      return;
+    }
+
+    const spawnAttempt = this.spawnSubprocess();
+    this.subprocessSpawnInFlight = spawnAttempt;
+    try {
+      await spawnAttempt;
+    } finally {
+      if (this.subprocessSpawnInFlight === spawnAttempt) {
+        this.subprocessSpawnInFlight = null;
+      }
+    }
   }
 
   /**
@@ -505,11 +687,6 @@ export class PiAgent extends BaseAgent {
     this.debug(`Spawning Pi subprocess: ${nodePath} ${piServerPath}`);
     this.resetSubprocessErrorDedup();
 
-    // Set up ready promise before spawning
-    this.subprocessReady = new Promise<void>((resolve) => {
-      this.subprocessReadyResolve = resolve;
-    });
-
     // Build session ID and session dir path upfront (used for spawn env + init command)
     const sessionId = this.config.session?.id || `agent-${Date.now()}`;
     const sessionDir = this.config.session
@@ -528,12 +705,19 @@ export class PiAgent extends BaseAgent {
     // from the same fetch that produces piAuth (single source of truth).
 
     // For OAuth providers with short-lived access tokens: preemptively refresh
-    // before fetching credentials, so getPiAuth() picks up a fresh token.
+    // before fetching credentials, so getPiAuth() picks up a fresh token. Also
+    // join a refresh started by the auth-failed runtime being replaced.
     // refreshAndPushTokens guards this.subprocess internally — safe to call pre-spawn.
-    if (this.config.authType === 'oauth' && (runtime.piAuthProvider === 'github-copilot' || runtime.piAuthProvider === 'google-gemini-code-assist')) {
+    if (this.config.authType === 'oauth' && runtime.piAuthProvider) {
       const slug = this.config.connectionSlug || 'pi';
       const stored = await getCredentialManager().getLlmOAuth(slug);
-      if (stored?.refreshToken && (!stored.expiresAt || stored.expiresAt < Date.now() + 5 * 60_000)) {
+      if (shouldRefreshPiOAuthBeforeSpawn({
+        authType: this.config.authType,
+        piAuthProvider: runtime.piAuthProvider,
+        refreshToken: stored?.refreshToken,
+        expiresAt: stored?.expiresAt,
+        refreshInFlight: PiAgent.globalRefreshMutex.has(slug),
+      })) {
         this.debug(`${runtime.piAuthProvider} token expired or expiring soon — refreshing before session start`);
         await this.refreshAndPushTokens();
       }
@@ -551,22 +735,41 @@ export class PiAgent extends BaseAgent {
 
     // Derive AWS env vars from the piAuth credential (single fetch, no race).
     const awsEnv = this.buildAwsEnv(piAuth, runtime);
+    const providerEnv = this.buildProviderEnv(runtime);
+
+    // Set up the handshake only after all pre-spawn async work succeeded. This
+    // avoids leaving an unreachable pending promise when credential resolution
+    // fails before a child process exists.
+    this.subprocessReady = new Promise<void>((resolve, reject) => {
+      this.subprocessReadyResolve = resolve;
+      this.subprocessReadyReject = reject;
+    });
 
     // Spawn the subprocess
-    const child = spawn(nodePath, args, {
-      cwd,
-      stdio: ['pipe', 'pipe', 'pipe'],
-      env: {
-        ...process.env,
-        ...getProxyEnvVars(),
-        ...this.config.envOverrides,
-        ...awsEnv,
-        // Pass session dir for cross-process toolMetadataStore
-        ...(sessionDir ? { CRAFT_SESSION_DIR: sessionDir } : {}),
-        // Propagate debug mode
-        CRAFT_DEBUG: (process.argv.includes('--debug') || process.env.CRAFT_DEBUG === '1') ? '1' : '0',
-      },
-    });
+    let child: ChildProcess;
+    try {
+      child = spawn(nodePath, args, {
+        cwd,
+        stdio: ['pipe', 'pipe', 'pipe'],
+        env: buildPiSubprocessEnvironment({
+          proxyEnv: getProxyEnvVars(),
+          envOverrides: this.config.envOverrides,
+          providerEnv,
+          awsEnv,
+          // Pass session dir for cross-process toolMetadataStore.
+          sessionDir,
+          // Propagate debug mode without inheriting the rest of process.env.
+          debugEnabled: process.argv.includes('--debug') || process.env.CRAFT_DEBUG === '1',
+        }),
+      });
+    } catch (error) {
+      // No consumer can be awaiting the private ready promise yet; discard it
+      // and let spawnSubprocess's own rejection reach every deduplicated caller.
+      this.subprocessReady = null;
+      this.subprocessReadyResolve = null;
+      this.subprocessReadyReject = null;
+      throw error;
+    }
 
     this.subprocess = child;
     const configuredIdleMs = Number(process.env.CRAFT_AGENT_PROCESS_IDLE_TIMEOUT_MS);
@@ -615,11 +818,28 @@ export class PiAgent extends BaseAgent {
     });
 
     child.on('error', (error) => {
-      this.debug(`Subprocess error: ${error.message}`);
-      this.resetSubprocessErrorDedup();
-      this.eventQueue.enqueue({ type: 'error', message: `Pi subprocess error: ${error.message}` });
-      this.eventQueue.complete();
+      this.handleSubprocessError(error, child);
     });
+
+    const startupTimeoutMs = resolvePiSubprocessStartupTimeoutMs(
+      process.env.CRAFT_AGENT_PROCESS_STARTUP_TIMEOUT_MS,
+    );
+    this.subprocessReadyTimer = setTimeout(() => {
+      if (this.subprocess !== child || !this.subprocessReadyReject) return;
+      const error = new PiRuntimeInterruptedError(
+        `Pi subprocess did not become ready within ${startupTimeoutMs} ms`,
+        'startup_timeout',
+      );
+      this.debug(error.message);
+      this.rejectSubprocessReady(error);
+      this.expectedSubprocessExits.add(child);
+      if (this.subprocessSupervisorHandle) {
+        this.subprocessSupervisorHandle.terminate('Pi agent startup timeout');
+      } else {
+        child.kill('SIGTERM');
+      }
+    }, startupTimeoutMs);
+    this.subprocessReadyTimer.unref?.();
 
     const sessionPath = this.config.session
       ? getSessionPath(this.config.workspace.rootPath, sessionId)
@@ -783,7 +1003,8 @@ export class PiAgent extends BaseAgent {
         // API key-based connections.
         // NOTE: authType === 'environment' (e.g. Bedrock with ~/.aws/credentials)
         // intentionally falls through here, finds no API key, and returns null.
-        // The subprocess inherits process.env which contains the AWS credential chain.
+        // buildAwsEnv() grants the AWS credential chain only to the selected
+        // Bedrock subprocess; it is not part of generic process.env inheritance.
         const apiKey = await credentialManager.getLlmApiKey(slug);
         if (apiKey) {
           this.debug(`Retrieved API key credential for Pi provider: ${piAuthProvider}`);
@@ -819,7 +1040,12 @@ export class PiAgent extends BaseAgent {
   ): Record<string, string> {
     if (runtime.piAuthProvider !== 'amazon-bedrock') return {};
 
-    const env: Record<string, string> = {};
+    // Environment auth is an explicit user choice for this one Bedrock
+    // connection. Preserve the AWS default credential chain without exposing
+    // cloud credentials to any other Pi provider.
+    const env: Record<string, string> = this.config.authType === 'environment'
+      ? pickExplicitEnvironment(BEDROCK_ENVIRONMENT_AUTH_KEYS)
+      : {};
 
     if (piAuth?.credential.type === 'iam') {
       env.AWS_ACCESS_KEY_ID = piAuth.credential.accessKeyId;
@@ -831,11 +1057,19 @@ export class PiAgent extends BaseAgent {
 
     // Defensive: force HTTP/1.1 for Bedrock. AWS SDK v3 defaults to HTTP/2
     // (NodeHttp2Handler) which can be incompatible with Bun/Electron runtimes.
-    if (!process.env.AWS_BEDROCK_FORCE_HTTP1) {
-      env.AWS_BEDROCK_FORCE_HTTP1 = '1';
-    }
+    env.AWS_BEDROCK_FORCE_HTTP1 = process.env.AWS_BEDROCK_FORCE_HTTP1
+      || env.AWS_BEDROCK_FORCE_HTTP1
+      || '1';
 
     return env;
+  }
+
+  /**
+   * Preserve non-secret provider bootstrap values only for the provider that
+   * consumes them. They are deliberately not part of the generic host env.
+   */
+  private buildProviderEnv(runtime: { piAuthProvider?: string }): Record<string, string> {
+    return buildPiProviderEnvironment(runtime.piAuthProvider);
   }
 
   /**
@@ -1015,7 +1249,7 @@ export class PiAgent extends BaseAgent {
           this.piSessionId = msg.sessionId as string;
           this.config.onSdkSessionIdUpdate?.(this.piSessionId!);
         }
-        this.subprocessReadyResolve?.();
+        this.resolveSubprocessReady();
         break;
 
       case 'event':
@@ -1245,6 +1479,19 @@ export class PiAgent extends BaseAgent {
     // The event adapter expects typed PiAgentEvent/AgentSessionEvent objects,
     // but since we're receiving plain JSON, we cast through unknown.
     for (const agentEvent of this.adapter.adaptEvent(adaptedEvent as any)) {
+      if (
+        agentEvent.type === 'typed_error' &&
+        this.config.authType === 'oauth' &&
+        (agentEvent.error.code === 'expired_oauth_token' || agentEvent.error.code === 'invalid_api_key')
+      ) {
+        // Provider message_end failures do not necessarily arrive through the
+        // generic subprocess `error` envelope. Start refresh here as well so
+        // SessionManager's replacement runtime can join the same global mutex.
+        void this.refreshAndPushTokens().catch(error => {
+          this.debug(`Token refresh from typed auth error failed: ${error}`);
+        });
+      }
+
       // Track Read tool calls for prerequisite checking
       if (agentEvent.type === 'tool_start' && agentEvent.toolName === 'Read') {
         this.prerequisiteManager.trackReadTool(agentEvent.input as Record<string, unknown>);
@@ -1859,15 +2106,65 @@ export class PiAgent extends BaseAgent {
       || this.pendingToolExecutions.size > 0;
   }
 
+  private clearSubprocessReadyTimer(): void {
+    if (this.subprocessReadyTimer) clearTimeout(this.subprocessReadyTimer);
+    this.subprocessReadyTimer = null;
+  }
+
+  private resolveSubprocessReady(): void {
+    const resolve = this.subprocessReadyResolve;
+    this.clearSubprocessReadyTimer();
+    this.subprocessReadyResolve = null;
+    this.subprocessReadyReject = null;
+    resolve?.();
+  }
+
+  private rejectSubprocessReady(error: Error): void {
+    const reject = this.subprocessReadyReject;
+    this.clearSubprocessReadyTimer();
+    this.subprocessReadyResolve = null;
+    this.subprocessReadyReject = null;
+    reject?.(error);
+  }
+
+  private handleSubprocessError(error: Error, child: ChildProcess): void {
+    if (this.subprocess !== child) {
+      this.debug(`Ignoring error from stale Pi subprocess: ${error.message}`);
+      return;
+    }
+    this.handleSubprocessExit(null, null, child, error);
+  }
+
   private handleSubprocessExit(
     code: number | null,
     signal: string | null,
     child?: ChildProcess,
+    processError?: Error,
   ): void {
-    this.debug(`Pi subprocess exited: code=${code}, signal=${signal}`);
+    // A terminated generation may emit its exit after its replacement is
+    // already live. Never let that late event tear down the new generation.
+    if (child && this.subprocess !== child) {
+      this.expectedSubprocessExits.delete(child);
+      this.debug('Ignoring termination from stale Pi subprocess generation');
+      return;
+    }
+
+    this.debug(processError
+      ? `Pi subprocess error: ${processError.message}`
+      : `Pi subprocess exited: code=${code}, signal=${signal}`);
 
     const expectedExit = child ? this.expectedSubprocessExits.delete(child) : false;
     const hadPendingWork = this.hasPendingSubprocessWork();
+    const interruptionCode: PiRuntimeInterruptionCode = processError
+      ? 'process_error'
+      : 'process_exit';
+    const exitReason = processError?.message
+      ?? (signal ? `signal ${signal}` : `code ${code}`);
+    const interruptionError = new PiRuntimeInterruptedError(
+      `Pi subprocess exited unexpectedly (${exitReason})`,
+      interruptionCode,
+    );
+    this.rejectSubprocessReady(interruptionError);
     // A signal-only idle exit can come from the long-running-process idle
     // supervisor. Treat it as a failure only when work was active; explicit
     // non-zero exit codes remain failures even while idle.
@@ -1891,20 +2188,23 @@ export class PiAgent extends BaseAgent {
     this.resetSubprocessErrorDedup();
     this.subprocessReady = null;
     this.subprocessReadyResolve = null;
+    this.subprocessReadyReject = null;
 
-    // If we were processing, emit error + complete
-    if (this._isProcessing) {
-      const exitReason = signal ? `signal ${signal}` : `code ${code}`;
+    // Runtime loss is progress interruption, not a terminal provider error.
+    // SessionManager owns the durable retry budget and process recreation.
+    if (this._isProcessing && !expectedExit) {
       this.eventQueue.enqueue({
-        type: 'error',
-        message: `Pi subprocess exited unexpectedly (${exitReason})`,
+        type: 'runtime_interrupted',
+        message: interruptionError.message,
+        code: interruptionCode,
+        exitCode: code,
+        signal,
       });
       this.eventQueue.complete();
     }
 
     // Reject pending mini completions with error (not null) so callers
     // get a meaningful error instead of silently returning "no response"
-    const exitReason = signal ? `signal ${signal}` : `code ${code}`;
     for (const [, pending] of this.pendingMiniCompletions) {
       pending.reject(new Error(`Pi subprocess exited unexpectedly (${exitReason})`));
     }
@@ -2334,6 +2634,15 @@ export class PiAgent extends BaseAgent {
       }
 
       const errorObj = error instanceof Error ? error : new Error(String(error));
+      if (errorObj instanceof PiRuntimeInterruptedError) {
+        yield {
+          type: 'runtime_interrupted',
+          message: errorObj.message,
+          code: errorObj.interruptionCode,
+        };
+        yield { type: 'complete' };
+        return;
+      }
       const typedError = this.parsePiError(errorObj);
 
       if (typedError.code !== 'unknown_error') {
@@ -2635,6 +2944,8 @@ export class PiAgent extends BaseAgent {
     this.subprocessSupervisorHandle = null;
     this.subprocessReady = null;
     this.subprocessReadyResolve = null;
+    this.subprocessReadyReject = null;
+    this.clearSubprocessReadyTimer();
     this.callbackPort = 0;
     this.preToolMetadataByCallId.clear();
     this.adapter.resetOverflowState();
@@ -2675,6 +2986,8 @@ export class PiAgent extends BaseAgent {
 
     this.subprocessReady = null;
     this.subprocessReadyResolve = null;
+    this.subprocessReadyReject = null;
+    this.clearSubprocessReadyTimer();
     this.callbackPort = 0;
     this.preToolMetadataByCallId.clear();
 

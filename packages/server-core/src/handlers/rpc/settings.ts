@@ -17,12 +17,15 @@ import { requestClientOpenFileDialog } from '@craft-agent/server-core/transport'
 import { isValidWorkingDirectory } from '../../utils/path-validation'
 import { getLlmConnections } from '@craft-agent/shared/config/storage'
 import {
+  ALL_ROUTING_DIFFICULTIES,
   ALL_ROUTING_SENSITIVITIES,
+  resolveRoutingPolicy,
   simulateRoutingPolicy,
   validateRoutingPolicy,
   type RoutingPolicy,
   type RoutingPolicyContext,
 } from '@craft-agent/shared/config/routing-policy'
+import { RoutingOutcomeStore } from '@craft-agent/shared/config/routing-outcome-store'
 import {
   createDefaultWorkspaceGovernance,
   parseWorkspaceGovernanceProfile,
@@ -74,6 +77,7 @@ export const HANDLED_CHANNELS = [
   RPC_CHANNELS.workspace.SETTINGS_UPDATE,
   RPC_CHANNELS.workspace.GOVERNANCE_UPDATE,
   RPC_CHANNELS.workspace.ROUTING_SIMULATE,
+  RPC_CHANNELS.workspace.ROUTING_SHADOW_ANALYZE,
   RPC_CHANNELS.workspace.REMOTE_SUPERVISION_GRANT,
   RPC_CHANNELS.workspace.REMOTE_SUPERVISION_REVOKE,
   RPC_CHANNELS.preferences.READ,
@@ -114,6 +118,11 @@ export const HANDLED_CHANNELS = [
 ] as const
 
 export function registerSettingsHandlers(server: RpcServer, deps: HandlerDeps): void {
+  const defaultThinkingLevelStore = deps.defaultThinkingLevelStore ?? {
+    get: getDefaultThinkingLevel,
+    set: setDefaultThinkingLevel,
+  }
+
   const assertSessionAccess = async (context: RequestContext, sessionId: string): Promise<void> => {
     const session = await deps.sessionManager.getSession(sessionId)
     if (!session) throw new Error(`Session not found: ${sessionId}`)
@@ -189,14 +198,14 @@ export function registerSettingsHandlers(server: RpcServer, deps: HandlerDeps): 
   // ============================================================
 
   server.handle(RPC_CHANNELS.settings.GET_DEFAULT_THINKING_LEVEL, async () => {
-    return getDefaultThinkingLevel()
+    return defaultThinkingLevelStore.get()
   })
 
   server.handle(RPC_CHANNELS.settings.SET_DEFAULT_THINKING_LEVEL, async (_ctx, level: string) => {
     if (!isValidThinkingLevel(level)) {
       throw new Error(`Invalid thinking level: ${level}. Valid values: ${VALID_THINKING_LEVELS_LIST}`)
     }
-    const success = setDefaultThinkingLevel(level)
+    const success = defaultThinkingLevelStore.set(level)
     if (!success) {
       throw new Error('Failed to persist default thinking level')
     }
@@ -374,6 +383,45 @@ export function registerSettingsHandlers(server: RpcServer, deps: HandlerDeps): 
     }
     const connections = getLlmConnections().map(({ slug, providerType }) => ({ slug, providerType }))
     return simulateRoutingPolicy(config.routingPolicy, connections, safeContext)
+  })
+
+  // Read-only, local-only feedback. Runtime completion telemetry is retained for
+  // drift visibility, but the shared analyzer permits promotion candidates only
+  // from eval/Mission ground truth and never changes the persisted policy.
+  server.handle(RPC_CHANNELS.workspace.ROUTING_SHADOW_ANALYZE, async (ctx, workspaceId: string) => {
+    await authorizeWorkspaceAction(ctx, workspaceId, 'policy.read')
+    const workspace = getWorkspaceOrThrow(workspaceId)
+    const { loadWorkspaceConfig } = await import('@craft-agent/shared/workspaces')
+    const config = loadWorkspaceConfig(workspace.rootPath)
+    if (!config) throw new Error(`Failed to load workspace config: ${workspaceId}`)
+    const connections = getLlmConnections().map(({ slug, providerType }) => ({ slug, providerType }))
+    const baselineByDifficulty: Partial<Record<(typeof ALL_ROUTING_DIFFICULTIES)[number], string>> = {}
+    const policyEligibleByDifficulty: Partial<Record<(typeof ALL_ROUTING_DIFFICULTIES)[number], string[]>> = {}
+
+    for (const difficulty of ALL_ROUTING_DIFFICULTIES) {
+      const baseline = resolveRoutingPolicy(config.routingPolicy, connections, { difficulty })
+      if (baseline.selectedConnectionSlug) baselineByDifficulty[difficulty] = baseline.selectedConnectionSlug
+
+      // A route is a shadow candidate only if it survives the hard policy at
+      // every sensitivity tier. This conservative intersection guarantees that
+      // aggregate outcome data cannot weaken a confidentiality allow-list.
+      let eligible = new Set(connections.map(({ slug }) => slug))
+      for (const sensitivity of ALL_ROUTING_SENSITIVITIES) {
+        const decision = resolveRoutingPolicy(config.routingPolicy, connections, {
+          difficulty,
+          sensitivity,
+        })
+        const allowed = new Set(decision.errors.length === 0 ? decision.allowedConnectionSlugs : [])
+        eligible = new Set([...eligible].filter((slug) => allowed.has(slug)))
+      }
+      policyEligibleByDifficulty[difficulty] = [...eligible].sort()
+    }
+
+    return new RoutingOutcomeStore(workspace.rootPath).buildShadowReport({
+      minSamples: 500,
+      baselineByDifficulty,
+      policyEligibleByDifficulty,
+    })
   })
 
   // Update a workspace setting
