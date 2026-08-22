@@ -291,6 +291,10 @@ const windowsBuild = readFileSync(
   join(root, 'apps', 'electron', 'scripts', 'build-win.ps1'),
   'utf8',
 )
+const macBuild = readFileSync(
+  join(root, 'apps', 'electron', 'scripts', 'build-dmg.sh'),
+  'utf8',
+)
 const linuxBuild = readFileSync(
   join(root, 'apps', 'electron', 'scripts', 'build-linux.sh'),
   'utf8',
@@ -364,7 +368,11 @@ describe('public release policy', () => {
     expect(releaseWorkflow).toContain("tag_commit=\"$(git rev-list -n 1 '${{ needs.preflight.outputs.tag }}')\"")
   })
 
-  it('forces production provenance only on Windows and Linux release branches', () => {
+  it('keeps production-profile packaging explicit and source-verified', () => {
+    expect(macBuild).toContain('--local-production')
+    expect(macBuild).toContain('LOCAL_PRODUCTION_BUILD=true')
+    expect(macBuild).toContain('LOCAL_COMMIT="$(node "$SCRIPT_DIR/releaseIntegrity.cjs" --check-source "$ROOT_DIR")"')
+    expect(macBuild).toContain('it reads and writes ~/.craft-agent and must never be distributed')
     expect(windowsBuild).toContain('$env:ROBB_BUILD_CHANNEL = "production"')
     expect(windowsBuild).toContain('$env:ROBB_BUILD_CHANNEL = "development"')
     expect(windowsBuild).toContain('releaseIntegrity.cjs')
