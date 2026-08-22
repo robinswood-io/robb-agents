@@ -4,7 +4,13 @@
 param(
     [Parameter(Mandatory = $true)]
     [string]$Installer,
-    [switch]$RequireAuthenticode
+    [switch]$RequireAuthenticode,
+    # ASAR integrity keeps the immutable Electron app in app.asar while native
+    # subprocess runtimes remain unpacked. The secured Windows baseline is
+    # 953 MiB; a 1 GiB ceiling leaves bounded headroom without weakening the
+    # tighter cross-platform default used by the package audit itself.
+    [ValidateRange(1, 4096)]
+    [int]$MaxInstalledMiB = 1024
 )
 
 $ErrorActionPreference = 'Stop'
@@ -64,7 +70,7 @@ try {
 
     $packageAudit = Join-Path (Get-Location) 'scripts\robb_package_audit.py'
     if (-not (Test-Path $packageAudit)) { throw "Missing package audit script: $packageAudit" }
-    & python $packageAudit --root $InstallDir
+    & python $packageAudit --root $InstallDir --max-mib $MaxInstalledMiB
     if ($LASTEXITCODE -ne 0) { throw 'Installed app failed recursive release or unpacked size audit' }
     Write-Output 'OK: installed payload passes package hygiene and size audit'
 

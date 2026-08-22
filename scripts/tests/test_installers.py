@@ -185,6 +185,8 @@ class InstallerContractTests(unittest.TestCase):
         self.assertIn("[switch]$RequireAuthenticode", source)
         self.assertIn("Get-AuthenticodeSignature $app", source)
         self.assertIn("Installed executable Authenticode verification failed", source)
+        self.assertIn("[int]$MaxInstalledMiB = 1024", source)
+        self.assertIn("--max-mib $MaxInstalledMiB", source)
         self.assertNotIn(r"resources\app\dist\resources", source)
         self.assertNotIn("$DebugPort = 9229", source)
 
