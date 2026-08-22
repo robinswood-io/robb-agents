@@ -182,6 +182,9 @@ class InstallerContractTests(unittest.TestCase):
         self.assertIn(r"resources\app\resources\bin\win32-x64\rtk.exe", source)
         self.assertIn("[System.Net.Sockets.TcpListener]::new", source)
         self.assertIn("Get-AvailableLoopbackPort", source)
+        self.assertIn("Get-InstalledAppProcesses", source)
+        self.assertIn("[System.StringComparison]::OrdinalIgnoreCase", source)
+        self.assertIn("Write-StartupDiagnostics $InstallDir $SmokeConfig", source)
         self.assertIn("[switch]$RequireAuthenticode", source)
         self.assertIn("Get-AuthenticodeSignature $app", source)
         self.assertIn("Installed executable Authenticode verification failed", source)
@@ -189,6 +192,7 @@ class InstallerContractTests(unittest.TestCase):
         self.assertIn("--max-mib $MaxInstalledMiB", source)
         self.assertNotIn(r"resources\app\dist\resources", source)
         self.assertNotIn("$DebugPort = 9229", source)
+        self.assertNotIn('Win32_Process -Filter "ParentProcessId =', source)
 
     def test_windows_release_requires_dual_authenticode_proof_before_provenance(self) -> None:
         windows_build = (ROOT / "apps" / "electron" / "scripts" / "build-win.ps1").read_text(

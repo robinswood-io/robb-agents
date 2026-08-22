@@ -41,6 +41,41 @@ function Get-AvailableLoopbackPort {
     }
 }
 
+function Get-InstalledAppProcesses([string]$InstalledRoot) {
+    $prefix = [System.IO.Path]::GetFullPath($InstalledRoot).TrimEnd([System.IO.Path]::DirectorySeparatorChar) + [System.IO.Path]::DirectorySeparatorChar
+    return @(
+        Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
+            Where-Object {
+                $null -ne $_.ExecutablePath -and
+                $_.ExecutablePath.StartsWith($prefix, [System.StringComparison]::OrdinalIgnoreCase)
+            }
+    )
+}
+
+function Write-StartupDiagnostics([string]$InstalledRoot, [string]$ProfileRoot) {
+    Write-Output 'Installed process snapshot:'
+    $processes = @(Get-InstalledAppProcesses $InstalledRoot)
+    if ($processes.Count -eq 0) {
+        Write-Output '  <no running process under the isolated install root>'
+    } else {
+        $processes |
+            Select-Object ProcessId, ParentProcessId, ExecutablePath, CommandLine |
+            Format-List |
+            Out-String |
+            Write-Output
+    }
+
+    $logs = @(Get-ChildItem -Path $ProfileRoot -Recurse -File -Filter '*.log' -ErrorAction SilentlyContinue)
+    if ($logs.Count -eq 0) {
+        Write-Output 'Startup logs: <none>'
+        return
+    }
+    foreach ($log in $logs) {
+        Write-Output "Startup log tail: $($log.FullName)"
+        Get-Content -Path $log.FullName -Tail 80 -ErrorAction SilentlyContinue | Write-Output
+    }
+}
+
 try {
     New-Item -ItemType Directory -Force -Path $Root, $SmokeConfig, (Join-Path $SmokeConfig 'robb-electron') | Out-Null
     # NSIS requires /D= as its final argument. The installer is per-user, so
@@ -94,7 +129,7 @@ try {
     $targets = $null
     $rendererProcess = $null
     $hasCdpRenderer = $false
-    $deadline = (Get-Date).AddSeconds(45)
+    $deadline = (Get-Date).AddSeconds(60)
     do {
         Start-Sleep -Milliseconds 500
         $AppProcess.Refresh()
@@ -106,17 +141,20 @@ try {
         }
         $hasCdpRenderer = @($targets | Where-Object { $_.type -eq 'page' -and $_.title -eq 'Robb Agents' }).Count -gt 0
         # Hosted Windows runners may suppress the DevTools listener for their
-        # non-interactive desktop. A Chromium renderer child is the equivalent
-        # runtime signal in that environment.
-        $rendererProcess = Get-CimInstance Win32_Process -Filter "ParentProcessId = $($AppProcess.Id)" |
-            Where-Object { $_.CommandLine -match '--type=renderer' }
+        # non-interactive desktop. Electron can also detach the browser process
+        # from the launcher PID. A renderer executing from this isolated install
+        # is the equivalent runtime signal without depending on process topology.
+        $rendererProcess = @(Get-InstalledAppProcesses $InstallDir) |
+            Where-Object { $_.CommandLine -match '--type=renderer' } |
+            Select-Object -First 1
     } while (-not $hasCdpRenderer -and $null -eq $rendererProcess -and (Get-Date) -lt $deadline)
     if ($hasCdpRenderer) {
         Write-Output 'OK: installed Robb Agents exposes a renderer through CDP'
     } elseif ($null -ne $rendererProcess) {
         Write-Output 'OK: installed Robb Agents spawned a Chromium renderer on the non-interactive Windows runner'
     } else {
-        throw 'Installed app did not expose a CDP page or Chromium renderer within 45 seconds'
+        Write-StartupDiagnostics $InstallDir $SmokeConfig
+        throw 'Installed app did not expose a CDP page or installation-scoped Chromium renderer within 60 seconds'
     }
     & taskkill.exe /PID $AppProcess.Id /T /F 2>$null | Out-Null
     $AppProcess.WaitForExit()
