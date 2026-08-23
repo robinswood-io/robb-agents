@@ -124,6 +124,67 @@ function replaceDelimitedBlock(content: string, tagName: string, replacement: st
   return chunks.join('');
 }
 
+function isAsciiDigit(value: string | undefined): boolean {
+  return value !== undefined && value >= '0' && value <= '9';
+}
+
+function isWhitespace(value: string | undefined): boolean {
+  return value !== undefined && value.trim() === '';
+}
+
+function hasIsoDatePrefix(content: string, offset: number, lineEnd: number): boolean {
+  if (lineEnd - offset < 11) return false;
+  return (
+    isAsciiDigit(content[offset]) &&
+    isAsciiDigit(content[offset + 1]) &&
+    isAsciiDigit(content[offset + 2]) &&
+    isAsciiDigit(content[offset + 3]) &&
+    content[offset + 4] === '-' &&
+    isAsciiDigit(content[offset + 5]) &&
+    isAsciiDigit(content[offset + 6]) &&
+    content[offset + 7] === '-' &&
+    isAsciiDigit(content[offset + 8]) &&
+    isAsciiDigit(content[offset + 9]) &&
+    content[offset + 10]?.toLowerCase() === 't'
+  );
+}
+
+function findArchivedUserMarker(content: string): number | undefined {
+  const normalizedContent = content.toLowerCase();
+  let marker = content.indexOf('\n');
+
+  while (marker !== -1) {
+    const lineStart = marker + 1;
+    const nextNewline = content.indexOf('\n', lineStart);
+    const lineEnd = nextNewline === -1 ? content.length : nextNewline;
+
+    if (
+      normalizedContent.startsWith('user', lineStart) &&
+      isWhitespace(content[lineStart + 4])
+    ) {
+      return marker;
+    }
+
+    if (hasIsoDatePrefix(content, lineStart, lineEnd)) {
+      let candidate = normalizedContent.indexOf('user', lineStart + 11);
+      while (candidate !== -1 && candidate < lineEnd) {
+        if (
+          candidate > lineStart + 11 &&
+          isWhitespace(content[candidate - 1]) &&
+          isWhitespace(content[candidate + 4])
+        ) {
+          return marker;
+        }
+        candidate = normalizedContent.indexOf('user', candidate + 4);
+      }
+    }
+
+    marker = nextNewline;
+  }
+
+  return undefined;
+}
+
 /**
  * Strip high-volume runtime scaffolding from archived/run transcripts before
  * summary and handoff generation. These blocks are useful to the agent runtime
@@ -149,9 +210,9 @@ export function sanitizeConversationContent(content: string): string {
 
   // Archived runs sometimes serialize the opening instruction blob as Markdown
   // rather than XML. Keep the next true user turn when present.
-  const userMarker = /\n(?:\d{4}-\d{2}-\d{2}T[^\n]+\s+)?user\s+/i.exec(result);
-  if (result.length > 4_000 && userMarker?.index && result.slice(0, userMarker.index).includes('# AGENTS.md instructions')) {
-    result = result.slice(userMarker.index).trimStart();
+  const userMarker = findArchivedUserMarker(result);
+  if (result.length > 4_000 && userMarker && result.slice(0, userMarker).includes('# AGENTS.md instructions')) {
+    result = result.slice(userMarker).trimStart();
   }
 
   return result.trim();

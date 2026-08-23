@@ -92,6 +92,16 @@ describe('conversation-summary helpers', () => {
     expect(sanitizeConversationContent(content)).toBe(content)
   })
 
+  it('finds the next archived user turn without regex backtracking', () => {
+    const prefix = '# AGENTS.md instructions\n' + 'runtime scaffold '.repeat(400)
+    const userTurn = '2026-08-23T12:00:00Z user Ship the release.'
+
+    expect(sanitizeConversationContent(`${prefix}\n${userTurn}`)).toBe(userTurn)
+
+    const unterminatedTimestamp = `${prefix}\n2026-08-23T12:00:00Z${'\t'.repeat(20_000)}`
+    expect(sanitizeConversationContent(unterminatedTimestamp)).toBe(unterminatedTimestamp.trim())
+  })
+
   it('requires non-empty blocker and nextTask fields in runtime handoffs', () => {
     expect(() => buildRuntimeRecoveryHandoff({
       blocker: '   ',
