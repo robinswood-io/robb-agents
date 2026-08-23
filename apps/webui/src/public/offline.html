@@ -63,8 +63,8 @@
       <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><path d="M12 20h.01"/><path d="m3 3 18 18"/></svg>
     </div>
     <h1 id="title">Vous êtes hors ligne</h1>
-    <p id="description">L’interface est disponible, mais votre hôte Robb doit être joignable pour consulter les sessions et piloter les agents.</p>
-    <p class="privacy" id="privacy">Par sécurité, aucune conversation, pièce jointe ni donnée d’authentification n’est enregistrée dans le cache hors ligne.</p>
+    <p id="description">Votre hôte Robb doit être joignable pour le direct et le pilotage. Si vous avez activé l’espace hors ligne chiffré, rechargez l’application complète pour retrouver le texte synchronisé.</p>
+    <p class="privacy" id="privacy">Le cache public ne contient aucune donnée privée. Le texte libre opt-in reste chiffré séparément ; les champs structurés de fichiers, identifiants, outils et authentification sont exclus, mais le texte enregistré peut lui-même être sensible.</p>
     <button id="retry" type="button">Réessayer</button>
     <p id="status" role="status" aria-live="polite"></p>
   </main>
@@ -74,8 +74,8 @@
       document.documentElement.lang = 'en';
       document.title = 'Robb Agents — Offline';
       document.getElementById('title').textContent = 'You are offline';
-      document.getElementById('description').textContent = 'The interface is available, but your Robb host must be reachable to view sessions and control agents.';
-      document.getElementById('privacy').textContent = 'For security, no conversation, attachment, or authentication data is stored in the offline cache.';
+      document.getElementById('description').textContent = 'Your Robb host must be reachable for live work and agent control. If you enabled the encrypted offline workspace, reload the full app to open synchronized text.';
+      document.getElementById('privacy').textContent = 'The public app cache contains no private data. Opt-in free text stays encrypted separately; structured file, credential, tool, and authentication fields are excluded, but saved text can itself be sensitive.';
       document.getElementById('retry').textContent = 'Try again';
     }
     const retry = () => {

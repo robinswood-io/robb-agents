@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Download, RefreshCw, Sparkles, Wifi, WifiOff, X } from 'lucide-react'
+import { Database, Download, LogOut, RefreshCw, Sparkles, Wifi, WifiOff, X } from 'lucide-react'
 import type { WsRpcClient, TransportConnectionState } from '../../../electron/src/transport/client'
 import {
   clearInstallPrompt,
@@ -18,6 +18,9 @@ import {
 export interface RemoteConnectionBadgeProps {
   client: WsRpcClient
   hostLabel: string
+  offlineItemCount?: number
+  onOpenOfflineWorkspace?: () => void
+  onSignOut?: () => Promise<void>
 }
 
 const dialogFocusableSelector = [
@@ -82,7 +85,13 @@ function statusTone(status: TransportConnectionState['status']): string {
   return 'border-amber-500/20 bg-amber-500/12 text-amber-700 dark:text-amber-300'
 }
 
-export function RemoteConnectionBadge({ client, hostLabel }: RemoteConnectionBadgeProps) {
+export function RemoteConnectionBadge({
+  client,
+  hostLabel,
+  offlineItemCount = 0,
+  onOpenOfflineWorkspace,
+  onSignOut,
+}: RemoteConnectionBadgeProps) {
   const { t } = useTranslation()
   const [state, setState] = useState<TransportConnectionState>(() => client.getConnectionState())
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(() => getInstallPrompt())
@@ -90,6 +99,8 @@ export function RemoteConnectionBadge({ client, hostLabel }: RemoteConnectionBad
   const [installed, setInstalled] = useState(() => isRunningAsInstalledApp())
   const [menuOpen, setMenuOpen] = useState(false)
   const [updateAvailable, setUpdateAvailable] = useState(false)
+  const [signingOut, setSigningOut] = useState(false)
+  const [signOutError, setSignOutError] = useState(false)
   const controlsRef = useRef<HTMLDivElement>(null)
   const mobileMenuButtonRef = useRef<HTMLButtonElement>(null)
   const mobileMenuDialogRef = useRef<HTMLElement>(null)
@@ -207,6 +218,19 @@ export function RemoteConnectionBadge({ client, hostLabel }: RemoteConnectionBad
     }
   }
 
+  const signOut = async () => {
+    if (!onSignOut || signingOut) return
+    if (!window.confirm(t('dialog.logoutConfirmation'))) return
+    setSigningOut(true)
+    setSignOutError(false)
+    try {
+      await onSignOut()
+    } catch {
+      setSignOutError(true)
+      setSigningOut(false)
+    }
+  }
+
   const statusIcon = connected
     ? <Wifi className="h-4 w-4" />
     : retrying
@@ -273,19 +297,65 @@ export function RemoteConnectionBadge({ client, hostLabel }: RemoteConnectionBad
           <span className="hidden lg:inline">{t('webui.updateNow', 'Update now')}</span>
         </button>
       )}
+      {onOpenOfflineWorkspace && (
+        <button
+          type="button"
+          data-testid="remote-offline-workspace"
+          className="pointer-events-auto relative flex h-11 w-11 items-center justify-center rounded-xl border border-border bg-card/95 text-foreground shadow-sm lg:w-auto lg:gap-1.5 lg:px-3"
+          onClick={onOpenOfflineWorkspace}
+          aria-label={t('webui.offlineOpen', 'Offline workspace')}
+          title={t('webui.offlineOpen', 'Offline workspace')}
+        >
+          <Database className="h-4 w-4 text-accent" />
+          <span className="hidden lg:inline">{t('webui.offlineShort', 'Offline')}</span>
+          {offlineItemCount > 0 && (
+            <span className="absolute -right-1 -top-1 min-w-5 rounded-full bg-accent px-1 text-center text-[10px] font-bold leading-5 text-accent-foreground lg:static lg:ml-0.5">
+              {Math.min(99, offlineItemCount)}
+            </span>
+          )}
+        </button>
+      )}
+      {onSignOut && (
+        <button
+          type="button"
+          className="pointer-events-auto flex h-11 w-11 items-center justify-center rounded-xl border border-border bg-card/95 text-foreground shadow-sm"
+          onClick={() => void signOut()}
+          disabled={signingOut}
+          aria-label={t('webui.logOut')}
+          title={t('webui.logOut')}
+        >
+          {signingOut
+            ? <RefreshCw className="h-4 w-4 animate-spin" aria-hidden="true" />
+            : <LogOut className="h-4 w-4" aria-hidden="true" />}
+        </button>
+      )}
       </div>
 
-      {menuOpen && (
-        <section
-          ref={mobileMenuDialogRef}
-          id="remote-mobile-status-menu"
-          data-testid="remote-mobile-status-menu"
-          className="pointer-events-auto fixed left-3 right-3 top-[calc(62px+env(safe-area-inset-top))] rounded-2xl border border-border/70 bg-card/95 p-4 text-sm text-foreground shadow-2xl backdrop-blur-xl sm:hidden"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="remote-mobile-status-title"
-          tabIndex={-1}
+      {signOutError && !menuOpen && (
+        <p
+          className="pointer-events-auto fixed right-3 top-[calc(62px+env(safe-area-inset-top))] max-w-[calc(100vw-1.5rem)] rounded-xl border border-destructive/40 bg-destructive px-3 py-2 text-xs font-medium text-destructive-foreground shadow-lg"
+          role="alert"
         >
+          {t('webui.logOutFailed')}
+        </p>
+      )}
+
+      {menuOpen && (
+        <div
+          className="pointer-events-auto fixed inset-0 bg-foreground/20 sm:hidden"
+          onPointerDown={() => setMenuOpen(false)}
+        >
+          <section
+            ref={mobileMenuDialogRef}
+            id="remote-mobile-status-menu"
+            data-testid="remote-mobile-status-menu"
+            className="fixed left-3 right-3 top-[calc(62px+env(safe-area-inset-top))] rounded-2xl border border-border/70 bg-card/95 p-4 text-sm text-foreground shadow-2xl backdrop-blur-xl"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="remote-mobile-status-title"
+            tabIndex={-1}
+            onPointerDown={(event) => event.stopPropagation()}
+          >
           <button
             ref={mobileMenuCloseRef}
             type="button"
@@ -305,6 +375,24 @@ export function RemoteConnectionBadge({ client, hostLabel }: RemoteConnectionBad
             </div>
           </div>
           <div className="mt-4 grid gap-2">
+            {onOpenOfflineWorkspace && (
+              <button
+                type="button"
+                className="relative flex min-h-11 items-center justify-center gap-2 rounded-xl border border-border bg-background/70 px-4 font-semibold"
+                onClick={() => {
+                  setMenuOpen(false)
+                  onOpenOfflineWorkspace()
+                }}
+              >
+                <Database className="h-4 w-4 text-accent" />
+                {t('webui.offlineOpen', 'Offline workspace')}
+                {offlineItemCount > 0 && (
+                  <span className="rounded-full bg-accent px-2 py-0.5 text-[10px] text-accent-foreground">
+                    {Math.min(99, offlineItemCount)}
+                  </span>
+                )}
+              </button>
+            )}
             {!connected && (
               <button
                 type="button"
@@ -338,20 +426,44 @@ export function RemoteConnectionBadge({ client, hostLabel }: RemoteConnectionBad
                 {t('webui.updateNow', 'Update now')}
               </button>
             )}
+            {onSignOut && (
+              <button
+                type="button"
+                className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-destructive/25 bg-background/70 px-4 font-semibold text-destructive"
+                disabled={signingOut}
+                onClick={() => void signOut()}
+              >
+                {signingOut
+                  ? <RefreshCw className="h-4 w-4 animate-spin" aria-hidden="true" />
+                  : <LogOut className="h-4 w-4" aria-hidden="true" />}
+                {t('webui.logOut')}
+              </button>
+            )}
+            {signOutError && (
+              <p className="rounded-xl border border-destructive/40 bg-destructive p-3 text-xs font-medium text-destructive-foreground" role="alert">
+                {t('webui.logOutFailed')}
+              </p>
+            )}
           </div>
-        </section>
+          </section>
+        </div>
       )}
 
       {showInstallHelp && (
         <div
-          ref={installHelpDialogRef}
-          data-testid="remote-install-help"
-          className="pointer-events-auto fixed left-3 right-3 top-[calc(62px+env(safe-area-inset-top))] mx-auto max-w-sm rounded-2xl border border-border/70 bg-card/95 p-4 text-sm text-foreground shadow-2xl backdrop-blur-xl sm:left-auto sm:right-3"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="remote-install-help-title"
-          tabIndex={-1}
+          className="pointer-events-auto fixed inset-0 bg-foreground/20"
+          onPointerDown={() => setShowInstallHelp(false)}
         >
+          <div
+            ref={installHelpDialogRef}
+            data-testid="remote-install-help"
+            className="fixed left-3 right-3 top-[calc(62px+env(safe-area-inset-top))] mx-auto max-w-sm rounded-2xl border border-border/70 bg-card/95 p-4 text-sm text-foreground shadow-2xl backdrop-blur-xl sm:left-auto sm:right-3"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="remote-install-help-title"
+            tabIndex={-1}
+            onPointerDown={(event) => event.stopPropagation()}
+          >
           <button
             ref={installHelpCloseRef}
             type="button"
@@ -367,6 +479,7 @@ export function RemoteConnectionBadge({ client, hostLabel }: RemoteConnectionBad
               ? t('webui.remoteInstallIosInstructions')
               : t('webui.remoteInstallBrowserInstructions')}
           </p>
+          </div>
         </div>
       )}
     </div>

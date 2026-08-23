@@ -6,6 +6,7 @@ This file accumulates release notes for the next unreleased version. PRs that ad
 
 ## Improvements
 
+- Add an opt-in encrypted offline vault to Remote with read-only snapshots of up to 10 recent chats, local search, text drafts and pins, plus a manually reviewed outbox that never sends automatically.
 - Make Remote a responsive, accessible PWA across phones and tablets, with a privacy-preserving offline shell, immediate reconnect states, and user-controlled app updates.
 - Support validated public HTTPS/WSS endpoints for Remote reverse proxies so pairing links and browser sessions stay on the trusted public origin.
 - Let Task and Mission sub-agents inherit full Execute autonomy, including shell, browser, MCP, and network tools, only when their parent is in Execute and the workspace explicitly enables external actions in Execute; all other cases remain fail-closed.
