@@ -136,7 +136,9 @@ import {
   buildAutomaticTurnRecoveryPrompt,
   createPendingTurnRecovery,
   exhaustPendingTurnRecovery,
+  resolveAutomaticRecoveryInactivityTimeoutMs,
   turnStillNeedsRecovery,
+  withAutomaticRecoveryInactivityTimeout,
   type AutomaticTurnRecoveryCause,
 } from './turn-recovery'
 import {
@@ -2571,6 +2573,8 @@ export class SessionManager implements ISessionManager {
       sessionId: managed.id,
       message: cause === 'app_restart'
         ? 'The application restarted during this turn. Work is resuming automatically…'
+        : cause === 'premature_final'
+          ? 'The agent stopped after announcing more work. Work is continuing automatically…'
         : 'The agent connection ended before the final response. Work is resuming automatically…',
       level: 'warning',
       timestamp: this.monotonic(),
@@ -7287,9 +7291,20 @@ export class SessionManager implements ISessionManager {
         inputTokens: managed.tokenUsage?.inputTokens,
       })
       const chatIterator = agent.chat(effectiveMessage, modelInputAttachments.attachments)
+      const automaticRecoveryInactivityTimeoutMs = options?.automaticRecovery
+        ? resolveAutomaticRecoveryInactivityTimeoutMs(
+            process.env.CRAFT_AUTOMATIC_RECOVERY_INACTIVITY_TIMEOUT_MS,
+          )
+        : 0
+      const chatEvents = options?.automaticRecovery
+        ? withAutomaticRecoveryInactivityTimeout(
+            chatIterator,
+            automaticRecoveryInactivityTimeoutMs,
+          )
+        : chatIterator
       sessionLog.info('Got chat iterator, starting iteration...')
 
-      for await (const event of chatIterator) {
+      for await (const event of chatEvents) {
         // Log events (skip noisy text_delta)
         if (event.type !== 'text_delta') {
           if (event.type === 'tool_start') {
@@ -7346,7 +7361,22 @@ export class SessionManager implements ISessionManager {
           // A complete event is valid only when this user turn produced either
           // a final assistant response or a visible error. Commentary and tool
           // results alone are progress, not completion.
-          if (classifyLatestTurnTerminalState(managed.messages) === 'incomplete') {
+          const latestTurnTerminalState = classifyLatestTurnTerminalState(managed.messages)
+          if (latestTurnTerminalState === 'premature-final-assistant') {
+            sessionLog.warn(`Session ${sessionId} ended with a final response that announced unfinished work`)
+            const recoveryQueued = await this.enqueueAutomaticTurnRecovery(managed, 'premature_final')
+            if (recoveryQueued) {
+              sendSpan.mark('chat.complete.premature_final_auto_recovery')
+              sendSpan.end()
+              await this.onProcessingStopped(sessionId, 'interrupted', myGeneration)
+              return
+            }
+
+            await this.processEvent(managed, {
+              type: 'error',
+              message: 'The agent repeatedly stopped after announcing more work. Completed work was preserved; retry to resume safely.',
+            }, myGeneration)
+          } else if (latestTurnTerminalState === 'incomplete') {
             sessionLog.warn(`Session ${sessionId} completed without assistant response - possible context overflow or API issue`)
 
             // Check if there's a captured API error that explains the silent failure.

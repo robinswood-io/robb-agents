@@ -769,7 +769,7 @@ export interface SendMessageOptions {
    */
   automaticRecovery?: {
     originalUserMessageId: string
-    cause: 'app_restart' | 'stream_ended' | 'runtime_error'
+    cause: 'app_restart' | 'stream_ended' | 'runtime_error' | 'premature_final'
   }
 }
 

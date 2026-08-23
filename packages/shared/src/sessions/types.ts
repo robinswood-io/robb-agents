@@ -93,7 +93,7 @@ export interface PendingTurnRecovery {
   startedAt: number;
   attempts: number;
   lastAttemptAt?: number;
-  lastCause?: 'app_restart' | 'stream_ended' | 'runtime_error';
+  lastCause?: 'app_restart' | 'stream_ended' | 'runtime_error' | 'premature_final';
   exhaustedAt?: number;
 }
 
