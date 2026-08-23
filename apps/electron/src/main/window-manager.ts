@@ -196,13 +196,14 @@ export class WindowManager {
     const { workspaceId, focused = false, initialDeepLink, restoreUrl } = options
 
     // Load platform-specific app icon
-    // In packaged app, resources are at dist/resources/ (same level as __dirname)
-    // In dev, resources are at ../resources/ (sibling of dist/)
+    // Packaged assets copied by electron-builder live outside app.asar under
+    // Resources/app/resources. In dev, resources remain next to dist/.
     const getIconPath = () => {
       const iconName = process.platform === 'darwin' ? 'robinswood-icon.icns'
         : process.platform === 'win32' ? 'robinswood-icon.ico'
         : 'robinswood-icon.png'
       return [
+        join(process.resourcesPath, 'app', 'resources', iconName),
         join(__dirname, 'resources', iconName),
         join(__dirname, '../resources', iconName),
       ].find(p => existsSync(p)) ?? join(__dirname, '../resources', iconName)
