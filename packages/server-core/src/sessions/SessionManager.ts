@@ -4089,6 +4089,39 @@ export class SessionManager implements ISessionManager {
     }
   }
 
+  async restartAgentRuntime(sessionId: string): Promise<void> {
+    const managed = this.sessions.get(sessionId)
+    if (!managed) {
+      throw new Error(`Session ${sessionId} not found`)
+    }
+
+    const inflight = this.agentRefreshLocks.get(managed.id)
+    if (inflight) {
+      await inflight.catch(() => undefined)
+    }
+
+    if (managed.isProcessing || managed.agent?.isProcessing()) {
+      throw new Error('Cannot reconnect runtime while session is processing')
+    }
+
+    const work = this.disposeManagedAgentRuntime(managed, 'manual runtime reconnect')
+    const tracked = work.then(() => undefined, () => undefined)
+    this.agentRefreshLocks.set(managed.id, tracked)
+    try {
+      await work
+    } finally {
+      if (this.agentRefreshLocks.get(managed.id) === tracked) {
+        this.agentRefreshLocks.delete(managed.id)
+      }
+    }
+
+    this.recordAutonomyEvent(managed, {
+      phase: 'fallback',
+      message: 'Execution runtime bridge was reconnected; retry the failed turn to recreate the runtime.',
+      evidence: 'Session runtime disposed by restartRuntime command.',
+    })
+  }
+
   private async applyRoutingPolicyForNextTurn(
     managed: ManagedSession,
     workspaceConfig: ReturnType<typeof loadWorkspaceConfig>,
@@ -9331,6 +9364,11 @@ export class SessionManager implements ISessionManager {
                 ? 'Steered the active agent to the integrated browser as a materially different fallback.'
                 : 'Queued an immediate hidden continuation through the integrated browser.',
               evidence,
+            })
+          } else if (decision.kind === 'reconnect_runtime') {
+            this.recordAutonomyEvent(managed, {
+              phase: 'fallback', toolName,
+              message: 'Execution runtime bridge is unavailable; reconnect the runtime before retrying.', evidence,
             })
           }
         }

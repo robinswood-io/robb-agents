@@ -6,6 +6,7 @@ import {
 
 export type AutonomyDecision =
   | { kind: 'fallback_browser' }
+  | { kind: 'reconnect_runtime' }
   | { kind: 'escalate'; reason: HumanEscalationReason }
   | { kind: 'none' }
 
@@ -74,6 +75,9 @@ export function decideAutonomyRecovery(input: AutonomyDecisionInput): AutonomyDe
   }
   if (failure.failureClass === 'credential-required') {
     return { kind: 'escalate', reason: 'credential_required' }
+  }
+  if (failure.recovery === 'runtime-reconnect') {
+    return { kind: 'reconnect_runtime' }
   }
   if (isBrowserTool || !input.browserEnabled) {
     return { kind: 'escalate', reason: 'access_unavailable_after_fallback' }

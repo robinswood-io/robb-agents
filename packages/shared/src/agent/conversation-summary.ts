@@ -7,6 +7,17 @@ const MAX_TRANSCRIPT_CHARS = 12_000;
 export interface ConversationSummaryOptions {
   maxMessageChars?: number;
   maxTranscriptChars?: number;
+  sanitizeInfrastructureBlocks?: boolean;
+}
+
+export interface RuntimeHandoffInput {
+  currentGoal?: string;
+  verifiedFacts?: string[];
+  attemptedActions?: string[];
+  touchedAreas?: string[];
+  executedChecks?: string[];
+  blocker: string;
+  nextTask: string;
 }
 
 export interface HierarchicalContextArtifact {
@@ -43,6 +54,7 @@ export function buildConversationSummaryTranscript(
 ): string {
   const maxMessageChars = options?.maxMessageChars ?? MAX_MESSAGE_CHARS;
   const maxTranscriptChars = options?.maxTranscriptChars ?? MAX_TRANSCRIPT_CHARS;
+  const sanitizeInfrastructureBlocks = options?.sanitizeInfrastructureBlocks ?? true;
   if (!Number.isInteger(maxMessageChars) || maxMessageChars < 0) {
     throw new Error('maxMessageChars must be a non-negative integer');
   }
@@ -52,7 +64,12 @@ export function buildConversationSummaryTranscript(
   if (maxTranscriptChars === 0) return '';
 
   const transcript = messages
-    .map((message) => `${message.type === 'user' ? 'User' : 'Assistant'}: ${message.content.slice(0, maxMessageChars)}`)
+    .map((message) => {
+      const content = sanitizeInfrastructureBlocks
+        ? sanitizeConversationContent(message.content)
+        : message.content;
+      return `${message.type === 'user' ? 'User' : 'Assistant'}: ${content.slice(0, maxMessageChars)}`;
+    })
     .join('\n\n');
 
   if (transcript.length <= maxTranscriptChars) return transcript;
@@ -80,6 +97,86 @@ export function buildConversationSummaryPrompt(messages: RecoveryMessage[]): str
     'Summarize this conversation concisely. Preserve: key decisions, ongoing tasks, ' +
     `technical context, and the user's current goal. Be specific, not generic.\n\n${transcript}`
   );
+}
+
+/**
+ * Strip high-volume runtime scaffolding from archived/run transcripts before
+ * summary and handoff generation. These blocks are useful to the agent runtime
+ * but they routinely drown out the user's actual objective when rehydrating
+ * recent runs.
+ */
+export function sanitizeConversationContent(content: string): string {
+  let result = content
+    .replace(/<recommended_plugins>[\s\S]*?<\/recommended_plugins>/gi, '[recommended plugins omitted]')
+    .replace(/<environment_context>[\s\S]*?<\/environment_context>/gi, '[environment context omitted]')
+    .replace(/<INSTRUCTIONS>[\s\S]*?<\/INSTRUCTIONS>/gi, '[agent instructions omitted]');
+
+  // Archived runs sometimes serialize the opening instruction blob as Markdown
+  // rather than XML. Keep the next true user turn when present.
+  const userMarker = /\n(?:\d{4}-\d{2}-\d{2}T[^\n]+\s+)?user\s+/i.exec(result);
+  if (result.length > 4_000 && userMarker?.index && result.slice(0, userMarker.index).includes('# AGENTS.md instructions')) {
+    result = result.slice(userMarker.index).trimStart();
+  }
+
+  return result.trim();
+}
+
+function formatHandoffList(title: string, values: string[] | undefined): string[] {
+  const cleanValues = (values ?? []).map(value => value.trim()).filter(Boolean);
+  if (cleanValues.length === 0) return [];
+  return [
+    `## ${title}`,
+    ...cleanValues.map(value => `- ${value}`),
+  ];
+}
+
+function sanitizeHandoffText(value: string | undefined): string {
+  return sanitizeConversationContent(value ?? '')
+    .replace(/\[(?:recommended plugins|environment context|agent instructions) omitted\]/gi, '')
+    .trim();
+}
+
+/**
+ * Deterministic handoff block for cases where the local runtime cannot recover
+ * the current turn. It is intentionally compact and implementation-ready.
+ */
+export function buildRuntimeRecoveryHandoff(input: RuntimeHandoffInput): string {
+  const currentGoal = sanitizeHandoffText(input.currentGoal) || 'Resume the interrupted user request from the latest available session context.';
+  const blocker = sanitizeHandoffText(input.blocker);
+  const nextTask = sanitizeHandoffText(input.nextTask);
+  if (!blocker) {
+    throw new Error('blocker is required');
+  }
+  if (!nextTask) {
+    throw new Error('nextTask is required');
+  }
+  const verifiedFacts = input.verifiedFacts?.map(sanitizeHandoffText).filter(Boolean);
+  const attemptedActions = input.attemptedActions?.map(sanitizeHandoffText).filter(Boolean);
+  const touchedAreas = input.touchedAreas?.map(sanitizeHandoffText).filter(Boolean);
+  const executedChecks = input.executedChecks?.map(sanitizeHandoffText).filter(Boolean);
+
+  const lines = [
+    '# Runtime Recovery Handoff',
+    '',
+    '## Current Goal',
+    currentGoal,
+    '',
+    ...formatHandoffList('Verified Facts', verifiedFacts),
+    ...(verifiedFacts?.length ? [''] : []),
+    ...formatHandoffList('Actions Attempted', attemptedActions),
+    ...(attemptedActions?.length ? [''] : []),
+    ...formatHandoffList('Touched Areas', touchedAreas),
+    ...(touchedAreas?.length ? [''] : []),
+    ...formatHandoffList('Checks Already Run', executedChecks),
+    ...(executedChecks?.length ? [''] : []),
+    '## Blocker',
+    blocker,
+    '',
+    '## Next Task',
+    nextTask,
+  ];
+
+  return lines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
 }
 
 export async function generateConversationSummary(
@@ -120,7 +217,9 @@ export function buildHierarchicalConversationContext(
     .reverse()
     .find((message) => message.type === 'user')
     ?.content.trim();
-  const currentGoal = explicitGoal || inferredGoal;
+  const currentGoal = explicitGoal
+    ? sanitizeConversationContent(explicitGoal)
+    : (inferredGoal ? sanitizeConversationContent(inferredGoal) : undefined);
   const recentMessages = buildConversationSummaryTranscript(
     input.messages.slice(-maxRecentMessages),
     { maxMessageChars: 1000, maxTranscriptChars: 8000 },
