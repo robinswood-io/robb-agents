@@ -86,6 +86,12 @@ describe('conversation-summary helpers', () => {
     expect(handoff).not.toContain('catalog')
   })
 
+  it('keeps unterminated instruction delimiters without pathological scanning', () => {
+    const content = '<recommended_plugins>'.repeat(20_000) + 'actual request'
+
+    expect(sanitizeConversationContent(content)).toBe(content)
+  })
+
   it('requires non-empty blocker and nextTask fields in runtime handoffs', () => {
     expect(() => buildRuntimeRecoveryHandoff({
       blocker: '   ',

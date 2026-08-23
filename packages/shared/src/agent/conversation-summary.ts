@@ -99,6 +99,31 @@ export function buildConversationSummaryPrompt(messages: RecoveryMessage[]): str
   );
 }
 
+function replaceDelimitedBlock(content: string, tagName: string, replacement: string): string {
+  const normalizedContent = content.toLowerCase();
+  const openingTag = `<${tagName}>`;
+  const closingTag = `</${tagName}>`;
+  const chunks: string[] = [];
+  let cursor = 0;
+  let replaced = false;
+
+  while (cursor < content.length) {
+    const start = normalizedContent.indexOf(openingTag, cursor);
+    if (start === -1) break;
+
+    const end = normalizedContent.indexOf(closingTag, start + openingTag.length);
+    if (end === -1) break;
+
+    chunks.push(content.slice(cursor, start), replacement);
+    cursor = end + closingTag.length;
+    replaced = true;
+  }
+
+  if (!replaced) return content;
+  chunks.push(content.slice(cursor));
+  return chunks.join('');
+}
+
 /**
  * Strip high-volume runtime scaffolding from archived/run transcripts before
  * summary and handoff generation. These blocks are useful to the agent runtime
@@ -106,10 +131,21 @@ export function buildConversationSummaryPrompt(messages: RecoveryMessage[]): str
  * recent runs.
  */
 export function sanitizeConversationContent(content: string): string {
-  let result = content
-    .replace(/<recommended_plugins>[\s\S]*?<\/recommended_plugins>/gi, '[recommended plugins omitted]')
-    .replace(/<environment_context>[\s\S]*?<\/environment_context>/gi, '[environment context omitted]')
-    .replace(/<INSTRUCTIONS>[\s\S]*?<\/INSTRUCTIONS>/gi, '[agent instructions omitted]');
+  let result = replaceDelimitedBlock(
+    content,
+    'recommended_plugins',
+    '[recommended plugins omitted]',
+  );
+  result = replaceDelimitedBlock(
+    result,
+    'environment_context',
+    '[environment context omitted]',
+  );
+  result = replaceDelimitedBlock(
+    result,
+    'instructions',
+    '[agent instructions omitted]',
+  );
 
   // Archived runs sometimes serialize the opening instruction blob as Markdown
   // rather than XML. Keep the next true user turn when present.
