@@ -580,7 +580,7 @@ export function useOnboarding({
         return
       }
 
-      // Google Gemini OAuth (browser flow — Google account / Gemini Code Assist)
+      // Mistral Vibe subscription (delegated browser flow owned by Vibe)
       if (effectiveMethod === 'pi_mistral_vibe_subscription') {
         const effectiveEditingSlug = connectionSlugOverride ?? editingSlug
         const isReauth = !!effectiveEditingSlug

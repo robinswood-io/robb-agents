@@ -8,10 +8,14 @@ import { getCredentialManager } from '@craft-agent/shared/credentials'
 import { isSetupDeferred, setSetupDeferred } from '@craft-agent/shared/config/storage'
 import { prepareClaudeOAuth, exchangeClaudeCode, hasValidOAuthState, clearOAuthState, prepareMcpOAuth } from '@craft-agent/shared/auth'
 import { validateMcpConnection } from '@craft-agent/shared/mcp'
-import { spawn } from 'node:child_process'
+import { randomUUID } from 'node:crypto'
 import { RPC_CHANNELS } from '@craft-agent/shared/protocol'
 import type { RpcServer } from '@craft-agent/server-core/transport'
 import type { HandlerDeps } from '../handler-deps'
+import {
+  startMistralVibeBrowserAuth,
+  type MistralVibeBrowserAuthFlow,
+} from '../../services/mistral-vibe-browser-auth.ts'
 
 // ============================================
 // IPC Handlers
@@ -26,6 +30,8 @@ export const HANDLED_CHANNELS = [
   RPC_CHANNELS.onboarding.HAS_CLAUDE_OAUTH_STATE,
   RPC_CHANNELS.onboarding.CLEAR_CLAUDE_OAUTH_STATE,
   RPC_CHANNELS.onboarding.START_MISTRAL_VIBE_SETUP,
+  RPC_CHANNELS.onboarding.COMPLETE_MISTRAL_VIBE_SETUP,
+  RPC_CHANNELS.onboarding.CANCEL_MISTRAL_VIBE_SETUP,
   RPC_CHANNELS.onboarding.DEFER_SETUP,
 ] as const
 
@@ -169,30 +175,103 @@ export function registerOnboardingHandlers(server: RpcServer, deps: HandlerDeps)
     return { success: true }
   })
 
-  // Mistral Vibe subscription setup. Vibe owns its browser-login credential
-  // in ~/.vibe; Robb only launches the official setup command and never reads
-  // or persists the resulting secret.
-  server.handle(RPC_CHANNELS.onboarding.START_MISTRAL_VIBE_SETUP, async () => {
-    const command = process.env.ROBB_VIBE_ACP_COMMAND || 'vibe-acp'
+  // Mistral Vibe subscription setup. Vibe owns and persists its credential;
+  // Robb only delegates the official ACP browser flow and opens the returned
+  // public sign-in URL on the client machine.
+  interface PendingMistralVibeFlow {
+    ownerClientId: string
+    flow: MistralVibeBrowserAuthFlow
+    expiryTimer: ReturnType<typeof setTimeout>
+  }
+  const pendingMistralVibeFlows = new Map<string, PendingMistralVibeFlow>()
+
+  function disposePendingMistralVibeFlow(flowId: string) {
+    const pending = pendingMistralVibeFlows.get(flowId)
+    if (!pending) return
+    clearTimeout(pending.expiryTimer)
+    pendingMistralVibeFlows.delete(flowId)
+    pending.flow.close()
+  }
+
+  function cleanupExpiredMistralVibeFlows() {
+    const now = Date.now()
+    for (const [flowId, pending] of pendingMistralVibeFlows) {
+      if (pending.flow.expiresAt <= now) disposePendingMistralVibeFlow(flowId)
+    }
+  }
+
+  server.handle(RPC_CHANNELS.onboarding.START_MISTRAL_VIBE_SETUP, async (ctx) => {
+    cleanupExpiredMistralVibeFlows()
+    for (const [flowId, pending] of pendingMistralVibeFlows) {
+      if (pending.ownerClientId === ctx.clientId) disposePendingMistralVibeFlow(flowId)
+    }
     try {
-      const result = await new Promise<{ code: number | null; stderr: string }>((resolve, reject) => {
-        const child = spawn(command, ['--setup'], { stdio: ['ignore', 'ignore', 'pipe'], env: process.env })
-        let stderr = ''
-        child.stderr?.on('data', (chunk: Buffer) => { stderr = (stderr + chunk.toString()).slice(-4000) })
-        child.once('error', reject)
-        child.once('exit', (code) => resolve({ code, stderr }))
-      })
-      if (result.code !== 0) {
-        return { success: false, error: `${command} --setup exited with code ${result.code ?? 'unknown'}: ${result.stderr || 'No diagnostic output'}` }
-      }
-      return { success: true }
+      const flow = await startMistralVibeBrowserAuth()
+      const flowId = randomUUID()
+      const expiryTimer = setTimeout(
+        () => disposePendingMistralVibeFlow(flowId),
+        Math.max(1, flow.expiresAt - Date.now()),
+      )
+      expiryTimer.unref?.()
+      pendingMistralVibeFlows.set(flowId, { ownerClientId: ctx.clientId, flow, expiryTimer })
+      log?.info(`[Onboarding] Mistral Vibe delegated browser flow started (flow=${flowId})`)
+      return { success: true, flowId, authUrl: flow.authUrl }
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error)
+      log?.warn(`[Onboarding] Mistral Vibe browser flow unavailable: ${detail}`)
+      const needsUpdate = detail.includes('must be updated')
       return {
         success: false,
-        error: `Mistral Vibe is not available (${detail}). Install it with \`uv tool install mistral-vibe\`, then retry.`,
+        error: needsUpdate
+          ? 'Mistral Vibe must be updated. Run `uv tool upgrade mistral-vibe`, then try again.'
+          : 'Mistral Vibe is unavailable. Install it with `uv tool install mistral-vibe`, then try again.',
       }
     }
+  })
+
+  server.handle(RPC_CHANNELS.onboarding.COMPLETE_MISTRAL_VIBE_SETUP, async (ctx, args: unknown) => {
+    const flowId = args && typeof args === 'object' && 'flowId' in args
+      ? (args as { flowId?: unknown }).flowId
+      : undefined
+    if (typeof flowId !== 'string' || !flowId) {
+      return { success: false, error: 'A valid Mistral Vibe flow identifier is required.' }
+    }
+
+    const pending = pendingMistralVibeFlows.get(flowId)
+    if (!pending) return { success: false, error: 'The Mistral Vibe session expired. Start again.' }
+    if (pending.ownerClientId !== ctx.clientId) {
+      return { success: false, error: 'This Mistral Vibe session belongs to another client.' }
+    }
+    if (pending.flow.expiresAt <= Date.now()) {
+      disposePendingMistralVibeFlow(flowId)
+      return { success: false, error: 'The Mistral Vibe session expired. Start again.' }
+    }
+
+    try {
+      await pending.flow.complete()
+      log?.info(`[Onboarding] Mistral Vibe delegated browser flow completed (flow=${flowId})`)
+      return { success: true }
+    } catch {
+      return {
+        success: false,
+        error: 'Mistral Vibe sign-in did not complete. Check the browser window, then try again.',
+      }
+    } finally {
+      disposePendingMistralVibeFlow(flowId)
+    }
+  })
+
+  server.handle(RPC_CHANNELS.onboarding.CANCEL_MISTRAL_VIBE_SETUP, async (ctx, args: unknown) => {
+    const flowId = args && typeof args === 'object' && 'flowId' in args
+      ? (args as { flowId?: unknown }).flowId
+      : undefined
+    if (typeof flowId !== 'string' || !flowId) return { success: true }
+
+    const pending = pendingMistralVibeFlows.get(flowId)
+    if (pending?.ownerClientId === ctx.clientId) {
+      disposePendingMistralVibeFlow(flowId)
+    }
+    return { success: true }
   })
 
   // User chose "Setup later" — persist so onboarding doesn't re-show on next launch

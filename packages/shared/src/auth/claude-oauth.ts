@@ -5,7 +5,7 @@
  * the standard secure flow for public clients (desktop/mobile apps) that
  * does not require a client secret.
  *
- * Based on: https://github.com/grll/claude-code-login
+ * Kept aligned with the Anthropic OAuth contract bundled in the pinned Pi SDK.
  */
 import { randomBytes, createHash } from 'node:crypto'
 import { CLAUDE_OAUTH_CONFIG } from './claude-oauth-config'
@@ -246,6 +246,10 @@ export async function exchangeClaudeCode(
       // Resolved identity (issue #838). Optional — read defensively.
       account?: { uuid?: string; email_address?: string; email?: string }
       organization?: { uuid?: string; name?: string }
+    }
+
+    if (!data.access_token) {
+      throw new Error('Token exchange succeeded but no access_token was returned')
     }
 
     // Runtime confirmation (issue #838): log the response KEYS ONLY — never

@@ -220,6 +220,8 @@ export const RPC_CHANNELS = {
     HAS_CLAUDE_OAUTH_STATE: 'onboarding:hasClaudeOAuthState',
     CLEAR_CLAUDE_OAUTH_STATE: 'onboarding:clearClaudeOAuthState',
     START_MISTRAL_VIBE_SETUP: 'onboarding:startMistralVibeSetup',
+    COMPLETE_MISTRAL_VIBE_SETUP: 'onboarding:completeMistralVibeSetup',
+    CANCEL_MISTRAL_VIBE_SETUP: 'onboarding:cancelMistralVibeSetup',
     DEFER_SETUP: 'onboarding:deferSetup',
   },
   llmConnections: {

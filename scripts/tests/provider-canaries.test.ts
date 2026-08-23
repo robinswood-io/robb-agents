@@ -37,9 +37,17 @@ describe('provider contract canaries', () => {
   it('exercises ChatGPT auth, search and tool-call without serializing the token', async () => {
     const token = makeChatGptJwt('acc_canary');
     const report = await runProviderCanaries({
-      environment: { ROBB_CANARY_CHATGPT_ACCESS_TOKEN: token },
+      environment: {
+        ROBB_CANARY_CHATGPT_ACCESS_TOKEN: token,
+        ROBB_CANARY_CHATGPT_MODEL: 'gpt-canary-model',
+      },
       fetchImpl: async (_input, init) => {
         const body = JSON.parse(String(init?.body)) as Record<string, any>;
+        expect(body.model).toBe('gpt-canary-model');
+        expect(body.input).toEqual([{
+          role: 'user',
+          content: [{ type: 'input_text', text: expect.any(String) }],
+        }]);
         if (body.tools?.[0]?.type === 'web_search') {
           return new Response(JSON.stringify({
             output: [{ type: 'message', content: [{
@@ -49,6 +57,8 @@ describe('provider contract canaries', () => {
             }] }],
           }));
         }
+        expect(body.tools?.[0]?.strict).toBeNull();
+        expect(body.tools?.[0]?.parameters?.additionalProperties).toBe(false);
         return new Response(JSON.stringify({
           output: [{ type: 'function_call', name: 'provider_contract_healthcheck', arguments: '{}' }],
         }));

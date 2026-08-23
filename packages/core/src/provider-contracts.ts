@@ -68,7 +68,7 @@ export const UNSTABLE_PROVIDER_CONTRACTS: Readonly<
       search: 'required',
       'tool-call': 'required',
     }),
-    defaultModel: 'gpt-5.3-codex',
+    defaultModel: 'gpt-5.4-mini',
     requiredHeaders: Object.freeze([
       'Authorization',
       'chatgpt-account-id',

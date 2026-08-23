@@ -19,7 +19,7 @@ import {
 
 /**
  * Codex backend request contract (search path):
- * - model: gpt-5.3-codex
+ * - model: current provider-contract default (gpt-5.4-mini)
  * - store: false
  * - stream: true (backend may return JSON or SSE)
  * - instructions + tool_choice + text.verbosity

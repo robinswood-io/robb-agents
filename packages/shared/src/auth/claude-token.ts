@@ -61,6 +61,10 @@ export async function refreshClaudeToken(refreshToken: string): Promise<{
     token_type?: string;
   };
 
+  if (!data.access_token) {
+    throw new Error('Token refresh succeeded but no access_token was returned');
+  }
+
   // Log what we received from the API for debugging
   const expiresAt = data.expires_in ? Date.now() + data.expires_in * 1000 : undefined;
   debug(`[claude-token] Refresh response - expires_in: ${data.expires_in ?? 'NOT PROVIDED'}, calculated expiresAt: ${expiresAt ? new Date(expiresAt).toISOString() : 'undefined'}`);

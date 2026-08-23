@@ -108,6 +108,14 @@ function wait(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
+async function waitUntil(predicate: () => boolean, timeoutMs = 3_000): Promise<void> {
+  const deadline = Date.now() + timeoutMs
+  while (!predicate()) {
+    if (Date.now() >= deadline) throw new Error('Timed out waiting for file watcher notification')
+    await wait(25)
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -140,8 +148,10 @@ describe('session file watcher isolation', () => {
     // Trigger a change in s1
     writeFileSync(join(dir1, 'output.txt'), 'hello')
 
-    // Wait for debounce + fs.watch delay
-    await wait(300)
+    // Wait for debounce + fs.watch delivery without assuming an unloaded event loop.
+    await waitUntil(() => pushCalls.some(
+      p => p.target.to === 'client' && p.target.clientId === 'client-a',
+    ))
 
     // Only client-a should have received the notification
     const clientAPushes = pushCalls.filter(p => p.target.to === 'client' && p.target.clientId === 'client-a')
@@ -161,7 +171,9 @@ describe('session file watcher isolation', () => {
 
     // Trigger a change in s2
     writeFileSync(join(dir2, 'data.json'), '{}')
-    await wait(300)
+    await waitUntil(() => pushCalls.some(
+      p => p.target.to === 'client' && p.target.clientId === 'client-b',
+    ))
 
     // Client B should still receive notifications
     const clientBAfter = pushCalls.filter(p => p.target.to === 'client' && p.target.clientId === 'client-b')
@@ -204,7 +216,9 @@ describe('session file watcher isolation', () => {
 
     // Write to s2 — should trigger notification
     writeFileSync(join(dir2, 'new.txt'), 'fresh')
-    await wait(300)
+    await waitUntil(() => pushCalls.some(
+      p => p.args[0] === 's2' && p.channel === RPC_CHANNELS.sessions.FILES_CHANGED,
+    ))
 
     const s2Pushes = pushCalls.filter(p =>
       p.args[0] === 's2' && p.channel === RPC_CHANNELS.sessions.FILES_CHANGED
@@ -235,7 +249,7 @@ describe('session file watcher isolation', () => {
 
     // Write a normal file — should trigger notification
     writeFileSync(join(dir, 'result.txt'), 'output')
-    await wait(300)
+    await waitUntil(() => pushCalls.length > 0)
 
     expect(pushCalls.length).toBeGreaterThanOrEqual(1)
 

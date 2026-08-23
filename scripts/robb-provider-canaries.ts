@@ -203,6 +203,7 @@ async function runChatGptCanaries(
   }
 
   const endpoint = `${contract.endpoint.origin}${contract.endpoint.operationPaths!.search}`;
+  const model = environment.ROBB_CANARY_CHATGPT_MODEL?.trim() || contract.defaultModel;
   const commonHeaders = {
     'Content-Type': 'application/json',
     Authorization: `Bearer ${accessToken}`,
@@ -214,13 +215,16 @@ async function runChatGptCanaries(
       method: 'POST',
       headers: commonHeaders,
       body: JSON.stringify({
-        model: contract.defaultModel,
+        model,
         store: false,
         stream: true,
         instructions: 'Provider contract canary. Return one current public result with a source URL.',
         tools: [{ type: 'web_search' }],
         tool_choice: 'auto',
-        input: 'Find the official OpenAI API documentation homepage.',
+        input: [{
+          role: 'user',
+          content: [{ type: 'input_text', text: 'Find the official OpenAI API documentation homepage.' }],
+        }],
       }),
       signal: requestSignal(),
     }, secrets);
@@ -236,18 +240,21 @@ async function runChatGptCanaries(
       method: 'POST',
       headers: commonHeaders,
       body: JSON.stringify({
-        model: contract.defaultModel,
+        model,
         store: false,
         stream: true,
         tools: [{
           type: 'function',
           name: toolName,
           description: 'Return provider contract health.',
-          parameters: { type: 'object', properties: {}, additionalProperties: false },
-          strict: true,
+          parameters: { type: 'object', properties: {}, required: [], additionalProperties: false },
+          strict: null,
         }],
         tool_choice: { type: 'function', name: toolName },
-        input: 'Call the healthcheck function now.',
+        input: [{
+          role: 'user',
+          content: [{ type: 'input_text', text: 'Call the healthcheck function now.' }],
+        }],
       }),
       signal: requestSignal(),
     }, secrets);
