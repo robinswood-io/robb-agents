@@ -82,9 +82,9 @@
   "dependencies": {
     "@craft-agent/core": "workspace:*",
     "@craft-agent/session-tools-core": "workspace:*",
-    "@earendil-works/pi-agent-core": "0.84.2",
-    "@earendil-works/pi-ai": "0.84.2",
-    "@earendil-works/pi-coding-agent": "0.84.2",
+    "@earendil-works/pi-agent-core": "0.80.3",
+    "@earendil-works/pi-ai": "0.80.3",
+    "@earendil-works/pi-coding-agent": "0.80.3",
     "@isaacs/ttlcache": "^2.1.4",
     "@leeoniya/ufuzzy": "^1.0.19",
     "@modelcontextprotocol/client": "2.0.0",
