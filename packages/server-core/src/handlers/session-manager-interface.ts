@@ -270,6 +270,8 @@ export interface ISessionManager {
    * `getOrCreateAgent`.
    */
   refreshConnectionRuntime(connectionSlug: string): Promise<void>
+  /** Dispose a session-scoped agent runtime so the next turn recreates it cleanly. */
+  restartAgentRuntime(sessionId: string): Promise<void>
   completeAuthRequest(sessionId: string, result: AuthResult): Promise<void>
   executePromptAutomation(input: ExecutePromptAutomationInput): Promise<{ sessionId: string }>
 

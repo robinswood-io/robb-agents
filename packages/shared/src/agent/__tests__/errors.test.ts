@@ -69,3 +69,25 @@ describe('parseError tool-support classification', () => {
     }
   })
 })
+
+describe('parseError runtime bridge classification', () => {
+  it('maps local execution bridge failures to an actionable runtime reconnect error', () => {
+    const parsed = parseError(new Error('Execution bridge unavailable: handler timeout while dispatching exec_command'))
+
+    expect(parsed.code).toBe('execution_bridge_unavailable')
+    expect(parsed.canRetry).toBe(true)
+    expect(parsed.actions.some(action => action.action === 'reconnect_runtime')).toBe(true)
+  })
+
+  it('maps the local LangGraph agent port failure to runtime reconnect', () => {
+    const parsed = parseError(new Error('curl: (7) Failed to connect to localhost:3201 after 0 ms: Connection refused'))
+
+    expect(parsed.code).toBe('execution_bridge_unavailable')
+  })
+
+  it('does not classify generic bridge-adjacent words as runtime bridge failures', () => {
+    expect(parseError(new Error('empty query')).code).not.toBe('execution_bridge_unavailable')
+    expect(parseError(new Error('handler timeout')).code).not.toBe('execution_bridge_unavailable')
+    expect(parseError(new Error('rpc handler failed')).code).not.toBe('execution_bridge_unavailable')
+  })
+})

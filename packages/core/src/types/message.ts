@@ -387,7 +387,7 @@ export interface Message {
   errorActions?: Array<{
     key: string;
     label: string;
-    action?: 'retry' | 'settings' | 'reauth' | 'open_url' | 'reconnect_source';
+    action?: 'retry' | 'settings' | 'reauth' | 'open_url' | 'reconnect_source' | 'reconnect_runtime';
     url?: string;
     sourceSlug?: string;
   }>;
@@ -468,7 +468,7 @@ export interface StoredMessage {
   errorActions?: Array<{
     key: string;
     label: string;
-    action?: 'retry' | 'settings' | 'reauth' | 'open_url' | 'reconnect_source';
+    action?: 'retry' | 'settings' | 'reauth' | 'open_url' | 'reconnect_source' | 'reconnect_runtime';
     url?: string;
     sourceSlug?: string;
   }>;
@@ -523,7 +523,7 @@ export interface RecoveryAction {
   /** Slash command to execute (e.g., '/settings') */
   command?: string;
   /** Custom action type for special handling */
-  action?: 'retry' | 'settings' | 'reauth' | 'open_url' | 'reconnect_source';
+  action?: 'retry' | 'settings' | 'reauth' | 'open_url' | 'reconnect_source' | 'reconnect_runtime';
   /** URL to open (for open_url action) */
   url?: string;
   /** Source slug (for reconnect_source action) */
@@ -556,6 +556,7 @@ export type ErrorCode =
   | 'queued_message_replay_failed'  // A message queued during an active turn could not be auto-replayed (#616)
   | 'sdk_binary_missing'     // SDK subprocess binary not present on disk (incomplete bundle)
   | 'sdk_cwd_missing'        // SDK subprocess cwd not present on disk (stale cross-machine import)
+  | 'execution_bridge_unavailable' // Local execution/tool bridge unavailable or corrupted
   | 'unknown_error';
 
 /**

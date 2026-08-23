@@ -2157,8 +2157,16 @@ function ErrorMessage({ message, onOpenUrl, sessionId, onRetry }: { message: Mes
   const [detailsOpen, setDetailsOpen] = React.useState(false)
   const actions = message.errorActions?.filter(a => {
     if (a.action === 'open_url') return !!a.url && !!onOpenUrl
+    if (a.action === 'reconnect_runtime') return !!sessionId
     return true
   })
+  const handleReconnectRuntime = React.useCallback(() => {
+    if (!sessionId) return
+    void window.electronAPI.sessionCommand(sessionId, { type: 'restartRuntime' }).catch(error => {
+      const detail = error instanceof Error ? error.message : String(error)
+      toast.error(t('toast.reconnectFailed'), { description: detail })
+    })
+  }, [sessionId, t])
 
   return (
     <div className="flex justify-start mt-4">
@@ -2186,6 +2194,7 @@ function ErrorMessage({ message, onOpenUrl, sessionId, onRetry }: { message: Mes
                     sessionId,
                     onOpenUrl,
                     onRetry,
+                    onReconnectRuntime: handleReconnectRuntime,
                   })
                 }}
                 className="text-xs px-2 py-0.5 rounded border border-destructive/20 text-destructive/70 hover:text-destructive hover:border-destructive/40 transition-colors"

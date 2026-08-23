@@ -401,6 +401,9 @@ export function registerSessionsHandlers(server: RpcServer, deps: HandlerDeps): 
       case 'refreshTitle':
         log.info(`IPC: refreshTitle received for session ${sessionId}`)
         return sessionManager.refreshTitle(sessionId)
+      case 'restartRuntime':
+        log.info(`IPC: restartRuntime received for session ${sessionId}`)
+        return sessionManager.restartAgentRuntime(sessionId)
       // Connection selection (locked after first message)
       case 'setConnection':
         log.info(`IPC: setConnection received for session ${sessionId}, connection: ${command.connectionSlug}`)
