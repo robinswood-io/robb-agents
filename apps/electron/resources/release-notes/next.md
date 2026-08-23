@@ -6,6 +6,11 @@ This file accumulates release notes for the next unreleased version. PRs that ad
 
 ## Improvements
 
+- Add an opt-in encrypted offline vault to Remote with read-only snapshots of up to 10 recent chats, local search, text drafts and pins, plus a manually reviewed outbox that never sends automatically.
+- Make Remote a responsive, accessible PWA across phones and tablets, with a privacy-preserving offline shell, immediate reconnect states, and user-controlled app updates.
+
 ## Bug Fixes
+
+- Keep Remote pairing usable in short landscape and under the mobile keyboard, prevent focus from entering off-screen panels, and avoid TopBar collisions with Remote controls.
 
 ## Breaking Changes

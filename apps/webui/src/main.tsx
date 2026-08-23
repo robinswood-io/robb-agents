@@ -9,39 +9,55 @@ import { setupI18n } from '@craft-agent/shared/i18n'
 import { initReactI18next } from 'react-i18next'
 import { useTranslation } from 'react-i18next'
 import LanguageDetector from 'i18next-browser-languagedetector'
+import { registerPwa } from './pwa-registration'
 import './index.css'
 
 // Initialize i18n before any React rendering
-setupI18n([LanguageDetector, initReactI18next])
-
-if ('serviceWorker' in navigator && window.isSecureContext) {
-  window.addEventListener('load', () => {
-    void navigator.serviceWorker.register('/sw.js')
-  })
+const i18n = setupI18n([LanguageDetector, initReactI18next])
+const syncDocumentLanguage = () => {
+  document.documentElement.lang = i18n.resolvedLanguage ?? i18n.language ?? 'fr'
 }
+syncDocumentLanguage()
+i18n.on('languageChanged', syncDocumentLanguage)
+
+// Register immediately so the lightweight shell can be warmed before the
+// Electron renderer's large lazy chunks are requested. The PWA cache never
+// stores API, WebSocket, conversation, file, or credential responses.
+void registerPwa()
 
 function CrashFallback() {
   const { t } = useTranslation()
   return (
-    <div className="flex flex-col items-center justify-center h-screen font-sans text-foreground/50 gap-3">
-      <p className="text-base font-medium">{t("auth.somethingWentWrong")}</p>
-      <p className="text-[13px]">{t("errors.pleaseReload")}</p>
+    <main className="flex h-[100dvh] flex-col items-center justify-center gap-3 overflow-y-auto p-6 font-sans text-foreground/60">
+      <p className="text-base font-medium">{t('auth.somethingWentWrong')}</p>
+      <p className="text-center text-[13px]">{t('errors.pleaseReload')}</p>
       <button
         onClick={() => window.location.reload()}
-        className="mt-2 px-4 py-1.5 rounded-md bg-background shadow-minimal text-[13px] text-foreground/70 cursor-pointer"
+        className="mt-2 min-h-11 cursor-pointer rounded-xl bg-background px-5 py-2 shadow-minimal text-[13px] text-foreground/80"
       >
-        {t("common.reload")}
+        {t('common.reload')}
       </button>
-    </div>
+    </main>
   )
 }
 
-function ErrorBoundary({ children }: { children: React.ReactNode }) {
-  return (
-    <React.Suspense fallback={<CrashFallback />}>
-      {children}
-    </React.Suspense>
-  )
+class ErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { failed: boolean }
+> {
+  state = { failed: false }
+
+  static getDerivedStateFromError(): { failed: boolean } {
+    return { failed: true }
+  }
+
+  componentDidCatch(error: unknown): void {
+    console.error('[webui] Renderer crashed', error instanceof Error ? error.name : 'UnknownError')
+  }
+
+  render(): React.ReactNode {
+    return this.state.failed ? <CrashFallback /> : this.props.children
+  }
 }
 
 function Root() {

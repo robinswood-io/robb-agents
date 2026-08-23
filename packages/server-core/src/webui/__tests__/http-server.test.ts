@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'bun:test'
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createWebuiHandler, startWebuiHttpServer } from '../http-server'
@@ -21,8 +21,19 @@ const logger = {
 function createTestWebuiDir(): string {
   const dir = mkdtempSync(join(tmpdir(), 'craft-webui-test-'))
   TEMP_DIRS.push(dir)
+  mkdirSync(join(dir, 'assets'))
   writeFileSync(join(dir, 'login.html'), '<!doctype html><html><body>login</body></html>')
   writeFileSync(join(dir, 'index.html'), '<!doctype html><html><body>app</body></html>')
+  writeFileSync(join(dir, 'offline.html'), '<!doctype html><html><body>offline</body></html>')
+  writeFileSync(join(dir, 'sw.js'), 'self.addEventListener("fetch", () => {})')
+  writeFileSync(join(dir, 'manifest.json'), '{"name":"Robb Agents"}')
+  writeFileSync(join(dir, 'favicon.ico'), 'ico')
+  writeFileSync(join(dir, 'favicon.svg'), '<svg xmlns="http://www.w3.org/2000/svg"/>')
+  writeFileSync(join(dir, 'apple-touch-icon.png'), 'png')
+  writeFileSync(join(dir, 'icon-192.png'), 'png')
+  writeFileSync(join(dir, 'icon-512.png'), 'png')
+  writeFileSync(join(dir, 'assets', 'app-abc123.js'), 'console.log("app")')
+  writeFileSync(join(dir, 'assets', 'app-abc123.js.map'), '{"version":3}')
   return dir
 }
 
@@ -192,6 +203,69 @@ describe('startWebuiHttpServer', () => {
     } finally {
       Response.redirect = originalRedirect
     }
+  })
+
+  it('serves the public PWA shell with explicit cache and service-worker contracts', async () => {
+    const { baseUrl } = await createServer()
+
+    const serviceWorker = await fetch(`${baseUrl}/sw.js`)
+    expect(serviceWorker.status).toBe(200)
+    expect(serviceWorker.headers.get('cache-control')).toBe('no-cache')
+    expect(serviceWorker.headers.get('service-worker-allowed')).toBe('/')
+    expect(serviceWorker.headers.get('content-type')).toBe('application/javascript; charset=utf-8')
+
+    for (const path of ['/login', '/remote', '/index.html', '/offline.html']) {
+      const response = await fetch(`${baseUrl}${path}`)
+      expect(response.status).toBe(200)
+      expect(response.headers.get('cache-control')).toContain('no-store')
+      expect(response.headers.get('content-type')).toBe('text/html; charset=utf-8')
+    }
+
+    const immutableAsset = await fetch(`${baseUrl}/assets/app-abc123.js`)
+    expect(immutableAsset.status).toBe(200)
+    expect(immutableAsset.headers.get('cache-control')).toBe('public, max-age=31536000, immutable')
+
+    for (const path of [
+      '/manifest.json',
+      '/favicon.ico',
+      '/favicon.svg',
+      '/apple-touch-icon.png',
+      '/icon-192.png',
+      '/icon-512.png',
+    ]) {
+      const response = await fetch(`${baseUrl}${path}`)
+      expect(response.status).toBe(200)
+      expect(response.headers.get('cache-control')).toBe('public, max-age=300, must-revalidate')
+    }
+
+    const manifest = await fetch(`${baseUrl}/manifest.json`)
+    expect(manifest.headers.get('content-type')).toBe('application/manifest+json; charset=utf-8')
+
+    const sourceMap = await fetch(`${baseUrl}/assets/app-abc123.js.map`)
+    expect(sourceMap.status).toBe(404)
+    expect(sourceMap.headers.get('cache-control')).toBe('no-store')
+  })
+
+  it('marks authenticated and unauthenticated API responses as non-cacheable', async () => {
+    const { baseUrl } = await createServer({ remoteAuthMode: 'server-token' })
+
+    const unauthenticated = await fetch(`${baseUrl}/api/config`)
+    expect(unauthenticated.status).toBe(401)
+    expect(unauthenticated.headers.get('cache-control')).toBe('no-store')
+
+    const login = await fetch(`${baseUrl}/api/auth`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: PASSWORD }),
+    })
+    expect(login.status).toBe(200)
+    expect(login.headers.get('cache-control')).toBe('no-store')
+
+    const authenticated = await fetch(`${baseUrl}/api/config`, {
+      headers: { cookie: extractSessionCookie(login) },
+    })
+    expect(authenticated.status).toBe(200)
+    expect(authenticated.headers.get('cache-control')).toBe('no-store')
   })
 
   it('rejects invalid credentials', async () => {

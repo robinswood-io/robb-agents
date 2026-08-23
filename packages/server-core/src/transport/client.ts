@@ -137,7 +137,7 @@ export class WsRpcClient implements RpcClient {
   private serverChannels: Set<string> | null = null
 
   private readonly url: string
-  private readonly workspaceId: string | undefined
+  private workspaceId: string | undefined
   private readonly webContentsId: number | undefined
   private readonly token: string | undefined
   private readonly clientCapabilities: string[]
@@ -255,6 +255,15 @@ export class WsRpcClient implements RpcClient {
     return () => {
       this.connectionStateListeners.delete(callback)
     }
+  }
+
+  /**
+   * Update the workspace included in subsequent reconnect handshakes. The
+   * caller must first have the active server connection accept the same
+   * workspace switch, so a failed RPC can never alter reconnect identity.
+   */
+  setWorkspaceId(workspaceId: string | undefined): void {
+    this.workspaceId = workspaceId
   }
 
   /** Subscribe to all push events regardless of channel. Used by RemoteClientBridge for event forwarding. */

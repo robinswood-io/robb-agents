@@ -27,18 +27,9 @@
  */
 @import "../../electron/src/renderer/index.css";
 
-/*
- * Web UI responsive layout is handled by container queries and isAutoCompact
- * in the shared renderer components. No webui-specific CSS overrides needed.
- *
- * The only webui-specific styles are safe-area insets for mobile browsers.
- */
-
-/*
- * Fill the dynamic viewport exactly. The previous combination of a 100%-high
- * root, body padding, and document-level zoom left part of the iOS standalone
- * viewport outside the application surface.
- */
+/* Browser/PWA viewport contract. The Electron renderer assumes a fixed app
+ * viewport; use dynamic viewport units without scaling the entire layout or
+ * double-counting iOS safe-area insets. */
 html, body, #root {
   width: 100%;
   height: 100%;
@@ -46,25 +37,208 @@ html, body, #root {
   overflow: hidden;
   max-width: 100%;
   background: var(--background);
+  overscroll-behavior: none;
+}
+
+/* The desktop renderer uses a 15px root. On touch screens that shrinks
+ * Tailwind's 44px (h-11/w-11) targets to 41.25px, so restore the browser
+ * baseline for the PWA instead of scaling the whole interface. */
+html {
+  font-size: 16px;
 }
 
 body {
   margin: 0;
+  padding: 0;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
-/*
- * The shared app reserves --topbar-height above the panel stack. Include the
- * iOS status-bar inset in that single reservation, and let TopBar use the same
- * inset as internal padding. Bottom insets remain owned by scrollable lists and
- * the mobile FAB, so they are not counted twice at the document level.
- */
+button,
+a,
+input,
+textarea,
+select {
+  touch-action: manipulation;
+}
+
+/* Reserve the iOS status-bar inset once in the shared shell. TopBar consumes
+ * the same value as internal padding, while bottom insets remain owned by the
+ * scrollable panels and mobile actions. */
 :root {
   --topbar-safe-area-top: env(safe-area-inset-top, 0px);
   --topbar-height: calc(48px + var(--topbar-safe-area-top));
 }
 
-@media (max-width: 768px) {
+/* Connection/loading/offline surfaces remain useful even when the large
+ * Electron renderer chunk is unavailable. */
+.webui-state-page {
+  display: grid;
+  min-height: 100%;
+  place-items: center;
+  overflow-y: auto;
+  padding:
+    calc(24px + env(safe-area-inset-top, 0px))
+    calc(20px + env(safe-area-inset-right, 0px))
+    calc(24px + env(safe-area-inset-bottom, 0px))
+    calc(20px + env(safe-area-inset-left, 0px));
+  background:
+    radial-gradient(circle at 50% 8%, color-mix(in srgb, var(--accent) 13%, transparent), transparent 38%),
+    var(--background);
+  color: var(--foreground);
+}
+
+.webui-state-card {
+  width: min(100%, 440px);
+  text-align: center;
+}
+
+.webui-state-icon {
+  display: grid;
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 22px;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, currentColor 18%, transparent);
+  border-radius: 24px;
+  background: color-mix(in srgb, currentColor 8%, transparent);
+}
+
+.webui-state-card h1 {
+  margin: 0;
+  font-size: clamp(1.5rem, 7vw, 2rem);
+  font-weight: 650;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+}
+
+.webui-state-card > p {
+  max-width: 38ch;
+  margin: 12px auto 0;
+  color: var(--muted-foreground);
+  font-size: 0.925rem;
+  line-height: 1.65;
+}
+
+.webui-state-card .webui-state-detail {
+  margin-top: 10px;
+  font-size: 0.75rem;
+  opacity: 0.72;
+}
+
+.webui-state-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.webui-state-actions button {
+  display: inline-flex;
+  min-height: 46px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 14px;
+  padding: 0 18px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: filter 150ms ease, transform 150ms ease;
+}
+
+.webui-state-primary {
+  background: var(--accent);
+  color: var(--accent-foreground);
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.webui-state-secondary {
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--foreground);
+}
+
+.webui-state-privacy {
+  display: flex;
+  max-width: 390px;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 22px auto 0;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
+  padding: 11px 13px;
+  color: var(--muted-foreground);
+  text-align: left;
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.remote-pairing-content {
+  padding-block: clamp(24px, 7vh, 58px);
+}
+
+@media (max-width: 1024px) {
   :root {
     --topbar-height: calc(56px + var(--topbar-safe-area-top));
+  }
+}
+
+@media (hover: hover) {
+  .webui-state-actions button:hover {
+    filter: brightness(1.04);
+    transform: translateY(-1px);
+  }
+}
+
+@media (max-width: 639px) {
+  :root {
+    --webui-topbar-controls-gap: 14px;
+  }
+
+  .webui-state-actions {
+    flex-direction: column;
+  }
+
+  .webui-state-actions button {
+    width: 100%;
+  }
+}
+
+@media (min-width: 640px) {
+  :root {
+    --webui-topbar-controls-gap: 24px;
+  }
+}
+
+@media (min-width: 1025px) {
+  /* The desktop shell restores variable-width TopBar actions above the compact
+   * breakpoint. Reserve the measured Remote controls width so neither group
+   * can cover the other, including when an update action appears. */
+  html.webui-remote-controls-active .webui-topbar-content {
+    padding-right: calc(var(--webui-remote-controls-width, 0px) + 24px);
+  }
+}
+
+@media (max-height: 620px) {
+  .remote-pairing-content {
+    justify-content: flex-start;
+    padding-block: 18px 24px;
+  }
+
+  .webui-state-icon {
+    width: 58px;
+    height: 58px;
+    margin-bottom: 16px;
+    border-radius: 19px;
+  }
+
+  .webui-state-privacy {
+    margin-top: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .webui-state-actions button {
+    transition: none;
   }
 }

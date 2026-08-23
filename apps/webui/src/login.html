@@ -2,12 +2,16 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Robb Agents — Login</title>
-  <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
-  <link rel="icon" type="image/x-icon" href="./favicon.ico" />
-  <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <link rel="manifest" href="/manifest.json" />
   <meta name="theme-color" content="#1F1F24" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Robb Agents" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600&display=swap" rel="stylesheet">
@@ -19,7 +23,7 @@
       --card-bg: rgba(255, 255, 255, 0.86);
       --card-border: rgba(228, 228, 232, 0.9);
       --card-shadow: 0 32px 96px rgba(41, 25, 63, 0.14), 0 16px 40px rgba(41, 25, 63, 0.08);
-      --subtitle: rgba(26, 26, 46, 0.56);
+      --subtitle: rgba(26, 26, 46, 0.68);
       --input-bg: rgba(255, 255, 255, 0.72);
       --input-border: rgba(212, 212, 216, 0.95);
       --placeholder: rgba(26, 26, 46, 0.34);
@@ -36,24 +40,37 @@
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
+    html {
+      min-height: 100%;
+      overflow-x: clip;
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
+    }
+
     body {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
       display: flex;
       align-items: center;
       justify-content: center;
       min-height: 100vh;
-      overflow: hidden;
+      min-height: 100dvh;
+      overflow-x: clip;
+      overflow-y: auto;
       position: relative;
       isolation: isolate;
       background: var(--page-bg);
       color: var(--page-fg);
-      padding: 16px;
+      padding:
+        calc(16px + env(safe-area-inset-top, 0px))
+        calc(16px + env(safe-area-inset-right, 0px))
+        calc(16px + env(safe-area-inset-bottom, 0px))
+        calc(16px + env(safe-area-inset-left, 0px));
     }
 
     body::before,
     body::after {
       content: '';
-      position: absolute;
+      position: fixed;
       inset: 0;
       pointer-events: none;
     }
@@ -85,7 +102,7 @@
       z-index: 1;
       width: 100%;
       max-width: 28rem;
-      padding: 32px;
+      padding: clamp(24px, 7vw, 32px);
       background: var(--card-bg);
       border: 1px solid var(--card-border);
       border-radius: 20px;
@@ -119,7 +136,8 @@
 
     input {
       width: 100%;
-      padding: 10px 12px;
+      min-height: 46px;
+      padding: 11px 12px;
       font-size: 14px;
       font-family: 'JetBrains Mono', monospace;
       border: 1px solid var(--input-border);
@@ -141,8 +159,9 @@
 
     button {
       width: 100%;
+      min-height: 46px;
       margin-top: 20px;
-      padding: 10px;
+      padding: 10px 14px;
       font-size: 14px;
       font-weight: 500;
       font-family: 'Inter', sans-serif;
@@ -181,6 +200,23 @@
 
     .error.visible { display: block; }
 
+    .network-status {
+      display: none;
+      align-items: flex-start;
+      gap: 8px;
+      margin: 0 0 18px;
+      padding: 10px 12px;
+      border: 1px solid #f2c46d;
+      border-radius: 10px;
+      background: #fff8e8;
+      color: #774b00;
+      text-align: left;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .network-status.visible { display: flex; }
+
     .divider {
       display: flex;
       align-items: center;
@@ -214,7 +250,7 @@
     }
 
     .remote-link {
-      min-height: 42px;
+      min-height: 46px;
       border: 1px solid var(--input-border);
       background: var(--input-bg);
       color: var(--page-fg);
@@ -228,6 +264,7 @@
 
     .setup-link {
       margin-top: 13px;
+      min-height: 44px;
       color: var(--subtitle);
     }
 
@@ -260,7 +297,7 @@
         --card-bg: rgba(26, 26, 34, 0.82);
         --card-border: rgba(42, 42, 53, 0.95);
         --card-shadow: 0 32px 96px rgba(0, 0, 0, 0.42), 0 16px 40px rgba(0, 0, 0, 0.24);
-        --subtitle: rgba(224, 224, 232, 0.64);
+        --subtitle: rgba(224, 224, 232, 0.72);
         --input-bg: rgba(15, 15, 20, 0.72);
         --input-border: rgba(42, 42, 53, 0.95);
         --placeholder: rgba(224, 224, 232, 0.32);
@@ -272,13 +309,31 @@
         --error-border: #5a2020;
         --error-fg: #f5a0a0;
       }
+
+      .network-status {
+        border-color: #745a24;
+        background: #2b2417;
+        color: #f5d994;
+      }
+    }
+
+    @media (max-height: 620px) {
+      body { align-items: flex-start; }
+      .card { margin-block: auto; }
+      .subtitle { margin-bottom: 20px; }
+      .divider { margin-top: 18px; }
     }
   </style>
 </head>
 <body>
-  <div class="card">
+  <main class="card">
     <h1>Robb Agents</h1>
     <p class="subtitle">Sign in on this host, or pair a mobile device with Remote.</p>
+
+    <div id="network-status" class="network-status" role="status" aria-live="polite">
+      <span aria-hidden="true">◌</span>
+      <span>This device is offline. Reconnect to sign in to your Robb host.</span>
+    </div>
 
     <form id="login-form">
       <label for="password">Server Token</label>
@@ -294,22 +349,38 @@
       <button type="submit" id="submit-btn">Sign In</button>
     </form>
 
-    <div id="error" class="error"></div>
+    <div id="error" class="error" role="alert"></div>
 
     <div class="divider">Remote</div>
     <a class="remote-link" href="/remote">Enter a one-time pairing code</a>
     <a class="setup-link" href="/remote/setup">Show a QR code for my phone</a>
-  </div>
+  </main>
 
   <script>
     const form = document.getElementById('login-form');
     const errorEl = document.getElementById('error');
     const submitBtn = document.getElementById('submit-btn');
+    const networkStatus = document.getElementById('network-status');
+    let signingIn = false;
+
+    function syncNetworkState() {
+      const offline = !navigator.onLine;
+      networkStatus.classList.toggle('visible', offline);
+      submitBtn.disabled = offline || signingIn;
+    }
+    window.addEventListener('online', syncNetworkState);
+    window.addEventListener('offline', syncNetworkState);
+    syncNetworkState();
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
+      if (!navigator.onLine) {
+        syncNetworkState();
+        return;
+      }
       errorEl.classList.remove('visible');
-      submitBtn.disabled = true;
+      signingIn = true;
+      syncNetworkState();
       submitBtn.textContent = 'Signing in...';
 
       try {
@@ -332,11 +403,17 @@
         errorEl.textContent = data.error || 'Authentication failed';
         errorEl.classList.add('visible');
       } catch (err) {
-        errorEl.textContent = 'Network error — is the server running?';
-        errorEl.classList.add('visible');
+        if (!navigator.onLine) {
+          errorEl.classList.remove('visible');
+          syncNetworkState();
+        } else {
+          errorEl.textContent = 'Network error — is the server running?';
+          errorEl.classList.add('visible');
+        }
       } finally {
-        submitBtn.disabled = false;
+        signingIn = false;
         submitBtn.textContent = 'Sign In';
+        syncNetworkState();
       }
     });
   </script>

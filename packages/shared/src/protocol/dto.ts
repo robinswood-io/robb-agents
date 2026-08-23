@@ -756,6 +756,16 @@ export interface SendMessageOptions {
   badges?: ContentBadge[]
   optimisticMessageId?: string
   /**
+   * Optional compare-and-send guard used by the Remote offline outbox. The
+   * host checks this immediately before appending the user message and rejects
+   * with SESSION_CONTEXT_CHANGED if any field moved.
+   */
+  expectedSessionAnchor?: {
+    messageCount: number
+    lastFinalMessageId: string | null
+    lastMessageAt: number
+  }
+  /**
    * When true, the message drives a turn (reaches the model) but is marked
    * `hidden` on the persisted `Message` so it never renders as a transcript
    * bubble. Used for system-generated nudges (e.g. WS2 background-task-completion
