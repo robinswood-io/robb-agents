@@ -1,6 +1,6 @@
 {
   "name": "@craft-agent/core",
-  "version": "0.12.5",
+  "version": "0.12.6",
   "license": "MIT",
   "description": "Core types, storage, and agent logic for Craft Agents",
   "type": "module",
