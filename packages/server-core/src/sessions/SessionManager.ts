@@ -90,7 +90,7 @@ import { isParentTaskTool } from '@craft-agent/shared/utils/toolNames'
 import { restoreFiles } from '@craft-agent/shared/utils/bundle-files'
 import { getCredentialManager } from '@craft-agent/shared/credentials'
 import { CraftMcpClient, McpClientPool, McpPoolServer } from '@craft-agent/shared/mcp'
-import { type Session, type SessionEvent, type FileAttachment, type SendMessageOptions, type PermissionRequest, type UnreadSummary, type RemoteSessionTransferPayload, type ImportRemoteSessionTransferResult, RPC_CHANNELS, generateMessageId } from '@craft-agent/shared/protocol'
+import { type Session, type SessionEvent, type FileAttachment, type SendMessageOptions, type PermissionRequest, type UnreadSummary, type RemoteSessionTransferPayload, type ImportRemoteSessionTransferResult, CodedError, RPC_CHANNELS, generateMessageId } from '@craft-agent/shared/protocol'
 import { messageToStored, storedToMessage, type Message, type StoredAttachment, type ToolDisplayMeta, type RoutingMeta, type TokenUsage } from '@craft-agent/core/types'
 import { formatPathsToRelative, formatToolInputPaths, perf, encodeIconToDataUrlAsync, getEmojiIcon, resetSummarizationClient, resolveToolIcon, readFileAttachment, selectSpreadMessages, normalizePath, redactSecretLikeMaterial } from '@craft-agent/shared/utils'
 import { loadAllSkills, loadSkillBySlug, invalidateSkillsCache, type LoadedSkill } from '@craft-agent/shared/skills'
@@ -136,7 +136,9 @@ import {
   buildAutomaticTurnRecoveryPrompt,
   createPendingTurnRecovery,
   exhaustPendingTurnRecovery,
+  resolveAutomaticRecoveryInactivityTimeoutMs,
   turnStillNeedsRecovery,
+  withAutomaticRecoveryInactivityTimeout,
   type AutomaticTurnRecoveryCause,
 } from './turn-recovery'
 import {
@@ -887,6 +889,13 @@ interface ManagedSession {
   executionTelemetryCompactions?: Map<number, RuntimeCompactionTelemetry>
   /** Durable in-flight turn marker used for bounded automatic recovery. */
   pendingTurnRecovery?: PendingTurnRecovery
+  /** Durable Accept & Compact state; cleared atomically with an accepted user turn. */
+  pendingPlanExecution?: {
+    planPath: string
+    draftInputSnapshot?: string
+    awaitingCompaction: boolean
+    executionDispatched?: boolean
+  }
   /** Durable sensitive-action grants scoped to an exact category and target. */
   externalActionAuthorizations?: ExternalActionAuthorization[]
   // NOTE: Parent-child tracking state (pendingTools, parentToolStack, toolToParentMap,
@@ -2571,6 +2580,8 @@ export class SessionManager implements ISessionManager {
       sessionId: managed.id,
       message: cause === 'app_restart'
         ? 'The application restarted during this turn. Work is resuming automatically…'
+        : cause === 'premature_final'
+          ? 'The agent stopped after announcing more work. Work is continuing automatically…'
         : 'The agent connection ended before the final response. Work is resuming automatically…',
       level: 'warning',
       timestamp: this.monotonic(),
@@ -6825,25 +6836,53 @@ export class SessionManager implements ISessionManager {
     if (!managed) {
       throw new Error(`Session ${sessionId} not found`)
     }
-    this.setLastMessageClientId(sessionId, rpcContext?.callerClientId)
-
-    // Source-activation auto-retry dedup (craft-agents-oss#804). When the server
-    // has just scheduled or committed a "[<slug> activated]" retry, drop a matching
-    // duplicate that arrives from a legacy renderer still running the client-side
-    // auto_retry. The first matching caller wins (server timer or legacy RPC,
-    // whichever arrives first), subsequent matching calls within the deadline drop.
-    if (claimAutoRetryPending(managed, message) === 'drop') {
-      sessionLog.info(`sendMessage: dropped duplicate source-activation retry for ${sessionId}`)
-      return
+    const expectedAnchor = options?.expectedSessionAnchor
+    const assertExpectedAnchor = () => {
+      if (!expectedAnchor) return
+      const actualLastFinalMessageId = managed.lastFinalMessageId ?? null
+      const contextMatches = !managed.isProcessing
+        && managed.messages.length === expectedAnchor.messageCount
+        && actualLastFinalMessageId === expectedAnchor.lastFinalMessageId
+        && managed.lastMessageAt === expectedAnchor.lastMessageAt
+      if (!contextMatches) {
+        throw new CodedError(
+          'SESSION_CONTEXT_CHANGED',
+          'The conversation changed before the offline message could be appended',
+        )
+      }
     }
 
-    // Clear any pending plan execution state when a new user message is sent.
-    // This acts as a safety valve - if the user moves on, we don't want to
-    // auto-execute an old plan later.
-    await clearStoredPendingPlanExecution(managed.workspace.rootPath, sessionId)
+    if (expectedAnchor) {
+      // The Remote outbox contract must be side-effect-free when its reviewed
+      // anchor is stale. Once loaded, the guard and in-memory append run without
+      // an await, so another turn cannot slip between them. Clearing the
+      // in-memory plan field makes the same atomic JSONL flush persist both the
+      // accepted message and plan cancellation; a rejected guard writes neither.
+      await this.ensureMessagesLoaded(managed)
+      assertExpectedAnchor()
+      managed.pendingPlanExecution = undefined
+      this.setLastMessageClientId(sessionId, rpcContext?.callerClientId)
+    } else {
+      this.setLastMessageClientId(sessionId, rpcContext?.callerClientId)
 
-    // Ensure messages are loaded before we try to add new ones
-    await this.ensureMessagesLoaded(managed)
+      // Source-activation auto-retry dedup (craft-agents-oss#804). When the server
+      // has just scheduled or committed a "[<slug> activated]" retry, drop a matching
+      // duplicate that arrives from a legacy renderer still running the client-side
+      // auto_retry. The first matching caller wins (server timer or legacy RPC,
+      // whichever arrives first), subsequent matching calls within the deadline drop.
+      if (claimAutoRetryPending(managed, message) === 'drop') {
+        sessionLog.info(`sendMessage: dropped duplicate source-activation retry for ${sessionId}`)
+        return
+      }
+
+      // Clear any pending plan execution state when a new user message is sent.
+      // This acts as a safety valve - if the user moves on, we don't want to
+      // auto-execute an old plan later.
+      await clearStoredPendingPlanExecution(managed.workspace.rootPath, sessionId)
+
+      // Ensure messages are loaded before we try to add new ones
+      await this.ensureMessagesLoaded(managed)
+    }
 
     // If currently processing, behavior depends on the connection's
     // `midStreamBehavior` (resolved via {@link resolveMidStreamBehavior},
@@ -7287,9 +7326,20 @@ export class SessionManager implements ISessionManager {
         inputTokens: managed.tokenUsage?.inputTokens,
       })
       const chatIterator = agent.chat(effectiveMessage, modelInputAttachments.attachments)
+      const automaticRecoveryInactivityTimeoutMs = options?.automaticRecovery
+        ? resolveAutomaticRecoveryInactivityTimeoutMs(
+            process.env.CRAFT_AUTOMATIC_RECOVERY_INACTIVITY_TIMEOUT_MS,
+          )
+        : 0
+      const chatEvents = options?.automaticRecovery
+        ? withAutomaticRecoveryInactivityTimeout(
+            chatIterator,
+            automaticRecoveryInactivityTimeoutMs,
+          )
+        : chatIterator
       sessionLog.info('Got chat iterator, starting iteration...')
 
-      for await (const event of chatIterator) {
+      for await (const event of chatEvents) {
         // Log events (skip noisy text_delta)
         if (event.type !== 'text_delta') {
           if (event.type === 'tool_start') {
@@ -7346,7 +7396,22 @@ export class SessionManager implements ISessionManager {
           // A complete event is valid only when this user turn produced either
           // a final assistant response or a visible error. Commentary and tool
           // results alone are progress, not completion.
-          if (classifyLatestTurnTerminalState(managed.messages) === 'incomplete') {
+          const latestTurnTerminalState = classifyLatestTurnTerminalState(managed.messages)
+          if (latestTurnTerminalState === 'premature-final-assistant') {
+            sessionLog.warn(`Session ${sessionId} ended with a final response that announced unfinished work`)
+            const recoveryQueued = await this.enqueueAutomaticTurnRecovery(managed, 'premature_final')
+            if (recoveryQueued) {
+              sendSpan.mark('chat.complete.premature_final_auto_recovery')
+              sendSpan.end()
+              await this.onProcessingStopped(sessionId, 'interrupted', myGeneration)
+              return
+            }
+
+            await this.processEvent(managed, {
+              type: 'error',
+              message: 'The agent repeatedly stopped after announcing more work. Completed work was preserved; retry to resume safely.',
+            }, myGeneration)
+          } else if (latestTurnTerminalState === 'incomplete') {
             sessionLog.warn(`Session ${sessionId} completed without assistant response - possible context overflow or API issue`)
 
             // Check if there's a captured API error that explains the silent failure.

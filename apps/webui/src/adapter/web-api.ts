@@ -15,6 +15,7 @@ import { WsRpcClient } from '../../../electron/src/transport/client'
 import { buildClientApi } from '../../../electron/src/transport/build-api'
 import { CHANNEL_MAP } from '../../../electron/src/transport/channel-map'
 import type { ElectronAPI, TransportConnectionState } from '../../../electron/src/shared/types'
+import type { OfflineCoordinator } from '../offline-coordinator'
 
 // ---------------------------------------------------------------------------
 // Web file picker (replaces native Electron dialog)
@@ -61,13 +62,20 @@ export interface WebApiOptions {
   serverUrl: string
   /** Workspace ID to connect as. */
   workspaceId?: string
+  /** Optional encrypted, opt-in offline data coordinator. */
+  offlineCoordinator?: OfflineCoordinator
+  /** Called only after the server accepts an in-window workspace switch. */
+  onWorkspaceChanged?: (workspaceId: string) => void | Promise<void>
 }
 
 export function createWebApi(options: WebApiOptions): {
   api: ElectronAPI
   client: WsRpcClient
+  syncOfflineData: () => Promise<void>
 } {
-  const { serverUrl, workspaceId } = options
+  const { serverUrl, workspaceId, offlineCoordinator, onWorkspaceChanged } = options
+  let activeWorkspaceId = workspaceId
+  const sessionWorkspaceIds = new Map<string, string>()
 
   const client = new WsRpcClient(serverUrl, {
     workspaceId,
@@ -85,6 +93,67 @@ export function createWebApi(options: WebApiOptions): {
 
   // Override LOCAL_ONLY methods with web-compatible implementations
   const webOverrides: Partial<ElectronAPI> = {
+    // Remote data snapshots. The original RPC result is always returned to the
+    // renderer; encrypted offline capture happens as a bounded side effect.
+    getSessions: async () => {
+      const requestWorkspaceId = activeWorkspaceId
+      const sessions = await baseApi.getSessions()
+      for (const session of sessions) sessionWorkspaceIds.set(session.id, session.workspaceId)
+      if (requestWorkspaceId) {
+        void offlineCoordinator?.captureRecentSessions(
+          sessions,
+          (sessionId) => baseApi.getSessionMessages(sessionId),
+          requestWorkspaceId,
+        ).catch(() => {})
+      }
+      return sessions
+    },
+    getSessionMessages: async (sessionId: string) => {
+      const session = await baseApi.getSessionMessages(sessionId)
+      if (session) {
+        sessionWorkspaceIds.set(session.id, session.workspaceId)
+        offlineCoordinator?.captureSession(session)
+      }
+      return session
+    },
+    getAllDrafts: async () => {
+      const requestWorkspaceId = activeWorkspaceId
+      const drafts = await baseApi.getAllDrafts()
+      if (requestWorkspaceId) {
+        void offlineCoordinator?.captureRemoteDrafts(drafts, requestWorkspaceId).catch(() => {})
+      }
+      return drafts
+    },
+    setDraft: async (sessionId, draft) => {
+      if (!offlineCoordinator) return baseApi.setDraft(sessionId, draft)
+      await offlineCoordinator.persistDraft(
+        sessionId,
+        draft,
+        client.getConnectionState().status === 'connected',
+        () => baseApi.setDraft(sessionId, draft),
+        sessionWorkspaceIds.get(sessionId) ?? activeWorkspaceId ?? '',
+      )
+    },
+    deleteDraft: async (sessionId) => {
+      if (!offlineCoordinator) return baseApi.deleteDraft(sessionId)
+      await offlineCoordinator.deleteDraft(
+        sessionId,
+        client.getConnectionState().status === 'connected',
+        () => baseApi.deleteDraft(sessionId),
+        sessionWorkspaceIds.get(sessionId) ?? activeWorkspaceId ?? '',
+      )
+    },
+    // Never convert a normal composer submission into an implicit outbox item:
+    // the renderer has already created an optimistic message by this point.
+    sendMessage: async (...args) => {
+      if (client.getConnectionState().status !== 'connected') {
+        const error = new Error('Host unavailable. Save this message from the offline workspace instead.')
+        error.name = 'RemoteHostUnavailableError'
+        throw error
+      }
+      return baseApi.sendMessage(...args)
+    },
+
     // Shell operations — use browser APIs
     openUrl: (url: string) => {
       const result = openExternalUrl(url)
@@ -140,17 +209,23 @@ export function createWebApi(options: WebApiOptions): {
     },
 
     // Workspace operations — web UI works with a single connection
-    getWindowWorkspace: () => Promise.resolve(workspaceId ?? null),
+    getWindowWorkspace: () => Promise.resolve(activeWorkspaceId ?? null),
     getWindowMode: () => Promise.resolve('main'),
     // switchWorkspace must call the server so it registers the client's
     // workspaceId — otherwise push events (session updates) won't arrive.
     switchWorkspace: async (wsId: string) => {
       await client.invoke('window:switchWorkspace', wsId)
+      client.setWorkspaceId(wsId)
+      activeWorkspaceId = wsId
+      await onWorkspaceChanged?.(wsId)
     },
     openWorkspace: async () => {},
-    openSessionInNewWindow: async (_wsId: string, sessionId: string) => {
+    openSessionInNewWindow: async (wsId: string, sessionId: string) => {
       // Open in new tab
-      window.open(`${window.location.origin}/?session=${sessionId}`, '_blank')
+      const url = new URL('/', window.location.origin)
+      url.searchParams.set('workspace', wsId)
+      url.searchParams.set('session', sessionId)
+      window.open(url.toString(), '_blank', 'noopener')
     },
 
     // Auto-update — not applicable to web (but expose server version for About page)
@@ -216,7 +291,6 @@ export function createWebApi(options: WebApiOptions): {
     // Confirmation dialogs — use browser confirm()
     showLogoutConfirmation: () => Promise.resolve(window.confirm(i18n.t('dialog.logoutConfirmation'))),
     showDeleteSessionConfirmation: (name: string) => Promise.resolve(window.confirm(i18n.t('dialog.deleteSessionConfirmation', { name }))),
-
     // Power settings — not applicable
     getKeepAwakeWhileRunning: () => Promise.resolve(false),
     setKeepAwakeWhileRunning: () => Promise.resolve(),
@@ -343,5 +417,20 @@ export function createWebApi(options: WebApiOptions): {
 
   const api = { ...baseApi, ...webOverrides, ...oauthOverrides } as ElectronAPI
 
-  return { api, client }
+  const syncOfflineData = async () => {
+    const requestWorkspaceId = activeWorkspaceId
+    if (!offlineCoordinator || !requestWorkspaceId || !offlineCoordinator.isEnabled()) return
+    const sessions = await baseApi.getSessions()
+    for (const session of sessions) sessionWorkspaceIds.set(session.id, session.workspaceId)
+    await offlineCoordinator.captureRecentSessions(
+      sessions,
+      (sessionId) => baseApi.getSessionMessages(sessionId),
+      requestWorkspaceId,
+      true,
+    )
+    const drafts = await baseApi.getAllDrafts()
+    await offlineCoordinator.captureRemoteDrafts(drafts, requestWorkspaceId)
+  }
+
+  return { api, client, syncOfflineData }
 }

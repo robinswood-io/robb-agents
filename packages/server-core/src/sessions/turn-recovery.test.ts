@@ -1,11 +1,15 @@
 import { describe, expect, it } from 'bun:test';
 import type { Message } from '@craft-agent/core/types';
 import {
+  AutomaticRecoveryStalledError,
+  DEFAULT_AUTOMATIC_RECOVERY_INACTIVITY_TIMEOUT_MS,
   advancePendingTurnRecovery,
   buildAutomaticTurnRecoveryPrompt,
   createPendingTurnRecovery,
   exhaustPendingTurnRecovery,
+  resolveAutomaticRecoveryInactivityTimeoutMs,
   turnStillNeedsRecovery,
+  withAutomaticRecoveryInactivityTimeout,
 } from './turn-recovery.ts';
 
 const message = (
@@ -41,6 +45,13 @@ describe('durable turn recovery', () => {
 
     expect(turnStillNeedsRecovery([
       message('user-1', 'user'),
+      message('premature', 'assistant', {
+        content: 'Le diagnostic est terminé. Je lance maintenant les tests.',
+      }),
+    ], 'user-1')).toBe(true);
+
+    expect(turnStillNeedsRecovery([
+      message('user-1', 'user'),
       message('error', 'error'),
     ], 'user-1')).toBe(false);
   });
@@ -57,5 +68,46 @@ describe('durable turn recovery', () => {
     expect(prompt).toContain('original_user_message_id="user-1"');
     expect(prompt).toContain('Do not repeat an external mutation');
     expect(prompt).toContain('verify its state first');
+  });
+
+  it('makes premature-final recovery explicitly execute the remaining work', () => {
+    const prompt = buildAutomaticTurnRecoveryPrompt(
+      createPendingTurnRecovery('user-1', 1),
+      'premature_final',
+    );
+    expect(prompt).toContain('announced more work');
+    expect(prompt).toContain('Perform the remaining actions now');
+    expect(prompt).toContain('Do not end with another promise');
+  });
+
+  it('uses a bounded configurable inactivity timeout', () => {
+    expect(resolveAutomaticRecoveryInactivityTimeoutMs(undefined))
+      .toBe(DEFAULT_AUTOMATIC_RECOVERY_INACTIVITY_TIMEOUT_MS);
+    expect(resolveAutomaticRecoveryInactivityTimeoutMs('invalid'))
+      .toBe(DEFAULT_AUTOMATIC_RECOVERY_INACTIVITY_TIMEOUT_MS);
+    expect(resolveAutomaticRecoveryInactivityTimeoutMs('0')).toBe(0);
+    expect(resolveAutomaticRecoveryInactivityTimeoutMs('5')).toBe(30_000);
+    expect(resolveAutomaticRecoveryInactivityTimeoutMs('99999999')).toBe(1_800_000);
+  });
+
+  it('fails a stalled automatic recovery so SessionManager can recycle its runtime', async () => {
+    const stalled: AsyncIterable<number> = {
+      [Symbol.asyncIterator](): AsyncIterator<number> {
+        return {
+          next: () => new Promise<IteratorResult<number>>(() => {}),
+        };
+      },
+    };
+
+    let caught: unknown;
+    try {
+      for await (const _event of withAutomaticRecoveryInactivityTimeout(stalled, 10)) {
+        // The source deliberately never emits.
+      }
+    } catch (error) {
+      caught = error;
+    }
+
+    expect(caught).toBeInstanceOf(AutomaticRecoveryStalledError);
   });
 });

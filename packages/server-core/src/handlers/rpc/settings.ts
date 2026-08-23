@@ -9,9 +9,11 @@ const VALID_THINKING_LEVELS_LIST = THINKING_LEVEL_IDS.map(id => `'${id}'`).join(
 import { getWorkspaceOrThrow } from '@craft-agent/server-core/handlers'
 import {
   assertRequestWorkspace,
+  assertRequestWorkspaceAccess,
   type RequestContext,
   type RpcServer,
 } from '@craft-agent/server-core/transport'
+import { filterDraftsForWorkspace } from './draft-workspace-filter'
 import type { HandlerDeps } from '../handler-deps'
 import { requestClientOpenFileDialog } from '@craft-agent/server-core/transport'
 import { isValidWorkingDirectory } from '../../utils/path-validation'
@@ -549,17 +551,15 @@ export function registerSettingsHandlers(server: RpcServer, deps: HandlerDeps): 
 
   // Get all drafts (for loading on app start)
   server.handle(RPC_CHANNELS.drafts.GET_ALL, async (ctx) => {
+    const workspaceId = ctx.workspaceId
+    if (!workspaceId) return {}
+    assertRequestWorkspaceAccess(ctx, workspaceId)
     const drafts = getAllSessionDrafts()
-    if (ctx.allowedWorkspaceIds === '*') return drafts
-
-    const allowedDrafts: typeof drafts = {}
-    await Promise.all(Object.entries(drafts).map(async ([sessionId, draft]) => {
-      const session = await deps.sessionManager.getSession(sessionId)
-      if (session && ctx.allowedWorkspaceIds.includes(session.workspaceId)) {
-        allowedDrafts[sessionId] = draft
-      }
-    }))
-    return allowedDrafts
+    return filterDraftsForWorkspace(
+      drafts,
+      workspaceId,
+      async (sessionId) => (await deps.sessionManager.getSession(sessionId))?.workspaceId ?? null,
+    )
   })
 
   // ============================================================

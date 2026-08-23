@@ -97,12 +97,14 @@
   --user-message-bubble: oklch(from var(--foreground) l c h / 0.05);
   --user-message-bubble-dimmed: oklch(from var(--foreground) l c h / 0.03);
   --accent: oklch(0.62 0.13 293);           /* purple - brand, Auto mode */
+  --accent-foreground: oklch(0.12 0.01 270); /* accessible text on solid accent */
   --accent-rgb: 104, 78, 133;               /* darkened RGB for shadow-tinted (70% of accent) */
   --info: oklch(0.75 0.16 70);              /* amber - warnings, Ask mode */
   --info-rgb: 180, 120, 40;                 /* RGB for shadow-tinted */
   --success: oklch(0.55 0.17 145);          /* green - connected, checkmarks */
   --success-rgb: 34, 120, 60;               /* RGB for shadow-tinted */
   --destructive: oklch(0.58 0.24 28);       /* red - errors, failed */
+  --destructive-foreground: oklch(0.12 0.01 270); /* accessible text on solid destructive */
   --destructive-rgb: 180, 60, 50;           /* RGB for shadow-tinted */
 
   /* === SHADOW OPACITY (light mode = subtle, dark mode = stronger) === */
@@ -264,12 +266,14 @@
   --user-message-bubble: oklch(from var(--foreground) l c h / 0.05);
   --user-message-bubble-dimmed: oklch(from var(--foreground) l c h / 0.03);
   --accent: oklch(0.65 0.22 293);            /* brighter purple in dark */
+  --accent-foreground: oklch(0.12 0.01 270);
   --accent-rgb: 130, 75, 185;               /* darkened RGB for shadow-tinted (70% of accent) */
   --info: oklch(0.78 0.14 70);               /* amber */
   --info-rgb: 210, 155, 55;                  /* RGB for shadow-tinted */
   --success: oklch(0.60 0.17 145);           /* green */
   --success-rgb: 50, 140, 80;               /* RGB for shadow-tinted */
   --destructive: oklch(0.65 0.22 28);        /* brighter red in dark */
+  --destructive-foreground: oklch(0.12 0.01 270);
   --destructive-rgb: 200, 70, 60;            /* RGB for shadow-tinted */
 
   /* === SHADOW OPACITY (stronger in dark mode for visibility) === */
@@ -404,9 +408,11 @@ html[data-font="inter"] {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
   --color-info: var(--info);
   --color-success: var(--success);
   --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
 
   /* === MIX VARIANTS (solid interpolation) === */
   --color-foreground-1\.5: var(--foreground-1\.5);
@@ -1434,13 +1440,6 @@ html.dark[data-scenic] .fullscreen-overlay-background {
   }
   [data-list-role="sessions"] {
     padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
-  }
-
-  /* Top safe area: keep the navigator's first row clear of the iOS notch
-     when the app runs as a PWA / mobile webui. Desktop builds report 0px
-     for the inset so this is a no-op there. */
-  [data-panel-role="navigator"] {
-    padding-top: env(safe-area-inset-top, 0px);
   }
 
   /* Workspace pill chevron: 12px is hard to read at narrow widths,

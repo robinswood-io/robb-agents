@@ -420,6 +420,7 @@ export function createWebuiHandler(options: WebuiHandlerOptions): WebuiHandler {
     return await serveFile(join(webuiDir, 'index.html'), {
       'Content-Type': 'text/html; charset=utf-8',
       'Referrer-Policy': 'no-referrer',
+      'Cache-Control': 'private, no-store',
       ...headers,
     }) ?? new Response('Not Found', { status: 404 })
   }
@@ -481,6 +482,7 @@ export function createWebuiHandler(options: WebuiHandlerOptions): WebuiHandler {
     if (path === '/login' || path === '/login/') {
       return await serveFile(join(webuiDir, 'login.html'), {
         'Content-Type': 'text/html; charset=utf-8',
+        'Cache-Control': 'private, no-store',
       }) ?? new Response('Login page not found', { status: 404 })
     }
 
@@ -490,17 +492,41 @@ export function createWebuiHandler(options: WebuiHandlerOptions): WebuiHandler {
     }
 
     // ── Public static assets used by login and Remote pairing pages ──
+    if (path.endsWith('.map')) {
+      return new Response('Not Found', {
+        status: 404,
+        headers: { 'Cache-Control': 'no-store' },
+      })
+    }
+
     if (
       path === '/favicon.ico'
       || path === '/favicon.svg'
       || path === '/apple-touch-icon.png'
+      || path === '/icon-192.png'
+      || path === '/icon-512.png'
       || path === '/manifest.json'
+      || path === '/offline.html'
+      || path === '/index.html'
       || path === '/sw.js'
       || path.startsWith('/login-assets/')
       || path.startsWith('/assets/')
     ) {
+      const isServiceWorker = path === '/sw.js'
+      const isHtml = path.endsWith('.html')
+      const isImmutableAsset = path.startsWith('/assets/')
       return await serveFile(join(webuiDir, path), {
-        'Content-Type': getMimeType(path),
+        'Content-Type': path === '/manifest.json'
+          ? 'application/manifest+json; charset=utf-8'
+          : getMimeType(path),
+        'Cache-Control': isServiceWorker
+          ? 'no-cache'
+          : isHtml
+            ? 'private, no-store'
+            : isImmutableAsset
+              ? 'public, max-age=31536000, immutable'
+              : 'public, max-age=300, must-revalidate',
+        ...(isServiceWorker ? { 'Service-Worker-Allowed': '/' } : {}),
       }) ?? new Response('Not Found', { status: 404 })
     }
 

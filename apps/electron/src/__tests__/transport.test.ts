@@ -109,6 +109,19 @@ describe('handshake', () => {
     expect(server.port).toBeGreaterThan(0)
   })
 
+  test('uses an accepted workspace update on the next reconnect handshake', async () => {
+    const { server, client } = await createPair()
+    server.handle('workspace', async (ctx) => ctx.workspaceId)
+    expect(await client.invoke('workspace')).toBe('test-workspace')
+
+    client.setWorkspaceId('next-workspace')
+    client.reconnectNow()
+    await waitForStatus(client, (status) => status !== 'connected')
+    await waitConnected(client)
+
+    expect(await client.invoke('workspace')).toBe('next-workspace')
+  })
+
   test('handshake without protocolVersion is rejected', async () => {
     const server = trackServer(new WsRpcServer({ host: '127.0.0.1', port: 0 }))
     await server.listen()

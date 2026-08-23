@@ -2,10 +2,14 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import babel from '@rolldown/plugin-babel'
 import tailwindcss from '@tailwindcss/vite'
+import { readFileSync } from 'node:fs'
 import { resolve } from 'path'
 
 const configDir = import.meta.dirname
 const webBaselineTargets = ['chrome111', 'edge111', 'firefox114', 'safari16.4']
+const webuiPackage = JSON.parse(
+  readFileSync(resolve(configDir, 'package.json'), 'utf8'),
+) as { version: string }
 
 export default defineConfig({
   plugins: [
@@ -25,11 +29,19 @@ export default defineConfig({
     target: webBaselineTargets,
     outDir: resolve(configDir, 'dist'),
     emptyOutDir: true,
-    sourcemap: true,
+    // Remote bundles are public assets. Do not ship source maps containing
+    // internal renderer source or cache them in the PWA shell.
+    sourcemap: false,
     rolldownOptions: {
       input: {
         main: resolve(configDir, 'src/index.html'),
         login: resolve(configDir, 'src/login.html'),
+        sw: resolve(configDir, 'src/sw.ts'),
+      },
+      output: {
+        entryFileNames: (chunk) => chunk.name === 'sw'
+          ? 'sw.js'
+          : 'assets/[name]-[hash].js',
       },
       // Suppress warnings for Node.js externalized modules — these are
       // referenced by shared code but only used in server/Electron codepaths.
@@ -81,6 +93,8 @@ export default defineConfig({
   define: {
     // Flag to detect web UI context in shared code
     'import.meta.env.IS_WEBUI': 'true',
+    // A release version change produces a new worker and cache namespace.
+    'import.meta.env.PWA_CACHE_VERSION': JSON.stringify(webuiPackage.version),
   },
   optimizeDeps: {
     include: ['react', 'react-dom', 'jotai'],

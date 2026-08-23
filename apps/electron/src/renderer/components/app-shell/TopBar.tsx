@@ -136,16 +136,24 @@ export function TopBar({
         "fixed top-0 left-0 right-0 z-panel titlebar-drag-region",
         isWebUI && "bg-background border-b border-border/70 shadow-xs"
       )}
-      style={{ height: 'var(--topbar-height)' }}
+      style={{
+        height: 'var(--topbar-height)',
+        paddingTop: isWebUI ? 'var(--topbar-safe-area-top, 0px)' : undefined,
+      }}
     >
-      <div className="flex h-full w-full items-center justify-between gap-2">
+      <div className="webui-topbar-content flex h-full w-full items-center justify-between gap-2">
       {/* === LEFT: Sidebar + Menu + Navigation + Workspace === */}
       {/* Keep this container draggable. Only individual interactive controls should use titlebar-no-drag. */}
       {/* In compact mode the right slot is hidden, so we add right padding here
           so the workspace pill doesn't run flush against the viewport edge. */}
       <div
         className="pointer-events-auto flex min-w-0 flex-1 items-center gap-0.5"
-        style={{ paddingLeft: menuLeftPadding, paddingRight: isCompact && isWebUI ? 98 : isCompact ? 12 : 0 }}
+        style={{
+          paddingLeft: menuLeftPadding,
+          paddingRight: isCompact && isWebUI
+            ? 'calc(var(--webui-remote-controls-width, 44px) + var(--webui-topbar-controls-gap, 14px))'
+            : isCompact ? 12 : 0,
+        }}
       >
         <div className="flex items-center gap-0.5">
         {!isCompact && (
