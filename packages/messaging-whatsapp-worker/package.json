@@ -13,7 +13,7 @@
     "typecheck": "node ../../scripts/run-typescript.mjs native --noEmit"
   },
   "dependencies": {
-    "@whiskeysockets/baileys": "6.7.23",
+    "@whiskeysockets/baileys": "6.7.24",
     "sharp": "0.35.3"
   },
   "devDependencies": {

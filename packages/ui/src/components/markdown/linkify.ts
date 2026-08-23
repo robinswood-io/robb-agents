@@ -1,4 +1,4 @@
-import LinkifyIt from 'linkify-it'
+import { LinkifyIt } from 'linkify-it'
 import { hasKnownFileExtension } from '../../lib/file-classification'
 
 /**
@@ -316,7 +316,7 @@ export function preprocessLinks(text: string): string {
   text = stripPlaceholderLinks(text)
 
   // Quick check - if no potential links, return early
-  if (!linkify.pretest(text) && findFilePathCandidates(text).length === 0) {
+  if (!linkify.test(text) && findFilePathCandidates(text).length === 0) {
     return text
   }
 
@@ -357,7 +357,7 @@ export function preprocessLinks(text: string): string {
  * Useful for optimization - skip preprocessing if no links present
  */
 export function hasLinks(text: string): boolean {
-  return linkify.pretest(text) || findFilePathCandidates(text).length > 0
+  return linkify.test(text) || findFilePathCandidates(text).length > 0
 }
 
 /**
