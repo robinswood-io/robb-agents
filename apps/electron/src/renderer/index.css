@@ -1436,13 +1436,6 @@ html.dark[data-scenic] .fullscreen-overlay-background {
     padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
   }
 
-  /* Top safe area: keep the navigator's first row clear of the iOS notch
-     when the app runs as a PWA / mobile webui. Desktop builds report 0px
-     for the inset so this is a no-op there. */
-  [data-panel-role="navigator"] {
-    padding-top: env(safe-area-inset-top, 0px);
-  }
-
   /* Workspace pill chevron: 12px is hard to read at narrow widths,
      bump to 16px so the dropdown affordance is clearly tappable. */
   [data-workspace-switcher="topbar"] [data-slot="chevron"] {

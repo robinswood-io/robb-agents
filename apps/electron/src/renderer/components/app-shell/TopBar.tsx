@@ -136,7 +136,10 @@ export function TopBar({
         "fixed top-0 left-0 right-0 z-panel titlebar-drag-region",
         isWebUI && "bg-background border-b border-border/70 shadow-xs"
       )}
-      style={{ height: 'var(--topbar-height)' }}
+      style={{
+        height: 'var(--topbar-height)',
+        paddingTop: isWebUI ? 'var(--topbar-safe-area-top, 0px)' : undefined,
+      }}
     >
       <div className="flex h-full w-full items-center justify-between gap-2">
       {/* === LEFT: Sidebar + Menu + Navigation + Workspace === */}

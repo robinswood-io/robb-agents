@@ -34,26 +34,37 @@
  * The only webui-specific styles are safe-area insets for mobile browsers.
  */
 
-/* Safe area insets for mobile browsers (notch, home indicator) */
+/*
+ * Fill the dynamic viewport exactly. The previous combination of a 100%-high
+ * root, body padding, and document-level zoom left part of the iOS standalone
+ * viewport outside the application surface.
+ */
 html, body, #root {
+  width: 100%;
+  height: 100%;
+  height: 100dvh;
   overflow: hidden;
   max-width: 100%;
+  background: var(--background);
 }
 
 body {
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  margin: 0;
 }
 
-/* 120% zoom on mobile viewports for better readability */
-@media (max-width: 768px) {
-  html {
-    zoom: 1.2;
-  }
+/*
+ * The shared app reserves --topbar-height above the panel stack. Include the
+ * iOS status-bar inset in that single reservation, and let TopBar use the same
+ * inset as internal padding. Bottom insets remain owned by scrollable lists and
+ * the mobile FAB, so they are not counted twice at the document level.
+ */
+:root {
+  --topbar-safe-area-top: env(safe-area-inset-top, 0px);
+  --topbar-height: calc(48px + var(--topbar-safe-area-top));
+}
 
-  /* Remote pairing is a purpose-built phone layout and already sizes text and
-   * controls for touch. Keep it at its authored scale so the complete trust
-   * context remains visible on common 390×844 screens. */
-  html:has(.remote-access-page) {
-    zoom: 1;
+@media (max-width: 768px) {
+  :root {
+    --topbar-height: calc(56px + var(--topbar-safe-area-top));
   }
 }
