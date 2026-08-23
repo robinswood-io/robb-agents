@@ -4,8 +4,10 @@ import {
   buildHierarchicalConversationContext,
   buildConversationSummaryPrompt,
   buildConversationSummaryTranscript,
+  buildRuntimeRecoveryHandoff,
   buildTransferredSessionContext,
   generateConversationSummary,
+  sanitizeConversationContent,
 } from '../conversation-summary.ts'
 import { estimateTokensDensityAware } from '../../utils/large-response.ts'
 
@@ -50,6 +52,82 @@ describe('conversation-summary helpers', () => {
     expect(prompt).toContain('Summarize this conversation concisely. Preserve: key decisions, ongoing tasks, technical context, and the user\'s current goal. Be specific, not generic.')
     expect(prompt).toContain('User: Need to ship the mobile fix.')
     expect(prompt).toContain('Assistant: Working through the remaining edge cases.')
+  })
+
+  it('omits runtime instruction scaffolding from summary transcripts', () => {
+    const transcript = buildConversationSummaryTranscript([
+      {
+        type: 'user',
+        content: '<recommended_plugins>huge plugin catalog</recommended_plugins> # AGENTS.md instructions\n<INSTRUCTIONS>very long global rulebook</INSTRUCTIONS>Actual request: reprends le fix updater.',
+      },
+      { type: 'assistant', content: 'Je reprends.' },
+    ])
+
+    expect(transcript).not.toContain('huge plugin catalog')
+    expect(transcript).not.toContain('very long global rulebook')
+    expect(transcript).toContain('Actual request: reprends le fix updater.')
+  })
+
+  it('sanitizes standalone environment context blocks', () => {
+    expect(sanitizeConversationContent('before <environment_context>secret cwd noise</environment_context> after'))
+      .toBe('before [environment context omitted] after')
+  })
+
+  it('sanitizes infrastructure blocks case-insensitively and explicit handoff goals', () => {
+    const handoff = buildRuntimeRecoveryHandoff({
+      currentGoal: '<INSTRUCTIONS>do not keep this</INSTRUCTIONS> Ship the runtime fix.',
+      verifiedFacts: [' <RECOMMENDED_PLUGINS>catalog</RECOMMENDED_PLUGINS> '],
+      blocker: 'Runtime bridge failed.',
+      nextTask: 'Continue implementation.',
+    })
+
+    expect(handoff).toContain('Ship the runtime fix.')
+    expect(handoff).not.toContain('do not keep this')
+    expect(handoff).not.toContain('catalog')
+  })
+
+  it('keeps unterminated instruction delimiters without pathological scanning', () => {
+    const content = '<recommended_plugins>'.repeat(20_000) + 'actual request'
+
+    expect(sanitizeConversationContent(content)).toBe(content)
+  })
+
+  it('finds the next archived user turn without regex backtracking', () => {
+    const prefix = '# AGENTS.md instructions\n' + 'runtime scaffold '.repeat(400)
+    const userTurn = '2026-08-23T12:00:00Z user Ship the release.'
+
+    expect(sanitizeConversationContent(`${prefix}\n${userTurn}`)).toBe(userTurn)
+
+    const unterminatedTimestamp = `${prefix}\n2026-08-23T12:00:00Z${'\t'.repeat(20_000)}`
+    expect(sanitizeConversationContent(unterminatedTimestamp)).toBe(unterminatedTimestamp.trim())
+  })
+
+  it('requires non-empty blocker and nextTask fields in runtime handoffs', () => {
+    expect(() => buildRuntimeRecoveryHandoff({
+      blocker: '   ',
+      nextTask: 'Continue.',
+    })).toThrow('blocker is required')
+    expect(() => buildRuntimeRecoveryHandoff({
+      blocker: 'Runtime unavailable.',
+      nextTask: '<environment_context>only noise</environment_context>',
+    })).toThrow('nextTask is required')
+  })
+
+  it('builds a structured runtime recovery handoff', () => {
+    const handoff = buildRuntimeRecoveryHandoff({
+      currentGoal: 'Corriger updater et QR mobile.',
+      verifiedFacts: ['Git clean before implementation.'],
+      attemptedActions: ['Retried empty command and bridge still failed.'],
+      touchedAreas: ['apps/electron/src/main/index.ts'],
+      executedChecks: ['git status --short'],
+      blocker: 'Execution bridge unavailable after reconnect attempt.',
+      nextTask: 'Resume in the same workspace and inspect updater + QR mobile code.',
+    })
+
+    expect(handoff).toContain('# Runtime Recovery Handoff')
+    expect(handoff).toContain('Corriger updater et QR mobile.')
+    expect(handoff).toContain('Execution bridge unavailable after reconnect attempt.')
+    expect(handoff).toContain('Resume in the same workspace')
   })
 
   it('delegates summary generation to the provided mini completion callback', async () => {

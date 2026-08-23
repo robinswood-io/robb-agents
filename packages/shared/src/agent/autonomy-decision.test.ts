@@ -35,6 +35,13 @@ describe('decideAutonomyRecovery', () => {
     })).toEqual({ kind: 'escalate', reason: 'credential_required' })
   })
 
+  it('requests runtime reconnect for execution bridge failures', () => {
+    expect(decideAutonomyRecovery({
+      ...sourceFailure,
+      result: 'Execution bridge unavailable: handler timeout',
+    })).toEqual({ kind: 'reconnect_runtime' })
+  })
+
   it('does not waste a browser fallback on invalid input', () => {
     expect(decideAutonomyRecovery({
       ...sourceFailure,

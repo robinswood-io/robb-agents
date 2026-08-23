@@ -65,4 +65,42 @@ describe('handleErrorMessageAction', () => {
 
     expect(onOpenSettings).toHaveBeenCalledTimes(1)
   })
+
+  it('routes reconnect_runtime through the dedicated handler when available', () => {
+    const onReconnectRuntime = mock(() => {})
+    const onRetryFocus = mock(() => {})
+    const action: ErrorMessageAction = {
+      key: 'c',
+      label: 'Reconnect runtime',
+      action: 'reconnect_runtime',
+    }
+
+    handleErrorMessageAction(action, {
+      sessionId: 'session-123',
+      onReconnectRuntime,
+      onRetryFocus,
+    })
+
+    expect(onReconnectRuntime).toHaveBeenCalledTimes(1)
+    expect(onRetryFocus).not.toHaveBeenCalled()
+  })
+
+  it('does nothing for reconnect_runtime actions without a dedicated handler', () => {
+    const onRetryFocus = mock(() => {})
+    const onRetry = mock(() => {})
+    const action: ErrorMessageAction = {
+      key: 'c',
+      label: 'Reconnect runtime',
+      action: 'reconnect_runtime',
+    }
+
+    handleErrorMessageAction(action, {
+      sessionId: 'session-123',
+      onRetry,
+      onRetryFocus,
+    })
+
+    expect(onRetry).not.toHaveBeenCalled()
+    expect(onRetryFocus).not.toHaveBeenCalled()
+  })
 })

@@ -84,13 +84,13 @@ afterAll(() => {
   }
 })
 
-interface AgentStub {
-  isProcessing: () => boolean
-  updateRuntimeConfig: jest.Mock
-  setModel: jest.Mock
-  dispose: () => void
-  disposeForRestart?: () => Promise<void>
-}
+  interface AgentStub {
+    isProcessing: () => boolean
+    updateRuntimeConfig: jest.Mock
+    setModel: jest.Mock
+    dispose: jest.Mock
+    disposeForRestart?: () => Promise<void>
+  }
 
 function createAgentStub(opts: {
   isProcessing?: boolean
@@ -104,9 +104,9 @@ function createAgentStub(opts: {
     updateRuntimeConfig: jest.fn().mockImplementation(async () => {
       if (delay > 0) await new Promise(resolve => setTimeout(resolve, delay))
       return result
-    }),
+      }),
     setModel: jest.fn(),
-    dispose: () => { /* no-op for tests */ },
+    dispose: jest.fn(),
   }
 }
 
@@ -312,5 +312,45 @@ describe('refreshConnectionRuntime', () => {
     expect(agent.setModel).not.toHaveBeenCalled()
     expect(refreshRuntime).toHaveBeenCalledTimes(1)
     expect(refreshRuntime).toHaveBeenCalledWith(managed, 'session model changed')
+  })
+})
+
+describe('restartAgentRuntime', () => {
+  let tmpRoot: string
+  let sm: InstanceType<typeof SessionManager>
+
+  beforeEach(() => {
+    writeTestConfig()
+    tmpRoot = mkdtempSync(join(tmpdir(), 'sm-restart-'))
+    sm = new SessionManager()
+  })
+
+  afterEach(() => {
+    rmSync(tmpRoot, { recursive: true, force: true })
+  })
+
+  it('disposes the session runtime so the next turn recreates it', async () => {
+    const agent = createAgentStub()
+    const managed = injectSession(sm, 'restart-me', tmpRoot, 'slug-A', agent)
+
+    await sm.restartAgentRuntime('restart-me')
+
+    expect(agent.dispose).toHaveBeenCalledTimes(1)
+    expect(managed.agent).toBeNull()
+    expect(managed.backendRuntimeSignature).toBeUndefined()
+    expect((managed as { autonomyEvents?: Array<Record<string, unknown>> }).autonomyEvents?.at(-1)).toMatchObject({
+      phase: 'fallback',
+      message: 'Execution runtime bridge was reconnected; retry the failed turn to recreate the runtime.',
+    })
+  })
+
+  it('refuses to dispose a runtime while the session is processing', async () => {
+    const agent = createAgentStub({ isProcessing: true })
+    const managed = injectSession(sm, 'busy-restart', tmpRoot, 'slug-A', agent, { isProcessing: false })
+
+    await expect(sm.restartAgentRuntime('busy-restart')).rejects.toThrow('Cannot reconnect runtime while session is processing')
+
+    expect(agent.dispose).not.toHaveBeenCalled()
+    expect(managed.agent).toBe(agent)
   })
 })

@@ -7,6 +7,17 @@ const MAX_TRANSCRIPT_CHARS = 12_000;
 export interface ConversationSummaryOptions {
   maxMessageChars?: number;
   maxTranscriptChars?: number;
+  sanitizeInfrastructureBlocks?: boolean;
+}
+
+export interface RuntimeHandoffInput {
+  currentGoal?: string;
+  verifiedFacts?: string[];
+  attemptedActions?: string[];
+  touchedAreas?: string[];
+  executedChecks?: string[];
+  blocker: string;
+  nextTask: string;
 }
 
 export interface HierarchicalContextArtifact {
@@ -43,6 +54,7 @@ export function buildConversationSummaryTranscript(
 ): string {
   const maxMessageChars = options?.maxMessageChars ?? MAX_MESSAGE_CHARS;
   const maxTranscriptChars = options?.maxTranscriptChars ?? MAX_TRANSCRIPT_CHARS;
+  const sanitizeInfrastructureBlocks = options?.sanitizeInfrastructureBlocks ?? true;
   if (!Number.isInteger(maxMessageChars) || maxMessageChars < 0) {
     throw new Error('maxMessageChars must be a non-negative integer');
   }
@@ -52,7 +64,12 @@ export function buildConversationSummaryTranscript(
   if (maxTranscriptChars === 0) return '';
 
   const transcript = messages
-    .map((message) => `${message.type === 'user' ? 'User' : 'Assistant'}: ${message.content.slice(0, maxMessageChars)}`)
+    .map((message) => {
+      const content = sanitizeInfrastructureBlocks
+        ? sanitizeConversationContent(message.content)
+        : message.content;
+      return `${message.type === 'user' ? 'User' : 'Assistant'}: ${content.slice(0, maxMessageChars)}`;
+    })
     .join('\n\n');
 
   if (transcript.length <= maxTranscriptChars) return transcript;
@@ -80,6 +97,183 @@ export function buildConversationSummaryPrompt(messages: RecoveryMessage[]): str
     'Summarize this conversation concisely. Preserve: key decisions, ongoing tasks, ' +
     `technical context, and the user's current goal. Be specific, not generic.\n\n${transcript}`
   );
+}
+
+function replaceDelimitedBlock(content: string, tagName: string, replacement: string): string {
+  const normalizedContent = content.toLowerCase();
+  const openingTag = `<${tagName}>`;
+  const closingTag = `</${tagName}>`;
+  const chunks: string[] = [];
+  let cursor = 0;
+  let replaced = false;
+
+  while (cursor < content.length) {
+    const start = normalizedContent.indexOf(openingTag, cursor);
+    if (start === -1) break;
+
+    const end = normalizedContent.indexOf(closingTag, start + openingTag.length);
+    if (end === -1) break;
+
+    chunks.push(content.slice(cursor, start), replacement);
+    cursor = end + closingTag.length;
+    replaced = true;
+  }
+
+  if (!replaced) return content;
+  chunks.push(content.slice(cursor));
+  return chunks.join('');
+}
+
+function isAsciiDigit(value: string | undefined): boolean {
+  return value !== undefined && value >= '0' && value <= '9';
+}
+
+function isWhitespace(value: string | undefined): boolean {
+  return value !== undefined && value.trim() === '';
+}
+
+function hasIsoDatePrefix(content: string, offset: number, lineEnd: number): boolean {
+  if (lineEnd - offset < 11) return false;
+  return (
+    isAsciiDigit(content[offset]) &&
+    isAsciiDigit(content[offset + 1]) &&
+    isAsciiDigit(content[offset + 2]) &&
+    isAsciiDigit(content[offset + 3]) &&
+    content[offset + 4] === '-' &&
+    isAsciiDigit(content[offset + 5]) &&
+    isAsciiDigit(content[offset + 6]) &&
+    content[offset + 7] === '-' &&
+    isAsciiDigit(content[offset + 8]) &&
+    isAsciiDigit(content[offset + 9]) &&
+    content[offset + 10]?.toLowerCase() === 't'
+  );
+}
+
+function findArchivedUserMarker(content: string): number | undefined {
+  const normalizedContent = content.toLowerCase();
+  let marker = content.indexOf('\n');
+
+  while (marker !== -1) {
+    const lineStart = marker + 1;
+    const nextNewline = content.indexOf('\n', lineStart);
+    const lineEnd = nextNewline === -1 ? content.length : nextNewline;
+
+    if (
+      normalizedContent.startsWith('user', lineStart) &&
+      isWhitespace(content[lineStart + 4])
+    ) {
+      return marker;
+    }
+
+    if (hasIsoDatePrefix(content, lineStart, lineEnd)) {
+      let candidate = normalizedContent.indexOf('user', lineStart + 11);
+      while (candidate !== -1 && candidate < lineEnd) {
+        if (
+          candidate > lineStart + 11 &&
+          isWhitespace(content[candidate - 1]) &&
+          isWhitespace(content[candidate + 4])
+        ) {
+          return marker;
+        }
+        candidate = normalizedContent.indexOf('user', candidate + 4);
+      }
+    }
+
+    marker = nextNewline;
+  }
+
+  return undefined;
+}
+
+/**
+ * Strip high-volume runtime scaffolding from archived/run transcripts before
+ * summary and handoff generation. These blocks are useful to the agent runtime
+ * but they routinely drown out the user's actual objective when rehydrating
+ * recent runs.
+ */
+export function sanitizeConversationContent(content: string): string {
+  let result = replaceDelimitedBlock(
+    content,
+    'recommended_plugins',
+    '[recommended plugins omitted]',
+  );
+  result = replaceDelimitedBlock(
+    result,
+    'environment_context',
+    '[environment context omitted]',
+  );
+  result = replaceDelimitedBlock(
+    result,
+    'instructions',
+    '[agent instructions omitted]',
+  );
+
+  // Archived runs sometimes serialize the opening instruction blob as Markdown
+  // rather than XML. Keep the next true user turn when present.
+  const userMarker = findArchivedUserMarker(result);
+  if (result.length > 4_000 && userMarker && result.slice(0, userMarker).includes('# AGENTS.md instructions')) {
+    result = result.slice(userMarker).trimStart();
+  }
+
+  return result.trim();
+}
+
+function formatHandoffList(title: string, values: string[] | undefined): string[] {
+  const cleanValues = (values ?? []).map(value => value.trim()).filter(Boolean);
+  if (cleanValues.length === 0) return [];
+  return [
+    `## ${title}`,
+    ...cleanValues.map(value => `- ${value}`),
+  ];
+}
+
+function sanitizeHandoffText(value: string | undefined): string {
+  return sanitizeConversationContent(value ?? '')
+    .replace(/\[(?:recommended plugins|environment context|agent instructions) omitted\]/gi, '')
+    .trim();
+}
+
+/**
+ * Deterministic handoff block for cases where the local runtime cannot recover
+ * the current turn. It is intentionally compact and implementation-ready.
+ */
+export function buildRuntimeRecoveryHandoff(input: RuntimeHandoffInput): string {
+  const currentGoal = sanitizeHandoffText(input.currentGoal) || 'Resume the interrupted user request from the latest available session context.';
+  const blocker = sanitizeHandoffText(input.blocker);
+  const nextTask = sanitizeHandoffText(input.nextTask);
+  if (!blocker) {
+    throw new Error('blocker is required');
+  }
+  if (!nextTask) {
+    throw new Error('nextTask is required');
+  }
+  const verifiedFacts = input.verifiedFacts?.map(sanitizeHandoffText).filter(Boolean);
+  const attemptedActions = input.attemptedActions?.map(sanitizeHandoffText).filter(Boolean);
+  const touchedAreas = input.touchedAreas?.map(sanitizeHandoffText).filter(Boolean);
+  const executedChecks = input.executedChecks?.map(sanitizeHandoffText).filter(Boolean);
+
+  const lines = [
+    '# Runtime Recovery Handoff',
+    '',
+    '## Current Goal',
+    currentGoal,
+    '',
+    ...formatHandoffList('Verified Facts', verifiedFacts),
+    ...(verifiedFacts?.length ? [''] : []),
+    ...formatHandoffList('Actions Attempted', attemptedActions),
+    ...(attemptedActions?.length ? [''] : []),
+    ...formatHandoffList('Touched Areas', touchedAreas),
+    ...(touchedAreas?.length ? [''] : []),
+    ...formatHandoffList('Checks Already Run', executedChecks),
+    ...(executedChecks?.length ? [''] : []),
+    '## Blocker',
+    blocker,
+    '',
+    '## Next Task',
+    nextTask,
+  ];
+
+  return lines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
 }
 
 export async function generateConversationSummary(
@@ -120,7 +314,9 @@ export function buildHierarchicalConversationContext(
     .reverse()
     .find((message) => message.type === 'user')
     ?.content.trim();
-  const currentGoal = explicitGoal || inferredGoal;
+  const currentGoal = explicitGoal
+    ? sanitizeConversationContent(explicitGoal)
+    : (inferredGoal ? sanitizeConversationContent(inferredGoal) : undefined);
   const recentMessages = buildConversationSummaryTranscript(
     input.messages.slice(-maxRecentMessages),
     { maxMessageChars: 1000, maxTranscriptChars: 8000 },

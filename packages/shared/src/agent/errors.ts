@@ -29,7 +29,7 @@ export interface RecoveryAction {
   /** Slash command to execute (e.g., '/settings') */
   command?: string;
   /** Custom action type for special handling */
-  action?: 'retry' | 'settings' | 'reauth' | 'open_url' | 'reconnect_source';
+  action?: 'retry' | 'settings' | 'reauth' | 'open_url' | 'reconnect_source' | 'reconnect_runtime';
   /** URL to open (for 'open_url' action) */
   url?: string;
   /** Source slug (for 'reconnect_source' action) */
@@ -252,6 +252,18 @@ const ERROR_DEFINITIONS: Record<ErrorCode, Omit<AgentError, 'code' | 'originalEr
     canRetry: true,
     retryDelayMs: 1000,
   },
+  execution_bridge_unavailable: {
+    title: 'Execution bridge unavailable',
+    message:
+      'The local runtime bridge used to execute tools is unavailable or out of sync. ' +
+      'Reconnect the runtime, then retry. If reconnecting fails, prepare a structured handoff before starting a new task.',
+    actions: [
+      { key: 'c', label: 'Reconnect runtime', action: 'reconnect_runtime' },
+      { key: 'r', label: 'Retry', action: 'retry' },
+    ],
+    canRetry: true,
+    retryDelayMs: 1000,
+  },
   unknown_error: {
     title: 'Error',
     message: 'Something went wrong. If this persists, check the provider status page or retry.',
@@ -367,6 +379,34 @@ function buildProxyErrorMessage(errorMessage: string, fullErrorText: string): st
   return `Received an unexpected HTML error page${suffix} instead of a JSON API response. This is usually caused by a proxy, firewall, or captive portal intercepting the request. Check your proxy settings in Settings > Network.`;
 }
 
+function hasRuntimeBridgeErrorContext(lowerMessage: string): boolean {
+  if (
+    lowerMessage.includes('execution bridge') ||
+    lowerMessage.includes('runtime bridge') ||
+    lowerMessage.includes('tool bridge') ||
+    lowerMessage.includes('tools context') ||
+    lowerMessage.includes('tool context') ||
+    lowerMessage.includes('bridge is corrupted') ||
+    lowerMessage.includes('bridge corrupted') ||
+    lowerMessage.includes('command bridge') ||
+    lowerMessage.includes('exec bridge') ||
+    lowerMessage.includes('codex bridge') ||
+    lowerMessage.includes('localhost:3201') ||
+    lowerMessage.includes('localhost 3201') ||
+    lowerMessage.includes('fix-errors') ||
+    lowerMessage.includes('local agent') ||
+    lowerMessage.includes('agent task') ||
+    lowerMessage.includes('exec_command')
+  ) {
+    return true;
+  }
+
+  return (
+    (lowerMessage.includes('econnrefused') || lowerMessage.includes('connection refused')) &&
+    lowerMessage.includes('3201')
+  );
+}
+
 /**
  * Parse an error and return a typed AgentError with user-friendly info
  */
@@ -405,6 +445,8 @@ export function parseError(
     code = 'model_no_tool_support';
   } else if (lowerMessage.includes('is not a valid model') || lowerMessage.includes('model not found') || lowerMessage.includes('invalid model') || lowerMessage.includes('model identifier is invalid')) {
     code = 'invalid_model';
+  } else if (hasRuntimeBridgeErrorContext(lowerMessage)) {
+    code = 'execution_bridge_unavailable';
   // HTML-intercepted responses (proxy/firewall/captive portal).
   // Must be checked BEFORE status codes: a 502 Cloudflare page or 401 proxy login
   // page would otherwise be misclassified as service_error or invalid_api_key.
