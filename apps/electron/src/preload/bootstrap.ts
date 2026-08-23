@@ -355,6 +355,35 @@ client.onConnectionStateChanged((state) => {
   }
 }
 
+// ── startMistralVibeSetup ────────────────────────────────────────────────
+// Vibe's ACP server owns the credential and exposes a delegated browser flow.
+// The server starts/polls that flow; preload opens only the validated public URL
+// on the user's machine so remote Robb servers never try to open a browser.
+;(api as any).startMistralVibeSetup = async (): Promise<{
+  success: boolean
+  error?: string
+}> => {
+  let flowId: string | undefined
+  try {
+    const startResult = await client.invoke('onboarding:startMistralVibeSetup')
+    if (!startResult.success || !startResult.flowId || !startResult.authUrl) {
+      return { success: false, error: startResult.error || 'Mistral Vibe authentication could not start' }
+    }
+    flowId = startResult.flowId
+    await openSafeExternalUrl(startResult.authUrl, (safeUrl) => shell.openExternal(safeUrl))
+    const result = await client.invoke('onboarding:completeMistralVibeSetup', { flowId })
+    return { success: result.success, error: result.error }
+  } catch (err) {
+    if (flowId) {
+      client.invoke('onboarding:cancelMistralVibeSetup', { flowId }).catch(() => {})
+    }
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Mistral Vibe authentication failed',
+    }
+  }
+}
+
 // ── performChatGptOAuth ──────────────────────────────────────────────────
 // Same shape as performOAuth: callback server (port 1455) → chatgpt:startOAuth →
 // browser → callback → chatgpt:completeOAuth.

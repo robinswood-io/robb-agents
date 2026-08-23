@@ -499,7 +499,7 @@ export interface ElectronAPI {
   exchangeClaudeCode(code: string, connectionSlug: string): Promise<ClaudeOAuthResult>
   hasClaudeOAuthState(): Promise<boolean>
   clearClaudeOAuthState(): Promise<{ success: boolean }>
-  /** Launches official `vibe-acp --setup`; Vibe retains the subscription credential locally. */
+  /** Runs Vibe's delegated ACP browser flow; Vibe retains the credential locally. */
   startMistralVibeSetup(): Promise<{ success: boolean; error?: string }>
   /** Defer onboarding setup — user chose "Setup later" */
   deferSetup(): Promise<{ success: boolean }>

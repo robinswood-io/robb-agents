@@ -18,7 +18,7 @@ Required headers:
 - `Content-Type: application/json`
 
 Known-good body fields for search:
-- `model: "gpt-5.3-codex"`
+- `model: "gpt-5.4-mini"`
 - `store: false`
 - `stream: true`
 - `instructions: string`
