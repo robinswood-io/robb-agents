@@ -71,6 +71,13 @@ describe('build provenance dirty-state resolution', () => {
     expect(buildScript).toContain('git", ["rev-parse", "HEAD"]')
     expect(buildScript).toContain('git", ["status", "--porcelain", "--untracked-files=all"]')
     expect(buildScript).toContain('assertCleanProductionBuild')
+    expect(buildScript).toContain('cmd: ["bun", "run", "scripts/build-wa-worker.ts"]')
+
+    const workerBuildScript = readFileSync(join(import.meta.dir, '..', 'build-wa-worker.ts'), 'utf8')
+    expect(workerBuildScript).toContain('process.env.ROBB_BUILD_COMMIT')
+    expect(workerBuildScript).toContain('process.env.ROBB_BUILD_DIRTY')
+    expect(workerBuildScript).toContain('assertCleanProductionBuild')
+    expect(workerBuildScript).toContain('--define:__WA_WORKER_PROVENANCE__')
   })
 
   it('covers development, direct package, and legacy Windows main builds', () => {

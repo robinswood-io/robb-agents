@@ -25,7 +25,6 @@ const SESSION_SERVER_OUTPUT = join(SESSION_SERVER_DIR, "dist/index.js");
 const PI_AGENT_SERVER_DIR = join(ROOT_DIR, "packages/pi-agent-server");
 const PI_AGENT_SERVER_OUTPUT = join(PI_AGENT_SERVER_DIR, "dist/index.js");
 const WA_WORKER_DIR = join(ROOT_DIR, "packages/messaging-whatsapp-worker");
-const WA_WORKER_SOURCE = join(WA_WORKER_DIR, "src/worker.ts");
 const WA_WORKER_OUTPUT = join(WA_WORKER_DIR, "dist/worker.cjs");
 
 // Load .env file if it exists
@@ -314,38 +313,17 @@ async function buildPiAgentServer(): Promise<void> {
 
 // Build the WhatsApp worker (Baileys-backed subprocess spawned by WhatsAppAdapter)
 async function buildWhatsAppWorker(): Promise<void> {
-  if (!existsSync(WA_WORKER_SOURCE)) {
+  if (!existsSync(WA_WORKER_DIR)) {
     console.log("⏭️  WhatsApp worker skipped (package not found)");
     return;
   }
 
   console.log("📨 Building WhatsApp worker...");
-
-  const workerDistDir = join(WA_WORKER_DIR, "dist");
-  if (!existsSync(workerDistDir)) {
-    mkdirSync(workerDistDir, { recursive: true });
-  }
-
-  // Baileys is bundled INTO worker.cjs (not external) so the packaged app is
-  // self-contained. Dynamic `import('@whiskeysockets/baileys')` is resolved
-  // at bundle time because the specifier is a literal.
   const proc = spawn({
-    cmd: [
-      "bun", "run", "esbuild",
-      WA_WORKER_SOURCE,
-      "--bundle",
-      "--platform=node",
-      "--format=cjs",
-      "--target=node20",
-      `--outfile=${WA_WORKER_OUTPUT}`,
-      "--external:electron",
-      // Baileys' runtime-optional features — wrapped in try/catch at the
-      // call site and not used by Craft Agent (we send text + documents, no
-      // link previews, no inline image processing, no terminal QR).
-      "--external:link-preview-js",
-      "--external:qrcode-terminal",
-      "--external:jimp",
-    ],
+    // Keep development and packaged builds on the same canonical path. This
+    // script injects the worker build ID and Git SHA used by staging/release
+    // diagnostics; duplicating its esbuild arguments previously omitted them.
+    cmd: ["bun", "run", "scripts/build-wa-worker.ts"],
     cwd: ROOT_DIR,
     stdout: "inherit",
     stderr: "inherit",

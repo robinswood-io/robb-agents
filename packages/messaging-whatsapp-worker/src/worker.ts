@@ -32,10 +32,15 @@ import { processUpsertMessage } from './upsert'
  */
 declare const __WA_WORKER_BUILD_ID__: string
 declare const __WA_WORKER_GIT_SHA__: string
+declare const __WA_WORKER_PROVENANCE__: string
 const WORKER_BUILD_ID =
   typeof __WA_WORKER_BUILD_ID__ !== 'undefined' ? __WA_WORKER_BUILD_ID__ : 'dev-unbundled'
 const WORKER_GIT_SHA =
   typeof __WA_WORKER_GIT_SHA__ !== 'undefined' ? __WA_WORKER_GIT_SHA__ : 'dev-unbundled'
+const WORKER_PROVENANCE =
+  typeof __WA_WORKER_PROVENANCE__ !== 'undefined'
+    ? __WA_WORKER_PROVENANCE__
+    : 'dev-unbundled-provenance'
 
 // ---------------------------------------------------------------------------
 // Send helpers
@@ -215,7 +220,7 @@ async function startSession(
   // operator can confirm which bundle is actually running. Also included
   // in the `ready` event for structured logging.
   log(
-    `starting — build=${WORKER_BUILD_ID} sha=${WORKER_GIT_SHA} selfChatMode=${selfChatMode} pairingMode=${pairingMode}`,
+    `starting — build=${WORKER_BUILD_ID} sha=${WORKER_GIT_SHA} provenance=${WORKER_PROVENANCE} selfChatMode=${selfChatMode} pairingMode=${pairingMode}`,
   )
   const baileys = await loadBaileys()
   if (!baileys) {
