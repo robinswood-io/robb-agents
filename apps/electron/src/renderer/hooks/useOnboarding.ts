@@ -101,6 +101,32 @@ export const BASE_SLUG_FOR_METHOD: Record<ApiSetupMethod, string> = {
   pi_api_key: 'pi-api-key',
 }
 
+interface ProviderSetupSelection {
+  method: ApiSetupMethod
+  preferredPiPreset?: string
+  startOAuth: boolean
+}
+
+/**
+ * Resolve the safe default setup for a provider card. Google individual
+ * accounts use the supported AI Studio API-key flow; the legacy Code Assist
+ * OAuth method remains available only from direct edit/setup for licensed
+ * organization accounts.
+ */
+export function resolveProviderSetupSelection(
+  choice: Exclude<ProviderChoice, 'local'>,
+): ProviderSetupSelection {
+  const selections: Record<Exclude<ProviderChoice, 'local'>, ProviderSetupSelection> = {
+    claude: { method: 'claude_oauth', startOAuth: true },
+    chatgpt: { method: 'pi_chatgpt_oauth', startOAuth: true },
+    copilot: { method: 'pi_copilot_oauth', startOAuth: true },
+    google: { method: 'pi_api_key', preferredPiPreset: 'google', startOAuth: false },
+    mistral: { method: 'pi_mistral_vibe_subscription', startOAuth: false },
+    api_key: { method: 'pi_api_key', startOAuth: false },
+  }
+  return selections[choice]
+}
+
 /**
  * Generate a unique slug for a new connection.
  * If the base slug is taken, appends -2, -3, etc.
@@ -677,33 +703,25 @@ export function useOnboarding({
 
   // Map ProviderChoice → ApiSetupMethod and navigate to the right step
   const handleSelectProvider = useCallback((choice: ProviderChoice) => {
-    const CHOICE_TO_METHOD: Record<Exclude<ProviderChoice, 'local'>, ApiSetupMethod> = {
-      claude: 'claude_oauth',
-      chatgpt: 'pi_chatgpt_oauth',
-      copilot: 'pi_copilot_oauth',
-      google: 'pi_gemini_oauth',
-      mistral: 'pi_mistral_vibe_subscription',
-      api_key: 'pi_api_key',
-    }
-
     if (choice === 'local') {
       // Local uses anthropic_api_key with custom endpoint (Ollama doesn't need an API key)
       setState(s => ({ ...s, step: 'local-model', apiSetupMethod: 'anthropic_api_key', credentialStatus: 'idle', errorMessage: undefined }))
       return
     }
 
-    const method = CHOICE_TO_METHOD[choice]
+    const selection = resolveProviderSetupSelection(choice)
+    const method = selection.method
     setState(s => ({
       ...s,
       apiSetupMethod: method,
-      preferredPiPreset: undefined,
+      preferredPiPreset: selection.preferredPiPreset,
       step: 'credentials',
       credentialStatus: 'idle',
       errorMessage: undefined,
     }))
 
     // OAuth methods start immediately
-    if (choice === 'claude' || choice === 'chatgpt' || choice === 'copilot' || choice === 'google') {
+    if (selection.startOAuth) {
       // Defer to next tick so state is updated before handleStartOAuth reads it
       setTimeout(() => handleStartOAuth(method), 0)
     }

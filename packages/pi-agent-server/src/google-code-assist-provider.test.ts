@@ -94,6 +94,153 @@ describe('Google Code Assist provider', () => {
     }
   });
 
+  it('fails closed with AI Studio guidance when Google rejects individual Code Assist accounts', async () => {
+    const originalFetch = globalThis.fetch;
+    const fetchMock = mock(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes(':loadCodeAssist')) {
+        return new Response(JSON.stringify({
+          allowedTiers: [{
+            id: 'standard-tier',
+            isDefault: true,
+            userDefinedCloudaicompanionProject: true,
+          }],
+          ineligibleTiers: [{
+            reasonMessage: 'This client is no longer supported for Gemini Code Assist for individuals. Please migrate to the Antigravity suite of products.',
+          }],
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      }
+      throw new Error(`Unexpected fetch URL: ${url}`);
+    });
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+    try {
+      const auth = AuthStorage.inMemory({
+        'google-gemini-code-assist': { type: 'api_key', key: 'individual-access-token' },
+      });
+      const registry = ModelRegistry.inMemory(auth);
+      registerGoogleCodeAssistProvider(registry);
+      const model = registry.find('google-gemini-code-assist', 'gemini-2.5-flash');
+      const stream = streamGoogleCodeAssist(
+        model!,
+        { messages: [{ role: 'user', content: 'healthcheck', timestamp: Date.now() }] },
+        { apiKey: 'individual-access-token' },
+      );
+      const events: AssistantMessageEvent[] = [];
+      for await (const event of stream) events.push(event);
+
+      const error = events.find(
+        (event): event is Extract<AssistantMessageEvent, { type: 'error' }> => event.type === 'error',
+      );
+      expect(error?.error.errorMessage).toContain('no longer available for individual accounts');
+      expect(error?.error.errorMessage).toContain('Google AI Studio API key');
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it('requires a Google Cloud project before onboarding an organization tier', async () => {
+    const originalFetch = globalThis.fetch;
+    const originalProject = process.env.GOOGLE_CLOUD_PROJECT;
+    const originalProjectId = process.env.GOOGLE_CLOUD_PROJECT_ID;
+    const fetchMock = mock(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes(':loadCodeAssist')) {
+        return new Response(JSON.stringify({
+          allowedTiers: [{
+            id: 'standard-tier',
+            isDefault: true,
+            userDefinedCloudaicompanionProject: true,
+          }],
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      }
+      throw new Error(`Unexpected fetch URL: ${url}`);
+    });
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+    delete process.env.GOOGLE_CLOUD_PROJECT;
+    delete process.env.GOOGLE_CLOUD_PROJECT_ID;
+
+    try {
+      const auth = AuthStorage.inMemory({
+        'google-gemini-code-assist': { type: 'api_key', key: 'organization-access-token' },
+      });
+      const registry = ModelRegistry.inMemory(auth);
+      registerGoogleCodeAssistProvider(registry);
+      const model = registry.find('google-gemini-code-assist', 'gemini-2.5-flash');
+      const stream = streamGoogleCodeAssist(
+        model!,
+        { messages: [{ role: 'user', content: 'healthcheck', timestamp: Date.now() }] },
+        { apiKey: 'organization-access-token' },
+      );
+      const events: AssistantMessageEvent[] = [];
+      for await (const event of stream) events.push(event);
+
+      const error = events.find(
+        (event): event is Extract<AssistantMessageEvent, { type: 'error' }> => event.type === 'error',
+      );
+      expect(error?.error.errorMessage).toContain('requires GOOGLE_CLOUD_PROJECT');
+      expect(error?.error.errorMessage).toContain('Google AI Studio API key');
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    } finally {
+      globalThis.fetch = originalFetch;
+      if (originalProject === undefined) delete process.env.GOOGLE_CLOUD_PROJECT;
+      else process.env.GOOGLE_CLOUD_PROJECT = originalProject;
+      if (originalProjectId === undefined) delete process.env.GOOGLE_CLOUD_PROJECT_ID;
+      else process.env.GOOGLE_CLOUD_PROJECT_ID = originalProjectId;
+    }
+  });
+
+  it('maps a subscription-required generation response to actionable setup guidance', async () => {
+    const originalFetch = globalThis.fetch;
+    const fetchMock = mock(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes(':loadCodeAssist')) {
+        return new Response(JSON.stringify({
+          currentTier: { id: 'STANDARD', name: 'Gemini Code Assist' },
+          cloudaicompanionProject: 'test-project',
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      }
+      if (url.includes(':streamGenerateContent')) {
+        return new Response(JSON.stringify({
+          error: {
+            code: 403,
+            message: 'You do not have a valid license to use Gemini Code Assist.',
+            details: [{ reason: 'SUBSCRIPTION_REQUIRED' }],
+          },
+        }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+      }
+      throw new Error(`Unexpected fetch URL: ${url}`);
+    });
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+    try {
+      const auth = AuthStorage.inMemory({
+        'google-gemini-code-assist': { type: 'api_key', key: 'expired-license-token' },
+      });
+      const registry = ModelRegistry.inMemory(auth);
+      registerGoogleCodeAssistProvider(registry);
+      const model = registry.find('google-gemini-code-assist', 'gemini-2.5-flash');
+      const stream = streamGoogleCodeAssist(
+        model!,
+        { messages: [{ role: 'user', content: 'healthcheck', timestamp: Date.now() }] },
+        { apiKey: 'expired-license-token' },
+      );
+      const events: AssistantMessageEvent[] = [];
+      for await (const event of stream) events.push(event);
+
+      const error = events.find(
+        (event): event is Extract<AssistantMessageEvent, { type: 'error' }> => event.type === 'error',
+      );
+      expect(error?.error.errorMessage).toContain('no longer available for individual accounts');
+      expect(error?.error.errorMessage).toContain('Code Assist Standard or Enterprise');
+      expect(error?.error.errorMessage).not.toContain('expired-license-token');
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
   it('fails closed before fetch when the v1internal kill switch is active', async () => {
     const originalFetch = globalThis.fetch;
     const originalKillSwitch = process.env.ROBB_DISABLE_GOOGLE_CODE_ASSIST_V1INTERNAL;

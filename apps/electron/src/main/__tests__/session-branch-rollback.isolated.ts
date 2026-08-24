@@ -290,7 +290,7 @@ describe('session branch rollback on preflight failure', () => {
   it('deletes newly created child session when ensureBranchReady throws', async () => {
     const manager = new SessionManager()
 
-    let destroyCalled = false
+    let disposeCalled = false
     let poolStopCalled = false
 
     ;(manager as any).ensureMessagesLoaded = async (_managed: any) => {}
@@ -301,8 +301,8 @@ describe('session branch rollback on preflight failure', () => {
         ensureBranchReady: async () => {
           throw new Error('preflight boom')
         },
-        destroy: () => {
-          destroyCalled = true
+        dispose: () => {
+          disposeCalled = true
         },
       }
       return managed.agent
@@ -318,7 +318,7 @@ describe('session branch rollback on preflight failure', () => {
     expect(deletedIds).toEqual(['child-1'])
     expect(storedById.has('child-1')).toBe(false)
     expect((manager as any).sessions.has('child-1')).toBe(false)
-    expect(destroyCalled).toBe(true)
+    expect(disposeCalled).toBe(true)
     expect(poolStopCalled).toBe(true)
   })
 
@@ -355,7 +355,7 @@ describe('session branch rollback on preflight failure', () => {
         ensureBranchReady: async () => {
           throw new Error('pi preflight boom')
         },
-        destroy: () => {},
+        dispose: () => {},
       }
       return managed.agent
     }
