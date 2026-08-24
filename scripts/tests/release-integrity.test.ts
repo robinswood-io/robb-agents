@@ -8,6 +8,7 @@ import {
   resolveElectronFuseBinary,
   validateProtectedExternalRuntimeInventory,
   validateElectronPackageSecurityLayout,
+  validatePackagedWhatsAppWorkerProvenance,
   validateRequiredElectronFuses,
 } from '../validate-electron-package-security'
 import {
@@ -167,6 +168,28 @@ function prepareSecurityLayout(): string {
 }
 
 describe('packaged Electron security contract', () => {
+  it('requires exact Git provenance in the packaged WhatsApp worker', () => {
+    fixtureDirectory = mkdtempSync(join(tmpdir(), 'robb-worker-provenance-'))
+    const resourcesDir = join(fixtureDirectory, 'resources')
+    const workerPath = join(resourcesDir, 'messaging-whatsapp-worker', 'worker.cjs')
+    writeFixtureFile(workerPath)
+
+    expect(() => validatePackagedWhatsAppWorkerProvenance(resourcesDir, '1'.repeat(40)))
+      .toThrow('has no embedded Git provenance')
+
+    writeFileSync(workerPath, 'const provenance = "robb-wa-worker-git:111111111111"')
+    expect(validatePackagedWhatsAppWorkerProvenance(resourcesDir, '1'.repeat(40)))
+      .toBe('111111111111')
+
+    writeFileSync(workerPath, 'const provenance = "robb-wa-worker-git:111111111111+dirty"')
+    expect(() => validatePackagedWhatsAppWorkerProvenance(resourcesDir, '1'.repeat(40)))
+      .toThrow('provenance mismatch')
+
+    writeFileSync(workerPath, 'const provenance = "robb-wa-worker-git:222222222222"')
+    expect(() => validatePackagedWhatsAppWorkerProvenance(resourcesDir, '1'.repeat(40)))
+      .toThrow('provenance mismatch')
+  })
+
   it('keeps the main entrypoint in ASAR and only explicit subprocess runtimes outside it', () => {
     const resourcesDir = prepareSecurityLayout()
 

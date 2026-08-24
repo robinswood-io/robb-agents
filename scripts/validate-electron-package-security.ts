@@ -70,6 +70,40 @@ export interface ElectronFuseWire {
 export interface ValidatedElectronPackageSecurity extends ElectronPackageSecurityLayout {
   protectedRuntimeManifestPath: string
   verifiedRuntimeFiles: string[]
+  whatsAppWorkerGitSha: string
+}
+
+/**
+ * Verify that the packaged WhatsApp subprocess came from the canonical build
+ * path and carries the revision requested by a production packaging wrapper.
+ */
+export function validatePackagedWhatsAppWorkerProvenance(
+  resourcesDir: string,
+  expectedCommit?: string,
+): string {
+  const workerPath = join(resolve(resourcesDir), 'messaging-whatsapp-worker', 'worker.cjs')
+  requireRegularFile(workerPath, 'packaged WhatsApp worker')
+  const workerSource = readFileSync(workerPath, 'utf8')
+  const marker = /robb-wa-worker-git:([0-9a-f]{7,40})(\+dirty)?/i.exec(workerSource)
+  if (!marker) {
+    throw new Error(`Packaged WhatsApp worker has no embedded Git provenance: ${workerPath}`)
+  }
+
+  const embeddedSha = marker[1]!.toLowerCase()
+  const dirtySuffix = marker[2] ?? ''
+  const declaredCommit = expectedCommit?.trim().toLowerCase()
+  if (declaredCommit) {
+    if (!/^[0-9a-f]{7,40}$/.test(declaredCommit)) {
+      throw new Error(`Invalid expected WhatsApp worker commit: ${expectedCommit}`)
+    }
+    const expectedSha = declaredCommit.slice(0, 12)
+    if (embeddedSha !== expectedSha || dirtySuffix) {
+      throw new Error(
+        `Packaged WhatsApp worker provenance mismatch: expected ${expectedSha}, found ${embeddedSha}${dirtySuffix}`,
+      )
+    }
+  }
+  return `${embeddedSha}${dirtySuffix}`
 }
 
 export function resolveElectronFuseBinary(electronBinary: string): string {
@@ -169,6 +203,10 @@ export async function validatePackagedElectronSecurity(
   const layout = validateElectronPackageSecurityLayout(resourcesDir)
   const fuseBinary = resolveElectronFuseBinary(resolvedBinary)
   validateRequiredElectronFuses(readElectronFuseWires(readFileSync(fuseBinary)))
+  const whatsAppWorkerGitSha = validatePackagedWhatsAppWorkerProvenance(
+    resourcesDir,
+    process.env.ROBB_BUILD_COMMIT,
+  )
   const verifiedRuntimeFiles = validateProtectedExternalRuntimeInventory(
     layout.appAsarPath,
     resourcesDir,
@@ -178,6 +216,7 @@ export async function validatePackagedElectronSecurity(
     ...layout,
     protectedRuntimeManifestPath: RUNTIME_INTEGRITY_MANIFEST_ASAR_PATH,
     verifiedRuntimeFiles,
+    whatsAppWorkerGitSha,
   }
 }
 
@@ -199,5 +238,6 @@ if (import.meta.main) {
   const layout = await validatePackagedElectronSecurity(binary, resourcesDir)
   console.log(`Validated integrity-protected ASAR: ${layout.appAsarPath}`)
   console.log(`Validated protected external runtime inventory: ${layout.verifiedRuntimeFiles.length} files`)
+  console.log(`Validated packaged WhatsApp worker provenance: ${layout.whatsAppWorkerGitSha}`)
   console.log('Validated Electron fuses: ASAR integrity and OnlyLoadAppFromAsar')
 }
