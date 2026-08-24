@@ -3,8 +3,27 @@ import {
   resolveSlugForMethod,
   apiSetupMethodToConnectionSetup,
   BASE_SLUG_FOR_METHOD,
+  resolveProviderSetupSelection,
 } from '../useOnboarding'
 import type { ApiSetupMethod } from '@/components/onboarding'
+
+describe('resolveProviderSetupSelection', () => {
+  it('routes Google individual accounts to the official AI Studio API-key preset', () => {
+    expect(resolveProviderSetupSelection('google')).toEqual({
+      method: 'pi_api_key',
+      preferredPiPreset: 'google',
+      startOAuth: false,
+    })
+  })
+
+  it('starts OAuth only for supported subscription provider cards', () => {
+    expect(resolveProviderSetupSelection('claude').startOAuth).toBe(true)
+    expect(resolveProviderSetupSelection('chatgpt').startOAuth).toBe(true)
+    expect(resolveProviderSetupSelection('copilot').startOAuth).toBe(true)
+    expect(resolveProviderSetupSelection('mistral').startOAuth).toBe(false)
+    expect(resolveProviderSetupSelection('api_key').startOAuth).toBe(false)
+  })
+})
 
 // ============================================================
 // resolveSlugForMethod

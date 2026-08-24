@@ -140,6 +140,43 @@ describe('provider contract canaries', () => {
     expect(serialized).not.toContain(googleToken);
   });
 
+  it('reports the supported AI Studio alternative for an ineligible individual Google account', async () => {
+    const googleToken = 'individual-google-secret-token';
+    const report = await runProviderCanaries({
+      environment: {
+        ROBB_CANARY_GOOGLE_CODE_ASSIST_ACCESS_TOKEN: googleToken,
+      },
+      fetchImpl: async (input) => {
+        const url = String(input);
+        if (url.includes(':loadCodeAssist')) {
+          return new Response(JSON.stringify({
+            allowedTiers: [{
+              id: 'standard-tier',
+              isDefault: true,
+              userDefinedCloudaicompanionProject: true,
+            }],
+            ineligibleTiers: [{
+              reasonMessage: 'This client is no longer supported for Gemini Code Assist for individuals. Please migrate to the Antigravity suite of products.',
+            }],
+          }));
+        }
+        throw new Error(`unexpected canary URL: ${url}`);
+      },
+      now: () => Date.now(),
+    });
+
+    const google = report.results.filter(item => item.provider === 'google-code-assist-v1internal');
+    expect(google.map(item => item.status)).toEqual([
+      'failed',
+      'not-applicable',
+      'not-applicable',
+      'skipped',
+    ]);
+    expect(google[0]?.detail).toContain('unavailable for individual accounts');
+    expect(google[0]?.detail).toContain('Google AI Studio API key');
+    expect(JSON.stringify(report)).not.toContain(googleToken);
+  });
+
   it('keeps every runtime on the exact Pi SDK contract', async () => {
     const root = await Bun.file('package.json').json() as any;
     const shared = await Bun.file('packages/shared/package.json').json() as any;

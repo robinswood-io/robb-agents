@@ -164,7 +164,7 @@ export const BUILT_IN_CONNECTION_TEMPLATES: Record<string, {
     piAuthProvider: 'github-copilot',
   },
   'google-gemini': {
-    name: 'Google Gemini',
+    name: 'Google Gemini Code Assist',
     providerType: 'pi',
     authType: 'oauth',
     piAuthProvider: 'google-gemini-code-assist',
@@ -196,7 +196,7 @@ const PI_AUTH_PROVIDER_DISPLAY_NAMES: Record<string, string> = {
   openai: 'OpenAI',
   'openai-codex': 'OpenAI',
   google: 'Google AI Studio',
-  'google-gemini-code-assist': 'Google Gemini',
+  'google-gemini-code-assist': 'Google Gemini Code Assist',
   'mistral-vibe': 'Mistral Vibe',
   openrouter: 'OpenRouter',
   'azure-openai-responses': 'Azure OpenAI',

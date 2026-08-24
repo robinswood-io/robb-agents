@@ -373,8 +373,18 @@ async function runCopilotCanaries(
 }
 
 function googleCurrentProject(text: string): string | undefined {
-  const parsed = JSON.parse(text) as Record<string, unknown>;
-  if (!parsed.currentTier) throw new Error('Code Assist account has no current tier; canary will not perform onboarding mutations');
+  const parsed = JSON.parse(text) as Record<string, any>;
+  if (!parsed.currentTier) {
+    const reasons = (Array.isArray(parsed.ineligibleTiers) ? parsed.ineligibleTiers : [])
+      .map((tier: Record<string, unknown>) => tier?.reasonMessage)
+      .filter((reason: unknown): reason is string => typeof reason === 'string' && reason.trim().length > 0);
+    if (reasons.some(reason => /no longer supported for Gemini Code Assist for individuals|Antigravity suite of products/i.test(reason))) {
+      throw new Error(
+        'Gemini Code Assist OAuth is unavailable for individual accounts; use a Google AI Studio API key. Organization OAuth requires an active Code Assist license and GOOGLE_CLOUD_PROJECT.',
+      );
+    }
+    throw new Error(`Code Assist account has no active tier; canary will not perform onboarding mutations${reasons.length ? `: ${reasons.join(', ')}` : ''}`);
+  }
   const project = parsed.cloudaicompanionProject;
   if (typeof project === 'string') return project;
   if (project && typeof project === 'object') {
