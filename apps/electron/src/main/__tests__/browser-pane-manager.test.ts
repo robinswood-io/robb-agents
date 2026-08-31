@@ -10,6 +10,7 @@ import { describe, it, expect, beforeEach, mock } from 'bun:test'
 const createdWindows: any[] = []
 let toolbarLoadFailuresRemaining = 0
 let emptyStateLoadError: Error | null = null
+let nextMockWebContentsId = 0
 const mockShellOpenExternal = mock(async () => {})
 const mockIpcMainHandle = mock(() => {})
 const mockDialogShowMessageBox = mock(async () => ({ response: 0, checkboxChecked: false }))
@@ -21,6 +22,7 @@ function createMockWebContents() {
   const listeners: Record<string, Function[]> = {}
   let currentUrl = 'about:blank'
   return {
+    id: ++nextMockWebContentsId,
     userAgent: 'Mock Chrome Electron/99.0.0',
     session: {},
     isDestroyed: mock(() => false),
@@ -118,6 +120,8 @@ function createMockWindow(opts?: { width?: number; height?: number; minWidth?: n
   const minWidth = opts?.minWidth ?? 0
   const minHeight = opts?.minHeight ?? 0
   const childViews: any[] = []
+  let destroyed = false
+  let resizable = true
 
   const win = {
     webContents,
@@ -149,7 +153,15 @@ function createMockWindow(opts?: { width?: number; height?: number; minWidth?: n
     _emit: (event: string, ...args: any[]) => {
       for (const cb of listeners[event] || []) cb(...args)
     },
-    isDestroyed: mock(() => false),
+    isDestroyed: mock(() => destroyed),
+    isResizable: mock(() => {
+      if (destroyed) throw new TypeError('Object has been destroyed')
+      return resizable
+    }),
+    setResizable: mock((value: boolean) => {
+      if (destroyed) throw new TypeError('Object has been destroyed')
+      resizable = value
+    }),
     isMinimized: mock(() => false),
     restore: mock(() => {}),
     show: mock(() => {}),
@@ -160,6 +172,7 @@ function createMockWindow(opts?: { width?: number; height?: number; minWidth?: n
     }),
     focus: mock(() => {}),
     destroy: mock(() => {
+      destroyed = true
       win._emit('closed')
     }),
     getContentSize: mock(() => [contentWidth, contentHeight]),
@@ -534,6 +547,21 @@ describe('BrowserPaneManager', () => {
 
     expect(popupWindow.destroy).toHaveBeenCalledTimes(1)
     expect((manager as any).popupWindowsByParentInstanceId.has('popup-parent')).toBe(false)
+  })
+
+  it('unregisters a popup after Electron destroys its webContents wrapper', () => {
+    manager.createInstance('popup-destroyed-webcontents')
+    const instance = (manager as any).instances.get('popup-destroyed-webcontents')
+    const popupWindow = createMockWindow({ width: 520, height: 720 })
+
+    instance.pageView.webContents._emit('did-create-window', popupWindow, { url: 'https://accounts.google.com/signin' })
+    Object.defineProperty(popupWindow.webContents, 'id', {
+      configurable: true,
+      get: () => { throw new TypeError('Object has been destroyed') },
+    })
+
+    expect(() => popupWindow._emit('closed')).not.toThrow()
+    expect((manager as any).popupWindowsByParentInstanceId.has('popup-destroyed-webcontents')).toBe(false)
   })
 
   it('destroys instances', () => {
@@ -1373,6 +1401,19 @@ describe('BrowserPaneManager', () => {
       await Promise.resolve()
 
       expect(instance.nativeOverlayView.webContents.executeJavaScript.mock.calls.length).toBeGreaterThan(callCountAfterSet)
+    })
+
+    it('ignores late page lifecycle events after the browser window is destroyed', () => {
+      manager.createInstance('ac-late-page-event')
+      manager.bindSession('ac-late-page-event', 'sess-late-page-event')
+      manager.setAgentControl('sess-late-page-event', { displayName: 'Navigate Page' })
+
+      const instance = (manager as any).instances.get('ac-late-page-event')
+      manager.destroyInstance('ac-late-page-event')
+
+      expect(() => instance.pageView.webContents._emit('did-stop-loading')).not.toThrow()
+      expect(() => instance.pageView.webContents._emit('did-navigate', 'https://example.com/late')).not.toThrow()
+      expect(() => instance.window._emit('show')).not.toThrow()
     })
 
     it('reapplies native overlay after hide/show while control is active', async () => {
