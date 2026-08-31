@@ -254,23 +254,24 @@ export const piDriver: ProviderDriver = {
         node: resolvedPaths.nodeRuntimePath,
       },
       piAuthProvider,
-    baseUrl: context.connection?.baseUrl,
-    customEndpoint: context.connection?.customEndpoint,
-    customModels: context.connection?.models?.map(m => {
-      if (typeof m === 'string') return m;
-      const supportsImages = typeof m.supportsImages === 'boolean'
-        ? m.supportsImages
-        : undefined;
-      if (m.contextWindow || supportsImages !== undefined) {
-        return {
-          id: m.id,
-          ...(m.contextWindow ? { contextWindow: m.contextWindow } : {}),
-          ...(supportsImages !== undefined ? { supportsImages } : {}),
-        };
-      }
-      return m.id;
-    }),
-  };
+      googleCloudProject: context.connection?.googleCloudProject,
+      baseUrl: context.connection?.baseUrl,
+      customEndpoint: context.connection?.customEndpoint,
+      customModels: context.connection?.models?.map(m => {
+        if (typeof m === 'string') return m;
+        const supportsImages = typeof m.supportsImages === 'boolean'
+          ? m.supportsImages
+          : undefined;
+        if (m.contextWindow || supportsImages !== undefined) {
+          return {
+            id: m.id,
+            ...(m.contextWindow ? { contextWindow: m.contextWindow } : {}),
+            ...(supportsImages !== undefined ? { supportsImages } : {}),
+          };
+        }
+        return m.id;
+      }),
+    };
   },
   fetchModels: async ({ connection, credentials, timeoutMs }) => {
     // Copilot OAuth: fetch models directly from the Copilot API via HTTP.

@@ -234,6 +234,7 @@ const PROVIDER_CONTRACT_ENVIRONMENT_KEYS = [
 export function buildPiProviderEnvironment(
   piAuthProvider: string | undefined,
   baseEnv: NodeJS.ProcessEnv = process.env,
+  googleCloudProject?: string,
 ): Record<string, string> {
   const keys: string[] = [PROVIDER_CONTRACT_ENVIRONMENT_KEYS[0]];
   if (piAuthProvider === 'openai-codex') keys.push(PROVIDER_CONTRACT_ENVIRONMENT_KEYS[1]);
@@ -246,7 +247,12 @@ export function buildPiProviderEnvironment(
     );
   }
   if (piAuthProvider === 'mistral-vibe') keys.push('ROBB_VIBE_ACP_COMMAND');
-  return pickExplicitEnvironment(keys, baseEnv);
+  const environment = pickExplicitEnvironment(keys, baseEnv);
+  if (piAuthProvider === 'google-gemini-code-assist' && googleCloudProject?.trim()) {
+    environment.GOOGLE_CLOUD_PROJECT = googleCloudProject.trim();
+    delete environment.GOOGLE_CLOUD_PROJECT_ID;
+  }
+  return environment;
 }
 
 type PiAuthPayload = {
@@ -1068,8 +1074,8 @@ export class PiAgent extends BaseAgent {
    * Preserve non-secret provider bootstrap values only for the provider that
    * consumes them. They are deliberately not part of the generic host env.
    */
-  private buildProviderEnv(runtime: { piAuthProvider?: string }): Record<string, string> {
-    return buildPiProviderEnvironment(runtime.piAuthProvider);
+  private buildProviderEnv(runtime: { piAuthProvider?: string; googleCloudProject?: string }): Record<string, string> {
+    return buildPiProviderEnvironment(runtime.piAuthProvider, process.env, runtime.googleCloudProject);
   }
 
   /**

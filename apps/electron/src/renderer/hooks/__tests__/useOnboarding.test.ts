@@ -103,9 +103,15 @@ describe('apiSetupMethodToConnectionSetup', () => {
     expect(setup.slug).toBe('github-copilot')
   })
 
-  it('pi_gemini_oauth maps to google-gemini slug', () => {
-    const setup = apiSetupMethodToConnectionSetup('pi_gemini_oauth', {}, null, new Set())
+  it('pi_gemini_oauth maps the organization project to google-gemini', () => {
+    const setup = apiSetupMethodToConnectionSetup(
+      'pi_gemini_oauth',
+      { googleCloudProject: 'organization-project' },
+      null,
+      new Set(),
+    )
     expect(setup.slug).toBe('google-gemini')
+    expect(setup.googleCloudProject).toBe('organization-project')
   })
 
   it('pi_mistral_vibe_subscription maps to a credential-free mistral-vibe slug', () => {
