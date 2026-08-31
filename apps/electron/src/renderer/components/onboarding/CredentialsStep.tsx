@@ -26,7 +26,7 @@ interface CredentialsStepProps {
   status: CredentialStatus
   errorMessage?: string
   onSubmit: (data: ApiKeySubmitData) => void
-  onStartOAuth?: (methodOverride?: ApiSetupMethod) => void
+  onStartOAuth?: (methodOverride?: ApiSetupMethod, connectionSlugOverride?: string, googleCloudProject?: string) => void
   onBack: () => void
   // Two-step OAuth flow
   isWaitingForCode?: boolean
@@ -42,6 +42,7 @@ interface CredentialsStepProps {
     activePreset?: string
     models?: string[]
     customApi?: CustomEndpointApi
+    googleCloudProject?: string
   }
   /** Pi preset selected from the first-level onboarding screen. */
   initialPiPreset?: string
@@ -70,6 +71,8 @@ export function CredentialsStep({
   const isAnthropicApiKey = apiSetupMethod === 'anthropic_api_key'
   const isPiApiKey = apiSetupMethod === 'pi_api_key'
   const isApiKey = isAnthropicApiKey || isPiApiKey
+  const [googleCloudProject, setGoogleCloudProject] = useState(editInitialValues?.googleCloudProject ?? '')
+  const validGoogleCloudProject = /^[a-z][a-z0-9-]{4,28}[a-z0-9]$/.test(googleCloudProject.trim())
 
   // Copilot device code clipboard handling
   const [copiedCode, setCopiedCode] = useState(false)
@@ -249,8 +252,9 @@ export function CredentialsStep({
           <>
             <BackButton onClick={onBack} disabled={status === 'validating'} />
             <ContinueButton
-              onClick={() => onStartOAuth?.()}
+              onClick={() => onStartOAuth?.(undefined, undefined, googleCloudProject.trim())}
               className="gap-2"
+              disabled={!validGoogleCloudProject}
               loading={status === 'validating'}
               loadingText={t("common.connecting")}
             >
@@ -263,6 +267,25 @@ export function CredentialsStep({
         <div className="space-y-4">
           <div className="rounded-xl bg-foreground-2 p-4 text-sm text-muted-foreground">
             <p>{t("onboarding.credentials.geminiInstructions")}</p>
+          </div>
+          <div className="space-y-2">
+            <label htmlFor="gemini-google-cloud-project" className="text-sm font-medium text-foreground">
+              {t("onboarding.credentials.googleCloudProject")}
+            </label>
+            <input
+              id="gemini-google-cloud-project"
+              type="text"
+              value={googleCloudProject}
+              onChange={(event) => setGoogleCloudProject(event.target.value)}
+              placeholder="my-organization-project"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
+            />
+            <p className="text-xs text-muted-foreground">
+              {t("onboarding.credentials.googleCloudProjectHelp")}
+            </p>
           </div>
           {status === 'error' && errorMessage && (
             <div className="rounded-lg bg-destructive/10 text-destructive text-sm p-3">

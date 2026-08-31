@@ -2758,6 +2758,8 @@ export function updateLlmConnection(slug: string, updates: Partial<Omit<LlmConne
     modelSelectionMode: updates.modelSelectionMode !== undefined ? updates.modelSelectionMode : existing.modelSelectionMode,
     // Pi auth provider
     piAuthProvider: updates.piAuthProvider !== undefined ? updates.piAuthProvider : existing.piAuthProvider,
+    // Organization project for Gemini Code Assist OAuth
+    googleCloudProject: updates.googleCloudProject !== undefined ? updates.googleCloudProject : existing.googleCloudProject,
     // Custom endpoint protocol (Anthropic/OpenAI compatible)
     customEndpoint: updates.customEndpoint !== undefined ? updates.customEndpoint : existing.customEndpoint,
     // Mid-stream send behavior (steer vs queue) — read via resolveMidStreamBehavior()

@@ -93,4 +93,14 @@ describe('Pi provider contract environment', () => {
       ROBB_VIBE_ACP_COMMAND: '/opt/vibe-acp',
     });
   });
+
+  it('prefers the per-connection Google Cloud project over ambient host values', () => {
+    expect(buildPiProviderEnvironment(
+      'google-gemini-code-assist',
+      { GOOGLE_CLOUD_PROJECT: 'ambient-project', GOOGLE_CLOUD_PROJECT_ID: 'legacy-project' },
+      'saved-organization-project',
+    )).toEqual({
+      GOOGLE_CLOUD_PROJECT: 'saved-organization-project',
+    });
+  });
 });
