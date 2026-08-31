@@ -1,0 +1,587 @@
+{
+  "surface": "report",
+  "manifest": {
+    "version": 1,
+    "surface": "report",
+    "title": "Robb face à la frontière agentique 2026",
+    "description": "Audit de Robb Agents 0.12.6 face aux technologies agentiques structurantes au 27 août 2026.",
+    "generatedAt": "2026-08-27T11:31:55Z",
+    "charts": [
+      {
+        "id": "maturity_by_domain",
+        "title": "Maturité de Robb par domaine",
+        "subtitle": "Jugement d’audit sur 5, fondé sur le code, les tests ciblés et les gates externes documentés au 27 août 2026.",
+        "showDescription": true,
+        "intent": "comparison",
+        "question": "Dans quels domaines Robb est-il proche de la frontière agentique et où les écarts sont-ils les plus grands ?",
+        "rationale": "Une barre catégorielle sur une échelle commune permet de comparer directement les dix domaines ; les libellés détaillés restent dans la table d’audit.",
+        "type": "bar",
+        "dataset": "maturity",
+        "sourceId": "audit_synthesis",
+        "encodings": {
+          "x": {
+            "field": "chart_domain",
+            "type": "nominal",
+            "label": "Domaine"
+          },
+          "y": {
+            "field": "score",
+            "type": "quantitative",
+            "label": "Maturité",
+            "format": "number"
+          },
+          "tooltip": [
+            {
+              "field": "score",
+              "type": "quantitative",
+              "label": "Score / 5",
+              "format": "number"
+            },
+            {
+              "field": "position",
+              "type": "text",
+              "label": "Position"
+            },
+            {
+              "field": "priority",
+              "type": "text",
+              "label": "Priorité"
+            }
+          ]
+        },
+        "xAxisTitle": "Domaine",
+        "yAxisTitle": "Score d’audit sur 5",
+        "valueFormat": "number",
+        "layout": "full",
+        "maxRows": 10,
+        "compatibleTypes": [
+          "bar",
+          "horizontalBar",
+          "leaderboard"
+        ]
+      }
+    ],
+    "tables": [
+      {
+        "id": "maturity_detail",
+        "title": "Détail de l’évaluation",
+        "subtitle": "Le score mesure la maturité vérifiée localement et pénalise les surfaces non branchées ou non qualifiées en conditions réelles.",
+        "showDescription": true,
+        "dataset": "maturity",
+        "defaultSort": {
+          "field": "score",
+          "direction": "desc"
+        },
+        "density": "spacious",
+        "sourceId": "audit_synthesis",
+        "layout": "full",
+        "columns": [
+          {
+            "field": "domain",
+            "label": "Domaine",
+            "type": "text"
+          },
+          {
+            "field": "score",
+            "label": "Score / 5",
+            "format": "number",
+            "role": "value"
+          },
+          {
+            "field": "position",
+            "label": "Position vérifiée",
+            "type": "text"
+          },
+          {
+            "field": "gap",
+            "label": "Écart principal",
+            "type": "text"
+          }
+        ]
+      },
+      {
+        "id": "frontier_comparison",
+        "title": "Comparaison avec les game changers 2026",
+        "subtitle": "Technologies retenues pour leur effet structurant sur l’architecture, la distribution ou la confiance des agents.",
+        "showDescription": true,
+        "dataset": "frontier",
+        "defaultSort": {
+          "field": "technology",
+          "direction": "asc"
+        },
+        "density": "spacious",
+        "sourceId": "frontier_sources",
+        "layout": "full",
+        "columns": [
+          {
+            "field": "technology",
+            "label": "Game changer",
+            "type": "text"
+          },
+          {
+            "field": "robb",
+            "label": "Position de Robb",
+            "type": "text"
+          },
+          {
+            "field": "decision",
+            "label": "Décision recommandée",
+            "type": "text"
+          }
+        ]
+      },
+      {
+        "id": "roadmap",
+        "title": "Feuille de route recommandée",
+        "subtitle": "Ordre proposé selon l’impact stratégique, la réutilisation des briques existantes et la réduction du risque produit.",
+        "showDescription": true,
+        "dataset": "roadmap",
+        "defaultSort": {
+          "field": "priority",
+          "direction": "asc"
+        },
+        "density": "spacious",
+        "sourceId": "audit_synthesis",
+        "layout": "full",
+        "columns": [
+          {
+            "field": "priority",
+            "label": "Priorité",
+            "type": "text"
+          },
+          {
+            "field": "horizon",
+            "label": "Horizon",
+            "type": "text"
+          },
+          {
+            "field": "evolution",
+            "label": "Évolution",
+            "type": "text"
+          },
+          {
+            "field": "gate",
+            "label": "Gate de validation",
+            "type": "text"
+          }
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "id": "audit_synthesis",
+        "label": "Audit du dépôt Robb Agents au commit 434f57f37d7e",
+        "path": "docs/robinswood/reports/robb-agentic-audit-2026-08-27/audit-datasets.sql",
+        "href": "https://github.com/robinswood-io/robb-agents/tree/434f57f37d7ed68a630b82ffe4daad0434c047d3",
+        "query": {
+          "description": "Synthèse qualitative du code, de la documentation de qualification et de 89 tests ciblés exécutés le 27 août 2026.",
+          "executed_at": "2026-08-27T11:31:55Z",
+          "language": "TypeScript, Markdown et tests Bun",
+          "filters": [
+            "Dépôt local version 0.12.6",
+            "Commit 434f57f37d7ed68a630b82ffe4daad0434c047d3",
+            "Aucune construction, installation ou modification applicative",
+            "Score 0 à 5 : code réel, branchement produit, tests locaux et qualification externe"
+          ],
+          "metric_definitions": [
+            "Score par domaine : jugement d’audit de 0 (absent) à 5 (frontière qualifiée en conditions réelles).",
+            "Score global 66/100 : moyenne non pondérée des dix scores de domaine, multipliée par 20."
+          ],
+          "tables_used": [
+            "packages/server-core/src/missions",
+            "packages/shared/src/interop",
+            "packages/shared/src/projects/memory-v2.ts",
+            "packages/shared/src/governance",
+            "packages/shared/src/telemetry/execution-telemetry.ts",
+            "packages/shared/src/evals/eval-gate.ts",
+            "packages/session-tools-core/src/runtime",
+            "docs/robinswood"
+          ]
+        }
+      },
+      {
+        "id": "frontier_sources",
+        "label": "Spécifications et annonces primaires de la frontière agentique 2026",
+        "path": "docs/robinswood/reports/robb-agentic-audit-2026-08-27/audit-datasets.sql",
+        "href": "https://blog.modelcontextprotocol.io/posts/2026-07-28/",
+        "query": {
+          "description": "Revue de sources primaires officielles MCP, A2A, AG-UI, OpenAI, Anthropic, OpenTelemetry, AWS, Google AP2 et UCP.",
+          "executed_at": "2026-08-27T11:31:55Z",
+          "language": "Documentation et annonces officielles",
+          "filters": [
+            "Sources primaires uniquement pour les affirmations techniques",
+            "État vérifié au 27 août 2026",
+            "Priorité aux technologies structurantes plutôt qu’aux annonces de modèle isolées"
+          ],
+          "tables_used": [
+            "Model Context Protocol 2026-07-28",
+            "A2A Protocol 1.0",
+            "AG-UI protocol",
+            "OpenAI Agents SDK 2026",
+            "Anthropic Managed Agents et Agent Skills",
+            "OpenTelemetry GenAI semantic conventions",
+            "Amazon Bedrock AgentCore",
+            "Google AP2 et Universal Commerce Protocol"
+          ]
+        }
+      }
+    ],
+    "blocks": [
+      {
+        "id": "title",
+        "type": "markdown",
+        "body": "# Robb face à la frontière agentique 2026"
+      },
+      {
+        "id": "executive_summary",
+        "type": "markdown",
+        "body": "## Executive Summary\n\n- **Robb possède déjà le bon noyau.** Les missions durables, les approbations liées au payload, les preuves d’exécution, les Proof Passports, les skills et l’observabilité OTLP placent l’architecture au-dessus d’un simple framework d’agents.\n- **La maturité globale est estimée à 66/100.** Ce score d’audit n’est pas un benchmark utilisateur : il reflète une base locale forte, pénalisée par l’absence de surfaces A2A/AG-UI productisées, de mémoire auto-alimentée, de quotas d’exécution multi-OS et de qualification externe.\n- **Le meilleur pari n’est pas un nouvel orchestrateur.** Il faut fermer une boucle différenciante : mission gouvernée → exécution confinée → preuve d’outcome → évaluation → routage → apprentissage vérifié. Robb possède déjà chaque brique, mais pas encore le parcours produit continu.\n- **Les trois priorités sont l’interopérabilité, le contexte et la qualification réelle.** Productiser MCP 2026/A2A 1.0/AG-UI, rendre la mémoire et les skills pilotés par les outcomes, puis prouver le système sur des tenants et deux hôtes réels créera plus de valeur qu’une course aux features de modèle."
+      },
+      {
+        "id": "positioning",
+        "type": "markdown",
+        "body": "## Robb est déjà fort là où les agents deviennent risqués\n\n**La différenciation crédible est la souveraineté vérifiable.** Le marché converge vers des agents plus longs, plus autonomes et plus distribués ; leur valeur dépend donc de leur capacité à reprendre, agir avec des droits bornés et prouver le résultat. Robb dispose déjà d’un runtime de Mission durable, d’un broker de mutations idempotent, d’un jumeau numérique de préflight et de passeports de preuve Ed25519.\n\n**Ce positionnement est plus défendable qu’une simple parité de modèles.** Les fournisseurs améliorent rapidement leurs harnesses ; une couche Robb trop couplée à une stratégie de prompting ou à une famille de modèles deviendrait obsolète. Le cœur durable doit rester indépendant des providers, tandis que les harnesses deviennent interchangeables.\n\n**La limite actuelle est la preuve externe.** Les derniers bilans documentent des tests locaux solides, mais pas encore de tenants Microsoft/Google réels, de maillage deux hôtes, de conformance contre plusieurs implémentations externes ni de quotas OS complets."
+      },
+      {
+        "id": "maturity_chart",
+        "type": "chart",
+        "chartId": "maturity_by_domain",
+        "layout": "full"
+      },
+      {
+        "id": "maturity_interpretation",
+        "type": "markdown",
+        "body": "## L’écart se concentre dans quatre zones productisables\n\n**Les scores les plus élevés correspondent au noyau Mission et à la gouvernance.** Ils sont soutenus par du code branché dans le runtime et par des tests de reprise, de non-duplication et de vérification cryptographique.\n\n**Les scores faibles ne désignent pas des absences complètes.** A2A, AG-UI, le mesh souverain, la mémoire v2 et l’apprentissage vérifié existent déjà sous forme de contrats ou de fondations. Leur décote vient du manque de raccord produit, d’exploitation réelle ou de qualification multi-environnement.\n\n**Implication :** la feuille de route peut privilégier l’intégration et la preuve plutôt qu’une réécriture."
+      },
+      {
+        "id": "maturity_table",
+        "type": "table",
+        "tableId": "maturity_detail",
+        "layout": "full"
+      },
+      {
+        "id": "frontier_narrative",
+        "type": "markdown",
+        "body": "## Les game changers 2026 déplacent la valeur vers les interfaces stables\n\n**Les protocoles se spécialisent par frontière.** [MCP 2026-07-28](https://blog.modelcontextprotocol.io/posts/2026-07-28/) devient stateless, cacheable et routable pour les outils et les tâches longues ; [A2A 1.0](https://a2a-protocol.org/latest/announcing-1.0/) stabilise la collaboration entre agents ; [AG-UI](https://docs.ag-ui.com/) standardise le flux agent–interface. Robb a raison de conserver un modèle interne canonique, mais doit désormais exposer ces frontières réellement.\n\n**Le harness devient remplaçable, l’exécution devient une infrastructure.** [OpenAI Agents SDK](https://openai.com/index/the-next-evolution-of-the-agents-sdk/) et [Anthropic Managed Agents](https://www.anthropic.com/engineering/managed-agents) séparent session, boucle agentique et sandbox afin de rendre l’exécution durable, scalable et indépendante d’un container précis. Robb doit formaliser la même séparation sans abandonner son avantage local-first.\n\n**Le contexte devient un système de production.** Les [Agent Skills](https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills) utilisent la divulgation progressive et du code déterministe ; Robb est déjà bien aligné. La prochaine étape est de relier mémoire, skills, preuves et évaluations pour que le contexte soit proposé, mesuré, révoqué et promu.\n\n**La confiance se déplace hors du modèle.** Le [confinement Anthropic](https://www.anthropic.com/engineering/how-we-contain-claude), les politiques hors runtime d’[Amazon Bedrock AgentCore](https://aws.amazon.com/bedrock/agentcore/faqs/) et les conventions [OpenTelemetry GenAI](https://opentelemetry.io/blog/2026/genai-observability/) confirment le besoin de limites déterministes et d’une télémétrie corrélée. Le Proof Passport de Robb est une avance réelle s’il devient une preuve utilisateur portable et qualifiée."
+      },
+      {
+        "id": "frontier_table",
+        "type": "table",
+        "tableId": "frontier_comparison",
+        "layout": "full"
+      },
+      {
+        "id": "roadmap_narrative",
+        "type": "markdown",
+        "body": "## Le prochain produit doit être une boucle de confiance, pas une collection de briques\n\n**P0 — fermer le parcours de valeur.** Une Mission doit pouvoir être lancée depuis l’interface, exécutée dans un environnement borné, observée de bout en bout, évaluée sur l’état réel, puis produire un passeport et une proposition d’apprentissage. Tant que ce parcours reste fragmenté, Robb supporte le coût d’une plateforme sans en exposer tout l’avantage.\n\n**P1 — ouvrir sans diluer.** La passerelle d’interop doit projeter le même état canonique vers MCP Tasks, A2A et AG-UI, avec identité, plafond de permissions, audit et timeouts. Aucun protocole externe ne doit devenir le modèle de domaine interne.\n\n**P2 — spécialiser seulement après preuve.** AP2/UCP, l’identité agentique émergente et WebMCP sont prometteurs, mais doivent rester des adaptateurs verticaux tant que le cœur Mission, les pilotes réels et les SLO ne sont pas qualifiés."
+      },
+      {
+        "id": "roadmap_table",
+        "type": "table",
+        "tableId": "roadmap",
+        "layout": "full"
+      },
+      {
+        "id": "architecture_principles",
+        "type": "markdown",
+        "body": "## Cinq règles d’architecture pour la prochaine étape\n\n1. **Conserver Mission comme modèle canonique.** MCP, A2A, AG-UI, AP2 ou tout futur protocole restent des adaptateurs de bordure versionnés et désactivables.\n2. **Séparer brain, hands et session.** Le harness fournisseur, l’état durable et les environnements d’exécution doivent pouvoir échouer, migrer ou être remplacés indépendamment.\n3. **Promouvoir uniquement des outcomes prouvés.** Ni le texte final du modèle ni une trajectoire élégante ne remplace la vérification de l’état, du reçu ou de l’artefact attendu.\n4. **Rendre l’autonomie proportionnelle au confinement.** Moins une action est réversible ou plus son blast radius est grand, plus elle doit passer par capability, approbation exacte, preuve et rapprochement.\n5. **Mesurer avant d’automatiser le routage ou l’apprentissage.** Shadow, canary, rollback et validation humaine restent obligatoires jusqu’à ce que les seuils soient prouvés sur des cas réels."
+      },
+      {
+        "id": "further_questions",
+        "type": "markdown",
+        "body": "## Questions à trancher avant l’investissement\n\n- **Marché prioritaire :** Robb vise-t-il d’abord l’opérateur individuel souverain, l’équipe régulée locale ou une plateforme d’entreprise multi-hôte ? Le control plane et l’identité diffèrent fortement selon ce choix.\n- **Surface principale :** la Control Room doit-elle devenir le produit central, ou Robb doit-il surtout être un runtime embeddable exposé via A2A/AG-UI ?\n- **Verticale de preuve :** la réconciliation financière Microsoft/Google est-elle le meilleur pilote, ou un workflow plus réversible permettrait-il de qualifier plus vite la boucle complète ?\n- **Modèle économique :** quels SLO coût, délai, taux de succès et intervention humaine définissent une Mission rentable et comparable entre providers ?"
+      },
+      {
+        "id": "caveats",
+        "type": "markdown",
+        "body": "## Caveats et hypothèses\n\n- L’audit porte sur le dépôt local Robb Agents 0.12.6 au commit `434f57f37d7e`, pas sur un paquet production installé ni sur un service managé.\n- Les scores 0–5 sont des jugements d’architecture explicites, pas des mesures d’usage, de marché ou de performance end-to-end.\n- La vérification exécutée pour cet audit couvre 89 tests ciblés, tous réussis ; elle ne remplace pas la suite exhaustive, les builds multi-OS, les signatures, les tenants réels ou les campagnes externes.\n- Plusieurs capacités ont été vérifiées localement mais restent volontairement fail-closed en l’absence d’adaptateur ou d’identité externe. Elles ne sont pas présentées comme disponibles en production.\n- Les technologies émergentes peuvent évoluer rapidement. AIP, WebMCP et les protocoles de commerce doivent être suivis sans coupler le cœur Robb à leur forme actuelle."
+      }
+    ]
+  },
+  "snapshot": {
+    "version": 1,
+    "generatedAt": "2026-08-27T11:31:55Z",
+    "status": "ready",
+    "datasets": {
+      "maturity": [
+        {
+          "domain": "Missions durables et reprise",
+          "chart_domain": "Missions",
+          "score": 4.5,
+          "position": "Runtime, réservations, retries, recovery, replan et Control Room branchés.",
+          "gap": "SLO end-to-end et charge réelle non qualifiés.",
+          "priority": "P0 — instrumenter et piloter"
+        },
+        {
+          "domain": "Gouvernance, mutations et preuves",
+          "chart_domain": "Gouvernance",
+          "score": 4.5,
+          "position": "Capabilities, approbations exactes, WAL, idempotence, rapprochement et passeports Ed25519.",
+          "gap": "Ancres organisationnelles et connecteurs réels non qualifiés.",
+          "priority": "P0 — productiser la boucle de confiance"
+        },
+        {
+          "domain": "Skills, contexte et mémoire",
+          "chart_domain": "Skills/mémoire",
+          "score": 3.5,
+          "position": "Skills progressifs et obligatoires ; mémoire v2 structurée, temporelle et locale.",
+          "gap": "Le runtime ne propose ni n’alimente automatiquement la mémoire v2 ; index sémantique optionnel seulement.",
+          "priority": "P0 — Context Engine v3"
+        },
+        {
+          "domain": "Évaluations et observabilité",
+          "chart_domain": "Evals et OTLP",
+          "score": 3.5,
+          "position": "Gates multi-graders, intervalles de confiance et OTLP corrélé avec redaction.",
+          "gap": "Pas de backend opéré ni de producteur d’outcomes durable à l’échelle production.",
+          "priority": "P0 — Trust Loop"
+        },
+        {
+          "domain": "UX agentique et supervision",
+          "chart_domain": "UX/supervision",
+          "score": 3.5,
+          "position": "Control Room, approvals, navigateur intégré, WebUI distante et WhatsApp.",
+          "gap": "Pas de surface AG-UI/generative UI commune ni de benchmark GUI hybride.",
+          "priority": "P1 — surface événementielle unifiée"
+        },
+        {
+          "domain": "Interopérabilité ouverte",
+          "chart_domain": "Interop",
+          "score": 3.0,
+          "position": "MCP 2026 dual-era et tests A2A 1.0/AG-UI sur un modèle canonique.",
+          "gap": "A2A et AG-UI sont des adaptateurs internes non exposés par le produit.",
+          "priority": "P0 — Interop Gateway"
+        },
+        {
+          "domain": "Sandbox et plan d’exécution",
+          "chart_domain": "Sandbox",
+          "score": 3.0,
+          "position": "Isolation réseau/fichiers fail-closed pour script_sandbox sur macOS/Linux.",
+          "gap": "Pas de quotas CPU/RAM/disque multi-OS ni d’interface sandbox indépendante par Mission.",
+          "priority": "P0 — Sandbox Provider Interface"
+        },
+        {
+          "domain": "Routage modèles et économie",
+          "chart_domain": "Routage",
+          "score": 3.0,
+          "position": "Policy-first, fallbacks, outcomes durables, drift et recommandations shadow.",
+          "gap": "Peu de ground truth réel ; aucune promotion canary branchée en production.",
+          "priority": "P1 — router outcome-aware qualifié"
+        },
+        {
+          "domain": "Connecteurs et outcomes réels",
+          "chart_domain": "Connecteurs",
+          "score": 2.5,
+          "position": "Broker sécurisé et pack financier qualifié hors ligne.",
+          "gap": "Aucun tenant Microsoft/Google réel muté et réconcilié dans la campagne auditée.",
+          "priority": "P0 — pilotes limités réels"
+        },
+        {
+          "domain": "Mesh multi-hôte et control plane",
+          "chart_domain": "Mesh",
+          "score": 2.0,
+          "position": "Identités, attestations, leases, fencing et failover simulés localement.",
+          "gap": "Pas d’IdP, control plane ni essai deux hôtes réels.",
+          "priority": "P1 — qualification distribuée"
+        }
+      ],
+      "frontier": [
+        {
+          "rank": 1,
+          "technology": "MCP 2026-07-28 + Tasks",
+          "frontier": "Cœur stateless, routage par headers, listes cacheables, MRTR et extension Tasks officielle.",
+          "robb": "Très bien aligné : SDK v2 scindé, négociation dual-era et conformance Tasks ; défaut SDK amont gardé fail-closed.",
+          "decision": "Achever l’exposition production et tester contre au moins deux implémentations réelles."
+        },
+        {
+          "rank": 2,
+          "technology": "A2A Protocol 1.0",
+          "frontier": "Découverte d’agents, délégation, tâches longues et compatibilité inter-organisations.",
+          "robb": "Contrat interne et conformance existent, mais aucun endpoint AgentCard/tâches n’est branché dans le produit.",
+          "decision": "Livrer une passerelle opt-in au-dessus de Mission, sans adopter A2A comme modèle interne."
+        },
+        {
+          "rank": 3,
+          "technology": "AG-UI et UI générative",
+          "frontier": "Flux standard de run, messages, outils, état, interrupts et interactions frontend.",
+          "robb": "Adaptateur et validation d’événements présents ; Electron, WebUI et mobile utilisent encore des contrats propriétaires.",
+          "decision": "Unifier les surfaces temps réel via AG-UI ; garder MCP Apps/A2UI comme formats de rendu optionnels."
+        },
+        {
+          "rank": 4,
+          "technology": "Meta-harness brain / hands / session",
+          "frontier": "Le harness, l’état durable et les sandboxes évoluent et échouent indépendamment.",
+          "robb": "Mission et sessions sont durables, mais le provider et l’environnement d’exécution ne sont pas encore une interface sandbox portable par Mission.",
+          "decision": "Créer un SandboxProvider et externaliser explicitement snapshots, leases, artefacts et secrets."
+        },
+        {
+          "rank": 5,
+          "technology": "Agent Skills + context engineering",
+          "frontier": "Divulgation progressive, scripts déterministes et expertise portable chargée à la demande.",
+          "robb": "Alignement fort : découverte multi-niveaux, SKILL.md obligatoire avant outils et validation locale.",
+          "decision": "Ajouter evals de skills, provenance, versions et promotion depuis des outcomes prouvés."
+        },
+        {
+          "rank": 6,
+          "technology": "Mémoire hybride et apprentissage vérifié",
+          "frontier": "Mémoire structurée, retrieval lexical+sémantique, validité temporelle et feedback mesuré.",
+          "robb": "Le journal v2 est solide et accepte des scores vectoriels, mais aucune boucle runtime ne l’alimente automatiquement.",
+          "decision": "Introduire des propositions de mémoire revues, ACL/provenance, index local et métriques d’utilité."
+        },
+        {
+          "rank": 7,
+          "technology": "Containment et policy gateway",
+          "frontier": "Permissions évaluées hors modèle, confinement OS, egress borné et credentials hors sandbox.",
+          "robb": "Très fort sur policy et mutations ; sandbox de scripts limitée et sans quotas de ressources complets.",
+          "decision": "Étendre le même modèle de confinement à toutes les hands, MCP et sous-agents."
+        },
+        {
+          "rank": 8,
+          "technology": "OTel GenAI + trace grading",
+          "frontier": "Traçage standardisé du modèle, outils, tokens, coûts et outcomes avec contenu opt-in.",
+          "robb": "OTLP corrélé et redacted existe ; l’exploitation et les dashboards de fiabilité restent externes.",
+          "decision": "Adopter les semconv courantes, relier Mission/Task/Tool/Proof et grader les traces sur corpus réels."
+        },
+        {
+          "rank": 9,
+          "technology": "Computer use hybride DOM + vision",
+          "frontier": "Choix dynamique entre API, DOM/accessibility et vision, vérifié par état backend.",
+          "robb": "Navigateur intégré avec snapshot, clic, saisie et screenshot ; pas de benchmark de sélection de modalité.",
+          "decision": "Créer un router d’interaction et des evals WebArena/OSWorld-like centrées sur l’état final."
+        },
+        {
+          "rank": 10,
+          "technology": "AP2 / UCP et identité agentique",
+          "frontier": "Mandats cryptographiques, reçus et protocoles verticaux pour commerce et paiements agents.",
+          "robb": "Proof Passport et approvals payload-bound offrent une base conceptuelle proche ; aucun adaptateur vertical standard.",
+          "decision": "Surveiller et prototyper seulement si la verticale financière devient le marché prioritaire."
+        }
+      ],
+      "roadmap": [
+        {
+          "rank": 1,
+          "priority": "P0",
+          "horizon": "0–90 jours",
+          "evolution": "Trust Loop produit : Mission → OTLP → outcome → eval → passport → proposition d’apprentissage.",
+          "outcome": "Une mission terminée est explicable, comparable et réutilisable depuis la Control Room.",
+          "gate": "100 % des nœuds corrélés ; aucune promotion automatique ; preuve utilisateur vérifiable."
+        },
+        {
+          "rank": 2,
+          "priority": "P0",
+          "horizon": "0–90 jours",
+          "evolution": "Interop Gateway MCP 2026 / A2A 1.0 / AG-UI au-dessus du modèle Mission canonique.",
+          "outcome": "Robb peut être runtime, client ou interface dans un écosystème multi-agents sans lock-in.",
+          "gate": "Deux implémentations externes réelles par protocole, identité et plafond de permissions vérifiés."
+        },
+        {
+          "rank": 3,
+          "priority": "P0",
+          "horizon": "0–90 jours",
+          "evolution": "Context Engine v3 : propositions mémoire, retrieval hybride local, provenance, TTL, oubli et evals de skills.",
+          "outcome": "Les agents réutilisent le bon contexte avec moins de tokens et sans mémoire silencieuse indésirable.",
+          "gate": "−30 % tokens ou interventions, régression succès ≤ 1 point, 100 % des écritures explicables/révocables."
+        },
+        {
+          "rank": 4,
+          "priority": "P0",
+          "horizon": "0–120 jours",
+          "evolution": "Sandbox Provider Interface séparant brain, hands et session avec egress et credentials brokerés.",
+          "outcome": "Une Mission peut reprendre dans un nouvel environnement sans élargir son blast radius.",
+          "gate": "Quotas CPU/RAM/disque et isolement réseau/fichiers qualifiés sur macOS, Windows et Linux."
+        },
+        {
+          "rank": 5,
+          "priority": "P0",
+          "horizon": "60–150 jours",
+          "evolution": "Pilotes réels limités Microsoft 365 et Google Workspace avec révocation et rapprochement.",
+          "outcome": "La promesse de travail autonome dépasse les mocks et prouve un gain opérateur.",
+          "gate": "0 mutation dupliquée sur 1 000 reprises, 100 % des écritures approuvées/réconciliées, gain > 50 %."
+        },
+        {
+          "rank": 6,
+          "priority": "P1",
+          "horizon": "3–6 mois",
+          "evolution": "Router outcome-aware avec ground truth Mission, canary et promotion humaine.",
+          "outcome": "Robb choisit le provider selon réussite, coût et délai réels, pas seulement des règles statiques.",
+          "gate": "≥ 500 cas ; −25 % coût ou −20 % latence ; baisse de réussite ≤ 1 point ; zéro violation policy."
+        },
+        {
+          "rank": 7,
+          "priority": "P1",
+          "horizon": "3–6 mois",
+          "evolution": "Sovereign Team Mesh qualifié avec IdP, control plane minimal et deux hôtes.",
+          "outcome": "Les équipes distribuent l’exécution sans centraliser leurs données ni perdre la capacité de révocation.",
+          "gate": "Failover < 60 s, révocation < 30 s, 1 000 bascules sans mutation dupliquée."
+        },
+        {
+          "rank": 8,
+          "priority": "P2",
+          "horizon": "6–12 mois",
+          "evolution": "Adaptateurs verticaux AP2/UCP, identité agentique et WebMCP selon traction marché.",
+          "outcome": "Robb entre dans des écosystèmes spécialisés sans fragiliser son cœur souverain.",
+          "gate": "Adoption seulement après stabilité du standard, demande client et threat model spécifique."
+        }
+      ]
+    }
+  },
+  "sources": [
+    {
+      "id": "audit_synthesis",
+      "label": "Audit du dépôt Robb Agents au commit 434f57f37d7e",
+      "path": "docs/robinswood/reports/robb-agentic-audit-2026-08-27/audit-datasets.sql",
+      "href": "https://github.com/robinswood-io/robb-agents/tree/434f57f37d7ed68a630b82ffe4daad0434c047d3",
+      "query": {
+        "description": "Synthèse qualitative du code, de la documentation de qualification et de 89 tests ciblés exécutés le 27 août 2026.",
+        "executed_at": "2026-08-27T11:31:55Z",
+        "language": "TypeScript, Markdown et tests Bun",
+        "filters": [
+          "Dépôt local version 0.12.6",
+          "Commit 434f57f37d7ed68a630b82ffe4daad0434c047d3",
+          "Aucune construction, installation ou modification applicative",
+          "Score 0 à 5 : code réel, branchement produit, tests locaux et qualification externe"
+        ],
+        "metric_definitions": [
+          "Score par domaine : jugement d’audit de 0 (absent) à 5 (frontière qualifiée en conditions réelles).",
+          "Score global 66/100 : moyenne non pondérée des dix scores de domaine, multipliée par 20."
+        ],
+        "tables_used": [
+          "packages/server-core/src/missions",
+          "packages/shared/src/interop",
+          "packages/shared/src/projects/memory-v2.ts",
+          "packages/shared/src/governance",
+          "packages/shared/src/telemetry/execution-telemetry.ts",
+          "packages/shared/src/evals/eval-gate.ts",
+          "packages/session-tools-core/src/runtime",
+          "docs/robinswood"
+        ]
+      }
+    },
+    {
+      "id": "frontier_sources",
+      "label": "Spécifications et annonces primaires de la frontière agentique 2026",
+      "path": "docs/robinswood/reports/robb-agentic-audit-2026-08-27/audit-datasets.sql",
+      "href": "https://blog.modelcontextprotocol.io/posts/2026-07-28/",
+      "query": {
+        "description": "Revue de sources primaires officielles MCP, A2A, AG-UI, OpenAI, Anthropic, OpenTelemetry, AWS, Google AP2 et UCP.",
+        "executed_at": "2026-08-27T11:31:55Z",
+        "language": "Documentation et annonces officielles",
+        "filters": [
+          "Sources primaires uniquement pour les affirmations techniques",
+          "État vérifié au 27 août 2026",
+          "Priorité aux technologies structurantes plutôt qu’aux annonces de modèle isolées"
+        ],
+        "tables_used": [
+          "Model Context Protocol 2026-07-28",
+          "A2A Protocol 1.0",
+          "AG-UI protocol",
+          "OpenAI Agents SDK 2026",
+          "Anthropic Managed Agents et Agent Skills",
+          "OpenTelemetry GenAI semantic conventions",
+          "Amazon Bedrock AgentCore",
+          "Google AP2 et Universal Commerce Protocol"
+        ]
+      }
+    }
+  ]
+}
