@@ -25,6 +25,7 @@ const BetaBadge = ({ label }: { label: string }) => (
  * - 'pi_chatgpt_oauth' → pi + oauth
  * - 'pi_copilot_oauth' → pi + oauth
  * - 'pi_gemini_oauth' → pi + oauth + piAuthProvider google-gemini-code-assist
+ * - 'pi_google_antigravity_subscription' → pi + none + Google-owned Antigravity credentials
  * - 'pi_mistral_vibe_subscription' → pi + none + local Vibe ACP credentials
  * - 'pi_api_key' → pi + api_key
  */
@@ -34,6 +35,7 @@ export type ApiSetupMethod =
   | 'pi_chatgpt_oauth'
   | 'pi_copilot_oauth'
   | 'pi_gemini_oauth'
+  | 'pi_google_antigravity_subscription'
   | 'pi_mistral_vibe_subscription'
   | 'pi_api_key'
 
@@ -55,6 +57,8 @@ export function apiSetupMethodToConnectionTypes(method: ApiSetupMethod): {
       return { providerType: 'pi', authType: 'oauth' };
     case 'pi_gemini_oauth':
       return { providerType: 'pi', authType: 'oauth' };
+    case 'pi_google_antigravity_subscription':
+      return { providerType: 'pi', authType: 'none' };
     case 'pi_mistral_vibe_subscription':
       return { providerType: 'pi', authType: 'none' };
     case 'pi_api_key':
@@ -76,6 +80,7 @@ const API_SETUP_ICONS: Record<ApiSetupMethod, React.ReactNode> = {
   pi_chatgpt_oauth: <Cpu className="size-4" />,
   pi_copilot_oauth: <Cpu className="size-4" />,
   pi_gemini_oauth: <img src={googleIcon} alt="" className="size-4 rounded-[3px]" />,
+  pi_google_antigravity_subscription: <img src={googleIcon} alt="" className="size-4 rounded-[3px]" />,
   pi_mistral_vibe_subscription: <img src={mistralIcon} alt="" className="size-4 rounded-[3px]" />,
   pi_api_key: <Key className="size-4" />,
 }
@@ -243,6 +248,13 @@ export function APISetupStep({
       name: 'GitHub Copilot',
       description: t("onboarding.apiSetup.githubCopilotDesc"),
       icon: API_SETUP_ICONS.pi_copilot_oauth,
+      providerType: 'pi',
+    },
+    {
+      id: 'pi_google_antigravity_subscription',
+      name: t("onboarding.apiSetup.googleAntigravity"),
+      description: t("onboarding.apiSetup.googleAntigravityDesc"),
+      icon: API_SETUP_ICONS.pi_google_antigravity_subscription,
       providerType: 'pi',
     },
     {

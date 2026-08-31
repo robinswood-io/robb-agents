@@ -219,6 +219,7 @@ export const RPC_CHANNELS = {
     EXCHANGE_CLAUDE_CODE: 'onboarding:exchangeClaudeCode',
     HAS_CLAUDE_OAUTH_STATE: 'onboarding:hasClaudeOAuthState',
     CLEAR_CLAUDE_OAUTH_STATE: 'onboarding:clearClaudeOAuthState',
+    START_GOOGLE_ANTIGRAVITY_SETUP: 'onboarding:startGoogleAntigravitySetup',
     START_MISTRAL_VIBE_SETUP: 'onboarding:startMistralVibeSetup',
     COMPLETE_MISTRAL_VIBE_SETUP: 'onboarding:completeMistralVibeSetup',
     CANCEL_MISTRAL_VIBE_SETUP: 'onboarding:cancelMistralVibeSetup',

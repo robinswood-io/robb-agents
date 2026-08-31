@@ -93,11 +93,37 @@ const MISTRAL_VIBE_SUBSCRIPTION_MODELS: ModelDefinition[] = [
   },
 ];
 
+const GOOGLE_ANTIGRAVITY_MODELS: ModelDefinition[] = ([
+  ['gemini-3.7-flash-high', 'Gemini 3.7 Flash (High)', '3.7 High'],
+  ['gemini-3.7-flash-medium', 'Gemini 3.7 Flash (Medium)', '3.7 Medium'],
+  ['gemini-3.7-flash-low', 'Gemini 3.7 Flash (Low)', '3.7 Low'],
+  ['gemini-3.6-flash-high', 'Gemini 3.6 Flash (High)', '3.6 High'],
+  ['gemini-3.6-flash-medium', 'Gemini 3.6 Flash (Medium)', '3.6 Medium'],
+  ['gemini-3.6-flash-low', 'Gemini 3.6 Flash (Low)', '3.6 Low'],
+  ['gemini-3.5-flash-high', 'Gemini 3.5 Flash (High)', '3.5 High'],
+  ['gemini-3.5-flash-medium', 'Gemini 3.5 Flash (Medium)', '3.5 Medium'],
+  ['gemini-3.5-flash-low', 'Gemini 3.5 Flash (Low)', '3.5 Low'],
+  ['gemini-3.1-pro-high', 'Gemini 3.1 Pro (High)', '3.1 Pro High'],
+  ['gemini-3.1-pro-low', 'Gemini 3.1 Pro (Low)', '3.1 Pro Low'],
+] as const).map(([id, name, shortName]) => ({
+  id: `pi/${id}`,
+  name,
+  shortName,
+  description: 'Gemini model through the official Google Antigravity CLI and account quota',
+  provider: 'pi',
+  contextWindow: 1_048_576,
+  supportsThinking: true,
+  supportsImages: false,
+}));
+
 const PI_MODEL_SUPPLEMENTS: Record<string, ModelDefinition[]> = {
   // Pi SDK 0.80.3 predates OpenAI's GPT-5.6 launch. Keep Robb current by
   // injecting the official model IDs until the upstream SDK catalog catches up.
   openai: OPENAI_GPT_56_MODELS,
   'openai-codex': OPENAI_GPT_56_MODELS,
+  // Antigravity is an external account-backed agent, not a Pi API provider.
+  // These IDs are reported by `agy models` and passed back to the official CLI.
+  'google-antigravity': GOOGLE_ANTIGRAVITY_MODELS,
   // Vibe is an ACP agent, not a Pi API provider. The single selector entry
   // delegates model choice to the authenticated Vibe profile.
   'mistral-vibe': MISTRAL_VIBE_SUBSCRIPTION_MODELS,
@@ -192,6 +218,9 @@ function isBareBedrockClaudeModel(modelId: string): boolean {
 export function getPiModelsForAuthProvider(piAuthProvider: string): ModelDefinition[] {
   if (piAuthProvider === 'google-gemini-code-assist') {
     return [...GOOGLE_GEMINI_CODE_ASSIST_MODELS];
+  }
+  if (piAuthProvider === 'google-antigravity') {
+    return [...GOOGLE_ANTIGRAVITY_MODELS];
   }
 
   try {

@@ -179,6 +179,10 @@ class InstallerContractTests(unittest.TestCase):
     def test_windows_installer_e2e_uses_packaged_paths_and_ephemeral_cdp_port(self) -> None:
         source = WINDOWS_INSTALLER_E2E.read_text(encoding="utf-8")
         self.assertIn(
+            r"resources\app\resources\pi-agent-server\antigravity-server.js",
+            source,
+        )
+        self.assertIn(
             r"resources\app\resources\pi-agent-server\vibe-acp-server.js",
             source,
         )

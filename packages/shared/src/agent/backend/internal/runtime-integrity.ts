@@ -8,6 +8,7 @@ export const REQUIRED_PACKAGED_EXTERNAL_RUNTIME_PATHS = [
   'app/dist/interceptor.cjs',
   'app/node_modules/@anthropic-ai/claude-agent-sdk/sdk.mjs',
   'app/resources/bridge-mcp-server/index.js',
+  'app/resources/pi-agent-server/antigravity-server.js',
   'app/resources/pi-agent-server/index.js',
   'app/resources/pi-agent-server/vibe-acp-server.js',
   'app/resources/session-mcp-server/index.js',

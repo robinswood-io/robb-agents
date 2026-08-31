@@ -51,6 +51,30 @@ describe('piDriver.buildRuntime custom endpoint models', () => {
   });
 });
 
+describe('piDriver external subscription bridges', () => {
+  it('routes Google Antigravity through its dedicated bridge without the Pi interceptor', () => {
+    const runtime = piDriver.buildRuntime({
+      context: {
+        provider: 'pi',
+        authType: 'none',
+        resolvedModel: 'pi/gemini-3.7-flash-high',
+        capabilities: { needsHttpPoolServer: false },
+        connection: { piAuthProvider: 'google-antigravity' } as any,
+      },
+      coreConfig: {} as any,
+      hostRuntime: {} as any,
+      resolvedPaths: {
+        piServerPath: '/tmp/pi-agent-server.js',
+        antigravityServerPath: '/tmp/antigravity-server.js',
+        interceptorBundlePath: '/tmp/interceptor.cjs',
+        nodeRuntimePath: '/usr/bin/node',
+      },
+    });
+    expect(runtime.paths?.piServer).toBe('/tmp/antigravity-server.js');
+    expect(runtime.paths?.interceptor).toBeUndefined();
+  });
+});
+
 describe('piDriver GitHub Copilot contract', () => {
   it('uses the exact SDK static catalog without network when the proxy is disabled', async () => {
     process.env.ROBB_DISABLE_GITHUB_COPILOT_PROXY = '1';

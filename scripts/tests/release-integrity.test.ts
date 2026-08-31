@@ -159,6 +159,7 @@ function prepareSecurityLayout(): string {
     'resources/bridge-mcp-server/index.js',
     'resources/session-mcp-server/index.js',
     'resources/pi-agent-server/index.js',
+    'resources/pi-agent-server/antigravity-server.js',
     'resources/pi-agent-server/vibe-acp-server.js',
     'webui/index.html',
   ]) {
@@ -196,7 +197,7 @@ describe('packaged Electron security contract', () => {
     const layout = validateElectronPackageSecurityLayout(resourcesDir)
 
     expect(layout.appAsarPath).toBe(join(resourcesDir, 'app.asar'))
-    expect(layout.requiredRuntimeFiles).toHaveLength(6)
+    expect(layout.requiredRuntimeFiles).toHaveLength(7)
 
     writeFixtureFile(join(resourcesDir, 'app', 'dist', 'main.cjs'))
     expect(() => validateElectronPackageSecurityLayout(resourcesDir))
@@ -410,6 +411,7 @@ describe('public release policy', () => {
   })
 
   it('uses packaged Windows resource paths and a dynamically allocated CDP port', () => {
+    expect(windowsInstallerE2E).toContain('resources\\app\\resources\\pi-agent-server\\antigravity-server.js')
     expect(windowsInstallerE2E).toContain('resources\\app\\resources\\pi-agent-server\\vibe-acp-server.js')
     expect(windowsInstallerE2E).toContain('resources\\app\\resources\\bin\\win32-x64\\rtk.exe')
     expect(windowsInstallerE2E).toContain('[System.Net.Sockets.TcpListener]::new')

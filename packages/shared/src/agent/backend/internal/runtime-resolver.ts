@@ -31,6 +31,8 @@ export interface ResolvedBackendRuntimePaths {
   piServerPath?: string;
   /** ACP-to-Robb bridge for Mistral Vibe subscription sessions. */
   vibeAcpServerPath?: string;
+  /** NDJSON-to-Robb bridge for Google Antigravity subscription sessions. */
+  antigravityServerPath?: string;
   nodeRuntimePath?: string;
   bundledRuntimePath?: string;
 }
@@ -272,6 +274,18 @@ export function resolveBackendRuntimePaths(hostRuntime: BackendHostRuntimeContex
           join(hostRuntime.appRootPath, 'dist', 'resources', 'pi-agent-server', 'vibe-acp-server.js'),
         ])
       : resolveUpwards(hostRuntime.appRootPath, join('packages', 'pi-agent-server', 'dist', 'vibe-acp-server.js')),
+    antigravityServerPath: hostRuntime.isPackaged
+      ? firstExistingPath([
+          ...(externalRoot
+            ? [
+                join(externalRoot, 'resources', 'pi-agent-server', 'antigravity-server.js'),
+                join(externalRoot, 'dist', 'resources', 'pi-agent-server', 'antigravity-server.js'),
+              ]
+            : []),
+          join(hostRuntime.appRootPath, 'resources', 'pi-agent-server', 'antigravity-server.js'),
+          join(hostRuntime.appRootPath, 'dist', 'resources', 'pi-agent-server', 'antigravity-server.js'),
+        ])
+      : resolveUpwards(hostRuntime.appRootPath, join('packages', 'pi-agent-server', 'dist', 'antigravity-server.js')),
     nodeRuntimePath: hostRuntime.nodeRuntimePath || bundledRuntimePath || process.execPath,
     bundledRuntimePath,
   };

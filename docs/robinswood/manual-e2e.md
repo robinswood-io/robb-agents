@@ -43,7 +43,8 @@ Créer ou vérifier les connexions suivantes dans Settings → AI :
 | `local-rapide` | tâches peu sensibles / rapides | local ou endpoint compatible |
 | `souverain-standard` | données internes/confidentielles | endpoint EU/souverain validé |
 | `premium-analyse-complexe` | raisonnement complexe autorisé | provider premium autorisé |
-| `google-gemini` | Gemini via compte Google / abonnement | `providerType: pi`, `authType: oauth`, `piAuthProvider: google-gemini-code-assist` |
+| `google-antigravity` | Gemini via compte Google / quota Antigravity | `providerType: pi`, `authType: none`, `piAuthProvider: google-antigravity` |
+| `google-gemini` | Gemini Code Assist pour organisation licenciée | `providerType: pi`, `authType: oauth`, `piAuthProvider: google-gemini-code-assist` |
 
 Notes credentials :
 
@@ -53,22 +54,23 @@ Notes credentials :
 
 ## Scénario A — Création de connexions
 
-### A1. Google Gemini OAuth
+### A1. Google Antigravity
 
 1. Ouvrir Settings → AI.
 2. Cliquer Add connection.
 3. Sélectionner Google Gemini.
-4. Se connecter au compte Google dans le navigateur.
+4. Si nécessaire, terminer la connexion Google dans le terminal Antigravity ouvert par Robb.
 5. Valider la connexion.
 
 Résultat attendu :
 
-- connexion créée sous slug `google-gemini` ou variante unique si slug déjà pris ;
-- `authType: oauth` ;
-- `piAuthProvider: google-gemini-code-assist` ;
+- connexion créée sous slug `google-antigravity` ou variante unique si slug déjà pris ;
+- `authType: none` car l’identifiant reste dans le trousseau géré par Antigravity ;
+- `piAuthProvider: google-antigravity` ;
 - aucun champ clé API Google AI Studio n’est demandé ;
 - modèle par défaut Gemini résolu ;
 - validation de connexion OK.
+- flux réel `agy` sandboxé et réponse Gemini reçue.
 
 Statut : `[ ] PASS` `[ ] FAIL` `[ ] BLOCKED`
 

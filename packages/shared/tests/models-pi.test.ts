@@ -65,4 +65,15 @@ describe('models-pi filtering', () => {
       name: 'Mistral Vibe',
     })]);
   });
+
+  it('exposes the Gemini models reported by the official Antigravity CLI', () => {
+    const models = getPiModelsForAuthProvider('google-antigravity');
+    const ids = models.map(model => model.id);
+    expect(ids.slice(0, 3)).toEqual([
+      'pi/gemini-3.7-flash-high',
+      'pi/gemini-3.7-flash-medium',
+      'pi/gemini-3.7-flash-low',
+    ]);
+    expect(models.every(model => model.supportsImages === false)).toBe(true);
+  });
 });

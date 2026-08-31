@@ -64,6 +64,7 @@ describe('Pi provider contract environment', () => {
     ROBB_DISABLE_GITHUB_COPILOT_PROXY: '1',
     ROBB_DISABLE_GOOGLE_CODE_ASSIST_V1INTERNAL: '1',
     ROBB_VIBE_ACP_COMMAND: '/opt/vibe-acp',
+    ROBB_ANTIGRAVITY_COMMAND: '/opt/agy',
     GOOGLE_CLOUD_PROJECT: 'project-id',
     ROBB_SENTINEL_SECRET: 'must-not-leak',
   };
@@ -91,6 +92,10 @@ describe('Pi provider contract environment', () => {
     expect(buildPiProviderEnvironment('mistral-vibe', hostEnvironment)).toEqual({
       ROBB_DISABLE_UNSTABLE_PROVIDERS: '1',
       ROBB_VIBE_ACP_COMMAND: '/opt/vibe-acp',
+    });
+    expect(buildPiProviderEnvironment('google-antigravity', hostEnvironment)).toEqual({
+      ROBB_DISABLE_UNSTABLE_PROVIDERS: '1',
+      ROBB_ANTIGRAVITY_COMMAND: '/opt/agy',
     });
   });
 

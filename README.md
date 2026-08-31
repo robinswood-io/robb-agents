@@ -130,9 +130,11 @@ Maintainers use `--release` / `-Release` only with externally supplied signing c
 
 Robb keeps billing/authentication modes explicit:
 
+- **Google Antigravity account**: select *Google Gemini* in onboarding. Robb uses the official `agy` headless stream with sandboxing; Google keeps the account credential in the operating-system keyring and Robb never reads or stores it. Install Antigravity CLI first with `curl -fsSL https://antigravity.google/cli/install.sh | bash`.
+- **Gemini Code Assist organization license**: remains available as a separate OAuth setup for organizations that assigned a Standard or Enterprise license and Google Cloud project.
 - **Mistral Vibe subscription**: select *Mistral Vibe* in onboarding. Robb launches the official `vibe-acp --setup` browser flow; Vibe owns the local subscription credential and Robb never reads, copies, or stores it.
 - **Mistral API**: use the separate generic API-key provider only for Mistral AI Studio pay-as-you-go access.
-- **Gemini, ChatGPT/Codex, Claude, GitHub Copilot**: connect using their respective provider setup paths.
+- **Gemini API, ChatGPT/Codex, Claude, GitHub Copilot**: connect using their respective provider setup paths.
 
 ## Remote access from a phone
 

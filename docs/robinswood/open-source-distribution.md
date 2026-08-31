@@ -183,7 +183,7 @@ Windows signing route are configured:
 
 Store these values only as repository or organization Actions secrets. Never add a certificate, password, token, or API-key file to Git, a pull request, an issue, or an agent prompt.
 
-The release workflow publishes provenance evidence (tag, commit SHA, platform and verified signing state), `SHA256SUMS.txt`, and an SPDX SBOM. Public repositories also publish GitHub/Sigstore build provenance attestations. Its Windows validation checks Authenticode on the unpacked application and NSIS installer, performs a real isolated install/uninstall, rechecks the installed executable, and verifies that the installed Mistral Vibe ACP bridge is present.
+The release workflow publishes provenance evidence (tag, commit SHA, platform and verified signing state), `SHA256SUMS.txt`, and an SPDX SBOM. Public repositories also publish GitHub/Sigstore build provenance attestations. Its Windows validation checks Authenticode on the unpacked application and NSIS installer, performs a real isolated install/uninstall, rechecks the installed executable, and verifies that the installed Google Antigravity and Mistral Vibe bridges are present.
 
 ## Public visibility and protected publication
 

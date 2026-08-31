@@ -499,6 +499,8 @@ export interface ElectronAPI {
   exchangeClaudeCode(code: string, connectionSlug: string): Promise<ClaudeOAuthResult>
   hasClaudeOAuthState(): Promise<boolean>
   clearClaudeOAuthState(): Promise<{ success: boolean }>
+  /** Verifies or launches the official Antigravity CLI account sign-in. */
+  startGoogleAntigravitySetup(): Promise<{ success: boolean; error?: string }>
   /** Runs Vibe's delegated ACP browser flow; Vibe retains the credential locally. */
   startMistralVibeSetup(): Promise<{ success: boolean; error?: string }>
   /** Defer onboarding setup — user chose "Setup later" */
