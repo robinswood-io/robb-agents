@@ -59,13 +59,11 @@ const ChatPage = React.memo(function ChatPage({ sessionId }: ChatPageProps) {
     hydrateDraftAttachments,
     onInputChange,
     onAttachmentsChange,
-    enabledSources,
     skills,
     labels,
     onSessionLabelsChange,
     enabledModes,
     sessionStatuses,
-    onSessionSourcesChange,
     onRenameSession,
     onFlagSession,
     onUnflagSession,
@@ -769,12 +767,10 @@ const ChatPage = React.memo(function ChatPage({ sessionId }: ChatPageProps) {
                 onInputChange={handleInputChange}
                 attachmentsValue={attachmentsValue}
                 onAttachmentsChange={handleAttachmentsChange}
-                sources={enabledSources}
                 skills={skills}
                 sessionStatuses={sessionStatuses}
                 onSessionStatusChange={handleSessionStatusChange}
                 workspaceId={activeWorkspaceId || undefined}
-                onSourcesChange={(slugs) => onSessionSourcesChange?.(sessionId, slugs)}
                 workingDirectory={sessionMeta.workingDirectory}
                 onWorkingDirectoryChange={handleWorkingDirectoryChange}
                 messagesLoading={messageLoadState.messagesLoading || (messagesRetrying && !messageLoadState.messagesReady)}
@@ -846,14 +842,12 @@ const ChatPage = React.memo(function ChatPage({ sessionId }: ChatPageProps) {
             onInputChange={handleInputChange}
             attachmentsValue={attachmentsValue}
             onAttachmentsChange={handleAttachmentsChange}
-            sources={enabledSources}
             skills={skills}
             labels={labels}
             onLabelsChange={(newLabels) => onSessionLabelsChange?.(sessionId, newLabels)}
             sessionStatuses={sessionStatuses}
             onSessionStatusChange={handleSessionStatusChange}
             workspaceId={activeWorkspaceId || undefined}
-            onSourcesChange={(slugs) => onSessionSourcesChange?.(sessionId, slugs)}
             workingDirectory={workingDirectory}
             onWorkingDirectoryChange={handleWorkingDirectoryChange}
             sessionFolderPath={session?.sessionFolderPath}

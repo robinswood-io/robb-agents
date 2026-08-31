@@ -45,7 +45,7 @@ import {
 } from "@craft-agent/ui"
 import { useFocusZone } from "@/hooks/keyboard"
 import { useTheme } from "@/hooks/useTheme"
-import type { Session, Message, FileAttachment, StoredAttachment, PermissionRequest, CredentialRequest, CredentialResponse, LoadedSource, LoadedSkill } from "../../../shared/types"
+import type { Session, Message, FileAttachment, StoredAttachment, PermissionRequest, CredentialRequest, CredentialResponse, LoadedSkill } from "../../../shared/types"
 import type { PermissionMode } from "@craft-agent/shared/agent/modes"
 import type { ThinkingLevel } from "@craft-agent/shared/agent/thinking-levels"
 import {
@@ -183,11 +183,6 @@ interface ChatDisplayProps {
   attachmentsValue?: FileAttachment[]
   /** Callback when attachment draft changes (add, remove, clear on send) */
   onAttachmentsChange?: (attachments: FileAttachment[]) => void
-  // Source selection
-  /** Available sources (enabled only) */
-  sources?: LoadedSource[]
-  /** Callback when source selection changes */
-  onSourcesChange?: (slugs: string[]) => void
   // Skill selection (for @mentions)
   /** Available skills for @mention autocomplete */
   skills?: LoadedSkill[]
@@ -483,9 +478,6 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
   onInputChange,
   attachmentsValue,
   onAttachmentsChange,
-  // Sources
-  sources,
-  onSourcesChange,
   // Skills (for @mentions)
   skills,
   // Labels (for #labels)
@@ -1985,9 +1977,6 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
               onInputChange,
               attachmentsValue,
               onAttachmentsChange,
-              sources,
-              enabledSourceSlugs: session.enabledSourceSlugs,
-              onSourcesChange,
               skills,
               workspaceId,
               workingDirectory,

@@ -164,6 +164,7 @@
   "chat.inputFailedDescription": "El resto de este chat sigue disponible. Puedes reintentarlo o borrar el borrador local si se dañó.",
   "chat.inputFailedTitle": "No se pudo cargar la entrada",
   "chat.learnMore": "Más información",
+  "chat.mentionFilesSkills": "Menciona archivos y habilidades",
   "chat.mentionFilesSkillsSources": "Menciona archivos, habilidades, fuentes",
   "chat.modelPicker.contextSection": "Contexto",
   "chat.modelPicker.modelsSection": "Modelos",
