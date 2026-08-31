@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test'
 import type { LlmConnection } from '@craft-agent/shared/config'
 import type { FileAttachment } from '@craft-agent/shared/protocol'
-import { buildBackendRuntimeSignature, filterAttachmentsForModelInput } from './runtime-config'
+import { buildBackendRuntimeSignature, buildRestartRequiredSignature, filterAttachmentsForModelInput } from './runtime-config'
 
 const baseCompat: LlmConnection = {
   slug: 'local',
@@ -56,6 +56,24 @@ describe('buildBackendRuntimeSignature', () => {
 
   it('ignores non-runtime metadata such as lastUsedAt', () => {
     expect(sig({ ...baseCompat, lastUsedAt: 1 })).toBe(sig({ ...baseCompat, lastUsedAt: 2 }))
+  })
+
+  it('restarts a Gemini runtime when its saved Google Cloud project changes', () => {
+    const signature = (googleCloudProject: string) => buildRestartRequiredSignature({
+      connection: {
+        ...baseCompat,
+        slug: 'google-gemini',
+        providerType: 'pi',
+        authType: 'oauth',
+        piAuthProvider: 'google-gemini-code-assist',
+        googleCloudProject,
+      },
+      provider: 'pi',
+      authType: 'oauth',
+      resolvedModel: 'pi/gemini-2.5-flash',
+    })
+
+    expect(signature('organization-project-a')).not.toBe(signature('organization-project-b'))
   })
 })
 

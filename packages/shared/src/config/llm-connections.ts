@@ -175,6 +175,13 @@ export interface LlmConnection {
   piAuthProvider?: string;
 
   /**
+   * Google Cloud project ID used by organization Gemini Code Assist OAuth.
+   * Stored per connection so the Pi subprocess does not depend on a global
+   * GOOGLE_CLOUD_PROJECT environment variable.
+   */
+  googleCloudProject?: string;
+
+  /**
    * Custom endpoint protocol config.
    * Set when user configures an arbitrary API endpoint (Ollama, DashScope, vLLM, etc.).
    * Determines which streaming adapter the Pi SDK uses for requests.

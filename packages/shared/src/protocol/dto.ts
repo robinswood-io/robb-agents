@@ -930,6 +930,8 @@ export interface LlmConnectionSetup {
   defaultModel?: string | null
   models?: string[] | null
   piAuthProvider?: string
+  /** Google Cloud project ID for organization Gemini Code Assist OAuth. */
+  googleCloudProject?: string
   modelSelectionMode?: 'automaticallySyncedFromProvider' | 'userDefined3Tier'
   /** When true, reject setup if the connection doesn't already exist (reauth guard). */
   updateOnly?: boolean
