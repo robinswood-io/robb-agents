@@ -18,6 +18,8 @@ const METADATA = {
 };
 const INDIVIDUAL_CODE_ASSIST_UNAVAILABLE =
   'Google Gemini Code Assist OAuth is no longer available for individual accounts. Use a Google AI Studio API key in Robb Agents. Organization accounts require an active Code Assist Standard or Enterprise license and GOOGLE_CLOUD_PROJECT.';
+const CODE_ASSIST_LICENSE_REQUIRED =
+  'Google Gemini Code Assist did not confirm an active Standard or Enterprise license for this organization account. Ask your Google Cloud administrator to assign the license to the signed-in account, then sign in again. GOOGLE_CLOUD_PROJECT must identify a project in that organization. Individual accounts should use a Google AI Studio API key in Robb Agents.';
 
 interface CodeAssistUserData {
   projectId?: string;
@@ -52,7 +54,7 @@ async function codeAssistFetch<T>(method: string, accessToken: string, body: unk
   if (!res.ok) {
     const text = await res.text().catch(() => res.statusText);
     if (res.status === 403 && /SUBSCRIPTION_REQUIRED|do not have a valid license|#3501/i.test(text)) {
-      throw new Error(INDIVIDUAL_CODE_ASSIST_UNAVAILABLE);
+      throw new Error(CODE_ASSIST_LICENSE_REQUIRED);
     }
     throw new Error(
       `Google Gemini Code Assist ${method} failed (${res.status}): ${redactProviderDiagnostic(text, [accessToken]).slice(0, 800)}`,
@@ -81,6 +83,11 @@ async function codeAssistGet<T>(operationName: string, accessToken: string, sign
 
 function pickDefaultTier(loadRes: any): any | undefined {
   return loadRes?.allowedTiers?.find((tier: any) => tier?.isDefault) ?? loadRes?.allowedTiers?.[0];
+}
+
+function pickOrganizationTier(loadRes: any): any | undefined {
+  return loadRes?.allowedTiers?.find((tier: any) =>
+    tier?.id && tier?.userDefinedCloudaicompanionProject === true);
 }
 
 function codeAssistIneligibilityReasons(loadRes: any): string[] {
@@ -112,7 +119,17 @@ async function ensureCodeAssistUser(accessToken: string, signal?: AbortSignal): 
 
   if (!loadRes?.currentTier) {
     const ineligibilityReasons = codeAssistIneligibilityReasons(loadRes);
-    if (isIndividualCodeAssistUnavailable(ineligibilityReasons)) {
+    const organizationTier = pickOrganizationTier(loadRes);
+
+    // Google may return an ineligible Individuals tier alongside an allowed
+    // Standard/Enterprise tier. An explicit Cloud project selects the latter;
+    // the personal-tier deprecation must not mask that valid organization path.
+    if (!envProject && organizationTier) {
+      throw new Error(
+        'Google Gemini Code Assist requires GOOGLE_CLOUD_PROJECT for this organization tier. Individual accounts should use a Google AI Studio API key in Robb Agents.',
+      );
+    }
+    if (!organizationTier && isIndividualCodeAssistUnavailable(ineligibilityReasons)) {
       throw new Error(INDIVIDUAL_CODE_ASSIST_UNAVAILABLE);
     }
 
@@ -121,7 +138,7 @@ async function ensureCodeAssistUser(accessToken: string, signal?: AbortSignal): 
       throw new Error(`Google account validation required before using Gemini Code Assist: ${validationTier.reasonMessage ?? validationTier.validationUrl}`);
     }
 
-    const tier = pickDefaultTier(loadRes);
+    const tier = organizationTier ?? pickDefaultTier(loadRes);
     if (!tier?.id) {
       const reasons = ineligibilityReasons.join(', ');
       throw new Error(reasons || 'Google Gemini Code Assist account is not eligible or no tier is available.');

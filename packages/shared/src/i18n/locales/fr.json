@@ -766,6 +766,8 @@
   "onboarding.credentials.enterCodeOnGitHub": "Saisissez ce code sur GitHub pour autoriser :",
   "onboarding.credentials.geminiConnected": "Google Gemini connecté avec succès.",
   "onboarding.credentials.geminiInstructions": "Une fenêtre navigateur va s’ouvrir pour la connexion Google. Ce backend OAuth ne prend plus en charge les comptes individuels ; utilisez plutôt une clé API Google AI Studio. L’accès d’organisation requiert aussi GOOGLE_CLOUD_PROJECT.",
+  "onboarding.credentials.googleCloudProject": "ID du projet Google Cloud",
+  "onboarding.credentials.googleCloudProjectHelp": "Utilisez un projet de l’organisation qui a attribué votre licence Code Assist Standard ou Enterprise.",
   "onboarding.credentials.mistralVibeConnected": "Abonnement Mistral Vibe connecté.",
   "onboarding.credentials.mistralVibeInstructions": "Robb lance la configuration officielle de Mistral Vibe. Finalisez la connexion dans le navigateur ; votre identifiant d’abonnement reste dans Vibe et n’est jamais stocké par Robb.",
   "onboarding.credentials.piApiKeyDescription": "Choisissez un préréglage de fournisseur et saisissez la clé API. Pour un point de terminaison Anthropic-compatible arbitraire, utilisez le mode Clé API Anthropic.",
