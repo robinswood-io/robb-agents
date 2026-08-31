@@ -132,9 +132,6 @@ export interface AppShellContextType {
   // Attachment draft callback — persists attachment refs per session
   onAttachmentsChange: (sessionId: string, attachments: FileAttachment[]) => void
 
-  // Source selection callback (per-session) - provided by AppShell component
-  onSessionSourcesChange?: (sessionId: string, sourceSlugs: string[]) => void
-
   // Open a new chat with optional agent, name, and pre-filled input
   openNewChat?: (params?: NewChatActionParams) => Promise<void>
 

@@ -9,7 +9,6 @@ import {
   MOCK_LABELS,
   MOCK_LLM_CONNECTIONS,
   MOCK_SESSION_STATUSES,
-  MOCK_SOURCES,
   MOCK_SKILLS,
   MOBILE_WORKSPACE_ID,
   buildMockSession,
@@ -114,8 +113,6 @@ export function ChatDisplayMobilePreview({
             onPermissionModeChange={setMode}
             inputValue={input}
             onInputChange={(v) => setInput(v)}
-            sources={MOCK_SOURCES}
-            onSourcesChange={log('onSourcesChange')}
             skills={MOCK_SKILLS}
             labels={MOCK_LABELS}
             onLabelsChange={log('onLabelsChange')}

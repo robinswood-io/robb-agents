@@ -195,6 +195,9 @@ export function InlineMentionMenu({
   const [selectedIndex, setSelectedIndex] = React.useState(0)
   const filteredSections = filterSections(sections, filter)
   const flatItems = flattenItems(filteredSections)
+  const mentionPromptKey = sections.some(section => section.id === 'sources')
+    ? 'chat.mentionFilesSkillsSources'
+    : 'chat.mentionFilesSkills'
 
   // Reset selection when filter changes
   React.useEffect(() => {
@@ -279,7 +282,7 @@ export function InlineMentionMenu({
     >
       {/* Menu header — sticky above scroll area */}
       <div className="px-3 py-1.5 text-[12px] font-medium text-muted-foreground border-b border-foreground/5">
-        {t('chat.mentionFilesSkillsSources')}
+        {t(mentionPromptKey)}
       </div>
 
       <div ref={listRef} className={MENU_LIST_STYLE}>

@@ -1047,16 +1047,6 @@ function AppShellContent({
     return cleanup
   }, [activeWorkspaceId])
 
-  // Handle session source selection changes
-  const handleSessionSourcesChange = React.useCallback(async (sessionId: string, sourceSlugs: string[]) => {
-    try {
-      await window.electronAPI.sessionCommand(sessionId, { type: 'setSources', sourceSlugs })
-      // Session will emit a 'sources_changed' event that updates the session state
-    } catch (err) {
-      console.error('[Chat] Failed to set session sources:', err)
-    }
-  }, [])
-
   // Handle session label changes (add/remove via # menu or badge X)
   const handleSessionLabelsChange = React.useCallback(async (sessionId: string, labels: string[]) => {
     try {
@@ -1711,7 +1701,6 @@ function AppShellContent({
     onSessionLabelsChange: handleSessionLabelsChange,
     enabledModes,
     sessionStatuses: effectiveSessionStatuses,
-    onSessionSourcesChange: handleSessionSourcesChange,
     onJumpToTaskSessions: handleJumpToTaskSessions,
     rightSidebarButton: null,
     isCompactMode: isAutoCompact,
@@ -1727,7 +1716,7 @@ function AppShellContent({
     automationTestResults,
     getAutomationHistory,
     onReplayAutomation: handleReplayAutomation,
-  }), [contextValue, handleDeleteSession, sources, skills, activeSessionWorkingDirectory, displayLabelConfigs, handleSessionLabelsChange, enabledModes, effectiveSessionStatuses, handleSessionSourcesChange, handleJumpToTaskSessions, isAutoCompact, searchActive, searchQuery, handleChatMatchInfoChange, handleTestAutomation, handleToggleAutomation, handleDuplicateAutomation, handleDeleteAutomation, automationTestResults, getAutomationHistory, handleReplayAutomation])
+  }), [contextValue, handleDeleteSession, sources, skills, activeSessionWorkingDirectory, displayLabelConfigs, handleSessionLabelsChange, enabledModes, effectiveSessionStatuses, handleJumpToTaskSessions, isAutoCompact, searchActive, searchQuery, handleChatMatchInfoChange, handleTestAutomation, handleToggleAutomation, handleDuplicateAutomation, handleDeleteAutomation, automationTestResults, getAutomationHistory, handleReplayAutomation])
 
   // Persist expanded folders to localStorage (workspace-scoped)
   React.useEffect(() => {

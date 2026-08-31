@@ -164,6 +164,7 @@
   "chat.inputFailedDescription": "Le reste de cette conversation est toujours disponible. Vous pouvez réessayer ou effacer le brouillon local s'il est corrompu.",
   "chat.inputFailedTitle": "Le chargement de la saisie a échoué",
   "chat.learnMore": "En savoir plus",
+  "chat.mentionFilesSkills": "Mentionner des fichiers et compétences",
   "chat.mentionFilesSkillsSources": "Mentionner des fichiers, compétences, sources",
   "chat.modelPicker.contextSection": "Contexte",
   "chat.modelPicker.modelsSection": "Modèles",

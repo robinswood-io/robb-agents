@@ -123,6 +123,10 @@ export function CompactModelSelector({
     return model.name ?? stripPiPrefixForDisplay(model.id)
   }, [availableModels, currentModel, connectionDefaultModel])
 
+  // Prefer the configured base connection name (for example ChatGPT or Gemini)
+  // on the trigger. Individual model variants remain available in the drawer.
+  const baseModelDisplayName = effectiveConnectionDetails?.name ?? currentModelDisplayName
+
   const thinkingDisabled = React.useMemo(() => {
     const model = availableModels.find(
       m => typeof m !== 'string' && m.id === currentModel,
@@ -172,7 +176,7 @@ export function CompactModelSelector({
           type="button"
           aria-label={connectionUnavailable
             ? t('common.unavailable')
-            : `${t('common.model')}: ${currentModelDisplayName}`}
+            : `${t('common.model')}: ${baseModelDisplayName}`}
           className={cn(
             'h-7 pl-2 pr-2 text-xs font-medium rounded-[6px] flex items-center gap-1.5 shadow-tinted outline-none select-none min-w-[64px] shrink',
             connectionUnavailable
@@ -191,7 +195,7 @@ export function CompactModelSelector({
               {showConnectionIcon && effectiveConnectionDetails && (
                 <ConnectionIcon connection={effectiveConnectionDetails} size={14} />
               )}
-              <span className="truncate min-w-0">{currentModelDisplayName}</span>
+              <span className="truncate min-w-0">{baseModelDisplayName}</span>
               {pickerMode !== 'locked-single' && (
                 <ChevronDown className="h-3 w-3 opacity-50 shrink-0" />
               )}
