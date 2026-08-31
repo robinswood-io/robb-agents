@@ -60,7 +60,7 @@ interface UseOnboardingReturn {
 
   // Local model
   handleSubmitLocalModel: (data: LocalModelSubmitData) => void
-  handleStartOAuth: (methodOverride?: ApiSetupMethod, connectionSlugOverride?: string) => void
+  handleStartOAuth: (methodOverride?: ApiSetupMethod, connectionSlugOverride?: string, googleCloudProject?: string) => void
 
   // Claude OAuth (two-step flow)
   isWaitingForCode: boolean
@@ -170,6 +170,7 @@ export function apiSetupMethodToConnectionSetup(
     connectionDefaultModel?: string
     models?: string[]
     piAuthProvider?: string
+    googleCloudProject?: string
     modelSelectionMode?: 'automaticallySyncedFromProvider' | 'userDefined3Tier'
     customEndpoint?: CustomEndpointConfig
     iamCredentials?: { accessKeyId: string; secretAccessKey: string; sessionToken?: string }
@@ -208,6 +209,7 @@ export function apiSetupMethodToConnectionSetup(
       return {
         slug,
         credential: options.credential,
+        googleCloudProject: options.googleCloudProject,
       }
     case 'pi_mistral_vibe_subscription':
       return { slug }
@@ -284,6 +286,7 @@ export function useOnboarding({
       connectionDefaultModel?: string
       models?: string[]
       piAuthProvider?: string
+      googleCloudProject?: string
       modelSelectionMode?: 'automaticallySyncedFromProvider' | 'userDefined3Tier'
       customEndpoint?: CustomEndpointConfig
       iamCredentials?: { accessKeyId: string; secretAccessKey: string; sessionToken?: string }
@@ -310,6 +313,7 @@ export function useOnboarding({
         connectionDefaultModel: options?.connectionDefaultModel,
         models: options?.models,
         piAuthProvider: options?.piAuthProvider,
+        googleCloudProject: options?.googleCloudProject,
         modelSelectionMode: options?.modelSelectionMode,
         customEndpoint: options?.customEndpoint,
         iamCredentials: options?.iamCredentials,
@@ -539,8 +543,18 @@ export function useOnboarding({
   // `method` is passed explicitly to break the stale-closure chain — the OAuth
   // await crosses renders, so handleSaveConfig's closure may have an outdated
   // state.apiSetupMethod.
-  const saveAndValidateConnection = useCallback(async (connectionSlug: string, method: ApiSetupMethod, credential?: string, updateOnly?: boolean, oauthIdentity?: ClaudeOAuthIdentityDto): Promise<boolean> => {
-    const saved = await handleSaveConfig(credential, oauthIdentity ? { oauthIdentity } : undefined, method, connectionSlug, updateOnly)
+  const saveAndValidateConnection = useCallback(async (
+    connectionSlug: string,
+    method: ApiSetupMethod,
+    credential?: string,
+    updateOnly?: boolean,
+    oauthIdentity?: ClaudeOAuthIdentityDto,
+    googleCloudProject?: string,
+  ): Promise<boolean> => {
+    const setupOptions = oauthIdentity || googleCloudProject
+      ? { ...(oauthIdentity ? { oauthIdentity } : {}), ...(googleCloudProject ? { googleCloudProject } : {}) }
+      : undefined
+    const saved = await handleSaveConfig(credential, setupOptions, method, connectionSlug, updateOnly)
     if (!saved) {
       setState(s => ({ ...s, credentialStatus: 'error' }))
       return false
@@ -562,7 +576,11 @@ export function useOnboarding({
   const [copilotDeviceCode, setCopilotDeviceCode] = useState<{ userCode: string; verificationUri: string } | undefined>()
 
   // Start OAuth flow (Claude or ChatGPT depending on selected method)
-  const handleStartOAuth = useCallback(async (methodOverride?: ApiSetupMethod, connectionSlugOverride?: string) => {
+  const handleStartOAuth = useCallback(async (
+    methodOverride?: ApiSetupMethod,
+    connectionSlugOverride?: string,
+    googleCloudProject?: string,
+  ) => {
     const effectiveMethod = methodOverride ?? state.apiSetupMethod
 
     if (methodOverride && methodOverride !== state.apiSetupMethod) {
@@ -621,13 +639,22 @@ export function useOnboarding({
       }
 
       if (effectiveMethod === 'pi_gemini_oauth') {
+        const trimmedProject = googleCloudProject?.trim() ?? ''
+        if (!/^[a-z][a-z0-9-]{4,28}[a-z0-9]$/.test(trimmedProject)) {
+          setState(s => ({
+            ...s,
+            credentialStatus: 'error',
+            errorMessage: 'Enter a valid Google Cloud project ID before signing in.',
+          }))
+          return
+        }
         const effectiveEditingSlug = connectionSlugOverride ?? editingSlug
         const isReauth = !!effectiveEditingSlug
         const connectionSlug = apiSetupMethodToConnectionSetup(effectiveMethod, {}, effectiveEditingSlug, existingSlugs).slug
         const result = await window.electronAPI.startGeminiOAuth(connectionSlug)
 
         if (result.success) {
-          await saveAndValidateConnection(connectionSlug, effectiveMethod, undefined, isReauth)
+          await saveAndValidateConnection(connectionSlug, effectiveMethod, undefined, isReauth, undefined, trimmedProject)
         } else {
           setState(s => ({
             ...s,
