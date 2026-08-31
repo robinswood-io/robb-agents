@@ -353,6 +353,7 @@ export class BrowserPaneManager implements IBrowserPaneManager {
   private lastNetworkActivityByWebContentsId = new Map<number, number>()
   private popupWindowsByParentInstanceId = new Map<string, Set<BrowserWindow>>()
   private popupParentByWebContentsId = new Map<number, string>()
+  private popupWebContentsIdByWindow = new WeakMap<BrowserWindow, number>()
   private windowManager: WindowManager | null = null
   private sessionPathResolver: ((sessionId: string) => string | null) | null = null
   private permissionAutonomyResolver: BrowserPanePermissionAutonomyResolver | null = null
@@ -1958,9 +1959,25 @@ export class BrowserPaneManager implements IBrowserPaneManager {
   }
 
   private reapplyAgentControlVisual(instance: BrowserInstance): void {
+    if (!this.isLiveInstance(instance)) return
+
     const active = !!instance.agentControl?.active
     this.applyAgentControlLock(instance, active)
     this.updateNativeOverlayState(instance)
+  }
+
+  private isBrowserWindowAlive(window: BrowserWindow): boolean {
+    try {
+      return !window.isDestroyed()
+    } catch {
+      return false
+    }
+  }
+
+  private isLiveInstance(instance: BrowserInstance): boolean {
+    return this.instances.get(instance.id) === instance
+      && !this.destroyingIds.has(instance.id)
+      && this.isBrowserWindowAlive(instance.window)
   }
 
   /** Resolve the app's current accent color as a concrete CSS value (not a var reference). */
@@ -2063,18 +2080,31 @@ export class BrowserPaneManager implements IBrowserPaneManager {
   }
 
   private bringToolbarToFront(instance: BrowserInstance): void {
-    if (instance.window.isDestroyed()) return
+    if (!this.isBrowserWindowAlive(instance.window)) return
     // View.addChildView reorders an existing child to the top of the z-stack.
-    instance.window.contentView.addChildView(instance.toolbarView)
+    try {
+      instance.window.contentView.addChildView(instance.toolbarView)
+    } catch {
+      // Native BrowserWindow teardown can invalidate the content view between
+      // the liveness check and the reorder operation.
+    }
   }
 
   private updateNativeOverlayState(instance: BrowserInstance): void {
+    if (!this.isBrowserWindowAlive(instance.window)) return
+
+    try {
+      if (instance.nativeOverlayView.webContents.isDestroyed()) return
+    } catch {
+      return
+    }
+
     const control = instance.agentControl
     const agentActive = !!control?.active
     const menuActive = !!instance.toolbarMenuOverlayActive
     const shouldShow = agentActive || menuActive
 
-    if (!shouldShow || !instance.nativeOverlayReady || instance.window.isDestroyed()) {
+    if (!shouldShow || !instance.nativeOverlayReady) {
       instance.nativeOverlayView.setBounds({ x: 0, y: 0, width: 0, height: 0 })
       this.bringToolbarToFront(instance)
       return
@@ -2123,22 +2153,36 @@ export class BrowserPaneManager implements IBrowserPaneManager {
   }
 
   private getWindowResizable(window: BrowserWindow): boolean {
-    return typeof window.isResizable === 'function' ? window.isResizable() : true
+    try {
+      return typeof window.isResizable === 'function' ? window.isResizable() : true
+    } catch {
+      return true
+    }
   }
 
-  private setWindowResizable(window: BrowserWindow, value: boolean): void {
-    if (typeof window.setResizable === 'function') {
-      window.setResizable(value)
+  private setWindowResizable(window: BrowserWindow, value: boolean): boolean {
+    try {
+      if (typeof window.setResizable === 'function') {
+        window.setResizable(value)
+      }
+      return true
+    } catch {
+      return false
     }
   }
 
   private applyAgentControlLock(instance: BrowserInstance, active: boolean): void {
     const wantsLock = active && !!instance.agentControl?.active
 
+    if (!this.isBrowserWindowAlive(instance.window)) {
+      instance.lockState.active = false
+      return
+    }
+
     if (wantsLock && !instance.lockState.active) {
       instance.lockState.previousResizable = this.getWindowResizable(instance.window)
-      this.setWindowResizable(instance.window, false)
-      instance.lockState.active = true
+      instance.lockState.active = this.setWindowResizable(instance.window, false)
+      if (!instance.lockState.active) return
       mainLog.info(`[browser-pane] interaction lock enabled id=${instance.id}`)
       return
     }
@@ -2339,9 +2383,13 @@ export class BrowserPaneManager implements IBrowserPaneManager {
   }
 
   private isLiveToolbarInstance(instance: BrowserInstance): boolean {
-    return this.instances.get(instance.id) === instance
-      && !instance.window.isDestroyed()
-      && !instance.toolbarView.webContents.isDestroyed()
+    if (!this.isLiveInstance(instance)) return false
+
+    try {
+      return !instance.toolbarView.webContents.isDestroyed()
+    } catch {
+      return false
+    }
   }
 
   private async loadToolbarFallback(instance: BrowserInstance, reason: string): Promise<void> {
@@ -3113,6 +3161,7 @@ export class BrowserPaneManager implements IBrowserPaneManager {
 
     popups.add(popupWindow)
     this.popupParentByWebContentsId.set(popupWcId, parentInstance.id)
+    this.popupWebContentsIdByWindow.set(popupWindow, popupWcId)
 
     const initialUrl = sourceUrl || popupWindow.webContents.getURL?.() || 'about:blank'
     mainLog.info(`[browser-pane] popup created parent=${parentInstance.id} popupWebContentsId=${popupWcId} url=${initialUrl}`)
@@ -3143,7 +3192,10 @@ export class BrowserPaneManager implements IBrowserPaneManager {
   }
 
   private unregisterPopupWindow(popupWindow: BrowserWindow, reason: 'closed' | 'parent_destroy' | 'reparented'): void {
-    const popupWcId = popupWindow.webContents.id
+    const popupWcId = this.popupWebContentsIdByWindow.get(popupWindow)
+    if (popupWcId === undefined) return
+
+    this.popupWebContentsIdByWindow.delete(popupWindow)
     const parentId = this.popupParentByWebContentsId.get(popupWcId)
     if (!parentId) return
 
@@ -3165,7 +3217,7 @@ export class BrowserPaneManager implements IBrowserPaneManager {
     if (!popups || popups.size === 0) return
 
     for (const popupWindow of Array.from(popups)) {
-      const popupWcId = popupWindow.webContents.id
+      const popupWcId = this.popupWebContentsIdByWindow.get(popupWindow) ?? -1
       this.unregisterPopupWindow(popupWindow, reason)
       try {
         if (!popupWindow.isDestroyed()) {
