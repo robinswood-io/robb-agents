@@ -97,6 +97,40 @@ describe('SessionPersistenceQueue', () => {
     expect(header.sdkSessionId).toBe('new-thread-id');
   });
 
+  it('serializes a debounce-timer write with an explicit flush', async () => {
+    let releaseFirstWrite!: () => void;
+    const firstWriteGate = new Promise<void>(resolve => { releaseFirstWrite = resolve; });
+    let notifyFirstWriteStarted!: () => void;
+    const firstWriteStarted = new Promise<void>(resolve => { notifyFirstWriteStarted = resolve; });
+    let writeStarts = 0;
+
+    queue = new SessionPersistenceQueue(0, {
+      beforeWrite: async () => {
+        writeStarts += 1;
+        if (writeStarts === 1) {
+          notifyFirstWriteStarted();
+          await firstWriteGate;
+        }
+      },
+    });
+
+    queue.enqueue(createTestSession('test-session', testDir, 'timer-write'));
+    await firstWriteStarted;
+
+    queue.enqueue(createTestSession('test-session', testDir, 'flushed-write'));
+    const flush = queue.flush('test-session');
+    await Bun.sleep(10);
+    expect(writeStarts).toBe(1);
+
+    releaseFirstWrite();
+    await flush;
+
+    const filePath = join(testDir, 'sessions', 'test-session', 'session.jsonl');
+    const header = JSON.parse(readFileSync(filePath, 'utf-8').split('\n')[0]);
+    expect(writeStarts).toBe(2);
+    expect(header.sdkSessionId).toBe('flushed-write');
+  });
+
   it('allows parallel writes to different sessions', async () => {
     // Different sessions should write in parallel without blocking each other
     mkdirSync(join(testDir, 'sessions', 'session-a'), { recursive: true });
