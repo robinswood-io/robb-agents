@@ -42,7 +42,10 @@ import { validateSessionStatus } from '../statuses/validation.ts';
 import { debug } from '../utils/debug.ts';
 import { getStatusCategory } from '../statuses/storage.ts';
 import { readSessionHeader, readSessionJsonl } from './jsonl.ts';
-import { sessionPersistenceQueue } from './persistence-queue.ts';
+import {
+  isSessionPersistenceWriteInProgress,
+  sessionPersistenceQueue,
+} from './persistence-queue.ts';
 
 // Re-export types for convenience
 export type { SessionConfig } from './types.ts';
@@ -90,6 +93,11 @@ export function getSessionFilePath(workspaceRootPath: string, sessionId: string)
  * tmp file when the primary file is absent; otherwise remove stale sidecars.
  */
 function recoverInterruptedSessionWrite(sessionFile: string): void {
+  // The async persistence queue has already created (or is about to promote)
+  // its .tmp file. Treating that live sidecar as stale races the rename and
+  // produces ENOENT under normal reads/list refreshes.
+  if (isSessionPersistenceWriteInProgress(sessionFile)) return;
+
   const tmpFile = `${sessionFile}.tmp`;
   const backupFile = `${sessionFile}.bak`;
 

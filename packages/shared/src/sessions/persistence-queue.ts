@@ -13,6 +13,23 @@ interface PendingWrite {
 
 interface SessionPersistenceQueueTestHooks {
   beforeWrite?: (sessionId: string) => Promise<void> | void
+  afterTempWrite?: (sessionId: string) => Promise<void> | void
+}
+
+const activeSessionWritePaths = new Map<string, number>()
+
+function beginSessionPersistenceWrite(filePath: string): void {
+  activeSessionWritePaths.set(filePath, (activeSessionWritePaths.get(filePath) ?? 0) + 1)
+}
+
+function endSessionPersistenceWrite(filePath: string): void {
+  const remaining = (activeSessionWritePaths.get(filePath) ?? 1) - 1
+  if (remaining > 0) activeSessionWritePaths.set(filePath, remaining)
+  else activeSessionWritePaths.delete(filePath)
+}
+
+export function isSessionPersistenceWriteInProgress(filePath: string): boolean {
+  return activeSessionWritePaths.has(filePath)
 }
 
 interface HeaderMetadataSignature {
@@ -140,6 +157,7 @@ class SessionPersistenceQueue {
     if (!entry) return
 
     this.pending.delete(sessionId)
+    let filePath: string | undefined
 
     try {
       const { data } = entry
@@ -147,7 +165,8 @@ class SessionPersistenceQueue {
       ensureSessionsDir(data.workspaceRootPath)
       ensureSessionDir(data.workspaceRootPath, sessionId)
 
-      const filePath = getSessionFilePath(data.workspaceRootPath, sessionId)
+      filePath = getSessionFilePath(data.workspaceRootPath, sessionId)
+      beginSessionPersistenceWrite(filePath)
 
       // Prepare session with portable paths for cross-machine compatibility
       const storageSession: StoredSession = {
@@ -205,10 +224,13 @@ class SessionPersistenceQueue {
 
       const tmpFile = filePath + '.tmp'
       await writeFile(tmpFile, lines.join('\n') + '\n', 'utf-8')
+      await this.testHooks?.afterTempWrite?.(sessionId)
       await replaceFileAtomically(tmpFile, filePath)
       debug(`[PersistenceQueue] Wrote session ${sessionId}`)
     } catch (error) {
       console.error(`[PersistenceQueue] Failed to write session ${sessionId}:`, error)
+    } finally {
+      if (filePath) endSessionPersistenceWrite(filePath)
     }
   }
 
