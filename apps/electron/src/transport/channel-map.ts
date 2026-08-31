@@ -174,6 +174,7 @@ export const CHANNEL_MAP = {
   exchangeClaudeCode: invoke(RPC_CHANNELS.onboarding.EXCHANGE_CLAUDE_CODE),
   hasClaudeOAuthState: invoke(RPC_CHANNELS.onboarding.HAS_CLAUDE_OAUTH_STATE),
   clearClaudeOAuthState: invoke(RPC_CHANNELS.onboarding.CLEAR_CLAUDE_OAUTH_STATE),
+  startGoogleAntigravitySetup: invoke(RPC_CHANNELS.onboarding.START_GOOGLE_ANTIGRAVITY_SETUP),
   startMistralVibeSetup: invoke(RPC_CHANNELS.onboarding.START_MISTRAL_VIBE_SETUP),
   deferSetup: invoke(RPC_CHANNELS.onboarding.DEFER_SETUP),
 

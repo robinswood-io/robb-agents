@@ -64,7 +64,7 @@ if (buildResult.status !== 0 || !existsSync(piAgentDist)) {
 }
 mkdirSync(destDir, { recursive: true });
 cpSync(piAgentDist, stagedPiAgentDir, { recursive: true, force: true });
-console.log("📦 Built and staged Pi agent server resources (including Vibe ACP bridge)");
+console.log("📦 Built and staged Pi agent server resources (including Antigravity and Vibe bridges)");
 
 function collectRuntimeSources(
   sourceRoot: string,

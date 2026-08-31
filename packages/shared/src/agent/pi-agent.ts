@@ -247,6 +247,7 @@ export function buildPiProviderEnvironment(
     );
   }
   if (piAuthProvider === 'mistral-vibe') keys.push('ROBB_VIBE_ACP_COMMAND');
+  if (piAuthProvider === 'google-antigravity') keys.push('ROBB_ANTIGRAVITY_COMMAND');
   const environment = pickExplicitEnvironment(keys, baseEnv);
   if (piAuthProvider === 'google-gemini-code-assist' && googleCloudProject?.trim()) {
     environment.GOOGLE_CLOUD_PROJECT = googleCloudProject.trim();

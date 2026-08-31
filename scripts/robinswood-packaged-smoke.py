@@ -42,6 +42,7 @@ PACKAGED_ASAR = APP_DIR / "Contents" / "Resources" / "app.asar"
 # Pi providers run as explicit resource subprocesses. In particular, this is
 # the credential-free ACP bridge for Mistral Vibe subscriptions.
 PACKAGED_PI_AGENT_SERVER = APP_DIR / "Contents" / "Resources" / "app" / "resources" / "pi-agent-server" / "index.js"
+PACKAGED_ANTIGRAVITY_BRIDGE = APP_DIR / "Contents" / "Resources" / "app" / "resources" / "pi-agent-server" / "antigravity-server.js"
 PACKAGED_VIBE_ACP_BRIDGE = APP_DIR / "Contents" / "Resources" / "app" / "resources" / "pi-agent-server" / "vibe-acp-server.js"
 SOURCE_ICON = ELECTRON_DIR / "resources" / "robinswood-icon.icns"
 DMG = RELEASE_DIR / "Robb-Agents-arm64.dmg"
@@ -52,7 +53,7 @@ ARCH = "arm64"
 
 def configure_arch(arch: str) -> None:
     global APP_DIR, APP_BIN, PLIST, PACKAGED_ICON, PACKAGED_ASAR, PACKAGED_PI_AGENT_SERVER
-    global PACKAGED_VIBE_ACP_BRIDGE, DMG, ZIP, ARCH
+    global PACKAGED_ANTIGRAVITY_BRIDGE, PACKAGED_VIBE_ACP_BRIDGE, DMG, ZIP, ARCH
 
     ARCH = arch
     app_output_directory = "mac-arm64" if arch == "arm64" else "mac"
@@ -72,6 +73,15 @@ def configure_arch(arch: str) -> None:
         / "resources"
         / "pi-agent-server"
         / "vibe-acp-server.js"
+    )
+    PACKAGED_ANTIGRAVITY_BRIDGE = (
+        APP_DIR
+        / "Contents"
+        / "Resources"
+        / "app"
+        / "resources"
+        / "pi-agent-server"
+        / "antigravity-server.js"
     )
     DMG = RELEASE_DIR / f"Robb-Agents-{arch}.dmg"
     ZIP = RELEASE_DIR / f"Robb-Agents-{arch}.zip"
@@ -187,6 +197,7 @@ def check_bundle(require_release_signing: bool = False) -> None:
     require(PACKAGED_ASAR, "integrity-protected app.asar")
     require(PACKAGED_PI_AGENT_SERVER, "packaged Pi agent server")
     require(PACKAGED_VIBE_ACP_BRIDGE, "packaged Mistral Vibe ACP bridge")
+    require(PACKAGED_ANTIGRAVITY_BRIDGE, "packaged Google Antigravity bridge")
     require(SOURCE_ICON, "Robinswood source icon")
 
     with PLIST.open("rb") as handle:
@@ -295,6 +306,7 @@ def check_dmg() -> None:
             require(mounted_app, "DMG Robb Agents.app")
             require(mounted_app / "Contents" / "Resources" / "app.asar", "DMG integrity-protected app.asar")
             require(mounted_app / "Contents" / "Resources" / "app" / "resources" / "pi-agent-server" / "vibe-acp-server.js", "DMG Mistral Vibe ACP bridge")
+            require(mounted_app / "Contents" / "Resources" / "app" / "resources" / "pi-agent-server" / "antigravity-server.js", "DMG Google Antigravity bridge")
             with mounted_plist.open("rb") as handle:
                 plist = plistlib.load(handle)
             if plist.get("CFBundleName") != "Robb Agents" or plist.get("CFBundleIdentifier") != "io.robinswood.robbagents":

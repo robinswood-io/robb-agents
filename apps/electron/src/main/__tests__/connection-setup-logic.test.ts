@@ -142,6 +142,16 @@ describe('createBuiltInConnection', () => {
     expect(conn.modelSelectionMode).toBe('automaticallySyncedFromProvider')
   })
 
+  it('creates google-antigravity as a keyring-owned account connection', () => {
+    const conn = createBuiltInConnection('google-antigravity')
+    expect(conn.name).toBe('Google Antigravity')
+    expect(conn.providerType).toBe('pi')
+    expect(conn.authType).toBe('none')
+    expect(conn.piAuthProvider).toBe('google-antigravity')
+    expect(conn.defaultModel).toBe('pi/gemini-3.7-flash-high')
+    expect(conn.midStreamBehavior).toBe('queue')
+  })
+
   it('creates mistral-vibe as a credential-free Vibe subscription connection', () => {
     const conn = createBuiltInConnection('mistral-vibe')
     expect(conn.name).toBe('Mistral Vibe')

@@ -621,6 +621,7 @@ export const PI_PREFERRED_DEFAULTS: Record<string, string[]> = {
   // April 2026 — and are deliberately excluded from defaults.
   google: ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-3-flash-preview', 'gemini-3.1-flash-lite-preview'],
   'google-gemini-code-assist': ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-3-flash-preview'],
+  'google-antigravity': ['gemini-3.7-flash-high', 'gemini-3.7-flash-medium', 'gemini-3.7-flash-low', 'gemini-3.1-pro-high'],
   // Mistral Medium 3.5 is Mistral's frontier agentic/coding model; Small 4
   // is its efficient unified instruct/reasoning/coding alternative. Keep a
   // lightweight Ministral option last for mini/summarization work.

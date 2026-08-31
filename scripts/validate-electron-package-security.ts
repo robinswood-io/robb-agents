@@ -20,6 +20,7 @@ const REQUIRED_EXTERNAL_RUNTIME_FILES = [
   'resources/bridge-mcp-server/index.js',
   'resources/session-mcp-server/index.js',
   'resources/pi-agent-server/index.js',
+  'resources/pi-agent-server/antigravity-server.js',
   'resources/pi-agent-server/vibe-acp-server.js',
   'webui/index.html',
 ] as const

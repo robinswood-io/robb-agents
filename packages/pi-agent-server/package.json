@@ -9,7 +9,7 @@
     "pi-agent-server": "./dist/index.js"
   },
   "scripts": {
-    "build": "bun build src/index.ts src/vibe-acp-server.ts --outdir=dist --target=bun --format=esm --external koffi",
+    "build": "bun build src/index.ts src/vibe-acp-server.ts src/antigravity-server.ts --outdir=dist --target=bun --format=esm --external koffi",
     "typecheck": "node ../../scripts/run-typescript.mjs native --noEmit -p tsconfig.typecheck.json",
     "validate": "bun run typecheck && bun run build"
   },

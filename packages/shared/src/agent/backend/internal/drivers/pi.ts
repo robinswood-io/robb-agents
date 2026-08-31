@@ -248,9 +248,14 @@ export const piDriver: ProviderDriver = {
         // established JSONL lifecycle and permission plumbing.
         piServer: piAuthProvider === 'mistral-vibe'
           ? resolvedPaths.vibeAcpServerPath
-          : resolvedPaths.piServerPath,
+          : piAuthProvider === 'google-antigravity'
+            ? resolvedPaths.antigravityServerPath
+            : resolvedPaths.piServerPath,
         vibeAcpServer: resolvedPaths.vibeAcpServerPath,
-        interceptor: piAuthProvider === 'mistral-vibe' ? undefined : resolvedPaths.interceptorBundlePath,
+        antigravityServer: resolvedPaths.antigravityServerPath,
+        interceptor: piAuthProvider === 'mistral-vibe' || piAuthProvider === 'google-antigravity'
+          ? undefined
+          : resolvedPaths.interceptorBundlePath,
         node: resolvedPaths.nodeRuntimePath,
       },
       piAuthProvider,

@@ -16,6 +16,7 @@ import {
   startMistralVibeBrowserAuth,
   type MistralVibeBrowserAuthFlow,
 } from '../../services/mistral-vibe-browser-auth.ts'
+import { startGoogleAntigravitySetup } from '../../services/google-antigravity-setup.ts'
 
 // ============================================
 // IPC Handlers
@@ -29,6 +30,7 @@ export const HANDLED_CHANNELS = [
   RPC_CHANNELS.onboarding.EXCHANGE_CLAUDE_CODE,
   RPC_CHANNELS.onboarding.HAS_CLAUDE_OAUTH_STATE,
   RPC_CHANNELS.onboarding.CLEAR_CLAUDE_OAUTH_STATE,
+  RPC_CHANNELS.onboarding.START_GOOGLE_ANTIGRAVITY_SETUP,
   RPC_CHANNELS.onboarding.START_MISTRAL_VIBE_SETUP,
   RPC_CHANNELS.onboarding.COMPLETE_MISTRAL_VIBE_SETUP,
   RPC_CHANNELS.onboarding.CANCEL_MISTRAL_VIBE_SETUP,
@@ -173,6 +175,16 @@ export function registerOnboardingHandlers(server: RpcServer, deps: HandlerDeps)
   server.handle(RPC_CHANNELS.onboarding.CLEAR_CLAUDE_OAUTH_STATE, async () => {
     clearOAuthState()
     return { success: true }
+  })
+
+  // Google Antigravity owns the Google account credential in the OS keyring.
+  // If needed, its official CLI is opened in a terminal for interactive login;
+  // Robb only probes `agy models` until account-backed access is ready.
+  server.handle(RPC_CHANNELS.onboarding.START_GOOGLE_ANTIGRAVITY_SETUP, async () => {
+    const result = await startGoogleAntigravitySetup()
+    if (result.success) log.info('[Onboarding] Google Antigravity account is ready')
+    else log.warn('[Onboarding] Google Antigravity setup is not ready')
+    return result
   })
 
   // Mistral Vibe subscription setup. Vibe owns and persists its credential;

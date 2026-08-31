@@ -87,12 +87,13 @@ try {
     if ($process.ExitCode -ne 0) { throw "Silent NSIS install exited with $($process.ExitCode)" }
 
     $app = Join-Path $InstallDir 'Robb Agents.exe'
+    $antigravityBridge = Join-Path $InstallDir 'resources\app\resources\pi-agent-server\antigravity-server.js'
     $vibeBridge = Join-Path $InstallDir 'resources\app\resources\pi-agent-server\vibe-acp-server.js'
     $bundledBun = Join-Path $InstallDir 'resources\app\vendor\bun\bun.exe'
     $claudeRuntime = Join-Path $InstallDir 'resources\app\node_modules\@anthropic-ai\claude-agent-sdk-binary\claude.exe'
     $ripgrep = Join-Path $InstallDir 'resources\app\node_modules\@vscode\ripgrep\bin\rg.exe'
     $rtk = Join-Path $InstallDir 'resources\app\resources\bin\win32-x64\rtk.exe'
-    foreach ($required in @($app, $vibeBridge, $bundledBun, $claudeRuntime, $ripgrep, $rtk)) {
+    foreach ($required in @($app, $antigravityBridge, $vibeBridge, $bundledBun, $claudeRuntime, $ripgrep, $rtk)) {
         if (-not (Test-Path $required)) { throw "Installed runtime missing: $required" }
     }
 

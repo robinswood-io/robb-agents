@@ -8,11 +8,10 @@ import {
 import type { ApiSetupMethod } from '@/components/onboarding'
 
 describe('resolveProviderSetupSelection', () => {
-  it('routes Google individual accounts to the official AI Studio API-key preset', () => {
+  it('routes Google accounts to the official Antigravity subscription bridge', () => {
     expect(resolveProviderSetupSelection('google')).toEqual({
-      method: 'pi_api_key',
-      preferredPiPreset: 'google',
-      startOAuth: false,
+      method: 'pi_google_antigravity_subscription',
+      startOAuth: true,
     })
   })
 
@@ -20,6 +19,7 @@ describe('resolveProviderSetupSelection', () => {
     expect(resolveProviderSetupSelection('claude').startOAuth).toBe(true)
     expect(resolveProviderSetupSelection('chatgpt').startOAuth).toBe(true)
     expect(resolveProviderSetupSelection('copilot').startOAuth).toBe(true)
+    expect(resolveProviderSetupSelection('google').startOAuth).toBe(true)
     expect(resolveProviderSetupSelection('mistral').startOAuth).toBe(false)
     expect(resolveProviderSetupSelection('api_key').startOAuth).toBe(false)
   })
@@ -53,7 +53,7 @@ describe('resolveSlugForMethod', () => {
   it('works for all setup methods', () => {
     const methods: ApiSetupMethod[] = [
       'anthropic_api_key', 'claude_oauth',
-      'pi_chatgpt_oauth', 'pi_copilot_oauth', 'pi_gemini_oauth', 'pi_mistral_vibe_subscription', 'pi_api_key',
+      'pi_chatgpt_oauth', 'pi_copilot_oauth', 'pi_gemini_oauth', 'pi_google_antigravity_subscription', 'pi_mistral_vibe_subscription', 'pi_api_key',
     ]
     for (const method of methods) {
       const slug = resolveSlugForMethod(method, null, new Set())
@@ -112,6 +112,16 @@ describe('apiSetupMethodToConnectionSetup', () => {
     )
     expect(setup.slug).toBe('google-gemini')
     expect(setup.googleCloudProject).toBe('organization-project')
+  })
+
+  it('pi_google_antigravity_subscription maps to a keyring-owned connection', () => {
+    const setup = apiSetupMethodToConnectionSetup(
+      'pi_google_antigravity_subscription',
+      {},
+      null,
+      new Set(),
+    )
+    expect(setup).toEqual({ slug: 'google-antigravity' })
   })
 
   it('pi_mistral_vibe_subscription maps to a credential-free mistral-vibe slug', () => {

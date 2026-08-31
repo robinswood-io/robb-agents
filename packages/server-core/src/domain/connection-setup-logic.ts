@@ -140,6 +140,7 @@ export const BUILT_IN_CONNECTION_TEMPLATES: Record<string, {
   /** Explicit catalog for providers whose models are not exposed by Pi's API registry. */
   models?: LlmConnection['models']
   defaultModel?: string
+  midStreamBehavior?: LlmConnection['midStreamBehavior']
 }> = {
   'anthropic-api': {
     name: (h) => h ? 'Custom Anthropic-Compatible' : 'Anthropic (API Key)',
@@ -169,6 +170,16 @@ export const BUILT_IN_CONNECTION_TEMPLATES: Record<string, {
     authType: 'oauth',
     piAuthProvider: 'google-gemini-code-assist',
   },
+  'google-antigravity': {
+    name: 'Google Antigravity',
+    providerType: 'pi',
+    // The official CLI owns the Google account credential in the OS keyring.
+    // Robb never reads, stores, or transmits the account token.
+    authType: 'none',
+    piAuthProvider: 'google-antigravity',
+    defaultModel: 'pi/gemini-3.7-flash-high',
+    midStreamBehavior: 'queue',
+  },
   'mistral-vibe': {
     name: 'Mistral Vibe',
     providerType: 'pi',
@@ -197,6 +208,7 @@ const PI_AUTH_PROVIDER_DISPLAY_NAMES: Record<string, string> = {
   'openai-codex': 'OpenAI',
   google: 'Google AI Studio',
   'google-gemini-code-assist': 'Google Gemini Code Assist',
+  'google-antigravity': 'Google Antigravity',
   'mistral-vibe': 'Mistral Vibe',
   openrouter: 'OpenRouter',
   'azure-openai-responses': 'Azure OpenAI',
@@ -261,7 +273,7 @@ export function createBuiltInConnection(slug: string, baseUrl?: string | null): 
     defaultModel: template.defaultModel ?? getDefaultModelForConnection(providerType, template.piAuthProvider),
     modelSelectionMode: providerType === 'pi' ? 'automaticallySyncedFromProvider' : undefined,
     piAuthProvider: template.piAuthProvider,
-    midStreamBehavior: defaultMidStreamBehavior(providerType),
+    midStreamBehavior: template.midStreamBehavior ?? defaultMidStreamBehavior(providerType),
     createdAt: Date.now(),
   }
 }

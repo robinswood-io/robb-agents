@@ -531,8 +531,14 @@ export function copyPiAgentServer(config: BuildConfig): void {
   console.log('Copying Pi Agent Server...');
   mkdirSync(piDestDir, { recursive: true });
 
-  // 1. Copy index.js
-  copyFileSync(join(piSourceDir, 'index.js'), join(piDestDir, 'index.js'));
+  // 1. Copy the Pi runtime and the account-backed external-agent bridges.
+  for (const runtimeFile of ['index.js', 'antigravity-server.js', 'vibe-acp-server.js']) {
+    const source = join(piSourceDir, runtimeFile);
+    if (!existsSync(source)) {
+      throw new Error(`Pi agent runtime not found at ${source}`);
+    }
+    copyFileSync(source, join(piDestDir, runtimeFile));
+  }
 
   // 2. Copy koffi npm package (external import, resolved via node_modules at runtime)
   const koffiSource = join(rootDir, 'node_modules', 'koffi');
@@ -603,7 +609,7 @@ export function buildMcpServers(config: BuildConfig): void {
   if (existsSync(join(piDir, 'src'))) {
     mkdirSync(join(piDir, 'dist'), { recursive: true });
     execSync(
-      `bun build ${join(piDir, 'src', 'index.ts')} --outdir ${join(piDir, 'dist')} --target bun --format esm --external koffi`,
+      `bun build ${join(piDir, 'src', 'index.ts')} ${join(piDir, 'src', 'antigravity-server.ts')} ${join(piDir, 'src', 'vibe-acp-server.ts')} --outdir ${join(piDir, 'dist')} --target bun --format esm --external koffi`,
       { cwd: rootDir, stdio: 'inherit', shell: true }
     );
     if (!existsSync(piOut)) {
@@ -640,12 +646,20 @@ export function verifyMcpServersExist(config: BuildConfig): void {
 
   const sessionPath = join(electronDir, 'resources', 'session-mcp-server', 'index.js');
   const piPath = join(electronDir, 'resources', 'pi-agent-server', 'index.js');
+  const antigravityPath = join(electronDir, 'resources', 'pi-agent-server', 'antigravity-server.js');
+  const vibePath = join(electronDir, 'resources', 'pi-agent-server', 'vibe-acp-server.js');
 
   if (!existsSync(sessionPath)) {
     throw new Error(`Session MCP server not found at ${sessionPath}`);
   }
   if (!existsSync(piPath)) {
     console.warn(`Warning: Pi agent server not found at ${piPath}. Pi SDK sessions will not work.`);
+  }
+  if (!existsSync(antigravityPath)) {
+    throw new Error(`Google Antigravity bridge not found at ${antigravityPath}`);
+  }
+  if (!existsSync(vibePath)) {
+    throw new Error(`Mistral Vibe bridge not found at ${vibePath}`);
   }
 }
 

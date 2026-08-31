@@ -208,6 +208,7 @@ const EXPECTED_CHANNELS: string[] = [
   'onboarding:getAuthState',
   'onboarding:hasClaudeOAuthState',
   'onboarding:startClaudeOAuth',
+  'onboarding:startGoogleAntigravitySetup',
   'onboarding:startMcpOAuth',
   'onboarding:startMistralVibeSetup',
   'onboarding:validateMcp',

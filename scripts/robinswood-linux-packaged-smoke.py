@@ -205,6 +205,7 @@ def main() -> None:
 
         find_one(root, "resources/app.asar", "integrity-protected ASAR")
         find_one(root, "resources/app/resources/pi-agent-server/index.js", "Pi agent server")
+        find_one(root, "resources/app/resources/pi-agent-server/antigravity-server.js", "Google Antigravity bridge")
         find_one(root, "resources/app/resources/pi-agent-server/vibe-acp-server.js", "Mistral Vibe ACP bridge")
         if (root.joinpath("resources/app/dist/main.cjs").exists()):
             fail("Electron main entrypoint escaped the integrity-protected app.asar")

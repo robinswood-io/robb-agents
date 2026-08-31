@@ -78,7 +78,9 @@ describe('resolveServerPath fallback', () => {
       writeFileSync(join(serverDir, 'index.js'), '// external server');
     }
     const vibePath = join(externalRoot, 'resources', 'pi-agent-server', 'vibe-acp-server.js');
+    const antigravityPath = join(externalRoot, 'resources', 'pi-agent-server', 'antigravity-server.js');
     writeFileSync(vibePath, '// external ACP bridge');
+    writeFileSync(antigravityPath, '// external Antigravity bridge');
     mkdirSync(join(externalRoot, 'dist'), { recursive: true });
     writeFileSync(interceptorPath, '// external interceptor');
     mkdirSync(join(claudePath, '..'), { recursive: true });
@@ -94,6 +96,7 @@ describe('resolveServerPath fallback', () => {
     expect(paths.sessionServerPath).toBe(join(externalRoot, 'resources', 'session-mcp-server', 'index.js'));
     expect(paths.bridgeServerPath).toBe(join(externalRoot, 'resources', 'bridge-mcp-server', 'index.js'));
     expect(paths.vibeAcpServerPath).toBe(vibePath);
+    expect(paths.antigravityServerPath).toBe(antigravityPath);
     expect(paths.interceptorBundlePath).toBe(interceptorPath);
     expect(paths.claudeCliPath).toBe(claudePath);
   });

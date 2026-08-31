@@ -97,6 +97,7 @@ export const BASE_SLUG_FOR_METHOD: Record<ApiSetupMethod, string> = {
   pi_chatgpt_oauth: 'chatgpt-plus',
   pi_copilot_oauth: 'github-copilot',
   pi_gemini_oauth: 'google-gemini',
+  pi_google_antigravity_subscription: 'google-antigravity',
   pi_mistral_vibe_subscription: 'mistral-vibe',
   pi_api_key: 'pi-api-key',
 }
@@ -108,10 +109,9 @@ interface ProviderSetupSelection {
 }
 
 /**
- * Resolve the safe default setup for a provider card. Google individual
- * accounts use the supported AI Studio API-key flow; the legacy Code Assist
- * OAuth method remains available only from direct edit/setup for licensed
- * organization accounts.
+ * Resolve the safe default setup for a provider card. Google account access
+ * uses the official Antigravity CLI; the legacy Code Assist OAuth method
+ * remains available from direct setup for separately licensed organizations.
  */
 export function resolveProviderSetupSelection(
   choice: Exclude<ProviderChoice, 'local'>,
@@ -120,7 +120,7 @@ export function resolveProviderSetupSelection(
     claude: { method: 'claude_oauth', startOAuth: true },
     chatgpt: { method: 'pi_chatgpt_oauth', startOAuth: true },
     copilot: { method: 'pi_copilot_oauth', startOAuth: true },
-    google: { method: 'pi_api_key', preferredPiPreset: 'google', startOAuth: false },
+    google: { method: 'pi_google_antigravity_subscription', startOAuth: true },
     mistral: { method: 'pi_mistral_vibe_subscription', startOAuth: false },
     api_key: { method: 'pi_api_key', startOAuth: false },
   }
@@ -211,6 +211,8 @@ export function apiSetupMethodToConnectionSetup(
         credential: options.credential,
         googleCloudProject: options.googleCloudProject,
       }
+    case 'pi_google_antigravity_subscription':
+      return { slug }
     case 'pi_mistral_vibe_subscription':
       return { slug }
     case 'pi_api_key':
@@ -634,6 +636,21 @@ export function useOnboarding({
           await saveAndValidateConnection(connectionSlug, effectiveMethod, undefined, isReauth)
         } else {
           setState(s => ({ ...s, credentialStatus: 'error', errorMessage: result.error || 'Mistral Vibe setup failed' }))
+        }
+        return
+      }
+
+      // Google Antigravity subscription (official CLI owns the browser login
+      // and keeps its credential in the operating-system keyring).
+      if (effectiveMethod === 'pi_google_antigravity_subscription') {
+        const effectiveEditingSlug = connectionSlugOverride ?? editingSlug
+        const isReauth = !!effectiveEditingSlug
+        const connectionSlug = apiSetupMethodToConnectionSetup(effectiveMethod, {}, effectiveEditingSlug, existingSlugs).slug
+        const result = await window.electronAPI.startGoogleAntigravitySetup()
+        if (result.success) {
+          await saveAndValidateConnection(connectionSlug, effectiveMethod, undefined, isReauth)
+        } else {
+          setState(s => ({ ...s, credentialStatus: 'error', errorMessage: result.error || 'Google Antigravity setup failed' }))
         }
         return
       }
