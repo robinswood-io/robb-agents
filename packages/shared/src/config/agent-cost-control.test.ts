@@ -35,6 +35,7 @@ describe('decideAgentCostControl', () => {
     expect(decision.model).toBe('pi/gpt-5.6-sol');
     expect(decision.thinkingLevel).toBe('xhigh');
     expect(decision.highRisk).toBe(true);
+    expect(decision.criticalRisk).toBe(true);
   });
 
   test('keeps a terse continuation on the strongest model when the historical objective is sensitive', () => {
@@ -51,6 +52,22 @@ describe('decideAgentCostControl', () => {
     expect(decision.thinkingLevel).toBe('xhigh');
   });
 
+  test('uses the balanced model with high thinking for a reversible permission change', () => {
+    const decision = decideAgentCostControl({
+      text: 'Autorise les membres existants à publier dans ce groupe, puis vérifie le réglage.',
+      riskContext: 'Configuration de sécurité et permissions Google Groups',
+      turnKind: 'direct',
+      connection,
+    });
+
+    expect(decision.highRisk).toBe(true);
+    expect(decision.criticalRisk).toBe(false);
+    expect(decision.readOnlyRisk).toBe(false);
+    expect(decision.model).toBe('pi/gpt-5.6-terra');
+    expect(decision.thinkingLevel).toBe('high');
+    expect(decision.explanation).toContain('safety:guarded-high-risk');
+  });
+
   test('uses the balanced model for an explicitly read-only sensitive audit', () => {
     const decision = decideAgentCostControl({
       text: 'Reprends en lecture seule, sans aucune mutation ni écriture.',
@@ -60,6 +77,7 @@ describe('decideAgentCostControl', () => {
     });
 
     expect(decision.highRisk).toBe(true);
+    expect(decision.criticalRisk).toBe(false);
     expect(decision.readOnlyRisk).toBe(true);
     expect(decision.model).toBe('pi/gpt-5.6-terra');
     expect(decision.thinkingLevel).toBe('medium');

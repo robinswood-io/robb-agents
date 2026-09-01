@@ -89,6 +89,8 @@ export interface AgentCostControlDecision {
   turnKind: CostControlledTurnKind;
   difficulty: RoutingDifficulty;
   highRisk: boolean;
+  /** Irreversible, destructive, production, payment, credential, or publication risk. */
+  criticalRisk: boolean;
   /** Sensitive domain work whose current request explicitly forbids mutation. */
   readOnlyRisk: boolean;
   budgetState: CostBudgetState;
@@ -238,6 +240,7 @@ function selectModel(
 }
 
 const HIGH_RISK_PATTERN = /\b(production|prod|deploy|release|publish|delete|remove|purge|drop|migration|rollback|secret|credential|payment|invoice|accounting|ledger|reconciliation|legal|security|permission|rbac|signature|notari[sz]|irreversible|destructive|transaction)\b|\b(supprim|nettoy|déploi|production|migration|secret|paiement|factur|comptab|écriture|lettr|juridique|sécurit|irréversible|destruct)/i;
+const CRITICAL_RISK_PATTERN = /\b(production|prod|deploy|release|publish|delete|remove|purge|drop|migration|rollback|secret|credential|payment|legal|signature|notari[sz]|irreversible|destructive|transaction)\b|\b(supprim|nettoy|déploi|production|migration|secret|paiement|juridique|irréversible|destruct)/i;
 const EXPLICIT_READ_ONLY_PATTERN = /\b(read[ -]?only|audit only|inspect only|verify only|no writes?|without (?:any )?(?:change|mutation|write))\b|\b(lecture seule|sans (?:aucune )?(?:modification|mutation|écriture)|aucune (?:modification|mutation|écriture)|vérifie seulement|contrôle seulement)/i;
 const EXPLICIT_MUTATION_REQUEST_PATTERN = /\b(deploy|publish|delete|remove|purge|drop|migrate|rollback|write|execute|apply|fix|change|modify|approve|submit|pay)\b|\b(déploie|publie|supprime|purge|migre|restaure|écris|exécute|applique|corrige|modifie|approuve|soumets|paie|nettoie)/i;
 
@@ -255,7 +258,9 @@ export function decideAgentCostControl(
     text: input.text,
     contextTokens: input.contextTokens,
   });
-  const highRisk = HIGH_RISK_PATTERN.test(`${input.text}\n${input.riskContext ?? ''}`);
+  const combinedRiskText = `${input.text}\n${input.riskContext ?? ''}`;
+  const highRisk = HIGH_RISK_PATTERN.test(combinedRiskText);
+  const criticalRisk = CRITICAL_RISK_PATTERN.test(combinedRiskText);
   const readOnlyRisk = highRisk
     && EXPLICIT_READ_ONLY_PATTERN.test(input.text)
     && !EXPLICIT_MUTATION_REQUEST_PATTERN.test(input.text);
@@ -270,8 +275,10 @@ export function decideAgentCostControl(
   const hardContextLimitReached = contextTokens >= policy.context.hardLimitTokens;
 
   let tier: 'routine' | 'standard' | 'complex' | 'highRisk';
-  if (highRisk && !readOnlyRisk) tier = 'highRisk';
+  const ambiguousInternalRisk = highRisk && isInternalTurn(turnKind) && !readOnlyRisk;
+  if ((criticalRisk || ambiguousInternalRisk) && !readOnlyRisk) tier = 'highRisk';
   else if (readOnlyRisk) tier = 'standard';
+  else if (highRisk) tier = 'standard';
   else if (classified.difficulty === 'complex') tier = isInternalTurn(turnKind) ? 'standard' : 'complex';
   else if (classified.difficulty === 'standard' && !isInternalTurn(turnKind)) tier = 'standard';
   else tier = 'routine';
@@ -281,7 +288,10 @@ export function decideAgentCostControl(
   }
 
   const modelPatterns = policy.routing[`${tier}ModelPatterns`];
-  const thinkingLevel = policy.routing[`${tier}Thinking`];
+  const guardedHighRisk = highRisk && !criticalRisk && !readOnlyRisk && !ambiguousInternalRisk;
+  const thinkingLevel = guardedHighRisk
+    ? policy.routing.complexThinking
+    : policy.routing[`${tier}Thinking`];
   const model = policy.enabled && policy.routing.enabled
     ? selectModel(input.connection, modelPatterns, input.currentModel)
     : input.currentModel;
@@ -292,12 +302,14 @@ export function decideAgentCostControl(
     turnKind,
     difficulty: classified.difficulty ?? 'standard',
     highRisk,
+    criticalRisk,
     readOnlyRisk,
     budgetState,
     shouldCompact,
     hardContextLimitReached,
     explanation: [
       `cost-control:${tier}`,
+      guardedHighRisk ? 'safety:guarded-high-risk' : undefined,
       readOnlyRisk ? 'safety:explicit-read-only' : undefined,
       `turn:${turnKind}`,
       `difficulty:${classified.difficulty ?? 'standard'}`,
