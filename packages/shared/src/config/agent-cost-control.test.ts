@@ -84,6 +84,20 @@ describe('decideAgentCostControl', () => {
     expect(decision.explanation).toContain('safety:explicit-read-only');
   });
 
+  test('does not mistake the noun paiement in a read-only prohibition for an imperative', () => {
+    const decision = decideAgentCostControl({
+      text: 'Reprends en lecture seule, sans aucune souscription, modification contractuelle, paiement ni engagement.',
+      riskContext: 'Choix de couverture assurance',
+      turnKind: 'direct',
+      connection,
+    });
+
+    expect(decision.criticalRisk).toBe(true);
+    expect(decision.readOnlyRisk).toBe(true);
+    expect(decision.model).toBe('pi/gpt-5.6-terra');
+    expect(decision.thinkingLevel).toBe('medium');
+  });
+
   test('does not accept a read-only phrase that also requests a mutation', () => {
     const decision = decideAgentCostControl({
       text: 'Vérifie en lecture seule puis applique la correction en production.',

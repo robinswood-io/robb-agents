@@ -242,7 +242,7 @@ function selectModel(
 const HIGH_RISK_PATTERN = /\b(production|prod|deploy|release|publish|delete|remove|purge|drop|migration|rollback|secret|credential|payment|invoice|accounting|ledger|reconciliation|legal|security|permission|rbac|signature|notari[sz]|irreversible|destructive|transaction)\b|\b(supprim|nettoy|déploi|production|migration|secret|paiement|factur|comptab|écriture|lettr|juridique|sécurit|irréversible|destruct)/i;
 const CRITICAL_RISK_PATTERN = /\b(production|prod|deploy|release|publish|delete|remove|purge|drop|migration|rollback|secret|credential|payment|legal|signature|notari[sz]|irreversible|destructive|transaction)\b|\b(supprim|nettoy|déploi|production|migration|secret|paiement|juridique|irréversible|destruct)/i;
 const EXPLICIT_READ_ONLY_PATTERN = /\b(read[ -]?only|audit only|inspect only|verify only|no writes?|without (?:any )?(?:change|mutation|write))\b|\b(lecture seule|sans (?:aucune )?(?:modification|mutation|écriture)|aucune (?:modification|mutation|écriture)|vérifie seulement|contrôle seulement)/i;
-const EXPLICIT_MUTATION_REQUEST_PATTERN = /\b(deploy|publish|delete|remove|purge|drop|migrate|rollback|write|execute|apply|fix|change|modify|approve|submit|pay)\b|\b(déploie|publie|supprime|purge|migre|restaure|écris|exécute|applique|corrige|modifie|approuve|soumets|paie|nettoie)/i;
+const EXPLICIT_MUTATION_REQUEST_PATTERN = /\b(deploy|publish|delete|remove|purge|drop|migrate|rollback|write|execute|apply|fix|change|modify|approve|submit|pay)\b|\b(déploie|publie|supprime|purge|migre|restaure|écris|exécute|applique|corrige|modifie|approuve|soumets|paie|nettoie)\b/i;
 
 function isInternalTurn(turnKind: CostControlledTurnKind): boolean {
   return turnKind !== 'direct';
