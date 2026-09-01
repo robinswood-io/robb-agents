@@ -4375,6 +4375,13 @@ export class SessionManager implements ISessionManager {
           : (managed.triggeredBy ? 'automation' : 'direct'))
       const costDecision = decideAgentCostControl({
         text: costTurn.message,
+        riskContext: [
+          managed.name,
+          ...managed.messages
+            .filter(message => message.role === 'user' && !message.hidden)
+            .slice(-3)
+            .map(message => message.content.slice(0, 2_000)),
+        ].filter(Boolean).join('\n').slice(0, 8_000),
         connection: preRouteContext.connection ?? undefined,
         currentModel: managed.model ?? preRouteContext.resolvedModel,
         turnKind,

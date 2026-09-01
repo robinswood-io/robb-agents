@@ -37,6 +37,20 @@ describe('decideAgentCostControl', () => {
     expect(decision.highRisk).toBe(true);
   });
 
+  test('keeps a terse continuation on the strongest model when the historical objective is sensitive', () => {
+    const decision = decideAgentCostControl({
+      text: 'Poursuis.',
+      riskContext: 'Revue comptable Inqom et lettrage des écritures',
+      turnKind: 'automatic-recovery',
+      connection,
+      sessionCostUsd: 80,
+    });
+
+    expect(decision.highRisk).toBe(true);
+    expect(decision.model).toBe('pi/gpt-5.6-sol');
+    expect(decision.thinkingLevel).toBe('xhigh');
+  });
+
   test('compacts at 80k and treats 100k as the hard context boundary', () => {
     expect(decideAgentCostControl({ text: 'Continue.', connection, contextTokens: 80_000 }).shouldCompact).toBe(true);
     expect(decideAgentCostControl({ text: 'Continue.', connection, contextTokens: 99_999 }).hardContextLimitReached).toBe(false);

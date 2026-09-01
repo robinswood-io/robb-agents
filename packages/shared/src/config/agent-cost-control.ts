@@ -74,6 +74,8 @@ export interface ResolvedAgentCostControlPolicy {
 
 export interface AgentCostControlInput {
   text: string;
+  /** Bounded historical context used only to detect sensitive objectives hidden by terse follow-ups. */
+  riskContext?: string;
   connection?: Pick<LlmConnection, 'models' | 'defaultModel'>;
   currentModel?: string;
   turnKind?: CostControlledTurnKind;
@@ -233,7 +235,7 @@ function selectModel(
   return fallback ?? connection?.defaultModel ?? modelIds[0];
 }
 
-const HIGH_RISK_PATTERN = /\b(production|prod|deploy|release|publish|delete|remove|purge|drop|migration|rollback|secret|credential|payment|invoice|legal|security|permission|rbac|signature|notari[sz]|irreversible|destructive|transaction)\b|\b(supprim|déploi|production|migration|secret|paiement|juridique|sécurit|irréversible|destruct)/i;
+const HIGH_RISK_PATTERN = /\b(production|prod|deploy|release|publish|delete|remove|purge|drop|migration|rollback|secret|credential|payment|invoice|accounting|ledger|reconciliation|legal|security|permission|rbac|signature|notari[sz]|irreversible|destructive|transaction)\b|\b(supprim|nettoy|déploi|production|migration|secret|paiement|factur|comptab|écriture|lettr|juridique|sécurit|irréversible|destruct)/i;
 
 function isInternalTurn(turnKind: CostControlledTurnKind): boolean {
   return turnKind !== 'direct';
@@ -249,7 +251,7 @@ export function decideAgentCostControl(
     text: input.text,
     contextTokens: input.contextTokens,
   });
-  const highRisk = HIGH_RISK_PATTERN.test(input.text);
+  const highRisk = HIGH_RISK_PATTERN.test(`${input.text}\n${input.riskContext ?? ''}`);
   const contextTokens = Math.max(0, input.contextTokens ?? 0);
   const sessionCostUsd = Math.max(0, input.sessionCostUsd ?? 0);
   const budgetState: CostBudgetState = sessionCostUsd >= policy.budgets.hardSessionUsd
