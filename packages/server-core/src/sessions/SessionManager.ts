@@ -160,6 +160,10 @@ import {
   selectInternalMessageCoalesceTarget,
 } from './internal-message-coalescing'
 import { resolveContextTokenEstimate } from './context-token-estimate'
+import {
+  buildExtractiveTransferSummary,
+  selectTransferSummaryMessages,
+} from './transfer-summary-context'
 
 // Import from server-core domain utilities
 import { sanitizeForTitle, shouldActivateBrowserOverlay, normalizeBrowserToolName, rollbackFailedBranchCreation, releaseBrowserOwnershipOnForcedStop } from '@craft-agent/server-core/domain'
@@ -10579,10 +10583,27 @@ export class SessionManager implements ISessionManager {
       providerOptions: { piAuthProvider: backendContext.connection?.piAuthProvider },
     })
 
+    const boundedMessages = selectTransferSummaryMessages(messages)
+    const extractiveFallback = buildExtractiveTransferSummary(messages)
+    let timeout: ReturnType<typeof setTimeout> | undefined
+
     try {
-      const summary = await generateConversationSummary(messages, agent.runMiniCompletion.bind(agent))
-      return summary ? redactSecretLikeMaterial(summary) : null
+      const summary = await Promise.race([
+        generateConversationSummary(boundedMessages, agent.runMiniCompletion.bind(agent)),
+        new Promise<never>((_, reject) => {
+          timeout = setTimeout(() => reject(new Error('Provider handoff summary timed out after 15 seconds')), 15_000)
+        }),
+      ])
+      return summary ? redactSecretLikeMaterial(summary) : extractiveFallback
+    } catch (error) {
+      sessionLog.warn(`Provider summary generation unavailable for ${managed.id}; using bounded local extract`, {
+        error: error instanceof Error ? error.message : String(error),
+        sourceMessages: messages.length,
+        boundedMessages: boundedMessages.length,
+      })
+      return extractiveFallback
     } finally {
+      if (timeout) clearTimeout(timeout)
       agent.destroy()
     }
   }
