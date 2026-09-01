@@ -89,6 +89,8 @@ export interface AgentCostControlDecision {
   turnKind: CostControlledTurnKind;
   difficulty: RoutingDifficulty;
   highRisk: boolean;
+  /** Sensitive domain work whose current request explicitly forbids mutation. */
+  readOnlyRisk: boolean;
   budgetState: CostBudgetState;
   shouldCompact: boolean;
   hardContextLimitReached: boolean;
@@ -236,6 +238,8 @@ function selectModel(
 }
 
 const HIGH_RISK_PATTERN = /\b(production|prod|deploy|release|publish|delete|remove|purge|drop|migration|rollback|secret|credential|payment|invoice|accounting|ledger|reconciliation|legal|security|permission|rbac|signature|notari[sz]|irreversible|destructive|transaction)\b|\b(supprim|nettoy|déploi|production|migration|secret|paiement|factur|comptab|écriture|lettr|juridique|sécurit|irréversible|destruct)/i;
+const EXPLICIT_READ_ONLY_PATTERN = /\b(read[ -]?only|audit only|inspect only|verify only|no writes?|without (?:any )?(?:change|mutation|write))\b|\b(lecture seule|sans (?:aucune )?(?:modification|mutation|écriture)|aucune (?:modification|mutation|écriture)|vérifie seulement|contrôle seulement)/i;
+const EXPLICIT_MUTATION_REQUEST_PATTERN = /\b(deploy|publish|delete|remove|purge|drop|migrate|rollback|write|execute|apply|fix|change|modify|approve|submit|pay)\b|\b(déploie|publie|supprime|purge|migre|restaure|écris|exécute|applique|corrige|modifie|approuve|soumets|paie|nettoie)/i;
 
 function isInternalTurn(turnKind: CostControlledTurnKind): boolean {
   return turnKind !== 'direct';
@@ -252,6 +256,9 @@ export function decideAgentCostControl(
     contextTokens: input.contextTokens,
   });
   const highRisk = HIGH_RISK_PATTERN.test(`${input.text}\n${input.riskContext ?? ''}`);
+  const readOnlyRisk = highRisk
+    && EXPLICIT_READ_ONLY_PATTERN.test(input.text)
+    && !EXPLICIT_MUTATION_REQUEST_PATTERN.test(input.text);
   const contextTokens = Math.max(0, input.contextTokens ?? 0);
   const sessionCostUsd = Math.max(0, input.sessionCostUsd ?? 0);
   const budgetState: CostBudgetState = sessionCostUsd >= policy.budgets.hardSessionUsd
@@ -263,7 +270,8 @@ export function decideAgentCostControl(
   const hardContextLimitReached = contextTokens >= policy.context.hardLimitTokens;
 
   let tier: 'routine' | 'standard' | 'complex' | 'highRisk';
-  if (highRisk) tier = 'highRisk';
+  if (highRisk && !readOnlyRisk) tier = 'highRisk';
+  else if (readOnlyRisk) tier = 'standard';
   else if (classified.difficulty === 'complex') tier = isInternalTurn(turnKind) ? 'standard' : 'complex';
   else if (classified.difficulty === 'standard' && !isInternalTurn(turnKind)) tier = 'standard';
   else tier = 'routine';
@@ -284,11 +292,13 @@ export function decideAgentCostControl(
     turnKind,
     difficulty: classified.difficulty ?? 'standard',
     highRisk,
+    readOnlyRisk,
     budgetState,
     shouldCompact,
     hardContextLimitReached,
     explanation: [
       `cost-control:${tier}`,
+      readOnlyRisk ? 'safety:explicit-read-only' : undefined,
       `turn:${turnKind}`,
       `difficulty:${classified.difficulty ?? 'standard'}`,
       `budget:${budgetState}`,

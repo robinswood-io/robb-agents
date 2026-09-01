@@ -51,6 +51,32 @@ describe('decideAgentCostControl', () => {
     expect(decision.thinkingLevel).toBe('xhigh');
   });
 
+  test('uses the balanced model for an explicitly read-only sensitive audit', () => {
+    const decision = decideAgentCostControl({
+      text: 'Reprends en lecture seule, sans aucune mutation ni écriture.',
+      riskContext: 'Revue comptable Inqom et lettrage des écritures',
+      turnKind: 'direct',
+      connection,
+    });
+
+    expect(decision.highRisk).toBe(true);
+    expect(decision.readOnlyRisk).toBe(true);
+    expect(decision.model).toBe('pi/gpt-5.6-terra');
+    expect(decision.thinkingLevel).toBe('medium');
+    expect(decision.explanation).toContain('safety:explicit-read-only');
+  });
+
+  test('does not accept a read-only phrase that also requests a mutation', () => {
+    const decision = decideAgentCostControl({
+      text: 'Vérifie en lecture seule puis applique la correction en production.',
+      connection,
+    });
+
+    expect(decision.readOnlyRisk).toBe(false);
+    expect(decision.model).toBe('pi/gpt-5.6-sol');
+    expect(decision.thinkingLevel).toBe('xhigh');
+  });
+
   test('compacts at 80k and treats 100k as the hard context boundary', () => {
     expect(decideAgentCostControl({ text: 'Continue.', connection, contextTokens: 80_000 }).shouldCompact).toBe(true);
     expect(decideAgentCostControl({ text: 'Continue.', connection, contextTokens: 99_999 }).hardContextLimitReached).toBe(false);
