@@ -159,6 +159,7 @@ import {
   appendCoalescedInternalMessage,
   selectInternalMessageCoalesceTarget,
 } from './internal-message-coalescing'
+import { resolveContextTokenEstimate } from './context-token-estimate'
 
 // Import from server-core domain utilities
 import { sanitizeForTitle, shouldActivateBrowserOverlay, normalizeBrowserToolName, rollbackFailedBranchCreation, releaseBrowserOwnershipOnForcedStop } from '@craft-agent/server-core/domain'
@@ -4373,6 +4374,10 @@ export class SessionManager implements ISessionManager {
         ?? (costTurn.options?.automaticRecovery
           ? 'automatic-recovery'
           : (managed.triggeredBy ? 'automation' : 'direct'))
+      const effectiveContextTokens = resolveContextTokenEstimate(
+        managed.tokenUsage?.contextTokens,
+        managed.messages,
+      )
       const costDecision = decideAgentCostControl({
         text: costTurn.message,
         riskContext: [
@@ -4385,7 +4390,7 @@ export class SessionManager implements ISessionManager {
         connection: preRouteContext.connection ?? undefined,
         currentModel: managed.model ?? preRouteContext.resolvedModel,
         turnKind,
-        contextTokens: managed.tokenUsage?.contextTokens,
+        contextTokens: effectiveContextTokens,
         sessionCostUsd: managed.tokenUsage?.costUsd,
       }, workspaceConfig?.costControl)
 
@@ -4405,7 +4410,7 @@ export class SessionManager implements ISessionManager {
             turnKind: costDecision.turnKind,
             budgetState: costDecision.budgetState,
             thinkingLevel: costDecision.thinkingLevel,
-            contextTokensBefore: managed.tokenUsage?.contextTokens ?? 0,
+            contextTokensBefore: effectiveContextTokens,
             hardContextLimitReached: costDecision.hardContextLimitReached,
           },
           budgetDecision: {
@@ -7395,7 +7400,10 @@ export class SessionManager implements ISessionManager {
 
       const activeWorkspaceConfig = loadWorkspaceConfig(managed.workspace.rootPath)
       const costPolicy = resolveAgentCostControlPolicy(activeWorkspaceConfig?.costControl)
-      const contextTokens = managed.tokenUsage?.contextTokens ?? 0
+      const contextTokens = resolveContextTokenEstimate(
+        managed.tokenUsage?.contextTokens,
+        managed.messages,
+      )
       if (
         costPolicy.enabled
         && contextTokens >= costPolicy.context.compactAtTokens
