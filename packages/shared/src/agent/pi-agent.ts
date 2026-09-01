@@ -2319,6 +2319,11 @@ export class PiAgent extends BaseAgent {
     });
   }
 
+  /** Host-triggered bounded-context compaction used by the session cost controller. */
+  async compactContext(customInstructions?: string): Promise<{ summary: string; firstKeptEntryId: string; tokensBefore: number } | null> {
+    return this.requestCompact(customInstructions);
+  }
+
   /**
    * Ask the subprocess for one serialized manual compact-and-continue attempt
    * after the Pi SDK's native overflow recovery was skipped or exhausted.

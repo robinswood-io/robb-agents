@@ -15,6 +15,8 @@ export interface AutonomyDecisionInput {
   result: string
   browserEnabled: boolean
   fallbackAlreadyAttempted: boolean
+  /** True only when the failed tool has an equivalent browser access path. */
+  browserFallbackEligible?: boolean
   /** Structured provider/MCP fields. Prefer these over parsing result text. */
   errorCode?: string
   httpStatus?: number
@@ -90,5 +92,6 @@ export function decideAutonomyRecovery(input: AutonomyDecisionInput): AutonomyDe
     return { kind: 'none' }
   }
   if (input.fallbackAlreadyAttempted) return { kind: 'none' }
+  if (input.browserFallbackEligible === false) return { kind: 'none' }
   return { kind: 'fallback_browser' }
 }

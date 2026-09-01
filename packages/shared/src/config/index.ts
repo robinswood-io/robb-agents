@@ -7,6 +7,7 @@ export * from './models-pi.ts';
 export * from './model-fetcher.ts';
 export * from './preferences.ts';
 export * from './routing-policy.ts';
+export * from './agent-cost-control.ts';
 export * from './routing-outcome-adapter.ts';
 export * from './routing-outcomes.ts';
 export * from './routing-shadow.ts';

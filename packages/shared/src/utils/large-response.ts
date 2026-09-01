@@ -25,7 +25,7 @@ import {
 // ============================================================
 
 /**
- * Default per-result summarization threshold (roughly ~48KB of plain text,
+ * Default per-result summarization threshold (roughly ~16KB of plain text,
  * less for token-dense content like base64).
  *
  * Prefer {@link tokenLimitFor} at call sites that have the active model's
@@ -33,16 +33,14 @@ import {
  * models (e.g. 64k) from filling their window with a few sub-threshold tool
  * results that each pass individually.
  *
- * Lowered from 15k to 12k after observing a session poisoned by a single
- * 56KB base64-heavy Read result that estimated to ~14k tokens via the
- * 4-chars/token heuristic but cost far more in the real tokenizer. The
- * lower cap, combined with {@link estimateTokensDensityAware}, gives
- * headroom for that drift.
+ * Cost-control default: one tool result may consume at most ~4% of the
+ * 100k active-context budget. Full output is retained as a durable artifact;
+ * only the reference and summary remain in model context.
  */
-export const TOKEN_LIMIT = 12000;
+export const TOKEN_LIMIT = 4_000;
 
-/** Max tokens to send for summarization (~400KB). Beyond this, save to file + preview only. */
-export const MAX_SUMMARIZATION_INPUT = 100000;
+/** Max tokens sent to the mini summarizer. Beyond this, save + preview only. */
+export const MAX_SUMMARIZATION_INPUT = 40_000;
 
 /** Canonical subfolder under session dir for full tool results */
 export const LONG_RESPONSES_DIR = 'long_responses';
@@ -52,11 +50,11 @@ export const LONG_RESPONSES_DIR = 'long_responses';
  * file-reference + summary message is roughly the same size as the original
  * content, so summarization stops paying off.
  */
-const TOKEN_LIMIT_FLOOR = 2_000;
+const TOKEN_LIMIT_FLOOR = 1_000;
 
 /** Fraction of the model's context window allocated to a single tool result
- *  before we summarize. 10% lets ~4 results fit before tightening. */
-const PER_RESULT_CONTEXT_FRACTION = 0.10;
+ *  before we summarize. The global 4k ceiling protects large-window models. */
+const PER_RESULT_CONTEXT_FRACTION = 0.04;
 
 // ============================================================
 // Token Estimation
@@ -122,8 +120,8 @@ export function estimateTokensDensityAware(text: string): number {
 
 /**
  * Per-result summarization threshold scaled to the active model's context
- * window. A 200k-window model returns the {@link TOKEN_LIMIT} cap (12k);
- * a 64k-window model returns 6_400; below ~20k window the floor (2_000)
+ * window. A 200k-window model returns the {@link TOKEN_LIMIT} cap (4k);
+ * a 64k-window model also returns 2_560; below ~25k window the floor (1_000)
  * kicks in.
  *
  * Pass `undefined` when the call site has no model context — returns the

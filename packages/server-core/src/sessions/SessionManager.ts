@@ -22,7 +22,7 @@ import {
   type BackendHostRuntimeContext,
   type PostInitResult,
 } from '@craft-agent/shared/agent/backend'
-import { getLlmConnection, getLlmConnections, getDefaultLlmConnection, getDefaultThinkingLevel, getBrowserToolEnabled, resetManagedAnthropicAuthEnvVars, resolveMidStreamBehavior, getPersistedUiLanguage, resolveTitleLanguageName, resolveRoutingPolicy, RoutingOutcomeStore, telemetryToRoutingOutcome, ALL_ROUTING_CAPABILITIES, ALL_ROUTING_DIFFICULTIES, type RoutingOutcomeAdapterContext } from '@craft-agent/shared/config'
+import { getLlmConnection, getLlmConnections, getDefaultLlmConnection, getDefaultThinkingLevel, getBrowserToolEnabled, resetManagedAnthropicAuthEnvVars, resolveMidStreamBehavior, getPersistedUiLanguage, resolveTitleLanguageName, resolveRoutingPolicy, RoutingOutcomeStore, telemetryToRoutingOutcome, ALL_ROUTING_CAPABILITIES, ALL_ROUTING_DIFFICULTIES, decideAgentCostControl, isBrowserFallbackEligibleTool, resolveAgentCostControlPolicy, type CostControlledTurnKind, type RoutingOutcomeAdapterContext } from '@craft-agent/shared/config'
 import { formatPlaybookPrompt, getBuiltinPlaybook, loadWorkspacePlaybook } from '@craft-agent/shared/playbooks'
 import { validateSessionExecutionIsolation } from '@craft-agent/shared/tasks'
 import { PrivilegedExecutionBroker } from '@craft-agent/server-core/services'
@@ -155,6 +155,10 @@ import {
   buildAutonomyBrowserFallbackPrompt,
   isAutonomyBrowserFallbackPrompt,
 } from './autonomy-browser-fallback'
+import {
+  appendCoalescedInternalMessage,
+  selectInternalMessageCoalesceTarget,
+} from './internal-message-coalescing'
 
 // Import from server-core domain utilities
 import { sanitizeForTitle, shouldActivateBrowserOverlay, normalizeBrowserToolName, rollbackFailedBranchCreation, releaseBrowserOwnershipOnForcedStop } from '@craft-agent/server-core/domain'
@@ -815,6 +819,11 @@ async function resolveToolDisplayMeta(
 
 /** Agent type - unified backend interface for all providers */
 type AgentInstance = AgentBackend
+
+interface CostControlledTurnContext {
+  message: string
+  options?: SendMessageOptions
+}
 
 /**
  * Status of a background task in the main-process registry.
@@ -2521,16 +2530,9 @@ export class SessionManager implements ISessionManager {
       // A turn marker survives a host update/crash. Resume only after the
       // complete session catalogue has been restored so source/session lookups
       // behave exactly like a normal user send.
-      for (const sessionId of pendingRecoverySessionIds) {
-        setImmediate(() => {
-          void this.resumePendingTurnAfterRestart(sessionId).catch(error => {
-            sessionLog.error('Failed to resume interrupted turn after restart', {
-              sessionId,
-              error: error instanceof Error ? error.message : String(error),
-            })
-          })
-        })
-      }
+      setImmediate(() => {
+        void this.resumePendingTurnsAfterRestart(pendingRecoverySessionIds)
+      })
     } catch (error) {
       sessionLog.error('Failed to load sessions from disk:', error)
     }
@@ -2553,7 +2555,10 @@ export class SessionManager implements ISessionManager {
       return true
     }
 
-    const advanced = advancePendingTurnRecovery(pending, cause)
+    const workspaceConfig = loadWorkspaceConfig(managed.workspace.rootPath)
+    const maxAttempts = resolveAgentCostControlPolicy(workspaceConfig?.costControl)
+      .recovery.maxAutomaticAttempts
+    const advanced = advancePendingTurnRecovery(pending, cause, Date.now(), maxAttempts)
     if (!advanced) {
       managed.pendingTurnRecovery = exhaustPendingTurnRecovery(pending)
       this.persistSession(managed)
@@ -2614,6 +2619,26 @@ export class SessionManager implements ISessionManager {
     if (queued && !managed.isProcessing) {
       this.processNextQueuedMessage(managed.id)
     }
+  }
+
+  private async resumePendingTurnsAfterRestart(sessionIds: string[]): Promise<void> {
+    if (sessionIds.length === 0) return
+    let nextIndex = 0
+    const worker = async () => {
+      while (nextIndex < sessionIds.length) {
+        const sessionId = sessionIds[nextIndex++]
+        if (!sessionId) continue
+        try {
+          await this.resumePendingTurnAfterRestart(sessionId)
+        } catch (error) {
+          sessionLog.error('Failed to resume interrupted turn after restart', {
+            sessionId,
+            error: error instanceof Error ? error.message : String(error),
+          })
+        }
+      }
+    }
+    await Promise.all(Array.from({ length: Math.min(2, sessionIds.length) }, worker))
   }
 
   // Suppress fs.watch metadata-revert events for the window in which our own
@@ -4323,7 +4348,10 @@ export class SessionManager implements ISessionManager {
    * 3. global defaultLlmConnection
    * 4. fallback: no connection configured
    */
-  private async getOrCreateAgent(managed: ManagedSession): Promise<AgentInstance> {
+  private async getOrCreateAgent(
+    managed: ManagedSession,
+    costTurn?: CostControlledTurnContext,
+  ): Promise<AgentInstance> {
     const workspaceConfig = loadWorkspaceConfig(managed.workspace.rootPath)
     const externalActionPolicy = workspaceConfig?.defaults?.externalActionPolicy ?? 'confirm'
     if (managed.agent) {
@@ -4334,6 +4362,69 @@ export class SessionManager implements ISessionManager {
       )
     }
     await this.applyRoutingPolicyForNextTurn(managed, workspaceConfig)
+
+    if (costTurn) {
+      const preRouteContext = resolveBackendContext({
+        sessionConnectionSlug: managed.llmConnection,
+        workspaceDefaultConnectionSlug: workspaceConfig?.defaults?.defaultLlmConnection,
+        managedModel: managed.model,
+      })
+      const turnKind: CostControlledTurnKind = costTurn.options?.internalOrigin?.kind
+        ?? (costTurn.options?.automaticRecovery
+          ? 'automatic-recovery'
+          : (managed.triggeredBy ? 'automation' : 'direct'))
+      const costDecision = decideAgentCostControl({
+        text: costTurn.message,
+        connection: preRouteContext.connection ?? undefined,
+        currentModel: managed.model ?? preRouteContext.resolvedModel,
+        turnKind,
+        contextTokens: managed.tokenUsage?.contextTokens,
+        sessionCostUsd: managed.tokenUsage?.costUsd,
+      }, workspaceConfig?.costControl)
+
+      const resolvedCostPolicy = resolveAgentCostControlPolicy(workspaceConfig?.costControl)
+      if (resolvedCostPolicy.enabled) {
+        const modelChanged = Boolean(costDecision.model && costDecision.model !== managed.model)
+        const thinkingChanged = costDecision.thinkingLevel !== managed.thinkingLevel
+        if (costDecision.model) managed.model = costDecision.model
+        managed.thinkingLevel = costDecision.thinkingLevel
+        managed.pendingRoutingReason = 'cost-control'
+        managed.pendingRoutingMeta = {
+          ...managed.pendingRoutingMeta,
+          reason: 'cost-control',
+          routingDifficulty: costDecision.difficulty,
+          routingExplanation: costDecision.explanation,
+          costControl: {
+            turnKind: costDecision.turnKind,
+            budgetState: costDecision.budgetState,
+            thinkingLevel: costDecision.thinkingLevel,
+            contextTokensBefore: managed.tokenUsage?.contextTokens ?? 0,
+            hardContextLimitReached: costDecision.hardContextLimitReached,
+          },
+          budgetDecision: {
+            status: costDecision.budgetState,
+            exceededScopes: costDecision.budgetState === 'normal' ? [] : ['session'],
+            projectedUsd: { session: managed.tokenUsage?.costUsd },
+          },
+        }
+        if (modelChanged || thinkingChanged) {
+          this.persistSession(managed)
+          sessionLog.info('cost-control route applied', {
+            sessionId: managed.id,
+            model: managed.model,
+            thinkingLevel: managed.thinkingLevel,
+            explanation: costDecision.explanation,
+          })
+          if (modelChanged) {
+            this.sendEvent({
+              type: 'session_model_changed',
+              sessionId: managed.id,
+              model: managed.model ?? null,
+            }, managed.workspace.id)
+          }
+        }
+      }
+    }
 
     // Refresh runtime config in-place when the connection has drifted since
     // the agent was created. May null out `managed.agent` if the in-place
@@ -5386,7 +5477,12 @@ export class SessionManager implements ISessionManager {
         // (session_created is emitted by createSession above.)
 
         // Fire and forget — send the message but don't await completion
-        this.sendMessage(session.id, request.prompt, fileAttachments).catch(err => {
+        this.sendMessage(session.id, request.prompt, fileAttachments, undefined, {
+          internalOrigin: {
+            kind: 'spawned-session',
+            senderSessionId: managed.id,
+          },
+        }).catch(err => {
           sessionLog.error(`Failed to send message to spawned session ${session.id}:`, err)
         })
 
@@ -5537,7 +5633,13 @@ export class SessionManager implements ISessionManager {
           // target starts processing immediately. sendMessage throws for an
           // unknown session — that rejection propagates to the handler's catch.
           const targetBusy = this.sessions.get(sessionId)?.isProcessing === true
-          await this.sendMessage(sessionId, message, fileAttachments)
+          await this.sendMessage(sessionId, message, fileAttachments, undefined, {
+            hidden: true,
+            internalOrigin: {
+              kind: 'agent-message',
+              senderSessionId: managed.id,
+            },
+          })
           return {
             delivery: targetBusy ? ('queued' as const) : ('delivered' as const),
             targetBusy,
@@ -6935,7 +7037,10 @@ export class SessionManager implements ISessionManager {
       const connection = resolveSessionConnection(managed.llmConnection, undefined)
       // Fallback to 'steer' when no connection is resolvable — preserves
       // today's exact behavior (call redirect, take whatever it returns).
-      const behavior = connection ? resolveMidStreamBehavior(connection) : 'steer'
+      const isInternalMessage = Boolean(options?.internalOrigin)
+      const behavior = isInternalMessage
+        ? 'queue'
+        : connection ? resolveMidStreamBehavior(connection) : 'steer'
 
       const agent = managed.agent
       let steered = false
@@ -6952,6 +7057,34 @@ export class SessionManager implements ISessionManager {
         backend: agent ? agent.constructor.name : 'none',
         connectionSlug: connection?.slug,
       })
+
+      if (isInternalMessage) {
+        const workspaceConfig = loadWorkspaceConfig(managed.workspace.rootPath)
+        const maxQueuedMessages = resolveAgentCostControlPolicy(workspaceConfig?.costControl)
+          .coordination.maxQueuedMessages
+        const senderSessionId = options?.internalOrigin?.senderSessionId
+        const coalesceTarget = selectInternalMessageCoalesceTarget(
+          managed.messageQueue,
+          senderSessionId,
+          maxQueuedMessages,
+        )
+        if (coalesceTarget) {
+          appendCoalescedInternalMessage(coalesceTarget, message)
+          const existingQueuedMessage = coalesceTarget.messageId
+            ? managed.messages.find(existing => existing.id === coalesceTarget.messageId)
+            : undefined
+          if (existingQueuedMessage) existingQueuedMessage.content = coalesceTarget.message
+          this.persistSession(managed)
+          await this.flushSession(managed.id)
+          if (coalesceTarget.messageId) onAck?.(coalesceTarget.messageId)
+          sessionLog.info('coalesced internal agent update', {
+            sessionId,
+            senderSessionId,
+            queueLength: managed.messageQueue.length,
+          })
+          return
+        }
+      }
 
       // Create user message for UI
       const userMessage: Message = {
@@ -7240,7 +7373,7 @@ export class SessionManager implements ISessionManager {
       managed.routingAttemptedConnectionSlugs = new Set()
       while (true) {
         try {
-          agent = await this.getOrCreateAgent(managed)
+          agent = await this.getOrCreateAgent(managed, { message, options })
           break
         } catch (error) {
           const didFallback = await this.tryApplyRoutingFallbackAfterAgentFailure(
@@ -7252,6 +7385,44 @@ export class SessionManager implements ISessionManager {
         }
       }
       sendSpan.mark('agent.ready')
+
+      const activeWorkspaceConfig = loadWorkspaceConfig(managed.workspace.rootPath)
+      const costPolicy = resolveAgentCostControlPolicy(activeWorkspaceConfig?.costControl)
+      const contextTokens = managed.tokenUsage?.contextTokens ?? 0
+      if (
+        costPolicy.enabled
+        && contextTokens >= costPolicy.context.compactAtTokens
+        && agent.compactContext
+      ) {
+        try {
+          const compacted = await agent.compactContext([
+            'Retain only the current objective, verified decisions, user constraints,',
+            'paths or identifiers needed to continue, pending external effects, blockers,',
+            'and concise references to durable tool evidence. Discard raw tool output,',
+            'repeated status chatter, acknowledgements, and superseded exploration.',
+          ].join(' '))
+          if (compacted && managed.tokenUsage) {
+            managed.tokenUsage.contextTokens = Math.min(
+              managed.tokenUsage.contextTokens,
+              Math.floor(costPolicy.context.compactAtTokens / 4),
+            )
+          }
+          if (managed.pendingRoutingMeta?.costControl) {
+            managed.pendingRoutingMeta.costControl.compacted = true
+          }
+          this.persistSession(managed)
+          sendSpan.mark('cost-control.compacted')
+          sessionLog.info('cost-control context compacted', {
+            sessionId: managed.id,
+            tokensBefore: compacted?.tokensBefore ?? contextTokens,
+          })
+        } catch (error) {
+          sessionLog.warn('cost-control context compaction failed; continuing on routed model', {
+            sessionId: managed.id,
+            error: error instanceof Error ? error.message : String(error),
+          })
+        }
+      }
 
       // Always set all sources for context (even if none are enabled), including built-ins
       const allSources = loadAllSources(workspaceRootPath)
@@ -9317,6 +9488,10 @@ export class SessionManager implements ISessionManager {
             result: formattedResult,
             browserEnabled: getBrowserToolEnabled(),
             fallbackAlreadyAttempted: managed.autonomyFallbackAttemptedTools?.has(toolName) ?? false,
+            browserFallbackEligible: isBrowserFallbackEligibleTool(
+              toolName,
+              loadWorkspaceConfig(managed.workspace.rootPath)?.costControl,
+            ),
           })
 
           this.recordAutonomyEvent(managed, {
@@ -9349,6 +9524,7 @@ export class SessionManager implements ISessionManager {
                 message: fallbackPrompt,
                 options: {
                   hidden: true,
+                  internalOrigin: { kind: 'browser-fallback' },
                   ...(originalUserMessageId ? {
                     automaticRecovery: {
                       originalUserMessageId,
@@ -9899,7 +10075,10 @@ export class SessionManager implements ISessionManager {
           // Ride the normal turn machinery (resume + persistence). `hidden: true`
           // keeps the nudge out of the transcript — the agent's response (the
           // presented result) renders as a normal assistant turn.
-          void this.sendMessage(sessionId, nudge, [], [], { hidden: true }).catch((err) => {
+          void this.sendMessage(sessionId, nudge, [], [], {
+            hidden: true,
+            internalOrigin: { kind: 'agent-message' },
+          }).catch((err) => {
             sessionLog.error(`[bg-lifecycle] failed to surface completed task ${event.taskId}:`, err)
           })
         }
@@ -10103,6 +10282,7 @@ export class SessionManager implements ISessionManager {
             message: event.message,
             options: {
               hidden: true,
+              internalOrigin: { kind: 'browser-fallback' },
               ...(originalUserMessageId ? {
                 automaticRecovery: {
                   originalUserMessageId,
@@ -10283,6 +10463,7 @@ export class SessionManager implements ISessionManager {
     if (waitForCompletion === false) {
       void this.sendMessage(session.id, prompt, undefined, undefined, {
         skillSlugs: resolved?.skillSlugs,
+        internalOrigin: { kind: 'automation' },
       }).catch((err) => {
         sessionLog.error('[Automations] background sendMessage failed for test run', {
           sessionId: session.id,
@@ -10294,6 +10475,7 @@ export class SessionManager implements ISessionManager {
 
     await this.sendMessage(session.id, prompt, undefined, undefined, {
       skillSlugs: resolved?.skillSlugs,
+      internalOrigin: { kind: 'automation' },
     })
 
     return { sessionId: session.id }

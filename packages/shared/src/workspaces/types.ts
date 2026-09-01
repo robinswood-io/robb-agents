@@ -14,6 +14,7 @@
 import type { PermissionMode } from '../agent/mode-manager.ts';
 import type { ThinkingLevel } from '../agent/thinking-levels.ts';
 import type { RoutingPolicy } from '../config/routing-policy.ts';
+import type { AgentCostControlPolicy } from '../config/agent-cost-control.ts';
 import type { WorkspaceGovernanceProfile } from '../governance/workspace-governance.ts';
 import type { RemoteSupervisionProfile } from '../remote-supervision/remote-supervision.ts';
 
@@ -72,6 +73,9 @@ export interface WorkspaceConfig {
    * provider preference, cost, or performance.
    */
   routingPolicy?: RoutingPolicy;
+
+  /** Local model/context/recovery controls that keep agent turns within a bounded cost envelope. */
+  costControl?: AgentCostControlPolicy;
 
   /** Workspace-scoped RBAC, memory retention, mission budgets, and hash-chained audit. */
   governance?: WorkspaceGovernanceProfile;

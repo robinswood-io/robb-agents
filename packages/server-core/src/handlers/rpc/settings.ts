@@ -2,7 +2,7 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { randomUUID } from 'node:crypto'
 import { dirname } from 'path'
 import { RPC_CHANNELS } from '@craft-agent/shared/protocol'
-import { getPreferencesPath, getSessionDraft, setSessionDraft, deleteSessionDraft, getAllSessionDrafts, getWorkspaceByNameOrId, getDefaultThinkingLevel, setDefaultThinkingLevel } from '@craft-agent/shared/config'
+import { getPreferencesPath, getSessionDraft, setSessionDraft, deleteSessionDraft, getAllSessionDrafts, getWorkspaceByNameOrId, getDefaultThinkingLevel, setDefaultThinkingLevel, resolveAgentCostControlPolicy, type AgentCostControlPolicy } from '@craft-agent/shared/config'
 import { isValidThinkingLevel, normalizeThinkingLevel, THINKING_LEVEL_IDS } from '@craft-agent/shared/agent/thinking-levels'
 
 const VALID_THINKING_LEVELS_LIST = THINKING_LEVEL_IDS.map(id => `'${id}'`).join(', ')
@@ -283,6 +283,7 @@ export function registerSettingsHandlers(server: RpcServer, deps: HandlerDeps): 
       defaultLlmConnection: config.defaults?.defaultLlmConnection,
       enabledSourceSlugs: config.defaults?.enabledSourceSlugs ?? [],
       routingPolicy: config.routingPolicy,
+      costControl: config.costControl,
       governance: governanceDocument.profile,
       governanceRevision: governanceDocument.revision,
       governanceUpdatedAt: governanceDocument.updatedAt,
@@ -435,7 +436,7 @@ export function registerSettingsHandlers(server: RpcServer, deps: HandlerDeps): 
       : value
 
     // Validate key is a known workspace setting
-    const validKeys = ['name', 'model', 'enabledSourceSlugs', 'permissionMode', 'externalActionPolicy', 'cyclablePermissionModes', 'thinkingLevel', 'workingDirectory', 'localMcpEnabled', 'defaultLlmConnection', 'routingPolicy']
+    const validKeys = ['name', 'model', 'enabledSourceSlugs', 'permissionMode', 'externalActionPolicy', 'cyclablePermissionModes', 'thinkingLevel', 'workingDirectory', 'localMcpEnabled', 'defaultLlmConnection', 'routingPolicy', 'costControl']
     if (!validKeys.includes(key)) {
       throw new Error(`Invalid workspace setting key: ${key}. Valid keys: ${validKeys.join(', ')}`)
     }
@@ -454,6 +455,15 @@ export function registerSettingsHandlers(server: RpcServer, deps: HandlerDeps): 
       if (!validation.valid) {
         throw new Error(validation.errors.join('; '))
       }
+    }
+
+    if (key === 'costControl' && normalizedValue !== undefined && normalizedValue !== null) {
+      if (typeof normalizedValue !== 'object' || Array.isArray(normalizedValue)) {
+        throw new Error('costControl must be a JSON object')
+      }
+      // Resolve once at the trust boundary so invalid numeric values are bounded
+      // before the policy can reach a live session.
+      resolveAgentCostControlPolicy(normalizedValue as AgentCostControlPolicy)
     }
 
     if (key === 'externalActionPolicy' && !['confirm', 'allow-in-execute'].includes(String(normalizedValue))) {
@@ -480,6 +490,10 @@ export function registerSettingsHandlers(server: RpcServer, deps: HandlerDeps): 
       config.routingPolicy = normalizedValue === undefined || normalizedValue === null
         ? undefined
         : normalizedValue as RoutingPolicy
+    } else if (key === 'costControl') {
+      config.costControl = normalizedValue === undefined || normalizedValue === null
+        ? undefined
+        : resolveAgentCostControlPolicy(normalizedValue as AgentCostControlPolicy)
     } else if (key === 'localMcpEnabled') {
       // Store in localMcpServers.enabled (top-level, not in defaults)
       config.localMcpServers = config.localMcpServers || { enabled: true }

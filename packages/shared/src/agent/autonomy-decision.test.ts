@@ -49,6 +49,16 @@ describe('decideAutonomyRecovery', () => {
       errorCode: 'INVALID_ARGUMENT',
     })).toEqual({ kind: 'none' })
   })
+
+  it('does not turn a local shell or filesystem failure into a browser turn', () => {
+    expect(decideAutonomyRecovery({
+      toolName: 'Bash',
+      result: 'command failed with exit code 1',
+      browserEnabled: true,
+      fallbackAlreadyAttempted: false,
+      browserFallbackEligible: false,
+    })).toEqual({ kind: 'none' })
+  })
 })
 
 describe('formatAutonomyContract sensitive external action guard', () => {

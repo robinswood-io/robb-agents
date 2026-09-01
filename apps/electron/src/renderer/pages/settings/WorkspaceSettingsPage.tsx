@@ -33,10 +33,12 @@ import { SourceAvatar } from '@/components/ui/source-avatar'
 import { toast } from 'sonner'
 import { parseRoutingPolicyText } from './routing-policy-editor'
 import type {
+  AgentCostControlPolicy,
   RoutingPolicySimulation,
   RoutingSensitivity,
   RoutingShadowReport,
 } from '@craft-agent/shared/config'
+import { DEFAULT_AGENT_COST_CONTROL_POLICY } from '@craft-agent/shared/config/agent-cost-control'
 
 import {
   SettingsSection,
@@ -81,6 +83,9 @@ export default function WorkspaceSettingsPage() {
   const [routingPolicyErrors, setRoutingPolicyErrors] = useState<string[]>([])
   const [routingPolicyWarnings, setRoutingPolicyWarnings] = useState<string[]>([])
   const [isSavingRoutingPolicy, setIsSavingRoutingPolicy] = useState(false)
+  const [costControlText, setCostControlText] = useState('')
+  const [costControlError, setCostControlError] = useState<string | null>(null)
+  const [isSavingCostControl, setIsSavingCostControl] = useState(false)
   const [llmConnectionSlugs, setLlmConnectionSlugs] = useState<string[]>([])
   const [simulationSensitivity, setSimulationSensitivity] = useState<RoutingSensitivity>('internal')
   const [routingSimulation, setRoutingSimulation] = useState<RoutingPolicySimulation | null>(null)
@@ -119,6 +124,8 @@ export default function WorkspaceSettingsPage() {
           setWorkingDirectory(settings.workingDirectory || '')
           setLocalMcpEnabled(settings.localMcpEnabled ?? true)
           setRoutingPolicyText(settings.routingPolicy ? JSON.stringify(settings.routingPolicy, null, 2) : '')
+          setCostControlText(JSON.stringify(settings.costControl ?? DEFAULT_AGENT_COST_CONTROL_POLICY, null, 2))
+          setCostControlError(null)
           setRoutingPolicyErrors([])
           setRoutingPolicyWarnings([])
           // Load cyclable permission modes from workspace settings
@@ -258,6 +265,32 @@ export default function WorkspaceSettingsPage() {
       setIsSavingRoutingPolicy(false)
     }
   }, [routingPolicyText, updateWorkspaceSetting, validateRoutingPolicyText, t])
+
+  const handleSaveCostControl = useCallback(async () => {
+    let parsed: AgentCostControlPolicy
+    try {
+      const value = JSON.parse(costControlText) as unknown
+      if (!value || typeof value !== 'object' || Array.isArray(value)) {
+        throw new Error('costControl must be a JSON object')
+      }
+      parsed = value as AgentCostControlPolicy
+    } catch (error) {
+      setCostControlError(error instanceof Error ? error.message : 'Invalid JSON')
+      return
+    }
+
+    setIsSavingCostControl(true)
+    setCostControlError(null)
+    try {
+      const saved = await updateWorkspaceSetting('costControl', parsed)
+      if (saved) {
+        setCostControlText(JSON.stringify(parsed, null, 2))
+        toast.success(t('settings.workspace.costControlSaved'))
+      }
+    } finally {
+      setIsSavingCostControl(false)
+    }
+  }, [costControlText, updateWorkspaceSetting, t])
 
   const handleSimulateRoutingPolicy = useCallback(async () => {
     if (!window.electronAPI || !activeWorkspaceId) return
@@ -634,6 +667,47 @@ export default function WorkspaceSettingsPage() {
               ) : (
                 <p className="text-sm text-muted-foreground">{t("settings.workspace.noSourcesConfigured")}</p>
               )}
+            </SettingsSection>
+
+            {/* Agent cost controls */}
+            <SettingsSection
+              title={t('settings.workspace.costControlTitle')}
+              description={t('settings.workspace.costControlDesc')}
+            >
+              <SettingsCard>
+                <div className="p-4 space-y-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <div className="text-sm font-medium">{t('settings.workspace.costControlJson')}</div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {t('settings.workspace.costControlDefaults')}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleSaveCostControl}
+                      disabled={isSavingCostControl}
+                      className="inline-flex items-center h-8 px-3 text-sm rounded-lg bg-background shadow-minimal hover:bg-foreground/[0.02] transition-colors disabled:opacity-50"
+                    >
+                      {isSavingCostControl ? t('common.saving') : t('common.save')}
+                    </button>
+                  </div>
+                  <textarea
+                    value={costControlText}
+                    onChange={(event) => {
+                      setCostControlText(event.target.value)
+                      setCostControlError(null)
+                    }}
+                    spellCheck={false}
+                    className="min-h-[320px] w-full resize-y rounded-lg bg-foreground-2 px-3 py-2 font-mono text-xs text-foreground outline-none shadow-minimal focus:bg-background focus:ring-2 focus:ring-ring"
+                  />
+                  {costControlError && (
+                    <div className="rounded-lg bg-destructive/10 p-3 text-xs text-destructive">
+                      {costControlError}
+                    </div>
+                  )}
+                </div>
+              </SettingsCard>
             </SettingsSection>
 
             {/* AI Router Policy */}

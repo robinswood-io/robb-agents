@@ -68,6 +68,7 @@ const WorkspaceConfigStorageSchema = z.object({
   }).passthrough().optional(),
   localMcpServers: z.object({ enabled: z.boolean() }).strict().optional(),
   routingPolicy: z.unknown().optional(),
+  costControl: z.unknown().optional(),
   governance: z.unknown().optional(),
   remoteSupervision: z.unknown().optional(),
   createdAt: z.number().int().nonnegative(),

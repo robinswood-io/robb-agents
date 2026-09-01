@@ -58,9 +58,15 @@ describe('durable turn recovery', () => {
 
   it('bounds retries and records exhaustion durably', () => {
     const first = advancePendingTurnRecovery(createPendingTurnRecovery('user-1', 1), 'stream_ended', 2)!;
-    const second = advancePendingTurnRecovery(first, 'runtime_error', 3)!;
-    expect(advancePendingTurnRecovery(second, 'app_restart', 4)).toBeNull();
-    expect(exhaustPendingTurnRecovery(second, 5).exhaustedAt).toBe(5);
+    expect(advancePendingTurnRecovery(first, 'runtime_error', 3)).toBeNull();
+    expect(exhaustPendingTurnRecovery(first, 5).exhaustedAt).toBe(5);
+  });
+
+  it('accepts an explicit workspace retry bound', () => {
+    const first = advancePendingTurnRecovery(createPendingTurnRecovery('user-1', 1), 'stream_ended', 2, 2)!;
+    const second = advancePendingTurnRecovery(first, 'runtime_error', 3, 2)!;
+    expect(second.attempts).toBe(2);
+    expect(advancePendingTurnRecovery(second, 'app_restart', 4, 2)).toBeNull();
   });
 
   it('builds a hidden nudge that requires side-effect verification', () => {

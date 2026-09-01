@@ -4,8 +4,8 @@ import { looksLikePrematureFinalAssistant } from './turn-completion.ts';
 
 export type AutomaticTurnRecoveryCause = NonNullable<PendingTurnRecovery['lastCause']>;
 
-/** One immediate retry plus one later retry keeps recovery useful but bounded. */
-export const MAX_AUTOMATIC_TURN_RECOVERY_ATTEMPTS = 2;
+/** One materially different retry; further recovery requires new user intent. */
+export const MAX_AUTOMATIC_TURN_RECOVERY_ATTEMPTS = 1;
 export const DEFAULT_AUTOMATIC_RECOVERY_INACTIVITY_TIMEOUT_MS = 5 * 60 * 1000;
 const MIN_AUTOMATIC_RECOVERY_INACTIVITY_TIMEOUT_MS = 30 * 1000;
 const MAX_AUTOMATIC_RECOVERY_INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000;
@@ -86,8 +86,9 @@ export function advancePendingTurnRecovery(
   pending: PendingTurnRecovery,
   cause: AutomaticTurnRecoveryCause,
   nowMs = Date.now(),
+  maxAttempts = MAX_AUTOMATIC_TURN_RECOVERY_ATTEMPTS,
 ): PendingTurnRecovery | null {
-  if (pending.exhaustedAt || pending.attempts >= MAX_AUTOMATIC_TURN_RECOVERY_ATTEMPTS) {
+  if (pending.exhaustedAt || pending.attempts >= Math.max(0, Math.floor(maxAttempts))) {
     return null;
   }
 

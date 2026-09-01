@@ -71,16 +71,11 @@ describe('transient network recovery', () => {
     })
     expect(managed.messages.some(message => message.role === 'error')).toBe(false)
 
-    // Simulate the first recovery being dequeued and failing the same way.
+    // Simulate the single recovery being dequeued and failing the same way.
     managed.messageQueue = []
     await processEvent(managed, event, 1)
-    expect(managed.pendingTurnRecovery?.attempts).toBe(2)
-    expect(managed.messages.some(message => message.role === 'error')).toBe(false)
-
-    // The third failure exhausts the two-attempt budget and preserves the
-    // original typed error contract for the user.
-    managed.messageQueue = []
-    await processEvent(managed, event, 1)
+    // The second failure exhausts the one-attempt budget and preserves the
+    // original typed error contract for the user instead of opening a loop.
     expect(typeof managed.pendingTurnRecovery?.exhaustedAt).toBe('number')
     expect(managed.messages.at(-1)).toMatchObject({
       role: 'error',

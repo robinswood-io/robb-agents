@@ -99,6 +99,7 @@ import {
   IncompleteToolTailRecovery,
   prepareMessagesForIncompleteTailContinuation,
 } from './incomplete-tool-tail-recovery.ts';
+import { ToolLoopBudget } from './tool-loop-budget.ts';
 
 // ============================================================
 // Types — JSONL Protocol
@@ -264,6 +265,7 @@ let initConfig: Extract<InboundMessage, { type: 'init' }> | null = null;
 // Mutable state
 let currentUserMessage = '';
 const incompleteToolTailRecovery = new IncompleteToolTailRecovery();
+const toolLoopBudget = new ToolLoopBudget();
 
 // Pending promises for async handshakes
 const pendingPreToolUse = new Map<string, { resolve: (response: { action: string; input?: Record<string, unknown>; reason?: string }) => void }>();
@@ -771,6 +773,14 @@ function wrapSingleTool(tool: ToolDefinition<any, any>): ToolDefinition<any, any
     // even if a future pre-tool-use path returns `allow` without modification.
     inputObj = stripCraftMetadata(inputObj);
 
+    const loopDecision = toolLoopBudget.observe(sdkToolName, inputObj);
+    if (loopDecision.action === 'block') {
+      return {
+        content: [{ type: 'text', text: loopDecision.message ?? 'Repeated unchanged tool call blocked.' }],
+        details: { costControlBlocked: true },
+      };
+    }
+
     // Execute original tool with (potentially modified) input
     const result = await originalExecute(toolCallId, inputObj, signal, onUpdate, ctx);
 
@@ -807,7 +817,12 @@ function wrapSingleTool(tool: ToolDefinition<any, any>): ToolDefinition<any, any
 
         if (largeResult) {
           return {
-            content: [{ type: 'text', text: largeResult.message }],
+            content: [{
+              type: 'text',
+              text: loopDecision.action === 'hint' && loopDecision.message
+                ? `${largeResult.message}\n\n${loopDecision.message}`
+                : largeResult.message,
+            }],
             details: result.details,
           };
         }
@@ -816,6 +831,16 @@ function wrapSingleTool(tool: ToolDefinition<any, any>): ToolDefinition<any, any
           `Large response handling failed: ${error instanceof Error ? error.message : String(error)}`,
         );
       }
+    }
+
+    if (loopDecision.action === 'hint' && loopDecision.message) {
+      return {
+        ...result,
+        content: [
+          ...result.content,
+          { type: 'text', text: `\n\n${loopDecision.message}` },
+        ],
+      };
     }
 
     return result;
@@ -1330,6 +1355,7 @@ async function waitForCompaction(session: { isCompacting: boolean }, timeoutMs =
 async function handlePrompt(msg: Extract<InboundMessage, { type: 'prompt' }>): Promise<void> {
   currentUserMessage = msg.message;
   incompleteToolTailRecovery.beginPrompt();
+  toolLoopBudget.beginPrompt();
 
   try {
     // If proxy tools changed since last session creation, dispose and recreate.

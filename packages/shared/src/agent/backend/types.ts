@@ -421,6 +421,16 @@ export interface AgentBackend {
   runMiniCompletion(prompt: string): Promise<string | null>;
 
   /**
+   * Compact the provider-side conversation before a costly turn. Backends that
+   * cannot compact in place may omit this capability.
+   */
+  compactContext?(customInstructions?: string): Promise<{
+    summary: string;
+    firstKeptEntryId: string;
+    tokensBefore: number;
+  } | null>;
+
+  /**
    * Clean up resources (MCP connections, watchers, etc.)
    */
   destroy(): void;

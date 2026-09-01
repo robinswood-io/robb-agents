@@ -310,6 +310,15 @@ export interface RoutingMeta {
   requiredCapabilities?: string[];
   /** Reader-facing explanation of the selected route. */
   routingExplanation?: string;
+  /** Queryable local cost-controller decision for this model response. */
+  costControl?: {
+    turnKind: string;
+    budgetState: string;
+    thinkingLevel: string;
+    contextTokensBefore: number;
+    compacted?: boolean;
+    hardContextLimitReached?: boolean;
+  };
   /** Exact hard-policy reasons why configured alternatives were rejected. */
   rejectedConnections?: Array<{ slug: string; reasons: string[] }>;
   /** Cost guardrail result evaluated before route selection. */

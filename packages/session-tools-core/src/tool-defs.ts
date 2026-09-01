@@ -211,6 +211,8 @@ export const ListBackgroundTasksSchema = z.object({
 export const SendAgentMessageSchema = z.object({
   sessionId: z.string().describe('Target session ID to send the message to'),
   message: z.string().describe('The message to send to the target session'),
+  messageType: z.enum(['progress', 'result', 'question', 'decision']).optional()
+    .describe('Semantic type. Defaults to progress; use question/decision only when a reply is required.'),
   attachments: z.array(z.object({
     path: z.string().describe('Absolute file path on disk'),
     name: z.string().optional().describe('Display name (defaults to file basename)'),
@@ -490,12 +492,13 @@ Status meanings:
 
 Never guess or claim "the app restarted" — report exactly what this tool returns. Omit sessionId for the current session.`,
 
-  send_agent_message: `Send a message to another session. The message is delivered with your session ID so the target can reply back.
+  send_agent_message: `Send a typed message to another session. The message is delivered with your session ID.
 
 Use this to coordinate with spawned sessions, send follow-up instructions, or relay information between sessions.
 Use list_sessions to find session IDs, or use the sessionId returned by spawn_session.
 
-The target session receives your message with a sender envelope containing your session ID, so it can use send_agent_message to reply.`,
+Choose progress or result for one-way updates. Choose question or decision only when a reply is necessary.
+Do not send acknowledgement-only messages and do not poll with repeated status messages; adjacent updates may be coalesced while the target is busy.`,
 
   list_messaging_channels: `List messaging channels (Telegram, WhatsApp) bound to a session.
 Shows which external chat apps are connected and can send/receive messages.`,

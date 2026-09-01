@@ -20,6 +20,7 @@ import type { PermissionMode } from '../agent/mode-types'
 import type { ThinkingLevel } from '../agent/thinking-levels'
 import type { CustomEndpointConfig } from '../config/llm-connections'
 import type { RoutingPolicy } from '../config/routing-policy'
+import type { AgentCostControlPolicy } from '../config/agent-cost-control'
 import type { SessionExecutionIsolation } from '../tasks/durable-execution'
 import type {
   MissionDigitalTwinReport,
@@ -781,6 +782,11 @@ export interface SendMessageOptions {
     originalUserMessageId: string
     cause: 'app_restart' | 'stream_ended' | 'runtime_error' | 'premature_final'
   }
+  /** Provenance for model-driven turns that were not directly sent by the user. */
+  internalOrigin?: {
+    kind: 'agent-message' | 'browser-fallback' | 'spawned-session' | 'automation'
+    senderSessionId?: string
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -1098,6 +1104,7 @@ export interface WorkspaceSettings {
   defaultLlmConnection?: string
   enabledSourceSlugs?: string[]
   routingPolicy?: RoutingPolicy
+  costControl?: AgentCostControlPolicy
   governance?: WorkspaceGovernanceProfile
   governanceRevision?: number
   governanceUpdatedAt?: string
