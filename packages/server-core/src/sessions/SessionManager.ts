@@ -2161,6 +2161,16 @@ export class SessionManager implements ISessionManager {
         const lastWrittenSignature = sessionPersistenceQueue.getLastWrittenSignature(sessionId)
         const isSelfWrite = !!(lastWrittenSignature && incomingSignature === lastWrittenSignature)
 
+        // A matching self-write is the durable winner currently present on
+        // disk. Any older watcher snapshot deferred while that write was in
+        // flight is now obsolete; keeping it would re-apply stale metadata at
+        // turn completion (most visibly, reverting needs-review to
+        // in-progress after set_session_status succeeded).
+        if (isSelfWrite && managed.pendingExternalMetadata) {
+          managed.pendingExternalMetadata = undefined
+          sessionLog.info(`Discarded superseded deferred metadata for session ${sessionId} after confirmed self-write`)
+        }
+
         // For external writes: sync in-memory state + emit UI events.
         // Skip for self-writes to avoid feedback loops (especially on Windows
         // where fs.watch fires aggressively: unlink + rename = 2+ events).

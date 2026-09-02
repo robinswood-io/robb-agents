@@ -33,7 +33,8 @@ describe('cold-session metadata persistence', () => {
     sm = new SessionManager()
   })
 
-  afterEach(() => {
+  afterEach(async () => {
+    await sm.cleanup()
     rmSync(tmpRoot, { recursive: true, force: true })
   })
 
@@ -212,5 +213,39 @@ describe('cold-session metadata persistence', () => {
     await sm.flushSession(sessionId)
 
     expect(readDiskHeader(sessionId).sessionStatus).toBe('cancelled')
+  })
+
+  it('does not re-apply stale deferred status after a confirmed self-write', async () => {
+    const sessionId = 'status-self-write-echo'
+    seedColdSession(sessionId, { sessionStatus: 'in-progress' })
+    sm.setupConfigWatcher(tmpRoot, 'ws_test')
+
+    await sm.setSessionStatus(sessionId, 'needs-review')
+
+    const managed = (sm as unknown as {
+      sessions: Map<string, {
+        isProcessing: boolean
+        sessionStatus?: string
+        pendingExternalMetadata?: Record<string, unknown>
+      }>
+    }).sessions.get(sessionId)!
+    managed.isProcessing = true
+    managed.pendingExternalMetadata = {
+      ...readDiskHeader(sessionId),
+      sessionStatus: 'in-progress',
+    }
+
+    const watcher = (sm as unknown as {
+      configWatchers: Map<string, {
+        callbacks: {
+          onSessionMetadataChange?: (id: string, header: Record<string, unknown>) => void
+        }
+      }>
+    }).configWatchers.get(tmpRoot)!
+    watcher.callbacks.onSessionMetadataChange?.(sessionId, readDiskHeader(sessionId))
+
+    expect(managed.pendingExternalMetadata).toBeUndefined()
+    expect(managed.sessionStatus).toBe('needs-review')
+    expect(readDiskHeader(sessionId).sessionStatus).toBe('needs-review')
   })
 })
