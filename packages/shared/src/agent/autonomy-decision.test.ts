@@ -86,6 +86,13 @@ describe('formatAutonomyContract sensitive external action guard', () => {
     expect(contract).toContain('Continue safe, reversible local edits and local verification without extra confirmation')
   })
 
+  it('sets a compact phase budget and preserves mutation verification', () => {
+    expect(contract).toContain('target 3-5 calls total')
+    expect(contract).toContain('Batch independent searches and reads')
+    expect(contract).toContain('reserve enough tool budget for verification and cleanup')
+    expect(contract).toContain('provider quota, rate limit')
+  })
+
   it('aligns the model with the explicit total-autonomy workspace policy', () => {
     const executeContract = formatAutonomyContract('allow-in-execute')
     expect(executeContract).toContain('standing authorization for in-scope sensitive external actions')

@@ -7,9 +7,14 @@ export type LatestTurnTerminalState =
   | 'incomplete'
   | 'no-user';
 
-const UNFINISHED_ACTION_PATTERN = /\b(?:je\s+(?:vais\s+(?:(?:maintenant|donc|d['’]abord|ensuite|aussi|[àa]\s+pr[ée]sent)\s+)?(?:v[ée]rifier|lancer|relancer|ex[ée]cuter|impl[ée]menter|corriger|modifier|cr[ée]er|g[ée]n[ée]rer|tester|analyser|auditer|chercher|contr[oô]ler|ouvrir|fermer|d[ée]ployer|remplacer|copier|soumettre|pousser|charger|lire|relire)|(?:v[ée]rifie|lance|relance|ex[ée]cute|impl[ée]mente|corrige|modifie|cr[ée]e|g[ée]n[èe]re|teste|analyse|audite|cherche|contr[oô]le|ouvre|ferme|d[ée]ploie|remplace|copie|soumets|pousse|charge|lis|relis)(?:\s+(?:maintenant|d['’]abord|ensuite|aussi))?|poursuis|continue|commence)|j['’](?:ouvre|[ée]cris|analyse|ex[ée]cute|impl[ée]mente)|i\s+will\s+(?:now\s+)?(?:check|verify|run|rerun|implement|fix|change|create|generate|test|analyze|audit|search|open|close|deploy)|i['’]ll\s+(?:now\s+)?(?:check|verify|run|rerun|implement|fix|change|create|generate|test|analyze|audit|search|open|close|deploy)|i(?:\s+am|'m)\s+going\s+to\s+(?:check|verify|run|rerun|implement|fix|change|create|generate|test|analyze|audit|search|open|close|deploy))\b/i;
+const UNFINISHED_ACTION_PATTERNS = [
+  /\b(?:je\s+(?:vais\s+)?(?:(?:maintenant|donc|d['’]abord|ensuite|aussi|[àa]\s+pr[ée]sent)\s+)?(?:v[ée]rifier|lancer|relancer|ex[ée]cuter|impl[ée]menter|corriger|modifier|cr[ée]er|g[ée]n[ée]rer|tester|analyser|auditer|chercher|contr[oô]ler|ouvrir|fermer|d[ée]ployer|remplacer|copier|soumettre|pousser|charger|lire|relire|poursuivre|continuer|commencer|poursuis|continue|commence)|j['’](?:ouvre|[ée]cris|analyse|ex[ée]cute|impl[ée]mente)|i\s+(?:will|am\s+going\s+to)\s+(?:now\s+)?(?:check|verify|run|rerun|implement|fix|change|create|generate|test|analyze|audit|search|open|close|deploy|continue|resume)|i['’]ll\s+(?:now\s+)?(?:check|verify|run|rerun|implement|fix|change|create|generate|test|analyze|audit|search|open|close|deploy|continue|resume))\b/i,
+  /\bje\s+(?:poursuivrai|continuerai|reprendrai|relancerai|v[ée]rifierai|terminerai)\b/i,
+  /\bje\s+(?:v[ée]rifie|lance|relance|ex[ée]cute|impl[ée]mente|corrige|modifie|cr[ée]e|g[ée]n[èe]re|teste|analyse|audite|cherche|contr[oô]le|ouvre|ferme|d[ée]ploie|remplace|copie|soumets|pousse|charge|lis|relis|poursuis|continue|commence)(?:\s+(?:maintenant|d['’]abord|ensuite|aussi))?\b/i,
+  /(?:au\s+prochain\s+tour|dans\s+un\s+nouveau\s+tour|next\s+turn|new\s+turn).{0,120}(?:poursuiv|continu|reprendr|relanc|v[ée]rifi|termin|resume)/i,
+];
 
-const HUMAN_HANDOFF_PATTERN = /(?:connecte(?:-toi|z-vous)?|clique(?:z)?|valide(?:z)?|saisis(?:sez)?|renseigne(?:r|z)?|r[ée]ponds|dites?-moi|dis-moi|quand\s+(?:tu|vous)|merci\s+de|peux-tu|pouvez-vous|il\s+me\s+manque|j['’]ai\s+besoin\s+de|(?:action|intervention|validation|confirmation)\s+humaine|j['’]attends\s+(?:ta|votre|une)|bloqu[ée]|ne\s+peux\s+pas|red[ée]marr(?:er|e|ez)|please\s+(?:sign\s+in|log\s+in|click|confirm|enter|reply)|tell\s+me|once\s+you|cannot|can't|blocked|waiting\s+for\s+you)/i;
+const HUMAN_HANDOFF_PATTERN = /(?:connecte(?:-toi|z-vous)?|authentifie(?:-toi|z-vous)?|clique(?:z)?|valide(?:z)?|saisis(?:sez)?|renseigne(?:r|z)?|r[ée]ponds|dites?-moi|dis-moi|quand\s+(?:tu|vous)|merci\s+de|peux-tu|pouvez-vous|il\s+me\s+manque\s+(?:seulement\s+|ton|ta|votre|un\s+choix|une\s+d[ée]cision|une\s+autorisation|un\s+identifiant|un\s+secret)|j['’]ai\s+besoin\s+(?:de\s+ton|de\s+ta|de\s+votre|d['’]un\s+choix|d['’]une\s+d[ée]cision|d['’]une\s+autorisation|d['’]un\s+identifiant|d['’]un\s+secret)|(?:action|intervention|validation|confirmation|d[ée]cision|autorisation)\s+humaine|j['’]attends\s+(?:ta|votre)\s+(?:r[ée]ponse|validation|confirmation|d[ée]cision|autorisation)|please\s+(?:sign\s+in|log\s+in|click|confirm|enter|reply)|tell\s+me|once\s+you|waiting\s+for\s+you)/i;
 
 /**
  * Detect a provider "final" that is actually only a progress update followed
@@ -24,7 +29,8 @@ export function looksLikePrematureFinalAssistant(content: string): boolean {
   // work. This avoids matching an opening "I will..." followed by a complete
   // report in the same message.
   const tail = normalized.slice(-700);
-  return UNFINISHED_ACTION_PATTERN.test(tail) && !HUMAN_HANDOFF_PATTERN.test(tail);
+  return UNFINISHED_ACTION_PATTERNS.some(pattern => pattern.test(tail))
+    && !HUMAN_HANDOFF_PATTERN.test(tail);
 }
 
 /**

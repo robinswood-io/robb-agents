@@ -233,7 +233,17 @@ export function classifyAgentFailure(signal: AgentFailureSignal): AgentFailureCl
   if (containsAny(['invalid argument', 'validation failed', 'bad request', 'malformed', 'schema error'])) {
     return result('invalid-input', 'never', 'fix-input', 'heuristic')
   }
-  if (containsAny(['rate limit', 'too many requests', 'quota exceeded']) || words.has('429')) {
+  if (
+    containsAny([
+      'rate limit',
+      'too many requests',
+      'quota exceeded',
+      'usage limit has been reached',
+      'usage limit reached',
+      'credit balance is too low',
+    ])
+    || words.has('429')
+  ) {
     return result('rate-limited', 'safe', 'provider-fallback', 'heuristic', signal.retryAfterMs)
   }
   if (hasRuntimeBridgeContext(signal)) {

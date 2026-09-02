@@ -16,6 +16,16 @@ describe('classifyAgentFailure', () => {
     })
   })
 
+  it('recognizes subscription usage exhaustion as provider-fallback eligible', () => {
+    expect(classifyAgentFailure({
+      message: 'Codex error: The usage limit has been reached',
+    })).toMatchObject({
+      failureClass: 'rate-limited',
+      retryability: 'safe',
+      recovery: 'provider-fallback',
+    })
+  })
+
   it('distinguishes interactive authentication from missing credentials', () => {
     expect(classifyAgentFailure({ message: 'OAuth requires MFA' }).failureClass)
       .toBe('interactive-auth-required')

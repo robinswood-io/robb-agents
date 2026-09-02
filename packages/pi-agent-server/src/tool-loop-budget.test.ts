@@ -49,4 +49,38 @@ describe('ToolLoopBudget', () => {
     expect(decision.action).toBe('block');
     expect(decision.totalToolCalls).toBe(24);
   });
+
+  test('emits a total-budget hint even when tool names alternate', () => {
+    const budget = new ToolLoopBudget();
+    for (let index = 1; index < 6; index += 1) {
+      budget.observe(index % 2 === 0 ? 'Read' : 'Grep', { index });
+    }
+    const decision = budget.observe('Read', { index: 6 });
+    expect(decision.action).toBe('hint');
+    expect(decision.message).toContain('3-5 calls');
+  });
+
+  test('reserves enough budget before starting a new mutation', () => {
+    const budget = new ToolLoopBudget();
+    for (let index = 1; index < 20; index += 1) {
+      budget.observe(index % 2 === 0 ? 'Read' : 'Grep', { index });
+    }
+    const decision = budget.observe('Write', { path: 'result.txt', content: 'done' });
+    expect(decision.action).toBe('block');
+    expect(decision.message).toContain('was not started');
+    expect(decision.message).toContain('automatic recovery');
+  });
+
+  test('allows verification and cleanup after an admitted mutation crosses the hard cap', () => {
+    const budget = new ToolLoopBudget();
+    for (let index = 1; index < 18; index += 1) {
+      budget.observe(index % 2 === 0 ? 'Read' : 'Grep', { index });
+    }
+    expect(budget.observe('Write', { path: 'result.txt', content: 'done' }).action).not.toBe('block');
+    for (let index = 19; index <= 22; index += 1) {
+      expect(budget.observe(index % 2 === 0 ? 'Read' : 'Grep', { index }).action).not.toBe('block');
+    }
+    expect(budget.observe('Read', { index: 23 }).action).not.toBe('block');
+    expect(budget.observe('Grep', { index: 24 }).action).toBe('block');
+  });
 });

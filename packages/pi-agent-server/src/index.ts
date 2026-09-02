@@ -100,6 +100,7 @@ import {
   prepareMessagesForIncompleteTailContinuation,
 } from './incomplete-tool-tail-recovery.ts';
 import { ToolLoopBudget } from './tool-loop-budget.ts';
+import { normalizeSessionPathTokens } from './session-path-normalization.ts';
 
 // ============================================================
 // Types — JSONL Protocol
@@ -755,6 +756,11 @@ function wrapSingleTool(tool: ToolDefinition<any, any>): ToolDefinition<any, any
   ) => {
     const sdkToolName = PI_TOOL_NAME_MAP[tool.name] || tool.name;
     let inputObj: Record<string, unknown> = { ...(params as Record<string, unknown>) };
+
+    if (initConfig) {
+      const sessionPath = getSessionPath(initConfig.workspaceRootPath, initConfig.sessionId);
+      inputObj = normalizeSessionPathTokens(inputObj, sessionPath) as Record<string, unknown>;
+    }
 
     // Extract intent before main process strips metadata (used for summarization)
     const intent = typeof inputObj._intent === 'string' ? inputObj._intent : undefined;

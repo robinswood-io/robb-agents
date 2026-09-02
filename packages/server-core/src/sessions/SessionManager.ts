@@ -121,7 +121,9 @@ import {
   classifyRoutingFallbackReason,
   isRoutingCircuitOpen,
   recordRoutingCircuitFailure,
+  resolveRoutingFallbackCandidates,
   selectRoutingFallbackCandidate,
+  shouldAttemptProviderFallback,
   type RoutingCircuitState,
 } from './routing-fallback'
 import { buildRoutingRuntimeContext } from './routing-runtime'
@@ -131,6 +133,11 @@ import {
   toRoutingMetaAppProvenance,
 } from './session-app-provenance'
 import { classifyLatestTurnTerminalState } from './turn-completion'
+import {
+  resolveLifecycleStartStatus,
+  resolveLifecycleTerminalStatus,
+  type SessionLifecycleStopReason,
+} from './session-status-lifecycle'
 import {
   advancePendingTurnRecovery,
   buildAutomaticTurnRecoveryPrompt,
@@ -1016,6 +1023,8 @@ interface ManagedSession {
   lastFinalMessageId?: string
   // Turn baseline: last final assistant message ID at turn start (runtime-only, not persisted)
   turnStartFinalMessageId?: string
+  /** Runtime-only status written by automatic lifecycle; explicit changes replace it and win. */
+  turnLifecycleManagedStatus?: string
   // External session metadata updates seen while processing (applied after turn stop)
   pendingExternalMetadata?: SessionHeader
   // Guard: suppress external metadata revert after programmatic writes (setSessionStatus/setSessionLabels).
@@ -4300,7 +4309,11 @@ export class SessionManager implements ISessionManager {
       return false
     }
 
-    const candidates = (managed.pendingRoutingFallbackConnectionSlugs ?? []).filter(slug => slug && slug !== primarySlug)
+    const candidates = resolveRoutingFallbackCandidates(
+      primarySlug,
+      managed.pendingRoutingFallbackConnectionSlugs,
+      getLlmConnections().map(connection => connection.slug),
+    )
     const fallbackSlug = selectRoutingFallbackCandidate(
       primarySlug,
       candidates,
@@ -5904,6 +5917,33 @@ export class SessionManager implements ISessionManager {
     }
   }
 
+  private async beginAutomaticSessionStatusLifecycle(managed: ManagedSession): Promise<void> {
+    const config = loadStatusConfig(managed.workspace.rootPath)
+    const startStatus = resolveLifecycleStartStatus(config, managed.sessionStatus)
+    managed.turnLifecycleManagedStatus = undefined
+    if (!startStatus) return
+
+    if (managed.sessionStatus !== startStatus) {
+      await this.setSessionStatus(managed.id, startStatus)
+    }
+    managed.turnLifecycleManagedStatus = startStatus
+  }
+
+  private async finishAutomaticSessionStatusLifecycle(
+    managed: ManagedSession,
+    reason: SessionLifecycleStopReason,
+  ): Promise<void> {
+    const lifecycleOwnedStatus = managed.turnLifecycleManagedStatus
+    managed.turnLifecycleManagedStatus = undefined
+    if (!lifecycleOwnedStatus || managed.sessionStatus !== lifecycleOwnedStatus) return
+
+    const config = loadStatusConfig(managed.workspace.rootPath)
+    const terminalStatus = resolveLifecycleTerminalStatus(config, reason)
+    if (terminalStatus && terminalStatus !== managed.sessionStatus) {
+      await this.setSessionStatus(managed.id, terminalStatus)
+    }
+  }
+
   /**
    * Set the LLM connection for a session.
    *
@@ -7267,6 +7307,17 @@ export class SessionManager implements ISessionManager {
     managed.processingGeneration++
     managed.turnStartFinalMessageId = this.getLastFinalAssistantMessageId(managed.messages)
 
+    if (!options?.hidden) {
+      try {
+        await this.beginAutomaticSessionStatusLifecycle(managed)
+      } catch (error) {
+        sessionLog.warn('Automatic session status start transition failed; continuing turn', {
+          sessionId,
+          error: error instanceof Error ? error.message : String(error),
+        })
+      }
+    }
+
     // Reset auth retry flag for this new message (allows one retry per message)
     // IMPORTANT: Skip reset if this is an auth retry call - the flag is already true
     // and resetting it would allow infinite retry loops
@@ -7402,11 +7453,13 @@ export class SessionManager implements ISessionManager {
           agent = await this.getOrCreateAgent(managed, { message, options })
           break
         } catch (error) {
-          const didFallback = await this.tryApplyRoutingFallbackAfterAgentFailure(
-            managed,
-            error,
-            userMessage.id,
-          )
+          const didFallback = shouldAttemptProviderFallback(error)
+            ? await this.tryApplyRoutingFallbackAfterAgentFailure(
+                managed,
+                error,
+                userMessage.id,
+              )
+            : false
           if (!didFallback) throw error
         }
       }
@@ -7789,12 +7842,41 @@ export class SessionManager implements ISessionManager {
         sendSpan.mark('chat.error')
         sendSpan.setMetadata('error', error instanceof Error ? error.message : String(error))
         sendSpan.end()
+
+        // Preparation-time fallback already uses the policy router. Apply the
+        // same handoff when a provider fails after streaming has started (for
+        // example subscription quota exhaustion or a 429/503). The preserved
+        // recovery marker replays the objective on the newly selected runtime;
+        // external mutations are never blindly replayed by the recovery prompt.
+        let providerFallbackApplied = false
+        if (shouldAttemptProviderFallback(error)) {
+          try {
+            providerFallbackApplied = await this.tryApplyRoutingFallbackAfterAgentFailure(
+              managed,
+              error,
+              managed.pendingTurnRecovery?.userMessageId,
+            )
+          } catch (fallbackError) {
+            sessionLog.warn('Mid-stream routing fallback failed; using normal recovery path', {
+              sessionId,
+              error: fallbackError instanceof Error ? fallbackError.message : String(fallbackError),
+            })
+          }
+        }
         const recoveryQueued = await this.enqueueAutomaticTurnRecovery(managed, 'runtime_error')
         if (!recoveryQueued) {
           this.sendEvent({
             type: 'error',
             sessionId,
             error: error instanceof Error ? error.message : 'Unknown error'
+          }, managed.workspace.id)
+        } else if (providerFallbackApplied) {
+          this.sendEvent({
+            type: 'info',
+            sessionId,
+            message: 'The provider became unavailable. The turn is continuing automatically on a configured fallback connection…',
+            level: 'warning',
+            timestamp: this.monotonic(),
           }, managed.workspace.id)
         }
         // Handle error via centralized handler
@@ -8173,6 +8255,21 @@ export class SessionManager implements ISessionManager {
       managed.pendingExternalMetadata = undefined
       sessionLog.info(`Applying deferred external metadata for session ${sessionId} after processing stop`)
       this.applyExternalSessionMetadata(managed, pendingHeader)
+    }
+
+    // Only assign a terminal handoff when no autonomous continuation is
+    // queued. The transition is conditional on our start status still being
+    // current, so an explicit user/agent status change made during the turn
+    // always wins.
+    if (managed.messageQueue.length === 0) {
+      try {
+        await this.finishAutomaticSessionStatusLifecycle(managed, reason)
+      } catch (error) {
+        sessionLog.warn('Automatic session status terminal transition failed', {
+          sessionId,
+          error: error instanceof Error ? error.message : String(error),
+        })
+      }
     }
 
     // 5. Check queue and process or complete

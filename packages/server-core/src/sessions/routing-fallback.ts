@@ -39,6 +39,15 @@ export function classifyRoutingFallbackReason(error: unknown): RoutingFallbackRe
   }
 }
 
+/** Restrict mid-stream handoff to failures that another provider can actually recover. */
+export function shouldAttemptProviderFallback(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error)
+  const failure = classifyAgentFailure({ message })
+  return failure.recovery === 'provider-fallback'
+    || failure.failureClass === 'network-unavailable'
+    || failure.failureClass === 'timeout'
+}
+
 export function selectRoutingFallbackCandidate(
   primarySlug: string | undefined,
   candidates: string[] | undefined,
@@ -49,6 +58,18 @@ export function selectRoutingFallbackCandidate(
   return (candidates ?? [])
     .filter(slug => slug && slug !== primarySlug)
     .find(slug => exists(slug) && !isUnavailable(slug))
+}
+
+/** Explicit policy order wins; otherwise every other configured connection is eligible. */
+export function resolveRoutingFallbackCandidates(
+  primarySlug: string,
+  policyCandidates: string[] | undefined,
+  configuredConnectionSlugs: string[],
+): string[] {
+  const source = policyCandidates && policyCandidates.length > 0
+    ? policyCandidates
+    : configuredConnectionSlugs
+  return [...new Set(source)].filter(slug => slug && slug !== primarySlug)
 }
 
 export function recordRoutingCircuitFailure(

@@ -3,7 +3,9 @@ import {
   classifyRoutingFallbackReason,
   isRoutingCircuitOpen,
   recordRoutingCircuitFailure,
+  resolveRoutingFallbackCandidates,
   selectRoutingFallbackCandidate,
+  shouldAttemptProviderFallback,
 } from './routing-fallback'
 
 describe('classifyRoutingFallbackReason', () => {
@@ -53,6 +55,31 @@ describe('selectRoutingFallbackCandidate', () => {
       () => true,
       slug => slug === 'open-circuit',
     )).toBe('healthy')
+  })
+})
+
+describe('resolveRoutingFallbackCandidates', () => {
+  it('uses explicit policy order when configured', () => {
+    expect(resolveRoutingFallbackCandidates('primary', ['policy-b', 'policy-c'], ['global-a']))
+      .toEqual(['policy-b', 'policy-c'])
+  })
+
+  it('falls back across configured connections when no policy exists', () => {
+    expect(resolveRoutingFallbackCandidates('primary', undefined, ['primary', 'api', 'google', 'api']))
+      .toEqual(['api', 'google'])
+  })
+})
+
+describe('shouldAttemptProviderFallback', () => {
+  it('allows quota, rate-limit and provider availability handoffs', () => {
+    expect(shouldAttemptProviderFallback(new Error('Codex error: The usage limit has been reached'))).toBe(true)
+    expect(shouldAttemptProviderFallback(new Error('429 too many requests'))).toBe(true)
+    expect(shouldAttemptProviderFallback(new Error('503 provider unavailable'))).toBe(true)
+  })
+
+  it('does not hand authentication or invalid input to another account', () => {
+    expect(shouldAttemptProviderFallback(new Error('401 Unauthorized: token expired'))).toBe(false)
+    expect(shouldAttemptProviderFallback(new Error('validation failed: missing required field'))).toBe(false)
   })
 })
 

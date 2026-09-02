@@ -84,6 +84,21 @@ describe('classifyLatestTurnTerminalState', () => {
     )).toBe(false);
   });
 
+  it('recovers a technical checkpoint that incorrectly asks for another turn', () => {
+    expect(looksLikePrematureFinalAssistant(
+      'Je m’arrête ici à cause de la limite technique. Au prochain tour, je poursuivrai la vérification.',
+    )).toBe(true);
+    expect(looksLikePrematureFinalAssistant(
+      'The tool budget is exhausted. In a new turn I will continue the deployment checks.',
+    )).toBe(true);
+  });
+
+  it('does not treat a generic technical limitation as a human decision', () => {
+    expect(looksLikePrematureFinalAssistant(
+      'Je ne peux pas finir dans ce tour ; je continuerai avec la vérification.',
+    )).toBe(true);
+  });
+
   it('does not reject a completed report because its introduction announced the work', () => {
     const completedReport = [
       'Je vais maintenant analyser les journaux.',
