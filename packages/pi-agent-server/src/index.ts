@@ -101,6 +101,11 @@ import {
 } from './incomplete-tool-tail-recovery.ts';
 import { ToolLoopBudget } from './tool-loop-budget.ts';
 import { normalizeSessionPathTokens } from './session-path-normalization.ts';
+import {
+  ReadToolTimeoutError,
+  resolveReadToolTimeoutMs,
+  withReadToolTimeout,
+} from './read-tool-timeout.ts';
 
 // ============================================================
 // Types — JSONL Protocol
@@ -788,7 +793,19 @@ function wrapSingleTool(tool: ToolDefinition<any, any>): ToolDefinition<any, any
     }
 
     // Execute original tool with (potentially modified) input
-    const result = await originalExecute(toolCallId, inputObj, signal, onUpdate, ctx);
+    let result: AgentToolResult<any>;
+    try {
+      result = await withReadToolTimeout(
+        sdkToolName,
+        originalExecute(toolCallId, inputObj, signal, onUpdate, ctx),
+        resolveReadToolTimeoutMs(process.env.CRAFT_READ_TOOL_TIMEOUT_MS),
+      );
+    } catch (error) {
+      if (error instanceof ReadToolTimeoutError) {
+        return makeErrorResult(error.message);
+      }
+      throw error;
+    }
 
     // --- Post-execute: large response summarization ---
 
