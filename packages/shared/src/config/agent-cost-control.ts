@@ -93,6 +93,8 @@ export interface AgentCostControlDecision {
   criticalRisk: boolean;
   /** Sensitive domain work whose current request explicitly forbids mutation. */
   readOnlyRisk: boolean;
+  /** The turn only confirms an already-completed objective and hands it off for review. */
+  completionReviewOnly: boolean;
   budgetState: CostBudgetState;
   shouldCompact: boolean;
   hardContextLimitReached: boolean;
@@ -243,6 +245,16 @@ const HIGH_RISK_PATTERN = /\b(production|prod|deploy|release|publish|delete|remo
 const CRITICAL_RISK_PATTERN = /\b(production|prod|deploy|release|publish|delete|remove|purge|drop|migration|rollback|secret|credential|payment|legal|signature|notari[sz]|irreversible|destructive|transaction)\b|\b(supprim|nettoy|déploi|production|migration|secret|paiement|juridique|irréversible|destruct)/i;
 const EXPLICIT_READ_ONLY_PATTERN = /\b(read[ -]?only|audit only|inspect only|verify only|no writes?|without (?:any )?(?:change|mutation|write))\b|\b(lecture seule|sans (?:aucune )?(?:modification|mutation|écriture)|aucune (?:modification|mutation|écriture)|vérifie seulement|contrôle seulement)/i;
 const EXPLICIT_MUTATION_REQUEST_PATTERN = /\b(deploy|publish|delete|remove|purge|drop|migrate|rollback|write|execute|apply|fix|change|modify|approve|submit|pay)\b|\b(déploie|publie|supprime|purge|migre|restaure|écris|exécute|applique|corrige|modifie|approuve|soumets|paie|nettoie)\b/i;
+const COMPLETION_REVIEW_PATTERN = /(?:objectif|travail|tâche|task|work).{0,120}(?:déjà\s+)?(?:achev[ée]|termin[ée]|complét[ée]|complete(?:d)?|finished)|(?:déjà\s+)?(?:achev[ée]|termin[ée]|complét[ée]).{0,120}(?:objectif|travail|tâche)/i;
+const NO_REEXECUTION_PATTERN = /(?:ne|n['’])\s+(?:relance|répète|lance|effectue).{0,160}(?:audit|appel réseau|effet externe|action externe)|(?:sans|aucun|aucune|no|without).{0,100}(?:audit|network call|appel réseau|external effect|effet externe)/i;
+const REVIEW_HANDOFF_PATTERN = /needs-review|(?:statut|status).{0,40}(?:revue|review)|(?:place|mets|mettre|placer).{0,80}(?:revue|review)/i;
+
+function isCompletionReviewOnly(text: string): boolean {
+  return COMPLETION_REVIEW_PATTERN.test(text)
+    && NO_REEXECUTION_PATTERN.test(text)
+    && REVIEW_HANDOFF_PATTERN.test(text)
+    && !EXPLICIT_MUTATION_REQUEST_PATTERN.test(text);
+}
 
 function isInternalTurn(turnKind: CostControlledTurnKind): boolean {
   return turnKind !== 'direct';
@@ -261,9 +273,13 @@ export function decideAgentCostControl(
   const combinedRiskText = `${input.text}\n${input.riskContext ?? ''}`;
   const highRisk = HIGH_RISK_PATTERN.test(combinedRiskText);
   const criticalRisk = CRITICAL_RISK_PATTERN.test(combinedRiskText);
+  const completionReviewOnly = isCompletionReviewOnly(input.text);
   const readOnlyRisk = highRisk
-    && EXPLICIT_READ_ONLY_PATTERN.test(input.text)
+    && (EXPLICIT_READ_ONLY_PATTERN.test(input.text) || completionReviewOnly)
     && !EXPLICIT_MUTATION_REQUEST_PATTERN.test(input.text);
+  const difficulty: RoutingDifficulty = completionReviewOnly && !highRisk
+    ? 'simple'
+    : (classified.difficulty ?? 'standard');
   const contextTokens = Math.max(0, input.contextTokens ?? 0);
   const sessionCostUsd = Math.max(0, input.sessionCostUsd ?? 0);
   const budgetState: CostBudgetState = sessionCostUsd >= policy.budgets.hardSessionUsd
@@ -279,8 +295,9 @@ export function decideAgentCostControl(
   if ((criticalRisk || ambiguousInternalRisk) && !readOnlyRisk) tier = 'highRisk';
   else if (readOnlyRisk) tier = 'standard';
   else if (highRisk) tier = 'standard';
-  else if (classified.difficulty === 'complex') tier = isInternalTurn(turnKind) ? 'standard' : 'complex';
-  else if (classified.difficulty === 'standard' && !isInternalTurn(turnKind)) tier = 'standard';
+  else if (completionReviewOnly) tier = 'routine';
+  else if (difficulty === 'complex') tier = isInternalTurn(turnKind) ? 'standard' : 'complex';
+  else if (difficulty === 'standard' && !isInternalTurn(turnKind)) tier = 'standard';
   else tier = 'routine';
 
   if (budgetState !== 'normal' && tier !== 'highRisk') {
@@ -300,10 +317,11 @@ export function decideAgentCostControl(
     model,
     thinkingLevel,
     turnKind,
-    difficulty: classified.difficulty ?? 'standard',
+    difficulty,
     highRisk,
     criticalRisk,
     readOnlyRisk,
+    completionReviewOnly,
     budgetState,
     shouldCompact,
     hardContextLimitReached,
@@ -311,8 +329,9 @@ export function decideAgentCostControl(
       `cost-control:${tier}`,
       guardedHighRisk ? 'safety:guarded-high-risk' : undefined,
       readOnlyRisk ? 'safety:explicit-read-only' : undefined,
+      completionReviewOnly ? 'cost:completion-review-only' : undefined,
       `turn:${turnKind}`,
-      `difficulty:${classified.difficulty ?? 'standard'}`,
+      `difficulty:${difficulty}`,
       `budget:${budgetState}`,
       shouldCompact ? `compact-at:${contextTokens}` : undefined,
     ].filter(Boolean).join('; '),

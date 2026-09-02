@@ -25,6 +25,49 @@ describe('decideAgentCostControl', () => {
     expect(decision.shouldCompact).toBe(false);
   });
 
+  test('routes a completion-only review handoff to the cheapest model', () => {
+    const decision = decideAgentCostControl({
+      text: 'Reprends uniquement depuis le dernier état vérifié. Vérifie si l’objectif initial est déjà achevé. S’il l’est, ne relance aucun audit ni appel réseau, résume brièvement puis place le chat en needs-review.',
+      connection,
+      currentModel: 'pi/gpt-5.6-sol',
+      turnKind: 'direct',
+      contextTokens: 20_000,
+    });
+
+    expect(decision.completionReviewOnly).toBe(true);
+    expect(decision.difficulty).toBe('simple');
+    expect(decision.model).toBe('pi/gpt-5.6-luna');
+    expect(decision.thinkingLevel).toBe('low');
+    expect(decision.explanation).toContain('cost:completion-review-only');
+  });
+
+  test('keeps a sensitive completion-only review handoff on the balanced model', () => {
+    const decision = decideAgentCostControl({
+      text: 'Vérifie si l’objectif est déjà terminé, sans aucun audit ni effet externe, puis place le chat en needs-review.',
+      riskContext: 'Déploiement de production et migration de sécurité',
+      connection,
+      currentModel: 'pi/gpt-5.6-sol',
+      turnKind: 'direct',
+    });
+
+    expect(decision.completionReviewOnly).toBe(true);
+    expect(decision.readOnlyRisk).toBe(true);
+    expect(decision.model).toBe('pi/gpt-5.6-terra');
+    expect(decision.thinkingLevel).toBe('medium');
+  });
+
+  test('does not downgrade a review handoff that also requests a mutation', () => {
+    const decision = decideAgentCostControl({
+      text: 'Vérifie si l’objectif est déjà terminé, sans aucun audit ni effet externe, puis supprime les données et place le chat en needs-review.',
+      connection,
+      turnKind: 'direct',
+    });
+
+    expect(decision.completionReviewOnly).toBe(false);
+    expect(decision.model).toBe('pi/gpt-5.6-sol');
+    expect(decision.thinkingLevel).toBe('xhigh');
+  });
+
   test('keeps a high-risk production action on the strongest model', () => {
     const decision = decideAgentCostControl({
       text: 'Déploie cette migration destructive en production.',
