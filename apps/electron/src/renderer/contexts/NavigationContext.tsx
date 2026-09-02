@@ -87,6 +87,7 @@ import {
   updateFocusedPanelRouteAtom,
   parseSessionIdFromRoute,
 } from '@/atoms/panel-stack'
+import { shouldAutoDeleteEmptySession } from './navigation-empty-session-cleanup'
 
 // Re-export routes for convenience
 export { routes }
@@ -483,6 +484,7 @@ export function NavigationProvider({
   // disappears (navigate away, close tab, Cmd+W), check if it was empty and
   // auto-delete it. This is the single codepath for all navigate-away cleanup.
   const prevVisibleSessionIdsRef = useRef<Set<string>>(new Set())
+  const autoDeleteEligibleSessionIdsRef = useRef<Set<string>>(new Set())
 
   useEffect(() => {
     const currentIds = new Set<string>()
@@ -497,10 +499,12 @@ export function NavigationProvider({
       for (const prevId of prevVisibleSessionIdsRef.current) {
         if (!currentIds.has(prevId)) {
           const meta = store.get(sessionMetaMapAtom).get(prevId)
-          const isEmpty = meta && !meta.lastFinalMessageId && !meta.name && !meta.isProcessing
-          const hasDraft = getDraft?.(prevId)?.trim()
-          if (isEmpty && !hasDraft) {
+          const eligible = autoDeleteEligibleSessionIdsRef.current.has(prevId)
+          if (shouldAutoDeleteEmptySession(eligible, meta, getDraft?.(prevId))) {
+            autoDeleteEligibleSessionIdsRef.current.delete(prevId)
             onAutoDeleteEmptySession(prevId)
+          } else if (eligible && meta && (meta.lastFinalMessageId || meta.name || meta.isProcessing)) {
+            autoDeleteEligibleSessionIdsRef.current.delete(prevId)
           }
         }
       }
@@ -718,6 +722,7 @@ export function NavigationProvider({
             createOptions.playbookSlug = parsed.params.playbook
           }
           const session = await onCreateSession(workspaceId, createOptions)
+          autoDeleteEligibleSessionIdsRef.current.add(session.id)
 
           if (parsed.params.name) {
             await window.electronAPI.sessionCommand(session.id, { type: 'rename', name: parsed.params.name })
