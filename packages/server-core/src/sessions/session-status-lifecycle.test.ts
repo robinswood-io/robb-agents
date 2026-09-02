@@ -3,6 +3,7 @@ import type { WorkspaceStatusConfig } from '@craft-agent/shared/statuses'
 import {
   resolveLifecycleStartStatus,
   resolveLifecycleTerminalStatus,
+  shouldManageSessionStatusLifecycle,
 } from './session-status-lifecycle'
 
 const config: WorkspaceStatusConfig = {
@@ -18,6 +19,16 @@ const config: WorkspaceStatusConfig = {
 }
 
 describe('automatic session status lifecycle', () => {
+  it('owns visible and hidden recovery turns, but not unrelated hidden maintenance', () => {
+    expect(shouldManageSessionStatusLifecycle()).toBe(true)
+    expect(shouldManageSessionStatusLifecycle({ hidden: false })).toBe(true)
+    expect(shouldManageSessionStatusLifecycle({ hidden: true })).toBe(false)
+    expect(shouldManageSessionStatusLifecycle({
+      hidden: true,
+      automaticRecovery: { cause: 'app_restart' },
+    })).toBe(true)
+  })
+
   it('moves an unassigned or default task to in-progress', () => {
     expect(resolveLifecycleStartStatus(config, undefined)).toBe('in-progress')
     expect(resolveLifecycleStartStatus(config, 'todo')).toBe('in-progress')

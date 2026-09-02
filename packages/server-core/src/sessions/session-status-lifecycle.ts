@@ -2,6 +2,18 @@ import type { WorkspaceStatusConfig } from '@craft-agent/shared/statuses'
 
 export type SessionLifecycleStopReason = 'complete' | 'interrupted' | 'error' | 'timeout'
 
+export interface SessionLifecycleTurnOptions {
+  hidden?: boolean
+  automaticRecovery?: unknown
+}
+
+/** Hidden maintenance turns stay invisible, except recovery turns which own the user task lifecycle. */
+export function shouldManageSessionStatusLifecycle(
+  options?: SessionLifecycleTurnOptions,
+): boolean {
+  return options?.hidden !== true || options.automaticRecovery != null
+}
+
 function normalized(value: string): string {
   return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-')
 }

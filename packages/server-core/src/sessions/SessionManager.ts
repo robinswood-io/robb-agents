@@ -136,6 +136,7 @@ import { classifyLatestTurnTerminalState } from './turn-completion'
 import {
   resolveLifecycleStartStatus,
   resolveLifecycleTerminalStatus,
+  shouldManageSessionStatusLifecycle,
   type SessionLifecycleStopReason,
 } from './session-status-lifecycle'
 import {
@@ -7307,7 +7308,7 @@ export class SessionManager implements ISessionManager {
     managed.processingGeneration++
     managed.turnStartFinalMessageId = this.getLastFinalAssistantMessageId(managed.messages)
 
-    if (!options?.hidden) {
+    if (shouldManageSessionStatusLifecycle(options)) {
       try {
         await this.beginAutomaticSessionStatusLifecycle(managed)
       } catch (error) {
