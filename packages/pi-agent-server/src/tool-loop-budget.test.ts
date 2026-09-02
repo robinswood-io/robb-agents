@@ -25,5 +25,28 @@ describe('ToolLoopBudget', () => {
     expect(budget.observe('Bash', { command: 'pwd' }).consecutiveToolCalls).toBe(1);
     budget.beginPrompt();
     expect(budget.observe('Read', { path: 'a' }).identicalCalls).toBe(1);
+    expect(budget.observe('Read', { path: 'b' }).totalToolCalls).toBe(2);
+  });
+
+  test('blocks the eighth consecutive call even when every input differs', () => {
+    const budget = new ToolLoopBudget();
+    for (let index = 1; index < 8; index += 1) {
+      expect(budget.observe('Bash', { command: `check-${index}` }).action).not.toBe('block');
+    }
+    const decision = budget.observe('Bash', { command: 'check-8' });
+    expect(decision.action).toBe('block');
+    expect(decision.consecutiveToolCalls).toBe(8);
+    expect(decision.totalToolCalls).toBe(8);
+  });
+
+  test('blocks the twenty-fourth tool call even when tool names alternate', () => {
+    const budget = new ToolLoopBudget();
+    for (let index = 1; index < 24; index += 1) {
+      const toolName = index % 2 === 0 ? 'Read' : 'Grep';
+      expect(budget.observe(toolName, { index }).action).not.toBe('block');
+    }
+    const decision = budget.observe('Read', { index: 24 });
+    expect(decision.action).toBe('block');
+    expect(decision.totalToolCalls).toBe(24);
   });
 });
