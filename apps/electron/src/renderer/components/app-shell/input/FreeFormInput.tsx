@@ -222,10 +222,10 @@ export interface FreeFormInputProps {
    * behavior.
    */
   enableCompactModelPicker?: boolean
-  // Connection selection (hierarchical connection → model selector)
-  /** Current LLM connection slug (locked after first message) */
+  // Provider selection; model and reasoning are selected by the router.
+  /** Current LLM connection slug. */
   currentConnection?: string
-  /** Callback when connection changes (only works when session is empty) */
+  /** Callback when the provider changes between idle turns. */
   onConnectionChange?: (connectionSlug: string) => void
   /** When true, the session's locked connection has been removed */
   connectionUnavailable?: boolean
@@ -314,6 +314,10 @@ export function FreeFormInput({
   const appShellCtx = useOptionalAppShellContext()
   const llmConnections = appShellCtx?.llmConnections ?? []
   const workspaceDefaultConnection = appShellCtx?.workspaceDefaultLlmConnection
+
+  // Robinswood's router owns model and reasoning selection. The composer only
+  // exposes the authenticated provider/connection chosen by the user.
+  const providerOnly = true
 
   // Derive connectionDefaultModel per-session from the effective connection.
   // Only non-null for compat providers (custom endpoints with fixed models).
@@ -404,10 +408,12 @@ export function FreeFormInput({
     return llmConnections.find(c => c.slug === effectiveConnection) ?? null
   }, [llmConnections, effectiveConnection])
 
-  // The composer surfaces the base connection (for example ChatGPT or Gemini)
-  // rather than a low-level model ID. The picker still exposes each connection's
-  // model variants after the user opens it.
+  // The composer surfaces the provider connection (for example ChatGPT or
+  // Gemini), never the low-level model selected by automatic routing.
   const baseModelDisplayName = effectiveConnectionDetails?.name ?? currentModelDisplayName
+  const selectorDisplayName = providerOnly
+    ? effectiveConnectionDetails?.name ?? t('common.aiProvider')
+    : baseModelDisplayName
 
 
   // Access sessionStatuses and onSessionStatusChange from context for the # menu state picker
@@ -1734,6 +1740,8 @@ export function FreeFormInput({
               isEmptySession={isEmptySession}
               connectionUnavailable={connectionUnavailable}
               contextStatus={contextStatus}
+              providerOnly={providerOnly}
+              disabled={isProcessing}
             />
           )}
           <FreeFormInputContextBadge
@@ -1821,9 +1829,14 @@ export function FreeFormInput({
                 <DropdownMenuTrigger asChild>
                   <button
                     type="button"
+                    data-testid="provider-selector-trigger"
+                    data-routing-control="provider-only"
+                    disabled={providerOnly && isProcessing}
                     aria-label={connectionUnavailable
                       ? t('common.unavailable')
-                      : `${t('common.model')}: ${baseModelDisplayName}`}
+                      : providerOnly
+                        ? `${t('common.aiProvider')}: ${selectorDisplayName}`
+                        : `${t('common.model')}: ${selectorDisplayName}`}
                     className={cn(
                       "input-toolbar-btn inline-flex items-center h-7 px-1.5 gap-0.5 text-[13px] shrink-0 rounded-[6px] hover:bg-foreground/5 transition-colors select-none",
                       modelDropdownOpen && "bg-foreground/5",
@@ -1838,20 +1851,62 @@ export function FreeFormInput({
                     ) : (
                       <>
                         {effectiveConnectionDetails && llmConnections.length > 1 && storage.get(storage.KEYS.showConnectionIcons, true) && <ConnectionIcon connection={effectiveConnectionDetails} size={14} showTooltip />}
-                        {baseModelDisplayName}
-                        {pickerMode !== 'locked-single' && <ChevronDown className="h-3 w-3 opacity-50 shrink-0" />}
+                        {selectorDisplayName}
+                        {(!providerOnly || !isProcessing) && pickerMode !== 'locked-single' && <ChevronDown className="h-3 w-3 opacity-50 shrink-0" />}
                       </>
                     )}
                   </button>
                 </DropdownMenuTrigger>
               </TooltipTrigger>
               <TooltipContent side="top">
-                {t('common.model')}
+                {providerOnly
+                  ? isProcessing
+                    ? t('chat.providerPicker.busy')
+                    : t('chat.providerPicker.automaticRouting')
+                  : t('common.model')}
               </TooltipContent>
             </Tooltip>
             <StyledDropdownMenuContent side="top" align="end" sideOffset={8} className="min-w-[260px]">
               {/* Connection unavailable message */}
-              {pickerMode === 'unavailable' ? (
+              {providerOnly ? (
+                connectionsByProvider.map(([providerName, connections], index) => (
+                  <React.Fragment key={providerName}>
+                    <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wide select-none">
+                      {providerName}
+                    </div>
+                    {connections.map(conn => {
+                      const isCurrentConnection = effectiveConnection === conn.slug
+                      const connectionDisabled = !conn.isAuthenticated || isProcessing
+                      return (
+                        <StyledDropdownMenuItem
+                          key={conn.slug}
+                          data-testid="provider-option"
+                          data-provider-slug={conn.slug}
+                          disabled={connectionDisabled}
+                          onSelect={() => {
+                            if (!connectionDisabled && !isCurrentConnection && onConnectionChange) {
+                              void onConnectionChange(conn.slug)
+                            }
+                          }}
+                          className="flex items-center justify-between px-2 py-2 rounded-lg"
+                        >
+                          <div className="flex min-w-0 items-center gap-2">
+                            <ConnectionIcon connection={conn} size={14} />
+                            <div className="min-w-0 text-left">
+                              <div className="truncate text-sm font-medium">{conn.name}</div>
+                              {!conn.isAuthenticated && (
+                                <div className="text-xs text-muted-foreground">{t('settings.ai.notAuthenticated')}</div>
+                              )}
+                            </div>
+                          </div>
+                          {isCurrentConnection && <Check className="h-3 w-3 shrink-0 text-foreground" />}
+                        </StyledDropdownMenuItem>
+                      )
+                    })}
+                    {index < connectionsByProvider.length - 1 && <StyledDropdownMenuSeparator className="my-1" />}
+                  </React.Fragment>
+                ))
+              ) : pickerMode === 'unavailable' ? (
                 <div className="flex flex-col items-center justify-center py-6 px-4 text-center">
                   <AlertCircle className="h-8 w-8 text-destructive mb-2" />
                   <div className="font-medium text-sm mb-1">{t('chat.connectionUnavailable')}</div>
@@ -2114,7 +2169,7 @@ export function FreeFormInput({
 
               {/* Thinking level selector — only shown when thinking levels are available
                   (Claude supports extended thinking, OpenAI backends may not) */}
-              {availableThinkingLevels.length > 0 && (
+              {!providerOnly && availableThinkingLevels.length > 0 && (
                 <>
                   <StyledDropdownMenuSeparator className="my-1" />
 

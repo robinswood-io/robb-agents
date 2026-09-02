@@ -58,6 +58,10 @@ interface CompactModelSelectorProps {
     inputTokens?: number
     contextWindow?: number
   }
+  /** Hide model/reasoning overrides and expose provider connections only. */
+  providerOnly?: boolean
+  /** Provider handoff is rejected while the current turn is processing. */
+  disabled?: boolean
 }
 
 export function CompactModelSelector({
@@ -70,6 +74,8 @@ export function CompactModelSelector({
   isEmptySession = false,
   connectionUnavailable = false,
   contextStatus,
+  providerOnly = true,
+  disabled = false,
 }: CompactModelSelectorProps) {
   const { t } = useTranslation()
   const [open, setOpen] = React.useState(false)
@@ -123,9 +129,12 @@ export function CompactModelSelector({
     return model.name ?? stripPiPrefixForDisplay(model.id)
   }, [availableModels, currentModel, connectionDefaultModel])
 
-  // Prefer the configured base connection name (for example ChatGPT or Gemini)
-  // on the trigger. Individual model variants remain available in the drawer.
+  // Prefer the configured provider connection name (for example ChatGPT or
+  // Gemini) on the trigger. Automatic routing keeps model IDs private.
   const baseModelDisplayName = effectiveConnectionDetails?.name ?? currentModelDisplayName
+  const selectorDisplayName = providerOnly
+    ? effectiveConnectionDetails?.name ?? t('common.aiProvider')
+    : baseModelDisplayName
 
   const thinkingDisabled = React.useMemo(() => {
     const model = availableModels.find(
@@ -169,14 +178,26 @@ export function CompactModelSelector({
     [onModelChange, onConnectionChange, effectiveConnection],
   )
 
+  const handlePickProvider = React.useCallback(async (connectionSlug: string) => {
+    if (connectionSlug !== effectiveConnection && onConnectionChange) {
+      await onConnectionChange(connectionSlug)
+    }
+    setOpen(false)
+  }, [effectiveConnection, onConnectionChange])
+
   return (
     <Drawer open={open} onOpenChange={setOpen}>
       <DrawerTrigger asChild>
         <button
           type="button"
+          data-testid="provider-selector-trigger"
+          data-routing-control="provider-only"
+          disabled={providerOnly && disabled}
           aria-label={connectionUnavailable
             ? t('common.unavailable')
-            : `${t('common.model')}: ${baseModelDisplayName}`}
+            : providerOnly
+              ? `${t('common.aiProvider')}: ${selectorDisplayName}`
+              : `${t('common.model')}: ${selectorDisplayName}`}
           className={cn(
             'h-7 pl-2 pr-2 text-xs font-medium rounded-[6px] flex items-center gap-1.5 shadow-tinted outline-none select-none min-w-[64px] shrink',
             connectionUnavailable
@@ -195,8 +216,8 @@ export function CompactModelSelector({
               {showConnectionIcon && effectiveConnectionDetails && (
                 <ConnectionIcon connection={effectiveConnectionDetails} size={14} />
               )}
-              <span className="truncate min-w-0">{baseModelDisplayName}</span>
-              {pickerMode !== 'locked-single' && (
+              <span className="truncate min-w-0">{selectorDisplayName}</span>
+              {(!providerOnly || !disabled) && pickerMode !== 'locked-single' && (
                 <ChevronDown className="h-3 w-3 opacity-50 shrink-0" />
               )}
             </>
@@ -206,12 +227,56 @@ export function CompactModelSelector({
 
       <DrawerContent>
         <DrawerHeader>
-          <DrawerTitle>{t('common.model')}</DrawerTitle>
+          <DrawerTitle>{providerOnly ? t('common.aiProvider') : t('common.model')}</DrawerTitle>
         </DrawerHeader>
 
         <div className="px-2 pb-4 flex flex-col gap-0.5 max-h-[55vh] overflow-y-auto">
           {/* === Models section === */}
-          {pickerMode === 'unavailable' ? (
+          {providerOnly ? (
+            connectionsByProvider.map(([providerName, connections]) => (
+              <React.Fragment key={providerName}>
+                <div className="px-3 pt-3 pb-1 text-xs font-medium text-foreground/60 uppercase tracking-wide select-none">
+                  {providerName}
+                </div>
+                {connections.map(conn => {
+                  const isCurrentConnection = effectiveConnection === conn.slug
+                  const connectionDisabled = !conn.isAuthenticated || disabled
+                  return (
+                    <DrawerClose asChild key={conn.slug}>
+                      <button
+                        type="button"
+                        data-testid="provider-option"
+                        data-provider-slug={conn.slug}
+                        disabled={connectionDisabled}
+                        onClick={() => {
+                          if (!connectionDisabled) void handlePickProvider(conn.slug)
+                        }}
+                        className={cn(
+                          'flex items-center gap-2 w-full px-3 py-2 rounded-lg text-left transition-colors',
+                          connectionDisabled && 'opacity-50 cursor-not-allowed',
+                          !connectionDisabled && 'hover:bg-foreground/5',
+                          isCurrentConnection && 'bg-foreground/5',
+                        )}
+                      >
+                        <ConnectionIcon connection={conn} size={14} />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium truncate">{conn.name}</div>
+                          {!conn.isAuthenticated && (
+                            <div className="text-xs text-muted-foreground">
+                              {t('settings.ai.notAuthenticated')}
+                            </div>
+                          )}
+                        </div>
+                        {isCurrentConnection && (
+                          <Check className="h-3 w-3 text-foreground/60 shrink-0" />
+                        )}
+                      </button>
+                    </DrawerClose>
+                  )
+                })}
+              </React.Fragment>
+            ))
+          ) : pickerMode === 'unavailable' ? (
             <div className="flex flex-col items-center justify-center py-6 px-4 text-center">
               <AlertCircle className="h-8 w-8 text-destructive mb-2" />
               <div className="font-medium text-sm mb-1">
@@ -399,7 +464,7 @@ export function CompactModelSelector({
           )}
 
           {/* === Thinking section === */}
-          {THINKING_LEVELS.length > 0 && pickerMode !== 'unavailable' && (
+          {!providerOnly && THINKING_LEVELS.length > 0 && pickerMode !== 'unavailable' && (
             <>
               <div className="px-3 pt-4 pb-1 text-xs font-medium text-foreground/60 uppercase tracking-wide select-none">
                 {t('chat.modelPicker.thinkingSection')}

@@ -1988,7 +1988,9 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
               onConnectionChange,
               contextStatus: {
                 isCompacting: session.currentStatus?.statusType === 'compacting',
-                inputTokens: session.tokenUsage?.inputTokens,
+                // Display the current provider context, not aggregate billed
+                // input across the turn's tool-call loop.
+                inputTokens: session.tokenUsage?.contextTokens ?? session.tokenUsage?.inputTokens,
                 contextWindow: session.tokenUsage?.contextWindow,
               },
               followUpItems: followUpInputItems,

@@ -324,6 +324,30 @@ async function validateRemoteMobileFlow() {
 
     await page.goto(`${RENDERER_ORIGIN}/playground.html`);
     await page.evaluate(() => {
+      localStorage.setItem('playground-selected-component', 'mobile-webui-chat-display');
+      localStorage.setItem('playground-preview-size', JSON.stringify({ width: 800, height: 760 }));
+    });
+    await page.reload();
+    await page.locator('h2:visible').filter({ hasText: /^ChatDisplay \(Mobile\)$/ }).waitFor({ timeout: 20_000 });
+
+    const providerTrigger = page.getByTestId('provider-selector-trigger');
+    await providerTrigger.waitFor({ timeout: 20_000 });
+    const providerOnlyControl = await providerTrigger.getAttribute('data-routing-control') === 'provider-only';
+    await providerTrigger.click();
+    const providerDrawer = page.locator('[role="dialog"]');
+    await providerDrawer.waitFor({ timeout: 10_000 });
+    const providerOptionCount = await page.getByTestId('provider-option').count();
+    const providerDrawerText = await providerDrawer.innerText();
+    const manualRoutingControlsHidden = ![
+      'Claude Opus',
+      'DeepSeek Chat',
+      'Qwen 2.5',
+      'Réflexion',
+      'Thinking',
+    ].some(label => providerDrawerText.includes(label));
+    await page.keyboard.press('Escape');
+
+    await page.evaluate(() => {
       localStorage.setItem('playground-selected-component', 'session-item-search');
       localStorage.setItem('playground-variants-sidebar-open', 'true');
       localStorage.setItem('playground-expanded-categories', JSON.stringify(['Session List']));
@@ -362,6 +386,7 @@ async function validateRemoteMobileFlow() {
     console.log(`Updater:  ${devUpdaterHidden ? 'hidden in development' : 'unexpectedly visible'}`);
     console.log(`Desktop QR: ${desktopQrVisible ? 'visible and scannable' : 'missing'}`);
     console.log(`Desktop Remote screenshot: ${desktopRemoteScreenshot}`);
+    console.log(`Routing:  ${providerOnlyControl && providerOptionCount >= 2 && manualRoutingControlsHidden ? 'provider-only' : 'manual model control exposed'}`);
     console.log(`Subagents: ${subagentCount} total, ${runningSubagentCount} running`);
     console.log(`Summary:  ${summaryIsNonInteractive ? 'non-interactive' : 'unexpected interactive control'}`);
     console.log(`Children: ${childSessionRows === 0 ? 'not directly navigable' : `${childSessionRows} exposed rows`}`);
@@ -383,6 +408,9 @@ async function validateRemoteMobileFlow() {
       && darkThemeApplied
       && devUpdaterHidden
       && desktopQrVisible
+      && providerOnlyControl
+      && providerOptionCount >= 2
+      && manualRoutingControlsHidden
       && subagentCount === '4'
       && runningSubagentCount === '2'
       && summaryIsNonInteractive
