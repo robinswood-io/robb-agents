@@ -100,6 +100,7 @@ export class PiEventAdapter extends BaseEventAdapter {
     cacheReadTokens: number;
     cacheCreationTokens: number;
     costUsd: number;
+    contextTokens: number;
   } | undefined;
 
   // ============================================================
@@ -291,13 +292,16 @@ export class PiEventAdapter extends BaseEventAdapter {
       cacheReadTokens: 0,
       cacheCreationTokens: 0,
       costUsd: 0,
+      contextTokens: 0,
     };
 
-    totals.inputTokens += usage.input + (usage.cacheRead || 0);
+    const currentContextTokens = usage.input + (usage.cacheRead || 0);
+    totals.inputTokens += currentContextTokens;
     totals.outputTokens += usage.output;
     totals.cacheReadTokens += usage.cacheRead || 0;
     totals.cacheCreationTokens += usage.cacheWrite || 0;
     totals.costUsd += usage.cost.total;
+    totals.contextTokens = currentContextTokens;
     this.turnUsage = totals;
   }
 

@@ -32,5 +32,7 @@ describe('overflow recovery helpers', () => {
     expect(OVERFLOW_RECOVERY_COMPACTION_INSTRUCTIONS).toContain('user goal');
     expect(OVERFLOW_RECOVERY_COMPACTION_INSTRUCTIONS).toContain('exact file paths');
     expect(OVERFLOW_RECOVERY_COMPACTION_INSTRUCTIONS).toContain('raw tool output');
+    expect(OVERFLOW_RECOVERY_COMPACTION_INSTRUCTIONS).toContain('pending approvals');
+    expect(OVERFLOW_RECOVERY_COMPACTION_INSTRUCTIONS).toContain('do not invent details');
   });
 });

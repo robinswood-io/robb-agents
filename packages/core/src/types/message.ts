@@ -316,7 +316,17 @@ export interface RoutingMeta {
     budgetState: string;
     thinkingLevel: string;
     contextTokensBefore: number;
+    contextWindow?: number;
+    compactAtTokens?: number;
+    hardLimitTokens?: number;
     compacted?: boolean;
+    compactionOutcome?: 'succeeded' | 'ineffective' | 'unverified' | 'failed' | 'skipped-cooldown';
+    compactionModel?: string;
+    compactionDurationMs?: number;
+    contextTokensAfter?: number;
+    reclaimedTokens?: number;
+    reductionRatio?: number;
+    compactionIssueCodes?: string[];
     hardContextLimitReached?: boolean;
   };
   /** Exact hard-policy reasons why configured alternatives were rejected. */
@@ -643,14 +653,18 @@ export interface PermissionRequest {
 
 /**
  * Usage data emitted by CraftAgent in 'complete' events
- * Note: This is a subset of TokenUsage - totalTokens/contextTokens are computed by consumers
+ * Note: This is a subset of TokenUsage. totalTokens is computed by consumers;
+ * contextTokens is optional because older backends only report inputTokens.
  */
 export interface AgentEventUsage {
+  /** Billed input across the completed turn (may aggregate several model calls). */
   inputTokens: number;
   outputTokens: number;
   cacheReadTokens?: number;
   cacheCreationTokens?: number;
   costUsd?: number;
+  /** Model-visible input on the latest call; unlike inputTokens this is never cumulative. */
+  contextTokens?: number;
   /** Model's context window size in tokens (from SDK modelUsage) */
   contextWindow?: number;
 }

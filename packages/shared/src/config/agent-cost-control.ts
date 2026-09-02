@@ -80,6 +80,8 @@ export interface AgentCostControlInput {
   currentModel?: string;
   turnKind?: CostControlledTurnKind;
   contextTokens?: number;
+  /** Effective model context window, used to keep absolute limits safe on smaller models. */
+  contextWindow?: number;
   sessionCostUsd?: number;
 }
 
@@ -143,6 +145,38 @@ export const DEFAULT_AGENT_COST_CONTROL_POLICY: ResolvedAgentCostControlPolicy =
     maxQueuedMessages: 8,
   },
 };
+
+const MIN_CONTEXT_LIMIT_TOKENS = 8_000;
+const COMPACT_CONTEXT_WINDOW_RATIO = 0.7;
+const HARD_CONTEXT_WINDOW_RATIO = 0.85;
+
+/**
+ * Clamp absolute policy limits to the active model's real context window.
+ * Without this, the default 80k/100k policy cannot protect a 64k model.
+ */
+export function resolveEffectiveAgentContextLimits(
+  context: ResolvedAgentCostControlPolicy['context'],
+  contextWindow?: number,
+): ResolvedAgentCostControlPolicy['context'] {
+  if (!Number.isFinite(contextWindow) || (contextWindow ?? 0) < MIN_CONTEXT_LIMIT_TOKENS) {
+    return context;
+  }
+
+  const windowTokens = Math.floor(contextWindow as number);
+  const compactAtTokens = Math.min(
+    context.compactAtTokens,
+    Math.max(MIN_CONTEXT_LIMIT_TOKENS, Math.floor(windowTokens * COMPACT_CONTEXT_WINDOW_RATIO)),
+  );
+  const hardLimitTokens = Math.max(
+    compactAtTokens,
+    Math.min(
+      context.hardLimitTokens,
+      Math.max(MIN_CONTEXT_LIMIT_TOKENS, Math.floor(windowTokens * HARD_CONTEXT_WINDOW_RATIO)),
+    ),
+  );
+
+  return { compactAtTokens, hardLimitTokens };
+}
 
 function finiteAtLeast(value: number | undefined, fallback: number, minimum: number): number {
   return Number.isFinite(value) ? Math.max(minimum, value as number) : fallback;
@@ -281,14 +315,15 @@ export function decideAgentCostControl(
     ? 'simple'
     : (classified.difficulty ?? 'standard');
   const contextTokens = Math.max(0, input.contextTokens ?? 0);
+  const effectiveContext = resolveEffectiveAgentContextLimits(policy.context, input.contextWindow);
   const sessionCostUsd = Math.max(0, input.sessionCostUsd ?? 0);
   const budgetState: CostBudgetState = sessionCostUsd >= policy.budgets.hardSessionUsd
     ? 'hard-limit'
     : sessionCostUsd >= policy.budgets.softSessionUsd
       ? 'soft-limit'
       : 'normal';
-  const shouldCompact = contextTokens >= policy.context.compactAtTokens || budgetState !== 'normal';
-  const hardContextLimitReached = contextTokens >= policy.context.hardLimitTokens;
+  const shouldCompact = contextTokens >= effectiveContext.compactAtTokens;
+  const hardContextLimitReached = contextTokens >= effectiveContext.hardLimitTokens;
 
   let tier: 'routine' | 'standard' | 'complex' | 'highRisk';
   const ambiguousInternalRisk = highRisk && isInternalTurn(turnKind) && !readOnlyRisk;

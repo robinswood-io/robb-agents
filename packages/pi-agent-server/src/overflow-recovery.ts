@@ -4,9 +4,11 @@
  * source of a second context overflow, so the fallback explicitly drops them.
  */
 export const OVERFLOW_RECOVERY_COMPACTION_INSTRUCTIONS = [
-  'Create a compact operational handoff for continuing the current task.',
-  'Preserve the user goal, verified facts, decisions, unresolved work, exact file paths, tests, and safety constraints.',
-  'Discard repeated conversation, superseded attempts, raw tool output, and non-essential prose.',
+  'Create a precise, fact-preserving operational handoff for continuing the current task.',
+  'Preserve the user goal, verified facts and evidence, decisions, user constraints, negative findings,',
+  'exact file paths, identifiers, values, tests, completed external effects, pending approvals, blockers, and the next safe action.',
+  'Distinguish verified facts from hypotheses and do not invent details.',
+  'Discard repeated progress chatter, acknowledgements, superseded attempts, raw tool output, and non-essential prose.',
 ].join(' ');
 
 type ContinuationMessage = {

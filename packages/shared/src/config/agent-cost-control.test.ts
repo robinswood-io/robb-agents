@@ -3,6 +3,7 @@ import type { LlmConnection } from './llm-connections.ts';
 import {
   decideAgentCostControl,
   isBrowserFallbackEligibleTool,
+  resolveEffectiveAgentContextLimits,
   resolveAgentCostControlPolicy,
 } from './agent-cost-control.ts';
 
@@ -158,6 +159,21 @@ describe('decideAgentCostControl', () => {
     expect(decideAgentCostControl({ text: 'Continue.', connection, contextTokens: 100_000 }).hardContextLimitReached).toBe(true);
   });
 
+  test('clamps context limits to smaller model windows', () => {
+    const limits = resolveEffectiveAgentContextLimits(
+      resolveAgentCostControlPolicy().context,
+      64_000,
+    );
+
+    expect(limits).toEqual({ compactAtTokens: 44_800, hardLimitTokens: 54_400 });
+    expect(decideAgentCostControl({
+      text: 'Continue.',
+      connection,
+      contextTokens: 50_000,
+      contextWindow: 64_000,
+    }).shouldCompact).toBe(true);
+  });
+
   test('downgrades non-risk work after the hard session budget', () => {
     const decision = decideAgentCostControl({
       text: 'Analyse les résultats et prépare une synthèse détaillée.',
@@ -168,7 +184,19 @@ describe('decideAgentCostControl', () => {
 
     expect(decision.model).toBe('pi/gpt-5.6-luna');
     expect(decision.budgetState).toBe('hard-limit');
-    expect(decision.shouldCompact).toBe(true);
+    expect(decision.shouldCompact).toBe(false);
+  });
+
+  test('does not compact a small context solely because the dollar budget is exceeded', () => {
+    const decision = decideAgentCostControl({
+      text: 'Résume ce point.',
+      connection,
+      contextTokens: 4_000,
+      sessionCostUsd: 30,
+    });
+
+    expect(decision.budgetState).toBe('hard-limit');
+    expect(decision.shouldCompact).toBe(false);
   });
 
   test('normalizes invalid numeric boundaries', () => {

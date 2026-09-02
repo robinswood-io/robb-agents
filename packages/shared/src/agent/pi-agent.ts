@@ -532,7 +532,7 @@ export class PiAgent extends BaseAgent {
 
   // Pending compact requests (manual compaction RPC)
   private pendingCompactions: Map<string, {
-    resolve: (result: { summary: string; firstKeptEntryId: string; tokensBefore: number } | null) => void;
+    resolve: (result: { summary: string; firstKeptEntryId: string; tokensBefore: number; estimatedTokensAfter?: number; compactionModel?: string } | null) => void;
     reject: (error: Error) => void;
   }> = new Map();
 
@@ -2060,6 +2060,12 @@ export class PiAgent extends BaseAgent {
       summary: String(raw.summary || ''),
       firstKeptEntryId: String(raw.firstKeptEntryId || ''),
       tokensBefore: Number(raw.tokensBefore || 0),
+      estimatedTokensAfter: typeof raw.estimatedTokensAfter === 'number'
+        ? raw.estimatedTokensAfter
+        : undefined,
+      compactionModel: typeof raw.compactionModel === 'string'
+        ? raw.compactionModel
+        : undefined,
     });
   }
 
@@ -2289,18 +2295,19 @@ export class PiAgent extends BaseAgent {
   /**
    * Ask subprocess to compact the active session context.
    */
-  private async requestCompact(customInstructions?: string): Promise<{ summary: string; firstKeptEntryId: string; tokensBefore: number } | null> {
+  private async requestCompact(customInstructions?: string): Promise<{ summary: string; firstKeptEntryId: string; tokensBefore: number; estimatedTokensAfter?: number; compactionModel?: string } | null> {
     await this.ensureSubprocess();
 
     const id = `compact-${++this.rpcIdCounter}`;
-    // GPT-backed Pi compactions on large conversations can legitimately take 60-120s
-    // (single blocking OpenAI summary call, no progress stream). 5 min covers realistic
-    // cases; truly hung subprocesses are caught by the stdio death watchdog.
-    const timeoutMs = 300_000;
+    // GPT-backed Pi compactions on large conversations can legitimately take 60-120s.
+    // Bound them at 210s and explicitly abort the SDK compaction on expiry so a
+    // lost response cannot keep consuming tokens in the subprocess indefinitely.
+    const timeoutMs = 210_000;
 
-    return new Promise<{ summary: string; firstKeptEntryId: string; tokensBefore: number } | null>((resolve, reject) => {
+    return new Promise<{ summary: string; firstKeptEntryId: string; tokensBefore: number; estimatedTokensAfter?: number; compactionModel?: string } | null>((resolve, reject) => {
       const timer = setTimeout(() => {
         this.pendingCompactions.delete(id);
+        this.send({ type: 'abort_compaction', id });
         reject(new Error(`compact timed out after ${Math.floor(timeoutMs / 1000)}s`));
       }, timeoutMs);
 
@@ -2320,7 +2327,7 @@ export class PiAgent extends BaseAgent {
   }
 
   /** Host-triggered bounded-context compaction used by the session cost controller. */
-  async compactContext(customInstructions?: string): Promise<{ summary: string; firstKeptEntryId: string; tokensBefore: number } | null> {
+  async compactContext(customInstructions?: string): Promise<{ summary: string; firstKeptEntryId: string; tokensBefore: number; estimatedTokensAfter?: number; compactionModel?: string } | null> {
     return this.requestCompact(customInstructions);
   }
 

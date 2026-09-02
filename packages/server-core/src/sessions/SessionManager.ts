@@ -22,7 +22,7 @@ import {
   type BackendHostRuntimeContext,
   type PostInitResult,
 } from '@craft-agent/shared/agent/backend'
-import { getLlmConnection, getLlmConnections, getDefaultLlmConnection, getDefaultThinkingLevel, getBrowserToolEnabled, resetManagedAnthropicAuthEnvVars, resolveMidStreamBehavior, getPersistedUiLanguage, resolveTitleLanguageName, resolveRoutingPolicy, RoutingOutcomeStore, telemetryToRoutingOutcome, ALL_ROUTING_CAPABILITIES, ALL_ROUTING_DIFFICULTIES, decideAgentCostControl, isBrowserFallbackEligibleTool, resolveAgentCostControlPolicy, type CostControlledTurnKind, type RoutingOutcomeAdapterContext } from '@craft-agent/shared/config'
+import { getLlmConnection, getLlmConnections, getDefaultLlmConnection, getDefaultThinkingLevel, getBrowserToolEnabled, resetManagedAnthropicAuthEnvVars, resolveMidStreamBehavior, getPersistedUiLanguage, resolveTitleLanguageName, resolveRoutingPolicy, RoutingOutcomeStore, telemetryToRoutingOutcome, ALL_ROUTING_CAPABILITIES, ALL_ROUTING_DIFFICULTIES, decideAgentCostControl, isBrowserFallbackEligibleTool, resolveAgentCostControlPolicy, resolveEffectiveAgentContextLimits, type CostControlledTurnKind, type RoutingOutcomeAdapterContext } from '@craft-agent/shared/config'
 import { formatPlaybookPrompt, getBuiltinPlaybook, loadWorkspacePlaybook } from '@craft-agent/shared/playbooks'
 import { validateSessionExecutionIsolation } from '@craft-agent/shared/tasks'
 import { PrivilegedExecutionBroker } from '@craft-agent/server-core/services'
@@ -168,6 +168,13 @@ import {
   selectInternalMessageCoalesceTarget,
 } from './internal-message-coalescing'
 import { resolveContextTokenEstimate } from './context-token-estimate'
+import {
+  COST_CONTROL_COMPACTION_INSTRUCTIONS,
+  assessContextCompactionResult,
+  classifyContextCompactionFailure,
+  shouldAttemptContextCompaction,
+  type ContextCompactionAttemptState,
+} from './context-compaction'
 import {
   buildExtractiveTransferSummary,
   selectTransferSummaryMessages,
@@ -1136,6 +1143,8 @@ interface ManagedSession {
   pendingRoutingReason?: 'manual-handoff' | 'session-connection' | 'router' | string
   // Runtime-only: extra routing audit details for the next assistant response.
   pendingRoutingMeta?: Partial<RoutingMeta>
+  /** Runtime-only backoff state preventing a failed compaction on every queued turn. */
+  contextCompactionAttempt?: ContextCompactionAttemptState
   // Runtime-only: policy-authorized fallback candidates for the current turn.
   pendingRoutingFallbackConnectionSlugs?: string[]
   // Runtime-only: bounded fallback attempts and per-turn loop prevention.
@@ -4419,10 +4428,15 @@ export class SessionManager implements ISessionManager {
         currentModel: managed.model ?? preRouteContext.resolvedModel,
         turnKind,
         contextTokens: effectiveContextTokens,
+        contextWindow: managed.tokenUsage?.contextWindow,
         sessionCostUsd: managed.tokenUsage?.costUsd,
       }, workspaceConfig?.costControl)
 
       const resolvedCostPolicy = resolveAgentCostControlPolicy(workspaceConfig?.costControl)
+      const effectiveContextLimits = resolveEffectiveAgentContextLimits(
+        resolvedCostPolicy.context,
+        managed.tokenUsage?.contextWindow,
+      )
       if (resolvedCostPolicy.enabled) {
         const modelChanged = Boolean(costDecision.model && costDecision.model !== managed.model)
         const thinkingChanged = costDecision.thinkingLevel !== managed.thinkingLevel
@@ -4439,6 +4453,9 @@ export class SessionManager implements ISessionManager {
             budgetState: costDecision.budgetState,
             thinkingLevel: costDecision.thinkingLevel,
             contextTokensBefore: effectiveContextTokens,
+            contextWindow: managed.tokenUsage?.contextWindow,
+            compactAtTokens: effectiveContextLimits.compactAtTokens,
+            hardLimitTokens: effectiveContextLimits.hardLimitTokens,
             hardContextLimitReached: costDecision.hardContextLimitReached,
           },
           budgetDecision: {
@@ -7468,42 +7485,110 @@ export class SessionManager implements ISessionManager {
 
       const activeWorkspaceConfig = loadWorkspaceConfig(managed.workspace.rootPath)
       const costPolicy = resolveAgentCostControlPolicy(activeWorkspaceConfig?.costControl)
+      const effectiveContextLimits = resolveEffectiveAgentContextLimits(
+        costPolicy.context,
+        managed.tokenUsage?.contextWindow,
+      )
       const contextTokens = resolveContextTokenEstimate(
         managed.tokenUsage?.contextTokens,
         managed.messages,
       )
       if (
         costPolicy.enabled
-        && contextTokens >= costPolicy.context.compactAtTokens
+        && contextTokens >= effectiveContextLimits.compactAtTokens
         && agent.compactContext
       ) {
-        try {
-          const compacted = await agent.compactContext([
-            'Retain only the current objective, verified decisions, user constraints,',
-            'paths or identifiers needed to continue, pending external effects, blockers,',
-            'and concise references to durable tool evidence. Discard raw tool output,',
-            'repeated status chatter, acknowledgements, and superseded exploration.',
-          ].join(' '))
-          if (compacted && managed.tokenUsage) {
-            managed.tokenUsage.contextTokens = Math.min(
-              managed.tokenUsage.contextTokens,
-              Math.floor(costPolicy.context.compactAtTokens / 4),
-            )
-          }
+        const now = Date.now()
+        const shouldAttempt = shouldAttemptContextCompaction({
+          contextTokens,
+          compactAtTokens: effectiveContextLimits.compactAtTokens,
+          now,
+          previous: managed.contextCompactionAttempt,
+        })
+        if (!shouldAttempt) {
           if (managed.pendingRoutingMeta?.costControl) {
-            managed.pendingRoutingMeta.costControl.compacted = true
+            managed.pendingRoutingMeta.costControl.compacted = false
+            managed.pendingRoutingMeta.costControl.compactionOutcome = 'skipped-cooldown'
           }
-          this.persistSession(managed)
-          sendSpan.mark('cost-control.compacted')
-          sessionLog.info('cost-control context compacted', {
+          sessionLog.info('cost-control context compaction skipped during retry cooldown', {
             sessionId: managed.id,
-            tokensBefore: compacted?.tokensBefore ?? contextTokens,
+            contextTokens,
+            previousOutcome: managed.contextCompactionAttempt?.outcome,
           })
-        } catch (error) {
-          sessionLog.warn('cost-control context compaction failed; continuing on routed model', {
-            sessionId: managed.id,
-            error: error instanceof Error ? error.message : String(error),
-          })
+        } else {
+          try {
+            const compacted = await agent.compactContext(COST_CONTROL_COMPACTION_INSTRUCTIONS)
+            const compactionDurationMs = Math.max(0, Date.now() - now)
+            const assessment = assessContextCompactionResult(compacted)
+            managed.contextCompactionAttempt = {
+              attemptedAt: now,
+              contextTokensBefore: contextTokens,
+              outcome: assessment.outcome,
+            }
+
+            // Use the SDK's model-visible estimate, never a fabricated fraction
+            // of the configured threshold. Even an unverified summary may carry
+            // a valid measurement after the SDK has already applied it.
+            if (assessment.tokensAfter !== undefined) {
+              managed.tokenUsage ??= { ...DEFAULT_TOKEN_USAGE }
+              managed.tokenUsage.contextTokens = assessment.tokensAfter
+            }
+
+            if (managed.pendingRoutingMeta?.costControl) {
+              managed.pendingRoutingMeta.costControl.compacted = assessment.outcome === 'succeeded'
+              managed.pendingRoutingMeta.costControl.compactionOutcome = assessment.outcome
+              managed.pendingRoutingMeta.costControl.compactionModel = compacted?.compactionModel
+              managed.pendingRoutingMeta.costControl.compactionDurationMs = compactionDurationMs
+              managed.pendingRoutingMeta.costControl.contextTokensAfter = assessment.tokensAfter
+              managed.pendingRoutingMeta.costControl.reclaimedTokens = assessment.reclaimedTokens
+              managed.pendingRoutingMeta.costControl.reductionRatio = assessment.reductionRatio
+              managed.pendingRoutingMeta.costControl.compactionIssueCodes = assessment.issues.length > 0
+                ? assessment.issues
+                : undefined
+            }
+            this.persistSession(managed)
+
+            if (assessment.outcome === 'succeeded') {
+              sendSpan.mark('cost-control.compacted')
+              sessionLog.info('cost-control context compacted and measured', {
+                sessionId: managed.id,
+                tokensBefore: assessment.tokensBefore,
+                tokensAfter: assessment.tokensAfter,
+                reclaimedTokens: assessment.reclaimedTokens,
+                reductionRatio: assessment.reductionRatio,
+                compactionModel: compacted?.compactionModel,
+                durationMs: compactionDurationMs,
+              })
+            } else {
+              sendSpan.mark(`cost-control.compaction-${assessment.outcome}`)
+              sessionLog.warn('cost-control context compaction result was not effective and verifiable', {
+                sessionId: managed.id,
+                outcome: assessment.outcome,
+                issues: assessment.issues,
+                tokensBefore: assessment.tokensBefore,
+                tokensAfter: assessment.tokensAfter,
+              })
+            }
+          } catch (error) {
+            const issueCode = classifyContextCompactionFailure(error)
+            managed.contextCompactionAttempt = {
+              attemptedAt: now,
+              contextTokensBefore: contextTokens,
+              outcome: 'failed',
+            }
+            if (managed.pendingRoutingMeta?.costControl) {
+              managed.pendingRoutingMeta.costControl.compacted = false
+              managed.pendingRoutingMeta.costControl.compactionOutcome = 'failed'
+              managed.pendingRoutingMeta.costControl.compactionDurationMs = Math.max(0, Date.now() - now)
+              managed.pendingRoutingMeta.costControl.compactionIssueCodes = [issueCode]
+            }
+            this.persistSession(managed)
+            sessionLog.warn('cost-control context compaction failed; continuing on routed model', {
+              sessionId: managed.id,
+              issueCode,
+              error: error instanceof Error ? error.message : String(error),
+            })
+          }
         }
       }
 
@@ -10304,9 +10389,10 @@ export class SessionManager implements ISessionManager {
               costUsd: 0,
             }
           }
-          // inputTokens = current context size (full conversation sent this turn), NOT accumulated
-          // Each API call sends the full conversation history, so we use the latest value
+          // inputTokens remains the backend's billed turn input. Pi may aggregate
+          // several model calls around tools; contextTokens is the latest call only.
           managed.tokenUsage.inputTokens = event.usage.inputTokens
+          managed.tokenUsage.contextTokens = event.usage.contextTokens ?? event.usage.inputTokens
           // outputTokens and costUsd are accumulated across all turns (total session usage)
           managed.tokenUsage.outputTokens += event.usage.outputTokens
           managed.tokenUsage.totalTokens = managed.tokenUsage.inputTokens + managed.tokenUsage.outputTokens
@@ -10381,8 +10467,10 @@ export class SessionManager implements ISessionManager {
               costUsd: 0,
             }
           }
-          // Update only inputTokens (current context size) - other fields accumulate on complete
+          // Keep both display and routing context counters on the latest provider measurement.
+          // Other fields still accumulate only on complete.
           managed.tokenUsage.inputTokens = event.usage.inputTokens
+          managed.tokenUsage.contextTokens = event.usage.inputTokens
           if (event.usage.contextWindow) {
             managed.tokenUsage.contextWindow = event.usage.contextWindow
           }

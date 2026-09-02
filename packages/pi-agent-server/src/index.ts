@@ -87,6 +87,7 @@ import { getDefaultSummarizationModel } from '../../shared/src/config/models.ts'
 import { createWebFetchTool } from './tools/web-fetch.ts';
 import { resolveSearchProvider } from './tools/search/resolve-provider.ts';
 import { createSearchTool } from './tools/search/create-search-tool.ts';
+import { selectCompactionUtilityModel } from './compaction-model-policy.ts';
 import { allowCraftMetadataProperties, stripCraftMetadata } from './craft-metadata-schema.ts';
 import { applySystemPromptOverride } from './system-prompt-override.ts';
 import { registerGoogleCodeAssistProvider } from './google-code-assist-provider.ts';
@@ -165,6 +166,7 @@ type InboundMessage =
   | { type: 'set_model'; model: string }
   | { type: 'set_thinking_level'; level: string }
   | { type: 'compact'; id: string; customInstructions?: string }
+  | { type: 'abort_compaction'; id: string }
   | { type: 'recover_overflow'; id: string }
   | { type: 'set_auto_compaction'; id: string; enabled: boolean }
   | RuntimeConfigUpdateMessage
@@ -221,7 +223,7 @@ interface OutboundCompactResult {
   type: 'compact_result';
   id: string;
   success: boolean;
-  result?: { summary: string; firstKeptEntryId: string; tokensBefore: number };
+  result?: { summary: string; firstKeptEntryId: string; tokensBefore: number; estimatedTokensAfter?: number; compactionModel?: string };
   errorMessage?: string;
 }
 interface OutboundSetAutoCompactionResult {
@@ -1354,9 +1356,9 @@ async function handleInit(msg: Extract<InboundMessage, { type: 'init' }>): Promi
  * Wait for any in-flight compaction to finish before sending a prompt or
  * starting another compaction. Prevents a race in the Pi SDK where concurrent
  * _runAutoCompaction calls crash on a shared AbortController
- * (see craft-agents-oss#464). Default timeout matches the RPC compact timeout
- * in PiAgent.requestCompact (300 s), since GPT compactions can legitimately
- * take 60–120 s.
+ * (see craft-agents-oss#464). Prompt-side waiting remains bounded at five
+ * minutes because a native overflow compaction can legitimately take 60–120 s;
+ * host-requested compaction uses a shorter explicit wait before it starts.
  */
 async function waitForCompaction(session: { isCompacting: boolean }, timeoutMs = 300_000): Promise<boolean> {
   if (!session.isCompacting) return true;
@@ -1410,7 +1412,10 @@ async function handlePrompt(msg: Extract<InboundMessage, { type: 'prompt' }>): P
     unsubscribeEvents = session.subscribe(handleSessionEvent);
 
     // Wait for any in-flight auto-compaction to avoid race (craft-agents-oss#464)
-    await waitForCompaction(session);
+    const compactionSettled = await waitForCompaction(session);
+    if (!compactionSettled) {
+      throw new Error('Previous compaction did not settle before the prompt safety deadline');
+    }
 
     // Fire prompt — use followUp when session is already streaming so the
     // message is queued instead of throwing "Agent is already processing".
@@ -1560,6 +1565,77 @@ async function handleEnsureSessionReady(msg: Extract<InboundMessage, { type: 'en
   });
 }
 
+async function compactWithCostEfficientModel(
+  session: AgentSession,
+  customInstructions?: string,
+): Promise<Awaited<ReturnType<AgentSession['compact']>> & { compactionModel?: string }> {
+  const activeModel = session.model;
+  const originalThinkingLevel = session.thinkingLevel;
+  const contextTokens = session.getContextUsage()?.tokens;
+  const utilityModelId = initConfig?.miniModel;
+  const resolvedUtilityModel = utilityModelId && piModelRegistry && !isDeniedMiniModelId(utilityModelId, initConfig?.piAuth?.provider)
+    ? resolvePiModel(piModelRegistry, utilityModelId, initConfig?.piAuth?.provider, shouldPreferCustomEndpoint())
+    : undefined;
+  const utilityModel = selectCompactionUtilityModel({
+    activeModel: activeModel
+      ? { id: activeModel.id, provider: activeModel.provider, contextWindow: activeModel.contextWindow }
+      : undefined,
+    utilityModel: resolvedUtilityModel
+      ? { id: resolvedUtilityModel.id, provider: resolvedUtilityModel.provider, contextWindow: resolvedUtilityModel.contextWindow }
+      : undefined,
+    contextTokens,
+  });
+
+  let switchedModel = false;
+  if (utilityModel && resolvedUtilityModel) {
+    try {
+      await session.setModel(resolvedUtilityModel);
+      switchedModel = true;
+      setInterceptorApiHints(resolvedUtilityModel);
+      debugLog(`[compact] Using utility model ${resolvedUtilityModel.provider}/${resolvedUtilityModel.id} for ${contextTokens} context tokens`);
+    } catch (error) {
+      debugLog(`[compact] Utility model activation failed; retaining active model: ${error instanceof Error ? error.message : String(error)}`);
+    }
+    if (switchedModel) {
+      try {
+        session.setThinkingLevel('medium');
+      } catch (error) {
+        debugLog(`[compact] Utility thinking-level reduction failed; continuing with the utility model: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
+  }
+
+  let result: Awaited<ReturnType<AgentSession['compact']>> | undefined;
+  let operationError: unknown;
+  try {
+    result = await session.compact(customInstructions);
+  } catch (error) {
+    operationError = error;
+  } finally {
+    if (switchedModel && activeModel) {
+      try {
+        await session.setModel(activeModel);
+        session.setThinkingLevel(originalThinkingLevel);
+        setInterceptorApiHints(activeModel);
+      } catch (restoreError) {
+        debugLog(`[compact] Failed to restore active model; disposing runtime: ${restoreError instanceof Error ? restoreError.message : String(restoreError)}`);
+        unsubscribeEvents?.();
+        unsubscribeEvents = null;
+        session.dispose();
+        if (piSession === session) piSession = null;
+        throw new Error('Compaction completed but the active model could not be restored; runtime was safely recreated');
+      }
+    }
+  }
+
+  if (operationError) throw operationError;
+  if (!result) throw new Error('Compaction returned no result');
+  return {
+    ...result,
+    compactionModel: switchedModel ? resolvedUtilityModel?.id : activeModel?.id,
+  };
+}
+
 async function handleCompact(msg: Extract<InboundMessage, { type: 'compact' }>): Promise<void> {
   try {
     const session = await ensureSession();
@@ -1569,8 +1645,11 @@ async function handleCompact(msg: Extract<InboundMessage, { type: 'compact' }>):
     // the SDK's race surface widens. Wait for the auto-compaction to drain
     // before starting a manual one. waitForCompaction has its own timeout
     // fallback so we don't deadlock on a stuck subprocess.
-    await waitForCompaction(session);
-    const result = await session.compact(msg.customInstructions);
+    const settled = await waitForCompaction(session, 30_000);
+    if (!settled) {
+      throw new Error('Previous compaction did not settle before the safety deadline');
+    }
+    const result = await compactWithCostEfficientModel(session, msg.customInstructions);
     send({
       type: 'compact_result',
       id: msg.id,
@@ -1579,6 +1658,8 @@ async function handleCompact(msg: Extract<InboundMessage, { type: 'compact' }>):
         summary: result.summary,
         firstKeptEntryId: result.firstKeptEntryId,
         tokensBefore: result.tokensBefore,
+        estimatedTokensAfter: result.estimatedTokensAfter,
+        compactionModel: result.compactionModel,
       },
     });
   } catch (error) {
@@ -1591,6 +1672,11 @@ async function handleCompact(msg: Extract<InboundMessage, { type: 'compact' }>):
       errorMessage: errorMsg,
     });
   }
+}
+
+function handleAbortCompaction(msg: Extract<InboundMessage, { type: 'abort_compaction' }>): void {
+  debugLog(`[${msg.id}] Aborting compaction after host timeout`);
+  piSession?.abortCompaction();
 }
 
 /**
@@ -1876,6 +1962,9 @@ async function processMessage(msg: InboundMessage): Promise<void> {
 
     case 'compact':
       await handleCompact(msg);
+      break;
+    case 'abort_compaction':
+      handleAbortCompaction(msg);
       break;
 
     case 'recover_overflow':

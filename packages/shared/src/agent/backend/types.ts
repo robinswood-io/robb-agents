@@ -428,6 +428,10 @@ export interface AgentBackend {
     summary: string;
     firstKeptEntryId: string;
     tokensBefore: number;
+    /** SDK estimate of the actual model-visible context immediately after compaction. */
+    estimatedTokensAfter?: number;
+    /** Provider model that generated the summary, when reported by the backend. */
+    compactionModel?: string;
   } | null>;
 
   /**

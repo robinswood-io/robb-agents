@@ -146,6 +146,7 @@ describe('PiEventAdapter', () => {
           outputTokens: 50,
           cacheReadTokens: 190,
           cacheCreationTokens: 35,
+          contextTokens: 400,
           contextWindow: 200_000,
         },
       });
@@ -185,6 +186,7 @@ describe('PiEventAdapter', () => {
           cacheReadTokens: 10,
           cacheCreationTokens: 2,
           costUsd: 0.006,
+          contextTokens: 50,
           contextWindow: undefined,
         },
       });
@@ -221,6 +223,7 @@ describe('PiEventAdapter', () => {
           cacheReadTokens: 50,
           cacheCreationTokens: 5,
           costUsd: 0.03,
+          contextTokens: 120,
           contextWindow: undefined,
         },
       }]);
