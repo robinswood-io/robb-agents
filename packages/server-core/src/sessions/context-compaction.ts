@@ -13,10 +13,15 @@ export type AgentContextCompactionResult = {
   estimatedTokensAfter?: number
 }
 
-export type ContextCompactionOutcome = 'succeeded' | 'ineffective' | 'unverified' | 'failed'
+export type ContextCompactionOutcome =
+  | 'succeeded'
+  | 'ineffective'
+  | 'unverified'
+  | 'failed'
+  | 'skipped-not-needed'
 
 export interface ContextCompactionAssessment {
-  outcome: Exclude<ContextCompactionOutcome, 'failed'>
+  outcome: 'succeeded' | 'ineffective' | 'unverified'
   issues: string[]
   tokensBefore?: number
   tokensAfter?: number
@@ -28,6 +33,7 @@ export interface ContextCompactionAttemptState {
   attemptedAt: number
   contextTokensBefore: number
   outcome: ContextCompactionOutcome
+  issueCode?: string
 }
 
 export const CONTEXT_COMPACTION_RETRY_COOLDOWN_MS = 10 * 60 * 1_000
@@ -133,10 +139,17 @@ export function shouldAttemptContextCompaction(input: {
   if (input.contextTokens < input.compactAtTokens) return false
   if (!input.previous || input.previous.outcome === 'succeeded') return true
 
-  const cooldownElapsed = input.now - input.previous.attemptedAt >= CONTEXT_COMPACTION_RETRY_COOLDOWN_MS
   const contextGrewMaterially = input.contextTokens >= Math.ceil(
     input.previous.contextTokensBefore * MATERIAL_CONTEXT_GROWTH_RATIO,
   )
+  // The SDK can know that the retained history is not compactable even when
+  // our conservative token estimate crosses the threshold. Time alone does
+  // not change that fact, so avoid paying for the same no-op every cooldown.
+  if (input.previous.outcome === 'skipped-not-needed' || input.previous.issueCode === 'not-needed') {
+    return contextGrewMaterially
+  }
+
+  const cooldownElapsed = input.now - input.previous.attemptedAt >= CONTEXT_COMPACTION_RETRY_COOLDOWN_MS
   return cooldownElapsed || contextGrewMaterially
 }
 

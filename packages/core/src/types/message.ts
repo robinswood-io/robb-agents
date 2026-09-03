@@ -320,7 +320,7 @@ export interface RoutingMeta {
     compactAtTokens?: number;
     hardLimitTokens?: number;
     compacted?: boolean;
-    compactionOutcome?: 'succeeded' | 'ineffective' | 'unverified' | 'failed' | 'skipped-cooldown';
+    compactionOutcome?: 'succeeded' | 'ineffective' | 'unverified' | 'failed' | 'skipped-cooldown' | 'skipped-not-needed';
     compactionModel?: string;
     compactionDurationMs?: number;
     contextTokensAfter?: number;

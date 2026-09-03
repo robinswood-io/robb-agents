@@ -152,6 +152,27 @@ describe('context compaction', () => {
     })).toBe(true)
   })
 
+  test('does not retry an SDK not-needed result until context grows materially', () => {
+    const previous = {
+      attemptedAt: 1_000,
+      contextTokensBefore: 80_000,
+      outcome: 'skipped-not-needed' as const,
+      issueCode: 'not-needed',
+    }
+    expect(shouldAttemptContextCompaction({
+      contextTokens: 81_000,
+      compactAtTokens: 80_000,
+      now: 1_000 + CONTEXT_COMPACTION_RETRY_COOLDOWN_MS * 4,
+      previous,
+    })).toBe(false)
+    expect(shouldAttemptContextCompaction({
+      contextTokens: 100_000,
+      compactAtTokens: 80_000,
+      now: 2_000,
+      previous,
+    })).toBe(true)
+  })
+
   test('classifies failures without persisting provider error text', () => {
     expect(classifyContextCompactionFailure(new Error('compact timed out after 300s'))).toBe('timeout')
     expect(classifyContextCompactionFailure(new Error('Already compacted'))).toBe('not-needed')

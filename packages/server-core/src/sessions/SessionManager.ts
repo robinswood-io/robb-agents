@@ -7580,23 +7580,33 @@ export class SessionManager implements ISessionManager {
             }
           } catch (error) {
             const issueCode = classifyContextCompactionFailure(error)
+            const compactionOutcome = issueCode === 'not-needed'
+              ? 'skipped-not-needed' as const
+              : 'failed' as const
             managed.contextCompactionAttempt = {
               attemptedAt: now,
               contextTokensBefore: contextTokens,
-              outcome: 'failed',
+              outcome: compactionOutcome,
+              issueCode,
             }
             if (managed.pendingRoutingMeta?.costControl) {
               managed.pendingRoutingMeta.costControl.compacted = false
-              managed.pendingRoutingMeta.costControl.compactionOutcome = 'failed'
+              managed.pendingRoutingMeta.costControl.compactionOutcome = compactionOutcome
               managed.pendingRoutingMeta.costControl.compactionDurationMs = Math.max(0, Date.now() - now)
               managed.pendingRoutingMeta.costControl.compactionIssueCodes = [issueCode]
             }
             this.persistSession(managed)
-            sessionLog.warn('cost-control context compaction failed; continuing on routed model', {
+            const logCompactionIssue = issueCode === 'not-needed'
+              ? sessionLog.info.bind(sessionLog)
+              : sessionLog.warn.bind(sessionLog)
+            logCompactionIssue(
+              issueCode === 'not-needed'
+                ? 'cost-control context compaction skipped because SDK found no compactable history'
+                : 'cost-control context compaction failed; continuing on routed model', {
               sessionId: managed.id,
               issueCode,
               error: error instanceof Error ? error.message : String(error),
-            })
+              })
           }
         }
       }
