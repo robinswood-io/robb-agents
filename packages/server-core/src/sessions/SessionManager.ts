@@ -1147,6 +1147,13 @@ interface ManagedSession {
   contextCompactionAttempt?: ContextCompactionAttemptState
   // Runtime-only: policy-authorized fallback candidates for the current turn.
   pendingRoutingFallbackConnectionSlugs?: string[]
+  // Runtime-only: provider failure emitted as a stream event. The handoff is
+  // deferred until the current iterator completes so disposing its runtime
+  // cannot deadlock event processing.
+  pendingRuntimeProviderFallback?: {
+    error: Error
+    generation: number
+  }
   // Runtime-only: bounded fallback attempts and per-turn loop prevention.
   routingFallbackAttempts?: number
   routingAttemptedConnectionSlugs?: Set<string>
@@ -7332,6 +7339,7 @@ export class SessionManager implements ISessionManager {
     this.setProcessing(managed, true)
     managed.streamingText = ''
     managed.processingGeneration++
+    managed.pendingRuntimeProviderFallback = undefined
     managed.turnStartFinalMessageId = this.getLastFinalAssistantMessageId(managed.messages)
 
     if (shouldManageSessionStatusLifecycle(options)) {
@@ -8283,6 +8291,33 @@ export class SessionManager implements ISessionManager {
     const hasQueuedAutomaticRecovery = managed.messageQueue.some(item =>
       !!item.options?.automaticRecovery
     )
+    const pendingProviderFallback = managed.pendingRuntimeProviderFallback
+    if (pendingProviderFallback?.generation === generationKey) {
+      managed.pendingRuntimeProviderFallback = undefined
+      if (hasQueuedAutomaticRecovery) {
+        try {
+          const fallbackApplied = await this.tryApplyRoutingFallbackAfterAgentFailure(
+            managed,
+            pendingProviderFallback.error,
+            managed.pendingTurnRecovery?.userMessageId,
+          )
+          if (fallbackApplied) {
+            this.sendEvent({
+              type: 'info',
+              sessionId,
+              message: 'The provider became unavailable. The turn is continuing automatically on a configured fallback connection…',
+              level: 'warning',
+              timestamp: this.monotonic(),
+            }, managed.workspace.id)
+          }
+        } catch (fallbackError) {
+          sessionLog.warn('Deferred routing fallback failed; continuing bounded recovery on the current route', {
+            sessionId,
+            error: fallbackError instanceof Error ? fallbackError.message : String(fallbackError),
+          })
+        }
+      }
+    }
     if (!hasQueuedAutomaticRecovery) {
       this.clearPendingTurnRecovery(managed)
     }
@@ -10004,6 +10039,27 @@ export class SessionManager implements ISessionManager {
           break
         }
 
+        // Some backends report quota/network failures as plain stream events
+        // instead of throwing or emitting typed_error. Queue recovery now, but
+        // defer the provider handoff until the iterator completes safely.
+        if (
+          shouldAttemptProviderFallback(event.message) &&
+          managed.pendingTurnRecovery &&
+          turnStillNeedsRecovery(managed.messages, managed.pendingTurnRecovery.userMessageId) &&
+          await this.enqueueAutomaticTurnRecovery(managed, 'runtime_error')
+        ) {
+          managed.pendingRuntimeProviderFallback = {
+            error: new Error(event.message),
+            generation: generationKey,
+          }
+          sessionLog.warn('Queued bounded recovery and deferred provider fallback for plain agent error', {
+            sessionId,
+            generation: generationKey,
+            reason: classifyRoutingFallbackReason(event.message),
+          })
+          break
+        }
+
         sessionLog.error('Agent event failed', {
           sessionId,
           generation: generationKey,
@@ -10089,6 +10145,10 @@ export class SessionManager implements ISessionManager {
           turnStillNeedsRecovery(managed.messages, managed.pendingTurnRecovery.userMessageId) &&
           await this.enqueueAutomaticTurnRecovery(managed, 'runtime_error')
         ) {
+          managed.pendingRuntimeProviderFallback = {
+            error: new Error(typedErrorMsg),
+            generation: generationKey,
+          }
           sessionLog.warn('Queued bounded automatic recovery for transient network error', {
             sessionId,
             generation: generationKey,
