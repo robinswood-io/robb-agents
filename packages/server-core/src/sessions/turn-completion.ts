@@ -14,6 +14,13 @@ const UNFINISHED_ACTION_PATTERNS = [
   /(?:au\s+prochain\s+tour|dans\s+un\s+nouveau\s+tour|next\s+turn|new\s+turn).{0,120}(?:poursuiv|continu|reprendr|relanc|v[ée]rifi|termin|resume)/i,
 ];
 
+const RECOVERABLE_TECHNICAL_CHECKPOINT_PATTERNS = [
+  /(?:le|un)\s+prochain\s+correctif\s+(?:doit|devra|consiste|portera)\b/i,
+  /\b(?:je\s+n['’]ai\s+pas|nous\s+n['’]avons\s+pas)\s+(?:encore\s+)?(?:appliqu[ée]|impl[ée]ment[ée]|tent[ée]|test[ée])\s+(?:de\s+|la\s+|le\s+|un\s+|une\s+)?(?:correction|correctif|solution|alternative)\b/i,
+  /\b(?:aucun|aucune)\s+(?:test|validation|v[ée]rification|d[ée]ploiement|d[ée]p[oô]t|mutation).{0,100}\bn['’]a\s+(?:donc\s+)?pu\s+[êe]tre\s+(?:ex[ée]cut[ée]|effectu[ée]|valid[ée]|termin[ée])\b/i,
+  /\b(?:la\s+suite|l['’][ée]tape\s+suivante)\s+(?:concerne|consiste|sera|doit|devra)\b/i,
+];
+
 const HUMAN_HANDOFF_PATTERN = /(?:connecte(?:-toi|z-vous)?|authentifie(?:-toi|z-vous)?|clique(?:z)?|valide(?:z)?|saisis(?:sez)?|renseigne(?:r|z)?|r[ée]ponds|dites?-moi|dis-moi|quand\s+(?:tu|vous)|merci\s+de|peux-tu|pouvez-vous|il\s+me\s+manque\s+(?:seulement\s+|ton|ta|votre|un\s+choix|une\s+d[ée]cision|une\s+autorisation|un\s+identifiant|un\s+secret)|j['’]ai\s+besoin\s+(?:de\s+ton|de\s+ta|de\s+votre|d['’]un\s+choix|d['’]une\s+d[ée]cision|d['’]une\s+autorisation|d['’]un\s+identifiant|d['’]un\s+secret)|(?:action|intervention|validation|confirmation|d[ée]cision|autorisation)\s+humaine|j['’]attends\s+(?:ta|votre)\s+(?:r[ée]ponse|validation|confirmation|d[ée]cision|autorisation)|please\s+(?:sign\s+in|log\s+in|click|confirm|enter|reply)|tell\s+me|once\s+you|waiting\s+for\s+you)/i;
 
 /**
@@ -28,9 +35,11 @@ export function looksLikePrematureFinalAssistant(content: string): boolean {
   // Only the tail decides whether the response actually ended with pending
   // work. This avoids matching an opening "I will..." followed by a complete
   // report in the same message.
-  const tail = normalized.slice(-700);
-  return UNFINISHED_ACTION_PATTERNS.some(pattern => pattern.test(tail))
-    && !HUMAN_HANDOFF_PATTERN.test(tail);
+  const actionTail = normalized.slice(-700);
+  const checkpointTail = normalized.slice(-1_800);
+  const unfinished = UNFINISHED_ACTION_PATTERNS.some(pattern => pattern.test(actionTail))
+    || RECOVERABLE_TECHNICAL_CHECKPOINT_PATTERNS.some(pattern => pattern.test(checkpointTail));
+  return unfinished && !HUMAN_HANDOFF_PATTERN.test(checkpointTail);
 }
 
 /**

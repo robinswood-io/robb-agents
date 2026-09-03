@@ -91,6 +91,9 @@ describe('formatAutonomyContract sensitive external action guard', () => {
     expect(contract).toContain('Batch independent searches and reads')
     expect(contract).toContain('reserve enough tool budget for verification and cleanup')
     expect(contract).toContain('provider quota, rate limit')
+    expect(contract).toContain('A technical obstacle is a diagnosis checkpoint')
+    expect(contract).toContain('Do not defer an identified next correction')
+    expect(contract).toContain('Operate like a senior owner')
   })
 
   it('aligns the model with the explicit total-autonomy workspace policy', () => {

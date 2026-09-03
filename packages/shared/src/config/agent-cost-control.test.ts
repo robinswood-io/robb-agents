@@ -96,6 +96,45 @@ describe('decideAgentCostControl', () => {
     expect(decision.thinkingLevel).toBe('xhigh');
   });
 
+  test('inherits complex task difficulty for a terse direct continuation', () => {
+    const decision = decideAgentCostControl({
+      text: 'Fais-le avec précision.',
+      riskContext: 'Diagnostic approfondi d’un import API bloqué, analyse du runtime et correction multi-étapes.',
+      turnKind: 'direct',
+      connection,
+    });
+
+    expect(decision.difficulty).toBe('complex');
+    expect(decision.model).toBe('pi/gpt-5.6-sol');
+    expect(decision.thinkingLevel).toBe('high');
+  });
+
+  test('does not inherit historical complexity for an unrelated short acknowledgement', () => {
+    const decision = decideAgentCostControl({
+      text: 'Merci.',
+      riskContext: 'Diagnostic approfondi d’un import API bloqué, analyse du runtime et correction multi-étapes.',
+      turnKind: 'direct',
+      connection,
+    });
+
+    expect(decision.difficulty).toBe('simple');
+    expect(decision.model).toBe('pi/gpt-5.6-luna');
+    expect(decision.thinkingLevel).toBe('low');
+  });
+
+  test('does not route a technical automatic recovery as routine work', () => {
+    const decision = decideAgentCostControl({
+      text: '<automatic_turn_recovery>Continue the interrupted task.</automatic_turn_recovery>',
+      riskContext: 'Diagnostic approfondi d’un processus API bloqué, analyse du runtime et correction multi-étapes.',
+      turnKind: 'automatic-recovery',
+      connection,
+    });
+
+    expect(decision.difficulty).toBe('complex');
+    expect(decision.model).toBe('pi/gpt-5.6-terra');
+    expect(decision.thinkingLevel).toBe('medium');
+  });
+
   test('uses the balanced model with high thinking for a reversible permission change', () => {
     const decision = decideAgentCostControl({
       text: 'Autorise les membres existants à publier dans ce groupe, puis vérifie le réglage.',
@@ -207,6 +246,7 @@ describe('decideAgentCostControl', () => {
 
     expect(resolved.context.hardLimitTokens).toBe(20_000);
     expect(resolved.budgets.hardSessionUsd).toBe(7);
+    expect(resolved.recovery.maxAutomaticAttempts).toBe(3);
   });
 
   test('fails safe to defaults for malformed persisted fields', () => {

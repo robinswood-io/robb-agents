@@ -2601,6 +2601,12 @@ export class SessionManager implements ISessionManager {
     }
 
     managed.pendingTurnRecovery = advanced
+    if (cause === 'premature_final') {
+      this.recordAutonomyEvent(managed, {
+        phase: 'fallback',
+        message: `Detected a recoverable technical checkpoint; queued senior recovery pass ${advanced.attempts}/${maxAttempts}.`,
+      })
+    }
     managed.messageQueue.unshift({
       message: buildAutomaticTurnRecoveryPrompt(pending, cause),
       options: {
@@ -4420,8 +4426,11 @@ export class SessionManager implements ISessionManager {
         riskContext: [
           managed.name,
           ...managed.messages
-            .filter(message => message.role === 'user' && !message.hidden)
-            .slice(-3)
+            .filter(message => (
+              (message.role === 'user' && !message.hidden)
+              || (message.role === 'assistant' && !message.isIntermediate)
+            ))
+            .slice(-5)
             .map(message => message.content.slice(0, 2_000)),
         ].filter(Boolean).join('\n').slice(0, 8_000),
         connection: preRouteContext.connection ?? undefined,

@@ -93,6 +93,26 @@ describe('classifyLatestTurnTerminalState', () => {
     )).toBe(true);
   });
 
+  it('recovers observed senior-level technical blockers instead of accepting them as terminal', () => {
+    expect(looksLikePrematureFinalAssistant([
+      'Guacamole démarre, mais reste inutilisable : son serveur interne ne répond pas correctement.',
+      'Aucun test Batigest n’a donc pu être exécuté.',
+      'Le prochain correctif doit porter sur le lancement propre de Guacamole.',
+    ].join(' '))).toBe(true);
+
+    expect(looksLikePrematureFinalAssistant([
+      'Le mode fumée et l’import du module dépassent le délai de trente secondes.',
+      'Je n’ai pas appliqué de correction spéculative au code.',
+      'API smoke : échec. Code métier : inchangé.',
+    ].join(' '))).toBe(true);
+
+    expect(looksLikePrematureFinalAssistant([
+      'Le préparateur fiscal est en préparation uniquement.',
+      'Aucun dépôt n’a donc pu être exécuté.',
+      'La suite concerne la recherche d’une voie de soumission dédiée.',
+    ].join(' '))).toBe(true);
+  });
+
   it('does not treat a generic technical limitation as a human decision', () => {
     expect(looksLikePrematureFinalAssistant(
       'Je ne peux pas finir dans ce tour ; je continuerai avec la vérification.',

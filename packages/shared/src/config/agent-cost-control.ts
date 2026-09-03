@@ -125,7 +125,7 @@ export const DEFAULT_AGENT_COST_CONTROL_POLICY: ResolvedAgentCostControlPolicy =
     hardSessionUsd: 25,
   },
   recovery: {
-    maxAutomaticAttempts: 1,
+    maxAutomaticAttempts: 3,
     browserFallbackToolPatterns: [
       'browser',
       'web',
@@ -282,6 +282,7 @@ const EXPLICIT_MUTATION_REQUEST_PATTERN = /\b(deploy|publish|delete|remove|purge
 const COMPLETION_REVIEW_PATTERN = /(?:objectif|travail|tâche|task|work).{0,120}(?:déjà\s+)?(?:achev[ée]|termin[ée]|complét[ée]|complete(?:d)?|finished)|(?:déjà\s+)?(?:achev[ée]|termin[ée]|complét[ée]).{0,120}(?:objectif|travail|tâche)/i;
 const NO_REEXECUTION_PATTERN = /(?:ne|n['’])\s+(?:relance|répète|lance|effectue).{0,160}(?:audit|appel réseau|effet externe|action externe)|(?:sans|aucun|aucune|no|without).{0,100}(?:audit|network call|appel réseau|external effect|effet externe)/i;
 const REVIEW_HANDOFF_PATTERN = /needs-review|(?:statut|status).{0,40}(?:revue|review)|(?:place|mets|mettre|placer).{0,80}(?:revue|review)/i;
+const CONTEXT_DEPENDENT_DIRECT_TURN_PATTERN = /^(?:(?:ok|oui|yes|go|d['’]accord)[\s,;:!.-]+)?(?:fais(?:-le)?|faites|vas-y|allez-y|continue|poursuis|reprends|corrige|impl[ée]mente|d[ée]ploie|relance|ex[ée]cute|termine|proc[èe]de|applique)\b/i;
 
 function isCompletionReviewOnly(text: string): boolean {
   return COMPLETION_REVIEW_PATTERN.test(text)
@@ -300,11 +301,17 @@ export function decideAgentCostControl(
 ): AgentCostControlDecision {
   const policy = resolveAgentCostControlPolicy(policyInput);
   const turnKind = input.turnKind ?? 'direct';
+  const combinedRiskText = `${input.text}\n${input.riskContext ?? ''}`;
+  const normalizedTurnText = input.text.trim();
+  const contextDependentDirectTurn = normalizedTurnText.split(/\s+/).length < 30
+    && CONTEXT_DEPENDENT_DIRECT_TURN_PATTERN.test(normalizedTurnText);
+  const classificationText = isInternalTurn(turnKind) || contextDependentDirectTurn
+    ? combinedRiskText
+    : input.text;
   const classified = classifyLocalRoutingRequirements({
-    text: input.text,
+    text: classificationText,
     contextTokens: input.contextTokens,
   });
-  const combinedRiskText = `${input.text}\n${input.riskContext ?? ''}`;
   const highRisk = HIGH_RISK_PATTERN.test(combinedRiskText);
   const criticalRisk = CRITICAL_RISK_PATTERN.test(combinedRiskText);
   const completionReviewOnly = isCompletionReviewOnly(input.text);
@@ -332,7 +339,7 @@ export function decideAgentCostControl(
   else if (highRisk) tier = 'standard';
   else if (completionReviewOnly) tier = 'routine';
   else if (difficulty === 'complex') tier = isInternalTurn(turnKind) ? 'standard' : 'complex';
-  else if (difficulty === 'standard' && !isInternalTurn(turnKind)) tier = 'standard';
+  else if (difficulty === 'standard' && (!isInternalTurn(turnKind) || turnKind === 'automatic-recovery')) tier = 'standard';
   else tier = 'routine';
 
   if (budgetState !== 'normal' && tier !== 'highRisk') {

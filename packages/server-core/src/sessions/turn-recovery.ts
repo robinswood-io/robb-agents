@@ -4,8 +4,8 @@ import { looksLikePrematureFinalAssistant } from './turn-completion.ts';
 
 export type AutomaticTurnRecoveryCause = NonNullable<PendingTurnRecovery['lastCause']>;
 
-/** One materially different retry; further recovery requires new user intent. */
-export const MAX_AUTOMATIC_TURN_RECOVERY_ATTEMPTS = 1;
+/** Three materially different recovery passes; unchanged retries remain forbidden. */
+export const MAX_AUTOMATIC_TURN_RECOVERY_ATTEMPTS = 3;
 export const DEFAULT_AUTOMATIC_RECOVERY_INACTIVITY_TIMEOUT_MS = 5 * 60 * 1000;
 const MIN_AUTOMATIC_RECOVERY_INACTIVITY_TIMEOUT_MS = 30 * 1000;
 const MAX_AUTOMATIC_RECOVERY_INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000;
@@ -152,7 +152,7 @@ export function buildAutomaticTurnRecoveryPrompt(
     `Continue the interrupted user turn because ${causeLabel}.`,
     'Use the preserved conversation and tool results. Do not repeat an external mutation that may already have completed; verify its state first and reuse idempotency or duplicate checks when available.',
     cause === 'premature_final'
-      ? 'Perform the remaining actions now. Do not end with another promise to continue.'
+      ? 'Treat the reported technical obstacle as a diagnosis checkpoint, not a terminal result. Form a materially different hypothesis, inspect the strongest available evidence, test the safest viable correction or alternate route, and verify the user-visible outcome. Perform the remaining actions now. Do not end with another promise, a proposed next correction, or an untested recommendation.'
       : '',
     'Finish the requested work and provide the final user-facing response.',
     '</automatic_turn_recovery>',

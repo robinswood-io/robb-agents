@@ -58,8 +58,10 @@ describe('durable turn recovery', () => {
 
   it('bounds retries and records exhaustion durably', () => {
     const first = advancePendingTurnRecovery(createPendingTurnRecovery('user-1', 1), 'stream_ended', 2)!;
-    expect(advancePendingTurnRecovery(first, 'runtime_error', 3)).toBeNull();
-    expect(exhaustPendingTurnRecovery(first, 5).exhaustedAt).toBe(5);
+    const second = advancePendingTurnRecovery(first, 'runtime_error', 3)!;
+    const third = advancePendingTurnRecovery(second, 'premature_final', 4)!;
+    expect(advancePendingTurnRecovery(third, 'runtime_error', 5)).toBeNull();
+    expect(exhaustPendingTurnRecovery(third, 6).exhaustedAt).toBe(6);
   });
 
   it('accepts an explicit workspace retry bound', () => {
@@ -84,6 +86,8 @@ describe('durable turn recovery', () => {
     expect(prompt).toContain('announced more work');
     expect(prompt).toContain('Perform the remaining actions now');
     expect(prompt).toContain('Do not end with another promise');
+    expect(prompt).toContain('materially different hypothesis');
+    expect(prompt).toContain('test the safest viable correction or alternate route');
   });
 
   it('uses a bounded configurable inactivity timeout', () => {
