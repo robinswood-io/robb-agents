@@ -283,6 +283,7 @@ const COMPLETION_REVIEW_PATTERN = /(?:objectif|travail|tâche|task|work).{0,120}
 const NO_REEXECUTION_PATTERN = /(?:ne|n['’])\s+(?:relance|répète|lance|effectue).{0,160}(?:audit|appel réseau|effet externe|action externe)|(?:sans|aucun|aucune|no|without).{0,100}(?:audit|network call|appel réseau|external effect|effet externe)/i;
 const REVIEW_HANDOFF_PATTERN = /needs-review|(?:statut|status).{0,40}(?:revue|review)|(?:place|mets|mettre|placer).{0,80}(?:revue|review)/i;
 const CONTEXT_DEPENDENT_DIRECT_TURN_PATTERN = /^(?:(?:ok|oui|yes|go|d['’]accord)[\s,;:!.-]+)?(?:fais(?:-le)?|faites|vas-y|allez-y|continue|poursuis|reprends|corrige|impl[ée]mente|d[ée]ploie|relance|ex[ée]cute|termine|proc[èe]de|applique)\b/i;
+const AUTOMATIC_RECOVERY_ATTEMPT_PATTERN = /<automatic_turn_recovery\b[^>]*\battempt=["'](\d+)["']/i;
 
 function isCompletionReviewOnly(text: string): boolean {
   return COMPLETION_REVIEW_PATTERN.test(text)
@@ -293,6 +294,12 @@ function isCompletionReviewOnly(text: string): boolean {
 
 function isInternalTurn(turnKind: CostControlledTurnKind): boolean {
   return turnKind !== 'direct';
+}
+
+function automaticRecoveryAttempt(text: string, turnKind: CostControlledTurnKind): number {
+  if (turnKind !== 'automatic-recovery') return 0;
+  const match = text.match(AUTOMATIC_RECOVERY_ATTEMPT_PATTERN);
+  return match ? Math.max(1, Number.parseInt(match[1] ?? '1', 10)) : 1;
 }
 
 export function decideAgentCostControl(
@@ -331,6 +338,8 @@ export function decideAgentCostControl(
       : 'normal';
   const shouldCompact = contextTokens >= effectiveContext.compactAtTokens;
   const hardContextLimitReached = contextTokens >= effectiveContext.hardLimitTokens;
+  const recoveryAttempt = automaticRecoveryAttempt(input.text, turnKind);
+  const seniorRecoveryEscalation = recoveryAttempt >= 2;
 
   let tier: 'routine' | 'standard' | 'complex' | 'highRisk';
   const ambiguousInternalRisk = highRisk && isInternalTurn(turnKind) && !readOnlyRisk;
@@ -338,11 +347,12 @@ export function decideAgentCostControl(
   else if (readOnlyRisk) tier = 'standard';
   else if (highRisk) tier = 'standard';
   else if (completionReviewOnly) tier = 'routine';
+  else if (seniorRecoveryEscalation) tier = 'complex';
   else if (difficulty === 'complex') tier = isInternalTurn(turnKind) ? 'standard' : 'complex';
   else if (difficulty === 'standard' && (!isInternalTurn(turnKind) || turnKind === 'automatic-recovery')) tier = 'standard';
   else tier = 'routine';
 
-  if (budgetState !== 'normal' && tier !== 'highRisk') {
+  if (budgetState !== 'normal' && tier !== 'highRisk' && turnKind !== 'automatic-recovery') {
     tier = budgetState === 'hard-limit' ? 'routine' : tier === 'complex' ? 'standard' : 'routine';
   }
 
@@ -372,6 +382,7 @@ export function decideAgentCostControl(
       guardedHighRisk ? 'safety:guarded-high-risk' : undefined,
       readOnlyRisk ? 'safety:explicit-read-only' : undefined,
       completionReviewOnly ? 'cost:completion-review-only' : undefined,
+      seniorRecoveryEscalation ? `recovery:senior-attempt-${recoveryAttempt}` : undefined,
       `turn:${turnKind}`,
       `difficulty:${difficulty}`,
       `budget:${budgetState}`,

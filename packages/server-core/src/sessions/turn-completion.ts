@@ -17,11 +17,12 @@ const UNFINISHED_ACTION_PATTERNS = [
 const RECOVERABLE_TECHNICAL_CHECKPOINT_PATTERNS = [
   /(?:le|un)\s+prochain\s+correctif\s+(?:doit|devra|consiste|portera)\b/i,
   /\b(?:je\s+n['’]ai\s+pas|nous\s+n['’]avons\s+pas)\s+(?:encore\s+)?(?:appliqu[ée]|impl[ée]ment[ée]|tent[ée]|test[ée])\s+(?:de\s+|la\s+|le\s+|un\s+|une\s+)?(?:correction|correctif|solution|alternative)\b/i,
-  /\b(?:aucun|aucune)\s+(?:test|validation|v[ée]rification|d[ée]ploiement|d[ée]p[oô]t|mutation).{0,100}\bn['’]a\s+(?:donc\s+)?pu\s+[êe]tre\s+(?:ex[ée]cut[ée]|effectu[ée]|valid[ée]|termin[ée])\b/i,
+  /\b(?:aucun|aucune)\s+(?:test|validation|v[ée]rification|d[ée]ploiement|d[ée]p[oô]t|mutation).{0,100}\bn['’]a\s+(?:donc\s+)?pu\s+[êe]tre\s+(?:ex[ée]cut[ée]|effectu[ée]|valid[ée]|termin[ée])(?=\s|[.,;:!?]|$)/i,
   /\b(?:la\s+suite|l['’][ée]tape\s+suivante)\s+(?:concerne|consiste|sera|doit|devra)\b/i,
 ];
 
 const HUMAN_HANDOFF_PATTERN = /(?:connecte(?:-toi|z-vous)?|authentifie(?:-toi|z-vous)?|clique(?:z)?|valide(?:z)?|saisis(?:sez)?|renseigne(?:r|z)?|r[ée]ponds|dites?-moi|dis-moi|quand\s+(?:tu|vous)|merci\s+de|peux-tu|pouvez-vous|il\s+me\s+manque\s+(?:seulement\s+|ton|ta|votre|un\s+choix|une\s+d[ée]cision|une\s+autorisation|un\s+identifiant|un\s+secret)|j['’]ai\s+besoin\s+(?:de\s+ton|de\s+ta|de\s+votre|d['’]un\s+choix|d['’]une\s+d[ée]cision|d['’]une\s+autorisation|d['’]un\s+identifiant|d['’]un\s+secret)|(?:action|intervention|validation|confirmation|d[ée]cision|autorisation)\s+humaine|j['’]attends\s+(?:ta|votre)\s+(?:r[ée]ponse|validation|confirmation|d[ée]cision|autorisation)|please\s+(?:sign\s+in|log\s+in|click|confirm|enter|reply)|tell\s+me|once\s+you|waiting\s+for\s+you)/i;
+const PROVEN_HUMAN_BLOCKER_PATTERN = /(?:oauth|mfa|2fa|authentification\s+[àa]\s+deux\s+facteurs|(?:code\s+(?:de\s+)?(?:validation|s[ée]curit[ée])|mot\s+de\s+passe|password|api[-_ ]?key|cl[ée]\s+api|secret|credentials?|identifiant)\s+(?:manquant|requis|n[ée]cessaire|absent|invalide|expir[ée]|missing|required|needed|invalid|expired)|(?:manque|besoin|exige|requiert|requires?|needs?)\s+(?:d['’])?(?:un\s+|une\s+|le\s+|la\s+|des?\s+)?(?:code\s+(?:de\s+)?(?:validation|s[ée]curit[ée])|mot\s+de\s+passe|password|api[-_ ]?key|cl[ée]\s+api|secret|credentials?|identifiant)|connecte(?:-toi|z-vous)?|authentifie(?:-toi|z-vous)?|sign\s+in|log\s+in|d[ée]cision\s+m[ée]tier|business\s+decision|choix\s+m[ée]tier|autorisation\s+(?:externe|humaine|irr[ée]versible)|external\s+authorization)/i;
 
 /**
  * Detect a provider "final" that is actually only a progress update followed
@@ -37,9 +38,15 @@ export function looksLikePrematureFinalAssistant(content: string): boolean {
   // report in the same message.
   const actionTail = normalized.slice(-700);
   const checkpointTail = normalized.slice(-1_800);
-  const unfinished = UNFINISHED_ACTION_PATTERNS.some(pattern => pattern.test(actionTail))
-    || RECOVERABLE_TECHNICAL_CHECKPOINT_PATTERNS.some(pattern => pattern.test(checkpointTail));
-  return unfinished && !HUMAN_HANDOFF_PATTERN.test(checkpointTail);
+  const unfinishedAction = UNFINISHED_ACTION_PATTERNS.some(pattern => pattern.test(actionTail));
+  const recoverableCheckpoint = RECOVERABLE_TECHNICAL_CHECKPOINT_PATTERNS
+    .some(pattern => pattern.test(checkpointTail));
+  if (recoverableCheckpoint) {
+    const provenHumanBlocker = PROVEN_HUMAN_BLOCKER_PATTERN.test(checkpointTail)
+      && HUMAN_HANDOFF_PATTERN.test(checkpointTail);
+    return !provenHumanBlocker;
+  }
+  return unfinishedAction && !HUMAN_HANDOFF_PATTERN.test(checkpointTail);
 }
 
 /**

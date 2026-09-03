@@ -124,7 +124,7 @@ describe('decideAgentCostControl', () => {
 
   test('does not route a technical automatic recovery as routine work', () => {
     const decision = decideAgentCostControl({
-      text: '<automatic_turn_recovery>Continue the interrupted task.</automatic_turn_recovery>',
+      text: '<automatic_turn_recovery attempt="1">Continue the interrupted task.</automatic_turn_recovery>',
       riskContext: 'Diagnostic approfondi d’un processus API bloqué, analyse du runtime et correction multi-étapes.',
       turnKind: 'automatic-recovery',
       connection,
@@ -133,6 +133,34 @@ describe('decideAgentCostControl', () => {
     expect(decision.difficulty).toBe('complex');
     expect(decision.model).toBe('pi/gpt-5.6-terra');
     expect(decision.thinkingLevel).toBe('medium');
+  });
+
+  test('escalates a second automatic recovery to the senior model despite the session budget', () => {
+    const decision = decideAgentCostControl({
+      text: '<automatic_turn_recovery attempt="2">Continue with a materially different hypothesis.</automatic_turn_recovery>',
+      riskContext: 'Diagnostic approfondi d’un processus API bloqué, analyse du runtime et correction multi-étapes.',
+      turnKind: 'automatic-recovery',
+      connection,
+      sessionCostUsd: 80,
+    });
+
+    expect(decision.budgetState).toBe('hard-limit');
+    expect(decision.model).toBe('pi/gpt-5.6-sol');
+    expect(decision.thinkingLevel).toBe('high');
+    expect(decision.explanation).toContain('recovery:senior-attempt-2');
+  });
+
+  test('keeps a high-risk automatic recovery at the maximum safety reasoning', () => {
+    const decision = decideAgentCostControl({
+      text: '<automatic_turn_recovery attempt="2">Continue the production deployment recovery.</automatic_turn_recovery>',
+      riskContext: 'Migration destructive en production.',
+      turnKind: 'automatic-recovery',
+      connection,
+      sessionCostUsd: 80,
+    });
+
+    expect(decision.model).toBe('pi/gpt-5.6-sol');
+    expect(decision.thinkingLevel).toBe('xhigh');
   });
 
   test('uses the balanced model with high thinking for a reversible permission change', () => {

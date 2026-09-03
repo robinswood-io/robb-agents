@@ -113,6 +113,21 @@ describe('classifyLatestTurnTerminalState', () => {
     ].join(' '))).toBe(true);
   });
 
+  it('does not accept a generic request to continue as proof of a human blocker', () => {
+    expect(looksLikePrematureFinalAssistant(
+      'Aucun test n’a pu être exécuté. Dites-moi si je dois continuer avec le prochain correctif.',
+    )).toBe(true);
+    expect(looksLikePrematureFinalAssistant(
+      'L’audit des secrets est terminé. Aucun test n’a pu être exécuté. Dites-moi si je dois continuer.',
+    )).toBe(true);
+  });
+
+  it('accepts a technical checkpoint when interactive authentication is genuinely required', () => {
+    expect(looksLikePrematureFinalAssistant(
+      'Aucun test n’a pu être exécuté car OAuth exige un code MFA. Connectez-vous puis dites-moi quand c’est fait.',
+    )).toBe(false);
+  });
+
   it('does not treat a generic technical limitation as a human decision', () => {
     expect(looksLikePrematureFinalAssistant(
       'Je ne peux pas finir dans ce tour ; je continuerai avec la vérification.',
