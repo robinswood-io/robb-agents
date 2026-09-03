@@ -485,6 +485,7 @@ function RotatingPlaceholder({
 
   return (
     <div
+      data-rich-text-placeholder="true"
       className={cn('transition-opacity duration-300 ease-in-out', className)}
       style={{ opacity }}
     >

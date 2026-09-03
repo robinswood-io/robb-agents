@@ -75,6 +75,7 @@ import { hasOpenOverlay } from '@/lib/overlay-detection'
 import { ToolbarStatusSlot } from './ToolbarStatusSlot'
 import { buildPlanApprovalMessage } from '../plan-approval-message'
 import { shouldHandleScopedInputEvent } from './input-event-guards'
+import { readUsableViewportHeight, subscribeToViewportHeight } from './viewport-height'
 import { clearPendingFocusForSession, consumePendingFocusForSession } from './focus-input-events'
 import {
   getRecentWorkingDirs,
@@ -578,13 +579,12 @@ export function FreeFormInput({
 
   // Calculate max height: min(66% of window height, 540px)
   React.useEffect(() => {
-    const updateMaxHeight = () => {
-      const maxFromWindow = Math.floor(window.innerHeight * 0.66)
+    const updateMaxHeight = (viewportHeight = readUsableViewportHeight()) => {
+      const maxFromWindow = Math.floor(viewportHeight * 0.66)
       setInputMaxHeight(Math.min(maxFromWindow, 540))
     }
     updateMaxHeight()
-    window.addEventListener('resize', updateMaxHeight)
-    return () => window.removeEventListener('resize', updateMaxHeight)
+    return subscribeToViewportHeight(updateMaxHeight)
   }, [])
 
   const dragCounterRef = React.useRef(0)

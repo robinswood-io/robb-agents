@@ -10,7 +10,13 @@ import { initReactI18next } from 'react-i18next'
 import { useTranslation } from 'react-i18next'
 import LanguageDetector from 'i18next-browser-languagedetector'
 import { registerPwa } from './pwa-registration'
+import { installWebViewportSync } from './web-viewport'
 import './index.css'
+
+// Keep the fixed application shell inside the visible viewport when mobile
+// browsers resize around their virtual keyboard. The CSS 100dvh fallback still
+// covers browsers without VisualViewport support.
+installWebViewportSync()
 
 // Initialize i18n before any React rendering
 const i18n = setupI18n([LanguageDetector, initReactI18next])
