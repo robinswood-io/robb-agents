@@ -41,12 +41,29 @@ const REQUIRED_SUMMARY_SECTIONS = [
   '## Next Steps',
   '## Critical Context',
 ] as const
+const REQUIRED_SPLIT_TURN_SUMMARY_SECTIONS = [
+  '## Original Request',
+  '## Early Progress',
+  '## Context for Suffix',
+] as const
+const SPLIT_TURN_SUMMARY_MARKER = '**Turn Context (split turn):**'
 const UNRESOLVED_TEMPLATE_PATTERN = /\[(?:What is the user trying|Any constraints|Completed tasks|Current work|Issues preventing|Decision|Ordered list|Any data)/i
 
 function finiteNonNegativeInteger(value: unknown): number | undefined {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0
     ? Math.floor(value)
     : undefined
+}
+
+function hasRequiredSummarySections(summary: string): boolean {
+  const hasOperationalHandoff = REQUIRED_SUMMARY_SECTIONS.every(section => summary.includes(section))
+  if (hasOperationalHandoff) return true
+
+  // The pi SDK deliberately uses a different schema when compaction cuts
+  // inside an oversized turn. Its prefix summary is merged with the retained
+  // suffix and cannot honor the normal history-summary headings.
+  return summary.includes(SPLIT_TURN_SUMMARY_MARKER)
+    && REQUIRED_SPLIT_TURN_SUMMARY_SECTIONS.every(section => summary.includes(section))
 }
 
 /**
@@ -71,7 +88,7 @@ export function assessContextCompactionResult(
   const tokensAfter = finiteNonNegativeInteger(result.estimatedTokensAfter)
 
   if (summary.length < MIN_VERIFIABLE_SUMMARY_CHARS) issues.push('summary-too-short')
-  if (!REQUIRED_SUMMARY_SECTIONS.every(section => summary.includes(section))) {
+  if (!hasRequiredSummarySections(summary)) {
     issues.push('missing-required-sections')
   }
   if (UNRESOLVED_TEMPLATE_PATTERN.test(summary)) issues.push('unresolved-template-placeholders')

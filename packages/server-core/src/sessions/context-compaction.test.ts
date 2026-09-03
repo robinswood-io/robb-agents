@@ -51,6 +51,34 @@ describe('context compaction', () => {
     })
   })
 
+  test('accepts the SDK split-turn summary schema', () => {
+    const splitTurnSummary = [
+      'No prior history.',
+      '---',
+      '**Turn Context (split turn):**',
+      '## Original Request',
+      'Finish the verified migration.',
+      '## Early Progress',
+      '- Backup verified and migration applied.',
+      '## Context for Suffix',
+      '- Validate staging without replaying external effects.',
+    ].join('\n')
+
+    expect(assessContextCompactionResult({
+      summary: splitTurnSummary,
+      firstKeptEntryId: 'entry-42',
+      tokensBefore: 150_707,
+      estimatedTokensAfter: 49_315,
+    })).toEqual({
+      outcome: 'succeeded',
+      issues: [],
+      tokensBefore: 150_707,
+      tokensAfter: 49_315,
+      reclaimedTokens: 101_392,
+      reductionRatio: 101_392 / 150_707,
+    })
+  })
+
   test('does not claim success for a missing or malformed result', () => {
     expect(assessContextCompactionResult(null)).toEqual({
       outcome: 'unverified',
@@ -85,6 +113,17 @@ describe('context compaction', () => {
     expect(assessment.outcome).toBe('unverified')
     expect(assessment.issues).toContain('missing-required-sections')
     expect(assessment.issues).toContain('unresolved-template-placeholders')
+  })
+
+  test('rejects partial split-turn headings without the SDK marker', () => {
+    const assessment = assessContextCompactionResult({
+      summary: '## Original Request\nFinish migration.\n## Early Progress\n- Backup verified.\n## Context for Suffix\n- Validate staging.',
+      firstKeptEntryId: 'entry-9',
+      tokensBefore: 80_000,
+      estimatedTokensAfter: 20_000,
+    })
+    expect(assessment.outcome).toBe('unverified')
+    expect(assessment.issues).toContain('missing-required-sections')
   })
 
   test('backs off failures until cooldown or material context growth', () => {
