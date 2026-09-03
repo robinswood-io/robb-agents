@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Database, Download, LogOut, RefreshCw, Sparkles, Wifi, WifiOff, X } from 'lucide-react'
+import { Cpu, Database, Download, LogOut, RefreshCw, Sparkles, Wifi, WifiOff, X } from 'lucide-react'
 import type { WsRpcClient, TransportConnectionState } from '../../../electron/src/transport/client'
 import {
   clearInstallPrompt,
@@ -14,6 +14,9 @@ import {
   activatePwaUpdate,
   subscribeToPwaUpdate,
 } from '../pwa-registration'
+import { publishPwaBadgeState } from '../pwa-badging'
+import { detectPwaCapabilities, type PwaCapabilities } from '../pwa-capabilities'
+import { PwaCapabilitiesPanel } from './PwaCapabilitiesPanel'
 
 export interface RemoteConnectionBadgeProps {
   client: WsRpcClient
@@ -99,6 +102,8 @@ export function RemoteConnectionBadge({
   const [installed, setInstalled] = useState(() => isRunningAsInstalledApp())
   const [menuOpen, setMenuOpen] = useState(false)
   const [updateAvailable, setUpdateAvailable] = useState(false)
+  const [capabilities, setCapabilities] = useState<PwaCapabilities | null>(null)
+  const [capabilitiesOpen, setCapabilitiesOpen] = useState(false)
   const [signingOut, setSigningOut] = useState(false)
   const [signOutError, setSignOutError] = useState(false)
   const controlsRef = useRef<HTMLDivElement>(null)
@@ -109,6 +114,9 @@ export function RemoteConnectionBadge({
   const installHelpDialogRef = useRef<HTMLDivElement>(null)
   const installHelpCloseRef = useRef<HTMLButtonElement>(null)
   const installHelpReturnFocusRef = useRef<HTMLElement | null>(null)
+  const capabilitiesButtonRef = useRef<HTMLButtonElement>(null)
+  const capabilitiesDialogRef = useRef<HTMLDivElement>(null)
+  const capabilitiesCloseRef = useRef<HTMLButtonElement>(null)
 
   useLayoutEffect(() => {
     const controls = controlsRef.current
@@ -136,6 +144,21 @@ export function RemoteConnectionBadge({
   useEffect(() => client.onConnectionStateChanged(setState), [client])
   useEffect(() => subscribeToInstallPrompt(setInstallPrompt), [])
   useEffect(() => subscribeToPwaUpdate((registration) => setUpdateAvailable(Boolean(registration?.waiting))), [])
+  useEffect(() => {
+    let cancelled = false
+    void detectPwaCapabilities().then((snapshot) => {
+      if (!cancelled) setCapabilities(snapshot)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+  useEffect(() => {
+    void publishPwaBadgeState({ offlineItemCount, updateAvailable })
+    return () => {
+      void publishPwaBadgeState({ offlineItemCount: 0, updateAvailable: false })
+    }
+  }, [offlineItemCount, updateAvailable])
   useEffect(() => {
     const onInstalled = () => {
       setInstalled(true)
@@ -194,6 +217,21 @@ export function RemoteConnectionBadge({
       })
     }
   }, [showInstallHelp])
+  useEffect(() => {
+    if (!capabilitiesOpen) return
+
+    const focusFrame = window.requestAnimationFrame(() => capabilitiesCloseRef.current?.focus())
+    const onKeyDown = (event: KeyboardEvent) => {
+      handleDialogKeyDown(event, capabilitiesDialogRef.current, () => setCapabilitiesOpen(false))
+    }
+    document.addEventListener('keydown', onKeyDown)
+
+    return () => {
+      window.cancelAnimationFrame(focusFrame)
+      document.removeEventListener('keydown', onKeyDown)
+      window.requestAnimationFrame(() => capabilitiesButtonRef.current?.focus())
+    }
+  }, [capabilitiesOpen])
 
   const connected = state.status === 'connected'
   const retrying = state.status === 'connecting' || state.status === 'reconnecting'
@@ -297,6 +335,18 @@ export function RemoteConnectionBadge({
           <span className="hidden lg:inline">{t('webui.updateNow', 'Update now')}</span>
         </button>
       )}
+      <button
+        ref={capabilitiesButtonRef}
+        type="button"
+        data-testid="remote-pwa-capabilities"
+        className="pointer-events-auto flex h-11 w-11 items-center justify-center rounded-xl border border-border bg-card/95 text-foreground shadow-sm"
+        onClick={() => setCapabilitiesOpen((open) => !open)}
+        aria-label={t('webui.pwaCapabilities', 'PWA capabilities')}
+        title={t('webui.pwaCapabilities', 'PWA capabilities')}
+        aria-expanded={capabilitiesOpen}
+      >
+        <Cpu className="h-4 w-4" aria-hidden="true" />
+      </button>
       {onOpenOfflineWorkspace && (
         <button
           type="button"
@@ -426,6 +476,9 @@ export function RemoteConnectionBadge({
                 {t('webui.updateNow', 'Update now')}
               </button>
             )}
+            <div className="rounded-xl border border-border/70 bg-background/50 p-3">
+              <PwaCapabilitiesPanel capabilities={capabilities} />
+            </div>
             {onSignOut && (
               <button
                 type="button"
@@ -446,6 +499,36 @@ export function RemoteConnectionBadge({
             )}
           </div>
           </section>
+        </div>
+      )}
+
+      {capabilitiesOpen && (
+        <div
+          className="pointer-events-auto fixed inset-0 hidden bg-foreground/10 sm:block"
+          onPointerDown={() => setCapabilitiesOpen(false)}
+        >
+          <div
+            ref={capabilitiesDialogRef}
+            className="fixed right-3 top-[calc(62px+env(safe-area-inset-top))] w-[min(360px,calc(100vw-1.5rem))] rounded-2xl border border-border/70 bg-card/95 p-4 text-sm text-foreground shadow-2xl backdrop-blur-xl"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="pwa-capabilities-title"
+            tabIndex={-1}
+            onPointerDown={(event) => event.stopPropagation()}
+          >
+            <button
+              ref={capabilitiesCloseRef}
+              type="button"
+              className="absolute right-2 top-2 flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground hover:bg-foreground/5"
+              onClick={() => setCapabilitiesOpen(false)}
+              aria-label={t('common.close')}
+            >
+              <X className="h-4 w-4" aria-hidden="true" />
+            </button>
+            <div className="pr-10">
+              <PwaCapabilitiesPanel capabilities={capabilities} />
+            </div>
+          </div>
         </div>
       )}
 

@@ -16,6 +16,7 @@ import { buildClientApi } from '../../../electron/src/transport/build-api'
 import { CHANNEL_MAP } from '../../../electron/src/transport/channel-map'
 import type { ElectronAPI, TransportConnectionState } from '../../../electron/src/shared/types'
 import type { OfflineCoordinator } from '../offline-coordinator'
+import { publishPwaBadgeState } from '../pwa-badging'
 
 // ---------------------------------------------------------------------------
 // Web file picker (replaces native Electron dialog)
@@ -95,6 +96,17 @@ export function createWebApi(options: WebApiOptions): {
   const webOverrides: Partial<ElectronAPI> = {
     // Remote data snapshots. The original RPC result is always returned to the
     // renderer; encrypted offline capture happens as a bounded side effect.
+    getUnreadSummary: async () => {
+      const summary = await baseApi.getUnreadSummary()
+      void publishPwaBadgeState({ unreadCount: summary.totalUnreadSessions })
+      return summary
+    },
+    onUnreadSummaryChanged: (cb) => {
+      return baseApi.onUnreadSummaryChanged((summary) => {
+        void publishPwaBadgeState({ unreadCount: summary.totalUnreadSessions })
+        cb(summary)
+      })
+    },
     getSessions: async () => {
       const requestWorkspaceId = activeWorkspaceId
       const sessions = await baseApi.getSessions()
@@ -265,8 +277,11 @@ export function createWebApi(options: WebApiOptions): {
     menuPaste: () => { document.execCommand('paste'); return Promise.resolve() },
     menuSelectAll: () => { document.execCommand('selectAll'); return Promise.resolve() },
 
-    // Badge — use document title
-    refreshBadge: () => Promise.resolve(),
+    // Badge — use the native PWA App Badging API when the browser exposes it.
+    refreshBadge: async () => {
+      const summary = await baseApi.getUnreadSummary()
+      await publishPwaBadgeState({ unreadCount: summary.totalUnreadSessions })
+    },
     setDockIconWithBadge: () => Promise.resolve(),
     onBadgeDraw: () => () => {},
     onBadgeDrawWindows: () => () => {},

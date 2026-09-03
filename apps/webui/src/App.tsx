@@ -41,6 +41,7 @@ import {
   subscribeWebSessionInvalidation,
 } from './private-storage'
 import { isTerminalRemoteAuthState } from './remote-auth-state'
+import { saveJsonFile } from './pwa-file-system'
 
 if (typeof document !== 'undefined') {
   document.documentElement.dataset.robbRuntime = 'web'
@@ -912,6 +913,16 @@ export default function App() {
     await purgeAllLocalPrivateData()
   }, [purgeAllLocalPrivateData])
 
+  const exportOfflineData = useCallback(async () => {
+    const exportedAt = new Date().toISOString()
+    const host = (offlineState.scope?.hostLabel ?? 'robb-agents').toLocaleLowerCase().replace(/[^\w.-]+/g, '-')
+    await saveJsonFile({
+      exportedAt,
+      source: 'Robb Agents Remote PWA',
+      state: offlineState,
+    }, `robb-agents-offline-${host}-${exportedAt.slice(0, 10)}.json`)
+  }, [offlineState])
+
   const retryOfflineSync = useCallback(async () => {
     if (!transportConnected || !offlineSyncRef.current) {
       await initialize()
@@ -988,6 +999,7 @@ export default function App() {
         const scopeToken = offlineVault.getScopeToken()
         if (confirmed && scopeToken) await offlineVault.removeOutbox(itemId, scopeToken)
       }}
+      onExportOfflineData={exportOfflineData}
       onClearOfflineData={clearOfflineData}
     />
   )

@@ -6,6 +6,7 @@ import {
   BookOpenText,
   Clock3,
   Database,
+  Download,
   FileText,
   Inbox,
   LockKeyhole,
@@ -118,6 +119,7 @@ export interface OfflineWorkspaceProps {
   onSendOutbox?: (itemId: string) => MaybePromise
   onDeleteOutbox?: (itemId: string) => MaybePromise
   onRetentionDaysChange?: (days: number) => MaybePromise
+  onExportOfflineData?: () => MaybePromise
   onClearOfflineData?: () => MaybePromise
 }
 
@@ -212,6 +214,7 @@ export function OfflineWorkspace({
   onSendOutbox,
   onDeleteOutbox,
   onRetentionDaysChange,
+  onExportOfflineData,
   onClearOfflineData,
 }: OfflineWorkspaceProps) {
   const { t, i18n } = useTranslation()
@@ -883,6 +886,18 @@ export function OfflineWorkspace({
                   <option key={days} value={days}>{t('webui.offlineRetentionDays', '{{count}} days', { count: days })}</option>
                 ))}
               </select>
+
+              <button
+                type="button"
+                className="mt-4 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-border bg-background px-3 text-sm font-medium text-foreground hover:bg-muted/60 disabled:opacity-50"
+                disabled={!onExportOfflineData || busyAction !== null}
+                onClick={() => void runAction('export', onExportOfflineData)}
+              >
+                {busyAction === 'export'
+                  ? <RefreshCw className="h-4 w-4 animate-spin" aria-hidden="true" />
+                  : <Download className="h-4 w-4" aria-hidden="true" />}
+                {t('webui.offlineExportData', 'Export offline data')}
+              </button>
 
               {!clearArmed ? (
                 <button
