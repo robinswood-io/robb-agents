@@ -780,7 +780,7 @@ export interface SendMessageOptions {
    */
   automaticRecovery?: {
     originalUserMessageId: string
-    cause: 'app_restart' | 'stream_ended' | 'runtime_error' | 'premature_final'
+    cause: 'app_restart' | 'stream_ended' | 'runtime_error' | 'premature_final' | 'tool_checkpoint' | 'evidence_gate' | 'objective_incomplete'
   }
   /** Provenance for model-driven turns that were not directly sent by the user. */
   internalOrigin?: {

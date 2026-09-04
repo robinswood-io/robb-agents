@@ -1069,6 +1069,31 @@ describe('PiEventAdapter', () => {
       expect(events[0].result).toBe('command output');
     });
 
+    it('should preserve a host-authored continuation checkpoint from tool details', () => {
+      collect(adapter.adaptEvent({ type: 'turn_start' } as any));
+      collect(adapter.adaptEvent({
+        type: 'tool_execution_start',
+        toolCallId: 'call_budget',
+        toolName: 'bash',
+        args: {},
+      } as any));
+
+      const events = collect(adapter.adaptEvent({
+        type: 'tool_execution_end',
+        toolCallId: 'call_budget',
+        result: {
+          content: [{ type: 'text', text: 'Tool-call checkpoint reached.' }],
+          details: { costControlBlocked: true, continuationRequired: true },
+        },
+        isError: false,
+      } as any));
+
+      expect(events[0]).toMatchObject({
+        type: 'tool_result',
+        continuationRequired: true,
+      });
+    });
+
     it('should handle error tool results', () => {
       collect(adapter.adaptEvent({ type: 'turn_start' } as any));
       collect(adapter.adaptEvent({

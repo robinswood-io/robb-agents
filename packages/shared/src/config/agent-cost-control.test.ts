@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import type { LlmConnection } from './llm-connections.ts';
 import {
   decideAgentCostControl,
+  isContextDependentDirectTurn,
   isBrowserFallbackEligibleTool,
   resolveEffectiveAgentContextLimits,
   resolveAgentCostControlPolicy,
@@ -147,6 +148,20 @@ describe('decideAgentCostControl', () => {
     expect(decision.difficulty).toBe('complex');
     expect(decision.model).toBe('pi/gpt-5.6-sol');
     expect(decision.thinkingLevel).toBe('high');
+  });
+
+  test('recognizes the terse continuation variants observed in real sessions', () => {
+    for (const text of ['Fais le', 'Fais le avec précision', 'Go', 'Ok go', 'OK, fais le', 'Poursuit', 'Reprends']) {
+      expect(isContextDependentDirectTurn(text)).toBe(true);
+      const decision = decideAgentCostControl({
+        text,
+        riskContext: 'Diagnostic approfondi multi-étapes puis correction et vérification.',
+        turnKind: 'direct',
+        connection,
+      });
+      expect(decision.difficulty).toBe('complex');
+      expect(decision.model).toBe('pi/gpt-5.6-sol');
+    }
   });
 
   test('does not inherit historical complexity for an unrelated short acknowledgement', () => {
@@ -314,7 +329,8 @@ describe('decideAgentCostControl', () => {
 
     expect(resolved.context.hardLimitTokens).toBe(20_000);
     expect(resolved.budgets.hardSessionUsd).toBe(7);
-    expect(resolved.recovery.maxAutomaticAttempts).toBe(3);
+    expect(resolved.recovery.maxAutomaticAttempts).toBe(8);
+    expect(resolved.recovery.maxNoProgressAttempts).toBe(2);
   });
 
   test('fails safe to defaults for malformed persisted fields', () => {

@@ -20,6 +20,8 @@ export type {
   SessionHeader,
   SessionPersistentField,
   PendingTurnRecovery,
+  ActiveSessionObjective,
+  SessionObjectiveTerminalState,
   ExternalActionAuthorization,
   ExternalActionAuthorizationCategory,
 } from './types.ts';

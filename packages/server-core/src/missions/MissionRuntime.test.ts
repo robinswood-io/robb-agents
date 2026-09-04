@@ -157,4 +157,54 @@ describe('MissionRuntime', () => {
     expect(executor.executed.find((input) => input.item.id === 'task-a')?.dispatchId).toBe('reserved-before-crash');
     expect(settled.workItems['task-a']?.executionHistory).toEqual(['execution-before-crash']);
   });
+
+  it('does not dispatch when a host runtime policy is already terminal', async () => {
+    const executor = new ScriptedExecutor();
+    const guarded = new MissionRuntime({
+      workspaceRoot: root,
+      controller,
+      executor,
+      evaluateRunPolicy: () => ({ status: 'cancelled', reason: 'Emergency stop is active' }),
+    });
+
+    const settled = await guarded.runUntilSettled('runtime-demo');
+    expect(settled.status).toBe('cancelled');
+    expect(executor.prepared).toHaveLength(0);
+    expect(executor.executed).toHaveLength(0);
+  });
+
+  it('fails closed after a measured attempt crosses a host runtime budget', async () => {
+    const executor = new ScriptedExecutor();
+    executor.execute = async (input) => {
+      executor.executed.push(input);
+      return {
+        ...successfulResult(input),
+        telemetry: {
+          durationMs: 10,
+          tokenUsage: {
+            inputTokens: 80,
+            outputTokens: 30,
+            totalTokens: 110,
+            contextTokens: 80,
+            costUsd: 0.02,
+          },
+        },
+      };
+    };
+    const guarded = new MissionRuntime({
+      workspaceRoot: root,
+      controller,
+      executor,
+      evaluateRunPolicy: (_snapshot, telemetry, completedAttempt) =>
+        completedAttempt && (telemetry?.tokenUsage?.totalTokens ?? 0) > 100
+          ? { status: 'failed', reason: 'Mission token budget 100 exceeded' }
+          : null,
+    });
+
+    const settled = await guarded.runUntilSettled('runtime-demo');
+    expect(settled.status).toBe('failed');
+    expect(settled.workItems['task-a']?.status).toBe('blocked');
+    expect(settled.workItems['task-a']?.attemptTelemetry[0]?.tokenUsage?.totalTokens).toBe(110);
+    expect(executor.executed.map((input) => input.item.id)).toEqual(['task-a']);
+  });
 });

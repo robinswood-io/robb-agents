@@ -73,9 +73,24 @@ export interface MissionRuntimeOptions {
   genDispatchId?: (missionId: string, workItemId: string, attempt: number) => string;
   onSnapshot?: (snapshot: MissionSnapshot) => void;
   onError?: (context: { missionId: string; workItemId?: string; error: Error }) => void;
+  /** Host-owned admission/continuation policy, evaluated before and between attempts. */
+  evaluateRunPolicy?: (
+    snapshot: MissionSnapshot,
+    pendingTelemetry?: MissionAttemptTelemetry,
+    completedAttempt?: boolean,
+  ) => MissionRuntimePolicyDecision | null;
+  /** Stops live executor sessions after a policy decision becomes terminal. */
+  onPolicyHalt?: (before: MissionSnapshot, after: MissionSnapshot) => Promise<void> | void;
+  nowMs?: () => number;
+}
+
+export interface MissionRuntimePolicyDecision {
+  status: 'failed' | 'cancelled';
+  reason: string;
 }
 
 const TERMINAL_OR_WAITING = new Set(['paused', 'blocked', 'waiting-approval', 'completed', 'failed', 'cancelled']);
+const TERMINAL = new Set(['completed', 'failed', 'cancelled']);
 
 function isReview(item: MissionWorkItem): boolean {
   return item.kind === 'objective-review' || item.kind === 'final-review';
@@ -85,6 +100,8 @@ function isReview(item: MissionWorkItem): boolean {
 export class MissionRuntime {
   private readonly loops = new Map<string, Promise<MissionSnapshot>>();
   private readonly work = new Map<string, Promise<void>>();
+  private readonly deadlineTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  private readonly policyHalts = new Map<string, Promise<void>>();
   private readonly genDispatchId: NonNullable<MissionRuntimeOptions['genDispatchId']>;
 
   constructor(private readonly options: MissionRuntimeOptions) {
@@ -94,6 +111,8 @@ export class MissionRuntime {
 
   startMission(missionId: string): MissionSnapshot {
     let snapshot = this.options.controller.getMission(missionId);
+    const policyHalt = this.applyRunPolicy(snapshot);
+    if (policyHalt) return policyHalt;
     if (snapshot.status === 'draft' || snapshot.status === 'paused') {
       snapshot = this.options.controller.startMission(missionId);
       this.emit(snapshot);
@@ -103,14 +122,15 @@ export class MissionRuntime {
   }
 
   async runUntilSettled(missionId: string): Promise<MissionSnapshot> {
-    this.startMission(missionId);
-    return this.loops.get(missionId)!;
+    const started = this.startMission(missionId);
+    return this.loops.get(missionId) ?? started;
   }
 
   recoverNonTerminalMissions(): string[] {
     const recovered: string[] = [];
     for (const missionId of listMissionIds(this.options.workspaceRoot)) {
       const snapshot = this.options.controller.getMission(missionId);
+      if (snapshot.status !== 'draft' && !TERMINAL.has(snapshot.status)) this.armDeadline(missionId);
       if (snapshot.status === 'draft' || TERMINAL_OR_WAITING.has(snapshot.status)) continue;
       this.ensureLoop(missionId);
       recovered.push(missionId);
@@ -120,19 +140,27 @@ export class MissionRuntime {
 
   private ensureLoop(missionId: string): void {
     if (this.loops.has(missionId)) return;
+    this.armDeadline(missionId);
     const loop = this.pump(missionId)
       .catch((error: unknown) => {
         const normalized = error instanceof Error ? error : new Error(String(error));
         this.options.onError?.({ missionId, error: normalized });
         return this.options.controller.getMission(missionId);
       })
-      .finally(() => this.loops.delete(missionId));
+      .finally(() => {
+        this.loops.delete(missionId);
+        const snapshot = this.options.controller.getMission(missionId);
+        if (TERMINAL.has(snapshot.status)) this.clearDeadline(missionId);
+        else this.armDeadline(missionId);
+      });
     this.loops.set(missionId, loop);
   }
 
   private async pump(missionId: string): Promise<MissionSnapshot> {
     while (true) {
-      const snapshot = this.options.controller.getMission(missionId);
+      let snapshot = this.options.controller.getMission(missionId);
+      if (TERMINAL_OR_WAITING.has(snapshot.status)) return snapshot;
+      snapshot = this.applyRunPolicy(snapshot) ?? snapshot;
       if (TERMINAL_OR_WAITING.has(snapshot.status)) return snapshot;
 
       const candidates = new Map<string, MissionWorkItem>();
@@ -167,6 +195,7 @@ export class MissionRuntime {
 
   private async driveWork(missionId: string, workItemId: string): Promise<void> {
     let snapshot = this.options.controller.getMission(missionId);
+    if (this.applyRunPolicy(snapshot)) return;
     let runtime = snapshot.workItems[workItemId];
     if (!runtime) throw new Error(`Unknown mission work item "${workItemId}"`);
 
@@ -181,6 +210,7 @@ export class MissionRuntime {
     }
 
     if (runtime.status === 'reserved') {
+      if (this.applyRunPolicy(snapshot)) return;
       snapshot = this.options.controller.confirmWorkItemDispatch(missionId, workItemId, runtime.dispatchId!);
       this.emit(snapshot);
       runtime = snapshot.workItems[workItemId]!;
@@ -202,6 +232,14 @@ export class MissionRuntime {
         this.emit(accepted);
       },
     });
+    const afterExecution = this.options.controller.getMission(missionId);
+    if (TERMINAL_OR_WAITING.has(afterExecution.status)) return;
+    const policyHalt = this.applyRunPolicy(
+      afterExecution,
+      result.telemetry,
+      { workItemId, dispatchId: runtime.dispatchId },
+    );
+    if (policyHalt) return;
     if (result.status === 'approval-required') {
       snapshot = this.options.controller.waitForWorkItemApproval(
         missionId,
@@ -294,5 +332,78 @@ export class MissionRuntime {
 
   private emit(snapshot: MissionSnapshot): void {
     this.options.onSnapshot?.(snapshot);
+  }
+
+  /** Re-evaluate live host policy immediately (used by emergency-control changes). */
+  async enforceRunPolicy(missionId: string): Promise<MissionSnapshot> {
+    const before = this.options.controller.getMission(missionId);
+    const after = this.applyRunPolicy(before) ?? before;
+    const halt = this.policyHalts.get(missionId);
+    if (halt) await halt;
+    return after;
+  }
+
+  private applyRunPolicy(
+    snapshot: MissionSnapshot,
+    pendingTelemetry?: MissionAttemptTelemetry,
+    attempt?: { workItemId: string; dispatchId: string },
+  ): MissionSnapshot | null {
+    if (TERMINAL.has(snapshot.status)) return null;
+    const decision = this.options.evaluateRunPolicy?.(snapshot, pendingTelemetry, attempt !== undefined);
+    if (!decision) return null;
+    const after = decision.status === 'cancelled'
+      ? this.options.controller.cancelMission(snapshot.spec.id, decision.reason)
+      : this.options.controller.failMissionForRuntimeLimit(
+          snapshot.spec.id,
+          decision.reason,
+          pendingTelemetry && attempt
+            ? { ...attempt, telemetry: pendingTelemetry }
+            : undefined,
+        );
+    this.emit(after);
+    this.clearDeadline(snapshot.spec.id);
+    const halt = (async () => {
+      try {
+        await this.options.onPolicyHalt?.(snapshot, after);
+      } catch (error: unknown) {
+        this.options.onError?.({
+          missionId: snapshot.spec.id,
+          error: error instanceof Error ? error : new Error(String(error)),
+        });
+      }
+    });
+    const pendingHalt = halt();
+    this.policyHalts.set(snapshot.spec.id, pendingHalt);
+    void pendingHalt.then(() => {
+      if (this.policyHalts.get(snapshot.spec.id) === pendingHalt) {
+        this.policyHalts.delete(snapshot.spec.id);
+      }
+    });
+    return after;
+  }
+
+  private armDeadline(missionId: string): void {
+    this.clearDeadline(missionId);
+    const snapshot = this.options.controller.getMission(missionId);
+    const deadline = snapshot.spec.policy.deadline;
+    if (!deadline || TERMINAL.has(snapshot.status) || snapshot.status === 'draft') return;
+    const remaining = Date.parse(deadline) - (this.options.nowMs?.() ?? Date.now());
+    const delay = Math.max(0, Math.min(remaining, 2_147_000_000));
+    const timer = setTimeout(() => {
+      this.deadlineTimers.delete(missionId);
+      if (remaining > delay) {
+        this.armDeadline(missionId);
+        return;
+      }
+      void this.enforceRunPolicy(missionId);
+    }, delay);
+    timer.unref?.();
+    this.deadlineTimers.set(missionId, timer);
+  }
+
+  private clearDeadline(missionId: string): void {
+    const timer = this.deadlineTimers.get(missionId);
+    if (timer) clearTimeout(timer);
+    this.deadlineTimers.delete(missionId);
   }
 }

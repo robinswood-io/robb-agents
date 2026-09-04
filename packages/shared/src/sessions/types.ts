@@ -79,6 +79,8 @@ export const SESSION_PERSISTENT_FIELDS = [
   'externalActionAuthorizations',
   // Durable in-flight turn marker used to recover after a host restart/stream loss
   'pendingTurnRecovery',
+  // Durable objective contract used for continuation routing and per-objective budgets
+  'activeObjective',
 ] as const;
 
 export type SessionPersistentField = typeof SESSION_PERSISTENT_FIELDS[number];
@@ -93,8 +95,51 @@ export interface PendingTurnRecovery {
   startedAt: number;
   attempts: number;
   lastAttemptAt?: number;
-  lastCause?: 'app_restart' | 'stream_ended' | 'runtime_error' | 'premature_final';
+  lastCause?: 'app_restart' | 'stream_ended' | 'runtime_error' | 'premature_final' | 'tool_checkpoint' | 'evidence_gate' | 'objective_incomplete';
+  /** Stable fingerprint of successful tool evidence seen before the last recovery pass. */
+  lastProgressFingerprint?: string;
+  /** Consecutive recovery passes that produced no new successful tool evidence. */
+  stagnantAttempts?: number;
+  /** Host-authored checkpoint that forces continuation independently of assistant prose. */
+  continuationRequired?: boolean;
   exhaustedAt?: number;
+}
+
+export type SessionObjectiveTerminalState =
+  | 'active'
+  | 'complete_verified'
+  | 'blocked_human'
+  | 'blocked_policy'
+  | 'exhausted';
+
+/**
+ * Durable contract for the current user objective. It deliberately references
+ * the original transcript message instead of duplicating sensitive user text.
+ */
+export interface ActiveSessionObjective {
+  schemaVersion: 1;
+  userMessageId: string;
+  startedAt: number;
+  /** Lifetime session cost when this objective started. */
+  budgetBaselineUsd: number;
+  /** Lifetime session token total when this objective started. */
+  tokenBaseline: number;
+  continuationCount: number;
+  orchestrationMode: 'direct' | 'mission';
+  risk: 'standard' | 'high-stakes';
+  /** Objective explicitly asks for a mutation/build/deployment, so prose alone is insufficient. */
+  requiresExecutionEvidence?: boolean;
+  evidenceRequirement?: 'authoritative-sources-before-mutation';
+  completionCriteria: Array<
+    | 'requested-outcome-delivered'
+    | 'relevant-checks-passed'
+    | 'no-safe-work-remaining'
+    | 'independent-review-passed'
+  >;
+  terminalState: SessionObjectiveTerminalState;
+  model?: string;
+  thinkingLevel?: ThinkingLevel;
+  completedAt?: number;
 }
 
 export type ExternalActionAuthorizationCategory =
@@ -216,6 +261,8 @@ export interface SessionConfig {
   externalActionAuthorizations?: ExternalActionAuthorization[];
   /** In-flight user turn awaiting a final response; cleared on terminal completion or explicit stop. */
   pendingTurnRecovery?: PendingTurnRecovery;
+  /** Current objective contract, retained across terse continuation turns and restarts. */
+  activeObjective?: ActiveSessionObjective;
   /** Shared viewer URL (if shared via viewer) */
   sharedUrl?: string;
   /** Shared session ID in viewer (for revoke) */
@@ -430,6 +477,8 @@ export interface SessionHeader {
   missionRole?: 'planner' | 'worker' | 'reviewer' | 'supervisor';
   /** In-flight user turn awaiting automatic recovery after host/stream interruption. */
   pendingTurnRecovery?: PendingTurnRecovery;
+  /** Current objective contract used for routing, budgets, and completion gates. */
+  activeObjective?: ActiveSessionObjective;
   /** Unexpired sensitive-action grants, scoped to category + concrete target. */
   externalActionAuthorizations?: ExternalActionAuthorization[];
   // Pre-computed fields for fast list loading
@@ -544,6 +593,8 @@ export interface SessionMetadata {
   missionRole?: 'planner' | 'worker' | 'reviewer' | 'supervisor';
   /** In-flight user turn awaiting automatic recovery after host/stream interruption. */
   pendingTurnRecovery?: PendingTurnRecovery;
+  /** Current objective contract used for routing, budgets, and completion gates. */
+  activeObjective?: ActiveSessionObjective;
   /** Unexpired sensitive-action grants, scoped to category + concrete target. */
   externalActionAuthorizations?: ExternalActionAuthorization[];
 }

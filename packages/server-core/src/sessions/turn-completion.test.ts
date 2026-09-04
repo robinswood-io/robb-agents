@@ -2,6 +2,7 @@ import { describe, expect, it } from 'bun:test';
 import type { Message } from '@craft-agent/core/types';
 import {
   classifyLatestTurnTerminalState,
+  classifyObjectiveTerminalState,
   looksLikePrematureFinalAssistant,
 } from './turn-completion.ts';
 
@@ -15,6 +16,28 @@ const message = (
   content: role,
   timestamp,
   ...options,
+});
+
+describe('classifyObjectiveTerminalState', () => {
+  it('uses the four host terminal states', () => {
+    expect(classifyObjectiveTerminalState('Correctif appliqué et tests validés.')).toBe('complete_verified');
+    expect(classifyObjectiveTerminalState(
+      'OAuth exige un code MFA. Connectez-vous puis dites-moi quand c’est fait.',
+    )).toBe('blocked_human');
+    expect(classifyObjectiveTerminalState(
+      'La politique de sécurité interdit cette mutation et la permission est refusée.',
+    )).toBe('blocked_policy');
+    expect(classifyObjectiveTerminalState('Reste à exécuter : les tests.')).toBe('continue');
+  });
+
+  it('keeps a high-stakes or execution objective active while evidence is missing', () => {
+    expect(classifyObjectiveTerminalState('Le document est prêt.', {
+      evidenceGap: 'independent review missing',
+    })).toBe('continue');
+    expect(classifyObjectiveTerminalState('Le correctif est prêt.', {
+      executionEvidenceMissing: true,
+    })).toBe('continue');
+  });
 });
 
 describe('classifyLatestTurnTerminalState', () => {
@@ -111,6 +134,22 @@ describe('classifyLatestTurnTerminalState', () => {
       'Aucun dépôt n’a donc pu être exécuté.',
       'La suite concerne la recherche d’une voie de soumission dédiée.',
     ].join(' '))).toBe(true);
+  });
+
+  it('recognizes the unfinished formulations observed in the 72-hour audit', () => {
+    const auditedFinals = [
+      'État intermédiaire : la configuration locale est corrigée. Il reste à installer la version distante puis à la valider.',
+      'Point d’étape : le diagnostic est confirmé. La prochaine action consiste à appliquer le correctif.',
+      'Reste à exécuter : le test d’intégration et la validation utilisateur.',
+      'Étape restante : déployer le candidat sur l’environnement de test.',
+      'Prochaine action automatique : relancer le service puis contrôler son état.',
+      'Le travail est engagé mais pas terminé.',
+      'L’objectif n’est pas encore déclaré terminé.',
+    ];
+
+    for (const content of auditedFinals) {
+      expect(looksLikePrematureFinalAssistant(content)).toBe(true);
+    }
   });
 
   it('does not accept a generic request to continue as proof of a human blocker', () => {

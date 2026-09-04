@@ -17,7 +17,10 @@ import {
   type MissionExecutionResult,
   type MissionWorkExecutor,
 } from './MissionRuntime.ts';
-import { MissionRuntimeService } from './MissionRuntimeService.ts';
+import {
+  MissionRuntimeService,
+  evaluateMissionRuntimePolicy,
+} from './MissionRuntimeService.ts';
 import { MissionProofPassportService } from './MissionProofPassportService.ts';
 import type { SubagentAutonomyContext } from '../subagents/autonomy-inheritance.ts';
 
@@ -131,6 +134,122 @@ describe('MissionRuntimeService', () => {
     expect(completed.status).toBe('completed');
     expect(executor.executed).toEqual(['task-a', 'review-objective-one-0', 'final-review-0']);
     expect((await runtimeService.listMissions('workspace-1')).map((mission) => mission.spec.id)).toEqual(['service-demo']);
+  });
+
+  it('evaluates kill switches, deadlines, and projected mission budgets deterministically', () => {
+    const controller = new MissionController({ workspaceRoot: root });
+    controller.createMission(fixture({
+      policy: {
+        maxConcurrentAgents: 1,
+        maxTotalTokens: 100,
+        maxTotalCostUsd: 0.05,
+        deadline: '2026-09-05T10:00:00Z',
+      },
+    }));
+    const snapshot = controller.getMission('service-demo');
+    const common = {
+      workspace: { id: 'workspace-1', rootPath: root },
+      snapshot,
+      nowMs: Date.parse('2026-09-04T10:00:00Z'),
+    };
+
+    expect(evaluateMissionRuntimePolicy({
+      ...common,
+      killSwitch: {
+        schemaVersion: 1,
+        generation: 1,
+        global: false,
+        workspaceIds: ['workspace-1'],
+        missionIds: [],
+        connectorIds: [],
+      },
+    })).toMatchObject({ status: 'cancelled' });
+    expect(evaluateMissionRuntimePolicy({
+      ...common,
+      nowMs: Date.parse('2026-09-05T10:00:00Z'),
+    })).toMatchObject({ status: 'failed', reason: expect.stringContaining('deadline') });
+    expect(evaluateMissionRuntimePolicy({
+      ...common,
+      completedAttempt: true,
+      pendingTelemetry: {
+        durationMs: 10,
+        tokenUsage: {
+          inputTokens: 75,
+          outputTokens: 30,
+          totalTokens: 105,
+          contextTokens: 75,
+          costUsd: 0.02,
+        },
+      },
+    })).toMatchObject({ status: 'failed', reason: expect.stringContaining('token budget') });
+  });
+
+  it('refuses all dispatch while an emergency stop is active', async () => {
+    const runtimeService = new MissionRuntimeService({
+      sessionManager,
+      resolveWorkspace: (id) => id === 'workspace-1' ? { id, rootPath: root } : null,
+      listWorkspaces: () => [{ id: 'workspace-1', rootPath: root }],
+      executorFactory: () => executor,
+      getKillSwitch: () => ({
+        schemaVersion: 1,
+        generation: 1,
+        global: false,
+        workspaceIds: [],
+        missionIds: ['service-demo'],
+        connectorIds: [],
+      }),
+    });
+
+    const stopped = await runtimeService.createAndStart('workspace-1', fixture());
+    expect(stopped.status).toBe('cancelled');
+    expect(stopped.statusReason).toContain('Emergency stop');
+    expect(executor.executed).toHaveLength(0);
+  });
+
+  it('drains a bound live session when an emergency stop is activated', async () => {
+    let emergencyStop = false;
+    let release!: (result: MissionExecutionResult) => void;
+    const cancelledSessions: string[] = [];
+    const blockingExecutor: MissionWorkExecutor = {
+      prepare: async (input) => ({ executorKind: 'blocking', executionId: `execution-${input.dispatchId}` }),
+      execute: async (input, _binding, lifecycle) => {
+        lifecycle?.bindExternalExecution(`live-${input.item.id}`);
+        return new Promise<MissionExecutionResult>((resolve) => { release = resolve; });
+      },
+    };
+    sessionManager = {
+      waitForInit: async () => {},
+      getSessions: () => [],
+      cancelProcessing: async (sessionId: string) => { cancelledSessions.push(sessionId); },
+    } as unknown as ISessionManager;
+    const runtimeService = new MissionRuntimeService({
+      sessionManager,
+      resolveWorkspace: (id) => id === 'workspace-1' ? { id, rootPath: root } : null,
+      listWorkspaces: () => [{ id: 'workspace-1', rootPath: root }],
+      executorFactory: () => blockingExecutor,
+      getKillSwitch: () => ({
+        schemaVersion: 1,
+        generation: emergencyStop ? 1 : 0,
+        global: emergencyStop,
+        workspaceIds: [],
+        missionIds: [],
+        connectorIds: [],
+      }),
+    });
+
+    await runtimeService.createAndStart('workspace-1', fixture());
+    await eventually(async () =>
+      (await runtimeService.getMission('workspace-1', 'service-demo'))
+        .workItems['task-a']?.externalSessionId === 'live-task-a');
+    emergencyStop = true;
+
+    expect(await runtimeService.enforceRuntimePolicies()).toBe(1);
+    expect(cancelledSessions).toContain('live-task-a');
+    expect((await runtimeService.getMission('workspace-1', 'service-demo')).status).toBe('cancelled');
+
+    release({ status: 'submission', submission: { summary: 'late result', outputRefs: [], evidence: [] } });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect((await runtimeService.getMission('workspace-1', 'service-demo')).status).toBe('cancelled');
   });
 
   it('issues and verifies the completion passport before reporting PASS', async () => {

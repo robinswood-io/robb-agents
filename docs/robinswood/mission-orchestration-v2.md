@@ -116,7 +116,7 @@ making the new quality and lineage contracts independently testable.
 - targeted tests and `shared`/`server-core` typechecks must pass before wiring
   the controller into production RPCs.
 
-## Implementation status — 2026-08-18
+## Implementation status — 2026-09-04
 
 Implemented and tested:
 
@@ -149,6 +149,13 @@ Implemented and tested:
 - versioned eight-scenario shadow-mode corpus, journal auditor, machine-readable
   promotion gates, CI exit status, and read-only audit mode for real workspaces;
 - signed proof requirement for external mutations;
+- mission-local and workspace-governance token/cost ceilings enforced before
+  dispatch and after every measured attempt, with the crossing telemetry
+  journaled atomically;
+- absolute Mission deadlines enforced by a resumable runtime timer, including
+  cancellation of bound specialist sessions;
+- one shared durable kill-switch registry for Tasks and Missions: activation
+  blocks new Mission dispatches and drains already-bound sessions;
 - TaskRunner hardening for path validation, post-await fencing, recovery of
   confirmed/rejected transitions, fresh approval after verifier repair,
   duplicate run IDs, kill-switch projection, and unsupported deferred kinds.
@@ -157,7 +164,7 @@ Not production-complete yet:
 
 - multi-process leases, heartbeat/stall detection, and global fair scheduling;
 - host verification of evidence existence, content, checksum, and provenance;
-- mission-wide token/cost reservations, deadline, approvals, and kill switch;
+- multi-process token/cost reservations and mid-provider-call budget preemption;
 - per-profile tool capability allow-lists and brokered secret leases;
 - isolated worktrees/workspaces and an explicit integration agent;
 - versioned replanning, snapshots/compaction, and retention;
@@ -246,12 +253,42 @@ Market priority inferred from this convergence:
    submission, and verdict mutation remain private to the server.
 4. **Done for safe/local effects:** dedicated planner with a validated plan
    preview and explicit launch. High-impact effects remain rejected at admission.
-5. **Next:** host-resolved evidence manifests, deterministic graders, mission
-   budget/deadline/kill-switch aggregation, and per-profile capabilities.
+5. **Done:** host-resolved evidence manifests, Mission runtime
+   budget/deadline/kill-switch aggregation, and shared emergency draining.
+   Deterministic domain graders and per-profile capability allow-lists remain.
 6. **Baseline done:** deterministic shadow-mode corpus, atomic attempt telemetry,
    promotion gates, and read-only workspace audit.
 7. **Then:** add worktree isolation/integration and run representative real
    missions in shadow-mode before enabling autonomous execution by default.
+
+## Ordinary-chat objective bridge
+
+Complex direct chats now enter Mission semantics without requiring the user to
+manually create a Mission. The session header persists an `activeObjective`
+contract containing the original user-message identity, completion criteria,
+risk, execution mode, chosen route, and cost/token baselines. Short follow-ups
+such as `Fais le`, `Go`, `Poursuit`, or `Reprends` retain this contract and the
+original route.
+
+The host, rather than assistant prose, owns the terminal decision:
+
+- `complete_verified`: requested outcome and relevant execution evidence exist;
+- `blocked_human`: a concrete credential, MFA, external authorization, or
+  missing business choice is proven;
+- `blocked_policy`: a host policy or permission boundary refuses the action;
+- `continue`: safe work, execution evidence, authoritative evidence, or review
+  is still missing.
+
+Tool-call ceilings emit a typed continuation checkpoint. Recovery is bounded by
+both a total cap and a two-pass no-progress circuit breaker; successful new tool
+evidence resets stagnation. Cost routing uses spend since the active objective
+started instead of lifetime chat spend. High-stakes mutations are gated until
+authoritative evidence is observed, and completion additionally requires an
+independent reviewer tool result.
+
+The anonymized production-derived regression corpus lives in
+`packages/server-core/src/sessions/autonomy-regression-corpus.ts` and runs with
+`bun run test:evals:autonomy`.
 
 ## Verification of the beta vertical slice
 

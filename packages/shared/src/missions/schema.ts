@@ -291,6 +291,11 @@ export const MissionPolicySchema = z.object({
   maxWorkItems: z.number().int().positive().max(512).default(128),
   maxDepth: z.number().int().positive().max(8).default(4),
   maxTechnicalAttempts: z.number().int().positive().max(10).default(3),
+  /** Hard mission-local ceilings. Workspace governance may impose lower live limits. */
+  maxTotalTokens: z.number().int().positive().optional(),
+  maxTotalCostUsd: z.number().positive().optional(),
+  /** Absolute host-enforced stop time. Offset is mandatory so recovery is timezone-stable. */
+  deadline: z.string().datetime({ offset: true }).optional(),
   requireIndependentReview: z.literal(true).default(true),
   requireIndependentSupervisor: z.literal(true).default(true),
 }).default({

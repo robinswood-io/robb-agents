@@ -73,6 +73,27 @@ describe('MissionSpecSchema', () => {
       }],
     }).success).toBe(false);
   });
+
+  it('validates mission-local runtime ceilings and timezone-stable deadlines', () => {
+    const base = missionFixture();
+    expect(MissionSpecSchema.safeParse({
+      ...base,
+      policy: {
+        ...base.policy,
+        maxTotalTokens: 50_000,
+        maxTotalCostUsd: 2.5,
+        deadline: '2026-09-05T18:00:00+02:00',
+      },
+    }).success).toBe(true);
+    expect(MissionSpecSchema.safeParse({
+      ...base,
+      policy: { ...base.policy, maxTotalTokens: 0 },
+    }).success).toBe(false);
+    expect(MissionSpecSchema.safeParse({
+      ...base,
+      policy: { ...base.policy, deadline: '2026-09-05 18:00' },
+    }).success).toBe(false);
+  });
 });
 describe('StructuredMissionVerdictSchema', () => {
   it('requires failed work for FAIL and forbids corrections on PASS', () => {

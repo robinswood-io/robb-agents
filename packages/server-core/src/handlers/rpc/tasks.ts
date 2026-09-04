@@ -203,11 +203,20 @@ function extractYaml(text: string): string {
   return (fenced ? fenced[1] : text).trim()
 }
 
-export function registerTasksHandlers(server: RpcServer, deps: HandlerDeps): void {
+export interface TaskHandlerRuntimeOptions {
+  killSwitchRegistry?: DurableKillSwitchRegistry;
+  onKillSwitchActivated?: () => Promise<number> | number;
+}
+
+export function registerTasksHandlers(
+  server: RpcServer,
+  deps: HandlerDeps,
+  runtimeOptions: TaskHandlerRuntimeOptions = {},
+): void {
   // One Conductor per workspace, created on demand. Holds active runs in memory.
   const runners = new Map<string, TaskRunner>()
   const runnerPromises = new Map<string, Promise<TaskRunner>>()
-  const killSwitchRegistry = new DurableKillSwitchRegistry(
+  const killSwitchRegistry = runtimeOptions.killSwitchRegistry ?? new DurableKillSwitchRegistry(
     join(resolveConfigDir(), 'governance', 'kill-switches.jsonl'),
   )
 
@@ -636,12 +645,14 @@ export function registerTasksHandlers(server: RpcServer, deps: HandlerDeps): voi
       if (request.active) {
         let stopped = 0
         for (const runner of runners.values()) stopped += runner.enforceKillSwitches()
+        const stoppedMissions = await runtimeOptions.onKillSwitchActivated?.() ?? 0
         tasksLog.warn('kill switch activated', {
           scope: request.scope,
           id: request.id,
           actorId: ctx.actorId,
           generation: snapshot.generation,
           stoppedRuns: stopped,
+          stoppedMissions,
         })
       }
       return snapshot

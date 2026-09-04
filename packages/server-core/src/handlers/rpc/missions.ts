@@ -1,6 +1,7 @@
 import { getWorkspaceByNameOrId } from '@craft-agent/shared/config'
 import {
   WorkspaceGovernanceProfileSchema,
+  type DurableKillSwitchRegistry,
   assertSpaceAction,
   createDefaultWorkspaceGovernance,
   type SpaceAction,
@@ -95,7 +96,15 @@ export function registerMissionProofPassportHandlers(
   )
 }
 
-export function registerMissionsHandlers(server: RpcServer, deps: HandlerDeps): void {
+export interface MissionHandlerRuntimeOptions {
+  killSwitchRegistry?: DurableKillSwitchRegistry;
+}
+
+export function registerMissionsHandlers(
+  server: RpcServer,
+  deps: HandlerDeps,
+  runtimeOptions: MissionHandlerRuntimeOptions = {},
+): MissionRuntimeService {
   const planners = new Map<string, MissionPlanner>()
   const resolveSubagentAutonomyContext = (
     workspace: { id: string; rootPath: string },
@@ -119,6 +128,9 @@ export function registerMissionsHandlers(server: RpcServer, deps: HandlerDeps): 
     connectorReadiness: deps.missionConnectorReadiness,
     preflightCostEstimator: deps.missionPreflightCostEstimator,
     preflightConnections: deps.missionPreflightConnections,
+    getKillSwitch: runtimeOptions.killSwitchRegistry
+      ? () => runtimeOptions.killSwitchRegistry!.snapshot()
+      : undefined,
     resolveSubagentAutonomyContext,
     onSnapshot: (workspaceId, snapshot) => {
       pushTyped(
@@ -371,6 +383,8 @@ export function registerMissionsHandlers(server: RpcServer, deps: HandlerDeps): 
       return service.cancelMission(workspaceId, request.missionId, requireReason(request.reason))
     },
   )
+
+  return service
 }
 
 function requireReason(reason: string): string {

@@ -55,6 +55,10 @@ import {
   type SensitiveExternalActionCategory,
 } from './sensitive-external-action.ts';
 import type { SessionExecutionIsolation } from '../../tasks/durable-execution.ts';
+import {
+  checkObjectiveEvidenceBeforeMutation,
+  isEvidenceAcquisitionTool,
+} from './objective-evidence-gate.ts';
 
 // ============================================================
 // TYPES
@@ -850,7 +854,29 @@ export function runPreToolUseChecks(ctx: PreToolUseInput): PreToolUseCheckResult
   }
 
   // ============================================================
-  // 5. CALL_LLM / SPAWN_SESSION INTERCEPTION
+  // 5. HIGH-STAKES EVIDENCE GATE
+  // ============================================================
+  // Reuse the mature safe-mode classifier to distinguish reads from writes
+  // across built-in, Bash, MCP, and API tools. Evidence/reviewer tools always
+  // remain reachable so the agent can satisfy the gate autonomously.
+  if (!isEvidenceAcquisitionTool(toolName)) {
+    const safeModeDecision = shouldAllowToolInMode(
+      toolName,
+      input,
+      'safe',
+      { plansFolderPath, dataFolderPath, permissionsContext },
+    );
+    if (!safeModeDecision.allowed) {
+      const evidenceDecision = checkObjectiveEvidenceBeforeMutation(sessionId, toolName);
+      if (!evidenceDecision.allowed) {
+        onDebug?.(`Objective evidence gate: blocking ${toolName}`);
+        return { type: 'block', reason: evidenceDecision.reason };
+      }
+    }
+  }
+
+  // ============================================================
+  // 6. CALL_LLM / SPAWN_SESSION INTERCEPTION
   // ============================================================
   if (toolName === 'mcp__session__call_llm') {
     return { type: 'call_llm_intercept', input };

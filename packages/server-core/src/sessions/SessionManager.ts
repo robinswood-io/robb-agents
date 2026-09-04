@@ -10,7 +10,7 @@ import { readFile, writeFile, mkdir } from 'fs/promises'
 import { randomUUID } from 'node:crypto'
 import type { AutonomyEvent } from '@craft-agent/core/types'
 import type { AgentEventUsage } from '@craft-agent/core/types'
-import { type AgentEvent, setPermissionMode, hydratePreviousPermissionMode, getPermissionModeDiagnostics, type PermissionMode, unregisterSessionScopedToolCallbacks, mergeSessionScopedToolCallbacks, AbortReason, type AuthRequest, type AuthResult, type CredentialAuthRequest, type BrowserPaneFns, generateConversationSummary, resolveKeepBackgroundTasksAlive, decideAutonomyRecovery, permissionModeAfterPlanApproval } from '@craft-agent/shared/agent'
+import { type AgentEvent, setPermissionMode, hydratePreviousPermissionMode, getPermissionModeDiagnostics, type PermissionMode, unregisterSessionScopedToolCallbacks, mergeSessionScopedToolCallbacks, AbortReason, type AuthRequest, type AuthResult, type CredentialAuthRequest, type BrowserPaneFns, generateConversationSummary, resolveKeepBackgroundTasksAlive, decideAutonomyRecovery, permissionModeAfterPlanApproval, beginObjectiveEvidenceGate, clearObjectiveEvidenceGate, getObjectiveEvidenceCompletionGap, recordObjectiveEvidence } from '@craft-agent/shared/agent'
 import {
   resolveSessionConnection,
   createBackendFromConnection,
@@ -22,7 +22,7 @@ import {
   type BackendHostRuntimeContext,
   type PostInitResult,
 } from '@craft-agent/shared/agent/backend'
-import { getLlmConnection, getLlmConnections, getDefaultLlmConnection, getDefaultThinkingLevel, getBrowserToolEnabled, resetManagedAnthropicAuthEnvVars, resolveMidStreamBehavior, getPersistedUiLanguage, resolveTitleLanguageName, resolveRoutingPolicy, RoutingOutcomeStore, telemetryToRoutingOutcome, ALL_ROUTING_CAPABILITIES, ALL_ROUTING_DIFFICULTIES, decideAgentCostControl, isBrowserFallbackEligibleTool, resolveAgentCostControlPolicy, resolveEffectiveAgentContextLimits, type CostControlledTurnKind, type RoutingOutcomeAdapterContext } from '@craft-agent/shared/config'
+import { getLlmConnection, getLlmConnections, getDefaultLlmConnection, getDefaultThinkingLevel, getBrowserToolEnabled, resetManagedAnthropicAuthEnvVars, resolveMidStreamBehavior, getPersistedUiLanguage, resolveTitleLanguageName, resolveRoutingPolicy, RoutingOutcomeStore, telemetryToRoutingOutcome, ALL_ROUTING_CAPABILITIES, ALL_ROUTING_DIFFICULTIES, decideAgentCostControl, isBrowserFallbackEligibleTool, isContextDependentDirectTurn, resolveAgentCostControlPolicy, resolveEffectiveAgentContextLimits, type CostControlledTurnKind, type RoutingOutcomeAdapterContext } from '@craft-agent/shared/config'
 import { formatPlaybookPrompt, getBuiltinPlaybook, loadWorkspacePlaybook } from '@craft-agent/shared/playbooks'
 import { validateSessionExecutionIsolation } from '@craft-agent/shared/tasks'
 import { PrivilegedExecutionBroker } from '@craft-agent/server-core/services'
@@ -77,6 +77,7 @@ import {
   type SessionHeader,
   type SessionAppProvenance,
   type PendingTurnRecovery,
+  type ActiveSessionObjective,
   type ExternalActionAuthorization,
   type ExternalActionAuthorizationCategory,
   pickSessionFields,
@@ -133,7 +134,7 @@ import {
   resolveImportedSessionAppProvenance,
   toRoutingMetaAppProvenance,
 } from './session-app-provenance'
-import { classifyLatestTurnTerminalState } from './turn-completion'
+import { classifyLatestTurnTerminalState, classifyObjectiveTerminalState } from './turn-completion'
 import {
   resolveLifecycleStartStatus,
   resolveLifecycleTerminalStatus,
@@ -169,6 +170,14 @@ import {
   selectInternalMessageCoalesceTarget,
 } from './internal-message-coalescing'
 import { resolveContextTokenEstimate } from './context-token-estimate'
+import {
+  buildObjectiveContractPrompt,
+  findObjectiveText,
+  hasObjectiveExecutionEvidence,
+  objectiveCostUsd,
+  transitionObjectiveContract,
+  turnProgressFingerprint,
+} from './objective-contract'
 import {
   COST_CONTROL_COMPACTION_INSTRUCTIONS,
   assessContextCompactionResult,
@@ -919,6 +928,8 @@ interface ManagedSession {
   executionTelemetryCompactions?: Map<number, RuntimeCompactionTelemetry>
   /** Durable in-flight turn marker used for bounded automatic recovery. */
   pendingTurnRecovery?: PendingTurnRecovery
+  /** Durable contract for the active user objective and its isolated budget. */
+  activeObjective?: ActiveSessionObjective
   /** Durable Accept & Compact state; cleared atomically with an accepted user turn. */
   pendingPlanExecution?: {
     planPath: string
@@ -2615,9 +2626,17 @@ export class SessionManager implements ISessionManager {
     }
 
     const workspaceConfig = loadWorkspaceConfig(managed.workspace.rootPath)
-    const maxAttempts = resolveAgentCostControlPolicy(workspaceConfig?.costControl)
-      .recovery.maxAutomaticAttempts
-    const advanced = advancePendingTurnRecovery(pending, cause, Date.now(), maxAttempts)
+    const recoveryPolicy = resolveAgentCostControlPolicy(workspaceConfig?.costControl).recovery
+    const maxAttempts = recoveryPolicy.maxAutomaticAttempts
+    const progressFingerprint = turnProgressFingerprint(managed.messages, pending.userMessageId)
+    const advanced = advancePendingTurnRecovery(
+      pending,
+      cause,
+      Date.now(),
+      maxAttempts,
+      progressFingerprint,
+      recoveryPolicy.maxNoProgressAttempts,
+    )
     if (!advanced) {
       managed.pendingTurnRecovery = exhaustPendingTurnRecovery(pending)
       this.persistSession(managed)
@@ -2626,10 +2645,15 @@ export class SessionManager implements ISessionManager {
     }
 
     managed.pendingTurnRecovery = advanced
-    if (cause === 'premature_final') {
+    if (
+      cause === 'premature_final'
+      || cause === 'objective_incomplete'
+      || cause === 'evidence_gate'
+      || cause === 'tool_checkpoint'
+    ) {
       this.recordAutonomyEvent(managed, {
         phase: 'fallback',
-        message: `Detected a recoverable technical checkpoint; queued senior recovery pass ${advanced.attempts}/${maxAttempts}.`,
+        message: `Objective completion gate requested recovery pass ${advanced.attempts}/${maxAttempts} (stagnant=${advanced.stagnantAttempts ?? 0}/${recoveryPolicy.maxNoProgressAttempts}).`,
       })
     }
     managed.messageQueue.unshift({
@@ -2652,6 +2676,12 @@ export class SessionManager implements ISessionManager {
         ? 'The application restarted during this turn. Work is resuming automatically…'
         : cause === 'premature_final'
           ? 'The agent stopped after announcing more work. Work is continuing automatically…'
+          : cause === 'tool_checkpoint'
+            ? 'The tool-call budget reached a checkpoint. The objective is continuing automatically…'
+            : cause === 'evidence_gate'
+              ? 'The high-stakes evidence or review gate is incomplete. Work is continuing automatically…'
+              : cause === 'objective_incomplete'
+                ? 'Execution or verification evidence is incomplete. Work is continuing automatically…'
         : 'The agent connection ended before the final response. Work is resuming automatically…',
       level: 'warning',
       timestamp: this.monotonic(),
@@ -2673,7 +2703,11 @@ export class SessionManager implements ISessionManager {
     const pending = managed.pendingTurnRecovery
     if (!pending || managed.isProcessing) return
 
-    if (!turnStillNeedsRecovery(managed.messages, pending.userMessageId)) {
+    if (!turnStillNeedsRecovery(
+      managed.messages,
+      pending.userMessageId,
+      pending.continuationRequired === true,
+    )) {
       this.clearPendingTurnRecovery(managed)
       this.persistSession(managed)
       await this.flushSession(managed.id)
@@ -4446,10 +4480,12 @@ export class SessionManager implements ISessionManager {
         managed.tokenUsage?.contextTokens,
         managed.messages,
       )
+      const objectiveText = findObjectiveText(managed.messages, managed.activeObjective)
       const costDecision = decideAgentCostControl({
         text: costTurn.message,
         riskContext: [
           managed.name,
+          objectiveText,
           ...managed.messages
             .filter(message => (
               (message.role === 'user' && !message.hidden)
@@ -4463,8 +4499,31 @@ export class SessionManager implements ISessionManager {
         turnKind,
         contextTokens: effectiveContextTokens,
         contextWindow: managed.tokenUsage?.contextWindow,
-        sessionCostUsd: managed.tokenUsage?.costUsd,
+        sessionCostUsd: objectiveCostUsd(managed.activeObjective, managed.tokenUsage?.costUsd),
       }, workspaceConfig?.costControl)
+
+      const inheritsObjectiveRoute = turnKind === 'direct'
+        && isContextDependentDirectTurn(costTurn.message)
+        && managed.activeObjective?.continuationCount
+      if (inheritsObjectiveRoute && managed.activeObjective) {
+        if (managed.activeObjective.model) costDecision.model = managed.activeObjective.model
+        if (managed.activeObjective.thinkingLevel) {
+          costDecision.thinkingLevel = managed.activeObjective.thinkingLevel
+        }
+        costDecision.explanation = `${costDecision.explanation}; objective:route-inherited`
+      }
+
+      if (managed.activeObjective) {
+        managed.activeObjective = {
+          ...managed.activeObjective,
+          orchestrationMode: costDecision.difficulty === 'complex' || costDecision.highRisk
+            ? 'mission'
+            : managed.activeObjective.orchestrationMode,
+          risk: costDecision.highRisk ? 'high-stakes' : managed.activeObjective.risk,
+          model: costDecision.model ?? managed.model,
+          thinkingLevel: costDecision.thinkingLevel,
+        }
+      }
 
       const resolvedCostPolicy = resolveAgentCostControlPolicy(workspaceConfig?.costControl)
       const effectiveContextLimits = resolveEffectiveAgentContextLimits(
@@ -7089,6 +7148,7 @@ export class SessionManager implements ISessionManager {
 
     // Clean up session-scoped tool callbacks to prevent memory accumulation
     unregisterSessionScopedToolCallbacks(sessionId)
+    clearObjectiveEvidenceGate(sessionId)
 
     // Destroy browser instances bound to this session
     const sessionBpm = this.getBrowserPaneManagerForSession(sessionId)
@@ -7468,8 +7528,35 @@ export class SessionManager implements ISessionManager {
         })
       }
     } else if (!options?.hidden) {
+      managed.activeObjective = transitionObjectiveContract({
+        existing: managed.activeObjective,
+        messageId: userMessage.id,
+        text: message,
+        lifetimeCostUsd: managed.tokenUsage?.costUsd,
+        lifetimeTokens: managed.tokenUsage?.totalTokens,
+      })
       managed.pendingTurnRecovery = createPendingTurnRecovery(userMessage.id)
       managed.autonomyFallbackAttemptedTools = new Set()
+    }
+    const activeObjectiveText = findObjectiveText(managed.messages, managed.activeObjective)
+    if (managed.activeObjective && activeObjectiveText) {
+      beginObjectiveEvidenceGate(
+        managed.id,
+        managed.activeObjective.userMessageId,
+        activeObjectiveText,
+      )
+      const objectiveIndex = managed.messages.findIndex(candidate => (
+        candidate.id === managed.activeObjective?.userMessageId && candidate.role === 'user'
+      ))
+      for (const prior of managed.messages.slice(Math.max(0, objectiveIndex + 1))) {
+        if (prior.role !== 'tool') continue
+        recordObjectiveEvidence(
+          managed.id,
+          prior.toolName ?? 'tool',
+          prior.toolResult ?? prior.content,
+          prior.isError === true || prior.toolStatus === 'error',
+        )
+      }
     }
     if (managed.pendingTurnRecovery) {
       this.persistSession(managed)
@@ -7782,6 +7869,9 @@ export class SessionManager implements ISessionManager {
         effectiveMessage = `${message}\n\n<system-reminder>The previous assistant response was interrupted by the user and may be incomplete. Do not repeat or continue the interrupted response unless asked. Focus on the new message above.</system-reminder>`
         managed.wasInterrupted = false
       }
+      if (managed.activeObjective?.terminalState === 'active') {
+        effectiveMessage = `${effectiveMessage}\n\n${buildObjectiveContractPrompt(managed.activeObjective)}`
+      }
 
       const messageBackendContext = resolveBackendContext({
         sessionConnectionSlug: managed.llmConnection,
@@ -7883,7 +7973,21 @@ export class SessionManager implements ISessionManager {
           // a final assistant response or a visible error. Commentary and tool
           // results alone are progress, not completion.
           const latestTurnTerminalState = classifyLatestTurnTerminalState(managed.messages)
-          if (latestTurnTerminalState === 'premature-final-assistant') {
+          if (managed.pendingTurnRecovery?.continuationRequired) {
+            sessionLog.warn(`Session ${sessionId} reached a host-authored tool checkpoint`)
+            const recoveryQueued = await this.enqueueAutomaticTurnRecovery(managed, 'tool_checkpoint')
+            if (recoveryQueued) {
+              sendSpan.mark('chat.complete.tool_checkpoint_auto_recovery')
+              sendSpan.end()
+              await this.onProcessingStopped(sessionId, 'interrupted', myGeneration)
+              return
+            }
+            if (managed.activeObjective) managed.activeObjective.terminalState = 'exhausted'
+            await this.processEvent(managed, {
+              type: 'error',
+              message: 'The objective reached its recovery ceiling after a structural tool checkpoint. Completed work was preserved.',
+            }, myGeneration)
+          } else if (latestTurnTerminalState === 'premature-final-assistant') {
             sessionLog.warn(`Session ${sessionId} ended with a final response that announced unfinished work`)
             const recoveryQueued = await this.enqueueAutomaticTurnRecovery(managed, 'premature_final')
             if (recoveryQueued) {
@@ -7956,6 +8060,53 @@ export class SessionManager implements ISessionManager {
                 type: 'error',
                 message: 'The agent stopped before producing a final response after bounded automatic recovery. Completed tool results were preserved; retry to resume safely.',
               }, myGeneration)
+            }
+          } else if (latestTurnTerminalState === 'final-assistant' && managed.activeObjective) {
+            const finalMessage = [...managed.messages].reverse().find(candidate => (
+              candidate.role === 'assistant' && !candidate.isIntermediate
+            ))
+            const hasExecutionEvidence = hasObjectiveExecutionEvidence(
+              managed.messages,
+              managed.activeObjective.userMessageId,
+            )
+            const evidenceGap = managed.activeObjective.evidenceRequirement
+              ? getObjectiveEvidenceCompletionGap(managed.id)
+              : undefined
+            const objectiveTerminalState = classifyObjectiveTerminalState(
+              finalMessage?.content ?? '',
+              {
+                evidenceGap,
+                executionEvidenceMissing: managed.activeObjective.requiresExecutionEvidence === true
+                  && !hasExecutionEvidence,
+              },
+            )
+
+            if (objectiveTerminalState === 'continue') {
+              const recoveryCause: AutomaticTurnRecoveryCause = evidenceGap
+                ? 'evidence_gate'
+                : 'objective_incomplete'
+              sessionLog.warn('Objective completion contract rejected terminal response', {
+                sessionId,
+                recoveryCause,
+                evidenceGap,
+                hasExecutionEvidence,
+              })
+              const recoveryQueued = await this.enqueueAutomaticTurnRecovery(managed, recoveryCause)
+              if (recoveryQueued) {
+                sendSpan.mark('chat.complete.objective_contract_auto_recovery')
+                sendSpan.end()
+                await this.onProcessingStopped(sessionId, 'interrupted', myGeneration)
+                return
+              }
+              managed.activeObjective.terminalState = 'exhausted'
+              await this.processEvent(managed, {
+                type: 'error',
+                message: 'The objective could not satisfy its execution, evidence, or review contract within the bounded recovery budget. Completed work was preserved.',
+              }, myGeneration)
+            } else {
+              managed.activeObjective.terminalState = objectiveTerminalState
+              managed.activeObjective.completedAt = Date.now()
+              this.persistSession(managed)
             }
           }
 
@@ -8490,7 +8641,15 @@ export class SessionManager implements ISessionManager {
     // always wins.
     if (managed.messageQueue.length === 0) {
       try {
-        await this.finishAutomaticSessionStatusLifecycle(managed, reason)
+        const objectiveState = managed.activeObjective?.terminalState
+        const lifecycleReason: SessionLifecycleStopReason = reason === 'complete' && objectiveState
+          ? objectiveState === 'complete_verified'
+            ? 'complete'
+            : objectiveState === 'blocked_human' || objectiveState === 'blocked_policy'
+              ? 'error'
+              : 'interrupted'
+          : reason
+        await this.finishAutomaticSessionStatusLifecycle(managed, lifecycleReason)
       } catch (error) {
         sessionLog.warn('Automatic session status terminal transition failed', {
           sessionId,
@@ -9826,6 +9985,20 @@ export class SessionManager implements ISessionManager {
 
         // Some backends omit explicit isError but still prefix with [ERROR].
         const inferredError = event.isError === true || /^\s*(\[ERROR\]|Error:|error:)/.test(formattedResult)
+
+        recordObjectiveEvidence(managed.id, toolName, formattedResult, inferredError)
+        if (event.continuationRequired && managed.pendingTurnRecovery) {
+          managed.pendingTurnRecovery = {
+            ...managed.pendingTurnRecovery,
+            continuationRequired: true,
+          }
+          this.persistSession(managed)
+          sessionLog.warn('Host tool checkpoint requires a continuation pass', {
+            sessionId,
+            toolName,
+            toolUseId: event.toolUseId,
+          })
+        }
 
         if (!inferredError) {
           this.recordAutonomyEvent(managed, {

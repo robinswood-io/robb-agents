@@ -4,8 +4,9 @@ import { looksLikePrematureFinalAssistant } from './turn-completion.ts';
 
 export type AutomaticTurnRecoveryCause = NonNullable<PendingTurnRecovery['lastCause']>;
 
-/** Three materially different recovery passes; unchanged retries remain forbidden. */
-export const MAX_AUTOMATIC_TURN_RECOVERY_ATTEMPTS = 3;
+/** A generous total bound paired with a strict no-progress circuit breaker. */
+export const MAX_AUTOMATIC_TURN_RECOVERY_ATTEMPTS = 8;
+export const MAX_AUTOMATIC_TURN_RECOVERY_STAGNANT_ATTEMPTS = 2;
 export const DEFAULT_AUTOMATIC_RECOVERY_INACTIVITY_TIMEOUT_MS = 5 * 60 * 1000;
 const MIN_AUTOMATIC_RECOVERY_INACTIVITY_TIMEOUT_MS = 30 * 1000;
 const MAX_AUTOMATIC_RECOVERY_INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000;
@@ -87,8 +88,21 @@ export function advancePendingTurnRecovery(
   cause: AutomaticTurnRecoveryCause,
   nowMs = Date.now(),
   maxAttempts = MAX_AUTOMATIC_TURN_RECOVERY_ATTEMPTS,
+  progressFingerprint?: string,
+  maxStagnantAttempts = MAX_AUTOMATIC_TURN_RECOVERY_STAGNANT_ATTEMPTS,
 ): PendingTurnRecovery | null {
   if (pending.exhaustedAt || pending.attempts >= Math.max(0, Math.floor(maxAttempts))) {
+    return null;
+  }
+
+  const progressComparable = progressFingerprint !== undefined;
+  const madeProgress = progressComparable
+    && pending.lastProgressFingerprint !== undefined
+    && progressFingerprint !== pending.lastProgressFingerprint;
+  const stagnantAttempts = !progressComparable || pending.lastProgressFingerprint === undefined || madeProgress
+    ? 0
+    : (pending.stagnantAttempts ?? 0) + 1;
+  if (progressComparable && stagnantAttempts >= Math.max(1, Math.floor(maxStagnantAttempts))) {
     return null;
   }
 
@@ -97,6 +111,8 @@ export function advancePendingTurnRecovery(
     attempts: pending.attempts + 1,
     lastAttemptAt: nowMs,
     lastCause: cause,
+    ...(progressComparable ? { lastProgressFingerprint: progressFingerprint, stagnantAttempts } : {}),
+    ...(pending.continuationRequired ? { continuationRequired: false } : {}),
   };
 }
 
@@ -117,6 +133,7 @@ export function exhaustPendingTurnRecovery(
 export function turnStillNeedsRecovery(
   messages: Message[],
   userMessageId: string,
+  forceContinuation = false,
 ): boolean {
   const userIndex = messages.findIndex(message => message.id === userMessageId && message.role === 'user');
   if (userIndex < 0) return false;
@@ -129,7 +146,7 @@ export function turnStillNeedsRecovery(
       message.role === 'assistant'
       && !message.isIntermediate
       && !looksLikePrematureFinalAssistant(message.content)
-    ) return false;
+    ) return forceContinuation;
   }
 
   return true;
@@ -145,6 +162,12 @@ export function buildAutomaticTurnRecoveryPrompt(
       ? 'the provider stream ended before a final response'
       : cause === 'premature_final'
         ? 'the previous response announced more work instead of completing it'
+        : cause === 'tool_checkpoint'
+          ? 'the host tool-call budget reached a structural checkpoint before the objective was complete'
+          : cause === 'evidence_gate'
+            ? 'the high-stakes completion gate still requires authoritative evidence or independent review'
+            : cause === 'objective_incomplete'
+              ? 'the objective completion contract still lacks execution or verification evidence'
         : 'the agent runtime failed before a final response';
 
   return [
@@ -153,6 +176,15 @@ export function buildAutomaticTurnRecoveryPrompt(
     'Use the preserved conversation and tool results. Do not repeat an external mutation that may already have completed; verify its state first and reuse idempotency or duplicate checks when available.',
     cause === 'premature_final'
       ? 'Treat the reported technical obstacle as a diagnosis checkpoint, not a terminal result. Form a materially different hypothesis, inspect the strongest available evidence, test the safest viable correction or alternate route, and verify the user-visible outcome. Perform the remaining actions now. Do not end with another promise, a proposed next correction, or an untested recommendation.'
+      : '',
+    cause === 'tool_checkpoint'
+      ? 'Resume from the preserved tool results. Continue with the remaining checklist; do not treat the prior tool-call ceiling as completion.'
+      : '',
+    cause === 'evidence_gate'
+      ? 'Before any further mutation, gather the missing primary or official evidence. Then obtain an independent review of the deliverable and verify the end-user result.'
+      : '',
+    cause === 'objective_incomplete'
+      ? 'Resume the original objective, perform the missing execution or verification steps now, and report the concrete evidence. Do not substitute a plan or assertion for the requested outcome.'
       : '',
     'Finish the requested work and provide the final user-facing response.',
     '</automatic_turn_recovery>',

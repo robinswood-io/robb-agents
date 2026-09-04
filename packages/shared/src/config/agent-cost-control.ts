@@ -35,6 +35,7 @@ export interface AgentCostControlPolicy {
   };
   recovery?: {
     maxAutomaticAttempts?: number;
+    maxNoProgressAttempts?: number;
     browserFallbackToolPatterns?: string[];
   };
   coordination?: {
@@ -65,6 +66,7 @@ export interface ResolvedAgentCostControlPolicy {
   };
   recovery: {
     maxAutomaticAttempts: number;
+    maxNoProgressAttempts: number;
     browserFallbackToolPatterns: string[];
   };
   coordination: {
@@ -125,7 +127,8 @@ export const DEFAULT_AGENT_COST_CONTROL_POLICY: ResolvedAgentCostControlPolicy =
     hardSessionUsd: 25,
   },
   recovery: {
-    maxAutomaticAttempts: 3,
+    maxAutomaticAttempts: 8,
+    maxNoProgressAttempts: 2,
     browserFallbackToolPatterns: [
       'browser',
       'web',
@@ -242,6 +245,11 @@ export function resolveAgentCostControlPolicy(
         defaults.recovery.maxAutomaticAttempts,
         0,
       )),
+      maxNoProgressAttempts: Math.floor(finiteAtLeast(
+        policy?.recovery?.maxNoProgressAttempts,
+        defaults.recovery.maxNoProgressAttempts,
+        1,
+      )),
       browserFallbackToolPatterns: stringArrayOr(
         policy?.recovery?.browserFallbackToolPatterns,
         defaults.recovery.browserFallbackToolPatterns,
@@ -286,7 +294,7 @@ const EXPLICIT_MUTATION_REQUEST_PATTERN = /\b(deploy|publish|delete|remove|purge
 const COMPLETION_REVIEW_PATTERN = /(?:objectif|travail|tâche|task|work).{0,120}(?:déjà\s+)?(?:achev[ée]|termin[ée]|complét[ée]|complete(?:d)?|finished)|(?:déjà\s+)?(?:achev[ée]|termin[ée]|complét[ée]).{0,120}(?:objectif|travail|tâche)/i;
 const NO_REEXECUTION_PATTERN = /(?:ne|n['’])\s+(?:relance|répète|lance|effectue).{0,160}(?:audit|appel réseau|effet externe|action externe)|(?:sans|aucun|aucune|no|without).{0,100}(?:audit|network call|appel réseau|external effect|effet externe)/i;
 const REVIEW_HANDOFF_PATTERN = /needs-review|(?:statut|status).{0,40}(?:revue|review)|(?:place|mets|mettre|placer).{0,80}(?:revue|review)/i;
-const CONTEXT_DEPENDENT_DIRECT_TURN_PATTERN = /^(?:(?:ok|oui|yes|go|d['’]accord)[\s,;:!.-]+)?(?:fais(?:-le)?|faites|vas-y|allez-y|continue|poursuis|reprends|corrige|impl[ée]mente|d[ée]ploie|relance|ex[ée]cute|termine|proc[èe]de|applique)\b/i;
+const CONTEXT_DEPENDENT_DIRECT_TURN_PATTERN = /^(?:(?:ok|oui|yes|d['’]accord)[\s,;:!.-]+)?(?:(?:go|vas-y|allez-y|continue|poursui(?:s|t|vre)|reprend(?:s|re)?|corrige|impl[ée]mente|d[ée]ploie|relance|ex[ée]cute|termine|proc[èe]de|applique)\b|(?:fais|faites)(?:-le|\s+le)?\b)/i;
 const AUTOMATIC_RECOVERY_ATTEMPT_PATTERN = /<automatic_turn_recovery\b[^>]*\battempt=["'](\d+)["']/i;
 
 function isCompletionReviewOnly(text: string): boolean {
@@ -306,6 +314,17 @@ function automaticRecoveryAttempt(text: string, turnKind: CostControlledTurnKind
   return match ? Math.max(1, Number.parseInt(match[1] ?? '1', 10)) : 1;
 }
 
+/**
+ * Whether a short direct message semantically continues the active objective.
+ * Kept public so session accounting can preserve the same objective budget and
+ * route that cost control uses for terse follow-ups.
+ */
+export function isContextDependentDirectTurn(text: string): boolean {
+  const normalized = text.trim();
+  return normalized.split(/\s+/).length < 30
+    && CONTEXT_DEPENDENT_DIRECT_TURN_PATTERN.test(normalized);
+}
+
 export function decideAgentCostControl(
   input: AgentCostControlInput,
   policyInput?: AgentCostControlPolicy,
@@ -314,8 +333,7 @@ export function decideAgentCostControl(
   const turnKind = input.turnKind ?? 'direct';
   const combinedRiskText = `${input.text}\n${input.riskContext ?? ''}`;
   const normalizedTurnText = input.text.trim();
-  const contextDependentDirectTurn = normalizedTurnText.split(/\s+/).length < 30
-    && CONTEXT_DEPENDENT_DIRECT_TURN_PATTERN.test(normalizedTurnText);
+  const contextDependentDirectTurn = isContextDependentDirectTurn(normalizedTurnText);
   const classificationText = isInternalTurn(turnKind) || contextDependentDirectTurn
     ? combinedRiskText
     : input.text;

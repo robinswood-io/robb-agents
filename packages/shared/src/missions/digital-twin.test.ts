@@ -52,6 +52,35 @@ describe('Mission digital twin', () => {
     expect(report.projectedCostUsd).toBeCloseTo(0.3);
   });
 
+  it('fails preflight when a mission-local cost ceiling or deadline is already breached', () => {
+    const base = spec();
+    const mission = MissionSpecSchema.parse({
+      ...base,
+      policy: {
+        ...base.policy,
+        maxTotalCostUsd: 0.2,
+        deadline: '2026-09-04T12:00:00Z',
+      },
+    });
+    const ids = ['source', 'dependent', 'independent'];
+    const report = simulateMissionDigitalTwin({
+      spec: mission,
+      routeByProfileId: {
+        worker: { policyAllowed: true, connectionSlug: 'local-safe' },
+        reviewer: { policyAllowed: true, connectionSlug: 'local-safe' },
+        supervisor: { policyAllowed: true, connectionSlug: 'local-safe' },
+      },
+      pathPolicyAllowedByWorkItemId: Object.fromEntries(ids.map((id) => [id, true])),
+      estimatedCostUsdByWorkItemId: Object.fromEntries(ids.map((id) => [id, 0.1])),
+      availableBudgetUsd: mission.policy.maxTotalCostUsd,
+      generatedAt: '2026-09-04T12:00:00Z',
+    });
+
+    expect(report.readyToStart).toBe(false);
+    expect(report.gates.find((gate) => gate.id === 'policy.deadline')?.status).toBe('fail');
+    expect(report.gates.find((gate) => gate.id === 'budget.projected')?.status).toBe('fail');
+  });
+
   it('invalidates a changed item and its dependants while preserving independent accepted work', () => {
     const mission = spec();
     const runtime = (item: MissionWorkItem) => ({

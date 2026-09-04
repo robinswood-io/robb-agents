@@ -525,6 +525,8 @@ export async function clearSessionMessages(workspaceRootPath: string, sessionId:
     // Clear messages and SDK session ID but preserve metadata
     session.messages = [];
     session.sdkSessionId = undefined;
+    session.pendingTurnRecovery = undefined;
+    session.activeObjective = undefined;
     // Reset token usage to zero
     session.tokenUsage = {
       inputTokens: 0,

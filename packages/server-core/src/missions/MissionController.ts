@@ -48,6 +48,12 @@ export interface MissionReplanInput {
   reason: string;
 }
 
+export interface MissionRuntimeLimitAttempt {
+  workItemId: string;
+  dispatchId: string;
+  telemetry: MissionAttemptTelemetry;
+}
+
 function runtimeItems(snapshot: MissionSnapshot): MissionWorkItemRuntime[] {
   return Object.values(snapshot.workItems);
 }
@@ -458,6 +464,43 @@ export class MissionController {
         reason,
       }));
     events.push(this.event({ kind: 'mission-status-changed', status: 'cancelled', reason }));
+    return this.commit(missionId, snapshot.revision, events);
+  }
+
+  /**
+   * Fail closed on a host-observed runtime limit while preserving the measured
+   * cost of the attempt that crossed it. Unfinished work is blocked atomically,
+   * so a late executor result cannot resurrect or advance the mission.
+   */
+  failMissionForRuntimeLimit(
+    missionId: string,
+    reason: string,
+    attempt?: MissionRuntimeLimitAttempt,
+  ): MissionSnapshot {
+    const snapshot = this.requireMission(missionId);
+    if (TERMINAL_MISSION_STATUSES.has(snapshot.status)) {
+      if (snapshot.status === 'failed') return snapshot;
+      throw new Error(`Mission "${missionId}" is terminal`);
+    }
+    const events: MissionEvent[] = [];
+    if (attempt) {
+      const runtime = snapshot.workItems[attempt.workItemId];
+      if (!runtime || (runtime.status !== 'reserved' && runtime.status !== 'running') ||
+          runtime.dispatchId !== attempt.dispatchId) {
+        throw new Error(`Runtime-limit telemetry does not match active work item "${attempt.workItemId}"`);
+      }
+      events.push(...this.telemetryEvent(attempt.workItemId, attempt.dispatchId, attempt.telemetry));
+    }
+    for (const runtime of runtimeItems(snapshot)) {
+      if (['accepted', 'rejected', 'superseded', 'blocked', 'cancelled'].includes(runtime.status)) continue;
+      events.push(this.event({
+        kind: 'work-item-status-changed',
+        workItemId: runtime.definition.id,
+        status: 'blocked',
+        reason,
+      }));
+    }
+    events.push(this.event({ kind: 'mission-status-changed', status: 'failed', reason }));
     return this.commit(missionId, snapshot.revision, events);
   }
 

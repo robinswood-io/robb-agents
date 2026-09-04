@@ -669,6 +669,11 @@ export class PiEventAdapter extends BaseEventAdapter {
         const accumulatedOutput = this.consumeOutput(toolCallId);
 
         const isError = event.isError;
+        const continuationRequired = Boolean(
+          event.result
+          && typeof event.result === 'object'
+          && (event.result as { details?: { continuationRequired?: unknown } }).details?.continuationRequired === true
+        );
         let result: string;
 
         if (accumulatedOutput) {
@@ -686,11 +691,11 @@ export class PiEventAdapter extends BaseEventAdapter {
         // Check if this was classified as a file read
         const readInfo = this.consumeReadCommand(toolCallId);
         if (readInfo) {
-          yield this.createToolResult(toolCallId, 'Read', result, isError);
+          yield this.createToolResult(toolCallId, 'Read', result, isError, undefined, continuationRequired);
           break;
         }
 
-        yield this.createToolResult(toolCallId, resolvedToolName, result, isError);
+        yield this.createToolResult(toolCallId, resolvedToolName, result, isError, undefined, continuationRequired);
         break;
       }
 

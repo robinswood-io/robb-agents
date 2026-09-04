@@ -151,6 +151,17 @@ export { AGENTS_PLUGIN_NAME } from '../../skills/types.ts';
 export { enforceTaskToolIsolation } from './task-tool-isolation.ts';
 export type { TaskToolIsolationInput } from './task-tool-isolation.ts';
 
+// High-stakes objective evidence gate
+export {
+  beginObjectiveEvidenceGate,
+  checkObjectiveEvidenceBeforeMutation,
+  clearObjectiveEvidenceGate,
+  getObjectiveEvidenceCompletionGap,
+  isEvidenceAcquisitionTool,
+  recordObjectiveEvidence,
+} from './objective-evidence-gate.ts';
+export type { HighStakesEvidenceDomain, ObjectiveEvidenceGateState } from './objective-evidence-gate.ts';
+
 // RTK detector
 export { getRtkPath, getRtkStatus, getRtkGain, resetRtkPathCache } from './rtk-detector.ts';
 export type { RtkStatus, RtkGainStats } from './rtk-detector.ts';

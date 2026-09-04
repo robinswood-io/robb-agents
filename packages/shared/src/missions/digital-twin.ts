@@ -70,6 +70,16 @@ export function simulateMissionDigitalTwin(input: MissionDigitalTwinInput): Miss
   const gates: MissionPreflightGate[] = [{
     id: 'graph.valid', category: 'graph', status: 'pass', detail: 'Mission DAG and role invariants are valid',
   }];
+  const generatedAt = input.generatedAt ?? new Date().toISOString();
+  const deadline = spec.policy.deadline;
+  gates.push({
+    id: 'policy.deadline',
+    category: 'policy',
+    status: !deadline || Date.parse(generatedAt) < Date.parse(deadline) ? 'pass' : 'fail',
+    detail: !deadline
+      ? 'No mission deadline is configured'
+      : `Mission deadline ${deadline} checked at ${generatedAt}`,
+  });
   const executing = spec.workItems.filter((item) =>
     ['task', 'subtask', 'integration', 'correction'].includes(item.kind));
   const usedProfiles = new Set([
@@ -138,7 +148,7 @@ export function simulateMissionDigitalTwin(input: MissionDigitalTwinInput): Miss
     mode: 'dry-run',
     mutationMode: 'forbidden',
     missionId: spec.id,
-    generatedAt: input.generatedAt ?? new Date().toISOString(),
+    generatedAt,
     planFingerprint: planFingerprint(spec.workItems),
     readyToStart: gates.every((gate) => gate.status === 'pass'),
     projectedExternalMutations: executing.filter((item) => item.effect === 'external-mutation').length,

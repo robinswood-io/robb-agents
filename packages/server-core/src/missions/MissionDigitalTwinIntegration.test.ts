@@ -247,7 +247,8 @@ describe('Mission digital twin host integration', () => {
     const report = await service.preflightMission('workspace-1', { spec: escaped });
     expect(report.readyToStart).toBe(false);
     expect(report.gates.filter((gate) => gate.category === 'route').every((gate) => gate.status === 'fail')).toBe(true);
-    expect(report.gates.filter((gate) => gate.category === 'policy').every((gate) => gate.status === 'fail')).toBe(true);
+    expect(report.gates.filter((gate) => gate.id.startsWith('policy.path.')).every((gate) => gate.status === 'fail')).toBe(true);
+    expect(report.gates.find((gate) => gate.id === 'policy.deadline')?.status).toBe('pass');
     expect(existsSync(join(root, 'missions'))).toBe(false);
   });
 

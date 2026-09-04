@@ -804,7 +804,11 @@ function wrapSingleTool(tool: ToolDefinition<any, any>): ToolDefinition<any, any
     if (loopDecision.action === 'block') {
       return {
         content: [{ type: 'text', text: loopDecision.message ?? 'Repeated unchanged tool call blocked.' }],
-        details: { costControlBlocked: true },
+        details: {
+          costControlBlocked: true,
+          continuationRequired: true,
+          checkpoint: 'tool-call-budget',
+        },
       };
     }
 

@@ -57,10 +57,10 @@ describe('durable turn recovery', () => {
   });
 
   it('bounds retries and records exhaustion durably', () => {
-    const first = advancePendingTurnRecovery(createPendingTurnRecovery('user-1', 1), 'stream_ended', 2)!;
-    const second = advancePendingTurnRecovery(first, 'runtime_error', 3)!;
-    const third = advancePendingTurnRecovery(second, 'premature_final', 4)!;
-    expect(advancePendingTurnRecovery(third, 'runtime_error', 5)).toBeNull();
+    const first = advancePendingTurnRecovery(createPendingTurnRecovery('user-1', 1), 'stream_ended', 2, 3)!;
+    const second = advancePendingTurnRecovery(first, 'runtime_error', 3, 3)!;
+    const third = advancePendingTurnRecovery(second, 'premature_final', 4, 3)!;
+    expect(advancePendingTurnRecovery(third, 'runtime_error', 5, 3)).toBeNull();
     expect(exhaustPendingTurnRecovery(third, 6).exhaustedAt).toBe(6);
   });
 
@@ -69,6 +69,24 @@ describe('durable turn recovery', () => {
     const second = advancePendingTurnRecovery(first, 'runtime_error', 3, 2)!;
     expect(second.attempts).toBe(2);
     expect(advancePendingTurnRecovery(second, 'app_restart', 4, 2)).toBeNull();
+  });
+
+  it('continues while successful tool evidence advances and stops after two stagnant passes', () => {
+    const first = advancePendingTurnRecovery(
+      createPendingTurnRecovery('user-1', 1), 'premature_final', 2, 8, 'proof-a', 2,
+    )!;
+    const progressed = advancePendingTurnRecovery(first, 'premature_final', 3, 8, 'proof-b', 2)!;
+    expect(progressed.stagnantAttempts).toBe(0);
+    const stagnant = advancePendingTurnRecovery(progressed, 'premature_final', 4, 8, 'proof-b', 2)!;
+    expect(stagnant.stagnantAttempts).toBe(1);
+    expect(advancePendingTurnRecovery(stagnant, 'premature_final', 5, 8, 'proof-b', 2)).toBeNull();
+  });
+
+  it('forces recovery after a structural checkpoint even when assistant prose looks final', () => {
+    expect(turnStillNeedsRecovery([
+      message('user-1', 'user'),
+      message('final', 'assistant'),
+    ], 'user-1', true)).toBe(true);
   });
 
   it('builds a hidden nudge that requires side-effect verification', () => {
@@ -88,6 +106,15 @@ describe('durable turn recovery', () => {
     expect(prompt).toContain('Do not end with another promise');
     expect(prompt).toContain('materially different hypothesis');
     expect(prompt).toContain('test the safest viable correction or alternate route');
+  });
+
+  it('builds dedicated prompts for host checkpoints and evidence gates', () => {
+    expect(buildAutomaticTurnRecoveryPrompt(
+      createPendingTurnRecovery('user-1', 1), 'tool_checkpoint',
+    )).toContain('tool-call budget reached a structural checkpoint');
+    expect(buildAutomaticTurnRecoveryPrompt(
+      createPendingTurnRecovery('user-1', 1), 'evidence_gate',
+    )).toContain('gather the missing primary or official evidence');
   });
 
   it('uses a bounded configurable inactivity timeout', () => {

@@ -1,5 +1,8 @@
 import type { RpcServer } from '@craft-agent/server-core/transport'
 import type { HandlerDeps } from '../handler-deps'
+import { resolveConfigDir } from '@craft-agent/shared/config'
+import { DurableKillSwitchRegistry } from '@craft-agent/shared/governance'
+import { join } from 'node:path'
 
 import { registerAuthHandlers } from './auth'
 import { registerAutomationsHandlers } from './automations'
@@ -32,6 +35,9 @@ export function registerCoreRpcHandlers(
   deps: HandlerDeps,
   serverCtx?: ServerHandlerContext,
 ): void {
+  const killSwitchRegistry = new DurableKillSwitchRegistry(
+    join(resolveConfigDir(), 'governance', 'kill-switches.jsonl'),
+  )
   registerAuthHandlers(server, deps)
   registerAutomationsHandlers(server, deps)
   registerFilesHandlers(server, deps)
@@ -48,9 +54,12 @@ export function registerCoreRpcHandlers(
   registerSourcesHandlers(server, deps)
   registerStatusesHandlers(server, deps)
   registerSystemCoreHandlers(server, deps)
-  registerTasksHandlers(server, deps)
+  const missionService = registerMissionsHandlers(server, deps, { killSwitchRegistry })
+  registerTasksHandlers(server, deps, {
+    killSwitchRegistry,
+    onKillSwitchActivated: () => missionService.enforceRuntimePolicies(),
+  })
   registerTransferHandlers(server)
   registerWorkspaceCoreHandlers(server, deps)
   registerMessagingHandlers(server, deps)
-  registerMissionsHandlers(server, deps)
 }

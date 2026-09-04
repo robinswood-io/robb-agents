@@ -232,6 +232,37 @@ describe('MissionController', () => {
     expect(controller.cancelMission('mission-demo', 'Repeated cancellation')).toEqual(cancelled);
   });
 
+  it('fails a runtime limit atomically and journals the crossing attempt telemetry', () => {
+    controller.createMission(fixture());
+    controller.startMission('mission-demo');
+    controller.dispatchWorkItem('mission-demo', 'task-a', 'worker-a');
+
+    const failed = controller.failMissionForRuntimeLimit(
+      'mission-demo',
+      'Mission token budget exceeded',
+      {
+        workItemId: 'task-a',
+        dispatchId: 'manual-task-a-1',
+        telemetry: {
+          durationMs: 25,
+          tokenUsage: {
+            inputTokens: 80,
+            outputTokens: 30,
+            totalTokens: 110,
+            contextTokens: 80,
+            costUsd: 0.01,
+          },
+        },
+      },
+    );
+
+    expect(failed.status).toBe('failed');
+    expect(failed.statusReason).toBe('Mission token budget exceeded');
+    expect(failed.workItems['task-a']?.status).toBe('blocked');
+    expect(failed.workItems['task-a']?.attemptTelemetry[0]?.tokenUsage?.totalTokens).toBe(110);
+    expect(new MissionController({ workspaceRoot: root }).getMission('mission-demo')).toEqual(failed);
+  });
+
   it('journals final report reservation, acceptance, and delivery after completion', () => {
     executeInitialWork();
     controller.dispatchWorkItem('mission-demo', 'review-objective-one-0', 'reviewer-1');

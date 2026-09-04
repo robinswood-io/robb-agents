@@ -12,12 +12,16 @@ import {
   simulateMissionDigitalTwin,
   type MissionConnectorPreflight,
   type MissionDigitalTwinReport,
+  type MissionAttemptTelemetry,
   type MissionReplanPreview,
   type MissionSnapshot,
   type MissionSpec,
   type MissionWorkItem,
 } from '@craft-agent/shared/missions';
-import { WorkspaceGovernanceProfileSchema } from '@craft-agent/shared/governance';
+import {
+  WorkspaceGovernanceProfileSchema,
+  type EnterpriseKillSwitchSnapshot,
+} from '@craft-agent/shared/governance';
 import type { Session } from '@craft-agent/shared/protocol';
 import { authorizeWorkspacePath } from '@craft-agent/shared/tasks';
 import { loadWorkspaceConfig } from '@craft-agent/shared/workspaces';
@@ -26,6 +30,7 @@ import { loadWorkspaceExecutionProofIssuer } from '../tasks/execution-proof-runt
 import { MissionController, previewAdmissibleMissionReplan } from './MissionController.ts';
 import {
   MissionRuntime,
+  type MissionRuntimePolicyDecision,
   type MissionWorkExecutor,
 } from './MissionRuntime.ts';
 import { SessionMissionExecutor } from './SessionMissionExecutor.ts';
@@ -101,6 +106,9 @@ export interface MissionRuntimeServiceOptions {
   preflightCostEstimator?: MissionPreflightCostEstimator;
   preflightConnections?: () => MissionPreflightConnection[];
   preflightNow?: () => Date;
+  /** Shared live emergency-control registry. Omission keeps embedded/test runtimes unchanged. */
+  getKillSwitch?: () => EnterpriseKillSwitchSnapshot;
+  nowMs?: () => number;
   onSnapshot?: (workspaceId: string, snapshot: MissionSnapshot) => void;
   onError?: (context: { workspaceId?: string; missionId?: string; workItemId?: string; error: Error }) => void;
   reportTimeoutMs?: number;
@@ -291,7 +299,7 @@ export class MissionRuntimeService {
       pathPolicyAllowedByWorkItemId,
       ...(Object.keys(connectorByWorkItemId).length > 0 ? { connectorByWorkItemId } : {}),
       ...(Object.keys(estimatedCostUsdByWorkItemId).length > 0 ? { estimatedCostUsdByWorkItemId } : {}),
-      ...remainingMissionBudgetUsd(config.governance, snapshot),
+      ...remainingMissionBudgetUsd(config.governance, snapshot, spec),
       generatedAt: (this.options.preflightNow?.() ?? new Date()).toISOString(),
     });
   }
@@ -503,6 +511,22 @@ export class MissionRuntimeService {
     return snapshot;
   }
 
+  /** Apply newly changed emergency controls to every loaded durable Mission. */
+  async enforceRuntimePolicies(): Promise<number> {
+    await this.start();
+    let halted = 0;
+    for (const workspace of this.listWorkspaces()) {
+      const context = await this.contextFor(workspace.id);
+      for (const missionId of listMissionIds(workspace.rootPath)) {
+        const before = context.controller.getMission(missionId);
+        if (['completed', 'failed', 'cancelled'].includes(before.status)) continue;
+        const after = await context.runtime.enforceRunPolicy(missionId);
+        if (after.status !== before.status && ['completed', 'failed', 'cancelled'].includes(after.status)) halted += 1;
+      }
+    }
+    return halted;
+  }
+
   private async contextFor(workspaceId: string): Promise<WorkspaceMissionRuntime> {
     const existing = this.contexts.get(workspaceId);
     if (existing) return existing;
@@ -546,6 +570,23 @@ export class MissionRuntimeService {
       workspaceRoot: workspace.rootPath,
       controller,
       executor,
+      nowMs: this.options.nowMs,
+      evaluateRunPolicy: (snapshot, pendingTelemetry, completedAttempt) =>
+        evaluateMissionRuntimePolicy({
+          workspace,
+          snapshot,
+          pendingTelemetry,
+          completedAttempt,
+          killSwitch: this.options.getKillSwitch?.(),
+          nowMs: this.options.nowMs?.() ?? Date.now(),
+        }),
+      onPolicyHalt: async (before) => {
+        const activeSessionIds = Object.values(before.workItems)
+          .filter((item) => item.status === 'reserved' || item.status === 'running')
+          .flatMap((item) => item.externalSessionId ? [item.externalSessionId] : []);
+        await Promise.allSettled(activeSessionIds.map((sessionId) =>
+          this.options.sessionManager.cancelProcessing(sessionId, true)));
+      },
       onSnapshot: (snapshot) => {
         this.options.onSnapshot?.(workspace.id, snapshot);
         if (this.ensureCompletionPassport(context, snapshot)) this.scheduleReport(context, snapshot);
@@ -896,12 +937,93 @@ function measuredMissionCostUsd(snapshot: MissionSnapshot): number {
       itemTotal + (attempt.tokenUsage?.costUsd ?? 0), 0), 0);
 }
 
+function measuredMissionTokens(snapshot: MissionSnapshot): number {
+  return Object.values(snapshot.workItems).reduce((total, runtime) =>
+    total + runtime.attemptTelemetry.reduce((itemTotal, attempt) =>
+      itemTotal + (attempt.tokenUsage?.totalTokens ?? 0), 0), 0);
+}
+
+function hasUnmeteredSettledAttempt(snapshot: MissionSnapshot): boolean {
+  return Object.values(snapshot.workItems).some((runtime) =>
+    !['pending', 'reserved', 'running'].includes(runtime.status)
+    && runtime.attempt > runtime.attemptTelemetry.filter((entry) => entry.tokenUsage).length);
+}
+
+function lowerLimit(left?: number, right?: number): number | undefined {
+  if (left === undefined) return right;
+  if (right === undefined) return left;
+  return Math.min(left, right);
+}
+
+export function evaluateMissionRuntimePolicy(input: {
+  workspace: MissionWorkspace;
+  snapshot: MissionSnapshot;
+  pendingTelemetry?: MissionAttemptTelemetry;
+  completedAttempt?: boolean;
+  killSwitch?: EnterpriseKillSwitchSnapshot;
+  nowMs: number;
+}): MissionRuntimePolicyDecision | null {
+  const { workspace, snapshot, pendingTelemetry, completedAttempt, killSwitch, nowMs } = input;
+  if (killSwitch && (
+    killSwitch.global
+    || killSwitch.workspaceIds.includes(workspace.id)
+    || killSwitch.missionIds.includes(snapshot.spec.id)
+  )) {
+    return { status: 'cancelled', reason: 'Emergency stop is active for this mission scope' };
+  }
+
+  const deadline = snapshot.spec.policy.deadline;
+  if (deadline && nowMs >= Date.parse(deadline)) {
+    return { status: 'failed', reason: `Mission deadline reached at ${deadline}` };
+  }
+
+  const governance = loadWorkspaceConfig(workspace.rootPath)?.governance;
+  const parsedGovernance = WorkspaceGovernanceProfileSchema.safeParse(governance);
+  const workspaceTokenLimit = parsedGovernance.success
+    ? parsedGovernance.data.budgets.missionMaxTokens
+    : undefined;
+  const workspaceCostLimit = parsedGovernance.success
+    ? parsedGovernance.data.budgets.missionMaxCostUsd
+    : undefined;
+  const tokenLimit = lowerLimit(snapshot.spec.policy.maxTotalTokens, workspaceTokenLimit);
+  const costLimit = lowerLimit(snapshot.spec.policy.maxTotalCostUsd, workspaceCostLimit);
+  if (tokenLimit === undefined && costLimit === undefined) return null;
+
+  if (hasUnmeteredSettledAttempt(snapshot) || (completedAttempt && !pendingTelemetry?.tokenUsage)) {
+    return {
+      status: 'failed',
+      reason: 'Mission budget cannot be verified because a completed attempt has no host telemetry',
+    };
+  }
+
+  const currentTokens = measuredMissionTokens(snapshot);
+  const currentCost = measuredMissionCostUsd(snapshot);
+  const projectedTokens = currentTokens + (pendingTelemetry?.tokenUsage?.totalTokens ?? 0);
+  const projectedCost = currentCost + (pendingTelemetry?.tokenUsage?.costUsd ?? 0);
+  const projecting = completedAttempt === true;
+  if (tokenLimit !== undefined && (projecting ? projectedTokens > tokenLimit : currentTokens >= tokenLimit)) {
+    return {
+      status: 'failed',
+      reason: `Mission token budget ${tokenLimit} exceeded or exhausted (${projecting ? projectedTokens : currentTokens})`,
+    };
+  }
+  if (costLimit !== undefined && (projecting ? projectedCost > costLimit : currentCost >= costLimit)) {
+    return {
+      status: 'failed',
+      reason: `Mission cost budget $${costLimit.toFixed(4)} exceeded or exhausted ($${(projecting ? projectedCost : currentCost).toFixed(4)})`,
+    };
+  }
+  return null;
+}
+
 function remainingMissionBudgetUsd(
   governance: unknown,
   snapshot: MissionSnapshot | null,
+  spec?: MissionSpec,
 ): { availableBudgetUsd?: number } {
   const parsed = WorkspaceGovernanceProfileSchema.safeParse(governance);
-  const limit = parsed.success ? parsed.data.budgets.missionMaxCostUsd : undefined;
+  const workspaceLimit = parsed.success ? parsed.data.budgets.missionMaxCostUsd : undefined;
+  const limit = lowerLimit(workspaceLimit, spec?.policy.maxTotalCostUsd ?? snapshot?.spec.policy.maxTotalCostUsd);
   if (limit === undefined) return {};
   const spent = snapshot ? measuredMissionCostUsd(snapshot) : 0;
   return { availableBudgetUsd: Math.max(0, limit - spent) };

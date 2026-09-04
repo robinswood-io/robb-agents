@@ -89,6 +89,7 @@
     "test:interop:external": "bun run scripts/robb-interop-conformance.ts",
     "test:evals:providers": "bun run scripts/robb-provider-evals.ts",
     "test:evals:missions": "bun run packages/server-core/src/missions/evaluation/run.ts",
+    "test:evals:autonomy": "bun test packages/server-core/src/sessions/autonomy-regression-corpus.test.ts",
     "test:otlp:collector": "bun run scripts/robb-otlp-collector-smoke.ts",
     "test:recovery:campaign": "bun run scripts/robb-recovery-campaign.ts --runs 1000 --min-safe-rate 0.99",
     "electron:dev:terminal": "bun run scripts/electron-dev.ts --terminal",
