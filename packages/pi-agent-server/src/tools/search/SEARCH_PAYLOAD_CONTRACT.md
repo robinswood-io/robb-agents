@@ -1,6 +1,6 @@
 # Search Payload Contract
 
-Last updated: 2026-03-06
+Last updated: 2026-09-04
 
 This file documents the **known-good request shape** for provider-native web search calls in `pi-agent-server`.
 
@@ -22,14 +22,14 @@ Known-good body fields for search:
 - `store: false`
 - `stream: true`
 - `instructions: string`
-- `tools: [{ type: "web_search" }]` (fallback retry: `web_search_preview`)
+- `tools: [{ type: "web_search" }]`
 - `tool_choice: "auto"`
 - `parallel_tool_calls: true`
 - `text: { verbosity: "medium" }`
 - `input: [{ role, content: [{ type: "input_text", text }] }]`
 
 ### Why `stream: true` here?
-The backend may reply with either JSON or SSE-like payloads depending on edge behavior. The provider parses both formats and treats parse failures as retryable across `web_search` → `web_search_preview` attempts before surfacing an aggregated error.
+The backend may reply with either JSON or SSE-like payloads depending on edge behavior. The provider parses both formats. Do not retry this ChatGPT/Codex backend with `web_search_preview`: staging logs on 2026-09-04 showed that the backend rejects that legacy tool type, and current OpenAI Responses API guidance for new integrations is to use `web_search`.
 
 ## Regression Checklist
 

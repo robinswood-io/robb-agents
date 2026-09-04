@@ -37,15 +37,7 @@ const ERROR_TEXT_LIMIT = 600;
 const SEARCH_INSTRUCTIONS = 'You are a web search assistant. Return concise, factual search results with source citations when available.';
 const SEARCH_TEXT_VERBOSITY = 'medium';
 
-interface SearchAttempt {
-  toolType: 'web_search' | 'web_search_preview';
-  label: string;
-}
-
-const SEARCH_ATTEMPTS: SearchAttempt[] = [
-  { toolType: 'web_search', label: 'web_search' },
-  { toolType: 'web_search_preview', label: 'web_search_preview' },
-];
+const SEARCH_TOOL_TYPE = 'web_search' as const;
 
 /**
  * Extract the `chatgpt_account_id` from a ChatGPT OAuth access token (JWT).
@@ -76,80 +68,60 @@ export class ChatGPTBackendSearchProvider implements WebSearchProvider {
 
   async search(query: string, count: number): Promise<WebSearchResult[]> {
     assertUnstableProviderContractEnabled('chatgpt-codex-backend', process.env);
-    const attemptErrors: string[] = [];
-
-    for (const attempt of SEARCH_ATTEMPTS) {
-      const requestBody = {
-        model: this.options?.model || DEFAULT_SEARCH_MODEL,
-        store: false,
-        stream: true,
-        instructions: SEARCH_INSTRUCTIONS,
-        tools: [{ type: attempt.toolType }],
-        tool_choice: 'auto',
-        parallel_tool_calls: true,
-        text: { verbosity: SEARCH_TEXT_VERBOSITY },
-        input: [
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'input_text',
-                text: `Search the web for: ${query}\n\nReturn the top ${count} results with title, URL, and a brief description.`,
-              },
-            ],
-          },
-        ],
-      };
-
-      const requestFingerprint = buildRequestFingerprint(requestBody);
-      const hasMoreAttempts = attempt !== SEARCH_ATTEMPTS[SEARCH_ATTEMPTS.length - 1];
-
-      const response = await fetch(`${API_BASE}/responses`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${this.accessToken}`,
-          'chatgpt-account-id': this.accountId,
-          ...PROVIDER_CONTRACT.staticHeaders,
+    const requestBody = {
+      model: this.options?.model || DEFAULT_SEARCH_MODEL,
+      store: false,
+      stream: true,
+      instructions: SEARCH_INSTRUCTIONS,
+      tools: [{ type: SEARCH_TOOL_TYPE }],
+      tool_choice: 'auto',
+      parallel_tool_calls: true,
+      text: { verbosity: SEARCH_TEXT_VERBOSITY },
+      input: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'input_text',
+              text: `Search the web for: ${query}\n\nReturn the top ${count} results with title, URL, and a brief description.`,
+            },
+          ],
         },
-        body: JSON.stringify(requestBody),
-        signal: AbortSignal.timeout(30_000),
-      });
+      ],
+    };
 
-      const contentType = response.headers.get('content-type') || 'unknown';
+    const requestFingerprint = buildRequestFingerprint(requestBody);
+    const response = await fetch(`${API_BASE}/responses`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${this.accessToken}`,
+        'chatgpt-account-id': this.accountId,
+        ...PROVIDER_CONTRACT.staticHeaders,
+      },
+      body: JSON.stringify(requestBody),
+      signal: AbortSignal.timeout(30_000),
+    });
 
-      if (response.ok) {
-        try {
-          const data = await parseResponsePayload(response);
-          return parseResponsesApiResults(data, query, count);
-        } catch (parseError) {
-          const parseMessage = parseError instanceof Error ? parseError.message : String(parseError);
-          attemptErrors.push(
-            `${attempt.label} parse failed [${requestFingerprint}, content-type=${contentType}]: ${compactErrorText(parseMessage, [this.accessToken])}`,
-          );
+    const contentType = response.headers.get('content-type') || 'unknown';
 
-          if (hasMoreAttempts) {
-            continue;
-          }
-
-          throw new Error(`ChatGPT search failed: ${attemptErrors.join('; ')}`);
-        }
-      }
-
-      const errorText = await response.text();
-      const compactError = compactErrorText(errorText, [this.accessToken]);
-      attemptErrors.push(
-        `${attempt.label} failed (HTTP ${response.status}) [${requestFingerprint}, content-type=${contentType}]: ${compactError}`,
-      );
-
-      // Retry only for likely schema/tool incompatibility (400).
-      const canRetry = response.status === 400;
-      if (!(canRetry && hasMoreAttempts)) {
-        throw new Error(`ChatGPT search failed: ${attemptErrors.join('; ')}`);
+    if (response.ok) {
+      try {
+        const data = await parseResponsePayload(response);
+        return parseResponsesApiResults(data, query, count);
+      } catch (parseError) {
+        const parseMessage = parseError instanceof Error ? parseError.message : String(parseError);
+        throw new Error(
+          `ChatGPT search failed: web_search parse failed [${requestFingerprint}, content-type=${contentType}]: ${compactErrorText(parseMessage, [this.accessToken])}`,
+        );
       }
     }
 
-    throw new Error(`ChatGPT search failed: ${attemptErrors.join('; ')}`);
+    const errorText = await response.text();
+    const compactError = compactErrorText(errorText, [this.accessToken]);
+    throw new Error(
+      `ChatGPT search failed: web_search failed (HTTP ${response.status}) [${requestFingerprint}, content-type=${contentType}]: ${compactError}`,
+    );
   }
 }
 
