@@ -107,6 +107,10 @@ import {
   resolveReadToolTimeoutMs,
   withReadToolTimeout,
 } from './read-tool-timeout.ts';
+import {
+  extractRecentUserTexts,
+  SourceToolActivationController,
+} from './source-tool-activation.ts';
 
 // ============================================================
 // Types — JSONL Protocol
@@ -272,6 +276,7 @@ let initConfig: Extract<InboundMessage, { type: 'init' }> | null = null;
 
 // Mutable state
 let currentUserMessage = '';
+const sourceToolActivation = new SourceToolActivationController();
 const incompleteToolTailRecovery = new IncompleteToolTailRecovery();
 const toolLoopBudget = new ToolLoopBudget();
 
@@ -1403,6 +1408,30 @@ async function handlePrompt(msg: Extract<InboundMessage, { type: 'prompt' }>): P
     // SDK (see system-prompt-override.ts).
     if (msg.systemPrompt) {
       applySystemPromptOverride(session, msg.systemPrompt);
+    }
+
+    // Large workspace aggregators can expose hundreds of unrelated schemas.
+    // Keep normal sources untouched, but activate only the relevant product
+    // families when intent is clear. The selector fails open on ambiguity and
+    // carries prior intent across terse follow-ups for autonomy.
+    const activation = sourceToolActivation.select(
+      session.getAllTools().map(tool => tool.name),
+      msg.message,
+      extractRecentUserTexts(session.agent.state.messages),
+    );
+    // A follow-up may arrive while the preceding turn is still consuming tool
+    // results. Never remove tools from that in-flight turn; only expand its set.
+    const activeToolNames = session.isStreaming
+      ? [...new Set([...session.getActiveToolNames(), ...activation.activeToolNames])]
+      : activation.activeToolNames;
+    const currentToolNames = session.getActiveToolNames();
+    const unchanged = currentToolNames.length === activeToolNames.length
+      && activeToolNames.every(name => currentToolNames.includes(name));
+    if (!unchanged) session.setActiveToolsByName(activeToolNames);
+    if (activation.filtered) {
+      debugLog(
+        `Source tool activation: ${activation.sourceToolsActive}/${activation.sourceToolsTotal} source tools selected; families=${activation.selectedFamilies.join(',')}; streamingUnion=${session.isStreaming}`,
+      );
     }
 
     // Wire up event handler
