@@ -819,6 +819,10 @@ export class PiAgent extends BaseAgent {
       }
     });
 
+    child.stdin?.on('error', (error: NodeJS.ErrnoException) => {
+      this.debug(`Pi subprocess stdin closed while sending command: ${error.code || error.message}`);
+    });
+
     // Handle subprocess exit
     child.on('exit', (code, signal) => {
       this.handleSubprocessExit(code, signal, child);
