@@ -72,6 +72,10 @@ describe('Pi session self-management regression (#511)', () => {
       setSessionStatusFn: (sid, status) => { setStatusCalled.push([sid, status]); },
       getSessionInfoFn: (sid) => makeSessionInfo({ id: sid ?? sessionId }),
       listSessionsFn: () => ({ total: 1, returned: 1, sessions: [] }),
+      waitForSessionsFn: async (sessionIds) => ({
+        outcome: 'completed',
+        sessions: sessionIds.map((id) => ({ sessionId: id, state: 'idle' })),
+      }),
       resolveLabelsFn: (labels) => ({ resolved: labels, unknown: [], available: labels }),
       resolveStatusFn: (status) => ({ resolved: status, available: ['active', 'done'] }),
     });
@@ -81,6 +85,7 @@ describe('Pi session self-management regression (#511)', () => {
     expect(ctx.setSessionStatus).toBeDefined();
     expect(ctx.getSessionInfo).toBeDefined();
     expect(ctx.listSessions).toBeDefined();
+    expect(ctx.waitForSessions).toBeDefined();
     expect(ctx.resolveLabels).toBeDefined();
     expect(ctx.resolveStatus).toBeDefined();
 
@@ -97,6 +102,9 @@ describe('Pi session self-management regression (#511)', () => {
 
     const list = ctx.listSessions!();
     expect(list.total).toBe(1);
+
+    const waited = await ctx.waitForSessions!(['child'], 0);
+    expect(waited.sessions[0]?.sessionId).toBe('child');
 
     const resolved = ctx.resolveLabels!(['bug']);
     expect(resolved.resolved).toEqual(['bug']);
@@ -234,6 +242,7 @@ describe('Claude/Pi session self-management parity', () => {
       'setSessionStatus',
       'getSessionInfo',
       'listSessions',
+      'waitForSessions',
       'resolveLabels',
       'resolveStatus',
     ] as const;
@@ -243,6 +252,7 @@ describe('Claude/Pi session self-management parity', () => {
       setSessionStatusFn: () => {},
       getSessionInfoFn: () => makeSessionInfo({ id: sessionId }),
       listSessionsFn: () => ({ total: 0, returned: 0, sessions: [] }),
+      waitForSessionsFn: async () => ({ outcome: 'timeout', sessions: [] }),
       resolveLabelsFn: (l) => ({ resolved: l, unknown: [], available: l }),
       resolveStatusFn: (s) => ({ resolved: s, available: [] }),
     });

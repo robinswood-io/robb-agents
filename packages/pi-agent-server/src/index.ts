@@ -88,7 +88,7 @@ import { createWebFetchTool } from './tools/web-fetch.ts';
 import { resolveSearchProvider } from './tools/search/resolve-provider.ts';
 import { createSearchTool } from './tools/search/create-search-tool.ts';
 import { selectCompactionUtilityModel } from './compaction-model-policy.ts';
-import { allowCraftMetadataProperties, stripCraftMetadata } from './craft-metadata-schema.ts';
+import { allowCraftMetadataProperties, normalizeForPiTool, stripCraftMetadata } from './craft-metadata-schema.ts';
 import { applySystemPromptOverride } from './system-prompt-override.ts';
 import { registerGoogleCodeAssistProvider } from './google-code-assist-provider.ts';
 import { assertPiAuthProviderContractEnabled } from './provider-contract-guard.ts';
@@ -183,6 +183,9 @@ interface ProxyToolDef {
   name: string;
   description: string;
   inputSchema: Record<string, unknown>;
+  readOnly?: boolean;
+  idempotent?: boolean;
+  parallelSafe?: boolean;
 }
 
 /** Canonical tool metadata propagated on Pi tool start events */
@@ -290,16 +293,15 @@ const pendingSessionToolCalls = new Map<string, { toolName: string; arguments: R
 // Proxy tool definitions from main process
 let proxyToolDefs: ProxyToolDef[] = [];
 
-// Speculative prefetch for read-only tools (enables parallel execution despite Pi SDK's sequential loop).
-// When the LLM emits multiple call_llm tool calls in a single message, we fire all requests
-// to the main process in parallel on message_end (before executeToolCalls iterates sequentially).
-// Each proxy tool's execute() then hits the cache instead of sending a new request.
-const PREFETCHABLE_TOOLS = new Set(['call_llm']);
+// Speculative prefetch for explicitly parallel-safe read-only session tools.
+// The batch is capped because Pi's SDK loop is sequential and upstream services
+// may enforce rate limits. Source MCP annotations are propagated separately but
+// never opt a tool into this permission-bypassing prefetch path.
+const MAX_PARALLEL_PREFETCH = 4;
 const prefetchCache = new Map<string, Promise<{ content: string; isError: boolean }>>();
 
 function isPrefetchableTool(toolName: string): boolean {
-  const stripped = toolName.replace(/^(mcp__session__|session__)/, '');
-  return PREFETCHABLE_TOOLS.has(stripped);
+  return proxyToolDefs.some(def => def.name === toolName && def.readOnly === true && def.parallelSafe === true);
 }
 
 // Flag: proxy tools changed since last session creation — session needs recreation
@@ -757,7 +759,8 @@ function makeErrorResult(message: string): AgentToolResult<any> {
 
 function wrapSingleTool(tool: ToolDefinition<any, any>): ToolDefinition<any, any> {
   const originalExecute = tool.execute;
-  const parameters = allowCraftMetadataProperties(tool.parameters);
+  const sdkToolName = PI_TOOL_NAME_MAP[tool.name] || tool.name;
+  const parameters = allowCraftMetadataProperties(tool.parameters, sdkToolName);
 
   const wrappedExecute: ToolDefinition<any, any>['execute'] = async (
     toolCallId,
@@ -766,7 +769,6 @@ function wrapSingleTool(tool: ToolDefinition<any, any>): ToolDefinition<any, any
     onUpdate,
     ctx,
   ) => {
-    const sdkToolName = PI_TOOL_NAME_MAP[tool.name] || tool.name;
     let inputObj: Record<string, unknown> = { ...(params as Record<string, unknown>) };
 
     if (initConfig) {
@@ -782,6 +784,13 @@ function wrapSingleTool(tool: ToolDefinition<any, any>): ToolDefinition<any, any
         && typeof inputObj.path === 'string' && !inputObj.file_path) {
       inputObj = { ...inputObj, file_path: inputObj.path };
     }
+    if (sdkToolName === 'Edit' && Array.isArray(inputObj.edits)) {
+      const firstEdit = inputObj.edits[0] as { oldText?: unknown; newText?: unknown } | undefined;
+      if (firstEdit && typeof firstEdit.oldText === 'string' && typeof firstEdit.newText === 'string') {
+        inputObj.old_string ??= firstEdit.oldText;
+        inputObj.new_string ??= firstEdit.newText;
+      }
+    }
 
     // Send to main process for permission checking + transforms
     inputObj = await requestPreToolUseApproval(sdkToolName, inputObj, toolCallId);
@@ -789,7 +798,7 @@ function wrapSingleTool(tool: ToolDefinition<any, any>): ToolDefinition<any, any
     // Metadata is for Craft UI only. Keep a final defensive strip here so the
     // upstream Pi tool implementation always receives clean executable args,
     // even if a future pre-tool-use path returns `allow` without modification.
-    inputObj = stripCraftMetadata(inputObj);
+    inputObj = normalizeForPiTool(sdkToolName, stripCraftMetadata(inputObj));
 
     const loopDecision = toolLoopBudget.observe(sdkToolName, inputObj);
     if (loopDecision.action === 'block') {
@@ -1250,13 +1259,27 @@ function handleSessionEvent(event: AgentSessionEvent): void {
       // iterates sequentially. Each proxy tool's execute() will hit the cache.
       const content = (msg as { content?: Array<{ type: string; id?: string; name?: string; arguments?: unknown }> }).content;
       if (Array.isArray(content)) {
-        const prefetchableToolCalls = content.filter(
+        const plannedToolCalls = content.flatMap((item) => {
+          if (item.type !== 'toolCall' || !item.name) return [];
+          const sdkToolName = PI_TOOL_NAME_MAP[item.name] || item.name;
+          let batchInput = stripCraftMetadata((item.arguments ?? {}) as Record<string, unknown>);
+          if (initConfig) {
+            const sessionPath = getSessionPath(initConfig.workspaceRootPath, initConfig.sessionId);
+            batchInput = normalizeSessionPathTokens(batchInput, sessionPath) as Record<string, unknown>;
+          }
+          batchInput = normalizeForPiTool(sdkToolName, batchInput);
+          return [{ toolName: sdkToolName, input: batchInput }];
+        });
+        toolLoopBudget.registerPlannedBatch(plannedToolCalls);
+
+        const allPrefetchableToolCalls = content.filter(
           (c) => c.type === 'toolCall' && c.name && isPrefetchableTool(c.name),
         );
+        const prefetchableToolCalls = allPrefetchableToolCalls.slice(0, MAX_PARALLEL_PREFETCH);
         if (prefetchableToolCalls.length >= 2) {
           const firstToolCall = prefetchableToolCalls[0];
           const toolLabel = firstToolCall?.name ?? 'tool';
-          debugLog(`Prefetching ${prefetchableToolCalls.length} parallel ${toolLabel} calls`);
+          debugLog(`Prefetching ${prefetchableToolCalls.length}/${allPrefetchableToolCalls.length} parallel-safe ${toolLabel} calls (cap ${MAX_PARALLEL_PREFETCH})`);
           for (const tc of prefetchableToolCalls) {
             if (!tc.id || !tc.name) continue;
             const requestId = `prefetch-${tc.id}`;

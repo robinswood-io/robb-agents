@@ -39,6 +39,8 @@ export interface PrerequisiteCheckResult {
 export interface PrerequisiteManagerConfig {
   workspaceRootPath: string;
   onDebug?: (message: string) => void;
+  /** The stable system prompt already contains the complete browser contract. */
+  browserGuideLoadedInContext?: boolean;
 }
 
 // ============================================================
@@ -49,7 +51,10 @@ export interface PrerequisiteManagerConfig {
 const EXEMPT_SLUGS = new Set(['session', 'craft-agents-docs']);
 
 /** Global browser tools docs path required before browser tool usage. */
-const BROWSER_TOOLS_DOC_PATH = resolve(join(homedir(), '.craft-agent', 'docs', 'browser-tools.md'));
+function getBrowserToolsDocPath(): string {
+  const configDir = process.env.CRAFT_CONFIG_DIR || join(homedir(), '.craft-agent');
+  return resolve(join(configDir, 'docs', 'browser-tools.md'));
+}
 
 // ============================================================
 // Rules
@@ -103,7 +108,8 @@ const RULES: PrerequisiteRule[] = [
       getBrowserToolEnabled() &&
       (toolName === 'browser_tool' || toolName === 'mcp__session__browser_tool'),
     resolveRequiredPath: () => {
-      return existsSync(BROWSER_TOOLS_DOC_PATH) ? BROWSER_TOOLS_DOC_PATH : null;
+      const browserToolsDocPath = getBrowserToolsDocPath();
+      return existsSync(browserToolsDocPath) ? browserToolsDocPath : null;
     },
     blockMessage:
       'You must read the browser tools guide before using browser automation. Please read the file at {filePath} first, then retry.',
@@ -120,6 +126,7 @@ export class PrerequisiteManager {
   private static readonly MAX_REJECTIONS = 1;
 
   private readFiles: Set<string> = new Set();
+  private persistentContextFiles: Set<string> = new Set();
   private rejectionCounts: Map<string, number> = new Map();
   private pendingSkillPaths: Set<string> = new Set();
   private workspaceRootPath: string;
@@ -128,6 +135,15 @@ export class PrerequisiteManager {
   constructor(config: PrerequisiteManagerConfig) {
     this.workspaceRootPath = config.workspaceRootPath;
     this.onDebug = config.onDebug;
+
+    if (config.browserGuideLoadedInContext) {
+      const browserToolsDocPath = getBrowserToolsDocPath();
+      if (existsSync(browserToolsDocPath)) {
+        this.persistentContextFiles.add(browserToolsDocPath);
+        this.readFiles.add(browserToolsDocPath);
+        this.onDebug?.(`Prerequisite: browser guide already loaded in stable system context ${browserToolsDocPath}`);
+      }
+    }
   }
 
   /**
@@ -293,6 +309,9 @@ export class PrerequisiteManager {
     const count = this.readFiles.size;
     const skillCount = this.pendingSkillPaths.size;
     this.readFiles.clear();
+    for (const filePath of this.persistentContextFiles) {
+      this.readFiles.add(filePath);
+    }
     this.rejectionCounts.clear();
     this.pendingSkillPaths.clear();
     this.onDebug?.(`Prerequisite: reset read state (cleared ${count} reads, ${skillCount} skill prerequisites)`);

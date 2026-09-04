@@ -244,6 +244,19 @@ describe('PrerequisiteManager', () => {
       expect(manager.checkPrerequisites('mcp__linear__createIssue').allowed).toBe(false);
     });
 
+    it('preserves a browser guide supplied by the stable system context', () => {
+      const docsPath = browserDocPath();
+      mockExistsPaths.add(docsPath);
+      const browserManager = new PrerequisiteManager({
+        workspaceRootPath: WORKSPACE_ROOT,
+        browserGuideLoadedInContext: true,
+      });
+
+      expect(browserManager.checkPrerequisites('browser_tool').allowed).toBe(true);
+      browserManager.resetReadState();
+      expect(browserManager.checkPrerequisites('browser_tool').allowed).toBe(true);
+    });
+
     it('logs debug message on reset', () => {
       manager.trackReadTool({ file_path: '/some/file' });
       manager.resetReadState();

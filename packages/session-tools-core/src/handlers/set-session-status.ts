@@ -7,6 +7,11 @@ export interface SetSessionStatusArgs {
   status: string;
 }
 
+/** Compatibility for the spelling advertised by older system prompts. */
+function normalizeLegacyStatusAlias(status: string): string {
+  return status === 'in_progress' ? 'in-progress' : status;
+}
+
 export async function handleSetSessionStatus(
   ctx: SessionToolContext,
   args: SetSessionStatusArgs
@@ -16,7 +21,7 @@ export async function handleSetSessionStatus(
   }
 
   try {
-    let status = args.status;
+    let status = normalizeLegacyStatusAlias(args.status);
 
     // Resolve display name → ID, reject unknown statuses
     if (ctx.resolveStatus) {

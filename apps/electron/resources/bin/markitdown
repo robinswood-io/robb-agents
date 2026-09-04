@@ -1,2 +1,2 @@
 #!/bin/sh
-exec "$CRAFT_UV" run --python 3.12 "$CRAFT_SCRIPTS/markitdown_cli.py" "$@"
+exec "$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)/_python-tool" markitdown_cli.py "$@"

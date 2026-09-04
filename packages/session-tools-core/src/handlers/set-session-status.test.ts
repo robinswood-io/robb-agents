@@ -37,6 +37,13 @@ describe('handleSetSessionStatus — closed-status guard', () => {
     expect(sets).toEqual([{ sessionId: undefined, status: 'needs-review' }]);
   });
 
+  it('normalizes the legacy in_progress spelling before dynamic validation', async () => {
+    const { ctx, sets } = createCtx();
+    const result = await handleSetSessionStatus(ctx, { status: 'in_progress' });
+    expect(result.isError).toBeFalsy();
+    expect(sets).toEqual([{ sessionId: undefined, status: 'in-progress' }]);
+  });
+
   it('rejects a closed status (done) and does not write it', async () => {
     const { ctx, sets } = createCtx();
     const result = await handleSetSessionStatus(ctx, { status: 'done' });

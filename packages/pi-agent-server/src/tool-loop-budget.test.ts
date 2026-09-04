@@ -19,6 +19,30 @@ describe('ToolLoopBudget', () => {
     expect(decision.identicalCalls).toBe(4);
   });
 
+  test('does not warn for distinct calls emitted in one intentional batch', () => {
+    const budget = new ToolLoopBudget();
+    const calls = Array.from({ length: 8 }, (_, index) => ({
+      toolName: 'Read',
+      input: { path: `file-${index}.ts` },
+    }));
+    budget.registerPlannedBatch(calls);
+
+    for (const call of calls) {
+      expect(budget.observe(call.toolName, call.input).action).toBe('allow');
+    }
+  });
+
+  test('still blocks unchanged duplicates inside a planned batch', () => {
+    const budget = new ToolLoopBudget();
+    const calls = Array.from({ length: 4 }, () => ({
+      toolName: 'Grep',
+      input: { path: '.', pattern: 'same' },
+    }));
+    budget.registerPlannedBatch(calls);
+    for (const call of calls.slice(0, 3)) budget.observe(call.toolName, call.input);
+    expect(budget.observe(calls[3]!.toolName, calls[3]!.input).action).toBe('block');
+  });
+
   test('resets at each prompt and when the tool changes', () => {
     const budget = new ToolLoopBudget();
     budget.observe('Read', { path: 'a' });

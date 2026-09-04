@@ -110,6 +110,7 @@ import { ExecutionProofCollector } from './execution-proof-collector'
 import { buildRoutingCostMeta, applyRoutingCostMetaToLatestAssistantMessage, resolveRoutingCostOptions } from '@craft-agent/shared/audit'
 import {
   GenerationTelemetryLifecycle,
+  LocalJsonlTelemetrySink,
   OtlpHttpTelemetrySink,
   parseCompactionInputTokens,
   resolveOtlpTelemetryConfig,
@@ -1427,6 +1428,8 @@ export class SessionManager implements ISessionManager {
   }> = new Map()
   // Workspace-scoped OTLP sinks. A sink is created only after explicit workspace opt-in.
   private telemetrySinks: Map<string, ExecutionTelemetrySink> = new Map()
+  /** Always-on, privacy-safe local operational telemetry (no prompts/tool payloads). */
+  private localTelemetrySinks: Map<string, ExecutionTelemetrySink> = new Map()
   // Local privacy-minimal routing observations. They never contain prompt/response bodies.
   private routingOutcomeStores: Map<string, RoutingOutcomeStore> = new Map()
   // Enforces active → exactly-one-terminal generation telemetry transitions.
@@ -1512,6 +1515,21 @@ export class SessionManager implements ISessionManager {
     event: RobbExecutionTelemetryEvent,
   ): void {
     const workspaceId = managed.workspace.id
+    let localSink = this.localTelemetrySinks.get(workspaceId)
+    if (!localSink) {
+      localSink = new LocalJsonlTelemetrySink(
+        join(managed.workspace.rootPath, 'telemetry', 'execution-quality.jsonl'),
+      )
+      this.localTelemetrySinks.set(workspaceId, localSink)
+    }
+    void localSink.emit(event).catch(error => {
+      sessionLog.warn('Local execution telemetry write failed', {
+        workspaceId,
+        eventName: event.name,
+        message: error instanceof Error ? error.message : String(error),
+      })
+    })
+
     const config = resolveOtlpTelemetryConfig(process.env, workspaceId)
     if (!config.enabled) return
 
@@ -5641,6 +5659,74 @@ export class SessionManager implements ISessionManager {
               projectId: s.projectId,
             })),
           }
+        },
+        waitForSessionsFn: async (sessionIds: string[], timeoutMs: number) => {
+          const targetIds = new Set(sessionIds)
+          const workspaceId = managed.workspace.id
+          const terminalEvents = new Map<string, SessionCompletionEvent>()
+
+          const snapshot = () => sessionIds.map((sessionId) => {
+            const target = this.sessions.get(sessionId)
+            if (!target || target.workspace.id !== workspaceId) {
+              return { sessionId, state: 'missing' as const }
+            }
+            const event = terminalEvents.get(sessionId)
+            const active = target.isProcessing || target.messageQueue.length > 0
+            return {
+              sessionId,
+              state: active ? ('active' as const) : ('idle' as const),
+              status: target.sessionStatus ?? 'todo',
+              processingGeneration: target.processingGeneration,
+              ...(event ? {
+                reason: event.reason,
+                ...(event.finalText ? { finalText: event.finalText.slice(0, 2_000) } : {}),
+              } : {}),
+            }
+          })
+
+          // Generation > 0 with an empty queue proves that at least one full
+          // turn already completed. Generation 0 may be the short spawn race
+          // before sendMessage flips isProcessing, so subscribe instead.
+          const hasCompletedTarget = () => {
+            const visibleTargets = sessionIds.flatMap((sessionId) => {
+              const target = this.sessions.get(sessionId)
+              return target?.workspace.id === workspaceId ? [target] : []
+            })
+            return visibleTargets.length === 0 || visibleTargets.some((target) =>
+              !target.isProcessing && target.messageQueue.length === 0 && target.processingGeneration > 0
+            )
+          }
+          const alreadyCompleted = hasCompletedTarget()
+          if (alreadyCompleted) {
+            return { outcome: 'completed' as const, sessions: snapshot() }
+          }
+          if (timeoutMs === 0) {
+            return { outcome: 'timeout' as const, sessions: snapshot() }
+          }
+
+          return await new Promise<import('@craft-agent/session-tools-core').WaitSessionsResult>((resolve) => {
+            let settled = false
+            let timer: ReturnType<typeof setTimeout> | undefined
+            let off = () => {}
+            const finish = (outcome: 'completed' | 'timeout') => {
+              if (settled) return
+              settled = true
+              if (timer) clearTimeout(timer)
+              off()
+              resolve({ outcome, sessions: snapshot() })
+            }
+
+            off = this.onSessionComplete((event) => {
+              if (event.workspaceId !== workspaceId || !targetIds.has(event.sessionId)) return
+              terminalEvents.set(event.sessionId, event)
+              finish('completed')
+            })
+            timer = setTimeout(() => finish('timeout'), timeoutMs)
+
+            // Close the check→subscribe race for very short delegated turns.
+            const completedBeforeSubscription = hasCompletedTarget()
+            if (completedBeforeSubscription) finish('completed')
+          })
         },
         listBackgroundTasksFn: (sessionId?: string) => {
           const targetId = sessionId ?? managed.id

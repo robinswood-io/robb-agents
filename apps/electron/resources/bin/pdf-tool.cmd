@@ -1,2 +1,3 @@
 @echo off
-"%CRAFT_UV%" run --python 3.12 "%CRAFT_SCRIPTS%\pdf_tool.py" %*
+set "CRAFT_TOOL_SCRIPT=pdf_tool.py"
+call "%~dp0_python-tool.cmd" %*

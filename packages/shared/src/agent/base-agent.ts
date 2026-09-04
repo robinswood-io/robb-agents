@@ -25,7 +25,7 @@ import { DEFAULT_THINKING_LEVEL, normalizeThinkingLevel } from './thinking-level
 import type { PermissionMode } from './mode-manager.ts';
 import type { LoadedSource } from '../sources/types.ts';
 import { buildCallLlmRequest, type LLMQueryRequest, type LLMQueryResult } from './llm-tool.ts';
-import { getLlmConnections, getDefaultLlmConnection } from '../config/storage.ts';
+import { getLlmConnections, getDefaultLlmConnection, getBrowserToolEnabled } from '../config/storage.ts';
 import { loadAllSources } from '../sources/storage.ts';
 import type { ApiServerConfig } from '../mcp/mcp-pool.ts';
 
@@ -314,6 +314,8 @@ export abstract class BaseAgent implements AgentBackend {
     // PrerequisiteManager: blocks source tool calls until guide.md is read
     this.prerequisiteManager = new PrerequisiteManager({
       workspaceRootPath: config.workspace.rootPath,
+      // buildSystemPrompt injects this contract into stable system context.
+      browserGuideLoadedInContext: getBrowserToolEnabled(),
       onDebug: (msg) => this.debug(msg),
     });
 

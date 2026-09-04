@@ -1,2 +1,3 @@
 @echo off
-"%CRAFT_UV%" run --python 3.12 "%CRAFT_SCRIPTS%\doc_diff.py" %*
+set "CRAFT_TOOL_SCRIPT=doc_diff.py"
+call "%~dp0_python-tool.cmd" %*

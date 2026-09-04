@@ -1,2 +1,3 @@
 @echo off
-"%CRAFT_UV%" run --python 3.12 "%CRAFT_SCRIPTS%\markitdown_cli.py" %*
+set "CRAFT_TOOL_SCRIPT=markitdown_cli.py"
+call "%~dp0_python-tool.cmd" %*
