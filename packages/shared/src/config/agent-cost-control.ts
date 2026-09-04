@@ -275,8 +275,8 @@ function selectModel(
   return fallback ?? connection?.defaultModel ?? modelIds[0];
 }
 
-const HIGH_RISK_PATTERN = /\b(deploy|release|publish|delete|remove|purge|drop|migration|rollback|secret|credential|payment|invoice|accounting|ledger|reconciliation|legal|security|permission|rbac|signature|notari[sz]|irreversible|destructive|transaction)\b|\b(supprim|nettoy|déploi|migration|secret|paiement|factur|comptab|écriture|lettr|juridique|sécurit|irréversible|destruct)/i;
-const CRITICAL_RISK_PATTERN = /\b(deploy|release|publish|delete|remove|purge|drop|migration|rollback|secret|credential|payment|legal|signature|notari[sz]|irreversible|destructive|transaction)\b|\b(supprim|nettoy|déploi|migration|secret|paiement|juridique|irréversible|destruct)/i;
+const HIGH_RISK_PATTERN = /\b(deploy|release|publish|delete|remove|purge|drop|migration|rollback|secret|credential|payment|invoice|accounting|ledger|reconciliation|legal|security|permission|rbac|signature|notari[sz]|irreversible|destructive|transaction|nda|non-disclosure)\b|\b(supprim|nettoy|déploi|migration|secret|paiement|factur|comptab|écriture|lettr|juridique|sécurit|irréversible|destruct)/i;
+const CRITICAL_RISK_PATTERN = /\b(deploy|release|publish|delete|remove|purge|drop|migration|rollback|secret|credential|payment|legal|signature|notari[sz]|irreversible|destructive|transaction|nda|non-disclosure)\b|\b(supprim|nettoy|déploi|migration|secret|paiement|juridique|irréversible|destruct)/i;
 // "Production" is also a normal business function (alongside marketing and
 // support). Only treat it as an operational safety signal when it is coupled
 // to an environment/resource or a mutating action.

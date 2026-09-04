@@ -43,6 +43,8 @@ describe('system prompt guidance', () => {
     expect(prompt).toContain('## Operational Autonomy')
     expect(prompt).toContain('Default to completing the requested outcome end-to-end.')
     expect(prompt).toContain('use the integrated browser')
+    expect(prompt).toContain('verify the controlling claims against current primary or official sources')
+    expect(prompt).toContain('never present a first-pass document as compliant or validated')
     expect(prompt).toContain('Escalate only for a genuinely human-only input')
   })
 })

@@ -109,6 +109,19 @@ describe('decideAgentCostControl', () => {
     expect(decision.thinkingLevel).toBe('xhigh');
   });
 
+  test('routes NDA drafting as critical legal work', () => {
+    const decision = decideAgentCostControl({
+      text: 'Fais évoluer notre NDA pour une présentation à des investisseurs.',
+      connection,
+      turnKind: 'direct',
+    });
+
+    expect(decision.highRisk).toBe(true);
+    expect(decision.criticalRisk).toBe(true);
+    expect(decision.model).toBe('pi/gpt-5.6-sol');
+    expect(decision.thinkingLevel).toBe('xhigh');
+  });
+
   test('keeps a terse continuation on the strongest model when the historical objective is sensitive', () => {
     const decision = decideAgentCostControl({
       text: 'Poursuis.',
