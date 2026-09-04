@@ -82,6 +82,33 @@ describe('decideAgentCostControl', () => {
     expect(decision.criticalRisk).toBe(true);
   });
 
+  test('does not confuse a business production category with a production environment', () => {
+    const decision = decideAgentCostControl({
+      text: 'Rassemble les réponses par Marketing / Production / Support avec les pourcentages.',
+      riskContext: 'Analyse anonyme des usages de l’IA en entreprise.',
+      connection,
+      turnKind: 'direct',
+    });
+
+    expect(decision.highRisk).toBe(false);
+    expect(decision.criticalRisk).toBe(false);
+    expect(decision.model).toBe('pi/gpt-5.6-luna');
+    expect(decision.thinkingLevel).toBe('low');
+  });
+
+  test('still protects an action targeting a production environment', () => {
+    const decision = decideAgentCostControl({
+      text: 'Redémarre le serveur de production puis vérifie le service.',
+      connection,
+      turnKind: 'direct',
+    });
+
+    expect(decision.highRisk).toBe(true);
+    expect(decision.criticalRisk).toBe(true);
+    expect(decision.model).toBe('pi/gpt-5.6-sol');
+    expect(decision.thinkingLevel).toBe('xhigh');
+  });
+
   test('keeps a terse continuation on the strongest model when the historical objective is sensitive', () => {
     const decision = decideAgentCostControl({
       text: 'Poursuis.',

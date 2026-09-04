@@ -173,6 +173,52 @@ describe('context compaction', () => {
     })).toBe(true)
   })
 
+  test('retries a not-needed result before the hard limit after meaningful growth', () => {
+    const previous = {
+      attemptedAt: 1_000,
+      contextTokensBefore: 80_500,
+      outcome: 'skipped-not-needed' as const,
+      issueCode: 'not-needed',
+    }
+    expect(shouldAttemptContextCompaction({
+      contextTokens: 88_549,
+      compactAtTokens: 80_000,
+      hardLimitTokens: 100_000,
+      now: 2_000,
+      previous,
+    })).toBe(false)
+    expect(shouldAttemptContextCompaction({
+      contextTokens: 88_550,
+      compactAtTokens: 80_000,
+      hardLimitTokens: 100_000,
+      now: 2_000,
+      previous,
+    })).toBe(true)
+  })
+
+  test('never postpones a retry beyond the hard context limit', () => {
+    const previous = {
+      attemptedAt: 1_000,
+      contextTokensBefore: 96_000,
+      outcome: 'skipped-not-needed' as const,
+      issueCode: 'not-needed',
+    }
+    expect(shouldAttemptContextCompaction({
+      contextTokens: 99_999,
+      compactAtTokens: 80_000,
+      hardLimitTokens: 100_000,
+      now: 2_000,
+      previous,
+    })).toBe(false)
+    expect(shouldAttemptContextCompaction({
+      contextTokens: 100_000,
+      compactAtTokens: 80_000,
+      hardLimitTokens: 100_000,
+      now: 2_000,
+      previous,
+    })).toBe(true)
+  })
+
   test('classifies failures without persisting provider error text', () => {
     expect(classifyContextCompactionFailure(new Error('compact timed out after 300s'))).toBe('timeout')
     expect(classifyContextCompactionFailure(new Error('Already compacted'))).toBe('not-needed')

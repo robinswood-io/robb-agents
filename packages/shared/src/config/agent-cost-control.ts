@@ -275,8 +275,12 @@ function selectModel(
   return fallback ?? connection?.defaultModel ?? modelIds[0];
 }
 
-const HIGH_RISK_PATTERN = /\b(production|prod|deploy|release|publish|delete|remove|purge|drop|migration|rollback|secret|credential|payment|invoice|accounting|ledger|reconciliation|legal|security|permission|rbac|signature|notari[sz]|irreversible|destructive|transaction)\b|\b(supprim|nettoy|déploi|production|migration|secret|paiement|factur|comptab|écriture|lettr|juridique|sécurit|irréversible|destruct)/i;
-const CRITICAL_RISK_PATTERN = /\b(production|prod|deploy|release|publish|delete|remove|purge|drop|migration|rollback|secret|credential|payment|legal|signature|notari[sz]|irreversible|destructive|transaction)\b|\b(supprim|nettoy|déploi|production|migration|secret|paiement|juridique|irréversible|destruct)/i;
+const HIGH_RISK_PATTERN = /\b(deploy|release|publish|delete|remove|purge|drop|migration|rollback|secret|credential|payment|invoice|accounting|ledger|reconciliation|legal|security|permission|rbac|signature|notari[sz]|irreversible|destructive|transaction)\b|\b(supprim|nettoy|déploi|migration|secret|paiement|factur|comptab|écriture|lettr|juridique|sécurit|irréversible|destruct)/i;
+const CRITICAL_RISK_PATTERN = /\b(deploy|release|publish|delete|remove|purge|drop|migration|rollback|secret|credential|payment|legal|signature|notari[sz]|irreversible|destructive|transaction)\b|\b(supprim|nettoy|déploi|migration|secret|paiement|juridique|irréversible|destruct)/i;
+// "Production" is also a normal business function (alongside marketing and
+// support). Only treat it as an operational safety signal when it is coupled
+// to an environment/resource or a mutating action.
+const PRODUCTION_ENVIRONMENT_RISK_PATTERN = /(?:\b(?:production|prod)\b.{0,80}\b(?:environment|server|database|cluster|application|service|site|branch|deploy|release|publish|migration|rollback|delete|remove|purge|drop|restart|execute|write|apply|fix|change|modify)\b|\b(?:environment|server|database|cluster|application|service|site|branch|deploy|release|publish|migration|rollback|delete|remove|purge|drop|restart|execute|write|apply|fix|change|modify)\b.{0,80}\b(?:production|prod)\b|\bproduction\b.{0,80}\b(?:environnement|serveur|base de données|cluster|application|service|site|branche|déploi|publie|migration|restaure|supprim|purge|redémarr|exécut|lance|écris|appliqu|corrig|modifi)\w*|\b(?:environnement|serveur|base de données|cluster|application|service|site|branche|déploi|publie|migration|restaure|supprim|purge|redémarr|exécut|lance|écris|appliqu|corrig|modifi)\w*.{0,80}\bproduction\b)/i;
 const EXPLICIT_READ_ONLY_PATTERN = /\b(read[ -]?only|audit only|inspect only|verify only|no writes?|without (?:any )?(?:change|mutation|write))\b|\b(lecture seule|sans (?:aucune )?(?:modification|mutation|écriture)|aucune (?:modification|mutation|écriture)|vérifie seulement|contrôle seulement)/i;
 const EXPLICIT_MUTATION_REQUEST_PATTERN = /\b(deploy|publish|delete|remove|purge|drop|migrate|rollback|write|execute|apply|fix|change|modify|approve|submit|pay)\b|\b(déploie|publie|supprime|purge|migre|restaure|écris|exécute|applique|corrige|modifie|approuve|soumets|paie|nettoie)\b/i;
 const COMPLETION_REVIEW_PATTERN = /(?:objectif|travail|tâche|task|work).{0,120}(?:déjà\s+)?(?:achev[ée]|termin[ée]|complét[ée]|complete(?:d)?|finished)|(?:déjà\s+)?(?:achev[ée]|termin[ée]|complét[ée]).{0,120}(?:objectif|travail|tâche)/i;
@@ -319,8 +323,9 @@ export function decideAgentCostControl(
     text: classificationText,
     contextTokens: input.contextTokens,
   });
-  const highRisk = HIGH_RISK_PATTERN.test(combinedRiskText);
-  const criticalRisk = CRITICAL_RISK_PATTERN.test(combinedRiskText);
+  const productionEnvironmentRisk = PRODUCTION_ENVIRONMENT_RISK_PATTERN.test(combinedRiskText);
+  const highRisk = HIGH_RISK_PATTERN.test(combinedRiskText) || productionEnvironmentRisk;
+  const criticalRisk = CRITICAL_RISK_PATTERN.test(combinedRiskText) || productionEnvironmentRisk;
   const completionReviewOnly = isCompletionReviewOnly(input.text);
   const readOnlyRisk = highRisk
     && (EXPLICIT_READ_ONLY_PATTERN.test(input.text) || completionReviewOnly)

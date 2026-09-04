@@ -38,7 +38,8 @@ export interface ContextCompactionAttemptState {
 
 export const CONTEXT_COMPACTION_RETRY_COOLDOWN_MS = 10 * 60 * 1_000
 const MIN_VERIFIABLE_SUMMARY_CHARS = 40
-const MATERIAL_CONTEXT_GROWTH_RATIO = 1.25
+const MATERIAL_CONTEXT_GROWTH_PERCENT = 10
+const MIN_MATERIAL_CONTEXT_GROWTH_TOKENS = 4_096
 const REQUIRED_SUMMARY_SECTIONS = [
   '## Goal',
   '## Constraints & Preferences',
@@ -133,15 +134,26 @@ export function assessContextCompactionResult(
 export function shouldAttemptContextCompaction(input: {
   contextTokens: number
   compactAtTokens: number
+  hardLimitTokens?: number
   now: number
   previous?: ContextCompactionAttemptState
 }): boolean {
   if (input.contextTokens < input.compactAtTokens) return false
   if (!input.previous || input.previous.outcome === 'succeeded') return true
 
-  const contextGrewMaterially = input.contextTokens >= Math.ceil(
-    input.previous.contextTokensBefore * MATERIAL_CONTEXT_GROWTH_RATIO,
+  const previousContextTokens = input.previous.contextTokensBefore
+  const materialGrowthTokens = Math.max(
+    MIN_MATERIAL_CONTEXT_GROWTH_TOKENS,
+    Math.ceil(previousContextTokens * MATERIAL_CONTEXT_GROWTH_PERCENT / 100),
   )
+  let retryAtTokens = previousContextTokens + materialGrowthTokens
+  if (
+    input.hardLimitTokens !== undefined
+    && previousContextTokens < input.hardLimitTokens
+  ) {
+    retryAtTokens = Math.min(retryAtTokens, input.hardLimitTokens)
+  }
+  const contextGrewMaterially = input.contextTokens >= retryAtTokens
   // The SDK can know that the retained history is not compactable even when
   // our conservative token estimate crosses the threshold. Time alone does
   // not change that fact, so avoid paying for the same no-op every cooldown.

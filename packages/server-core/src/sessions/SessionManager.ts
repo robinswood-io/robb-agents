@@ -7519,6 +7519,7 @@ export class SessionManager implements ISessionManager {
         const shouldAttempt = shouldAttemptContextCompaction({
           contextTokens,
           compactAtTokens: effectiveContextLimits.compactAtTokens,
+          hardLimitTokens: effectiveContextLimits.hardLimitTokens,
           now,
           previous: managed.contextCompactionAttempt,
         })
