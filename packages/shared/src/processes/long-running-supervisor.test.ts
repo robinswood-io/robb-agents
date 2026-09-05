@@ -5,7 +5,10 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { PassThrough } from 'node:stream';
 import type { ChildProcess } from 'node:child_process';
-import { LongRunningProcessSupervisor } from './long-running-supervisor.ts';
+import {
+  getSuspectedOrphanPidsFromProcessTable,
+  LongRunningProcessSupervisor,
+} from './long-running-supervisor.ts';
 
 function fakeChild(): ChildProcess {
   const child = new EventEmitter() as ChildProcess;
@@ -93,5 +96,23 @@ describe('long-running process supervisor', () => {
     expect(supervisor.snapshot().status).toBe('degraded');
     expect(supervisor.snapshot().reportError).toBeTruthy();
     supervisor.shutdown('test complete');
+  });
+
+  it('ignores Electron helper children while detecting real orphaned children', () => {
+    const output = [
+      '101 42 /Applications/Robb Agents.app/Contents/Frameworks/Robb Agents Helper.app/Contents/MacOS/Robb Agents Helper --type=gpu-process',
+      '102 42 /Applications/Robb Agents.app/Contents/Frameworks/Robb Agents Helper (Renderer).app/Contents/MacOS/Robb Agents Helper (Renderer) --type=renderer --app-path=/Applications/Robb Agents.app/Contents/Resources/app.asar',
+      '103 42 /bin/sh -c sleep 1000',
+      '104 42 /usr/bin/python worker.py',
+    ].join('\n');
+    const result = getSuspectedOrphanPidsFromProcessTable(
+      output,
+      42,
+      new Set([104]),
+      new Map([[101, 1], [102, 1], [103, 1], [104, 1]]),
+      '/Applications/Robb Agents.app/Contents/MacOS/Robb Agents',
+    );
+
+    expect(result.pids).toEqual([103]);
   });
 });

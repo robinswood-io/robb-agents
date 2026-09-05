@@ -86,6 +86,12 @@ interface ProcessRecord {
   killTimer?: ReturnType<typeof setTimeout>;
 }
 
+interface ProcessTableEntry {
+  pid: number;
+  ppid: number;
+  command: string;
+}
+
 export interface SupervisorStartOptions {
   healthReportPath?: string;
   sweepIntervalMs?: number;
@@ -110,6 +116,55 @@ function execFileText(command: string, args: string[]): Promise<string> {
       else resolve(stdout);
     });
   });
+}
+
+function parseProcessTable(output: string): ProcessTableEntry[] {
+  return output
+    .trim()
+    .split('\n')
+    .map((line): ProcessTableEntry | undefined => {
+      const match = line.trim().match(/^(\d+)\s+(\d+)\s*(.*)$/);
+      if (!match) return undefined;
+      const pid = Number(match[1]);
+      const ppid = Number(match[2]);
+      if (!Number.isInteger(pid) || !Number.isInteger(ppid)) return undefined;
+      return { pid, ppid, command: match[3] ?? '' };
+    })
+    .filter((entry): entry is ProcessTableEntry => Boolean(entry));
+}
+
+function appBundleRoot(executablePath: string): string | undefined {
+  const marker = '.app/Contents/MacOS/';
+  const markerIndex = executablePath.indexOf(marker);
+  if (markerIndex === -1) return undefined;
+  return executablePath.slice(0, markerIndex + '.app'.length);
+}
+
+function isExpectedHostChild(command: string, hostExecutable = process.execPath): boolean {
+  const bundleRoot = appBundleRoot(hostExecutable);
+  if (!bundleRoot) return false;
+  return command.startsWith(`${bundleRoot}/Contents/Frameworks/`) && command.includes(' --type=');
+}
+
+export function getSuspectedOrphanPidsFromProcessTable(
+  output: string,
+  parentPid: number,
+  trackedPids: ReadonlySet<number>,
+  previousSightings: ReadonlyMap<number, number>,
+  hostExecutable = process.execPath,
+): { pids: number[]; sightings: Map<number, number> } {
+  const untracked = parseProcessTable(output)
+    .filter((entry) => entry.ppid === parentPid)
+    .filter((entry) => !trackedPids.has(entry.pid))
+    .filter((entry) => !isExpectedHostChild(entry.command, hostExecutable))
+    .map((entry) => entry.pid);
+  const sightings = new Map<number, number>();
+  for (const pid of untracked) sightings.set(pid, (previousSightings.get(pid) ?? 0) + 1);
+  const pids = [...sightings]
+    .filter(([, count]) => count >= 2)
+    .map(([pid]) => pid)
+    .sort((a, b) => a - b);
+  return { pids, sightings };
 }
 
 export class LongRunningProcessSupervisor {
@@ -245,30 +300,22 @@ export class LongRunningProcessSupervisor {
       return;
     }
     try {
-      const output = await execFileText('ps', ['-axo', 'pid=,ppid=']);
-      const directChildren = output
-        .trim()
-        .split('\n')
-        .map((line) => line.trim().split(/\s+/).map(Number))
-        .filter((parts) => parts.length >= 2 && parts[1] === process.pid)
-        .map((parts) => parts[0]!)
-        .filter((pid) => Number.isInteger(pid));
+      const output = await execFileText('ps', ['-axo', 'pid=,ppid=,command=']);
       const tracked = new Set(
         [...this.records.values()]
           .filter((record) => record.status === 'running' || record.status === 'terminating')
           .map((record) => record.child.pid)
           .filter((pid): pid is number => Boolean(pid)),
       );
-      const untracked = directChildren.filter((pid) => !tracked.has(pid));
-      const nextSightings = new Map<number, number>();
-      for (const pid of untracked) nextSightings.set(pid, (this.orphanSightings.get(pid) ?? 0) + 1);
+      const { pids, sightings } = getSuspectedOrphanPidsFromProcessTable(
+        output,
+        process.pid,
+        tracked,
+        this.orphanSightings,
+      );
       this.orphanSightings.clear();
-      for (const [pid, count] of nextSightings) this.orphanSightings.set(pid, count);
-      // Two consecutive samples avoid flagging legitimate short-lived utilities.
-      this.suspectedOrphanPids = [...nextSightings]
-        .filter(([, count]) => count >= 2)
-        .map(([pid]) => pid)
-        .sort((a, b) => a - b);
+      for (const [pid, count] of sightings) this.orphanSightings.set(pid, count);
+      this.suspectedOrphanPids = pids;
     } catch {
       this.suspectedOrphanPids = [];
     }
