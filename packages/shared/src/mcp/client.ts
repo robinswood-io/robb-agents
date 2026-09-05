@@ -11,6 +11,10 @@ import {
 } from '@modelcontextprotocol/client';
 import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
 import { buildRestrictedSubprocessEnvironment } from '../processes/subprocess-env.ts';
+import {
+  expectLongRunningChildPid,
+  type ExpectedChildProcessHandle,
+} from '../processes/long-running-supervisor.ts';
 
 /**
  * HTTP transport config for remote MCP servers
@@ -79,9 +83,11 @@ export interface PoolClient {
 export class CraftMcpClient {
   private client: Client;
   private transport: Transport;
+  private stdioTransport?: StdioClientTransport;
+  private expectedChildHandle?: ExpectedChildProcessHandle;
   private connected = false;
 
-  constructor(config: McpClientConfig) {
+  constructor(config: McpClientConfig, private readonly ownerId = 'mcp-source') {
     this.client = new Client(
       {
         name: 'craft-agent',
@@ -99,11 +105,12 @@ export class CraftMcpClient {
     if (config.transport === 'stdio') {
       // Stdio transport for local MCP servers. Inherit a strict operational
       // baseline, then layer only this source's explicitly configured env.
-      this.transport = new StdioClientTransport({
+      this.stdioTransport = new StdioClientTransport({
         command: config.command,
         args: config.args,
         env: buildStdioMcpSubprocessEnvironment(config.env),
       });
+      this.transport = this.stdioTransport;
     } else {
       // HTTP transport for remote MCP servers
       this.transport = new StreamableHTTPClientTransport(
@@ -121,6 +128,10 @@ export class CraftMcpClient {
     if (this.connected) return;
 
     await this.client.connect(this.transport);
+    const pid = this.stdioTransport?.pid;
+    if (pid) {
+      this.expectedChildHandle = expectLongRunningChildPid(pid, `mcp:${this.ownerId}`);
+    }
 
     // Verify connection works by listing tools
     try {
@@ -174,9 +185,14 @@ export class CraftMcpClient {
   }
 
   async close(): Promise<void> {
-    if (this.connected) {
-      await this.client.close();
-      this.connected = false;
+    try {
+      if (this.connected) {
+        await this.client.close();
+        this.connected = false;
+      }
+    } finally {
+      this.expectedChildHandle?.release();
+      this.expectedChildHandle = undefined;
     }
   }
 }

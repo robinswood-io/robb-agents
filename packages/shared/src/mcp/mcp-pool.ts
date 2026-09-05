@@ -244,7 +244,7 @@ export class McpClientPool {
       this.debug(`Unknown MCP server type for ${slug}: ${(config as { type: string }).type}`);
       return;
     }
-    await this.registerClient(slug, new CraftMcpClient(clientConfig));
+    await this.registerClient(slug, new CraftMcpClient(clientConfig, slug));
     this.activeConfigs.set(slug, config);
   }
 

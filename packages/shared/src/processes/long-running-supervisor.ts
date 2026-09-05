@@ -71,6 +71,10 @@ export interface LongRunningProcessHandle {
   release: (reason?: string) => void;
 }
 
+export interface ExpectedChildProcessHandle {
+  release: () => void;
+}
+
 interface ProcessRecord {
   child: ChildProcess;
   registration: Required<Pick<LongRunningProcessRegistration, 'id' | 'kind' | 'ownerId'>> & LongRunningProcessRegistration;
@@ -169,6 +173,7 @@ export function getSuspectedOrphanPidsFromProcessTable(
 
 export class LongRunningProcessSupervisor {
   private readonly records = new Map<string, ProcessRecord>();
+  private readonly expectedChildPids = new Map<number, string>();
   private sweepTimer?: ReturnType<typeof setInterval>;
   private reportTimer?: ReturnType<typeof setInterval>;
   private healthReportPath?: string;
@@ -231,6 +236,18 @@ export class LongRunningProcessSupervisor {
       touch,
       terminate: (reason = 'owner-requested termination') => this.terminateRecord(record, reason),
       release: (reason = 'owner released process') => this.terminateRecord(record, reason),
+    };
+  }
+
+  expectChildPid(pid: number, ownerId: string): ExpectedChildProcessHandle {
+    if (!Number.isInteger(pid) || pid <= 0) {
+      throw new Error(`Invalid expected child pid: ${pid}`);
+    }
+    this.expectedChildPids.set(pid, ownerId);
+    return {
+      release: () => {
+        if (this.expectedChildPids.get(pid) === ownerId) this.expectedChildPids.delete(pid);
+      },
     };
   }
 
@@ -307,6 +324,10 @@ export class LongRunningProcessSupervisor {
           .map((record) => record.child.pid)
           .filter((pid): pid is number => Boolean(pid)),
       );
+      for (const pid of this.expectedChildPids.keys()) {
+        if (isAlive(pid)) tracked.add(pid);
+        else this.expectedChildPids.delete(pid);
+      }
       const { pids, sightings } = getSuspectedOrphanPidsFromProcessTable(
         output,
         process.pid,
@@ -435,6 +456,9 @@ export const registerLongRunningProcess = (
   child: ChildProcess,
   registration: LongRunningProcessRegistration,
 ): LongRunningProcessHandle => longRunningProcessSupervisor.register(child, registration);
+
+export const expectLongRunningChildPid = (pid: number, ownerId: string): ExpectedChildProcessHandle =>
+  longRunningProcessSupervisor.expectChildPid(pid, ownerId);
 
 export const getLongRunningHealthSnapshot = (): LongRunningHealthSnapshot =>
   longRunningProcessSupervisor.snapshot();
