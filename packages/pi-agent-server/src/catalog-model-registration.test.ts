@@ -8,21 +8,30 @@ import { registerOAuthProvider, unregisterOAuthProvider } from '@earendil-works/
 import { registerSupplementalCatalogModels } from './catalog-model-registration.ts';
 import { resolvePiModel } from './model-resolution.ts';
 
-const GPT_56_IDS = [
+const OPENAI_SUPPLEMENTAL_IDS = [
+  'gpt-6-astra',
   'gpt-5.6-sol',
   'gpt-5.6-terra',
   'gpt-5.6-luna',
 ];
 
-const GPT_56_COSTS = {
+const OPENAI_SUPPLEMENTAL_COSTS = {
+  'gpt-6-astra': { input: 10, output: 50, cacheRead: 1, cacheWrite: 12.5 },
   'gpt-5.6-sol': { input: 5, output: 30, cacheRead: 0.5, cacheWrite: 6.25 },
   'gpt-5.6-terra': { input: 2, output: 12, cacheRead: 0.2, cacheWrite: 2.5 },
   'gpt-5.6-luna': { input: 0.2, output: 1.2, cacheRead: 0.02, cacheWrite: 0.25 },
 };
 
+const OPENAI_SUPPLEMENTAL_CONTEXT_WINDOWS = {
+  'gpt-6-astra': 272_000,
+  'gpt-5.6-sol': 1_048_576,
+  'gpt-5.6-terra': 1_048_576,
+  'gpt-5.6-luna': 1_048_576,
+};
+
 describe('registerSupplementalCatalogModels', () => {
   for (const provider of ['openai', 'openai-codex']) {
-    it(`registers and resolves GPT-5.6 for ${provider} without removing SDK models`, () => {
+    it(`registers and resolves recent OpenAI models for ${provider} without removing SDK models`, () => {
       const authStorage = provider === 'openai'
         ? PiAuthStorage.inMemory({
           [provider]: { type: 'api_key', key: 'test-api-key' },
@@ -40,34 +49,47 @@ describe('registerSupplementalCatalogModels', () => {
       const providerModelCountBefore = registry.getAll().filter(model => model.provider === provider).length;
 
       expect(templateBefore).toBeDefined();
-      expect(registry.find(provider, GPT_56_IDS[0]!)).toBeUndefined();
+      expect(registry.find(provider, OPENAI_SUPPLEMENTAL_IDS[0]!)).toBeUndefined();
 
-      expect(registerSupplementalCatalogModels(registry, provider)).toEqual(GPT_56_IDS);
+      expect(registerSupplementalCatalogModels(registry, provider)).toEqual(OPENAI_SUPPLEMENTAL_IDS);
 
-      for (const modelId of GPT_56_IDS) {
+      for (const modelId of OPENAI_SUPPLEMENTAL_IDS) {
         const resolved = resolvePiModel(registry, `pi/${modelId}`, provider);
         expect(resolved).toBeDefined();
         expect(resolved!.provider).toBe(provider);
         expect(resolved!.api).toBe(templateBefore!.api);
         expect(resolved!.baseUrl).toBe(templateBefore!.baseUrl);
-        expect(resolved!.contextWindow).toBe(1_048_576);
+        expect(resolved!.contextWindow).toBe(
+          OPENAI_SUPPLEMENTAL_CONTEXT_WINDOWS[modelId as keyof typeof OPENAI_SUPPLEMENTAL_CONTEXT_WINDOWS],
+        );
         expect(resolved!.maxTokens).toBe(128_000);
-        expect(resolved!.cost).toEqual(GPT_56_COSTS[modelId as keyof typeof GPT_56_COSTS]);
+        expect(resolved!.cost).toEqual(
+          OPENAI_SUPPLEMENTAL_COSTS[modelId as keyof typeof OPENAI_SUPPLEMENTAL_COSTS],
+        );
         expect(resolved!.reasoning).toBe(true);
       }
+
+      expect(resolvePiModel(registry, 'pi/gpt-6-astra', provider)?.thinkingLevelMap).toEqual({
+        off: null,
+        minimal: null,
+        low: 'low',
+        medium: 'medium',
+        high: 'high',
+        xhigh: 'xhigh',
+      });
 
       expect(registry.find(provider, 'gpt-5.5')).toMatchObject({
         api: templateBefore!.api,
         baseUrl: templateBefore!.baseUrl,
       });
       expect(registry.getAll().filter(model => model.provider === provider)).toHaveLength(
-        providerModelCountBefore + GPT_56_IDS.length,
+        providerModelCountBefore + OPENAI_SUPPLEMENTAL_IDS.length,
       );
 
       // Repeated registry setup calls must not duplicate supplemental entries.
       expect(registerSupplementalCatalogModels(registry, provider)).toEqual([]);
       expect(registry.getAll().filter(model => model.provider === provider)).toHaveLength(
-        providerModelCountBefore + GPT_56_IDS.length,
+        providerModelCountBefore + OPENAI_SUPPLEMENTAL_IDS.length,
       );
     });
   }
@@ -117,7 +139,7 @@ describe('registerSupplementalCatalogModels', () => {
       registerSupplementalCatalogModels(registry, 'openai-codex');
       expect(authStorage.get('openai-codex')).toBe(credentialBefore);
 
-      const model = registry.find('openai-codex', 'gpt-5.6-sol');
+      const model = registry.find('openai-codex', 'gpt-6-astra');
       expect(model).toBeDefined();
       expect(await registry.getApiKeyAndHeaders(model!)).toMatchObject({
         ok: true,
@@ -158,7 +180,7 @@ describe('registerSupplementalCatalogModels', () => {
       const registry = PiModelRegistry.inMemory(authStorage);
 
       registerSupplementalCatalogModels(registry, 'openai-codex');
-      const model = registry.find('openai-codex', 'gpt-5.6-sol');
+      const model = registry.find('openai-codex', 'gpt-6-astra');
       expect(model).toBeDefined();
 
       const auth = await registry.getApiKeyAndHeaders(model!);

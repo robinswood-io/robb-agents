@@ -27,3 +27,43 @@ export async function resolveRequestContext(
 
   return { bodyStr: undefined, normalizedInit: init ?? {} };
 }
+
+/**
+ * Normalize legacy Responses API options that GPT-6 Astra rejects.
+ *
+ * Pi 0.80.3 can still emit sampling/logprob fields and the former 24-hour
+ * prompt-cache option. Astra uses fixed sampling and the newer 30-minute cache
+ * configuration, so adapt only requests targeting that exact model.
+ *
+ * Mutates and returns `body`, matching the interceptor's other request helpers.
+ */
+export function normalizeGpt6AstraResponsesRequest(
+  body: Record<string, unknown>,
+): Record<string, unknown> {
+  const model = typeof body.model === 'string' ? body.model.replace(/^pi\//, '') : '';
+  if (model !== 'gpt-6-astra') return body;
+
+  delete body.temperature;
+  delete body.top_p;
+  delete body.top_logprobs;
+  delete body.logprobs;
+
+  if (Array.isArray(body.include)) {
+    const include = body.include.filter(item => item !== 'message.output_text.logprobs');
+    if (include.length > 0) body.include = include;
+    else delete body.include;
+  }
+
+  if (typeof body.prompt_cache_retention === 'string') {
+    const existingOptions = body.prompt_cache_options;
+    body.prompt_cache_options = {
+      ...(existingOptions && typeof existingOptions === 'object' && !Array.isArray(existingOptions)
+        ? existingOptions as Record<string, unknown>
+        : {}),
+      ttl: '30m',
+    };
+  }
+  delete body.prompt_cache_retention;
+
+  return body;
+}
