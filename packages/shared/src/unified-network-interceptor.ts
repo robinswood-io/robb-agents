@@ -31,7 +31,10 @@ import {
   intentSchema,
 } from './interceptor-common.ts';
 import { FEATURE_FLAGS } from './feature-flags.ts';
-import { resolveRequestContext } from './interceptor-request-utils.ts';
+import {
+  normalizeGpt6AstraResponsesRequest,
+  resolveRequestContext,
+} from './interceptor-request-utils.ts';
 
 // Type alias for fetch's HeadersInit
 type HeadersInitType = Headers | Record<string, string> | string[][];
@@ -1472,6 +1475,10 @@ const openAiResponsesAdapter: ApiAdapter = {
 
   validateOutgoingBody(body: Record<string, unknown>): void {
     validateOpenAiResponsesBody(body);
+  },
+
+  modifyRequest(_url: string, init: RequestInit, body: Record<string, unknown>) {
+    return { init, body: normalizeGpt6AstraResponsesRequest(body) };
   },
 
   createSseProcessor(): TransformStream<Uint8Array, Uint8Array> {

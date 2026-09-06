@@ -14,14 +14,24 @@ describe('models-pi filtering', () => {
     expect(ids.some(id => id.startsWith('pi/gpt-4'))).toBe(false);
   });
 
-  it('exposes GPT-5.6 Sol, Terra, and Luna for OpenAI API and ChatGPT account auth', () => {
+  it('exposes GPT-6 Astra and GPT-5.6 for OpenAI API and ChatGPT account auth', () => {
     for (const provider of ['openai', 'openai-codex']) {
-      const ids = getPiModelsForAuthProvider(provider).map(m => m.id);
-      expect(ids.slice(0, 3)).toEqual([
+      const models = getPiModelsForAuthProvider(provider);
+      const ids = models.map(m => m.id);
+      expect(ids.slice(0, 4)).toEqual([
+        'pi/gpt-6-astra',
         'pi/gpt-5.6-sol',
         'pi/gpt-5.6-terra',
         'pi/gpt-5.6-luna',
       ]);
+      expect(ids.filter(id => id === 'pi/gpt-6-astra')).toHaveLength(1);
+      expect(models.find(model => model.id === 'pi/gpt-6-astra')).toMatchObject({
+        name: 'GPT-6 Astra',
+        shortName: 'Astra',
+        contextWindow: 272_000,
+        supportsThinking: true,
+        supportsImages: true,
+      });
     }
   });
 

@@ -203,17 +203,19 @@ describe('getMiniModel() — auth-flavor awareness', () => {
 // Preferred Pi defaults
 // ============================================================
 
-describe('getDefaultModelsForConnection() — GPT-5.6 OpenAI defaults', () => {
-  it('uses GPT-5.6 Sol/Terra/Luna first for regular OpenAI API auth', () => {
+describe('getDefaultModelsForConnection() — current OpenAI defaults', () => {
+  it('offers Astra after Sol for regular OpenAI API auth without changing the default', () => {
     registerPiModelResolver((provider) => provider === 'openai' ? [
       { id: 'pi/gpt-5.5', name: 'GPT 5.5', shortName: '5.5', provider: 'pi', contextWindow: 1048576, supportsThinking: true },
       { id: 'pi/gpt-5.6-luna', name: 'GPT-5.6 Luna', shortName: 'Luna', provider: 'pi', contextWindow: 1048576, supportsThinking: true },
+      { id: 'pi/gpt-6-astra', name: 'GPT-6 Astra', shortName: 'Astra', provider: 'pi', contextWindow: 272000, supportsThinking: true },
       { id: 'pi/gpt-5.6-sol', name: 'GPT-5.6 Sol', shortName: 'Sol', provider: 'pi', contextWindow: 1048576, supportsThinking: true },
       { id: 'pi/gpt-5.6-terra', name: 'GPT-5.6 Terra', shortName: 'Terra', provider: 'pi', contextWindow: 1048576, supportsThinking: true },
     ] : []);
 
-    expect(getDefaultModelsForConnection('pi', 'openai').slice(0, 4).map(m => typeof m === 'string' ? m : m.id)).toEqual([
+    expect(getDefaultModelsForConnection('pi', 'openai').slice(0, 5).map(m => typeof m === 'string' ? m : m.id)).toEqual([
       'pi/gpt-5.6-sol',
+      'pi/gpt-6-astra',
       'pi/gpt-5.6-terra',
       'pi/gpt-5.6-luna',
       'pi/gpt-5.5',
@@ -221,16 +223,18 @@ describe('getDefaultModelsForConnection() — GPT-5.6 OpenAI defaults', () => {
     expect(getDefaultModelForConnection('pi', 'openai')).toBe('pi/gpt-5.6-sol');
   });
 
-  it('uses GPT-5.6 Sol/Terra/Luna first for ChatGPT account / Codex auth', () => {
+  it('offers Astra after Sol for ChatGPT account / Codex auth without changing the default', () => {
     registerPiModelResolver((provider) => provider === 'openai-codex' ? [
       { id: 'pi/gpt-5.2', name: 'GPT 5.2', shortName: '5.2', provider: 'pi', contextWindow: 1048576, supportsThinking: true },
       { id: 'pi/gpt-5.6-terra', name: 'GPT-5.6 Terra', shortName: 'Terra', provider: 'pi', contextWindow: 1048576, supportsThinking: true },
+      { id: 'pi/gpt-6-astra', name: 'GPT-6 Astra', shortName: 'Astra', provider: 'pi', contextWindow: 272000, supportsThinking: true },
       { id: 'pi/gpt-5.6-luna', name: 'GPT-5.6 Luna', shortName: 'Luna', provider: 'pi', contextWindow: 1048576, supportsThinking: true },
       { id: 'pi/gpt-5.6-sol', name: 'GPT-5.6 Sol', shortName: 'Sol', provider: 'pi', contextWindow: 1048576, supportsThinking: true },
     ] : []);
 
-    expect(getDefaultModelsForConnection('pi', 'openai-codex').slice(0, 4).map(m => typeof m === 'string' ? m : m.id)).toEqual([
+    expect(getDefaultModelsForConnection('pi', 'openai-codex').slice(0, 5).map(m => typeof m === 'string' ? m : m.id)).toEqual([
       'pi/gpt-5.6-sol',
+      'pi/gpt-6-astra',
       'pi/gpt-5.6-terra',
       'pi/gpt-5.6-luna',
       'pi/gpt-5.2',

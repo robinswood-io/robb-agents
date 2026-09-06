@@ -4,6 +4,8 @@ This file accumulates release notes for the next unreleased version. PRs that ad
 
 ## Features
 
+- **GPT-6 Astra for OpenAI connections** — Astra is now selectable with both OpenAI API keys and ChatGPT/Codex accounts, with compatible reasoning and prompt-cache requests while GPT-5.6 Sol remains the default.
+
 ## Improvements
 
 - **Autonomous execution checkpoints** — Agent turns now batch routine discovery, reserve verification capacity before mutations, continue cost checkpoints automatically, and hand completed work to review without overwriting an explicit workflow status.

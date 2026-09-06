@@ -51,7 +51,20 @@ const GOOGLE_GEMINI_CODE_ASSIST_MODELS: ModelDefinition[] = [
   },
 ];
 
-const OPENAI_GPT_56_MODELS: ModelDefinition[] = [
+const OPENAI_SUPPLEMENTAL_MODELS: ModelDefinition[] = [
+  {
+    id: 'pi/gpt-6-astra',
+    name: 'GPT-6 Astra',
+    shortName: 'Astra',
+    description: 'OpenAI GPT-6 flagship reasoning and coding model via Robb Agents Backend',
+    provider: 'pi',
+    // Astra supports up to 1.05M tokens, but standard pricing changes above
+    // 272K and Pi 0.80.3 cannot represent tiered costs. Use the same safe
+    // operational cap as the current upstream Pi catalogue.
+    contextWindow: 272_000,
+    supportsThinking: true,
+    supportsImages: true,
+  },
   {
     id: 'pi/gpt-5.6-sol',
     name: 'GPT-5.6 Sol',
@@ -117,10 +130,11 @@ const GOOGLE_ANTIGRAVITY_MODELS: ModelDefinition[] = ([
 }));
 
 const PI_MODEL_SUPPLEMENTS: Record<string, ModelDefinition[]> = {
-  // Pi SDK 0.80.3 predates OpenAI's GPT-5.6 launch. Keep Robb current by
-  // injecting the official model IDs until the upstream SDK catalog catches up.
-  openai: OPENAI_GPT_56_MODELS,
-  'openai-codex': OPENAI_GPT_56_MODELS,
+  // Pi SDK 0.80.3 predates OpenAI's GPT-5.6 and GPT-6 Astra launches. Keep
+  // Robb current by injecting the official IDs until the upstream catalogue
+  // catches up.
+  openai: OPENAI_SUPPLEMENTAL_MODELS,
+  'openai-codex': OPENAI_SUPPLEMENTAL_MODELS,
   // Antigravity is an external account-backed agent, not a Pi API provider.
   // These IDs are reported by `agy models` and passed back to the official CLI.
   'google-antigravity': GOOGLE_ANTIGRAVITY_MODELS,
