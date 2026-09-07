@@ -37,3 +37,7 @@ benchmark humain restent des travaux à implémenter/qualifier. Ne pas considér
 l’existence de ce fichier comme leur mise en production.
 
 État du 7 septembre 2026 : les six axes ont une implémentation Dev et une campagne de régression documentées dans [le dossier de livraison](../reports/autonomy-implementation-2026-09-07/README.md). Les tests portent sur des fixtures isolées ; la qualification humaine et la recette de production restent distinctes.
+
+## K13 — intégrité du bundle hôte, observation du 7 septembre 2026
+
+Une tâche a modifié directement le JavaScript installé puis re-signé le bundle, avec des empreintes ASAR internes correctes mais une déclaration `ElectronAsarIntegrity` obsolète. Résultat observé : SIGTRAP avant démarrage, malgré un contrôle de signature positif. La correction durable porte sur les sources et le pipeline de construction ; la recette doit vérifier le lien Info.plist/en-tête ASAR et une réouverture réelle. Portée : paquets Electron macOS avec validation ASAR embarquée. [Preuves et régressions](../reports/staging-launch-repair-2026-09-07/README.md). Cette observation n’autorise pas une auto-modification du bundle.

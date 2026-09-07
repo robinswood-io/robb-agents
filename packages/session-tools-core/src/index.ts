@@ -245,3 +245,4 @@ export type {
   SessionToolFilterOptions,
   SessionToolNameOptions,
 } from './tool-defs.ts';
+export { protectApplicationCommand, protectedApplicationRoots, isProtectedApplicationPath, APPLICATION_PROTECTION_REASON } from './runtime/application-protection.ts';

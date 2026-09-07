@@ -2,7 +2,9 @@
 
 Date : 7 septembre 2026. Cible : **Robb Agents Dev**, profils de test temporaires isolés. Référence : audit des 100 dernières tâches créées au 6 septembre, conservé séparément dans `../autonomy-100-chats-2026-09-06/`.
 
-Les six axes ont une implémentation et des contrôles exécutables. Cela ne certifie ni une autonomie universelle, ni une supériorité humaine, ni l’état de l’application installée en production. Aucun déploiement, remplacement de `/Applications/Robb Agents.app`, tag ou publication n’a été effectué.
+Les six axes ont une implémentation et des contrôles exécutables. Cela ne certifie ni une autonomie universelle, ni une supériorité humaine, ni l’état de l’application installée en production. Au terme des contrôles Dev décrits ici, aucun déploiement, remplacement de `/Applications/Robb Agents.app`, tag ou publication n’avait été effectué.
+
+Le candidat a ensuite été installé dans le staging local : voir le [rapport de staging et ses réserves](</Users/thibault/Documents/Robb Agents/docs/robinswood/reports/staging-autonomy-2026-09-07/README.md>).
 
 ## Résultat par axe
 

@@ -1,3 +1,4 @@
+import { protectApplicationCommand } from '@craft-agent/session-tools-core';
 /**
  * Pi Backend (Subprocess RPC Client)
  *
@@ -755,7 +756,8 @@ export class PiAgent extends BaseAgent {
     // Spawn the subprocess
     let child: ChildProcess;
     try {
-      child = spawn(nodePath, args, {
+      const protectedCommand = protectApplicationCommand(nodePath, args);
+      child = spawn(protectedCommand.command, protectedCommand.args, {
         cwd,
         stdio: ['pipe', 'pipe', 'pipe'],
         env: buildPiSubprocessEnvironment({

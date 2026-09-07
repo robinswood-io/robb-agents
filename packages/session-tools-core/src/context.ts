@@ -1,3 +1,4 @@
+import { isProtectedApplicationPath, APPLICATION_PROTECTION_REASON } from './runtime/application-protection.ts';
 /**
  * Session Tools Core - Context Interface
  *
@@ -615,7 +616,10 @@ export function createNodeFileSystem(): FileSystemInterface {
     exists: (path: string) => fs.existsSync(path),
     readFile: (path: string) => fs.readFileSync(path, 'utf-8'),
     readFileBuffer: (path: string) => fs.readFileSync(path),
-    writeFile: (path: string, content: string) => fs.writeFileSync(path, content, 'utf-8'),
+    writeFile: (path: string, content: string) => {
+      if (isProtectedApplicationPath(path)) throw new Error(APPLICATION_PROTECTION_REASON);
+      fs.writeFileSync(path, content, 'utf-8');
+    },
     isDirectory: (path: string) => fs.existsSync(path) && fs.statSync(path).isDirectory(),
     readdir: (path: string) => fs.readdirSync(path),
     stat: (path: string) => {

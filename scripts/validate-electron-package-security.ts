@@ -1,6 +1,8 @@
 import { existsSync, readFileSync, statSync } from 'node:fs'
-import { join, resolve } from 'node:path'
-import { extractFile } from '@electron/asar'
+import { basename, dirname, join, resolve } from 'node:path'
+import { createHash } from 'node:crypto'
+import { execFileSync } from 'node:child_process'
+import { extractFile, getRawHeader } from '@electron/asar'
 import {
   REQUIRED_PACKAGED_EXTERNAL_RUNTIME_PATHS,
   RUNTIME_INTEGRITY_MANIFEST_ASAR_PATH,
@@ -72,6 +74,38 @@ export interface ValidatedElectronPackageSecurity extends ElectronPackageSecurit
   protectedRuntimeManifestPath: string
   verifiedRuntimeFiles: string[]
   whatsAppWorkerGitSha: string
+  embeddedAsarHeaderSha256?: string
+}
+
+/** macOS verifies this outer header hash before running any application code.
+ * Repacking and re-signing an archive can leave valid per-file hashes while
+ * Info.plist still declares an older header, causing an immediate SIGTRAP.
+ */
+export function validateMacAsarHeaderIntegrity(appAsarPath: string, infoPlistPath: string): string {
+  requireRegularFile(infoPlistPath, 'macOS Info.plist')
+  let metadata: unknown
+  try {
+    metadata = JSON.parse(execFileSync('/usr/bin/plutil', [
+      '-extract', 'ElectronAsarIntegrity', 'json', '-o', '-', infoPlistPath,
+    ], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }))
+  } catch (error) {
+    throw new Error(`Missing or invalid ElectronAsarIntegrity in ${infoPlistPath}`, { cause: error })
+  }
+  const entry = metadata && typeof metadata === 'object'
+    ? (metadata as Record<string, unknown>)['Resources/app.asar']
+    : undefined
+  if (!entry || typeof entry !== 'object'
+    || (entry as Record<string, unknown>).algorithm !== 'SHA256'
+    || typeof (entry as Record<string, unknown>).hash !== 'string'
+    || !/^[0-9a-f]{64}$/i.test((entry as Record<string, unknown>).hash as string)) {
+    throw new Error(`Invalid embedded ASAR integrity declaration in ${infoPlistPath}`)
+  }
+  const declaredHash = ((entry as Record<string, unknown>).hash as string).toLowerCase()
+  const actualHash = createHash('sha256').update(getRawHeader(appAsarPath).headerString).digest('hex')
+  if (declaredHash !== actualHash) {
+    throw new Error(`Embedded ASAR header integrity mismatch: Info.plist declares ${declaredHash}, archive has ${actualHash}`)
+  }
+  return actualHash
 }
 
 /**
@@ -202,6 +236,10 @@ export async function validatePackagedElectronSecurity(
   const resolvedBinary = resolve(electronBinary)
   requireRegularFile(resolvedBinary, 'packaged Electron binary')
   const layout = validateElectronPackageSecurityLayout(resourcesDir)
+  const contentsDir = dirname(resolve(resourcesDir))
+  const embeddedAsarHeaderSha256 = basename(contentsDir) === 'Contents'
+    ? validateMacAsarHeaderIntegrity(layout.appAsarPath, join(contentsDir, 'Info.plist'))
+    : undefined
   const fuseBinary = resolveElectronFuseBinary(resolvedBinary)
   validateRequiredElectronFuses(readElectronFuseWires(readFileSync(fuseBinary)))
   const whatsAppWorkerGitSha = validatePackagedWhatsAppWorkerProvenance(
@@ -218,6 +256,7 @@ export async function validatePackagedElectronSecurity(
     protectedRuntimeManifestPath: RUNTIME_INTEGRITY_MANIFEST_ASAR_PATH,
     verifiedRuntimeFiles,
     whatsAppWorkerGitSha,
+    embeddedAsarHeaderSha256,
   }
 }
 
@@ -238,6 +277,9 @@ if (import.meta.main) {
 
   const layout = await validatePackagedElectronSecurity(binary, resourcesDir)
   console.log(`Validated integrity-protected ASAR: ${layout.appAsarPath}`)
+  if (layout.embeddedAsarHeaderSha256) {
+    console.log(`Validated macOS embedded ASAR header: ${layout.embeddedAsarHeaderSha256}`)
+  }
   console.log(`Validated protected external runtime inventory: ${layout.verifiedRuntimeFiles.length} files`)
   console.log(`Validated packaged WhatsApp worker provenance: ${layout.whatsAppWorkerGitSha}`)
   console.log('Validated Electron fuses: ASAR integrity and OnlyLoadAppFromAsar')

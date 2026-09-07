@@ -14,6 +14,28 @@ import {
 import { extractObjectiveOutcome } from './objective-outcome.ts';
 
 describe('durable objective contract', () => {
+  it('does not count quoted comparisons or heredoc Python as mutation evidence', () => {
+    for (const command of [
+      'python3 -c "assert 3 >= 2"',
+      "python3 - <<'PY'\nassert 3 >= 2\nassert 3 > 2\nPY",
+      'node -e "console.log(3 > 2)"',
+      'echo "this > that"',
+    ]) {
+      expect(hasObjectiveExecutionEvidence([
+        { id: 'u1', role: 'user', content: 'Corrige le résultat', timestamp: 1 },
+        { id: 't1', role: 'tool', content: 'true', timestamp: 2, toolName: 'Bash', toolInput: { command }, toolExecuted: true, toolStatus: 'completed' },
+      ], 'u1')).toBe(false);
+    }
+  });
+
+  it('still counts real redirects, including after a quoted comparison', () => {
+    for (const command of ['echo ok > output.txt', 'echo ok >> output.txt', 'node -e "console.log(3 >= 2)" > output.txt', "cat <<'EOF' > output.txt\nvalue >= threshold\nEOF"]) {
+      expect(hasObjectiveExecutionEvidence([
+        { id: 'u1', role: 'user', content: 'Corrige le résultat', timestamp: 1 },
+        { id: 't1', role: 'tool', content: 'File saved', timestamp: 2, toolName: 'Bash', toolInput: { command }, toolExecuted: true, toolStatus: 'completed' },
+      ], 'u1')).toBe(true);
+    }
+  });
   it('promotes complex and high-stakes work to mission semantics', () => {
     const objective = transitionObjectiveContract({
       messageId: 'u1',

@@ -1,3 +1,4 @@
+import { protectedClaudeQuery as query } from '../agent/claude-process.ts';
 /**
  * AI-powered URL validation using Claude Agent SDK
  *
@@ -5,7 +6,7 @@
  * with contextual understanding of valid Craft MCP URL patterns.
  */
 
-import { query, type Options } from '@anthropic-ai/claude-agent-sdk';
+import { type Options } from '@anthropic-ai/claude-agent-sdk';
 import { getDefaultOptions } from '../agent/options.ts';
 import { getDefaultSummarizationModel } from '../config/models.ts';
 

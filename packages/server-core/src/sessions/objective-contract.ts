@@ -1,3 +1,4 @@
+import { hasShellOutputRedirection } from '@craft-agent/shared/agent/bash-validator';
 import { createHash } from 'node:crypto';
 import type { Message } from '@craft-agent/core/types';
 import type { ActiveSessionObjective } from '@craft-agent/shared/sessions';
@@ -267,7 +268,7 @@ export function isObjectiveMutationTool(message: Message): boolean {
   if (query && MUTATION_SQL_PATTERN.test(query)) return true;
   const command = [message.toolInput?.command, message.toolInput?.cmd, message.toolInput?.script]
     .find((value): value is string => typeof value === 'string') ?? '';
-  return MUTATION_BASH_PATTERN.test(command);
+  return MUTATION_BASH_PATTERN.test(command) || hasShellOutputRedirection(command);
 }
 
 export interface TurnProgressFingerprints {
@@ -328,7 +329,7 @@ export function turnProgressFingerprint(messages: Message[], userMessageId: stri
   return turnProgressFingerprints(messages, userMessageId).fingerprint;
 }
 
-const MUTATION_BASH_PATTERN = /(?:^|\s)(?:apply_patch|chmod|chown|cp|install|ln|mkdir|mv|rm|rmdir|sed\s+-i|touch|truncate|deploy|git\s+(?:commit|merge|push)|systemctl\s+(?:disable|enable|restart|start|stop)|(?:npm|bun|pnpm|yarn)\s+(?:install|publish)|(?:python\d*|bun|node)\s+[^\n]*(?:build|generate|write|create)|docx-tool|xlsx-tool|pptx-tool|pdf-tool)\b|(?:^|[^<])>{1,2}(?!>)/i;
+const MUTATION_BASH_PATTERN = /(?:^|\s)(?:apply_patch|chmod|chown|cp|install|ln|mkdir|mv|rm|rmdir|sed\s+-i|touch|truncate|deploy|git\s+(?:commit|merge|push)|systemctl\s+(?:disable|enable|restart|start|stop)|(?:npm|bun|pnpm|yarn)\s+(?:install|publish)|(?:python\d*|bun|node)\s+[^\n]*(?:build|generate|write|create)|docx-tool|xlsx-tool|pptx-tool|pdf-tool)\b/i;
 
 export function hasObjectiveExecutionEvidence(messages: Message[], userMessageId: string): boolean {
   const userIndex = messages.findIndex(message => message.id === userMessageId && message.role === 'user');

@@ -1,0 +1,101 @@
+{
+  "status": "launch_restored_and_visually_verified",
+  "target": "/Applications/Robb Agents.app",
+  "restoration": {
+    "restoredAt": "2026-09-07T10:02:37Z",
+    "restoredCommit": "eaf673c998b178102115adf457c931aad98902b0",
+    "restoredAsarSha256": "a27d9d35d14dbe8b9fd7dda225eb8d70503654ad837932da1f774961409651e4",
+    "modifiedAsarSha256": "a119b1ad1fb8074f05c8654debb40dab30ceabb0b1cea1afd738dc05adbccf5c",
+    "backupPath": "/Users/thibault/Library/Application Support/Robb Agents/Staging Backups/20260907-launch-repair",
+    "currentProfileFilesBackedUp": 1087,
+    "profileModifiedByRepair": false
+  },
+  "cause": {
+    "kind": "post-installation bundle edit left stale Info.plist ElectronAsarIntegrity",
+    "modifiedEntry": "dist/main.cjs",
+    "modifiedBytes": 19,
+    "sourceSessionId": "260904-young-cloud",
+    "declaredHeaderSha256": "558ba4c5772d550f93895d56f8c1836067f7186e2fca280df2970f7d9efe27a5",
+    "modifiedHeaderSha256": "86c2cb16faefcf8bfaac68bc7d475e6cc13cd90ee586b6487d0f18cd9f357252",
+    "nativeFailure": "Integrity check failed for asar archive entry <header>; SIGTRAP before app startup"
+  },
+  "coldReopen": {
+    "verifiedAt": "2026-09-07T10:09:24Z",
+    "oldPid": 2035,
+    "newPid": 4966,
+    "oldProcessExited": true,
+    "secondsToNewRuntime": 2.66,
+    "asarSha256": "a27d9d35d14dbe8b9fd7dda225eb8d70503654ad837932da1f774961409651e4",
+    "profile": "/Users/thibault/.craft-agent/robb-electron"
+  },
+  "runtime": {
+    "verifiedAt": "2026-09-07T10:10:25.658Z",
+    "sessionCount": 1049,
+    "authenticatedConnections": 4,
+    "historicalChatLoaded": true,
+    "messageCount": 24,
+    "offendingTaskProcessing": false,
+    "health": {
+      "status": "unhealthy",
+      "checks": [
+        {
+          "name": "session_manager",
+          "status": "pass",
+          "message": "1 workspace(s) loaded"
+        },
+        {
+          "name": "memory",
+          "status": "fail",
+          "message": "Heap: 1.64 GB"
+        },
+        {
+          "name": "long_running_processes",
+          "status": "pass",
+          "message": "3 running, 0 failed, 0 suspected orphan(s); parent CPU 14.55% / RSS 1787 MB"
+        }
+      ]
+    }
+  },
+  "profile": {
+    "sessionsChecked": 1049,
+    "preservedOriginalMessages": 201800,
+    "missingOriginalMessages": [],
+    "missingFiles": [],
+    "passed": true
+  },
+  "visualInspection": {
+    "initialWindow": true,
+    "windowAfterFullQuitAndReopen": true,
+    "observed": "Session list, workspace navigation, loaded chat history and composer rendered"
+  },
+  "releaseContractTestsPassed": 58,
+  "scriptsTypecheckPassed": true,
+  "defectiveBundleNowRejectedByValidator": true,
+  "stagingRestoredBundleAcceptedByValidator": true,
+  "remainingLimits": [
+    "TRAID task is stopped and its automatic recovery marker cleared after its direct host-bundle modification. Its conversation remains available.",
+    "Memory health warning remains (1.64 GB heap against 1.5 GB threshold); this is separate from the confirmed ASAR launch failure.",
+    "The attempted regular-expression hotpatch was not promoted; source-level fixes must follow the clean build and staging process."
+  ],
+  "evidenceSha256": {
+    "restoration.log": "80600a362c83e0bcd6bda1f065ccbaf95fdc2d8faa987fc812e58b6d8733e57c",
+    "reopened-window.png": "60bbd44b1e09e2eef573f3d13a4c043014084b6699cc106d0ba4b79af96c63a5",
+    "validator-before.log": "dbd8e820809af16e6c06a19ce6295b130d5fb81ddf02669f9a7db63a076c9c93",
+    "release-contract-tests.log": "2b087a17c7dc7402752c4698582ffc38c9f394482c814174251ba99718695746",
+    "bundle-difference.json": "76fc3734387f1014496704c3e01dd3b5138ea2c9e9452e9f20c623b711ed1e2c",
+    "restoration.json": "80600a362c83e0bcd6bda1f065ccbaf95fdc2d8faa987fc812e58b6d8733e57c",
+    "scripts-typecheck.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "cold-reopen.log": "77e79cbc9d88c380202b939817afcc7598f0cb58737aef0d4f78e9b67c0b74cc",
+    "cold-reopen.json": "77e79cbc9d88c380202b939817afcc7598f0cb58737aef0d4f78e9b67c0b74cc",
+    "restored-window.png": "27a61bad0efa1c596f3e65c231d6685d1245d7ac59648a78f2fc8a68ba1a4508",
+    "window-after-reopen.json": "4573f79e2683ead3a637ff5f01f4c93c352e565549534c2f89ecd98410a2cc8c",
+    "window-after.json": "852a5b083c34ea2965a3d9bb058846c7988589cce5630d6e492ccbb45da0902e",
+    "runtime-after.json": "2460b5ee67f2c39fcb6d499d0aff12bc2a5f890c8b2be41950c2900c76236226",
+    "profile-after.json": "4147f63887a6786b2d6c408b48b909d3a6e1f910e95fb145a545dc0bc54d87fc",
+    "validator-restored.log": "07bec0df19b1346e47d47b4953add775dff0f827643d63e20babdf22ed3efb15",
+    "paused-session.json": "bf082e368e12591d7b657ed1919dc49d5caaae6a0eda831586339548ae1a9dca",
+    "runtime-after.log": "36e9afd520cec987f66b11fe6c47e85685537c2930cb1c75da25cdc1f73eb07d",
+    "validator-broken-after.log": "36dbc1b506efd4281d5445cab9a1b84c6450344591b8d252420fcc24f89bb983",
+    "launch-before.log": "07eeab495558abdcb675f0407f189a9284e197e21f98e5f602cd3cd84df7d006"
+  }
+}

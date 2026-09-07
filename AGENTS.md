@@ -28,6 +28,16 @@ interchangeables.
   Après lancement, vérifier le commit embarqué, `~/.craft-agent/robb-electron`,
   la présence des sessions/connexions et le démarrage des MCP pertinents.
 - Le paquet ad hoc de staging reste local et ne doit jamais être distribué.
+- Ne jamais corriger directement `app.asar` ou un exécutable du bundle installé :
+  modifier les sources et reconstruire depuis un commit propre. Une nouvelle
+  signature seule ne met pas à jour `ElectronAsarIntegrity` dans `Info.plist`.
+- La recette doit vérifier cette empreinte d’en-tête avec
+  `scripts/validate-electron-package-security.ts`, puis une fermeture complète
+  et une réouverture avec contrôle visuel de l’interface.
+- Les processus d’agents et MCP locaux sur macOS doivent conserver la protection
+  du bundle imposée par `application-protection.ts`, y compris en mode Execute.
+  Aucun réglage, retry ou contournement via un autre processus ne doit désactiver
+  cette protection. Un échec du contrôle de protection bloque les agents.
 
 ### 3. GitHub Release
 

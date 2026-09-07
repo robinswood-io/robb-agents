@@ -19,6 +19,27 @@ import bashParser from 'bash-parser';
 import { debug } from '../utils/debug.ts';
 import type { CompiledBashPattern } from './mode-types.ts';
 
+/** Evidence classifier: a comparison in quoted Python/JS is not a shell redirect. */
+export function hasShellOutputRedirection(command: string): boolean {
+  // bash-parser 0.5 misparses heredoc bodies as shell commands. Such a parse
+  // cannot establish execution evidence; inspect only the shell header, never
+  // Python comparisons in the body. A real redirect on the header still counts.
+  // This is evidence classification, not a permission/security authorization.
+  if (command.includes('<<')) command = command.split('\n')[0] ?? '';
+  let ast: unknown;
+  try { ast = bashParser(command); } catch { return false; }
+  const visit = (value: unknown): boolean => {
+    if (!value || typeof value !== 'object') return false;
+    const node = value as Record<string, unknown>;
+    if (node.type === 'Redirect') {
+      const op = node.op as { text?: string } | undefined;
+      return typeof op?.text === 'string' && /^(?:>|>>|>\||&>|&>>)$/.test(op.text);
+    }
+    return Object.values(node).some(visit);
+  };
+  return visit(ast);
+}
+
 // ============================================================
 // Types
 // ============================================================

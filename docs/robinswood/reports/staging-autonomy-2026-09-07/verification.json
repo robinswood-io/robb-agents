@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "status": "installed_with_verification_reservations",
+  "target": "/Applications/Robb Agents.app",
+  "identity": "io.robinswood.robbagents",
+  "version": "0.12.6",
+  "channel": "production (local staging)",
+  "buildCommit": "eaf673c998b178102115adf457c931aad98902b0",
+  "installedAt": "2026-09-07T08:09:59Z",
+  "asarSha256": "a27d9d35d14dbe8b9fd7dda225eb8d70503654ad837932da1f774961409651e4",
+  "backupPath": "/Users/thibault/Library/Application Support/Robb Agents/Staging Backups/20260907-autonomy-3633f7e5",
+  "checks": {
+    "autonomyRegressionTestsPassed": 304,
+    "additionalMcpAndPathTestsPassed": 5,
+    "serverCoreTypecheckPassed": true,
+    "releaseContractTestsPassed": 54,
+    "packageAuditTestsPassed": 21,
+    "installerTestsPassed": 9,
+    "installerTestsSkipped": 1,
+    "packagedSmokePassed": true,
+    "installedPdfRenderingPassed": true,
+    "sessionCount": 1049,
+    "preservedOriginalMessages": 200786,
+    "missingOriginalMessages": 0,
+    "sourceCount": 31,
+    "authenticatedConnections": 4,
+    "browserCookiesPreserved": {
+      "backup": 526,
+      "staging": 526
+    },
+    "historicalChatsLoaded": 3,
+    "mcpAvailable": 18,
+    "mcpTotal": 19,
+    "mcpToolsListed": 674
+  },
+  "latestHealth": {
+    "verifiedAt": "2026-09-07T08:13:10.276Z",
+    "health": {
+      "status": "unhealthy",
+      "checks": [
+        {
+          "name": "session_manager",
+          "status": "pass",
+          "message": "1 workspace(s) loaded"
+        },
+        {
+          "name": "memory",
+          "status": "fail",
+          "message": "Heap: 1.77 GB"
+        },
+        {
+          "name": "long_running_processes",
+          "status": "pass",
+          "message": "3 running, 0 failed, 0 suspected orphan(s); parent CPU 1.87% / RSS 490 MB"
+        }
+      ]
+    }
+  },
+  "limitations": [
+    "ingenierie-son starts its WING hardware discovery but exits because the configured console identity is not found on the network; the source-variable inspection defect is fixed and covered by subprocess regression tests.",
+    "Memory health check remains unhealthy: heap 1.77 GB exceeds its 1.5 GB threshold during active tasks; no evidence yet establishing a regression or a sustained memory leak.",
+    "uv is resolved through the installed PATH fallback, not bundled. Actual packaged PDF rendering passed on this Mac.",
+    "UI window presence was checked through existing macOS accessibility APIs; chat and connector loading were checked through existing authenticated TLS RPC, not a full visual UI walkthrough.",
+    "Human superiority and universal autonomy remain unmeasured."
+  ],
+  "publicReleaseCreated": false,
+  "evidenceSha256": {
+    "final-bundle-preflight.json": "b6e31aa8ad7b21bf48bbdded3c54331b2c4192d5772d81bf1f8011e69dd2e565",
+    "installed-bundle-verification.json": "34ca656bbda7d4f92e6a19621ba0431978b58dade43c5f050817c45e6d385efe",
+    "backup-verification.json": "e10c2984ae5f38bef644ac288daa344a0637d6cf6b3b2742368ff2311dd44d7b",
+    "regression.log": "f4dfc13762f36522788188b54780994a27186e521a736f0f7f85eae6b9cb7249",
+    "regression.json": "f3b30bbbd3ca570aef4ed69312451af824f34ff6155cbb309592940b2b45cd99",
+    "profile-verification.json": "7e3ee1e0ac26278fb4d83f83dedbe387991ce163dca2c29a9a9f1974071bbb61",
+    "profile-final.log": "709bebc9be41e9eacbb63547442ec0a48d6b7d787e4dcbacae063c120b392411",
+    "installation.json": "3de75eeb3e70a05c1057e61f59b32dffc6b724115376f35807056886c8ad82d2",
+    "typecheck-final.log": "86750cbd7a645f90c9d5af611e003a213ed5f971743c8e4a749eb8a7f2daa8ac",
+    "release-contract.log": "950466f605a6d7bccebbf0dd4d2ee78cb6f860093a70b29aaeb7ec07ae41b934",
+    "package-audit.log": "20c30bf229455c6d98e51f7302403ad9b5e27edcb1281d1bb9177b1e9827f454",
+    "install-final.log": "3de75eeb3e70a05c1057e61f59b32dffc6b724115376f35807056886c8ad82d2",
+    "runtime-verification.log": "e618ba1fd59e83c098088bebe9f85abfb15cae2d12663718d1ca31e5a38888ff",
+    "mcp-final-tests.log": "e9b188f4d5f0e616c29024bb15c446c479163d1b03db70a01a32718d5ce1ffe6",
+    "packaged-document-verification.json": "3e9892c6e69cc91a550b84376b7a905e23a9697cf31bc4d113200884a0a28f15",
+    "runtime-verification.json": "88244d349a0cb6e1f4fb9c7db0d857e135a2fa6549c9986c7846ec94917c9c5a",
+    "mcp-regression-before.log": "ed358f755e842e258e073ef0d6a51593da78ffde511543b025889dc4c40c3a54",
+    "installation-first.json": "adbbd821f50e43f528b5cdb7ed05b5665b0d0c2a433805574ffdce81c31e3b92",
+    "installer-contract.log": "a170bd5053e94649836e173c01543c30d0b3972f0f7a19852e0bce4b80a45646",
+    "sound-mcp-diagnostic.log": "dc74c525f0ed24e247cdae8dafccafcb1e7e393f1a4f240fd30f179cd9ec4e3d",
+    "build-final.log": "77e6cf11ac34cb809730fc689af17f4cbf499285f38af6052ab090c3e947c3df",
+    "health-recheck.json": "439b68f34011e7e052e1e426652bb216d45b5c052cdd3a31cac01ea7860fabd9",
+    "window-interface.json": "2fca111993a84ed0f0f7354f4fe0ff602c200f9fdcc179b7857c93976bbdb2f6",
+    "mcp-regression-after.log": "a93d6ce94c68ec9f67b83bffef7f375883c0dc70184cc905fb8c0ce6e60e4a87",
+    "runtime-verification-first.json": "9975257657963e655e791b46fcb47ad71fe118c4e41aa5192f1b45bcae4e9317",
+    "packaged-document-final.log": "3e9892c6e69cc91a550b84376b7a905e23a9697cf31bc4d113200884a0a28f15",
+    "bundle-preflight.json": "a6a392d34f125331572e7045d13acd411c8544d298bdf91db0012ba6bb446e6c",
+    "backup.log": "feab47c898fae587399eec4025d81754b9f6555b0c2a1172ce95c3d81dc14ada",
+    "window-state-final.json": "3020f60c4d3510e8c6f0a2998edd977e362f39f5489054a99f27d9929d8ec67b",
+    "source-snapshot.json": "842ae246cf2a133004717fc62f9c018bbe7c2e1f9e52453e22c513235d116105",
+    "health-final.log": "4378d9287baad6ee85012f33d1ade1dd7f6ee70c7122e4784c2b604fb1d1e6dc",
+    "install.log": "499fd416f08cf936c38f18243557f1ed6c9f74d9274137c8ebabda24ad4465f8",
+    "runtime-verification-final.log": "733ab28f3bc74972d262aac8976065fe803d322e93c0a119c3470fa75e2f5407",
+    "window-state.json": "ae41494e74a44f8660abd25000a4326795538284b585474a4773feb99f9ae7fa",
+    "build.log": "3cb413bf65268f9d824929c73f9bf4becd1da88526b0b5851ab753dcd602b997"
+  }
+}

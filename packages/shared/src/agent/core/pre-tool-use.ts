@@ -19,6 +19,7 @@
 
 import { existsSync, readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
+import { isProtectedApplicationPath, APPLICATION_PROTECTION_REASON } from '@craft-agent/session-tools-core';
 import { join, resolve } from 'node:path';
 import { expandPath } from '../../utils/paths.ts';
 import {
@@ -924,6 +925,18 @@ export function runPreToolUseChecks(ctx: PreToolUseInput): PreToolUseCheckResult
     permissionsContext,
     ctx.declaredToolCapabilities,
   );
+
+  // Host invariant, before modes, whitelists, trusted-source hints or objective gates.
+  // The kernel sandbox is the boundary for scripts/obfuscated commands; this gives
+  // direct file tools a useful explanation and also covers host-side MCP handlers.
+  if (toolEffect.kind !== 'read' || FILE_WRITE_TOOLS.has(toolName)) {
+    const targets = [input.file_path, input.path, input.notebook_path, input.destination, input.outputFile];
+    for (const target of targets) {
+      if (typeof target === 'string' && isProtectedApplicationPath(resolve(workingDirectory ?? workspaceRootPath, expandPath(target)))) {
+        return { type: 'block', reason: APPLICATION_PROTECTION_REASON };
+      }
+    }
+  }
 
   // Canonical mode source of truth for this session.
   // Keep incoming permissionMode only for mismatch diagnostics.

@@ -53,6 +53,14 @@ function check(overrides: Partial<PreToolUseInput>, highStakesObjective?: string
 }
 
 describe('typed tool effects', () => {
+  it.skipIf(process.platform !== 'darwin')('blocks installed-bundle writes even in Execute mode with trusted read hints', () => {
+    for (const toolName of ['Write', 'Edit', 'MultiEdit', 'NotebookEdit']) {
+      expect(check({
+        toolName, permissionMode: 'allow-all',
+        input: { file_path: '/Applications/Robb Agents.app/Contents/Resources/app.asar' },
+      })).toMatchObject({ type: 'block', reason: expect.stringContaining('installed Robb Agents') });
+    }
+  });
   it('classifies a read-only remote shell command from its input semantics', () => {
     expect(classifyToolEffect(
       'mcp__rbw-servers__ssh_execute',
