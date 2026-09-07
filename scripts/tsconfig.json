@@ -3,7 +3,9 @@
   "compilerOptions": {
     "allowJs": false,
     "rootDir": "..",
-    "types": ["bun"]
+    "types": [
+      "bun"
+    ]
   },
   "include": [
     "apply-minimatch-compat.ts",
@@ -20,6 +22,9 @@
     "tests/validate-release-bundle.test.ts",
     "tests/verify-proof-passport.test.ts",
     "tests/verify-github-release-assets.test.ts",
-    "validate-workspace-versions.ts"
+    "validate-workspace-versions.ts",
+    "robb-human-benchmark.ts",
+    "robb-autonomy-acceptance.ts",
+    "test-autonomy-audit.ts"
   ]
 }

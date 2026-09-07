@@ -11,7 +11,19 @@
 
 import type { PermissionMode } from '../agent/mode-manager.ts';
 import type { ThinkingLevel } from '../agent/thinking-levels.ts';
-import type { StoredAttachment, MessageRole, ToolStatus, AuthRequestType, AuthStatus, CredentialInputMode, StoredMessage, AutonomyEvent } from '@craft-agent/core/types';
+import type {
+  StoredAttachment,
+  MessageRole,
+  ToolStatus,
+  AuthRequestType,
+  AuthStatus,
+  CredentialInputMode,
+  StoredMessage,
+  AutonomyEvent,
+  ObjectiveOutcomeDeclaration,
+  ObjectiveOutcomeState,
+  ObjectiveAcceptanceCriterion,
+} from '@craft-agent/core/types';
 import type { SessionExecutionIsolation } from '../tasks/durable-execution.ts';
 
 /**
@@ -81,6 +93,7 @@ export const SESSION_PERSISTENT_FIELDS = [
   'pendingTurnRecovery',
   // Durable objective contract used for continuation routing and per-objective budgets
   'activeObjective',
+  'pendingAgentDeliveryIds',
 ] as const;
 
 export type SessionPersistentField = typeof SESSION_PERSISTENT_FIELDS[number];
@@ -93,15 +106,21 @@ export type SessionPersistentField = typeof SESSION_PERSISTENT_FIELDS[number];
 export interface PendingTurnRecovery {
   userMessageId: string;
   startedAt: number;
+  /** Fixed wall-clock lease for the automatic-recovery phase of this logical turn. */
+  leaseExpiresAt?: number;
   attempts: number;
   lastAttemptAt?: number;
+  /** Last pass that added semantic evidence or a confirmed execution. */
+  lastProgressAt?: number;
   lastCause?: 'app_restart' | 'stream_ended' | 'runtime_error' | 'premature_final' | 'tool_checkpoint' | 'evidence_gate' | 'objective_incomplete';
-  /** Stable fingerprint of successful tool evidence seen before the last recovery pass. */
+  /** Stable fingerprint of semantic evidence and confirmed execution seen before the last recovery pass. */
   lastProgressFingerprint?: string;
-  /** Consecutive recovery passes that produced no new successful tool evidence. */
+  /** Consecutive recovery passes that produced no new semantic evidence or confirmed execution. */
   stagnantAttempts?: number;
   /** Host-authored checkpoint that forces continuation independently of assistant prose. */
   continuationRequired?: boolean;
+  /** Bounded host validation gaps supplied to the next automatic recovery. */
+  validationGaps?: string[];
   exhaustedAt?: number;
 }
 
@@ -112,13 +131,29 @@ export type SessionObjectiveTerminalState =
   | 'blocked_policy'
   | 'exhausted';
 
+export type SessionObjectiveDeclaredState = ObjectiveOutcomeState;
+export type SessionObjectiveOutcomeDeclaration = ObjectiveOutcomeDeclaration;
+
 /**
  * Durable contract for the current user objective. It deliberately references
  * the original transcript message instead of duplicating sensitive user text.
  */
 export interface ActiveSessionObjective {
   schemaVersion: 1;
+  /** Original request kept locally across compaction; never a new permission. */
+  originalText?: string;
+  requiresObservationEvidence?: boolean;
+  /** New objectives require target-bound checks; legacy stored objectives remain readable. */
+  requiresAcceptanceCriteria?: boolean;
+  /** Registered checks may be extended, never weakened during an objective. */
+  acceptanceCriteria?: ObjectiveAcceptanceCriterion[];
+  acceptanceRegisteredAt?: number;
+  /** Stable identity of the root objective; old sessions fall back to userMessageId. */
+  objectiveId?: string;
+  /** Original user message that defines the invariant objective. */
   userMessageId: string;
+  /** Most recent visible user message folded into this objective. */
+  lastUserMessageId?: string;
   startedAt: number;
   /** Lifetime session cost when this objective started. */
   budgetBaselineUsd: number;
@@ -139,6 +174,8 @@ export interface ActiveSessionObjective {
   terminalState: SessionObjectiveTerminalState;
   model?: string;
   thinkingLevel?: ThinkingLevel;
+  /** Last host-validated terminal declaration, when one has been received. */
+  lastOutcome?: ObjectiveOutcomeDeclaration;
   completedAt?: number;
 }
 
@@ -263,6 +300,7 @@ export interface SessionConfig {
   pendingTurnRecovery?: PendingTurnRecovery;
   /** Current objective contract, retained across terse continuation turns and restarts. */
   activeObjective?: ActiveSessionObjective;
+  pendingAgentDeliveryIds?: string[];
   /** Shared viewer URL (if shared via viewer) */
   sharedUrl?: string;
   /** Shared session ID in viewer (for revoke) */
@@ -479,6 +517,7 @@ export interface SessionHeader {
   pendingTurnRecovery?: PendingTurnRecovery;
   /** Current objective contract used for routing, budgets, and completion gates. */
   activeObjective?: ActiveSessionObjective;
+  pendingAgentDeliveryIds?: string[];
   /** Unexpired sensitive-action grants, scoped to category + concrete target. */
   externalActionAuthorizations?: ExternalActionAuthorization[];
   // Pre-computed fields for fast list loading
@@ -595,6 +634,7 @@ export interface SessionMetadata {
   pendingTurnRecovery?: PendingTurnRecovery;
   /** Current objective contract used for routing, budgets, and completion gates. */
   activeObjective?: ActiveSessionObjective;
+  pendingAgentDeliveryIds?: string[];
   /** Unexpired sensitive-action grants, scoped to category + concrete target. */
   externalActionAuthorizations?: ExternalActionAuthorization[];
 }

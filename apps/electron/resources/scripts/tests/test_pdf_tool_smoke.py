@@ -67,6 +67,22 @@ class PdfToolSmokeTests(unittest.TestCase):
     def run_tool(self, *args: str):
         return run_tool("pdf-tool", *args, env=self.env)
 
+    def test_delivered_pdf_renders_all_pages_to_nonempty_images(self) -> None:
+        output = self.tmpdir / "rendered"
+        result = self.run_tool("to-image", str(self.input_pdf), "--dpi", "100", "-o", str(output))
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        pages = sorted(output.glob("page_*.png"))
+        self.assertEqual(len(pages), 3)
+        # Inspect actual PNG headers and pixel dimensions, not merely an exit code.
+        import struct
+        for page in pages:
+            data = page.read_bytes()
+            self.assertEqual(data[:8], b"\x89PNG\r\n\x1a\n")
+            width, height = struct.unpack(">II", data[16:24])
+            self.assertGreater(width, 1)
+            self.assertGreater(height, 1)
+            self.assertGreater(len(data), 100)
+
     def test_invalid_pages_out_of_range_fails(self) -> None:
         result = self.run_tool("extract", str(self.input_pdf), "--pages", "999")
         self.assertNotEqual(result.returncode, 0)

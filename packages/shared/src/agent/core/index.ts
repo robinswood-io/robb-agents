@@ -119,6 +119,9 @@ export {
   // Centralized pipeline types
   type PreToolUseCheckResult,
   type PreToolUseInput,
+  type DeclaredToolCapabilities,
+  type ToolEffectDescriptor,
+  classifyToolEffect,
   type PermissionManagerLike,
   type PrerequisiteManagerLike,
   // Constants
@@ -158,9 +161,21 @@ export {
   clearObjectiveEvidenceGate,
   getObjectiveEvidenceCompletionGap,
   isEvidenceAcquisitionTool,
+  parseIndependentReviewReceipt,
   recordObjectiveEvidence,
 } from './objective-evidence-gate.ts';
-export type { HighStakesEvidenceDomain, ObjectiveEvidenceGateState } from './objective-evidence-gate.ts';
+export type {
+  HighStakesEvidenceDomain,
+  IndependentReviewReceipt,
+  ObjectiveEvidenceGateState,
+} from './objective-evidence-gate.ts';
+
+// Conservative semantics shared by permission and objective-outcome gates.
+export {
+  classifyToolNameMutationSemantics,
+  normalizeToolLeafName,
+  type ToolNameMutationSemantics,
+} from './tool-name-semantics.ts';
 
 // RTK detector
 export { getRtkPath, getRtkStatus, getRtkGain, resetRtkPathCache } from './rtk-detector.ts';

@@ -1,0 +1,21 @@
+{
+  "protocolId": "robb-autonomy-domains-to-qualify",
+  "eligible": false,
+  "gaps": [
+    "Independent evaluator signature is missing or invalid",
+    "development: at least 30 independent held-out task families required",
+    "development: superiority over human upper-quartile quality is not established at 95% confidence",
+    "development: objective completion below 95%"
+  ],
+  "domains": [
+    {
+      "domain": "development",
+      "cases": 0,
+      "wins": 0,
+      "winRateLower95": 0,
+      "meanQualityDelta": 0,
+      "meanTimeRatio": 0,
+      "meanCostDeltaUsd": 0
+    }
+  ]
+}

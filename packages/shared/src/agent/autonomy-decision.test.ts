@@ -22,9 +22,29 @@ describe('decideAutonomyRecovery', () => {
     expect(decideAutonomyRecovery({ ...sourceFailure, fallbackAlreadyAttempted: true })).toEqual({ kind: 'none' })
   })
 
-  it('escalates a browser failure as unavailable access', () => {
+  it('switches a first browser failure to a structured access path', () => {
     expect(decideAutonomyRecovery({ ...sourceFailure, toolName: 'mcp__session__browser_tool' }))
-      .toEqual({ kind: 'escalate', reason: 'access_unavailable_after_fallback' })
+      .toEqual({ kind: 'fallback_structured' })
+  })
+
+  it.each([
+    ['browser_open', 'UI navigation failed'],
+    ['mcp__session__browser_click_at', 'UI target was obscured'],
+    ['mcp__session__browser_snapshot', 'UI snapshot could not be captured'],
+  ])('normalizes browser alias %s and falls back to structured access on UI errors', (toolName, result) => {
+    expect(decideAutonomyRecovery({
+      ...sourceFailure,
+      toolName,
+      result,
+    })).toEqual({ kind: 'fallback_structured' })
+  })
+
+  it('escalates only after the structured fallback also failed', () => {
+    expect(decideAutonomyRecovery({
+      ...sourceFailure,
+      toolName: 'mcp__session__browser_tool',
+      fallbackAlreadyAttempted: true,
+    })).toEqual({ kind: 'escalate', reason: 'access_unavailable_after_fallback' })
   })
 
   it('uses structured provider status before legacy text parsing', () => {
@@ -47,6 +67,18 @@ describe('decideAutonomyRecovery', () => {
       ...sourceFailure,
       result: 'generic failure',
       errorCode: 'INVALID_ARGUMENT',
+    })).toEqual({ kind: 'none' })
+  })
+
+  it.each([
+    ['INVALID_ARGUMENT', 'generic failure'],
+    ['PERMISSION_DENIED', 'generic failure'],
+  ])('does not escalate %s merely because browser access is disabled', (errorCode, result) => {
+    expect(decideAutonomyRecovery({
+      ...sourceFailure,
+      browserEnabled: false,
+      errorCode,
+      result,
     })).toEqual({ kind: 'none' })
   })
 
@@ -94,6 +126,8 @@ describe('formatAutonomyContract sensitive external action guard', () => {
     expect(contract).toContain('A technical obstacle is a diagnosis checkpoint')
     expect(contract).toContain('Do not defer an identified next correction')
     expect(contract).toContain('Operate like a senior owner')
+    expect(contract).toContain('For RDP, Guacamole, VNC')
+    expect(contract).toContain('switch to the structured route')
   })
 
   it('aligns the model with the explicit total-autonomy workspace policy', () => {

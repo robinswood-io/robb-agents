@@ -2,7 +2,7 @@ import * as React from 'react'
 import { useMemo, useEffect, useRef, useCallback, useState } from 'react'
 import i18n from 'i18next'
 import { useTranslation } from 'react-i18next'
-import type { ToolDisplayMeta, AnnotationV1 } from '@craft-agent/core'
+import type { ToolDisplayMeta, AnnotationV1, ToolExecutionCheckpoint } from '@craft-agent/core'
 import { normalizePath, pathStartsWith, stripPathPrefix } from '@craft-agent/core/utils'
 import { isParentTaskTool } from '@craft-agent/shared/utils/toolNames'
 import { motion, AnimatePresence } from 'motion/react'
@@ -11,6 +11,7 @@ import {
   CheckCircle2,
   XCircle,
   Circle,
+  CircleDashed,
   MessageCircleDashed,
   FileText,
   ArrowUpRight,
@@ -245,7 +246,7 @@ export const SIZE_CONFIG = {
 // Types
 // ============================================================================
 
-export type ActivityStatus = 'pending' | 'running' | 'completed' | 'error' | 'backgrounded'
+export type ActivityStatus = 'pending' | 'running' | 'completed' | 'error' | 'backgrounded' | 'checkpoint'
 export type ActivityType = 'tool' | 'thinking' | 'intermediate' | 'status' | 'plan'
 export type AnnotationInteractionMode = 'interactive' | 'tooltip-only'
 
@@ -281,6 +282,9 @@ export interface ActivityItem {
   toolDisplayMeta?: ToolDisplayMeta  // Embedded metadata with base64 icon (for viewer compatibility)
   timestamp: number
   error?: string
+  /** False when the host closed the result envelope before invoking the tool. */
+  executed?: boolean
+  checkpoint?: ToolExecutionCheckpoint
   // Parent-child nesting for Task subagents
   parentId?: string  // Parent activity's toolUseId
   depth?: number     // Nesting level (0 = root, 1 = child, etc.)
@@ -760,6 +764,12 @@ function getPreviewText(
   hasResponse?: boolean,
   isComplete?: boolean
 ): string {
+  const hasCheckpoint = activities.some(activity => activity.status === 'checkpoint')
+  const hasRunningActivity = activities.some(activity => activity.status === 'running' || activity.status === 'backgrounded')
+  if (hasCheckpoint && !hasRunningActivity) {
+    return i18n.t('turnCard.notExecutedAutoResume')
+  }
+
   // If we have an explicit intent, use it
   if (intent) return intent
 
@@ -879,6 +889,8 @@ export function ActivityStatusIcon({
             <Spinner className={cn(SIZE_CONFIG.spinnerSize, "text-accent")} />
           </div>
         )
+      case 'checkpoint':
+        return <CircleDashed className={cn(SIZE_CONFIG.iconSize, "shrink-0 text-muted-foreground")} />
       case 'completed':
         // Edit and Write tools get their own icons with accent color instead of green checkmark
         if (toolName === 'Edit') {
@@ -1052,7 +1064,9 @@ function ActivityRow({ activity, onOpenDetails, isLastChild, sessionFolderPath, 
   const intentOrDescription = activity.intent || (activity.toolInput?.description as string | undefined)
   const inputSummary = formatToolInput(activity.toolInput, activity.toolName, sessionFolderPath)
   const diffStats = computeEditWriteDiffStats(activity.toolName, activity.toolInput)
-  const isComplete = activity.status === 'completed' || activity.status === 'error'
+  const isCheckpoint = activity.status === 'checkpoint'
+  const visibleDiffStats = isCheckpoint ? null : diffStats
+  const isComplete = activity.status === 'completed' || activity.status === 'error' || isCheckpoint
   const isBackgrounded = activity.status === 'backgrounded'
 
   // For backgrounded tasks, show task/shell ID and elapsed time
@@ -1075,6 +1089,14 @@ function ActivityRow({ activity, onOpenDetails, isLastChild, sessionFolderPath, 
         onClick={onOpenDetails && isComplete ? onOpenDetails : undefined}
       >
         <ActivityStatusIcon status={activity.status} toolName={activity.toolName} customIcon={toolDisplay.icon} />
+        {isCheckpoint && (
+          <span
+            data-tool-execution="checkpoint"
+            className="shrink-0 rounded-[4px] bg-muted/60 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground"
+          >
+            {i18n.t('turnCard.notExecutedAutoResume')}
+          </span>
+        )}
         {/* MCP/API tools: Source name (shrink-0) then error badge (if any) then compound label (flex-1) */}
         {isMcpOrApiTool && !isBackgrounded && (
           <>
@@ -1130,19 +1152,19 @@ function ActivityRow({ activity, onOpenDetails, isLastChild, sessionFolderPath, 
           <span className={cn("shrink-0", onOpenDetails && isComplete && "group-hover/row:underline")}>{displayedName}</span>
         )}
         {/* Diff stats and filename badges - after tool name */}
-        {!isMcpOrApiTool && !isBackgrounded && diffStats && (
+        {!isMcpOrApiTool && !isBackgrounded && visibleDiffStats && (
           <span className="flex items-center gap-1.5 text-[10px] shrink-0">
-            {diffStats.deletions > 0 && (
+            {visibleDiffStats.deletions > 0 && (
               <span
                 className="px-1.5 py-0.5 bg-[color-mix(in_oklab,var(--destructive)_5%,var(--background))] shadow-tinted rounded-[4px] text-destructive"
                 style={{ '--shadow-color': 'var(--destructive-rgb)' } as React.CSSProperties}
-              >{diffStats.deletions}</span>
+              >{visibleDiffStats.deletions}</span>
             )}
-            {diffStats.additions > 0 && (
+            {visibleDiffStats.additions > 0 && (
               <span
                 className="px-1.5 py-0.5 bg-[color-mix(in_oklab,var(--success)_5%,var(--background))] shadow-tinted rounded-[4px] text-success"
                 style={{ '--shadow-color': 'var(--success-rgb)' } as React.CSSProperties}
-              >{diffStats.additions}</span>
+              >{visibleDiffStats.additions}</span>
             )}
             {/* Filename badge - supports both Claude Code and Codex formats */}
             {(() => {
@@ -1170,7 +1192,7 @@ function ActivityRow({ activity, onOpenDetails, isLastChild, sessionFolderPath, 
           </span>
         )}
         {/* Filename badge for Read tool (no diff stats) */}
-        {!isMcpOrApiTool && !isBackgrounded && !diffStats && activity.toolName === 'Read' && typeof activity.toolInput?.file_path === 'string' && (
+        {!isMcpOrApiTool && !isBackgrounded && !visibleDiffStats && activity.toolName === 'Read' && typeof activity.toolInput?.file_path === 'string' && (
           <span className="flex items-center gap-1.5 text-[10px] shrink-0">
             <span className="px-1.5 py-0.5 bg-background shadow-minimal rounded-[4px] text-[11px] text-foreground/70">
               {normalizePath(activity.toolInput.file_path).split('/').pop()}
@@ -1292,7 +1314,8 @@ function ActivityGroupRow({ group, expandedGroups: externalExpandedGroups, onExp
 
   const description = group.parent.toolInput?.description as string | undefined
   const subagentType = group.parent.toolInput?.subagent_type as string | undefined
-  const isComplete = group.parent.status === 'completed' || group.parent.status === 'error'
+  const isCheckpoint = group.parent.status === 'checkpoint'
+  const isComplete = group.parent.status === 'completed' || group.parent.status === 'error' || isCheckpoint
   const hasError = group.parent.status === 'error'
 
   return (
@@ -1323,6 +1346,15 @@ function ActivityGroupRow({ group, expandedGroups: externalExpandedGroups, onExp
 
         {/* Status icon - aligned with tool call icons */}
         <ActivityStatusIcon status={group.parent.status} toolName={group.parent.toolName} />
+
+        {isCheckpoint && (
+          <span
+            data-tool-execution="checkpoint"
+            className="shrink-0 rounded-[4px] bg-muted/60 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground"
+          >
+            {i18n.t('turnCard.notExecutedAutoResume')}
+          </span>
+        )}
 
         {/* Subagent type badge */}
         <span className="shrink-0 px-1.5 py-0.5 rounded-[4px] bg-background shadow-minimal text-[10px] font-medium">

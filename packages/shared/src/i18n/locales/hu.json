@@ -2016,6 +2016,7 @@
   "transport.wsClosedWithCode": "WebSocket lezárva, kód: {{code}}{{reason}}.",
   "turnCard.errorCount_one": " · {{count}} hiba",
   "turnCard.errorCount_other": " · {{count}} hiba",
+  "turnCard.notExecutedAutoResume": "Nem hajtódott végre — automatikus folytatás",
   "turnCard.processing": "Feldolgozás",
   "turnCard.responding": "Válaszolás...",
   "turnCard.starting": "Indítás...",

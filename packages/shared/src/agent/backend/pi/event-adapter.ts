@@ -12,6 +12,7 @@
 import type {
   AgentEvent as CraftAgentEvent,
   AgentModelProvenance,
+  ToolExecutionCheckpoint,
 } from '@craft-agent/core/types';
 import type {
   AgentEvent as PiAgentEvent,
@@ -669,11 +670,23 @@ export class PiEventAdapter extends BaseEventAdapter {
         const accumulatedOutput = this.consumeOutput(toolCallId);
 
         const isError = event.isError;
-        const continuationRequired = Boolean(
-          event.result
-          && typeof event.result === 'object'
-          && (event.result as { details?: { continuationRequired?: unknown } }).details?.continuationRequired === true
-        );
+        const details = event.result && typeof event.result === 'object'
+          ? (event.result as {
+              details?: {
+                continuationRequired?: unknown;
+                costControlBlocked?: unknown;
+                executed?: unknown;
+                checkpoint?: unknown;
+              };
+            }).details
+          : undefined;
+        const continuationRequired = details?.continuationRequired === true;
+        const costControlBlocked = details?.costControlBlocked === true;
+        const executed = details?.executed === false || costControlBlocked
+          ? false
+          : details?.executed === true
+            ? true
+            : undefined;
         let result: string;
 
         if (accumulatedOutput) {
@@ -684,6 +697,24 @@ export class PiEventAdapter extends BaseEventAdapter {
           result = this.extractToolResult(event.result, isError);
         }
 
+        let checkpoint: ToolExecutionCheckpoint | undefined;
+        const rawCheckpoint = details?.checkpoint;
+        if (
+          rawCheckpoint
+          && typeof rawCheckpoint === 'object'
+          && (rawCheckpoint as { kind?: unknown }).kind === 'tool-call-budget'
+        ) {
+          const reason = (rawCheckpoint as { reason?: unknown }).reason;
+          checkpoint = {
+            schemaVersion: 1,
+            kind: 'tool-call-budget',
+            reason: typeof reason === 'string' && reason.length > 0 ? reason : result,
+          };
+        } else if (rawCheckpoint === 'tool-call-budget' || costControlBlocked) {
+          // Normalize results emitted by older packaged Pi runtimes.
+          checkpoint = { schemaVersion: 1, kind: 'tool-call-budget', reason: result };
+        }
+
         // After tool completion, the assistant may generate new text
         this.hasEmittedFinalText = false;
         this.messageSubTurnId = null;
@@ -691,11 +722,29 @@ export class PiEventAdapter extends BaseEventAdapter {
         // Check if this was classified as a file read
         const readInfo = this.consumeReadCommand(toolCallId);
         if (readInfo) {
-          yield this.createToolResult(toolCallId, 'Read', result, isError, undefined, continuationRequired);
+          yield this.createToolResult(
+            toolCallId,
+            'Read',
+            result,
+            isError,
+            undefined,
+            continuationRequired,
+            executed,
+            checkpoint,
+          );
           break;
         }
 
-        yield this.createToolResult(toolCallId, resolvedToolName, result, isError, undefined, continuationRequired);
+        yield this.createToolResult(
+          toolCallId,
+          resolvedToolName,
+          result,
+          isError,
+          undefined,
+          continuationRequired,
+          executed,
+          checkpoint,
+        );
         break;
       }
 

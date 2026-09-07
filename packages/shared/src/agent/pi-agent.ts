@@ -456,7 +456,7 @@ export class PiAgent extends BaseAgent {
           sizeBytes: a.sizeBytes,
         })),
         memoryPath: getProjectMemoryPath(root, slug),
-        memoryContent: loadProjectMemory(root, slug) ?? undefined,
+        memoryContent: loadProjectMemory(root, slug, 5000, { includeStructured: false }) ?? undefined,
       };
     } catch (error) {
       this.debug(`[resolveProjectContext] Failed to load project ${projectId}: ${error instanceof Error ? error.message : error}`);
@@ -1607,6 +1607,7 @@ export class PiAgent extends BaseAgent {
       prerequisiteManager: this.prerequisiteManager,
       preloadedSourceGuidePaths: this.sourceManager.getPreloadedSourceGuidePaths(),
       currentUserRequest: this.getCurrentTurnUserMessage() ?? undefined,
+      declaredToolCapabilities: this.mcpPool?.getProxyToolCapabilities(toolName),
       externalActionPolicy: this.config.externalActionPolicy,
       rtkContext,
       onDebug: (msg) => this.debug(`PreToolUse(sessionId=${sessionId}): ${msg}`),
@@ -1684,6 +1685,7 @@ export class PiAgent extends BaseAgent {
           prerequisiteManager: this.prerequisiteManager,
           preloadedSourceGuidePaths: this.sourceManager.getPreloadedSourceGuidePaths(),
           currentUserRequest: this.getCurrentTurnUserMessage() ?? undefined,
+          declaredToolCapabilities: this.mcpPool?.getProxyToolCapabilities(toolName),
           externalActionPolicy: this.config.externalActionPolicy,
           rtkContext,
           onDebug: (msg) => this.debug(`PreToolUse(sessionId=${sessionId}): ${msg}`),

@@ -1,0 +1,310 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-07T07:31:40.438Z",
+  "target": "isolated development test profiles",
+  "empiricalHumanBenchmark": "not_measured",
+  "specificationSha256": "1f65697b8e48b7b6d425bf24b9ba0122df861cb58c033292ca941906703d84bf",
+  "passed": true,
+  "testCount": 304,
+  "results": [
+    {
+      "id": "objectives",
+      "scenarios": [
+        "E01",
+        "E03",
+        "E04",
+        "E05",
+        "E11",
+        "E12",
+        "E14"
+      ],
+      "command": [
+        "/Users/thibault/.bun/bin/bun",
+        "test",
+        "packages/server-core/src/sessions/objective-contract.test.ts",
+        "packages/server-core/src/sessions/objective-outcome.test.ts",
+        "packages/server-core/src/sessions/objective-acceptance-criteria.test.ts",
+        "packages/server-core/src/sessions/session-objective-outcome-integration.test.ts",
+        "packages/server-core/src/sessions/turn-recovery.test.ts",
+        "packages/shared/src/sessions/__tests__/active-objective-persistence.test.ts"
+      ],
+      "exitCode": 0,
+      "pass": 78,
+      "fail": 0,
+      "logSha256": "3156c395330b99349744c119bae0c27fa8af90f5732fc56a56c3c376fc36d90f",
+      "log": "/var/folders/dw/w9l8d92909nc_4frg_7km46h0000gn/T/robb-autonomy-verification-ozGMNx/objectives.log"
+    },
+    {
+      "id": "routing",
+      "scenarios": [
+        "E02"
+      ],
+      "command": [
+        "/Users/thibault/.bun/bin/bun",
+        "test",
+        "packages/server-core/src/sessions/routing-fallback.test.ts",
+        "packages/server-core/src/tasks/task-node-routing.test.ts"
+      ],
+      "exitCode": 0,
+      "pass": 46,
+      "fail": 0,
+      "logSha256": "1e6542847d4da4004a72c7f57e00d08ede0658bf21d29a228ae5f27a52efd645",
+      "log": "/var/folders/dw/w9l8d92909nc_4frg_7km46h0000gn/T/robb-autonomy-verification-ozGMNx/routing.log"
+    },
+    {
+      "id": "delivery",
+      "scenarios": [
+        "E05",
+        "E13"
+      ],
+      "command": [
+        "/Users/thibault/.bun/bin/bun",
+        "test",
+        "packages/server-core/src/sessions/agent-delivery.test.ts",
+        "packages/server-core/src/sessions/sendmessage-durability.test.ts",
+        "packages/server-core/src/sessions/internal-message-coalescing.test.ts"
+      ],
+      "exitCode": 0,
+      "pass": 13,
+      "fail": 0,
+      "logSha256": "7b245d6f5b4670af63c3b1255deb8aab5c803bb8b6eb87331412232a8560869c",
+      "log": "/var/folders/dw/w9l8d92909nc_4frg_7km46h0000gn/T/robb-autonomy-verification-ozGMNx/delivery.log"
+    },
+    {
+      "id": "tool-contracts",
+      "scenarios": [
+        "E08",
+        "E09"
+      ],
+      "command": [
+        "/Users/thibault/.bun/bin/bun",
+        "test",
+        "packages/session-tools-core/src",
+        "packages/shared/src/agent/backend/claude/session-tool-parity.test.ts",
+        "packages/shared/src/agent/backend/pi/session-tool-parity.test.ts",
+        "packages/pi-agent-server/src/craft-metadata-schema.test.ts"
+      ],
+      "exitCode": 0,
+      "pass": 91,
+      "fail": 0,
+      "logSha256": "4fe224ef7011ae74ccb89914b03146e3c99dba65118b71bde357b133b9a6e8f7",
+      "log": "/var/folders/dw/w9l8d92909nc_4frg_7km46h0000gn/T/robb-autonomy-verification-ozGMNx/tool-contracts.log"
+    },
+    {
+      "id": "browser-prerequisites",
+      "scenarios": [
+        "E07"
+      ],
+      "command": [
+        "/Users/thibault/.bun/bin/bun",
+        "test",
+        "./packages/shared/src/agent/core/__tests__/prerequisite-manager.isolated.ts"
+      ],
+      "exitCode": 0,
+      "pass": 39,
+      "fail": 0,
+      "logSha256": "41a2c407b439295dd49a8c8d24e9d98e8caae731a3ce28f36f20576cafd9ac02",
+      "log": "/var/folders/dw/w9l8d92909nc_4frg_7km46h0000gn/T/robb-autonomy-verification-ozGMNx/browser-prerequisites.log"
+    },
+    {
+      "id": "learning",
+      "scenarios": [
+        "E15"
+      ],
+      "command": [
+        "/Users/thibault/.bun/bin/bun",
+        "test",
+        "packages/server-core/src/sessions/project-learning.test.ts",
+        "packages/shared/src/projects/__tests__/memory-v2.test.ts",
+        "packages/shared/src/governance/workspace-governance-store.test.ts"
+      ],
+      "exitCode": 0,
+      "pass": 20,
+      "fail": 0,
+      "logSha256": "ada2b69862f495753714cd53cd2af505de3c74c59a6546b1e6bf29bb2f42444d",
+      "log": "/var/folders/dw/w9l8d92909nc_4frg_7km46h0000gn/T/robb-autonomy-verification-ozGMNx/learning.log"
+    },
+    {
+      "id": "benchmark-gates",
+      "scenarios": [
+        "E16"
+      ],
+      "command": [
+        "/Users/thibault/.bun/bin/bun",
+        "test",
+        "packages/server-core/src/sessions/human-benchmark.test.ts",
+        "packages/server-core/src/sessions/autonomy-acceptance.test.ts"
+      ],
+      "exitCode": 0,
+      "pass": 10,
+      "fail": 0,
+      "logSha256": "dc1c957cc79feb6b09b784bc34af8a68f0316edcfdef71182058515a0a01c8d0",
+      "log": "/var/folders/dw/w9l8d92909nc_4frg_7km46h0000gn/T/robb-autonomy-verification-ozGMNx/benchmark-gates.log"
+    },
+    {
+      "id": "document-runtime",
+      "scenarios": [
+        "E06"
+      ],
+      "command": [
+        "python3",
+        "-m",
+        "unittest",
+        "apps.electron.resources.scripts.tests.test_python_wrapper"
+      ],
+      "exitCode": 0,
+      "pass": 1,
+      "fail": 0,
+      "logSha256": "3c535354d62caca89dee1fcd5c6daa86ab080b2b3e9d5810ccaaa2a6223560c9",
+      "log": "/var/folders/dw/w9l8d92909nc_4frg_7km46h0000gn/T/robb-autonomy-verification-ozGMNx/document-runtime.log"
+    },
+    {
+      "id": "document-rendering",
+      "scenarios": [
+        "E10"
+      ],
+      "command": [
+        "python3",
+        "-m",
+        "unittest",
+        "apps.electron.resources.scripts.tests.test_pdf_tool_smoke"
+      ],
+      "exitCode": 0,
+      "pass": 6,
+      "fail": 0,
+      "logSha256": "ba38d05018eceee09a13050eef9a67cc439427057504a77a07d65a3ec7ba56b6",
+      "log": "/var/folders/dw/w9l8d92909nc_4frg_7km46h0000gn/T/robb-autonomy-verification-ozGMNx/document-rendering.log"
+    }
+  ],
+  "coverage": [
+    {
+      "id": "E01",
+      "status": "automated_regression_passed",
+      "groups": [
+        "objectives"
+      ],
+      "limitation": "Automated fixture coverage; historical production runs and human superiority are not requalified by this test."
+    },
+    {
+      "id": "E02",
+      "status": "automated_regression_passed",
+      "groups": [
+        "routing"
+      ],
+      "limitation": "Automated fixture coverage; historical production runs and human superiority are not requalified by this test."
+    },
+    {
+      "id": "E03",
+      "status": "automated_regression_passed",
+      "groups": [
+        "objectives"
+      ],
+      "limitation": "Automated fixture coverage; historical production runs and human superiority are not requalified by this test."
+    },
+    {
+      "id": "E04",
+      "status": "automated_regression_passed",
+      "groups": [
+        "objectives"
+      ],
+      "limitation": "Automated fixture coverage; historical production runs and human superiority are not requalified by this test."
+    },
+    {
+      "id": "E05",
+      "status": "automated_regression_passed",
+      "groups": [
+        "objectives",
+        "delivery"
+      ],
+      "limitation": "Automated fixture coverage; historical production runs and human superiority are not requalified by this test."
+    },
+    {
+      "id": "E06",
+      "status": "automated_regression_passed",
+      "groups": [
+        "document-runtime"
+      ],
+      "limitation": "Automated fixture coverage; historical production runs and human superiority are not requalified by this test."
+    },
+    {
+      "id": "E07",
+      "status": "automated_regression_passed",
+      "groups": [
+        "browser-prerequisites"
+      ],
+      "limitation": "Automated fixture coverage; historical production runs and human superiority are not requalified by this test."
+    },
+    {
+      "id": "E08",
+      "status": "automated_regression_passed",
+      "groups": [
+        "tool-contracts"
+      ],
+      "limitation": "Automated fixture coverage; historical production runs and human superiority are not requalified by this test."
+    },
+    {
+      "id": "E09",
+      "status": "automated_regression_passed",
+      "groups": [
+        "tool-contracts"
+      ],
+      "limitation": "Automated fixture coverage; historical production runs and human superiority are not requalified by this test."
+    },
+    {
+      "id": "E10",
+      "status": "automated_regression_passed",
+      "groups": [
+        "document-rendering"
+      ],
+      "limitation": "Automated fixture coverage; historical production runs and human superiority are not requalified by this test."
+    },
+    {
+      "id": "E11",
+      "status": "automated_regression_passed",
+      "groups": [
+        "objectives"
+      ],
+      "limitation": "Automated fixture coverage; historical production runs and human superiority are not requalified by this test."
+    },
+    {
+      "id": "E12",
+      "status": "automated_regression_passed",
+      "groups": [
+        "objectives"
+      ],
+      "limitation": "Automated fixture coverage; historical production runs and human superiority are not requalified by this test."
+    },
+    {
+      "id": "E13",
+      "status": "automated_regression_passed",
+      "groups": [
+        "delivery"
+      ],
+      "limitation": "Automated fixture coverage; historical production runs and human superiority are not requalified by this test."
+    },
+    {
+      "id": "E14",
+      "status": "automated_regression_passed",
+      "groups": [
+        "objectives"
+      ],
+      "limitation": "Automated fixture coverage; historical production runs and human superiority are not requalified by this test."
+    },
+    {
+      "id": "E15",
+      "status": "automated_regression_passed",
+      "groups": [
+        "learning"
+      ],
+      "limitation": "Automated fixture coverage; historical production runs and human superiority are not requalified by this test."
+    },
+    {
+      "id": "E16",
+      "status": "automated_regression_passed",
+      "groups": [
+        "benchmark-gates"
+      ],
+      "limitation": "Automated fixture coverage; historical production runs and human superiority are not requalified by this test."
+    }
+  ]
+}

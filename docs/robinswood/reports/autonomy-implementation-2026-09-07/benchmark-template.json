@@ -1,0 +1,21 @@
+{
+  "protocol": {
+    "id": "robb-autonomy-domains-to-qualify",
+    "registeredAt": "2026-09-07T00:00:00Z",
+    "synthetic": false,
+    "domains": [
+      "development"
+    ],
+    "rubric": {
+      "path": "rubric.md",
+      "sha256": "222c408d6db067c3f8acb8466db5edcda78f9ef1b21f3400ae972e00da3be747"
+    },
+    "blinded": true,
+    "professionalHumans": true,
+    "trainingFamilyIds": [],
+    "timeBudgetSeconds": 3600,
+    "maxAgentCostUsd": 10
+  },
+  "cases": [],
+  "signature": ""
+}

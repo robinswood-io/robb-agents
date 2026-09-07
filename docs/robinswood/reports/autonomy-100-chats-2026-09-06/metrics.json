@@ -1,0 +1,4053 @@
+{
+  "schemaVersion": 1,
+  "summary": {
+    "inventoryCount": 1041,
+    "selectedCount": 100,
+    "oldestCreatedAtUtc": "2026-08-31T14:22:40.103000+00:00",
+    "newestCreatedAtUtc": "2026-09-06T15:34:09.558000+00:00",
+    "messages": 16836,
+    "tools": 13004,
+    "roles": {
+      "user": 1056,
+      "tool": 13004,
+      "assistant": 2678,
+      "error": 50,
+      "plan": 15,
+      "info": 33
+    },
+    "toolStatuses": {
+      "completed": 12627,
+      "error": 326,
+      "executing": 51
+    },
+    "children": 54,
+    "parentsOutsideCohort": 12,
+    "emptySessions": 3,
+    "quotaWithoutWork": 12,
+    "quotaWithoutWorkMarkedDone": 8,
+    "allowAll": 95,
+    "storedStatuses": {
+      "done": 62,
+      "in-progress": 3,
+      "missing": 23,
+      "blocked": 1,
+      "todo": 11
+    },
+    "storedObjectives": {
+      "complete_verified": 16,
+      "active": 3,
+      "missing": 80,
+      "blocked_human": 1
+    },
+    "shortContinuations": 74,
+    "sessionsWithShortContinuations": 29,
+    "headerCostUsd": 999.05208926,
+    "headerCostMissing": 0,
+    "topFiveHeaderCostShare": 0.42064193563848606,
+    "headerTotalTokens": 91236730,
+    "signals": {
+      "provider_quota": {
+        "records": 28,
+        "sessions": 18
+      },
+      "browser_guide": {
+        "records": 37,
+        "sessions": 12
+      },
+      "status_contract": {
+        "records": 16,
+        "sessions": 14
+      },
+      "packaged_runtime": {
+        "records": 16,
+        "sessions": 9
+      },
+      "tool_schema": {
+        "records": 20,
+        "sessions": 12
+      },
+      "permission": {
+        "records": 16,
+        "sessions": 4
+      },
+      "context_compaction": {
+        "records": 4,
+        "sessions": 2
+      },
+      "recovery_ceiling": {
+        "records": 10,
+        "sessions": 6
+      },
+      "cost_checkpoint": {
+        "records": 194,
+        "sessions": 20
+      },
+      "delivery_queued": {
+        "records": 202,
+        "sessions": 38
+      }
+    }
+  },
+  "sessions": [
+    {
+      "alias": "S001",
+      "sourceSha256": "7c63a176abb51ca316980eec9da36e80c950004a42c8327fa55e0b7bff40839b",
+      "createdAtUtc": "2026-09-06T15:34:09.558000+00:00",
+      "sourceBytes": 203503,
+      "child": true,
+      "parentInCohort": "S002",
+      "parentOutsideCohort": false,
+      "storedStatus": "done",
+      "storedObjective": "complete_verified",
+      "allowAll": true,
+      "messages": 47,
+      "roles": {
+        "user": 11,
+        "tool": 19,
+        "assistant": 17
+      },
+      "tools": 19,
+      "toolStatuses": {
+        "completed": 19
+      },
+      "errorRecords": 0,
+      "lastFinalLine": 48,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [
+        31
+      ],
+      "signals": {
+        "delivery_queued": [
+          29
+        ]
+      },
+      "headerCostUsd": 1.5242930000000001,
+      "headerTotalTokens": 217162
+    },
+    {
+      "alias": "S002",
+      "sourceSha256": "e20ca2ea9efff2da15d65a2e169f12612d749749b4307281879ef640b143f384",
+      "createdAtUtc": "2026-09-06T15:31:56.139000+00:00",
+      "sourceBytes": 279207,
+      "child": true,
+      "parentInCohort": "S023",
+      "parentOutsideCohort": false,
+      "storedStatus": "done",
+      "storedObjective": "complete_verified",
+      "allowAll": true,
+      "messages": 59,
+      "roles": {
+        "user": 8,
+        "assistant": 14,
+        "tool": 37
+      },
+      "tools": 37,
+      "toolStatuses": {
+        "completed": 37
+      },
+      "errorRecords": 0,
+      "lastFinalLine": 60,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [
+        40
+      ],
+      "signals": {
+        "delivery_queued": [
+          36,
+          38,
+          45,
+          50,
+          51,
+          56,
+          57
+        ]
+      },
+      "headerCostUsd": 1.7870444000000003,
+      "headerTotalTokens": 95588
+    },
+    {
+      "alias": "S003",
+      "sourceSha256": "84dd83958c68638e2b042841a601a8d48694dc773980c7949fc3a5a23ccf69f3",
+      "createdAtUtc": "2026-09-06T15:31:56.137000+00:00",
+      "sourceBytes": 21101,
+      "child": true,
+      "parentInCohort": "S023",
+      "parentOutsideCohort": false,
+      "storedStatus": "done",
+      "storedObjective": "complete_verified",
+      "allowAll": true,
+      "messages": 14,
+      "roles": {
+        "user": 4,
+        "error": 3,
+        "tool": 6,
+        "assistant": 1
+      },
+      "tools": 6,
+      "toolStatuses": {
+        "completed": 6
+      },
+      "errorRecords": 3,
+      "lastFinalLine": 15,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [
+        8
+      ],
+      "signals": {
+        "provider_quota": [
+          3,
+          5,
+          7
+        ],
+        "delivery_queued": [
+          14
+        ]
+      },
+      "headerCostUsd": 0.669869,
+      "headerTotalTokens": 384881
+    },
+    {
+      "alias": "S004",
+      "sourceSha256": "30ef90b0f208126b8339ef7023b4a37c19697d72b518d972fe5128a110d7ddc5",
+      "createdAtUtc": "2026-09-06T15:31:56.133000+00:00",
+      "sourceBytes": 269158,
+      "child": true,
+      "parentInCohort": "S023",
+      "parentOutsideCohort": false,
+      "storedStatus": "in-progress",
+      "storedObjective": "active",
+      "allowAll": true,
+      "messages": 63,
+      "roles": {
+        "user": 11,
+        "assistant": 15,
+        "tool": 36,
+        "error": 1
+      },
+      "tools": 36,
+      "toolStatuses": {
+        "completed": 34,
+        "error": 2
+      },
+      "errorRecords": 3,
+      "lastFinalLine": 55,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [],
+      "signals": {},
+      "headerCostUsd": 0.3370316,
+      "headerTotalTokens": 376403
+    },
+    {
+      "alias": "S005",
+      "sourceSha256": "68f74706a33d201acf623f9e0f9c7a78f544613f88302d219d774dc4147f4812",
+      "createdAtUtc": "2026-09-06T08:27:47.548000+00:00",
+      "sourceBytes": 1589048,
+      "child": false,
+      "parentInCohort": null,
+      "parentOutsideCohort": false,
+      "storedStatus": "in-progress",
+      "storedObjective": "active",
+      "allowAll": true,
+      "messages": 312,
+      "roles": {
+        "user": 17,
+        "tool": 270,
+        "assistant": 25
+      },
+      "tools": 270,
+      "toolStatuses": {
+        "completed": 267,
+        "error": 3
+      },
+      "errorRecords": 3,
+      "lastFinalLine": 306,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [
+        302
+      ],
+      "signals": {
+        "cost_checkpoint": [
+          86,
+          87,
+          88,
+          116,
+          142,
+          143,
+          144,
+          179,
+          210,
+          211,
+          264
+        ]
+      },
+      "headerCostUsd": 17.00029408,
+      "headerTotalTokens": 618661
+    },
+    {
+      "alias": "S006",
+      "sourceSha256": "85a6d08c1559fd041d938373134dc196e9d60bce1ef28eedb47499fd8e927035",
+      "createdAtUtc": "2026-09-05T10:37:14.270000+00:00",
+      "sourceBytes": 514002,
+      "child": true,
+      "parentInCohort": "S023",
+      "parentOutsideCohort": false,
+      "storedStatus": "done",
+      "storedObjective": "complete_verified",
+      "allowAll": true,
+      "messages": 100,
+      "roles": {
+        "user": 5,
+        "assistant": 33,
+        "tool": 59,
+        "plan": 2,
+        "error": 1
+      },
+      "tools": 59,
+      "toolStatuses": {
+        "error": 14,
+        "completed": 45
+      },
+      "errorRecords": 15,
+      "lastFinalLine": 101,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [
+        30
+      ],
+      "signals": {
+        "permission": [
+          4,
+          12,
+          13,
+          14,
+          15,
+          16,
+          32,
+          34,
+          35,
+          36,
+          37,
+          38
+        ],
+        "delivery_queued": [
+          96
+        ]
+      },
+      "headerCostUsd": 3.3268829999999996,
+      "headerTotalTokens": 3128731
+    },
+    {
+      "alias": "S007",
+      "sourceSha256": "e0b67f495aea50f87c1d28be6b7b2fef1b29d6c9f2393f809692d74b4195a291",
+      "createdAtUtc": "2026-09-05T10:30:49.442000+00:00",
+      "sourceBytes": 1867834,
+      "child": false,
+      "parentInCohort": null,
+      "parentOutsideCohort": false,
+      "storedStatus": "done",
+      "storedObjective": "complete_verified",
+      "allowAll": true,
+      "messages": 375,
+      "roles": {
+        "user": 20,
+        "assistant": 58,
+        "tool": 297
+      },
+      "tools": 297,
+      "toolStatuses": {
+        "completed": 289,
+        "error": 6,
+        "executing": 2
+      },
+      "errorRecords": 6,
+      "lastFinalLine": 376,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [
+        15,
+        279
+      ],
+      "signals": {
+        "tool_schema": [
+          364
+        ],
+        "cost_checkpoint": [
+          55,
+          84,
+          113,
+          114,
+          144,
+          145,
+          146,
+          147,
+          179,
+          180,
+          181,
+          228,
+          257,
+          305
+        ]
+      },
+      "headerCostUsd": 27.756566000000003,
+      "headerTotalTokens": 3966522
+    },
+    {
+      "alias": "S008",
+      "sourceSha256": "215f524171d3fec3de597fcf282ed0cb74e6a1fdaa9c033c9f0edaab4f93eb1a",
+      "createdAtUtc": "2026-09-05T09:37:39.105000+00:00",
+      "sourceBytes": 705,
+      "child": false,
+      "parentInCohort": null,
+      "parentOutsideCohort": false,
+      "storedStatus": "missing",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 0,
+      "roles": {},
+      "tools": 0,
+      "toolStatuses": {},
+      "errorRecords": 0,
+      "lastFinalLine": null,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [],
+      "signals": {},
+      "headerCostUsd": 0,
+      "headerTotalTokens": 0
+    },
+    {
+      "alias": "S009",
+      "sourceSha256": "15c812c135ca7c17162b2c4e927fdfc13e65e8fcca9d73b48d0103f80673ed56",
+      "createdAtUtc": "2026-09-05T09:33:49.947000+00:00",
+      "sourceBytes": 1749624,
+      "child": false,
+      "parentInCohort": null,
+      "parentOutsideCohort": false,
+      "storedStatus": "done",
+      "storedObjective": "complete_verified",
+      "allowAll": true,
+      "messages": 317,
+      "roles": {
+        "user": 15,
+        "tool": 261,
+        "assistant": 41
+      },
+      "tools": 261,
+      "toolStatuses": {
+        "completed": 251,
+        "error": 10
+      },
+      "errorRecords": 10,
+      "lastFinalLine": 318,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [],
+      "signals": {
+        "cost_checkpoint": [
+          58,
+          85,
+          111,
+          137,
+          166,
+          196,
+          197,
+          234,
+          261,
+          289
+        ]
+      },
+      "headerCostUsd": 28.499015000000004,
+      "headerTotalTokens": 1113642
+    },
+    {
+      "alias": "S010",
+      "sourceSha256": "0eed771cb83b5612690360fa68763242680429fa69e114b74ddf0323dd4dedc4",
+      "createdAtUtc": "2026-09-05T08:52:26.048000+00:00",
+      "sourceBytes": 1342217,
+      "child": true,
+      "parentInCohort": "S024",
+      "parentOutsideCohort": false,
+      "storedStatus": "done",
+      "storedObjective": "complete_verified",
+      "allowAll": true,
+      "messages": 265,
+      "roles": {
+        "user": 18,
+        "tool": 196,
+        "error": 3,
+        "assistant": 47,
+        "plan": 1
+      },
+      "tools": 196,
+      "toolStatuses": {
+        "error": 8,
+        "completed": 188
+      },
+      "errorRecords": 11,
+      "lastFinalLine": 266,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [
+        27,
+        29,
+        187
+      ],
+      "signals": {
+        "provider_quota": [
+          26,
+          28
+        ],
+        "recovery_ceiling": [
+          186
+        ],
+        "cost_checkpoint": [
+          55,
+          56,
+          57,
+          58,
+          89,
+          90,
+          216
+        ]
+      },
+      "headerCostUsd": 11.625516999999999,
+      "headerTotalTokens": 1568736
+    },
+    {
+      "alias": "S011",
+      "sourceSha256": "66df70f0ddc48b0076f322691ac0c21af7c3d46d49979d34a1cd5164f52d7d5a",
+      "createdAtUtc": "2026-09-05T08:52:26.046000+00:00",
+      "sourceBytes": 174855,
+      "child": true,
+      "parentInCohort": "S024",
+      "parentOutsideCohort": false,
+      "storedStatus": "done",
+      "storedObjective": "complete_verified",
+      "allowAll": false,
+      "messages": 50,
+      "roles": {
+        "user": 9,
+        "assistant": 13,
+        "tool": 27,
+        "error": 1
+      },
+      "tools": 27,
+      "toolStatuses": {
+        "completed": 21,
+        "error": 6
+      },
+      "errorRecords": 7,
+      "lastFinalLine": 51,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [
+        25
+      ],
+      "signals": {
+        "tool_schema": [
+          15,
+          36
+        ],
+        "recovery_ceiling": [
+          24
+        ]
+      },
+      "headerCostUsd": 0,
+      "headerTotalTokens": 421963
+    },
+    {
+      "alias": "S012",
+      "sourceSha256": "cca5988f74dc82b59a28738a7699004e7c7cb8e3d4b65f519f5be3f9e4c9b1eb",
+      "createdAtUtc": "2026-09-05T08:52:09.517000+00:00",
+      "sourceBytes": 16100,
+      "child": true,
+      "parentInCohort": "S023",
+      "parentOutsideCohort": false,
+      "storedStatus": "done",
+      "storedObjective": "complete_verified",
+      "allowAll": true,
+      "messages": 9,
+      "roles": {
+        "user": 2,
+        "assistant": 2,
+        "tool": 4,
+        "plan": 1
+      },
+      "tools": 4,
+      "toolStatuses": {
+        "error": 2,
+        "completed": 2
+      },
+      "errorRecords": 2,
+      "lastFinalLine": 10,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [],
+      "signals": {
+        "permission": [
+          4,
+          9
+        ]
+      },
+      "headerCostUsd": 0.011592680000000001,
+      "headerTotalTokens": 92473
+    },
+    {
+      "alias": "S013",
+      "sourceSha256": "cbeccff1711a94d59ea625b81be76ccb4a49c246e27ecf3bdf0719fb34d17a61",
+      "createdAtUtc": "2026-09-05T07:50:04.040000+00:00",
+      "sourceBytes": 313376,
+      "child": true,
+      "parentInCohort": "S017",
+      "parentOutsideCohort": false,
+      "storedStatus": "done",
+      "storedObjective": "complete_verified",
+      "allowAll": false,
+      "messages": 42,
+      "roles": {
+        "user": 4,
+        "tool": 35,
+        "assistant": 3
+      },
+      "tools": 35,
+      "toolStatuses": {
+        "completed": 34,
+        "error": 1
+      },
+      "errorRecords": 1,
+      "lastFinalLine": 43,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [],
+      "signals": {},
+      "headerCostUsd": 0,
+      "headerTotalTokens": 249629
+    },
+    {
+      "alias": "S014",
+      "sourceSha256": "0d4a5538e01b77aa922928536d8a062d621891088c633b3d5cc4373d7a304fd5",
+      "createdAtUtc": "2026-09-05T07:25:13.679000+00:00",
+      "sourceBytes": 263317,
+      "child": false,
+      "parentInCohort": null,
+      "parentOutsideCohort": false,
+      "storedStatus": "done",
+      "storedObjective": "blocked_human",
+      "allowAll": true,
+      "messages": 64,
+      "roles": {
+        "user": 8,
+        "info": 2,
+        "tool": 46,
+        "assistant": 8
+      },
+      "tools": 46,
+      "toolStatuses": {
+        "completed": 42,
+        "error": 4
+      },
+      "errorRecords": 4,
+      "lastFinalLine": 65,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [],
+      "signals": {
+        "cost_checkpoint": [
+          33
+        ]
+      },
+      "headerCostUsd": 2.9456860000000002,
+      "headerTotalTokens": 832454
+    },
+    {
+      "alias": "S015",
+      "sourceSha256": "1931b2411d38ff99dfdcac5172a7e3a4f8fbae71f236c43d042c5be79ba2790e",
+      "createdAtUtc": "2026-09-05T07:20:28.428000+00:00",
+      "sourceBytes": 244931,
+      "child": false,
+      "parentInCohort": null,
+      "parentOutsideCohort": false,
+      "storedStatus": "done",
+      "storedObjective": "complete_verified",
+      "allowAll": true,
+      "messages": 59,
+      "roles": {
+        "user": 6,
+        "info": 2,
+        "tool": 48,
+        "assistant": 3
+      },
+      "tools": 48,
+      "toolStatuses": {
+        "completed": 47,
+        "error": 1
+      },
+      "errorRecords": 1,
+      "lastFinalLine": 60,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [],
+      "signals": {
+        "cost_checkpoint": [
+          31,
+          32,
+          33
+        ]
+      },
+      "headerCostUsd": 1.15913616,
+      "headerTotalTokens": 735910
+    },
+    {
+      "alias": "S016",
+      "sourceSha256": "1a5d389a0c9b06221d4a6872a04b639216d25c0fdb1351ea985cfd1b104583d1",
+      "createdAtUtc": "2026-09-05T06:56:43.184000+00:00",
+      "sourceBytes": 477568,
+      "child": true,
+      "parentInCohort": "S024",
+      "parentOutsideCohort": false,
+      "storedStatus": "done",
+      "storedObjective": "complete_verified",
+      "allowAll": true,
+      "messages": 53,
+      "roles": {
+        "user": 3,
+        "tool": 43,
+        "assistant": 7
+      },
+      "tools": 43,
+      "toolStatuses": {
+        "completed": 41,
+        "error": 2
+      },
+      "errorRecords": 2,
+      "lastFinalLine": 54,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [],
+      "signals": {
+        "cost_checkpoint": [
+          26
+        ],
+        "delivery_queued": [
+          53
+        ]
+      },
+      "headerCostUsd": 2.0778146000000004,
+      "headerTotalTokens": 223598
+    },
+    {
+      "alias": "S017",
+      "sourceSha256": "6f3a635407b31129a5937993be851fa3eafad48415e3add2a6a27f1942655888",
+      "createdAtUtc": "2026-09-05T06:56:43.172000+00:00",
+      "sourceBytes": 3253051,
+      "child": true,
+      "parentInCohort": "S024",
+      "parentOutsideCohort": false,
+      "storedStatus": "done",
+      "storedObjective": "complete_verified",
+      "allowAll": true,
+      "messages": 547,
+      "roles": {
+        "user": 20,
+        "assistant": 45,
+        "tool": 481,
+        "plan": 1
+      },
+      "tools": 481,
+      "toolStatuses": {
+        "completed": 473,
+        "error": 8
+      },
+      "errorRecords": 8,
+      "lastFinalLine": 548,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [
+        108,
+        498
+      ],
+      "signals": {
+        "cost_checkpoint": [
+          28,
+          29,
+          30,
+          32,
+          61,
+          91,
+          168,
+          195,
+          225,
+          255,
+          281,
+          321,
+          346,
+          373,
+          438,
+          439,
+          440,
+          441,
+          442,
+          443,
+          470
+        ]
+      },
+      "headerCostUsd": 33.807214,
+      "headerTotalTokens": 5737929
+    },
+    {
+      "alias": "S018",
+      "sourceSha256": "9e1537b52bde9367a83c337ba155c58ff914bedf6a540e52d7cef32cc3443cf8",
+      "createdAtUtc": "2026-09-04T16:05:54.597000+00:00",
+      "sourceBytes": 1816193,
+      "child": false,
+      "parentInCohort": null,
+      "parentOutsideCohort": false,
+      "storedStatus": "done",
+      "storedObjective": "complete_verified",
+      "allowAll": true,
+      "messages": 422,
+      "roles": {
+        "user": 17,
+        "assistant": 55,
+        "tool": 349,
+        "plan": 1
+      },
+      "tools": 349,
+      "toolStatuses": {
+        "completed": 345,
+        "error": 4
+      },
+      "errorRecords": 4,
+      "lastFinalLine": 423,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [],
+      "signals": {
+        "tool_schema": [
+          94
+        ],
+        "cost_checkpoint": [
+          37,
+          38,
+          39,
+          40,
+          41,
+          81,
+          158,
+          185,
+          211,
+          212,
+          213,
+          238,
+          268,
+          316,
+          317,
+          318,
+          319,
+          320,
+          321,
+          322,
+          350,
+          418
+        ]
+      },
+      "headerCostUsd": 18.472879719999998,
+      "headerTotalTokens": 365758
+    },
+    {
+      "alias": "S019",
+      "sourceSha256": "754209bcf0237648f6b6d8dd2ac5147a70b96061d0c5085f50007ede3650fb7c",
+      "createdAtUtc": "2026-09-04T15:56:00.263000+00:00",
+      "sourceBytes": 5926,
+      "child": false,
+      "parentInCohort": null,
+      "parentOutsideCohort": false,
+      "storedStatus": "blocked",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 4,
+      "roles": {
+        "user": 2,
+        "tool": 1,
+        "error": 1
+      },
+      "tools": 1,
+      "toolStatuses": {
+        "completed": 1
+      },
+      "errorRecords": 1,
+      "lastFinalLine": null,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [],
+      "signals": {},
+      "headerCostUsd": 0,
+      "headerTotalTokens": 224824
+    },
+    {
+      "alias": "S020",
+      "sourceSha256": "15e0ededd1e48cb0b2977579f94c83ff0a06d7d233d9e9195635785c919d6981",
+      "createdAtUtc": "2026-09-04T15:44:47.595000+00:00",
+      "sourceBytes": 2179852,
+      "child": false,
+      "parentInCohort": null,
+      "parentOutsideCohort": false,
+      "storedStatus": "done",
+      "storedObjective": "complete_verified",
+      "allowAll": true,
+      "messages": 479,
+      "roles": {
+        "user": 20,
+        "assistant": 86,
+        "tool": 373
+      },
+      "tools": 373,
+      "toolStatuses": {
+        "completed": 363,
+        "error": 10
+      },
+      "errorRecords": 10,
+      "lastFinalLine": 480,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [
+        75,
+        155,
+        189
+      ],
+      "signals": {
+        "tool_schema": [
+          50,
+          51
+        ],
+        "cost_checkpoint": [
+          67,
+          68,
+          69,
+          70,
+          71,
+          72,
+          73,
+          153,
+          317,
+          346,
+          373,
+          404
+        ]
+      },
+      "headerCostUsd": 24.183201559999997,
+      "headerTotalTokens": 2898568
+    },
+    {
+      "alias": "S021",
+      "sourceSha256": "5e0fe732215a8425ba253691a6645127eb96174727ac54dae0250c3c7f01d4ba",
+      "createdAtUtc": "2026-09-04T15:36:41.615000+00:00",
+      "sourceBytes": 581233,
+      "child": false,
+      "parentInCohort": null,
+      "parentOutsideCohort": false,
+      "storedStatus": "done",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 151,
+      "roles": {
+        "user": 6,
+        "assistant": 41,
+        "tool": 103,
+        "plan": 1
+      },
+      "tools": 103,
+      "toolStatuses": {
+        "completed": 98,
+        "error": 5
+      },
+      "errorRecords": 5,
+      "lastFinalLine": 152,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [
+        53
+      ],
+      "signals": {
+        "status_contract": [
+          48
+        ],
+        "cost_checkpoint": [
+          51
+        ]
+      },
+      "headerCostUsd": 12.003307,
+      "headerTotalTokens": 2178932
+    },
+    {
+      "alias": "S022",
+      "sourceSha256": "fd3f264cef12621f63ab93d692b5601b28ba7c53a18b0c8b81a5bcfb94982bfa",
+      "createdAtUtc": "2026-09-04T15:34:55.383000+00:00",
+      "sourceBytes": 2615,
+      "child": false,
+      "parentInCohort": null,
+      "parentOutsideCohort": false,
+      "storedStatus": "done",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 3,
+      "roles": {
+        "user": 2,
+        "info": 1
+      },
+      "tools": 0,
+      "toolStatuses": {},
+      "errorRecords": 0,
+      "lastFinalLine": null,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [],
+      "signals": {},
+      "headerCostUsd": 0,
+      "headerTotalTokens": 0
+    },
+    {
+      "alias": "S023",
+      "sourceSha256": "6ecb07d0323bad45eecb4cee8f84adab24dac7eb1046e82420c5a7af93c328f2",
+      "createdAtUtc": "2026-09-04T15:29:13.885000+00:00",
+      "sourceBytes": 6086154,
+      "child": false,
+      "parentInCohort": null,
+      "parentOutsideCohort": false,
+      "storedStatus": "in-progress",
+      "storedObjective": "active",
+      "allowAll": true,
+      "messages": 1078,
+      "roles": {
+        "user": 51,
+        "tool": 838,
+        "assistant": 187,
+        "plan": 1,
+        "info": 1
+      },
+      "tools": 838,
+      "toolStatuses": {
+        "completed": 820,
+        "error": 18
+      },
+      "errorRecords": 18,
+      "lastFinalLine": 1051,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [
+        93,
+        734,
+        1062
+      ],
+      "signals": {
+        "tool_schema": [
+          614,
+          888,
+          1075
+        ],
+        "cost_checkpoint": [
+          213,
+          297,
+          332,
+          359,
+          397,
+          480,
+          505,
+          532,
+          582,
+          583,
+          584,
+          585,
+          639,
+          720,
+          764,
+          796,
+          931,
+          933,
+          974,
+          975,
+          1050
+        ],
+        "delivery_queued": [
+          957,
+          973
+        ]
+      },
+      "headerCostUsd": 79.85278524,
+      "headerTotalTokens": 2511771
+    },
+    {
+      "alias": "S024",
+      "sourceSha256": "3602d9fbc3c5e1a6b1d35a12434f9d3d2995598c7e1db04ecd83827665a221bb",
+      "createdAtUtc": "2026-09-04T15:26:50.041000+00:00",
+      "sourceBytes": 8688553,
+      "child": false,
+      "parentInCohort": null,
+      "parentOutsideCohort": false,
+      "storedStatus": "done",
+      "storedObjective": "complete_verified",
+      "allowAll": true,
+      "messages": 1369,
+      "roles": {
+        "user": 55,
+        "tool": 1138,
+        "assistant": 175,
+        "error": 1
+      },
+      "tools": 1138,
+      "toolStatuses": {
+        "completed": 1092,
+        "error": 46
+      },
+      "errorRecords": 47,
+      "lastFinalLine": 1370,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [
+        66,
+        108,
+        139,
+        186,
+        485,
+        1219
+      ],
+      "signals": {
+        "tool_schema": [
+          1189
+        ],
+        "recovery_ceiling": [
+          484
+        ],
+        "cost_checkpoint": [
+          61,
+          62,
+          63,
+          64,
+          106,
+          137,
+          184,
+          220,
+          250,
+          251,
+          252,
+          253,
+          281,
+          282,
+          314,
+          344,
+          373,
+          403,
+          431,
+          458,
+          482,
+          510,
+          539,
+          540,
+          541,
+          578,
+          605,
+          632,
+          657,
+          684,
+          711,
+          736,
+          762,
+          763,
+          821,
+          822,
+          877,
+          903,
+          932,
+          958,
+          1003,
+          1004,
+          1005,
+          1032,
+          1059,
+          1086,
+          1114,
+          1146,
+          1173,
+          1200,
+          1244,
+          1302,
+          1333,
+          1363
+        ]
+      },
+      "headerCostUsd": 110.849503,
+      "headerTotalTokens": 1132539
+    },
+    {
+      "alias": "S025",
+      "sourceSha256": "10216574ff217043fc528c2cf5bdb716ad62a5095e335123afed30e8e9cd474b",
+      "createdAtUtc": "2026-09-04T07:53:30.223000+00:00",
+      "sourceBytes": 663757,
+      "child": false,
+      "parentInCohort": null,
+      "parentOutsideCohort": false,
+      "storedStatus": "done",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 144,
+      "roles": {
+        "user": 7,
+        "tool": 119,
+        "assistant": 18
+      },
+      "tools": 119,
+      "toolStatuses": {
+        "completed": 115,
+        "error": 4
+      },
+      "errorRecords": 4,
+      "lastFinalLine": 145,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [],
+      "signals": {
+        "browser_guide": [
+          46,
+          111,
+          122
+        ],
+        "cost_checkpoint": [
+          37,
+          42,
+          144
+        ]
+      },
+      "headerCostUsd": 7.4456384,
+      "headerTotalTokens": 1703567
+    },
+    {
+      "alias": "S026",
+      "sourceSha256": "8f40f60946487db1b143ee131e115ba1ceeab131ecc1d6144e4ab38b83a6d1f1",
+      "createdAtUtc": "2026-09-04T06:44:55.213000+00:00",
+      "sourceBytes": 205174,
+      "child": false,
+      "parentInCohort": null,
+      "parentOutsideCohort": false,
+      "storedStatus": "done",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 21,
+      "roles": {
+        "user": 3,
+        "tool": 11,
+        "assistant": 7
+      },
+      "tools": 11,
+      "toolStatuses": {
+        "completed": 9,
+        "error": 2
+      },
+      "errorRecords": 2,
+      "lastFinalLine": 22,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [],
+      "signals": {},
+      "headerCostUsd": 1.3299910000000001,
+      "headerTotalTokens": 203278
+    },
+    {
+      "alias": "S027",
+      "sourceSha256": "b994da7b99296605c287da6965f0c6f9fe614d5396af8068073ee441cc6b6fe3",
+      "createdAtUtc": "2026-09-03T09:55:51.616000+00:00",
+      "sourceBytes": 225128,
+      "child": false,
+      "parentInCohort": null,
+      "parentOutsideCohort": false,
+      "storedStatus": "done",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 47,
+      "roles": {
+        "user": 5,
+        "tool": 35,
+        "assistant": 7
+      },
+      "tools": 35,
+      "toolStatuses": {
+        "completed": 34,
+        "error": 1
+      },
+      "errorRecords": 1,
+      "lastFinalLine": 48,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [],
+      "signals": {},
+      "headerCostUsd": 3.444069,
+      "headerTotalTokens": 2390534
+    },
+    {
+      "alias": "S028",
+      "sourceSha256": "5693a1364253aa68207f573debe642d1922d66413004b88e57e138ea99435031",
+      "createdAtUtc": "2026-09-03T09:52:29.161000+00:00",
+      "sourceBytes": 257748,
+      "child": false,
+      "parentInCohort": null,
+      "parentOutsideCohort": false,
+      "storedStatus": "done",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 46,
+      "roles": {
+        "user": 4,
+        "tool": 37,
+        "assistant": 3,
+        "info": 2
+      },
+      "tools": 37,
+      "toolStatuses": {
+        "completed": 31,
+        "error": 3,
+        "executing": 3
+      },
+      "errorRecords": 3,
+      "lastFinalLine": 46,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [],
+      "signals": {
+        "packaged_runtime": [
+          29
+        ],
+        "cost_checkpoint": [
+          26
+        ]
+      },
+      "headerCostUsd": 0.3991296,
+      "headerTotalTokens": 884270
+    },
+    {
+      "alias": "S029",
+      "sourceSha256": "0de19188d21bde53b1a6ea7c02ae49c4a0ef8b2840f7315c5314615347568ed9",
+      "createdAtUtc": "2026-09-03T09:17:05.300000+00:00",
+      "sourceBytes": 4118,
+      "child": true,
+      "parentInCohort": "S033",
+      "parentOutsideCohort": false,
+      "storedStatus": "done",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 2,
+      "roles": {
+        "user": 1,
+        "error": 1
+      },
+      "tools": 0,
+      "toolStatuses": {},
+      "errorRecords": 1,
+      "lastFinalLine": null,
+      "quotaWithoutWork": true,
+      "shortContinuationLines": [],
+      "signals": {
+        "provider_quota": [
+          3
+        ]
+      },
+      "headerCostUsd": 0,
+      "headerTotalTokens": 0
+    },
+    {
+      "alias": "S030",
+      "sourceSha256": "5bae3f528af02f9a2472633e6a43f85cbc8dd634aa32c1268b9e2a3b886e4e7f",
+      "createdAtUtc": "2026-09-03T09:14:53.030000+00:00",
+      "sourceBytes": 7652,
+      "child": true,
+      "parentInCohort": "S033",
+      "parentOutsideCohort": false,
+      "storedStatus": "done",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 4,
+      "roles": {
+        "user": 2,
+        "error": 2
+      },
+      "tools": 0,
+      "toolStatuses": {},
+      "errorRecords": 2,
+      "lastFinalLine": null,
+      "quotaWithoutWork": true,
+      "shortContinuationLines": [],
+      "signals": {
+        "provider_quota": [
+          3,
+          5
+        ]
+      },
+      "headerCostUsd": 0,
+      "headerTotalTokens": 0
+    },
+    {
+      "alias": "S031",
+      "sourceSha256": "aa4bc870aa77bf2b16904060e86a4fb3b22cbcd115757f32f6cae44f583bc1a5",
+      "createdAtUtc": "2026-09-03T09:13:53.345000+00:00",
+      "sourceBytes": 360053,
+      "child": true,
+      "parentInCohort": null,
+      "parentOutsideCohort": true,
+      "storedStatus": "done",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 90,
+      "roles": {
+        "user": 4,
+        "tool": 76,
+        "assistant": 10
+      },
+      "tools": 76,
+      "toolStatuses": {
+        "error": 1,
+        "completed": 75
+      },
+      "errorRecords": 1,
+      "lastFinalLine": 91,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [
+        30
+      ],
+      "signals": {
+        "status_contract": [
+          3
+        ],
+        "cost_checkpoint": [
+          24,
+          28
+        ],
+        "delivery_queued": [
+          89
+        ]
+      },
+      "headerCostUsd": 3.92915,
+      "headerTotalTokens": 207789
+    },
+    {
+      "alias": "S032",
+      "sourceSha256": "6d3e766690374df534dc1e35eb84e59aa2a5111eea17a032221c7b8b52fcdfb4",
+      "createdAtUtc": "2026-09-03T09:12:20.138000+00:00",
+      "sourceBytes": 2898,
+      "child": true,
+      "parentInCohort": null,
+      "parentOutsideCohort": true,
+      "storedStatus": "done",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 2,
+      "roles": {
+        "user": 1,
+        "error": 1
+      },
+      "tools": 0,
+      "toolStatuses": {},
+      "errorRecords": 1,
+      "lastFinalLine": null,
+      "quotaWithoutWork": true,
+      "shortContinuationLines": [],
+      "signals": {
+        "provider_quota": [
+          3
+        ]
+      },
+      "headerCostUsd": 0,
+      "headerTotalTokens": 0
+    },
+    {
+      "alias": "S033",
+      "sourceSha256": "c7ecc20ea27d638566ff041cf0c72061a45ce3d24f8e1d6c7ae7b2554eca08f3",
+      "createdAtUtc": "2026-09-03T09:02:04.152000+00:00",
+      "sourceBytes": 1115667,
+      "child": true,
+      "parentInCohort": null,
+      "parentOutsideCohort": true,
+      "storedStatus": "done",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 195,
+      "roles": {
+        "user": 8,
+        "assistant": 30,
+        "tool": 156,
+        "error": 1
+      },
+      "tools": 156,
+      "toolStatuses": {
+        "error": 3,
+        "completed": 153
+      },
+      "errorRecords": 4,
+      "lastFinalLine": 172,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [],
+      "signals": {
+        "status_contract": [
+          4
+        ],
+        "cost_checkpoint": [
+          23,
+          24,
+          29,
+          30,
+          67,
+          170,
+          171
+        ],
+        "delivery_queued": [
+          36,
+          40
+        ]
+      },
+      "headerCostUsd": 9.647092999999998,
+      "headerTotalTokens": 955346
+    },
+    {
+      "alias": "S034",
+      "sourceSha256": "57064403fb454ee317c56bdc0cfe117b0c0189ae97e80159b2c452ab392dddc1",
+      "createdAtUtc": "2026-09-03T06:22:47.562000+00:00",
+      "sourceBytes": 2015553,
+      "child": false,
+      "parentInCohort": null,
+      "parentOutsideCohort": false,
+      "storedStatus": "done",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 165,
+      "roles": {
+        "user": 14,
+        "tool": 121,
+        "assistant": 29,
+        "error": 1
+      },
+      "tools": 121,
+      "toolStatuses": {
+        "completed": 117,
+        "error": 4
+      },
+      "errorRecords": 5,
+      "lastFinalLine": 166,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [
+        60
+      ],
+      "signals": {
+        "browser_guide": [
+          92
+        ],
+        "tool_schema": [
+          37,
+          38
+        ],
+        "cost_checkpoint": [
+          26
+        ]
+      },
+      "headerCostUsd": 4.4476106,
+      "headerTotalTokens": 602936
+    },
+    {
+      "alias": "S035",
+      "sourceSha256": "4aabcd8f67d08ddf6594c52a33e7f5f6cabbb7b3acfa45efe290c094daafa596",
+      "createdAtUtc": "2026-09-02T21:00:22.187000+00:00",
+      "sourceBytes": 3322,
+      "child": true,
+      "parentInCohort": "S038",
+      "parentOutsideCohort": false,
+      "storedStatus": "done",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 4,
+      "roles": {
+        "user": 2,
+        "error": 2
+      },
+      "tools": 0,
+      "toolStatuses": {},
+      "errorRecords": 2,
+      "lastFinalLine": null,
+      "quotaWithoutWork": true,
+      "shortContinuationLines": [],
+      "signals": {
+        "provider_quota": [
+          3,
+          5
+        ]
+      },
+      "headerCostUsd": 0,
+      "headerTotalTokens": 0
+    },
+    {
+      "alias": "S036",
+      "sourceSha256": "693d32d55aa5f0c053fdb9475ed6fd7163e72e0c40d18a4afcd365278af81c3e",
+      "createdAtUtc": "2026-09-02T21:00:22.185000+00:00",
+      "sourceBytes": 3174,
+      "child": true,
+      "parentInCohort": "S038",
+      "parentOutsideCohort": false,
+      "storedStatus": "done",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 4,
+      "roles": {
+        "user": 2,
+        "error": 2
+      },
+      "tools": 0,
+      "toolStatuses": {},
+      "errorRecords": 2,
+      "lastFinalLine": null,
+      "quotaWithoutWork": true,
+      "shortContinuationLines": [],
+      "signals": {
+        "provider_quota": [
+          3,
+          5
+        ]
+      },
+      "headerCostUsd": 0,
+      "headerTotalTokens": 0
+    },
+    {
+      "alias": "S037",
+      "sourceSha256": "4e6e2758c377227d56890ce207991e24f5d3bb02195aad50ea00201ff6c8279e",
+      "createdAtUtc": "2026-09-02T21:00:22.179000+00:00",
+      "sourceBytes": 3269,
+      "child": true,
+      "parentInCohort": "S038",
+      "parentOutsideCohort": false,
+      "storedStatus": "done",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 4,
+      "roles": {
+        "user": 2,
+        "error": 2
+      },
+      "tools": 0,
+      "toolStatuses": {},
+      "errorRecords": 2,
+      "lastFinalLine": null,
+      "quotaWithoutWork": true,
+      "shortContinuationLines": [],
+      "signals": {
+        "provider_quota": [
+          3,
+          5
+        ]
+      },
+      "headerCostUsd": 0,
+      "headerTotalTokens": 0
+    },
+    {
+      "alias": "S038",
+      "sourceSha256": "9c6c10cf0b1e8b370b165ba6b817c9382fe9e46f0ee30301dce970debc6107cf",
+      "createdAtUtc": "2026-09-02T20:55:58.450000+00:00",
+      "sourceBytes": 1390635,
+      "child": false,
+      "parentInCohort": null,
+      "parentOutsideCohort": false,
+      "storedStatus": "done",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 305,
+      "roles": {
+        "user": 13,
+        "assistant": 48,
+        "tool": 241,
+        "plan": 1,
+        "error": 2
+      },
+      "tools": 241,
+      "toolStatuses": {
+        "completed": 240,
+        "error": 1
+      },
+      "errorRecords": 3,
+      "lastFinalLine": 228,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [
+        64,
+        75,
+        229
+      ],
+      "signals": {
+        "cost_checkpoint": [
+          62
+        ]
+      },
+      "headerCostUsd": 17.59323476,
+      "headerTotalTokens": 8517954
+    },
+    {
+      "alias": "S039",
+      "sourceSha256": "b8f6965b89e8e4f6b08a8d2e361e95d7fbda6a3728be6eecf6c8e6e630e3e6bc",
+      "createdAtUtc": "2026-09-02T18:47:26.248000+00:00",
+      "sourceBytes": 411047,
+      "child": false,
+      "parentInCohort": null,
+      "parentOutsideCohort": false,
+      "storedStatus": "done",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 72,
+      "roles": {
+        "user": 6,
+        "tool": 59,
+        "assistant": 7
+      },
+      "tools": 59,
+      "toolStatuses": {
+        "completed": 55,
+        "error": 4
+      },
+      "errorRecords": 4,
+      "lastFinalLine": 73,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [],
+      "signals": {
+        "packaged_runtime": [
+          47
+        ],
+        "tool_schema": [
+          43
+        ],
+        "cost_checkpoint": [
+          26
+        ]
+      },
+      "headerCostUsd": 1.6657022800000003,
+      "headerTotalTokens": 478908
+    },
+    {
+      "alias": "S040",
+      "sourceSha256": "1658f22228ae17867c111b4cc07695be43a310ae0a222dc8b4022e8c862f8aa2",
+      "createdAtUtc": "2026-09-02T13:51:19.997000+00:00",
+      "sourceBytes": 127769,
+      "child": false,
+      "parentInCohort": null,
+      "parentOutsideCohort": false,
+      "storedStatus": "missing",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 23,
+      "roles": {
+        "user": 2,
+        "tool": 19,
+        "assistant": 2
+      },
+      "tools": 19,
+      "toolStatuses": {
+        "completed": 18,
+        "error": 1
+      },
+      "errorRecords": 1,
+      "lastFinalLine": 24,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [],
+      "signals": {},
+      "headerCostUsd": 0.050929199999999994,
+      "headerTotalTokens": 403830
+    },
+    {
+      "alias": "S041",
+      "sourceSha256": "2922abe55560e41bdd194cb65ac4ddcabf2abffe37dd5215f2733590a7af6077",
+      "createdAtUtc": "2026-09-02T13:49:13.120000+00:00",
+      "sourceBytes": 1544,
+      "child": false,
+      "parentInCohort": null,
+      "parentOutsideCohort": false,
+      "storedStatus": "missing",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 2,
+      "roles": {
+        "user": 1,
+        "error": 1
+      },
+      "tools": 0,
+      "toolStatuses": {},
+      "errorRecords": 1,
+      "lastFinalLine": null,
+      "quotaWithoutWork": true,
+      "shortContinuationLines": [],
+      "signals": {
+        "provider_quota": [
+          3
+        ]
+      },
+      "headerCostUsd": 0,
+      "headerTotalTokens": 0
+    },
+    {
+      "alias": "S042",
+      "sourceSha256": "9e2733edd041c137bab7378b4c802d6b969a1a4a50b99625aa840cfc28da8187",
+      "createdAtUtc": "2026-09-02T13:49:11.300000+00:00",
+      "sourceBytes": 808,
+      "child": false,
+      "parentInCohort": null,
+      "parentOutsideCohort": false,
+      "storedStatus": "missing",
+      "storedObjective": "missing",
+      "allowAll": false,
+      "messages": 0,
+      "roles": {},
+      "tools": 0,
+      "toolStatuses": {},
+      "errorRecords": 0,
+      "lastFinalLine": null,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [],
+      "signals": {},
+      "headerCostUsd": 0,
+      "headerTotalTokens": 0
+    },
+    {
+      "alias": "S043",
+      "sourceSha256": "ac8c3bf4becf3c40c95af4e07212ce697ea605cf7c6d3a17b1a18d0044821b35",
+      "createdAtUtc": "2026-09-02T07:24:46.636000+00:00",
+      "sourceBytes": 641368,
+      "child": false,
+      "parentInCohort": null,
+      "parentOutsideCohort": false,
+      "storedStatus": "done",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 96,
+      "roles": {
+        "user": 7,
+        "assistant": 24,
+        "tool": 65
+      },
+      "tools": 65,
+      "toolStatuses": {
+        "completed": 60,
+        "error": 5
+      },
+      "errorRecords": 5,
+      "lastFinalLine": 97,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [],
+      "signals": {
+        "browser_guide": [
+          81
+        ],
+        "packaged_runtime": [
+          36
+        ]
+      },
+      "headerCostUsd": 2.94427964,
+      "headerTotalTokens": 1313189
+    },
+    {
+      "alias": "S044",
+      "sourceSha256": "d9ba8cf4caa5dae9bcb041a7f8254b2e6bb6deb262b3a7663a570135925eee65",
+      "createdAtUtc": "2026-09-01T19:39:00.962000+00:00",
+      "sourceBytes": 67567,
+      "child": true,
+      "parentInCohort": "S071",
+      "parentOutsideCohort": false,
+      "storedStatus": "missing",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 13,
+      "roles": {
+        "user": 2,
+        "tool": 10,
+        "assistant": 1
+      },
+      "tools": 10,
+      "toolStatuses": {
+        "completed": 10
+      },
+      "errorRecords": 0,
+      "lastFinalLine": 14,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [],
+      "signals": {
+        "delivery_queued": [
+          12
+        ]
+      },
+      "headerCostUsd": 1.217899,
+      "headerTotalTokens": 138191
+    },
+    {
+      "alias": "S045",
+      "sourceSha256": "9290e43ecdb10c3a5685c7d505e6e7cd949357d605286532d61f019e26df4947",
+      "createdAtUtc": "2026-09-01T19:11:23.579000+00:00",
+      "sourceBytes": 613936,
+      "child": false,
+      "parentInCohort": null,
+      "parentOutsideCohort": false,
+      "storedStatus": "done",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 85,
+      "roles": {
+        "user": 5,
+        "assistant": 11,
+        "tool": 68,
+        "plan": 1
+      },
+      "tools": 68,
+      "toolStatuses": {
+        "completed": 68
+      },
+      "errorRecords": 0,
+      "lastFinalLine": 86,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [],
+      "signals": {},
+      "headerCostUsd": 0.06738356000000001,
+      "headerTotalTokens": 307130
+    },
+    {
+      "alias": "S046",
+      "sourceSha256": "7726fd64f4ca1202982b3fd6a66d3537493ecc6c7770186017a02fc800319689",
+      "createdAtUtc": "2026-09-01T19:10:49.173000+00:00",
+      "sourceBytes": 257150,
+      "child": true,
+      "parentInCohort": "S071",
+      "parentOutsideCohort": false,
+      "storedStatus": "missing",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 57,
+      "roles": {
+        "user": 5,
+        "assistant": 8,
+        "tool": 44
+      },
+      "tools": 44,
+      "toolStatuses": {
+        "completed": 43,
+        "error": 1
+      },
+      "errorRecords": 1,
+      "lastFinalLine": 58,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [],
+      "signals": {
+        "browser_guide": [
+          5
+        ],
+        "delivery_queued": [
+          48,
+          49,
+          52,
+          55
+        ]
+      },
+      "headerCostUsd": 3.7533069999999995,
+      "headerTotalTokens": 167533
+    },
+    {
+      "alias": "S047",
+      "sourceSha256": "58fd959b3c2c7d1cd2799b245059b38cda037aa32fa6c9921b428f62022cea02",
+      "createdAtUtc": "2026-09-01T18:51:50.333000+00:00",
+      "sourceBytes": 1914664,
+      "child": false,
+      "parentInCohort": null,
+      "parentOutsideCohort": false,
+      "storedStatus": "done",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 173,
+      "roles": {
+        "user": 7,
+        "assistant": 16,
+        "tool": 150
+      },
+      "tools": 150,
+      "toolStatuses": {
+        "completed": 147,
+        "error": 3
+      },
+      "errorRecords": 3,
+      "lastFinalLine": 174,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [
+        108,
+        168
+      ],
+      "signals": {
+        "status_contract": [
+          110
+        ]
+      },
+      "headerCostUsd": 10.26950176,
+      "headerTotalTokens": 1451147
+    },
+    {
+      "alias": "S048",
+      "sourceSha256": "04edab7704cbaf0b086b0a951e1696822d492ccc2aeeb4e2ba1b44e85961556f",
+      "createdAtUtc": "2026-09-01T18:46:28.038000+00:00",
+      "sourceBytes": 1459678,
+      "child": false,
+      "parentInCohort": null,
+      "parentOutsideCohort": false,
+      "storedStatus": "done",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 280,
+      "roles": {
+        "user": 9,
+        "assistant": 84,
+        "tool": 187
+      },
+      "tools": 187,
+      "toolStatuses": {
+        "completed": 185,
+        "error": 2
+      },
+      "errorRecords": 2,
+      "lastFinalLine": 281,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [
+        207
+      ],
+      "signals": {
+        "status_contract": [
+          36
+        ]
+      },
+      "headerCostUsd": 32.365658839999995,
+      "headerTotalTokens": 5496018
+    },
+    {
+      "alias": "S049",
+      "sourceSha256": "d7622b9a9de1e38d024245720c92cdbd355b6529ab9a1916be94a150d4e529c3",
+      "createdAtUtc": "2026-09-01T18:45:43.793000+00:00",
+      "sourceBytes": 1735,
+      "child": false,
+      "parentInCohort": null,
+      "parentOutsideCohort": false,
+      "storedStatus": "done",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 2,
+      "roles": {
+        "user": 1,
+        "error": 1
+      },
+      "tools": 0,
+      "toolStatuses": {},
+      "errorRecords": 1,
+      "lastFinalLine": null,
+      "quotaWithoutWork": true,
+      "shortContinuationLines": [],
+      "signals": {
+        "provider_quota": [
+          3
+        ]
+      },
+      "headerCostUsd": 0,
+      "headerTotalTokens": 0
+    },
+    {
+      "alias": "S050",
+      "sourceSha256": "73bbed80a90664144189b192d610ebf674a42dd5e5442da76c4fb5f7d53d3727",
+      "createdAtUtc": "2026-09-01T18:43:38.212000+00:00",
+      "sourceBytes": 713071,
+      "child": false,
+      "parentInCohort": null,
+      "parentOutsideCohort": false,
+      "storedStatus": "done",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 174,
+      "roles": {
+        "user": 11,
+        "tool": 99,
+        "assistant": 64
+      },
+      "tools": 99,
+      "toolStatuses": {
+        "completed": 98,
+        "error": 1
+      },
+      "errorRecords": 1,
+      "lastFinalLine": 175,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [],
+      "signals": {},
+      "headerCostUsd": 7.007587600000001,
+      "headerTotalTokens": 382667
+    },
+    {
+      "alias": "S051",
+      "sourceSha256": "0019c9bd7de39d98fbc49b354449f6c9e2f0edf8b91dfde54e60102cd771dedf",
+      "createdAtUtc": "2026-09-01T17:47:11.950000+00:00",
+      "sourceBytes": 450223,
+      "child": true,
+      "parentInCohort": "S071",
+      "parentOutsideCohort": false,
+      "storedStatus": "todo",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 73,
+      "roles": {
+        "user": 2,
+        "assistant": 8,
+        "tool": 63
+      },
+      "tools": 63,
+      "toolStatuses": {
+        "completed": 62,
+        "error": 1
+      },
+      "errorRecords": 1,
+      "lastFinalLine": 74,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [],
+      "signals": {
+        "browser_guide": [
+          26
+        ]
+      },
+      "headerCostUsd": 5.0426340000000005,
+      "headerTotalTokens": 242867
+    },
+    {
+      "alias": "S052",
+      "sourceSha256": "9689f20be1629c9e1041ae31ce0bfcc517893028e42e1dc0a64ae8d95e5ad267",
+      "createdAtUtc": "2026-09-01T17:36:22.213000+00:00",
+      "sourceBytes": 2850311,
+      "child": false,
+      "parentInCohort": null,
+      "parentOutsideCohort": false,
+      "storedStatus": "done",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 469,
+      "roles": {
+        "user": 22,
+        "assistant": 84,
+        "tool": 362,
+        "info": 1
+      },
+      "tools": 362,
+      "toolStatuses": {
+        "completed": 351,
+        "error": 11
+      },
+      "errorRecords": 11,
+      "lastFinalLine": 470,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [
+        132,
+        302,
+        396
+      ],
+      "signals": {
+        "status_contract": [
+          458
+        ],
+        "tool_schema": [
+          111,
+          112,
+          151
+        ]
+      },
+      "headerCostUsd": 37.63115867999999,
+      "headerTotalTokens": 3457818
+    },
+    {
+      "alias": "S053",
+      "sourceSha256": "a55e3aeb5560c310bd9e1c7c52bfcf26cc4871f10ab6b01da9470a464d21af7b",
+      "createdAtUtc": "2026-09-01T17:35:03.191000+00:00",
+      "sourceBytes": 1807,
+      "child": false,
+      "parentInCohort": null,
+      "parentOutsideCohort": false,
+      "storedStatus": "done",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 2,
+      "roles": {
+        "user": 1,
+        "error": 1
+      },
+      "tools": 0,
+      "toolStatuses": {},
+      "errorRecords": 1,
+      "lastFinalLine": null,
+      "quotaWithoutWork": true,
+      "shortContinuationLines": [],
+      "signals": {
+        "provider_quota": [
+          3
+        ]
+      },
+      "headerCostUsd": 0,
+      "headerTotalTokens": 0
+    },
+    {
+      "alias": "S054",
+      "sourceSha256": "338930e3325f5a30bbf3b611bb7c5ccd7756a06c62302e52861dda8961b0f820",
+      "createdAtUtc": "2026-09-01T17:34:09.922000+00:00",
+      "sourceBytes": 229954,
+      "child": true,
+      "parentInCohort": "S071",
+      "parentOutsideCohort": false,
+      "storedStatus": "todo",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 33,
+      "roles": {
+        "user": 3,
+        "assistant": 8,
+        "tool": 22
+      },
+      "tools": 22,
+      "toolStatuses": {
+        "completed": 22
+      },
+      "errorRecords": 0,
+      "lastFinalLine": 34,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [],
+      "signals": {
+        "delivery_queued": [
+          32
+        ]
+      },
+      "headerCostUsd": 0.595389,
+      "headerTotalTokens": 212133
+    },
+    {
+      "alias": "S055",
+      "sourceSha256": "b66c4297780fbbf8a754ced2c8504c806a90387422cd425bae96b42926b35948",
+      "createdAtUtc": "2026-09-01T17:20:47.698000+00:00",
+      "sourceBytes": 566332,
+      "child": true,
+      "parentInCohort": "S071",
+      "parentOutsideCohort": false,
+      "storedStatus": "todo",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 102,
+      "roles": {
+        "user": 6,
+        "assistant": 11,
+        "tool": 85
+      },
+      "tools": 85,
+      "toolStatuses": {
+        "completed": 84,
+        "error": 1
+      },
+      "errorRecords": 1,
+      "lastFinalLine": 103,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [],
+      "signals": {
+        "delivery_queued": [
+          75,
+          94,
+          97,
+          101
+        ]
+      },
+      "headerCostUsd": 5.923850000000002,
+      "headerTotalTokens": 299708
+    },
+    {
+      "alias": "S056",
+      "sourceSha256": "7202a763c08cd34416115b3e001c582ae8f739be37877e3372129ef37812e79c",
+      "createdAtUtc": "2026-09-01T17:18:16.504000+00:00",
+      "sourceBytes": 457576,
+      "child": true,
+      "parentInCohort": "S080",
+      "parentOutsideCohort": false,
+      "storedStatus": "missing",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 64,
+      "roles": {
+        "user": 7,
+        "assistant": 19,
+        "tool": 38
+      },
+      "tools": 38,
+      "toolStatuses": {
+        "completed": 38
+      },
+      "errorRecords": 0,
+      "lastFinalLine": 65,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [],
+      "signals": {
+        "delivery_queued": [
+          32,
+          35,
+          41
+        ]
+      },
+      "headerCostUsd": 4.1287294,
+      "headerTotalTokens": 199050
+    },
+    {
+      "alias": "S057",
+      "sourceSha256": "4ce433352f2c5bc6e4266a686677a90cc3983c75d8e8a8d59d9f9e4e82a8be2b",
+      "createdAtUtc": "2026-09-01T16:33:24.128000+00:00",
+      "sourceBytes": 405391,
+      "child": true,
+      "parentInCohort": "S080",
+      "parentOutsideCohort": false,
+      "storedStatus": "todo",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 52,
+      "roles": {
+        "user": 5,
+        "assistant": 5,
+        "tool": 39,
+        "error": 3
+      },
+      "tools": 39,
+      "toolStatuses": {
+        "completed": 39
+      },
+      "errorRecords": 3,
+      "lastFinalLine": 53,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [],
+      "signals": {
+        "delivery_queued": [
+          50
+        ]
+      },
+      "headerCostUsd": 2.741999,
+      "headerTotalTokens": 197955
+    },
+    {
+      "alias": "S058",
+      "sourceSha256": "6d86df1cca2869a7920aa0598aec8d88b5adc3c42f6ddc9508d982e1bb4098d8",
+      "createdAtUtc": "2026-09-01T16:04:15.167000+00:00",
+      "sourceBytes": 307226,
+      "child": true,
+      "parentInCohort": "S071",
+      "parentOutsideCohort": false,
+      "storedStatus": "todo",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 50,
+      "roles": {
+        "user": 7,
+        "assistant": 8,
+        "tool": 35
+      },
+      "tools": 35,
+      "toolStatuses": {
+        "completed": 35
+      },
+      "errorRecords": 0,
+      "lastFinalLine": 51,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [],
+      "signals": {
+        "delivery_queued": [
+          26,
+          50
+        ]
+      },
+      "headerCostUsd": 2.850046,
+      "headerTotalTokens": 249806
+    },
+    {
+      "alias": "S059",
+      "sourceSha256": "90e80292e15371a9e6659497aa65c323aa03d850265ef0aac3bd67d500dabfa9",
+      "createdAtUtc": "2026-09-01T15:59:46.827000+00:00",
+      "sourceBytes": 264560,
+      "child": true,
+      "parentInCohort": "S080",
+      "parentOutsideCohort": false,
+      "storedStatus": "done",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 33,
+      "roles": {
+        "user": 2,
+        "tool": 29,
+        "assistant": 2
+      },
+      "tools": 29,
+      "toolStatuses": {
+        "error": 1,
+        "completed": 28
+      },
+      "errorRecords": 1,
+      "lastFinalLine": 34,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [],
+      "signals": {
+        "status_contract": [
+          3
+        ],
+        "delivery_queued": [
+          28,
+          33
+        ]
+      },
+      "headerCostUsd": 1.987755,
+      "headerTotalTokens": 130728
+    },
+    {
+      "alias": "S060",
+      "sourceSha256": "a748016242d1d7e5d84cfb455a69ebc858f312bdc6ec2464f82fdec6adde8efc",
+      "createdAtUtc": "2026-09-01T15:48:25.291000+00:00",
+      "sourceBytes": 331607,
+      "child": true,
+      "parentInCohort": "S071",
+      "parentOutsideCohort": false,
+      "storedStatus": "missing",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 46,
+      "roles": {
+        "user": 5,
+        "assistant": 9,
+        "tool": 32
+      },
+      "tools": 32,
+      "toolStatuses": {
+        "completed": 32
+      },
+      "errorRecords": 0,
+      "lastFinalLine": 47,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [],
+      "signals": {
+        "delivery_queued": [
+          29,
+          42
+        ]
+      },
+      "headerCostUsd": 4.240395,
+      "headerTotalTokens": 208641
+    },
+    {
+      "alias": "S061",
+      "sourceSha256": "bbf9e66c443012d57f397eb84184df682274b34461c3a6bf9bfc65cf448b22f1",
+      "createdAtUtc": "2026-09-01T15:38:08.319000+00:00",
+      "sourceBytes": 309624,
+      "child": true,
+      "parentInCohort": "S071",
+      "parentOutsideCohort": false,
+      "storedStatus": "missing",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 51,
+      "roles": {
+        "user": 2,
+        "assistant": 16,
+        "tool": 33
+      },
+      "tools": 33,
+      "toolStatuses": {
+        "completed": 33
+      },
+      "errorRecords": 0,
+      "lastFinalLine": 52,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [],
+      "signals": {
+        "delivery_queued": [
+          46,
+          51
+        ]
+      },
+      "headerCostUsd": 3.206188,
+      "headerTotalTokens": 193137
+    },
+    {
+      "alias": "S062",
+      "sourceSha256": "b45f9bf9fb1d1afd524a666f78e35d8ab98847ce9c9ca72d63e122c9da88b7db",
+      "createdAtUtc": "2026-09-01T15:23:46.438000+00:00",
+      "sourceBytes": 508309,
+      "child": true,
+      "parentInCohort": "S071",
+      "parentOutsideCohort": false,
+      "storedStatus": "missing",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 81,
+      "roles": {
+        "user": 6,
+        "tool": 74,
+        "assistant": 1
+      },
+      "tools": 74,
+      "toolStatuses": {
+        "completed": 73,
+        "error": 1
+      },
+      "errorRecords": 1,
+      "lastFinalLine": 82,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [],
+      "signals": {
+        "delivery_queued": [
+          54,
+          70,
+          76,
+          81
+        ]
+      },
+      "headerCostUsd": 6.625597,
+      "headerTotalTokens": 213940
+    },
+    {
+      "alias": "S063",
+      "sourceSha256": "aa30815c8745ae4d4ea3c05f874999bf522afc7ae76d08b72b65f6c970dc187f",
+      "createdAtUtc": "2026-09-01T15:21:20.374000+00:00",
+      "sourceBytes": 516880,
+      "child": true,
+      "parentInCohort": "S080",
+      "parentOutsideCohort": false,
+      "storedStatus": "todo",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 112,
+      "roles": {
+        "user": 4,
+        "assistant": 15,
+        "tool": 93
+      },
+      "tools": 93,
+      "toolStatuses": {
+        "completed": 93
+      },
+      "errorRecords": 0,
+      "lastFinalLine": 113,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [],
+      "signals": {
+        "delivery_queued": [
+          43,
+          78,
+          79,
+          98,
+          112
+        ]
+      },
+      "headerCostUsd": 7.673163,
+      "headerTotalTokens": 252734
+    },
+    {
+      "alias": "S064",
+      "sourceSha256": "af7b502f310d5a6c1b2218fc29c9f938c07c3a0e6bfe37219923d8caa856e081",
+      "createdAtUtc": "2026-09-01T14:56:36.960000+00:00",
+      "sourceBytes": 186687,
+      "child": true,
+      "parentInCohort": "S080",
+      "parentOutsideCohort": false,
+      "storedStatus": "missing",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 33,
+      "roles": {
+        "user": 3,
+        "assistant": 4,
+        "tool": 25,
+        "error": 1
+      },
+      "tools": 25,
+      "toolStatuses": {
+        "completed": 25
+      },
+      "errorRecords": 1,
+      "lastFinalLine": null,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [],
+      "signals": {},
+      "headerCostUsd": 1.114528,
+      "headerTotalTokens": 93518
+    },
+    {
+      "alias": "S065",
+      "sourceSha256": "1a94836d52ce063b3f6d736c98591e3444e286c7f59eb954e7f6ea246ea98cc1",
+      "createdAtUtc": "2026-09-01T14:49:13.567000+00:00",
+      "sourceBytes": 249248,
+      "child": true,
+      "parentInCohort": "S071",
+      "parentOutsideCohort": false,
+      "storedStatus": "missing",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 59,
+      "roles": {
+        "user": 10,
+        "tool": 45,
+        "assistant": 4
+      },
+      "tools": 45,
+      "toolStatuses": {
+        "completed": 45
+      },
+      "errorRecords": 0,
+      "lastFinalLine": 60,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [],
+      "signals": {
+        "delivery_queued": [
+          14,
+          21,
+          33,
+          37,
+          51,
+          59
+        ]
+      },
+      "headerCostUsd": 4.742748,
+      "headerTotalTokens": 174109
+    },
+    {
+      "alias": "S066",
+      "sourceSha256": "f4d40e18080f40083e8042ad8468a3af1412d4823bff5e6d1d45b797393d5970",
+      "createdAtUtc": "2026-09-01T14:40:05.854000+00:00",
+      "sourceBytes": 560853,
+      "child": true,
+      "parentInCohort": "S071",
+      "parentOutsideCohort": false,
+      "storedStatus": "done",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 95,
+      "roles": {
+        "user": 5,
+        "tool": 75,
+        "assistant": 15
+      },
+      "tools": 75,
+      "toolStatuses": {
+        "error": 1,
+        "completed": 74
+      },
+      "errorRecords": 1,
+      "lastFinalLine": 96,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [],
+      "signals": {
+        "status_contract": [
+          3
+        ],
+        "delivery_queued": [
+          44,
+          78,
+          94
+        ]
+      },
+      "headerCostUsd": 9.028216999999998,
+      "headerTotalTokens": 340466
+    },
+    {
+      "alias": "S067",
+      "sourceSha256": "15c11d50db943f6e3b21b57d25689446b4e14f78bbac4c5d8428281f9441e479",
+      "createdAtUtc": "2026-09-01T14:28:08.355000+00:00",
+      "sourceBytes": 293840,
+      "child": true,
+      "parentInCohort": "S071",
+      "parentOutsideCohort": false,
+      "storedStatus": "missing",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 71,
+      "roles": {
+        "user": 4,
+        "assistant": 8,
+        "tool": 59
+      },
+      "tools": 59,
+      "toolStatuses": {
+        "completed": 57,
+        "error": 2
+      },
+      "errorRecords": 2,
+      "lastFinalLine": 72,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [],
+      "signals": {
+        "delivery_queued": [
+          27,
+          49,
+          70
+        ]
+      },
+      "headerCostUsd": 4.303141,
+      "headerTotalTokens": 164475
+    },
+    {
+      "alias": "S068",
+      "sourceSha256": "8e59938fc027e4b3cc99ed5bfc381a137a73c203c29b45d014361da1a2522be5",
+      "createdAtUtc": "2026-09-01T14:17:15.480000+00:00",
+      "sourceBytes": 469601,
+      "child": true,
+      "parentInCohort": "S071",
+      "parentOutsideCohort": false,
+      "storedStatus": "missing",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 131,
+      "roles": {
+        "user": 9,
+        "assistant": 8,
+        "tool": 114
+      },
+      "tools": 114,
+      "toolStatuses": {
+        "completed": 114
+      },
+      "errorRecords": 0,
+      "lastFinalLine": 132,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [],
+      "signals": {
+        "delivery_queued": [
+          28,
+          32,
+          92,
+          96,
+          116,
+          117,
+          121,
+          125
+        ]
+      },
+      "headerCostUsd": 7.619928500000001,
+      "headerTotalTokens": 176437
+    },
+    {
+      "alias": "S069",
+      "sourceSha256": "a0026825407e7b94570abf2fc35cbdc75d2071ef0f2dd85afb8ac4d9748a721f",
+      "createdAtUtc": "2026-09-01T14:07:02.989000+00:00",
+      "sourceBytes": 3268,
+      "child": true,
+      "parentInCohort": "S071",
+      "parentOutsideCohort": false,
+      "storedStatus": "missing",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 2,
+      "roles": {
+        "user": 1,
+        "error": 1
+      },
+      "tools": 0,
+      "toolStatuses": {},
+      "errorRecords": 1,
+      "lastFinalLine": null,
+      "quotaWithoutWork": true,
+      "shortContinuationLines": [],
+      "signals": {
+        "provider_quota": [
+          3
+        ]
+      },
+      "headerCostUsd": 0,
+      "headerTotalTokens": 0
+    },
+    {
+      "alias": "S070",
+      "sourceSha256": "70293222870bd96acbb647f267cdc70bfd391b493e094ac9150b0306e43b4fa2",
+      "createdAtUtc": "2026-09-01T13:38:14.459000+00:00",
+      "sourceBytes": 4016,
+      "child": true,
+      "parentInCohort": "S080",
+      "parentOutsideCohort": false,
+      "storedStatus": "missing",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 2,
+      "roles": {
+        "user": 1,
+        "error": 1
+      },
+      "tools": 0,
+      "toolStatuses": {},
+      "errorRecords": 1,
+      "lastFinalLine": null,
+      "quotaWithoutWork": true,
+      "shortContinuationLines": [],
+      "signals": {
+        "provider_quota": [
+          3
+        ]
+      },
+      "headerCostUsd": 0,
+      "headerTotalTokens": 0
+    },
+    {
+      "alias": "S071",
+      "sourceSha256": "56b58acdc4c60d7df14a5c12b33f1c6615c49fc66c4d41fc4153e3876ca9d604",
+      "createdAtUtc": "2026-09-01T13:23:01.554000+00:00",
+      "sourceBytes": 2867054,
+      "child": false,
+      "parentInCohort": null,
+      "parentOutsideCohort": false,
+      "storedStatus": "done",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 743,
+      "roles": {
+        "user": 67,
+        "assistant": 109,
+        "tool": 566,
+        "info": 1
+      },
+      "tools": 566,
+      "toolStatuses": {
+        "completed": 537,
+        "executing": 11,
+        "error": 18
+      },
+      "errorRecords": 18,
+      "lastFinalLine": 744,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [
+        428
+      ],
+      "signals": {
+        "browser_guide": [
+          49,
+          143,
+          155,
+          488,
+          531,
+          706
+        ],
+        "packaged_runtime": [
+          106
+        ],
+        "delivery_queued": [
+          190,
+          199,
+          213,
+          218,
+          227,
+          266,
+          271,
+          282,
+          293,
+          300,
+          302,
+          352,
+          357,
+          379,
+          393,
+          403,
+          416,
+          426,
+          469,
+          513,
+          624
+        ]
+      },
+      "headerCostUsd": 73.04906408000001,
+      "headerTotalTokens": 655756
+    },
+    {
+      "alias": "S072",
+      "sourceSha256": "86fd6afc8d4a3b169e8b0420a22b79ccf7157888425ecab6126645e57e8662e9",
+      "createdAtUtc": "2026-09-01T13:16:05.673000+00:00",
+      "sourceBytes": 705,
+      "child": false,
+      "parentInCohort": null,
+      "parentOutsideCohort": false,
+      "storedStatus": "missing",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 0,
+      "roles": {},
+      "tools": 0,
+      "toolStatuses": {},
+      "errorRecords": 0,
+      "lastFinalLine": null,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [],
+      "signals": {},
+      "headerCostUsd": 0,
+      "headerTotalTokens": 0
+    },
+    {
+      "alias": "S073",
+      "sourceSha256": "07b63ea8b27f9a14344c30ff943aeb08ac5b9650f6a65f564eb1d685b9067f68",
+      "createdAtUtc": "2026-09-01T13:15:37.919000+00:00",
+      "sourceBytes": 394132,
+      "child": true,
+      "parentInCohort": "S080",
+      "parentOutsideCohort": false,
+      "storedStatus": "todo",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 75,
+      "roles": {
+        "user": 6,
+        "assistant": 11,
+        "tool": 58
+      },
+      "tools": 58,
+      "toolStatuses": {
+        "completed": 58
+      },
+      "errorRecords": 0,
+      "lastFinalLine": 76,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [],
+      "signals": {
+        "delivery_queued": [
+          38,
+          75
+        ]
+      },
+      "headerCostUsd": 2.606957,
+      "headerTotalTokens": 172534
+    },
+    {
+      "alias": "S074",
+      "sourceSha256": "bd51bdaa886d9c39a31533c1e4d9aac1113e7326dac59bd12130e94e34089283",
+      "createdAtUtc": "2026-09-01T13:14:15.942000+00:00",
+      "sourceBytes": 50124,
+      "child": true,
+      "parentInCohort": "S080",
+      "parentOutsideCohort": false,
+      "storedStatus": "missing",
+      "storedObjective": "missing",
+      "allowAll": false,
+      "messages": 9,
+      "roles": {
+        "user": 1,
+        "assistant": 2,
+        "tool": 5,
+        "plan": 1
+      },
+      "tools": 5,
+      "toolStatuses": {
+        "completed": 4,
+        "error": 1
+      },
+      "errorRecords": 1,
+      "lastFinalLine": null,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [],
+      "signals": {
+        "permission": [
+          6
+        ]
+      },
+      "headerCostUsd": 0,
+      "headerTotalTokens": 0
+    },
+    {
+      "alias": "S075",
+      "sourceSha256": "a8000b16c170bf6e9e7f7197c270a9165adcf8b1d4c3c098ba90496e623ad662",
+      "createdAtUtc": "2026-09-01T13:12:26.309000+00:00",
+      "sourceBytes": 4647535,
+      "child": false,
+      "parentInCohort": null,
+      "parentOutsideCohort": false,
+      "storedStatus": "done",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 538,
+      "roles": {
+        "user": 22,
+        "tool": 435,
+        "assistant": 79,
+        "info": 2
+      },
+      "tools": 435,
+      "toolStatuses": {
+        "completed": 417,
+        "executing": 2,
+        "error": 16
+      },
+      "errorRecords": 16,
+      "lastFinalLine": 539,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [
+        8,
+        10,
+        49,
+        192
+      ],
+      "signals": {
+        "packaged_runtime": [
+          60,
+          64,
+          436,
+          437,
+          442
+        ]
+      },
+      "headerCostUsd": 23.064240939999998,
+      "headerTotalTokens": 736067
+    },
+    {
+      "alias": "S076",
+      "sourceSha256": "76e460abb03cfb19fa9af815b56460b962328f67fbddb6897a6d65bdff89f4ff",
+      "createdAtUtc": "2026-09-01T12:45:14.005000+00:00",
+      "sourceBytes": 908586,
+      "child": true,
+      "parentInCohort": "S080",
+      "parentOutsideCohort": false,
+      "storedStatus": "done",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 121,
+      "roles": {
+        "user": 25,
+        "assistant": 14,
+        "tool": 80,
+        "info": 1,
+        "error": 1
+      },
+      "tools": 80,
+      "toolStatuses": {
+        "error": 1,
+        "completed": 77,
+        "executing": 2
+      },
+      "errorRecords": 2,
+      "lastFinalLine": 122,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [],
+      "signals": {
+        "status_contract": [
+          4
+        ],
+        "recovery_ceiling": [
+          118
+        ],
+        "delivery_queued": [
+          36,
+          43,
+          52,
+          55,
+          57,
+          62,
+          85,
+          87,
+          95,
+          97,
+          101,
+          103,
+          105,
+          115,
+          121
+        ]
+      },
+      "headerCostUsd": 5.40580485,
+      "headerTotalTokens": 211701
+    },
+    {
+      "alias": "S077",
+      "sourceSha256": "0f222900f1a74c357c7604841f9a261ec8a98948a4f576afa60e0d92af161464",
+      "createdAtUtc": "2026-09-01T12:19:38.282000+00:00",
+      "sourceBytes": 132334,
+      "child": true,
+      "parentInCohort": "S080",
+      "parentOutsideCohort": false,
+      "storedStatus": "missing",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 41,
+      "roles": {
+        "user": 2,
+        "assistant": 9,
+        "tool": 30
+      },
+      "tools": 30,
+      "toolStatuses": {
+        "completed": 29,
+        "error": 1
+      },
+      "errorRecords": 1,
+      "lastFinalLine": 42,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [],
+      "signals": {
+        "delivery_queued": [
+          41
+        ]
+      },
+      "headerCostUsd": 0,
+      "headerTotalTokens": 491557
+    },
+    {
+      "alias": "S078",
+      "sourceSha256": "bf7227d7fa1597c54c3eb4531bfba918f62fb5bca90c913024434eaa8be6b5ec",
+      "createdAtUtc": "2026-09-01T12:06:22.129000+00:00",
+      "sourceBytes": 1379504,
+      "child": true,
+      "parentInCohort": "S080",
+      "parentOutsideCohort": false,
+      "storedStatus": "todo",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 290,
+      "roles": {
+        "user": 38,
+        "assistant": 40,
+        "tool": 206,
+        "info": 3,
+        "error": 3
+      },
+      "tools": 206,
+      "toolStatuses": {
+        "completed": 202,
+        "executing": 3,
+        "error": 1
+      },
+      "errorRecords": 4,
+      "lastFinalLine": 291,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [],
+      "signals": {
+        "recovery_ceiling": [
+          223,
+          229
+        ],
+        "delivery_queued": [
+          64,
+          115,
+          119,
+          125,
+          129,
+          147,
+          195,
+          218,
+          221,
+          249,
+          253,
+          261,
+          266,
+          273,
+          281,
+          283,
+          288
+        ]
+      },
+      "headerCostUsd": 12.111232050000002,
+      "headerTotalTokens": 314447
+    },
+    {
+      "alias": "S079",
+      "sourceSha256": "c9247937b82bccb174551d6cf17a932418f8bb0ae01aa3c3f91f273fb3c8d4bb",
+      "createdAtUtc": "2026-09-01T12:03:35.913000+00:00",
+      "sourceBytes": 3254,
+      "child": true,
+      "parentInCohort": "S080",
+      "parentOutsideCohort": false,
+      "storedStatus": "missing",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 2,
+      "roles": {
+        "user": 1,
+        "error": 1
+      },
+      "tools": 0,
+      "toolStatuses": {},
+      "errorRecords": 1,
+      "lastFinalLine": null,
+      "quotaWithoutWork": true,
+      "shortContinuationLines": [],
+      "signals": {
+        "provider_quota": [
+          3
+        ]
+      },
+      "headerCostUsd": 0,
+      "headerTotalTokens": 0
+    },
+    {
+      "alias": "S080",
+      "sourceSha256": "096c759a2281997f7138bfe480cc8fb798486efdb8ddd52829d0a0ccafbff833",
+      "createdAtUtc": "2026-09-01T09:38:29.451000+00:00",
+      "sourceBytes": 5313113,
+      "child": false,
+      "parentInCohort": null,
+      "parentOutsideCohort": false,
+      "storedStatus": "done",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 895,
+      "roles": {
+        "user": 64,
+        "tool": 743,
+        "assistant": 79,
+        "plan": 1,
+        "error": 6,
+        "info": 2
+      },
+      "tools": 743,
+      "toolStatuses": {
+        "completed": 732,
+        "error": 8,
+        "executing": 3
+      },
+      "errorRecords": 14,
+      "lastFinalLine": 896,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [
+        10,
+        316,
+        456,
+        473,
+        875
+      ],
+      "signals": {
+        "provider_quota": [
+          109,
+          126,
+          443
+        ],
+        "status_contract": [
+          458,
+          680
+        ],
+        "tool_schema": [
+          148,
+          149
+        ],
+        "permission": [
+          382
+        ],
+        "context_compaction": [
+          471,
+          472
+        ],
+        "recovery_ceiling": [
+          220,
+          239,
+          300,
+          410
+        ],
+        "delivery_queued": [
+          153,
+          183,
+          190,
+          277,
+          304,
+          387,
+          406,
+          530,
+          540,
+          784,
+          855,
+          859,
+          868,
+          871
+        ]
+      },
+      "headerCostUsd": 29.467770999999995,
+      "headerTotalTokens": 613693
+    },
+    {
+      "alias": "S081",
+      "sourceSha256": "0843af3b87eb490bfddc943d3b57cdc3717d10dd41f7d883b63aec7c1afe37fa",
+      "createdAtUtc": "2026-09-01T09:36:55.199000+00:00",
+      "sourceBytes": 1799489,
+      "child": false,
+      "parentInCohort": null,
+      "parentOutsideCohort": false,
+      "storedStatus": "done",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 318,
+      "roles": {
+        "user": 26,
+        "tool": 250,
+        "assistant": 40,
+        "info": 2
+      },
+      "tools": 250,
+      "toolStatuses": {
+        "completed": 223,
+        "error": 22,
+        "executing": 5
+      },
+      "errorRecords": 22,
+      "lastFinalLine": 319,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [
+        24
+      ],
+      "signals": {
+        "provider_quota": [
+          7
+        ],
+        "browser_guide": [
+          54,
+          55,
+          64,
+          69,
+          94,
+          181,
+          226
+        ],
+        "packaged_runtime": [
+          125
+        ],
+        "tool_schema": [
+          25
+        ]
+      },
+      "headerCostUsd": 16.17888895,
+      "headerTotalTokens": 359847
+    },
+    {
+      "alias": "S082",
+      "sourceSha256": "cf14a3835e3b48678cf09bf5a7c2c58145f9591dd77c903dcdef61f35d290dca",
+      "createdAtUtc": "2026-09-01T09:36:37.084000+00:00",
+      "sourceBytes": 3752544,
+      "child": false,
+      "parentInCohort": null,
+      "parentOutsideCohort": false,
+      "storedStatus": "done",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 1070,
+      "roles": {
+        "user": 43,
+        "tool": 720,
+        "assistant": 303,
+        "info": 2,
+        "error": 2
+      },
+      "tools": 720,
+      "toolStatuses": {
+        "completed": 710,
+        "error": 10
+      },
+      "errorRecords": 12,
+      "lastFinalLine": 1071,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [
+        10,
+        25,
+        261,
+        326,
+        343,
+        375,
+        422,
+        540,
+        858,
+        1025
+      ],
+      "signals": {
+        "browser_guide": [
+          46,
+          47,
+          151,
+          185,
+          245,
+          276,
+          727,
+          1064
+        ],
+        "context_compaction": [
+          420,
+          421
+        ]
+      },
+      "headerCostUsd": 85.96719450999998,
+      "headerTotalTokens": 7834927
+    },
+    {
+      "alias": "S083",
+      "sourceSha256": "1bc32ac45e98409551ca8048241af75c4a30eebbe20a8923ab55b330d1d0a078",
+      "createdAtUtc": "2026-09-01T09:35:53.363000+00:00",
+      "sourceBytes": 876018,
+      "child": false,
+      "parentInCohort": null,
+      "parentOutsideCohort": false,
+      "storedStatus": "todo",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 136,
+      "roles": {
+        "user": 5,
+        "tool": 111,
+        "assistant": 19,
+        "info": 1
+      },
+      "tools": 111,
+      "toolStatuses": {
+        "completed": 107,
+        "error": 4
+      },
+      "errorRecords": 4,
+      "lastFinalLine": 137,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [
+        15
+      ],
+      "signals": {
+        "browser_guide": [
+          53,
+          54,
+          55,
+          56
+        ]
+      },
+      "headerCostUsd": 7.912254449999999,
+      "headerTotalTokens": 293954
+    },
+    {
+      "alias": "S084",
+      "sourceSha256": "4fd9519f9d13b38a4cf3177d035f41307ef7eb4422465e1c2f1e6f7f129b2c48",
+      "createdAtUtc": "2026-09-01T09:34:06.349000+00:00",
+      "sourceBytes": 1104830,
+      "child": true,
+      "parentInCohort": null,
+      "parentOutsideCohort": true,
+      "storedStatus": "done",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 193,
+      "roles": {
+        "user": 10,
+        "assistant": 18,
+        "tool": 163,
+        "info": 2
+      },
+      "tools": 163,
+      "toolStatuses": {
+        "completed": 156,
+        "error": 7
+      },
+      "errorRecords": 7,
+      "lastFinalLine": 194,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [
+        20,
+        43
+      ],
+      "signals": {
+        "browser_guide": [
+          56,
+          101
+        ],
+        "tool_schema": [
+          64
+        ]
+      },
+      "headerCostUsd": 5.942879649999999,
+      "headerTotalTokens": 148884
+    },
+    {
+      "alias": "S085",
+      "sourceSha256": "f3fc2fab1af52bc273be2fcebaf73f9b77d30f560a782a6be82fd26e52fdfd7e",
+      "createdAtUtc": "2026-09-01T09:22:38.327000+00:00",
+      "sourceBytes": 4129774,
+      "child": false,
+      "parentInCohort": null,
+      "parentOutsideCohort": false,
+      "storedStatus": "done",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 1022,
+      "roles": {
+        "user": 36,
+        "tool": 729,
+        "assistant": 254,
+        "info": 2,
+        "error": 1
+      },
+      "tools": 729,
+      "toolStatuses": {
+        "completed": 723,
+        "error": 6
+      },
+      "errorRecords": 7,
+      "lastFinalLine": 1023,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [
+        53,
+        282,
+        325,
+        333,
+        354,
+        756
+      ],
+      "signals": {
+        "provider_quota": [
+          7
+        ]
+      },
+      "headerCostUsd": 70.52465779999997,
+      "headerTotalTokens": 760647
+    },
+    {
+      "alias": "S086",
+      "sourceSha256": "5957be1bebaaf98f14fcfe2fcb16b10e490342dd4419bf4a91b2ebc4eb350b97",
+      "createdAtUtc": "2026-09-01T09:22:12.200000+00:00",
+      "sourceBytes": 1035685,
+      "child": false,
+      "parentInCohort": null,
+      "parentOutsideCohort": false,
+      "storedStatus": "done",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 207,
+      "roles": {
+        "user": 16,
+        "tool": 157,
+        "assistant": 31,
+        "info": 3
+      },
+      "tools": 157,
+      "toolStatuses": {
+        "completed": 148,
+        "executing": 7,
+        "error": 2
+      },
+      "errorRecords": 2,
+      "lastFinalLine": 208,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [
+        134
+      ],
+      "signals": {
+        "browser_guide": [
+          112
+        ],
+        "delivery_queued": [
+          81
+        ]
+      },
+      "headerCostUsd": 5.706788850000001,
+      "headerTotalTokens": 156207
+    },
+    {
+      "alias": "S087",
+      "sourceSha256": "b85eb428844da907c3d253cdf482425bece8f35840d76bb7790319ca72a8b43a",
+      "createdAtUtc": "2026-09-01T09:20:18.649000+00:00",
+      "sourceBytes": 2138,
+      "child": false,
+      "parentInCohort": null,
+      "parentOutsideCohort": false,
+      "storedStatus": "missing",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 2,
+      "roles": {
+        "user": 1,
+        "assistant": 1
+      },
+      "tools": 0,
+      "toolStatuses": {},
+      "errorRecords": 0,
+      "lastFinalLine": 3,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [],
+      "signals": {},
+      "headerCostUsd": 0.05792325,
+      "headerTotalTokens": 76801
+    },
+    {
+      "alias": "S088",
+      "sourceSha256": "a67fee06cd5be4bf0e5d30654f21013a0b6feba22e20162fc6c961f96ba54a52",
+      "createdAtUtc": "2026-09-01T09:14:17.674000+00:00",
+      "sourceBytes": 405749,
+      "child": false,
+      "parentInCohort": null,
+      "parentOutsideCohort": false,
+      "storedStatus": "done",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 48,
+      "roles": {
+        "user": 3,
+        "tool": 41,
+        "assistant": 4
+      },
+      "tools": 41,
+      "toolStatuses": {
+        "completed": 37,
+        "error": 3,
+        "executing": 1
+      },
+      "errorRecords": 3,
+      "lastFinalLine": 49,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [],
+      "signals": {
+        "packaged_runtime": [
+          21,
+          30
+        ]
+      },
+      "headerCostUsd": 1.3500607500000001,
+      "headerTotalTokens": 563911
+    },
+    {
+      "alias": "S089",
+      "sourceSha256": "c422cf104788d001dcea84207d1087df020647f182a02649e84f34b2721ef15f",
+      "createdAtUtc": "2026-09-01T09:10:48.491000+00:00",
+      "sourceBytes": 4327747,
+      "child": false,
+      "parentInCohort": null,
+      "parentOutsideCohort": false,
+      "storedStatus": "done",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 655,
+      "roles": {
+        "user": 33,
+        "assistant": 152,
+        "tool": 467,
+        "info": 3
+      },
+      "tools": 467,
+      "toolStatuses": {
+        "completed": 455,
+        "executing": 4,
+        "error": 8
+      },
+      "errorRecords": 8,
+      "lastFinalLine": 656,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [
+        133,
+        149,
+        279,
+        393,
+        435,
+        649
+      ],
+      "signals": {
+        "browser_guide": [
+          444,
+          485
+        ],
+        "status_contract": [
+          281,
+          578
+        ],
+        "packaged_runtime": [
+          423,
+          425
+        ]
+      },
+      "headerCostUsd": 26.404314069999998,
+      "headerTotalTokens": 971341
+    },
+    {
+      "alias": "S090",
+      "sourceSha256": "184f9f18055557010eb11254d4f01673d9f782ce79dafc61373f0f44ec084ff2",
+      "createdAtUtc": "2026-09-01T08:52:06.663000+00:00",
+      "sourceBytes": 1113148,
+      "child": false,
+      "parentInCohort": null,
+      "parentOutsideCohort": false,
+      "storedStatus": "done",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 134,
+      "roles": {
+        "user": 8,
+        "error": 2,
+        "assistant": 15,
+        "tool": 109
+      },
+      "tools": 109,
+      "toolStatuses": {
+        "completed": 103,
+        "error": 5,
+        "executing": 1
+      },
+      "errorRecords": 7,
+      "lastFinalLine": 135,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [],
+      "signals": {
+        "provider_quota": [
+          3,
+          5
+        ],
+        "packaged_runtime": [
+          89,
+          90
+        ]
+      },
+      "headerCostUsd": 6.187103200000001,
+      "headerTotalTokens": 2548700
+    },
+    {
+      "alias": "S091",
+      "sourceSha256": "025f35831e3abb8d1906338c1ca9d554106025caee1de389db5505060ae4a9c4",
+      "createdAtUtc": "2026-08-31T18:38:12.534000+00:00",
+      "sourceBytes": 415671,
+      "child": true,
+      "parentInCohort": null,
+      "parentOutsideCohort": true,
+      "storedStatus": "missing",
+      "storedObjective": "missing",
+      "allowAll": false,
+      "messages": 83,
+      "roles": {
+        "user": 4,
+        "tool": 76,
+        "plan": 3
+      },
+      "tools": 76,
+      "toolStatuses": {
+        "completed": 72,
+        "error": 4
+      },
+      "errorRecords": 4,
+      "lastFinalLine": null,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [],
+      "signals": {},
+      "headerCostUsd": 0,
+      "headerTotalTokens": 0
+    },
+    {
+      "alias": "S092",
+      "sourceSha256": "e0b0dc035da8c7628da8e7faa6e95da9402be4f40f651c47713080872faea629",
+      "createdAtUtc": "2026-08-31T17:05:41.439000+00:00",
+      "sourceBytes": 570793,
+      "child": true,
+      "parentInCohort": null,
+      "parentOutsideCohort": true,
+      "storedStatus": "done",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 76,
+      "roles": {
+        "user": 7,
+        "tool": 66,
+        "assistant": 3
+      },
+      "tools": 66,
+      "toolStatuses": {
+        "completed": 66
+      },
+      "errorRecords": 0,
+      "lastFinalLine": 77,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [],
+      "signals": {
+        "delivery_queued": [
+          49,
+          51,
+          53,
+          54,
+          70,
+          71,
+          75,
+          76
+        ]
+      },
+      "headerCostUsd": 6.132031000000001,
+      "headerTotalTokens": 698648
+    },
+    {
+      "alias": "S093",
+      "sourceSha256": "1a25c79c14ce7c1b180127846daec53e630a17af6ef5f365b14c6a287f9a9ad2",
+      "createdAtUtc": "2026-08-31T16:27:42.036000+00:00",
+      "sourceBytes": 2913,
+      "child": false,
+      "parentInCohort": null,
+      "parentOutsideCohort": false,
+      "storedStatus": "todo",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 3,
+      "roles": {
+        "user": 1,
+        "tool": 1,
+        "assistant": 1
+      },
+      "tools": 1,
+      "toolStatuses": {
+        "completed": 1
+      },
+      "errorRecords": 0,
+      "lastFinalLine": 4,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [],
+      "signals": {},
+      "headerCostUsd": 0,
+      "headerTotalTokens": 72071
+    },
+    {
+      "alias": "S094",
+      "sourceSha256": "b0bae4fea486baa997c60e75aa3b78d4634ba3459d2bae193abc7aabdfda1d98",
+      "createdAtUtc": "2026-08-31T16:02:34.736000+00:00",
+      "sourceBytes": 5865,
+      "child": false,
+      "parentInCohort": null,
+      "parentOutsideCohort": false,
+      "storedStatus": "missing",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 6,
+      "roles": {
+        "user": 3,
+        "tool": 2,
+        "assistant": 1
+      },
+      "tools": 2,
+      "toolStatuses": {
+        "error": 2
+      },
+      "errorRecords": 2,
+      "lastFinalLine": 7,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [],
+      "signals": {},
+      "headerCostUsd": 0,
+      "headerTotalTokens": 304599
+    },
+    {
+      "alias": "S095",
+      "sourceSha256": "d26033481440df82f1f5decd27e7c8ff80ca05038d138628d82db9280b9f89d3",
+      "createdAtUtc": "2026-08-31T15:49:57.300000+00:00",
+      "sourceBytes": 362044,
+      "child": true,
+      "parentInCohort": null,
+      "parentOutsideCohort": true,
+      "storedStatus": "done",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 102,
+      "roles": {
+        "user": 17,
+        "tool": 84,
+        "assistant": 1
+      },
+      "tools": 84,
+      "toolStatuses": {
+        "error": 1,
+        "completed": 80,
+        "executing": 3
+      },
+      "errorRecords": 1,
+      "lastFinalLine": 103,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [],
+      "signals": {
+        "status_contract": [
+          3
+        ],
+        "delivery_queued": [
+          24,
+          34,
+          40,
+          74
+        ]
+      },
+      "headerCostUsd": 0.316914,
+      "headerTotalTokens": 398595
+    },
+    {
+      "alias": "S096",
+      "sourceSha256": "e990523bdf1e4966f3b93caedd52feff98efaa78a6b7a351a6092c3064da6466",
+      "createdAtUtc": "2026-08-31T15:43:10.315000+00:00",
+      "sourceBytes": 265810,
+      "child": true,
+      "parentInCohort": null,
+      "parentOutsideCohort": true,
+      "storedStatus": "done",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 36,
+      "roles": {
+        "user": 2,
+        "tool": 33,
+        "assistant": 1
+      },
+      "tools": 33,
+      "toolStatuses": {
+        "completed": 33
+      },
+      "errorRecords": 0,
+      "lastFinalLine": 37,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [],
+      "signals": {
+        "delivery_queued": [
+          36
+        ]
+      },
+      "headerCostUsd": 2.587381,
+      "headerTotalTokens": 2466347
+    },
+    {
+      "alias": "S097",
+      "sourceSha256": "1dbf097daac82a32095d920ef3d5e685d79dd6c759cb4fc8aad3ce06e55b6997",
+      "createdAtUtc": "2026-08-31T15:43:10.308000+00:00",
+      "sourceBytes": 337624,
+      "child": true,
+      "parentInCohort": null,
+      "parentOutsideCohort": true,
+      "storedStatus": "done",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 39,
+      "roles": {
+        "user": 2,
+        "tool": 36,
+        "assistant": 1
+      },
+      "tools": 36,
+      "toolStatuses": {
+        "completed": 36
+      },
+      "errorRecords": 0,
+      "lastFinalLine": 40,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [],
+      "signals": {
+        "delivery_queued": [
+          39
+        ]
+      },
+      "headerCostUsd": 2.829531,
+      "headerTotalTokens": 2769450
+    },
+    {
+      "alias": "S098",
+      "sourceSha256": "a49afe0990b3ccf760181f89fee3d80e2e81e67a0155db9fb1f01f5855bb5216",
+      "createdAtUtc": "2026-08-31T14:50:50.502000+00:00",
+      "sourceBytes": 509505,
+      "child": true,
+      "parentInCohort": null,
+      "parentOutsideCohort": true,
+      "storedStatus": "done",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 95,
+      "roles": {
+        "user": 7,
+        "tool": 82,
+        "assistant": 6
+      },
+      "tools": 82,
+      "toolStatuses": {
+        "completed": 80,
+        "error": 1,
+        "executing": 1
+      },
+      "errorRecords": 1,
+      "lastFinalLine": 96,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [],
+      "signals": {
+        "status_contract": [
+          7
+        ],
+        "delivery_queued": [
+          63,
+          95
+        ]
+      },
+      "headerCostUsd": 2.4779280000000004,
+      "headerTotalTokens": 3266928
+    },
+    {
+      "alias": "S099",
+      "sourceSha256": "79e1b5489cf202adf6f071de3bee57eedfcc549ff2b54930a25b5d544d9bbd0e",
+      "createdAtUtc": "2026-08-31T14:43:18.005000+00:00",
+      "sourceBytes": 1330722,
+      "child": true,
+      "parentInCohort": null,
+      "parentOutsideCohort": true,
+      "storedStatus": "todo",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 229,
+      "roles": {
+        "user": 54,
+        "tool": 162,
+        "assistant": 13
+      },
+      "tools": 162,
+      "toolStatuses": {
+        "completed": 160,
+        "executing": 2
+      },
+      "errorRecords": 0,
+      "lastFinalLine": 230,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [],
+      "signals": {
+        "delivery_queued": [
+          11,
+          22,
+          31,
+          34,
+          37,
+          38,
+          45,
+          47,
+          71,
+          72,
+          82,
+          83,
+          86,
+          87,
+          93,
+          128,
+          136,
+          137,
+          142,
+          143,
+          144,
+          145,
+          149,
+          150,
+          165,
+          166,
+          168,
+          169,
+          172,
+          175,
+          178,
+          194,
+          195,
+          199,
+          200,
+          201,
+          203,
+          204,
+          205,
+          208,
+          211,
+          223,
+          224,
+          225,
+          226,
+          229
+        ]
+      },
+      "headerCostUsd": 16.57626,
+      "headerTotalTokens": 899386
+    },
+    {
+      "alias": "S100",
+      "sourceSha256": "755694e0ce1eee2d7ab7faec2e1626a9e206293907de3d7f0d70e9773e622d29",
+      "createdAtUtc": "2026-08-31T14:22:40.103000+00:00",
+      "sourceBytes": 884747,
+      "child": true,
+      "parentInCohort": null,
+      "parentOutsideCohort": true,
+      "storedStatus": "done",
+      "storedObjective": "missing",
+      "allowAll": true,
+      "messages": 215,
+      "roles": {
+        "user": 9,
+        "tool": 205,
+        "assistant": 1
+      },
+      "tools": 205,
+      "toolStatuses": {
+        "completed": 203,
+        "error": 1,
+        "executing": 1
+      },
+      "errorRecords": 1,
+      "lastFinalLine": 216,
+      "quotaWithoutWork": false,
+      "shortContinuationLines": [],
+      "signals": {
+        "status_contract": [
+          6
+        ],
+        "delivery_queued": [
+          125,
+          146
+        ]
+      },
+      "headerCostUsd": 1.271644,
+      "headerTotalTokens": 1961249
+    }
+  ]
+}

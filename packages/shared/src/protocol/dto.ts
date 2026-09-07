@@ -14,6 +14,7 @@ import type {
   AnnotationV1,
   RoutingMeta,
   AutonomyEvent,
+  ToolExecutionCheckpoint,
   PermissionRequest as BasePermissionRequest,
 } from '@craft-agent/core/types'
 import type { PermissionMode } from '../agent/mode-types'
@@ -706,7 +707,7 @@ export type SessionEvent =
   | { type: 'text_delta'; sessionId: string; delta: string; turnId?: string }
   | { type: 'text_complete'; sessionId: string; text: string; isIntermediate?: boolean; turnId?: string; parentToolUseId?: string; timestamp?: number; messageId?: string; routingMeta?: RoutingMeta }
   | { type: 'tool_start'; sessionId: string; toolName: string; toolUseId: string; toolInput: Record<string, unknown>; toolIntent?: string; toolDisplayName?: string; toolDisplayMeta?: ToolDisplayMeta; turnId?: string; parentToolUseId?: string; timestamp?: number }
-  | { type: 'tool_result'; sessionId: string; toolUseId: string; toolName: string; result: string; turnId?: string; parentToolUseId?: string; isError?: boolean; timestamp?: number }
+  | { type: 'tool_result'; sessionId: string; toolUseId: string; toolName: string; result: string; turnId?: string; parentToolUseId?: string; isError?: boolean; executed?: boolean; checkpoint?: ToolExecutionCheckpoint; timestamp?: number }
   | { type: 'error'; sessionId: string; error: string; timestamp?: number }
   | { type: 'typed_error'; sessionId: string; error: TypedError; timestamp?: number }
   | { type: 'complete'; sessionId: string; reason?: 'complete' | 'interrupted' | 'error' | 'timeout'; tokenUsage?: Session['tokenUsage']; hasUnread?: boolean; backgroundTasksAlive?: boolean }
@@ -786,6 +787,8 @@ export interface SendMessageOptions {
   internalOrigin?: {
     kind: 'agent-message' | 'browser-fallback' | 'spawned-session' | 'automation'
     senderSessionId?: string
+    deliveryId?: string
+    attachmentsSha256?: string
   }
 }
 

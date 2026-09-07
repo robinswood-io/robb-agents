@@ -1069,7 +1069,7 @@ describe('PiEventAdapter', () => {
       expect(events[0].result).toBe('command output');
     });
 
-    it('should preserve a host-authored continuation checkpoint from tool details', () => {
+    it('should preserve a structured non-execution checkpoint from tool details', () => {
       collect(adapter.adaptEvent({ type: 'turn_start' } as any));
       collect(adapter.adaptEvent({
         type: 'tool_execution_start',
@@ -1083,7 +1083,52 @@ describe('PiEventAdapter', () => {
         toolCallId: 'call_budget',
         result: {
           content: [{ type: 'text', text: 'Tool-call checkpoint reached.' }],
-          details: { costControlBlocked: true, continuationRequired: true },
+          details: {
+            costControlBlocked: true,
+            continuationRequired: true,
+            executed: false,
+            checkpoint: {
+              schemaVersion: 1,
+              kind: 'tool-call-budget',
+              reason: 'Tool-call checkpoint reached.',
+            },
+          },
+        },
+        isError: false,
+      } as any));
+
+      expect(events[0]).toMatchObject({
+        type: 'tool_result',
+        isError: false,
+        continuationRequired: true,
+        executed: false,
+        checkpoint: {
+          schemaVersion: 1,
+          kind: 'tool-call-budget',
+          reason: 'Tool-call checkpoint reached.',
+        },
+      });
+    });
+
+    it('normalizes legacy cost-control checkpoint details as non-executed', () => {
+      collect(adapter.adaptEvent({ type: 'turn_start' } as any));
+      collect(adapter.adaptEvent({
+        type: 'tool_execution_start',
+        toolCallId: 'call_legacy_budget',
+        toolName: 'edit',
+        args: {},
+      } as any));
+
+      const events = collect(adapter.adaptEvent({
+        type: 'tool_execution_end',
+        toolCallId: 'call_legacy_budget',
+        result: {
+          content: [{ type: 'text', text: 'Legacy checkpoint.' }],
+          details: {
+            costControlBlocked: true,
+            continuationRequired: true,
+            checkpoint: 'tool-call-budget',
+          },
         },
         isError: false,
       } as any));
@@ -1091,6 +1136,12 @@ describe('PiEventAdapter', () => {
       expect(events[0]).toMatchObject({
         type: 'tool_result',
         continuationRequired: true,
+        executed: false,
+        checkpoint: {
+          schemaVersion: 1,
+          kind: 'tool-call-budget',
+          reason: 'Legacy checkpoint.',
+        },
       });
     });
 

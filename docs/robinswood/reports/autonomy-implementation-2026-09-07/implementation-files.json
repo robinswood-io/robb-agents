@@ -1,0 +1,220 @@
+{
+  "baselineSnapshot": "/var/folders/dw/w9l8d92909nc_4frg_7km46h0000gn/T/robb-autonomy-implementation-20260907-nof3msix",
+  "files": [
+    {
+      "path": "apps/electron/resources/bin/_python-tool",
+      "sha256": "841871248dd5da03270410b341da0d5ea2ecfcb097cd65ac13512abf25a0d7c5",
+      "existedInInitialDirtySnapshot": false
+    },
+    {
+      "path": "apps/electron/resources/release-notes/next.md",
+      "sha256": "6f0fbeec88eede9452a418f65a7c9711d6f5e25a5d8963880e273898a315d565",
+      "existedInInitialDirtySnapshot": false
+    },
+    {
+      "path": "apps/electron/resources/scripts/tests/test_pdf_tool_smoke.py",
+      "sha256": "56cb83fbb9016f1f6c5297f149b1b1cc1ab495987c16e70b1cb7826dc4d1daf4",
+      "existedInInitialDirtySnapshot": false
+    },
+    {
+      "path": "apps/electron/resources/scripts/tests/test_python_wrapper.py",
+      "sha256": "f93bd389da8ae7b7b6d7f42ebd85e8b1bb16f1e8b9c1a90ee099c09a9179de40",
+      "existedInInitialDirtySnapshot": false
+    },
+    {
+      "path": "package.json",
+      "sha256": "8b12f9fbb5f653f5e0e84e27ddf16be4bb24a8f573d11ea92f3b1f7c0b77773b",
+      "existedInInitialDirtySnapshot": true
+    },
+    {
+      "path": "packages/core/src/types/index.ts",
+      "sha256": "26c8ff985edbbdaa9b09c634e3140cd2f8c7a52cbc3b93e9f2fee71b9f39c145",
+      "existedInInitialDirtySnapshot": true
+    },
+    {
+      "path": "packages/core/src/types/message.ts",
+      "sha256": "6cfaa4c89cbbbab1387d95cd624581e75a2b665227e651d307295303c82c08a8",
+      "existedInInitialDirtySnapshot": true
+    },
+    {
+      "path": "packages/core/src/types/objective-acceptance.ts",
+      "sha256": "089a0aa89c6c7c4b3890605b8960712cc419a1b34cf5aca4207abece9c1748c0",
+      "existedInInitialDirtySnapshot": false
+    },
+    {
+      "path": "packages/server-core/src/sessions/SessionManager.ts",
+      "sha256": "495a6a755ae736e43fbf0404838eaaa083c82e28710e2ed9d94f28d6f49360e2",
+      "existedInInitialDirtySnapshot": true
+    },
+    {
+      "path": "packages/server-core/src/sessions/agent-delivery.test.ts",
+      "sha256": "66da0d3c96acbe2bbf7262de5202d4263aaa3dd8760fb3d8084232868153cd33",
+      "existedInInitialDirtySnapshot": false
+    },
+    {
+      "path": "packages/server-core/src/sessions/agent-delivery.ts",
+      "sha256": "beb3002e1485bbcd28493b8268d6253b6f2ddc1c28bf23ae1ef51c45cc15544d",
+      "existedInInitialDirtySnapshot": false
+    },
+    {
+      "path": "packages/server-core/src/sessions/autonomy-acceptance.test.ts",
+      "sha256": "d270b039655644f4640d5bf622e26080998790b3b2ed06972ec06424ce256695",
+      "existedInInitialDirtySnapshot": true
+    },
+    {
+      "path": "packages/server-core/src/sessions/autonomy-acceptance.ts",
+      "sha256": "651613320a778a2137ad1565b296576112e27b0f85894d43d0151a1c1f12e203",
+      "existedInInitialDirtySnapshot": true
+    },
+    {
+      "path": "packages/server-core/src/sessions/human-benchmark.test.ts",
+      "sha256": "ed14b1a6cbd1219acde58bd461a4fa09a667b4abb805bd0166021b099a7b42ec",
+      "existedInInitialDirtySnapshot": false
+    },
+    {
+      "path": "packages/server-core/src/sessions/human-benchmark.ts",
+      "sha256": "7c0769798ef4394aa64e3aa0dc688a9600cecefd871ab31f6cd694037c6b6f89",
+      "existedInInitialDirtySnapshot": false
+    },
+    {
+      "path": "packages/server-core/src/sessions/objective-acceptance-criteria.test.ts",
+      "sha256": "0c23944645f533e1911e9a896493493723e4df5b911ad3a644d38f4c9a667622",
+      "existedInInitialDirtySnapshot": false
+    },
+    {
+      "path": "packages/server-core/src/sessions/objective-acceptance-criteria.ts",
+      "sha256": "644a24787847968e31ab5340ec2eea3a8589587d5f1390f61660aa66acbc36d5",
+      "existedInInitialDirtySnapshot": false
+    },
+    {
+      "path": "packages/server-core/src/sessions/objective-contract.ts",
+      "sha256": "6b87bebbb1aa372b761b9f262ba8de4426e4d3f365afd065c140ba5830b0495e",
+      "existedInInitialDirtySnapshot": true
+    },
+    {
+      "path": "packages/server-core/src/sessions/objective-outcome.ts",
+      "sha256": "cee85d013dd008cdf5e0c5fb0e11e484cb51115331e75a81a18f311d01574a80",
+      "existedInInitialDirtySnapshot": true
+    },
+    {
+      "path": "packages/server-core/src/sessions/project-learning.test.ts",
+      "sha256": "c25875718778772a18c719025ca39b98c49bf504b2466bb5dc13d876c5932c1c",
+      "existedInInitialDirtySnapshot": false
+    },
+    {
+      "path": "packages/server-core/src/sessions/project-learning.ts",
+      "sha256": "837382905ecebd95a46aa966c0dab4840f09da2dd3b5e2512be9a1ef13040e50",
+      "existedInInitialDirtySnapshot": false
+    },
+    {
+      "path": "packages/server-core/src/sessions/session-objective-outcome-integration.test.ts",
+      "sha256": "84a668df881de97dd6ebb6c8d4de81268af3f7a8a228687a5be57b5dd49cfc79",
+      "existedInInitialDirtySnapshot": true
+    },
+    {
+      "path": "packages/session-tools-core/src/context.ts",
+      "sha256": "50c02a0dbfcf9f006edce46d8161129696e951787cc58d6680b769511a542873",
+      "existedInInitialDirtySnapshot": false
+    },
+    {
+      "path": "packages/session-tools-core/src/handlers/project-learning.ts",
+      "sha256": "ecac1108bbf653e9c12814f887a4c87f42db8a32989a8e0c8706750164ad18ee",
+      "existedInInitialDirtySnapshot": false
+    },
+    {
+      "path": "packages/session-tools-core/src/handlers/send-agent-message.ts",
+      "sha256": "f1b9a49827ffc333404ee4dc30bc63cc190131074d39a44d3e1df520b2a9eeac",
+      "existedInInitialDirtySnapshot": false
+    },
+    {
+      "path": "packages/session-tools-core/src/handlers/set-completion-criteria.ts",
+      "sha256": "cf72dc528241f6fe7cade01796ff124942f0a80927f7d0cdd7b38f67cdb1c3b5",
+      "existedInInitialDirtySnapshot": false
+    },
+    {
+      "path": "packages/session-tools-core/src/tool-defs.ts",
+      "sha256": "4d5a645a3616ce08938b6111db4c3659b9eb4cc10145b48429e909f4f135842f",
+      "existedInInitialDirtySnapshot": false
+    },
+    {
+      "path": "packages/shared/src/agent/claude-agent.ts",
+      "sha256": "e7b3b398619446142f6926c1f9b6354ae477d78770913c26f190cc3716b5aaae",
+      "existedInInitialDirtySnapshot": true
+    },
+    {
+      "path": "packages/shared/src/agent/core/__tests__/prerequisite-manager.isolated.ts",
+      "sha256": "666ed5bee067cd8eeb06ce0d1bffacafb4d40a31c80e3d64991d189fe3067b56",
+      "existedInInitialDirtySnapshot": false
+    },
+    {
+      "path": "packages/shared/src/agent/core/objective-evidence-gate.ts",
+      "sha256": "8a20bdf02ed7b095832bd30018be1d7a579030a0e3fa5e963390cc3e3cf90107",
+      "existedInInitialDirtySnapshot": true
+    },
+    {
+      "path": "packages/shared/src/agent/pi-agent.ts",
+      "sha256": "71eef3b74f71658e0b4e3760d89cce059c8628b7139ede66ddc251589b86951f",
+      "existedInInitialDirtySnapshot": true
+    },
+    {
+      "path": "packages/shared/src/agent/session-scoped-tool-callback-registry.ts",
+      "sha256": "fb2f18a6d4bdeff5836451ed749ddd82f7c6b1a6d759ec30bbc596b155712be6",
+      "existedInInitialDirtySnapshot": false
+    },
+    {
+      "path": "packages/shared/src/agent/session-self-management-bindings.ts",
+      "sha256": "04befd300bcd5917790ab378fb0310399998c88a7fc68358a64e9e8e0aa1e16d",
+      "existedInInitialDirtySnapshot": false
+    },
+    {
+      "path": "packages/shared/src/governance/workspace-governance-store.test.ts",
+      "sha256": "ad1fea8b0fff272369b9abd04cc09f00d06673564ccfb9308b25c0e69666fdce",
+      "existedInInitialDirtySnapshot": false
+    },
+    {
+      "path": "packages/shared/src/governance/workspace-governance-store.ts",
+      "sha256": "e65aed4d1e78655d8cba03b1a2dc436b8d069888c0817108fd668f217391b417",
+      "existedInInitialDirtySnapshot": false
+    },
+    {
+      "path": "packages/shared/src/projects/memory-v2.ts",
+      "sha256": "05fc65200afe0beaae6c6e0734242d03b6065fd3437926d1aa1c39a5f556f476",
+      "existedInInitialDirtySnapshot": false
+    },
+    {
+      "path": "packages/shared/src/projects/storage.ts",
+      "sha256": "a0df6b09843be63d84551f7c84394672df29c9610aaa42510baf04011264d4ed",
+      "existedInInitialDirtySnapshot": false
+    },
+    {
+      "path": "packages/shared/src/protocol/dto.ts",
+      "sha256": "68ec7017909d9f75fca4dccc26724200e176138a9b92ca9b67e8042ec9a01900",
+      "existedInInitialDirtySnapshot": true
+    },
+    {
+      "path": "packages/shared/src/sessions/types.ts",
+      "sha256": "b3721ffa438456e214b51c757e46716b843ee7985726420b8b51f67b6ea94d90",
+      "existedInInitialDirtySnapshot": true
+    },
+    {
+      "path": "scripts/robb-autonomy-acceptance.ts",
+      "sha256": "6487eab5d3abddde5661bd6fcebe7eff090ae4d8a16dbb81c7bf906f988414d5",
+      "existedInInitialDirtySnapshot": true
+    },
+    {
+      "path": "scripts/robb-human-benchmark.ts",
+      "sha256": "a1645faea1b182ddde742b4d6448241d63c8459cedd88b51de8525651df2fd97",
+      "existedInInitialDirtySnapshot": false
+    },
+    {
+      "path": "scripts/test-autonomy-audit.ts",
+      "sha256": "b89db4641f30638382a9d5930ef1d1d58cb7ff1b646383a97dff7d64407151ef",
+      "existedInInitialDirtySnapshot": false
+    },
+    {
+      "path": "scripts/tsconfig.json",
+      "sha256": "6021521d3a88ad389691746091f5a9cca46d3550a1f8881d28bb0b2d90d4c933",
+      "existedInInitialDirtySnapshot": false
+    }
+  ]
+}

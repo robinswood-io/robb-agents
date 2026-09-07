@@ -19,6 +19,7 @@ import { dirname, isAbsolute, relative, resolve } from 'path';
 import { getSessionSafeAllowedToolNames } from '@craft-agent/session-tools-core';
 import { FEATURE_FLAGS } from '../feature-flags.ts';
 import { isBrowserToolNameOrAlias } from './browser-tool-names.ts';
+import { classifyToolNameMutationSemantics } from './core/tool-name-semantics.ts';
 import type { PermissionsContext, MergedPermissionsConfig } from './permissions-config.ts';
 import {
   validateBashCommand,
@@ -1711,6 +1712,7 @@ export function getPathHint(targetPath: string, plansFolderPath: string, dataFol
  * Check if an MCP tool is read-only using the given config
  */
 function isReadOnlyMcpToolWithConfig(toolName: string, config: ToolCheckConfig): boolean {
+  if (classifyToolNameMutationSemantics(toolName) !== 'neutral') return false;
   return config.readOnlyMcpPatterns.some(pattern => pattern.test(toolName));
 }
 

@@ -34,6 +34,16 @@ export function attachSessionSelfManagementBindings(
   context: SessionToolContext,
   sessionId: string,
 ): void {
+  Object.defineProperty(context, 'setCompletionCriteria', {
+    get: () => getSessionScopedToolCallbacks(sessionId)?.setCompletionCriteriaFn,
+    configurable: true,
+    enumerable: true,
+  });
+  Object.defineProperty(context, 'projectLearning', {
+    get: () => getSessionScopedToolCallbacks(sessionId)?.projectLearningFn,
+    configurable: true,
+    enumerable: true,
+  });
   // Direct pass-through bindings — signatures match, no wrapping needed.
   // Each getter resolves fresh from the registry on every access.
 

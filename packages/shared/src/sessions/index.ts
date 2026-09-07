@@ -22,6 +22,8 @@ export type {
   PendingTurnRecovery,
   ActiveSessionObjective,
   SessionObjectiveTerminalState,
+  SessionObjectiveDeclaredState,
+  SessionObjectiveOutcomeDeclaration,
   ExternalActionAuthorization,
   ExternalActionAuthorizationCategory,
 } from './types.ts';

@@ -101,6 +101,7 @@ import {
   prepareMessagesForIncompleteTailContinuation,
 } from './incomplete-tool-tail-recovery.ts';
 import { ToolLoopBudget } from './tool-loop-budget.ts';
+import { createToolExecutionCheckpointResult } from './tool-execution-checkpoint.ts';
 import { normalizeSessionPathTokens } from './session-path-normalization.ts';
 import {
   ReadToolTimeoutError,
@@ -802,14 +803,8 @@ function wrapSingleTool(tool: ToolDefinition<any, any>): ToolDefinition<any, any
 
     const loopDecision = toolLoopBudget.observe(sdkToolName, inputObj);
     if (loopDecision.action === 'block') {
-      return {
-        content: [{ type: 'text', text: loopDecision.message ?? 'Repeated unchanged tool call blocked.' }],
-        details: {
-          costControlBlocked: true,
-          continuationRequired: true,
-          checkpoint: 'tool-call-budget',
-        },
-      };
+      const reason = loopDecision.message ?? 'Repeated unchanged tool call blocked.';
+      return createToolExecutionCheckpointResult(reason);
     }
 
     // Execute original tool with (potentially modified) input

@@ -82,8 +82,16 @@ export function handleTextComplete(
 ): SessionState {
   const { session, streaming } = state
 
-  // Find message by turnId (try streaming first, then any assistant)
-  let msgIndex = findStreamingMessage(session.messages, event.turnId)
+  // An authoritative persisted message ID is more precise than turnId. The
+  // host may reclassify the same final bubble as intermediate to continue an
+  // objective, so an id match must update in place even after streaming ended.
+  let msgIndex = event.messageId
+    ? session.messages.findIndex(message => message.role === 'assistant' && message.id === event.messageId)
+    : -1
+  // Legacy servers do not send messageId: retain turn-based correlation.
+  if (msgIndex === -1) {
+    msgIndex = findStreamingMessage(session.messages, event.turnId)
+  }
   if (msgIndex === -1) {
     msgIndex = findAssistantMessage(session.messages, event.turnId)
   }
@@ -93,7 +101,13 @@ export function handleTextComplete(
 
     // Don't overwrite a completed intermediate message with another intermediate —
     // each thinking block (e.g. Codex reasoning between tool calls) should be distinct
-    if (!existingMsg.isStreaming && existingMsg.isIntermediate && event.isIntermediate) {
+    const isSameAuthoritativeMessage = !!event.messageId && existingMsg.id === event.messageId
+    if (
+      !existingMsg.isStreaming
+      && existingMsg.isIntermediate
+      && event.isIntermediate
+      && !isSameAuthoritativeMessage
+    ) {
       msgIndex = -1
     }
   }

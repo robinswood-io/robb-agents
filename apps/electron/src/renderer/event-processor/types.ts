@@ -6,6 +6,7 @@
  */
 
 import type { Session, Message, PermissionRequest, CredentialRequest, TypedError, PermissionMode, SessionStatus, AuthRequest, ToolDisplayMeta, RoutingMeta, AutonomyEvent } from '../../shared/types'
+import type { ToolExecutionCheckpoint } from '@craft-agent/core/types'
 
 /**
  * Streaming state for a session - replaces streamingTextRef
@@ -82,6 +83,9 @@ export interface ToolResultEvent {
   toolName?: string
   result: string
   isError?: boolean
+  /** False when the host checkpointed before invoking the tool. */
+  executed?: boolean
+  checkpoint?: ToolExecutionCheckpoint
   turnId?: string
   parentToolUseId?: string
   /** Timestamp from main process for consistent ordering */

@@ -26,6 +26,16 @@ describe('classifyAgentFailure', () => {
     })
   })
 
+  it('recognizes provider-specific unusable quota messages as fallback eligible', () => {
+    expect(classifyAgentFailure({
+      message: 'This Google account does not currently have usable Antigravity quota.',
+    })).toMatchObject({
+      failureClass: 'rate-limited',
+      retryability: 'safe',
+      recovery: 'provider-fallback',
+    })
+  })
+
   it('distinguishes interactive authentication from missing credentials', () => {
     expect(classifyAgentFailure({ message: 'OAuth requires MFA' }).failureClass)
       .toBe('interactive-auth-required')

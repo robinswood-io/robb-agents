@@ -11,8 +11,14 @@ export type CostControlledTurnKind =
   | 'automation';
 
 export type CostBudgetState = 'normal' | 'soft-limit' | 'hard-limit';
+export type AgentCostControlProfile = 'maximum-quality' | 'balanced';
 
 export interface AgentCostControlPolicy {
+  /**
+   * `maximum-quality` preserves the session route across every turn and is the
+   * safe default. `balanced` opts into automatic model/thinking tiering.
+   */
+  profile?: AgentCostControlProfile;
   enabled?: boolean;
   context?: {
     compactAtTokens?: number;
@@ -44,6 +50,7 @@ export interface AgentCostControlPolicy {
 }
 
 export interface ResolvedAgentCostControlPolicy {
+  profile: AgentCostControlProfile;
   enabled: boolean;
   context: {
     compactAtTokens: number;
@@ -80,6 +87,8 @@ export interface AgentCostControlInput {
   riskContext?: string;
   connection?: Pick<LlmConnection, 'models' | 'defaultModel'>;
   currentModel?: string;
+  /** Effective session thinking level before cost control is applied. */
+  currentThinkingLevel?: ThinkingLevel;
   turnKind?: CostControlledTurnKind;
   contextTokens?: number;
   /** Effective model context window, used to keep absolute limits safe on smaller models. */
@@ -88,6 +97,7 @@ export interface AgentCostControlInput {
 }
 
 export interface AgentCostControlDecision {
+  profile: AgentCostControlProfile;
   model?: string;
   thinkingLevel: ThinkingLevel;
   turnKind: CostControlledTurnKind;
@@ -106,6 +116,7 @@ export interface AgentCostControlDecision {
 }
 
 export const DEFAULT_AGENT_COST_CONTROL_POLICY: ResolvedAgentCostControlPolicy = {
+  profile: 'maximum-quality',
   enabled: true,
   context: {
     compactAtTokens: 80_000,
@@ -115,8 +126,8 @@ export const DEFAULT_AGENT_COST_CONTROL_POLICY: ResolvedAgentCostControlPolicy =
     enabled: true,
     routineModelPatterns: ['gpt-5.6-luna', 'gpt-5.4-mini', 'haiku'],
     standardModelPatterns: ['gpt-5.6-terra', 'gpt-5.4', 'sonnet'],
-    complexModelPatterns: ['gpt-5.6-sol', 'gpt-5.5', 'opus'],
-    highRiskModelPatterns: ['gpt-5.6-sol', 'gpt-5.5', 'opus'],
+    complexModelPatterns: ['gpt-6-astra', 'gpt-5.6-sol', 'gpt-5.5', 'opus'],
+    highRiskModelPatterns: ['gpt-6-astra', 'gpt-5.6-sol', 'gpt-5.5', 'opus'],
     routineThinking: 'low',
     standardThinking: 'medium',
     complexThinking: 'high',
@@ -199,6 +210,10 @@ function thinkingOr(value: unknown, fallback: ThinkingLevel): ThinkingLevel {
   return isValidThinkingLevel(value) ? value : fallback;
 }
 
+function profileOr(value: unknown, fallback: AgentCostControlProfile): AgentCostControlProfile {
+  return value === 'maximum-quality' || value === 'balanced' ? value : fallback;
+}
+
 export function resolveAgentCostControlPolicy(
   policy?: AgentCostControlPolicy,
 ): ResolvedAgentCostControlPolicy {
@@ -219,6 +234,7 @@ export function resolveAgentCostControlPolicy(
   );
 
   return {
+    profile: profileOr(policy?.profile, defaults.profile),
     enabled: booleanOr(policy?.enabled, defaults.enabled),
     context: { compactAtTokens, hardLimitTokens },
     routing: {
@@ -294,7 +310,7 @@ const EXPLICIT_MUTATION_REQUEST_PATTERN = /\b(deploy|publish|delete|remove|purge
 const COMPLETION_REVIEW_PATTERN = /(?:objectif|travail|tâche|task|work).{0,120}(?:déjà\s+)?(?:achev[ée]|termin[ée]|complét[ée]|complete(?:d)?|finished)|(?:déjà\s+)?(?:achev[ée]|termin[ée]|complét[ée]).{0,120}(?:objectif|travail|tâche)/i;
 const NO_REEXECUTION_PATTERN = /(?:ne|n['’])\s+(?:relance|répète|lance|effectue).{0,160}(?:audit|appel réseau|effet externe|action externe)|(?:sans|aucun|aucune|no|without).{0,100}(?:audit|network call|appel réseau|external effect|effet externe)/i;
 const REVIEW_HANDOFF_PATTERN = /needs-review|(?:statut|status).{0,40}(?:revue|review)|(?:place|mets|mettre|placer).{0,80}(?:revue|review)/i;
-const CONTEXT_DEPENDENT_DIRECT_TURN_PATTERN = /^(?:(?:ok|oui|yes|d['’]accord)[\s,;:!.-]+)?(?:(?:go|vas-y|allez-y|continue|poursui(?:s|t|vre)|reprend(?:s|re)?|corrige|impl[ée]mente|d[ée]ploie|relance|ex[ée]cute|termine|proc[èe]de|applique)\b|(?:fais|faites)(?:-le|\s+le)?\b)/i;
+const CONTEXT_DEPENDENT_DIRECT_TURN_PATTERN = /^(?:(?:ok|oui|yes|d['’]accord)[\s,;:!.-]+)?(?:(?:go|vas-y|allez-y|continue|poursui(?:s|t|vre)|reprend(?:s|re)?|avance)\b|(?:fais|faites)(?:-le|\s+le)\b|(?:corrige|impl[ée]mente|d[ée]ploie|relance|ex[ée]cute|termine|proc[èe]de|applique)(?:-le|-la|\s+(?:[çc]a|cela|ceci|le\s+reste|la\s+suite|ce\s+point|cette\s+(?:partie|[ée]tape)))\b)/i;
 const AUTOMATIC_RECOVERY_ATTEMPT_PATTERN = /<automatic_turn_recovery\b[^>]*\battempt=["'](\d+)["']/i;
 
 function isCompletionReviewOnly(text: string): boolean {
@@ -306,6 +322,15 @@ function isCompletionReviewOnly(text: string): boolean {
 
 function isInternalTurn(turnKind: CostControlledTurnKind): boolean {
   return turnKind !== 'direct';
+}
+
+/**
+ * A specialist's first turn and every automatic recovery are continuations of
+ * an already-routed objective. Reclassifying their short host prompt must never
+ * silently lower the model or reasoning selected for that objective.
+ */
+function mustPreserveCurrentRoute(turnKind: CostControlledTurnKind): boolean {
+  return turnKind === 'spawned-session' || turnKind === 'automatic-recovery';
 }
 
 function automaticRecoveryAttempt(text: string, turnKind: CostControlledTurnKind): number {
@@ -381,14 +406,31 @@ export function decideAgentCostControl(
 
   const modelPatterns = policy.routing[`${tier}ModelPatterns`];
   const guardedHighRisk = highRisk && !criticalRisk && !readOnlyRisk && !ambiguousInternalRisk;
-  const thinkingLevel = guardedHighRisk
+  const tierThinkingLevel = guardedHighRisk
     ? policy.routing.complexThinking
     : policy.routing[`${tier}Thinking`];
-  const model = policy.enabled && policy.routing.enabled
+  const tierModel = policy.enabled && policy.routing.enabled
     ? selectModel(input.connection, modelPatterns, input.currentModel)
     : input.currentModel;
+  const preservesQualityBaseline = policy.profile === 'maximum-quality';
+  const preservesObjectiveRoute = mustPreserveCurrentRoute(turnKind)
+    && Boolean(input.currentModel || input.currentThinkingLevel);
+  let model = tierModel;
+  let thinkingLevel = tierThinkingLevel;
+  if (preservesQualityBaseline) {
+    model = input.currentModel ?? (
+      policy.enabled && policy.routing.enabled
+        ? selectModel(input.connection, policy.routing.highRiskModelPatterns)
+        : undefined
+    );
+    thinkingLevel = input.currentThinkingLevel ?? policy.routing.highRiskThinking;
+  } else if (preservesObjectiveRoute) {
+    model = input.currentModel ?? model;
+    thinkingLevel = input.currentThinkingLevel ?? thinkingLevel;
+  }
 
   return {
+    profile: policy.profile,
     model,
     thinkingLevel,
     turnKind,
@@ -401,7 +443,10 @@ export function decideAgentCostControl(
     shouldCompact,
     hardContextLimitReached,
     explanation: [
+      `profile:${policy.profile}`,
       `cost-control:${tier}`,
+      preservesQualityBaseline ? 'quality:baseline-preserved' : undefined,
+      !preservesQualityBaseline && preservesObjectiveRoute ? 'objective:route-preserved' : undefined,
       guardedHighRisk ? 'safety:guarded-high-risk' : undefined,
       readOnlyRisk ? 'safety:explicit-read-only' : undefined,
       completionReviewOnly ? 'cost:completion-review-only' : undefined,

@@ -6,6 +6,7 @@
  */
 
 import type { Message, StoredMessage, MessageRole } from '@craft-agent/core'
+import i18n from 'i18next'
 import { isParentTaskTool } from '@craft-agent/shared/utils/toolNames'
 import { storedToMessage } from '@craft-agent/core'
 
@@ -194,6 +195,9 @@ export function shouldShowThinkingIndicator(phase: TurnPhase, isBuffering: boole
 
 /** Convert tool status from message to ActivityStatus */
 function getToolStatus(message: Message): ActivityStatus {
+  // The result envelope completed, but the requested operation did not run.
+  // Render this separately from both success and operational failure.
+  if (message.toolExecuted === false) return 'checkpoint'
   // response_too_large is success (data was saved, just too large for inline display)
   if (message.errorCode === 'response_too_large') return 'completed'
   if (message.isError) return 'error'
@@ -230,6 +234,8 @@ function messageToActivity(message: Message, existingActivities: ActivityItem[] 
     toolDisplayMeta: message.toolDisplayMeta,  // Embedded metadata with base64 icon for viewer
     timestamp: message.timestamp,
     error: message.isError ? stripErrorTags(message.toolResult || message.content) : undefined,
+    executed: message.toolExecuted,
+    checkpoint: message.toolCheckpoint,
     // parentId: The toolUseId of the parent tool (e.g., Task subagent).
     // This is tracked by session manager's parentToolStack, NOT the SDK's
     // parent_tool_use_id which is for result-matching, not hierarchy.
@@ -707,11 +713,13 @@ export function getActivitySummary(turn: AssistantTurn): string {
   const completed = turn.activities.filter(a => a.status === 'completed').length
   const running = turn.activities.filter(a => a.status === 'running').length
   const errors = turn.activities.filter(a => a.status === 'error').length
+  const checkpoints = turn.activities.filter(a => a.status === 'checkpoint').length
 
   const parts: string[] = []
   if (running > 0) parts.push(`${running} running`)
   if (completed > 0) parts.push(`${completed} completed`)
   if (errors > 0) parts.push(`${errors} failed`)
+  if (checkpoints > 0) parts.push(`${checkpoints} not executed`)
 
   return parts.join(', ') || 'No activities'
 }
@@ -764,6 +772,11 @@ export function formatTurnAsMarkdown(turn: AssistantTurn): string {
         // Intent if available
         if (activity.intent) {
           lines.push(`> ${activity.intent}`)
+          lines.push('')
+        }
+
+        if (activity.status === 'checkpoint') {
+          lines.push(`**Execution:** ${i18n.t('turnCard.notExecutedAutoResume')}`)
           lines.push('')
         }
 
@@ -852,6 +865,11 @@ export function formatActivityAsMarkdown(activity: ActivityItem): string {
   // Intent if available
   if (activity.intent) {
     lines.push(`> ${activity.intent}`)
+    lines.push('')
+  }
+
+  if (activity.status === 'checkpoint') {
+    lines.push(`**Execution:** ${i18n.t('turnCard.notExecutedAutoResume')}`)
     lines.push('')
   }
 

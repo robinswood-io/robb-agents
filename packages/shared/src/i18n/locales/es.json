@@ -2016,6 +2016,7 @@
   "transport.wsClosedWithCode": "WebSocket cerrado con código {{code}}{{reason}}.",
   "turnCard.errorCount_one": " · {{count}} error",
   "turnCard.errorCount_other": " · {{count}} errores",
+  "turnCard.notExecutedAutoResume": "No ejecutado — reanudación automática",
   "turnCard.processing": "Procesando",
   "turnCard.responding": "Respondiendo...",
   "turnCard.starting": "Iniciando...",

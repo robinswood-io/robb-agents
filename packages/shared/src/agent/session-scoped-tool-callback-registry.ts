@@ -67,6 +67,8 @@ export interface SessionScopedToolCallbacks {
   resolveLabelsFn?: (labels: string[]) => import('@craft-agent/session-tools-core').ResolvedLabelsResult;
   /** Resolve a status display name to its ID. */
   resolveStatusFn?: (status: string) => import('@craft-agent/session-tools-core').ResolvedStatusResult;
+  setCompletionCriteriaFn?: (criteria: import('@craft-agent/core/types').ObjectiveAcceptanceCriterion[]) => Promise<unknown>;
+  projectLearningFn?: NonNullable<import('@craft-agent/session-tools-core').SessionToolContext['projectLearning']>;
   /** Send a message to another session (inter-session messaging). Resolves with delivery status. */
   sendAgentMessageFn?: (sessionId: string, message: string, attachments?: Array<{ path: string; name?: string }>) => Promise<import('@craft-agent/session-tools-core').SendAgentMessageResult>;
   /**

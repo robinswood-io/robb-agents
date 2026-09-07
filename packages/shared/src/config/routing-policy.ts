@@ -241,11 +241,18 @@ export function classifyLocalRoutingRequirements(
     /analyse approfondie/i,
     /multi[- ]?étapes?/i,
     /refactor/i,
+    /\b(?:impl[eé]ment|implant\w*|développ|constru|corrig|diagnost|investigu|déplo|intégr|automat)\w*/i,
+    /\bchacun(?:e)?\s+de\b/i,
+    /\b(?:de bout en bout|end[- ]to[- ]end)\b/i,
+  ];
+  const trivialSignals = [
+    /^(?:merci|thanks|ok|okay|oui|yes|non|no|bonjour|salut)[\s!.?]*$/i,
+    /^(?:go|vas-y|allez-y|continue|poursui(?:s|t)|reprends?)[\s!.?]*$/i,
   ];
   const difficulty: RoutingDifficulty =
     wordCount > 180 || complexSignals.some(pattern => pattern.test(normalized))
       ? 'complex'
-      : wordCount < 30
+      : wordCount === 0 || trivialSignals.some(pattern => pattern.test(normalized))
         ? 'simple'
         : 'standard';
   const requiredCapabilities: RoutingCapability[] = [];

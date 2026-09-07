@@ -714,7 +714,7 @@ export class ClaudeAgent extends BaseAgent {
           sizeBytes: a.sizeBytes,
         })),
         memoryPath: getProjectMemoryPath(this.workspaceRootPath, slug),
-        memoryContent: loadProjectMemory(this.workspaceRootPath, slug) ?? undefined,
+        memoryContent: loadProjectMemory(this.workspaceRootPath, slug, 5000, { includeStructured: false }) ?? undefined,
       };
     } catch (error) {
       debug(`[resolveProjectContext] Failed to load project ${projectId}:`, error);
@@ -1363,6 +1363,7 @@ export class ClaudeAgent extends BaseAgent {
                 prerequisiteManager: this.prerequisiteManager,
                 preloadedSourceGuidePaths: this.sourceManager.getPreloadedSourceGuidePaths(),
                 currentUserRequest: this.getCurrentTurnUserMessage() ?? undefined,
+                declaredToolCapabilities: this.config.mcpPool?.getProxyToolCapabilities(input.tool_name),
                 externalActionPolicy: this.config.externalActionPolicy,
                 rtkContext,
                 onDebug: (msg) => this.onDebug?.(msg),

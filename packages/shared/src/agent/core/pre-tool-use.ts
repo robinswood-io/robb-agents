@@ -57,8 +57,8 @@ import {
 import type { SessionExecutionIsolation } from '../../tasks/durable-execution.ts';
 import {
   checkObjectiveEvidenceBeforeMutation,
-  isEvidenceAcquisitionTool,
 } from './objective-evidence-gate.ts';
+import { classifyToolNameMutationSemantics } from './tool-name-semantics.ts';
 
 // ============================================================
 // TYPES
@@ -99,6 +99,24 @@ export interface ConfigValidationResult {
   valid: boolean;
   /** Error message if validation failed */
   error?: string;
+}
+
+export interface DeclaredToolCapabilities {
+  readOnly?: boolean;
+  idempotent?: boolean;
+  destructive?: boolean;
+  openWorld?: boolean;
+  /** Host assertion, not a remote server's self-reported annotation. */
+  trusted?: boolean;
+}
+
+/** Host-owned effect classification used by permission and evidence gates. */
+export interface ToolEffectDescriptor {
+  kind: 'read' | 'local-write' | 'external-mutation' | 'unknown';
+  reversibility: 'not-applicable' | 'reversible' | 'irreversible' | 'unknown';
+  idempotent?: boolean;
+  openWorld?: boolean;
+  source: 'builtin' | 'input-semantics' | 'mcp-annotations' | 'permissions-config' | 'unknown';
 }
 
 // ============================================================
@@ -674,6 +692,8 @@ export interface PreToolUseInput {
   backendMetadata?: { intent?: string; displayName?: string };
   /** Raw current user request, used only for narrow action+target authorization matching. */
   currentUserRequest?: string;
+  /** Capability hints supplied by the registered MCP definition, never by model input. */
+  declaredToolCapabilities?: DeclaredToolCapabilities;
   /** RTK Bash-rewrite context (undefined when toggle is off or rtk binary missing) */
   rtkContext?: import('./rtk-rewrite.ts').RtkContext;
   /** Debug callback */
@@ -706,6 +726,138 @@ const BUILT_IN_MCP_SERVERS = new Set(['session', 'craft-agents-docs']);
 
 /** File write tools that require permission in ask mode */
 const FILE_WRITE_TOOLS = new Set(['Write', 'Edit', 'MultiEdit', 'NotebookEdit']);
+
+const BUILTIN_READ_TOOLS = new Set([
+  'Read', 'Find', 'Grep', 'Glob', 'LS', 'Ls', 'TodoRead', 'WebFetch', 'WebSearch',
+]);
+const REMOTE_COMMAND_TOOL_PATTERN = /(?:^|__)(?:ssh_(?:execute|exec)|remote_(?:execute|exec)|run_command)$/i;
+const MUTATION_HTTP_METHOD_PATTERN = /^(?:DELETE|PATCH|POST|PUT)$/i;
+
+function commandFromInput(input: Record<string, unknown>): string | undefined {
+  return [input.command, input.cmd, input.script].find(
+    (value): value is string => typeof value === 'string' && value.trim().length > 0,
+  );
+}
+
+export function classifyToolEffect(
+  toolName: string,
+  input: Record<string, unknown>,
+  permissionsContext?: PermissionsContext,
+  declared?: DeclaredToolCapabilities,
+): ToolEffectDescriptor {
+  if (BUILTIN_READ_TOOLS.has(toolName)) {
+    return { kind: 'read', reversibility: 'not-applicable', idempotent: true, source: 'builtin' };
+  }
+  if (FILE_WRITE_TOOLS.has(toolName)) {
+    return { kind: 'local-write', reversibility: 'unknown', source: 'builtin' };
+  }
+
+  const config = permissionsContext
+    ? permissionsConfigCache.getMergedConfig(permissionsContext)
+    : undefined;
+  const isMcpTool = toolName.startsWith('mcp__');
+  const nameSemantics = classifyToolNameMutationSemantics(toolName);
+
+  // A destructive hint can only make the decision more restrictive, so it is
+  // safe to honor even when it came from an untrusted remote MCP server.
+  if (isMcpTool && declared?.destructive === true) {
+    return {
+      kind: 'external-mutation',
+      reversibility: 'irreversible',
+      idempotent: declared.idempotent,
+      openWorld: declared.openWorld,
+      source: 'mcp-annotations',
+    };
+  }
+
+  const command = commandFromInput(input);
+  if ((toolName === 'Bash' || REMOTE_COMMAND_TOOL_PATTERN.test(toolName)) && command && config) {
+    const readOnly = isReadOnlyBashCommandWithConfig(command, config);
+    if (readOnly) {
+      return {
+        kind: 'read',
+        reversibility: 'not-applicable',
+        idempotent: true,
+        openWorld: REMOTE_COMMAND_TOOL_PATTERN.test(toolName),
+        source: 'input-semantics',
+      };
+    }
+    return {
+      kind: toolName === 'Bash' ? 'unknown' : 'external-mutation',
+      reversibility: 'unknown',
+      openWorld: REMOTE_COMMAND_TOOL_PATTERN.test(toolName),
+      source: 'input-semantics',
+    };
+  }
+
+  const action = [input.action, input.operation]
+    .find((value): value is string => typeof value === 'string' && value.trim().length > 0);
+  const method = typeof input.method === 'string' ? input.method.trim().toUpperCase() : undefined;
+  if (
+    (method && MUTATION_HTTP_METHOD_PATTERN.test(method))
+    || (action && classifyToolNameMutationSemantics(action) === 'mutation')
+  ) {
+    return {
+      kind: isMcpTool || toolName.startsWith('api_') ? 'external-mutation' : 'unknown',
+      reversibility: 'unknown',
+      openWorld: isMcpTool || toolName.startsWith('api_'),
+      source: 'input-semantics',
+    };
+  }
+
+  if (
+    isMcpTool
+    && declared?.trusted === true
+    && declared.readOnly === true
+  ) {
+    return {
+      kind: 'read',
+      reversibility: 'not-applicable',
+      idempotent: declared.idempotent,
+      openWorld: declared.openWorld,
+      source: 'mcp-annotations',
+    };
+  }
+
+  // Mutation tokens win over broad legacy read patterns such as `search` or
+  // `check`. This prevents compound tools like search_and_delete and
+  // check_and_publish from masquerading as evidence acquisition.
+  if ((isMcpTool || toolName.startsWith('api_')) && nameSemantics === 'mutation') {
+    return {
+      kind: 'external-mutation',
+      reversibility: 'unknown',
+      idempotent: declared?.idempotent,
+      openWorld: declared?.openWorld ?? true,
+      source: 'input-semantics',
+    };
+  }
+
+  if (toolName.startsWith('api_') || toolName.includes('__api_')) {
+    const effectiveMethod = method ?? 'GET';
+    return effectiveMethod === 'GET'
+      ? { kind: 'read', reversibility: 'not-applicable', idempotent: true, openWorld: true, source: 'input-semantics' }
+      : { kind: 'external-mutation', reversibility: 'unknown', openWorld: true, source: 'input-semantics' };
+  }
+
+  // permissions.json is host-owned. Retain its explicitly supported MCP
+  // reads, but only after explicit mutation semantics above have been ruled
+  // out. Remote MCP annotations alone never reach this branch as authority.
+  if (
+    isMcpTool
+    && nameSemantics === 'neutral'
+    && config?.readOnlyMcpPatterns.some(pattern => pattern.test(toolName))
+  ) {
+    return {
+      kind: 'read',
+      reversibility: 'not-applicable',
+      idempotent: declared?.idempotent,
+      openWorld: declared?.openWorld,
+      source: 'permissions-config',
+    };
+  }
+
+  return { kind: 'unknown', reversibility: 'unknown', source: 'unknown' };
+}
 
 /**
  * Centralized PreToolUse pipeline.
@@ -766,6 +918,12 @@ export function runPreToolUseChecks(ctx: PreToolUseInput): PreToolUseCheckResult
     workspaceRootPath,
     activeSourceSlugs,
   };
+  const toolEffect = classifyToolEffect(
+    toolName,
+    input,
+    permissionsContext,
+    ctx.declaredToolCapabilities,
+  );
 
   // Canonical mode source of truth for this session.
   // Keep incoming permissionMode only for mismatch diagnostics.
@@ -782,12 +940,14 @@ export function runPreToolUseChecks(ctx: PreToolUseInput): PreToolUseCheckResult
   // ============================================================
   // 1. PERMISSION MODE CHECK
   // ============================================================
-  const modeResult = shouldAllowToolInMode(
-    toolName,
-    input,
-    effectivePermissionMode,
-    { plansFolderPath, dataFolderPath, permissionsContext }
-  );
+  const modeResult = toolEffect.kind === 'read'
+    ? { allowed: true as const }
+    : shouldAllowToolInMode(
+      toolName,
+      input,
+      effectivePermissionMode,
+      { plansFolderPath, dataFolderPath, permissionsContext }
+    );
 
   if (!modeResult.allowed) {
     const reasonWithContext = withPermissionModeContext(modeResult.reason, sessionId, effectivePermissionMode);
@@ -856,18 +1016,29 @@ export function runPreToolUseChecks(ctx: PreToolUseInput): PreToolUseCheckResult
   // ============================================================
   // 5. HIGH-STAKES EVIDENCE GATE
   // ============================================================
-  // Reuse the mature safe-mode classifier to distinguish reads from writes
-  // across built-in, Bash, MCP, and API tools. Evidence/reviewer tools always
-  // remain reachable so the agent can satisfy the gate autonomously.
-  if (!isEvidenceAcquisitionTool(toolName)) {
+  // Typed reads remain available for evidence acquisition. Every known
+  // mutation, plus an unknown external MCP/API effect, is fail-closed: a tool
+  // name containing `search`, `check`, or another read-like token is not proof
+  // that invoking it is observational.
+  if (toolEffect.kind !== 'read') {
     const safeModeDecision = shouldAllowToolInMode(
       toolName,
       input,
       'safe',
       { plansFolderPath, dataFolderPath, permissionsContext },
     );
-    if (!safeModeDecision.allowed) {
-      const evidenceDecision = checkObjectiveEvidenceBeforeMutation(sessionId, toolName);
+    const unknownExternalEffect = toolEffect.kind === 'unknown' && (
+      (toolName.startsWith('mcp__') && !BUILT_IN_MCP_SERVERS.has(toolName.split('__')[1] ?? ''))
+      || toolName.startsWith('api_')
+      || toolName.includes('__api_')
+    );
+    if (
+      toolEffect.kind === 'local-write'
+      || toolEffect.kind === 'external-mutation'
+      || unknownExternalEffect
+      || !safeModeDecision.allowed
+    ) {
+      const evidenceDecision = checkObjectiveEvidenceBeforeMutation(sessionId, toolName, toolEffect.kind);
       if (!evidenceDecision.allowed) {
         onDebug?.(`Objective evidence gate: blocking ${toolName}`);
         return { type: 'block', reason: evidenceDecision.reason };
@@ -1021,6 +1192,7 @@ export function runPreToolUseChecks(ctx: PreToolUseInput): PreToolUseCheckResult
       permissionsContext,
       plansFolderPath,
       onDebug,
+      toolEffect,
     );
     if (promptInfo) {
       const adminWrappedInput =
@@ -1171,7 +1343,13 @@ export function shouldPromptInAskMode(
   permissionsContext: PermissionsContext,
   plansFolderPath?: string,
   onDebug?: (message: string) => void,
+  toolEffect?: ToolEffectDescriptor,
 ): PromptInfo | null {
+
+  if (toolEffect?.kind === 'read') {
+    onDebug?.(`Auto-allowing typed read-only tool: ${toolName}`);
+    return null;
+  }
 
   // --- File writes ---
   if (FILE_WRITE_TOOLS.has(toolName)) {

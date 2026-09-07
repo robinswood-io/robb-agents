@@ -62,10 +62,25 @@ export function looksLikePrematureFinalAssistant(content: string): boolean {
 /** Host-side terminal evaluator used by the durable objective lifecycle. */
 export function classifyObjectiveTerminalState(
   content: string,
-  options: { evidenceGap?: string; executionEvidenceMissing?: boolean } = {},
+  options: {
+    evidenceGap?: string;
+    executionEvidenceMissing?: boolean;
+    structuredOutcomeRequired?: boolean;
+    structuredOutcomeValid?: boolean;
+    declaredState?: ObjectiveTerminalState;
+  } = {},
 ): ObjectiveTerminalState {
   const normalized = content.replace(/\s+/g, ' ').trim();
-  if (!normalized || looksLikePrematureFinalAssistant(normalized)) return 'continue';
+  if (!normalized) return 'continue';
+  if (options.declaredState) {
+    if (options.structuredOutcomeValid !== true) return 'continue';
+    if (options.declaredState === 'continue') return 'continue';
+    if (options.declaredState === 'complete_verified'
+      && (options.evidenceGap || options.executionEvidenceMissing)) return 'continue';
+    return options.declaredState;
+  }
+  if (looksLikePrematureFinalAssistant(normalized)) return 'continue';
+  if (options.structuredOutcomeRequired) return 'continue';
   if (PROVEN_HUMAN_BLOCKER_PATTERN.test(normalized) && HUMAN_HANDOFF_PATTERN.test(normalized)) {
     return 'blocked_human';
   }
@@ -78,10 +93,10 @@ export function classifyObjectiveTerminalState(
  * Classify whether the latest user turn has a user-visible terminal outcome.
  * Intermediate commentary and tool results are progress, not a final answer.
  */
-export function classifyLatestTurnTerminalState(messages: Message[]): LatestTurnTerminalState {
+export function classifyLatestTurnTerminalState(messages: Message[], userMessageId?: string): LatestTurnTerminalState {
   let latestUserIndex = -1;
   for (let index = messages.length - 1; index >= 0; index -= 1) {
-    if (messages[index]?.role === 'user') {
+    if (messages[index]?.role === 'user' && (!userMessageId || messages[index]?.id === userMessageId)) {
       latestUserIndex = index;
       break;
     }
@@ -93,6 +108,9 @@ export function classifyLatestTurnTerminalState(messages: Message[]): LatestTurn
     if (!message) continue;
     if (message.role === 'error') return 'error';
     if (message.role === 'assistant' && !message.isIntermediate) {
+      // Structured declarations are evaluated by the objective validator;
+      // prose heuristics must not bypass that host-side decision.
+      if (message.objectiveOutcome || message.objectiveOutcomeError) return 'final-assistant';
       return looksLikePrematureFinalAssistant(message.content)
         ? 'premature-final-assistant'
         : 'final-assistant';

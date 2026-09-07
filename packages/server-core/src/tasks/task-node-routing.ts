@@ -1,5 +1,6 @@
 import type { ThinkingLevel } from '@craft-agent/shared/agent';
 import {
+  DEFAULT_AGENT_COST_CONTROL_POLICY,
   getMiniModel,
   maxRoutingSensitivity,
   resolveRoutingPolicy,
@@ -212,6 +213,21 @@ function modelForTier(
   taskDefaultModel?: string,
 ): string | undefined {
   const models = connection.models ?? [];
+  // OpenAI's catalogue order preserves Sol as the connection default. Task
+  // tiers instead follow workload needs, selecting Astra only for best-tier
+  // work. Explicit user-defined tiers keep their own ordering.
+  if (connection.modelSelectionMode !== 'userDefined3Tier'
+    && connection.providerType === 'pi'
+    && (connection.piAuthProvider === 'openai' || connection.piAuthProvider === 'openai-codex')) {
+    const routing = DEFAULT_AGENT_COST_CONTROL_POLICY.routing;
+    const patterns = tier === 'fast' ? routing.routineModelPatterns
+      : tier === 'balanced' ? routing.standardModelPatterns
+        : routing.complexModelPatterns;
+    for (const pattern of patterns) {
+      const match = models.find(model => modelId(model).toLowerCase().includes(pattern));
+      if (match) return modelId(match);
+    }
+  }
   if (tier === 'fast') {
     return getMiniModel(connection) ?? connection.defaultModel ?? taskDefaultModel;
   }
@@ -263,6 +279,7 @@ export function resolveTaskNodeExecutionRoute(
   const llmConnection = retryFallback ?? primaryConnection;
   const connection = input.connections.find((candidate) => candidate.slug === llmConnection);
   const model = input.node.model
+    ?? input.spec.defaults?.model
     ?? (connection
       ? modelForTier(connection, profile.modelTier, input.spec.defaults?.model)
       : input.spec.defaults?.model);

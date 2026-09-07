@@ -8,7 +8,7 @@
  * Mirrors both sides' logic inline (no Electron/Jotai imports).
  */
 import { describe, it, expect } from 'bun:test'
-import type { Message, ToolDisplayMeta } from '@craft-agent/core'
+import type { Message, ToolDisplayMeta, ToolExecutionCheckpoint } from '@craft-agent/core'
 
 // ============================================================================
 // Event types (mirrored from event-processor/types.ts)
@@ -39,6 +39,8 @@ interface ToolResultEvent {
   toolName?: string
   result: string
   isError?: boolean
+  executed?: boolean
+  checkpoint?: ToolExecutionCheckpoint
   turnId?: string
   parentToolUseId?: string
   timestamp?: number
@@ -332,6 +334,42 @@ describe('tool_result → tool Message update parity', () => {
     }
 
     expect(mainUpdate).toEqual(rendererUpdate)
+  })
+
+  it('preserves non-execution metadata without turning a checkpoint into an error', () => {
+    const checkpoint: ToolExecutionCheckpoint = {
+      schemaVersion: 1,
+      kind: 'tool-call-budget',
+      reason: 'Error: mutation was not started.',
+    }
+    const event: ToolResultEvent = {
+      toolUseId: 'tu-edit-checkpoint',
+      toolName: 'Edit',
+      result: checkpoint.reason,
+      isError: false,
+      executed: false,
+      checkpoint,
+    }
+    const inferredIsError = event.executed !== false
+      && (event.isError === true || /^\s*(\[ERROR\]|Error:|error:)/.test(event.result || ''))
+
+    const mainUpdate = {
+      toolResult: event.result,
+      toolStatus: inferredIsError ? ('error' as const) : ('completed' as const),
+      isError: inferredIsError,
+      toolExecuted: event.executed,
+      toolCheckpoint: event.checkpoint,
+    }
+    const rendererUpdate = {
+      toolResult: event.result,
+      toolStatus: inferredIsError ? ('error' as const) : ('completed' as const),
+      isError: inferredIsError,
+      toolExecuted: event.executed,
+      toolCheckpoint: event.checkpoint,
+    }
+
+    expect(mainUpdate).toEqual(rendererUpdate)
+    expect(mainUpdate.isError).toBe(false)
   })
 })
 

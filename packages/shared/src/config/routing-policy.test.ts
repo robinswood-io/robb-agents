@@ -15,11 +15,21 @@ const connections: Array<Pick<LlmConnection, 'slug' | 'providerType'>> = [
 ];
 
 describe('classifyLocalRoutingRequirements', () => {
-  test('classifies a short text locally without requiring capabilities', () => {
+  test('does not mistake a short substantive request for a trivial task', () => {
     expect(classifyLocalRoutingRequirements({ text: 'Résume ce document.' })).toEqual({
-      difficulty: 'simple',
+      difficulty: 'standard',
       requiredCapabilities: [],
     });
+  });
+
+  test('keeps acknowledgements simple', () => {
+    expect(classifyLocalRoutingRequirements({ text: 'Merci.' }).difficulty).toBe('simple');
+  });
+
+  test('classifies a terse multi-element implementation request as complex', () => {
+    expect(classifyLocalRoutingRequirements({
+      text: "Réalise l'implantaiton méthodique de chacun de ces éléments",
+    }).difficulty).toBe('complex');
   });
 
   test('derives complex, image, tool, and large-context requirements', () => {

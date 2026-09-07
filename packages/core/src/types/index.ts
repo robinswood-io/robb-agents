@@ -25,6 +25,10 @@ export type {
 export type {
   MessageRole,
   ToolStatus,
+  ToolExecutionCheckpoint,
+  ObjectiveOutcomeState,
+  ObjectiveOutcomeBlockerKind,
+  ObjectiveOutcomeDeclaration,
   ToolDisplayMeta,
   AttachmentType,
   MessageAttachment,
@@ -83,3 +87,4 @@ export type {
   SessionProcessingStatus,
   ActiveSessionInfo,
 } from './server.ts';
+export type { ObjectiveAcceptanceCriterion } from './objective-acceptance.ts';

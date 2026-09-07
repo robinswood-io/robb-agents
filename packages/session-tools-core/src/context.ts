@@ -338,6 +338,9 @@ export interface SessionToolContext {
 
   /** Resolve a status display name to its ID against configured statuses. Injected by backend. */
   resolveStatus?(status: string): ResolvedStatusResult;
+  /** Strengthen the current objective; never grants tool permissions. */
+  setCompletionCriteria?(criteria: import('@craft-agent/core/types').ObjectiveAcceptanceCriterion[]): Promise<unknown>;
+  projectLearning?(request: import('./handlers/project-learning.ts').ProjectLearningArgs): Promise<unknown>;
 
   // ============================================================
   // Inter-Session Messaging
@@ -511,6 +514,8 @@ export interface SendAgentMessageResult {
   delivery: 'delivered' | 'queued';
   /** Whether the target session was processing a turn when the message arrived. */
   targetBusy: boolean;
+  receiptId?: string;
+  status?: 'queued' | 'processing' | 'processed' | 'failed';
 }
 
 /**

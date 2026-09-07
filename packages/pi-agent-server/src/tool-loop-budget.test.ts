@@ -52,26 +52,29 @@ describe('ToolLoopBudget', () => {
     expect(budget.observe('Read', { path: 'b' }).totalToolCalls).toBe(2);
   });
 
-  test('blocks the eighth consecutive call even when every input differs', () => {
+  test('allows long consecutive analysis when every input is materially different', () => {
     const budget = new ToolLoopBudget();
-    for (let index = 1; index < 8; index += 1) {
+    for (let index = 1; index <= 24; index += 1) {
       expect(budget.observe('Bash', { command: `check-${index}` }).action).not.toBe('block');
     }
-    const decision = budget.observe('Bash', { command: 'check-8' });
-    expect(decision.action).toBe('block');
-    expect(decision.consecutiveToolCalls).toBe(8);
-    expect(decision.totalToolCalls).toBe(8);
   });
 
-  test('blocks the twenty-fourth tool call even when tool names alternate', () => {
+  test('allows more than twenty-four distinct calls when tool names alternate', () => {
     const budget = new ToolLoopBudget();
-    for (let index = 1; index < 24; index += 1) {
+    for (let index = 1; index <= 30; index += 1) {
       const toolName = index % 2 === 0 ? 'Read' : 'Grep';
       expect(budget.observe(toolName, { index }).action).not.toBe('block');
     }
-    const decision = budget.observe('Read', { index: 24 });
-    expect(decision.action).toBe('block');
-    expect(decision.totalToolCalls).toBe(24);
+  });
+
+  test('blocks a low-novelty loop at the structural checkpoint', () => {
+    const budget = new ToolLoopBudget();
+    let decision;
+    for (let index = 1; index <= 24; index += 1) {
+      decision = budget.observe(index % 2 === 0 ? 'Read' : 'Grep', { target: index % 2 });
+    }
+    expect(decision?.action).toBe('block');
+    expect(decision?.totalToolCalls).toBe(24);
   });
 
   test('emits a total-budget hint even when tool names alternate', () => {
@@ -86,7 +89,7 @@ describe('ToolLoopBudget', () => {
 
   test('reserves enough budget before starting a new mutation', () => {
     const budget = new ToolLoopBudget();
-    for (let index = 1; index < 20; index += 1) {
+    for (let index = 1; index < 92; index += 1) {
       budget.observe(index % 2 === 0 ? 'Read' : 'Grep', { index });
     }
     const decision = budget.observe('Write', { path: 'result.txt', content: 'done' });
@@ -95,7 +98,7 @@ describe('ToolLoopBudget', () => {
     expect(decision.message).toContain('automatic recovery');
   });
 
-  test('allows verification and cleanup after an admitted mutation crosses the hard cap', () => {
+  test('allows verification and cleanup after an admitted mutation crosses the soft checkpoint', () => {
     const budget = new ToolLoopBudget();
     for (let index = 1; index < 18; index += 1) {
       budget.observe(index % 2 === 0 ? 'Read' : 'Grep', { index });
@@ -105,6 +108,30 @@ describe('ToolLoopBudget', () => {
       expect(budget.observe(index % 2 === 0 ? 'Read' : 'Grep', { index }).action).not.toBe('block');
     }
     expect(budget.observe('Read', { index: 23 }).action).not.toBe('block');
-    expect(budget.observe('Grep', { index: 24 }).action).toBe('block');
+    expect(budget.observe('Grep', { index: 24 }).action).not.toBe('block');
+  });
+
+  test('retains an absolute safety lease for unique calls', () => {
+    const budget = new ToolLoopBudget();
+    for (let index = 1; index < 96; index += 1) {
+      expect(budget.observe(index % 2 === 0 ? 'Read' : 'Grep', { index }).action).not.toBe('block');
+    }
+    expect(budget.observe('Read', { index: 96 }).action).toBe('block');
+  });
+
+  test('does not let repeated mutations extend the absolute lease', () => {
+    const budget = new ToolLoopBudget();
+    for (let index = 1; index < 90; index += 1) {
+      budget.observe(index % 2 === 0 ? 'Read' : 'Grep', { index });
+    }
+    expect(budget.observe('Write', { path: 'a', content: '90' }).action).not.toBe('block');
+    for (let index = 91; index < 94; index += 1) {
+      budget.observe(index % 2 === 0 ? 'Read' : 'Grep', { index });
+    }
+    expect(budget.observe('Edit', { path: 'a', content: '94' }).action).toBe('block');
+    expect(budget.observe('Read', { index: 95 }).action).not.toBe('block');
+    expect(budget.observe('Write', { path: 'b', content: '96' }).action).toBe('block');
+    expect(budget.observe('Edit', { path: 'c', content: '97' }).action).toBe('block');
+    expect(budget.observe('Write', { path: 'd', content: '98' }).action).toBe('block');
   });
 });

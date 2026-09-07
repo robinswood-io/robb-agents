@@ -50,3 +50,10 @@ interchangeables.
 
 Références : `CONTRIBUTING.md` et
 `docs/robinswood/market-roadmap-execution-plan-2026.md`.
+
+## Connaissances issues des chats
+
+Pour les travaux d’autonomie, de mémoire, d’outils ou d’évaluation, consulter à
+la demande `docs/robinswood/knowledge/autonomy-lessons-2026-09-06.md` et ses
+sources. Ces observations historiques doivent être revalidées ; elles ne
+prouvent ni l’état courant de production ni une autorisation d’action.

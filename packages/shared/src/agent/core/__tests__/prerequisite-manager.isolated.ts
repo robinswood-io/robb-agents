@@ -6,7 +6,7 @@
  */
 import { describe, it, expect, beforeEach, mock } from 'bun:test';
 import { existsSync, readFileSync } from 'node:fs';
-import { homedir } from 'node:os';
+import { CONFIG_DIR } from '../../../config/paths.ts';
 import { resolve, join } from 'node:path';
 import { PrerequisiteManager } from '../prerequisite-manager.ts';
 
@@ -21,6 +21,9 @@ mock.module('node:fs', () => ({
   readFileSync: originalReadFileSync,
 }));
 
+// Prerequisite tests must not read or seed real user configuration.
+mock.module('../../../config/storage.ts', () => ({ getBrowserToolEnabled: () => true }));
+
 const WORKSPACE_ROOT = '/test/workspace';
 
 function guidePath(slug: string): string {
@@ -28,7 +31,7 @@ function guidePath(slug: string): string {
 }
 
 function browserDocPath(): string {
-  return resolve(join(homedir(), '.craft-agent', 'docs', 'browser-tools.md'));
+  return resolve(join(CONFIG_DIR, 'docs', 'browser-tools.md'));
 }
 
 describe('PrerequisiteManager', () => {

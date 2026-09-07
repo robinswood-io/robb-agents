@@ -10,7 +10,7 @@
  */
 import { describe, it, expect, beforeEach } from 'bun:test';
 import { BaseEventAdapter } from '../backend/base-event-adapter.ts';
-import type { AgentEvent } from '@craft-agent/core/types';
+import type { AgentEvent, ToolExecutionCheckpoint } from '@craft-agent/core/types';
 
 /**
  * Concrete test implementation of BaseEventAdapter.
@@ -61,8 +61,20 @@ class TestEventAdapter extends BaseEventAdapter {
     result: string,
     isError: boolean,
     parentToolUseId?: string,
+    continuationRequired?: boolean,
+    executed?: boolean,
+    checkpoint?: ToolExecutionCheckpoint,
   ): AgentEvent {
-    return this.createToolResult(id, toolName, result, isError, parentToolUseId);
+    return this.createToolResult(
+      id,
+      toolName,
+      result,
+      isError,
+      parentToolUseId,
+      continuationRequired,
+      executed,
+      checkpoint,
+    );
   }
 
   public testCreateReadToolStart(
@@ -229,6 +241,33 @@ describe('BaseEventAdapter', () => {
         isError: false,
         turnId: 'turn-1',
         parentToolUseId: 'parent-456',
+      });
+    });
+
+    it('should preserve non-execution checkpoints without turning them into errors', () => {
+      adapter.startTurn('turn-checkpoint');
+      const checkpoint: ToolExecutionCheckpoint = {
+        schemaVersion: 1,
+        kind: 'tool-call-budget',
+        reason: 'Mutation was not started.',
+      };
+      const event = adapter.testCreateToolResult(
+        'tool-checkpoint',
+        'Edit',
+        checkpoint.reason,
+        false,
+        undefined,
+        true,
+        false,
+        checkpoint,
+      );
+
+      expect(event).toMatchObject({
+        type: 'tool_result',
+        isError: false,
+        continuationRequired: true,
+        executed: false,
+        checkpoint,
       });
     });
 

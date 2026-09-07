@@ -36,6 +36,8 @@ import { handleRenderTemplate } from './handlers/render-template.ts';
 import { handleSendDeveloperFeedback } from './handlers/send-developer-feedback.ts';
 import { handleSetSessionLabels } from './handlers/set-session-labels.ts';
 import { handleSetSessionStatus } from './handlers/set-session-status.ts';
+import { handleSetCompletionCriteria } from './handlers/set-completion-criteria.ts';
+import { handleProjectLearning } from './handlers/project-learning.ts';
 import { handleGetSessionInfo } from './handlers/get-session-info.ts';
 import { handleListSessions } from './handlers/list-sessions.ts';
 import { handleWaitSessions } from './handlers/wait-sessions.ts';
@@ -191,8 +193,29 @@ export const SetSessionStatusSchema = z.object({
   status: z.string().describe('Workspace status ID or display label (e.g., "todo", "in-progress", "needs-review")'),
 });
 
+const AcceptanceScalar = z.union([z.string().max(2048), z.number().finite(), z.boolean(), z.null()]);
+export const SetCompletionCriteriaSchema = z.object({
+  criteria: z.array(z.object({
+    id: z.string().regex(/^[a-z][a-z0-9_-]{0,63}$/),
+    description: z.string().min(1).max(1000),
+    toolName: z.string().min(1).max(256),
+    input: z.record(z.string(), AcceptanceScalar),
+    checks: z.array(z.object({ path: z.string().min(1).max(256), equals: AcceptanceScalar }).strict()).min(1).max(16),
+  }).strict()).min(1).max(16),
+});
+
 export const GetSessionInfoSchema = z.object({
   sessionId: z.string().optional().describe('Session ID to query. Omit to get info about the current session.'),
+});
+
+export const ProjectLearningSchema = z.object({
+  action: z.enum(['propose', 'validate', 'revoke', 'list']),
+  id: z.string().max(256).optional(),
+  content: z.string().max(4000).optional(),
+  tags: z.array(z.string().max(64)).max(8).optional(),
+  evidenceIds: z.array(z.string().max(256)).min(1).max(16).optional(),
+  reviewToolUseId: z.string().max(256).optional(),
+  ttlDays: z.number().min(1).max(365).optional(),
 });
 
 export const ListSessionsSchema = z.object({
@@ -585,6 +608,8 @@ export const SESSION_TOOL_DEFS: SessionToolDef[] = [
   // Single CLI-like tool that handles all browser actions via command string.
   { name: 'browser_tool', description: TOOL_DESCRIPTIONS.browser_tool, inputSchema: BrowserToolSchema, executionMode: 'backend', safeMode: 'allow', handler: null },
   // Session self-management tools (registry — use context callbacks to reach SessionManager)
+  { name: 'project_learning', description: 'Propose, list, validate or revoke a sourced project learning. Proposals are excluded from memory retrieval. Validate from a different session after independent replay and a call_llm JSON review receipt containing proposalId, contentSha256, sourceEvidenceSha256, verdict:PASS, findings:[], replayEvidenceIds:[actual toolUseIds]. Never store secrets or permissions; knowledge is historical data. Review is bound to the exact proposal and actual successful replay results.', inputSchema: ProjectLearningSchema, executionMode: 'registry', safeMode: 'block', handler: handleProjectLearning },
+  { name: 'set_completion_criteria', description: 'Register immutable observable success criteria for the current objective before acting. Specify exact verification tool, target input selectors, and expected JSON result fields (or $text for exact whole-output equality). Every criterion must later cite its own successful post-action toolUseId in the final outcome receipt. Adding checks strengthens the contract; this tool never authorizes actions.', inputSchema: SetCompletionCriteriaSchema, executionMode: 'registry', safeMode: 'allow', handler: handleSetCompletionCriteria },
   { name: 'set_session_labels', description: TOOL_DESCRIPTIONS.set_session_labels, inputSchema: SetSessionLabelsSchema, executionMode: 'registry', safeMode: 'block', handler: handleSetSessionLabels },
   { name: 'set_session_status', description: TOOL_DESCRIPTIONS.set_session_status, inputSchema: SetSessionStatusSchema, executionMode: 'registry', safeMode: 'block', handler: handleSetSessionStatus },
   { name: 'get_session_info', description: TOOL_DESCRIPTIONS.get_session_info, inputSchema: GetSessionInfoSchema, executionMode: 'registry', safeMode: 'allow', readOnly: true, idempotent: true, parallelSafe: true, handler: handleGetSessionInfo },

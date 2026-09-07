@@ -51,6 +51,11 @@ export async function handleSendAgentMessage(
     // target queues the message behind its current turn; an idle target starts
     // now. This is what lets the sender avoid guessing (e.g. never invent "the
     // app restarted") — for actual task status, call list_background_tasks.
+    if (result.receiptId) return successResponse(JSON.stringify({
+      sessionId: args.sessionId, receiptId: result.receiptId, status: result.status,
+      delivery: result.delivery,
+      meaning: 'Persisted transport receipt. Processing does not certify that the delegated business objective succeeded.',
+    }));
     if (result.delivery === 'queued') {
       return successResponse(
         `Message queued for session ${args.sessionId}. It may be coalesced with adjacent agent updates. ` +

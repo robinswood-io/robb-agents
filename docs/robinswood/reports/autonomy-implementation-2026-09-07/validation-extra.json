@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-07T07:33:22.051236+00:00",
+  "head": "9bbe4d90e19737aaf6ba61d499ddcc94185d6de5",
+  "workingTreeDirty": true,
+  "deployment": "none",
+  "target": "Robb Agents Dev — isolated temporary test profiles",
+  "checks": {
+    "typecheck": {
+      "passed": true,
+      "log": "/tmp/robb-autonomy-typecheck.log",
+      "sha256": "b9d3787c574ac4e21417274ba592965663100d506d9d5d3431e14bcddbe5627f"
+    },
+    "developmentBuild": {
+      "passed": true,
+      "log": "/tmp/robb-autonomy-dev-build.log",
+      "sha256": "b0519f216609e7dacb8c09f2ee9e18d5807571697a28eb65f2b9001a98b9bcf8"
+    },
+    "finalMainBuild": {
+      "passed": true,
+      "log": "/tmp/robb-autonomy-main-final.log",
+      "sha256": "55ca2d918ecbdceb247220577eaaf2caa7263f1c6f0da8d526e17acf11ea1c5a"
+    },
+    "recovery": {
+      "passed": true,
+      "log": "/tmp/robb-recovery-suite.log",
+      "sha256": "2ad7c5d81872869ad6092e8ed3325ac6e7ccbe993bae321e3c12bc81171e6557"
+    },
+    "documents": {
+      "passed": true,
+      "log": "/tmp/robb-doc-tools-isolated.log",
+      "sha256": "e4b21e366eb313ffaae30ef368bfcb1e9814fa50a63c75c97d4a84ec1ca9177f"
+    }
+  },
+  "recoveryTests": 149,
+  "documentSmokeTestsBeforeAdditionalPdfRenderCase": 20,
+  "ui": {
+    "workspaceCount": 2,
+    "settingsRequests": 20,
+    "sessionId": "260907-plain-boulder",
+    "sessionName": "Validation autonomie — Dev",
+    "profileIsolated": true,
+    "reloadPersisted": true,
+    "url": "http://localhost:6174/?workspaceId=91d00964-2cc5-4fd2-8f1a-e0878385ecf0&ws=my-workspace&route=allSessions%2Fsession%2F260907-plain-boulder",
+    "errors": [],
+    "screenshot": "dev-validation.png",
+    "providerExecution": "not_requested_no_real_connection"
+  },
+  "humanBenchmark": {
+    "status": "not_measured",
+    "gateResult": "benchmark-not-qualified.json"
+  },
+  "limitations": [
+    "No real provider or external business system was exercised by Playwright.",
+    "Chromium emitted cache-directory warnings in the temporary profile; browser authentication persistence was not qualified.",
+    "User-created pre-existing workspace changes were preserved; this is not a clean production release build."
+  ]
+}

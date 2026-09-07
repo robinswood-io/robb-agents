@@ -41,14 +41,18 @@ export class ToolLoopBudget {
   private identicalCalls = 0;
   private transactionGraceUntil = 0;
   private plannedBatchSignatures = new Map<string, number>();
+  private uniqueSignatures = new Set<string>();
+  private consecutiveToolSignatures = new Set<string>();
 
   constructor(
     private readonly hintAfter = 3,
     private readonly blockIdenticalAfter = 4,
-    private readonly blockConsecutiveAfter = 8,
+    private readonly blockConsecutiveAfter = 16,
     private readonly blockTotalAfter = 24,
     private readonly transactionReserve = 4,
     private readonly totalHintEvery = 6,
+    private readonly absoluteMaxCalls = 96,
+    private readonly minimumNoveltyRatio = 0.25,
   ) {}
 
   beginPrompt(): void {
@@ -59,6 +63,8 @@ export class ToolLoopBudget {
     this.identicalCalls = 0;
     this.transactionGraceUntil = 0;
     this.plannedBatchSignatures.clear();
+    this.uniqueSignatures.clear();
+    this.consecutiveToolSignatures.clear();
   }
 
   /**
@@ -80,10 +86,14 @@ export class ToolLoopBudget {
     const plannedBatchMember = plannedCount > 0;
     if (plannedCount === 1) this.plannedBatchSignatures.delete(nextSignature);
     else if (plannedCount > 1) this.plannedBatchSignatures.set(nextSignature, plannedCount - 1);
+    const sameTool = toolName === this.lastToolName;
     this.totalToolCalls += 1;
-    this.consecutiveToolCalls = toolName === this.lastToolName
+    this.consecutiveToolCalls = sameTool
       ? this.consecutiveToolCalls + 1
       : 1;
+    if (!sameTool) this.consecutiveToolSignatures.clear();
+    this.uniqueSignatures.add(nextSignature);
+    this.consecutiveToolSignatures.add(nextSignature);
     this.identicalCalls = nextSignature === this.lastSignature
       ? this.identicalCalls + 1
       : 1;
@@ -92,6 +102,8 @@ export class ToolLoopBudget {
 
     const mutation = isMutation(toolName, input);
     const transactionInFlight = this.totalToolCalls <= this.transactionGraceUntil;
+    const noveltyRatio = this.uniqueSignatures.size / this.totalToolCalls;
+    const consecutiveNoveltyRatio = this.consecutiveToolSignatures.size / this.consecutiveToolCalls;
 
     if (this.identicalCalls >= this.blockIdenticalAfter) {
       return {
@@ -102,10 +114,20 @@ export class ToolLoopBudget {
         message: `Cost guard: blocked unchanged ${toolName} call #${this.identicalCalls}. Use the existing result, change the hypothesis or arguments, or batch the remaining work.`,
       };
     }
+    // This ceiling always wins. A mutation grace window may reserve a few
+    // calls below it for verification, but can never extend the turn itself.
+    if (this.totalToolCalls >= this.absoluteMaxCalls) {
+      return {
+        action: 'block',
+        totalToolCalls: this.totalToolCalls,
+        consecutiveToolCalls: this.consecutiveToolCalls,
+        identicalCalls: this.identicalCalls,
+        message: `Cost guard checkpoint: tool call #${this.totalToolCalls} reached this turn's absolute safety lease. Synthesize the verified evidence and end with a concise statement of remaining work; automatic recovery will continue without waiting for another user message.`,
+      };
+    }
     if (
       mutation
-      && !transactionInFlight
-      && this.totalToolCalls >= this.blockTotalAfter - this.transactionReserve
+      && this.totalToolCalls >= this.absoluteMaxCalls - this.transactionReserve
     ) {
       return {
         action: 'block',
@@ -115,29 +137,38 @@ export class ToolLoopBudget {
         message: `Cost guard checkpoint: mutation ${toolName} was not started because this turn no longer has the ${this.transactionReserve}-call reserve required to verify and close it safely. End this response with a concise checkpoint naming the remaining action; automatic recovery will continue it without waiting for another user message.`,
       };
     }
-    if (mutation) {
-      this.transactionGraceUntil = Math.max(
-        this.transactionGraceUntil,
+    if (mutation && !transactionInFlight) {
+      this.transactionGraceUntil = Math.min(
+        this.absoluteMaxCalls - 1,
         this.totalToolCalls + this.transactionReserve,
       );
     }
     const closingTransaction = this.totalToolCalls <= this.transactionGraceUntil;
-    if (this.totalToolCalls >= this.blockTotalAfter && !closingTransaction) {
+    if (
+      this.totalToolCalls >= this.blockTotalAfter
+      && noveltyRatio <= this.minimumNoveltyRatio
+      && !closingTransaction
+    ) {
       return {
         action: 'block',
         totalToolCalls: this.totalToolCalls,
         consecutiveToolCalls: this.consecutiveToolCalls,
         identicalCalls: this.identicalCalls,
-        message: `Cost guard checkpoint: tool call #${this.totalToolCalls} reached this turn's hard budget. Synthesize the verified evidence and end with a concise statement of remaining work; automatic recovery will continue without waiting for another user message.`,
+        message: `Cost guard checkpoint: only ${this.uniqueSignatures.size} materially distinct calls were observed across ${this.totalToolCalls} tool calls. Re-plan from the preserved evidence; automatic recovery will continue without waiting for another user message.`,
       };
     }
-    if (this.consecutiveToolCalls >= this.blockConsecutiveAfter && !closingTransaction && !plannedBatchMember) {
+    if (
+      this.consecutiveToolCalls >= this.blockConsecutiveAfter
+      && consecutiveNoveltyRatio <= this.minimumNoveltyRatio
+      && !closingTransaction
+      && !plannedBatchMember
+    ) {
       return {
         action: 'block',
         totalToolCalls: this.totalToolCalls,
         consecutiveToolCalls: this.consecutiveToolCalls,
         identicalCalls: this.identicalCalls,
-        message: `Cost guard checkpoint: blocked consecutive ${toolName} call #${this.consecutiveToolCalls}. Synthesize the existing results and state the remaining work precisely; automatic recovery will continue with a batched or materially different call.`,
+        message: `Cost guard checkpoint: blocked low-novelty ${toolName} loop at call #${this.consecutiveToolCalls}. Synthesize the existing results and state the remaining work precisely; automatic recovery will continue with a materially different plan.`,
       };
     }
     if (this.consecutiveToolCalls >= this.hintAfter && !plannedBatchMember) {

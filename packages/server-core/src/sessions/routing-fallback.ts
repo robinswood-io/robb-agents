@@ -60,16 +60,14 @@ export function selectRoutingFallbackCandidate(
     .find(slug => exists(slug) && !isUnavailable(slug))
 }
 
-/** Explicit policy order wins; otherwise every other configured connection is eligible. */
+/** Cross-connection handoff is allowed only by an explicit routing policy. */
 export function resolveRoutingFallbackCandidates(
   primarySlug: string,
   policyCandidates: string[] | undefined,
-  configuredConnectionSlugs: string[],
+  _configuredConnectionSlugs: string[],
 ): string[] {
-  const source = policyCandidates && policyCandidates.length > 0
-    ? policyCandidates
-    : configuredConnectionSlugs
-  return [...new Set(source)].filter(slug => slug && slug !== primarySlug)
+  if (!policyCandidates) return []
+  return [...new Set(policyCandidates)].filter(slug => slug && slug !== primarySlug)
 }
 
 export function recordRoutingCircuitFailure(

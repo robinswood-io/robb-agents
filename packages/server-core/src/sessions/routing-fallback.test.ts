@@ -64,15 +64,18 @@ describe('resolveRoutingFallbackCandidates', () => {
       .toEqual(['policy-b', 'policy-c'])
   })
 
-  it('falls back across configured connections when no policy exists', () => {
+  it('fails closed across connections when no routing policy exists', () => {
     expect(resolveRoutingFallbackCandidates('primary', undefined, ['primary', 'api', 'google', 'api']))
-      .toEqual(['api', 'google'])
+      .toEqual([])
   })
 })
 
 describe('shouldAttemptProviderFallback', () => {
   it('allows quota, rate-limit and provider availability handoffs', () => {
     expect(shouldAttemptProviderFallback(new Error('Codex error: The usage limit has been reached'))).toBe(true)
+    expect(shouldAttemptProviderFallback(new Error(
+      'This Google account does not currently have usable Antigravity quota.',
+    ))).toBe(true)
     expect(shouldAttemptProviderFallback(new Error('429 too many requests'))).toBe(true)
     expect(shouldAttemptProviderFallback(new Error('503 provider unavailable'))).toBe(true)
   })

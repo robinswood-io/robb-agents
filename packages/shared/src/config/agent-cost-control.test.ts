@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { LlmConnection } from './llm-connections.ts';
 import {
-  decideAgentCostControl,
+  decideAgentCostControl as decideAgentCostControlRaw,
   isContextDependentDirectTurn,
   isBrowserFallbackEligibleTool,
   resolveEffectiveAgentContextLimits,
@@ -13,7 +13,164 @@ const connection: Pick<LlmConnection, 'models' | 'defaultModel'> = {
   defaultModel: 'pi/gpt-5.6-sol',
 };
 
+// The historical cases below document the opt-in cost/quality trade-offs of
+// the balanced profile. The product default is tested separately.
+const decideAgentCostControl = (
+  input: Parameters<typeof decideAgentCostControlRaw>[0],
+) => decideAgentCostControlRaw(input, { profile: 'balanced' });
+
+describe('Astra automatic routing', () => {
+  const astraConnection: typeof connection = {
+    // Deliberately keep Sol first, as in the connection catalogue.
+    models: ['pi/gpt-5.6-sol', 'pi/gpt-6-astra', 'pi/gpt-5.6-terra', 'pi/gpt-5.6-luna'],
+    defaultModel: 'pi/gpt-5.6-sol',
+  };
+
+  test.each([
+    { text: 'Merci.', model: 'pi/gpt-5.6-luna', thinkingLevel: 'low' },
+    { text: 'Résume les résultats.', model: 'pi/gpt-5.6-terra', thinkingLevel: 'medium' },
+    { text: 'Conçois une architecture multi-étapes.', model: 'pi/gpt-6-astra', thinkingLevel: 'high' },
+    { text: 'Déploie la migration en production.', model: 'pi/gpt-6-astra', thinkingLevel: 'xhigh' },
+  ])('routes $text to $model', ({ text, model, thinkingLevel }) => {
+    expect(decideAgentCostControl({ text, connection: astraConnection })).toMatchObject({
+      model,
+      thinkingLevel,
+    });
+  });
+
+  test('uses Astra as the maximum-quality baseline only when no model is already selected', () => {
+    expect(decideAgentCostControlRaw({ text: 'Merci.', connection: astraConnection }).model)
+      .toBe('pi/gpt-6-astra');
+    expect(decideAgentCostControlRaw({
+      text: 'Conçois une architecture multi-étapes.',
+      connection: astraConnection,
+      currentModel: 'pi/gpt-5.6-sol',
+    }).model).toBe('pi/gpt-5.6-sol');
+  });
+
+  test('retains Sol when Astra is absent from the authorized connection', () => {
+    expect(decideAgentCostControl({ text: 'Conçois une architecture multi-étapes.', connection }).model)
+      .toBe('pi/gpt-5.6-sol');
+  });
+
+  test('honors custom preferences and disabled automatic routing', () => {
+    const input = {
+      text: 'Conçois une architecture multi-étapes.',
+      connection: astraConnection,
+      currentModel: 'pi/gpt-5.6-terra',
+    };
+    expect(decideAgentCostControlRaw(input, {
+      profile: 'balanced',
+      routing: { complexModelPatterns: ['gpt-5.6-sol'] },
+    }).model).toBe('pi/gpt-5.6-sol');
+    expect(decideAgentCostControlRaw(input, {
+      profile: 'balanced',
+      routing: { enabled: false },
+    }).model).toBe('pi/gpt-5.6-terra');
+  });
+
+  test('respects budget downgrades for complex work and preserves Astra for critical actions', () => {
+    expect(decideAgentCostControl({
+      text: 'Conçois une architecture multi-étapes.',
+      connection: astraConnection,
+      sessionCostUsd: 10,
+    }).model).toBe('pi/gpt-5.6-terra');
+    expect(decideAgentCostControl({
+      text: 'Conçois une architecture multi-étapes.',
+      connection: astraConnection,
+      sessionCostUsd: 25,
+    }).model).toBe('pi/gpt-5.6-luna');
+    expect(decideAgentCostControl({
+      text: 'Déploie la migration en production.',
+      connection: astraConnection,
+      sessionCostUsd: 25,
+    })).toMatchObject({ model: 'pi/gpt-6-astra', thinkingLevel: 'xhigh' });
+  });
+
+  test.each(['spawned-session', 'automatic-recovery'] as const)(
+    'preserves Astra across a short %s turn', (turnKind) => {
+      expect(decideAgentCostControl({
+        text: 'Continue.',
+        connection: astraConnection,
+        currentModel: 'pi/gpt-6-astra',
+        currentThinkingLevel: 'high',
+        turnKind,
+        sessionCostUsd: 250,
+      })).toMatchObject({ model: 'pi/gpt-6-astra', thinkingLevel: 'high' });
+    },
+  );
+});
+
 describe('decideAgentCostControl', () => {
+  test('defaults to maximum quality and preserves the selected session route', () => {
+    const decision = decideAgentCostControlRaw({
+      text: 'Résume ce point.',
+      connection,
+      currentModel: 'pi/gpt-5.6-sol',
+      currentThinkingLevel: 'high',
+      sessionCostUsd: 250,
+    });
+
+    expect(decision.profile).toBe('maximum-quality');
+    expect(decision.model).toBe('pi/gpt-5.6-sol');
+    expect(decision.thinkingLevel).toBe('high');
+    expect(decision.budgetState).toBe('hard-limit');
+    expect(decision.explanation).toContain('quality:baseline-preserved');
+  });
+
+  test('uses the strongest available route when maximum quality has no session baseline', () => {
+    const decision = decideAgentCostControlRaw({
+      text: 'Merci.',
+      connection,
+      sessionCostUsd: 250,
+    }, { profile: 'maximum-quality' });
+
+    expect(decision.model).toBe('pi/gpt-5.6-sol');
+    expect(decision.thinkingLevel).toBe('xhigh');
+  });
+
+  test('preserves a specialist inherited route on its first turn', () => {
+    const decision = decideAgentCostControlRaw({
+      text: 'Inspecte les journaux et rapporte les faits.',
+      connection,
+      currentModel: 'pi/gpt-5.6-terra',
+      currentThinkingLevel: 'high',
+      turnKind: 'spawned-session',
+    }, { profile: 'balanced' });
+
+    expect(decision.model).toBe('pi/gpt-5.6-terra');
+    expect(decision.thinkingLevel).toBe('high');
+    expect(decision.explanation).toContain('objective:route-preserved');
+  });
+
+  test('honors an explicit specialist override instead of rerouting its short prompt', () => {
+    const decision = decideAgentCostControlRaw({
+      text: 'Vérifie.',
+      connection,
+      currentModel: 'pi/gpt-5.6-luna',
+      currentThinkingLevel: 'medium',
+      turnKind: 'spawned-session',
+    }, { profile: 'balanced' });
+
+    expect(decision.model).toBe('pi/gpt-5.6-luna');
+    expect(decision.thinkingLevel).toBe('medium');
+  });
+
+  test('never lowers the current route during an automatic recovery', () => {
+    const decision = decideAgentCostControlRaw({
+      text: '<automatic_turn_recovery attempt="1">Continue.</automatic_turn_recovery>',
+      connection,
+      currentModel: 'pi/gpt-5.6-sol',
+      currentThinkingLevel: 'xhigh',
+      turnKind: 'automatic-recovery',
+      sessionCostUsd: 250,
+    }, { profile: 'balanced' });
+
+    expect(decision.model).toBe('pi/gpt-5.6-sol');
+    expect(decision.thinkingLevel).toBe('xhigh');
+    expect(decision.explanation).toContain('objective:route-preserved');
+  });
+
   test('routes a routine internal message to the cheapest model and low thinking', () => {
     const decision = decideAgentCostControl({
       text: 'Le contrôle est terminé.',
@@ -93,8 +250,8 @@ describe('decideAgentCostControl', () => {
 
     expect(decision.highRisk).toBe(false);
     expect(decision.criticalRisk).toBe(false);
-    expect(decision.model).toBe('pi/gpt-5.6-luna');
-    expect(decision.thinkingLevel).toBe('low');
+    expect(decision.model).toBe('pi/gpt-5.6-terra');
+    expect(decision.thinkingLevel).toBe('medium');
   });
 
   test('still protects an action targeting a production environment', () => {
@@ -162,6 +319,8 @@ describe('decideAgentCostControl', () => {
       expect(decision.difficulty).toBe('complex');
       expect(decision.model).toBe('pi/gpt-5.6-sol');
     }
+    expect(isContextDependentDirectTurn('Corrige le nouveau budget marketing')).toBe(false);
+    expect(isContextDependentDirectTurn('Corrige ça avec précision')).toBe(true);
   });
 
   test('does not inherit historical complexity for an unrelated short acknowledgement', () => {
@@ -335,6 +494,7 @@ describe('decideAgentCostControl', () => {
 
   test('fails safe to defaults for malformed persisted fields', () => {
     const resolved = resolveAgentCostControlPolicy({
+      profile: 'economy',
       enabled: 'yes',
       routing: {
         routineModelPatterns: 5,
@@ -343,6 +503,7 @@ describe('decideAgentCostControl', () => {
       recovery: { browserFallbackToolPatterns: ['web', 5] },
     } as unknown as Parameters<typeof resolveAgentCostControlPolicy>[0]);
 
+    expect(resolved.profile).toBe('maximum-quality');
     expect(resolved.enabled).toBe(true);
     expect(resolved.routing.routineModelPatterns).toContain('gpt-5.6-luna');
     expect(resolved.routing.routineThinking).toBe('low');

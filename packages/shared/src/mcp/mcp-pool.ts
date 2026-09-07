@@ -49,6 +49,18 @@ export interface ProxyToolDef {
   inputSchema: Record<string, unknown>;
   readOnly?: boolean;
   idempotent?: boolean;
+  destructive?: boolean;
+  openWorld?: boolean;
+}
+
+/** Capability hints reported by an MCP server. They are untrusted by default. */
+export interface ProxyToolCapabilities {
+  readOnly?: boolean;
+  idempotent?: boolean;
+  destructive?: boolean;
+  openWorld?: boolean;
+  /** Only host-owned manifests may set this. Remote MCP annotations never do. */
+  trusted?: boolean;
 }
 
 /**
@@ -442,11 +454,30 @@ export class McpClientPool {
           inputSchema,
           readOnly: tool.annotations?.readOnlyHint === true,
           idempotent: tool.annotations?.idempotentHint === true,
+          destructive: tool.annotations?.destructiveHint === true,
+          openWorld: tool.annotations?.openWorldHint === true,
         });
       }
     }
 
     return defs;
+  }
+
+  /** Resolve capability hints for the exact proxy name used by agent hooks. */
+  getProxyToolCapabilities(proxyName: string): ProxyToolCapabilities | undefined {
+    for (const [slug, tools] of this.toolCache.entries()) {
+      for (const tool of tools) {
+        if (this.getProxyToolName(slug, tool.name) !== proxyName) continue;
+        return {
+          readOnly: tool.annotations?.readOnlyHint === true,
+          idempotent: tool.annotations?.idempotentHint === true,
+          destructive: tool.annotations?.destructiveHint === true,
+          openWorld: tool.annotations?.openWorldHint === true,
+          trusted: false,
+        };
+      }
+    }
+    return undefined;
   }
 
   // ============================================================

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'bun:test';
-import type { LlmConnection, RoutingPolicy } from '@craft-agent/shared/config';
+import { decideAgentCostControl, type LlmConnection, type RoutingPolicy } from '@craft-agent/shared/config';
+import { getPiModelsForAuthProvider } from '../../../shared/src/config/models-pi';
 import { parseTaskSpec, type TaskSpec } from '@craft-agent/shared/tasks';
 import {
   inferTaskNodeProfile,
@@ -28,6 +29,98 @@ function connection(overrides: Partial<LlmConnection> = {}): LlmConnection {
 }
 
 describe('task node adaptive routing', () => {
+  for (const piAuthProvider of ['openai', 'openai-codex']) {
+    const openaiConnection = connection({
+      providerType: 'pi',
+      piAuthProvider,
+      // Exercise both catalogue definitions and persisted string IDs.
+      models: ['pi/gpt-5.6-sol', 'pi/gpt-6-astra', 'pi/gpt-5.6-terra', 'pi/gpt-5.6-luna']
+        .map(id => piAuthProvider === 'openai'
+          ? getPiModelsForAuthProvider(piAuthProvider).find(model => model.id === id)!
+          : id),
+      defaultModel: 'pi/gpt-5.6-sol',
+      modelSelectionMode: 'automaticallySyncedFromProvider',
+    });
+
+    it.each([
+      { prompt: 'List files.', attempt: 1, model: 'pi/gpt-5.6-luna', thinkingLevel: 'low' },
+      { prompt: 'Implement the TypeScript endpoint.', attempt: 1, model: 'pi/gpt-5.6-terra', thinkingLevel: 'medium' },
+      { prompt: 'Design the architecture.', attempt: 1, model: 'pi/gpt-6-astra', thinkingLevel: 'high' },
+      { prompt: 'Implement the TypeScript endpoint.', attempt: 2, model: 'pi/gpt-6-astra', thinkingLevel: 'high' },
+      { prompt: 'List files.', attempt: 3, model: 'pi/gpt-6-astra', thinkingLevel: 'xhigh' },
+      { prompt: 'Check the result.', kind: 'verify', attempt: 1, model: 'pi/gpt-6-astra', thinkingLevel: 'high' },
+      { prompt: 'Check the result.', kind: 'judge', attempt: 1, model: 'pi/gpt-6-astra', thinkingLevel: 'high' },
+    ])(`${piAuthProvider}: routes $prompt at attempt $attempt to $model`, ({ prompt, kind, attempt, model, thinkingLevel }) => {
+      const spec = task({
+        id: 'astra-routing', title: 'Astra routing', goal: 'Match the workload',
+        nodes: [{ id: 'node', prompt, ...(kind ? { kind } : {}) }],
+      });
+      const route = resolveTaskNodeExecutionRoute({
+        node: spec.nodes[0]!, spec, attempt,
+        connections: [openaiConnection], defaultConnectionSlug: 'primary',
+      });
+      expect(route).toMatchObject({ model, thinkingLevel, llmConnection: 'primary' });
+      // The actual first-turn controller must preserve the specialist route.
+      expect(decideAgentCostControl({
+        text: prompt, connection: openaiConnection,
+        currentModel: route.model, currentThinkingLevel: route.thinkingLevel,
+        turnKind: 'spawned-session',
+      }, { profile: 'balanced' })).toMatchObject({ model, thinkingLevel });
+    });
+
+    it(`${piAuthProvider}: falls back to Sol when Astra is not configured`, () => {
+      const spec = task({
+        id: 'without-astra', title: 'Without Astra', goal: 'Use available models',
+        nodes: [{ id: 'node', prompt: 'Design the architecture.' }],
+      });
+      const route = resolveTaskNodeExecutionRoute({
+        node: spec.nodes[0]!, spec, attempt: 1, defaultConnectionSlug: 'primary',
+        connections: [{ ...openaiConnection, models: ['pi/gpt-5.6-terra', 'pi/gpt-5.6-sol'] }],
+      });
+      expect(route.model).toBe('pi/gpt-5.6-sol');
+    });
+
+    it(`${piAuthProvider}: respects explicit task defaults and node model overrides`, () => {
+      const spec = task({
+        id: 'pinned-astra', title: 'Pinned model', goal: 'Respect model pins',
+        defaults: { model: 'pi/gpt-5.6-terra' },
+        nodes: [
+          { id: 'default', prompt: 'Design the architecture.' },
+          { id: 'override', prompt: 'Design the architecture.', model: 'pi/gpt-5.6-sol' },
+        ],
+      });
+      for (const [index, model] of ['pi/gpt-5.6-terra', 'pi/gpt-5.6-sol'].entries()) {
+        expect(resolveTaskNodeExecutionRoute({
+          node: spec.nodes[index]!, spec, attempt: 3,
+          connections: [openaiConnection], defaultConnectionSlug: 'primary',
+        })).toMatchObject({ model, strategy: 'pinned' });
+      }
+    });
+
+    it(`${piAuthProvider}: respects user-defined model tier ordering`, () => {
+      const spec = task({
+        id: 'custom-tiers', title: 'Custom tiers', goal: 'Respect configured tiers',
+        nodes: [{ id: 'node', prompt: 'Design the architecture.' }],
+      });
+      expect(resolveTaskNodeExecutionRoute({
+        node: spec.nodes[0]!, spec, attempt: 1, defaultConnectionSlug: 'primary',
+        connections: [{ ...openaiConnection, modelSelectionMode: 'userDefined3Tier' }],
+      }).model).toBe('pi/gpt-5.6-sol');
+    });
+
+    it(`${piAuthProvider}: never crosses the policy boundary just to use Astra`, () => {
+      const spec = task({
+        id: 'restricted-astra', title: 'Restricted route', goal: 'Respect authorized providers',
+        nodes: [{ id: 'node', prompt: 'Design the architecture.' }],
+      });
+      expect(resolveTaskNodeExecutionRoute({
+        node: spec.nodes[0]!, spec, attempt: 1, defaultConnectionSlug: 'primary',
+        connections: [openaiConnection, connection({ slug: 'allowed' })],
+        routingPolicy: { version: 1, defaultAllowConnectionSlugs: ['allowed'] },
+      })).toMatchObject({ llmConnection: 'allowed', model: 'claude-opus' });
+    });
+  }
+
   it('infers a specialist and promotes the model tier after failures', () => {
     const spec = task({
       id: 'implement-api',

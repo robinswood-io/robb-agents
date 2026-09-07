@@ -3,9 +3,11 @@ import {
   classifyAgentFailure,
   type AgentFailureSignal,
 } from './failure-taxonomy.ts'
+import { isBrowserToolNameOrAlias } from './browser-tool-names.ts'
 
 export type AutonomyDecision =
   | { kind: 'fallback_browser' }
+  | { kind: 'fallback_structured' }
   | { kind: 'reconnect_runtime' }
   | { kind: 'escalate'; reason: HumanEscalationReason }
   | { kind: 'none' }
@@ -51,6 +53,7 @@ export function formatAutonomyContract(
     'Batch independent searches and reads in a single tool call whenever supported. Prefer exact identifiers returned by the first search; do not restart broad discovery after sufficient evidence is available.',
     'Set an output budget before broad reads: request only the fields, date range, page size, log lines, or result count needed for the next decision. Start narrow and expand only when the returned evidence is insufficient.',
     'Prefer a connected structured source or API for repeatable data access. Use browser automation for UI-only steps, a verified equivalent fallback, or final rendered-journey validation.',
+    'For RDP, Guacamole, VNC, or other remote desktops, prefer a native remote agent, SSH, database connection, or application API for diagnosis and repeatable execution. Use coordinate/pixel automation only for unavoidable UI-only steps, authentication handoff, or final journey verification. After one browser transport failure or two materially different UI attempts without progress, switch to the structured route instead of continuing pixel retries.',
     'For remote SSH work, keep a stable remote working directory and combine related diagnostics. When several files must move or change, prefer an available sync/worktree operation over repeated one-file upload/download calls, then verify once at the destination.',
     'After delegating to known sessions, wait on a structured completion primitive when available. Do not poll session lists or send acknowledgement-only status messages.',
     'Before any mutation, reserve enough tool budget for verification and cleanup. Once a mutation starts, finish its verification and close its guards before unrelated exploration.',
@@ -73,7 +76,7 @@ export function formatAutonomyContract(
  * This is deliberately pure: SessionManager owns persistence, prompts and UI.
  */
 export function decideAutonomyRecovery(input: AutonomyDecisionInput): AutonomyDecision {
-  const isBrowserTool = /browser_tool|browser:|\bbrowser\b/i.test(input.toolName)
+  const isBrowserTool = isBrowserToolNameOrAlias(input.toolName)
   const signal: AgentFailureSignal = {
     toolName: input.toolName,
     message: input.result,
@@ -92,15 +95,20 @@ export function decideAutonomyRecovery(input: AutonomyDecisionInput): AutonomyDe
   if (failure.recovery === 'runtime-reconnect') {
     return { kind: 'reconnect_runtime' }
   }
-  if (isBrowserTool || !input.browserEnabled) {
-    return { kind: 'escalate', reason: 'access_unavailable_after_fallback' }
-  }
   if (
     failure.recovery === 'fix-input'
     || failure.recovery === 'request-authorization'
     || failure.recovery === 'stop'
   ) {
     return { kind: 'none' }
+  }
+  if (isBrowserTool) {
+    return input.fallbackAlreadyAttempted
+      ? { kind: 'escalate', reason: 'access_unavailable_after_fallback' }
+      : { kind: 'fallback_structured' }
+  }
+  if (!input.browserEnabled) {
+    return { kind: 'escalate', reason: 'access_unavailable_after_fallback' }
   }
   if (input.fallbackAlreadyAttempted) return { kind: 'none' }
   if (input.browserFallbackEligible === false) return { kind: 'none' }

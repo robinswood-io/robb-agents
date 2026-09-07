@@ -103,4 +103,58 @@ describe('handleTextComplete messageId synchronization', () => {
     expect(id.startsWith('msg-')).toBe(true)
     expect(id).not.toBe('')
   })
+
+  it('reclassifies the same authoritative final message as intermediate in place', () => {
+    const state = makeState([{
+      id: 'msg-host-1',
+      role: 'assistant',
+      content: 'Premature final response',
+      isStreaming: false,
+      isPending: false,
+      isIntermediate: false,
+      turnId: 'turn-original',
+      timestamp: 500,
+    }])
+    const event: TextCompleteEvent = {
+      type: 'text_complete',
+      sessionId: 'session-1',
+      text: 'Premature final response',
+      turnId: 'turn-reclassified',
+      messageId: 'msg-host-1',
+      isIntermediate: true,
+      timestamp: 500,
+    }
+
+    const next = handleTextComplete(state, event)
+    expect(next.session.messages).toHaveLength(1)
+    expect(next.session.messages[0]).toMatchObject({
+      id: 'msg-host-1',
+      isIntermediate: true,
+      isStreaming: false,
+      isPending: false,
+      turnId: 'turn-reclassified',
+    })
+  })
+
+  it('is idempotent when the same completed intermediate event is delivered twice', () => {
+    const state = makeState([])
+    const event: TextCompleteEvent = {
+      type: 'text_complete',
+      sessionId: 'session-1',
+      text: 'Continue automatically.',
+      turnId: 'turn-continue',
+      messageId: 'msg-continue-1',
+      isIntermediate: true,
+      timestamp: 600,
+    }
+
+    const once = handleTextComplete(state, event)
+    const twice = handleTextComplete(once, event)
+    expect(twice.session.messages).toHaveLength(1)
+    expect(twice.session.messages[0]).toMatchObject({
+      id: 'msg-continue-1',
+      content: 'Continue automatically.',
+      isIntermediate: true,
+    })
+  })
 })

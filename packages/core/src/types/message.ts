@@ -47,6 +47,47 @@ export type AuthStatus = 'pending' | 'completed' | 'cancelled' | 'failed';
 export type ToolStatus = 'pending' | 'executing' | 'completed' | 'error' | 'backgrounded';
 
 /**
+ * Host-authored explanation for a tool result that closed without executing
+ * the requested operation. Optional fields on events/messages keep sessions
+ * written by older app versions readable.
+ */
+export interface ToolExecutionCheckpoint {
+  schemaVersion: 1;
+  kind: 'tool-call-budget';
+  reason: string;
+}
+
+export type ObjectiveOutcomeState =
+  | 'complete_verified'
+  | 'blocked_human'
+  | 'blocked_policy'
+  | 'continue';
+
+export type ObjectiveOutcomeBlockerKind =
+  | 'credential'
+  | 'mfa'
+  | 'external_authorization'
+  | 'irreversible_authority'
+  | 'business_decision'
+  | 'policy';
+
+/** Structured, model-authored outcome subsequently verified by the host. */
+export interface ObjectiveOutcomeDeclaration {
+  state: ObjectiveOutcomeState;
+  criteria: Array<{
+    id: string;
+    satisfied: boolean;
+    evidence: string[];
+  }>;
+  remainingWork: string[];
+  blocker?: {
+    kind: ObjectiveOutcomeBlockerKind;
+    description: string;
+    evidence: string[];
+  } | null;
+}
+
+/**
  * Tool display metadata - embedded at storage time for viewer compatibility
  * Icons are base64-encoded to work in both Electron and web viewer
  */
@@ -373,6 +414,10 @@ export interface Message {
   toolInput?: Record<string, unknown>;
   toolResult?: string;
   toolStatus?: ToolStatus;
+  /** False when the host returned a checkpoint before invoking the tool. */
+  toolExecuted?: boolean;
+  /** Structured reason associated with a non-executed tool result. */
+  toolCheckpoint?: ToolExecutionCheckpoint;
   toolDuration?: number;
   toolIntent?: string;
   toolDisplayName?: string;
@@ -399,6 +444,10 @@ export interface Message {
   isPending?: boolean;
   // Queued: user message that is waiting to be processed (sent during ongoing response)
   isQueued?: boolean;
+  /** Durable transport provenance; this never grants user authority. */
+  internalOrigin?: InternalMessageOrigin;
+  agentDelivery?: { id: string; status: 'queued' | 'processing' | 'processed' | 'failed'; attempts: number; attachmentsSha256?: string };
+
   // Intermediate text (commentary between tool calls, not final response)
   isIntermediate?: boolean;
   // Hidden: a system-generated message that must reach the model (it drives a
@@ -413,6 +462,10 @@ export interface Message {
   statusType?: 'compacting' | 'compaction_complete';
   /** Provider/model routing audit metadata for assistant messages. */
   routingMeta?: RoutingMeta;
+  /** Model-declared objective outcome; the host validates it before changing objective state. */
+  objectiveOutcome?: ObjectiveOutcomeDeclaration;
+  /** Host extraction failure retained for crash-safe continuation diagnostics. */
+  objectiveOutcomeError?: string;
   // Info level for info messages (determines icon/color)
   infoLevel?: 'info' | 'warning' | 'error' | 'success';
   // Error-specific fields (for typed errors with diagnostics)
@@ -468,6 +521,10 @@ export interface StoredMessage {
   toolInput?: Record<string, unknown>;
   toolResult?: string;
   toolStatus?: ToolStatus;
+  /** False when the host returned a checkpoint before invoking the tool. */
+  toolExecuted?: boolean;
+  /** Structured reason associated with a non-executed tool result. */
+  toolCheckpoint?: ToolExecutionCheckpoint;
   toolDuration?: number;
   toolIntent?: string;
   toolDisplayName?: string;
@@ -494,6 +551,9 @@ export interface StoredMessage {
   statusType?: 'compacting' | 'compaction_complete';
   /** Provider/model routing audit metadata for assistant messages. */
   routingMeta?: RoutingMeta;
+  /** Model-declared objective outcome; the host validates it before changing objective state. */
+  objectiveOutcome?: ObjectiveOutcomeDeclaration;
+  objectiveOutcomeError?: string;
   // Info level for info messages (persisted for reload)
   infoLevel?: 'info' | 'warning' | 'error' | 'success';
   // Error display fields
@@ -534,6 +594,11 @@ export interface StoredMessage {
   authWorkspace?: string;
   // Queued: user message that is waiting to be processed (persisted for recovery)
   isQueued?: boolean;
+  hidden?: boolean;
+  /** Durable transport provenance; this never grants user authority. */
+  internalOrigin?: InternalMessageOrigin;
+  agentDelivery?: { id: string; status: 'queued' | 'processing' | 'processed' | 'failed'; attempts: number; attachmentsSha256?: string };
+
 }
 
 /**
@@ -695,7 +760,7 @@ export type AgentEvent =
   | { type: 'text_complete'; text: string; isIntermediate?: boolean; turnId?: string; parentToolUseId?: string; sdkMessageId?: string; modelProvenance?: AgentModelProvenance }
   | { type: 'pi_turn_anchor'; sdkMessageId: string; sdkTurnAnchor: string }
   | { type: 'tool_start'; toolName: string; toolUseId: string; input: Record<string, unknown>; intent?: string; displayName?: string; turnId?: string; parentToolUseId?: string; toolDisplayMeta?: ToolDisplayMeta }
-  | { type: 'tool_result'; toolUseId: string; toolName?: string; result: string; isError: boolean; input?: Record<string, unknown>; turnId?: string; parentToolUseId?: string; continuationRequired?: boolean }
+  | { type: 'tool_result'; toolUseId: string; toolName?: string; result: string; isError: boolean; input?: Record<string, unknown>; turnId?: string; parentToolUseId?: string; continuationRequired?: boolean; executed?: boolean; checkpoint?: ToolExecutionCheckpoint }
   | {
       type: 'permission_request';
       requestId: string;
@@ -743,4 +808,12 @@ export type AgentEvent =
  */
 export function generateMessageId(): string {
   return `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+/** Persisted alongside internal messages so recovery preserves their origin. */
+export interface InternalMessageOrigin {
+  kind: 'agent-message' | 'browser-fallback' | 'spawned-session' | 'automation';
+  senderSessionId?: string;
+  deliveryId?: string;
+  attachmentsSha256?: string;
 }

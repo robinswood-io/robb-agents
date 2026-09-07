@@ -80,7 +80,9 @@ export function handleToolResult(
 
   const toolIndex = findToolMessage(session.messages, event.toolUseId)
 
-  const inferredError = event.isError === true || /^\s*(\[ERROR\]|Error:|error:)/.test(event.result || '')
+  const toolWasExecuted = event.executed !== false
+  const inferredError = toolWasExecuted
+    && (event.isError === true || /^\s*(\[ERROR\]|Error:|error:)/.test(event.result || ''))
 
   if (toolIndex !== -1) {
     // Detect "persisted output" - SDK marks as error but data was actually saved successfully
@@ -103,12 +105,15 @@ export function handleToolResult(
       toolStatus: newToolStatus,
       isError: effectiveIsError,
       errorCode: isPersistedOutput ? 'response_too_large' : undefined,
+      ...(typeof event.executed === 'boolean' ? { toolExecuted: event.executed } : {}),
+      ...(event.checkpoint ? { toolCheckpoint: event.checkpoint } : {}),
+      ...(!event.checkpoint && event.executed === true ? { toolCheckpoint: undefined } : {}),
     })
 
     // Safety net: when a parent Task completes, auto-complete any still-pending child tools.
     // This handles the case where child tool_result events never arrive.
     const completedTool = updatedSession.messages[toolIndex]
-    if (completedTool && (isParentTaskTool(completedTool.toolName || '') || completedTool.toolName === 'TaskOutput')) {
+    if (toolWasExecuted && completedTool && (isParentTaskTool(completedTool.toolName || '') || completedTool.toolName === 'TaskOutput')) {
       const hasOrphanedChildren = updatedSession.messages.some(
         m => m.parentToolUseId === event.toolUseId
           && m.toolStatus !== 'completed'
@@ -155,6 +160,8 @@ export function handleToolResult(
     toolResult: event.result,
     toolStatus: effectiveIsError ? 'error' : 'completed',
     isError: effectiveIsError,
+    ...(typeof event.executed === 'boolean' ? { toolExecuted: event.executed } : {}),
+    ...(event.checkpoint ? { toolCheckpoint: event.checkpoint } : {}),
     errorCode: isPersistedOutput ? 'response_too_large' : undefined,
     turnId: event.turnId,
     parentToolUseId: event.parentToolUseId,

@@ -1,3 +1,4 @@
+import { agentDeliveryId, acknowledgeDurableDelivery, recoveredInternalMessageOptions, persistAgentDeliveryAttachments, restoreAgentDeliveryAttachments } from './agent-delivery.ts'
 import type { EventSink, RpcServer } from '@craft-agent/server-core/transport'
 import { CLIENT_BROWSER_INVOKE } from '@craft-agent/server-core/transport'
 import type { ISessionManager, IBrowserPaneManager, ExecutePromptAutomationInput } from '@craft-agent/server-core/handlers'
@@ -135,6 +136,11 @@ import {
   toRoutingMetaAppProvenance,
 } from './session-app-provenance'
 import { classifyLatestTurnTerminalState, classifyObjectiveTerminalState } from './turn-completion'
+import { extractObjectiveOutcome, validateObjectiveOutcome } from './objective-outcome'
+import { registerObjectiveAcceptanceCriteria } from './objective-acceptance-criteria'
+import { captureObjectiveLearning, handleProjectLearning, getProjectLearningPolicy } from './project-learning'
+import { loadProjectById, loadProjectMemoryV2Context } from '@craft-agent/shared/projects'
+import { demoteLatestCheckpointAssistant, latestFinalAssistantId } from './tool-checkpoint-visibility'
 import {
   resolveLifecycleStartStatus,
   resolveLifecycleTerminalStatus,
@@ -146,6 +152,7 @@ import {
   buildAutomaticTurnRecoveryPrompt,
   createPendingTurnRecovery,
   exhaustPendingTurnRecovery,
+  pendingRecoveryRequiresContinuation,
   resolveAutomaticRecoveryInactivityTimeoutMs,
   turnStillNeedsRecovery,
   withAutomaticRecoveryInactivityTimeout,
@@ -163,7 +170,9 @@ import {
 } from './permission-request-lifecycle'
 import {
   buildAutonomyBrowserFallbackPrompt,
+  buildAutonomyStructuredFallbackPrompt,
   isAutonomyBrowserFallbackPrompt,
+  isAutonomyStructuredFallbackPrompt,
 } from './autonomy-browser-fallback'
 import {
   appendCoalescedInternalMessage,
@@ -174,6 +183,7 @@ import {
   buildObjectiveContractPrompt,
   findObjectiveText,
   hasObjectiveExecutionEvidence,
+  hasObjectiveSubstantiveToolResult,
   objectiveCostUsd,
   transitionObjectiveContract,
   turnProgressFingerprint,
@@ -929,6 +939,7 @@ interface ManagedSession {
   /** Durable in-flight turn marker used for bounded automatic recovery. */
   pendingTurnRecovery?: PendingTurnRecovery
   /** Durable contract for the active user objective and its isolated budget. */
+  pendingAgentDeliveryIds?: string[]
   activeObjective?: ActiveSessionObjective
   /** Durable Accept & Compact state; cleared atomically with an accepted user turn. */
   pendingPlanExecution?: {
@@ -1071,6 +1082,12 @@ interface ManagedSession {
     options?: SendMessageOptions
     messageId?: string  // Pre-generated ID for matching with UI
     optimisticMessageId?: string  // Frontend's ID for reliable event matching
+  }>
+  /** Runtime correlation for providers that accept a steer but later cannot deliver it. */
+  pendingUserSteers?: Map<string, {
+    queued: ManagedSession['messageQueue'][number]
+    objectiveBefore?: ActiveSessionObjective
+    recoveryBefore?: PendingTurnRecovery
   }>
   // Map of shellId -> command for killing background shells
   backgroundShellCommands: Map<string, string>
@@ -1233,6 +1250,33 @@ export function consumeSourceActivationRestart(
   if (host.sourceActivationRestartGeneration !== generation) return false
   host.sourceActivationRestartGeneration = undefined
   return true
+}
+
+export interface SpawnRouteSelection {
+  llmConnection?: string
+  model?: string
+  thinkingLevel?: ThinkingLevel
+}
+
+/**
+ * Resolve a specialist route before creating its session. Omitted fields
+ * inherit the effective parent values exactly; explicitly requested fields
+ * always win, including `thinkingLevel: 'off'`.
+ */
+export function resolveSpawnedSessionRoute(
+  request: SpawnRouteSelection,
+  parent: SpawnRouteSelection,
+): SpawnRouteSelection {
+  const changesConnection = request.llmConnection !== undefined
+    && request.llmConnection !== parent.llmConnection
+  return {
+    llmConnection: request.llmConnection ?? parent.llmConnection,
+    // A model is connection-scoped. Carrying an OpenAI model into an
+    // Anthropic (or another Pi-provider) connection creates a false audit
+    // trail even when the backend silently chooses that connection's default.
+    model: request.model ?? (changesConnection ? undefined : parent.model),
+    thinkingLevel: request.thinkingLevel ?? parent.thinkingLevel,
+  }
 }
 
 /**
@@ -2535,6 +2579,7 @@ export class SessionManager implements ISessionManager {
       const workspaces = getWorkspaces()
       let totalSessions = 0
       const pendingRecoverySessionIds: string[] = []
+      const pendingInboxSessionIds: string[] = []
 
       // Iterate over each workspace and load its sessions
       for (const workspace of workspaces) {
@@ -2575,6 +2620,7 @@ export class SessionManager implements ISessionManager {
           }
 
           this.sessions.set(meta.id, managed)
+          if (meta.pendingAgentDeliveryIds?.length) pendingInboxSessionIds.push(meta.id)
           if (managed.pendingTurnRecovery && !managed.pendingTurnRecovery.exhaustedAt) {
             pendingRecoverySessionIds.push(meta.id)
           }
@@ -2601,7 +2647,13 @@ export class SessionManager implements ISessionManager {
       // complete session catalogue has been restored so source/session lookups
       // behave exactly like a normal user send.
       setImmediate(() => {
-        void this.resumePendingTurnsAfterRestart(pendingRecoverySessionIds)
+        void (async () => {
+          await this.resumePendingTurnsAfterRestart(pendingRecoverySessionIds)
+          for (const id of pendingInboxSessionIds) {
+            const managed = this.sessions.get(id)
+            if (managed) await this.ensureMessagesLoaded(managed)
+          }
+        })().catch(error => sessionLog.error('Durable inbox recovery failed', error))
       })
     } catch (error) {
       sessionLog.error('Failed to load sessions from disk:', error)
@@ -2615,6 +2667,7 @@ export class SessionManager implements ISessionManager {
   private async enqueueAutomaticTurnRecovery(
     managed: ManagedSession,
     cause: AutomaticTurnRecoveryCause,
+    validationGaps?: string[],
   ): Promise<boolean> {
     const pending = managed.pendingTurnRecovery
     if (!pending) return false
@@ -2644,20 +2697,34 @@ export class SessionManager implements ISessionManager {
       return false
     }
 
-    managed.pendingTurnRecovery = advanced
+    managed.pendingTurnRecovery = {
+      ...advanced,
+      validationGaps: validationGaps?.slice(0, 16).map(gap => gap.slice(0, 500)) ?? pending.validationGaps,
+    }
     if (
       cause === 'premature_final'
       || cause === 'objective_incomplete'
       || cause === 'evidence_gate'
       || cause === 'tool_checkpoint'
     ) {
+      const checkpoint = demoteLatestCheckpointAssistant(managed.messages, pending.userMessageId)
+      if (checkpoint) {
+        managed.lastFinalMessageId = latestFinalAssistantId(managed.messages)
+        this.sendEvent({
+          type: 'text_complete', sessionId: managed.id,
+          text: checkpoint.content, isIntermediate: true,
+          turnId: checkpoint.turnId, parentToolUseId: checkpoint.parentToolUseId,
+          timestamp: checkpoint.timestamp, messageId: checkpoint.id,
+          routingMeta: checkpoint.routingMeta,
+        }, managed.workspace.id)
+      }
       this.recordAutonomyEvent(managed, {
         phase: 'fallback',
-        message: `Objective completion gate requested recovery pass ${advanced.attempts}/${maxAttempts} (stagnant=${advanced.stagnantAttempts ?? 0}/${recoveryPolicy.maxNoProgressAttempts}).`,
+        message: `Objective completion gate requested recovery pass ${advanced.attempts} (stagnant=${advanced.stagnantAttempts ?? 0}/${recoveryPolicy.maxNoProgressAttempts}, leaseExpiresAt=${advanced.leaseExpiresAt}).`,
       })
     }
     managed.messageQueue.unshift({
-      message: buildAutomaticTurnRecoveryPrompt(pending, cause),
+      message: buildAutomaticTurnRecoveryPrompt({ ...pending, validationGaps: managed.pendingTurnRecovery.validationGaps }, cause),
       options: {
         hidden: true,
         automaticRecovery: {
@@ -2703,10 +2770,48 @@ export class SessionManager implements ISessionManager {
     const pending = managed.pendingTurnRecovery
     if (!pending || managed.isProcessing) return
 
+    // A crash can happen between persisting provider text and validating its
+    // outcome. Re-run the host gate before treating that text as terminal.
+    let invalidFinal = false
+    let validationGaps: string[] | undefined
+    const objective = managed.activeObjective
+    if (objective?.terminalState === 'active') {
+      const userIndex = managed.messages.findIndex(message => message.id === pending.userMessageId)
+      const finalMessage = userIndex < 0 ? undefined : managed.messages.slice(userIndex + 1).findLast(message => (
+        message.role === 'assistant' && !message.isIntermediate
+      ))
+      if (finalMessage) {
+        this.rehydrateObjectiveEvidence(managed)
+        const evidenceGap = objective.evidenceRequirement ? getObjectiveEvidenceCompletionGap(managed.id) : undefined
+        const executionEvidenceMissing = objective.requiresExecutionEvidence === true
+          && !hasObjectiveExecutionEvidence(managed.messages, objective.userMessageId)
+        const validation = validateObjectiveOutcome(finalMessage.objectiveOutcome, {
+          objective, messages: managed.messages, extractionError: finalMessage.objectiveOutcomeError,
+          evidenceGap, executionEvidenceMissing, autonomyEvents: managed.autonomyEvents,
+        })
+        const state = classifyObjectiveTerminalState(finalMessage.content, {
+          evidenceGap, executionEvidenceMissing,
+          structuredOutcomeRequired: objective.orchestrationMode === 'mission' || objective.requiresExecutionEvidence === true || objective.requiresObservationEvidence === true,
+          ...(finalMessage.objectiveOutcome || finalMessage.objectiveOutcomeError ? {
+            declaredState: validation.state, structuredOutcomeValid: validation.valid,
+          } : {}),
+        })
+        invalidFinal = state === 'continue'
+        validationGaps = invalidFinal ? validation.gaps : undefined
+        if (state !== 'continue') {
+          objective.terminalState = state
+          objective.lastOutcome = validation.valid ? finalMessage.objectiveOutcome : undefined
+          objective.completedAt = Date.now()
+        }
+      }
+    }
     if (!turnStillNeedsRecovery(
       managed.messages,
       pending.userMessageId,
-      pending.continuationRequired === true,
+      invalidFinal || pendingRecoveryRequiresContinuation(
+        pending,
+        managed.activeObjective?.terminalState === 'active',
+      ),
     )) {
       this.clearPendingTurnRecovery(managed)
       this.persistSession(managed)
@@ -2714,7 +2819,7 @@ export class SessionManager implements ISessionManager {
       return
     }
 
-    const queued = await this.enqueueAutomaticTurnRecovery(managed, 'app_restart')
+    const queued = await this.enqueueAutomaticTurnRecovery(managed, invalidFinal ? 'objective_incomplete' : 'app_restart', validationGaps)
     if (queued && !managed.isProcessing) {
       this.processNextQueuedMessage(managed.id)
     }
@@ -2800,7 +2905,7 @@ export class SessionManager implements ISessionManager {
             messageId: msg.id,
             attachments: undefined,
             storedAttachments: msg.attachments,
-            options: undefined,
+            options: recoveredInternalMessageOptions(msg),
           })
         }
         if (!managed.isProcessing && managed.messageQueue.length > 0) {
@@ -2827,6 +2932,9 @@ export class SessionManager implements ISessionManager {
       const currentApp = getPlatformSessionAppProvenance(_platform)
       if (currentApp) managed.lastUsedByApp = currentApp
 
+      managed.pendingAgentDeliveryIds = managed.messages
+        .filter(m => m.agentDelivery && m.isQueued)
+        .map(m => m.id)
       const storedSession: StoredSession = {
         ...pickSessionFields(managed),
         workspaceRootPath: managed.workspace.rootPath,
@@ -3287,7 +3395,7 @@ export class SessionManager implements ISessionManager {
             messageId: msg.id,
             attachments: undefined,  // Attachments already stored on disk
             storedAttachments: msg.attachments,
-            options: undefined,
+            options: recoveredInternalMessageOptions(msg),
           })
         }
         // Process queue when session becomes active (will be triggered by first message or interaction)
@@ -4349,7 +4457,15 @@ export class SessionManager implements ISessionManager {
       }
     }
 
+    const routedContext = resolveBackendContext({
+      sessionConnectionSlug: selectedSlug,
+      managedModel: managed.model,
+    })
     managed.llmConnection = selectedSlug
+    managed.model = routedContext.resolvedModel || undefined
+    if (managed.activeObjective?.terminalState === 'active') {
+      managed.activeObjective.model = managed.model
+    }
     managed.connectionLocked = true
     this.persistSession(managed)
     this.sendEvent({
@@ -4419,7 +4535,15 @@ export class SessionManager implements ISessionManager {
     managed.branchFromSdkSessionId = undefined
     managed.branchFromSdkCwd = undefined
     managed.branchFromSdkTurnId = undefined
+    const fallbackContext = resolveBackendContext({
+      sessionConnectionSlug: fallbackSlug,
+      managedModel: managed.model,
+    })
     managed.llmConnection = fallbackSlug
+    managed.model = fallbackContext.resolvedModel || undefined
+    if (managed.activeObjective?.terminalState === 'active') {
+      managed.activeObjective.model = managed.model
+    }
     managed.connectionLocked = true
     managed.pendingRoutingReason = 'router'
     managed.pendingRoutingMeta = {
@@ -4496,6 +4620,7 @@ export class SessionManager implements ISessionManager {
         ].filter(Boolean).join('\n').slice(0, 8_000),
         connection: preRouteContext.connection ?? undefined,
         currentModel: managed.model ?? preRouteContext.resolvedModel,
+        currentThinkingLevel: managed.thinkingLevel,
         turnKind,
         contextTokens: effectiveContextTokens,
         contextWindow: managed.tokenUsage?.contextWindow,
@@ -5586,13 +5711,15 @@ export class SessionManager implements ISessionManager {
       managed.agent.onSpawnSession = async (request) => {
         sessionLog.info(`Spawn session request from session ${managed.id}:`, request.name || '(unnamed)')
 
+        const inheritedRoute = resolveSpawnedSessionRoute(request, managed)
+
         const session = await this.createSession(managed.workspace.id, {
           name: request.name,
-          llmConnection: request.llmConnection ?? managed.llmConnection,
-          model: request.model ?? managed.model,
+          llmConnection: inheritedRoute.llmConnection,
+          model: inheritedRoute.model,
           enabledSourceSlugs: request.enabledSourceSlugs ?? managed.enabledSourceSlugs,
           permissionMode: request.permissionMode ?? managed.permissionMode,
-          thinkingLevel: request.thinkingLevel ?? managed.thinkingLevel,
+          thinkingLevel: inheritedRoute.thinkingLevel,
           labels: request.labels ?? managed.labels,
           workingDirectory: request.workingDirectory,
           projectId: request.projectId ?? managed.projectId,
@@ -5823,7 +5950,23 @@ export class SessionManager implements ISessionManager {
 
           return { resolved: null, available }
         },
+        setCompletionCriteriaFn: async (criteria) => {
+          if (!managed.activeObjective) throw new Error('No active objective')
+          managed.activeObjective = registerObjectiveAcceptanceCriteria(managed.activeObjective, criteria)
+          this.persistSession(managed)
+          await this.flushSession(managed.id)
+          return { objectiveId: managed.activeObjective.objectiveId, criteria: managed.activeObjective.acceptanceCriteria }
+        },
+        projectLearningFn: async (request) => {
+          const project = managed.projectId ? loadProjectById(managed.workspace.rootPath, managed.projectId) : null
+          if (!project) throw new Error('Bind the session to an existing project first')
+          const policy = await getProjectLearningPolicy(managed.workspace.rootPath)
+          if (!policy.enabled && request.action !== 'list' && request.action !== 'revoke') throw new Error('Project learning is disabled by workspace policy')
+          return handleProjectLearning(managed.workspace.rootPath, project.config.slug, managed.id, managed.messages, { ...request, ttlDays: Math.min(request.ttlDays ?? 30, policy.retentionDays) })
+        },
         sendAgentMessageFn: async (sessionId: string, message: string, attachments?: Array<{ path: string; name?: string }>) => {
+          const target = this.sessions.get(sessionId)
+          if (!target || target.workspace.id !== managed.workspace.id) throw new Error('Target session must belong to the current workspace')
           // Build FileAttachment[] from paths (same pattern as spawn_session)
           let fileAttachments: FileAttachment[] | undefined
           if (attachments?.length) {
@@ -5836,32 +5979,26 @@ export class SessionManager implements ISessionManager {
                 if (attachment) {
                   if (a.name) attachment.name = a.name
                   builtAttachments.push(attachment)
-                }
+                } else throw new Error('Attachment was not readable')
               } catch (error) {
                 const msg = error instanceof Error ? error.message : String(error)
-                sessionLog.warn(`send_agent_message: blocked attachment path ${a.path}: ${msg}`)
+                throw new Error(`send_agent_message attachment could not be delivered: ${msg}`)
               }
             }
             if (builtAttachments.length > 0) fileAttachments = builtAttachments
           }
 
-          // Capture the target's busy state BEFORE delivery so the sender gets a
-          // truthful ack. A busy (mid-turn) target queues the message and replays
-          // it after the current turn (anthropic defaults to 'queue'); an idle
-          // target starts processing immediately. sendMessage throws for an
-          // unknown session — that rejection propagates to the handler's catch.
-          const targetBusy = this.sessions.get(sessionId)?.isProcessing === true
-          await this.sendMessage(sessionId, message, fileAttachments, undefined, {
+          const targetBusy = target.isProcessing === true
+          const deliveryId = agentDeliveryId(managed.id, managed.activeObjective?.objectiveId ?? managed.id, sessionId, message, fileAttachments)
+          const attachmentsSha256 = persistAgentDeliveryAttachments(target.workspace.rootPath, target.id, fileAttachments)
+          const messageId = await acknowledgeDurableDelivery(ack => this.sendMessage(sessionId, message, fileAttachments, undefined, {
             hidden: true,
-            internalOrigin: {
-              kind: 'agent-message',
-              senderSessionId: managed.id,
-            },
-          })
-          return {
-            delivery: targetBusy ? ('queued' as const) : ('delivered' as const),
-            targetBusy,
-          }
+            internalOrigin: { kind: 'agent-message', senderSessionId: managed.id, deliveryId, attachmentsSha256 },
+          }, undefined, undefined, ack), error => sessionLog.error('Agent delivery processing failed', { sessionId, deliveryId, error }))
+          const receipt = target.messages.find(m => m.id === messageId)?.agentDelivery
+          return { delivery: targetBusy ? ('queued' as const) : ('delivered' as const), targetBusy,
+            receiptId: deliveryId, status: receipt?.status ?? 'queued' }
+
         },
         activateSourceInSessionFn: async (sourceSlug: string) => {
           const cb = managed.agent?.onSourceActivationRequest
@@ -7189,6 +7326,24 @@ export class SessionManager implements ISessionManager {
     sessionLog.info(`Deleted session ${sessionId}`)
   }
 
+  private rehydrateObjectiveEvidence(managed: ManagedSession): void {
+    const objective = managed.activeObjective
+    const objectiveText = findObjectiveText(managed.messages, objective)
+    if (!objective || !objectiveText) {
+      clearObjectiveEvidenceGate(managed.id)
+      return
+    }
+    beginObjectiveEvidenceGate(managed.id, objective.userMessageId, objectiveText)
+    const objectiveIndex = managed.messages.findIndex(candidate => (
+      candidate.id === objective.userMessageId && candidate.role === 'user'
+    ))
+    if (objectiveIndex < 0) return
+    for (const prior of managed.messages.slice(objectiveIndex + 1)) {
+      if (!hasObjectiveSubstantiveToolResult(prior)) continue
+      recordObjectiveEvidence(managed.id, prior.toolName ?? 'tool', prior.toolResult!, false)
+    }
+  }
+
   async sendMessage(
     sessionId: string,
     message: string,
@@ -7265,6 +7420,17 @@ export class SessionManager implements ISessionManager {
       await this.ensureMessagesLoaded(managed)
     }
 
+    const deliveryId = options?.internalOrigin?.deliveryId
+    if (deliveryId && !existingMessageId) {
+      const previous = managed.messages.find(m => m.agentDelivery?.id === deliveryId)
+      if (previous) {
+        this.persistSession(managed)
+        await this.flushSession(managed.id)
+        onAck?.(previous.id)
+        return
+      }
+    }
+
     // If currently processing, behavior depends on the connection's
     // `midStreamBehavior` (resolved via {@link resolveMidStreamBehavior},
     // defaults to provider-appropriate value):
@@ -7277,6 +7443,21 @@ export class SessionManager implements ISessionManager {
     //   to natural completion; replay as a new turn afterwards. NO call to
     //   `agent.redirect()`, NO forceAbort, NO interruption.
     if (managed.isProcessing) {
+      // A user turn may win the race while a dequeued message is awaiting
+      // hydration. Put back the same record instead of manufacturing a copy.
+      if (existingMessageId) {
+        const existing = managed.messages.find(m => m.id === existingMessageId)
+        if (!existing) throw new Error(`Existing message ${existingMessageId} not found`)
+        existing.isQueued = true
+        if (!managed.messageQueue.some(item => item.messageId === existingMessageId)) {
+          managed.messageQueue.unshift({ message, attachments, storedAttachments, options, messageId: existingMessageId })
+        }
+        this.queuedMessageDispatches.delete(sessionId)
+        this.persistSession(managed)
+        await this.flushSession(managed.id)
+        onAck?.(existingMessageId)
+        return
+      }
       if (!options?.hidden) {
         managed.autonomyFallbackAttemptedTools = new Set()
       }
@@ -7288,10 +7469,34 @@ export class SessionManager implements ISessionManager {
         ? 'queue'
         : connection ? resolveMidStreamBehavior(connection) : 'steer'
 
+      const userMessage: Message = {
+        id: generateMessageId(),
+        role: 'user',
+        content: message,
+        timestamp: this.monotonic(),
+        attachments: storedAttachments,
+        badges: options?.badges,
+        ...(options?.hidden ? { hidden: true } : {}),
+        ...(options?.internalOrigin ? { internalOrigin: options.internalOrigin } : {}),
+        ...(options?.internalOrigin?.deliveryId ? {
+          isQueued: true,
+          agentDelivery: { id: options.internalOrigin.deliveryId, status: 'queued' as const, attempts: 0, attachmentsSha256: options.internalOrigin.attachmentsSha256 },
+        } : {}),
+      }
+      const steeredObjective = !options?.hidden ? transitionObjectiveContract({
+        existing: managed.activeObjective,
+        messageId: userMessage.id,
+        text: message,
+        lifetimeCostUsd: managed.tokenUsage?.costUsd,
+        lifetimeTokens: managed.tokenUsage?.totalTokens,
+      }) : undefined
       const agent = managed.agent
       let steered = false
+      const steeringMessage = steeredObjective
+        ? `${message}\n\n${buildObjectiveContractPrompt(steeredObjective)}`
+        : message
       if (behavior === 'steer') {
-        steered = agent?.redirect(message) ?? false
+        steered = agent?.redirect(steeringMessage) ?? false
       }
       // For 'queue': skip redirect entirely. The current turn is undisturbed.
 
@@ -7304,7 +7509,7 @@ export class SessionManager implements ISessionManager {
         connectionSlug: connection?.slug,
       })
 
-      if (isInternalMessage) {
+      if (isInternalMessage && !deliveryId) {
         const workspaceConfig = loadWorkspaceConfig(managed.workspace.rootPath)
         const maxQueuedMessages = resolveAgentCostControlPolicy(workspaceConfig?.costControl)
           .coordination.maxQueuedMessages
@@ -7332,19 +7537,28 @@ export class SessionManager implements ISessionManager {
         }
       }
 
-      // Create user message for UI
-      const userMessage: Message = {
-        id: generateMessageId(),
-        role: 'user',
-        content: message,
-        timestamp: this.monotonic(),
-        attachments: storedAttachments,
-        badges: options?.badges,
-        // Hidden system-generated messages reach the model but never render as a
-        // transcript bubble (e.g. background-task-completion nudge).
-        ...(options?.hidden ? { hidden: true } : {}),
-      }
+      if (deliveryId && managed.messageQueue.length >= resolveAgentCostControlPolicy(
+        loadWorkspaceConfig(managed.workspace.rootPath)?.costControl,
+      ).coordination.maxQueuedMessages) throw new Error('Target inbox is full; wait for a terminal result before retrying')
+      userMessage.isQueued = !steered
       managed.messages.push(userMessage)
+      if (steered && steeredObjective) {
+        managed.pendingUserSteers ??= new Map()
+        managed.pendingUserSteers.set(steeringMessage, {
+          queued: { message, attachments, storedAttachments, options, messageId: userMessage.id, optimisticMessageId: options?.optimisticMessageId },
+          objectiveBefore: managed.activeObjective,
+          recoveryBefore: managed.pendingTurnRecovery,
+        })
+        // The accepted user message and its host-side contract must move
+        // together. Queued messages do not supersede the running objective.
+        managed.activeObjective = steeredObjective
+        managed.pendingTurnRecovery = createPendingTurnRecovery(userMessage.id)
+        managed.lastSentMessage = message
+        managed.lastSentAttachments = attachments
+        managed.lastSentStoredAttachments = storedAttachments
+        managed.lastSentOptions = options
+        this.rehydrateObjectiveEvidence(managed)
+      }
 
       // Emit to UI — 'accepted' iff a steer succeeded; 'queued' otherwise
       // (covers both queue-direct and queue-after-abort paths).
@@ -7362,7 +7576,7 @@ export class SessionManager implements ISessionManager {
         // queue-after-abort (backend already aborted) — the replay path in
         // processNextQueuedMessage is identical.
         managed.messageQueue.push({ message, attachments, storedAttachments, options, messageId: userMessage.id, optimisticMessageId: options?.optimisticMessageId })
-        managed.wasInterrupted = true
+        if (!isInternalMessage && behavior === 'steer') managed.wasInterrupted = true
       }
 
       this.persistSession(managed)
@@ -7383,6 +7597,8 @@ export class SessionManager implements ISessionManager {
       if (!userMessage) {
         throw new Error(`Existing message ${existingMessageId} not found`)
       }
+      this.setProcessing(managed, true)
+      this.queuedMessageDispatches.delete(sessionId)
     } else {
       // Create new message
       userMessage = {
@@ -7395,8 +7611,17 @@ export class SessionManager implements ISessionManager {
         // Hidden system-generated messages reach the model but never render as a
         // transcript bubble (e.g. background-task-completion nudge).
         ...(options?.hidden ? { hidden: true } : {}),
+        ...(options?.internalOrigin ? { internalOrigin: options.internalOrigin } : {}),
+        ...(options?.internalOrigin?.deliveryId ? {
+          isQueued: true,
+          agentDelivery: { id: options.internalOrigin.deliveryId, status: 'queued' as const, attempts: 0, attachmentsSha256: options.internalOrigin.attachmentsSha256 },
+        } : {}),
       }
       managed.messages.push(userMessage)
+      // Reserve the turn before the first durability await. Concurrent sends
+      // must queue instead of starting two recipient turns during this flush.
+      this.setProcessing(managed, true)
+      this.queuedMessageDispatches.delete(sessionId)
 
       // Update lastMessageRole for badge display. Skip for hidden messages so the
       // session-list preview isn't briefly driven by an invisible system nudge.
@@ -7408,7 +7633,8 @@ export class SessionManager implements ISessionManager {
       // genuinely on disk before we tell the renderer "accepted", and
       // `persistSession` is debounced (500ms). #616.
       this.persistSession(managed)
-      await this.flushSession(managed.id)
+      try { await this.flushSession(managed.id) }
+      catch (error) { this.setProcessing(managed, false); throw error }
       onAck?.(userMessage.id)
 
       // Emit user_message event so UI can confirm the optimistic message
@@ -7481,6 +7707,9 @@ export class SessionManager implements ISessionManager {
       sessionLog.warn(`Auto-label evaluation failed for session ${sessionId}:`, e)
     }
 
+    if (!attachments && userMessage.agentDelivery?.attachmentsSha256) {
+      attachments = restoreAgentDeliveryAttachments(managed.workspace.rootPath, managed.id, userMessage.agentDelivery.attachmentsSha256)
+    }
     managed.lastMessageAt = Date.now()
     this.setProcessing(managed, true)
     managed.streamingText = ''
@@ -7538,27 +7767,22 @@ export class SessionManager implements ISessionManager {
       managed.pendingTurnRecovery = createPendingTurnRecovery(userMessage.id)
       managed.autonomyFallbackAttemptedTools = new Set()
     }
-    const activeObjectiveText = findObjectiveText(managed.messages, managed.activeObjective)
-    if (managed.activeObjective && activeObjectiveText) {
-      beginObjectiveEvidenceGate(
-        managed.id,
-        managed.activeObjective.userMessageId,
-        activeObjectiveText,
-      )
-      const objectiveIndex = managed.messages.findIndex(candidate => (
-        candidate.id === managed.activeObjective?.userMessageId && candidate.role === 'user'
-      ))
-      for (const prior of managed.messages.slice(Math.max(0, objectiveIndex + 1))) {
-        if (prior.role !== 'tool') continue
-        recordObjectiveEvidence(
-          managed.id,
-          prior.toolName ?? 'tool',
-          prior.toolResult ?? prior.content,
-          prior.isError === true || prior.toolStatus === 'error',
-        )
+    if (userMessage.agentDelivery) {
+      userMessage.agentDelivery.status = 'processing'
+      userMessage.agentDelivery.attempts++
+      if (userMessage.agentDelivery.attempts > 3) {
+        userMessage.agentDelivery.status = 'failed'
+        userMessage.isQueued = false
+        this.persistSession(managed)
+        await this.flushSession(managed.id)
+        this.setProcessing(managed, false)
+        throw new Error('Agent delivery recovery exhausted after three attempts; inspect the persisted transcript')
       }
+    } else {
+      userMessage.isQueued = false
     }
-    if (managed.pendingTurnRecovery) {
+    this.rehydrateObjectiveEvidence(managed)
+    if (managed.pendingTurnRecovery || userMessage.agentDelivery || existingMessageId) {
       this.persistSession(managed)
       await this.flushSession(managed.id)
     }
@@ -7865,12 +8089,24 @@ export class SessionManager implements ISessionManager {
         const playbook = loadWorkspacePlaybook(workspaceRootPath, managed.playbookSlug) ?? getBuiltinPlaybook(managed.playbookSlug)
         if (playbook) effectiveMessage = `${formatPlaybookPrompt(playbook)}\n\n${effectiveMessage}`
       }
-      if (managed.wasInterrupted) {
+      if (managed.wasInterrupted && !options?.hidden) {
         effectiveMessage = `${message}\n\n<system-reminder>The previous assistant response was interrupted by the user and may be incomplete. Do not repeat or continue the interrupted response unless asked. Focus on the new message above.</system-reminder>`
-        managed.wasInterrupted = false
       }
+      managed.wasInterrupted = false
       if (managed.activeObjective?.terminalState === 'active') {
         effectiveMessage = `${effectiveMessage}\n\n${buildObjectiveContractPrompt(managed.activeObjective)}`
+      }
+      if (managed.projectId) {
+        try {
+          const project = loadProjectById(workspaceRootPath, managed.projectId)
+          const memoryPolicy = await getProjectLearningPolicy(workspaceRootPath)
+          const memory = project && memoryPolicy.enabled ? loadProjectMemoryV2Context(workspaceRootPath, project.config.slug, {
+            maxAgeDays: memoryPolicy.retentionDays,
+            query: findObjectiveText(managed.messages, managed.activeObjective) ?? message,
+            requireQueryMatch: true, maxEntries: 6, maxTokens: 1800,
+          }) : null
+          if (memory) effectiveMessage += `\n\n${memory}`
+        } catch (error) { sessionLog.warn('Project memory retrieval unavailable', { sessionId, error: String(error) }) }
       }
 
       const messageBackendContext = resolveBackendContext({
@@ -7972,7 +8208,10 @@ export class SessionManager implements ISessionManager {
           // A complete event is valid only when this user turn produced either
           // a final assistant response or a visible error. Commentary and tool
           // results alone are progress, not completion.
-          const latestTurnTerminalState = classifyLatestTurnTerminalState(managed.messages)
+          const latestTurnTerminalState = classifyLatestTurnTerminalState(
+            managed.messages,
+            managed.pendingTurnRecovery?.userMessageId ?? userMessage.id,
+          )
           if (managed.pendingTurnRecovery?.continuationRequired) {
             sessionLog.warn(`Session ${sessionId} reached a host-authored tool checkpoint`)
             const recoveryQueued = await this.enqueueAutomaticTurnRecovery(managed, 'tool_checkpoint')
@@ -8072,12 +8311,28 @@ export class SessionManager implements ISessionManager {
             const evidenceGap = managed.activeObjective.evidenceRequirement
               ? getObjectiveEvidenceCompletionGap(managed.id)
               : undefined
+            const executionEvidenceMissing = managed.activeObjective.requiresExecutionEvidence === true
+              && !hasExecutionEvidence
+            const structuredOutcomeRequired = managed.activeObjective.orchestrationMode === 'mission'
+              || managed.activeObjective.requiresExecutionEvidence === true || managed.activeObjective.requiresObservationEvidence === true
+            const outcomeValidation = validateObjectiveOutcome(finalMessage?.objectiveOutcome, {
+              objective: managed.activeObjective,
+              messages: managed.messages,
+              extractionError: finalMessage?.objectiveOutcomeError,
+              evidenceGap,
+              executionEvidenceMissing,
+              autonomyEvents: managed.autonomyEvents,
+            })
             const objectiveTerminalState = classifyObjectiveTerminalState(
               finalMessage?.content ?? '',
               {
                 evidenceGap,
-                executionEvidenceMissing: managed.activeObjective.requiresExecutionEvidence === true
-                  && !hasExecutionEvidence,
+                executionEvidenceMissing,
+                structuredOutcomeRequired,
+                ...(finalMessage?.objectiveOutcome || finalMessage?.objectiveOutcomeError ? {
+                  declaredState: outcomeValidation.state,
+                  structuredOutcomeValid: outcomeValidation.valid,
+                } : {}),
               },
             )
 
@@ -8090,8 +8345,9 @@ export class SessionManager implements ISessionManager {
                 recoveryCause,
                 evidenceGap,
                 hasExecutionEvidence,
+                outcomeGaps: outcomeValidation.gaps,
               })
-              const recoveryQueued = await this.enqueueAutomaticTurnRecovery(managed, recoveryCause)
+              const recoveryQueued = await this.enqueueAutomaticTurnRecovery(managed, recoveryCause, outcomeValidation.gaps)
               if (recoveryQueued) {
                 sendSpan.mark('chat.complete.objective_contract_auto_recovery')
                 sendSpan.end()
@@ -8105,7 +8361,16 @@ export class SessionManager implements ISessionManager {
               }, myGeneration)
             } else {
               managed.activeObjective.terminalState = objectiveTerminalState
+              managed.activeObjective.lastOutcome = outcomeValidation.valid ? finalMessage?.objectiveOutcome : undefined
               managed.activeObjective.completedAt = Date.now()
+              if (objectiveTerminalState === 'complete_verified' && managed.projectId) {
+                try {
+                  const project = loadProjectById(managed.workspace.rootPath, managed.projectId)
+                  const start = managed.messages.findIndex(m => m.id === managed.activeObjective?.userMessageId)
+                  const memoryPolicy = await getProjectLearningPolicy(managed.workspace.rootPath)
+                  if (project && memoryPolicy.enabled && start >= 0) captureObjectiveLearning(managed.workspace.rootPath, project.config.slug, managed.id, managed.messages.slice(start + 1), Math.min(30, memoryPolicy.retentionDays))
+                } catch (error) { sessionLog.warn('Learning proposal capture unavailable', { sessionId, error: String(error) }) }
+              }
               this.persistSession(managed)
             }
           }
@@ -8509,6 +8774,13 @@ export class SessionManager implements ISessionManager {
     const managed = this.sessions.get(sessionId)
     if (!managed) return
 
+    // Blocked/exhausted objectives are terminal handoffs, never successful
+    // completion signals to dependent tasks, telemetry, or the renderer.
+    const objectiveState = managed.activeObjective?.terminalState
+    if (reason === 'complete' && objectiveState && objectiveState !== 'complete_verified') {
+      reason = objectiveState === 'blocked_human' || objectiveState === 'blocked_policy' ? 'error' : 'interrupted'
+    }
+
     sessionLog.info(`Processing stopped for session ${sessionId}: ${reason}`)
 
     const generationKey = processingGeneration ?? managed.processingGeneration
@@ -8563,6 +8835,7 @@ export class SessionManager implements ISessionManager {
     // 1. Cleanup state
     this.setProcessing(managed, false)
     managed.stopRequested = false  // Reset for next turn
+    managed.pendingUserSteers?.clear()
 
     // 1b. Orphan backstop: with the default per-turn subprocess model, any
     // background sub-agent still marked `running` dies when this turn's
@@ -8602,6 +8875,16 @@ export class SessionManager implements ISessionManager {
     //    - If user is NOT viewing: mark as unread (they have new content)
     //    IMPORTANT: only apply this when the turn produced a NEW final assistant message.
     const isViewing = this.isSessionBeingViewed(sessionId, managed.workspace.id)
+    const activeDeliveryId = managed.lastSentOptions?.internalOrigin?.deliveryId
+    if (activeDeliveryId) {
+      const delivered = managed.messages.find(m => m.agentDelivery?.id === activeDeliveryId)
+      if (delivered?.agentDelivery) {
+        delivered.agentDelivery.status = reason === 'complete' ? 'processed' : 'failed'
+        delivered.isQueued = false
+        this.persistSession(managed)
+        await this.flushSession(managed.id)
+      }
+    }
     const currentFinalMessageId = this.getLastFinalAssistantMessageId(managed.messages)
     const didReceiveNewFinalMessage = !!currentFinalMessageId && currentFinalMessageId !== turnStartFinalMessageId
 
@@ -8641,15 +8924,7 @@ export class SessionManager implements ISessionManager {
     // always wins.
     if (managed.messageQueue.length === 0) {
       try {
-        const objectiveState = managed.activeObjective?.terminalState
-        const lifecycleReason: SessionLifecycleStopReason = reason === 'complete' && objectiveState
-          ? objectiveState === 'complete_verified'
-            ? 'complete'
-            : objectiveState === 'blocked_human' || objectiveState === 'blocked_policy'
-              ? 'error'
-              : 'interrupted'
-          : reason
-        await this.finishAutomaticSessionStatusLifecycle(managed, lifecycleReason)
+        await this.finishAutomaticSessionStatusLifecycle(managed, reason)
       } catch (error) {
         sessionLog.warn('Automatic session status terminal transition failed', {
           sessionId,
@@ -8719,10 +8994,13 @@ export class SessionManager implements ISessionManager {
    * Process the next message in the queue.
    * Called by onProcessingStopped when queue has messages.
    */
+  private queuedMessageDispatches = new Set<string>()
+
   private processNextQueuedMessage(sessionId: string): void {
     const managed = this.sessions.get(sessionId)
-    if (!managed || managed.messageQueue.length === 0) return
+    if (!managed || managed.isProcessing || this.queuedMessageDispatches.has(sessionId) || managed.messageQueue.length === 0) return
 
+    this.queuedMessageDispatches.add(sessionId)
     const next = managed.messageQueue.shift()!
     sessionLog.info('replay queued', {
       sessionId,
@@ -8734,9 +9012,8 @@ export class SessionManager implements ISessionManager {
     if (next.messageId) {
       const existingMessage = managed.messages.find(m => m.id === next.messageId)
       if (existingMessage) {
-        // Clear isQueued flag and persist - prevents re-queueing if crash during processing
-        existingMessage.isQueued = false
-        this.persistSession(managed)
+        // Leave the durable queue flag until sendMessage persists its recovery
+        // marker (or the internal delivery finishes). A crash here must replay it.
 
         this.sendEvent({
           type: 'user_message',
@@ -8758,6 +9035,7 @@ export class SessionManager implements ISessionManager {
         next.options,
         next.messageId
       ).catch(err => {
+        this.queuedMessageDispatches.delete(sessionId)
         sessionLog.error('replay failed', {
           sessionId,
           messageId: next.messageId,
@@ -9680,6 +9958,9 @@ export class SessionManager implements ISessionManager {
       case 'text_complete': {
         // Flush any pending deltas before sending complete (ensures renderer has all content)
         this.flushDelta(sessionId, workspaceId)
+        const extractedOutcome = event.isIntermediate
+          ? { visibleContent: event.text }
+          : extractObjectiveOutcome(event.text)
 
         const routingConnection = managed.llmConnection ? getLlmConnection(managed.llmConnection) : undefined
         const modelProvenance = event.modelProvenance
@@ -9689,7 +9970,9 @@ export class SessionManager implements ISessionManager {
         const assistantMessage: Message = {
           id: generateMessageId(),
           role: 'assistant',
-          content: event.text,
+          content: extractedOutcome.visibleContent,
+          ...('declaration' in extractedOutcome && extractedOutcome.declaration ? { objectiveOutcome: extractedOutcome.declaration } : {}),
+          ...('error' in extractedOutcome && extractedOutcome.error ? { objectiveOutcomeError: extractedOutcome.error } : {}),
           timestamp: this.monotonic(),
           isIntermediate: event.isIntermediate,
           turnId: event.turnId,
@@ -9788,7 +10071,7 @@ export class SessionManager implements ISessionManager {
           })
         }
 
-        this.sendEvent({ type: 'text_complete', sessionId, text: event.text, isIntermediate: event.isIntermediate, turnId: event.turnId, parentToolUseId: event.parentToolUseId, timestamp: assistantMessage.timestamp, messageId: assistantMessage.id, routingMeta: assistantMessage.routingMeta }, workspaceId)
+        this.sendEvent({ type: 'text_complete', sessionId, text: assistantMessage.content, isIntermediate: event.isIntermediate, turnId: event.turnId, parentToolUseId: event.parentToolUseId, timestamp: assistantMessage.timestamp, messageId: assistantMessage.id, routingMeta: assistantMessage.routingMeta }, workspaceId)
 
         // Persist session after complete message to prevent data loss on quit
         this.persistSession(managed)
@@ -9983,11 +10266,25 @@ export class SessionManager implements ISessionManager {
             `\n\n[Truncated for storage: ${rawFormattedResult.length.toLocaleString()} chars total]`
           : rawFormattedResult
 
+        // A host checkpoint is a successfully delivered result envelope, but
+        // it is explicitly not a successful tool execution. Keep it outside
+        // both the operational-error and verified-evidence paths.
+        const toolWasExecuted = event.executed !== false
+        const activeObjectiveIndex = managed.activeObjective
+          ? managed.messages.findIndex(message => message.id === managed.activeObjective?.userMessageId)
+          : -1
+        const startedToolIndex = managed.messages.findIndex(message => message.toolUseId === event.toolUseId)
+        // A result can arrive after a user steers to an unrelated objective.
+        // Its original tool_start remains owned by the earlier objective.
+        const belongsToActiveObjective = activeObjectiveIndex < 0 || startedToolIndex < 0 || startedToolIndex > activeObjectiveIndex
         // Some backends omit explicit isError but still prefix with [ERROR].
-        const inferredError = event.isError === true || /^\s*(\[ERROR\]|Error:|error:)/.test(formattedResult)
+        const inferredError = toolWasExecuted
+          && (event.isError === true || /^\s*(\[ERROR\]|Error:|error:)/.test(formattedResult))
 
-        recordObjectiveEvidence(managed.id, toolName, formattedResult, inferredError)
-        if (event.continuationRequired && managed.pendingTurnRecovery) {
+        if (toolWasExecuted && belongsToActiveObjective) {
+          recordObjectiveEvidence(managed.id, toolName, formattedResult, inferredError)
+        }
+        if (event.continuationRequired && belongsToActiveObjective && managed.pendingTurnRecovery) {
           managed.pendingTurnRecovery = {
             ...managed.pendingTurnRecovery,
             continuationRequired: true,
@@ -10000,14 +10297,14 @@ export class SessionManager implements ISessionManager {
           })
         }
 
-        if (!inferredError) {
+        if (toolWasExecuted && belongsToActiveObjective && !inferredError) {
           this.recordAutonomyEvent(managed, {
             phase: 'verified', toolName,
             message: `${toolName} completed successfully.`,
           })
         }
 
-        if (inferredError) {
+        if (inferredError && belongsToActiveObjective) {
           const evidence = formattedResult.slice(0, 1_000)
           const decision = decideAutonomyRecovery({
             toolName,
@@ -10067,6 +10364,33 @@ export class SessionManager implements ISessionManager {
                 : 'Queued an immediate hidden continuation through the integrated browser.',
               evidence,
             })
+          } else if (decision.kind === 'fallback_structured') {
+            managed.autonomyFallbackAttemptedTools ??= new Set()
+            managed.autonomyFallbackAttemptedTools.add(toolName)
+            const fallbackPrompt = buildAutonomyStructuredFallbackPrompt(toolName)
+            const deliveredInCurrentTurn = managed.agent?.redirect(fallbackPrompt) ?? false
+            if (!deliveredInCurrentTurn && !managed.messageQueue.some(item =>
+              isAutonomyStructuredFallbackPrompt(item.message)
+            )) {
+              const originalUserMessageId = managed.pendingTurnRecovery?.userMessageId
+              managed.messageQueue.unshift({
+                message: fallbackPrompt,
+                options: {
+                  hidden: true,
+                  internalOrigin: { kind: 'browser-fallback' },
+                  ...(originalUserMessageId ? {
+                    automaticRecovery: { originalUserMessageId, cause: 'runtime_error' as const },
+                  } : {}),
+                },
+              })
+            }
+            this.recordAutonomyEvent(managed, {
+              phase: 'fallback', toolName,
+              message: deliveredInCurrentTurn
+                ? 'Steered the active agent to native remote, SSH, database or API access after the browser failure.'
+                : 'Queued an immediate continuation through a structured access path.',
+              evidence,
+            })
           } else if (decision.kind === 'reconnect_runtime') {
             this.recordAutonomyEvent(managed, {
               phase: 'fallback', toolName,
@@ -10079,8 +10403,10 @@ export class SessionManager implements ISessionManager {
         const existingToolMsg = managed.messages.find(m => m.toolUseId === event.toolUseId)
         // Track if already completed to avoid sending duplicate events
         const wasAlreadyComplete = existingToolMsg?.toolStatus === 'completed'
+        const previousResult = existingToolMsg?.toolResult
+        const previouslyExecuted = existingToolMsg?.toolExecuted
 
-        sessionLog.info(`RESULT MATCH: toolUseId=${event.toolUseId}, found=${!!existingToolMsg}, toolName=${existingToolMsg?.toolName || toolName}, wasComplete=${wasAlreadyComplete}`)
+        sessionLog.info(`RESULT MATCH: toolUseId=${event.toolUseId}, found=${!!existingToolMsg}, toolName=${existingToolMsg?.toolName || toolName}, wasComplete=${wasAlreadyComplete}, executed=${toolWasExecuted}`)
 
         // parentToolUseId comes from CraftAgent (SDK-authoritative) or existing message
         const parentToolUseId = existingToolMsg?.parentToolUseId || event.parentToolUseId
@@ -10090,6 +10416,12 @@ export class SessionManager implements ISessionManager {
           existingToolMsg.toolResult = formattedResult
           existingToolMsg.toolStatus = inferredError ? 'error' : 'completed'
           existingToolMsg.isError = inferredError
+          existingToolMsg.toolExecuted = toolWasExecuted
+          if (event.checkpoint) {
+            existingToolMsg.toolCheckpoint = event.checkpoint
+          } else if (toolWasExecuted) {
+            delete existingToolMsg.toolCheckpoint
+          }
           // If message doesn't have parent set, use event's parentToolUseId
           if (!existingToolMsg.parentToolUseId && event.parentToolUseId) {
             existingToolMsg.parentToolUseId = event.parentToolUseId
@@ -10113,6 +10445,8 @@ export class SessionManager implements ISessionManager {
             toolUseId: event.toolUseId,
             toolResult: formattedResult,
             toolStatus: inferredError ? 'error' : 'completed',
+            toolExecuted: toolWasExecuted,
+            ...(event.checkpoint ? { toolCheckpoint: event.checkpoint } : {}),
             toolDisplayMeta: fallbackToolDisplayMeta,
             parentToolUseId,
             isError: inferredError,
@@ -10122,7 +10456,7 @@ export class SessionManager implements ISessionManager {
 
         // Send event to renderer if: (a) first completion, or (b) result content changed
         // (e.g., safety net auto-completed with empty result, then real result arrived later)
-        const resultChanged = wasAlreadyComplete && formattedResult && existingToolMsg?.toolResult !== formattedResult
+        const resultChanged = wasAlreadyComplete && (previousResult !== formattedResult || previouslyExecuted !== toolWasExecuted)
         if (!wasAlreadyComplete || resultChanged) {
           // Use existing tool message timestamp, or fallback message timestamp for ordering
           const toolResultTimestamp = existingToolMsg?.timestamp ?? (managed.messages.find(m => m.toolUseId === event.toolUseId)?.timestamp)
@@ -10135,11 +10469,13 @@ export class SessionManager implements ISessionManager {
             turnId: event.turnId,
             parentToolUseId,
             isError: inferredError,
+            executed: toolWasExecuted,
+            ...(event.checkpoint ? { checkpoint: event.checkpoint } : {}),
             timestamp: toolResultTimestamp,
           }, workspaceId)
         }
 
-        if (!wasAlreadyComplete) {
+        if ((!wasAlreadyComplete || previouslyExecuted === false || !previousResult) && toolWasExecuted) {
           const completedAt = Date.now()
           this.emitExecutionTelemetry(managed, {
             schemaVersion: 1,
@@ -10164,7 +10500,7 @@ export class SessionManager implements ISessionManager {
         // Safety net: when a parent Task completes, mark all its still-pending child tools as completed.
         // This handles the case where child tool_result events never arrive (e.g., subagent internal tools
         // whose results aren't surfaced through the parent stream).
-        if (isParentTaskTool(toolName) || toolName === 'TaskOutput') {
+        if (toolWasExecuted && (isParentTaskTool(toolName) || toolName === 'TaskOutput')) {
           const pendingChildren = managed.messages.filter(
             m => m.parentToolUseId === event.toolUseId
               && m.toolStatus !== 'completed'
@@ -10826,11 +11162,21 @@ export class SessionManager implements ISessionManager {
         }
         break
 
-      case 'steer_undelivered':
+      case 'steer_undelivered': {
         // Steer message was not delivered (no PreToolUse fired before turn ended).
         // Re-queue it so it's sent as a normal message on the next turn.
         sessionLog.info(`Steer message undelivered, re-queuing for session ${sessionId}`)
-        if (isAutonomyBrowserFallbackPrompt(event.message)) {
+        const correlated = managed.pendingUserSteers?.get(event.message)
+        if (correlated) {
+          if (!managed.messageQueue.some(item => item.messageId === correlated.queued.messageId)) {
+            managed.messageQueue.push(correlated.queued)
+          }
+          if (managed.pendingTurnRecovery?.userMessageId === correlated.queued.messageId) {
+            managed.activeObjective = correlated.objectiveBefore
+            managed.pendingTurnRecovery = correlated.recoveryBefore
+            this.rehydrateObjectiveEvidence(managed)
+          }
+        } else if (isAutonomyBrowserFallbackPrompt(event.message) || isAutonomyStructuredFallbackPrompt(event.message)) {
           const originalUserMessageId = managed.pendingTurnRecovery?.userMessageId
           managed.messageQueue.push({
             message: event.message,
@@ -10849,7 +11195,9 @@ export class SessionManager implements ISessionManager {
           managed.messageQueue.push({ message: event.message })
         }
         managed.wasInterrupted = true
+        this.persistSession(managed)
         break
+      }
 
       // Note: working_directory_changed is user-initiated only (via updateWorkingDirectory),
       // the agent no longer has a change_working_directory tool
