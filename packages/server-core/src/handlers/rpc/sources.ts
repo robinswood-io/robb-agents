@@ -3,6 +3,7 @@ import { getWorkspaceByNameOrId } from '@craft-agent/shared/config'
 import { loadWorkspaceSources } from '@craft-agent/shared/sources'
 import { pushTyped } from '@craft-agent/server-core/transport'
 import { safeJsonParse } from '@craft-agent/shared/utils/files'
+import { resolveStdioConfig } from '@craft-agent/shared/utils'
 import { getCredentialManager } from '@craft-agent/shared/credentials'
 import type { RpcServer } from '@craft-agent/server-core/transport'
 import type { HandlerDeps } from '../handler-deps'
@@ -207,12 +208,14 @@ export function registerSourcesHandlers(server: RpcServer, deps: HandlerDeps): v
         if (!source.config.mcp.command) {
           return { success: false, error: 'Stdio MCP source is missing required "command" field' }
         }
-        log.info(`Fetching MCP tools via stdio: ${source.config.mcp.command}`)
+        const resolved = resolveStdioConfig(source.config.mcp, source.workspaceRootPath, source.folderPath)
+        if (!resolved) return { success: false, error: 'Stdio MCP configuration could not be resolved' }
+        log.info(`Fetching MCP tools via stdio: ${resolved.command}`)
         client = new CraftMcpClient({
           transport: 'stdio',
-          command: source.config.mcp.command,
-          args: source.config.mcp.args,
-          env: source.config.mcp.env,
+          command: resolved.command,
+          args: resolved.args,
+          env: resolved.env,
         })
       } else {
         if (!source.config.mcp.url) {
