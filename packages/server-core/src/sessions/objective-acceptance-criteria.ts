@@ -4,12 +4,55 @@ import { isObjectiveToolExecutedSuccessfully, isObjectiveMutationTool } from './
 
 const forbiddenKeys = new Set(['__proto__', 'prototype', 'constructor']);
 
-/** Own JSON properties only: no evaluation, prototypes, or JSONPath expressions. */
-function atPath(value: unknown, path: string): unknown {
+/**
+ * Parse a deliberately small, non-evaluating JSON selector subset.
+ *
+ * Supported forms include legacy dotted paths (`step.id`) and the JSONPath
+ * forms emitted by completion criteria (`$.step.id`, `$[0].labelIds[0]`).
+ * Wildcards, filters, slices, quoted keys and executable expressions are not
+ * accepted.
+ */
+function pathKeys(path: string): string[] | undefined {
   if (!path || path.length > 256) return undefined;
-  for (const key of path.split('.')) {
-    if (forbiddenKeys.has(key) || !value || typeof value !== 'object'
-      || !Object.prototype.hasOwnProperty.call(value, key)) return undefined;
+  let cursor = 0;
+  const keys: string[] = [];
+  const rooted = path.startsWith('$');
+  if (rooted) {
+    cursor = 1;
+    if (cursor === path.length) return keys;
+    if (path[cursor] === '.') {
+      cursor += 1;
+      if (cursor === path.length || path[cursor] === '.' || path[cursor] === '[') return undefined;
+    } else if (path[cursor] !== '[') return undefined;
+  }
+  while (cursor < path.length) {
+    if (path[cursor] === '[') {
+      const match = /^\[(0|[1-9]\d*)\]/.exec(path.slice(cursor));
+      if (!match) return undefined;
+      keys.push(match[1]!);
+      cursor += match[0].length;
+    } else {
+      const start = cursor;
+      while (cursor < path.length && path[cursor] !== '.' && path[cursor] !== '[' && path[cursor] !== ']') cursor += 1;
+      if (cursor === start) return undefined;
+      keys.push(path.slice(start, cursor));
+    }
+    if (cursor === path.length) break;
+    if (path[cursor] === '.') {
+      cursor += 1;
+      if (cursor === path.length || path[cursor] === '.' || path[cursor] === '[') return undefined;
+    } else if (path[cursor] !== '[') return undefined;
+  }
+  if (keys.some(key => forbiddenKeys.has(key) || !key)) return undefined;
+  return keys;
+}
+
+/** Own JSON properties only: no evaluation or prototype traversal. */
+function atPath(value: unknown, path: string): unknown {
+  const keys = pathKeys(path);
+  if (!keys) return undefined;
+  for (const key of keys) {
+    if (!value || typeof value !== 'object' || !Object.prototype.hasOwnProperty.call(value, key)) return undefined;
     value = (value as Record<string, unknown>)[key];
   }
   return value;
@@ -44,9 +87,10 @@ export function registerObjectiveAcceptanceCriteria(
       || Object.keys(item.input).length > 16 || !Array.isArray(item.checks)
       || item.checks.length < 1 || item.checks.length > 16) throw new Error('Incomplete criterion');
     for (const [path, value] of [...Object.entries(item.input), ...item.checks.map(check => [check.path, check.equals] as const)]) {
-      if (!path || path.length > 256 || path.split('.').some(key => forbiddenKeys.has(key) || !key)
-        || !(value === null || typeof value === 'boolean' || (typeof value === 'number' && Number.isFinite(value))
-          || (typeof value === 'string' && value.length <= 2048))) throw new Error('Invalid JSON selector or scalar');
+      const validSelector = path === '$text' || pathKeys(path) !== undefined;
+      if (!validSelector || !(value === null || typeof value === 'boolean'
+        || (typeof value === 'number' && Number.isFinite(value))
+        || (typeof value === 'string' && value.length <= 2048))) throw new Error('Invalid JSON selector or scalar');
     }
     const previous = byId.get(item.id);
     if (previous && JSON.stringify(previous) !== JSON.stringify(item)) throw new Error('Registered criteria cannot be weakened or replaced');
@@ -83,7 +127,9 @@ export function validateObjectiveAcceptanceCriteria(
       if (index <= lastMutation || message.timestamp < (objective.acceptanceRegisteredAt ?? objective.startedAt)
         || message.toolName !== criterion.toolName || !isObjectiveToolExecutedSuccessfully(message)
         || isObjectiveMutationTool(message) || !message.toolResult
-        || !(claim.evidence.includes(message.id) || (message.toolUseId && claim.evidence.includes(message.toolUseId)))) return false;
+        || !(claim.evidence.includes(message.id)
+          || (message.toolUseId && claim.evidence.includes(message.toolUseId))
+          || claim.evidence.includes(`tool:${message.toolName}`))) return false;
       if (!Object.entries(criterion.input).every(([path, expected]) => atPath(message.toolInput, path) === expected)) return false;
       const result = resultJson(message.toolResult);
       return criterion.checks.every(check => (check.path === '$text' ? message.toolResult : atPath(result, check.path)) === check.equals);

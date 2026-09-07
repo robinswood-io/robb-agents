@@ -35,6 +35,67 @@ describe('business criteria and durable goal — E01 E03 E04 E11 E12', () => {
       { toolName: 'mcp__other__get_timer' },
     ]) expect(validateObjectiveOutcome(receipt, { objective, messages: [root, { ...observation, ...changes }] }).valid).toBe(false);
   });
+  it('supports safe root JSONPath selectors and numeric array indices', () => {
+    const criteria: ObjectiveAcceptanceCriterion[] = [
+      {
+        id: 'crm-opportunity-updated', description: 'The opportunity has the requested state',
+        toolName: 'mcp__comptabilite__sellsy_get_opportunity', input: { id: 10926974 },
+        checks: [
+          { path: '$.name', equals: 'CERFrance Côte d’Armor — Conférence IA — 12 novembre 2026' },
+          { path: '$.due_date', equals: '2026-11-12' },
+          { path: '$.status', equals: 'open' },
+          { path: '$.step.id', equals: 345681 },
+        ],
+      },
+      {
+        id: 'gmail-message-delivered', description: 'The sent message has the requested envelope',
+        toolName: 'mcp__google-contacts__gmail_list_messages', input: { q: 'in:sent subject:"CERFrance"', maxResults: 1 },
+        checks: [
+          { path: '$[0].subject', equals: 'Intervention du 12 novembre 2026 — entité de facturation et lieu' },
+          { path: '$[0].from', equals: 'Thibault Fritsch <thibault@robinswood.io>' },
+          { path: '$[0].labelIds[0]', equals: 'SENT' },
+        ],
+      },
+    ];
+    const jsonObjective = registerObjectiveAcceptanceCriteria(
+      transitionObjectiveContract({ messageId: 'u1', text: root.content, nowMs: 1 }), criteria, 2,
+    );
+    const sellsy: Message = {
+      ...observation, id: 'sellsy-message', toolUseId: 'sellsy-check', timestamp: 4,
+      toolName: criteria[0]!.toolName, toolInput: { id: 10926974 },
+      toolResult: JSON.stringify({
+        name: 'CERFrance Côte d’Armor — Conférence IA — 12 novembre 2026', due_date: '2026-11-12',
+        status: 'open', step: { id: 345681 },
+      }),
+    };
+    const gmail: Message = {
+      ...observation, id: 'gmail-message', toolUseId: 'gmail-check', timestamp: 5,
+      toolName: criteria[1]!.toolName, toolInput: { q: 'in:sent subject:"CERFrance"', maxResults: 1 },
+      toolResult: JSON.stringify([{
+        subject: 'Intervention du 12 novembre 2026 — entité de facturation et lieu',
+        from: 'Thibault Fritsch <thibault@robinswood.io>', labelIds: ['SENT'],
+      }]),
+    };
+    const jsonReceipt: ObjectiveOutcomeDeclaration = {
+      state: 'complete_verified', blocker: null, remainingWork: [],
+      criteria: [
+        { id: criteria[0]!.id, satisfied: true, evidence: ['sellsy-check'] },
+        { id: criteria[1]!.id, satisfied: true, evidence: ['gmail-check'] },
+        ...jsonObjective.completionCriteria.map(id => ({
+          id, satisfied: true, evidence: [id === 'relevant-checks-passed' ? 'gmail-check' : 'assistant-final'],
+        })),
+      ],
+    };
+    expect(validateObjectiveAcceptanceCriteria(jsonObjective, [root, sellsy, gmail], jsonReceipt)).toEqual([]);
+  });
+  it('rejects dynamic, ambiguous and prototype-traversing JSONPath expressions', () => {
+    for (const path of ['$..enabled', '$.', '$.[0]', '$[*].enabled', '$[?(@.enabled)]', '$[-1]', '$.constructor.enabled']) {
+      expect(() => registerObjectiveAcceptanceCriteria(
+        transitionObjectiveContract({ messageId: 'u1', text: root.content, nowMs: 1 }),
+        [{ ...criterion, checks: [{ path, equals: true }] }], 2,
+      )).toThrow('Invalid JSON selector');
+    }
+  });
   it('rejects evidence before a mutation even if all technical flags pass', () => {
     const mutation: Message = { ...observation, id: 'm2', toolUseId: 't2', toolName: 'Edit', toolInput: { file_path: '/tmp/timer' } };
     expect(validateObjectiveAcceptanceCriteria(objective, [root, observation, mutation], receipt)).toHaveLength(1);
@@ -64,8 +125,16 @@ describe('business criteria and durable goal — E01 E03 E04 E11 E12', () => {
     expect(validateObjectiveAcceptanceCriteria(textObjective, [root, textResult], receipt)).toEqual([]);
     expect(validateObjectiveAcceptanceCriteria(textObjective, [root, { ...textResult, toolResult: `${textResult.toolResult} BUT FAILED` }], receipt)).toHaveLength(1);
   });
-  it('does not accept a tool-name alias or assistant assertion as criterion evidence', () => {
-    for (const ref of ['assistant-final', `tool:${criterion.toolName}`]) {
+  it('accepts an exact tool-name alias without letting it bypass target or result checks', () => {
+    const aliasReceipt: ObjectiveOutcomeDeclaration = {
+      ...receipt, criteria: [{ id: criterion.id, satisfied: true, evidence: [`tool:${criterion.toolName}`] }],
+    };
+    expect(validateObjectiveAcceptanceCriteria(objective, [root, observation], aliasReceipt)).toEqual([]);
+    for (const changes of [
+      { toolInput: { host: 'production', timer: 'cleanup' } },
+      { toolResult: '{"enabled":false,"nextRunScheduled":true}' },
+    ]) expect(validateObjectiveAcceptanceCriteria(objective, [root, { ...observation, ...changes }], aliasReceipt)).toHaveLength(1);
+    for (const ref of ['assistant-final', 'tool:mcp__other__get_timer']) {
       expect(validateObjectiveAcceptanceCriteria(objective, [root, observation], {
         ...receipt, criteria: [{ id: criterion.id, satisfied: true, evidence: [ref] }],
       })).toHaveLength(1);
