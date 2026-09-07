@@ -570,6 +570,18 @@ describe('BrowserPaneManager', () => {
     expect(manager.listInstances()).toHaveLength(0)
   })
 
+  it('destroys all instances even when Electron has already removed a native webContents wrapper', () => {
+    manager.createInstance('native-already-destroyed')
+    manager.createInstance('still-alive')
+    const instance = (manager as any).instances.get('native-already-destroyed')
+    const wcId = instance.pageWebContentsId
+    Object.defineProperty(instance.pageView, 'webContents', { configurable: true, get: () => undefined })
+    expect(() => (manager as any).getInstanceByWebContentsId(wcId)).not.toThrow()
+    expect(() => manager.destroyAll()).not.toThrow()
+    expect(manager.listInstances()).toHaveLength(0)
+    expect(() => manager.destroyAll()).not.toThrow()
+  })
+
   it('destroys instance via toolbar destroy IPC handler', async () => {
     manager.createInstance('d-ipc-destroy')
     manager.registerToolbarIpc()

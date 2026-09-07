@@ -148,6 +148,8 @@ interface BrowserInstance {
   window: BrowserWindow
   toolbarView: WebContentsView
   pageView: WebContentsView
+  /** Native wrappers may already be gone when Electron emits shutdown events. */
+  pageWebContentsId: number
   nativeOverlayView: WebContentsView
   cdp: BrowserCDP
   currentUrl: string
@@ -465,6 +467,7 @@ export class BrowserPaneManager implements IBrowserPaneManager {
     const cdp = new BrowserCDP(pageView.webContents)
 
     const instance: BrowserInstance = {
+      pageWebContentsId: pageView.webContents.id,
       id: instanceId,
       window,
       toolbarView,
@@ -567,7 +570,7 @@ export class BrowserPaneManager implements IBrowserPaneManager {
     instance.pendingShowToken += 1
 
     // Clean up in-flight network tracking for this instance's webContents
-    const wcId = instance.pageView.webContents.id
+    const wcId = instance.pageWebContentsId
     this.inFlightRequestsByWebContentsId.delete(wcId)
     this.lastNetworkActivityByWebContentsId.delete(wcId)
 
@@ -3141,7 +3144,7 @@ export class BrowserPaneManager implements IBrowserPaneManager {
 
   private getInstanceByWebContentsId(webContentsId: number): BrowserInstance | undefined {
     for (const instance of this.instances.values()) {
-      if (instance.pageView.webContents.id === webContentsId) return instance
+      if (instance.pageWebContentsId === webContentsId) return instance
     }
     return undefined
   }
