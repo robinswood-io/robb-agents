@@ -4,6 +4,9 @@ import {
   ModelRegistry as PiModelRegistry,
 } from '@earendil-works/pi-coding-agent';
 import { registerOAuthProvider, unregisterOAuthProvider } from '@earendil-works/pi-ai/oauth';
+import { hasApi } from '@earendil-works/pi-ai';
+import { streamSimple as streamAnthropic } from '@earendil-works/pi-ai/api/anthropic-messages';
+import { streamSimple as streamOpenAi } from '@earendil-works/pi-ai/api/openai-responses';
 
 import { registerSupplementalCatalogModels } from './catalog-model-registration.ts';
 import { resolvePiModel } from './model-resolution.ts';
@@ -17,7 +20,7 @@ const OPENAI_SUPPLEMENTAL_IDS = [
 
 const OPENAI_SUPPLEMENTAL_COSTS = {
   'gpt-6-astra': { input: 10, output: 50, cacheRead: 1, cacheWrite: 12.5 },
-  'gpt-5.6-sol': { input: 5, output: 30, cacheRead: 0.5, cacheWrite: 6.25 },
+  'gpt-5.6-sol': { input: 4, output: 20, cacheRead: 0.4, cacheWrite: 5 },
   'gpt-5.6-terra': { input: 2, output: 12, cacheRead: 0.2, cacheWrite: 2.5 },
   'gpt-5.6-luna': { input: 0.2, output: 1.2, cacheRead: 0.02, cacheWrite: 0.25 },
 };
@@ -94,14 +97,116 @@ describe('registerSupplementalCatalogModels', () => {
     });
   }
 
-  it('leaves providers without a runtime registration rule unchanged', () => {
+  it('registers current Anthropic models with adaptive thinking and their own prices', () => {
     const authStorage = PiAuthStorage.inMemory({
       anthropic: { type: 'api_key', key: 'test-api-key' },
     });
     const registry = PiModelRegistry.inMemory(authStorage);
+    const existing = registry.find('anthropic', 'claude-opus-4-8');
+
+    expect(registerSupplementalCatalogModels(registry, 'anthropic').sort()).toEqual([
+      'claude-fable-5-1', 'claude-opus-5',
+    ]);
+    expect(registry.find('anthropic', 'claude-opus-5')).toMatchObject({
+      api: 'anthropic-messages',
+      contextWindow: 1_000_000,
+      maxTokens: 128_000,
+      cost: { input: 5, output: 25, cacheRead: 0.5, cacheWrite: 6.25 },
+      compat: { forceAdaptiveThinking: true, supportsTemperature: false },
+    });
+    expect(registry.find('anthropic', 'claude-fable-5-1')).toMatchObject({
+      api: 'anthropic-messages',
+      contextWindow: 1_000_000,
+      maxTokens: 128_000,
+      cost: { input: 10, output: 50, cacheRead: 0.25, cacheWrite: 12.5 },
+      compat: { forceAdaptiveThinking: true, supportsTemperature: false },
+      thinkingLevelMap: { off: null, xhigh: 'xhigh' },
+    });
+    expect(registry.find('anthropic', 'claude-opus-4-8')).toEqual(existing);
+    expect(registerSupplementalCatalogModels(registry, 'anthropic')).toEqual([]);
+  });
+
+  for (const id of ['claude-opus-5', 'claude-fable-5-1']) {
+    it(`serializes ${id} with supported adaptive effort before any network request`, async () => {
+      const registry = PiModelRegistry.inMemory(PiAuthStorage.inMemory({
+        anthropic: { type: 'api_key', key: 'test-api-key' },
+      }));
+      registerSupplementalCatalogModels(registry, 'anthropic');
+      const model = registry.find('anthropic', id)!;
+      if (!hasApi(model, 'anthropic-messages')) throw new Error('Unexpected Anthropic transport');
+      let payload: unknown;
+      const result = await streamAnthropic(model, {
+        messages: [{ role: 'user', content: 'Offline serializer check', timestamp: 0 }],
+      }, {
+        apiKey: 'test-api-key',
+        reasoning: 'xhigh',
+        temperature: 0.2,
+        onPayload(body) {
+          payload = body;
+          throw new Error('offline-payload-captured');
+        },
+      }).result();
+
+      expect(result.errorMessage).toContain('offline-payload-captured');
+      expect(payload).toMatchObject({
+        model: id,
+        thinking: { type: 'adaptive' },
+        output_config: { effort: 'xhigh' },
+      });
+      expect(payload).not.toHaveProperty('temperature');
+    });
+  }
+
+  it('does not disable Fable thinking when a caller omits reasoning', async () => {
+    const registry = PiModelRegistry.inMemory(PiAuthStorage.inMemory({
+      anthropic: { type: 'api_key', key: 'test-api-key' },
+    }));
+    registerSupplementalCatalogModels(registry, 'anthropic');
+    const model = registry.find('anthropic', 'claude-fable-5-1')!;
+    if (!hasApi(model, 'anthropic-messages')) throw new Error('Unexpected Anthropic transport');
+    let payload: unknown;
+    await streamAnthropic(model, { messages: [] }, {
+      apiKey: 'test-api-key',
+      onPayload(body) { payload = body; throw new Error('offline-payload-captured'); },
+    }).result();
+    expect(payload).toMatchObject({ model: 'claude-fable-5-1' });
+    expect(payload).not.toHaveProperty('thinking');
+  });
+
+  it('clamps legacy off to a supported Astra effort before serializing', async () => {
+    const registry = PiModelRegistry.inMemory(PiAuthStorage.inMemory({
+      openai: { type: 'api_key', key: 'test-api-key' },
+    }));
+    registerSupplementalCatalogModels(registry, 'openai');
+    const model = registry.find('openai', 'gpt-6-astra')!;
+    if (!hasApi(model, 'openai-responses')) throw new Error('Unexpected OpenAI transport');
+    let payload: unknown;
+    await streamOpenAi(model, { messages: [] }, {
+      apiKey: 'test-api-key',
+      reasoning: 'off',
+      onPayload(body) { payload = body; throw new Error('offline-payload-captured'); },
+    }).result();
+    expect(payload).toMatchObject({ model: 'gpt-6-astra', reasoning: { effort: 'low' } });
+  });
+
+  it('registers the canonical Mistral Medium 3.5 id using the native Conversations transport', () => {
+    const registry = PiModelRegistry.inMemory(PiAuthStorage.inMemory({
+      mistral: { type: 'api_key', key: 'test-api-key' },
+    }));
+    expect(registerSupplementalCatalogModels(registry, 'mistral')).toEqual(['mistral-medium-3-5']);
+    expect(registry.find('mistral', 'mistral-medium-3-5')).toMatchObject({
+      api: 'mistral-conversations',
+      reasoning: true,
+      input: ['text', 'image'],
+      cost: { input: 1.5, output: 7.5, cacheRead: 0.15, cacheWrite: 0 },
+    });
+  });
+
+  it('leaves providers without a runtime registration rule unchanged', () => {
+    const registry = PiModelRegistry.inMemory(PiAuthStorage.inMemory());
     const countBefore = registry.getAll().length;
 
-    expect(registerSupplementalCatalogModels(registry, 'anthropic')).toEqual([]);
+    expect(registerSupplementalCatalogModels(registry, 'unknown-provider')).toEqual([]);
     expect(registry.getAll()).toHaveLength(countBefore);
   });
 

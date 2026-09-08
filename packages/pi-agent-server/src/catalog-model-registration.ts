@@ -24,19 +24,30 @@ const CATALOG_MODEL_TEMPLATES: Readonly<Record<string, {
     templateId: 'gpt-5.5',
     supplementalModelIds: OPENAI_SUPPLEMENTAL_MODEL_IDS,
   },
+  anthropic: {
+    // This template explicitly enables adaptive thinking and disables sampling.
+    templateId: 'claude-opus-4-8',
+    supplementalModelIds: ['claude-opus-5', 'claude-fable-5-1'],
+  },
+  mistral: {
+    templateId: 'mistral-medium-2604',
+    supplementalModelIds: ['mistral-medium-3-5'],
+  },
 };
 
 /**
  * Current standard-processing prices in USD per 1M tokens.
  *
- * Pi 0.80.3 predates these models, so cloning the GPT-5.5 transport would also
+ * Pi 0.80.3 predates these models, so cloning an older transport would also
  * clone stale prices and reasoning compatibility. Keep the overrides explicit
  * until the upstream SDK catalogue contains the models itself.
  * Sources:
  * - https://developers.openai.com/api/docs/models/gpt-6-astra
  * - https://developers.openai.com/api/docs/models/gpt-5.6-sol
+ * - https://platform.claude.com/docs/en/models/opus-5/overview
+ * - https://platform.claude.com/docs/en/models/fable-5-1/overview
  */
-const OPENAI_RUNTIME_OVERRIDES: Readonly<Record<
+const RUNTIME_OVERRIDES: Readonly<Record<
   string,
   Pick<RuntimeModel, 'cost' | 'maxTokens' | 'thinkingLevelMap'>
 >> = {
@@ -56,7 +67,8 @@ const OPENAI_RUNTIME_OVERRIDES: Readonly<Record<
     },
   },
   'gpt-5.6-sol': {
-    cost: { input: 5, output: 30, cacheRead: 0.5, cacheWrite: 6.25 },
+    // Promotional pricing is available at least through November 21, 2026.
+    cost: { input: 4, output: 20, cacheRead: 0.4, cacheWrite: 5 },
     maxTokens: 128_000,
   },
   'gpt-5.6-terra': {
@@ -66,6 +78,16 @@ const OPENAI_RUNTIME_OVERRIDES: Readonly<Record<
   'gpt-5.6-luna': {
     cost: { input: 0.2, output: 1.2, cacheRead: 0.02, cacheWrite: 0.25 },
     maxTokens: 128_000,
+  },
+  'claude-opus-5': {
+    cost: { input: 5, output: 25, cacheRead: 0.5, cacheWrite: 6.25 },
+    maxTokens: 128_000,
+  },
+  'claude-fable-5-1': {
+    cost: { input: 10, output: 50, cacheRead: 0.25, cacheWrite: 12.5 },
+    maxTokens: 128_000,
+    // Fable always thinks; omitting thinking keeps the API's adaptive default.
+    thinkingLevelMap: { off: null, xhigh: 'xhigh' },
   },
 };
 
@@ -119,8 +141,8 @@ function getRegistrationAuth(
 /**
  * Register catalog models that are newer than the bundled Pi SDK catalogue.
  *
- * The shared catalogue intentionally exposes recent OpenAI models for API-key
- * and ChatGPT-account auth. Pi SDK 0.80.3 does not know these IDs yet, so create
+ * The shared catalogue exposes recent models for supported auth providers.
+ * Pi SDK 0.80.3 does not know these IDs yet, so create
  * runtime entries using the latest compatible provider model as the transport
  * template. Unknown providers and unauthenticated registries are left intact.
  */
@@ -145,7 +167,7 @@ export function registerSupplementalCatalogModels(
 
   const supplementalModels = missingDefinitions.map(definition => {
     const id = definition.id.replace(/^pi\//, '');
-    const overrides = OPENAI_RUNTIME_OVERRIDES[id];
+    const overrides = RUNTIME_OVERRIDES[id];
     return {
       ...toRegistrationModel(template),
       id,

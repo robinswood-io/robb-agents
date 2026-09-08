@@ -465,6 +465,7 @@
   "editor.noLanguagesFound": "未找到语言",
   "editor.searchLanguages": "搜索语言...",
   "editor.strikethrough": "删除线",
+  "errors.bridgeImagesUnsupported": "{{provider}} 无法通过此连接接收图片附件。请选择支持图片的连接，或在发送前移除图片。",
   "errors.chatGptOAuthNotAvailable": "Web UI 不支持 ChatGPT OAuth。请使用桌面应用或设置 API 密钥。",
   "errors.failedToLoadSession": "无法加载会话",
   "errors.failedToLoadSessions": "无法加载会话列表",

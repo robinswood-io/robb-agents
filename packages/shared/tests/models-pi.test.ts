@@ -46,6 +46,34 @@ describe('models-pi filtering', () => {
     expect(bedrockIds.some(id => id.includes('claude-opus-4-6'))).toBe(false);
   });
 
+  it('exposes the current Anthropic snapshots alongside existing selections', () => {
+    const models = getPiModelsForAuthProvider('anthropic');
+    for (const id of ['pi/claude-opus-5', 'pi/claude-fable-5-1']) {
+      expect(models.filter(model => model.id === id)).toEqual([
+        expect.objectContaining({
+          id,
+          contextWindow: 1_000_000,
+          supportsThinking: true,
+          supportsImages: true,
+        }),
+      ]);
+    }
+    expect(models.map(model => model.id)).toContain('pi/claude-fable-5');
+    expect(models.map(model => model.id)).toContain('pi/claude-opus-4-8');
+  });
+
+  it('preserves SDK image capabilities for vision and text-only models', () => {
+    const mistralModels = getPiModelsForAuthProvider('mistral');
+    expect(mistralModels.find(model => model.id === 'pi/mistral-small-latest')).toMatchObject({
+      supportsImages: true,
+      supportsThinking: true,
+    });
+    expect(mistralModels.find(model => model.id === 'pi/codestral-latest')).toMatchObject({
+      supportsImages: false,
+      supportsThinking: false,
+    });
+  });
+
   it('includes DeepSeek in the Pi API key provider list with a human-readable label', () => {
     const providers = getPiApiKeyProviders();
     expect(providers.some(provider => provider.key === 'deepseek' && provider.label === 'DeepSeek')).toBe(true);
@@ -62,7 +90,14 @@ describe('models-pi filtering', () => {
     const providers = getPiApiKeyProviders();
     expect(providers.some(provider => provider.key === 'mistral' && provider.label === 'Mistral')).toBe(true);
 
-    const ids = getPiModelsForAuthProvider('mistral').map(m => m.id);
+    const models = getPiModelsForAuthProvider('mistral');
+    const ids = models.map(m => m.id);
+    expect(ids[0]).toBe('pi/mistral-medium-3-5');
+    expect(models.find(model => model.id === 'pi/mistral-medium-3-5')).toMatchObject({
+      contextWindow: 262_144,
+      supportsThinking: true,
+      supportsImages: true,
+    });
     expect(ids).toContain('pi/mistral-medium-3.5');
     expect(ids).toContain('pi/mistral-small-latest');
     expect(ids).toContain('pi/devstral-latest');
@@ -73,6 +108,8 @@ describe('models-pi filtering', () => {
     expect(models).toEqual([expect.objectContaining({
       id: 'pi/mistral-vibe',
       name: 'Mistral Vibe',
+      supportsThinking: false,
+      supportsImages: false,
     })]);
   });
 
@@ -80,10 +117,12 @@ describe('models-pi filtering', () => {
     const models = getPiModelsForAuthProvider('google-antigravity');
     const ids = models.map(model => model.id);
     expect(ids.slice(0, 3)).toEqual([
-      'pi/gemini-3.7-flash-high',
-      'pi/gemini-3.7-flash-medium',
-      'pi/gemini-3.7-flash-low',
+      'pi/gemini-3.8-flash-high',
+      'pi/gemini-3.8-flash-medium',
+      'pi/gemini-3.8-flash-low',
     ]);
+    expect(ids.some(id => id.startsWith('pi/gemini-3.5-flash-'))).toBe(false);
     expect(models.every(model => model.supportsImages === false)).toBe(true);
+    expect(models.every(model => model.supportsThinking === false)).toBe(true);
   });
 });

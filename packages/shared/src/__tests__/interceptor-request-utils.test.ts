@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 import {
-  normalizeGpt6AstraResponsesRequest,
+  normalizeOpenAiResponsesRequest,
   resolveRequestContext,
 } from '../interceptor-request-utils.ts';
 
@@ -43,23 +43,51 @@ describe('interceptor-request-utils', () => {
       prompt_cache_options: { mode: 'explicit' },
     };
 
-    expect(normalizeGpt6AstraResponsesRequest(body)).toEqual({
+    expect(normalizeOpenAiResponsesRequest(body)).toEqual({
       model: 'gpt-6-astra',
       include: ['reasoning.encrypted_content'],
       prompt_cache_options: { mode: 'explicit', ttl: '30m' },
     });
   });
 
-  it('leaves non-Astra Responses API options unchanged', () => {
+  for (const model of ['gpt-5.6', 'gpt-5.6-sol', 'gpt-5.6-terra', 'pi/gpt-5.6-luna']) {
+    it(`updates legacy cache options for ${model} while preserving sampling and effort`, () => {
+      const body: Record<string, unknown> = {
+        model,
+        temperature: 0.2,
+        reasoning: { effort: 'low', context: 'all_turns' },
+        prompt_cache_key: 'stable-session',
+        prompt_cache_retention: '24h',
+      };
+
+      expect(normalizeOpenAiResponsesRequest(body)).toEqual({
+        model,
+        temperature: 0.2,
+        reasoning: { effort: 'low', context: 'all_turns' },
+        prompt_cache_key: 'stable-session',
+        prompt_cache_options: { ttl: '30m' },
+      });
+    });
+  }
+
+  it('preserves explicit cache configuration when no legacy option is present', () => {
+    const options = { mode: 'explicit', ttl: '30m', comparison_response_id: 'resp_previous' };
+    const body: Record<string, unknown> = { model: 'gpt-6-astra', prompt_cache_options: options };
+
+    expect(normalizeOpenAiResponsesRequest(body)).toBe(body);
+    expect(body.prompt_cache_options).toBe(options);
+  });
+
+  it('leaves earlier Responses API model options unchanged', () => {
     const body: Record<string, unknown> = {
-      model: 'gpt-5.6-sol',
+      model: 'gpt-5.5',
       temperature: 0.2,
       prompt_cache_retention: '24h',
     };
 
-    expect(normalizeGpt6AstraResponsesRequest(body)).toBe(body);
+    expect(normalizeOpenAiResponsesRequest(body)).toBe(body);
     expect(body).toEqual({
-      model: 'gpt-5.6-sol',
+      model: 'gpt-5.5',
       temperature: 0.2,
       prompt_cache_retention: '24h',
     });

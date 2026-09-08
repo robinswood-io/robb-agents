@@ -465,6 +465,7 @@
   "editor.noLanguagesFound": "Keine Sprachen gefunden",
   "editor.searchLanguages": "Sprachen suchen...",
   "editor.strikethrough": "Durchgestrichen",
+  "errors.bridgeImagesUnsupported": "{{provider}} kann über diese Verbindung keine Bildanhänge empfangen. Wähle eine Verbindung mit Bildunterstützung oder entferne die Bilder vor dem Senden.",
   "errors.chatGptOAuthNotAvailable": "ChatGPT OAuth ist in der Web-Oberfläche nicht verfügbar. Verwende die Desktop-App oder richte einen API-Schlüssel ein.",
   "errors.failedToLoadSession": "Sitzung konnte nicht geladen werden",
   "errors.failedToLoadSessions": "Sitzungen konnten nicht geladen werden",

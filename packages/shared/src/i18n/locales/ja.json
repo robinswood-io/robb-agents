@@ -465,6 +465,7 @@
   "editor.noLanguagesFound": "言語が見つかりません",
   "editor.searchLanguages": "言語を検索...",
   "editor.strikethrough": "取り消し線",
+  "errors.bridgeImagesUnsupported": "{{provider}} はこの接続では添付画像を受け取れません。画像に対応する接続を選択するか、送信前に画像を削除してください。",
   "errors.chatGptOAuthNotAvailable": "Web UIではChatGPT OAuthを利用できません。デスクトップアプリを使用するか、APIキーを設定してください。",
   "errors.failedToLoadSession": "セッションの読み込みに失敗しました",
   "errors.failedToLoadSessions": "セッション一覧の読み込みに失敗しました",

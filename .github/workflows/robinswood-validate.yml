@@ -62,6 +62,14 @@ jobs:
       - name: Typecheck Electron app
         run: bun run typecheck:electron
 
+      - name: Verify provider catalogs and request capabilities
+        env:
+          CRAFT_CONFIG_DIR: ${{ runner.temp }}/robb-agents-provider-contracts
+        run: |
+          bun test packages/shared/tests/models.test.ts packages/shared/tests/models-pi.test.ts packages/shared/tests/llm-connections.test.ts packages/shared/src/config/__tests__/model-supports-images.test.ts
+          bun test packages/shared/src/__tests__/interceptor-request-utils.test.ts packages/shared/src/__tests__/mistral-request-normalization.test.ts packages/shared/src/agent/__tests__/claude-thinking-config.test.ts packages/shared/src/agent/__tests__/pi-agent-vibe-steering.test.ts packages/shared/src/agent/__tests__/pi-agent-bridge-images.test.ts
+          bun test packages/pi-agent-server/src/catalog-model-registration.test.ts packages/pi-agent-server/src/antigravity-server.test.ts packages/pi-agent-server/src/vibe-acp-server.test.ts packages/pi-agent-server/src/mistral-provider-contract.test.ts
+
       - name: Run focused fork tests
         run: |
           bun test \

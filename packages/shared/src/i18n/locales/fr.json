@@ -465,6 +465,7 @@
   "editor.noLanguagesFound": "No languages found",
   "editor.searchLanguages": "Rechercher des langages...",
   "editor.strikethrough": "Barré",
+  "errors.bridgeImagesUnsupported": "{{provider}} ne peut pas recevoir de pièces jointes images avec cette connexion. Choisissez une connexion compatible avec les images ou retirez les images avant l’envoi.",
   "errors.chatGptOAuthNotAvailable": "L'OAuth ChatGPT n'est pas disponible dans l'interface web. Utilisez l'application de bureau ou configurez une clé API à la place.",
   "errors.failedToLoadSession": "Échec du chargement de la session",
   "errors.failedToLoadSessions": "Échec du chargement des sessions",

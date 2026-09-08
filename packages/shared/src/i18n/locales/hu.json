@@ -465,6 +465,7 @@
   "editor.noLanguagesFound": "Nem található nyelv",
   "editor.searchLanguages": "Nyelvek keresése...",
   "editor.strikethrough": "Áthúzott",
+  "errors.bridgeImagesUnsupported": "A(z) {{provider}} ezen a kapcsolaton nem fogad képmellékleteket. Válassz képeket támogató kapcsolatot, vagy küldés előtt távolítsd el a képeket.",
   "errors.chatGptOAuthNotAvailable": "A ChatGPT OAuth nem érhető el a webes felületen. Használd az asztali alkalmazást vagy állíts be egy API kulcsot.",
   "errors.failedToLoadSession": "A munkamenet betöltése sikertelen",
   "errors.failedToLoadSessions": "A munkamenetek betöltése sikertelen",

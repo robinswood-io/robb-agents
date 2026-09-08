@@ -233,16 +233,40 @@ describe('getDefaultModelsForConnection() — current OpenAI defaults', () => {
       { id: 'pi/ministral-3b-latest', name: 'Ministral 3B', shortName: '3B', provider: 'pi', contextWindow: 128000, supportsThinking: false },
       { id: 'pi/mistral-medium-3.5', name: 'Mistral Medium 3.5', shortName: 'Medium 3.5', provider: 'pi', contextWindow: 262144, supportsThinking: true },
       { id: 'pi/devstral-latest', name: 'Devstral 2', shortName: 'Devstral', provider: 'pi', contextWindow: 262144, supportsThinking: false },
+      { id: 'pi/mistral-medium-3-5', name: 'Mistral Medium 3.5', shortName: 'Medium 3.5', provider: 'pi', contextWindow: 262144, supportsThinking: true },
     ] : []);
 
     expect(getDefaultModelsForConnection('pi', 'mistral').map(m => typeof m === 'string' ? m : m.id)).toEqual([
+      'pi/mistral-medium-3-5',
       'pi/mistral-medium-3.5',
       'pi/mistral-small-latest',
       'pi/ministral-3b-latest',
       'pi/devstral-latest',
       'pi/codestral-latest',
     ]);
-    expect(getDefaultModelForConnection('pi', 'mistral')).toBe('pi/mistral-medium-3.5');
+    expect(getDefaultModelForConnection('pi', 'mistral')).toBe('pi/mistral-medium-3-5');
+  });
+
+  it.each(['anthropic', 'amazon-bedrock'])('ranks actual current Claude IDs without upgrading old IDs for %s', (provider) => {
+    const prefix = provider === 'amazon-bedrock' ? 'pi/eu.anthropic.' : 'pi/';
+    const ids = ['claude-opus-4-5-20251101', 'claude-opus-4-8', 'claude-fable-5', 'claude-fable-5-1', 'claude-opus-5'];
+    const models = ids.map(id => ({ id: `${prefix}${id}`, name: id, shortName: id, provider: 'pi' as const, contextWindow: 1_000_000 }));
+    registerPiModelResolver(() => models);
+
+    expect(getDefaultModelForConnection('pi', provider)).toBe(`${prefix}claude-opus-5`);
+    const rankedIds = getDefaultModelsForConnection('pi', provider).map(m => typeof m === 'string' ? m : m.id);
+    expect(rankedIds.indexOf(`${prefix}claude-opus-4-5-20251101`)).toBeGreaterThan(rankedIds.indexOf(`${prefix}claude-opus-4-8`));
+    if (provider === 'anthropic') {
+      expect(rankedIds.indexOf(`${prefix}claude-fable-5-1`)).toBeLessThan(rankedIds.indexOf(`${prefix}claude-fable-5`));
+    }
+    expect(models.map(m => m.id)).toEqual(ids.map(id => `${prefix}${id}`));
+  });
+
+  it('prefers an available current Antigravity model at connection creation', () => {
+    registerPiModelResolver(() => ['gemini-3.7-flash-high', 'gemini-3.8-flash-medium', 'gemini-3.8-flash-high'].map(id => ({
+      id: `pi/${id}`, name: id, shortName: id, provider: 'pi', contextWindow: 1_048_576,
+    })));
+    expect(getDefaultModelForConnection('pi', 'google-antigravity')).toBe('pi/gemini-3.8-flash-high');
   });
 });
 

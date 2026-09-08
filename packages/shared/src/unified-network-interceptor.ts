@@ -32,7 +32,8 @@ import {
 } from './interceptor-common.ts';
 import { FEATURE_FLAGS } from './feature-flags.ts';
 import {
-  normalizeGpt6AstraResponsesRequest,
+  normalizeMistralChatRequest,
+  normalizeOpenAiResponsesRequest,
   resolveRequestContext,
 } from './interceptor-request-utils.ts';
 
@@ -1259,6 +1260,10 @@ const openAiAdapter: ApiAdapter = {
     validateOpenAiChatBody(body);
   },
 
+  modifyRequest(url: string, init: RequestInit, body: Record<string, unknown>) {
+    return { init, body: normalizeMistralChatRequest(url, body) };
+  },
+
   createSseProcessor(): TransformStream<Uint8Array, Uint8Array> {
     return createOpenAiSseStrippingStream();
   },
@@ -1478,7 +1483,7 @@ const openAiResponsesAdapter: ApiAdapter = {
   },
 
   modifyRequest(_url: string, init: RequestInit, body: Record<string, unknown>) {
-    return { init, body: normalizeGpt6AstraResponsesRequest(body) };
+    return { init, body: normalizeOpenAiResponsesRequest(body) };
   },
 
   createSseProcessor(): TransformStream<Uint8Array, Uint8Array> {
