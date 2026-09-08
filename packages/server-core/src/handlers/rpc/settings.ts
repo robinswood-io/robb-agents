@@ -17,17 +17,6 @@ import { filterDraftsForWorkspace } from './draft-workspace-filter'
 import type { HandlerDeps } from '../handler-deps'
 import { requestClientOpenFileDialog } from '@craft-agent/server-core/transport'
 import { isValidWorkingDirectory } from '../../utils/path-validation'
-import { getLlmConnections } from '@craft-agent/shared/config/storage'
-import {
-  ALL_ROUTING_DIFFICULTIES,
-  ALL_ROUTING_SENSITIVITIES,
-  resolveRoutingPolicy,
-  simulateRoutingPolicy,
-  validateRoutingPolicy,
-  type RoutingPolicy,
-  type RoutingPolicyContext,
-} from '@craft-agent/shared/config/routing-policy'
-import { RoutingOutcomeStore } from '@craft-agent/shared/config/routing-outcome-store'
 import {
   createDefaultWorkspaceGovernance,
   parseWorkspaceGovernanceProfile,
@@ -78,8 +67,6 @@ export const HANDLED_CHANNELS = [
   RPC_CHANNELS.workspace.SETTINGS_GET,
   RPC_CHANNELS.workspace.SETTINGS_UPDATE,
   RPC_CHANNELS.workspace.GOVERNANCE_UPDATE,
-  RPC_CHANNELS.workspace.ROUTING_SIMULATE,
-  RPC_CHANNELS.workspace.ROUTING_SHADOW_ANALYZE,
   RPC_CHANNELS.workspace.REMOTE_SUPERVISION_GRANT,
   RPC_CHANNELS.workspace.REMOTE_SUPERVISION_REVOKE,
   RPC_CHANNELS.preferences.READ,
@@ -282,8 +269,7 @@ export function registerSettingsHandlers(server: RpcServer, deps: HandlerDeps): 
       localMcpEnabled: config.localMcpServers?.enabled ?? true,
       defaultLlmConnection: config.defaults?.defaultLlmConnection,
       enabledSourceSlugs: config.defaults?.enabledSourceSlugs ?? [],
-      routingPolicy: config.routingPolicy,
-      costControl: config.costControl,
+      costControl: resolveAgentCostControlPolicy(config.costControl),
       governance: governanceDocument.profile,
       governanceRevision: governanceDocument.revision,
       governanceUpdatedAt: governanceDocument.updatedAt,
@@ -363,70 +349,6 @@ export function registerSettingsHandlers(server: RpcServer, deps: HandlerDeps): 
     },
   )
 
-  // Explain the current persisted policy without starting a provider, checking a
-  // credential, or writing any workspace/session state.
-  server.handle(RPC_CHANNELS.workspace.ROUTING_SIMULATE, async (ctx, workspaceId: string, context: RoutingPolicyContext = {}) => {
-    await authorizeWorkspaceAction(ctx, workspaceId, 'policy.read')
-    const workspace = getWorkspaceOrThrow(workspaceId)
-    const { loadWorkspaceConfig } = await import('@craft-agent/shared/workspaces')
-    const config = loadWorkspaceConfig(workspace.rootPath)
-    if (!config) throw new Error(`Failed to load workspace config: ${workspaceId}`)
-
-    if (context.sensitivity && !ALL_ROUTING_SENSITIVITIES.includes(context.sensitivity)) {
-      throw new Error(`Invalid routing sensitivity: ${context.sensitivity}`)
-    }
-    const sanitizeStrings = (value: unknown): string[] | undefined => Array.isArray(value)
-      ? value.filter((item): item is string => typeof item === 'string')
-      : undefined
-    const safeContext: RoutingPolicyContext = {
-      sensitivity: context.sensitivity,
-      requestedConnectionSlug: typeof context.requestedConnectionSlug === 'string' ? context.requestedConnectionSlug : undefined,
-      tags: sanitizeStrings(context.tags),
-      sourceSlugs: sanitizeStrings(context.sourceSlugs),
-    }
-    const connections = getLlmConnections().map(({ slug, providerType }) => ({ slug, providerType }))
-    return simulateRoutingPolicy(config.routingPolicy, connections, safeContext)
-  })
-
-  // Read-only, local-only feedback. Runtime completion telemetry is retained for
-  // drift visibility, but the shared analyzer permits promotion candidates only
-  // from eval/Mission ground truth and never changes the persisted policy.
-  server.handle(RPC_CHANNELS.workspace.ROUTING_SHADOW_ANALYZE, async (ctx, workspaceId: string) => {
-    await authorizeWorkspaceAction(ctx, workspaceId, 'policy.read')
-    const workspace = getWorkspaceOrThrow(workspaceId)
-    const { loadWorkspaceConfig } = await import('@craft-agent/shared/workspaces')
-    const config = loadWorkspaceConfig(workspace.rootPath)
-    if (!config) throw new Error(`Failed to load workspace config: ${workspaceId}`)
-    const connections = getLlmConnections().map(({ slug, providerType }) => ({ slug, providerType }))
-    const baselineByDifficulty: Partial<Record<(typeof ALL_ROUTING_DIFFICULTIES)[number], string>> = {}
-    const policyEligibleByDifficulty: Partial<Record<(typeof ALL_ROUTING_DIFFICULTIES)[number], string[]>> = {}
-
-    for (const difficulty of ALL_ROUTING_DIFFICULTIES) {
-      const baseline = resolveRoutingPolicy(config.routingPolicy, connections, { difficulty })
-      if (baseline.selectedConnectionSlug) baselineByDifficulty[difficulty] = baseline.selectedConnectionSlug
-
-      // A route is a shadow candidate only if it survives the hard policy at
-      // every sensitivity tier. This conservative intersection guarantees that
-      // aggregate outcome data cannot weaken a confidentiality allow-list.
-      let eligible = new Set(connections.map(({ slug }) => slug))
-      for (const sensitivity of ALL_ROUTING_SENSITIVITIES) {
-        const decision = resolveRoutingPolicy(config.routingPolicy, connections, {
-          difficulty,
-          sensitivity,
-        })
-        const allowed = new Set(decision.errors.length === 0 ? decision.allowedConnectionSlugs : [])
-        eligible = new Set([...eligible].filter((slug) => allowed.has(slug)))
-      }
-      policyEligibleByDifficulty[difficulty] = [...eligible].sort()
-    }
-
-    return new RoutingOutcomeStore(workspace.rootPath).buildShadowReport({
-      minSamples: 500,
-      baselineByDifficulty,
-      policyEligibleByDifficulty,
-    })
-  })
-
   // Update a workspace setting
   server.handle(RPC_CHANNELS.workspace.SETTINGS_UPDATE, async (ctx, workspaceId: string, key: string, value: unknown) => {
     await authorizeWorkspaceAction(ctx, workspaceId, 'policy.update')
@@ -436,7 +358,7 @@ export function registerSettingsHandlers(server: RpcServer, deps: HandlerDeps): 
       : value
 
     // Validate key is a known workspace setting
-    const validKeys = ['name', 'model', 'enabledSourceSlugs', 'permissionMode', 'externalActionPolicy', 'cyclablePermissionModes', 'thinkingLevel', 'workingDirectory', 'localMcpEnabled', 'defaultLlmConnection', 'routingPolicy', 'costControl']
+    const validKeys = ['name', 'model', 'enabledSourceSlugs', 'permissionMode', 'externalActionPolicy', 'cyclablePermissionModes', 'thinkingLevel', 'workingDirectory', 'localMcpEnabled', 'defaultLlmConnection', 'costControl']
     if (!validKeys.includes(key)) {
       throw new Error(`Invalid workspace setting key: ${key}. Valid keys: ${validKeys.join(', ')}`)
     }
@@ -446,14 +368,6 @@ export function registerSettingsHandlers(server: RpcServer, deps: HandlerDeps): 
       const { getLlmConnection } = await import('@craft-agent/shared/config/storage')
       if (!getLlmConnection(normalizedValue as string)) {
         throw new Error(`LLM connection "${normalizedValue}" not found`)
-      }
-    }
-
-    if (key === 'routingPolicy' && normalizedValue !== undefined && normalizedValue !== null) {
-      const knownSlugs = getLlmConnections().map(connection => connection.slug)
-      const validation = validateRoutingPolicy(normalizedValue as RoutingPolicy, knownSlugs)
-      if (!validation.valid) {
-        throw new Error(validation.errors.join('; '))
       }
     }
 
@@ -486,10 +400,6 @@ export function registerSettingsHandlers(server: RpcServer, deps: HandlerDeps): 
     // Handle 'name' specially - it's a top-level config property, not in defaults
     if (key === 'name') {
       config.name = String(normalizedValue).trim()
-    } else if (key === 'routingPolicy') {
-      config.routingPolicy = normalizedValue === undefined || normalizedValue === null
-        ? undefined
-        : normalizedValue as RoutingPolicy
     } else if (key === 'costControl') {
       config.costControl = normalizedValue === undefined || normalizedValue === null
         ? undefined

@@ -127,6 +127,26 @@ class FakeHost implements SessionMissionHost {
 }
 
 describe('SessionMissionExecutor', () => {
+  it('inherits the parent selection and preserves explicit profile model and reasoning overrides', async () => {
+    for (const override of [false, true]) {
+      const host = new FakeHost();
+      const parent = await host.createSession('workspace-1', {
+        model: 'parent-model', llmConnection: 'parent-connection', thinkingLevel: 'medium',
+      });
+      parent.id = 'origin-session';
+      const executor = new SessionMissionExecutor({ host, workspaceId: 'workspace-1', workspaceRoot: '/tmp' });
+      const assignment = input();
+      if (override) assignment.profile = {
+        ...assignment.profile, model: 'explicit-model', llmConnection: 'explicit-connection', thinkingLevel: 'high',
+      };
+      const binding = await executor.prepare(assignment);
+      await executor.execute(assignment, binding);
+      expect(host.sessions[1]).toMatchObject(override
+        ? { model: 'explicit-model', llmConnection: 'explicit-connection', thinkingLevel: 'high' }
+        : { model: 'parent-model', llmConnection: 'parent-connection', thinkingLevel: 'medium' });
+    }
+  });
+
   it('creates a specialist session with durable mission metadata and parses its submission', async () => {
     const host = new FakeHost();
     host.completionTokenUsage = {

@@ -1,31 +1,17 @@
 # LLM Tool (`call_llm`)
 
-Invoke a secondary LLM for focused subtasks. The tool loads file content automatically from paths you provide.
+Run focused subtasks using the session’s selected connection, model, and reasoning level. The tool loads file content from paths you provide. A model override is allowed only when requested by the user or an explicit task specification; omit it to preserve the session selection.
 
 ## When to Use
 
-| Use Case | Model | Features |
-|----------|-------|----------|
-| Summarize large file | haiku | `attachments` |
-| Classify content | haiku | `outputFormat: "classification"` |
-| Extract structured data | haiku | `outputSchema` |
-| Deep analysis | sonnet/opus | `thinking: true` (API key only) |
-| Parallel processing | any | Multiple calls in one message |
+| Use Case | Features |
+|----------|----------|
+| Summarize large file | `attachments` |
+| Classify content | `outputFormat: "classification"` |
+| Extract structured data | `outputSchema` |
+| Parallel processing | Multiple independent calls |
 
-## Authentication Paths
-
-Features depend on how you authenticate:
-
-| Feature | API Key | OAuth |
-|---------|---------|-------|
-| Text attachments | Yes | Yes |
-| Image attachments | Yes | No |
-| Structured output | Guaranteed (tool_choice) | Prompt-based |
-| Extended thinking | Yes | No |
-| All models | Yes | Yes |
-
-- **API key**: Full features via direct Anthropic SDK
-- **OAuth**: Basic features via agent-native callback
+All requests use the active agent backend. Attachment and structured-output support depend on that backend and the selected model. An unavailable selection reports an error; it does not switch to another model or connection.
 
 ## Parameters
 
@@ -33,12 +19,10 @@ Features depend on how you authenticate:
 |-----------|------|-------------|
 | `prompt` | string | Instructions for the LLM (required) |
 | `attachments` | array | File/image paths to include |
-| `model` | string | Any model from the model registry. Defaults to Haiku (fastest) |
+| `model` | string | Explicit model override; omitted means the session’s selected model |
 | `systemPrompt` | string | Optional system prompt |
 | `maxTokens` | number | Max output tokens (1-64000, default 4096) |
-| `temperature` | number | Sampling temperature 0-1 (ignored if thinking=true) |
-| `thinking` | boolean | Enable extended thinking (API key only) |
-| `thinkingBudget` | number | Token budget for thinking (1024-100000, default 10000) |
+| `temperature` | number | Sampling temperature 0-1, where supported by the selected model |
 | `outputFormat` | enum | Predefined output format |
 | `outputSchema` | object | Custom JSON Schema |
 
@@ -51,7 +35,7 @@ attachments: ["/src/auth.ts"]
 // Large file - use line range (required for files >2000 lines)
 attachments: [{ path: "/logs/app.log", startLine: 1000, endLine: 1500 }]
 
-// Mix of files and images (API key only for images)
+// Mix of files and images (if supported by the active backend)
 attachments: ["/src/component.tsx", "/designs/mockup.png"]
 ```
 
@@ -68,7 +52,7 @@ The tool will tell you the file structure if you try to load a file that's too l
 ### Supported Formats
 
 - **Text files**: Any UTF-8 encoded file (`.ts`, `.js`, `.py`, `.md`, `.json`, etc.)
-- **Images**: `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp` (max 5MB each, API key only)
+- **Images**: `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp` (max 5MB each, if supported by the active backend)
 
 ## Output Formats
 
@@ -89,7 +73,7 @@ Call multiple times in a single message for parallel execution:
 call_llm(prompt: "Summarize", attachments: ["/file1.ts"])
 call_llm(prompt: "Summarize", attachments: ["/file2.ts"])
 call_llm(prompt: "Summarize", attachments: ["/file3.ts"])
-// All run simultaneously - ~3x faster than sequential!
+// Independent calls can run concurrently.
 ```
 
 Use cases for parallel calls:
@@ -100,13 +84,12 @@ Use cases for parallel calls:
 
 ## Examples
 
-### Summarize a File (Cheap)
+### Summarize a File
 
 ```typescript
 call_llm({
   prompt: "Summarize the main functionality",
-  attachments: ["/src/auth/handler.ts"],
-  model: "claude-haiku-4-5-20251001"
+  attachments: ["/src/auth/handler.ts"]
 })
 ```
 
@@ -147,25 +130,21 @@ call_llm({
 // Returns: { category: "billing", confidence: 0.92, reasoning: "..." }
 ```
 
-### Deep Analysis with Thinking (API Key Only)
+### Analyze with the Selected Model
 
 ```typescript
 call_llm({
   prompt: "Analyze this algorithm for edge cases and potential bugs",
-  attachments: ["/src/sorting.ts"],
-  model: "claude-sonnet-4-6",
-  thinking: true,
-  thinkingBudget: 15000
+  attachments: ["/src/sorting.ts"]
 })
 ```
 
-### Analyze Screenshot (API Key Only)
+### Analyze Screenshot (When Supported)
 
 ```typescript
 call_llm({
   prompt: "Describe the UI issues in this screenshot",
-  attachments: ["/screenshots/bug-report.png"],
-  model: "claude-sonnet-4-6"
+  attachments: ["/screenshots/bug-report.png"]
 })
 ```
 
@@ -177,10 +156,6 @@ call_llm({
 | Max text file size | 2000 lines or 500KB |
 | Max image size | 5MB |
 | Max total content | 2MB across all attachments |
-| thinking + structured output | Mutually exclusive |
-| thinking + haiku | Not supported (use Sonnet/Opus) |
-| thinking + OAuth | Not supported (use API key) |
-| images + OAuth | Not supported (use API key) |
 
 ## Error Handling
 
@@ -202,15 +177,10 @@ The tool provides detailed error messages with recovery suggestions. Common erro
 
 | Error | Cause | Solution |
 |-------|-------|----------|
-| thinking + outputFormat | Incompatible modes | Remove one option |
-| thinking + haiku | Haiku doesn't support thinking | Use Sonnet or Opus |
-| thinking + OAuth | OAuth doesn't support thinking | Use API key or remove thinking |
-| images + OAuth | OAuth doesn't support images | Use API key or remove images |
-| thinkingBudget without thinking | Missing thinking=true | Add `thinking: true` |
 | Invalid line range | startLine > endLine | Fix range values |
 | Unknown model | Model not in registry | Check available models in settings |
 
-### API Errors (API Key Path)
+### Provider Errors
 
 | Status | Meaning | Recovery |
 |--------|---------|----------|
@@ -221,7 +191,7 @@ The tool provides detailed error messages with recovery suggestions. Common erro
 
 ## When NOT to Use
 
-- You can reason through it yourself without needing a cheaper model
+- You can reason through it yourself without needing a separate call
 - The task requires your conversation context
 - You need tools (Read, Bash, Glob) - use Task tool with subagents instead
 - Simple one-liner responses that don't need isolation

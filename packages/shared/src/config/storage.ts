@@ -47,7 +47,6 @@ import {
   getModelProvider,
   getModelById,
   getModelDisplayName,
-  normalizeDeprecatedModelId,
   type ModelDefinition,
 } from './models.ts';
 
@@ -1817,44 +1816,6 @@ function backfillAllConnectionModels(config: StoredConfig): boolean {
           connection.models = defaultModels;
           changed = true;
         }
-      } else {
-        const currentIds = normalizeModelIds(connection.models);
-        if (providerDefaultModelIds.length > 0) {
-          const allowedIds = new Set(providerDefaultModelIds);
-          const canonicalCurrentIds = currentIds.map((id) => {
-            if (allowedIds.has(id)) return id;
-            if (!id.startsWith('pi/')) {
-              const prefixed = `pi/${id}`;
-              if (allowedIds.has(prefixed)) return prefixed;
-            }
-            return id;
-          });
-          const filtered = canonicalCurrentIds.filter(id => allowedIds.has(id));
-
-          if (!modelSetEquals(canonicalCurrentIds, currentIds) || filtered.length !== currentIds.length) {
-            debug('[storage] backfill userDefined filtered', {
-              slug: connection.slug,
-              piAuthProvider: connection.piAuthProvider,
-              beforeCount: currentIds.length,
-              canonicalCount: canonicalCurrentIds.length,
-              afterCount: filtered.length,
-              beforeFirst5: currentIds.slice(0, 5),
-              afterFirst5: filtered.slice(0, 5),
-            });
-            connection.models = filtered;
-            changed = true;
-          }
-
-          if (filtered.length === 0) {
-            debug('[storage] backfill userDefined fallback-to-defaults', {
-              slug: connection.slug,
-              piAuthProvider: connection.piAuthProvider,
-              defaultCount: providerDefaultModelIds.length,
-            });
-            connection.models = defaultModels;
-            changed = true;
-          }
-        }
       }
     }
 
@@ -1868,268 +1829,11 @@ function backfillAllConnectionModels(config: StoredConfig): boolean {
       changed = true;
     }
 
-    // Validate that existing defaultModel is in the models list
-    if (connection.defaultModel && connection.models && Array.isArray(connection.models) && connection.models.length > 0) {
-      const modelIds = connection.models.map(m => typeof m === 'string' ? m : m.id);
-      if (!modelIds.includes(connection.defaultModel)) {
-        // Reset to first available model in the list
-        const firstModelId = modelIds[0];
-        if (firstModelId) {
-          connection.defaultModel = firstModelId;
-        }
-        changed = true;
-      }
-    }
+    // Preserve an existing choice even when the refreshed catalog no longer
+    // contains it. Runtime validation asks for a new explicit choice.
+
   }
   return changed;
-}
-
-const OPUS_DEFAULT_ID = 'claude-opus-4-8';
-const OPUS_FALLBACK_ID = 'claude-opus-4-7';
-
-function defaultModelIdsForConnection(connection: LlmConnection): Set<string> {
-  return new Set(
-    getDefaultModelsForConnection(connection.providerType, connection.piAuthProvider)
-      .map(model => typeof model === 'string' ? model : model.id),
-  );
-}
-
-function normalizeConnectionModelId(connection: LlmConnection, modelId: string): string {
-  const normalized = normalizeDeprecatedModelId(modelId);
-
-  // Bedrock connections run through Pi and need native inference-profile IDs.
-  if (connection.providerType === 'pi' && connection.piAuthProvider === 'amazon-bedrock') {
-    const hasPiPrefix = normalized.startsWith('pi/');
-    const bare = hasPiPrefix ? normalized.slice(3) : normalized;
-    const native = toBedrockNativeId(bare);
-    const defaults = defaultModelIdsForConnection(connection);
-    const prefixedCandidate = `pi/${native}`;
-    const candidate = hasPiPrefix || defaults.has(prefixedCandidate) ? prefixedCandidate : native;
-
-    // Pi 0.73.1 does not yet expose Opus 4.8. Keep 4.7 as the selectable fallback
-    // until the upstream catalog adds 4.8; the preferred-default list is already future-proofed.
-    if (bare === OPUS_DEFAULT_ID || native.endsWith(`.${OPUS_DEFAULT_ID}`)) {
-      const fallbackNative = toBedrockNativeId(OPUS_FALLBACK_ID);
-      const prefixedFallback = `pi/${fallbackNative}`;
-      const fallback = defaults.has(prefixedFallback) ? prefixedFallback : fallbackNative;
-      if (!defaults.has(candidate) && defaults.has(fallback)) return fallback;
-    }
-    return candidate;
-  }
-
-  if (connection.providerType === 'pi') {
-    const defaults = defaultModelIdsForConnection(connection);
-    const hasPiPrefix = normalized.startsWith('pi/');
-    const bare = hasPiPrefix ? normalized.slice(3) : normalized;
-    const prefixedCandidate = `pi/${bare}`;
-    const candidate = hasPiPrefix || defaults.has(prefixedCandidate) ? prefixedCandidate : normalized;
-    const prefixedFallback = `pi/${OPUS_FALLBACK_ID}`;
-    const fallback = defaults.has(prefixedFallback) ? prefixedFallback : OPUS_FALLBACK_ID;
-    if ((bare === OPUS_DEFAULT_ID)
-      && !defaults.has(candidate)
-      && defaults.has(fallback)) {
-      return fallback;
-    }
-    if (bare === OPUS_DEFAULT_ID && candidate !== normalized) {
-      return candidate;
-    }
-  }
-
-  return normalized;
-}
-
-function displayNameForMigratedModel(modelId: string): string {
-  const bareModelId = modelId.startsWith('pi/') ? modelId.slice(3) : modelId;
-  return getModelDisplayName(bareModelId);
-}
-
-function withUpdatedModelEntry(
-  connection: LlmConnection,
-  entry: ModelDefinition | string,
-  nextId: string,
-): ModelDefinition | string {
-  if (typeof entry === 'string') {
-    if (connection.providerType === 'anthropic' && nextId === OPUS_DEFAULT_ID) {
-      return { ...getModelById(OPUS_DEFAULT_ID)! };
-    }
-    return nextId;
-  }
-
-  const nextEntry: ModelDefinition = { ...entry, id: nextId };
-  if (connection.providerType === 'anthropic' && nextId === OPUS_DEFAULT_ID) {
-    return { ...getModelById(OPUS_DEFAULT_ID)! };
-  }
-  if (nextEntry.name && /Opus 4\.[56]/.test(nextEntry.name)) {
-    nextEntry.name = displayNameForMigratedModel(nextId);
-  }
-  return nextEntry;
-}
-
-function modelEntryForDefault(connection: LlmConnection, modelId: string): ModelDefinition | string {
-  if (connection.providerType === 'anthropic' && modelId === OPUS_DEFAULT_ID) {
-    return { ...getModelById(OPUS_DEFAULT_ID)! };
-  }
-  return modelId;
-}
-
-/**
- * Migrate deprecated Opus 4.5/4.6 IDs and previous direct-Anthropic Opus 4.7 defaults to the current default Opus model.
- * Custom/compat endpoints are intentionally skipped because provider-specific aliases may differ.
- */
-function migrateLegacyOpusToDefaultOpus(config: StoredConfig): boolean {
-  if (!config.llmConnections) return false;
-
-  let changed = false;
-
-  for (const connection of config.llmConnections) {
-    if (connection.providerType !== 'anthropic' && connection.providerType !== 'pi') continue;
-
-    if (connection.defaultModel) {
-      let normalizedDefault = normalizeConnectionModelId(connection, connection.defaultModel);
-      // The previous direct-Anthropic default was Opus 4.7. Move existing
-      // direct-Anthropic defaults to Opus 4.8 while keeping 4.7 in the model list.
-      // Pi stays on 4.7 until the current Pi catalog exposes 4.8.
-      if (connection.providerType === 'anthropic' && normalizedDefault === OPUS_FALLBACK_ID) {
-        normalizedDefault = OPUS_DEFAULT_ID;
-      }
-      if (normalizedDefault !== connection.defaultModel) {
-        connection.defaultModel = normalizedDefault;
-        changed = true;
-      }
-    }
-
-    if (connection.models && Array.isArray(connection.models)) {
-      const nextModels: Array<ModelDefinition | string> = [];
-      const seen = new Set<string>();
-      let connectionModelsChanged = false;
-
-      for (const entry of connection.models) {
-        const currentId = typeof entry === 'string' ? entry : entry.id;
-        const nextId = normalizeConnectionModelId(connection, currentId);
-
-        if (seen.has(nextId)) {
-          connectionModelsChanged = true;
-          continue;
-        }
-        seen.add(nextId);
-
-        if (nextId !== currentId) {
-          nextModels.push(withUpdatedModelEntry(connection, entry, nextId));
-          connectionModelsChanged = true;
-        } else {
-          nextModels.push(entry);
-        }
-      }
-
-      if (connection.defaultModel && !seen.has(connection.defaultModel)) {
-        nextModels.unshift(modelEntryForDefault(connection, connection.defaultModel));
-        connectionModelsChanged = true;
-      }
-
-      if (connectionModelsChanged) {
-        connection.models = nextModels;
-        changed = true;
-      }
-    }
-  }
-
-  return changed;
-}
-
-/**
- * Migrate Sonnet 4.5 to Sonnet 4.6 for direct Anthropic connections.
- * Updates stored model IDs and names for direct Anthropic connections.
- */
-function migrateSonnet45ToSonnet46(config: StoredConfig): boolean {
-  if (!config.llmConnections) return false;
-
-  const SONNET_45_ID = 'claude-sonnet-4-5-20250929';
-  const SONNET_46_ID = 'claude-sonnet-4-6';
-
-  let changed = false;
-
-  for (const connection of config.llmConnections) {
-    // Only migrate direct Anthropic connections (not compat/third-party)
-    if (connection.providerType !== 'anthropic') continue;
-
-    // Migrate defaultModel
-    if (connection.defaultModel === SONNET_45_ID) {
-      connection.defaultModel = SONNET_46_ID;
-      changed = true;
-    }
-
-    // Migrate models array
-    if (connection.models && Array.isArray(connection.models)) {
-      const hasNew = connection.models.some(m =>
-        (typeof m === 'string' ? m : m.id) === SONNET_46_ID
-      );
-
-      if (hasNew) {
-        // New model already exists — just remove the old entry to avoid duplicates
-        const before = connection.models.length;
-        connection.models = connection.models.filter(m =>
-          (typeof m === 'string' ? m : m.id) !== SONNET_45_ID
-        );
-        if (connection.models.length !== before) changed = true;
-      } else {
-        // New model doesn't exist — rename the old entry in place
-        for (let i = 0; i < connection.models.length; i++) {
-          const model = connection.models[i];
-          if (typeof model === 'string' && model === SONNET_45_ID) {
-            connection.models[i] = SONNET_46_ID;
-            changed = true;
-          } else if (typeof model === 'object' && model.id === SONNET_45_ID) {
-            model.id = SONNET_46_ID;
-            if (model.name?.includes('4.5')) {
-              model.name = model.name.replace('4.5', '4.6');
-            }
-            changed = true;
-          }
-        }
-      }
-    }
-  }
-
-  return changed;
-}
-
-/**
- * Migrate Sonnet 4.5 to Sonnet 4.6 in workspace default models.
- */
-function migrateWorkspaceSonnet45ToSonnet46(config: StoredConfig): void {
-  if (!config.workspaces) return;
-
-  const SONNET_45_ID = 'claude-sonnet-4-5-20250929';
-  const SONNET_46_ID = 'claude-sonnet-4-6';
-
-  for (const workspace of config.workspaces) {
-    const wsConfig = loadWorkspaceConfig(workspace.rootPath);
-    if (!wsConfig?.defaults?.model) continue;
-
-    if (wsConfig.defaults.model === SONNET_45_ID) {
-      wsConfig.defaults.model = SONNET_46_ID;
-      saveWorkspaceConfig(workspace.rootPath, wsConfig);
-    }
-  }
-}
-
-/**
- * Migrate deprecated/previous Opus defaults in workspace default models to the current default Opus model.
- */
-function migrateWorkspaceLegacyOpusToDefaultOpus(config: StoredConfig): void {
-  if (!config.workspaces) return;
-
-  for (const workspace of config.workspaces) {
-    const wsConfig = loadWorkspaceConfig(workspace.rootPath);
-    if (!wsConfig?.defaults?.model) continue;
-
-    const normalized = normalizeDeprecatedModelId(wsConfig.defaults.model);
-    const nextModel = normalized === OPUS_FALLBACK_ID ? OPUS_DEFAULT_ID : normalized;
-    if (nextModel !== wsConfig.defaults.model) {
-      wsConfig.defaults.model = nextModel;
-      saveWorkspaceConfig(workspace.rootPath, wsConfig);
-    }
-  }
 }
 
 /**
@@ -2223,7 +1927,7 @@ function migrateLegacyProviderTypes(config: StoredConfig): boolean {
 /** Normalize a pi/-prefixed model ID for Bedrock: pi/claude-opus-4-8 → pi/us.anthropic.claude-opus-4-8 */
 function normalizePiBedrockId(id: string): string {
   const bare = id.startsWith('pi/') ? id.slice(3) : id;
-  const native = toBedrockNativeId(normalizeDeprecatedModelId(bare));
+  const native = toBedrockNativeId(bare);
   return `pi/${native}`;
 }
 
@@ -2376,10 +2080,6 @@ export function migrateLegacyLlmConnectionsConfig(): void {
       needsSave = true;
     }
 
-    // Phase 1b: Normalize legacy Opus IDs/defaults before Pi model-list filtering.
-    if (migrateLegacyOpusToDefaultOpus(config)) {
-      needsSave = true;
-    }
     // Phase 1c: Backfill models/defaultModel on ALL connections (not just compat)
     // This ensures built-in connections (anthropic, openai) always have models populated
     if (backfillAllConnectionModels(config)) {
@@ -2389,26 +2089,8 @@ export function migrateLegacyLlmConnectionsConfig(): void {
     if (migrateModelDefaultsToConnections(config)) {
       needsSave = true;
     }
-    // Phase 1e: Normalize anything introduced by modelDefaults.
-    if (migrateLegacyOpusToDefaultOpus(config)) {
-      needsSave = true;
-    }
-    // Phase 1f: Migrate legacy/previous Opus workspace defaults → current default Opus
-    migrateWorkspaceLegacyOpusToDefaultOpus(config);
-    // Phase 1g: Migrate Sonnet 4.5 → Sonnet 4.6 for direct Anthropic connections
-    if (migrateSonnet45ToSonnet46(config)) {
-      needsSave = true;
-    }
-    // Phase 1h: Migrate Sonnet 4.5 → Sonnet 4.6 in workspace default models
-    migrateWorkspaceSonnet45ToSonnet46(config);
     // Phase 1j: Migrate legacy provider types (bedrock/vertex/anthropic_compat → pi/pi_compat)
     if (migrateLegacyProviderTypes(config)) {
-      needsSave = true;
-    }
-    // Phase 1k: Normalize legacy Opus IDs introduced by provider-type migration.
-    // Important for old Bedrock connections: they become Pi+Bedrock first, then can
-    // fall back from Opus 4.8 to 4.7 while Pi's catalog lacks 4.8.
-    if (migrateLegacyOpusToDefaultOpus(config)) {
       needsSave = true;
     }
 
@@ -2531,18 +2213,13 @@ export function migrateLegacyLlmConnectionsConfig(): void {
   migrateCodexCopilotToPi(config);
   backfillAllConnectionModels(config);
   migrateModelDefaultsToConnections(config);
-  migrateLegacyOpusToDefaultOpus(config);
-  migrateWorkspaceLegacyOpusToDefaultOpus(config);
 
   saveConfig(config);
 }
 
 /**
- * Fix defaultLlmConnection references that point to non-existent connections.
- * This can happen when a connection is removed or was never created
- * (e.g. "anthropic-api" is set as default but only "claude-max" exists).
- *
- * Fixes both the global defaultLlmConnection and per-workspace defaults.
+ * Initialize a missing global default for configurations without a selection.
+ * Existing global/workspace selections, including missing connections, remain unchanged.
  * Called on app startup alongside other migrations.
  */
 export function migrateOrphanedDefaultConnections(): void {
@@ -2552,29 +2229,13 @@ export function migrateOrphanedDefaultConnections(): void {
 
   let changed = false;
 
-  // Fix global default if it points to a non-existent connection
+  // Only initialize a default when none was selected.
   if (ensureDefaultLlmConnection(config)) {
     changed = true;
   }
 
-  // Fix workspace defaults that point to non-existent connections
-  try {
-    const workspaces = getWorkspaces();
-    for (const ws of workspaces) {
-      const wsConfig = loadWorkspaceConfig(ws.rootPath);
-      if (wsConfig?.defaults?.defaultLlmConnection) {
-        const exists = config.llmConnections.some(
-          c => c.slug === wsConfig.defaults!.defaultLlmConnection
-        );
-        if (!exists) {
-          delete wsConfig.defaults.defaultLlmConnection;
-          saveWorkspaceConfig(ws.rootPath, wsConfig);
-        }
-      }
-    }
-  } catch (error) {
-    console.error('Failed to clean up workspace default connection references:', error);
-  }
+  // Existing global/workspace selections are preserved. An unavailable
+  // selected connection is reported by backend resolution, never replaced.
 
   if (changed) {
     saveConfig(config);
@@ -2591,8 +2252,7 @@ function ensureDefaultLlmConnection(config: StoredConfig): boolean {
     return false;
   }
 
-  const defaultExists = config.llmConnections.some(c => c.slug === config.defaultLlmConnection);
-  if (!config.defaultLlmConnection || !defaultExists) {
+  if (!config.defaultLlmConnection) {
     config.defaultLlmConnection = config.llmConnections[0]!.slug;
     return true;
   }

@@ -243,16 +243,9 @@ export const DEFAULT_MODEL = getModelIdByShortName('Opus');
 // UTILITY MODELS
 // ============================================
 
-/**
- * Get the default summarization model ID (Haiku).
- * Used as fallback when no connection context is available
- * (e.g., url-validator, mcp/validation, summarize.ts without modelOverride).
- *
- * For connection-aware summarization model resolution, use
- * getSummarizationModel(connection) from llm-connections.ts instead.
- */
-export function getDefaultSummarizationModel(): string {
-  return findModelIdByShortName('Haiku') ?? DEFAULT_MODEL;
+/** Fixed model used only to probe an Anthropic credential, without user task content. */
+export function getCredentialValidationModel(): string {
+  return getModelIdByShortName('Haiku');
 }
 
 // ============================================

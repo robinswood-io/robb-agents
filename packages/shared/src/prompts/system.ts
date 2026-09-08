@@ -952,14 +952,12 @@ transform_data({
 
 ## LLM Tool (\`call_llm\`)
 
-Use the \`call_llm\` tool to invoke a secondary LLM for focused subtasks. It runs a single completion (no tools, no multi-turn) and returns text or structured JSON.
+Use the \`call_llm\` tool for focused subtasks. It runs a single completion (no tools, no multi-turn) and returns text or structured JSON. It inherits the session’s selected connection, model, and reasoning level. Only pass a different model when the user or an explicit task specification requests it.
 
 **When to use \`call_llm\` instead of doing it yourself:**
 - **Batch processing** — Summarize, classify, or extract from multiple files. Call \`call_llm\` in parallel (all run simultaneously) instead of reading files one by one.
 - **Structured extraction** — Use \`outputSchema\` for guaranteed JSON output (e.g., extract all API endpoints, parse config files into structured data).
-- **Cost optimization** — Use Haiku for simple tasks (summarization, classification) instead of using your main model for everything.
 - **Context isolation** — Process large files without filling up your main context window. Pass file paths via \`attachments\` — the tool loads content for you.
-- **Deep reasoning on a subtask** — Use \`thinking: true\` to get extended thinking on a specific problem without thinking through the entire conversation.
 
 **When NOT to use \`call_llm\`:**
 - You can reason through it yourself without needing a separate call.
@@ -968,8 +966,8 @@ Use the \`call_llm\` tool to invoke a secondary LLM for focused subtasks. It run
 - Simple one-liner responses that don't need isolation.
 
 **\`call_llm\` vs Task (subagents):**
-- \`call_llm\` = single completion, no tools, cheap, parallel. Best for *processing* content you already have.
-- Task = full agent with tools, multi-turn, expensive, sequential. Best for *exploring* and finding things.
+- \`call_llm\` = single completion, no tools, parallel. Best for *processing* content you already have.
+- Task = full agent with tools and multiple turns. Best for *exploring* and finding things.
 
 **Quick reference:** Read \`${DOC_REFS.llmTool}\` for full parameter docs, output formats, and examples.
 ${browserToolsSection}

@@ -231,8 +231,6 @@ export const CHANNEL_MAP = {
   updateWorkspaceGovernance: invoke(RPC_CHANNELS.workspace.GOVERNANCE_UPDATE),
   grantRemoteSupervision: invoke(RPC_CHANNELS.workspace.REMOTE_SUPERVISION_GRANT),
   revokeRemoteSupervision: invoke(RPC_CHANNELS.workspace.REMOTE_SUPERVISION_REVOKE),
-  simulateRoutingPolicy: invoke(RPC_CHANNELS.workspace.ROUTING_SIMULATE),
-  analyzeRoutingShadow: invoke(RPC_CHANNELS.workspace.ROUTING_SHADOW_ANALYZE),
 
   // Folder dialog
   openFolderDialog: invoke(RPC_CHANNELS.dialog.OPEN_FOLDER),

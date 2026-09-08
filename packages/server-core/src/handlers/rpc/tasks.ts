@@ -36,7 +36,8 @@ import type {
 } from '@craft-agent/shared/protocol'
 import {
   getDefaultLlmConnection,
-  getLlmConnections,
+  getLlmConnection,
+  getDefaultThinkingLevel,
   getWorkspaceByNameOrId,
   resolveConfigDir,
 } from '@craft-agent/shared/config'
@@ -86,7 +87,6 @@ import {
   TaskRunner,
   DEFAULT_AUTONOMOUS_RETRY_POLICY,
   loadWorkspaceExecutionProofIssuer,
-  resolveTaskNodeExecutionRoute,
   type TaskExecutionGuardContext,
 } from '../../tasks'
 
@@ -275,15 +275,23 @@ export function registerTasksHandlers(
           }
         },
         defaultRetry: DEFAULT_AUTONOMOUS_RETRY_POLICY,
-        resolveNodeRoute: (context) => {
+        getModelDefaults: (parentSessionId, selectedConnectionSlug) => {
           const workspaceConfig = loadWorkspaceConfig(ws.rootPath)
-          return resolveTaskNodeExecutionRoute({
-            ...context,
-            connections: getLlmConnections(),
-            routingPolicy: workspaceConfig?.routingPolicy,
-            defaultConnectionSlug:
-              workspaceConfig?.defaults?.defaultLlmConnection ?? getDefaultLlmConnection() ?? undefined,
-          })
+          const parent = parentSessionId
+            ? deps.sessionManager.getSessions(ws.id).find((session) => session.id === parentSessionId)
+            : undefined
+          const workspaceConnection = workspaceConfig?.defaults?.defaultLlmConnection
+            ?? getDefaultLlmConnection() ?? undefined
+          const inheritedConnection = parent?.llmConnection ?? workspaceConnection
+          const llmConnection = selectedConnectionSlug ?? inheritedConnection
+          const connection = llmConnection ? getLlmConnection(llmConnection) : undefined
+          return {
+            llmConnection,
+            model: (llmConnection === inheritedConnection ? parent?.model : undefined)
+              ?? (llmConnection === workspaceConnection ? workspaceConfig?.defaults?.model : undefined)
+              ?? connection?.defaultModel,
+            thinkingLevel: parent?.thinkingLevel ?? workspaceConfig?.defaults?.thinkingLevel ?? getDefaultThinkingLevel(),
+          }
         },
         verifyExecutionProof: (proof, binding) => proofIssuer.verifyForTask(proof, binding),
       })

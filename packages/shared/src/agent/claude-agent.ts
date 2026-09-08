@@ -23,7 +23,7 @@ import {
 import type { McpClientPool } from '../mcp/mcp-pool.ts';
 import { loadPlanFromPath, type SessionConfig as Session } from '../sessions/storage.ts';
 import { loadProjectById, getProjectAssetsPath, listProjectAssets, getProjectMemoryPath, loadProjectMemory } from '../projects/storage.ts';
-import { DEFAULT_MODEL, isClaudeModel, isAdaptiveThinkingAlwaysOnModel, getDefaultSummarizationModel, getModelContextWindow } from '../config/models.ts';
+import { DEFAULT_MODEL, isClaudeModel, isAdaptiveThinkingAlwaysOnModel, getModelContextWindow } from '../config/models.ts';
 import { getCredentialManager } from '../credentials/index.ts';
 import { loadPreferences, formatPreferencesForPrompt, getCoAuthorPreference } from '../config/preferences.ts';
 import type { FileAttachment } from '../utils/files.ts';
@@ -208,7 +208,7 @@ export interface ClaudeAgentConfig {
    * Returns last N user/assistant message pairs for context injection.
    */
   getRecoveryMessages?: () => RecoveryMessage[];
-  /** All parent messages for branch fork fallback (summarized via mini on fork failure). */
+  /** All parent messages for branch fork fallback (summarized with the selected session model). */
   getBranchFallbackMessages?: () => RecoveryMessage[];
   /** Branch seed messages for seeded-fresh-session context strategy. */
   getBranchSeedMessages?: () => RecoveryMessage[];
@@ -235,7 +235,7 @@ export interface ClaudeAgentConfig {
    * must not be clobbered by concurrent sessions.
    */
   envOverrides?: Record<string, string>;
-  /** Mini/utility model for summarization, title generation, and mini completions. */
+  /** Utility model for title/icon metadata generation only. */
   miniModel?: string;
   /** Centralized MCP client pool for source tool execution. */
   mcpPool?: McpClientPool;
@@ -901,13 +901,8 @@ export class ClaudeAgent extends BaseAgent {
       process.env[key] = value;
     }
 
-    // Pass mini model to SDK subprocess so built-in tools like WebFetch
-    // use the correct summarization model (instead of hardcoded Haiku).
-    // This is critical for custom providers where the default Haiku model ID
-    // doesn't exist on the provider's endpoint.
-    if (this.config.miniModel) {
-      process.env.ANTHROPIC_DEFAULT_HAIKU_MODEL = this.config.miniModel;
-    }
+    // Built-in content summaries inherit the selected task model.
+    process.env.ANTHROPIC_DEFAULT_HAIKU_MODEL = this.getModel();
 
     return { authInjected: true };
   }
@@ -1177,7 +1172,7 @@ export class ClaudeAgent extends BaseAgent {
       const resolvedCwd = this.resolveSpawnCwd({ isRetry: _isRetry, sessionId });
 
       const options: Options = {
-        ...getDefaultOptions(this.config.envOverrides),
+        ...getDefaultOptions({ ...this.config.envOverrides, ANTHROPIC_DEFAULT_HAIKU_MODEL: this.getModel() }),
         model: effectiveModel,
         // Capture stderr from SDK subprocess for error diagnostics
         // This helps identify why sessions fail with "process exited with code 1"
@@ -3048,7 +3043,7 @@ This is a branched conversation. All prior messages in this conversation are par
     const model = this.config.miniModel;
 
     const options = {
-      ...getDefaultOptions(this.config.envOverrides),
+      ...getDefaultOptions({ ...this.config.envOverrides, ANTHROPIC_DEFAULT_HAIKU_MODEL: this.getModel() }),
       model,
       maxTurns: 1,
       systemPrompt: 'Reply with ONLY the requested text. No explanation.', // Minimal - no Claude Code preset
@@ -3154,7 +3149,7 @@ This is a branched conversation. All prior messages in this conversation are par
   }
 
   /**
-   * Generate a mini-summarized fallback context from parent conversation messages.
+   * Generate fallback context from parent messages using the selected model.
    * Called when SDK-level branch fork fails and we need to inject parent context
    * into the retry without overflowing the context window with raw messages.
    */
@@ -3163,7 +3158,7 @@ This is a branched conversation. All prior messages in this conversation are par
     if (!messages || messages.length === 0) return null;
 
     try {
-      return await generateConversationSummary(messages, this.runMiniCompletion.bind(this));
+      return await generateConversationSummary(messages, async (prompt) => (await this.queryLlm({ prompt })).text);
     } catch (error) {
       debug(`[ClaudeAgent] Branch fallback mini summary failed: ${error}`);
       return null;
@@ -3175,11 +3170,17 @@ This is a branched conversation. All prior messages in this conversation are par
   // ============================================================
 
   async queryLlm(request: LLMQueryRequest): Promise<LLMQueryResult> {
-    const model = request.model ?? this.config.miniModel ?? getDefaultSummarizationModel();
+    const model = request.model ?? this.getModel();
 
     const options = {
-      ...getDefaultOptions(this.config.envOverrides),
+      ...getDefaultOptions({ ...this.config.envOverrides, ANTHROPIC_DEFAULT_HAIKU_MODEL: this.getModel() }),
       model,
+      ...resolveClaudeThinkingOptions({
+        thinkingLevel: this._thinkingLevel,
+        model,
+        providerType: this.config.providerType,
+        minimizeThinking: false,
+      }),
       // Reasoning-model outputs (Opus extended thinking) can span multiple SDK-counted
       // turns even with no tools exposed. Tool surface here is empty, so no tool-use loop risk.
       maxTurns: 10,

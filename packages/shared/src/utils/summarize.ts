@@ -11,7 +11,7 @@ import { debug } from './debug.ts';
 
 /**
  * Reset the cached summarization client.
- * @deprecated No-op. Summarization now goes through agent.runMiniCompletion().
+ * @deprecated No-op. Summarization now goes through agent.getSummarizeCallback().
  */
 export function resetSummarizationClient(): void {
   debug('[summarize] resetSummarizationClient called (no-op)');

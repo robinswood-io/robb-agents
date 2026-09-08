@@ -4,9 +4,7 @@ on:
   pull_request:
     paths:
       - "evals/**"
-      - "packages/shared/src/config/routing-policy.ts"
       - "packages/shared/src/evals/**"
-      - "packages/server-core/src/sessions/routing-fallback.ts"
       - "packages/shared/src/sources/**"
       - ".github/workflows/robinswood-evals.yml"
   workflow_dispatch:

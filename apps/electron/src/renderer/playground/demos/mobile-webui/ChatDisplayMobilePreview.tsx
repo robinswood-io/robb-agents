@@ -2,6 +2,7 @@ import * as React from 'react'
 import { ChatDisplay } from '@/components/app-shell/ChatDisplay'
 import type { Message } from '@craft-agent/core/types'
 import type { PermissionMode } from '../../../../shared/types'
+import type { ThinkingLevel } from '@craft-agent/shared/agent/thinking-levels'
 import { MobileWebUIFrame, type MobileDevice } from './MobileWebUIFrame'
 import { MobilePlaygroundProviders } from './MobilePlaygroundProviders'
 import {
@@ -79,6 +80,8 @@ export function ChatDisplayMobilePreview({
   permissionMode = 'ask',
 }: ChatDisplayMobilePreviewProps) {
   const [model, setModel] = React.useState('haiku')
+  const [connection, setConnection] = React.useState('anthropic-builtin')
+  const [thinkingLevel, setThinkingLevel] = React.useState<ThinkingLevel>('medium')
   const [mode, setMode] = React.useState<PermissionMode>(permissionMode)
   const [input, setInput] = React.useState('')
 
@@ -91,11 +94,14 @@ export function ChatDisplayMobilePreview({
 
   const session = React.useMemo(
     () =>
-      buildMockSession(DEMO_SESSION_ID, {
-        messages,
-        isProcessing: streaming,
+      ({
+        ...buildMockSession(DEMO_SESSION_ID, {
+          messages,
+          isProcessing: streaming,
+        }),
+        llmConnection: connection,
       }),
-    [messages, streaming],
+    [messages, streaming, connection],
   )
 
   return (
@@ -108,7 +114,13 @@ export function ChatDisplayMobilePreview({
             onOpenFile={log('onOpenFile')}
             onOpenUrl={log('onOpenUrl')}
             currentModel={model}
-            onModelChange={setModel}
+            onModelChange={(nextModel, nextConnection) => {
+              setModel(nextModel)
+              if (nextConnection) setConnection(nextConnection)
+            }}
+            onConnectionChange={setConnection}
+            thinkingLevel={thinkingLevel}
+            onThinkingLevelChange={setThinkingLevel}
             permissionMode={mode}
             onPermissionModeChange={setMode}
             inputValue={input}

@@ -81,7 +81,7 @@ function isTokenGetter(
   return typeof cred === 'function';
 }
 
-/** Summarize callback type — typically agent.runMiniCompletion.bind(agent) */
+/** Summarize callback type — typically agent.getSummarizeCallback() */
 export type SummarizeCallback = (prompt: string) => Promise<string | null>;
 
 

@@ -22,6 +22,7 @@ import type { McpClientPool } from '../../mcp/mcp-pool.ts';
 import type { Workspace } from '../../config/storage.ts';
 import type { SessionConfig as Session } from '../../sessions/storage.ts';
 import type { SourceManager } from '../core/source-manager.ts';
+import type { LLMQueryRequest, LLMQueryResult } from '../llm-tool.ts';
 
 // Import AbortReason and RecoveryMessage from core module (single source of truth)
 import { AbortReason, type RecoveryMessage } from '../core/index.ts';
@@ -178,7 +179,7 @@ export interface CoreBackendConfig {
   /** Initial model ID */
   model?: string;
 
-  /** Mini/utility model for summarization/title generation/mini-completions */
+  /** Utility model for title/icon metadata generation only */
   miniModel?: string;
 
   /** Initial thinking level */
@@ -416,9 +417,12 @@ export interface AgentBackend {
 
   /**
    * Run a simple text completion using the backend's auth infrastructure.
-   * Used for connection testing, title generation, and summarization.
+   * Used for connection testing and title/icon metadata only.
    */
   runMiniCompletion(prompt: string): Promise<string | null>;
+
+  /** Query task content using the selected session model unless explicitly overridden. */
+  queryLlm(request: LLMQueryRequest): Promise<LLMQueryResult>;
 
   /**
    * Compact the provider-side conversation before a costly turn. Backends that

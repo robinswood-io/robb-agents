@@ -2,7 +2,6 @@ import { createHash } from 'node:crypto';
 import type { Message } from '@craft-agent/core/types';
 import type { ActiveSessionObjective } from '@craft-agent/shared/sessions';
 import { isContextDependentDirectTurn } from '@craft-agent/shared/config/agent-cost-control';
-import { classifyLocalRoutingRequirements } from '@craft-agent/shared/config/routing-policy';
 
 const HIGH_STAKES_DOMAIN_PATTERN = /\b(?:legal|law|juridique|droit|nda|non[- ]disclosure|contrat|compliance|conformit[ée]|medical|m[ée]dical|sant[ée]|financial|finance|accounting|comptab|fiscal|tax|security|s[ée]curit[ée]|credential|secret|permission|rbac)\b/i;
 const MULTI_STEP_PATTERN = /\b(?:puis|ensuite|et\s+(?:v[ée]rifie|teste|corrige|impl[ée]mente|d[ée]ploie)|tous\s+les\s+points|l['’]ensemble\s+de\s+ces\s+points|de\s+bout\s+en\s+bout|end[- ]to[- ]end|multi[- ]?[ée]tapes?)\b/i;
@@ -28,10 +27,9 @@ export function transitionObjectiveContract(input: ObjectiveTransitionInput): Ac
     };
   }
 
-  const difficulty = classifyLocalRoutingRequirements({ text: input.text }).difficulty ?? 'standard';
   const highStakes = HIGH_STAKES_DOMAIN_PATTERN.test(input.text);
   const requiresExecutionEvidence = EXECUTION_REQUEST_PATTERN.test(input.text);
-  const mission = highStakes || difficulty === 'complex' || MULTI_STEP_PATTERN.test(input.text);
+  const mission = highStakes || MULTI_STEP_PATTERN.test(input.text);
   const completionCriteria: ActiveSessionObjective['completionCriteria'] = [
     'requested-outcome-delivered',
     'relevant-checks-passed',

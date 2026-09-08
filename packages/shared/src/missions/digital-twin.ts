@@ -98,10 +98,10 @@ export function simulateMissionDigitalTwin(input: MissionDigitalTwinInput): Miss
       profileId,
       status: !route ? 'unknown' : route.policyAllowed && !!route.connectionSlug ? 'pass' : 'fail',
       detail: !route
-        ? 'No host routing simulation was supplied'
+        ? 'No host connection check was supplied'
         : route.policyAllowed && route.connectionSlug
-          ? `Hard policy allows ${route.connectionSlug}`
-          : route.explanation ?? 'No policy-authorized route is available',
+          ? `Selected connection ${route.connectionSlug} is configured`
+          : route.explanation ?? 'The selected connection is unavailable',
     });
   }
 

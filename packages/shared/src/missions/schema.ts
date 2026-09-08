@@ -1,3 +1,4 @@
+import { THINKING_LEVEL_IDS } from '../agent/thinking-levels.ts';
 import { z } from 'zod';
 import type { PermissionMode } from '../agent/mode-types.ts';
 import { TaskExecutionSchema, type TaskExecution } from '../tasks/schema.ts';
@@ -46,7 +47,6 @@ export const WORK_ITEM_STATUSES = [
 ] as const;
 
 export const AGENT_PROFILE_ROLES = ['planner', 'worker', 'reviewer', 'supervisor'] as const;
-export const AGENT_MODEL_TIERS = ['fast', 'balanced', 'best'] as const;
 export const EVIDENCE_KINDS = ['test', 'artifact', 'state', 'receipt', 'source', 'diff', 'other'] as const;
 export const WORK_ITEM_EFFECTS = ['read', 'workspace-write', 'external-mutation'] as const;
 
@@ -189,9 +189,9 @@ export const AgentProfileSchema = z.object({
   tools: z.array(z.string().min(1)).default([]),
   sources: z.array(z.string().min(1)).default([]),
   permissionMode: z.enum(['safe', 'ask', 'allow-all'] as const satisfies readonly PermissionMode[]).default('safe'),
-  modelTier: z.enum(AGENT_MODEL_TIERS).default('balanced'),
   model: z.string().min(1).optional(),
   llmConnection: z.string().min(1).optional(),
+  thinkingLevel: z.enum(THINKING_LEVEL_IDS).optional(),
 });
 
 export const MissionWorkItemSchema = z.object({

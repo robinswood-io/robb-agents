@@ -601,9 +601,7 @@ export class PiAgent extends BaseAgent {
     if (modelDef?.contextWindow) {
       this.adapter.setContextWindow(modelDef.contextWindow);
     }
-    if (config.miniModel) {
-      this.adapter.setMiniModel(config.miniModel);
-    }
+    this.adapter.setCallLlmModel(this.getModel());
 
     // Set session dir on adapter for concurrent-safe toolMetadataStore lookups
     if (config.session?.id && config.workspace.rootPath) {
@@ -913,14 +911,6 @@ export class PiAgent extends BaseAgent {
     // inconsistently depending on backend.
     if (!getBrowserToolEnabled()) {
       sessionToolDefs = sessionToolDefs.filter(d => d.name !== 'mcp__session__browser_tool');
-    }
-
-    // Patch call_llm description with provider-specific model hint
-    if (this.config.miniModel) {
-      const callLlmDef = sessionToolDefs.find(d => d.name === 'mcp__session__call_llm');
-      if (callLlmDef) {
-        callLlmDef.description += `\n\nDefault fast model for this session: ${this.config.miniModel}. Omit the model parameter to use it automatically.`;
-      }
     }
 
     this.send({
@@ -2715,6 +2705,7 @@ export class PiAgent extends BaseAgent {
       },
     };
     this._model = update.model;
+    this.adapter.setCallLlmModel(update.model);
 
     if (!this.subprocess) {
       this.debug(`Runtime config updated locally (no subprocess): ${previousModel} → ${update.model}`);
@@ -2734,6 +2725,7 @@ export class PiAgent extends BaseAgent {
   override setModel(model: string): void {
     const previousModel = this.getModel();
     super.setModel(model);
+    this.adapter.setCallLlmModel(model);
     // Forward to subprocess so it uses the new model on next turn
     if (this.subprocess) {
       this.debug(`Forwarding model change to subprocess: ${previousModel} → ${model}`);
@@ -3074,7 +3066,7 @@ export class PiAgent extends BaseAgent {
       this.pendingLlmQueries.set(id, { resolve, reject });
     });
 
-    this.send({ type: 'llm_query', id, request });
+    this.send({ type: 'llm_query', id, request: { ...request, model: request.model ?? this.getModel() } });
 
     // Keep this aligned with the subprocess-side queryLlm timeout.
     const timeout = new Promise<LLMQueryResult>((_, reject) => {

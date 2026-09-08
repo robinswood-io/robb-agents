@@ -342,14 +342,24 @@ describe('phase4 backend abstraction APIs', () => {
 });
 
 describe('resolveModelForProvider', () => {
-  it('falls back to the Pi connection default when a normalized stale model is not in the connection list', () => {
+  it('rejects a model from another provider instead of selecting a fallback', () => {
+    expect(() => resolveModelForProvider('pi', 'claude-sonnet-4-6', null)).toThrow('incompatible');
+  });
+
+  it('rejects an unavailable configured default instead of choosing the first model', () => {
+    const connection = { defaultModel: 'pi/missing', models: ['pi/available'] } as LlmConnection;
+    expect(() => resolveModelForProvider('pi', undefined, connection)).toThrow('unavailable');
+  });
+
+  it('rejects a stale explicit model instead of substituting a newer catalog default', () => {
     const connection = {
       providerType: 'pi',
       defaultModel: 'pi/claude-opus-4-7',
       models: ['pi/claude-opus-4-7', 'pi/claude-sonnet-4-6'],
     } as unknown as LlmConnection;
 
-    expect(resolveModelForProvider('pi', 'pi/claude-opus-4-6', connection)).toBe('pi/claude-opus-4-7');
+    expect(() => resolveModelForProvider('pi', 'pi/claude-opus-4-6', connection)).toThrow('unavailable');
+    expect(resolveModelForProvider('pi', undefined, connection)).toBe('pi/claude-opus-4-7');
   });
 });
 

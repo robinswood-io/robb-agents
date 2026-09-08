@@ -46,12 +46,11 @@ export function registerSourcesHandlers(server: RpcServer, deps: HandlerDeps): v
       mcp: config.mcp,
       api: config.api,
       local: config.local,
-      routingSensitivity: config.routingSensitivity,
     })
   })
 
   // Update an existing source config
-  server.handle(RPC_CHANNELS.sources.UPDATE_CONFIG, async (_ctx, workspaceId: string, sourceSlug: string, updates: Omit<Partial<import('@craft-agent/shared/sources').FolderSourceConfig>, 'routingSensitivity'> & { routingSensitivity?: import('@craft-agent/shared/sources').FolderSourceConfig['routingSensitivity'] | null }) => {
+  server.handle(RPC_CHANNELS.sources.UPDATE_CONFIG, async (_ctx, workspaceId: string, sourceSlug: string, updates: Partial<import('@craft-agent/shared/sources').FolderSourceConfig>) => {
     const workspace = getWorkspaceByNameOrId(workspaceId)
     if (!workspace) throw new Error(`Workspace not found: ${workspaceId}`)
     const { loadSourceConfig, saveSourceConfig } = await import('@craft-agent/shared/sources')
@@ -61,7 +60,6 @@ export function registerSourcesHandlers(server: RpcServer, deps: HandlerDeps): v
     const next = {
       ...existing,
       ...updates,
-      routingSensitivity: updates.routingSensitivity === null ? undefined : updates.routingSensitivity ?? existing.routingSensitivity,
       id: existing.id,
       slug: existing.slug,
       type: existing.type,

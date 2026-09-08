@@ -78,7 +78,6 @@ import { CHAT_LAYOUT } from "@/config/layout"
 import { collectFileChangesFromActivities, getFirstFileChangeIdForActivity } from "@/lib/file-changes"
 import { resolveBranchNewPanelOption } from "./branching"
 import { handleErrorMessageAction } from "./error-message-actions"
-import { RoutingAuditPanel } from "./RoutingAuditPanel"
 import { AutonomyPanel } from "./AutonomyPanel"
 
 // ============================================================================
@@ -1610,7 +1609,7 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
                     skip={skipScrollToBottom}
                     onScroll={handleInitialTranscriptScroll}
                   />
-                  {!compactMode && <><AutonomyPanel session={session} /><RoutingAuditPanel session={session} /></>}
+                  {!compactMode && <AutonomyPanel session={session} />}
                   {/* Empty state for compact mode - inviting conversational prompt, centered in full popover */}
                   {compactMode && turns.length === 0 && (
                     <div className="absolute inset-0 flex flex-col items-center justify-center select-none gap-1 pointer-events-none">
@@ -2255,102 +2254,6 @@ function ErrorMessage({ message, onOpenUrl, sessionId, onRetry }: { message: Mes
   )
 }
 
-function RoutingMetaBadge({ message }: { message: Message }) {
-  const meta = message.routingMeta
-  if (!meta || message.isStreaming) return null
-
-  const provider = meta.providerType ?? meta.connectionSlug
-  const model = meta.model
-  if (!provider && !model) return null
-
-  const label = [provider, model].filter(Boolean).join(' · ')
-  const reason = meta.reason ?? 'session-connection'
-  const policyRuleIds = meta.policyRuleIds?.filter(Boolean) ?? []
-  const estimatedCostEur = typeof meta.estimatedCostEur === 'number' ? meta.estimatedCostEur : undefined
-  const estimatedCostUsd = typeof meta.estimatedCostUsd === 'number' ? meta.estimatedCostUsd : undefined
-  const actualCostEur = typeof meta.actualCostEur === 'number' ? meta.actualCostEur : undefined
-  const actualCostUsd = typeof meta.actualCostUsd === 'number' ? meta.actualCostUsd : undefined
-  const hasCost = estimatedCostEur !== undefined || estimatedCostUsd !== undefined || actualCostEur !== undefined || actualCostUsd !== undefined
-  const actualCostLabel = actualCostEur !== undefined
-    ? `${actualCostEur.toFixed(6)} € réel`
-    : actualCostUsd !== undefined
-      ? `$${actualCostUsd.toFixed(6)} réel`
-      : undefined
-  const estimatedCostLabel = estimatedCostEur !== undefined
-    ? `${estimatedCostEur.toFixed(6)} € estimé`
-    : estimatedCostUsd !== undefined
-      ? `$${estimatedCostUsd.toFixed(6)} estimé`
-      : undefined
-
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <div className="mt-2 inline-flex max-w-full cursor-help select-none items-center gap-1 truncate rounded-sm text-[10px] text-foreground/35 hover:text-foreground/55">
-          <span className="truncate">{label}</span>
-          {reason === 'router' && <span className="shrink-0 text-foreground/30">policy</span>}
-          {meta.fallbackFromConnectionSlug && <span className="shrink-0 text-foreground/30">fallback</span>}
-        </div>
-      </TooltipTrigger>
-      <TooltipContent side="bottom" sideOffset={4} className="max-w-sm text-left">
-        <div className="space-y-1 text-xs">
-          <div className="font-medium text-foreground">Routage IA</div>
-          {meta.connectionSlug && <div><span className="text-muted-foreground">Connexion:</span> {meta.connectionSlug}</div>}
-          {meta.providerType && <div><span className="text-muted-foreground">Provider:</span> {meta.providerType}</div>}
-          {meta.model && <div className="break-all"><span className="text-muted-foreground">Modèle:</span> {meta.model}</div>}
-          <div><span className="text-muted-foreground">Raison:</span> {reason}</div>
-          {meta.sensitivity && <div><span className="text-muted-foreground">Sensibilité:</span> {meta.sensitivity}</div>}
-          {meta.routingDifficulty && <div><span className="text-muted-foreground">Difficulté:</span> {meta.routingDifficulty}</div>}
-          {(meta.requiredCapabilities?.length ?? 0) > 0 && (
-            <div><span className="text-muted-foreground">Capacités:</span> {meta.requiredCapabilities?.join(', ')}</div>
-          )}
-          {meta.routingExplanation && (
-            <div className="break-words"><span className="text-muted-foreground">Pourquoi:</span> {meta.routingExplanation}</div>
-          )}
-          {meta.fallbackFromConnectionSlug && <div><span className="text-muted-foreground">Fallback depuis:</span> {meta.fallbackFromConnectionSlug}</div>}
-          {meta.fallbackReason && <div><span className="text-muted-foreground">Raison fallback:</span> {meta.fallbackReason}</div>}
-          {meta.budgetDecision && (
-            <div>
-              <span className="text-muted-foreground">Budget:</span>{' '}
-              {meta.budgetDecision.status}
-              {meta.budgetDecision.exceededScopes.length > 0
-                ? ` (${meta.budgetDecision.exceededScopes.join(', ')})`
-                : ''}
-            </div>
-          )}
-          {(meta.rejectedConnections?.length ?? 0) > 0 && (
-            <div className="space-y-0.5 break-words">
-              <span className="text-muted-foreground">Alternatives rejetées:</span>
-              {meta.rejectedConnections?.map(candidate => (
-                <div key={candidate.slug} className="pl-2">
-                  {candidate.slug}: {candidate.reasons.join(', ')}
-                </div>
-              ))}
-            </div>
-          )}
-          {hasCost && (
-            <div>
-              <span className="text-muted-foreground">Coût:</span>{' '}
-              {actualCostLabel ?? estimatedCostLabel}
-            </div>
-          )}
-          {meta.costProvenance?.source && meta.costProvenance.source !== 'unavailable' && <div><span className="text-muted-foreground">Source coût:</span> {meta.costProvenance.source}</div>}
-          {meta.costProvenance?.exchangeRateAsOf && (
-            <div>
-              <span className="text-muted-foreground">Conversion:</span>{' '}
-              {meta.costProvenance.exchangeRateSource} · {meta.costProvenance.exchangeRateAsOf}
-            </div>
-          )}
-          {policyRuleIds.length > 0 && (
-            <div className="break-words">
-              <span className="text-muted-foreground">Règles:</span> {policyRuleIds.join(', ')}
-            </div>
-          )}
-        </div>
-      </TooltipContent>
-    </Tooltip>
-  )
-}
-
 function MessageBubble({
   message,
   onOpenFile,
@@ -2418,7 +2321,6 @@ function MessageBubble({
               </Markdown>
             </CollapsibleMarkdownProvider>
           )}
-          <RoutingMetaBadge message={message} />
         </div>
       </div>
     )

@@ -278,11 +278,11 @@ export function buildRuntimeRecoveryHandoff(input: RuntimeHandoffInput): string 
 
 export async function generateConversationSummary(
   messages: RecoveryMessage[],
-  runMiniCompletion: (prompt: string) => Promise<string | null>,
+  summarize: (prompt: string) => Promise<string | null>,
 ): Promise<string | null> {
   const prompt = buildConversationSummaryPrompt(messages);
   if (!prompt) return null;
-  return runMiniCompletion(prompt);
+  return summarize(prompt);
 }
 
 export function buildTransferredSessionContext(summary: string): string {

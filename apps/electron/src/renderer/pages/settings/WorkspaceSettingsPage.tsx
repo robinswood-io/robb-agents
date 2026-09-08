@@ -15,7 +15,6 @@ import * as React from 'react'
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { motion, AnimatePresence } from 'motion/react'
-import { AlertTriangle, CheckCircle2 } from 'lucide-react'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { HeaderMenu } from '@/components/ui/HeaderMenu'
@@ -31,14 +30,8 @@ import { PERMISSION_MODE_CONFIG } from '@craft-agent/shared/agent/mode-types'
 import type { DetailsPageMeta } from '@/lib/navigation-registry'
 import { SourceAvatar } from '@/components/ui/source-avatar'
 import { toast } from 'sonner'
-import { parseRoutingPolicyText } from './routing-policy-editor'
-import type {
-  AgentCostControlPolicy,
-  RoutingPolicySimulation,
-  RoutingSensitivity,
-  RoutingShadowReport,
-} from '@craft-agent/shared/config'
-import { DEFAULT_AGENT_COST_CONTROL_POLICY } from '@craft-agent/shared/config/agent-cost-control'
+import type { AgentCostControlPolicy } from '@craft-agent/shared/config'
+import { DEFAULT_AGENT_COST_CONTROL_POLICY, resolveAgentCostControlPolicy } from '@craft-agent/shared/config/agent-cost-control'
 
 import {
   SettingsSection,
@@ -64,10 +57,6 @@ export default function WorkspaceSettingsPage() {
   const appShellContext = useAppShellContext()
   const activeWorkspaceId = appShellContext.activeWorkspaceId
   const onRefreshWorkspaces = appShellContext.onRefreshWorkspaces
-  const activeWorkspaceRef = React.useRef(activeWorkspaceId)
-  const routingShadowSequence = React.useRef(0)
-  activeWorkspaceRef.current = activeWorkspaceId
-
   // Workspace settings state
   const [wsName, setWsName] = useState('')
   const [wsNameEditing, setWsNameEditing] = useState('')
@@ -79,20 +68,9 @@ export default function WorkspaceSettingsPage() {
   const [workingDirectory, setWorkingDirectory] = useState('')
   const [localMcpEnabled, setLocalMcpEnabled] = useState(true)
   const [isLoadingWorkspace, setIsLoadingWorkspace] = useState(true)
-  const [routingPolicyText, setRoutingPolicyText] = useState('')
-  const [routingPolicyErrors, setRoutingPolicyErrors] = useState<string[]>([])
-  const [routingPolicyWarnings, setRoutingPolicyWarnings] = useState<string[]>([])
-  const [isSavingRoutingPolicy, setIsSavingRoutingPolicy] = useState(false)
   const [costControlText, setCostControlText] = useState('')
   const [costControlError, setCostControlError] = useState<string | null>(null)
   const [isSavingCostControl, setIsSavingCostControl] = useState(false)
-  const [llmConnectionSlugs, setLlmConnectionSlugs] = useState<string[]>([])
-  const [simulationSensitivity, setSimulationSensitivity] = useState<RoutingSensitivity>('internal')
-  const [routingSimulation, setRoutingSimulation] = useState<RoutingPolicySimulation | null>(null)
-  const [isSimulatingRouting, setIsSimulatingRouting] = useState(false)
-  const [routingShadowReport, setRoutingShadowReport] = useState<RoutingShadowReport | null>(null)
-  const [isAnalyzingRoutingShadow, setIsAnalyzingRoutingShadow] = useState(false)
-
   // Default sources state
   const [availableSources, setAvailableSources] = useState<LoadedSource[]>([])
   const [enabledSourceSlugs, setEnabledSourceSlugs] = useState<string[]>([])
@@ -103,9 +81,6 @@ export default function WorkspaceSettingsPage() {
 
   // Load workspace settings when active workspace changes
   useEffect(() => {
-    routingShadowSequence.current += 1
-    setIsAnalyzingRoutingShadow(false)
-    setRoutingShadowReport(null)
     const loadWorkspaceSettings = async () => {
       if (!window.electronAPI || !activeWorkspaceId) {
         setIsLoadingWorkspace(false)
@@ -113,7 +88,6 @@ export default function WorkspaceSettingsPage() {
       }
 
       setIsLoadingWorkspace(true)
-      setRoutingSimulation(null)
       try {
         const settings = await window.electronAPI.getWorkspaceSettings(activeWorkspaceId)
         if (settings) {
@@ -123,11 +97,8 @@ export default function WorkspaceSettingsPage() {
           setExternalActionPolicy(settings.externalActionPolicy === 'allow-in-execute' ? 'allow-in-execute' : 'confirm')
           setWorkingDirectory(settings.workingDirectory || '')
           setLocalMcpEnabled(settings.localMcpEnabled ?? true)
-          setRoutingPolicyText(settings.routingPolicy ? JSON.stringify(settings.routingPolicy, null, 2) : '')
           setCostControlText(JSON.stringify(settings.costControl ?? DEFAULT_AGENT_COST_CONTROL_POLICY, null, 2))
           setCostControlError(null)
-          setRoutingPolicyErrors([])
-          setRoutingPolicyWarnings([])
           // Load cyclable permission modes from workspace settings
           if (settings.cyclablePermissionModes && settings.cyclablePermissionModes.length >= 2) {
             setEnabledModes(settings.cyclablePermissionModes)
@@ -135,14 +106,6 @@ export default function WorkspaceSettingsPage() {
 
           // Load default source slugs
           const savedSlugs = settings.enabledSourceSlugs ?? []
-
-          try {
-            const connections = await window.electronAPI.listLlmConnections()
-            setLlmConnectionSlugs(connections.map(connection => connection.slug))
-          } catch (error) {
-            console.error('Failed to load LLM connections for routingPolicy validation:', error)
-            setLlmConnectionSlugs([])
-          }
 
           // Load available sources and auto-heal stale slugs
           const sources = await window.electronAPI.getSources(activeWorkspaceId)
@@ -231,41 +194,6 @@ export default function WorkspaceSettingsPage() {
     [activeWorkspaceId, t]
   )
 
-  const validateRoutingPolicyText = useCallback((text: string) => {
-    return parseRoutingPolicyText(text, llmConnectionSlugs)
-  }, [llmConnectionSlugs])
-
-  const handleValidateRoutingPolicy = useCallback(() => {
-    const result = validateRoutingPolicyText(routingPolicyText)
-    setRoutingPolicyErrors(result.errors)
-    setRoutingPolicyWarnings(result.warnings)
-    if (result.errors.length === 0) {
-      toast.success(t('settings.workspace.routingPolicyValid'))
-    }
-  }, [routingPolicyText, validateRoutingPolicyText, t])
-
-  const handleSaveRoutingPolicy = useCallback(async () => {
-    const result = validateRoutingPolicyText(routingPolicyText)
-    setRoutingPolicyErrors(result.errors)
-    setRoutingPolicyWarnings(result.warnings)
-    if (result.errors.length > 0) return
-
-    setIsSavingRoutingPolicy(true)
-    try {
-      const saved = await updateWorkspaceSetting('routingPolicy', result.policy)
-      if (saved) {
-        setRoutingSimulation(null)
-        setRoutingShadowReport(null)
-        if (result.policy) {
-          setRoutingPolicyText(JSON.stringify(result.policy, null, 2))
-        }
-        toast.success(result.policy ? t('settings.workspace.routingPolicySaved') : t('settings.workspace.routingPolicyCleared'))
-      }
-    } finally {
-      setIsSavingRoutingPolicy(false)
-    }
-  }, [routingPolicyText, updateWorkspaceSetting, validateRoutingPolicyText, t])
-
   const handleSaveCostControl = useCallback(async () => {
     let parsed: AgentCostControlPolicy
     try {
@@ -273,7 +201,7 @@ export default function WorkspaceSettingsPage() {
       if (!value || typeof value !== 'object' || Array.isArray(value)) {
         throw new Error('costControl must be a JSON object')
       }
-      parsed = value as AgentCostControlPolicy
+      parsed = resolveAgentCostControlPolicy(value as AgentCostControlPolicy)
     } catch (error) {
       setCostControlError(error instanceof Error ? error.message : 'Invalid JSON')
       return
@@ -291,43 +219,6 @@ export default function WorkspaceSettingsPage() {
       setIsSavingCostControl(false)
     }
   }, [costControlText, updateWorkspaceSetting, t])
-
-  const handleSimulateRoutingPolicy = useCallback(async () => {
-    if (!window.electronAPI || !activeWorkspaceId) return
-    setIsSimulatingRouting(true)
-    try {
-      const simulation = await window.electronAPI.simulateRoutingPolicy(activeWorkspaceId, {
-        sensitivity: simulationSensitivity,
-      })
-      if (activeWorkspaceRef.current === activeWorkspaceId) setRoutingSimulation(simulation)
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error'
-      toast.error(t('settings.workspace.routingPolicySimulationFailed'), { description: message })
-    } finally {
-      setIsSimulatingRouting(false)
-    }
-  }, [activeWorkspaceId, simulationSensitivity, t])
-
-  const handleAnalyzeRoutingShadow = useCallback(async () => {
-    if (!window.electronAPI || !activeWorkspaceId) return
-    const workspaceId = activeWorkspaceId
-    const sequence = ++routingShadowSequence.current
-    setIsAnalyzingRoutingShadow(true)
-    setRoutingShadowReport(null)
-    try {
-      const report = await window.electronAPI.analyzeRoutingShadow(workspaceId)
-      if (sequence === routingShadowSequence.current
-        && activeWorkspaceRef.current === workspaceId) setRoutingShadowReport(report)
-    } catch (error) {
-      if (sequence !== routingShadowSequence.current
-        || activeWorkspaceRef.current !== workspaceId) return
-      const message = error instanceof Error ? error.message : 'Unknown error'
-      toast.error(t('settings.workspace.routingShadowFailed'), { description: message })
-    } finally {
-      if (sequence === routingShadowSequence.current
-        && activeWorkspaceRef.current === workspaceId) setIsAnalyzingRoutingShadow(false)
-    }
-  }, [activeWorkspaceId, t])
 
   // Workspace icon upload handler
   const handleIconUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -710,210 +601,6 @@ export default function WorkspaceSettingsPage() {
               </SettingsCard>
             </SettingsSection>
 
-            {/* AI Router Policy */}
-            <SettingsSection
-              title={t('settings.workspace.routingPolicyTitle')}
-              description={t('settings.workspace.routingPolicyDesc')}
-            >
-              <SettingsCard>
-                <div className="p-4 space-y-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <div className="text-sm font-medium">{t('settings.workspace.routingPolicyJson')}</div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {t('settings.workspace.routingPolicyKnownConnections', {
-                          connections: llmConnectionSlugs.length > 0 ? llmConnectionSlugs.join(', ') : t('settings.workspace.routingPolicyNoConnections'),
-                        })}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <button
-                        type="button"
-                        onClick={handleValidateRoutingPolicy}
-                        className="inline-flex items-center h-8 px-3 text-sm rounded-lg bg-background shadow-minimal hover:bg-foreground/[0.02] transition-colors"
-                      >
-                        {t('settings.workspace.routingPolicyValidate')}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleSaveRoutingPolicy}
-                        disabled={isSavingRoutingPolicy}
-                        className="inline-flex items-center h-8 px-3 text-sm rounded-lg bg-background shadow-minimal hover:bg-foreground/[0.02] transition-colors disabled:opacity-50"
-                      >
-                        {isSavingRoutingPolicy ? t('common.saving') : t('common.save')}
-                      </button>
-                    </div>
-                  </div>
-                  <textarea
-                    value={routingPolicyText}
-                    onChange={(event) => {
-                      setRoutingPolicyText(event.target.value)
-                      setRoutingPolicyErrors([])
-                      setRoutingPolicyWarnings([])
-                    }}
-                    spellCheck={false}
-                    placeholder={'{\n  "version": 1,\n  "defaultSensitivity": "internal",\n  "rules": []\n}'}
-                    className="min-h-[220px] w-full resize-y rounded-lg bg-foreground-2 px-3 py-2 font-mono text-xs text-foreground outline-none shadow-minimal focus:bg-background focus:ring-2 focus:ring-ring"
-                  />
-                  {routingPolicyErrors.length > 0 && (
-                    <div className="rounded-lg bg-destructive/10 p-3 text-xs text-destructive space-y-1">
-                      {routingPolicyErrors.map((error) => <div key={error}>• {error}</div>)}
-                    </div>
-                  )}
-                  {routingPolicyWarnings.length > 0 && (
-                    <div className="rounded-lg bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-300 space-y-1">
-                      {routingPolicyWarnings.map((warning) => <div key={warning}>• {warning}</div>)}
-                    </div>
-                  )}
-                  <div className="border-t border-border/60 pt-3 space-y-3">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <label htmlFor="routing-policy-simulation-sensitivity" className="text-xs font-medium">
-                        {t('settings.workspace.routingPolicySimulationSensitivity')}
-                      </label>
-                      <select
-                        id="routing-policy-simulation-sensitivity"
-                        value={simulationSensitivity}
-                        onChange={(event) => setSimulationSensitivity(event.target.value as RoutingSensitivity)}
-                        className="h-8 rounded-lg bg-background px-2 text-xs shadow-minimal outline-none focus:ring-2 focus:ring-ring"
-                      >
-                        {(['public', 'internal', 'confidential', 'restricted'] as const).map((sensitivity) => (
-                          <option key={sensitivity} value={sensitivity}>{t(`settings.workspace.routingSensitivity.${sensitivity}`)}</option>
-                        ))}
-                      </select>
-                      <button
-                        type="button"
-                        onClick={handleSimulateRoutingPolicy}
-                        disabled={isSimulatingRouting}
-                        className="inline-flex items-center h-8 px-3 text-sm rounded-lg bg-background shadow-minimal hover:bg-foreground/[0.02] transition-colors disabled:opacity-50"
-                      >
-                        {isSimulatingRouting ? t('settings.workspace.routingPolicySimulating') : t('settings.workspace.routingPolicySimulate')}
-                      </button>
-                    </div>
-                    <p className="text-xs text-muted-foreground">{t('settings.workspace.routingPolicySimulationDesc')}</p>
-                    {routingSimulation && (
-                      <div className="rounded-lg bg-foreground/[0.03] p-3 text-xs space-y-3">
-                        <div className="flex flex-wrap gap-x-4 gap-y-1">
-                          <span><strong>{t('settings.workspace.routingPolicySimulationSelected')}:</strong> {routingSimulation.decision.selectedConnectionSlug ?? t('settings.workspace.routingPolicySimulationNone')}</span>
-                          <span><strong>{t('settings.workspace.routingPolicySimulationReason')}:</strong> {routingSimulation.decision.reason}</span>
-                        </div>
-                        {routingSimulation.decision.errors.length > 0 && (
-                          <div className="text-destructive space-y-1">
-                            {routingSimulation.decision.errors.map((error) => <div key={error}>• {error}</div>)}
-                          </div>
-                        )}
-                        <div className="space-y-1">
-                          {routingSimulation.candidates.map((candidate) => (
-                            <div key={candidate.slug} className="flex flex-wrap gap-x-2">
-                              <span className={candidate.allowed ? 'text-emerald-700 dark:text-emerald-300' : 'text-muted-foreground'}>
-                                {candidate.slug} — {candidate.allowed ? t('settings.workspace.routingPolicySimulationAllowed') : t('settings.workspace.routingPolicySimulationBlocked')}
-                              </span>
-                              {!candidate.allowed && candidate.exclusionReasons.length > 0 && (
-                                <span className="text-muted-foreground">({candidate.exclusionReasons.join(', ')})</span>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  <div className="border-t border-border/60 pt-3 space-y-3">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div>
-                        <div className="text-xs font-medium">{t('settings.workspace.routingShadowTitle')}</div>
-                        <p id="routing-shadow-description" className="mt-1 text-xs text-muted-foreground">
-                          {t('settings.workspace.routingShadowDesc')}
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={handleAnalyzeRoutingShadow}
-                        disabled={isAnalyzingRoutingShadow}
-                        aria-busy={isAnalyzingRoutingShadow}
-                        aria-describedby="routing-shadow-description"
-                        className="inline-flex h-8 items-center rounded-lg bg-background px-3 text-sm shadow-minimal transition-colors hover:bg-foreground/[0.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
-                      >
-                        {isAnalyzingRoutingShadow
-                          ? t('settings.workspace.routingShadowAnalyzing')
-                          : t('settings.workspace.routingShadowAnalyze')}
-                      </button>
-                    </div>
-                    {routingShadowReport && (
-                      <div
-                        className="space-y-3 rounded-lg bg-foreground/[0.03] p-3 text-xs"
-                        role="status"
-                        aria-live="polite"
-                      >
-                        <div className="flex flex-wrap gap-x-4 gap-y-1">
-                          <span>
-                            <strong>{t('settings.workspace.routingShadowSamples')}:</strong>{' '}
-                            {routingShadowReport.sampleCount}
-                          </span>
-                          <span>
-                            <strong>{t('settings.workspace.routingShadowGroundTruth')}:</strong>{' '}
-                            {routingShadowReport.groundTruthSampleCount}
-                          </span>
-                          <span>
-                            <strong>{t('settings.workspace.routingShadowMinimumSamples')}:</strong>{' '}
-                            {routingShadowReport.minSamples}
-                          </span>
-                          <span className="text-muted-foreground">
-                            {t('settings.workspace.routingShadowAutomaticMutationDisabled')}
-                          </span>
-                        </div>
-                        {routingShadowReport.promotionCandidates.length === 0 && routingShadowReport.driftWarnings.length === 0 && (
-                          <p className="text-muted-foreground">{t('settings.workspace.routingShadowEmpty')}</p>
-                        )}
-                        {routingShadowReport.promotionCandidates.map((candidate) => (
-                          <div
-                            key={`${candidate.difficulty}:${candidate.baselineConnectionSlug}:${candidate.proposedConnectionSlug}`}
-                            className="space-y-2 rounded-md bg-background/70 p-3"
-                          >
-                            <div className="flex flex-wrap items-center justify-between gap-2">
-                              <strong>
-                                {t('settings.workspace.routingShadowCandidate')}: {candidate.baselineConnectionSlug} → {candidate.proposedConnectionSlug}
-                              </strong>
-                              <span className={candidate.eligible ? 'text-emerald-700 dark:text-emerald-300' : 'text-amber-700 dark:text-amber-300'}>
-                                {candidate.difficulty} · {candidate.eligible
-                                  ? t('settings.workspace.routingShadowEligible')
-                                  : t('settings.workspace.routingShadowNotEligible')}
-                              </span>
-                            </div>
-                            <ul className="space-y-1 text-muted-foreground">
-                              {candidate.gates.map((gate) => (
-                                <li
-                                  key={gate.id}
-                                  className={cn(
-                                    'flex items-start gap-1.5',
-                                    !gate.passed && 'text-amber-700 dark:text-amber-300',
-                                  )}
-                                >
-                                  {gate.passed
-                                    ? <CheckCircle2 aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
-                                    : <AlertTriangle aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />}
-                                  <span>{gate.id}: {gate.detail}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        ))}
-                        {routingShadowReport.driftWarnings.length > 0 && (
-                          <div className="space-y-1 text-amber-700 dark:text-amber-300">
-                            <strong>{t('settings.workspace.routingShadowDrift')}</strong>
-                            <ul className="list-disc space-y-1 pl-4">
-                              {routingShadowReport.driftWarnings.map((warning) => (
-                                <li key={`${warning.difficulty}:${warning.connectionSlug}:${warning.detail}`}>
-                                  {warning.connectionSlug} · {warning.difficulty}: {warning.detail}
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </SettingsCard>
-            </SettingsSection>
 
             {/* Advanced */}
             <SettingsSection title={t("settings.workspace.advanced")}>

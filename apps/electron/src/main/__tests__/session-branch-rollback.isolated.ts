@@ -93,7 +93,6 @@ mock.module('@craft-agent/shared/config', () => ({
   setGitBashPath: () => {},
   clearGitBashPath: () => {},
   setActiveWorkspace: () => {},
-  getSummarizationModel: () => 'claude-haiku-4-5-20251001',
   ensureConfigDir: () => {},
   ensureConfigDefaults: () => {},
   addWorkspace: async () => null,

@@ -8,11 +8,9 @@ import { getPiModelsForAuthProvider } from '../models-pi.ts'
 const PI_ANTHROPIC_OPUS_DEFAULT = getPiModelsForAuthProvider('anthropic').some(m => m.id === 'pi/claude-opus-4-8')
   ? 'pi/claude-opus-4-8'
   : 'pi/claude-opus-4-7'
-const PI_ANTHROPIC_OPUS_DEFAULT_NAME = PI_ANTHROPIC_OPUS_DEFAULT.endsWith('4-8') ? 'Opus 4.8' : 'Opus 4.7'
-const PI_BEDROCK_OPUS_DEFAULT = getPiModelsForAuthProvider('amazon-bedrock').some(m => m.id === 'pi/us.anthropic.claude-opus-4-8')
-  ? 'pi/us.anthropic.claude-opus-4-8'
-  : 'pi/us.anthropic.claude-opus-4-7'
-const PI_BEDROCK_OPUS_DEFAULT_NAME = PI_BEDROCK_OPUS_DEFAULT.endsWith('4-8') ? 'Opus 4.8' : 'Opus 4.7'
+
+
+
 
 const STORAGE_MODULE_PATH = pathToFileURL(join(import.meta.dir, '..', 'storage.ts')).href
 const PI_RESOLVER_SETUP_PATH = pathToFileURL(join(import.meta.dir, '..', '..', '..', 'tests', 'setup', 'register-pi-model-resolver.ts')).href
@@ -71,7 +69,7 @@ function runMigration(configDir: string) {
   const run = Bun.spawnSync([
     process.execPath,
     '--eval',
-    `import '${PI_RESOLVER_SETUP_PATH}'; import { migrateLegacyLlmConnectionsConfig } from '${STORAGE_MODULE_PATH}'; migrateLegacyLlmConnectionsConfig();`,
+    `import '${PI_RESOLVER_SETUP_PATH}'; import { migrateLegacyLlmConnectionsConfig, migrateOrphanedDefaultConnections } from '${STORAGE_MODULE_PATH}'; migrateLegacyLlmConnectionsConfig(); migrateOrphanedDefaultConnections();`,
   ], {
     env: {
       ...process.env,
@@ -125,7 +123,7 @@ describe('startup migration (integration)', () => {
   it('preserves userDefined3Tier model subsets during startup migration', () => {
     const { configDir, workspaceRoot, configPath } = setupWorkspaceConfigDir()
     const userDefinedModels = ['pi/claude-opus-4-6', 'pi/claude-sonnet-4-6', 'pi/claude-haiku-4-5']
-    const migratedModels = [PI_ANTHROPIC_OPUS_DEFAULT, 'pi/claude-sonnet-4-6', 'pi/claude-haiku-4-5']
+    const migratedModels = [...userDefinedModels]
 
     writeRootConfig(configPath, workspaceRoot, [
       {
@@ -178,7 +176,7 @@ describe('startup migration (integration)', () => {
     expect(modelIds).toContain(connection.defaultModel)
   })
 
-  it('repairs userDefined3Tier lists by removing invalid IDs and fixing default model', () => {
+  it('preserves unavailable explicit model IDs for runtime validation instead of replacing them', () => {
     const { configDir, workspaceRoot, configPath } = setupWorkspaceConfigDir()
 
     writeRootConfig(configPath, workspaceRoot, [
@@ -200,11 +198,11 @@ describe('startup migration (integration)', () => {
     const connection = readPiApiKeyConnection(configPath)
     expect(connection).toBeDefined()
     expect(connection.modelSelectionMode).toBe('userDefined3Tier')
-    expect(connection.models).toEqual([PI_ANTHROPIC_OPUS_DEFAULT, 'pi/claude-haiku-4-5'])
-    expect(connection.defaultModel).toBe(PI_ANTHROPIC_OPUS_DEFAULT)
+    expect(connection.models).toEqual(['pi/claude-opus-4-6', 'pi/not-real', 'pi/claude-haiku-4-5'])
+    expect(connection.defaultModel).toBe('pi/not-real')
   })
 
-  it('falls back to provider defaults when userDefined3Tier becomes empty after filtering', () => {
+  it('does not replace a user-owned model list when its models are absent from the catalog', () => {
     const { configDir, workspaceRoot, configPath } = setupWorkspaceConfigDir()
 
     writeRootConfig(configPath, workspaceRoot, [
@@ -227,19 +225,14 @@ describe('startup migration (integration)', () => {
     expect(connection).toBeDefined()
     expect(connection.modelSelectionMode).toBe('userDefined3Tier')
     const modelIds = getModelIds(connection)
-    expect(modelIds.length).toBeGreaterThan(1)
-    expect(modelIds).toContain(PI_ANTHROPIC_OPUS_DEFAULT)
-    expect(modelIds).not.toContain('pi/not-real-1')
-    expect(connection.defaultModel).toBe(modelIds[0])
+    expect(modelIds).toEqual(['pi/not-real-1', 'pi/not-real-2'])
+    expect(connection.defaultModel).toBe('pi/not-real-1')
   })
 
-  it('normalizes legacy unprefixed userDefined3Tier model IDs instead of resetting', () => {
+  it('preserves legacy explicit model IDs without choosing a different model', () => {
     const { configDir, workspaceRoot, configPath } = setupWorkspaceConfigDir()
 
-    // Derive currently-valid OpenRouter IDs from the live Pi catalog. The migration
-    // normalizes (pi/-prefixes) known IDs and drops unknown ones, so hardcoding a
-    // specific model here makes the test brittle when models.dev drifts across Pi
-    // SDK uplifts (e.g. x-ai/grok-4 aged out by 0.79.x).
+    // Use actual catalog IDs as fixtures and preserve their explicit legacy spelling.
     const openrouterIds = getPiModelsForAuthProvider('openrouter').map(m => m.id)
     expect(openrouterIds).toContain('pi/openrouter/auto')
     const otherPrefixed = openrouterIds.find(id => id !== 'pi/openrouter/auto')
@@ -267,8 +260,8 @@ describe('startup migration (integration)', () => {
     expect(connection).toBeDefined()
     expect(connection.modelSelectionMode).toBe('userDefined3Tier')
     const modelIds = getModelIds(connection)
-    expect(modelIds).toEqual(expectedPrefixed)
-    expect(connection.defaultModel).toBe(expectedPrefixed[0])
+    expect(modelIds).toEqual(legacyUnprefixed)
+    expect(connection.defaultModel).toBe(legacyUnprefixed[0])
   })
 })
 
@@ -284,253 +277,58 @@ function modelIdsOf(connection: any): string[] {
   return (connection?.models ?? []).map((m: any) => typeof m === 'string' ? m : m.id)
 }
 
-describe('legacy Opus migration to default Opus (integration)', () => {
-  it('migrates direct Anthropic default/model entries from Opus 4.6 to Opus 4.8 while keeping Opus 4.7', () => {
+describe('preserving existing explicit selections at startup', () => {
+  it('preserves an orphaned selected connection and rejects backend creation instead of using another one', () => {
     const { configDir, workspaceRoot, configPath } = setupWorkspaceConfigDir()
-
-    writeRootConfig(configPath, workspaceRoot, [
-      {
-        slug: 'anthropic',
-        name: 'Anthropic',
-        providerType: 'anthropic',
-        authType: 'api_key',
-        createdAt: Date.now(),
-        models: [
-          { id: 'claude-opus-4-6', name: 'Opus 4.6', shortName: 'Opus', provider: 'anthropic', contextWindow: 200_000 },
-          { id: 'claude-opus-4-7', name: 'Opus 4.7', shortName: 'Opus', provider: 'anthropic', contextWindow: 1_000_000 },
-          { id: 'claude-sonnet-4-6', name: 'Sonnet 4.6', shortName: 'Sonnet', provider: 'anthropic', contextWindow: 200_000 },
-        ],
-        defaultModel: 'claude-opus-4-6',
-      },
-    ])
-
+    writeRootConfig(configPath, workspaceRoot, [{
+      slug: 'pi-api-key', name: 'Available connection', providerType: 'anthropic',
+      authType: 'api_key', createdAt: Date.now(), models: ['claude-sonnet-4-6'], defaultModel: 'claude-sonnet-4-6',
+    }])
+    const config = readConfigJson(configPath)
+    config.defaultLlmConnection = 'retired-selected-connection'
+    writeFileSync(configPath, JSON.stringify(config))
     runMigration(configDir)
+    expect(readConfigJson(configPath).defaultLlmConnection).toBe('retired-selected-connection')
 
-    const connection = findConnection(configPath, 'anthropic')
-    const ids = modelIdsOf(connection)
-    expect(connection.defaultModel).toBe('claude-opus-4-8')
-    expect(ids).toContain('claude-opus-4-8')
-    expect(ids).toContain('claude-opus-4-7')
-    expect(ids).not.toContain('claude-opus-4-6')
-    expect(ids.filter(id => id === 'claude-opus-4-8')).toHaveLength(1)
-    const opus = connection.models.find((m: any) => (typeof m === 'string' ? m : m.id) === 'claude-opus-4-8')
-    expect(typeof opus).toBe('object')
-    expect(opus.name).toBe('Opus 4.8')
+    const factoryPath = pathToFileURL(join(import.meta.dir, '..', '..', 'agent', 'backend', 'factory.ts')).href
+    const result = Bun.spawnSync([process.execPath, '--eval', `
+      import { resolveBackendContext } from '${factoryPath}';
+      try { resolveBackendContext({}); process.exit(2); }
+      catch (error) { console.log(error.message); }
+    `], { env: { ...process.env, CRAFT_CONFIG_DIR: configDir }, stdout: 'pipe', stderr: 'pipe' })
+    expect(result.exitCode).toBe(0)
+    expect(result.stdout.toString()).toContain('selected LLM connection is unavailable')
   })
 
-  it('migrates direct Anthropic Opus 4.5 defaults straight to Opus 4.8', () => {
+  for (const selected of ['claude-opus-4-5-20251101', 'claude-opus-4-6', 'claude-opus-4-7', 'claude-sonnet-4-5-20250929']) {
+    it(`preserves connection and workspace model ${selected}`, () => {
+      const { configDir, workspaceRoot, configPath } = setupWorkspaceConfigDir()
+      const workspacePath = join(workspaceRoot, 'config.json')
+      const workspace = JSON.parse(readFileSync(workspacePath, 'utf-8'))
+      workspace.defaults = { model: selected, defaultLlmConnection: 'retired-explicit-connection' }
+      writeFileSync(workspacePath, JSON.stringify(workspace))
+      writeRootConfig(configPath, workspaceRoot, [{
+        slug: 'pi-api-key', name: 'Explicit selection', providerType: 'anthropic',
+        authType: 'api_key', createdAt: Date.now(), models: [selected], defaultModel: selected,
+      }])
+      runMigration(configDir)
+      runMigration(configDir)
+      expect(readPiApiKeyConnection(configPath).defaultModel).toBe(selected)
+      expect(getModelIds(readPiApiKeyConnection(configPath))).toEqual([selected])
+      expect(JSON.parse(readFileSync(workspacePath, 'utf-8')).defaults)
+        .toEqual({ model: selected, defaultLlmConnection: 'retired-explicit-connection' })
+    })
+  }
+
+  it('keeps provider defaults available for a connection without a prior model selection', () => {
     const { configDir, workspaceRoot, configPath } = setupWorkspaceConfigDir()
-
-    writeRootConfig(configPath, workspaceRoot, [
-      {
-        slug: 'anthropic',
-        name: 'Anthropic',
-        providerType: 'anthropic',
-        authType: 'api_key',
-        createdAt: Date.now(),
-        models: ['claude-opus-4-5-20251101', 'claude-sonnet-4-6'],
-        defaultModel: 'claude-opus-4-5-20251101',
-      },
-    ])
-
+    writeRootConfig(configPath, workspaceRoot, [{
+      slug: 'pi-api-key', name: 'New connection', providerType: 'anthropic',
+      authType: 'api_key', createdAt: Date.now(),
+    }])
     runMigration(configDir)
-
-    const connection = findConnection(configPath, 'anthropic')
-    const ids = modelIdsOf(connection)
-    expect(connection.defaultModel).toBe('claude-opus-4-8')
-    expect(ids).toContain('claude-opus-4-8')
-    expect(ids).not.toContain('claude-opus-4-5-20251101')
-  })
-
-  it('migrates previous direct Anthropic Opus 4.7 defaults to Opus 4.8 while keeping 4.7 selectable', () => {
-    const { configDir, workspaceRoot, configPath } = setupWorkspaceConfigDir()
-
-    writeRootConfig(configPath, workspaceRoot, [
-      {
-        slug: 'anthropic',
-        name: 'Anthropic',
-        providerType: 'anthropic',
-        authType: 'api_key',
-        createdAt: Date.now(),
-        models: ['claude-opus-4-7', 'claude-sonnet-4-6'],
-        defaultModel: 'claude-opus-4-7',
-      },
-      {
-        slug: 'pi-api-key',
-        name: 'Craft Agents Backend (Anthropic)',
-        providerType: 'pi',
-        authType: 'api_key',
-        piAuthProvider: 'anthropic',
-        modelSelectionMode: 'userDefined3Tier',
-        createdAt: Date.now(),
-        models: ['pi/claude-opus-4-7', 'pi/claude-sonnet-4-6'],
-        defaultModel: 'pi/claude-opus-4-7',
-      },
-    ])
-
-    runMigration(configDir)
-
-    const anthropic = findConnection(configPath, 'anthropic')
-    expect(anthropic.defaultModel).toBe('claude-opus-4-8')
-    expect(modelIdsOf(anthropic)).toEqual(['claude-opus-4-8', 'claude-opus-4-7', 'claude-sonnet-4-6'])
-
-    const pi = readPiApiKeyConnection(configPath)
-    expect(pi.defaultModel).toBe('pi/claude-opus-4-7')
-    expect(modelIdsOf(pi)).toEqual(['pi/claude-opus-4-7', 'pi/claude-sonnet-4-6'])
-  })
-
-  it('migrates workspace default Opus 4.6 to Opus 4.8', () => {
-    const { configDir, workspaceRoot, configPath } = setupWorkspaceConfigDir()
-    const wsConfigPath = join(workspaceRoot, 'config.json')
-    const wsConfig = JSON.parse(readFileSync(wsConfigPath, 'utf-8'))
-    wsConfig.defaults = { model: 'claude-opus-4-6' }
-    writeFileSync(wsConfigPath, JSON.stringify(wsConfig, null, 2), 'utf-8')
-
-    writeRootConfig(configPath, workspaceRoot, [
-      {
-        slug: 'anthropic',
-        name: 'Anthropic',
-        providerType: 'anthropic',
-        authType: 'api_key',
-        createdAt: Date.now(),
-        models: ['claude-opus-4-8', 'claude-opus-4-7', 'claude-sonnet-4-6'],
-        defaultModel: 'claude-opus-4-8',
-      },
-    ])
-
-    runMigration(configDir)
-
-    const migratedWsConfig = JSON.parse(readFileSync(wsConfigPath, 'utf-8'))
-    expect(migratedWsConfig.defaults.model).toBe('claude-opus-4-8')
-  })
-
-  it('migrates workspace default Opus 4.7 to Opus 4.8', () => {
-    const { configDir, workspaceRoot, configPath } = setupWorkspaceConfigDir()
-    const wsConfigPath = join(workspaceRoot, 'config.json')
-    const wsConfig = JSON.parse(readFileSync(wsConfigPath, 'utf-8'))
-    wsConfig.defaults = { model: 'claude-opus-4-7' }
-    writeFileSync(wsConfigPath, JSON.stringify(wsConfig, null, 2), 'utf-8')
-
-    writeRootConfig(configPath, workspaceRoot, [
-      {
-        slug: 'anthropic',
-        name: 'Anthropic',
-        providerType: 'anthropic',
-        authType: 'api_key',
-        createdAt: Date.now(),
-        models: ['claude-opus-4-8', 'claude-opus-4-7', 'claude-sonnet-4-6'],
-        defaultModel: 'claude-opus-4-8',
-      },
-    ])
-
-    runMigration(configDir)
-
-    const migratedWsConfig = JSON.parse(readFileSync(wsConfigPath, 'utf-8'))
-    expect(migratedWsConfig.defaults.model).toBe('claude-opus-4-8')
-  })
-
-  it('migrates Pi Anthropic Opus 4.6 IDs to the best available Opus default', () => {
-    const { configDir, workspaceRoot, configPath } = setupWorkspaceConfigDir()
-
-    writeRootConfig(configPath, workspaceRoot, [
-      {
-        slug: 'pi-api-key',
-        name: 'Craft Agents Backend (Anthropic)',
-        providerType: 'pi',
-        authType: 'api_key',
-        piAuthProvider: 'anthropic',
-        modelSelectionMode: 'userDefined3Tier',
-        createdAt: Date.now(),
-        models: [
-          { id: 'pi/claude-opus-4-6', name: 'Opus 4.6', shortName: 'Opus', provider: 'pi', contextWindow: 200_000 },
-          'pi/claude-sonnet-4-6',
-        ],
-        defaultModel: 'pi/claude-opus-4-6',
-      },
-    ])
-
-    runMigration(configDir)
-
     const connection = readPiApiKeyConnection(configPath)
-    expect(connection.defaultModel).toBe(PI_ANTHROPIC_OPUS_DEFAULT)
-    expect(modelIdsOf(connection)).toEqual([PI_ANTHROPIC_OPUS_DEFAULT, 'pi/claude-sonnet-4-6'])
-    expect(connection.models[0].name).toBe(PI_ANTHROPIC_OPUS_DEFAULT_NAME)
-  })
-
-  it('migrates Pi Bedrock Opus 4.6 IDs to the best available Opus native IDs', () => {
-    const { configDir, workspaceRoot, configPath } = setupWorkspaceConfigDir()
-
-    writeRootConfig(configPath, workspaceRoot, [
-      {
-        slug: 'pi-api-key',
-        name: 'Craft Agents Backend (Bedrock)',
-        providerType: 'pi',
-        authType: 'iam_credentials',
-        piAuthProvider: 'amazon-bedrock',
-        modelSelectionMode: 'userDefined3Tier',
-        createdAt: Date.now(),
-        models: [
-          { id: 'pi/us.anthropic.claude-opus-4-6-v1', name: 'Opus 4.6', shortName: 'Opus', provider: 'pi', contextWindow: 200_000 },
-          'pi/us.anthropic.claude-sonnet-4-6',
-        ],
-        defaultModel: 'pi/us.anthropic.claude-opus-4-6-v1',
-      },
-    ])
-
-    runMigration(configDir)
-
-    const connection = readPiApiKeyConnection(configPath)
-    expect(connection.defaultModel).toBe(PI_BEDROCK_OPUS_DEFAULT)
-    expect(modelIdsOf(connection)).toEqual([PI_BEDROCK_OPUS_DEFAULT, 'pi/us.anthropic.claude-sonnet-4-6'])
-    expect(connection.models[0].name).toBe(PI_BEDROCK_OPUS_DEFAULT_NAME)
-  })
-
-  it('migrates legacy unprefixed Pi Anthropic Opus 4.6 IDs to pi-prefixed best available Opus', () => {
-    const { configDir, workspaceRoot, configPath } = setupWorkspaceConfigDir()
-
-    writeRootConfig(configPath, workspaceRoot, [
-      {
-        slug: 'pi-api-key',
-        name: 'Craft Agents Backend (Anthropic)',
-        providerType: 'pi',
-        authType: 'api_key',
-        piAuthProvider: 'anthropic',
-        modelSelectionMode: 'userDefined3Tier',
-        createdAt: Date.now(),
-        models: ['claude-opus-4-6', 'claude-sonnet-4-6'],
-        defaultModel: 'claude-opus-4-6',
-      },
-    ])
-
-    runMigration(configDir)
-
-    const connection = readPiApiKeyConnection(configPath)
-    expect(connection.defaultModel).toBe(PI_ANTHROPIC_OPUS_DEFAULT)
-    expect(modelIdsOf(connection)).toEqual([PI_ANTHROPIC_OPUS_DEFAULT, 'pi/claude-sonnet-4-6'])
-  })
-
-  it('migrates legacy Bedrock provider Opus 4.6 IDs to Pi Bedrock best available Opus', () => {
-    const { configDir, workspaceRoot, configPath } = setupWorkspaceConfigDir()
-
-    writeRootConfig(configPath, workspaceRoot, [
-      {
-        slug: 'legacy-bedrock',
-        name: 'Legacy Bedrock',
-        providerType: 'bedrock',
-        authType: 'iam_credentials',
-        modelSelectionMode: 'userDefined3Tier',
-        createdAt: Date.now(),
-        models: ['claude-opus-4-6', 'claude-sonnet-4-6'],
-        defaultModel: 'claude-opus-4-6',
-      },
-    ])
-
-    runMigration(configDir)
-
-    const connection = findConnection(configPath, 'legacy-bedrock')
-    expect(connection.providerType).toBe('pi')
-    expect(connection.piAuthProvider).toBe('amazon-bedrock')
-    expect(connection.defaultModel).toBe(PI_BEDROCK_OPUS_DEFAULT)
-    expect(modelIdsOf(connection)).toEqual([PI_BEDROCK_OPUS_DEFAULT, 'pi/us.anthropic.claude-sonnet-4-6'])
+    expect(connection.defaultModel).toBeTruthy()
+    expect(getModelIds(connection)).toContain(connection.defaultModel)
   })
 })

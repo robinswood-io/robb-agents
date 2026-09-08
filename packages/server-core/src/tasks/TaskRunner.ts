@@ -34,9 +34,9 @@ import {
 import {
   inferTaskNodeProfile,
   taskNodeSpecialistPreamble,
-  type TaskNodeExecutionRoute,
-  type TaskNodeRouteContext,
-} from './task-node-routing';
+  resolveTaskModelSettings,
+  type TaskModelSettings,
+} from './task-node-execution';
 import {
   type TaskSpec,
   type TaskNode,
@@ -114,13 +114,8 @@ export interface TaskRunnerDeps {
    * receives the same policy, but this hook is the authoritative boundary.
    */
   executionGuard?: (context: TaskExecutionGuardContext) => GuardDecision | Promise<GuardDecision>;
-  /**
-   * Selects the connection, model, and reasoning level for each attempt. Production uses
-   * policy-aware adaptive routing; tests and embedders may omit it to preserve explicit settings.
-   */
-  resolveNodeRoute?: (
-    context: TaskNodeRouteContext,
-  ) => TaskNodeExecutionRoute | Promise<TaskNodeExecutionRoute>;
+  /** Read only the explicit parent/workspace model settings; retries reuse their saved values. */
+  getModelDefaults?: (parentSessionId?: string, selectedConnectionSlug?: string) => TaskModelSettings | Promise<TaskModelSettings>;
   /** Bounded fallback retry used when neither the node nor task defaults declare one. */
   defaultRetry?: TaskRetryPolicy;
   /** Authoritative verification seam for provider-reconciled external mutations. */
@@ -250,8 +245,8 @@ interface NodeStateEntry {
   retryAtMs?: number;
   /** Reason the previous attempt failed, fed back into the retry prompt (failure-aware retry). */
   lastFailure?: string;
-  /** Last dispatched route, used to avoid repeating a failed provider path after restart. */
-  lastRoute?: Pick<TaskNodeExecutionRoute, 'llmConnection' | 'model'>;
+  /** Last explicit settings, preserved across retries and process restarts. */
+  lastRoute?: TaskModelSettings;
 }
 
 interface RepairReflection {
@@ -440,6 +435,7 @@ class ActiveRun {
           st.lastRoute = {
             ...(e.connectionSlug ? { llmConnection: e.connectionSlug } : {}),
             ...(e.model ? { model: e.model } : {}),
+            ...(e.thinkingLevel ? { thinkingLevel: e.thinkingLevel } : {}),
           };
         }
       } else if (e.kind === 'node-scheduled') {
@@ -876,50 +872,26 @@ class ActiveRun {
         );
         return;
       }
-      const inferredProfile = inferTaskNodeProfile(node, st.attempt);
-      const route = this.deps.resolveNodeRoute
-        ? await this.deps.resolveNodeRoute({
-            node,
-            spec: this.spec,
-            attempt: st.attempt,
-            lastFailure: st.lastFailure,
-            previousRoute: st.lastRoute,
-          })
-        : {
-            profile: inferredProfile,
-            model: node.model ?? this.spec.defaults?.model,
-            llmConnection: node.llmConnection ?? this.spec.defaults?.llmConnection,
-            thinkingLevel: inferredProfile.thinkingLevel,
-            strategy: node.model
-              || node.llmConnection
-              || this.spec.defaults?.model
-              || this.spec.defaults?.llmConnection
-              ? 'pinned' as const
-              : 'primary' as const,
-          };
+      const profile = inferTaskNodeProfile(node);
+      const settings = st.lastRoute ?? resolveTaskModelSettings(node, this.spec,
+        await this.deps.getModelDefaults?.(this.opts.orchestratorSessionId, node.llmConnection ?? this.spec.defaults?.llmConnection));
       if (!stillActive()) return;
-      if (route.blockedReason) {
-        this.failNode(node.id, `model routing blocked node: ${route.blockedReason}`, undefined, false, 'invalid');
-        return;
-      }
-      st.lastRoute = {
-        ...(route.llmConnection ? { llmConnection: route.llmConnection } : {}),
-        ...(route.model ? { model: route.model } : {}),
-      };
+      st.lastRoute = { ...settings };
       this.log({
         kind: 'node-routed',
         nodeId: node.id,
         attempt: st.attempt,
-        ...(route.llmConnection ? { connectionSlug: route.llmConnection } : {}),
-        ...(route.model ? { model: route.model } : {}),
-        strategy: route.strategy,
+        ...(settings.llmConnection ? { connectionSlug: settings.llmConnection } : {}),
+        ...(settings.model ? { model: settings.model } : {}),
+        ...(settings.thinkingLevel ? { thinkingLevel: settings.thinkingLevel } : {}),
+        strategy: 'pinned',
       });
       const prompt =
         skillsPreamble(this.spec.skills) +
         (autonomy.grantsFullToolAndNetworkAccess
           ? inheritedAutonomyPreamble(idempotencyKey)
           : executionPreamble(sessionPolicy, idempotencyKey)) +
-        taskNodeSpecialistPreamble(route.profile, st.attempt) +
+        taskNodeSpecialistPreamble(profile, st.attempt) +
         (await this.buildPrompt(node));
       if (!stillActive()) return;
       const options: CreateSessionOptions = {
@@ -939,11 +911,11 @@ class ActiveRun {
           },
         }),
         name: nodeTitle(node),
-        model: route.model,
+        model: settings.model,
         // Required for non-default (e.g. pi/*) models to resolve a backend — without it the
         // child session completes instantly with no output.
-        llmConnection: route.llmConnection,
-        thinkingLevel: route.thinkingLevel,
+        llmConnection: settings.llmConnection,
+        thinkingLevel: settings.thinkingLevel,
         // Explicit node/task modes remain strict. Omission inherits Execute only
         // through the two-key parent/workspace policy; every other default is Safe.
         permissionMode,

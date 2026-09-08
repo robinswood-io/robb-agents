@@ -10,10 +10,9 @@ Vérifier en conditions réelles que :
 
 - les connexions IA agentiques se créent correctement ;
 - le switch manuel de provider fonctionne entre deux tours ;
-- `routingPolicy` route selon la politique workspace ;
-- `routingSensitivity` des sources influence la sensibilité effective ;
+- le choix du modèle et du raisonnement persiste pendant les tâches et les reprises ;
 - le badge provider/modèle expose une explication claire ;
-- la politique fail-closed bloque les routes non autorisées.
+- une erreur fournisseur ne change pas silencieusement la sélection.
 
 ## Pré-requis
 
@@ -25,7 +24,7 @@ Depuis le repo :
 cd ~/Developer/robinswood-agents
 bun install --frozen-lockfile
 bun run typecheck:electron
-bun run dev:electron
+bun run electron:dev
 ```
 
 Si la commande de lancement Electron diffère selon l’environnement, noter ici la commande réellement utilisée :
@@ -126,142 +125,24 @@ Notes :
 
 ```
 
-## Scénario C — Sensibilité source
+## Scénario C — Conservation du choix explicite
 
-1. Ouvrir une source test.
-2. Régler Sensibilité router sur `Confidentiel`.
-3. Créer une session avec cette source activée.
-4. Envoyer une question simple sur la source.
+1. Choisir une connexion, un modèle et un raisonnement.
+2. Envoyer successivement une question simple et une demande complexe.
+3. Faire exécuter une revue `call_llm` et une sous-tâche sans override de modèle.
+4. Tester une compaction et une erreur temporaire dans un profil Dev isolé.
 
-Résultat attendu :
-
-- la sensibilité effective du tour est `confidential` ;
-- le badge/tooltip de réponse affiche la sensibilité ;
-- la route choisie respecte les allow-lists confidentielles.
+Attendu : le fournisseur, le modèle et le raisonnement choisis restent stables.
+Un modèle indisponible produit une erreur exploitable. Aucun modèle alternatif
+n'est sélectionné sans paramètre explicite. Les anciens historiques restent lisibles.
 
 Statut : `[ ] PASS` `[ ] FAIL` `[ ] BLOCKED`
 
-Notes :
-
-```text
-
-```
-
-## Scénario D — routingPolicy workspace
-
-Dans Workspace Settings → Router IA, coller une policy minimale adaptée aux slugs disponibles :
-
-```json
-{
-  "version": 1,
-  "enabled": true,
-  "defaultSensitivity": "internal",
-  "requireExplicitAllowFor": ["confidential", "restricted"],
-  "rules": [
-    {
-      "id": "public-premium-ok",
-      "when": { "sensitivity": ["public"] },
-      "allowConnectionSlugs": ["premium-analyse-complexe", "google-gemini"],
-      "preferConnectionSlugs": ["premium-analyse-complexe"]
-    },
-    {
-      "id": "internal-sovereign-first",
-      "when": { "sensitivity": ["internal"] },
-      "allowConnectionSlugs": ["souverain-standard", "local-rapide"],
-      "preferConnectionSlugs": ["souverain-standard"]
-    },
-    {
-      "id": "confidential-local-or-sovereign",
-      "when": { "sensitivity": ["confidential"] },
-      "allowConnectionSlugs": ["souverain-standard", "local-rapide"],
-      "preferConnectionSlugs": ["souverain-standard"]
-    },
-    {
-      "id": "restricted-local-only",
-      "when": { "sensitivity": ["restricted"] },
-      "allowConnectionSlugs": ["local-rapide"]
-    }
-  ]
-}
-```
-
-Valider puis enregistrer.
-
-Résultat attendu :
-
-- JSON valide accepté ;
-- warnings visibles si un slug n’existe pas ;
-- policy persistée au top-level `routingPolicy` du `config.json` workspace ;
-- champ vide supprime/désactive la policy.
-
-Statut : `[ ] PASS` `[ ] FAIL` `[ ] BLOCKED`
-
-Notes :
-
-```text
-
-```
-
-## Scénario E — Routage automatique policy-first
-
-Avec la policy du scénario D :
-
-1. Session sans source sensible → poser une question publique.
-2. Session avec source `internal` → poser une question interne.
-3. Session avec source `confidential` → poser une question confidentielle.
-4. Session avec source `restricted` → poser une question restreinte.
-
-Résultat attendu :
-
-- public : route autorisée premium/Gemini selon préférence ;
-- internal : route souveraine/local ;
-- confidential : route souveraine/local explicitement autorisée ;
-- restricted : local uniquement ;
-- tooltip affiche `reason`, `sensitivity`, `policyRuleIds`, `connectionSlug`, `model`.
-
-Statut : `[ ] PASS` `[ ] FAIL` `[ ] BLOCKED`
-
-Notes :
-
-```text
-
-```
-
-## Scénario F — Fail-closed
-
-Configurer temporairement une policy restrictive :
-
-```json
-{
-  "version": 1,
-  "enabled": true,
-  "defaultSensitivity": "restricted",
-  "requireExplicitAllowFor": ["restricted"],
-  "rules": []
-}
-```
-
-Créer une session et envoyer un message.
-
-Résultat attendu :
-
-- la requête est bloquée ;
-- aucun fallback silencieux vers un provider non autorisé ;
-- l’erreur explique que `routingPolicy` ne laisse aucune route autorisée.
-
-Statut : `[ ] PASS` `[ ] FAIL` `[ ] BLOCKED`
-
-Notes :
-
-```text
-
-```
-
-## Scénario G — Régression non-router
+## Scénario D — Régression générale
 
 Vérifier rapidement :
 
-- création de session classique sans policy ;
+- création de session classique ;
 - sources activées/désactivées ;
 - permission mode Explore / Ask / Execute ;
 - streaming long ;
@@ -280,10 +161,9 @@ Notes :
 
 Le pilote client peut démarrer si :
 
-- A, B, D, E, F passent ;
-- C passe sur au moins une source réelle ;
+- A, B, C et D passent ;
 - aucun crash Electron ;
-- aucune route non autorisée observée ;
+- aucun changement silencieux de modèle observé ;
 - les éventuels `BLOCKED` concernent uniquement credentials/providers externes non disponibles.
 
 ## Résumé d’exécution
@@ -298,8 +178,5 @@ Version/commit : `________________`
 |---|---|---|
 | A — Connexions |  |  |
 | B — Switch manuel |  |  |
-| C — Sensibilité source |  |  |
-| D — routingPolicy |  |  |
-| E — Routage automatique |  |  |
-| F — Fail-closed |  |  |
-| G — Régression |  |  |
+| C — Choix explicite conservé |  |  |
+| D — Régression générale |  |  |

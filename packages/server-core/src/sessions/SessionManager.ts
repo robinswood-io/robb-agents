@@ -10,7 +10,7 @@ import { readFile, writeFile, mkdir } from 'fs/promises'
 import { randomUUID } from 'node:crypto'
 import type { AutonomyEvent } from '@craft-agent/core/types'
 import type { AgentEventUsage } from '@craft-agent/core/types'
-import { type AgentEvent, setPermissionMode, hydratePreviousPermissionMode, getPermissionModeDiagnostics, type PermissionMode, unregisterSessionScopedToolCallbacks, mergeSessionScopedToolCallbacks, AbortReason, type AuthRequest, type AuthResult, type CredentialAuthRequest, type BrowserPaneFns, generateConversationSummary, resolveKeepBackgroundTasksAlive, decideAutonomyRecovery, permissionModeAfterPlanApproval, beginObjectiveEvidenceGate, clearObjectiveEvidenceGate, getObjectiveEvidenceCompletionGap, recordObjectiveEvidence } from '@craft-agent/shared/agent'
+import { type AgentEvent, setPermissionMode, hydratePreviousPermissionMode, getPermissionModeDiagnostics, type PermissionMode, unregisterSessionScopedToolCallbacks, mergeSessionScopedToolCallbacks, AbortReason, type AuthRequest, type AuthResult, type CredentialAuthRequest, type BrowserPaneFns, generateConversationSummary, resolveKeepBackgroundTasksAlive, decideAutonomyRecovery, permissionModeAfterPlanApproval, beginObjectiveEvidenceGate, clearObjectiveEvidenceGate, getObjectiveEvidenceCompletionGap, recordObjectiveEvidence, classifyAgentFailure } from '@craft-agent/shared/agent'
 import {
   resolveSessionConnection,
   createBackendFromConnection,
@@ -22,7 +22,7 @@ import {
   type BackendHostRuntimeContext,
   type PostInitResult,
 } from '@craft-agent/shared/agent/backend'
-import { getLlmConnection, getLlmConnections, getDefaultLlmConnection, getDefaultThinkingLevel, getBrowserToolEnabled, resetManagedAnthropicAuthEnvVars, resolveMidStreamBehavior, getPersistedUiLanguage, resolveTitleLanguageName, resolveRoutingPolicy, RoutingOutcomeStore, telemetryToRoutingOutcome, ALL_ROUTING_CAPABILITIES, ALL_ROUTING_DIFFICULTIES, decideAgentCostControl, isBrowserFallbackEligibleTool, isContextDependentDirectTurn, resolveAgentCostControlPolicy, resolveEffectiveAgentContextLimits, type CostControlledTurnKind, type RoutingOutcomeAdapterContext } from '@craft-agent/shared/config'
+import { getLlmConnection, getDefaultLlmConnection, getDefaultThinkingLevel, getBrowserToolEnabled, resetManagedAnthropicAuthEnvVars, resolveMidStreamBehavior, getPersistedUiLanguage, resolveTitleLanguageName, isBrowserFallbackEligibleTool, resolveAgentCostControlPolicy, resolveEffectiveAgentContextLimits, type CostControlledTurnKind } from '@craft-agent/shared/config'
 import { formatPlaybookPrompt, getBuiltinPlaybook, loadWorkspacePlaybook } from '@craft-agent/shared/playbooks'
 import { validateSessionExecutionIsolation } from '@craft-agent/shared/tasks'
 import { PrivilegedExecutionBroker } from '@craft-agent/server-core/services'
@@ -97,7 +97,6 @@ import { formatPathsToRelative, formatToolInputPaths, perf, encodeIconToDataUrlA
 import { loadAllSkills, loadSkillBySlug, invalidateSkillsCache, type LoadedSkill } from '@craft-agent/shared/skills'
 import { invalidateContextFileCache } from '@craft-agent/shared/prompts/system'
 import { getToolIconsDir, getMiniModel, getGitBashPath } from '@craft-agent/shared/config'
-import { getDefaultSummarizationModel } from '@craft-agent/shared/config/models'
 import type { SummarizeCallback } from '@craft-agent/shared/sources'
 import { type ThinkingLevel, DEFAULT_THINKING_LEVEL, normalizeThinkingLevel } from '@craft-agent/shared/agent/thinking-levels'
 import { evaluateAutoLabels } from '@craft-agent/shared/labels/auto'
@@ -119,16 +118,6 @@ import {
   type GenerationTerminalName,
   type RobbExecutionTelemetryEvent,
 } from '@craft-agent/shared/telemetry'
-import {
-  classifyRoutingFallbackReason,
-  isRoutingCircuitOpen,
-  recordRoutingCircuitFailure,
-  resolveRoutingFallbackCandidates,
-  selectRoutingFallbackCandidate,
-  shouldAttemptProviderFallback,
-  type RoutingCircuitState,
-} from './routing-fallback'
-import { buildRoutingRuntimeContext } from './routing-runtime'
 import {
   getPlatformSessionAppProvenance,
   resolveImportedSessionAppProvenance,
@@ -892,8 +881,6 @@ interface RunningBackgroundTask {
 interface RuntimeGenerationTelemetryRef {
   generationId: string
   turnId: string
-  /** Captured before routing metadata is cleared by the completed message. */
-  routingOutcome?: RoutingOutcomeAdapterContext
 }
 
 interface RuntimeCompactionTelemetry {
@@ -1152,25 +1139,11 @@ interface ManagedSession {
    */
   piSdkMessageToCraftMessage?: Map<string, string>
   // Runtime-only: annotate the next assistant response with why a route changed.
-  pendingRoutingReason?: 'manual-handoff' | 'session-connection' | 'router' | string
+  pendingRoutingReason?: 'manual-handoff' | 'session-connection'
   // Runtime-only: extra routing audit details for the next assistant response.
   pendingRoutingMeta?: Partial<RoutingMeta>
   /** Runtime-only backoff state preventing a failed compaction on every queued turn. */
   contextCompactionAttempt?: ContextCompactionAttemptState
-  // Runtime-only: policy-authorized fallback candidates for the current turn.
-  pendingRoutingFallbackConnectionSlugs?: string[]
-  // Runtime-only: provider failure emitted as a stream event. The handoff is
-  // deferred until the current iterator completes so disposing its runtime
-  // cannot deadlock event processing.
-  pendingRuntimeProviderFallback?: {
-    error: Error
-    generation: number
-  }
-  // Runtime-only: bounded fallback attempts and per-turn loop prevention.
-  routingFallbackAttempts?: number
-  routingAttemptedConnectionSlugs?: Set<string>
-  // Runtime-only: consecutive connection failures and cooldown windows.
-  routingCircuitStates?: Map<string, RoutingCircuitState>
   // Source-activation auto-retry (craft-agents-oss#804). When a source activates
   // mid-turn, we re-send the original message with a "[<slug> activated]" suffix
   // after a short delay. The pending slot lets `sendMessage` dedup a duplicate
@@ -1185,7 +1158,6 @@ interface ManagedSession {
 }
 
 const PI_SDK_MESSAGE_ID_CACHE_LIMIT = 256
-const MAX_ROUTING_FALLBACKS_PER_TURN = 2
 
 export interface AutoRetryPendingHost {
   autoRetryPending?: {
@@ -1441,8 +1413,6 @@ export class SessionManager implements ISessionManager {
   private telemetrySinks: Map<string, ExecutionTelemetrySink> = new Map()
   /** Always-on, privacy-safe local operational telemetry (no prompts/tool payloads). */
   private localTelemetrySinks: Map<string, ExecutionTelemetrySink> = new Map()
-  // Local privacy-minimal routing observations. They never contain prompt/response bodies.
-  private routingOutcomeStores: Map<string, RoutingOutcomeStore> = new Map()
   // Enforces active → exactly-one-terminal generation telemetry transitions.
   private generationTelemetryLifecycle = new GenerationTelemetryLifecycle()
   // Privileged approval binding + audit logger
@@ -1584,35 +1554,10 @@ export class SessionManager implements ISessionManager {
       inputTokens: input.inputTokens,
     })
 
-    const routingDifficulty = managed.pendingRoutingMeta?.routingDifficulty
-    const requiredCapabilities = managed.pendingRoutingMeta?.requiredCapabilities
-    const resolvedDifficulty = ALL_ROUTING_DIFFICULTIES.find(
-      (difficulty) => difficulty === routingDifficulty,
-    )
-    const resolvedCapabilities = (requiredCapabilities ?? []).flatMap((required) => {
-      const capability = ALL_ROUTING_CAPABILITIES.find((candidate) => candidate === required)
-      return capability ? [capability] : []
-    })
-    const routingOutcome = managed.pendingRoutingReason === 'router'
-      && !!managed.llmConnection
-      && !!resolvedDifficulty
-      && resolvedCapabilities.length === (requiredCapabilities ?? []).length
-      ? {
-          connectionSlug: managed.llmConnection,
-          difficulty: resolvedDifficulty,
-          requiredCapabilities: resolvedCapabilities,
-          retryCount: managed.routingFallbackAttempts ?? 0,
-          workspaceId: managed.workspace.id,
-          sessionId: managed.id,
-          ...(managed.missionId ? { missionId: managed.missionId } : {}),
-        }
-      : undefined
-
     const generations = managed.executionTelemetryGenerations ?? new Map()
     generations.set(processingGeneration, {
       generationId,
       turnId: input.turnId,
-      ...(routingOutcome ? { routingOutcome } : {}),
     })
     managed.executionTelemetryGenerations = generations
     this.emitExecutionTelemetry(managed, event)
@@ -1648,29 +1593,6 @@ export class SessionManager implements ISessionManager {
     managed.executionTelemetryGenerations?.delete(processingGeneration)
     if (managed.executionTelemetryGenerations?.size === 0) {
       managed.executionTelemetryGenerations = undefined
-    }
-    if (event && reference.routingOutcome) {
-      const outcome = telemetryToRoutingOutcome(event, {
-        ...reference.routingOutcome,
-        ...(typeof usage?.costUsd === 'number' ? { costUsd: usage.costUsd } : {}),
-      })
-      if (outcome) {
-        try {
-          let store = this.routingOutcomeStores.get(managed.workspace.id)
-          if (!store) {
-            store = new RoutingOutcomeStore(managed.workspace.rootPath)
-            this.routingOutcomeStores.set(managed.workspace.id, store)
-          }
-          store.record(outcome)
-        } catch (error) {
-          // Feedback must never affect the user-visible provider result.
-          sessionLog.warn('Failed to persist local routing outcome', {
-            workspaceId: managed.workspace.id,
-            sessionId: managed.id,
-            message: error instanceof Error ? error.message : String(error),
-          })
-        }
-      }
     }
     if (event) this.emitExecutionTelemetry(managed, event)
   }
@@ -2557,14 +2479,10 @@ export class SessionManager implements ISessionManager {
             workingDirectory: meta.workingDirectory ?? wsDefaultWorkingDir,
           })
 
-          // Migration: clear orphaned llmConnection references (e.g., after connection was deleted)
-          if (managed.llmConnection) {
-            const conn = resolveSessionConnection(managed.llmConnection, undefined)
-            if (!conn) {
-              sessionLog.warn(`Session ${meta.id} has orphaned llmConnection "${managed.llmConnection}", clearing`)
-              managed.llmConnection = undefined
-              managed.connectionLocked = false
-            }
+          // Keep missing explicit connections visible. The next send must fail
+          // until the user selects a replacement, rather than change providers.
+          if (managed.llmConnection && !getLlmConnection(managed.llmConnection)) {
+            sessionLog.warn(`Session ${meta.id} references unavailable connection "${managed.llmConnection}"; keeping its selection`)
           }
 
           // Initialize mode-manager state for restored sessions even before agent creation.
@@ -3355,23 +3273,11 @@ export class SessionManager implements ISessionManager {
     // Get default enabled sources from workspace config
     const defaultEnabledSourceSlugs = options?.enabledSourceSlugs ?? wsConfig?.defaults?.enabledSourceSlugs
 
-    // Resolve model tier hints ('fast' / 'default') to actual model IDs.
-    // EditPopover uses tier hints instead of hardcoded Anthropic model names
-    // so the right model is selected regardless of the active LLM provider.
-    let resolvedModelOption = options?.model || defaultModel
-    if (resolvedModelOption === 'fast' || resolvedModelOption === 'default') {
-      const tierConnection = resolveSessionConnection(
-        options?.llmConnection,
-        wsConfig?.defaults?.defaultLlmConnection,
-      )
-      if (tierConnection) {
-        resolvedModelOption = resolvedModelOption === 'fast'
-          ? (getMiniModel(tierConnection) ?? tierConnection.defaultModel ?? defaultModel)
-          : (tierConnection.defaultModel ?? defaultModel)
-      } else {
-        resolvedModelOption = defaultModel
-      }
-    }
+    const selectedConnectionDefault = options?.llmConnection
+      && options.llmConnection !== wsConfig?.defaults?.defaultLlmConnection
+      ? getLlmConnection(options.llmConnection)?.defaultModel
+      : defaultModel
+    const resolvedModelOption = options?.model ?? selectedConnectionDefault
 
     // Resolve backend target early for branching policy checks.
     const targetBackendContext = resolveBackendContext({
@@ -4246,201 +4152,6 @@ export class SessionManager implements ISessionManager {
     })
   }
 
-  private async applyRoutingPolicyForNextTurn(
-    managed: ManagedSession,
-    workspaceConfig: ReturnType<typeof loadWorkspaceConfig>,
-  ): Promise<void> {
-    const policy = workspaceConfig?.routingPolicy
-    if (!policy || policy.enabled === false) return
-
-    const connections = getLlmConnections()
-    if (connections.length === 0) return
-
-    const requestedConnectionSlug = managed.llmConnection
-      ?? workspaceConfig?.defaults?.defaultLlmConnection
-      ?? getDefaultLlmConnection()
-      ?? undefined
-
-    const enabledSourceSlugs = managed.enabledSourceSlugs ?? []
-    const enabledSources = enabledSourceSlugs.length > 0
-      ? getSourcesBySlugs(managed.workspace.rootPath, enabledSourceSlugs)
-      : []
-    const unavailableConnectionSlugs = connections
-      .filter(connection => isRoutingCircuitOpen(managed.routingCircuitStates?.get(connection.slug)))
-      .map(connection => connection.slug)
-    const routingRuntime = buildRoutingRuntimeContext({
-      requestedConnectionSlug,
-      enabledSourceSlugs,
-      sourceSensitivities: enabledSources.map(source => source.config.routingSensitivity),
-      messages: managed.messages ?? [],
-      labels: managed.labels,
-      tokenUsage: managed.tokenUsage,
-      unavailableConnectionSlugs,
-    })
-    const classification = routingRuntime.classification
-
-    const decision = resolveRoutingPolicy(policy, connections, routingRuntime.context)
-
-    for (const warning of decision.warnings) {
-      sessionLog.warn(`routingPolicy warning for session ${managed.id}: ${warning}`)
-    }
-
-    if (decision.errors.length > 0 || !decision.selectedConnectionSlug) {
-      const message = decision.errors.join('; ') || 'routingPolicy did not select a connection'
-      sessionLog.warn(`routingPolicy blocked session ${managed.id}: ${message}`)
-      throw new Error(`Routing policy blocked this turn: ${message}`)
-    }
-
-    const selectedSlug = decision.selectedConnectionSlug
-    const isSameConnection = managed.llmConnection === selectedSlug
-    const hasPriorAssistantResponse = (managed.messages ?? []).some(message =>
-      (message.role === 'assistant' || message.role === 'plan') && !message.isIntermediate
-    )
-
-    const previousFallbackMeta = {
-      fallbackFromConnectionSlug: managed.pendingRoutingMeta?.fallbackFromConnectionSlug,
-      fallbackReason: managed.pendingRoutingMeta?.fallbackReason,
-    }
-
-    managed.pendingRoutingReason = 'router'
-    managed.pendingRoutingMeta = {
-      reason: 'router',
-      sensitivity: decision.sensitivity,
-      policyRuleIds: decision.matchedRuleIds,
-      routingDifficulty: classification.difficulty,
-      requiredCapabilities: classification.requiredCapabilities,
-      routingExplanation: decision.explanation,
-      rejectedConnections: decision.rejectedCandidates,
-      budgetDecision: decision.budget,
-      ...(previousFallbackMeta.fallbackFromConnectionSlug ? previousFallbackMeta : {}),
-    }
-    managed.pendingRoutingFallbackConnectionSlugs = decision.fallbackConnectionSlugs
-
-    if (isSameConnection) return
-
-    sessionLog.info(`routingPolicy selected connection for session ${managed.id}: ${managed.llmConnection ?? '(default)'} -> ${selectedSlug}`, {
-      sensitivity: decision.sensitivity,
-      matchedRuleIds: decision.matchedRuleIds,
-      reason: decision.reason,
-    })
-
-    if (hasPriorAssistantResponse) {
-      try {
-        const summary = await this.generateRemoteTransferSummary(managed)
-        if (summary?.trim()) {
-          managed.transferredSessionSummary = [
-            'Context summary from before an automatic policy router handoff:',
-            summary.trim(),
-          ].join('\n\n')
-          managed.transferredSessionSummaryApplied = false
-          sessionLog.info(`Policy router handoff summary prepared for session ${managed.id}: ${summary.length} chars`)
-        }
-      } catch (error) {
-        sessionLog.warn(`Policy router handoff summary failed for session ${managed.id}: ${error instanceof Error ? error.message : error}`)
-      }
-
-      managed.sdkSessionId = undefined
-      managed.branchFromSdkSessionId = undefined
-      managed.branchFromSdkCwd = undefined
-      managed.branchFromSdkTurnId = undefined
-
-      if (managed.agent) {
-        await this.disposeManagedAgentRuntime(managed, 'policy router handoff')
-      }
-    }
-
-    managed.llmConnection = selectedSlug
-    managed.connectionLocked = true
-    this.persistSession(managed)
-    this.sendEvent({
-      type: 'connection_changed',
-      sessionId: managed.id,
-      connectionSlug: selectedSlug,
-      supportsBranching: resolveSupportsBranching(managed),
-    }, managed.workspace.id)
-  }
-
-  private async tryApplyRoutingFallbackAfterAgentFailure(
-    managed: ManagedSession,
-    error: unknown,
-    turnId?: string,
-  ): Promise<boolean> {
-    const primarySlug = managed.llmConnection
-    if (!primarySlug) return false
-    const attempted = managed.routingAttemptedConnectionSlugs ?? new Set<string>()
-    attempted.add(primarySlug)
-    managed.routingAttemptedConnectionSlugs = attempted
-
-    const circuitStates = managed.routingCircuitStates ?? new Map<string, RoutingCircuitState>()
-    circuitStates.set(
-      primarySlug,
-      recordRoutingCircuitFailure(circuitStates.get(primarySlug)),
-    )
-    managed.routingCircuitStates = circuitStates
-
-    const fallbackAttempts = managed.routingFallbackAttempts ?? 0
-    if (fallbackAttempts >= MAX_ROUTING_FALLBACKS_PER_TURN) {
-      sessionLog.warn(`routingPolicy stopped fallback loop for session ${managed.id} after ${fallbackAttempts} attempts`)
-      return false
-    }
-
-    const candidates = resolveRoutingFallbackCandidates(
-      primarySlug,
-      managed.pendingRoutingFallbackConnectionSlugs,
-      getLlmConnections().map(connection => connection.slug),
-    )
-    const fallbackSlug = selectRoutingFallbackCandidate(
-      primarySlug,
-      candidates,
-      slug => !!getLlmConnection(slug),
-      slug => attempted.has(slug) || isRoutingCircuitOpen(circuitStates.get(slug)),
-    )
-    if (!fallbackSlug) return false
-    attempted.add(fallbackSlug)
-    managed.routingFallbackAttempts = fallbackAttempts + 1
-
-    const fallbackReason = classifyRoutingFallbackReason(error)
-    this.recordRetryTelemetry(managed, {
-      component: 'provider',
-      attempt: fallbackAttempts + 1,
-      reasonCode: fallbackReason,
-      turnId,
-    })
-    sessionLog.warn(`routingPolicy fallback for session ${managed.id}: ${primarySlug} -> ${fallbackSlug} (${fallbackReason})`, {
-      primarySlug,
-      fallbackSlug,
-      fallbackReason,
-      error: error instanceof Error ? error.message : String(error),
-    })
-
-    await this.disposeManagedAgentRuntime(managed, 'routing policy fallback')
-
-    managed.sdkSessionId = undefined
-    managed.branchFromSdkSessionId = undefined
-    managed.branchFromSdkCwd = undefined
-    managed.branchFromSdkTurnId = undefined
-    managed.llmConnection = fallbackSlug
-    managed.connectionLocked = true
-    managed.pendingRoutingReason = 'router'
-    managed.pendingRoutingMeta = {
-      ...managed.pendingRoutingMeta,
-      reason: 'router',
-      fallbackFromConnectionSlug: primarySlug,
-      fallbackReason,
-    }
-    managed.pendingRoutingFallbackConnectionSlugs = candidates.filter(slug => slug !== fallbackSlug)
-
-    this.persistSession(managed)
-    this.sendEvent({
-      type: 'connection_changed',
-      sessionId: managed.id,
-      connectionSlug: fallbackSlug,
-      supportsBranching: resolveSupportsBranching(managed),
-    }, managed.workspace.id)
-
-    return true
-  }
-
   /**
    * Get or create agent for a session (lazy loading)
    * Creates the appropriate backend agent based on LLM connection.
@@ -4464,115 +4175,29 @@ export class SessionManager implements ISessionManager {
         'send-path refresh',
       )
     }
-    await this.applyRoutingPolicyForNextTurn(managed, workspaceConfig)
-
+    // Keep the user-selected connection, model and thinking level stable. Cost
+    // controls only observe context pressure; they never select a different model.
     if (costTurn) {
-      const preRouteContext = resolveBackendContext({
-        sessionConnectionSlug: managed.llmConnection,
-        workspaceDefaultConnectionSlug: workspaceConfig?.defaults?.defaultLlmConnection,
-        managedModel: managed.model,
-      })
+      const policy = resolveAgentCostControlPolicy(workspaceConfig?.costControl)
+      const limits = resolveEffectiveAgentContextLimits(policy.context, managed.tokenUsage?.contextWindow)
+      const contextTokens = resolveContextTokenEstimate(managed.tokenUsage?.contextTokens, managed.messages)
+      const costUsd = objectiveCostUsd(managed.activeObjective, managed.tokenUsage?.costUsd)
+      const budgetState = costUsd >= policy.budgets.hardSessionUsd ? 'hard-limit'
+        : costUsd >= policy.budgets.softSessionUsd ? 'soft-limit' : 'normal'
       const turnKind: CostControlledTurnKind = costTurn.options?.internalOrigin?.kind
-        ?? (costTurn.options?.automaticRecovery
-          ? 'automatic-recovery'
-          : (managed.triggeredBy ? 'automation' : 'direct'))
-      const effectiveContextTokens = resolveContextTokenEstimate(
-        managed.tokenUsage?.contextTokens,
-        managed.messages,
-      )
-      const objectiveText = findObjectiveText(managed.messages, managed.activeObjective)
-      const costDecision = decideAgentCostControl({
-        text: costTurn.message,
-        riskContext: [
-          managed.name,
-          objectiveText,
-          ...managed.messages
-            .filter(message => (
-              (message.role === 'user' && !message.hidden)
-              || (message.role === 'assistant' && !message.isIntermediate)
-            ))
-            .slice(-5)
-            .map(message => message.content.slice(0, 2_000)),
-        ].filter(Boolean).join('\n').slice(0, 8_000),
-        connection: preRouteContext.connection ?? undefined,
-        currentModel: managed.model ?? preRouteContext.resolvedModel,
-        turnKind,
-        contextTokens: effectiveContextTokens,
-        contextWindow: managed.tokenUsage?.contextWindow,
-        sessionCostUsd: objectiveCostUsd(managed.activeObjective, managed.tokenUsage?.costUsd),
-      }, workspaceConfig?.costControl)
-
-      const inheritsObjectiveRoute = turnKind === 'direct'
-        && isContextDependentDirectTurn(costTurn.message)
-        && managed.activeObjective?.continuationCount
-      if (inheritsObjectiveRoute && managed.activeObjective) {
-        if (managed.activeObjective.model) costDecision.model = managed.activeObjective.model
-        if (managed.activeObjective.thinkingLevel) {
-          costDecision.thinkingLevel = managed.activeObjective.thinkingLevel
-        }
-        costDecision.explanation = `${costDecision.explanation}; objective:route-inherited`
-      }
-
-      if (managed.activeObjective) {
-        managed.activeObjective = {
-          ...managed.activeObjective,
-          orchestrationMode: costDecision.difficulty === 'complex' || costDecision.highRisk
-            ? 'mission'
-            : managed.activeObjective.orchestrationMode,
-          risk: costDecision.highRisk ? 'high-stakes' : managed.activeObjective.risk,
-          model: costDecision.model ?? managed.model,
-          thinkingLevel: costDecision.thinkingLevel,
-        }
-      }
-
-      const resolvedCostPolicy = resolveAgentCostControlPolicy(workspaceConfig?.costControl)
-      const effectiveContextLimits = resolveEffectiveAgentContextLimits(
-        resolvedCostPolicy.context,
-        managed.tokenUsage?.contextWindow,
-      )
-      if (resolvedCostPolicy.enabled) {
-        const modelChanged = Boolean(costDecision.model && costDecision.model !== managed.model)
-        const thinkingChanged = costDecision.thinkingLevel !== managed.thinkingLevel
-        if (costDecision.model) managed.model = costDecision.model
-        managed.thinkingLevel = costDecision.thinkingLevel
-        managed.pendingRoutingReason = 'cost-control'
-        managed.pendingRoutingMeta = {
-          ...managed.pendingRoutingMeta,
-          reason: 'cost-control',
-          routingDifficulty: costDecision.difficulty,
-          routingExplanation: costDecision.explanation,
-          costControl: {
-            turnKind: costDecision.turnKind,
-            budgetState: costDecision.budgetState,
-            thinkingLevel: costDecision.thinkingLevel,
-            contextTokensBefore: effectiveContextTokens,
-            contextWindow: managed.tokenUsage?.contextWindow,
-            compactAtTokens: effectiveContextLimits.compactAtTokens,
-            hardLimitTokens: effectiveContextLimits.hardLimitTokens,
-            hardContextLimitReached: costDecision.hardContextLimitReached,
-          },
-          budgetDecision: {
-            status: costDecision.budgetState,
-            exceededScopes: costDecision.budgetState === 'normal' ? [] : ['session'],
-            projectedUsd: { session: managed.tokenUsage?.costUsd },
-          },
-        }
-        if (modelChanged || thinkingChanged) {
-          this.persistSession(managed)
-          sessionLog.info('cost-control route applied', {
-            sessionId: managed.id,
-            model: managed.model,
-            thinkingLevel: managed.thinkingLevel,
-            explanation: costDecision.explanation,
-          })
-          if (modelChanged) {
-            this.sendEvent({
-              type: 'session_model_changed',
-              sessionId: managed.id,
-              model: managed.model ?? null,
-            }, managed.workspace.id)
-          }
-        }
+        ?? (costTurn.options?.automaticRecovery ? 'automatic-recovery' : managed.triggeredBy ? 'automation' : 'direct')
+      managed.pendingRoutingMeta = {
+        ...managed.pendingRoutingMeta,
+        costControl: {
+          turnKind,
+          budgetState,
+          thinkingLevel: managed.thinkingLevel ?? getDefaultThinkingLevel(),
+          contextTokensBefore: contextTokens,
+          contextWindow: managed.tokenUsage?.contextWindow,
+          compactAtTokens: limits.compactAtTokens,
+          hardLimitTokens: limits.hardLimitTokens,
+          hardContextLimitReached: contextTokens >= limits.hardLimitTokens,
+        },
       }
     }
 
@@ -4664,9 +4289,9 @@ export class SessionManager implements ISessionManager {
       const persistedGitBashPath = getGitBashPath()
       const envOverrides: Record<string, string> = {
         CRAFT_WORKSPACE_PATH: managed.workspace.rootPath,
-        // Pass mini model to SDK subprocess so built-in tools like WebFetch
-        // use the correct model for summarization (instead of hardcoded Haiku)
-        ...(miniModel ? { ANTHROPIC_DEFAULT_HAIKU_MODEL: miniModel } : {}),
+        // Built-in tools such as WebFetch summarize task content with the
+        // selected model. The mini model is reserved for title metadata.
+        ANTHROPIC_DEFAULT_HAIKU_MODEL: backendContext.resolvedModel,
         // Pass persisted Git Bash path to SDK subprocess so bash tool
         // resolves custom gitBashPath from config.json (fixes #935)
         ...(persistedGitBashPath ? { CLAUDE_CODE_GIT_BASH_PATH: persistedGitBashPath } : {}),
@@ -5586,10 +5211,11 @@ export class SessionManager implements ISessionManager {
       managed.agent.onSpawnSession = async (request) => {
         sessionLog.info(`Spawn session request from session ${managed.id}:`, request.name || '(unnamed)')
 
+        const selectedConnection = request.llmConnection ?? managed.llmConnection
         const session = await this.createSession(managed.workspace.id, {
           name: request.name,
-          llmConnection: request.llmConnection ?? managed.llmConnection,
-          model: request.model ?? managed.model,
+          llmConnection: selectedConnection,
+          model: request.model ?? (selectedConnection === managed.llmConnection ? managed.model : undefined),
           enabledSourceSlugs: request.enabledSourceSlugs ?? managed.enabledSourceSlugs,
           permissionMode: request.permissionMode ?? managed.permissionMode,
           thinkingLevel: request.thinkingLevel ?? managed.thinkingLevel,
@@ -6185,6 +5811,12 @@ export class SessionManager implements ISessionManager {
     }
 
     managed.llmConnection = connectionSlug
+    if (!isSameConnection) {
+      // A manual provider change selects that connection's configured default;
+      // never carry an incompatible model from the previous provider.
+      managed.model = connection.defaultModel
+      this.sendEvent({ type: 'session_model_changed', sessionId, model: managed.model ?? null }, managed.workspace.id)
+    }
     managed.connectionLocked = true
     // Persist in-memory state directly to avoid race with pending queue writes.
     this.persistSession(managed)
@@ -7485,7 +7117,6 @@ export class SessionManager implements ISessionManager {
     this.setProcessing(managed, true)
     managed.streamingText = ''
     managed.processingGeneration++
-    managed.pendingRuntimeProviderFallback = undefined
     managed.turnStartFinalMessageId = this.getLastFinalAssistantMessageId(managed.messages)
 
     if (shouldManageSessionStatusLifecycle(options)) {
@@ -7654,23 +7285,7 @@ export class SessionManager implements ISessionManager {
       // Get or create the agent (lazy loading). Its internal cold-session build
       // now sees fresh tokens. Every preparation failure is handled here so a
       // rejected postInit/source setup cannot leave the session stuck processing.
-      managed.routingFallbackAttempts = 0
-      managed.routingAttemptedConnectionSlugs = new Set()
-      while (true) {
-        try {
-          agent = await this.getOrCreateAgent(managed, { message, options })
-          break
-        } catch (error) {
-          const didFallback = shouldAttemptProviderFallback(error)
-            ? await this.tryApplyRoutingFallbackAfterAgentFailure(
-                managed,
-                error,
-                userMessage.id,
-              )
-            : false
-          if (!didFallback) throw error
-        }
-      }
+      agent = await this.getOrCreateAgent(managed, { message, options })
       sendSpan.mark('agent.ready')
 
       const activeWorkspaceConfig = loadWorkspaceConfig(managed.workspace.rootPath)
@@ -7784,7 +7399,7 @@ export class SessionManager implements ISessionManager {
             logCompactionIssue(
               issueCode === 'not-needed'
                 ? 'cost-control context compaction skipped because SDK found no compactable history'
-                : 'cost-control context compaction failed; continuing on routed model', {
+                : 'cost-control context compaction failed; continuing on selected model', {
               sessionId: managed.id,
               issueCode,
               error: error instanceof Error ? error.message : String(error),
@@ -8194,40 +7809,12 @@ export class SessionManager implements ISessionManager {
         sendSpan.setMetadata('error', error instanceof Error ? error.message : String(error))
         sendSpan.end()
 
-        // Preparation-time fallback already uses the policy router. Apply the
-        // same handoff when a provider fails after streaming has started (for
-        // example subscription quota exhaustion or a 429/503). The preserved
-        // recovery marker replays the objective on the newly selected runtime;
-        // external mutations are never blindly replayed by the recovery prompt.
-        let providerFallbackApplied = false
-        if (shouldAttemptProviderFallback(error)) {
-          try {
-            providerFallbackApplied = await this.tryApplyRoutingFallbackAfterAgentFailure(
-              managed,
-              error,
-              managed.pendingTurnRecovery?.userMessageId,
-            )
-          } catch (fallbackError) {
-            sessionLog.warn('Mid-stream routing fallback failed; using normal recovery path', {
-              sessionId,
-              error: fallbackError instanceof Error ? fallbackError.message : String(fallbackError),
-            })
-          }
-        }
         const recoveryQueued = await this.enqueueAutomaticTurnRecovery(managed, 'runtime_error')
         if (!recoveryQueued) {
           this.sendEvent({
             type: 'error',
             sessionId,
             error: error instanceof Error ? error.message : 'Unknown error'
-          }, managed.workspace.id)
-        } else if (providerFallbackApplied) {
-          this.sendEvent({
-            type: 'info',
-            sessionId,
-            message: 'The provider became unavailable. The turn is continuing automatically on a configured fallback connection…',
-            level: 'warning',
-            timestamp: this.monotonic(),
           }, managed.workspace.id)
         }
         // Handle error via centralized handler
@@ -8529,33 +8116,6 @@ export class SessionManager implements ISessionManager {
     const hasQueuedAutomaticRecovery = managed.messageQueue.some(item =>
       !!item.options?.automaticRecovery
     )
-    const pendingProviderFallback = managed.pendingRuntimeProviderFallback
-    if (pendingProviderFallback?.generation === generationKey) {
-      managed.pendingRuntimeProviderFallback = undefined
-      if (hasQueuedAutomaticRecovery) {
-        try {
-          const fallbackApplied = await this.tryApplyRoutingFallbackAfterAgentFailure(
-            managed,
-            pendingProviderFallback.error,
-            managed.pendingTurnRecovery?.userMessageId,
-          )
-          if (fallbackApplied) {
-            this.sendEvent({
-              type: 'info',
-              sessionId,
-              message: 'The provider became unavailable. The turn is continuing automatically on a configured fallback connection…',
-              level: 'warning',
-              timestamp: this.monotonic(),
-            }, managed.workspace.id)
-          }
-        } catch (fallbackError) {
-          sessionLog.warn('Deferred routing fallback failed; continuing bounded recovery on the current route', {
-            sessionId,
-            error: fallbackError instanceof Error ? fallbackError.message : String(fallbackError),
-          })
-        }
-      }
-    }
     if (!hasQueuedAutomaticRecovery) {
       this.clearPendingTurnRecovery(managed)
     }
@@ -9738,17 +9298,10 @@ export class SessionManager implements ISessionManager {
           // assistant message id mapping. The actual anchor arrives as a
           // separate `pi_turn_anchor` event one microtask later — the SDK
           // updates its leaf only AFTER firing message_end (see #782).
-          if (managed.pendingRoutingReason || managed.pendingRoutingMeta || managed.pendingRoutingFallbackConnectionSlugs) {
+          if (managed.pendingRoutingReason || managed.pendingRoutingMeta) {
             managed.pendingRoutingReason = undefined
             managed.pendingRoutingMeta = undefined
-            managed.pendingRoutingFallbackConnectionSlugs = undefined
           }
-          managed.routingFallbackAttempts = undefined
-          managed.routingAttemptedConnectionSlugs = undefined
-          if (managed.llmConnection) {
-            managed.routingCircuitStates?.delete(managed.llmConnection)
-          }
-
           if (event.sdkMessageId) {
             let cache = managed.piSdkMessageToCraftMessage
             if (!cache) {
@@ -9763,29 +9316,6 @@ export class SessionManager implements ISessionManager {
               if (oldest !== undefined) cache.delete(oldest)
             }
           }
-        }
-
-        if (!event.isIntermediate) {
-          const routingMeta = assistantMessage.routingMeta
-          this.emitExecutionTelemetry(managed, {
-            schemaVersion: 1,
-            eventId: randomUUID(),
-            timestamp: assistantMessage.timestamp,
-            name: routingMeta?.fallbackFromConnectionSlug
-              ? 'routing.fallback'
-              : 'routing.selected',
-            correlation: {
-              workspaceId,
-              sessionId,
-              ...(event.turnId ? { turnId: event.turnId } : {}),
-            },
-            connectionSlug: routingMeta?.connectionSlug,
-            providerType: routingMeta?.providerType,
-            model: routingMeta?.model,
-            sensitivity: routingMeta?.sensitivity,
-            policyRuleIds: routingMeta?.policyRuleIds,
-            fallbackReason: routingMeta?.fallbackReason,
-          })
         }
 
         this.sendEvent({ type: 'text_complete', sessionId, text: event.text, isIntermediate: event.isIntermediate, turnId: event.turnId, parentToolUseId: event.parentToolUseId, timestamp: assistantMessage.timestamp, messageId: assistantMessage.id, routingMeta: assistantMessage.routingMeta }, workspaceId)
@@ -9826,7 +9356,7 @@ export class SessionManager implements ISessionManager {
 
         // Resolve call_llm model for TurnCard badge display.
         // Resolve call_llm model short names to full IDs for display.
-        // Note: Pi sessions override the model in PiEventAdapter (call_llm always uses miniModel).
+        // Pi supplies the explicit model or the model selected in the parent session.
         if (event.toolName === 'mcp__session__call_llm' && formattedToolInput?.model) {
           const shortName = String(formattedToolInput.model)
           const modelDef = MODEL_REGISTRY.find(m => m.id === shortName)
@@ -10299,23 +9829,18 @@ export class SessionManager implements ISessionManager {
           break
         }
 
-        // Some backends report quota/network failures as plain stream events
-        // instead of throwing or emitting typed_error. Queue recovery now, but
-        // defer the provider handoff until the iterator completes safely.
+        // Retry transient stream failures through the bounded recovery path,
+        // preserving the selected provider, model and thinking level.
         if (
-          shouldAttemptProviderFallback(event.message) &&
+          ['network-unavailable', 'timeout', 'service-unavailable'].includes(classifyAgentFailure({ message: event.message }).failureClass) &&
           managed.pendingTurnRecovery &&
           turnStillNeedsRecovery(managed.messages, managed.pendingTurnRecovery.userMessageId) &&
           await this.enqueueAutomaticTurnRecovery(managed, 'runtime_error')
         ) {
-          managed.pendingRuntimeProviderFallback = {
-            error: new Error(event.message),
-            generation: generationKey,
-          }
-          sessionLog.warn('Queued bounded recovery and deferred provider fallback for plain agent error', {
+          sessionLog.warn('Queued bounded same-connection recovery for plain agent error', {
             sessionId,
             generation: generationKey,
-            reason: classifyRoutingFallbackReason(event.message),
+            reason: classifyAgentFailure({ message: event.message }).failureClass,
           })
           break
         }
@@ -10405,10 +9930,6 @@ export class SessionManager implements ISessionManager {
           turnStillNeedsRecovery(managed.messages, managed.pendingTurnRecovery.userMessageId) &&
           await this.enqueueAutomaticTurnRecovery(managed, 'runtime_error')
         ) {
-          managed.pendingRuntimeProviderFallback = {
-            error: new Error(typedErrorMsg),
-            generation: generationKey,
-          }
           sessionLog.warn('Queued bounded automatic recovery for transient network error', {
             sessionId,
             generation: generationKey,
@@ -11083,14 +10604,10 @@ export class SessionManager implements ISessionManager {
       managedModel: managed.model || defaultModel,
     })
 
-    const miniModel = backendContext.connection
-      ? (getMiniModel(backendContext.connection) ?? backendContext.connection.defaultModel ?? getDefaultSummarizationModel())
-      : getDefaultSummarizationModel()
-
     const persistedGitBashPath = getGitBashPath()
     const envOverrides: Record<string, string> = {
       CRAFT_WORKSPACE_PATH: workspaceRootPath,
-      ...(miniModel ? { ANTHROPIC_DEFAULT_HAIKU_MODEL: miniModel } : {}),
+      ANTHROPIC_DEFAULT_HAIKU_MODEL: backendContext.resolvedModel,
       ...(persistedGitBashPath ? { CLAUDE_CODE_GIT_BASH_PATH: persistedGitBashPath } : {}),
     }
 
@@ -11111,7 +10628,7 @@ export class SessionManager implements ISessionManager {
           permissionMode: managed.permissionMode,
           previousPermissionMode: managed.previousPermissionMode,
         },
-        miniModel,
+        thinkingLevel: managed.thinkingLevel,
         envOverrides,
         isHeadless: true,
       },
@@ -11124,7 +10641,7 @@ export class SessionManager implements ISessionManager {
 
     try {
       const summary = await Promise.race([
-        generateConversationSummary(boundedMessages, agent.runMiniCompletion.bind(agent)),
+        generateConversationSummary(boundedMessages, async prompt => (await agent.queryLlm({ prompt })).text),
         new Promise<never>((_, reject) => {
           timeout = setTimeout(() => reject(new Error('Provider handoff summary timed out after 15 seconds')), 15_000)
         }),
@@ -11358,32 +10875,11 @@ export class SessionManager implements ISessionManager {
       storedSession.sharedUrl = undefined
       storedSession.sharedId = undefined
 
-      // Resume-first: try to find a compatible LLM connection on the target workspace.
-      // If found and the session has an sdkSessionId, preserve it for API-level resume.
-      // If not, clear SDK state and fall back to transferred session summary.
-      const sourceProviderType = header.llmConnection
-        ? getLlmConnection(header.llmConnection)?.providerType
-        : undefined
-      const compatibleConnection = sourceProviderType
-        ? this.findCompatibleLlmConnection(workspaceRootPath, sourceProviderType)
-        : null
-
-      if (compatibleConnection && storedSession.sdkSessionId) {
-        // Resume path: compatible credentials exist — preserve SDK session ID
-        sessionLog.info(`[import] Fork: compatible ${sourceProviderType} connection "${compatibleConnection}" found — preserving sdkSessionId for resume`)
-        storedSession.llmConnection = compatibleConnection
-        storedSession.connectionLocked = false
-      } else {
-        // Summary path: no compatible connection or no SDK session — clear for fresh start
-        if (storedSession.llmConnection) {
-          sessionLog.info(`[import] Fork: no compatible ${sourceProviderType ?? 'unknown'} connection — clearing, will use summary context`)
-        }
-        storedSession.sdkSessionId = undefined
-        storedSession.llmConnection = undefined
-        storedSession.connectionLocked = false
-      }
-      // Clear thinking level so the session inherits the workspace default
-      storedSession.thinkingLevel = undefined
+      // Provider state is not portable. Import the transcript with the target
+      // workspace's explicit defaults; never search for a similar connection.
+      storedSession.sdkSessionId = undefined
+      storedSession.llmConnection = undefined
+      storedSession.connectionLocked = false
       // Clear working directory — the source path won't exist on a different server.
       // The user can set a new cwd after the session is transferred.
       storedSession.workingDirectory = undefined
@@ -11398,22 +10894,6 @@ export class SessionManager implements ISessionManager {
         sessionLog.warn(`[import] Sources not available: ${missingSources.join(', ')}`)
         warnings.push(`Sources not available in target workspace: ${missingSources.join(', ')}`)
       }
-    }
-
-    // Check LLM connection compatibility for move mode (fork already cleared above)
-    if (mode === 'move' && storedSession.llmConnection) {
-      sessionLog.info(`[import] Checking LLM connection: "${storedSession.llmConnection}"`)
-      const conn = resolveSessionConnection(storedSession.llmConnection, undefined)
-      if (!conn) {
-        sessionLog.warn(`[import] LLM connection "${storedSession.llmConnection}" not found — clearing to use default`)
-        warnings.push(`LLM connection "${storedSession.llmConnection}" not found in target — session will use default`)
-        storedSession.llmConnection = undefined
-        storedSession.connectionLocked = false
-      } else {
-        sessionLog.info(`[import] LLM connection "${storedSession.llmConnection}" resolved OK`)
-      }
-    } else if (mode === 'move' && !storedSession.llmConnection) {
-      sessionLog.info('[import] No LLM connection in bundle — will use default')
     }
 
     // Write JSONL file (after compatibility checks so remapped values are persisted)
@@ -11458,23 +10938,6 @@ export class SessionManager implements ISessionManager {
 
     sessionLog.info(`[import] Complete: sessionId=${sessionId}, transferredSummary=${managed.transferredSessionSummary ? `${managed.transferredSessionSummary.length} chars` : 'none'}, applied=${managed.transferredSessionSummaryApplied}, warnings=${warnings.length > 0 ? warnings.join('; ') : 'none'}`)
     return { sessionId, warnings: warnings.length > 0 ? warnings : undefined }
-  }
-
-  /**
-   * Find an LLM connection on this server that matches the given provider type.
-   * Checks workspace default first, then falls back to any matching connection.
-   */
-  private findCompatibleLlmConnection(workspaceRootPath: string, providerType: string): string | null {
-    const wsConfig = loadWorkspaceConfig(workspaceRootPath)
-    const defaultSlug = wsConfig?.defaults?.defaultLlmConnection
-    if (defaultSlug) {
-      const conn = getLlmConnection(defaultSlug)
-      if (conn?.providerType === providerType) return defaultSlug
-    }
-    // Fall back: any connection with matching provider type
-    const connections = getLlmConnections()
-    const match = connections.find(c => c.providerType === providerType)
-    return match?.slug ?? null
   }
 
   /**

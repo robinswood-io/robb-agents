@@ -382,7 +382,6 @@ import { getWorkspaceSourcesPath } from '../workspaces/storage.ts';
 // --- sources/{slug}/config.json ---
 
 const SourceTypeSchema = z.enum(['mcp', 'api', 'local']);
-const RoutingSensitivitySchema = z.enum(['public', 'internal', 'confidential', 'restricted']);
 
 // MCP source supports current transports plus legacy persisted SSE:
 // - Streamable HTTP / legacy SSE: requires url and authType
@@ -474,7 +473,6 @@ export const FolderSourceConfigSchema = z.object({
   api: ApiSourceConfigSchema.optional(),
   local: LocalSourceConfigSchema.optional(),
   brand: SourceBrandSchema.optional(),
-  routingSensitivity: RoutingSensitivitySchema.optional(),
   isAuthenticated: z.boolean().optional(),
   lastTestedAt: z.number().int().min(0).optional(),
   // Timestamps are optional - manually created configs may not have them

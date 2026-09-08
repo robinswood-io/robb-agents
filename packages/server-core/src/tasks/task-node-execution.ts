@@ -1,13 +1,4 @@
 import type { ThinkingLevel } from '@craft-agent/shared/agent';
-import {
-  getMiniModel,
-  maxRoutingSensitivity,
-  resolveRoutingPolicy,
-  type LlmConnection,
-  type ModelDefinition,
-  type RoutingDifficulty,
-  type RoutingPolicy,
-} from '@craft-agent/shared/config';
 import type { TaskNode, TaskSpec } from '@craft-agent/shared/tasks';
 
 export type TaskNodeSpecialty =
@@ -22,37 +13,31 @@ export type TaskNodeSpecialty =
   | 'documentation'
   | 'general';
 
-export type TaskModelTier = 'fast' | 'balanced' | 'best';
-
 export interface TaskNodeProfile {
   specialty: TaskNodeSpecialty;
-  difficulty: RoutingDifficulty;
-  modelTier: TaskModelTier;
-  thinkingLevel: ThinkingLevel;
+  difficulty: 'simple' | 'standard' | 'complex';
 }
 
-export interface TaskNodeRouteContext {
-  node: TaskNode;
-  spec: TaskSpec;
-  attempt: number;
-  lastFailure?: string;
-  /** Last dispatched route, persisted in the run log for crash-safe retry diversification. */
-  previousRoute?: Pick<TaskNodeExecutionRoute, 'llmConnection' | 'model'>;
-}
-
-export interface TaskNodeExecutionRoute {
-  profile: TaskNodeProfile;
+/** Settings explicitly selected on the node, task, parent session or workspace. */
+export interface TaskModelSettings {
   model?: string;
   llmConnection?: string;
-  thinkingLevel: ThinkingLevel;
-  strategy: 'primary' | 'retry-fallback' | 'pinned';
-  blockedReason?: string;
+  thinkingLevel?: ThinkingLevel;
 }
 
-export interface ResolveTaskNodeExecutionRouteInput extends TaskNodeRouteContext {
-  connections: LlmConnection[];
-  routingPolicy?: RoutingPolicy;
-  defaultConnectionSlug?: string;
+export function resolveTaskModelSettings(node: TaskNode, spec: TaskSpec, defaults: TaskModelSettings = {}): TaskModelSettings {
+  const llmConnection = node.llmConnection ?? spec.defaults?.llmConnection ?? defaults.llmConnection;
+  // A node's explicit connection replaces the task connection and its model.
+  // Keep a task model only when the node also inherits that connection.
+  const taskModel = !node.llmConnection || node.llmConnection === spec.defaults?.llmConnection
+    ? spec.defaults?.model
+    : undefined;
+  return {
+    llmConnection,
+    model: node.model ?? taskModel
+      ?? (llmConnection === defaults.llmConnection ? defaults.model : undefined),
+    thinkingLevel: node.thinkingLevel ?? spec.defaults?.thinkingLevel ?? defaults.thinkingLevel,
+  };
 }
 
 const SPECIALTY_SIGNALS: ReadonlyArray<{
@@ -155,33 +140,14 @@ function inferSpecialty(text: string): TaskNodeSpecialty {
   return best.specialty;
 }
 
-function inferDifficulty(text: string): RoutingDifficulty {
+function inferDifficulty(text: string): TaskNodeProfile['difficulty'] {
   const wordCount = text.trim() ? text.trim().split(/\s+/).length : 0;
   if (wordCount > 160 || COMPLEX_SIGNALS.some((pattern) => pattern.test(text))) return 'complex';
   if (wordCount >= 30 || STANDARD_SIGNALS.some((pattern) => pattern.test(text))) return 'standard';
   return 'simple';
 }
 
-function baseTier(difficulty: RoutingDifficulty): TaskModelTier {
-  if (difficulty === 'complex') return 'best';
-  if (difficulty === 'standard') return 'balanced';
-  return 'fast';
-}
-
-function promoteTier(tier: TaskModelTier, attempt: number): TaskModelTier {
-  if (attempt >= 3) return 'best';
-  if (attempt < 2) return tier;
-  return tier === 'fast' ? 'balanced' : 'best';
-}
-
-function thinkingForTier(tier: TaskModelTier, attempt: number): ThinkingLevel {
-  if (attempt >= 3) return 'xhigh';
-  if (tier === 'best') return 'high';
-  if (tier === 'balanced') return 'medium';
-  return 'low';
-}
-
-export function inferTaskNodeProfile(node: TaskNode, attempt = 1): TaskNodeProfile {
+export function inferTaskNodeProfile(node: TaskNode): TaskNodeProfile {
   const text = `${node.title ?? ''}\n${node.prompt ?? ''}`;
   const specialty = node.kind === 'verify' || node.kind === 'judge'
     ? 'review'
@@ -189,91 +155,7 @@ export function inferTaskNodeProfile(node: TaskNode, attempt = 1): TaskNodeProfi
       ? 'analysis'
       : inferSpecialty(text);
   const difficulty = inferDifficulty(text);
-  // A verifier is the acceptance boundary, not a cheap formatting pass. Route it
-  // at the strongest tier unless the task explicitly pins another model.
-  const modelTier = node.kind === 'verify' || node.kind === 'judge'
-    ? 'best'
-    : promoteTier(baseTier(difficulty), attempt);
-  return {
-    specialty,
-    difficulty,
-    modelTier,
-    thinkingLevel: thinkingForTier(modelTier, attempt),
-  };
-}
-
-function modelId(model: ModelDefinition | string): string {
-  return typeof model === 'string' ? model : model.id;
-}
-
-function modelForTier(
-  connection: LlmConnection,
-  tier: TaskModelTier,
-  taskDefaultModel?: string,
-): string | undefined {
-  const models = connection.models ?? [];
-  if (tier === 'fast') {
-    return getMiniModel(connection) ?? connection.defaultModel ?? taskDefaultModel;
-  }
-  if (tier === 'balanced') {
-    if (connection.modelSelectionMode === 'userDefined3Tier' && models[1]) return modelId(models[1]);
-    return connection.defaultModel ?? taskDefaultModel ?? (models[0] ? modelId(models[0]) : undefined);
-  }
-  return models[0] ? modelId(models[0]) : connection.defaultModel ?? taskDefaultModel;
-}
-
-export function resolveTaskNodeExecutionRoute(
-  input: ResolveTaskNodeExecutionRouteInput,
-): TaskNodeExecutionRoute {
-  const profile = inferTaskNodeProfile(input.node, input.attempt);
-  const requestedConnectionSlug =
-    input.node.llmConnection ?? input.spec.defaults?.llmConnection ?? input.defaultConnectionSlug;
-  const routePinned = Boolean(
-    input.node.llmConnection
-    ?? input.spec.defaults?.llmConnection
-    ?? input.node.model
-    ?? input.spec.defaults?.model,
-  );
-  const sensitivity = maxRoutingSensitivity(
-    input.spec.mission?.inputs.map((missionInput) => missionInput.sensitivity) ?? [],
-  );
-  const decision = resolveRoutingPolicy(input.routingPolicy, input.connections, {
-    requestedConnectionSlug,
-    sensitivity,
-    difficulty: profile.difficulty,
-    tags: [profile.specialty, ...(input.node.labels ?? [])],
-    sourceSlugs: input.spec.sources,
-  });
-
-  if (input.routingPolicy?.enabled !== false && input.routingPolicy && !decision.selectedConnectionSlug) {
-    return {
-      profile,
-      thinkingLevel: profile.thinkingLevel,
-      strategy: routePinned ? 'pinned' : 'primary',
-      blockedReason: decision.errors.join('; ') || 'No policy-authorized LLM connection is available.',
-    };
-  }
-
-  const primaryConnection = decision.selectedConnectionSlug ?? requestedConnectionSlug;
-  const retryFallback = input.attempt > 1 && !routePinned
-    ? decision.fallbackConnectionSlugs.find(
-        (candidate) => candidate !== input.previousRoute?.llmConnection,
-      )
-    : undefined;
-  const llmConnection = retryFallback ?? primaryConnection;
-  const connection = input.connections.find((candidate) => candidate.slug === llmConnection);
-  const model = input.node.model
-    ?? (connection
-      ? modelForTier(connection, profile.modelTier, input.spec.defaults?.model)
-      : input.spec.defaults?.model);
-
-  return {
-    profile,
-    model,
-    llmConnection,
-    thinkingLevel: profile.thinkingLevel,
-    strategy: routePinned ? 'pinned' : retryFallback ? 'retry-fallback' : 'primary',
-  };
+  return { specialty, difficulty };
 }
 
 const SPECIALTY_INSTRUCTIONS: Record<TaskNodeSpecialty, string> = {

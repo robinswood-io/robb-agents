@@ -281,8 +281,7 @@ The host, rather than assistant prose, owns the terminal decision:
 
 Tool-call ceilings emit a typed continuation checkpoint. Recovery is bounded by
 both a total cap and a two-pass no-progress circuit breaker; successful new tool
-evidence resets stagnation. Cost routing uses spend since the active objective
-started instead of lifetime chat spend. High-stakes mutations are gated until
+evidence resets stagnation. Cost accounting records spend without changing the selected model. High-stakes mutations are gated until
 authoritative evidence is observed, and completion additionally requires an
 independent reviewer tool result.
 
