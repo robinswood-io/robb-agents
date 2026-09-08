@@ -77,6 +77,8 @@ Local verification of this candidate passed 178 focused provider, selection and
 bridge tests, 54 release-contract tests, 8 source-boundary tests, and 10 installer
 tests (one platform-specific skip). Shared, Electron, Pi and release-contract
 TypeScript checks, locale parity and OSS validation passed.
+The full Electron development build also passed without installing or launching
+the application.
 
 CI now runs the catalog, image-capability, thinking-option, request-normalization,
 provider-registration and external-bridge regression suites explicitly. The

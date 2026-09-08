@@ -7,11 +7,11 @@ describe('Mistral Medium 3.5 request compatibility', () => {
   it('translates the SDK legacy prompt mode without changing the selected snapshot or history', () => {
     for (const model of ['mistral-medium-3-5', 'mistral-medium-2604']) {
       const messages = [{ role: 'assistant', content: [{ type: 'thinking', thinking: [{ type: 'text', text: 'Earlier reasoning' }] }] }];
-      const body = { model, prompt_mode: 'reasoning', prompt_cache_key: 'conversation-42', messages };
+      const body = { model, prompt_mode: 'reasoning', prompt_cache_key: 'test', messages };
       expect(normalizeMistralChatRequest(endpoint, body)).toEqual({
         model,
         reasoning_effort: 'high',
-        prompt_cache_key: 'conversation-42',
+        prompt_cache_key: 'test',
         messages,
       });
       expect(body.messages).toBe(messages);
