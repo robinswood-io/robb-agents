@@ -38,6 +38,7 @@ find . \
   \( -name '*.test.ts' -o -name '*.test.tsx' \) \
   ! -name '*.e2e.test.ts' \
   ! -name '*.e2e.test.tsx' \
+  ! -path './packages/server-core/src/sessions/refresh-connection-runtime.test.ts' \
   -print \
   | sort > "$TEST_LIST"
 
@@ -52,6 +53,9 @@ find . \
   \) -prune -o \
   -name '*.isolated.ts' -print \
   | sort > "$ISOLATED_LIST"
+
+# This suite replaces module exports that other server-core suites also mock.
+printf '%s\n' './packages/server-core/src/sessions/refresh-connection-runtime.test.ts' >> "$ISOLATED_LIST"
 
 if [ -s "$TEST_LIST" ]; then
   # Run each workspace in a fresh Bun process. Several suites intentionally

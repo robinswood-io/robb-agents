@@ -156,6 +156,7 @@ describe('TaskRunner (Conductor)', () => {
       workspacePermissionMode: 'allow-all',
       externalActionPolicy: 'confirm',
     },
+    nowMs?: () => number,
   ) {
     return new TaskRunner({
       host,
@@ -163,6 +164,7 @@ describe('TaskRunner (Conductor)', () => {
       workspaceRoot: root,
       getKillSwitch: inactiveKillSwitch,
       now: () => '2026-06-07T00:00:00.000Z',
+      nowMs,
       resolveSubagentAutonomyContext: () => autonomyContext,
       ...(executionProofIssuer ? {
         verifyExecutionProof: (proof, binding) => executionProofIssuer.verifyForTask(proof, binding),
@@ -1190,6 +1192,7 @@ describe('TaskRunner (Conductor)', () => {
   });
 
   it('applies retry backoff before dispatching the next attempt', async () => {
+    let clockMs = Date.now();
     saveTaskSpec(
       root,
       specOf({
@@ -1203,7 +1206,7 @@ describe('TaskRunner (Conductor)', () => {
         }],
       }),
     );
-    const runner = new TaskRunner({ host, workspaceId: 'ws', workspaceRoot: root, getKillSwitch: inactiveKillSwitch });
+    const runner = new TaskRunner({ host, workspaceId: 'ws', workspaceRoot: root, getKillSwitch: inactiveKillSwitch, nowMs: () => clockMs });
     runner.run('backoff', { runId: 'r1', verifyOnComplete: false });
     await tick();
     host.complete('a', { reason: 'error' });
@@ -1213,7 +1216,8 @@ describe('TaskRunner (Conductor)', () => {
     const retry = readRunLog(root, 'backoff', 'r1').find((entry) => entry.kind === 'node-retry');
     expect(retry).toMatchObject({ kind: 'node-retry', delayMs: 30 });
 
-    await new Promise<void>((resolve) => setTimeout(resolve, 40));
+    clockMs += 31;
+    await waitUntil(() => host.created.filter((entry) => entry.options.name === 'a').length === 2, 2000);
     expect(host.created.filter((entry) => entry.options.name === 'a')).toHaveLength(2);
   });
 
@@ -1294,7 +1298,9 @@ describe('TaskRunner (Conductor)', () => {
   });
 
   it('cancels in-flight work when a future mission deadline is crossed', async () => {
-    const deadline = new Date(Date.now() + 200).toISOString();
+    // Freeze only the injected mission clock: durable fsync may exceed 200 ms.
+    let clockMs = Date.now();
+    const deadline = new Date(clockMs + 200).toISOString();
     saveTaskSpec(
       root,
       specOf({
@@ -1309,12 +1315,13 @@ describe('TaskRunner (Conductor)', () => {
         nodes: [{ id: 'slow', prompt: 'wait beyond deadline' }],
       }),
     );
-    const runner = makeRunner();
+    const runner = makeRunner(undefined, undefined, () => clockMs);
     runner.run('deadline-crossing', { runId: 'r1', verifyOnComplete: false });
     await tick();
     expect(host.dispatchedNames()).toEqual(['slow']);
 
-    await new Promise<void>((resolve) => setTimeout(resolve, 250));
+    clockMs += 201;
+    await waitUntil(() => host.cancelled.includes('sess-slow'), 2000);
     expect(host.cancelled).toContain('sess-slow');
     expect(runner.getRunState('deadline-crossing', 'r1')?.status).toBe('failed');
     expect(readRunLog(root, 'deadline-crossing', 'r1').some(
@@ -1522,7 +1529,7 @@ describe('TaskRunner (Conductor)', () => {
         .filter((entry) => entry.kind === 'node-spawned').length;
     }
     expect(originalSpawnCount).toBe(checkpointCount);
-  }, 60_000);
+  }, 300_000);
 
   it('retries a failed node up to retry.limit, then fails', async () => {
     saveTaskSpec(

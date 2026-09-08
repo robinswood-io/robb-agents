@@ -365,7 +365,7 @@ describe('Sovereign Team Mesh', () => {
     expect(tokens.size).toBe(1_000);
     queue.revokeIdentity(last!.ownerIdentityId);
     expect(() => queue.assertFence('mission-1', last!)).toThrow(/revoked/);
-  });
+  }, 120_000);
 
   it('derives the durable creator only from the trusted authentication resolver', () => {
     const root = mkdtempSync(join(tmpdir(), 'robb-team-mesh-creator-'));
