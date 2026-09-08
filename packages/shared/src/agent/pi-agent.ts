@@ -17,6 +17,7 @@ import { spawn, type ChildProcess } from 'node:child_process';
 import { createInterface, type Interface as ReadlineInterface } from 'node:readline';
 import type { AgentEvent } from '@craft-agent/core/types';
 import type { FileAttachment } from '../utils/files.ts';
+import { i18n } from '../i18n/index.ts';
 import { getProxyEnvVars } from '../config/proxy-env.ts';
 import {
   buildRestrictedSubprocessEnvironment,
@@ -2468,6 +2469,25 @@ export class PiAgent extends BaseAgent {
     }
 
     try {
+      const bridgeProvider = getBackendRuntime(this.config).piAuthProvider;
+      const bridgeName = bridgeProvider === 'google-antigravity' ? 'Antigravity'
+        : bridgeProvider === 'mistral-vibe' ? 'Mistral Vibe' : undefined;
+      if (bridgeName && attachments?.some(attachment =>
+        attachment.type === 'image' || attachment.mimeType?.startsWith('image/')
+      )) {
+        // These external bridges send text only. Reject the turn before launch
+        // so direct callers cannot silently discard images or transmit a partial prompt.
+        yield {
+          type: 'error',
+          message: i18n.t('errors.bridgeImagesUnsupported', {
+            provider: bridgeName,
+            defaultValue: '{{provider}} cannot receive image attachments through this connection. Choose a connection that supports images, or remove the images before sending.',
+          }),
+        };
+        yield { type: 'complete' };
+        return;
+      }
+
       // Ensure subprocess is spawned and ready
       try {
         await this.ensureSubprocess();
@@ -2832,6 +2852,11 @@ export class PiAgent extends BaseAgent {
    * Events flow through the existing generator — no abort needed.
    */
   override redirect(message: string): boolean {
+    // ACP Vibe has no steering operation. Returning false keeps the user input
+    // in SessionManager's durable queue, including when steer was explicitly
+    // selected. Do not abort the ongoing Vibe turn just to enqueue its follow-up.
+    if (getBackendRuntime(this.config).piAuthProvider === 'mistral-vibe') return false;
+
     if (!this._isProcessing || !this.subprocess) {
       // Not streaming or no subprocess — fall back to abort
       this.forceAbort(AbortReason.Redirect);

@@ -47,6 +47,7 @@ let vibeProcess: ChildProcess | null = null;
 let acpConnection: any = null;
 let acpSession: any = null;
 let bridgeSessionId: string | null = null;
+let deliveredSystemPrompt: string | undefined;
 let activePrompt = false;
 let promptQueue: Promise<void> = Promise.resolve();
 const pendingPermissions = new Map<string, (action: PermissionAction) => void>();
@@ -76,6 +77,7 @@ function clearVibeState(): void {
   acpSession = null;
   acpConnection = null;
   bridgeSessionId = null;
+  deliveredSystemPrompt = undefined;
   vibeProcess = null;
 }
 
@@ -93,7 +95,9 @@ function emitEvent(event: Record<string, unknown>): void {
 }
 
 function selectPermissionOption(options: any[], action: PermissionAction): string | undefined {
-  if (action === 'allow' || action === 'modify') {
+  // ACP permission options cannot carry rewritten tool arguments. A host
+  // decision that permits only modified input must never allow the original.
+  if (action === 'allow') {
     return options.find(option => option?.kind === 'allow_once')?.optionId
       ?? options.find(option => option?.kind === 'allow_always')?.optionId;
   }
@@ -231,7 +235,7 @@ function emitToolUpdate(update: any): void {
   }
 }
 
-async function runPrompt(message: string): Promise<void> {
+async function runPrompt(message: string, systemPrompt?: string): Promise<void> {
   if (!acpSession) throw new Error('Mistral Vibe ACP session is not initialized');
   activePrompt = true;
   try {
@@ -240,7 +244,15 @@ async function runPrompt(message: string): Promise<void> {
   emitEvent({ type: 'agent_start' });
   emitEvent({ type: 'turn_start' });
 
-  const promptResult = acpSession.prompt(message);
+  // ACP has no system-message role. Include host instructions in the first
+  // prompt of this bridge session and whenever they change. A failed prompt
+  // must resend them; only remember delivery after successful completion.
+  const normalizedSystemPrompt = systemPrompt?.trim();
+  const needsSystemPrompt = normalizedSystemPrompt && normalizedSystemPrompt !== deliveredSystemPrompt;
+  const prompt = needsSystemPrompt
+    ? ['<robb_system_instructions>', normalizedSystemPrompt, '</robb_system_instructions>', '', message].join('\n')
+    : message;
+  const promptResult = acpSession.prompt(prompt);
   while (true) {
     const next = await acpSession.nextUpdate();
     if (next.kind === 'stop') break;
@@ -263,6 +275,7 @@ async function runPrompt(message: string): Promise<void> {
     }
   }
   await promptResult;
+  if (needsSystemPrompt) deliveredSystemPrompt = normalizedSystemPrompt;
 
   emitEvent({
     type: 'message_end',
@@ -287,7 +300,7 @@ async function handle(message: InboundMessage): Promise<void> {
       await startVibe(message);
       return;
     case 'prompt':
-      promptQueue = promptQueue.then(() => runPrompt(message.message)).catch(() => {
+      promptQueue = promptQueue.then(() => runPrompt(message.message, message.systemPrompt)).catch(() => {
         reportVibeError('MISTRAL_VIBE_PROMPT_FAILED', 'Mistral Vibe could not complete this turn. Confirm that Vibe is available and start a new turn.');
         emitEvent({ type: 'agent_end' });
       });

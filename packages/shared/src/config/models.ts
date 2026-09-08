@@ -14,6 +14,8 @@
 // Must stay in sync with BEDROCK_MODEL_MAP in llm-connections.ts.
 const BEDROCK_TO_BARE: Record<string, string> = {
   // US inference profile IDs (primary)
+  'us.anthropic.claude-opus-5': 'claude-opus-5',
+  'us.anthropic.claude-fable-5-1': 'claude-fable-5-1',
   'us.anthropic.claude-opus-4-8': 'claude-opus-4-8',
   'us.anthropic.claude-fable-5': 'claude-fable-5',
   'us.anthropic.claude-opus-4-7': 'claude-opus-4-7',
@@ -25,6 +27,8 @@ const BEDROCK_TO_BARE: Record<string, string> = {
   'us.anthropic.claude-opus-4-5-20251101-v1:0': 'claude-opus-4-5-20251101',
   'us.anthropic.claude-sonnet-4-5-20250929-v1:0': 'claude-sonnet-4-5-20250929',
   // EU inference profile IDs
+  'eu.anthropic.claude-opus-5': 'claude-opus-5',
+  'eu.anthropic.claude-fable-5-1': 'claude-fable-5-1',
   'eu.anthropic.claude-opus-4-8': 'claude-opus-4-8',
   'eu.anthropic.claude-fable-5': 'claude-fable-5',
   'eu.anthropic.claude-opus-4-7': 'claude-opus-4-7',
@@ -35,6 +39,8 @@ const BEDROCK_TO_BARE: Record<string, string> = {
   'eu.anthropic.claude-opus-4-5-20251101-v1:0': 'claude-opus-4-5-20251101',
   'eu.anthropic.claude-sonnet-4-5-20250929-v1:0': 'claude-sonnet-4-5-20250929',
   // Global inference profile IDs
+  'global.anthropic.claude-opus-5': 'claude-opus-5',
+  'global.anthropic.claude-fable-5-1': 'claude-fable-5-1',
   'global.anthropic.claude-opus-4-8': 'claude-opus-4-8',
   'global.anthropic.claude-fable-5': 'claude-fable-5',
   'global.anthropic.claude-opus-4-7': 'claude-opus-4-7',
@@ -43,6 +49,8 @@ const BEDROCK_TO_BARE: Record<string, string> = {
   'global.anthropic.claude-sonnet-4-6': 'claude-sonnet-4-6',
   'global.anthropic.claude-haiku-4-5-20251001-v1:0': 'claude-haiku-4-5-20251001',
   // Base IDs (no region prefix)
+  'anthropic.claude-opus-5': 'claude-opus-5',
+  'anthropic.claude-fable-5-1': 'claude-fable-5-1',
   'anthropic.claude-opus-4-8': 'claude-opus-4-8',
   'anthropic.claude-fable-5': 'claude-fable-5',
   'anthropic.claude-opus-4-7': 'claude-opus-4-7',
@@ -129,6 +137,19 @@ export const MODEL_REGISTRY: ModelDefinition[] = [
   // ----------------------------------------
   // Anthropic Claude Models
   // ----------------------------------------
+  // Official model IDs and capabilities verified 2026-09-08:
+  // https://platform.claude.com/docs/en/models/overview
+  {
+    id: 'claude-opus-5',
+    name: 'Opus 5',
+    shortName: 'Opus',
+    description: 'Most capable for complex work',
+    descriptionKey: 'model.opusDesc',
+    provider: 'anthropic',
+    contextWindow: 1_000_000,
+    supportsThinking: true,
+    supportsImages: true,
+  },
   {
     id: 'claude-opus-4-8',
     name: 'Opus 4.8',
@@ -173,6 +194,17 @@ export const MODEL_REGISTRY: ModelDefinition[] = [
     descriptionKey: 'model.haikuDesc',
     provider: 'anthropic',
     contextWindow: 200_000,
+  },
+  {
+    id: 'claude-fable-5-1',
+    name: 'Fable 5.1',
+    shortName: 'Fable',
+    description: 'Next-generation model for complex work',
+    descriptionKey: 'model.fableDesc',
+    provider: 'anthropic',
+    contextWindow: 1_000_000,
+    supportsThinking: true,
+    supportsImages: true,
   },
   {
     id: 'claude-fable-5',

@@ -465,6 +465,7 @@
   "editor.noLanguagesFound": "No languages found",
   "editor.searchLanguages": "Search languages...",
   "editor.strikethrough": "Strikethrough",
+  "errors.bridgeImagesUnsupported": "{{provider}} cannot receive image attachments through this connection. Choose a connection that supports images, or remove the images before sending.",
   "errors.chatGptOAuthNotAvailable": "ChatGPT OAuth is not available in the web UI. Use the desktop app or set up an API key instead.",
   "errors.failedToLoadSession": "Failed to load session",
   "errors.failedToLoadSessions": "Failed to load sessions",

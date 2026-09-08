@@ -465,6 +465,7 @@
   "editor.noLanguagesFound": "Nie znaleziono języków",
   "editor.searchLanguages": "Szukaj języków...",
   "editor.strikethrough": "Przekreślenie",
+  "errors.bridgeImagesUnsupported": "{{provider}} nie może odbierać załączonych obrazów przez to połączenie. Wybierz połączenie obsługujące obrazy lub usuń je przed wysłaniem.",
   "errors.chatGptOAuthNotAvailable": "ChatGPT OAuth nie jest dostępne w interfejsie web. Użyj aplikacji desktopowej lub skonfiguruj klucz API.",
   "errors.failedToLoadSession": "Nie udało się załadować sesji",
   "errors.failedToLoadSessions": "Nie udało się załadować sesji",

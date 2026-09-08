@@ -5,32 +5,70 @@ import { getPiModelsForAuthProvider } from '../../shared/src/config/models-pi.ts
 
 type RuntimeModel = Model<Api>;
 
+const OPENAI_SUPPLEMENTAL_MODEL_IDS = [
+  'gpt-6-astra',
+  'gpt-5.6-sol',
+  'gpt-5.6-terra',
+  'gpt-5.6-luna',
+] as const;
+
 const CATALOG_MODEL_TEMPLATES: Readonly<Record<string, {
   templateId: string;
-  supplementalIdPrefix: string;
+  supplementalModelIds: readonly string[];
 }>> = {
   openai: {
     templateId: 'gpt-5.5',
-    supplementalIdPrefix: 'gpt-5.6-',
+    supplementalModelIds: OPENAI_SUPPLEMENTAL_MODEL_IDS,
   },
   'openai-codex': {
     templateId: 'gpt-5.5',
-    supplementalIdPrefix: 'gpt-5.6-',
+    supplementalModelIds: OPENAI_SUPPLEMENTAL_MODEL_IDS,
+  },
+  anthropic: {
+    // This template explicitly enables adaptive thinking and disables sampling.
+    templateId: 'claude-opus-4-8',
+    supplementalModelIds: ['claude-opus-5', 'claude-fable-5-1'],
+  },
+  mistral: {
+    templateId: 'mistral-medium-2604',
+    supplementalModelIds: ['mistral-medium-3-5'],
   },
 };
 
 /**
  * Current standard-processing prices in USD per 1M tokens.
  *
- * Pi 0.80.3 predates GPT-5.6, so cloning the GPT-5.5 transport would otherwise
- * also clone its prices. That is correct for Sol input/output but materially
- * overstates Terra/Luna and misses GPT-5.6 cache-write billing. Keep these
- * explicit until the upstream SDK catalogue contains the models itself.
- * Source: https://developers.openai.com/api/docs/models/gpt-5.6-sol
+ * Pi 0.80.3 predates these models, so cloning an older transport would also
+ * clone stale prices and reasoning compatibility. Keep the overrides explicit
+ * until the upstream SDK catalogue contains the models itself.
+ * Sources:
+ * - https://developers.openai.com/api/docs/models/gpt-6-astra
+ * - https://developers.openai.com/api/docs/models/gpt-5.6-sol
+ * - https://platform.claude.com/docs/en/models/opus-5/overview
+ * - https://platform.claude.com/docs/en/models/fable-5-1/overview
  */
-const GPT_56_RUNTIME_OVERRIDES: Readonly<Record<string, Pick<RuntimeModel, 'cost' | 'maxTokens'>>> = {
+const RUNTIME_OVERRIDES: Readonly<Record<
+  string,
+  Pick<RuntimeModel, 'cost' | 'maxTokens' | 'thinkingLevelMap'>
+>> = {
+  'gpt-6-astra': {
+    cost: { input: 10, output: 50, cacheRead: 1, cacheWrite: 12.5 },
+    maxTokens: 128_000,
+    // Astra rejects the legacy `none` and `minimal` efforts. Pi 0.80.3 has no
+    // distinct `max` enum yet, so Robb's current max setting safely clamps to
+    // xhigh until the pinned runtime is upgraded.
+    thinkingLevelMap: {
+      off: null,
+      minimal: null,
+      low: 'low',
+      medium: 'medium',
+      high: 'high',
+      xhigh: 'xhigh',
+    },
+  },
   'gpt-5.6-sol': {
-    cost: { input: 5, output: 30, cacheRead: 0.5, cacheWrite: 6.25 },
+    // Promotional pricing is available at least through November 21, 2026.
+    cost: { input: 4, output: 20, cacheRead: 0.4, cacheWrite: 5 },
     maxTokens: 128_000,
   },
   'gpt-5.6-terra': {
@@ -40,6 +78,16 @@ const GPT_56_RUNTIME_OVERRIDES: Readonly<Record<string, Pick<RuntimeModel, 'cost
   'gpt-5.6-luna': {
     cost: { input: 0.2, output: 1.2, cacheRead: 0.02, cacheWrite: 0.25 },
     maxTokens: 128_000,
+  },
+  'claude-opus-5': {
+    cost: { input: 5, output: 25, cacheRead: 0.5, cacheWrite: 6.25 },
+    maxTokens: 128_000,
+  },
+  'claude-fable-5-1': {
+    cost: { input: 10, output: 50, cacheRead: 0.25, cacheWrite: 12.5 },
+    maxTokens: 128_000,
+    // Fable always thinks; omitting thinking keeps the API's adaptive default.
+    thinkingLevelMap: { off: null, xhigh: 'xhigh' },
   },
 };
 
@@ -93,8 +141,8 @@ function getRegistrationAuth(
 /**
  * Register catalog models that are newer than the bundled Pi SDK catalogue.
  *
- * The shared catalogue intentionally exposes GPT-5.6 for OpenAI API-key and
- * ChatGPT-account auth. Pi SDK 0.80.3 does not know these IDs yet, so create
+ * The shared catalogue exposes recent models for supported auth providers.
+ * Pi SDK 0.80.3 does not know these IDs yet, so create
  * runtime entries using the latest compatible provider model as the transport
  * template. Unknown providers and unauthenticated registries are left intact.
  */
@@ -113,20 +161,26 @@ export function registerSupplementalCatalogModels(
   const existingIds = new Set(existingModels.map(model => model.id));
   const missingDefinitions = getPiModelsForAuthProvider(provider).filter(definition => {
     const bareId = definition.id.replace(/^pi\//, '');
-    return bareId.startsWith(rule.supplementalIdPrefix) && !existingIds.has(bareId);
+    return rule.supplementalModelIds.includes(bareId) && !existingIds.has(bareId);
   });
   if (missingDefinitions.length === 0) return [];
 
   const supplementalModels = missingDefinitions.map(definition => {
     const id = definition.id.replace(/^pi\//, '');
-    const overrides = GPT_56_RUNTIME_OVERRIDES[id];
+    const overrides = RUNTIME_OVERRIDES[id];
     return {
       ...toRegistrationModel(template),
       id,
       name: definition.name,
       reasoning: definition.supportsThinking ?? template.reasoning,
       contextWindow: definition.contextWindow ?? template.contextWindow,
-      ...(overrides ? { cost: { ...overrides.cost }, maxTokens: overrides.maxTokens } : {}),
+      ...(overrides ? {
+        cost: { ...overrides.cost },
+        maxTokens: overrides.maxTokens,
+        ...(overrides.thinkingLevelMap
+          ? { thinkingLevelMap: { ...overrides.thinkingLevelMap } }
+          : {}),
+      } : {}),
     };
   });
 

@@ -15,7 +15,7 @@
 
 import { getProviders, getModels } from '@earendil-works/pi-ai/compat';
 import type { KnownProvider, Model, Api } from '@earendil-works/pi-ai';
-import type { ModelDefinition } from './models.ts';
+import { MODEL_REGISTRY, type ModelDefinition } from './models.ts';
 
 // ============================================
 // PI MODEL DISCOVERY
@@ -51,7 +51,20 @@ const GOOGLE_GEMINI_CODE_ASSIST_MODELS: ModelDefinition[] = [
   },
 ];
 
-const OPENAI_GPT_56_MODELS: ModelDefinition[] = [
+const OPENAI_SUPPLEMENTAL_MODELS: ModelDefinition[] = [
+  {
+    id: 'pi/gpt-6-astra',
+    name: 'GPT-6 Astra',
+    shortName: 'Astra',
+    description: 'OpenAI GPT-6 flagship reasoning and coding model via Robb Agents Backend',
+    provider: 'pi',
+    // Astra supports up to 1.05M tokens, but standard pricing changes above
+    // 272K and Pi 0.80.3 cannot represent tiered costs. Use the same safe
+    // operational cap as the current upstream Pi catalogue.
+    contextWindow: 272_000,
+    supportsThinking: true,
+    supportsImages: true,
+  },
   {
     id: 'pi/gpt-5.6-sol',
     name: 'GPT-5.6 Sol',
@@ -60,6 +73,7 @@ const OPENAI_GPT_56_MODELS: ModelDefinition[] = [
     provider: 'pi',
     contextWindow: 1048576,
     supportsThinking: true,
+    supportsImages: true,
   },
   {
     id: 'pi/gpt-5.6-terra',
@@ -69,6 +83,7 @@ const OPENAI_GPT_56_MODELS: ModelDefinition[] = [
     provider: 'pi',
     contextWindow: 1048576,
     supportsThinking: true,
+    supportsImages: true,
   },
   {
     id: 'pi/gpt-5.6-luna',
@@ -78,6 +93,7 @@ const OPENAI_GPT_56_MODELS: ModelDefinition[] = [
     provider: 'pi',
     contextWindow: 1048576,
     supportsThinking: true,
+    supportsImages: true,
   },
 ];
 
@@ -89,20 +105,46 @@ const MISTRAL_VIBE_SUBSCRIPTION_MODELS: ModelDefinition[] = [
     description: 'Mistral Vibe subscription agent via the official ACP bridge',
     provider: 'pi',
     contextWindow: 262144,
+    // The authenticated Vibe profile controls effort; ACP does not expose a
+    // reasoning selector through this bridge. Thinking events still stream.
+    supportsThinking: false,
+    supportsImages: false,
+  },
+];
+
+// Pi 0.80.3 lacks the current Anthropic snapshots. Preserve the metadata in
+// the shared registry; runtime definitions live in catalog-model-registration.
+const ANTHROPIC_SUPPLEMENTAL_MODELS: ModelDefinition[] = MODEL_REGISTRY
+  .filter(model => model.id === 'claude-opus-5' || model.id === 'claude-fable-5-1')
+  .map(model => ({ ...model, id: `pi/${model.id}`, provider: 'pi' }));
+
+const MISTRAL_SUPPLEMENTAL_MODELS: ModelDefinition[] = [
+  {
+    // Official canonical ID; Pi 0.80.3 only has the 2604 snapshot and a dotted
+    // alias. Keep existing selections and offer the documented ID for new ones.
+    // https://docs.mistral.ai/models/mistral-medium-3-5-26-04
+    id: 'pi/mistral-medium-3-5',
+    name: 'Mistral Medium 3.5',
+    shortName: 'Medium 3.5',
+    description: 'Mistral model for agentic and coding tasks via Robb Agents Backend',
+    provider: 'pi',
+    contextWindow: 262_144,
     supportsThinking: true,
+    supportsImages: true,
   },
 ];
 
 const GOOGLE_ANTIGRAVITY_MODELS: ModelDefinition[] = ([
+  // Verified with the official `agy models` command on 2026-09-08.
+  ['gemini-3.8-flash-high', 'Gemini 3.8 Flash (High)', '3.8 High'],
+  ['gemini-3.8-flash-medium', 'Gemini 3.8 Flash (Medium)', '3.8 Medium'],
+  ['gemini-3.8-flash-low', 'Gemini 3.8 Flash (Low)', '3.8 Low'],
   ['gemini-3.7-flash-high', 'Gemini 3.7 Flash (High)', '3.7 High'],
   ['gemini-3.7-flash-medium', 'Gemini 3.7 Flash (Medium)', '3.7 Medium'],
   ['gemini-3.7-flash-low', 'Gemini 3.7 Flash (Low)', '3.7 Low'],
   ['gemini-3.6-flash-high', 'Gemini 3.6 Flash (High)', '3.6 High'],
   ['gemini-3.6-flash-medium', 'Gemini 3.6 Flash (Medium)', '3.6 Medium'],
   ['gemini-3.6-flash-low', 'Gemini 3.6 Flash (Low)', '3.6 Low'],
-  ['gemini-3.5-flash-high', 'Gemini 3.5 Flash (High)', '3.5 High'],
-  ['gemini-3.5-flash-medium', 'Gemini 3.5 Flash (Medium)', '3.5 Medium'],
-  ['gemini-3.5-flash-low', 'Gemini 3.5 Flash (Low)', '3.5 Low'],
   ['gemini-3.1-pro-high', 'Gemini 3.1 Pro (High)', '3.1 Pro High'],
   ['gemini-3.1-pro-low', 'Gemini 3.1 Pro (Low)', '3.1 Pro Low'],
 ] as const).map(([id, name, shortName]) => ({
@@ -112,15 +154,20 @@ const GOOGLE_ANTIGRAVITY_MODELS: ModelDefinition[] = ([
   description: 'Gemini model through the official Google Antigravity CLI and account quota',
   provider: 'pi',
   contextWindow: 1_048_576,
-  supportsThinking: true,
+  // Effort is encoded in the selected CLI model slug. The separate reasoning
+  // selector cannot override it, although thinking events still stream.
+  supportsThinking: false,
   supportsImages: false,
 }));
 
 const PI_MODEL_SUPPLEMENTS: Record<string, ModelDefinition[]> = {
-  // Pi SDK 0.80.3 predates OpenAI's GPT-5.6 launch. Keep Robb current by
-  // injecting the official model IDs until the upstream SDK catalog catches up.
-  openai: OPENAI_GPT_56_MODELS,
-  'openai-codex': OPENAI_GPT_56_MODELS,
+  // Pi SDK 0.80.3 predates OpenAI's GPT-5.6 and GPT-6 Astra launches. Keep
+  // Robb current by injecting the official IDs until the upstream catalogue
+  // catches up.
+  openai: OPENAI_SUPPLEMENTAL_MODELS,
+  'openai-codex': OPENAI_SUPPLEMENTAL_MODELS,
+  anthropic: ANTHROPIC_SUPPLEMENTAL_MODELS,
+  mistral: MISTRAL_SUPPLEMENTAL_MODELS,
   // Antigravity is an external account-backed agent, not a Pi API provider.
   // These IDs are reported by `agy models` and passed back to the official CLI.
   'google-antigravity': GOOGLE_ANTIGRAVITY_MODELS,
@@ -154,6 +201,7 @@ function piModelToDefinition(m: Model<Api>): ModelDefinition {
     provider: 'pi',
     contextWindow: m.contextWindow,
     supportsThinking: m.reasoning,
+    supportsImages: m.input.includes('image'),
   };
 }
 

@@ -334,8 +334,8 @@ describe('Claude Fable 5', () => {
     expect(isClaudeModel('claude-fable-5')).toBe(true)
   })
 
-  it('does NOT become the Anthropic default (Opus 4.8 stays default)', () => {
-    expect(getDefaultModelForConnection('anthropic')).toBe('claude-opus-4-8')
+  it('keeps Opus 5 as the default for new Anthropic connections', () => {
+    expect(getDefaultModelForConnection('anthropic')).toBe('claude-opus-5')
   })
 
   it('round-trips through the Bedrock inference-profile mapping', () => {
