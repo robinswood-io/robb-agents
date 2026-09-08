@@ -59,16 +59,13 @@ setBedrockProviderModule(bedrockProviderModule);
 import {
   requireExplicitPiModel,
   resolvePiModel,
-  isDeniedMiniModelId,
 } from './model-resolution.ts';
 import { registerSupplementalCatalogModels } from './catalog-model-registration.ts';
 import {
   activateEphemeralQueryModel,
-  selectCompatibleQueryModel,
-  shouldRetryQueryModel,
-} from './query-llm-model-policy.ts';
+  resolveQueryModel,
+} from './query-model.ts';
 import { applyTokenUpdate, type PiCredential } from './token-update.ts';
-import { pickProviderAppropriateMiniModel } from './pick-mini-model.ts';
 import {
   buildCustomEndpointModelDef,
   normalizeCustomEndpointModelEntry,
@@ -83,11 +80,11 @@ import { getSessionPlansPath, getSessionPath } from '../../shared/src/sessions/s
 import { buildCallLlmRequest, withTimeout, LLM_QUERY_TIMEOUT_MS } from '../../shared/src/agent/llm-tool.ts';
 import type { LLMQueryRequest, LLMQueryResult } from '../../shared/src/agent/llm-tool.ts';
 import { PI_TOOL_NAME_MAP, THINKING_TO_PI } from '../../shared/src/agent/backend/pi/constants.ts';
-import { getDefaultSummarizationModel } from '../../shared/src/config/models.ts';
 import { createWebFetchTool } from './tools/web-fetch.ts';
 import { resolveSearchProvider } from './tools/search/resolve-provider.ts';
 import { createSearchTool } from './tools/search/create-search-tool.ts';
-import { selectCompactionUtilityModel } from './compaction-model-policy.ts';
+import { compactSelectedModel } from './compact-selected-model.ts';
+import { applySelectedThinkingLevel } from './selected-thinking-level.ts';
 import { allowCraftMetadataProperties, normalizeForPiTool, stripCraftMetadata } from './craft-metadata-schema.ts';
 import { applySystemPromptOverride } from './system-prompt-override.ts';
 import { registerGoogleCodeAssistProvider } from './google-code-assist-provider.ts';
@@ -672,19 +669,11 @@ async function ensureSession(): Promise<AgentSession> {
 
   }
 
-  // Set model if specified
-  if (initConfig.model) {
-    const piModel = requireExplicitPiModel(
-      modelRegistry,
-      initConfig.model,
-      initConfig.piAuth?.provider,
-      shouldPreferCustomEndpoint(),
-    );
-    sessionOptions.model = piModel;
-    setInterceptorApiHints(piModel);
-  } else {
-    setInterceptorApiHints(undefined);
-  }
+  // Never let the SDK substitute its own provider/model default.
+  if (!initConfig.model) throw new Error('A selected model is required to start the session');
+  const selectedModel = requireExplicitPiModel(modelRegistry, initConfig.model, initConfig.piAuth?.provider, shouldPreferCustomEndpoint());
+  sessionOptions.model = selectedModel;
+  setInterceptorApiHints(selectedModel);
 
   // Set thinking level
   const piThinkingLevel = THINKING_TO_PI[initConfig.thinkingLevel as keyof typeof THINKING_TO_PI];
@@ -694,6 +683,10 @@ async function ensureSession(): Promise<AgentSession> {
 
   // Create the session — tools flow through customTools + allowlist (see comment above).
   const { session } = await createAgentSession(sessionOptions);
+  if (sessionOptions.model) {
+    await activateEphemeralQueryModel(session, sessionOptions.model, initConfig.model);
+  }
+  if (piThinkingLevel) session.setThinkingLevel(piThinkingLevel);
   piSession = session;
 
   toolsChanged = false;
@@ -854,7 +847,7 @@ function wrapSingleTool(tool: ToolDefinition<any, any>): ToolDefinition<any, any
             intent,
             userRequest: currentUserMessage,
           },
-          summarize: runMiniCompletion,
+          summarize: async prompt => (await queryLlm({ prompt })).text,
           contextWindow: modelContextWindow,
         });
 
@@ -972,49 +965,11 @@ async function queryLlm(request: LLMQueryRequest): Promise<LLMQueryResult> {
 
   debugLog('[queryLlm] Starting');
 
-  // Pick mini model. If the configured miniModel uses a different provider than
-  // what the user authenticated with (e.g. gemini-2.5-pro when only anthropic
-  // credentials exist), fall back to the default summarization model which uses
-  // the same provider family.
-  const explicitlyRequestedModel = request.model !== undefined;
-  let model = request.model ?? initConfig.miniModel ?? getDefaultSummarizationModel();
-
-  // Create authenticated registry upfront — used by both the provider guard and the ephemeral session.
+  // Auxiliary task work inherits the user's selected model unless its caller
+  // explicitly supplies another model. A missing model is an error, never a
+  // reason to search other providers or mini-model candidates.
+  const model = resolveQueryModel(request.model, initConfig.model);
   const { authStorage, modelRegistry } = createAuthenticatedRegistry();
-
-  const piAuthProvider = initConfig.piAuth?.provider;
-
-  // If piAuth is set, ensure the mini model uses the same provider.
-  // Pi SDK will fail with "No API key found" if the model requires a different provider.
-  // Exception: 'custom-endpoint' provider is always compatible because it has its own
-  // API key configured via resolveCustomEndpointApiKey() and doesn't use authStorage.
-  if (initConfig.piAuth) {
-    const authProvider = initConfig.piAuth.provider;
-    const bareModel = model.startsWith('pi/') ? model.slice(3) : model;
-    const resolved = resolvePiModel(modelRegistry, bareModel, authProvider, shouldPreferCustomEndpoint());
-    const resolvedProvider = (resolved as any)?.provider;
-    const isCompatible = resolvedProvider === authProvider || resolvedProvider === 'custom-endpoint';
-    if (!resolved || !isCompatible || isDeniedMiniModelId(model, piAuthProvider)) {
-      model = selectCompatibleQueryModel({
-        modelId: model,
-        explicitlyRequested: explicitlyRequestedModel,
-        compatible: false,
-        authProvider,
-        resolvedProvider,
-        getFallbackModel: () => {
-          // Anthropic: keep Haiku (the cheap/fast mini). For every other provider
-          // Haiku is unresolvable, so walk PI_PREFERRED_DEFAULTS for a model that
-          // actually works under the user's auth.
-          const providerDefault = authProvider === 'anthropic'
-            ? undefined
-            : pickProviderAppropriateMiniModel(authProvider, modelRegistry, shouldPreferCustomEndpoint());
-          const fallback = providerDefault ?? getDefaultSummarizationModel();
-          debugLog(`[queryLlm] Model ${bareModel} incompatible with ${authProvider} (resolved: ${resolvedProvider}), falling back to ${fallback}`);
-          return fallback;
-        },
-      });
-    }
-  }
 
   const runQueryWithModel = async (modelId: string): Promise<string> => {
     debugLog(`[queryLlm] Using model: ${modelId}`);
@@ -1023,12 +978,7 @@ async function queryLlm(request: LLMQueryRequest): Promise<LLMQueryResult> {
     // fall back to its own internal default (which may require a provider
     // the user hasn't authenticated with, surfacing as a misleading
     // "No API key found for <provider>" error).
-    const piModel = resolvePiModel(modelRegistry, modelId, initConfig!.piAuth?.provider, shouldPreferCustomEndpoint());
-    if (!piModel) {
-      throw new Error(
-        `Could not resolve mini model "${modelId}" for provider "${initConfig!.piAuth?.provider ?? '(unknown)'}"`,
-      );
-    }
+    const piModel = requireExplicitPiModel(modelRegistry, modelId, initConfig!.piAuth?.provider, shouldPreferCustomEndpoint());
 
     // Create minimal ephemeral session
     const ephemeralOptions: CreateAgentSessionOptions = {
@@ -1043,8 +993,11 @@ async function queryLlm(request: LLMQueryRequest): Promise<LLMQueryResult> {
     const { session: ephemeralSession } = await createAgentSession(ephemeralOptions);
 
     // Pi SDK ignores options.model for ephemeral sessions (same issue as options.tools).
-    // Explicitly set the model after creation to ensure the mini model is used.
+    // Explicitly set the model after creation to ensure the selected model is used.
     await activateEphemeralQueryModel(ephemeralSession, piModel, modelId);
+    const thinkingLevel = piSession?.thinkingLevel
+      ?? THINKING_TO_PI[initConfig!.thinkingLevel as keyof typeof THINKING_TO_PI];
+    if (thinkingLevel) ephemeralSession.setThinkingLevel(thinkingLevel);
 
     debugLog(`[queryLlm] Created ephemeral session: ${ephemeralSession.sessionId}`);
 
@@ -1114,54 +1067,8 @@ async function queryLlm(request: LLMQueryRequest): Promise<LLMQueryResult> {
     }
   };
 
-  const fallbackCandidates = [
-    // Removed 'pi/gpt-5.1-codex-mini' (#596) — stale on several OpenAI catalogs.
-    // The connection-configured miniModel is still tried via `initConfig.miniModel`.
-    'pi/gpt-5-mini',
-    initConfig.miniModel,
-    getDefaultSummarizationModel(),
-  ].filter((candidate): candidate is string => !!candidate && !isDeniedMiniModelId(candidate, piAuthProvider));
-
-  const triedModels = new Set<string>();
-  let currentModel = model;
-
-  while (true) {
-    triedModels.add(currentModel);
-    try {
-      const text = await runQueryWithModel(currentModel);
-      return { text, model: currentModel };
-    } catch (error) {
-      const shouldRetry = shouldRetryQueryModel(error, explicitlyRequestedModel);
-
-      if (!shouldRetry) {
-        throw error;
-      }
-
-      const retryModel = fallbackCandidates.find(candidate => {
-        if (triedModels.has(candidate)) return false;
-        try {
-          const resolved = resolvePiModel(modelRegistry, candidate, initConfig!.piAuth?.provider, shouldPreferCustomEndpoint());
-          if (!resolved) return false;
-          if (initConfig!.piAuth) {
-            const rp = (resolved as any).provider;
-            if (rp !== initConfig!.piAuth.provider && rp !== 'custom-endpoint') {
-              return false;
-            }
-          }
-          return true;
-        } catch {
-          return false;
-        }
-      });
-
-      if (!retryModel) {
-        throw error;
-      }
-
-      debugLog(`[queryLlm] Model ${currentModel} not found, retrying with ${retryModel}`);
-      currentModel = retryModel;
-    }
-  }
+  const text = await runQueryWithModel(model);
+  return { text, model };
 }
 
 async function preExecuteCallLlm(input: Record<string, unknown>): Promise<LLMQueryResult> {
@@ -1172,17 +1079,6 @@ async function preExecuteCallLlm(input: Record<string, unknown>): Promise<LLMQue
   return queryLlm(request);
 }
 
-async function runMiniCompletion(prompt: string): Promise<string | null> {
-  try {
-    const result = await queryLlm({ prompt });
-    const text = result.text || null;
-    debugLog(`[runMiniCompletion] Result: ${text ? `"${text.slice(0, 200)}"` : 'null'}`);
-    return text;
-  } catch (error) {
-    debugLog(`[runMiniCompletion] Failed: ${error instanceof Error ? error.message : String(error)}`);
-    return null;
-  }
-}
 
 // ============================================================
 // Event Handling
@@ -1582,9 +1478,8 @@ async function handleAbort(): Promise<void> {
 async function handleMiniCompletion(msg: Extract<InboundMessage, { type: 'mini_completion' }>): Promise<void> {
   // Call queryLlm directly (not runMiniCompletion) so auth errors propagate
   // as 'error' messages instead of being swallowed and returned as null.
-  // runMiniCompletion is kept for the summarize callback where null is acceptable.
   try {
-    const result = await queryLlm({ prompt: msg.prompt });
+    const result = await queryLlm({ prompt: msg.prompt, model: initConfig?.miniModel ?? initConfig?.model });
     send({ type: 'mini_completion_result', id: msg.id, text: result.text || null });
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
@@ -1621,77 +1516,6 @@ async function handleEnsureSessionReady(msg: Extract<InboundMessage, { type: 'en
   });
 }
 
-async function compactWithCostEfficientModel(
-  session: AgentSession,
-  customInstructions?: string,
-): Promise<Awaited<ReturnType<AgentSession['compact']>> & { compactionModel?: string }> {
-  const activeModel = session.model;
-  const originalThinkingLevel = session.thinkingLevel;
-  const contextTokens = session.getContextUsage()?.tokens;
-  const utilityModelId = initConfig?.miniModel;
-  const resolvedUtilityModel = utilityModelId && piModelRegistry && !isDeniedMiniModelId(utilityModelId, initConfig?.piAuth?.provider)
-    ? resolvePiModel(piModelRegistry, utilityModelId, initConfig?.piAuth?.provider, shouldPreferCustomEndpoint())
-    : undefined;
-  const utilityModel = selectCompactionUtilityModel({
-    activeModel: activeModel
-      ? { id: activeModel.id, provider: activeModel.provider, contextWindow: activeModel.contextWindow }
-      : undefined,
-    utilityModel: resolvedUtilityModel
-      ? { id: resolvedUtilityModel.id, provider: resolvedUtilityModel.provider, contextWindow: resolvedUtilityModel.contextWindow }
-      : undefined,
-    contextTokens,
-  });
-
-  let switchedModel = false;
-  if (utilityModel && resolvedUtilityModel) {
-    try {
-      await session.setModel(resolvedUtilityModel);
-      switchedModel = true;
-      setInterceptorApiHints(resolvedUtilityModel);
-      debugLog(`[compact] Using utility model ${resolvedUtilityModel.provider}/${resolvedUtilityModel.id} for ${contextTokens} context tokens`);
-    } catch (error) {
-      debugLog(`[compact] Utility model activation failed; retaining active model: ${error instanceof Error ? error.message : String(error)}`);
-    }
-    if (switchedModel) {
-      try {
-        session.setThinkingLevel('medium');
-      } catch (error) {
-        debugLog(`[compact] Utility thinking-level reduction failed; continuing with the utility model: ${error instanceof Error ? error.message : String(error)}`);
-      }
-    }
-  }
-
-  let result: Awaited<ReturnType<AgentSession['compact']>> | undefined;
-  let operationError: unknown;
-  try {
-    result = await session.compact(customInstructions);
-  } catch (error) {
-    operationError = error;
-  } finally {
-    if (switchedModel && activeModel) {
-      try {
-        await session.setModel(activeModel);
-        session.setThinkingLevel(originalThinkingLevel);
-        setInterceptorApiHints(activeModel);
-      } catch (restoreError) {
-        debugLog(`[compact] Failed to restore active model; disposing runtime: ${restoreError instanceof Error ? restoreError.message : String(restoreError)}`);
-        unsubscribeEvents?.();
-        unsubscribeEvents = null;
-        session.dispose();
-        if (piSession === session) piSession = null;
-        throw new Error('Compaction completed but the active model could not be restored; runtime was safely recreated');
-      }
-    }
-  }
-
-  if (operationError) throw operationError;
-  if (!result) throw new Error('Compaction returned no result');
-  return {
-    ...result,
-    compactionModel: switchedModel ? resolvedUtilityModel?.id : activeModel?.id,
-  };
-}
-
 async function handleCompact(msg: Extract<InboundMessage, { type: 'compact' }>): Promise<void> {
   try {
     const session = await ensureSession();
@@ -1705,7 +1529,7 @@ async function handleCompact(msg: Extract<InboundMessage, { type: 'compact' }>):
     if (!settled) {
       throw new Error('Previous compaction did not settle before the safety deadline');
     }
-    const result = await compactWithCostEfficientModel(session, msg.customInstructions);
+    const result = await compactSelectedModel(session, msg.customInstructions);
     send({
       type: 'compact_result',
       id: msg.id,
@@ -1880,57 +1704,57 @@ async function handleUpdateRuntimeConfig(msg: RuntimeConfigUpdateMessage): Promi
 
 async function handleSetModel(msg: Extract<InboundMessage, { type: 'set_model' }>): Promise<void> {
   debugLog(`[set_model] Received: ${msg.model}`);
-  if (!piSession || !piModelRegistry) {
-    debugLog(`[set_model] No active session or model registry, ignoring`);
+  if (!initConfig) {
+    send({ type: 'error', code: 'model_error', message: 'Model selection received before init' });
     return;
   }
-  let piModel = resolvePiModel(piModelRegistry, msg.model, initConfig?.piAuth?.provider, shouldPreferCustomEndpoint());
+  // Persist the requested selection even when activation fails. The next turn
+  // must validate it again instead of continuing with the previous model.
+  initConfig.model = msg.model;
+  if (!piSession || !piModelRegistry) {
+    debugLog('[set_model] Stored selection for the next session');
+    return;
+  }
+  try {
+    let piModel = resolvePiModel(piModelRegistry, msg.model, initConfig.piAuth?.provider, shouldPreferCustomEndpoint());
 
   // For custom endpoints, dynamically register unknown models so mid-session switching works.
   // Uses registerCustomEndpointModels which accumulates into the existing model set
   // (registerProvider replaces, so we track all IDs and re-register the full set).
-  if (!piModel && initConfig?.baseUrl?.trim() && initConfig?.customEndpoint) {
-    const bareId = stripPiPrefix(msg.model);
-    registerCustomEndpointModels(piModelRegistry, initConfig.customEndpoint.api, initConfig.baseUrl!.trim(), [{ id: bareId }]);
-    piModel = piModelRegistry.find('custom-endpoint', bareId) ?? undefined;
-    debugLog(`[set_model] Dynamically registered custom endpoint model: ${bareId}`);
-  }
+    if (!piModel && initConfig.baseUrl?.trim() && initConfig.customEndpoint) {
+      const bareId = stripPiPrefix(msg.model);
+      registerCustomEndpointModels(piModelRegistry, initConfig.customEndpoint.api, initConfig.baseUrl.trim(), [{ id: bareId }]);
+      piModel = piModelRegistry.find('custom-endpoint', bareId) ?? undefined;
+      debugLog(`[set_model] Dynamically registered custom endpoint model: ${bareId}`);
+    }
 
-  if (!piModel) {
-    debugLog(`[set_model] Could not resolve model: ${msg.model}`);
-    setInterceptorApiHints(undefined);
-    return;
-  }
-  try {
+    if (!piModel) {
+      throw new Error(`Could not resolve selected model: ${msg.model}`);
+    }
     await piSession.setModel(piModel);
     setInterceptorApiHints(piModel as { api?: string; provider?: string; baseUrl?: string });
     debugLog(`[set_model] Model changed to: ${msg.model} (resolved: ${piModel.provider}/${piModel.id})`);
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
     debugLog(`[set_model] Failed to set model: ${errorMsg}`);
+    unsubscribeEvents?.();
+    unsubscribeEvents = null;
+    piSession.dispose();
+    piSession = null;
+    setInterceptorApiHints(undefined);
+    send({ type: 'error', code: 'model_error', message: errorMsg });
   }
 }
 
 async function handleSetThinkingLevel(msg: Extract<InboundMessage, { type: 'set_thinking_level' }>): Promise<void> {
   debugLog(`[set_thinking_level] Received: ${msg.level}`);
-
-  if (!piSession) {
-    debugLog('[set_thinking_level] No active session, ignoring');
-    return;
-  }
-
-  const piLevel = THINKING_TO_PI[msg.level as keyof typeof THINKING_TO_PI];
-  if (!piLevel) {
-    debugLog(`[set_thinking_level] No Pi mapping for level: ${msg.level}`);
-    return;
-  }
-
   try {
-    piSession.setThinkingLevel(piLevel);
-    debugLog(`[set_thinking_level] Thinking level changed to: ${msg.level} (mapped: ${piLevel})`);
+    applySelectedThinkingLevel(initConfig, piSession, msg.level);
+    debugLog(`[set_thinking_level] Stored selected reasoning: ${msg.level}${piSession ? ' and applied to active session' : ' for next session'}`);
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
     debugLog(`[set_thinking_level] Failed to set thinking level: ${errorMsg}`);
+    send({ type: 'error', code: 'thinking_level_error', message: errorMsg });
   }
 }
 

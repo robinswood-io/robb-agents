@@ -315,10 +315,6 @@ export const RPC_CHANNELS = {
     SETTINGS_GET: 'workspaceSettings:get',
     SETTINGS_UPDATE: 'workspaceSettings:update',
     GOVERNANCE_UPDATE: 'workspaceSettings:governanceUpdate',
-    /** Explain a routing decision without running a provider or mutating state. */
-    ROUTING_SIMULATE: 'workspaceSettings:simulateRouting',
-    /** Analyze locally stored, ground-truth routing outcomes in read-only shadow mode. */
-    ROUTING_SHADOW_ANALYZE: 'workspaceSettings:analyzeRoutingShadow',
     REMOTE_SUPERVISION_GRANT: 'workspaceSettings:remoteSupervisionGrant',
     REMOTE_SUPERVISION_REVOKE: 'workspaceSettings:remoteSupervisionRevoke',
   },

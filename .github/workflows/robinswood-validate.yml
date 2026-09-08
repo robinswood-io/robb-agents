@@ -45,6 +45,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Verify public source boundary
+        run: |
+          python3 scripts/robinswood-public-source-boundary.py
+          python3 -m unittest scripts/tests/test_robinswood_public_source_boundary.py
+
       - name: Run Robinswood checks
         run: python3 scripts/robinswood-validate.py
 
@@ -60,9 +65,6 @@ jobs:
       - name: Run focused fork tests
         run: |
           bun test \
-            packages/shared/tests/routing-policy.test.ts \
-            packages/shared/tests/routing-policy-example.test.ts \
-            packages/shared/tests/client-workspace-template.test.ts \
             packages/shared/src/sources/__tests__/source-config-validation.test.ts \
             packages/shared/src/utils/__tests__/paths.test.ts \
             packages/shared/src/tasks/schema.test.ts \
@@ -80,9 +82,15 @@ jobs:
             apps/electron/src/renderer/config/__tests__/session-status-config.test.ts \
             apps/electron/src/renderer/hooks/__tests__/useOnboarding.test.ts \
             apps/electron/src/renderer/hooks/__tests__/useSessionSearch.test.ts \
-            apps/electron/src/renderer/pages/settings/__tests__/routing-policy-editor.test.ts \
             apps/electron/src/main/__tests__/connection-setup-logic.test.ts \
             packages/pi-agent-server/src/google-code-assist-provider.test.ts \
+            packages/pi-agent-server/src/query-model.test.ts \
+            packages/pi-agent-server/src/compact-selected-model.test.ts \
+            packages/pi-agent-server/src/selected-thinking-level.test.ts \
+            packages/server-core/src/tasks/task-node-execution.test.ts \
+            packages/server-core/src/missions/MissionPlanner.test.ts \
+            packages/server-core/src/missions/SessionMissionExecutor.test.ts \
+            packages/server-core/src/missions/MissionDigitalTwinIntegration.test.ts \
             packages/shared/src/audit/routing-audit.test.ts \
             packages/server-core/src/tasks/TaskRunner.test.ts \
             packages/server-core/src/sessions/background-task-surface.test.ts \
@@ -93,7 +101,6 @@ jobs:
             packages/session-tools-core/src/handlers/list-background-tasks.test.ts \
             packages/session-tools-core/src/handlers/send-agent-message.test.ts \
             packages/session-tools-core/src/handlers/set-session-status.test.ts \
-            packages/server-core/src/sessions/routing-fallback.test.ts \
             packages/server-core/src/sessions/runtime-config.test.ts
 
       - name: Run config-dir-sensitive runtime refresh test

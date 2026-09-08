@@ -330,21 +330,17 @@ async function validateRemoteMobileFlow() {
     await page.reload();
     await page.locator('h2:visible').filter({ hasText: /^ChatDisplay \(Mobile\)$/ }).waitFor({ timeout: 20_000 });
 
-    const providerTrigger = page.getByTestId('provider-selector-trigger');
-    await providerTrigger.waitFor({ timeout: 20_000 });
-    const providerOnlyControl = await providerTrigger.getAttribute('data-routing-control') === 'provider-only';
-    await providerTrigger.click();
-    const providerDrawer = page.locator('[role="dialog"]');
-    await providerDrawer.waitFor({ timeout: 10_000 });
-    const providerOptionCount = await page.getByTestId('provider-option').count();
-    const providerDrawerText = await providerDrawer.innerText();
-    const manualRoutingControlsHidden = ![
-      'Claude Opus',
-      'DeepSeek Chat',
-      'Qwen 2.5',
-      'Réflexion',
-      'Thinking',
-    ].some(label => providerDrawerText.includes(label));
+    const modelTrigger = page.getByTestId('model-selector-trigger');
+    await modelTrigger.waitFor({ timeout: 20_000 });
+    await modelTrigger.click();
+    const modelDrawer = page.locator('[role="dialog"]');
+    await modelDrawer.waitFor({ timeout: 10_000 });
+    const connections = page.getByTestId('model-connection-option');
+    const connectionOptionCount = await connections.count();
+    await page.locator('[data-testid="model-connection-option"]:not(:disabled)').first().click();
+    const modelOptionCount = await page.getByTestId('model-option').count();
+    const thinkingOptionCount = await page.getByTestId('thinking-option').count();
+    const manualModelControlsVisible = modelOptionCount > 0 && thinkingOptionCount > 0;
     await page.keyboard.press('Escape');
 
     await page.evaluate(() => {
@@ -386,7 +382,7 @@ async function validateRemoteMobileFlow() {
     console.log(`Updater:  ${devUpdaterHidden ? 'hidden in development' : 'unexpectedly visible'}`);
     console.log(`Desktop QR: ${desktopQrVisible ? 'visible and scannable' : 'missing'}`);
     console.log(`Desktop Remote screenshot: ${desktopRemoteScreenshot}`);
-    console.log(`Routing:  ${providerOnlyControl && providerOptionCount >= 2 && manualRoutingControlsHidden ? 'provider-only' : 'manual model control exposed'}`);
+    console.log(`Model controls: ${manualModelControlsVisible ? 'manual model and reasoning' : 'missing controls'}`);
     console.log(`Subagents: ${subagentCount} total, ${runningSubagentCount} running`);
     console.log(`Summary:  ${summaryIsNonInteractive ? 'non-interactive' : 'unexpected interactive control'}`);
     console.log(`Children: ${childSessionRows === 0 ? 'not directly navigable' : `${childSessionRows} exposed rows`}`);
@@ -408,9 +404,8 @@ async function validateRemoteMobileFlow() {
       && darkThemeApplied
       && devUpdaterHidden
       && desktopQrVisible
-      && providerOnlyControl
-      && providerOptionCount >= 2
-      && manualRoutingControlsHidden
+      && connectionOptionCount >= 2
+      && manualModelControlsVisible
       && subagentCount === '4'
       && runningSubagentCount === '2'
       && summaryIsNonInteractive

@@ -144,6 +144,29 @@ describe('MissionPlanner', () => {
     expect(result.spec).toBeUndefined();
   });
 
+  it('inherits the origin model, connection and reasoning when the UI requests a plan without overrides', async () => {
+    Object.assign(host.sessions[0]!, {
+      llmConnection: 'origin-connection', model: 'origin-model', thinkingLevel: 'high',
+    });
+    const started = await planner.start({ goal: 'Plan this work', originSessionId: 'origin' });
+    expect(host.lastOptions).toMatchObject({
+      llmConnection: 'origin-connection', model: 'origin-model', thinkingLevel: 'high',
+    });
+    await started.result;
+  });
+
+  it('clears the inherited model for a manually selected planner connection while retaining reasoning', async () => {
+    Object.assign(host.sessions[0]!, {
+      llmConnection: 'origin-connection', model: 'origin-model', thinkingLevel: 'low',
+    });
+    const started = await planner.start({
+      goal: 'Plan on the requested connection', originSessionId: 'origin', llmConnection: 'requested-connection',
+    });
+    expect(host.lastOptions).toMatchObject({ llmConnection: 'requested-connection', thinkingLevel: 'low' });
+    expect(host.lastOptions?.model).toBeUndefined();
+    await started.result;
+  });
+
   it('uses Execute and instructs allow-all profiles only after the two-key opt-in', async () => {
     const autonomousHost = new PlannerHost(root);
     const autonomousPlanner = new MissionPlanner({

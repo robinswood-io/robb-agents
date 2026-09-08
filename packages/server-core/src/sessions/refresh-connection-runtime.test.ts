@@ -313,6 +313,53 @@ describe('refreshConnectionRuntime', () => {
     expect(refreshRuntime).toHaveBeenCalledTimes(1)
     expect(refreshRuntime).toHaveBeenCalledWith(managed, 'session model changed')
   })
+
+  it('selects the new connection default only after a manual connection change and preserves reasoning', async () => {
+    const stored = await createStoredSession(tmpRoot, { model: 'test-text', llmConnection: 'slug-A' })
+    const managed = injectSession(sm, stored.id, tmpRoot, 'slug-A', null) as ReturnType<typeof injectSession> & {
+      model?: string
+      thinkingLevel?: string
+    }
+    managed.model = 'test-vision'
+    managed.thinkingLevel = 'high'
+
+    await sm.setSessionConnection(stored.id, 'slug-A')
+    expect(managed.model).toBe('test-vision')
+
+    await sm.setSessionConnection(stored.id, 'slug-B')
+    expect(managed.llmConnection).toBe('slug-B')
+    expect(managed.model).toBe('test-b')
+    expect(managed.thinkingLevel).toBe('high')
+  })
+
+  it('keeps the selected runtime model and reasoning for complex turns beyond the cost budget', async () => {
+    const agent = { ...createAgentStub(), setExternalActionPolicy: jest.fn() }
+    const managed = injectSession(sm, 'selected-turn', tmpRoot, 'slug-A', agent) as ReturnType<typeof injectSession> & {
+      model?: string
+      thinkingLevel?: string
+      tokenUsage?: { costUsd: number }
+      pendingRoutingMeta?: { costControl?: { budgetState?: string; thinkingLevel?: string } }
+    }
+    managed.model = 'test-vision'
+    managed.thinkingLevel = 'high'
+    managed.tokenUsage = { costUsd: 100_000 }
+    const internal = sm as unknown as {
+      tryRefreshAgentRuntime: (session: unknown, reason: string) => Promise<void>
+      getOrCreateAgent: (session: unknown, turn: { message: string }) => Promise<unknown>
+    }
+    internal.tryRefreshAgentRuntime = jest.fn().mockResolvedValue(undefined)
+
+    const result = await internal.getOrCreateAgent(managed, {
+      message: 'Audit the architecture, implement a migration, verify the result, and review every security requirement.',
+    })
+
+    expect(result).toBe(agent)
+    expect(managed.llmConnection).toBe('slug-A')
+    expect(managed.model).toBe('test-vision')
+    expect(managed.thinkingLevel).toBe('high')
+    expect(agent.setModel).not.toHaveBeenCalled()
+    expect(managed.pendingRoutingMeta?.costControl).toMatchObject({ budgetState: 'hard-limit', thinkingLevel: 'high' })
+  })
 })
 
 describe('restartAgentRuntime', () => {

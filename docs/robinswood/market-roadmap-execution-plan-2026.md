@@ -58,8 +58,8 @@ l’incident à éviter est son installation sur la cible production/staging.
 | Capacité | État au 2026-07-23 | Preuve dans le dépôt |
 |---|---|---|
 | Français natif et rebrand Robb | Livré | locale, assets, metadata Electron et smoke tests |
-| Router policy-first par tour | Livré | `routingPolicy`, sensibilité, allow-list |
-| Fallback router fail-closed | Livré | fallback unique avant streaming et `routingMeta` |
+| Sélection du fournisseur et modèle | Manuelle dans le public | Héritée par les travaux délégués |
+| Erreurs fournisseur | Visibles dans le public | Aucun changement automatique de modèle |
 | Audit provider/modèle/coût | Partiel | coût SDK, agrégat session, exports presse-papiers |
 | Playbooks et automatisations | Partiel | builtins, validation, storage et UI |
 | Autonomie gouvernée | Partiel | décision, preuve, politique d’exécution et dead-letter |

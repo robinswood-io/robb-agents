@@ -2020,21 +2020,6 @@
       "updatedBy": "oss-p9-p13-improvements"
     },
     {
-      "legacy_id": "provider-routing-guard",
-      "accepted": true,
-      "riskClass": "low_observability_or_guardrail",
-      "sideEffects": [
-        "filesystem-write:ops-report"
-      ],
-      "mutationMode": "prepare_only_or_read_only",
-      "requiresHumanApprovalForApply": false,
-      "requiresHumanApprovalForExternalSend": false,
-      "requiresExplicitReviewBeforeRiskIncrease": true,
-      "scheduleAllowed": true,
-      "updatedAt": "2026-06-28T07:37:38.315556Z",
-      "updatedBy": "oss-p9-p13-improvements"
-    },
-    {
       "legacy_id": "qualified-opportunity-quote-guard",
       "accepted": true,
       "riskClass": "low_observability_or_guardrail",

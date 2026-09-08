@@ -14,7 +14,6 @@
 import {
   type ModelDefinition,
   ANTHROPIC_MODELS,
-  normalizeDeprecatedModelId,
 } from './models';
 import type { CredentialManager } from '../credentials/manager.ts';
 
@@ -235,7 +234,7 @@ export interface LlmConnectionWithStatus extends LlmConnection {
 // ============================================================
 
 /**
- * Returns true when `modelId` must NOT be used as the mini/summarization model
+ * Returns true when `modelId` must NOT be used as the metadata utility model
  * given the current auth flavor.
  *
  * - `codex-mini-latest` is always denied (Pi SDK rejects it outright).
@@ -263,7 +262,7 @@ export function isDeniedMiniModelId(modelId: string, piAuthProvider?: string): b
  * (e.g. `gpt-5.1-codex-mini` under ChatGPT-account auth). See
  * {@link isDeniedMiniModelId}.
  *
- * Used for mini agent, title generation, and mini completions.
+ * Used only for title/icon metadata generation and connection health probes.
  */
 export function getMiniModel(
   connection: Pick<LlmConnection, 'models' | 'providerType' | 'piAuthProvider'>,
@@ -272,21 +271,8 @@ export function getMiniModel(
 }
 
 /**
- * Get the summarization model ID for a connection.
- * Same provider-aware logic as getMiniModel(), but separate
- * so summarization and mini agent models can diverge independently.
- *
- * Used for response summarization and API tool summarization.
- */
-export function getSummarizationModel(
-  connection: Pick<LlmConnection, 'models' | 'providerType' | 'piAuthProvider'>,
-): string | undefined {
-  return findSmallModel(connection);
-}
-
-/**
  * Provider-aware small model resolution.
- * Shared implementation for getMiniModel() and getSummarizationModel().
+ * Implementation for metadata-only getMiniModel().
  *
  *   - Anthropic: find "haiku"
  *   - Pi: find "mini" or "flash"
@@ -844,9 +830,8 @@ export function deriveBedrockRegionPrefix(awsRegion?: string): string {
  * Pass-through if already native or unknown.
  */
 export function toBedrockNativeId(modelId: string, regionPrefix?: string): string {
-  const normalizedModelId = normalizeDeprecatedModelId(modelId)
-  const nativeId = BEDROCK_MODEL_MAP[normalizedModelId]
-  if (!nativeId) return normalizedModelId
+  const nativeId = BEDROCK_MODEL_MAP[modelId]
+  if (!nativeId) return modelId
   if (!regionPrefix || regionPrefix === 'us') return nativeId
   // BEDROCK_MODEL_MAP stores us.* variants — swap the region prefix
   return nativeId.replace(/^us\./, `${regionPrefix}.`)
@@ -854,8 +839,7 @@ export function toBedrockNativeId(modelId: string, regionPrefix?: string): strin
 
 /** Map a Bedrock-native model ID back to its bare Anthropic equivalent. Pass-through if already bare or unknown. */
 export function fromBedrockNativeId(modelId: string): string {
-  const normalizedModelId = normalizeDeprecatedModelId(modelId)
-  return BEDROCK_REVERSE_MAP[normalizedModelId] ?? normalizedModelId
+  return BEDROCK_REVERSE_MAP[modelId] ?? modelId
 }
 
 /**

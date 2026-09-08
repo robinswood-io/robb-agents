@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto';
 import { MissionSpecSchema } from '@craft-agent/shared/missions';
+import { inheritMissionModelSettings } from './mission-model-settings.ts';
 import type {
   MissionPlanAck,
   MissionPlanRequest,
@@ -65,8 +66,7 @@ export class MissionPlanner {
       projectId: request.projectId ?? origin.projectId,
       workingDirectory: cwd,
       permissionMode: autonomy.permissionMode,
-      model: request.model,
-      llmConnection: request.llmConnection,
+      ...inheritMissionModelSettings(request, origin),
       enabledSourceSlugs: request.enabledSourceSlugs,
       sessionStatus: 'in-progress',
       missionId,

@@ -2,8 +2,7 @@ import {
   getLlmConnections,
   getWorkspaceByNameOrId,
   getWorkspaces,
-  resolveRoutingPolicy,
-  type RoutingCapability,
+  getDefaultLlmConnection,
 } from '@craft-agent/shared/config';
 import {
   MissionSpecSchema,
@@ -34,6 +33,7 @@ import {
   type MissionWorkExecutor,
 } from './MissionRuntime.ts';
 import { SessionMissionExecutor } from './SessionMissionExecutor.ts';
+import { inheritMissionModelSettings } from './mission-model-settings.ts';
 import {
   BrokeredMissionConnectorExecutor,
   EffectRoutingMissionExecutor,
@@ -42,7 +42,6 @@ import {
 import { resolveMissionSubmissionEvidence } from './MissionEvidenceResolver.ts';
 import { MissionProofPassportService } from './MissionProofPassportService.ts';
 import { loadMissionProofPassportService } from './proof-passport-runtime.ts';
-import { recordMissionRoutingGroundTruth } from './mission-routing-ground-truth.ts';
 import {
   resolveSubagentAutonomy,
   type SubagentAutonomyContext,
@@ -209,34 +208,21 @@ export class MissionRuntimeService {
       spec.supervisorProfileId,
     ]);
     const routeByProfileId: NonNullable<Parameters<typeof simulateMissionDigitalTwin>[0]['routeByProfileId']> = {};
-    const resolveRoutes = (projectedMissionUsd?: number) => {
-      for (const profileId of [...profileIds].sort()) {
-        const profile = spec.agentProfiles.find((candidate) => candidate.id === profileId);
-        if (!profile) continue;
-        const requiredCapabilities: RoutingCapability[] =
-          profile.tools.length > 0 || profile.sources.length > 0 ? ['tools'] : [];
-        const decision = resolveRoutingPolicy(config.routingPolicy, connections, {
-          requestedConnectionSlug: profile.llmConnection,
-          requiredCapabilities,
-          budgetUsage: {
-            missionUsd: snapshot ? measuredMissionCostUsd(snapshot) : 0,
-            ...(projectedMissionUsd === undefined ? {} : { projectedTurnUsd: projectedMissionUsd }),
-          },
-        });
-        const budgetAllowed = !decision.budget || decision.budget.status === 'within-budget';
-        routeByProfileId[profileId] = {
-          policyAllowed: decision.errors.length === 0 && budgetAllowed && !!decision.selectedConnectionSlug,
-          ...(decision.selectedConnectionSlug ? { connectionSlug: decision.selectedConnectionSlug } : {}),
-          explanation: decision.explanation
-            || decision.errors.join('; ')
-            || 'No host-authorized route is available',
-        };
-      }
-    };
-    // Resolve once to select the host connection needed by the cost estimator.
-    // Once every cost is known, resolve again with the aggregate projection so
-    // routingPolicy mission/workspace budget gates are evaluated before launch.
-    resolveRoutes();
+    const origin = spec.originSessionId
+      ? this.options.sessionManager.getSessions(workspaceId).find(session => session.id === spec.originSessionId)
+      : undefined;
+    for (const profileId of [...profileIds].sort()) {
+      const profile = spec.agentProfiles.find((candidate) => candidate.id === profileId);
+      if (!profile) continue;
+      const connectionSlug = inheritMissionModelSettings(profile, origin).llmConnection
+        ?? config.defaults?.defaultLlmConnection ?? getDefaultLlmConnection() ?? undefined;
+      const available = connections.some((connection) => connection.slug === connectionSlug);
+      routeByProfileId[profileId] = {
+        policyAllowed: available,
+        ...(connectionSlug ? { connectionSlug } : {}),
+        explanation: available ? 'User-selected connection is configured' : 'The selected connection is unavailable',
+      };
+    }
 
     const pathPolicyAllowedByWorkItemId = Object.fromEntries(executing.map((item) => [
       item.id,
@@ -289,10 +275,6 @@ export class MissionRuntimeService {
         estimatedCostUsdByWorkItemId[item.id] = estimate;
       }
     }
-    if (Object.keys(estimatedCostUsdByWorkItemId).length === executing.length) {
-      resolveRoutes(Object.values(estimatedCostUsdByWorkItemId).reduce((sum, value) => sum + value, 0));
-    }
-
     return simulateMissionDigitalTwin({
       spec,
       routeByProfileId,
@@ -609,17 +591,6 @@ export class MissionRuntimeService {
         error: normalizedError(error),
       });
       return false;
-    }
-    try {
-      recordMissionRoutingGroundTruth(context.workspace.rootPath, snapshot);
-    } catch (error) {
-      // Outcome feedback is local analytics and must not invalidate a genuine,
-      // already-issued Proof Passport or suppress the user-facing final report.
-      this.reportError({
-        workspaceId: context.workspace.id,
-        missionId: snapshot.spec.id,
-        error: normalizedError(error),
-      });
     }
     return true;
   }

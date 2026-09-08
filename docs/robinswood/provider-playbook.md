@@ -6,16 +6,11 @@ This document defines the target provider strategy for French client deployments
 
 ## Principle
 
-Robb Agents should not push every task to the strongest cloud model. Provider choice must be policy-first:
-
-1. client confidentiality policy;
-2. source/data sensitivity;
-3. task difficulty;
-4. tool/vision/context requirements;
-5. latency;
-6. cost.
-
-The UI should make provider/model usage visible and auditable.
+The public distribution uses the connection, model and reasoning selected for the
+session. Task content, cost and failures do not change that selection. Subtasks,
+reviews and context summaries inherit it unless an explicit model is supplied.
+Provider availability and confidentiality requirements must be checked when
+configuring and selecting the connection.
 
 ## Baseline provider classes
 
@@ -39,7 +34,7 @@ Typical setup:
 Policy:
 
 - preferred for sensitive content if quality is enough;
-- fallback to sovereign endpoint if local model confidence is insufficient.
+- select another approved connection explicitly when local capability is insufficient.
 
 ### 2. Sovereign / French or EU endpoint
 
@@ -70,9 +65,9 @@ Target preset name once verified:
 Purpose:
 
 - broad model access;
-- flexible premium fallback;
+- explicitly selected premium models;
 - experimentation and non-sensitive complex tasks;
-- cost/quality routing.
+- comparison of configured model capabilities.
 
 Typical setup:
 
@@ -141,67 +136,11 @@ Connection names should be readable by non-technical users:
 
 Avoid exposing raw provider slugs in client-facing labels.
 
-## Router policy schema
+## Visible selection and provenance
 
-Implemented foundation: `WorkspaceConfig.routingPolicy?: RoutingPolicy`.
-
-The schema is deliberately policy-first: hard allow/deny constraints are evaluated before preferences/fallbacks.
-
-```ts
-{
-  version: 1,
-  enabled: true,
-  defaultSensitivity: 'internal',
-  requireExplicitAllowFor: ['confidential', 'restricted'],
-  rules: [
-    {
-      id: 'confidential-local-or-sovereign',
-      when: { sensitivity: ['confidential', 'restricted'] },
-      allowConnectionSlugs: ['local-fast', 'sovereign-standard'],
-      allowProviderTypes: ['pi_compat'],
-      preferConnectionSlugs: ['sovereign-standard', 'local-fast']
-    },
-    {
-      id: 'public-complex',
-      when: { sensitivity: ['public'] },
-      allowConnectionSlugs: ['premium-complex', 'openrouter-experimentation'],
-      preferConnectionSlugs: ['premium-complex']
-    }
-  ],
-  fallbackConnectionSlug: 'sovereign-standard'
-}
-```
-
-Current implementation lives in `packages/shared/src/config/routing-policy.ts` with validation and pure resolution helpers. `SessionManager` now applies the policy before backend creation/reuse when a workspace explicitly enables `routingPolicy`.
-
-`routingPolicy` can be edited from Workspace Settings → Router IA, or directly in workspace `config.json`.
-
-A complete JSON example for client workspaces is maintained at `docs/robinswood/routing-policy.example.json` and covered by `packages/shared/tests/routing-policy-example.test.ts`.
-
-Sources can also declare a manual sensitivity hint from the Source detail page UI, or directly in their `config.json`:
-
-```json
-{
-  "routingSensitivity": "confidential"
-}
-```
-
-Allowed values are `public`, `internal`, `confidential`, `restricted`. When multiple sources are enabled for a session, the runtime uses the highest configured source sensitivity for the turn before resolving `routingPolicy`.
-
-## UI requirements
-
-Each assistant response now displays/exposes:
-
-- connection/provider used;
-- model used;
-- routing reason;
-- sensitivity tier;
-- matched policy rule IDs.
-
-Still to add:
-
-- fallback reason if any;
-- estimated/actual cost if available.
+The model picker exposes the configured provider, model and reasoning controls.
+Each assistant response retains the effective provider/model and available costs.
+Historical decision metadata remains readable but does not activate a selector.
 
 ## Private provider contract controls
 
@@ -236,16 +175,3 @@ diagnostics. Set repository variable `ROBB_PROVIDER_CANARIES_REQUIRED=1` after
 the secrets are installed to make skipped required checks fail the workflow.
 Optional model overrides are `ROBB_CANARY_COPILOT_MODEL` and
 `ROBB_CANARY_GOOGLE_CODE_ASSIST_MODEL`.
-
-## Next engineering steps
-
-1. Verify OVHcloud AI Endpoints current OpenAI-compatible base URL format and authentication.
-2. Add a branded OVH/custom endpoint preset only after verification.
-3. Persist provider/model metadata per assistant response. ✅
-4. Implement router policy schema. ✅
-5. Wire `resolveRoutingPolicy(...)` into runtime turn creation. ✅
-6. Add validated example `routing-policy.example.json`. ✅
-7. Add manual policy labels to sources/workspaces. ✅ (`routingSensitivity` on sources)
-8. Add source sensitivity UI. ✅
-9. Add UI/settings editor for workspace `routingPolicy`. ✅
-10. Add Google Gemini account/subscription OAuth flow via Gemini Code Assist. ✅

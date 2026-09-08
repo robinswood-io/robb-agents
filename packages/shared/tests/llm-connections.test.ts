@@ -2,14 +2,13 @@
  * Tests for LLM connection utilities (llm-connections.ts).
  *
  * Focuses on getMiniModel() / findSmallModel() — the provider-aware small
- * model resolution used for title generation, summarization, and call_llm.
+ * model resolution used for title/icon metadata generation.
  */
 import { afterEach, describe, it, expect } from 'bun:test';
 import {
   getDefaultModelForConnection,
   getDefaultModelsForConnection,
   getMiniModel,
-  getSummarizationModel,
   isDeniedMiniModelId,
   registerPiModelResolver,
 } from '../src/config/llm-connections.ts';
@@ -142,21 +141,6 @@ describe('getMiniModel()', () => {
   it('handles single-model list', () => {
     const conn = makeConnection('pi', ['pi/gpt-5']);
     expect(getMiniModel(conn)).toBe('pi/gpt-5');
-  });
-});
-
-// ============================================================
-// getSummarizationModel (same logic, but separate function)
-// ============================================================
-
-describe('getSummarizationModel()', () => {
-  it('returns same result as getMiniModel (shared implementation)', () => {
-    const conn = makeConnection('pi', [
-      'pi/gpt-5',
-      'pi/gpt-5-mini',
-      'pi/claude-sonnet-4.6',
-    ]);
-    expect(getSummarizationModel(conn)).toBe(getMiniModel(conn));
   });
 });
 

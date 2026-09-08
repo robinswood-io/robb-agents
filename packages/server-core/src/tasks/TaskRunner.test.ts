@@ -21,7 +21,6 @@ import {
 } from '@craft-agent/shared/tasks';
 import type { SessionCompletionEvent } from '../sessions/SessionManager';
 import { TaskRunner, type ConductorSessionHost } from './TaskRunner';
-import { inferTaskNodeProfile, type TaskNodeRouteContext } from './task-node-routing';
 import type { SubagentAutonomyContext } from '../subagents/autonomy-inheritance.ts';
 
 // Flush pending microtasks so the runner's async dispatch (create → column → send) settles.
@@ -1237,13 +1236,7 @@ describe('TaskRunner (Conductor)', () => {
       workspaceId: 'ws',
       workspaceRoot: root,
       getKillSwitch: inactiveKillSwitch,
-      resolveNodeRoute: (context) => ({
-        profile: inferTaskNodeProfile(context.node, context.attempt),
-        llmConnection: 'primary',
-        model: 'primary-model',
-        thinkingLevel: 'low',
-        strategy: 'primary',
-      }),
+      getModelDefaults: () => ({ llmConnection: 'primary', model: 'primary-model', thinkingLevel: 'low' }),
     });
     first.run('backoff-restart', { runId: 'r1', verifyOnComplete: false });
     await tick();
@@ -1252,22 +1245,12 @@ describe('TaskRunner (Conductor)', () => {
     first.pause('backoff-restart', 'r1');
 
     const recoveredHost = new MockHost();
-    const recoveredPreviousRoutes: Array<TaskNodeRouteContext['previousRoute']> = [];
     const recovered = new TaskRunner({
       host: recoveredHost,
       workspaceId: 'ws',
       workspaceRoot: root,
       getKillSwitch: inactiveKillSwitch,
-      resolveNodeRoute: (context) => {
-        recoveredPreviousRoutes.push(context.previousRoute);
-        return {
-          profile: inferTaskNodeProfile(context.node, context.attempt),
-          llmConnection: 'secondary',
-          model: 'fallback-model',
-          thinkingLevel: 'high',
-          strategy: 'retry-fallback',
-        };
-      },
+      getModelDefaults: () => ({ llmConnection: 'secondary', model: 'other-model', thinkingLevel: 'high' }),
     });
     recovered.resume('backoff-restart', 'r1');
     await tick();
@@ -1275,9 +1258,9 @@ describe('TaskRunner (Conductor)', () => {
 
     await new Promise<void>((resolve) => setTimeout(resolve, 340));
     expect(recoveredHost.dispatchedNames()).toEqual(['a']);
-    expect(recoveredPreviousRoutes).toEqual([{ llmConnection: 'primary', model: 'primary-model' }]);
+    expect(recoveredHost.created[0]?.options).toMatchObject({ llmConnection: 'primary', model: 'primary-model', thinkingLevel: 'low' });
     expect(readRunLog(root, 'backoff-restart', 'r1').filter((entry) => entry.kind === 'node-routed').at(-1))
-      .toMatchObject({ connectionSlug: 'secondary', model: 'fallback-model', strategy: 'retry-fallback' });
+      .toMatchObject({ connectionSlug: 'primary', model: 'primary-model', thinkingLevel: 'low', strategy: 'pinned' });
   });
 
   it('fails without dispatch when the mission deadline is already expired', async () => {
@@ -1608,41 +1591,28 @@ describe('TaskRunner (Conductor)', () => {
     expect(runner.getRunState('auto-retry', 'r1')!.status).toBe('completed');
   });
 
-  it('persists the selected route and passes it to the next retry attempt', async () => {
-    saveTaskSpec(root, specOf({ id: 'route-retry', title: 'Route retry', goal: 'g', nodes: [{ id: 'a', prompt: 'a' }] }));
-    const previousRoutes: Array<TaskNodeRouteContext['previousRoute']> = [];
+  it('preserves the selected connection, model and reasoning through retries', async () => {
+    saveTaskSpec(root, specOf({ id: 'manual-retry', title: 'Manual retry', goal: 'g', nodes: [{ id: 'a', prompt: 'a' }] }));
+    let defaultsReads = 0;
     const runner = new TaskRunner({
-      host,
-      workspaceId: 'ws',
-      workspaceRoot: root,
-      getKillSwitch: inactiveKillSwitch,
+      host, workspaceId: 'ws', workspaceRoot: root, getKillSwitch: inactiveKillSwitch,
       defaultRetry: { limit: 1, when: 'error' },
-      resolveNodeRoute: (context) => {
-        previousRoutes.push(context.previousRoute);
-        const useFallback = context.attempt > 1;
-        return {
-          profile: inferTaskNodeProfile(context.node, context.attempt),
-          llmConnection: useFallback ? 'secondary' : 'primary',
-          model: useFallback ? 'fallback-model' : 'primary-model',
-          thinkingLevel: useFallback ? 'high' : 'low',
-          strategy: useFallback ? 'retry-fallback' : 'primary',
-        };
+      getModelDefaults: () => {
+        defaultsReads += 1;
+        return { llmConnection: 'primary', model: 'selected-model', thinkingLevel: 'medium' };
       },
     });
-    runner.run('route-retry', { runId: 'r1' });
+    runner.run('manual-retry', { runId: 'r1' });
     await tick();
     host.complete('a', { reason: 'error' });
     await tick();
-
-    expect(previousRoutes).toEqual([
-      undefined,
-      { llmConnection: 'primary', model: 'primary-model' },
+    expect(defaultsReads).toBe(1);
+    expect(host.created.filter(entry => entry.options.name === 'a').map(entry => ({
+      model: entry.options.model, llmConnection: entry.options.llmConnection, thinkingLevel: entry.options.thinkingLevel,
+    }))).toEqual([
+      { model: 'selected-model', llmConnection: 'primary', thinkingLevel: 'medium' },
+      { model: 'selected-model', llmConnection: 'primary', thinkingLevel: 'medium' },
     ]);
-    expect(readRunLog(root, 'route-retry', 'r1').filter((entry) => entry.kind === 'node-routed'))
-      .toEqual([
-        expect.objectContaining({ connectionSlug: 'primary', strategy: 'primary' }),
-        expect.objectContaining({ connectionSlug: 'secondary', strategy: 'retry-fallback' }),
-      ]);
   });
 
   it('ignores a stale completion emitted by an earlier retry attempt', async () => {

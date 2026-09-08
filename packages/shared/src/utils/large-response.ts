@@ -4,7 +4,7 @@
  * Centralized save + prompt building + formatting for large tool results.
  * Follows the title-generator.ts pattern: pure functions only, no SDK/LLM calls.
  *
- * Callers orchestrate via their agent's runMiniCompletion() for summarization.
+ * Callers orchestrate via their agent's selected-model query callback for summarization.
  */
 
 import { existsSync, mkdirSync, writeFileSync } from 'fs';
@@ -409,7 +409,7 @@ export interface SummarizationContext {
  *
  * @param text - The large response text
  * @param context - Context about the tool call
- * @returns Prompt string ready for runMiniCompletion()
+ * @returns Prompt string ready for agent.getSummarizeCallback()
  */
 export function buildSummarizationPrompt(text: string, context: SummarizationContext): string {
   // Safely stringify input
@@ -468,7 +468,7 @@ export interface FormatOptions {
   relativePath: string;
   /** Absolute path (for Read/Grep reference) */
   absolutePath: string;
-  /** Summary from runMiniCompletion (if available) */
+  /** Summary from the selected session model (if available) */
   summary?: string;
   /** Fallback preview when no summary (first N chars of response) */
   preview?: string;
@@ -509,7 +509,7 @@ export interface HandleLargeResponseOptions {
   sessionPath: string;
   /** Context about the tool call */
   context: SummarizationContext;
-  /** Optional summarize callback — typically agent.runMiniCompletion.bind(agent) */
+  /** Optional summarize callback — typically agent.getSummarizeCallback() */
   summarize?: (prompt: string) => Promise<string | null>;
   /** Active model's context window — see {@link guardLargeResult}. */
   contextWindow?: number;

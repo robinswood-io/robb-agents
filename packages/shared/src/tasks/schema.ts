@@ -1,3 +1,4 @@
+import { THINKING_LEVEL_IDS } from '../agent/thinking-levels.ts';
 /**
  * task.yaml schema — the declarative DAG spec for Tasks.
  *
@@ -177,6 +178,7 @@ export const TaskParamSchema = z.object({
 export const TaskDefaultsSchema = z.object({
   model: z.string().min(1).optional(),
   llmConnection: z.string().min(1).optional(),
+  thinkingLevel: z.enum(THINKING_LEVEL_IDS).optional(),
   permissionMode: z.enum(PERMISSION_MODES).optional(),
   /** Shared retry policy for nodes that do not declare an override. */
   retry: RetrySchema.optional(),
@@ -191,6 +193,7 @@ export const TaskExecutorSchema = z.object({
   /** Optional executor-level route; node/default routes still take precedence at dispatch. */
   model: z.string().min(1).optional(),
   llmConnection: z.string().min(1).optional(),
+  thinkingLevel: z.enum(THINKING_LEVEL_IDS).optional(),
 }).optional();
 
 /** Resource and access envelope for autonomous task execution. */
@@ -265,6 +268,7 @@ const TaskNodeObject = z.object({
   model: z.string().min(1).optional(),
   /** LLM connection slug that serves `model` — required for non-default (e.g. pi/*) models to resolve a backend. */
   llmConnection: z.string().min(1).optional(),
+  thinkingLevel: z.enum(THINKING_LEVEL_IDS).optional(),
   permissionMode: z.enum(PERMISSION_MODES).optional(),
   labels: z.array(z.string()).optional(),
   status: z.string().optional(),

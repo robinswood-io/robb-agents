@@ -17,6 +17,7 @@ import type {
   TaskExecutionProofBinding,
 } from '@craft-agent/shared/governance';
 import type { SessionCompletionEvent } from '../sessions/SessionManager.ts';
+import { inheritMissionModelSettings } from './mission-model-settings.ts';
 import {
   resolveSubagentAutonomy,
   type SubagentAutonomyContext,
@@ -267,14 +268,16 @@ export class SessionMissionExecutor implements MissionWorkExecutor {
           ...(this.options.resolveSubagentAutonomyContext?.(input.mission.originSessionId) ?? {}),
           requestedPermissionMode: input.profile.permissionMode,
         });
+        const parent = input.mission.originSessionId
+          ? this.options.host.getSessions(this.options.workspaceId).find(candidate => candidate.id === input.mission.originSessionId)
+          : undefined;
         session = await this.options.host.createSession(this.options.workspaceId, {
           name: `${input.profile.role}: ${input.item.title}`,
           parentSessionId: input.mission.originSessionId,
           projectId: input.mission.projectId,
           workingDirectory: input.mission.cwd,
           permissionMode: autonomy.permissionMode,
-          model: input.profile.model ?? (input.profile.modelTier === 'fast' ? 'fast' : 'default'),
-          llmConnection: input.profile.llmConnection,
+          ...inheritMissionModelSettings(input.profile, parent),
           enabledSourceSlugs: input.profile.sources.length > 0 ? input.profile.sources : undefined,
           sessionStatus: 'in-progress',
           // Full inherited Execute uses the ordinary session tool surface. Every

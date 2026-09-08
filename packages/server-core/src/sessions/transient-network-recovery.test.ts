@@ -35,6 +35,9 @@ describe('transient network recovery', () => {
       { id: 'session-network-recovery' },
       workspace as never,
       {
+        llmConnection: 'selected-connection',
+        model: 'selected-model',
+        thinkingLevel: 'high',
         messagesLoaded: true,
         messages: [userMessage],
         isProcessing: true,
@@ -69,10 +72,7 @@ describe('transient network recovery', () => {
       originalUserMessageId: userMessage.id,
       cause: 'runtime_error',
     })
-    expect(managed.pendingRuntimeProviderFallback).toMatchObject({
-      generation: 1,
-      error: expect.any(Error),
-    })
+    expect(managed).toMatchObject({ llmConnection: 'selected-connection', model: 'selected-model', thinkingLevel: 'high' })
     expect(managed.messages.some(message => message.role === 'error')).toBe(false)
 
     // Simulate each configured recovery being dequeued and failing the same
@@ -89,7 +89,7 @@ describe('transient network recovery', () => {
     })
   })
 
-  it('queues recovery and defers fallback for a retryable plain provider error', async () => {
+  it('surfaces quota errors without scheduling a provider replacement', async () => {
     const workspaceRoot = mkdtempSync(join(tmpdir(), 'plain-provider-recovery-'))
     roots.push(workspaceRoot)
 
@@ -109,6 +109,9 @@ describe('transient network recovery', () => {
       { id: 'session-provider-recovery' },
       workspace as never,
       {
+        llmConnection: 'selected-connection',
+        model: 'selected-model',
+        thinkingLevel: 'high',
         messagesLoaded: true,
         messages: [userMessage],
         isProcessing: true,
@@ -129,12 +132,9 @@ describe('transient network recovery', () => {
       message: 'Codex error: The usage limit has been reached',
     }, 3)
 
-    expect(managed.pendingTurnRecovery?.attempts).toBe(1)
-    expect(managed.messageQueue).toHaveLength(1)
-    expect(managed.pendingRuntimeProviderFallback).toMatchObject({
-      generation: 3,
-      error: expect.any(Error),
-    })
-    expect(managed.messages.some(message => message.role === 'error')).toBe(false)
+    expect(managed.pendingTurnRecovery?.attempts).toBe(0)
+    expect(managed.messageQueue).toHaveLength(0)
+    expect(managed).toMatchObject({ llmConnection: 'selected-connection', model: 'selected-model', thinkingLevel: 'high' })
+    expect(managed.messages.some(message => message.role === 'error')).toBe(true)
   })
 })

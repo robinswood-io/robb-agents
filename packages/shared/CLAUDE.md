@@ -172,9 +172,11 @@ Key integration points:
 ## `queryLlm` backend contract
 
 Every `AgentBackend.queryLlm(request: LLMQueryRequest)` implementation MUST:
-- honor `request.model` (with backend-specific fallback only when the model is
-  unresolvable/unsupported; always report the *effective* model in
-  `LLMQueryResult.model`)
+- honor `request.model` exactly when explicitly supplied; otherwise inherit the
+  session’s selected model, connection, and reasoning level
+- reject an unavailable or unsupported selection with an actionable error; never
+  substitute another model or provider
+- report the model actually used in `LLMQueryResult.model`
 - honor `request.systemPrompt`
 
 SHOULD:

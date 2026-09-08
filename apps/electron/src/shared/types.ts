@@ -553,16 +553,6 @@ export interface ElectronAPI {
     workspaceId: string,
     request: RemoteSupervisionRevokeRequest,
   ): Promise<NonNullable<WorkspaceSettings['remoteSupervision']>>
-  /** Read-only policy explanation. It never invokes a model or touches credentials. */
-  simulateRoutingPolicy(
-    workspaceId: string,
-    context?: import('@craft-agent/shared/config').RoutingPolicyContext,
-  ): Promise<import('@craft-agent/shared/config').RoutingPolicySimulation>
-  /** Read-only outcome report; this method has no policy mutation capability. */
-  analyzeRoutingShadow(
-    workspaceId: string,
-  ): Promise<import('@craft-agent/shared/config').RoutingShadowReport>
-
   // Folder dialog
   openFolderDialog(): Promise<string | null>
 
@@ -587,7 +577,7 @@ export interface ElectronAPI {
   // Sources
   getSources(workspaceId: string): Promise<LoadedSource[]>
   createSource(workspaceId: string, config: Partial<FolderSourceConfig>): Promise<FolderSourceConfig>
-  updateSourceConfig(workspaceId: string, sourceSlug: string, updates: Omit<Partial<FolderSourceConfig>, 'routingSensitivity'> & { routingSensitivity?: FolderSourceConfig['routingSensitivity'] | null }): Promise<FolderSourceConfig>
+  updateSourceConfig(workspaceId: string, sourceSlug: string, updates: Partial<FolderSourceConfig>): Promise<FolderSourceConfig>
   deleteSource(workspaceId: string, sourceSlug: string): Promise<void>
   startSourceOAuth(workspaceId: string, sourceSlug: string): Promise<{ success: boolean; error?: string }>
   saveSourceCredentials(workspaceId: string, sourceSlug: string, credential: string): Promise<void>

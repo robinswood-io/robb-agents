@@ -153,12 +153,7 @@ describe('Mission digital twin host integration', () => {
     saveWorkspaceConfig(root, {
       schemaVersion: 1,
       id: 'workspace-1', name: 'Twin workspace', slug: 'twin-workspace', createdAt, updatedAt: createdAt,
-      routingPolicy: {
-        version: 1,
-        enabled: true,
-        defaultAllowConnectionSlugs: ['local-safe'],
-        connectionProfiles: { 'local-safe': { capabilities: ['tools'] } },
-      },
+      defaults: { defaultLlmConnection: 'local-safe' },
       governance: { ...governance, budgets: { ...governance.budgets, missionMaxCostUsd: 1 } },
     });
     const spec = externalFixture();
@@ -219,7 +214,7 @@ describe('Mission digital twin host integration', () => {
     expect(existsSync(join(root, 'missions'))).toBe(false);
   });
 
-  it('fails preflight on host path and routing-budget policy before launch', async () => {
+  it('fails preflight on host path and mission budget before launch', async () => {
     const createdAt = Date.parse('2026-08-20T10:00:00.000Z');
     const governance = createDefaultWorkspaceGovernance({
       workspaceId: 'workspace-1', workspaceName: 'Twin workspace',
@@ -228,13 +223,8 @@ describe('Mission digital twin host integration', () => {
     saveWorkspaceConfig(root, {
       schemaVersion: 1,
       id: 'workspace-1', name: 'Twin workspace', slug: 'twin-workspace', createdAt, updatedAt: createdAt,
-      routingPolicy: {
-        version: 1,
-        enabled: true,
-        defaultAllowConnectionSlugs: ['local-safe'],
-        budgets: { missionUsd: 0.2, onExceed: 'block' },
-      },
-      governance: { ...governance, budgets: { ...governance.budgets, missionMaxCostUsd: 1 } },
+      defaults: { defaultLlmConnection: 'local-safe' },
+      governance: { ...governance, budgets: { ...governance.budgets, missionMaxCostUsd: 0.2 } },
     });
     const escaped = MissionSpecSchema.parse({ ...fixture('twin-policy-fail'), cwd: `${root}-outside` });
     const service = new MissionRuntimeService({
@@ -246,10 +236,46 @@ describe('Mission digital twin host integration', () => {
     });
     const report = await service.preflightMission('workspace-1', { spec: escaped });
     expect(report.readyToStart).toBe(false);
-    expect(report.gates.filter((gate) => gate.category === 'route').every((gate) => gate.status === 'fail')).toBe(true);
+    expect(report.gates.filter((gate) => gate.category === 'route').every((gate) => gate.status === 'pass')).toBe(true);
+    expect(report.gates.find((gate) => gate.id === 'budget.projected')?.status).toBe('fail');
     expect(report.gates.filter((gate) => gate.id.startsWith('policy.path.')).every((gate) => gate.status === 'fail')).toBe(true);
     expect(report.gates.find((gate) => gate.id === 'policy.deadline')?.status).toBe('pass');
     expect(existsSync(join(root, 'missions'))).toBe(false);
+  });
+
+  it('checks and estimates the inherited origin connection used by mission execution', async () => {
+    const createdAt = Date.parse('2026-08-20T10:00:00.000Z');
+    const governance = createDefaultWorkspaceGovernance({
+      workspaceId: 'workspace-1', workspaceName: 'Twin workspace',
+      createdAt: new Date(createdAt).toISOString(),
+    });
+    saveWorkspaceConfig(root, {
+      schemaVersion: 1,
+      id: 'workspace-1', name: 'Twin workspace', slug: 'twin-workspace', createdAt, updatedAt: createdAt,
+      defaults: { defaultLlmConnection: 'unavailable-workspace-connection' },
+      governance: { ...governance, budgets: { ...governance.budgets, missionMaxCostUsd: 1 } },
+    });
+    sessionManager.getSessions = () => [{
+      id: 'origin', workspaceId: 'workspace-1', workspaceName: 'Twin workspace',
+      messages: [], lastMessageAt: createdAt, isProcessing: false,
+      llmConnection: 'origin-connection', model: 'origin-model', thinkingLevel: 'high',
+    }];
+    const estimatedConnections: string[] = [];
+    const service = new MissionRuntimeService({
+      sessionManager,
+      resolveWorkspace: id => id === 'workspace-1' ? { id, rootPath: root } : null,
+      listWorkspaces: () => [],
+      preflightConnections: () => [{ slug: 'origin-connection', providerType: 'pi' }],
+      preflightCostEstimator: { estimateUsd: ({ connectionSlug }) => {
+        estimatedConnections.push(connectionSlug);
+        return 0.1;
+      } },
+    });
+    const report = await service.preflightMission('workspace-1', {
+      spec: MissionSpecSchema.parse({ ...fixture('origin-connection'), originSessionId: 'origin' }),
+    });
+    expect(report.gates.filter(gate => gate.category === 'route').every(gate => gate.status === 'pass')).toBe(true);
+    expect(estimatedConnections).toEqual(['origin-connection', 'origin-connection', 'origin-connection']);
   });
 
   it('journals the exact replan, preserves independent accepted work, and invalidates derived reviews', () => {
@@ -496,5 +522,5 @@ describe('Mission digital twin host integration', () => {
     await eventually(() => new MissionController({ workspaceRoot: root }).getMission('twin-faults').status === 'blocked');
     events = readMissionEvents(root, 'twin-faults');
     expect(events.filter((event) => event.kind === 'work-item-dispatch-reserved')).toHaveLength(1);
-  });
+  }, 30_000); // Includes 100 durable journal rewrites; allow slower CI disks.
 });

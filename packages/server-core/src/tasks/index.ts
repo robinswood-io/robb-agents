@@ -8,9 +8,9 @@
 export { TaskRunner, DEFAULT_AUTONOMOUS_RETRY_POLICY } from './TaskRunner';
 export {
   inferTaskNodeProfile,
-  resolveTaskNodeExecutionRoute,
+  resolveTaskModelSettings,
   taskNodeSpecialistPreamble,
-} from './task-node-routing';
+} from './task-node-execution';
 export { loadWorkspaceExecutionProofIssuer } from './execution-proof-runtime';
 export type {
   ConductorSessionHost,
@@ -25,10 +25,7 @@ export type {
 } from './TaskRunner';
 export type {
   TaskNodeSpecialty,
-  TaskModelTier,
   TaskNodeProfile,
-  TaskNodeRouteContext,
-  TaskNodeExecutionRoute,
-  ResolveTaskNodeExecutionRouteInput,
-} from './task-node-routing';
+  TaskModelSettings,
+} from './task-node-execution';
 export type { GovernanceCredentialStore } from './execution-proof-runtime';

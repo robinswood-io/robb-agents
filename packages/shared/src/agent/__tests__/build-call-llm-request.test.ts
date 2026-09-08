@@ -197,15 +197,11 @@ describe('buildCallLlmRequest()', () => {
     expect(receivedModel).toBe('some-model-id');
   });
 
-  it('clears model when validateModel returns undefined', async () => {
-    const result = await buildCallLlmRequest(
+  it('rejects an explicit model when validateModel returns undefined', async () => {
+    await expect(buildCallLlmRequest(
       { prompt: 'test', model: 'some-model-id' },
-      {
-        backendName: 'Test',
-        validateModel: () => undefined,
-      }
-    );
-    expect(result.model).toBeUndefined();
+      { backendName: 'Test', validateModel: () => undefined },
+    )).rejects.toThrow('not supported by Test');
   });
 
   it('uses corrected model from validateModel', async () => {

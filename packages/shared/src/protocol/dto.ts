@@ -19,7 +19,6 @@ import type {
 import type { PermissionMode } from '../agent/mode-types'
 import type { ThinkingLevel } from '../agent/thinking-levels'
 import type { CustomEndpointConfig } from '../config/llm-connections'
-import type { RoutingPolicy } from '../config/routing-policy'
 import type { AgentCostControlPolicy } from '../config/agent-cost-control'
 import type { SessionExecutionIsolation } from '../tasks/durable-execution'
 import type {
@@ -1103,7 +1102,6 @@ export interface WorkspaceSettings {
   localMcpEnabled?: boolean
   defaultLlmConnection?: string
   enabledSourceSlugs?: string[]
-  routingPolicy?: RoutingPolicy
   costControl?: AgentCostControlPolicy
   governance?: WorkspaceGovernanceProfile
   governanceRevision?: number

@@ -1,3 +1,4 @@
+import type { ThinkingLevel } from '../agent/thinking-levels.ts';
 /**
  * Task + run-state persistence.
  *
@@ -57,7 +58,8 @@ export type RunLogEntry =
       attempt: number;
       connectionSlug?: string;
       model?: string;
-      strategy: 'primary' | 'retry-fallback' | 'pinned';
+      thinkingLevel?: ThinkingLevel;
+      strategy: 'pinned';
     }
   | { t: string; kind: 'node-spawned'; nodeId: string; sessionId: string }
   | {
