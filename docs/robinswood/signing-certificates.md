@@ -11,8 +11,8 @@ Une release publique exige :
 
 - macOS : un certificat **Developer ID Application** et une authentification de
   notarisation Apple ;
-- Windows : soit un certificat Authenticode PFX, soit **Microsoft Artifact
-  Signing** (anciennement Trusted Signing) ;
+- Windows : mode non signé explicite par défaut, ou certificat Authenticode
+  PFX / **Microsoft Artifact Signing** (anciennement Trusted Signing) ;
 - un tag stable `vX.Y.Z` correspondant exactement à la version Electron.
 
 La voie recommandée est une clé App Store Connect pour Apple et Artifact
@@ -88,6 +88,17 @@ pas passer un mot de passe ou une clé directement dans la ligne de commande.
 L'alternative Apple ID reste supportée avec `APPLE_ID`,
 `APPLE_APP_SPECIFIC_PASSWORD` et `APPLE_TEAM_ID`, mais la Team Key est mieux
 adaptée à l'automatisation.
+
+## Windows non signé (politique par défaut)
+
+Sans certificat de confiance publique, utiliser `WINDOWS_SIGNING_MODE=unsigned`
+ou laisser la variable absente. La publication conserve les contrôles de source,
+de contenu, de provenance, d'empreintes et le parcours réel d'installation et
+de désinstallation. Windows SmartScreen peut afficher un avertissement.
+
+Un certificat auto-signé n'apporte pas de confiance publique supplémentaire et
+n'est donc pas utilisé par défaut. Dès qu'un certificat reconnu est disponible,
+choisir l'une des deux voies ci-dessous.
 
 ## Microsoft : Artifact Signing Public Trust (recommandé)
 

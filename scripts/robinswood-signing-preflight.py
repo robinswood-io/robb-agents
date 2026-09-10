@@ -4,8 +4,8 @@
 Reports only whether required variables are present; it never prints secret
 values. Use ``--strict`` before a public release. ``--ci`` checks the same
 GitHub Actions secret names used by the release workflow and skips local
-Keychain inspection. The Windows check supports either a traditional PFX or
-Microsoft Artifact Signing (the service formerly named Trusted Signing).
+Keychain inspection. Windows may be explicitly unsigned, use a traditional
+PFX, or use Microsoft Artifact Signing (formerly Trusted Signing).
 
 Usage:
     python3 scripts/robinswood-signing-preflight.py
@@ -31,7 +31,7 @@ MAC_ENTITLEMENTS = ROOT / "apps/electron/build/entitlements.mac.plist"
 APP_ID = "io.robinswood.robbagents"
 PRODUCT_NAME = "Robb Agents"
 APPLE_TEAM_ID = "4FWLQ2KVUY"
-WINDOWS_SIGNING_MODES = {"pfx", "azure"}
+WINDOWS_SIGNING_MODES = {"unsigned", "pfx", "azure"}
 UUID_PATTERN = re.compile(
     r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
 )
@@ -180,16 +180,16 @@ def missing(names: tuple[str, ...]) -> list[str]:
 
 
 def check_windows_signing(ci: bool) -> list[Check]:
-    mode = os.environ.get("WINDOWS_SIGNING_MODE", "pfx").strip().lower()
+    mode = os.environ.get("WINDOWS_SIGNING_MODE", "unsigned").strip().lower()
     mode_ok = mode in WINDOWS_SIGNING_MODES
     checks = [
         Check(
             "Windows signing mode",
             mode_ok,
-            mode if mode_ok else f"unsupported {mode!r}; expected pfx or azure",
+            mode if mode_ok else f"unsupported {mode!r}; expected unsigned, pfx or azure",
         )
     ]
-    if not mode_ok:
+    if not mode_ok or mode == "unsigned":
         return checks
 
     if mode == "pfx":

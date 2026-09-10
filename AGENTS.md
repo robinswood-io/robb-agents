@@ -34,7 +34,8 @@ interchangeables.
 - Une fusion dans `main` ne constitue pas une GitHub Release.
 - Ne créer une version/tag GitHub qu’après validation technique complète du
   staging local et acceptation explicite du résultat utilisateur.
-- La publication publique reste fail-closed : signatures, notarisation,
+- La publication publique reste fail-closed : signature et notarisation macOS,
+  politique de signature Windows explicite (`unsigned`, `pfx` ou `azure`),
   checksums, provenance et parcours installateur CI doivent tous être verts.
 
 ## Garde-fous

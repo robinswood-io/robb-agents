@@ -337,16 +337,18 @@ const macSignatureHook = readFileSync(
 )
 
 describe('public release policy', () => {
-  it('has no public unsigned mode and maps pushed tags to signed publication', () => {
+  it('keeps release publication gated while allowing an explicit unsigned Windows policy', () => {
     expect(releaseWorkflow).toContain('options: [test-artifacts, publish-signed]')
     expect(releaseWorkflow).toContain('mode="${REQUESTED_MODE:-publish-signed}"')
     expect(releaseWorkflow).toContain('if [[ "$mode" == "publish-signed" ]]')
+    expect(releaseWorkflow).toContain("WINDOWS_SIGNING_MODE: ${{ vars.WINDOWS_SIGNING_MODE || 'unsigned' }}")
+    expect(releaseWorkflow).toContain("$signing = 'unsigned-public-release'")
+    expect(releaseWorkflow).toContain('--windows-signing-mode')
     expect(releaseWorkflow).not.toContain('publish-unsigned')
     expect(releaseWorkflow).not.toContain('unsigned-github-release')
-    expect(releaseWorkflow).not.toContain('allow-unsigned-windows')
   })
 
-  it('verifies the installer and unpacked Windows executable before signed provenance and publication', () => {
+  it('verifies Authenticode in signed modes and records explicit provenance in unsigned mode', () => {
     const authenticodeVerification = releaseWorkflow.indexOf('Get-AuthenticodeSignature')
     const installerVerification = releaseWorkflow.indexOf(
       "Assert-ValidAuthenticodeSignature $installer.FullName 'installer'",
@@ -365,6 +367,8 @@ describe('public release policy', () => {
     expect(releaseWorkflow).toContain('needs: [preflight, macos, windows, linux]')
     expect(releaseWorkflow).toContain("$args += '-Release'")
     expect(releaseWorkflow).toContain("$e2eArgs += '-RequireAuthenticode'")
+    expect(releaseWorkflow).toContain("$signing = 'unsigned-public-release'")
+    expect(releaseWorkflow).toContain("-ne 'unsigned') { $e2eArgs += '-RequireAuthenticode' }")
 
     const unpackedBuildVerification = windowsBuild.indexOf(
       'Require-ValidAuthenticodeSignature $UnpackedBinary "unpacked Electron binary"',
@@ -372,6 +376,8 @@ describe('public release policy', () => {
     const installerBuildVerification = windowsBuild.indexOf(
       'Require-ValidAuthenticodeSignature $Installer.FullName "NSIS installer"',
     )
+    expect(windowsBuild).toContain('if ($Release -and $SigningMode -ne "unsigned")')
+    expect(windowsBuild).toContain('$env:CSC_IDENTITY_AUTO_DISCOVERY = "false"')
     expect(unpackedBuildVerification).toBeGreaterThan(windowsBuild.indexOf('if ($Release)'))
     expect(installerBuildVerification).toBeGreaterThan(unpackedBuildVerification)
     expect(windowsBuild.indexOf('=== Build complete ===')).toBeGreaterThan(installerBuildVerification)
