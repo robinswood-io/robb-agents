@@ -4,7 +4,7 @@ Robb Agents is an MIT-licensed desktop application distributed from [GitHub Rele
 
 ## Release artifacts
 
-A version tag (`vX.Y.Z`) is always a `publish-signed` request. The workflow has no public unsigned mode: macOS must be Developer ID signed, notarized and stapled; the Windows installer and application executable must both have valid Authenticode signatures; Linux remains checksum- and provenance-verified. The preflight checks that the tag exactly matches the Electron version, that every required signing route is configured, and that no release already exists. If any check fails, no public GitHub Release is created. It then builds:
+A version tag (`vX.Y.Z`) is always a release-grade `publish-signed` request. macOS must be Developer ID signed, notarized and stapled. Windows uses the explicit `WINDOWS_SIGNING_MODE`: `unsigned` by default, or `pfx`/`azure` when trusted Authenticode material is configured. Linux remains checksum- and provenance-verified. The preflight checks that the tag exactly matches the Electron version, that every selected signing route is configured, and that no release already exists. If any check fails, no public GitHub Release is created. It then builds:
 
 - macOS Apple Silicon DMG + ZIP;
 - macOS Intel DMG + ZIP;
@@ -19,7 +19,7 @@ same updater manifests as the desktop app, require one unambiguous artifact for
 the detected platform, verify the declared byte size and SHA-512, and then:
 
 - validate Developer ID/Gatekeeper before replacing the macOS application;
-- validate Authenticode before launching the Windows per-user installer;
+- validate Authenticode when declared, or show an explicit SmartScreen warning for a release whose provenance declares `unsigned-public-release`, before launching the Windows per-user installer;
 - install the Linux AppImage and launcher under the current user's home.
 
 The helpers accept a pinned stable `X.Y.Z` version and never use a private
@@ -38,8 +38,9 @@ sources.
 Before publication, CI reconstructs one canonical checksum inventory after all
 artifacts, manifests, provenance files, installer helpers and the SBOM exist.
 `scripts/validate-release-bundle.ts` then rejects missing, duplicate,
-ambiguous, tampered, CI-only unsigned or cross-version content. There is no
-unsigned exception at the publication boundary. Pull requests also run
+ambiguous, tampered, CI-only unsigned or cross-version content. Windows
+`unsigned-public-release` provenance is accepted only when the release explicitly
+selects `WINDOWS_SIGNING_MODE=unsigned`. Pull requests also run
 the manifest and installer contracts on macOS, Windows and Linux.
 
 Production packages keep the Electron entrypoint and its main-process
@@ -130,8 +131,8 @@ measured baseline, not a cross-platform guarantee.
 
 A manual GitHub Actions run in `test-artifacts` mode may build unsigned or
 ad-hoc-signed CI artifacts for verification, but it cannot publish a GitHub
-Release. Public release requests must use `publish-signed` and pass every
-platform signing check.
+Release. Public release requests must use `publish-signed`, pass macOS signing and
+notarization, and satisfy the explicit Windows signing policy.
 
 ## Public release signing
 
@@ -156,17 +157,18 @@ The release smoke test requires a valid Developer ID signature, a successful Gat
 
 ### Windows
 
-A public Windows release requires a valid Authenticode certificate provided as
-`CSC_LINK` with `CSC_KEY_PASSWORD` (or a configured `CSC_NAME` certificate), or
-Microsoft Artifact Signing Public Trust. Without one of these routes, the
-workflow fails closed. Unsigned development artifacts may exist locally or in
-CI for testing, but are never published:
+A public Windows release is intentionally unsigned by default. Set
+`WINDOWS_SIGNING_MODE=unsigned` (or leave the repository variable unset) to
+produce a production installer with checksum, provenance, package-security and
+isolated install/uninstall verification. Windows SmartScreen may warn users.
+A self-signed certificate is not used because it adds no public trust.
 
 ```powershell
+$env:WINDOWS_SIGNING_MODE = 'unsigned'
 powershell -ExecutionPolicy Bypass -File apps/electron/scripts/build-win.ps1 -Release
 ```
 
-Set `WINDOWS_SIGNING_MODE=pfx` for the PFX route or `azure` for Artifact Signing. The complete acquisition and GitHub configuration procedure is documented in [Signing certificates](signing-certificates.md).
+Set `WINDOWS_SIGNING_MODE=pfx` for a trusted PFX route or `azure` for Microsoft Artifact Signing. Those modes remain fail-closed and require valid Authenticode on the unpacked executable, installer and installed executable. The complete acquisition and GitHub configuration procedure is documented in [Signing certificates](signing-certificates.md).
 
 Robb Agents was submitted to the SignPath Foundation program in July 2026 and was not accepted because the project did not yet have enough public trust/adoption signals. Do not add placeholder SignPath secrets or represent an unsigned installer as SignPath-signed. Reapply only after broader public recognition or use a paid SignPath subscription.
 
@@ -174,10 +176,11 @@ The installer is per-user by default, supports a selectable install directory, a
 
 ## CI release secrets
 
-GitHub Actions refuses to publish a version tag unless macOS signing and one
-Windows signing route are configured:
+GitHub Actions refuses to publish a version tag unless macOS signing is
+configured and the selected Windows policy is valid:
 
 - macOS: `MAC_CSC_LINK`, `MAC_CSC_KEY_PASSWORD`, `APPLE_TEAM_ID` plus either the Apple ID route or `APPLE_API_KEY_BASE64`, `APPLE_API_KEY_ID`, `APPLE_API_ISSUER`;
+- Windows unsigned: variable absent or `WINDOWS_SIGNING_MODE=unsigned`, with no Windows signing secret;
 - Windows PFX: variable `WINDOWS_SIGNING_MODE=pfx`, secrets `WINDOWS_CSC_LINK`, `WINDOWS_CSC_KEY_PASSWORD`;
 - Windows Artifact Signing: variable `WINDOWS_SIGNING_MODE=azure`, the four `WINDOWS_AZURE_*` variables, and secrets `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`.
 
@@ -187,7 +190,7 @@ The release workflow publishes provenance evidence (tag, commit SHA, platform an
 
 ## Public visibility and protected publication
 
-Robb Agents is designed as a public open-source project. GitHub artifact attestations and public GitHub Release distribution require the repository to be public. Release publication remains behind the `release` deployment environment, requires verified signing evidence for macOS and Windows, and preserves explicit provenance for every platform.
+Robb Agents is designed as a public open-source project. GitHub artifact attestations and public GitHub Release distribution require the repository to be public. Release publication remains behind the `release` deployment environment, requires verified signing evidence for macOS, enforces the selected Windows signing policy, and preserves explicit provenance for every platform.
 
 Before changing repository visibility, run the explicit preflight against the candidate public ref:
 
@@ -206,7 +209,7 @@ Before publishing a public release:
 1. GitHub validation and the macOS/Windows/Linux release-contract matrix pass on the tagged commit.
 2. SHA-256 checksums match the released binaries.
 3. macOS `codesign --verify`, `spctl --assess`, and `xcrun stapler validate` pass.
-4. Windows Authenticode is valid for the unpacked, installer and installed executables before provenance is accepted, and the installer starts successfully in a clean Windows environment.
+4. Windows provenance matches the selected signing policy; Authenticode is valid in `pfx`/`azure` modes, and the installer completes an isolated install/uninstall journey in every mode.
 5. `SBOM.spdx.json` is present and `gh attestation verify` succeeds for public release artifacts.
 6. The release contains no credentials, private endpoints, or duplicate/ambiguous artifacts.
 7. `latest.yml`, `latest-mac.yml` and `latest-linux.yml` reference only the verified stable release artifacts.

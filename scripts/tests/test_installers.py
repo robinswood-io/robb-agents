@@ -280,6 +280,8 @@ class InstallerContractTests(unittest.TestCase):
             "Get-AuthenticodeSignature",
             "PROVENANCE-windows-x64.txt",
             "verified-authenticode",
+            "unsigned-public-release",
+            "Write-Warning",
             "Programs\\Robb Agents",
             "Robb Agents.exe",
             "robb-agents.cmd",

@@ -54,9 +54,9 @@ if ($Release) {
     $env:ROBB_BUILD_DIRTY = "false"
     Remove-Item Env:CRAFT_DEV_RUNTIME -ErrorAction SilentlyContinue
 
-    $SigningMode = if ([string]::IsNullOrWhiteSpace($env:WINDOWS_SIGNING_MODE)) { "pfx" } else { $env:WINDOWS_SIGNING_MODE.ToLowerInvariant() }
-    if ($SigningMode -notin @("pfx", "azure")) {
-        throw "Unsupported WINDOWS_SIGNING_MODE '$SigningMode'. Expected 'pfx' or 'azure'."
+    $SigningMode = if ([string]::IsNullOrWhiteSpace($env:WINDOWS_SIGNING_MODE)) { "unsigned" } else { $env:WINDOWS_SIGNING_MODE.ToLowerInvariant() }
+    if ($SigningMode -notin @("unsigned", "pfx", "azure")) {
+        throw "Unsupported WINDOWS_SIGNING_MODE '$SigningMode'. Expected 'unsigned', 'pfx', or 'azure'."
     }
     if ($SigningMode -eq "pfx") {
         if ([string]::IsNullOrWhiteSpace($env:CSC_LINK) -and [string]::IsNullOrWhiteSpace($env:CSC_NAME)) {
@@ -65,7 +65,7 @@ if ($Release) {
         if (-not [string]::IsNullOrWhiteSpace($env:CSC_LINK)) {
             Require-Environment "CSC_KEY_PASSWORD"
         }
-    } else {
+    } elseif ($SigningMode -eq "azure") {
         foreach ($name in @(
             "WINDOWS_AZURE_ENDPOINT",
             "WINDOWS_AZURE_ACCOUNT_NAME",
@@ -162,6 +162,11 @@ try {
         Remove-Item Env:CSC_LINK -ErrorAction SilentlyContinue
         Remove-Item Env:CSC_KEY_PASSWORD -ErrorAction SilentlyContinue
         Remove-Item Env:CSC_NAME -ErrorAction SilentlyContinue
+    } elseif ($SigningMode -eq "unsigned") {
+        Remove-Item Env:CSC_LINK -ErrorAction SilentlyContinue
+        Remove-Item Env:CSC_KEY_PASSWORD -ErrorAction SilentlyContinue
+        Remove-Item Env:CSC_NAME -ErrorAction SilentlyContinue
+        $env:CSC_IDENTITY_AUTO_DISCOVERY = "false"
     }
     Write-Host "Windows signing mode: $SigningMode" -ForegroundColor Cyan
     bun x --bun electron-builder --config $BuilderConfig --win --x64 --publish never
@@ -179,9 +184,9 @@ if ($LASTEXITCODE -ne 0) { throw "Electron ASAR/fuse security validation failed"
 $Installer = Get-ChildItem -Path "$ElectronDir\release" -Filter "Robb-Agents-x64*.exe" | Sort-Object Length -Descending | Select-Object -First 1
 if (-not $Installer) { throw "Expected Robb Agents NSIS installer was not produced" }
 
-if ($Release) {
-    # A public release is valid only when electron-builder signed both the
-    # packaged application executable and its NSIS installer.
+if ($Release -and $SigningMode -ne "unsigned") {
+    # Signed Windows release modes remain fail-closed for both the packaged
+    # application executable and the NSIS installer.
     Require-ValidAuthenticodeSignature $UnpackedBinary "unpacked Electron binary"
     Require-ValidAuthenticodeSignature $Installer.FullName "NSIS installer"
 }

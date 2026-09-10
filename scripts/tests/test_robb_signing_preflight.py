@@ -62,6 +62,13 @@ class SigningPreflightTests(unittest.TestCase):
         encoding = next(check for check in checks if check.name == "App Store Connect private key encoding")
         self.assertFalse(encoding.ok)
 
+    def test_windows_unsigned_route_is_valid_without_credentials(self) -> None:
+        with patch.dict(os.environ, {"WINDOWS_SIGNING_MODE": "unsigned"}, clear=True):
+            checks = MODULE.check_windows_signing(ci=True)
+
+        self.assertTrue(all(check.ok for check in checks))
+        self.assertEqual(checks[0].detail, "unsigned")
+
     def test_windows_pfx_route_requires_link_and_password_in_ci(self) -> None:
         with patch.dict(
             os.environ,

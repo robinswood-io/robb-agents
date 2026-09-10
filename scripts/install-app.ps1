@@ -116,16 +116,18 @@ if ($Provenance.product -ne 'Robb Agents') { throw 'Windows provenance has inval
 if ($Provenance.version -ne $ManifestVersion) { throw "Windows provenance version $($Provenance.version) does not match manifest version $ManifestVersion." }
 if ($Provenance.platform -ne 'windows-x64') { throw 'Windows provenance has invalid platform.' }
 $DeclaredSigning = $Provenance.signing
-if ($DeclaredSigning -ne 'verified-authenticode') {
+if ($DeclaredSigning -eq 'verified-authenticode') {
+    $Signature = Get-AuthenticodeSignature $InstallerPath
+    if ($Signature.Status -ne 'Valid') {
+        Remove-Item $InstallerPath -Force
+        throw "Authenticode verification failed: $($Signature.Status) $($Signature.StatusMessage)"
+    }
+    Write-Success "Authenticode signature verified: $($Signature.SignerCertificate.Subject)"
+} elseif ($DeclaredSigning -eq 'unsigned-public-release') {
+    Write-Warning 'This Robb Agents Windows release is intentionally unsigned. Windows SmartScreen may display a warning; SHA-512 and release provenance were verified.'
+} else {
     throw "Windows provenance has unsupported signing state: $DeclaredSigning"
 }
-
-$Signature = Get-AuthenticodeSignature $InstallerPath
-if ($Signature.Status -ne 'Valid') {
-    Remove-Item $InstallerPath -Force
-    throw "Authenticode verification failed: $($Signature.Status) $($Signature.StatusMessage)"
-}
-Write-Success "Authenticode signature verified: $($Signature.SignerCertificate.Subject)"
 
 $Running = @(Get-Process -Name 'Robb Agents' -ErrorAction SilentlyContinue)
 if ($Running.Count -gt 0) {
