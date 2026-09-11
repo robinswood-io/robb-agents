@@ -2059,8 +2059,11 @@ export function shouldAllowToolInMode(
     };
   }
 
-  // Default: allow other tools not explicitly handled
-  return { allowed: true };
+  // Unclassified tools have no established read-only contract: fail closed.
+  return {
+    allowed: false,
+    reason: `Unclassified tool "${toolName}" is blocked in ${config.displayName}. Switch to Ask or Allow All mode (${config.shortcutHint}) to run it.`,
+  };
 }
 
 /**

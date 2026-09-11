@@ -742,5 +742,13 @@ export type AgentEvent =
  * Generate a unique message ID
  */
 export function generateMessageId(): string {
-  return `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  // These IDs also enter permission checks; never fall back to Math.random.
+  // getRandomValues keeps this shared package usable in browser and server runtimes.
+  // Core deliberately has no DOM/Node ambient types; describe only this standard API.
+  const webCrypto = (globalThis as typeof globalThis & {
+    crypto: { getRandomValues(bytes: Uint8Array): Uint8Array };
+  }).crypto;
+  const bytes = webCrypto.getRandomValues(new Uint8Array(16));
+  const randomPart = Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+  return `msg-${Date.now()}-${randomPart}`;
 }

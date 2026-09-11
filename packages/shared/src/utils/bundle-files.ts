@@ -7,9 +7,10 @@
  * BundleFile.relativePath is always forward-slash separated for cross-platform portability.
  */
 
-import { existsSync, readdirSync, readFileSync, statSync, mkdirSync, writeFileSync } from 'fs'
-import { join, relative, dirname, sep } from 'path'
+import { existsSync, readdirSync, readFileSync, statSync, mkdirSync, writeFileSync, constants, ftruncateSync } from 'fs'
+import { join, relative, sep } from 'path'
 import { debug } from './debug.ts'
+import { canonicalConfinementRoot, ensureConfinedDirectory, openConfinedRegularFile } from '../missions/confined-file.ts'
 
 /**
  * Maximum bundle size in bytes (~100MB).
@@ -181,22 +182,24 @@ export function restoreFiles(targetDir: string, files: BundleFile[]): void {
       throw new Error(`Invalid bundle file: ${error}`)
     }
 
-    const nativePath = fromPortableRelPath(file.relativePath)
-    const fullPath = join(targetDir, nativePath)
-
-    // Safety: ensure resolved path is inside target dir
-    if (!fullPath.startsWith(targetDir + sep) && fullPath !== targetDir) {
-      throw new Error(`Path escapes target directory: ${file.relativePath}`)
+    // Resolve the trusted root once, then reject symlinks in every descendant.
+    if (!existsSync(targetDir)) mkdirSync(targetDir, { recursive: true })
+    const root = canonicalConfinementRoot(targetDir)
+    const parts = file.relativePath.split('/').filter(part => part !== '.')
+    const parent = ensureConfinedDirectory(root, ...parts.slice(0, -1))
+    const handle = openConfinedRegularFile(root, join(parent, parts.at(-1)!), {
+      flags: constants.O_WRONLY | constants.O_CREAT,
+      mode: 0o600,
+      allowCreate: true,
+    })
+    try {
+      handle.assertStillBound()
+      // Do not truncate until the descriptor, parent and link count are checked.
+      ftruncateSync(handle.descriptor, 0)
+      writeFileSync(handle.descriptor, Buffer.from(file.contentBase64, 'base64'))
+      handle.assertStillBound()
+    } finally {
+      handle.close()
     }
-
-    // Ensure parent directory exists
-    const parentDir = dirname(fullPath)
-    if (!existsSync(parentDir)) {
-      mkdirSync(parentDir, { recursive: true })
-    }
-
-    // Decode and write
-    const content = Buffer.from(file.contentBase64, 'base64')
-    writeFileSync(fullPath, content)
   }
 }
