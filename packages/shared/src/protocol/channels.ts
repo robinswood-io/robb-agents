@@ -101,6 +101,15 @@ export const RPC_CHANNELS = {
     CANCEL: 'missions:cancel',
     CHANGED: 'missions:changed',
   },
+  specializedProfiles: {
+    ANALYZE: 'specializedProfiles:analyze',
+    GET_REGISTRY: 'specializedProfiles:getRegistry',
+    CREATE_DRAFT: 'specializedProfiles:createDraft',
+    TRANSITION: 'specializedProfiles:transition',
+    RECORD_EVALUATION: 'specializedProfiles:recordEvaluation',
+    ROLLBACK: 'specializedProfiles:rollback',
+    CHANGED: 'specializedProfiles:changed',
+  },
   workspaces: {
     GET: 'workspaces:get',
     CREATE: 'workspaces:create',

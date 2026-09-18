@@ -357,6 +357,7 @@ const SETTINGS_ICONS: Record<SettingsSubpage, string> = {
   workspace: 'Building2',
   permissions: 'ShieldCheck',
   governance: 'Scale',
+  profiles: 'Bot',
   labels: 'Tag',
   messaging: 'Smartphone',
   server: 'Server',

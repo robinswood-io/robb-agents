@@ -256,6 +256,13 @@ import type {
   RemoteSessionTransferPayload,
   ImportRemoteSessionTransferResult,
 } from '@craft-agent/shared/protocol'
+import type {
+  CreateSpecializedProfileDraftRequest,
+  SpecializedProfileAnalysisResult,
+  SpecializedProfileRegistryDocument,
+  SpecializedProfileRegistryMutationResult,
+  TransitionSpecializedProfileRequest,
+} from '@craft-agent/shared/specialized-profiles'
 
 export interface ElectronAPI {
   // Session management
@@ -324,6 +331,21 @@ export interface ElectronAPI {
   resumeMission(workspaceId: string, request: MissionResumeRequest): Promise<MissionSnapshotDto>
   cancelMission(workspaceId: string, request: MissionControlRequest): Promise<MissionSnapshotDto>
   onMissionChanged(callback: (workspaceId: string, snapshot: MissionSnapshotDto) => void): () => void
+
+  // Specialized profiles — analysis is proposal-only and every state change is explicit.
+  analyzeSpecializedProfiles(workspaceId: string): Promise<SpecializedProfileAnalysisResult>
+  getSpecializedProfileRegistry(workspaceId: string): Promise<SpecializedProfileRegistryDocument>
+  createSpecializedProfileDraft(
+    workspaceId: string,
+    request: CreateSpecializedProfileDraftRequest,
+  ): Promise<SpecializedProfileRegistryMutationResult>
+  transitionSpecializedProfile(
+    workspaceId: string,
+    request: TransitionSpecializedProfileRequest,
+  ): Promise<SpecializedProfileRegistryMutationResult>
+  onSpecializedProfilesChanged(
+    callback: (workspaceId: string, revision: number) => void,
+  ): () => void
 
   respondToPermission(sessionId: string, requestId: string, allowed: boolean, alwaysAllow: boolean, options?: PermissionResponseOptions): Promise<boolean>
   respondToCredential(sessionId: string, requestId: string, response: CredentialResponse): Promise<boolean>

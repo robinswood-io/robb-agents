@@ -164,6 +164,7 @@ export const NavigationRegistry = {
       workspace: PlaceholderComponent, // WorkspaceSettingsPage
       permissions: PlaceholderComponent, // PermissionsSettingsPage
       governance: PlaceholderComponent, // GovernanceSettingsPage
+      profiles: PlaceholderComponent, // ProfilesSettingsPage
       labels: PlaceholderComponent, // LabelsSettingsPage
       shortcuts: PlaceholderComponent, // ShortcutsPage
       preferences: PlaceholderComponent, // PreferencesPage

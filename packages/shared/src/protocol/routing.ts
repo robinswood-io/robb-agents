@@ -321,6 +321,15 @@ export const REMOTE_ELIGIBLE_CHANNELS = new Set<string>([
   RPC_CHANNELS.missions.CANCEL,
   RPC_CHANNELS.missions.CHANGED,
 
+  // specialized profiles — workspace-scoped discovery and governed registry
+  RPC_CHANNELS.specializedProfiles.ANALYZE,
+  RPC_CHANNELS.specializedProfiles.GET_REGISTRY,
+  RPC_CHANNELS.specializedProfiles.CREATE_DRAFT,
+  RPC_CHANNELS.specializedProfiles.TRANSITION,
+  RPC_CHANNELS.specializedProfiles.RECORD_EVALUATION,
+  RPC_CHANNELS.specializedProfiles.ROLLBACK,
+  RPC_CHANNELS.specializedProfiles.CHANGED,
+
   // file — workspace files (not openDialog which is native)
   RPC_CHANNELS.file.READ,
   RPC_CHANNELS.file.READ_DATA_URL,

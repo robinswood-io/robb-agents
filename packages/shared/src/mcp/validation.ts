@@ -1,3 +1,4 @@
+import { protectApplicationCommand } from '@craft-agent/session-tools-core';
 /**
  * MCP Connection Validation
  *
@@ -383,8 +384,7 @@ export async function validateStdioMcpConnection(
 
   try {
     transport = new StdioClientTransport({
-      command,
-      args,
+      ...protectApplicationCommand(command, args),
       env: buildStdioMcpSubprocessEnvironment(env),
       cwd,
       stderr: 'pipe',
@@ -497,7 +497,8 @@ export async function validateStdioMcpConnection(
     const framingHint =
       'Check that the server speaks newline-delimited JSON-RPC (MCP stdio spec) on stdout, not LSP-style Content-Length framing.';
 
-    if (error.message.includes('ENOENT') || error.message.includes('not found')) {
+    if (error.message.includes('ENOENT') || error.message.includes('not found')
+      || /sandbox-exec: execvp\(\) of .*: No such file or directory/.test(stderrSnippet)) {
       errorMessage = `Command not found: "${command}". Install the required dependency and try again.`;
     } else if (error.message.includes('EACCES') || error.message.includes('permission denied')) {
       errorMessage = `Permission denied running "${command}". Check file permissions.`;

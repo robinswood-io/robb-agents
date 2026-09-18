@@ -70,6 +70,14 @@ export const CHANNEL_MAP = {
   resumeMission: invoke(RPC_CHANNELS.missions.RESUME),
   cancelMission: invoke(RPC_CHANNELS.missions.CANCEL),
   onMissionChanged: listener(RPC_CHANNELS.missions.CHANGED),
+
+  // Specialized profiles (workspace-scoped, proposal-only analysis)
+  analyzeSpecializedProfiles: invoke(RPC_CHANNELS.specializedProfiles.ANALYZE),
+  getSpecializedProfileRegistry: invoke(RPC_CHANNELS.specializedProfiles.GET_REGISTRY),
+  createSpecializedProfileDraft: invoke(RPC_CHANNELS.specializedProfiles.CREATE_DRAFT),
+  transitionSpecializedProfile: invoke(RPC_CHANNELS.specializedProfiles.TRANSITION),
+  onSpecializedProfilesChanged: listener(RPC_CHANNELS.specializedProfiles.CHANGED),
+
   respondToPermission: invoke(RPC_CHANNELS.sessions.RESPOND_TO_PERMISSION),
   respondToCredential: invoke(RPC_CHANNELS.sessions.RESPOND_TO_CREDENTIAL),
   sessionCommand: invoke(RPC_CHANNELS.sessions.COMMAND),

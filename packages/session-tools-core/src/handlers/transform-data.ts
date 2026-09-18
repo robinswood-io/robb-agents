@@ -17,6 +17,7 @@ import { tmpdir } from 'node:os';
 import { createScriptRuntimeEnv } from '../runtime/sandbox-env.ts';
 import { isPathWithinDirectory, isPathWithinDirectoryForCreation } from '../runtime/path-security.ts';
 import { resolveScriptRuntime } from '../runtime/resolve-script-runtime.ts';
+import { protectApplicationCommand, isProtectedApplicationPath, APPLICATION_PROTECTION_REASON } from '../runtime/application-protection.ts';
 
 export interface TransformDataArgs {
   language: 'python3' | 'node' | 'bun';
@@ -45,6 +46,7 @@ export async function handleTransformData(
 
   const sessionDir = ctx.sessionPath;
   const dataDir = ctx.dataPath;
+  if (isProtectedApplicationPath(dataDir)) return errorResponse(APPLICATION_PROTECTION_REASON);
 
   // Validate outputFile doesn't escape data/ directory
   const resolvedOutput = resolve(dataDir, args.outputFile);
@@ -103,7 +105,8 @@ export async function handleTransformData(
     // We can't rely on spawn()'s built-in `timeout` option because it only sends
     // SIGTERM, which can be caught/ignored — leaving the promise hanging forever.
     const result = await new Promise<{ stdout: string; stderr: string; code: number | null }>((resolvePromise, reject) => {
-      const child = spawn(cmd, spawnArgs, {
+      const protectedCommand = protectApplicationCommand(cmd, spawnArgs);
+      const child = spawn(protectedCommand.command, protectedCommand.args, {
         cwd: dataDir,
         env,
         stdio: ['ignore', 'pipe', 'pipe'],

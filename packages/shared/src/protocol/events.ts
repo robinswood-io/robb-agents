@@ -35,6 +35,10 @@ export interface BroadcastEventMap {
   [RPC_CHANNELS.tasks.GENERATED]: [workspaceId: string, result: TaskGenerateResult]
   [RPC_CHANNELS.missions.CHANGED]: [workspaceId: string, snapshot: MissionSnapshotDto]
   [RPC_CHANNELS.missions.PLANNED]: [workspaceId: string, result: MissionPlanResult]
+  [RPC_CHANNELS.specializedProfiles.CHANGED]: [
+    workspaceId: string,
+    revision: number,
+  ]
   [RPC_CHANNELS.llmConnections.CHANGED]: []
   [RPC_CHANNELS.permissions.DEFAULTS_CHANGED]: [value: null]
 

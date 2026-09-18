@@ -37,6 +37,7 @@
     "./processes": "./src/processes/index.ts",
     "./remote-supervision": "./src/remote-supervision/index.ts",
     "./sessions": "./src/sessions/index.ts",
+    "./specialized-profiles": "./src/specialized-profiles/index.ts",
     "./projects": "./src/projects/index.ts",
     "./projects/types": "./src/projects/types.ts",
     "./sources": "./src/sources/index.ts",

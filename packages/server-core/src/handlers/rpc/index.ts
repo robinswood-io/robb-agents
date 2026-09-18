@@ -1,6 +1,6 @@
 import type { RpcServer } from '@craft-agent/server-core/transport'
 import type { HandlerDeps } from '../handler-deps'
-import { resolveConfigDir } from '@craft-agent/shared/config'
+import { getWorkspaceByNameOrId, resolveConfigDir } from '@craft-agent/shared/config'
 import { DurableKillSwitchRegistry } from '@craft-agent/shared/governance'
 import { join } from 'node:path'
 
@@ -29,6 +29,8 @@ import { registerTransferHandlers } from './transfer'
 import { registerWorkspaceCoreHandlers } from './workspace'
 import { registerMessagingHandlers } from './messaging'
 import { registerMissionsHandlers } from './missions'
+import { registerSpecializedProfileHandlers } from './specialized-profiles'
+import { SpecializedProfileService } from '../../specialized-profiles/index.ts'
 
 export function registerCoreRpcHandlers(
   server: RpcServer,
@@ -55,6 +57,14 @@ export function registerCoreRpcHandlers(
   registerStatusesHandlers(server, deps)
   registerSystemCoreHandlers(server, deps)
   const missionService = registerMissionsHandlers(server, deps, { killSwitchRegistry })
+  const specializedProfileService = new SpecializedProfileService({
+    resolveWorkspace: (workspaceId) => {
+      const workspace = getWorkspaceByNameOrId(workspaceId)
+      return workspace ? { id: workspace.id, rootPath: workspace.rootPath } : null
+    },
+    listMissions: (workspaceId) => missionService.listMissions(workspaceId),
+  })
+  registerSpecializedProfileHandlers(server, specializedProfileService)
   registerTasksHandlers(server, deps, {
     killSwitchRegistry,
     onKillSwitchActivated: () => missionService.enforceRuntimePolicies(),

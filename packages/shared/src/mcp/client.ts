@@ -1,3 +1,4 @@
+import { protectApplicationCommand } from '@craft-agent/session-tools-core';
 /**
  * MCP client using the official split @modelcontextprotocol/client SDK
  * Supports both HTTP and stdio transports for remote and local MCP servers
@@ -106,8 +107,7 @@ export class CraftMcpClient {
       // Stdio transport for local MCP servers. Inherit a strict operational
       // baseline, then layer only this source's explicitly configured env.
       this.stdioTransport = new StdioClientTransport({
-        command: config.command,
-        args: config.args,
+        ...protectApplicationCommand(config.command, config.args),
         env: buildStdioMcpSubprocessEnvironment(config.env),
       });
       this.transport = this.stdioTransport;

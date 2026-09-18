@@ -4,6 +4,7 @@ This file accumulates release notes for the next unreleased version. PRs that ad
 
 ## Features
 
+- **Profils d’agents spécialisés** — Détecte les familles de missions récurrentes et propose depuis les réglages des profils inactifs, versionnés et soumis à des évaluations avant activation, sans attribuer automatiquement un fournisseur, un modèle ou des permissions.
 - **GPT-6 Astra for OpenAI connections** — Astra is now selectable with both OpenAI API keys and ChatGPT/Codex accounts, with compatible reasoning and prompt-cache requests while GPT-5.6 Sol remains the default.
 - **Current provider models** — Adds Claude Opus 5, Claude Fable 5.1, Gemini 3.8 Flash through the official Antigravity CLI, and the documented Mistral Medium 3.5 model ID. Existing session selections are preserved.
 

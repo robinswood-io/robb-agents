@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'bun:test'
 import { execFileSync } from 'node:child_process'
-import { createPackage } from '@electron/asar'
+import { createPackage, getRawHeader } from '@electron/asar'
+import { createHash } from 'node:crypto'
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -10,6 +11,7 @@ import {
   validateElectronPackageSecurityLayout,
   validatePackagedWhatsAppWorkerProvenance,
   validateRequiredElectronFuses,
+  validateMacAsarHeaderIntegrity,
 } from '../validate-electron-package-security'
 import {
   createRuntimeIntegrityManifest,
@@ -40,6 +42,49 @@ function createCleanRepository(): string {
   execFileSync('git', ['commit', '--quiet', '-m', 'fixture'], { cwd: fixtureDirectory })
   return fixtureDirectory
 }
+
+describe.skipIf(process.platform !== 'darwin')('macOS embedded ASAR header integrity', () => {
+  async function archiveFixture() {
+    fixtureDirectory = mkdtempSync(join(tmpdir(), 'robb-asar-header-'))
+    const source = join(fixtureDirectory, 'source')
+    mkdirSync(source)
+    writeFileSync(join(source, 'main.cjs'), 'console.log("original")\n')
+    const archive = join(fixtureDirectory, 'app.asar')
+    const plist = join(fixtureDirectory, 'Info.plist')
+    await createPackage(source, archive)
+    const hash = createHash('sha256').update(getRawHeader(archive).headerString).digest('hex')
+    const writeDeclaration = (algorithm: string, declaredHash: string) => writeFileSync(plist,
+      `<?xml version="1.0" encoding="UTF-8"?><plist version="1.0"><dict><key>ElectronAsarIntegrity</key><dict><key>Resources/app.asar</key><dict><key>algorithm</key><string>${algorithm}</string><key>hash</key><string>${declaredHash}</string></dict></dict></dict></plist>`)
+    writeDeclaration('SHA256', hash)
+    return { source, archive, plist, hash, writeDeclaration }
+  }
+
+  it('accepts the exact archive declared by Info.plist', async () => {
+    const { archive, plist, hash } = await archiveFixture()
+    expect(validateMacAsarHeaderIntegrity(archive, plist)).toBe(hash)
+  })
+
+  it('rejects a repacked archive even when its own entry hashes are coherent', async () => {
+    const { source, archive, plist } = await archiveFixture()
+    writeFileSync(join(source, 'main.cjs'), 'console.log("modified")\n')
+    await createPackage(source, archive)
+    expect(() => validateMacAsarHeaderIntegrity(archive, plist)).toThrow('Embedded ASAR header integrity mismatch')
+  })
+
+  it('rejects absent embedded integrity metadata', async () => {
+    const { archive, plist } = await archiveFixture()
+    writeFileSync(plist, '<?xml version="1.0"?><plist version="1.0"><dict/></plist>')
+    expect(() => validateMacAsarHeaderIntegrity(archive, plist)).toThrow('Missing or invalid ElectronAsarIntegrity')
+  })
+
+  it('rejects unsupported algorithms and malformed declared hashes', async () => {
+    const { archive, plist, hash, writeDeclaration } = await archiveFixture()
+    writeDeclaration('SHA1', hash)
+    expect(() => validateMacAsarHeaderIntegrity(archive, plist)).toThrow('Invalid embedded ASAR integrity declaration')
+    writeDeclaration('SHA256', 'not-a-sha256')
+    expect(() => validateMacAsarHeaderIntegrity(archive, plist)).toThrow('Invalid embedded ASAR integrity declaration')
+  })
+})
 
 describe('cross-platform release source integrity', () => {
   it('accepts an exact clean Git commit and rejects subsequent tracked or untracked changes', () => {

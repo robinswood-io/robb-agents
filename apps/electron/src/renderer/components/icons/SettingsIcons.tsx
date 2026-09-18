@@ -7,6 +7,7 @@
  */
 
 import {
+  Bot,
   Building2,
   Keyboard,
   Palette,
@@ -30,6 +31,7 @@ export const InputIcon = ({ className }: IconProps) => <Keyboard className={clas
 export const WorkspaceIcon = ({ className }: IconProps) => <Building2 className={className} />
 export const PermissionsIcon = ({ className }: IconProps) => <ShieldCheck className={className} />
 export const GovernanceIcon = ({ className }: IconProps) => <Scale className={className} />
+export const ProfilesIcon = ({ className }: IconProps) => <Bot className={className} />
 export const LabelsIcon = ({ className }: IconProps) => <Tag className={className} />
 export const MessagingSettingsIcon = ({ className }: IconProps) => <Smartphone className={className} />
 export const ServerSettingsIcon = ({ className }: IconProps) => <Server className={className} />
@@ -48,6 +50,7 @@ export const SETTINGS_ICONS: Record<SettingsSubpage, React.ComponentType<IconPro
   workspace: WorkspaceIcon,
   permissions: PermissionsIcon,
   governance: GovernanceIcon,
+  profiles: ProfilesIcon,
   labels: LabelsIcon,
   messaging: MessagingSettingsIcon,
   server: ServerSettingsIcon,
