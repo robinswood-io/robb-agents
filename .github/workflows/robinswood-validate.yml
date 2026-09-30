@@ -221,3 +221,17 @@ jobs:
         run: |
           bun run lint:i18n:parity
           bun run lint:i18n:sorted
+
+  scotland-conference:
+    name: Scottish conference contract and Gmail effect guards
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Test bounded campaign without external effects
+        run: python3 ops/rbw-agents-oss/scripts/scotland_executive_conference_october_tests.py
