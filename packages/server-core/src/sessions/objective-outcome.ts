@@ -226,7 +226,7 @@ function gmailExplicitIdentityTerms(value: string): Set<string> {
   for (const match of value.matchAll(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|(?:[A-Z0-9-]+\.)+[A-Z]{2,}/gi)) {
     addTerms(match[0]);
   }
-  for (const match of value.matchAll(/\b(?:[A-ZÀ-ÖØ-Þ]{4,}|[A-ZÀ-ÖØ-Þ][a-zà-öø-ÿ0-9]+(?:[A-ZÀ-ÖØ-Þ][A-Za-zÀ-ÖØ-öø-ÿ0-9]*)+)\b/g)) {
+  for (const match of value.matchAll(/\b(?:[A-ZÀ-ÖØ-Þ]{4,}|[A-ZÀ-ÖØ-Þ][a-zà-öø-ÿ0-9]+[A-ZÀ-ÖØ-Þ][A-Za-zÀ-ÖØ-öø-ÿ0-9]*)\b/g)) {
     addTerms(match[0]);
   }
   return result;

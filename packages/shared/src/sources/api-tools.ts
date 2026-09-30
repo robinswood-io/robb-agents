@@ -13,7 +13,7 @@ import { guardLargeResult } from '../utils/large-response.ts';
 import { MAX_DOWNLOAD_SIZE, formatBytes } from '../utils/binary-detection.ts';
 import type { ApiCredential, BasicAuthCredential } from './credential-manager.ts';
 import { isMultiHeaderCredential } from './credential-manager.ts';
-import { createHash } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 
 // Re-export for convenience
 export type { ApiCredential, BasicAuthCredential } from './credential-manager.ts';
@@ -84,11 +84,24 @@ function isTokenGetter(
 
 /** Summarize callback type — typically agent.runMiniCompletion.bind(agent) */
 export type SummarizeCallback = ((prompt: string, request?: {
-  /** Digest of the actual request/authentication boundary; never a credential. */
+  /** Opaque identity of the actual request/authentication boundary. */
   requestIdentity: string;
   allowReuse: boolean;
 }) => Promise<string | null>) & { onSourceMutation?: () => void };
 
+// Share collection identities across live tool instances without persisting a
+// fast digest of authentication material. Eviction and process restart expire
+// reuse; credential/configuration changes always receive a different ID.
+const requestIdentities = new Map<string, string>();
+function apiSummaryRequestIdentity(request: string): string {
+  if (request.length > 128_000) return randomUUID();
+  const existing = requestIdentities.get(request);
+  if (existing) return existing;
+  if (requestIdentities.size >= 1_000) requestIdentities.delete(requestIdentities.keys().next().value!);
+  const identity = randomUUID();
+  requestIdentities.set(request, identity);
+  return identity;
+}
 
 /**
  * Build headers for an API request, injecting authentication and default headers
@@ -364,9 +377,9 @@ export function createApiTool(
             input: params,
             intent: _intent,
             summarize: summarize ? prompt => summarize(prompt, {
-              requestIdentity: createHash('sha256').update(JSON.stringify([
+              requestIdentity: apiSummaryRequestIdentity(JSON.stringify([
                 config.baseUrl, config.auth, config.defaultHeaders, resolvedCredential, method, path, params,
-              ])).digest('hex'),
+              ])),
               allowReuse: method === 'GET',
             }) : undefined,
           });

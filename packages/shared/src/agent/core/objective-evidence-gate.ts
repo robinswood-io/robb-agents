@@ -1,3 +1,4 @@
+import { trimTrailingCharacters } from '../../utils/string-boundaries.ts';
 import {
   DIRECT_RBAC_ASSIGNMENT_PHRASE_SOURCE,
   DIRECT_RBAC_MUTATION_ACTION_SOURCE,
@@ -723,7 +724,7 @@ function hasOfficialSourceUrl(
 ): boolean {
   return [...result.matchAll(/https?:\/\/[^\s<>"'`\\]+/gi)]
     .some(match => isOfficialSourceUrl(
-      match[0].replace(/[),.;]+$/, ''), domain, businessSourceVendors, securityDocumentationProviders,
+      trimTrailingCharacters(match[0], '),.;'), domain, businessSourceVendors, securityDocumentationProviders,
     ));
 }
 
@@ -779,8 +780,10 @@ const WAIT_SESSIONS_TOOL_PATTERN = /^(?:mcp__session__|session__)?wait_sessions$
 
 function jsonCandidates(result: string): string[] {
   const candidates = [result.trim()];
-  for (const match of result.matchAll(/```(?:json)?\s*([\s\S]*?)```/gi)) {
-    if (match[1]) candidates.push(match[1].trim());
+  const fences = result.split('```');
+  for (let index = 1; index + 1 < fences.length; index += 2) {
+    const fenced = fences[index]!.replace(/^json/i, '').trim();
+    if (fenced) candidates.push(fenced);
   }
   const firstBrace = result.indexOf('{');
   const lastBrace = result.lastIndexOf('}');

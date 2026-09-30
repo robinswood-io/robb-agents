@@ -25,7 +25,8 @@ import {
 import { isBrowserToolNameOrAlias, isCanonicalBrowserToolName } from '../browser-tool-names.ts';
 import { existsSync, lstatSync, readFileSync, realpathSync } from 'node:fs';
 import { yoloHumanHandoffBlock, YOLO_AUTONOMY_GUIDANCE } from '../yolo-policy.ts';
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash, createHmac, randomUUID } from 'node:crypto';
+import { trimTrailingCharacters, hasSingleMailboxShape } from '../../utils/string-boundaries.ts';
 import { isProtectedApplicationPath, APPLICATION_PROTECTION_REASON } from '@craft-agent/session-tools-core';
 import { dirname, isAbsolute, join, posix, relative, resolve } from 'node:path';
 import { expandPath } from '../../utils/paths.ts';
@@ -2125,7 +2126,7 @@ function hasTargetBoundOperationalTechnicalReadAuthority(
 }
 
 function normalizedRemoteProjectIdentity(value: string): string {
-  const withoutDigestOrTag = value.split('@', 1)[0]!.replace(/:[^/]+$/, '');
+  const withoutDigestOrTag = value.split('@', 1)[0]!.replace(/:[^/:]+$/, '');
   let identity = (withoutDigestOrTag.split('/').filter(Boolean).at(-1) ?? '')
     .toLowerCase().replace(/[^a-z0-9]+/g, '');
   // These suffixes describe the role/artifact family rather than a sibling
@@ -2814,7 +2815,7 @@ function explicitBoundedSoftwareRemoteRootOccurrences(
       segment,
       index,
       rawPath.length,
-    ) ? rawPath : rawPath.replace(/[.,]+$/u, '');
+    ) ? rawPath : trimTrailingCharacters(rawPath, '.,');
     const parts = path.split('/').slice(1);
     if (parts.length < 2 || parts.some(part => !part || part === '.' || part === '..')) continue;
     occurrences.push({
@@ -3052,7 +3053,7 @@ function isQuotedOrReportedBoundedSoftwareContract(segment: string): boolean {
   const trimmed = segment.trim();
   if (!trimmed) return false;
   if (/```|~~~/u.test(trimmed)
-    || /(?:^|\r?\n)\s*>/u.test(trimmed)
+    || /^[^\S\r\n]*>/mu.test(trimmed)
     || /^(?:[«“„])/u.test(trimmed)) return true;
 
   const normalized = normalizeUserInstructionForChannelMatch(trimmed);
@@ -3609,10 +3610,10 @@ function isHostOwnedConnectorObservation(
       && (input.isHtml === undefined || typeof input.isHtml === 'boolean')
       && (input.expectedSenderEmail === undefined
         || typeof input.expectedSenderEmail === 'string'
-          && /^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(input.expectedSenderEmail))
+          && hasSingleMailboxShape(input.expectedSenderEmail))
       && (recipientBound
         ? typeof input.expectedRecipientEmail === 'string'
-          && /^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(input.expectedRecipientEmail)
+          && hasSingleMailboxShape(input.expectedRecipientEmail)
         : input.expectedRecipientEmail === undefined)
       && keys.every(key => (
         key === 'messageId' || key === 'body' || key === 'isHtml'
@@ -3953,8 +3954,7 @@ export function deriveTerminalReconciliationInvocationCapability(
   }
   const inputJson = canonicalTerminalReconciliationToolInput(operationalInput);
   if (inputJson === undefined) return undefined;
-  return createHash('sha256')
-    .update(capabilityKey, 'utf8')
+  return createHmac('sha256', capabilityKey)
     .update('\0', 'utf8')
     .update(toolName, 'utf8')
     .update('\0', 'utf8')

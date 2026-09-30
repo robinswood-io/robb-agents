@@ -6,6 +6,7 @@
 export * from './turn-utils'
 export * from './follow-up-helpers'
 export * from './conversation-presentation'
+export * from './user-input-timeline'
 export { JourneyProgress, JourneyOutcome } from './JourneyProgress'
 export { UserInputCard, userInputAnswersComplete, type UserInputCardProps } from './UserInputCard'
 

@@ -199,9 +199,10 @@ describe('specialized Mission host identities', () => {
     });
     saveSourceGuide(root, 'drive', { raw: '# Drive\nRead files.' });
     let bindingId = 'credential-generation-a';
+    let secret = 'never-hashed-secret';
     const load = spyOn(SourceCredentialManager.prototype, 'loadWithIdentity')
       .mockImplementation(async (source) => ({
-        credential: { value: 'never-hashed-secret', bindingId },
+        credential: { value: secret, bindingId },
         credentialId: { type: 'source_bearer', workspaceId: source.workspaceId, sourceId: source.config.slug },
       }));
     try {
@@ -212,6 +213,8 @@ describe('specialized Mission host identities', () => {
         assignedItems: [spec.workItems[1]!],
       });
       const first = (await resolve()).find(({ kind }) => kind === 'source')!.identitySha256;
+      secret = 'different-unhashed-secret';
+      expect((await resolve()).find(({ kind }) => kind === 'source')!.identitySha256).toBe(first);
       bindingId = 'credential-generation-b';
       expect((await resolve()).find(({ kind }) => kind === 'source')!.identitySha256).not.toBe(first);
       expect(JSON.stringify(await resolve())).not.toContain('never-hashed-secret');

@@ -52,6 +52,7 @@ import {
   TurnCard,
   UserMessageBubble,
   projectConversation,
+  buildUserInputTimeline,
   JourneyProgress,
   JourneyOutcome,
   UserInputCard,
@@ -1356,6 +1357,10 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
   // Reverse pagination: only render last N turns for fast initial render
   const startIndex = Math.max(0, allTurns.length - visibleTurnCount)
   const turns = allTurns.slice(startIndex)
+  const timeline = useMemo(() => buildUserInputTimeline(allTurns, session?.userInputRequests ?? [], {
+    pendingAtEnd: true,
+  }), [allTurns, session?.userInputRequests])
+  const visibleTimeline = timeline.filter(entry => entry.turnIndex >= startIndex)
   const hasMoreAbove = startIndex > 0
 
   const assistantTurnIndexByMessageId = useMemo(() => {
@@ -1553,7 +1558,13 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
                       ↑ {t('chat.scrollUpForEarlier', { count: startIndex })}
                     </div>
                   )}
-                  {turns.map((turn, index) => {
+                  {visibleTimeline.map(entry => {
+                    if (entry.type === 'user-input') {
+                      return <UserInputCard key={`user-input-${entry.request.id}`} request={entry.request}
+                        onRespond={respondToUserInput} onRecordedRetryChange={onRecordedRetryChange} />
+                    }
+                    const { turn } = entry
+                    const index = entry.turnIndex - startIndex
                     // Compute turn key and check if it's a search match
                     const turnKey = getTurnKey(turn)
                     const isCurrentMatch = isSearchActive && matchingTurnIds[currentMatchIndex] === turnKey
@@ -1827,9 +1838,6 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
                     </AnimatePresence>
                   </motion.div>
                 </AnimatePresence>
-                {session.userInputRequests?.map(request => (
-                  <UserInputCard key={request.id} request={request} onRespond={respondToUserInput} onRecordedRetryChange={onRecordedRetryChange} />
-                ))}
                 {pendingDescendantAuthRequests.map(request => (
                   <div key={`auth-${request.sessionId}-${request.message.id}`} className="mt-2">
                     <MemoizedAuthRequestCard

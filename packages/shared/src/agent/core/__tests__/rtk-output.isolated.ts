@@ -22,6 +22,7 @@ if [ "$1" = --version ]; then printf 'rtk 0.43.0\n'; exit 0; fi
 if [ "$RTK_TELEMETRY_DISABLED" != 1 ]; then exit 98; fi
 if [ "$1" = rewrite ]; then printf 'rtk %s' "$2"; exit "\${ROBB_REWRITE_STATUS:-3}"; fi
 if [ "$1" = pipe ]; then
+  if [ "$2" = --help ]; then printf 'Usage: rtk pipe <runner>\\n'; exit 0; fi
   cat >/dev/null
   printf '%s' "\${ROBB_FILTER_OUTPUT:-Summary: all 100 tests passed.}"
   printf '%s' 'private filter diagnostic' >&2

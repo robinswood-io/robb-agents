@@ -2,6 +2,7 @@
 
 import bashParser from 'bash-parser';
 import { posix } from 'node:path';
+import { hasSingleMailboxShape } from '../../utils/string-boundaries.ts';
 import {
   isProvablyReadOnlyShellCommand,
   isReadOnlyRegisteredShellObservation,
@@ -396,10 +397,9 @@ export function hasUnresolvedSensitiveExternalActionTarget(
  * commands cannot authorize a different tool category or target. */
 function structuredGmailPolicyRequest(rawRequest: string): string {
   if (!parseStructuredGmailSendResumeSegment(rawRequest)) return rawRequest;
-  return rawRequest.replace(
-    /(^|\r?\n)BODY_BEGIN\r?\n[\s\S]*?\r?\nBODY_END(?=\r?\n|$)/u,
-    '$1BODY_BEGIN\n[exact Gmail payload body omitted from generic action authority]\nBODY_END',
-  );
+  const start = rawRequest.indexOf('BODY_BEGIN\n') + 'BODY_BEGIN\n'.length;
+  const end = rawRequest.indexOf('\nBODY_END', start);
+  return `${rawRequest.slice(0, start)}[exact Gmail payload body omitted from generic action authority]${rawRequest.slice(end)}`;
 }
 
 export function externalActionAuthorityPolicySegments(segments: readonly string[]): string[] {
@@ -491,13 +491,15 @@ function uniqueTargets(values: Array<string | undefined>): string[] {
   return unique;
 }
 
-const CANONICAL_EMAIL_ADDRESS = /^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?\.[A-Za-z]{2,}$/u;
-
 function isCanonicalEmailAddress(value: unknown): value is string {
-  return typeof value === 'string'
-    && value === value.trim()
-    && !/[\0\r\n]/u.test(value)
-    && CANONICAL_EMAIL_ADDRESS.test(value);
+  if (typeof value !== 'string' || !hasSingleMailboxShape(value) || /\0/u.test(value)) return false;
+  const at = value.indexOf('@');
+  const dot = value.lastIndexOf('.');
+  const host = value.slice(at + 1, dot);
+  return /^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+$/u.test(value.slice(0, at))
+    && /^[A-Za-z0-9][A-Za-z0-9.-]*$/u.test(host)
+    && /[A-Za-z0-9]$/u.test(host)
+    && /^[A-Za-z]{2,}$/u.test(value.slice(dot + 1));
 }
 
 function isBoundedSessionPdfAttachmentPath(path: unknown): path is string {
@@ -2214,15 +2216,33 @@ function positionalAfter(words: string[], actionIndex: number): string[] {
   return positionals;
 }
 
+/** Scan headers once; malformed repeated headers cannot trigger backtracking. */
+function redactAuthenticationHeaders(command: string): string {
+  const pattern = /([a-z0-9-]{1,256})[ \t]{0,256}:[ \t]{0,256}/giu;
+  let cursor = 0;
+  let output = '';
+  for (const match of command.matchAll(pattern)) {
+    const start = match.index;
+    if (start < cursor) continue;
+    const name = match[1]!.toLowerCase().replace(/-/g, '_');
+    if (!['authorization', 'proxy_authorization', 'cookie', 'set_cookie'].includes(name)
+      && !['api_key', 'apikey', 'access_token', 'refresh_token', 'auth_token', 'csrf_token', 'xsrf_token', 'client_secret', 'password', 'credential', 'session_key']
+        .some(token => name.includes(token))) continue;
+    let end = start + match[0].length;
+    while (end < command.length && !['"', "'", '\r', '\n'].includes(command[end]!)) end++;
+    output += command.slice(cursor, start) + match[0] + '[REDACTED]';
+    cursor = end;
+  }
+  return output + command.slice(cursor);
+}
+
 function redactCommandPreview(command: string, category: SensitiveExternalActionCategory): string {
   if (category === 'secret_transfer') return '[Sensitive credential operation — values redacted]';
-  return command
+  return redactAuthenticationHeaders(command)
     // Preserve the header name so the prompt remains useful, but never expose
     // cookies or key-like authentication header values. Handle quoted headers
     // before bare values so a cookie containing spaces/semicolons is redacted
     // as one unit rather than leaking its suffix.
-    .replace(/((?:authorization|proxy-authorization|cookie|set-cookie|[a-z0-9-]*(?:api[-_]?key|access[-_]?token|refresh[-_]?token|auth[-_]?token|csrf[-_]?token|xsrf[-_]?token|client[-_]?secret|password|credential|session[-_]?key)[a-z0-9-]*)\s*:\s*)[^'"\r\n]*(?=['"])/gi, '$1[REDACTED]')
-    .replace(/((?:authorization|proxy-authorization|cookie|set-cookie|[a-z0-9-]*(?:api[-_]?key|access[-_]?token|refresh[-_]?token|auth[-_]?token|csrf[-_]?token|xsrf[-_]?token|client[-_]?secret|password|credential|session[-_]?key)[a-z0-9-]*)\s*:\s*)[^\s'"\r\n]+/gi, '$1[REDACTED]')
     .replace(/((?:api[_-]?key|access[_-]?token|refresh[_-]?token|auth[_-]?token|csrf[_-]?token|xsrf[_-]?token|client[_-]?secret|token|secret|password|credential|session[_-]?key|cookie)\s*[=:]\s*)(["'])[^'"\r\n]*\2/gi, '$1$2[REDACTED]$2')
     .replace(/((?:api[_-]?key|access[_-]?token|refresh[_-]?token|token|secret|password)\s*[=:]\s*["']?)[^\s,"'};]+/gi, '$1[REDACTED]')
     .replace(/(--(?:api[_-]?key|token|secret|password)\s+)[^\s]+/gi, '$1[REDACTED]')
@@ -2807,7 +2827,8 @@ function normalizedPayloadFieldName(value: string): string | undefined {
 }
 
 function hasDynamicShellValue(value: string): boolean {
-  return /\$\{[^}]*\}|\$\([^)]*\)|`[^`]*`|\$[A-Za-z_][A-Za-z0-9_]*|\$[0-9@*#?$!-]/.test(value);
+  return value.includes('${') || value.includes('$(') || value.includes('`')
+    || /\$[A-Za-z_0-9@*#?$!-]/.test(value);
 }
 
 function decodedLiteralValue(value: string): string | undefined {
@@ -4399,7 +4420,7 @@ export interface StructuredGmailSendAuthorizationDiagnostic {
 }
 
 const STRUCTURED_GMAIL_SEND_MARKER = /^\[robb-resume:[A-Za-z0-9][A-Za-z0-9:._-]{1,300}\]$/gmu;
-const STRUCTURED_GMAIL_SEND_PAYLOAD_HEADER = /^(?:Payload autoris(?:e|é)|Authorized payload)\s*:\s*$/gimu;
+const STRUCTURED_GMAIL_SEND_PAYLOAD_HEADER = /^(?:Payload autoris(?:e|é)|Authorized payload)[ \t]*:[ \t]*$/gimu;
 const STRUCTURED_GMAIL_SEND_DIRECT_IMPERATIVE = /\b(?:envoie|envoyez|envoyer|execute|executez|executer|effectue|effectuez|effectuer|realise|realisez|realiser|procede|procedez|proceder|send|execute|perform|dispatch|deliver)\b[^.!?;\n]{0,240}\b(?:e mail|email|gmail|mail|message|envoi|send|sending)\b/u;
 const STRUCTURED_GMAIL_SEND_NO_SEND_DIRECTIVE = /\b(?:(?:n|ne)\s+(?:envoie|envoyez|envoyer|transmets|transmettez|transmettre|expedie|expediez|expedier)\s+(?:rien|pas|plus)|(?:do\s+not|don\s+t|never)\s+(?:send|deliver|dispatch|transmit)|sans\s+(?:envoyer|envoi|transmettre)|without\s+(?:sending|delivery|dispatch))\b/u;
 const STRUCTURED_GMAIL_SEND_SAFE_ABSENCE_GUARD = /^(?:si|seulement\s+si|if|only\s+if)\b[^.!?;\n]{0,260}\b(?:ambiguite|ambiguous|candidate|draft|brouillon|duplicate|doublon|pagination|sent)\b/u;
@@ -4410,7 +4431,10 @@ function exactlyOneStructuredField(
   pattern: RegExp,
 ): RegExpMatchArray | undefined {
   const matches = [...text.matchAll(pattern)];
-  return matches.length === 1 ? matches[0] : undefined;
+  if (matches.length !== 1) return undefined;
+  const match = matches[0]!;
+  if (match[1] !== undefined) match[1] = match[1].trim();
+  return match;
 }
 
 function structuredGmailSendAttachmentPaths(value: string): string[] | undefined {
@@ -4435,7 +4459,7 @@ export function parseStructuredGmailSendResumeSegment(
   const bodyBegin = exactlyOneStructuredField(segment, /^BODY_BEGIN$/gmu);
   const bodyEnd = exactlyOneStructuredField(segment, /^BODY_END$/gmu);
   if (!marker || !payloadHeader || !bodyBegin || !bodyEnd
-    || (segment.match(/\[robb-resume[^\]\r\n]*\]/giu)?.length ?? 0) !== 1
+    || (segment.match(/\[robb-resume[^\]\[\r\n]*\]/giu)?.length ?? 0) !== 1
     || bodyBegin.index === undefined || bodyEnd.index === undefined
     || payloadHeader.index === undefined
     || payloadHeader.index >= bodyBegin.index
@@ -4447,25 +4471,25 @@ export function parseStructuredGmailSendResumeSegment(
   if (!body || /\0/u.test(body)) return undefined;
 
   const withoutBody = `${segment.slice(0, bodyStart + 1)}[authorized body omitted]\n${segment.slice(bodyEnd.index)}`;
-  const from = exactlyOneStructuredField(withoutBody, /^-\s*From\s*:\s*([^\r\n]+?)\s*$/gimu);
-  const to = exactlyOneStructuredField(withoutBody, /^-\s*To\s*:\s*([^\r\n]+?)\s*$/gimu);
-  const cc = exactlyOneStructuredField(withoutBody, /^-\s*CC\s*:\s*\[\]\s*$/gimu);
-  const bcc = exactlyOneStructuredField(withoutBody, /^-\s*BCC\s*:\s*\[\]\s*$/gimu);
+  const from = exactlyOneStructuredField(withoutBody, /^-[ \t]*From[ \t]*:[ \t]*([^ \t\r\n][^\r\n]*)$/gimu);
+  const to = exactlyOneStructuredField(withoutBody, /^-[ \t]*To[ \t]*:[ \t]*([^ \t\r\n][^\r\n]*)$/gimu);
+  const cc = exactlyOneStructuredField(withoutBody, /^-[ \t]*CC[ \t]*:[ \t]*\[\][ \t]*$/gimu);
+  const bcc = exactlyOneStructuredField(withoutBody, /^-[ \t]*BCC[ \t]*:[ \t]*\[\][ \t]*$/gimu);
   const subject = exactlyOneStructuredField(
     withoutBody,
-    /^-\s*(?:Subject|Sujet)\s*:\s*([^\r\n]+?)\s*$/gimu,
+    /^-[ \t]*(?:Subject|Sujet)[ \t]*:[ \t]*([^ \t\r\n][^\r\n]*)$/gimu,
   );
   const bodyDeclaration = exactlyOneStructuredField(
     withoutBody,
-    /^-\s*(?:Texte du message|Message body)\s*:\s*([^\r\n]+?)\s*$/gimu,
+    /^-[ \t]*(?:Texte du message|Message body)[ \t]*:[ \t]*([^ \t\r\n][^\r\n]*)$/gimu,
   );
   const attachments = exactlyOneStructuredField(
     withoutBody,
-    /^-\s*(?:Attachments?|Pieces jointes|Pièces jointes)\s*:\s*([^\r\n]+?)\s*$/gimu,
+    /^-[ \t]*(?:Attachments?|Pieces jointes|Pièces jointes)[ \t]*:[ \t]*([^ \t\r\n][^\r\n]*)$/gimu,
   );
   const signature = exactlyOneStructuredField(
     withoutBody,
-    /^-\s*Signature\s*:\s*([^\r\n]+?)\s*$/gimu,
+    /^-[ \t]*Signature[ \t]*:[ \t]*([^ \t\r\n][^\r\n]*)$/gimu,
   );
   const attachmentPaths = attachments?.[1]
     ? structuredGmailSendAttachmentPaths(attachments[1])
@@ -4817,7 +4841,7 @@ export function contextualGmailTargetScopedAuthorizationSegments(
   const recipient = typeof input.expectedRecipientEmail === 'string'
     ? input.expectedRecipientEmail.trim().toLowerCase() : '';
   if (!/^[0-9a-f]{12,32}$/u.test(messageId)
-    || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(recipient)) return objectiveSegments;
+    || !hasSingleMailboxShape(recipient)) return objectiveSegments;
   const latest = authenticatedUserAuthorizationSegments.at(-1);
   if (!latest || objectiveSegments.at(-1) !== latest) return objectiveSegments;
   const latestGrant = parseHostAuthenticatedUserAuthorization(latest);
@@ -5056,7 +5080,7 @@ function contextualGmailRoutingText(rawRequest: string): string {
       '$1[exact subject]',
     )
     .replace(
-      /(\b(?:sujet|subject)\s+exact\s*(?::|=)\s*)(?![«“"`])([^\r\n]{1,998}?)(?=(?:\s*[.;]\s*|\s*\r?\n\s*)(?:(?:corps|body|texte|text|message)\s+exact|exact\s+(?:body|text|message))\b)/giu,
+      /(\b(?:sujet|subject)\s+exact\s*(?::|=)\s*)(?![«“"`])([^\r\n]{1,998}?)(?=(?:[ \t]*[.;][ \t]*|[ \t]*\r?\n[ \t]*)(?:(?:corps|body|texte|text|message)\s+exact|exact\s+(?:body|text|message))\b)/giu,
       '$1[exact subject]',
     );
   if (!CONTEXTUAL_REPLY_STRUCTURED_IMMUTABLE_PAYLOAD.test(masked)) {
@@ -5183,6 +5207,25 @@ function latestContextualGmailMention(objectiveSegments: readonly string[]): str
   return undefined;
 }
 
+/** Parse complete body envelopes in one pass, rejecting nested or unclosed markers. */
+function gmailBodyEnvelopeSpans(text: string): Array<{ body: string; start: number; end: number }> | null {
+  const spans: Array<{ body: string; start: number; end: number }> = [];
+  let start: number | undefined;
+  for (const marker of text.matchAll(/^[ \t]*BODY_(BEGIN|END)[ \t]*\r?$/gimu)) {
+    if (marker[1]!.toUpperCase() === 'BEGIN') {
+      if (start !== undefined) return null;
+      start = marker.index + marker[0].length + 1;
+      if (text[start - 1] !== '\n') return null;
+    } else {
+      if (start === undefined || marker.index <= start) return null;
+      const end = marker.index - (text[marker.index - 2] === '\r' ? 2 : 1);
+      spans.push({ body: text.slice(start, end), start, end });
+      start = undefined;
+    }
+  }
+  return start === undefined ? spans : null;
+}
+
 function contextualGmailExactBodySpan(
   rawRequest: string,
 ): { body: string; start: number; end: number } | null | undefined {
@@ -5205,18 +5248,12 @@ function contextualGmailExactBodySpan(
   // Accept one explicit machine-readable body envelope. Operational recovery
   // prompts use this form so exact content can contain quotes and line breaks
   // without making the following instructions part of the message body.
-  const bodyBlocks = [...rawRequest.matchAll(
-    /(?:^|\r?\n)[ \t]*BODY_BEGIN[ \t]*\r?\n([\s\S]*?)\r?\n[ \t]*BODY_END[ \t]*(?=$|\r?\n)/giu,
-  )];
-  if (bodyBlocks.length > 1) return null;
+  const bodyBlocks = gmailBodyEnvelopeSpans(rawRequest);
+  if (!bodyBlocks || bodyBlocks.length > 1) return null;
   const bodyBlock = bodyBlocks[0];
-  if (bodyBlock?.[1] !== undefined && bodyBlock.index !== undefined) {
-    const full = bodyBlock[0];
-    const body = bodyBlock[1];
-    const relativeStart = full.indexOf(body);
-    if (!body.trim() || body.length > 4000 || relativeStart < 0) return null;
-    const start = bodyBlock.index + relativeStart;
-    return { body, start, end: start + body.length };
+  if (bodyBlock) {
+    if (!bodyBlock.body.trim() || bodyBlock.body.length > 4000) return null;
+    return bodyBlock;
   }
   const exactness = /\b(?:(?:corps|texte|message|body|text)\s+exact|exactement\s+(?:ce|le)\s+(?:corps|texte|message)|exact\s+(?:body|text|message)|exactly\s+(?:this|the)\s+(?:body|text|message))\b/giu;
   const labels = [...rawRequest.matchAll(exactness)];
@@ -5282,7 +5319,7 @@ function contextualGmailExpectedSubjects(rawRequest: string): string[] {
   const routingText = contextualGmailBodyMaskedText(rawRequest);
   const subjects: string[] = [];
   for (const match of routingText.matchAll(
-    /\b(?:sujet|subject)(?:\s+exact)?\s*(?::|=)?\s*(?:«([^«»\r\n]{1,998})»|“([^“”\r\n]{1,998})”|"([^"\r\n]{1,998})"|`([^`\r\n]{1,998})`)/giu,
+    /\b(?:sujet|subject)(?:[ \t]{1,256}exact)?[ \t]{0,256}(?::|=)?[ \t]{0,256}(?:«([^«»\r\n]{1,998})»|“([^“”\r\n]{1,998})”|"([^"\r\n]{1,998})"|`([^`\r\n]{1,998})`)/giu,
   )) {
     const subject = (match[1] ?? match[2] ?? match[3] ?? match[4] ?? '').trim();
     if (subject) subjects.push(subject);
@@ -5291,7 +5328,7 @@ function contextualGmailExpectedSubjects(rawRequest: string): string[] {
   // label and before another exact field on the same line. This keeps the
   // boundary structural instead of guessing where ordinary prose ends.
   for (const match of routingText.matchAll(
-    /\b(?:sujet|subject)\s+exact\s*(?::|=)\s*(?![«“"`])([^\r\n]{1,998}?)(?=(?:\s*[.;]\s*|\s*\r?\n\s*)(?:(?:corps|body|texte|text|message)\s+exact|exact\s+(?:body|text|message))\b)/giu,
+    /\b(?:sujet|subject)[ \t]{1,256}exact[ \t]{0,256}(?::|=)[ \t]{0,256}(?![«“"`])([^\r\n]{1,998}?)(?=(?:[ \t]*[.;][ \t]*|[ \t]*\r?\n[ \t]*)(?:(?:corps|body|texte|text|message)[ \t]{1,256}exact|exact[ \t]{1,256}(?:body|text|message))\b)/giu,
   )) {
     const subject = (match[1] ?? '').trim();
     if (subject) subjects.push(subject);
@@ -5448,7 +5485,7 @@ function contextualGmailHasStrictClosedFields(rawRequest: string): boolean {
     || structuredImmutablePayload && contextualGmailExpectedSubjects(rawRequest).length === 1;
   const strictBody = /\b(?:corps\s+exact|exact\s+body|body\s+exact|exactement\s+(?:ce|le)\s+corps|exactly\s+(?:this|the)\s+body)\b/u.test(normalized)
     || structuredImmutablePayload
-      && /(?:^|\r?\n)[ \t]*BODY_BEGIN[ \t]*\r?\n[\s\S]*?\r?\n[ \t]*BODY_END[ \t]*(?=$|\r?\n)/iu.test(rawRequest);
+      && gmailBodyEnvelopeSpans(rawRequest)?.length === 1;
   return strictAnchor && strictRecipient && strictSender && strictEmptyCc && strictEmptyBcc
     && strictSubject && strictBody
     && !contextualGmailHasNegatedExactField(rawRequest)
@@ -5980,7 +6017,7 @@ export function signedOssAtomicWriteAuthorizedSessionId(
 
 const BOUNDED_REMOTE_EXACT_SCOPE_DECLARATION = /\b(?:cible exacte autorisee|exact target authorized|exact authorized target)\b|\b(?:cible exacte|exact target)\s*:/u;
 const AFFIRMATIVE_BOUNDED_REMOTE_EXACT_SCOPE_DECLARATION = /^(?:(?:cible exacte autorisee|exact target authorized|exact authorized target)\b|(?:cible exacte|exact target)\s*:)/u;
-const COLON_BOUNDED_REMOTE_EXACT_SCOPE_DECLARATION = /(?:^|[.!?;\n]\s*)(?:cible\s+exacte|exact\s+target)\s*:\s*([^.!?;\n]{1,1000})/giu;
+const COLON_BOUNDED_REMOTE_EXACT_SCOPE_DECLARATION = /(?:^|[.!?;\n][ \t]*)(?:cible\s+exacte|exact\s+target)\s*:\s*([^.!?;\n]{1,1000})/giu;
 const NEGATIVE_EXACT_SCOPE_VALUE = /\b(?:aucun|aucune|none|nothing|no|not|never|pas|sans|without)\b/u;
 const READ_ONLY_EXACT_SCOPE_QUALIFIER = /\b(?:lecture seule|read only|observation only|sans (?:aucune )?(?:modification|ecriture|mutation)|without (?:any )?(?:change|write|mutation))\b/u;
 const EXPLICIT_BOUNDED_REMOTE_EXECUTION_AUTHORIZATION = /\b(?:deja\s+autorise(?:e|es|s)?|already\s+authorized)\b/u;

@@ -29,6 +29,7 @@ export {
 export {
   SessionViewer,
   projectConversation,
+  buildUserInputTimeline,
   JourneyProgress,
   JourneyOutcome,
   UserInputCard,

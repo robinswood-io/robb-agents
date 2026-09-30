@@ -108,8 +108,12 @@ function matchingFamilies(text: string): string[] {
     .map(({ family }) => family);
 }
 
-const PLATFORM_DEFECT_RE = /(?:schema|runtime|tool).*(?:invalid|missing|not found|unavailable)|(?:guide|status).*(?:required|unknown)/i;
-const CONTEXT_GAP_RE = /compaction|context.*(?:missing|lost|unavailable)|objective.*(?:missing|lost)/i;
+function hasFollowingTerm(text: string, prefixes: readonly string[], suffixes: readonly string[]): boolean {
+  return prefixes.some(prefix => {
+    const index = text.indexOf(prefix);
+    return index >= 0 && suffixes.some(suffix => text.indexOf(suffix, index + prefix.length) >= 0);
+  });
+}
 
 /**
  * Convert durable Mission snapshots into privacy-minimal, root-level signals.
@@ -173,8 +177,12 @@ function inferSignals(
     ...Object.values(snapshot.workItems).map((item) => item.statusReason),
   ].filter((value): value is string => Boolean(value)).join(' ');
 
-  if (PLATFORM_DEFECT_RE.test(reasons)) signals.add('platform-defect');
-  if (CONTEXT_GAP_RE.test(reasons)) signals.add('context-retrieval-gap');
+  const normalizedReasons = reasons.toLowerCase();
+  if (hasFollowingTerm(normalizedReasons, ['schema', 'runtime', 'tool'], ['invalid', 'missing', 'not found', 'unavailable'])
+    || hasFollowingTerm(normalizedReasons, ['guide', 'status'], ['required', 'unknown'])) signals.add('platform-defect');
+  if (normalizedReasons.includes('compaction')
+    || hasFollowingTerm(normalizedReasons, ['context'], ['missing', 'lost', 'unavailable'])
+    || hasFollowingTerm(normalizedReasons, ['objective'], ['missing', 'lost'])) signals.add('context-retrieval-gap');
 
   const deterministic = executable.every(({ definition }) =>
     Boolean(definition.execution || definition.connectorInvocation));

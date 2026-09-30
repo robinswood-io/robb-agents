@@ -18,6 +18,7 @@ import { TurnCard } from './TurnCard'
 import { UserMessageBubble } from './UserMessageBubble'
 import { SystemMessage } from './SystemMessage'
 import { projectConversation } from './conversation-presentation'
+import { buildUserInputTimeline } from './user-input-timeline'
 import { JourneyOutcome } from './JourneyProgress'
 import {
   storedToMessage,
@@ -93,6 +94,7 @@ export function SessionViewer({
     [session.messages]
   )
   const turns = presentation.turns
+  const timeline = useMemo(() => buildUserInputTimeline(turns, userInputRequests), [turns, userInputRequests])
 
   // Track expanded turns (for controlled state)
   const [expandedTurns, setExpandedTurns] = useState<Set<string>>(() => {
@@ -162,7 +164,11 @@ export function SessionViewer({
         >
           <div className="h-full overflow-y-auto">
             <div className={cn(CHAT_LAYOUT.maxWidth, "mx-auto", CHAT_LAYOUT.containerPadding, CHAT_LAYOUT.messageSpacing)}>
-            {turns.map((turn, index) => {
+            {timeline.map(entry => {
+              if (entry.type === 'user-input') {
+                return <UserInputCard key={`user-input-${entry.request.id}`} request={entry.request} readOnly />
+              }
+              const { turn, turnIndex: index } = entry
               if (turn.type === 'user') {
                 return (
                   <div key={turn.message.id} className={CHAT_LAYOUT.userMessagePadding}>
@@ -227,7 +233,6 @@ export function SessionViewer({
               return null
             })}
 
-            {userInputRequests.map(request => <UserInputCard key={request.id} request={request} readOnly />)}
             {presentation.outcome && <JourneyOutcome outcome={presentation.outcome} />}
 
             {/* Bottom branding */}
