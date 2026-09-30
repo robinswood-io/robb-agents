@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react'
 import babel from '@rolldown/plugin-babel'
 import tailwindcss from '@tailwindcss/vite'
 import { resolve } from 'path'
+import { resolveReactPdfWorker } from '../../scripts/pdf-worker-resolution'
 
 const configDir = import.meta.dirname
 
@@ -54,6 +55,9 @@ export default defineConfig({
   },
   resolve: {
     alias: {
+      // The hoisted pdfjs-dist may serve another dependency at a different
+      // major version. Resolve this worker next to react-pdf's actual API.
+      'pdfjs-dist/build/pdf.worker.min.mjs?url': `${resolveReactPdfWorker()}?url`,
       '@': resolve(configDir, 'src/renderer'),
       '@config': resolve(configDir, '../../packages/shared/src/config'),
       // Force all React imports to use the root node_modules React
@@ -65,7 +69,7 @@ export default defineConfig({
   },
   optimizeDeps: {
     include: ['react', 'react-dom', 'jotai', 'pdfjs-dist'],
-    exclude: ['@craft-agent/ui'],
+    exclude: ['@craft-agent/ui', 'pdfjs-dist/build/pdf.worker.min.mjs?url'],
     rolldownOptions: {
       transform: { target: 'chrome150' },
     },

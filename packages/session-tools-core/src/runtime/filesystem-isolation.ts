@@ -1,4 +1,5 @@
 import { spawnSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 export interface FilesystemIsolationPlan {
@@ -19,15 +20,16 @@ function existsOnPath(binary: string): boolean {
 }
 
 let sandboxExecUsableCache: boolean | null = null;
+const DARWIN_SANDBOX_EXEC = '/usr/bin/sandbox-exec';
 
 function canUseSandboxExec(): boolean {
   if (sandboxExecUsableCache !== null) return sandboxExecUsableCache;
-  if (!existsOnPath('sandbox-exec')) {
+  if (!existsSync(DARWIN_SANDBOX_EXEC)) {
     sandboxExecUsableCache = false;
     return false;
   }
 
-  const probe = spawnSync('sandbox-exec', ['-p', '(version 1) (allow default)', '/usr/bin/true'], { stdio: 'ignore' });
+  const probe = spawnSync(DARWIN_SANDBOX_EXEC, ['-p', '(version 1) (allow default)', '/usr/bin/true'], { stdio: 'ignore' });
   sandboxExecUsableCache = probe.status === 0;
   return sandboxExecUsableCache;
 }
@@ -80,7 +82,7 @@ export function applyFilesystemIsolation(
     return {
       status: 'enforced',
       backend: 'sandbox-exec',
-      command: 'sandbox-exec',
+      command: DARWIN_SANDBOX_EXEC,
       args: ['-p', profile, command, ...args],
     };
   }

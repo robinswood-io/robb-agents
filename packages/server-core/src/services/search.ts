@@ -76,6 +76,8 @@ export interface SearchOptions {
   ignoreCase?: boolean;
   /** Search ID for correlating logs across stages */
   searchId?: string;
+  /** Optional allowlist applied before result counting and snippet limits. */
+  allowedSessionIds?: ReadonlySet<string>;
 }
 
 /**
@@ -195,6 +197,7 @@ export async function searchSessions(
     maxSessions = 50,
     ignoreCase = true,
     searchId = Date.now().toString(36),
+    allowedSessionIds,
   } = options;
 
   if (!query.trim()) {
@@ -298,6 +301,7 @@ export async function searchSessions(
 
           const sessionId = pathParts[jsonlIndex - 1];
           if (!sessionId) continue;
+          if (allowedSessionIds && !allowedSessionIds.has(sessionId)) continue;
 
           // Skip header line (line 1)
           const lineNumber = data.line_number;

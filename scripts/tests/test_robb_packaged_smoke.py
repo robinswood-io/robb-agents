@@ -21,6 +21,16 @@ SPEC.loader.exec_module(MODULE)
 
 
 class CodesignInspectionTests(unittest.TestCase):
+    def test_packaged_smoke_requires_the_platform_uv_runtime(self) -> None:
+        source = (SCRIPTS_DIR / "robinswood-packaged-smoke.py").read_text(encoding="utf-8")
+        after_pack = (SCRIPTS_DIR.parent / "apps" / "electron" / "scripts" / "afterPack.cjs").read_text(encoding="utf-8")
+        self.assertIn('require(PACKAGED_UV, "packaged uv runtime")', source)
+        self.assertNotIn('sha256(PACKAGED_UV) != sha256(SOURCE_UV)', source)
+        self.assertIn('uv_version_parts[:2] != ["uv", expected_uv_version()]', source)
+        self.assertIn('run([str(PACKAGED_UV), "--version"])', source)
+        self.assertIn('run(["codesign", "--verify", "--strict", "--verbose=2", str(PACKAGED_UV)])', source)
+        self.assertIn("verifyPackagedUvMatchesStaged(context, resourcesDir);", after_pack)
+
     def test_inspection_requests_full_certificate_metadata(self) -> None:
         self.assertEqual(
             MODULE.codesign_inspection_command(Path("/tmp/Robb Agents.app")),

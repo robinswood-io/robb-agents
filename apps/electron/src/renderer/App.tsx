@@ -32,6 +32,8 @@ import { stripMarkdown } from './utils/text'
 import { coerceInputText } from './lib/input-text'
 import { getSessionsToRefreshAfterStaleReconnect } from './lib/reconnect-recovery'
 import { formatSessionLoadFailure, shouldTreatSessionLoadFailureAsTransportFallback } from './lib/session-load'
+import { getPermissionModeReconciliationTarget } from './lib/permission-mode-reconciliation'
+import { hydrateCreatedSession } from './lib/session-created-hydration'
 import { extractWorkspaceSlugFromPath } from '@craft-agent/shared/utils/workspace-slug'
 import { DEFAULT_THINKING_LEVEL } from '@craft-agent/shared/agent/thinking-levels'
 import { initRendererPerf } from './lib/perf'
@@ -61,6 +63,9 @@ import {
 } from '@/atoms/background-finished'
 import { visibleSessionIdsAtom } from '@/atoms/panel-stack'
 import { getSessionTitle } from '@/utils/session'
+import { getInternalRequestNavigationTarget, getUserFacingSessionId, isUserFacingSession } from '@/utils/session-visibility'
+import { removePendingRequest, upsertPendingRequest } from '@/utils/pending-request-queue'
+import { pendingSessionAuthRequestsAtom } from '@/atoms/session-auth-requests'
 import { extractBadges } from '@/lib/mentions'
 import { getDefaultStore } from 'jotai'
 import {
@@ -301,6 +306,7 @@ export default function App() {
   const updateSessionDirect = useSetAtom(updateSessionAtom)
   const replaceLoadedSession = useSetAtom(replaceLoadedSessionAtom)
   const store = useStore()
+  const sessionCreatedHydrationsRef = useRef(new Map<string, Promise<void>>())
 
   // Helper to update a session by ID with partial fields
   // Uses per-session atom directly instead of updating an array
@@ -553,9 +559,10 @@ export default function App() {
       }
       setSessionOptions(optionsMap)
 
-      await Promise.allSettled(
-        loadedSessions.map((s) => reconcilePermissionModeState(s.id))
-      )
+      // The catalogue already contains persisted permission modes. Reconcile
+      // only the focused session instead of hydrating every cold transcript.
+      const permissionModeTarget = getPermissionModeReconciliationTarget(loadedSessions, initialSessionId)
+      if (permissionModeTarget) await reconcilePermissionModeState(permissionModeTarget)
 
       setSessionsLoaded(true)
 
@@ -629,7 +636,8 @@ export default function App() {
       for (const session of sessions) {
         syncSessionOptionsFromSession(session)
       }
-      await Promise.allSettled(sessions.map(s => reconcilePermissionModeState(s.id)))
+      const permissionModeTarget = getPermissionModeReconciliationTarget(sessions, selectedSessionId)
+      if (permissionModeTarget) await reconcilePermissionModeState(permissionModeTarget)
 
       return nextMetaMap
     } catch (err) {
@@ -757,6 +765,29 @@ export default function App() {
 
   // Session selection state
   const [sessionSelection, setSession] = useSession()
+  const pendingSessionAuthRequests = useAtomValue(pendingSessionAuthRequestsAtom)
+
+  // Required human input from an internal worker is surfaced through its
+  // user-facing conversation. Keep requests untouched; responses still go to
+  // the session ID carried by the original request, and never expose an orphan.
+  useEffect(() => {
+    const sessions = store.get(sessionMetaMapAtom)
+    const requestSessionIds = new Set([...pendingPermissions.keys(), ...pendingCredentials.keys(), ...pendingSessionAuthRequests.map(request => request.sessionId)])
+    const toastIds: string[] = []
+    for (const sessionId of requestSessionIds) {
+      const targetId = getInternalRequestNavigationTarget(sessionId, sessions)
+      if (!targetId) continue
+      if (targetId === sessionSelection.selected || store.get(visibleSessionIdsAtom).has(targetId)) continue
+      const toastId = `session-input-${sessionId}`
+      toastIds.push(toastId)
+      toast.message(t('chat.journey.outcome.blocked'), {
+        id: toastId,
+        duration: Infinity,
+        action: { label: t('common.open'), onClick: () => { navigate(routes.view.allSessions(targetId)) } },
+      })
+    }
+    return () => { toastIds.forEach(id => toast.dismiss(id)) }
+  }, [pendingPermissions, pendingCredentials, pendingSessionAuthRequests, sessionSelection.selected, store, t])
 
   // Notification system - shows native OS notifications and badge count
   const handleNavigateToSession = useCallback((sessionId: string) => {
@@ -850,7 +881,7 @@ export default function App() {
     // Handoff events signal end of streaming - need to sync back to React state
     // Also includes todo_state_changed so status updates immediately reflect in sidebar
     // async_operation included so shimmer effect on session titles updates in real-time
-    const handoffEventTypes = new Set(['complete', 'error', 'interrupted', 'typed_error', 'session_status_changed', 'session_metadata_changed', 'session_flagged', 'session_unflagged', 'name_changed', 'labels_changed', 'project_id_changed', 'title_generated', 'async_operation'])
+    const handoffEventTypes = new Set(['complete', 'error', 'interrupted', 'typed_error', 'auth_request', 'auth_completed', 'user_input_changed', 'session_status_changed', 'session_metadata_changed', 'objective_changed', 'session_flagged', 'session_unflagged', 'name_changed', 'labels_changed', 'project_id_changed', 'title_generated', 'async_operation'])
 
     // Helper to handle side effects (same logic for both paths)
     const handleEffects = (effects: Effect[], sessionId: string, eventType: string) => {
@@ -858,14 +889,12 @@ export default function App() {
         switch (effect.type) {
           case 'permission_request': {
             setPendingPermissions(prevPerms => {
-              const next = new Map(prevPerms)
-              const existingQueue = next.get(sessionId) || []
-              next.set(sessionId, [...existingQueue, effect.request])
-              return next
+              return upsertPendingRequest(prevPerms, sessionId, effect.request)
             })
 
             // Native notification for approval-required pauses (same gating as completion notifications)
-            const notifySession = store.get(sessionAtomFamily(sessionId))
+            const targetId = getUserFacingSessionId(sessionId, store.get(sessionMetaMapAtom)) ?? sessionId
+            const notifySession = store.get(sessionAtomFamily(targetId))
             if (notifySession && !notifySession.hidden) {
               const isAdminPrompt = effect.request.type === 'admin_approval'
               const promptBody = isAdminPrompt
@@ -897,10 +926,7 @@ export default function App() {
           }
           case 'credential_request': {
             setPendingCredentials(prevCreds => {
-              const next = new Map(prevCreds)
-              const existingQueue = next.get(sessionId) || []
-              next.set(sessionId, [...existingQueue, effect.request])
-              return next
+              return upsertPendingRequest(prevCreds, sessionId, effect.request)
             })
             break
           }
@@ -922,7 +948,11 @@ export default function App() {
             break
           }
           case 'toast_error': {
-            toast.error(effect.message, { duration: 5000 })
+            const errorSession = store.get(sessionMetaMapAtom).get(sessionId)
+              ?? store.get(sessionAtomFamily(sessionId))
+            if (!errorSession || isUserFacingSession(errorSession)) {
+              toast.error(effect.message, { duration: 5000 })
+            }
             break
           }
         }
@@ -957,21 +987,25 @@ export default function App() {
 
       // Session lifecycle events are handled explicitly (not by the agent event processor).
       if (event.type === 'session_created') {
-        window.electronAPI.getSessionMessages(sessionId)
-          .then((createdSession: Session | null) => {
-            if (createdSession) {
-              const existingMeta = store.get(sessionMetaMapAtom).has(sessionId)
-              if (existingMeta) {
-                replaceLoadedSession(createdSession)
-              } else {
-                addSession(createdSession)
-              }
-              syncSessionOptionsFromSession(createdSession)
-              return
+        void hydrateCreatedSession(sessionCreatedHydrationsRef.current, sessionId, {
+          fetchSession: id => window.electronAPI.getSessionMessages(id),
+          upsertSession: (createdSession: Session) => {
+            const existingMeta = store.get(sessionMetaMapAtom).has(sessionId)
+            if (existingMeta) {
+              replaceLoadedSession(createdSession)
+            } else {
+              addSession(createdSession)
             }
-            return window.electronAPI.getSessions().then(initializeSessions)
-          })
-          .catch((error: unknown) => console.error('Failed to handle session_created event:', error))
+            syncSessionOptionsFromSession(createdSession)
+          },
+          refreshSessionMetadata: async id => {
+            await refreshSessionListMetadataFromServer({
+              removeMissing: false,
+              reason: `session-created-fallback:${id}`,
+            })
+          },
+          onError: (error, phase) => console.error(`Failed to hydrate session_created ${phase}:`, error),
+        })
         return
       }
 
@@ -1031,11 +1065,11 @@ export default function App() {
           store.set(sessionMetaMapAtom, newMetaMap)
 
           // Show notification on complete (when window is not focused)
-          // Skip hidden sessions (mini-agent sessions) - they shouldn't trigger notifications
+          // Internal work reports through its parent conversation.
           if (
             event.type === 'complete'
             && (event.reason === undefined || event.reason === 'complete')
-            && !updatedSession.hidden
+            && isUserFacingSession(updatedSession)
           ) {
             // Get the last assistant/plan message as preview
             const lastMessage = updatedSession.messages.findLast(
@@ -1100,12 +1134,12 @@ export default function App() {
     updateSessionDirect,
     replaceLoadedSession,
     showSessionNotification,
-    initializeSessions,
     addSession,
     removeSession,
     syncSessionOptionsFromSession,
     applyPermissionModeState,
     reconcilePermissionModeState,
+    refreshSessionListMetadataFromServer,
   ])
 
   // Transport reconnect recovery — refresh session metadata plus active/processing
@@ -1620,33 +1654,12 @@ export default function App() {
     const success = await window.electronAPI.respondToPermission(sessionId, requestId, allowed, alwaysAllow, options)
 
     if (success) {
-      // Remove only the first permission from the queue (the one we just responded to)
-      setPendingPermissions(prev => {
-        const next = new Map(prev)
-        const queue = next.get(sessionId) || []
-        const remainingQueue = queue.slice(1) // Remove first item
-        if (remainingQueue.length === 0) {
-          next.delete(sessionId)
-        } else {
-          next.set(sessionId, remainingQueue)
-        }
-        return next
-      })
+      setPendingPermissions(prev => removePendingRequest(prev, sessionId, requestId))
       // Note: No need to force session refresh - per-session atoms update automatically
     } else {
-      // Response failed (agent/session gone) - clear the permission anyway
-      // to avoid UI being stuck with stale permission
-      setPendingPermissions(prev => {
-        const next = new Map(prev)
-        const queue = next.get(sessionId) || []
-        const remainingQueue = queue.slice(1)
-        if (remainingQueue.length === 0) {
-          next.delete(sessionId)
-        } else {
-          next.set(sessionId, remainingQueue)
-        }
-        return next
-      })
+      // A closed request is stale UI state. Remove that exact capability only:
+      // a newer approval may already have arrived while the RPC was in flight.
+      setPendingPermissions(prev => removePendingRequest(prev, sessionId, requestId))
     }
   }, [])
 
@@ -1654,33 +1667,12 @@ export default function App() {
     const success = await window.electronAPI.respondToCredential(sessionId, requestId, response)
 
     if (success) {
-      // Remove only the first credential from the queue (the one we just responded to)
-      setPendingCredentials(prev => {
-        const next = new Map(prev)
-        const queue = next.get(sessionId) || []
-        const remainingQueue = queue.slice(1) // Remove first item
-        if (remainingQueue.length === 0) {
-          next.delete(sessionId)
-        } else {
-          next.set(sessionId, remainingQueue)
-        }
-        return next
-      })
+      setPendingCredentials(prev => removePendingRequest(prev, sessionId, requestId))
       // Note: No need to force session refresh - per-session atoms update automatically
     } else {
-      // Response failed (agent/session gone) - clear the credential anyway
-      // to avoid UI being stuck with stale credential request
-      setPendingCredentials(prev => {
-        const next = new Map(prev)
-        const queue = next.get(sessionId) || []
-        const remainingQueue = queue.slice(1)
-        if (remainingQueue.length === 0) {
-          next.delete(sessionId)
-        } else {
-          next.set(sessionId, remainingQueue)
-        }
-        return next
-      })
+      // A closed request is stale UI state. Preserve any newer credential card
+      // that arrived while this exact response was in flight.
+      setPendingCredentials(prev => removePendingRequest(prev, sessionId, requestId))
     }
   }, [])
 

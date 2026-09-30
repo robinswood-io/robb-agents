@@ -170,6 +170,11 @@ function convertResult(result: ToolResult): { content: Array<{ type: 'text'; tex
 // "Already connected to a transport". Creating a fresh server wrapper per query avoids this.
 const sessionToolsCache = new Map<string, ReturnType<typeof tool>[]>();
 
+export interface SessionScopedToolExecutionGuard {
+  begin(toolName: string, args: Record<string, unknown>): string | undefined;
+  settle(toolUseId: string): void;
+}
+
 /**
  * Invalidate ALL session tool caches (e.g., when a global setting like browserToolEnabled changes).
  * This forces tools to be rebuilt on the next message for every session.
@@ -217,7 +222,8 @@ const TOOL_DESCRIPTIONS: Record<string, string> = {
 export function getSessionScopedTools(
   sessionId: string,
   workspaceRootPath: string,
-  workspaceId?: string
+  workspaceId?: string,
+  executionGuard?: SessionScopedToolExecutionGuard,
 ): ReturnType<typeof createSdkMcpServer> {
   const cacheKey = `${sessionId}::${workspaceRootPath}`;
 
@@ -309,9 +315,35 @@ export function getSessionScopedTools(
 
   // Always create a fresh MCP server wrapper to avoid "Already connected to a transport"
   // race condition when queries are sent back-to-back (see comment on sessionToolsCache).
+  const guardedTools = executionGuard
+    ? tools.map((definition) => {
+        const originalHandler = definition.handler.bind(definition);
+        return {
+          ...definition,
+          handler: async (args: Record<string, unknown>, ...rest: unknown[]) => {
+            const fullToolName = `mcp__session__${definition.name}`;
+            const toolUseId = executionGuard.begin(fullToolName, args);
+            if (!toolUseId) {
+              return {
+                content: [{
+                  type: 'text' as const,
+                  text: 'The host did not find one exact current PreToolUse admission for this session tool. The tool was not executed.',
+                }],
+                isError: true,
+              };
+            }
+            try {
+              return await originalHandler(args, ...rest);
+            } finally {
+              executionGuard.settle(toolUseId);
+            }
+          },
+        };
+      })
+    : tools;
   return createSdkMcpServer({
     name: 'session',
     version: '1.0.0',
-    tools,
+    tools: guardedTools,
   });
 }

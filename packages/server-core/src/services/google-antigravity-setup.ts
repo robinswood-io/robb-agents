@@ -79,7 +79,7 @@ export function resolveGoogleAntigravityCommand(
 
 function parseModelIds(output: string): string[] {
   return output
-    .split(/\r?\n/)
+    .split(/[\r\n]+/)
     .map(line => line.trim().split(/\s+/)[0] ?? '')
     .filter(id => /^(?:gemini|claude|gpt)-[a-z0-9][a-z0-9.-]*$/i.test(id))
 }
@@ -161,14 +161,14 @@ async function launchInteractiveAntigravity(
 
 export async function startGoogleAntigravitySetup(
   options: GoogleAntigravitySetupOptions = {},
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; models?: string[]; error?: string }> {
   const environment = options.environment ?? process.env
   const platform = options.platform ?? process.platform
   const command = options.command
     ?? resolveGoogleAntigravityCommand(environment, platform, options.pathExists)
   const probeOptions = { environment, platform, spawnImpl: options.spawnImpl }
   const initial = await probeGoogleAntigravity(command, probeOptions)
-  if (initial.status === 'ready') return { success: true }
+  if (initial.status === 'ready') return { success: true, models: initial.models }
   if (initial.status === 'unavailable') {
     return {
       success: false,
@@ -199,7 +199,7 @@ export async function startGoogleAntigravitySetup(
   while (now() < deadline) {
     await delay(AUTH_POLL_INTERVAL_MS)
     const probe = await probeGoogleAntigravity(command, probeOptions)
-    if (probe.status === 'ready') return { success: true }
+    if (probe.status === 'ready') return { success: true, models: probe.models }
     if (probe.status === 'unavailable') break
   }
   return {

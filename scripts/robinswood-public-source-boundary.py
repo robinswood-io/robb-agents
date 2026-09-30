@@ -32,10 +32,13 @@ FORBIDDEN_PATHS = (
     "ops/rbw-agents-oss/config/agents-v2/generated/observability/provider-routing-guard.json",
 )
 FORBIDDEN_RUNTIME_SYMBOLS = re.compile(
-    r"\b(?:resolveRoutingPolicy|simulateRoutingPolicy|classifyLocalRoutingRequirements|"
+    r"\b(?:hasExactLivePnsCodeChangeAuthorization|hasExactLiveZeroPlanImplementationAuthorization|LIVE_PNS_CODE_CHANGE_AUTHORIZATIONS|LIVE_SILAE_GMAIL_SEND_RECIPIENT|resolveRoutingPolicy|simulateRoutingPolicy|classifyLocalRoutingRequirements|"
     r"decideAgentCostControl|RoutingOutcomeStore|buildRoutingShadowReport|"
     r"selectCompactionUtilityModel|applyRoutingFallback|"
-    r"getSummarizationModel|getDefaultSummarizationModel)\b|provider[_-]routing[_-]guard"
+    r"getSummarizationModel|getDefaultSummarizationModel|"
+    r"isWorkspaceAutomaticRoutingEnabled|automaticModelSubstitutionAllowed|"
+    r"resolveAutomaticModelSubstitution|resolveMiniCompletionRoute|"
+    r"pickProviderMiniModel|tryPickProviderMiniModel|reconcileSessionModelAvailability)\b|provider[_-]routing[_-]guard"
 )
 RUNTIME_ROOTS = {"apps", "packages", "ops"}
 SOURCE_EXTENSIONS = {".ts", ".tsx", ".js", ".mjs", ".cjs", ".py", ".json"}

@@ -5,7 +5,7 @@ import { FreeFormInput, type FreeFormInputProps } from './FreeFormInput'
 import { StructuredInput } from './StructuredInput'
 import type { RichTextInputHandle } from '@/components/ui/rich-text-input'
 import { useOptionalAppShellContext } from '@/context/AppShellContext'
-import type { StructuredInputState, StructuredResponse, InputMode } from './structured/types'
+import { structuredInputIdentity, type StructuredInputState, type StructuredResponse, type InputMode } from './structured/types'
 import { getStructuredInputMaxHeight } from './structured-height'
 import { BackgroundFinishedChip } from '../BackgroundFinishedChip'
 import { readUsableViewportHeight, subscribeToViewportHeight } from './viewport-height'
@@ -14,7 +14,7 @@ interface InputContainerProps extends Omit<FreeFormInputProps, 'inputRef'> {
   /** Structured input state - when present, shows structured UI instead of freeform */
   structuredInput?: StructuredInputState
   /** Callback when user responds to structured input */
-  onStructuredResponse?: (response: StructuredResponse) => void
+  onStructuredResponse?: (response: StructuredResponse) => void | Promise<void>
   /** External ref for the input (for focus control) */
   textareaRef?: React.RefObject<RichTextInputHandle>
   /** Per-frame callback during height animation (for scroll sync) */
@@ -69,7 +69,9 @@ export function InputContainer({
   const hasInitializedRef = React.useRef(false)
 
   // Create a stable key for the current content
-  const contentKey = mode === 'freeform' ? 'freeform' : `structured-${structuredInput?.type}`
+  const contentKey = mode === 'freeform'
+    ? 'freeform'
+    : `structured-${structuredInput!.type}-${structuredInputIdentity(structuredInput!)}`
 
   // Track mode transitions - animate height for a short period after mode change
   const [isAnimating, setIsAnimating] = React.useState(false)
@@ -212,7 +214,7 @@ export function InputContainer({
   }, [targetHeight, shouldAnimateHeight, heightMotionValue])
 
   const handleStructuredResponse = (response: StructuredResponse) => {
-    onStructuredResponse?.(response)
+    return onStructuredResponse?.(response)
   }
 
   // Render the current content (measuring div only for structured, freeform uses callback)
@@ -259,9 +261,15 @@ export function InputContainer({
       {/* Visible animated container */}
       <motion.div
         className={cn(
-          "input-container relative overflow-hidden transition-colors",
-          compactMode ? "rounded-[20px] border border-border/70" : "rounded-[12px]",
-          isFocusedPanel ? "shadow-middle" : "shadow-minimal",
+          "input-container relative overflow-hidden transition-all duration-200",
+          compactMode
+            ? cn("rounded-2xl border", isFocused || isFocusedPanel ? "border-border/70 shadow-middle" : "border-border/40 shadow-xs")
+            : cn(
+                "rounded-2xl border transition-[border-color,box-shadow]",
+                isFocused
+                  ? "border-ring/40 ring-2 ring-ring/10 shadow-middle"
+                  : "border-border/40 hover:border-border/65 shadow-xs"
+              ),
           "bg-background"
         )}
         style={{
@@ -276,7 +284,7 @@ export function InputContainer({
             className={mode === 'freeform' ? "absolute bottom-0 left-0 right-0" : "absolute inset-0"}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            exit={{ opacity: 0, pointerEvents: 'none' }}
             transition={{ duration: TRANSITION_DURATION, ease: TRANSITION_EASE }}
           >
             {renderContent(false)}

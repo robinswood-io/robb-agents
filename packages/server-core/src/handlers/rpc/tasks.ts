@@ -12,83 +12,18 @@
  * The legacy `tasks:getOutput` (background-task remnant) is handled in sessions.ts
  * and intentionally left untouched; retiring it is a separate cleanup.
  */
-import { RPC_CHANNELS } from '@craft-agent/shared/protocol'
-import { join } from 'node:path'
-import type {
-  TaskCreateRequest,
-  TaskCreateResult,
-  TaskGenerateRequest,
-  TaskGenerateAck,
-  TaskGenerateResult,
-  TaskRunRequest,
-  TaskRepairRequest,
-  TaskValidationResultDto,
-  TaskGetResult,
-  TaskResultsDto,
-  TaskResultNodeDto,
-  TaskApprovalRequestDto,
-  TaskApprovalDecisionRequest,
-  TaskKillSwitchSnapshotDto,
-  TaskKillSwitchUpdateRequest,
-  DurableTaskSnapshotDto,
-  DurableTaskMetadataUpdateRequest,
-  DurableTaskCockpitProjectionsDto,
-} from '@craft-agent/shared/protocol'
-import {
-  getDefaultLlmConnection,
-  getLlmConnection,
-  getDefaultThinkingLevel,
-  getWorkspaceByNameOrId,
-  resolveConfigDir,
-} from '@craft-agent/shared/config'
-import { loadWorkspaceConfig } from '@craft-agent/shared/workspaces'
-import {
-  WorkspaceGovernanceProfileSchema,
-  assertSpaceAction,
-  createDefaultWorkspaceGovernance,
-  DurableKillSwitchRegistry,
-  type SpaceAction,
-} from '@craft-agent/shared/governance'
-import {
-  parseTaskYaml,
-  saveTaskSpec,
-  loadTaskSpec,
-  listTaskSlugs,
-  buildGeneratorPrompt,
-  buildRepairPrompt,
-  listRunIds,
-  readRunLog,
-  readNodeOutput,
-  readRunSpecSnapshot,
-  nodeTitle,
-  DEFAULT_REPAIR_ATTEMPTS,
-  MAX_REPAIR_ATTEMPTS_CAP,
-  buildMissionControlSnapshot,
-  planMissionReplay,
-  exportMissionReportMarkdown,
-  authorizeWorkspacePath,
-  validateExecutionIsolationPolicy,
-  type GuardDecision,
-  ensureDurableTaskMetadata,
-  loadDurableTaskMetadata,
-  updateDurableTaskMetadata,
-  buildDurableTaskSnapshot,
-  projectDurableTaskToCockpits,
-} from '@craft-agent/shared/tasks'
-import { createLogger } from '@craft-agent/shared/utils'
-import {
-  assertRequestWorkspace,
-  pushTyped,
-  type RequestContext,
-  type RpcServer,
-} from '@craft-agent/server-core/transport'
-import type { HandlerDeps } from '../handler-deps'
-import {
-  TaskRunner,
-  DEFAULT_AUTONOMOUS_RETRY_POLICY,
-  loadWorkspaceExecutionProofIssuer,
-  type TaskExecutionGuardContext,
-} from '../../tasks'
+import { RPC_CHANNELS } from '@craft-agent/shared/protocol';
+import { join } from 'node:path';
+import type { TaskCreateRequest, TaskCreateResult, TaskGenerateRequest, TaskGenerateAck, TaskGenerateResult, TaskRunRequest, TaskRepairRequest, TaskValidationResultDto, TaskGetResult, TaskResultsDto, TaskResultNodeDto, TaskApprovalRequestDto, TaskApprovalDecisionRequest, TaskKillSwitchSnapshotDto, TaskKillSwitchUpdateRequest, DurableTaskSnapshotDto, DurableTaskMetadataUpdateRequest, DurableTaskCockpitProjectionsDto } from '@craft-agent/shared/protocol';
+import { getDefaultLlmConnection, getLlmConnections, getLlmConnection, getDefaultThinkingLevel, getWorkspaceByNameOrId, resolveConfigDir, maxSourceSensitivity } from '@craft-agent/shared/config';
+import { getSourcesBySlugs } from '@craft-agent/shared/sources';
+import { loadWorkspaceConfig } from '@craft-agent/shared/workspaces';
+import { WorkspaceGovernanceProfileSchema, assertSpaceAction, createDefaultWorkspaceGovernance, DurableKillSwitchRegistry, type SpaceAction } from '@craft-agent/shared/governance';
+import { parseTaskYaml, saveTaskSpec, loadTaskSpec, listTaskSlugs, buildGeneratorPrompt, buildRepairPrompt, listRunIds, readRunLog, readNodeOutput, readRunSpecSnapshot, nodeTitle, DEFAULT_REPAIR_ATTEMPTS, MAX_REPAIR_ATTEMPTS_CAP, buildMissionControlSnapshot, planMissionReplay, exportMissionReportMarkdown, authorizeWorkspacePath, validateExecutionIsolationPolicy, type GuardDecision, ensureDurableTaskMetadata, loadDurableTaskMetadata, updateDurableTaskMetadata, buildDurableTaskSnapshot, projectDurableTaskToCockpits } from '@craft-agent/shared/tasks';
+import { createLogger } from '@craft-agent/shared/utils';
+import { assertRequestWorkspace, pushTyped, type RequestContext, type RpcServer } from '@craft-agent/server-core/transport';
+import type { HandlerDeps } from '../handler-deps';
+import { TaskRunner, DEFAULT_AUTONOMOUS_RETRY_POLICY, loadWorkspaceExecutionProofIssuer, resolveEffectiveTaskSourceSlugs, resolveTaskNodeExecutionRoute, type TaskExecutionGuardContext } from '../../tasks';
 
 const tasksLog = createLogger('tasks-generate')
 
@@ -124,6 +59,18 @@ export function createProductionTaskExecutionGuard(
       return {
         allowed: false,
         reason: 'External mutation nodes require a broker-backed connector worker',
+      }
+    }
+    if (
+      context.reviewOnly
+      && (context.effect !== 'read'
+        || context.permissionMode !== 'safe'
+        || context.fullAutonomyInherited
+        || context.policy.allowedWritePaths.length > 0)
+    ) {
+      return {
+        allowed: false,
+        reason: 'Review-only task nodes must remain Safe and read-isolated',
       }
     }
     if (
@@ -291,7 +238,34 @@ export function registerTasksHandlers(
               ?? (llmConnection === workspaceConnection ? workspaceConfig?.defaults?.model : undefined)
               ?? connection?.defaultModel,
             thinkingLevel: parent?.thinkingLevel ?? workspaceConfig?.defaults?.thinkingLevel ?? getDefaultThinkingLevel(),
+            connectionRoutePinned: selectedConnectionSlug !== undefined
+              || (llmConnection === parent?.llmConnection && parent?.connectionRoutePinned === true),
+            modelRoutePinned: llmConnection === parent?.llmConnection
+              && parent?.modelRoutePinned === true,
+            thinkingLevelPinned: parent?.thinkingLevelPinned === true,
           }
+        },
+        resolveNodeRoute: (context) => {
+          const workspaceConfig = loadWorkspaceConfig(ws.rootPath)
+          const effectiveSourceSlugs = resolveEffectiveTaskSourceSlugs(
+            context.spec.sources,
+            workspaceConfig?.defaults?.enabledSourceSlugs,
+          )
+          const sourceSensitivity = maxSourceSensitivity(
+            getSourcesBySlugs(ws.rootPath, effectiveSourceSlugs)
+              .map(source => source.config.routingSensitivity),
+          )
+          return resolveTaskNodeExecutionRoute({
+            ...context,
+            routingSensitivity: sourceSensitivity,
+            sourceSlugs: effectiveSourceSlugs,
+            connections: getLlmConnections(),
+            costControlPolicy: workspaceConfig?.costControl,
+            defaultConnectionSlug: context.defaults?.llmConnection
+              ?? workspaceConfig?.defaults?.defaultLlmConnection
+              ?? getDefaultLlmConnection()
+              ?? undefined,
+          })
         },
         verifyExecutionProof: (proof, binding) => proofIssuer.verifyForTask(proof, binding),
       })

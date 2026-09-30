@@ -203,7 +203,7 @@ function createComponents(
       const sanitized = trimmedHref ? defaultUrlTransform(trimmedHref) : ''
       const safeHref = sanitized ? sanitized : undefined
 
-      const handleClick = (e: React.MouseEvent) => {
+      const handleClick = (e: React.SyntheticEvent) => {
         e.preventDefault()
 
         // Some AI outputs include raw HTML anchors with empty href but path text content.
@@ -227,7 +227,10 @@ function createComponents(
       return (
         <a
           href={safeHref}
+          role={safeHref ? undefined : 'link'}
+          tabIndex={safeHref ? undefined : 0}
           onClick={handleClick}
+          onKeyDown={e => { if (!safeHref && e.key === 'Enter') handleClick(e) }}
           className="text-accent hover:underline cursor-pointer"
         >
           {children}

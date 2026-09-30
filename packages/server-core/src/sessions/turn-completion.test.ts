@@ -38,9 +38,39 @@ describe('classifyObjectiveTerminalState', () => {
       executionEvidenceMissing: true,
     })).toBe('continue');
   });
+
+  it('fails closed when a mission lacks a valid structured outcome receipt', () => {
+    expect(classifyObjectiveTerminalState('Correctif appliqué et tests validés.', {
+      structuredOutcomeRequired: true,
+    })).toBe('continue');
+    expect(classifyObjectiveTerminalState('Correctif appliqué et tests validés.', {
+      structuredOutcomeRequired: true,
+      structuredOutcomeValid: false,
+      declaredState: 'complete_verified',
+    })).toBe('continue');
+  });
+
+  it('honors a host-validated structured state over prose heuristics', () => {
+    expect(classifyObjectiveTerminalState('Livraison vérifiée.', {
+      structuredOutcomeRequired: true,
+      structuredOutcomeValid: true,
+      declaredState: 'complete_verified',
+    })).toBe('complete_verified');
+    expect(classifyObjectiveTerminalState('Authentification nécessaire.', {
+      structuredOutcomeRequired: true,
+      structuredOutcomeValid: true,
+      declaredState: 'blocked_human',
+    })).toBe('blocked_human');
+  });
 });
 
 describe('classifyLatestTurnTerminalState', () => {
+  it('scopes completion to the running user message, not a newer queued request', () => {
+    const messages = [message('user', 1), message('assistant', 2), message('user', 3)];
+    expect(classifyLatestTurnTerminalState(messages, 'user-1')).toBe('final-assistant');
+    expect(classifyLatestTurnTerminalState(messages, 'user-3')).toBe('incomplete');
+    expect(classifyLatestTurnTerminalState(messages, 'missing')).toBe('no-user');
+  });
   it('accepts a final assistant response after the latest user message', () => {
     expect(classifyLatestTurnTerminalState([
       message('user', 1),
@@ -180,5 +210,14 @@ describe('classifyLatestTurnTerminalState', () => {
       'Analyse terminée : la cause est identifiée et le correctif a été vérifié.',
     ].join(' ');
     expect(looksLikePrematureFinalAssistant(completedReport)).toBe(false);
+  });
+
+  it('does not reject a completed report when ending with a polite closing or conditional offer', () => {
+    expect(looksLikePrematureFinalAssistant(
+      'Analyse terminée : la cause est identifiée et le correctif a été vérifié. Je reste à votre disposition si vous souhaitez que je vérifie un autre point.',
+    )).toBe(false);
+    expect(looksLikePrematureFinalAssistant(
+      'Tout est prêt et fonctionnel. N’hésitez pas si vous avez besoin que je lance d’autres vérifications.',
+    )).toBe(false);
   });
 });

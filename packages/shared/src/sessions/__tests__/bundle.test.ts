@@ -185,6 +185,17 @@ describe('serializeSession', () => {
       missionWorkItemId: 'work-one',
       missionDispatchId: 'dispatch-one',
       missionRole: 'worker',
+      missionOrdinaryRouteLock: {
+        schemaVersion: 1,
+        routeDecisionSha256: '1'.repeat(64),
+        routeConfigIdentitySha256: '2'.repeat(64),
+        connectionIdentitySha256: '3'.repeat(64),
+        sourceIdentitySha256: '4'.repeat(64),
+        effectiveSourceBindings: [],
+        agentProfileId: 'worker', connectionSlug: 'openai', version: 1,
+        profile: 'balanced', origin: 'mission', model: 'gpt-test', thinkingLevel: 'high',
+        measuredMissionUsd: 0, effectiveSourceSlugs: [], cwd: tmpDir,
+      },
       executionIsolation: {
         effect: 'workspace-write',
         policy: {
@@ -211,6 +222,7 @@ describe('serializeSession', () => {
     expect(bundle!.session.header.missionWorkItemId).toBeUndefined()
     expect(bundle!.session.header.missionDispatchId).toBeUndefined()
     expect(bundle!.session.header.missionRole).toBeUndefined()
+    expect(bundle!.session.header.missionOrdinaryRouteLock).toBeUndefined()
     expect(JSON.stringify(bundle)).not.toContain('private-source')
 
     const restoredWorkspace = makeTmpDir()

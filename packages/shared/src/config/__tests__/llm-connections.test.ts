@@ -3,6 +3,7 @@ import '../../../tests/setup/register-pi-model-resolver.ts'
 import {
   getDefaultModelsForConnection,
   getDefaultModelForConnection,
+  getMiniModel,
   isCompatProvider,
   isAnthropicProvider,
   isPiProvider,
@@ -84,6 +85,40 @@ describe('getDefaultModelForConnection', () => {
   it('returns empty string for pi_compat (dynamic provider)', () => {
     const defaultModel = getDefaultModelForConnection('pi_compat')
     expect(defaultModel).toBe('')
+  })
+})
+
+describe('getMiniModel', () => {
+  it('prefers Luna for Pi utility work instead of falling through to the last legacy model', () => {
+    expect(getMiniModel({
+      providerType: 'pi',
+      piAuthProvider: 'openai-codex',
+      models: [
+        'pi/gpt-6-astra',
+        'pi/gpt-5.6-sol',
+        'pi/gpt-5.6-terra',
+        'pi/gpt-5.6-luna',
+        'pi/gpt-5.5',
+      ],
+    })).toBe('pi/gpt-5.6-luna')
+
+    expect(getMiniModel({
+      providerType: 'pi',
+      piAuthProvider: 'openai-codex',
+      models: ['pi/gpt-5-mini', 'pi/gpt-5.6-luna'],
+    })).toBe('pi/gpt-5.6-luna')
+  })
+
+  it('keeps provider-specific small tiers and never crosses the saved model list', () => {
+    expect(getMiniModel({
+      providerType: 'pi',
+      piAuthProvider: 'openai',
+      models: ['pi/gpt-5-mini', 'pi/gpt-5.5'],
+    })).toBe('pi/gpt-5-mini')
+    expect(getMiniModel({
+      providerType: 'anthropic',
+      models: ['claude-sonnet-4-6', 'claude-haiku-4-5-20251001'],
+    })).toBe('claude-haiku-4-5-20251001')
   })
 })
 

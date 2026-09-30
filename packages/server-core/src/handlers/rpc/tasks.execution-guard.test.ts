@@ -13,6 +13,7 @@ function context(root: string, overrides: Partial<TaskExecutionGuardContext> = {
     effect: 'read',
     permissionMode: 'safe',
     fullAutonomyInherited: false,
+    reviewOnly: false,
     policy: {
       workspaceRoot: root,
       allowedReadPaths: ['.'],
@@ -90,5 +91,19 @@ describe('production task execution guard', () => {
 
     expect(guard(autonomous)).toEqual({ allowed: true })
     expect(guard({ ...autonomous, fullAutonomyInherited: false }).allowed).toBe(false)
+  })
+
+  it('rejects any widened authority for a host-authenticated read-only reviewer', () => {
+    const root = process.cwd()
+    const guard = createProductionTaskExecutionGuard(root)
+    const review = context(root, { reviewOnly: true })
+
+    expect(guard(review)).toEqual({ allowed: true })
+    expect(guard({ ...review, permissionMode: 'allow-all' }).allowed).toBe(false)
+    expect(guard({ ...review, fullAutonomyInherited: true }).allowed).toBe(false)
+    expect(guard({
+      ...review,
+      policy: { ...review.policy, allowedWritePaths: ['artifacts'] },
+    }).allowed).toBe(false)
   })
 })

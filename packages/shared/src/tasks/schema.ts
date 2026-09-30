@@ -7,9 +7,11 @@ import { THINKING_LEVEL_IDS } from '../agent/thinking-levels.ts';
  * This module is the single source of truth for the spec shape: Zod schemas +
  * the TypeScript types inferred from them + thin parse helpers.
  *
- * v1 EXECUTES: `kind: 'session'` nodes wired by `depends_on` + `inputs`
- *   (with `${nodes.<id>.output[.field]}` / `${params.<name>}` references).
- * v1 PARSES BUT DEFERS: every other `kind` and the control-flow fields
+ * v1 EXECUTES: `kind: 'session'`, `kind: 'judge'`, and `kind: 'verify'`
+ *   nodes wired by `depends_on` + `inputs` (with
+ *   `${nodes.<id>.output[.field]}` / `${params.<name>}` references). Read-effect
+ *   judges and verifiers are host-bounded to Safe, isolated review sessions.
+ * v1 PARSES BUT DEFERS: every other executable `kind` and the control-flow fields
  *   (`loop`, `when`, `route`, `for_each`, `aggregate`, `approval`, …). They are
  *   validated so hand-authored yaml round-trips, but the Conductor ignores them
  *   until P4. See sessions/.../tasks-architecture.md §5–§5a for the full design.
@@ -30,9 +32,9 @@ import type { PermissionMode } from '../agent/mode-types.ts';
 export const PERMISSION_MODES = ['safe', 'ask', 'allow-all'] as const satisfies readonly PermissionMode[];
 
 /**
- * Node roles. Only `session` (and the dynamic `orchestrator` escape hatch)
- * carry execution in v1; the rest are pattern/control-flow kinds parsed now,
- * executed in P4.
+ * Node roles. `session`, `judge`, and `verify` (plus the dynamic `orchestrator`
+ * escape hatch) carry execution in v1; the rest are pattern/control-flow kinds
+ * parsed now and executed in P4.
  */
 export const NODE_KINDS = [
   'session', 'orchestrator',
@@ -364,11 +366,11 @@ export const TaskSpecSchema = z
         });
       }
       seen.add(node.id);
-      // v1 executes session nodes; they must carry a prompt.
-      if (node.kind === 'session' && (!node.prompt || node.prompt.trim() === '')) {
+      // Every currently executable agent node must carry an assignment.
+      if (['session', 'judge', 'verify'].includes(node.kind) && (!node.prompt || node.prompt.trim() === '')) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: `Node "${node.id}" is a session node and must have a non-empty prompt`,
+          message: `Node "${node.id}" is an executable ${node.kind} node and must have a non-empty prompt`,
           path: ['nodes', i, 'prompt'],
         });
       }

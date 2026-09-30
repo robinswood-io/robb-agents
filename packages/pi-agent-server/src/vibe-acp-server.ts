@@ -12,6 +12,10 @@ import type { ChildProcess } from 'node:child_process';
 import { createInterface } from 'node:readline';
 import { Readable, Writable } from 'node:stream';
 import { client, methods, ndJsonStream, PROTOCOL_VERSION } from '@agentclientprotocol/sdk';
+import {
+  createCorrelatedProviderPromptStream,
+  type CorrelatedProviderPromptStream,
+} from './provider-handoff.ts';
 import { spawnVibeSubprocess } from './vibe-subprocess.ts';
 
 interface InitMessage {
@@ -46,6 +50,7 @@ type PermissionAction = 'allow' | 'block' | 'modify';
 let vibeProcess: ChildProcess | null = null;
 let acpConnection: any = null;
 let acpSession: any = null;
+let providerPromptStream: CorrelatedProviderPromptStream<any> | null = null;
 let bridgeSessionId: string | null = null;
 let deliveredSystemPrompt: string | undefined;
 let activePrompt = false;
@@ -53,6 +58,13 @@ let promptQueue: Promise<void> = Promise.resolve();
 const pendingPermissions = new Map<string, (action: PermissionAction) => void>();
 
 const VIBE_SETUP_GUIDANCE = 'Install Mistral Vibe, then run vibe-acp --setup to sign in with your Mistral plan.';
+
+class VibePromptRejectedBeforeWriteError extends Error {
+  constructor(cause: unknown) {
+    super(cause instanceof Error ? cause.message : String(cause));
+    this.name = 'VibePromptRejectedBeforeWriteError';
+  }
+}
 
 function send(message: Record<string, unknown>): void {
   process.stdout.write(`${JSON.stringify(message)}\n`);
@@ -76,6 +88,8 @@ function clearVibeState(): void {
   activePrompt = false;
   acpSession = null;
   acpConnection = null;
+  providerPromptStream?.cancelPending();
+  providerPromptStream = null;
   bridgeSessionId = null;
   deliveredSystemPrompt = undefined;
   vibeProcess = null;
@@ -88,6 +102,26 @@ function randomId(prefix: string): string {
 function textFromContent(content: any): string {
   if (!content || typeof content !== 'object') return '';
   return content.type === 'text' && typeof content.text === 'string' ? content.text : '';
+}
+
+function isExactPromptRequest(
+  request: Record<string, unknown>,
+  sessionId: string,
+  prompt: string,
+): boolean {
+  const params = request.params;
+  if (!params || typeof params !== 'object' || Array.isArray(params)) return false;
+  const promptParams = params as Record<string, unknown>;
+  if (promptParams.sessionId !== sessionId || !Array.isArray(promptParams.prompt)) return false;
+  if (promptParams.prompt.length !== 1) return false;
+  const block = promptParams.prompt[0];
+  return Boolean(
+    block
+    && typeof block === 'object'
+    && !Array.isArray(block)
+    && (block as Record<string, unknown>).type === 'text'
+    && (block as Record<string, unknown>).text === prompt,
+  );
 }
 
 function emitEvent(event: Record<string, unknown>): void {
@@ -164,7 +198,15 @@ async function startVibe(init: InitMessage): Promise<void> {
     Writable.toWeb(child.stdin!) as WritableStream<Uint8Array>,
     Readable.toWeb(child.stdout!) as unknown as ReadableStream<Uint8Array>,
   );
-  acpConnection = app.connect(stream);
+  const observedPromptStream = createCorrelatedProviderPromptStream(stream, turnId => {
+    // A late completion from a superseded child must not acknowledge a turn on
+    // the replacement runtime.
+    if (providerPromptStream === observedPromptStream && vibeProcess === child) {
+      send({ type: 'provider_handoff', id: turnId });
+    }
+  });
+  providerPromptStream = observedPromptStream;
+  acpConnection = app.connect(observedPromptStream.stream);
 
   const initializeResult = await acpConnection.agent.request(methods.agent.initialize, {
     protocolVersion: PROTOCOL_VERSION,
@@ -235,60 +277,96 @@ function emitToolUpdate(update: any): void {
   }
 }
 
-async function runPrompt(message: string, systemPrompt?: string): Promise<void> {
-  if (!acpSession) throw new Error('Mistral Vibe ACP session is not initialized');
-  activePrompt = true;
-  try {
-  let text = '';
-  let sdkMessageId: string | undefined;
-  emitEvent({ type: 'agent_start' });
-  emitEvent({ type: 'turn_start' });
-
-  // ACP has no system-message role. Include host instructions in the first
-  // prompt of this bridge session and whenever they change. A failed prompt
-  // must resend them; only remember delivery after successful completion.
-  const normalizedSystemPrompt = systemPrompt?.trim();
-  const needsSystemPrompt = normalizedSystemPrompt && normalizedSystemPrompt !== deliveredSystemPrompt;
-  const prompt = needsSystemPrompt
-    ? ['<robb_system_instructions>', normalizedSystemPrompt, '</robb_system_instructions>', '', message].join('\n')
-    : message;
-  const promptResult = acpSession.prompt(prompt);
-  while (true) {
-    const next = await acpSession.nextUpdate();
-    if (next.kind === 'stop') break;
-
-    const update = next.update;
-    if (update.sessionUpdate === 'agent_message_chunk') {
-      const delta = textFromContent(update.content);
-      if (delta) {
-        text += delta;
-        sdkMessageId = update.messageId ?? sdkMessageId;
-        emitEvent({ type: 'message_update', assistantMessageEvent: { type: 'text_delta', delta } });
-      }
-    } else if (update.sessionUpdate === 'agent_thought_chunk') {
-      const delta = textFromContent(update.content);
-      if (delta) emitEvent({ type: 'thinking_delta', delta });
-    } else if (update.sessionUpdate === 'tool_call' || update.sessionUpdate === 'tool_call_update') {
-      emitToolUpdate(update);
-    } else if (update.sessionUpdate === 'usage_update' && typeof update.used === 'number') {
-      emitEvent({ type: 'usage_update', usage: { input: update.used, contextWindow: 262144 } });
-    }
+async function runPrompt(id: string, message: string, systemPrompt?: string): Promise<void> {
+  const session = acpSession;
+  if (!session) {
+    throw new VibePromptRejectedBeforeWriteError('Mistral Vibe ACP session is not initialized');
   }
-  await promptResult;
-  if (needsSystemPrompt) deliveredSystemPrompt = normalizedSystemPrompt;
+  const promptStream = providerPromptStream;
+  if (!promptStream) {
+    throw new VibePromptRejectedBeforeWriteError('Mistral Vibe ACP prompt stream is not initialized');
+  }
+  activePrompt = true;
+  let reservation: { cancel: () => boolean } | undefined;
+  try {
+    let text = '';
+    let sdkMessageId: string | undefined;
+    emitEvent({ type: 'agent_start' });
+    emitEvent({ type: 'turn_start' });
 
-  emitEvent({
-    type: 'message_end',
-    sdkMessageId,
-    message: {
-      id: sdkMessageId,
-      role: 'assistant',
-      content: [{ type: 'text', text }],
-      stopReason: 'stop',
-    },
-  });
-  emitEvent({ type: 'turn_end' });
-  emitEvent({ type: 'agent_end' });
+    // ACP has no system-message role. Include host instructions in the first
+    // prompt of this bridge session and whenever they change. A failed prompt
+    // must resend them; only remember delivery after successful completion.
+    const normalizedSystemPrompt = systemPrompt?.trim();
+    const needsSystemPrompt = normalizedSystemPrompt && normalizedSystemPrompt !== deliveredSystemPrompt;
+    const prompt = needsSystemPrompt
+      ? ['<robb_system_instructions>', normalizedSystemPrompt, '</robb_system_instructions>', '', message].join('\n')
+      : message;
+    const promptSessionId = String(session.sessionId);
+    reservation = promptStream.reserve(
+      id,
+      request => isExactPromptRequest(request, promptSessionId, prompt),
+    );
+    const promptResult = Promise.resolve()
+      .then(() => session.prompt(prompt))
+      .catch(error => {
+        // A rejected prompt operation cannot later enqueue a frame. Combined
+        // with a still-unbound reservation, this is positive pre-write proof.
+        if (reservation?.cancel()) {
+          throw new VibePromptRejectedBeforeWriteError(error);
+        }
+        throw error;
+      });
+    // ACP can reject local validation/queueing before it ever produces a stream
+    // frame. Observe that rejection while nextUpdate() is pending so the bridge
+    // neither hangs nor leaves a temporarily unhandled promise.
+    const promptFailure = promptResult.then<never>(
+      () => new Promise<never>(() => undefined),
+      error => Promise.reject(error),
+    );
+    void promptFailure.catch(() => undefined);
+    while (true) {
+      const next = await Promise.race([session.nextUpdate(), promptFailure]);
+      if (next.kind === 'stop') break;
+
+      const update = next.update;
+      if (update.sessionUpdate === 'agent_message_chunk') {
+        const delta = textFromContent(update.content);
+        if (delta) {
+          text += delta;
+          sdkMessageId = update.messageId ?? sdkMessageId;
+          emitEvent({ type: 'message_update', assistantMessageEvent: { type: 'text_delta', delta } });
+        }
+      } else if (update.sessionUpdate === 'agent_thought_chunk') {
+        const delta = textFromContent(update.content);
+        if (delta) emitEvent({ type: 'thinking_delta', delta });
+      } else if (update.sessionUpdate === 'tool_call' || update.sessionUpdate === 'tool_call_update') {
+        emitToolUpdate(update);
+      } else if (update.sessionUpdate === 'usage_update' && typeof update.used === 'number') {
+        emitEvent({ type: 'usage_update', usage: { input: update.used, contextWindow: 262144 } });
+      }
+    }
+    await promptResult;
+    if (needsSystemPrompt) deliveredSystemPrompt = normalizedSystemPrompt;
+
+    emitEvent({
+      type: 'message_end',
+      sdkMessageId,
+      message: {
+        id: sdkMessageId,
+        role: 'assistant',
+        content: [{ type: 'text', text }],
+        stopReason: 'stop',
+      },
+    });
+    emitEvent({ type: 'turn_end' });
+    emitEvent({ type: 'agent_end' });
+  } catch (error) {
+    // Do not let an unrelated nextUpdate/output failure turn an unbound
+    // reservation into replay permission: the prompt operation itself may
+    // still enqueue later. Cancellation here only prevents stale correlation.
+    reservation?.cancel();
+    throw error;
   } finally {
     activePrompt = false;
   }
@@ -300,8 +378,17 @@ async function handle(message: InboundMessage): Promise<void> {
       await startVibe(message);
       return;
     case 'prompt':
-      promptQueue = promptQueue.then(() => runPrompt(message.message, message.systemPrompt)).catch(() => {
-        reportVibeError('MISTRAL_VIBE_PROMPT_FAILED', 'Mistral Vibe could not complete this turn. Confirm that Vibe is available and start a new turn.');
+      promptQueue = promptQueue.then(() => runPrompt(message.id, message.message, message.systemPrompt)).catch(error => {
+        if (error instanceof VibePromptRejectedBeforeWriteError) {
+          send({
+            type: 'error',
+            code: 'prompt_error',
+            id: message.id,
+            message: 'Mistral Vibe rejected this turn before sending it to the provider. Confirm that Vibe is available, then try again.',
+          });
+        } else {
+          reportVibeError('MISTRAL_VIBE_PROMPT_FAILED', 'Mistral Vibe could not complete this turn. Confirm that Vibe is available and start a new turn.');
+        }
         emitEvent({ type: 'agent_end' });
       });
       return;

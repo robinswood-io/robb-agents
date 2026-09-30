@@ -569,6 +569,10 @@ export function createLLMTool(options: LLMToolOptions) {
 - Parallel processing: call multiple times in one message - all run simultaneously
 - Context isolation: process content without polluting main context
 
+This tool uses the current session connection and may inherit the same model.
+It can review response content, but cannot supply independent-review evidence;
+use a separate reviewer-role session for that contract.
+
 Put text/content directly in the 'prompt' parameter. Do NOT pass inline text via attachments.
 Only use 'attachments' for existing file paths on disk - the tool loads file content automatically.
 For large files (>2000 lines), use {path, startLine, endLine} to select a portion.`,

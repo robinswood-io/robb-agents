@@ -59,7 +59,10 @@ export type RunLogEntry =
       connectionSlug?: string;
       model?: string;
       thinkingLevel?: ThinkingLevel;
-      strategy: 'pinned';
+      connectionRoutePinned?: boolean;
+      modelRoutePinned?: boolean;
+      thinkingLevelPinned?: boolean;
+      strategy: 'primary' | 'retry-fallback' | 'pinned';
     }
   | { t: string; kind: 'node-spawned'; nodeId: string; sessionId: string }
   | {
@@ -82,6 +85,29 @@ export type RunLogEntry =
       retryAt?: string;
     }
   | { t: string; kind: 'run-paused' | 'run-resumed' | 'run-stopped' | 'run-completed' | 'run-failed' | 'run-verifying' }
+  | {
+      t: string;
+      kind: 'run-pause-draining';
+      /** Exact worker identities that still have to be proven idle while the
+       * non-terminal run remains paused. */
+      sessionIds: string[];
+    }
+  | { t: string; kind: 'run-pause-drained' }
+  | {
+      t: string;
+      kind: 'run-draining';
+      target: 'failed' | 'stopped';
+      cause: 'budget' | 'deadline' | 'kill-switch' | 'operator' | 'timeout' | 'recovery' | 'reviewer';
+      /** Exact worker identities that must be proven idle before the terminal
+       * state may be published. Persisting them closes the crash window between
+       * requesting cancellation and appending the terminal event. */
+      sessionIds: string[];
+      /** Reviewer identities are kept separate so recovery cannot mistake a
+       * completed receipt for an ordinary worker result. */
+      reviewerSessionIds?: string[];
+      reason?: string;
+      scope?: 'global' | 'workspace' | 'mission';
+    }
   | {
       t: string;
       kind: 'verdict';
@@ -124,7 +150,18 @@ export type RunLogEntry =
     }
   | { t: string; kind: 'run-replayed'; sourceRunId: string; externalMutationsApproved: boolean }
   | { t: string; kind: 'node-reused'; nodeId: string; sourceRunId: string; proofHash?: string }
-  | { t: string; kind: 'usage-updated'; tokensUsed: number; costUsed?: number; currency?: 'USD' | 'EUR' }
+  | {
+      t: string;
+      kind: 'usage-updated';
+      tokensUsed: number;
+      costUsed?: number;
+      currency?: 'USD' | 'EUR';
+      /** Durable per-session high-water marks prevent a recovered cumulative
+       * provider receipt from being charged a second time after a crash. */
+      sourceSessionId?: string;
+      cumulativeTokens?: number;
+      cumulativeCostUsd?: number;
+    }
   | { t: string; kind: 'budget-breach'; metric: 'tokens' | 'cost' | 'parallel' | 'iterations'; value: number; limit: number }
   | { t: string; kind: 'deadline-breach'; deadline: string }
   | { t: string; kind: 'kill-switch'; scope: 'global' | 'workspace' | 'mission'; reason: string };

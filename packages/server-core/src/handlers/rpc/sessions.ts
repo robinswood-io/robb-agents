@@ -46,6 +46,37 @@ function sessionWorkspaceDistribution(sessions: Array<{ workspaceId?: string }>)
   return distribution
 }
 
+/** RPC clients can request presentation/options, never mint host provenance. */
+export function assertRpcSendMessageOptions(options?: SendMessageOptions): void {
+  if (options?.internalOrigin || options?.automaticRecovery) {
+    throw new Error('Internal message provenance cannot be supplied through sessions.sendMessage')
+  }
+}
+
+export function getSearchableSessionIds(
+  sessions: Array<{
+    id: string
+    hidden?: boolean
+    parentSessionId?: string
+    delegation?: unknown
+    taskNodeId?: string
+    missionWorkItemId?: string
+    missionRole?: string
+  }>,
+): Set<string> {
+  return new Set(
+    sessions
+      .filter(session => !session.hidden
+        && !session.parentSessionId
+        && !session.delegation
+        && !session.taskNodeId
+        && !session.missionWorkItemId
+        && session.missionRole !== 'worker'
+        && session.missionRole !== 'reviewer')
+      .map(session => session.id),
+  )
+}
+
 /**
  * Clean up session file watcher for a client.
  * Called from main process disconnect hooks to prevent watcher leaks.
@@ -120,6 +151,7 @@ export const HANDLED_CHANNELS = [
   RPC_CHANNELS.tasks.GET_OUTPUT,
   RPC_CHANNELS.sessions.RESPOND_TO_PERMISSION,
   RPC_CHANNELS.sessions.RESPOND_TO_CREDENTIAL,
+  RPC_CHANNELS.sessions.RESPOND_TO_USER_INPUT,
   RPC_CHANNELS.sessions.COMMAND,
   RPC_CHANNELS.sessions.GET_PENDING_PLAN_EXECUTION,
   RPC_CHANNELS.sessions.GET_PERMISSION_MODE_STATE,
@@ -144,10 +176,10 @@ export function registerSessionsHandlers(server: RpcServer, deps: HandlerDeps): 
     return ctx.workspaceId
   }
 
-  const assertSessionAccess = async (ctx: RequestContext, sessionId: string): Promise<void> => {
-    const session = await sessionManager.getSession(sessionId)
-    if (!session) throw new Error(`Session not found: ${sessionId}`)
-    assertRequestWorkspace(ctx, session.workspaceId)
+  const assertSessionAccess = (ctx: RequestContext, sessionId: string): void => {
+    const workspaceId = sessionManager.getSessionWorkspaceId(sessionId)
+    if (!workspaceId) throw new Error(`Session not found: ${sessionId}`)
+    assertRequestWorkspace(ctx, workspaceId)
   }
 
   // Get all sessions for the calling window's workspace
@@ -189,8 +221,10 @@ export function registerSessionsHandlers(server: RpcServer, deps: HandlerDeps): 
       log.error('GET_UNREAD_SUMMARY continuing after initialization failure:', error)
     }
     const workspaceId = requireContextWorkspace(ctx)
-    const unread = sessionManager.getSessions(workspaceId)
-      .filter((session) => !session.hidden && !session.isArchived && session.hasUnread)
+    const sessions = sessionManager.getSessions(workspaceId)
+    const userFacingIds = getSearchableSessionIds(sessions)
+    const unread = sessions
+      .filter((session) => userFacingIds.has(session.id) && !session.isArchived && session.hasUnread)
       .length
     return {
       totalUnreadSessions: unread,
@@ -245,6 +279,10 @@ export function registerSessionsHandlers(server: RpcServer, deps: HandlerDeps): 
   // attachments: FileAttachment[] for Claude (has content), storedAttachments: StoredAttachment[] for persistence (has thumbnailBase64)
   server.handle(RPC_CHANNELS.sessions.SEND_MESSAGE, async (ctx, sessionId: string, message: string, attachments?: FileAttachment[], storedAttachments?: StoredAttachment[], options?: SendMessageOptions) => {
     await assertSessionAccess(ctx, sessionId)
+    // Orchestration/recovery provenance is minted only by in-process host
+    // flows. Accepting it from RPC would let a client impersonate a Task or
+    // Mission dispatch and hide part of its text from safety routing.
+    assertRpcSendMessageOptions(options)
     // Capture the caller's clientId for error routing
     const callerClientId = ctx.clientId
 
@@ -291,6 +329,14 @@ export function registerSessionsHandlers(server: RpcServer, deps: HandlerDeps): 
     })
   })
 
+  server.handle(RPC_CHANNELS.sessions.RESPOND_TO_USER_INPUT, async (ctx, sessionId: string, response: import('@craft-agent/core/types').UserInputResponse) => {
+    // Authorize metadata before hydration can recover a queued answer.
+    const session = sessionManager.getSessions().find(candidate => candidate.id === sessionId)
+    if (!session) throw new Error('Question session not found')
+    assertRequestWorkspace(ctx, session.workspaceId)
+    return sessionManager.respondToUserInput(sessionId, response, { callerClientId: ctx.clientId })
+  })
+
   // Cancel processing
   server.handle(RPC_CHANNELS.sessions.CANCEL, async (ctx, sessionId: string, silent?: boolean) => {
     await assertSessionAccess(ctx, sessionId)
@@ -319,9 +365,16 @@ export function registerSessionsHandlers(server: RpcServer, deps: HandlerDeps): 
 
   // Respond to a permission request (bash command approval)
   // Returns true if the response was delivered, false if agent/session is gone
-  server.handle(RPC_CHANNELS.sessions.RESPOND_TO_PERMISSION, async (ctx, sessionId: string, requestId: string, allowed: boolean, alwaysAllow: boolean) => {
+  server.handle(RPC_CHANNELS.sessions.RESPOND_TO_PERMISSION, async (
+    ctx,
+    sessionId: string,
+    requestId: string,
+    allowed: boolean,
+    alwaysAllow: boolean,
+    options?: import('@craft-agent/shared/protocol').PermissionResponseOptions,
+  ) => {
     await assertSessionAccess(ctx, sessionId)
-    return sessionManager.respondToPermission(sessionId, requestId, allowed, alwaysAllow)
+    return sessionManager.respondToPermission(sessionId, requestId, allowed, alwaysAllow, options)
   })
 
   // Respond to a credential request (secure auth input)
@@ -341,7 +394,15 @@ export function registerSessionsHandlers(server: RpcServer, deps: HandlerDeps): 
     sessionId: string,
     command: import('@craft-agent/shared/protocol').SessionCommand
   ) => {
-    await assertSessionAccess(ctx, sessionId)
+    if (command.type === 'retryTurn') {
+      // Hydration can resume queued work. Authorize metadata first, as for
+      // question responses, before the retry takes the session reservation.
+      const session = sessionManager.getSessions().find(candidate => candidate.id === sessionId)
+      if (!session) throw new Error(`Session not found: ${sessionId}`)
+      assertRequestWorkspace(ctx, session.workspaceId)
+    } else {
+      await assertSessionAccess(ctx, sessionId)
+    }
     switch (command.type) {
       case 'flag':
         return sessionManager.flagSession(sessionId)
@@ -405,6 +466,8 @@ export function registerSessionsHandlers(server: RpcServer, deps: HandlerDeps): 
       case 'restartRuntime':
         log.info(`IPC: restartRuntime received for session ${sessionId}`)
         return sessionManager.restartAgentRuntime(sessionId)
+      case 'retryTurn':
+        return sessionManager.retryTurn(sessionId, command.userMessageId, { callerClientId: ctx.clientId })
       // Connection selection (locked after first message)
       case 'setConnection':
         log.info(`IPC: setConnection received for session ${sessionId}, connection: ${command.connectionSlug}`)
@@ -471,19 +534,19 @@ export function registerSessionsHandlers(server: RpcServer, deps: HandlerDeps): 
     const sessionsDir = getWorkspaceSessionsPath(workspace.rootPath)
     log.debug(`SEARCH_SESSIONS: Searching "${query}" in ${sessionsDir}`)
 
+    // Apply sidebar visibility inside the search stream, before delegated work
+    // can consume the result/snippet budget reserved for root conversations.
+    const searchableSessionIds = getSearchableSessionIds(sessionManager.getSessions(workspace.id))
     const results = await searchSessions(query, sessionsDir, {
       timeout: 5000,
       maxMatchesPerSession: 3,
       maxSessions: 50,
       searchId: id,
+      allowedSessionIds: searchableSessionIds,
     })
 
-    // Filter out hidden sessions (e.g., mini edit sessions)
-    const allSessions = await sessionManager.getSessions()
-    const hiddenSessionIds = new Set(
-      allSessions.filter(s => s.hidden).map(s => s.id)
-    )
-    const filteredResults = results.filter(r => !hiddenSessionIds.has(r.sessionId))
+    // Defensive post-filter in case an alternate search provider ignores the allowlist.
+    const filteredResults = results.filter(result => searchableSessionIds.has(result.sessionId))
 
     log.info('[search]','ipc:response', { searchId: id, resultCount: filteredResults.length, totalFound: results.length })
     return filteredResults

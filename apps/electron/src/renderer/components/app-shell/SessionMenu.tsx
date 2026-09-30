@@ -154,31 +154,6 @@ export function SessionMenu({
       {/* Connect to Messaging — pairing code flow */}
       <MessagingSessionMenuItem sessionId={sessionId} />
 
-      <Separator />
-
-      {/* Status submenu - includes all statuses plus Flag/Unflag at the bottom */}
-      <Sub>
-        <SubTrigger className="pr-2">
-          <span style={{ color: getStateColor(currentSessionStatus, sessionStatuses) ?? 'var(--foreground)' }}>
-            {(() => {
-              const icon = getStateIcon(currentSessionStatus, sessionStatuses)
-              return React.isValidElement(icon)
-                ? React.cloneElement(icon as React.ReactElement<{ bare?: boolean }>, { bare: true })
-                : icon
-            })()}
-          </span>
-          <span className="flex-1">{t("sessionMenu.status")}</span>
-        </SubTrigger>
-        <SubContent>
-          <StatusMenuItems
-            sessionStatuses={sessionStatuses}
-            activeStateId={currentSessionStatus}
-            onSelect={onSessionStatusChange}
-            menu={{ MenuItem }}
-          />
-        </SubContent>
-      </Sub>
-
       {/* Labels submenu - hierarchical label tree with nested sub-menus and toggle checkmarks */}
       {labels.length > 0 && (
         <Sub>

@@ -13,9 +13,8 @@ afterEach(() => {
     rmSync(root, { recursive: true, force: true })
   }
 })
-
 describe('transient network recovery', () => {
-  it('retries through the bounded durable path before surfacing the typed error', async () => {
+  it.each([false, true])('retries through the bounded durable path before surfacing the typed error (existing retry: %s)', async retryExisting => {
     const workspaceRoot = mkdtempSync(join(tmpdir(), 'network-turn-recovery-'))
     roots.push(workspaceRoot)
 
@@ -35,9 +34,6 @@ describe('transient network recovery', () => {
       { id: 'session-network-recovery' },
       workspace as never,
       {
-        llmConnection: 'selected-connection',
-        model: 'selected-model',
-        thinkingLevel: 'high',
         messagesLoaded: true,
         messages: [userMessage],
         isProcessing: true,
@@ -47,6 +43,13 @@ describe('transient network recovery', () => {
     )
     const manager = new SessionManager()
     ;(manager as unknown as { sessions: Map<string, unknown> }).sessions.set(managed.id, managed)
+    if (retryExisting) {
+      managed.messages.push(
+        { id: 'old-final', role: 'assistant', content: 'Done.', timestamp: 2 },
+        { id: 'old-error', role: 'error', content: 'Previous attempt failed.', timestamp: 3 },
+      )
+      managed.pendingTurnRecovery = { ...managed.pendingTurnRecovery!, lastCause: 'user_retry', userRetryFromMessageCount: 3 }
+    }
 
     const event: AgentEvent = {
       type: 'typed_error',
@@ -68,12 +71,19 @@ describe('transient network recovery', () => {
 
     expect(managed.pendingTurnRecovery?.attempts).toBe(1)
     expect(managed.messageQueue).toHaveLength(1)
-    expect(managed.messageQueue[0]?.options?.automaticRecovery).toEqual({
+    expect(managed.messageQueue[0]?.options?.automaticRecovery).toMatchObject({
       originalUserMessageId: userMessage.id,
       cause: 'runtime_error',
+      dispatchId: expect.any(String),
+      dispatchAttempt: retryExisting ? 2 : 1,
+      dispatchOrigin: 'automatic',
+      dispatchAllocatedAt: expect.any(Number),
     })
-    expect(managed).toMatchObject({ llmConnection: 'selected-connection', model: 'selected-model', thinkingLevel: 'high' })
-    expect(managed.messages.some(message => message.role === 'error')).toBe(false)
+    expect(managed.pendingRuntimeProviderFallback).toMatchObject({
+      generation: 1,
+      error: expect.any(Error),
+    })
+    expect(managed.messages.slice(retryExisting ? 3 : 0).some(message => message.role === 'error')).toBe(false)
 
     // Simulate each configured recovery being dequeued and failing the same
     // way. The bounded policy may allow more than one retry, but must exhaust.
@@ -89,7 +99,7 @@ describe('transient network recovery', () => {
     })
   })
 
-  it('surfaces quota errors without scheduling a provider replacement', async () => {
+  it.each([false, true])('queues recovery and defers fallback for a retryable plain provider error (existing retry: %s)', async retryExisting => {
     const workspaceRoot = mkdtempSync(join(tmpdir(), 'plain-provider-recovery-'))
     roots.push(workspaceRoot)
 
@@ -109,9 +119,6 @@ describe('transient network recovery', () => {
       { id: 'session-provider-recovery' },
       workspace as never,
       {
-        llmConnection: 'selected-connection',
-        model: 'selected-model',
-        thinkingLevel: 'high',
         messagesLoaded: true,
         messages: [userMessage],
         isProcessing: true,
@@ -121,6 +128,13 @@ describe('transient network recovery', () => {
     )
     const manager = new SessionManager()
     ;(manager as unknown as { sessions: Map<string, unknown> }).sessions.set(managed.id, managed)
+    if (retryExisting) {
+      managed.messages.push(
+        { id: 'old-final', role: 'assistant', content: 'Done.', timestamp: 2 },
+        { id: 'old-error', role: 'error', content: 'Previous attempt failed.', timestamp: 3 },
+      )
+      managed.pendingTurnRecovery = { ...managed.pendingTurnRecovery!, lastCause: 'user_retry', userRetryFromMessageCount: 3 }
+    }
     const processEvent = (
       manager as unknown as {
         processEvent: (session: typeof managed, agentEvent: AgentEvent, generation: number) => Promise<void>
@@ -132,9 +146,72 @@ describe('transient network recovery', () => {
       message: 'Codex error: The usage limit has been reached',
     }, 3)
 
-    expect(managed.pendingTurnRecovery?.attempts).toBe(0)
-    expect(managed.messageQueue).toHaveLength(0)
-    expect(managed).toMatchObject({ llmConnection: 'selected-connection', model: 'selected-model', thinkingLevel: 'high' })
-    expect(managed.messages.some(message => message.role === 'error')).toBe(true)
+    expect(managed.pendingTurnRecovery?.attempts).toBe(1)
+    expect(managed.messageQueue).toHaveLength(1)
+    expect(managed.pendingRuntimeProviderFallback).toMatchObject({
+      generation: 3,
+      error: expect.any(Error),
+    })
+    expect(managed.messages.slice(retryExisting ? 3 : 0).some(message => message.role === 'error')).toBe(false)
   })
+
+  it.each(['provider_error', 'service_error'] as const)(
+    'retries transient %s typed errors through the bounded durable path',
+    async errorCode => {
+      const workspaceRoot = mkdtempSync(join(tmpdir(), 'transient-typed-recovery-'))
+      roots.push(workspaceRoot)
+
+      const workspace = {
+        id: 'ws-typed-recovery',
+        name: 'Typed recovery',
+        rootPath: workspaceRoot,
+        createdAt: Date.now(),
+      }
+      const userMessage: Message = {
+        id: 'user-typed-turn',
+        role: 'user',
+        content: 'Continue the work',
+        timestamp: 1,
+      }
+      const managed = createManagedSession(
+        { id: 'session-typed-recovery' },
+        workspace as never,
+        {
+          messagesLoaded: true,
+          messages: [userMessage],
+          isProcessing: true,
+          processingGeneration: 1,
+          pendingTurnRecovery: createPendingTurnRecovery(userMessage.id, 1),
+        },
+      )
+      const manager = new SessionManager()
+      ;(manager as unknown as { sessions: Map<string, unknown> }).sessions.set(managed.id, managed)
+
+      const event: AgentEvent = {
+        type: 'typed_error',
+        error: {
+          code: errorCode,
+          title: 'AI Service Issue',
+          message: 'An unexpected error has occurred.',
+          actions: [{ key: 'r', label: 'Retry', action: 'retry' }],
+          canRetry: true,
+        },
+      }
+      const processEvent = (
+        manager as unknown as {
+          processEvent: (session: typeof managed, agentEvent: AgentEvent, generation: number) => Promise<void>
+        }
+      ).processEvent.bind(manager)
+
+      await processEvent(managed, event, 1)
+
+      expect(managed.pendingTurnRecovery?.attempts).toBe(1)
+      expect(managed.messageQueue).toHaveLength(1)
+      expect(managed.pendingRuntimeProviderFallback).toMatchObject({
+        generation: 1,
+        error: expect.any(Error),
+      })
+      expect(managed.messages.some(message => message.role === 'error')).toBe(false)
+    },
+  )
 })

@@ -18,10 +18,21 @@ describe('McpPoolServer dual-era HTTP compatibility', () => {
           type: 'object',
           properties: { value: { type: 'string' } },
         },
+        outputSchema: {
+          type: 'object',
+          properties: { echoed: { type: 'string' } },
+          required: ['echoed'],
+        },
+        readOnly: true,
+        idempotent: false,
       }],
       callTool: async (name: string, args: Record<string, unknown>) => {
         calls.push({ name, args })
-        return { content: String(args.value ?? ''), isError: false }
+        return {
+          content: String(args.value ?? ''),
+          isError: false,
+          structuredContent: { echoed: String(args.value ?? '') },
+        }
       },
     } as unknown as McpClientPool
 
@@ -38,19 +49,31 @@ describe('McpPoolServer dual-era HTTP compatibility', () => {
       await modern.connect()
       expect(modern.getProtocolEra()).toBe('modern')
       expect(modern.getNegotiatedProtocolVersion()).toBe('2026-07-28')
-      expect((await modern.listTools()).map((tool) => tool.name)).toEqual(['demo__echo'])
+      const [modernTool] = await modern.listTools()
+      expect(modernTool?.name).toBe('demo__echo')
+      expect(modernTool?.outputSchema).toEqual({
+        type: 'object',
+        properties: { echoed: { type: 'string' } },
+        required: ['echoed'],
+      })
+      expect(modernTool?.annotations).toEqual({ readOnlyHint: true, idempotentHint: false })
       const modernResult = await modern.callTool('demo__echo', { value: 'modern' }) as {
         content: Array<{ type: string; text: string }>
+        structuredContent?: Record<string, unknown>
       }
       expect(modernResult.content).toEqual([{ type: 'text', text: 'modern' }])
+      expect(modernResult.structuredContent).toEqual({ echoed: 'modern' })
 
       await legacy.connect(new LegacyHttpTransport(new URL(url)))
-      expect((await legacy.listTools()).tools.map((tool) => tool.name)).toEqual(['demo__echo'])
+      const [legacyTool] = (await legacy.listTools()).tools
+      expect(legacyTool?.name).toBe('demo__echo')
+      expect(legacyTool?.annotations).toEqual({ readOnlyHint: true, idempotentHint: false })
       const legacyResult = await legacy.callTool({
         name: 'demo__echo',
         arguments: { value: 'legacy' },
       })
       expect(legacyResult.content).toEqual([{ type: 'text', text: 'legacy' }])
+      expect(legacyResult.structuredContent).toEqual({ echoed: 'legacy' })
 
       expect(calls).toEqual([
         { name: 'mcp__demo__echo', args: { value: 'modern' } },

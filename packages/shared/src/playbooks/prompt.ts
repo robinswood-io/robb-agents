@@ -11,6 +11,7 @@ export function formatPlaybookPrompt(playbook: LoadedPlaybook): string {
 
   return `<robb_playbook slug="${playbook.manifest.slug}" version="1">
 ${playbook.instructions}
+${playbook.manifest.procedure ? `Mandatory business procedure: ${playbook.manifest.procedure}. Register and observe every required outcome using set_completion_criteria before claiming completion.` : ''}
 
 Allowed tools: ${playbook.manifest.allowedTools.join(', ')}
 Human-only gates: ${gates}

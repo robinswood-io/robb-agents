@@ -101,6 +101,9 @@ try {
     if ($LASTEXITCODE -ne 0) { throw "bun install failed" }
     bun scripts/prepare-rtk.ts --platform win32 --arch $Arch
     if ($LASTEXITCODE -ne 0) { throw "RTK preparation failed" }
+    bun scripts/prepare-uv.ts --platform win32 --arch $Arch --refresh
+    if ($LASTEXITCODE -ne 0) { throw "uv preparation failed" }
+    Require-Path "$ElectronDir\resources\bin\win32-$Arch\uv.exe" "bundled uv runtime"
 } finally {
     Pop-Location
 }

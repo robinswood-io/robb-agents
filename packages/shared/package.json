@@ -1,6 +1,6 @@
 {
   "name": "@craft-agent/shared",
-  "version": "0.12.7",
+  "version": "0.12.9",
   "license": "MIT",
   "description": "Shared business logic for Craft Agents - agent, auth, config, credentials, MCP integration",
   "type": "module",
@@ -14,6 +14,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./agent": "./src/agent/index.ts",
+    "./agent/bash-validator": "./src/agent/bash-validator.ts",
     "./agent/modes": "./src/agent/mode-types.ts",
     "./agent/mode-types": "./src/agent/mode-types.ts",
     "./agent/thinking-levels": "./src/agent/thinking-levels.ts",
@@ -37,6 +38,7 @@
     "./processes": "./src/processes/index.ts",
     "./remote-supervision": "./src/remote-supervision/index.ts",
     "./sessions": "./src/sessions/index.ts",
+    "./specialized-profiles": "./src/specialized-profiles/index.ts",
     "./projects": "./src/projects/index.ts",
     "./projects/types": "./src/projects/types.ts",
     "./sources": "./src/sources/index.ts",

@@ -6,6 +6,7 @@
  */
 
 import type { Session, Message, PermissionRequest, CredentialRequest, TypedError, PermissionMode, SessionStatus, AuthRequest, ToolDisplayMeta, RoutingMeta, AutonomyEvent } from '../../shared/types'
+import type { UserInputRequest, ToolExecutionCheckpoint } from '@craft-agent/core/types'
 
 /**
  * Streaming state for a session - replaces streamingTextRef
@@ -50,6 +51,9 @@ export interface TextCompleteEvent {
   messageId?: string
   /** Provider/model routing audit metadata from main process */
   routingMeta?: RoutingMeta
+  /** Persisted receipt metadata; null explicitly clears an earlier value. */
+  objectiveOutcome?: Message['objectiveOutcome'] | null
+  objectiveOutcomeError?: string | null
 }
 
 /**
@@ -82,6 +86,9 @@ export interface ToolResultEvent {
   toolName?: string
   result: string
   isError?: boolean
+  /** False when the host checkpointed before invoking the tool. */
+  executed?: boolean
+  checkpoint?: ToolExecutionCheckpoint
   turnId?: string
   parentToolUseId?: string
   /** Timestamp from main process for consistent ordering */
@@ -173,10 +180,17 @@ export interface SessionStatusChangedEvent {
  * Session metadata changed event — generic live push for programmatic metadata writes
  * (taskNodeCount, kanbanColumn) that don't ride the header-signature file-watch path.
  */
+export interface ObjectiveChangedEvent {
+  type: 'objective_changed'
+  sessionId: string
+  activeObjective: NonNullable<Session['activeObjective']> | null
+  pendingTurnRecovery: NonNullable<Session['pendingTurnRecovery']> | null
+}
+
 export interface SessionMetadataChangedEvent {
   type: 'session_metadata_changed'
   sessionId: string
-  changes: Partial<Pick<Session, 'taskNodeCount' | 'kanbanColumn' | 'taskDraft' | 'taskSlug' | 'projectId'>>
+  changes: Partial<Pick<Session, 'taskNodeCount' | 'kanbanColumn' | 'taskDraft' | 'taskSlug' | 'projectId' | 'isProcessing'>>
 }
 
 /**
@@ -340,6 +354,8 @@ export interface SessionModelChangedEvent {
   type: 'session_model_changed'
   sessionId: string
   model: string | null
+  /** Whether the effective model is an explicit user choice. */
+  modelRoutePinned?: boolean
 }
 
 /**
@@ -471,6 +487,12 @@ export interface SessionUnsharedEvent {
  * Auth request event - unified auth flow (credential or OAuth)
  * Adds auth-request message to session and displays inline auth UI
  */
+export interface UserInputChangedEvent {
+  type: 'user_input_changed'
+  sessionId: string
+  requests: UserInputRequest[]
+}
+
 export interface AuthRequestEvent {
   type: 'auth_request'
   sessionId: string
@@ -539,6 +561,7 @@ export type AgentEvent =
   | ProjectIdChangedEvent
   | SessionStatusChangedEvent
   | SessionMetadataChangedEvent
+  | ObjectiveChangedEvent
   | SessionFlaggedEvent
   | SessionUnflaggedEvent
   | SessionArchivedEvent
@@ -565,6 +588,7 @@ export type AgentEvent =
   | MessageAnnotationsUpdatedEvent
   | SessionSharedEvent
   | SessionUnsharedEvent
+  | UserInputChangedEvent
   | AuthRequestEvent
   | AuthCompletedEvent
   | SourceActivatedEvent

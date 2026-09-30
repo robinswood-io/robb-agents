@@ -37,6 +37,7 @@ import {
 } from '@craft-agent/server-core/transport'
 import { MissionPlanner, MissionRuntimeService } from '../../missions/index.ts'
 import type { HandlerDeps } from '../handler-deps.ts'
+import { createHash } from 'node:crypto'
 
 const missionsLog = createLogger('missions-v2')
 
@@ -124,6 +125,14 @@ export function registerMissionsHandlers(
   }
   const service = new MissionRuntimeService({
     sessionManager: deps.sessionManager,
+    ...(deps.platform.buildCommit?.trim() && deps.platform.buildDirty !== true ? {
+      specializedProfileRuntimeIdentitySha256: createHash('sha256').update(JSON.stringify({
+        appVersion: deps.platform.appVersion,
+        buildCommit: deps.platform.buildCommit.trim(),
+        buildChannel: deps.platform.buildChannel ?? null,
+        isPackaged: deps.platform.isPackaged,
+      })).digest('hex'),
+    } : {}),
     connectorExecutorFactory: deps.missionConnectorExecutorFactory,
     connectorReadiness: deps.missionConnectorReadiness,
     preflightCostEstimator: deps.missionPreflightCostEstimator,

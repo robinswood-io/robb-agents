@@ -13,9 +13,10 @@ interface EntityListLabelBadgeProps {
   rawValue?: string
   sessionLabels: string[]
   onLabelsChange?: (updatedLabels: string[]) => void
+  onToggleFilter?: (labelId: string) => void
 }
 
-export function EntityListLabelBadge({ label, rawValue, sessionLabels, onLabelsChange }: EntityListLabelBadgeProps) {
+export function EntityListLabelBadge({ label, rawValue, sessionLabels, onLabelsChange, onToggleFilter }: EntityListLabelBadgeProps) {
   const [open, setOpen] = useState(false)
   const { isDark } = useTheme()
   const color = label.color ? resolveEntityColor(label.color, isDark) : null
@@ -28,6 +29,7 @@ export function EntityListLabelBadge({ label, rawValue, sessionLabels, onLabelsC
       value={rawValue}
       open={open}
       onOpenChange={setOpen}
+      onFilterByLabel={onToggleFilter ? () => onToggleFilter(label.id) : undefined}
       onValueChange={(newValue) => {
         const updated = sessionLabels.map(entry => {
           const parsed = parseLabelEntry(entry)
@@ -47,9 +49,16 @@ export function EntityListLabelBadge({ label, rawValue, sessionLabels, onLabelsC
       <div
         role="button"
         tabIndex={0}
-        title={displayValue ? `${label.name} · ${displayValue}` : label.name}
-        className="shrink-0 h-[18px] max-w-[120px] px-1.5 text-[10px] font-medium rounded flex items-center whitespace-nowrap gap-0.5 cursor-pointer overflow-hidden"
-        onMouseDown={(e) => { e.stopPropagation(); e.preventDefault() }}
+        title={displayValue ? `${label.name} · ${displayValue}` : `${label.name}${onToggleFilter ? ' (Alt+Click to filter)' : ''}`}
+        className="shrink-0 h-[18px] max-w-[120px] px-1.5 text-[10px] font-medium rounded flex items-center whitespace-nowrap gap-0.5 cursor-pointer overflow-hidden transition-opacity hover:opacity-90"
+        onMouseDown={(e) => {
+          e.stopPropagation()
+          e.preventDefault()
+          if ((e.altKey || e.metaKey || e.ctrlKey) && onToggleFilter) {
+            onToggleFilter(label.id)
+            return
+          }
+        }}
         style={color ? {
           backgroundColor: `color-mix(in srgb, ${color} 6%, transparent)`,
           color: `color-mix(in srgb, ${color} 75%, var(--foreground))`,

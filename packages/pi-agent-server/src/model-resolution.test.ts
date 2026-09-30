@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'bun:test';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { AuthStorage, ModelRegistry, SessionManager, SettingsManager, DefaultResourceLoader, createAgentSession } from '@earendil-works/pi-coding-agent';
 import {
+  resolveInitialPiModel,
+  resolvePiModelWithCustomFallback,
   requireExplicitPiModel,
   resolvePiModel,
   isDeniedMiniModelId,
@@ -29,7 +35,154 @@ function createMockRegistry(
   } as any;
 }
 
+describe('initial Pi session model', () => {
+  it('makes an absent or empty Codex model explicit using supported provider preferences', () => {
+    const registry = createMockRegistry({
+      'openai-codex': [
+        { id: 'gpt-5.4', name: 'GPT-5.4', provider: 'openai-codex' },
+        { id: 'gpt-5.4-mini', name: 'GPT-5.4 Mini', provider: 'openai-codex' },
+        { id: 'gpt-5.3-codex-spark', name: 'GPT-5.3 Codex Spark', provider: 'openai-codex' },
+        { id: 'gpt-5.5', name: 'GPT-5.5', provider: 'openai-codex' },
+      ],
+    });
+    for (const id of [undefined, '']) {
+      expect(resolveInitialPiModel(registry, id, 'openai-codex')).toMatchObject({ id: 'gpt-5.5', provider: 'openai-codex' });
+    }
+    expect(() => resolveInitialPiModel(registry, 'pi/gpt-5.4-mini', 'openai-codex')).toThrow('could not be resolved');
+    expect(() => resolveInitialPiModel(registry, 'pi/gpt-5.4', 'openai-codex')).toThrow('could not be resolved');
+    expect(() => resolveInitialPiModel(registry, 'pi/gpt-5.3-codex-spark', 'openai-codex')).toThrow('could not be resolved');
+    expect(resolveInitialPiModel(registry, undefined, 'openai')).toBeUndefined();
+    expect(resolveInitialPiModel(registry, '', 'openai')).toBeUndefined();
+  });
+
+  it('falls back only within the authenticated provider and fails if all its models are retired', () => {
+    const registry = createMockRegistry({
+      'openai-codex': [{ id: 'gpt-5.4-mini', name: 'Mini', provider: 'openai-codex' }],
+      openai: [{ id: 'gpt-5.5', name: 'GPT-5.5', provider: 'openai' }],
+    });
+    expect(() => resolveInitialPiModel(registry, undefined, 'openai-codex')).toThrow('No supported Pi model');
+    const retired = createMockRegistry({
+      'openai-codex': [{ id: 'gpt-5.4', name: 'GPT-5.4', provider: 'openai-codex' }],
+      openai: [{ id: 'gpt-5.5', name: 'GPT-5.5', provider: 'openai' }],
+      'custom-endpoint': [{ id: 'gpt-5.5', name: 'GPT-5.5', provider: 'custom-endpoint' }],
+    });
+    expect(() => resolveInitialPiModel(retired, undefined, 'openai-codex', true)).toThrow('No supported Pi model');
+  });
+
+  it('prevents the real SDK from restoring GPT-5.4 from saved settings or session history', async () => {
+    const directory = mkdtempSync(join(tmpdir(), 'robb-pi-model-policy-'));
+    try {
+      for (const withHistory of [false, true]) {
+        const authStorage = AuthStorage.inMemory();
+        authStorage.set('openai-codex', { type: 'api_key', key: 'fixture-no-network' });
+        const modelRegistry = ModelRegistry.inMemory(authStorage);
+        const settingsManager = SettingsManager.inMemory({ defaultProvider: 'openai-codex', defaultModel: 'gpt-5.4' });
+        const sessionManager = SessionManager.inMemory(directory);
+        if (withHistory) {
+          sessionManager.appendModelChange('openai-codex', 'gpt-5.4');
+          sessionManager.appendMessage({ role: 'user', content: 'Isolated test fixture', timestamp: 1 });
+        }
+        const resourceLoader = new DefaultResourceLoader({
+          cwd: directory, agentDir: directory, settingsManager,
+          noExtensions: true, noSkills: true, noPromptTemplates: true, noThemes: true, noContextFiles: true,
+        });
+        await resourceLoader.reload();
+        const model = resolveInitialPiModel(modelRegistry, undefined, 'openai-codex');
+        const { session } = await createAgentSession({
+          cwd: directory, agentDir: directory, authStorage, modelRegistry,
+          settingsManager, sessionManager, resourceLoader, model, tools: [],
+        });
+        try {
+          expect(session.model?.provider).toBe('openai-codex');
+          expect(session.model?.id).not.toBe('gpt-5.4');
+          expect(session.model?.id).toBe(model?.id);
+        } finally {
+          session.dispose();
+        }
+      }
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('dynamic custom-endpoint model fallback', () => {
+  it('never registers forbidden Codex models, but preserves regular API registration', () => {
+    for (const provider of ['openai-codex', 'openai']) {
+      let registrationCalls = 0;
+      let registered: { id: string; name: string; provider: string } | undefined;
+      const registry = {
+        find: (candidateProvider: string, id: string) => candidateProvider === 'custom-endpoint' && registered?.id === id ? registered : undefined,
+        getAll: () => registered ? [registered] : [],
+      } as any;
+      const result = resolvePiModelWithCustomFallback(registry, 'pi/gpt-5.4', provider, true, id => {
+        registrationCalls += 1;
+        registered = { id, name: id, provider: 'custom-endpoint' };
+      });
+      expect(registrationCalls).toBe(provider === 'openai' ? 1 : 0);
+      if (provider === 'openai') expect(result?.id).toBe('gpt-5.4');
+      else expect(result).toBeUndefined();
+    }
+  });
+
+  it('revalidates the model returned after dynamic registration', () => {
+    let registered = false;
+    const registry = {
+      find: () => registered ? { id: 'gpt-5.4', name: 'Alias', provider: 'custom-endpoint' } : undefined,
+      getAll: () => [],
+    } as any;
+    expect(resolvePiModelWithCustomFallback(registry, 'Alias', 'openai-codex', true, () => { registered = true; })).toBeUndefined();
+  });
+});
+
 describe('resolvePiModel', () => {
+  describe('ChatGPT model eligibility', () => {
+    const registry = createMockRegistry(Object.fromEntries(
+      ['openai-codex', 'openai', 'custom-endpoint'].map(provider => [provider, [
+        { id: 'gpt-5.4', name: 'GPT-5.4', provider },
+        { id: 'gpt-5.4-mini', name: 'GPT-5.4 Mini', provider },
+        { id: 'gpt-5.3-codex-spark', name: 'GPT-5.3 Codex Spark', provider },
+      ]]),
+    ));
+
+    it('rejects exact and prefixed incompatible models without falling through to another provider', () => {
+      for (const id of ['gpt-5.4', 'pi/gpt-5.4', 'openai-codex/gpt-5.4', 'pi/openai-codex/gpt-5.4', 'gpt-5.4-mini', 'pi/gpt-5.4-mini', 'openai-codex/gpt-5.4-mini', 'pi/openai-codex/gpt-5.4-mini', 'gpt-5.3-codex-spark', 'pi/gpt-5.3-codex-spark', 'openai-codex/gpt-5.3-codex-spark', 'pi/openai-codex/gpt-5.3-codex-spark']) {
+        expect(resolvePiModel(registry, id, 'openai-codex')).toBeUndefined();
+        expect(resolvePiModel(registry, id, 'openai-codex', true)).toBeUndefined();
+        expect(() => requireExplicitPiModel(registry, id, 'openai-codex')).toThrow('could not be resolved');
+      }
+    });
+
+    it('also rejects a name alias that resolves to the forbidden model ID', () => {
+      expect(resolvePiModel(registry, 'GPT-5.4', 'openai-codex')).toBeUndefined();
+      expect(resolvePiModel(registry, 'GPT-5.4', 'openai-codex', true)).toBeUndefined();
+      const aliased = createMockRegistry({
+        'openai-codex': [{ id: 'gpt-5.4', name: 'Old saved choice', provider: 'openai-codex' }],
+      });
+      expect(resolvePiModel(aliased, 'Old saved choice', 'openai-codex')).toBeUndefined();
+      expect(resolvePiModel({ ...aliased, find: () => undefined }, 'Old saved choice', 'openai-codex')).toBeUndefined();
+    });
+
+    it('preserves GPT-5.4 and Mini on regular API providers', () => {
+      expect(requireExplicitPiModel(registry, 'pi/gpt-5.4-mini', 'openai').id).toBe('gpt-5.4-mini');
+      expect(requireExplicitPiModel(registry, 'pi/gpt-5.4', 'openai').provider).toBe('openai');
+      expect(requireExplicitPiModel(registry, 'pi/gpt-5.4', 'openai', true).provider).toBe('custom-endpoint');
+      expect(requireExplicitPiModel(registry, 'pi/gpt-5.3-codex-spark', 'openai').id).toBe('gpt-5.3-codex-spark');
+    });
+
+    it('fails closed on ambiguous providerless matches while preserving unambiguous lookup', () => {
+      expect(resolvePiModel(registry, 'gpt-5.4')).toBeUndefined();
+      const openaiOnly = createMockRegistry({
+        openai: [{ id: 'gpt-5.4', name: 'GPT-5.4', provider: 'openai' }],
+      });
+      expect(resolvePiModel(openaiOnly, 'gpt-5.4')?.provider).toBe('openai');
+      const codexOnly = createMockRegistry({
+        'openai-codex': [{ id: 'gpt-5.4', name: 'Old saved choice', provider: 'openai-codex' }],
+      });
+      expect(resolvePiModel(codexOnly, 'Old saved choice')).toBeUndefined();
+    });
+  });
+
   describe('preferCustomEndpoint', () => {
     it('returns custom-endpoint model when preferCustomEndpoint=true and model exists in both providers', () => {
       const registry = createMockRegistry({

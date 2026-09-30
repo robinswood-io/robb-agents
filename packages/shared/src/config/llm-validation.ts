@@ -1,3 +1,4 @@
+import { protectedClaudeQuery as query } from '../agent/claude-process.ts';
 /**
  * Centralized LLM Connection Validation
  *
@@ -8,7 +9,7 @@
  * credential injection, no tools, minimal system prompt.
  */
 
-import { query } from '@anthropic-ai/claude-agent-sdk';
+
 import { getDefaultOptions } from '../agent/options.ts';
 import { debug } from '../utils/debug.ts';
 

@@ -5,12 +5,15 @@ import {
   type MissionWorkItem,
 } from './schema.ts';
 import type { MissionSnapshot } from './events.ts';
+import type { SelectionSnapshot } from '../config/selection-provenance.ts';
 
 export type MissionPreflightGateStatus = 'pass' | 'fail' | 'unknown';
 
 export interface MissionRoutePreflight {
   policyAllowed: boolean;
   connectionSlug?: string;
+  /** Exact first-turn route projected by the same pure policy/cost resolver as dispatch. */
+  routingDecision?: SelectionSnapshot;
   estimatedCostUsd?: number;
   explanation?: string;
 }
@@ -28,6 +31,9 @@ export interface MissionConnectorPreflight {
 export interface MissionDigitalTwinInput {
   spec: MissionSpec;
   routeByProfileId?: Record<string, MissionRoutePreflight>;
+  /** Exact runtime route for each executable assignment. Profile routes remain
+   * the aggregate/backward-compatible check and cover controller-created reviews. */
+  routeByWorkItemId?: Record<string, MissionRoutePreflight>;
   connectorByWorkItemId?: Record<string, MissionConnectorPreflight>;
   /** Remaining enforceable budget supplied by the host, never inferred by the model. */
   availableBudgetUsd?: number;
@@ -57,7 +63,37 @@ export interface MissionDigitalTwinReport {
   projectedExternalMutations: number;
   projectedCostUsd?: number;
   budgetVarianceKnown: boolean;
+  /** Stable host projection used to reject a changed route before journal mutation. */
+  routeFingerprint?: string;
+  /** Optional additive detail; legacy consumers may keep reading route gates only. */
+  routes?: {
+    byProfileId: Record<string, MissionRoutePreflight>;
+    byWorkItemId: Record<string, MissionRoutePreflight>;
+  };
   gates: MissionPreflightGate[];
+}
+
+function canonicalRouteEntries(
+  routes: Record<string, MissionRoutePreflight> | undefined,
+): Array<[string, Pick<MissionRoutePreflight, 'policyAllowed' | 'connectionSlug' | 'routingDecision'>]> {
+  return Object.entries(routes ?? {})
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([id, route]) => [id, {
+      policyAllowed: route.policyAllowed,
+      ...(route.connectionSlug ? { connectionSlug: route.connectionSlug } : {}),
+      ...(route.routingDecision ? { routingDecision: route.routingDecision } : {}),
+    }]);
+}
+
+/** Route-only fingerprint: estimates and prose cannot create a false drift. */
+export function missionRouteFingerprint(input: Pick<
+  MissionDigitalTwinInput,
+  'routeByProfileId' | 'routeByWorkItemId'
+>): string {
+  return createHash('sha256').update(JSON.stringify({
+    profiles: canonicalRouteEntries(input.routeByProfileId),
+    workItems: canonicalRouteEntries(input.routeByWorkItemId),
+  })).digest('hex');
 }
 
 /**
@@ -100,9 +136,32 @@ export function simulateMissionDigitalTwin(input: MissionDigitalTwinInput): Miss
       detail: !route
         ? 'No host connection check was supplied'
         : route.policyAllowed && route.connectionSlug
-          ? `Selected connection ${route.connectionSlug} is configured`
+          ? `Selected connection ${route.connectionSlug} is configured${route.routingDecision
+            ? ` with ${route.routingDecision.model} (${route.routingDecision.thinkingLevel}, ${route.routingDecision.profile})`
+            : ''}`
           : route.explanation ?? 'The selected connection is unavailable',
     });
+  }
+
+  if (input.routeByWorkItemId) {
+    for (const item of executing) {
+      const profileId = item.agentProfileId ?? spec.defaultWorkerProfileId;
+      const route = input.routeByWorkItemId[item.id];
+      gates.push({
+        id: `route.work-item.${item.id}`,
+        category: 'route',
+        workItemId: item.id,
+        profileId,
+        status: !route ? 'unknown' : route.policyAllowed && !!route.connectionSlug ? 'pass' : 'fail',
+        detail: !route
+          ? 'No host connection check was supplied for this assignment'
+          : route.policyAllowed && route.connectionSlug
+            ? `Selected connection ${route.connectionSlug} is configured for this assignment${route.routingDecision
+              ? ` with ${route.routingDecision.model} (${route.routingDecision.thinkingLevel}, ${route.routingDecision.profile})`
+              : ''}`
+            : route.explanation ?? 'The assignment connection is unavailable',
+      });
+    }
   }
 
   for (const item of executing) {
@@ -143,6 +202,7 @@ export function simulateMissionDigitalTwin(input: MissionDigitalTwinInput): Miss
         : `Projected $${projectedCostUsd.toFixed(4)} against $${budget.toFixed(4)} remaining`,
   });
 
+  const hasRoutes = input.routeByProfileId !== undefined || input.routeByWorkItemId !== undefined;
   return {
     schemaVersion: 1,
     mode: 'dry-run',
@@ -154,6 +214,13 @@ export function simulateMissionDigitalTwin(input: MissionDigitalTwinInput): Miss
     projectedExternalMutations: executing.filter((item) => item.effect === 'external-mutation').length,
     ...(projectedCostUsd === undefined ? {} : { projectedCostUsd }),
     budgetVarianceKnown,
+    ...(hasRoutes ? {
+      routeFingerprint: missionRouteFingerprint(input),
+      routes: {
+        byProfileId: { ...(input.routeByProfileId ?? {}) },
+        byWorkItemId: { ...(input.routeByWorkItemId ?? {}) },
+      },
+    } : {}),
     gates,
   };
 }

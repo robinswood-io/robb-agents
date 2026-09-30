@@ -131,8 +131,11 @@ export type {
   ListSessionsOptions,
   ListSessionsResult,
   WaitSessionSnapshot,
+  WaitSessionDiagnostic,
+  WaitSessionsMode,
   WaitSessionsResult,
   BackgroundTaskInfo,
+  AgentMessageType,
   SendAgentMessageResult,
   ResolvedLabelsResult,
   ResolvedStatusResult,
@@ -171,6 +174,7 @@ export {
   handleSendDeveloperFeedback,
   // Event-driven delegated-session wait
   handleWaitSessions,
+  handleRequestUserInput,
 } from './handlers/index.ts';
 
 export type {
@@ -210,6 +214,7 @@ export {
   // Browser tool schema
   BrowserToolSchema,
   WaitSessionsSchema,
+  RequestUserInputSchema,
   // Developer feedback schema
   SendDeveloperFeedbackSchema,
   // Descriptions
@@ -245,3 +250,9 @@ export type {
   SessionToolFilterOptions,
   SessionToolNameOptions,
 } from './tool-defs.ts';
+export { protectApplicationCommand, protectedApplicationRoots, isProtectedApplicationPath, APPLICATION_PROTECTION_REASON } from './runtime/application-protection.ts';
+
+// Exact scalar-selector grammar shared with host acceptance validation.
+export { completionCriterionPathKeys } from './completion-criteria-selectors.ts';
+
+export { SpawnSessionSchema, parseSpawnSessionInput, SpawnSessionInputError, SPAWN_SESSION_ROLE_HELP, type SpawnSessionInput } from './spawn-session-schema.ts';

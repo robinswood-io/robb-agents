@@ -17,6 +17,7 @@ export type {
   StructuredInputState,
   StructuredInputData,
   StructuredResponse,
+  StructuredCredentialResponse,
   PermissionResponse,
   AdminApprovalResponse,
 } from './structured/types'

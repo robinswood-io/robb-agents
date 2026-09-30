@@ -342,5 +342,51 @@ export const piDriver: ProviderDriver = {
     }
     return testAnthropicCompatible(args.apiKey, baseUrl, bareModel, args.timeoutMs);
   },
-  validateStoredConnection: async () => ({ success: true }),
+  validateStoredConnection: async ({ slug, connection, credentialManager }) => {
+    if (connection.authType === 'oauth') {
+      const stored = await credentialManager.getLlmOAuth(slug);
+      if (!stored?.accessToken) {
+        return { success: false, error: 'No OAuth token found. Please sign in again.' };
+      }
+      // Check if expired or about to expire (within 60s)
+      if (stored.expiresAt && Date.now() > stored.expiresAt - 60_000) {
+        if (!stored.refreshToken) {
+          return { success: false, error: 'OAuth token has expired and cannot be refreshed. Please sign in again.' };
+        }
+        try {
+          if (connection.piAuthProvider === 'openai-codex') {
+            const { refreshChatGptTokens } = await import('../../../../auth/chatgpt-oauth.ts');
+            const refreshed = await refreshChatGptTokens(stored.refreshToken);
+            await credentialManager.refreshLlmOAuth(slug, {
+              accessToken: refreshed.accessToken,
+              idToken: refreshed.idToken,
+              refreshToken: refreshed.refreshToken,
+              expiresAt: refreshed.expiresAt,
+            });
+          } else if (connection.piAuthProvider === 'google-gemini-code-assist') {
+            const { refreshGoogleGeminiTokens } = await import('../../../../auth/google-gemini-oauth.ts');
+            const refreshed = await refreshGoogleGeminiTokens(stored.refreshToken);
+            await credentialManager.refreshLlmOAuth(slug, {
+              accessToken: refreshed.accessToken,
+              idToken: refreshed.idToken,
+              refreshToken: refreshed.refreshToken ?? stored.refreshToken,
+              expiresAt: refreshed.expiresAt,
+            });
+          } else if (connection.piAuthProvider === 'github-copilot') {
+            const { refreshGitHubCopilotToken } = await import('@earendil-works/pi-ai/oauth');
+            const newCreds = await refreshGitHubCopilotToken(stored.refreshToken);
+            await credentialManager.refreshLlmOAuth(slug, {
+              accessToken: newCreds.access,
+              refreshToken: newCreds.refresh,
+              expiresAt: newCreds.expires,
+            });
+          }
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          return { success: false, error: `Token refresh failed: ${msg}. Please sign in again.` };
+        }
+      }
+    }
+    return { success: true };
+  },
 };

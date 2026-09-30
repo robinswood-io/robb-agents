@@ -4,7 +4,7 @@
  * RTK is distributed by rtk-ai under Apache-2.0; see THIRD_PARTY_NOTICES.
  */
 import { createHash } from 'node:crypto'
-import { chmodSync, copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs'
+import { chmodSync, copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { isAbsolute, join, relative, resolve } from 'node:path'
 
 const ROOT = resolve(import.meta.dir, '..')
@@ -52,16 +52,26 @@ function findFile(root: string, fileName: string): string | null {
   return null
 }
 
-function validateExisting(binaryPath: string, version: string): boolean {
-  if (!existsSync(binaryPath) || statSync(binaryPath).size < 1_000_000) return false
-  const result = Bun.spawnSync([binaryPath, '--version'], { stdout: 'pipe', stderr: 'pipe' })
-  return result.exitCode === 0 && new TextDecoder().decode(result.stdout).includes(version)
+export function validateRtkBinary(binaryPath: string, version: string, archiveSha256: string, nativeTarget: boolean): boolean {
+  try {
+    if (!existsSync(binaryPath) || statSync(binaryPath).size < 1_000_000) return false
+    const receipt = JSON.parse(readFileSync(`${binaryPath}.provenance.json`, 'utf8'))
+    if (receipt.version !== version || receipt.archiveSha256 !== archiveSha256
+      || receipt.binarySha256 !== createHash('sha256').update(readFileSync(binaryPath)).digest('hex')) return false
+    // A checksum-verified cross-target binary cannot be executed on this host.
+    if (!nativeTarget) return true
+    const result = Bun.spawnSync([binaryPath, '--version'], {
+      stdout: 'pipe', stderr: 'pipe', env: { ...process.env, RTK_TELEMETRY_DISABLED: '1' },
+    })
+    return result.exitCode === 0 && new TextDecoder().decode(result.stdout).trim() === `rtk ${version}`
+  } catch { return false }
 }
 
 async function main(): Promise<void> {
   const platform = option('--platform') ?? process.platform
   const arch = option('--arch') ?? process.arch
   const targetKey = `${platform}-${arch}`
+  const nativeTarget = platform === process.platform && arch === process.arch
   const manifest = JSON.parse(readFileSync(MANIFEST_PATH, 'utf8')) as Manifest
   const target = manifest.targets[targetKey]
   if (!target) throw new Error(`RTK is not pinned for target ${targetKey}`)
@@ -77,10 +87,11 @@ async function main(): Promise<void> {
       if (!entry.isDirectory() || entry.name === targetKey) continue
       for (const binaryName of ['rtk', 'rtk.exe']) {
         rmSync(join(binRoot, entry.name, binaryName), { force: true })
+        rmSync(join(binRoot, entry.name, `${binaryName}.provenance.json`), { force: true })
       }
     }
   }
-  if (validateExisting(targetPath, manifest.version)) {
+  if (validateRtkBinary(targetPath, manifest.version, target.sha256, nativeTarget)) {
     console.log(`RTK ${manifest.version} already staged: ${targetPath}`)
     return
   }
@@ -127,7 +138,11 @@ async function main(): Promise<void> {
     mkdirSync(targetDir, { recursive: true })
     copyFileSync(binary, targetPath)
     if (platform !== 'win32') chmodSync(targetPath, 0o755)
-    if (!validateExisting(targetPath, manifest.version)) {
+    writeFileSync(`${targetPath}.provenance.json`, JSON.stringify({
+      version: manifest.version, archiveSha256: target.sha256,
+      binarySha256: createHash('sha256').update(readFileSync(targetPath)).digest('hex'),
+    }) + '\n')
+    if (!validateRtkBinary(targetPath, manifest.version, target.sha256, nativeTarget)) {
       throw new Error(`Staged RTK failed version verification at ${targetPath}`)
     }
     console.log(`RTK ${manifest.version} staged: ${targetPath} ✓`)
@@ -136,4 +151,4 @@ async function main(): Promise<void> {
   }
 }
 
-await main()
+if (import.meta.main) await main()

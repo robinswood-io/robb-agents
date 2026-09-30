@@ -78,6 +78,15 @@ describe('schema', () => {
     expect(r.success).toBe(false);
   });
 
+  it.each(['judge', 'verify'] as const)('requires a prompt on executable %s nodes', (kind) => {
+    expect(parseTaskSpec({
+      id: `missing-${kind}`, title: kind, goal: 'g', nodes: [{ id: kind, kind }],
+    }).success).toBe(false);
+    expect(parseTaskSpec({
+      id: `valid-${kind}`, title: kind, goal: 'g', nodes: [{ id: kind, kind, prompt: 'Review the evidence.' }],
+    }).success).toBe(true);
+  });
+
   it('accepts an optional acceptance_criteria rubric', () => {
     const r = parseTaskSpec({ ...CHAIN, acceptance_criteria: 'The implementation must pass all tests.' });
     expect(r.success).toBe(true);

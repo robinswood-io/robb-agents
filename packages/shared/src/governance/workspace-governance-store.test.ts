@@ -28,6 +28,14 @@ afterEach(() => {
 });
 
 describe('WorkspaceGovernanceStore', () => {
+  it('joins concurrent first-boot loads across store instances without reporting a busy store', async () => {
+    const { root, profile } = createFixture();
+    const documents = await Promise.all(Array.from({ length: 20 }, () => new WorkspaceGovernanceStore(root).loadOrCreate(profile)));
+    expect(documents).toHaveLength(20);
+    expect(documents.every(document => document.revision === 0 && JSON.stringify(document) === JSON.stringify(documents[0]))).toBe(true);
+    expect(await new WorkspaceGovernanceStore(root).load()).toEqual(documents[0]!);
+  });
+
   it('shares an atomic 0600 document between independent store instances', async () => {
     const { root, profile } = createFixture();
     const first = new WorkspaceGovernanceStore(root, {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'bun:test'
 import type { WorkspaceStatusConfig } from '@craft-agent/shared/statuses'
 import {
+  isClosedSessionStatus,
   resolveLifecycleStartStatus,
   resolveLifecycleTerminalStatus,
   shouldManageSessionStatusLifecycle,
@@ -35,6 +36,8 @@ describe('automatic session status lifecycle', () => {
   })
 
   it('never reopens a user-closed task or replaces a custom workflow status', () => {
+    expect(isClosedSessionStatus(config, 'done')).toBe(true)
+    expect(isClosedSessionStatus(config, 'in-progress')).toBe(false)
     expect(resolveLifecycleStartStatus(config, 'done')).toBeUndefined()
     const custom = {
       ...config,

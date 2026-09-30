@@ -1,3 +1,4 @@
+import { runShutdownCleanup } from './shutdown-cleanup'
 // Load user's shell environment first (before other imports that may use env)
 // This ensures tools like Homebrew, nvm, etc. are available to the agent
 import { loadShellEnv } from './shell-env'
@@ -1460,41 +1461,16 @@ app.on('before-quit', async (event) => {
     } catch (error) {
       mainLog.error('Failed to flush sessions:', error)
     }
-    // Clean up SessionManager resources (file watchers, timers, etc.)
-    await sessionManager.cleanup()
-
-    // Clean up browser pane instances
-    if (browserPaneManager) {
-      browserPaneManager.destroyAll()
-    }
-
-    // Clean up OAuth flow store (stop periodic cleanup timer)
-    if (oauthFlowStore) {
-      oauthFlowStore.dispose()
-    }
-
-    // Stop all model refresh timers
-    getModelRefreshService().stopAll()
-
-    // Stop messaging gateways so the WhatsApp worker subprocess exits cleanly.
-    if (messagingHandle) {
-      try {
-        await messagingHandle.dispose()
-      } catch (err) {
-        mainLog.error('[messaging] dispose failed:', err)
-      }
-    }
-
-    embeddedWebuiHandler?.dispose()
-    embeddedWebuiHandler = null
-
-    // Clean up power manager (release power blocker)
-    const { cleanup: cleanupPowerManager } = await import('./power-manager')
-    cleanupPowerManager()
-
-    // Release the server lock file so the next launch doesn't see a stale PID.
-    // This must happen regardless of the exit path (normal quit or update quit).
-    releaseServerLock()
+    await runShutdownCleanup([
+      ['sessions', () => sessionManager!.cleanup()],
+      ['browser panes', () => browserPaneManager?.destroyAll()],
+      ['OAuth flows', () => oauthFlowStore?.dispose()],
+      ['model refresh', () => getModelRefreshService().stopAll()],
+      ['messaging', () => messagingHandle?.dispose()],
+      ['web UI', () => { embeddedWebuiHandler?.dispose(); embeddedWebuiHandler = null }],
+      ['power manager', async () => { const { cleanup } = await import('./power-manager'); cleanup() }],
+      ['server lock', () => releaseServerLock()],
+    ], (step, error) => mainLog.error(`[shutdown] ${step} cleanup failed:`, error))
 
     // If update is in progress, let electron-updater handle the quit flow
     // Force exit breaks the NSIS installer on Windows

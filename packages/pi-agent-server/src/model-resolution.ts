@@ -1,4 +1,5 @@
 import type { ModelRegistry as PiModelRegistry } from '@earendil-works/pi-coding-agent';
+import { isModelAllowedForAuthProvider, PI_PREFERRED_DEFAULTS } from '../../shared/src/config/llm-connections.ts';
 
 // Re-export from shared so the auth-aware mini-model denylist has a single
 // source of truth (also used by `getMiniModel()` at selection time).
@@ -6,6 +7,49 @@ export { isDeniedMiniModelId } from '../../shared/src/config/llm-connections.ts'
 
 // Re-export the PiModel type used by callers
 type PiModel = ReturnType<PiModelRegistry['find']>;
+
+/**
+ * Codex sessions must pass an explicit eligible model to the SDK, including
+ * when the host has no selection: otherwise the SDK can restore a retired
+ * model from its own settings/history without passing through our resolver.
+ * Other providers retain their existing implicit-default behavior.
+ */
+export function resolveInitialPiModel(
+  modelRegistry: PiModelRegistry,
+  modelId: string | undefined,
+  piAuthProvider?: string,
+  preferCustomEndpoint?: boolean,
+): PiModel {
+  if (modelId) return requireExplicitPiModel(modelRegistry, modelId, piAuthProvider, preferCustomEndpoint);
+  if (piAuthProvider !== 'openai-codex') return undefined;
+
+  const candidates = [
+    ...(PI_PREFERRED_DEFAULTS[piAuthProvider] ?? []),
+    ...modelRegistry.getAll().filter(model => model.provider === piAuthProvider).map(model => model.id),
+  ];
+  for (const candidate of new Set(candidates)) {
+    const model = resolvePiModel(modelRegistry, candidate, piAuthProvider);
+    // An implicit choice must not switch to a custom endpoint or another provider.
+    if (model?.provider === piAuthProvider) return model;
+  }
+  throw new Error(`No supported Pi model is available for provider "${piAuthProvider}"`);
+}
+
+/** Preserve model eligibility across dynamic custom-endpoint registration. */
+export function resolvePiModelWithCustomFallback(
+  modelRegistry: PiModelRegistry,
+  modelId: string,
+  piAuthProvider?: string,
+  preferCustomEndpoint?: boolean,
+  registerCustomModel?: (bareId: string) => void,
+): PiModel {
+  if (!isModelAllowedForAuthProvider(modelId, piAuthProvider)) return undefined;
+  const model = resolvePiModel(modelRegistry, modelId, piAuthProvider, preferCustomEndpoint);
+  if (model || !registerCustomModel) return model;
+  const bareId = modelId.startsWith('pi/') ? modelId.slice(3) : modelId;
+  registerCustomModel(bareId);
+  return resolvePiModel(modelRegistry, modelId, piAuthProvider, preferCustomEndpoint);
+}
 
 /**
  * Resolve the chosen Pi SDK model within the configured provider.
@@ -21,6 +65,13 @@ export function resolvePiModel(
   piAuthProvider?: string,
   preferCustomEndpoint?: boolean,
 ): PiModel {
+  // Reject stale selections before any fallback, including custom endpoints.
+  // Also check each resolved ID: registry lookups may accept a display-name alias.
+  if (!isModelAllowedForAuthProvider(modelId, piAuthProvider)) return undefined;
+  const isAllowedModel = (model: NonNullable<PiModel>): boolean =>
+    isModelAllowedForAuthProvider(model.id, piAuthProvider)
+    && isModelAllowedForAuthProvider(model.id, model.provider);
+
   // Strip Craft's pi/ prefix — Pi SDK uses bare model IDs (e.g. "claude-sonnet-4-6")
   const bareId = modelId.startsWith('pi/') ? modelId.slice(3) : modelId;
 
@@ -30,15 +81,16 @@ export function resolvePiModel(
   if (provider) {
     const exact = modelRegistry.find(provider, bareId)
       ?? modelRegistry.getAll().find(model => (model.id === bareId || model.name === bareId) && model.provider === provider);
-    if (exact && provider === 'minimax-cn' && exact.id.startsWith('MiniMax-')) {
+    if (exact && isAllowedModel(exact) && provider === 'minimax-cn' && exact.id.startsWith('MiniMax-')) {
       return { ...exact, id: exact.id.slice('MiniMax-'.length) };
     }
-    return exact;
+    return exact && isAllowedModel(exact) ? exact : undefined;
   }
 
   // Legacy connections without a provider can resolve one unambiguous model.
   // An ambiguous ID requires an explicit connection choice.
-  const matches = modelRegistry.getAll().filter(model => model.id === bareId || model.name === bareId);
+  const matches = modelRegistry.getAll().filter(model =>
+    (model.id === bareId || model.name === bareId) && isAllowedModel(model));
   if (matches.length === 1) return matches[0];
 
   return undefined;

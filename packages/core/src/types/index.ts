@@ -25,6 +25,10 @@ export type {
 export type {
   MessageRole,
   ToolStatus,
+  ToolExecutionCheckpoint,
+  ObjectiveOutcomeState,
+  ObjectiveOutcomeBlockerKind,
+  ObjectiveOutcomeDeclaration,
   ToolDisplayMeta,
   AttachmentType,
   MessageAttachment,
@@ -56,7 +60,7 @@ export type {
   AuthRequestType,
   AuthStatus,
 } from './message.ts';
-export { generateMessageId } from './message.ts';
+export { generateMessageId, AGENT_RUNTIME_ACTIVITY, isAgentRuntimeActivity } from './message.ts';
 
 export type { AutonomyEvent, AutonomyPhase, HumanEscalationReason } from './autonomy.ts';
 export type {
@@ -83,3 +87,12 @@ export type {
   SessionProcessingStatus,
   ActiveSessionInfo,
 } from './server.ts';
+export type { ObjectiveAcceptanceCriterion, ObjectiveProcedureId } from './objective-acceptance.ts';
+export type {
+  UserInputOption,
+  UserInputQuestion,
+  UserInputAnswer,
+  UserInputRequest,
+  UserInputResponse,
+  UserInputResponseResult,
+} from './user-input.ts';

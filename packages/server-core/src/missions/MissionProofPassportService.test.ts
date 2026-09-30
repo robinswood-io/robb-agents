@@ -130,6 +130,36 @@ describe('MissionProofPassportService', () => {
     expect(() => service.issue(completed)).toThrow('signature is invalid');
   });
 
+  it('accepts its authenticated terminal prefix after report-delivery events extend the journal', () => {
+    const root = mkdtempSync(join(tmpdir(), 'robb-terminal-prefix-'));
+    writeFileSync(join(root, 'test-a.txt'), 'passed\n');
+    const controller = new MissionController({
+      workspaceRoot: root,
+      resolveSubmissionEvidence: (item, submission) => resolveMissionSubmissionEvidence({
+        workspaceRoot: root, item, submission,
+      }).submission,
+    });
+    controller.createMission(fixture());
+    controller.startMission('mission-demo');
+    const terminal = completeMission(controller, submissionA);
+    const { privateKey } = generateKeyPairSync('ed25519');
+    const service = new MissionProofPassportService({
+      workspaceId: 'workspace-1', workspaceRoot: root, privateKey,
+    });
+    const attestation = service.issueTerminalAttestation(terminal);
+    service.issue(terminal);
+
+    const withPendingReport = controller.reserveMissionReport(
+      'mission-demo', 'report-one', 'origin-session',
+    );
+    expect(withPendingReport.revision).toBeGreaterThan(terminal.revision);
+    expect(service.issueTerminalAttestation(withPendingReport)).toEqual(attestation);
+    expect(service.verifyTerminalSnapshot('mission-demo')).toMatchObject({
+      valid: true,
+      snapshot: { revision: terminal.revision, status: 'completed' },
+    });
+  });
+
   it('refuses to issue if a previously accepted artifact changed', () => {
     const root = mkdtempSync(join(tmpdir(), 'robb-passport-change-'));
     writeFileSync(join(root, 'test-a.txt'), 'passed\n');

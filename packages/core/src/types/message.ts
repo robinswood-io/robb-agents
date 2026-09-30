@@ -47,6 +47,47 @@ export type AuthStatus = 'pending' | 'completed' | 'cancelled' | 'failed';
 export type ToolStatus = 'pending' | 'executing' | 'completed' | 'error' | 'backgrounded';
 
 /**
+ * Host-authored explanation for a tool result that closed without executing
+ * the requested operation. Optional fields on events/messages keep sessions
+ * written by older app versions readable.
+ */
+export interface ToolExecutionCheckpoint {
+  schemaVersion: 1;
+  kind: 'tool-call-budget';
+  reason: string;
+}
+
+export type ObjectiveOutcomeState =
+  | 'complete_verified'
+  | 'blocked_human'
+  | 'blocked_policy'
+  | 'continue';
+
+export type ObjectiveOutcomeBlockerKind =
+  | 'credential'
+  | 'mfa'
+  | 'external_authorization'
+  | 'irreversible_authority'
+  | 'business_decision'
+  | 'policy';
+
+/** Structured, model-authored outcome subsequently verified by the host. */
+export interface ObjectiveOutcomeDeclaration {
+  state: ObjectiveOutcomeState;
+  criteria: Array<{
+    id: string;
+    satisfied: boolean;
+    evidence: string[];
+  }>;
+  remainingWork: string[];
+  blocker?: {
+    kind: ObjectiveOutcomeBlockerKind;
+    description: string;
+    evidence: string[];
+  } | null;
+}
+
+/**
  * Tool display metadata - embedded at storage time for viewer compatibility
  * Icons are base64-encoded to work in both Electron and web viewer
  */
@@ -373,6 +414,10 @@ export interface Message {
   toolInput?: Record<string, unknown>;
   toolResult?: string;
   toolStatus?: ToolStatus;
+  /** False when the host returned a checkpoint before invoking the tool. */
+  toolExecuted?: boolean;
+  /** Structured reason associated with a non-executed tool result. */
+  toolCheckpoint?: ToolExecutionCheckpoint;
   toolDuration?: number;
   toolIntent?: string;
   toolDisplayName?: string;
@@ -399,6 +444,31 @@ export interface Message {
   isPending?: boolean;
   // Queued: user message that is waiting to be processed (sent during ongoing response)
   isQueued?: boolean;
+  /** Durable transport provenance; this never grants user authority. */
+  internalOrigin?: InternalMessageOrigin;
+  /**
+   * Durable write-ahead fence recorded before this exact turn is handed to a
+   * provider runtime.  Its presence means the runtime may have accepted the
+   * turn, but the host did not durably observe the correlated acknowledgement.
+   * It is evidence against automatic replay, never authority to start work.
+   */
+  providerDispatch?: ProviderDispatchWriteAhead;
+  agentDelivery?: {
+    id: string;
+    status: 'queued' | 'processing' | 'processed' | 'failed';
+    /** Provider handoffs, not runtime construction attempts. */
+    attempts: number;
+    attachmentsSha256?: string;
+    /** Durable bounded setup backoff before any provider handoff. */
+    setupFailureCount?: number;
+    lastSetupFailureClass?: string;
+    setupRetryNotBefore?: number;
+    setupRetryBlockedAt?: number;
+    setupPersistenceFencedAt?: number;
+    /** Stop won after host-to-child dispatch but before the correlated child ACK. */
+    providerDispatchUncertainAt?: number;
+  };
+
   // Intermediate text (commentary between tool calls, not final response)
   isIntermediate?: boolean;
   // Hidden: a system-generated message that must reach the model (it drives a
@@ -413,6 +483,10 @@ export interface Message {
   statusType?: 'compacting' | 'compaction_complete';
   /** Provider/model routing audit metadata for assistant messages. */
   routingMeta?: RoutingMeta;
+  /** Model-declared objective outcome; the host validates it before changing objective state. */
+  objectiveOutcome?: ObjectiveOutcomeDeclaration;
+  /** Host extraction failure retained for crash-safe continuation diagnostics. */
+  objectiveOutcomeError?: string;
   // Info level for info messages (determines icon/color)
   infoLevel?: 'info' | 'warning' | 'error' | 'success';
   // Error-specific fields (for typed errors with diagnostics)
@@ -468,6 +542,10 @@ export interface StoredMessage {
   toolInput?: Record<string, unknown>;
   toolResult?: string;
   toolStatus?: ToolStatus;
+  /** False when the host returned a checkpoint before invoking the tool. */
+  toolExecuted?: boolean;
+  /** Structured reason associated with a non-executed tool result. */
+  toolCheckpoint?: ToolExecutionCheckpoint;
   toolDuration?: number;
   toolIntent?: string;
   toolDisplayName?: string;
@@ -494,6 +572,9 @@ export interface StoredMessage {
   statusType?: 'compacting' | 'compaction_complete';
   /** Provider/model routing audit metadata for assistant messages. */
   routingMeta?: RoutingMeta;
+  /** Model-declared objective outcome; the host validates it before changing objective state. */
+  objectiveOutcome?: ObjectiveOutcomeDeclaration;
+  objectiveOutcomeError?: string;
   // Info level for info messages (persisted for reload)
   infoLevel?: 'info' | 'warning' | 'error' | 'success';
   // Error display fields
@@ -534,6 +615,46 @@ export interface StoredMessage {
   authWorkspace?: string;
   // Queued: user message that is waiting to be processed (persisted for recovery)
   isQueued?: boolean;
+  hidden?: boolean;
+  /** Durable transport provenance; this never grants user authority. */
+  internalOrigin?: InternalMessageOrigin;
+  /** Durable provider-acceptance uncertainty fence. */
+  providerDispatch?: ProviderDispatchWriteAhead;
+  agentDelivery?: {
+    id: string;
+    status: 'queued' | 'processing' | 'processed' | 'failed';
+    attempts: number;
+    attachmentsSha256?: string;
+    setupFailureCount?: number;
+    lastSetupFailureClass?: string;
+    setupRetryNotBefore?: number;
+    setupRetryBlockedAt?: number;
+    setupPersistenceFencedAt?: number;
+    providerDispatchUncertainAt?: number;
+  };
+
+}
+
+/** Exact durable identity for a provider dispatch crossing the non-replay seam. */
+export interface ProviderDispatchWriteAhead {
+  schemaVersion: 1;
+  state: 'acceptance-unknown' | 'accepted' | 'retired-uncertain' | 'retired-accepted';
+  messageId: string;
+  objectiveId: string;
+  objectiveUserMessageId: string;
+  generation: number;
+  cancellationEpoch: number;
+  markedAt: number;
+  /** Durable correlated provider-runtime acknowledgement. */
+  acceptedAt?: number;
+  /** Explicit user Stop observed while this possibly-consumed prompt was
+   * fenced. Cold recovery must not turn that cancellation into new work; only
+   * a later authenticated Retry may reconcile the receipt. */
+  userStoppedAt?: number;
+  /** Cold reconciliation retained evidence that an older prompt may have been
+   * consumed, but a later authenticated human objective superseded it. */
+  retiredAt?: number;
+  retirementReason?: 'superseded-by-new-human-objective' | 'user-stop-after-provider-ack' | 'explicit-retry-reconciliation' | 'live-nonreplay-reconciliation';
 }
 
 /**
@@ -594,6 +715,7 @@ export type ErrorCode =
   | 'sdk_binary_missing'     // SDK subprocess binary not present on disk (incomplete bundle)
   | 'sdk_cwd_missing'        // SDK subprocess cwd not present on disk (stale cross-machine import)
   | 'execution_bridge_unavailable' // Local execution/tool bridge unavailable or corrupted
+  | 'objective_validation_failed' // Completion contract rejected after bounded recovery
   | 'unknown_error';
 
 /**
@@ -629,6 +751,8 @@ export type PermissionRequestType = 'bash' | 'file_write' | 'mcp_mutation' | 'ap
 export interface PermissionRequest {
   requestId: string;
   toolName: string;
+  /** Exact provider tool call blocked by this pre-execution permission gate. */
+  toolUseId?: string;
   command?: string;  // Optional: bash commands have it, MCP tools may not
   description: string;
   type?: PermissionRequestType;  // Type of permission request
@@ -647,8 +771,10 @@ export interface PermissionRequest {
   /** Approval validity window */
   approvalTtlSeconds?: number;
   /** Scoped metadata for a sensitive external-action confirmation. */
-  sensitiveActionCategory?: 'git_push' | 'deployment' | 'service_restart' | 'secret_transfer' | 'external_send' | 'external_publication' | 'payment';
+  sensitiveActionCategory?: 'git_push' | 'deployment' | 'service_restart' | 'secret_transfer' | 'external_send' | 'external_publication' | 'external_mutation' | 'payment';
   sensitiveActionTargets?: string[];
+  /** Hash binding this approval to the exact tool input without exposing it. */
+  sensitiveActionOperationHash?: string;
 }
 
 /**
@@ -688,6 +814,16 @@ export interface AgentModelProvenance {
  * Events emitted by CraftAgent during chat
  * turnId: Correlation ID from the API's message.id, groups all events in an assistant turn
  */
+/** Fixed transient activity labels; never populated with model reasoning text. */
+export const AGENT_RUNTIME_ACTIVITY = {
+  preparingContext: 'Préparation du contexte',
+  composingResponse: 'Le modèle élabore la réponse',
+} as const;
+
+export function isAgentRuntimeActivity(value: unknown): boolean {
+  return value === AGENT_RUNTIME_ACTIVITY.preparingContext || value === AGENT_RUNTIME_ACTIVITY.composingResponse;
+}
+
 export type AgentEvent =
   | { type: 'status'; message: string }
   | { type: 'info'; message: string }
@@ -695,7 +831,7 @@ export type AgentEvent =
   | { type: 'text_complete'; text: string; isIntermediate?: boolean; turnId?: string; parentToolUseId?: string; sdkMessageId?: string; modelProvenance?: AgentModelProvenance }
   | { type: 'pi_turn_anchor'; sdkMessageId: string; sdkTurnAnchor: string }
   | { type: 'tool_start'; toolName: string; toolUseId: string; input: Record<string, unknown>; intent?: string; displayName?: string; turnId?: string; parentToolUseId?: string; toolDisplayMeta?: ToolDisplayMeta }
-  | { type: 'tool_result'; toolUseId: string; toolName?: string; result: string; isError: boolean; input?: Record<string, unknown>; turnId?: string; parentToolUseId?: string; continuationRequired?: boolean }
+  | { type: 'tool_result'; toolUseId: string; toolName?: string; result: string; isError: boolean; input?: Record<string, unknown>; turnId?: string; parentToolUseId?: string; continuationRequired?: boolean; executed?: boolean; checkpoint?: ToolExecutionCheckpoint }
   | {
       type: 'permission_request';
       requestId: string;
@@ -742,5 +878,35 @@ export type AgentEvent =
  * Generate a unique message ID
  */
 export function generateMessageId(): string {
-  return `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  // These IDs also enter permission checks; never fall back to Math.random.
+  // getRandomValues keeps this shared package usable in browser and server runtimes.
+  // Core deliberately has no DOM/Node ambient types; describe only this standard API.
+  const webCrypto = (globalThis as typeof globalThis & {
+    crypto: { getRandomValues(bytes: Uint8Array): Uint8Array };
+  }).crypto;
+  const bytes = webCrypto.getRandomValues(new Uint8Array(16));
+  const randomPart = Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+  return `msg-${Date.now()}-${randomPart}`;
+}
+
+/** Persisted alongside internal messages so recovery preserves their origin. */
+export interface InternalMessageOrigin {
+  /** `source-activation` is a host-authenticated same-objective restart; its
+   * prompt text is transport and never independent user authority. */
+  kind: 'agent-message' | 'auth-result' | 'auth-retry' | 'browser-fallback' | 'source-activation' | 'spawned-session' | 'automation' | 'user-input';
+  /** Host-only durable binding for a source-activation continuation. RPC
+   * callers cannot supply InternalMessageOrigin at all. */
+  objectiveId?: string;
+  /** Most recent direct-user revision accepted into the bound objective. */
+  objectiveRevision?: string;
+  /** Source and host nonce that minted a durable source-activation restart. */
+  sourceSlug?: string;
+  sourceActivationId?: string;
+  senderSessionId?: string;
+  deliveryId?: string;
+  attachmentsSha256?: string;
+  /** Typed delivery semantics supplied by the session tool and persisted by the host. */
+  agentMessageType?: 'progress' | 'result' | 'question' | 'decision';
+  /** Host-authored semantic Task assignment, excluding execution/retry scaffolding. */
+  authenticatedTaskText?: string;
 }

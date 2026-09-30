@@ -1,3 +1,4 @@
+import type { SourceSensitivity, LegacyAutomaticModelTier } from '../config/selection-provenance.ts';
 /**
  * Workspace Types
  *
@@ -13,6 +14,7 @@
 
 import type { PermissionMode } from '../agent/mode-manager.ts';
 import type { ThinkingLevel } from '../agent/thinking-levels.ts';
+
 import type { AgentCostControlPolicy } from '../config/agent-cost-control.ts';
 import type { WorkspaceGovernanceProfile } from '../governance/workspace-governance.ts';
 import type { RemoteSupervisionProfile } from '../remote-supervision/remote-supervision.ts';
@@ -66,7 +68,28 @@ export interface WorkspaceConfig {
    */
   localMcpServers?: LocalMcpConfig;
 
-  /** Local context/recovery controls that keep agent turns within a bounded cost envelope. */
+  /**
+   * Private, opt-in automatic model selection within the connection chosen by
+   * the user/workspace. It may adapt model and reasoning, but never provider,
+   * subscription or cross-connection fallback.
+   */
+
+
+  /**
+   * Private legacy channel-fallback switch. Kept separate from automatic model
+   * selection so choosing Auto can never authorize a browser, SSH, database or
+   * API handoff. Absent stays disabled.
+   */
+  automaticToolFallbackEnabled?: boolean;
+
+  /**
+   * Optional policy-first LLM routing configuration.
+   * Robinswood fork foundation: confidentiality/allow-lists are evaluated before
+   * provider preference, cost, or performance.
+   */
+
+
+  /** Local model/context/recovery controls that keep agent turns within a bounded cost envelope. */
   costControl?: AgentCostControlPolicy;
 
   /** Workspace-scoped RBAC, memory retention, mission budgets, and hash-chained audit. */
@@ -77,6 +100,16 @@ export interface WorkspaceConfig {
 
   createdAt: number;
   updatedAt: number;
+}
+
+/** Automatic model selection is private and must be explicitly enabled per workspace. */
+
+
+/** Automatic browser/structured channel fallback is a separate explicit opt-in. */
+export function isWorkspaceAutomaticToolFallbackEnabled(
+  config: Pick<WorkspaceConfig, 'automaticToolFallbackEnabled'> | null | undefined,
+): boolean {
+  return config?.automaticToolFallbackEnabled === true;
 }
 
 /**

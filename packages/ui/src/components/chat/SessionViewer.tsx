@@ -9,15 +9,17 @@
 
 import type { ReactNode } from 'react'
 import { useMemo, useState, useCallback } from 'react'
-import type { StoredSession } from '@craft-agent/core'
+import type { StoredSession, UserInputRequest } from '@craft-agent/core'
+import { UserInputCard } from './UserInputCard'
 import { cn } from '../../lib/utils'
 import { CHAT_LAYOUT, CHAT_CLASSES } from '../../lib/layout'
 import { PlatformProvider, type PlatformActions } from '../../context'
 import { TurnCard } from './TurnCard'
 import { UserMessageBubble } from './UserMessageBubble'
 import { SystemMessage } from './SystemMessage'
+import { projectConversation } from './conversation-presentation'
+import { JourneyOutcome } from './JourneyProgress'
 import {
-  groupMessagesByTurn,
   storedToMessage,
   getAssistantTurnUiKey,
   type ActivityItem,
@@ -28,6 +30,7 @@ export type SessionViewerMode = 'interactive' | 'readonly'
 export interface SessionViewerProps {
   /** Session data to display */
   session: StoredSession
+  userInputRequests?: UserInputRequest[]
   /** View mode - 'readonly' for web viewer, 'interactive' for Electron */
   mode?: SessionViewerMode
   /** Platform-specific actions (file opening, URL handling, etc.) */
@@ -74,6 +77,7 @@ function CraftAgentLogo({ className }: { className?: string }) {
  */
 export function SessionViewer({
   session,
+  userInputRequests = [],
   mode = 'readonly',
   platformActions = {},
   className,
@@ -84,13 +88,11 @@ export function SessionViewer({
   footer,
   sessionFolderPath,
 }: SessionViewerProps) {
-  // Convert StoredMessage[] to Message[] and group into turns.
-  // Viewer is always a snapshot of a finished session, so we mark it as not processing
-  // to force the open turn (if any) to flush with the intermediate-text fallback applied.
-  const turns = useMemo(
-    () => groupMessagesByTurn(session.messages.map(storedToMessage), { isSessionProcessing: false }),
+  const presentation = useMemo(
+    () => projectConversation(session.messages.map(storedToMessage), { isProcessing: false }),
     [session.messages]
   )
+  const turns = presentation.turns
 
   // Track expanded turns (for controlled state)
   const [expandedTurns, setExpandedTurns] = useState<Set<string>>(() => {
@@ -224,6 +226,9 @@ export function SessionViewer({
 
               return null
             })}
+
+            {userInputRequests.map(request => <UserInputCard key={request.id} request={request} readOnly />)}
+            {presentation.outcome && <JourneyOutcome outcome={presentation.outcome} />}
 
             {/* Bottom branding */}
             <div className={CHAT_CLASSES.brandingContainer}>

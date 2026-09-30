@@ -30,6 +30,7 @@ export const RPC_CHANNELS = {
     KILL_SHELL: 'sessions:killShell',
     RESPOND_TO_PERMISSION: 'sessions:respondToPermission',
     RESPOND_TO_CREDENTIAL: 'sessions:respondToCredential',
+    RESPOND_TO_USER_INPUT: 'sessions:respondToUserInput',
     COMMAND: 'sessions:command',
     GET_PENDING_PLAN_EXECUTION: 'sessions:getPendingPlanExecution',
     GET_PERMISSION_MODE_STATE: 'sessions:getPermissionModeState',
@@ -315,6 +316,10 @@ export const RPC_CHANNELS = {
     SETTINGS_GET: 'workspaceSettings:get',
     SETTINGS_UPDATE: 'workspaceSettings:update',
     GOVERNANCE_UPDATE: 'workspaceSettings:governanceUpdate',
+    /** Explain a routing decision without running a provider or mutating state. */
+    ROUTING_SIMULATE: 'workspaceSettings:simulateRouting',
+    /** Analyze locally stored, ground-truth routing outcomes in read-only shadow mode. */
+    ROUTING_SHADOW_ANALYZE: 'workspaceSettings:analyzeRoutingShadow',
     REMOTE_SUPERVISION_GRANT: 'workspaceSettings:remoteSupervisionGrant',
     REMOTE_SUPERVISION_REVOKE: 'workspaceSettings:remoteSupervisionRevoke',
   },

@@ -330,35 +330,41 @@ async function validateRemoteMobileFlow() {
     await page.reload();
     await page.locator('h2:visible').filter({ hasText: /^ChatDisplay \(Mobile\)$/ }).waitFor({ timeout: 20_000 });
 
-    const modelTrigger = page.getByTestId('model-selector-trigger');
-    await modelTrigger.waitFor({ timeout: 20_000 });
-    await modelTrigger.click();
-    const modelDrawer = page.locator('[role="dialog"]');
-    await modelDrawer.waitFor({ timeout: 10_000 });
-    const connections = page.getByTestId('model-connection-option');
-    const connectionOptionCount = await connections.count();
-    await page.locator('[data-testid="model-connection-option"]:not(:disabled)').first().click();
+    const providerTrigger = page.getByTestId('provider-selector-trigger');
+    await providerTrigger.waitFor({ timeout: 20_000 });
+    const providerTriggerCount = await providerTrigger.count();
+    await providerTrigger.first().click();
+    const providerDrawer = page.locator('[role="dialog"]:visible');
+    await providerDrawer.waitFor({ timeout: 10_000 });
+    const providerOptionCount = await page.getByTestId('provider-option').count();
+    const modelSelectorTriggerCount = await page.getByTestId('model-selector-trigger').count();
     const modelOptionCount = await page.getByTestId('model-option').count();
     const thinkingOptionCount = await page.getByTestId('thinking-option').count();
-    const manualModelControlsVisible = modelOptionCount > 0 && thinkingOptionCount > 0;
+    const providerOnlyRoutingControls = providerTriggerCount > 0
+      && providerOptionCount >= 2
+      && modelSelectorTriggerCount === 0
+      && modelOptionCount === 0
+      && thinkingOptionCount === 0;
     await page.keyboard.press('Escape');
 
     await page.evaluate(() => {
-      localStorage.setItem('playground-selected-component', 'session-item-search');
-      localStorage.setItem('playground-variants-sidebar-open', 'true');
-      localStorage.setItem('playground-expanded-categories', JSON.stringify(['Session List']));
+      localStorage.setItem('playground-selected-component', 'mobile-webui-session-list');
     });
     await page.reload();
-    await page.locator('nav button:visible').filter({ hasText: /^SessionItem States$/ }).first().click();
-    await page.locator('h2:visible').filter({ hasText: /^SessionItem States$/ }).first().waitFor({ timeout: 20_000 });
-    await page.getByRole('button', { name: /Hidden Sub-agents Running/i }).click();
+    await page.locator('h2:visible').filter({ hasText: /^SessionList \(Mobile\)$/ }).first().waitFor({ timeout: 20_000 });
 
-    const subagentSummary = page.getByTestId('session-subagent-summary');
-    await subagentSummary.waitFor({ timeout: 10_000 });
-    const subagentCount = await subagentSummary.getAttribute('data-subagent-count');
-    const runningSubagentCount = await subagentSummary.getAttribute('data-running-subagent-count');
-    const summaryIsNonInteractive = await subagentSummary.locator('button, a').count() === 0;
-    const childSessionRows = await page.locator('[data-parent-session-id]').count();
+    const delegatedParentRow = page.locator('[data-session-id="mobile-s-2"]');
+    await delegatedParentRow.waitFor({ timeout: 10_000 });
+    const delegatedParentSpinnerCount = await delegatedParentRow.getByRole('status').count();
+    const activeChildRowCount = await page.locator('[data-session-id="mobile-subagent-active"]').count();
+    const grandchildRowCount = await page.locator('[data-session-id="mobile-subagent-grandchild"]').count();
+    const unrelatedRootRow = page.locator('[data-session-id="mobile-s-4"]');
+    await unrelatedRootRow.waitFor({ timeout: 10_000 });
+    const unrelatedRootSpinnerCount = await unrelatedRootRow.getByRole('status').count();
+    const delegatedActivityProjected = delegatedParentSpinnerCount === 1
+      && activeChildRowCount === 0
+      && grandchildRowCount === 0
+      && unrelatedRootSpinnerCount === 0;
     const playgroundOverflow = await page.evaluate(
       () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
     );
@@ -382,10 +388,8 @@ async function validateRemoteMobileFlow() {
     console.log(`Updater:  ${devUpdaterHidden ? 'hidden in development' : 'unexpectedly visible'}`);
     console.log(`Desktop QR: ${desktopQrVisible ? 'visible and scannable' : 'missing'}`);
     console.log(`Desktop Remote screenshot: ${desktopRemoteScreenshot}`);
-    console.log(`Model controls: ${manualModelControlsVisible ? 'manual model and reasoning' : 'missing controls'}`);
-    console.log(`Subagents: ${subagentCount} total, ${runningSubagentCount} running`);
-    console.log(`Summary:  ${summaryIsNonInteractive ? 'non-interactive' : 'unexpected interactive control'}`);
-    console.log(`Children: ${childSessionRows === 0 ? 'not directly navigable' : `${childSessionRows} exposed rows`}`);
+    console.log(`Routing controls: ${providerOnlyRoutingControls ? `${providerOptionCount} providers, no manual model/reasoning` : 'invalid'}`);
+    console.log(`Delegation: ${delegatedActivityProjected ? 'children hidden, activity projected onto parent' : 'invalid hierarchy rendering'}`);
     console.log(`Overflow: ${governanceOverflow || playgroundOverflow ? 'horizontal overflow detected' : 'none'}`);
     console.log(`Console errors: ${filteredConsoleErrors.length}`);
     console.log(`Page errors: ${filteredPageErrors.length}`);
@@ -404,12 +408,8 @@ async function validateRemoteMobileFlow() {
       && darkThemeApplied
       && devUpdaterHidden
       && desktopQrVisible
-      && connectionOptionCount >= 2
-      && manualModelControlsVisible
-      && subagentCount === '4'
-      && runningSubagentCount === '2'
-      && summaryIsNonInteractive
-      && childSessionRows === 0
+      && providerOnlyRoutingControls
+      && delegatedActivityProjected
       && !governanceOverflow
       && !playgroundOverflow
       && filteredConsoleErrors.length === 0

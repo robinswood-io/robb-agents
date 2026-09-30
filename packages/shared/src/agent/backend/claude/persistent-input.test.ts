@@ -26,6 +26,36 @@ async function take<T>(it: AsyncIterable<T>, n: number): Promise<T[]> {
 }
 
 describe('createPushableInputStream', () => {
+  it('acknowledges an item only after the consumer resumes past its yield', async () => {
+    const order: string[] = [];
+    const s = createPushableInputStream<number>();
+    s.push(1, () => { order.push('acknowledged'); });
+    s.end();
+
+    for await (const item of s.stream) {
+      order.push(`write:${item}`);
+      await Promise.resolve();
+    }
+
+    expect(order).toEqual(['write:1', 'acknowledged']);
+  });
+
+  it('does not acknowledge when the consumer transport write rejects', async () => {
+    let acknowledgements = 0;
+    const s = createPushableInputStream<number>();
+    s.push(1, () => { acknowledgements += 1; });
+    s.end();
+
+    const consumeLikeSdk = async () => {
+      for await (const _item of s.stream) {
+        await Promise.reject(new Error('transport.write rejected'));
+      }
+    };
+
+    await expect(consumeLikeSdk()).rejects.toThrow('transport.write rejected');
+    expect(acknowledgements).toBe(0);
+  });
+
   it('delivers synchronously-queued items in FIFO order', async () => {
     const s = createPushableInputStream<number>();
     s.push(1);

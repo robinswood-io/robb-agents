@@ -27,8 +27,6 @@ const NOISE_ELEMENTS = ['script', 'style', 'nav', 'footer', 'header', 'aside', '
 turndown.remove(NOISE_ELEMENTS);
 
 const MAX_DOWNLOAD_SIZE = 50 * 1024 * 1024; // 50MB
-const MAX_TEXT_LENGTH = 50_000;
-
 const MIME_TO_EXT: Record<string, string> = {
   'application/pdf': '.pdf',
   'image/png': '.png',
@@ -158,12 +156,6 @@ function result(text: string, isError = false): AgentToolResult<{ isError?: bool
   };
 }
 
-function truncate(text: string, maxLen: number = MAX_TEXT_LENGTH): string {
-  return text.length > maxLen
-    ? text.slice(0, maxLen) + '\n\n[Content truncated]'
-    : text;
-}
-
 // ============================================================
 // Content-type handlers
 // ============================================================
@@ -242,7 +234,7 @@ async function handlePdf(
         `PDF from ${url} (saved to ${savedPath})\n\nNo extractable text (likely scanned/image-based).`,
       );
     }
-    return result(`PDF content from ${url} (saved to ${savedPath}):\n\n${truncate(text)}`);
+    return result(`PDF content from ${url} (saved to ${savedPath}):\n\n${text}`);
   } catch (err) {
     return result(
       `PDF from ${url} (saved to ${savedPath})\n\nFailed to extract text: ${err instanceof Error ? err.message : String(err)}`,
@@ -289,7 +281,7 @@ function handleHtml(
     ? `Content from ${url} (asked: "${prompt}"):\n\n`
     : `Content from ${url}:\n\n`;
 
-  return result(prefix + truncate(markdown));
+  return result(prefix + markdown);
 }
 
 function handleJson(
@@ -302,14 +294,14 @@ function handleJson(
   } catch {
     formatted = raw;
   }
-  return result(`JSON from ${url}:\n\n${truncate(formatted)}`);
+  return result(`JSON from ${url}:\n\n${formatted}`);
 }
 
 function handleText(
   raw: string,
   url: string,
 ): AgentToolResult<{ isError?: boolean }> {
-  return result(`Content from ${url}:\n\n${truncate(raw)}`);
+  return result(`Content from ${url}:\n\n${raw}`);
 }
 
 // ============================================================

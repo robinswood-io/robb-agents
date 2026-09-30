@@ -4,6 +4,7 @@ import babel from '@rolldown/plugin-babel'
 import tailwindcss from '@tailwindcss/vite'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'path'
+import { resolveReactPdfWorker } from '../../scripts/pdf-worker-resolution'
 
 const configDir = import.meta.dirname
 const webBaselineTargets = ['chrome111', 'edge111', 'firefox114', 'safari16.4']
@@ -53,6 +54,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
+      'pdfjs-dist/build/pdf.worker.min.mjs?url': `${resolveReactPdfWorker()}?url`,
       // Reuse the Electron renderer's components, hooks, pages, etc.
       '@': resolve(configDir, '../electron/src/renderer'),
       // Web-specific overrides
@@ -98,7 +100,7 @@ export default defineConfig({
   },
   optimizeDeps: {
     include: ['react', 'react-dom', 'jotai'],
-    exclude: ['@craft-agent/ui'],
+    exclude: ['@craft-agent/ui', 'pdfjs-dist/build/pdf.worker.min.mjs?url'],
     rolldownOptions: {
       transform: { target: webBaselineTargets },
     },

@@ -8,10 +8,12 @@
  */
 import {
   authorizeWorkspacePath,
+  canonicalExecutionIsolationToolInput,
   validateSessionExecutionIsolation,
   type GuardDecision,
   type SessionExecutionIsolation,
 } from '../../tasks/durable-execution.ts';
+import type { MissionCapabilityLock } from '../../sessions/types.ts';
 
 export interface TaskToolIsolationInput {
   toolName: string;
@@ -19,11 +21,73 @@ export interface TaskToolIsolationInput {
   workspaceRootPath: string;
   workingDirectory?: string;
   isolation: SessionExecutionIsolation;
+  missionCapabilityLock?: MissionCapabilityLock;
 }
 
 const FILE_READ_TOOLS = new Set(['Read', 'Glob', 'Grep']);
 const FILE_WRITE_TOOLS = new Set(['Write', 'Edit', 'MultiEdit', 'NotebookEdit']);
-const LOCAL_STATE_TOOLS = new Set(['TodoWrite', 'Skill']);
+const LOCAL_STATE_TOOLS = new Set(['TodoWrite', 'Skill', 'update_plan', 'mcp__session__update_plan', 'session__update_plan']);
+
+function collectHttpUrls(value: unknown, depth = 0, seen = new Set<object>()): string[] {
+  if (depth > 8) return [];
+  if (typeof value === 'string') return /^https?:\/\//iu.test(value) ? [value] : [];
+  if (!value || typeof value !== 'object' || seen.has(value)) return [];
+  seen.add(value);
+  if (Array.isArray(value)) {
+    return value.flatMap(item => collectHttpUrls(item, depth + 1, seen));
+  }
+  return Object.values(value as Record<string, unknown>)
+    .flatMap(item => collectHttpUrls(item, depth + 1, seen));
+}
+
+function exactSpecializedConnectorDecision(ctx: TaskToolIsolationInput): GuardDecision | undefined {
+  const lock = ctx.missionCapabilityLock;
+  if (!lock || !ctx.toolName.startsWith('mcp__') || LOCAL_STATE_TOOLS.has(ctx.toolName)) return undefined;
+  const [, sourceSlug, ...toolParts] = ctx.toolName.split('__');
+  if (!sourceSlug || toolParts.length === 0) {
+    return { allowed: false, reason: 'Malformed MCP tool identity' };
+  }
+  const sourceDeclared = lock.capabilities.some(capability =>
+    capability.kind === 'source' && capability.name === sourceSlug);
+  const toolDeclared = lock.capabilities.some(capability =>
+    capability.kind === 'tool' && capability.name === ctx.toolName);
+  if (!sourceDeclared || !toolDeclared) {
+    return {
+      allowed: false,
+      reason: `MCP tool ${ctx.toolName} is not sealed with its source in the specialized capability lease`,
+    };
+  }
+  // A URL supplied by the model is a distinct network authority. The source
+  // server URL itself is already covered by the source identity.
+  for (const value of collectHttpUrls(ctx.input)) {
+    let host: string;
+    try {
+      host = new URL(value).hostname.toLowerCase();
+    } catch {
+      return { allowed: false, reason: 'Connector URL is invalid' };
+    }
+    const allowedHosts = ctx.isolation.policy.allowedHosts.map(candidate => candidate.toLowerCase());
+    if (!allowedHosts.includes(host)) {
+      return { allowed: false, reason: `Connector host ${host} is outside the sealed network allow-list` };
+    }
+  }
+  return { allowed: true };
+}
+
+function exactPreflightedReadToolDecision(ctx: TaskToolIsolationInput): GuardDecision | undefined {
+  if (!ctx.toolName.startsWith('mcp__')) return undefined;
+  const allowed = ctx.isolation.policy.allowedReadToolInvocations ?? [];
+  if (allowed.length === 0) return undefined;
+  const inputJson = canonicalExecutionIsolationToolInput(ctx.input);
+  if (!inputJson) {
+    return { allowed: false, reason: `Tool ${ctx.toolName} input cannot be canonically matched` };
+  }
+  return allowed.some(invocation => (
+    invocation.toolName === ctx.toolName && invocation.inputJson === inputJson
+  ))
+    ? { allowed: true }
+    : { allowed: false, reason: `Tool ${ctx.toolName} input is outside the exact Mission read allow-list` };
+}
 
 function requiredString(
   input: Record<string, unknown>,
@@ -104,6 +168,18 @@ export function enforceTaskToolIsolation(ctx: TaskToolIsolationInput): GuardDeci
       reason: 'External mutation must execute through the host capability broker, not a session tool',
     };
   }
+
+  const preflightedReadToolDecision = exactPreflightedReadToolDecision(ctx);
+  if (preflightedReadToolDecision && !preflightedReadToolDecision.allowed) {
+    return preflightedReadToolDecision;
+  }
+
+  // Specialized profiles must satisfy both their sealed source/tool lease and
+  // the narrower exact-input allow-list produced by Mission preflight.
+  const connectorDecision = exactSpecializedConnectorDecision(ctx);
+  if (connectorDecision && !connectorDecision.allowed) return connectorDecision;
+  if (preflightedReadToolDecision) return preflightedReadToolDecision;
+  if (connectorDecision) return connectorDecision;
 
   if (FILE_READ_TOOLS.has(ctx.toolName)) {
     return authorizeReadTarget(ctx);

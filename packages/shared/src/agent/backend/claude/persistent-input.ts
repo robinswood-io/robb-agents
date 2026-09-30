@@ -44,8 +44,14 @@ export function resolveKeepBackgroundTasksAlive(
 export interface PushableInputStream<T> {
   /** The async-iterable to hand to `query({ prompt })`. Drain with a single consumer. */
   readonly stream: AsyncIterable<T>;
-  /** Enqueue an item; wakes a waiting consumer. Throws if already ended. */
-  push(item: T): void;
+  /**
+   * Enqueue an item; wakes a waiting consumer. Throws if already ended.
+   * `onConsumed` runs only when the consumer resumes after the yielded item.
+   * A `for await` consumer that awaits transport.write(item) before requesting
+   * the next item therefore turns this into a post-write CLI-runtime
+   * acknowledgement. It deliberately does not claim remote HTTP delivery.
+   */
+  push(item: T, onConsumed?: () => void): void;
   /** Signal end-of-input; the consumer's loop returns after draining the queue. */
   end(): void;
   /** Whether `end()` has been called. */
@@ -53,7 +59,7 @@ export interface PushableInputStream<T> {
 }
 
 export function createPushableInputStream<T>(): PushableInputStream<T> {
-  const queue: T[] = [];
+  const queue: Array<{ item: T; onConsumed?: () => void }> = [];
   let wake: (() => void) | null = null;
   let ended = false;
 
@@ -68,7 +74,9 @@ export function createPushableInputStream<T>(): PushableInputStream<T> {
       // Drain everything currently queued before considering suspension, so a
       // burst of synchronous pushes is delivered in order without gaps.
       while (queue.length > 0) {
-        yield queue.shift() as T;
+        const queued = queue.shift()!;
+        yield queued.item;
+        queued.onConsumed?.();
       }
       if (ended) return;
       // Nothing queued and not ended → suspend until push()/end() wakes us.
@@ -80,11 +88,11 @@ export function createPushableInputStream<T>(): PushableInputStream<T> {
 
   return {
     stream: generator(),
-    push(item: T): void {
+    push(item: T, onConsumed?: () => void): void {
       if (ended) {
         throw new Error('PushableInputStream: cannot push() after end()');
       }
-      queue.push(item);
+      queue.push({ item, onConsumed });
       wakeConsumer();
     },
     end(): void {

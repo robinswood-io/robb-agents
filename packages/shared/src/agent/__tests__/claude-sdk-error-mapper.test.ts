@@ -57,6 +57,34 @@ describe('mapClaudeSdkAssistantError', () => {
     expect(error.message.toLowerCase()).toContain('internet connection');
   });
 
+  it('maps unknown with unexpected error message to provider_error', () => {
+    const error = mapClaudeSdkAssistantError('unknown', {
+      ...baseContext,
+      actualError: {
+        errorType: 'api_error',
+        message: 'An unexpected error has occurred.',
+      },
+    });
+
+    expect(error.code).toBe('provider_error');
+    expect(error.title).toBe('AI Provider Issue');
+  });
+
+  it('maps unknown with captured unexpected error to provider_error', () => {
+    const error = mapClaudeSdkAssistantError('unknown', {
+      ...baseContext,
+      capturedApiError: {
+        status: 500,
+        statusText: 'Internal Server Error',
+        message: 'An unexpected error occurred.',
+        timestamp: Date.now(),
+      },
+    });
+
+    expect(error.code).toBe('provider_error');
+    expect(error.title).toBe('AI Provider Issue');
+  });
+
   describe('invalid_request — 1M context specialization', () => {
     it('maps invalid_request with context-1m hint to 1M-context-specific error', () => {
       const error = mapClaudeSdkAssistantError('invalid_request', {

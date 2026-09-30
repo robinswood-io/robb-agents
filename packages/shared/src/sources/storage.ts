@@ -531,6 +531,7 @@ export async function createSource(
     enabled: input.enabled ?? true,
     provider: input.provider,
     type: input.type,
+    routingSensitivity: input.routingSensitivity,
     createdAt: now,
     updatedAt: now,
   };

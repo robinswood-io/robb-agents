@@ -9,6 +9,12 @@ scripts_dir=${CRAFT_SCRIPTS:-"$bin_dir/../scripts"}
 
 if [ -n "${CRAFT_UV:-}" ]; then
   uv_bin=$CRAFT_UV
+  # Main uses the command name when no platform bundle is available.
+  # Resolve it through PATH before testing executability; never eval it.
+  case "$uv_bin" in
+    */*) ;;
+    *) uv_bin=$(command -v "$uv_bin" || true) ;;
+  esac
 else
   case "$(uname -s)" in
     Darwin) platform=darwin ;;

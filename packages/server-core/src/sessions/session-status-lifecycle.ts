@@ -28,12 +28,12 @@ function findStatus(
   )?.id
 }
 
-function isClosed(config: WorkspaceStatusConfig, statusId: string | undefined): boolean {
+export function isClosedSessionStatus(config: WorkspaceStatusConfig, statusId: string | undefined): boolean {
   return !!statusId && config.statuses.find(status => status.id === statusId)?.category === 'closed'
 }
 
 function canLifecycleManage(config: WorkspaceStatusConfig, currentStatus: string | undefined): boolean {
-  if (isClosed(config, currentStatus)) return false
+  if (isClosedSessionStatus(config, currentStatus)) return false
   if (!currentStatus) return true
   const status = config.statuses.find(candidate => candidate.id === currentStatus)
   if (!status) return true

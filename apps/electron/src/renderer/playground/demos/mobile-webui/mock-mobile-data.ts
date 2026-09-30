@@ -76,8 +76,8 @@ export const MOCK_SESSION_STATUSES: SessionStatus[] = [
 const now = () => Date.now()
 
 /**
- * 10 sessions spread across today / yesterday / older, exercising flagged,
- * unread, archived and various statuses.
+ * 12 sessions spread across today / yesterday / older, exercising flagged,
+ * unread, archived, delegated descendants and various statuses.
  */
 export const MOCK_SESSIONS: SessionMeta[] = [
   {
@@ -98,6 +98,25 @@ export const MOCK_SESSIONS: SessionMeta[] = [
     lastMessageAt: now() - 35 * ONE_MINUTE,
     sessionStatus: 'todo',
     labels: ['feature', 'design'],
+    isProcessing: false,
+  },
+  {
+    id: 'mobile-subagent-active',
+    name: 'Validate compact toolbar behavior',
+    workspaceId: MOBILE_WORKSPACE_ID,
+    parentSessionId: 'mobile-s-2',
+    lastMessageAt: now() - 34 * ONE_MINUTE,
+    sessionStatus: 'in-progress',
+    isProcessing: true,
+  },
+  {
+    id: 'mobile-subagent-grandchild',
+    name: 'Inspect the narrowest breakpoint',
+    workspaceId: MOBILE_WORKSPACE_ID,
+    parentSessionId: 'mobile-subagent-active',
+    lastMessageAt: now() - 33 * ONE_MINUTE,
+    sessionStatus: 'todo',
+    isProcessing: true,
   },
   {
     id: 'mobile-s-3',
@@ -115,6 +134,7 @@ export const MOCK_SESSIONS: SessionMeta[] = [
     lastMessageAt: now() - 5 * ONE_HOUR,
     sessionStatus: 'in-progress',
     labels: ['feature'],
+    isProcessing: false,
   },
   {
     id: 'mobile-s-5',

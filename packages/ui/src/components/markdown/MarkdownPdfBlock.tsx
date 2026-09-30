@@ -36,6 +36,8 @@ import { PDFPreviewOverlay } from '../overlay/PDFPreviewOverlay'
 import { ItemNavigator } from '../overlay/ItemNavigator'
 import { usePlatform } from '../../context/PlatformContext'
 import { useTranslation } from 'react-i18next'
+import { resolveMarkdownLinkTarget } from './link-target'
+import { parseMarkdownPreviewSpec, normalizePreviewItems } from './markdown-preview-helpers'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
 import 'react-pdf/dist/Page/TextLayer.css'
 
@@ -87,26 +89,15 @@ export function MarkdownPdfBlock({ code, className, onCreateRegionAnnotation: _o
 
   // Parse the JSON spec — supports single src or items array
   const spec = React.useMemo<PdfPreviewSpec | null>(() => {
-    try {
-      const raw = JSON.parse(code)
-      if (raw.items && Array.isArray(raw.items) && raw.items.length > 0) {
-        return raw as PdfPreviewSpec
-      }
-      if (raw.src && typeof raw.src === 'string') {
-        return raw as PdfPreviewSpec
-      }
-      return null
-    } catch {
-      return null
-    }
+    return parseMarkdownPreviewSpec(code)
   }, [code])
 
   // Normalize to items array (backward compat)
   const items = React.useMemo<PreviewItem[]>(() => {
-    if (!spec) return []
-    if (spec.items && spec.items.length > 0) return spec.items
-    if (spec.src) return [{ src: spec.src }]
-    return []
+    return normalizePreviewItems(spec).map(item => {
+      const target = resolveMarkdownLinkTarget(item.src)
+      return { ...item, src: target.kind === 'file' ? target.path : item.src }
+    })
   }, [spec])
 
   const [activeIndex, setActiveIndex] = React.useState(0)
@@ -249,4 +240,3 @@ export function MarkdownPdfBlock({ code, className, onCreateRegionAnnotation: _o
     </PdfBlockErrorBoundary>
   )
 }
-

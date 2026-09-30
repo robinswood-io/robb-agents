@@ -1,8 +1,15 @@
 // Export ClaudeAgent (renamed from CraftAgent) and backward-compatible aliases
 export * from './claude-agent.ts';
 export * from './conversation-summary.ts';
+export { parseCompactCommand, type CompactCommand } from './compact-command.ts';
 export * from './autonomy-decision.ts';
+export * from './yolo-policy.ts';
 export * from './failure-taxonomy.ts';
+export {
+  assertContextualGmailBrowserMutationTargetAllowed,
+  isContextualGmailBrowserMutationGuardEnabled,
+} from './browser-tool-runtime.ts';
+export { isClearlyReadOnlyToolAction } from './core/sensitive-external-action.ts';
 
 // Export PiAgent for direct use
 export { PiAgent, PiBackend } from './pi-agent.ts';
@@ -124,6 +131,8 @@ export {
   BaseAgent,
   // Mini agent configuration (centralized for all backends)
   type MiniAgentConfig,
+  type SpawnSessionRequest,
+  type SpawnSessionResult,
   MINI_AGENT_TOOLS,
   MINI_AGENT_MCP_KEYS,
 } from './base-agent.ts';
@@ -140,6 +149,7 @@ export {
   type AgentBackend,
   type AgentProvider,
   type BackendConfig,
+  type TerminalReconciliationPolicy,
   type PermissionCallback,
   type PlanCallback,
   type AuthCallback,
@@ -150,7 +160,12 @@ export {
   type SdkMcpServerConfig as BackendMcpServerConfig,
   // Enums
   AbortReason as BackendAbortReason,
+  ToolAdmissionRecoveryError,
+  ProviderDispatchRejectedError,
 } from './backend/index.ts';
+
+// Persisted tool receipts share this classifier with backend event adapters.
+export { isToolResultError } from './tool-matching.ts';
 
 // Export core utilities for shared agent logic
 export * from './core/index.ts';

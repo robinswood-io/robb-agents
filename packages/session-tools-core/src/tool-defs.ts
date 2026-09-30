@@ -1,3 +1,4 @@
+import { SpawnSessionSchema } from './spawn-session-schema.ts';
 /**
  * Session Tool Definitions — Single Source of Truth
  *
@@ -12,11 +13,11 @@
  */
 
 import { z } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
 import type { SessionToolContext } from './context.ts';
 import type { ToolResult } from './types.ts';
 
 // Handlers
+import { handleUpdatePlan, UpdatePlanSchema } from './handlers/update-plan.ts';
 import { handleSubmitPlan } from './handlers/submit-plan.ts';
 import { handleConfigValidate } from './handlers/config-validate.ts';
 import { handleSkillValidate } from './handlers/skill-validate.ts';
@@ -36,6 +37,13 @@ import { handleRenderTemplate } from './handlers/render-template.ts';
 import { handleSendDeveloperFeedback } from './handlers/send-developer-feedback.ts';
 import { handleSetSessionLabels } from './handlers/set-session-labels.ts';
 import { handleSetSessionStatus } from './handlers/set-session-status.ts';
+import { handleSetCompletionCriteria } from './handlers/set-completion-criteria.ts';
+import { handleRequestUserInput } from './handlers/request-user-input.ts';
+import { RequestUserInputSchema } from './request-user-input-schema.ts';
+export { RequestUserInputSchema } from './request-user-input-schema.ts';
+import { SetCompletionCriteriaSchema, SET_COMPLETION_CRITERIA_FORMAT_HELP, getCompletionCriteriaJsonSchema } from './completion-criteria-schema.ts';
+export { SetCompletionCriteriaSchema } from './completion-criteria-schema.ts';
+import { handleProjectLearning } from './handlers/project-learning.ts';
 import { handleGetSessionInfo } from './handlers/get-session-info.ts';
 import { handleListSessions } from './handlers/list-sessions.ts';
 import { handleWaitSessions } from './handlers/wait-sessions.ts';
@@ -129,9 +137,18 @@ export const UpdatePreferencesSchema = z.object({
   includeCoAuthoredBy: z.boolean().optional().describe("Whether to include 'Co-Authored-By: Craft Agent' trailer on git commits. Defaults to true."),
 });
 
+const TransformFilterScalar = z.union([z.string(), z.number(), z.boolean(), z.null()]);
+
 export const TransformDataSchema = z.object({
-  language: z.enum(['python3', 'node', 'bun']).describe('Script runtime to use'),
-  script: z.string().describe('Transform script source code. Receives input file paths as command-line args (sys.argv[1:] or process.argv.slice(2)), last arg is the output file path.'),
+  language: z.enum(['python3', 'node', 'bun']).optional().describe('Script runtime; omit when using recipe'),
+  script: z.string().optional().describe('Transform script source code. Receives input file paths as command-line args, last arg is the output path. Omit when using recipe.'),
+  recipe: z.object({
+    name: z.literal('json-records-v1'),
+    recordsPath: z.array(z.string()).max(16).optional().describe('JSON object keys leading to the records array; omit for a top-level array'),
+    select: z.array(z.string()).min(1).max(64).optional().describe('Exact fields to project; missing fields fail the file'),
+    filter: z.object({ field: z.string(), equals: TransformFilterScalar }).optional(),
+    aggregate: z.object({ groupBy: z.string().optional(), sums: z.array(z.string()).max(64).optional() }).optional().describe('Return group/count/sums instead of projected records; every sum field must be numeric'),
+  }).optional().describe('Built-in deterministic JSON batch recipe; omit language/script. Reuses only intact results for unchanged inputs and recipe.'),
   inputFiles: z.array(z.string()).describe('Input file paths relative to session dir (e.g., "long_responses/stripe_txns.txt")'),
   outputFile: z.string().describe('Output file name relative to session data/ dir (e.g., "transactions.json")'),
 });
@@ -162,23 +179,7 @@ export const BrowserToolSchema = z.object({
   ]).describe('Browser command as a string (e.g., "click @e1") or array (e.g., ["evaluate", "var x = 1; x + 2"]). Array mode preserves semicolons and whitespace in arguments.'),
 });
 
-export const SpawnSessionSchema = z.object({
-  help: z.boolean().optional().describe('If true, returns available connections, models, and sources instead of creating a session'),
-  prompt: z.string().optional().describe('Instructions for the new session (required when not in help mode)'),
-  name: z.string().optional().describe('Session name'),
-  llmConnection: z.string().optional().describe('Connection slug (e.g., "anthropic-api", "codex")'),
-  model: z.string().optional().describe('Model ID override'),
-  enabledSourceSlugs: z.array(z.string()).optional().describe('Source slugs to enable in the new session'),
-  permissionMode: z.enum(['safe', 'ask', 'allow-all']).optional().describe('Permission mode for the new session'),
-  thinkingLevel: z.enum(['off', 'low', 'medium', 'high', 'xhigh', 'max']).optional()
-    .describe('Reasoning level for the new session. Silently ignored on non-reasoning models (e.g. gpt-4o, gemini-2.5-flash). Omit to inherit the spawning session’s selection.'),
-  labels: z.array(z.string()).optional().describe('Labels for the new session'),
-  workingDirectory: z.string().optional().describe('Working directory for the new session'),
-  attachments: z.array(z.object({
-    path: z.string().describe('Absolute file path on disk'),
-    name: z.string().optional().describe('Display name (defaults to file basename)'),
-  })).optional().describe('Files to include with the prompt'),
-});
+export { SpawnSessionSchema } from './spawn-session-schema.ts';
 
 // Session self-management tools
 export const SetSessionLabelsSchema = z.object({
@@ -195,6 +196,16 @@ export const GetSessionInfoSchema = z.object({
   sessionId: z.string().optional().describe('Session ID to query. Omit to get info about the current session.'),
 });
 
+export const ProjectLearningSchema = z.object({
+  action: z.enum(['propose', 'validate', 'revoke', 'list']),
+  id: z.string().max(256).optional(),
+  content: z.string().max(4000).optional(),
+  tags: z.array(z.string().max(64)).max(8).optional(),
+  evidenceIds: z.array(z.string().max(256)).min(1).max(16).optional(),
+  reviewToolUseId: z.string().max(256).optional(),
+  ttlDays: z.number().min(1).max(365).optional(),
+});
+
 export const ListSessionsSchema = z.object({
   status: z.string().optional().describe('Filter by status'),
   label: z.string().optional().describe('Filter by label'),
@@ -205,8 +216,12 @@ export const ListSessionsSchema = z.object({
 });
 
 export const WaitSessionsSchema = z.object({
+  _hostTerminalReconciliationCapability: z.string().min(32).max(128).optional()
+    .describe('Host-reserved invocation capability. Never provide this field yourself.'),
   sessionIds: z.array(z.string()).min(1).max(8).describe('Target session IDs (1-8). The current session is not allowed.'),
-  timeoutMs: z.number().int().min(0).max(60_000).optional().describe('Maximum event wait in milliseconds (default 30000, max 60000).'),
+  timeoutMs: z.number().int().min(0).max(60_000).optional().describe('Maximum event wait in milliseconds (default 60000, max 60000).'),
+  afterCursors: z.record(z.string().min(1).max(128), z.string().regex(/^[a-f0-9]{64}$/)).refine(value => Object.keys(value).length <= 8, 'At most 8 cursors').optional().describe('Last returned cursor for each target. Preserve across compaction to avoid receiving an old completion again.'),
+  mode: z.enum(['first', 'all']).optional().describe('first returns on the first new terminal event (default); all waits until every target is terminal or needs attention.'),
 });
 
 export const ListBackgroundTasksSchema = z.object({
@@ -345,6 +360,8 @@ The user will see a secure input UI with appropriate fields based on the auth mo
 
   transform_data: `Transform data files using a script and write structured output for datatable/spreadsheet blocks, or extract HTML content for html-preview blocks.
 
+For JSON record extraction, projection, equality filtering, counts or grouped sums, prefer the built-in recipe instead of generating a script: \`recipe: {name: "json-records-v1", recordsPath: ["data"], select: ["id", "amount"]}\`. Omit language and script. Use \`aggregate: {groupBy: "status", sums: ["amount"]}\` for grouped counts/sums. Process up to 32 input files in one call. The output is a per-file report with rows, source hashes and errors. Retry the same call after fixing failed inputs: successful unchanged files are reused after checking input and output hashes. This does not fetch data; refresh source files first when current external evidence is required.
+
 Use this tool when you need to transform large datasets (20+ rows) into structured JSON for display, or extract/decode content for rich previews. Write a transform script that reads the input file and produces an output file, then reference it via \`"src"\` in your datatable/spreadsheet/html-preview/pdf-preview/image-preview block.
 
 **Workflow:**
@@ -440,20 +457,25 @@ Examples:
 - Parallel processing: call multiple times in one message - all run simultaneously
 - Context isolation: process content without polluting main context
 
+call_llm uses this session's connection and may inherit its exact model. It can
+review response content, but it is never independent-review evidence. Use a
+separate role:"reviewer" session and collect it with wait_sessions when the
+host contract requires an independent review.
+
 Put text/content directly in the 'prompt' parameter. Do NOT pass inline text via attachments.
 Only use 'attachments' for existing file paths on disk - the tool loads file content automatically.
 For large files (>2000 lines), use {path, startLine, endLine} to select a portion.`,
 
-  spawn_session: `Create a new session that runs independently with its own prompt, connection, model, and sources.
+  spawn_session: `Create a new session that runs independently with its own prompt and sources.
 
 Use this to delegate tasks to parallel sessions — research, analysis, drafts, or any work that benefits from separate context.
 
-Call with help=true first to discover available connections, models, and sources.
+The input schema is sufficient for normal delegation. Use help=true only when you need to inspect optional sources or role guidance.
 When spawning, the 'prompt' parameter is required.
 
-Optional overrides: \`model\`, \`llmConnection\`, \`permissionMode\`, \`thinkingLevel\`, \`enabledSourceSlugs\`, \`labels\`, \`workingDirectory\`. Omitted fields inherit from the spawning session, with workspace defaults only for unconfigured values. Change the connection, model, or reasoning level only when the user or an explicit task specification requests that override.
+For an independent review, set \`role:"reviewer"\` explicitly. Reviewers are read-only, cannot delegate, and receive the exact parent review contract. Omitted role defaults to worker; labels are not a substitute for selecting the role.
 
-\`thinkingLevel\` is silently ignored on non-reasoning models (e.g. gpt-4o, gemini-2.5-flash) — the SDK drops the reasoning param rather than erroring.
+Optional overrides: \`role\`, \`permissionMode\`, \`enabledSourceSlugs\`, \`labels\`, \`workingDirectory\`. The provider always remains the parent's provider. A manually selected parent model remains authoritative; otherwise the host selects the child model and reasoning from the assignment difficulty.
 
 The spawned session appears in the session list and runs fire-and-forget.
 Only use 'attachments' for existing file paths on disk — the tool reads them automatically.`,
@@ -484,9 +506,9 @@ Call with no arguments to introspect your own session state.`,
 Use filters (status, label, search) to narrow results instead of fetching everything. Default limit is 20 sessions.
 Use get_session_info for full details on a specific session (list-then-detail pattern).`,
 
-  wait_sessions: `Wait for the first of up to 8 delegated sessions to finish a turn, using the host completion event instead of repeated list_sessions polling.
+  wait_sessions: `Wait for the first or all of up to 8 delegated sessions to finish a turn, using host completion events instead of repeated list_sessions polling.
 
-Returns immediately for a session that has already completed a turn, or after timeoutMs (default 30000, max 60000). The result includes a compact state snapshot for every target. Never include the current session ID.`,
+mode defaults to first. all composes successive cursor-aware waits and returns only when every target is terminal or needs attention, or when timeoutMs expires. Returns a newly completed turn or a request for user input, or a compact snapshot after timeoutMs (default 60000, max 60000). An unchanged completed sibling cannot interrupt the wait for other targets. Preserve the returned cursors in afterCursors across compaction or restart. Final text is sent once per cursor; finalMessageId remains available. timeoutMs: 0 is an explicit snapshot. Never include the current session ID. A snapshot or truncated final text is not proof of success. A diagnostic is unverified failure context, never a completion receipt or permission. Read its findings and existing tool receipts before requesting another reviewer; a replacement review still needs a concrete unresolved reason. Diagnostic text and gaps are delivered once per cursor.`,
 
   list_background_tasks: `List background agents/tasks tracked for a session (running, finished, or orphaned).
 
@@ -563,6 +585,7 @@ export type SessionToolDef = RegistrySessionToolDef | BackendSessionToolDef;
 // ============================================================
 
 export const SESSION_TOOL_DEFS: SessionToolDef[] = [
+  { name: 'update_plan', description: 'Publish an optional live checklist when it materially helps track work with several dependent steps. Send the full current state with pending, in_progress, and completed items, but update it only when scope or step status changes materially, not after every tool call. Skip it for simple tasks, direct answers, and bounded reviews. Include a concise explanation of observed progress. Mark completed only after doing the work; leave unfinished steps pending. This does not request approval and is not evidence of a verified outcome.', inputSchema: UpdatePlanSchema, executionMode: 'registry', safeMode: 'allow', readOnly: true, idempotent: true, handler: handleUpdatePlan },
   { name: 'SubmitPlan', description: TOOL_DESCRIPTIONS.SubmitPlan, inputSchema: SubmitPlanSchema, executionMode: 'registry', safeMode: 'allow', handler: handleSubmitPlan },
   { name: 'config_validate', description: TOOL_DESCRIPTIONS.config_validate, inputSchema: ConfigValidateSchema, executionMode: 'registry', safeMode: 'allow', readOnly: true, idempotent: true, parallelSafe: true, handler: handleConfigValidate },
   { name: 'skill_validate', description: TOOL_DESCRIPTIONS.skill_validate, inputSchema: SkillValidateSchema, executionMode: 'registry', safeMode: 'allow', readOnly: true, idempotent: true, parallelSafe: true, handler: handleSkillValidate },
@@ -584,6 +607,9 @@ export const SESSION_TOOL_DEFS: SessionToolDef[] = [
   // Single CLI-like tool that handles all browser actions via command string.
   { name: 'browser_tool', description: TOOL_DESCRIPTIONS.browser_tool, inputSchema: BrowserToolSchema, executionMode: 'backend', safeMode: 'allow', handler: null },
   // Session self-management tools (registry — use context callbacks to reach SessionManager)
+  { name: 'request_user_input', description: 'Ask 1–3 concise questions when the user\'s answer would meaningfully refine the current work. Each question may offer up to 8 choices (multiSelect enables multiple choices); a free-text answer is always available. Use stable unique question and option IDs. This tool returns pending once the host registers the questions for display, without waiting for answers. Continue independent work while the user decides. Do not assume an answer, repeat the pending questions, or perform work that depends on an unanswered choice. An access, key, endpoint, or vendor response already established as pending from a named third party is not a missing user preference: finish independent safe work and report the exact external dependency instead of asking the user whether to wait. A substantive business alternative, such as replacing the blocked provider or integration, remains a valid short choice. You may end the turn while awaiting answers; do not claim a terminal objective result while input is pending. The response will be delivered into this same conversation and objective. This tool is for clarification, not permission to perform external actions or access credentials; it grants no permissions.', inputSchema: RequestUserInputSchema, executionMode: 'registry', safeMode: 'allow', handler: handleRequestUserInput },
+  { name: 'project_learning', description: 'Propose, list, validate or revoke a sourced project learning. Proposals are excluded from memory retrieval. Validate from a different session after independent replay and a call_llm JSON review receipt containing proposalId, contentSha256, sourceEvidenceSha256, verdict:PASS, findings:[], replayEvidenceIds:[actual toolUseIds]. Never store secrets or permissions; knowledge is historical data. Review is bound to the exact proposal and actual successful replay results.', inputSchema: ProjectLearningSchema, executionMode: 'registry', safeMode: 'block', handler: handleProjectLearning },
+  { name: 'set_completion_criteria', description: 'Register immutable observable success criteria for the current objective, preferably before acting. Each criteria item requires id, description, toolName, input and checks:[{path,equals}]. Selectors support only simple properties and nonnegative indexes: $.foo, $[0], or foo.0. Wildcards, filters, slices and expressions are rejected. Result checks may use $text for exact whole-output equality, ignoring only one final LF/CRLF terminator. Criteria using native or namespaced Bash, shell, exec_command or ssh_execute tools must use a read-only inspection, a named validate/verify/check/test script, a test/check command, or curl GET/HEAD; inline interpreter/eval/stdin programs and output-only commands are rejected before the immutable contract is stored. Equivalent selector syntax does not change the target, expected values or registered contract. Every criterion must cite a matching successful observation in the final outcome receipt. Prefer its toolUseId or messageId; an exact tool-name alias is accepted only when the host resolves it to one unique matching observation. Register known checks together. Repeating equivalent registration is idempotent. Never replace or re-register an already reviewed contract merely to cite alternate receipts or read-only observations; that changes its independent-review binding without changing the user requirement. Only an exact current negative observation permits the explicit next-version correction described below; the host archives its predecessor and changes the review binding. A matching successful observation from the current objective, or from its latest authenticated amendment, may be reused even when it preceded registration; a later relevant target mutation invalidates it. Adding checks strengthens the contract and changes the independent-review binding; this tool never authorizes actions. ' + SET_COMPLETION_CRITERIA_FORMAT_HELP, inputSchema: SetCompletionCriteriaSchema, executionMode: 'registry', safeMode: 'allow', handler: handleSetCompletionCriteria },
   { name: 'set_session_labels', description: TOOL_DESCRIPTIONS.set_session_labels, inputSchema: SetSessionLabelsSchema, executionMode: 'registry', safeMode: 'block', handler: handleSetSessionLabels },
   { name: 'set_session_status', description: TOOL_DESCRIPTIONS.set_session_status, inputSchema: SetSessionStatusSchema, executionMode: 'registry', safeMode: 'block', handler: handleSetSessionStatus },
   { name: 'get_session_info', description: TOOL_DESCRIPTIONS.get_session_info, inputSchema: GetSessionInfoSchema, executionMode: 'registry', safeMode: 'allow', readOnly: true, idempotent: true, parallelSafe: true, handler: handleGetSessionInfo },
@@ -734,9 +760,23 @@ export function getToolDefsAsJsonSchema(opts?: {
   const defs = getSessionToolDefs({ includeDeveloperFeedback: opts?.includeDeveloperFeedback });
 
   return defs.map(def => {
-    // Explicit `as any` avoids TS2589 ("type instantiation is excessively deep")
-    // caused by zodToJsonSchema inferring deep generic chains from union schemas.
-    const jsonSchema = zodToJsonSchema(def.inputSchema as any, { $refStrategy: 'none' }) as Record<string, unknown>;
+    // Every registry schema is Zod 4. The Zod 3 converter silently emitted {}
+    // for 28 tools, hiding required inputs, enums and the reviewer role from Pi.
+    const jsonSchema = (def.name === 'set_completion_criteria'
+      ? getCompletionCriteriaJsonSchema()
+      : z.toJSONSchema(def.inputSchema, {
+        io: 'input',
+        override: ({ zodSchema, jsonSchema }) => {
+          if (zodSchema !== TransformFilterScalar) return;
+          // Pi tries/coerces anyOf alternatives in order. A typed JSON filter
+          // must retain true/1/null rather than matching a different string.
+          delete jsonSchema.anyOf;
+          (jsonSchema as Record<string, unknown>).type = ['string', 'number', 'boolean', 'null'];
+        },
+      })) as Record<string, unknown>;
+    if (jsonSchema.type !== 'object' || !jsonSchema.properties || typeof jsonSchema.properties !== 'object') {
+      throw new Error(`Session tool ${def.name} did not produce an object input schema`);
+    }
     // Strip metadata not needed by MCP/Pi consumers
     delete jsonSchema.$schema;
     delete jsonSchema.additionalProperties;

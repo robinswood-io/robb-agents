@@ -48,7 +48,9 @@ export function isPathWithinDirectoryForCreation(targetPath: string, baseDir: st
   const realBase = realpathIfExists(resolvedBase);
 
   if (existsSync(resolvedTarget)) {
-    return isPathWithinDirectory(resolvedTarget, realBase);
+    // Keep lexical paths in the same namespace (e.g. /var on macOS); the
+    // existing-file helper canonicalizes both sides for the symlink check.
+    return isPathWithinDirectory(resolvedTarget, resolvedBase);
   }
 
   let current = dirname(resolvedTarget);

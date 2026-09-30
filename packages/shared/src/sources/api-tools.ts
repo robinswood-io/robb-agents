@@ -13,6 +13,7 @@ import { guardLargeResult } from '../utils/large-response.ts';
 import { MAX_DOWNLOAD_SIZE, formatBytes } from '../utils/binary-detection.ts';
 import type { ApiCredential, BasicAuthCredential } from './credential-manager.ts';
 import { isMultiHeaderCredential } from './credential-manager.ts';
+import { createHash } from 'node:crypto';
 
 // Re-export for convenience
 export type { ApiCredential, BasicAuthCredential } from './credential-manager.ts';
@@ -81,8 +82,12 @@ function isTokenGetter(
   return typeof cred === 'function';
 }
 
-/** Summarize callback type — typically agent.getSummarizeCallback() */
-export type SummarizeCallback = (prompt: string) => Promise<string | null>;
+/** Summarize callback type — typically agent.runMiniCompletion.bind(agent) */
+export type SummarizeCallback = ((prompt: string, request?: {
+  /** Digest of the actual request/authentication boundary; never a credential. */
+  requestIdentity: string;
+  allowReuse: boolean;
+}) => Promise<string | null>) & { onSourceMutation?: () => void };
 
 
 /**
@@ -285,6 +290,7 @@ export function createApiTool(
       const { path, method, params, _intent } = args;
 
       try {
+        if (method !== 'GET') summarize?.onSourceMutation?.();
         // Resolve credential — if a getter, call it to get a fresh credential.
         // A null result (vault has nothing for this source) is normalized to
         // an empty string; buildHeaders / buildUrl already treat that as
@@ -357,7 +363,12 @@ export function createApiTool(
             toolName: `api_${config.name}`,
             input: params,
             intent: _intent,
-            summarize,
+            summarize: summarize ? prompt => summarize(prompt, {
+              requestIdentity: createHash('sha256').update(JSON.stringify([
+                config.baseUrl, config.auth, config.defaultHeaders, resolvedCredential, method, path, params,
+              ])).digest('hex'),
+              allowReuse: method === 'GET',
+            }) : undefined,
           });
           if (guarded) {
             return { content: [{ type: 'text' as const, text: guarded }] };
@@ -372,6 +383,8 @@ export function createApiTool(
           content: [{ type: 'text' as const, text: `Request failed: ${message}` }],
           isError: true,
         };
+      } finally {
+        if (method !== 'GET') summarize?.onSourceMutation?.();
       }
     }
   );

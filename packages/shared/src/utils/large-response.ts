@@ -7,8 +7,8 @@
  * Callers orchestrate via their agent's selected-model query callback for summarization.
  */
 
-import { existsSync, mkdirSync, writeFileSync } from 'fs';
-import { createHash } from 'crypto';
+import { existsSync, linkSync, mkdirSync, unlinkSync, writeFileSync } from 'fs';
+import { createHash, randomUUID } from 'crypto';
 import { join, relative } from 'path';
 import { debug } from './debug.ts';
 import {
@@ -167,16 +167,38 @@ export function saveLargeResponse(
     mkdirSync(responsesDir, { recursive: true });
 
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 23);
+    // Keep enough room for the timestamp, UUID and label on filesystems with a
+    // 255-byte filename limit. The UUID prevents same-millisecond calls from
+    // targeting the same artifact.
+    const safeTool = (sanitizeFilename(toolName || 'tool_result') || 'tool_result').slice(0, 120);
     const safeLabel = label.replace(/[^a-zA-Z0-9]/g, '_').slice(0, 30);
-    const filename = `${timestamp}_${toolName}_${safeLabel}.txt`;
-    const absolutePath = join(responsesDir, filename);
+    for (let attempt = 0; attempt < 8; attempt++) {
+      const uniqueId = randomUUID();
+      const filename = `${timestamp}_${uniqueId}_${safeTool}_${safeLabel}.txt`;
+      const absolutePath = join(responsesDir, filename);
+      // Write a complete inode first, then publish it with an exclusive hard
+      // link. Unlike rename(), link() fails if the destination exists and can
+      // never overwrite a prior response. Both paths are in the same folder,
+      // so publication is atomic for readers.
+      const temporaryPath = join(responsesDir, `.large-response-${uniqueId}.partial`);
+      let temporaryCreated = false;
+      try {
+        writeFileSync(temporaryPath, content, { encoding: 'utf-8', flag: 'wx' });
+        temporaryCreated = true;
+        linkSync(temporaryPath, absolutePath);
 
-    writeFileSync(absolutePath, content, 'utf-8');
-
-    const relativePath = relative(sessionPath, absolutePath);
-
-    debug('large-response', `Saved ${content.length} bytes to ${relativePath}`);
-    return { absolutePath, relativePath };
+        const relativePath = relative(sessionPath, absolutePath);
+        debug('large-response', `Saved ${content.length} bytes to ${relativePath}`);
+        return { absolutePath, relativePath };
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
+      } finally {
+        if (temporaryCreated) {
+          try { unlinkSync(temporaryPath); } catch { /* already absent */ }
+        }
+      }
+    }
+    throw new Error('Failed to allocate a unique large-response artifact path');
   } catch (error) {
     debug('large-response', `Failed to save: ${error instanceof Error ? error.message : String(error)}`);
     return null;
@@ -205,8 +227,39 @@ interface SavedAsset {
 
 interface JsonAssetExtractionResult {
   originalJsonPath: string;
+  originalJsonSha256: string;
   linkedJsonPath: string;
   assets: SavedAsset[];
+  /** Bounded non-body fields retained for exact Gmail acceptance checks. */
+  resultMetadataJson?: string;
+}
+
+function gmailMessageResultMetadata(parsed: unknown, toolName: string): string | undefined {
+  const normalizedToolName = toolName.startsWith('functions.')
+    ? toolName.slice('functions.'.length)
+    : toolName;
+  if (normalizedToolName !== 'mcp__google-contacts__gmail_get_message'
+    || !parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return undefined;
+  const source = parsed as Record<string, unknown>;
+  const metadata: Record<string, unknown> = {};
+  for (const key of ['id', 'threadId', 'subject', 'from', 'to', 'cc', 'bcc', 'date', 'messageIdHeader']) {
+    const descriptor = Object.getOwnPropertyDescriptor(source, key);
+    if (descriptor && 'value' in descriptor && typeof descriptor.value === 'string'
+      && descriptor.value.length <= 2_048) metadata[key] = descriptor.value;
+  }
+  const labels = Object.getOwnPropertyDescriptor(source, 'labelIds');
+  if (labels && 'value' in labels && Array.isArray(labels.value) && labels.value.length <= 32
+    && labels.value.every(value => typeof value === 'string' && value.length <= 128)) {
+    metadata.labelIds = [...labels.value];
+  }
+  return Object.keys(metadata).length ? JSON.stringify(metadata) : undefined;
+}
+
+/** Recompute the exact bounded Gmail header projection from the saved source
+ * JSON. Callers must authenticate the source artifact before trusting it. */
+export function extractGmailMessageResultMetadataJson(text: string, toolName: string): string | undefined {
+  if (!text || text.length > 8_000_000) return undefined;
+  try { return gmailMessageResultMetadata(JSON.parse(text), toolName); } catch { return undefined; }
 }
 
 function saveJsonArtifact(
@@ -219,15 +272,35 @@ function saveJsonArtifact(
   try {
     mkdirSync(responsesDir, { recursive: true });
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 23);
-    const safeTool = sanitizeFilename(toolName || 'tool_result');
-    const filename = `${timestamp}_${safeTool}_${suffix}.json`;
-    const absolutePath = join(responsesDir, filename);
-    writeFileSync(absolutePath, content, 'utf-8');
-    return {
-      absolutePath,
-      relativePath: relative(sessionPath, absolutePath),
-      filename,
-    };
+    const safeTool = (sanitizeFilename(toolName || 'tool_result') || 'tool_result').slice(0, 120);
+    const safeSuffix = (sanitizeFilename(suffix || 'artifact') || 'artifact').slice(0, 40);
+    for (let attempt = 0; attempt < 8; attempt++) {
+      const uniqueId = randomUUID();
+      const filename = `${timestamp}_${uniqueId}_${safeTool}_${safeSuffix}.json`;
+      const absolutePath = join(responsesDir, filename);
+      const temporaryPath = join(responsesDir, `.json-artifact-${uniqueId}.partial`);
+      let temporaryCreated = false;
+      try {
+        // Publish a complete inode without ever replacing an earlier result.
+        // The UUID also keeps original/linked evidence stable when several
+        // connector responses finish during the same millisecond.
+        writeFileSync(temporaryPath, content, { encoding: 'utf-8', flag: 'wx' });
+        temporaryCreated = true;
+        linkSync(temporaryPath, absolutePath);
+        return {
+          absolutePath,
+          relativePath: relative(sessionPath, absolutePath),
+          filename,
+        };
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
+      } finally {
+        if (temporaryCreated) {
+          try { unlinkSync(temporaryPath); } catch { /* already absent */ }
+        }
+      }
+    }
+    throw new Error('Failed to allocate a unique structured JSON artifact path');
   } catch (error) {
     debug('large-response', `Failed to save JSON artifact: ${error instanceof Error ? error.message : String(error)}`);
     return null;
@@ -361,11 +434,14 @@ function extractAssetsFromStructuredJson(
   const linkedArtifact = saveJsonArtifact(sessionPath, toolName, 'linked', JSON.stringify(linked, null, 2));
 
   if (!originalArtifact || !linkedArtifact) return null;
+  const resultMetadataJson = gmailMessageResultMetadata(parsed, toolName);
 
   return {
     originalJsonPath: originalArtifact.absolutePath,
+    originalJsonSha256: createHash('sha256').update(text).digest('hex'),
     linkedJsonPath: linkedArtifact.absolutePath,
     assets,
+    ...(resultMetadataJson ? { resultMetadataJson } : {}),
   };
 }
 
@@ -377,6 +453,8 @@ function formatStructuredMediaExtractionMessage(result: JsonAssetExtractionResul
   return [
     '[Structured media assets extracted and saved]',
     '',
+    ...(result.resultMetadataJson ? [`Result metadata JSON: ${result.resultMetadataJson}`, ''] : []),
+    `Original JSON SHA256: ${result.originalJsonSha256}`,
     `Original JSON: ${result.originalJsonPath}`,
     `Linked JSON: ${result.linkedJsonPath}`,
     `Assets extracted: ${result.assets.length}`,
@@ -472,6 +550,61 @@ export interface FormatOptions {
   summary?: string;
   /** Fallback preview when no summary (first N chars of response) */
   preview?: string;
+  /** Deterministic bounded scalars retained from an exact top-level JSON result. */
+  resultMetadataJson?: string;
+  /** Digest of the complete persisted response, used to authenticate re-reads. */
+  fullDataSha256: string;
+}
+
+const LARGE_RESULT_METADATA_KEYS = new Set([
+  'code', 'exitCode', 'ok', 'success', 'status', 'resultCount',
+]);
+
+/** Preserve only small deterministic transport/business scalars. The full
+ * result stays on disk; arbitrary nested fields and stdout/stderr never return
+ * to model context through this metadata channel. */
+export function extractLargeResultMetadataJson(
+  text: string,
+  context?: Pick<SummarizationContext, 'toolName' | 'input'>,
+): string | undefined {
+  if (!text || text.length > 2_000_000) return undefined;
+  try {
+    let jsonText = text;
+    const normalizedToolName = context?.toolName.startsWith('functions.')
+      ? context.toolName.slice('functions.'.length)
+      : context?.toolName;
+    if (/^(?:WebFetch|web_fetch)$/i.test(normalizedToolName ?? '')) {
+      const wrapped = /^JSON from https?:\/\/[^\r\n]+:\r?\n\r?\n([\s\S]+)$/.exec(text.replace(/\r?\n$/, ''));
+      if (!wrapped) return undefined;
+      jsonText = wrapped[1]!;
+    }
+    const parsed: unknown = JSON.parse(jsonText);
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return undefined;
+    const metadata: Record<string, string | number | boolean> = {};
+    for (const key of LARGE_RESULT_METADATA_KEYS) {
+      const descriptor = Object.getOwnPropertyDescriptor(parsed, key);
+      if (!descriptor || !('value' in descriptor)) continue;
+      const value = descriptor.value;
+      if ((key === 'code' || key === 'exitCode')
+        && typeof value === 'number' && Number.isInteger(value) && Math.abs(value) <= 1_000_000) {
+        metadata[key] = value;
+      } else if ((key === 'ok' || key === 'success') && typeof value === 'boolean') {
+        metadata[key] = value;
+      } else if (key === 'resultCount'
+        && typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= 1_000_000_000) {
+        metadata[key] = value;
+      } else if (key === 'status' && ((typeof value === 'number' && Number.isInteger(value)
+        && value >= 0 && value <= 999) || (typeof value === 'string'
+        && /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$/.test(value)))) {
+        metadata[key] = value;
+      }
+    }
+    if (!Object.keys(metadata).length) return undefined;
+    const serialized = JSON.stringify(metadata);
+    return serialized.length <= 512 ? serialized : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 /**
@@ -479,23 +612,25 @@ export interface FormatOptions {
  * Includes file references for both Read/Grep and transform_data access.
  */
 export function formatLargeResponseMessage(opts: FormatOptions): string {
-  const { estimatedTokens, relativePath, absolutePath, summary, preview } = opts;
+  const { estimatedTokens, relativePath, absolutePath, summary, preview, resultMetadataJson, fullDataSha256 } = opts;
 
   const fileRef = [
     `Full data saved to: ${absolutePath}`,
     `- Use Read/Grep to access specific content`,
     `- Use transform_data with inputFiles: ["${relativePath}"] for data analysis`,
   ].join('\n');
+  const metadata = resultMetadataJson ? `\n\nResult metadata JSON: ${resultMetadataJson}` : '';
+  const authenticatedFileRef = `${metadata}\n\nFull data SHA256: ${fullDataSha256}\n\n${fileRef}`;
 
   if (summary) {
-    return `[Large response (~${estimatedTokens} tokens) summarized]\n\n${fileRef}\n\n${summary}`;
+    return `[Large response (~${estimatedTokens} tokens) summarized]${authenticatedFileRef}\n\n${summary}`;
   }
 
   if (preview) {
-    return `[Response too large (~${estimatedTokens} tokens)]\n\n${fileRef}\n\nPreview:\n${preview}...`;
+    return `[Response too large (~${estimatedTokens} tokens)]${authenticatedFileRef}\n\nPreview:\n${preview}...`;
   }
 
-  return `[Response too large (~${estimatedTokens} tokens)]\n\n${fileRef}`;
+  return `[Response too large (~${estimatedTokens} tokens)]${authenticatedFileRef}`;
 }
 
 // ============================================================
@@ -668,6 +803,8 @@ export async function handleLargeResponse(
     absolutePath,
     summary,
     preview: summary ? undefined : text.substring(0, 2000),
+    resultMetadataJson: extractLargeResultMetadataJson(text, context),
+    fullDataSha256: createHash('sha256').update(text).digest('hex'),
   });
 
   return { message, filePath: absolutePath, wasSummarized: !!summary };

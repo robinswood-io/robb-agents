@@ -22,8 +22,13 @@ import {
 import { ApiSourcePoolClient } from './api-source-pool-client.ts';
 import type { SdkMcpServerConfig } from '../agent/backend/types.ts';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { JsonSchemaValidator } from '@modelcontextprotocol/server';
+import { AjvJsonSchemaValidator } from '@modelcontextprotocol/server/validators/ajv';
 import { isLocalMcpEnabled } from '../workspaces/storage.ts';
 import { guardLargeResult } from '../utils/large-response.ts';
+import { collectionSummaryCache, createCollectionSummaryCallback, type CollectionCacheScope } from './collection-cache.ts';
+import { classifyToolNameMutationSemantics } from '../agent/core/tool-name-semantics.ts';
+import { createHash } from 'node:crypto';
 import {
   saveBinaryResponse,
   detectExtensionFromMagic,
@@ -47,8 +52,21 @@ export interface ProxyToolDef {
   name: string;
   description: string;
   inputSchema: Record<string, unknown>;
+  outputSchema?: Record<string, unknown>;
   readOnly?: boolean;
   idempotent?: boolean;
+  destructive?: boolean;
+  openWorld?: boolean;
+}
+
+/** Capability hints reported by an MCP server. They are untrusted by default. */
+export interface ProxyToolCapabilities {
+  readOnly?: boolean;
+  idempotent?: boolean;
+  destructive?: boolean;
+  openWorld?: boolean;
+  /** Only host-owned manifests may set this. Remote MCP annotations never do. */
+  trusted?: boolean;
 }
 
 /**
@@ -57,12 +75,40 @@ export interface ProxyToolDef {
 export interface McpToolResult {
   content: string;
   isError: boolean;
+  /** Typed MCP output retained for hosts that support structured tool results. */
+  structuredContent?: Record<string, unknown>;
   /** Source slug for error attribution (set on failure) */
   sourceSlug?: string;
 }
 
+/**
+ * Host-owned fence evaluated immediately before a source client is invoked.
+ * The callback must not mutate source/authentication state; governed runtimes
+ * use it to attest the exact live credential generation consumed by the call.
+ */
+export type BeforeSourceToolExecution = (input: {
+  sourceSlug: string;
+  toolName: string;
+  /** Exact arguments that will be sent after this final host-owned fence. */
+  args: Readonly<Record<string, unknown>>;
+  /** Untrusted remote hints; authorization must never rely on them alone. */
+  capabilities?: ProxyToolCapabilities;
+}) => Promise<void> | void;
+
 const LLM_TOOL_NAME_PATTERN = /^[A-Za-z0-9_-]{1,128}$/;
 const LLM_TOOL_NAME_MAX_LENGTH = 128;
+
+function normalizeInputSchema(inputSchema: Record<string, unknown> | undefined): Record<string, unknown> {
+  // AJV consumers used by some backends reject unknown meta-schema URIs.
+  const { $schema, ...cleanSchema } = inputSchema || {};
+  return Object.keys(cleanSchema).length > 0 ? cleanSchema : { type: 'object', properties: {} };
+}
+
+function normalizeStructuredContent(value: unknown): Record<string, unknown> | undefined {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : undefined;
+}
 
 function sanitizeToolNamePart(value: string): string {
   const sanitized = value.replace(/[^A-Za-z0-9_-]/g, '_');
@@ -184,6 +230,17 @@ export class McpClientPool {
 
   /** Summarize callback for large response handling */
   private summarizeCallback?: (prompt: string) => Promise<string | null>;
+  private collectionCacheScope?: CollectionCacheScope | (() => CollectionCacheScope | undefined);
+  private beforeSourceToolExecution?: BeforeSourceToolExecution;
+  private readonly inputSchemaValidator = new AjvJsonSchemaValidator();
+  private readonly toolInputValidators = new Map<string, {
+    schemaKey: string;
+    validate: JsonSchemaValidator<Record<string, unknown>>;
+  }>();
+  private readonly toolOutputValidators = new Map<string, {
+    schemaKey: string;
+    validate: JsonSchemaValidator<Record<string, unknown>>;
+  }>();
 
   /** Called after sync() connects/disconnects sources, so clients can be notified */
   onToolsChanged?: () => void;
@@ -199,7 +256,26 @@ export class McpClientPool {
    * Typically called after agent creation: pool.setSummarizeCallback(agent.getSummarizeCallback())
    */
   setSummarizeCallback(fn: (prompt: string) => Promise<string | null>): void {
-    this.summarizeCallback = fn;
+    this.summarizeCallback = createCollectionSummaryCallback(() => this.resolveCollectionCacheScope(), fn);
+  }
+
+  setCollectionCacheScope(scope?: CollectionCacheScope | (() => CollectionCacheScope | undefined)): void {
+    this.collectionCacheScope = typeof scope === 'function' ? scope : scope ? { ...scope } : undefined;
+  }
+
+  setBeforeSourceToolExecution(fence?: BeforeSourceToolExecution): void {
+    this.beforeSourceToolExecution = fence;
+  }
+
+  private resolveCollectionCacheScope(): CollectionCacheScope | undefined {
+    const scope = typeof this.collectionCacheScope === 'function' ? this.collectionCacheScope() : this.collectionCacheScope;
+    if (!scope) return undefined;
+    // Actual active endpoint/credential configuration participates in the
+    // boundary, but only its digest enters the cache key; never log it.
+    const permissionRevision = createHash('sha256').update(JSON.stringify([
+      scope.permissionRevision, [...this.activeConfigs].sort(([left], [right]) => left.localeCompare(right)),
+    ])).digest('hex');
+    return { ...scope, permissionRevision };
   }
 
   private debug(msg: string): void {
@@ -268,7 +344,11 @@ export class McpClientPool {
 
     // Remove proxy tool entries for this slug
     for (const [proxyName, info] of this.proxyTools) {
-      if (info.slug === slug) this.proxyTools.delete(proxyName);
+      if (info.slug === slug) {
+        this.proxyTools.delete(proxyName);
+        this.toolInputValidators.delete(proxyName);
+        this.toolOutputValidators.delete(proxyName);
+      }
     }
     this.sourceToolProxyNames.delete(slug);
     this.toolCache.delete(slug);
@@ -287,6 +367,8 @@ export class McpClientPool {
     this.proxyTools.clear();
     this.sourceToolProxyNames.clear();
     this.activeConfigs.clear();
+    this.toolInputValidators.clear();
+    this.toolOutputValidators.clear();
     this.debug('Disconnected all MCP clients');
   }
 
@@ -432,21 +514,38 @@ export class McpClientPool {
       for (const tool of tools) {
         const proxyName = this.getProxyToolName(slug, tool.name);
         if (!proxyName) continue;
-        // Strip $schema — AJV (Pi agent) fails on unregistered meta-schema URIs.
-        // Same pattern as getToolDefsAsJsonSchema() in tool-defs.ts.
-        const { $schema, ...cleanSchema } = (tool.inputSchema as Record<string, unknown>) || {};
-        const inputSchema = Object.keys(cleanSchema).length > 0 ? cleanSchema : { type: 'object', properties: {} };
+        const inputSchema = normalizeInputSchema(tool.inputSchema);
         defs.push({
           name: proxyName,
           description: withOutputBudgetGuidance(tool.description || `Tool from ${slug}`, tool.name, inputSchema),
           inputSchema,
-          readOnly: tool.annotations?.readOnlyHint === true,
-          idempotent: tool.annotations?.idempotentHint === true,
+          ...(tool.outputSchema ? { outputSchema: tool.outputSchema } : {}),
+          readOnly: tool.annotations?.readOnlyHint,
+          idempotent: tool.annotations?.idempotentHint,
+          destructive: tool.annotations?.destructiveHint,
+          openWorld: tool.annotations?.openWorldHint,
         });
       }
     }
 
     return defs;
+  }
+
+  /** Resolve capability hints for the exact proxy name used by agent hooks. */
+  getProxyToolCapabilities(proxyName: string): ProxyToolCapabilities | undefined {
+    for (const [slug, tools] of this.toolCache.entries()) {
+      for (const tool of tools) {
+        if (this.getProxyToolName(slug, tool.name) !== proxyName) continue;
+        return {
+          readOnly: tool.annotations?.readOnlyHint,
+          idempotent: tool.annotations?.idempotentHint,
+          destructive: tool.annotations?.destructiveHint,
+          openWorld: tool.annotations?.openWorldHint,
+          trusted: false,
+        };
+      }
+    }
+    return undefined;
   }
 
   // ============================================================
@@ -477,11 +576,93 @@ export class McpClientPool {
       };
     }
 
+    const sourceTool = this.toolCache.get(slug)?.find(tool => tool.name === originalName);
+    if (!sourceTool) {
+      return {
+        content: `MCP tool "${originalName}" is no longer advertised by source "${slug}".`,
+        isError: true,
+        sourceSlug: slug,
+      };
+    }
+
+    const inputSchema = normalizeInputSchema(sourceTool.inputSchema);
     try {
+      const schemaKey = JSON.stringify(inputSchema);
+      let cachedValidator = this.toolInputValidators.get(proxyName);
+      if (!cachedValidator || cachedValidator.schemaKey !== schemaKey) {
+        cachedValidator = {
+          schemaKey,
+          validate: this.inputSchemaValidator.getValidator<Record<string, unknown>>(inputSchema),
+        };
+        this.toolInputValidators.set(proxyName, cachedValidator);
+      }
+
+      const validation = cachedValidator.validate(args);
+      if (!validation.valid) {
+        return {
+          content: `Invalid arguments for MCP tool "${originalName}". The call was blocked before execution.`,
+          isError: true,
+          sourceSlug: slug,
+        };
+      }
+    } catch (error) {
+      this.debug(`Invalid input schema for ${proxyName}: ${error instanceof Error ? error.message : String(error)}`);
+      return {
+        content: `MCP tool "${originalName}" has an invalid input schema and was not executed.`,
+        isError: true,
+        sourceSlug: slug,
+      };
+    }
+
+    const possibleMutation = classifyToolNameMutationSemantics(originalName) !== 'neutral'
+      || (typeof args.method === 'string' && !['GET', 'HEAD'].includes(args.method.toUpperCase()));
+    const mutationWorkspace = possibleMutation ? this.resolveCollectionCacheScope()?.workspace : undefined;
+    try {
+      // This is deliberately the final awaited host fence before dispatching to
+      // either a remote MCP transport or an in-process API source client.
+      await this.beforeSourceToolExecution?.({
+        sourceSlug: slug,
+        toolName: originalName,
+        args,
+        capabilities: this.getProxyToolCapabilities(proxyName),
+      });
+      // Names only invalidate; they never authorize a cached source call. Sources
+      // are always read afresh, including tools with remote readOnly annotations.
+      if (mutationWorkspace) collectionSummaryCache.invalidateWorkspace(mutationWorkspace);
       const result = await client.callTool(originalName, args) as {
         content?: Array<{ type: string; text?: unknown; data?: string; mimeType?: string }>;
         isError?: boolean;
+        structuredContent?: unknown;
       };
+      const structuredContent = normalizeStructuredContent(result.structuredContent);
+      if (structuredContent && sourceTool.outputSchema) {
+        try {
+          const outputSchema = normalizeInputSchema(sourceTool.outputSchema);
+          const schemaKey = JSON.stringify(outputSchema);
+          let cachedValidator = this.toolOutputValidators.get(proxyName);
+          if (!cachedValidator || cachedValidator.schemaKey !== schemaKey) {
+            cachedValidator = {
+              schemaKey,
+              validate: this.inputSchemaValidator.getValidator<Record<string, unknown>>(outputSchema),
+            };
+            this.toolOutputValidators.set(proxyName, cachedValidator);
+          }
+          if (!cachedValidator.validate(structuredContent).valid) {
+            return {
+              content: `MCP tool "${originalName}" returned structured output that does not match its declared schema.`,
+              isError: true,
+              sourceSlug: slug,
+            };
+          }
+        } catch (error) {
+          this.debug(`Invalid output schema for ${proxyName}: ${error instanceof Error ? error.message : String(error)}`);
+          return {
+            content: `MCP tool "${originalName}" has an invalid output schema. Its structured result was rejected.`,
+            isError: true,
+            sourceSlug: slug,
+          };
+        }
+      }
 
       const contentBlocks = result.content || [];
       const parts: string[] = [];
@@ -532,6 +713,7 @@ export class McpClientPool {
       return {
         content: text,
         isError: !!result.isError,
+        ...(structuredContent ? { structuredContent } : {}),
       };
     } catch (err) {
       return {
@@ -539,6 +721,8 @@ export class McpClientPool {
         isError: true,
         sourceSlug: slug,
       };
+    } finally {
+      if (mutationWorkspace) collectionSummaryCache.invalidateWorkspace(mutationWorkspace);
     }
   }
 

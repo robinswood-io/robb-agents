@@ -11,6 +11,7 @@
 
 import type { ErrorCode } from '@craft-agent/core/types';
 import { getProviderMetadata } from '../config/provider-metadata.ts';
+import { InvalidWorkingDirectoryError } from './spawn-helpers.ts';
 
 export type { ErrorCode };
 
@@ -61,6 +62,12 @@ export interface AgentError {
  * Error definitions with user-friendly messages and recovery actions
  */
 const ERROR_DEFINITIONS: Record<ErrorCode, Omit<AgentError, 'code' | 'originalError' | 'details'>> = {
+  objective_validation_failed: {
+    title: 'Completion could not be verified',
+    message: 'The completion contract could not be validated. Completed work and tool receipts were preserved; inspect the validation gaps before retrying.',
+    actions: [],
+    canRetry: true,
+  },
   invalid_api_key: {
     title: 'Invalid API Key',
     message: 'Your API key was rejected. It may be invalid or expired.',
@@ -414,6 +421,17 @@ export function parseError(
   error: unknown,
   providerContext?: { providerType?: string; piAuthProvider?: string },
 ): AgentError {
+  if (error instanceof InvalidWorkingDirectoryError) {
+    return {
+      code: 'sdk_cwd_missing',
+      title: 'Working directory unavailable on this host',
+      message: error.message,
+      actions: [],
+      canRetry: false,
+      originalError: error.message,
+    };
+  }
+
   // Extract all error messages including nested causes and subprocess output
   const fullErrorText = extractErrorMessages(error);
   const errorMessage = error instanceof Error ? error.message : String(error);
@@ -472,6 +490,8 @@ export function parseError(
     lowerMessage.includes('internal server error') ||
     lowerMessage.includes('service unavailable') ||
     lowerMessage.includes('server_error') ||
+    lowerMessage.includes('an unexpected error has occurred') ||
+    lowerMessage.includes('an unexpected error occurred') ||
     (
       lowerMessage.includes('an error occurred while processing your request') &&
       lowerMessage.includes('request id')

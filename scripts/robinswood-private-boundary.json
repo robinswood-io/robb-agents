@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "privateRepository": "github.com/robinswood-io/robb-agents-private",
+  "privateRefPatterns": [
+    "refs/heads/robinswood/private-*",
+    "refs/heads/codex/private-*",
+    "refs/heads/codex/quiet-multi-agent-ui-*",
+    "refs/heads/codex/fix-message-blockers-*",
+    "refs/tags/*-private-*"
+  ],
+  "privateCommitRoots": [
+    "a299ee1546374504591d03a317f8b8631fdd4500",
+    "3633f7e5f0e94a79d595edf982fc472327ff3416"
+  ]
+}

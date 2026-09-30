@@ -127,12 +127,15 @@ function parseProcessTable(output: string): ProcessTableEntry[] {
     .trim()
     .split('\n')
     .map((line): ProcessTableEntry | undefined => {
-      const match = line.trim().match(/^(\d+)\s+(\d+)\s*(.*)$/);
+      const row = line.trim();
+      // Match only the numeric prefix. Capturing the command after \s* caused
+      // overlapping repetitions and quadratic backtracking on hostile input.
+      const match = row.match(/^(\d+)\s+(\d+)/);
       if (!match) return undefined;
       const pid = Number(match[1]);
       const ppid = Number(match[2]);
       if (!Number.isInteger(pid) || !Number.isInteger(ppid)) return undefined;
-      return { pid, ppid, command: match[3] ?? '' };
+      return { pid, ppid, command: row.slice(match[0].length).trimStart() };
     })
     .filter((entry): entry is ProcessTableEntry => Boolean(entry));
 }

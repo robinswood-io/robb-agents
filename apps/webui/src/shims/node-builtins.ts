@@ -15,6 +15,7 @@ export const writeFileSync = () => { throw new Error('writeFileSync not availabl
 export const openSync = () => { throw new Error('openSync not available in browser') }
 export const fsyncSync = () => { throw new Error('fsyncSync not available in browser') }
 export const closeSync = () => { throw new Error('closeSync not available in browser') }
+export const linkSync = () => { throw new Error('linkSync not available in browser') }
 export const existsSync = () => false
 export const statSync = () => { throw new Error('statSync not available in browser') }
 export const unlinkSync = () => {}

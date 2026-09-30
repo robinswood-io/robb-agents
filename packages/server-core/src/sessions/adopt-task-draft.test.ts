@@ -6,7 +6,7 @@ import { SessionManager } from './SessionManager.ts'
 // four guard branches that must NEVER promote — they're the correctness guarantees the external
 // review asked for (no silent capture of an unrelated/non-draft session).
 describe('adoptGeneratedTaskOrchestrator guards', () => {
-  function seed(sm: SessionManager, id: string, fields: { taskDraft?: boolean; taskSlug?: string }) {
+  function seed(sm: SessionManager, id: string, fields: { taskDraft?: boolean; taskSlug?: string; missionRouteLockSha256?: string; llmConnection?: string }) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ;(sm as any).sessions.set(id, { id, ...fields })
   }
@@ -36,6 +36,26 @@ describe('adoptGeneratedTaskOrchestrator guards', () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect((sm as any).sessions.get('orch').taskSlug).toBe('slug-a')
   })
+
+  it('refuses atomically to adopt a specialized Mission session', async () => {
+    const sm = new SessionManager()
+    seed(sm, 'specialist', {
+      taskDraft: true,
+      llmConnection: 'sealed-connection',
+      missionRouteLockSha256: 'a'.repeat(64),
+    })
+
+    expect(await sm.adoptGeneratedTaskOrchestrator('specialist', 'slug-a', {
+      llmConnection: 'replacement-connection',
+    })).toBe(false)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const specialized = (sm as any).sessions.get('specialist')
+    expect(specialized).toMatchObject({
+      taskDraft: true,
+      llmConnection: 'sealed-connection',
+    })
+    expect(specialized.taskSlug).toBeUndefined()
+  })
 })
 
 // bindExistingSessionToTask attaches an authored spec onto a *visible* (non-draft) tile — the
@@ -43,7 +63,7 @@ describe('adoptGeneratedTaskOrchestrator guards', () => {
 // hijack a session already owned by a different task. The success path persists/flushes (needs
 // storage wiring), so we pin the three early-return guards that run before any I/O.
 describe('bindExistingSessionToTask guards', () => {
-  function seed(sm: SessionManager, id: string, fields: { taskDraft?: boolean; taskSlug?: string }) {
+  function seed(sm: SessionManager, id: string, fields: { taskDraft?: boolean; taskSlug?: string; missionRouteLockSha256?: string; llmConnection?: string }) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ;(sm as any).sessions.set(id, { id, ...fields })
   }
@@ -67,6 +87,24 @@ describe('bindExistingSessionToTask guards', () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect((sm as any).sessions.get('orch').taskSlug).toBe('slug-a')
   })
+
+  it('refuses atomically to attach a specialized Mission session', async () => {
+    const sm = new SessionManager()
+    seed(sm, 'specialist', {
+      llmConnection: 'sealed-connection',
+      missionRouteLockSha256: 'a'.repeat(64),
+    })
+
+    expect(await sm.bindExistingSessionToTask('specialist', 'slug-a', {
+      llmConnection: 'replacement-connection',
+    })).toBe(false)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const specialized = (sm as any).sessions.get('specialist')
+    expect(specialized).toMatchObject({
+      llmConnection: 'sealed-connection',
+    })
+    expect(specialized.taskSlug).toBeUndefined()
+  })
 })
 
 // PR #415 follow-up: adopt/bind must route model/cwd/permission through the canonical live-update
@@ -85,7 +123,10 @@ describe('adopt/bind route changed fields through canonical live-update mutators
     any.persistSession = () => {}
     any.flushSession = async () => {}
     any.setMetadataWriteGuard = () => {}
-    any.updateSessionModel = async (_id: string, _ws: string, m: string) => { calls.model.push(m) }
+    // adopt/bind already own a session-operation lease, so they call the
+    // canonical model-update implementation directly instead of nesting the
+    // public lease wrapper. Stub that internal seam in this partial harness.
+    any.performUpdateSessionModel = async (_managed: unknown, m: string) => { calls.model.push(m) }
     any.updateWorkingDirectory = (_id: string, p: string) => { calls.cwd.push(p) }
     any.setSessionPermissionMode = (_id: string, m: string) => { calls.mode.push(m) }
     any.sessions.set('s', {
@@ -148,5 +189,28 @@ describe('adopt/bind route changed fields through canonical live-update mutators
     expect(calls.model).toEqual([])
     expect(calls.cwd).toEqual([])
     expect(calls.mode).toEqual([])
+  })
+
+  it('records explicit task route provenance even when values already match', async () => {
+    for (const kind of ['adopt', 'bind'] as const) {
+      const { sm } = harness({
+        taskDraft: kind === 'adopt',
+        model: 'same-model', modelRoutePinned: false,
+        llmConnection: 'same-conn', connectionRoutePinned: false,
+      })
+      const result = kind === 'adopt'
+        ? await sm.adoptGeneratedTaskOrchestrator('s', 'slug', {
+            model: 'same-model', llmConnection: 'same-conn',
+          })
+        : await sm.bindExistingSessionToTask('s', 'slug', {
+            model: 'same-model', llmConnection: 'same-conn',
+          })
+      expect(result).toBe(true)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      expect((sm as any).sessions.get('s')).toMatchObject({
+        modelRoutePinned: true,
+        connectionRoutePinned: true,
+      })
+    }
   })
 })

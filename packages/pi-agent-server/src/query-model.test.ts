@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'bun:test';
-import { activateEphemeralQueryModel, resolveQueryModel } from './query-model.ts';
+import { activateEphemeralQueryModel, resolveEphemeralQueryThinkingLevel, resolveQueryModel } from './query-model.ts';
 
 describe('queryLlm manual model selection', () => {
+
+
   it('inherits exactly the selected model or preserves an explicit override', () => {
     expect(resolveQueryModel(undefined, 'pi/selected')).toBe('pi/selected');
     expect(resolveQueryModel('pi/override', 'pi/selected')).toBe('pi/override');
@@ -33,5 +35,13 @@ describe('queryLlm manual model selection', () => {
     expect(disposeCalls).toBe(1);
     expect(promptCalls).toBe(0);
   });
+
+  it('inherits reasoning for generic queries but permits an explicit private utility override', () => {
+    expect(resolveEphemeralQueryThinkingLevel(undefined, 'xhigh', 'medium')).toBe('xhigh');
+    expect(resolveEphemeralQueryThinkingLevel(undefined, undefined, 'medium')).toBe('medium');
+    expect(resolveEphemeralQueryThinkingLevel('low', 'xhigh', 'medium')).toBe('low');
+  });
+
+
 
 });

@@ -2,7 +2,7 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { randomUUID } from 'node:crypto'
 import { dirname } from 'path'
 import { RPC_CHANNELS } from '@craft-agent/shared/protocol'
-import { getPreferencesPath, getSessionDraft, setSessionDraft, deleteSessionDraft, getAllSessionDrafts, getWorkspaceByNameOrId, getDefaultThinkingLevel, setDefaultThinkingLevel, resolveAgentCostControlPolicy, type AgentCostControlPolicy } from '@craft-agent/shared/config'
+import { getPreferencesPath, getSessionDraft, setSessionDraft, deleteSessionDraft, getAllSessionDrafts, getWorkspaceByNameOrId, getDefaultThinkingLevel, setDefaultThinkingLevel } from '@craft-agent/shared/config'
 import { isValidThinkingLevel, normalizeThinkingLevel, THINKING_LEVEL_IDS } from '@craft-agent/shared/agent/thinking-levels'
 
 const VALID_THINKING_LEVELS_LIST = THINKING_LEVEL_IDS.map(id => `'${id}'`).join(', ')
@@ -112,10 +112,10 @@ export function registerSettingsHandlers(server: RpcServer, deps: HandlerDeps): 
     set: setDefaultThinkingLevel,
   }
 
-  const assertSessionAccess = async (context: RequestContext, sessionId: string): Promise<void> => {
-    const session = await deps.sessionManager.getSession(sessionId)
-    if (!session) throw new Error(`Session not found: ${sessionId}`)
-    assertRequestWorkspace(context, session.workspaceId)
+  const assertSessionAccess = (context: RequestContext, sessionId: string): void => {
+    const workspaceId = deps.sessionManager.getSessionWorkspaceId(sessionId)
+    if (!workspaceId) throw new Error(`Session not found: ${sessionId}`)
+    assertRequestWorkspace(context, workspaceId)
   }
 
   const authorizeWorkspaceAction = async (
@@ -267,9 +267,9 @@ export function registerSettingsHandlers(server: RpcServer, deps: HandlerDeps): 
       thinkingLevel: normalizeThinkingLevel(config.defaults?.thinkingLevel),
       workingDirectory: config.defaults?.workingDirectory,
       localMcpEnabled: config.localMcpServers?.enabled ?? true,
+      costControl: config.costControl,
       defaultLlmConnection: config.defaults?.defaultLlmConnection,
       enabledSourceSlugs: config.defaults?.enabledSourceSlugs ?? [],
-      costControl: resolveAgentCostControlPolicy(config.costControl),
       governance: governanceDocument.profile,
       governanceRevision: governanceDocument.revision,
       governanceUpdatedAt: governanceDocument.updatedAt,
@@ -358,7 +358,7 @@ export function registerSettingsHandlers(server: RpcServer, deps: HandlerDeps): 
       : value
 
     // Validate key is a known workspace setting
-    const validKeys = ['name', 'model', 'enabledSourceSlugs', 'permissionMode', 'externalActionPolicy', 'cyclablePermissionModes', 'thinkingLevel', 'workingDirectory', 'localMcpEnabled', 'defaultLlmConnection', 'costControl']
+    const validKeys = ['costControl', 'name', 'model', 'enabledSourceSlugs', 'permissionMode', 'externalActionPolicy', 'cyclablePermissionModes', 'thinkingLevel', 'workingDirectory', 'localMcpEnabled', 'defaultLlmConnection']
     if (!validKeys.includes(key)) {
       throw new Error(`Invalid workspace setting key: ${key}. Valid keys: ${validKeys.join(', ')}`)
     }
@@ -371,18 +371,11 @@ export function registerSettingsHandlers(server: RpcServer, deps: HandlerDeps): 
       }
     }
 
-    if (key === 'costControl' && normalizedValue !== undefined && normalizedValue !== null) {
-      if (typeof normalizedValue !== 'object' || Array.isArray(normalizedValue)) {
-        throw new Error('costControl must be a JSON object')
-      }
-      // Resolve once at the trust boundary so invalid numeric values are bounded
-      // before the policy can reach a live session.
-      resolveAgentCostControlPolicy(normalizedValue as AgentCostControlPolicy)
-    }
-
     if (key === 'externalActionPolicy' && !['confirm', 'allow-in-execute'].includes(String(normalizedValue))) {
       throw new Error('externalActionPolicy must be "confirm" or "allow-in-execute"')
     }
+
+    {}
 
     if (key === 'workingDirectory' && normalizedValue !== undefined && normalizedValue !== null) {
       const validation = isValidWorkingDirectory(String(normalizedValue))
@@ -401,9 +394,8 @@ export function registerSettingsHandlers(server: RpcServer, deps: HandlerDeps): 
     if (key === 'name') {
       config.name = String(normalizedValue).trim()
     } else if (key === 'costControl') {
-      config.costControl = normalizedValue === undefined || normalizedValue === null
-        ? undefined
-        : resolveAgentCostControlPolicy(normalizedValue as AgentCostControlPolicy)
+      const { resolveAgentCostControlPolicy } = await import('@craft-agent/shared/config')
+      config.costControl = resolveAgentCostControlPolicy(value as any)
     } else if (key === 'localMcpEnabled') {
       // Store in localMcpServers.enabled (top-level, not in defaults)
       config.localMcpServers = config.localMcpServers || { enabled: true }
@@ -482,7 +474,7 @@ export function registerSettingsHandlers(server: RpcServer, deps: HandlerDeps): 
     return filterDraftsForWorkspace(
       drafts,
       workspaceId,
-      async (sessionId) => (await deps.sessionManager.getSession(sessionId))?.workspaceId ?? null,
+      async (sessionId) => deps.sessionManager.getSessionWorkspaceId(sessionId),
     )
   })
 
@@ -602,7 +594,7 @@ export function registerSettingsHandlers(server: RpcServer, deps: HandlerDeps): 
     return getRtkStatus(opts)
   })
 
-  // Token-savings summary from `rtk gain --format json` (efficiency meter)
+  // App-only net output savings; excludes other tools' global RTK history.
   server.handle(RPC_CHANNELS.rtk.GET_GAIN, async () => {
     const { getRtkGain } = await import('@craft-agent/shared/agent')
     return getRtkGain()

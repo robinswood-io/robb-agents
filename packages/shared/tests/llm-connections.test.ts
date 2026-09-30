@@ -10,6 +10,7 @@ import {
   getDefaultModelsForConnection,
   getMiniModel,
   isDeniedMiniModelId,
+  isModelAllowedForAuthProvider,
   registerPiModelResolver,
 } from '../src/config/llm-connections.ts';
 import type { LlmProviderType } from '../src/config/llm-connections.ts';
@@ -149,6 +150,46 @@ describe('getMiniModel()', () => {
 // ============================================================
 
 describe('getMiniModel() — auth-flavor awareness', () => {
+  it('filters rejected ChatGPT models from saved utility choices without mutating them', () => {
+    const conn = makeConnection('pi', ['pi/gpt-5.5', 'pi/gpt-5.4'], 'openai-codex');
+    expect(getMiniModel(conn)).toBe('pi/gpt-5.5');
+    expect(conn.models).toEqual(['pi/gpt-5.5', 'pi/gpt-5.4']);
+    expect(getMiniModel({ ...conn, models: ['pi/gpt-5.4'] })).toBeUndefined();
+    expect(getMiniModel({ ...conn, models: ['pi/gpt-5.4-mini'] })).toBeUndefined();
+    expect(getMiniModel({ ...conn, models: ['pi/gpt-5.3-codex-spark'] })).toBeUndefined();
+    expect(getMiniModel({ ...conn, piAuthProvider: 'openai' })).toBe('pi/gpt-5.4');
+  });
+
+  it('filters saved model definitions by ID even when their label matches mini', () => {
+    const conn = {
+      providerType: 'pi' as const,
+      piAuthProvider: 'openai-codex',
+      models: [
+        { id: 'pi/gpt-5.4', name: 'My mini model', shortName: 'mini', description: '', provider: 'pi' as const, contextWindow: 272_000 },
+        { id: 'pi/gpt-5.4-mini', name: 'GPT-5.4 Mini', shortName: 'Mini', description: '', provider: 'pi' as const, contextWindow: 272_000 },
+      ],
+    };
+    expect(getMiniModel(conn)).toBeUndefined();
+  });
+
+  it.each(['ids', 'definitions'])('selects only an eligible existing utility model from the observed ChatGPT catalog (%s)', shape => {
+    const ids = ['pi/gpt-6-astra', 'pi/gpt-5.6-sol', 'pi/gpt-5.6-terra', 'pi/gpt-5.6-luna',
+      'pi/gpt-5.3-codex-spark', 'pi/gpt-5.4-mini', 'pi/gpt-5.5'];
+    const models = shape === 'ids' ? ids : ids.map(id => ({
+      id, name: id, shortName: id, description: '', provider: 'pi' as const, contextWindow: 272_000,
+    }));
+    const conn = { providerType: 'pi' as const, piAuthProvider: 'openai-codex', models };
+    const before = JSON.stringify(conn);
+    expect(getMiniModel(conn)).toBe('pi/gpt-5.6-luna');
+    expect(JSON.stringify(conn)).toBe(before);
+    expect(getMiniModel({ ...conn, piAuthProvider: 'openai' })).toBe('pi/gpt-5.6-luna');
+  });
+
+  it('returns no utility model when every configured candidate is denied for this auth', () => {
+    const conn = makeConnection('pi', ['pi/gpt-5.4-mini', 'pi/gpt-5.1-codex-mini'], 'openai-codex');
+    expect(getMiniModel(conn)).toBeUndefined();
+  });
+
   it('skips *codex-mini* variants under openai-codex auth', () => {
     // Reproduces the bug surfaced as:
     //   "The 'gpt-5.1-codex-mini' model is not supported when using Codex
@@ -188,6 +229,20 @@ describe('getMiniModel() — auth-flavor awareness', () => {
 // ============================================================
 
 describe('getDefaultModelsForConnection() — current OpenAI defaults', () => {
+  it('filters an injected or cached ChatGPT catalog before choosing its default', () => {
+    const models = ['pi/gpt-5.4', 'pi/gpt-5.4-mini'].map(id => ({
+      id, name: id, shortName: id, description: '', provider: 'pi' as const, contextWindow: 272_000,
+    }));
+    registerPiModelResolver(() => models);
+    expect(getDefaultModelsForConnection('pi', 'openai-codex').map(m => typeof m === 'string' ? m : m.id))
+      .toEqual([]);
+    expect(getDefaultModelForConnection('pi', 'openai-codex')).toBe('');
+    expect(getDefaultModelsForConnection('pi', 'openai')).toHaveLength(2);
+    expect(models).toHaveLength(2);
+    registerPiModelResolver(() => models.slice(0, 1));
+    expect(getDefaultModelForConnection('pi', 'openai-codex')).toBe('');
+  });
+
   it('offers Astra after Sol for regular OpenAI API auth without changing the default', () => {
     registerPiModelResolver((provider) => provider === 'openai' ? [
       { id: 'pi/gpt-5.5', name: 'GPT 5.5', shortName: '5.5', provider: 'pi', contextWindow: 1048576, supportsThinking: true },
@@ -275,6 +330,20 @@ describe('getDefaultModelsForConnection() — current OpenAI defaults', () => {
 // the pi-agent-server queryLlm guard share one source of truth.
 // ============================================================
 
+describe('isModelAllowedForAuthProvider()', () => {
+  it('rejects exact incompatible IDs for ChatGPT-account auth, including supported prefixes', () => {
+    for (const id of ['gpt-5.4', 'pi/gpt-5.4', 'openai-codex/gpt-5.4', 'pi/openai-codex/gpt-5.4', ' PI/GPT-5.4 ', 'gpt-5.4-mini', 'pi/gpt-5.4-mini', 'openai-codex/gpt-5.4-mini', 'pi/openai-codex/gpt-5.4-mini', ' PI/GPT-5.4-MINI ', 'gpt-5.3-codex-spark', 'pi/gpt-5.3-codex-spark', 'openai-codex/gpt-5.3-codex-spark', 'pi/openai-codex/gpt-5.3-codex-spark', ' PI/GPT-5.3-CODEX-SPARK ']) {
+      expect(isModelAllowedForAuthProvider(id, 'openai-codex')).toBe(false);
+      for (const provider of ['openai', 'azure-openai-responses', 'github-copilot', undefined]) {
+        expect(isModelAllowedForAuthProvider(id, provider)).toBe(true);
+      }
+    }
+    for (const id of ['gpt-5.4-pro', 'gpt-5.5', 'gpt-5-mini']) {
+      expect(isModelAllowedForAuthProvider(id, 'openai-codex')).toBe(true);
+    }
+  });
+});
+
 describe('isDeniedMiniModelId()', () => {
   it('always denies codex-mini-latest', () => {
     expect(isDeniedMiniModelId('codex-mini-latest')).toBe(true);
@@ -287,6 +356,20 @@ describe('isDeniedMiniModelId()', () => {
     expect(isDeniedMiniModelId('pi/gpt-5.1-codex-mini', 'openai-codex')).toBe(true);
     expect(isDeniedMiniModelId('gpt-5.1-codex-mini', 'openai')).toBe(false);
     expect(isDeniedMiniModelId('gpt-5.1-codex-mini')).toBe(false);
+  });
+
+  it('denies auth-incompatible GPT-5.4 Mini for worker utility and compaction guards', () => {
+    for (const id of ['gpt-5.4-mini', 'pi/gpt-5.4-mini', 'pi/openai-codex/gpt-5.4-mini']) {
+      expect(isDeniedMiniModelId(id, 'openai-codex')).toBe(true);
+      expect(isDeniedMiniModelId(id, 'openai')).toBe(false);
+    }
+  });
+
+  it('denies auth-incompatible Codex Spark for worker utility and compaction guards', () => {
+    for (const id of ['gpt-5.3-codex-spark', 'pi/gpt-5.3-codex-spark', 'pi/openai-codex/gpt-5.3-codex-spark']) {
+      expect(isDeniedMiniModelId(id, 'openai-codex')).toBe(true);
+      expect(isDeniedMiniModelId(id, 'openai')).toBe(false);
+    }
   });
 
   it('does not deny non-codex-mini models', () => {

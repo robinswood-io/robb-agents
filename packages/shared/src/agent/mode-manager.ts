@@ -13,16 +13,19 @@
 /// <reference path="../types/incr-regex-package.d.ts" />
 
 import { homedir } from 'os';
-import { existsSync, realpathSync } from 'fs';
+import { lstatSync, realpathSync } from 'fs';
 import { debug } from '../utils/debug.ts';
 import { dirname, isAbsolute, relative, resolve } from 'path';
 import { getSessionSafeAllowedToolNames } from '@craft-agent/session-tools-core';
 import { FEATURE_FLAGS } from '../feature-flags.ts';
-import { isBrowserToolNameOrAlias } from './browser-tool-names.ts';
+import { isBrowserToolNameOrAlias, isCanonicalBrowserToolName } from './browser-tool-names.ts';
+import { isObservationalBrowserCommand } from './browser-tool-runtime.ts';
+import { classifyToolNameMutationSemantics } from './core/tool-name-semantics.ts';
 import type { PermissionsContext, MergedPermissionsConfig } from './permissions-config.ts';
 import {
   validateBashCommand,
   hasControlCharacters,
+  READ_ONLY_GIT_HARDENING_ARGS,
   type BashValidationResult,
   type BashValidationReason,
 } from './bash-validator.ts';
@@ -110,6 +113,22 @@ export interface ModeCallbacks {
   onStateChange?: (state: ModeState) => void;
 }
 
+const INVALID_PERMISSION_MODE_MESSAGE = 'Invalid permission mode. Expected safe, ask, or allow-all. Correct the session configuration before retrying; no permissions were changed.';
+
+export class InvalidPermissionModeError extends Error {
+  readonly code = 'invalid_permission_mode';
+  readonly retryable = false;
+  constructor() { super(INVALID_PERMISSION_MODE_MESSAGE); this.name = 'InvalidPermissionModeError'; }
+}
+
+export function isCanonicalPermissionMode(value: unknown): value is PermissionMode {
+  return value === 'safe' || value === 'ask' || value === 'allow-all';
+}
+
+export function assertCanonicalPermissionMode(value: unknown): asserts value is PermissionMode {
+  if (!isCanonicalPermissionMode(value)) throw new InvalidPermissionModeError();
+}
+
 // ============================================================
 // Path Matching Utilities
 // ============================================================
@@ -182,13 +201,23 @@ function isWithin(base: string, target: string): boolean {
   return rel === '' || (!rel.startsWith('..') && !isAbsolute(rel));
 }
 
+function filesystemEntryState(path: string): 'exists' | 'missing' | 'inaccessible' {
+  try {
+    lstatSync(path);
+    return 'exists';
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    return code === 'ENOENT' || code === 'ENOTDIR' ? 'missing' : 'inaccessible';
+  }
+}
+
 /**
  * Check whether targetPath is inside baseDir (or exactly equal to it).
  *
  * Uses path.relative semantics to avoid sibling-prefix bypasses and then
  * re-validates using real paths to prevent symlink escapes.
  */
-function isPathWithinDirectory(targetPath: string, baseDir: string): boolean {
+export function isPathWithinDirectory(targetPath: string, baseDir: string): boolean {
   const expandedTarget = expandHome(targetPath);
   const expandedBase = expandHome(baseDir);
 
@@ -198,20 +227,45 @@ function isPathWithinDirectory(targetPath: string, baseDir: string): boolean {
     return false;
   }
 
-  const realBase = existsSync(resolvedBase) ? realpathSync.native(resolvedBase) : resolvedBase;
+  const baseState = filesystemEntryState(resolvedBase);
+  if (baseState === 'inaccessible') return false;
+  let realBase = resolvedBase;
+  if (baseState === 'exists') {
+    try {
+      realBase = realpathSync.native(resolvedBase);
+    } catch {
+      // Includes broken or looping base-directory symlinks.
+      return false;
+    }
+  }
 
-  if (existsSync(resolvedTarget)) {
-    const realTarget = realpathSync.native(resolvedTarget);
-    return isWithin(realBase, realTarget);
+  const targetState = filesystemEntryState(resolvedTarget);
+  if (targetState === 'inaccessible') return false;
+  if (targetState === 'exists') {
+    try {
+      const realTarget = realpathSync.native(resolvedTarget);
+      return isWithin(realBase, realTarget);
+    } catch {
+      // A follow-based existence probe misses a broken destination link.
+      // lstat above deliberately detects it so it cannot be treated as a new
+      // confined file and followed by the eventual writer.
+      return false;
+    }
   }
 
   // Target may be a new file path. Validate using nearest existing ancestor
   // to prevent symlink escapes while still allowing legitimate new files.
   let current = dirname(resolvedTarget);
   while (true) {
-    if (existsSync(current)) {
-      const realCurrent = realpathSync.native(current);
-      return isWithin(realBase, realCurrent);
+    const currentState = filesystemEntryState(current);
+    if (currentState === 'inaccessible') return false;
+    if (currentState === 'exists') {
+      try {
+        const realCurrent = realpathSync.native(current);
+        return isWithin(realBase, realCurrent);
+      } catch {
+        return false;
+      }
     }
     const parent = dirname(current);
     if (parent === current) {
@@ -239,6 +293,11 @@ class ModeManager {
    * Used on session restore so transition metadata can survive app restarts.
    */
   setPreviousPermissionMode(sessionId: string, previousPermissionMode?: PermissionMode): void {
+    // Transition metadata grants no authority. Ignore unknown legacy values,
+    // and normalize UI aliases before looking up their display labels.
+    previousPermissionMode = typeof previousPermissionMode === 'string'
+      ? parsePermissionMode(previousPermissionMode) ?? undefined
+      : undefined;
     const existing = this.getState(sessionId);
     if (existing.previousPermissionMode === previousPermissionMode) {
       return;
@@ -278,6 +337,7 @@ class ModeManager {
     mode: PermissionMode,
     metadata?: { changedBy?: PermissionModeChangedBy; changedAt?: string }
   ): boolean {
+    assertCanonicalPermissionMode(mode);
     const existing = this.getState(sessionId);
 
     // No-op when mode is unchanged (prevents duplicate logs/events)
@@ -471,8 +531,10 @@ export function getPermissionModeDiagnostics(sessionId: string): {
   userModeSignalPending: boolean;
 } {
   const state = modeManager.getState(sessionId);
-  const transitionDisplay = state.previousPermissionMode
-    ? `${PERMISSION_MODE_CONFIG[state.previousPermissionMode].displayName} -> ${PERMISSION_MODE_CONFIG[state.permissionMode].displayName}`
+  assertCanonicalPermissionMode(state.permissionMode);
+  const previousPermissionMode = isCanonicalPermissionMode(state.previousPermissionMode) ? state.previousPermissionMode : undefined;
+  const transitionDisplay = previousPermissionMode
+    ? `${PERMISSION_MODE_CONFIG[previousPermissionMode].displayName} -> ${PERMISSION_MODE_CONFIG[state.permissionMode].displayName}`
     : undefined;
   const userModeSignalPending =
     state.lastChangedBy === 'user' &&
@@ -481,7 +543,7 @@ export function getPermissionModeDiagnostics(sessionId: string): {
 
   return {
     permissionMode: state.permissionMode,
-    previousPermissionMode: state.previousPermissionMode,
+    previousPermissionMode,
     transitionDisplay,
     modeVersion: state.modeVersion,
     lastChangedAt: state.lastChangedAt,
@@ -787,12 +849,25 @@ function findRelevantPatterns(command: string, patterns: CompiledBashPattern[]):
  * Uses exact base-command match and optional whenNotMatching condition.
  */
 function findBlockedCommandHint(command: string, config: ToolCheckConfig): CompiledBlockedCommandHint | undefined {
-  const hints = config.blockedCommandHints ?? [];
-  if (hints.length === 0) return undefined;
-
   const firstToken = command.trim().split(/\s+/)[0]?.toLowerCase();
   if (!firstToken) return undefined;
   const baseCommand = firstToken.split('/').pop() ?? firstToken;
+
+  if (baseCommand === 'git') {
+    const safePrefix = `git ${READ_ONLY_GIT_HARDENING_ARGS.join(' ')}`;
+    return {
+      command: 'git',
+      reason: 'Repository Git configuration can execute filesystem, hook, pager, formatting, or signature helpers, so an unneutralized Git command is not provably read-only.',
+      context: 'Use the host-owned read-only Git grammar; this retry does not require broader permission.',
+      tryInstead: [
+        `Retry the supported read-only operation with the exact prefix \`${safePrefix}\`.`,
+        'Use only rev-parse, branch --show-current, merge-base, ls-files, grep without a pattern file, or non-patch log. For worktree status or content differences, use target-bound Read/rg/cmp instead of Git status/diff/show.',
+      ],
+      example: `${safePrefix} rev-parse HEAD`,
+    };
+  }
+
+  const hints = config.blockedCommandHints ?? [];
 
   for (const hint of hints) {
     if (hint.command !== baseCommand) continue;
@@ -1711,6 +1786,7 @@ export function getPathHint(targetPath: string, plansFolderPath: string, dataFol
  * Check if an MCP tool is read-only using the given config
  */
 function isReadOnlyMcpToolWithConfig(toolName: string, config: ToolCheckConfig): boolean {
+  if (classifyToolNameMutationSemantics(toolName) !== 'neutral') return false;
   return config.readOnlyMcpPatterns.some(pattern => pattern.test(toolName));
 }
 
@@ -1769,13 +1845,62 @@ export function isApiEndpointAllowed(
 const ALWAYS_ALLOWED_TOOLS = new Set([
   'Read', 'Glob', 'Grep',           // File reading
   'Task', 'TaskOutput',             // Agent orchestration
+  'TaskStop', 'KillShell',          // Cancellation/cleanup of agent-owned work
+  'Skill',                          // Host-reviewed instruction loading
   'WebFetch', 'WebSearch',          // Web research
   'TodoWrite',                      // Task tracking
   'SubmitPlan',                     // Plan submission
   'LSP',                            // Language server (read-only)
-  // Browser automation tool (canonical wrapper)
-  'browser_tool',
 ]);
+
+const OBSERVATIONAL_LEGACY_BROWSER_OPERATIONS = new Set([
+  'open',
+  'navigate',
+  'snapshot',
+  'screenshot',
+  'screenshot-region',
+  'console',
+  'network',
+  'wait',
+  'downloads',
+  'scroll',
+  'back',
+  'forward',
+]);
+
+/** Explore mode is a read boundary, including inside the multiplexed browser
+ * tool. Unknown, malformed and mutating browser commands fail closed. */
+function browserSafeModeDecision(toolName: string, toolInput: unknown): ToolCheckResult | undefined {
+  const input = toolInput && typeof toolInput === 'object' && !Array.isArray(toolInput)
+    ? toolInput as Record<string, unknown>
+    : {};
+  if (isCanonicalBrowserToolName(toolName)) {
+    return isObservationalBrowserCommand(input.command)
+      ? { allowed: true }
+      : { allowed: false, reason: 'Browser mutations and unknown browser commands are blocked in Explore mode.' };
+  }
+  if (!isBrowserToolNameOrAlias(toolName)) return undefined;
+
+  const leafName = toolName.split('__').at(-1)?.toLowerCase() ?? '';
+  const operation = leafName.slice('browser_'.length).replaceAll('_', '-');
+  if (!OBSERVATIONAL_LEGACY_BROWSER_OPERATIONS.has(operation)) {
+    return { allowed: false, reason: 'Browser mutations and unknown browser commands are blocked in Explore mode.' };
+  }
+  if (operation === 'navigate') {
+    const target = [input.url, input.href, input.target]
+      .find((value): value is string => typeof value === 'string' && value.trim().length > 0);
+    if (!target || !isObservationalBrowserCommand(['navigate', target])) {
+      return { allowed: false, reason: 'Browser mutations and unknown browser commands are blocked in Explore mode.' };
+    }
+  }
+  if (operation === 'downloads') {
+    const action = typeof input.action === 'string' ? input.action.trim().toLowerCase() : 'list';
+    if (action !== 'list' && action !== 'wait') {
+      return { allowed: false, reason: 'Browser mutations and unknown browser commands are blocked in Explore mode.' };
+    }
+  }
+  return { allowed: true };
+}
 
 /**
  * Result type for tool permission checks
@@ -1804,6 +1929,7 @@ export function shouldAllowToolInMode(
     permissionsContext?: PermissionsContext;
   }
 ): ToolCheckResult {
+  if (!isCanonicalPermissionMode(mode)) return { allowed: false, reason: INVALID_PERMISSION_MODE_MESSAGE };
   // Get config: merged custom if context provided, otherwise defaults
   let config: ToolCheckConfig;
 
@@ -1827,6 +1953,9 @@ export function shouldAllowToolInMode(
 
   // Safe mode: check against read-only allowlist
 
+  const browserDecision = browserSafeModeDecision(toolName, toolInput);
+  if (browserDecision) return browserDecision;
+
   // Always-allowed tools (read-only by nature)
   if (ALWAYS_ALLOWED_TOOLS.has(toolName)) {
     return { allowed: true };
@@ -1837,12 +1966,6 @@ export function shouldAllowToolInMode(
     if (toolName.endsWith(`__${allowedTool}`)) {
       return { allowed: true };
     }
-  }
-
-  // Browser tool aliases (legacy browser_open/browser_snapshot/...)
-  // are normalized centrally to avoid drift across permission checks.
-  if (isBrowserToolNameOrAlias(toolName)) {
-    return { allowed: true };
   }
 
   // Handle Bash - check if command is read-only
@@ -2059,8 +2182,11 @@ export function shouldAllowToolInMode(
     };
   }
 
-  // Default: allow other tools not explicitly handled
-  return { allowed: true };
+  // Unclassified tools have no established read-only contract: fail closed.
+  return {
+    allowed: false,
+    reason: `Unclassified tool "${toolName}" is blocked in ${config.displayName}. Switch to Ask or Allow All mode (${config.shortcutHint}) to run it.`,
+  };
 }
 
 /**

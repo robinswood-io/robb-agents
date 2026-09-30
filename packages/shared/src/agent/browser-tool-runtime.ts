@@ -7,6 +7,22 @@ import type {
   BrowserScreenshotRegionArgs,
   BrowserWaitArgs,
 } from './browser-tools.ts';
+import {
+  BROWSER_TOOL_TIMEOUT_GRACE_MS,
+  DEFAULT_BROWSER_TOOL_EXECUTION_TIMEOUT_MS,
+  MAX_BROWSER_TOOL_EXECUTION_TIMEOUT_MS,
+  MAX_BROWSER_TOOL_REQUESTED_TIMEOUT_MS,
+  withBrowserToolExecutionWatchdog,
+} from './browser-tool-execution-watchdog.ts';
+
+export {
+  BROWSER_TOOL_TIMEOUT_GRACE_MS,
+  BrowserToolExecutionTimeoutError,
+  DEFAULT_BROWSER_TOOL_EXECUTION_TIMEOUT_MS,
+  MAX_BROWSER_TOOL_EXECUTION_TIMEOUT_MS,
+  MAX_BROWSER_TOOL_REQUESTED_TIMEOUT_MS,
+  withBrowserToolExecutionWatchdog,
+} from './browser-tool-execution-watchdog.ts';
 
 export interface BrowserCommandImage {
   data: string;
@@ -18,6 +34,77 @@ export interface BrowserCommandResult {
   output: string;
   appendReleaseHint: boolean;
   image?: BrowserCommandImage;
+}
+
+const contextualGmailBrowserMutationGuards = new Set<string>();
+
+/** Configure the session-scoped runtime fence used by the pre-tool policy.
+ * The fence is intentionally enforced against the actual browser URL so an
+ * unrelated CMS/form workflow in the same objective remains autonomous. */
+export function setContextualGmailBrowserMutationGuard(
+  sessionId: string,
+  enabled: boolean,
+): void {
+  if (enabled) contextualGmailBrowserMutationGuards.add(sessionId);
+  else contextualGmailBrowserMutationGuards.delete(sessionId);
+}
+
+/** Host bridge helper: propagate the active session fence to the desktop that
+ * performs the browser effect. */
+export function isContextualGmailBrowserMutationGuardEnabled(sessionId: string): boolean {
+  return contextualGmailBrowserMutationGuards.has(sessionId);
+}
+
+function isGmailBrowserUrl(rawUrl: string): boolean {
+  try {
+    const url = new URL(rawUrl);
+    return url.protocol === 'https:'
+      && (url.hostname === 'mail.google.com' || url.hostname.endsWith('.mail.google.com'));
+  } catch {
+    return false;
+  }
+}
+
+/** Re-check the effective target immediately after the host resolves the
+ * instance used by a mutating callback. This closes the gap between the
+ * command-level preview and a concurrent window rebind. */
+export function assertContextualGmailBrowserMutationTargetAllowed(
+  sessionId: string,
+  targetUrl: string,
+): void {
+  if (!contextualGmailBrowserMutationGuards.has(sessionId) || !isGmailBrowserUrl(targetUrl)) return;
+  throw new Error(
+    'Validation failed: browser mutations on Gmail are disabled for this contextual reply. '
+      + 'Use only gmail_reply_preflight + gmail_reply_bound or '
+      + 'gmail_reply_all_preflight + gmail_reply_all with the signed closed payload.',
+  );
+}
+
+async function assertContextualGmailBrowserMutationAllowed(args: {
+  commandParts: string[];
+  fns: BrowserPaneFns;
+  sessionId: string;
+}): Promise<void> {
+  if (!contextualGmailBrowserMutationGuards.has(args.sessionId)
+    || isObservationalBrowserCommandParts(args.commandParts)) return;
+
+  const commandText = args.commandParts.join(' ');
+  const explicitlyTargetsGmail = /(?:^|[^a-z0-9])(?:gmail|mail\.google\.com)(?:[^a-z0-9]|$)/iu.test(commandText);
+  if (!explicitlyTargetsGmail) {
+    // A session may own or even retain bindings to several windows. Inspecting
+    // all of them over-blocks an unrelated CMS whenever a historical Gmail
+    // window is also present. Resolve through the same manager path used by the
+    // command callbacks and fence only the effective target.
+    const target = await args.fns.resolveCurrentWindow();
+    assertContextualGmailBrowserMutationTargetAllowed(args.sessionId, target.url);
+    return;
+  }
+
+  throw new Error(
+    'Validation failed: browser mutations on Gmail are disabled for this contextual reply. '
+      + 'Use only gmail_reply_preflight + gmail_reply_bound or '
+      + 'gmail_reply_all_preflight + gmail_reply_all with the signed closed payload.',
+  );
 }
 
 interface BrowserPageMetrics {
@@ -51,16 +138,18 @@ export function getBrowserToolHelp(): string {
     '  click-at <x> <y>                               click at pixel coordinates (canvas elements)',
     '  drag <x1> <y1> <x2> <y2>                      drag from (x1,y1) to (x2,y2)',
     '  fill <ref> <value>',
-    '  type <text>                                    type into focused element (no ref needed)',
+    '  type <text>                                    insert into a focused visible DOM editor',
+    '  type-keys <text>                               printable keyboard text for a focused canvas/RDP receiver (max 256; no Enter)',
     '  select <ref> <value> [--assert-text <text>] [--assert-value <value>] [--timeout <ms>]',
     '  upload <ref> <path> [path2...]                 attach local file(s) to a file input',
-    '  set-clipboard <text>                           write text to page clipboard',
-    '  get-clipboard                                  read clipboard text content',
+    '  set-clipboard <text>                           request clipboard write (fails when browser policy denies it)',
+    '  get-clipboard                                  request clipboard read (denial is not an empty clipboard)',
     '  paste <text>                                   set clipboard + trigger Ctrl/Cmd+V',
     '  screenshot [--annotated|-a] [--png]            capture screenshot (JPEG default, --png for lossless)',
     '  screenshot-region <x> <y> <width> <height> [--png]',
     '  screenshot-region --ref <@eN> [--padding <px>] [--png]',
     '  screenshot-region --selector <css-selector> [--padding <px>] [--png]',
+    '  screenshot-region --canvas --selector <unique-canvas-selector> (bitmap only; no DOM overlays)',
     '  console [limit] [level]',
     '  window-resize <width> <height>',
     '  network [limit] [status]',
@@ -84,6 +173,7 @@ export function getBrowserToolHelp(): string {
     'Array mode (JSON array input, no batch splitting/tokenization):',
     '  ["evaluate", "var x = 1; var y = 2; x + y"]',
     '  ["paste", "Name\\tAge\\nAlice\\t30"]',
+    '  ["type-keys", "AZERTY éèàçù € @[]"]',
     '',
     'Examples:',
     '  navigate https://example.com',
@@ -483,6 +573,97 @@ function tokenizeCommand(input: string): string[] {
   return tokens;
 }
 
+function finitePositiveTimeout(value: string | undefined): number | undefined {
+  if (value === undefined) return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+}
+
+function boundedBrowserCommandTimeout(raw: string, command: string): number {
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed)) {
+    throw new Error(`Invalid ${command} timeout "${raw}". Expected a finite number.`);
+  }
+  return Math.max(100, Math.min(MAX_BROWSER_TOOL_REQUESTED_TIMEOUT_MS, parsed));
+}
+
+function requestedBrowserCommandTimeoutMs(parts: string[]): number | undefined {
+  const cmd = parts[0]?.toLowerCase();
+  if (!cmd) return undefined;
+
+  if (cmd === 'resume') {
+    return finitePositiveTimeout(parts[1]) ?? 120_000;
+  }
+  if (cmd === 'click') {
+    return finitePositiveTimeout(parts[3]);
+  }
+  if (cmd === 'wait') {
+    return finitePositiveTimeout(parts[1]?.toLowerCase() === 'network-idle' ? parts[2] : parts[3]);
+  }
+  if (cmd === 'downloads' && parts[1]?.toLowerCase() === 'wait') {
+    return finitePositiveTimeout(parts[2]);
+  }
+  if (cmd === 'select') {
+    const timeoutIndex = parts.indexOf('--timeout');
+    return timeoutIndex >= 0 ? finitePositiveTimeout(parts[timeoutIndex + 1]) : undefined;
+  }
+  return undefined;
+}
+
+/** 45s of work plus the shared 15s receipt grace preserves the 60s default. */
+const DEFAULT_BROWSER_COMMAND_EXECUTION_BUDGET_MS =
+  DEFAULT_BROWSER_TOOL_EXECUTION_TIMEOUT_MS - BROWSER_TOOL_TIMEOUT_GRACE_MS;
+
+/**
+ * Keep ordinary actions responsive while preserving the explicit long waits
+ * supported by `wait`, `resume`, `click`, `select`, and `downloads wait`.
+ * Even an excessive caller-provided timeout is capped at five minutes plus a
+ * short transport/result grace period.
+ */
+export function resolveBrowserToolExecutionTimeoutMs(
+  command: string | string[],
+  invalidCommandTimeoutMs = DEFAULT_BROWSER_TOOL_EXECUTION_TIMEOUT_MS,
+): number {
+  const invalidFallback = Number.isFinite(invalidCommandTimeoutMs)
+    ? Math.min(MAX_BROWSER_TOOL_EXECUTION_TIMEOUT_MS,
+      Math.max(DEFAULT_BROWSER_TOOL_EXECUTION_TIMEOUT_MS, invalidCommandTimeoutMs))
+    : DEFAULT_BROWSER_TOOL_EXECUTION_TIMEOUT_MS;
+  let commandParts: string[][];
+  try {
+    commandParts = Array.isArray(command)
+      ? [command]
+      : splitBatchCommands(command.trim()).map(tokenizeCommand);
+  } catch {
+    // The command executor will return the actual parse error. The watchdog
+    // resolver must never turn malformed input into an unbounded execution.
+    return invalidFallback;
+  }
+
+  if (commandParts.length === 0) return invalidFallback;
+
+  // Batches execute serially. Sum their individual budgets rather than taking
+  // the maximum (two valid 90s waits need about 180s), add transport/result
+  // grace once, and saturate during accumulation to avoid numeric overflow.
+  let totalBudgetMs = BROWSER_TOOL_TIMEOUT_GRACE_MS;
+  for (const parts of commandParts) {
+    const commandBudgetMs = Math.min(
+      requestedBrowserCommandTimeoutMs(parts) ?? DEFAULT_BROWSER_COMMAND_EXECUTION_BUDGET_MS,
+      MAX_BROWSER_TOOL_EXECUTION_TIMEOUT_MS,
+    );
+    totalBudgetMs = Math.min(
+      MAX_BROWSER_TOOL_EXECUTION_TIMEOUT_MS,
+      totalBudgetMs + commandBudgetMs,
+    );
+    // The executor deliberately stops a batch after any navigation-capable
+    // command so the caller can inspect the changed page before continuing.
+    // Do not reserve time for commands that can never run.
+    const commandName = parts[0]?.toLowerCase();
+    if (commandName && NAVIGATION_COMMANDS.has(commandName)) break;
+  }
+
+  return Math.max(DEFAULT_BROWSER_TOOL_EXECUTION_TIMEOUT_MS, totalBudgetMs);
+}
+
 interface ParsedSelectCommand {
   ref: string;
   value: string;
@@ -520,9 +701,7 @@ function parseSelectCommand(parts: string[]): ParsedSelectCommand {
     if (token === '--timeout') {
       const next = tokens[i + 1];
       if (!next) throw new Error('select --timeout requires milliseconds. Example: select @e3 CNAME --timeout 3000');
-      const parsed = Number(next);
-      if (Number.isNaN(parsed)) throw new Error(`Invalid select timeout "${next}". Expected a number.`);
-      timeoutMs = Math.max(100, parsed);
+      timeoutMs = boundedBrowserCommandTimeout(next, 'select');
       i += 1;
       continue;
     }
@@ -620,11 +799,156 @@ async function verifySelectResult(args: {
 }
 
 
+/** Uses exactly the executor's tokenization; quoted/array text is never an action. */
+export function containsBrowserKeyboardText(command: unknown): boolean {
+  if (Array.isArray(command)) return typeof command[0] === 'string' && command[0].toLowerCase() === 'type-keys';
+  if (typeof command !== 'string') return false;
+  try {
+    return splitBatchCommands(command.trim()).some(part => tokenizeCommand(part)[0]?.toLowerCase() === 'type-keys');
+  } catch {
+    return false; // Malformed commands are rejected by the same parser before execution.
+  }
+}
+
+const OBSERVATIONAL_BROWSER_COMMANDS = new Set([
+  '--help',
+  '-h',
+  'help',
+  'open',
+  'navigate',
+  'snapshot',
+  'find',
+  'screenshot',
+  'screenshot-region',
+  'console',
+  'network',
+  'wait',
+  'resume',
+  'get-clipboard',
+  'downloads',
+  'scroll',
+  'back',
+  'forward',
+  'focus',
+  'windows',
+  'release',
+  'close',
+  'hide',
+  'window-resize',
+]);
+
+function hasObservationalNavigationTarget(parts: string[]): boolean {
+  const rawTarget = parts.slice(1).join(' ').trim();
+  if (!rawTarget) return false;
+
+  // BrowserPaneManager turns ordinary host names and free text into HTTPS
+  // navigation/searches. Explicit schemes are narrower here so a future
+  // runtime cannot turn `navigate javascript://...` into an evaluate bypass.
+  const explicitScheme = rawTarget.match(/^([a-z][a-z0-9+.-]*):/i)?.[1]?.toLowerCase();
+  if (!explicitScheme) return true;
+  if (explicitScheme === 'http' || explicitScheme === 'https') return true;
+  return explicitScheme === 'about' && rawTarget.toLowerCase() === 'about:blank';
+}
+
+function isObservationalBrowserCommandParts(parts: string[]): boolean {
+  const commandName = parts[0]?.toLowerCase();
+  if (!commandName || !OBSERVATIONAL_BROWSER_COMMANDS.has(commandName)) return false;
+
+  if (commandName === 'navigate') return hasObservationalNavigationTarget(parts);
+  if (commandName === 'downloads') {
+    const action = parts[1]?.toLowerCase();
+    return action === undefined || action === 'list' || action === 'wait';
+  }
+  if (commandName === 'wait') {
+    const kind = parts[1]?.toLowerCase();
+    return kind === 'selector' || kind === 'text' || kind === 'url' || kind === 'network-idle';
+  }
+  return true;
+}
+
+/**
+ * Closed authority classifier for browser_tool input.
+ *
+ * This deliberately shares the executor's batch splitting and tokenization so
+ * quoted values, array mode, and semicolon batches cannot disguise a mutating
+ * command. Unknown or malformed commands fail closed. Long waits remain
+ * bounded by the browser runtime's shared five-minute ceiling.
+ */
+export function isObservationalBrowserCommand(command: unknown): boolean {
+  let commands: string[][];
+  try {
+    if (Array.isArray(command)) {
+      if (command.length === 0 || !command.every((part): part is string => typeof part === 'string')) {
+        return false;
+      }
+      commands = [command];
+    } else if (typeof command === 'string') {
+      commands = splitBatchCommands(command.trim()).map(tokenizeCommand);
+    } else {
+      return false;
+    }
+  } catch {
+    return false;
+  }
+
+  return commands.length > 0 && commands.every(isObservationalBrowserCommandParts);
+}
+
 export async function executeBrowserToolCommand(args: {
   command: string | string[];
   fns: BrowserPaneFns;
   sessionId: string;
   platform?: NodeJS.Platform;
+}): Promise<BrowserCommandResult> {
+  const controller = new AbortController();
+  const guardedFns = abortAwareBrowserPaneFns(args.fns, controller.signal);
+  return withBrowserToolExecutionWatchdog(
+    executeBrowserToolCommandWithoutWatchdog({ ...args, fns: guardedFns, signal: controller.signal }),
+    resolveBrowserToolExecutionTimeoutMs(args.command),
+    error => controller.abort(error),
+  );
+}
+
+function throwIfBrowserToolExecutionAborted(signal: AbortSignal): void {
+  if (!signal.aborted) return;
+  if (signal.reason instanceof Error) throw signal.reason;
+  throw new Error('Browser operation was cancelled after its execution deadline.');
+}
+
+/**
+ * A watchdog cannot undo an action already handed to Electron/CDP, but it must
+ * fence every later callback. This prevents a delayed callback from continuing
+ * a compound command (or the next command in a batch) after the caller already
+ * received a timeout and may have started recovery.
+ */
+function abortAwareBrowserPaneFns(fns: BrowserPaneFns, signal: AbortSignal): BrowserPaneFns {
+  return new Proxy(fns, {
+    get(target, property, receiver) {
+      const value = Reflect.get(target, property, receiver);
+      if (typeof value !== 'function') return value;
+      return (...callbackArgs: unknown[]) => {
+        throwIfBrowserToolExecutionAborted(signal);
+        const result = Reflect.apply(value, target, callbackArgs);
+        if (result !== null && (typeof result === 'object' || typeof result === 'function')
+          && 'then' in result && typeof result.then === 'function') {
+          return Promise.resolve(result).then(resolved => {
+            throwIfBrowserToolExecutionAborted(signal);
+            return resolved;
+          });
+        }
+        throwIfBrowserToolExecutionAborted(signal);
+        return result;
+      };
+    },
+  }) as BrowserPaneFns;
+}
+
+async function executeBrowserToolCommandWithoutWatchdog(args: {
+  command: string | string[];
+  fns: BrowserPaneFns;
+  sessionId: string;
+  platform?: NodeJS.Platform;
+  signal: AbortSignal;
 }): Promise<BrowserCommandResult> {
   // Array mode: no batch splitting, pass directly to single command execution
   if (Array.isArray(args.command)) {
@@ -653,14 +977,17 @@ async function executeBatchCommands(args: {
   fns: BrowserPaneFns;
   sessionId: string;
   platform?: NodeJS.Platform;
+  signal: AbortSignal;
 }): Promise<BrowserCommandResult> {
   const outputs: string[] = [];
   let lastImage: BrowserCommandImage | undefined;
   let appendReleaseHint = false;
 
   for (let i = 0; i < args.commands.length; i++) {
+    throwIfBrowserToolExecutionAborted(args.signal);
     const command = args.commands[i]!;
     const result = await executeSingleCommand({ ...args, command });
+    throwIfBrowserToolExecutionAborted(args.signal);
 
     outputs.push(result.output);
     if (result.image) lastImage = result.image;
@@ -685,7 +1012,9 @@ async function executeSingleCommand(args: {
   fns: BrowserPaneFns;
   sessionId: string;
   platform?: NodeJS.Platform;
+  signal: AbortSignal;
 }): Promise<BrowserCommandResult> {
+  throwIfBrowserToolExecutionAborted(args.signal);
   // Array mode: use parts directly, no parsing needed
   const parts = Array.isArray(args.command)
     ? args.command
@@ -697,6 +1026,11 @@ async function executeSingleCommand(args: {
   }
 
   const { fns } = args;
+  await assertContextualGmailBrowserMutationAllowed({
+    commandParts: parts,
+    fns,
+    sessionId: args.sessionId,
+  });
 
   if (cmd === 'open') {
     const foreground = parts.includes('--foreground') || parts.includes('-f');
@@ -920,10 +1254,7 @@ async function executeSingleCommand(args: {
     if (waitForRaw && !waitFor) {
       throw new Error('click waitFor must be one of: none, navigation, network-idle');
     }
-    const timeoutMs = timeoutRaw ? Number(timeoutRaw) : undefined;
-    if (timeoutRaw && Number.isNaN(timeoutMs)) {
-      throw new Error(`Invalid click timeout "${timeoutRaw}". Expected a number.`);
-    }
+    const timeoutMs = timeoutRaw ? boundedBrowserCommandTimeout(timeoutRaw, 'click') : undefined;
 
     const before = await getPageMetrics(fns);
     const started = Date.now();
@@ -1049,6 +1380,16 @@ async function executeSingleCommand(args: {
     };
   }
 
+  if (cmd === 'type-keys') {
+    const text = parts.slice(1).join(' ');
+    if (!text) throw new Error('type-keys requires printable text. Prefer array input to preserve punctuation and spaces.');
+    await fns.sendKey({ key: 'Unidentified', text });
+    return {
+      output: `Dispatched ${text.length} characters as keyboard events to the focused receiver. No clipboard or Enter was used. Remote text and application effects are not verified: inspect once before a separate submit action. If the receiver did not accept the text, change the authorized route instead of repeating it.`,
+      appendReleaseHint: true,
+    };
+  }
+
   if (cmd === 'type') {
     const text = parts.slice(1).join(' ');
     if (!text) throw new Error('type requires text. Example: type Hello World');
@@ -1059,7 +1400,7 @@ async function executeSingleCommand(args: {
 
     return {
       output: [
-        `Typed ${text.length} characters into focused element`,
+        `Requested insertion of ${text.length} characters into the focused editor; application state is not verified`,
         `Active element before: ${describeActive(before)}`,
         `Active element after: ${describeActive(after)}`,
       ].join('\n'),
@@ -1185,7 +1526,7 @@ async function executeSingleCommand(args: {
 
     return {
       output: [
-        `Pasted ${text.length} characters`,
+        `Clipboard write confirmed; paste shortcut dispatched for ${text.length} characters (page/remote receipt not verified)`,
         `Shortcut used: ${isMac ? 'Cmd+V' : 'Ctrl+V'}`,
         `Lines: ${lineCount}, tabs: ${tabCount}`,
       ].join('\n'),
@@ -1245,6 +1586,25 @@ async function executeSingleCommand(args: {
       throw new Error('screenshot-region requires either coordinates, --ref, or --selector.');
     }
 
+    const canvasMode = rest.includes('--canvas');
+    if (canvasMode) {
+      const tokens = rest.filter(t => t !== '--canvas' && t !== '--png');
+      if (rest.filter(t => t === '--canvas').length !== 1 || tokens.length !== 2 || tokens[0] !== '--selector' || !tokens[1]?.trim()) {
+        throw new Error('Canvas capture requires --canvas --selector <one unique canvas selector>, with no coordinates, ref, padding or other options. Use array input for selectors containing spaces.');
+      }
+      const result = await fns.screenshotRegion({ source: 'canvas', selector: tokens[1], format: 'png' });
+      const buf = result.imageBuffer;
+      if (!buf?.length || buf.length > 4 * 1024 * 1024 || result.imageFormat !== 'png' || result.metadata?.source !== 'canvas-bitmap') {
+        throw new Error('Canvas capture returned an invalid, empty or oversized image receipt. No page screenshot was substituted.');
+      }
+      return {
+        output: ['Canvas bitmap captured (visible rectangular crop; intrinsic pixels).',
+          'This is not a composited page screenshot: DOM overlays, other layers and CSS effects are excluded. It does not certify remote execution or a fresh application repaint.',
+          `PNG: ${formatBytes(buf.length)}`, 'Metadata:', JSON.stringify(result.metadata, null, 2)].join('\n'),
+        appendReleaseHint: true,
+        image: { data: buf.toString('base64'), mimeType: 'image/png', sizeBytes: buf.length },
+      };
+    }
     const usePng = rest.includes('--png');
     const format = usePng ? 'png' as const : 'jpeg' as const;
     const filteredRest = rest.filter((t) => t !== '--png');
@@ -1428,18 +1788,12 @@ async function executeSingleCommand(args: {
     let timeoutMs: number | undefined;
     if (kind === 'network-idle') {
       const timeoutRaw = parts[2];
-      timeoutMs = timeoutRaw ? Number(timeoutRaw) : undefined;
-      if (timeoutRaw && Number.isNaN(timeoutMs)) {
-        throw new Error(`Invalid wait timeout "${timeoutRaw}". Expected a number.`);
-      }
+      timeoutMs = timeoutRaw ? boundedBrowserCommandTimeout(timeoutRaw, 'wait') : undefined;
     } else {
       value = parts[2];
       if (!value) throw new Error(`wait ${kind} requires a value.`);
       const timeoutRaw = parts[3];
-      timeoutMs = timeoutRaw ? Number(timeoutRaw) : undefined;
-      if (timeoutRaw && Number.isNaN(timeoutMs)) {
-        throw new Error(`Invalid wait timeout "${timeoutRaw}". Expected a number.`);
-      }
+      timeoutMs = timeoutRaw ? boundedBrowserCommandTimeout(timeoutRaw, 'wait') : undefined;
     }
 
     const started = Date.now();
@@ -1461,7 +1815,7 @@ async function executeSingleCommand(args: {
     if (!Number.isFinite(requestedTimeout)) {
       throw new Error(`Invalid resume timeout "${String(timeoutRaw)}". Expected a number.`);
     }
-    const timeoutMs = Math.max(1_000, Math.min(300_000, requestedTimeout));
+    const timeoutMs = Math.max(1_000, Math.min(MAX_BROWSER_TOOL_REQUESTED_TIMEOUT_MS, requestedTimeout));
     const result = await fns.waitFor({ kind: 'challenge-clear', timeoutMs });
 
     return {
@@ -1501,9 +1855,13 @@ async function executeSingleCommand(args: {
     const actionRaw = parts[1] as BrowserDownloadsArgs['action'] | undefined;
     const action = actionRaw && ['list', 'wait'].includes(actionRaw) ? actionRaw : 'list';
     const valueRaw = parts[2];
-    const valueNum = valueRaw ? Number(valueRaw) : undefined;
-    if (valueRaw && Number.isNaN(valueNum)) {
-      throw new Error(`Invalid downloads numeric value "${valueRaw}".`);
+    const valueNum = valueRaw
+      ? action === 'wait'
+        ? boundedBrowserCommandTimeout(valueRaw, 'downloads wait')
+        : Number(valueRaw)
+      : undefined;
+    if (valueRaw && action !== 'wait' && !Number.isFinite(valueNum)) {
+      throw new Error(`Invalid downloads numeric value "${valueRaw}". Expected a finite number.`);
     }
 
     const entries = await fns.getDownloads({

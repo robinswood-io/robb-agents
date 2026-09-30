@@ -1,6 +1,6 @@
 {
   "name": "@craft-agent/server-core",
-  "version": "0.12.7",
+  "version": "0.12.9",
   "license": "MIT",
   "description": "Reusable headless server infrastructure for Craft Agent",
   "type": "module",
@@ -20,6 +20,7 @@
     "./sessions": "./src/sessions/index.ts",
     "./tasks": "./src/tasks/index.ts",
     "./missions": "./src/missions/index.ts",
+    "./specialized-profiles": "./src/specialized-profiles/index.ts",
     "./webui": "./src/webui/index.ts"
   },
   "scripts": {
@@ -28,7 +29,9 @@
   "dependencies": {
     "@agentclientprotocol/sdk": "1.4.0",
     "@craft-agent/core": "workspace:*",
+    "@craft-agent/session-tools-core": "workspace:*",
     "@craft-agent/shared": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "jose": "^6.0.0",
     "ws": "^8.19.0",
     "sharp": "0.35.4",

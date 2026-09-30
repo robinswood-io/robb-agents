@@ -167,5 +167,9 @@ export function createEmptySession(sessionId: string, workspaceId: string, works
     lastMessageAt: Date.now(),
     messages: [],
     isProcessing: true,
+    // An event can beat the authoritative session_created hydration. Keep that
+    // metadata-less placeholder out of the sidebar so a delegated session never
+    // flashes as a root chat; replaceLoadedSession restores the real visibility.
+    hidden: true,
   }
 }

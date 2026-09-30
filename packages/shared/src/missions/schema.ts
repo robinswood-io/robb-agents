@@ -178,6 +178,51 @@ export const MissionAttemptTelemetrySchema = z.object({
 export const MissionExecutionBindingSchema = z.object({
   executorKind: slug('executor kind'),
   executionId: z.string().min(1).max(512),
+  /**
+   * Host-owned ordinary Mission route admitted before the journal mutation and
+   * persisted with the dispatch reservation. The runtime revalidates this
+   * fingerprint immediately before execute and pins the effective session to
+   * these exact route fields. Specialized profiles keep using their stronger
+   * signed executionRouteSha256 binding below.
+   */
+  missionRoute: z.object({
+    schemaVersion: z.literal(1),
+    routeDecisionSha256: z.string().regex(/^[a-f0-9]{64}$/),
+    routeConfigIdentitySha256: z.string().regex(/^[a-f0-9]{64}$/),
+    connectionIdentitySha256: z.string().regex(/^[a-f0-9]{64}$/),
+    sourceIdentitySha256: z.string().regex(/^[a-f0-9]{64}$/),
+    agentProfileId: slug('agent profile id'),
+    connectionSlug: z.string().min(1),
+    version: z.number().int().positive(),
+    profile: z.enum(['maximum-quality', 'balanced']),
+    origin: z.enum(['router', 'cost-control', 'conductor', 'mission']),
+    requestedModel: z.string().min(1).optional(),
+    model: z.string().min(1),
+    thinkingLevel: z.enum(THINKING_LEVEL_IDS),
+    measuredMissionUsd: z.number().finite().nonnegative(),
+    projectedRemainingUsd: z.number().finite().nonnegative().optional(),
+    effectiveSourceSlugs: z.array(z.string().min(1)),
+    effectiveSourceBindings: z.array(z.object({
+      slug: z.string().min(1),
+      identitySha256: z.string().regex(/^[a-f0-9]{64}$/),
+      authorityBindingId: z.string().min(1).optional(),
+    }).strict()),
+    cwd: z.string().min(1),
+    runtimeIdentitySha256: z.string().regex(/^[a-f0-9]{64}$/).optional(),
+  }).strict().optional(),
+  /**
+   * Host-created fingerprint of the specialized profile and effective
+   * capability envelope used during prepare. It is persisted with the
+   * reservation so execute cannot reuse a session prepared under a different
+   * envelope after restart or a host-state change.
+   */
+  specializedProfile: z.object({
+    profileId: slug('specialized profile id'),
+    profileVersion: z.number().int().positive(),
+    versionSha256: z.string().regex(/^[a-f0-9]{64}$/),
+    capabilityEnvelopeSha256: z.string().regex(/^[a-f0-9]{64}$/),
+    executionRouteSha256: z.string().regex(/^[a-f0-9]{64}$/),
+  }).strict().optional(),
 });
 
 export const AgentProfileSchema = z.object({

@@ -1,0 +1,34 @@
+[robb-resume:260101-synthetic-mail:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:v3]
+Le SHA du marqueur identifie uniquement le runtime Robb Agents installé. Il ne constitue ni une révision distante, ni un artefact métier, ni une autorisation supplémentaire.
+
+Envoie maintenant à Benoît le message exact défini ci-dessous, exclusivement avec l’API Gmail canonique, puis vérifie son résultat réel par cette API. Cette action poursuit l’objectif explicitement autorisé « Envoi l'e-mail à Benoît ». N’utilise jamais le navigateur ni une interface. Ne modifie pas le dossier Exemple pendant cet envoi de démonstration.
+
+Pour l’appel mutatif `mcp__google-contacts__gmail_send`, utilise exactement les champs canoniques du contrat : représente l’expéditeur uniquement par `sendAsEmail` avec la valeur From déclarée ; n’inclus ni `from` ni `replyTo` ; conserve `to`, `subject` et `body` exactement ; fixe `isHtml` à `false` et `attachmentPaths` à `[]`. `cc` et `bcc` peuvent être omis ou valoir des chaînes vides. Les seuls champs supplémentaires admis sont les booléens `requireKnownContacts`, `allowExternal`, `checkContacts` et les métadonnées texte `_displayName`, `_intent`.
+
+Payload autorisé :
+- From : sender@example.test
+- To : benoit@example.test
+- CC : []
+- BCC : []
+- Sujet : Exemple — compte rendu de démonstration
+- Texte du message : exactement le corps délimité ci-dessous
+- Pièces jointes : []
+- Signature : la signature automatique Gmail est autorisée ; n’ajoute manuellement aucune signature au corps
+
+BODY_BEGIN
+Bonjour Benoît,
+
+Voici le compte rendu de la démonstration sur le dossier Exemple. Peux-tu confirmer sa réception ?
+
+Merci !
+BODY_END
+
+Le corps hors signature fait exactement 124 caractères et son SHA-256 UTF-8 est 95d489042450d751c7632e6a1c5187f6e2f10625219da46af912cb7631984d90.
+
+Un ancien `gmail_send` est resté sans résultat terminal. Avant toute mutation, réconcilie donc de façon complète et paginée SENT et DRAFT pour ce payload exact :
+- si un exemplaire exact est déjà dans SENT, n’envoie rien de plus ; vérifie ce message et termine sur cette preuve ;
+- si un unique brouillon exact existe et aucun exemplaire SENT, inspecte tous ses champs puis réutilise ce brouillon pour un envoi unique par l’API ;
+- seulement si SENT et DRAFT sont tous deux vides, exécute le préflight canonique frais puis un unique envoi API exact ;
+- si plusieurs candidats, une ambiguïté ou une réconciliation incomplète apparaît, ne crée aucun nouvel effet et poursuis seulement les lectures nécessaires à la résolution.
+
+Après l’unique envoi éventuel, vérifie par l’API le messageId, le label SENT, From, To, CC, BCC, sujet, corps, absence de pièce jointe et absence de signature manuellement ajoutée. Ne redemande pas une confirmation déjà donnée et ne répète jamais un effet ambigu. Une fois l’e-mail vérifié, indique clairement que la démonstration est terminée sur la preuve obtenue.

@@ -10,11 +10,13 @@ import { describe, it, expect, beforeEach, mock } from 'bun:test';
 import {
   getSetupNeeds,
   performTokenRefresh,
+  getValidClaudeOAuthToken,
   _resetRefreshMutex,
   type AuthState,
   type TokenResult,
   type MigrationInfo,
 } from '../state.ts';
+import { setCredentialManagerForTesting } from '../../credentials/index.ts';
 
 // ============================================
 // Mock credential manager
@@ -378,5 +380,144 @@ describe('MigrationInfo', () => {
     };
 
     expect(validInfo.reason).toBe('legacy_token');
+  });
+});
+
+// ============================================
+// Multi-connection Claude OAuth resolution tests
+// ============================================
+
+describe('getValidClaudeOAuthToken connectionSlug resolution', () => {
+  beforeEach(() => {
+    _resetRefreshMutex();
+  });
+
+  it('performs dual-write to LLM connection and legacy store on refresh', async () => {
+    let legacySet: any = null;
+    let llmRefreshedSlug = '';
+    let llmRefreshedCreds: any = null;
+
+    const mockManager: any = {
+      getClaudeOAuthCredentials: async () => null,
+      setClaudeOAuthCredentials: async (creds: any) => {
+        legacySet = creds;
+      },
+      getLlmOAuth: async () => null,
+      refreshLlmOAuth: async (slug: string, creds: any) => {
+        llmRefreshedSlug = slug;
+        llmRefreshedCreds = creds;
+      },
+      deleteLlmCredentials: async () => {},
+    };
+
+    // Mock fetch for token refresh
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async () => {
+      return new Response(JSON.stringify({
+        access_token: 'fresh-dual-access-token',
+        token_type: 'Bearer',
+        expires_in: 3600,
+      }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }) as any;
+
+    try {
+      const result = await performTokenRefresh(
+        mockManager,
+        'valid-refresh-token',
+        'native',
+        'claude-work-account'
+      );
+
+      expect(result.accessToken).toBe('fresh-dual-access-token');
+      expect(legacySet?.accessToken).toBe('fresh-dual-access-token');
+      expect(llmRefreshedSlug).toBe('claude-work-account');
+      expect(llmRefreshedCreds?.accessToken).toBe('fresh-dual-access-token');
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it('clears both stores when refresh fails with invalid_grant', async () => {
+    let legacyCleared = false;
+    let llmDeletedSlug = '';
+
+    const mockManager: any = {
+      getClaudeOAuthCredentials: async () => null,
+      setClaudeOAuthCredentials: async (creds: any) => {
+        if (creds.accessToken === '') legacyCleared = true;
+      },
+      getLlmOAuth: async () => null,
+      refreshLlmOAuth: async () => {},
+      deleteLlmCredentials: async (slug: string) => {
+        llmDeletedSlug = slug;
+      },
+    };
+
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async () => {
+      return new Response(JSON.stringify({
+        error: 'invalid_grant',
+        error_description: 'Refresh token expired or revoked',
+      }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }) as any;
+
+    try {
+      const result = await performTokenRefresh(
+        mockManager,
+        'revoked-token',
+        'native',
+        'claude-revoked'
+      );
+
+      expect(result.accessToken).toBeNull();
+      expect(legacyCleared).toBe(true);
+      expect(llmDeletedSlug).toBe('claude-revoked');
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it('resolves valid token from LLM OAuth store for specific connectionSlug', async () => {
+    const mockManager: any = {
+      getLlmOAuth: async (slug: string) => {
+        if (slug === 'claude-pro') {
+          return {
+            accessToken: 'token-for-claude-pro',
+            refreshToken: 'refresh-pro',
+            expiresAt: Date.now() + 3600000,
+          };
+        }
+        return null;
+      },
+      getClaudeOAuthCredentials: async () => ({
+        accessToken: 'legacy-token',
+      }),
+    };
+
+    setCredentialManagerForTesting(mockManager);
+    try {
+      const result = await getValidClaudeOAuthToken('claude-pro');
+      expect(result.accessToken).toBe('token-for-claude-pro');
+    } finally {
+      setCredentialManagerForTesting(null);
+    }
+  });
+
+  it('falls back to legacy Claude OAuth store when connectionSlug has no LLM OAuth token', async () => {
+    const mockManager: any = {
+      getLlmOAuth: async () => null,
+      getClaudeOAuthCredentials: async () => ({
+        accessToken: 'fallback-legacy-token',
+        expiresAt: Date.now() + 3600000,
+      }),
+    };
+
+    setCredentialManagerForTesting(mockManager);
+    try {
+      const result = await getValidClaudeOAuthToken('claude-unmigrated');
+      expect(result.accessToken).toBe('fallback-legacy-token');
+    } finally {
+      setCredentialManagerForTesting(null);
+    }
   });
 });

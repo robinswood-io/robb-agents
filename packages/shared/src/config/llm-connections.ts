@@ -234,6 +234,22 @@ export interface LlmConnectionWithStatus extends LlmConnection {
 // ============================================================
 
 /**
+ * Auth-specific model eligibility shared by catalogs, saved selections and
+ * runtime resolution. ChatGPT-account Codex auth only exposes models that the
+ * authenticated Codex endpoint can actually execute. Keep this list tied to
+ * observed provider rejections rather than the broader Pi registry: the same
+ * model ids can remain valid with a regular OpenAI API key.
+ * This module is renderer-safe: keep this policy independent of the Pi SDK.
+ */
+export function isModelAllowedForAuthProvider(modelId: string, piAuthProvider?: string): boolean {
+  if (piAuthProvider !== 'openai-codex') return true;
+  const bare = modelId.trim().toLowerCase().replace(/^pi\//, '').replace(/^openai-codex\//, '');
+  return bare !== 'gpt-5.4'
+    && bare !== 'gpt-5.4-mini'
+    && bare !== 'gpt-5.3-codex-spark';
+}
+
+/**
  * Returns true when `modelId` must NOT be used as the metadata utility model
  * given the current auth flavor.
  *
@@ -245,6 +261,7 @@ export interface LlmConnectionWithStatus extends LlmConnection {
  *   A regular OpenAI API key uses provider `'openai'`, which is unaffected.
  */
 export function isDeniedMiniModelId(modelId: string, piAuthProvider?: string): boolean {
+  if (!isModelAllowedForAuthProvider(modelId, piAuthProvider)) return true;
   const bare = modelId.startsWith('pi/') ? modelId.slice(3) : modelId;
   if (bare === 'codex-mini-latest') return true;
   if (piAuthProvider === 'openai-codex' && bare.includes('codex-mini')) return true;
@@ -255,14 +272,16 @@ export function isDeniedMiniModelId(modelId: string, piAuthProvider?: string): b
  * Get the mini/utility model ID for a connection.
  * Provider-aware search:
  *   - Anthropic: find any model with "haiku" in its id/name
- *   - Pi: find any model with "mini" or "flash" in its id/name
+ *   - Pi: prefer the named Luna routine tier, then "mini" or "flash"
  *   - Otherwise: last model in the list
  *
  * Auth-flavor-aware: skips models that the user's `piAuthProvider` would reject
  * (e.g. `gpt-5.1-codex-mini` under ChatGPT-account auth). See
  * {@link isDeniedMiniModelId}.
  *
- * Used only for title/icon metadata generation and connection health probes.
+ * Used for low-cost utility work such as titles, task helpers, collection
+ * summaries and provider-side context compaction. Callers that require a
+ * stronger model must select one explicitly instead of relying on this helper.
  */
 export function getMiniModel(
   connection: Pick<LlmConnection, 'models' | 'providerType' | 'piAuthProvider'>,
@@ -272,10 +291,10 @@ export function getMiniModel(
 
 /**
  * Provider-aware small model resolution.
- * Implementation for metadata-only getMiniModel().
+ * Implementation for getMiniModel().
  *
  *   - Anthropic: find "haiku"
- *   - Pi: find "mini" or "flash"
+ *   - Pi: prefer "luna", then find "mini" or "flash"
  *   - Otherwise: last model in the list
  *
  * Skips models denied by {@link isDeniedMiniModelId} for the connection's
@@ -287,6 +306,10 @@ function findSmallModel(
   if (!connection.models || connection.models.length === 0) return undefined;
 
   const toId = (m: ModelDefinition | string) => typeof m === 'string' ? m : m.id;
+  // Saved connection lists can outlive a provider's model support. Exclude
+  // ineligible models before keyword search and the final-entry fallback.
+  const models = connection.models.filter(m => isModelAllowedForAuthProvider(toId(m), connection.piAuthProvider));
+  if (models.length === 0) return undefined;
 
   const toSearchStr = (m: ModelDefinition | string) =>
     typeof m === 'string' ? m.toLowerCase() : `${m.id} ${m.name} ${m.shortName}`.toLowerCase();
@@ -300,26 +323,31 @@ function findSmallModel(
   if (isAnthropicProvider(connection.providerType)) {
     keywords.push('haiku');
   } else if (isPiProvider(connection.providerType)) {
-    keywords.push('mini', 'flash');
+    // The current OpenAI family names its inexpensive utility tier Luna; it
+    // does not contain the historical "mini" keyword. Without this explicit
+    // preference the final-entry fallback selects gpt-5.5 from standard saved
+    // connection ordering, making titles, summaries and compactions needlessly
+    // expensive.
+    keywords.push('luna', 'mini', 'flash');
   } else {
     // Aggregator providers (copilot, etc.) — try all common small-model keywords
     keywords.push('mini', 'haiku', 'flash');
   }
 
   if (keywords.length > 0) {
-    const match = connection.models.find(m => {
-      if (!isAllowedModel(m)) return false;
-      const searchStr = toSearchStr(m);
-      return keywords.some(k => searchStr.includes(k));
-    });
-    if (match) {
-      return toId(match);
+    // Keyword order is the provider policy. Model order is only a tiebreaker
+    // within one tier; otherwise a legacy mini listed before Luna would defeat
+    // the explicit Luna preference above.
+    for (const keyword of keywords) {
+      const match = models.find(m => isAllowedModel(m) && toSearchStr(m).includes(keyword));
+      if (match) return toId(match);
     }
   }
 
-  // Fallback: last allowed model in the list, otherwise final entry.
-  const fallback = [...connection.models].reverse().find(isAllowedModel);
-  return fallback ? toId(fallback) : toId(connection.models[connection.models.length - 1]!);
+  // An implicit utility role may use another eligible configured model.
+  // An all-denied list has no valid fallback; never return a rejected model.
+  const fallback = [...models].reverse().find(isAllowedModel);
+  return fallback ? toId(fallback) : undefined;
 }
 
 /**
@@ -457,13 +485,12 @@ export function isPiProvider(providerType: LlmProviderType): boolean {
 /**
  * Default mid-stream send behavior for a given provider type.
  *
- * - 'anthropic' → 'queue': Claude's emulated steer (PreToolUse hook injection)
- *   has a real failure mode — if no tool fires before the turn ends, the steer
- *   becomes `steer_undelivered` and gets re-queued anyway, paying for the
- *   original turn's tokens for nothing. Default to queue for predictability.
+ * - 'anthropic' → 'queue': Claude has no acknowledged native mid-turn steer.
+ *   Queue preserves the complete payload and the current turn by default.
+ *   An explicit 'steer' setting aborts the old turn before host FIFO replay.
  * - 'pi' / 'pi_compat' → 'steer': Pi's native `.steer()` is non-destructive
- *   (delivers after the current tool finishes, keeps full context). No
- *   downside to defaulting to immediate steering.
+ *   (delivers after the current tool finishes, keeps full context). A failed
+ *   subprocess write falls back to abort plus durable host replay.
  */
 export function defaultMidStreamBehavior(providerType: LlmProviderType): MidStreamBehavior {
   return providerType === 'anthropic' ? 'queue' : 'steer';
@@ -595,8 +622,8 @@ export function getModelsForProviderType(providerType: LlmProviderType, piAuthPr
  */
 export const PI_PREFERRED_DEFAULTS: Record<string, string[]> = {
   anthropic: ['claude-opus-5', 'claude-opus-4-8', 'claude-opus-4-7', 'claude-fable-5-1', 'claude-fable-5', 'claude-sonnet-5', 'claude-sonnet-4-6', 'claude-haiku-4-5'],
-  // Keep Sol as the default/utility model; Astra is intentionally opt-in
-  // because its flagship pricing is substantially higher.
+  // Keep Sol as the default/utility model. Adaptive routing selects Astra only
+  // for work whose policy classification requires the flagship tier.
   openai: ['gpt-5.6-sol', 'gpt-6-astra', 'gpt-5.6-terra', 'gpt-5.6-luna', 'gpt-5.5', 'gpt-5.2', 'gpt-5.1', 'gpt-5', 'o4-mini', 'o3', 'gpt-4o'],
   'openai-codex': ['gpt-5.6-sol', 'gpt-6-astra', 'gpt-5.6-terra', 'gpt-5.6-luna', 'gpt-5.5', 'gpt-5.2', 'gpt-5.1', 'gpt-5', 'o4-mini', 'o3', 'gpt-4o'],
   // Stable models first so the connection-setup test (which uses
@@ -606,7 +633,18 @@ export const PI_PREFERRED_DEFAULTS: Record<string, string[]> = {
   // April 2026 — and are deliberately excluded from defaults.
   google: ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-3-flash-preview', 'gemini-3.1-flash-lite-preview'],
   'google-gemini-code-assist': ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-3-flash-preview'],
-  'google-antigravity': ['gemini-3.8-flash-high', 'gemini-3.8-flash-medium', 'gemini-3.8-flash-low', 'gemini-3.7-flash-high', 'gemini-3.7-flash-medium', 'gemini-3.7-flash-low', 'gemini-3.1-pro-high'],
+  'google-antigravity': [
+    'gemini-3.8-flash-high',
+    'gemini-3.8-flash-medium',
+    'gemini-3.8-flash-low',
+    'claude-sonnet-4-6',
+    'claude-opus-4-6-thinking',
+    'gemini-3.7-flash-high',
+    'gemini-3.7-flash-medium',
+    'gemini-3.7-flash-low',
+    'gemini-3.1-pro-high',
+    'gpt-oss-120b-medium',
+  ],
   // Mistral Medium 3.5 is Mistral's frontier agentic/coding model; Small 4
   // is its efficient unified instruct/reasoning/coding alternative. Keep a
   // lightweight Ministral option last for mini/summarization work.
@@ -621,7 +659,8 @@ export const PI_PREFERRED_DEFAULTS: Record<string, string[]> = {
 
 export function getDefaultModelsForConnection(providerType: LlmProviderType, piAuthProvider?: string): Array<ModelDefinition | string> {
   if (providerType === 'pi') {
-    const models = [..._piModelResolver(piAuthProvider)];
+    const models = _piModelResolver(piAuthProvider)
+      .filter(model => isModelAllowedForAuthProvider(model.id, piAuthProvider));
     // Sort preferred defaults first so getDefaultModelForConnection picks a modern model.
     // For Bedrock models, the Pi SDK returns IDs like pi/us.anthropic.claude-opus-4-8
     // but preferred defaults use bare IDs. Strip the transport namespace only:
@@ -1008,6 +1047,7 @@ export async function resolveAuthEnvVars(
   connectionSlug: string,
   credentialManager: CredentialManager,
   getValidOAuthToken: (slug: string) => Promise<{ accessToken?: string | null }>,
+  expectedCredentialBindingId?: string,
 ): Promise<ResolvedAuthEnvVars> {
   const envVars: Record<string, string> = {};
 
@@ -1025,7 +1065,7 @@ export async function resolveAuthEnvVars(
   const authType = connection.authType;
 
   if (authType === 'api_key' || authType === 'api_key_with_endpoint' || authType === 'bearer_token') {
-    const apiKey = await credentialManager.getLlmApiKey(connectionSlug);
+    const apiKey = await credentialManager.getLlmApiKey(connectionSlug, expectedCredentialBindingId);
     if (apiKey) {
       envVars.ANTHROPIC_API_KEY = apiKey;
     } else if (connection.baseUrl) {
@@ -1036,16 +1076,26 @@ export async function resolveAuthEnvVars(
     }
   } else if (authType === 'oauth') {
     if (connection.providerType === 'anthropic') {
-      // Anthropic OAuth uses getValidClaudeOAuthToken which handles token refresh
-      const tokenResult = await getValidOAuthToken(connectionSlug);
-      if (tokenResult.accessToken) {
-        envVars.CLAUDE_CODE_OAUTH_TOKEN = tokenResult.accessToken;
+      const exactCredential = expectedCredentialBindingId
+        ? await credentialManager.getLlmOAuth(connectionSlug, expectedCredentialBindingId)
+        : null;
+      // A governed route must not consult the legacy global Claude slot. Its
+      // exact connection generation is the authority; expiry fails closed.
+      const tokenResult = expectedCredentialBindingId
+        ? { accessToken: exactCredential?.expiresAt !== undefined
+            && exactCredential.expiresAt <= Date.now()
+          ? null
+          : exactCredential?.accessToken }
+        : await getValidOAuthToken(connectionSlug);
+      const accessToken = tokenResult.accessToken;
+      if (accessToken) {
+        envVars.CLAUDE_CODE_OAUTH_TOKEN = accessToken;
       } else {
         return { envVars, success: false, warning: `Failed to get OAuth token for: ${connectionSlug}` };
       }
     } else {
       // Fallback OAuth path (should not be reached after legacy migration)
-      const llmOAuth = await credentialManager.getLlmOAuth(connectionSlug);
+      const llmOAuth = await credentialManager.getLlmOAuth(connectionSlug, expectedCredentialBindingId);
       if (llmOAuth?.accessToken) {
         envVars.CLAUDE_CODE_OAUTH_TOKEN = llmOAuth.accessToken;
       } else {

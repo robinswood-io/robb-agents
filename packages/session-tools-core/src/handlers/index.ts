@@ -64,6 +64,7 @@ export { handleSendDeveloperFeedback } from './send-developer-feedback.ts';
 export type { SendDeveloperFeedbackArgs } from './send-developer-feedback.ts';
 
 // Session Self-Management
+export { handleRequestUserInput } from './request-user-input.ts';
 export { handleSetSessionLabels } from './set-session-labels.ts';
 export type { SetSessionLabelsArgs } from './set-session-labels.ts';
 export { handleSetSessionStatus } from './set-session-status.ts';

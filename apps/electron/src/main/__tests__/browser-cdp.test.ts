@@ -388,7 +388,7 @@ describe('BrowserCDP', () => {
       const calls: Array<{ method: string; params?: Record<string, unknown> }> = []
       const wc = createMockWebContents(async (method, params) => {
         calls.push({ method, params })
-        return {}
+        return method === 'Runtime.evaluate' ? { result: { value: true } } : {}
       })
 
       const cdp = new BrowserCDP(
@@ -466,6 +466,68 @@ describe('BrowserCDP', () => {
 
       expect(sentCommands).toContain('DOM.resolveNode')
       expect(sentCommands).toContain('Runtime.callFunctionOn')
+    })
+  })
+
+  describe('setFileInputFiles', () => {
+    it('uses the referenced file input directly', async () => {
+      const calls: Array<{ method: string; params?: Record<string, unknown> }> = []
+      const wc = createMockWebContents(async (method, params) => {
+        calls.push({ method, params })
+        if (method === 'Accessibility.getFullAXTree') {
+          return {
+            nodes: [
+              { role: { value: 'button' }, name: { value: 'Upload' }, backendDOMNodeId: 42 },
+            ],
+          }
+        }
+        if (method === 'DOM.resolveNode') {
+          return { object: { objectId: 'obj-upload' } }
+        }
+        if (method === 'Runtime.callFunctionOn') {
+          return { result: { objectId: 'obj-file-input' } }
+        }
+        if (method === 'DOM.getBoxModel') {
+          return { model: { content: [10, 10, 50, 10, 50, 50, 10, 50] } }
+        }
+        return {}
+      })
+
+      const cdp = new BrowserCDP(wc as any)
+      await cdp.getAccessibilitySnapshot()
+
+      await cdp.setFileInputFiles('@e1', ['/tmp/upload.txt'])
+
+      expect(calls).toContainEqual({
+        method: 'DOM.setFileInputFiles',
+        params: { files: ['/tmp/upload.txt'], objectId: 'obj-file-input' },
+      })
+    })
+
+    it('fails clearly when no file input can be resolved from the reference', async () => {
+      const wc = createMockWebContents(async (method) => {
+        if (method === 'Accessibility.getFullAXTree') {
+          return {
+            nodes: [
+              { role: { value: 'button' }, name: { value: 'Upload' }, backendDOMNodeId: 42 },
+            ],
+          }
+        }
+        if (method === 'DOM.resolveNode') {
+          return { object: { objectId: 'obj-upload' } }
+        }
+        if (method === 'Runtime.callFunctionOn') {
+          return { result: { value: null } }
+        }
+        return {}
+      })
+
+      const cdp = new BrowserCDP(wc as any)
+      await cdp.getAccessibilitySnapshot()
+
+      await expect(cdp.setFileInputFiles('@e1', ['/tmp/upload.txt'])).rejects.toThrow(
+        'no unambiguous file input was found nearby',
+      )
     })
   })
 

@@ -15,8 +15,14 @@ const mockShellOpenExternal = mock(async () => {})
 const mockIpcMainHandle = mock(() => {})
 const mockDialogShowMessageBox = mock(async () => ({ response: 0, checkboxChecked: false }))
 const mockSessionListeners: Record<string, Function[]> = {}
+const mockNativeTheme = { shouldUseDarkColors: false }
 let mockPermissionCheckHandler: ((...args: any[]) => boolean) | null = null
 let mockPermissionRequestHandler: ((...args: any[]) => void) | null = null
+const mockCanvasImage = () => ({
+  isEmpty: () => false, getSize: () => ({ width: 120, height: 90 }),
+  crop: mock((_rect: unknown) => ({ isEmpty: () => false, toBitmap: () => Buffer.from([0, 0, 255, 255]), toPNG: () => Buffer.from('canvas-png') })),
+})
+let canvasImage = mockCanvasImage()
 
 function createMockWebContents() {
   const listeners: Record<string, Function[]> = {}
@@ -70,7 +76,6 @@ function createMockWebContents() {
     reload: mock(() => {}),
     stop: mock(() => {}),
     setUserAgent: mock(() => {}),
-    setBackgroundColor: mock(() => {}),
     capturePage: mock(async () => {
       const img = {
         isEmpty: () => false,
@@ -109,6 +114,7 @@ function createMockWebContentsView() {
   return {
     webContents,
     setBounds: mock(() => {}),
+    setBackgroundColor: mock((_color: string) => {}),
   }
 }
 
@@ -218,9 +224,8 @@ mock.module('electron', () => ({
       popup: mock(() => {}),
     })),
   },
-  nativeTheme: {
-    shouldUseDarkColors: false,
-  },
+  nativeTheme: mockNativeTheme,
+  nativeImage: { createFromBuffer: () => canvasImage },
   shell: {
     openExternal: mockShellOpenExternal,
   },
@@ -341,6 +346,8 @@ describe('BrowserPaneManager', () => {
     createdWindows.length = 0
     toolbarLoadFailuresRemaining = 0
     emptyStateLoadError = null
+    mockNativeTheme.shouldUseDarkColors = false
+    canvasImage = mockCanvasImage()
     mockShellOpenExternal.mockClear()
     mockIpcMainHandle.mockClear()
     mockDialogShowMessageBox.mockClear()
@@ -359,6 +366,65 @@ describe('BrowserPaneManager', () => {
     expect(list[0].agentControlActive).toBe(false)
   })
 
+  it('captures an explicit canvas crop without capturePage, overlay changes, focus or clipboard', async () => {
+    manager.createInstance('canvas-image', { ownerType: 'session', ownerSessionId: 'task', workspaceId: 'ws' })
+    const instance = (manager as any).instances.get('canvas-image')
+    instance.cdp.captureCanvasBitmap = mock(async (_selector: string, current: () => boolean) => {
+      expect(current()).toBe(true)
+      return { png: Buffer.from('validated-source-png'), receipt: {
+        width: 120, height: 90, sourceRect: { x: 0, y: 0, width: 80, height: 60 },
+        region: { x: 10, y: 20, width: 40, height: 30 }, canvasBox: { x: 10, y: 20, width: 60, height: 45 },
+        viewport: { width: 1200, height: 852, dpr: 2, scrollX: 0, scrollY: 0 }, capturedAt: 123,
+      } }
+    })
+    const result = await manager.screenshotRegion('canvas-image', { source: 'canvas', selector: 'canvas' })
+    expect(result.metadata?.source).toBe('canvas-bitmap')
+    expect(result.metadata?.imageToViewport).toEqual({ x: 10, y: 20, scaleX: 0.5, scaleY: 0.5 })
+    expect(canvasImage.crop).toHaveBeenCalledWith({ x: 0, y: 0, width: 80, height: 60 })
+    expect(result.imageBuffer.toString()).toBe('canvas-png')
+    expect(instance.pageView.webContents.capturePage).not.toHaveBeenCalled()
+    expect(instance.pageView.webContents.focus).not.toHaveBeenCalled()
+    expect(instance.cdp.renderTemporaryOverlay).not.toHaveBeenCalled()
+  })
+
+  it('rejects a canvas image after its owner changes during the read', async () => {
+    manager.createInstance('canvas-race', { ownerType: 'session', ownerSessionId: 'task', workspaceId: 'ws' })
+    const instance = (manager as any).instances.get('canvas-race')
+    instance.cdp.captureCanvasBitmap = mock(async () => { instance.ownerSessionId = 'other'; return { png: Buffer.alloc(0), receipt: {} } })
+    await expect(manager.screenshotRegion('canvas-race', { source: 'canvas', selector: 'canvas' })).rejects.toThrow('ownership changed')
+  })
+
+  it('does not widen the remote browser owner gate for canvas capture', async () => {
+    manager.createInstance('canvas-owner', { ownerType: 'session', ownerSessionId: 'remote:ws:other', workspaceId: 'ws' })
+    const instance = (manager as any).instances.get('canvas-owner')
+    instance.cdp.captureCanvasBitmap = mock(async () => { throw Error('must not read') })
+    await expect((manager as any).dispatchCapability({ v: 1, workspaceId: 'ws', sessionId: 'task', method: 'screenshotRegion', args: ['canvas-owner', { source: 'canvas', selector: 'canvas' }] })).rejects.toThrow('not owned')
+    expect(instance.cdp.captureCanvasBitmap).not.toHaveBeenCalled()
+  })
+
+  it('rejects ambiguous or unbounded transport options without attempting a canvas read', async () => {
+    manager.createInstance('canvas-args')
+    const instance = (manager as any).instances.get('canvas-args')
+    instance.cdp.captureCanvasBitmap = mock(async () => { throw Error('must not read') })
+    for (const extra of [{ padding: 0 }, { ref: '@e1' }, { x: 1 }, { selector: ['canvas'] }, { format: 'jpeg' }, { source: true }]) {
+      await expect(manager.screenshotRegion('canvas-args', { source: 'canvas', selector: 'canvas', ...extra } as any)).rejects.toThrow('Canvas capture requires')
+    }
+    expect(instance.cdp.captureCanvasBitmap).not.toHaveBeenCalled()
+  })
+
+  it('does not turn an empty/transparent bitmap or oversized encoding into a successful screenshot', async () => {
+    manager.createInstance('canvas-empty')
+    const instance = (manager as any).instances.get('canvas-empty')
+    instance.cdp.captureCanvasBitmap = mock(async () => ({ png: Buffer.from('validated-source'), receipt: {
+      width: 120, height: 90, sourceRect: { x: 0, y: 0, width: 80, height: 60 },
+    } }))
+    canvasImage.crop = mock(() => ({ isEmpty: () => false, toBitmap: () => Buffer.alloc(4), toPNG: () => Buffer.from('data') }))
+    await expect(manager.screenshotRegion('canvas-empty', { source: 'canvas', selector: 'canvas' })).rejects.toThrow('does not prove')
+    canvasImage.crop = mock(() => ({ isEmpty: () => false, toBitmap: () => Buffer.from([0, 0, 0, 255]), toPNG: () => Buffer.alloc(4 * 1024 * 1024 + 1) }))
+    await expect(manager.screenshotRegion('canvas-empty', { source: 'canvas', selector: 'canvas' })).rejects.toThrow('image limit')
+    expect(instance.pageView.webContents.capturePage).not.toHaveBeenCalled()
+  })
+
   it('composes page, overlay, and toolbar as ordered WebContentsView children', () => {
     manager.createInstance('web-contents-views')
     const instance = (manager as any).instances.get('web-contents-views')
@@ -373,6 +439,43 @@ describe('BrowserPaneManager', () => {
     expect(instance.nativeOverlayView.setBounds).toHaveBeenCalled()
     expect(instance.toolbarView.setBounds).toHaveBeenCalled()
     expect(instance.window.contentView.children[2]).toBe(instance.toolbarView)
+  })
+
+  it('sets native view transparency in both themes instead of relying on page CSS', () => {
+    for (const [dark, pageBackground] of [[false, '#fafafb'], [true, '#2b292e']] as const) {
+      mockNativeTheme.shouldUseDarkColors = dark
+      const id = manager.createInstance(`native-background-${dark}`)
+      const instance = (manager as any).instances.get(id)
+      // Electron exposes background color on View, never on WebContents.
+      expect(instance.toolbarView.webContents.setBackgroundColor).toBeUndefined()
+      expect(instance.nativeOverlayView.webContents.setBackgroundColor).toBeUndefined()
+      expect(instance.pageView.setBackgroundColor).toHaveBeenCalledWith(pageBackground)
+      expect(instance.toolbarView.setBackgroundColor).toHaveBeenCalledWith('#00000000')
+      expect(instance.nativeOverlayView.setBackgroundColor).toHaveBeenCalledWith('#00000000')
+    }
+  })
+
+  it('keeps the page beneath transparent full-window toolbar and menu overlay views', async () => {
+    const id = manager.createInstance('transparent-menu')
+    await Promise.resolve()
+    const instance = (manager as any).instances.get(id)
+    manager.registerToolbarIpc()
+    const registration = (
+      mockIpcMainHandle.mock.calls as unknown as Array<[
+        string, (event: unknown, instanceId: string, open: boolean, height?: number) => Promise<void>,
+      ]>
+    ).find(([channel]) => channel === 'browser-toolbar:menu-geometry')
+    if (!registration) throw new Error('Missing menu geometry handler')
+    const [, setMenuGeometry] = registration
+    await setMenuGeometry({}, id, true, 120)
+    expect(instance.toolbarView.setBounds).toHaveBeenLastCalledWith({ x: 0, y: 0, width: 1200, height: 900 })
+    expect(instance.nativeOverlayView.setBounds).toHaveBeenLastCalledWith({ x: 0, y: 48, width: 1200, height: 852 })
+    expect(instance.toolbarView.setBackgroundColor).toHaveBeenLastCalledWith('#00000000')
+    expect(instance.nativeOverlayView.setBackgroundColor).toHaveBeenLastCalledWith('#00000000')
+    expect(instance.window.contentView.children).toEqual([instance.pageView, instance.nativeOverlayView, instance.toolbarView])
+    await setMenuGeometry({}, id, false)
+    expect(instance.toolbarView.setBounds).toHaveBeenLastCalledWith({ x: 0, y: 0, width: 1200, height: 48 })
+    expect(instance.nativeOverlayView.setBounds).toHaveBeenLastCalledWith({ x: 0, y: 0, width: 0, height: 0 })
   })
 
   it('grants scoped browser permissions only with live autonomous session context', async () => {
@@ -570,6 +673,18 @@ describe('BrowserPaneManager', () => {
     expect(manager.listInstances()).toHaveLength(0)
   })
 
+  it('destroys all instances even when Electron has already removed a native webContents wrapper', () => {
+    manager.createInstance('native-already-destroyed')
+    manager.createInstance('still-alive')
+    const instance = (manager as any).instances.get('native-already-destroyed')
+    const wcId = instance.pageWebContentsId
+    Object.defineProperty(instance.pageView, 'webContents', { configurable: true, get: () => undefined })
+    expect(() => (manager as any).getInstanceByWebContentsId(wcId)).not.toThrow()
+    expect(() => manager.destroyAll()).not.toThrow()
+    expect(manager.listInstances()).toHaveLength(0)
+    expect(() => manager.destroyAll()).not.toThrow()
+  })
+
   it('destroys instance via toolbar destroy IPC handler', async () => {
     manager.createInstance('d-ipc-destroy')
     manager.registerToolbarIpc()
@@ -658,6 +773,50 @@ describe('BrowserPaneManager', () => {
     expect(info.ownerSessionId).toBe('sess-reuse')
     expect(info.boundSessionId).toBe('sess-reuse')
     expect(manager.listInstances()).toHaveLength(1)
+  })
+
+  describe('explicit remote keyboard text', () => {
+    it('uses one bounded CDP text operation and revokes it if the browser is rebound', async () => {
+      const manager = new BrowserPaneManager()
+      manager.createInstance('keyboard-fixture')
+      const instance = (manager as any).instances.get('keyboard-fixture')
+      let calls = 0
+      instance.cdp.typeKeys = async (text: string, isCurrent: () => boolean) => {
+        calls++
+        expect(text).toBe('é € []')
+        expect(isCurrent()).toBe(true)
+        instance.boundSessionId = 'another-session'
+        expect(isCurrent()).toBe(false)
+      }
+      await manager.sendKey('keyboard-fixture', { key: 'Unidentified', text: 'é € []' })
+      expect(calls).toBe(1)
+      await manager.destroyAll()
+    })
+
+    it('applies host clipboard policy before page JavaScript can return a forged success', async () => {
+      const manager = new BrowserPaneManager()
+      manager.createInstance('clipboard-policy-fixture')
+      const instance = (manager as any).instances.get('clipboard-policy-fixture')
+      let pageCalls = 0
+      instance.cdp.setClipboard = async () => { pageCalls++ }
+      instance.cdp.getClipboard = async () => { pageCalls++; return 'old system contents' }
+      await expect(manager.setClipboard('clipboard-policy-fixture', 'text')).rejects.toThrow('denied by browser policy')
+      await expect(manager.getClipboard('clipboard-policy-fixture')).rejects.toThrow('unknown, not empty')
+      expect(pageCalls).toBe(0)
+      await manager.destroyAll()
+    })
+
+    it('rejects shortcut modifiers before delivering keyboard text', async () => {
+      const manager = new BrowserPaneManager()
+      manager.createInstance('keyboard-modifiers')
+      const instance = (manager as any).instances.get('keyboard-modifiers')
+      instance.cdp.typeKeys = async () => { throw new Error('must not deliver') }
+      await expect(manager.sendKey('keyboard-modifiers', { key: 'Unidentified', text: 'v', modifiers: ['meta'] })).rejects.toThrow('shortcut modifiers')
+      for (const modifiers of [{}, 0, true, '']) {
+        await expect(manager.sendKey('keyboard-modifiers', { key: 'Unidentified', text: 'v', modifiers: modifiers as any })).rejects.toThrow('shortcut modifiers')
+      }
+      await manager.destroyAll()
+    })
   })
 
   describe('workspaceId stamping', () => {
@@ -821,6 +980,442 @@ describe('BrowserPaneManager', () => {
     } finally {
       ;(globalThis as any).clearTimeout = originalClearTimeout
     }
+  })
+
+  it('re-checks the live URL at the local mutation point after a concurrent navigation', async () => {
+    manager.createInstance('gmail-local-race')
+    await Bun.sleep(0)
+    await manager.navigate('gmail-local-race', 'https://cms.example.test/form')
+    const instance = (manager as any).instances.get('gmail-local-race')
+    const originalLoadURL = instance.pageView.webContents.loadURL
+    let navigationStarted!: () => void
+    let releaseNavigation!: () => void
+    const started = new Promise<void>((resolve) => { navigationStarted = resolve })
+    const held = new Promise<void>((resolve) => { releaseNavigation = resolve })
+    instance.pageView.webContents.loadURL = mock(async (url: string) => {
+      navigationStarted()
+      await held
+      await originalLoadURL(url)
+    })
+    const policy = {
+      reason: 'contextual-gmail-reply' as const,
+      blockedHosts: ['mail.google.com'],
+      matchSubdomains: true,
+    }
+
+    await manager.clickElement('gmail-local-race', '@save', undefined, policy)
+    expect(instance.cdp.clickElement).toHaveBeenCalledTimes(1)
+    instance.cdp.clickElement.mockClear()
+
+    const navigation = manager.navigate('gmail-local-race', 'https://mail.google.com/mail/u/0/#inbox')
+    await started
+    const click = manager.clickElement('gmail-local-race', '@send', undefined, policy)
+    let clickError: unknown
+    const clickSettled = click.then(
+      () => { throw new Error('Expected Gmail click to be blocked') },
+      (error) => { clickError = error },
+    )
+    await Bun.sleep(0)
+    expect(instance.cdp.clickElement).not.toHaveBeenCalled()
+    releaseNavigation()
+
+    await navigation
+    await clickSettled
+    expect(String(clickError)).toContain('browser mutations on Gmail are disabled')
+    expect(instance.cdp.clickElement).not.toHaveBeenCalled()
+  })
+
+  it('keeps a history navigation serialized until its Gmail URL commits before a local mutation', async () => {
+    manager.createInstance('gmail-local-history-race')
+    await Bun.sleep(0)
+    await manager.navigate('gmail-local-history-race', 'https://cms.example.test/form')
+    const instance = (manager as any).instances.get('gmail-local-history-race')
+    const originalLoadURL = instance.pageView.webContents.loadURL
+    let historyStarted!: () => void
+    let releaseHistory!: () => void
+    const started = new Promise<void>((resolve) => { historyStarted = resolve })
+    const held = new Promise<void>((resolve) => { releaseHistory = resolve })
+    instance.pageView.webContents.canGoBack = mock(() => true)
+    instance.pageView.webContents.goBack = mock(() => {
+      historyStarted()
+      instance.pageView.webContents._emit(
+        'did-navigate-in-page',
+        'https://mail.google.com/frame-only',
+        false,
+      )
+      void held.then(async () => {
+        const gmailUrl = 'https://mail.google.com/mail/u/0/#inbox'
+        await originalLoadURL(gmailUrl)
+        instance.pageView.webContents._emit('did-navigate', gmailUrl)
+      })
+    })
+    const policy = {
+      reason: 'contextual-gmail-reply' as const,
+      blockedHosts: ['mail.google.com'],
+      matchSubdomains: true,
+    }
+
+    const historyNavigation = manager.goBack('gmail-local-history-race')
+    await started
+    const click = manager.clickElement('gmail-local-history-race', '@send', undefined, policy)
+    let clickError: unknown
+    const clickSettled = click.then(
+      () => { throw new Error('Expected Gmail click after history navigation to be blocked') },
+      (error) => { clickError = error },
+    )
+    await Bun.sleep(0)
+    expect(instance.cdp.clickElement).not.toHaveBeenCalled()
+    releaseHistory()
+
+    await historyNavigation
+    await clickSettled
+    expect(String(clickError)).toContain('browser mutations on Gmail are disabled')
+    expect(instance.cdp.clickElement).not.toHaveBeenCalled()
+  })
+
+  it('ignores a sub-frame in-page event while a guarded click awaits its main-frame Gmail navigation', async () => {
+    manager.createInstance('gmail-local-click-navigation-race')
+    await Bun.sleep(0)
+    await manager.navigate('gmail-local-click-navigation-race', 'https://cms.example.test/form')
+    const instance = (manager as any).instances.get('gmail-local-click-navigation-race')
+    const originalLoadURL = instance.pageView.webContents.loadURL
+    let clickStarted!: () => void
+    let releaseNavigation!: () => void
+    const started = new Promise<void>((resolve) => { clickStarted = resolve })
+    const held = new Promise<void>((resolve) => { releaseNavigation = resolve })
+    instance.cdp.clickElement = mock(async () => {
+      clickStarted()
+      instance.pageView.webContents._emit(
+        'did-navigate-in-page',
+        'https://cms.example.test/embedded-frame',
+        false,
+      )
+      void held.then(async () => {
+        const gmailUrl = 'https://mail.google.com/mail/u/0/#inbox'
+        await originalLoadURL(gmailUrl)
+        instance.pageView.webContents._emit('did-navigate', gmailUrl)
+      })
+      return {
+        ref: '@open-mail',
+        box: { x: 0, y: 0, width: 10, height: 10 },
+        clickPoint: { x: 5, y: 5 },
+      }
+    })
+    const policy = {
+      reason: 'contextual-gmail-reply' as const,
+      blockedHosts: ['mail.google.com'],
+      matchSubdomains: true,
+    }
+
+    const navigationClick = manager.clickElement(
+      'gmail-local-click-navigation-race',
+      '@open-mail',
+      { waitFor: 'navigation' },
+      policy,
+    )
+    await started
+    const followupClick = manager.clickElement(
+      'gmail-local-click-navigation-race',
+      '@send',
+      undefined,
+      policy,
+    )
+    let followupError: unknown
+    const followupSettled = followupClick.then(
+      () => { throw new Error('Expected Gmail follow-up click to be blocked') },
+      (error) => { followupError = error },
+    )
+    await Bun.sleep(0)
+    expect(instance.cdp.clickElement).toHaveBeenCalledTimes(1)
+    releaseNavigation()
+
+    await navigationClick
+    await followupSettled
+    expect(String(followupError)).toContain('browser mutations on Gmail are disabled')
+    expect(instance.cdp.clickElement).toHaveBeenCalledTimes(1)
+  })
+
+  it('fails closed at the local mutation point when Electron exposes no parseable live URL', async () => {
+    manager.createInstance('gmail-local-unknown-url')
+    await Bun.sleep(0)
+    const instance = (manager as any).instances.get('gmail-local-unknown-url')
+    instance.currentUrl = ''
+    instance.pageView.webContents.getURL = mock(() => 'not a valid URL')
+    const policy = {
+      reason: 'contextual-gmail-reply' as const,
+      blockedHosts: ['mail.google.com'],
+      matchSubdomains: true,
+    }
+
+    let clickError: unknown
+    await manager.clickElement('gmail-local-unknown-url', '@send', undefined, policy).then(
+      () => { throw new Error('Expected a mutation with an unknown live URL to be blocked') },
+      (error) => { clickError = error },
+    )
+    expect(String(clickError)).toContain('browser mutations on Gmail are disabled')
+    expect(instance.cdp.clickElement).not.toHaveBeenCalled()
+  })
+
+  it('re-applies a remote mutation URL policy after a concurrent capability navigation', async () => {
+    const createRequest = {
+      v: 1 as const,
+      workspaceId: 'ws-gmail-race',
+      sessionId: 'session-gmail-race',
+      method: 'createForSession' as const,
+      args: ['session-gmail-race', { show: false }],
+    }
+    const instanceId = await (manager as any).dispatchCapability(createRequest) as string
+    await Bun.sleep(0)
+    await (manager as any).dispatchCapability({
+      ...createRequest,
+      method: 'navigate',
+      args: [instanceId, 'https://cms.example.test/form'],
+    })
+    const instance = (manager as any).instances.get(instanceId)
+    const originalLoadURL = instance.pageView.webContents.loadURL
+    let navigationStarted!: () => void
+    let releaseNavigation!: () => void
+    const started = new Promise<void>((resolve) => { navigationStarted = resolve })
+    const held = new Promise<void>((resolve) => { releaseNavigation = resolve })
+    instance.pageView.webContents.loadURL = mock(async (url: string) => {
+      navigationStarted()
+      await held
+      await originalLoadURL(url)
+    })
+    const policy = {
+      reason: 'contextual-gmail-reply' as const,
+      blockedHosts: ['mail.google.com'],
+      matchSubdomains: true,
+    }
+
+    const navigation = (manager as any).dispatchCapability({
+      ...createRequest,
+      method: 'navigate',
+      args: [instanceId, 'https://mail.google.com/mail/u/0/#inbox'],
+    })
+    await started
+    const click = (manager as any).dispatchCapability({
+      ...createRequest,
+      v: 2,
+      method: 'clickElement',
+      args: [instanceId, '@send', undefined],
+      mutationUrlPolicy: policy,
+    })
+    let clickError: unknown
+    const clickSettled = click.then(
+      () => { throw new Error('Expected remote Gmail click to be blocked') },
+      (error: unknown) => { clickError = error },
+    )
+    await Bun.sleep(0)
+    expect(instance.cdp.clickElement).not.toHaveBeenCalled()
+    releaseNavigation()
+
+    await navigation
+    await clickSettled
+    expect(String(clickError)).toContain('browser mutations on Gmail are disabled')
+    expect(instance.cdp.clickElement).not.toHaveBeenCalled()
+  })
+
+  it('keeps a remote history capability serialized until Gmail commits before its mutation', async () => {
+    const createRequest = {
+      v: 1 as const,
+      workspaceId: 'ws-gmail-history-race',
+      sessionId: 'session-gmail-history-race',
+      method: 'createForSession' as const,
+      args: ['session-gmail-history-race', { show: false }],
+    }
+    const instanceId = await (manager as any).dispatchCapability(createRequest) as string
+    await Bun.sleep(0)
+    await (manager as any).dispatchCapability({
+      ...createRequest,
+      method: 'navigate',
+      args: [instanceId, 'https://cms.example.test/form'],
+    })
+    const instance = (manager as any).instances.get(instanceId)
+    const originalLoadURL = instance.pageView.webContents.loadURL
+    let historyStarted!: () => void
+    let releaseHistory!: () => void
+    const started = new Promise<void>((resolve) => { historyStarted = resolve })
+    const held = new Promise<void>((resolve) => { releaseHistory = resolve })
+    instance.pageView.webContents.canGoBack = mock(() => true)
+    instance.pageView.webContents.goBack = mock(() => {
+      historyStarted()
+      instance.pageView.webContents._emit(
+        'did-fail-load',
+        -3,
+        'ERR_ABORTED',
+        'https://mail.google.com/frame-only',
+        false,
+      )
+      void held.then(async () => {
+        const gmailUrl = 'https://mail.google.com/mail/u/0/#inbox'
+        await originalLoadURL(gmailUrl)
+        instance.pageView.webContents._emit('did-navigate', gmailUrl)
+      })
+    })
+    const policy = {
+      reason: 'contextual-gmail-reply' as const,
+      blockedHosts: ['mail.google.com'],
+      matchSubdomains: true,
+    }
+
+    const historyNavigation = (manager as any).dispatchCapability({
+      ...createRequest,
+      method: 'goBack',
+      args: [instanceId],
+    })
+    await started
+    const click = (manager as any).dispatchCapability({
+      ...createRequest,
+      v: 2,
+      method: 'clickElement',
+      args: [instanceId, '@send', undefined],
+      mutationUrlPolicy: policy,
+    })
+    let clickError: unknown
+    const clickSettled = click.then(
+      () => { throw new Error('Expected remote Gmail click after history navigation to be blocked') },
+      (error: unknown) => { clickError = error },
+    )
+    await Bun.sleep(0)
+    expect(instance.cdp.clickElement).not.toHaveBeenCalled()
+    releaseHistory()
+
+    await historyNavigation
+    await clickSettled
+    expect(String(clickError)).toContain('browser mutations on Gmail are disabled')
+    expect(instance.cdp.clickElement).not.toHaveBeenCalled()
+  })
+
+  it('keeps a remote guarded click queued through sub-frame events until main-frame Gmail commits', async () => {
+    const createRequest = {
+      v: 1 as const,
+      workspaceId: 'ws-gmail-click-navigation-race',
+      sessionId: 'session-gmail-click-navigation-race',
+      method: 'createForSession' as const,
+      args: ['session-gmail-click-navigation-race', { show: false }],
+    }
+    const instanceId = await (manager as any).dispatchCapability(createRequest) as string
+    await Bun.sleep(0)
+    await (manager as any).dispatchCapability({
+      ...createRequest,
+      method: 'navigate',
+      args: [instanceId, 'https://cms.example.test/form'],
+    })
+    const instance = (manager as any).instances.get(instanceId)
+    const originalLoadURL = instance.pageView.webContents.loadURL
+    let clickStarted!: () => void
+    let releaseNavigation!: () => void
+    const started = new Promise<void>((resolve) => { clickStarted = resolve })
+    const held = new Promise<void>((resolve) => { releaseNavigation = resolve })
+    instance.cdp.clickElement = mock(async () => {
+      clickStarted()
+      instance.pageView.webContents._emit(
+        'did-navigate-in-page',
+        'https://cms.example.test/embedded-frame',
+        false,
+      )
+      void held.then(async () => {
+        const gmailUrl = 'https://mail.google.com/mail/u/0/#inbox'
+        await originalLoadURL(gmailUrl)
+        instance.pageView.webContents._emit('did-navigate', gmailUrl)
+      })
+      return {
+        ref: '@open-mail',
+        box: { x: 0, y: 0, width: 10, height: 10 },
+        clickPoint: { x: 5, y: 5 },
+      }
+    })
+    const mutationUrlPolicy = {
+      reason: 'contextual-gmail-reply' as const,
+      blockedHosts: ['mail.google.com'],
+      matchSubdomains: true,
+    }
+
+    const navigationClick = (manager as any).dispatchCapability({
+      ...createRequest,
+      v: 2,
+      method: 'clickElement',
+      args: [instanceId, '@open-mail', { waitFor: 'navigation' }],
+      mutationUrlPolicy,
+    })
+    await started
+    const followupClick = (manager as any).dispatchCapability({
+      ...createRequest,
+      v: 2,
+      method: 'clickElement',
+      args: [instanceId, '@send', undefined],
+      mutationUrlPolicy,
+    })
+    let followupError: unknown
+    const followupSettled = followupClick.then(
+      () => { throw new Error('Expected remote Gmail follow-up click to be blocked') },
+      (error: unknown) => { followupError = error },
+    )
+    await Bun.sleep(0)
+    expect(instance.cdp.clickElement).toHaveBeenCalledTimes(1)
+    releaseNavigation()
+
+    await navigationClick
+    await followupSettled
+    expect(String(followupError)).toContain('browser mutations on Gmail are disabled')
+    expect(instance.cdp.clickElement).toHaveBeenCalledTimes(1)
+  })
+
+  it('fails closed for a remote mutation policy when the desktop live URL is malformed', async () => {
+    const createRequest = {
+      v: 1 as const,
+      workspaceId: 'ws-gmail-unknown-url',
+      sessionId: 'session-gmail-unknown-url',
+      method: 'createForSession' as const,
+      args: ['session-gmail-unknown-url', { show: false }],
+    }
+    const instanceId = await (manager as any).dispatchCapability(createRequest) as string
+    await Bun.sleep(0)
+    const instance = (manager as any).instances.get(instanceId)
+    instance.currentUrl = ''
+    instance.pageView.webContents.getURL = mock(() => 'https://[invalid')
+    const policy = {
+      reason: 'contextual-gmail-reply' as const,
+      blockedHosts: ['mail.google.com'],
+      matchSubdomains: true,
+    }
+
+    let clickError: unknown
+    await (manager as any).dispatchCapability({
+      ...createRequest,
+      v: 2,
+      method: 'clickElement',
+      args: [instanceId, '@send', undefined],
+      mutationUrlPolicy: policy,
+    }).then(
+      () => { throw new Error('Expected remote mutation with malformed URL to be blocked') },
+      (error: unknown) => { clickError = error },
+    )
+    expect(String(clickError)).toContain('browser mutations on Gmail are disabled')
+    expect(instance.cdp.clickElement).not.toHaveBeenCalled()
+  })
+
+  it('rejects malformed or observational v2 capability requests before dispatch', async () => {
+    const base = {
+      workspaceId: 'ws-policy-contract',
+      sessionId: 'session-policy-contract',
+      args: ['missing-instance', '@send', undefined],
+    }
+    await expect((manager as any).dispatchCapability({
+      ...base,
+      v: 2,
+      method: 'clickElement',
+    })).rejects.toThrow('v2 is reserved for a policy-bearing page mutation')
+    await expect((manager as any).dispatchCapability({
+      ...base,
+      v: 2,
+      method: 'navigate',
+      mutationUrlPolicy: {
+        reason: 'contextual-gmail-reply',
+        blockedHosts: ['mail.google.com'],
+      },
+    })).rejects.toThrow('v2 is reserved for a policy-bearing page mutation')
   })
 
   it('focus brings the instance window to front', () => {
@@ -1368,6 +1963,7 @@ describe('BrowserPaneManager', () => {
 
       const instance = (manager as any).instances.get('ac-idle')
       expect(instance.nativeOverlayView.setBounds).toHaveBeenCalledWith({ x: 0, y: 48, width: 1200, height: 852 })
+      expect(instance.nativeOverlayView.setBackgroundColor).toHaveBeenLastCalledWith('#00000000')
       expect(instance.nativeOverlayView.webContents.focus).not.toHaveBeenCalled()
       expect(manager.listInstances().find(i => i.id === 'ac-idle')?.agentControlActive).toBe(true)
     })
@@ -1401,6 +1997,7 @@ describe('BrowserPaneManager', () => {
       await Promise.resolve()
 
       expect(instance.nativeOverlayView.webContents.executeJavaScript.mock.calls.length).toBeGreaterThan(callCountAfterSet)
+      expect(instance.nativeOverlayView.setBackgroundColor).toHaveBeenLastCalledWith('#00000000')
     })
 
     it('ignores late page lifecycle events after the browser window is destroyed', () => {
@@ -1431,6 +2028,7 @@ describe('BrowserPaneManager', () => {
       await Promise.resolve()
 
       expect(instance.nativeOverlayView.webContents.executeJavaScript.mock.calls.length).toBeGreaterThan(callCountAfterSet)
+      expect(instance.nativeOverlayView.setBackgroundColor).toHaveBeenLastCalledWith('#00000000')
     })
 
     it('setAgentControl uses fallback label when no intent', async () => {

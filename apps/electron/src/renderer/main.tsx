@@ -98,14 +98,23 @@ sentryInit(
  * Minimal fallback UI shown when the entire React tree crashes.
  * Sentry.ErrorBoundary captures the error and sends it to Sentry automatically.
  */
-function CrashFallback() {
+function CrashFallback({ error }: { error?: unknown }) {
+  const errorMessage = error instanceof Error
+    ? `${error.name}: ${error.message}\n\n${error.stack || ''}`
+    : error ? String(error) : null
+
   return (
-    <div className="flex flex-col items-center justify-center h-screen font-sans text-foreground/50 gap-3">
-      <p className="text-base font-medium">{i18n.t('crash.somethingWentWrong')}</p>
-      <p className="text-[13px]">{i18n.t('crash.restartPrompt')}</p>
+    <div className="flex flex-col items-center justify-center h-screen font-sans text-foreground/70 gap-3 p-6 max-w-xl mx-auto text-center">
+      <p className="text-base font-medium text-foreground">{i18n.t('crash.somethingWentWrong')}</p>
+      <p className="text-[13px] text-muted-foreground">{i18n.t('crash.restartPrompt')}</p>
+      {errorMessage && (
+        <pre className="mt-2 p-3 rounded bg-muted/60 text-xs text-left max-h-48 overflow-auto w-full font-mono border border-border/40 select-text text-foreground/80 whitespace-pre-wrap">
+          {errorMessage}
+        </pre>
+      )}
       <button
         onClick={() => window.location.reload()}
-        className="mt-2 px-4 py-1.5 rounded-md bg-background shadow-minimal text-[13px] text-foreground/70 cursor-pointer"
+        className="mt-2 px-4 py-1.5 rounded-md bg-background border border-border/40 shadow-minimal text-[13px] text-foreground/80 cursor-pointer hover:bg-muted"
       >
         {i18n.t('crash.reload')}
       </button>
@@ -131,7 +140,7 @@ function Root() {
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <Sentry.ErrorBoundary fallback={<CrashFallback />}>
+    <Sentry.ErrorBoundary fallback={({ error }) => <CrashFallback error={error} />}>
       <JotaiProvider>
         <Root />
       </JotaiProvider>

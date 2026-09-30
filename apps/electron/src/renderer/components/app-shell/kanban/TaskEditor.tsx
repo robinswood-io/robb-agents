@@ -496,7 +496,6 @@ export function TaskEditor({
   target = { mode: 'create' },
   onClose,
   onOpenSession,
-  onOpenChildSession,
   onCreated,
   modelGroups,
   modelToConnection,
@@ -1049,7 +1048,6 @@ export function TaskEditor({
         <ResultsPanel
           results={results}
           loading={resultsLoading}
-          onOpenChildSession={onOpenChildSession}
           onControl={controlMission}
           onResolveApproval={resolveMissionApproval}
           onRepairNode={repairMissionNode}
@@ -1319,14 +1317,12 @@ export function TaskEditor({
 function ResultsPanel({
   results,
   loading,
-  onOpenChildSession,
   onControl,
   onResolveApproval,
   onRepairNode,
 }: {
   results: TaskResults | null
   loading: boolean
-  onOpenChildSession?: (sessionId: string) => void
   onControl: (action: 'pause' | 'resume' | 'stop') => void
   onResolveApproval: (requestId: string, decision: 'approved' | 'rejected') => void
   onRepairNode: (nodeId: string) => void
@@ -1674,15 +1670,6 @@ function ResultsPanel({
             <span className={cn('shrink-0 rounded-full border px-2 py-0.5 text-[10.5px] font-bold', pill.className)}>
               {pill.labelKey ? t(pill.labelKey) : node.state}
             </span>
-            {node.sessionId && onOpenChildSession && (
-              <button
-                type="button"
-                onClick={() => onOpenChildSession(node.sessionId!)}
-                className="inline-flex shrink-0 items-center gap-1 rounded text-[11.5px] font-semibold text-indigo-500 hover:underline dark:text-indigo-300"
-              >
-                <ExternalLink className="h-3 w-3" strokeWidth={2.5} /> {t('tasks.openSession')}
-              </button>
-            )}
             <button
               type="button"
               disabled={!repairableRun || !node.repair?.allowed}

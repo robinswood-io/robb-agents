@@ -159,6 +159,8 @@ export const mobileWebUIComponents: ComponentEntry[] = [
       { name: 'Single user message', props: { messageCount: '1', streaming: false } },
       { name: 'Multi-turn with code', props: { messageCount: '5', streaming: false } },
       { name: 'Streaming reply', props: { messageCount: '5', streaming: true } },
+      { name: 'Interrupted request marked done', props: { messageCount: '5', streaming: false, stoppedRequest: 'marked-complete' } },
+      { name: 'Exhausted request', props: { messageCount: '5', streaming: false, stoppedRequest: 'exhausted' } },
       { name: 'Long thread (scroll)', props: { messageCount: '20', streaming: false } },
       { name: 'Explore mode', props: { messageCount: '5', permissionMode: 'safe' } },
     ],

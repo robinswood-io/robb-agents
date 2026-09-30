@@ -712,7 +712,14 @@ export function createWebuiHandler(options: WebuiHandlerOptions): WebuiHandler {
 
       if (error) {
         const flow = state ? options.oauthCallbackDeps.flowStore.getByState(state) : null
-        if (flow && state) options.oauthCallbackDeps.flowStore.remove(state)
+        if (flow && state) {
+          options.oauthCallbackDeps.flowStore.remove(state)
+          if (flow.sessionId && flow.authRequestId) {
+            options.oauthCallbackDeps.sessionManager.releasePendingOAuthRequest?.(
+              flow.sessionId, flow.authRequestId, flow.flowId,
+            )
+          }
+        }
         const errorMsg = errorDescription || error
         logger.warn(`[webui] OAuth callback error: ${errorMsg}`)
         return new Response(generateCallbackPage({ title: 'Authorization Failed', isSuccess: false, errorDetail: errorMsg }), {

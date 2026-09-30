@@ -593,7 +593,7 @@ export function buildMcpServers(config: BuildConfig): void {
   mkdirSync(join(sessionDir, 'dist'), { recursive: true });
 
   execSync(
-    `bun build ${join(sessionDir, 'src', 'index.ts')} --outfile ${sessionOut} --target node --format cjs`,
+    `bun build "${join(sessionDir, 'src', 'index.ts')}" --outfile "${sessionOut}" --target node --format cjs`,
     { cwd: rootDir, stdio: 'inherit', shell: true }
   );
 
@@ -609,7 +609,7 @@ export function buildMcpServers(config: BuildConfig): void {
   if (existsSync(join(piDir, 'src'))) {
     mkdirSync(join(piDir, 'dist'), { recursive: true });
     execSync(
-      `bun build ${join(piDir, 'src', 'index.ts')} ${join(piDir, 'src', 'antigravity-server.ts')} ${join(piDir, 'src', 'vibe-acp-server.ts')} --outdir ${join(piDir, 'dist')} --target bun --format esm --external koffi`,
+      `bun build "${join(piDir, 'src', 'index.ts')}" "${join(piDir, 'src', 'antigravity-server.ts')}" "${join(piDir, 'src', 'vibe-acp-server.ts')}" --outdir "${join(piDir, 'dist')}" --target bun --format esm --external koffi`,
       { cwd: rootDir, stdio: 'inherit', shell: true }
     );
     if (!existsSync(piOut)) {

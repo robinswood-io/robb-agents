@@ -11,7 +11,7 @@ describe('public agent context and recovery controls', () => {
     const resolved = resolveAgentCostControlPolicy();
     expect(resolved.context).toEqual({ compactAtTokens: 80_000, hardLimitTokens: 100_000 });
     expect(resolved.recovery.maxAutomaticAttempts).toBe(8);
-    expect(resolved.recovery.maxNoProgressAttempts).toBe(2);
+    expect(resolved.recovery.maxNoProgressAttempts).toBe(1);
     expect(resolved.coordination.maxQueuedMessages).toBe(8);
   });
 

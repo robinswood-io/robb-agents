@@ -123,6 +123,7 @@ export class TestAgent extends BaseAgent {
     this.chatCalls.push({ message, attachments, options });
     this._isProcessing = true;
     try {
+      this.performProviderHandoff(() => undefined);
       yield { type: 'complete' };
     } finally {
       this._isProcessing = false;

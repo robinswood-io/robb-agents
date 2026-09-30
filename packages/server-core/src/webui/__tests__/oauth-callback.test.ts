@@ -91,8 +91,12 @@ describe('WebUI /api/oauth/callback', () => {
   it('renders an OAuth failure page when the relay forwards provider errors', async () => {
     const flow = {
       state: 'inner-state-456',
+      flowId: 'flow-456',
+      sessionId: 'session-456',
+      authRequestId: 'request-456',
     };
     const flows = new Map([[flow.state, flow]]);
+    const releases: unknown[] = [];
 
     const handler = createWebuiHandler({
       webuiDir: createTestWebuiDir(),
@@ -116,6 +120,7 @@ describe('WebUI /api/oauth/callback', () => {
       },
       sessionManager: {
         completeAuthRequest: async () => {},
+        releasePendingOAuthRequest: (...args: unknown[]) => { releases.push(args); },
       },
       pushSourcesChanged: () => {},
     });
@@ -128,6 +133,7 @@ describe('WebUI /api/oauth/callback', () => {
       expect(response.status).toBe(200);
       expect(await response.text()).toContain('Authorization Failed');
       expect(flows.has('inner-state-456')).toBe(false);
+      expect(releases).toEqual([['session-456', 'request-456', 'flow-456']]);
     } finally {
       handler.dispose();
     }
