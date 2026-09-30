@@ -255,4 +255,54 @@ class CampaignTests(unittest.TestCase):
         m.save(self.root/'audience-preparation.json',{'items':[evidence]})
         g=Fake();self.runit(g);self.assertEqual(g.send_calls,0)
 
+class PublicQualificationTests(unittest.TestCase):
+    def setUp(self):
+        self.now=datetime.now(timezone.utc)
+        self.item={'id':'one','company':'Example Scotland','domain':'example.co.uk','email':'alex@example.co.uk','contactName':'Alex Example','role':'Chief Executive Officer','corporateType':'limited_company','roleEvidenceUrl':'https://example.co.uk/team','legalEvidenceUrl':'https://example.co.uk/legal','roleCheckedAt':m.stamp(self.now-timedelta(days=1)),'addressSourceType':'found','qualification':audience.QUALIFIED}
+        self.page={'url':'https://example.co.uk/team','checkedAt':m.stamp(self.now-timedelta(minutes=1)),'text':'Example Scotland Limited. Alex Example, Chief Executive Officer.','emails':[]}
+    def test_inaccessible_site_preserves_review_without_refreshing_date(self):
+        result=audience.qualify_item(self.item,[])
+        self.assertEqual(result['qualification'],audience.QUALIFIED)
+        self.assertEqual(result['roleCheckedAt'],self.item['roleCheckedAt'])
+    def test_stale_or_unrelated_review_cannot_be_preserved(self):
+        for updates in [{'roleCheckedAt':m.stamp(self.now-timedelta(days=15))},{'roleEvidenceUrl':'https://unrelated.example/team'}]:
+            result=audience.qualify_item(self.item|updates,[])
+            self.assertNotEqual(result['qualification'],audience.QUALIFIED)
+            self.assertIsNone(result['roleCheckedAt'])
+    def test_generated_mailbox_requires_primary_publication(self):
+        result=audience.qualify_item(self.item|{'addressSourceType':'generated','qualification':'candidate'},[self.page])
+        self.assertEqual(result['qualification'],'address_binding_requires_primary_confirmation')
+        self.assertIsNone(result['roleCheckedAt'])
+    def test_published_mailto_qualifies_generated_address(self):
+        text,emails=audience.public_html('<div>Example Scotland Limited. Alex Example, Chief Executive Officer.</div><a href="mailto:alex%40example.co.uk?subject=Hello">Email Alex</a>')
+        self.assertNotIn('alex@example.co.uk',text)
+        result=audience.qualify_item(self.item|{'addressSourceType':'generated','qualification':'candidate'},[self.page|{'text':text,'emails':emails}])
+        self.assertEqual(result['qualification'],audience.QUALIFIED)
+        self.assertEqual(result['addressBindingEvidenceUrl'],self.page['url'])
+    def test_other_domains_or_substring_mailboxes_cannot_bind(self):
+        for page in [self.page|{'url':'https://unrelated.example/team','emails':[self.item['email']]},self.page|{'text':self.page['text']+' fakealex@example.co.uk'}]:
+            result=audience.qualify_item(self.item|{'addressSourceType':'generated','qualification':'candidate'},[page])
+            self.assertNotEqual(result['qualification'],audience.QUALIFIED)
+    def test_explicit_former_role_invalidates_prior_review(self):
+        result=audience.qualify_item(self.item,[self.page|{'text':'Example Scotland Limited. Alex Example, former Chief Executive Officer.'}])
+        self.assertNotEqual(result['qualification'],audience.QUALIFIED)
+        self.assertIsNone(result['roleCheckedAt'])
+    def test_original_provider_source_type_is_recovered_without_api_calls(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory)
+            m.save(root/'hunter-cache'/'cached.json',{'body':{'data':{'emails':[{'value':'alex@example.co.uk','source_type':'generated'}]}}})
+            with patch.object(audience,'ROOT',root),patch.object(audience,'call',side_effect=AssertionError('network forbidden')):
+                self.assertEqual(audience.cached_address_types(),{'alex@example.co.uk':'generated'})
+    def test_concurrent_identity_or_review_update_is_preserved(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);original=self.item|{'qualification':'candidate'}
+            m.save(root/'audience-preparation.json',{'items':[original],'counts':{}})
+            changed=original|{'email':'changed@example.co.uk','roleCheckedAt':m.stamp(self.now)}
+            def fetch(*args):
+                m.save(root/'audience-preparation.json',{'items':[changed],'counts':{}})
+                return [self.page]
+            with patch.object(audience,'ROOT',root),patch.object(audience,'public_company_pages',side_effect=fetch):
+                audience.qualify_cached()
+            self.assertEqual(audience.read(root/'audience-preparation.json')['items'],[changed])
+
 if __name__=='__main__':unittest.main(verbosity=2)

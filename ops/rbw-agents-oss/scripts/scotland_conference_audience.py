@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Authorized Hunter audience preparation; never sends mail or purchases credits."""
-import argparse, concurrent.futures, hashlib, json, re, sys, time
+import argparse, concurrent.futures, hashlib, json, os, re, sys, time
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib import request, parse, error
@@ -10,7 +10,7 @@ TITLES='CEO,Managing Director,CFO,COO,CTO,CIO,CMO,Chief Executive Officer,Chief 
 def stamp():return datetime.now(timezone.utc).isoformat().replace('+00:00','Z')
 def read(p):return json.loads(p.read_text())
 def save(p,v):
- p.parent.mkdir(parents=True,exist_ok=True);q=p.with_name('.'+p.name+'.tmp');q.write_text(json.dumps(v,ensure_ascii=False,indent=2)+'\n');q.replace(p)
+ p.parent.mkdir(parents=True,exist_ok=True);q=p.with_name('.'+p.name+'.'+str(os.getpid())+'.tmp');q.write_text(json.dumps(v,ensure_ascii=False,indent=2)+'\n');q.replace(p)
 def key():
  for line in Path('/srv/rbw-agents-oss/compose/.env').read_text().splitlines():
   if line.startswith('HUNTER_API_KEY='):return line.split('=',1)[1].strip().strip('"').strip("'")
@@ -115,78 +115,146 @@ def verify_cached(target=300):
  state['stopReason']='cached_executive_candidates_exhausted';save(ROOT/'audience-preparation.json',state);return state['counts']
 
 
+
+QUALIFIED='qualified_public_role_and_provider_company_evidence'
+def own_public_url(url,domain):
+ parsed=parse.urlparse(url or '')
+ return parsed.scheme=='https' and parsed.hostname in [domain,'www.'+domain] and not parsed.username and not parsed.password and parsed.port in [None,443]
+def fresh_public_evidence(value):
+ try:
+  age=(datetime.now(timezone.utc)-datetime.fromisoformat(value.replace('Z','+00:00'))).total_seconds()
+  return 0<=age<=14*86400
+ except (ValueError,TypeError,AttributeError):return False
+def public_html(content):
+ # Preserve addresses actually published in links, before removing HTML tags.
+ from html.parser import HTMLParser
+ import html
+ class MailLinks(HTMLParser):
+  def __init__(self):super().__init__();self.emails=set()
+  def handle_starttag(self,tag,attrs):
+   if tag.lower()!='a':return
+   href=dict(attrs).get('href','')
+   if href.lower().startswith('mailto:'):
+    address=parse.unquote(href[7:].split('?',1)[0]).strip().lower()
+    if re.fullmatch(r'[^@\s,;]+@[^@\s,;]+\.[^@\s,;]+',address):self.emails.add(address)
+ links=MailLinks();links.feed(content)
+ content=re.sub(r'<(?:script|style)\b[^>]*>.*?</(?:script|style)>',' ',content,flags=re.S|re.I)
+ text=re.sub(r'\s+',' ',html.unescape(re.sub('<[^>]+>',' ',content)))
+ return text,sorted(links.emails)
 def cache_public_navigation(domain):
- p=ROOT/'public-evidence-cache'/(hashlib.sha256((domain+'-navigation').encode()).hexdigest()+'.json')
- if p.exists():return read(p).get('paths',[])
+ p=ROOT/'public-evidence-cache'/(hashlib.sha256((domain+'-navigation-v2').encode()).hexdigest()+'.json')
+ if p.exists() and fresh_public_evidence(read(p).get('checkedAt')):return read(p).get('paths',[])
  paths=[]
  for suffix in ['/','/sitemap.xml','/sitemap_index.xml']:
   try:
-   with request.urlopen(request.Request('https://'+domain+suffix,headers={'User-Agent':'Robinswood-Conference-Business-Research/1.0'}),timeout=8) as r:
-    if parse.urlparse(r.url).hostname not in [domain,'www.'+domain]:continue
+   url='https://'+domain+suffix
+   with request.urlopen(request.Request(url,headers={'User-Agent':'Robinswood-Conference-Business-Research/1.0'}),timeout=8) as r:
+    if not own_public_url(r.url,domain):continue
     raw=r.read(1200000).decode('utf-8','replace')
    links=re.findall(r'(?:href=["\x27]([^"\x27]+)|<loc>([^<]+)</loc>)',raw,re.I)
    for pair in links:
-    link=pair[0] or pair[1];parsed=parse.urlparse(parse.urljoin('https://'+domain+'/',link))
-    if parsed.hostname not in [domain,'www.'+domain] or parsed.query or parsed.fragment:continue
+    parsed=parse.urlparse(parse.urljoin(url,pair[0] or pair[1]))
+    if not own_public_url(parsed.geturl(),domain) or parsed.query or parsed.fragment:continue
     path=parsed.path
-    if re.search(r'leadership|executive|management|board|directors|team|about|who-we-are|company|people',path,re.I) and not path.endswith(('.pdf','.jpg','.png','.xml')):paths.append(path)
+    if re.search(r'leadership|executive|management|board|directors|team|about|who-we-are|company|people|privacy|legal|terms|slavery',path,re.I) and not path.lower().endswith(('.pdf','.jpg','.png','.xml')):paths.append(path)
   except Exception:continue
  paths=list(dict.fromkeys(paths))
- paths.sort(key=lambda p:(0 if re.search('leadership|executive|board|management',p,re.I) else 1,len(p)))
- save(p,{'checkedAt':stamp(),'paths':paths[:17]})
- return paths[:17]
+ paths.sort(key=lambda p:(0 if re.search('leadership|executive|board|management',p,re.I) else 1 if re.search('privacy|legal|terms|slavery',p,re.I) else 2,len(p)))
+ save(p,{'checkedAt':stamp(),'paths':paths[:25]})
+ return paths[:25]
 
-def public_company_pages(domain):
+def public_company_pages(domain,extra_paths=()):
  if not re.fullmatch(r'[a-z0-9][a-z0-9.-]+\.[a-z]{2,}',domain):return []
- out=[]
- paths=['/','/about-us/','/about/','/our-team/','/team/','/leadership/','/management/']
- # Follow the company's own navigation to actual leadership pages.
- homepage=cache_public_navigation(domain)
- for path in homepage:
-  if path not in paths:paths.append(path)
- for path in paths[:24]:
+ out=[];paths=list(dict.fromkeys(['/']+list(extra_paths)+cache_public_navigation(domain)+['/about-us/','/about/','/our-team/','/team/','/leadership/','/management/','/privacy-policy/','/legal/','/terms-and-conditions/']))
+ for path in paths[:36]:
+  url='https://'+domain+path
+  if not own_public_url(url,domain) or not path.startswith('/') or path.startswith('//'):continue
   p=ROOT/'public-evidence-cache'/(hashlib.sha256((domain+path).encode()).hexdigest()+'.json')
-  if p.exists():v=read(p)
+  old=read(p) if p.exists() else {}
+  if old.get('parserVersion')==2 and fresh_public_evidence(old.get('checkedAt')):v=old
   else:
-   url='https://'+domain+path
    try:
     with request.urlopen(request.Request(url,headers={'User-Agent':'Robinswood-Conference-Business-Research/1.0'}),timeout=10) as r:
-     if parse.urlparse(r.url).hostname not in [domain,'www.'+domain]:continue
-     content=r.read(1200000).decode('utf-8','replace')
-     content=re.sub(r'<(?:script|style)\b[^>]*>.*?</(?:script|style)>',' ',content,flags=re.S|re.I)
-     import html
-     text=html.unescape(re.sub('<[^>]+>',' ',content));text=re.sub(r'\s+',' ',text)
-     v={'url':r.url,'checkedAt':stamp(),'text':text}
-   except Exception as e:v={'url':url,'checkedAt':stamp(),'errorType':type(e).__name__}
+     if not own_public_url(r.url,domain):continue
+     text,emails=public_html(r.read(1200000).decode('utf-8','replace'))
+     v={'url':r.url,'checkedAt':stamp(),'text':text,'emails':emails,'parserVersion':2}
+   except Exception as e:
+    # An inaccessible site must not invent a new verification date.
+    v=dict(old) if old.get('text') else {'url':url,'checkedAt':stamp()}
+    v.update(parserVersion=2,fetchErrorType=type(e).__name__,fetchAttemptedAt=stamp())
    save(p,v)
-  if v.get('text'):out.append(v)
+  if v.get('text') and fresh_public_evidence(v.get('checkedAt')):out.append(v)
  return out
-def qualify_cached():
- state=read(ROOT/'audience-preparation.json');domains=sorted({x['domain'] for x in state['items']})
- with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
-  pages=dict(zip(domains,pool.map(public_company_pages,domains)))
+
+def qualified_review(item):
+ return item.get('qualification')==QUALIFIED and item.get('corporateType')=='limited_company' and own_public_url(item.get('roleEvidenceUrl'),item['domain']) and fresh_public_evidence(item.get('roleCheckedAt')) and parse.urlparse(item.get('legalEvidenceUrl','')).scheme=='https'
+
+def qualify_item(original,pages):
+ item=dict(original);legal=None;role_page=None;contradiction=False
+ pages=[p for p in pages if own_public_url(p.get('url'),item['domain']) and fresh_public_evidence(p.get('checkedAt'))]
+ for page in pages:
+  text=page['text']
+  if re.search(r'\b(?:'+re.escape(item['company'])+r')\s+(?:group\s+)?(?:limited|ltd|plc)\b|company (?:registration )?(?:number|no\.)\s*(?:SC[0-9]{6}|[0-9]{8})|registered in scotland no[:. ]*SC[0-9]{6}',text,re.I):legal=page
+  pos=text.lower().find(item['contactName'].lower())
+  if pos>=0:
+   excerpt=text[max(0,pos-180):pos+len(item['contactName'])+250]
+   aliases={'Chief Executive Officer':'CEO|chief executive','Managing Director':'managing director','Chief Financial Officer':'CFO|chief financial','Chief Operating Officer':'COO|chief operating','Chief Technology Officer':'CTO|chief technology|chief technical','Chief Information Officer':'CIO|chief information','Chief Marketing Officer':'CMO|chief marketing'}
+   if re.search(r'\b(?:'+aliases.get(item['role'],re.escape(item['role']))+r')\b',excerpt,re.I):
+    if re.search(r'\b(?:former|retired|previous|resigned)\b',excerpt,re.I):contradiction=True
+    else:role_page=page;item['roleEvidenceExcerpt']=excerpt[:400]
+ if legal and role_page and not contradiction:
+  item.update(corporateType='limited_company',legalEvidenceUrl=legal['url'],roleEvidenceUrl=role_page['url'],roleCheckedAt=role_page['checkedAt'],qualification=QUALIFIED)
+  if item.get('addressSourceType')=='generated':
+   binding=next((p for p in pages if item['email'].lower() in p.get('emails',[]) or re.search(r'(?<![\w.+-])'+re.escape(item['email'])+r'(?![\w.-])',p['text'],re.I)),None)
+   if binding:item.update(addressBindingEvidenceUrl=binding['url'],addressBindingCheckedAt=binding['checkedAt'])
+   else:item.update(qualification='address_binding_requires_primary_confirmation',roleCheckedAt=None)
+ elif not contradiction and qualified_review(original):
+  # Keep the original proof and timestamp, including a separately reviewed primary page.
+  item=dict(original)
+ else:item.update(qualification='current_public_role_or_corporate_evidence_missing',roleCheckedAt=None)
+ item['publicEvidenceCheckedAt']=stamp()
+ return item
+
+def cached_address_types():
+ types={}
+ for path in (ROOT/'hunter-cache').glob('*.json'):
+  data=read(path).get('body',{}).get('data',{})
+  if not isinstance(data,dict):continue
+  for person in data.get('emails',[]):
+   kind=person.get('source_type');email=person.get('value','').lower()
+   if kind in ['found','generated'] and types.get(email)!='generated':types[email]=kind
+ return types
+
+def qualify_cached(selected_domains=None):
+ import fcntl
+ state=read(ROOT/'audience-preparation.json')
+ domains=sorted({x['domain'] for x in state['items'] if not selected_domains or x['domain'] in selected_domains})
+ paths={d:[] for d in domains}
  for item in state['items']:
-  item['qualification']='current_public_role_or_corporate_evidence_missing'
-  legal=None;role_page=None
-  for page in pages.get(item['domain'],[]):
-   text=page['text']
-   if re.search(r'\b(?:'+re.escape(item['company'])+r')\s+(?:group\s+)?(?:limited|ltd|plc)\b|company (?:registration )?(?:number|no\.)\s*(?:SC[0-9]{6}|[0-9]{8})|registered in scotland no[:. ]*SC[0-9]{6}',text,re.I):legal=page
-   pos=text.lower().find(item['contactName'].lower())
-   if pos>=0:
-    excerpt=text[max(0,pos-180):pos+len(item['contactName'])+250]
-    if not re.search(r'former|retired|previous|resigned',excerpt,re.I):
-     canonical=item['role'].lower()
-     aliases={'Chief Executive Officer':'CEO|chief executive','Managing Director':'managing director','Chief Financial Officer':'CFO|chief financial','Chief Operating Officer':'COO|chief operating','Chief Technology Officer':'CTO|chief technology|chief technical','Chief Information Officer':'CIO|chief information','Chief Marketing Officer':'CMO|chief marketing'}
-     if re.search(r'\b(?:'+aliases.get(item['role'],re.escape(canonical))+r')\b',excerpt,re.I):role_page=page;item['roleEvidenceExcerpt']=excerpt[:400]
-  if legal and role_page:
-   item['corporateType']='limited_company';item['legalEvidenceUrl']=legal['url'];item['roleEvidenceUrl']=role_page['url'];item['roleCheckedAt']=role_page['checkedAt']
-   item['qualification']='qualified_public_role_and_provider_company_evidence'
-   if item.get('addressSourceType')=='generated' and not any(item['email'].lower() in p['text'].lower() for p in pages.get(item['domain'],[])):
-    item['qualification']='address_binding_requires_primary_confirmation';item['roleCheckedAt']=None
-  item['publicEvidenceCheckedAt']=stamp()
- state['counts']['publicRoleQualifiedContacts']=sum(x['qualification']=='qualified_public_role_and_provider_company_evidence' for x in state['items'])
- state['counts']['publicRoleQualifiedCompanies']=len({x['domain'] for x in state['items'] if x['qualification']=='qualified_public_role_and_provider_company_evidence'})
- state['updatedAt']=stamp();save(ROOT/'audience-preparation.json',state);return state['counts']
+  if item['domain'] not in paths:continue
+  for url in [item.get('roleEvidenceUrl',''),item.get('legalEvidenceUrl','')]:
+   if own_public_url(url,item['domain']):
+    parsed=parse.urlparse(url)
+    if not parsed.query and not parsed.fragment:paths[item['domain']].append(parsed.path or '/')
+ with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
+  futures={d:pool.submit(public_company_pages,d,paths[d]) for d in domains}
+  pages={d:f.result() for d,f in futures.items()}
+ types=cached_address_types()
+ patches={x['id']:qualify_item(x if x.get('addressSourceType') else x|{'addressSourceType':types.get(x['email'])},pages[x['domain']]) for x in state['items'] if x['domain'] in pages}
+ # Serialize evidence commits, reread concurrent updates, and never change approved identities.
+ with (ROOT/'audience-evidence.lock').open('a') as lock:
+  fcntl.flock(lock,fcntl.LOCK_EX)
+  latest=read(ROOT/'audience-preparation.json')
+  for i,item in enumerate(latest['items']):
+   candidate=patches.get(item['id'])
+   if not candidate or any(candidate.get(k)!=item.get(k) for k in ['id','email','domain','contactName']):continue
+   snapshot=next(x for x in state['items'] if x['id']==item['id'])
+   if item!=snapshot:continue
+   latest['items'][i]=candidate
+  latest.setdefault('counts',{})['publicRoleQualifiedContacts']=sum(x.get('qualification')==QUALIFIED for x in latest['items'])
+  latest['counts']['publicRoleQualifiedCompanies']=len({x['domain'] for x in latest['items'] if x.get('qualification')==QUALIFIED})
+  latest['updatedAt']=stamp();save(ROOT/'audience-preparation.json',latest)
+ return latest['counts']
 
 if __name__=='__main__':
- ap=argparse.ArgumentParser();ap.add_argument('--target',type=int,default=300);ap.add_argument('--cached-only',action='store_true');ap.add_argument('--qualify-public',action='store_true');args=ap.parse_args();print(json.dumps(qualify_cached() if args.qualify_public else verify_cached(args.target) if args.cached_only else run(args.target)))
+ ap=argparse.ArgumentParser();ap.add_argument('--target',type=int,default=300);ap.add_argument('--cached-only',action='store_true');ap.add_argument('--qualify-public',action='store_true');ap.add_argument('--domain',action='append');args=ap.parse_args();print(json.dumps(qualify_cached(args.domain) if args.qualify_public else verify_cached(args.target) if args.cached_only else run(args.target)))
