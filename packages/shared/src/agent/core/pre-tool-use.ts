@@ -49,7 +49,16 @@ import { permissionsConfigCache, type PermissionsContext } from '../permissions-
 import type { PrerequisiteCheckResult } from './prerequisite-manager.ts';
 import { rewriteBashWithRtk } from './rtk-rewrite.ts';
 import { enforceTaskToolIsolation } from './task-tool-isolation.ts';
+import {
+  classifySensitiveExternalAction,
+  isSensitiveExternalActionExplicitlyAuthorized,
+  type SensitiveExternalActionCategory,
+} from './sensitive-external-action.ts';
 import type { SessionExecutionIsolation } from '../../tasks/durable-execution.ts';
+import {
+  checkObjectiveEvidenceBeforeMutation,
+  isEvidenceAcquisitionTool,
+} from './objective-evidence-gate.ts';
 
 // ============================================================
 // TYPES
@@ -378,14 +387,21 @@ export function validateConfigWrite(
   }
 
   let contentToValidate: string | null = null;
+  let previousContent: string | undefined;
 
   if (toolName === 'Write') {
     // For Write, the full file content is in input.content
     contentToValidate = input.content as string;
+    try {
+      previousContent = readFileSync(filePath, 'utf-8');
+    } catch {
+      // A missing file is a new write and intentionally has no legacy allowance.
+    }
   } else if (toolName === 'Edit') {
     // For Edit, simulate the replacement on the current file content
     try {
       const currentContent = readFileSync(filePath, 'utf-8');
+      previousContent = currentContent;
       const oldString = input.old_string as string;
       const newString = input.new_string as string;
       const replaceAll = input.replace_all as boolean | undefined;
@@ -403,7 +419,7 @@ export function validateConfigWrite(
     return { valid: true };
   }
 
-  const validationResult = validateConfigFileContent(detection, contentToValidate);
+  const validationResult = validateConfigFileContent(detection, contentToValidate, previousContent);
 
   if (validationResult && !validationResult.valid) {
     onDebug?.(
@@ -598,6 +614,11 @@ export type PreToolUseCheckResult =
       rememberForMinutes?: number;
       commandHash?: string;
       approvalTtlSeconds?: number;
+      /** Scoped metadata used to remember this exact external authorization. */
+      sensitiveActionCategory?: SensitiveExternalActionCategory;
+      sensitiveActionTargets?: string[];
+      /** Never auto-allow this prompt when the backend has no permission handler. */
+      requiresExplicitConfirmation?: true;
     }
   | { type: 'source_activation_needed'; sourceSlug: string; sourceExists: boolean }
   | { type: 'call_llm_intercept'; input: Record<string, unknown> }
@@ -634,12 +655,25 @@ export interface PreToolUseInput {
   allSourceSlugs: string[];
   /** Whether the agent supports source activation (has onSourceActivationRequest callback) */
   hasSourceActivation: boolean;
+  /**
+   * Confirmation policy for sensitive external actions. Defaults to `confirm`.
+   * The opt-in bypass is honored only in the effective `allow-all` mode.
+   */
+  externalActionPolicy?: 'confirm' | 'allow-in-execute';
   /** PermissionManager for session-scoped whitelists */
   permissionManager: PermissionManagerLike;
   /** PrerequisiteManager for guide.md checking */
   prerequisiteManager?: PrerequisiteManagerLike;
+  /**
+   * Source guide files whose full contents were preloaded into the model's
+   * current context. Host-owned context builders may provide these to avoid a
+   * synthetic first-call rejection.
+   */
+  preloadedSourceGuidePaths?: readonly string[];
   /** Backend metadata (e.g. Pi forwards intent / displayName via input.metadata) */
   backendMetadata?: { intent?: string; displayName?: string };
+  /** Raw current user request, used only for narrow action+target authorization matching. */
+  currentUserRequest?: string;
   /** RTK Bash-rewrite context (undefined when toggle is off or rtk binary missing) */
   rtkContext?: import('./rtk-rewrite.ts').RtkContext;
   /** Debug callback */
@@ -664,6 +698,7 @@ export interface PermissionManagerLike {
 export interface PrerequisiteManagerLike {
   checkPrerequisites(toolName: string): PrerequisiteCheckResult;
   trackBashSkillRead(input: Record<string, unknown>): boolean;
+  markSourceGuidesLoadedInContext?(filePaths: readonly string[]): void;
 }
 
 /** Built-in MCP servers that are always available (not user sources) */
@@ -684,7 +719,8 @@ const FILE_WRITE_TOOLS = new Set(['Write', 'Edit', 'MultiEdit', 'NotebookEdit'])
  * 3. Prerequisite check (guide.md before source tools)
  * 4. call_llm interception
  * 5. Input transforms (paths, config validation, skills, metadata)
- * 6. Ask-mode prompt decision
+ * 6. Sensitive external-action confirmation (all non-safe modes, before whitelists)
+ * 7. Ask-mode prompt decision
  *
  * @returns A discriminated union that the agent translates to its SDK format
  */
@@ -716,9 +752,12 @@ export function runPreToolUseChecks(ctx: PreToolUseInput): PreToolUseCheckResult
     activeSourceSlugs,
     allSourceSlugs,
     hasSourceActivation,
+    externalActionPolicy = 'confirm',
     permissionManager,
     prerequisiteManager,
+    preloadedSourceGuidePaths,
     backendMetadata,
+    currentUserRequest,
     onDebug,
   } = ctx;
 
@@ -799,6 +838,10 @@ export function runPreToolUseChecks(ctx: PreToolUseInput): PreToolUseCheckResult
   // 4. PREREQUISITE CHECK (guide.md before source tools)
   // ============================================================
   if (prerequisiteManager) {
+    if (preloadedSourceGuidePaths?.length) {
+      prerequisiteManager.markSourceGuidesLoadedInContext?.(preloadedSourceGuidePaths);
+    }
+
     // Allow Bash through if it's reading a pending skill file (clears the prerequisite)
     if (toolName === 'Bash' && prerequisiteManager.trackBashSkillRead(input)) {
       // Prerequisite cleared — fall through to remaining pipeline steps
@@ -811,7 +854,29 @@ export function runPreToolUseChecks(ctx: PreToolUseInput): PreToolUseCheckResult
   }
 
   // ============================================================
-  // 5. CALL_LLM / SPAWN_SESSION INTERCEPTION
+  // 5. HIGH-STAKES EVIDENCE GATE
+  // ============================================================
+  // Reuse the mature safe-mode classifier to distinguish reads from writes
+  // across built-in, Bash, MCP, and API tools. Evidence/reviewer tools always
+  // remain reachable so the agent can satisfy the gate autonomously.
+  if (!isEvidenceAcquisitionTool(toolName)) {
+    const safeModeDecision = shouldAllowToolInMode(
+      toolName,
+      input,
+      'safe',
+      { plansFolderPath, dataFolderPath, permissionsContext },
+    );
+    if (!safeModeDecision.allowed) {
+      const evidenceDecision = checkObjectiveEvidenceBeforeMutation(sessionId, toolName);
+      if (!evidenceDecision.allowed) {
+        onDebug?.(`Objective evidence gate: blocking ${toolName}`);
+        return { type: 'block', reason: evidenceDecision.reason };
+      }
+    }
+  }
+
+  // ============================================================
+  // 6. CALL_LLM / SPAWN_SESSION INTERCEPTION
   // ============================================================
   if (toolName === 'mcp__session__call_llm') {
     return { type: 'call_llm_intercept', input };
@@ -897,7 +962,56 @@ export function runPreToolUseChecks(ctx: PreToolUseInput): PreToolUseCheckResult
   }
 
   // ============================================================
-  // 7. ASK MODE PROMPT DECISION
+  // 7. SENSITIVE EXTERNAL-ACTION CONFIRMATION
+  // ============================================================
+  // Safe mode remains non-interactive and blocks. Ask always retains the
+  // dedicated confirmation boundary. Execute does too unless the host opts the
+  // workspace into `allow-in-execute`; the default remains fail-closed. This
+  // deliberately runs before ask-mode/session whitelists.
+  const sensitiveAction = classifySensitiveExternalAction(toolName, input);
+  if (sensitiveAction) {
+    if (effectivePermissionMode === 'safe') {
+      const reason = withPermissionModeContext(
+        `${sensitiveAction.description}\n\nSensitive external actions are blocked in Explore mode.`,
+        sessionId,
+        effectivePermissionMode,
+      );
+      onDebug?.(`Sensitive external action: blocking ${toolName} in safe mode`);
+      return { type: 'block', reason };
+    }
+
+    const policyAllowsExecute = effectivePermissionMode === 'allow-all'
+      && externalActionPolicy === 'allow-in-execute';
+    if (policyAllowsExecute) {
+      onDebug?.(
+        `Sensitive external action: workspace policy allows ${sensitiveAction.category} in Execute`,
+      );
+    } else {
+      const explicitlyAuthorized = isSensitiveExternalActionExplicitlyAuthorized(
+        sensitiveAction,
+        currentUserRequest,
+      );
+      if (!explicitlyAuthorized) {
+        onDebug?.(`Sensitive external action: confirmation required for ${sensitiveAction.category}`);
+        return {
+          type: 'prompt',
+          promptType: sensitiveAction.promptType,
+          description: sensitiveAction.description,
+          command: sensitiveAction.commandPreview,
+          modifiedInput: wasModified ? currentInput : undefined,
+          reason: sensitiveAction.reason,
+          impact: sensitiveAction.impact,
+          sensitiveActionCategory: sensitiveAction.category,
+          sensitiveActionTargets: sensitiveAction.targetCandidates,
+          requiresExplicitConfirmation: true,
+        };
+      }
+      onDebug?.(`Sensitive external action: current request explicitly authorizes ${sensitiveAction.category} target`);
+    }
+  }
+
+  // ============================================================
+  // 8. ASK MODE PROMPT DECISION
   // ============================================================
   if (effectivePermissionMode === 'ask') {
     const promptInfo = shouldPromptInAskMode(

@@ -59,22 +59,32 @@ describe('modelSupportsImages — pi_compat precedence', () => {
   })
 })
 
-describe('modelSupportsImages — non-pi_compat fallthrough', () => {
-  it('returns true for anthropic regardless of override (renderer does not gate built-in catalogs)', () => {
+describe('modelSupportsImages — built-in provider capabilities', () => {
+  it('honors explicit Anthropic model capabilities', () => {
     const conn: LlmConnection = {
       slug: 'a', name: 'a', providerType: 'anthropic', authType: 'api_key',
       models: [{ id: 'claude-haiku', supportsImages: false } as never],
       createdAt: 1,
     }
-    expect(modelSupportsImages(conn, 'claude-haiku')).toBe(true)
+    expect(modelSupportsImages(conn, 'claude-haiku')).toBe(false)
   })
 
-  it('returns true for pi regardless of override', () => {
+  it('honors explicit Pi model capabilities', () => {
     const conn: LlmConnection = {
       slug: 'p', name: 'p', providerType: 'pi', authType: 'api_key',
       models: [{ id: 'gpt-x', supportsImages: false } as never],
       createdAt: 1,
     }
-    expect(modelSupportsImages(conn, 'gpt-x')).toBe(true)
+    expect(modelSupportsImages(conn, 'gpt-x')).toBe(false)
+  })
+
+  it('preserves unknown native model behavior without borrowing a custom endpoint default', () => {
+    const conn: LlmConnection = {
+      slug: 'p', name: 'p', providerType: 'pi', authType: 'api_key',
+      models: ['unknown', { id: 'vision', supportsImages: true } as never],
+      createdAt: 1,
+    }
+    expect(modelSupportsImages(conn, 'unknown')).toBe(true)
+    expect(modelSupportsImages(conn, 'vision')).toBe(true)
   })
 })

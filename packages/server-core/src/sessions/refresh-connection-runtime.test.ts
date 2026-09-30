@@ -8,7 +8,9 @@ let loadWorkspaceConfig: typeof import('@craft-agent/shared/workspaces')['loadWo
 let SessionManager: typeof import('./SessionManager.ts')['SessionManager']
 let createManagedSession: typeof import('./SessionManager.ts')['createManagedSession']
 let buildRestartRequiredSignature: typeof import('./runtime-config.ts')['buildRestartRequiredSignature']
+let createStoredSession: typeof import('@craft-agent/shared/sessions')['createSession']
 let tmpConfigRoot: string
+const originalCraftConfigDir = process.env.CRAFT_CONFIG_DIR
 
 // Regression coverage for the stale-Pi-subprocess bug where toggling
 // `supportsImages` on a custom-endpoint model wrote to disk but never reached
@@ -68,20 +70,27 @@ beforeAll(async () => {
   ;({ loadWorkspaceConfig } = await import('@craft-agent/shared/workspaces'))
   ;({ SessionManager, createManagedSession } = await import('./SessionManager.ts'))
   ;({ buildRestartRequiredSignature } = await import('./runtime-config.ts'))
+  ;({ createSession: createStoredSession } = await import('@craft-agent/shared/sessions'))
 })
 
 afterAll(() => {
   if (tmpConfigRoot) {
     rmSync(tmpConfigRoot, { recursive: true, force: true })
   }
+  if (originalCraftConfigDir === undefined) {
+    delete process.env.CRAFT_CONFIG_DIR
+  } else {
+    process.env.CRAFT_CONFIG_DIR = originalCraftConfigDir
+  }
 })
 
-interface AgentStub {
-  isProcessing: () => boolean
-  updateRuntimeConfig: jest.Mock
-  dispose: () => void
-  disposeForRestart?: () => Promise<void>
-}
+  interface AgentStub {
+    isProcessing: () => boolean
+    updateRuntimeConfig: jest.Mock
+    setModel: jest.Mock
+    dispose: jest.Mock
+    disposeForRestart?: () => Promise<void>
+  }
 
 function createAgentStub(opts: {
   isProcessing?: boolean
@@ -95,8 +104,9 @@ function createAgentStub(opts: {
     updateRuntimeConfig: jest.fn().mockImplementation(async () => {
       if (delay > 0) await new Promise(resolve => setTimeout(resolve, delay))
       return result
-    }),
-    dispose: () => { /* no-op for tests */ },
+      }),
+    setModel: jest.fn(),
+    dispose: jest.fn(),
   }
 }
 
@@ -283,5 +293,111 @@ describe('refreshConnectionRuntime', () => {
         }
       }
     }
+  })
+
+  it('changes a live model through acknowledged runtime config instead of fire-and-forget setModel', async () => {
+    const stored = await createStoredSession(tmpRoot, {
+      model: 'test-text',
+      llmConnection: 'slug-A',
+    })
+    const agent = createAgentStub()
+    const managed = injectSession(sm, stored.id, tmpRoot, 'slug-A', agent)
+    const refreshRuntime = jest.fn().mockResolvedValue(undefined)
+    ;(sm as unknown as {
+      tryRefreshAgentRuntime: (session: unknown, reason: string) => Promise<void>
+    }).tryRefreshAgentRuntime = refreshRuntime
+
+    await sm.updateSessionModel(stored.id, 'ws_test', 'test-vision')
+
+    expect(agent.setModel).not.toHaveBeenCalled()
+    expect(refreshRuntime).toHaveBeenCalledTimes(1)
+    expect(refreshRuntime).toHaveBeenCalledWith(managed, 'session model changed')
+  })
+
+  it('selects the new connection default only after a manual connection change and preserves reasoning', async () => {
+    const stored = await createStoredSession(tmpRoot, { model: 'test-text', llmConnection: 'slug-A' })
+    const managed = injectSession(sm, stored.id, tmpRoot, 'slug-A', null) as ReturnType<typeof injectSession> & {
+      model?: string
+      thinkingLevel?: string
+    }
+    managed.model = 'test-vision'
+    managed.thinkingLevel = 'high'
+
+    await sm.setSessionConnection(stored.id, 'slug-A')
+    expect(managed.model).toBe('test-vision')
+
+    await sm.setSessionConnection(stored.id, 'slug-B')
+    expect(managed.llmConnection).toBe('slug-B')
+    expect(managed.model).toBe('test-b')
+    expect(managed.thinkingLevel).toBe('high')
+  })
+
+  it('keeps the selected runtime model and reasoning for complex turns beyond the cost budget', async () => {
+    const agent = { ...createAgentStub(), setExternalActionPolicy: jest.fn() }
+    const managed = injectSession(sm, 'selected-turn', tmpRoot, 'slug-A', agent) as ReturnType<typeof injectSession> & {
+      model?: string
+      thinkingLevel?: string
+      tokenUsage?: { costUsd: number }
+      pendingRoutingMeta?: { costControl?: { budgetState?: string; thinkingLevel?: string } }
+    }
+    managed.model = 'test-vision'
+    managed.thinkingLevel = 'high'
+    managed.tokenUsage = { costUsd: 100_000 }
+    const internal = sm as unknown as {
+      tryRefreshAgentRuntime: (session: unknown, reason: string) => Promise<void>
+      getOrCreateAgent: (session: unknown, turn: { message: string }) => Promise<unknown>
+    }
+    internal.tryRefreshAgentRuntime = jest.fn().mockResolvedValue(undefined)
+
+    const result = await internal.getOrCreateAgent(managed, {
+      message: 'Audit the architecture, implement a migration, verify the result, and review every security requirement.',
+    })
+
+    expect(result).toBe(agent)
+    expect(managed.llmConnection).toBe('slug-A')
+    expect(managed.model).toBe('test-vision')
+    expect(managed.thinkingLevel).toBe('high')
+    expect(agent.setModel).not.toHaveBeenCalled()
+    expect(managed.pendingRoutingMeta?.costControl).toMatchObject({ budgetState: 'hard-limit', thinkingLevel: 'high' })
+  })
+})
+
+describe('restartAgentRuntime', () => {
+  let tmpRoot: string
+  let sm: InstanceType<typeof SessionManager>
+
+  beforeEach(() => {
+    writeTestConfig()
+    tmpRoot = mkdtempSync(join(tmpdir(), 'sm-restart-'))
+    sm = new SessionManager()
+  })
+
+  afterEach(() => {
+    rmSync(tmpRoot, { recursive: true, force: true })
+  })
+
+  it('disposes the session runtime so the next turn recreates it', async () => {
+    const agent = createAgentStub()
+    const managed = injectSession(sm, 'restart-me', tmpRoot, 'slug-A', agent)
+
+    await sm.restartAgentRuntime('restart-me')
+
+    expect(agent.dispose).toHaveBeenCalledTimes(1)
+    expect(managed.agent).toBeNull()
+    expect(managed.backendRuntimeSignature).toBeUndefined()
+    expect((managed as { autonomyEvents?: Array<Record<string, unknown>> }).autonomyEvents?.at(-1)).toMatchObject({
+      phase: 'fallback',
+      message: 'Execution runtime bridge was reconnected; retry the failed turn to recreate the runtime.',
+    })
+  })
+
+  it('refuses to dispose a runtime while the session is processing', async () => {
+    const agent = createAgentStub({ isProcessing: true })
+    const managed = injectSession(sm, 'busy-restart', tmpRoot, 'slug-A', agent, { isProcessing: false })
+
+    await expect(sm.restartAgentRuntime('busy-restart')).rejects.toThrow('Cannot reconnect runtime while session is processing')
+
+    expect(agent.dispose).not.toHaveBeenCalled()
+    expect(managed.agent).toBe(agent)
   })
 })

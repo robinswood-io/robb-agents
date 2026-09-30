@@ -12,3 +12,5 @@ export * from './storage.ts';
 export * from './generator-prompt.ts';
 export * from './durable-execution.ts';
 export * from './mission-control.ts';
+export * from './durable-task.ts';
+export * from './cockpit-projection.ts';

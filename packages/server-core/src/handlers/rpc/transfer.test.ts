@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'bun:test'
+import { afterEach, describe, expect, it, jest } from 'bun:test'
 import { createHash } from 'node:crypto'
 import { RPC_CHANNELS } from '@craft-agent/shared/protocol'
 import type { HandlerFn, RequestContext, RpcServer } from '../../transport/types'
@@ -165,39 +165,44 @@ describe('chunked transfer handlers', () => {
   })
 
   it('refreshes TTL as chunks arrive so slow healthy uploads survive', async () => {
+    jest.useFakeTimers()
     process.env.CRAFT_TRANSFER_TTL_MS = '40'
 
-    const { start, chunk, commit } = createHarness()
-    const payload = encodeParts({ hello: 'world', slow: true }, 8)
+    try {
+      const { start, chunk, commit } = createHarness()
+      const payload = encodeParts({ hello: 'world', slow: true }, 8)
 
-    setTransferableHandler('test:echo', async (_ctx, _placeholder, body) => ({ ok: true, body }))
+      setTransferableHandler('test:echo', async (_ctx, _placeholder, body) => ({ ok: true, body }))
 
-    const { transferId } = await start(ctx('client-1'), {
-      totalBytes: payload.bytes.length,
-      chunkCount: payload.chunks.length,
-      channel: 'test:echo',
-      args: [null, null],
-      largeArgIndex: 1,
-      checksum: payload.checksum,
-    }) as { transferId: string }
+      const { transferId } = await start(ctx('client-1'), {
+        totalBytes: payload.bytes.length,
+        chunkCount: payload.chunks.length,
+        channel: 'test:echo',
+        args: [null, null],
+        largeArgIndex: 1,
+        checksum: payload.checksum,
+      }) as { transferId: string }
 
-    await new Promise(resolve => setTimeout(resolve, 25))
-    await chunk(ctx('client-1'), {
-      transferId,
-      index: 0,
-      data: payload.chunks[0],
-    })
+      jest.advanceTimersByTime(25)
+      await chunk(ctx('client-1'), {
+        transferId,
+        index: 0,
+        data: payload.chunks[0],
+      })
 
-    await new Promise(resolve => setTimeout(resolve, 25))
-    await chunk(ctx('client-1'), {
-      transferId,
-      index: 1,
-      data: payload.chunks[1],
-    })
+      jest.advanceTimersByTime(25)
+      await chunk(ctx('client-1'), {
+        transferId,
+        index: 1,
+        data: payload.chunks[1],
+      })
 
-    await expect(commit(ctx('client-1'), { transferId })).resolves.toEqual({
-      ok: true,
-      body: { hello: 'world', slow: true },
-    })
+      await expect(commit(ctx('client-1'), { transferId })).resolves.toEqual({
+        ok: true,
+        body: { hello: 'world', slow: true },
+      })
+    } finally {
+      jest.useRealTimers()
+    }
   })
 })

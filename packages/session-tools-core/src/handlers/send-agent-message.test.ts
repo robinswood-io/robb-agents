@@ -32,8 +32,7 @@ describe('handleSendAgentMessage delivery ack', () => {
     expect(res.isError).toBeFalsy();
     const text = JSON.stringify(res);
     expect(text).toContain('queued');
-    // Must warn the sender not to assume the message was read yet.
-    expect(text.toLowerCase()).toContain('do not assume it was read');
+    expect(text.toLowerCase()).toContain('do not send an acknowledgement');
   });
 
   it('wraps the message with a sender envelope', async () => {
@@ -44,6 +43,19 @@ describe('handleSendAgentMessage delivery ack', () => {
     if (call == null) throw new Error('Expected exactly one delivered message');
     expect(call.message).toContain('sender-1');
     expect(call.message).toContain('ping');
+    expect(call.message).toContain('type="progress"');
+    expect(call.message).toContain('No acknowledgement is required');
+  });
+
+  it('marks questions as requiring only a substantive answer', async () => {
+    const { ctx, calls } = createCtx({ delivery: 'delivered', targetBusy: false });
+    await handleSendAgentMessage(ctx, {
+      sessionId: 'target-9',
+      message: 'Which option passed?',
+      messageType: 'question',
+    });
+    expect(calls[0]?.message).toContain('type="question"');
+    expect(calls[0]?.message).toContain('only when the requested answer or decision is ready');
   });
 
   it('rejects a self-send', async () => {

@@ -8,6 +8,7 @@ import { useOptionalAppShellContext } from '@/context/AppShellContext'
 import type { StructuredInputState, StructuredResponse, InputMode } from './structured/types'
 import { getStructuredInputMaxHeight } from './structured-height'
 import { BackgroundFinishedChip } from '../BackgroundFinishedChip'
+import { readUsableViewportHeight, subscribeToViewportHeight } from './viewport-height'
 
 interface InputContainerProps extends Omit<FreeFormInputProps, 'inputRef'> {
   /** Structured input state - when present, shows structured UI instead of freeform */
@@ -62,7 +63,7 @@ export function InputContainer({
   )
   const [structuredHeight, setStructuredHeight] = React.useState<number | null>(null)
   const [viewportHeight, setViewportHeight] = React.useState<number>(() =>
-    typeof window === 'undefined' ? 0 : window.innerHeight
+    typeof window === 'undefined' ? 0 : readUsableViewportHeight()
   )
   const [isFocused, setIsFocused] = React.useState(false)
   const hasInitializedRef = React.useRef(false)
@@ -143,11 +144,7 @@ export function InputContainer({
 
   React.useEffect(() => {
     if (typeof window === 'undefined') return
-
-    const updateViewportHeight = () => setViewportHeight(window.innerHeight)
-    updateViewportHeight()
-    window.addEventListener('resize', updateViewportHeight)
-    return () => window.removeEventListener('resize', updateViewportHeight)
+    return subscribeToViewportHeight(setViewportHeight)
   }, [])
 
   // Use ResizeObserver only for structured inputs (freeform uses onHeightChange callback)
@@ -262,7 +259,8 @@ export function InputContainer({
       {/* Visible animated container */}
       <motion.div
         className={cn(
-          "input-container relative rounded-[12px] overflow-hidden transition-colors",
+          "input-container relative overflow-hidden transition-colors",
+          compactMode ? "rounded-[20px] border border-border/70" : "rounded-[12px]",
           isFocusedPanel ? "shadow-middle" : "shadow-minimal",
           "bg-background"
         )}

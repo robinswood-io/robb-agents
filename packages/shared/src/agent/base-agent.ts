@@ -25,7 +25,7 @@ import { DEFAULT_THINKING_LEVEL, normalizeThinkingLevel } from './thinking-level
 import type { PermissionMode } from './mode-manager.ts';
 import type { LoadedSource } from '../sources/types.ts';
 import { buildCallLlmRequest, type LLMQueryRequest, type LLMQueryResult } from './llm-tool.ts';
-import { getLlmConnections, getDefaultLlmConnection } from '../config/storage.ts';
+import { getLlmConnections, getDefaultLlmConnection, getBrowserToolEnabled } from '../config/storage.ts';
 import { loadAllSources } from '../sources/storage.ts';
 import type { ApiServerConfig } from '../mcp/mcp-pool.ts';
 
@@ -298,6 +298,7 @@ export abstract class BaseAgent implements AgentBackend {
       debugMode: config.debugMode,
       systemPromptPreset: config.systemPromptPreset,
       isHeadless: config.isHeadless,
+      externalActionPolicy: config.externalActionPolicy,
     });
 
     // PathProcessor: expands ~ and normalizes paths
@@ -313,6 +314,8 @@ export abstract class BaseAgent implements AgentBackend {
     // PrerequisiteManager: blocks source tool calls until guide.md is read
     this.prerequisiteManager = new PrerequisiteManager({
       workspaceRootPath: config.workspace.rootPath,
+      // buildSystemPrompt injects this contract into stable system context.
+      browserGuideLoadedInContext: getBrowserToolEnabled(),
       onDebug: (msg) => this.debug(msg),
     });
 
@@ -510,6 +513,12 @@ export abstract class BaseAgent implements AgentBackend {
     this.onPermissionModeChange?.(mode);
   }
 
+  setExternalActionPolicy(policy: 'confirm' | 'allow-in-execute'): void {
+    this.config.externalActionPolicy = policy;
+    this.promptBuilder.setExternalActionPolicy(policy);
+    this.debug(`External action policy set to: ${policy}`);
+  }
+
   cyclePermissionMode(): PermissionMode {
     const newMode = this.permissionManager.cyclePermissionMode();
     this.onPermissionModeChange?.(newMode);
@@ -550,7 +559,7 @@ export abstract class BaseAgent implements AgentBackend {
    */
   clearHistory(): void {
     this.usageTracker.reset();
-    this.prerequisiteManager.resetReadState();
+    this.resetPrerequisiteState();
     this.debug('History cleared');
   }
 
@@ -1154,7 +1163,7 @@ ${formattedMessages}
   /**
    * Optional model validation hook for call_llm.
    * Override in subclasses to filter models (e.g., Codex rejects non-OpenAI models).
-   * Return undefined to fall back to miniModel.
+   * Return undefined to reject an unsupported explicit model.
    */
   protected validateCallLlmModel?(modelId: string): string | undefined;
 
@@ -1278,7 +1287,7 @@ ${formattedMessages}
    * This allows MCP servers to summarize using the agent's auth infrastructure.
    */
   getSummarizeCallback(): (prompt: string) => Promise<string | null> {
-    return this.runMiniCompletion.bind(this);
+    return async (prompt) => (await this.queryLlm({ prompt })).text;
   }
 }
 

@@ -22,7 +22,6 @@ import {
   ensureMockElectronAPI,
   mockInputCallbacks,
   mockAttachmentCallbacks,
-  mockSources,
   sampleImageAttachment,
   samplePdfAttachment,
 } from '../mock-utils'
@@ -548,8 +547,6 @@ interface InputContainerPlaygroundProps {
   showLabels?: boolean
   showStatuses?: boolean
   labelCount?: number
-  showSources?: boolean
-  sourceCount?: number
   showWorkingDirectory?: boolean
   seedRecentDirs?: boolean
   recentDirScenario?: RecentDirScenario
@@ -573,8 +570,6 @@ function InputContainerPlayground({
   showLabels = true,
   showStatuses = true,
   labelCount = 3,
-  showSources = true,
-  sourceCount = 2,
   showWorkingDirectory = true,
   seedRecentDirs = true,
   recentDirScenario = 'few',
@@ -624,14 +619,6 @@ function InputContainerPlayground({
     })
     setSessionLabels(next)
   }, [labels])
-
-  const sources = React.useMemo(() => mockSources.slice(0, Math.max(1, Math.min(sourceCount, mockSources.length))), [sourceCount])
-  const defaultEnabled = React.useMemo(() => sources.slice(0, Math.min(2, sources.length)).map(source => source.config.slug), [sources])
-  const [enabledSourceSlugs, setEnabledSourceSlugs] = React.useState<string[]>(defaultEnabled)
-
-  React.useEffect(() => {
-    setEnabledSourceSlugs(defaultEnabled)
-  }, [defaultEnabled])
 
   const followUpItems = React.useMemo(() => {
     const samples = [
@@ -766,9 +753,6 @@ function InputContainerPlayground({
               console.log('[Playground] Structured response:', response)
             },
             currentModel: model,
-            sources: showSources ? sources : [],
-            enabledSourceSlugs: showSources ? enabledSourceSlugs : [],
-            onSourcesChange: showSources ? setEnabledSourceSlugs : undefined,
             workingDirectory: showWorkingDirectory ? cwd : undefined,
             onWorkingDirectoryChange: showWorkingDirectory ? setCwd : undefined,
             followUpItems,
@@ -840,8 +824,6 @@ function ActiveTasksBarContext({ tasks = sampleBackgroundTasks }: ActiveTasksBar
           currentModel="claude-sonnet-4-6"
           permissionMode={permissionMode}
           onPermissionModeChange={setPermissionMode}
-          sources={mockSources}
-          enabledSourceSlugs={['github-api', 'local-files']}
           workingDirectory="/Users/demo/projects/craft-agent"
           sessionId="playground-session"
           onSubmit={mockInputCallbacks.onSubmit}
@@ -849,7 +831,6 @@ function ActiveTasksBarContext({ tasks = sampleBackgroundTasks }: ActiveTasksBar
           onInputChange={mockInputCallbacks.onInputChange}
           onHeightChange={mockInputCallbacks.onHeightChange}
           onFocusChange={mockInputCallbacks.onFocusChange}
-          onSourcesChange={mockInputCallbacks.onSourcesChange}
           onWorkingDirectoryChange={mockInputCallbacks.onWorkingDirectoryChange}
           onStop={mockInputCallbacks.onStop}
         />
@@ -943,8 +924,6 @@ function PermissionInputToggle({ autoToggle = false, autoToggleInterval = 3000, 
         currentModel="claude-sonnet-4-6"
         permissionMode={permissionMode}
         onPermissionModeChange={setPermissionMode}
-        sources={mockSources}
-        enabledSourceSlugs={['github-api', 'local-files']}
         workingDirectory="/Users/demo/projects/craft-agent"
         sessionId="playground-session"
         structuredInput={structuredInput}
@@ -954,7 +933,6 @@ function PermissionInputToggle({ autoToggle = false, autoToggleInterval = 3000, 
         onInputChange={mockInputCallbacks.onInputChange}
         onHeightChange={mockInputCallbacks.onHeightChange}
         onFocusChange={mockInputCallbacks.onFocusChange}
-        onSourcesChange={mockInputCallbacks.onSourcesChange}
         onWorkingDirectoryChange={mockInputCallbacks.onWorkingDirectoryChange}
         onStop={mockInputCallbacks.onStop}
       />
@@ -1349,18 +1327,6 @@ export const chatComponents: ComponentEntry[] = [
         defaultValue: true,
       },
       {
-        name: 'showSources',
-        description: 'Enable sources selector badge and source mentions',
-        control: { type: 'boolean' },
-        defaultValue: true,
-      },
-      {
-        name: 'sourceCount',
-        description: 'How many sources are available in selector',
-        control: { type: 'number', min: 1, max: 4, step: 1 },
-        defaultValue: 2,
-      },
-      {
         name: 'showWorkingDirectory',
         description: 'Show working directory context badge',
         control: { type: 'boolean' },
@@ -1420,7 +1386,7 @@ export const chatComponents: ComponentEntry[] = [
     variants: [
       {
         name: 'Default (Comprehensive)',
-        description: 'App-like full setup with badges, labels, statuses, sources, and working directory',
+        description: 'App-like full setup with badges, labels, statuses, and working directory',
         props: {},
       },
       {
@@ -1452,10 +1418,9 @@ export const chatComponents: ComponentEntry[] = [
       },
       {
         name: 'Minimal',
-        description: 'Input only — no badges, no sources, no cwd badge',
+        description: 'Input only — no badges or working-directory badge',
         props: {
           showOptionBadges: false,
-          showSources: false,
           showWorkingDirectory: false,
         },
       },
@@ -1501,15 +1466,6 @@ export const chatComponents: ComponentEntry[] = [
           labelCount: 4,
           showStatuses: true,
           showTasks: false,
-        },
-      },
-      {
-        name: 'Source-heavy Review',
-        description: 'Multiple source avatars and source selector stress test',
-        props: {
-          showSources: true,
-          sourceCount: 4,
-          showWorkingDirectory: false,
         },
       },
       {

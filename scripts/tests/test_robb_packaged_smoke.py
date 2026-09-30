@@ -21,6 +21,12 @@ SPEC.loader.exec_module(MODULE)
 
 
 class CodesignInspectionTests(unittest.TestCase):
+    def test_inspection_requests_full_certificate_metadata(self) -> None:
+        self.assertEqual(
+            MODULE.codesign_inspection_command(Path("/tmp/Robb Agents.app")),
+            ["codesign", "-dv", "--verbose=4", "/tmp/Robb Agents.app"],
+        )
+
     def test_unsigned_cross_architecture_smoke_build_is_accepted(self) -> None:
         mode = MODULE.validate_codesign_inspection(
             1,
@@ -67,7 +73,9 @@ class CodesignInspectionTests(unittest.TestCase):
         self.assertEqual(
             MODULE.validate_codesign_inspection(
                 0,
-                "Identifier=io.robinswood.robbagents\nTeamIdentifier=ABCDE12345",
+                "Identifier=io.robinswood.robbagents\n"
+                "Authority=Developer ID Application: Robinswood (ABCDE12345)\n"
+                "TeamIdentifier=ABCDE12345",
                 require_release_signing=True,
             ),
             "developer-id",
@@ -79,6 +87,30 @@ class CodesignInspectionTests(unittest.TestCase):
                 "Identifier=com.example.other\nTeamIdentifier=ABCDE12345",
                 require_release_signing=False,
             )
+
+    def test_release_rejects_an_apple_development_signature(self) -> None:
+        with self.assertRaises(SystemExit):
+            MODULE.validate_codesign_inspection(
+                0,
+                "Identifier=io.robinswood.robbagents\n"
+                "Authority=Apple Development: Developer (ABCDE12345)\n"
+                "TeamIdentifier=ABCDE12345",
+                require_release_signing=True,
+            )
+
+    def test_release_verification_requires_codesign_gatekeeper_and_stapler(self) -> None:
+        valid = (0, "valid on disk", 0, "source=Notarized Developer ID", 0, "The validate action worked!")
+        MODULE.validate_release_verification_results(*valid)
+
+        failures = (
+            (1, "invalid signature", 0, "source=Notarized Developer ID", 0, "ok"),
+            (0, "valid", 1, "rejected", 0, "ok"),
+            (0, "valid", 0, "source=Developer ID", 0, "ok"),
+            (0, "valid", 0, "source=Notarized Developer ID", 1, "ticket missing"),
+        )
+        for values in failures:
+            with self.subTest(values=values), self.assertRaises(SystemExit):
+                MODULE.validate_release_verification_results(*values)
 
 
 if __name__ == "__main__":

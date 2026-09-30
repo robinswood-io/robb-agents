@@ -56,8 +56,16 @@ import { bedrockProviderModule } from '@earendil-works/pi-ai/bedrock-provider';
 setBedrockProviderModule(bedrockProviderModule);
 
 // Model resolution (extracted for testability + custom-endpoint precedence)
-import { resolvePiModel, isDeniedMiniModelId, isModelNotFoundError } from './model-resolution.ts';
-import { pickProviderAppropriateMiniModel } from './pick-mini-model.ts';
+import {
+  requireExplicitPiModel,
+  resolvePiModel,
+} from './model-resolution.ts';
+import { registerSupplementalCatalogModels } from './catalog-model-registration.ts';
+import {
+  activateEphemeralQueryModel,
+  resolveQueryModel,
+} from './query-model.ts';
+import { applyTokenUpdate, type PiCredential } from './token-update.ts';
 import {
   buildCustomEndpointModelDef,
   normalizeCustomEndpointModelEntry,
@@ -72,23 +80,38 @@ import { getSessionPlansPath, getSessionPath } from '../../shared/src/sessions/s
 import { buildCallLlmRequest, withTimeout, LLM_QUERY_TIMEOUT_MS } from '../../shared/src/agent/llm-tool.ts';
 import type { LLMQueryRequest, LLMQueryResult } from '../../shared/src/agent/llm-tool.ts';
 import { PI_TOOL_NAME_MAP, THINKING_TO_PI } from '../../shared/src/agent/backend/pi/constants.ts';
-import { getDefaultSummarizationModel } from '../../shared/src/config/models.ts';
 import { createWebFetchTool } from './tools/web-fetch.ts';
 import { resolveSearchProvider } from './tools/search/resolve-provider.ts';
 import { createSearchTool } from './tools/search/create-search-tool.ts';
-import { allowCraftMetadataProperties, stripCraftMetadata } from './craft-metadata-schema.ts';
+import { compactSelectedModel } from './compact-selected-model.ts';
+import { applySelectedThinkingLevel } from './selected-thinking-level.ts';
+import { allowCraftMetadataProperties, normalizeForPiTool, stripCraftMetadata } from './craft-metadata-schema.ts';
 import { applySystemPromptOverride } from './system-prompt-override.ts';
 import { registerGoogleCodeAssistProvider } from './google-code-assist-provider.ts';
+import { assertPiAuthProviderContractEnabled } from './provider-contract-guard.ts';
+import {
+  OVERFLOW_RECOVERY_COMPACTION_INSTRUCTIONS,
+  prepareMessagesForOverflowContinuation,
+} from './overflow-recovery.ts';
+import {
+  IncompleteToolTailRecovery,
+  prepareMessagesForIncompleteTailContinuation,
+} from './incomplete-tool-tail-recovery.ts';
+import { ToolLoopBudget } from './tool-loop-budget.ts';
+import { normalizeSessionPathTokens } from './session-path-normalization.ts';
+import {
+  ReadToolTimeoutError,
+  resolveReadToolTimeoutMs,
+  withReadToolTimeout,
+} from './read-tool-timeout.ts';
+import {
+  extractRecentUserTexts,
+  SourceToolActivationController,
+} from './source-tool-activation.ts';
 
 // ============================================================
 // Types — JSONL Protocol
 // ============================================================
-
-/** Credential union used in init and token_update messages */
-type PiCredential =
-  | { type: 'api_key'; key: string }
-  | { type: 'oauth'; access: string; refresh: string; expires: number }
-  | { type: 'iam'; accessKeyId: string; secretAccessKey: string; region?: string; sessionToken?: string };
 
 /** Custom endpoint protocol — determines which streaming adapter Pi SDK uses */
 type CustomEndpointApi = 'openai-completions' | 'anthropic-messages';
@@ -144,6 +167,8 @@ type InboundMessage =
   | { type: 'set_model'; model: string }
   | { type: 'set_thinking_level'; level: string }
   | { type: 'compact'; id: string; customInstructions?: string }
+  | { type: 'abort_compaction'; id: string }
+  | { type: 'recover_overflow'; id: string }
   | { type: 'set_auto_compaction'; id: string; enabled: boolean }
   | RuntimeConfigUpdateMessage
   | { type: 'steer'; message: string }
@@ -155,6 +180,9 @@ interface ProxyToolDef {
   name: string;
   description: string;
   inputSchema: Record<string, unknown>;
+  readOnly?: boolean;
+  idempotent?: boolean;
+  parallelSafe?: boolean;
 }
 
 /** Canonical tool metadata propagated on Pi tool start events */
@@ -199,7 +227,7 @@ interface OutboundCompactResult {
   type: 'compact_result';
   id: string;
   success: boolean;
-  result?: { summary: string; firstKeptEntryId: string; tokensBefore: number };
+  result?: { summary: string; firstKeptEntryId: string; tokensBefore: number; estimatedTokensAfter?: number; compactionModel?: string };
   errorMessage?: string;
 }
 interface OutboundSetAutoCompactionResult {
@@ -248,6 +276,9 @@ let initConfig: Extract<InboundMessage, { type: 'init' }> | null = null;
 
 // Mutable state
 let currentUserMessage = '';
+const sourceToolActivation = new SourceToolActivationController();
+const incompleteToolTailRecovery = new IncompleteToolTailRecovery();
+const toolLoopBudget = new ToolLoopBudget();
 
 // Pending promises for async handshakes
 const pendingPreToolUse = new Map<string, { resolve: (response: { action: string; input?: Record<string, unknown>; reason?: string }) => void }>();
@@ -259,16 +290,15 @@ const pendingSessionToolCalls = new Map<string, { toolName: string; arguments: R
 // Proxy tool definitions from main process
 let proxyToolDefs: ProxyToolDef[] = [];
 
-// Speculative prefetch for read-only tools (enables parallel execution despite Pi SDK's sequential loop).
-// When the LLM emits multiple call_llm tool calls in a single message, we fire all requests
-// to the main process in parallel on message_end (before executeToolCalls iterates sequentially).
-// Each proxy tool's execute() then hits the cache instead of sending a new request.
-const PREFETCHABLE_TOOLS = new Set(['call_llm']);
+// Speculative prefetch for explicitly parallel-safe read-only session tools.
+// The batch is capped because Pi's SDK loop is sequential and upstream services
+// may enforce rate limits. Source MCP annotations are propagated separately but
+// never opt a tool into this permission-bypassing prefetch path.
+const MAX_PARALLEL_PREFETCH = 4;
 const prefetchCache = new Map<string, Promise<{ content: string; isError: boolean }>>();
 
 function isPrefetchableTool(toolName: string): boolean {
-  const stripped = toolName.replace(/^(mcp__session__|session__)/, '');
-  return PREFETCHABLE_TOOLS.has(stripped);
+  return proxyToolDefs.some(def => def.name === toolName && def.readOnly === true && def.parallelSafe === true);
 }
 
 // Flag: proxy tools changed since last session creation — session needs recreation
@@ -497,6 +527,13 @@ function createAuthenticatedRegistry(): {
 
   const modelRegistry = PiModelRegistry.inMemory(authStorage);
 
+  if (initConfig?.piAuth?.provider) {
+    const registeredIds = registerSupplementalCatalogModels(modelRegistry, initConfig.piAuth.provider);
+    if (registeredIds.length > 0) {
+      debugLog(`Registered supplemental Pi models for ${initConfig.piAuth.provider}: ${registeredIds.join(', ')}`);
+    }
+  }
+
   if (initConfig?.piAuth?.provider === 'google-gemini-code-assist') {
     registerGoogleCodeAssistProvider(modelRegistry);
     debugLog('Registered Google Gemini Code Assist provider');
@@ -522,8 +559,9 @@ function createAuthenticatedRegistry(): {
 }
 
 async function ensureSession(): Promise<AgentSession> {
-  if (piSession) return piSession;
   if (!initConfig) throw new Error('Cannot create session: init not received');
+  assertPiAuthProviderContractEnabled(initConfig.piAuth?.provider, process.env);
+  if (piSession) return piSession;
 
   const cwd = resolvedCwd();
 
@@ -631,35 +669,11 @@ async function ensureSession(): Promise<AgentSession> {
 
   }
 
-  // Set model if specified
-  if (initConfig.model) {
-    try {
-      const piModel = resolvePiModel(modelRegistry, initConfig.model, initConfig.piAuth?.provider, shouldPreferCustomEndpoint());
-      if (piModel) {
-        // Verify resolved model's provider is compatible with the authenticated provider.
-        // Without this, a model that resolves to a different provider (e.g. azure-openai-responses
-        // when authed as github-copilot) would cause "No API key found" at runtime.
-        const resolvedProvider = (piModel as any)?.provider;
-        const isCompatible = !initConfig.piAuth ||
-          resolvedProvider === initConfig.piAuth.provider ||
-          resolvedProvider === 'custom-endpoint';
-        if (isCompatible) {
-          sessionOptions.model = piModel;
-          setInterceptorApiHints(piModel as { api?: string; provider?: string; baseUrl?: string });
-        } else {
-          debugLog(`Model ${initConfig.model} resolved to incompatible provider ${resolvedProvider} (expected ${initConfig.piAuth!.provider}), skipping`);
-          setInterceptorApiHints(undefined);
-        }
-      } else {
-        setInterceptorApiHints(undefined);
-      }
-    } catch {
-      debugLog(`Could not resolve Pi model: ${initConfig.model}`);
-      setInterceptorApiHints(undefined);
-    }
-  } else {
-    setInterceptorApiHints(undefined);
-  }
+  // Never let the SDK substitute its own provider/model default.
+  if (!initConfig.model) throw new Error('A selected model is required to start the session');
+  const selectedModel = requireExplicitPiModel(modelRegistry, initConfig.model, initConfig.piAuth?.provider, shouldPreferCustomEndpoint());
+  sessionOptions.model = selectedModel;
+  setInterceptorApiHints(selectedModel);
 
   // Set thinking level
   const piThinkingLevel = THINKING_TO_PI[initConfig.thinkingLevel as keyof typeof THINKING_TO_PI];
@@ -669,6 +683,10 @@ async function ensureSession(): Promise<AgentSession> {
 
   // Create the session — tools flow through customTools + allowlist (see comment above).
   const { session } = await createAgentSession(sessionOptions);
+  if (sessionOptions.model) {
+    await activateEphemeralQueryModel(session, sessionOptions.model, initConfig.model);
+  }
+  if (piThinkingLevel) session.setThinkingLevel(piThinkingLevel);
   piSession = session;
 
   toolsChanged = false;
@@ -734,7 +752,8 @@ function makeErrorResult(message: string): AgentToolResult<any> {
 
 function wrapSingleTool(tool: ToolDefinition<any, any>): ToolDefinition<any, any> {
   const originalExecute = tool.execute;
-  const parameters = allowCraftMetadataProperties(tool.parameters);
+  const sdkToolName = PI_TOOL_NAME_MAP[tool.name] || tool.name;
+  const parameters = allowCraftMetadataProperties(tool.parameters, sdkToolName);
 
   const wrappedExecute: ToolDefinition<any, any>['execute'] = async (
     toolCallId,
@@ -743,8 +762,12 @@ function wrapSingleTool(tool: ToolDefinition<any, any>): ToolDefinition<any, any
     onUpdate,
     ctx,
   ) => {
-    const sdkToolName = PI_TOOL_NAME_MAP[tool.name] || tool.name;
     let inputObj: Record<string, unknown> = { ...(params as Record<string, unknown>) };
+
+    if (initConfig) {
+      const sessionPath = getSessionPath(initConfig.workspaceRootPath, initConfig.sessionId);
+      inputObj = normalizeSessionPathTokens(inputObj, sessionPath) as Record<string, unknown>;
+    }
 
     // Extract intent before main process strips metadata (used for summarization)
     const intent = typeof inputObj._intent === 'string' ? inputObj._intent : undefined;
@@ -754,6 +777,13 @@ function wrapSingleTool(tool: ToolDefinition<any, any>): ToolDefinition<any, any
         && typeof inputObj.path === 'string' && !inputObj.file_path) {
       inputObj = { ...inputObj, file_path: inputObj.path };
     }
+    if (sdkToolName === 'Edit' && Array.isArray(inputObj.edits)) {
+      const firstEdit = inputObj.edits[0] as { oldText?: unknown; newText?: unknown } | undefined;
+      if (firstEdit && typeof firstEdit.oldText === 'string' && typeof firstEdit.newText === 'string') {
+        inputObj.old_string ??= firstEdit.oldText;
+        inputObj.new_string ??= firstEdit.newText;
+      }
+    }
 
     // Send to main process for permission checking + transforms
     inputObj = await requestPreToolUseApproval(sdkToolName, inputObj, toolCallId);
@@ -761,10 +791,34 @@ function wrapSingleTool(tool: ToolDefinition<any, any>): ToolDefinition<any, any
     // Metadata is for Craft UI only. Keep a final defensive strip here so the
     // upstream Pi tool implementation always receives clean executable args,
     // even if a future pre-tool-use path returns `allow` without modification.
-    inputObj = stripCraftMetadata(inputObj);
+    inputObj = normalizeForPiTool(sdkToolName, stripCraftMetadata(inputObj));
+
+    const loopDecision = toolLoopBudget.observe(sdkToolName, inputObj);
+    if (loopDecision.action === 'block') {
+      return {
+        content: [{ type: 'text', text: loopDecision.message ?? 'Repeated unchanged tool call blocked.' }],
+        details: {
+          costControlBlocked: true,
+          continuationRequired: true,
+          checkpoint: 'tool-call-budget',
+        },
+      };
+    }
 
     // Execute original tool with (potentially modified) input
-    const result = await originalExecute(toolCallId, inputObj, signal, onUpdate, ctx);
+    let result: AgentToolResult<any>;
+    try {
+      result = await withReadToolTimeout(
+        sdkToolName,
+        originalExecute(toolCallId, inputObj, signal, onUpdate, ctx),
+        resolveReadToolTimeoutMs(process.env.CRAFT_READ_TOOL_TIMEOUT_MS),
+      );
+    } catch (error) {
+      if (error instanceof ReadToolTimeoutError) {
+        return makeErrorResult(error.message);
+      }
+      throw error;
+    }
 
     // --- Post-execute: large response summarization ---
 
@@ -793,13 +847,18 @@ function wrapSingleTool(tool: ToolDefinition<any, any>): ToolDefinition<any, any
             intent,
             userRequest: currentUserMessage,
           },
-          summarize: runMiniCompletion,
+          summarize: async prompt => (await queryLlm({ prompt })).text,
           contextWindow: modelContextWindow,
         });
 
         if (largeResult) {
           return {
-            content: [{ type: 'text', text: largeResult.message }],
+            content: [{
+              type: 'text',
+              text: loopDecision.action === 'hint' && loopDecision.message
+                ? `${largeResult.message}\n\n${loopDecision.message}`
+                : largeResult.message,
+            }],
             details: result.details,
           };
         }
@@ -808,6 +867,16 @@ function wrapSingleTool(tool: ToolDefinition<any, any>): ToolDefinition<any, any
           `Large response handling failed: ${error instanceof Error ? error.message : String(error)}`,
         );
       }
+    }
+
+    if (loopDecision.action === 'hint' && loopDecision.message) {
+      return {
+        ...result,
+        content: [
+          ...result.content,
+          { type: 'text', text: `\n\n${loopDecision.message}` },
+        ],
+      };
     }
 
     return result;
@@ -892,42 +961,15 @@ function buildProxyTools(): ToolDefinition<any, any>[] {
 
 async function queryLlm(request: LLMQueryRequest): Promise<LLMQueryResult> {
   if (!initConfig) throw new Error('Cannot run queryLlm: init not received');
+  assertPiAuthProviderContractEnabled(initConfig.piAuth?.provider, process.env);
 
   debugLog('[queryLlm] Starting');
 
-  // Pick mini model. If the configured miniModel uses a different provider than
-  // what the user authenticated with (e.g. gemini-2.5-pro when only anthropic
-  // credentials exist), fall back to the default summarization model which uses
-  // the same provider family.
-  let model = request.model ?? initConfig.miniModel ?? getDefaultSummarizationModel();
-
-  // Create authenticated registry upfront — used by both the provider guard and the ephemeral session.
+  // Auxiliary task work inherits the user's selected model unless its caller
+  // explicitly supplies another model. A missing model is an error, never a
+  // reason to search other providers or mini-model candidates.
+  const model = resolveQueryModel(request.model, initConfig.model);
   const { authStorage, modelRegistry } = createAuthenticatedRegistry();
-
-  const piAuthProvider = initConfig.piAuth?.provider;
-
-  // If piAuth is set, ensure the mini model uses the same provider.
-  // Pi SDK will fail with "No API key found" if the model requires a different provider.
-  // Exception: 'custom-endpoint' provider is always compatible because it has its own
-  // API key configured via resolveCustomEndpointApiKey() and doesn't use authStorage.
-  if (initConfig.piAuth) {
-    const authProvider = initConfig.piAuth.provider;
-    const bareModel = model.startsWith('pi/') ? model.slice(3) : model;
-    const resolved = resolvePiModel(modelRegistry, bareModel, authProvider, shouldPreferCustomEndpoint());
-    const resolvedProvider = (resolved as any)?.provider;
-    const isCompatible = resolvedProvider === authProvider || resolvedProvider === 'custom-endpoint';
-    if (!resolved || !isCompatible || isDeniedMiniModelId(model, piAuthProvider)) {
-      // Anthropic: keep Haiku (the cheap/fast mini). For every other provider
-      // Haiku is unresolvable, so walk PI_PREFERRED_DEFAULTS for a model that
-      // actually works under the user's auth.
-      const providerDefault = authProvider === 'anthropic'
-        ? undefined
-        : pickProviderAppropriateMiniModel(authProvider, modelRegistry, shouldPreferCustomEndpoint());
-      const fallback = providerDefault ?? getDefaultSummarizationModel();
-      debugLog(`[queryLlm] Model ${bareModel} incompatible with ${authProvider} (resolved: ${resolvedProvider}), falling back to ${fallback}`);
-      model = fallback;
-    }
-  }
 
   const runQueryWithModel = async (modelId: string): Promise<string> => {
     debugLog(`[queryLlm] Using model: ${modelId}`);
@@ -936,12 +978,7 @@ async function queryLlm(request: LLMQueryRequest): Promise<LLMQueryResult> {
     // fall back to its own internal default (which may require a provider
     // the user hasn't authenticated with, surfacing as a misleading
     // "No API key found for <provider>" error).
-    const piModel = resolvePiModel(modelRegistry, modelId, initConfig!.piAuth?.provider, shouldPreferCustomEndpoint());
-    if (!piModel) {
-      throw new Error(
-        `Could not resolve mini model "${modelId}" for provider "${initConfig!.piAuth?.provider ?? '(unknown)'}"`,
-      );
-    }
+    const piModel = requireExplicitPiModel(modelRegistry, modelId, initConfig!.piAuth?.provider, shouldPreferCustomEndpoint());
 
     // Create minimal ephemeral session
     const ephemeralOptions: CreateAgentSessionOptions = {
@@ -956,12 +993,11 @@ async function queryLlm(request: LLMQueryRequest): Promise<LLMQueryResult> {
     const { session: ephemeralSession } = await createAgentSession(ephemeralOptions);
 
     // Pi SDK ignores options.model for ephemeral sessions (same issue as options.tools).
-    // Explicitly set the model after creation to ensure the mini model is used.
-    try {
-      await ephemeralSession.setModel(piModel);
-    } catch {
-      debugLog(`[queryLlm] Failed to set model on ephemeral session, proceeding with default`);
-    }
+    // Explicitly set the model after creation to ensure the selected model is used.
+    await activateEphemeralQueryModel(ephemeralSession, piModel, modelId);
+    const thinkingLevel = piSession?.thinkingLevel
+      ?? THINKING_TO_PI[initConfig!.thinkingLevel as keyof typeof THINKING_TO_PI];
+    if (thinkingLevel) ephemeralSession.setThinkingLevel(thinkingLevel);
 
     debugLog(`[queryLlm] Created ephemeral session: ${ephemeralSession.sessionId}`);
 
@@ -1031,55 +1067,8 @@ async function queryLlm(request: LLMQueryRequest): Promise<LLMQueryResult> {
     }
   };
 
-  const fallbackCandidates = [
-    // Removed 'pi/gpt-5.1-codex-mini' (#596) — stale on several OpenAI catalogs.
-    // The connection-configured miniModel is still tried via `initConfig.miniModel`.
-    'pi/gpt-5-mini',
-    initConfig.miniModel,
-    getDefaultSummarizationModel(),
-  ].filter((candidate): candidate is string => !!candidate && !isDeniedMiniModelId(candidate, piAuthProvider));
-
-  const triedModels = new Set<string>();
-  let currentModel = model;
-
-  while (true) {
-    triedModels.add(currentModel);
-    try {
-      const text = await runQueryWithModel(currentModel);
-      return { text, model: currentModel };
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : String(error);
-      const shouldRetry = isModelNotFoundError(errorMsg);
-
-      if (!shouldRetry) {
-        throw error;
-      }
-
-      const retryModel = fallbackCandidates.find(candidate => {
-        if (triedModels.has(candidate)) return false;
-        try {
-          const resolved = resolvePiModel(modelRegistry, candidate, initConfig!.piAuth?.provider, shouldPreferCustomEndpoint());
-          if (!resolved) return false;
-          if (initConfig!.piAuth) {
-            const rp = (resolved as any).provider;
-            if (rp !== initConfig!.piAuth.provider && rp !== 'custom-endpoint') {
-              return false;
-            }
-          }
-          return true;
-        } catch {
-          return false;
-        }
-      });
-
-      if (!retryModel) {
-        throw error;
-      }
-
-      debugLog(`[queryLlm] Model ${currentModel} not found, retrying with ${retryModel}`);
-      currentModel = retryModel;
-    }
-  }
+  const text = await runQueryWithModel(model);
+  return { text, model };
 }
 
 async function preExecuteCallLlm(input: Record<string, unknown>): Promise<LLMQueryResult> {
@@ -1090,17 +1079,6 @@ async function preExecuteCallLlm(input: Record<string, unknown>): Promise<LLMQue
   return queryLlm(request);
 }
 
-async function runMiniCompletion(prompt: string): Promise<string | null> {
-  try {
-    const result = await queryLlm({ prompt });
-    const text = result.text || null;
-    debugLog(`[runMiniCompletion] Result: ${text ? `"${text.slice(0, 200)}"` : 'null'}`);
-    return text;
-  } catch (error) {
-    debugLog(`[runMiniCompletion] Failed: ${error instanceof Error ? error.message : String(error)}`);
-    return null;
-  }
-}
 
 // ============================================================
 // Event Handling
@@ -1181,13 +1159,27 @@ function handleSessionEvent(event: AgentSessionEvent): void {
       // iterates sequentially. Each proxy tool's execute() will hit the cache.
       const content = (msg as { content?: Array<{ type: string; id?: string; name?: string; arguments?: unknown }> }).content;
       if (Array.isArray(content)) {
-        const prefetchableToolCalls = content.filter(
+        const plannedToolCalls = content.flatMap((item) => {
+          if (item.type !== 'toolCall' || !item.name) return [];
+          const sdkToolName = PI_TOOL_NAME_MAP[item.name] || item.name;
+          let batchInput = stripCraftMetadata((item.arguments ?? {}) as Record<string, unknown>);
+          if (initConfig) {
+            const sessionPath = getSessionPath(initConfig.workspaceRootPath, initConfig.sessionId);
+            batchInput = normalizeSessionPathTokens(batchInput, sessionPath) as Record<string, unknown>;
+          }
+          batchInput = normalizeForPiTool(sdkToolName, batchInput);
+          return [{ toolName: sdkToolName, input: batchInput }];
+        });
+        toolLoopBudget.registerPlannedBatch(plannedToolCalls);
+
+        const allPrefetchableToolCalls = content.filter(
           (c) => c.type === 'toolCall' && c.name && isPrefetchableTool(c.name),
         );
+        const prefetchableToolCalls = allPrefetchableToolCalls.slice(0, MAX_PARALLEL_PREFETCH);
         if (prefetchableToolCalls.length >= 2) {
           const firstToolCall = prefetchableToolCalls[0];
           const toolLabel = firstToolCall?.name ?? 'tool';
-          debugLog(`Prefetching ${prefetchableToolCalls.length} parallel ${toolLabel} calls`);
+          debugLog(`Prefetching ${prefetchableToolCalls.length}/${allPrefetchableToolCalls.length} parallel-safe ${toolLabel} calls (cap ${MAX_PARALLEL_PREFETCH})`);
           for (const tc of prefetchableToolCalls) {
             if (!tc.id || !tc.name) continue;
             const requestId = `prefetch-${tc.id}`;
@@ -1240,6 +1232,14 @@ function handleSessionEvent(event: AgentSessionEvent): void {
     }
   }
 
+  if (
+    event.type === 'agent_end'
+    && incompleteToolTailRecovery.shouldSuppressAgentEnd(event.messages)
+  ) {
+    debugLog('Held premature agent_end with an incomplete tail; scheduling bounded continuation');
+    return;
+  }
+
   // Forward all events to main process
   send({ type: 'event', event: forwardedEvent });
 }
@@ -1284,28 +1284,31 @@ async function handleInit(msg: Extract<InboundMessage, { type: 'init' }>): Promi
  * Wait for any in-flight compaction to finish before sending a prompt or
  * starting another compaction. Prevents a race in the Pi SDK where concurrent
  * _runAutoCompaction calls crash on a shared AbortController
- * (see craft-agents-oss#464). Default timeout matches the RPC compact timeout
- * in PiAgent.requestCompact (300 s), since GPT compactions can legitimately
- * take 60–120 s.
+ * (see craft-agents-oss#464). Prompt-side waiting remains bounded at five
+ * minutes because a native overflow compaction can legitimately take 60–120 s;
+ * host-requested compaction uses a shorter explicit wait before it starts.
  */
-async function waitForCompaction(session: { isCompacting: boolean }, timeoutMs = 300_000): Promise<void> {
-  if (!session.isCompacting) return;
+async function waitForCompaction(session: { isCompacting: boolean }, timeoutMs = 300_000): Promise<boolean> {
+  if (!session.isCompacting) return true;
   debugLog('Waiting for in-flight compaction to finish before prompt...');
   const start = Date.now();
   while (session.isCompacting) {
     if (Date.now() - start > timeoutMs) {
       debugLog(`Compaction wait timed out after ${Math.floor(timeoutMs / 1000)}s, proceeding anyway`);
-      break;
+      return false;
     }
     await new Promise(resolve => setTimeout(resolve, 200));
   }
   if (Date.now() - start < timeoutMs) {
     debugLog('Compaction finished, proceeding with prompt');
   }
+  return true;
 }
 
 async function handlePrompt(msg: Extract<InboundMessage, { type: 'prompt' }>): Promise<void> {
   currentUserMessage = msg.message;
+  incompleteToolTailRecovery.beginPrompt();
+  toolLoopBudget.beginPrompt();
 
   try {
     // If proxy tools changed since last session creation, dispose and recreate.
@@ -1330,6 +1333,30 @@ async function handlePrompt(msg: Extract<InboundMessage, { type: 'prompt' }>): P
       applySystemPromptOverride(session, msg.systemPrompt);
     }
 
+    // Large workspace aggregators can expose hundreds of unrelated schemas.
+    // Keep normal sources untouched, but activate only the relevant product
+    // families when intent is clear. The selector fails open on ambiguity and
+    // carries prior intent across terse follow-ups for autonomy.
+    const activation = sourceToolActivation.select(
+      session.getAllTools().map(tool => tool.name),
+      msg.message,
+      extractRecentUserTexts(session.agent.state.messages),
+    );
+    // A follow-up may arrive while the preceding turn is still consuming tool
+    // results. Never remove tools from that in-flight turn; only expand its set.
+    const activeToolNames = session.isStreaming
+      ? [...new Set([...session.getActiveToolNames(), ...activation.activeToolNames])]
+      : activation.activeToolNames;
+    const currentToolNames = session.getActiveToolNames();
+    const unchanged = currentToolNames.length === activeToolNames.length
+      && activeToolNames.every(name => currentToolNames.includes(name));
+    if (!unchanged) session.setActiveToolsByName(activeToolNames);
+    if (activation.filtered) {
+      debugLog(
+        `Source tool activation: ${activation.sourceToolsActive}/${activation.sourceToolsTotal} source tools selected; families=${activation.selectedFamilies.join(',')}; streamingUnion=${session.isStreaming}`,
+      );
+    }
+
     // Wire up event handler
     if (unsubscribeEvents) {
       unsubscribeEvents();
@@ -1337,7 +1364,10 @@ async function handlePrompt(msg: Extract<InboundMessage, { type: 'prompt' }>): P
     unsubscribeEvents = session.subscribe(handleSessionEvent);
 
     // Wait for any in-flight auto-compaction to avoid race (craft-agents-oss#464)
-    await waitForCompaction(session);
+    const compactionSettled = await waitForCompaction(session);
+    if (!compactionSettled) {
+      throw new Error('Previous compaction did not settle before the prompt safety deadline');
+    }
 
     // Fire prompt — use followUp when session is already streaming so the
     // message is queued instead of throwing "Agent is already processing".
@@ -1345,6 +1375,27 @@ async function handlePrompt(msg: Extract<InboundMessage, { type: 'prompt' }>): P
       images: msg.images && msg.images.length > 0 ? msg.images : undefined,
       streamingBehavior: 'followUp',
     });
+
+    const recoveryResult = await incompleteToolTailRecovery.recover(async () => {
+      const prepared = prepareMessagesForIncompleteTailContinuation(session.agent.state.messages);
+      if (prepared.removedAbortedAssistant) {
+        session.agent.state.messages = prepared.messages;
+        debugLog('Removed aborted assistant tail before incomplete-turn continuation');
+      }
+      debugLog('Continuing Pi turn from the last durable user/tool-result tail after premature agent_end');
+      await session.agent.continue();
+    });
+
+    if (recoveryResult === 'exhausted') {
+      const message = 'The agent repeatedly stopped with an incomplete turn before producing a final response. Completed tool results were preserved; retry to resume safely.';
+      debugLog('Incomplete tool-tail recovery exhausted');
+      send({ type: 'error', message, code: 'incomplete_tool_tail' });
+      send({ type: 'event', event: { type: 'agent_end', messages: [], willRetry: false } });
+    } else if (recoveryResult === 'aborted') {
+      // The original incomplete agent_end was withheld. Close the parent queue
+      // without surfacing an error because this path was explicitly cancelled.
+      send({ type: 'event', event: { type: 'agent_end', messages: [], willRetry: false } });
+    }
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
 
@@ -1362,6 +1413,8 @@ async function handlePrompt(msg: Extract<InboundMessage, { type: 'prompt' }>): P
     // Send synthetic agent_end so the main process event queue unblocks.
     // willRetry: false — this is the terminal error path, no retry follows.
     send({ type: 'event', event: { type: 'agent_end', messages: [], willRetry: false } });
+  } finally {
+    incompleteToolTailRecovery.endPrompt();
   }
 }
 
@@ -1403,6 +1456,7 @@ function handlePreToolUseResponse(msg: Extract<InboundMessage, { type: 'pre_tool
 }
 
 async function handleAbort(): Promise<void> {
+  incompleteToolTailRecovery.requestAbort();
   if (piSession) {
     try {
       await piSession.abort();
@@ -1424,9 +1478,8 @@ async function handleAbort(): Promise<void> {
 async function handleMiniCompletion(msg: Extract<InboundMessage, { type: 'mini_completion' }>): Promise<void> {
   // Call queryLlm directly (not runMiniCompletion) so auth errors propagate
   // as 'error' messages instead of being swallowed and returned as null.
-  // runMiniCompletion is kept for the summarize callback where null is acceptable.
   try {
-    const result = await queryLlm({ prompt: msg.prompt });
+    const result = await queryLlm({ prompt: msg.prompt, model: initConfig?.miniModel ?? initConfig?.model });
     send({ type: 'mini_completion_result', id: msg.id, text: result.text || null });
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
@@ -1472,8 +1525,11 @@ async function handleCompact(msg: Extract<InboundMessage, { type: 'compact' }>):
     // the SDK's race surface widens. Wait for the auto-compaction to drain
     // before starting a manual one. waitForCompaction has its own timeout
     // fallback so we don't deadlock on a stuck subprocess.
-    await waitForCompaction(session);
-    const result = await session.compact(msg.customInstructions);
+    const settled = await waitForCompaction(session, 30_000);
+    if (!settled) {
+      throw new Error('Previous compaction did not settle before the safety deadline');
+    }
+    const result = await compactSelectedModel(session, msg.customInstructions);
     send({
       type: 'compact_result',
       id: msg.id,
@@ -1482,6 +1538,8 @@ async function handleCompact(msg: Extract<InboundMessage, { type: 'compact' }>):
         summary: result.summary,
         firstKeptEntryId: result.firstKeptEntryId,
         tokensBefore: result.tokensBefore,
+        estimatedTokensAfter: result.estimatedTokensAfter,
+        compactionModel: result.compactionModel,
       },
     });
   } catch (error) {
@@ -1493,6 +1551,76 @@ async function handleCompact(msg: Extract<InboundMessage, { type: 'compact' }>):
       success: false,
       errorMessage: errorMsg,
     });
+  }
+}
+
+function handleAbortCompaction(msg: Extract<InboundMessage, { type: 'abort_compaction' }>): void {
+  debugLog(`[${msg.id}] Aborting compaction after host timeout`);
+  piSession?.abortCompaction();
+}
+
+/**
+ * Last-resort recovery invoked only after PiEventAdapter confirms the SDK did
+ * not start its native overflow recovery, exhausted its retry, or hit the known
+ * auto-compaction race. The adapter allows this path once per user turn.
+ */
+async function handleRecoverOverflow(msg: Extract<InboundMessage, { type: 'recover_overflow' }>): Promise<void> {
+  let compactionStarted = false;
+  let compactionSucceeded = false;
+
+  try {
+    const session = await ensureSession();
+
+    // A late native compaction may still be unwinding when the main process
+    // sends this request. Serialize behind it before starting the manual pass.
+    const compactionSettled = await waitForCompaction(session, 15_000);
+    if (!compactionSettled) {
+      throw new Error('A previous compaction did not finish in time');
+    }
+    debugLog(`[${msg.id}] Starting guarded manual overflow compaction`);
+    compactionStarted = true;
+    await session.compact(OVERFLOW_RECOVERY_COMPACTION_INSTRUCTIONS);
+    compactionSucceeded = true;
+
+    const prepared = prepareMessagesForOverflowContinuation(session.agent.state.messages);
+    if (prepared.removedTrailingError) {
+      session.agent.state.messages = prepared.messages;
+      debugLog(`[${msg.id}] Removed trailing assistant overflow error before continuation`);
+    }
+
+    // Continue the already-persisted user turn instead of sending the prompt a
+    // second time. This avoids duplicating both text and image attachments.
+    await session.agent.continue();
+    debugLog(`[${msg.id}] Guarded overflow recovery completed`);
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    debugLog(`[${msg.id}] Guarded overflow recovery failed: ${errorMsg}`);
+
+    if (!compactionStarted) {
+      // No SDK compaction event exists to drain the adapter's held state.
+      send({
+        type: 'event',
+        event: {
+          type: 'compaction_end',
+          reason: 'overflow',
+          result: undefined,
+          aborted: false,
+          willRetry: false,
+          errorMessage: `Context overflow recovery failed: ${errorMsg}`,
+        },
+      });
+    } else if (compactionSucceeded) {
+      // The compaction succeeded but continuation failed. Surface one friendly
+      // terminal error and an agent_end so the main event queue cannot hang.
+      send({
+        type: 'error',
+        code: 'prompt_error',
+        message: `Context was compacted, but the response could not resume: ${errorMsg}`,
+      });
+      send({ type: 'event', event: { type: 'agent_end', messages: [], willRetry: false } });
+    }
+    // If session.compact() itself failed, it already emitted compaction_end
+    // with the detailed error and the adapter will close the held queue.
   }
 }
 
@@ -1576,57 +1704,57 @@ async function handleUpdateRuntimeConfig(msg: RuntimeConfigUpdateMessage): Promi
 
 async function handleSetModel(msg: Extract<InboundMessage, { type: 'set_model' }>): Promise<void> {
   debugLog(`[set_model] Received: ${msg.model}`);
-  if (!piSession || !piModelRegistry) {
-    debugLog(`[set_model] No active session or model registry, ignoring`);
+  if (!initConfig) {
+    send({ type: 'error', code: 'model_error', message: 'Model selection received before init' });
     return;
   }
-  let piModel = resolvePiModel(piModelRegistry, msg.model, initConfig?.piAuth?.provider, shouldPreferCustomEndpoint());
+  // Persist the requested selection even when activation fails. The next turn
+  // must validate it again instead of continuing with the previous model.
+  initConfig.model = msg.model;
+  if (!piSession || !piModelRegistry) {
+    debugLog('[set_model] Stored selection for the next session');
+    return;
+  }
+  try {
+    let piModel = resolvePiModel(piModelRegistry, msg.model, initConfig.piAuth?.provider, shouldPreferCustomEndpoint());
 
   // For custom endpoints, dynamically register unknown models so mid-session switching works.
   // Uses registerCustomEndpointModels which accumulates into the existing model set
   // (registerProvider replaces, so we track all IDs and re-register the full set).
-  if (!piModel && initConfig?.baseUrl?.trim() && initConfig?.customEndpoint) {
-    const bareId = stripPiPrefix(msg.model);
-    registerCustomEndpointModels(piModelRegistry, initConfig.customEndpoint.api, initConfig.baseUrl!.trim(), [{ id: bareId }]);
-    piModel = piModelRegistry.find('custom-endpoint', bareId) ?? undefined;
-    debugLog(`[set_model] Dynamically registered custom endpoint model: ${bareId}`);
-  }
+    if (!piModel && initConfig.baseUrl?.trim() && initConfig.customEndpoint) {
+      const bareId = stripPiPrefix(msg.model);
+      registerCustomEndpointModels(piModelRegistry, initConfig.customEndpoint.api, initConfig.baseUrl.trim(), [{ id: bareId }]);
+      piModel = piModelRegistry.find('custom-endpoint', bareId) ?? undefined;
+      debugLog(`[set_model] Dynamically registered custom endpoint model: ${bareId}`);
+    }
 
-  if (!piModel) {
-    debugLog(`[set_model] Could not resolve model: ${msg.model}`);
-    setInterceptorApiHints(undefined);
-    return;
-  }
-  try {
+    if (!piModel) {
+      throw new Error(`Could not resolve selected model: ${msg.model}`);
+    }
     await piSession.setModel(piModel);
     setInterceptorApiHints(piModel as { api?: string; provider?: string; baseUrl?: string });
     debugLog(`[set_model] Model changed to: ${msg.model} (resolved: ${piModel.provider}/${piModel.id})`);
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
     debugLog(`[set_model] Failed to set model: ${errorMsg}`);
+    unsubscribeEvents?.();
+    unsubscribeEvents = null;
+    piSession.dispose();
+    piSession = null;
+    setInterceptorApiHints(undefined);
+    send({ type: 'error', code: 'model_error', message: errorMsg });
   }
 }
 
 async function handleSetThinkingLevel(msg: Extract<InboundMessage, { type: 'set_thinking_level' }>): Promise<void> {
   debugLog(`[set_thinking_level] Received: ${msg.level}`);
-
-  if (!piSession) {
-    debugLog('[set_thinking_level] No active session, ignoring');
-    return;
-  }
-
-  const piLevel = THINKING_TO_PI[msg.level as keyof typeof THINKING_TO_PI];
-  if (!piLevel) {
-    debugLog(`[set_thinking_level] No Pi mapping for level: ${msg.level}`);
-    return;
-  }
-
   try {
-    piSession.setThinkingLevel(piLevel);
-    debugLog(`[set_thinking_level] Thinking level changed to: ${msg.level} (mapped: ${piLevel})`);
+    applySelectedThinkingLevel(initConfig, piSession, msg.level);
+    debugLog(`[set_thinking_level] Stored selected reasoning: ${msg.level}${piSession ? ' and applied to active session' : ' for next session'}`);
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
     debugLog(`[set_thinking_level] Failed to set thinking level: ${errorMsg}`);
+    send({ type: 'error', code: 'thinking_level_error', message: errorMsg });
   }
 }
 
@@ -1715,6 +1843,13 @@ async function processMessage(msg: InboundMessage): Promise<void> {
     case 'compact':
       await handleCompact(msg);
       break;
+    case 'abort_compaction':
+      handleAbortCompaction(msg);
+      break;
+
+    case 'recover_overflow':
+      await handleRecoverOverflow(msg);
+      break;
 
     case 'set_auto_compaction':
       await handleSetAutoCompaction(msg);
@@ -1734,16 +1869,19 @@ async function processMessage(msg: InboundMessage): Promise<void> {
       break;
 
     case 'token_update':
-      if (moduleAuthStorage) {
-        const { provider, credential } = msg.piAuth;
-        // See ambient comment at the initial `authStorage.set` call — same shape reason.
-        moduleAuthStorage.set(provider, credential as unknown as AuthCredential);
-        if (initConfig) {
-          initConfig.piAuth = msg.piAuth;
-        }
-        debugLog(`Updated ${credential.type} credential for provider: ${provider}`);
+      if (applyTokenUpdate(
+        msg.piAuth,
+        initConfig,
+        moduleAuthStorage
+          ? (provider, credential) => {
+            // See ambient comment at the initial `authStorage.set` call — same shape reason.
+            moduleAuthStorage!.set(provider, credential as unknown as AuthCredential);
+          }
+          : undefined,
+      )) {
+        debugLog(`Updated ${msg.piAuth.credential.type} credential for provider: ${msg.piAuth.provider}`);
       } else {
-        debugLog('token_update received but no authStorage initialized');
+        debugLog('token_update stored for registry initialization');
       }
       break;
 

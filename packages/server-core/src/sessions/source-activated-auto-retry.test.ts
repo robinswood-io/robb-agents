@@ -2,7 +2,12 @@ import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
 import { mkdtempSync, rmSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
-import { SessionManager, createManagedSession, claimAutoRetryPending } from './SessionManager.ts'
+import {
+  SessionManager,
+  claimAutoRetryPending,
+  consumeSourceActivationRestart,
+  createManagedSession,
+} from './SessionManager.ts'
 
 // Regression test for craft-agents-oss#804.
 //
@@ -63,6 +68,18 @@ describe('claimAutoRetryPending', () => {
   })
 })
 
+describe('source activation stream boundary', () => {
+  it('consumes only the matching generation marker', () => {
+    const host = { sourceActivationRestartGeneration: 4 }
+
+    expect(consumeSourceActivationRestart(host, 3)).toBe(false)
+    expect(host.sourceActivationRestartGeneration).toBe(4)
+    expect(consumeSourceActivationRestart(host, 4)).toBe(true)
+    expect(host.sourceActivationRestartGeneration).toBeUndefined()
+    expect(consumeSourceActivationRestart(host, 4)).toBe(false)
+  })
+})
+
 describe('source_activated auto-retry', () => {
   let tmpRoot: string
   let sm: SessionManager
@@ -119,10 +136,11 @@ describe('source_activated auto-retry', () => {
 
   it('basic re-send — fires sendMessage with "[<slug> activated]" suffix', async () => {
     const sessionId = 'basic-resend'
-    buildSession(sessionId)
+    const managed = buildSession(sessionId)
     const calls = spyOnSendMessage(sessionId)
 
     await fireSourceActivated(sessionId, 'github', 'list my repos')
+    expect(managed.sourceActivationRestartGeneration).toBe(managed.processingGeneration)
     await new Promise(r => setTimeout(r, 150))
 
     expect(calls).toEqual(['list my repos\n\n[github activated]'])

@@ -25,6 +25,7 @@ import {
 } from '../utils/bundle-files.ts'
 import { getWorkspaceSourcesPath, getWorkspaceSkillsPath } from '../workspaces/storage.ts'
 import { loadSourceConfig, getSourcePath } from '../sources/storage.ts'
+import { assertMcpTransportWriteAllowed } from '../sources/mcp-transport-policy.ts'
 import { isBuiltinSource } from '../sources/builtin-sources.ts'
 import { validateSourceConfig } from '../config/validators.ts'
 import {
@@ -751,6 +752,11 @@ async function importSources(
         result.skipped.push(entry.slug)
         continue
       }
+
+      assertMcpTransportWriteAllowed(
+        entry.config,
+        exists ? loadSourceConfig(workspaceRootPath, entry.slug) : null,
+      )
 
       // Stage: build in temp dir
       const tmpDir = join(sourcesDir, `.tmp-${entry.slug}-${randomUUID().slice(0, 8)}`)

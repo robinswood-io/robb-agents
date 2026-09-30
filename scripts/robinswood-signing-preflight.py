@@ -4,14 +4,13 @@
 Reports only whether required variables are present; it never prints secret
 values. Use ``--strict`` before a public release. ``--ci`` checks the same
 GitHub Actions secret names used by the release workflow and skips local
-Keychain inspection. The Windows check supports either a traditional PFX or
-Microsoft Artifact Signing (the service formerly named Trusted Signing).
+Keychain inspection. Windows may be explicitly unsigned, use a traditional
+PFX, or use Microsoft Artifact Signing (formerly Trusted Signing).
 
 Usage:
     python3 scripts/robinswood-signing-preflight.py
     python3 scripts/robinswood-signing-preflight.py --strict
     python3 scripts/robinswood-signing-preflight.py --ci --strict
-    python3 scripts/robinswood-signing-preflight.py --ci --strict --allow-unsigned-windows
 """
 from __future__ import annotations
 
@@ -28,9 +27,11 @@ from dataclasses import dataclass
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 ELECTRON_BUILDER = ROOT / "apps/electron/electron-builder.yml"
 ELECTRON_BUILDER_AZURE = ROOT / "apps/electron/electron-builder.azure.yml"
+MAC_ENTITLEMENTS = ROOT / "apps/electron/build/entitlements.mac.plist"
 APP_ID = "io.robinswood.robbagents"
 PRODUCT_NAME = "Robb Agents"
-WINDOWS_SIGNING_MODES = {"pfx", "azure"}
+APPLE_TEAM_ID = "4FWLQ2KVUY"
+WINDOWS_SIGNING_MODES = {"unsigned", "pfx", "azure"}
 UUID_PATTERN = re.compile(
     r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
 )
@@ -54,12 +55,18 @@ def present(name: str) -> bool:
 def check_builder_metadata() -> list[Check]:
     text = ELECTRON_BUILDER.read_text(encoding="utf-8")
     azure_text = ELECTRON_BUILDER_AZURE.read_text(encoding="utf-8") if ELECTRON_BUILDER_AZURE.exists() else ""
+    entitlements_text = MAC_ENTITLEMENTS.read_text(encoding="utf-8") if MAC_ENTITLEMENTS.exists() else ""
     return [
         Check("electron-builder appId", f"appId: {APP_ID}" in text, APP_ID),
         Check("electron-builder productName", f"productName: {PRODUCT_NAME}" in text, PRODUCT_NAME),
         Check("mac hardened runtime", "hardenedRuntime: true" in text, "required for notarized distribution"),
         Check("mac notarization", "notarize: true" in text, "electron-builder notarization enabled"),
         Check("mac entitlements", "entitlements: build/entitlements.mac.plist" in text, "build/entitlements.mac.plist"),
+        Check(
+            "mac restricted Keychain entitlement absent",
+            "keychain-access-groups" not in entitlements_text,
+            "requires an embedded Developer ID provisioning profile before it can be enabled",
+        ),
         Check(
             "Windows Artifact Signing configuration",
             all(
@@ -111,7 +118,11 @@ def valid_private_key_base64(value: str) -> bool:
 
 def check_notarization(ci: bool) -> list[Check]:
     team_id = os.environ.get("APPLE_TEAM_ID", "")
-    team = Check("APPLE_TEAM_ID", bool(re.fullmatch(r"[A-Z0-9]{10}", team_id)), "10 uppercase alphanumeric characters required")
+    team = Check(
+        "APPLE_TEAM_ID",
+        team_id == APPLE_TEAM_ID,
+        f"must match the Robinswood signing team ({APPLE_TEAM_ID})",
+    )
     apple_id_route = present("APPLE_ID") and present("APPLE_APP_SPECIFIC_PASSWORD")
     api_key_name = "APPLE_API_KEY_BASE64" if ci else "APPLE_API_KEY"
     api_key_value = os.environ.get(api_key_name, "")
@@ -168,26 +179,17 @@ def missing(names: tuple[str, ...]) -> list[str]:
     return [name for name in names if not present(name)]
 
 
-def check_windows_signing(ci: bool, allow_unsigned_windows: bool = False) -> list[Check]:
-    if allow_unsigned_windows:
-        return [
-            Check(
-                "Windows signing mode",
-                True,
-                "unsigned GitHub Release mode allowed; Authenticode material intentionally not required",
-            )
-        ]
-
-    mode = os.environ.get("WINDOWS_SIGNING_MODE", "pfx").strip().lower()
+def check_windows_signing(ci: bool) -> list[Check]:
+    mode = os.environ.get("WINDOWS_SIGNING_MODE", "unsigned").strip().lower()
     mode_ok = mode in WINDOWS_SIGNING_MODES
     checks = [
         Check(
             "Windows signing mode",
             mode_ok,
-            mode if mode_ok else f"unsupported {mode!r}; expected pfx or azure",
+            mode if mode_ok else f"unsupported {mode!r}; expected unsigned, pfx or azure",
         )
     ]
-    if not mode_ok:
+    if not mode_ok or mode == "unsigned":
         return checks
 
     if mode == "pfx":
@@ -262,11 +264,6 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--strict", action="store_true", help="exit non-zero if any public-release requirement is missing")
     parser.add_argument("--ci", action="store_true", help="validate GitHub Actions secret names instead of local Keychain material")
-    parser.add_argument(
-        "--allow-unsigned-windows",
-        action="store_true",
-        help="permit the explicit publish-unsigned Windows GitHub Release route without Authenticode material",
-    )
     args = parser.parse_args()
 
     checks = check_builder_metadata()
@@ -275,7 +272,7 @@ def main() -> None:
     checks.append(check_signing_material(args.ci))
     checks.extend(check_notarization(args.ci))
     checks.append(check_notarytool(args.ci))
-    checks.extend(check_windows_signing(args.ci, args.allow_unsigned_windows))
+    checks.extend(check_windows_signing(args.ci))
 
     ok = True
     for check in checks:

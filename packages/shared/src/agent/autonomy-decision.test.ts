@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { decideAutonomyRecovery } from './autonomy-decision.ts'
+import { decideAutonomyRecovery, formatAutonomyContract } from './autonomy-decision.ts'
 
 const sourceFailure = { toolName: 'mcp__crm__lookup', result: 'HTTP 503 service unavailable', browserEnabled: true, fallbackAlreadyAttempted: false }
 
@@ -35,11 +35,72 @@ describe('decideAutonomyRecovery', () => {
     })).toEqual({ kind: 'escalate', reason: 'credential_required' })
   })
 
+  it('requests runtime reconnect for execution bridge failures', () => {
+    expect(decideAutonomyRecovery({
+      ...sourceFailure,
+      result: 'Execution bridge unavailable: handler timeout',
+    })).toEqual({ kind: 'reconnect_runtime' })
+  })
+
   it('does not waste a browser fallback on invalid input', () => {
     expect(decideAutonomyRecovery({
       ...sourceFailure,
       result: 'generic failure',
       errorCode: 'INVALID_ARGUMENT',
     })).toEqual({ kind: 'none' })
+  })
+
+  it('does not turn a local shell or filesystem failure into a browser turn', () => {
+    expect(decideAutonomyRecovery({
+      toolName: 'Bash',
+      result: 'command failed with exit code 1',
+      browserEnabled: true,
+      fallbackAlreadyAttempted: false,
+      browserFallbackEligible: false,
+    })).toEqual({ kind: 'none' })
+  })
+})
+
+describe('formatAutonomyContract sensitive external action guard', () => {
+  const contract = formatAutonomyContract()
+
+  it('keeps permission modes separate from task-level authorization', () => {
+    expect(contract).toContain('Apply safe, ask, and allow-all exactly as configured')
+    expect(contract).toContain('No permission mode expands the task scope or supplies business authorization')
+  })
+
+  it('covers the observed sensitive external action categories', () => {
+    expect(contract).toContain('secret or credential disclosure or transfer')
+    expect(contract).toContain('git push or deployment')
+    expect(contract).toContain('service restart')
+    expect(contract).toContain('payment or financial submission')
+    expect(contract).toContain('publication or sending to an external audience')
+  })
+
+  it('rejects ambiguous continuation without re-prompting explicit requests', () => {
+    expect(contract).toContain('A generic continuation such as "continue", "proceed", or "poursuis" does not authorize')
+    expect(contract).toContain('when the current request is already explicit, do not ask again')
+  })
+
+  it('preserves safe and reversible local work without extra confirmation', () => {
+    expect(contract).toContain('Continue safe, reversible local edits and local verification without extra confirmation')
+  })
+
+  it('sets a compact phase budget and preserves mutation verification', () => {
+    expect(contract).toContain('target 3-5 calls total')
+    expect(contract).toContain('Batch independent searches and reads')
+    expect(contract).toContain('reserve enough tool budget for verification and cleanup')
+    expect(contract).toContain('provider quota, rate limit')
+    expect(contract).toContain('A technical obstacle is a diagnosis checkpoint')
+    expect(contract).toContain('Do not defer an identified next correction')
+    expect(contract).toContain('Operate like a senior owner')
+  })
+
+  it('aligns the model with the explicit total-autonomy workspace policy', () => {
+    const executeContract = formatAutonomyContract('allow-in-execute')
+    expect(executeContract).toContain('standing authorization for in-scope sensitive external actions')
+    expect(executeContract).toContain('do not request an additional confirmation solely because an action is sensitive')
+    expect(executeContract).toContain('Ask and Safe remain confirmation-bound')
+    expect(executeContract).not.toContain('No permission mode expands the task scope or supplies business authorization')
   })
 })

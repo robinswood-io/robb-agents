@@ -14,7 +14,6 @@
 import {
   type ModelDefinition,
   ANTHROPIC_MODELS,
-  normalizeDeprecatedModelId,
 } from './models';
 import type { CredentialManager } from '../credentials/manager.ts';
 
@@ -175,6 +174,13 @@ export interface LlmConnection {
   piAuthProvider?: string;
 
   /**
+   * Google Cloud project ID used by organization Gemini Code Assist OAuth.
+   * Stored per connection so the Pi subprocess does not depend on a global
+   * GOOGLE_CLOUD_PROJECT environment variable.
+   */
+  googleCloudProject?: string;
+
+  /**
    * Custom endpoint protocol config.
    * Set when user configures an arbitrary API endpoint (Ollama, DashScope, vLLM, etc.).
    * Determines which streaming adapter the Pi SDK uses for requests.
@@ -228,7 +234,7 @@ export interface LlmConnectionWithStatus extends LlmConnection {
 // ============================================================
 
 /**
- * Returns true when `modelId` must NOT be used as the mini/summarization model
+ * Returns true when `modelId` must NOT be used as the metadata utility model
  * given the current auth flavor.
  *
  * - `codex-mini-latest` is always denied (Pi SDK rejects it outright).
@@ -256,7 +262,7 @@ export function isDeniedMiniModelId(modelId: string, piAuthProvider?: string): b
  * (e.g. `gpt-5.1-codex-mini` under ChatGPT-account auth). See
  * {@link isDeniedMiniModelId}.
  *
- * Used for mini agent, title generation, and mini completions.
+ * Used only for title/icon metadata generation and connection health probes.
  */
 export function getMiniModel(
   connection: Pick<LlmConnection, 'models' | 'providerType' | 'piAuthProvider'>,
@@ -265,21 +271,8 @@ export function getMiniModel(
 }
 
 /**
- * Get the summarization model ID for a connection.
- * Same provider-aware logic as getMiniModel(), but separate
- * so summarization and mini agent models can diverge independently.
- *
- * Used for response summarization and API tool summarization.
- */
-export function getSummarizationModel(
-  connection: Pick<LlmConnection, 'models' | 'providerType' | 'piAuthProvider'>,
-): string | undefined {
-  return findSmallModel(connection);
-}
-
-/**
  * Provider-aware small model resolution.
- * Shared implementation for getMiniModel() and getSummarizationModel().
+ * Implementation for metadata-only getMiniModel().
  *
  *   - Anthropic: find "haiku"
  *   - Pi: find "mini" or "flash"
@@ -540,25 +533,22 @@ export function setModelSupportsImages(
  *   ?? connection-level `customEndpoint.supportsImages` default
  *   ?? false
  *
- * For non-`pi_compat` connections the renderer doesn't own the catalog — Pi SDK's
- * bundled provider definitions and Anthropic's API do. This helper conservatively
- * returns `true` there (we don't know better; the upstream decides). The
- * pre-flight banner gates on `pi_compat` separately, so this just reports what
- * the renderer can know with confidence.
+ * Built-in catalogs also carry provider capabilities. Honor an explicit value
+ * there before keeping the historical true fallback for unknown native models.
  */
 export function modelSupportsImages(
   connection: Pick<LlmConnection, 'providerType' | 'models' | 'customEndpoint'>,
   modelId: string,
 ): boolean {
-  if (!isCompatProvider(connection.providerType)) return true;
-
   const entry = connection.models?.find(m =>
     (typeof m === 'string' ? m : m.id) === modelId,
   );
   if (entry && typeof entry !== 'string' && typeof entry.supportsImages === 'boolean') {
     return entry.supportsImages;
   }
-  return connection.customEndpoint?.supportsImages ?? false;
+  return isCompatProvider(connection.providerType)
+    ? connection.customEndpoint?.supportsImages ?? false
+    : true;
 }
 
 /**
@@ -604,9 +594,11 @@ export function getModelsForProviderType(providerType: LlmProviderType, piAuthPr
  * Format: bare model IDs (without pi/ prefix). Matched against pi/{id} or pi/{id}-*.
  */
 export const PI_PREFERRED_DEFAULTS: Record<string, string[]> = {
-  anthropic: ['claude-opus-4-8', 'claude-opus-4-7', 'claude-fable-5', 'claude-sonnet-5', 'claude-sonnet-4-6', 'claude-haiku-4-5'],
-  openai: ['gpt-5.6-sol', 'gpt-5.6-terra', 'gpt-5.6-luna', 'gpt-5.5', 'gpt-5.2', 'gpt-5.1', 'gpt-5', 'o4-mini', 'o3', 'gpt-4o'],
-  'openai-codex': ['gpt-5.6-sol', 'gpt-5.6-terra', 'gpt-5.6-luna', 'gpt-5.5', 'gpt-5.2', 'gpt-5.1', 'gpt-5', 'o4-mini', 'o3', 'gpt-4o'],
+  anthropic: ['claude-opus-5', 'claude-opus-4-8', 'claude-opus-4-7', 'claude-fable-5-1', 'claude-fable-5', 'claude-sonnet-5', 'claude-sonnet-4-6', 'claude-haiku-4-5'],
+  // Keep Sol as the default/utility model; Astra is intentionally opt-in
+  // because its flagship pricing is substantially higher.
+  openai: ['gpt-5.6-sol', 'gpt-6-astra', 'gpt-5.6-terra', 'gpt-5.6-luna', 'gpt-5.5', 'gpt-5.2', 'gpt-5.1', 'gpt-5', 'o4-mini', 'o3', 'gpt-4o'],
+  'openai-codex': ['gpt-5.6-sol', 'gpt-6-astra', 'gpt-5.6-terra', 'gpt-5.6-luna', 'gpt-5.5', 'gpt-5.2', 'gpt-5.1', 'gpt-5', 'o4-mini', 'o3', 'gpt-4o'],
   // Stable models first so the connection-setup test (which uses
   // getDefaultModelForConnection) lands on a reliable model.
   // gemini-3-pro-preview and gemini-3.1-pro-preview are intermittently
@@ -614,38 +606,36 @@ export const PI_PREFERRED_DEFAULTS: Record<string, string[]> = {
   // April 2026 — and are deliberately excluded from defaults.
   google: ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-3-flash-preview', 'gemini-3.1-flash-lite-preview'],
   'google-gemini-code-assist': ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-3-flash-preview'],
+  'google-antigravity': ['gemini-3.8-flash-high', 'gemini-3.8-flash-medium', 'gemini-3.8-flash-low', 'gemini-3.7-flash-high', 'gemini-3.7-flash-medium', 'gemini-3.7-flash-low', 'gemini-3.1-pro-high'],
   // Mistral Medium 3.5 is Mistral's frontier agentic/coding model; Small 4
   // is its efficient unified instruct/reasoning/coding alternative. Keep a
   // lightweight Ministral option last for mini/summarization work.
-  mistral: ['mistral-medium-3.5', 'mistral-small-latest', 'ministral-3b-latest', 'devstral-latest', 'codestral-latest'],
+  mistral: ['mistral-medium-3-5', 'mistral-medium-3.5', 'mistral-medium-2604', 'mistral-small-latest', 'ministral-3b-latest', 'devstral-latest', 'codestral-latest'],
   // Mistral Vibe manages the selected model inside the authenticated Vibe
   // profile. Robb intentionally stores no token or model API credential.
   'mistral-vibe': ['mistral-vibe'],
   deepseek: ['deepseek-v4-pro', 'deepseek-v4-flash'],
   'github-copilot': ['claude-sonnet-4-6', 'gpt-5', 'o4-mini', 'claude-haiku-4-5'],
-  'amazon-bedrock': ['claude-opus-4-8', 'claude-opus-4-7', 'claude-sonnet-5', 'claude-sonnet-4-6', 'claude-haiku-4-5'],
+  'amazon-bedrock': ['claude-opus-5', 'claude-opus-4-8', 'claude-opus-4-7', 'claude-sonnet-5', 'claude-sonnet-4-6', 'claude-haiku-4-5'],
 };
 
 export function getDefaultModelsForConnection(providerType: LlmProviderType, piAuthProvider?: string): Array<ModelDefinition | string> {
   if (providerType === 'pi') {
-    const models = _piModelResolver(piAuthProvider);
+    const models = [..._piModelResolver(piAuthProvider)];
     // Sort preferred defaults first so getDefaultModelForConnection picks a modern model.
     // For Bedrock models, the Pi SDK returns IDs like pi/us.anthropic.claude-opus-4-8
-    // but preferred defaults use bare IDs (claude-opus-4-8). We match via both direct
-    // comparison and reverse Bedrock ID mapping.
+    // but preferred defaults use bare IDs. Strip the transport namespace only:
+    // legacy migration helpers would rank an old model as its newer replacement
+    // while leaving the old request ID unchanged.
     const preferred = (piAuthProvider && PI_PREFERRED_DEFAULTS[piAuthProvider]) || [];
     if (preferred.length > 0) {
       const findPreferredIndex = (id: string): number => {
         const bare = id.startsWith('pi/') ? id.slice(3) : id
-        // Try direct match first (works for non-Bedrock providers)
-        const direct = preferred.findIndex(p => bare === p || bare.startsWith(`${p}-`))
-        if (direct >= 0) return direct
-        // For Bedrock: reverse-map native ID to bare, then match
-        const reversed = fromBedrockNativeId(bare)
-        if (reversed !== bare) {
-          return preferred.findIndex(p => reversed === p || reversed.startsWith(`${p}-`))
-        }
-        return -1
+        const modelId = piAuthProvider === 'amazon-bedrock'
+          ? bare.replace(/^(?:(?:[a-z]{2}|global)\.)?anthropic\./, '').replace(/-v\d+(?::\d+)?$/, '')
+          : bare
+        const exact = preferred.indexOf(modelId)
+        return exact >= 0 ? exact : preferred.findIndex(p => modelId.startsWith(`${p}-`))
       }
       models.sort((a, b) => {
         const aPrio = findPreferredIndex(a.id) ?? preferred.length;
@@ -757,6 +747,8 @@ export function isValidProviderAuthCombination(
  * Source: Pi SDK registry (models.generated.js) — us.* variants
  */
 const BEDROCK_MODEL_MAP: Record<string, string> = {
+  'claude-opus-5': 'us.anthropic.claude-opus-5',
+  'claude-fable-5-1': 'us.anthropic.claude-fable-5-1',
   'claude-opus-4-8': 'us.anthropic.claude-opus-4-8',
   'claude-opus-4-7': 'us.anthropic.claude-opus-4-7',
   'claude-fable-5': 'us.anthropic.claude-fable-5',
@@ -767,6 +759,8 @@ const BEDROCK_MODEL_MAP: Record<string, string> = {
   'claude-opus-4-5-20251101': 'us.anthropic.claude-opus-4-5-20251101-v1:0',
   'claude-sonnet-4-5-20250929': 'us.anthropic.claude-sonnet-4-5-20250929-v1:0',
   // Also map base IDs (without region prefix) to US inference profiles
+  'anthropic.claude-opus-5': 'us.anthropic.claude-opus-5',
+  'anthropic.claude-fable-5-1': 'us.anthropic.claude-fable-5-1',
   'anthropic.claude-opus-4-8': 'us.anthropic.claude-opus-4-8',
   'anthropic.claude-opus-4-7': 'us.anthropic.claude-opus-4-7',
   'anthropic.claude-fable-5': 'us.anthropic.claude-fable-5',
@@ -780,6 +774,8 @@ const BEDROCK_MODEL_MAP: Record<string, string> = {
 /** Reverse map: all known Bedrock ID variants → bare Anthropic ID */
 const BEDROCK_REVERSE_MAP: Record<string, string> = {
   // US inference profiles
+  'us.anthropic.claude-opus-5': 'claude-opus-5',
+  'us.anthropic.claude-fable-5-1': 'claude-fable-5-1',
   'us.anthropic.claude-opus-4-8': 'claude-opus-4-8',
   'us.anthropic.claude-fable-5': 'claude-fable-5',
   'us.anthropic.claude-opus-4-7': 'claude-opus-4-7',
@@ -790,6 +786,8 @@ const BEDROCK_REVERSE_MAP: Record<string, string> = {
   'us.anthropic.claude-opus-4-5-20251101-v1:0': 'claude-opus-4-5-20251101',
   'us.anthropic.claude-sonnet-4-5-20250929-v1:0': 'claude-sonnet-4-5-20250929',
   // EU inference profiles
+  'eu.anthropic.claude-opus-5': 'claude-opus-5',
+  'eu.anthropic.claude-fable-5-1': 'claude-fable-5-1',
   'eu.anthropic.claude-opus-4-8': 'claude-opus-4-8',
   'eu.anthropic.claude-fable-5': 'claude-fable-5',
   'eu.anthropic.claude-opus-4-7': 'claude-opus-4-7',
@@ -800,6 +798,8 @@ const BEDROCK_REVERSE_MAP: Record<string, string> = {
   'eu.anthropic.claude-opus-4-5-20251101-v1:0': 'claude-opus-4-5-20251101',
   'eu.anthropic.claude-sonnet-4-5-20250929-v1:0': 'claude-sonnet-4-5-20250929',
   // Global inference profiles
+  'global.anthropic.claude-opus-5': 'claude-opus-5',
+  'global.anthropic.claude-fable-5-1': 'claude-fable-5-1',
   'global.anthropic.claude-opus-4-8': 'claude-opus-4-8',
   'global.anthropic.claude-fable-5': 'claude-fable-5',
   'global.anthropic.claude-opus-4-7': 'claude-opus-4-7',
@@ -808,6 +808,8 @@ const BEDROCK_REVERSE_MAP: Record<string, string> = {
   'global.anthropic.claude-sonnet-4-6': 'claude-sonnet-4-6',
   'global.anthropic.claude-haiku-4-5-20251001-v1:0': 'claude-haiku-4-5-20251001',
   // Base IDs (no region prefix)
+  'anthropic.claude-opus-5': 'claude-opus-5',
+  'anthropic.claude-fable-5-1': 'claude-fable-5-1',
   'anthropic.claude-opus-4-8': 'claude-opus-4-8',
   'anthropic.claude-fable-5': 'claude-fable-5',
   'anthropic.claude-opus-4-7': 'claude-opus-4-7',
@@ -836,9 +838,8 @@ export function deriveBedrockRegionPrefix(awsRegion?: string): string {
  * Pass-through if already native or unknown.
  */
 export function toBedrockNativeId(modelId: string, regionPrefix?: string): string {
-  const normalizedModelId = normalizeDeprecatedModelId(modelId)
-  const nativeId = BEDROCK_MODEL_MAP[normalizedModelId]
-  if (!nativeId) return normalizedModelId
+  const nativeId = BEDROCK_MODEL_MAP[modelId]
+  if (!nativeId) return modelId
   if (!regionPrefix || regionPrefix === 'us') return nativeId
   // BEDROCK_MODEL_MAP stores us.* variants — swap the region prefix
   return nativeId.replace(/^us\./, `${regionPrefix}.`)
@@ -846,8 +847,7 @@ export function toBedrockNativeId(modelId: string, regionPrefix?: string): strin
 
 /** Map a Bedrock-native model ID back to its bare Anthropic equivalent. Pass-through if already bare or unknown. */
 export function fromBedrockNativeId(modelId: string): string {
-  const normalizedModelId = normalizeDeprecatedModelId(modelId)
-  return BEDROCK_REVERSE_MAP[normalizedModelId] ?? normalizedModelId
+  return BEDROCK_REVERSE_MAP[modelId] ?? modelId
 }
 
 /**

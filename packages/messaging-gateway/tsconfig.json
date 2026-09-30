@@ -1,9 +1,18 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "rootDir": "src",
+    "rootDir": "..",
     "outDir": "dist",
-    "composite": true
+    "types": ["bun", "node"],
+    "noUncheckedIndexedAccess": false,
+    "paths": {
+      "@craft-agent/core": ["../core/src/index.ts"],
+      "@craft-agent/core/*": ["../core/src/*"],
+      "@craft-agent/server-core": ["../server-core/src/index.ts"],
+      "@craft-agent/server-core/*": ["../server-core/src/*"],
+      "@craft-agent/shared": ["../shared/src/index.ts"],
+      "@craft-agent/shared/*": ["../shared/src/*"]
+    }
   },
   "include": ["src"]
 }

@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "qualificationCase": {
+    "period": "2026-07",
+    "operationalRecordId": "crm-record-2026-07-0042",
+    "financialEntryId": "erp-entry-2026-07-0042",
+    "documentResourceId": "supporting-document-2026-07-0042",
+    "approvedBy": "finance.validator@example.test",
+    "difference": { "amount": 1250, "currency": "EUR", "reasonCode": "TIMING_CUTOFF" },
+    "proposalSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "approvalRef": "approval-bundle-2026-07-0042"
+  },
+  "operations": [
+    {
+      "pack": "crm",
+      "operationId": "records.upsert",
+      "resourceType": "crm-record",
+      "resourceId": "crm-record-2026-07-0042",
+      "providerStatus": 200,
+      "providerRequestId": "crm-request-qualification-1",
+      "providerState": { "recordId": "crm-record-2026-07-0042", "correctionApplied": true },
+      "reconciliation": "confirmed"
+    },
+    {
+      "pack": "erp",
+      "operationId": "entries.post",
+      "resourceType": "erp-entry",
+      "resourceId": "erp-entry-2026-07-0042",
+      "providerStatus": 201,
+      "providerRequestId": "erp-request-qualification-1",
+      "providerState": { "entryId": "erp-entry-2026-07-0042", "posted": true },
+      "reconciliation": "confirmed"
+    },
+    {
+      "pack": "microsoft365",
+      "operationId": "files.update",
+      "resourceType": "file",
+      "resourceId": "supporting-document-2026-07-0042",
+      "providerStatus": 200,
+      "providerRequestId": "graph-request-qualification-1",
+      "providerState": { "id": "supporting-document-2026-07-0042", "tagged": true },
+      "reconciliation": "confirmed"
+    },
+    {
+      "pack": "googleWorkspace",
+      "operationId": "drive.update",
+      "resourceType": "file",
+      "resourceId": "supporting-document-2026-07-0042",
+      "providerStatus": 200,
+      "providerRequestId": "google-request-qualification-1",
+      "providerState": { "id": "supporting-document-2026-07-0042", "tagged": true },
+      "reconciliation": "confirmed"
+    }
+  ],
+  "faults": {
+    "crashAfterProviderMutation": {
+      "expectedProviderMutationCount": 1,
+      "recoveryLookup": "confirmed",
+      "expectedReplayCount": 0
+    },
+    "providerStateDivergence": {
+      "reconciliation": "diverged",
+      "detailCode": "PROVIDER_STATE_MISMATCH",
+      "expectedMissionResult": "failed",
+      "expectedCompensationState": "compensation-required"
+    }
+  }
+}

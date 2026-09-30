@@ -5,7 +5,7 @@
  * Format: Line 1 = SessionHeader, Lines 2+ = StoredMessage (one per line)
  */
 
-import { openSync, readSync, closeSync, readFileSync, writeFileSync, renameSync, unlinkSync } from 'fs';
+import { existsSync, openSync, readSync, closeSync, readFileSync, writeFileSync, renameSync, unlinkSync } from 'fs';
 import { open, readFile } from 'fs/promises';
 import { dirname } from 'path';
 import type { SessionHeader, StoredSession, StoredMessage, SessionTokenUsage } from './types.ts';
@@ -16,6 +16,7 @@ import { debug } from '../utils/debug.ts';
 import { safeJsonParse } from '../utils/files.ts';
 import { sanitizeMessagePreviewText } from '../utils/text-sanitization.ts';
 import { pickSessionFields } from './utils.ts';
+import { z } from 'zod';
 
 // ============================================================
 // Session Path Portability
@@ -24,6 +25,59 @@ import { pickSessionFields } from './utils.ts';
 const SESSION_PATH_TOKEN = '{{SESSION_PATH}}';
 const SESSION_HEADER_READ_CHUNK_BYTES = 8192;
 const SESSION_HEADER_MAX_BYTES = 1024 * 1024;
+export const SESSION_HEADER_SCHEMA_VERSION = 1 as const;
+
+const SessionHeaderStorageSchema = z.object({
+  schemaVersion: z.literal(SESSION_HEADER_SCHEMA_VERSION),
+  id: z.string().trim().min(1),
+  workspaceRootPath: z.string().min(1),
+  createdAt: z.number().int().nonnegative(),
+  lastUsedAt: z.number().int().nonnegative(),
+  messageCount: z.number().int().nonnegative(),
+  tokenUsage: z.object({
+    inputTokens: z.number().int().nonnegative(),
+    outputTokens: z.number().int().nonnegative(),
+    totalTokens: z.number().int().nonnegative(),
+    contextTokens: z.number().int().nonnegative(),
+    costUsd: z.number().nonnegative(),
+    cacheReadTokens: z.number().int().nonnegative().optional(),
+    cacheCreationTokens: z.number().int().nonnegative().optional(),
+    contextWindow: z.number().int().positive().optional(),
+  }).passthrough(),
+}).passthrough();
+
+const EMPTY_TOKEN_USAGE: SessionTokenUsage = {
+  inputTokens: 0,
+  outputTokens: 0,
+  totalTokens: 0,
+  contextTokens: 0,
+  costUsd: 0,
+};
+
+export class UnsupportedSessionHeaderVersionError extends Error {
+  constructor(readonly version: unknown) {
+    super(`Unsupported session header schema version: ${String(version)}`);
+    this.name = 'UnsupportedSessionHeaderVersionError';
+  }
+}
+
+function parseSessionHeaderLine(line: string, sessionDir: string): SessionHeader {
+  const raw = safeJsonParse(expandSessionPath(line, sessionDir));
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    throw new Error('Session header must be an object');
+  }
+  const record = raw as Record<string, unknown>;
+  if (record.schemaVersion !== undefined && record.schemaVersion !== SESSION_HEADER_SCHEMA_VERSION) {
+    throw new UnsupportedSessionHeaderVersionError(record.schemaVersion);
+  }
+  const migrated = {
+    ...record,
+    schemaVersion: SESSION_HEADER_SCHEMA_VERSION,
+    messageCount: record.messageCount ?? 0,
+    tokenUsage: record.tokenUsage ?? EMPTY_TOKEN_USAGE,
+  };
+  return normalizeHeaderPermissionModes(SessionHeaderStorageSchema.parse(migrated) as SessionHeader);
+}
 
 /**
  * Replace absolute session directory paths with a portable token.
@@ -149,9 +203,9 @@ export function readSessionHeader(sessionFile: string): SessionHeader | null {
     const firstLine = firstNewline >= 0 ? content.slice(0, firstNewline) : content;
     if (!firstLine) return null;
 
-    const parsed = safeJsonParse(expandSessionPath(firstLine, dirname(sessionFile))) as SessionHeader;
-    return normalizeHeaderPermissionModes(parsed);
+    return parseSessionHeaderLine(firstLine, dirname(sessionFile));
   } catch (error) {
+    if (error instanceof UnsupportedSessionHeaderVersionError) throw error;
     debug('[jsonl] Failed to read session header:', sessionFile, error);
     return null;
   } finally {
@@ -174,9 +228,7 @@ export function readSessionJsonl(sessionFile: string): StoredSession | null {
     if (!firstLine) return null;
 
     const sessionDir = dirname(sessionFile);
-    const header = normalizeHeaderPermissionModes(
-      safeJsonParse(expandSessionPath(firstLine, sessionDir)) as SessionHeader
-    );
+    const header = parseSessionHeaderLine(firstLine, sessionDir);
     // Parse messages resiliently: skip lines that fail to parse (e.g. truncated by crash)
     // rather than losing the entire session's messages.
     // Expand session path tokens before parsing so embedded paths resolve correctly.
@@ -199,6 +251,7 @@ export function readSessionJsonl(sessionFile: string): StoredSession | null {
       tokenUsage: header.tokenUsage,
     } as StoredSession;
   } catch (error) {
+    if (error instanceof UnsupportedSessionHeaderVersionError) throw error;
     debug('[jsonl] Failed to read session:', sessionFile, error);
     return null;
   }
@@ -213,6 +266,10 @@ export function readSessionJsonl(sessionFile: string): StoredSession | null {
  * Lines 2+: Messages (one per line)
  */
 export function writeSessionJsonl(sessionFile: string, session: StoredSession): void {
+  // A stale process must not overwrite a session already upgraded by a newer
+  // application. readSessionHeader deliberately throws for future envelopes.
+  if (existsSync(sessionFile)) readSessionHeader(sessionFile);
+
   const header = createSessionHeader(session);
   const sessionDir = dirname(sessionFile);
 
@@ -232,7 +289,8 @@ export function writeSessionJsonl(sessionFile: string, session: StoredSession): 
  * Uses pickSessionFields() to ensure all persistent fields are included.
  */
 export function createSessionHeader(session: StoredSession): SessionHeader {
-  return {
+  const header = {
+    schemaVersion: SESSION_HEADER_SCHEMA_VERSION,
     ...pickSessionFields(session),
     // Path conversion for portability
     workspaceRootPath: toPortablePath(session.workspaceRootPath),
@@ -244,7 +302,8 @@ export function createSessionHeader(session: StoredSession): SessionHeader {
     preview: extractPreview(session.messages),
     tokenUsage: session.tokenUsage,
     lastFinalMessageId: extractLastFinalMessageId(session.messages),
-  } as SessionHeader;
+  };
+  return SessionHeaderStorageSchema.parse(header) as SessionHeader;
 }
 
 /**
@@ -299,17 +358,38 @@ export async function readSessionHeaderAsync(sessionFile: string): Promise<Sessi
   try {
     const handle = await open(sessionFile, 'r');
     try {
-      const buffer = Buffer.alloc(8192);
-      const { bytesRead } = await handle.read(buffer, 0, 8192, 0);
-      const content = buffer.toString('utf-8', 0, bytesRead);
+      const chunks: Buffer[] = [];
+      let totalBytesRead = 0;
+      let newlineIndex = -1;
+
+      while (totalBytesRead < SESSION_HEADER_MAX_BYTES && newlineIndex === -1) {
+        const bytesToRead = Math.min(
+          SESSION_HEADER_READ_CHUNK_BYTES,
+          SESSION_HEADER_MAX_BYTES - totalBytesRead,
+        );
+        const buffer = Buffer.alloc(bytesToRead);
+        const { bytesRead } = await handle.read(buffer, 0, bytesToRead, totalBytesRead);
+        if (bytesRead <= 0) break;
+
+        const chunk = buffer.subarray(0, bytesRead);
+        const chunkNewlineIndex = chunk.indexOf(0x0a);
+        if (chunkNewlineIndex !== -1) {
+          newlineIndex = totalBytesRead + chunkNewlineIndex;
+        }
+        chunks.push(chunk);
+        totalBytesRead += bytesRead;
+      }
+
+      const content = Buffer.concat(chunks, totalBytesRead).toString('utf-8');
       const firstNewline = content.indexOf('\n');
-      const firstLine = firstNewline > 0 ? content.slice(0, firstNewline) : content;
-      const parsed = safeJsonParse(expandSessionPath(firstLine, dirname(sessionFile))) as SessionHeader;
-      return normalizeHeaderPermissionModes(parsed);
+      const firstLine = firstNewline >= 0 ? content.slice(0, firstNewline) : content;
+      if (!firstLine) return null;
+      return parseSessionHeaderLine(firstLine, dirname(sessionFile));
     } finally {
       await handle.close();
     }
   } catch (error) {
+    if (error instanceof UnsupportedSessionHeaderVersionError) throw error;
     debug('[jsonl] Failed to read session header async:', sessionFile, error);
     return null;
   }

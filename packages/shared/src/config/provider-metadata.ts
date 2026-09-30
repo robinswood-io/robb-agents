@@ -37,6 +37,11 @@ const PROVIDER_METADATA: Record<string, ProviderMetadata> = {
     statusPageUrl: 'https://status.cloud.google.com',
     dashboardUrl: 'https://gemini.google.com',
   },
+  'google-antigravity': {
+    name: 'Google Antigravity',
+    statusPageUrl: 'https://status.cloud.google.com',
+    dashboardUrl: 'https://antigravity.google',
+  },
   'amazon-bedrock': {
     name: 'Amazon Bedrock',
     statusPageUrl: 'https://health.aws.amazon.com',

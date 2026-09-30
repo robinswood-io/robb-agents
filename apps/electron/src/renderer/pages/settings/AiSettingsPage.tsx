@@ -177,6 +177,7 @@ const PI_AUTH_PROVIDER_LABELS: Record<string, string> = {
   huggingface: 'Hugging Face',
   'vercel-ai-gateway': 'Vercel AI Gateway',
   'github-copilot': 'GitHub Copilot',
+  'google-antigravity': 'Google Antigravity',
 }
 
 // ============================================
@@ -339,7 +340,7 @@ function ConnectionRow({ connection, isLastConnection, onRenameClick, onDelete, 
               <span>{t("settings.ai.setAsDefault")}</span>
             </StyledDropdownMenuItem>
           )}
-          {connection.authType === 'oauth' ? (
+          {connection.authType === 'oauth' || connection.piAuthProvider === 'google-antigravity' ? (
             <StyledDropdownMenuItem onClick={() => runAfterMenuClose(onReauthenticate)}>
               <RefreshCcw className="h-3.5 w-3.5" />
               <span>{t("settings.ai.reAuthenticate")}</span>
@@ -616,6 +617,7 @@ function WorkspaceOverrideCard({ workspace, llmConnections, onSettingsChange }: 
 /** Map a connection's provider type to the corresponding API key setup method. */
 function getApiKeyMethodForConnection(conn: LlmConnectionWithStatus): ApiSetupMethod {
   const provider = conn.providerType || conn.type
+  if (provider === 'pi' && conn.piAuthProvider === 'google-antigravity') return 'pi_google_antigravity_subscription'
   if (provider === 'pi' && conn.piAuthProvider === 'google-gemini-code-assist') return 'pi_gemini_oauth'
   if (provider === 'pi' || provider === 'pi_compat') return 'pi_api_key'
   return 'anthropic_api_key'
@@ -640,6 +642,7 @@ export default function AiSettingsPage() {
     activePreset?: string
     models?: string[]
     customApi?: CustomEndpointApi
+    googleCloudProject?: string
   } | undefined>(undefined)
   const setFullscreenOverlayOpen = useSetAtom(fullscreenOverlayOpenAtom)
 
@@ -809,6 +812,11 @@ export default function AiSettingsPage() {
     openApiSetup(connection.slug)
     apiSetupOnboarding.reset()
 
+    if (connection.piAuthProvider === 'google-antigravity') {
+      apiSetupOnboarding.handleStartOAuth('pi_google_antigravity_subscription', connection.slug)
+      return
+    }
+
     if (connection.authType === 'oauth') {
       const method = connection.providerType === 'pi'
                    ? (connection.piAuthProvider === 'github-copilot' ? 'pi_copilot_oauth' : 'pi_chatgpt_oauth')
@@ -845,6 +853,7 @@ export default function AiSettingsPage() {
       activePreset: isCustomEndpointConnection ? 'custom' : (connection.piAuthProvider || undefined),
       models: modelIds,
       customApi: connection.customEndpoint?.api,
+      googleCloudProject: connection.googleCloudProject,
     })
 
     // Open overlay and jump directly to credentials step (no reset — jumpToCredentials sets state)

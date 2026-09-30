@@ -9,6 +9,7 @@ import { execSync } from 'child_process';
 import { existsSync, mkdirSync, rmSync, readdirSync, statSync, cpSync } from 'fs';
 import { join } from 'path';
 import type { BuildConfig } from './common';
+import { resolveBuildCommit, resolveBuildDirty } from '../build-provenance';
 
 /**
  * Verify SDK native binary is bundled in the packaged Windows app.
@@ -129,8 +130,9 @@ function buildMainProcess(config: BuildConfig): void {
     // SDK 0.3.x is pure ESM and calls createRequire(import.meta.url) at module init.
     // esbuild's CJS bundling leaves import.meta.url undefined for inlined ESM, crashing
     // the packaged app on load (ERR_INVALID_ARG_VALUE at sdk.mjs). Externalize so Node
-    // loads it natively as ESM; electron-builder.yml copies the SDK core into
-    // app/node_modules/@anthropic-ai/claude-agent-sdk (asar:false) so the require resolves.
+    // loads it natively as ESM; electron-build-resources.ts stages the thin SDK
+    // beside dist/main.cjs inside ASAR. Only native subprocess binaries remain
+    // on the real filesystem under Resources/app.
     // Must stay in sync with package.json build:main, electron-dev.ts, electron-build-main.ts.
     '--external:@anthropic-ai/claude-agent-sdk',
     // Replace grammY's bundled polyfills (node-fetch@2 + abort-controller@3)
@@ -153,6 +155,28 @@ function buildMainProcess(config: BuildConfig): void {
       mainArgs.push(`--define:process.env.${key}="'${value}'"`);
     }
   }
+
+  let gitCommit: string | undefined;
+  let gitPorcelain: string | undefined;
+  try {
+    gitCommit = execSync('git rev-parse HEAD', { cwd: rootDir, encoding: 'utf8' });
+    gitPorcelain = execSync('git status --porcelain', { cwd: rootDir, encoding: 'utf8' });
+  } catch {
+    // Source archives may not include git metadata.
+  }
+  const buildCommit = resolveBuildCommit(
+    process.env.ROBB_BUILD_COMMIT,
+    gitCommit,
+    process.env.GITHUB_SHA,
+  ) || '';
+  const buildDirty = resolveBuildDirty(process.env.ROBB_BUILD_DIRTY, gitPorcelain);
+  const buildChannel = process.env.CRAFT_DEV_RUNTIME === '1'
+    || process.env.ROBB_BUILD_CHANNEL === 'development'
+    ? 'development'
+    : 'production';
+  mainArgs.push(`--define:process.env.ROBB_BUILD_COMMIT="'${buildCommit}'"`);
+  mainArgs.push(`--define:process.env.ROBB_BUILD_DIRTY="'${buildDirty === undefined ? '' : String(buildDirty)}'"`);
+  mainArgs.push(`--define:process.env.ROBB_BUILD_CHANNEL="'${buildChannel}'"`);
 
   // Use node to run esbuild directly
   run(`node ./node_modules/esbuild/bin/esbuild ${mainArgs.join(' ')}`, rootDir);

@@ -10,7 +10,7 @@
 ## Commands
 From repo root:
 ```bash
-cd packages/core && bun run tsc --noEmit
+node scripts/run-typescript.mjs native --noEmit -p packages/core/tsconfig.json
 ```
 
 ## Hard rules

@@ -14,6 +14,7 @@
 import { atom } from 'jotai'
 import { atomWithStorage } from 'jotai/utils'
 import type { KanbanColumnId, TaskEditorTarget } from '@/components/app-shell/kanban/types'
+import { createWebSafeAtomStorage } from '@/lib/web-safe-atom-storage'
 
 /** Selected project ids to filter the board by. Empty array = all projects. */
 export const kanbanProjectFilterAtom = atom<string[]>([])
@@ -46,5 +47,6 @@ export const kanbanLivePulseAtom = atomWithStorage<boolean>('craft-kanban-live-p
  */
 export const kanbanColumnStatusAtom = atomWithStorage<Partial<Record<KanbanColumnId, string>>>(
   'craft-kanban-column-status',
-  {}
+  {},
+  createWebSafeAtomStorage<Partial<Record<KanbanColumnId, string>>>(),
 )

@@ -9,6 +9,7 @@ import { mkdirSync, rmSync, existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { SessionPersistenceQueue } from '../src/sessions/persistence-queue.ts';
+import { loadSession } from '../src/sessions/storage.ts';
 import type { StoredSession } from '../src/sessions/types.ts';
 
 // Create a minimal stored session for testing
@@ -24,6 +25,13 @@ function createTestSession(
     lastUsedAt: Date.now(),
     lastMessageAt: Date.now(),
     messages: [],
+    tokenUsage: {
+      inputTokens: 0,
+      outputTokens: 0,
+      totalTokens: 0,
+      contextTokens: 0,
+      costUsd: 0,
+    },
     sdkSessionId,
   };
 }
@@ -88,6 +96,72 @@ describe('SessionPersistenceQueue', () => {
 
     // Before the fix, this could randomly be undefined due to race condition
     expect(header.sdkSessionId).toBe('new-thread-id');
+  });
+
+  it('serializes a debounce-timer write with an explicit flush', async () => {
+    let releaseFirstWrite!: () => void;
+    const firstWriteGate = new Promise<void>(resolve => { releaseFirstWrite = resolve; });
+    let notifyFirstWriteStarted!: () => void;
+    const firstWriteStarted = new Promise<void>(resolve => { notifyFirstWriteStarted = resolve; });
+    let writeStarts = 0;
+
+    queue = new SessionPersistenceQueue(0, {
+      beforeWrite: async () => {
+        writeStarts += 1;
+        if (writeStarts === 1) {
+          notifyFirstWriteStarted();
+          await firstWriteGate;
+        }
+      },
+    });
+
+    queue.enqueue(createTestSession('test-session', testDir, 'timer-write'));
+    await firstWriteStarted;
+
+    queue.enqueue(createTestSession('test-session', testDir, 'flushed-write'));
+    const flush = queue.flush('test-session');
+    await Bun.sleep(10);
+    expect(writeStarts).toBe(1);
+
+    releaseFirstWrite();
+    await flush;
+
+    const filePath = join(testDir, 'sessions', 'test-session', 'session.jsonl');
+    const header = JSON.parse(readFileSync(filePath, 'utf-8').split('\n')[0]);
+    expect(writeStarts).toBe(2);
+    expect(header.sdkSessionId).toBe('flushed-write');
+  });
+
+  it('keeps an active temp file intact while session storage reads the primary', async () => {
+    queue.enqueue(createTestSession('test-session', testDir, 'initial'));
+    await queue.flush('test-session');
+
+    let releaseTempWrite!: () => void;
+    const tempWriteGate = new Promise<void>(resolve => { releaseTempWrite = resolve; });
+    let notifyTempWritten!: () => void;
+    const tempWritten = new Promise<void>(resolve => { notifyTempWritten = resolve; });
+
+    queue = new SessionPersistenceQueue(0, {
+      afterTempWrite: async () => {
+        notifyTempWritten();
+        await tempWriteGate;
+      },
+    });
+
+    queue.enqueue(createTestSession('test-session', testDir, 'updated'));
+    const flush = queue.flush('test-session');
+    await tempWritten;
+
+    const filePath = join(testDir, 'sessions', 'test-session', 'session.jsonl');
+    expect(existsSync(`${filePath}.tmp`)).toBe(true);
+    expect(loadSession(testDir, 'test-session')?.sdkSessionId).toBe('initial');
+    expect(existsSync(`${filePath}.tmp`)).toBe(true);
+
+    releaseTempWrite();
+    await flush;
+
+    const header = JSON.parse(readFileSync(filePath, 'utf-8').split('\n')[0]);
+    expect(header.sdkSessionId).toBe('updated');
   });
 
   it('allows parallel writes to different sessions', async () => {

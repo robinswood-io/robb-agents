@@ -58,6 +58,8 @@ interface CompactModelSelectorProps {
     inputTokens?: number
     contextWindow?: number
   }
+  /** Provider handoff is rejected while the current turn is processing. */
+  disabled?: boolean
 }
 
 export function CompactModelSelector({
@@ -70,6 +72,7 @@ export function CompactModelSelector({
   isEmptySession = false,
   connectionUnavailable = false,
   contextStatus,
+  disabled = false,
 }: CompactModelSelectorProps) {
   const { t } = useTranslation()
   const [open, setOpen] = React.useState(false)
@@ -123,6 +126,8 @@ export function CompactModelSelector({
     return model.name ?? stripPiPrefixForDisplay(model.id)
   }, [availableModels, currentModel, connectionDefaultModel])
 
+  const selectorDisplayName = currentModelDisplayName
+
   const thinkingDisabled = React.useMemo(() => {
     const model = availableModels.find(
       m => typeof m !== 'string' && m.id === currentModel,
@@ -170,9 +175,11 @@ export function CompactModelSelector({
       <DrawerTrigger asChild>
         <button
           type="button"
+          data-testid="model-selector-trigger"
+          disabled={disabled}
           aria-label={connectionUnavailable
             ? t('common.unavailable')
-            : `${t('common.model')}: ${currentModelDisplayName}`}
+            : `${t('common.model')}: ${selectorDisplayName}`}
           className={cn(
             'h-7 pl-2 pr-2 text-xs font-medium rounded-[6px] flex items-center gap-1.5 shadow-tinted outline-none select-none min-w-[64px] shrink',
             connectionUnavailable
@@ -191,8 +198,8 @@ export function CompactModelSelector({
               {showConnectionIcon && effectiveConnectionDetails && (
                 <ConnectionIcon connection={effectiveConnectionDetails} size={14} />
               )}
-              <span className="truncate min-w-0">{currentModelDisplayName}</span>
-              {pickerMode !== 'locked-single' && (
+              <span className="truncate min-w-0">{selectorDisplayName}</span>
+              {!disabled && pickerMode !== 'locked-single' && (
                 <ChevronDown className="h-3 w-3 opacity-50 shrink-0" />
               )}
             </>
@@ -247,6 +254,7 @@ export function CompactModelSelector({
                     <React.Fragment key={conn.slug}>
                       <button
                         type="button"
+                        data-testid="model-connection-option"
                         disabled={!isAuthenticated}
                         onClick={() =>
                           setExpandedConnection(prev => (prev === conn.slug ? null : conn.slug))
@@ -294,6 +302,8 @@ export function CompactModelSelector({
                               <DrawerClose asChild key={modelId}>
                                 <button
                                   type="button"
+                                  data-testid="model-option"
+                                  data-model-id={modelId}
                                   onClick={() => handlePickSwitcherModel(conn.slug, modelId)}
                                   className={cn(
                                     'flex items-center justify-between w-full px-3 py-2 rounded-lg text-left transition-colors',
@@ -355,6 +365,8 @@ export function CompactModelSelector({
                 <DrawerClose asChild key={modelId}>
                   <button
                     type="button"
+                    data-testid="model-option"
+                    data-model-id={modelId}
                     onClick={() => handlePickFlatModel(modelId)}
                     className={cn(
                       'flex items-center justify-between w-full px-3 py-2 rounded-lg text-left transition-colors',
@@ -406,6 +418,8 @@ export function CompactModelSelector({
                   <DrawerClose asChild key={id}>
                     <button
                       type="button"
+                      data-testid="thinking-option"
+                      data-thinking-level={id}
                       disabled={thinkingDisabled}
                       onClick={() => onThinkingLevelChange?.(id)}
                       className={cn(

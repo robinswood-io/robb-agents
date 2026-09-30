@@ -234,11 +234,42 @@ def check_robinswood_packaging() -> None:
         "autoUpdater.autoDownload = false",
         "autoUpdater.autoInstallOnAppQuit = false",
         "autoUpdater.allowPrerelease = false",
+        "startAutomaticUpdateChecks",
+        "Installing macOS update with verified detached installer",
+        "Replacing installed application transactionally",
+        "updateDownloadPromise",
     ]:
         if token not in updater:
-            fail(f"Manual stable updater policy missing: {token}")
-    if "checkForUpdatesOnLaunch" in updater:
-        fail("Production updater must never check on application launch")
+            fail(f"Stable updater policy missing: {token}")
+    if "currentMacAppUsesDeveloperIdSignature" in updater:
+        fail("macOS updates must use the verified detached installer for every signing state")
+
+    electron_main = (ROOT / "apps/electron/src/main/index.ts").read_text(encoding="utf-8")
+    if "startAutomaticUpdateChecks()" not in electron_main:
+        fail("Production startup must schedule the bounded main-process update check")
+
+    update_hook = (ROOT / "apps/electron/src/renderer/hooks/useUpdateChecker.ts").read_text(encoding="utf-8")
+    if "automaticCheckStarted" in update_hook:
+        fail("Update scheduling must not depend on renderer mounting")
+
+    session_manager = (ROOT / "packages/server-core/src/sessions/SessionManager.ts").read_text(encoding="utf-8")
+    for token in [
+        "Failed to prepare agent runtime",
+        "SESSION_RUNTIME_EVICTION_CONCURRENCY",
+        "failed branch preflight",
+    ]:
+        if token not in session_manager:
+            fail(f"Agent recovery contract missing: {token}")
+
+    release_workflow = (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
+    for token in [
+        "--draft",
+        "verify-github-release-assets.ts",
+        "--draft=false",
+        "--latest",
+    ]:
+        if token not in release_workflow:
+            fail(f"Transactional GitHub release contract missing: {token}")
 
     public_installers = {
         "scripts/install-app.sh": [
@@ -292,20 +323,12 @@ def check_robinswood_packaging() -> None:
 def check_robinswood_docs() -> None:
     required = [
         ROOT / "docs" / "robinswood" / "README.md",
-        ROOT / "docs" / "robinswood" / "technical-spike-router.md",
         ROOT / "docs" / "robinswood" / "rebrand-inventory.md",
         ROOT / "docs" / "robinswood" / "provider-playbook.md",
-        ROOT / "docs" / "robinswood" / "routing-policy.example.json",
     ]
     missing = [path.relative_to(ROOT).as_posix() for path in required if not path.exists()]
     if missing:
         fail("Missing Robinswood documentation files: " + ", ".join(missing))
-    try:
-        example = json.loads((ROOT / "docs" / "robinswood" / "routing-policy.example.json").read_text(encoding="utf-8"))
-    except Exception as exc:  # noqa: BLE001 - validation script
-        fail(f"Failed to read routing-policy.example.json: {exc}")
-    if example.get("version") != 1 or not isinstance(example.get("rules"), list):
-        fail("routing-policy.example.json must include version: 1 and a rules array")
     print("✓ Robinswood memory docs")
 
 

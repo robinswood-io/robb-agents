@@ -111,4 +111,61 @@ describe('sendMessage durability', () => {
     expect(ackedMessageId).not.toBeNull()
     expect(onDiskAtAck).toBe(true)
   })
+
+  it('rejects a changed offline anchor before appending any user message', async () => {
+    const sessionId = 'offline-anchor-changed'
+    const managed = buildSession(sessionId)
+    const originalCount = managed.messages.length
+
+    const send = sm.sendMessage(sessionId, 'must not append', undefined, undefined, {
+      expectedSessionAnchor: {
+        messageCount: originalCount + 1,
+        lastFinalMessageId: managed.lastFinalMessageId ?? null,
+        lastMessageAt: managed.lastMessageAt,
+      },
+    })
+    await expect(send).rejects.toMatchObject({ code: 'SESSION_CONTEXT_CHANGED' })
+    expect(managed.messages).toHaveLength(originalCount)
+    expect(readPersistedMessageIds(sessionId)).toEqual([])
+  })
+
+  it('does not clear a pending plan when an offline anchor is rejected', async () => {
+    const sessionId = 'offline-anchor-plan'
+    const managed = buildSession(sessionId)
+    ;(sm as unknown as { persistSession: (session: unknown) => void }).persistSession(managed)
+    await sm.flushSession(sessionId)
+    await sm.setPendingPlanExecution(sessionId, '/tmp/plan.md', 'draft')
+    expect(sm.getPendingPlanExecution(sessionId)).not.toBeNull()
+
+    const send = sm.sendMessage(sessionId, 'must not mutate plan state', undefined, undefined, {
+      expectedSessionAnchor: {
+        messageCount: managed.messages.length + 1,
+        lastFinalMessageId: managed.lastFinalMessageId ?? null,
+        lastMessageAt: managed.lastMessageAt,
+      },
+    })
+    await expect(send).rejects.toMatchObject({ code: 'SESSION_CONTEXT_CHANGED' })
+    expect(sm.getPendingPlanExecution(sessionId)).toMatchObject({
+      planPath: '/tmp/plan.md',
+      draftInputSnapshot: 'draft',
+    })
+  })
+
+  it('rejects an offline outbox send if the session became busy after review', async () => {
+    const sessionId = 'offline-anchor-busy'
+    const managed = buildSession(sessionId)
+    const originalCount = managed.messages.length
+    managed.isProcessing = true
+
+    const send = sm.sendMessage(sessionId, 'must remain local', undefined, undefined, {
+      expectedSessionAnchor: {
+        messageCount: originalCount,
+        lastFinalMessageId: managed.lastFinalMessageId ?? null,
+        lastMessageAt: managed.lastMessageAt,
+      },
+    })
+    await expect(send).rejects.toMatchObject({ code: 'SESSION_CONTEXT_CHANGED' })
+    expect(managed.messages).toHaveLength(originalCount)
+    expect(readPersistedMessageIds(sessionId)).toEqual([])
+  })
 })

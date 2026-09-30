@@ -274,12 +274,30 @@ export interface RoutingCostProvenance {
 }
 
 export interface RoutingMeta {
+  /** App version that produced this assistant response. */
+  appVersion?: string;
+  /** Source revision baked into the app build, when available. */
+  buildCommit?: string;
+  /** Distribution/runtime channel that produced the response. */
+  buildChannel?: string;
+  /** Whether the producing build came from a dirty working tree. */
+  buildDirty?: boolean;
+  /** Whether the producing runtime was a packaged application. */
+  isPackaged?: boolean;
   /** LLM connection slug selected for this turn, when known. */
   connectionSlug?: string;
   /** Backend/provider type, e.g. anthropic, pi, pi_compat, router. */
   providerType?: string;
   /** Effective model ID used by the backend for this turn. */
   model?: string;
+  /** Model ID requested before any provider-side aliasing or dynamic routing. */
+  requestedModel?: string;
+  /** Provider ID reported by the model backend (distinct from the Craft providerType). */
+  provider?: string;
+  /** Provider API/transport reported by the model backend. */
+  api?: string;
+  /** Context-window size associated with the model call, when known. */
+  contextWindow?: number;
   /** Why this route was selected. MVP values are intentionally simple. */
   reason?: 'session-connection' | 'manual-handoff' | 'router' | string;
   /** Sensitivity tier used by a policy-first router, when available. */
@@ -292,6 +310,25 @@ export interface RoutingMeta {
   requiredCapabilities?: string[];
   /** Reader-facing explanation of the selected route. */
   routingExplanation?: string;
+  /** Queryable local cost-controller decision for this model response. */
+  costControl?: {
+    turnKind: string;
+    budgetState: string;
+    thinkingLevel: string;
+    contextTokensBefore: number;
+    contextWindow?: number;
+    compactAtTokens?: number;
+    hardLimitTokens?: number;
+    compacted?: boolean;
+    compactionOutcome?: 'succeeded' | 'ineffective' | 'unverified' | 'failed' | 'skipped-cooldown' | 'skipped-not-needed';
+    compactionModel?: string;
+    compactionDurationMs?: number;
+    contextTokensAfter?: number;
+    reclaimedTokens?: number;
+    reductionRatio?: number;
+    compactionIssueCodes?: string[];
+    hardContextLimitReached?: boolean;
+  };
   /** Exact hard-policy reasons why configured alternatives were rejected. */
   rejectedConnections?: Array<{ slug: string; reasons: string[] }>;
   /** Cost guardrail result evaluated before route selection. */
@@ -387,7 +424,7 @@ export interface Message {
   errorActions?: Array<{
     key: string;
     label: string;
-    action?: 'retry' | 'settings' | 'reauth' | 'open_url' | 'reconnect_source';
+    action?: 'retry' | 'settings' | 'reauth' | 'open_url' | 'reconnect_source' | 'reconnect_runtime';
     url?: string;
     sourceSlug?: string;
   }>;
@@ -468,7 +505,7 @@ export interface StoredMessage {
   errorActions?: Array<{
     key: string;
     label: string;
-    action?: 'retry' | 'settings' | 'reauth' | 'open_url' | 'reconnect_source';
+    action?: 'retry' | 'settings' | 'reauth' | 'open_url' | 'reconnect_source' | 'reconnect_runtime';
     url?: string;
     sourceSlug?: string;
   }>;
@@ -523,7 +560,7 @@ export interface RecoveryAction {
   /** Slash command to execute (e.g., '/settings') */
   command?: string;
   /** Custom action type for special handling */
-  action?: 'retry' | 'settings' | 'reauth' | 'open_url' | 'reconnect_source';
+  action?: 'retry' | 'settings' | 'reauth' | 'open_url' | 'reconnect_source' | 'reconnect_runtime';
   /** URL to open (for open_url action) */
   url?: string;
   /** Source slug (for reconnect_source action) */
@@ -556,6 +593,7 @@ export type ErrorCode =
   | 'queued_message_replay_failed'  // A message queued during an active turn could not be auto-replayed (#616)
   | 'sdk_binary_missing'     // SDK subprocess binary not present on disk (incomplete bundle)
   | 'sdk_cwd_missing'        // SDK subprocess cwd not present on disk (stale cross-machine import)
+  | 'execution_bridge_unavailable' // Local execution/tool bridge unavailable or corrupted
   | 'unknown_error';
 
 /**
@@ -608,19 +646,41 @@ export interface PermissionRequest {
   commandHash?: string;
   /** Approval validity window */
   approvalTtlSeconds?: number;
+  /** Scoped metadata for a sensitive external-action confirmation. */
+  sensitiveActionCategory?: 'git_push' | 'deployment' | 'service_restart' | 'secret_transfer' | 'external_send' | 'external_publication' | 'payment';
+  sensitiveActionTargets?: string[];
 }
 
 /**
  * Usage data emitted by CraftAgent in 'complete' events
- * Note: This is a subset of TokenUsage - totalTokens/contextTokens are computed by consumers
+ * Note: This is a subset of TokenUsage. totalTokens is computed by consumers;
+ * contextTokens is optional because older backends only report inputTokens.
  */
 export interface AgentEventUsage {
+  /** Billed input across the completed turn (may aggregate several model calls). */
   inputTokens: number;
   outputTokens: number;
   cacheReadTokens?: number;
   cacheCreationTokens?: number;
   costUsd?: number;
+  /** Model-visible input on the latest call; unlike inputTokens this is never cumulative. */
+  contextTokens?: number;
   /** Model's context window size in tokens (from SDK modelUsage) */
+  contextWindow?: number;
+}
+
+/**
+ * Native model identity attached to a completed assistant message.
+ *
+ * All fields are optional so older backends and stored events remain valid.
+ * `model` is the effective provider-reported model, while `requestedModel`
+ * preserves the model sent to the provider before aliases/dynamic routing.
+ */
+export interface AgentModelProvenance {
+  model?: string;
+  requestedModel?: string;
+  provider?: string;
+  api?: string;
   contextWindow?: number;
 }
 
@@ -632,10 +692,10 @@ export type AgentEvent =
   | { type: 'status'; message: string }
   | { type: 'info'; message: string }
   | { type: 'text_delta'; text: string; turnId?: string; parentToolUseId?: string }
-  | { type: 'text_complete'; text: string; isIntermediate?: boolean; turnId?: string; parentToolUseId?: string; sdkMessageId?: string }
+  | { type: 'text_complete'; text: string; isIntermediate?: boolean; turnId?: string; parentToolUseId?: string; sdkMessageId?: string; modelProvenance?: AgentModelProvenance }
   | { type: 'pi_turn_anchor'; sdkMessageId: string; sdkTurnAnchor: string }
   | { type: 'tool_start'; toolName: string; toolUseId: string; input: Record<string, unknown>; intent?: string; displayName?: string; turnId?: string; parentToolUseId?: string; toolDisplayMeta?: ToolDisplayMeta }
-  | { type: 'tool_result'; toolUseId: string; toolName?: string; result: string; isError: boolean; input?: Record<string, unknown>; turnId?: string; parentToolUseId?: string }
+  | { type: 'tool_result'; toolUseId: string; toolName?: string; result: string; isError: boolean; input?: Record<string, unknown>; turnId?: string; parentToolUseId?: string; continuationRequired?: boolean }
   | {
       type: 'permission_request';
       requestId: string;
@@ -652,6 +712,19 @@ export type AgentEvent =
       approvalTtlSeconds?: number;
     }
   | { type: 'error'; message: string }
+  | {
+      /**
+       * The provider runtime disappeared before the turn reached a terminal
+       * response. SessionManager treats this as a resumable interruption, not
+       * as a user-visible provider error, and applies its durable bounded
+       * recovery policy before surfacing a terminal failure.
+       */
+      type: 'runtime_interrupted';
+      message: string;
+      code: 'process_exit' | 'process_error' | 'startup_timeout';
+      exitCode?: number | null;
+      signal?: string | null;
+    }
   | { type: 'typed_error'; error: TypedError }
   | { type: 'complete'; usage?: AgentEventUsage }
   | { type: 'working_directory_changed'; workingDirectory: string }

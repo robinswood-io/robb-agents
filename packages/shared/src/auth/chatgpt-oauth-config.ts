@@ -42,7 +42,13 @@ export const CHATGPT_OAUTH_CONFIG = {
    * OAuth scopes requested during authentication
    * These scopes provide access to ChatGPT Plus features via Codex
    */
-  SCOPES: 'openid profile email offline_access',
+  SCOPES: 'openid profile email offline_access api.connectors.read api.connectors.invoke',
+
+  /**
+   * Registered Codex client identity expected by the OpenAI authorization flow.
+   * Keep aligned with openai/codex's DEFAULT_ORIGINATOR.
+   */
+  ORIGINATOR: 'codex_cli_rs',
 
   /**
    * OpenID Connect issuer for token validation

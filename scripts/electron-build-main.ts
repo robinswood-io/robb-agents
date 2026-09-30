@@ -4,8 +4,15 @@
  */
 
 import { spawn } from "bun";
+import { execFileSync } from "child_process";
 import { existsSync, readFileSync, statSync, mkdirSync } from "fs";
 import { join } from "path";
+import {
+  assertCleanProductionBuild,
+  resolveBuildChannel,
+  resolveBuildCommit as chooseBuildCommit,
+  resolveBuildDirty,
+} from "./build-provenance";
 
 const ROOT_DIR = join(import.meta.dir, "..");
 const DIST_DIR = join(ROOT_DIR, "apps/electron/dist");
@@ -18,7 +25,6 @@ const SESSION_SERVER_OUTPUT = join(SESSION_SERVER_DIR, "dist/index.js");
 const PI_AGENT_SERVER_DIR = join(ROOT_DIR, "packages/pi-agent-server");
 const PI_AGENT_SERVER_OUTPUT = join(PI_AGENT_SERVER_DIR, "dist/index.js");
 const WA_WORKER_DIR = join(ROOT_DIR, "packages/messaging-whatsapp-worker");
-const WA_WORKER_SOURCE = join(WA_WORKER_DIR, "src/worker.ts");
 const WA_WORKER_OUTPUT = join(WA_WORKER_DIR, "dist/worker.cjs");
 
 // Load .env file if it exists
@@ -46,16 +52,50 @@ function loadEnvFile(): void {
   }
 }
 
+/** Resolve the source revision once at build time so packaged apps retain it. */
+function resolveBuildCommit(): string {
+  let gitCommit: string | undefined;
+  try {
+    gitCommit = execFileSync("git", ["rev-parse", "HEAD"], {
+      cwd: ROOT_DIR,
+      encoding: "utf8",
+    });
+  } catch {
+    // A source archive may not include .git; explicit/CI metadata still works.
+  }
+  return chooseBuildCommit(
+    process.env.ROBB_BUILD_COMMIT,
+    gitCommit,
+    process.env.GITHUB_SHA,
+  ) || "";
+}
+
+function resolveBuildDirtyFlag(buildChannel: 'development' | 'production'): boolean | undefined {
+  let gitPorcelain: string | undefined
+  try {
+    gitPorcelain = execFileSync("git", ["status", "--porcelain", "--untracked-files=all"], {
+      cwd: ROOT_DIR,
+      encoding: "utf8",
+    })
+  } catch {
+    // A source archive may not include .git; explicit CI metadata still works.
+  }
+  assertCleanProductionBuild(buildChannel, process.env.ROBB_BUILD_DIRTY, gitPorcelain)
+  return resolveBuildDirty(process.env.ROBB_BUILD_DIRTY, gitPorcelain)
+}
+
 // Get build-time defines for esbuild (OAuth, Sentry DSN, etc.)
 // NOTE: Sentry source map upload is intentionally disabled for the main process.
 // To enable in the future, add @sentry/esbuild-plugin. See apps/electron/CLAUDE.md.
 // NOTE: Google OAuth credentials are NOT baked into the build - users provide their own
 // via source config. See README_FOR_OSS.md for setup instructions.
 function getBuildDefines(): string[] {
-  const buildChannel = process.env.CRAFT_DEV_RUNTIME === "1"
-    || process.env.ROBB_BUILD_CHANNEL === "development"
-    ? "development"
-    : "production";
+  const buildChannel = resolveBuildChannel(
+    process.env.ROBB_BUILD_CHANNEL,
+    process.env.CRAFT_DEV_RUNTIME,
+  );
+  const buildCommit = resolveBuildCommit();
+  const buildDirty = resolveBuildDirtyFlag(buildChannel);
   const definedVars = [
     "SLACK_OAUTH_CLIENT_ID",
     "SLACK_OAUTH_CLIENT_SECRET",
@@ -64,12 +104,17 @@ function getBuildDefines(): string[] {
     "SENTRY_ELECTRON_INGEST_URL",
     "CRAFT_DEV_RUNTIME",
     "ROBB_BUILD_CHANNEL",
+    "ROBB_BUILD_COMMIT",
+    "ROBB_BUILD_DIRTY",
   ];
 
   return definedVars.map((varName) => {
-    const value = varName === "ROBB_BUILD_CHANNEL"
-      ? buildChannel
-      : process.env[varName] || "";
+    let value = process.env[varName] || "";
+    if (varName === "ROBB_BUILD_CHANNEL") value = buildChannel;
+    if (varName === "ROBB_BUILD_COMMIT") value = buildCommit;
+    if (varName === "ROBB_BUILD_DIRTY") {
+      value = buildDirty === undefined ? "" : String(buildDirty);
+    }
     return `--define:process.env.${varName}="${value}"`;
   });
 }
@@ -268,38 +313,17 @@ async function buildPiAgentServer(): Promise<void> {
 
 // Build the WhatsApp worker (Baileys-backed subprocess spawned by WhatsAppAdapter)
 async function buildWhatsAppWorker(): Promise<void> {
-  if (!existsSync(WA_WORKER_SOURCE)) {
+  if (!existsSync(WA_WORKER_DIR)) {
     console.log("⏭️  WhatsApp worker skipped (package not found)");
     return;
   }
 
   console.log("📨 Building WhatsApp worker...");
-
-  const workerDistDir = join(WA_WORKER_DIR, "dist");
-  if (!existsSync(workerDistDir)) {
-    mkdirSync(workerDistDir, { recursive: true });
-  }
-
-  // Baileys is bundled INTO worker.cjs (not external) so the packaged app is
-  // self-contained. Dynamic `import('@whiskeysockets/baileys')` is resolved
-  // at bundle time because the specifier is a literal.
   const proc = spawn({
-    cmd: [
-      "bun", "run", "esbuild",
-      WA_WORKER_SOURCE,
-      "--bundle",
-      "--platform=node",
-      "--format=cjs",
-      "--target=node20",
-      `--outfile=${WA_WORKER_OUTPUT}`,
-      "--external:electron",
-      // Baileys' runtime-optional features — wrapped in try/catch at the
-      // call site and not used by Craft Agent (we send text + documents, no
-      // link previews, no inline image processing, no terminal QR).
-      "--external:link-preview-js",
-      "--external:qrcode-terminal",
-      "--external:jimp",
-    ],
+    // Keep development and packaged builds on the same canonical path. This
+    // script injects the worker build ID and Git SHA used by staging/release
+    // diagnostics; duplicating its esbuild arguments previously omitted them.
+    cmd: ["bun", "run", "scripts/build-wa-worker.ts"],
     cwd: ROOT_DIR,
     stdout: "inherit",
     stderr: "inherit",
@@ -321,27 +345,30 @@ async function buildWhatsAppWorker(): Promise<void> {
 
 async function main(): Promise<void> {
   loadEnvFile();
+  const mainOnly = process.argv.includes("--main-only");
 
   // Ensure dist directory exists
   if (!existsSync(DIST_DIR)) {
     mkdirSync(DIST_DIR, { recursive: true });
   }
 
-  // Verify session tools core exists (shared utilities for session-scoped tools)
-  verifySessionToolsCore();
+  if (!mainOnly) {
+    // Verify session tools core exists (shared utilities for session-scoped tools)
+    verifySessionToolsCore();
 
-  // Build session server (provides session-scoped tools like SubmitPlan)
-  // Depends on session-tools-core being built first
-  await buildSessionServer();
+    // Build session server (provides session-scoped tools like SubmitPlan)
+    // Depends on session-tools-core being built first
+    await buildSessionServer();
 
-  // Build Pi agent server (subprocess for Pi SDK sessions)
-  await buildPiAgentServer();
+    // Build Pi agent server (subprocess for Pi SDK sessions)
+    await buildPiAgentServer();
 
-  // Build unified network interceptor (CJS bundle for Node.js --require)
-  await buildInterceptor();
+    // Build unified network interceptor (CJS bundle for Node.js --require)
+    await buildInterceptor();
 
-  // Build WhatsApp worker (Baileys subprocess — optional package)
-  await buildWhatsAppWorker();
+    // Build WhatsApp worker (Baileys subprocess — optional package)
+    await buildWhatsAppWorker();
+  }
 
   const buildDefines = getBuildDefines();
 
@@ -360,7 +387,7 @@ async function main(): Promise<void> {
       // at module init. esbuild's CJS bundling leaves the synthesized `import_meta.url`
       // undefined for inner ESM modules, which throws ERR_INVALID_ARG_VALUE on load.
       // Externalize so Node loads the SDK natively as ESM (with a real import.meta.url).
-      // Electron 39 ships Node 22.x which supports require() of ESM without TLA, so the
+      // Electron 43 ships Node 24.x which supports require() of ESM without TLA, so the
       // bundled main.cjs's `require('@anthropic-ai/claude-agent-sdk')` works.
       "--external:@anthropic-ai/claude-agent-sdk",
       // Replace grammY's bundled polyfills (node-fetch@2 + abort-controller@3)

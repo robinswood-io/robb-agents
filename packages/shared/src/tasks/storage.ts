@@ -1,3 +1,4 @@
+import type { ThinkingLevel } from '../agent/thinking-levels.ts';
 /**
  * Task + run-state persistence.
  *
@@ -28,6 +29,7 @@ import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import { atomicWriteFileSync, stripBom } from '../utils/files.ts';
 import { validateTaskInput } from './validate.ts';
 import { TaskSpecSchema, type TaskSpec } from './schema.ts';
+import { SLUG_RE } from './schema.ts';
 import type { NodeOutput } from './refs.ts';
 import type { ValidationResult } from '../config/validators.ts';
 import type { SignedExecutionProof } from '../governance/execution-proof.ts';
@@ -56,7 +58,8 @@ export type RunLogEntry =
       attempt: number;
       connectionSlug?: string;
       model?: string;
-      strategy: 'primary' | 'retry-fallback' | 'pinned';
+      thinkingLevel?: ThinkingLevel;
+      strategy: 'pinned';
     }
   | { t: string; kind: 'node-spawned'; nodeId: string; sessionId: string }
   | {
@@ -79,7 +82,28 @@ export type RunLogEntry =
       retryAt?: string;
     }
   | { t: string; kind: 'run-paused' | 'run-resumed' | 'run-stopped' | 'run-completed' | 'run-failed' | 'run-verifying' }
-  | { t: string; kind: 'verdict'; result: 'pass' | 'fail' | 'unparsed'; reason?: string; nodes?: string[] }
+  | {
+      t: string;
+      kind: 'verdict';
+      result: 'pass' | 'fail' | 'unparsed';
+      reason?: string;
+      nodes?: string[];
+      /** Canonical hash of the outputs evaluated for this FAIL verdict. */
+      outputFingerprint?: string;
+      /** Materialized repair frontier, retained for crash-safe reflective memory. */
+      frontier?: string[];
+      /** Number of repeated rejected fingerprints observed in the current no-progress streak. */
+      stagnantRepeats?: number;
+    }
+  | {
+      t: string;
+      kind: 'stagnation-detected';
+      fingerprint: string;
+      repetitions: number;
+      limit: number;
+      nodes: string[];
+      reason: string;
+    }
   | {
       t: string;
       kind: 'approval-requested';
@@ -113,12 +137,14 @@ export function tasksRoot(workspaceRoot: string): string {
   return join(workspaceRoot, TASKS_DIR);
 }
 export function taskDir(workspaceRoot: string, slug: string): string {
+  if (!SLUG_RE.test(slug)) throw new Error(`Invalid task slug "${slug}"`);
   return join(workspaceRoot, TASKS_DIR, slug);
 }
 export function taskYamlPath(workspaceRoot: string, slug: string): string {
   return join(taskDir(workspaceRoot, slug), TASK_FILE);
 }
 export function runDir(workspaceRoot: string, slug: string, runId: string): string {
+  if (!SLUG_RE.test(runId)) throw new Error(`Invalid task run id "${runId}"`);
   return join(taskDir(workspaceRoot, slug), RUNS_DIR, runId);
 }
 
@@ -175,7 +201,7 @@ export function listTaskSlugs(workspaceRoot: string): string[] {
   const root = tasksRoot(workspaceRoot);
   if (!existsSync(root)) return [];
   return readdirSync(root, { withFileTypes: true })
-    .filter((d) => d.isDirectory() && existsSync(join(root, d.name, TASK_FILE)))
+    .filter((d) => d.isDirectory() && SLUG_RE.test(d.name) && existsSync(join(root, d.name, TASK_FILE)))
     .map((d) => d.name)
     .sort();
 }
@@ -185,7 +211,7 @@ export function listTaskRunSlugs(workspaceRoot: string): string[] {
   const root = tasksRoot(workspaceRoot);
   if (!existsSync(root)) return [];
   return readdirSync(root, { withFileTypes: true })
-    .filter((d) => d.isDirectory() && existsSync(join(root, d.name, RUNS_DIR)))
+    .filter((d) => d.isDirectory() && SLUG_RE.test(d.name) && existsSync(join(root, d.name, RUNS_DIR)))
     .map((d) => d.name)
     .sort();
 }
@@ -515,7 +541,7 @@ export function listRunIds(workspaceRoot: string, slug: string): string[] {
   const runs = join(taskDir(workspaceRoot, slug), RUNS_DIR);
   if (!existsSync(runs)) return [];
   return readdirSync(runs, { withFileTypes: true })
-    .filter((d) => d.isDirectory())
+    .filter((d) => d.isDirectory() && SLUG_RE.test(d.name))
     .map((d) => d.name)
     .sort();
 }
@@ -665,6 +691,7 @@ export function writeNodeOutput(
   nodeId: string,
   output: NodeOutput,
 ): void {
+  if (!SLUG_RE.test(nodeId) && nodeId !== '__verdict__') throw new Error(`Invalid task node id "${nodeId}"`);
   const dir = join(runDir(workspaceRoot, slug, runId), NODES_DIR);
   ensureDir(dir);
   atomicWriteFileSync(join(dir, `${nodeId}.json`), JSON.stringify(output, null, 2));
@@ -676,6 +703,7 @@ export function readNodeOutput(
   runId: string,
   nodeId: string,
 ): NodeOutput | null {
+  if (!SLUG_RE.test(nodeId) && nodeId !== '__verdict__') throw new Error(`Invalid task node id "${nodeId}"`);
   const path = join(runDir(workspaceRoot, slug, runId), NODES_DIR, `${nodeId}.json`);
   if (!existsSync(path)) return null;
   try {

@@ -1,0 +1,76 @@
+name: Provider contract canaries
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/provider-contract-canaries.yml"
+      - "packages/core/src/provider-contracts.ts"
+      - "packages/core/tests/provider-contracts.test.ts"
+      - "packages/pi-agent-server/src/google-code-assist-provider.ts"
+      - "packages/pi-agent-server/src/provider-contract-guard.ts"
+      - "packages/pi-agent-server/src/tools/search/**"
+      - "packages/shared/src/agent/backend/internal/drivers/pi.ts"
+      - "scripts/robb-provider-canaries.ts"
+      - "scripts/tests/provider-canaries.test.ts"
+  schedule:
+    - cron: "17 4 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: provider-contract-canaries-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contract-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+      - run: bun install --frozen-lockfile
+      - name: Validate registry, kill switches, fallbacks and redaction
+        run: >-
+          bun test
+          packages/core/tests/provider-contracts.test.ts
+          packages/pi-agent-server/src/google-code-assist-provider.test.ts
+          packages/pi-agent-server/src/provider-contract-guard.test.ts
+          packages/pi-agent-server/src/tools/search/resolve-provider.test.ts
+          packages/pi-agent-server/src/tools/search/providers/chatgpt.test.ts
+          packages/shared/src/agent/__tests__/pi-agent-subprocess-env.test.ts
+          packages/shared/src/agent/backend/internal/drivers/pi.test.ts
+          scripts/tests/provider-canaries.test.ts
+
+  live-canaries:
+    if: github.event_name != 'pull_request'
+    needs: contract-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      ROBB_CANARY_CHATGPT_ACCESS_TOKEN: ${{ secrets.ROBB_CANARY_CHATGPT_ACCESS_TOKEN }}
+      ROBB_CANARY_GITHUB_TOKEN: ${{ secrets.ROBB_CANARY_GITHUB_TOKEN }}
+      ROBB_CANARY_GOOGLE_CODE_ASSIST_ACCESS_TOKEN: ${{ secrets.ROBB_CANARY_GOOGLE_CODE_ASSIST_ACCESS_TOKEN }}
+      ROBB_CANARY_COPILOT_MODEL: ${{ vars.ROBB_CANARY_COPILOT_MODEL }}
+      ROBB_CANARY_GOOGLE_CODE_ASSIST_MODEL: ${{ vars.ROBB_CANARY_GOOGLE_CODE_ASSIST_MODEL }}
+      ROBB_PROVIDER_CANARIES_REQUIRED: ${{ vars.ROBB_PROVIDER_CANARIES_REQUIRED || '0' }}
+      ROBB_PROVIDER_CANARY_REPORT: provider-canary-report.json
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+      - run: bun install --frozen-lockfile
+      - name: Run credential-backed provider contract canaries
+        run: bun run scripts/robb-provider-canaries.ts
+      - name: Upload redacted canary report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: provider-canary-report-${{ github.run_id }}
+          path: provider-canary-report.json
+          if-no-files-found: ignore
+          retention-days: 30

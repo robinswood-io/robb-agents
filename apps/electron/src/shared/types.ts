@@ -199,6 +199,28 @@ import type {
   TaskKillSwitchUpdateRequest,
   TaskGetResult,
   TaskResultsDto,
+  TaskRepairRequest,
+  DurableTaskSnapshotDto,
+  DurableTaskMetadataUpdateRequest,
+  DurableTaskCockpitProjectionsDto,
+  MissionPlanRequest,
+  MissionPlanAck,
+  MissionPlanResult,
+  MissionCreateAndStartRequest,
+  MissionPreflightRequest,
+  MissionPreflightResult,
+  MissionReplanPreviewDto,
+  MissionReplanPreviewRequest,
+  MissionReplanRequest,
+  MissionControlRequest,
+  MissionConnectorApprovalDecisionRequest,
+  MissionConnectorApprovalRefreshRequest,
+  MissionConnectorApprovalRequestDto,
+  MissionResumeRequest,
+  MissionSnapshotDto,
+  MissionProofPassportDto,
+  MissionProofPassportTrustAnchorDto,
+  MissionProofPassportVerificationDto,
   FileAttachment,
   SendMessageOptions,
   SessionEvent,
@@ -258,6 +280,7 @@ export interface ElectronAPI {
   pauseTask(workspaceId: string, slug: string, runId: string): Promise<void>
   resumeTask(workspaceId: string, slug: string, runId: string): Promise<void>
   stopTask(workspaceId: string, slug: string, runId: string): Promise<void>
+  repairTask(workspaceId: string, req: TaskRepairRequest): Promise<TaskRunSnapshotDto>
   listTaskApprovals(workspaceId: string, slug?: string, runId?: string): Promise<TaskApprovalRequestDto[]>
   resolveTaskApproval(
     workspaceId: string,
@@ -270,7 +293,37 @@ export interface ElectronAPI {
   ): Promise<TaskKillSwitchSnapshotDto>
   getTask(workspaceId: string, slug: string, runId?: string): Promise<TaskGetResult>
   listTasks(workspaceId: string): Promise<string[]>
+  listDurableTasks(workspaceId: string, includeArchived?: boolean): Promise<DurableTaskSnapshotDto[]>
+  updateTaskMetadata(workspaceId: string, request: DurableTaskMetadataUpdateRequest): Promise<DurableTaskSnapshotDto>
+  getTaskCockpitProjections(workspaceId: string, slug: string): Promise<DurableTaskCockpitProjectionsDto>
   getTaskResults(workspaceId: string, slug: string, runId?: string): Promise<TaskResultsDto>
+
+  // Missions v2
+  planMission(workspaceId: string, request: MissionPlanRequest): Promise<MissionPlanAck>
+  getMissionPlan(workspaceId: string, plannerSessionId: string): Promise<MissionPlanResult>
+  onMissionPlanned(callback: (workspaceId: string, result: MissionPlanResult) => void): () => void
+  startMission(workspaceId: string, request: MissionCreateAndStartRequest): Promise<MissionSnapshotDto>
+  preflightMission(workspaceId: string, request: MissionPreflightRequest): Promise<MissionPreflightResult>
+  previewMissionReplan(workspaceId: string, request: MissionReplanPreviewRequest): Promise<MissionReplanPreviewDto>
+  replanMission(workspaceId: string, request: MissionReplanRequest): Promise<MissionSnapshotDto>
+  getMission(workspaceId: string, missionId: string): Promise<MissionSnapshotDto>
+  listMissions(workspaceId: string): Promise<MissionSnapshotDto[]>
+  listMissionConnectorApprovals(workspaceId: string): Promise<MissionConnectorApprovalRequestDto[]>
+  resolveMissionConnectorApproval(
+    workspaceId: string,
+    request: MissionConnectorApprovalDecisionRequest,
+  ): Promise<MissionSnapshotDto>
+  refreshMissionConnectorApproval(
+    workspaceId: string,
+    request: MissionConnectorApprovalRefreshRequest,
+  ): Promise<MissionSnapshotDto>
+  getMissionProofPassport(workspaceId: string, missionId: string): Promise<MissionProofPassportDto | null>
+  getMissionProofPassportTrustAnchor(workspaceId: string): Promise<MissionProofPassportTrustAnchorDto>
+  verifyMissionProofPassport(workspaceId: string, missionId: string): Promise<MissionProofPassportVerificationDto>
+  pauseMission(workspaceId: string, request: MissionControlRequest): Promise<MissionSnapshotDto>
+  resumeMission(workspaceId: string, request: MissionResumeRequest): Promise<MissionSnapshotDto>
+  cancelMission(workspaceId: string, request: MissionControlRequest): Promise<MissionSnapshotDto>
+  onMissionChanged(callback: (workspaceId: string, snapshot: MissionSnapshotDto) => void): () => void
 
   respondToPermission(sessionId: string, requestId: string, allowed: boolean, alwaysAllow: boolean, options?: PermissionResponseOptions): Promise<boolean>
   respondToCredential(sessionId: string, requestId: string, response: CredentialResponse): Promise<boolean>
@@ -446,7 +499,9 @@ export interface ElectronAPI {
   exchangeClaudeCode(code: string, connectionSlug: string): Promise<ClaudeOAuthResult>
   hasClaudeOAuthState(): Promise<boolean>
   clearClaudeOAuthState(): Promise<{ success: boolean }>
-  /** Launches official `vibe-acp --setup`; Vibe retains the subscription credential locally. */
+  /** Verifies or launches the official Antigravity CLI account sign-in. */
+  startGoogleAntigravitySetup(): Promise<{ success: boolean; error?: string }>
+  /** Runs Vibe's delegated ACP browser flow; Vibe retains the credential locally. */
   startMistralVibeSetup(): Promise<{ success: boolean; error?: string }>
   /** Defer onboarding setup — user chose "Setup later" */
   deferSetup(): Promise<{ success: boolean }>
@@ -498,12 +553,6 @@ export interface ElectronAPI {
     workspaceId: string,
     request: RemoteSupervisionRevokeRequest,
   ): Promise<NonNullable<WorkspaceSettings['remoteSupervision']>>
-  /** Read-only policy explanation. It never invokes a model or touches credentials. */
-  simulateRoutingPolicy(
-    workspaceId: string,
-    context?: import('@craft-agent/shared/config').RoutingPolicyContext,
-  ): Promise<import('@craft-agent/shared/config').RoutingPolicySimulation>
-
   // Folder dialog
   openFolderDialog(): Promise<string | null>
 
@@ -528,7 +577,7 @@ export interface ElectronAPI {
   // Sources
   getSources(workspaceId: string): Promise<LoadedSource[]>
   createSource(workspaceId: string, config: Partial<FolderSourceConfig>): Promise<FolderSourceConfig>
-  updateSourceConfig(workspaceId: string, sourceSlug: string, updates: Omit<Partial<FolderSourceConfig>, 'routingSensitivity'> & { routingSensitivity?: FolderSourceConfig['routingSensitivity'] | null }): Promise<FolderSourceConfig>
+  updateSourceConfig(workspaceId: string, sourceSlug: string, updates: Partial<FolderSourceConfig>): Promise<FolderSourceConfig>
   deleteSource(workspaceId: string, sourceSlug: string): Promise<void>
   startSourceOAuth(workspaceId: string, sourceSlug: string): Promise<{ success: boolean; error?: string }>
   saveSourceCredentials(workspaceId: string, sourceSlug: string, credential: string): Promise<void>
@@ -958,6 +1007,18 @@ export interface ProjectsNavigationState {
 }
 
 /**
+ * Workspace-wide Mission OS navigation state.
+ *
+ * Mission detail remains part of the Control Room instead of opening a chat or
+ * introducing another scheduler/source of truth.
+ */
+export interface MissionsNavigationState {
+  navigator: 'missions'
+  details: { type: 'mission'; missionId: string } | null
+  rightSidebar?: RightSidebarPanel
+}
+
+/**
  * Unified navigation state
  */
 export type NavigationState =
@@ -967,6 +1028,7 @@ export type NavigationState =
   | SkillsNavigationState
   | AutomationsNavigationState
   | ProjectsNavigationState
+  | MissionsNavigationState
 
 export const isSessionsNavigation = (
   state: NavigationState
@@ -991,6 +1053,10 @@ export const isAutomationsNavigation = (
 export const isProjectsNavigation = (
   state: NavigationState
 ): state is ProjectsNavigationState => state.navigator === 'projects'
+
+export const isMissionsNavigation = (
+  state: NavigationState
+): state is MissionsNavigationState => state.navigator === 'missions'
 
 export const DEFAULT_NAVIGATION_STATE: NavigationState = {
   navigator: 'sessions',
@@ -1022,6 +1088,12 @@ export const getNavigationStateKey = (state: NavigationState): string => {
       return `projects/project/${state.details.projectSlug}`
     }
     return 'projects'
+  }
+  if (state.navigator === 'missions') {
+    if (state.details?.type === 'mission') {
+      return `missions/mission/${state.details.missionId}`
+    }
+    return 'missions'
   }
   if (state.navigator === 'settings') {
     if (state.subpage === null) return 'settings'
@@ -1079,6 +1151,16 @@ export const parseNavigationStateKey = (key: string): NavigationState | null => 
       return { navigator: 'projects', details: { type: 'project', projectSlug } }
     }
     return { navigator: 'projects', details: null }
+  }
+
+  // Handle missions
+  if (key === 'missions') return { navigator: 'missions', details: null }
+  if (key.startsWith('missions/mission/')) {
+    const missionId = key.slice(17)
+    if (missionId) {
+      return { navigator: 'missions', details: { type: 'mission', missionId } }
+    }
+    return { navigator: 'missions', details: null }
   }
 
   // Handle settings

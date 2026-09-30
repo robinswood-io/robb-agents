@@ -42,7 +42,10 @@ import { validateSessionStatus } from '../statuses/validation.ts';
 import { debug } from '../utils/debug.ts';
 import { getStatusCategory } from '../statuses/storage.ts';
 import { readSessionHeader, readSessionJsonl } from './jsonl.ts';
-import { sessionPersistenceQueue } from './persistence-queue.ts';
+import {
+  isSessionPersistenceWriteInProgress,
+  sessionPersistenceQueue,
+} from './persistence-queue.ts';
 
 // Re-export types for convenience
 export type { SessionConfig } from './types.ts';
@@ -90,6 +93,11 @@ export function getSessionFilePath(workspaceRootPath: string, sessionId: string)
  * tmp file when the primary file is absent; otherwise remove stale sidecars.
  */
 function recoverInterruptedSessionWrite(sessionFile: string): void {
+  // The async persistence queue has already created (or is about to promote)
+  // its .tmp file. Treating that live sidecar as stale races the rename and
+  // produces ENOENT under normal reads/list refreshes.
+  if (isSessionPersistenceWriteInProgress(sessionFile)) return;
+
   const tmpFile = `${sessionFile}.tmp`;
   const backupFile = `${sessionFile}.bak`;
 
@@ -235,7 +243,13 @@ export async function createSession(
     taskNodeId?: string;
     taskDraft?: boolean;
     executionIsolation?: SessionConfig['executionIsolation'];
+    missionId?: string;
+    missionWorkItemId?: string;
+    missionDispatchId?: string;
+    missionRole?: SessionConfig['missionRole'];
     playbookSlug?: string;
+    createdByApp?: SessionConfig['createdByApp'];
+    lastUsedByApp?: SessionConfig['lastUsedByApp'];
   }
 ): Promise<SessionConfig> {
   ensureSessionsDir(workspaceRootPath);
@@ -257,6 +271,8 @@ export async function createSession(
     name: options?.name,
     createdAt: now,
     lastUsedAt: now,
+    createdByApp: options?.createdByApp,
+    lastUsedByApp: options?.lastUsedByApp,
     workingDirectory: options?.workingDirectory,
     sdkCwd,
     permissionMode: options?.permissionMode,
@@ -274,6 +290,10 @@ export async function createSession(
     taskNodeId: options?.taskNodeId,
     taskDraft: options?.taskDraft,
     executionIsolation: options?.executionIsolation,
+    missionId: options?.missionId,
+    missionWorkItemId: options?.missionWorkItemId,
+    missionDispatchId: options?.missionDispatchId,
+    missionRole: options?.missionRole,
     playbookSlug: options?.playbookSlug,
   };
 
@@ -311,6 +331,8 @@ export async function getOrCreateSessionById(
       name: existing.name,
       createdAt: existing.createdAt,
       lastUsedAt: existing.lastUsedAt,
+      createdByApp: existing.createdByApp,
+      lastUsedByApp: existing.lastUsedByApp,
       sdkCwd: existing.sdkCwd,
       workingDirectory: existing.workingDirectory,
     };
@@ -503,6 +525,8 @@ export async function clearSessionMessages(workspaceRootPath: string, sessionId:
     // Clear messages and SDK session ID but preserve metadata
     session.messages = [];
     session.sdkSessionId = undefined;
+    session.pendingTurnRecovery = undefined;
+    session.activeObjective = undefined;
     // Reset token usage to zero
     session.tokenUsage = {
       inputTokens: 0,
@@ -530,6 +554,8 @@ export async function getOrCreateLatestSession(workspaceRootPath: string): Promi
       name: latest.name,
       createdAt: latest.createdAt,
       lastUsedAt: latest.lastUsedAt,
+      createdByApp: latest.createdByApp,
+      lastUsedByApp: latest.lastUsedByApp,
     };
   }
   return createSession(workspaceRootPath);

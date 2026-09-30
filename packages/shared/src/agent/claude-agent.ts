@@ -13,7 +13,7 @@ import type { BackendConfig, PostInitResult, PermissionRequestType, SdkMcpServer
 // Plan types are used by UI components; not needed in craft-agent.ts since Safe Mode is user-controlled
 import { parseError, type AgentError } from './errors.ts';
 import { mapClaudeSdkAssistantError, type ClaudeSdkApiError } from './claude-sdk-error-mapper.ts';
-import { redactDiagnosticText, runErrorDiagnostics } from './diagnostics.ts';
+import { redactDiagnosticText, runErrorDiagnostics, type DiagnosticCode } from './diagnostics.ts';
 import { loadStoredConfig, loadConfigDefaults, type Workspace, type AuthType, getDefaultLlmConnection, getLlmConnection } from '../config/storage.ts';
 import { getValidClaudeOAuthToken } from '../auth/state.ts';
 import {
@@ -23,7 +23,7 @@ import {
 import type { McpClientPool } from '../mcp/mcp-pool.ts';
 import { loadPlanFromPath, type SessionConfig as Session } from '../sessions/storage.ts';
 import { loadProjectById, getProjectAssetsPath, listProjectAssets, getProjectMemoryPath, loadProjectMemory } from '../projects/storage.ts';
-import { DEFAULT_MODEL, isClaudeModel, isAdaptiveThinkingAlwaysOnModel, getDefaultSummarizationModel, getModelContextWindow } from '../config/models.ts';
+import { DEFAULT_MODEL, isClaudeModel, isAdaptiveThinkingAlwaysOnModel, getModelContextWindow } from '../config/models.ts';
 import { getCredentialManager } from '../credentials/index.ts';
 import { loadPreferences, formatPreferencesForPrompt, getCoAuthorPreference } from '../config/preferences.ts';
 import type { FileAttachment } from '../utils/files.ts';
@@ -94,6 +94,19 @@ import {
   isSpawnEnoent as detectSpawnEnoent,
 } from './spawn-helpers.ts';
 import { IMAGE_LIMITS } from '../utils/files.ts';
+
+/**
+ * Only infrastructure-shaped Claude subprocess failures enter automatic turn
+ * recovery. Credentials, billing, rate limits, and invalid input remain
+ * terminal so a process relaunch cannot create a hot retry loop.
+ */
+export function shouldAutomaticallyRecoverClaudeProcessInterruption(
+  code: DiagnosticCode,
+): boolean {
+  return code === 'service_unavailable'
+    || code === 'mcp_unreachable'
+    || code === 'unknown_error';
+}
 
 /** Image extensions that may need size-guard in PreToolUse (matches Read tool's image detection) */
 const IMAGE_READ_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'tiff']);
@@ -195,7 +208,7 @@ export interface ClaudeAgentConfig {
    * Returns last N user/assistant message pairs for context injection.
    */
   getRecoveryMessages?: () => RecoveryMessage[];
-  /** All parent messages for branch fork fallback (summarized via mini on fork failure). */
+  /** All parent messages for branch fork fallback (summarized with the selected session model). */
   getBranchFallbackMessages?: () => RecoveryMessage[];
   /** Branch seed messages for seeded-fresh-session context strategy. */
   getBranchSeedMessages?: () => RecoveryMessage[];
@@ -222,7 +235,7 @@ export interface ClaudeAgentConfig {
    * must not be clobbered by concurrent sessions.
    */
   envOverrides?: Record<string, string>;
-  /** Mini/utility model for summarization, title generation, and mini completions. */
+  /** Utility model for title/icon metadata generation only. */
   miniModel?: string;
   /** Centralized MCP client pool for source tool execution. */
   mcpPool?: McpClientPool;
@@ -723,6 +736,8 @@ export class ClaudeAgent extends BaseAgent {
     rememberForMinutes?: number;
     commandHash?: string;
     approvalTtlSeconds?: number;
+    sensitiveActionCategory?: import('./core/sensitive-external-action.ts').SensitiveExternalActionCategory;
+    sensitiveActionTargets?: string[];
   }) => void) | null = null;
 
   // Debug callback for status messages
@@ -886,13 +901,8 @@ export class ClaudeAgent extends BaseAgent {
       process.env[key] = value;
     }
 
-    // Pass mini model to SDK subprocess so built-in tools like WebFetch
-    // use the correct summarization model (instead of hardcoded Haiku).
-    // This is critical for custom providers where the default Haiku model ID
-    // doesn't exist on the provider's endpoint.
-    if (this.config.miniModel) {
-      process.env.ANTHROPIC_DEFAULT_HAIKU_MODEL = this.config.miniModel;
-    }
+    // Built-in content summaries inherit the selected task model.
+    process.env.ANTHROPIC_DEFAULT_HAIKU_MODEL = this.getModel();
 
     return { authInjected: true };
   }
@@ -1162,7 +1172,7 @@ export class ClaudeAgent extends BaseAgent {
       const resolvedCwd = this.resolveSpawnCwd({ isRetry: _isRetry, sessionId });
 
       const options: Options = {
-        ...getDefaultOptions(this.config.envOverrides),
+        ...getDefaultOptions({ ...this.config.envOverrides, ANTHROPIC_DEFAULT_HAIKU_MODEL: this.getModel() }),
         model: effectiveModel,
         // Capture stderr from SDK subprocess for error diagnostics
         // This helps identify why sessions fail with "process exited with code 1"
@@ -1346,6 +1356,9 @@ export class ClaudeAgent extends BaseAgent {
                 hasSourceActivation: !!this.onSourceActivationRequest,
                 permissionManager: this.permissionManager,
                 prerequisiteManager: this.prerequisiteManager,
+                preloadedSourceGuidePaths: this.sourceManager.getPreloadedSourceGuidePaths(),
+                currentUserRequest: this.getCurrentTurnUserMessage() ?? undefined,
+                externalActionPolicy: this.config.externalActionPolicy,
                 rtkContext,
                 onDebug: (msg) => this.onDebug?.(msg),
               });
@@ -1402,11 +1415,21 @@ export class ClaudeAgent extends BaseAgent {
                     try {
                       const activated = await this.onSourceActivationRequest(sourceSlug);
                       if (activated) {
-                        this.onDebug?.(`Source "${sourceSlug}" auto-enabled successfully, tools available next turn`);
+                        const currentUserMessage = this.getCurrentTurnUserMessage() ?? '';
+                        if (currentUserMessage) {
+                          // The current Claude query has a fixed tool catalogue. Queue
+                          // the existing host restart seam so the blocked tool result
+                          // triggers an automatic fresh turn with the source live.
+                          this.setPendingSourceActivationRestart({
+                            sourceSlug,
+                            userMessage: currentUserMessage,
+                          });
+                        }
+                        this.onDebug?.(`Source "${sourceSlug}" auto-enabled successfully; scheduling automatic fresh-turn retry`);
                         return {
                           continue: false,
                           decision: 'block' as const,
-                          reason: `STOP. Source "${sourceSlug}" has been activated successfully. The tools will be available on the next turn. Do NOT try other tool names or approaches. Respond to the user now: tell them the source is now active and ask them to send their request again.`,
+                          reason: `Source "${sourceSlug}" has been activated. This tool attempt is stopping so the host can retry the original request automatically in a fresh turn with the source available. Do not ask the user to resend it.`,
                         };
                       } else {
                         return {
@@ -1472,6 +1495,8 @@ export class ClaudeAgent extends BaseAgent {
                       rememberForMinutes: checkResult.rememberForMinutes,
                       commandHash: checkResult.commandHash,
                       approvalTtlSeconds: checkResult.approvalTtlSeconds,
+                      sensitiveActionCategory: checkResult.sensitiveActionCategory,
+                      sensitiveActionTargets: checkResult.sensitiveActionTargets,
                     });
                   } else {
                     this.pendingPermissions.delete(requestId);
@@ -2298,6 +2323,15 @@ This is a branched conversation. All prior messages in this conversation are par
 
           const safeStderrContext = stderrContext ? redactDiagnosticText(stderrContext) : undefined;
           const safeRawErrorMessage = redactDiagnosticText(rawErrorMsg);
+          if (shouldAutomaticallyRecoverClaudeProcessInterruption(diagnostics.code)) {
+            yield {
+              type: 'runtime_interrupted',
+              message: diagnostics.message,
+              code: 'process_exit',
+            };
+            yield { type: 'complete' };
+            return;
+          }
           yield {
             type: 'typed_error',
             error: {
@@ -2742,6 +2776,7 @@ This is a branched conversation. All prior messages in this conversation are par
     this.pinnedIncludeCoAuthoredBy = null;
     this.pinnedProjectContext = null;
     this.preferencesDriftNotified = false;
+    super.clearHistory();
   }
 
   /**
@@ -3008,7 +3043,7 @@ This is a branched conversation. All prior messages in this conversation are par
     const model = this.config.miniModel;
 
     const options = {
-      ...getDefaultOptions(this.config.envOverrides),
+      ...getDefaultOptions({ ...this.config.envOverrides, ANTHROPIC_DEFAULT_HAIKU_MODEL: this.getModel() }),
       model,
       maxTurns: 1,
       systemPrompt: 'Reply with ONLY the requested text. No explanation.', // Minimal - no Claude Code preset
@@ -3114,7 +3149,7 @@ This is a branched conversation. All prior messages in this conversation are par
   }
 
   /**
-   * Generate a mini-summarized fallback context from parent conversation messages.
+   * Generate fallback context from parent messages using the selected model.
    * Called when SDK-level branch fork fails and we need to inject parent context
    * into the retry without overflowing the context window with raw messages.
    */
@@ -3123,7 +3158,7 @@ This is a branched conversation. All prior messages in this conversation are par
     if (!messages || messages.length === 0) return null;
 
     try {
-      return await generateConversationSummary(messages, this.runMiniCompletion.bind(this));
+      return await generateConversationSummary(messages, async (prompt) => (await this.queryLlm({ prompt })).text);
     } catch (error) {
       debug(`[ClaudeAgent] Branch fallback mini summary failed: ${error}`);
       return null;
@@ -3135,11 +3170,17 @@ This is a branched conversation. All prior messages in this conversation are par
   // ============================================================
 
   async queryLlm(request: LLMQueryRequest): Promise<LLMQueryResult> {
-    const model = request.model ?? this.config.miniModel ?? getDefaultSummarizationModel();
+    const model = request.model ?? this.getModel();
 
     const options = {
-      ...getDefaultOptions(this.config.envOverrides),
+      ...getDefaultOptions({ ...this.config.envOverrides, ANTHROPIC_DEFAULT_HAIKU_MODEL: this.getModel() }),
       model,
+      ...resolveClaudeThinkingOptions({
+        thinkingLevel: this._thinkingLevel,
+        model,
+        providerType: this.config.providerType,
+        minimizeThinking: false,
+      }),
       // Reasoning-model outputs (Opus extended thinking) can span multiple SDK-counted
       // turns even with no tools exposed. Tool surface here is empty, so no tool-use loop risk.
       maxTurns: 10,

@@ -55,6 +55,7 @@ export function buildRestartRequiredSignature(input: BackendRuntimeSignatureInpu
     slug: connection?.slug,
     providerType: connection?.providerType,
     piAuthProvider: connection?.piAuthProvider,
+    googleCloudProject: connection?.googleCloudProject,
   }))
 }
 
@@ -71,6 +72,7 @@ export function buildBackendRuntimeSignature(input: BackendRuntimeSignatureInput
         providerType: connection.providerType,
         authType: connection.authType,
         defaultModel: connection.defaultModel,
+        googleCloudProject: connection.googleCloudProject,
         ...(isCompatProvider(connection.providerType)
           ? {
               baseUrl: connection.baseUrl,

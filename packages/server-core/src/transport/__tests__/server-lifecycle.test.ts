@@ -18,6 +18,8 @@ function createServer(opts?: {
   requireAuth?: boolean
   requireAuthoritativePrincipal?: boolean
   validateToken?: (token: string) => Promise<AuthenticationResult>
+  validateSessionCookie?: (cookie: string | null) => Promise<AuthenticationResult>
+  allowedSessionCookieOrigins?: readonly string[]
   authorizeRequest?: (
     context: RequestContext,
     channel: string,
@@ -29,6 +31,8 @@ function createServer(opts?: {
     port: 0,
     requireAuth: opts?.requireAuth ?? true,
     validateToken: opts?.validateToken ?? (async (t) => t === TEST_TOKEN),
+    validateSessionCookie: opts?.validateSessionCookie,
+    allowedSessionCookieOrigins: opts?.allowedSessionCookieOrigins,
     requireAuthoritativePrincipal: opts?.requireAuthoritativePrincipal,
     maxClients: opts?.maxClients,
     authorizeRequest: opts?.authorizeRequest,
@@ -263,6 +267,47 @@ describe('WsRpcServer lifecycle', () => {
     })
 
     expect(closeCode).toBe(4005)
+  })
+
+  it('accepts cookie authentication only from an explicitly allowed browser origin', async () => {
+    server = createServer({
+      validateSessionCookie: async (cookie) => cookie === 'craft_session=valid',
+      allowedSessionCookieOrigins: ['https://remote.example.com'],
+    })
+    await server.listen()
+    const url = `ws://127.0.0.1:${server.port}`
+
+    const connectWithOrigin = (origin: string): Promise<WebSocket> => new Promise((resolve, reject) => {
+      const ws = new WebSocket(url, {
+        headers: {
+          Cookie: 'craft_session=valid',
+          Origin: origin,
+        },
+      })
+      const timeout = setTimeout(() => reject(new Error('Handshake timeout')), 5_000)
+      ws.on('open', () => {
+        ws.send(JSON.stringify({
+          id: crypto.randomUUID(),
+          type: 'handshake',
+          protocolVersion: PROTOCOL_VERSION,
+        }))
+      })
+      ws.on('message', (data) => {
+        const message = JSON.parse(data.toString()) as { type?: string }
+        if (message.type !== 'handshake_ack') return
+        clearTimeout(timeout)
+        resolve(ws)
+      })
+      ws.on('close', (code) => {
+        clearTimeout(timeout)
+        reject(new Error(`WS closed: ${code}`))
+      })
+      ws.on('error', reject)
+    })
+
+    const trusted = await connectWithOrigin('https://remote.example.com')
+    openSockets.push(trusted)
+    await expect(connectWithOrigin('https://attacker.example')).rejects.toThrow('WS closed: 4005')
   })
 
   // -- Capacity tests --

@@ -229,7 +229,7 @@ export function SessionItem({
         </>
       }
       title={ctx.searchQuery ? highlightMatch(title, ctx.searchQuery) : title}
-      titleClassName={cn("text-[13px]", item.isAsyncOperationOngoing && "animate-shimmer-text")}
+      titleClassName={cn(isCompactMode ? "text-[14px] font-semibold" : "text-[13px]", item.isAsyncOperationOngoing && "animate-shimmer-text")}
       subtitle={previewText}
       titleSuffix={
         (hasSubagents || projectName || hasMessagingBinding) ? (

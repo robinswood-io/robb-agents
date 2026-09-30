@@ -9,7 +9,7 @@
 import { join, parse as parsePath } from 'path'
 import { existsSync, mkdirSync } from 'fs'
 import { validateFilePath, getWorkspaceAllowedDirs } from '@craft-agent/server-core/handlers'
-import { BrowserView, BrowserWindow, app, ipcMain, nativeTheme, session, shell, type Session as ElectronSession } from 'electron'
+import { BrowserWindow, WebContentsView, app, dialog, ipcMain, nativeTheme, session, shell, type Session as ElectronSession } from 'electron'
 import { mainLog } from './logger'
 import type { WindowManager } from './window-manager'
 import { BrowserCDP, type AccessibilitySnapshot, type ElementGeometry } from './browser-cdp'
@@ -19,9 +19,14 @@ import {
   type BrowserInstanceInfo,
 } from '../shared/types'
 import { DEFAULT_THEME, loadAppTheme, getAllowRemoteEvaluate } from '@craft-agent/shared/config'
+import { i18n } from '@craft-agent/shared/i18n'
 import { CodedError } from '@craft-agent/shared/protocol'
+import { redactSecretLikeMaterial } from '@craft-agent/shared/utils'
 import { getBrowserLiveFxCornerRadii } from '../shared/browser-live-fx'
-import { isBrowserPanePermissionAllowed } from './browser-pane-permissions'
+import {
+  isBrowserPanePermissionAllowed,
+  type BrowserPanePermissionContext,
+} from './browser-pane-permissions'
 import type {
   IBrowserPaneManager,
   BrowserInstanceSnapshot,
@@ -141,9 +146,9 @@ interface AgentControlLockState {
 interface BrowserInstance {
   id: string
   window: BrowserWindow
-  toolbarView: BrowserView
-  pageView: BrowserView
-  nativeOverlayView: BrowserView
+  toolbarView: WebContentsView
+  pageView: WebContentsView
+  nativeOverlayView: WebContentsView
   cdp: BrowserCDP
   currentUrl: string
   title: string
@@ -190,6 +195,16 @@ interface CreateBrowserInstanceOptions {
   ownerSessionId?: string
   workspaceId?: string | null
 }
+
+interface BrowserPanePermissionAutonomyState {
+  permissionMode?: string
+  externalActionPolicy?: string
+}
+
+type BrowserPanePermissionAutonomyResolver = (input: {
+  sessionId: string
+  workspaceId: string
+}) => BrowserPanePermissionAutonomyState | null
 
 export interface BrowserScreenshotOptions {
   mode?: 'raw' | 'agent'
@@ -338,8 +353,10 @@ export class BrowserPaneManager implements IBrowserPaneManager {
   private lastNetworkActivityByWebContentsId = new Map<number, number>()
   private popupWindowsByParentInstanceId = new Map<string, Set<BrowserWindow>>()
   private popupParentByWebContentsId = new Map<number, string>()
+  private popupWebContentsIdByWindow = new WeakMap<BrowserWindow, number>()
   private windowManager: WindowManager | null = null
   private sessionPathResolver: ((sessionId: string) => string | null) | null = null
+  private permissionAutonomyResolver: BrowserPanePermissionAutonomyResolver | null = null
 
   setWindowManager(windowManager: WindowManager): void {
     this.windowManager = windowManager
@@ -347,6 +364,14 @@ export class BrowserPaneManager implements IBrowserPaneManager {
 
   setSessionPathResolver(fn: (sessionId: string) => string | null): void {
     this.sessionPathResolver = fn
+  }
+
+  /**
+   * Resolve live session/workspace autonomy state without coupling this
+   * Electron-only manager to SessionManager internals.
+   */
+  setPermissionAutonomyResolver(fn: BrowserPanePermissionAutonomyResolver): void {
+    this.permissionAutonomyResolver = fn
   }
 
   onStateChange(callback: (info: BrowserInstanceInfo) => void): void {
@@ -387,7 +412,7 @@ export class BrowserPaneManager implements IBrowserPaneManager {
       minHeight: 500,
       show: false, // Always hidden until toolbar is painted (ready-to-show)
       backgroundColor: bgColor,
-      // Fully chromeless — toolbar is rendered in a dedicated BrowserView
+      // Fully chromeless — toolbar is rendered in a dedicated WebContentsView
       frame: false,
       webPreferences: {
         partition: SESSION_PARTITION,
@@ -398,7 +423,7 @@ export class BrowserPaneManager implements IBrowserPaneManager {
       },
     })
 
-    const toolbarView = new BrowserView({
+    const toolbarView = new WebContentsView({
       webPreferences: {
         preload: join(__dirname, 'browser-toolbar-preload.cjs'),
         partition: SESSION_PARTITION,
@@ -409,7 +434,7 @@ export class BrowserPaneManager implements IBrowserPaneManager {
       },
     })
 
-    const pageView = new BrowserView({
+    const pageView = new WebContentsView({
       webPreferences: {
         partition: SESSION_PARTITION,
         session: ses,
@@ -419,12 +444,7 @@ export class BrowserPaneManager implements IBrowserPaneManager {
       },
     })
 
-    const supportsMultiView = typeof window.addBrowserView === 'function' && typeof window.setTopBrowserView === 'function'
-    if (!supportsMultiView) {
-      throw new Error('[browser-pane] Native overlay requires BrowserWindow.addBrowserView + setTopBrowserView')
-    }
-
-    const nativeOverlayView = new BrowserView({
+    const nativeOverlayView = new WebContentsView({
       webPreferences: {
         partition: SESSION_PARTITION,
         session: ses,
@@ -434,7 +454,7 @@ export class BrowserPaneManager implements IBrowserPaneManager {
       },
     })
 
-    // Set BrowserView backgrounds to match theme so about:blank doesn't flash white
+    // Set WebContentsView backgrounds to match theme so about:blank doesn't flash white
     const toolbarWcWithBg = toolbarView.webContents as typeof toolbarView.webContents & { setBackgroundColor?: (color: string) => void }
     toolbarWcWithBg.setBackgroundColor?.('#00000000')
     const pageWcWithBg = pageView.webContents as typeof pageView.webContents & { setBackgroundColor?: (color: string) => void }
@@ -493,10 +513,11 @@ export class BrowserPaneManager implements IBrowserPaneManager {
       pageView.webContents.setUserAgent(sanitizedUa)
     }
 
-    window.addBrowserView(pageView)
-    window.addBrowserView(nativeOverlayView)
-    window.addBrowserView(toolbarView)
-    window.setTopBrowserView(toolbarView)
+    // Child view order is the z-order. Re-adding an existing child later brings it
+    // to the front, which replaces BrowserWindow.setTopBrowserView.
+    window.contentView.addChildView(pageView)
+    window.contentView.addChildView(nativeOverlayView)
+    window.contentView.addChildView(toolbarView)
     void this.loadNativeOverlayPage(instance)
 
     this.layoutAllViews(instance)
@@ -510,11 +531,15 @@ export class BrowserPaneManager implements IBrowserPaneManager {
     void this.loadToolbarPage(instance)
       .finally(() => {
         // Safety net: if Electron never fires ready-to-show, still unblock focus/show behavior.
-        if (!instance.toolbarReady) {
+        if (this.isLiveToolbarInstance(instance) && !instance.toolbarReady) {
           this.markToolbarReady(instance, 'toolbar-load-finalized')
         }
       })
     void this.loadEmptyStatePage(instance).catch((error) => {
+      if (this.isAbortedNavigationError(error)) {
+        mainLog.info(`[browser-pane] empty-state load superseded by navigation id=${instance.id}`)
+        return
+      }
       mainLog.warn(`[browser-pane] empty-state load failed id=${instance.id}: ${error instanceof Error ? error.message : String(error)}`)
       void pageView.webContents.loadURL('about:blank')
     })
@@ -821,7 +846,7 @@ export class BrowserPaneManager implements IBrowserPaneManager {
 
     // Re-entrancy guard: bail if a hide is already in progress. Prevents the
     // 'close' listener from re-entering hide() during teardown, which can crash
-    // Chromium's compositor when the BrowserView is mid-load.
+    // Chromium's compositor when the embedded WebContentsView is mid-load.
     if (instance.isHiding) return
 
     const win = instance.window
@@ -838,7 +863,7 @@ export class BrowserPaneManager implements IBrowserPaneManager {
     this.forceCloseToolbarMenu(instance, 'window-hide')
 
     // Cancel an in-flight page load before hiding. Hiding the window while the
-    // BrowserView is still loading can trigger a Chromium compositor assertion
+    // WebContentsView is still loading can trigger a Chromium compositor assertion
     // and kill the main process.
     if (instance.isLoading) {
       try {
@@ -854,7 +879,7 @@ export class BrowserPaneManager implements IBrowserPaneManager {
     instance.isVisible = false
 
     // Defer the state-change callback so native window teardown completes before
-    // listeners (which may touch BrowserView/Chromium internals) run.
+    // listeners (which may touch WebContentsView/Chromium internals) run.
     queueMicrotask(() => {
       instance.isHiding = false
       this.emitStateChange(instance)
@@ -1934,9 +1959,25 @@ export class BrowserPaneManager implements IBrowserPaneManager {
   }
 
   private reapplyAgentControlVisual(instance: BrowserInstance): void {
+    if (!this.isLiveInstance(instance)) return
+
     const active = !!instance.agentControl?.active
     this.applyAgentControlLock(instance, active)
     this.updateNativeOverlayState(instance)
+  }
+
+  private isBrowserWindowAlive(window: BrowserWindow): boolean {
+    try {
+      return !window.isDestroyed()
+    } catch {
+      return false
+    }
+  }
+
+  private isLiveInstance(instance: BrowserInstance): boolean {
+    return this.instances.get(instance.id) === instance
+      && !this.destroyingIds.has(instance.id)
+      && this.isBrowserWindowAlive(instance.window)
   }
 
   /** Resolve the app's current accent color as a concrete CSS value (not a var reference). */
@@ -2036,28 +2077,43 @@ export class BrowserPaneManager implements IBrowserPaneManager {
     const toolbarHeight = this.getToolbarEffectiveHeight(instance)
 
     instance.toolbarView.setBounds({ x: 0, y: 0, width, height: toolbarHeight })
-    instance.toolbarView.setAutoResize({ width: true, height: false })
+  }
+
+  private bringToolbarToFront(instance: BrowserInstance): void {
+    if (!this.isBrowserWindowAlive(instance.window)) return
+    // View.addChildView reorders an existing child to the top of the z-stack.
+    try {
+      instance.window.contentView.addChildView(instance.toolbarView)
+    } catch {
+      // Native BrowserWindow teardown can invalidate the content view between
+      // the liveness check and the reorder operation.
+    }
   }
 
   private updateNativeOverlayState(instance: BrowserInstance): void {
+    if (!this.isBrowserWindowAlive(instance.window)) return
+
+    try {
+      if (instance.nativeOverlayView.webContents.isDestroyed()) return
+    } catch {
+      return
+    }
+
     const control = instance.agentControl
     const agentActive = !!control?.active
     const menuActive = !!instance.toolbarMenuOverlayActive
     const shouldShow = agentActive || menuActive
 
-    if (!shouldShow || !instance.nativeOverlayReady || instance.window.isDestroyed()) {
+    if (!shouldShow || !instance.nativeOverlayReady) {
       instance.nativeOverlayView.setBounds({ x: 0, y: 0, width: 0, height: 0 })
-      if (!instance.window.isDestroyed()) {
-        instance.window.setTopBrowserView(instance.toolbarView)
-      }
+      this.bringToolbarToFront(instance)
       return
     }
 
     const [width, height] = instance.window.getContentSize()
     const overlayHeight = Math.max(100, height - TOOLBAR_HEIGHT)
     instance.nativeOverlayView.setBounds({ x: 0, y: TOOLBAR_HEIGHT, width, height: overlayHeight })
-    instance.nativeOverlayView.setAutoResize({ width: true, height: true })
-    instance.window.setTopBrowserView(instance.toolbarView)
+    this.bringToolbarToFront(instance)
 
     if (agentActive) {
       const label = this.getAgentControlLabel(control)
@@ -2097,22 +2153,36 @@ export class BrowserPaneManager implements IBrowserPaneManager {
   }
 
   private getWindowResizable(window: BrowserWindow): boolean {
-    return typeof window.isResizable === 'function' ? window.isResizable() : true
+    try {
+      return typeof window.isResizable === 'function' ? window.isResizable() : true
+    } catch {
+      return true
+    }
   }
 
-  private setWindowResizable(window: BrowserWindow, value: boolean): void {
-    if (typeof window.setResizable === 'function') {
-      window.setResizable(value)
+  private setWindowResizable(window: BrowserWindow, value: boolean): boolean {
+    try {
+      if (typeof window.setResizable === 'function') {
+        window.setResizable(value)
+      }
+      return true
+    } catch {
+      return false
     }
   }
 
   private applyAgentControlLock(instance: BrowserInstance, active: boolean): void {
     const wantsLock = active && !!instance.agentControl?.active
 
+    if (!this.isBrowserWindowAlive(instance.window)) {
+      instance.lockState.active = false
+      return
+    }
+
     if (wantsLock && !instance.lockState.active) {
       instance.lockState.previousResizable = this.getWindowResizable(instance.window)
-      this.setWindowResizable(instance.window, false)
-      instance.lockState.active = true
+      instance.lockState.active = this.setWindowResizable(instance.window, false)
+      if (!instance.lockState.active) return
       mainLog.info(`[browser-pane] interaction lock enabled id=${instance.id}`)
       return
     }
@@ -2156,16 +2226,13 @@ export class BrowserPaneManager implements IBrowserPaneManager {
   private layoutPageView(instance: BrowserInstance): void {
     const [width, height] = instance.window.getContentSize()
     instance.pageView.setBounds({ x: 0, y: TOOLBAR_HEIGHT, width, height: Math.max(100, height - TOOLBAR_HEIGHT) })
-    instance.pageView.setAutoResize({ width: true, height: true })
     this.updateNativeOverlayState(instance)
   }
 
   private layoutAllViews(instance: BrowserInstance): void {
     this.layoutToolbarView(instance)
     this.layoutPageView(instance)
-    if (!instance.window.isDestroyed()) {
-      instance.window.setTopBrowserView(instance.toolbarView)
-    }
+    this.bringToolbarToFront(instance)
   }
 
   private forceCloseToolbarMenu(instance: BrowserInstance, reason: string): void {
@@ -2202,6 +2269,14 @@ export class BrowserPaneManager implements IBrowserPaneManager {
     }
 
     await instance.pageView.webContents.loadFile(join(__dirname, `renderer/${BROWSER_EMPTY_STATE_PAGE}`))
+  }
+
+  private isAbortedNavigationError(error: unknown): boolean {
+    if (typeof error === 'object' && error !== null) {
+      const candidate = error as { code?: unknown; errno?: unknown }
+      if (candidate.code === 'ERR_ABORTED' || candidate.errno === -3) return true
+    }
+    return error instanceof Error && error.message.includes('ERR_ABORTED')
   }
 
   private async handleDeepLinkUrl(url: string): Promise<void> {
@@ -2270,6 +2345,8 @@ export class BrowserPaneManager implements IBrowserPaneManager {
     let lastError: unknown = null
 
     for (let attempt = 0; attempt <= TOOLBAR_LOAD_MAX_RETRIES; attempt++) {
+      if (!this.isLiveToolbarInstance(instance)) return
+
       try {
         if (VITE_DEV_SERVER_URL) {
           await instance.toolbarView.webContents.loadURL(`${VITE_DEV_SERVER_URL}/browser-toolbar.html?${query}`)
@@ -2285,6 +2362,8 @@ export class BrowserPaneManager implements IBrowserPaneManager {
         }
         return
       } catch (error) {
+        if (!this.isLiveToolbarInstance(instance)) return
+
         lastError = error
         const retrying = attempt < TOOLBAR_LOAD_MAX_RETRIES
         mainLog.warn(
@@ -2297,8 +2376,20 @@ export class BrowserPaneManager implements IBrowserPaneManager {
       }
     }
 
+    if (!this.isLiveToolbarInstance(instance)) return
+
     const errorText = lastError instanceof Error ? lastError.message : String(lastError ?? 'unknown error')
     await this.loadToolbarFallback(instance, errorText)
+  }
+
+  private isLiveToolbarInstance(instance: BrowserInstance): boolean {
+    if (!this.isLiveInstance(instance)) return false
+
+    try {
+      return !instance.toolbarView.webContents.isDestroyed()
+    } catch {
+      return false
+    }
   }
 
   private async loadToolbarFallback(instance: BrowserInstance, reason: string): Promise<void> {
@@ -2505,7 +2596,7 @@ export class BrowserPaneManager implements IBrowserPaneManager {
    * Extract a plain {@link BrowserInstanceSnapshot} from a live `BrowserInstance`.
    *
    * `this.getInstance(id)` returns the full instance, which has non-cloneable
-   * Electron native references (`window: BrowserWindow`, `pageView: BrowserView`,
+   * Electron native references (`window: BrowserWindow`, `pageView: WebContentsView`,
    * `toolbarView`, ...). When we ship the result back over the `__browser:invoke`
    * IPC channel, Electron's structured-clone serializer throws
    * "An object could not be cloned" — see the user-reported bug on the remote
@@ -3070,6 +3161,7 @@ export class BrowserPaneManager implements IBrowserPaneManager {
 
     popups.add(popupWindow)
     this.popupParentByWebContentsId.set(popupWcId, parentInstance.id)
+    this.popupWebContentsIdByWindow.set(popupWindow, popupWcId)
 
     const initialUrl = sourceUrl || popupWindow.webContents.getURL?.() || 'about:blank'
     mainLog.info(`[browser-pane] popup created parent=${parentInstance.id} popupWebContentsId=${popupWcId} url=${initialUrl}`)
@@ -3100,7 +3192,10 @@ export class BrowserPaneManager implements IBrowserPaneManager {
   }
 
   private unregisterPopupWindow(popupWindow: BrowserWindow, reason: 'closed' | 'parent_destroy' | 'reparented'): void {
-    const popupWcId = popupWindow.webContents.id
+    const popupWcId = this.popupWebContentsIdByWindow.get(popupWindow)
+    if (popupWcId === undefined) return
+
+    this.popupWebContentsIdByWindow.delete(popupWindow)
     const parentId = this.popupParentByWebContentsId.get(popupWcId)
     if (!parentId) return
 
@@ -3122,7 +3217,7 @@ export class BrowserPaneManager implements IBrowserPaneManager {
     if (!popups || popups.size === 0) return
 
     for (const popupWindow of Array.from(popups)) {
-      const popupWcId = popupWindow.webContents.id
+      const popupWcId = this.popupWebContentsIdByWindow.get(popupWindow) ?? -1
       this.unregisterPopupWindow(popupWindow, reason)
       try {
         if (!popupWindow.isDestroyed()) {
@@ -3177,6 +3272,27 @@ export class BrowserPaneManager implements IBrowserPaneManager {
   private setupSessionObservers(ses: ElectronSession): void {
     if (this.partitionObserversInitialized) return
     this.partitionObserversInitialized = true
+
+    ses.on('select-webauthn-account', (_event, details, callback) => {
+      void (async () => {
+        let credentialId: string | undefined
+        try {
+          credentialId = await this.selectWebAuthnAccount(details)
+        } catch (error) {
+          mainLog.warn(
+            `[browser-pane] WebAuthn account selection failed rp=${details.relyingPartyId} error=${error instanceof Error ? error.message : String(error)}`,
+          )
+        }
+
+        try {
+          callback(credentialId)
+        } catch (error) {
+          mainLog.warn(
+            `[browser-pane] WebAuthn account callback failed rp=${details.relyingPartyId} error=${error instanceof Error ? error.message : String(error)}`,
+          )
+        }
+      })()
+    })
 
     ses.webRequest.onBeforeRequest((details, callback) => {
       const wcId = details.webContentsId
@@ -3278,6 +3394,43 @@ export class BrowserPaneManager implements IBrowserPaneManager {
     })
   }
 
+  private async selectWebAuthnAccount(details: {
+    relyingPartyId: string
+    accounts: Electron.WebAuthnAccount[]
+    frame: Electron.WebFrameMain | null
+  }): Promise<string | undefined> {
+    if (details.accounts.length === 0) return undefined
+    if (details.accounts.length === 1) return details.accounts[0]?.credentialId
+
+    const accountButtons = details.accounts.map((account, index) => (
+      account.displayName
+      || account.name
+      || i18n.t('browser.passkeyAccountFallback', { number: index + 1 })
+    ))
+    const cancelLabel = i18n.t('common.cancel')
+    const parentWindow = Array.from(this.instances.values()).find((instance) => (
+      !instance.window.isDestroyed()
+      && instance.pageView.webContents.mainFrame === details.frame?.top
+    ))?.window
+
+    const options: Electron.MessageBoxOptions = {
+      type: 'question',
+      title: app.getName(),
+      message: i18n.t('browser.passkeyAccountPrompt', {
+        relyingPartyId: details.relyingPartyId,
+      }),
+      buttons: [...accountButtons, cancelLabel],
+      defaultId: 0,
+      cancelId: accountButtons.length,
+      noLink: true,
+    }
+    const result = parentWindow
+      ? await dialog.showMessageBox(parentWindow, options)
+      : await dialog.showMessageBox(options)
+
+    return details.accounts[result.response]?.credentialId
+  }
+
   private logPermissionDecision(kind: 'check' | 'request', permission: string, origin: string): void {
     const isNonBlockingNoise = permission === 'background-sync'
     const suffix = isNonBlockingNoise ? ' (non-blocking)' : ''
@@ -3289,13 +3442,65 @@ export class BrowserPaneManager implements IBrowserPaneManager {
     mainLog.warn(message)
   }
 
+  private getPermissionInstance(webContents: { id: number } | null): BrowserInstance | undefined {
+    if (!webContents) return undefined
+
+    const directInstance = this.getInstanceByWebContentsId(webContents.id)
+    if (directInstance) return directInstance
+
+    const parentInstanceId = this.popupParentByWebContentsId.get(webContents.id)
+    return parentInstanceId ? this.instances.get(parentInstanceId) : undefined
+  }
+
+  private getPermissionContext(
+    webContents: { id: number } | null,
+    requestingOrigin: string,
+  ): BrowserPanePermissionContext | undefined {
+    const instance = this.getPermissionInstance(webContents)
+    const agentControl = instance?.agentControl
+    const workspaceId = instance?.workspaceId
+
+    if (!instance
+      || !agentControl?.active
+      || instance.boundSessionId !== agentControl.sessionId
+      || !workspaceId
+      || !this.permissionAutonomyResolver) {
+      return undefined
+    }
+
+    const autonomy = this.permissionAutonomyResolver({
+      sessionId: agentControl.sessionId,
+      workspaceId,
+    })
+    if (!autonomy) return undefined
+
+    return {
+      agentControlled: true,
+      permissionMode: autonomy.permissionMode,
+      externalActionPolicy: autonomy.externalActionPolicy,
+      requestingOrigin,
+      topLevelUrl: instance.currentUrl,
+    }
+  }
+
+  private isPermissionAllowed(
+    webContents: { id: number } | null,
+    permission: string,
+    requestingOrigin: string,
+  ): boolean {
+    return isBrowserPanePermissionAllowed(
+      permission,
+      this.getPermissionContext(webContents, requestingOrigin),
+    )
+  }
+
   private setupSessionPermissions(ses: ElectronSession): void {
     if (this.partitionPermissionsInitialized) return
     this.partitionPermissionsInitialized = true
 
     if (typeof ses.setPermissionCheckHandler === 'function') {
-      ses.setPermissionCheckHandler((_webContents, permission, requestingOrigin) => {
-        const allowed = isBrowserPanePermissionAllowed(permission)
+      ses.setPermissionCheckHandler((webContents, permission, requestingOrigin) => {
+        const allowed = this.isPermissionAllowed(webContents, permission, requestingOrigin)
         if (!allowed) {
           this.logPermissionDecision('check', permission, requestingOrigin)
         }
@@ -3304,13 +3509,10 @@ export class BrowserPaneManager implements IBrowserPaneManager {
     }
 
     if (typeof ses.setPermissionRequestHandler === 'function') {
-      ses.setPermissionRequestHandler((_webContents, permission, callback, details) => {
-        const allowed = isBrowserPanePermissionAllowed(permission)
+      ses.setPermissionRequestHandler((webContents, permission, callback, details) => {
+        const requestingOrigin = details.requestingUrl || 'unknown'
+        const allowed = this.isPermissionAllowed(webContents, permission, requestingOrigin)
         if (!allowed) {
-          const requestingOrigin = 'requestingOrigin' in details
-            && typeof details.requestingOrigin === 'string'
-            ? details.requestingOrigin
-            : 'unknown'
           this.logPermissionDecision('request', permission, requestingOrigin)
         }
         callback(allowed)
@@ -3519,17 +3721,21 @@ export class BrowserPaneManager implements IBrowserPaneManager {
       }
 
       const mappedLevel: BrowserConsoleEntry['level'] = level >= 3 ? 'error' : level === 2 ? 'warn' : level === 1 ? 'info' : 'log'
+      // Browser console messages can contain full OAuth callback URLs emitted
+      // by third-party pages. Redact before retaining the entry so neither the
+      // browser console tool nor the main logger receives raw callback data.
+      const sanitizedMessage = redactSecretLikeMaterial(message)
       instance.consoleLogs.push({
         timestamp: Date.now(),
         level: mappedLevel,
-        message,
+        message: sanitizedMessage,
       })
       if (instance.consoleLogs.length > MAX_CONSOLE_LOG_ENTRIES) {
         instance.consoleLogs.splice(0, instance.consoleLogs.length - MAX_CONSOLE_LOG_ENTRIES)
       }
 
       if (level >= 2) {
-        mainLog.warn(`[browser-pane] console id=${instance.id} level=${level}: ${message}`)
+        mainLog.warn(`[browser-pane] console id=${instance.id} level=${level}: ${sanitizedMessage}`)
       }
     })
 

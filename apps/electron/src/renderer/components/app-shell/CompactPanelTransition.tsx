@@ -44,16 +44,39 @@ export function CompactPanelTransition({
   isDetailActive,
   children,
 }: CompactPanelTransitionProps) {
+  const isOffscreen = role === 'navigator' ? isDetailActive : !isDetailActive
+  const containerRef = React.useRef<HTMLDivElement>(null)
+  const wasOffscreen = React.useRef(isOffscreen)
   const reduceMotion = useReducedMotion()
   const transition = reduceMotion ? REDUCED_TWEEN : SNAPPY_SPRING
 
-  const isOffscreen = role === 'navigator' ? isDetailActive : !isDetailActive
   // Navigator parallaxes (-30%) to feel layered behind the incoming detail panel.
   // Detail slides fully off (100%) so it never bleeds in over the navigator.
   const offscreenX = role === 'navigator' ? '-30%' : '100%'
 
+  React.useLayoutEffect(() => {
+    containerRef.current?.toggleAttribute('inert', isOffscreen)
+  }, [isOffscreen])
+
+  React.useEffect(() => {
+    const becameActive = wasOffscreen.current && !isOffscreen
+    wasOffscreen.current = isOffscreen
+    if (!becameActive) return
+
+    const frame = requestAnimationFrame(() => {
+      const activeElement = document.activeElement
+      if (activeElement && activeElement !== document.body && !activeElement.closest('[inert]')) return
+      const target = containerRef.current?.querySelector<HTMLElement>(
+        'button:not([disabled]), a[href], input:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      )
+      target?.focus({ preventScroll: true })
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [isOffscreen])
+
   return (
     <motion.div
+      ref={containerRef}
       className="absolute left-0 right-0 bottom-0"
       style={{
         top: 'var(--compact-panel-stack-top, 0px)',
@@ -65,6 +88,8 @@ export function CompactPanelTransition({
         pointerEvents: isOffscreen ? 'none' : 'auto',
       }}
       aria-hidden={isOffscreen || undefined}
+      data-compact-panel-role={role}
+      data-compact-panel-active={isOffscreen ? 'false' : 'true'}
       initial={false}
       animate={{ x: isOffscreen ? offscreenX : '0%' }}
       transition={transition}

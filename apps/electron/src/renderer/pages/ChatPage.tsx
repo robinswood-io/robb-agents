@@ -14,6 +14,7 @@ import { PanelHeader } from '@/components/app-shell/PanelHeader'
 import { SessionMenu } from '@/components/app-shell/SessionMenu'
 import { CompactSessionMenu } from '@/components/app-shell/CompactSessionMenu'
 import { SessionInfoPopover } from '@/components/app-shell/SessionInfoPopover'
+import { MissionControlPopover } from '@/components/app-shell/MissionControlPopover'
 import { RenameDialog } from '@/components/ui/rename-dialog'
 import { toast } from 'sonner'
 import { PanelHeaderCenterButton } from '@/components/ui/PanelHeaderCenterButton'
@@ -58,13 +59,11 @@ const ChatPage = React.memo(function ChatPage({ sessionId }: ChatPageProps) {
     hydrateDraftAttachments,
     onInputChange,
     onAttachmentsChange,
-    enabledSources,
     skills,
     labels,
     onSessionLabelsChange,
     enabledModes,
     sessionStatuses,
-    onSessionSourcesChange,
     onRenameSession,
     onFlagSession,
     onUnflagSession,
@@ -281,14 +280,16 @@ const ChatPage = React.memo(function ChatPage({ sessionId }: ChatPageProps) {
     onAttachmentsChange(sessionId, attachments)
   }, [sessionId, onAttachmentsChange])
 
-  // Session model change handler - persists per-session model and connection
+  // Kept for internal compatibility; the user-facing composer no longer
+  // exposes a model override because Robinswood routes models automatically.
   const handleModelChange = React.useCallback((model: string, connection?: string) => {
     if (activeWorkspaceId) {
       window.electronAPI.setSessionModel(sessionId, activeWorkspaceId, model, connection)
     }
   }, [sessionId, activeWorkspaceId])
 
-  // Session connection change handler - can only change before first message
+  // Provider handoff is allowed between idle turns. The server prepares a
+  // continuity summary and rejects the change while a turn is processing.
   const handleConnectionChange = React.useCallback(async (connectionSlug: string) => {
     try {
       await window.electronAPI.sessionCommand(sessionId, { type: 'setConnection', connectionSlug })
@@ -633,9 +634,18 @@ const ChatPage = React.memo(function ChatPage({ sessionId }: ChatPageProps) {
   }, [isTaskOrchestrator, handleEditTask, t])
 
   const primaryHeaderAction = isCompactMode ? compactInfoButton : shareButton
-  const headerActions = editTaskButton ? (
+  const missionButton = activeWorkspaceId && session && !session.missionRole ? (
+    <MissionControlPopover
+      workspaceId={activeWorkspaceId}
+      sessionId={session.id}
+      cwd={workingDirectory}
+      projectId={session.projectId}
+    />
+  ) : undefined
+  const headerActions = editTaskButton || missionButton ? (
     <div className="flex items-center gap-1.5">
       {editTaskButton}
+      {missionButton}
       {primaryHeaderAction}
     </div>
   ) : primaryHeaderAction
@@ -759,12 +769,10 @@ const ChatPage = React.memo(function ChatPage({ sessionId }: ChatPageProps) {
                 onInputChange={handleInputChange}
                 attachmentsValue={attachmentsValue}
                 onAttachmentsChange={handleAttachmentsChange}
-                sources={enabledSources}
                 skills={skills}
                 sessionStatuses={sessionStatuses}
                 onSessionStatusChange={handleSessionStatusChange}
                 workspaceId={activeWorkspaceId || undefined}
-                onSourcesChange={(slugs) => onSessionSourcesChange?.(sessionId, slugs)}
                 workingDirectory={sessionMeta.workingDirectory}
                 onWorkingDirectoryChange={handleWorkingDirectoryChange}
                 messagesLoading={messageLoadState.messagesLoading || (messagesRetrying && !messageLoadState.messagesReady)}
@@ -836,14 +844,12 @@ const ChatPage = React.memo(function ChatPage({ sessionId }: ChatPageProps) {
             onInputChange={handleInputChange}
             attachmentsValue={attachmentsValue}
             onAttachmentsChange={handleAttachmentsChange}
-            sources={enabledSources}
             skills={skills}
             labels={labels}
             onLabelsChange={(newLabels) => onSessionLabelsChange?.(sessionId, newLabels)}
             sessionStatuses={sessionStatuses}
             onSessionStatusChange={handleSessionStatusChange}
             workspaceId={activeWorkspaceId || undefined}
-            onSourcesChange={(slugs) => onSessionSourcesChange?.(sessionId, slugs)}
             workingDirectory={workingDirectory}
             onWorkingDirectoryChange={handleWorkingDirectoryChange}
             sessionFolderPath={session?.sessionFolderPath}

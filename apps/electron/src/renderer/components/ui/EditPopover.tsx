@@ -107,8 +107,8 @@ export interface EditConfig {
   exampleKey?: string
   /** i18n key for overridePlaceholder */
   overridePlaceholderKey?: string
-  /** Model tier hint: 'fast' uses the connection's mini model, 'default' uses the primary model */
-  model?: 'fast' | 'default'
+  /** Explicit model ID; omitted to inherit the workspace's configured model. */
+  model?: string
   /** Optional system prompt preset for mini agent (e.g., 'mini' for focused edits) */
   systemPromptPreset?: 'default' | 'mini'
   /** When true, executes inline within the popover instead of opening a new window */
@@ -135,7 +135,6 @@ const EDIT_CONFIGS: Record<EditContextKey, (location: string) => EditConfig> = {
     example: "Allow running 'make build' in Explore mode",
     displayLabelKey: 'editPopover.label.permissionSettings',
     exampleKey: 'editPopover.example.workspacePermissions',
-    model: 'default',
     systemPromptPreset: 'mini',
     inlineExecution: true,
   }),
@@ -156,7 +155,6 @@ const EDIT_CONFIGS: Record<EditContextKey, (location: string) => EditConfig> = {
     example: 'Allow git fetch command',
     displayLabelKey: 'editPopover.label.defaultPermissions',
     exampleKey: 'editPopover.example.defaultPermissions',
-    model: 'default',
     systemPromptPreset: 'mini',
     inlineExecution: true,
   }),
@@ -177,7 +175,6 @@ const EDIT_CONFIGS: Record<EditContextKey, (location: string) => EditConfig> = {
     example: 'Add error handling guidelines',
     displayLabelKey: 'editPopover.label.skillInstructions',
     exampleKey: 'editPopover.example.skillInstructions',
-    model: 'fast',
     systemPromptPreset: 'mini',
     inlineExecution: true,
   }),
@@ -196,7 +193,6 @@ const EDIT_CONFIGS: Record<EditContextKey, (location: string) => EditConfig> = {
     example: 'Update the skill description',
     displayLabelKey: 'editPopover.label.skillMetadata',
     exampleKey: 'editPopover.example.skillMetadata',
-    model: 'fast',
     systemPromptPreset: 'mini',
     inlineExecution: true,
   }),
@@ -215,7 +211,6 @@ const EDIT_CONFIGS: Record<EditContextKey, (location: string) => EditConfig> = {
     example: 'Add rate limit documentation',
     displayLabelKey: 'editPopover.label.sourceDocumentation',
     exampleKey: 'editPopover.example.sourceGuide',
-    model: 'fast',
     systemPromptPreset: 'mini',
     inlineExecution: true,
   }),
@@ -234,7 +229,6 @@ const EDIT_CONFIGS: Record<EditContextKey, (location: string) => EditConfig> = {
     example: 'Update the display name',
     displayLabelKey: 'editPopover.label.sourceConfiguration',
     exampleKey: 'editPopover.example.sourceConfig',
-    model: 'default',
     systemPromptPreset: 'mini',
     inlineExecution: true,
   }),
@@ -253,7 +247,6 @@ const EDIT_CONFIGS: Record<EditContextKey, (location: string) => EditConfig> = {
     example: 'Allow list operations in Explore mode',
     displayLabelKey: 'editPopover.label.sourcePermissions',
     exampleKey: 'editPopover.example.sourcePermissions',
-    model: 'default',
     systemPromptPreset: 'mini',
     inlineExecution: true,
   }),
@@ -274,7 +267,6 @@ const EDIT_CONFIGS: Record<EditContextKey, (location: string) => EditConfig> = {
     example: 'Only allow read operations (list, get, search)',
     displayLabelKey: 'editPopover.label.toolPermissions',
     exampleKey: 'editPopover.example.sourceToolPermissions',
-    model: 'default',
     systemPromptPreset: 'mini',
     inlineExecution: true,
   }),
@@ -294,7 +286,6 @@ const EDIT_CONFIGS: Record<EditContextKey, (location: string) => EditConfig> = {
     example: 'Add coding style preferences',
     displayLabelKey: 'editPopover.label.preferencesNotes',
     exampleKey: 'editPopover.example.preferencesNotes',
-    model: 'fast',
     systemPromptPreset: 'mini',
     inlineExecution: true,
   }),
@@ -306,7 +297,7 @@ const EDIT_CONFIGS: Record<EditContextKey, (location: string) => EditConfig> = {
       filePath: `${location}/sources/`, // location is the workspace root path
       context:
         'The user wants to add a new source to their workspace. ' +
-        'Sources can be MCP servers (HTTP/SSE or stdio), REST APIs, or local filesystems. ' +
+        'Sources can be MCP servers (Streamable HTTP or stdio), REST APIs, or local filesystems. ' +
         'Ask clarifying questions if needed: What service? MCP or API? Auth type? ' +
         'Create the source folder and config.json in the workspace sources directory. ' +
         'Follow the patterns in ~/.craft-agent/docs/sources.md. ' +
@@ -347,7 +338,8 @@ const EDIT_CONFIGS: Record<EditContextKey, (location: string) => EditConfig> = {
       context:
         'The user is viewing MCP sources and wants to add a new MCP server. ' +
         'Default to creating an MCP source (type: "mcp") unless they specify otherwise. ' +
-        'MCP servers can use HTTP/SSE transport (remote) or stdio transport (local subprocess). ' +
+        'MCP servers can use Streamable HTTP (remote) or stdio (local subprocess). ' +
+        'Do not create legacy SSE transports; existing SSE configs may only be preserved or migrated. ' +
         'Ask about the service they want to connect to and whether it\'s a remote URL or local command. ' +
         'Create the source folder and config.json in the workspace sources directory. ' +
         'Follow the patterns in ~/.craft-agent/docs/sources.md. ' +
@@ -417,7 +409,6 @@ const EDIT_CONFIGS: Record<EditContextKey, (location: string) => EditConfig> = {
     example: 'Add a "Blocked" status',
     displayLabelKey: 'editPopover.label.statusConfiguration',
     exampleKey: 'editPopover.example.editStatuses',
-    model: 'fast',               // Use fast model for quick config edits
     systemPromptPreset: 'mini',   // Use focused mini prompt
     inlineExecution: true,        // Execute inline in popover
   }),
@@ -440,7 +431,6 @@ const EDIT_CONFIGS: Record<EditContextKey, (location: string) => EditConfig> = {
     example: 'Add a "Bug" label with red color',
     displayLabelKey: 'editPopover.label.labelConfiguration',
     exampleKey: 'editPopover.example.editLabels',
-    model: 'fast',               // Use fast model for quick config edits
     systemPromptPreset: 'mini',   // Use focused mini prompt
     inlineExecution: true,        // Execute inline in popover
   }),
@@ -462,7 +452,6 @@ const EDIT_CONFIGS: Record<EditContextKey, (location: string) => EditConfig> = {
     example: 'Add a rule to detect GitHub issue URLs',
     displayLabelKey: 'editPopover.label.autoApplyRules',
     exampleKey: 'editPopover.example.editAutoRules',
-    model: 'fast',               // Use fast model for quick config edits
     systemPromptPreset: 'mini',   // Use focused mini prompt
     inlineExecution: true,        // Execute inline in popover
   }),
@@ -486,7 +475,6 @@ const EDIT_CONFIGS: Record<EditContextKey, (location: string) => EditConfig> = {
     displayLabelKey: 'editPopover.label.addLabel',
     exampleKey: 'editPopover.example.addLabel',
     overridePlaceholderKey: 'editPopover.placeholder.addLabel',
-    model: 'fast',               // Use fast model for quick config edits
     systemPromptPreset: 'mini',   // Use focused mini prompt
     inlineExecution: true,        // Execute inline in popover
   }),
@@ -509,7 +497,6 @@ const EDIT_CONFIGS: Record<EditContextKey, (location: string) => EditConfig> = {
     example: 'Add a "Stale" view for sessions inactive > 7 days',
     displayLabelKey: 'editPopover.label.viewsConfiguration',
     exampleKey: 'editPopover.example.editViews',
-    model: 'fast',               // Use fast model for quick config edits
     systemPromptPreset: 'mini',   // Use focused mini prompt
     inlineExecution: true,        // Execute inline in popover
   }),
@@ -532,7 +519,6 @@ const EDIT_CONFIGS: Record<EditContextKey, (location: string) => EditConfig> = {
     example: 'Add an icon for my custom CLI tool "deploy"',
     displayLabelKey: 'editPopover.label.toolIcons',
     exampleKey: 'editPopover.example.editToolIcons',
-    model: 'fast',               // Use fast model for quick config edits
     systemPromptPreset: 'mini',   // Use focused mini prompt
     inlineExecution: true,        // Execute inline in popover
   }),
@@ -551,7 +537,6 @@ const EDIT_CONFIGS: Record<EditContextKey, (location: string) => EditConfig> = {
     example: 'Change the cron schedule to every 30 minutes',
     displayLabelKey: 'editPopover.label.automationConfiguration',
     exampleKey: 'editPopover.example.automationConfig',
-    model: 'default',
     systemPromptPreset: 'mini',
     inlineExecution: true,
   }),
@@ -610,8 +595,8 @@ export interface EditPopoverProps {
    * - Absolute path string: Use this specific path
    */
   workingDirectory?: string | 'user_default' | 'none'
-  /** Model tier hint: 'fast' uses the connection's mini model, 'default' uses the primary model */
-  model?: 'fast' | 'default'
+  /** Explicit model ID; omitted to inherit the workspace's configured model. */
+  model?: string
   /** System prompt preset for mini agent (e.g., 'mini' for focused edits) */
   systemPromptPreset?: 'default' | 'mini'
   /** Width of the popover (default: 320) */
@@ -776,7 +761,7 @@ export function EditPopover({
   const pendingCredential = usePendingCredential(inlineSessionId || '')
 
   // Model state for ChatDisplay (starts with prop value, can be changed by user)
-  const [currentModel, setCurrentModel] = useState(model || 'haiku')
+  const [currentModel, setCurrentModel] = useState(model ?? '')
 
   // Create a stub session for ChatDisplay when no real session exists yet
   // This allows showing the input before the first message is sent
@@ -949,7 +934,7 @@ export function EditPopover({
   // Reset state when popover opens
   useEffect(() => {
     if (open) {
-      setCurrentModel(model || 'haiku')
+      setCurrentModel(model ?? '')
       resetInlineSession()
     }
   }, [open, model, resetInlineSession])
@@ -963,7 +948,7 @@ export function EditPopover({
     let sessionId = inlineSessionId
     if (!sessionId && workspace?.id) {
       const createOptions: CreateSessionOptions = {
-        model: model || 'fast',
+        model,
         systemPromptPreset: systemPromptPreset || 'mini',
         permissionMode,
         workingDirectory,
@@ -972,6 +957,7 @@ export function EditPopover({
       const newSession = await onCreateSession(workspace.id, createOptions)
       sessionId = newSession.id
       setInlineSessionId(sessionId)
+      setCurrentModel(newSession.model ?? model ?? '')
     }
 
     // Send message via App context (includes optimistic user message update)

@@ -14,6 +14,30 @@ import {
 const noConn = new Map<string, string>()
 
 describe('task-spec-form round-trip', () => {
+  it('persists a canonical description independently from the execution goal', () => {
+    const subtasks = specToSubtasks([{ id: 'a', title: 'A', prompt: 'p' }]);
+    const described = buildSpec({
+      title: 'T',
+      description: 'Cockpit summary',
+      goal: 'Detailed execution objective',
+      projectId: '',
+      orchModel: '',
+      subtasks,
+    }, noConn);
+    const blank = buildSpec({
+      title: 'T',
+      description: '   ',
+      goal: 'g',
+      projectId: '',
+      orchModel: '',
+      subtasks,
+    }, noConn);
+
+    expect(described.description).toBe('Cockpit summary');
+    expect(described.goal).toBe('Detailed execution objective');
+    expect('description' in blank).toBe(false);
+  });
+
   it('preserves generated node ids so ${nodes.<id>.output} references survive generate → edit → create', () => {
     // A generated spec where one node references another by its (non-title-slug) id.
     const generated: SpecNode[] = [
@@ -196,6 +220,38 @@ describe('task-spec-form round-trip', () => {
       noConn,
     )
     expect(spec.max_iterations).toBe(0)
+  })
+
+  it('preserves explicit reflective-repair overrides without copying backend defaults', () => {
+    const autonomy = {
+      reflection_memory_entries: 2,
+      reflection_output_chars: 750,
+      stagnation_limit: 1,
+    }
+    const spec = buildSpec(
+      {
+        title: 'T',
+        goal: 'g',
+        autonomy,
+        projectId: '',
+        orchModel: '',
+        subtasks: [{ uid: 'a', title: 'A', prompt: 'p', dependsOn: [] }],
+      },
+      noConn,
+    )
+    expect(spec.autonomy).toEqual(autonomy)
+
+    const defaulted = buildSpec(
+      {
+        title: 'T',
+        goal: 'g',
+        projectId: '',
+        orchModel: '',
+        subtasks: [{ uid: 'a', title: 'A', prompt: 'p', dependsOn: [] }],
+      },
+      noConn,
+    )
+    expect('autonomy' in defaulted).toBe(false)
   })
 
   it('keeps a preserved id even when it collides with a manual subtask title slug', () => {

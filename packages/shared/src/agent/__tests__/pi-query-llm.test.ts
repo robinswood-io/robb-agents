@@ -54,6 +54,21 @@ async function flushMicrotasks(): Promise<void> {
 }
 
 describe('PiAgent.queryLlm — subprocess RPC round-trip', () => {
+  it('inherits the current selected model instead of the configured metadata mini model', async () => {
+    const agent = new PiAgent(createConfig({ model: 'pi/gpt-5.5', miniModel: 'pi/gpt-5-mini' }));
+    const { sent } = installFakeSubprocess(agent);
+    agent.setModel('pi/gpt-5.6-sol');
+    const pending = agent.queryLlm({ prompt: 'Review the task result' });
+    await flushMicrotasks();
+    expect((sent[0]!.request as LLMQueryRequest).model).toBe('pi/gpt-5.6-sol');
+    (agent as any).handleLine(JSON.stringify({
+      type: 'llm_query_result', id: sent[0]!.id,
+      result: { text: 'reviewed', model: 'pi/gpt-5.6-sol' },
+    }));
+    expect((await pending).text).toBe('reviewed');
+    agent.destroy();
+  });
+
   it('propagates the full LLMQueryRequest shape over the llm_query RPC unchanged', async () => {
     const agent = new PiAgent(createConfig());
     const { sent } = installFakeSubprocess(agent);

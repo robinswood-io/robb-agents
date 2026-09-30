@@ -94,6 +94,8 @@ export interface ToolResultEvent {
 export interface CompleteEvent {
   type: 'complete'
   sessionId: string
+  /** Authoritative server-side stop reason (legacy servers may omit it). */
+  reason?: 'complete' | 'interrupted' | 'error' | 'timeout'
   tokenUsage?: Session['tokenUsage']
   /** Explicit unread flag - set by main process based on viewing state */
   hasUnread?: boolean

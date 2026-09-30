@@ -64,6 +64,31 @@ export const KEYS = {
 
 export type StorageKey = typeof KEYS[keyof typeof KEYS]
 
+const WEB_EPHEMERAL_KEYS = new Set<StorageKey>([
+  KEYS.recentWorkingDirs,
+  KEYS.sessionFilesExpandedFolders,
+  KEYS.tabs,
+  KEYS.workspaceUrl,
+  KEYS.lastSelectedSessionId,
+  KEYS.turnCardExpansion,
+  KEYS.expandedFolders,
+  KEYS.collapsedSidebarItems,
+  KEYS.collapsedSessionGroups,
+  KEYS.viewFilters,
+  KEYS.labelFilter,
+  KEYS.listFilter,
+])
+
+export function isWebEphemeralStorageKey(key: StorageKey): boolean {
+  return WEB_EPHEMERAL_KEYS.has(key)
+}
+
+function shouldUsePersistentStorage(key: StorageKey): boolean {
+  const isRemoteWeb = typeof document !== 'undefined'
+    && document.documentElement.dataset.robbRuntime === 'web'
+  return !isRemoteWeb || !isWebEphemeralStorageKey(key)
+}
+
 /**
  * Build the full prefixed key.
  * Supports dynamic suffixes like 'panel-layout:chat' or 'tabs-workspace123'
@@ -78,6 +103,7 @@ function buildKey(key: string, suffix?: string): string {
  * Returns fallback if key doesn't exist or parsing fails.
  */
 export function get<T>(key: StorageKey, fallback: T, suffix?: string): T {
+  if (!shouldUsePersistentStorage(key)) return fallback
   try {
     const item = localStorage.getItem(buildKey(key, suffix))
     if (item === null) return fallback
@@ -91,6 +117,7 @@ export function get<T>(key: StorageKey, fallback: T, suffix?: string): T {
  * Set a value in localStorage with JSON stringification.
  */
 export function set<T>(key: StorageKey, value: T, suffix?: string): void {
+  if (!shouldUsePersistentStorage(key)) return
   try {
     localStorage.setItem(buildKey(key, suffix), JSON.stringify(value))
   } catch (error) {
@@ -109,6 +136,7 @@ export function remove(key: StorageKey, suffix?: string): void {
  * Get raw string value (for non-JSON data like atomWithStorage compatibility).
  */
 export function getRaw(key: StorageKey, suffix?: string): string | null {
+  if (!shouldUsePersistentStorage(key)) return null
   return localStorage.getItem(buildKey(key, suffix))
 }
 
@@ -116,6 +144,7 @@ export function getRaw(key: StorageKey, suffix?: string): string | null {
  * Set raw string value (for non-JSON data like atomWithStorage compatibility).
  */
 export function setRaw(key: StorageKey, value: string, suffix?: string): void {
+  if (!shouldUsePersistentStorage(key)) return
   localStorage.setItem(buildKey(key, suffix), value)
 }
 

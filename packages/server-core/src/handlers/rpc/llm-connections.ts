@@ -108,6 +108,13 @@ export function registerLlmConnectionsHandlers(server: RpcServer, deps: HandlerD
       if (setup.modelSelectionMode !== undefined) {
         updates.modelSelectionMode = setup.modelSelectionMode
       }
+      if (setup.googleCloudProject !== undefined) {
+        const projectId = setup.googleCloudProject.trim()
+        if (projectId && !/^[a-z][a-z0-9-]{4,28}[a-z0-9]$/.test(projectId)) {
+          return { success: false, error: 'Google Cloud project ID must be 6-30 lowercase letters, digits, or hyphens, starting with a letter.' }
+        }
+        updates.googleCloudProject = projectId || undefined
+      }
 
       const customEndpoint = hasConfiguredBaseUrl ? setup.customEndpoint : undefined
       const isCustomEndpointCompat = !!customEndpoint

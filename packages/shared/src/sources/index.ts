@@ -23,6 +23,13 @@ export type {
   ApiRenewEndpoint,
 } from './types.ts';
 
+export {
+  LEGACY_SSE_TRANSPORT_ERROR,
+  assertMcpTransportWriteAllowed,
+  evaluateMcpTransportWrite,
+} from './mcp-transport-policy.ts';
+export type { McpTransportWriteDecision } from './mcp-transport-policy.ts';
+
 // Constants and helpers
 export {
   API_OAUTH_PROVIDERS,

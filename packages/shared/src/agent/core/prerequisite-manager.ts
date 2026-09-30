@@ -12,7 +12,7 @@
 
 import { existsSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { resolve, join } from 'node:path';
+import { isAbsolute, join, relative, resolve } from 'node:path';
 import { expandPath } from './path-processor.ts';
 import { getBrowserToolEnabled } from '../../config/storage.ts';
 
@@ -39,6 +39,8 @@ export interface PrerequisiteCheckResult {
 export interface PrerequisiteManagerConfig {
   workspaceRootPath: string;
   onDebug?: (message: string) => void;
+  /** The stable system prompt already contains the complete browser contract. */
+  browserGuideLoadedInContext?: boolean;
 }
 
 // ============================================================
@@ -49,7 +51,10 @@ export interface PrerequisiteManagerConfig {
 const EXEMPT_SLUGS = new Set(['session', 'craft-agents-docs']);
 
 /** Global browser tools docs path required before browser tool usage. */
-const BROWSER_TOOLS_DOC_PATH = resolve(join(homedir(), '.craft-agent', 'docs', 'browser-tools.md'));
+function getBrowserToolsDocPath(): string {
+  const configDir = process.env.CRAFT_CONFIG_DIR || join(homedir(), '.craft-agent');
+  return resolve(join(configDir, 'docs', 'browser-tools.md'));
+}
 
 // ============================================================
 // Rules
@@ -103,7 +108,8 @@ const RULES: PrerequisiteRule[] = [
       getBrowserToolEnabled() &&
       (toolName === 'browser_tool' || toolName === 'mcp__session__browser_tool'),
     resolveRequiredPath: () => {
-      return existsSync(BROWSER_TOOLS_DOC_PATH) ? BROWSER_TOOLS_DOC_PATH : null;
+      const browserToolsDocPath = getBrowserToolsDocPath();
+      return existsSync(browserToolsDocPath) ? browserToolsDocPath : null;
     },
     blockMessage:
       'You must read the browser tools guide before using browser automation. Please read the file at {filePath} first, then retry.',
@@ -120,6 +126,7 @@ export class PrerequisiteManager {
   private static readonly MAX_REJECTIONS = 1;
 
   private readFiles: Set<string> = new Set();
+  private persistentContextFiles: Set<string> = new Set();
   private rejectionCounts: Map<string, number> = new Map();
   private pendingSkillPaths: Set<string> = new Set();
   private workspaceRootPath: string;
@@ -128,6 +135,15 @@ export class PrerequisiteManager {
   constructor(config: PrerequisiteManagerConfig) {
     this.workspaceRootPath = config.workspaceRootPath;
     this.onDebug = config.onDebug;
+
+    if (config.browserGuideLoadedInContext) {
+      const browserToolsDocPath = getBrowserToolsDocPath();
+      if (existsSync(browserToolsDocPath)) {
+        this.persistentContextFiles.add(browserToolsDocPath);
+        this.readFiles.add(browserToolsDocPath);
+        this.onDebug?.(`Prerequisite: browser guide already loaded in stable system context ${browserToolsDocPath}`);
+      }
+    }
   }
 
   /**
@@ -140,6 +156,39 @@ export class PrerequisiteManager {
       const expanded = expandPath(path);
       this.pendingSkillPaths.add(expanded);
       this.onDebug?.(`Prerequisite: registered skill prerequisite ${expanded}`);
+    }
+  }
+
+  /**
+   * Mark source guides whose complete contents have already been injected into
+   * the model's current context.
+   *
+   * This is the host-side counterpart to preloading guides before a turn. It is
+   * deliberately limited to `sources/{slug}/guide.md`: callers cannot use this
+   * API to bypass strict browser or dynamic skill prerequisites. The state is
+   * cleared by {@link resetReadState}, so a compaction requires reinjection.
+   */
+  markSourceGuidesLoadedInContext(filePaths: readonly string[]): void {
+    const sourcesRoot = resolve(this.workspaceRootPath, 'sources');
+
+    for (const filePath of filePaths) {
+      const expanded = expandPath(filePath, this.workspaceRootPath);
+      const relativePath = relative(sourcesRoot, expanded);
+      const segments = relativePath.split(/[\\/]/).filter(Boolean);
+      const isSourceGuide = relativePath.length > 0
+        && !relativePath.startsWith('..')
+        && !isAbsolute(relativePath)
+        && segments.length === 2
+        && segments[1] === 'guide.md';
+
+      if (!isSourceGuide || !existsSync(expanded)) {
+        this.onDebug?.(`Prerequisite: ignored invalid preloaded source guide ${expanded}`);
+        continue;
+      }
+
+      this.readFiles.add(expanded);
+      this.rejectionCounts.delete(expanded);
+      this.onDebug?.(`Prerequisite: source guide already loaded in context ${expanded}`);
     }
   }
 
@@ -260,6 +309,9 @@ export class PrerequisiteManager {
     const count = this.readFiles.size;
     const skillCount = this.pendingSkillPaths.size;
     this.readFiles.clear();
+    for (const filePath of this.persistentContextFiles) {
+      this.readFiles.add(filePath);
+    }
     this.rejectionCounts.clear();
     this.pendingSkillPaths.clear();
     this.onDebug?.(`Prerequisite: reset read state (cleared ${count} reads, ${skillCount} skill prerequisites)`);

@@ -432,18 +432,6 @@
     "model": "nvidia/nemotron-3-super-120b-a12b:free"
   },
   {
-    "legacy_id": "provider-routing-guard",
-    "name": "Guard routage providers LLM",
-    "triggerType": "SchedulerTick",
-    "cron": "*/30 * * * *",
-    "timezone": "Europe/Paris",
-    "enabled": true,
-    "workflow_id": "rbw.provider-routing-guard",
-    "task_queue": "watchdog",
-    "llm_connection": "openrouter",
-    "model": "nvidia/nemotron-3-super-120b-a12b:free"
-  },
-  {
     "legacy_id": "campaigns-autonomy-loop",
     "name": "Boucle d’autonomie des campagnes OSS",
     "triggerType": "SchedulerTick",

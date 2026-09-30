@@ -7,7 +7,7 @@
  *
  * Coverage exercised here: project-colored tiles, a `needs-review` tile parked
  * in the In Progress column (status independent from column), expanded vs
- * collapsed subtasks, auto-routed Haiku/Sonnet sub-models, a no-project tile,
+ * collapsed subtasks, explicit Haiku/Sonnet subtask models, a no-project tile,
  * and a `cancelled` tile in Done.
  */
 

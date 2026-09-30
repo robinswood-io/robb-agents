@@ -21,19 +21,25 @@
  */
 
 import { createServer, type Server as HttpServer } from 'node:http';
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-} from '@modelcontextprotocol/sdk/types.js';
+  createMcpHandler,
+  Server as McpProtocolServer,
+  type McpHttpHandler,
+} from '@modelcontextprotocol/server';
+import {
+  localhostHostValidation,
+  localhostOriginValidation,
+  toNodeHandler,
+  type NodeMcpRequestHandler,
+} from '@modelcontextprotocol/node';
+import type { Tool } from '@modelcontextprotocol/client';
 import type { McpClientPool } from './mcp-pool.ts';
 
 export class McpPoolServer {
   private pool: McpClientPool;
   private httpServer: HttpServer | null = null;
-  private mcpServer: Server | null = null;
-  private transport: StreamableHTTPServerTransport | null = null;
+  private mcpHandler: McpHttpHandler | null = null;
+  private nodeHandler: NodeMcpRequestHandler | null = null;
   private debugFn: ((msg: string) => void) | undefined;
   private _port = 0;
 
@@ -63,12 +69,23 @@ export class McpPoolServer {
       return this.url;
     }
 
-    // Create a single MCP Server + Streamable HTTP transport pair (stateless mode)
-    this.transport = new StreamableHTTPServerTransport({
-      sessionIdGenerator: undefined, // Stateless — no session tracking
+    // The v2 handler classifies each request and serves both protocol eras:
+    // modern 2026-07-28 requests are stateless and legacy 2025 requests use
+    // the SDK's stateless compatibility path. A fresh protocol instance is
+    // created per request so no identity or capabilities leak across callers.
+    this.mcpHandler = createMcpHandler(
+      () => this.createMcpServer(),
+      {
+        legacy: 'stateless',
+        onerror: (error) => this.debug(`MCP handler error: ${error.message}`),
+      },
+    );
+    this.nodeHandler = toNodeHandler(this.mcpHandler, {
+      onerror: (error) => this.debug(`MCP Node adapter error: ${error.message}`),
     });
-    this.mcpServer = this.createMcpServer();
-    await this.mcpServer.connect(this.transport);
+
+    const validateHost = localhostHostValidation();
+    const validateOrigin = localhostOriginValidation();
 
     this.httpServer = createServer(async (req, res) => {
       const url = new URL(req.url || '/', `http://127.0.0.1`);
@@ -78,8 +95,11 @@ export class McpPoolServer {
         return;
       }
 
-      // Route all methods (POST, GET, DELETE) through the Streamable HTTP transport
-      await this.transport!.handleRequest(req, res);
+      // The endpoint is loopback-only, and the guards prevent a hostile web
+      // origin or DNS-rebinding Host header from reaching the MCP handler.
+      if (!validateHost(req, res) || !validateOrigin(req, res)) return;
+
+      await this.nodeHandler!(req, res);
     });
 
     await new Promise<void>((resolve, reject) => {
@@ -104,29 +124,26 @@ export class McpPoolServer {
    *   exposed here:  craft__search_spaces
    *   Codex sees:    mcp__sources__craft__search_spaces
    */
-  private createMcpServer(): Server {
-    const server = new Server(
+  private createMcpServer(): McpProtocolServer {
+    const server = new McpProtocolServer(
       { name: 'craft-pool-proxy', version: '1.0.0' },
       { capabilities: { tools: {} } }
     );
 
     // List tools — proxy from pool, strip `mcp__` prefix
-    server.setRequestHandler(ListToolsRequestSchema, async () => {
+    server.setRequestHandler('tools/list', async () => {
       const proxyDefs = this.pool.getProxyToolDefs();
       return {
         tools: proxyDefs.map(def => ({
           name: def.name.replace(/^mcp__/, ''),
           description: def.description,
-          inputSchema: def.inputSchema as {
-            type: 'object';
-            properties?: Record<string, unknown>;
-          },
+          inputSchema: def.inputSchema as Tool['inputSchema'],
         })),
       };
     });
 
     // Call tool — add `mcp__` prefix back before routing through pool
-    server.setRequestHandler(CallToolRequestSchema, async (request) => {
+    server.setRequestHandler('tools/call', async (request) => {
       const { name, arguments: args } = request.params;
       const internalName = `mcp__${name}`;
       this.debug(`Tool call: ${name} → ${internalName}`);
@@ -156,14 +173,10 @@ export class McpPoolServer {
    * Stop the HTTP server and close the transport.
    */
   async stop(): Promise<void> {
-    if (this.transport) {
-      await this.transport.close().catch(() => {});
-      this.transport = null;
-    }
-
-    if (this.mcpServer) {
-      await this.mcpServer.close().catch(() => {});
-      this.mcpServer = null;
+    if (this.mcpHandler) {
+      await this.mcpHandler.close().catch(() => {});
+      this.mcpHandler = null;
+      this.nodeHandler = null;
     }
 
     if (this.httpServer) {

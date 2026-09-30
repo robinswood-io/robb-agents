@@ -6,7 +6,6 @@ import {
   ArrowUp,
   Square,
   Check,
-  DatabaseZap,
   ChevronDown,
   ChevronUp,
   AlertCircle,
@@ -25,7 +24,6 @@ import {
   InlineMentionMenu,
   useInlineMention,
   type MentionItem,
-  type MentionItemType,
 } from '@/components/ui/mention-menu'
 import {
   InlineLabelMenu,
@@ -62,14 +60,11 @@ import {
 } from '@config/llm-connections'
 import { useOptionalAppShellContext } from '@/context/AppShellContext'
 import { EditPopover, getEditConfig } from '@/components/ui/EditPopover'
-import { SourceAvatar } from '@/components/ui/source-avatar'
-import { SourceSelectorPopover } from '@/components/ui/SourceSelectorPopover'
-import { CompactSourceSelector } from '@/components/ui/CompactSourceSelector'
 import { CompactWorkingDirectorySelector } from '@/components/ui/CompactWorkingDirectorySelector'
 import { ConnectionIcon } from '@/components/icons/ConnectionIcon'
 import { FreeFormInputContextBadge } from './FreeFormInputContextBadge'
 import { derivePickerMode } from './picker-mode'
-import type { FileAttachment, LoadedSource, LoadedSkill } from '../../../../shared/types'
+import type { FileAttachment, LoadedSkill } from '../../../../shared/types'
 import {
   permissionModeAfterPlanApproval,
   type PermissionMode,
@@ -80,6 +75,7 @@ import { hasOpenOverlay } from '@/lib/overlay-detection'
 import { ToolbarStatusSlot } from './ToolbarStatusSlot'
 import { buildPlanApprovalMessage } from '../plan-approval-message'
 import { shouldHandleScopedInputEvent } from './input-event-guards'
+import { readUsableViewportHeight, subscribeToViewportHeight } from './viewport-height'
 import { clearPendingFocusForSession, consumePendingFocusForSession } from './focus-input-events'
 import {
   getRecentWorkingDirs,
@@ -172,13 +168,6 @@ export interface FreeFormInputProps {
   onHeightChange?: (height: number) => void
   /** Callback when focus state changes */
   onFocusChange?: (focused: boolean) => void
-  // Source selection
-  /** Available sources (enabled only) */
-  sources?: LoadedSource[]
-  /** Currently enabled source slugs for this session */
-  enabledSourceSlugs?: string[]
-  /** Callback when source selection changes */
-  onSourcesChange?: (slugs: string[]) => void
   // Skill selection (for @mentions)
   /** Available skills for @mention autocomplete */
   skills?: LoadedSkill[]
@@ -234,10 +223,10 @@ export interface FreeFormInputProps {
    * behavior.
    */
   enableCompactModelPicker?: boolean
-  // Connection selection (hierarchical connection → model selector)
-  /** Current LLM connection slug (locked after first message) */
+  // Explicit connection, model, and reasoning choices.
+  /** Current LLM connection slug. */
   currentConnection?: string
-  /** Callback when connection changes (only works when session is empty) */
+  /** Callback when the provider changes between idle turns. */
   onConnectionChange?: (connectionSlug: string) => void
   /** When true, the session's locked connection has been removed */
   connectionUnavailable?: boolean
@@ -282,9 +271,6 @@ export function FreeFormInput({
   unstyled = false,
   onHeightChange,
   onFocusChange,
-  sources = [],
-  enabledSourceSlugs = [],
-  onSourcesChange,
   skills = [],
   labels = [],
   sessionLabels = [],
@@ -419,6 +405,7 @@ export function FreeFormInput({
     return llmConnections.find(c => c.slug === effectiveConnection) ?? null
   }, [llmConnections, effectiveConnection])
 
+  const selectorDisplayName = currentModelDisplayName
 
   // Access sessionStatuses and onSessionStatusChange from context for the # menu state picker
   const sessionStatuses = appShellCtx?.sessionStatuses ?? []
@@ -507,23 +494,6 @@ export function FreeFormInput({
     onAttachmentsChangeRef.current?.(attachments)
   }, [attachments])
 
-  // Optimistic state for source selection - updates UI immediately before IPC round-trip completes
-  const [optimisticSourceSlugs, setOptimisticSourceSlugs] = React.useState(enabledSourceSlugs)
-
-  // Sync from prop when server state changes (reconciles after IPC or on external updates)
-  // Use content comparison (not reference) to avoid infinite loops with empty arrays
-  const prevEnabledSourceSlugsRef = React.useRef(enabledSourceSlugs)
-  React.useEffect(() => {
-    const prev = prevEnabledSourceSlugsRef.current
-    const changed = enabledSourceSlugs.length !== prev.length ||
-      enabledSourceSlugs.some((slug, i) => slug !== prev[i])
-
-    if (changed) {
-      setOptimisticSourceSlugs(enabledSourceSlugs)
-      prevEnabledSourceSlugsRef.current = enabledSourceSlugs
-    }
-  }, [enabledSourceSlugs])
-
   // Sync from parent when inputValue changes externally (e.g., switching sessions)
   const prevInputValueRef = React.useRef(coerceInputText(inputValue))
   React.useEffect(() => {
@@ -565,7 +535,6 @@ export function FreeFormInput({
 
   const [isDraggingOver, setIsDraggingOver] = React.useState(false)
   const [loadingCount, setLoadingCount] = React.useState(0)
-  const [sourceDropdownOpen, setSourceDropdownOpen] = React.useState(false)
   const [isFocused, setIsFocused] = React.useState(false)
   const [inputMaxHeight, setInputMaxHeight] = React.useState(540)
   const [modelDropdownOpen, setModelDropdownOpen] = React.useState(false)
@@ -600,18 +569,16 @@ export function FreeFormInput({
 
   // Calculate max height: min(66% of window height, 540px)
   React.useEffect(() => {
-    const updateMaxHeight = () => {
-      const maxFromWindow = Math.floor(window.innerHeight * 0.66)
+    const updateMaxHeight = (viewportHeight = readUsableViewportHeight()) => {
+      const maxFromWindow = Math.floor(viewportHeight * 0.66)
       setInputMaxHeight(Math.min(maxFromWindow, 540))
     }
     updateMaxHeight()
-    window.addEventListener('resize', updateMaxHeight)
-    return () => window.removeEventListener('resize', updateMaxHeight)
+    return subscribeToViewportHeight(updateMaxHeight)
   }, [])
 
   const dragCounterRef = React.useRef(0)
   const containerRef = React.useRef<HTMLDivElement>(null)
-  const sourceButtonRef = React.useRef<HTMLButtonElement>(null)
   const fileInputRef = React.useRef<HTMLInputElement>(null)
 
   // Merge refs for RichTextInput
@@ -966,29 +933,16 @@ export function FreeFormInput({
     homeDir,
   })
 
-  // Handle mention selection (sources, skills, files)
-  const handleMentionSelect = React.useCallback((item: MentionItem) => {
-    // For sources: enable the source immediately
-    if (item.type === 'source' && item.source && onSourcesChange) {
-      const slug = item.source.config.slug
-      if (!optimisticSourceSlugs.includes(slug)) {
-        const newSlugs = [...optimisticSourceSlugs, slug]
-        setOptimisticSourceSlugs(newSlugs)
-        onSourcesChange(newSlugs)
-      }
-    }
+  const handleInlineMentionSideEffect = React.useCallback(() => undefined, [])
 
-    // Files via @ mention in text are sufficient context for the agent.
-    // Skills also don't need special handling beyond text insertion.
-  }, [optimisticSourceSlugs, onSourcesChange])
-
-  // Inline mention hook (for skills, sources, and files)
+  // Source activation is automatic. The chat @ menu remains focused on skills
+  // and files, which are explicit user-provided context.
   const inlineMention = useInlineMention({
     inputRef: richInputRef,
     skills,
-    sources,
+    sources: [],
     basePath: workingDirectory,
-    onSelect: handleMentionSelect,
+    onSelect: handleInlineMentionSideEffect,
     // Use workspace slug (not UUID) for SDK skill qualification
     workspaceId: workspaceSlug,
   })
@@ -1255,19 +1209,10 @@ export function FreeFormInput({
     // Tutorial may disable sending to guide user through specific steps
     if (disableSend) return false
 
-    // Parse all @mentions (skills, sources, folders)
+    // Parse explicit @mentions (skills and folders). Sources are activated by
+    // the runtime when the agent needs them, not by a composer selection.
     const skillSlugs = skills.map(s => s.slug)
-    const sourceSlugs = sources.map(s => s.config.slug)
-    const mentions = parseMentions(input, skillSlugs, sourceSlugs)
-
-    // Enable any mentioned sources that aren't already enabled
-    if (mentions.sources.length > 0 && onSourcesChange) {
-      const newSlugs = [...new Set([...optimisticSourceSlugs, ...mentions.sources])]
-      if (newSlugs.length > optimisticSourceSlugs.length) {
-        setOptimisticSourceSlugs(newSlugs)
-        onSourcesChange(newSlugs)
-      }
-    }
+    const mentions = parseMentions(input, skillSlugs, [])
 
     const attachmentSnapshot = attachments
 
@@ -1290,7 +1235,7 @@ export function FreeFormInput({
     })
 
     return true
-  }, [input, attachments, followUpItems, disabled, disableSend, onInputChange, onAttachmentsChange, onSubmit, skills, sources, optimisticSourceSlugs, onSourcesChange, onWorkingDirectoryChange, homeDir])
+  }, [input, attachments, followUpItems, disabled, disableSend, onInputChange, onAttachmentsChange, onSubmit, skills, onWorkingDirectoryChange, homeDir])
 
   // Listen for craft:submit-input events (simulate pressing the Send button)
   React.useEffect(() => {
@@ -1402,23 +1347,7 @@ export function FreeFormInput({
     setInput(nextValue)
     syncToParent(nextValue) // Debounced sync to parent for draft persistence
 
-    // Sync source selection when mentions are removed from input
-    if (onSourcesChange) {
-      const sourceSlugs = sources.map(s => s.config.slug)
-
-      // Parse mentions from previous and current input
-      const prevMentions = parseMentions(prevValue, [], sourceSlugs)
-      const currMentions = parseMentions(nextValue, [], sourceSlugs)
-
-      // Remove sources that were mentioned before but not anymore
-      const removedSources = prevMentions.sources.filter(slug => !currMentions.sources.includes(slug))
-      if (removedSources.length > 0) {
-        const newSlugs = optimisticSourceSlugs.filter(slug => !removedSources.includes(slug))
-        setOptimisticSourceSlugs(newSlugs)
-        onSourcesChange(newSlugs)
-      }
-    }
-  }, [syncToParent, sources, optimisticSourceSlugs, onSourcesChange])
+  }, [syncToParent])
 
   // Handle input with cursor position (for menu detection)
   const handleRichInput = React.useCallback((value: string, cursorPosition: number) => {
@@ -1427,7 +1356,7 @@ export function FreeFormInput({
     // Update inline slash command state
     inlineSlash.handleInputChange(nextValue, cursorPosition)
 
-    // Update inline mention state (for @mentions - skills, sources, folders)
+    // Update inline mention state (for @mentions - skills and folders)
     inlineMention.handleInputChange(nextValue, cursorPosition)
 
     // Update inline label state (for #labels)
@@ -1574,7 +1503,7 @@ export function FreeFormInput({
           position={inlineSlash.position}
         />
 
-        {/* Inline Mention Autocomplete (skills, sources, files) */}
+        {/* Inline Mention Autocomplete (skills and files) */}
         <InlineMentionMenu
           open={inlineMention.isOpen}
           onOpenChange={(open) => !open && inlineMention.close()}
@@ -1749,7 +1678,6 @@ export function FreeFormInput({
           placeholder={effectivePlaceholder}
           disabled={disabled}
           skills={skills}
-          sources={sources}
           workspaceId={workspaceSlug}
           className="pl-5 pr-4 pt-4 pb-3 overflow-y-auto min-h-[88px]"
           style={{ maxHeight: inputMaxHeight }}
@@ -1766,7 +1694,10 @@ export function FreeFormInput({
             sessionId={sessionId}
           />
 
-          <div className={cn("flex items-center gap-1 px-2 py-2", !compactMode && "border-t border-border/50")}>
+          <div className={cn(
+            "flex items-center gap-1",
+            compactMode ? "px-2.5 py-2" : "border-t border-border/50 px-2 py-2",
+          )}>
           {/* Hidden file input for attach button (shared by compact and desktop) */}
           <input
             ref={fileInputRef}
@@ -1776,11 +1707,11 @@ export function FreeFormInput({
             onChange={handleFileInputChange}
           />
 
-          {/* Compact mode: permission mode drawer + standard icon badges for attach/sources/working dir.
+          {/* Compact mode: permission mode drawer + standard icon badges for attach/working dir.
               Wrapper absorbs all squeeze so the model label truncates first and the send button stays
               anchored to the right (craft-agents-oss#798). overflow-hidden is safe — Radix Drawer /
               dropdowns inside render via portals, so they aren't clipped. */}
-          {compactMode && (
+          {compactMode && !isCollapsedInCompact && (
           <div className="flex items-center gap-1 min-w-0 shrink overflow-hidden">
           {onPermissionModeChange && (
             <CompactPermissionModeSelector
@@ -1799,6 +1730,7 @@ export function FreeFormInput({
               isEmptySession={isEmptySession}
               connectionUnavailable={connectionUnavailable}
               contextStatus={contextStatus}
+              disabled={isProcessing}
             />
           )}
           <FreeFormInputContextBadge
@@ -1810,81 +1742,11 @@ export function FreeFormInput({
             isExpanded={false}
             hasSelection={attachments.length > 0}
             showChevron={false}
+            iconOnly
             onClick={handleAttachClick}
             tooltip={t("chat.attachFilesTooltip")}
             disabled={disabled}
           />
-          {onSourcesChange && (
-            <div className="relative shrink min-w-0">
-              <FreeFormInputContextBadge
-                buttonRef={sourceButtonRef}
-                icon={
-                  optimisticSourceSlugs.length === 0 ? (
-                    <DatabaseZap className="h-4 w-4" />
-                  ) : (
-                    <div className="flex items-center -ml-0.5">
-                      {(() => {
-                        const enabledSources = sources.filter(s => optimisticSourceSlugs.includes(s.config.slug))
-                        const displaySources = enabledSources.slice(0, 3)
-                        const remainingCount = enabledSources.length - 3
-                        return (
-                          <>
-                            {displaySources.map((source, index) => (
-                              <div
-                                key={source.config.slug}
-                                className={cn("relative h-5 w-5 rounded-[4px] bg-background shadow-minimal flex items-center justify-center", index > 0 && "-ml-1")}
-                                style={{ zIndex: index + 1 }}
-                              >
-                                <SourceAvatar source={source} size="xs" />
-                              </div>
-                            ))}
-                            {remainingCount > 0 && (
-                              <div
-                                className="-ml-1 h-5 w-5 rounded-[4px] bg-background shadow-minimal flex items-center justify-center text-[8px] font-medium text-muted-foreground"
-                                style={{ zIndex: displaySources.length + 1 }}
-                              >
-                                +{remainingCount}
-                              </div>
-                            )}
-                          </>
-                        )
-                      })()}
-                    </div>
-                  )
-                }
-                label={
-                  optimisticSourceSlugs.length === 0
-                    ? t("chat.sourcesTooltip")
-                    : (() => {
-                        const enabledSources = sources.filter(s => optimisticSourceSlugs.includes(s.config.slug))
-                        if (enabledSources.length === 1) return enabledSources[0].config.name
-                        return t("chat.sourcesCount", { count: enabledSources.length })
-                      })()
-                }
-                isExpanded={false}
-                hasSelection={optimisticSourceSlugs.length > 0}
-                showChevron={false}
-                isOpen={sourceDropdownOpen}
-                disabled={disabled}
-                onClick={() => setSourceDropdownOpen(prev => !prev)}
-                tooltip={t("chat.sourcesTooltip")}
-              />
-              <CompactSourceSelector
-                open={sourceDropdownOpen}
-                onOpenChange={setSourceDropdownOpen}
-                sources={sources}
-                selectedSlugs={optimisticSourceSlugs}
-                onToggleSlug={(slug) => {
-                  const isEnabled = optimisticSourceSlugs.includes(slug)
-                  const newSlugs = isEnabled
-                    ? optimisticSourceSlugs.filter(currentSlug => currentSlug !== slug)
-                    : [...optimisticSourceSlugs, slug]
-                  setOptimisticSourceSlugs(newSlugs)
-                  onSourcesChange?.(newSlugs)
-                }}
-              />
-            </div>
-          )}
           {onWorkingDirectoryChange && (
             <CompactWorkingDirectorySelector
               workingDirectory={workingDirectory}
@@ -1915,84 +1777,7 @@ export function FreeFormInput({
             disabled={disabled}
           />
 
-          {/* 2. Source Selector Badge - only show if onSourcesChange is provided */}
-          {onSourcesChange && (
-            <div className="relative shrink min-w-0 overflow-hidden">
-              <FreeFormInputContextBadge
-                buttonRef={sourceButtonRef}
-                icon={
-                  optimisticSourceSlugs.length === 0 ? (
-                    <DatabaseZap className="h-4 w-4" />
-                  ) : (
-                    <div className="flex items-center -ml-0.5">
-                      {(() => {
-                        const enabledSources = sources.filter(s => optimisticSourceSlugs.includes(s.config.slug))
-                        const displaySources = enabledSources.slice(0, 3)
-                        const remainingCount = enabledSources.length - 3
-                        return (
-                          <>
-                            {displaySources.map((source, index) => (
-                              <div
-                                key={source.config.slug}
-                                className={cn("relative h-5 w-5 rounded-[4px] bg-background shadow-minimal flex items-center justify-center", index > 0 && "-ml-1")}
-                                style={{ zIndex: index + 1 }}
-                              >
-                                <SourceAvatar source={source} size="xs" />
-                              </div>
-                            ))}
-                            {remainingCount > 0 && (
-                              <div
-                                className="-ml-1 h-5 w-5 rounded-[4px] bg-background shadow-minimal flex items-center justify-center text-[8px] font-medium text-muted-foreground"
-                                style={{ zIndex: displaySources.length + 1 }}
-                              >
-                                +{remainingCount}
-                              </div>
-                            )}
-                          </>
-                        )
-                      })()}
-                    </div>
-                  )
-                }
-                label={
-                  optimisticSourceSlugs.length === 0
-                    ? t("chat.chooseSources")
-                    : (() => {
-                        const enabledSources = sources.filter(s => optimisticSourceSlugs.includes(s.config.slug))
-                        if (enabledSources.length === 1) return enabledSources[0].config.name
-                        if (enabledSources.length === 2) return enabledSources.map(s => s.config.name).join(', ')
-                        return t("chat.sourcesCount", { count: enabledSources.length })
-                      })()
-                }
-                isExpanded={isEmptySession}
-                hasSelection={optimisticSourceSlugs.length > 0}
-                showChevron={true}
-                isOpen={sourceDropdownOpen}
-                disabled={disabled}
-                data-tutorial="source-selector-button"
-                onClick={() => setSourceDropdownOpen(prev => !prev)}
-                tooltip={t("chat.sourcesTooltip")}
-              />
-
-              <SourceSelectorPopover
-                open={sourceDropdownOpen}
-                onOpenChange={setSourceDropdownOpen}
-                anchorRef={sourceButtonRef}
-                sources={sources}
-                selectedSlugs={optimisticSourceSlugs}
-                onToggleSlug={(slug) => {
-                  const isEnabled = optimisticSourceSlugs.includes(slug)
-                  const newSlugs = isEnabled
-                    ? optimisticSourceSlugs.filter(currentSlug => currentSlug !== slug)
-                    : [...optimisticSourceSlugs, slug]
-                  setOptimisticSourceSlugs(newSlugs)
-                  onSourcesChange?.(newSlugs)
-                }}
-              />
-            </div>
-          )}
-
-          {/* 3. Working Directory Selector Badge */}
+          {/* 2. Working Directory Selector Badge */}
           {onWorkingDirectoryChange && (
             <WorkingDirectoryBadge
               workingDirectory={workingDirectory}
@@ -2014,9 +1799,10 @@ export function FreeFormInput({
               onClick={onRequestExpand}
               onMouseEnter={onRequestExpand}
               aria-label={t('chat.tapToType')}
-              className="flex-1 h-7 mx-1 flex items-center justify-center text-foreground/30 hover:text-foreground/60 transition-colors cursor-pointer rounded-[6px] hover:bg-foreground/5 focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              className="flex h-9 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl px-2 text-xs font-medium text-foreground/50 transition-colors hover:bg-foreground/5 hover:text-foreground/70 focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             >
-              <ChevronUp className="h-4 w-4" />
+              <ChevronUp className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">{t('chat.tapToType')}</span>
             </button>
           ) : (
             <div className="flex-1" />
@@ -2032,6 +1818,11 @@ export function FreeFormInput({
                 <DropdownMenuTrigger asChild>
                   <button
                     type="button"
+                    data-testid="model-selector-trigger"
+                    disabled={isProcessing}
+                    aria-label={connectionUnavailable
+                      ? t('common.unavailable')
+                      : `${t('common.model')}: ${selectorDisplayName}`}
                     className={cn(
                       "input-toolbar-btn inline-flex items-center h-7 px-1.5 gap-0.5 text-[13px] shrink-0 rounded-[6px] hover:bg-foreground/5 transition-colors select-none",
                       modelDropdownOpen && "bg-foreground/5",
@@ -2046,8 +1837,8 @@ export function FreeFormInput({
                     ) : (
                       <>
                         {effectiveConnectionDetails && llmConnections.length > 1 && storage.get(storage.KEYS.showConnectionIcons, true) && <ConnectionIcon connection={effectiveConnectionDetails} size={14} showTooltip />}
-                        {currentModelDisplayName}
-                        {pickerMode !== 'locked-single' && <ChevronDown className="h-3 w-3 opacity-50 shrink-0" />}
+                        {selectorDisplayName}
+                        {!isProcessing && pickerMode !== 'locked-single' && <ChevronDown className="h-3 w-3 opacity-50 shrink-0" />}
                       </>
                     )}
                   </button>
@@ -2128,7 +1919,7 @@ export function FreeFormInput({
                   )
                 })()
               ) : pickerMode === 'switcher' ? (
-                /* Hierarchical view: Provider → Connection → Models (empty session with multiple connections — lets the user switch BEFORE the first message locks the connection) */
+                /* Explicit provider → connection → model selection between turns. */
                 connectionsByProvider.map(([providerName, connections], index) => (
                   <React.Fragment key={providerName}>
                     {/* Provider group label */}
@@ -2141,6 +1932,7 @@ export function FreeFormInput({
                       return (
                         <DropdownMenuSub key={conn.slug}>
                           <StyledDropdownMenuSubTrigger
+                            data-testid="model-connection-option"
                             disabled={!isAuthenticated}
                             className={cn(
                               "flex items-center justify-between px-2 py-2 rounded-lg",
@@ -2172,10 +1964,10 @@ export function FreeFormInput({
                                 return (
                                   <StyledDropdownMenuItem
                                     key={modelId}
-                                    onSelect={() => {
-                                      // If selecting a different connection, update both connection and model
+                                    onSelect={async () => {
+                                      // Finish the connection handoff before persisting its explicit model.
                                       if (!isCurrentConnection && onConnectionChange) {
-                                        onConnectionChange(conn.slug)
+                                        await onConnectionChange(conn.slug)
                                       }
                                       // Always pass connection with model for proper persistence
                                       onModelChange(modelId, conn.slug)

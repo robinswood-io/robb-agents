@@ -7,6 +7,7 @@
 
 import type { PermissionMode } from '../agent/mode-manager.ts';
 import type { ThinkingLevel } from '../agent/thinking-levels.ts';
+import type { ExternalActionPolicy } from '../workspaces/types.ts';
 
 export interface ConfigDefaults {
   version: string;
@@ -32,6 +33,7 @@ export interface ConfigDefaults {
   workspaceDefaults: {
     thinkingLevel: ThinkingLevel;
     permissionMode: PermissionMode;
+    externalActionPolicy: ExternalActionPolicy;
     cyclablePermissionModes: PermissionMode[];
     localMcpServers: {
       enabled: boolean;

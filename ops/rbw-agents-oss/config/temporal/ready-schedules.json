@@ -545,22 +545,6 @@
       "enabled": true
     },
     {
-      "schedule_id": "sched.provider-routing-guard",
-      "legacy_id": "provider-routing-guard",
-      "name": "Guard routage providers LLM",
-      "workflow_id": "rbw.provider-routing-guard",
-      "cron": "*/30 * * * *",
-      "timezone": "Europe/Paris",
-      "task_queue": "watchdog",
-      "payload": {
-        "legacy_id": "provider-routing-guard",
-        "name": "Guard routage providers LLM",
-        "llm_connection": "openrouter",
-        "model": "nvidia/nemotron-3-super-120b-a12b:free"
-      },
-      "enabled": true
-    },
-    {
       "schedule_id": "sched.auto-ads-bmw-i4-night-watch",
       "legacy_id": "auto-ads-bmw-i4-night-watch",
       "name": "BMW i4 Watch annonces+enchères (email Listmonk)",
@@ -2753,20 +2737,6 @@
       "payload": {
         "legacy_id": "contact-enrichment-autopilot",
         "name": "Enrichissement autonome des contacts",
-        "llm_connection": "openrouter",
-        "model": "nvidia/nemotron-3-super-120b-a12b:free"
-      },
-      "enabled": true
-    },
-    {
-      "capability_id": "provider-routing-guard",
-      "mode": "temporal",
-      "workflow_id": "rbw.provider-routing-guard",
-      "schedule_id": "sched.provider-routing-guard",
-      "task_queue": "watchdog",
-      "payload": {
-        "legacy_id": "provider-routing-guard",
-        "name": "Guard routage providers LLM",
         "llm_connection": "openrouter",
         "model": "nvidia/nemotron-3-super-120b-a12b:free"
       },

@@ -132,14 +132,24 @@ describe('createBuiltInConnection', () => {
     expect(conn.piAuthProvider).toBe('github-copilot')
   })
 
-  it('creates google-gemini as a Pi Google OAuth subscription connection', () => {
+  it('creates google-gemini as a licensed organization Code Assist OAuth connection', () => {
     const conn = createBuiltInConnection('google-gemini')
     expect(conn.slug).toBe('google-gemini')
-    expect(conn.name).toBe('Google Gemini')
+    expect(conn.name).toBe('Google Gemini Code Assist')
     expect(conn.providerType).toBe('pi')
     expect(conn.authType).toBe('oauth')
     expect(conn.piAuthProvider).toBe('google-gemini-code-assist')
     expect(conn.modelSelectionMode).toBe('automaticallySyncedFromProvider')
+  })
+
+  it('creates google-antigravity as a keyring-owned account connection', () => {
+    const conn = createBuiltInConnection('google-antigravity')
+    expect(conn.name).toBe('Google Antigravity')
+    expect(conn.providerType).toBe('pi')
+    expect(conn.authType).toBe('none')
+    expect(conn.piAuthProvider).toBe('google-antigravity')
+    expect(conn.defaultModel).toBe('pi/gemini-3.7-flash-high')
+    expect(conn.midStreamBehavior).toBe('queue')
   })
 
   it('creates mistral-vibe as a credential-free Vibe subscription connection', () => {

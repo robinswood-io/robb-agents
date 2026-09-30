@@ -80,6 +80,7 @@ export function prepareChatGptOAuth(): ChatGptPreparedFlow {
     state,
     codex_cli_simplified_flow: 'true',
     id_token_add_organizations: 'true',
+    originator: CHATGPT_OAUTH_CONFIG.ORIGINATOR,
   });
 
   return {
@@ -132,6 +133,10 @@ export async function exchangeChatGptTokens(
     refresh_token?: string;
     expires_in?: number;
   };
+
+  if (!data.id_token || !data.access_token) {
+    throw new Error('Token exchange succeeded but required token fields were missing');
+  }
 
   return {
     idToken: data.id_token,
@@ -188,6 +193,10 @@ export async function refreshChatGptTokens(
       refresh_token?: string;
       expires_in?: number;
     };
+
+    if (!data.id_token || !data.access_token) {
+      throw new Error('Token refresh succeeded but required token fields were missing');
+    }
 
     onStatus?.('Tokens refreshed successfully!');
 

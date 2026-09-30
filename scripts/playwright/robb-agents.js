@@ -324,6 +324,26 @@ async function validateRemoteMobileFlow() {
 
     await page.goto(`${RENDERER_ORIGIN}/playground.html`);
     await page.evaluate(() => {
+      localStorage.setItem('playground-selected-component', 'mobile-webui-chat-display');
+      localStorage.setItem('playground-preview-size', JSON.stringify({ width: 800, height: 760 }));
+    });
+    await page.reload();
+    await page.locator('h2:visible').filter({ hasText: /^ChatDisplay \(Mobile\)$/ }).waitFor({ timeout: 20_000 });
+
+    const modelTrigger = page.getByTestId('model-selector-trigger');
+    await modelTrigger.waitFor({ timeout: 20_000 });
+    await modelTrigger.click();
+    const modelDrawer = page.locator('[role="dialog"]');
+    await modelDrawer.waitFor({ timeout: 10_000 });
+    const connections = page.getByTestId('model-connection-option');
+    const connectionOptionCount = await connections.count();
+    await page.locator('[data-testid="model-connection-option"]:not(:disabled)').first().click();
+    const modelOptionCount = await page.getByTestId('model-option').count();
+    const thinkingOptionCount = await page.getByTestId('thinking-option').count();
+    const manualModelControlsVisible = modelOptionCount > 0 && thinkingOptionCount > 0;
+    await page.keyboard.press('Escape');
+
+    await page.evaluate(() => {
       localStorage.setItem('playground-selected-component', 'session-item-search');
       localStorage.setItem('playground-variants-sidebar-open', 'true');
       localStorage.setItem('playground-expanded-categories', JSON.stringify(['Session List']));
@@ -362,6 +382,7 @@ async function validateRemoteMobileFlow() {
     console.log(`Updater:  ${devUpdaterHidden ? 'hidden in development' : 'unexpectedly visible'}`);
     console.log(`Desktop QR: ${desktopQrVisible ? 'visible and scannable' : 'missing'}`);
     console.log(`Desktop Remote screenshot: ${desktopRemoteScreenshot}`);
+    console.log(`Model controls: ${manualModelControlsVisible ? 'manual model and reasoning' : 'missing controls'}`);
     console.log(`Subagents: ${subagentCount} total, ${runningSubagentCount} running`);
     console.log(`Summary:  ${summaryIsNonInteractive ? 'non-interactive' : 'unexpected interactive control'}`);
     console.log(`Children: ${childSessionRows === 0 ? 'not directly navigable' : `${childSessionRows} exposed rows`}`);
@@ -383,6 +404,8 @@ async function validateRemoteMobileFlow() {
       && darkThemeApplied
       && devUpdaterHidden
       && desktopQrVisible
+      && connectionOptionCount >= 2
+      && manualModelControlsVisible
       && subagentCount === '4'
       && runningSubagentCount === '2'
       && summaryIsNonInteractive

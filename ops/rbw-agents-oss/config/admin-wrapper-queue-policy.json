@@ -14,7 +14,6 @@
     "temporal-history-audit",
     "temporal-rtk-token-optimization-report",
     "source-connectionstatus-watchdog",
-    "provider-routing-guard",
     "auth-watchdog",
     "oss-lock-watchdog",
     "autonomy-queue-owner-governor",

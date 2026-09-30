@@ -17,29 +17,55 @@
  */
 
 import { spawn } from "bun";
-import { execSync } from "child_process";
+import { execFileSync } from "child_process";
 import { existsSync, mkdirSync, statSync } from "fs";
 import { join } from "path";
+import {
+  assertCleanProductionBuild,
+  resolveBuildChannel,
+  resolveBuildCommit,
+  resolveBuildDirty,
+} from "./build-provenance";
 
 /**
- * Resolve a short git SHA for the build, suffixed with `+dirty` when the
- * working tree has uncommitted changes. Returns `unknown` outside a git
- * checkout.
+ * Resolve the same explicit/checkout/CI provenance used by the Electron main
+ * bundle. Production builds fail closed if their source cannot be verified.
  */
 function resolveGitSha(cwd: string): string {
+  let gitCommit: string | undefined;
+  let gitPorcelain: string | undefined;
   try {
-    const sha = execSync("git rev-parse --short HEAD", { cwd }).toString().trim();
-    let dirty = false;
-    try {
-      const status = execSync("git status --porcelain", { cwd }).toString().trim();
-      dirty = status.length > 0;
-    } catch {
-      // ignore — treat as clean
-    }
-    return dirty ? `${sha}+dirty` : sha;
+    gitCommit = execFileSync("git", ["rev-parse", "HEAD"], {
+      cwd,
+      encoding: "utf8",
+    });
   } catch {
-    return "unknown";
+    // A source archive may not include .git; explicit/CI metadata still works.
   }
+  try {
+    gitPorcelain = execFileSync("git", ["status", "--porcelain", "--untracked-files=all"], {
+      cwd,
+      encoding: "utf8",
+    });
+  } catch {
+    // A source archive may not include .git; explicit metadata still works.
+  }
+
+  const channel = resolveBuildChannel(
+    process.env.ROBB_BUILD_CHANNEL,
+    process.env.CRAFT_DEV_RUNTIME,
+  );
+  assertCleanProductionBuild(channel, process.env.ROBB_BUILD_DIRTY, gitPorcelain);
+  const commit = resolveBuildCommit(
+    process.env.ROBB_BUILD_COMMIT,
+    gitCommit,
+    process.env.GITHUB_SHA,
+  );
+  if (!commit || !/^[0-9a-f]{7,40}$/i.test(commit)) return "unknown";
+
+  const shortCommit = commit.slice(0, 12).toLowerCase();
+  const dirty = resolveBuildDirty(process.env.ROBB_BUILD_DIRTY, gitPorcelain);
+  return dirty ? `${shortCommit}+dirty` : shortCommit;
 }
 
 const ROOT_DIR = join(import.meta.dir, "..");
@@ -92,6 +118,7 @@ async function main(): Promise<void> {
       // subprocess after `bun run build:wa-worker`.
       `--define:__WA_WORKER_BUILD_ID__=${JSON.stringify(buildId)}`,
       `--define:__WA_WORKER_GIT_SHA__=${JSON.stringify(gitSha)}`,
+      `--define:__WA_WORKER_PROVENANCE__=${JSON.stringify(`robb-wa-worker-git:${gitSha}`)}`,
       // Mark only Electron + Baileys' runtime-optional peers external.
       // Baileys itself and all its required transitive deps get bundled.
       //

@@ -47,7 +47,7 @@ Use this to delegate tasks to parallel sessions — research, analysis, drafts, 
 Call with help=true first to discover available connections, models, and sources.
 When spawning, the 'prompt' parameter is required.
 
-Optional overrides: model, llmConnection, permissionMode, thinkingLevel, enabledSourceSlugs, labels, workingDirectory. Omitted fields inherit from the spawning session or the workspace default.
+Optional overrides: model, llmConnection, permissionMode, thinkingLevel, enabledSourceSlugs, labels, workingDirectory. Omitted fields inherit from the spawning session, with workspace defaults only for unconfigured values. Change the connection, model, or reasoning level only when the user or an explicit task specification requests that override.
 
 thinkingLevel is silently ignored on non-reasoning models (e.g. gpt-4o, gemini-2.5-flash) — the SDK drops the reasoning param rather than erroring.
 
@@ -69,7 +69,7 @@ Only use 'attachments' for existing file paths on disk — the tool reads them a
       permissionMode: z.enum(['safe', 'ask', 'allow-all']).optional()
         .describe('Permission mode for the new session'),
       thinkingLevel: z.enum(['off', 'low', 'medium', 'high', 'xhigh', 'max']).optional()
-        .describe('Reasoning level for the new session. Silently ignored on non-reasoning models (e.g. gpt-4o, gemini-2.5-flash). Omit to inherit the workspace default.'),
+        .describe('Reasoning level for the new session. Silently ignored on non-reasoning models (e.g. gpt-4o, gemini-2.5-flash). Omit to inherit the spawning session’s selection.'),
       labels: z.array(z.string()).optional()
         .describe('Labels for the new session'),
       workingDirectory: z.string().optional()

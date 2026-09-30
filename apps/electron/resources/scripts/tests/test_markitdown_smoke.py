@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -31,6 +32,17 @@ class MarkitdownSmokeTests(unittest.TestCase):
         result = self.run_markitdown(str(txt))
         self.assertEqual(result.returncode, 0, msg=result.stderr)
         self.assertIn("hello craft", result.stdout)
+
+    def test_wrapper_resolves_bundled_runtime_when_craft_env_is_missing(self) -> None:
+        txt = self.tmpdir / "plain-no-env.txt"
+        txt.write_text("self resolving wrapper", encoding="utf-8")
+        env = dict(os.environ)
+        env.pop("CRAFT_UV", None)
+        env.pop("CRAFT_SCRIPTS", None)
+
+        result = run_tool("markitdown", str(txt), env=env)
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        self.assertIn("self resolving wrapper", result.stdout)
 
     def test_docx_fallback_path(self) -> None:
         docx = self.tmpdir / "sample.docx"

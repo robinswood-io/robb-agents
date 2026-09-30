@@ -1,0 +1,88 @@
+{
+  "schemaVersion": 1,
+  "id": "io.robb-agents.vertical.financial-reconciliation",
+  "name": "Rapprochement opérationnel et financier gouverné",
+  "version": "1.0.0",
+  "qualificationLevel": "contract-offline",
+  "realTenantQualified": false,
+  "legacyTask": {
+    "path": "task.yaml",
+    "status": "legacy-reference-only",
+    "runtime": "TaskRunner v1",
+    "executableByMissionV2": false
+  },
+  "variants": [
+    {
+      "id": "microsoft365",
+      "missionSpec": "mission.microsoft365.json",
+      "capabilityPolicy": "policies/capability.microsoft365.json",
+      "documentaryPack": "microsoft365",
+      "documentaryOperation": "files.update",
+      "documentaryOrigin": "https://graph.microsoft.com"
+    },
+    {
+      "id": "google-workspace",
+      "missionSpec": "mission.google-workspace.json",
+      "capabilityPolicy": "policies/capability.google-workspace.json",
+      "documentaryPack": "googleWorkspace",
+      "documentaryOperation": "drive.update",
+      "documentaryOrigin": "https://www.googleapis.com"
+    }
+  ],
+  "commonConnectors": [
+    {
+      "pack": "crm",
+      "operation": "records.upsert",
+      "egressPolicy": "policies/egress.crm.json"
+    },
+    {
+      "pack": "erp",
+      "operation": "entries.post",
+      "egressPolicy": "policies/egress.erp.json"
+    }
+  ],
+  "documentaryEgressPolicies": {
+    "microsoft365": "policies/egress.microsoft365.json",
+    "googleWorkspace": "policies/egress.google-workspace.json"
+  },
+  "contractMocks": "fixtures/mock-provider-contracts.json",
+  "qualificationGates": {
+    "local": {
+      "missionSchemaValid": true,
+      "externalMutationsBrokered": true,
+      "approvalBeforeMutation": true,
+      "duplicateMutationCount": 0,
+      "reconciliationRequired": true,
+      "compensationOnDivergence": true,
+      "privacyReceiptSignatureValid": true,
+      "proofPassportOfflineValid": true,
+      "networkCalls": 0
+    },
+    "tenant": {
+      "required": true,
+      "status": "not-run",
+      "checks": [
+        "OAuth/OIDC et scopes de moindre privilège accordés sur un tenant sandbox réel",
+        "Lecture et mutation canary confirmées par le fournisseur pour chaque connecteur",
+        "Crash injecté après réponse fournisseur sans seconde mutation",
+        "Réconciliation par lecture indépendante et détection de divergence",
+        "Exercice de compensation approuvé et audité",
+        "Révocation du connecteur et kill switch vérifiés",
+        "Privacy Receipt et Proof Passport vérifiés hors du runtime",
+        "Absence de secrets et de données brutes dans journaux, reçus et télémétrie"
+      ]
+    }
+  },
+  "kpis": {
+    "unexplainedDifferenceCount": 0,
+    "unreconciledMutationCount": 0,
+    "duplicateMutationCount": 0,
+    "requiredEvidenceCoveragePercent": 100,
+    "approvalCoveragePercent": 100,
+    "proofVerificationPercent": 100,
+    "privacyReceiptCoveragePercent": 100,
+    "maxMissionDurationMinutes": 30,
+    "maxApprovalWaitMinutes": 15,
+    "maxCostEur": 25
+  }
+}

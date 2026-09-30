@@ -2,6 +2,7 @@ import { AsyncLocalStorage } from 'node:async_hooks'
 import {
   connectorPackTemplates,
   createPriorityConnectorDriver,
+  materializeConnectorHttpPayload,
   priorityConnectorDriverDefinitions,
   type ConnectorCapabilityAuthorization,
   type ConnectorHttpTransport,
@@ -16,6 +17,8 @@ import {
 import {
   CapabilityBroker,
   CapabilityOperationRequestSchema,
+  StructuredEgressFirewall,
+  canonicalOperationValue,
   DurableUseLedger,
   ExecutionProofIssuer,
   type AutonomyLevel,
@@ -26,7 +29,11 @@ import {
   type OperationBudgetEstimate,
   type OperationCompensation,
   type OperationIdentity,
+  type EgressVaultEntry,
+  type PreparedStructuredEgress,
+  type PrivacyReceipt,
   type SignedExecutionProof,
+  type StructuredEgressPolicy,
 } from '@craft-agent/shared/governance'
 import type { DurableConnectorPackRegistry } from '@craft-agent/shared/connectors'
 import {
@@ -37,6 +44,7 @@ import {
 const CAPABILITY_KEY_PURPOSE = 'connector-capability-v1'
 const SECRET_LEASE_KEY_PURPOSE = 'connector-secret-lease-v1'
 const EXECUTION_PROOF_KEY_PURPOSE = 'execution-proof-v1'
+const STRUCTURED_EGRESS_KEY_PURPOSE = 'structured-egress-v1'
 
 export interface PriorityConnectorRuntimeConfiguration {
   pack: PriorityConnectorPack
@@ -44,6 +52,7 @@ export interface PriorityConnectorRuntimeConfiguration {
   secretName: string
   baseUrl?: string
   healthIdentity?: Omit<OperationIdentity, 'workspaceId' | 'connectorId'>
+  egressPolicy?: StructuredEgressPolicy
 }
 
 export interface ConnectorSecretValueRequest {
@@ -58,6 +67,11 @@ export interface ConnectorProofRecord {
   proof: SignedExecutionProof
 }
 
+export interface ConnectorPrivacyReceiptRecord {
+  sessionId: string
+  receipt: PrivacyReceipt
+}
+
 export interface PrepareConnectorInvocationInput {
   pack: PriorityConnectorPack
   sessionId: string
@@ -70,6 +84,8 @@ export interface PrepareConnectorInvocationInput {
   idempotencyKey?: string
   budget?: OperationBudgetEstimate
   compensation?: OperationCompensation
+  /** Stable host timestamp used to reconstruct the exact request after restart. */
+  requestedAt?: string
 }
 
 export interface PreparedConnectorInvocation {
@@ -95,6 +111,13 @@ export type ConnectorExecutionResult =
       output: Record<string, unknown>
     }
 
+export type ConnectorAuthorizationResult = Exclude<ConnectorExecutionResult, { status: 'executed' }>
+  | {
+      status: 'authorized'
+      requestHash: string
+      preparationId: string
+    }
+
 interface InternalPreparedInvocation {
   preparationId: string
   pack: PriorityConnectorPack
@@ -102,8 +125,10 @@ interface InternalPreparedInvocation {
   operationId: string
   request: CapabilityOperationRequest
   payload: Record<string, unknown>
+  privacy?: PreparedStructuredEgress
   resourceId?: string
   idempotencyKey?: string
+  authorization?: ConnectorCapabilityAuthorization
 }
 
 interface ConnectorExecutionRuntimeOptions {
@@ -118,6 +143,9 @@ interface ConnectorExecutionRuntimeOptions {
   resolveSecretValue: (request: ConnectorSecretValueRequest) => Promise<string | null>
   reconcileMutation: ConnectorMutationReconciler
   recordExecutionProof: (record: ConnectorProofRecord) => void
+  egressFirewall?: StructuredEgressFirewall
+  recordPrivacyReceipt?: (record: ConnectorPrivacyReceiptRecord) => void
+  storeEgressVaultEntries?: (entries: readonly EgressVaultEntry[]) => void
   nowMs?: () => number
   generateId?: () => string
 }
@@ -132,6 +160,8 @@ export interface CreateWorkspaceConnectorExecutionRuntimeInput {
   resolveSecretValue: (request: ConnectorSecretValueRequest) => Promise<string | null>
   reconcileMutation: ConnectorMutationReconciler
   recordExecutionProof: (record: ConnectorProofRecord) => void
+  recordPrivacyReceipt?: (record: ConnectorPrivacyReceiptRecord) => void
+  storeEgressVaultEntries?: (entries: readonly EgressVaultEntry[]) => void
   credentialStore?: GovernanceCredentialStore
   nowMs?: () => number
   generateId?: () => string
@@ -146,7 +176,12 @@ export class ConnectorExecutionRuntime {
   private readonly configurations = new Map<PriorityConnectorPack, PriorityConnectorRuntimeConfiguration>()
   private readonly drivers = new Map<PriorityConnectorPack, HttpConnectorPackDriver>()
   private readonly prepared = new Map<string, InternalPreparedInvocation>()
-  private readonly invocationContext = new AsyncLocalStorage<{ sessionId: string }>()
+  private readonly invocationContext = new AsyncLocalStorage<{
+    sessionId: string
+    missionId?: string
+    operationId?: string
+    privacy?: PreparedStructuredEgress
+  }>()
   private readonly nowMs: () => number
   private readonly generateId: () => string
 
@@ -155,6 +190,13 @@ export class ConnectorExecutionRuntime {
     for (const configuration of options.connectors) {
       if (this.configurations.has(configuration.pack)) {
         throw new Error(`Duplicate connector runtime configuration for ${configuration.pack}`)
+      }
+      if (configuration.egressPolicy && (
+        !options.egressFirewall || !options.recordPrivacyReceipt || !options.storeEgressVaultEntries
+      )) {
+        throw new Error(
+          `Connector ${configuration.pack} egress policy requires a firewall, durable receipt sink, and encrypted mapping vault`,
+        )
       }
       this.configurations.set(configuration.pack, { ...configuration })
     }
@@ -172,8 +214,20 @@ export class ConnectorExecutionRuntime {
       throw new Error(`Resource type ${input.resourceType} is not allowed for ${input.operationId}`)
     }
     const baseUrl = this.baseUrl(input.pack, configuration)
+    const binding = priorityConnectorDriverDefinitions[input.pack].bindings[input.operationId]
+    if (!binding) throw new Error(`No HTTP binding for ${input.pack}/${input.operationId}`)
+    const releasedInputPayload = materializeConnectorHttpPayload(binding.method, input.payload)
+    const destinationOrigin = new URL(baseUrl).origin
     const policy = this.options.broker.snapshotPolicy()
     const compensation = input.compensation ?? admission.operation.compensation
+    const privacy = configuration.egressPolicy
+      ? this.options.egressFirewall!.prepare({
+          payload: structuredClone(releasedInputPayload),
+          destinationOrigin,
+          policy: configuration.egressPolicy,
+        })
+      : undefined
+    const payload = privacy?.payload ?? structuredClone(releasedInputPayload)
     const request = CapabilityOperationRequestSchema.parse({
       schemaVersion: 1,
       operationId: input.operationId,
@@ -187,12 +241,21 @@ export class ConnectorExecutionRuntime {
       target: {
         resourceType: input.resourceType,
         ...(input.resourceId ? { resourceId: input.resourceId } : {}),
-        origin: new URL(baseUrl).origin,
+        origin: destinationOrigin,
       },
-      payload: structuredClone(input.payload),
+      payload: structuredClone(payload),
       policyVersion: policy.policyVersion,
       authorizationGeneration: admission.authorizationGeneration,
-      requestedAt: new Date(this.nowMs()).toISOString(),
+      requestedAt: input.requestedAt ?? new Date(this.nowMs()).toISOString(),
+      approvalContext: {
+        provider: manifest.name,
+        connectorId: manifest.id,
+        origin: destinationOrigin,
+        resourceClass: input.resourceType,
+        purpose: admission.operation.title,
+        effect: admission.operation.effect,
+        method: binding.method,
+      },
       ...(input.idempotencyKey ? { idempotencyKey: input.idempotencyKey } : {}),
       ...(input.budget ? { budget: input.budget } : {}),
       ...(compensation ? { compensation } : {}),
@@ -204,7 +267,8 @@ export class ConnectorExecutionRuntime {
       sessionId: input.sessionId,
       operationId: input.operationId,
       request,
-      payload: structuredClone(input.payload),
+      payload: structuredClone(payload),
+      ...(privacy ? { privacy } : {}),
       ...(input.resourceId ? { resourceId: input.resourceId } : {}),
       ...(input.idempotencyKey ? { idempotencyKey: input.idempotencyKey } : {}),
     }
@@ -213,8 +277,25 @@ export class ConnectorExecutionRuntime {
   }
 
   async execute(preparationId: string, approvalId?: string): Promise<ConnectorExecutionResult> {
+    const authorization = this.authorize(preparationId, approvalId)
+    if (authorization.status !== 'authorized') return authorization
+    return this.invokeAuthorized(preparationId)
+  }
+
+  /**
+   * Authorizes without crossing the credentialed transport boundary. Callers
+   * can durably record an execution WAL entry before invokeAuthorized().
+   */
+  authorize(preparationId: string, approvalId?: string): ConnectorAuthorizationResult {
     const prepared = this.prepared.get(preparationId)
     if (!prepared) throw new Error('Prepared connector invocation is unknown or already consumed')
+    if (prepared.authorization) {
+      return {
+        status: 'authorized',
+        requestHash: prepared.authorization.capability.requestHash,
+        preparationId,
+      }
+    }
     this.syncPolicyEpoch()
     const decision = this.options.broker.authorize(prepared.request, approvalId)
     if (decision.status === 'approval-required') {
@@ -230,19 +311,35 @@ export class ConnectorExecutionRuntime {
       return decision
     }
 
-    const driver = this.driver(prepared.pack)
-    const authorization: ConnectorCapabilityAuthorization = {
+    prepared.authorization = {
       request: prepared.request,
       capability: decision.capability,
     }
+    return {
+      status: 'authorized',
+      requestHash: decision.requestHash,
+      preparationId,
+    }
+  }
+
+  /** Executes a previously authorized invocation exactly once in this process. */
+  async invokeAuthorized(preparationId: string): Promise<Extract<ConnectorExecutionResult, { status: 'executed' }>> {
+    const prepared = this.prepared.get(preparationId)
+    if (!prepared?.authorization) throw new Error('Connector invocation is not authorized')
+    const driver = this.driver(prepared.pack)
     try {
       const output = await this.invocationContext.run(
-        { sessionId: prepared.sessionId },
+        {
+          sessionId: prepared.sessionId,
+          missionId: prepared.request.identity.missionId,
+          operationId: prepared.operationId,
+          ...(prepared.privacy ? { privacy: prepared.privacy } : {}),
+        },
         () => driver.invoke(prepared.operationId, {
           payload: structuredClone(prepared.payload),
           ...(prepared.resourceId ? { resourceId: prepared.resourceId } : {}),
           ...(prepared.idempotencyKey ? { idempotencyKey: prepared.idempotencyKey } : {}),
-          authorization,
+          authorization: prepared.authorization,
         }),
       )
       return { status: 'executed', output }
@@ -326,6 +423,27 @@ export class ConnectorExecutionRuntime {
         const context = this.invocationContext.getStore()
         if (!context) throw new Error('Connector execution proof has no host session binding')
         this.options.recordExecutionProof({ sessionId: context.sessionId, proof })
+      },
+      onEgress: ({ operationId, destinationOrigin, payload }) => {
+        const context = this.invocationContext.getStore()
+        if (!context?.privacy) return
+        if (
+          context.operationId !== operationId
+          || destinationOrigin !== context.privacy.destinationOrigin
+          || canonicalOperationValue(payload) !== canonicalOperationValue(context.privacy.payload)
+        ) {
+          throw new Error('Structured egress observation does not match its inspected payload')
+        }
+        if (!context.missionId) throw new Error('Structured egress has no authoritative mission binding')
+        this.options.storeEgressVaultEntries!(context.privacy.vaultEntries)
+        const receipt = this.options.egressFirewall!.issueReceipt({
+          prepared: context.privacy,
+          workspaceId: this.options.workspaceId,
+          missionId: context.missionId,
+          connectorId: manifest.id,
+          operationId,
+        })
+        this.options.recordPrivacyReceipt!({ sessionId: context.sessionId, receipt })
       },
       createHealthAuthorization: () => this.createHealthAuthorization(pack, configuration),
       now: () => new Date(this.nowMs()).toISOString(),
@@ -447,10 +565,11 @@ export async function createWorkspaceConnectorExecutionRuntime(
   if (input.policy.workspaceId !== input.workspaceId) {
     throw new Error('Connector runtime policy workspace does not match')
   }
-  const [capabilityKey, leaseKey, proofKey] = await Promise.all([
+  const [capabilityKey, leaseKey, proofKey, egressKey] = await Promise.all([
     loadWorkspaceGovernanceSigningKey(input.workspaceId, CAPABILITY_KEY_PURPOSE, input.credentialStore),
     loadWorkspaceGovernanceSigningKey(input.workspaceId, SECRET_LEASE_KEY_PURPOSE, input.credentialStore),
     loadWorkspaceGovernanceSigningKey(input.workspaceId, EXECUTION_PROOF_KEY_PURPOSE, input.credentialStore),
+    loadWorkspaceGovernanceSigningKey(input.workspaceId, STRUCTURED_EGRESS_KEY_PURPOSE, input.credentialStore),
   ])
   const nowMs = input.nowMs ?? Date.now
   const generation = input.registry.snapshot().generation
@@ -486,6 +605,13 @@ export async function createWorkspaceConnectorExecutionRuntime(
     resolveSecretValue: input.resolveSecretValue,
     reconcileMutation: input.reconcileMutation,
     recordExecutionProof: input.recordExecutionProof,
+    egressFirewall: new StructuredEgressFirewall({
+      signingKey: egressKey,
+      now: () => new Date(nowMs()).toISOString(),
+      generateId: input.generateId,
+    }),
+    recordPrivacyReceipt: input.recordPrivacyReceipt,
+    storeEgressVaultEntries: input.storeEgressVaultEntries,
     nowMs,
     generateId: input.generateId,
   })

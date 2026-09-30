@@ -12,18 +12,24 @@ ROOT_DIR="$(dirname "$(dirname "$ELECTRON_DIR")")"
 
 ARCH="arm64"
 RELEASE_BUILD=false
-BUN_VERSION="bun-v1.3.10"
+LOCAL_PRODUCTION_BUILD=false
+BUN_VERSION="bun-v1.3.14"
 
 usage() {
   cat <<'EOF'
-Usage: build-dmg.sh [arm64|x64] [--release]
+Usage: build-dmg.sh [arm64|x64] [--release|--local-production]
 
 Builds a local Robb Agents DMG and ZIP plus SHA-256 checksums.
 
 Options:
   arm64|x64  Target macOS architecture (default: arm64)
-  --release  Require Developer ID signing and Apple notarization, then verify
-             the final application with codesign, spctl and stapler.
+  --release  Require a clean, identifiable Git source plus Developer ID
+             signing and Apple notarization, then verify the final application
+             with codesign, spctl and stapler.
+  --local-production
+             Build an ad-hoc signed local package which uses the production
+             identity and ~/.craft-agent profile. Requires a clean Git source.
+             Never distribute this unnotarized artifact.
 
 Release credentials (provided by the operator/CI; never committed):
   CSC_LINK + CSC_KEY_PASSWORD, or CSC_NAME
@@ -31,7 +37,8 @@ Release credentials (provided by the operator/CI; never committed):
   or APPLE_API_KEY (absolute .p8 path) + APPLE_API_KEY_ID +
      APPLE_API_ISSUER + APPLE_TEAM_ID
 
-Without --release, the artifact is intentionally an unsigned local smoke build.
+Without either explicit mode, the artifact uses the isolated development
+profile (~/.craft-agent-dev) and is ad-hoc signed for local smoke testing.
 Distribute only a --release artifact to end users.
 EOF
 }
@@ -50,13 +57,30 @@ while (($#)); do
   case "$1" in
     arm64|x64) ARCH="$1" ;;
     --release) RELEASE_BUILD=true ;;
+    --local-production) LOCAL_PRODUCTION_BUILD=true ;;
     -h|--help) usage; exit 0 ;;
     *) echo "Unknown argument: $1" >&2; usage >&2; exit 2 ;;
   esac
   shift
 done
 
+if [[ "$RELEASE_BUILD" == true && "$LOCAL_PRODUCTION_BUILD" == true ]]; then
+  echo "ERROR: --release and --local-production are mutually exclusive." >&2
+  exit 2
+fi
+
 if [[ "$RELEASE_BUILD" == true ]]; then
+  command -v git >/dev/null || { echo "ERROR: --release requires Git to verify source integrity." >&2; exit 1; }
+  command -v node >/dev/null || { echo "ERROR: --release requires Node.js to verify source integrity." >&2; exit 1; }
+  # Refuse dirty source before dependency installation or any generated-file
+  # cleanup. The Electron main build and electron-builder hook repeat this
+  # check so source cannot become dirty between preflight and packaging.
+  RELEASE_COMMIT="$(node "$SCRIPT_DIR/releaseIntegrity.cjs" --check-source "$ROOT_DIR")"
+  export ROBB_BUILD_CHANNEL=production
+  export ROBB_BUILD_COMMIT="$RELEASE_COMMIT"
+  export ROBB_BUILD_DIRTY=false
+  unset CRAFT_DEV_RUNTIME
+
   if [[ -z "${CSC_LINK:-}" && -z "${CSC_NAME:-}" ]]; then
     echo "ERROR: --release requires CSC_LINK or CSC_NAME for Developer ID signing." >&2
     exit 1
@@ -66,6 +90,27 @@ if [[ "$RELEASE_BUILD" == true ]]; then
     echo "ERROR: --release requires Apple ID, App Store Connect API-key, or keychain notarization credentials." >&2
     exit 1
   fi
+elif [[ "$LOCAL_PRODUCTION_BUILD" == true ]]; then
+  command -v git >/dev/null || { echo "ERROR: --local-production requires Git to verify source integrity." >&2; exit 1; }
+  command -v node >/dev/null || { echo "ERROR: --local-production requires Node.js to verify source integrity." >&2; exit 1; }
+  LOCAL_COMMIT="$(node "$SCRIPT_DIR/releaseIntegrity.cjs" --check-source "$ROOT_DIR")"
+  export ROBB_BUILD_CHANNEL=production
+  export ROBB_BUILD_COMMIT="$LOCAL_COMMIT"
+  export ROBB_BUILD_DIRTY=false
+  unset CRAFT_DEV_RUNTIME
+
+  echo "WARNING: building an ad-hoc local production-profile package." >&2
+  echo "WARNING: it reads and writes ~/.craft-agent and must never be distributed." >&2
+
+  export CSC_IDENTITY_AUTO_DISCOVERY=false
+  unset CSC_LINK CSC_KEY_PASSWORD CSC_NAME
+else
+  # The default contract is a development-channel local smoke artifact.
+  export ROBB_BUILD_CHANNEL=development
+  # Explicitly disable keychain auto-discovery so duplicate Apple Development identities
+  # cannot make a non-release build fail or accidentally sign it.
+  export CSC_IDENTITY_AUTO_DISCOVERY=false
+  unset CSC_LINK CSC_KEY_PASSWORD CSC_NAME
 fi
 
 command -v bun >/dev/null || { echo "ERROR: Bun is required to build Robb Agents." >&2; exit 1; }
@@ -139,7 +184,24 @@ bun run electron:build
 cd "$ELECTRON_DIR"
 # Publishing is handled only by the verified GitHub Release job, never by
 # electron-builder's CI auto-detection.
-bun x --bun electron-builder --config electron-builder.yml --mac --"$ARCH" --publish never
+BUILDER_ARGS=(--config electron-builder.yml --mac --"$ARCH" --publish never)
+if [[ "$RELEASE_BUILD" == true ]]; then
+  # Repeat the production config's fail-closed setting at the invocation
+  # boundary so a future config regression cannot silently disable it.
+  BUILDER_ARGS+=(--config.mac.forceCodeSigning=true)
+else
+  # Preserve explicitly non-release local smoke builds without a certificate.
+  # Apple Silicon refuses to launch a mutated Electron bundle without a valid
+  # code directory, so use the explicit untrusted ad-hoc identity before DMG
+  # and ZIP creation. Public provenance still classifies this as unsigned.
+  BUILDER_ARGS+=(--config.mac.forceCodeSigning=false --config.mac.identity=-)
+fi
+bun x --bun electron-builder "${BUILDER_ARGS[@]}"
+
+PACKAGED_APP_DIR="$ELECTRON_DIR/release/$([[ "$ARCH" == arm64 ]] && echo mac-arm64 || echo mac)/Robb Agents.app"
+bun "$ROOT_DIR/scripts/validate-electron-package-security.ts" \
+  --binary "$PACKAGED_APP_DIR/Contents/MacOS/Robb Agents" \
+  --resources-dir "$PACKAGED_APP_DIR/Contents/Resources"
 
 DMG_PATH="$ELECTRON_DIR/release/Robb-Agents-${ARCH}.dmg"
 ZIP_PATH="$ELECTRON_DIR/release/Robb-Agents-${ARCH}.zip"

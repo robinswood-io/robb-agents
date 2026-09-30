@@ -209,6 +209,16 @@ describe('call_llm tool — warning prefix rendering', () => {
     return tool.handler(argsFor(prompt), {});
   }
 
+  it('leaves an omitted model to the session backend instead of selecting a utility model', async () => {
+    let request: LLMQueryRequest | undefined;
+    const tool = buildTool(async (input) => {
+      request = input;
+      return { text: 'ok' };
+    });
+    await invoke(tool, 'Review this result');
+    expect(request?.model).toBeUndefined();
+  });
+
   it('renders a [Partial result — …] prefix when queryFn returns a warning', async () => {
     const tool = buildTool(async () => ({
       text: 'Draft body here.',

@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import {
   CapabilityBroker,
+  capabilityOperationRequestHash,
   type CapabilityOperationRequest,
   type CapabilityPolicy,
 } from './capability-broker'
@@ -194,5 +195,49 @@ describe('CapabilityBroker', () => {
       allowed: false,
       code: 'POLICY_VERSION_MISMATCH',
     })
+  })
+
+  test('binds bounded approval context to the canonical request hash without exposing business values', () => {
+    const now = { value: startMs }
+    const broker = createBroker(now)
+    const operation = request({
+      operationId: 'documents.update',
+      risk: 'W2',
+      autonomy: 'A3',
+      payload: { confidentialTitle: 'Quarterly acquisition target' },
+      idempotencyKey: 'document-1-v3',
+      compensation: { strategy: 'manual' },
+      approvalContext: {
+        provider: 'Document Provider',
+        connectorId: 'connector-1',
+        origin: 'https://connector.example.com',
+        resourceClass: 'document',
+        purpose: 'Update an approved document',
+        effect: 'external-mutation',
+        method: 'PATCH',
+      },
+    })
+    const pending = broker.authorize(operation)
+    if (pending.status !== 'approval-required') throw new Error('Expected approval request')
+    expect(pending.approval).toMatchObject({
+      risk: 'W2',
+      approvalContext: {
+        provider: 'Document Provider',
+        resourceClass: 'document',
+        purpose: 'Update an approved document',
+        method: 'PATCH',
+      },
+    })
+    expect(JSON.stringify(pending.approval)).not.toContain('Quarterly acquisition target')
+    expect(JSON.stringify(pending.approval)).not.toContain('document-1')
+
+    expect(capabilityOperationRequestHash({
+      ...operation,
+      approvalContext: { ...operation.approvalContext!, purpose: 'Delete the document' },
+    })).not.toBe(capabilityOperationRequestHash(operation))
+    expect(() => capabilityOperationRequestHash({
+      ...operation,
+      approvalContext: { ...operation.approvalContext!, origin: 'https://attacker.example' },
+    })).toThrow('Approval origin must match')
   })
 })

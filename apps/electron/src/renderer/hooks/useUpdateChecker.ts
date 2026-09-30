@@ -35,7 +35,6 @@ interface UseUpdateCheckerResult {
 
 // Toast ID for update notification (allows dismiss/update)
 const UPDATE_TOAST_ID = 'update-available'
-let automaticCheckStarted = false
 
 export function useUpdateChecker(): UseUpdateCheckerResult {
   const { t } = useTranslation()
@@ -150,18 +149,6 @@ export function useUpdateChecker(): UseUpdateCheckerResult {
       setUpdateInfo((prev) => prev ? { ...prev, downloadProgress: progress } : prev)
     })
 
-    if (!automaticCheckStarted && window.electronAPI.getRuntimeEnvironment() === 'electron') {
-      automaticCheckStarted = true
-      void window.electronAPI.isDebugMode().then(async (debugMode) => {
-        if (debugMode) return
-        const info = await window.electronAPI.checkForUpdates()
-        setUpdateInfo(info)
-        await checkAndNotify(info)
-      }).catch((error) => {
-        console.error('[useUpdateChecker] Automatic check failed:', error)
-      })
-    }
-
     return () => {
       cleanupAvailable()
       cleanupProgress()
@@ -173,6 +160,10 @@ export function useUpdateChecker(): UseUpdateCheckerResult {
     try {
       const info = await window.electronAPI.checkForUpdates()
       setUpdateInfo(info)
+
+      if (info.downloadState === 'error') {
+        throw new Error(info.error || 'Update request failed')
+      }
 
       if (!info.available) {
         toast.success(t('toast.upToDate'), {

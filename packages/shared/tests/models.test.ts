@@ -97,15 +97,16 @@ describe('getModelShortName', () => {
 });
 
 describe('Opus registry', () => {
-  it('includes Opus 4.8 and keeps Opus 4.7, but excludes deprecated Opus 4.6', () => {
+  it('includes Opus 5 and keeps the previous listed Opus snapshots', () => {
     const ids = ANTHROPIC_MODELS.map(m => m.id);
+    expect(ids).toContain('claude-opus-5');
     expect(ids).toContain('claude-opus-4-8');
     expect(ids).toContain('claude-opus-4-7');
     expect(ids).not.toContain('claude-opus-4-6');
   });
 
-  it('resolves "Opus" shortName to 4.8', () => {
-    expect(getModelIdByShortName('Opus')).toBe('claude-opus-4-8');
+  it('resolves "Opus" shortName to 5 for new connections', () => {
+    expect(getModelIdByShortName('Opus')).toBe('claude-opus-5');
   });
 
   it('normalizes deprecated Opus IDs to Opus 4.8 without migrating Opus 4.7', () => {
@@ -113,6 +114,28 @@ describe('Opus registry', () => {
     expect(normalizeDeprecatedModelId('pi/claude-opus-4-6')).toBe('pi/claude-opus-4-8');
     expect(normalizeDeprecatedModelId('us.anthropic.claude-opus-4-6-v1')).toBe('us.anthropic.claude-opus-4-8');
     expect(normalizeDeprecatedModelId('claude-opus-4-7')).toBe('claude-opus-4-7');
+  });
+});
+
+describe('current Anthropic snapshots', () => {
+  it('exposes current model capabilities without rewriting existing selections', () => {
+    for (const id of ['claude-opus-5', 'claude-fable-5-1']) {
+      expect(getModelById(id)).toMatchObject({
+        id,
+        contextWindow: 1_000_000,
+        supportsThinking: true,
+        supportsImages: true,
+      });
+      for (const prefix of ['anthropic.', 'us.anthropic.', 'eu.anthropic.', 'global.anthropic.']) {
+        expect(getModelById(`${prefix}${id}`)?.id).toBe(id);
+      }
+    }
+    for (const id of ['claude-opus-4-8', 'claude-opus-4-7', 'claude-fable-5']) {
+      expect(normalizeDeprecatedModelId(id)).toBe(id);
+      expect(normalizeDeprecatedModelId(`pi/${id}`)).toBe(`pi/${id}`);
+      expect(getModelById(id)?.id).toBe(id);
+    }
+    expect(getModelIdByShortName('Fable')).toBe('claude-fable-5-1');
   });
 });
 

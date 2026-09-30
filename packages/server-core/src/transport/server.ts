@@ -154,6 +154,11 @@ export interface WsRpcServerOptions {
    * If provided, a valid session cookie is accepted as an alternative to a bearer token.
    */
   validateSessionCookie?: (cookieHeader: string | null) => Promise<AuthenticationResult>
+  /**
+   * Explicit browser origins allowed to authenticate a WebSocket with a
+   * session cookie. When unset, the server requires its own HTTPS/HTTP origin.
+   */
+  allowedSessionCookieOrigins?: readonly string[]
   /** Authoritative per-channel authorization invoked before every RPC handler. */
   authorizeRequest?: (
     context: RequestContext,
@@ -170,6 +175,8 @@ export interface WsRpcServerOptions {
   serverVersion?: string
   /** Maximum concurrent clients. 0 = unlimited. Default: 50 */
   maxClients?: number
+  /** Maximum WebSocket message size in bytes. Default: 8 MiB. */
+  maxPayloadBytes?: number
   /** Called when a client completes handshake. */
   onClientConnected?: (info: ConnectedClientInfo) => void
   /** Called when a client disconnects. */
@@ -209,12 +216,14 @@ export class WsRpcServer implements RpcServer {
   private readonly requireAuth: boolean
   private readonly validateToken: ((token: string) => Promise<AuthenticationResult>) | null
   private readonly validateSessionCookie: ((cookieHeader: string | null) => Promise<AuthenticationResult>) | null
+  private readonly allowedSessionCookieOrigins: ReadonlySet<string>
   private readonly authorizeRequest: WsRpcServerOptions['authorizeRequest']
   private readonly requireAuthoritativePrincipal: boolean
   private readonly serverId: string
   private readonly tlsOptions: WsRpcTlsOptions | null
   private readonly serverVersion: string
   private readonly maxClients: number
+  private readonly maxPayloadBytes: number
   private readonly onClientConnected: WsRpcServerOptions['onClientConnected']
   private readonly onClientDisconnected: WsRpcServerOptions['onClientDisconnected']
   private readonly httpHandler: WsRpcServerOptions['httpHandler']
@@ -225,12 +234,16 @@ export class WsRpcServer implements RpcServer {
     this.requireAuth = opts?.requireAuth ?? false
     this.validateToken = opts?.validateToken ?? null
     this.validateSessionCookie = opts?.validateSessionCookie ?? null
+    this.allowedSessionCookieOrigins = new Set((opts?.allowedSessionCookieOrigins ?? []).map((origin) => (
+      new URL(origin).origin
+    )))
     this.authorizeRequest = opts?.authorizeRequest
     this.requireAuthoritativePrincipal = opts?.requireAuthoritativePrincipal ?? false
     this.serverId = opts?.serverId ?? 'local'
     this.serverVersion = opts?.serverVersion ?? ''
     this.tlsOptions = opts?.tls ?? null
     this.maxClients = opts?.maxClients ?? 50
+    this.maxPayloadBytes = opts?.maxPayloadBytes ?? 8 * 1024 * 1024
     this.onClientConnected = opts?.onClientConnected
     this.onClientDisconnected = opts?.onClientDisconnected
     this.httpHandler = opts?.httpHandler
@@ -353,7 +366,11 @@ export class WsRpcServer implements RpcServer {
           this.httpHandler,
         )
 
-        this.wss = new WebSocketServer({ server: this.httpsServer })
+        this.wss = new WebSocketServer({
+          server: this.httpsServer,
+          perMessageDeflate: false,
+          maxPayload: this.maxPayloadBytes,
+        })
 
         this.httpsServer.on('error', (err) => reject(err))
 
@@ -369,7 +386,11 @@ export class WsRpcServer implements RpcServer {
         // Plain WS + HTTP handler: create an HTTP server for both.
         this._protocol = 'ws'
         this.httpServer = createHttpServer(this.httpHandler)
-        this.wss = new WebSocketServer({ server: this.httpServer })
+        this.wss = new WebSocketServer({
+          server: this.httpServer,
+          perMessageDeflate: false,
+          maxPayload: this.maxPayloadBytes,
+        })
 
         this.httpServer.on('error', (err) => reject(err))
 
@@ -387,6 +408,8 @@ export class WsRpcServer implements RpcServer {
         this.wss = new WebSocketServer({
           host: this.host,
           port: this.requestedPort,
+          perMessageDeflate: false,
+          maxPayload: this.maxPayloadBytes,
         })
 
         this.wss.on('listening', () => {
@@ -404,7 +427,12 @@ export class WsRpcServer implements RpcServer {
       }
 
       this.wss.on('connection', (ws, req) => {
-        this.onConnection(ws, req.headers.cookie ?? null)
+        this.onConnection(
+          ws,
+          req.headers.cookie ?? null,
+          req.headers.origin ?? null,
+          req.headers.host ?? null,
+        )
       })
     })
   }
@@ -443,7 +471,12 @@ export class WsRpcServer implements RpcServer {
   // Connection handling
   // -------------------------------------------------------------------------
 
-  private onConnection(ws: WebSocket, upgradeRequestCookie: string | null): void {
+  private onConnection(
+    ws: WebSocket,
+    upgradeRequestCookie: string | null,
+    upgradeRequestOrigin: string | null,
+    upgradeRequestHost: string | null,
+  ): void {
     // Reject if at capacity
     if (this.maxClients > 0 && this.clients.size >= this.maxClients) {
       transportLog.warn('Connection rejected: at capacity', {
@@ -521,7 +554,12 @@ export class WsRpcServer implements RpcServer {
           }
 
           // 2. Fallback: try session cookie from HTTP upgrade request (web UI path)
-          if (authenticationResult === false && this.validateSessionCookie && upgradeRequestCookie) {
+          if (
+            authenticationResult === false
+            && this.validateSessionCookie
+            && upgradeRequestCookie
+            && this.isSessionCookieOriginAllowed(upgradeRequestOrigin, upgradeRequestHost)
+          ) {
             try {
               authenticationResult = await this.validateSessionCookie(upgradeRequestCookie)
             } catch (error) {
@@ -759,6 +797,21 @@ export class WsRpcServer implements RpcServer {
     ws.on('error', () => {
       // Connection errors are handled by the close event
     })
+  }
+
+  private isSessionCookieOriginAllowed(origin: string | null, host: string | null): boolean {
+    if (!origin) return false
+    try {
+      const normalizedOrigin = new URL(origin).origin
+      if (this.allowedSessionCookieOrigins.size > 0) {
+        return this.allowedSessionCookieOrigins.has(normalizedOrigin)
+      }
+      if (!host) return false
+      const expectedProtocol = this.tlsOptions ? 'https' : 'http'
+      return normalizedOrigin === new URL(`${expectedProtocol}://${host}`).origin
+    } catch {
+      return false
+    }
   }
 
   // -------------------------------------------------------------------------

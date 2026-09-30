@@ -2,9 +2,15 @@ import { afterEach, describe, expect, it } from 'bun:test';
 import { ChatGPTBackendSearchProvider, extractChatGptAccountId } from './chatgpt.ts';
 
 const originalFetch = globalThis.fetch;
+const originalKillSwitch = process.env.ROBB_DISABLE_CHATGPT_CODEX_BACKEND;
 
 afterEach(() => {
   globalThis.fetch = originalFetch;
+  if (originalKillSwitch === undefined) {
+    delete process.env.ROBB_DISABLE_CHATGPT_CODEX_BACKEND;
+  } else {
+    process.env.ROBB_DISABLE_CHATGPT_CODEX_BACKEND = originalKillSwitch;
+  }
 });
 
 /** Build a minimal JWT with the given claims payload. */
@@ -52,6 +58,21 @@ describe('extractChatGptAccountId', () => {
 });
 
 describe('ChatGPTBackendSearchProvider', () => {
+  it('fails closed before fetch when the contract kill switch is active', async () => {
+    let fetched = false;
+    globalThis.fetch = (async () => {
+      fetched = true;
+      return new Response('{}');
+    }) as typeof fetch;
+    process.env.ROBB_DISABLE_CHATGPT_CODEX_BACKEND = '1';
+
+    const provider = new ChatGPTBackendSearchProvider('must-not-leak', 'acc_123');
+    await expect(provider.search('test query', 5)).rejects.toThrow(
+      'ChatGPT Codex backend is disabled by provider contract',
+    );
+    expect(fetched).toBe(false);
+  });
+
   it('calls ChatGPT backend endpoint with correct auth headers', async () => {
     let calledUrl = '';
     let calledHeaders: Record<string, string> = {};
@@ -90,7 +111,7 @@ describe('ChatGPTBackendSearchProvider', () => {
     expect(calledUrl).toBe('https://chatgpt.com/backend-api/codex/responses');
     expect(calledHeaders.Authorization).toBe('Bearer my-access-token');
     expect(calledHeaders['chatgpt-account-id']).toBe('acc_12345');
-    expect(calledBody.model).toBe('gpt-5.3-codex');
+    expect(calledBody.model).toBe('gpt-5.4-mini');
     expect(calledBody.store).toBe(false);
     expect(calledBody.stream).toBe(true);
     expect(calledBody.instructions).toContain('web search assistant');
@@ -130,7 +151,7 @@ describe('ChatGPTBackendSearchProvider', () => {
     expect(results[0]?.url).toBe('https://status.openai.com/');
   });
 
-  it('retries with web_search_preview when first attempt returns 400', async () => {
+  it('does not retry with unsupported preview search when the backend returns 400', async () => {
     const attempts: Array<{
       tools: unknown;
       model: unknown;
@@ -157,35 +178,18 @@ describe('ChatGPTBackendSearchProvider', () => {
         input: body?.input,
       });
 
-      if (attempts.length === 1) {
-        return new Response('Bad Request', { status: 400 });
-      }
-
-      return new Response(
-        JSON.stringify({
-          output: [
-            {
-              type: 'message',
-              content: [
-                {
-                  type: 'output_text',
-                  text: 'Recovered search results.',
-                  annotations: [
-                    { type: 'url_citation', url: 'https://retry.example', title: 'Retry Result' },
-                  ],
-                },
-              ],
-            },
-          ],
-        }),
-        { status: 200, headers: { 'Content-Type': 'application/json' } },
-      );
+      return new Response('Unsupported tool type: web_search_preview', { status: 400 });
     }) as typeof fetch;
 
     const provider = new ChatGPTBackendSearchProvider('token', 'acc_123');
-    const results = await provider.search('retry query', 3);
+    let message = '';
+    try {
+      await provider.search('retry query', 3);
+    } catch (error) {
+      message = error instanceof Error ? error.message : String(error);
+    }
 
-    expect(attempts).toHaveLength(2);
+    expect(attempts).toHaveLength(1);
     expect(attempts[0]?.tools).toEqual([{ type: 'web_search' }]);
     expect(attempts[0]?.instructions).toContain('web search assistant');
     expect(attempts[0]?.store).toBe(false);
@@ -196,117 +200,75 @@ describe('ChatGPTBackendSearchProvider', () => {
     expect(Array.isArray(attempts[0]?.input)).toBe(true);
     expect((attempts[0]?.input as any[])[0]?.role).toBe('user');
     expect((attempts[0]?.input as any[])[0]?.content?.[0]?.type).toBe('input_text');
-    expect(attempts[1]?.tools).toEqual([{ type: 'web_search_preview' }]);
-    expect(attempts[1]?.instructions).toContain('web search assistant');
-    expect(attempts[1]?.store).toBe(false);
-    expect(attempts[1]?.stream).toBe(true);
-    expect(attempts[1]?.tool_choice).toBe('auto');
-    expect(attempts[1]?.parallel_tool_calls).toBe(true);
-    expect(attempts[1]?.text).toEqual({ verbosity: 'medium' });
-    expect(Array.isArray(attempts[1]?.input)).toBe(true);
-    expect((attempts[1]?.input as any[])[0]?.role).toBe('user');
-    expect((attempts[1]?.input as any[])[0]?.content?.[0]?.type).toBe('input_text');
-    expect(results[0]?.url).toBe('https://retry.example');
+    expect(message).toContain('HTTP 400');
+    expect(message).toContain('tool=web_search');
+    expect(JSON.stringify(attempts)).not.toContain('web_search_preview');
   });
 
-  it('retries with web_search_preview when first attempt returns 200 with non-JSON body', async () => {
+  it('surfaces parse failures without retrying with unsupported preview search', async () => {
+    const attempts: Array<{ tools: unknown }> = [];
+
+    globalThis.fetch = (async (_input: RequestInfo | URL, init?: RequestInit) => {
+      const body = init?.body ? JSON.parse(String(init.body)) : null;
+      attempts.push({ tools: body?.tools });
+      return new Response('Bad Request', {
+        status: 200,
+        headers: { 'Content-Type': 'text/plain' },
+      });
+    }) as typeof fetch;
+
+    const provider = new ChatGPTBackendSearchProvider('token', 'acc_123');
+    let message = '';
+    try {
+      await provider.search('parse retry query', 3);
+    } catch (error) {
+      message = error instanceof Error ? error.message : String(error);
+    }
+
+    expect(attempts).toHaveLength(1);
+    expect(attempts[0]?.tools).toEqual([{ type: 'web_search' }]);
+    expect(message).toContain('web_search parse failed');
+    expect(JSON.stringify(attempts)).not.toContain('web_search_preview');
+  });
+
+  it('does not retry invalid SSE payloads with unsupported preview search', async () => {
     const attempts: Array<{ tools: unknown }> = [];
 
     globalThis.fetch = (async (_input: RequestInfo | URL, init?: RequestInit) => {
       const body = init?.body ? JSON.parse(String(init.body)) : null;
       attempts.push({ tools: body?.tools });
 
-      if (attempts.length === 1) {
-        return new Response('Bad Request', {
-          status: 200,
-          headers: { 'Content-Type': 'text/plain' },
-        });
-      }
+      const invalidSse = [
+        'event: response.created',
+        'data: {"type":"response.created","response":{"id":"resp_1"}}',
+        '',
+        'event: ping',
+        'data: {"type":"response.in_progress"}',
+        '',
+      ].join('\n');
 
-      return new Response(
-        JSON.stringify({
-          output: [
-            {
-              type: 'message',
-              content: [
-                {
-                  type: 'output_text',
-                  text: 'Recovered from parse failure.',
-                  annotations: [
-                    { type: 'url_citation', url: 'https://parse-retry.example', title: 'Parse Retry Result' },
-                  ],
-                },
-              ],
-            },
-          ],
-        }),
-        { status: 200, headers: { 'Content-Type': 'application/json' } },
-      );
+      return new Response(invalidSse, {
+        status: 200,
+        headers: { 'Content-Type': 'text/event-stream' },
+      });
     }) as typeof fetch;
 
     const provider = new ChatGPTBackendSearchProvider('token', 'acc_123');
-    const results = await provider.search('parse retry query', 3);
+    let message = '';
+    try {
+      await provider.search('invalid sse query', 3);
+    } catch (error) {
+      message = error instanceof Error ? error.message : String(error);
+    }
 
-    expect(attempts).toHaveLength(2);
+    expect(attempts).toHaveLength(1);
     expect(attempts[0]?.tools).toEqual([{ type: 'web_search' }]);
-    expect(attempts[1]?.tools).toEqual([{ type: 'web_search_preview' }]);
-    expect(results[0]?.url).toBe('https://parse-retry.example');
+    expect(message).toContain('web_search parse failed');
+    expect(message).toContain('no completed response payload');
+    expect(JSON.stringify(attempts)).not.toContain('web_search_preview');
   });
 
-  it('retries with web_search_preview when first attempt returns invalid SSE payload', async () => {
-    const attempts: Array<{ tools: unknown }> = [];
-
-    globalThis.fetch = (async (_input: RequestInfo | URL, init?: RequestInit) => {
-      const body = init?.body ? JSON.parse(String(init.body)) : null;
-      attempts.push({ tools: body?.tools });
-
-      if (attempts.length === 1) {
-        const invalidSse = [
-          'event: response.created',
-          'data: {"type":"response.created","response":{"id":"resp_1"}}',
-          '',
-          'event: ping',
-          'data: {"type":"response.in_progress"}',
-          '',
-        ].join('\n');
-
-        return new Response(invalidSse, {
-          status: 200,
-          headers: { 'Content-Type': 'text/event-stream' },
-        });
-      }
-
-      return new Response(
-        JSON.stringify({
-          output: [
-            {
-              type: 'message',
-              content: [
-                {
-                  type: 'output_text',
-                  text: 'Recovered from SSE parse failure.',
-                  annotations: [
-                    { type: 'url_citation', url: 'https://sse-retry.example', title: 'SSE Retry Result' },
-                  ],
-                },
-              ],
-            },
-          ],
-        }),
-        { status: 200, headers: { 'Content-Type': 'application/json' } },
-      );
-    }) as typeof fetch;
-
-    const provider = new ChatGPTBackendSearchProvider('token', 'acc_123');
-    const results = await provider.search('invalid sse query', 3);
-
-    expect(attempts).toHaveLength(2);
-    expect(attempts[0]?.tools).toEqual([{ type: 'web_search' }]);
-    expect(attempts[1]?.tools).toEqual([{ type: 'web_search_preview' }]);
-    expect(results[0]?.url).toBe('https://sse-retry.example');
-  });
-
-  it('aggregates parse failures when both attempts fail to parse', async () => {
+  it('reports parse failure with request fingerprint', async () => {
     globalThis.fetch = (async (_input: RequestInfo | URL, init?: RequestInit) => {
       const body = init?.body ? JSON.parse(String(init.body)) : null;
       const toolType = body?.tools?.[0]?.type;
@@ -327,7 +289,7 @@ describe('ChatGPTBackendSearchProvider', () => {
 
     expect(message).toContain('ChatGPT search failed');
     expect(message).toContain('web_search parse failed');
-    expect(message).toContain('web_search_preview parse failed');
+    expect(message).toContain('tool=web_search');
     expect(message).toContain('content-type=text/plain');
   });
 

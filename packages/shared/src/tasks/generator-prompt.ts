@@ -20,6 +20,7 @@ export function buildGeneratorPrompt(goal: string, title?: string): string {
     '- Reference an upstream result inside a prompt with ${nodes.<id>.output}.',
     '- Every ${nodes.<id>.output} reference MUST point to an `id` that you actually declare under `nodes`. Never reference a node you did not create. Verify each reference resolves before emitting the YAML.',
     '- Add `acceptance_criteria`: a short, checkable rubric for the FINISHED task (what "done and correct" means). It is what you will grade the result against when the run finishes — make it concrete and testable, not a restatement of the goal.',
+    '- The runner already keeps bounded verifier reflections and stops repeated rejected results. Add an `autonomy` override only when this task needs non-default reflection or stagnation limits.',
     '',
     'Schema:',
     '  id: kebab-case-slug',

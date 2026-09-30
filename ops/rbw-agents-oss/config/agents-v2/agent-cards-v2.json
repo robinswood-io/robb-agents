@@ -2,8 +2,8 @@
   "schemaVersion": "rbw-agent-cards-v2",
   "generatedAt": "2026-07-12T21:22:15.029149Z",
   "counts": {
-    "cards": 193,
-    "traceable": 193
+    "cards": 192,
+    "traceable": 192
   },
   "cards": [
     {
@@ -5515,48 +5515,6 @@
         "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/prospect-research-sellsy-intake-last.json"
       },
       "specHash": "d3a8551604ae0c690e3a36117ad94f539175696963d862a004831f631cc0384a"
-    },
-    {
-      "agentId": "provider-routing-guard",
-      "name": "Guard de routage providers LLM (OpenRouter free-first)",
-      "description": "RBW OSS observability capability executed through Temporal/runtime v2.",
-      "protocolProfile": "rbw-agent-card-v2",
-      "transport": {
-        "type": "temporal-wrapper",
-        "workflowIds": [
-          "rbw.provider-routing-guard"
-        ],
-        "taskQueues": [
-          "watchdog"
-        ],
-        "scheduled": true
-      },
-      "skills": [
-        "observability",
-        "risk:unclassified"
-      ],
-      "execution": {
-        "backend": "argv",
-        "timeoutSeconds": 180
-      },
-      "contracts": {
-        "version": "runtime-v2-execution-report-v1",
-        "expects_report": true,
-        "json_path": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/provider-routing-guard-last.json",
-        "markdown_path": null
-      },
-      "security": {
-        "scope": "internal-only",
-        "policyClass": "classified",
-        "mutationMode": "prepare_only_or_read_only",
-        "approvalForApply": false,
-        "approvalForExternalSend": false
-      },
-      "observability": {
-        "traceable": true,
-        "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/provider-routing-guard-last.json"
-      },
-      "specHash": "c41078fb06be0db979dd983f9bd221d5b5060b956a37a810ca7d7eec2bf67c8c"
     },
     {
       "agentId": "qualified-opportunity-quote-guard",

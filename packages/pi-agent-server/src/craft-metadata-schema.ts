@@ -30,7 +30,7 @@ function cloneWithDescriptors<T extends object>(value: T): T {
  * properties at the adapter boundary. Unknown schema shapes are returned
  * unchanged, and upstream-defined metadata properties win if Pi adds them later.
  */
-export function allowCraftMetadataProperties<T>(schema: T): T {
+export function allowCraftMetadataProperties<T>(schema: T, sdkToolName?: string): T {
   if (!isRecord(schema)) return schema;
 
   const properties = schema.properties;
@@ -46,6 +46,33 @@ export function allowCraftMetadataProperties<T>(schema: T): T {
     nextProperties[CRAFT_INTENT_KEY] = CRAFT_INTENT_SCHEMA;
   }
 
+  // Pi's Edit schema uses { path, edits: [{ oldText, newText }] }, while the
+  // shared Craft contract and older resumed turns use
+  // { file_path, old_string, new_string }. Validation runs before execute(),
+  // so both shapes must be accepted at the schema boundary and normalized
+  // immediately before calling Pi.
+  if (sdkToolName === 'Edit') {
+    nextProperties.file_path ??= { type: 'string', description: 'Compatibility alias for path.' };
+    nextProperties.old_string ??= { type: 'string', description: 'Compatibility alias for edits[0].oldText.' };
+    nextProperties.new_string ??= { type: 'string', description: 'Compatibility alias for edits[0].newText.' };
+
+    Object.defineProperty(nextSchema, 'required', {
+      value: [],
+      enumerable: true,
+      configurable: true,
+      writable: true,
+    });
+    Object.defineProperty(nextSchema, 'anyOf', {
+      value: [
+        { required: ['path', 'edits'] },
+        { required: ['file_path', 'old_string', 'new_string'] },
+      ],
+      enumerable: true,
+      configurable: true,
+      writable: true,
+    });
+  }
+
   Object.defineProperty(nextSchema, 'properties', {
     value: nextProperties,
     enumerable: true,
@@ -53,6 +80,30 @@ export function allowCraftMetadataProperties<T>(schema: T): T {
     writable: true,
   });
   return nextSchema as T;
+}
+
+/** Convert Craft-compatible file arguments back to the strict Pi SDK shape. */
+export function normalizeForPiTool<T>(sdkToolName: string, input: T): T {
+  if (!isRecord(input)) return input;
+  if (!['Write', 'Edit', 'MultiEdit', 'NotebookEdit'].includes(sdkToolName)) return input;
+
+  const normalized: Record<string, unknown> = { ...input };
+  if (typeof normalized.file_path === 'string') {
+    normalized.path = normalized.file_path;
+  }
+
+  if (sdkToolName === 'Edit' && !Array.isArray(normalized.edits)
+      && typeof normalized.old_string === 'string'
+      && typeof normalized.new_string === 'string') {
+    normalized.edits = [{ oldText: normalized.old_string, newText: normalized.new_string }];
+  }
+
+  delete normalized.file_path;
+  delete normalized.old_string;
+  delete normalized.new_string;
+  delete normalized.oldText;
+  delete normalized.newText;
+  return normalized as T;
 }
 
 /** Strip Craft-only metadata before invoking the upstream Pi tool implementation. */

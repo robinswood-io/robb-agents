@@ -1,3 +1,4 @@
+import { THINKING_LEVEL_IDS } from '../agent/thinking-levels.ts';
 /**
  * task.yaml schema — the declarative DAG spec for Tasks.
  *
@@ -64,6 +65,25 @@ export const DEFAULT_REPAIR_ATTEMPTS = 3;
 export const MAX_REPAIR_ATTEMPTS_CAP = 10;
 
 // ---------------------------------------------------------------------------
+// Reflective repair policy — bounded episodic memory + no-progress detection.
+// These caps are intentionally small: verifier feedback should guide the next
+// attempt without turning the whole run trajectory into an unbounded prompt.
+// ---------------------------------------------------------------------------
+
+/** Verifier feedback entries retained when a task does not declare an override. */
+export const DEFAULT_REFLECTION_MEMORY_ENTRIES = 3;
+/** Maximum verifier feedback entries that may be injected into one repair prompt. */
+export const MAX_REFLECTION_MEMORY_ENTRIES_CAP = 8;
+/** Maximum characters retained from the immediately rejected node output. */
+export const DEFAULT_REFLECTION_OUTPUT_CHARS = 1_500;
+/** Hard prompt-size cap for a rejected output excerpt. */
+export const MAX_REFLECTION_OUTPUT_CHARS_CAP = 4_000;
+/** Repeated rejected-result fingerprints tolerated before the run stops early. */
+export const DEFAULT_STAGNATION_LIMIT = 2;
+/** Hard cap keeps cyclic exploration from silently replacing the iteration budget. */
+export const MAX_STAGNATION_LIMIT_CAP = 5;
+
+// ---------------------------------------------------------------------------
 // Primitive validators
 // ---------------------------------------------------------------------------
 
@@ -120,6 +140,34 @@ export const RetrySchema = z.object({
   when: z.union([z.enum(RETRY_WHEN), z.array(z.enum(RETRY_WHEN)).min(1)]).optional(),
 });
 
+/**
+ * Policy for evaluator→optimizer repair turns.
+ *
+ * A value of zero disables the corresponding memory/excerpt feature. Stagnation
+ * detection remains mandatory once `stagnation_limit` is reached; tasks can set
+ * it as high as the cap when broader exploration is justified.
+ */
+export const TaskAutonomySchema = z.object({
+  reflection_memory_entries: z
+    .number()
+    .int()
+    .min(0)
+    .max(MAX_REFLECTION_MEMORY_ENTRIES_CAP)
+    .default(DEFAULT_REFLECTION_MEMORY_ENTRIES),
+  reflection_output_chars: z
+    .number()
+    .int()
+    .min(0)
+    .max(MAX_REFLECTION_OUTPUT_CHARS_CAP)
+    .default(DEFAULT_REFLECTION_OUTPUT_CHARS),
+  stagnation_limit: z
+    .number()
+    .int()
+    .positive()
+    .max(MAX_STAGNATION_LIMIT_CAP)
+    .default(DEFAULT_STAGNATION_LIMIT),
+});
+
 export const TaskParamSchema = z.object({
   name: ident('param name'),
   type: z.enum(PARAM_TYPES).optional(),
@@ -130,10 +178,23 @@ export const TaskParamSchema = z.object({
 export const TaskDefaultsSchema = z.object({
   model: z.string().min(1).optional(),
   llmConnection: z.string().min(1).optional(),
+  thinkingLevel: z.enum(THINKING_LEVEL_IDS).optional(),
   permissionMode: z.enum(PERMISSION_MODES).optional(),
   /** Shared retry policy for nodes that do not declare an override. */
   retry: RetrySchema.optional(),
 });
+
+/** Human-auditable executor identity exposed by the durable Task projection. */
+export const TaskExecutorSchema = z.object({
+  /** Logical agent identity (for example `conductor`, `finance-reconciler`). */
+  agent: z.string().min(1).optional(),
+  /** Host wrapper/workflow entrypoint used to execute the task. */
+  wrapper: z.string().min(1).optional(),
+  /** Optional executor-level route; node/default routes still take precedence at dispatch. */
+  model: z.string().min(1).optional(),
+  llmConnection: z.string().min(1).optional(),
+  thinkingLevel: z.enum(THINKING_LEVEL_IDS).optional(),
+}).optional();
 
 /** Resource and access envelope for autonomous task execution. */
 export const TaskExecutionSchema = z.object({
@@ -207,6 +268,7 @@ const TaskNodeObject = z.object({
   model: z.string().min(1).optional(),
   /** LLM connection slug that serves `model` — required for non-default (e.g. pi/*) models to resolve a backend. */
   llmConnection: z.string().min(1).optional(),
+  thinkingLevel: z.enum(THINKING_LEVEL_IDS).optional(),
   permissionMode: z.enum(PERMISSION_MODES).optional(),
   labels: z.array(z.string()).optional(),
   status: z.string().optional(),
@@ -257,6 +319,8 @@ export const TaskSpecSchema = z
     id: slug('task id'),
     title: z.string().min(1),
     goal: z.string().min(1),
+    /** Canonical user-facing description. Legacy tasks fall back to `goal` in DurableTask. */
+    description: z.string().min(1).optional(),
     /** Freeform rubric the orchestrator grades the final result against (verification gate). Falls back to `goal`. */
     acceptance_criteria: z.string().min(1).optional(),
     project: z.string().min(1).optional(),
@@ -265,6 +329,7 @@ export const TaskSpecSchema = z
      *  children inherit it at dispatch. */
     cwd: z.string().min(1).optional(),
     runner: z.enum(TASK_RUNNERS).default('conduct'),
+    executor: TaskExecutorSchema,
     /** Source slugs enabled on the orchestrator and every child session (per-session enabled sources). */
     sources: z.array(z.string().min(1)).optional(),
     /** Skill slugs applied as context: dispatched child prompts carry [skill:slug] mentions, so the
@@ -282,6 +347,8 @@ export const TaskSpecSchema = z
     /** Max repair attempts on a FAIL verdict (re-run the repair frontier). 0 disables repair;
      *  capped at MAX_REPAIR_ATTEMPTS_CAP. Omitted → runner uses DEFAULT_REPAIR_ATTEMPTS. */
     max_iterations: z.number().int().min(0).max(MAX_REPAIR_ATTEMPTS_CAP).optional(),
+    /** Bounded reflective memory and no-progress stop policy for verifier-driven repairs. */
+    autonomy: TaskAutonomySchema.optional(),
     nodes: z.array(TaskNodeSchema).min(1, 'A task must define at least one node'),
     /** Named task outputs → reference strings, e.g. { result: "${nodes.review.output}" }. */
     outputs: z.record(z.string(), z.string()).optional(),
@@ -326,8 +393,10 @@ export type InputRef = z.infer<typeof InputRefSchema>;
 export type OutputDecl = z.infer<typeof OutputDeclSchema>;
 export type Loop = z.infer<typeof LoopSchema>;
 export type Retry = z.infer<typeof RetrySchema>;
+export type TaskAutonomy = z.infer<typeof TaskAutonomySchema>;
 export type TaskParam = z.infer<typeof TaskParamSchema>;
 export type TaskDefaults = z.infer<typeof TaskDefaultsSchema>;
+export type TaskExecutor = z.infer<typeof TaskExecutorSchema>;
 export type TaskExecution = z.infer<typeof TaskExecutionSchema>;
 export type Mission = z.infer<typeof MissionSchema>;
 export type TaskNode = z.infer<typeof TaskNodeSchema>;

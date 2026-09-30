@@ -9,10 +9,10 @@
  * - No background download or install-on-quit is allowed.
  */
 
-import { spawn, spawnSync } from 'node:child_process'
+import { spawn } from 'node:child_process'
 import { homedir } from 'node:os'
-import { dirname, join } from 'node:path'
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { basename, dirname, isAbsolute, join } from 'node:path'
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { app, BrowserWindow } from 'electron'
 import { autoUpdater } from 'electron-updater'
 import { clearDismissedUpdateVersion } from '@craft-agent/shared/config'
@@ -21,7 +21,6 @@ import type { EventSink } from '@craft-agent/server-core/transport'
 import { RPC_CHANNELS, type UpdateInfo } from '../shared/types'
 import {
   canUseStableUpdater,
-  isDeveloperIdApplicationSignature,
   isStableReleaseVersion,
   resolveAppChannel,
 } from './app-channel'
@@ -39,6 +38,17 @@ let eventSink: EventSink | null = null
 let beforeUpdateQuitHook: (() => void) | null = null
 let updateInProgress = false
 let updateCheckInProgress = false
+let activeUpdateCheckSource: 'manual' | 'automatic' | null = null
+let updateCheckPromise: Promise<UpdateInfo> | null = null
+let updateDownloadPromise: Promise<UpdateInfo> | null = null
+let automaticUpdateTimer: NodeJS.Timeout | null = null
+let automaticUpdateChecksStarted = false
+let consecutiveAutomaticCheckFailures = 0
+
+const AUTOMATIC_UPDATE_INITIAL_DELAY_MS = 30_000
+const AUTOMATIC_UPDATE_SUCCESS_INTERVAL_MS = 6 * 60 * 60 * 1000
+const AUTOMATIC_UPDATE_RETRY_BASE_MS = 15 * 60 * 1000
+const AUTOMATIC_UPDATE_RETRY_MAX_MS = 60 * 60 * 1000
 
 autoUpdater.autoDownload = false
 autoUpdater.autoInstallOnAppQuit = false
@@ -70,7 +80,7 @@ function broadcastDownloadProgress(progress: number): void {
 }
 
 autoUpdater.on('checking-for-update', () => {
-  autoUpdateLog.info('Manual stable update check started')
+  autoUpdateLog.info(`${activeUpdateCheckSource === 'automatic' ? 'Automatic' : 'Manual'} stable update check started`)
 })
 
 autoUpdater.on('update-available', (info) => {
@@ -103,6 +113,10 @@ autoUpdater.on('update-available', (info) => {
 })
 
 autoUpdater.on('update-not-available', (info) => {
+  autoUpdateLog.info('No stable update available', {
+    currentVersion: updateInfo.currentVersion,
+    feedVersion: info.version,
+  })
   updateInfo = {
     ...updateInfo,
     available: false,
@@ -183,7 +197,13 @@ function readUpdaterCacheDirName(): string {
   try {
     const config = readFileSync(updateConfigPath, 'utf8')
     const match = config.match(/^updaterCacheDirName:\s*['"]?([^'"\n]+)['"]?\s*$/m)
-    if (match?.[1]) return match[1].trim()
+    if (match?.[1]) {
+      const cacheDirName = match[1].trim()
+      if (cacheDirName && cacheDirName !== '.' && cacheDirName !== '..' && basename(cacheDirName) === cacheDirName) {
+        return cacheDirName
+      }
+      autoUpdateLog.warn('Ignored unsafe updater cache directory name; using bundled default')
+    }
   } catch (error) {
     autoUpdateLog.warn('Could not read updater cache directory name; using bundled default', error)
   }
@@ -203,7 +223,9 @@ function resolvePendingMacUpdateZip(): string {
     const info = JSON.parse(readFileSync(updateInfoPath, 'utf8')) as { fileName?: string; path?: string }
     const configuredPath = info.path ?? info.fileName
     if (configuredPath) {
-      const candidate = join(pendingDir, configuredPath)
+      // update-info.json is local updater state, but constrain it to the pending
+      // directory anyway so a corrupted cache cannot redirect installation.
+      const candidate = join(pendingDir, basename(configuredPath))
       if (existsSync(candidate)) return candidate
     }
   } catch {
@@ -211,8 +233,17 @@ function resolvePendingMacUpdateZip(): string {
   }
 
   try {
-    const zip = readdirSync(pendingDir).find((entry) => entry.endsWith('.zip'))
-    if (zip) return join(pendingDir, zip)
+    // Broken/legacy caches may omit update-info.json. Prefer the most recently
+    // written ZIP instead of filesystem enumeration order, which can select a
+    // stale update when multiple archives remain.
+    const zip = readdirSync(pendingDir, { withFileTypes: true })
+      .filter(entry => entry.isFile() && entry.name.endsWith('.zip'))
+      .map(entry => ({
+        name: entry.name,
+        modifiedAt: statSync(join(pendingDir, entry.name)).mtimeMs,
+      }))
+      .sort((left, right) => right.modifiedAt - left.modifiedAt)[0]
+    if (zip) return join(pendingDir, zip.name)
   } catch {
     // Fall through to the compatibility path used by electron-updater on macOS.
   }
@@ -220,15 +251,6 @@ function resolvePendingMacUpdateZip(): string {
   const compatibilityZip = join(cacheRoot, 'update.zip')
   if (existsSync(compatibilityZip)) return compatibilityZip
   throw new Error(`Downloaded macOS update zip not found in ${cacheRoot}`)
-}
-
-function currentMacAppUsesDeveloperIdSignature(): boolean {
-  if (process.platform !== 'darwin') return false
-  const result = spawnSync('/usr/bin/codesign', ['-dv', '--verbose=4', process.execPath], {
-    encoding: 'utf8',
-  })
-  const output = `${result.stdout ?? ''}\n${result.stderr ?? ''}`
-  return result.status === 0 && isDeveloperIdApplicationSignature(output)
 }
 
 function writeDetachedMacInstallerScript(): string {
@@ -246,8 +268,18 @@ printf '\n==== Robb detached macOS update started %s ====\n' "$(date -Iseconds)"
 echo "zip=$ZIP_PATH"
 echo "app=$APP_PATH"
 echo "expectedVersion=$EXPECTED_VERSION"
+if [[ "$APP_PATH" != /* || "$(basename "$APP_PATH")" != 'Robb Agents.app' ]]; then
+  echo "Unsafe application replacement target: $APP_PATH"
+  exit 1
+fi
 TMP_DIR="$(mktemp -d "\${TMPDIR:-/tmp}/robb-agents-update.XXXXXX")"
-cleanup() { rm -rf "$TMP_DIR"; }
+STAGED_ROOT=''
+OLD_APP_PATH=''
+cleanup() {
+  rm -rf "$TMP_DIR"
+  if [ -n "$STAGED_ROOT" ]; then rm -rf "$STAGED_ROOT"; fi
+  rm -f "$0"
+}
 trap cleanup EXIT
 
 validate_notarized_app() {
@@ -304,6 +336,22 @@ if [ "$ACTUAL_VERSION" != "$EXPECTED_VERSION" ]; then
   exit 1
 fi
 
+APP_PARENT="$(dirname "$APP_PATH")"
+STAGED_ROOT="$(mktemp -d "$APP_PARENT/.robb-agents-update.XXXXXX")"
+STAGED_APP="$STAGED_ROOT/Robb Agents.app"
+echo "Staging verified update beside installed application..."
+ditto "$SRC" "$STAGED_APP"
+xattr -cr "$STAGED_APP" || true
+if ! validate_notarized_app "$STAGED_APP"; then
+  echo 'Staged application failed signature verification; refusing installation.'
+  exit 1
+fi
+STAGED_VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$STAGED_APP/Contents/Info.plist")"
+if [ "$STAGED_VERSION" != "$EXPECTED_VERSION" ]; then
+  echo "Staged application has unexpected version $STAGED_VERSION"
+  exit 1
+fi
+
 mkdir -p "$BACKUP_DIR"
 BACKUP_PATH=''
 if [ -d "$APP_PATH" ]; then
@@ -312,30 +360,59 @@ if [ -d "$APP_PATH" ]; then
   ditto "$APP_PATH" "$BACKUP_PATH"
 fi
 
-echo 'Replacing installed application...'
-rm -rf "$APP_PATH"
-ditto "$SRC" "$APP_PATH"
+restore_previous_app() {
+  echo 'Restoring previous application...'
+  rm -rf "$APP_PATH"
+  if [ -n "$OLD_APP_PATH" ] && [ -d "$OLD_APP_PATH" ]; then
+    mv "$OLD_APP_PATH" "$APP_PATH"
+    OLD_APP_PATH=''
+  elif [ -n "$BACKUP_PATH" ] && [ -d "$BACKUP_PATH" ]; then
+    ditto "$BACKUP_PATH" "$APP_PATH"
+  fi
+}
+
+echo 'Replacing installed application transactionally...'
+if [ -d "$APP_PATH" ]; then
+  OLD_APP_PATH="$APP_PARENT/.Robb Agents.app.pre-update-$$"
+  if ! mv "$APP_PATH" "$OLD_APP_PATH"; then
+    echo 'Could not move the installed application aside; leaving it untouched.'
+    exit 1
+  fi
+fi
+if ! mv "$STAGED_APP" "$APP_PATH"; then
+  echo 'Could not activate the staged update.'
+  restore_previous_app
+  exit 1
+fi
 xattr -cr "$APP_PATH" || true
 if ! validate_notarized_app "$APP_PATH"; then
   echo 'Installed application failed signature verification; restoring the previous version.'
-  rm -rf "$APP_PATH"
-  if [ -n "$BACKUP_PATH" ] && [ -d "$BACKUP_PATH" ]; then
-    ditto "$BACKUP_PATH" "$APP_PATH"
-    /usr/bin/codesign --verify --deep --strict --verbose=2 "$APP_PATH"
-  fi
+  restore_previous_app
+  /usr/bin/codesign --verify --deep --strict --verbose=2 "$APP_PATH"
   exit 1
 fi
 INSTALLED_VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP_PATH/Contents/Info.plist")"
 if [ "$INSTALLED_VERSION" != "$EXPECTED_VERSION" ]; then
   echo "Installed application has unexpected version $INSTALLED_VERSION; restoring the previous version."
-  rm -rf "$APP_PATH"
-  if [ -n "$BACKUP_PATH" ] && [ -d "$BACKUP_PATH" ]; then
-    ditto "$BACKUP_PATH" "$APP_PATH"
-    /usr/bin/codesign --verify --deep --strict --verbose=2 "$APP_PATH"
-  fi
+  restore_previous_app
+  /usr/bin/codesign --verify --deep --strict --verbose=2 "$APP_PATH"
   exit 1
 fi
 echo "Installed version=$INSTALLED_VERSION"
+if [ -n "$OLD_APP_PATH" ] && [ -d "$OLD_APP_PATH" ]; then
+  rm -rf "$OLD_APP_PATH"
+  OLD_APP_PATH=''
+fi
+
+# Retain only the three newest recoverable backups to keep userData bounded.
+shopt -s nullglob
+backups=("$BACKUP_DIR"/Robb\ Agents.app.pre-update-*)
+if [ "\${#backups[@]}" -gt 3 ]; then
+  remove_count=$((\${#backups[@]} - 3))
+  for ((index=0; index<remove_count; index++)); do
+    rm -rf "\${backups[$index]}"
+  done
+fi
 
 rm -rf "$CACHE_ROOT/pending" "$CACHE_ROOT/update.zip" "$HOME/Library/Caches/io.robinswood.robbagents.ShipIt"
 
@@ -358,6 +435,9 @@ function installMacUpdateWithDetachedInstaller(): void {
 
   const zipPath = resolvePendingMacUpdateZip()
   const appBundlePath = resolveMacAppBundlePath()
+  if (!isAbsolute(appBundlePath) || basename(appBundlePath) !== 'Robb Agents.app' || !existsSync(appBundlePath)) {
+    throw new Error(`Refusing unsafe macOS application replacement target: ${appBundlePath}`)
+  }
   const cacheRoot = resolveMacUpdaterCacheRoot()
   const logDir = join(app.getPath('userData'), 'logs')
   mkdirSync(logDir, { recursive: true })
@@ -365,7 +445,7 @@ function installMacUpdateWithDetachedInstaller(): void {
   const backupDir = join(app.getPath('userData'), 'Backups')
   const scriptPath = writeDetachedMacInstallerScript()
 
-  autoUpdateLog.warn('Installing macOS update with detached installer fallback', {
+  autoUpdateLog.info('Installing macOS update with verified detached installer', {
     appBundlePath,
     cacheRoot,
     latestVersion,
@@ -382,45 +462,113 @@ function installMacUpdateWithDetachedInstaller(): void {
 }
 
 /**
- * Check the stable feed after an explicit Settings click.
+ * Check the stable feed, either after an explicit Settings click or from the
+ * bounded main-process scheduler.
  *
  * Downloading is deliberately a separate action: finding a release must not
  * consume bandwidth or disk space until the user accepts it in Settings.
  */
-export async function checkForUpdates(): Promise<UpdateInfo> {
+export async function checkForUpdates(
+  source: 'manual' | 'automatic' = 'manual',
+): Promise<UpdateInfo> {
   assertUpdaterIsAllowed()
-  if (updateCheckInProgress) return getUpdateInfo()
-
-  updateCheckInProgress = true
-  updateInfo = {
-    ...updateInfo,
-    downloadState: 'idle',
-    downloadProgress: 0,
-    error: undefined,
+  if (updateInfo.downloadState === 'downloading'
+    || updateInfo.downloadState === 'ready'
+    || updateInfo.downloadState === 'installing') {
+    return getUpdateInfo()
   }
-  broadcastUpdateInfo()
+  if (updateCheckPromise) return updateCheckPromise
 
-  try {
-    await autoUpdater.checkForUpdates()
-  } catch (error) {
-    autoUpdateLog.error('Manual update request failed', error)
+  const operation = (async (): Promise<UpdateInfo> => {
+    updateCheckInProgress = true
+    activeUpdateCheckSource = source
     updateInfo = {
       ...updateInfo,
-      downloadState: 'error',
-      error: error instanceof Error ? error.message : 'Update request failed',
+      downloadState: 'idle',
+      downloadProgress: 0,
+      error: undefined,
     }
     broadcastUpdateInfo()
-  } finally {
-    updateCheckInProgress = false
-  }
 
-  return getUpdateInfo()
+    try {
+      await autoUpdater.checkForUpdates()
+      return getUpdateInfo()
+    } catch (error) {
+      autoUpdateLog.error(`${source === 'automatic' ? 'Automatic' : 'Manual'} update request failed`, error)
+      updateInfo = {
+        ...updateInfo,
+        downloadState: 'error',
+        error: error instanceof Error ? error.message : 'Update request failed',
+      }
+      broadcastUpdateInfo()
+      throw error
+    } finally {
+      updateCheckInProgress = false
+      activeUpdateCheckSource = null
+    }
+  })()
+
+  updateCheckPromise = operation
+  try {
+    return await operation
+  } finally {
+    if (updateCheckPromise === operation) updateCheckPromise = null
+  }
+}
+
+function scheduleAutomaticUpdateCheck(delayMs: number): void {
+  if (!automaticUpdateChecksStarted || automaticUpdateTimer) return
+
+  automaticUpdateTimer = setTimeout(() => {
+    automaticUpdateTimer = null
+    void checkForUpdates('automatic').then(() => {
+      consecutiveAutomaticCheckFailures = 0
+      scheduleAutomaticUpdateCheck(AUTOMATIC_UPDATE_SUCCESS_INTERVAL_MS)
+    }).catch((error) => {
+      consecutiveAutomaticCheckFailures++
+      const retryDelay = Math.min(
+        AUTOMATIC_UPDATE_RETRY_BASE_MS * (2 ** (consecutiveAutomaticCheckFailures - 1)),
+        AUTOMATIC_UPDATE_RETRY_MAX_MS,
+      )
+      autoUpdateLog.warn('Automatic stable update check will retry', {
+        error: error instanceof Error ? error.message : String(error),
+        retryDelayMs: retryDelay,
+      })
+      scheduleAutomaticUpdateCheck(retryDelay)
+    })
+  }, delayMs)
+  automaticUpdateTimer.unref?.()
+}
+
+/**
+ * Start bounded availability checks in the main process. This never downloads
+ * or installs an update; those actions remain explicit user choices.
+ */
+export function startAutomaticUpdateChecks(): void {
+  if (!updaterIsAllowed() || automaticUpdateChecksStarted) return
+  automaticUpdateChecksStarted = true
+  consecutiveAutomaticCheckFailures = 0
+  autoUpdateLog.info('Automatic stable update checks scheduled', {
+    initialDelayMs: AUTOMATIC_UPDATE_INITIAL_DELAY_MS,
+    successIntervalMs: AUTOMATIC_UPDATE_SUCCESS_INTERVAL_MS,
+  })
+  scheduleAutomaticUpdateCheck(AUTOMATIC_UPDATE_INITIAL_DELAY_MS)
+}
+
+export function stopAutomaticUpdateChecks(): void {
+  automaticUpdateChecksStarted = false
+  consecutiveAutomaticCheckFailures = 0
+  if (automaticUpdateTimer) {
+    clearTimeout(automaticUpdateTimer)
+    automaticUpdateTimer = null
+  }
 }
 
 /** Download the stable release previously discovered by checkForUpdates(). */
 export async function downloadUpdate(): Promise<UpdateInfo> {
   assertUpdaterIsAllowed()
   if (updateInfo.downloadState === 'ready') return getUpdateInfo()
+  if (updateDownloadPromise) return updateDownloadPromise
   if (!updateInfo.available || !updateInfo.latestVersion) {
     throw new Error('No stable update is available to download')
   }
@@ -428,27 +576,35 @@ export async function downloadUpdate(): Promise<UpdateInfo> {
     throw new Error(`Refused non-stable release ${updateInfo.latestVersion}`)
   }
 
-  updateInfo = {
-    ...updateInfo,
-    downloadState: 'downloading',
-    downloadProgress: 0,
-    error: undefined,
-  }
-  broadcastUpdateInfo()
-
-  try {
-    await autoUpdater.downloadUpdate()
-  } catch (error) {
+  const operation = (async (): Promise<UpdateInfo> => {
     updateInfo = {
       ...updateInfo,
-      downloadState: 'error',
-      error: error instanceof Error ? error.message : 'Update download failed',
+      downloadState: 'downloading',
+      downloadProgress: 0,
+      error: undefined,
     }
     broadcastUpdateInfo()
-    throw error
-  }
 
-  return getUpdateInfo()
+    try {
+      await autoUpdater.downloadUpdate()
+      return getUpdateInfo()
+    } catch (error) {
+      updateInfo = {
+        ...updateInfo,
+        downloadState: 'error',
+        error: error instanceof Error ? error.message : 'Update download failed',
+      }
+      broadcastUpdateInfo()
+      throw error
+    }
+  })()
+
+  updateDownloadPromise = operation
+  try {
+    return await operation
+  } finally {
+    if (updateDownloadPromise === operation) updateDownloadPromise = null
+  }
 }
 
 export async function installUpdate(): Promise<void> {
@@ -469,7 +625,8 @@ export async function installUpdate(): Promise<void> {
 
   try {
     beforeUpdateQuitHook?.()
-    if (process.platform === 'darwin' && !currentMacAppUsesDeveloperIdSignature()) {
+    stopAutomaticUpdateChecks()
+    if (process.platform === 'darwin') {
       installMacUpdateWithDetachedInstaller()
       return
     }
