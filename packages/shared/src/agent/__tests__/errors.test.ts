@@ -102,3 +102,17 @@ describe('parseError runtime bridge classification', () => {
     expect(parseError(new Error('rpc handler failed')).code).not.toBe('execution_bridge_unavailable')
   })
 })
+
+describe('parseError unexpected provider errors', () => {
+  it('maps "An unexpected error has occurred" to service_error', () => {
+    const parsed = parseError(new Error('An unexpected error has occurred.'))
+    expect(parsed.code).toBe('service_error')
+    expect(parsed.canRetry).toBe(true)
+  })
+
+  it('maps "An unexpected error occurred" to service_error', () => {
+    const parsed = parseError(new Error('An unexpected error occurred.'))
+    expect(parsed.code).toBe('service_error')
+    expect(parsed.canRetry).toBe(true)
+  })
+})

@@ -33,7 +33,6 @@ import {
   Info,
   MailOpen,
   FolderKanban,
-  Workflow,
 } from "lucide-react"
 // SessionStatusIcons no longer used - icons come from dynamic sessionStatuses
 import { SourceAvatar } from "@/components/ui/source-avatar"
@@ -88,6 +87,8 @@ import { useAction, useActionLabel } from "@/actions"
 import { useFocusZone } from "@/hooks/keyboard"
 import { useFocusContext } from "@/context/FocusContext"
 import { getSessionTitle } from "@/utils/session"
+import { findPendingRequestForConversation, getUserFacingSessionId, isUserFacingSession } from "@/utils/session-visibility"
+import { pendingSessionAuthRequestsAtom } from "@/atoms/session-auth-requests"
 import { useSetAtom } from "jotai"
 import type { Session, Workspace, FileAttachment, PermissionRequest, LoadedSource, LoadedSkill, PermissionMode, SourceFilter, AutomationFilter } from "../../../shared/types"
 import { sessionMetaMapAtom, sendToWorkspaceAtom, type SessionMeta } from "@/atoms/sessions"
@@ -535,6 +536,7 @@ function AppShellContent({
     onSendMessage,
     openNewChat,
     pendingPermissions,
+    pendingCredentials,
   } = contextValue
 
   const { t } = useTranslation()
@@ -759,6 +761,18 @@ function AppShellContent({
     })
   }, [sessionFilterKey])
 
+  const handleToggleLabelFilter = useCallback((labelId: string) => {
+    setLabelFilter(prev => {
+      const next = new Map(prev)
+      if (next.has(labelId)) {
+        next.delete(labelId)
+      } else {
+        next.set(labelId, 'include')
+      }
+      return next
+    })
+  }, [setLabelFilter])
+
   // Setter for project filter — updates only the current view's entry in the map
   const setProjectFilter = useCallback((updater: Map<string, FilterMode> | ((prev: Map<string, FilterMode>) => Map<string, FilterMode>)) => {
     setViewFiltersMap(prev => {
@@ -960,14 +974,16 @@ function AppShellContent({
   // Whether local MCP servers are enabled (affects stdio source status)
   const [localMcpEnabled, setLocalMcpEnabled] = React.useState(true)
 
+
   // Enabled permission modes for Shift+Tab cycling (min 2 modes)
   const [enabledModes, setEnabledModes] = React.useState<PermissionMode[]>(['safe', 'ask', 'allow-all'])
 
   // Load workspace settings (for localMcpEnabled and cyclablePermissionModes) on workspace change
   React.useEffect(() => {
-    if (!activeWorkspaceId) return
+    let cancelled = false
+    if (!activeWorkspaceId) return () => { cancelled = true }
     window.electronAPI.getWorkspaceSettings(activeWorkspaceId).then((settings) => {
-      if (settings) {
+      if (!cancelled && settings) {
         setLocalMcpEnabled(settings.localMcpEnabled ?? true)
         // Load cyclablePermissionModes from workspace settings
         if (settings.cyclablePermissionModes && settings.cyclablePermissionModes.length >= 2) {
@@ -975,8 +991,9 @@ function AppShellContent({
         }
       }
     }).catch((err) => {
-      console.error('[Chat] Failed to load workspace settings:', err)
+      if (!cancelled) console.error('[Chat] Failed to load workspace settings:', err)
     })
+    return () => { cancelled = true }
   }, [activeWorkspaceId])
 
   // Reset UI state when workspace changes
@@ -1388,11 +1405,15 @@ function AppShellContent({
   // Use session metadata from Jotai atom (lightweight, no messages)
   // This prevents closures from retaining full message arrays
   const sessionMetaMap = useAtomValue(sessionMetaMapAtom)
+  const pendingSessionAuthRequests = useAtomValue(pendingSessionAuthRequestsAtom)
   const setSessionMetaMap = useSetAtom(sessionMetaMapAtom)
 
   const hasPendingPrompt = React.useCallback((sessionId: string) => {
-    return (pendingPermissions.get(sessionId)?.length ?? 0) > 0
-  }, [pendingPermissions])
+    return !!sessionMetaMap.get(sessionId)?.hasPendingUserInput
+      || !!findPendingRequestForConversation(sessionId, pendingPermissions, sessionMetaMap)
+      || !!findPendingRequestForConversation(sessionId, pendingCredentials, sessionMetaMap)
+      || pendingSessionAuthRequests.some(request => getUserFacingSessionId(request.sessionId, sessionMetaMap) === sessionId)
+  }, [pendingPermissions, pendingCredentials, pendingSessionAuthRequests, sessionMetaMap])
 
   // Workspace-level unread indicators (needed for workspace selectors across all workspaces)
   const [workspaceUnreadMap, setWorkspaceUnreadMap] = useState<Record<string, boolean>>({})
@@ -1412,17 +1433,21 @@ function AppShellContent({
   }, [activeWorkspaceId, activeSessionWorkingDirectory])
 
   // Filter session metadata by active workspace
-  // Also exclude hidden sessions (mini-agent sessions) from all counts and lists
+  // Exclude internal sessions before all counts, filters, and search lists.
   // For remote workspaces, sessions have the remote workspace ID (not the local one),
   // so we match against both the local and remote workspace IDs.
   const remoteWorkspaceId = activeWorkspace?.remoteServer?.remoteWorkspaceId
-  const workspaceSessionMetas = useMemo(() => {
+  const workspaceSessionFamilyMetas = useMemo(() => {
     const metas = Array.from(sessionMetaMap.values())
     if (!activeWorkspaceId) return metas.filter(s => !s.hidden)
     return metas.filter(s =>
       !s.hidden && (s.workspaceId === activeWorkspaceId || (remoteWorkspaceId && s.workspaceId === remoteWorkspaceId))
     )
   }, [sessionMetaMap, activeWorkspaceId, remoteWorkspaceId])
+  const workspaceSessionMetas = useMemo(
+    () => workspaceSessionFamilyMetas.filter(isUserFacingSession),
+    [workspaceSessionFamilyMetas],
+  )
 
   // Active sessions exclude archived - use this for all counts and filters except archived view
   const activeSessionMetas = useMemo(() => {
@@ -1690,34 +1715,6 @@ function AppShellContent({
     return onDeleteSession(sessionId, skipConfirmation)
   }, [session.selected, setSession, onDeleteSession])
 
-  // Extend context value with local overrides (wrapped onDeleteSession, sources, skills, labels, enabledModes, rightSidebarOpenButton, effectiveSessionStatuses)
-  const appShellContextValue = React.useMemo<AppShellContextType>(() => ({
-    ...contextValue,
-    onDeleteSession: handleDeleteSession,
-    enabledSources: sources,
-    skills,
-    activeSessionWorkingDirectory,
-    labels: displayLabelConfigs,
-    onSessionLabelsChange: handleSessionLabelsChange,
-    enabledModes,
-    sessionStatuses: effectiveSessionStatuses,
-    onJumpToTaskSessions: handleJumpToTaskSessions,
-    rightSidebarButton: null,
-    isCompactMode: isAutoCompact,
-    // Search state for ChatDisplay highlighting
-    sessionListSearchQuery: searchActive ? searchQuery : undefined,
-    isSearchModeActive: searchActive,
-    chatDisplayRef,
-    onChatMatchInfoChange: handleChatMatchInfoChange,
-    onTestAutomation: handleTestAutomation,
-    onToggleAutomation: handleToggleAutomation,
-    onDuplicateAutomation: handleDuplicateAutomation,
-    onDeleteAutomation: handleDeleteAutomation,
-    automationTestResults,
-    getAutomationHistory,
-    onReplayAutomation: handleReplayAutomation,
-  }), [contextValue, handleDeleteSession, sources, skills, activeSessionWorkingDirectory, displayLabelConfigs, handleSessionLabelsChange, enabledModes, effectiveSessionStatuses, handleJumpToTaskSessions, isAutoCompact, searchActive, searchQuery, handleChatMatchInfoChange, handleTestAutomation, handleToggleAutomation, handleDuplicateAutomation, handleDeleteAutomation, automationTestResults, getAutomationHistory, handleReplayAutomation])
-
   // Persist expanded folders to localStorage (workspace-scoped)
   React.useEffect(() => {
     if (!activeWorkspaceId) return
@@ -1827,10 +1824,6 @@ function AppShellContent({
   // Handler for projects view
   const handleProjectsClick = useCallback(() => {
     navigate(routes.view.projects())
-  }, [])
-
-  const handleMissionsClick = useCallback(() => {
-    navigate(routes.view.missions())
   }, [])
 
   const handleAutomationsScheduledClick = useCallback(() => {
@@ -2140,13 +2133,12 @@ function AppShellContent({
     result.push({ id: 'nav:sources', type: 'nav', action: handleSourcesClick })
     result.push({ id: 'nav:skills', type: 'nav', action: handleSkillsClick })
     result.push({ id: 'nav:projects', type: 'nav', action: handleProjectsClick })
-    result.push({ id: 'nav:missions', type: 'nav', action: handleMissionsClick })
     result.push({ id: 'nav:automations', type: 'nav', action: handleAutomationsClick })
     result.push({ id: 'nav:settings', type: 'nav', action: () => handleSettingsClick() })
     result.push({ id: 'nav:whats-new', type: 'nav', action: handleWhatsNewClick })
 
     return result
-  }, [handleAllSessionsClick, handleFlaggedClick, handleArchivedClick, handleSessionStatusClick, effectiveSessionStatuses, handleLabelClick, labelConfigs, labelTree, viewConfigs, handleViewClick, handleSourcesClick, handleSkillsClick, handleProjectsClick, handleMissionsClick, handleAutomationsClick, handleSettingsClick, handleWhatsNewClick])
+  }, [handleAllSessionsClick, handleFlaggedClick, handleArchivedClick, handleSessionStatusClick, effectiveSessionStatuses, handleLabelClick, labelConfigs, labelTree, viewConfigs, handleViewClick, handleSourcesClick, handleSkillsClick, handleProjectsClick, handleAutomationsClick, handleSettingsClick, handleWhatsNewClick])
 
   // Toggle folder expanded state
   const handleToggleFolder = React.useCallback((path: string) => {
@@ -2363,6 +2355,35 @@ function AppShellContent({
     })
   }, [sessionFilter, labelCounts, activeWorkspace?.id, handleLabelClick, isExpanded, toggleExpanded, openConfigureLabels, handleAddLabel, handleDeleteLabel])
 
+  // Extend context value with local overrides (wrapped onDeleteSession, sources, skills, labels, enabledModes, rightSidebarOpenButton, effectiveSessionStatuses)
+  const appShellContextValue = React.useMemo<AppShellContextType>(() => ({
+    ...contextValue,
+    onNewChat: handleNewChat,
+    onDeleteSession: handleDeleteSession,
+    enabledSources: sources,
+    skills,
+    activeSessionWorkingDirectory,
+    labels: displayLabelConfigs,
+    onSessionLabelsChange: handleSessionLabelsChange,
+    enabledModes,
+    sessionStatuses: effectiveSessionStatuses,
+    onJumpToTaskSessions: handleJumpToTaskSessions,
+    rightSidebarButton: null,
+    isCompactMode: isAutoCompact,
+    // Search state for ChatDisplay highlighting
+    sessionListSearchQuery: searchActive ? searchQuery : undefined,
+    isSearchModeActive: searchActive,
+    chatDisplayRef,
+    onChatMatchInfoChange: handleChatMatchInfoChange,
+    onTestAutomation: handleTestAutomation,
+    onToggleAutomation: handleToggleAutomation,
+    onDuplicateAutomation: handleDuplicateAutomation,
+    onDeleteAutomation: handleDeleteAutomation,
+    automationTestResults,
+    getAutomationHistory,
+    onReplayAutomation: handleReplayAutomation,
+  }), [contextValue, handleNewChat, handleDeleteSession, sources, skills, activeSessionWorkingDirectory, displayLabelConfigs, handleSessionLabelsChange, enabledModes, effectiveSessionStatuses, handleJumpToTaskSessions, isAutoCompact, searchActive, searchQuery, handleChatMatchInfoChange, handleTestAutomation, handleToggleAutomation, handleDuplicateAutomation, handleDeleteAutomation, automationTestResults, getAutomationHistory, handleReplayAutomation])
+
   return (
     <AppShellProvider value={appShellContextValue}>
         {/* === TOP BAR === */}
@@ -2453,7 +2474,6 @@ function AppShellContent({
                   focusedItemId={focusedSidebarItemId}
                   links={[
                     // --- Sessions Section ---
-                    // All Sessions: expandable with status children (sortable) + Flagged & Archived as trailing items
                     {
                       id: "nav:allSessions",
                       title: t("sidebar.allSessions"),
@@ -2461,12 +2481,8 @@ function AppShellContent({
                       icon: Inbox,
                       variant: sessionFilter?.kind === 'allSessions' ? "default" : "ghost",
                       onClick: handleAllSessionsClick,
-                      expandable: true,
-                      expanded: isExpanded('nav:allSessions'),
-                      onToggle: () => toggleExpanded('nav:allSessions'),
                       contextMenu: {
                         type: 'allSessions',
-                        onConfigureStatuses: openConfigureStatuses,
                         onMarkAllRead: () => {
                           if (!activeWorkspaceId) return
                           // Optimistic: clear hasUnread on all workspace session metas
@@ -2482,46 +2498,24 @@ function AppShellContent({
                           window.electronAPI.markAllSessionsRead(activeWorkspaceId)
                         },
                       },
-                      // Enable flat DnD reorder for status items
-                      sortable: { onReorder: handleStatusReorder },
-                      items: [
-                        // Status items (sortable via SortableStatusList)
-                        ...effectiveSessionStatuses.map(state => ({
-                          id: `nav:state:${state.id}`,
-                          title: t(`status.${state.id}`, state.label),
-                          label: String(sessionStatusCounts[state.id] || 0),
-                          icon: state.icon,
-                          iconColor: state.resolvedColor,
-                          iconColorable: state.iconColorable,
-                          variant: (sessionFilter?.kind === 'state' && sessionFilter.stateId === state.id ? "default" : "ghost") as "default" | "ghost",
-                          onClick: () => handleSessionStatusClick(state.id),
-                          contextMenu: {
-                            type: 'status' as const,
-                            statusId: state.id,
-                            onConfigureStatuses: openConfigureStatuses,
-                          },
-                        })),
-                        // Separator: SortableStatusList splits here — items after become non-sortable trailingItems
-                        { id: 'separator:states-flagged', type: 'separator' as const },
-                        // Flagged (trailing, non-sortable)
-                        {
-                          id: "nav:flagged",
-                          title: t("sidebar.flagged"),
-                          label: String(flaggedCount),
-                          icon: <Flag className="h-3.5 w-3.5" />,
-                          variant: (sessionFilter?.kind === 'flagged' ? "default" : "ghost") as "default" | "ghost",
-                          onClick: handleFlaggedClick,
-                        },
-                        // Archived (trailing, non-sortable)
-                        {
-                          id: "nav:archived",
-                          title: t("sidebar.archived"),
-                          label: archivedCount > 0 ? String(archivedCount) : undefined,
-                          icon: Archive,
-                          variant: (sessionFilter?.kind === 'archived' ? "default" : "ghost") as "default" | "ghost",
-                          onClick: handleArchivedClick,
-                        },
-                      ],
+                    },
+                    // Flagged (Favoris)
+                    {
+                      id: "nav:flagged",
+                      title: t("sidebar.flagged"),
+                      label: String(flaggedCount),
+                      icon: Flag,
+                      variant: (sessionFilter?.kind === 'flagged' ? "default" : "ghost") as "default" | "ghost",
+                      onClick: handleFlaggedClick,
+                    },
+                    // Archived (Archivées)
+                    {
+                      id: "nav:archived",
+                      title: t("sidebar.archived"),
+                      label: archivedCount > 0 ? String(archivedCount) : undefined,
+                      icon: Archive,
+                      variant: (sessionFilter?.kind === 'archived' ? "default" : "ghost") as "default" | "ghost",
+                      onClick: handleArchivedClick,
                     },
                     // Labels: navigable header (shows all labeled sessions) + hierarchical tree (drag-and-drop reorder + re-parent)
                     {
@@ -2637,13 +2631,6 @@ function AppShellContent({
                         variant: (sessionFilter?.kind === 'allSessions' && projectFilter.get(p.config.id) === 'include') ? "default" as const : "ghost" as const,
                         onClick: () => handleJumpToProjectSessions(p.config.id),
                       })),
-                    },
-                    {
-                      id: "nav:missions",
-                      title: t("sidebar.missions"),
-                      icon: Workflow,
-                      variant: isMissionsNavigation(navState) ? "default" : "ghost",
-                      onClick: handleMissionsClick,
                     },
                     {
                       id: "nav:automations",
@@ -3558,6 +3545,7 @@ function AppShellContent({
                 <SessionList
                   key={sessionFilter?.kind}
                   items={searchActive ? workspaceSessionMetas : filteredSessionMetas}
+                  relatedItems={workspaceSessionFamilyMetas}
                   onDelete={handleDeleteSession}
                   onFlag={onFlagSession}
                   onUnflag={onUnflagSession}
@@ -3596,6 +3584,7 @@ function AppShellContent({
                   evaluateViews={evaluateViews}
                   labels={displayLabelConfigs}
                   onLabelsChange={handleSessionLabelsChange}
+                  onToggleLabelFilter={handleToggleLabelFilter}
                   projects={projectMenuOptions}
                   onSetProjectId={handleSessionProjectChange}
                   groupingMode={chatGroupingMode}

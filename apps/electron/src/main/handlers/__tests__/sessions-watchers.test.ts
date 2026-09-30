@@ -58,6 +58,9 @@ describe('sessions file watchers', () => {
 
     const deps: HandlerDeps = {
       sessionManager: {
+        getSessionWorkspaceId: (sessionId: string) => (
+          sessionId === 'session-a' || sessionId === 'session-b' ? 'ws-1' : null
+        ),
         getSession: async (sessionId: string) => (
           sessionId === 'session-a' || sessionId === 'session-b'
             ? { id: sessionId, workspaceId: 'ws-1' }

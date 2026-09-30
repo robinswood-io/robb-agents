@@ -209,8 +209,32 @@ if [[ "$OS_TYPE" == "darwin" ]]; then
   APP_NAME="Robb Agents.app"
   APP_BUNDLE_ID="io.robinswood.robbagents"
   TEMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/robb-agents-install.XXXXXX")"
-  cleanup_macos() { rm -rf "$TEMP_DIR"; }
+  STAGING_DIR=""
+  BACKUP_APP=""
+  TARGET_APP=""
+  INSTALL_COMMITTED=false
+  cleanup_macos() {
+    local result=$?
+    trap - EXIT
+    # A second interrupt must not stop restoration halfway through.
+    trap '' HUP INT TERM
+    if [[ "$INSTALL_COMMITTED" != true && -n "$BACKUP_APP" && -d "$BACKUP_APP" ]]; then
+      if { [[ ! -e "$TARGET_APP" && ! -L "$TARGET_APP" ]] || rm -rf "$TARGET_APP"; } && mv "$BACKUP_APP" "$TARGET_APP"; then
+        :
+      else
+        warn "Could not restore the previous application; it is preserved at $BACKUP_APP"
+        STAGING_DIR="" # Keep the full backup if restoration itself fails.
+        result=1
+      fi
+    fi
+    [[ -z "$STAGING_DIR" ]] || rm -rf "$STAGING_DIR"
+    rm -rf "$TEMP_DIR"
+    exit "$result"
+  }
   trap cleanup_macos EXIT
+  trap 'exit 129' HUP
+  trap 'exit 130' INT
+  trap 'exit 143' TERM
 
   unzip -q "$ARTIFACT_PATH" -d "$TEMP_DIR"
   APP_SOURCE="$TEMP_DIR/$APP_NAME"
@@ -230,16 +254,24 @@ if [[ "$OS_TYPE" == "darwin" ]]; then
 
   mkdir -p "$INSTALL_DIR"
   TARGET_APP="$INSTALL_DIR/$APP_NAME"
-  BACKUP_APP="$INSTALL_DIR/.Robb Agents.app.backup.$$"
+  # Copy on the destination filesystem before moving the installed app. A
+  # failed/interrupted copy leaves the previous bundle at its normal path.
+  STAGING_DIR="$(mktemp -d "$INSTALL_DIR/.robb-agents-install.XXXXXX")"
+  STAGED_APP="$STAGING_DIR/$APP_NAME"
+  BACKUP_APP="$STAGING_DIR/previous.app"
+  if ! ditto "$APP_SOURCE" "$STAGED_APP"; then
+    error "Installation failed; the previous application was preserved"
+  fi
+  codesign --verify --deep --strict --verbose=2 "$STAGED_APP"
+  spctl --assess --type execute --verbose=2 "$STAGED_APP"
   if [[ -d "$TARGET_APP" ]]; then
     mv "$TARGET_APP" "$BACKUP_APP"
   fi
-  if ! ditto "$APP_SOURCE" "$TARGET_APP"; then
-    rm -rf "$TARGET_APP"
-    [[ -d "$BACKUP_APP" ]] && mv "$BACKUP_APP" "$TARGET_APP"
-    error "Installation failed; the previous application was restored"
-  fi
-  rm -rf "$BACKUP_APP" "$ARTIFACT_PATH"
+  # Both moves are local renames. The EXIT/signal handler restores the backup
+  # if publication fails or the process stops between the two moves.
+  mv "$STAGED_APP" "$TARGET_APP"
+  INSTALL_COMMITTED=true
+  rm -f "$ARTIFACT_PATH"
   success "Robb Agents ${VERSION} installed at $TARGET_APP"
   printf "Launch with: %bopen -a 'Robb Agents'%b\n" "$BOLD" "$NC"
 else

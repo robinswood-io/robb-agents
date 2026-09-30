@@ -14,7 +14,8 @@
 
 import { isLocalMcpEnabled } from '../../workspaces/storage.ts';
 import { formatPreferencesForPrompt } from '../../config/preferences.ts';
-import { formatSessionState } from '../mode-manager.ts';
+import { formatSessionState, getPermissionModeDiagnostics } from '../mode-manager.ts';
+import { isYoloMode, YOLO_AUTONOMY_GUIDANCE } from '../yolo-policy.ts';
 import { getDateTimeContext, getWorkingDirectoryContext } from '../../prompts/system.ts';
 import { getSessionPlansPath, getSessionDataPath, getSessionPath } from '../../sessions/storage.ts';
 import { formatAutonomyContract } from '../autonomy-decision.ts';
@@ -130,6 +131,10 @@ export class PromptBuilder {
       dataFolderPath,
       consumeModeChangeUserSignal: true,
     }));
+    if (this.config.getHumanInputAllowed?.() === false
+      || isYoloMode(getPermissionModeDiagnostics(sessionId).permissionMode, this.config.externalActionPolicy)) {
+      parts.push(`<yolo_execution_policy>${YOLO_AUTONOMY_GUIDANCE}</yolo_execution_policy>`);
+    }
 
     // Source state if provided
     if (sourceStateBlock) {

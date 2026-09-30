@@ -1,6 +1,9 @@
 export type CostControlledTurnKind =
   | 'direct'
   | 'agent-message'
+  | 'auth-result'
+  | 'auth-retry'
+  | 'source-activation'
   | 'automatic-recovery'
   | 'browser-fallback'
   | 'spawned-session'
@@ -20,6 +23,7 @@ export interface AgentCostControlPolicy {
   };
   recovery?: {
     maxAutomaticAttempts?: number;
+    maxValidatedContinuationAttempts?: number;
     maxNoProgressAttempts?: number;
     browserFallbackToolPatterns?: string[];
   };
@@ -40,6 +44,7 @@ export interface ResolvedAgentCostControlPolicy {
   };
   recovery: {
     maxAutomaticAttempts: number;
+    maxValidatedContinuationAttempts: number;
     maxNoProgressAttempts: number;
     browserFallbackToolPatterns: string[];
   };
@@ -60,7 +65,8 @@ export const DEFAULT_AGENT_COST_CONTROL_POLICY: ResolvedAgentCostControlPolicy =
   },
   recovery: {
     maxAutomaticAttempts: 8,
-    maxNoProgressAttempts: 2,
+    maxValidatedContinuationAttempts: 4,
+    maxNoProgressAttempts: 1,
     browserFallbackToolPatterns: [
       'browser',
       'web',
@@ -131,6 +137,29 @@ export function resolveAgentCostControlPolicy(
   policy?: AgentCostControlPolicy,
 ): ResolvedAgentCostControlPolicy {
   const defaults = DEFAULT_AGENT_COST_CONTROL_POLICY;
+  const rawMaxAutomaticAttempts = policy?.recovery?.maxAutomaticAttempts;
+  const maxAutomaticAttempts = Math.min(
+    MAX_SAFE_AUTOMATIC_RECOVERY_ATTEMPTS,
+    Math.floor(finiteAtLeast(
+      rawMaxAutomaticAttempts,
+      defaults.recovery.maxAutomaticAttempts,
+      0,
+    )),
+  );
+  // Before this dedicated field existed, maxAutomaticAttempts also bounded
+  // validated continuations. Preserve an explicit legacy value, including 0;
+  // only an unspecified policy receives the new four-pass default.
+  const legacyContinuationFallback = rawMaxAutomaticAttempts === undefined
+    ? defaults.recovery.maxValidatedContinuationAttempts
+    : maxAutomaticAttempts;
+  const maxValidatedContinuationAttempts = Math.min(
+    MAX_SAFE_VALIDATED_CONTINUATION_ATTEMPTS,
+    Math.floor(finiteAtLeast(
+      policy?.recovery?.maxValidatedContinuationAttempts,
+      legacyContinuationFallback,
+      0,
+    )),
+  );
   const compactAtTokens = finiteAtLeast(
     policy?.context?.compactAtTokens,
     defaults.context.compactAtTokens,
@@ -157,16 +186,16 @@ export function resolveAgentCostControlPolicy(
       ),
     },
     recovery: {
-      maxAutomaticAttempts: Math.floor(finiteAtLeast(
-        policy?.recovery?.maxAutomaticAttempts,
-        defaults.recovery.maxAutomaticAttempts,
-        0,
-      )),
-      maxNoProgressAttempts: Math.floor(finiteAtLeast(
-        policy?.recovery?.maxNoProgressAttempts,
-        defaults.recovery.maxNoProgressAttempts,
-        1,
-      )),
+      maxAutomaticAttempts,
+      maxValidatedContinuationAttempts,
+      maxNoProgressAttempts: Math.min(
+        MAX_SAFE_AUTOMATIC_RECOVERY_ATTEMPTS,
+        Math.floor(finiteAtLeast(
+          policy?.recovery?.maxNoProgressAttempts,
+          defaults.recovery.maxNoProgressAttempts,
+          1,
+        )),
+      ),
       browserFallbackToolPatterns: stringArrayOr(
         policy?.recovery?.browserFallbackToolPatterns,
         defaults.recovery.browserFallbackToolPatterns,
@@ -201,4 +230,56 @@ export function isBrowserFallbackEligibleTool(
   const normalized = toolName.toLowerCase();
   return resolveAgentCostControlPolicy(policyInput).recovery.browserFallbackToolPatterns
     .some(pattern => normalized.includes(pattern.toLowerCase()));
+}
+
+import type { LlmConnection } from './llm-connections.ts';
+export const MAX_SAFE_AUTOMATIC_RECOVERY_ATTEMPTS = 8;
+export const MAX_SAFE_VALIDATED_CONTINUATION_ATTEMPTS = 4;
+export const AGENT_COST_CONTROL_DECISION_VERSION = 2 as const;
+export type AgentCostControlRecoveryCause = NonNullable<import('../sessions/types.ts').PendingTurnRecovery['lastCause']>;
+export type AgentCostControlRecoveryWorkClass = 'receipt-repair' | 'read-only-verification' | 'substantive';
+export type CostProviderAdmission =
+  | { action: 'allow-provider'; reason: 'within-hard-limit' | 'explicit-user-turn' }
+  | { action: 'pause-for-user'; reason: 'autonomous-hard-limit' };
+export function monetaryBudgetCostUsd(
+  connection: LlmConnection | null | undefined,
+  providerReportedCostUsd: number | undefined,
+): number | undefined {
+  if (connection?.providerType === 'pi'
+    && connection.authType === 'oauth'
+    && connection.piAuthProvider === 'openai-codex') return undefined;
+  return providerReportedCostUsd;
+}
+export function decideCostProviderAdmission(input: {
+  budgetState: CostBudgetState;
+  turnKind: CostControlledTurnKind;
+  /** True only for a persisted answer to the host-owned hard-limit question. */
+  hostAuthenticatedUserOverride?: boolean;
+}): CostProviderAdmission {
+  if (input.budgetState !== 'hard-limit') {
+    return { action: 'allow-provider', reason: 'within-hard-limit' };
+  }
+  if (input.hostAuthenticatedUserOverride === true) {
+    return { action: 'allow-provider', reason: 'explicit-user-turn' };
+  }
+  return { action: 'pause-for-user', reason: 'autonomous-hard-limit' };
+}
+
+export function resolveAgentCostBudgetState(
+  sessionCostUsd: number | undefined,
+  budgets: Pick<ResolvedAgentCostControlPolicy['budgets'], 'softSessionUsd' | 'hardSessionUsd'>,
+): CostBudgetState {
+  // Missing telemetry means no reported spend yet. A present but non-finite
+  // value is corrupt accounting and must fail closed: treating it as zero would
+  // reopen the provider after the hard monetary fence.
+  const costUsd = sessionCostUsd === undefined
+    ? 0
+    : Number.isFinite(sessionCostUsd)
+      ? Math.max(0, sessionCostUsd)
+      : Number.POSITIVE_INFINITY;
+  return costUsd >= budgets.hardSessionUsd
+    ? 'hard-limit'
+    : costUsd >= budgets.softSessionUsd
+      ? 'soft-limit'
+      : 'normal';
 }

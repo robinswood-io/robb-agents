@@ -34,6 +34,9 @@ const PROVIDER_HINTS = [
   'api_error',
   'overloaded_error',
   'upstream',
+  'an unexpected error has occurred',
+  'an unexpected error occurred',
+  'unexpected error',
 ] as const;
 
 const NETWORK_HINTS = [

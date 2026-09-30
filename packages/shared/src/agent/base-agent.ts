@@ -15,17 +15,19 @@
 
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
+import { parseSpawnSessionInput, SPAWN_SESSION_ROLE_HELP } from '@craft-agent/session-tools-core';
 
 import type { AgentEvent } from '@craft-agent/core/types';
 import type { FileAttachment } from '../utils/files.ts';
 import { expandPath } from '../utils/paths.ts';
+import { assertExistingWorkingDirectory } from './spawn-helpers.ts';
 import { buildTransferredSessionContext } from './conversation-summary.ts';
 import type { ThinkingLevel } from './thinking-levels.ts';
 import { DEFAULT_THINKING_LEVEL, normalizeThinkingLevel } from './thinking-levels.ts';
 import type { PermissionMode } from './mode-manager.ts';
 import type { LoadedSource } from '../sources/types.ts';
 import { buildCallLlmRequest, type LLMQueryRequest, type LLMQueryResult } from './llm-tool.ts';
-import { getLlmConnections, getDefaultLlmConnection, getBrowserToolEnabled } from '../config/storage.ts';
+import { getBrowserToolEnabled } from '../config/storage.ts';
 import { loadAllSources } from '../sources/storage.ts';
 import type { ApiServerConfig } from '../mcp/mcp-pool.ts';
 
@@ -41,6 +43,7 @@ import type {
   BackendConfig,
   PostInitResult,
   BridgeUpdateContext,
+  SourceServerSnapshot,
   RecoveryMessage,
 } from './backend/types.ts';
 import { AbortReason } from './backend/types.ts';
@@ -55,6 +58,7 @@ import { PathProcessor } from './core/path-processor.ts';
 import { ConfigWatcherManager, type ConfigWatcherManagerCallbacks } from './core/config-watcher-manager.ts';
 import { UsageTracker, type UsageUpdate } from './core/usage-tracker.ts';
 import { PrerequisiteManager } from './core/prerequisite-manager.ts';
+import { canonicalTerminalReconciliationToolInput } from './core/pre-tool-use.ts';
 
 // Automation system for agent events
 import type { AutomationSystem } from '../automations/automation-system.ts';
@@ -91,17 +95,17 @@ export interface MiniAgentConfig {
 // ============================================================
 
 export interface SpawnSessionRequest {
+  /** One-shot host capability injected after PreToolUse; never model authority. */
+  _hostTerminalReconciliationCapability?: string;
   prompt: string;
   name?: string;
-  llmConnection?: string;
-  model?: string;
   enabledSourceSlugs?: string[];
   permissionMode?: PermissionMode;
-  thinkingLevel?: ThinkingLevel;
   labels?: string[];
   workingDirectory?: string;
   /** Workspace project id to bind the spawned session to */
   projectId?: string;
+  role?: 'worker' | 'reviewer';
   attachments?: Array<{ path: string; name?: string }>;
 }
 
@@ -109,19 +113,14 @@ export interface SpawnSessionResult {
   sessionId: string;
   name: string;
   status: 'started';
+  /** True when the identical request already owns an active child. */
+  reused?: boolean;
   connection?: string;
   model?: string;
 }
 
 export interface SpawnSessionHelpResult {
-  connections: Array<{
-    slug: string;
-    name: string;
-    isDefault: boolean;
-    providerType: string;
-    models: string[];
-    defaultModel?: string;
-  }>;
+  roleHelp: typeof SPAWN_SESSION_ROLE_HELP;
   sources: Array<{
     slug: string;
     name: string;
@@ -129,7 +128,6 @@ export interface SpawnSessionHelpResult {
     enabled: boolean;
   }>;
   defaults: {
-    defaultConnection: string | null;
     permissionMode: string;
   };
 }
@@ -200,6 +198,24 @@ export abstract class BaseAgent implements AgentBackend {
   // Additional State (protected for subclass access)
   // ============================================================
   protected temporaryClarifications: string | null = null;
+  /**
+   * One host-owned admission per provider tool-use id. The model never sees
+   * this state: it bridges the asynchronous PreToolUse decision to the actual
+   * proxy execution (Pi), and marks the SDK-owned execution window (Claude).
+   */
+  private admittedToolExecutions = new Map<string, {
+    toolName: string;
+    inputJson: string;
+    sessionId: string;
+    runtimeId: string;
+    authorizationEpoch: number;
+    state: 'admitted' | 'executing';
+  }>();
+  private sourceServerSnapshot: SourceServerSnapshot = {
+    mcpServers: {},
+    apiServers: {},
+    intendedSlugs: [],
+  };
 
   // ============================================================
   // Source activation auto-retry (routed through the existing source_activated
@@ -248,6 +264,94 @@ export abstract class BaseAgent implements AgentBackend {
     this._currentTurnUserMessage = message;
   }
 
+  /** Reserve an exact, non-serializable host admission before returning allow. */
+  protected admitToolExecution(input: {
+    toolUseId: string | undefined;
+    toolName: string;
+    toolInput: Record<string, unknown>;
+    sessionId: string;
+    runtimeId: string;
+    authorizationEpoch: number;
+  }): boolean {
+    this.admittedToolExecutions ??= new Map();
+    if (!input.toolUseId || this.admittedToolExecutions.has(input.toolUseId)) return false;
+    const inputJson = canonicalTerminalReconciliationToolInput(input.toolInput);
+    if (inputJson === undefined) return false;
+    this.admittedToolExecutions.set(input.toolUseId, {
+      toolName: input.toolName,
+      inputJson,
+      sessionId: input.sessionId,
+      runtimeId: input.runtimeId,
+      authorizationEpoch: input.authorizationEpoch,
+      state: 'admitted',
+    });
+    return true;
+  }
+
+  /** Atomically claim an exact Pi proxy admission at the execution boundary. */
+  protected beginAdmittedToolExecution(input: {
+    toolUseId: string | undefined;
+    toolName: string;
+    toolInput: Record<string, unknown>;
+    sessionId: string;
+    runtimeId: string;
+    authorizationEpoch: number;
+  }): boolean {
+    this.admittedToolExecutions ??= new Map();
+    if (!input.toolUseId) return false;
+    const admission = this.admittedToolExecutions.get(input.toolUseId);
+    const inputJson = canonicalTerminalReconciliationToolInput(input.toolInput);
+    if (!admission || admission.state !== 'admitted' || inputJson === undefined
+      || admission.toolName !== input.toolName || admission.inputJson !== inputJson
+      || admission.sessionId !== input.sessionId || admission.runtimeId !== input.runtimeId
+      || admission.authorizationEpoch !== input.authorizationEpoch) {
+      this.admittedToolExecutions.delete(input.toolUseId);
+      return false;
+    }
+    admission.state = 'executing';
+    return true;
+  }
+
+  /**
+   * Claude's in-process MCP callbacks do not receive the SDK tool_use_id.
+   * Claim only when the exact runtime/name/input tuple identifies one and only
+   * one admission; identical parallel calls stay fail-closed as ambiguous.
+   */
+  protected beginAdmittedToolExecutionBySignature(input: {
+    toolName: string;
+    toolInput: Record<string, unknown>;
+    sessionId: string;
+    runtimeId: string;
+    authorizationEpoch: number;
+  }): string | undefined {
+    this.admittedToolExecutions ??= new Map();
+    const inputJson = canonicalTerminalReconciliationToolInput(input.toolInput);
+    if (inputJson === undefined) return undefined;
+    const matches = [...this.admittedToolExecutions.entries()].filter(([, admission]) => (
+      admission.state === 'admitted'
+      && admission.toolName === input.toolName
+      && admission.inputJson === inputJson
+      && admission.sessionId === input.sessionId
+      && admission.runtimeId === input.runtimeId
+      && admission.authorizationEpoch === input.authorizationEpoch
+    ));
+    if (matches.length !== 1) return undefined;
+    matches[0]![1].state = 'executing';
+    return matches[0]![0];
+  }
+
+  protected settleAdmittedToolExecution(toolUseId: string | undefined): void {
+    if (toolUseId) this.admittedToolExecutions?.delete(toolUseId);
+  }
+
+  protected revokeAdmittedToolExecutions(): void {
+    this.admittedToolExecutions?.clear();
+  }
+
+  protected hasAdmittedToolExecutions(): boolean {
+    return (this.admittedToolExecutions?.size ?? 0) > 0;
+  }
+
   // ============================================================
   // Callbacks (public for facade wiring)
   // ============================================================
@@ -263,6 +367,77 @@ export abstract class BaseAgent implements AgentBackend {
   onUsageUpdate: ((update: UsageUpdate) => void) | null = null;
   onBackendAuthRequired: ((reason: string) => void) | null = null;
   onSpawnSession: ((request: SpawnSessionRequest) => Promise<SpawnSessionResult>) | null = null;
+  onProviderHandoff: (() => void) | null = null;
+  onBeforeProviderDispatch: (() => Promise<void>) | null = null;
+  onProviderDispatchRejected: (() => void) | null = null;
+  onProviderDispatchUncertain: (() => void) | null = null;
+
+  /** Fsync the host's exact non-replay fence before a provider-visible write. */
+  protected async awaitProviderDispatchWriteAhead(): Promise<void> {
+    await this.onBeforeProviderDispatch?.();
+  }
+
+  /** Await the durable fence, then invoke the provider-visible write inline. */
+  protected async performProviderDispatchWriteAhead<T>(dispatch: () => T): Promise<T> {
+    await this.awaitProviderDispatchWriteAhead();
+    return dispatch();
+  }
+
+  /** Capture rejection proof for the exact prompt being prepared. */
+  protected captureProviderDispatchRejection(): () => void {
+    const callback = this.onProviderDispatchRejected;
+    let rejected = false;
+    return () => {
+      if (rejected) return;
+      rejected = true;
+      this.invokeProviderHandoff(callback);
+    };
+  }
+
+  /**
+   * Report the backend runtime's non-replay boundary to the session host.
+   *
+   * Backends call this only after their strongest available query/prompt
+   * acknowledgement. Callback failures must not turn accepted work into an
+   * apparent pre-provider setup failure (which could duplicate that work).
+   */
+  private invokeProviderHandoff(callback: (() => void) | null): void {
+    try {
+      callback?.();
+    } catch (error) {
+      this.debug(`Provider handoff callback failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  /** Capture the callback belonging to one exact prompt and acknowledge it once. */
+  protected captureProviderHandoffAcknowledgement(): () => void {
+    const callback = this.onProviderHandoff;
+    let acknowledged = false;
+    return () => {
+      if (acknowledged) return;
+      acknowledged = true;
+      this.invokeProviderHandoff(callback);
+    };
+  }
+
+  /** Capture the conservative host-to-child dispatch fence for one prompt. */
+  protected captureProviderDispatchUncertainAcknowledgement(): () => void {
+    const callback = this.onProviderDispatchUncertain;
+    let acknowledged = false;
+    return () => {
+      if (acknowledged) return;
+      acknowledged = true;
+      this.invokeProviderHandoff(callback);
+    };
+  }
+
+  /** Run a synchronous runtime dispatch and report it only after success. */
+  protected performProviderHandoff<T>(dispatch: () => T): T {
+    const acknowledge = this.captureProviderHandoffAcknowledgement();
+    const result = dispatch();
+    acknowledge();
+    return result;
+  }
 
   // ============================================================
   // Constructor
@@ -299,6 +474,7 @@ export abstract class BaseAgent implements AgentBackend {
       systemPromptPreset: config.systemPromptPreset,
       isHeadless: config.isHeadless,
       externalActionPolicy: config.externalActionPolicy,
+      getHumanInputAllowed: config.getHumanInputAllowed,
     });
 
     // PathProcessor: expands ~ and normalizes paths
@@ -636,6 +812,19 @@ export abstract class BaseAgent implements AgentBackend {
         this.debug(`Failed to sync MCP pool: ${err instanceof Error ? err.message : String(err)}`);
       }
     }
+    this.sourceServerSnapshot = {
+      mcpServers: { ...mcpServers },
+      apiServers: { ...apiServers },
+      intendedSlugs: [...(intendedSlugs ?? [...Object.keys(mcpServers), ...Object.keys(apiServers)])],
+    };
+  }
+
+  getSourceServerSnapshot(): SourceServerSnapshot {
+    return {
+      mcpServers: { ...this.sourceServerSnapshot.mcpServers },
+      apiServers: { ...this.sourceServerSnapshot.apiServers },
+      intendedSlugs: [...this.sourceServerSnapshot.intendedSlugs],
+    };
   }
 
   getActiveSourceSlugs(): string[] {
@@ -940,12 +1129,14 @@ ${formattedMessages}
    */
   protected extractSkillPaths(message: string): {
     skillPaths: Map<string, string>;
+    sealedSkillContents: Map<string, string>;
     cleanMessage: string;
     missingSkills: string[];
   } {
     const workspaceRoot = this.config.workspace?.rootPath ?? this.workingDirectory;
     const projectRoot = this.config.session?.workingDirectory;
-    const skills = loadAllSkills(workspaceRoot, projectRoot);
+    const sealedSkills = this.config.sealedSkillPackages;
+    const skills = sealedSkills ?? loadAllSkills(workspaceRoot, projectRoot);
     const skillSlugs = skills.map(s => s.slug);
 
     this.debug(`[extractSkillPaths] Available skills: ${skillSlugs.join(', ')}`);
@@ -958,9 +1149,14 @@ ${formattedMessages}
 
     // Resolve SKILL.md paths for matched skills
     const skillPaths = new Map<string, string>();
+    const sealedSkillContents = new Map<string, string>();
     for (const slug of parsed.skills) {
       const skill = skills.find(s => s.slug === slug);
       if (skill) {
+        if (!('path' in skill)) {
+          sealedSkillContents.set(slug, skill.content);
+          continue;
+        }
         const skillMdPath = join(skill.path, 'SKILL.md');
         if (existsSync(skillMdPath)) {
           skillPaths.set(slug, skillMdPath);
@@ -974,14 +1170,17 @@ ${formattedMessages}
     // Resolve mentions to semantic markers (like file mentions) instead of stripping them.
     // This preserves sentence structure: "find the bug in [skill:datadog-api]"
     // becomes "find the bug in [Mentioned skill: Datadog API (slug: datadog-api)]"
-    const skillNames = new Map(skills.map(s => [s.slug, s.metadata.name]));
+    const skillNames = new Map(skills.map(s => [
+      s.slug,
+      'metadata' in s ? s.metadata.name : s.name,
+    ]));
     const withSkills = resolveSkillMentions(message, skillNames);
     const withSources = resolveSourceMentions(withSkills);
     const workDir = this.config.session?.workingDirectory ?? this.workingDirectory;
     const resolved = resolveFileMentions(withSources, workDir).trim();
 
     // If user sent only skill mentions with no other text, add a directive
-    const cleanMessage = (!resolved && skillPaths.size > 0)
+    const cleanMessage = (!resolved && (skillPaths.size > 0 || sealedSkillContents.size > 0))
       ? 'Follow the skill instructions from the files listed above.'
       : resolved;
 
@@ -989,6 +1188,7 @@ ${formattedMessages}
 
     return {
       skillPaths,
+      sealedSkillContents,
       cleanMessage,
       missingSkills: parsed.invalidSkills || []
     };
@@ -1006,6 +1206,14 @@ ${formattedMessages}
     return `Before proceeding with the user's request, you MUST read the following skill instruction files using the Read tool or \`cat\` via Bash:\n${pathList}\n\nDo not take any other action until you have read these files.`;
   }
 
+  protected formatSealedSkillDirective(skills: Map<string, string>): string {
+    if (skills.size === 0) return '';
+    return [...skills.entries()].map(([slug, content]) =>
+      `<host_sealed_skill_package slug=${JSON.stringify(slug)}>\n${content}\n</host_sealed_skill_package>`
+    ).join('\n\n')
+      + '\n\nThese are the complete host-sealed skill package bytes for this turn. Follow them directly; do not read or discover a live skill package from the filesystem.';
+  }
+
   // ============================================================
   // Chat entry point (template method)
   // ============================================================
@@ -1021,7 +1229,7 @@ ${formattedMessages}
     attachments?: FileAttachment[],
     options?: ChatOptions
   ): AsyncGenerator<AgentEvent> {
-    const { skillPaths, cleanMessage, missingSkills } = this.extractSkillPaths(message);
+    const { skillPaths, sealedSkillContents, cleanMessage, missingSkills } = this.extractSkillPaths(message);
     if (missingSkills.length > 0) {
       yield { type: 'error', message: `Skill(s) not found: ${missingSkills.join(', ')}` };
       yield { type: 'complete' };
@@ -1049,7 +1257,8 @@ ${formattedMessages}
 
     // Prepend read directive to the message so the model reads SKILL.md first.
     const directive = this.formatSkillDirective(skillPaths);
-    const messageParts = [branchSeedContext, transferredSessionContext, directive, cleanMessage].filter(Boolean);
+    const sealedDirective = this.formatSealedSkillDirective(sealedSkillContents);
+    const messageParts = [branchSeedContext, transferredSessionContext, directive, sealedDirective, cleanMessage].filter(Boolean);
     const effectiveMessage = messageParts.join('\n\n');
 
     // Capture the raw user message for source-activation auto-retry. `cleanMessage`
@@ -1057,6 +1266,7 @@ ${formattedMessages}
     // what we want to resend when an activation forces a turn restart.
     this.setCurrentTurnUserMessage(cleanMessage);
     try {
+      await this.config.beforeProviderExecution?.();
       yield* this.chatImpl(effectiveMessage, attachments, options);
     } finally {
       this.setCurrentTurnUserMessage(null);
@@ -1152,12 +1362,44 @@ ${formattedMessages}
    */
   protected async preExecuteCallLlm(input: Record<string, unknown>): Promise<LLMQueryResult> {
     const sessionPath = getSessionPath(this.config.workspace.rootPath, this._sessionId);
-    const request = await buildCallLlmRequest(input, {
+    const modelSubstitutionAllowed = false;
+    const requestInput = modelSubstitutionAllowed
+      ? input
+      : (() => {
+          const { model: _ignoredModelOverride, ...inheritedRouteInput } = input;
+          return inheritedRouteInput;
+        })();
+    const request = await buildCallLlmRequest(requestInput, {
       backendName: this.backendName,
       sessionPath,
       validateModel: this.validateCallLlmModel?.bind(this),
     });
+    // Attachment resolution may yield. Preserve a denied admission snapshot
+    // and also honor Auto -> Manual (or ON -> OFF) before dispatch.
+    if (!modelSubstitutionAllowed || !false) {
+      request.model = this.getModel();
+    }
     return this.queryLlm(request);
+  }
+
+  /** Workspace routing is opt-in and must fail closed if the live host getter
+   * is absent or cannot read its configuration. */
+
+
+  /** A workspace Auto setting never outranks an explicit session model pin.
+   * Missing host wiring falls back to the persisted session snapshot. Getter
+   * failures fail closed so an auxiliary call cannot escape a manual route. */
+
+
+  /** Read the host-owned pin independently from the workspace Auto switch so
+   * subprocess snapshots remain correct while Auto is temporarily disabled. */
+  protected modelRoutePinned(): boolean {
+    try {
+      return this.config.isModelRoutePinned?.()
+        ?? this.config.session?.modelRoutePinned === true;
+    } catch {
+      return true;
+    }
   }
 
   /**
@@ -1174,13 +1416,15 @@ ${formattedMessages}
   protected async preExecuteSpawnSession(
     input: Record<string, unknown>
   ): Promise<SpawnSessionResult | SpawnSessionHelpResult> {
-    // Help mode — return available config info
-    if (input.help) {
+    // This backend interception path does not execute the registry handler:
+    // validate the same schema before any host callback can persist a child.
+    const parsed = parseSpawnSessionInput(input);
+    if (parsed.help) {
       return this.getSpawnSessionHelp();
     }
 
     // Spawn mode — validate and delegate
-    const prompt = input.prompt as string | undefined;
+    const prompt = parsed.prompt;
     if (!prompt?.trim()) {
       throw new Error('prompt is required when not in help mode. Call with help=true to see available options.');
     }
@@ -1190,42 +1434,30 @@ ${formattedMessages}
     }
 
     const request: SpawnSessionRequest = {
+      ...parsed,
       prompt,
-      name: input.name as string | undefined,
-      llmConnection: input.llmConnection as string | undefined,
-      model: input.model as string | undefined,
-      enabledSourceSlugs: input.enabledSourceSlugs as string[] | undefined,
-      permissionMode: input.permissionMode as SpawnSessionRequest['permissionMode'],
-      thinkingLevel: input.thinkingLevel as SpawnSessionRequest['thinkingLevel'],
-      labels: input.labels as string[] | undefined,
-      workingDirectory: typeof input.workingDirectory === 'string' && input.workingDirectory
-        ? expandPath(input.workingDirectory)
+      workingDirectory: parsed.workingDirectory
+        ? expandPath(parsed.workingDirectory)
         : undefined,
-      projectId: input.projectId as string | undefined,
-      attachments: input.attachments as SpawnSessionRequest['attachments'],
     };
+
+    // Reject remote or stale paths before the host creates a stored child.
+    if (request.workingDirectory) {
+      await assertExistingWorkingDirectory(request.workingDirectory);
+    }
 
     return this.onSpawnSession(request);
   }
 
   /**
-   * Get available connections, models, and sources for spawn_session help mode.
+   * Get available sources and role guidance for spawn_session help mode.
    */
   protected getSpawnSessionHelp(): SpawnSessionHelpResult {
-    const connections = getLlmConnections();
-    const defaultConnectionSlug = getDefaultLlmConnection();
     const allSources = loadAllSources(this.config.workspace.rootPath);
     const activeSlugs = this.sourceManager.getActiveSlugs();
 
     return {
-      connections: connections.map(c => ({
-        slug: c.slug,
-        name: c.name,
-        isDefault: c.slug === defaultConnectionSlug,
-        providerType: c.providerType,
-        models: (c.models || []).map(m => typeof m === 'string' ? m : m.id),
-        defaultModel: c.defaultModel,
-      })),
+      roleHelp: SPAWN_SESSION_ROLE_HELP,
       sources: allSources.map(s => ({
         slug: s.config.slug,
         name: s.config.name,
@@ -1233,7 +1465,6 @@ ${formattedMessages}
         enabled: activeSlugs.has(s.config.slug),
       })),
       defaults: {
-        defaultConnection: defaultConnectionSlug,
         permissionMode: this.permissionManager.getPermissionMode(),
       },
     };

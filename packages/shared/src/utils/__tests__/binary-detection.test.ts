@@ -300,6 +300,70 @@ describe('guardLargeResult (base64 integration)', () => {
 });
 
 describe('guardLargeResult (structured JSON media extraction)', () => {
+  test('retains bounded Gmail message metadata when an attachment is extracted', async () => {
+    const payload = JSON.stringify({
+      id: 'message-1', threadId: 'thread-1', labelIds: ['SENT'],
+      subject: 'Expected subject', from: 'Sender <sender@example.com>', to: 'Recipient <recipient@example.com>',
+      bodyHtml: 'sensitive body that must stay in the linked artifact',
+      attachments: [{ mimeType: 'application/pdf', data: LARGE_PDF_BASE64 }],
+    });
+    const result = await guardLargeResult(payload, {
+      sessionPath: tempSessionDir,
+      toolName: 'mcp__google-contacts__gmail_get_message',
+    });
+
+    expect(result).not.toBeNull();
+    expect(result).toContain('Result metadata JSON: {"id":"message-1","threadId":"thread-1","subject":"Expected subject","from":"Sender <sender@example.com>","to":"Recipient <recipient@example.com>","labelIds":["SENT"]}');
+    expect(result).not.toContain('sensitive body that must stay in the linked artifact');
+    expect(result).not.toContain(LARGE_PDF_BASE64.slice(0, 80));
+  });
+
+  test('keeps same-millisecond structured JSON artifacts unique and immutable', async () => {
+    const originalToISOString = Date.prototype.toISOString;
+    Date.prototype.toISOString = () => '2026-09-16T10:00:00.123Z';
+    try {
+      const firstPayload = JSON.stringify({
+        id: 'message-first',
+        bodyHtml: 'first body',
+        attachments: [{ mimeType: 'application/pdf', data: LARGE_PDF_BASE64 }],
+      });
+      const secondPayload = JSON.stringify({
+        id: 'message-second',
+        bodyHtml: 'second body',
+        attachments: [{ mimeType: 'application/pdf', data: LARGE_PDF_BASE64 }],
+      });
+      const first = await guardLargeResult(firstPayload, {
+        sessionPath: tempSessionDir,
+        toolName: 'mcp__google-contacts__gmail_get_message',
+      });
+      const second = await guardLargeResult(secondPayload, {
+        sessionPath: tempSessionDir,
+        toolName: 'mcp__google-contacts__gmail_get_message',
+      });
+
+      const artifactPath = (result: string | null, label: string): string => {
+        const match = result?.match(new RegExp(`^${label}: (.+)$`, 'm'));
+        expect(match?.[1]).toBeDefined();
+        return match![1]!;
+      };
+      const firstOriginal = artifactPath(first, 'Original JSON');
+      const firstLinked = artifactPath(first, 'Linked JSON');
+      const secondOriginal = artifactPath(second, 'Original JSON');
+      const secondLinked = artifactPath(second, 'Linked JSON');
+
+      expect(firstOriginal).not.toBe(secondOriginal);
+      expect(firstLinked).not.toBe(secondLinked);
+      expect(readFileSync(firstOriginal, 'utf-8')).toBe(firstPayload);
+      expect(readFileSync(secondOriginal, 'utf-8')).toBe(secondPayload);
+      expect(readFileSync(firstLinked, 'utf-8')).toContain('message-first');
+      expect(readFileSync(firstLinked, 'utf-8')).not.toContain('message-second');
+      expect(readFileSync(secondLinked, 'utf-8')).toContain('message-second');
+      expect(readFileSync(secondLinked, 'utf-8')).not.toContain('message-first');
+    } finally {
+      Date.prototype.toISOString = originalToISOString;
+    }
+  });
+
   test('extracts screenshot asset from pretty JSON and writes original + linked JSON artifacts', async () => {
     const result = await guardLargeResult(SCREENSHOT_PAYLOAD_PRETTY, {
       sessionPath: tempSessionDir,

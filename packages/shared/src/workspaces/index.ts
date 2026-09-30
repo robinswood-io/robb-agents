@@ -12,6 +12,9 @@ export type {
   LoadedWorkspace,
   WorkspaceSummary,
 } from './types.ts';
+export {
+  isWorkspaceAutomaticToolFallbackEnabled,
+} from './types.ts';
 
 // Storage functions
 export {

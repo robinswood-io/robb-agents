@@ -3,6 +3,7 @@ import { getWorkspaceByNameOrId } from '@craft-agent/shared/config'
 import { loadWorkspaceSources } from '@craft-agent/shared/sources'
 import { pushTyped } from '@craft-agent/server-core/transport'
 import { safeJsonParse } from '@craft-agent/shared/utils/files'
+import { resolveStdioConfig } from '@craft-agent/shared/utils'
 import { getCredentialManager } from '@craft-agent/shared/credentials'
 import type { RpcServer } from '@craft-agent/server-core/transport'
 import type { HandlerDeps } from '../handler-deps'
@@ -46,11 +47,12 @@ export function registerSourcesHandlers(server: RpcServer, deps: HandlerDeps): v
       mcp: config.mcp,
       api: config.api,
       local: config.local,
+      routingSensitivity: config.routingSensitivity,
     })
   })
 
   // Update an existing source config
-  server.handle(RPC_CHANNELS.sources.UPDATE_CONFIG, async (_ctx, workspaceId: string, sourceSlug: string, updates: Partial<import('@craft-agent/shared/sources').FolderSourceConfig>) => {
+  server.handle(RPC_CHANNELS.sources.UPDATE_CONFIG, async (_ctx, workspaceId: string, sourceSlug: string, updates: Omit<Partial<import('@craft-agent/shared/sources').FolderSourceConfig>, 'routingSensitivity'> & { routingSensitivity?: import('@craft-agent/shared/sources').FolderSourceConfig['routingSensitivity'] | null }) => {
     const workspace = getWorkspaceByNameOrId(workspaceId)
     if (!workspace) throw new Error(`Workspace not found: ${workspaceId}`)
     const { loadSourceConfig, saveSourceConfig } = await import('@craft-agent/shared/sources')
@@ -60,6 +62,7 @@ export function registerSourcesHandlers(server: RpcServer, deps: HandlerDeps): v
     const next = {
       ...existing,
       ...updates,
+      routingSensitivity: updates.routingSensitivity === null ? undefined : updates.routingSensitivity ?? existing.routingSensitivity,
       id: existing.id,
       slug: existing.slug,
       type: existing.type,
@@ -205,12 +208,14 @@ export function registerSourcesHandlers(server: RpcServer, deps: HandlerDeps): v
         if (!source.config.mcp.command) {
           return { success: false, error: 'Stdio MCP source is missing required "command" field' }
         }
-        log.info(`Fetching MCP tools via stdio: ${source.config.mcp.command}`)
+        const resolved = resolveStdioConfig(source.config.mcp, source.workspaceRootPath, source.folderPath)
+        if (!resolved) return { success: false, error: 'Stdio MCP configuration could not be resolved' }
+        log.info(`Fetching MCP tools via stdio: ${resolved.command}`)
         client = new CraftMcpClient({
           transport: 'stdio',
-          command: source.config.mcp.command,
-          args: source.config.mcp.args,
-          env: source.config.mcp.env,
+          command: resolved.command,
+          args: resolved.args,
+          env: resolved.env,
         })
       } else {
         if (!source.config.mcp.url) {

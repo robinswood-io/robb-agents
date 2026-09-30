@@ -28,6 +28,8 @@ interface ChatDisplayMobilePreviewProps {
   messageCount?: MessageCount
   /** Show the last assistant turn as still streaming. */
   streaming?: boolean
+  /** Exercise recovery of an existing request, including sessions marked done. */
+  stoppedRequest?: 'none' | 'interrupted' | 'exhausted' | 'marked-complete'
   /** Initial permission mode for the inline badge. */
   permissionMode?: PermissionMode
 }
@@ -77,6 +79,7 @@ export function ChatDisplayMobilePreview({
   showBezel = true,
   messageCount = '5',
   streaming = false,
+  stoppedRequest = 'none',
   permissionMode = 'ask',
 }: ChatDisplayMobilePreviewProps) {
   const [model, setModel] = React.useState('haiku')
@@ -87,21 +90,40 @@ export function ChatDisplayMobilePreview({
 
   React.useEffect(() => setMode(permissionMode), [permissionMode])
 
-  const messages = React.useMemo(
-    () => buildMessages(messageCount, streaming),
-    [messageCount, streaming],
-  )
+  const messages = React.useMemo(() => {
+    const base = buildMessages(messageCount, streaming)
+    if (stoppedRequest === 'none') return base
+    const stopped: Message = stoppedRequest === 'exhausted'
+      ? { id: 'stopped-error', role: 'error', content: 'La réponse a été interrompue après la limite de reprises.',
+          timestamp: Date.now(), errorActions: [{ key: 'r', label: 'Retry', action: 'retry' }] }
+      : { id: 'stopped-info', role: 'info', content: 'Response interrupted', timestamp: Date.now() }
+    return [...base, stopped]
+  }, [messageCount, streaming, stoppedRequest])
 
   const session = React.useMemo(
-    () =>
-      ({
+    () => {
+      const base = {
         ...buildMockSession(DEMO_SESSION_ID, {
           messages,
           isProcessing: streaming,
         }),
         llmConnection: connection,
-      }),
-    [messages, streaming, connection],
+      }
+      if (stoppedRequest === 'none') return base
+      const user = messages.findLast(message => message.role === 'user')!
+      return {
+        ...base, sessionStatus: 'done',
+        activeObjective: {
+          schemaVersion: 1 as const, userMessageId: user.id, lastUserMessageId: user.id,
+          originalText: user.content, startedAt: user.timestamp, budgetBaselineUsd: 0, tokenBaseline: 0,
+          continuationCount: 0, orchestrationMode: 'mission' as const, risk: 'standard' as const,
+          terminalState: stoppedRequest === 'marked-complete' ? 'complete_verified' as const
+            : stoppedRequest === 'exhausted' ? 'exhausted' as const : 'active' as const,
+          completionCriteria: [],
+        },
+      }
+    },
+    [messages, streaming, stoppedRequest, connection],
   )
 
   return (
@@ -115,7 +137,7 @@ export function ChatDisplayMobilePreview({
             onOpenUrl={log('onOpenUrl')}
             currentModel={model}
             onModelChange={(nextModel, nextConnection) => {
-              setModel(nextModel)
+              if (nextModel !== null) setModel(nextModel)
               if (nextConnection) setConnection(nextConnection)
             }}
             onConnectionChange={setConnection}

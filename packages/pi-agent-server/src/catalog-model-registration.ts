@@ -6,7 +6,10 @@ import { getPiModelsForAuthProvider } from '../../shared/src/config/models-pi.ts
 type RuntimeModel = Model<Api>;
 
 const OPENAI_SUPPLEMENTAL_MODEL_IDS = [
+  'gpt-6.1-sol',
   'gpt-6-astra',
+  'gpt-6-sol',
+  'gpt-6-luna',
   'gpt-5.6-sol',
   'gpt-5.6-terra',
   'gpt-5.6-luna',
@@ -43,6 +46,9 @@ const CATALOG_MODEL_TEMPLATES: Readonly<Record<string, {
  * until the upstream SDK catalogue contains the models itself.
  * Sources:
  * - https://developers.openai.com/api/docs/models/gpt-6-astra
+ * - https://developers.openai.com/api/docs/models/gpt-6.1-sol
+ * - https://developers.openai.com/api/docs/models/gpt-6-sol
+ * - https://developers.openai.com/api/docs/models/gpt-6-luna
  * - https://developers.openai.com/api/docs/models/gpt-5.6-sol
  * - https://platform.claude.com/docs/en/models/opus-5/overview
  * - https://platform.claude.com/docs/en/models/fable-5-1/overview
@@ -51,6 +57,20 @@ const RUNTIME_OVERRIDES: Readonly<Record<
   string,
   Pick<RuntimeModel, 'cost' | 'maxTokens' | 'thinkingLevelMap'>
 >> = {
+  'gpt-6.1-sol': {
+    cost: { input: 2, output: 10, cacheRead: 0.1, cacheWrite: 2.5 },
+    maxTokens: 128_000,
+    // GPT-6.1 rejects none/minimal, including persisted legacy selections.
+    // The SDK clamps disabled levels to low before serializing Responses.
+    thinkingLevelMap: {
+      off: null,
+      minimal: null,
+      low: 'low',
+      medium: 'medium',
+      high: 'high',
+      xhigh: 'xhigh',
+    },
+  },
   'gpt-6-astra': {
     cost: { input: 10, output: 50, cacheRead: 1, cacheWrite: 12.5 },
     maxTokens: 128_000,
@@ -65,6 +85,16 @@ const RUNTIME_OVERRIDES: Readonly<Record<
       high: 'high',
       xhigh: 'xhigh',
     },
+  },
+  'gpt-6-sol': {
+    cost: { input: 2, output: 10, cacheRead: 0.2, cacheWrite: 2.5 },
+    maxTokens: 128_000,
+    thinkingLevelMap: { off: 'none', minimal: null, xhigh: 'xhigh' },
+  },
+  'gpt-6-luna': {
+    cost: { input: 0.1, output: 0.5, cacheRead: 0.01, cacheWrite: 0.125 },
+    maxTokens: 128_000,
+    thinkingLevelMap: { off: 'none', minimal: null, xhigh: 'xhigh' },
   },
   'gpt-5.6-sol': {
     // Promotional pricing is available at least through November 21, 2026.

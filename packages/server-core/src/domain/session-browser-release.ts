@@ -15,10 +15,12 @@ export type BrowserOwnershipReleaser = {
 export async function releaseBrowserOwnershipOnForcedStop(
   source: BrowserOwnershipReleaser | ((sessionId: string) => BrowserOwnershipReleaser | null) | null | undefined,
   sessionId: string,
+  ownsRelease?: () => boolean,
 ): Promise<void> {
-  if (!source) return
+  if (!source || (ownsRelease && !ownsRelease())) return
   const releaser = typeof source === 'function' ? source(sessionId) : source
   if (!releaser) return
   await releaser.clearVisualsForSession(sessionId)
+  if (ownsRelease && !ownsRelease()) return
   releaser.unbindAllForSession(sessionId)
 }

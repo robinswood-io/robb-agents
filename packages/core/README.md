@@ -65,7 +65,7 @@ import { generateMessageId, debug } from '@craft-agent/core';
 Generate a unique message ID:
 ```typescript
 const id = generateMessageId();
-// Returns: "msg-1702736400000-a1b2c3"
+// Returns: "msg-1702736400000-a1b2c3d4e5f60718293a4b5c6d7e8f90"
 ```
 
 ### `debug()`

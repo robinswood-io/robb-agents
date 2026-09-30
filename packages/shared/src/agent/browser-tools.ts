@@ -70,6 +70,8 @@ export interface BrowserConsoleArgs {
 }
 
 export interface BrowserScreenshotRegionArgs {
+  /** Explicit canvas bitmap capture, not a composited page screenshot. */
+  source?: 'canvas'
   x?: number
   y?: number
   width?: number
@@ -102,6 +104,8 @@ export interface BrowserWaitArgs {
 }
 
 export interface BrowserKeyArgs {
+  /** Explicit printable keyboard text (type-keys), never a clipboard operation. */
+  text?: string
   key: string
   modifiers?: Array<'shift' | 'control' | 'alt' | 'meta'>
 }
@@ -122,6 +126,8 @@ export interface BrowserLifecycleActionResult {
 
 export interface BrowserPaneFns {
   openPanel: (options?: { background?: boolean }) => Promise<{ instanceId: string }>;
+  /** Resolve the exact window that the next session-scoped browser command will target. */
+  resolveCurrentWindow: () => Promise<{ instanceId: string; title: string; url: string }>;
   navigate: (url: string) => Promise<{ url: string; title: string }>;
   snapshot: () => Promise<{ url: string; title: string; nodes: Array<{ ref: string; role: string; name: string; value?: string; description?: string; focused?: boolean; checked?: boolean; disabled?: boolean }> }>;
   click: (ref: string, options?: { waitFor?: 'none' | 'navigation' | 'network-idle'; timeoutMs?: number }) => Promise<void>;
@@ -202,6 +208,7 @@ Examples:
 - \`type Hello World\` — type into currently focused element (no ref needed)
 - \`select @e3 optionValue\`
 - \`select @e75 CNAME --assert-text Target --timeout 3000\`
+- \`type-keys <text>\` — explicit printable keyboard text for a focused canvas/RDP receiver, max 256 BMP characters, no control characters, Enter or clipboard. Prefer array input to preserve spaces and punctuation. Inspect the received remote text once before a separate submit; if it failed, change the authorized route instead of repeating.
 - \`set-clipboard Name\\tAge\\nAlice\\t30\` — write text to clipboard
 - \`get-clipboard\` — read clipboard text content
 - \`paste Name\\tAge\\nAlice\\t30\` — set clipboard and trigger Ctrl/Cmd+V
@@ -214,6 +221,7 @@ Examples:
 - \`screenshot-region 100 200 640 480\`
 - \`screenshot-region --ref @e12 --padding 8\`
 - \`screenshot-region --selector div[data-testid="chart"]\`
+- \`screenshot-region --canvas --selector canvas\` — image of one visible canvas bitmap, clipped to its visible rectangle; excludes DOM overlays and other canvas layers. Requires a unique selector. Does not focus, repaint, or repair the page.
 - \`window-resize 1440 900\`
 - \`network 50 failed\`
 - \`wait network-idle 8000\`

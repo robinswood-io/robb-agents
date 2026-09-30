@@ -40,6 +40,88 @@ import {
 // Track if permissions have been initialized this session (prevents re-init on hot reload)
 let permissionsInitialized = false;
 
+// These exact patterns shipped as application defaults, not user-authored
+// workspace rules. They admitted output-file or executable options, so keeping
+// them during the otherwise-additive default migration would preserve a
+// privilege-boundary bypass after an upgrade.
+const REVOKED_BUNDLED_BASH_PATTERNS = new Set([
+  '^tree\\b',
+  '^file\\b',
+  '^less\\b',
+  '^more\\b',
+  '^bat\\b',
+  '^markitdown\\b',
+  '^pdf-tool\\s+(extract|info)\\b',
+  '^xlsx-tool\\s+(read|info|export)\\b',
+  '^doc-diff\\b',
+  '^img-tool\\s+info\\b',
+  '^docx-tool\\s+(info|extract)\\b',
+  '^pptx-tool\\s+(info|extract)\\b',
+  '^ical-tool\\s+(read|filter)\\b',
+  '^rg\\b',
+  '^rg\\b(?![^\\r\\n]*\\s--pre(?:=\\S*)?(?:\\s|$))',
+  '^ag\\b',
+  '^ack\\b',
+  '^fd\\b',
+  '^fzf\\b',
+  '^git\\s+((-[A-Za-z]|--[a-z][-a-z]*)(\\s+[^\\s-][^\\s]*)?\\s+)*(status|log|diff|show|branch|tag|remote|stash\\s+list|describe|rev-parse|config\\s+--get|config\\s+-l|ls-files|ls-tree|shortlog|blame|annotate|reflog|cherry|whatchanged|ls-remote|history)\\b',
+  '^gh\\s+api\\b.*--method\\s+GET\\b',
+  '^gh\\s+api\\b(?!.*--method)',
+  '^npm\\s+(ls|list|view|info|show|outdated|audit|search|explain|why|config\\s+get|config\\s+list)\\b',
+  '^pnpm\\s+(list|ls|why|outdated|audit)\\b',
+  '^hostname\\b',
+  '^date\\b',
+  '^htop\\b',
+  '^docker-compose\\s+(ps|logs|config|images|top|version)\\b',
+  '^docker\\s+compose\\s+(ps|logs|config|images|top|version)\\b',
+  '^kubectl\\s+(get|describe|logs|top|explain|api-resources|api-versions|cluster-info|config\\s+view|config\\s+get-contexts|version)\\b',
+  '^kubectl\\s+(?:get|describe|logs|top|explain|api-resources|api-versions|cluster-info|config\\s+view|config\\s+get-contexts|version)\\b(?![^\\r\\n]*\\s--output-directory(?:=\\S*)?(?:\\s|$))',
+  '^sed\\s+-n\\b',
+  '^sed\\s+-n\\b(?![^\\r\\n]*\\s(?:-i\\S*|--in-place(?:=\\S*)?)(?:\\s|$))',
+  '^sort\\b',
+  '^uniq\\b',
+  '^(?:gawk|mawk|nawk|awk)\\b',
+  '^yq\\b',
+  '^xq\\b',
+  '^xmllint\\b',
+  '^python\\s+-m\\s+json\\.tool\\b',
+  '^ip\\s+(addr|link|route|neigh)\\s*(show)?\\b',
+  '^ifconfig\\b',
+  '^node\\s+(--version|-v)\\b',
+  '^npm\\s+(--version|-v)\\b',
+  '^yarn\\s+(--version|-v)\\b',
+  '^pnpm\\s+(--version|-v)\\b',
+  '^bun\\s+(--version|-v)\\b',
+  '^python\\s+(--version|-V)\\b',
+  '^python3\\s+(--version|-V)\\b',
+  '^ruby\\s+(--version|-v)\\b',
+  '^go\\s+version\\b',
+  '^rustc\\s+(--version|-V)\\b',
+  '^cargo\\s+(--version|-V)\\b',
+  '^java\\s+(-version|--version)\\b',
+  '^dotnet\\s+--version\\b',
+  '^php\\s+(--version|-v)\\b',
+  '^perl\\s+(--version|-v)\\b',
+  '^man\\b',
+  '--help\\b',
+  '-h\\b$',
+]);
+
+const getBlockedCommandHintKey = (hint: Pick<BlockedCommandHintRule, 'command' | 'reason' | 'whenNotMatching'>): string =>
+  `${hint.command}::${hint.whenNotMatching || ''}::${hint.reason}`;
+
+const REVOKED_BUNDLED_BLOCKED_COMMAND_HINT_KEYS = new Set([
+  getBlockedCommandHintKey({
+    command: 'sed',
+    reason: 'Only print-only sed is allowed in Explore mode by default.',
+    whenNotMatching: '^sed\\s+-n\\b',
+  }),
+  ...['awk', 'gawk', 'mawk', 'nawk'].map(command => getBlockedCommandHintKey({
+    command,
+    reason: `${command} is blocked when the command appears to execute external commands.`,
+  })),
+]);
+
 /**
  * Get the app-level permissions directory.
  * Default permissions are stored at ~/.craft-agent/permissions/
@@ -135,9 +217,9 @@ function migratePermissions(
   const getPatternString = (p: string | { pattern: string }): string =>
     typeof p === 'string' ? p : p.pattern;
 
-  const existingBashPatterns = new Set(
-    (installed.allowedBashPatterns || []).map(getPatternString)
-  );
+  const retainedInstalledBashPatterns = (installed.allowedBashPatterns || [])
+    .filter(pattern => !REVOKED_BUNDLED_BASH_PATTERNS.has(getPatternString(pattern)));
+  const existingBashPatterns = new Set(retainedInstalledBashPatterns.map(getPatternString));
   const existingMcpPatterns = new Set(
     (installed.allowedMcpPatterns || []).map(getPatternString)
   );
@@ -152,11 +234,14 @@ function migratePermissions(
 
   // Merge blocked command hints (dedupe by command + whenNotMatching + reason)
   const installedHints = installed.blockedCommandHints || [];
+  const retainedInstalledHints = installedHints.filter(
+    hint => !REVOKED_BUNDLED_BLOCKED_COMMAND_HINT_KEYS.has(getBlockedCommandHintKey(hint))
+  );
   const installedHintKeys = new Set(
-    installedHints.map(h => `${h.command}::${h.whenNotMatching || ''}::${h.reason}`)
+    retainedInstalledHints.map(getBlockedCommandHintKey)
   );
   const newBlockedCommandHints = (bundled.blockedCommandHints || []).filter(
-    h => !installedHintKeys.has(`${h.command}::${h.whenNotMatching || ''}::${h.reason}`)
+    h => !installedHintKeys.has(getBlockedCommandHintKey(h))
   );
 
   debug('[Permissions] Adding', newBashPatterns.length, 'new bash patterns');
@@ -167,7 +252,7 @@ function migratePermissions(
     ...installed,
     version: bundled.version,
     allowedBashPatterns: [
-      ...(installed.allowedBashPatterns || []),
+      ...retainedInstalledBashPatterns,
       ...newBashPatterns,
     ],
     allowedMcpPatterns: [
@@ -175,7 +260,7 @@ function migratePermissions(
       ...newMcpPatterns,
     ],
     blockedCommandHints: [
-      ...installedHints,
+      ...retainedInstalledHints,
       ...newBlockedCommandHints,
     ],
   };

@@ -2,11 +2,11 @@ import type { PermissionRequest as PermissionRequestType, CredentialRequest as C
 import { PermissionRequest } from './structured/PermissionRequest'
 import { CredentialRequest } from './structured/CredentialRequest'
 import { AdminApprovalRequest } from './structured/AdminApprovalRequest'
-import type { StructuredInputState, StructuredResponse } from './structured/types'
+import { permissionResponseIdentity, type StructuredInputState, type StructuredResponse } from './structured/types'
 
 interface StructuredInputProps {
   state: StructuredInputState
-  onResponse: (response: StructuredResponse) => void
+  onResponse: (response: StructuredResponse) => void | Promise<void>
   /** When true, removes container styling (shadow, bg, rounded) - used when wrapped by InputContainer */
   unstyled?: boolean
 }
@@ -37,11 +37,12 @@ export function StructuredInput({ state, onResponse, unstyled = false }: Structu
         />
       )
     case 'admin_approval':
+      const responseRequest = permissionResponseIdentity(state.request)
       return (
         <AdminApprovalRequest
           request={state.data as import('./structured/AdminApprovalRequest').AdminApprovalRequestData}
-          onApprove={({ rememberForMinutes }) => onResponse({ type: 'admin_approval', approved: true, rememberForMinutes })}
-          onCancel={() => onResponse({ type: 'admin_approval', approved: false })}
+          onApprove={({ rememberForMinutes }) => onResponse({ type: 'admin_approval', request: responseRequest, approved: true, rememberForMinutes })}
+          onCancel={() => onResponse({ type: 'admin_approval', request: responseRequest, approved: false })}
           unstyled={unstyled}
         />
       )

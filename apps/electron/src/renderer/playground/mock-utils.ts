@@ -279,6 +279,10 @@ export const mockElectronAPI = {
     return () => {}
   },
 
+  // NavigationProvider reads labels even when the embedded demo has no sidebar.
+  listLabels: async (_workspaceId: string) => [],
+  onLabelsChanged: (_callback: unknown) => () => {},
+
   // Debug menu actions invoked by the mobile menu's Debug sub-page in dev mode.
   // The real implementations call into the auto-updater; the playground just logs.
   checkForUpdates: () => {
@@ -795,8 +799,8 @@ export const mockInputCallbacks = {
     console.log('[Playground] Message submitted:', { message, attachments })
   },
 
-  onModelChange: (model: string) => {
-    console.log('[Playground] Model changed to:', model)
+  onModelChange: (model: string | null) => {
+    console.log('[Playground] Model changed to:', model ?? 'automatic')
   },
 
   onInputChange: (value: string) => {

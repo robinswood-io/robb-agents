@@ -22,6 +22,8 @@ import type {
   AnnotationV1,
   RoutingMeta,
   AutonomyEvent,
+  UserInputResponse,
+  UserInputResponseResult,
 } from '@craft-agent/core/types';
 
 // Mode types from dedicated subpath export (avoids pulling in SDK)
@@ -328,8 +330,10 @@ export interface ElectronAPI {
   respondToPermission(sessionId: string, requestId: string, allowed: boolean, alwaysAllow: boolean, options?: PermissionResponseOptions): Promise<boolean>
   respondToCredential(sessionId: string, requestId: string, response: CredentialResponse): Promise<boolean>
 
+  respondToUserInput(sessionId: string, response: UserInputResponse): Promise<UserInputResponseResult>
+
   // Consolidated session command handler
-  sessionCommand(sessionId: string, command: SessionCommand): Promise<void | ShareResult | RefreshTitleResult | { count: number }>
+  sessionCommand(sessionId: string, command: SessionCommand): Promise<void | ShareResult | RefreshTitleResult | import('@craft-agent/shared/protocol').RetryTurnResult | { count: number }>
 
   // Server info (REMOTE_ELIGIBLE — returns data from whichever server owns the workspace)
   getServerHomeDir(): Promise<string>
@@ -553,6 +557,11 @@ export interface ElectronAPI {
     workspaceId: string,
     request: RemoteSupervisionRevokeRequest,
   ): Promise<NonNullable<WorkspaceSettings['remoteSupervision']>>
+  /** Read-only policy explanation. It never invokes a model or touches credentials. */
+
+  /** Read-only outcome report; this method has no policy mutation capability. */
+
+
   // Folder dialog
   openFolderDialog(): Promise<string | null>
 
@@ -577,7 +586,7 @@ export interface ElectronAPI {
   // Sources
   getSources(workspaceId: string): Promise<LoadedSource[]>
   createSource(workspaceId: string, config: Partial<FolderSourceConfig>): Promise<FolderSourceConfig>
-  updateSourceConfig(workspaceId: string, sourceSlug: string, updates: Partial<FolderSourceConfig>): Promise<FolderSourceConfig>
+  updateSourceConfig(workspaceId: string, sourceSlug: string, updates: Omit<Partial<FolderSourceConfig>, 'routingSensitivity'> & { routingSensitivity?: FolderSourceConfig['routingSensitivity'] | null }): Promise<FolderSourceConfig>
   deleteSource(workspaceId: string, sourceSlug: string): Promise<void>
   startSourceOAuth(workspaceId: string, sourceSlug: string): Promise<{ success: boolean; error?: string }>
   saveSourceCredentials(workspaceId: string, sourceSlug: string, credential: string): Promise<void>

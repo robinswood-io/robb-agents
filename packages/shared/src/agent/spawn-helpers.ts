@@ -7,6 +7,29 @@
  */
 
 import { lstatSync } from 'node:fs';
+import { stat } from 'node:fs/promises';
+
+/** A deterministic local configuration error, not a missing runtime binary. */
+export class InvalidWorkingDirectoryError extends Error {
+  constructor(readonly workingDirectory: string) {
+    super(
+      `Working directory "${workingDirectory}" is not an accessible directory on the host running this agent. ` +
+      'Select an existing working directory on this host, then retry. ' +
+      'For work over SSH, keep the remote path in the task instructions or remote commands, not in workingDirectory.',
+    );
+    this.name = 'InvalidWorkingDirectoryError';
+  }
+}
+
+/** Follow valid directory symlinks, without blocking the host event loop. */
+export async function assertExistingWorkingDirectory(workingDirectory: string): Promise<void> {
+  try {
+    if ((await stat(workingDirectory)).isDirectory()) return;
+  } catch {
+    // Missing, inaccessible, and non-directory paths cannot be spawn cwd values.
+  }
+  throw new InvalidWorkingDirectoryError(workingDirectory);
+}
 
 /**
  * Returns true iff `p` is an existing directory.

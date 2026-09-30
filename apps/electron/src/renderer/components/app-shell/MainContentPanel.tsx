@@ -420,7 +420,7 @@ export function MainContentPanel({
     if (navState.details) {
       return wrapWithStoplight(
         <Panel variant="grow" className={className}>
-          <ChatPage sessionId={navState.details.sessionId} />
+          <ChatPage key={navState.details.sessionId} sessionId={navState.details.sessionId} />
         </Panel>
       )
     }

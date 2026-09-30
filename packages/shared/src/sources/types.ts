@@ -1,3 +1,4 @@
+import type { SourceSensitivity, LegacyAutomaticModelTier } from '../config/selection-provenance.ts';
 /**
  * Source Types
  *
@@ -9,6 +10,7 @@
  *   ├── config.json   - Source settings
  *   └── guide.md      - Usage guidelines + cached data (in YAML frontmatter)
  */
+
 
 
 /**
@@ -518,6 +520,13 @@ export interface FolderSourceConfig {
   // Brand theming for this source's UI elements
   brand?: SourceBrand;
 
+  /**
+   * Optional policy hint consumed by Robinswood's policy-first LLM router.
+   * When several enabled sources are present, the runtime uses the highest
+   * sensitivity among them for the turn.
+   */
+  routingSensitivity?: SourceSensitivity;
+
   // Status tracking
   isAuthenticated?: boolean;
   connectionStatus?: SourceConnectionStatus;
@@ -590,6 +599,7 @@ export interface CreateSourceInput {
   local?: LocalSourceConfig;
   icon?: string; // Emoji or URL (auto-downloaded)
   enabled?: boolean;
+  routingSensitivity?: SourceSensitivity;
 }
 
 /**

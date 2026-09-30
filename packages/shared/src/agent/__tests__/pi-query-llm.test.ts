@@ -70,7 +70,7 @@ describe('PiAgent.queryLlm — subprocess RPC round-trip', () => {
   });
 
   it('propagates the full LLMQueryRequest shape over the llm_query RPC unchanged', async () => {
-    const agent = new PiAgent(createConfig());
+    const agent = new PiAgent(createConfig({ model: 'pi/gpt-5-mini' }));
     const { sent } = installFakeSubprocess(agent);
 
     const request: LLMQueryRequest = {
@@ -90,6 +90,7 @@ describe('PiAgent.queryLlm — subprocess RPC round-trip', () => {
     const outbound = sent[0]!;
     expect(outbound.type).toBe('llm_query');
     expect(typeof outbound.id).toBe('string');
+    expect(outbound.allowModelSubstitution).toBe(false);
 
     // DRIFT GUARD: the outbound envelope must carry the entire request shape
     // byte-for-byte. If someone adds a field to LLMQueryRequest but doesn't
@@ -106,6 +107,97 @@ describe('PiAgent.queryLlm — subprocess RPC round-trip', () => {
     const result = await pending;
     expect(result).toEqual({ text: 'ok', model: 'pi/gpt-5-mini' });
 
+    agent.destroy();
+  });
+
+  it('drops a model override and inherits the active model for the public selected-model contract', async () => {
+    const agent = new PiAgent(createConfig({
+      model: 'pi/gpt-5.6-sol',
+
+    }));
+    const { sent } = installFakeSubprocess(agent);
+
+    const pending = agent.queryLlm({ prompt: 'Review', model: 'pi/gpt-5-mini' });
+    await flushMicrotasks();
+
+    const outbound = sent[0]!;
+    expect((outbound.request as LLMQueryRequest).model).toBe('pi/gpt-5.6-sol');
+    (agent as any).handleLine(JSON.stringify({
+      type: 'llm_query_result', id: outbound.id,
+      result: { text: 'ok', model: 'pi/gpt-5.6-sol' },
+    }));
+    expect(await pending).toEqual({ text: 'ok', model: 'pi/gpt-5.6-sol' });
+    agent.destroy();
+  });
+
+  it('keeps the active model when the model is pinned', async () => {
+    const agent = new PiAgent(createConfig({
+      model: 'pi/gpt-5.6-sol',
+
+      isModelRoutePinned: () => true,
+    }));
+    const { sent } = installFakeSubprocess(agent);
+
+    const pending = agent.queryLlm({ prompt: 'Review', model: 'pi/gpt-5-mini' });
+    await flushMicrotasks();
+
+    const outbound = sent[0]!;
+    expect(outbound.allowModelSubstitution).toBe(false);
+    expect((outbound.request as LLMQueryRequest).model).toBe('pi/gpt-5.6-sol');
+    (agent as any).handleLine(JSON.stringify({
+      type: 'llm_query_result', id: outbound.id,
+      result: { text: 'ok', model: 'pi/gpt-5.6-sol' },
+    }));
+    expect(await pending).toEqual({ text: 'ok', model: 'pi/gpt-5.6-sol' });
+    agent.destroy();
+  });
+
+  it('rechecks a false-to-true pin transition after an awaited provider fence', async () => {
+    let pinned = false;
+    const agent = new PiAgent(createConfig({
+      model: 'pi/gpt-5.6-sol',
+
+      isModelRoutePinned: () => pinned,
+      beforeProviderExecution: async () => {
+        await Promise.resolve();
+        pinned = true;
+      },
+    }));
+    const { sent } = installFakeSubprocess(agent);
+
+    const pending = agent.queryLlm({ prompt: 'Review', model: 'pi/gpt-5-mini' });
+    await flushMicrotasks();
+
+    const outbound = sent[0]!;
+    expect(outbound.allowModelSubstitution).toBe(false);
+    expect((outbound.request as LLMQueryRequest).model).toBe('pi/gpt-5.6-sol');
+    (agent as any).handleLine(JSON.stringify({
+      type: 'llm_query_result', id: outbound.id,
+      result: { text: 'ok', model: 'pi/gpt-5.6-sol' },
+    }));
+    await pending;
+    agent.destroy();
+  });
+
+  it('marks mini completions as non-substitutable under a manual model pin', async () => {
+    const agent = new PiAgent(createConfig({
+      model: 'pi/gpt-5.6-sol',
+      miniModel: 'pi/gpt-5-mini',
+
+      isModelRoutePinned: () => true,
+    }));
+    const { sent } = installFakeSubprocess(agent);
+
+    const pending = agent.runMiniCompletion('Create a title');
+    await flushMicrotasks();
+
+    const outbound = sent[0]!;
+    expect(outbound.type).toBe('mini_completion');
+    expect(outbound.allowModelSubstitution).toBe(false);
+    (agent as any).handleLine(JSON.stringify({
+      type: 'mini_completion_result', id: outbound.id, text: 'Title',
+    }));
+    expect(await pending).toBe('Title');
     agent.destroy();
   });
 

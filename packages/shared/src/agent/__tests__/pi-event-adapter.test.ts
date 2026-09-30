@@ -1045,9 +1045,118 @@ describe('PiEventAdapter', () => {
         type: 'tool_result',
         toolUseId: 'call_1',
         toolName: 'Read',
+        input: { file_path: '/foo.ts' },
         result: 'file contents',
         isError: false,
       });
+    });
+
+    it('correlates the exact semantic input for non-built-in tool results', () => {
+      const input = {
+        messageId: '1a0a917ea946a540',
+        expectedRecipientEmail: 'alice@example.com',
+        body: 'Merci.',
+        isHtml: false,
+        nested: { values: ['one', 'two'] },
+      };
+      collect(adapter.adaptEvent({
+        type: 'tool_execution_start',
+        toolCallId: 'gmail-preflight',
+        toolName: 'mcp__google-contacts__gmail_reply_preflight',
+        args: input,
+      } as any));
+
+      const events = collect(adapter.adaptEvent({
+        type: 'tool_execution_end',
+        toolCallId: 'gmail-preflight',
+        result: { content: [{ type: 'text', text: '{"ok":true}' }] },
+        isError: false,
+      } as any));
+
+      expect(events[0]).toMatchObject({
+        type: 'tool_result',
+        toolUseId: 'gmail-preflight',
+        input,
+      });
+    });
+
+    it('poisons repeated Pi tool ids instead of correlating either terminal', () => {
+      collect(adapter.adaptEvent({
+        type: 'tool_execution_start',
+        toolCallId: 'colliding-id',
+        toolName: 'mcp__google-contacts__gmail_reply_preflight',
+        args: { messageId: '1a0a917ea946a540', body: 'Premier' },
+      } as any));
+      collect(adapter.adaptEvent({
+        type: 'tool_execution_start',
+        toolCallId: 'colliding-id',
+        toolName: 'mcp__google-contacts__gmail_reply_bound',
+        args: { messageId: '1a0a917ea946a540', body: 'Deuxième' },
+      } as any));
+
+      for (const result of ['first terminal', 'second terminal', 'duplicate terminal']) {
+        const terminal = collect(adapter.adaptEvent({
+          type: 'tool_execution_end',
+          toolCallId: 'colliding-id',
+          result,
+          isError: false,
+        } as any))[0];
+        expect(terminal).toMatchObject({
+          type: 'tool_result',
+          toolUseId: 'colliding-id',
+          toolName: 'tool',
+        });
+        expect(terminal.input).toBeUndefined();
+      }
+    });
+
+    it('drops cached tool inputs after terminal results and lifecycle resets', () => {
+      collect(adapter.adaptEvent({
+        type: 'tool_execution_start',
+        toolCallId: 'terminal-cleanup',
+        toolName: 'mcp__example__read',
+        args: { value: 'terminal' },
+      } as any));
+      expect(collect(adapter.adaptEvent({
+        type: 'tool_execution_end',
+        toolCallId: 'terminal-cleanup',
+        result: 'done',
+        isError: false,
+      } as any))[0].input).toEqual({ value: 'terminal' });
+      expect(collect(adapter.adaptEvent({
+        type: 'tool_execution_end',
+        toolCallId: 'terminal-cleanup',
+        result: 'duplicate terminal',
+        isError: false,
+      } as any))[0].input).toBeUndefined();
+
+      collect(adapter.adaptEvent({
+        type: 'tool_execution_start',
+        toolCallId: 'runtime-reset',
+        toolName: 'mcp__example__read',
+        args: { value: 'stale runtime' },
+      } as any));
+      adapter.resetOverflowState();
+      expect(collect(adapter.adaptEvent({
+        type: 'tool_execution_end',
+        toolCallId: 'runtime-reset',
+        result: 'late runtime result',
+        isError: false,
+      } as any))[0].input).toBeUndefined();
+
+      collect(adapter.adaptEvent({
+        type: 'tool_execution_start',
+        toolCallId: 'turn-reset',
+        toolName: 'mcp__example__read',
+        args: { value: 'stale turn' },
+      } as any));
+      adapter.startTurn();
+      expect(collect(adapter.adaptEvent({
+        type: 'tool_execution_end',
+        toolCallId: 'turn-reset',
+        result: 'late turn result',
+        isError: false,
+      } as any))[0].input).toBeUndefined();
     });
 
     it('should handle string result in tool_execution_end', () => {
@@ -1069,7 +1178,7 @@ describe('PiEventAdapter', () => {
       expect(events[0].result).toBe('command output');
     });
 
-    it('should preserve a host-authored continuation checkpoint from tool details', () => {
+    it('should preserve a structured non-execution checkpoint from tool details', () => {
       collect(adapter.adaptEvent({ type: 'turn_start' } as any));
       collect(adapter.adaptEvent({
         type: 'tool_execution_start',
@@ -1083,7 +1192,52 @@ describe('PiEventAdapter', () => {
         toolCallId: 'call_budget',
         result: {
           content: [{ type: 'text', text: 'Tool-call checkpoint reached.' }],
-          details: { costControlBlocked: true, continuationRequired: true },
+          details: {
+            costControlBlocked: true,
+            continuationRequired: true,
+            executed: false,
+            checkpoint: {
+              schemaVersion: 1,
+              kind: 'tool-call-budget',
+              reason: 'Tool-call checkpoint reached.',
+            },
+          },
+        },
+        isError: false,
+      } as any));
+
+      expect(events[0]).toMatchObject({
+        type: 'tool_result',
+        isError: false,
+        continuationRequired: true,
+        executed: false,
+        checkpoint: {
+          schemaVersion: 1,
+          kind: 'tool-call-budget',
+          reason: 'Tool-call checkpoint reached.',
+        },
+      });
+    });
+
+    it('normalizes legacy cost-control checkpoint details as non-executed', () => {
+      collect(adapter.adaptEvent({ type: 'turn_start' } as any));
+      collect(adapter.adaptEvent({
+        type: 'tool_execution_start',
+        toolCallId: 'call_legacy_budget',
+        toolName: 'edit',
+        args: {},
+      } as any));
+
+      const events = collect(adapter.adaptEvent({
+        type: 'tool_execution_end',
+        toolCallId: 'call_legacy_budget',
+        result: {
+          content: [{ type: 'text', text: 'Legacy checkpoint.' }],
+          details: {
+            costControlBlocked: true,
+            continuationRequired: true,
+            checkpoint: 'tool-call-budget',
+          },
         },
         isError: false,
       } as any));
@@ -1091,6 +1245,12 @@ describe('PiEventAdapter', () => {
       expect(events[0]).toMatchObject({
         type: 'tool_result',
         continuationRequired: true,
+        executed: false,
+        checkpoint: {
+          schemaVersion: 1,
+          kind: 'tool-call-budget',
+          reason: 'Legacy checkpoint.',
+        },
       });
     });
 
@@ -1117,36 +1277,55 @@ describe('PiEventAdapter', () => {
       });
     });
 
-    it('should accumulate partial output from tool_execution_update', () => {
+    it.each([
+      ['complete result', { content: [{ type: 'text', text: '200|200' }] }, false, '200|200'],
+      ['empty string result', '', false, ''],
+      ['empty text result', { content: [{ type: 'text', text: '' }] }, false, ''],
+      ['empty content result', { content: [] }, false, ''],
+      ['final error', { content: [{ type: 'text', text: 'Command failed' }] }, true, 'Command failed'],
+      ['missing error result', undefined, true, 'Tool execution failed'],
+      ['missing final result', undefined, false, '200|200'],
+      ['null final result', null, false, '200|200'],
+    ])('preserves %s after cumulative Pi updates', (_label, result, isError, expected) => {
       collect(adapter.adaptEvent({ type: 'turn_start' } as any));
-      collect(adapter.adaptEvent({
-        type: 'tool_execution_start',
-        toolCallId: 'call_1',
-        toolName: 'bash',
-        args: {},
-      } as any));
+      collect(adapter.adaptEvent({ type: 'tool_execution_start', toolCallId: 'call_1',
+        toolName: 'bash', args: {} } as any));
+      for (const text of ['200|', '200|200']) {
+        collect(adapter.adaptEvent({ type: 'tool_execution_update', toolCallId: 'call_1',
+          partialResult: { content: [{ type: 'text', text }] } } as any));
+      }
+      const events = collect(adapter.adaptEvent({ type: 'tool_execution_end', toolCallId: 'call_1',
+        result, isError } as any));
+      expect(events[0]).toMatchObject({ type: 'tool_result', result: expected, isError });
+    });
 
-      // Partial updates
-      collect(adapter.adaptEvent({
-        type: 'tool_execution_update',
-        toolCallId: 'call_1',
-        partialResult: { content: [{ type: 'text', text: 'line 1\n' }] },
-      } as any));
-      collect(adapter.adaptEvent({
-        type: 'tool_execution_update',
-        toolCallId: 'call_1',
-        partialResult: { content: [{ type: 'text', text: 'line 2\n' }] },
-      } as any));
+    it('never masks a host block with streamed successful output', () => {
+      collect(adapter.adaptEvent({ type: 'tool_execution_start', toolCallId: 'blocked',
+        toolName: 'bash', args: {} } as any));
+      collect(adapter.adaptEvent({ type: 'tool_execution_update', toolCallId: 'blocked',
+        partialResult: { content: [{ type: 'text', text: 'PASS' }] } } as any));
+      adapter.setBlockReason('blocked', 'Application protection denied execution');
+      const events = collect(adapter.adaptEvent({ type: 'tool_execution_end', toolCallId: 'blocked',
+        result: { content: [{ type: 'text', text: 'PASS' }] }, isError: true } as any));
+      expect(events[0]).toMatchObject({ isError: true, result: 'Application protection denied execution' });
+    });
 
-      // End — should use accumulated output
-      const events = collect(adapter.adaptEvent({
-        type: 'tool_execution_end',
-        toolCallId: 'call_1',
-        result: 'ignored because accumulated',
-        isError: false,
-      } as any));
-
-      expect(events[0].result).toBe('line 1\nline 2\n');
+    it('keeps snapshots scoped to each tool and clears them after a turn', () => {
+      for (const [toolCallId, text] of [['one', 'first'], ['two', 'second']]) {
+        collect(adapter.adaptEvent({ type: 'tool_execution_start', toolCallId,
+          toolName: 'bash', args: {} } as any));
+        collect(adapter.adaptEvent({ type: 'tool_execution_update', toolCallId,
+          partialResult: { content: [{ type: 'text', text }] } } as any));
+      }
+      const finish = (toolCallId: string) => collect(adapter.adaptEvent({
+        type: 'tool_execution_end', toolCallId, result: null, isError: false } as any))[0].result;
+      expect(finish('two')).toBe('second');
+      expect(finish('one')).toBe('first');
+      expect(finish('one')).toBe('Success');
+      collect(adapter.adaptEvent({ type: 'tool_execution_update', toolCallId: 'stale',
+        partialResult: { content: [{ type: 'text', text: 'old' }] } } as any));
+      adapter.startTurn();
+      expect(finish('stale')).toBe('Success');
     });
 
     it('should use description as intent for bash tools', () => {
@@ -1161,7 +1340,7 @@ describe('PiEventAdapter', () => {
       expect(events[0].intent).toBe('Run unit tests');
     });
 
-    it('should classify bash cat commands as Read tool starts', () => {
+    it('keeps the Bash identity and command for read-like starts and results', () => {
       collect(adapter.adaptEvent({ type: 'turn_start' } as any));
       const events = collect(adapter.adaptEvent({
         type: 'tool_execution_start',
@@ -1171,8 +1350,17 @@ describe('PiEventAdapter', () => {
       } as any));
 
       expect(events).toHaveLength(1);
-      expect(events[0].toolName).toBe('Read');
+      expect(events[0].toolName).toBe('Bash');
+      expect(events[0].input).toEqual({ command: 'cat /path/to/file.ts' });
       expect(events[0].displayName).toBe('Read File');
+
+      const results = collect(adapter.adaptEvent({
+        type: 'tool_execution_end', toolCallId: 'call_1',
+        result: { content: [{ type: 'text', text: 'file contents' }], details: { executed: true } },
+        isError: false,
+      } as any));
+      expect(results[0]).toMatchObject({ toolName: 'Bash', result: 'file contents',
+        input: { command: 'cat /path/to/file.ts' }, executed: true });
     });
 
     it('should reset hasEmittedFinalText after tool_execution_end', () => {

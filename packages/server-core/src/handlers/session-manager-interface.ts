@@ -7,7 +7,7 @@
  */
 
 import type { Workspace, WorkspaceInfo, ActiveSessionInfo } from '@craft-agent/core/types'
-import type { StoredAttachment, AnnotationV1 } from '@craft-agent/core/types'
+import type { StoredAttachment, AnnotationV1, UserInputResponse, UserInputResponseResult, TokenUsage } from '@craft-agent/core/types'
 import type { PermissionMode } from '@craft-agent/shared/agent/mode-types'
 import type { ThinkingLevel } from '@craft-agent/shared/agent/thinking-levels'
 import type { AuthResult } from '@craft-agent/shared/agent'
@@ -23,7 +23,12 @@ import type {
   UnreadSummary,
   ShareResult,
 } from '@craft-agent/shared/protocol'
-import type { SessionBundle, DispatchMode } from '@craft-agent/shared/sessions'
+import type {
+  SessionBundle,
+  DispatchMode,
+  MissionCapabilityLock,
+  MissionOrdinaryRouteLock,
+} from '@craft-agent/shared/sessions'
 import type { ExternalActionPolicy } from '@craft-agent/shared/workspaces'
 import type { EventSink } from '../transport'
 
@@ -43,14 +48,22 @@ export interface ISessionManager {
   // ---------------------------------------------------------------------------
 
   getSessions(workspaceId?: string): Session[]
+  /** Read the authorization boundary without hydrating the session transcript. */
+  getSessionWorkspaceId(sessionId: string): string | null
   getSession(sessionId: string): Promise<Session | null>
   /** Creates a session and (unless `internal.emitCreatedEvent === false`) announces it to the
    *  renderer so it hydrates full metadata instead of fabricating a "New Chat" placeholder. */
   createSession(
     workspaceId: string,
     options?: CreateSessionOptions,
-    internal?: { emitCreatedEvent?: boolean },
+    internal?: {
+      emitCreatedEvent?: boolean
+      /** Host-owned only; never accepted from renderer CreateSessionOptions. */
+      missionOrdinaryRouteLock?: MissionOrdinaryRouteLock
+    },
   ): Promise<Session>
+  /** Host-internal only; seals a specialized Mission session before its first turn. */
+  bindSpecializedMissionCapabilityLock(sessionId: string, lock: MissionCapabilityLock): Promise<void>
   /** Resolved working directory of a live session (Tasks Conductor uses it so children inherit
    *  the orchestrator's cwd). */
   getSessionWorkingDirectory(sessionId: string): string | undefined
@@ -122,6 +135,11 @@ export interface ISessionManager {
     rpcContext?: { callerClientId?: string },
   ): Promise<void>
   cancelProcessing(sessionId: string, silent?: boolean): Promise<void>
+  /** Strong reviewer retirement seam: resolves only after the exact session is idle. */
+  cancelProcessingAndWait(
+    sessionId: string,
+    timeoutMs: number,
+  ): Promise<import('../sessions/SessionManager').SessionCompletionEvent>
   killShell(sessionId: string, shellId: string): Promise<{ success: boolean; error?: string }>
   getTaskSessionId(taskId: string): string | undefined
   getTaskOutput(taskId: string): Promise<string | null>
@@ -137,6 +155,19 @@ export interface ISessionManager {
   ): () => void
   /** Read a session's final assistant message text (Conductor output reader). */
   getSessionFinalText(sessionId: string): string | undefined
+  /** Recover host-persisted Task reviewer identities after a runner process loss. */
+  listTaskReviewerSessions(
+    workspaceId: string,
+    taskSlug: string,
+    taskRunId: string,
+    parentSessionId: string,
+  ): Array<{ id: string; isProcessing: boolean; tokenUsage?: TokenUsage; finalText?: string }>
+  /** Recover host-persisted Task worker identities after create-before-log loss. */
+  listTaskWorkerSessions(
+    workspaceId: string,
+    taskSlug: string,
+    taskRunId: string,
+  ): Array<{ id: string; isProcessing: boolean; tokenUsage?: TokenUsage; finalText?: string }>
   addMessageAnnotation(sessionId: string, messageId: string, annotation: AnnotationV1): void
   removeMessageAnnotation(sessionId: string, messageId: string, annotationId: string): void
   updateMessageAnnotation(
@@ -158,6 +189,10 @@ export interface ISessionManager {
     options?: PermissionResponseOptions,
   ): boolean
   respondToCredential(sessionId: string, requestId: string, response: CredentialResponse): Promise<boolean>
+  isPendingOAuthRequest(sessionId: string, requestId: string, sourceSlug: string, workspaceId: string): boolean
+  claimPendingOAuthRequest(sessionId: string, requestId: string, sourceSlug: string, workspaceId: string, flowId: string, expiresAt?: number): boolean
+  releasePendingOAuthRequest(sessionId: string, requestId: string, flowId: string): void
+  respondToUserInput(sessionId: string, response: UserInputResponse, rpcContext?: { callerClientId?: string }): Promise<UserInputResponseResult>
   getSessionPermissionModeState(sessionId: string): PermissionModeState | null
 
   // ---------------------------------------------------------------------------
@@ -275,6 +310,7 @@ export interface ISessionManager {
   refreshConnectionRuntime(connectionSlug: string): Promise<void>
   /** Dispose a session-scoped agent runtime so the next turn recreates it cleanly. */
   restartAgentRuntime(sessionId: string): Promise<void>
+  retryTurn(sessionId: string, userMessageId: string, rpcContext?: { callerClientId?: string }): Promise<import('@craft-agent/shared/protocol').RetryTurnResult>
   completeAuthRequest(sessionId: string, result: AuthResult): Promise<void>
   executePromptAutomation(input: ExecutePromptAutomationInput): Promise<{ sessionId: string }>
 

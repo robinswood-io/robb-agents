@@ -55,5 +55,14 @@ describe('path-security', () => {
     symlinkSync(outsideFile, linkInSession, 'file');
 
     expect(isPathWithinDirectory(linkInSession, sessionDir)).toBe(false);
+    expect(isPathWithinDirectoryForCreation(linkInSession, sessionDir)).toBe(false);
+  });
+
+  it('permits replacing a contained file when the session parent is a symlink alias', () => {
+    if (process.platform === 'win32') return;
+    const alias = join(rootDir, 'session-alias');
+    symlinkSync(sessionDir, alias, 'dir');
+    writeFileSync(join(dataDir, 'output.json'), '{}');
+    expect(isPathWithinDirectoryForCreation(join(alias, 'data', 'output.json'), join(alias, 'data'))).toBe(true);
   });
 });

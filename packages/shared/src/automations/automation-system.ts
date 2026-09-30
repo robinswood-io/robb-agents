@@ -72,9 +72,22 @@ export class AutomationSystem implements AutomationsConfigProvider {
   private eventLogHandler: EventLogHandler | null = null;
   private scheduler: SchedulerService | null = null;
   private disposed = false;
+  private disposePromise: Promise<void> | null = null;
 
   // Session metadata tracking (moved from SessionManager)
   private readonly lastKnownMetadata: Map<string, SessionMetadataSnapshot> = new Map();
+  /** fs.watch may report the same atomic header replacement several times
+   * while the first automation emission is still awaiting its handlers. Keep
+   * one per-session diff lane so every later snapshot observes the committed
+   * predecessor instead of emitting the same transition again. */
+  private readonly sessionMetadataUpdateTails = new Map<string, Promise<void>>();
+  /**
+   * Synchronous invalidation tokens for metadata mutations that bypass the
+   * async diff lane. A delete/reload/dispose must win immediately over both a
+   * running emission and snapshots already queued behind it.
+   */
+  private readonly sessionMetadataTokens = new Map<string, object>();
+  private metadataLifecycleToken: object = {};
 
   constructor(options: AutomationSystemOptions) {
     this.options = options;
@@ -331,6 +344,43 @@ export class AutomationSystem implements AutomationsConfigProvider {
     sessionId: string,
     next: SessionMetadataSnapshot
   ): Promise<AppEvent[]> {
+    if (this.disposed) return [];
+
+    const sessionToken = this.getOrCreateSessionMetadataToken(sessionId);
+    const lifecycleToken = this.metadataLifecycleToken;
+    const previous = this.sessionMetadataUpdateTails.get(sessionId) ?? Promise.resolve();
+    const operation = previous.catch(() => undefined).then(() => (
+      this.updateSessionMetadataNow(
+        sessionId,
+        next,
+        sessionToken,
+        lifecycleToken
+      )
+    ));
+    const tail = operation.then(() => undefined, () => undefined);
+    this.sessionMetadataUpdateTails.set(sessionId, tail);
+    try {
+      return await operation;
+    } finally {
+      if (this.sessionMetadataUpdateTails.get(sessionId) === tail) {
+        this.sessionMetadataUpdateTails.delete(sessionId);
+      }
+    }
+  }
+
+  private async updateSessionMetadataNow(
+    sessionId: string,
+    next: SessionMetadataSnapshot,
+    sessionToken: object,
+    lifecycleToken: object
+  ): Promise<AppEvent[]> {
+    const isCurrent = (): boolean => (
+      !this.disposed
+      && this.metadataLifecycleToken === lifecycleToken
+      && this.sessionMetadataTokens.get(sessionId) === sessionToken
+    );
+    if (!isCurrent()) return [];
+
     const prev = this.lastKnownMetadata.get(sessionId) ?? {};
     const emittedEvents: AppEvent[] = [];
     const timestamp = Date.now();
@@ -341,6 +391,7 @@ export class AutomationSystem implements AutomationsConfigProvider {
 
     // Permission mode change
     if (prev.permissionMode !== next.permissionMode) {
+      if (!isCurrent()) return emittedEvents;
       await this.eventBus.emit('PermissionModeChange', {
         sessionId,
         sessionName,
@@ -351,6 +402,7 @@ export class AutomationSystem implements AutomationsConfigProvider {
         newMode: next.permissionMode ?? '',
       });
       emittedEvents.push('PermissionModeChange');
+      if (!isCurrent()) return emittedEvents;
     }
 
     // Labels (array diff)
@@ -359,6 +411,7 @@ export class AutomationSystem implements AutomationsConfigProvider {
 
     for (const label of nextLabels) {
       if (!prevLabels.has(label)) {
+        if (!isCurrent()) return emittedEvents;
         await this.eventBus.emit('LabelAdd', {
           sessionId,
           sessionName,
@@ -368,11 +421,13 @@ export class AutomationSystem implements AutomationsConfigProvider {
           label,
         });
         emittedEvents.push('LabelAdd');
+        if (!isCurrent()) return emittedEvents;
       }
     }
 
     for (const label of prevLabels) {
       if (!nextLabels.has(label)) {
+        if (!isCurrent()) return emittedEvents;
         await this.eventBus.emit('LabelRemove', {
           sessionId,
           sessionName,
@@ -382,6 +437,7 @@ export class AutomationSystem implements AutomationsConfigProvider {
           label,
         });
         emittedEvents.push('LabelRemove');
+        if (!isCurrent()) return emittedEvents;
       }
     }
 
@@ -389,6 +445,7 @@ export class AutomationSystem implements AutomationsConfigProvider {
     const wasFlagged = prev.isFlagged ?? false;
     const isFlagged = next.isFlagged ?? false;
     if (wasFlagged !== isFlagged) {
+      if (!isCurrent()) return emittedEvents;
       await this.eventBus.emit('FlagChange', {
         sessionId,
         sessionName,
@@ -398,10 +455,12 @@ export class AutomationSystem implements AutomationsConfigProvider {
         isFlagged,
       });
       emittedEvents.push('FlagChange');
+      if (!isCurrent()) return emittedEvents;
     }
 
     // Session status change
     if (prev.sessionStatus !== next.sessionStatus) {
+      if (!isCurrent()) return emittedEvents;
       await this.eventBus.emit('SessionStatusChange', {
         sessionId,
         sessionName,
@@ -412,9 +471,11 @@ export class AutomationSystem implements AutomationsConfigProvider {
         newState: next.sessionStatus ?? '',
       });
       emittedEvents.push('SessionStatusChange');
+      if (!isCurrent()) return emittedEvents;
     }
 
     // Update stored metadata
+    if (!isCurrent()) return emittedEvents;
     this.lastKnownMetadata.set(sessionId, { ...next });
 
     if (emittedEvents.length > 0) {
@@ -429,6 +490,9 @@ export class AutomationSystem implements AutomationsConfigProvider {
    * Call this when a session is deleted.
    */
   removeSessionMetadata(sessionId: string): void {
+    // Deleting the opaque token invalidates all older work without retaining a
+    // tombstone for every session ever removed.
+    this.sessionMetadataTokens.delete(sessionId);
     this.lastKnownMetadata.delete(sessionId);
     log.debug(`[AutomationSystem] Removed metadata for session ${sessionId}`);
   }
@@ -445,7 +509,18 @@ export class AutomationSystem implements AutomationsConfigProvider {
    * Call this when loading existing sessions.
    */
   setInitialSessionMetadata(sessionId: string, metadata: SessionMetadataSnapshot): void {
+    if (this.disposed) return;
+    this.sessionMetadataTokens.set(sessionId, {});
     this.lastKnownMetadata.set(sessionId, { ...metadata });
+  }
+
+  private getOrCreateSessionMetadataToken(sessionId: string): object {
+    const current = this.sessionMetadataTokens.get(sessionId);
+    if (current) return current;
+
+    const token = {};
+    this.sessionMetadataTokens.set(sessionId, token);
+    return token;
   }
 
   // ============================================================================
@@ -538,9 +613,22 @@ export class AutomationSystem implements AutomationsConfigProvider {
   /**
    * Dispose the automation system, cleaning up all resources.
    */
-  async dispose(): Promise<void> {
-    if (this.disposed) return;
+  dispose(): Promise<void> {
+    if (this.disposePromise) return this.disposePromise;
+    if (this.disposed) return Promise.resolve();
 
+    // Invalidate running/queued metadata work before the first await. This is
+    // deliberately earlier than resource cleanup so a held event handler
+    // cannot later commit or emit another transition during disposal.
+    this.disposed = true;
+    this.metadataLifecycleToken = {};
+    this.sessionMetadataTokens.clear();
+
+    this.disposePromise = Promise.resolve().then(() => this.disposeResources());
+    return this.disposePromise;
+  }
+
+  private async disposeResources(): Promise<void> {
     log.debug(`[AutomationSystem] Disposing for workspace: ${this.options.workspaceId}`);
 
     // Stop scheduler
@@ -556,8 +644,8 @@ export class AutomationSystem implements AutomationsConfigProvider {
 
     // Clear metadata
     this.lastKnownMetadata.clear();
+    this.sessionMetadataUpdateTails.clear();
 
-    this.disposed = true;
     log.debug(`[AutomationSystem] Disposed`);
   }
 }

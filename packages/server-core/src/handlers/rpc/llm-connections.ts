@@ -3,6 +3,7 @@ import { getLlmConnections, getLlmConnection, addLlmConnection, updateLlmConnect
 import { getCredentialManager } from '@craft-agent/shared/credentials'
 import { setSetupDeferred } from '@craft-agent/shared/config/storage'
 import { ROBINSWOOD_BACKEND_NAME } from '@craft-agent/shared/robinswood-branding'
+import { isModelAllowedForAuthProvider } from '@craft-agent/shared/config/llm-connections'
 import {
   resolveSetupTestConnectionHint,
   testBackendConnection,
@@ -396,6 +397,7 @@ export function registerLlmConnectionsHandlers(server: RpcServer, deps: HandlerD
     const { getModels } = await import('@earendil-works/pi-ai/compat')
     try {
       const models = getModels(provider as Parameters<typeof getModels>[0])
+        .filter(model => isModelAllowedForAuthProvider(model.id, provider))
       const sorted = [...models].sort((a, b) => b.cost.output - a.cost.output || b.cost.input - a.cost.input)
       return {
         models: sorted.map(m => ({

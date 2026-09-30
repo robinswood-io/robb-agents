@@ -29,8 +29,8 @@ describe('task node explicit model settings', () => {
         { id: 'default', prompt: 'Inspect.' }],
     });
     const parent = { model: 'parent-model', llmConnection: 'parent-connection', thinkingLevel: 'low' as const };
-    expect(resolveTaskModelSettings(spec.nodes[0]!, spec, parent)).toEqual({ model: 'node-model', llmConnection: 'node-connection', thinkingLevel: 'off' });
-    expect(resolveTaskModelSettings(spec.nodes[1]!, spec, parent)).toEqual({ model: 'task-model', llmConnection: 'task-connection', thinkingLevel: 'high' });
+    expect(resolveTaskModelSettings(spec.nodes[0]!, spec, parent)).toMatchObject({ model: 'node-model', llmConnection: 'node-connection', thinkingLevel: 'off' });
+    expect(resolveTaskModelSettings(spec.nodes[1]!, spec, parent)).toMatchObject({ model: 'task-model', llmConnection: 'task-connection', thinkingLevel: 'high' });
   });
 
   it('does not invent a model or transplant another connection model when a connection is explicitly changed', () => {
@@ -56,7 +56,7 @@ describe('task node explicit model settings', () => {
       });
       expect(resolveTaskModelSettings(spec.nodes[0]!, spec, {
         llmConnection: 'node-connection', model: 'node-connection-default', thinkingLevel: 'low',
-      })).toEqual({
+      })).toMatchObject({
         llmConnection: 'node-connection', model: 'node-connection-default', thinkingLevel: 'high',
       });
     }

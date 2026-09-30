@@ -19,7 +19,8 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { WhatsAppAdapter, type WhatsAppConfig } from './index'
-import type { IncomingMessage } from '../../types'
+import { longRunningProcessSupervisor } from '@craft-agent/shared/processes'
+import type { IncomingMessage, MessagingLogger, MessagingLogMeta } from '../../types'
 
 const cleanups: Array<() => void> = []
 
@@ -29,11 +30,12 @@ function makeTmpDir(): string {
   return dir
 }
 
-function writeWorkerScript(kind: 'silent' | 'die-on-command'): string {
+function writeWorkerScript(kind: 'silent' | 'die-on-command' | 'connected'): string {
   const dir = makeTmpDir()
   const path = join(dir, 'fake-worker.mjs')
   // Silent worker: read stdin, do nothing. No events, no exit.
   // Die-on-command: exit as soon as we see any NDJSON line on stdin.
+  // Connected worker: announce a connected state and then stay silent.
   const silentBody = `
     process.stdin.setEncoding('utf8')
     process.stdin.on('data', () => {})
@@ -49,13 +51,53 @@ function writeWorkerScript(kind: 'silent' | 'die-on-command'): string {
     })
     setInterval(() => {}, 60_000)
   `
-  writeFileSync(path, kind === 'silent' ? silentBody : dieBody)
+  const connectedBody = `
+    process.stdin.setEncoding('utf8')
+    process.stdin.on('data', () => {})
+    process.stdout.write(JSON.stringify({ type: 'connected', jid: 'test@s.whatsapp.net', name: 'Tester' }) + '\\n')
+    setInterval(() => {}, 60_000)
+  `
+  writeFileSync(
+    path,
+    kind === 'silent' ? silentBody : kind === 'die-on-command' ? dieBody : connectedBody,
+  )
+  return path
+}
+
+function writeStderrDiagnosticsWorker(): string {
+  const dir = makeTmpDir()
+  const path = join(dir, 'stderr-worker.mjs')
+  const body = `
+    process.stdin.setEncoding('utf8')
+    process.stdin.on('data', () => {})
+    process.stderr.write([
+      '[wa-worker] starting — build=2026-09-11T21:54:10.381Z sha=f35d5299a1b4 provenance=robb-wa-worker-git:f35d5299a1b4 selfChatMode=true pairingMode=qr',
+      '[wa-worker] upsert type=append count=86',
+      '[wa-worker] upsert skip: history (ts=100 cutoff=200)',
+      '[wa-worker] upsert msg fromMe=true remoteJid=111@lid selfJid=222@s.whatsapp.net selfLid=111@lid bareRemote=111@lid msgKeys=imageMessage',
+      '[wa-worker] upsert msg fromMe=false remoteJid=? selfJid=? selfLid=? bareRemote=? msgKeys=<no message>',
+      '[wa-worker] upsert msg fromMe=false remoteJid=111@lid selfJid=222@s.whatsapp.net selfLid=111@lid bareRemote=111@lid msgKeys=',
+      '[wa-worker] upsert skip: own_outbound',
+      '[wa-worker] upsert emit: channelId=111@lid textLen=4 attachments=1',
+      'Session error:Error: Bad MAC Error: Bad MAC',
+      'failed to decrypt message',
+      'at SessionCipher.decrypt (/app/node_modules/libsignal/index.js:42:7)',
+      '[wa-worker] upsert skip: history (ts=100 cutoff=200) Bad MAC',
+      '[wa-worker] upsert skip: own_outbound Bad MAC',
+      '[wa-worker] upsert msg fromMe=true remoteJid=111@lid selfJid=222@s.whatsapp.net selfLid=111@lid bareRemote=111@lid msgKeys=imageMessage Bad MAC',
+      '[wa-worker] upsert emit: channelId=111@lid textLen=4 attachments=1 Bad MAC',
+    ].join('\\n') + '\\n')
+    setInterval(() => {}, 60_000)
+  `
+  writeFileSync(path, body)
   return path
 }
 
 async function makeAdapter(opts: {
   workerScript: string
   sendTimeoutMs?: number
+  workerIdleTimeoutMs?: number
+  logger?: MessagingLogger
 }): Promise<WhatsAppAdapter> {
   const adapter = new WhatsAppAdapter()
   const authDir = makeTmpDir()
@@ -64,18 +106,77 @@ async function makeAdapter(opts: {
     authStateDir: authDir,
     nodeBin: process.execPath,
     sendTimeoutMs: opts.sendTimeoutMs,
+    workerIdleTimeoutMs: opts.workerIdleTimeoutMs,
+    logger: opts.logger,
   }
   await adapter.initialize(cfg)
   return adapter
 }
 
+async function waitFor(check: () => boolean): Promise<void> {
+  const deadline = Date.now() + 1_000
+  while (!check()) {
+    if (Date.now() > deadline) throw new Error('condition was not met')
+    await new Promise((resolve) => setTimeout(resolve, 10))
+  }
+}
+
+async function waitForConnected(adapter: WhatsAppAdapter): Promise<void> {
+  const deadline = Date.now() + 1_000
+  while (!adapter.isConnected()) {
+    if (Date.now() > deadline) throw new Error('adapter did not connect')
+    await new Promise((r) => setTimeout(r, 10))
+  }
+}
+
 afterEach(async () => {
+  longRunningProcessSupervisor.shutdown('test cleanup')
   for (const c of cleanups.splice(0)) {
     try { c() } catch { /* cleanup best-effort */ }
   }
 })
 
 describe('WhatsAppAdapter send lifecycle', () => {
+  it('keeps bounded worker diagnostics at info while preserving real stderr warnings', async () => {
+    const entries: Array<{ level: 'info' | 'warn' | 'error'; message: string; meta?: MessagingLogMeta }> = []
+    const logger: MessagingLogger = {
+      info: (message, meta) => entries.push({ level: 'info', message, meta }),
+      warn: (message, meta) => entries.push({ level: 'warn', message, meta }),
+      error: (message, meta) => entries.push({ level: 'error', message, meta }),
+      child: () => logger,
+    }
+    const adapter = await makeAdapter({
+      workerScript: writeStderrDiagnosticsWorker(),
+      logger,
+    })
+
+    try {
+      await waitFor(() => entries.filter((entry) => entry.meta?.event === 'whatsapp_worker_stderr').length === 15)
+      const workerEntries = entries.filter((entry) => entry.meta?.event === 'whatsapp_worker_stderr')
+      expect(workerEntries.filter((entry) => entry.level === 'info').map((entry) => entry.meta?.line)).toEqual([
+        '[wa-worker] starting — build=2026-09-11T21:54:10.381Z sha=f35d5299a1b4 provenance=robb-wa-worker-git:f35d5299a1b4 selfChatMode=true pairingMode=qr',
+        '[wa-worker] upsert type=append count=86',
+        '[wa-worker] upsert skip: history (ts=100 cutoff=200)',
+        '[wa-worker] upsert msg fromMe=true remoteJid=111@lid selfJid=222@s.whatsapp.net selfLid=111@lid bareRemote=111@lid msgKeys=imageMessage',
+        '[wa-worker] upsert msg fromMe=false remoteJid=? selfJid=? selfLid=? bareRemote=? msgKeys=<no message>',
+        '[wa-worker] upsert msg fromMe=false remoteJid=111@lid selfJid=222@s.whatsapp.net selfLid=111@lid bareRemote=111@lid msgKeys=',
+        '[wa-worker] upsert skip: own_outbound',
+        '[wa-worker] upsert emit: channelId=111@lid textLen=4 attachments=1',
+      ])
+      expect(workerEntries.filter((entry) => entry.level === 'warn').map((entry) => entry.meta?.line)).toEqual([
+        'Session error:Error: Bad MAC Error: Bad MAC',
+        'failed to decrypt message',
+        'at SessionCipher.decrypt (/app/node_modules/libsignal/index.js:42:7)',
+        '[wa-worker] upsert skip: history (ts=100 cutoff=200) Bad MAC',
+        '[wa-worker] upsert skip: own_outbound Bad MAC',
+        '[wa-worker] upsert msg fromMe=true remoteJid=111@lid selfJid=222@s.whatsapp.net selfLid=111@lid bareRemote=111@lid msgKeys=imageMessage Bad MAC',
+        '[wa-worker] upsert emit: channelId=111@lid textLen=4 attachments=1 Bad MAC',
+      ])
+    } finally {
+      await adapter.destroy()
+    }
+  })
+
   it('times out a pending send when the worker never responds', async () => {
     const adapter = await makeAdapter({
       workerScript: writeWorkerScript('silent'),
@@ -119,6 +220,25 @@ describe('WhatsAppAdapter send lifecycle', () => {
     await expect(pending).rejects.toThrow(
       /worker exited|adapter destroyed/,
     )
+  })
+
+  it('does not idle-terminate a connected worker', async () => {
+    const adapter = await makeAdapter({
+      workerScript: writeWorkerScript('connected'),
+      workerIdleTimeoutMs: 5,
+    })
+    try {
+      await waitForConnected(adapter)
+      await new Promise((r) => setTimeout(r, 15))
+      await longRunningProcessSupervisor.sweep()
+      const hasRunningWorker = longRunningProcessSupervisor
+        .snapshot()
+        .processes
+        .some((process) => process.ownerId === 'whatsapp' && process.status === 'running')
+      expect(hasRunningWorker).toBe(true)
+    } finally {
+      await adapter.destroy()
+    }
   })
 })
 

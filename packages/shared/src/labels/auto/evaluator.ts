@@ -22,7 +22,27 @@ import { normalizeValue } from './normalize.ts'
 const MAX_MATCHES_PER_MESSAGE = 10
 
 /**
- * Recursively collect all labels that have autoRules defined.
+ * Built-in default topic patterns for common conversation themes.
+ * When a label does not have explicit `autoRules` defined, these patterns
+ * allow automatic tagging of chats based on user intent and domain.
+ * Supports both English and French keywords.
+ */
+const DEFAULT_TOPIC_PATTERNS: Record<string, string> = {
+  bug: '\\b(?:bug|bugs|fix|fixes|fixed|fixing|error|errors|crash|crashes|issue|issues|exception|exceptions|broken|patch|patching|debug|debugging|fail|failed|failure|erreur|erreurs|panne|pannes|corriger|correction|bloqu(?:ant|é|ee|es))\\b',
+  code: '\\b(?:code|coding|refactor|refactoring|component|components|function|functions|class|classes|endpoint|endpoints|api|apis|typescript|javascript|python|rust|golang|backend|frontend|fullstack|implementation|composant|composants|fonction|fonctions|developp(?:er|ement))\\b',
+  automation: '\\b(?:auto|automation|automations|script|scripts|cron|crons|ci|cd|pipeline|pipelines|docker|container|containers|workflow|workflows|bot|bots|automatisation|automatisations)\\b',
+  design: '\\b(?:design|designs|ui|ux|css|tailwind|style|styles|theme|themes|layout|layouts|font|fonts|color|colors|interface|interfaces|maquette|maquettes|visuel|visuels)\\b',
+  writing: '\\b(?:writing|write|doc|docs|documentation|readme|article|articles|blog|posts|copy|copywriting|redaction|rediger|texte|textes|traduction|translation)\\b',
+  research: '\\b(?:research|researching|investigate|investigation|explore|exploration|audit|audits|benchmark|benchmarks|compare|comparison|recherche|recherches|analyse|analyses|etude|etudes)\\b',
+}
+
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+/**
+ * Recursively collect all labels that have autoRules defined, or provide
+ * built-in topic rules for standard categories and hashtags.
  * Walks the entire label tree depth-first.
  */
 export function collectAutoLabelRules(labels: LabelConfig[]): Array<{
@@ -33,11 +53,50 @@ export function collectAutoLabelRules(labels: LabelConfig[]): Array<{
 
   function walk(nodes: LabelConfig[]) {
     for (const label of nodes) {
-      if (label.autoRules) {
+      if (label.autoRules && label.autoRules.length > 0) {
         for (const rule of label.autoRules) {
           result.push({ label, rule })
         }
+      } else {
+        // Built-in topic inference for standard labels without custom autoRules
+        const topicPattern = DEFAULT_TOPIC_PATTERNS[label.id.toLowerCase()]
+        if (topicPattern) {
+          result.push({
+            label,
+            rule: {
+              pattern: topicPattern,
+              flags: 'gi',
+              description: `Built-in topic pattern for ${label.name}`,
+            },
+          })
+        }
+
+        // Hashtag matching for any label (#bug, #code, #auth, etc.)
+        const escapedId = escapeRegex(label.id)
+        const escapedName = escapeRegex(label.name.replace(/\s+/g, ''))
+        result.push({
+          label,
+          rule: {
+            pattern: `(?:^|\\s)#(?:${escapedId}|${escapedName})\\b`,
+            flags: 'gi',
+            description: `Hashtag match for #${label.id}`,
+          },
+        })
+
+        // Keyword mention for custom domain labels (length >= 4, e.g. "Stripe", "Auth", "Billing")
+        const cleanName = label.name.trim()
+        if (cleanName.length >= 4 && !DEFAULT_TOPIC_PATTERNS[cleanName.toLowerCase()]) {
+          result.push({
+            label,
+            rule: {
+              pattern: `\\b${escapeRegex(cleanName)}\\b`,
+              flags: 'gi',
+              description: `Keyword match for ${label.name}`,
+            },
+          })
+        }
       }
+
       if (label.children) {
         walk(label.children)
       }
@@ -87,7 +146,7 @@ export function evaluateAutoLabels(
     for (const match of ruleMatches) {
       if (matches.length >= MAX_MATCHES_PER_MESSAGE) break
 
-      const key = `${match.labelId}::${match.value}`
+      const key = label.valueType && match.value ? `${match.labelId}::${match.value}` : match.labelId
       if (!seen.has(key)) {
         seen.add(key)
         matches.push(match)
@@ -119,14 +178,18 @@ function evaluateRegexRule(
     let match: RegExpExecArray | null
 
     while ((match = regex.exec(message)) !== null) {
-      // Single-pass $N substitution: prevents injection where captured text
-      // contains $N patterns that would be double-substituted
-      let value = rule.valueTemplate
-        ? rule.valueTemplate.replace(/\$(\d+)/g, (_, n) => match![parseInt(n)] ?? '')
-        : match[1] ?? match[0]
+      // For boolean labels without valueType, do not capture random substrings as value
+      let value = ''
+      if (label.valueType) {
+        // Single-pass $N substitution: prevents injection where captured text
+        // contains $N patterns that would be double-substituted
+        value = rule.valueTemplate
+          ? rule.valueTemplate.replace(/\$(\d+)/g, (_, n) => match![parseInt(n)] ?? '')
+          : match[1] ?? match[0]
 
-      // Normalize based on the label's declared valueType
-      value = normalizeValue(value, label.valueType)
+        // Normalize based on the label's declared valueType
+        value = normalizeValue(value, label.valueType)
+      }
 
       matches.push({
         labelId: label.id,

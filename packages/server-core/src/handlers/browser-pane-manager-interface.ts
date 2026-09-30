@@ -40,6 +40,7 @@ export interface BrowserScreenshotResult {
 }
 
 export interface BrowserScreenshotRegionTarget {
+  source?: 'canvas'
   x?: number
   y?: number
   width?: number
@@ -94,8 +95,21 @@ export interface BrowserWaitResult {
 }
 
 export interface BrowserKeyArgs {
+  /** Explicit printable keyboard text (type-keys), never a clipboard operation. */
+  text?: string
   key: string
   modifiers?: Array<'shift' | 'control' | 'alt' | 'meta'>
+}
+
+/**
+ * Host-issued URL fence for one browser mutation. The policy is carried over
+ * the remote browser capability boundary and re-evaluated by the desktop
+ * client immediately before the page effect occurs.
+ */
+export interface BrowserMutationUrlPolicy {
+  reason: 'contextual-gmail-reply'
+  blockedHosts: readonly string[]
+  matchSubdomains?: boolean
 }
 
 export interface BrowserDownloadOptions {
@@ -229,18 +243,18 @@ export interface IBrowserPaneManager {
   // -- Interaction ---------------------------------------------------------
 
   getAccessibilitySnapshot(id: string): Promise<AccessibilitySnapshot>
-  clickElement(id: string, ref: string, options?: { waitFor?: 'none' | 'navigation' | 'network-idle'; timeoutMs?: number }): Promise<void>
-  clickAtCoordinates(id: string, x: number, y: number): Promise<void>
-  drag(id: string, x1: number, y1: number, x2: number, y2: number): Promise<void>
-  fillElement(id: string, ref: string, value: string): Promise<void>
-  typeText(id: string, text: string): Promise<void>
-  selectOption(id: string, ref: string, value: string): Promise<void>
-  setClipboard(id: string, text: string): Promise<void>
+  clickElement(id: string, ref: string, options?: { waitFor?: 'none' | 'navigation' | 'network-idle'; timeoutMs?: number }, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void>
+  clickAtCoordinates(id: string, x: number, y: number, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void>
+  drag(id: string, x1: number, y1: number, x2: number, y2: number, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void>
+  fillElement(id: string, ref: string, value: string, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void>
+  typeText(id: string, text: string, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void>
+  selectOption(id: string, ref: string, value: string, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void>
+  setClipboard(id: string, text: string, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void>
   getClipboard(id: string): Promise<string>
   scroll(id: string, direction: 'up' | 'down' | 'left' | 'right', amount?: number): Promise<void>
-  sendKey(id: string, args: BrowserKeyArgs): Promise<void>
-  uploadFile(id: string, ref: string, filePaths: string[]): Promise<unknown>
-  evaluate(id: string, expression: string): Promise<unknown>
+  sendKey(id: string, args: BrowserKeyArgs, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void>
+  uploadFile(id: string, ref: string, filePaths: string[], mutationPolicy?: BrowserMutationUrlPolicy): Promise<unknown>
+  evaluate(id: string, expression: string, mutationPolicy?: BrowserMutationUrlPolicy): Promise<unknown>
 
   // -- Screenshot ----------------------------------------------------------
 

@@ -8,6 +8,8 @@
 export { TaskRunner, DEFAULT_AUTONOMOUS_RETRY_POLICY } from './TaskRunner';
 export {
   inferTaskNodeProfile,
+  resolveEffectiveTaskSourceSlugs,
+  resolveTaskNodeExecutionRoute,
   resolveTaskModelSettings,
   taskNodeSpecialistPreamble,
 } from './task-node-execution';
@@ -26,6 +28,9 @@ export type {
 export type {
   TaskNodeSpecialty,
   TaskNodeProfile,
+  TaskNodeExecutionRoute,
+  TaskNodeRouteContext,
+  ResolveTaskNodeExecutionRouteInput,
   TaskModelSettings,
 } from './task-node-execution';
 export type { GovernanceCredentialStore } from './execution-proof-runtime';

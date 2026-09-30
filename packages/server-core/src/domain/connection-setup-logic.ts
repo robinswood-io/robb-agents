@@ -189,6 +189,7 @@ export const BUILT_IN_CONNECTION_TEMPLATES: Record<string, {
     piAuthProvider: 'mistral-vibe',
     defaultModel: 'pi/mistral-vibe',
     models: ['pi/mistral-vibe'],
+    midStreamBehavior: 'queue',
   },
   'pi-api-key': {
     name: `${ROBINSWOOD_BACKEND_NAME} (API Key)`,

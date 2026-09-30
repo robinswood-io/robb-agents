@@ -5,6 +5,19 @@ export function resolveQueryModel(requestedModel: string | undefined, selectedMo
   return model;
 }
 
+
+
+/** Ephemeral queries inherit the active reasoning unless the host supplies an explicit override. */
+export function resolveEphemeralQueryThinkingLevel<T>(
+  systemOverride: T | undefined,
+  sessionThinking: T | undefined,
+  configuredThinking: T | undefined,
+): T | undefined {
+  return systemOverride ?? sessionThinking ?? configuredThinking;
+}
+
+
+
 interface EphemeralModelSession<TModel> {
   setModel(model: TModel): Promise<void>;
   dispose(): void;
@@ -28,4 +41,3 @@ export async function activateEphemeralQueryModel<TModel>(
     throw new Error(`Failed to activate selected model "${modelId}": ${detail}`, { cause: error });
   }
 }
-

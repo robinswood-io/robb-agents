@@ -26,6 +26,7 @@ import { imageSupportComponents } from './image-support'
 import { mobileWebUIComponents } from './mobile-webui'
 import { kanbanComponents } from './kanban'
 import { taskEditorComponents } from './task-editor'
+import { conversationJourneyComponents } from './conversation-journey'
 
 export * from './types'
 
@@ -34,6 +35,7 @@ export const componentRegistry: ComponentEntry[] = [
   ...apiKeyInputComponents,
   ...onboardingComponents,
   ...chatComponents,
+  ...conversationJourneyComponents,
   ...turnCardComponents,
   ...turnCardModesComponents,
   ...fullscreenOverlayComponents,

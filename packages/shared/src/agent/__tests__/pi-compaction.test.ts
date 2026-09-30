@@ -33,6 +33,43 @@ async function flushMicrotasks(): Promise<void> {
 }
 
 describe('PiAgent compaction RPC', () => {
+  it('keeps a local /compact turn outside the provider handoff boundary', async () => {
+    const agent = new PiAgent(createConfig())
+    const sent = installFakeSubprocess(agent)
+    let handoffs = 0
+    let writeAheads = 0
+    agent.onProviderHandoff = () => { handoffs += 1 }
+    agent.onBeforeProviderDispatch = async () => { writeAheads += 1 }
+    ;(agent as any).send = (message: Record<string, unknown>) => {
+      sent.push(message)
+      if (message.type !== 'compact') return
+      queueMicrotask(() => {
+        ;(agent as any).handleLine(JSON.stringify({
+          type: 'compact_result',
+          id: message.id,
+          success: true,
+          result: {
+            summary: 'Compacted locally.',
+            firstKeptEntryId: 'entry-local',
+            tokensBefore: 42_000,
+          },
+        }))
+      })
+    }
+
+    const events = []
+    for await (const event of agent.chat('/compact')) events.push(event)
+
+    expect(sent.map(message => message.type)).toEqual(['compact'])
+    expect(events).toEqual([
+      { type: 'info', message: 'Compacted context to fit within limits (from ~42,000 tokens)' },
+      { type: 'complete' },
+    ])
+    expect(handoffs).toBe(0)
+    expect(writeAheads).toBe(0)
+    agent.destroy()
+  })
+
   it('preserves the SDK post-compaction measurement and utility model', async () => {
     const agent = new PiAgent(createConfig())
     const sent = installFakeSubprocess(agent)

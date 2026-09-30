@@ -136,10 +136,25 @@ export interface ResourceImportResult {
 // ============================================================
 
 /**
- * Dependencies injected into importResources for credential cleanup.
- * This avoids the resource module depending on the credential store directly.
+ * Dependencies injected into importResources for staged-source validation and
+ * credential cleanup. This avoids the resource module depending on either
+ * implementation directly.
  */
 export interface ResourceImportDeps {
+  /**
+   * Validate a fully restored source in its staging directory before it can
+   * replace (or become) the live source. Throw or reject to abort the import.
+   *
+   * The hook is observational: mutating any staged entry invalidates the
+   * validation and makes the import fail closed. The staged directory is
+   * temporary and must not be retained by callers.
+   */
+  validateStagedSource?: (
+    workspaceId: string,
+    sourceSlug: string,
+    stagedDir: string,
+  ) => void | Promise<void>
+
   /**
    * Clear all stored credentials for a source slug in a workspace.
    * Called on source overwrite to prevent stale credential leakage.

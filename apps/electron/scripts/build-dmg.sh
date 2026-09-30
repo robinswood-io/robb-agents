@@ -116,6 +116,7 @@ fi
 command -v bun >/dev/null || { echo "ERROR: Bun is required to build Robb Agents." >&2; exit 1; }
 command -v curl >/dev/null || { echo "ERROR: curl is required to acquire the pinned Bun runtime." >&2; exit 1; }
 command -v shasum >/dev/null || { echo "ERROR: shasum is required for checksum verification." >&2; exit 1; }
+command -v tar >/dev/null || { echo "ERROR: tar is required to extract the pinned uv runtime." >&2; exit 1; }
 
 echo "=== Building Robb Agents macOS ${ARCH} (release=${RELEASE_BUILD}) ==="
 
@@ -127,6 +128,9 @@ bun install --frozen-lockfile
 
 # Bundle the pinned, checksum-verified RTK token optimizer for this artifact.
 bun run scripts/prepare-rtk.ts --platform darwin --arch "$ARCH"
+# Bundle the pinned, checksum-verified uv runtime required by Python document tools.
+bun run scripts/prepare-uv.ts --platform darwin --arch "$ARCH" --refresh
+require_path "$ELECTRON_DIR/resources/bin/darwin-$ARCH/uv" "bundled uv runtime"
 
 # Bundle a verified, architecture-specific Bun runtime for Pi/Vibe subprocesses.
 BUN_DOWNLOAD="bun-darwin-$([[ "$ARCH" == arm64 ]] && echo aarch64 || echo x64)"

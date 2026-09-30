@@ -46,7 +46,11 @@ export async function refreshClaudeToken(refreshToken: string): Promise<{
     let errorMessage: string;
     try {
       const errorJson = JSON.parse(errorText);
-      errorMessage = errorJson.error_description || errorJson.error || errorText;
+      if (errorJson.error && errorJson.error_description) {
+        errorMessage = `${errorJson.error} - ${errorJson.error_description}`;
+      } else {
+        errorMessage = errorJson.error_description || errorJson.error || errorText;
+      }
     } catch {
       errorMessage = errorText;
     }

@@ -17,10 +17,13 @@ import { tmpdir } from 'node:os';
 import { createScriptRuntimeEnv } from '../runtime/sandbox-env.ts';
 import { isPathWithinDirectory, isPathWithinDirectoryForCreation } from '../runtime/path-security.ts';
 import { resolveScriptRuntime } from '../runtime/resolve-script-runtime.ts';
+import { protectApplicationCommand, isProtectedApplicationPath, APPLICATION_PROTECTION_REASON } from '../runtime/application-protection.ts';
+import { runDeterministicRecipe, type DeterministicRecipe } from './deterministic-recipes.ts';
 
 export interface TransformDataArgs {
-  language: 'python3' | 'node' | 'bun';
-  script: string;
+  language?: 'python3' | 'node' | 'bun';
+  script?: string;
+  recipe?: DeterministicRecipe;
   inputFiles: string[];
   outputFile: string;
 }
@@ -42,9 +45,13 @@ export async function handleTransformData(
   if (!ctx.sessionPath || !ctx.dataPath) {
     return errorResponse('transform_data requires sessionPath and dataPath in context.');
   }
+  if (args.recipe ? args.script !== undefined || args.language !== undefined : !args.language || !args.script) {
+    return errorResponse('Choose either a deterministic recipe or both language and script.');
+  }
 
   const sessionDir = ctx.sessionPath;
   const dataDir = ctx.dataPath;
+  if (isProtectedApplicationPath(dataDir)) return errorResponse(APPLICATION_PROTECTION_REASON);
 
   // Validate outputFile doesn't escape data/ directory
   const resolvedOutput = resolve(dataDir, args.outputFile);
@@ -65,13 +72,15 @@ export async function handleTransformData(
   for (const inputFile of args.inputFiles) {
     // Try resolving relative to session dir first; if it's absolute, resolve() returns it as-is
     const resolvedInput = resolve(sessionDir, inputFile);
-    const isAllowed = allowedInputDirs.some(dir => isPathWithinDirectory(resolvedInput, dir));
+    const isAllowed = allowedInputDirs.some(dir => args.recipe && !existsSync(resolvedInput)
+      ? isPathWithinDirectoryForCreation(resolvedInput, dir)
+      : isPathWithinDirectory(resolvedInput, dir));
     if (!isAllowed) {
       return errorResponse(
         `inputFile must be within the session or skills directory. Got: ${inputFile}`
       );
     }
-    if (!existsSync(resolvedInput)) {
+    if (!existsSync(resolvedInput) && !args.recipe) {
       return errorResponse(`input file not found: ${inputFile}`);
     }
     resolvedInputs.push(resolvedInput);
@@ -82,20 +91,31 @@ export async function handleTransformData(
     mkdirSync(dataDir, { recursive: true });
   }
 
+  if (args.recipe) {
+    try {
+      const report = runDeterministicRecipe(resolvedInputs, resolvedOutput, dataDir, args.recipe);
+      const message = `Recipe ${args.recipe.name}: ${report.succeeded} succeeded, ${report.failed} failed, ${report.reused} verified results reused. Full per-file results: ${resolvedOutput}\n${report.files.map(file => `${file.status}: ${file.input}${file.error ? ` — ${file.error}` : ` (${file.rowCount} rows)`}`).join('\n')}`;
+      return report.failed ? errorResponse(message) : successResponse(message);
+    } catch (error) { return errorResponse(`Recipe failed: ${error instanceof Error ? error.message : String(error)}`); }
+  }
+  // The script route keeps its existing protected subprocess and environment.
+  const language = args.language!;
+  const script = args.script!;
+
   // Write script to temp file
-  const ext = args.language === 'python3' ? '.py' : '.js';
+  const ext = language === 'python3' ? '.py' : '.js';
   const tempScript = join(tmpdir(), `craft-transform-${ctx.sessionId}-${Date.now()}${ext}`);
-  writeFileSync(tempScript, args.script, 'utf-8');
+  writeFileSync(tempScript, script, 'utf-8');
 
   try {
     // Build command from shared runtime resolver
-    const runtime = resolveScriptRuntime(args.language);
+    const runtime = resolveScriptRuntime(language);
     const cmd = runtime.command;
     const spawnArgs = [...runtime.argsPrefix, tempScript, ...resolvedInputs, resolvedOutput];
 
     // Strip sensitive env vars + redirect runtime cache/temp paths to session data dir
     const env = createScriptRuntimeEnv({
-      language: args.language,
+      language,
       dataDir,
     });
 
@@ -103,7 +123,8 @@ export async function handleTransformData(
     // We can't rely on spawn()'s built-in `timeout` option because it only sends
     // SIGTERM, which can be caught/ignored — leaving the promise hanging forever.
     const result = await new Promise<{ stdout: string; stderr: string; code: number | null }>((resolvePromise, reject) => {
-      const child = spawn(cmd, spawnArgs, {
+      const protectedCommand = protectApplicationCommand(cmd, spawnArgs);
+      const child = spawn(protectedCommand.command, protectedCommand.args, {
         cwd: dataDir,
         env,
         stdio: ['ignore', 'pipe', 'pipe'],

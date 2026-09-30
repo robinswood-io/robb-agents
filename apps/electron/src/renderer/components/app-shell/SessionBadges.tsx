@@ -7,9 +7,10 @@ import type { LabelConfig } from "@craft-agent/shared/labels"
 
 interface SessionBadgesProps {
   item: SessionMeta
+  maxVisible?: number
 }
 
-export function SessionBadges({ item }: SessionBadgesProps) {
+export function SessionBadges({ item, maxVisible = 2 }: SessionBadgesProps) {
   const ctx = useSessionListContext()
 
   const resolvedLabels = useMemo(() => {
@@ -26,17 +27,29 @@ export function SessionBadges({ item }: SessionBadgesProps) {
 
   if (resolvedLabels.length === 0) return null
 
+  const visibleLabels = resolvedLabels.slice(0, maxVisible)
+  const remainingCount = resolvedLabels.length - visibleLabels.length
+
   return (
-    <>
-      {resolvedLabels.map(({ config, rawValue }, idx) => (
+    <div className="flex items-center gap-1 min-w-0">
+      {visibleLabels.map(({ config, rawValue }, idx) => (
         <EntityListLabelBadge
           key={`${config.id}-${idx}`}
           label={config}
           rawValue={rawValue}
           sessionLabels={item.labels || []}
           onLabelsChange={(updated) => ctx.onLabelsChange?.(item.id, updated)}
+          onToggleFilter={ctx.onToggleLabelFilter}
         />
       ))}
-    </>
+      {remainingCount > 0 && (
+        <span
+          className="shrink-0 h-[18px] px-1.5 text-[9px] font-medium rounded bg-foreground/5 text-foreground/60 flex items-center cursor-default"
+          title={resolvedLabels.slice(maxVisible).map(l => l.config.name).join(', ')}
+        >
+          +{remainingCount}
+        </span>
+      )}
+    </div>
   )
 }

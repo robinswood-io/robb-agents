@@ -7,7 +7,7 @@ import {
   stat,
   unlink,
 } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import {
@@ -59,6 +59,10 @@ export interface WorkspaceGovernanceStoreOptions {
   now?: () => Date;
 }
 
+// Concurrent renderer requests can initialize the same workspace on first boot.
+// Join that initialization in-process; update transactions keep the disk lock.
+const initializations = new Map<string, Promise<WorkspaceGovernanceDocument>>();
+
 export class WorkspaceGovernanceStore {
   readonly documentPath: string;
   readonly lockPath: string;
@@ -86,6 +90,16 @@ export class WorkspaceGovernanceStore {
   }
 
   async loadOrCreate(initialProfile: WorkspaceGovernanceProfile): Promise<WorkspaceGovernanceDocument> {
+    const key = resolve(this.documentPath);
+    const pending = initializations.get(key);
+    if (pending) return pending;
+    const operation = this.initialize(initialProfile);
+    initializations.set(key, operation);
+    try { return await operation; }
+    finally { if (initializations.get(key) === operation) initializations.delete(key); }
+  }
+
+  private async initialize(initialProfile: WorkspaceGovernanceProfile): Promise<WorkspaceGovernanceDocument> {
     const existing = await this.load();
     if (existing) return existing;
 

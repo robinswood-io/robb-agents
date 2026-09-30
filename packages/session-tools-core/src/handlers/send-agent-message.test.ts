@@ -1,17 +1,22 @@
 import { describe, it, expect } from 'bun:test';
 import { handleSendAgentMessage } from './send-agent-message.ts';
-import type { SessionToolContext, SendAgentMessageResult } from '../context.ts';
+import type { AgentMessageType, SessionToolContext, SendAgentMessageResult } from '../context.ts';
 
 function createCtx(
   result: SendAgentMessageResult,
   opts?: { name?: string },
-): { ctx: SessionToolContext; calls: Array<{ sessionId: string; message: string }> } {
-  const calls: Array<{ sessionId: string; message: string }> = [];
+): { ctx: SessionToolContext; calls: Array<{ sessionId: string; message: string; messageType?: string }> } {
+  const calls: Array<{ sessionId: string; message: string; messageType?: string }> = [];
   const ctx = {
     sessionId: 'sender-1',
     getSessionInfo: () => (opts?.name ? ({ name: opts.name } as never) : null),
-    sendAgentMessage: async (sessionId: string, message: string) => {
-      calls.push({ sessionId, message });
+    sendAgentMessage: async (
+      sessionId: string,
+      message: string,
+      _attachments?: Array<{ path: string; name?: string }>,
+      messageType?: AgentMessageType,
+    ) => {
+      calls.push({ sessionId, message, messageType });
       return result;
     },
   } as unknown as SessionToolContext;
@@ -35,6 +40,20 @@ describe('handleSendAgentMessage delivery ack', () => {
     expect(text.toLowerCase()).toContain('do not send an acknowledgement');
   });
 
+  it('never reports delivered while the durable receipt remains queued', async () => {
+    const { ctx } = createCtx({
+      delivery: 'queued', targetBusy: false, receiptId: 'receipt-1', status: 'queued',
+    });
+    const res = await handleSendAgentMessage(ctx, { sessionId: 'target-9', message: 'format correction' });
+    expect(res.isError).toBeFalsy();
+    const content = res.content[0];
+    if (!content || content.type !== 'text') throw new Error('Expected text receipt');
+    const receipt = JSON.parse(content.text) as { delivery: string; meaning: string };
+    expect(receipt.delivery).toBe('queued');
+    expect(receipt.meaning).toContain('remains queued');
+    expect(receipt.delivery).not.toBe('delivered');
+  });
+
   it('wraps the message with a sender envelope', async () => {
     const { ctx, calls } = createCtx({ delivery: 'delivered', targetBusy: false }, { name: 'Monitor' });
     await handleSendAgentMessage(ctx, { sessionId: 'target-9', message: 'ping' });
@@ -45,6 +64,7 @@ describe('handleSendAgentMessage delivery ack', () => {
     expect(call.message).toContain('ping');
     expect(call.message).toContain('type="progress"');
     expect(call.message).toContain('No acknowledgement is required');
+    expect(call.messageType).toBe('progress');
   });
 
   it('marks questions as requiring only a substantive answer', async () => {
@@ -56,6 +76,7 @@ describe('handleSendAgentMessage delivery ack', () => {
     });
     expect(calls[0]?.message).toContain('type="question"');
     expect(calls[0]?.message).toContain('only when the requested answer or decision is ready');
+    expect(calls[0]?.messageType).toBe('question');
   });
 
   it('rejects a self-send', async () => {

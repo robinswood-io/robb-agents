@@ -30,16 +30,25 @@ describe('browser tool name normalization', () => {
     expect(normalizeBrowserToolName('browser_snapshot')).toBe('browser_tool');
     expect(normalizeBrowserToolName('mcp__session__browser_open')).toBe('browser_tool');
     expect(normalizeBrowserToolName('mcp__session__browser_click_at')).toBe('browser_tool');
+    expect(normalizeBrowserToolName('mcp__playwright__browser_snapshot')).toBe('browser_tool');
+    expect(normalizeBrowserToolName('mcp__playwright__playwright_navigate')).toBe('browser_tool');
+    expect(normalizeBrowserToolName('mcp__puppeteer__puppeteer_click')).toBe('browser_tool');
+    expect(normalizeBrowserToolName('mcp__puppeteer__screenshot')).toBe('browser_tool');
   });
 
   it('returns null for non-browser tools', () => {
     expect(normalizeBrowserToolName('Read')).toBeNull();
     expect(normalizeBrowserToolName('mcp__session__source_test')).toBeNull();
+    expect(normalizeBrowserToolName('mcp__crm__browser_usage_report')).toBeNull();
+    expect(normalizeBrowserToolName('mcp__crm__playwright_account')).toBeNull();
+    expect(normalizeBrowserToolName('mcp__business-browser__search')).toBeNull();
   });
 
   it('detects canonical + aliases with boolean helper', () => {
     expect(isBrowserToolNameOrAlias('browser_tool')).toBe(true);
     expect(isBrowserToolNameOrAlias('mcp__session__browser_snapshot')).toBe(true);
+    expect(isBrowserToolNameOrAlias('mcp__playwright__browser_snapshot')).toBe(true);
+    expect(isBrowserToolNameOrAlias('mcp__puppeteer__puppeteer_click')).toBe(true);
     expect(isBrowserToolNameOrAlias('Write')).toBe(false);
   });
 });

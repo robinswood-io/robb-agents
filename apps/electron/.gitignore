@@ -9,4 +9,5 @@ node_modules/@anthropic-ai/
 resources/bin/darwin-arm64/
 resources/bin/darwin-x64/
 resources/bin/win32-x64/
+resources/bin/linux-arm64/
 resources/bin/linux-x64/

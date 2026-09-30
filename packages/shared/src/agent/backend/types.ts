@@ -21,6 +21,7 @@ import type { AuthRequest } from '../session-scoped-tools.ts';
 import type { McpClientPool } from '../../mcp/mcp-pool.ts';
 import type { Workspace } from '../../config/storage.ts';
 import type { SessionConfig as Session } from '../../sessions/storage.ts';
+import type { MissionCapabilityLock } from '../../sessions/types.ts';
 import type { SourceManager } from '../core/source-manager.ts';
 import type { LLMQueryRequest, LLMQueryResult } from '../llm-tool.ts';
 
@@ -30,8 +31,25 @@ export { AbortReason, type RecoveryMessage };
 
 import type { ModelProvider } from '../../config/models.ts';
 
+/** A host-authored, payload-free admission explanation that backends may show
+ * to the model. Arbitrary storage/runtime exceptions must remain generic. */
+export class ToolAdmissionRecoveryError extends Error {
+  constructor(readonly safeReason: string) {
+    super(safeReason);
+    this.name = 'ToolAdmissionRecoveryError';
+  }
+}
+
+/** Definitive local rejection before a provider/runtime accepted the prompt. */
+export class ProviderDispatchRejectedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ProviderDispatchRejectedError';
+  }
+}
+
 // Import LLM connection types for auth
-import type { LlmAuthType, LlmProviderType } from '../../config/llm-connections.ts';
+import type { LlmAuthType, LlmConnection, LlmProviderType } from '../../config/llm-connections.ts';
 export type { LlmAuthType, LlmProviderType } from '../../config/llm-connections.ts';
 
 export interface BackendRuntimeUpdate {
@@ -54,6 +72,29 @@ import type { AutomationSystem } from '../../automations/index.ts';
  */
 export type AgentProvider = ModelProvider;
 
+/**
+ * Host-computed capabilities for a receipt-only terminal reconciliation.
+ * Presence of this policy is itself the fail-closed lock: a backend may run
+ * only the explicitly listed operations, and must not infer additions from
+ * prompt text, tool metadata, permission mode, or a provider's read hint.
+ */
+export interface TerminalReconciliationPolicy {
+  /** Missing/invalid objective contexts reuse the same empty fail-closed capability envelope. */
+  kind: 'terminal-reconciliation' | 'missing-objective' | 'invalid-lineage';
+  allowInitialCriteriaRegistration: boolean;
+  allowReviewerSpawn: boolean;
+  /** Exact JSON inputs of current objective-scoped read observations. */
+  readReplays: ReadonlyArray<{ toolName: string; toolInputJson: string }>;
+  /** Direct terminal reviewers bound to the current objective + acceptance SHA. */
+  waitReviewerSessionIds: readonly string[];
+  /**
+   * Host-only key for deriving one exact invocation capability after every
+   * PreToolUse gate has passed. It is never accepted directly from model
+   * input and is not the capability returned to the tool handler.
+   */
+  invocationCapabilityKey?: string;
+}
+
 
 // ============================================================
 // Callback Types
@@ -71,6 +112,8 @@ export type PermissionRequestType = 'bash' | 'file_write' | 'mcp_mutation' | 'ap
 export type PermissionCallback = (request: {
   requestId: string;
   toolName: string;
+  /** Exact provider tool call blocked by this pre-execution permission gate. */
+  toolUseId?: string;
   command?: string;
   description: string;
   type?: PermissionRequestType;
@@ -83,6 +126,7 @@ export type PermissionCallback = (request: {
   approvalTtlSeconds?: number;
   sensitiveActionCategory?: import('../core/sensitive-external-action.ts').SensitiveExternalActionCategory;
   sensitiveActionTargets?: string[];
+  sensitiveActionOperationHash?: string;
 }) => void;
 
 /**
@@ -147,6 +191,16 @@ export interface BridgeUpdateContext {
   poolServerUrl?: string;
 }
 
+/** In-memory snapshot used to restore the exact source runtime when a
+ * mid-turn activation loses its objective/generation ownership while an
+ * asynchronous pool update is in flight. Values are deliberately retained by
+ * reference because API server instances are not structured-cloneable. */
+export interface SourceServerSnapshot {
+  mcpServers: Record<string, SdkMcpServerConfig>;
+  apiServers: Record<string, unknown>;
+  intendedSlugs: string[];
+}
+
 /**
  * Host runtime context passed from the application shell (Electron/CLI/etc.).
  * This is intentionally provider-agnostic metadata; backend drivers resolve
@@ -185,6 +239,14 @@ export interface CoreBackendConfig {
   /** Initial thinking level */
   thinkingLevel?: ThinkingLevel;
 
+  /** Live workspace master switch. The callback is host-owned so an existing
+   * runtime observes an UI toggle before any nested model request. */
+
+
+  /** Live session-owned manual model authority. Automatic routing may
+   * substitute a model only while this getter returns false. */
+  isModelRoutePinned?: () => boolean;
+
   /** Headless mode flag (disables interactive tools) */
   isHeadless?: boolean;
 
@@ -194,6 +256,54 @@ export interface CoreBackendConfig {
    * mode is `allow-all`; Explore and Ask retain their existing safeguards.
    */
   externalActionPolicy?: 'confirm' | 'allow-in-execute';
+  /** Host-owned live interaction policy; inheritance never grants tool rights. */
+  getHumanInputAllowed?: () => boolean;
+
+  /** Dynamic host-owned objective authority. False means the current accepted
+   * objective is observational/response-only. Segments are authenticated human
+   * scope and bind sensitive external actions to an explicit action + target. */
+  getObjectiveMutationAuthority?: (currentUserRequest?: string) => boolean | {
+    authorized: boolean;
+    sensitiveActionAuthorized: boolean;
+    authorizationSegments: readonly string[];
+    /** Structured-answer authority carried on a host-only provenance channel. */
+    authenticatedUserAuthorizationSegments?: readonly string[];
+    /** Host-owned receipt-reconciliation lock and its complete positive allowlist. */
+    terminalReconciliationPolicy?: TerminalReconciliationPolicy;
+  } | undefined;
+
+  /**
+   * Host-owned durability barrier for one exact tool execution. Backends must
+   * await this callback after their permission checks but before acknowledging
+   * PreToolUse to the SDK/subprocess. A rejection means the tool must not run.
+   */
+  beforeToolExecution?: (request: {
+    toolUseId?: string;
+    toolName: string;
+    toolInput: Record<string, unknown>;
+  }) => Promise<void>;
+
+  /** Host fence checked immediately before a provider turn is dispatched. */
+  beforeProviderExecution?: () => Promise<void>;
+
+  /**
+   * Immutable connection/config snapshot used by a governed Mission runtime.
+   * Backends must not re-resolve a mutable connection when this is present.
+   */
+  sealedLlmConnection?: LlmConnection;
+
+  /** Opaque host credential generation certified by the route lock. */
+  expectedLlmCredentialBindingId?: string;
+
+  /** Host-only exact capability lease for specialized Mission runtimes. */
+  missionCapabilityLock?: MissionCapabilityLock;
+
+  /** Complete host-sealed skill packages consumed inline by governed turns. */
+  sealedSkillPackages?: ReadonlyArray<{
+    slug: string;
+    name: string;
+    content: string;
+  }>;
 
   /** Skip agent-level config file watching (server already owns a workspace-level watcher) */
   skipConfigWatcher?: boolean;
@@ -552,6 +662,9 @@ export interface AgentBackend {
     intendedSlugs?: string[]
   ): void | Promise<void>;
 
+  /** Last source-server configuration committed by this runtime. */
+  getSourceServerSnapshot?(): SourceServerSnapshot;
+
   /**
    * Get currently active source slugs.
    */
@@ -666,6 +779,34 @@ export interface AgentBackend {
 
   /** Called when agent requests spawning a new session */
   onSpawnSession: ((request: import('../base-agent.ts').SpawnSessionRequest) => Promise<import('../base-agent.ts').SpawnSessionResult>) | null;
+
+  /**
+   * Called synchronously at the backend's non-replay boundary for this prompt.
+   *
+   * This is deliberately separate from the AgentEvent stream: a backend may
+   * emit local preparation events before its provider runtime accepts any work.
+   * The boundary is the strongest acknowledgement exposed by that runtime; it
+   * does not necessarily prove that a remote HTTP request reached the provider.
+   */
+  onProviderHandoff: (() => void) | null;
+
+  /**
+   * Awaited immediately before the backend makes a prompt visible to its
+   * provider runtime. The host uses it to fsync an exact write-ahead fence;
+   * rejection must prevent the provider write.
+   */
+  onBeforeProviderDispatch?: (() => Promise<void>) | null;
+
+  /** Correlated proof that the exact prepared prompt was rejected pre-provider. */
+  onProviderDispatchRejected?: (() => void) | null;
+
+  /**
+   * Optional conservative fence for out-of-process backends. It fires after
+   * the prompt has left the host process but before the child can report the
+   * authoritative provider handoff. Stop must not replay work in this window;
+   * a later explicit setup rejection may still roll it back normally.
+   */
+  onProviderDispatchUncertain?: (() => void) | null;
 }
 
 /**

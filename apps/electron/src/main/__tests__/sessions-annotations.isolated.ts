@@ -47,6 +47,7 @@ function makeAnnotation(id: string, extraMeta?: Record<string, unknown>): Annota
 
 function createHarness(initialAnnotations: AnnotationV1[] = []) {
   const managed = {
+    id: 'session-1',
     workspace: { id: 'ws-1' },
     messages: [{ id: 'msg-1', content: 'hello world', annotations: initialAnnotations }],
   }
@@ -55,6 +56,9 @@ function createHarness(initialAnnotations: AnnotationV1[] = []) {
   const events: Array<{ event: any; workspaceId: string }> = []
 
   const manager = Object.create(SessionManager.prototype) as any
+  // Object.create() deliberately bypasses the constructor, so restore the
+  // ownership state required by the real synchronous mutation guard.
+  manager.retiringSessions = new WeakSet()
   manager.sessions = new Map([['session-1', managed]])
   manager.persistSession = () => { persistCalls += 1 }
   manager.sendEvent = (event: any, workspaceId: string) => {

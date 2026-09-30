@@ -14,6 +14,7 @@ import { toast } from 'sonner'
 import { useActiveWorkspace, useAppShellContext } from '@/context/AppShellContext'
 import { navigate, routes } from '@/lib/navigate'
 import { sessionMetaMapAtom } from '@/atoms/sessions'
+import { isUserFacingSession } from '@/utils/session-visibility'
 import {
   Info_Page,
   Info_Section,
@@ -113,7 +114,7 @@ export default function ProjectInfoPage({ projectSlug }: ProjectInfoPageProps) {
     if (!project) return []
     const result: { id: string; name: string }[] = []
     for (const meta of sessionMetaMap.values()) {
-      if ((meta as { projectId?: string }).projectId === project.config.id) {
+      if (isUserFacingSession(meta) && meta.projectId === project.config.id) {
         result.push({ id: meta.id, name: meta.name ?? meta.id })
       }
     }

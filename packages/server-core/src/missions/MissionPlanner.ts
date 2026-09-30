@@ -140,7 +140,17 @@ export class MissionPlanner {
         buildPlannerPrompt(context, goal, title, autonomy),
         undefined,
         undefined,
-        { hidden: true },
+        {
+          hidden: true,
+          internalOrigin: {
+            kind: 'spawned-session',
+            senderSessionId: context.originSessionId,
+            // Route on the user's actual mission goal, not on the host-owned
+            // planning contract that necessarily mentions permissions, policy,
+            // cost limits and workspace mutations.
+            authenticatedTaskText: goal,
+          },
+        },
         undefined,
         undefined,
         () => onAccepted(),
@@ -256,7 +266,8 @@ function buildPlannerPrompt(
     : workerPermissionMode === 'ask'
       ? '- pour workspace-write, assigne un profil worker en permissionMode "ask" et des allowed_write_paths explicites ; n’utilise jamais allow-all ;'
       : '- le parent est en Safe : utilise uniquement effect "read" et n’inclus aucun workspace-write ;';
-  const profileMode = fullAutonomy ? ',"permissionMode":"allow-all"' : '';
+  const plannerProfileMode = fullAutonomy ? ',"permissionMode":"allow-all"' : '';
+  const reviewProfileMode = ',"permissionMode":"safe"';
   return `<mission-plan-request id="${context.planRequestId}" mission-id="${context.missionId}">
 Tu es le planner dédié d'une mission autonome. Décompose la demande en objectifs mesurables, tâches et sous-tâches spécialisées. Le contrôleur créera lui-même les revues indépendantes et les corrections : n'inclus jamais de work item objective-review, final-review ou correction.
 
@@ -282,10 +293,10 @@ Forme attendue :
   "reviewerProfileId":"reviewer",
   "supervisorProfileId":"supervisor",
   "agentProfiles":[
-    {"id":"planner","role":"planner","specialty":"planification","systemPrompt":"..."${profileMode}},
+    {"id":"planner","role":"planner","specialty":"planification","systemPrompt":"..."${plannerProfileMode}},
     {"id":"worker","role":"worker","specialty":"exécution","systemPrompt":"...","permissionMode":"${workerPermissionMode}"},
-    {"id":"reviewer","role":"reviewer","specialty":"qualité indépendante","systemPrompt":"..."${profileMode}},
-    {"id":"supervisor","role":"supervisor","specialty":"contrôle final","systemPrompt":"..."${profileMode}}
+    {"id":"reviewer","role":"reviewer","specialty":"qualité indépendante","systemPrompt":"..."${reviewProfileMode}},
+    {"id":"supervisor","role":"supervisor","specialty":"contrôle final","systemPrompt":"..."${reviewProfileMode}}
   ],
   "policy":{"maxConcurrentAgents":4,"maxCorrectionCycles":3,"maxWorkItems":128,"maxDepth":4,"maxTechnicalAttempts":3,"requireIndependentReview":true,"requireIndependentSupervisor":true},
   "workItems":[

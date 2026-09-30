@@ -1,3 +1,5 @@
+import type { ObjectiveProcedureId } from '@craft-agent/core/types'
+
 export type PlaybookHumanGate =
   | 'oauth_or_mfa'
   | 'credential_required'
@@ -12,6 +14,7 @@ export interface PlaybookProof {
 
 export interface PlaybookManifest {
   version: 1
+  procedure?: ObjectiveProcedureId
   slug: string
   name: string
   description: string

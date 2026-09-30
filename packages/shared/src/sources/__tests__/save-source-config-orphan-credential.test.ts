@@ -12,7 +12,7 @@ import { describe, test, expect, beforeEach, afterEach, spyOn } from 'bun:test';
 import { mkdtempSync, rmSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
-import { saveSourceConfig, loadSourceConfig } from '../storage.ts';
+import { createSource, saveSourceConfig, loadSourceConfig } from '../storage.ts';
 import { SourceCredentialManager } from '../credential-manager.ts';
 import type { FolderSourceConfig, LoadedSource } from '../types.ts';
 
@@ -74,6 +74,20 @@ function loadedApiSource(config: FolderSourceConfig): LoadedSource {
 }
 
 describe('saveSourceConfig orphan credential cleanup', () => {
+  test('persists routing sensitivity when a source is created', async () => {
+    const created = await createSource(workspaceRoot, {
+      name: 'Restricted files',
+      provider: 'local',
+      type: 'local',
+      local: { path: workspaceRoot },
+      icon: '🔒',
+      routingSensitivity: 'restricted',
+    });
+
+    expect(created.routingSensitivity).toBe('restricted');
+    expect(loadSourceConfig(workspaceRoot, created.slug)?.routingSensitivity).toBe('restricted');
+  });
+
   test("deletes the source_apikey slot when an API source is saved with authType:'none'", () => {
     saveSourceConfig(workspaceRoot, apiConfig({
       authType: 'none',

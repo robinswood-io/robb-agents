@@ -3,16 +3,17 @@
  *
  * Resolves the RTK binary (https://github.com/rtk-ai/rtk) from the bundled
  * platform resources first, then from the user's PATH. Every candidate must
- * meet the `rtk rewrite` minimum version and expose `rtk gain`, so a same-name
+ * meet the `rtk rewrite` minimum version and expose `rtk pipe`, so a same-name
  * non-optimizer binary is never used.
  *
  * Result is cached per process; resetRtkPathCache() supports explicit recheck.
  */
 
 import { execFileSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, readFileSync } from 'node:fs';
+import { isAbsolute, join } from 'node:path';
 import { getBundledAssetsDir } from '../../utils/paths.ts';
+import { RTK_METRICS_PATH } from './rtk-state.ts';
 
 const REQUIRED_MIN_VERSION = { major: 0, minor: 23, patch: 0 } as const;
 
@@ -54,9 +55,9 @@ export function getRtkStatus(opts?: { forceRecheck?: boolean }): RtkStatus {
 }
 
 /**
- * Token-savings stats from `rtk gain --format json`. Returns null if rtk
- * is not installed, the spawn fails, or the JSON can't be parsed. The Settings
- * UI uses this to render an efficiency meter beneath the RTK toggle.
+ * App-scoped savings from actual output shown to agents, including recovery
+ * hints and unchanged stderr. Values are byte/4 estimates, not provider billing.
+ * Global `rtk gain` also includes other applications and is never added here.
  */
 export interface RtkGainStats {
   totalCommands: number;
@@ -69,30 +70,37 @@ export interface RtkGainStats {
 }
 
 export function getRtkGain(): RtkGainStats | null {
-  const rtkPath = getRtkPath();
-  if (!rtkPath) return null;
-
+  if (!getRtkPath()) return null;
   try {
-    const out = execFileSync(rtkPath, ['gain', '--format', 'json'], {
-      encoding: 'utf-8',
-      timeout: 2000,
-      env: { ...process.env, RTK_TELEMETRY_DISABLED: '1' },
-    });
-    const parsed = JSON.parse(out) as { summary?: Partial<Record<keyof RtkGainStats | 'total_commands' | 'total_input' | 'total_output' | 'total_saved' | 'avg_savings_pct' | 'total_time_ms' | 'avg_time_ms', number>> };
-    const s = parsed.summary;
-    if (!s) return null;
-    return {
-      totalCommands: Number(s.total_commands ?? 0),
-      totalInput: Number(s.total_input ?? 0),
-      totalOutput: Number(s.total_output ?? 0),
-      totalSaved: Number(s.total_saved ?? 0),
-      avgSavingsPct: Number(s.avg_savings_pct ?? 0),
-      totalTimeMs: Number(s.total_time_ms ?? 0),
-      avgTimeMs: Number(s.avg_time_ms ?? 0),
-    };
-  } catch {
-    return null;
+    return parseRtkOutputMetrics(readFileSync(RTK_METRICS_PATH, 'utf8'));
+  } catch (error) {
+    return (error as NodeJS.ErrnoException).code === 'ENOENT'
+      ? parseRtkOutputMetrics('') : null;
   }
+}
+
+export function parseRtkOutputMetrics(records: string): RtkGainStats {
+  let totalCommands = 0;
+  let inputBytes = 0;
+  let outputBytes = 0;
+  let totalTimeMs = 0;
+  for (const line of records.split('\n')) {
+    const match = /^(\d+) (\d+) (\d+)$/.exec(line.trim());
+    if (!match) continue;
+    const [input, output, time] = match.slice(1).map(Number) as [number, number, number];
+    if (![input, output, time].every(Number.isSafeInteger) || output >= input) continue;
+    totalCommands++;
+    inputBytes += input;
+    outputBytes += output;
+    totalTimeMs += time;
+  }
+  const totalInput = Math.floor(inputBytes / 4);
+  const totalOutput = Math.floor(outputBytes / 4);
+  return {
+    totalCommands, totalInput, totalOutput, totalSaved: totalInput - totalOutput,
+    avgSavingsPct: inputBytes ? 100 * (inputBytes - outputBytes) / inputBytes : 0,
+    totalTimeMs, avgTimeMs: totalCommands ? totalTimeMs / totalCommands : 0,
+  };
 }
 
 /** Clears the cached detection result so the next call probes PATH fresh. */
@@ -103,8 +111,7 @@ export function resetRtkPathCache(): void {
 function resolveStatus(): CachedStatus {
   if (cachedStatus !== undefined) return cachedStatus;
 
-  const bundledPath = findBundledRtk();
-  if (bundledPath) {
+  for (const bundledPath of findBundledRtk()) {
     const version = readRtkVersion(bundledPath);
     if (version && meetsMinVersion(version) && supportsTokenOptimization(bundledPath)) {
       cachedStatus = { path: bundledPath, version, source: 'bundled' };
@@ -128,20 +135,38 @@ function resolveStatus(): CachedStatus {
   return cachedStatus;
 }
 
-function findBundledRtk(): string | null {
-  const binDir = getBundledAssetsDir('bin');
-  if (!binDir) return null;
+function isPhysicalExecutablePath(path: string): boolean {
+  // Electron can report that an ASAR member exists, but execFile cannot execute
+  // it. An adjacent .asar.unpacked directory is a real filesystem path.
+  return isAbsolute(path) && !/\.asar(?:[\\/]|$)/i.test(path);
+}
+
+function findBundledRtk(): string[] {
+  // These roots are set by host bootstrap, never taken from model/tool input.
+  // The main JS assets root may be app.asar while native tools live next to it
+  // under Resources/app. Standalone servers set CRAFT_BUNDLED_ASSETS_ROOT.
+  const binDirs = [
+    ...[process.env.CRAFT_RESOURCES_BASE, process.env.CRAFT_BUNDLED_ASSETS_ROOT]
+      .filter((root): root is string => !!root && isPhysicalExecutablePath(root))
+      .map(root => join(root, 'resources', 'bin')),
+    getBundledAssetsDir('bin'),
+  ];
   const binary = process.platform === 'win32' ? 'rtk.exe' : 'rtk';
-  const candidate = join(binDir, `${process.platform}-${process.arch}`, binary);
-  return existsSync(candidate) ? candidate : null;
+  return [...new Set(binDirs
+    .filter((dir): dir is string => !!dir)
+    .map(dir => join(dir, `${process.platform}-${process.arch}`, binary)))]
+    .filter(candidate => isPhysicalExecutablePath(candidate) && existsSync(candidate));
 }
 
 function findRtkOnPath(): string | null {
   const whichCmd = process.platform === 'win32' ? 'where' : 'which';
   try {
-    const result = execFileSync(whichCmd, ['rtk'], { encoding: 'utf-8', timeout: 2000 }).trim();
+    const result = execFileSync(whichCmd, ['rtk'], {
+      encoding: 'utf-8', timeout: 2000, env: { ...process.env },
+    }).trim();
     // `where` returns multiple lines on Windows — take the first.
-    return result.split('\n')[0]?.trim() || null;
+    const candidate = result.split('\n')[0]?.trim();
+    return candidate && isPhysicalExecutablePath(candidate) ? candidate : null;
   } catch {
     return null;
   }
@@ -149,7 +174,7 @@ function findRtkOnPath(): string | null {
 
 function readRtkVersion(rtkPath: string): string | null {
   try {
-    const out = execFileSync(rtkPath, ['--version'], { encoding: 'utf-8', timeout: 2000 }).trim();
+    const out = execFileSync(rtkPath, ['--version'], { encoding: 'utf-8', timeout: 2000, env: { ...process.env, RTK_TELEMETRY_DISABLED: '1' } }).trim();
     return out.match(/\d+\.\d+\.\d+/)?.[0] ?? null;
   } catch {
     return null;
@@ -158,7 +183,7 @@ function readRtkVersion(rtkPath: string): string | null {
 
 function supportsTokenOptimization(rtkPath: string): boolean {
   try {
-    execFileSync(rtkPath, ['gain', '--format', 'json'], {
+    execFileSync(rtkPath, ['pipe', '--help'], {
       encoding: 'utf-8',
       timeout: 2_000,
       env: { ...process.env, RTK_TELEMETRY_DISABLED: '1' },

@@ -31,6 +31,7 @@ export type {
   AgentBackend,
   AgentProvider,
   CoreBackendConfig,
+  TerminalReconciliationPolicy,
   BackendConfig,
   BackendHostRuntimeContext,
   PermissionCallback,
@@ -47,7 +48,7 @@ export type {
 } from './types.ts';
 
 // Enums need to be exported as values, not just types
-export { AbortReason } from './types.ts';
+export { AbortReason, ToolAdmissionRecoveryError, ProviderDispatchRejectedError } from './types.ts';
 
 // Factory
 export {

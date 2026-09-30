@@ -5,6 +5,7 @@ import type {
 
 export const DEFAULT_EXTERNAL_ACTION_GRANT_TTL_MS = 60 * 60 * 1000;
 const MAX_EXTERNAL_ACTION_GRANTS = 50;
+const SHA256_PATTERN = /^[a-f0-9]{64}$/;
 
 function normalizeTarget(value: string): string {
   return value
@@ -38,7 +39,8 @@ export function pruneExternalActionAuthorizations(
   nowMs = Date.now(),
 ): ExternalActionAuthorization[] {
   return (grants ?? [])
-    .filter(grant => grant.expiresAt > nowMs && grant.targetCandidates.length > 0)
+    .filter(grant => grant.expiresAt > nowMs && grant.targetCandidates.length > 0
+      && !!grant.toolName && SHA256_PATTERN.test(grant.operationHash))
     .slice(-MAX_EXTERNAL_ACTION_GRANTS);
 }
 
@@ -47,16 +49,21 @@ export function hasMatchingExternalActionAuthorization(
   request: {
     category?: ExternalActionAuthorizationCategory;
     targetCandidates?: string[];
+    toolName?: string;
+    operationHash?: string;
   },
   nowMs = Date.now(),
 ): boolean {
   const requestTargets = request.targetCandidates;
-  if (!request.category || !requestTargets?.length) return false;
+  if (!request.category || !requestTargets?.length || !request.toolName
+    || !request.operationHash || !SHA256_PATTERN.test(request.operationHash)) return false;
   if (canonicalTargetSet(requestTargets).length === 0) return false;
 
   return pruneExternalActionAuthorizations(grants, nowMs).some(grant =>
     grant.category === request.category
     && hasSameTargetSet(grant.targetCandidates, requestTargets)
+    && grant.toolName === request.toolName
+    && grant.operationHash === request.operationHash
   );
 }
 
@@ -66,12 +73,14 @@ export function rememberExternalActionAuthorization(
     category?: ExternalActionAuthorizationCategory;
     targetCandidates?: string[];
     toolName?: string;
+    operationHash?: string;
   },
   nowMs = Date.now(),
   ttlMs = DEFAULT_EXTERNAL_ACTION_GRANT_TTL_MS,
 ): ExternalActionAuthorization[] {
   const targetCandidates = uniqueTargets(request.targetCandidates ?? []);
-  if (!request.category || !request.toolName || targetCandidates.length === 0) {
+  if (!request.category || !request.toolName || !request.operationHash
+    || !SHA256_PATTERN.test(request.operationHash) || targetCandidates.length === 0) {
     return pruneExternalActionAuthorizations(grants, nowMs);
   }
 
@@ -79,12 +88,15 @@ export function rememberExternalActionAuthorization(
     category: request.category,
     targetCandidates,
     toolName: request.toolName,
+    operationHash: request.operationHash,
     grantedAt: nowMs,
     expiresAt: nowMs + Math.max(1, ttlMs),
   };
   const withoutSuperseded = pruneExternalActionAuthorizations(grants, nowMs).filter(grant =>
     grant.category !== next.category
     || !hasSameTargetSet(grant.targetCandidates, targetCandidates)
+    || grant.toolName !== next.toolName
+    || grant.operationHash !== next.operationHash
   );
   return [...withoutSuperseded, next].slice(-MAX_EXTERNAL_ACTION_GRANTS);
 }

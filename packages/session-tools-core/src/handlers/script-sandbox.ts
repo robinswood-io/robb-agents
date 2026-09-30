@@ -1,3 +1,4 @@
+import { protectApplicationCommand, isProtectedApplicationPath, APPLICATION_PROTECTION_REASON } from '../runtime/application-protection.ts';
 import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, unlinkSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -43,6 +44,7 @@ export async function handleScriptSandbox(
 
   const sessionDir = ctx.sessionPath;
   const dataDir = ctx.dataPath;
+  if (isProtectedApplicationPath(dataDir)) return errorResponse(APPLICATION_PROTECTION_REASON);
 
   const inputFiles = args.inputFiles ?? [];
   const resolvedInputs: string[] = [];
@@ -124,7 +126,16 @@ export async function handleScriptSandbox(
 
     const startedAt = Date.now();
     const result = await new Promise<{ stdout: string; stderr: string; code: number | null; timedOut: boolean }>((resolvePromise, reject) => {
-      const child = spawn(filesystemIsolation.command, filesystemIsolation.args, {
+      // On macOS the filesystem plan already uses one deny-by-default
+      // sandbox-exec profile. It only permits writes below the session root,
+      // denies the network and therefore protects every application bundle as
+      // well. Wrapping that command in the application-protection sandbox
+      // would create a nested sandbox-exec invocation, which macOS rejects
+      // with `sandbox_apply: Operation not permitted`.
+      const protectedCommand = process.platform === 'darwin' && filesystemIsolation.backend === 'sandbox-exec'
+        ? { command: filesystemIsolation.command, args: filesystemIsolation.args }
+        : protectApplicationCommand(filesystemIsolation.command, filesystemIsolation.args);
+      const child = spawn(protectedCommand.command, protectedCommand.args, {
         cwd: dataDir,
         env,
         stdio: ['pipe', 'pipe', 'pipe'],

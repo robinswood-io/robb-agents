@@ -1,4 +1,5 @@
 import { formatPreferencesForPrompt, getCoAuthorPreference } from '../config/preferences.ts';
+import { FINAL_RESPONSE_GUIDANCE, DOCUMENT_DELIVERY_GUIDANCE, PROGRESS_GUIDANCE } from './result-presentation.ts';
 import { getBrowserToolEnabled } from '../config/storage.ts';
 import { debug } from '../utils/debug.ts';
 import { existsSync, readFileSync, readdirSync } from 'fs';
@@ -9,33 +10,12 @@ import { FEATURE_FLAGS } from '../feature-flags.ts';
 import { APP_VERSION } from '../version/index.ts';
 import { readPluginName } from '../utils/workspace.ts';
 import { formatBytes } from '../utils/binary-detection.ts';
-import { globSync } from 'glob';
+import { projectContextFileDiscovery } from './project-context-files.ts';
 import os from 'os';
 import type { ProjectPromptContext } from '../projects/types.ts';
 
 /** Maximum size of CLAUDE.md file to include (10KB) */
 const MAX_CONTEXT_FILE_SIZE = 10 * 1024;
-
-/** Maximum number of context files to discover in monorepo */
-const MAX_CONTEXT_FILES = 30;
-
-/**
- * Directories to exclude when searching for context files.
- * These are common build output, dependency, and cache directories.
- */
-const EXCLUDED_DIRECTORIES = [
-  'node_modules',
-  '.git',
-  'dist',
-  'build',
-  '.next',
-  'coverage',
-  'vendor',
-  '.cache',
-  '.turbo',
-  'out',
-  '.output',
-];
 
 /**
  * Context file patterns to look for in working directory (in priority order).
@@ -73,80 +53,14 @@ export function findProjectContextFile(directory: string): string | null {
   return null;
 }
 
-// ── Context file cache ──────────────────────────────────────────────────
-// The glob walk is expensive (~7s in large monorepos). The result (a list of
-// file paths like "CLAUDE.md", "apps/electron/CLAUDE.md") rarely changes during
-// a session, so we cache it per working directory with a 5-minute safety TTL.
-// Explicit invalidation happens on working directory changes.
-
-const contextFileCache = new Map<string, { files: string[]; ts: number }>();
-const CONTEXT_FILE_CACHE_TTL = 5 * 60_000; // 5 minutes
-
-/** Invalidate the cached context file list for a directory (or all directories). */
+/** Invalidate the optional project instruction index after a working-directory change. */
 export function invalidateContextFileCache(directory?: string): void {
-  if (directory) {
-    contextFileCache.delete(directory);
-    debug(`[contextFileCache] Invalidated cache for ${directory}`);
-  } else {
-    contextFileCache.clear();
-    debug(`[contextFileCache] Cleared all cached entries`);
-  }
+  projectContextFileDiscovery.invalidate(directory);
 }
 
-/**
- * Find all project context files (AGENTS.md or CLAUDE.md) recursively in a directory.
- * Supports monorepo setups where each package may have its own context file.
- * Returns relative paths sorted by depth (root first), capped at MAX_CONTEXT_FILES.
- *
- * Results are cached per directory. Call invalidateContextFileCache() on working
- * directory changes. A 5-minute TTL acts as a safety net for cache staleness.
- */
-export function findAllProjectContextFiles(directory: string): string[] {
-  // Check cache first
-  const now = Date.now();
-  const cached = contextFileCache.get(directory);
-  if (cached && now - cached.ts < CONTEXT_FILE_CACHE_TTL) {
-    debug(`[findAllProjectContextFiles] Cache hit for ${directory} (${cached.files.length} files)`);
-    return cached.files;
-  }
-
-  try {
-    // Build glob ignore patterns from excluded directories
-    const ignorePatterns = EXCLUDED_DIRECTORIES.map((dir) => `**/${dir}/**`);
-
-    // Search for all context files (case-insensitive via nocase option)
-    const pattern = '**/{agents,claude}.md';
-    const matches = globSync(pattern, {
-      cwd: directory,
-      nocase: true,
-      ignore: ignorePatterns,
-      absolute: false,
-    });
-
-    if (matches.length === 0) {
-      contextFileCache.set(directory, { files: [], ts: now });
-      return [];
-    }
-
-    // Sort by depth (fewer slashes = shallower = higher priority), then alphabetically
-    // Root files come first, then nested packages
-    const sorted = matches.sort((a, b) => {
-      const depthA = (a.match(/\//g) || []).length;
-      const depthB = (b.match(/\//g) || []).length;
-      if (depthA !== depthB) return depthA - depthB;
-      return a.localeCompare(b);
-    });
-
-    // Cap at max files to avoid overwhelming the prompt
-    const capped = sorted.slice(0, MAX_CONTEXT_FILES);
-
-    debug(`[findAllProjectContextFiles] Found ${matches.length} files, returning ${capped.length}`);
-    contextFileCache.set(directory, { files: capped, ts: now });
-    return capped;
-  } catch (error) {
-    debug(`[findAllProjectContextFiles] Error searching directory:`, error);
-    return [];
-  }
+/** Discover project instructions without blocking the native event loop. */
+export async function findAllProjectContextFiles(directory: string): Promise<string[]> {
+  return (await projectContextFileDiscovery.discover(directory)).files;
 }
 
 /**
@@ -265,10 +179,9 @@ export function getProjectContextFilesPrompt(workingDirectory?: string): string 
     return '';
   }
 
-  const contextFiles = findAllProjectContextFiles(workingDirectory);
-  if (contextFiles.length === 0) {
-    return '';
-  }
+  const listing = projectContextFileDiscovery.getCached(workingDirectory);
+  const contextFiles = listing?.files ?? [];
+  if (contextFiles.length === 0 && listing?.complete) return '';
 
   // Format file list with (root) annotation for top-level files
   const fileList = contextFiles
@@ -280,7 +193,7 @@ export function getProjectContextFilesPrompt(workingDirectory?: string): string 
 
   return `
 <project_context_files working_directory="${workingDirectory}">
-${fileList}
+${fileList}${listing?.complete ? '' : '\nDiscovery was bounded or unavailable. Before changing a file, check applicable AGENTS.md and CLAUDE.md instructions in its directory and ancestors; this index is not exhaustive.'}
 </project_context_files>`;
 }
 
@@ -321,7 +234,7 @@ ${workspaceContext}
 ## Guidelines
 - Make the requested change directly
 - Validate with config_validate after editing
-- Confirm completion briefly
+- Briefly state the requested change and the actual validation result; if either failed or remains unchecked, say so without claiming completion
 - Don't add unrequested features or changes
 - Keep responses short and to the point
 - For math, use $$...$$ delimiters; avoid single $...$ in prose so currency remains plain text
@@ -330,6 +243,15 @@ ${workspaceContext}
 Use Read, Edit, Write tools for file operations.
 Use config_validate to verify changes match the expected schema.
 `;
+}
+
+/** Prepare the optional file index asynchronously before assembling a backend prompt. */
+export async function getSystemPromptAsync(...args: Parameters<typeof getSystemPrompt>): Promise<string> {
+  const workingDirectory = args[3];
+  if (workingDirectory && args[4] !== 'mini') {
+    await projectContextFileDiscovery.discover(workingDirectory);
+  }
+  return getSystemPrompt(...args);
 }
 
 /**
@@ -631,6 +553,8 @@ Use the browser as an **alternative/fallback** path when source setup is fragile
 
 You are Craft Agent - an AI assistant that helps users connect and work across their data sources through a desktop interface.
 
+The installed application bundle is read-only for agents. If an application defect blocks a task, record the evidence and correct the source repository through the build and verification workflow. Never patch app.asar, change integrity metadata or signatures, replace the running bundle, or delegate such a bypass to another process or service. A permission error at this boundary requires the application installer, not a workaround. Keep the original task and report its exact blocker when necessary.
+
 **Core capabilities:**
 - **Connect external sources** - MCP servers, REST APIs, local filesystems. Users can integrate Linear, GitHub, Craft, custom APIs, and more.
 - **Automate workflows** - Combine data from multiple sources to create unique, powerful workflows.
@@ -713,7 +637,7 @@ Prefer \`craft-agent\` CLI over direct file edits for labels, sources, skills, a
 
 ## User preferences
 
-You can store and update user preferences using the \`update_user_preferences\` tool. 
+You can store and update user preferences using the \`update_user_preferences\` tool.
 When you learn information about the user (their name, timezone, location, language preference, or other relevant context), proactively offer to save it for future conversations.
 
 ## Interaction Guidelines
@@ -725,6 +649,18 @@ When you learn information about the user (their name, timezone, location, langu
 5. **Present File Paths, Links As Clickable Markdown Links**: Format file paths and URLs as clickable markdown links for easy access instead of code formatting.
 6. **Nice Markdown Formatting**: The user sees your responses rendered in markdown. Use headings, lists, bold/italic text, and code blocks for clarity. Basic HTML is also supported, but use sparingly.
 7. **Math Delimiters**: Use \`$$...$$\` for math expressions. Do NOT use single-dollar delimiters (\`$...$\`) in normal prose so currency values like \`$100\` or \`$2M–$4M\` stay plain text.
+
+## Progress during work
+
+${PROGRESS_GUIDANCE}
+
+## Presenting Results
+
+${FINAL_RESPONSE_GUIDANCE}
+
+## Delivering Documents
+
+${DOCUMENT_DELIVERY_GUIDANCE}
 
 !!IMPORTANT!!. You must refer to yourself as Craft Agent when asked. You can acknowledge that you are powered by ${backendName}.
 
@@ -763,10 +699,10 @@ Co-Authored-By: Craft Agent <agents-noreply@craft.do>
 
 Current mode is in \`<session_state>\`, along with last mode-transition metadata when available (for example: \`modeTransition\`, \`modeChangedBy\`, \`modeChangedAt\`, \`modeVersion\`). \`plansFolderPath\` shows the **exact path** where you can write plan files. \`dataFolderPath\` shows where you can write data files (e.g. \`transform_data\` output). In Explore mode, writes are only allowed to these two folders — writes to any other location will be blocked.
 
-**${PERMISSION_MODE_CONFIG['safe'].displayName} mode:** Read, search, and explore freely. Use \`SubmitPlan\` when ready to implement - the user sees an "Accept Plan" button to transition to execution. 
+**${PERMISSION_MODE_CONFIG['safe'].displayName} mode:** Read, search, and explore freely. Use \`SubmitPlan\` when ready to implement - the user sees an "Accept Plan" button to transition to execution.
 Be decisive: when you have enough context, present your approach and ask "Ready for a plan?" or write it directly. This will help the user move forward.
 
-!!Important!! - Before executing a plan you need to present it to the user via SubmitPlan tool.
+!!Important!! - In Explore mode, before executing a plan you need to present it to the user via SubmitPlan tool. In YOLO, keep the plan in update_plan or a plan file and proceed without submitting it for approval.
 When presenting a plan via SubmitPlan the system will interrupt your current run and wait for user confirmation. Expect, and prepare for this.
 Never try to execute a plan without submitting it first - it will fail, especially if user is in ${PERMISSION_MODE_CONFIG['safe'].displayName} mode.
 
@@ -774,14 +710,10 @@ Never try to execute a plan without submitting it first - it will fail, especial
 **Do NOT** write to \`.copilot-config/\`, \`session-state/\`, or any other directory — those paths will be rejected. Use ONLY \`plansFolderPath\` or \`dataFolderPath\`.
 ${backendName === 'Codex' ? `
 ### Planning tools (Codex)
-- **update_plan** — Live task tracking within a turn/session (statuses: pending/in_progress/completed). Does not pause execution or request approval.
+- **update_plan** — Optional live task tracking for work whose dependent steps benefit from a visible checklist (statuses: pending/in_progress/completed). Does not pause execution or request approval.
 - **SubmitPlan** — User-facing implementation proposal (markdown plan file + approval gate). In Explore mode, required before execution and pauses for user confirmation.
 
-Recommended flow:
-1. Start multi-step work with \`update_plan\`.
-2. Keep \`update_plan\` updated as steps progress for turncard/tasklist accuracy.
-3. When ready to implement (especially in Explore mode), write the plan file and call \`SubmitPlan\`.
-4. After acceptance and execution starts, continue using \`update_plan\` for granular progress.
+Use \`update_plan\` only when it materially clarifies multi-step work; skip it for simple tasks and bounded reviews. Update it at meaningful scope or status changes, not after every tool call. In Explore mode, when ready to implement, write the plan file and call \`SubmitPlan\`. After acceptance, execute the work and keep the checklist only if it remains useful.
 
 **Writing plan files (Codex):** Create plan files using shell commands. Do NOT use heredocs (\`<<EOF\`) as they are blocked by the sandbox.
 
@@ -994,12 +926,14 @@ If you get a "Labels rejected" error, the reason is per-entry — common causes 
 \`list_sessions\` — returns \`{ total, returned, sessions }\` with pagination. Always use filters (status, label, search) to narrow results. Default limit is 20 sessions.
 - Use \`get_session_info\` for full details on a specific session (list-then-detail pattern).
 - Do NOT call \`list_sessions\` with a high limit just to scan all sessions — filter first.
-- After spawning or delegating work, use \`wait_sessions\` for up to 8 known session IDs. It waits on completion events; do not poll \`list_sessions\` or send repeated “status?” messages.
+- After spawning or delegating work, use \`wait_sessions\` for up to 8 known session IDs. It waits on completion events; do not poll \`list_sessions\` or send repeated “status?” messages. Preserve each returned cursor in \`afterCursors\` across compaction; unchanged completed targets do not replay their report. Use the default 60-second event wait while work is active. A timeout, idle snapshot, or truncated report is not completion evidence.
+- Reuse an active delegation for the same objective and exact request. A terminal independent reviewer reports its own observations; spawning another reviewer solely to approve that review creates no new evidence. A distinct investigation, changed target version, or substantiated arbitration remains useful.
+- Register acceptance criteria once and extend only genuinely changed user requirements. Never replace or re-register an already reviewed contract merely to point its criteria at alternate receipts or read-only observations: that changes the review binding and manufactures avoidable work. Existing valid observations remain usable; only a real requirement/target change, a new negative observation, or a relevant mutation requires a new contract or fresh verification.
 
 **Background task status:**
 \`list_background_tasks\` — enumerate the background agents/tasks tracked for a session (running, finished, or orphaned). This is the ONLY reliable way to answer "what is running / what's the status?" — it reads the main-process registry, which tracks tasks across turns. The SDK's in-subprocess task tools cannot see tasks from a prior turn's subprocess. If asked for status, call this and report exactly what it returns — never guess, and never claim "the app restarted." A \`status: 'orphaned'\` task was terminated when the turn that launched it ended.
 
-**Cross-session messaging acks:** \`send_agent_message\` reports whether the message was \`delivered\` (target idle, processing now) or \`queued\` (target mid-turn, will process after its current turn). A queued message has NOT been read yet — wait for a reply or query status before drawing conclusions.
+**Cross-session messaging acks:** \`send_agent_message\` reports whether the message was \`delivered\` (target idle, processing now) or \`queued\` (target mid-turn, will process after its current turn). A queued message has NOT been read yet — wait for a reply before drawing conclusions. Send a message when it supplies an actionable finding, decision, or question; acknowledging an acknowledgement adds no work and should not start another turn.
 
 **Automation integration:**
 Setting labels or status triggers the corresponding automation events (\`LabelAdd\`/\`LabelRemove\`, \`SessionStatusChange\`). This enables hand-off workflows:

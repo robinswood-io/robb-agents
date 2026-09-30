@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { Key, User, Lock, Eye, EyeOff, Check, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -6,10 +6,11 @@ import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
 import type { CredentialRequest as CredentialRequestType, CredentialResponse } from '../../../../../shared/types'
 import { validateBasicAuthCredentials, getPasswordValue, getPasswordLabel, getPasswordPlaceholder } from '@/utils/auth-validation'
+import { bindCredentialResponse, type StructuredCredentialResponse } from './types'
 
 interface CredentialRequestProps {
   request: CredentialRequestType
-  onResponse: (response: CredentialResponse) => void
+  onResponse: (response: StructuredCredentialResponse) => void | Promise<void>
   /** When true, removes container styling (shadow, rounded) - used when wrapped by InputContainer */
   unstyled?: boolean
 }
@@ -28,6 +29,8 @@ export function CredentialRequest({ request, onResponse, unstyled = false }: Cre
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const responseInFlightRef = useRef(false)
   // Multi-header state: { "DD-API-KEY": "", "DD-APPLICATION-KEY": "" }
   const [headerValues, setHeaderValues] = useState<Record<string, string>>(() => {
     const initial: Record<string, string> = {}
@@ -50,11 +53,35 @@ export function CredentialRequest({ request, onResponse, unstyled = false }: Cre
     ? request.headerNames?.every(name => headerValues[name]?.trim().length > 0) ?? false
     : value.trim().length > 0
 
+  const respond = useCallback(async (response: CredentialResponse) => {
+    if (responseInFlightRef.current) return
+    responseInFlightRef.current = true
+    setIsSubmitting(true)
+    // The immutable response already owns the submitted values. Drop secrets
+    // from React state immediately instead of retaining them for the duration
+    // of keychain/RPC work or in a completed historical card.
+    setValue('')
+    setUsername('')
+    setPassword('')
+    setHeaderValues(current => Object.fromEntries(Object.keys(current).map(key => [key, ''])))
+    try {
+      await onResponse(bindCredentialResponse({
+        sessionId: request.sessionId,
+        requestId: request.requestId,
+      }, response))
+    } catch (error) {
+      console.error('[CredentialRequest] Failed to submit credential response:', error)
+    } finally {
+      responseInFlightRef.current = false
+      setIsSubmitting(false)
+    }
+  }, [onResponse, request.sessionId, request.requestId])
+
   const handleSubmit = useCallback(() => {
     if (!isValid) return
 
     if (isBasicAuth) {
-      onResponse({
+      void respond({
         type: 'credential',
         username: username.trim(),
         password: getPasswordValue(password, passwordRequired),
@@ -66,23 +93,23 @@ export function CredentialRequest({ request, onResponse, unstyled = false }: Cre
       for (const [key, val] of Object.entries(headerValues)) {
         trimmedHeaders[key] = val.trim()
       }
-      onResponse({
+      void respond({
         type: 'credential',
         headers: trimmedHeaders,
         cancelled: false
       })
     } else {
-      onResponse({
+      void respond({
         type: 'credential',
         value: value.trim(),
         cancelled: false
       })
     }
-  }, [isBasicAuth, isMultiHeader, username, password, value, headerValues, isValid, onResponse, passwordRequired])
+  }, [isBasicAuth, isMultiHeader, username, password, value, headerValues, isValid, respond, passwordRequired])
 
   const handleCancel = useCallback(() => {
-    onResponse({ type: 'credential', cancelled: true })
-  }, [onResponse])
+    void respond({ type: 'credential', cancelled: true })
+  }, [respond])
 
   const handleFormSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault()
@@ -106,10 +133,14 @@ export function CredentialRequest({ request, onResponse, unstyled = false }: Cre
   const passwordPlaceholder = getPasswordPlaceholder(basePasswordLabel, passwordRequired)
 
   return (
-    <div className={cn(
-      'bg-background overflow-hidden h-full flex flex-col',
-      unstyled ? 'border-0' : 'border border-border rounded-[8px] shadow-middle'
-    )}>
+    <div
+      className={cn(
+        'bg-background overflow-hidden h-full flex flex-col',
+        unstyled ? 'border-0' : 'border border-border rounded-[8px] shadow-middle'
+      )}
+      data-credential-request-id={request.requestId}
+      data-credential-session-id={request.sessionId}
+    >
       {/* Form wraps the entire card so password managers (1Password) can detect fields.
           action points to the source URL for domain-based credential matching. */}
       <form
@@ -284,10 +315,10 @@ export function CredentialRequest({ request, onResponse, unstyled = false }: Cre
             size="sm"
             variant="default"
             className="h-7 gap-1.5"
-            disabled={!isValid}
+            disabled={!isValid || isSubmitting}
           >
             <Check className="h-3.5 w-3.5" />
-            Save
+            {isSubmitting ? 'Saving...' : 'Save'}
           </Button>
           <Button
             type="button"
@@ -295,6 +326,7 @@ export function CredentialRequest({ request, onResponse, unstyled = false }: Cre
             variant="ghost"
             className="h-7 gap-1.5 text-muted-foreground hover:text-foreground"
             onClick={handleCancel}
+            disabled={isSubmitting}
           >
             <X className="h-3.5 w-3.5" />
             Cancel

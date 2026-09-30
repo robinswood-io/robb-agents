@@ -6,9 +6,23 @@ import {
   hydratePreviousPermissionMode,
   initializeModeState,
   setPermissionMode,
+  shouldAllowToolInMode,
 } from '../mode-manager.ts';
 
 describe('mode transition session_state context', () => {
+  it('rejects invalid display labels without corrupting permission state or crashing the prompt', () => {
+    const sessionId = 'mode-invalid-spawn-label';
+    initializeModeState(sessionId, 'safe');
+    for (const mode of ['read-only', 'execute', 'explore', 'Explore', 'Execute']) {
+      expect(() => setPermissionMode(sessionId, mode as never, { changedBy: 'restore' })).toThrow('Invalid permission mode');
+      expect(getPermissionModeDiagnostics(sessionId).permissionMode).toBe('safe');
+      expect(formatSessionState(sessionId)).toContain('permissionMode: explore');
+      expect(shouldAllowToolInMode('Write', {}, mode as never).allowed).toBe(false);
+    }
+    hydratePreviousPermissionMode(sessionId, 'read-only' as never);
+    expect(formatSessionState(sessionId)).not.toContain('modeTransition:');
+    cleanupModeState(sessionId);
+  });
   it('includes explicit transition metadata after a mode change', () => {
     const sessionId = `mode-transition-${Date.now()}`;
 

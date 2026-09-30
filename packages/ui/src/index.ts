@@ -28,6 +28,12 @@ export {
 // Chat components
 export {
   SessionViewer,
+  projectConversation,
+  buildUserInputTimeline,
+  JourneyProgress,
+  JourneyOutcome,
+  UserInputCard,
+  type UserInputCardProps,
   TurnCard,
   TurnCardActionsMenu,
   ResponseCard,

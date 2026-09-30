@@ -227,7 +227,9 @@ function CompactChatPreview({
               onOpenFile={handleOpenFile}
               onOpenUrl={handleOpenUrl}
               currentModel={model}
-              onModelChange={setModel}
+              onModelChange={(nextModel) => {
+                if (nextModel !== null) setModel(nextModel)
+              }}
               compactMode={true}
               placeholder={placeholder}
             />

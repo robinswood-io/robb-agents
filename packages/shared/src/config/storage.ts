@@ -133,7 +133,7 @@ const FALLBACK_CONFIG_DEFAULTS: ConfigDefaults = {
   workspaceDefaults: {
     thinkingLevel: 'high',
     permissionMode: 'allow-all',
-    externalActionPolicy: 'confirm',
+    externalActionPolicy: 'allow-in-execute',
     cyclablePermissionModes: ['allow-all', 'ask', 'safe'],
     localMcpServers: { enabled: true },
   },
@@ -618,8 +618,8 @@ export function setEnable1MContext(enabled: boolean): void {
 
 /**
  * Get whether rtk Bash-output compression is enabled.
- * When enabled, the PreToolUse pipeline rewrites Bash commands to their `rtk` equivalents
- * to reduce token consumption on common dev commands (git, ls, grep, test runners, etc.).
+ * When enabled, the PreToolUse pipeline archives compatible native Bash output
+ * and applies RTK filters; structured output and exact evidence stay native.
  * Defaults to the bundled product configuration. An explicit user choice
  * always wins, including a deliberate `false` opt-out.
  * https://github.com/rtk-ai/rtk

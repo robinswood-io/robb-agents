@@ -3,7 +3,7 @@ import { ShieldAlert, Check, X, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import type { PermissionRequest as PermissionRequestType } from '../../../../../shared/types'
-import type { PermissionResponse } from './types'
+import { permissionResponseIdentity, type PermissionResponse } from './types'
 
 interface PermissionRequestProps {
   request: PermissionRequestType
@@ -24,17 +24,18 @@ interface PermissionRequestProps {
  */
 export function PermissionRequest({ request, onResponse, unstyled = false }: PermissionRequestProps) {
   const { t } = useTranslation()
+  const responseRequest = permissionResponseIdentity(request)
 
   const handleAllow = () => {
-    onResponse({ type: 'permission', allowed: true, alwaysAllow: false })
+    onResponse({ type: 'permission', request: responseRequest, allowed: true, alwaysAllow: false })
   }
 
   const handleAlwaysAllow = () => {
-    onResponse({ type: 'permission', allowed: true, alwaysAllow: true })
+    onResponse({ type: 'permission', request: responseRequest, allowed: true, alwaysAllow: true })
   }
 
   const handleDeny = () => {
-    onResponse({ type: 'permission', allowed: false, alwaysAllow: false })
+    onResponse({ type: 'permission', request: responseRequest, allowed: false, alwaysAllow: false })
   }
 
   return (
@@ -46,6 +47,8 @@ export function PermissionRequest({ request, onResponse, unstyled = false }: Per
           : 'border border-info/30 rounded-[8px] shadow-middle'
       )}
       data-tutorial="permission-banner"
+      data-permission-request-id={request.requestId}
+      data-permission-tool-use-id={request.toolUseId}
     >
       {/* Content - grows to fill available space and scrolls before actions disappear */}
       <div className="p-4 space-y-3 flex-1 min-h-0 flex flex-col overflow-y-auto">

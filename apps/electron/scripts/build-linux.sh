@@ -58,7 +58,7 @@ if [[ "$RELEASE_BUILD" == true && "$ARCH" != "x64" ]]; then
     exit 1
 fi
 
-for command in bun node npx curl unzip sha256sum python3; do
+for command in bun node npx curl unzip tar sha256sum python3; do
     command -v "$command" >/dev/null || { echo "ERROR: required command not found: $command" >&2; exit 1; }
 done
 
@@ -92,6 +92,9 @@ bun install --frozen-lockfile
 
 # Bundle the pinned, checksum-verified RTK token optimizer for this artifact.
 bun run scripts/prepare-rtk.ts --platform linux --arch "$ARCH"
+# Bundle the pinned, checksum-verified uv runtime required by Python document tools.
+bun run scripts/prepare-uv.ts --platform linux --arch "$ARCH" --refresh
+require_path "$ELECTRON_DIR/resources/bin/linux-$ARCH/uv" "bundled uv runtime" "uv preparation must succeed before packaging."
 
 # 3. Download Bun binary with checksum verification
 echo "Downloading Bun ${BUN_VERSION} for linux-${ARCH}..."

@@ -16,6 +16,8 @@ export interface SessionListContextValue {
   onMarkUnread: (sessionId: string) => void
   onDelete: (sessionId: string, skipConfirmation?: boolean) => Promise<boolean>
   onLabelsChange?: (sessionId: string, labels: string[]) => void
+  /** Quick filter/toggle sessions by a specific label */
+  onToggleLabelFilter?: (labelId: string) => void
   /** Set or clear the project binding for a session (null = unbind) */
   onSetProjectId?: (sessionId: string, projectId: string | null) => void
   /** Available workspace projects for the context-menu submenu */

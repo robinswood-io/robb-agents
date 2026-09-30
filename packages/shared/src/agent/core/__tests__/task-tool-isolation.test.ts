@@ -3,6 +3,7 @@ import { mkdtempSync, mkdirSync, rmSync, symlinkSync, writeFileSync } from 'node
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import type { SessionExecutionIsolation } from '../../../tasks/durable-execution.ts';
+import type { MissionCapabilityLock } from '../../../sessions/types.ts';
 import { enforceTaskToolIsolation } from '../task-tool-isolation.ts';
 
 let root = '';
@@ -42,6 +43,7 @@ function decide(
   toolName: string,
   input: Record<string, unknown>,
   effect: SessionExecutionIsolation['effect'] = 'read',
+  missionCapabilityLock?: MissionCapabilityLock,
 ) {
   return enforceTaskToolIsolation({
     toolName,
@@ -49,8 +51,18 @@ function decide(
     workspaceRootPath: root,
     workingDirectory: join(root, 'src'),
     isolation: isolation(effect),
+    missionCapabilityLock,
   });
 }
+
+const connectorLock: MissionCapabilityLock = {
+  schemaVersion: 1,
+  capabilityEnvelopeSha256: 'a'.repeat(64),
+  capabilities: [
+    { kind: 'source', name: 'drive', identitySha256: 'b'.repeat(64), authorityBindingId: 'binding-a' },
+    { kind: 'tool', name: 'mcp__drive__search', identitySha256: 'c'.repeat(64) },
+  ],
+};
 
 describe('task tool isolation', () => {
   it('allows reads only in configured paths', () => {
@@ -90,8 +102,27 @@ describe('task tool isolation', () => {
     }
   });
 
+  it('allows only an exact source and tool pair from a specialized capability lease', () => {
+    const exact = decide('mcp__drive__search', { query: 'invoice' }, 'read', connectorLock);
+    expect(exact.allowed).toBe(true);
+    expect(decide('mcp__drive__delete', { id: 'x' }, 'read', connectorLock).allowed).toBe(false);
+    expect(decide('mcp__slack__search', { query: 'x' }, 'read', connectorLock).allowed).toBe(false);
+  });
+
+  it('rejects a model-supplied connector URL outside the task host allow-list', () => {
+    const denied = decide(
+      'mcp__drive__search',
+      { request: { redirects: [{ url: 'https://attacker.invalid/data' }] } },
+      'read',
+      connectorLock,
+    );
+    expect(denied.allowed).toBe(false);
+  });
+
   it('allows only reviewed local state tools and rejects all tools for external mutation nodes', () => {
     expect(decide('TodoWrite', {}).allowed).toBe(true);
+    expect(decide('mcp__session__update_plan', {}).allowed).toBe(true);
+    expect(decide('mcp__other__update_plan', {}).allowed).toBe(false);
     expect(decide('Skill', { skill: 'reviewed-skill' }).allowed).toBe(true);
     expect(decide('Read', { file_path: join(root, 'src', 'input.txt') }, 'external-mutation').allowed).toBe(false);
   });

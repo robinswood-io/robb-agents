@@ -27,6 +27,12 @@ function createFullMessage(): Message {
     toolInput: { file_path: '/test.ts' },
     toolResult: 'File contents...',
     toolStatus: 'completed',
+    toolExecuted: false,
+    toolCheckpoint: {
+      schemaVersion: 1,
+      kind: 'tool-call-budget',
+      reason: 'Checkpoint before execution.',
+    },
     toolDuration: 1500,
     toolIntent: 'Reading test file',
     toolDisplayName: 'Read File',
@@ -58,6 +64,12 @@ function createFullMessage(): Message {
     isPending: false,
     isIntermediate: false,
     turnId: 'turn-abc',
+    objectiveOutcome: {
+      state: 'continue',
+      criteria: [],
+      remainingWork: ['Finish the requested operation.'],
+      blocker: null,
+    },
     infoLevel: 'warning',
     errorCode: 'network_error',
     errorTitle: 'Connection Failed',
@@ -115,11 +127,12 @@ describe('messageToStored/storedToMessage round-trip', () => {
     const expectedKeys = [
       'id', 'type', 'content', 'timestamp',
       'toolName', 'toolUseId', 'toolInput', 'toolResult', 'toolStatus',
+      'toolExecuted', 'toolCheckpoint',
       'toolDuration', 'toolIntent', 'toolDisplayName', 'toolDisplayMeta',
       'parentToolUseId',
       'taskId', 'shellId', 'elapsedSeconds', 'isBackground',
       'isError', 'attachments', 'badges', 'annotations',
-      'isIntermediate', 'turnId', 'infoLevel',
+      'isIntermediate', 'turnId', 'objectiveOutcome', 'infoLevel',
       'errorCode', 'errorTitle', 'errorDetails', 'errorOriginal', 'errorCanRetry',
       'planPath',
       'authRequestId', 'authRequestType', 'authSourceSlug', 'authSourceName',
@@ -148,6 +161,8 @@ describe('messageToStored/storedToMessage round-trip', () => {
     expect(restored.toolInput).toEqual(original.toolInput)
     expect(restored.toolResult).toBe(original.toolResult)
     expect(restored.toolStatus).toBe(original.toolStatus)
+    expect(restored.toolExecuted).toBe(original.toolExecuted)
+    expect(restored.toolCheckpoint).toEqual(original.toolCheckpoint)
     expect(restored.toolDuration).toBe(original.toolDuration)
     expect(restored.toolIntent).toBe(original.toolIntent)
     expect(restored.toolDisplayName).toBe(original.toolDisplayName)
@@ -163,6 +178,7 @@ describe('messageToStored/storedToMessage round-trip', () => {
     expect(restored.annotations).toEqual(original.annotations)
     expect(restored.isIntermediate).toBe(original.isIntermediate)
     expect(restored.turnId).toBe(original.turnId)
+    expect(restored.objectiveOutcome).toEqual(original.objectiveOutcome)
     expect(restored.infoLevel).toBe(original.infoLevel)
     expect(restored.errorCode).toBe(original.errorCode)
     expect(restored.errorTitle).toBe(original.errorTitle)

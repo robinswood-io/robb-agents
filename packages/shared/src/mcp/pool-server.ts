@@ -32,8 +32,18 @@ import {
   toNodeHandler,
   type NodeMcpRequestHandler,
 } from '@modelcontextprotocol/node';
-import type { Tool } from '@modelcontextprotocol/client';
-import type { McpClientPool } from './mcp-pool.ts';
+import type { Tool, ToolAnnotations } from '@modelcontextprotocol/client';
+import type { McpClientPool, ProxyToolDef } from './mcp-pool.ts';
+
+function toToolAnnotations(def: ProxyToolDef): ToolAnnotations | undefined {
+  const annotations: ToolAnnotations = {
+    ...(def.readOnly !== undefined ? { readOnlyHint: def.readOnly } : {}),
+    ...(def.idempotent !== undefined ? { idempotentHint: def.idempotent } : {}),
+    ...(def.destructive !== undefined ? { destructiveHint: def.destructive } : {}),
+    ...(def.openWorld !== undefined ? { openWorldHint: def.openWorld } : {}),
+  };
+  return Object.keys(annotations).length > 0 ? annotations : undefined;
+}
 
 export class McpPoolServer {
   private pool: McpClientPool;
@@ -138,6 +148,8 @@ export class McpPoolServer {
           name: def.name.replace(/^mcp__/, ''),
           description: def.description,
           inputSchema: def.inputSchema as Tool['inputSchema'],
+          ...(def.outputSchema ? { outputSchema: def.outputSchema as Tool['outputSchema'] } : {}),
+          ...(toToolAnnotations(def) ? { annotations: toToolAnnotations(def) } : {}),
         })),
       };
     });
@@ -153,6 +165,7 @@ export class McpPoolServer {
       return {
         content: [{ type: 'text' as const, text: result.content }],
         ...(result.isError ? { isError: true } : {}),
+        ...(result.structuredContent ? { structuredContent: result.structuredContent } : {}),
       };
     });
 

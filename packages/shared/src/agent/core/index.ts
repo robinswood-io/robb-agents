@@ -119,6 +119,10 @@ export {
   // Centralized pipeline types
   type PreToolUseCheckResult,
   type PreToolUseInput,
+  type DeclaredToolCapabilities,
+  type ToolEffectDescriptor,
+  type BrowserChannelDirective,
+  classifyToolEffect,
   type PermissionManagerLike,
   type PrerequisiteManagerLike,
   // Constants
@@ -132,7 +136,12 @@ export {
   stripMcpMetadata, // deprecated alias for backwards compatibility
   validateConfigWrite,
   // Centralized pipeline
+  destroyContextualGmailSessionState,
+  canonicalTerminalReconciliationToolInput,
+  deriveTerminalReconciliationInvocationCapability,
+  TERMINAL_RECONCILIATION_CAPABILITY_FIELD,
   runPreToolUseChecks,
+  resolveBrowserChannelDirective,
   shouldPromptInAskMode,
 } from './pre-tool-use.ts';
 
@@ -154,13 +163,54 @@ export type { TaskToolIsolationInput } from './task-tool-isolation.ts';
 // High-stakes objective evidence gate
 export {
   beginObjectiveEvidenceGate,
+  classifyHighStakesEvidenceDomain,
+  detectHighStakesEvidenceDomain,
+  isConcreteOperationalSoftwareRestatement,
+  isDirectLegalDocumentMutation,
+  isExplicitNonMedicalOperationalTreatmentClarification,
+  isOperationalTechnicalContractLifecycleObjective,
+  stripExplicitNonMedicalOperationalTreatmentClarification,
   checkObjectiveEvidenceBeforeMutation,
   clearObjectiveEvidenceGate,
   getObjectiveEvidenceCompletionGap,
   isEvidenceAcquisitionTool,
+  parseIndependentReviewReceipt,
   recordObjectiveEvidence,
 } from './objective-evidence-gate.ts';
-export type { HighStakesEvidenceDomain, ObjectiveEvidenceGateState } from './objective-evidence-gate.ts';
+export type {
+  HighStakesEvidenceDomain,
+  IndependentReviewContext,
+  IndependentReviewReceipt,
+  ObjectiveEvidenceGateAuthority,
+  ObjectiveEvidenceGateState,
+} from './objective-evidence-gate.ts';
+export {
+  hasBoundedObjectiveShellSuccessMarker,
+  isObjectiveShellExecutorToolName,
+  isObjectiveShellEvidenceCommand,
+  isObjectiveShellObservationCommand,
+  isProvablyReadOnlyShellCommand,
+  isReadOnlyRegisteredShellObservation,
+  isRegisteredShellObservation,
+  objectiveShellExitZeroProvesSuccess,
+} from './registered-observation.ts';
+
+// Conservative semantics shared by permission and objective-outcome gates.
+export {
+  classifyToolNameMutationSemantics,
+  normalizeToolLeafName,
+  type ToolNameMutationSemantics,
+} from './tool-name-semantics.ts';
+
+export {
+  contextualGmailExactEffectExpectationFromObjective,
+  isStructuredGmailSendAuthorizedByObjective,
+  parseStructuredGmailSendResumeSegment,
+  structuredGmailSendAuthorizationDecision,
+  type ContextualGmailExactEffectExpectation,
+  type StructuredGmailSendAuthorizationDecision,
+  type StructuredGmailSendResumePayload,
+} from './sensitive-external-action.ts';
 
 // RTK detector
 export { getRtkPath, getRtkStatus, getRtkGain, resetRtkPathCache } from './rtk-detector.ts';

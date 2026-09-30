@@ -21,9 +21,18 @@ export type {
   SessionPersistentField,
   PendingTurnRecovery,
   ActiveSessionObjective,
+  SessionDelegation,
   SessionObjectiveTerminalState,
+  SessionObjectiveDeclaredState,
+  SessionObjectiveOutcomeDeclaration,
   ExternalActionAuthorization,
   ExternalActionAuthorizationCategory,
+  ContextCompactionOutcome,
+  ContextCompactionIssueCode,
+  ContextCompactionAttemptState,
+  MissionCapabilityLock,
+  MissionOrdinarySourceBinding,
+  MissionOrdinaryRouteLock,
 } from './types.ts';
 
 // Field constants
@@ -48,6 +57,8 @@ export {
   loadSession,
   listSessions,
   deleteSession,
+  deleteSessionAtomically,
+  purgeSessionDeletionQuarantine,
   clearSessionMessages,
   getOrCreateLatestSession,
   // Metadata updates
@@ -86,10 +97,16 @@ export {
   deletePlanFile,
   getMostRecentPlanFile,
   // Async persistence queue
+  assertSessionPersistenceRootIdentity,
+  captureSessionPersistenceRootIdentity,
+  captureSessionPersistenceRootPath,
+  SessionPersistenceRootIdentityError,
   sessionPersistenceQueue,
   // Header metadata signature (for self-triggered event suppression)
   getHeaderMetadataSignature,
 } from './storage.ts';
+
+export type { SessionPersistenceRootIdentity } from './storage.ts';
 
 // JSONL helpers (for direct access if needed)
 export {
@@ -100,7 +117,7 @@ export {
 } from './jsonl.ts';
 
 // Field utilities
-export { pickSessionFields } from './utils.ts';
+export { pickSessionFields, sanitizeContextCompactionAttemptState } from './utils.ts';
 
 // Slug generator utilities
 export {

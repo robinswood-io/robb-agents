@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 import type { SessionExecutionIsolation } from '../../tasks/durable-execution.ts';
-import { SESSION_PERSISTENT_FIELDS } from '../types.ts';
+import { SESSION_PERSISTENT_FIELDS, type MissionOrdinaryRouteLock } from '../types.ts';
 import { pickSessionFields } from '../utils.ts';
 
 describe('session persistence: execution ownership', () => {
@@ -18,9 +18,28 @@ describe('session persistence: execution ownership', () => {
         timeoutMs: 30_000,
       },
     };
+    const ordinaryRouteLock: MissionOrdinaryRouteLock = {
+      schemaVersion: 1,
+      routeDecisionSha256: '1'.repeat(64),
+      routeConfigIdentitySha256: '2'.repeat(64),
+      connectionIdentitySha256: '3'.repeat(64),
+      sourceIdentitySha256: '4'.repeat(64),
+      effectiveSourceBindings: [],
+      agentProfileId: 'worker',
+      connectionSlug: 'openai',
+      version: 1,
+      profile: 'balanced',
+      origin: 'mission',
+      model: 'gpt-test',
+      thinkingLevel: 'high',
+      measuredMissionUsd: 0,
+      effectiveSourceSlugs: ['docs'],
+      cwd: '/tmp/workspace',
+    };
 
     expect(SESSION_PERSISTENT_FIELDS).toContain('executionIsolation');
     expect(SESSION_PERSISTENT_FIELDS).toContain('missionDispatchId');
+    expect(SESSION_PERSISTENT_FIELDS).toContain('missionOrdinaryRouteLock');
     const picked = pickSessionFields({
       id: 'session-1',
       workspaceRootPath: '/tmp/workspace',
@@ -31,6 +50,7 @@ describe('session persistence: execution ownership', () => {
       missionWorkItemId: 'task-one',
       missionDispatchId: 'dispatch-one',
       missionRole: 'worker',
+      missionOrdinaryRouteLock: ordinaryRouteLock,
       ignoredRuntimeField: 'not-persisted',
     });
 
@@ -40,6 +60,7 @@ describe('session persistence: execution ownership', () => {
       missionWorkItemId: 'task-one',
       missionDispatchId: 'dispatch-one',
       missionRole: 'worker',
+      missionOrdinaryRouteLock: ordinaryRouteLock,
     });
     expect((picked as Record<string, unknown>).ignoredRuntimeField).toBeUndefined();
   });

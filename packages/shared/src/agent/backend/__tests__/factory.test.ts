@@ -342,6 +342,33 @@ describe('phase4 backend abstraction APIs', () => {
 });
 
 describe('resolveModelForProvider', () => {
+  const chatgpt = {
+    slug: 'chatgpt', providerType: 'pi', piAuthProvider: 'openai-codex',
+    defaultModel: 'pi/gpt-5.6-sol', models: ['pi/gpt-5.4', 'pi/gpt-5.6-sol', 'pi/gpt-5.4-mini'],
+  } as LlmConnection;
+
+  it.each(['gpt-5.4', 'pi/gpt-5.4', 'openai-codex/gpt-5.4', 'pi/gpt-5.4-mini', 'pi/openai-codex/gpt-5.4-mini'])(
+    'rejects an explicitly selected incompatible ChatGPT model %s without changing the connection', model => {
+      const before = JSON.stringify(chatgpt);
+      expect(() => resolveModelForProvider('pi', model, chatgpt)).toThrow('Choose another model');
+      expect(JSON.stringify(chatgpt)).toBe(before);
+    });
+
+  it('skips both a stale default and the stale first saved model', () => {
+    expect(resolveModelForProvider('pi', undefined, { ...chatgpt, defaultModel: 'pi/gpt-5.4' }))
+      .toBe('pi/gpt-5.6-sol');
+  });
+
+  it('does not fall through to an opaque SDK default when all configured models are retired', () => {
+    expect(() => resolveModelForProvider('pi', undefined, { ...chatgpt, defaultModel: 'pi/gpt-5.4', models: ['pi/gpt-5.4', 'pi/gpt-5.4-mini'] }))
+      .toThrow('No supported model');
+  });
+
+  it('preserves the same models with regular OpenAI API authentication', () => {
+    expect(resolveModelForProvider('pi', 'pi/gpt-5.4', { ...chatgpt, piAuthProvider: 'openai' })).toBe('pi/gpt-5.4');
+    expect(resolveModelForProvider('pi', 'pi/gpt-5.4-mini', { ...chatgpt, piAuthProvider: 'openai' })).toBe('pi/gpt-5.4-mini');
+  });
+
   it('rejects a model from another provider instead of selecting a fallback', () => {
     expect(() => resolveModelForProvider('pi', 'claude-sonnet-4-6', null)).toThrow('incompatible');
   });

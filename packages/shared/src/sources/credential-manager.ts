@@ -61,6 +61,7 @@ import {
 } from '../auth/generic-oauth.ts';
 import { debug } from '../utils/debug.ts';
 import { markSourceAuthenticated, loadSourceConfig, saveSourceConfig } from './storage.ts';
+import { randomUUID } from 'node:crypto';
 
 /**
  * Result of authentication attempt
@@ -135,7 +136,13 @@ export class SourceCredentialManager {
   async save(source: LoadedSource, credential: StoredCredential): Promise<void> {
     const credentialId = this.getCredentialId(source);
     const manager = getCredentialManager();
-    await manager.set(credentialId, credential);
+    await manager.set(credentialId, {
+      ...credential,
+      // Fresh authentication/pasted credentials omit bindingId and therefore
+      // rotate the non-secret authority identity. Refresh paths spread the
+      // stored credential and preserve it.
+      bindingId: credential.bindingId ?? randomUUID(),
+    });
     debug(`[SourceCredentialManager] Saved ${credentialId.type} for ${source.config.slug}`);
   }
 
@@ -146,12 +153,24 @@ export class SourceCredentialManager {
    * (credentials may have been stored via different auth modes)
    */
   async load(source: LoadedSource): Promise<StoredCredential | null> {
+    return (await this.loadWithIdentity(source))?.credential ?? null;
+  }
+
+  /**
+   * Load the effective credential together with the exact vault slot selected
+   * by host fallback rules. Specialized-profile capability sealing consumes
+   * only the opaque bindingId and slot, never credential material.
+   */
+  async loadWithIdentity(source: LoadedSource): Promise<{
+    credential: StoredCredential;
+    credentialId: CredentialId;
+  } | null> {
     const manager = getCredentialManager();
 
     // For MCP sources, try both OAuth and bearer credentials
     // (stdio transport doesn't need credentials)
     if (source.config.type === 'mcp' && source.config.mcp?.transport !== 'stdio' && source.config.mcp?.authType !== 'none') {
-      return this.loadMcpCredential(source);
+      return this.loadMcpCredentialWithIdentity(source);
     }
 
     // API sources with authType:'none' must never read the shared source_apikey
@@ -171,13 +190,13 @@ export class SourceCredentialManager {
       debug(`[SourceCredentialManager] Found ${credentialId.type} for ${source.config.slug}`);
     }
 
-    return cred;
+    return cred ? { credential: cred, credentialId } : null;
   }
 
-  /**
-   * Load MCP credential with fallback (OAuth -> bearer)
-   */
-  private async loadMcpCredential(source: LoadedSource): Promise<StoredCredential | null> {
+  private async loadMcpCredentialWithIdentity(source: LoadedSource): Promise<{
+    credential: StoredCredential;
+    credentialId: CredentialId;
+  } | null> {
     const manager = getCredentialManager();
     const baseId = {
       workspaceId: source.workspaceId,
@@ -185,17 +204,19 @@ export class SourceCredentialManager {
     };
 
     // Try OAuth first
-    const oauthCreds = await manager.get({ type: 'source_oauth', ...baseId });
+    const oauthId: CredentialId = { type: 'source_oauth', ...baseId };
+    const oauthCreds = await manager.get(oauthId);
     if (oauthCreds?.value) {
       debug(`[SourceCredentialManager] Found source_oauth for ${source.config.slug}`);
-      return oauthCreds;
+      return { credential: oauthCreds, credentialId: oauthId };
     }
 
     // Fall back to bearer
-    const bearerCreds = await manager.get({ type: 'source_bearer', ...baseId });
+    const bearerId: CredentialId = { type: 'source_bearer', ...baseId };
+    const bearerCreds = await manager.get(bearerId);
     if (bearerCreds?.value) {
       debug(`[SourceCredentialManager] Found source_bearer for ${source.config.slug}`);
-      return bearerCreds;
+      return { credential: bearerCreds, credentialId: bearerId };
     }
 
     debug(`[SourceCredentialManager] No credential found for MCP source ${source.config.slug}`);
@@ -250,7 +271,50 @@ export class SourceCredentialManager {
    * Get API credential for a source (handles basic auth and multi-header JSON parsing)
    */
   async getApiCredential(source: LoadedSource): Promise<ApiCredential | null> {
-    const cred = await this.load(source);
+    return this.parseApiCredential(source, await this.load(source));
+  }
+
+  /** Load and parse one exact credential generation without a second vault read. */
+  async getApiCredentialWithIdentity(source: LoadedSource): Promise<{
+    credential: ApiCredential;
+    bindingId?: string;
+  } | null> {
+    const bound = await this.loadWithIdentity(source);
+    const credential = this.parseApiCredential(source, bound?.credential ?? null);
+    if (credential === null) return null;
+    return {
+      credential,
+      ...(bound?.credential.bindingId ? { bindingId: bound.credential.bindingId } : {}),
+    };
+  }
+
+  /**
+   * Load one immutable runtime view from a single vault read. Governed Mission
+   * builders use this object for both identity verification and secret injection
+   * so a credential replacement cannot land between two reads.
+   */
+  async loadRuntimeCredentialSnapshot(source: LoadedSource): Promise<{
+    stored: StoredCredential | null;
+    credentialId: CredentialId | null;
+    bindingId?: string;
+    token: string | null;
+    apiCredential: ApiCredential | null;
+  }> {
+    const bound = await this.loadWithIdentity(source);
+    const stored = bound?.credential ?? null;
+    return {
+      stored,
+      credentialId: bound?.credentialId ?? null,
+      ...(stored?.bindingId ? { bindingId: stored.bindingId } : {}),
+      token: stored?.value && !this.isExpired(stored) ? stored.value : null,
+      apiCredential: this.parseApiCredential(source, stored),
+    };
+  }
+
+  private parseApiCredential(
+    source: LoadedSource,
+    cred: StoredCredential | null,
+  ): ApiCredential | null {
     // Check both API and MCP headerNames (same credential store pattern)
     const headerNames = source.config.api?.headerNames || source.config.mcp?.headerNames;
     debug(`[SourceCredentialManager] getApiCredential for ${source.config.slug}: cred.value exists=${!!cred?.value}, headerNames=${JSON.stringify(headerNames)}`);

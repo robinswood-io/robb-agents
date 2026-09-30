@@ -1,7 +1,19 @@
 import { describe, it, expect } from 'bun:test';
-import { getPiApiKeyProviders, getPiModelsForAuthProvider } from '../src/config/models-pi.ts';
+import { getAllPiModels, getPiApiKeyProviders, getPiModelsForAuthProvider } from '../src/config/models-pi.ts';
 
 describe('models-pi filtering', () => {
+  it('excludes GPT-5.4 and Mini from the ChatGPT SDK catalog while preserving API access', () => {
+    const codexIds = getPiModelsForAuthProvider('openai-codex').map(m => m.id);
+    const apiIds = getPiModelsForAuthProvider('openai').map(m => m.id);
+    const all = getAllPiModels();
+    for (const id of ['pi/gpt-5.4', 'pi/gpt-5.4-mini']) {
+      expect(codexIds).not.toContain(id);
+      expect(apiIds).toContain(id);
+      expect(all.some(m => m.id === id && m.description?.startsWith('openai-codex model'))).toBe(false);
+      expect(all.some(m => m.id === id && m.description?.startsWith('openai model'))).toBe(true);
+    }
+  });
+
   it('excludes codex-mini-latest for openai models', () => {
     const models = getPiModelsForAuthProvider('openai');
     const ids = models.map(m => m.id);
@@ -14,17 +26,30 @@ describe('models-pi filtering', () => {
     expect(ids.some(id => id.startsWith('pi/gpt-4'))).toBe(false);
   });
 
-  it('exposes GPT-6 Astra and GPT-5.6 for OpenAI API and ChatGPT account auth', () => {
+  it('exposes current GPT-6 models for OpenAI API and ChatGPT account auth', () => {
     for (const provider of ['openai', 'openai-codex']) {
       const models = getPiModelsForAuthProvider(provider);
       const ids = models.map(m => m.id);
-      expect(ids.slice(0, 4)).toEqual([
+      expect(ids.slice(0, 7)).toEqual([
+        'pi/gpt-6.1-sol',
         'pi/gpt-6-astra',
+        'pi/gpt-6-sol',
+        'pi/gpt-6-luna',
         'pi/gpt-5.6-sol',
         'pi/gpt-5.6-terra',
         'pi/gpt-5.6-luna',
       ]);
       expect(ids.filter(id => id === 'pi/gpt-6-astra')).toHaveLength(1);
+      for (const id of ['pi/gpt-6.1-sol', 'pi/gpt-6-sol', 'pi/gpt-6-luna']) {
+        expect(models.filter(model => model.id === id)).toEqual([
+          expect.objectContaining({
+            id,
+            contextWindow: 272_000,
+            supportsThinking: true,
+            supportsImages: true,
+          }),
+        ]);
+      }
       expect(models.find(model => model.id === 'pi/gpt-6-astra')).toMatchObject({
         name: 'GPT-6 Astra',
         shortName: 'Astra',
@@ -113,7 +138,7 @@ describe('models-pi filtering', () => {
     })]);
   });
 
-  it('exposes the Gemini models reported by the official Antigravity CLI', () => {
+  it('exposes the Gemini, Claude, and GPT models reported by the official Antigravity CLI', () => {
     const models = getPiModelsForAuthProvider('google-antigravity');
     const ids = models.map(model => model.id);
     expect(ids.slice(0, 3)).toEqual([
@@ -121,8 +146,16 @@ describe('models-pi filtering', () => {
       'pi/gemini-3.8-flash-medium',
       'pi/gemini-3.8-flash-low',
     ]);
+    expect(ids).toContain('pi/claude-sonnet-4-6');
+    expect(ids).toContain('pi/claude-opus-4-6-thinking');
+    expect(ids).toContain('pi/gpt-oss-120b-medium');
     expect(ids.some(id => id.startsWith('pi/gemini-3.5-flash-'))).toBe(false);
     expect(models.every(model => model.supportsImages === false)).toBe(true);
     expect(models.every(model => model.supportsThinking === false)).toBe(true);
+
+    const sonnet = models.find(m => m.id === 'pi/claude-sonnet-4-6');
+    expect(sonnet?.contextWindow).toBe(200_000);
+    const gptOss = models.find(m => m.id === 'pi/gpt-oss-120b-medium');
+    expect(gptOss?.contextWindow).toBe(131_072);
   });
 });

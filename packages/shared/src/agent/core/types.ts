@@ -96,6 +96,7 @@ export interface PromptBuilderConfig {
   isHeadless?: boolean;
   /** Workspace policy for confirmations around sensitive external actions. */
   externalActionPolicy?: 'confirm' | 'allow-in-execute';
+  getHumanInputAllowed?: () => boolean;
   /** Optional pre-resolved project snapshot for prompt injection (lets tests pin a value) */
   project?: import('../../projects/types.ts').ProjectPromptContext;
 }

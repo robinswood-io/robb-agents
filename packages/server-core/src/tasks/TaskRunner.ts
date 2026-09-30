@@ -12,14 +12,23 @@
  *   5. drives child `sessionStatus` + `kanbanColumn` so the board renders the live DAG,
  *   6. persists an append-only run-log under `tasks/<slug>/runs/<runId>/`.
  *
- * v1 executes `kind: 'session'` nodes wired by `depends_on` + `inputs`. Control-flow
- * kinds (route/loop/approval/…) parse but are not yet executed (P4).
+ * v1 executes `kind: 'session'`, `kind: 'judge'`, and `kind: 'verify'` nodes
+ * wired by `depends_on` + `inputs`; read-only review nodes stay Safe and
+ * isolated. Remaining control-flow kinds (route/loop/…) parse but are not yet
+ * executed (P4).
  *
  * The runner depends on a minimal `ConductorSessionHost` interface (which
  * SessionManager structurally satisfies) so it is unit-testable with a mock.
  */
-import type { CreateSessionOptions } from '@craft-agent/shared/protocol';
+import type {
+  CreateSessionOptions,
+  FileAttachment,
+  SendMessageOptions,
+} from '@craft-agent/shared/protocol';
+import type { StoredAttachment, TokenUsage } from '@craft-agent/core/types';
+import { createLogger } from '@craft-agent/shared/utils';
 import { createHash } from 'node:crypto';
+import { join } from 'node:path';
 import {
   operationValueHash,
   type ExecutionProofVerificationDecision,
@@ -33,8 +42,11 @@ import {
 } from '../subagents/autonomy-inheritance.ts';
 import {
   inferTaskNodeProfile,
+  isReadOnlyTaskReviewNode,
   taskNodeSpecialistPreamble,
   resolveTaskModelSettings,
+  type TaskNodeExecutionRoute,
+  type TaskNodeRouteContext,
   type TaskModelSettings,
 } from './task-node-execution';
 import {
@@ -58,6 +70,7 @@ import {
   listTaskSlugs,
   writeRunContextSnapshot,
   writeRunSpecSnapshot,
+  runDir,
   DEFAULT_REPAIR_ATTEMPTS,
   MAX_REPAIR_ATTEMPTS_CAP,
   DEFAULT_REFLECTION_MEMORY_ENTRIES,
@@ -71,6 +84,12 @@ import {
   type GuardDecision,
   type KillSwitchSnapshot,
 } from '@craft-agent/shared/tasks';
+import {
+  HOST_PARENT_REVIEW_INSTRUCTION,
+  prependHostDelegatedReviewerScope,
+} from '../sessions/delegated-review-outcome.ts';
+
+const taskRunnerLog = createLogger('task-runner');
 
 // ---------------------------------------------------------------------------
 // Host interface (SessionManager satisfies this structurally)
@@ -80,12 +99,34 @@ export interface ConductorSessionHost {
   /** Creates the child session AND announces it to the renderer (createSession emits
    *  session_created by default), so the subtask appears on the board with its real title. */
   createSession(workspaceId: string, options: CreateSessionOptions): Promise<{ id: string }>;
-  sendMessage(sessionId: string, message: string): Promise<void>;
+  sendMessage(
+    sessionId: string,
+    message: string,
+    attachments?: FileAttachment[],
+    storedAttachments?: StoredAttachment[],
+    options?: SendMessageOptions,
+  ): Promise<void>;
   setSessionStatus(sessionId: string, status: string): Promise<void>;
   setKanbanColumn(sessionId: string, column: string | null): Promise<void>;
   /** Records the total DAG node count on the orchestrator session for a stable board progress denominator. */
   setTaskNodeCount(sessionId: string, count: number): Promise<void>;
   cancelProcessing(sessionId: string, silent?: boolean): Promise<void>;
+  /** Stop a session and resolve only once the host has published it idle. */
+  cancelProcessingAndWait(sessionId: string, timeoutMs: number): Promise<SessionCompletionEvent>;
+  /** Discover durable reviewer envelopes, including one created just before a process crash. */
+  listTaskReviewerSessions(
+    workspaceId: string,
+    taskSlug: string,
+    taskRunId: string,
+    parentSessionId: string,
+  ): Array<{ id: string; isProcessing: boolean; tokenUsage?: TokenUsage; finalText?: string }>;
+  /** Discover host-persisted worker envelopes, including a child created just
+   * before the runner could append node-spawned. */
+  listTaskWorkerSessions(
+    workspaceId: string,
+    taskSlug: string,
+    taskRunId: string,
+  ): Array<{ id: string; isProcessing: boolean; tokenUsage?: TokenUsage; finalText?: string }>;
   onSessionComplete(listener: (evt: SessionCompletionEvent) => void): () => void;
   getSessionFinalText(sessionId: string): string | undefined;
   /** Resolved working directory of a session, so children inherit the orchestrator's cwd. */
@@ -116,6 +157,10 @@ export interface TaskRunnerDeps {
   executionGuard?: (context: TaskExecutionGuardContext) => GuardDecision | Promise<GuardDecision>;
   /** Read only the explicit parent/workspace model settings; retries reuse their saved values. */
   getModelDefaults?: (parentSessionId?: string, selectedConnectionSlug?: string) => TaskModelSettings | Promise<TaskModelSettings>;
+  /** Private policy-aware adaptive route. Explicit node/task settings remain authoritative. */
+  resolveNodeRoute?: (
+    context: TaskNodeRouteContext,
+  ) => TaskNodeExecutionRoute | Promise<TaskNodeExecutionRoute>;
   /** Bounded fallback retry used when neither the node nor task defaults declare one. */
   defaultRetry?: TaskRetryPolicy;
   /** Authoritative verification seam for provider-reconciled external mutations. */
@@ -154,18 +199,20 @@ export interface TaskExecutionGuardContext {
   permissionMode: 'safe' | 'ask' | 'allow-all';
   /** Deliberate Execute + allow-in-execute inheritance; never inferred from the task spec alone. */
   fullAutonomyInherited: boolean;
+  /** Host-authenticated judge/verifier role whose read effect must remain Safe and isolated. */
+  reviewOnly: boolean;
   /** True when the spec explicitly requested host CPU or memory isolation. */
   resourceLimitsExplicit: boolean;
 }
 
 export interface RunOptions {
-  /** The task's persistent parent/orchestrator session (author + final verifier). */
+  /** The task's persistent parent/orchestrator session (reviewers are separate children). */
   orchestratorSessionId?: string;
   /** Resolved task param values (merged over the spec's declared defaults). */
   params?: Record<string, unknown>;
   /** Explicit run id (otherwise generated). */
   runId?: string;
-  /** When the run completes, message the orchestrator to verify the result. Default true. */
+  /** When the run completes, launch an independent reviewer child. Default true. */
   verifyOnComplete?: boolean;
   /** Confirmed outputs copied from an earlier run before scheduling a targeted repair. */
   replay?: {
@@ -176,6 +223,15 @@ export interface RunOptions {
 }
 
 export type RunStatus = 'running' | 'paused' | 'waiting-approval' | 'verifying' | 'stopped' | 'completed' | 'failed';
+
+interface TerminalIntent {
+  target: 'failed' | 'stopped';
+  cause: 'budget' | 'deadline' | 'kill-switch' | 'operator' | 'timeout' | 'recovery' | 'reviewer';
+  sessionIds: string[];
+  reviewerSessionIds: string[];
+  reason?: string;
+  scope?: 'global' | 'workspace' | 'mission';
+}
 
 export interface NodeRunStatus {
   id: string;
@@ -227,9 +283,28 @@ const DONE_STATUS = 'done';
 // is derived from the run-log, not from a session status.
 const FAILED_STATUS = 'needs-review';
 
-// A malformed verdict (no parseable VERDICT line) is re-asked this many times before we give up and
-// fail the run. These re-asks are format-only — they do NOT consume the repair (max_iterations) budget.
+// A malformed reviewer result is re-asked this many times before we give up and fail the run.
+// These re-asks are format-only — they do NOT consume the repair (max_iterations) budget.
 const MAX_UNPARSED_REASKS = 2;
+const MAX_REVIEW_NODE_OUTPUT_CHARS = 12_000;
+const MAX_REVIEW_EVIDENCE_CHARS = 48_000;
+const MAX_REVIEW_RUBRIC_CHARS = 12_000;
+// Match SessionManager's host-review-v2 receipt bounds exactly. A receipt the
+// host accepts must not be rejected by TaskRunner and trigger an impossible
+// second terminal turn on the same reviewer objective.
+const MAX_REVIEW_RESULT_CHARS = 32_000;
+const MAX_REVIEW_REASON_CHARS = 4_000;
+const MAX_REVIEW_NODES = 64;
+const MAX_HOST_REVIEW_CRITERIA = 32;
+const REVIEWER_RETIRE_TIMEOUT_MS = 7_500;
+const MAX_TIMER_DELAY_MS = 2_147_483_647;
+const PAUSE_RETIRE_RETRY_BASE_MS = 100;
+const PAUSE_RETIRE_RETRY_MAX_MS = 5_000;
+const TERMINAL_RETIRE_RETRY_BASE_MS = 100;
+const TERMINAL_RETIRE_RETRY_MAX_MS = 5_000;
+const REVIEWER_NODE_ID = '__verdict__';
+const REVIEW_EVIDENCE_CRITERION_ID = 'task-evidence';
+const REVIEW_OUTCOME_CRITERION_ID = 'task-outcome';
 
 const INPUTS_REF_RE = /\$\{\s*inputs\.([a-zA-Z_][a-zA-Z0-9_]*)\s*\}/g;
 
@@ -256,6 +331,37 @@ interface RepairReflection {
   outputFingerprint: string;
 }
 
+interface ReviewerVerdict {
+  result: 'pass' | 'fail' | 'unparsed';
+  reason?: string;
+  nodes?: string[];
+}
+
+type UsageIssue =
+  | { metric: 'tokens' | 'cost'; value: number; limit: number }
+  | { metric: 'invalid'; reason: string };
+
+interface ReviewerContract {
+  objectiveId: string;
+  acceptanceSha256: string;
+  criteria: string[];
+  /** Receipt criterion id → Task node id. Missing entries are run-level criteria. */
+  nodeByCriterion: ReadonlyMap<string, string>;
+  evidenceFingerprint: string;
+  evidenceText: string;
+  targetPath: string;
+}
+
+class ReviewerRetirementError extends AggregateError {
+  constructor(
+    readonly sessionIds: string[],
+    errors: Error[],
+  ) {
+    super(errors, 'One or more reviewer sessions could not be retired');
+    this.name = 'ReviewerRetirementError';
+  }
+}
+
 // ---------------------------------------------------------------------------
 // ActiveRun — a single run's state machine
 // ---------------------------------------------------------------------------
@@ -273,15 +379,59 @@ class ActiveRun {
   private readonly sessionTokens = new Map<string, number>();
   /** Last observed cumulative USD cost per child session — for delta accounting. */
   private readonly sessionCosts = new Map<string, number>();
+  private readonly invalidUsageSessions = new Set<string>();
   private readonly nodeTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
+  /** A timed-out attempt remains a terminality barrier until the host proves
+   * that exact child idle or a durable whole-run drain takes ownership. */
+  private readonly timeoutRetirements = new Set<string>();
   private readonly retryTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
+  /** Session creations are tracked until their returned identity is durably
+   * logged, so terminal drainage cannot miss a concurrently-created child. */
+  private readonly activeCreations = new Set<Promise<{ id: string }>>();
   private deadlineTimeout?: ReturnType<typeof setTimeout>;
   private readonly approvedNodes = new Set<string>();
   private readonly pendingApprovals = new Map<string, PendingTaskApproval>();
   private runStatus: RunStatus = 'running';
   private unsubscribe?: () => void;
-  /** Detaches the one-shot orchestrator-verdict listener while a run is `verifying`. */
+  /** Detaches the one-shot independent-reviewer listener while a run is `verifying`. */
   private verdictOff?: () => void;
+  /** Exact reviewer identity is persisted alongside its bounded response. */
+  private reviewerSessionId?: string;
+  /** Every discovered reviewer candidate remains durable until strong
+   * retirement succeeds. This also covers create-before-output crash windows. */
+  private readonly pendingReviewerSessionIds = new Set<string>();
+  private reviewerPending = false;
+  private reviewerTimeout?: ReturnType<typeof setTimeout>;
+  private reviewerContract?: ReviewerContract;
+  /** Serializes format-only follow-ups behind the provider turn whose
+   * completion callback requested them. SessionManager emits completion before
+   * its send transaction promise has fully unwound. */
+  private reviewerSend?: Promise<void>;
+  /** A terminal reviewer failure is not published until the child is proven
+   * idle and its final cumulative usage has been accounted. */
+  private reviewerFailure?: Promise<void>;
+  /** Durable terminal intent plus the exact worker identities that must be
+   * proven idle before a failed/stopped state can be published. */
+  private terminalIntent?: TerminalIntent;
+  /** The in-process strong-retirement barrier. A rejected barrier remains
+   * retryable from stop() and from crash recovery via terminalIntent. */
+  private terminalDrain?: Promise<void>;
+  private terminalRetirementAttempts = 0;
+  private terminalRetryTimeout?: ReturnType<typeof setTimeout>;
+  /** Pause uses the same strong worker fence but remains non-terminal. Resume is
+   * deferred until this barrier succeeds, preventing duplicate live attempts. */
+  private pauseDrain?: Promise<void>;
+  private pauseDrainRequired = false;
+  private pauseRetirementAttempts = 0;
+  private pauseRetryTimeout?: ReturnType<typeof setTimeout>;
+  private hydrationWorkerDrain?: Promise<void>;
+  private pausedSessionIds: string[] = [];
+  private resumeRequested = false;
+  /** An `invalid` persisted result is a failed/format-only attempt, never a
+   * late receipt that recovery may promote to an accepted verdict. */
+  private recoveredReviewerResultReusable = true;
+  /** Invalidates async reviewer callbacks after stop, restart, or finalization. */
+  private verificationGeneration = 0;
   /** FAIL verdicts that have triggered a repair pass (bounded by `maxRepairs`). */
   private repairsUsed = 0;
   /** Malformed-verdict re-asks issued (bounded by MAX_UNPARSED_REASKS); not a repair. */
@@ -355,11 +505,17 @@ class ActiveRun {
     this.runStatus = 'running';
     // Move the task tile to the in-progress column for the duration of the run.
     if (this.opts.orchestratorSessionId) {
-      void this.deps.host.setKanbanColumn(this.opts.orchestratorSessionId, 'in-progress');
-      void this.deps.host.setSessionStatus(this.opts.orchestratorSessionId, RUNNING_STATUS);
+      this.bestEffortHostMetadata('mark orchestrator column in-progress', this.opts.orchestratorSessionId, () => (
+        this.deps.host.setKanbanColumn(this.opts.orchestratorSessionId!, 'in-progress')
+      ));
+      this.bestEffortHostMetadata('mark orchestrator session in-progress', this.opts.orchestratorSessionId, () => (
+        this.deps.host.setSessionStatus(this.opts.orchestratorSessionId!, RUNNING_STATUS)
+      ));
       // Publish the full node count up front so the board's subtask progress denominator is stable,
       // rather than growing as children are spawned lazily at dispatch.
-      void this.deps.host.setTaskNodeCount(this.opts.orchestratorSessionId, this.spec.nodes.length);
+      this.bestEffortHostMetadata('publish orchestrator task-node count', this.opts.orchestratorSessionId, () => (
+        this.deps.host.setTaskNodeCount(this.opts.orchestratorSessionId!, this.spec.nodes.length)
+      ));
     }
     if (this.deadlineExpired()) {
       this.failForDeadline();
@@ -372,6 +528,7 @@ class ActiveRun {
   pause(): void {
     if (this.runStatus !== 'running') return;
     this.runStatus = 'paused';
+    this.resumeRequested = false;
     this.log({ kind: 'run-paused' });
     for (const [nodeId, st] of this.state) {
       if (st.state !== 'running') continue;
@@ -389,16 +546,35 @@ class ActiveRun {
         state: st.state,
         reason: st.lastFailure,
       });
-      if (st.sessionId) {
-        void this.deps.host.cancelProcessing(st.sessionId, true);
-        void this.deps.host.setKanbanColumn(st.sessionId, 'todo');
-      }
     }
     this.inFlight = 0;
+    this.pausedSessionIds = this.terminalSessionIds();
+    this.pauseDrainRequired = this.pausedSessionIds.length > 0 || this.activeCreations.size > 0;
+    if (this.pauseDrainRequired) {
+      this.log({ kind: 'run-pause-draining', sessionIds: [...this.pausedSessionIds] });
+    }
+    this.beginPauseDrain();
   }
 
   resume(): void {
     if (this.runStatus !== 'paused') return;
+    this.resumeRequested = true;
+    if (this.pauseDrain || this.pausedSessionIds.length > 0) {
+      const drain = this.beginPauseDrain();
+      void drain.then(
+        () => this.resumeAfterPauseDrain(),
+        () => { /* Remain paused; a later resume retries the durable identities. */ },
+      ).catch((error) => {
+        this.failForUnexpectedAsyncError('resume after pause drain', error);
+      });
+      return;
+    }
+    this.resumeAfterPauseDrain();
+  }
+
+  private resumeAfterPauseDrain(): void {
+    if (this.runStatus !== 'paused' || !this.resumeRequested) return;
+    this.resumeRequested = false;
     // Cancelled nodes return to pending so they re-dispatch. Nodes that exhausted their `retry`
     // budget stay 'failed' — automatic retry happens in failNode within the run, not on resume.
     for (const [, st] of this.state) if (st.state === 'cancelled') st.state = 'pending';
@@ -436,6 +612,9 @@ class ActiveRun {
             ...(e.connectionSlug ? { llmConnection: e.connectionSlug } : {}),
             ...(e.model ? { model: e.model } : {}),
             ...(e.thinkingLevel ? { thinkingLevel: e.thinkingLevel } : {}),
+            ...(e.connectionRoutePinned ? { connectionRoutePinned: true } : {}),
+            ...(e.modelRoutePinned ? { modelRoutePinned: true } : {}),
+            ...(e.thinkingLevelPinned ? { thinkingLevelPinned: true } : {}),
           };
         }
       } else if (e.kind === 'node-scheduled') {
@@ -524,8 +703,41 @@ class ActiveRun {
       } else if (e.kind === 'usage-updated') {
         this.tokensUsed = e.tokensUsed;
         this.costUsed = e.costUsed ?? this.costUsed;
+        if (e.sourceSessionId) {
+          if (Number.isFinite(e.cumulativeTokens) && e.cumulativeTokens! >= 0) {
+            this.sessionTokens.set(
+              e.sourceSessionId,
+              Math.max(this.sessionTokens.get(e.sourceSessionId) ?? 0, e.cumulativeTokens!),
+            );
+          }
+          if (Number.isFinite(e.cumulativeCostUsd) && e.cumulativeCostUsd! >= 0) {
+            this.sessionCosts.set(
+              e.sourceSessionId,
+              Math.max(this.sessionCosts.get(e.sourceSessionId) ?? 0, e.cumulativeCostUsd!),
+            );
+          }
+        }
       } else if (e.kind === 'run-paused') {
         persistedStatus = 'paused';
+      } else if (e.kind === 'run-pause-draining') {
+        persistedStatus = 'paused';
+        this.pauseDrainRequired = true;
+        this.pausedSessionIds = [...new Set(e.sessionIds)];
+      } else if (e.kind === 'run-pause-drained') {
+        this.pauseDrainRequired = false;
+        this.pausedSessionIds = [];
+      } else if (e.kind === 'run-draining') {
+        this.terminalIntent = {
+          target: e.target,
+          cause: e.cause,
+          sessionIds: [...e.sessionIds],
+          reviewerSessionIds: [...(e.reviewerSessionIds ?? [])],
+          ...(e.reason ? { reason: e.reason } : {}),
+          ...(e.scope ? { scope: e.scope } : {}),
+        };
+        for (const sessionId of e.reviewerSessionIds ?? []) {
+          this.pendingReviewerSessionIds.add(sessionId);
+        }
       } else if (e.kind === 'run-resumed' || e.kind === 'run-started') {
         persistedStatus = 'running';
       } else if (e.kind === 'run-verifying') {
@@ -571,7 +783,44 @@ class ActiveRun {
       st.state = 'waiting-approval';
       this.pendingApprovals.set(approval.requestId, approval);
     }
+    // Preserve the exact reviewer across every crash window, including after
+    // its bounded output changed from pending but before run-completed was
+    // appended. Recovery must retire/reconcile that child before creating a
+    // fresh reviewer.
+    const persistedReviewer = loadOutput('__verdict__');
+    const reviewerParams = persistedReviewer?.params;
+    const persistedReviewerSessionIds = Array.isArray(reviewerParams?.reviewerSessionIds)
+      ? reviewerParams.reviewerSessionIds.filter((value): value is string => typeof value === 'string')
+      : [];
+    if (persistedStatus === 'verifying' || this.terminalIntent) {
+      for (const sessionId of persistedReviewerSessionIds) {
+        this.pendingReviewerSessionIds.add(sessionId);
+      }
+    }
+    if (
+      persistedStatus === 'verifying'
+      && (typeof reviewerParams?.reviewerSessionId === 'string'
+        || persistedReviewerSessionIds.length > 0)
+    ) {
+      this.reviewerSessionId = typeof reviewerParams?.reviewerSessionId === 'string'
+        ? reviewerParams.reviewerSessionId
+        : persistedReviewerSessionIds[0];
+      if (this.reviewerSessionId) this.pendingReviewerSessionIds.add(this.reviewerSessionId);
+      this.reviewerPending = true;
+      this.recoveredReviewerResultReusable = reviewerParams?.reviewerState !== 'invalid';
+    }
     this.runStatus = this.pendingApprovals.size > 0 ? 'waiting-approval' : persistedStatus;
+    if (persistedStatus === 'paused' && !this.pauseDrainRequired) {
+      // A crash may occur after run-paused/node-finished but before the strong
+      // pause intent was appended. Legacy logs have no explicit drain marker,
+      // so reconstruct exact durable identities conservatively.
+      this.pausedSessionIds = [...new Set(
+        [...this.state.values()]
+          .filter((state) => state.state !== 'done' && state.state !== 'skipped')
+          .flatMap((state) => state.sessionId ? [state.sessionId] : []),
+      )];
+      this.pauseDrainRequired = this.pausedSessionIds.length > 0;
+    }
     this.inFlight = 0;
   }
 
@@ -584,9 +833,82 @@ class ActiveRun {
     this.unsubscribe = this.deps.host.onSessionComplete((evt) => this.onSessionComplete(evt));
     if (this.pendingApprovals.size > 0) {
       this.runStatus = 'waiting-approval';
+    }
+    if (this.terminalIntent) {
+      this.markRunningNodesCancelled(this.terminalIntent.reason ?? 'terminal retirement resumed');
+      this.beginTerminalDrain();
+      return;
+    }
+    const killSwitch = this.currentKillSwitch();
+    if (!killSwitch.allowed) {
+      this.stopForKillSwitch(killSwitch.reason ?? 'Execution stopped by kill switch');
+      return;
+    }
+    if (this.pendingApprovals.size > 0) return;
+    if (this.runStatus === 'paused') {
+      const discoveredWorkers = this.deps.host.listTaskWorkerSessions(
+        this.deps.workspaceId,
+        this.slug,
+        this.runId,
+      ).map((session) => session.id);
+      const merged = [...new Set([...this.pausedSessionIds, ...discoveredWorkers])];
+      if (merged.length > 0) {
+        this.pausedSessionIds = merged;
+        this.pauseDrainRequired = true;
+        this.log({ kind: 'run-pause-draining', sessionIds: merged });
+      }
+    }
+    if (this.runStatus === 'paused' && this.pauseDrainRequired) {
+      this.resumeRequested = shouldResume;
+      const drain = this.beginPauseDrain();
+      if (shouldResume) {
+        void drain.then(
+          () => this.resumeAfterPauseDrain(),
+          () => { /* Stay paused; a later explicit resume retries. */ },
+        ).catch((error) => {
+          this.failForUnexpectedAsyncError('resume hydrated pause drain', error);
+        });
+      }
       return;
     }
     if (!shouldResume) return;
+    const recoveredWorkers = this.deps.host.listTaskWorkerSessions(
+      this.deps.workspaceId,
+      this.slug,
+      this.runId,
+    ).map((session) => session.id);
+    if (recoveredWorkers.length > 0) {
+      const drain = this.resumeAfterRecoveredWorkerDrain(recoveredWorkers);
+      this.hydrationWorkerDrain = drain;
+      void drain.then(
+        () => {
+          if (this.hydrationWorkerDrain === drain) this.hydrationWorkerDrain = undefined;
+        },
+        () => {
+          if (this.hydrationWorkerDrain === drain) this.hydrationWorkerDrain = undefined;
+        },
+      ).catch((error) => {
+        this.failForUnexpectedAsyncError('hydrate recovered worker drain bookkeeping', error);
+      });
+      return;
+    }
+    this.continueHydratedResume();
+  }
+
+  private async resumeAfterRecoveredWorkerDrain(sessionIds: string[]): Promise<void> {
+    const errors = await this.retireWorkerSessions(sessionIds);
+    if (errors.length > 0) {
+      const reason = `recovered worker retirement failed: ${errors.map((error) => error.message).join('; ')}`;
+      this.setTerminalIntent({ target: 'failed', cause: 'recovery', reason });
+      this.markRunningNodesCancelled(reason);
+      this.beginTerminalDrain();
+      return;
+    }
+    this.continueHydratedResume();
+  }
+
+  private continueHydratedResume(): void {
+    if (this.settled || this.terminalIntent || this.isTerminal()) return;
     if (this.deadlineExpired()) {
       this.failForDeadline();
       return;
@@ -603,25 +925,37 @@ class ActiveRun {
   }
 
   async stop(): Promise<void> {
-    if (this.isTerminal()) return;
-    this.runStatus = 'stopped';
-    this.log({ kind: 'run-stopped' });
-    for (const [nodeId, st] of this.state) {
-      if (st.state === 'waiting-approval') {
-        st.state = 'cancelled';
-        this.log({ kind: 'node-finished', nodeId, sessionId: '', state: 'cancelled', reason: 'stopped before approval' });
-      } else if (st.state === 'running') {
-        this.clearNodeTimeout(nodeId);
-        st.state = 'cancelled';
-        this.log({ kind: 'node-finished', nodeId, sessionId: st.sessionId ?? '', state: 'cancelled', reason: 'stopped' });
-        if (st.sessionId) {
-          void this.deps.host.cancelProcessing(st.sessionId, true);
-          void this.deps.host.setKanbanColumn(st.sessionId, 'todo');
-        }
-      }
+    if (this.settled || (this.isTerminal() && this.runStatus !== 'stopped')) return;
+    if (this.reviewerFailure) {
+      try { await this.reviewerFailure; } catch { /* durable terminal intent is retried below */ }
+      if (this.settled) return;
     }
-    this.inFlight = 0;
-    this.finalize();
+    if (this.pauseDrain) {
+      try { await this.pauseDrain; } catch { /* terminal drain retries below */ }
+      if (this.settled) return;
+    }
+    if (this.hydrationWorkerDrain) {
+      try { await this.hydrationWorkerDrain; } catch { /* terminal drain retries below */ }
+      if (this.settled) return;
+    }
+    if (this.terminalDrain) {
+      try {
+        await this.terminalDrain;
+      } catch {
+        // The explicit stop below retries every durable identity.
+      }
+      if (this.settled) return;
+    }
+    // A failed durable drain is retried with its original terminal target and
+    // cause. An operator Stop must not rewrite a budget/deadline/timeout
+    // failure into a benign stopped result.
+    if (this.terminalIntent) {
+      await this.beginTerminalDrain();
+      return;
+    }
+    this.setTerminalIntent({ target: 'stopped', cause: 'operator', reason: 'stopped' });
+    this.markRunningNodesCancelled('stopped');
+    await this.beginTerminalDrain();
   }
 
   waitUntilSettled(): Promise<RunSnapshot> {
@@ -647,7 +981,7 @@ class ActiveRun {
 
   /** Apply a newly published kill switch immediately to this active run. */
   enforceKillSwitch(): boolean {
-    if (this.isTerminal()) return false;
+    if (this.isTerminal() || this.terminalIntent) return false;
     const decision = this.currentKillSwitch();
     if (decision.allowed) return false;
     this.stopForKillSwitch(decision.reason ?? 'Execution stopped by kill switch');
@@ -657,7 +991,7 @@ class ActiveRun {
   // --- scheduling ---
 
   private scheduleReady(): void {
-    if (this.runStatus !== 'running') return;
+    if (this.runStatus !== 'running' || this.terminalIntent || this.terminalDrain) return;
     if (this.deadlineExpired()) {
       this.failForDeadline();
       return;
@@ -684,7 +1018,9 @@ class ActiveRun {
         continue;
       }
       this.markRunning(node);
-      void this.dispatch(node);
+      void this.dispatch(node).catch((error) => {
+        this.failForUnexpectedAsyncError(`dispatch ${node.id}`, error);
+      });
     }
     this.maybeFinish();
   }
@@ -835,11 +1171,13 @@ class ActiveRun {
         }
       }
       const requestedPermissionMode = node.permissionMode ?? this.spec.defaults?.permissionMode;
+      const reviewOnly = isReadOnlyTaskReviewNode(node);
       const autonomy = resolveSubagentAutonomy({
         ...(this.deps.resolveSubagentAutonomyContext?.(this.opts.orchestratorSessionId) ?? {}),
         requestedPermissionMode,
       });
-      const permissionMode = autonomy.permissionMode;
+      const permissionMode = reviewOnly ? 'safe' : autonomy.permissionMode;
+      const fullAutonomyInherited = !reviewOnly && autonomy.grantsFullToolAndNetworkAccess;
       const sessionPolicy: ExecutionIsolationPolicy = {
         ...policy,
         allowedReadPaths: [...policy.allowedReadPaths],
@@ -853,10 +1191,11 @@ class ActiveRun {
         nodeId: node.id,
         idempotencyKey,
         workingDirectory: cwd,
-        policy,
+        policy: sessionPolicy,
         effect: node.effect,
         permissionMode,
-        fullAutonomyInherited: autonomy.grantsFullToolAndNetworkAccess,
+        fullAutonomyInherited,
+        reviewOnly,
         resourceLimitsExplicit:
           this.spec.execution?.max_cpu_percent !== undefined ||
           this.spec.execution?.max_memory_mb !== undefined,
@@ -872,27 +1211,98 @@ class ActiveRun {
         );
         return;
       }
-      const profile = inferTaskNodeProfile(node);
-      const settings = st.lastRoute ?? resolveTaskModelSettings(node, this.spec,
-        await this.deps.getModelDefaults?.(this.opts.orchestratorSessionId, node.llmConnection ?? this.spec.defaults?.llmConnection));
+      // Resolve interpolation before routing. Classifying the template could
+      // otherwise miss sensitive work supplied through ${inputs.*}. Recovery
+      // evidence stays in dispatchText and cannot impersonate user authority.
+      const resolvedPrompt = await this.buildPrompt(node);
       if (!stillActive()) return;
-      st.lastRoute = { ...settings };
+      const routingNode = { ...node, prompt: resolvedPrompt.routingText };
+
+      // Re-read the current human/workspace defaults on every attempt so
+      // switching automatic routing OFF takes effect immediately. Preserve
+      // only authenticated pins from the durable prior route; an unpinned
+      // automatic choice is history (`previousRoute`), never a new default.
+      const pinnedPreviousConnection = st.lastRoute?.connectionRoutePinned
+        && st.lastRoute.llmConnection
+        ? st.lastRoute.llmConnection
+        : undefined;
+      const selectedConnectionSlug = node.llmConnection
+        ?? this.spec.defaults?.llmConnection
+        ?? pinnedPreviousConnection;
+      const currentDefaults = await this.deps.getModelDefaults?.(
+        this.opts.orchestratorSessionId,
+        selectedConnectionSlug,
+      );
+      if (!stillActive()) return;
+      // A model default is provider-scoped. A stale/default resolver response
+      // for connection B must never be combined with the durable pin for A.
+      const compatibleCurrentDefaults = pinnedPreviousConnection
+        && currentDefaults?.llmConnection !== pinnedPreviousConnection
+        ? (({ model: _model, modelRoutePinned: _modelRoutePinned, ...compatible }) => compatible)(
+            currentDefaults ?? {},
+          )
+        : currentDefaults;
+      const pinnedPreviousDefaults: TaskModelSettings = {
+        ...(pinnedPreviousConnection
+          ? { llmConnection: pinnedPreviousConnection, connectionRoutePinned: true }
+          : {}),
+        ...(st.lastRoute?.modelRoutePinned && st.lastRoute.model
+          ? { model: st.lastRoute.model, modelRoutePinned: true }
+          : {}),
+        ...(st.lastRoute?.thinkingLevelPinned && st.lastRoute.thinkingLevel
+          ? { thinkingLevel: st.lastRoute.thinkingLevel, thinkingLevelPinned: true }
+          : {}),
+      };
+      const defaults = { ...compatibleCurrentDefaults, ...pinnedPreviousDefaults };
+      const inferredProfile = inferTaskNodeProfile(routingNode, st.attempt);
+      const explicitSettings = resolveTaskModelSettings(node, this.spec, defaults);
+      const route: TaskNodeExecutionRoute = this.deps.resolveNodeRoute
+        ? await this.deps.resolveNodeRoute({
+            node: routingNode,
+            spec: this.spec,
+            attempt: st.attempt,
+            lastFailure: st.lastFailure,
+            defaults,
+            previousRoute: st.lastRoute,
+          })
+        : {
+            profile: inferredProfile,
+            ...explicitSettings,
+            thinkingLevel: explicitSettings.thinkingLevel ?? 'medium',
+            strategy: 'pinned' as const,
+          };
+      if (!stillActive()) return;
+      if (route.blockedReason) {
+        this.failNode(node.id, `model routing blocked node: ${route.blockedReason}`, undefined, false, 'invalid');
+        return;
+      }
+      st.lastRoute = {
+        ...(route.llmConnection ? { llmConnection: route.llmConnection } : {}),
+        ...(route.model ? { model: route.model } : {}),
+        ...(route.thinkingLevel ? { thinkingLevel: route.thinkingLevel } : {}),
+        ...(route.connectionRoutePinned ? { connectionRoutePinned: true } : {}),
+        ...(route.modelRoutePinned ? { modelRoutePinned: true } : {}),
+        ...(route.thinkingLevelPinned ? { thinkingLevelPinned: true } : {}),
+      };
       this.log({
         kind: 'node-routed',
         nodeId: node.id,
         attempt: st.attempt,
-        ...(settings.llmConnection ? { connectionSlug: settings.llmConnection } : {}),
-        ...(settings.model ? { model: settings.model } : {}),
-        ...(settings.thinkingLevel ? { thinkingLevel: settings.thinkingLevel } : {}),
-        strategy: 'pinned',
+        ...(route.llmConnection ? { connectionSlug: route.llmConnection } : {}),
+        ...(route.model ? { model: route.model } : {}),
+        ...(route.thinkingLevel ? { thinkingLevel: route.thinkingLevel } : {}),
+        ...(route.connectionRoutePinned ? { connectionRoutePinned: true } : {}),
+        ...(route.modelRoutePinned ? { modelRoutePinned: true } : {}),
+        ...(route.thinkingLevelPinned ? { thinkingLevelPinned: true } : {}),
+        strategy: route.strategy,
       });
       const prompt =
         skillsPreamble(this.spec.skills) +
-        (autonomy.grantsFullToolAndNetworkAccess
+        (fullAutonomyInherited
           ? inheritedAutonomyPreamble(idempotencyKey)
           : executionPreamble(sessionPolicy, idempotencyKey)) +
-        taskNodeSpecialistPreamble(profile, st.attempt) +
-        (await this.buildPrompt(node));
+        taskNodeSpecialistPreamble(route.profile, st.attempt) +
+        resolvedPrompt.dispatchText;
       if (!stillActive()) return;
       const options: CreateSessionOptions = {
         parentSessionId: this.opts.orchestratorSessionId,
@@ -901,21 +1311,30 @@ class ActiveRun {
         taskSlug: this.slug,
         taskRunId: this.runId,
         taskNodeId: node.id,
+        // Persist the host-authenticated specialist role so every later turn
+        // (including crash recovery) retains the reviewer routing and Safe
+        // execution contract instead of being reclassified as ordinary work.
+        ...(isReadOnlyTaskReviewNode(node) ? { missionRole: 'reviewer' as const } : {}),
         // A fully opted-in Execute child uses the ordinary session tool surface:
         // shell, browser, active MCP sources, and network remain available. Ask,
         // Safe, and every missing-policy case retain the restrictive envelope.
-        ...(autonomy.grantsFullToolAndNetworkAccess ? {} : {
+        ...(fullAutonomyInherited ? {} : {
           executionIsolation: {
             effect: node.effect,
             policy: sessionPolicy,
           },
         }),
         name: nodeTitle(node),
-        model: settings.model,
+        model: route.model,
+        // Preserve only authenticated node/task/manual pins. Automatic routes
+        // remain adaptive after their host-authenticated first dispatch.
+        modelRoutePinned: route.modelRoutePinned === true,
+        thinkingLevelPinned: route.thinkingLevelPinned === true,
         // Required for non-default (e.g. pi/*) models to resolve a backend — without it the
         // child session completes instantly with no output.
-        llmConnection: settings.llmConnection,
-        thinkingLevel: settings.thinkingLevel,
+        llmConnection: route.llmConnection,
+        connectionRoutePinned: route.connectionRoutePinned === true,
+        thinkingLevel: route.thinkingLevel,
         // Explicit node/task modes remain strict. Omission inherits Execute only
         // through the two-key parent/workspace policy; every other default is Safe.
         permissionMode,
@@ -930,32 +1349,74 @@ class ActiveRun {
       };
       // createSession announces the child to the renderer by default, so it nests under the task
       // tile with its real title instead of a fabricated "New Chat" (or never appearing).
-      const child = await this.deps.host.createSession(this.deps.workspaceId, options);
+      const creation = this.deps.host.createSession(this.deps.workspaceId, options).then((child) => {
+        // Persist the host identity as part of the tracked creation phase,
+        // before a terminal barrier is allowed to take its second snapshot.
+        st.sessionId = child.id;
+        this.sessionToNode.set(child.id, node.id);
+        this.log({ kind: 'node-spawned', nodeId: node.id, sessionId: child.id });
+        return child;
+      });
+      this.activeCreations.add(creation);
+      void creation.then(
+        () => this.activeCreations.delete(creation),
+        () => this.activeCreations.delete(creation),
+      ).catch((error) => {
+        this.failForUnexpectedAsyncError(`worker creation bookkeeping ${node.id}`, error);
+      });
+      const child = await creation;
       if (!stillActive()) {
-        await this.deps.host.cancelProcessing(child.id, true);
-        await this.deps.host.setKanbanColumn(child.id, 'todo');
+        // A terminal barrier owns strong retirement. Pause retains the local
+        // responsibility because it has no terminal drain.
+        if (!this.terminalIntent && this.runStatus !== 'paused') {
+          const event = await this.deps.host.cancelProcessingAndWait(child.id, REVIEWER_RETIRE_TIMEOUT_MS);
+          const issue = this.accountSessionUsage(event);
+          if (issue) this.failForUsageIssue(issue);
+          await this.deps.host.setSessionStatus(child.id, 'cancelled');
+          await this.deps.host.setKanbanColumn(child.id, 'todo');
+        }
         return;
       }
-      st.sessionId = child.id;
-      this.sessionToNode.set(child.id, node.id);
-      this.log({ kind: 'node-spawned', nodeId: node.id, sessionId: child.id });
       await this.deps.host.setKanbanColumn(child.id, 'in-progress');
       if (!stillActive()) {
-        await this.deps.host.cancelProcessing(child.id, true);
-        await this.deps.host.setKanbanColumn(child.id, 'todo');
+        if (!this.terminalIntent && this.runStatus !== 'paused') {
+          const event = await this.deps.host.cancelProcessingAndWait(child.id, REVIEWER_RETIRE_TIMEOUT_MS);
+          const issue = this.accountSessionUsage(event);
+          if (issue) this.failForUsageIssue(issue);
+          await this.deps.host.setSessionStatus(child.id, 'cancelled');
+          await this.deps.host.setKanbanColumn(child.id, 'todo');
+        }
         return;
       }
       this.log({ kind: 'node-checkpoint', nodeId: node.id, idempotencyKey, status: 'executing' });
-      await this.deps.host.sendMessage(child.id, prompt);
+      // SessionManager resolves sendMessage only when the provider turn has
+      // unwound. Arm before awaiting it, otherwise a hung stream never obtains
+      // a watchdog at all.
+      this.armNodeTimeout(
+        node.id,
+        child.id,
+        st.attempt,
+        node.timeout ?? policy.timeoutMs,
+      );
+      await this.deps.host.sendMessage(child.id, prompt, undefined, undefined, {
+        internalOrigin: {
+          kind: 'spawned-session',
+          senderSessionId: this.opts.orchestratorSessionId,
+          // Keep policy/retry scaffolding out of the child's objective contract.
+          authenticatedTaskText: resolvedPrompt.routingText,
+        },
+      });
       if (!stillActive()) return;
-      this.armNodeTimeout(node.id, child.id, node.timeout ?? policy.timeoutMs);
     } catch (err) {
       if (stillActive()) this.failNode(node.id, `dispatch failed: ${(err as Error).message}`);
     }
   }
 
   /** Resolve a node's prompt: declared inputs (+ optional summarize) then ${…} interpolation. */
-  private async buildPrompt(node: TaskNode): Promise<string> {
+  private async buildPrompt(node: TaskNode): Promise<{
+    routingText: string;
+    dispatchText: string;
+  }> {
     const inputValues: Record<string, unknown> = {};
     for (const [name, ref] of Object.entries(node.inputs ?? {})) {
       const fromExpr = typeof ref === 'string' ? ref : ref.from;
@@ -964,18 +1425,19 @@ class ActiveRun {
       if (summarize && this.deps.summarize) resolved = await this.deps.summarize(resolved);
       inputValues[name] = resolved;
     }
-    let text = interpolateRefs(node.prompt ?? '', { nodeOutputs: this.outputs, params: this.opts.params });
-    text = text.replace(INPUTS_REF_RE, (raw, name: string) => (name in inputValues ? String(inputValues[name]) : raw));
+    let routingText = interpolateRefs(node.prompt ?? '', { nodeOutputs: this.outputs, params: this.opts.params });
+    routingText = routingText.replace(INPUTS_REF_RE, (raw, name: string) => (name in inputValues ? String(inputValues[name]) : raw));
+    let dispatchText = routingText;
 
     // Failure-aware retry: prepend the prior failure so a retried session knows what went wrong
     // instead of blindly repeating a deterministic failure.
     const st = this.state.get(node.id)!;
     if (st.attempt > 1 && st.lastFailure) {
-      text = `${st.lastFailure}\n\n${text}`;
+      dispatchText = `${st.lastFailure}\n\n${dispatchText}`;
     }
     const reflectionMemory = this.buildReflectionMemory(node.id);
-    if (reflectionMemory) text = `${reflectionMemory}\n\n${text}`;
-    return text;
+    if (reflectionMemory) dispatchText = `${reflectionMemory}\n\n${dispatchText}`;
+    return { routingText, dispatchText };
   }
 
   /**
@@ -1015,6 +1477,66 @@ class ActiveRun {
 
   // --- completion ---
 
+  /** Account cumulative provider usage once per session and expose hard-budget breaches. */
+  private accountSessionUsage(
+    evt: SessionCompletionEvent,
+  ): UsageIssue | null {
+    if (!evt.tokenUsage) return null;
+    const inputTokens = evt.tokenUsage.inputTokens ?? 0;
+    const outputTokens = evt.tokenUsage.outputTokens ?? 0;
+    const costUsd = evt.tokenUsage.costUsd ?? 0;
+    const cumulativeTokens = inputTokens + outputTokens;
+    if (![inputTokens, outputTokens, costUsd, cumulativeTokens].every(Number.isFinite)) {
+      if (this.invalidUsageSessions.has(evt.sessionId)) return null;
+      this.invalidUsageSessions.add(evt.sessionId);
+      return {
+        metric: 'invalid',
+        reason: `session ${evt.sessionId} returned non-finite token or cost usage`,
+      };
+    }
+    const cumulative = Math.max(0, cumulativeTokens);
+    const previousTokens = this.sessionTokens.get(evt.sessionId) ?? 0;
+    const tokenHighWater = Math.max(previousTokens, cumulative);
+    const cumulativeCost = Math.max(0, costUsd);
+    const previousCost = this.sessionCosts.get(evt.sessionId) ?? 0;
+    const costHighWater = Math.max(previousCost, cumulativeCost);
+    const nextTokensUsed = this.tokensUsed + (tokenHighWater - previousTokens);
+    const nextCostUsed = this.costUsed + (costHighWater - previousCost);
+    if (!Number.isFinite(nextTokensUsed) || !Number.isFinite(nextCostUsed)) {
+      if (this.invalidUsageSessions.has(evt.sessionId)) return null;
+      this.invalidUsageSessions.add(evt.sessionId);
+      return {
+        metric: 'invalid',
+        reason: `session ${evt.sessionId} overflowed cumulative token or cost usage`,
+      };
+    }
+    this.tokensUsed = nextTokensUsed;
+    this.sessionTokens.set(evt.sessionId, tokenHighWater);
+    this.costUsed = nextCostUsed;
+    this.sessionCosts.set(evt.sessionId, costHighWater);
+    this.log({
+      kind: 'usage-updated',
+      tokensUsed: this.tokensUsed,
+      costUsed: this.costUsed,
+      currency: 'USD',
+      sourceSessionId: evt.sessionId,
+      cumulativeTokens: tokenHighWater,
+      cumulativeCostUsd: costHighWater,
+    });
+    return this.measuredBudgetBreach();
+  }
+
+  private failForUsageIssue(issue: UsageIssue): void {
+    if (issue.metric !== 'invalid') {
+      this.failForBudget(issue.metric, issue.value, issue.limit);
+      return;
+    }
+    if (this.isTerminal() || this.terminalIntent) return;
+    this.setTerminalIntent({ target: 'failed', cause: 'recovery', reason: issue.reason });
+    this.markRunningNodesCancelled(issue.reason);
+    this.beginTerminalDrain();
+  }
+
   private onSessionComplete(evt: SessionCompletionEvent): void {
     const nodeId = this.sessionToNode.get(evt.sessionId);
     if (!nodeId) return; // not one of our child nodes
@@ -1023,29 +1545,10 @@ class ActiveRun {
     if (st.sessionId !== evt.sessionId) return; // stale completion from an earlier retry attempt
     this.clearNodeTimeout(nodeId);
 
-    if (evt.tokenUsage) {
-      // `tokenUsage` is cumulative-per-session; add only the delta since this session's last
-      // observed total so a node that ever runs >1 turn (future retry/loop) can't double-count.
-      const cumulative = (evt.tokenUsage.inputTokens ?? 0) + (evt.tokenUsage.outputTokens ?? 0);
-      const prev = this.sessionTokens.get(evt.sessionId) ?? 0;
-      this.tokensUsed += Math.max(0, cumulative - prev);
-      this.sessionTokens.set(evt.sessionId, cumulative);
-      const cumulativeCost = Math.max(0, evt.tokenUsage.costUsd ?? 0);
-      const previousCost = this.sessionCosts.get(evt.sessionId) ?? 0;
-      this.costUsed += Math.max(0, cumulativeCost - previousCost);
-      this.sessionCosts.set(evt.sessionId, cumulativeCost);
-      this.log({
-        kind: 'usage-updated',
-        tokensUsed: this.tokensUsed,
-        costUsed: this.costUsed,
-        currency: 'USD',
-      });
-
-      const measuredBreach = this.measuredBudgetBreach();
-      if (measuredBreach && this.runStatus === 'running') {
-        this.failForBudget(measuredBreach.metric, measuredBreach.value, measuredBreach.limit);
-        return;
-      }
+    const measuredBreach = this.accountSessionUsage(evt);
+    if (measuredBreach && this.runStatus === 'running') {
+      this.failForUsageIssue(measuredBreach);
+      return;
     }
 
     if (evt.reason === 'complete') {
@@ -1106,8 +1609,12 @@ class ActiveRun {
       });
       this.log({ kind: 'node-finished', nodeId, sessionId: evt.sessionId, state: 'done' });
       this.sessionToNode.delete(evt.sessionId);
-      void this.deps.host.setSessionStatus(evt.sessionId, DONE_STATUS);
-      void this.deps.host.setKanbanColumn(evt.sessionId, 'done');
+      this.bestEffortHostMetadata('mark completed worker session done', evt.sessionId, () => (
+        this.deps.host.setSessionStatus(evt.sessionId, DONE_STATUS)
+      ));
+      this.bestEffortHostMetadata('mark completed worker column done', evt.sessionId, () => (
+        this.deps.host.setKanbanColumn(evt.sessionId, 'done')
+      ));
       this.scheduleReady();
     } else if (evt.reason === 'interrupted') {
       const interruptedNode = this.spec.nodes.find((candidate) => candidate.id === nodeId);
@@ -1123,7 +1630,9 @@ class ActiveRun {
         st.state = 'cancelled';
         this.inFlight = Math.max(0, this.inFlight - 1);
         this.log({ kind: 'node-finished', nodeId, sessionId: evt.sessionId, state: 'cancelled', reason: 'interrupted' });
-        void this.deps.host.setKanbanColumn(evt.sessionId, 'todo');
+        this.bestEffortHostMetadata('return interrupted worker column to todo', evt.sessionId, () => (
+          this.deps.host.setKanbanColumn(evt.sessionId, 'todo')
+        ));
         this.scheduleReady();
       }
     } else {
@@ -1161,7 +1670,9 @@ class ActiveRun {
       const sid = sessionId ?? st.sessionId;
       if (sid) {
         this.sessionToNode.delete(sid);
-        void this.deps.host.setKanbanColumn(sid, 'todo');
+        this.bestEffortHostMetadata('return retrying worker column to todo', sid, () => (
+          this.deps.host.setKanbanColumn(sid, 'todo')
+        ));
       }
       const delayMs = retryDelayMs(retry.backoff, st.attempt);
       if (delayMs > 0) {
@@ -1186,13 +1697,18 @@ class ActiveRun {
     const sid = sessionId ?? st.sessionId;
     if (sid) this.sessionToNode.delete(sid);
     this.log({ kind: 'node-finished', nodeId, sessionId: sid ?? '', state: 'failed', reason });
-    if (sid) void this.deps.host.setSessionStatus(sid, FAILED_STATUS);
+    if (sid) {
+      this.bestEffortHostMetadata('mark failed worker session needs-review', sid, () => (
+        this.deps.host.setSessionStatus(sid, FAILED_STATUS)
+      ));
+    }
     this.scheduleReady();
   }
 
   private maybeFinish(): void {
     if (this.runStatus !== 'running') return;
     if (this.inFlight > 0) return;
+    if (this.timeoutRetirements.size > 0) return;
     if (this.spec.nodes.some((n) => this.isReady(n))) return; // more to dispatch
     if (this.hasDeferredRetry()) return;
     const allGood = this.spec.nodes.every((n) => {
@@ -1212,14 +1728,25 @@ class ActiveRun {
     }
   }
 
-  /** Enter the non-terminal `verifying` state and ask the orchestrator for a verdict. Does NOT finalize. */
+  /** Enter the non-terminal `verifying` state and launch one independent reviewer. */
   private enterVerifying(): void {
     this.runStatus = 'verifying';
     this.log({ kind: 'run-verifying' });
-    void this.sendVerification();
+    const generation = ++this.verificationGeneration;
+    void this.sendVerification(generation).catch((error) => {
+      this.failForUnexpectedAsyncError('reviewer verification dispatch', error);
+    });
   }
 
   private finish(status: RunStatus): void {
+    if (this.reviewerPending || this.reviewerSessionId || this.pendingReviewerSessionIds.size > 0) {
+      const reason = 'terminal publication was blocked because a reviewer retirement is still pending';
+      if (this.terminalIntent) throw new Error(reason);
+      this.setTerminalIntent({ target: 'failed', cause: 'reviewer', reason });
+      this.markRunningNodesCancelled(reason);
+      this.beginTerminalDrain();
+      return;
+    }
     this.runStatus = status;
     this.log({ kind: status === 'completed' ? 'run-completed' : 'run-failed' });
     // Settle the task tile: completed → done, failed → needs-review (the fixed status set has no
@@ -1227,10 +1754,16 @@ class ActiveRun {
     const orchestrator = this.opts.orchestratorSessionId;
     if (orchestrator) {
       if (status === 'completed') {
-        void this.deps.host.setKanbanColumn(orchestrator, 'done');
-        void this.deps.host.setSessionStatus(orchestrator, DONE_STATUS);
+        this.bestEffortHostMetadata('mark completed orchestrator column done', orchestrator, () => (
+          this.deps.host.setKanbanColumn(orchestrator, 'done')
+        ));
+        this.bestEffortHostMetadata('mark completed orchestrator session done', orchestrator, () => (
+          this.deps.host.setSessionStatus(orchestrator, DONE_STATUS)
+        ));
       } else {
-        void this.deps.host.setSessionStatus(orchestrator, FAILED_STATUS);
+        this.bestEffortHostMetadata('mark failed orchestrator session needs-review', orchestrator, () => (
+          this.deps.host.setSessionStatus(orchestrator, FAILED_STATUS)
+        ));
       }
     }
     this.finalize();
@@ -1243,6 +1776,12 @@ class ActiveRun {
     this.retryTimeouts.clear();
     if (this.deadlineTimeout) clearTimeout(this.deadlineTimeout);
     this.deadlineTimeout = undefined;
+    if (this.pauseRetryTimeout) clearTimeout(this.pauseRetryTimeout);
+    this.pauseRetryTimeout = undefined;
+    if (this.terminalRetryTimeout) clearTimeout(this.terminalRetryTimeout);
+    this.terminalRetryTimeout = undefined;
+    this.verificationGeneration += 1;
+    this.clearReviewerTimeout();
     this.unsubscribe?.();
     this.unsubscribe = undefined;
     this.verdictOff?.();
@@ -1254,81 +1793,306 @@ class ActiveRun {
     this.settleResolvers = [];
   }
 
-  private async sendVerification(): Promise<void> {
+  private async sendVerification(generation: number): Promise<void> {
     const orchestrator = this.opts.orchestratorSessionId;
     if (!orchestrator) {
-      this.finish('completed');
+      if (this.isCurrentVerification(generation)) {
+        this.failReviewer(undefined, 'reviewer parent is unavailable');
+      }
       return;
     }
-    this.attachVerdictListener(orchestrator);
-    const sections = this.spec.nodes.map((n) => {
-      const out = this.outputs[n.id];
-      return `### ${nodeTitle(n)} (${n.id})\n${out ? out.text : '(no output)'}`;
-    });
-    const rubric = this.spec.acceptance_criteria
-      ? `Acceptance criteria:\n${this.spec.acceptance_criteria}`
-      : `Goal: ${this.spec.goal}`;
-    const message = [
-      `The task "${this.spec.title}" has finished running.`,
-      '',
-      rubric,
-      '',
-      'Node outputs:',
-      ...sections,
-      '',
-      'Verify the observable outcome against every criterion above; do not treat a completion claim as evidence.',
-      'Prefer executed checks, resulting state, artifacts, receipts, and source-grounded facts. A missing proof cannot be graded as PASS.',
-      'On failure, give specific, actionable feedback and name the smallest incorrect node frontier.',
-      'End your reply with a verdict line, on its own line, in exactly one of these forms:',
-      'VERDICT: PASS',
-      'VERDICT: FAIL — <one-line reason>',
-      'If only some subtasks need redoing, name them so only those (and their dependents) re-run:',
-      'VERDICT: FAIL — nodes=<id>,<id> — <one-line reason>',
-    ].join('\n');
-    await this.sendToOrchestrator(orchestrator, message);
+    try {
+      const recoveredResultReusable = this.recoveredReviewerResultReusable;
+      this.recoveredReviewerResultReusable = true;
+      const recoveredReviewer = await this.retirePendingReviewer();
+      if (!this.isCurrentVerification(generation)) return;
+      if (recoveredReviewer?.reason === 'complete' && recoveredResultReusable) {
+        const recoveredText = recoveredReviewer.finalText
+          ?? this.deps.host.getSessionFinalText(recoveredReviewer.sessionId)
+          ?? '';
+        const recoveredContract = this.createReviewerContract(recoveredReviewer.sessionId);
+        if (parseReviewerVerdict(recoveredText, recoveredContract).result !== 'unparsed') {
+          this.reviewerSessionId = recoveredReviewer.sessionId;
+          this.reviewerContract = recoveredContract;
+          this.handleVerdict(recoveredText, recoveredReviewer.sessionId);
+          return;
+        }
+        // A completed but unbound/malformed recovered result is not eligible
+        // for reuse. Retire it durably before creating a replacement so a
+        // later recovery cannot rediscover it as the current reviewer.
+        await this.deps.host.setSessionStatus(recoveredReviewer.sessionId, FAILED_STATUS);
+        await this.deps.host.setKanbanColumn(recoveredReviewer.sessionId, 'todo');
+      } else if (recoveredReviewer?.reason === 'complete') {
+        await this.deps.host.setSessionStatus(recoveredReviewer.sessionId, FAILED_STATUS);
+        await this.deps.host.setKanbanColumn(recoveredReviewer.sessionId, 'todo');
+      }
+      const budget = this.schedulingBudgetBreach();
+      if (budget) {
+        this.failForBudget(budget.metric, budget.value, budget.limit);
+        return;
+      }
+
+      const cwd = this.deps.host.getSessionWorkingDirectory(orchestrator) ?? this.spec.cwd;
+      const basePolicy = resolveIsolationPolicy(this.spec, cwd ?? this.deps.workspaceRoot);
+      const reviewerPolicy: ExecutionIsolationPolicy = {
+        ...basePolicy,
+        allowedReadPaths: [...basePolicy.allowedReadPaths],
+        allowedWritePaths: [],
+        networkAccess: 'disabled',
+        allowedHosts: [],
+      };
+      const isolationDecision = validateExecutionIsolationPolicy(reviewerPolicy, this.deps.workspaceRoot);
+      if (!isolationDecision.allowed) {
+        this.failReviewer(undefined, `reviewer isolation rejected: ${isolationDecision.reason ?? 'blocked'}`);
+        return;
+      }
+      if (cwd) {
+        const cwdDecision = authorizeWorkspacePath(reviewerPolicy.workspaceRoot, cwd, ['.']);
+        if (!cwdDecision.allowed) {
+          this.failReviewer(undefined, `reviewer working directory rejected: ${cwdDecision.reason}`);
+          return;
+        }
+      }
+
+      const reviewerNode: TaskNode = {
+        id: 'independent-review',
+        title: `Independent review: ${this.spec.title}`,
+        prompt: 'Independently verify the completed task against its acceptance criteria and observable evidence.',
+        kind: 'judge',
+        effect: 'read',
+      };
+      const attempt = this.unparsedReAsks + 1;
+      const defaults = await this.deps.getModelDefaults?.(orchestrator);
+      if (!this.isCurrentVerification(generation)) return;
+      const inferredProfile = inferTaskNodeProfile(reviewerNode, attempt);
+      const explicitSettings = resolveTaskModelSettings(reviewerNode, this.spec, defaults);
+      const route: TaskNodeExecutionRoute = this.deps.resolveNodeRoute
+        ? await this.deps.resolveNodeRoute({
+            node: reviewerNode,
+            spec: this.spec,
+            attempt,
+            defaults,
+          })
+        : {
+            profile: inferredProfile,
+            ...explicitSettings,
+            thinkingLevel: explicitSettings.thinkingLevel ?? 'medium',
+            strategy: 'pinned' as const,
+          };
+      if (!this.isCurrentVerification(generation)) return;
+      if (route.blockedReason) {
+        this.failReviewer(undefined, `reviewer model routing blocked: ${route.blockedReason}`);
+        return;
+      }
+
+      const idempotencyKey = this.idempotencyKey('independent-review');
+      const guardDecision = await this.deps.executionGuard?.({
+        workspaceId: this.deps.workspaceId,
+        missionId: this.spec.id,
+        runId: this.runId,
+        nodeId: reviewerNode.id,
+        idempotencyKey,
+        workingDirectory: cwd,
+        policy: reviewerPolicy,
+        effect: 'read',
+        permissionMode: 'safe',
+        fullAutonomyInherited: false,
+        reviewOnly: true,
+        resourceLimitsExplicit:
+          this.spec.execution?.max_cpu_percent !== undefined
+          || this.spec.execution?.max_memory_mb !== undefined,
+      });
+      if (!this.isCurrentVerification(generation)) return;
+      if (guardDecision && !guardDecision.allowed) {
+        this.failReviewer(undefined, `execution guard rejected reviewer: ${guardDecision.reason ?? 'blocked'}`);
+        return;
+      }
+
+      const reviewerCreation = this.deps.host.createSession(this.deps.workspaceId, {
+        parentSessionId: orchestrator,
+        taskSlug: this.slug,
+        taskRunId: this.runId,
+        // Host-persisted marker used to discover a reviewer even if the process
+        // dies between createSession returning and the run output update.
+        taskNodeId: REVIEWER_NODE_ID,
+        missionRole: 'reviewer',
+        executionIsolation: { effect: 'read', policy: reviewerPolicy },
+        name: `Independent review: ${this.spec.title}`,
+        model: route.model,
+        modelRoutePinned: route.modelRoutePinned === true,
+        llmConnection: route.llmConnection,
+        connectionRoutePinned: route.connectionRoutePinned === true,
+        thinkingLevel: route.thinkingLevel,
+        thinkingLevelPinned: route.thinkingLevelPinned === true,
+        permissionMode: 'safe',
+        applyTaskLabel: true,
+        ...(this.spec.sources?.length ? { enabledSourceSlugs: this.spec.sources } : {}),
+        projectId: this.spec.project,
+        ...(cwd ? { workingDirectory: cwd } : {}),
+        sessionStatus: RUNNING_STATUS,
+      }).then((reviewer) => {
+        // Track and persist the identity before resolving the creation fence.
+        // A terminal drain that raced createSession will wait for this promise
+        // and then see the reviewer in pendingReviewerSessionIds.
+        this.pendingReviewerSessionIds.add(reviewer.id);
+        this.log({ kind: 'node-spawned', nodeId: REVIEWER_NODE_ID, sessionId: reviewer.id });
+        this.persistReviewerCandidateIds();
+        return reviewer;
+      });
+      this.activeCreations.add(reviewerCreation);
+      void reviewerCreation.then(
+        () => this.activeCreations.delete(reviewerCreation),
+        () => this.activeCreations.delete(reviewerCreation),
+      ).catch((error) => {
+        this.failForUnexpectedAsyncError('reviewer creation bookkeeping', error);
+      });
+      const reviewer = await reviewerCreation;
+      if (!this.isCurrentVerification(generation)) {
+        if (this.terminalIntent) return;
+        await this.deps.host.cancelProcessingAndWait(reviewer.id, REVIEWER_RETIRE_TIMEOUT_MS);
+        await this.deps.host.setSessionStatus(reviewer.id, 'cancelled');
+        await this.deps.host.setKanbanColumn(reviewer.id, 'todo');
+        this.pendingReviewerSessionIds.delete(reviewer.id);
+        this.persistReviewerCandidateIds();
+        return;
+      }
+
+      // Authenticate this Task child before its first provider turn. SessionManager
+      // checks the durable node-spawned binding when accepting internalOrigin.
+      this.reviewerSessionId = reviewer.id;
+      this.reviewerPending = true;
+      const reviewerContract = this.createReviewerContract(reviewer.id);
+      this.reviewerContract = reviewerContract;
+      this.persistReviewerOutput(reviewer.id, 'pending', '', undefined, reviewerContract.evidenceText);
+      this.attachVerdictListener(reviewer.id, generation);
+      await this.deps.host.setKanbanColumn(reviewer.id, 'in-progress');
+      if (!this.isCurrentReviewer(reviewer.id, generation)) return;
+      const authenticatedTaskText = this.buildReviewerPrompt(reviewerContract);
+      // The SessionManager host-review contract requires the authenticated
+      // spawned root message to equal the objective text byte-for-byte. The
+      // isolation policy, route and reviewer role are already host metadata;
+      // prepending generic specialist prose would make the root unverifiable.
+      const message = authenticatedTaskText;
+      await this.sendToReviewer(
+        reviewer.id,
+        message,
+        generation,
+        reviewerPolicy.timeoutMs,
+        authenticatedTaskText,
+      );
+    } catch (error) {
+      if (this.isCurrentVerification(generation)) {
+        this.failReviewer(
+          this.reviewerSessionId,
+          `reviewer dispatch failed: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    }
   }
 
-  /**
-   * Attach the one-shot orchestrator-verdict listener (separate from the run's main subscription).
-   * It catches the orchestrator's next completion, detaches itself, and routes the text to handleVerdict.
-   */
-  private attachVerdictListener(orchestrator: string): void {
+  /** Accept completions only from the exact reviewer session and generation. */
+  private attachVerdictListener(reviewerSessionId: string, generation: number): void {
     this.verdictOff?.();
     this.verdictOff = this.deps.host.onSessionComplete((evt) => {
-      if (evt.sessionId !== orchestrator) return;
+      if (!this.isCurrentReviewer(reviewerSessionId, generation) || evt.sessionId !== reviewerSessionId) return;
       this.verdictOff?.();
       this.verdictOff = undefined;
-      const text = evt.finalText ?? this.deps.host.getSessionFinalText(orchestrator) ?? '';
-      this.handleVerdict(text);
+      this.clearReviewerTimeout();
+      this.reviewerPending = false;
+      const budget = this.accountSessionUsage(evt);
+      if (budget) {
+        const reason = budget.metric === 'invalid'
+          ? budget.reason
+          : `reviewer exceeded ${budget.metric} budget`;
+        this.persistReviewerOutput(reviewerSessionId, 'invalid', '', reason);
+        this.bestEffortHostMetadata('mark over-budget reviewer needs-review', reviewerSessionId, () => (
+          this.deps.host.setSessionStatus(reviewerSessionId, FAILED_STATUS)
+        ));
+        this.bestEffortHostMetadata('return over-budget reviewer column to todo', reviewerSessionId, () => (
+          this.deps.host.setKanbanColumn(reviewerSessionId, 'todo')
+        ));
+        this.reviewerSessionId = undefined;
+        this.failForUsageIssue(budget);
+        return;
+      }
+      if (evt.reason !== 'complete') {
+        this.failReviewer(reviewerSessionId, `reviewer ended with ${evt.reason}`);
+        return;
+      }
+      const text = evt.finalText ?? this.deps.host.getSessionFinalText(reviewerSessionId) ?? '';
+      this.handleVerdict(text, reviewerSessionId);
     });
   }
 
-  /** Send to the orchestrator, failing the run (rather than hanging in `verifying`) if the send rejects. */
-  private async sendToOrchestrator(orchestrator: string, message: string): Promise<void> {
+  private async sendToReviewer(
+    reviewerSessionId: string,
+    message: string,
+    generation: number,
+    timeoutMs: number,
+    authenticatedTaskText?: string,
+  ): Promise<void> {
+    const priorSend = this.reviewerSend;
+    const dispatch = (async () => {
+      if (priorSend) {
+        try { await priorSend; } catch { /* the owning call records its own failure */ }
+      }
+      if (!this.isCurrentReviewer(reviewerSessionId, generation)) return;
+      // sendMessage resolves only after the provider turn has stopped in the
+      // production SessionManager. Arm before awaiting it so a hung first byte,
+      // provider stream or completion path is still bounded.
+      this.armReviewerTimeout(reviewerSessionId, generation, timeoutMs);
+      await this.deps.host.sendMessage(
+        reviewerSessionId,
+        message,
+        undefined,
+        undefined,
+        authenticatedTaskText && this.opts.orchestratorSessionId
+          ? {
+              internalOrigin: {
+                kind: 'spawned-session',
+                senderSessionId: this.opts.orchestratorSessionId,
+                authenticatedTaskText,
+              },
+            }
+          : undefined,
+      );
+    })();
+    this.reviewerSend = dispatch;
     try {
-      await this.deps.host.sendMessage(orchestrator, message);
-    } catch {
-      // The verdict will never arrive — detach the listener and settle as failed instead of hanging.
-      this.verdictOff?.();
-      this.verdictOff = undefined;
-      this.finish('failed');
+      await dispatch;
+    } catch (error) {
+      if (this.isCurrentReviewer(reviewerSessionId, generation)) {
+        this.failReviewer(
+          reviewerSessionId,
+          `reviewer send failed: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    } finally {
+      if (this.reviewerSend === dispatch) this.reviewerSend = undefined;
     }
   }
 
   /**
-   * Apply the orchestrator's parsed verdict:
+   * Apply the independent reviewer's parsed result:
    *   PASS      → completed.
    *   unparsed  → re-ask for a well-formed verdict (bounded; not a repair); exhausted → failed.
    *   FAIL      → repair the frontier if budget remains, else failed (iterations/token budget breach).
    */
-  private handleVerdict(text: string): void {
+  private handleVerdict(text: string, reviewerSessionId: string): void {
     if (this.runStatus !== 'verifying') return; // stopped/finalized while awaiting the verdict
-    writeNodeOutput(this.deps.workspaceRoot, this.slug, this.runId, '__verdict__', { text });
-    const verdict = parseVerdict(text);
+    const contract = this.reviewerContract ?? this.createReviewerContract(reviewerSessionId);
+    const verdict = parseReviewerVerdict(text, contract);
+    this.persistReviewerOutput(
+      reviewerSessionId,
+      verdict.result === 'unparsed' ? 'invalid' : verdict.result,
+      text,
+      verdict.result === 'unparsed' ? verdict.reason : undefined,
+    );
 
     if (verdict.result === 'pass') {
       this.log({ kind: 'verdict', result: 'pass', reason: verdict.reason, nodes: verdict.nodes });
       this.unparsedReAsks = 0;
+      this.settleReviewerSession(reviewerSessionId, true);
       this.finish('completed');
       return;
     }
@@ -1337,13 +2101,17 @@ class ActiveRun {
       this.log({ kind: 'verdict', result: 'unparsed', reason: verdict.reason, nodes: verdict.nodes });
       if (this.unparsedReAsks < MAX_UNPARSED_REASKS) {
         this.unparsedReAsks += 1;
-        void this.reAskVerdict();
+        void this.reAskVerdict(reviewerSessionId, verdict.reason, text).catch((error) => {
+          this.failForUnexpectedAsyncError('reviewer verdict re-ask', error);
+        });
         return;
       }
-      // Repeatedly malformed → don't hang the run forever.
+      this.settleReviewerSession(reviewerSessionId, false);
       this.finish('failed');
       return;
     }
+
+    this.settleReviewerSession(reviewerSessionId, true);
 
     // FAIL — repair the frontier if there is budget for it.
     const reflection = this.recordRepairReflection(
@@ -1403,22 +2171,441 @@ class ActiveRun {
     return reflection;
   }
 
-  /** Re-ask the orchestrator for a parseable verdict line (format-only; does not consume repair budget). */
-  private async reAskVerdict(): Promise<void> {
-    const orchestrator = this.opts.orchestratorSessionId;
-    if (!orchestrator) {
-      this.finish('completed');
+  /** Re-ask the same reviewer for strict JSON without consuming repair budget. */
+  private async reAskVerdict(
+    reviewerSessionId: string,
+    parseFailure?: string,
+    previousResponse = '',
+  ): Promise<void> {
+    // A completion emitter may iterate a live Set. Never attach the next
+    // generation's listener from inside the current listener's call stack, or
+    // the same completion event could be consumed twice. In production also
+    // wait for SessionManager's current send transaction to finish unwinding.
+    const completingSend = this.reviewerSend;
+    await Promise.resolve();
+    if (completingSend) {
+      try { await completingSend; } catch { /* the owning dispatch records the error */ }
+    }
+    if (this.runStatus !== 'verifying' || this.reviewerSessionId !== reviewerSessionId) return;
+    const generation = ++this.verificationGeneration;
+    this.reviewerPending = true;
+    const contract = this.reviewerContract ?? this.createReviewerContract(reviewerSessionId);
+    // Keep the exact target file stable across format-only retries. The prior
+    // response is still hashed and the parse failure is persisted in params,
+    // but replacing the evidence text would invalidate the reviewer's already
+    // registered Read check and make the host binding impossible to satisfy.
+    this.persistReviewerOutput(
+      reviewerSessionId,
+      'pending',
+      previousResponse,
+      parseFailure,
+      contract.evidenceText,
+    );
+    this.attachVerdictListener(reviewerSessionId, generation);
+    const message = [
+      `Your previous result was rejected by the parser${parseFailure ? `: ${parseFailure}` : '.'}`,
+      'Reply with exactly one host-review-v2 JSON object, no Markdown fence or surrounding prose.',
+      `Preserve this exact binding: ${JSON.stringify({
+        objectiveId: contract.objectiveId,
+        acceptanceSha256: contract.acceptanceSha256,
+      })}.`,
+      `Report every criterion exactly once: ${JSON.stringify(contract.criteria)}.`,
+      '',
+      // Repeat the exact authenticated objective and envelope. SessionManager
+      // keeps the active objective root because this continuation has the same
+      // spawned-session origin, while routing and crash recovery retain the
+      // original host-review-v2 binding on the re-ask turn itself.
+      this.buildReviewerPrompt(contract),
+    ].join('\n');
+    const timeoutMs = resolveIsolationPolicy(
+      this.spec,
+      this.deps.host.getSessionWorkingDirectory(this.opts.orchestratorSessionId!)
+        ?? this.spec.cwd
+        ?? this.deps.workspaceRoot,
+    ).timeoutMs;
+    await this.sendToReviewer(
+      reviewerSessionId,
+      message,
+      generation,
+      timeoutMs,
+      this.buildReviewerPrompt(contract),
+    );
+  }
+
+  private createReviewerContract(reviewerSessionId: string): ReviewerContract {
+    let remainingEvidenceChars = MAX_REVIEW_EVIDENCE_CHARS;
+    const evidenceNodes: Array<{ id: string; title: string; output: string }> = [];
+    for (const node of this.spec.nodes) {
+      const raw = this.outputs[node.id]?.text ?? '(no output)';
+      const excerpt = truncateForReview(
+        raw,
+        Math.max(0, Math.min(MAX_REVIEW_NODE_OUTPUT_CHARS, remainingEvidenceChars)),
+      );
+      remainingEvidenceChars = Math.max(0, remainingEvidenceChars - Array.from(excerpt).length);
+      evidenceNodes.push({
+        id: node.id,
+        title: nodeTitle(node),
+        output: excerpt || '…[evidence omitted: review input limit reached]',
+      });
+    }
+    const rubric = truncateForReview(
+      this.spec.acceptance_criteria ?? this.spec.goal,
+      MAX_REVIEW_RUBRIC_CHARS,
+    );
+    const evidenceFingerprint = repairOutputFingerprint(
+      this.spec.nodes.map((node) => node.id).sort(),
+      this.outputs,
+    );
+    const evidenceText = JSON.stringify({
+      schemaVersion: 1,
+      taskId: this.spec.id,
+      taskRunId: this.runId,
+      reviewerSessionId,
+      title: this.spec.title,
+      acceptanceContract: rubric,
+      reviewedOutputFingerprint: evidenceFingerprint,
+      nodes: evidenceNodes,
+    }, null, 2);
+    const nodeByCriterion = new Map<string, string>();
+    // host-review-v2 permits at most 32 receipt criteria. Reserve one for the
+    // whole outcome and one for the durable evidence read; excess nodes safely
+    // degrade to whole-run repair rather than weakening the host protocol.
+    const mappedNodes = this.spec.nodes.slice(0, MAX_HOST_REVIEW_CRITERIA - 2);
+    const nodeCriteria = mappedNodes.map((node, index) => {
+      const criterionId = `node-${index + 1}`;
+      nodeByCriterion.set(criterionId, node.id);
+      return criterionId;
+    });
+    const criteria = [
+      REVIEW_OUTCOME_CRITERION_ID,
+      ...nodeCriteria,
+      REVIEW_EVIDENCE_CRITERION_ID,
+    ];
+    const objectiveId = `task:${this.spec.id}:${this.runId}`;
+    const targetPath = join(runDir(this.deps.workspaceRoot, this.slug, this.runId), 'nodes', `${REVIEWER_NODE_ID}.json`);
+    const acceptanceSha256 = createHash('sha256').update(JSON.stringify({
+      objectiveId,
+      criteria,
+      evidenceFingerprint,
+      rubric,
+      targetPath,
+    }), 'utf8').digest('hex');
+    return {
+      objectiveId,
+      acceptanceSha256,
+      criteria,
+      nodeByCriterion,
+      evidenceFingerprint,
+      evidenceText,
+      targetPath,
+    };
+  }
+
+  private buildReviewerPrompt(contract: ReviewerContract): string {
+    const receiptCriteria = contract.criteria.map((id) => ({ id, passed: true }));
+    const nodeCriteria = [...contract.nodeByCriterion.entries()].map(([criterionId, nodeId]) => ({
+      criterionId,
+      nodeId,
+    }));
+    const brief = [
+      `Independently review the completed task ${JSON.stringify(this.spec.title)}.`,
+      'This is the task terminal review. Do not spawn or request another reviewer.',
+      '',
+      `Read the exact durable evidence bundle at ${JSON.stringify(contract.targetPath)}.`,
+      `Before inspecting it, register exactly one target-bound check named ${REVIEW_EVIDENCE_CRITERION_ID}: tool Read, input ${JSON.stringify({ file_path: contract.targetPath })}, check ${JSON.stringify({ path: '$.params.reviewedOutputFingerprint', equals: contract.evidenceFingerprint })}.`,
+      `The receipt criterion mapping is ${JSON.stringify(nodeCriteria)}. Mark ${REVIEW_OUTCOME_CRITERION_ID} false when the whole result must be redone.`,
+      `Known Task node ids: ${JSON.stringify(this.spec.nodes.map((node) => node.id))}. Nodes beyond the bounded mapping require a whole-result FAIL.`,
+      'Verify the observable outcome against the acceptance contract and evidence. Inspect only read-only workspace state when useful.',
+      'Do not accept completion claims as proof. Missing checks, artifacts, receipts, or source-grounded facts require FAIL.',
+      `Return the host-bound receipt with exactly these criterion ids: ${JSON.stringify(contract.criteria)}. A PASS example is ${JSON.stringify({
+        objectiveId: contract.objectiveId,
+        acceptanceSha256: contract.acceptanceSha256,
+        verdict: 'PASS',
+        criteria: receiptCriteria,
+        findings: [],
+      })}.`,
+    ].join('\n');
+    const contractEnvelope = {
+      protocol: 'host-review-v2' as const,
+      objectiveId: contract.objectiveId,
+      acceptanceSha256: contract.acceptanceSha256,
+      criteria: contract.criteria,
+      targetChecks: [],
+      singleTarget: { target: contract.targetPath },
+      instruction: HOST_PARENT_REVIEW_INSTRUCTION,
+    };
+    return `${prependHostDelegatedReviewerScope(brief)}\n\n<host_parent_review_contract>${JSON.stringify(contractEnvelope).replace(/</g, '\\u003c')}</host_parent_review_contract>`;
+  }
+
+  private persistReviewerOutput(
+    reviewerSessionId: string | undefined,
+    reviewerState: 'pending' | 'invalid' | 'pass' | 'fail',
+    response: string,
+    parseFailure?: string,
+    pendingEvidence?: string,
+  ): void {
+    if (reviewerSessionId) this.pendingReviewerSessionIds.add(reviewerSessionId);
+    const reviewerSessionIds = [...this.pendingReviewerSessionIds];
+    const boundedResponse = truncateForReview(response, MAX_REVIEW_RESULT_CHARS);
+    writeNodeOutput(this.deps.workspaceRoot, this.slug, this.runId, '__verdict__', {
+      text: reviewerState === 'pending' && pendingEvidence !== undefined
+        ? pendingEvidence
+        : boundedResponse,
+      params: {
+        schemaVersion: 1,
+        reviewerState,
+        ...(reviewerSessionId ? { reviewerSessionId } : {}),
+        ...(reviewerSessionIds.length > 0 ? { reviewerSessionIds } : {}),
+        ...(this.opts.orchestratorSessionId
+          ? { reviewerParentSessionId: this.opts.orchestratorSessionId }
+          : {}),
+        reviewerAttempt: this.unparsedReAsks + 1,
+        reviewedOutputFingerprint: repairOutputFingerprint(
+          this.spec.nodes.map((node) => node.id).sort(),
+          this.outputs,
+        ),
+        responseHash: createHash('sha256').update(response, 'utf8').digest('hex'),
+        responseTruncated: reviewTextExceedsLimit(response, MAX_REVIEW_RESULT_CHARS),
+        ...(parseFailure
+          ? { parseFailure: truncateForReview(parseFailure, MAX_REVIEW_REASON_CHARS) }
+          : {}),
+      },
+    });
+  }
+
+  /** Update only the durable reviewer identity set without replacing a
+   * response/evidence payload that may still be eligible for reconciliation. */
+  private persistReviewerCandidateIds(): void {
+    const existing = readNodeOutput(
+      this.deps.workspaceRoot,
+      this.slug,
+      this.runId,
+      REVIEWER_NODE_ID,
+    );
+    const reviewerSessionIds = [...this.pendingReviewerSessionIds];
+    if (!existing) {
+      if (reviewerSessionIds.length === 0) return;
+      this.persistReviewerOutput(
+        reviewerSessionIds[0],
+        'invalid',
+        '',
+        'reviewer retirement pending',
+      );
       return;
     }
-    this.attachVerdictListener(orchestrator);
-    const message = [
-      'Your previous reply did not include a parseable verdict line.',
-      'Reply with the verdict line only, on its own line, in exactly one of these forms:',
-      'VERDICT: PASS',
-      'VERDICT: FAIL — <one-line reason>',
-      'VERDICT: FAIL — nodes=<id>,<id> — <one-line reason>',
-    ].join('\n');
-    await this.sendToOrchestrator(orchestrator, message);
+    const {
+      reviewerSessionId: _previousReviewerSessionId,
+      reviewerSessionIds: _previousReviewerSessionIds,
+      ...params
+    } = existing.params ?? {};
+    writeNodeOutput(this.deps.workspaceRoot, this.slug, this.runId, REVIEWER_NODE_ID, {
+      ...existing,
+      params: {
+        ...params,
+        ...(reviewerSessionIds[0] ? { reviewerSessionId: reviewerSessionIds[0] } : {}),
+        ...(reviewerSessionIds.length > 0 ? { reviewerSessionIds } : {}),
+      },
+    });
+  }
+
+  private isCurrentVerification(generation: number): boolean {
+    return !this.settled
+      && !this.terminalIntent
+      && this.runStatus === 'verifying'
+      && this.verificationGeneration === generation;
+  }
+
+  private isCurrentReviewer(reviewerSessionId: string, generation: number): boolean {
+    return this.isCurrentVerification(generation) && this.reviewerSessionId === reviewerSessionId;
+  }
+
+  private settleReviewerSession(reviewerSessionId: string, acceptedResult: boolean): void {
+    this.clearReviewerTimeout();
+    this.verdictOff?.();
+    this.verdictOff = undefined;
+    this.reviewerPending = false;
+    if (this.reviewerSessionId === reviewerSessionId) {
+      this.reviewerSessionId = undefined;
+      this.reviewerContract = undefined;
+    }
+    this.pendingReviewerSessionIds.delete(reviewerSessionId);
+    this.bestEffortHostMetadata('settle reviewer session status', reviewerSessionId, () => (
+      this.deps.host.setSessionStatus(
+        reviewerSessionId,
+        acceptedResult ? DONE_STATUS : FAILED_STATUS,
+      )
+    ));
+    this.bestEffortHostMetadata('settle reviewer kanban column', reviewerSessionId, () => (
+      this.deps.host.setKanbanColumn(reviewerSessionId, acceptedResult ? 'done' : 'todo')
+    ));
+  }
+
+  private failReviewer(reviewerSessionId: string | undefined, reason: string): void {
+    if (this.runStatus !== 'verifying' || this.reviewerFailure || this.terminalIntent) return;
+    this.verificationGeneration += 1;
+    this.clearReviewerTimeout();
+    this.verdictOff?.();
+    this.verdictOff = undefined;
+    const sessionId = reviewerSessionId ?? this.reviewerSessionId;
+    if (sessionId) this.pendingReviewerSessionIds.add(sessionId);
+    this.reviewerPending = this.pendingReviewerSessionIds.size > 0;
+    this.recoveredReviewerResultReusable = false;
+    this.persistReviewerOutput(sessionId, 'invalid', '', reason);
+    this.log({ kind: 'verdict', result: 'unparsed', reason });
+    // Every reviewer failure uses the same durable whole-run barrier as worker
+    // failures. This prevents a discovered create-before-output reviewer from
+    // being omitted by a one-id direct finish path.
+    this.setTerminalIntent({ target: 'failed', cause: 'reviewer', reason });
+    this.markRunningNodesCancelled(reason);
+    const retirement = this.beginTerminalDrain();
+    this.reviewerFailure = retirement;
+    void retirement.then(
+      () => {
+        if (this.reviewerFailure === retirement) this.reviewerFailure = undefined;
+      },
+      () => {
+        if (this.reviewerFailure === retirement) this.reviewerFailure = undefined;
+      },
+    ).catch((error) => {
+      this.failForUnexpectedAsyncError('reviewer retirement bookkeeping', error);
+    });
+  }
+
+  private async retirePendingReviewer(
+    initialSessionIds: string[] = [],
+  ): Promise<SessionCompletionEvent | undefined> {
+    this.clearReviewerTimeout();
+    this.verdictOff?.();
+    this.verdictOff = undefined;
+    const orchestrator = this.opts.orchestratorSessionId;
+    const discovered = orchestrator
+      ? this.deps.host.listTaskReviewerSessions(
+          this.deps.workspaceId,
+          this.slug,
+          this.runId,
+          orchestrator,
+        ).map((session) => session.id)
+      : [];
+    const reviewerSessionIds = [...new Set([
+      ...initialSessionIds,
+      ...this.pendingReviewerSessionIds,
+      ...(this.reviewerSessionId ? [this.reviewerSessionId] : []),
+      ...discovered,
+    ])];
+    if (reviewerSessionIds.length === 0) {
+      this.reviewerSessionId = undefined;
+      this.reviewerPending = false;
+      this.reviewerContract = undefined;
+      return undefined;
+    }
+    for (const sessionId of reviewerSessionIds) this.pendingReviewerSessionIds.add(sessionId);
+    // Close the create-before-output crash window before the first await.
+    this.persistReviewerCandidateIds();
+
+    const completed: SessionCompletionEvent[] = [];
+    const retirementErrors: Array<{ sessionId: string; error: Error }> = [];
+    let budget: UsageIssue | null = null;
+    // Deliberately serial: no replacement can be created until every durable
+    // candidate has received a strong retirement attempt. One failure does not
+    // leave the remaining candidates spending unchecked.
+    for (const reviewerSessionId of reviewerSessionIds) {
+      try {
+        const event = await this.deps.host.cancelProcessingAndWait(
+          reviewerSessionId,
+          REVIEWER_RETIRE_TIMEOUT_MS,
+        );
+        const observedBudget = this.accountSessionUsage(event);
+        budget ??= observedBudget;
+        if (event.reason === 'complete') completed.push(event);
+        else {
+          await this.deps.host.setSessionStatus(reviewerSessionId, 'cancelled');
+          await this.deps.host.setKanbanColumn(reviewerSessionId, 'todo');
+          this.pendingReviewerSessionIds.delete(reviewerSessionId);
+        }
+      } catch (error) {
+        retirementErrors.push({
+          sessionId: reviewerSessionId,
+          error: error instanceof Error ? error : new Error(String(error)),
+        });
+      }
+    }
+    if (retirementErrors.length) {
+      // Completed peers are already idle but cannot be reused while another
+      // candidate remains ambiguous. Retire their metadata as well, retaining
+      // any identity whose update could not be confirmed.
+      for (const event of completed) {
+        try {
+          await this.deps.host.setSessionStatus(event.sessionId, 'cancelled');
+          await this.deps.host.setKanbanColumn(event.sessionId, 'todo');
+          this.pendingReviewerSessionIds.delete(event.sessionId);
+        } catch (error) {
+          retirementErrors.push({
+            sessionId: event.sessionId,
+            error: error instanceof Error ? error : new Error(String(error)),
+          });
+        }
+      }
+      this.persistReviewerCandidateIds();
+      throw new ReviewerRetirementError(
+        [...this.pendingReviewerSessionIds],
+        retirementErrors.map((entry) => entry.error),
+      );
+    }
+    if (completed.length > 1) {
+      const metadataErrors: Error[] = [];
+      for (const event of completed) {
+        try {
+          await this.deps.host.setSessionStatus(event.sessionId, FAILED_STATUS);
+          await this.deps.host.setKanbanColumn(event.sessionId, 'todo');
+          this.pendingReviewerSessionIds.delete(event.sessionId);
+        } catch (error) {
+          metadataErrors.push(error instanceof Error ? error : new Error(String(error)));
+        }
+      }
+      this.persistReviewerCandidateIds();
+      if (metadataErrors.length > 0) {
+        throw new ReviewerRetirementError([...this.pendingReviewerSessionIds], metadataErrors);
+      }
+      throw new Error(
+        `Ambiguous reviewer recovery: ${completed.length} completed reviewer sessions are eligible`,
+      );
+    }
+    if (completed[0]) this.pendingReviewerSessionIds.delete(completed[0].sessionId);
+    this.persistReviewerCandidateIds();
+    this.reviewerSessionId = undefined;
+    this.reviewerPending = false;
+    this.reviewerContract = undefined;
+    if (budget) {
+      this.failForUsageIssue(budget);
+    }
+    return completed[0];
+  }
+
+  private armReviewerTimeout(reviewerSessionId: string, generation: number, timeoutMs: number): void {
+    this.clearReviewerTimeout();
+    const deadlineMs = Math.min(
+      Number.MAX_SAFE_INTEGER,
+      this.currentTimeMs() + Math.max(0, timeoutMs),
+    );
+    const onTimer = () => {
+      this.reviewerTimeout = undefined;
+      if (!this.isCurrentReviewer(reviewerSessionId, generation)) return;
+      const remainingMs = deadlineMs - this.currentTimeMs();
+      if (remainingMs > 0) {
+        this.reviewerTimeout = setTimeout(onTimer, Math.min(remainingMs, MAX_TIMER_DELAY_MS));
+        return;
+      }
+      this.failReviewer(reviewerSessionId, `reviewer timed out after ${timeoutMs} ms`);
+    };
+    this.reviewerTimeout = setTimeout(
+      onTimer,
+      Math.min(Math.max(0, deadlineMs - this.currentTimeMs()), MAX_TIMER_DELAY_MS),
+    );
+  }
+
+  private clearReviewerTimeout(): void {
+    if (this.reviewerTimeout) clearTimeout(this.reviewerTimeout);
+    this.reviewerTimeout = undefined;
   }
 
   /**
@@ -1521,10 +2708,12 @@ class ActiveRun {
   }
 
   private failForBudget(metric: 'tokens' | 'cost', value: number, limit: number): void {
-    if (this.isTerminal()) return;
+    if (this.isTerminal() || this.terminalIntent) return;
     this.log({ kind: 'budget-breach', metric, value, limit });
-    this.cancelRunningNodes(`hard ${metric} budget breached`);
-    this.finish('failed');
+    const reason = `hard ${metric} budget breached`;
+    this.setTerminalIntent({ target: 'failed', cause: 'budget', reason });
+    this.markRunningNodesCancelled(reason);
+    this.beginTerminalDrain();
   }
 
   private deadlineExpired(): boolean {
@@ -1553,16 +2742,31 @@ class ActiveRun {
   }
 
   private failForDeadline(): void {
-    if (this.isTerminal()) return;
+    if (this.isTerminal() || this.terminalIntent) return;
     const deadline = this.spec.mission?.deadline;
     if (!deadline) return;
     this.log({ kind: 'deadline-breach', deadline });
-    this.cancelRunningNodes('mission deadline breached');
-    this.finish('failed');
+    const reason = 'mission deadline breached';
+    this.setTerminalIntent({ target: 'failed', cause: 'deadline', reason });
+    this.markRunningNodesCancelled(reason);
+    this.beginTerminalDrain();
   }
 
-  private cancelRunningNodes(reason: string): void {
+  /** Move runnable children behind a scheduling fence. Actual cancellation is
+   * performed by the strong terminal barrier below. */
+  private markRunningNodesCancelled(reason: string): void {
     for (const [nodeId, st] of this.state) {
+      if (st.state === 'waiting-approval') {
+        st.state = 'cancelled';
+        this.log({
+          kind: 'node-finished',
+          nodeId,
+          sessionId: st.sessionId ?? '',
+          state: 'cancelled',
+          reason,
+        });
+        continue;
+      }
       if (st.state !== 'running') continue;
       this.clearNodeTimeout(nodeId);
       st.state = 'cancelled';
@@ -1573,9 +2777,255 @@ class ActiveRun {
         state: 'cancelled',
         reason,
       });
-      if (st.sessionId) void this.deps.host.cancelProcessing(st.sessionId, true);
     }
     this.inFlight = 0;
+  }
+
+  private terminalSessionIds(): string[] {
+    return [...new Set([
+      ...(this.terminalIntent?.sessionIds ?? []),
+      ...[...this.state.values()]
+        .filter((state) => state.state !== 'done' && state.state !== 'skipped')
+        .flatMap((state) => state.sessionId ? [state.sessionId] : []),
+    ])];
+  }
+
+  private setTerminalIntent(
+    intent: Omit<TerminalIntent, 'sessionIds' | 'reviewerSessionIds'> & {
+      reviewerSessionIds?: string[];
+    },
+  ): void {
+    const sessionIds = this.terminalSessionIds();
+    const reviewerSessionIds = [...new Set([
+      ...(this.terminalIntent?.reviewerSessionIds ?? []),
+      ...(intent.reviewerSessionIds ?? []),
+      ...this.pendingReviewerSessionIds,
+      ...(this.reviewerSessionId ? [this.reviewerSessionId] : []),
+    ])];
+    this.terminalIntent = { ...intent, sessionIds, reviewerSessionIds };
+    this.log({
+      kind: 'run-draining',
+      target: intent.target,
+      cause: intent.cause,
+      sessionIds,
+      ...(reviewerSessionIds.length > 0 ? { reviewerSessionIds } : {}),
+      ...(intent.reason ? { reason: intent.reason } : {}),
+      ...(intent.scope ? { scope: intent.scope } : {}),
+    });
+  }
+
+  /** Start (or join) the exactly-once terminal barrier. The promise is kept
+   * retryable: a failure clears only the in-process attempt, never the durable
+   * intent or child identities. */
+  private beginTerminalDrain(): Promise<void> {
+    if (this.terminalDrain) return this.terminalDrain;
+    const intent = this.terminalIntent;
+    if (!intent) return Promise.reject(new Error('Terminal drain requested without a durable intent'));
+    const drain = (async () => {
+      await this.drainTerminalChildren(intent.sessionIds, intent.reviewerSessionIds);
+      if (this.settled) return;
+      if (this.reviewerPending || this.reviewerSessionId || this.pendingReviewerSessionIds.size > 0) {
+        throw new Error('terminal retirement completed without releasing every reviewer identity');
+      }
+      this.terminalRetirementAttempts = 0;
+      if (this.terminalRetryTimeout) clearTimeout(this.terminalRetryTimeout);
+      this.terminalRetryTimeout = undefined;
+      if (intent.target === 'failed') {
+        this.finish('failed');
+        return;
+      }
+      this.runStatus = 'stopped';
+      if (intent.cause === 'kill-switch') {
+        this.log({
+          kind: 'kill-switch',
+          scope: intent.scope ?? 'mission',
+          reason: intent.reason ?? 'Execution stopped by kill switch',
+        });
+      } else {
+        this.log({ kind: 'run-stopped' });
+      }
+      this.finalize();
+    })();
+    this.terminalDrain = drain;
+    // Attach a rejection handler for callback-initiated drains while preserving
+    // the original promise for explicit stop() callers that need the failure.
+    void drain.then(
+      () => {
+        if (this.terminalDrain === drain) this.terminalDrain = undefined;
+      },
+      () => {
+        if (this.terminalDrain === drain) {
+          this.terminalDrain = undefined;
+          this.scheduleTerminalDrainRetry();
+        }
+      },
+    ).catch((error) => {
+      this.failForUnexpectedAsyncError('terminal drain supervision', error);
+    });
+    return drain;
+  }
+
+  /** Terminal intent is durable, but the current process must also keep
+   * supervising a failed strong-retirement attempt. A bounded retry prevents
+   * an active child from spending indefinitely until an operator intervenes. */
+  private scheduleTerminalDrainRetry(): void {
+    if (this.terminalRetryTimeout || !this.terminalIntent || this.settled) return;
+    this.terminalRetirementAttempts += 1;
+    const delayMs = Math.min(
+      TERMINAL_RETIRE_RETRY_MAX_MS,
+      TERMINAL_RETIRE_RETRY_BASE_MS * (2 ** Math.min(this.terminalRetirementAttempts - 1, 6)),
+    );
+    this.terminalRetryTimeout = setTimeout(() => {
+      this.terminalRetryTimeout = undefined;
+      if (!this.terminalIntent || this.settled) return;
+      void this.beginTerminalDrain().catch(() => {
+        // beginTerminalDrain's rejection handler schedules the next bounded
+        // attempt; this handler only prevents an unhandled rejection.
+      });
+    }, delayMs);
+    this.terminalRetryTimeout.unref?.();
+  }
+
+  private beginPauseDrain(): Promise<void> {
+    if (this.pauseDrain) return this.pauseDrain;
+    if (!this.pauseDrainRequired
+      && this.pausedSessionIds.length === 0
+      && this.activeCreations.size === 0) {
+      return Promise.resolve();
+    }
+    const drain = (async () => {
+      const errors = await this.retireWorkerSessions(this.pausedSessionIds);
+      if (errors.length > 0) {
+        const discovered = this.deps.host.listTaskWorkerSessions(
+          this.deps.workspaceId,
+          this.slug,
+          this.runId,
+        ).map((session) => session.id);
+        this.pausedSessionIds = [...new Set([
+          ...this.pausedSessionIds,
+          ...this.terminalSessionIds(),
+          ...discovered,
+        ])];
+        this.log({ kind: 'run-pause-draining', sessionIds: [...this.pausedSessionIds] });
+        throw new AggregateError(errors, 'One or more paused task workers could not be retired');
+      }
+      this.pausedSessionIds = [];
+      this.pauseRetirementAttempts = 0;
+      if (this.pauseRetryTimeout) clearTimeout(this.pauseRetryTimeout);
+      this.pauseRetryTimeout = undefined;
+      if (this.pauseDrainRequired) {
+        this.pauseDrainRequired = false;
+        this.log({ kind: 'run-pause-drained' });
+      }
+    })();
+    this.pauseDrain = drain;
+    void drain.then(
+      () => {
+        if (this.pauseDrain === drain) {
+          this.pauseDrain = undefined;
+          // Resume may have been requested while an earlier drain was failing.
+          // The successful watchdog attempt owns that request exactly once.
+          this.resumeAfterPauseDrain();
+        }
+      },
+      () => {
+        if (this.pauseDrain === drain) {
+          this.pauseDrain = undefined;
+          this.schedulePauseDrainRetry();
+        }
+      },
+    ).catch((error) => {
+      this.failForUnexpectedAsyncError('pause drain supervision', error);
+    });
+    return drain;
+  }
+
+  /** A failed pause fence must remain actively supervised even when nobody
+   * presses Resume. The durable pause-draining record lets restart take over;
+   * this watchdog keeps retrying while the current process is alive. */
+  private schedulePauseDrainRetry(): void {
+    if (this.pauseRetryTimeout || this.runStatus !== 'paused'
+      || this.terminalIntent || this.settled || !this.pauseDrainRequired) return;
+    this.pauseRetirementAttempts += 1;
+    const delayMs = Math.min(
+      PAUSE_RETIRE_RETRY_MAX_MS,
+      PAUSE_RETIRE_RETRY_BASE_MS * (2 ** Math.min(this.pauseRetirementAttempts - 1, 6)),
+    );
+    this.pauseRetryTimeout = setTimeout(() => {
+      this.pauseRetryTimeout = undefined;
+      if (this.runStatus !== 'paused' || this.terminalIntent || this.settled
+        || !this.pauseDrainRequired) return;
+      void this.beginPauseDrain().catch(() => {
+        // beginPauseDrain's own rejection handler schedules the next bounded
+        // attempt; this handler only prevents an unhandled rejection.
+      });
+    }, delayMs);
+    this.pauseRetryTimeout.unref?.();
+  }
+
+  /** Strongly retire worker identities and close a concurrent createSession
+   * window. Errors are returned so terminal drainage can still attempt the
+   * reviewer before failing the aggregate barrier. */
+  private async retireWorkerSessions(initialSessionIds: string[]): Promise<Error[]> {
+    const retired = new Set<string>();
+    const errors: Error[] = [];
+    const retireWorker = async (sessionId: string): Promise<void> => {
+      if (retired.has(sessionId)) return;
+      retired.add(sessionId);
+      try {
+        const event = await this.deps.host.cancelProcessingAndWait(
+          sessionId,
+          REVIEWER_RETIRE_TIMEOUT_MS,
+        );
+        const issue = this.accountSessionUsage(event);
+        if (issue) this.failForUsageIssue(issue);
+        await this.deps.host.setSessionStatus(sessionId, 'cancelled');
+        await this.deps.host.setKanbanColumn(sessionId, 'todo');
+      } catch (error) {
+        errors.push(error instanceof Error ? error : new Error(String(error)));
+      }
+    };
+
+    const discoverWorkers = () => this.deps.host.listTaskWorkerSessions(
+      this.deps.workspaceId,
+      this.slug,
+      this.runId,
+    ).map((session) => session.id);
+    for (const sessionId of [...new Set([...initialSessionIds, ...discoverWorkers()])]) {
+      await retireWorker(sessionId);
+    }
+
+    // Each tracked creation logs its identity before resolving. Waiting here
+    // ensures the second snapshot contains every child that raced the fence.
+    const creations = [...this.activeCreations];
+    if (creations.length > 0) await Promise.allSettled(creations);
+    for (const sessionId of [...new Set([...this.terminalSessionIds(), ...discoverWorkers()])]) {
+      await retireWorker(sessionId);
+    }
+    return errors;
+  }
+
+  /** Prove every worker and reviewer idle, and record their final cumulative
+   * usage, before a terminal state is published. All candidates are attempted
+   * even when one retirement fails. */
+  private async drainTerminalChildren(
+    initialSessionIds: string[],
+    initialReviewerSessionIds: string[],
+  ): Promise<void> {
+    const errors = await this.retireWorkerSessions(initialSessionIds);
+
+    try {
+      const completedReviewer = await this.retirePendingReviewer(initialReviewerSessionIds);
+      if (completedReviewer) {
+        await this.deps.host.setSessionStatus(completedReviewer.sessionId, 'cancelled');
+        await this.deps.host.setKanbanColumn(completedReviewer.sessionId, 'todo');
+      }
+    } catch (error) {
+      errors.push(error instanceof Error ? error : new Error(String(error)));
+    }
+    if (errors.length > 0) {
+      throw new AggregateError(errors, 'One or more task child sessions could not be retired');
+    }
   }
 
   private hasDeferredRetry(): boolean {
@@ -1611,38 +3061,92 @@ class ActiveRun {
   }
 
   private stopForKillSwitch(reason: string): void {
+    if (this.isTerminal() || this.terminalIntent) return;
     const scope = reason.startsWith('Global')
       ? 'global'
       : reason.startsWith('Workspace')
         ? 'workspace'
         : 'mission';
-    this.log({ kind: 'kill-switch', scope, reason });
-    this.runStatus = 'stopped';
-    for (const [nodeId, st] of this.state) {
-      if (st.state !== 'running') continue;
-      this.clearNodeTimeout(nodeId);
-      st.state = 'cancelled';
-      this.log({
-        kind: 'node-finished',
-        nodeId,
-        sessionId: st.sessionId ?? '',
-        state: 'cancelled',
-        reason,
-      });
-      if (st.sessionId) void this.deps.host.cancelProcessing(st.sessionId, true);
-    }
-    this.finalize();
+    this.setTerminalIntent({ target: 'stopped', cause: 'kill-switch', reason, scope });
+    this.markRunningNodesCancelled(reason);
+    this.beginTerminalDrain();
   }
 
-  private armNodeTimeout(nodeId: string, sessionId: string, timeoutMs: number): void {
+  private armNodeTimeout(
+    nodeId: string,
+    sessionId: string,
+    attempt: number,
+    timeoutMs: number,
+  ): void {
     this.clearNodeTimeout(nodeId);
-    const timer = setTimeout(() => {
+    const deadlineMs = Math.min(
+      Number.MAX_SAFE_INTEGER,
+      this.currentTimeMs() + Math.max(0, timeoutMs),
+    );
+    const onTimer = () => {
+      this.nodeTimeouts.delete(nodeId);
+      const remainingMs = deadlineMs - this.currentTimeMs();
+      if (remainingMs > 0) {
+        const next = setTimeout(onTimer, Math.min(remainingMs, MAX_TIMER_DELAY_MS));
+        this.nodeTimeouts.set(nodeId, next);
+        return;
+      }
       const st = this.state.get(nodeId);
-      if (!st || st.state !== 'running') return;
-      void this.deps.host.cancelProcessing(sessionId, true);
-      this.failNode(nodeId, `execution timeout after ${timeoutMs}ms`, sessionId);
-    }, timeoutMs);
+      if (!st || st.state !== 'running' || st.sessionId !== sessionId || st.attempt !== attempt) return;
+      void this.retireTimedOutNode(nodeId, sessionId, timeoutMs).catch((error) => {
+        this.failForUnexpectedAsyncError(`timeout retirement ${nodeId}`, error);
+      });
+    };
+    const timer = setTimeout(
+      onTimer,
+      Math.min(Math.max(0, deadlineMs - this.currentTimeMs()), MAX_TIMER_DELAY_MS),
+    );
     this.nodeTimeouts.set(nodeId, timer);
+  }
+
+  private async retireTimedOutNode(nodeId: string, sessionId: string, timeoutMs: number): Promise<void> {
+    const st = this.state.get(nodeId);
+    if (!st || st.state !== 'running' || st.sessionId !== sessionId) return;
+    if (this.timeoutRetirements.has(sessionId)) return;
+    this.timeoutRetirements.add(sessionId);
+    const reason = `execution timeout after ${timeoutMs}ms`;
+    // Fence completions and retries before requesting cancellation. A retry is
+    // released only after the host proves this exact attempt idle.
+    st.state = 'cancelled';
+    st.lastFailure = reason;
+    this.inFlight = Math.max(0, this.inFlight - 1);
+    this.sessionToNode.delete(sessionId);
+    this.log({ kind: 'node-finished', nodeId, sessionId, state: 'cancelled', reason });
+    try {
+      const event = await this.deps.host.cancelProcessingAndWait(
+        sessionId,
+        REVIEWER_RETIRE_TIMEOUT_MS,
+      );
+      const budget = this.accountSessionUsage(event);
+      await this.deps.host.setSessionStatus(sessionId, FAILED_STATUS);
+      await this.deps.host.setKanbanColumn(sessionId, 'todo');
+      this.timeoutRetirements.delete(sessionId);
+      if (this.runStatus !== 'running' || this.terminalIntent || this.settled) return;
+      if (budget) {
+        this.failForUsageIssue(budget);
+        return;
+      }
+      this.failNode(nodeId, reason, sessionId, true, 'error');
+    } catch (error) {
+      st.lastFailure = `${reason}; retirement failed: ${error instanceof Error ? error.message : String(error)}`;
+      if (!this.terminalIntent && !this.settled) {
+        // A timed-out attempt whose stop cannot be proven is unsafe to retry.
+        // Escalate to the durable whole-run barrier; terminal failure is still
+        // withheld until a later strong attempt proves every child idle.
+        this.setTerminalIntent({ target: 'failed', cause: 'timeout', reason: st.lastFailure });
+        this.markRunningNodesCancelled(st.lastFailure);
+        this.beginTerminalDrain();
+      }
+      // Only release the local barrier after a durable terminal intent owns
+      // the same identity. If persistence itself failed, withholding ordinary
+      // completion is safer than publishing while the child may still spend.
+      if (this.terminalIntent || this.settled) this.timeoutRetirements.delete(sessionId);
+    }
   }
 
   private clearNodeTimeout(nodeId: string): void {
@@ -1672,6 +3176,52 @@ class ActiveRun {
     const timeout = this.retryTimeouts.get(nodeId);
     if (timeout) clearTimeout(timeout);
     this.retryTimeouts.delete(nodeId);
+  }
+
+  private reportAsyncFailure(
+    operation: string,
+    error: unknown,
+    context: Record<string, unknown> = {},
+  ): void {
+    taskRunnerLog.warn('Asynchronous TaskRunner operation failed', {
+      taskSlug: this.slug,
+      runId: this.runId,
+      operation,
+      ...context,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
+  /** Board/session metadata is observational UI state. A rejected update must
+   * be visible in logs, but must not rewrite the durable execution verdict. */
+  private bestEffortHostMetadata(
+    operation: string,
+    sessionId: string,
+    mutation: () => Promise<void>,
+  ): void {
+    try {
+      void mutation().catch((error) => {
+        this.reportAsyncFailure(operation, error, { sessionId });
+      });
+    } catch (error) {
+      this.reportAsyncFailure(operation, error, { sessionId });
+    }
+  }
+
+  /** An unexpected rejection from a detached control-flow promise is a run
+   * safety failure, not best-effort metadata. Convert it into the same durable
+   * terminal barrier used by budget, deadline and timeout failures. */
+  private failForUnexpectedAsyncError(operation: string, error: unknown): void {
+    this.reportAsyncFailure(operation, error);
+    if (this.settled || this.terminalIntent || this.isTerminal()) return;
+    const reason = `${operation} failed unexpectedly: ${error instanceof Error ? error.message : String(error)}`;
+    try {
+      this.setTerminalIntent({ target: 'failed', cause: 'recovery', reason });
+      this.markRunningNodesCancelled(reason);
+      this.beginTerminalDrain();
+    } catch (barrierError) {
+      this.reportAsyncFailure(`${operation}: terminal barrier setup`, barrierError);
+    }
   }
 
   private log(entry: RunLogEntryInput): void {
@@ -1767,6 +3317,34 @@ function truncateForReflection(text: string, maxChars: number): string {
   return `${chars.slice(0, maxChars).join('')}\n…[truncated]`;
 }
 
+/** Bound untrusted reviewer inputs/results without splitting Unicode characters. */
+function truncateForReview(text: string, maxChars: number): string {
+  if (maxChars <= 0) return '';
+  const chars: string[] = [];
+  let truncated = false;
+  for (const char of text.trim()) {
+    if (chars.length === maxChars) {
+      truncated = true;
+      break;
+    }
+    chars.push(char);
+  }
+  if (!truncated) return chars.join('');
+  const marker = '\n…[truncated]';
+  const markerChars = Array.from(marker);
+  if (maxChars <= markerChars.length) return chars.slice(0, maxChars).join('');
+  return `${chars.slice(0, maxChars - markerChars.length).join('')}${marker}`;
+}
+
+function reviewTextExceedsLimit(text: string, maxChars: number): boolean {
+  let count = 0;
+  for (const _char of text) {
+    count += 1;
+    if (count > maxChars) return true;
+  }
+  return false;
+}
+
 /**
  * Canonical fingerprint of the observable outputs rejected by the verifier.
  * Whitespace-only presentation changes do not count as progress. The run log
@@ -1783,33 +3361,82 @@ function repairOutputFingerprint(frontier: string[], outputs: Record<string, Nod
   return createHash('sha256').update(JSON.stringify(canonical), 'utf8').digest('hex');
 }
 
-/**
- * Parse the orchestrator's machine-readable verdict line. Tolerant of surrounding prose: the last
- * `VERDICT: PASS|FAIL [— [nodes=a,b — ]reason]` occurrence wins. A missing/garbled line is `unparsed`
- * — the caller re-asks (bounded) rather than hanging the run on a malformed reply.
- *
- * The optional `nodes=<id>,<id>` prefix names the subtasks to re-run on a FAIL (scoped repair). Node
- * ids are slugs (may contain single hyphens), so the prefix is split from the reason on an em-dash or
- * colon only — never on the hyphen that legitimately appears inside a slug.
- */
-function parseVerdict(text: string): { result: 'pass' | 'fail' | 'unparsed'; reason?: string; nodes?: string[] } {
-  const matches = [...text.matchAll(/VERDICT:\s*(PASS|FAIL)\b[ \t]*(?:[—:-]+[ \t]*([^\n]*))?/gi)];
-  const last = matches.at(-1);
-  if (!last) return { result: 'unparsed' };
-  const result = last[1]!.toUpperCase() === 'PASS' ? 'pass' : 'fail';
-  let rest = last[2]?.trim() || undefined;
-  let nodes: string[] | undefined;
-  if (rest) {
-    const m = rest.match(/^nodes=([a-z0-9,\- ]+?)\s*(?:[—:]+\s*(.*))?$/i);
-    if (m) {
-      nodes = m[1]!.split(',').map((s) => s.trim()).filter(Boolean);
-      rest = m[2]?.trim() || undefined;
-    }
+/** Strict host-review-v2 receipt; TaskRunner and SessionManager consume the
+ * same binding and shape rather than accepting two incompatible protocols. */
+function parseReviewerVerdict(text: string, contract: ReviewerContract): ReviewerVerdict {
+  if (text.length === 0) return { result: 'unparsed', reason: 'reviewer returned an empty result' };
+  if (reviewTextExceedsLimit(text, MAX_REVIEW_RESULT_CHARS)) {
+    return { result: 'unparsed', reason: `reviewer result exceeds ${MAX_REVIEW_RESULT_CHARS} characters` };
   }
-  const out: { result: 'pass' | 'fail' | 'unparsed'; reason?: string; nodes?: string[] } = { result };
-  if (rest) out.reason = rest;
-  if (nodes && nodes.length) out.nodes = nodes;
-  return out;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text.trim());
+  } catch {
+    return { result: 'unparsed', reason: 'reviewer result is not a standalone JSON object' };
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return { result: 'unparsed', reason: 'reviewer result must be a JSON object' };
+  }
+  const record = parsed as Record<string, unknown>;
+  if (record.objectiveId !== contract.objectiveId
+    || record.acceptanceSha256 !== contract.acceptanceSha256) {
+    return { result: 'unparsed', reason: 'reviewer result does not match the current host binding' };
+  }
+  if (record.verdict !== 'PASS' && record.verdict !== 'FAIL') {
+    return { result: 'unparsed', reason: 'reviewer verdict must be PASS or FAIL' };
+  }
+  if (!Array.isArray(record.criteria) || record.criteria.length !== contract.criteria.length) {
+    return { result: 'unparsed', reason: 'reviewer result must report every bound criterion exactly once' };
+  }
+  const criterionResults = new Map<string, boolean>();
+  for (const item of record.criteria) {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) {
+      return { result: 'unparsed', reason: 'reviewer criteria have an invalid shape' };
+    }
+    const { id, passed } = item as { id?: unknown; passed?: unknown };
+    if (typeof id !== 'string' || typeof passed !== 'boolean'
+      || !contract.criteria.includes(id) || criterionResults.has(id)) {
+      return { result: 'unparsed', reason: 'reviewer criteria contain an unknown or duplicate id' };
+    }
+    criterionResults.set(id, passed);
+  }
+  if (contract.criteria.some((id) => !criterionResults.has(id))) {
+    return { result: 'unparsed', reason: 'reviewer result omitted a bound criterion' };
+  }
+  if (!Array.isArray(record.findings) || record.findings.length > MAX_REVIEW_NODES
+    || record.findings.some((finding) => typeof finding !== 'string'
+      || finding.trim().length === 0
+      || finding.length > MAX_REVIEW_REASON_CHARS
+      || /^<.*>$/.test(finding.trim())
+      || /replace this example|example[_ -]?only/i.test(finding))) {
+    return { result: 'unparsed', reason: 'reviewer findings must be bounded concrete strings' };
+  }
+  const findings = (record.findings as string[]).map((finding) => finding.trim());
+  const failedCriteria = [...criterionResults].filter(([, passed]) => !passed).map(([id]) => id);
+  if (record.verdict === 'PASS') {
+    if (findings.length > 0 || failedCriteria.length > 0) {
+      return { result: 'unparsed', reason: 'PASS cannot contain findings or failed criteria' };
+    }
+    return { result: 'pass' };
+  }
+  if (findings.length === 0) {
+    return { result: 'unparsed', reason: 'FAIL requires concrete findings' };
+  }
+  const nodes = failedCriteria.flatMap((criterionId) => {
+    const nodeId = contract.nodeByCriterion.get(criterionId);
+    return nodeId ? [nodeId] : [];
+  });
+  const wholeRunFailure = failedCriteria.some((criterionId) => (
+    criterionId === REVIEW_OUTCOME_CRITERION_ID
+      || criterionId === REVIEW_EVIDENCE_CRITERION_ID
+      || !contract.nodeByCriterion.has(criterionId)
+  ));
+  const reason = truncateForReview(findings.join('; '), MAX_REVIEW_REASON_CHARS);
+  return {
+    result: 'fail',
+    reason,
+    ...(!wholeRunFailure && nodes.length ? { nodes } : {}),
+  };
 }
 
 /** A run is terminal (no further work) once completed/failed/stopped. running/paused/verifying are active. */
@@ -2035,7 +3662,10 @@ export class TaskRunner {
     if (!spec || (loaded !== null && !loaded.valid)) {
       throw new Error(`Cannot resume "${slug}:${runId}": immutable run snapshot and valid task.yaml are both unavailable`);
     }
-    this.assertSpecAdmissible(spec, slug);
+    // Recovery must be able to hydrate a denied mission so it can persist a
+    // kill-switch intent and drain already-created children. The live switch
+    // is enforced by ActiveRun.activateHydrated before any redispatch.
+    this.assertSpecAdmissible(spec, slug, false);
     const persistedStatus = persistedRunStatus(log);
     if (isTerminalRunStatus(persistedStatus)) {
       throw new Error(`Cannot resume terminal run "${slug}:${runId}" (${persistedStatus})`);
@@ -2146,9 +3776,13 @@ export class TaskRunner {
     return run.waitUntilSettled();
   }
 
-  private assertSpecAdmissible(spec: TaskSpec, slug: string): void {
+  private assertSpecAdmissible(spec: TaskSpec, slug: string, checkKillSwitch = true): void {
     const unsupported = spec.nodes.filter((node) =>
-      node.kind !== 'session' && node.kind !== 'orchestrator' && node.kind !== 'approval');
+      node.kind !== 'session'
+      && node.kind !== 'orchestrator'
+      && node.kind !== 'approval'
+      && node.kind !== 'judge'
+      && node.kind !== 'verify');
     if (unsupported.length > 0) {
       throw new Error(
         `Refusing to run task "${slug}": unsupported deferred node kind(s): ` +
@@ -2171,6 +3805,7 @@ export class TaskRunner {
         `Refusing to run task "${slug}": hard cost budgets require USD provider measurements; ${spec.mission.budget.currency} conversion is unavailable`,
       );
     }
+    if (!checkKillSwitch) return;
     let killSwitch: KillSwitchSnapshot;
     try {
       killSwitch = this.deps.getKillSwitch();

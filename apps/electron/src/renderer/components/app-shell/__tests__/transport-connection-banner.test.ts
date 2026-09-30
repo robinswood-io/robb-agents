@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'bun:test'
+import { beforeEach, describe, expect, it } from 'bun:test'
 import { setupI18n } from '@craft-agent/shared/i18n/setupI18n'
 
 // Bootstrap i18next with bundled English resources before importing the
@@ -45,6 +45,9 @@ describe('shouldShowTransportConnectionBanner', () => {
 })
 
 describe('getTransportBannerCopy', () => {
+  beforeEach(() => {
+    setupI18n().changeLanguage('en')
+  })
   it('maps auth failures to token guidance', () => {
     const copy = getTransportBannerCopy(state({
       status: 'failed',

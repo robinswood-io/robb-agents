@@ -16,6 +16,7 @@ import type {
   BrowserDownloadOptions,
   BrowserInstanceSnapshot,
   BrowserKeyArgs,
+  BrowserMutationUrlPolicy,
   BrowserNetworkEntry,
   BrowserNetworkOptions,
   BrowserScreenshotOptions,
@@ -71,18 +72,18 @@ export class NullBrowserPaneManager implements IBrowserPaneManager {
 
   // -- Interaction --
   async getAccessibilitySnapshot(_id: string): Promise<AccessibilitySnapshot> { unavailable('getAccessibilitySnapshot') }
-  async clickElement(_id: string, _ref: string, _options?: { waitFor?: 'none' | 'navigation' | 'network-idle'; timeoutMs?: number }): Promise<void> { unavailable('clickElement') }
-  async clickAtCoordinates(_id: string, _x: number, _y: number): Promise<void> { unavailable('clickAtCoordinates') }
-  async drag(_id: string, _x1: number, _y1: number, _x2: number, _y2: number): Promise<void> { unavailable('drag') }
-  async fillElement(_id: string, _ref: string, _value: string): Promise<void> { unavailable('fillElement') }
-  async typeText(_id: string, _text: string): Promise<void> { unavailable('typeText') }
-  async selectOption(_id: string, _ref: string, _value: string): Promise<void> { unavailable('selectOption') }
-  async setClipboard(_id: string, _text: string): Promise<void> { unavailable('setClipboard') }
+  async clickElement(_id: string, _ref: string, _options?: { waitFor?: 'none' | 'navigation' | 'network-idle'; timeoutMs?: number }, _mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> { unavailable('clickElement') }
+  async clickAtCoordinates(_id: string, _x: number, _y: number, _mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> { unavailable('clickAtCoordinates') }
+  async drag(_id: string, _x1: number, _y1: number, _x2: number, _y2: number, _mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> { unavailable('drag') }
+  async fillElement(_id: string, _ref: string, _value: string, _mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> { unavailable('fillElement') }
+  async typeText(_id: string, _text: string, _mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> { unavailable('typeText') }
+  async selectOption(_id: string, _ref: string, _value: string, _mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> { unavailable('selectOption') }
+  async setClipboard(_id: string, _text: string, _mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> { unavailable('setClipboard') }
   async getClipboard(_id: string): Promise<string> { return unavailable('getClipboard') }
   async scroll(_id: string, _direction: 'up' | 'down' | 'left' | 'right', _amount?: number): Promise<void> { unavailable('scroll') }
-  async sendKey(_id: string, _args: BrowserKeyArgs): Promise<void> { unavailable('sendKey') }
-  async uploadFile(_id: string, _ref: string, _filePaths: string[]): Promise<unknown> { return unavailable('uploadFile') }
-  async evaluate(_id: string, _expression: string): Promise<unknown> { return unavailable('evaluate') }
+  async sendKey(_id: string, _args: BrowserKeyArgs, _mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> { unavailable('sendKey') }
+  async uploadFile(_id: string, _ref: string, _filePaths: string[], _mutationPolicy?: BrowserMutationUrlPolicy): Promise<unknown> { return unavailable('uploadFile') }
+  async evaluate(_id: string, _expression: string, _mutationPolicy?: BrowserMutationUrlPolicy): Promise<unknown> { return unavailable('evaluate') }
 
   // -- Screenshot --
   async screenshot(_id: string, _options?: BrowserScreenshotOptions): Promise<BrowserScreenshotResult> { return unavailable('screenshot') }

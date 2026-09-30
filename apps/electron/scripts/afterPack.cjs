@@ -14,6 +14,52 @@
 
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
+const { Arch } = require('builder-util');
+
+function sha256File(filePath) {
+  const hash = crypto.createHash('sha256');
+  hash.update(fs.readFileSync(filePath));
+  return hash.digest('hex');
+}
+
+function requireRegularExecutable(filePath, label) {
+  let stats;
+  try {
+    stats = fs.lstatSync(filePath);
+  } catch {
+    throw new Error(`Missing ${label}: ${filePath}`);
+  }
+  if (!stats.isFile() || stats.isSymbolicLink()) {
+    throw new Error(`${label} must be a regular file: ${filePath}`);
+  }
+  if ((stats.mode & 0o111) === 0) {
+    throw new Error(`${label} must be executable: ${filePath}`);
+  }
+}
+
+function verifyPackagedUvMatchesStaged(context, resourcesDir) {
+  const arch = typeof context.arch === 'string' ? context.arch : Arch[context.arch];
+  if (arch !== 'arm64' && arch !== 'x64') {
+    throw new Error(`Unsupported macOS architecture for packaged uv verification: ${String(arch)}`);
+  }
+
+  const platformKey = `darwin-${arch}`;
+  const stagedUv = path.join(context.packager.projectDir, 'resources', 'bin', platformKey, 'uv');
+  const packagedUv = path.join(resourcesDir, 'app', 'resources', 'bin', platformKey, 'uv');
+  requireRegularExecutable(stagedUv, 'checksum-verified staged uv runtime');
+  requireRegularExecutable(packagedUv, 'packaged uv runtime');
+
+  const stagedHash = sha256File(stagedUv);
+  const packagedHash = sha256File(packagedUv);
+  if (packagedHash !== stagedHash) {
+    throw new Error(
+      `Packaged uv runtime differs from the checksum-verified staged binary `
+      + `(expected ${stagedHash}, received ${packagedHash})`,
+    );
+  }
+  console.log(`afterPack: verified exact staged uv payload for ${platformKey} (${stagedHash})`);
+}
 
 module.exports = async function afterPack(context) {
   // Only process macOS builds
@@ -29,6 +75,11 @@ module.exports = async function afterPack(context) {
 
   console.log(`afterPack: projectDir=${context.packager.projectDir}`);
   console.log(`afterPack: looking for robinswood-Assets.car at ${precompiledAssets}`);
+  // extraResources have been copied at this point, but electron-builder has not
+  // signed nested Mach-O files yet. This is the only stage where the complete
+  // uv file hash can be compared exactly with the checksum-verified download;
+  // codesign legitimately rewrites the Mach-O signature bytes afterwards.
+  verifyPackagedUvMatchesStaged(context, resourcesDir);
 
   // Check if pre-compiled Robinswood Assets.car exists
   if (!fs.existsSync(precompiledAssets)) {
@@ -48,3 +99,5 @@ module.exports = async function afterPack(context) {
     console.log('The app will use the fallback robinswood-icon.icns on all macOS versions');
   }
 };
+
+module.exports.verifyPackagedUvMatchesStaged = verifyPackagedUvMatchesStaged;

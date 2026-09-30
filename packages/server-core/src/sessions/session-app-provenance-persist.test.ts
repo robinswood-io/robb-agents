@@ -65,7 +65,7 @@ describe('SessionManager app provenance persistence', () => {
     const sessionManager = new SessionManager()
     ;(sessionManager as unknown as { persistSession: (session: unknown) => void })
       .persistSession(managed)
-    await sessionPersistenceQueue.flush(managed.id)
+    await sessionPersistenceQueue.flush(managed.id, managed.workspace.rootPath)
 
     const stored = loadSession(workspaceRoot, managed.id)
     expect(stored?.createdByApp).toEqual(createdByApp)

@@ -82,4 +82,21 @@ describe('mode-manager blocked command hints', () => {
     const rejection = getBashRejectionReason("sed -n '1,5p' file.txt", config);
     expect(rejection).toBeNull();
   });
+
+  it('gives ordinary agents the exact neutralized Git retry shape', () => {
+    const config = buildConfig({ blockedCommandHints: [] });
+
+    const rejection = getBashRejectionReason('git rev-parse HEAD', config);
+    expect(rejection).toMatchObject({ type: 'no_safe_pattern' });
+
+    const formatted = formatBashRejectionMessage(rejection!, config);
+    expect(formatted).toContain(
+      'git --no-optional-locks -c core.fsmonitor=false -c core.hooksPath=/dev/null -c log.showSignature=false -c format.pretty=medium --no-pager',
+    );
+    expect(formatted).toContain('this retry does not require broader permission');
+    expect(formatted).toContain('rev-parse HEAD');
+    expect(formatted).toContain('target-bound Read/rg/cmp');
+    expect(formatted).not.toContain('also pass `--no-ext-diff --no-textconv`');
+    expect(formatted).not.toContain('--no-pager status');
+  });
 });

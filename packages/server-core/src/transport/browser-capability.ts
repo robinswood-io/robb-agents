@@ -8,7 +8,16 @@
  * See docs/adr-transport-locality.md for the locality boundary definition.
  */
 
+import type { BrowserMutationUrlPolicy } from '../handlers/browser-pane-manager-interface'
+
+/** Legacy/observation protocol understood by every browser-capable desktop. */
 export const BROWSER_CAPABILITY_VERSION = 1
+/**
+ * A policy-bearing page mutation is a distinct wire contract. Sending it as a
+ * v2 request makes an older desktop reject the request instead of silently
+ * ignoring a trailing policy argument and executing without the URL fence.
+ */
+export const BROWSER_MUTATION_POLICY_CAPABILITY_VERSION = 2
 
 /**
  * Names map 1:1 to `IBrowserPaneManager` methods.
@@ -60,17 +69,42 @@ export type BrowserCapabilityMethod =
   | 'uploadFile'
   | 'detectSecurityChallenge'
 
-export interface BrowserCapabilityRequest {
-  /** Protocol version. Always `1` for now; bumped on breaking shape changes. */
-  v: 1
+export type BrowserPolicyMutationCapabilityMethod =
+  | 'clickElement'
+  | 'clickAtCoordinates'
+  | 'drag'
+  | 'fillElement'
+  | 'typeText'
+  | 'selectOption'
+  | 'sendKey'
+  | 'evaluate'
+  | 'setClipboard'
+
+interface BrowserCapabilityRequestBase {
   method: BrowserCapabilityMethod
-  /** Positional args matching `IBrowserPaneManager[method]` signature. */
+  /** Positional args matching `IBrowserPaneManager[method]` without a mutation policy. */
   args: unknown[]
   /** Owning session — used for owner-key namespacing on the client dispatcher. */
   sessionId: string
   /** Owning workspace — combined with `sessionId` to form the owner-key prefix. */
   workspaceId: string
 }
+
+export interface BrowserCapabilityRequestV1 extends BrowserCapabilityRequestBase {
+  v: 1
+}
+
+export interface BrowserPolicyMutationCapabilityRequestV2
+  extends Omit<BrowserCapabilityRequestBase, 'method'> {
+  v: 2
+  method: BrowserPolicyMutationCapabilityMethod
+  /** Required host policy, reapplied by Electron immediately before the effect. */
+  mutationUrlPolicy: BrowserMutationUrlPolicy
+}
+
+export type BrowserCapabilityRequest =
+  | BrowserCapabilityRequestV1
+  | BrowserPolicyMutationCapabilityRequestV2
 
 /**
  * Wire shape for `screenshot` / `screenshotRegion` results.

@@ -1,3 +1,4 @@
+import { isProtectedApplicationPath, APPLICATION_PROTECTION_REASON } from '../runtime/application-protection.ts';
 /**
  * Render Template Handler
  *
@@ -32,6 +33,7 @@ export async function handleRenderTemplate(
   ctx: SessionToolContext,
   args: RenderTemplateArgs
 ): Promise<ToolResult> {
+  if (ctx.dataPath && isProtectedApplicationPath(ctx.dataPath)) return errorResponse(APPLICATION_PROTECTION_REASON);
   if (!ctx.dataPath) {
     return errorResponse('render_template requires dataPath in context.');
   }

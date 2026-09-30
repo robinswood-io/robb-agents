@@ -361,6 +361,9 @@ export class WsRpcServer implements RpcServer {
             cert: this.tlsOptions.cert,
             key: this.tlsOptions.key,
             ca: this.tlsOptions.ca,
+            // A client CA is an authentication requirement, not just a trust hint.
+            requestCert: this.tlsOptions.ca !== undefined,
+            rejectUnauthorized: true,
             passphrase: this.tlsOptions.passphrase,
           },
           this.httpHandler,
