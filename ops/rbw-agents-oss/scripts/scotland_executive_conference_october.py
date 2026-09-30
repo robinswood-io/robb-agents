@@ -46,18 +46,27 @@ def save(path, value):
 def signed_scope(contract):
     return {k: contract[k] for k in ['campaignId', 'event', 'limits', 'templates', 'items', 'sender', 'language', 'paidAdsAllowed', 'crmMutationAllowed']}
 
+def require(condition, message='contract_guard_failed'):
+    if not condition:
+        raise AssertionError(message)
+
 def verify_contract(c):
-    assert c['campaignId'] == 'scotland-executive-conference-october-2026'
-    assert c['authorization']['scopeSha256'] == digest(signed_scope(c)), 'authorization_scope_changed'
-    assert c['authorization']['source'] == 'human_campaign_launch_request_2026-09-30'
-    assert c['sender'] == SENDER and c['language'] == 'en-GB'
-    assert c['event']['start'] == '2026-10-07' and c['event']['end'] == '2026-10-14'
-    assert c['limits']['dailyTouches'] <= 10 and c['limits']['weeklyTouches'] <= 40
-    assert c['limits']['maxCompanies'] <= 40 and len(c['items']) <= c['limits']['maxCompanies']
-    assert len({x['domain'] for x in c['items']}) == len(c['items']), 'multiple_contacts_same_company'
-    assert c['limits']['maxFollowups'] == 1
-    assert c['paidAdsAllowed'] is False and c['crmMutationAllowed'] is False
-    assert c['activation'] in ['prepared', 'active', 'paused', 'complete']
+    require(c['campaignId'] == 'scotland-executive-conference-october-2026')
+    require(c['authorization']['scopeSha256'] == digest(signed_scope(c)), 'authorization_scope_changed')
+    require(c['authorization']['source'] == 'human_campaign_launch_request_2026-09-30')
+    require(c['sender'] == SENDER and c['language'] == 'en-GB')
+    require(c['event']['start'] == '2026-10-07' and c['event']['end'] == '2026-10-14')
+    require(0 < c['limits']['dailyTouches'] <= 10 and 0 < c['limits']['weeklyTouches'] <= 100)
+    require(0 < c['limits']['maxCompanies'] <= 500 and len(c['items']) <= c['limits'].get('maxContacts', c['limits']['maxCompanies']) <= 500)
+    require(len({x['email'] for x in c['items']}) == len(c['items']), 'duplicate_recipient')
+    require(len({x['id'] for x in c['items']}) == len(c['items']), 'duplicate_item_id')
+    require(len({x['domain'] for x in c['items']}) <= c['limits']['maxCompanies'])
+    require(0 < c['limits'].get('maxRunTouches', 10) <= 10)
+    require(c['limits']['firstOutboundDate'] == '2026-10-01')
+    require(c['limits']['lastInitialDate'] <= '2026-10-08' and c['limits']['lastOutboundDate'] <= '2026-10-13')
+    require(c['limits']['maxFollowups'] == 1)
+    require(c['paidAdsAllowed'] is False and c['crmMutationAllowed'] is False)
+    require(c['activation'] in ['prepared', 'active', 'paused', 'complete'])
 
 def fresh(value, t, days):
     try:
@@ -68,7 +77,7 @@ def fresh(value, t, days):
 
 def eligible(item, proof, t):
     reasons = []
-    if not re.fullmatch(r'CEO|Chief Executive Officer|Managing Director|Chief (?:Operating|Financial|Technology|Information) Officer', item.get('role', ''), re.I):
+    if not re.fullmatch(r'CEO|Chief Executive Officer|Managing Director|Chief (?:Operating|Financial|Technology|Information|Marketing|Revenue|Commercial|People|Human Resources|Digital|Strategy) Officer', item.get('role', ''), re.I):
         reasons.append('not_verified_executive')
     if item.get('employeeMinimum', 0) <= 35 or not item.get('employeeEvidenceUrl'):
         reasons.append('strict_headcount_not_proven')
@@ -153,7 +162,7 @@ class Gateway:
         data = parse.urlencode(dict(client_id=creds['client_id'], client_secret=creds['client_secret'], refresh_token=tokens['refresh_token'], grant_type='refresh_token')).encode()
         with request.urlopen(request.Request(creds['token_uri'], data=data), timeout=25) as r:
             self.token = json.load(r)['access_token']
-        assert self.call('/profile')['emailAddress'].lower() == SENDER, 'unexpected_gmail_account'
+        require(self.call('/profile')['emailAddress'].lower() == SENDER, 'unexpected_gmail_account')
         self.identity = None
 
     def call(self, path, data=None):
@@ -174,7 +183,7 @@ class Gateway:
             self.identity = next(x for x in self.call('/settings/sendAs')['sendAs'] if x['sendAsEmail'].lower() == SENDER)
         identity = self.identity
         signature = identity.get('signature', '').strip()
-        assert signature and identity.get('verificationStatus') in [None, 'accepted'], 'sender_signature_not_ready'
+        require(signature and identity.get('verificationStatus') in [None, 'accepted'], 'sender_signature_not_ready')
         sig_text = html.unescape(re.sub('<[^>]+>', ' ', re.sub(r'<br\s*/?>', '\n', signature)))
         expected = draft['body'].strip() + '\n\n' + sig_text.strip() + '\n'
         m = EmailMessage()
@@ -226,7 +235,7 @@ def suppressed(path):
     obj = read(path)
     out = set()
     for row in obj.get('blockedRecipients', []) + obj.get('records', []):
-        if row.get('active') is True or row.get('status') in ['do_not_contact','blocked','unsubscribe','opt_out']:
+        if row.get('active') is True or row.get('status') in ['do_not_contact','blocked','unsubscribe','opt_out','bounced_invalid_email'] or str(row.get('status','')).startswith('cooldown_'):
             out.add((row.get('email') or row.get('value') or '').lower())
     return out
 
@@ -257,6 +266,16 @@ def run(root=ROOT, gateway=None, apply=False, t=None, suppression_path=GLOBAL_SU
     c = read(root / 'campaign-contract.json')
     verify_contract(c)
     proofs = read(root / 'email-evidence.json').get('items', {})
+    # Public evidence may be refreshed without changing the authorized recipients or copy.
+    evidence_path=root/'audience-preparation.json'
+    current_evidence={x['id']:x for x in read(evidence_path).get('items',[])} if evidence_path.exists() else {}
+    evidence_keys=['role','roleEvidenceUrl','roleCheckedAt','legalEvidenceUrl','corporateType','qualification']
+    for item in c['items']:
+        evidence=current_evidence.get(item['id'],{})
+        if evidence.get('qualification')=='qualified_public_role_and_provider_company_evidence' and all(evidence.get(k)==item.get(k) for k in ['email','domain','contactName']):
+            url=parse.urlparse(evidence.get('roleEvidenceUrl',''))
+            if url.scheme=='https' and url.hostname in [item['domain'],'www.'+item['domain']]:
+                item.update({k:evidence[k] for k in evidence_keys if k in evidence})
     db = database(root)
     decision = []
     # Pending sends are reconciled, never automatically repeated after an unknown outcome.
@@ -271,18 +290,38 @@ def run(root=ROOT, gateway=None, apply=False, t=None, suppression_path=GLOBAL_SU
                 if ok:
                     db.execute("UPDATE touches SET state='sent_verified',gmail_id=?,thread_id=?,checks=? WHERE item=? AND step=?", (m['id'],m['threadId'],json.dumps(checks),row['item'],row['step']))
                     db.commit()
-        for row in db.execute("SELECT * FROM touches WHERE step='initial' AND state='sent_verified'").fetchall():
+        verified_initials=db.execute("SELECT * FROM touches WHERE step='initial' AND state='sent_verified'").fetchall()
+        for row in verified_initials:
             messages = g.call('/threads/' + row['thread_id'] + '?format=full').get('messages',[])
             item = next(x for x in c['items'] if x['id']==row['item'])
+            # A fresh reply may arrive in a new thread. It stops the sequence,
+            # but qualifies as a lead only when bound to the invitation thread.
+            for match in g.search('after:'+dt(row['created']).date().isoformat()+' from:'+item['email']+' -in:sent'):
+                if match['id'] not in {m['id'] for m in messages}:
+                    m=g.get(match['id'])
+                    if addresses(header(m,'From'))==[item['email']] and SENDER in addresses(header(m,'To')):
+                        messages.append(m)
             for m in messages:
                 if 'SENT' in m.get('labelIds', []) or int(m.get('internalDate',0)) <= dt(row['created']).timestamp()*1000:
                     continue
                 kind,evidence = classify(m)
-                if addresses(header(m,'From')) != [item['email']] and kind=='qualified_interest':
+                if (addresses(header(m,'From')) != [item['email']] or m.get('threadId') != row['thread_id']) and kind=='qualified_interest':
                     kind='reply_received'
                 db.execute("INSERT OR IGNORE INTO replies VALUES(?,?,?,?,?)", (m['id'],item['id'],kind,stamp(t),evidence))
                 if kind in ['opt_out_or_negative','complaint','delivery_failure']:
                     add_suppression(item['email'],kind,m['id'])
+            db.commit()
+        if verified_initials:
+            since=min(dt(r['created']).date().isoformat() for r in verified_initials)
+            for found in g.search('after:'+since+' -in:sent {from:mailer-daemon from:postmaster subject:undeliverable subject:"delivery status"}'):
+                m=g.get(found['id'])
+                if 'SENT' in m.get('labelIds',[]):continue
+                text=plain(m.get('payload',{}))
+                for row in verified_initials:
+                    item=next(x for x in c['items'] if x['id']==row['item'])
+                    if (row['operation'] in text or item['email'].lower() in text.lower()) and classify(m)[0]=='delivery_failure':
+                        db.execute("INSERT OR IGNORE INTO replies VALUES(?,?,?,?,?)",(m['id'],item['id'],'delivery_failure',stamp(t),text[:600]))
+                        add_suppression(item['email'],'delivery_failure',m['id'])
             db.commit()
     learning = learn(db,t)
     danger = db.execute("SELECT count(*) FROM replies WHERE kind IN ('complaint','delivery_failure')").fetchone()[0]
@@ -290,12 +329,18 @@ def run(root=ROOT, gateway=None, apply=False, t=None, suppression_path=GLOBAL_SU
     local = t.astimezone(ZoneInfo('Europe/London'))
     daily = sum(dt(x['created']).astimezone(ZoneInfo('Europe/London')).date()==local.date() for x in db.execute("SELECT created FROM touches"))
     weekly = sum(dt(x['created']).astimezone(ZoneInfo('Europe/London')).isocalendar()[:2]==local.isocalendar()[:2] for x in db.execute("SELECT created FROM touches"))
+    arm_counts = {v:db.execute("SELECT count(*) FROM touches WHERE step='initial' AND variant=?",(v,)).fetchone()[0] for v in ['A','B']}
+    sent_this_run = 0
+    company_by_item = {x['id']:x['domain'] for x in c['items']}
     for n,item in enumerate(c['items']):
         reasons = eligible(item,proofs.get(item['email']),t)
         if item['email'] in suppressed(suppression_path):
             reasons.append('suppressed')
         existing = db.execute("SELECT * FROM touches WHERE item=? AND step='initial'",(item['id'],)).fetchone()
-        step,variant,parent,thread = 'initial',('A' if n%2==0 else 'B'),None,None
+        owned_company = [x for x in db.execute("SELECT item FROM touches WHERE step='initial'") if company_by_item.get(x['item']) == item['domain'] and x['item'] != item['id']]
+        if owned_company:
+            reasons.append('another_executive_already_contacted_at_company')
+        step,variant,parent,thread = 'initial',('A' if arm_counts['A']<=arm_counts['B'] else 'B'),None,None
         if existing:
             step,variant,thread = 'followup',existing['variant'],existing['thread_id']
             if db.execute("SELECT 1 FROM touches WHERE item=? AND step='followup'",(item['id'],)).fetchone():
@@ -318,9 +363,11 @@ def run(root=ROOT, gateway=None, apply=False, t=None, suppression_path=GLOBAL_SU
             reasons.append('external_send_not_authorized')
         if danger or unknown:
             reasons.append('campaign_paused_negative_or_unknown_effect')
+        if sent_this_run >= c['limits'].get('maxRunTouches',10):
+            reasons.append('paced_run_cap_reached')
         if daily>=c['limits']['dailyTouches'] or weekly>=c['limits']['weeklyTouches']:
             reasons.append('touch_cap_reached')
-        if learning['winner'] and n%4!=3 and step=='initial':
+        if learning['winner'] and sum(arm_counts.values())%4!=3 and step=='initial':
             variant=learning['winner']
         draft=body(c,item,variant,step)
         row={'id':item['id'],'company':item['company'],'step':step,'variant':variant,'blockingReasons':sorted(set(reasons)),'status':'blocked' if reasons else 'ready'}
@@ -335,10 +382,11 @@ def run(root=ROOT, gateway=None, apply=False, t=None, suppression_path=GLOBAL_SU
                     parent=g.get(existing['gmail_id'])
                 operation='rbw-scotland-'+digest({'id':item['id'],'step':step,'draft':draft})[:40]
                 raw,expected,signature=g.prepare(item,draft,operation,parent)
-                assert draft['body'].startswith('Hello '+item['firstName']+',') and 'no thanks' in draft['body'].lower()
+                require(draft['body'].startswith('Hello '+item['firstName']+',') and 'no thanks' in draft['body'].lower())
                 # Reserve and fsync via SQLite before contacting Gmail. Any uncertain effect stops the campaign.
                 db.execute("INSERT INTO touches VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",(item['id'],step,variant,stamp(t),'pending',operation,expected,json.dumps(draft),signature,None,thread,None))
                 db.commit()
+                if step=='initial':arm_counts[variant]+=1
                 try:
                     sent=g.send(raw,thread)
                     db.execute("UPDATE touches SET gmail_id=?,thread_id=? WHERE item=? AND step=?",(sent['id'],sent['threadId'],item['id'],step))
@@ -347,7 +395,7 @@ def run(root=ROOT, gateway=None, apply=False, t=None, suppression_path=GLOBAL_SU
                     db.execute("UPDATE touches SET state=?,checks=? WHERE item=? AND step=?",('sent_verified' if ok else 'sent_unverified',json.dumps(checks),item['id'],step))
                     db.commit()
                     row.update(status='sent_verified' if ok else 'sent_unverified',gmailMessageId=sent['id'],gmailThreadId=sent['threadId'])
-                    daily+=1;weekly+=1
+                    daily+=1;weekly+=1;sent_this_run+=1
                     if not ok:
                         unknown+=1
                 except Exception as e:
@@ -355,9 +403,9 @@ def run(root=ROOT, gateway=None, apply=False, t=None, suppression_path=GLOBAL_SU
                     unknown+=1
         decision.append(row)
     counts={s:sum(x['status']==s for x in decision) for s in sorted({x['status'] for x in decision})}
-    report={'generatedAt':stamp(t),'ok':not danger and not unknown,'campaignId':c['campaignId'],'status':'active' if c['activation']=='active' and not danger and not unknown else 'prepared_or_paused','externalSendsThisRun':counts.get('sent_verified',0),'verifiedSendsTotal':db.execute("SELECT count(*) FROM touches WHERE state='sent_verified'").fetchone()[0],'qualifiedCompanies':db.execute("SELECT count(DISTINCT item) FROM replies WHERE kind='qualified_interest'").fetchone()[0],'counts':counts,'decisions':decision,'learning':learning,'authorizationScopeSha256':c['authorization']['scopeSha256'],'simulation':not apply,'sender':SENDER,'nextBusinessWindow':'2026-10-01T09:20:00+01:00' if local.date().isoformat()<'2026-10-01' else None}
+    report={'generatedAt':stamp(t),'ok':not danger and not unknown,'capabilityId':c['campaignId'],'campaignId':c['campaignId'],'status':'active' if c['activation']=='active' and not danger and not unknown else 'prepared_or_paused','externalSendsThisRun':counts.get('sent_verified',0),'verifiedSendsTotal':db.execute("SELECT count(*) FROM touches WHERE state='sent_verified'").fetchone()[0],'qualifiedCompanies':db.execute("SELECT count(DISTINCT item) FROM replies WHERE kind='qualified_interest'").fetchone()[0],'counts':counts,'decisions':decision,'learning':learning,'summary':f'Scottish conference: {len(c["items"])} audience contacts, {counts.get("sent_verified",0)} verified sends this run; qualified responses drive learning','blockingReasons':(['unknown_gmail_effect'] if unknown else [])+(['complaint_or_delivery_failure'] if danger else []),'authorizationScopeSha256':c['authorization']['scopeSha256'],'simulation':not apply,'sender':SENDER,'audienceContacts':len(c['items']),'audienceCompanies':len({x['domain'] for x in c['items']}),'qualifiedAudienceContacts':sum(not eligible(x,proofs.get(x['email']),t) for x in c['items']),'qualifiedAudienceCompanies':len({x['domain'] for x in c['items'] if not eligible(x,proofs.get(x['email']),t)}),'dailyTouchCap':c['limits']['dailyTouches'],'weeklyTouchCap':c['limits']['weeklyTouches'],'nextBusinessWindow':'2026-10-01T09:00:00+01:00' if local.date().isoformat()<'2026-10-01' else None}
     save(root/'campaign-last.json',report)
-    save(root/'qualified-leads.json',{'generatedAt':stamp(t),'items':[dict(x) for x in db.execute("SELECT * FROM replies WHERE kind='qualified_interest'")]})
+    save(root/'qualified-leads.json',{'generatedAt':stamp(t),'items':[dict(x, contact=next(i for i in c['items'] if i['id']==x['item'])) for x in db.execute("SELECT * FROM replies WHERE kind='qualified_interest'")]})
     db.close()
     return report
 

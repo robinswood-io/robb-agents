@@ -7,6 +7,7 @@ from email.parser import BytesParser
 from pathlib import Path
 from unittest.mock import patch
 import scotland_executive_conference_october as m
+import scotland_conference_audience as audience
 
 T = datetime(2026,10,1,8,20,tzinfo=timezone.utc)
 
@@ -19,7 +20,7 @@ def payload(part):
     return out
 
 def inbound(text, sender='alex@example.co.uk', mid='reply1',thread='t1',auto=None):
-    p={'mimeType':'text/plain','headers':[{'name':'From','value':sender}],'body':{'data':base64.urlsafe_b64encode(text.encode()).decode()}}
+    p={'mimeType':'text/plain','headers':[{'name':'From','value':sender},{'name':'To','value':m.SENDER}],'body':{'data':base64.urlsafe_b64encode(text.encode()).decode()}}
     if auto:p['headers'].append({'name':'Auto-Submitted','value':auto})
     return {'id':mid,'threadId':thread,'labelIds':['INBOX'],'internalDate':str(int((T+timedelta(hours=1)).timestamp()*1000)),'payload':p}
 
@@ -136,7 +137,9 @@ class CampaignTests(unittest.TestCase):
     def test_one_executive_per_company(self):
         self.c['items'].append(self.item|{'id':'two','email':'sam@example.co.uk'})
         self.write()
-        with self.assertRaises(AssertionError):self.runit()
+        g=Fake();a=self.runit(g)
+        self.assertEqual(g.send_calls,1)
+        self.assertIn('another_executive_already_contacted_at_company',a['decisions'][1]['blockingReasons'])
     def test_daily_cap_includes_previous_sends(self):
         self.c['limits']['dailyTouches']=1
         self.c['items'].append(self.item|{'id':'two','email':'sam@other.co.uk','domain':'other.co.uk'})
@@ -182,5 +185,74 @@ class CampaignTests(unittest.TestCase):
     def test_prepared_campaign_cannot_send(self):
         self.c['activation']='prepared';self.write();g=Fake();a=self.runit(g)
         self.assertEqual(g.send_calls,0);self.assertIn('campaign_not_active',a['decisions'][0]['blockingReasons'])
+
+    def test_hundreds_are_allowed_without_increasing_send_cap(self):
+        self.c['limits'].update(maxCompanies=500,maxContacts=500,weeklyTouches=100,maxRunTouches=1)
+        self.c['items']=[self.item|{'id':str(n),'domain':f'company{n}.co.uk','email':f'alex@company{n}.co.uk'} for n in range(300)]
+        self.write();g=Fake();a=self.runit(g)
+        self.assertEqual(a['audienceContacts'],300)
+        self.assertEqual(g.send_calls,1)
+        self.assertIn('paced_run_cap_reached',a['decisions'][1]['blockingReasons'])
+    def test_london_start_is_exactly_nine_am(self):
+        g=Fake();self.runit(g,t=datetime(2026,10,1,7,59,tzinfo=timezone.utc))
+        self.assertEqual(g.send_calls,0)
+        self.runit(g,t=datetime(2026,10,1,8,0,tzinfo=timezone.utc))
+        self.assertEqual(g.send_calls,1)
+    def test_duplicate_email_is_rejected(self):
+        self.c['items'].append(self.item|{'id':'two'});self.write()
+        with self.assertRaises(AssertionError):self.runit()
+    def test_touch_caps_cannot_be_expanded_in_contract(self):
+        for field,value in [('dailyTouches',11),('weeklyTouches',101),('maxCompanies',501)]:
+            self.c['limits'][field]=value;self.write()
+            with self.assertRaises(AssertionError):self.runit()
+            self.c['limits'][field]={'dailyTouches':10,'weeklyTouches':40,'maxCompanies':40}[field]
+
+    def test_new_thread_optout_stops_sequence_and_suppresses(self):
+        g=Fake();self.runit(g)
+        g.messages['reply1']=inbound('No thanks',thread='other-thread')
+        a=self.runit(g,t=T+timedelta(days=5))
+        self.assertEqual(g.send_calls,1)
+        self.assertIn('alex@example.co.uk',m.suppressed(self.supp))
+        self.assertEqual(a['qualifiedCompanies'],0)
+    def test_new_thread_positive_is_not_learned_without_attribution(self):
+        g=Fake();self.runit(g)
+        g.messages['reply1']=inbound('Yes, interested',thread='other-thread')
+        a=self.runit(g,t=T+timedelta(days=5))
+        self.assertEqual(g.send_calls,1)
+        self.assertEqual(a['qualifiedCompanies'],0)
+    def test_out_of_thread_bounce_pauses_and_is_attributed(self):
+        class BounceFake(Fake):
+            def search(self,q):
+                if 'from:mailer-daemon' in q:return [{'id':'bounce1'}] if 'bounce1' in self.messages else []
+                return super().search(q)
+        g=BounceFake();self.runit(g)
+        g.messages['bounce1']=inbound('Undeliverable: delivery failed for alex@example.co.uk',sender='mailer-daemon@example.net',mid='bounce1',thread='dsn-thread')
+        a=self.runit(g,t=T+timedelta(days=1))
+        self.assertFalse(a['ok'])
+        self.assertIn('complaint_or_delivery_failure',a['blockingReasons'])
+        self.assertIn('alex@example.co.uk',m.suppressed(self.supp))
+    def test_provider_seniority_does_not_make_nonexecutive_eligible(self):
+        for raw in ['Associate Director','Head of Marketing','Assistant CEO','former Chief Executive Officer','CFE / CM','Deputy CEO']:
+            self.assertIsNone(audience.role(raw))
+        self.assertEqual(audience.role('Chief Executive Officer & Founder'),'Chief Executive Officer')
+    def test_enrichment_rejects_small_or_non_scottish_company(self):
+        for count,geo in [(35,{'countryCode':'GB','city':'Edinburgh'}),(90,{'countryCode':'GB','city':'London'}),(90,{'countryCode':'CA','city':'Edinburgh'})]:
+            value={'ok':True,'body':{'data':{'metrics':{'employeesCount':count},'geo':geo,'companyType':'privately held'}}}
+            with patch.object(audience,'cache',return_value=value):
+                self.assertEqual(audience.company({'domain':'example.co.uk'})['blocked'],'headcount_or_scottish_hq_unproven')
+
+    def test_public_evidence_refresh_cannot_change_approved_recipient(self):
+        self.c['items'][0]['roleCheckedAt']=None;self.write()
+        evidence=self.item|{'qualification':'qualified_public_role_and_provider_company_evidence','email':'other@example.co.uk'}
+        m.save(self.root/'audience-preparation.json',{'items':[evidence]})
+        g=Fake();self.runit(g);self.assertEqual(g.send_calls,0)
+        evidence['email']=self.item['email'];evidence['roleCheckedAt']=m.stamp(T-timedelta(days=1))
+        m.save(self.root/'audience-preparation.json',{'items':[evidence]})
+        self.runit(g);self.assertEqual(g.send_calls,1)
+    def test_public_evidence_refresh_must_use_the_company_domain(self):
+        self.c['items'][0]['roleCheckedAt']=None;self.write()
+        evidence=self.item|{'qualification':'qualified_public_role_and_provider_company_evidence','roleEvidenceUrl':'https://unrelated.example/team'}
+        m.save(self.root/'audience-preparation.json',{'items':[evidence]})
+        g=Fake();self.runit(g);self.assertEqual(g.send_calls,0)
 
 if __name__=='__main__':unittest.main(verbosity=2)
