@@ -223,6 +223,7 @@ def main() -> dict[str, Any]:
         status_counts[item.get('status', 'UNKNOWN')] = status_counts.get(item.get('status', 'UNKNOWN'), 0) + 1
     ok = not errors
     payload = {
+        'capabilityId': SLUG,
         'ok': ok,
         'status': 'passed' if ok and not warnings else 'warning' if ok else 'failed',
         'generatedAt': now_iso(),

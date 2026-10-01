@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-import ast, importlib.util, json, os, tempfile, time, unittest
+import ast, importlib.util, json, os, tempfile, time, unittest, io
+from types import SimpleNamespace
+from unittest.mock import patch
+from contextlib import redirect_stdout
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Any
@@ -73,9 +76,26 @@ class RecoveryTests(unittest.TestCase):
     with self.assertRaises(ValueError):obs.validate_observation(aid,p,ns,rc,err)
    self.make_report(p);os.utime(p,ns=(ns-2000000000,ns-2000000000))
    with self.assertRaises(ValueError):obs.validate_observation(aid,p,ns,1,'')
+ def test_bad_observer_report_is_technical_failure_not_business_failure(self):
+  aid='oss-agent-production-health-audit'
+  with tempfile.TemporaryDirectory() as t:
+   root=Path(t);ops=root/'ops';ops.mkdir()
+   def child(*args,**kwargs):
+    self.make_report(ops/obs.SPECS[aid][1],capabilityId='forged')
+    return SimpleNamespace(returncode=1,stderr='')
+   buf=io.StringIO()
+   with patch.object(obs,'ROOT',root),patch.object(obs,'OPS',ops),patch.object(obs.subprocess,'run',child),patch('sys.argv',['observer','--legacy-id',aid]),redirect_stdout(buf):
+    self.assertEqual(obs.main(),1)
+   d=json.loads(buf.getvalue())
+   self.assertEqual(d['status'],'technical_failed');self.assertNotIn('ok',d)
  def test_read_only_infra_scope_and_dev_probe_wrapper(self):
   self.assertEqual(obs.SPECS['infra-exposure-autoremediation-guard'][3],('--no-remediate',))
-  source=(SCRIPTS/'infra_exposure_autoremediation_guard.py').read_text()
+  source=(SCRIPTS/'oss_infrastructure_observation.py').read_text()
   self.assertIn('/opt/ia-webdev/bin/rbw-docker-guard docker -- ps',source)
   self.assertIn("if server.get('alias') == 'dev':",source)
+  self.assertNotIn('def remediate(',source)
+  self.assertNotIn('docker restart',source)
+  self.assertNotIn('iptables -I',source)
+  self.assertNotIn('systemctl restart',source)
+  self.assertNotIn('OVH_SECRET_ENV',source)
 if __name__=='__main__':unittest.main()

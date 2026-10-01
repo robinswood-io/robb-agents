@@ -17,8 +17,8 @@ SPECS = {
  'oss-agent-production-health-audit': ('oss_agent_production_health_audit.py','oss-agent-production-health-audit.json',280,()),
  'oss-agent-business-gate-classifier': ('oss_agent_business_gate_classifier.py','oss-agent-business-gate-classifier.json',110,()),
  'oss-temporal-execution-slo-guard': ('oss_temporal_execution_slo_guard.py','oss-temporal-execution-slo-guard-last.json',220,()),
- 'infra-exposure-autoremediation-guard': ('infra_exposure_autoremediation_guard.py','infra-exposure-autoremediation-guard-last.json',400,('--no-remediate',)),
- 'traid-onchain-liquidation-shadow-monitor': ('traid_onchain_liquidation_shadow_monitor.py','traid-onchain-liquidation-shadow-monitor-last.json',280,()),
+ 'infra-exposure-autoremediation-guard': ('oss_infrastructure_observation.py','infra-exposure-autoremediation-guard-last.json',400,('--no-remediate',)),
+ 'traid-onchain-liquidation-shadow-monitor': ('traid_onchain_liquidation_shadow_monitor.py','traid-onchain-liquidation-shadow-monitor-last.json',100,()),
 }
 
 def validate_observation(legacy_id, path, started_ns, returncode, stderr, previous_digest=None):
@@ -64,7 +64,7 @@ def main():
         try:
             fcntl.flock(lock.fileno(),fcntl.LOCK_EX|fcntl.LOCK_NB)
         except BlockingIOError:
-            print(json.dumps({'ok':False,'status':'technical_failed','error':'observer_already_running'}))
+            print(json.dumps({'executionFailed':True,'status':'technical_failed','error':'observer_already_running'}))
             return 1
         source_path=OPS/report_name
         previous_digest=hashlib.sha256(source_path.read_bytes()).hexdigest() if source_path.exists() else ''
@@ -108,7 +108,7 @@ def main():
             print(json.dumps(payload,ensure_ascii=False,separators=(',',':')))
             return 0
         except Exception as exc:
-            print(json.dumps({'ok':False,'status':'technical_failed',
+            print(json.dumps({'executionFailed':True,'status':'technical_failed',
                               'capabilityId':aid,'errorType':type(exc).__name__,
                               'error':str(exc) if isinstance(exc,ValueError) else 'observation_not_verified'}))
             return 1
