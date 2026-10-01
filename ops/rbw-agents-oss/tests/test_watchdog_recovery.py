@@ -12,7 +12,7 @@ def funcs(file,names,constants=()):
  tree=ast.parse((SCRIPTS/file).read_text())
  nodes=[n for n in tree.body if isinstance(n,(ast.FunctionDef,ast.AsyncFunctionDef)) and n.name in names or
         isinstance(n,ast.Assign) and any(isinstance(x,ast.Name) and x.id in constants for x in n.targets)]
- scope={'Any':Any,'Path':Path,'str':str}
+ scope={'Any':Any,'Path':Path,'str':str,'hashlib':__import__('hashlib')}
  exec(compile(ast.Module(body=nodes,type_ignores=[]),file,'exec'),scope)
  return scope
 
@@ -88,6 +88,16 @@ class RecoveryTests(unittest.TestCase):
     self.assertEqual(obs.main(),1)
    d=json.loads(buf.getvalue())
    self.assertEqual(d['status'],'technical_failed');self.assertNotIn('ok',d)
+ def test_read_only_review_is_bound_to_exact_source(self):
+  f=funcs('oss_config_mutation_guard.py',['approved_read_only_consumers'])['approved_read_only_consumers']
+  with tempfile.TemporaryDirectory() as t:
+   root=Path(t);p=root/'scripts/consumer.py';p.parent.mkdir();p.write_text('read_only')
+   sha=__import__('hashlib').sha256(p.read_bytes()).hexdigest()
+   policy={'acceptedReadOnlyProtectedConfigConsumers':['scripts/consumer.py'],
+           'reviewedReadOnlyProtectedConfigConsumers':[{'path':'scripts/consumer.py','sha256':sha}]}
+   allowed,errors=f(policy,root);self.assertEqual(allowed,{'scripts/consumer.py'});self.assertFalse(errors)
+   p.write_text('config_mutation')
+   allowed,errors=f(policy,root);self.assertFalse(allowed);self.assertEqual(errors[0]['code'],'read_only_consumer_review_hash_mismatch')
  def test_read_only_infra_scope_and_dev_probe_wrapper(self):
   self.assertEqual(obs.SPECS['infra-exposure-autoremediation-guard'][3],('--no-remediate',))
   source=(SCRIPTS/'oss_infrastructure_observation.py').read_text()

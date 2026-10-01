@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import re
 from datetime import datetime, timezone
 from pathlib import Path
@@ -85,10 +86,28 @@ def scan_config_writers() -> list[dict[str, Any]]:
     return candidates
 
 
+def approved_read_only_consumers(policy: dict, root: Path) -> tuple[set[str], list[dict]]:
+    accepted = set(policy.get('acceptedReadOnlyProtectedConfigConsumers', []))
+    reviewed = {}
+    for row in policy.get('reviewedReadOnlyProtectedConfigConsumers', []):
+        if isinstance(row, dict) and row.get('path') and row.get('sha256'):
+            reviewed.setdefault(row['path'], set()).add(row['sha256'])
+    errors = []
+    for path in accepted & reviewed.keys():
+        try:
+            digest = hashlib.sha256((root / path).read_bytes()).hexdigest()
+        except OSError:
+            digest = None
+        if digest not in reviewed[path]:
+            accepted.discard(path)
+            errors.append({'code': 'read_only_consumer_review_hash_mismatch', 'path': path})
+    return accepted, errors
+
+
 def main() -> dict[str, Any]:
     policy = load_json(POLICY, {})
     accepted = set(policy.get('acceptedLegacyConfigWriters', [])) if isinstance(policy, dict) else set()
-    accepted_read_only = set(policy.get('acceptedReadOnlyProtectedConfigConsumers', [])) if isinstance(policy, dict) else set()
+    accepted_read_only, read_only_errors = approved_read_only_consumers(policy, ROOT)
     accepted_backups = set(policy.get('acceptedLegacyBackupPatternScripts', [])) if isinstance(policy, dict) else set()
     active_backups = scan_active_backups()
     writers = scan_config_writers()
@@ -99,7 +118,7 @@ def main() -> dict[str, Any]:
         and w['path'] not in accepted_read_only
     ]
     helper_missing = not (SCRIPTS / 'lib/config_mutation.py').exists()
-    errors: list[dict[str, Any]] = []
+    errors: list[dict[str, Any]] = list(read_only_errors)
     warnings: list[dict[str, Any]] = []
     if helper_missing:
         errors.append({'code': 'config_mutation_helper_missing', 'path': 'scripts/lib/config_mutation.py'})
