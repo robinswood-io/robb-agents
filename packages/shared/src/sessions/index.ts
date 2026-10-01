@@ -12,12 +12,18 @@
 export type {
   SessionStatus,
   SessionTokenUsage,
+  SessionAppProvenance,
   StoredMessage,
   SessionConfig,
   StoredSession,
   SessionMetadata,
   SessionHeader,
   SessionPersistentField,
+  PendingTurnRecovery,
+  ActiveSessionObjective,
+  SessionObjectiveTerminalState,
+  ExternalActionAuthorization,
+  ExternalActionAuthorizationCategory,
 } from './types.ts';
 
 // Field constants
@@ -127,4 +133,3 @@ export {
   validateBundle,
   MAX_BUNDLE_SIZE_BYTES,
 } from './bundle.ts';
-

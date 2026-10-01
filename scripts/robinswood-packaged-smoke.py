@@ -38,10 +38,12 @@ APP_DIR = RELEASE_DIR / "mac-arm64" / APP_NAME
 APP_BIN = APP_DIR / "Contents" / "MacOS" / "Robb Agents"
 PLIST = APP_DIR / "Contents" / "Info.plist"
 PACKAGED_ICON = APP_DIR / "Contents" / "Resources" / "icon.icns"
+PACKAGED_ASAR = APP_DIR / "Contents" / "Resources" / "app.asar"
 # Pi providers run as explicit resource subprocesses. In particular, this is
 # the credential-free ACP bridge for Mistral Vibe subscriptions.
-PACKAGED_PI_AGENT_SERVER = APP_DIR / "Contents" / "Resources" / "app" / "dist" / "resources" / "pi-agent-server" / "index.js"
-PACKAGED_VIBE_ACP_BRIDGE = APP_DIR / "Contents" / "Resources" / "app" / "dist" / "resources" / "pi-agent-server" / "vibe-acp-server.js"
+PACKAGED_PI_AGENT_SERVER = APP_DIR / "Contents" / "Resources" / "app" / "resources" / "pi-agent-server" / "index.js"
+PACKAGED_ANTIGRAVITY_BRIDGE = APP_DIR / "Contents" / "Resources" / "app" / "resources" / "pi-agent-server" / "antigravity-server.js"
+PACKAGED_VIBE_ACP_BRIDGE = APP_DIR / "Contents" / "Resources" / "app" / "resources" / "pi-agent-server" / "vibe-acp-server.js"
 SOURCE_ICON = ELECTRON_DIR / "resources" / "robinswood-icon.icns"
 DMG = RELEASE_DIR / "Robb-Agents-arm64.dmg"
 ZIP = RELEASE_DIR / "Robb-Agents-arm64.zip"
@@ -50,8 +52,8 @@ ARCH = "arm64"
 
 
 def configure_arch(arch: str) -> None:
-    global APP_DIR, APP_BIN, PLIST, PACKAGED_ICON, PACKAGED_PI_AGENT_SERVER
-    global PACKAGED_VIBE_ACP_BRIDGE, DMG, ZIP, ARCH
+    global APP_DIR, APP_BIN, PLIST, PACKAGED_ICON, PACKAGED_ASAR, PACKAGED_PI_AGENT_SERVER
+    global PACKAGED_ANTIGRAVITY_BRIDGE, PACKAGED_VIBE_ACP_BRIDGE, DMG, ZIP, ARCH
 
     ARCH = arch
     app_output_directory = "mac-arm64" if arch == "arm64" else "mac"
@@ -59,18 +61,27 @@ def configure_arch(arch: str) -> None:
     APP_BIN = APP_DIR / "Contents" / "MacOS" / "Robb Agents"
     PLIST = APP_DIR / "Contents" / "Info.plist"
     PACKAGED_ICON = APP_DIR / "Contents" / "Resources" / "icon.icns"
+    PACKAGED_ASAR = APP_DIR / "Contents" / "Resources" / "app.asar"
     PACKAGED_PI_AGENT_SERVER = (
-        APP_DIR / "Contents" / "Resources" / "app" / "dist" / "resources" / "pi-agent-server" / "index.js"
+        APP_DIR / "Contents" / "Resources" / "app" / "resources" / "pi-agent-server" / "index.js"
     )
     PACKAGED_VIBE_ACP_BRIDGE = (
         APP_DIR
         / "Contents"
         / "Resources"
         / "app"
-        / "dist"
         / "resources"
         / "pi-agent-server"
         / "vibe-acp-server.js"
+    )
+    PACKAGED_ANTIGRAVITY_BRIDGE = (
+        APP_DIR
+        / "Contents"
+        / "Resources"
+        / "app"
+        / "resources"
+        / "pi-agent-server"
+        / "antigravity-server.js"
     )
     DMG = RELEASE_DIR / f"Robb-Agents-{arch}.dmg"
     ZIP = RELEASE_DIR / f"Robb-Agents-{arch}.zip"
@@ -97,6 +108,20 @@ def run(cmd: list[str], *, env: dict[str, str] | None = None, timeout: int = 60)
 def require(path: pathlib.Path, label: str) -> None:
     if not path.exists():
         fail(f"Missing {label}: {path}")
+
+
+def read_asar_entry(archive: pathlib.Path, entry: str) -> str:
+    script = (
+        "import { extractFile } from '@electron/asar';"
+        "process.stdout.write(extractFile(process.argv[1], process.argv[2]));"
+    )
+    result = run(
+        ["node", "--input-type=module", "--eval", script, str(archive), entry],
+        timeout=60,
+    )
+    if result.returncode != 0:
+        fail(f"Cannot read {entry} from {archive}: {result.stdout}{result.stderr}")
+    return result.stdout
 
 
 def sha256(path: pathlib.Path) -> str:
@@ -135,7 +160,33 @@ def validate_codesign_inspection(
     if "Identifier=io.robinswood.robbagents" not in code_text:
         fail("Packaged app signature does not expose io.robinswood.robbagents identifier")
 
-    return "developer-id"
+    has_developer_id = "Authority=Developer ID Application:" in code_text
+    if require_release_signing and not has_developer_id:
+        fail("Release validation requires an Apple Developer ID Application signature")
+
+    return "developer-id" if has_developer_id else "signed"
+
+
+def codesign_inspection_command(app_dir: pathlib.Path) -> list[str]:
+    """Request the full certificate chain used by release validation."""
+    return ["codesign", "-dv", "--verbose=4", str(app_dir)]
+
+
+def validate_release_verification_results(
+    codesign_returncode: int,
+    codesign_text: str,
+    gatekeeper_returncode: int,
+    gatekeeper_text: str,
+    stapler_returncode: int,
+    stapler_text: str,
+) -> None:
+    """Validate release command results without requiring a real certificate in tests."""
+    if codesign_returncode != 0:
+        fail(f"Developer ID signature verification failed: {codesign_text}")
+    if gatekeeper_returncode != 0 or "Notarized Developer ID" not in gatekeeper_text:
+        fail(f"Notarization assessment failed: {gatekeeper_text}")
+    if stapler_returncode != 0:
+        fail(f"Notarization ticket validation failed: {stapler_text}")
 
 
 def check_bundle(require_release_signing: bool = False) -> None:
@@ -143,8 +194,10 @@ def check_bundle(require_release_signing: bool = False) -> None:
     require(APP_BIN, "packaged app executable")
     require(PLIST, "Info.plist")
     require(PACKAGED_ICON, "packaged app icon")
+    require(PACKAGED_ASAR, "integrity-protected app.asar")
     require(PACKAGED_PI_AGENT_SERVER, "packaged Pi agent server")
     require(PACKAGED_VIBE_ACP_BRIDGE, "packaged Mistral Vibe ACP bridge")
+    require(PACKAGED_ANTIGRAVITY_BRIDGE, "packaged Google Antigravity bridge")
     require(SOURCE_ICON, "Robinswood source icon")
 
     with PLIST.open("rb") as handle:
@@ -172,12 +225,28 @@ def check_bundle(require_release_signing: bool = False) -> None:
     if sha256(PACKAGED_ICON) != sha256(SOURCE_ICON):
         fail("Packaged icon.icns does not match resources/robinswood-icon.icns")
 
+    main_bundle = read_asar_entry(PACKAGED_ASAR, "dist/main.cjs")
+    required_runtime_markers = (
+        "Automatic stable update checks scheduled",
+        "Installing macOS update with verified detached installer",
+        "Replacing installed application transactionally",
+        "Evicted idle session runtime",
+        "Failed to prepare agent runtime",
+        "authentication refresh retry",
+    )
+    missing_runtime_markers = [marker for marker in required_runtime_markers if marker not in main_bundle]
+    if missing_runtime_markers:
+        fail(
+            "Packaged main process is missing recovery/update markers: "
+            + ", ".join(missing_runtime_markers)
+        )
+
     package_report = audit_package(APP_DIR)
     print_report(package_report)
     if not package_report.ok:
         fail("Packaged app failed recursive release or unpacked size audit")
 
-    code_result = run(["codesign", "-dv", str(APP_DIR)])
+    code_result = run(codesign_inspection_command(APP_DIR))
     code_text = code_result.stdout + code_result.stderr
     signing_mode = validate_codesign_inspection(
         code_result.returncode,
@@ -193,21 +262,24 @@ def check_bundle(require_release_signing: bool = False) -> None:
 
     if require_release_signing:
         verify_result = run(["codesign", "--verify", "--deep", "--strict", "--verbose=2", str(APP_DIR)])
-        if verify_result.returncode != 0:
-            fail(f"Developer ID signature verification failed: {verify_result.stdout}{verify_result.stderr}")
         gatekeeper_result = run(["spctl", "--assess", "--verbose", "--type", "exec", str(APP_DIR)])
         gatekeeper_text = gatekeeper_result.stdout + gatekeeper_result.stderr
-        if gatekeeper_result.returncode != 0 or "Notarized Developer ID" not in gatekeeper_text:
-            fail(f"Notarization assessment failed: {gatekeeper_text}")
         stapler_result = run(["xcrun", "stapler", "validate", str(APP_DIR)])
-        if stapler_result.returncode != 0:
-            fail(f"Notarization ticket validation failed: {stapler_result.stdout}{stapler_result.stderr}")
+        validate_release_verification_results(
+            verify_result.returncode,
+            verify_result.stdout + verify_result.stderr,
+            gatekeeper_result.returncode,
+            gatekeeper_text,
+            stapler_result.returncode,
+            stapler_result.stdout + stapler_result.stderr,
+        )
         print("✓ Developer ID signature, Gatekeeper assessment and notarization ticket")
 
     print("✓ packaged app bundle metadata")
     print(f"✓ packaged app architecture {expected_architecture}")
     print("✓ packaged Robinswood icon")
     print("✓ packaged Pi agent server and Mistral Vibe ACP bridge")
+    print("✓ packaged updater and session-runtime recovery contract")
 
 
 def check_dmg() -> None:
@@ -232,7 +304,9 @@ def check_dmg() -> None:
             mounted_app = mount / APP_NAME
             mounted_plist = mounted_app / "Contents" / "Info.plist"
             require(mounted_app, "DMG Robb Agents.app")
-            require(mounted_app / "Contents" / "Resources" / "app" / "dist" / "resources" / "pi-agent-server" / "vibe-acp-server.js", "DMG Mistral Vibe ACP bridge")
+            require(mounted_app / "Contents" / "Resources" / "app.asar", "DMG integrity-protected app.asar")
+            require(mounted_app / "Contents" / "Resources" / "app" / "resources" / "pi-agent-server" / "vibe-acp-server.js", "DMG Mistral Vibe ACP bridge")
+            require(mounted_app / "Contents" / "Resources" / "app" / "resources" / "pi-agent-server" / "antigravity-server.js", "DMG Google Antigravity bridge")
             with mounted_plist.open("rb") as handle:
                 plist = plistlib.load(handle)
             if plist.get("CFBundleName") != "Robb Agents" or plist.get("CFBundleIdentifier") != "io.robinswood.robbagents":

@@ -1,2 +1,2 @@
 #!/bin/sh
-exec "$CRAFT_UV" run --python 3.12 "$CRAFT_SCRIPTS/ical_tool.py" "$@"
+exec "$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)/_python-tool" ical_tool.py "$@"

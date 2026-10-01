@@ -22,6 +22,7 @@ import { WsRpcClient, type TransportConnectionState } from '../transport/client'
 import { RoutedClient } from '../transport/routed-client'
 import { buildClientApi } from '../transport/build-api'
 import { CHANNEL_MAP } from '../transport/channel-map'
+import type { LocalRpcEndpoint } from '../transport/local-rpc-endpoint'
 import { createCallbackServer } from '@craft-agent/shared/auth/callback-server'
 import { CHATGPT_OAUTH_CONFIG } from '@craft-agent/shared/auth/chatgpt-oauth-config'
 import { GOOGLE_GEMINI_OAUTH_CONFIG } from '@craft-agent/shared/auth/google-gemini-oauth'
@@ -98,16 +99,17 @@ if (isClientOnly) {
   // RoutedClient routes LOCAL_ONLY to local server, REMOTE_ELIGIBLE to
   // whichever server owns the workspace (local or remote).
 
-  const wsPort: number = ipcRenderer.sendSync('__get-ws-port')
+  const localEndpoint = ipcRenderer.sendSync('__get-ws-endpoint') as LocalRpcEndpoint
   const wsToken: string = ipcRenderer.sendSync('__get-ws-token')
   const workspaceId: string = ipcRenderer.sendSync('__get-workspace-id')
 
-  const localClient = new WsRpcClient(`ws://127.0.0.1:${wsPort}`, {
+  const localClient = new WsRpcClient(localEndpoint.url, {
     token: wsToken,
     workspaceId,
     webContentsId,
     autoReconnect: true,
     mode: 'local',
+    tlsRejectUnauthorized: localEndpoint.tlsRejectUnauthorized,
     clientCapabilities: [...LOCAL_CLIENT_CAPABILITIES],
   })
 
@@ -349,6 +351,35 @@ client.onConnectionStateChanged((state) => {
     return {
       success: false,
       error: err instanceof Error ? err.message : 'Claude OAuth failed',
+    }
+  }
+}
+
+// ── startMistralVibeSetup ────────────────────────────────────────────────
+// Vibe's ACP server owns the credential and exposes a delegated browser flow.
+// The server starts/polls that flow; preload opens only the validated public URL
+// on the user's machine so remote Robb servers never try to open a browser.
+;(api as any).startMistralVibeSetup = async (): Promise<{
+  success: boolean
+  error?: string
+}> => {
+  let flowId: string | undefined
+  try {
+    const startResult = await client.invoke('onboarding:startMistralVibeSetup')
+    if (!startResult.success || !startResult.flowId || !startResult.authUrl) {
+      return { success: false, error: startResult.error || 'Mistral Vibe authentication could not start' }
+    }
+    flowId = startResult.flowId
+    await openSafeExternalUrl(startResult.authUrl, (safeUrl) => shell.openExternal(safeUrl))
+    const result = await client.invoke('onboarding:completeMistralVibeSetup', { flowId })
+    return { success: result.success, error: result.error }
+  } catch (err) {
+    if (flowId) {
+      client.invoke('onboarding:cancelMistralVibeSetup', { flowId }).catch(() => {})
+    }
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Mistral Vibe authentication failed',
     }
   }
 }

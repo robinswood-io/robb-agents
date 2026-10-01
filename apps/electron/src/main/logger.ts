@@ -1,12 +1,24 @@
 import log from 'electron-log/main'
-import { appendFileSync, existsSync, mkdirSync, renameSync, rmSync, statSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { appendFileSync, existsSync, renameSync, rmSync, statSync } from 'node:fs'
+import { join } from 'node:path'
 import { CONFIG_DIR } from '@craft-agent/shared/config'
 import type {
   MessagingLogContext,
   MessagingLogMeta,
   MessagingLogger,
 } from '@craft-agent/messaging-gateway'
+import {
+  formatLogDataForConsole,
+  resolveElectronLogTransportPolicy,
+  safeSerializeLogValue,
+  sanitizeLogValue,
+} from './log-sanitizer'
+import { redactSecretLikeMaterial } from '@craft-agent/shared/utils'
+import {
+  ensurePrivateLogDirectory,
+  ensurePrivateLogFilePath,
+  sanitizeExistingLogFile,
+} from './log-file-security'
 
 /**
  * Resolve debug mode deterministically across runtimes.
@@ -37,42 +49,66 @@ function resolveDebugMode(): boolean {
 
 export const isDebugMode = resolveDebugMode()
 
-// Configure transports based on debug mode
-if (isDebugMode) {
-  // Keep the Electron main log inside the active channel profile. Relying on
-  // Electron's default Logs directory can make a Dev runtime write under the
-  // production product name before app.setName() has been applied.
-  log.transports.file.resolvePathFn = () => join(CONFIG_DIR, 'logs', 'main.log')
+// Keep the Electron main log inside the active channel profile. Relying on
+// Electron's default Logs directory can make a Dev runtime write under the
+// production product name before app.setName() has been applied.
+const mainLogPath = join(CONFIG_DIR, 'logs', 'main.log')
+const mainLogBackupPath = `${mainLogPath}.1`
+const MAIN_LOG_MAX_BYTES = 5 * 1024 * 1024 // 5MB
+const transportPolicy = resolveElectronLogTransportPolicy(isDebugMode)
 
-  // JSON format for file (agent-parseable)
-  // Note: format expects (params: FormatParams) => any[], where params.message has the LogMessage fields
-  log.transports.file.format = ({ message }) => [
-    JSON.stringify({
-      timestamp: message.date.toISOString(),
-      level: message.level,
-      scope: message.scope,
-      message: message.data,
-    }),
-  ]
+ensurePrivateLogDirectory(join(CONFIG_DIR, 'logs'))
+ensurePrivateLogFilePath(mainLogPath)
+ensurePrivateLogFilePath(mainLogBackupPath)
+// Upgrade migration: scrub OAuth/session artifacts written by older builds
+// before electron-log opens the active file. Future writes are sanitized by
+// the transport formatter below.
+sanitizeExistingLogFile(mainLogPath, redactSecretLikeMaterial)
+sanitizeExistingLogFile(mainLogBackupPath, redactSecretLikeMaterial)
 
-  log.transports.file.maxSize = 5 * 1024 * 1024 // 5MB
-
-  // Console output in debug mode with readable format
-  // Note: format must return an array - electron-log's transformStyles calls .reduce() on it
-  log.transports.console.format = ({ message }) => {
-    const scope = message.scope ? `[${message.scope}]` : ''
-    const level = message.level.toUpperCase().padEnd(5)
-    const data = message.data
-      .map((d: unknown) => (typeof d === 'object' ? JSON.stringify(d) : String(d)))
-      .join(' ')
-    return [`${message.date.toISOString()} ${level} ${scope} ${data}`]
-  }
-  log.transports.console.level = 'debug'
-} else {
-  // Disable file and console transports in production
-  log.transports.file.level = false
-  log.transports.console.level = false
+log.transports.file.resolvePathFn = () => mainLogPath
+log.transports.file.maxSize = MAIN_LOG_MAX_BYTES
+log.transports.file.writeOptions = {
+  ...(log.transports.file.writeOptions ?? {}),
+  mode: 0o600,
 }
+
+// Keep one bounded archive. electron-log's default `.old.log` rotation can
+// fail when the destination already exists (notably on Windows).
+log.transports.file.archiveLogFn = (file) => {
+  try {
+    if (existsSync(mainLogBackupPath)) {
+      rmSync(mainLogBackupPath, { force: true })
+    }
+    renameSync(file.path, mainLogBackupPath)
+  } catch {
+    // Avoid logging from the transport itself (which would recurse). Clearing
+    // the active file is the bounded fallback if rotation cannot rename it.
+    file.clear()
+  }
+}
+
+// JSON format for file (agent-parseable). The sanitizer handles cycles,
+// throwing getters, non-JSON primitives, oversized values, and secrets.
+log.transports.file.format = ({ message }) => [
+  safeSerializeLogValue({
+    timestamp: message.date.toISOString(),
+    level: message.level,
+    scope: message.scope,
+    message: message.data,
+  }),
+]
+log.transports.file.level = transportPolicy.fileLevel
+
+// Keep local debug output readable while applying the same redaction rules.
+// Note: format must return an array - electron-log's transformStyles calls .reduce() on it.
+log.transports.console.format = ({ message }) => {
+  const scope = message.scope ? `[${message.scope}]` : ''
+  const level = message.level.toUpperCase().padEnd(5)
+  const data = formatLogDataForConsole(message.data)
+  return [`${message.date.toISOString()} ${level} ${scope} ${data}`]
+}
+log.transports.console.level = transportPolicy.consoleLevel
 
 // Export scoped loggers for different modules
 export const mainLog = log.scope('main')
@@ -92,8 +128,11 @@ export const messagingGatewayLogPath = join(CONFIG_DIR, 'logs', 'messaging-gatew
 const messagingGatewayBackupPath = `${messagingGatewayLogPath}.1`
 const MESSAGING_LOG_MAX_BYTES = 5 * 1024 * 1024 // 5MB
 
+ensurePrivateLogFilePath(messagingGatewayLogPath)
+ensurePrivateLogFilePath(messagingGatewayBackupPath)
+
 function ensureMessagingLogDir(): void {
-  mkdirSync(dirname(messagingGatewayLogPath), { recursive: true })
+  ensurePrivateLogFilePath(messagingGatewayLogPath)
 }
 
 function rotateMessagingLogIfNeeded(nextLineBytes: number): void {
@@ -106,40 +145,13 @@ function rotateMessagingLogIfNeeded(nextLineBytes: number): void {
     }
     renameSync(messagingGatewayLogPath, messagingGatewayBackupPath)
   } catch (error) {
-    mainLog.warn('[messaging-gateway] failed to rotate dedicated log file', normalizeLogValue(error))
+    mainLog.warn('[messaging-gateway] failed to rotate dedicated log file', sanitizeLogValue(error))
   }
-}
-
-function normalizeLogValue(value: unknown, depth = 0): unknown {
-  if (depth > 4) return '[truncated]'
-  if (value instanceof Error) {
-    const out: Record<string, unknown> = {
-      name: value.name,
-      message: value.message,
-    }
-    const code = (value as { code?: unknown }).code
-    if (code !== undefined) out.code = code
-    const cause = (value as { cause?: unknown }).cause
-    if (cause !== undefined) out.cause = normalizeLogValue(cause, depth + 1)
-    if (value.stack) out.stack = value.stack
-    return out
-  }
-  if (Array.isArray(value)) {
-    return value.map((item) => normalizeLogValue(item, depth + 1))
-  }
-  if (value && typeof value === 'object') {
-    const out: Record<string, unknown> = {}
-    for (const [key, inner] of Object.entries(value)) {
-      out[key] = normalizeLogValue(inner, depth + 1)
-    }
-    return out
-  }
-  return value
 }
 
 function normalizeMeta(meta?: MessagingLogMeta): Record<string, unknown> {
   if (!meta) return {}
-  const normalized = normalizeLogValue(meta)
+  const normalized = sanitizeLogValue(meta)
   return normalized && typeof normalized === 'object' && !Array.isArray(normalized)
     ? normalized as Record<string, unknown>
     : { meta: normalized }
@@ -160,14 +172,14 @@ function writeMessagingGatewayLog(
     message,
   }
 
-  const line = JSON.stringify(entry) + '\n'
+  const line = safeSerializeLogValue(entry) + '\n'
   try {
     ensureMessagingLogDir()
     rotateMessagingLogIfNeeded(Buffer.byteLength(line))
-    appendFileSync(messagingGatewayLogPath, line, 'utf8')
+    appendFileSync(messagingGatewayLogPath, line, { encoding: 'utf8', mode: 0o600 })
   } catch (error) {
     mainLog.warn('[messaging-gateway] failed to write dedicated log entry', {
-      error: normalizeLogValue(error),
+      error: sanitizeLogValue(error),
       attemptedEntry: entry,
     })
   }
@@ -211,15 +223,17 @@ export const messagingGatewayLog: MessagingLogger = new StructuredMessagingGatew
 /**
  * Dedicated auto-update log.
  *
- * In packaged builds the Electron file/console transports are disabled (see
- * above), so every `[auto-update]` / `[update-flow]` diagnostic is dropped —
- * leaving update-install failures undiagnosable in the field (see #891). This
- * dedicated, always-on rotating log records the update lifecycle at a stable
- * path regardless of debug mode, mirroring the messaging-gateway log above.
+ * This dedicated, always-on rotating log records the update lifecycle at a
+ * stable path regardless of debug mode, mirroring the messaging-gateway log
+ * above. It retains informational update events that the production main log
+ * intentionally filters out.
  */
 export const autoUpdateLogPath = join(CONFIG_DIR, 'logs', 'auto-update.log')
 const autoUpdateBackupPath = `${autoUpdateLogPath}.1`
 const AUTO_UPDATE_LOG_MAX_BYTES = 2 * 1024 * 1024 // 2MB
+
+ensurePrivateLogFilePath(autoUpdateLogPath)
+ensurePrivateLogFilePath(autoUpdateBackupPath)
 
 function rotateAutoUpdateLogIfNeeded(nextLineBytes: number): void {
   if (!existsSync(autoUpdateLogPath)) return
@@ -231,7 +245,7 @@ function rotateAutoUpdateLogIfNeeded(nextLineBytes: number): void {
     }
     renameSync(autoUpdateLogPath, autoUpdateBackupPath)
   } catch (error) {
-    mainLog.warn('[auto-update] failed to rotate dedicated log file', normalizeLogValue(error))
+    mainLog.warn('[auto-update] failed to rotate dedicated log file', sanitizeLogValue(error))
   }
 }
 
@@ -240,21 +254,21 @@ function writeAutoUpdateLog(level: 'info' | 'warn' | 'error', message: string, m
     timestamp: new Date().toISOString(),
     level,
     scope: 'auto-update',
-    ...(meta !== undefined ? { meta: normalizeLogValue(meta) } : {}),
+    ...(meta !== undefined ? { meta: sanitizeLogValue(meta) } : {}),
     message,
   }
 
-  const line = JSON.stringify(entry) + '\n'
+  const line = safeSerializeLogValue(entry) + '\n'
   try {
-    mkdirSync(dirname(autoUpdateLogPath), { recursive: true })
+    ensurePrivateLogFilePath(autoUpdateLogPath)
     rotateAutoUpdateLogIfNeeded(Buffer.byteLength(line))
-    appendFileSync(autoUpdateLogPath, line, 'utf8')
+    appendFileSync(autoUpdateLogPath, line, { encoding: 'utf8', mode: 0o600 })
   } catch (error) {
-    mainLog.warn('[auto-update] failed to write dedicated log entry', normalizeLogValue(error))
+    mainLog.warn('[auto-update] failed to write dedicated log entry', sanitizeLogValue(error))
   }
 
-  // Mirror to the Electron logger too (a no-op in production where transports
-  // are disabled, but keeps --debug console/file output intact).
+  // Mirror warning/error events to the production main log too, while keeping
+  // informational mirroring limited to debug builds.
   if (level === 'error') {
     mainLog.error('[auto-update]', message, entry)
   } else if (level === 'warn') {
@@ -277,10 +291,9 @@ export function getAutoUpdateLogFilePath(): string {
 
 /**
  * Get the path to the current Electron main log file.
- * Returns undefined if file logging is disabled.
+ * File logging is active in both debug and production builds.
  */
 export function getLogFilePath(): string | undefined {
-  if (!isDebugMode) return undefined
   return log.transports.file.getFile()?.path
 }
 

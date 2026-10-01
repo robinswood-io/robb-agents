@@ -153,6 +153,72 @@ export interface ExecutionTelemetrySink {
   emit(event: RobbExecutionTelemetryEvent): Promise<void>
 }
 
+const LOCAL_SAFE_FIELDS = new Set([
+  'outcome', 'durationMs', 'toolName', 'errorCode',
+  'connectionSlug', 'providerType', 'model', 'sensitivity', 'policyRuleIds', 'fallbackReason',
+  'permissionKind', 'resolution', 'source',
+  'estimatedCostUsd', 'actualCostUsd', 'estimatedCostEur', 'actualCostEur',
+  'pricingCatalogVersion', 'exchangeRateAsOf', 'exchangeRateSource',
+  'inputTokens', 'outputTokens', 'cachedInputTokens', 'cacheWriteTokens', 'reasoningTokens', 'cacheHit',
+  'component', 'attempt', 'delayMs', 'reasonCode', 'exhausted',
+  'reclaimedTokens', 'strategy', 'candidateCount', 'selectedCount',
+  'corpusId', 'caseId', 'graderType', 'passed', 'score',
+])
+
+/** Strip runtime-only additions before durable local telemetry persistence. */
+export function toPrivacySafeTelemetryRecord(event: RobbExecutionTelemetryEvent): Record<string, unknown> {
+  const correlation = event.correlation
+  const record: Record<string, unknown> = {
+    schemaVersion: 1,
+    eventId: event.eventId,
+    timestamp: event.timestamp,
+    name: event.name,
+    correlation: {
+      workspaceId: correlation.workspaceId,
+      sessionId: correlation.sessionId,
+      ...(correlation.missionId ? { missionId: correlation.missionId } : {}),
+      ...(correlation.turnId ? { turnId: correlation.turnId } : {}),
+      ...(correlation.toolCallId ? { toolCallId: correlation.toolCallId } : {}),
+      ...(correlation.runId ? { runId: correlation.runId } : {}),
+      ...(correlation.generationId ? { generationId: correlation.generationId } : {}),
+      ...(correlation.evalRunId ? { evalRunId: correlation.evalRunId } : {}),
+    },
+  }
+  for (const [key, value] of Object.entries(event)) {
+    if (LOCAL_SAFE_FIELDS.has(key) && value !== undefined) record[key] = value
+  }
+  return record
+}
+
+/**
+ * Small, dependency-free JSONL sink for local quality/cost analysis. Events are
+ * serialized through an explicit allowlist and rotated by truncation at a
+ * bounded size. Writes are ordered to prevent interleaved JSON records.
+ */
+export class LocalJsonlTelemetrySink implements ExecutionTelemetrySink {
+  private operation: Promise<void> = Promise.resolve()
+
+  constructor(
+    private readonly filePath: string,
+    private readonly maxBytes = 10 * 1024 * 1024,
+  ) {}
+
+  async emit(event: RobbExecutionTelemetryEvent): Promise<void> {
+    const line = `${JSON.stringify(toPrivacySafeTelemetryRecord(event))}\n`
+    const write = async () => {
+      await mkdir(dirname(this.filePath), { recursive: true })
+      const currentSize = (await stat(this.filePath).catch(() => undefined))?.size ?? 0
+      if (currentSize + Buffer.byteLength(line) > this.maxBytes) {
+        await writeFile(this.filePath, '', { encoding: 'utf8', mode: 0o600 })
+      }
+      await writeFile(this.filePath, line, { encoding: 'utf8', mode: 0o600, flag: 'a' })
+    }
+    const result = this.operation.then(write, write)
+    this.operation = result.catch(() => {})
+    await result
+  }
+}
+
 export type TelemetryFetch = (
   input: string | URL | Request,
   init?: RequestInit,

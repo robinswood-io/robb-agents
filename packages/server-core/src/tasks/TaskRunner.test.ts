@@ -15,12 +15,13 @@ import {
   saveTaskSpec,
   readRunLog,
   readNodeOutput,
+  writeNodeOutput,
   writeRunSpecSnapshot,
   type TaskSpec,
 } from '@craft-agent/shared/tasks';
 import type { SessionCompletionEvent } from '../sessions/SessionManager';
 import { TaskRunner, type ConductorSessionHost } from './TaskRunner';
-import { inferTaskNodeProfile, type TaskNodeRouteContext } from './task-node-routing';
+import type { SubagentAutonomyContext } from '../subagents/autonomy-inheritance.ts';
 
 // Flush pending microtasks so the runner's async dispatch (create → column → send) settles.
 const tick = () => new Promise<void>((r) => setTimeout(r, 0));
@@ -149,13 +150,20 @@ describe('TaskRunner (Conductor)', () => {
     rmSync(root, { recursive: true, force: true });
   });
 
-  function makeRunner(executionProofIssuer?: ExecutionProofIssuer) {
+  function makeRunner(
+    executionProofIssuer?: ExecutionProofIssuer,
+    autonomyContext: SubagentAutonomyContext = {
+      workspacePermissionMode: 'allow-all',
+      externalActionPolicy: 'confirm',
+    },
+  ) {
     return new TaskRunner({
       host,
       workspaceId: 'ws',
       workspaceRoot: root,
       getKillSwitch: inactiveKillSwitch,
       now: () => '2026-06-07T00:00:00.000Z',
+      resolveSubagentAutonomyContext: () => autonomyContext,
       ...(executionProofIssuer ? {
         verifyExecutionProof: (proof, binding) => executionProofIssuer.verifyForTask(proof, binding),
       } : {}),
@@ -304,6 +312,51 @@ describe('TaskRunner (Conductor)', () => {
     await tick()
 
     expect(host.created.find((c) => c.options.name === 'c')?.options.permissionMode).toBe('safe')
+  })
+
+  it('inherits full tools and network only from an opted-in Execute parent', async () => {
+    saveTaskSpec(
+      root,
+      specOf({ id: 'autonomous', title: 'Autonomous', goal: 'g', nodes: [{ id: 'work', prompt: 'work' }] }),
+    )
+    const runner = makeRunner(undefined, {
+      workspacePermissionMode: 'allow-all',
+      parentPermissionMode: 'allow-all',
+      externalActionPolicy: 'allow-in-execute',
+    })
+    runner.run('autonomous', { runId: 'r1', orchestratorSessionId: 'orch' })
+    await tick()
+
+    const created = host.created.find((entry) => entry.options.name === 'work')?.options
+    expect(created?.permissionMode).toBe('allow-all')
+    expect(created?.executionIsolation).toBeUndefined()
+    expect(host.promptFor('work')).toContain('[Inherited execution policy]')
+    expect(host.promptFor('work')).toContain('browser, shell, and network')
+  })
+
+  it('keeps explicit Ask and a non-Execute parent inside the restrictive envelope', async () => {
+    saveTaskSpec(
+      root,
+      specOf({
+        id: 'strict-children', title: 'Strict children', goal: 'g',
+        nodes: [
+          { id: 'explicit-ask', prompt: 'ask', permissionMode: 'ask' },
+          { id: 'requested-execute', prompt: 'execute', permissionMode: 'allow-all' },
+        ],
+      }),
+    )
+    const runner = makeRunner(undefined, {
+      workspacePermissionMode: 'allow-all',
+      parentPermissionMode: 'ask',
+      externalActionPolicy: 'allow-in-execute',
+    })
+    runner.run('strict-children', { runId: 'r1', orchestratorSessionId: 'orch' })
+    await tick()
+
+    for (const child of host.created) {
+      expect(child.options.permissionMode).toBe('ask')
+      expect(child.options.executionIsolation).toBeDefined()
+    }
   })
 
   it('injects a stable idempotency key and isolation envelope into the child prompt', async () => {
@@ -480,7 +533,12 @@ describe('TaskRunner (Conductor)', () => {
     expect(runner.getRunState('approve-mutation', started.runId)?.status).toBe('waiting-approval');
     expect(host.created).toHaveLength(0);
     const approval = runner.listPendingApprovals('approve-mutation', 'r1')[0];
-    expect(approval).toMatchObject({ nodeId: 'publish', impact: 'high', owner: 'bob' });
+    expect(approval).toMatchObject({
+      slug: 'approve-mutation',
+      nodeId: 'publish',
+      impact: 'high',
+      owner: 'bob',
+    });
 
     runner.resolveApproval('approve-mutation', 'r1', approval!.requestId, 'approved', 'bob');
     await tick();
@@ -936,6 +994,103 @@ describe('TaskRunner (Conductor)', () => {
     expect(resumed.getRunState('ambiguous', 'r1')?.nodes[0]?.state).toBe('failed');
   });
 
+  it('recovers a confirmed read checkpoint when the process died before node-finished', async () => {
+    const spec = specOf({
+      id: 'confirmed-before-finished',
+      title: 'Confirmed before finished',
+      goal: 'recover the committed output',
+      nodes: [{ id: 'inspect', prompt: 'inspect' }],
+    });
+    saveTaskSpec(root, spec);
+    writeRunSpecSnapshot(root, spec.id, 'r1', spec);
+    appendRunLog(root, spec.id, 'r1', {
+      t: '2026-06-07T00:00:00.000Z', kind: 'run-started', taskId: spec.id, runId: 'r1',
+    });
+    appendRunLog(root, spec.id, 'r1', {
+      t: '2026-06-07T00:00:01.000Z', kind: 'node-scheduled', nodeId: 'inspect',
+    });
+    appendRunLog(root, spec.id, 'r1', {
+      t: '2026-06-07T00:00:02.000Z', kind: 'node-spawned', nodeId: 'inspect', sessionId: 'old-session',
+    });
+    writeNodeOutput(root, spec.id, 'r1', 'inspect', { text: 'durable result' });
+    appendRunLog(root, spec.id, 'r1', {
+      t: '2026-06-07T00:00:03.000Z', kind: 'node-checkpoint', nodeId: 'inspect',
+      idempotencyKey: 'ws:confirmed-before-finished:r1:inspect', status: 'confirmed',
+      proofHash: operationValueHash('durable result'),
+    });
+
+    const recoveredHost = new MockHost();
+    const recovered = new TaskRunner({
+      host: recoveredHost, workspaceId: 'ws', workspaceRoot: root, getKillSwitch: inactiveKillSwitch,
+    });
+    const [snapshot] = recovered.recoverNonTerminalRuns();
+
+    expect(snapshot).toMatchObject({ status: 'completed', nodes: [{ id: 'inspect', state: 'done' }] });
+    expect(recoveredHost.created).toHaveLength(0);
+  });
+
+  it('recovers a rejected approval when the process died before node-finished', async () => {
+    const spec = specOf({
+      id: 'rejected-before-finished',
+      title: 'Rejected before finished',
+      goal: 'preserve the rejection',
+      nodes: [{ id: 'publish', prompt: 'publish', effect: 'external-mutation', approval: true }],
+    });
+    saveTaskSpec(root, spec);
+    writeRunSpecSnapshot(root, spec.id, 'r1', spec);
+    appendRunLog(root, spec.id, 'r1', {
+      t: '2026-06-07T00:00:00.000Z', kind: 'run-started', taskId: spec.id, runId: 'r1',
+    });
+    appendRunLog(root, spec.id, 'r1', {
+      t: '2026-06-07T00:00:01.000Z', kind: 'approval-requested', requestId: 'approval-1',
+      nodeId: 'publish', reason: 'high impact', impact: 'high',
+    });
+    appendRunLog(root, spec.id, 'r1', {
+      t: '2026-06-07T00:00:02.000Z', kind: 'approval-resolved', requestId: 'approval-1',
+      nodeId: 'publish', decision: 'rejected', actor: 'reviewer', comment: 'not authorized',
+    });
+
+    const recoveredHost = new MockHost();
+    const recovered = new TaskRunner({
+      host: recoveredHost, workspaceId: 'ws', workspaceRoot: root, getKillSwitch: inactiveKillSwitch,
+    });
+    const [snapshot] = recovered.recoverNonTerminalRuns();
+
+    expect(snapshot).toMatchObject({ status: 'failed', nodes: [{ id: 'publish', state: 'failed' }] });
+    expect(recovered.listPendingApprovals(spec.id, 'r1')).toHaveLength(0);
+    expect(recoveredHost.created).toHaveLength(0);
+  });
+
+  it('fences an asynchronous dispatch that resumes after the run was stopped', async () => {
+    saveTaskSpec(
+      root,
+      specOf({ id: 'fenced-stop', title: 'Fenced stop', goal: 'g', nodes: [{ id: 'a', prompt: 'a' }] }),
+    );
+    let releaseGuard!: () => void;
+    const guard = new Promise<{ allowed: true }>((resolve) => {
+      releaseGuard = () => resolve({ allowed: true });
+    });
+    const runner = new TaskRunner({
+      host,
+      workspaceId: 'ws',
+      workspaceRoot: root,
+      getKillSwitch: inactiveKillSwitch,
+      executionGuard: () => guard,
+    });
+    runner.run('fenced-stop', { runId: 'r1', verifyOnComplete: false });
+    await tick();
+    await runner.stop('fenced-stop', 'r1');
+    releaseGuard();
+    await tick();
+    await tick();
+
+    expect(runner.getRunState('fenced-stop', 'r1')).toMatchObject({
+      status: 'stopped', nodes: [{ id: 'a', state: 'cancelled' }],
+    });
+    expect(host.created).toHaveLength(0);
+    expect(host.sent).toHaveLength(0);
+  });
+
   it('recovers a proven external mutation without dispatching it twice', async () => {
     const issuer = new ExecutionProofIssuer({
       signingKey: 'task-runner-recovery-proof-key-32-bytes',
@@ -1081,13 +1236,7 @@ describe('TaskRunner (Conductor)', () => {
       workspaceId: 'ws',
       workspaceRoot: root,
       getKillSwitch: inactiveKillSwitch,
-      resolveNodeRoute: (context) => ({
-        profile: inferTaskNodeProfile(context.node, context.attempt),
-        llmConnection: 'primary',
-        model: 'primary-model',
-        thinkingLevel: 'low',
-        strategy: 'primary',
-      }),
+      getModelDefaults: () => ({ llmConnection: 'primary', model: 'primary-model', thinkingLevel: 'low' }),
     });
     first.run('backoff-restart', { runId: 'r1', verifyOnComplete: false });
     await tick();
@@ -1096,22 +1245,12 @@ describe('TaskRunner (Conductor)', () => {
     first.pause('backoff-restart', 'r1');
 
     const recoveredHost = new MockHost();
-    const recoveredPreviousRoutes: Array<TaskNodeRouteContext['previousRoute']> = [];
     const recovered = new TaskRunner({
       host: recoveredHost,
       workspaceId: 'ws',
       workspaceRoot: root,
       getKillSwitch: inactiveKillSwitch,
-      resolveNodeRoute: (context) => {
-        recoveredPreviousRoutes.push(context.previousRoute);
-        return {
-          profile: inferTaskNodeProfile(context.node, context.attempt),
-          llmConnection: 'secondary',
-          model: 'fallback-model',
-          thinkingLevel: 'high',
-          strategy: 'retry-fallback',
-        };
-      },
+      getModelDefaults: () => ({ llmConnection: 'secondary', model: 'other-model', thinkingLevel: 'high' }),
     });
     recovered.resume('backoff-restart', 'r1');
     await tick();
@@ -1119,9 +1258,9 @@ describe('TaskRunner (Conductor)', () => {
 
     await new Promise<void>((resolve) => setTimeout(resolve, 340));
     expect(recoveredHost.dispatchedNames()).toEqual(['a']);
-    expect(recoveredPreviousRoutes).toEqual([{ llmConnection: 'primary', model: 'primary-model' }]);
+    expect(recoveredHost.created[0]?.options).toMatchObject({ llmConnection: 'primary', model: 'primary-model', thinkingLevel: 'low' });
     expect(readRunLog(root, 'backoff-restart', 'r1').filter((entry) => entry.kind === 'node-routed').at(-1))
-      .toMatchObject({ connectionSlug: 'secondary', model: 'fallback-model', strategy: 'retry-fallback' });
+      .toMatchObject({ connectionSlug: 'primary', model: 'primary-model', thinkingLevel: 'low', strategy: 'pinned' });
   });
 
   it('fails without dispatch when the mission deadline is already expired', async () => {
@@ -1452,41 +1591,28 @@ describe('TaskRunner (Conductor)', () => {
     expect(runner.getRunState('auto-retry', 'r1')!.status).toBe('completed');
   });
 
-  it('persists the selected route and passes it to the next retry attempt', async () => {
-    saveTaskSpec(root, specOf({ id: 'route-retry', title: 'Route retry', goal: 'g', nodes: [{ id: 'a', prompt: 'a' }] }));
-    const previousRoutes: Array<TaskNodeRouteContext['previousRoute']> = [];
+  it('preserves the selected connection, model and reasoning through retries', async () => {
+    saveTaskSpec(root, specOf({ id: 'manual-retry', title: 'Manual retry', goal: 'g', nodes: [{ id: 'a', prompt: 'a' }] }));
+    let defaultsReads = 0;
     const runner = new TaskRunner({
-      host,
-      workspaceId: 'ws',
-      workspaceRoot: root,
-      getKillSwitch: inactiveKillSwitch,
+      host, workspaceId: 'ws', workspaceRoot: root, getKillSwitch: inactiveKillSwitch,
       defaultRetry: { limit: 1, when: 'error' },
-      resolveNodeRoute: (context) => {
-        previousRoutes.push(context.previousRoute);
-        const useFallback = context.attempt > 1;
-        return {
-          profile: inferTaskNodeProfile(context.node, context.attempt),
-          llmConnection: useFallback ? 'secondary' : 'primary',
-          model: useFallback ? 'fallback-model' : 'primary-model',
-          thinkingLevel: useFallback ? 'high' : 'low',
-          strategy: useFallback ? 'retry-fallback' : 'primary',
-        };
+      getModelDefaults: () => {
+        defaultsReads += 1;
+        return { llmConnection: 'primary', model: 'selected-model', thinkingLevel: 'medium' };
       },
     });
-    runner.run('route-retry', { runId: 'r1' });
+    runner.run('manual-retry', { runId: 'r1' });
     await tick();
     host.complete('a', { reason: 'error' });
     await tick();
-
-    expect(previousRoutes).toEqual([
-      undefined,
-      { llmConnection: 'primary', model: 'primary-model' },
+    expect(defaultsReads).toBe(1);
+    expect(host.created.filter(entry => entry.options.name === 'a').map(entry => ({
+      model: entry.options.model, llmConnection: entry.options.llmConnection, thinkingLevel: entry.options.thinkingLevel,
+    }))).toEqual([
+      { model: 'selected-model', llmConnection: 'primary', thinkingLevel: 'medium' },
+      { model: 'selected-model', llmConnection: 'primary', thinkingLevel: 'medium' },
     ]);
-    expect(readRunLog(root, 'route-retry', 'r1').filter((entry) => entry.kind === 'node-routed'))
-      .toEqual([
-        expect.objectContaining({ connectionSlug: 'primary', strategy: 'primary' }),
-        expect.objectContaining({ connectionSlug: 'secondary', strategy: 'retry-fallback' }),
-      ]);
   });
 
   it('ignores a stale completion emitted by an earlier retry attempt', async () => {
@@ -1646,6 +1772,105 @@ describe('TaskRunner (Conductor)', () => {
     host.completeSession('orch', { finalText: 'VERDICT: PASS' });
     await tick();
     expect(runner.getRunState('vf', 'r1')!.status).toBe('completed');
+  });
+
+  it('feeds bounded verifier reflections and the rejected output into the next attempt', async () => {
+    saveTaskSpec(root, specOf({
+      id: 'reflective-repair',
+      title: 'Reflective repair',
+      goal: 'Produce grounded evidence',
+      max_iterations: 3,
+      autonomy: { reflection_memory_entries: 2, reflection_output_chars: 200, stagnation_limit: 2 },
+      nodes: [{ id: 'a', prompt: 'Produce the report.' }],
+    }));
+    const runner = makeRunner();
+    runner.run('reflective-repair', { runId: 'r1', orchestratorSessionId: 'orch' });
+    await tick();
+    host.complete('a', { finalText: 'Claim without evidence' });
+    await tick();
+
+    host.completeSession('orch', { finalText: 'VERDICT: FAIL — missing executed evidence' });
+    await tick();
+    const retryPrompt = host.sent.filter((entry) => entry.sessionId === 'sess-a').at(-1)!.message;
+    expect(retryPrompt).toContain('<reflection_memory>');
+    expect(retryPrompt).toContain('missing executed evidence');
+    expect(retryPrompt).toContain('Claim without evidence');
+    expect(retryPrompt).toContain('changed hypothesis');
+  });
+
+  it('stops a verifier-repair loop when it repeats an already rejected result', async () => {
+    saveTaskSpec(root, specOf({
+      id: 'stagnant-repair',
+      title: 'Stagnant repair',
+      goal: 'Make observable progress',
+      max_iterations: 5,
+      autonomy: { stagnation_limit: 1 },
+      nodes: [{ id: 'a', prompt: 'Produce a result.' }],
+    }));
+    const runner = makeRunner();
+    runner.run('stagnant-repair', { runId: 'r1', orchestratorSessionId: 'orch' });
+    await tick();
+    host.complete('a', { finalText: 'unchanged result' });
+    await tick();
+    host.completeSession('orch', { finalText: 'VERDICT: FAIL — missing proof' });
+    await tick();
+    host.complete('a', { finalText: '  unchanged   result  ' });
+    await tick();
+    host.completeSession('orch', { finalText: 'VERDICT: FAIL — still missing proof' });
+    await tick();
+
+    expect(runner.getRunState('stagnant-repair', 'r1')!.status).toBe('failed');
+    expect(host.created.filter((entry) => entry.options.name === 'a')).toHaveLength(2);
+    expect(readRunLog(root, 'stagnant-repair', 'r1')).toContainEqual(expect.objectContaining({
+      kind: 'stagnation-detected',
+      repetitions: 1,
+      limit: 1,
+      nodes: ['a'],
+    }));
+  });
+
+  it('restores no-progress history before evaluating a post-restart verdict', async () => {
+    saveTaskSpec(root, specOf({
+      id: 'durable-stagnation',
+      title: 'Durable stagnation',
+      goal: 'Stop a repair cycle across restarts',
+      max_iterations: 5,
+      autonomy: { stagnation_limit: 2 },
+      nodes: [{ id: 'a', prompt: 'Produce a result.' }],
+    }));
+    const firstRunner = makeRunner();
+    firstRunner.run('durable-stagnation', { runId: 'r1', orchestratorSessionId: 'orch' });
+    await tick();
+    host.complete('a', { finalText: 'same' });
+    await tick();
+    host.completeSession('orch', { finalText: 'VERDICT: FAIL — first rejection' });
+    await tick();
+    host.complete('a', { finalText: 'same' });
+    await tick();
+    host.completeSession('orch', { finalText: 'VERDICT: FAIL — second rejection' });
+    await tick();
+    host.complete('a', { finalText: 'same' });
+    await tick();
+    expect(firstRunner.getRunState('durable-stagnation', 'r1')!.status).toBe('verifying');
+
+    const resumedHost = new MockHost();
+    const resumedRunner = new TaskRunner({
+      host: resumedHost,
+      workspaceId: 'ws',
+      workspaceRoot: root,
+      getKillSwitch: inactiveKillSwitch,
+    });
+    resumedRunner.resume('durable-stagnation', 'r1');
+    await tick();
+    resumedHost.completeSession('orch', { finalText: 'VERDICT: FAIL — third rejection' });
+    await tick();
+
+    expect(resumedRunner.getRunState('durable-stagnation', 'r1')!.status).toBe('failed');
+    expect(readRunLog(root, 'durable-stagnation', 'r1').at(-2)).toMatchObject({
+      kind: 'stagnation-detected',
+      repetitions: 2,
+      limit: 2,
+    });
   });
 
   it('fails the run when FAIL verdicts exhaust the repair budget (max_iterations)', async () => {
@@ -1878,5 +2103,72 @@ describe('TaskRunner (Conductor)', () => {
     await tick();
 
     expect(host.nodeCounts).toContainEqual({ sessionId: 'orch', count: 3 });
+  });
+
+  it('starts a targeted repair as a new run and reuses confirmed upstream evidence', async () => {
+    saveTaskSpec(
+      root,
+      specOf({
+        id: 'targeted-repair',
+        title: 'Targeted repair',
+        goal: 'g',
+        nodes: [
+          { id: 'collect', prompt: 'collect' },
+          { id: 'publish', depends_on: ['collect'], prompt: 'publish ${nodes.collect.output}' },
+        ],
+      }),
+    );
+    const runner = makeRunner();
+    runner.run('targeted-repair', { runId: 'source' });
+    await tick();
+    host.complete('collect', { finalText: 'CONFIRMED INPUT' });
+    await tick();
+    host.complete('publish', { finalText: 'OLD RESULT' });
+    await tick();
+    expect(runner.getRunState('targeted-repair', 'source')?.status).toBe('completed');
+
+    const repair = runner.repair('targeted-repair', 'source', ['publish'], { runId: 'repair-1' });
+    await tick();
+
+    expect(repair.runId).toBe('repair-1');
+    expect(host.dispatchedNames()).toEqual(['collect', 'publish', 'publish']);
+    const repairedPrompt = host.sent.filter((entry) => entry.sessionId === 'sess-publish').at(-1)?.message;
+    expect(repairedPrompt).toContain('publish CONFIRMED INPUT');
+    const repairLog = readRunLog(root, 'targeted-repair', 'repair-1');
+    expect(repairLog).toContainEqual(expect.objectContaining({ kind: 'run-replayed', sourceRunId: 'source' }));
+    expect(repairLog).toContainEqual(expect.objectContaining({ kind: 'node-reused', nodeId: 'collect' }));
+  });
+
+  it('refuses a targeted repair while the source run is still active', async () => {
+    saveTaskSpec(root, specOf({
+      id: 'active-repair',
+      title: 'Active repair',
+      goal: 'g',
+      nodes: [{ id: 'work', prompt: 'work' }],
+    }));
+    const runner = makeRunner();
+    runner.run('active-repair', { runId: 'source' });
+    await tick();
+
+    expect(() => runner.repair('active-repair', 'source', ['work'], { runId: 'repair' }))
+      .toThrow('Cannot repair non-terminal run');
+    expect(runner.getRunState('active-repair', 'repair')).toBeNull();
+  });
+
+  it('refuses to append a targeted repair into the immutable source run', async () => {
+    saveTaskSpec(root, specOf({
+      id: 'immutable-repair',
+      title: 'Immutable repair',
+      goal: 'g',
+      nodes: [{ id: 'work', prompt: 'work' }],
+    }));
+    const runner = makeRunner();
+    runner.run('immutable-repair', { runId: 'source' });
+    await tick();
+    host.complete('work', { finalText: 'done' });
+    await tick();
+
+    expect(() => runner.repair('immutable-repair', 'source', ['work'], { runId: 'source' }))
+      .toThrow('must create a new immutable run');
   });
 });

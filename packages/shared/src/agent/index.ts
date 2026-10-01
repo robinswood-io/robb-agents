@@ -173,3 +173,14 @@ export {
   createPushableInputStream,
   type PushableInputStream,
 } from './backend/claude/persistent-input.ts';
+
+// Packaged Electron external-runtime seal. The manifest itself lives inside
+// the integrity-protected ASAR; only hashes and relative paths are exposed.
+export {
+  assertRuntimeIntegrityManifestIncludes,
+  createRuntimeIntegrityManifest,
+  REQUIRED_PACKAGED_EXTERNAL_RUNTIME_PATHS,
+  RUNTIME_INTEGRITY_MANIFEST_ASAR_PATH,
+  serializeRuntimeIntegrityManifest,
+  verifyRuntimeIntegrityManifest,
+} from './backend/internal/runtime-integrity.ts';

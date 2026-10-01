@@ -15,6 +15,7 @@
 import { join } from 'node:path';
 import type { LoadedSource } from '../../sources/types.ts';
 import { sourceNeedsAuthentication } from '../../sources/credential-manager.ts';
+import { redactSecretLikeMaterial } from '../../utils/redaction.ts';
 import type { SourceManagerConfig } from './types.ts';
 
 /** Slugs exempt from guide.md prerequisite (internal sources) */
@@ -45,6 +46,10 @@ export class SourceManager {
   private intendedSlugs: Set<string> = new Set();
   private allSources: LoadedSource[] = [];
   private knownSlugs: Set<string> = new Set();
+  /** Guides whose sanitized full content is present in the current model context. */
+  private preloadedSourceGuidePaths: Set<string> = new Set();
+  /** Last loaded guide content by path, used to invalidate stale context state. */
+  private sourceGuidesByPath: Map<string, { slug: string; raw: string }> = new Map();
 
   constructor(config: SourceManagerConfig = {}) {
     this.config = config;
@@ -87,6 +92,26 @@ export class SourceManager {
    * Set all available sources (active and inactive).
    */
   setAllSources(sources: LoadedSource[]): void {
+    const nextGuides = new Map<string, { slug: string; raw: string }>();
+    for (const source of sources) {
+      const raw = source.guide?.raw;
+      if (!raw || GUIDE_EXEMPT_SLUGS.has(source.config.slug)) continue;
+      const guidePath = join(source.folderPath, 'guide.md');
+      nextGuides.set(guidePath, { slug: source.config.slug, raw });
+      const previous = this.sourceGuidesByPath.get(guidePath);
+      if (previous && previous.raw !== raw) {
+        this.preloadedSourceGuidePaths.delete(guidePath);
+        this.knownSlugs.delete(source.config.slug);
+        this.config.onDebug?.(`Source guide changed; invalidated preloaded context ${guidePath}`);
+      }
+    }
+    for (const [guidePath, previous] of this.sourceGuidesByPath) {
+      if (nextGuides.has(guidePath)) continue;
+      this.preloadedSourceGuidePaths.delete(guidePath);
+      this.knownSlugs.delete(previous.slug);
+      this.config.onDebug?.(`Source guide removed; invalidated preloaded context ${guidePath}`);
+    }
+    this.sourceGuidesByPath = nextGuides;
     this.allSources = sources;
   }
 
@@ -144,6 +169,12 @@ export class SourceManager {
    */
   resetSeenSources(): void {
     this.knownSlugs.clear();
+    this.preloadedSourceGuidePaths.clear();
+  }
+
+  /** Absolute guide paths actually injected into the current model context. */
+  getPreloadedSourceGuidePaths(): string[] {
+    return [...this.preloadedSourceGuidePaths];
   }
 
   // ============================================================
@@ -216,7 +247,7 @@ export class SourceManager {
       (s) => s.guide?.raw && !GUIDE_EXEMPT_SLUGS.has(s.config.slug)
     );
     if (activeSourcesWithGuides.length > 0) {
-      parts.push('Read each source\'s guide.md before first tool use — calls are blocked until guide is read.');
+      parts.push('Active source guides are preloaded below; credential-shaped values are redacted and supplied separately by the host credential manager.');
     }
 
     // Source descriptions (shown once per session when first introduced)
@@ -238,8 +269,23 @@ export class SourceManager {
       }
       if (hasGuides) {
         parts.push('');
-        parts.push('IMPORTANT: You MUST read a source\'s guide with the Read tool BEFORE using any of its tools. Tool calls WILL BE REJECTED if the guide has not been read first.');
+        parts.push('Source guides for active tools are loaded into this context before tool use.');
       }
+    }
+
+    // Preload each active guide once per context window. This removes the
+    // synthetic first-tool rejection while preserving compaction semantics:
+    // resetSeenSources() clears this set, so the next turn reinjects guides.
+    for (const source of activeSourcesWithGuides) {
+      const guidePath = join(source.folderPath, 'guide.md');
+      if (this.preloadedSourceGuidePaths.has(guidePath)) continue;
+      const sanitizedGuide = redactSecretLikeMaterial(source.guide?.raw ?? '').trim();
+      if (!sanitizedGuide) continue;
+      parts.push('');
+      parts.push(`<source_guide source="${source.config.slug}" path="${guidePath}">`);
+      parts.push(sanitizedGuide);
+      parts.push('</source_guide>');
+      this.preloadedSourceGuidePaths.add(guidePath);
     }
 
     let output = `<sources>\n${parts.join('\n')}\n</sources>`;

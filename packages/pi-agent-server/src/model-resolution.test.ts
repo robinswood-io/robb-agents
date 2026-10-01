@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'bun:test';
-import { resolvePiModel, isDeniedMiniModelId, isModelNotFoundError } from './model-resolution.ts';
+import {
+  requireExplicitPiModel,
+  resolvePiModel,
+  isDeniedMiniModelId,
+  isModelNotFoundError,
+} from './model-resolution.ts';
 
 /**
  * Minimal mock of PiModelRegistry.
@@ -48,15 +53,14 @@ describe('resolvePiModel', () => {
       expect(result!.provider).toBe('anthropic');
     });
 
-    it('falls through to piAuthProvider when preferCustomEndpoint=true but model not in custom-endpoint', () => {
+    it('rejects a missing custom endpoint model instead of switching to the auth provider', () => {
       const registry = createMockRegistry({
         'custom-endpoint': [],
         anthropic: [{ id: 'claude-sonnet-4-6', name: 'claude-sonnet-4-6', provider: 'anthropic' }],
       });
 
       const result = resolvePiModel(registry, 'claude-sonnet-4-6', 'anthropic', true);
-      expect(result).toBeDefined();
-      expect(result!.provider).toBe('anthropic');
+      expect(result).toBeUndefined();
     });
   });
 
@@ -95,7 +99,7 @@ describe('resolvePiModel', () => {
     });
   });
 
-  describe('fallback chain', () => {
+  describe('legacy unambiguous lookup', () => {
     it('falls through getAll scan when no exact match', () => {
       const registry = createMockRegistry({
         google: [{ id: 'gemini-pro', name: 'Gemini Pro', provider: 'google' }],
@@ -106,7 +110,7 @@ describe('resolvePiModel', () => {
       expect(result!.id).toBe('gemini-pro');
     });
 
-    it('tries common providers in fallback list (custom-endpoint first)', () => {
+    it('does not search common providers when none is explicitly configured', () => {
       // Model not in getAll by id/name match, but findable via provider lookup
       const registry = {
         find(provider: string, modelId: string) {
@@ -121,8 +125,15 @@ describe('resolvePiModel', () => {
       } as any;
 
       const result = resolvePiModel(registry, 'my-model');
-      expect(result).toBeDefined();
-      expect(result!.provider).toBe('custom-endpoint');
+      expect(result).toBeUndefined();
+    });
+
+    it('rejects an ambiguous model ID instead of choosing the first provider', () => {
+      const registry = createMockRegistry({
+        openai: [{ id: 'same-model', name: 'same-model', provider: 'openai' }],
+        anthropic: [{ id: 'same-model', name: 'same-model', provider: 'anthropic' }],
+      });
+      expect(resolvePiModel(registry, 'same-model')).toBeUndefined();
     });
 
     it('returns undefined when model not found anywhere', () => {
@@ -135,7 +146,7 @@ describe('resolvePiModel', () => {
     });
   });
 
-  describe('provider-safe fallback', () => {
+  describe('provider boundary', () => {
     it('does not return a model from an incompatible provider via getAll fallback', () => {
       // gpt-5.4 exists under azure-openai-responses but NOT github-copilot.
       // With github-copilot auth, the fallback must not return the azure model.
@@ -163,15 +174,14 @@ describe('resolvePiModel', () => {
       expect(result!.provider).toBe('github-copilot');
     });
 
-    it('allows custom-endpoint models regardless of piAuthProvider', () => {
+    it('does not switch to a custom endpoint without an explicit endpoint selection', () => {
       const registry = createMockRegistry({
         'custom-endpoint': [{ id: 'my-model', name: 'My Model', provider: 'custom-endpoint' }],
         'github-copilot': [],
       });
 
       const result = resolvePiModel(registry, 'my-model', 'github-copilot');
-      expect(result).toBeDefined();
-      expect(result!.provider).toBe('custom-endpoint');
+      expect(result).toBeUndefined();
     });
 
     it('does not filter by provider when piAuthProvider is not set', () => {
@@ -199,6 +209,45 @@ describe('resolvePiModel', () => {
       const result = resolvePiModel(registry, 'gpt-5.4', 'github-copilot');
       expect(result).toBeUndefined();
     });
+  });
+});
+
+describe('requireExplicitPiModel', () => {
+  it('returns the explicitly selected model when it resolves', () => {
+    const registry = createMockRegistry({
+      openai: [{ id: 'gpt-5.6-sol', name: 'GPT-5.6 Sol', provider: 'openai' }],
+    });
+
+    expect(requireExplicitPiModel(registry, 'pi/gpt-5.6-sol', 'openai')).toMatchObject({
+      id: 'gpt-5.6-sol',
+      provider: 'openai',
+    });
+  });
+
+  it('throws instead of allowing the SDK default when the selection is unresolved', () => {
+    const registry = createMockRegistry({
+      openai: [{ id: 'gpt-5.5', name: 'GPT-5.5' }],
+    });
+
+    expect(() => requireExplicitPiModel(registry, 'pi/gpt-5.6-sol', 'openai')).toThrow(
+      'Explicitly selected Pi model "pi/gpt-5.6-sol" could not be resolved for provider "openai"',
+    );
+  });
+
+  it('throws if a registry returns an incompatible provider', () => {
+    const registry = {
+      find(provider: string, modelId: string) {
+        if (provider === 'openai' && modelId === 'gpt-5.6-sol') {
+          return { id: modelId, name: 'GPT-5.6 Sol', provider: 'anthropic' };
+        }
+        return undefined;
+      },
+      getAll() { return []; },
+    } as any;
+
+    expect(() => requireExplicitPiModel(registry, 'gpt-5.6-sol', 'openai')).toThrow(
+      'resolved to incompatible provider "anthropic"',
+    );
   });
 });
 

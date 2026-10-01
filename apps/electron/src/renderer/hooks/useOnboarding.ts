@@ -60,7 +60,7 @@ interface UseOnboardingReturn {
 
   // Local model
   handleSubmitLocalModel: (data: LocalModelSubmitData) => void
-  handleStartOAuth: (methodOverride?: ApiSetupMethod, connectionSlugOverride?: string) => void
+  handleStartOAuth: (methodOverride?: ApiSetupMethod, connectionSlugOverride?: string, googleCloudProject?: string) => void
 
   // Claude OAuth (two-step flow)
   isWaitingForCode: boolean
@@ -97,8 +97,34 @@ export const BASE_SLUG_FOR_METHOD: Record<ApiSetupMethod, string> = {
   pi_chatgpt_oauth: 'chatgpt-plus',
   pi_copilot_oauth: 'github-copilot',
   pi_gemini_oauth: 'google-gemini',
+  pi_google_antigravity_subscription: 'google-antigravity',
   pi_mistral_vibe_subscription: 'mistral-vibe',
   pi_api_key: 'pi-api-key',
+}
+
+interface ProviderSetupSelection {
+  method: ApiSetupMethod
+  preferredPiPreset?: string
+  startOAuth: boolean
+}
+
+/**
+ * Resolve the safe default setup for a provider card. Google account access
+ * uses the official Antigravity CLI; the legacy Code Assist OAuth method
+ * remains available from direct setup for separately licensed organizations.
+ */
+export function resolveProviderSetupSelection(
+  choice: Exclude<ProviderChoice, 'local'>,
+): ProviderSetupSelection {
+  const selections: Record<Exclude<ProviderChoice, 'local'>, ProviderSetupSelection> = {
+    claude: { method: 'claude_oauth', startOAuth: true },
+    chatgpt: { method: 'pi_chatgpt_oauth', startOAuth: true },
+    copilot: { method: 'pi_copilot_oauth', startOAuth: true },
+    google: { method: 'pi_google_antigravity_subscription', startOAuth: true },
+    mistral: { method: 'pi_mistral_vibe_subscription', startOAuth: false },
+    api_key: { method: 'pi_api_key', startOAuth: false },
+  }
+  return selections[choice]
 }
 
 /**
@@ -144,6 +170,7 @@ export function apiSetupMethodToConnectionSetup(
     connectionDefaultModel?: string
     models?: string[]
     piAuthProvider?: string
+    googleCloudProject?: string
     modelSelectionMode?: 'automaticallySyncedFromProvider' | 'userDefined3Tier'
     customEndpoint?: CustomEndpointConfig
     iamCredentials?: { accessKeyId: string; secretAccessKey: string; sessionToken?: string }
@@ -182,7 +209,10 @@ export function apiSetupMethodToConnectionSetup(
       return {
         slug,
         credential: options.credential,
+        googleCloudProject: options.googleCloudProject,
       }
+    case 'pi_google_antigravity_subscription':
+      return { slug }
     case 'pi_mistral_vibe_subscription':
       return { slug }
     case 'pi_api_key':
@@ -258,6 +288,7 @@ export function useOnboarding({
       connectionDefaultModel?: string
       models?: string[]
       piAuthProvider?: string
+      googleCloudProject?: string
       modelSelectionMode?: 'automaticallySyncedFromProvider' | 'userDefined3Tier'
       customEndpoint?: CustomEndpointConfig
       iamCredentials?: { accessKeyId: string; secretAccessKey: string; sessionToken?: string }
@@ -284,6 +315,7 @@ export function useOnboarding({
         connectionDefaultModel: options?.connectionDefaultModel,
         models: options?.models,
         piAuthProvider: options?.piAuthProvider,
+        googleCloudProject: options?.googleCloudProject,
         modelSelectionMode: options?.modelSelectionMode,
         customEndpoint: options?.customEndpoint,
         iamCredentials: options?.iamCredentials,
@@ -513,8 +545,18 @@ export function useOnboarding({
   // `method` is passed explicitly to break the stale-closure chain — the OAuth
   // await crosses renders, so handleSaveConfig's closure may have an outdated
   // state.apiSetupMethod.
-  const saveAndValidateConnection = useCallback(async (connectionSlug: string, method: ApiSetupMethod, credential?: string, updateOnly?: boolean, oauthIdentity?: ClaudeOAuthIdentityDto): Promise<boolean> => {
-    const saved = await handleSaveConfig(credential, oauthIdentity ? { oauthIdentity } : undefined, method, connectionSlug, updateOnly)
+  const saveAndValidateConnection = useCallback(async (
+    connectionSlug: string,
+    method: ApiSetupMethod,
+    credential?: string,
+    updateOnly?: boolean,
+    oauthIdentity?: ClaudeOAuthIdentityDto,
+    googleCloudProject?: string,
+  ): Promise<boolean> => {
+    const setupOptions = oauthIdentity || googleCloudProject
+      ? { ...(oauthIdentity ? { oauthIdentity } : {}), ...(googleCloudProject ? { googleCloudProject } : {}) }
+      : undefined
+    const saved = await handleSaveConfig(credential, setupOptions, method, connectionSlug, updateOnly)
     if (!saved) {
       setState(s => ({ ...s, credentialStatus: 'error' }))
       return false
@@ -536,7 +578,11 @@ export function useOnboarding({
   const [copilotDeviceCode, setCopilotDeviceCode] = useState<{ userCode: string; verificationUri: string } | undefined>()
 
   // Start OAuth flow (Claude or ChatGPT depending on selected method)
-  const handleStartOAuth = useCallback(async (methodOverride?: ApiSetupMethod, connectionSlugOverride?: string) => {
+  const handleStartOAuth = useCallback(async (
+    methodOverride?: ApiSetupMethod,
+    connectionSlugOverride?: string,
+    googleCloudProject?: string,
+  ) => {
     const effectiveMethod = methodOverride ?? state.apiSetupMethod
 
     if (methodOverride && methodOverride !== state.apiSetupMethod) {
@@ -580,7 +626,7 @@ export function useOnboarding({
         return
       }
 
-      // Google Gemini OAuth (browser flow — Google account / Gemini Code Assist)
+      // Mistral Vibe subscription (delegated browser flow owned by Vibe)
       if (effectiveMethod === 'pi_mistral_vibe_subscription') {
         const effectiveEditingSlug = connectionSlugOverride ?? editingSlug
         const isReauth = !!effectiveEditingSlug
@@ -594,14 +640,38 @@ export function useOnboarding({
         return
       }
 
+      // Google Antigravity subscription (official CLI owns the browser login
+      // and keeps its credential in the operating-system keyring).
+      if (effectiveMethod === 'pi_google_antigravity_subscription') {
+        const effectiveEditingSlug = connectionSlugOverride ?? editingSlug
+        const isReauth = !!effectiveEditingSlug
+        const connectionSlug = apiSetupMethodToConnectionSetup(effectiveMethod, {}, effectiveEditingSlug, existingSlugs).slug
+        const result = await window.electronAPI.startGoogleAntigravitySetup()
+        if (result.success) {
+          await saveAndValidateConnection(connectionSlug, effectiveMethod, undefined, isReauth)
+        } else {
+          setState(s => ({ ...s, credentialStatus: 'error', errorMessage: result.error || 'Google Antigravity setup failed' }))
+        }
+        return
+      }
+
       if (effectiveMethod === 'pi_gemini_oauth') {
+        const trimmedProject = googleCloudProject?.trim() ?? ''
+        if (!/^[a-z][a-z0-9-]{4,28}[a-z0-9]$/.test(trimmedProject)) {
+          setState(s => ({
+            ...s,
+            credentialStatus: 'error',
+            errorMessage: 'Enter a valid Google Cloud project ID before signing in.',
+          }))
+          return
+        }
         const effectiveEditingSlug = connectionSlugOverride ?? editingSlug
         const isReauth = !!effectiveEditingSlug
         const connectionSlug = apiSetupMethodToConnectionSetup(effectiveMethod, {}, effectiveEditingSlug, existingSlugs).slug
         const result = await window.electronAPI.startGeminiOAuth(connectionSlug)
 
         if (result.success) {
-          await saveAndValidateConnection(connectionSlug, effectiveMethod, undefined, isReauth)
+          await saveAndValidateConnection(connectionSlug, effectiveMethod, undefined, isReauth, undefined, trimmedProject)
         } else {
           setState(s => ({
             ...s,
@@ -677,33 +747,25 @@ export function useOnboarding({
 
   // Map ProviderChoice → ApiSetupMethod and navigate to the right step
   const handleSelectProvider = useCallback((choice: ProviderChoice) => {
-    const CHOICE_TO_METHOD: Record<Exclude<ProviderChoice, 'local'>, ApiSetupMethod> = {
-      claude: 'claude_oauth',
-      chatgpt: 'pi_chatgpt_oauth',
-      copilot: 'pi_copilot_oauth',
-      google: 'pi_gemini_oauth',
-      mistral: 'pi_mistral_vibe_subscription',
-      api_key: 'pi_api_key',
-    }
-
     if (choice === 'local') {
       // Local uses anthropic_api_key with custom endpoint (Ollama doesn't need an API key)
       setState(s => ({ ...s, step: 'local-model', apiSetupMethod: 'anthropic_api_key', credentialStatus: 'idle', errorMessage: undefined }))
       return
     }
 
-    const method = CHOICE_TO_METHOD[choice]
+    const selection = resolveProviderSetupSelection(choice)
+    const method = selection.method
     setState(s => ({
       ...s,
       apiSetupMethod: method,
-      preferredPiPreset: undefined,
+      preferredPiPreset: selection.preferredPiPreset,
       step: 'credentials',
       credentialStatus: 'idle',
       errorMessage: undefined,
     }))
 
     // OAuth methods start immediately
-    if (choice === 'claude' || choice === 'chatgpt' || choice === 'copilot' || choice === 'google') {
+    if (selection.startOAuth) {
       // Defer to next tick so state is updated before handleStartOAuth reads it
       setTimeout(() => handleStartOAuth(method), 0)
     }

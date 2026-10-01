@@ -116,22 +116,17 @@ if ($Provenance.product -ne 'Robb Agents') { throw 'Windows provenance has inval
 if ($Provenance.version -ne $ManifestVersion) { throw "Windows provenance version $($Provenance.version) does not match manifest version $ManifestVersion." }
 if ($Provenance.platform -ne 'windows-x64') { throw 'Windows provenance has invalid platform.' }
 $DeclaredSigning = $Provenance.signing
-if ($DeclaredSigning -notin @('verified-authenticode', 'unsigned-github-release')) {
-    throw "Windows provenance has unsupported signing state: $DeclaredSigning"
-}
-
-$Signature = Get-AuthenticodeSignature $InstallerPath
 if ($DeclaredSigning -eq 'verified-authenticode') {
+    $Signature = Get-AuthenticodeSignature $InstallerPath
     if ($Signature.Status -ne 'Valid') {
         Remove-Item $InstallerPath -Force
         throw "Authenticode verification failed: $($Signature.Status) $($Signature.StatusMessage)"
     }
     Write-Success "Authenticode signature verified: $($Signature.SignerCertificate.Subject)"
-} elseif ($Signature.Status -eq 'Valid') {
-    Write-Success "Authenticode signature verified despite unsigned-release provenance: $($Signature.SignerCertificate.Subject)"
+} elseif ($DeclaredSigning -eq 'unsigned-public-release') {
+    Write-Warning 'This Robb Agents Windows release is intentionally unsigned. Windows SmartScreen may display a warning; SHA-512 and release provenance were verified.'
 } else {
-    Write-Info 'This GitHub Release explicitly declares the Windows installer as unsigned.'
-    Write-Info 'Windows may show an unknown-publisher or SmartScreen warning. Continue only if SHA-512 and GitHub provenance verification match your trust policy.'
+    throw "Windows provenance has unsupported signing state: $DeclaredSigning"
 }
 
 $Running = @(Get-Process -Name 'Robb Agents' -ErrorAction SilentlyContinue)

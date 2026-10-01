@@ -8,6 +8,8 @@
  */
 
 import { SignJWT, jwtVerify } from 'jose'
+import { randomBytes, scrypt as scryptCallback, timingSafeEqual } from 'node:crypto'
+import { promisify } from 'node:util'
 
 // ---------------------------------------------------------------------------
 // JWT helpers (via jose library)
@@ -149,26 +151,28 @@ export function extractSessionCookie(cookieHeader: string | null): string | null
 }
 
 // ---------------------------------------------------------------------------
-// Password verification (argon2id via Bun.password)
+// Password verification (Node-compatible scrypt)
 // ---------------------------------------------------------------------------
 
-let hashedPassword: string | null = null
+const scrypt = promisify(scryptCallback)
+
+export type PasswordVerifier = (input: string) => Promise<boolean>
 
 /**
- * Hash the login password at startup. Must be called before any auth requests.
- * The hash is stored in memory — the raw password is not retained.
+ * Build a server-local password verifier.
+ *
+ * Keeping the derived hash in this closure avoids the previous module-global
+ * state where starting a second Web UI handler silently replaced the first
+ * handler's password verifier.
  */
-export async function initPasswordHash(plaintext: string): Promise<void> {
-  hashedPassword = await Bun.password.hash(plaintext, { algorithm: 'argon2id' })
-}
+export async function createPasswordVerifier(plaintext: string): Promise<PasswordVerifier> {
+  const salt = randomBytes(16)
+  const expectedHash = await scrypt(plaintext, salt, 64) as Buffer
 
-/**
- * Verify a user-supplied password against the pre-hashed password.
- * Uses Bun's built-in argon2id verification (constant-time).
- */
-export async function verifyPassword(input: string): Promise<boolean> {
-  if (!hashedPassword) return false
-  return Bun.password.verify(input, hashedPassword)
+  return async (input: string): Promise<boolean> => {
+    const candidate = await scrypt(input, salt, expectedHash.length) as Buffer
+    return timingSafeEqual(candidate, expectedHash)
+  }
 }
 
 // ---------------------------------------------------------------------------

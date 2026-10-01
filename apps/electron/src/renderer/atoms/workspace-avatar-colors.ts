@@ -7,6 +7,7 @@
  */
 
 import { atomWithStorage } from 'jotai/utils'
+import { createWebSafeAtomStorage } from '@/lib/web-safe-atom-storage'
 
 const STORAGE_KEY = 'craft-workspace-avatar-colors'
 
@@ -14,5 +15,6 @@ export type WorkspaceAvatarColors = Record<string, string>
 
 export const workspaceAvatarColorsAtom = atomWithStorage<WorkspaceAvatarColors>(
   STORAGE_KEY,
-  {}
+  {},
+  createWebSafeAtomStorage<WorkspaceAvatarColors>(),
 )

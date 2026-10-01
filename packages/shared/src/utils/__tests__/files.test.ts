@@ -1,9 +1,9 @@
 import { describe, test, expect, afterEach } from 'bun:test'
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { Buffer } from 'node:buffer'
-import { getFileType, getMimeType, readFileAttachment } from '../files'
+import { atomicWriteFileSync, getFileType, getMimeType, readFileAttachment } from '../files'
 
 const cleanups: Array<() => void> = []
 
@@ -67,6 +67,19 @@ describe('getMimeType — audio support', () => {
 
   test('opus → audio/ogg', () => {
     expect(getMimeType('voice.opus')).toBe('audio/ogg')
+  })
+})
+
+describe('atomicWriteFileSync', () => {
+  test('durably creates and replaces a file without leaving temp files', () => {
+    const dir = makeTmp()
+    const path = join(dir, 'config.json')
+
+    atomicWriteFileSync(path, '{"version":1}\n')
+    atomicWriteFileSync(path, '{"version":2}\n')
+
+    expect(readFileSync(path, 'utf8')).toBe('{"version":2}\n')
+    expect(readdirSync(dir)).toEqual(['config.json'])
   })
 })
 

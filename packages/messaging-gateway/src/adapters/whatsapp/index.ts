@@ -19,6 +19,10 @@
 import { spawn, type ChildProcess } from 'node:child_process'
 import { Buffer } from 'node:buffer'
 import {
+  registerLongRunningProcess,
+  type LongRunningProcessHandle,
+} from '@craft-agent/shared/processes'
+import {
   encodeMessage,
   parseFrames,
   type WorkerCommand,
@@ -89,6 +93,8 @@ export interface WhatsAppConfig extends PlatformConfig {
    * slow networks.
    */
   sendTimeoutMs?: number
+  /** Maximum worker silence before the supervisor terminates its process tree. */
+  workerIdleTimeoutMs?: number
 }
 
 // ---------------------------------------------------------------------------
@@ -121,6 +127,7 @@ export class WhatsAppAdapter implements PlatformAdapter {
   }
 
   private proc: ChildProcess | null = null
+  private supervisorHandle: LongRunningProcessHandle | null = null
   private stdoutBuffer = ''
   private connected = false
   private started = false
@@ -163,6 +170,13 @@ export class WhatsAppAdapter implements PlatformAdapter {
       stdio: ['pipe', 'pipe', 'pipe'],
       env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
     })
+    this.supervisorHandle = registerLongRunningProcess(this.proc, {
+      id: `whatsapp-worker:${this.proc.pid ?? Date.now()}`,
+      kind: 'messaging-worker',
+      ownerId: 'whatsapp',
+      maxIdleMs: cfg.workerIdleTimeoutMs ?? 12 * 60 * 60 * 1000,
+      metadata: { platform: 'whatsapp' },
+    })
 
     this.proc.stdout?.setEncoding('utf8')
     this.proc.stdout?.on('data', (chunk: string) => {
@@ -186,6 +200,7 @@ export class WhatsAppAdapter implements PlatformAdapter {
       this.connected = false
       this.started = false
       this.proc = null
+      this.supervisorHandle = null
       this.drainPending(
         `worker exited with code ${code ?? 'null'}${signal ? ` (signal ${signal})` : ''}`,
       )
@@ -224,6 +239,7 @@ export class WhatsAppAdapter implements PlatformAdapter {
         error: err,
       })
     }
+    this.supervisorHandle?.terminate('WhatsApp adapter shutdown')
     const proc = this.proc
     await new Promise<void>((resolve) => {
       const timer = setTimeout(() => {
@@ -245,6 +261,7 @@ export class WhatsAppAdapter implements PlatformAdapter {
     // so no caller is left hanging.
     this.drainPending('adapter destroyed')
     this.proc = null
+    this.supervisorHandle = null
     this.started = false
     this.connected = false
   }
@@ -347,6 +364,7 @@ export class WhatsAppAdapter implements PlatformAdapter {
     if (!this.proc || !this.proc.stdin?.writable) {
       throw new Error('WhatsApp worker is not running')
     }
+    this.supervisorHandle?.touch()
     this.proc.stdin.write(encodeMessage(cmd))
   }
 

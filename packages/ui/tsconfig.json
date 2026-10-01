@@ -1,12 +1,13 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "rootDir": "./src",
+    "rootDir": "..",
     "outDir": "./dist",
     "declaration": true,
     "declarationDir": "./dist",
     "jsx": "react-jsx",
     "moduleResolution": "bundler",
+    "types": ["node", "vite/client"],
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "paths": {
       "@craft-agent/core": ["../core/src/index.ts"],

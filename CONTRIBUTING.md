@@ -13,6 +13,34 @@ bun run electron:dev
 
 Prerequisites: Bun 1.3.9+, Node.js 20+, and platform tooling appropriate to the component you are changing.
 
+## Development, local staging, and release promotion
+
+Robb Agents uses three separate targets. Select the target explicitly before
+building or installing anything:
+
+| Target | Application/profile | Purpose |
+|---|---|---|
+| Development | Robb Agents Dev / `~/.craft-agent-dev` | Daily development and isolated testing |
+| Local staging | `/Applications/Robb Agents.app` / `~/.craft-agent` | Validate a candidate with the existing production chats, credentials, browser state, and MCP configuration |
+| GitHub Release | Signed public artifacts | Distribute only after local staging acceptance and all release gates pass |
+
+Use `bun run electron:dev` for normal development. Never install a
+development-channel artifact over `/Applications/Robb Agents.app`.
+
+To update the local production application as a staging candidate, start from
+a clean, identifiable commit and run:
+
+```bash
+bash apps/electron/scripts/build-dmg.sh arm64 --local-production
+```
+
+Back up the installed bundle before replacement, then verify the embedded
+commit, the `~/.craft-agent/robb-electron` runtime path, historical sessions,
+configured connections, and relevant MCP processes. This ad-hoc package must
+remain local. Merging a pull request into `main` does not publish a GitHub
+Release; create a release tag only after the staging result has been explicitly
+accepted.
+
 ## Pull requests
 
 1. Branch from `robinswood/main`.

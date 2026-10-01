@@ -27,7 +27,7 @@ import {
 describe('tokenLimitFor', () => {
   test('falls back to default when contextWindow is undefined', () => {
     expect(tokenLimitFor(undefined)).toBe(TOKEN_LIMIT);
-    expect(tokenLimitFor(undefined)).toBe(12_000);
+    expect(tokenLimitFor(undefined)).toBe(4_000);
   });
 
   test('falls back to default for zero / negative contextWindow', () => {
@@ -41,21 +41,21 @@ describe('tokenLimitFor', () => {
   });
 
   test('scales linearly in the middle range', () => {
-    expect(tokenLimitFor(64_000)).toBe(6_400);
-    // 128_000 * 0.10 = 12_800 → capped at TOKEN_LIMIT (12_000).
-    expect(tokenLimitFor(128_000)).toBe(12_000);
-    expect(tokenLimitFor(100_000)).toBe(10_000);
+    expect(tokenLimitFor(64_000)).toBe(2_560);
+    // 128_000 * 0.04 = 5_120 → capped at TOKEN_LIMIT (4_000).
+    expect(tokenLimitFor(128_000)).toBe(4_000);
+    expect(tokenLimitFor(100_000)).toBe(4_000);
   });
 
-  test('floors at 2_000 for small-window models', () => {
-    // 8_000 * 0.10 = 800 → floor to 2_000
-    expect(tokenLimitFor(8_000)).toBe(2_000);
-    expect(tokenLimitFor(16_000)).toBe(2_000);
+  test('floors at 1_000 for small-window models', () => {
+    // 8_000 * 0.04 = 320 → floor to 1_000
+    expect(tokenLimitFor(8_000)).toBe(1_000);
+    expect(tokenLimitFor(16_000)).toBe(1_000);
   });
 
-  test('floor boundary: contextWindow * 0.10 == floor', () => {
-    // 20_000 * 0.10 = 2_000 → exact floor
-    expect(tokenLimitFor(20_000)).toBe(2_000);
+  test('floor boundary: contextWindow * 0.04 == floor', () => {
+    // 25_000 * 0.04 = 1_000 → exact floor
+    expect(tokenLimitFor(25_000)).toBe(1_000);
   });
 });
 
@@ -81,7 +81,7 @@ describe('guardLargeResult contextWindow handling', () => {
     rmSync(sessionPath, { recursive: true, force: true });
   });
 
-  test('triggers summarization on a 64k-window model (8k > 6.4k)', async () => {
+  test('triggers summarization on a 64k-window model (8k > 2.56k)', async () => {
     expect(estimateTokens(eightKTokenText)).toBeGreaterThanOrEqual(7_999);
     expect(estimateTokens(eightKTokenText)).toBeLessThanOrEqual(8_000);
     const result = await guardLargeResult(eightKTokenText, {
@@ -96,24 +96,24 @@ describe('guardLargeResult contextWindow handling', () => {
     expect(existsSync(join(sessionPath, 'long_responses'))).toBe(true);
   });
 
-  test('passes through a 200k-window model (8k < 12k)', async () => {
+  test('summarizes on a 200k-window model because the global cap is 4k', async () => {
     const result = await guardLargeResult(eightKTokenText, {
       sessionPath,
       toolName: 'test_tool',
       summarize: fakeSummarize,
       contextWindow: 200_000,
     });
-    expect(result).toBeNull();
+    expect(result).not.toBeNull();
   });
 
-  test('preserves existing behavior when contextWindow is undefined', async () => {
-    // No contextWindow → fixed 12k threshold → 8k passes through.
+  test('applies the bounded default when contextWindow is undefined', async () => {
+    // No contextWindow → fixed 4k threshold → 8k is summarized.
     const result = await guardLargeResult(eightKTokenText, {
       sessionPath,
       toolName: 'test_tool',
       summarize: fakeSummarize,
     });
-    expect(result).toBeNull();
+    expect(result).not.toBeNull();
   });
 
   test('floor still triggers on tiny-window models', async () => {
@@ -146,7 +146,7 @@ describe('handleLargeResponse contextWindow handling', () => {
     rmSync(sessionPath, { recursive: true, force: true });
   });
 
-  test('returns null below the model-aware threshold (200k window)', async () => {
+  test('summarizes above the global 4k threshold (200k window)', async () => {
     const result = await handleLargeResponse({
       text: eightKTokenText,
       sessionPath,
@@ -154,7 +154,7 @@ describe('handleLargeResponse contextWindow handling', () => {
       summarize: fakeSummarize,
       contextWindow: 200_000,
     });
-    expect(result).toBeNull();
+    expect(result).not.toBeNull();
   });
 
   test('returns a summarized result above the threshold (64k window)', async () => {
@@ -173,15 +173,14 @@ describe('handleLargeResponse contextWindow handling', () => {
     expect(written).toBe(eightKTokenText);
   });
 
-  test('contextWindow undefined matches pre-change behavior at 8k input', async () => {
-    // 8k < TOKEN_LIMIT (12k) → null, identical to pre-change behavior.
+  test('contextWindow undefined applies the bounded 4k default at 8k input', async () => {
     const result = await handleLargeResponse({
       text: eightKTokenText,
       sessionPath,
       context: { toolName: 'test_tool' },
       summarize: fakeSummarize,
     });
-    expect(result).toBeNull();
+    expect(result).not.toBeNull();
   });
 });
 

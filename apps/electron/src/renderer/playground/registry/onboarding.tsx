@@ -176,7 +176,7 @@ export const onboardingComponents: ComponentEntry[] = [
     id: 'credentials-step-oauth',
     name: 'Credentials - OAuth',
     category: 'Onboarding',
-    description: 'Claude Max/Pro OAuth authentication flow',
+    description: 'Claude and organization Gemini OAuth authentication flows',
     component: CredentialsStep,
     props: [
       {
@@ -214,6 +214,13 @@ export const onboardingComponents: ComponentEntry[] = [
       { name: 'Validating', props: { apiSetupMethod: 'claude_oauth', status: 'validating' } },
       { name: 'Success', props: { apiSetupMethod: 'claude_oauth', status: 'success' } },
       { name: 'Error', props: { apiSetupMethod: 'claude_oauth', status: 'error', errorMessage: 'Authentication failed. Please try again.' } },
+      {
+        name: 'Gemini Organization',
+        props: {
+          apiSetupMethod: 'pi_gemini_oauth',
+          status: 'idle',
+        },
+      },
     ],
     mockData: () => ({
       apiSetupMethod: 'claude_oauth',

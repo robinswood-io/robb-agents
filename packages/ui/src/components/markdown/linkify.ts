@@ -1,4 +1,4 @@
-import LinkifyIt from 'linkify-it'
+import { LinkifyIt } from 'linkify-it'
 import { hasKnownFileExtension } from '../../lib/file-classification'
 
 /**
@@ -8,8 +8,9 @@ import { hasKnownFileExtension } from '../../lib/file-classification'
  * plus custom regex for local file paths.
  */
 
-// Initialize linkify-it with default settings (fuzzy URLs, emails enabled)
-const linkify = new LinkifyIt()
+// linkify-it v6 disables fuzzy domains by default. Keep the established
+// behavior for bare domains such as example.com while retaining fuzzy emails.
+const linkify = new LinkifyIt({ fuzzyLink: true })
 
 function isAsciiLetterOrDigit(character: string): boolean {
   return (character >= 'a' && character <= 'z')
@@ -316,7 +317,7 @@ export function preprocessLinks(text: string): string {
   text = stripPlaceholderLinks(text)
 
   // Quick check - if no potential links, return early
-  if (!linkify.pretest(text) && findFilePathCandidates(text).length === 0) {
+  if (!linkify.test(text) && findFilePathCandidates(text).length === 0) {
     return text
   }
 
@@ -357,7 +358,7 @@ export function preprocessLinks(text: string): string {
  * Useful for optimization - skip preprocessing if no links present
  */
 export function hasLinks(text: string): boolean {
-  return linkify.pretest(text) || findFilePathCandidates(text).length > 0
+  return linkify.test(text) || findFilePathCandidates(text).length > 0
 }
 
 /**

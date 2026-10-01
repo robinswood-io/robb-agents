@@ -715,8 +715,12 @@ export default function App() {
 
   // Reauth reset handler - open reset confirmation dialog
   const handleReauthReset = useCallback(() => {
+    if (document.documentElement.dataset.robbRuntime === 'web') {
+      toast.error(t('webui.hostResetDesktopOnly'))
+      return
+    }
     setShowResetDialog(true)
-  }, [])
+  }, [t])
 
   // Check auth state and get window's workspace ID on mount
   useEffect(() => {
@@ -1028,7 +1032,11 @@ export default function App() {
 
           // Show notification on complete (when window is not focused)
           // Skip hidden sessions (mini-agent sessions) - they shouldn't trigger notifications
-          if (event.type === 'complete' && !updatedSession.hidden) {
+          if (
+            event.type === 'complete'
+            && (event.reason === undefined || event.reason === 'complete')
+            && !updatedSession.hidden
+          ) {
             // Get the last assistant/plan message as preview
             const lastMessage = updatedSession.messages.findLast(
               m => (m.role === 'assistant' || m.role === 'plan') && !m.isIntermediate
@@ -1751,8 +1759,12 @@ export default function App() {
 
   // Show reset confirmation dialog
   const handleReset = useCallback(() => {
+    if (document.documentElement.dataset.robbRuntime === 'web') {
+      toast.error(t('webui.hostResetDesktopOnly'))
+      return
+    }
     setShowResetDialog(true)
-  }, [])
+  }, [t])
 
   // Execute reset after user confirms in dialog
   const executeReset = useCallback(async () => {
@@ -1984,7 +1996,7 @@ export default function App() {
           <WindowCloseHandler />
           <ReauthScreen
             onLogin={handleReauthLogin}
-            onReset={handleReauthReset}
+            onReset={document.documentElement.dataset.robbRuntime === 'web' ? undefined : handleReauthReset}
           />
           <ResetConfirmationDialog
             open={showResetDialog}

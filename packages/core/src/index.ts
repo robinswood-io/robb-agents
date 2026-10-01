@@ -13,3 +13,6 @@ export * from './types/index.ts';
 
 // Re-export utilities
 export * from './utils/index.ts';
+
+// Provider integration contracts shared by the desktop and subprocess runtimes.
+export * from './provider-contracts.ts';

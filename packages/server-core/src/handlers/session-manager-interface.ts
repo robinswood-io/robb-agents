@@ -24,6 +24,7 @@ import type {
   ShareResult,
 } from '@craft-agent/shared/protocol'
 import type { SessionBundle, DispatchMode } from '@craft-agent/shared/sessions'
+import type { ExternalActionPolicy } from '@craft-agent/shared/workspaces'
 import type { EventSink } from '../transport'
 
 export interface ISessionManager {
@@ -33,7 +34,7 @@ export interface ISessionManager {
 
   waitForInit(): Promise<void>
   initialize(): Promise<void>
-  cleanup(): void
+  cleanup(): Promise<void>
   setEventSink(sink: EventSink): void
   flushAllSessions(): Promise<void>
 
@@ -76,6 +77,8 @@ export interface ISessionManager {
   // ---------------------------------------------------------------------------
 
   setSessionPermissionMode(sessionId: string, mode: PermissionMode): void
+  /** Refresh live idle agents now; active streams pick up the policy before their next turn. */
+  refreshWorkspaceExternalActionPolicy(workspaceId: string, policy: ExternalActionPolicy): Promise<void>
   setSessionThinkingLevel(sessionId: string, level: ThinkingLevel): void
   updateWorkingDirectory(sessionId: string, path: string): void
   setSessionSources(sessionId: string, sourceSlugs: string[]): Promise<void>
@@ -270,6 +273,8 @@ export interface ISessionManager {
    * `getOrCreateAgent`.
    */
   refreshConnectionRuntime(connectionSlug: string): Promise<void>
+  /** Dispose a session-scoped agent runtime so the next turn recreates it cleanly. */
+  restartAgentRuntime(sessionId: string): Promise<void>
   completeAuthRequest(sessionId: string, result: AuthResult): Promise<void>
   executePromptAutomation(input: ExecutePromptAutomationInput): Promise<{ sessionId: string }>
 

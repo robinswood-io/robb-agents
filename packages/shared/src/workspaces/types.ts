@@ -13,9 +13,12 @@
 
 import type { PermissionMode } from '../agent/mode-manager.ts';
 import type { ThinkingLevel } from '../agent/thinking-levels.ts';
-import type { RoutingPolicy } from '../config/routing-policy.ts';
+import type { AgentCostControlPolicy } from '../config/agent-cost-control.ts';
 import type { WorkspaceGovernanceProfile } from '../governance/workspace-governance.ts';
 import type { RemoteSupervisionProfile } from '../remote-supervision/remote-supervision.ts';
+
+/** Confirmation policy for externally visible/irreversible actions. */
+export type ExternalActionPolicy = 'confirm' | 'allow-in-execute';
 
 /**
  * Local MCP server configuration
@@ -34,6 +37,7 @@ export interface LocalMcpConfig {
  * Workspace configuration (stored in config.json)
  */
 export interface WorkspaceConfig {
+  schemaVersion: 1;
   id: string;
   name: string;
   slug: string; // Folder name (URL-safe)
@@ -47,6 +51,8 @@ export interface WorkspaceConfig {
     defaultLlmConnection?: string;
     enabledSourceSlugs?: string[]; // Sources to enable by default
     permissionMode?: PermissionMode; // Default permission mode ('safe', 'ask', 'allow-all')
+    /** Opt-in: let Execute perform sensitive external actions without per-action prompts. */
+    externalActionPolicy?: ExternalActionPolicy;
     cyclablePermissionModes?: PermissionMode[]; // Which modes can be cycled with SHIFT+TAB (min 2, default: all 3)
     workingDirectory?: string;
     thinkingLevel?: ThinkingLevel; // Default thinking level for new sessions (default: 'medium')
@@ -60,12 +66,8 @@ export interface WorkspaceConfig {
    */
   localMcpServers?: LocalMcpConfig;
 
-  /**
-   * Optional policy-first LLM routing configuration.
-   * Robinswood fork foundation: confidentiality/allow-lists are evaluated before
-   * provider preference, cost, or performance.
-   */
-  routingPolicy?: RoutingPolicy;
+  /** Local context/recovery controls that keep agent turns within a bounded cost envelope. */
+  costControl?: AgentCostControlPolicy;
 
   /** Workspace-scoped RBAC, memory retention, mission budgets, and hash-chained audit. */
   governance?: WorkspaceGovernanceProfile;

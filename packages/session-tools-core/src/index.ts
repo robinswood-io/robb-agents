@@ -130,6 +130,8 @@ export type {
   SessionListItem,
   ListSessionsOptions,
   ListSessionsResult,
+  WaitSessionSnapshot,
+  WaitSessionsResult,
   BackgroundTaskInfo,
   SendAgentMessageResult,
   ResolvedLabelsResult,
@@ -167,6 +169,8 @@ export {
   handleRenderTemplate,
   // Send Developer Feedback
   handleSendDeveloperFeedback,
+  // Event-driven delegated-session wait
+  handleWaitSessions,
 } from './handlers/index.ts';
 
 export type {
@@ -185,6 +189,7 @@ export type {
   ScriptSandboxArgs,
   RenderTemplateArgs,
   SendDeveloperFeedbackArgs,
+  WaitSessionsArgs,
 } from './handlers/index.ts';
 
 // Tool definitions — single source of truth
@@ -204,6 +209,7 @@ export {
   RenderTemplateSchema,
   // Browser tool schema
   BrowserToolSchema,
+  WaitSessionsSchema,
   // Developer feedback schema
   SendDeveloperFeedbackSchema,
   // Descriptions

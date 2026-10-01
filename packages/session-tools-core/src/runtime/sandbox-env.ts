@@ -8,7 +8,9 @@ import type { ScriptRuntimeLanguage } from './resolve-script-runtime.ts';
 
 /**
  * Env vars stripped from subprocesses to prevent credential leakage.
- * NOTE: Keep in sync with packages/shared/src/mcp/client.ts (BLOCKED_ENV_VARS).
+ * Script runtimes retain a broad host environment for compatibility and use
+ * this denylist. Long-lived MCP/agent subprocesses have a separate allowlist
+ * boundary in @craft-agent/shared.
  */
 export const BLOCKED_ENV_VARS = [
   'ANTHROPIC_API_KEY',

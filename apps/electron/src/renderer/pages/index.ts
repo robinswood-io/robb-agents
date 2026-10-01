@@ -6,6 +6,7 @@
 
 export { default as ChatPage } from './ChatPage'
 export { default as SourceInfoPage } from './SourceInfoPage'
+export { default as MissionControlRoomPage } from './MissionControlRoomPage'
 // Settings pages
 export {
   SettingsNavigator,

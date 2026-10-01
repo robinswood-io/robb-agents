@@ -59,6 +59,8 @@ export interface SessionScopedToolCallbacks {
   getSessionInfoFn?: (sessionId?: string) => import('@craft-agent/session-tools-core').SessionInfo | null;
   /** List sessions in the workspace with pagination. */
   listSessionsFn?: (options?: import('@craft-agent/session-tools-core').ListSessionsOptions) => import('@craft-agent/session-tools-core').ListSessionsResult;
+  /** Wait for delegated-session completion via the in-process completion seam. */
+  waitForSessionsFn?: (sessionIds: string[], timeoutMs: number) => Promise<import('@craft-agent/session-tools-core').WaitSessionsResult>;
   /** List background tasks (running + terminal) for a session from the main-process registry. */
   listBackgroundTasksFn?: (sessionId?: string) => import('@craft-agent/session-tools-core').BackgroundTaskInfo[];
   /** Resolve label display names to IDs. */

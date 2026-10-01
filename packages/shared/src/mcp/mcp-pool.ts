@@ -13,10 +13,14 @@
  * - Runtime source switching without session restart
  */
 
-import { CraftMcpClient, type McpClientConfig, type PoolClient } from './client.ts';
+import {
+  CraftMcpClient,
+  type McpClientConfig,
+  type PoolClient,
+  type PoolTool,
+} from './client.ts';
 import { ApiSourcePoolClient } from './api-source-pool-client.ts';
 import type { SdkMcpServerConfig } from '../agent/backend/types.ts';
-import type { Tool } from '@modelcontextprotocol/sdk/types.js';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { isLocalMcpEnabled } from '../workspaces/storage.ts';
 import { guardLargeResult } from '../utils/large-response.ts';
@@ -43,6 +47,8 @@ export interface ProxyToolDef {
   name: string;
   description: string;
   inputSchema: Record<string, unknown>;
+  readOnly?: boolean;
+  idempotent?: boolean;
 }
 
 /**
@@ -85,6 +91,27 @@ function buildSafeProxyToolName(slug: string, originalName: string, usedNames: S
   }
 
   return candidate;
+}
+
+const OUTPUT_BOUND_FIELD = /^(?:limit|maxResults|max_results|pageSize|page_size|count|top|fields|select|from|to|start|end|since|until)$/i;
+
+function withOutputBudgetGuidance(
+  description: string,
+  toolName: string,
+  inputSchema: Record<string, unknown>,
+): string {
+  const properties = inputSchema.properties;
+  const controls = properties && typeof properties === 'object' && !Array.isArray(properties)
+    ? Object.keys(properties as Record<string, unknown>).filter(key => OUTPUT_BOUND_FIELD.test(key)).slice(0, 6)
+    : [];
+  const guidance: string[] = [];
+  if (controls.length > 0) {
+    guidance.push(`Output budget: set ${controls.join(', ')} to the smallest range or projection sufficient for the next decision; expand only if evidence is missing.`);
+  }
+  if (/ssh.*(?:execute|command)|(?:execute|command).*ssh/i.test(toolName)) {
+    guidance.push('Remote efficiency: combine related read-only diagnostics and bound stdout with server-side filters, head, or tail. Prefer sync/worktree tools when several files must move.');
+  }
+  return guidance.length > 0 ? `${description}\n\n${guidance.join(' ')}` : description;
 }
 
 /**
@@ -138,7 +165,7 @@ export class McpClientPool {
   protected activeConfigs = new Map<string, SdkMcpServerConfig>();
 
   /** Cached tool lists keyed by source slug */
-  private toolCache = new Map<string, Tool[]>();
+  private toolCache = new Map<string, PoolTool[]>();
 
   /** Proxy tool name → { slug, originalName } (e.g., "mcp__linear__createIssue" → { slug: "linear", originalName: "createIssue" }) */
   private proxyTools = new Map<string, { slug: string; originalName: string }>();
@@ -217,7 +244,7 @@ export class McpClientPool {
       this.debug(`Unknown MCP server type for ${slug}: ${(config as { type: string }).type}`);
       return;
     }
-    await this.registerClient(slug, new CraftMcpClient(clientConfig));
+    await this.registerClient(slug, new CraftMcpClient(clientConfig, slug));
     this.activeConfigs.set(slug, config);
   }
 
@@ -356,7 +383,7 @@ export class McpClientPool {
   /**
    * Get cached tools for a source. Returns empty array if not connected.
    */
-  getTools(slug: string): Tool[] {
+  getTools(slug: string): PoolTool[] {
     return this.toolCache.get(slug) || [];
   }
 
@@ -408,10 +435,13 @@ export class McpClientPool {
         // Strip $schema — AJV (Pi agent) fails on unregistered meta-schema URIs.
         // Same pattern as getToolDefsAsJsonSchema() in tool-defs.ts.
         const { $schema, ...cleanSchema } = (tool.inputSchema as Record<string, unknown>) || {};
+        const inputSchema = Object.keys(cleanSchema).length > 0 ? cleanSchema : { type: 'object', properties: {} };
         defs.push({
           name: proxyName,
-          description: tool.description || `Tool from ${slug}`,
-          inputSchema: Object.keys(cleanSchema).length > 0 ? cleanSchema : { type: 'object', properties: {} },
+          description: withOutputBudgetGuidance(tool.description || `Tool from ${slug}`, tool.name, inputSchema),
+          inputSchema,
+          readOnly: tool.annotations?.readOnlyHint === true,
+          idempotent: tool.annotations?.idempotentHint === true,
         });
       }
     }

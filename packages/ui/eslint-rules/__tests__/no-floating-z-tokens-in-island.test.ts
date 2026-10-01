@@ -6,13 +6,20 @@ const require = createRequire(import.meta.url)
 const rule = require('../no-floating-z-tokens-in-island.cjs')
 
 function runRule(code: string, filename: string) {
-  const linter = new Linter({ configType: 'eslintrc' })
-  linter.defineRule('craft-styles/no-floating-z-tokens-in-island', rule)
+  const linter = new Linter({ cwd: '/repo' })
 
   return linter.verify(code, {
-    parserOptions: {
+    files: ['**/*.{js,jsx,ts,tsx}'],
+    languageOptions: {
       ecmaVersion: 'latest',
       sourceType: 'module',
+    },
+    plugins: {
+      'craft-styles': {
+        rules: {
+          'no-floating-z-tokens-in-island': rule,
+        },
+      },
     },
     rules: {
       'craft-styles/no-floating-z-tokens-in-island': 'error',

@@ -8,7 +8,7 @@ import { StepFormLayout } from "./primitives"
 
 interface ReauthScreenProps {
   onLogin: () => Promise<void>
-  onReset: () => void
+  onReset?: () => void
 }
 
 /**
@@ -78,15 +78,17 @@ export function ReauthScreen({ onLogin, onReset }: ReauthScreenProps) {
                   </>
                 )}
               </Button>
-              <Button
-                variant="ghost"
-                onClick={onReset}
-                disabled={isLoading}
-                className="w-full max-w-[320px] bg-foreground-2 shadow-minimal text-foreground hover:bg-foreground/5 rounded-lg"
-                size="sm"
-              >
-                {t("onboarding.reauth.resetApp")}
-              </Button>
+              {onReset && (
+                <Button
+                  variant="ghost"
+                  onClick={onReset}
+                  disabled={isLoading}
+                  className="w-full max-w-[320px] bg-foreground-2 shadow-minimal text-foreground hover:bg-foreground/5 rounded-lg"
+                  size="sm"
+                >
+                  {t("onboarding.reauth.resetApp")}
+                </Button>
+              )}
             </div>
           }
         >

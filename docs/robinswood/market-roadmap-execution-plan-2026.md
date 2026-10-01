@@ -25,13 +25,41 @@ Le produit doit gagner sur quatre axes :
 - Toute capacité sensible est livrée derrière une permission, un journal d’audit et un kill switch.
 - Une phase n’est terminée que lorsque ses critères d’acceptation et ses tests sont verts.
 
+## Contrat permanent de développement, staging et release
+
+Le cycle desktop repose sur trois cibles distinctes. Leur séparation fait
+partie des critères de fiabilité du produit.
+
+| Niveau | Cible et données | Usage | Condition de sortie |
+|---|---|---|---|
+| Développement | **Robb Agents Dev**, `io.robinswood.robbagents.dev`, `~/.craft-agent-dev` | développement courant, tests isolés et itérations rapides | tests pertinents verts sans accès ni mutation de `~/.craft-agent` |
+| Staging local | `/Applications/Robb Agents.app`, identité production, `~/.craft-agent` | tester le candidat sur ce Mac avec les chats, connexions, état navigateur et MCP réels | paquet issu d’un commit propre, sauvegarde restaurable, contrôles techniques verts et résultat utilisateur accepté |
+| GitHub Release | artefacts publics signés et vérifiés | distribution d’une nouvelle version | staging local accepté, CI multi-OS verte, signatures/notarisation/checksums/provenance vérifiés |
+
+Ordre de promotion obligatoire :
+
+1. développer et tester par défaut dans le profil isolé
+   `~/.craft-agent-dev` ;
+2. construire explicitement le candidat avec
+   `bash apps/electron/scripts/build-dmg.sh arm64 --local-production` ;
+3. sauvegarder le bundle installé, remplacer l’application production locale,
+   puis vérifier le commit embarqué, le chemin runtime
+   `~/.craft-agent/robb-electron`, les sessions, connexions et MCP ;
+4. obtenir l’acceptation explicite du résultat de staging ;
+5. seulement ensuite créer le tag et la GitHub Release via le workflow signé.
+
+Une fusion dans `main` peut précéder cette recette, mais ne vaut jamais
+publication. Le paquet local ad hoc sert uniquement au staging de ce Mac et ne
+doit pas être distribué. Le profil développement n’est pas une anomalie :
+l’incident à éviter est son installation sur la cible production/staging.
+
 ## Baseline vérifiée
 
 | Capacité | État au 2026-07-23 | Preuve dans le dépôt |
 |---|---|---|
 | Français natif et rebrand Robb | Livré | locale, assets, metadata Electron et smoke tests |
-| Router policy-first par tour | Livré | `routingPolicy`, sensibilité, allow-list |
-| Fallback router fail-closed | Livré | fallback unique avant streaming et `routingMeta` |
+| Sélection du fournisseur et modèle | Manuelle dans le public | Héritée par les travaux délégués |
+| Erreurs fournisseur | Visibles dans le public | Aucun changement automatique de modèle |
 | Audit provider/modèle/coût | Partiel | coût SDK, agrégat session, exports presse-papiers |
 | Playbooks et automatisations | Partiel | builtins, validation, storage et UI |
 | Autonomie gouvernée | Partiel | décision, preuve, politique d’exécution et dead-letter |

@@ -1,8 +1,8 @@
 {
   "schemaVersion": "agent-catalog-lock-v2",
   "generatedAt": "2026-07-12T21:22:15.029149Z",
-  "catalogHash": "8bde99d36679d68cbbf80e880e230b76fbb14405581931e65f3332de73d5b158",
-  "manifestHash": "6532a1882158c6d9fb1456aa3d118ca9ee0a151cc5fdeca6f4cb6117c2ed939c",
+  "catalogHash": "d1302c5e79b3168a649e22e86adde28824f42ede0aac0bf8691a4803ee246604",
+  "manifestHash": "7d988728f7e2a0c85c3a350bbb2d9d718d626ed2fad4f52203ceb12b219cd78d",
   "specHashes": {
     "2bfe5f": "9c7887d15d94f638966051809b829a6264ed574ff91de614569779bd678e48fb",
     "afnor-book-launch-controller": "d7d34fba464dd8daa21a295e6ea550d3b4878218e2d250d4c87136a40e3fe170",
@@ -132,7 +132,6 @@
     "post-flag-auto-review": "8bc34915a822e442a9ab306ed624df74406221f2a285106ca20e383666d113d8",
     "pr-campaign-avant-le-flow": "da0f1d05cf3ef395605958edf3154a292398ada1db87ca1e387e16237b8d7e32",
     "prospect-research-sellsy-intake": "d3a8551604ae0c690e3a36117ad94f539175696963d862a004831f631cc0384a",
-    "provider-routing-guard": "c41078fb06be0db979dd983f9bd221d5b5060b956a37a810ca7d7eec2bf67c8c",
     "qualified-opportunity-quote-guard": "72a428ecc4759b5cab5b34383e61570562d815e9a02a7626826a16330e4dc4eb",
     "report-envelope-standardizer": "a00528588cf3e8d1ea4f8ecc21b505923e7570ea9a4074990a5864fc4342b22c",
     "reseau-entreprendre-source-backfill": "5088be3ba212fe3e4462d4d103f703d57e049c456edcda2ce035fed9fac2fd3d",
@@ -327,7 +326,6 @@
     "generated/general/post-flag-auto-review.json",
     "generated/campaigns/pr-campaign-avant-le-flow.json",
     "generated/revenue_ops/prospect-research-sellsy-intake.json",
-    "generated/observability/provider-routing-guard.json",
     "generated/campaigns/qualified-opportunity-quote-guard.json",
     "generated/observability/report-envelope-standardizer.json",
     "generated/revenue_ops/reseau-entreprendre-source-backfill.json",

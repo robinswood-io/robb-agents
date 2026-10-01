@@ -19,9 +19,28 @@ import type {
 import type { PermissionMode } from '../agent/mode-types'
 import type { ThinkingLevel } from '../agent/thinking-levels'
 import type { CustomEndpointConfig } from '../config/llm-connections'
-import type { RoutingPolicy } from '../config/routing-policy'
+import type { AgentCostControlPolicy } from '../config/agent-cost-control'
 import type { SessionExecutionIsolation } from '../tasks/durable-execution'
+import type {
+  MissionDigitalTwinReport,
+  MissionReplanPreview,
+  MissionSnapshot,
+  MissionSpec,
+  MissionWorkItem,
+  ProofPassportTrustAnchor,
+  SignedProofPassport,
+} from '../missions'
+import type { SessionAppProvenance } from '../sessions/types'
+import type {
+  DurableTaskCockpitProjections,
+  DurableTaskExternalRefs,
+  DurableTaskSnapshot,
+} from '../tasks'
 import type { WorkspaceGovernanceProfile } from '../governance/workspace-governance'
+import type {
+  OperationApprovalContext,
+  OperationRiskLevel,
+} from '../governance/capability-broker'
 import type {
   RemoteAction,
   RemoteSupervisionProfile,
@@ -96,6 +115,10 @@ export interface Session {
     statusType?: string
   }
   createdAt?: number
+  /** App build that created this session identity. */
+  createdByApp?: SessionAppProvenance
+  /** App build that most recently persisted this session. */
+  lastUsedByApp?: SessionAppProvenance
   messageCount?: number
   tokenUsage?: {
     inputTokens: number
@@ -131,6 +154,14 @@ export interface Session {
   taskDraft?: boolean
   /** Host-enforced tool isolation envelope for a Conductor child session. */
   executionIsolation?: SessionExecutionIsolation
+  /** Mission v2 owning this specialist session. */
+  missionId?: string
+  /** Mission v2 work item executed by this session. */
+  missionWorkItemId?: string
+  /** Stable dispatch identity used for crash-safe session recovery. */
+  missionDispatchId?: string
+  /** Mission role assigned to this session. */
+  missionRole?: 'planner' | 'worker' | 'reviewer' | 'supervisor'
 }
 
 export interface CreateSessionOptions {
@@ -181,6 +212,14 @@ export interface CreateSessionOptions {
   taskDraft?: boolean
   /** Host-enforced tool isolation envelope for a Conductor child session. */
   executionIsolation?: SessionExecutionIsolation
+  /** Mission v2 owning this specialist session. */
+  missionId?: string
+  /** Mission v2 work item executed by this session. */
+  missionWorkItemId?: string
+  /** Stable dispatch identity used for crash-safe session recovery. */
+  missionDispatchId?: string
+  /** Mission role assigned to this session. */
+  missionRole?: 'planner' | 'worker' | 'reviewer' | 'supervisor'
   /**
    * Apply the reserved "Task" label (valueType 'number') after creation. Top-level sessions
    * allocate the next task number; sessions with a `parentSessionId` inherit the parent's
@@ -314,9 +353,19 @@ export interface TaskRunRequest {
   params?: Record<string, unknown>
 }
 
+export interface TaskRepairRequest {
+  slug: string
+  sourceRunId: string
+  nodeIds: string[]
+  runId?: string
+  orchestratorSessionId?: string
+  /** Required before a repair frontier may execute an external-mutation node. */
+  approveExternalMutations?: boolean
+}
+
 export interface TaskNodeRunStateDto {
   id: string
-  /** pending | running | done | failed | cancelled | skipped */
+  /** pending | waiting-approval | running | done | failed | cancelled | skipped */
   state: string
   sessionId?: string
   attempt: number
@@ -336,6 +385,8 @@ export interface TaskRunSnapshotDto {
 
 export interface TaskApprovalRequestDto {
   requestId: string
+  /** Durable task folder identifier; do not infer it from missionId. */
+  slug: string
   missionId: string
   runId: string
   nodeId: string
@@ -380,6 +431,119 @@ export interface TaskGetResult {
   spec?: unknown
   /** Active run snapshot when a runId was supplied and known; otherwise null. */
   run?: TaskRunSnapshotDto | null
+  /** Canonical durable product object, materialized from spec + journal + task metadata. */
+  task?: DurableTaskSnapshotDto
+}
+
+// ---------------------------------------------------------------------------
+// Missions v2 DTOs — durable goal / work-item / independent-review control.
+// ---------------------------------------------------------------------------
+
+export type MissionSnapshotDto = MissionSnapshot
+export type MissionProofPassportDto = SignedProofPassport
+export type MissionProofPassportTrustAnchorDto = ProofPassportTrustAnchor
+
+export type MissionProofPassportVerificationDto =
+  | { valid: true; passport: SignedProofPassport }
+  | { valid: false; reason: string }
+
+export interface MissionPlanRequest {
+  goal: string
+  originSessionId: string
+  title?: string
+  projectId?: string
+  cwd?: string
+  model?: string
+  llmConnection?: string
+  enabledSourceSlugs?: string[]
+}
+
+export interface MissionPlanAck {
+  planRequestId: string
+  missionId: string
+  plannerSessionId: string
+}
+
+export interface MissionPlanIssueDto {
+  path: string
+  message: string
+}
+
+export interface MissionPlanResult extends MissionPlanAck {
+  status: 'planned' | 'invalid' | 'failed' | 'pending'
+  spec?: MissionSpec
+  issues?: MissionPlanIssueDto[]
+  raw?: string
+  error?: string
+}
+
+export interface MissionCreateAndStartRequest {
+  spec: MissionSpec
+}
+
+/** Client supplies only a Mission identity/spec; every policy observation is host-resolved. */
+export type MissionPreflightRequest =
+  | { missionId: string; spec?: never }
+  | { missionId?: never; spec: MissionSpec }
+
+export type MissionPreflightResult = MissionDigitalTwinReport
+
+export interface MissionReplanPreviewRequest {
+  missionId: string
+  expectedRevision: number
+  proposedWorkItems: MissionWorkItem[]
+}
+
+export interface MissionReplanRequest extends MissionReplanPreviewRequest {
+  reason: string
+}
+
+export type MissionReplanPreviewDto = MissionReplanPreview
+
+export interface MissionControlRequest {
+  missionId: string
+  reason: string
+}
+
+export interface MissionResumeRequest {
+  missionId: string
+}
+
+/** Value-free durable approval request for one brokered connector mutation. */
+export interface MissionConnectorApprovalRequestDto {
+  workspaceId: string
+  missionId: string
+  workItemId: string
+  approvalId: string
+  requestHash: string
+  operationId: string
+  risk: OperationRiskLevel
+  approvalContext: OperationApprovalContext
+  expiresAt: string
+}
+
+export interface MissionConnectorApprovalDecisionRequest {
+  missionId: string
+  workItemId: string
+  approvalId: string
+  requestHash: string
+  decision: 'approved' | 'denied'
+}
+
+export interface MissionConnectorApprovalRefreshRequest {
+  missionId: string
+  workItemId: string
+}
+
+export type DurableTaskSnapshotDto = DurableTaskSnapshot
+export type DurableTaskCockpitProjectionsDto = DurableTaskCockpitProjections
+
+export interface DurableTaskMetadataUpdateRequest {
+  slug: string
+  expectedRevision?: number
+  archived?: boolean
+  nextAction?: string | null
+  externalRefs?: Partial<DurableTaskExternalRefs>
 }
 
 /** One subtask's outcome in a completed/persisted run, for the editor's Results tab. */
@@ -392,6 +556,11 @@ export interface TaskResultNodeDto {
   sessionId?: string
   /** The node's recorded final output text (from nodes/<id>.json), when present. */
   output?: string
+  dependsOn?: string[]
+  attempt?: number
+  proofHash?: string
+  evidenceRefs?: string[]
+  repair?: { allowed: boolean; reason: string }
 }
 
 export interface MissionBlockerDto {
@@ -506,6 +675,15 @@ export interface TaskResultsDto {
   replayPlan?: MissionReplayPlanDto
   /** Portable, auditable Markdown report generated from the same durable projection. */
   reportMarkdown?: string
+  /** Canonical durable work object rendered above the run-level evidence. */
+  task?: DurableTaskSnapshotDto
+  userEvidence?: {
+    actionRequested: string
+    actionAttempted: string[]
+    mutationsApplied: string[]
+    userVerification: string
+    remainingLimitations: string[]
+  }
   nodes: TaskResultNodeDto[]
 }
 
@@ -530,7 +708,7 @@ export type SessionEvent =
   | { type: 'tool_result'; sessionId: string; toolUseId: string; toolName: string; result: string; turnId?: string; parentToolUseId?: string; isError?: boolean; timestamp?: number }
   | { type: 'error'; sessionId: string; error: string; timestamp?: number }
   | { type: 'typed_error'; sessionId: string; error: TypedError; timestamp?: number }
-  | { type: 'complete'; sessionId: string; tokenUsage?: Session['tokenUsage']; hasUnread?: boolean; backgroundTasksAlive?: boolean }
+  | { type: 'complete'; sessionId: string; reason?: 'complete' | 'interrupted' | 'error' | 'timeout'; tokenUsage?: Session['tokenUsage']; hasUnread?: boolean; backgroundTasksAlive?: boolean }
   | { type: 'interrupted'; sessionId: string; message?: Message; queuedMessages?: string[] }
   | { type: 'status'; sessionId: string; message: string; statusType?: 'compacting' }
   | { type: 'info'; sessionId: string; message: string; statusType?: 'compaction_complete'; level?: 'info' | 'warning' | 'error' | 'success'; timestamp?: number }
@@ -578,12 +756,36 @@ export interface SendMessageOptions {
   badges?: ContentBadge[]
   optimisticMessageId?: string
   /**
+   * Optional compare-and-send guard used by the Remote offline outbox. The
+   * host checks this immediately before appending the user message and rejects
+   * with SESSION_CONTEXT_CHANGED if any field moved.
+   */
+  expectedSessionAnchor?: {
+    messageCount: number
+    lastFinalMessageId: string | null
+    lastMessageAt: number
+  }
+  /**
    * When true, the message drives a turn (reaches the model) but is marked
    * `hidden` on the persisted `Message` so it never renders as a transcript
    * bubble. Used for system-generated nudges (e.g. WS2 background-task-completion
    * surfacing) that should wake the agent without looking user-authored.
    */
   hidden?: boolean
+  /**
+   * Internal marker for a host-driven retry of an already-persisted user turn.
+   * The original visible message remains the durable recovery anchor; this
+   * hidden nudge must not replace it with a second user-authored turn.
+   */
+  automaticRecovery?: {
+    originalUserMessageId: string
+    cause: 'app_restart' | 'stream_ended' | 'runtime_error' | 'premature_final' | 'tool_checkpoint' | 'evidence_gate' | 'objective_incomplete'
+  }
+  /** Provenance for model-driven turns that were not directly sent by the user. */
+  internalOrigin?: {
+    kind: 'agent-message' | 'browser-fallback' | 'spawned-session' | 'automation'
+    senderSessionId?: string
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -613,6 +815,7 @@ export type SessionCommand =
   | { type: 'updateShare' }
   | { type: 'revokeShare' }
   | { type: 'refreshTitle' }
+  | { type: 'restartRuntime' }
   | { type: 'setConnection'; connectionSlug: string }
   | { type: 'setPendingPlanExecution'; planPath: string; draftInputSnapshot?: string }
   | { type: 'markCompactionComplete' }
@@ -732,6 +935,8 @@ export interface LlmConnectionSetup {
   defaultModel?: string | null
   models?: string[] | null
   piAuthProvider?: string
+  /** Google Cloud project ID for organization Gemini Code Assist OAuth. */
+  googleCloudProject?: string
   modelSelectionMode?: 'automaticallySyncedFromProvider' | 'userDefined3Tier'
   /** When true, reject setup if the connection doesn't already exist (reauth guard). */
   updateOnly?: boolean
@@ -890,13 +1095,14 @@ export interface WorkspaceSettings {
   name?: string
   model?: string
   permissionMode?: PermissionMode
+  externalActionPolicy?: 'confirm' | 'allow-in-execute'
   cyclablePermissionModes?: PermissionMode[]
   thinkingLevel?: ThinkingLevel
   workingDirectory?: string
   localMcpEnabled?: boolean
   defaultLlmConnection?: string
   enabledSourceSlugs?: string[]
-  routingPolicy?: RoutingPolicy
+  costControl?: AgentCostControlPolicy
   governance?: WorkspaceGovernanceProfile
   governanceRevision?: number
   governanceUpdatedAt?: string

@@ -22,6 +22,7 @@ import type { McpClientPool } from '../../mcp/mcp-pool.ts';
 import type { Workspace } from '../../config/storage.ts';
 import type { SessionConfig as Session } from '../../sessions/storage.ts';
 import type { SourceManager } from '../core/source-manager.ts';
+import type { LLMQueryRequest, LLMQueryResult } from '../llm-tool.ts';
 
 // Import AbortReason and RecoveryMessage from core module (single source of truth)
 import { AbortReason, type RecoveryMessage } from '../core/index.ts';
@@ -80,6 +81,8 @@ export type PermissionCallback = (request: {
   rememberForMinutes?: number;
   commandHash?: string;
   approvalTtlSeconds?: number;
+  sensitiveActionCategory?: import('../core/sensitive-external-action.ts').SensitiveExternalActionCategory;
+  sensitiveActionTargets?: string[];
 }) => void;
 
 /**
@@ -176,7 +179,7 @@ export interface CoreBackendConfig {
   /** Initial model ID */
   model?: string;
 
-  /** Mini/utility model for summarization/title generation/mini-completions */
+  /** Utility model for title/icon metadata generation only */
   miniModel?: string;
 
   /** Initial thinking level */
@@ -184,6 +187,13 @@ export interface CoreBackendConfig {
 
   /** Headless mode flag (disables interactive tools) */
   isHeadless?: boolean;
+
+  /**
+   * Confirmation policy for sensitive external actions. Defaults to `confirm`.
+   * `allow-in-execute` only takes effect when the session's effective permission
+   * mode is `allow-all`; Explore and Ask retain their existing safeguards.
+   */
+  externalActionPolicy?: 'confirm' | 'allow-in-execute';
 
   /** Skip agent-level config file watching (server already owns a workspace-level watcher) */
   skipConfigWatcher?: boolean;
@@ -202,7 +212,8 @@ export interface CoreBackendConfig {
 
   /**
    * Per-session environment variable overrides for the SDK subprocess.
-   * Spread after process.env in backend-specific option builders.
+   * Layered after the backend's inherited/restricted environment in
+   * backend-specific option builders.
    */
   envOverrides?: Record<string, string>;
 
@@ -406,9 +417,26 @@ export interface AgentBackend {
 
   /**
    * Run a simple text completion using the backend's auth infrastructure.
-   * Used for connection testing, title generation, and summarization.
+   * Used for connection testing and title/icon metadata only.
    */
   runMiniCompletion(prompt: string): Promise<string | null>;
+
+  /** Query task content using the selected session model unless explicitly overridden. */
+  queryLlm(request: LLMQueryRequest): Promise<LLMQueryResult>;
+
+  /**
+   * Compact the provider-side conversation before a costly turn. Backends that
+   * cannot compact in place may omit this capability.
+   */
+  compactContext?(customInstructions?: string): Promise<{
+    summary: string;
+    firstKeptEntryId: string;
+    tokensBefore: number;
+    /** SDK estimate of the actual model-visible context immediately after compaction. */
+    estimatedTokensAfter?: number;
+    /** Provider model that generated the summary, when reported by the backend. */
+    compactionModel?: string;
+  } | null>;
 
   /**
    * Clean up resources (MCP connections, watchers, etc.)
@@ -489,6 +517,9 @@ export interface AgentBackend {
 
   /** Set permission mode */
   setPermissionMode(mode: PermissionMode): void;
+
+  /** Apply the workspace sensitive-action policy to subsequent tool checks and prompts. */
+  setExternalActionPolicy(policy: 'confirm' | 'allow-in-execute'): void;
 
   /** Cycle to next permission mode */
   cyclePermissionMode(): PermissionMode;

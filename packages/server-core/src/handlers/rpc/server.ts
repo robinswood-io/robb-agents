@@ -4,6 +4,7 @@ import { homedir } from 'os'
 import { RPC_CHANNELS } from '@craft-agent/shared/protocol'
 import { addWorkspace, setActiveWorkspace } from '@craft-agent/shared/config'
 import { getDefaultWorkspacesDir, ensureDefaultWorkspacesDir } from '@craft-agent/shared/workspaces'
+import { getLongRunningHealthSnapshot } from '@craft-agent/shared/processes'
 import type { ServerStatus, ServerHealth } from '@craft-agent/core/types'
 import type { RpcServer } from '@craft-agent/server-core/transport'
 import type { HandlerDeps } from '../handler-deps'
@@ -88,6 +89,7 @@ export function registerServerHandlers(
     })
 
     const mem = process.memoryUsage()
+    const processHealth = getLongRunningHealthSnapshot()
     const status: ServerStatus = {
       serverId: serverCtx.serverId,
       version: deps.platform.appVersion,
@@ -98,6 +100,30 @@ export function registerServerHandlers(
         heapUsed: mem.heapUsed,
         heapTotal: mem.heapTotal,
         rss: mem.rss,
+      },
+      longRunning: {
+        status: processHealth.status,
+        parent: {
+          pid: processHealth.parent.pid,
+          cpuPercent: processHealth.parent.cpuPercent,
+          cpuCount: processHealth.parent.cpuCount,
+          rssBytes: processHealth.parent.rssBytes,
+        },
+        summary: processHealth.summary,
+        processes: processHealth.processes.map((child) => ({
+          id: child.id,
+          kind: child.kind,
+          ownerId: child.ownerId,
+          ...(child.pid !== undefined ? { pid: child.pid } : {}),
+          status: child.status,
+          idleForMs: child.idleForMs,
+          maxIdleMs: child.maxIdleMs,
+          ...(child.cpuPercent !== undefined ? { cpuPercent: child.cpuPercent } : {}),
+          ...(child.rssBytes !== undefined ? { rssBytes: child.rssBytes } : {}),
+          ...(child.terminationReason !== undefined ? { terminationReason: child.terminationReason } : {}),
+        })),
+        suspectedOrphanPids: processHealth.suspectedOrphanPids,
+        ...(processHealth.reportError ? { reportError: processHealth.reportError } : {}),
       },
     }
 
@@ -166,12 +192,24 @@ export function getHealthCheck(deps: {
     message: `Heap: ${Math.round(heapGB * 100) / 100} GB`,
   })
 
+  // Check 3: registered child processes, idle cleanup, and orphan detection.
+  const processHealth = getLongRunningHealthSnapshot()
+  checks.push({
+    name: 'long_running_processes',
+    status: processHealth.status === 'ok'
+      ? 'pass'
+      : processHealth.status === 'degraded'
+        ? 'warn'
+        : 'fail',
+    message: `${processHealth.summary.running} running, ${processHealth.summary.failed} failed, ${processHealth.summary.suspectedOrphans} suspected orphan(s); parent CPU ${processHealth.parent.cpuPercent}% / RSS ${Math.round(processHealth.parent.rssBytes / (1024 * 1024))} MB${processHealth.reportError ? `; report error: ${processHealth.reportError}` : ''}`,
+  })
+
   // Aggregate status
-  const allPass = checks.every(c => c.status === 'pass')
   const anyFail = checks.some(c => c.status === 'fail')
+  const anyWarn = checks.some(c => c.status === 'warn')
 
   return {
-    status: allPass ? 'ok' : anyFail ? 'unhealthy' : 'degraded',
+    status: anyFail ? 'unhealthy' : anyWarn ? 'degraded' : 'ok',
     checks,
   }
 }

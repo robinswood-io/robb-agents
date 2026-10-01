@@ -61,6 +61,14 @@ export function attachSessionSelfManagementBindings(
     enumerable: true,
   });
 
+  Object.defineProperty(context, 'waitForSessions', {
+    get() {
+      return getSessionScopedToolCallbacks(sessionId)?.waitForSessionsFn;
+    },
+    configurable: true,
+    enumerable: true,
+  });
+
   // listBackgroundTasks defaults sid → sessionId (like getSessionInfo)
   Object.defineProperty(context, 'listBackgroundTasks', {
     get() {

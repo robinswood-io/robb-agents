@@ -3,6 +3,34 @@ import { resolveClaudeThinkingOptions } from '../claude-agent.ts'
 import { getThinkingTokens } from '../thinking-levels.ts'
 
 describe('resolveClaudeThinkingOptions', () => {
+  it.each(['claude-opus-5', 'claude-fable-5-1'])('preserves all documented efforts for %s', (model) => {
+    for (const thinkingLevel of ['low', 'medium', 'high', 'xhigh', 'max'] as const) {
+      expect(resolveClaudeThinkingOptions({ model, thinkingLevel, providerType: 'anthropic', minimizeThinking: false })).toEqual({
+        thinking: { type: 'adaptive' }, effort: thinkingLevel,
+      })
+    }
+  })
+
+  it('keeps Fable 5.1 thinking enabled when off is selected or minimization is requested', () => {
+    for (const minimizeThinking of [false, true]) {
+      expect(resolveClaudeThinkingOptions({
+        model: 'claude-fable-5-1', thinkingLevel: minimizeThinking ? 'max' : 'off',
+        providerType: 'anthropic', minimizeThinking,
+      })).toEqual({ thinking: { type: 'adaptive' }, effort: 'low' })
+    }
+  })
+
+  it('does not combine disabled thinking with xhigh/max on Opus 5', () => {
+    for (const thinkingLevel of ['off', 'xhigh', 'max'] as const) {
+      const options = resolveClaudeThinkingOptions({
+        model: 'claude-opus-5', thinkingLevel, providerType: 'anthropic', minimizeThinking: true,
+      })
+      expect(options).toEqual({ thinking: { type: 'disabled' } })
+      // With no explicit effort, the API default is high, which allows disabled thinking.
+      expect(options.effort).toBeUndefined()
+    }
+  })
+
   it('uses adaptive thinking for true Anthropic backends', () => {
     const result = resolveClaudeThinkingOptions({
       thinkingLevel: 'medium',

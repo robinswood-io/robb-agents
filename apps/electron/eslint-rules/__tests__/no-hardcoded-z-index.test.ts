@@ -6,13 +6,19 @@ const require = createRequire(import.meta.url)
 const rule = require('../no-hardcoded-z-index.cjs')
 
 function runRule(code: string) {
-  const linter = new Linter({ configType: 'eslintrc' })
-  linter.defineRule('craft-styles/no-hardcoded-z-index', rule)
+  const linter = new Linter()
 
   return linter.verify(code, {
-    parserOptions: {
+    languageOptions: {
       ecmaVersion: 'latest',
       sourceType: 'module',
+    },
+    plugins: {
+      'craft-styles': {
+        rules: {
+          'no-hardcoded-z-index': rule,
+        },
+      },
     },
     rules: {
       'craft-styles/no-hardcoded-z-index': 'error',

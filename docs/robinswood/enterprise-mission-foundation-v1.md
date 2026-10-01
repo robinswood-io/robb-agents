@@ -11,7 +11,7 @@ Statut : contrat de migration validable ; ne constitue pas à lui seul une preuv
 | Interfaces | Electron, WebUI, CLI, Control Room, kanban de tâches, inbox d’approbation | produit local réel ; parcours de gouvernance et supervision vérifié dans le navigateur officiel |
 | Sessions et providers | `SessionManager`, backends Claude/Pi, connexions multi-provider | réel, responsabilités encore concentrées |
 | Missions et durabilité | `tasks/schema`, `storage`, `durable-execution`, `mission-control`, `TaskRunner` | sessions, journal, checkpoints, reprise et isolation persistée réels ; les mutations externes restent refusées tant que le worker connecteur structuré n’est pas raccordé au runner |
-| Routage | `routing-policy`, `routing-fallback`, `routing-audit`, evals providers | policy-first partiel, preuves de promotion réelle à compléter |
+| Modèles | sélection explicite, provenance et coûts | choix conservé pendant les travaux utilisateur |
 | Credentials | secure storage atomique et segmenté, clés de gouvernance par finalité, `SecretLeaseBroker` | qualifié localement sans exposition de valeur ; coffre central/HYOK et rotation distante non qualifiés |
 | Connecteurs | manifeste Ed25519, registre durable, broker, leases, drivers HTTP bornés, reçus et rapprochement | runtime hôte gouverné réel et testé localement ; raccord `TaskRunner` et sandboxes fournisseurs externes encore requis |
 | Gouvernance | espaces, rôles, `CapabilityBroker`, taxonomie R0–W3, mandats A0–A4, audit et kill switches | PDP/PEP local deny-by-default réel ; fédération OIDC/SAML/SCIM et diffusion multi-hôte non qualifiées |

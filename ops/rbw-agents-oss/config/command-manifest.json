@@ -1409,29 +1409,6 @@
       "contractVersion": "runtime-v2-execution-report-v1"
     },
     {
-      "legacy_id": "provider-routing-guard",
-      "name": "Guard de routage providers LLM (OpenRouter free-first)",
-      "mode": "script",
-      "command": "/srv/rbw-agents-oss/.venv/bin/python /srv/rbw-agents-oss/scripts/provider_routing_guard.py",
-      "timeout_seconds": 180,
-      "cutover_ready": true,
-      "note": "Bascule dynamique OpenRouter gratuit -> OVH fallback selon santé providers et seuils qualité.",
-      "execution": {
-        "backend": "argv",
-        "argv": [
-          "/srv/rbw-agents-oss/.venv/bin/python",
-          "/srv/rbw-agents-oss/scripts/provider_routing_guard.py"
-        ],
-        "cwd": "/home/craft/.craft-agent/workspaces/my-workspace-2",
-        "timeout_seconds": 180
-      },
-      "runtimeVersion": "v2",
-      "runtimeReportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/provider-routing-guard-last.json",
-      "expectsReport": true,
-      "reportJsonPath": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/runtime-v2/provider-routing-guard-last.json",
-      "contractVersion": "runtime-v2-execution-report-v1"
-    },
-    {
       "legacy_id": "auto-ads-bmw-i4-night-watch",
       "name": "BMW i4 Watch annonces+enchères (email Listmonk)",
       "mode": "script",

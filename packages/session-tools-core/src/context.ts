@@ -322,6 +322,9 @@ export interface SessionToolContext {
   /** List sessions in the workspace with pagination. Injected by backend. */
   listSessions?(options?: ListSessionsOptions): ListSessionsResult;
 
+  /** Wait for the first target session to finish a turn, without polling. */
+  waitForSessions?(sessionIds: string[], timeoutMs: number): Promise<WaitSessionsResult>;
+
   /**
    * List background tasks (running + recently-terminal) for a session from the
    * main-process registry. Defaults to the current session if no ID given.
@@ -479,6 +482,20 @@ export interface ListSessionsResult {
   total: number;
   returned: number;
   sessions: SessionListItem[];
+}
+
+export interface WaitSessionSnapshot {
+  sessionId: string;
+  state: 'active' | 'idle' | 'missing';
+  status?: string;
+  processingGeneration?: number;
+  reason?: 'complete' | 'interrupted' | 'error' | 'timeout';
+  finalText?: string;
+}
+
+export interface WaitSessionsResult {
+  outcome: 'completed' | 'timeout';
+  sessions: WaitSessionSnapshot[];
 }
 
 /**

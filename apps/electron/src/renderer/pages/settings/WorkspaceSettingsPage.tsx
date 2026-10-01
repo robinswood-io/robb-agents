@@ -30,8 +30,8 @@ import { PERMISSION_MODE_CONFIG } from '@craft-agent/shared/agent/mode-types'
 import type { DetailsPageMeta } from '@/lib/navigation-registry'
 import { SourceAvatar } from '@/components/ui/source-avatar'
 import { toast } from 'sonner'
-import { parseRoutingPolicyText } from './routing-policy-editor'
-import type { RoutingPolicySimulation, RoutingSensitivity } from '@craft-agent/shared/config'
+import type { AgentCostControlPolicy } from '@craft-agent/shared/config'
+import { DEFAULT_AGENT_COST_CONTROL_POLICY, resolveAgentCostControlPolicy } from '@craft-agent/shared/config/agent-cost-control'
 
 import {
   SettingsSection,
@@ -57,7 +57,6 @@ export default function WorkspaceSettingsPage() {
   const appShellContext = useAppShellContext()
   const activeWorkspaceId = appShellContext.activeWorkspaceId
   const onRefreshWorkspaces = appShellContext.onRefreshWorkspaces
-
   // Workspace settings state
   const [wsName, setWsName] = useState('')
   const [wsNameEditing, setWsNameEditing] = useState('')
@@ -65,18 +64,13 @@ export default function WorkspaceSettingsPage() {
   const [wsIconUrl, setWsIconUrl] = useState<string | null>(null)
   const [isUploadingIcon, setIsUploadingIcon] = useState(false)
   const [permissionMode, setPermissionMode] = useState<PermissionMode>('ask')
+  const [externalActionPolicy, setExternalActionPolicy] = useState<'confirm' | 'allow-in-execute'>('confirm')
   const [workingDirectory, setWorkingDirectory] = useState('')
   const [localMcpEnabled, setLocalMcpEnabled] = useState(true)
   const [isLoadingWorkspace, setIsLoadingWorkspace] = useState(true)
-  const [routingPolicyText, setRoutingPolicyText] = useState('')
-  const [routingPolicyErrors, setRoutingPolicyErrors] = useState<string[]>([])
-  const [routingPolicyWarnings, setRoutingPolicyWarnings] = useState<string[]>([])
-  const [isSavingRoutingPolicy, setIsSavingRoutingPolicy] = useState(false)
-  const [llmConnectionSlugs, setLlmConnectionSlugs] = useState<string[]>([])
-  const [simulationSensitivity, setSimulationSensitivity] = useState<RoutingSensitivity>('internal')
-  const [routingSimulation, setRoutingSimulation] = useState<RoutingPolicySimulation | null>(null)
-  const [isSimulatingRouting, setIsSimulatingRouting] = useState(false)
-
+  const [costControlText, setCostControlText] = useState('')
+  const [costControlError, setCostControlError] = useState<string | null>(null)
+  const [isSavingCostControl, setIsSavingCostControl] = useState(false)
   // Default sources state
   const [availableSources, setAvailableSources] = useState<LoadedSource[]>([])
   const [enabledSourceSlugs, setEnabledSourceSlugs] = useState<string[]>([])
@@ -100,11 +94,11 @@ export default function WorkspaceSettingsPage() {
           setWsName(settings.name || '')
           setWsNameEditing(settings.name || '')
           setPermissionMode(settings.permissionMode || 'ask')
+          setExternalActionPolicy(settings.externalActionPolicy === 'allow-in-execute' ? 'allow-in-execute' : 'confirm')
           setWorkingDirectory(settings.workingDirectory || '')
           setLocalMcpEnabled(settings.localMcpEnabled ?? true)
-          setRoutingPolicyText(settings.routingPolicy ? JSON.stringify(settings.routingPolicy, null, 2) : '')
-          setRoutingPolicyErrors([])
-          setRoutingPolicyWarnings([])
+          setCostControlText(JSON.stringify(settings.costControl ?? DEFAULT_AGENT_COST_CONTROL_POLICY, null, 2))
+          setCostControlError(null)
           // Load cyclable permission modes from workspace settings
           if (settings.cyclablePermissionModes && settings.cyclablePermissionModes.length >= 2) {
             setEnabledModes(settings.cyclablePermissionModes)
@@ -112,14 +106,6 @@ export default function WorkspaceSettingsPage() {
 
           // Load default source slugs
           const savedSlugs = settings.enabledSourceSlugs ?? []
-
-          try {
-            const connections = await window.electronAPI.listLlmConnections()
-            setLlmConnectionSlugs(connections.map(connection => connection.slug))
-          } catch (error) {
-            console.error('Failed to load LLM connections for routingPolicy validation:', error)
-            setLlmConnectionSlugs([])
-          }
 
           // Load available sources and auto-heal stale slugs
           const sources = await window.electronAPI.getSources(activeWorkspaceId)
@@ -208,55 +194,31 @@ export default function WorkspaceSettingsPage() {
     [activeWorkspaceId, t]
   )
 
-  const validateRoutingPolicyText = useCallback((text: string) => {
-    return parseRoutingPolicyText(text, llmConnectionSlugs)
-  }, [llmConnectionSlugs])
-
-  const handleValidateRoutingPolicy = useCallback(() => {
-    const result = validateRoutingPolicyText(routingPolicyText)
-    setRoutingPolicyErrors(result.errors)
-    setRoutingPolicyWarnings(result.warnings)
-    if (result.errors.length === 0) {
-      toast.success(t('settings.workspace.routingPolicyValid'))
-    }
-  }, [routingPolicyText, validateRoutingPolicyText, t])
-
-  const handleSaveRoutingPolicy = useCallback(async () => {
-    const result = validateRoutingPolicyText(routingPolicyText)
-    setRoutingPolicyErrors(result.errors)
-    setRoutingPolicyWarnings(result.warnings)
-    if (result.errors.length > 0) return
-
-    setIsSavingRoutingPolicy(true)
+  const handleSaveCostControl = useCallback(async () => {
+    let parsed: AgentCostControlPolicy
     try {
-      const saved = await updateWorkspaceSetting('routingPolicy', result.policy)
+      const value = JSON.parse(costControlText) as unknown
+      if (!value || typeof value !== 'object' || Array.isArray(value)) {
+        throw new Error('costControl must be a JSON object')
+      }
+      parsed = resolveAgentCostControlPolicy(value as AgentCostControlPolicy)
+    } catch (error) {
+      setCostControlError(error instanceof Error ? error.message : 'Invalid JSON')
+      return
+    }
+
+    setIsSavingCostControl(true)
+    setCostControlError(null)
+    try {
+      const saved = await updateWorkspaceSetting('costControl', parsed)
       if (saved) {
-        setRoutingSimulation(null)
-        if (result.policy) {
-          setRoutingPolicyText(JSON.stringify(result.policy, null, 2))
-        }
-        toast.success(result.policy ? t('settings.workspace.routingPolicySaved') : t('settings.workspace.routingPolicyCleared'))
+        setCostControlText(JSON.stringify(parsed, null, 2))
+        toast.success(t('settings.workspace.costControlSaved'))
       }
     } finally {
-      setIsSavingRoutingPolicy(false)
+      setIsSavingCostControl(false)
     }
-  }, [routingPolicyText, updateWorkspaceSetting, validateRoutingPolicyText, t])
-
-  const handleSimulateRoutingPolicy = useCallback(async () => {
-    if (!window.electronAPI || !activeWorkspaceId) return
-    setIsSimulatingRouting(true)
-    try {
-      const simulation = await window.electronAPI.simulateRoutingPolicy(activeWorkspaceId, {
-        sensitivity: simulationSensitivity,
-      })
-      setRoutingSimulation(simulation)
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error'
-      toast.error(t('settings.workspace.routingPolicySimulationFailed'), { description: message })
-    } finally {
-      setIsSimulatingRouting(false)
-    }
-  }, [activeWorkspaceId, simulationSensitivity, t])
+  }, [costControlText, updateWorkspaceSetting, t])
 
   // Workspace icon upload handler
   const handleIconUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -317,6 +279,15 @@ export default function WorkspaceSettingsPage() {
     async (newMode: PermissionMode) => {
       setPermissionMode(newMode)
       await updateWorkspaceSetting('permissionMode', newMode)
+    },
+    [updateWorkspaceSetting]
+  )
+
+  const handleTotalAutonomyChange = useCallback(
+    async (enabled: boolean) => {
+      const nextPolicy = enabled ? 'allow-in-execute' : 'confirm'
+      setExternalActionPolicy(nextPolicy)
+      await updateWorkspaceSetting('externalActionPolicy', nextPolicy)
     },
     [updateWorkspaceSetting]
   )
@@ -514,6 +485,12 @@ export default function WorkspaceSettingsPage() {
                     { value: 'allow-all', label: t("mode.execute"), description: t("mode.executeDesc") },
                   ]}
                 />
+                <SettingsToggle
+                  label={t("settings.workspace.totalAutonomy")}
+                  description={t("settings.workspace.totalAutonomyDesc")}
+                  checked={externalActionPolicy === 'allow-in-execute'}
+                  onCheckedChange={handleTotalAutonomyChange}
+                />
               </SettingsCard>
             </SettingsSection>
 
@@ -583,115 +560,47 @@ export default function WorkspaceSettingsPage() {
               )}
             </SettingsSection>
 
-            {/* AI Router Policy */}
+            {/* Agent cost controls */}
             <SettingsSection
-              title={t('settings.workspace.routingPolicyTitle')}
-              description={t('settings.workspace.routingPolicyDesc')}
+              title={t('settings.workspace.costControlTitle')}
+              description={t('settings.workspace.costControlDesc')}
             >
               <SettingsCard>
                 <div className="p-4 space-y-3">
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <div className="text-sm font-medium">{t('settings.workspace.routingPolicyJson')}</div>
+                      <div className="text-sm font-medium">{t('settings.workspace.costControlJson')}</div>
                       <p className="text-xs text-muted-foreground mt-1">
-                        {t('settings.workspace.routingPolicyKnownConnections', {
-                          connections: llmConnectionSlugs.length > 0 ? llmConnectionSlugs.join(', ') : t('settings.workspace.routingPolicyNoConnections'),
-                        })}
+                        {t('settings.workspace.costControlDefaults')}
                       </p>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <button
-                        type="button"
-                        onClick={handleValidateRoutingPolicy}
-                        className="inline-flex items-center h-8 px-3 text-sm rounded-lg bg-background shadow-minimal hover:bg-foreground/[0.02] transition-colors"
-                      >
-                        {t('settings.workspace.routingPolicyValidate')}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleSaveRoutingPolicy}
-                        disabled={isSavingRoutingPolicy}
-                        className="inline-flex items-center h-8 px-3 text-sm rounded-lg bg-background shadow-minimal hover:bg-foreground/[0.02] transition-colors disabled:opacity-50"
-                      >
-                        {isSavingRoutingPolicy ? t('common.saving') : t('common.save')}
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={handleSaveCostControl}
+                      disabled={isSavingCostControl}
+                      className="inline-flex items-center h-8 px-3 text-sm rounded-lg bg-background shadow-minimal hover:bg-foreground/[0.02] transition-colors disabled:opacity-50"
+                    >
+                      {isSavingCostControl ? t('common.saving') : t('common.save')}
+                    </button>
                   </div>
                   <textarea
-                    value={routingPolicyText}
+                    value={costControlText}
                     onChange={(event) => {
-                      setRoutingPolicyText(event.target.value)
-                      setRoutingPolicyErrors([])
-                      setRoutingPolicyWarnings([])
+                      setCostControlText(event.target.value)
+                      setCostControlError(null)
                     }}
                     spellCheck={false}
-                    placeholder={'{\n  "version": 1,\n  "defaultSensitivity": "internal",\n  "rules": []\n}'}
-                    className="min-h-[220px] w-full resize-y rounded-lg bg-foreground-2 px-3 py-2 font-mono text-xs text-foreground outline-none shadow-minimal focus:bg-background focus:ring-2 focus:ring-ring"
+                    className="min-h-[320px] w-full resize-y rounded-lg bg-foreground-2 px-3 py-2 font-mono text-xs text-foreground outline-none shadow-minimal focus:bg-background focus:ring-2 focus:ring-ring"
                   />
-                  {routingPolicyErrors.length > 0 && (
-                    <div className="rounded-lg bg-destructive/10 p-3 text-xs text-destructive space-y-1">
-                      {routingPolicyErrors.map((error) => <div key={error}>• {error}</div>)}
+                  {costControlError && (
+                    <div className="rounded-lg bg-destructive/10 p-3 text-xs text-destructive">
+                      {costControlError}
                     </div>
                   )}
-                  {routingPolicyWarnings.length > 0 && (
-                    <div className="rounded-lg bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-300 space-y-1">
-                      {routingPolicyWarnings.map((warning) => <div key={warning}>• {warning}</div>)}
-                    </div>
-                  )}
-                  <div className="border-t border-border/60 pt-3 space-y-3">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <label htmlFor="routing-policy-simulation-sensitivity" className="text-xs font-medium">
-                        {t('settings.workspace.routingPolicySimulationSensitivity')}
-                      </label>
-                      <select
-                        id="routing-policy-simulation-sensitivity"
-                        value={simulationSensitivity}
-                        onChange={(event) => setSimulationSensitivity(event.target.value as RoutingSensitivity)}
-                        className="h-8 rounded-lg bg-background px-2 text-xs shadow-minimal outline-none focus:ring-2 focus:ring-ring"
-                      >
-                        {(['public', 'internal', 'confidential', 'restricted'] as const).map((sensitivity) => (
-                          <option key={sensitivity} value={sensitivity}>{t(`settings.workspace.routingSensitivity.${sensitivity}`)}</option>
-                        ))}
-                      </select>
-                      <button
-                        type="button"
-                        onClick={handleSimulateRoutingPolicy}
-                        disabled={isSimulatingRouting}
-                        className="inline-flex items-center h-8 px-3 text-sm rounded-lg bg-background shadow-minimal hover:bg-foreground/[0.02] transition-colors disabled:opacity-50"
-                      >
-                        {isSimulatingRouting ? t('settings.workspace.routingPolicySimulating') : t('settings.workspace.routingPolicySimulate')}
-                      </button>
-                    </div>
-                    <p className="text-xs text-muted-foreground">{t('settings.workspace.routingPolicySimulationDesc')}</p>
-                    {routingSimulation && (
-                      <div className="rounded-lg bg-foreground/[0.03] p-3 text-xs space-y-3">
-                        <div className="flex flex-wrap gap-x-4 gap-y-1">
-                          <span><strong>{t('settings.workspace.routingPolicySimulationSelected')}:</strong> {routingSimulation.decision.selectedConnectionSlug ?? t('settings.workspace.routingPolicySimulationNone')}</span>
-                          <span><strong>{t('settings.workspace.routingPolicySimulationReason')}:</strong> {routingSimulation.decision.reason}</span>
-                        </div>
-                        {routingSimulation.decision.errors.length > 0 && (
-                          <div className="text-destructive space-y-1">
-                            {routingSimulation.decision.errors.map((error) => <div key={error}>• {error}</div>)}
-                          </div>
-                        )}
-                        <div className="space-y-1">
-                          {routingSimulation.candidates.map((candidate) => (
-                            <div key={candidate.slug} className="flex flex-wrap gap-x-2">
-                              <span className={candidate.allowed ? 'text-emerald-700 dark:text-emerald-300' : 'text-muted-foreground'}>
-                                {candidate.slug} — {candidate.allowed ? t('settings.workspace.routingPolicySimulationAllowed') : t('settings.workspace.routingPolicySimulationBlocked')}
-                              </span>
-                              {!candidate.allowed && candidate.exclusionReasons.length > 0 && (
-                                <span className="text-muted-foreground">({candidate.exclusionReasons.join(', ')})</span>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
                 </div>
               </SettingsCard>
             </SettingsSection>
+
 
             {/* Advanced */}
             <SettingsSection title={t("settings.workspace.advanced")}>

@@ -2,10 +2,14 @@ appId: io.robinswood.robbagents
 productName: Robb Agents
 copyright: Copyright © 2026 Robinswood
 
-electronVersion: "39.2.7"
+electronVersion: "43.4.0"
 
 # Hook to compile macOS 26+ Liquid Glass icon after packaging
 afterPack: scripts/afterPack.cjs
+# Every production package fails closed on dirty source before packing. macOS
+# additionally verifies Developer ID signing plus notarization after signing.
+beforePack: scripts/releaseIntegrity.cjs
+afterSign: scripts/afterSign.cjs
 
 directories:
   output: release
@@ -76,6 +80,23 @@ files:
   # Exclude everything from node_modules (will use extraResources for SDK)
   - "!node_modules/**/*"
 
+# Runtime subprocesses cannot execute files through Electron's virtual ASAR
+# filesystem. Keep the immutable Electron entrypoint in app.asar while staging
+# the explicitly spawned servers, tooling and WebUI under Resources/app/.
+# Platform-native binaries are copied by the platform blocks below.
+extraResources:
+  - from: dist/resources
+    to: app/resources
+    filter:
+      - "**/*"
+      - "!bin/darwin-*/**"
+      - "!bin/linux-*/**"
+      - "!bin/win32-*/**"
+  - from: dist/interceptor.cjs
+    to: app/dist/interceptor.cjs
+  - from: ../webui/dist
+    to: app/webui
+
 # Since SDK 0.2.113 the SDK ships a thin core (`@anthropic-ai/claude-agent-sdk`)
 # and a per-platform optional dependency (`-darwin-arm64`, `-darwin-x64`, etc.)
 # containing the ~210 MB native `claude` binary. We bundle both as extraResources
@@ -103,16 +124,26 @@ publish:
   releaseType: release
   publishAutoUpdate: true
 
-# Disable ASAR to avoid decompression overhead and click delays
-asar: false
+# Production code is loaded only from the integrity-protected ASAR. The
+# development overlay disables ASAR and these fuses for local iteration.
+asar: true
+electronFuses:
+  enableEmbeddedAsarIntegrityValidation: true
+  onlyLoadAppFromAsar: true
 
 mac:
   category: public.app-category.productivity
   icon: resources/robinswood-icon.icns
+  # The production config must never silently fall back to unsigned/ad-hoc.
+  # electron-builder.dev.yml and build-dmg.sh's non-release path override this.
+  forceCodeSigning: true
   # macOS 26+ Liquid Glass: Tell macOS to look for icon in Assets.car
   # The value must match --app-icon used in actool (see afterPack.cjs)
   extendInfo:
     CFBundleIconName: AppIcon
+    NSCameraUsageDescription: "Robb Agents uses the camera only when an agent-controlled secure website you selected requires it."
+    NSMicrophoneUsageDescription: "Robb Agents uses the microphone only when an agent-controlled secure website you selected requires it."
+    NSLocationWhenInUseUsageDescription: "Robb Agents shares location only with an agent-controlled secure website while that session is actively running."
     # Required for macOS to list the app under Privacy & Security > Local Network
     # and prompt for permission. Without it the app is silently denied LAN access
     # and never appears in the privacy pane (craft-agents-oss#938).
@@ -124,9 +155,11 @@ mac:
   # supplied by the release operator/CI; local developer builds remain usable.
   notarize: true
   hardenedRuntime: true
+  # The strict afterSign hook and packaged smoke-test perform the assessment;
+  # electron-builder's legacy assessment is therefore left disabled.
   gatekeeperAssess: false
   entitlements: build/entitlements.mac.plist
-  entitlementsInherit: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.inherit.plist
   extraResources:
     # Thin core SDK (sdk.mjs + types). ~4 MB — present on every platform.
     - from: node_modules/@anthropic-ai/claude-agent-sdk

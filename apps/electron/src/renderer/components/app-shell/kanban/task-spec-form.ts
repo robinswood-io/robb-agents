@@ -64,6 +64,13 @@ export const slugify = (s: string): string =>
 /** Permission modes are fixed (safe|ask|allow-all); mirrored here to avoid a shared Node import in the renderer. */
 export type TaskPermissionMode = 'safe' | 'ask' | 'allow-all'
 
+/** Optional backend-validated reflective repair policy, preserved losslessly by the editor. */
+export interface TaskAutonomyPolicy {
+  reflection_memory_entries?: number
+  reflection_output_chars?: number
+  stagnation_limit?: number
+}
+
 export interface EditorSubtask {
   uid: string
   // Original node id from a generated/loaded spec, preserved across the editor round-trip so
@@ -87,11 +94,15 @@ export interface EditorSubtask {
 
 export interface SpecForm {
   title: string
+  /** Canonical cockpit description; legacy/blank forms fall back to goal at read time. */
+  description?: string
   goal: string
   /** Checkable rubric the orchestrator grades the finished run against. Persisted to `acceptance_criteria`. */
   acceptanceCriteria?: string
   /** Max repair attempts on a FAIL verdict. Persisted to the spec's `max_iterations`. */
   maxRepairs?: number
+  /** Reflective repair overrides loaded from/generated into task.yaml. Defaults stay backend-owned. */
+  autonomy?: TaskAutonomyPolicy
   projectId: string
   orchModel: string
   /** Connection serving the orchestrator model; preserved from the loaded spec's `defaults` unless the
@@ -175,6 +186,7 @@ export function buildSpec(form: SpecForm, modelToConnection: Map<string, string>
 
   const orchConn = form.orchConnection ?? (form.orchModel ? modelToConnection.get(form.orchModel) : undefined)
   const cwd = form.cwd?.trim()
+  const description = form.description?.trim()
   const acceptanceCriteria = form.acceptanceCriteria?.trim()
   // Task-family defaults: orchestrator model/connection + the explicit, persisted permission mode.
   const defaults: Record<string, unknown> = {}
@@ -187,6 +199,7 @@ export function buildSpec(form: SpecForm, modelToConnection: Map<string, string>
   return {
     id: form.fixedId || slugify(form.title) || 'untitled-task',
     title: form.title.trim() || 'Untitled task',
+    ...(description ? { description } : {}),
     goal: form.goal.trim() || form.title.trim() || 'Untitled task',
     mission: {
       inputs: [],
@@ -206,6 +219,7 @@ export function buildSpec(form: SpecForm, modelToConnection: Map<string, string>
     ...(form.maxRepairs !== undefined && Number.isFinite(form.maxRepairs)
       ? { max_iterations: Math.min(MAX_REPAIR_ATTEMPTS_CAP, Math.max(0, Math.floor(form.maxRepairs))) }
       : {}),
+    ...(form.autonomy && Object.keys(form.autonomy).length ? { autonomy: { ...form.autonomy } } : {}),
     ...(project ? { project } : {}),
     ...(cwd ? { cwd } : {}),
     // Empty selections are omitted (not persisted as []) so sessions keep workspace defaults.

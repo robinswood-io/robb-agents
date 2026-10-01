@@ -6,6 +6,26 @@
  * localhost on a random port, allowing thin clients to connect.
  */
 
+export const REMOTE_TUNNEL_PROVIDERS = [
+  'manual',
+  'ssh-reverse',
+  'cloudflare',
+  'tailscale',
+  'ngrok',
+  'other',
+] as const
+
+export type RemoteTunnelProvider = typeof REMOTE_TUNNEL_PROVIDERS[number]
+
+export const REMOTE_AUTH_MODES = [
+  'pairing-code',
+  'server-token',
+  'email-code',
+  'external-provider',
+] as const
+
+export type RemoteAuthMode = typeof REMOTE_AUTH_MODES[number]
+
 export interface ServerConfig {
   /** Whether remote server mode is active (bind 0.0.0.0 vs 127.0.0.1) */
   enabled: boolean
@@ -17,6 +37,14 @@ export interface ServerConfig {
   tlsKeyPath?: string
   /** Stable auth token for remote clients (auto-generated on first enable) */
   token?: string
+  /** Tunnel/reverse-proxy implementation used for this installation. */
+  tunnelProvider?: RemoteTunnelProvider
+  /** Authentication gate applied before a mobile device can exchange a pairing ticket. */
+  remoteAuthMode?: RemoteAuthMode
+  /** Browser-facing HTTPS URL when a trusted reverse proxy exposes the WebUI. */
+  publicWebuiUrl?: string
+  /** Browser-facing WSS URL when a trusted reverse proxy exposes RPC. */
+  publicWsUrl?: string
 }
 
 export interface ServerStatus {
@@ -26,7 +54,7 @@ export interface ServerStatus {
   host: string
   /** Current port */
   port: number
-  /** Whether TLS is active */
+  /** Whether the browser-facing Remote transport is protected by TLS. */
   tls: boolean
   /** Full connection URL (ws:// or wss://) */
   url: string
@@ -59,4 +87,83 @@ export interface RemoteDeviceInfo {
 export const DEFAULT_SERVER_CONFIG: ServerConfig = {
   enabled: false,
   port: 9100,
+  tunnelProvider: 'manual',
+  remoteAuthMode: 'pairing-code',
+}
+
+function normalizeTunnelProvider(value: RemoteTunnelProvider | undefined): RemoteTunnelProvider {
+  return value && REMOTE_TUNNEL_PROVIDERS.includes(value) ? value : 'manual'
+}
+
+function normalizeRemoteAuthMode(value: RemoteAuthMode | undefined): RemoteAuthMode {
+  return value && REMOTE_AUTH_MODES.includes(value) ? value : 'pairing-code'
+}
+
+type PublicRemoteUrlKind = 'webui' | 'websocket'
+
+function normalizePublicRemoteUrl(
+  value: string | undefined,
+  kind: PublicRemoteUrlKind,
+): string | undefined {
+  const raw = value?.trim()
+  if (!raw) return undefined
+
+  let parsed: URL
+  try {
+    parsed = new URL(raw)
+  } catch {
+    throw new Error(`Invalid public ${kind === 'webui' ? 'Web UI' : 'WebSocket'} URL`)
+  }
+
+  const expectedProtocol = kind === 'webui' ? 'https:' : 'wss:'
+  if (parsed.protocol !== expectedProtocol) {
+    throw new Error(
+      `Public ${kind === 'webui' ? 'Web UI' : 'WebSocket'} URL must use ${expectedProtocol.slice(0, -1).toUpperCase()}`,
+    )
+  }
+  if (parsed.username || parsed.password) {
+    throw new Error('Public Remote URLs must not contain credentials')
+  }
+  // Reject even empty query/fragment delimiters. They are unnecessary for
+  // routing and are the most likely place for a durable token to leak.
+  if (raw.includes('?') || raw.includes('#')) {
+    throw new Error('Public Remote URLs must not contain a query or fragment')
+  }
+  if (kind === 'webui' && parsed.pathname !== '/') {
+    throw new Error('Public Web UI URL must not contain a path')
+  }
+
+  return parsed.toString()
+}
+
+/**
+ * Validate and canonicalize the public reverse-proxy endpoints as one atomic
+ * pair. Keeping the two values coupled prevents an HTTPS page from silently
+ * falling back to an internal or plaintext WebSocket endpoint.
+ */
+export function normalizeServerConfigPublicUrls(config: ServerConfig): ServerConfig {
+  const publicWebuiUrl = normalizePublicRemoteUrl(config.publicWebuiUrl, 'webui')
+  const publicWsUrl = normalizePublicRemoteUrl(config.publicWsUrl, 'websocket')
+
+  if (Boolean(publicWebuiUrl) !== Boolean(publicWsUrl)) {
+    throw new Error('Public Web UI and WebSocket URLs must be configured together')
+  }
+
+  if (publicWebuiUrl && publicWsUrl) {
+    const webuiHostname = new URL(publicWebuiUrl).hostname
+    const websocketHostname = new URL(publicWsUrl).hostname
+    if (webuiHostname !== websocketHostname) {
+      // Remote authentication uses a host-only session cookie. It cannot be
+      // sent to a WebSocket endpoint on another hostname.
+      throw new Error('Public Web UI and WebSocket URLs must use the same hostname')
+    }
+  }
+
+  return {
+    ...config,
+    tunnelProvider: normalizeTunnelProvider(config.tunnelProvider),
+    remoteAuthMode: normalizeRemoteAuthMode(config.remoteAuthMode),
+    publicWebuiUrl,
+    publicWsUrl,
+  }
 }

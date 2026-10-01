@@ -181,6 +181,10 @@ describe('serializeSession', () => {
     const session = makeStoredSession({
       taskRunId: 'run-1',
       taskNodeId: 'node-1',
+      missionId: 'mission-one',
+      missionWorkItemId: 'work-one',
+      missionDispatchId: 'dispatch-one',
+      missionRole: 'worker',
       executionIsolation: {
         effect: 'workspace-write',
         policy: {
@@ -203,6 +207,10 @@ describe('serializeSession', () => {
 
     expect(bundle).not.toBeNull()
     expect(bundle!.session.header.executionIsolation).toBeUndefined()
+    expect(bundle!.session.header.missionId).toBeUndefined()
+    expect(bundle!.session.header.missionWorkItemId).toBeUndefined()
+    expect(bundle!.session.header.missionDispatchId).toBeUndefined()
+    expect(bundle!.session.header.missionRole).toBeUndefined()
     expect(JSON.stringify(bundle)).not.toContain('private-source')
 
     const restoredWorkspace = makeTmpDir()

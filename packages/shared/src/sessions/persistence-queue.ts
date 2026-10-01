@@ -11,6 +11,27 @@ interface PendingWrite {
   timer: ReturnType<typeof setTimeout>
 }
 
+interface SessionPersistenceQueueTestHooks {
+  beforeWrite?: (sessionId: string) => Promise<void> | void
+  afterTempWrite?: (sessionId: string) => Promise<void> | void
+}
+
+const activeSessionWritePaths = new Map<string, number>()
+
+function beginSessionPersistenceWrite(filePath: string): void {
+  activeSessionWritePaths.set(filePath, (activeSessionWritePaths.get(filePath) ?? 0) + 1)
+}
+
+function endSessionPersistenceWrite(filePath: string): void {
+  const remaining = (activeSessionWritePaths.get(filePath) ?? 1) - 1
+  if (remaining > 0) activeSessionWritePaths.set(filePath, remaining)
+  else activeSessionWritePaths.delete(filePath)
+}
+
+export function isSessionPersistenceWriteInProgress(filePath: string): boolean {
+  return activeSessionWritePaths.has(filePath)
+}
+
 interface HeaderMetadataSignature {
   name?: string
   labels?: string[]
@@ -103,9 +124,11 @@ class SessionPersistenceQueue {
   private writeInProgress = new Map<string, Promise<void>>()
   private lastWrittenHeaderSignature = new Map<string, string>()
   private debounceMs: number
+  private testHooks?: SessionPersistenceQueueTestHooks
 
-  constructor(debounceMs = 500) {
+  constructor(debounceMs = 500, testHooks?: SessionPersistenceQueueTestHooks) {
     this.debounceMs = debounceMs
+    this.testHooks = testHooks
   }
 
   /**
@@ -119,7 +142,7 @@ class SessionPersistenceQueue {
     }
 
     const timer = setTimeout(() => {
-      void this.write(session.id)
+      void this.queueWrite(session.id)
     }, this.debounceMs)
 
     this.pending.set(session.id, { data: session, timer })
@@ -134,13 +157,16 @@ class SessionPersistenceQueue {
     if (!entry) return
 
     this.pending.delete(sessionId)
+    let filePath: string | undefined
 
     try {
       const { data } = entry
+      await this.testHooks?.beforeWrite?.(sessionId)
       ensureSessionsDir(data.workspaceRootPath)
       ensureSessionDir(data.workspaceRootPath, sessionId)
 
-      const filePath = getSessionFilePath(data.workspaceRootPath, sessionId)
+      filePath = getSessionFilePath(data.workspaceRootPath, sessionId)
+      beginSessionPersistenceWrite(filePath)
 
       // Prepare session with portable paths for cross-machine compatibility
       const storageSession: StoredSession = {
@@ -198,11 +224,34 @@ class SessionPersistenceQueue {
 
       const tmpFile = filePath + '.tmp'
       await writeFile(tmpFile, lines.join('\n') + '\n', 'utf-8')
+      await this.testHooks?.afterTempWrite?.(sessionId)
       await replaceFileAtomically(tmpFile, filePath)
       debug(`[PersistenceQueue] Wrote session ${sessionId}`)
     } catch (error) {
       console.error(`[PersistenceQueue] Failed to write session ${sessionId}:`, error)
+    } finally {
+      if (filePath) endSessionPersistenceWrite(filePath)
     }
+  }
+
+  /**
+   * Append a write to the per-session promise chain. Debounce timers and
+   * explicit flushes must both enter through this method; otherwise a timer
+   * write can race a flush and both processes can rename the same .tmp file.
+   */
+  private queueWrite(sessionId: string): Promise<void> {
+    const previous = this.writeInProgress.get(sessionId) ?? Promise.resolve()
+    const writePromise = previous
+      .catch(() => { /* keep the queue usable after an unexpected rejection */ })
+      .then(() => this.write(sessionId))
+
+    this.writeInProgress.set(sessionId, writePromise)
+    void writePromise.finally(() => {
+      if (this.writeInProgress.get(sessionId) === writePromise) {
+        this.writeInProgress.delete(sessionId)
+      }
+    })
+    return writePromise
   }
 
   /**
@@ -214,22 +263,15 @@ class SessionPersistenceQueue {
     const entry = this.pending.get(sessionId)
     if (entry) {
       clearTimeout(entry.timer)
+      await this.queueWrite(sessionId)
+      return
+    }
 
-      // Wait for any in-progress write to complete first
-      const inProgress = this.writeInProgress.get(sessionId)
-      if (inProgress) {
-        await inProgress
-      }
-
-      // Start new write and track it
-      const writePromise = this.write(sessionId)
-      this.writeInProgress.set(sessionId, writePromise)
-
-      try {
-        await writePromise
-      } finally {
-        this.writeInProgress.delete(sessionId)
-      }
+    const inProgress = this.writeInProgress.get(sessionId)
+    if (inProgress) {
+      await inProgress
+      // An enqueue may have arrived while the preceding write was running.
+      if (this.pending.has(sessionId)) await this.flush(sessionId)
     }
   }
 
@@ -250,7 +292,10 @@ class SessionPersistenceQueue {
    * Flush all pending sessions. Call this on app quit.
    */
   async flushAll(): Promise<void> {
-    const sessionIds = [...this.pending.keys()]
+    const sessionIds = [...new Set([
+      ...this.pending.keys(),
+      ...this.writeInProgress.keys(),
+    ])]
     await Promise.all(sessionIds.map(id => this.flush(id)))
   }
 

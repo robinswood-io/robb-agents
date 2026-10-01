@@ -126,6 +126,7 @@ describe('release bundle validation', () => {
       sourceCommit: SOURCE_COMMIT,
       tag: TAG,
       requireSigned: true,
+      windowsSigningMode: 'pfx',
       requireSbom: true,
     })
 
@@ -169,14 +170,13 @@ describe('release bundle validation', () => {
     })).toThrow('PROVENANCE-windows-x64.txt has invalid signing state')
   })
 
-
-  it('accepts a public release bundle with an explicitly unsigned Windows installer when allowed', () => {
+  it('accepts explicitly unsigned Windows provenance at the publication boundary', () => {
     const releaseDir = prepareReleaseBundle()
     writeProvenance(
       releaseDir,
       'PROVENANCE-windows-x64.txt',
       'windows-x64',
-      'unsigned-github-release',
+      'unsigned-public-release',
     )
     writeCanonicalChecksums(releaseDir)
 
@@ -186,32 +186,10 @@ describe('release bundle validation', () => {
       sourceCommit: SOURCE_COMMIT,
       tag: TAG,
       requireSigned: true,
-      allowUnsignedWindows: true,
+      windowsSigningMode: 'unsigned',
       requireSbom: true,
     })
-
-    expect(report.artifacts).toHaveLength(6)
-  })
-
-  it('does not accept CI-only unsigned Windows provenance in a public release bundle', () => {
-    const releaseDir = prepareReleaseBundle()
-    writeProvenance(
-      releaseDir,
-      'PROVENANCE-windows-x64.txt',
-      'windows-x64',
-      'unsigned-test-artifact',
-    )
-    writeCanonicalChecksums(releaseDir)
-
-    expect(() => validateReleaseBundle({
-      releaseDir,
-      version: VERSION,
-      sourceCommit: SOURCE_COMMIT,
-      tag: TAG,
-      requireSigned: true,
-      allowUnsignedWindows: true,
-      requireSbom: true,
-    })).toThrow('PROVENANCE-windows-x64.txt has invalid signing state')
+    expect(report.provenanceFiles).toContain('PROVENANCE-windows-x64.txt')
   })
 
   it('requires a checksum for every published file', () => {

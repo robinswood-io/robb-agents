@@ -2,12 +2,14 @@ import { z } from 'zod'
 import type {
   MissionControlSnapshotDto,
   MissionReplayPlanDto,
+  DurableTaskSnapshotDto,
   TaskResultsDto,
   TaskRunSnapshotDto,
 } from './dto'
 
 const taskNodeStateSchema = z.enum([
   'pending',
+  'waiting-approval',
   'running',
   'done',
   'failed',
@@ -18,6 +20,7 @@ const taskNodeStateSchema = z.enum([
 const taskRunStatusSchema = z.enum([
   'running',
   'paused',
+  'waiting-approval',
   'verifying',
   'stopped',
   'completed',
@@ -141,12 +144,95 @@ const taskResultNodeSchema = z.strictObject({
   state: taskNodeStateSchema,
   sessionId: z.string().min(1).optional(),
   output: z.string().optional(),
+  dependsOn: z.array(z.string().min(1)).optional(),
+  attempt: z.number().int().nonnegative().optional(),
+  proofHash: z.string().min(1).optional(),
+  evidenceRefs: z.array(z.string().min(1)).optional(),
+  repair: z.strictObject({
+    allowed: z.boolean(),
+    reason: z.string().min(1),
+  }).optional(),
 })
 
 const taskVerdictSchema = z.strictObject({
   result: z.enum(['pass', 'fail', 'unparsed']),
   reason: z.string().optional(),
   nodes: z.array(z.string().min(1)).optional(),
+})
+
+const durableTaskExternalRefsSchema = z.strictObject({
+  craftTaskId: z.string().min(1).optional(),
+  googleTaskId: z.string().min(1).optional(),
+  temporalWorkflowId: z.string().min(1).optional(),
+})
+
+const durableTaskSnapshotDtoSchema: z.ZodType<DurableTaskSnapshotDto> = z.strictObject({
+  schemaVersion: z.literal(1),
+  id: z.string().min(1),
+  slug: z.string().min(1),
+  revision: z.number().int().positive(),
+  title: z.string().min(1),
+  description: z.string(),
+  acceptanceCriteria: z.string(),
+  sources: z.array(z.string()),
+  projectId: z.string().min(1).optional(),
+  executor: z.strictObject({
+    runner: z.enum(['conduct', 'orchestrate']),
+    agent: z.string().min(1),
+    wrapper: z.string().min(1),
+    model: z.string().min(1).optional(),
+    llmConnection: z.string().min(1).optional(),
+  }),
+  status: z.enum(['ready', 'running', 'paused', 'waiting-approval', 'verifying', 'completed', 'failed', 'stopped', 'archived']),
+  archived: z.boolean(),
+  archivedAt: z.iso.datetime().optional(),
+  graph: z.strictObject({
+    nodes: z.array(z.strictObject({
+      id: z.string().min(1),
+      title: z.string().min(1),
+      kind: z.string().min(1),
+      dependsOn: z.array(z.string()),
+      state: taskNodeStateSchema,
+      attempt: z.number().int().nonnegative(),
+      sessionId: z.string().min(1).optional(),
+      model: z.string().min(1).optional(),
+      connectionSlug: z.string().min(1).optional(),
+      effect: z.enum(['read', 'workspace-write', 'external-mutation']),
+      outputAvailable: z.boolean(),
+      evidenceRefs: z.array(z.string()),
+      proofHash: z.string().min(1).optional(),
+      repair: z.strictObject({ allowed: z.boolean(), reason: z.string().min(1) }),
+    })),
+    edges: z.array(z.strictObject({ from: z.string().min(1), to: z.string().min(1) })),
+  }),
+  linkedSessions: z.strictObject({
+    orchestratorSessionId: z.string().min(1).optional(),
+    nodes: z.array(z.strictObject({ nodeId: z.string().min(1), sessionId: z.string().min(1) })),
+  }),
+  latestRunId: z.string().min(1).optional(),
+  result: z.strictObject({
+    verification: z.enum(['not-verified', 'verified', 'rejected', 'inconclusive']),
+    summary: z.string(),
+    output: z.string().optional(),
+  }),
+  evidenceRefs: z.array(z.string()),
+  userEvidence: z.strictObject({
+    actionRequested: z.string(),
+    actionAttempted: z.array(z.string()),
+    mutationsApplied: z.array(z.string()),
+    userVerification: z.string(),
+    remainingLimitations: z.array(z.string()),
+  }),
+  nextAction: z.string(),
+  externalRefs: durableTaskExternalRefsSchema,
+  visualState: z.strictObject({
+    tone: z.enum(['neutral', 'info', 'warning', 'success', 'danger', 'muted']),
+    label: z.string().min(1),
+    progressPercent: z.number().min(0).max(100),
+    attentionRequired: z.boolean(),
+  }),
+  createdAt: z.iso.datetime(),
+  updatedAt: z.iso.datetime(),
 })
 
 export const TaskResultsDtoSchema = z.strictObject({
@@ -164,6 +250,14 @@ export const TaskResultsDtoSchema = z.strictObject({
   controlRoom: MissionControlSnapshotDtoSchema.optional(),
   replayPlan: MissionReplayPlanDtoSchema.optional(),
   reportMarkdown: z.string().optional(),
+  task: durableTaskSnapshotDtoSchema.optional(),
+  userEvidence: z.strictObject({
+    actionRequested: z.string(),
+    actionAttempted: z.array(z.string()),
+    mutationsApplied: z.array(z.string()),
+    userVerification: z.string(),
+    remainingLimitations: z.array(z.string()),
+  }).optional(),
   nodes: z.array(taskResultNodeSchema),
 })
 

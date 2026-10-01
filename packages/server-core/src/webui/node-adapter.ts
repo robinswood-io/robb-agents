@@ -10,6 +10,31 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
 
 type WebHandler = (req: Request) => Promise<Response> | Response
+const MAX_REQUEST_BODY_BYTES = 64 * 1024
+
+/**
+ * Deliberately minimal request metadata exposed when a handler fails.
+ *
+ * Do not add the raw URL, headers, cookies, query parameters, or body here:
+ * this event is intended for production logs and must remain safe to record.
+ */
+export interface NodeHttpAdapterErrorContext {
+  readonly method: string
+  readonly pathname: string
+  /** Coarse, allow-listed classification. The thrown value and its message are never exposed. */
+  readonly errorName: string
+}
+
+export interface NodeHttpAdapterOptions {
+  onError?: (context: NodeHttpAdapterErrorContext) => void
+}
+
+const nodeRequestRemoteAddresses = new WeakMap<Request, string>()
+
+/** Returns the transport peer captured by the Node adapter, if any. */
+export function getNodeRequestRemoteAddress(request: Request): string | null {
+  return nodeRequestRemoteAddresses.get(request) ?? null
+}
 
 /**
  * Wrap a web-standard fetch handler as a Node HTTP request listener.
@@ -18,15 +43,62 @@ type WebHandler = (req: Request) => Promise<Response> | Response
  */
 export function nodeHttpAdapter(
   handler: WebHandler,
+  options: NodeHttpAdapterOptions = {},
 ): (req: IncomingMessage, res: ServerResponse) => void {
   return (nodeReq, nodeRes) => {
-    handleRequest(handler, nodeReq, nodeRes).catch((err) => {
-      console.error('[webui-adapter] Unhandled error:', err)
+    handleRequest(handler, nodeReq, nodeRes).catch((error) => {
+      reportHandlerError(error, nodeReq, options.onError)
       if (!nodeRes.headersSent) {
-        nodeRes.writeHead(500, { 'Content-Type': 'text/plain' })
+        nodeRes.writeHead(500, {
+          'Cache-Control': 'no-store',
+          'Content-Type': 'text/plain; charset=utf-8',
+          'X-Content-Type-Options': 'nosniff',
+        })
       }
       nodeRes.end('Internal Server Error')
     })
+  }
+}
+
+function reportHandlerError(
+  error: unknown,
+  request: IncomingMessage,
+  onError: NodeHttpAdapterOptions['onError'],
+): void {
+  const context = Object.freeze({
+    method: request.method ?? 'UNKNOWN',
+    pathname: requestPathname(request.url),
+    errorName: safeErrorName(error),
+  })
+
+  if (onError) {
+    try {
+      onError(context)
+      return
+    } catch {
+      // A diagnostic callback must never change the HTTP failure response.
+    }
+  }
+
+  console.error('[webui-adapter] Unhandled request error', context)
+}
+
+function safeErrorName(error: unknown): string {
+  if (error instanceof EvalError) return 'EvalError'
+  if (error instanceof RangeError) return 'RangeError'
+  if (error instanceof ReferenceError) return 'ReferenceError'
+  if (error instanceof SyntaxError) return 'SyntaxError'
+  if (error instanceof TypeError) return 'TypeError'
+  if (error instanceof URIError) return 'URIError'
+  if (error instanceof Error) return 'Error'
+  return 'NonErrorThrow'
+}
+
+function requestPathname(requestTarget: string | undefined): string {
+  try {
+    return new URL(requestTarget ?? '/', 'http://localhost').pathname || '/'
+  } catch {
+    return '/'
   }
 }
 
@@ -36,7 +108,7 @@ async function handleRequest(
   nodeRes: ServerResponse,
 ): Promise<void> {
   // Build web-standard Request from Node IncomingMessage
-  const encrypted = !!(nodeReq.socket as any).encrypted
+  const encrypted = Boolean((nodeReq.socket as typeof nodeReq.socket & { encrypted?: boolean }).encrypted)
   const protocol = encrypted ? 'https' : 'http'
   const host = nodeReq.headers.host ?? 'localhost'
   const url = `${protocol}://${host}${nodeReq.url ?? '/'}`
@@ -50,8 +122,21 @@ async function handleRequest(
   let body: Buffer | null = null
   if (nodeReq.method !== 'GET' && nodeReq.method !== 'HEAD') {
     const chunks: Buffer[] = []
+    let totalBytes = 0
     for await (const chunk of nodeReq) {
-      chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk)
+      const buffer = typeof chunk === 'string' ? Buffer.from(chunk) : chunk
+      totalBytes += buffer.byteLength
+      if (totalBytes > MAX_REQUEST_BODY_BYTES) {
+        nodeRes.writeHead(413, {
+          'Cache-Control': 'no-store',
+          'Content-Type': 'text/plain; charset=utf-8',
+          'X-Content-Type-Options': 'nosniff',
+        })
+        nodeRes.end('Payload Too Large')
+        nodeReq.destroy()
+        return
+      }
+      chunks.push(buffer)
     }
     body = Buffer.concat(chunks)
   }
@@ -61,6 +146,8 @@ async function handleRequest(
     headers,
     body: body ? new Uint8Array(body) : null,
   })
+  const remoteAddress = nodeReq.socket.remoteAddress
+  if (remoteAddress) nodeRequestRemoteAddresses.set(request, remoteAddress)
 
   const response = await handler(request)
 

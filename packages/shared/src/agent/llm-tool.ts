@@ -25,7 +25,7 @@ type ToolResult = {
 import { readFile } from 'fs/promises';
 import { existsSync, statSync } from 'fs';
 import path from 'node:path';
-import { getModelById, getDefaultSummarizationModel, MODEL_REGISTRY } from '../config/models.ts';
+import { MODEL_REGISTRY } from '../config/models.ts';
 
 // ============================================================================
 // QUERY INTERFACES (used by agent backends to implement queryFn)
@@ -162,7 +162,7 @@ export const OUTPUT_FORMATS = {
 export interface BuildCallLlmOptions {
   /** Backend name for error messages (e.g., "Codex", "Copilot") */
   backendName: string;
-  /** Optional model validation hook — return undefined to reject (falls back to default), or corrected model ID */
+  /** Optional model validation hook — return undefined to reject, or a validated model ID */
   validateModel?: (resolvedModelId: string) => string | undefined;
   /** Session directory for resolving relative attachment paths */
   sessionPath?: string;
@@ -210,7 +210,7 @@ export async function buildCallLlmRequest(
   // Resolve model against registry, with optional backend-specific validation
   let model = input.model as string | undefined;
   if (model) {
-    const modelDef = getModelById(model)
+    const modelDef = MODEL_REGISTRY.find(m => m.id === model)
       || MODEL_REGISTRY.find(m => m.shortName.toLowerCase() === model!.toLowerCase())
       || MODEL_REGISTRY.find(m => m.name.toLowerCase() === model!.toLowerCase());
     if (modelDef) {
@@ -219,7 +219,9 @@ export async function buildCallLlmRequest(
 
     // Backend-specific model validation (e.g., Codex rejects non-OpenAI models)
     if (options.validateModel) {
-      model = options.validateModel(model) ?? undefined;
+      const validated = options.validateModel(model);
+      if (!validated) throw new Error(`Model "${model}" is not supported by ${options.backendName}.`);
+      model = validated;
     }
   }
 
@@ -563,7 +565,6 @@ export function createLLMTool(options: LLMToolOptions) {
   return tool(
     'call_llm',
     `Invoke a secondary LLM for focused subtasks. Use for:
-- Cost optimization: use a smaller model for simple tasks (summarization, classification)
 - Structured output: JSON schema compliance via native backend support
 - Parallel processing: call multiple times in one message - all run simultaneously
 - Context isolation: process content without polluting main context
@@ -579,7 +580,7 @@ For large files (>2000 lines), use {path, startLine, endLine} to select a portio
         .describe(`File paths on disk (max ${MAX_ATTACHMENTS}). NOT for inline text — put text in prompt instead. Use {path, startLine, endLine} for large files.`),
 
       model: z.string().optional()
-        .describe('Model ID or short name (e.g., "haiku", "sonnet"). Defaults to a fast model.'),
+        .describe('Model ID or short name (e.g., "haiku", "sonnet"). Defaults to the model selected for this session.'),
 
       systemPrompt: z.string().optional()
         .describe('Optional system prompt'),
@@ -616,7 +617,7 @@ For large files (>2000 lines), use {path, startLine, endLine} to select a portio
 
       // --- Validate and resolve model against registry ---
       if (args.model) {
-        let modelDef = getModelById(args.model);
+        let modelDef = MODEL_REGISTRY.find(m => m.id === args.model);
         if (!modelDef) {
           modelDef = MODEL_REGISTRY.find(m => m.shortName.toLowerCase() === args.model!.toLowerCase())
             || MODEL_REGISTRY.find(m => m.name.toLowerCase() === args.model!.toLowerCase());
@@ -691,7 +692,7 @@ For large files (>2000 lines), use {path, startLine, endLine} to select a portio
       // EXECUTE QUERY
       // ========================================
 
-      const model = args.model || getDefaultSummarizationModel();
+      const model = args.model;
       const schema = args.outputSchema || (args.outputFormat ? OUTPUT_FORMATS[args.outputFormat] : null);
 
       try {

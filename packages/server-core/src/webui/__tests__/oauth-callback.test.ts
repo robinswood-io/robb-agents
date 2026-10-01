@@ -77,7 +77,7 @@ describe('WebUI /api/oauth/callback', () => {
 
     try {
       const response = await handler.fetch(
-        new Request('http://127.0.0.1/api/oauth/callback?code=auth-code-123&state=inner-state-123'),
+        new Request('https://127.0.0.1/api/oauth/callback?code=auth-code-123&state=inner-state-123'),
       );
 
       expect(response.status).toBe(200);
@@ -122,7 +122,7 @@ describe('WebUI /api/oauth/callback', () => {
 
     try {
       const response = await handler.fetch(
-        new Request('http://127.0.0.1/api/oauth/callback?error=access_denied&error_description=User%20denied&state=inner-state-456'),
+        new Request('https://127.0.0.1/api/oauth/callback?error=access_denied&error_description=User%20denied&state=inner-state-456'),
       );
 
       expect(response.status).toBe(200);

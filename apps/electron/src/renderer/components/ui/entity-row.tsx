@@ -265,7 +265,7 @@ export function EntityRow({
 
   // Build the inner content (shared between with-context-menu and without)
   const innerContent = (
-    <div className="relative group select-none pl-2 mr-2">
+    <div className={cn("relative group select-none", isCompactMode ? "px-2" : "pl-2 mr-2")}>
       {/* Selection indicator bar — suppressed when an outer wrapper draws its
           own leading stripe (e.g. project color) so they don't stack on top of
           each other. Background tint on the inner button still indicates selection. */}
@@ -277,7 +277,10 @@ export function EntityRow({
       <button
         {...(buttonProps as React.ButtonHTMLAttributes<HTMLButtonElement>)}
         className={cn(
-          "entity-row-btn flex w-full items-start gap-2 pl-2 pr-4 py-3 text-left text-sm outline-none rounded-[8px]",
+          "entity-row-btn flex w-full items-start gap-2 text-left text-sm outline-none",
+          isCompactMode
+            ? "min-h-[68px] rounded-[14px] px-3 py-3.5"
+            : "rounded-[8px] pl-2 pr-4 py-3",
           "transition-[background-color] duration-75",
           (isSelected || isInMultiSelect)
             ? "bg-foreground/3"
@@ -379,13 +382,16 @@ export function EntityRow({
 
           {/* Subtitle line */}
           {subtitle && (
-            <div className="flex items-start gap-[10px] w-full text-[12px] text-foreground/55 min-w-0 -mt-1">
+            <div className={cn(
+              "flex items-start gap-[10px] w-full text-foreground/55 min-w-0 -mt-1",
+              isCompactMode ? "text-[13px]" : "text-[12px]",
+            )}>
               {icon && (
                 <div className="shrink-0 flex items-center gap-[10px] [&>*]:w-3 [&>*]:h-3 invisible" aria-hidden="true">
                   {icon}
                 </div>
               )}
-              <div className="min-w-0 flex-1 line-clamp-2 leading-[1.35]">
+              <div className={cn("min-w-0 flex-1 leading-[1.35]", isCompactMode ? "line-clamp-1" : "line-clamp-2")}>
                 {subtitle}
               </div>
             </div>

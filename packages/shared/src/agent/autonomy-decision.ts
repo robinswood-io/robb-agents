@@ -6,6 +6,7 @@ import {
 
 export type AutonomyDecision =
   | { kind: 'fallback_browser' }
+  | { kind: 'reconnect_runtime' }
   | { kind: 'escalate'; reason: HumanEscalationReason }
   | { kind: 'none' }
 
@@ -14,6 +15,8 @@ export interface AutonomyDecisionInput {
   result: string
   browserEnabled: boolean
   fallbackAlreadyAttempted: boolean
+  /** True only when the failed tool has an equivalent browser access path. */
+  browserFallbackEligible?: boolean
   /** Structured provider/MCP fields. Prefer these over parsing result text. */
   errorCode?: string
   httpStatus?: number
@@ -27,15 +30,39 @@ export interface AutonomyDecisionInput {
  * those guards so routine failures are recovered autonomously instead of being
  * surfaced as premature questions or repeated unchanged attempts.
  */
-export function formatAutonomyContract(): string {
+export function formatAutonomyContract(
+  externalActionPolicy: 'confirm' | 'allow-in-execute' = 'confirm',
+): string {
+  const externalActionAuthorization = externalActionPolicy === 'allow-in-execute'
+    ? 'The workspace owner has explicitly configured Execute (allow-all) as standing authorization for in-scope sensitive external actions. In effective allow-all, do not request an additional confirmation solely because an action is sensitive; keep the exact requested scope and target. Ask and Safe remain confirmation-bound.'
+    : 'No permission mode expands the task scope or supplies business authorization.'
   return [
     '<autonomy_contract>',
     'Continue through all safe, reversible, in-scope work until the requested outcome is complete and verified.',
     'Make routine implementation choices from repository evidence; ask only when a missing choice would materially change the result or requires new authority.',
+    `Apply safe, ask, and allow-all exactly as configured for tool execution. ${externalActionAuthorization}`,
+    'Treat secret or credential disclosure or transfer, git push or deployment, service restart, payment or financial submission, and publication or sending to an external audience as sensitive external actions.',
+    externalActionPolicy === 'allow-in-execute'
+      ? 'In Execute, act on sensitive external actions without another prompt when they are within the user-requested scope and have a concrete target. A generic continuation does not create authority for a new action, target, audience, or broader scope.'
+      : 'Before the first sensitive external action, require an explicit user instruction that identifies the action and target or audience well enough to remove material ambiguity. A generic continuation such as "continue", "proceed", or "poursuis" does not authorize a new sensitive external action; when the current request is already explicit, do not ask again.',
+    'Continue safe, reversible local edits and local verification without extra confirmation.',
     'After a failure, inspect and classify the exact cause. Never repeat the same action unchanged.',
+    'Use a phase budget before calling tools: for a routine lookup, target 3-5 calls total (one targeted search, one batched read, one action, one verification). Escalate that budget only when new evidence proves the task is materially more complex.',
+    'Batch independent searches and reads in a single tool call whenever supported. Prefer exact identifiers returned by the first search; do not restart broad discovery after sufficient evidence is available.',
+    'Set an output budget before broad reads: request only the fields, date range, page size, log lines, or result count needed for the next decision. Start narrow and expand only when the returned evidence is insufficient.',
+    'Prefer a connected structured source or API for repeatable data access. Use browser automation for UI-only steps, a verified equivalent fallback, or final rendered-journey validation.',
+    'For remote SSH work, keep a stable remote working directory and combine related diagnostics. When several files must move or change, prefer an available sync/worktree operation over repeated one-file upload/download calls, then verify once at the destination.',
+    'After delegating to known sessions, wait on a structured completion primitive when available. Do not poll session lists or send acknowledgement-only status messages.',
+    'Before any mutation, reserve enough tool budget for verification and cleanup. Once a mutation starts, finish its verification and close its guards before unrelated exploration.',
+    'Preserve concrete verifier feedback and observable evidence across attempts; use them to form a materially different next hypothesis.',
+    'At every retry checkpoint, compare the observable result with prior attempts. Stop a bounded loop when it is not producing new evidence or progress.',
+    'A technical obstacle is a diagnosis checkpoint, not a completed outcome. Before stopping, reproduce or minimize it, inspect the strongest available logs, stack traces, source, process state, and configuration, then test a materially different safe correction or alternate route.',
+    'Do not defer an identified next correction to a future turn when it is safe and in scope now. A final response that says the next fix should be attempted, that no test could be run, or that code was left unchanged is incomplete unless a genuine human-only blocker is proved.',
+    'Operate like a senior owner: convert uncertainty into tests, prefer reversible experiments over speculation, clean up temporary changes, and continue until the end-user outcome is demonstrated.',
     'Recovery order: repair invalid input or local configuration; retry transient read-only work with bounded backoff; use a policy-authorized provider or tool fallback; use the integrated browser only for an equivalent safe access path.',
     'Never broaden permissions, bypass policy, expose secrets, or automatically replay an external mutation whose outcome is ambiguous.',
     'Escalate only for interactive authentication or MFA, missing credentials, an external authorization, a material business decision, a destructive action outside the request, or exhausted safe recovery paths.',
+    'A provider quota, rate limit, transient service failure, recoverable tool error, searchable uncertainty, or per-turn cost checkpoint is not a human blocker. Use the authorized fallback or automatic continuation path.',
     'Completion requires executed verification. Report exact evidence and name every remaining unverified item or blocker.',
     '</autonomy_contract>',
   ].join('\n')
@@ -62,6 +89,9 @@ export function decideAutonomyRecovery(input: AutonomyDecisionInput): AutonomyDe
   if (failure.failureClass === 'credential-required') {
     return { kind: 'escalate', reason: 'credential_required' }
   }
+  if (failure.recovery === 'runtime-reconnect') {
+    return { kind: 'reconnect_runtime' }
+  }
   if (isBrowserTool || !input.browserEnabled) {
     return { kind: 'escalate', reason: 'access_unavailable_after_fallback' }
   }
@@ -73,5 +103,6 @@ export function decideAutonomyRecovery(input: AutonomyDecisionInput): AutonomyDe
     return { kind: 'none' }
   }
   if (input.fallbackAlreadyAttempted) return { kind: 'none' }
+  if (input.browserFallbackEligible === false) return { kind: 'none' }
   return { kind: 'fallback_browser' }
 }

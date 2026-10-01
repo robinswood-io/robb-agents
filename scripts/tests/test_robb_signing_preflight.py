@@ -35,7 +35,7 @@ class SigningPreflightTests(unittest.TestCase):
         with patch.dict(
             os.environ,
             {
-                "APPLE_TEAM_ID": "ABCDE12345",
+                "APPLE_TEAM_ID": MODULE.APPLE_TEAM_ID,
                 "APPLE_API_KEY_BASE64": private_key,
                 "APPLE_API_KEY_ID": "A1B2C3D4E5",
                 "APPLE_API_ISSUER": "11111111-2222-3333-4444-555555555555",
@@ -50,7 +50,7 @@ class SigningPreflightTests(unittest.TestCase):
         with patch.dict(
             os.environ,
             {
-                "APPLE_TEAM_ID": "ABCDE12345",
+                "APPLE_TEAM_ID": MODULE.APPLE_TEAM_ID,
                 "APPLE_API_KEY_BASE64": "not-base64",
                 "APPLE_API_KEY_ID": "A1B2C3D4E5",
                 "APPLE_API_ISSUER": "11111111-2222-3333-4444-555555555555",
@@ -62,14 +62,12 @@ class SigningPreflightTests(unittest.TestCase):
         encoding = next(check for check in checks if check.name == "App Store Connect private key encoding")
         self.assertFalse(encoding.ok)
 
+    def test_windows_unsigned_route_is_valid_without_credentials(self) -> None:
+        with patch.dict(os.environ, {"WINDOWS_SIGNING_MODE": "unsigned"}, clear=True):
+            checks = MODULE.check_windows_signing(ci=True)
 
-    def test_windows_signing_accepts_explicit_unsigned_release_mode(self) -> None:
-        with patch.dict(os.environ, {"WINDOWS_SIGNING_MODE": "pfx"}, clear=True):
-            checks = MODULE.check_windows_signing(ci=True, allow_unsigned_windows=True)
-
-        self.assertEqual(len(checks), 1)
-        self.assertTrue(checks[0].ok)
-        self.assertIn("unsigned GitHub Release mode allowed", checks[0].detail)
+        self.assertTrue(all(check.ok for check in checks))
+        self.assertEqual(checks[0].detail, "unsigned")
 
     def test_windows_pfx_route_requires_link_and_password_in_ci(self) -> None:
         with patch.dict(

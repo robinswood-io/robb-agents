@@ -38,12 +38,17 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: "1.3.10"
+          bun-version: "1.3.14"
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify public source boundary
+        run: |
+          python3 scripts/robinswood-public-source-boundary.py
+          python3 -m unittest scripts/tests/test_robinswood_public_source_boundary.py
 
       - name: Run Robinswood checks
         run: python3 scripts/robinswood-validate.py
@@ -57,12 +62,17 @@ jobs:
       - name: Typecheck Electron app
         run: bun run typecheck:electron
 
+      - name: Verify provider catalogs and request capabilities
+        env:
+          CRAFT_CONFIG_DIR: ${{ runner.temp }}/robb-agents-provider-contracts
+        run: |
+          bun test packages/shared/tests/models.test.ts packages/shared/tests/models-pi.test.ts packages/shared/tests/llm-connections.test.ts packages/shared/src/config/__tests__/model-supports-images.test.ts
+          bun test packages/shared/src/__tests__/interceptor-request-utils.test.ts packages/shared/src/__tests__/mistral-request-normalization.test.ts packages/shared/src/agent/__tests__/claude-thinking-config.test.ts packages/shared/src/agent/__tests__/pi-agent-vibe-steering.test.ts packages/shared/src/agent/__tests__/pi-agent-bridge-images.test.ts
+          bun test packages/pi-agent-server/src/catalog-model-registration.test.ts packages/pi-agent-server/src/antigravity-server.test.ts packages/pi-agent-server/src/vibe-acp-server.test.ts packages/pi-agent-server/src/mistral-provider-contract.test.ts
+
       - name: Run focused fork tests
         run: |
           bun test \
-            packages/shared/tests/routing-policy.test.ts \
-            packages/shared/tests/routing-policy-example.test.ts \
-            packages/shared/tests/client-workspace-template.test.ts \
             packages/shared/src/sources/__tests__/source-config-validation.test.ts \
             packages/shared/src/utils/__tests__/paths.test.ts \
             packages/shared/src/tasks/schema.test.ts \
@@ -80,9 +90,15 @@ jobs:
             apps/electron/src/renderer/config/__tests__/session-status-config.test.ts \
             apps/electron/src/renderer/hooks/__tests__/useOnboarding.test.ts \
             apps/electron/src/renderer/hooks/__tests__/useSessionSearch.test.ts \
-            apps/electron/src/renderer/pages/settings/__tests__/routing-policy-editor.test.ts \
             apps/electron/src/main/__tests__/connection-setup-logic.test.ts \
             packages/pi-agent-server/src/google-code-assist-provider.test.ts \
+            packages/pi-agent-server/src/query-model.test.ts \
+            packages/pi-agent-server/src/compact-selected-model.test.ts \
+            packages/pi-agent-server/src/selected-thinking-level.test.ts \
+            packages/server-core/src/tasks/task-node-execution.test.ts \
+            packages/server-core/src/missions/MissionPlanner.test.ts \
+            packages/server-core/src/missions/SessionMissionExecutor.test.ts \
+            packages/server-core/src/missions/MissionDigitalTwinIntegration.test.ts \
             packages/shared/src/audit/routing-audit.test.ts \
             packages/server-core/src/tasks/TaskRunner.test.ts \
             packages/server-core/src/sessions/background-task-surface.test.ts \
@@ -93,7 +109,6 @@ jobs:
             packages/session-tools-core/src/handlers/list-background-tasks.test.ts \
             packages/session-tools-core/src/handlers/send-agent-message.test.ts \
             packages/session-tools-core/src/handlers/set-session-status.test.ts \
-            packages/server-core/src/sessions/routing-fallback.test.ts \
             packages/server-core/src/sessions/runtime-config.test.ts
 
       - name: Run config-dir-sensitive runtime refresh test
@@ -125,7 +140,7 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: "1.3.10"
+          bun-version: "1.3.14"
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
@@ -173,7 +188,7 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: "1.3.10"
+          bun-version: "1.3.14"
 
       - name: Setup Python
         uses: actions/setup-python@v7
@@ -207,7 +222,7 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: "1.3.10"
+          bun-version: "1.3.14"
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
@@ -221,3 +236,17 @@ jobs:
         run: |
           bun run lint:i18n:parity
           bun run lint:i18n:sorted
+
+  scotland-conference:
+    name: Scottish conference contract and Gmail effect guards
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Test bounded campaign without external effects
+        run: python3 ops/rbw-agents-oss/scripts/scotland_executive_conference_october_tests.py

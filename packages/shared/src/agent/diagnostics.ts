@@ -240,8 +240,8 @@ async function checkWorkspaceToken(_workspaceId: string): Promise<CheckResult> {
  */
 async function validateApiKeyWithAnthropic(apiKey: string, baseUrl?: string | null, providerLabel: string = 'Anthropic'): Promise<CheckResult> {
   try {
-    const { getDefaultSummarizationModel } = await import('../config/models.ts');
-    const model = getDefaultSummarizationModel();
+    const { getCredentialValidationModel } = await import('../config/models.ts');
+    const model = getCredentialValidationModel();
 
     const result = await validateAnthropicConnection({
       model,

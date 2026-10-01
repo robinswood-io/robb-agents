@@ -38,6 +38,7 @@ import { handleSetSessionLabels } from './handlers/set-session-labels.ts';
 import { handleSetSessionStatus } from './handlers/set-session-status.ts';
 import { handleGetSessionInfo } from './handlers/get-session-info.ts';
 import { handleListSessions } from './handlers/list-sessions.ts';
+import { handleWaitSessions } from './handlers/wait-sessions.ts';
 import { handleListBackgroundTasks } from './handlers/list-background-tasks.ts';
 import { handleSendAgentMessage } from './handlers/send-agent-message.ts';
 import { handleListMessagingChannels, handleUnbindMessagingChannel } from './handlers/messaging.ts';
@@ -103,7 +104,7 @@ export const CallLlmSchema = z.object({
       endLine: z.number().optional().describe('Last line (1-indexed)'),
     }),
   ])).optional().describe('File paths on disk to attach (max 20). NOT for inline text — put text in prompt instead. Use {path, startLine, endLine} for large files.'),
-  model: z.string().optional().describe('Model ID or short name. Defaults to a fast model.'),
+  model: z.string().optional().describe('Model ID or short name. Defaults to the model selected for this session.'),
   systemPrompt: z.string().optional().describe('Optional system prompt'),
   maxTokens: z.number().optional().describe('Max output tokens (1-64000). Defaults to 4096'),
   temperature: z.number().optional().describe('Sampling temperature 0-1'),
@@ -170,7 +171,7 @@ export const SpawnSessionSchema = z.object({
   enabledSourceSlugs: z.array(z.string()).optional().describe('Source slugs to enable in the new session'),
   permissionMode: z.enum(['safe', 'ask', 'allow-all']).optional().describe('Permission mode for the new session'),
   thinkingLevel: z.enum(['off', 'low', 'medium', 'high', 'xhigh', 'max']).optional()
-    .describe('Reasoning level for the new session. Silently ignored on non-reasoning models (e.g. gpt-4o, gemini-2.5-flash). Omit to inherit the workspace default.'),
+    .describe('Reasoning level for the new session. Silently ignored on non-reasoning models (e.g. gpt-4o, gemini-2.5-flash). Omit to inherit the spawning session’s selection.'),
   labels: z.array(z.string()).optional().describe('Labels for the new session'),
   workingDirectory: z.string().optional().describe('Working directory for the new session'),
   attachments: z.array(z.object({
@@ -187,7 +188,7 @@ export const SetSessionLabelsSchema = z.object({
 
 export const SetSessionStatusSchema = z.object({
   sessionId: z.string().optional().describe('Session ID to update. Omit to update the current session.'),
-  status: z.string().describe('Status to set (e.g., "todo", "in_progress", "done")'),
+  status: z.string().describe('Workspace status ID or display label (e.g., "todo", "in-progress", "needs-review")'),
 });
 
 export const GetSessionInfoSchema = z.object({
@@ -203,6 +204,11 @@ export const ListSessionsSchema = z.object({
   offset: z.number().optional().describe('Skip first N results (for pagination)'),
 });
 
+export const WaitSessionsSchema = z.object({
+  sessionIds: z.array(z.string()).min(1).max(8).describe('Target session IDs (1-8). The current session is not allowed.'),
+  timeoutMs: z.number().int().min(0).max(60_000).optional().describe('Maximum event wait in milliseconds (default 30000, max 60000).'),
+});
+
 export const ListBackgroundTasksSchema = z.object({
   sessionId: z.string().optional().describe('Session ID to query. Omit to list background tasks for the current session.'),
 });
@@ -211,6 +217,8 @@ export const ListBackgroundTasksSchema = z.object({
 export const SendAgentMessageSchema = z.object({
   sessionId: z.string().describe('Target session ID to send the message to'),
   message: z.string().describe('The message to send to the target session'),
+  messageType: z.enum(['progress', 'result', 'question', 'decision']).optional()
+    .describe('Semantic type. Defaults to progress; use question/decision only when a reply is required.'),
   attachments: z.array(z.object({
     path: z.string().describe('Absolute file path on disk'),
     name: z.string().optional().describe('Display name (defaults to file basename)'),
@@ -428,7 +436,6 @@ Examples:
 - \`hide\` — hide the window while preserving state`,
 
   call_llm: `Invoke a secondary LLM for focused subtasks. Use for:
-- Cost optimization: use a smaller model for simple tasks (summarization, classification)
 - Structured output: JSON schema compliance via prompt instructions
 - Parallel processing: call multiple times in one message - all run simultaneously
 - Context isolation: process content without polluting main context
@@ -444,9 +451,9 @@ Use this to delegate tasks to parallel sessions — research, analysis, drafts, 
 Call with help=true first to discover available connections, models, and sources.
 When spawning, the 'prompt' parameter is required.
 
-Optional overrides: \`model\`, \`llmConnection\`, \`permissionMode\`, \`thinkingLevel\`, \`enabledSourceSlugs\`, \`labels\`, \`workingDirectory\`. Omitted fields inherit from the spawning session or the workspace default.
+Optional overrides: \`model\`, \`llmConnection\`, \`permissionMode\`, \`thinkingLevel\`, \`enabledSourceSlugs\`, \`labels\`, \`workingDirectory\`. Omitted fields inherit from the spawning session, with workspace defaults only for unconfigured values. Change the connection, model, or reasoning level only when the user or an explicit task specification requests that override.
 
-\`thinkingLevel\` is silently ignored on non-reasoning models (e.g. gpt-4o, gemini-2.5-flash) — the SDK drops the reasoning param rather than erroring. Use it when you want to force deeper reasoning on a supported model, or set it to \`off\` when spawning a session that doesn't need to think.
+\`thinkingLevel\` is silently ignored on non-reasoning models (e.g. gpt-4o, gemini-2.5-flash) — the SDK drops the reasoning param rather than erroring.
 
 The spawned session appears in the session list and runs fire-and-forget.
 Only use 'attachments' for existing file paths on disk — the tool reads them automatically.`,
@@ -460,7 +467,7 @@ Use this to share anything that would help improve the product — issues you hi
 Use this to tag sessions for filtering or to trigger label-based automations (LabelAdd/LabelRemove events).
 Pass an empty array to clear all labels. Omit sessionId to target the current session.`,
 
-  set_session_status: `Set the status of the current session or a specific session by ID (e.g., "todo", "in_progress").
+  set_session_status: `Set the status of the current session or a specific session by ID (e.g., "todo", "in-progress").
 
 Use this to reflect progress or trigger status-based automations (SessionStatusChange events).
 Omit sessionId to target the current session.
@@ -477,6 +484,10 @@ Call with no arguments to introspect your own session state.`,
 Use filters (status, label, search) to narrow results instead of fetching everything. Default limit is 20 sessions.
 Use get_session_info for full details on a specific session (list-then-detail pattern).`,
 
+  wait_sessions: `Wait for the first of up to 8 delegated sessions to finish a turn, using the host completion event instead of repeated list_sessions polling.
+
+Returns immediately for a session that has already completed a turn, or after timeoutMs (default 30000, max 60000). The result includes a compact state snapshot for every target. Never include the current session ID.`,
+
   list_background_tasks: `List background agents/tasks tracked for a session (running, finished, or orphaned).
 
 This is the authoritative way to answer a "what background work is running / what's the status?" question.
@@ -490,12 +501,13 @@ Status meanings:
 
 Never guess or claim "the app restarted" — report exactly what this tool returns. Omit sessionId for the current session.`,
 
-  send_agent_message: `Send a message to another session. The message is delivered with your session ID so the target can reply back.
+  send_agent_message: `Send a typed message to another session. The message is delivered with your session ID.
 
 Use this to coordinate with spawned sessions, send follow-up instructions, or relay information between sessions.
 Use list_sessions to find session IDs, or use the sessionId returned by spawn_session.
 
-The target session receives your message with a sender envelope containing your session ID, so it can use send_agent_message to reply.`,
+Choose progress or result for one-way updates. Choose question or decision only when a reply is necessary.
+Do not send acknowledgement-only messages and do not poll with repeated status messages; adjacent updates may be coalesced while the target is busy.`,
 
   list_messaging_channels: `List messaging channels (Telegram, WhatsApp) bound to a session.
 Shows which external chat apps are connected and can send/receive messages.`,
@@ -525,6 +537,10 @@ interface SessionToolDefBase {
   safeMode: SessionToolSafeMode;
   /** Whether this tool only reads data (no side effects). Enables parallel execution in backends that support it. */
   readOnly?: boolean;
+  /** Whether retrying the same call has the same externally visible effect. */
+  idempotent?: boolean;
+  /** Explicit opt-in for speculative parallel execution by sequential backends. */
+  parallelSafe?: boolean;
 }
 
 /** Tool executed from the canonical registry (requires a concrete handler). */
@@ -548,9 +564,9 @@ export type SessionToolDef = RegistrySessionToolDef | BackendSessionToolDef;
 
 export const SESSION_TOOL_DEFS: SessionToolDef[] = [
   { name: 'SubmitPlan', description: TOOL_DESCRIPTIONS.SubmitPlan, inputSchema: SubmitPlanSchema, executionMode: 'registry', safeMode: 'allow', handler: handleSubmitPlan },
-  { name: 'config_validate', description: TOOL_DESCRIPTIONS.config_validate, inputSchema: ConfigValidateSchema, executionMode: 'registry', safeMode: 'allow', readOnly: true, handler: handleConfigValidate },
-  { name: 'skill_validate', description: TOOL_DESCRIPTIONS.skill_validate, inputSchema: SkillValidateSchema, executionMode: 'registry', safeMode: 'allow', readOnly: true, handler: handleSkillValidate },
-  { name: 'mermaid_validate', description: TOOL_DESCRIPTIONS.mermaid_validate, inputSchema: MermaidValidateSchema, executionMode: 'registry', safeMode: 'allow', readOnly: true, handler: handleMermaidValidate },
+  { name: 'config_validate', description: TOOL_DESCRIPTIONS.config_validate, inputSchema: ConfigValidateSchema, executionMode: 'registry', safeMode: 'allow', readOnly: true, idempotent: true, parallelSafe: true, handler: handleConfigValidate },
+  { name: 'skill_validate', description: TOOL_DESCRIPTIONS.skill_validate, inputSchema: SkillValidateSchema, executionMode: 'registry', safeMode: 'allow', readOnly: true, idempotent: true, parallelSafe: true, handler: handleSkillValidate },
+  { name: 'mermaid_validate', description: TOOL_DESCRIPTIONS.mermaid_validate, inputSchema: MermaidValidateSchema, executionMode: 'registry', safeMode: 'allow', readOnly: true, idempotent: true, parallelSafe: true, handler: handleMermaidValidate },
   { name: 'source_test', description: TOOL_DESCRIPTIONS.source_test, inputSchema: SourceTestSchema, executionMode: 'registry', safeMode: 'allow', handler: handleSourceTest },
   { name: 'source_oauth_trigger', description: TOOL_DESCRIPTIONS.source_oauth_trigger, inputSchema: SourceOAuthTriggerSchema, executionMode: 'registry', safeMode: 'block', handler: handleSourceOAuthTrigger },
   { name: 'source_google_oauth_trigger', description: TOOL_DESCRIPTIONS.source_google_oauth_trigger, inputSchema: SourceOAuthTriggerSchema, executionMode: 'registry', safeMode: 'block', handler: handleGoogleOAuthTrigger },
@@ -562,7 +578,7 @@ export const SESSION_TOOL_DEFS: SessionToolDef[] = [
   { name: 'script_sandbox', description: TOOL_DESCRIPTIONS.script_sandbox, inputSchema: ScriptSandboxSchema, executionMode: 'registry', safeMode: 'allow', handler: handleScriptSandbox },
   { name: 'render_template', description: TOOL_DESCRIPTIONS.render_template, inputSchema: RenderTemplateSchema, executionMode: 'registry', safeMode: 'allow', handler: handleRenderTemplate },
   { name: 'send_developer_feedback', description: TOOL_DESCRIPTIONS.send_developer_feedback, inputSchema: SendDeveloperFeedbackSchema, executionMode: 'registry', safeMode: 'allow', handler: handleSendDeveloperFeedback },
-  { name: 'call_llm', description: TOOL_DESCRIPTIONS.call_llm, inputSchema: CallLlmSchema, executionMode: 'backend', safeMode: 'allow', readOnly: true, handler: null },
+  { name: 'call_llm', description: TOOL_DESCRIPTIONS.call_llm, inputSchema: CallLlmSchema, executionMode: 'backend', safeMode: 'allow', readOnly: true, idempotent: false, parallelSafe: true, handler: null },
   { name: 'spawn_session', description: TOOL_DESCRIPTIONS.spawn_session, inputSchema: SpawnSessionSchema, executionMode: 'backend', safeMode: 'block', handler: null },
   // Browser tool (backend-specific — requires BrowserPaneManager in Electron)
   // Single CLI-like tool that handles all browser actions via command string.
@@ -570,13 +586,14 @@ export const SESSION_TOOL_DEFS: SessionToolDef[] = [
   // Session self-management tools (registry — use context callbacks to reach SessionManager)
   { name: 'set_session_labels', description: TOOL_DESCRIPTIONS.set_session_labels, inputSchema: SetSessionLabelsSchema, executionMode: 'registry', safeMode: 'block', handler: handleSetSessionLabels },
   { name: 'set_session_status', description: TOOL_DESCRIPTIONS.set_session_status, inputSchema: SetSessionStatusSchema, executionMode: 'registry', safeMode: 'block', handler: handleSetSessionStatus },
-  { name: 'get_session_info', description: TOOL_DESCRIPTIONS.get_session_info, inputSchema: GetSessionInfoSchema, executionMode: 'registry', safeMode: 'allow', readOnly: true, handler: handleGetSessionInfo },
-  { name: 'list_sessions', description: TOOL_DESCRIPTIONS.list_sessions, inputSchema: ListSessionsSchema, executionMode: 'registry', safeMode: 'allow', readOnly: true, handler: handleListSessions },
-  { name: 'list_background_tasks', description: TOOL_DESCRIPTIONS.list_background_tasks, inputSchema: ListBackgroundTasksSchema, executionMode: 'registry', safeMode: 'allow', readOnly: true, handler: handleListBackgroundTasks },
+  { name: 'get_session_info', description: TOOL_DESCRIPTIONS.get_session_info, inputSchema: GetSessionInfoSchema, executionMode: 'registry', safeMode: 'allow', readOnly: true, idempotent: true, parallelSafe: true, handler: handleGetSessionInfo },
+  { name: 'list_sessions', description: TOOL_DESCRIPTIONS.list_sessions, inputSchema: ListSessionsSchema, executionMode: 'registry', safeMode: 'allow', readOnly: true, idempotent: true, parallelSafe: true, handler: handleListSessions },
+  { name: 'wait_sessions', description: TOOL_DESCRIPTIONS.wait_sessions, inputSchema: WaitSessionsSchema, executionMode: 'registry', safeMode: 'allow', readOnly: true, idempotent: false, handler: handleWaitSessions },
+  { name: 'list_background_tasks', description: TOOL_DESCRIPTIONS.list_background_tasks, inputSchema: ListBackgroundTasksSchema, executionMode: 'registry', safeMode: 'allow', readOnly: true, idempotent: true, parallelSafe: true, handler: handleListBackgroundTasks },
   // Inter-session messaging
   { name: 'send_agent_message', description: TOOL_DESCRIPTIONS.send_agent_message, inputSchema: SendAgentMessageSchema, executionMode: 'registry', safeMode: 'block', handler: handleSendAgentMessage },
   // Messaging gateway tools
-  { name: 'list_messaging_channels', description: TOOL_DESCRIPTIONS.list_messaging_channels, inputSchema: ListMessagingChannelsSchema, executionMode: 'registry', safeMode: 'allow', readOnly: true, handler: handleListMessagingChannels },
+  { name: 'list_messaging_channels', description: TOOL_DESCRIPTIONS.list_messaging_channels, inputSchema: ListMessagingChannelsSchema, executionMode: 'registry', safeMode: 'allow', readOnly: true, idempotent: true, parallelSafe: true, handler: handleListMessagingChannels },
   { name: 'unbind_messaging_channel', description: TOOL_DESCRIPTIONS.unbind_messaging_channel, inputSchema: UnbindMessagingChannelSchema, executionMode: 'registry', safeMode: 'block', handler: handleUnbindMessagingChannel },
 ];
 
@@ -697,6 +714,9 @@ export interface JsonSchemaToolDef {
   name: string;
   description: string;
   inputSchema: Record<string, unknown>;
+  readOnly?: boolean;
+  idempotent?: boolean;
+  parallelSafe?: boolean;
 }
 
 /**
@@ -724,6 +744,9 @@ export function getToolDefsAsJsonSchema(opts?: {
       name: prefix + def.name,
       description: def.description,
       inputSchema: jsonSchema,
+      readOnly: def.readOnly,
+      idempotent: def.idempotent,
+      parallelSafe: def.parallelSafe,
     };
   });
 }

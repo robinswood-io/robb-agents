@@ -6,6 +6,7 @@
 
 // Types
 export type {
+  ExternalActionPolicy,
   WorkspaceConfig,
   CreateWorkspaceInput,
   LoadedWorkspace,

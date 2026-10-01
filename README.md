@@ -88,7 +88,7 @@ installed with `bash install-app.sh --version X.Y.Z` or
 
 ### Build from source
 
-Requirements: [Bun](https://bun.sh/) 1.3.10+, Node.js 20+, and platform build tooling (Xcode command-line tools on macOS; PowerShell 7/Windows build tools on Windows).
+Requirements: [Bun](https://bun.sh/) 1.3.14+, Node.js 20+, and platform build tooling (Xcode command-line tools on macOS; PowerShell 7/Windows build tools on Windows).
 
 ```bash
 git clone https://github.com/robinswood-io/robb-agents.git
@@ -112,15 +112,29 @@ bun run electron:dist:dev:win
 bun run electron:dist:dev:linux
 ```
 
+To replace an installed macOS application while retaining its existing
+production chats, credentials and MCP configuration, use the explicit local
+production-profile mode from a clean commit:
+
+```bash
+bash apps/electron/scripts/build-dmg.sh arm64 --local-production
+```
+
+This package uses `~/.craft-agent` and the production application identity, but
+is only ad-hoc signed and is not notarized. It is suitable for installation on
+the maintainer's own Mac and must not be distributed.
+
 Maintainers use `--release` / `-Release` only with externally supplied signing credentials. Tags must match the Electron version, and releases include checksum plus provenance evidence. See [the distribution guide](docs/robinswood/open-source-distribution.md).
 
 ## Providers
 
 Robb keeps billing/authentication modes explicit:
 
+- **Google Antigravity account**: select *Google Gemini* in onboarding. Robb uses the official `agy` headless stream with sandboxing; Google keeps the account credential in the operating-system keyring and Robb never reads or stores it. Install Antigravity CLI first with `curl -fsSL https://antigravity.google/cli/install.sh | bash`.
+- **Gemini Code Assist organization license**: remains available as a separate OAuth setup for organizations that assigned a Standard or Enterprise license and Google Cloud project.
 - **Mistral Vibe subscription**: select *Mistral Vibe* in onboarding. Robb launches the official `vibe-acp --setup` browser flow; Vibe owns the local subscription credential and Robb never reads, copies, or stores it.
 - **Mistral API**: use the separate generic API-key provider only for Mistral AI Studio pay-as-you-go access.
-- **Gemini, ChatGPT/Codex, Claude, GitHub Copilot**: connect using their respective provider setup paths.
+- **Gemini API, ChatGPT/Codex, Claude, GitHub Copilot**: connect using their respective provider setup paths.
 
 ## Remote access from a phone
 
@@ -146,7 +160,7 @@ Read the complete [Privacy Policy](PRIVACY.md).
 
 - Robb does **not** ship a Robinswood private updater, proxy, telemetry endpoint, credential service, or required cloud account.
 - The installed production app uses the existing `~/.craft-agent` data root directly. Source and development builds are forced onto `~/.craft-agent-dev`; `CRAFT_CONFIG_DIR=~/.craft-agent` is refused by the development launcher.
-- Signed, notarized GitHub Releases are the stable production distribution mechanism. Production never checks or downloads in the background: the update button in Settings is the only way to check, download and install a stable release. The updater is disabled in Robb Agents Dev.
+- Signed, notarized GitHub Releases are the stable production distribution mechanism. Production performs a bounded availability check after launch and periodically thereafter, but never downloads or installs in the background: both actions require explicit confirmation. The updater is disabled in Robb Agents Dev.
 - Credentials remain in the selected provider’s normal local storage/OS keychain flow. Never commit `.env`, certificates, API keys, or tokens.
 
 ## Contributing

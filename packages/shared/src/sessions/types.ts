@@ -29,6 +29,8 @@ export const SESSION_PERSISTENT_FIELDS = [
   'id', 'workspaceRootPath', 'sdkSessionId', 'sdkCwd',
   // Timestamps
   'createdAt', 'lastUsedAt', 'lastMessageAt',
+  // App build provenance
+  'createdByApp', 'lastUsedByApp',
   // Display
   'name', 'isFlagged', 'sessionStatus', 'labels', 'hidden',
   // Read tracking
@@ -66,12 +68,97 @@ export const SESSION_PERSISTENT_FIELDS = [
   'taskNodeCount',
   'taskDraft',
   'executionIsolation',
+  // Mission Orchestration v2: durable dispatch identity for crash recovery
+  'missionId',
+  'missionWorkItemId',
+  'missionDispatchId',
+  'missionRole',
   // Runtime evidence of autonomous resolution and human-only blockers
   'autonomyEvents',
   'playbookSlug',
+  'externalActionAuthorizations',
+  // Durable in-flight turn marker used to recover after a host restart/stream loss
+  'pendingTurnRecovery',
+  // Durable objective contract used for continuation routing and per-objective budgets
+  'activeObjective',
 ] as const;
 
 export type SessionPersistentField = typeof SESSION_PERSISTENT_FIELDS[number];
+
+/**
+ * Durable marker for a user turn that has started but has not yet produced a
+ * terminal assistant response. It is written before model streaming begins so
+ * a host replacement/crash can resume the turn after restart.
+ */
+export interface PendingTurnRecovery {
+  userMessageId: string;
+  startedAt: number;
+  attempts: number;
+  lastAttemptAt?: number;
+  lastCause?: 'app_restart' | 'stream_ended' | 'runtime_error' | 'premature_final' | 'tool_checkpoint' | 'evidence_gate' | 'objective_incomplete';
+  /** Stable fingerprint of successful tool evidence seen before the last recovery pass. */
+  lastProgressFingerprint?: string;
+  /** Consecutive recovery passes that produced no new successful tool evidence. */
+  stagnantAttempts?: number;
+  /** Host-authored checkpoint that forces continuation independently of assistant prose. */
+  continuationRequired?: boolean;
+  exhaustedAt?: number;
+}
+
+export type SessionObjectiveTerminalState =
+  | 'active'
+  | 'complete_verified'
+  | 'blocked_human'
+  | 'blocked_policy'
+  | 'exhausted';
+
+/**
+ * Durable contract for the current user objective. It deliberately references
+ * the original transcript message instead of duplicating sensitive user text.
+ */
+export interface ActiveSessionObjective {
+  schemaVersion: 1;
+  userMessageId: string;
+  startedAt: number;
+  /** Lifetime session cost when this objective started. */
+  budgetBaselineUsd: number;
+  /** Lifetime session token total when this objective started. */
+  tokenBaseline: number;
+  continuationCount: number;
+  orchestrationMode: 'direct' | 'mission';
+  risk: 'standard' | 'high-stakes';
+  /** Objective explicitly asks for a mutation/build/deployment, so prose alone is insufficient. */
+  requiresExecutionEvidence?: boolean;
+  evidenceRequirement?: 'authoritative-sources-before-mutation';
+  completionCriteria: Array<
+    | 'requested-outcome-delivered'
+    | 'relevant-checks-passed'
+    | 'no-safe-work-remaining'
+    | 'independent-review-passed'
+  >;
+  terminalState: SessionObjectiveTerminalState;
+  model?: string;
+  thinkingLevel?: ThinkingLevel;
+  completedAt?: number;
+}
+
+export type ExternalActionAuthorizationCategory =
+  | 'git_push'
+  | 'deployment'
+  | 'service_restart'
+  | 'secret_transfer'
+  | 'external_send'
+  | 'external_publication'
+  | 'payment';
+
+/** Durable grant scoped to one sensitive action category and concrete target. */
+export interface ExternalActionAuthorization {
+  category: ExternalActionAuthorizationCategory;
+  targetCandidates: string[];
+  toolName: string;
+  grantedAt: number;
+  expiresAt: number;
+}
 
 /**
  * Session status (user-controlled, never automatic)
@@ -104,6 +191,19 @@ export interface SessionTokenUsage {
 }
 
 /**
+ * App build that created or most recently persisted a session.
+ * Optional on sessions written before build provenance was introduced.
+ */
+export interface SessionAppProvenance {
+  appVersion: string;
+  buildCommit?: string;
+  buildChannel?: string;
+  /** Whether uncommitted changes were present when this build was produced. */
+  buildDirty?: boolean;
+  isPackaged: boolean;
+}
+
+/**
  * Stored message format (simplified for persistence)
  * Re-exported from @craft-agent/core for convenience
  */
@@ -122,6 +222,10 @@ export interface SessionConfig {
   name?: string;
   createdAt: number;
   lastUsedAt: number;
+  /** App build that created this session identity. Immutable after creation. */
+  createdByApp?: SessionAppProvenance;
+  /** App build that most recently persisted this session. */
+  lastUsedByApp?: SessionAppProvenance;
   /** Timestamp of last meaningful message (user or final assistant). Used for date grouping in session list.
    *  Separate from lastUsedAt which tracks any session access (auto-save, open to read, etc.). */
   lastMessageAt?: number;
@@ -153,6 +257,12 @@ export interface SessionConfig {
   autonomyEvents?: AutonomyEvent[];
   /** Optional operational playbook bound to this session. */
   playbookSlug?: string;
+  /** Unexpired sensitive-action grants, scoped to category + concrete target. */
+  externalActionAuthorizations?: ExternalActionAuthorization[];
+  /** In-flight user turn awaiting a final response; cleared on terminal completion or explicit stop. */
+  pendingTurnRecovery?: PendingTurnRecovery;
+  /** Current objective contract, retained across terse continuation turns and restarts. */
+  activeObjective?: ActiveSessionObjective;
   /** Shared viewer URL (if shared via viewer) */
   sharedUrl?: string;
   /** Shared session ID in viewer (for revoke) */
@@ -235,6 +345,14 @@ export interface SessionConfig {
   taskDraft?: boolean;
   /** Host-enforced tool isolation envelope for a Conductor child session. */
   executionIsolation?: SessionExecutionIsolation;
+  /** Mission v2 owning this specialist session. */
+  missionId?: string;
+  /** Mission v2 work item executed by this session. */
+  missionWorkItemId?: string;
+  /** Stable dispatch identity used to find/recover this session after a crash. */
+  missionDispatchId?: string;
+  /** Mission role assigned to this session. */
+  missionRole?: 'planner' | 'worker' | 'reviewer' | 'supervisor';
 }
 
 /**
@@ -252,6 +370,7 @@ export interface StoredSession extends SessionConfig {
  * This enables fast session listing without parsing message content.
  */
 export interface SessionHeader {
+  schemaVersion: 1;
   id: string;
   /** SDK session ID (captured after first message) */
   sdkSessionId?: string;
@@ -261,6 +380,10 @@ export interface SessionHeader {
   name?: string;
   createdAt: number;
   lastUsedAt: number;
+  /** App build that created this session identity. */
+  createdByApp?: SessionAppProvenance;
+  /** App build that most recently persisted this session. */
+  lastUsedByApp?: SessionAppProvenance;
   /** Timestamp of last meaningful message — persisted separately from lastUsedAt for stable date grouping across restarts. */
   lastMessageAt?: number;
   /** Whether this session is flagged */
@@ -344,6 +467,20 @@ export interface SessionHeader {
   taskDraft?: boolean;
   /** Host-enforced tool isolation envelope for a Conductor child session. */
   executionIsolation?: SessionExecutionIsolation;
+  /** Mission v2 owning this specialist session. */
+  missionId?: string;
+  /** Mission v2 work item executed by this session. */
+  missionWorkItemId?: string;
+  /** Stable dispatch identity used to find/recover this session after a crash. */
+  missionDispatchId?: string;
+  /** Mission role assigned to this session. */
+  missionRole?: 'planner' | 'worker' | 'reviewer' | 'supervisor';
+  /** In-flight user turn awaiting automatic recovery after host/stream interruption. */
+  pendingTurnRecovery?: PendingTurnRecovery;
+  /** Current objective contract used for routing, budgets, and completion gates. */
+  activeObjective?: ActiveSessionObjective;
+  /** Unexpired sensitive-action grants, scoped to category + concrete target. */
+  externalActionAuthorizations?: ExternalActionAuthorization[];
   // Pre-computed fields for fast list loading
   /** Number of messages in session */
   messageCount: number;
@@ -366,6 +503,10 @@ export interface SessionMetadata {
   name?: string;
   createdAt: number;
   lastUsedAt: number;
+  /** App build that created this session identity. */
+  createdByApp?: SessionAppProvenance;
+  /** App build that most recently persisted this session. */
+  lastUsedByApp?: SessionAppProvenance;
   /** Timestamp of last meaningful message — used for date grouping. Falls back to lastUsedAt for pre-fix sessions. */
   lastMessageAt?: number;
   messageCount: number;
@@ -442,4 +583,18 @@ export interface SessionMetadata {
   taskDraft?: boolean;
   /** Host-enforced tool isolation envelope for a Conductor child session. */
   executionIsolation?: SessionExecutionIsolation;
+  /** Mission v2 owning this specialist session. */
+  missionId?: string;
+  /** Mission v2 work item executed by this session. */
+  missionWorkItemId?: string;
+  /** Stable dispatch identity used to find/recover this session after a crash. */
+  missionDispatchId?: string;
+  /** Mission role assigned to this session. */
+  missionRole?: 'planner' | 'worker' | 'reviewer' | 'supervisor';
+  /** In-flight user turn awaiting automatic recovery after host/stream interruption. */
+  pendingTurnRecovery?: PendingTurnRecovery;
+  /** Current objective contract used for routing, budgets, and completion gates. */
+  activeObjective?: ActiveSessionObjective;
+  /** Unexpired sensitive-action grants, scoped to category + concrete target. */
+  externalActionAuthorizations?: ExternalActionAuthorization[];
 }

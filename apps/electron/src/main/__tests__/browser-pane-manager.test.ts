@@ -9,13 +9,20 @@ import { describe, it, expect, beforeEach, mock } from 'bun:test'
 
 const createdWindows: any[] = []
 let toolbarLoadFailuresRemaining = 0
+let emptyStateLoadError: Error | null = null
+let nextMockWebContentsId = 0
 const mockShellOpenExternal = mock(async () => {})
 const mockIpcMainHandle = mock(() => {})
+const mockDialogShowMessageBox = mock(async () => ({ response: 0, checkboxChecked: false }))
+const mockSessionListeners: Record<string, Function[]> = {}
+let mockPermissionCheckHandler: ((...args: any[]) => boolean) | null = null
+let mockPermissionRequestHandler: ((...args: any[]) => void) | null = null
 
 function createMockWebContents() {
   const listeners: Record<string, Function[]> = {}
   let currentUrl = 'about:blank'
   return {
+    id: ++nextMockWebContentsId,
     userAgent: 'Mock Chrome Electron/99.0.0',
     session: {},
     isDestroyed: mock(() => false),
@@ -36,6 +43,11 @@ function createMockWebContents() {
     },
     loadURL: mock(async (url: string) => {
       currentUrl = url
+      if (url.includes('browser-empty-state.html') && emptyStateLoadError) {
+        const error = emptyStateLoadError
+        emptyStateLoadError = null
+        throw error
+      }
       const isToolbarUrl = typeof url === 'string' && url.includes('browser-toolbar.html')
       if (isToolbarUrl && toolbarLoadFailuresRemaining > 0) {
         toolbarLoadFailuresRemaining--
@@ -92,12 +104,11 @@ function createMockWebContents() {
   }
 }
 
-function createMockBrowserView() {
+function createMockWebContentsView() {
   const webContents = createMockWebContents()
   return {
     webContents,
     setBounds: mock(() => {}),
-    setAutoResize: mock(() => {}),
   }
 }
 
@@ -108,9 +119,25 @@ function createMockWindow(opts?: { width?: number; height?: number; minWidth?: n
   let contentHeight = opts?.height ?? 900
   const minWidth = opts?.minWidth ?? 0
   const minHeight = opts?.minHeight ?? 0
+  const childViews: any[] = []
+  let destroyed = false
+  let resizable = true
 
   const win = {
     webContents,
+    contentView: {
+      children: childViews,
+      addChildView: mock((view: any, index?: number) => {
+        const existingIndex = childViews.indexOf(view)
+        if (existingIndex >= 0) childViews.splice(existingIndex, 1)
+        if (typeof index === 'number') childViews.splice(index, 0, view)
+        else childViews.push(view)
+      }),
+      removeChildView: mock((view: any) => {
+        const existingIndex = childViews.indexOf(view)
+        if (existingIndex >= 0) childViews.splice(existingIndex, 1)
+      }),
+    },
     on: (event: string, cb: Function) => {
       if (!listeners[event]) listeners[event] = []
       listeners[event].push(cb)
@@ -126,7 +153,15 @@ function createMockWindow(opts?: { width?: number; height?: number; minWidth?: n
     _emit: (event: string, ...args: any[]) => {
       for (const cb of listeners[event] || []) cb(...args)
     },
-    isDestroyed: mock(() => false),
+    isDestroyed: mock(() => destroyed),
+    isResizable: mock(() => {
+      if (destroyed) throw new TypeError('Object has been destroyed')
+      return resizable
+    }),
+    setResizable: mock((value: boolean) => {
+      if (destroyed) throw new TypeError('Object has been destroyed')
+      resizable = value
+    }),
     isMinimized: mock(() => false),
     restore: mock(() => {}),
     show: mock(() => {}),
@@ -137,11 +172,9 @@ function createMockWindow(opts?: { width?: number; height?: number; minWidth?: n
     }),
     focus: mock(() => {}),
     destroy: mock(() => {
+      destroyed = true
       win._emit('closed')
     }),
-    setBrowserView: mock((_view: any) => {}),
-    addBrowserView: mock((_view: any) => {}),
-    setTopBrowserView: mock((_view: any) => {}),
     getContentSize: mock(() => [contentWidth, contentHeight]),
     setContentSize: mock((width: number, height: number) => {
       contentWidth = Math.max(minWidth, Math.floor(width))
@@ -155,6 +188,7 @@ function createMockWindow(opts?: { width?: number; height?: number; minWidth?: n
 
 mock.module('electron', () => ({
   app: {
+    getName: mock(() => 'Robb Agents'),
     getPath: mock((name: string) => name === 'downloads' ? '/tmp/mock-downloads' : `/tmp/mock-${name}`),
   },
   BrowserWindow: class MockBrowserWindow {
@@ -165,13 +199,16 @@ mock.module('electron', () => ({
       Object.assign(this, win)
     }
   },
-  BrowserView: class MockBrowserView {
+  WebContentsView: class MockWebContentsView {
     webContents: any
     constructor(_opts?: any) {
-      const view = createMockBrowserView()
+      const view = createMockWebContentsView()
       this.webContents = view.webContents
       Object.assign(this, view)
     }
+  },
+  dialog: {
+    showMessageBox: mockDialogShowMessageBox,
   },
   ipcMain: {
     handle: mockIpcMainHandle,
@@ -189,14 +226,21 @@ mock.module('electron', () => ({
   },
   session: {
     fromPartition: mock(() => ({
-      setPermissionCheckHandler: mock(() => {}),
-      setPermissionRequestHandler: mock(() => {}),
+      setPermissionCheckHandler: mock((handler: (...args: any[]) => boolean) => {
+        mockPermissionCheckHandler = handler
+      }),
+      setPermissionRequestHandler: mock((handler: (...args: any[]) => void) => {
+        mockPermissionRequestHandler = handler
+      }),
       webRequest: {
         onBeforeRequest: mock((_cb: any) => {}),
         onCompleted: mock((_cb: any) => {}),
         onErrorOccurred: mock((_cb: any) => {}),
       },
-      on: mock((_event: string, _cb: any) => {}),
+      on: mock((event: string, cb: any) => {
+        if (!mockSessionListeners[event]) mockSessionListeners[event] = []
+        mockSessionListeners[event].push(cb)
+      }),
     })),
   },
 }))
@@ -296,8 +340,13 @@ describe('BrowserPaneManager', () => {
   beforeEach(() => {
     createdWindows.length = 0
     toolbarLoadFailuresRemaining = 0
+    emptyStateLoadError = null
     mockShellOpenExternal.mockClear()
     mockIpcMainHandle.mockClear()
+    mockDialogShowMessageBox.mockClear()
+    mockPermissionCheckHandler = null
+    mockPermissionRequestHandler = null
+    for (const event of Object.keys(mockSessionListeners)) delete mockSessionListeners[event]
     manager = new BrowserPaneManager()
   })
 
@@ -310,12 +359,100 @@ describe('BrowserPaneManager', () => {
     expect(list[0].agentControlActive).toBe(false)
   })
 
+  it('composes page, overlay, and toolbar as ordered WebContentsView children', () => {
+    manager.createInstance('web-contents-views')
+    const instance = (manager as any).instances.get('web-contents-views')
+
+    expect(instance.window.contentView.children).toHaveLength(3)
+    expect(instance.window.contentView.children[0]).toBe(instance.pageView)
+    expect(instance.window.contentView.children[1]).toBe(instance.nativeOverlayView)
+    expect(instance.window.contentView.children[2]).toBe(instance.toolbarView)
+
+    instance.window._emit('resize')
+    expect(instance.pageView.setBounds).toHaveBeenCalled()
+    expect(instance.nativeOverlayView.setBounds).toHaveBeenCalled()
+    expect(instance.toolbarView.setBounds).toHaveBeenCalled()
+    expect(instance.window.contentView.children[2]).toBe(instance.toolbarView)
+  })
+
+  it('grants scoped browser permissions only with live autonomous session context', async () => {
+    const instanceId = manager.createForSession('session-autonomous', { workspaceId: 'workspace-autonomous' })
+    const instance = (manager as any).instances.get(instanceId)
+    await manager.navigate(instanceId, 'https://signup.microsoft.com/account')
+    instance.pageView.webContents._emit('did-navigate', 'https://signup.microsoft.com/account')
+    manager.setAgentControl('session-autonomous', {}, { workspaceId: 'workspace-autonomous' })
+    manager.setPermissionAutonomyResolver(() => ({
+      permissionMode: 'allow-all',
+      externalActionPolicy: 'allow-in-execute',
+    }))
+
+    expect((manager as any).getPermissionContext(
+      instance.pageView.webContents,
+      'https://microsoft-api.arkoselabs.com/',
+    )).toEqual({
+      agentControlled: true,
+      permissionMode: 'allow-all',
+      externalActionPolicy: 'allow-in-execute',
+      requestingOrigin: 'https://microsoft-api.arkoselabs.com/',
+      topLevelUrl: 'https://signup.microsoft.com/account',
+    })
+    expect(mockPermissionCheckHandler).not.toBeNull()
+    expect(mockPermissionCheckHandler!(
+      instance.pageView.webContents,
+      'sensors',
+      'https://microsoft-api.arkoselabs.com/',
+      {},
+    )).toBe(true)
+
+    let requestDecision: boolean | undefined
+    mockPermissionRequestHandler!(
+      instance.pageView.webContents,
+      'media',
+      (allowed: boolean) => { requestDecision = allowed },
+      { requestingUrl: 'https://microsoft-api.arkoselabs.com/challenge' },
+    )
+    expect(requestDecision).toBe(true)
+  })
+
+  it('keeps browser permissions denied when the live session is not autonomous', async () => {
+    const instanceId = manager.createForSession('session-ask', { workspaceId: 'workspace-ask' })
+    const instance = (manager as any).instances.get(instanceId)
+    await manager.navigate(instanceId, 'https://example.com/')
+    instance.pageView.webContents._emit('did-navigate', 'https://example.com/')
+    manager.setAgentControl('session-ask', {}, { workspaceId: 'workspace-ask' })
+    manager.setPermissionAutonomyResolver(() => ({
+      permissionMode: 'ask',
+      externalActionPolicy: 'allow-in-execute',
+    }))
+
+    expect(mockPermissionCheckHandler!(
+      instance.pageView.webContents,
+      'geolocation',
+      'https://example.com/',
+      {},
+    )).toBe(false)
+  })
+
   it('is idempotent when explicit ID already exists', () => {
     const first = manager.createInstance('same-id')
     const second = manager.createInstance('same-id')
     expect(first).toBe('same-id')
     expect(second).toBe('same-id')
     expect(manager.listInstances()).toHaveLength(1)
+  })
+
+  it('does not replace an immediate navigation when the empty state load is aborted', async () => {
+    emptyStateLoadError = Object.assign(new Error("ERR_ABORTED (-3) loading 'https://example.com/'"), {
+      code: 'ERR_ABORTED',
+      errno: -3,
+    })
+
+    manager.createInstance('empty-state-aborted')
+    await Bun.sleep(0)
+
+    const instance = (manager as any).instances.get('empty-state-aborted')
+    const loadedUrls = instance.pageView.webContents.loadURL.mock.calls.map((call: [string]) => call[0])
+    expect(loadedUrls).not.toContain('about:blank')
   })
 
   it('allows http(s) popups with shared browser partition', () => {
@@ -333,6 +470,52 @@ describe('BrowserPaneManager', () => {
     expect(result.overrideBrowserWindowOptions?.webPreferences?.partition).toBe('persist:browser-pane')
     expect(result.overrideBrowserWindowOptions?.webPreferences?.nodeIntegration).toBe(false)
     expect(result.overrideBrowserWindowOptions?.webPreferences?.contextIsolation).toBe(true)
+  })
+
+  it('prompts the user when WebAuthn returns multiple discoverable accounts', async () => {
+    manager.createInstance('passkey-select')
+    const listener = mockSessionListeners['select-webauthn-account']?.[0]
+    let resolveSelection!: (credentialId: string | undefined) => void
+    const selection = new Promise<string | undefined>((resolve) => {
+      resolveSelection = resolve
+    })
+    const callback = mock((credentialId?: string) => resolveSelection(credentialId))
+    expect(listener).toBeDefined()
+
+    listener({}, {
+      relyingPartyId: 'example.com',
+      accounts: [
+        { credentialId: 'credential-1', name: 'alice@example.com', displayName: 'Alice' },
+        { credentialId: 'credential-2', name: 'bob@example.com', displayName: 'Bob' },
+      ],
+      frame: null,
+    }, callback)
+    const credentialId = await selection
+
+    expect(credentialId).toBe('credential-1')
+  })
+
+  it('cancels WebAuthn account selection when the native dialog is dismissed', async () => {
+    mockDialogShowMessageBox.mockResolvedValueOnce({ response: 2, checkboxChecked: false })
+    manager.createInstance('passkey-cancel')
+    const listener = mockSessionListeners['select-webauthn-account']?.[0]
+    let resolveSelection!: (credentialId: string | undefined) => void
+    const selection = new Promise<string | undefined>((resolve) => {
+      resolveSelection = resolve
+    })
+    const callback = mock((credentialId?: string) => resolveSelection(credentialId))
+
+    listener({}, {
+      relyingPartyId: 'example.com',
+      accounts: [
+        { credentialId: 'credential-1', name: 'alice@example.com' },
+        { credentialId: 'credential-2', name: 'bob@example.com' },
+      ],
+      frame: null,
+    }, callback)
+    const credentialId = await selection
+
+    expect(credentialId).toBeUndefined()
   })
 
   it('denies app deep-link popups and forwards to deep-link handler', async () => {
@@ -364,6 +547,21 @@ describe('BrowserPaneManager', () => {
 
     expect(popupWindow.destroy).toHaveBeenCalledTimes(1)
     expect((manager as any).popupWindowsByParentInstanceId.has('popup-parent')).toBe(false)
+  })
+
+  it('unregisters a popup after Electron destroys its webContents wrapper', () => {
+    manager.createInstance('popup-destroyed-webcontents')
+    const instance = (manager as any).instances.get('popup-destroyed-webcontents')
+    const popupWindow = createMockWindow({ width: 520, height: 720 })
+
+    instance.pageView.webContents._emit('did-create-window', popupWindow, { url: 'https://accounts.google.com/signin' })
+    Object.defineProperty(popupWindow.webContents, 'id', {
+      configurable: true,
+      get: () => { throw new TypeError('Object has been destroyed') },
+    })
+
+    expect(() => popupWindow._emit('closed')).not.toThrow()
+    expect((manager as any).popupWindowsByParentInstanceId.has('popup-destroyed-webcontents')).toBe(false)
   })
 
   it('destroys instances', () => {
@@ -724,7 +922,7 @@ describe('BrowserPaneManager', () => {
     await Bun.sleep(1400)
 
     const instance = (manager as unknown as {
-      instances: Map<string, { toolbarView: ReturnType<typeof createMockBrowserView> }>
+      instances: Map<string, { toolbarView: ReturnType<typeof createMockWebContentsView> }>
     }).instances.get('retry-toolbar')
     if (!instance) throw new Error('retry-toolbar instance was not created')
     const toolbarWebContents = instance.toolbarView.webContents
@@ -737,6 +935,23 @@ describe('BrowserPaneManager', () => {
     expect(toolbarWebContents.loadURL).not.toHaveBeenCalledWith(expect.stringContaining('data:text/html'))
   })
 
+  it('stops toolbar retries when the instance is destroyed during its initial load', async () => {
+    toolbarLoadFailuresRemaining = 20
+    manager.createInstance('destroy-during-toolbar-load')
+    const instance = (manager as any).instances.get('destroy-during-toolbar-load')
+
+    manager.destroyInstance('destroy-during-toolbar-load')
+    await Bun.sleep(600)
+
+    const fileAttempts = instance.toolbarView.webContents.loadFile.mock.calls.length
+    const toolbarUrlAttempts = instance.toolbarView.webContents.loadURL.mock.calls
+      .filter((args: [string]) => args[0]?.includes('browser-toolbar.html')).length
+
+    expect(fileAttempts + toolbarUrlAttempts).toBe(1)
+    expect(instance.toolbarView.webContents.loadURL).not.toHaveBeenCalledWith(expect.stringContaining('data:text/html'))
+    expect(instance.toolbarReady).toBe(false)
+  })
+
   it('loads toolbar fallback page after retry exhaustion', async () => {
     toolbarLoadFailuresRemaining = 20
     manager.createInstance('fallback-toolbar')
@@ -744,7 +959,7 @@ describe('BrowserPaneManager', () => {
     await Bun.sleep(3200)
 
     const instance = (manager as unknown as {
-      instances: Map<string, { toolbarView: ReturnType<typeof createMockBrowserView> }>
+      instances: Map<string, { toolbarView: ReturnType<typeof createMockWebContentsView> }>
     }).instances.get('fallback-toolbar')
     if (!instance) throw new Error('fallback-toolbar instance was not created')
     const toolbarWebContents = instance.toolbarView.webContents
@@ -770,6 +985,25 @@ describe('BrowserPaneManager', () => {
     const warnEntries = manager.getConsoleLogs('console-1', { level: 'warn', limit: 10 })
     expect(warnEntries).toHaveLength(1)
     expect(warnEntries[0].message).toBe('warn message')
+  })
+
+  it('redacts OAuth callback artifacts before retaining browser console entries', () => {
+    manager.createInstance('console-oauth')
+    const instance = (manager as any).instances.get('console-oauth')
+    const authorizationCode = 'authorization-code-value'
+    const oauthState = 'oauth-state-value'
+    const clientInfo = 'client-identity-value'
+    const message = `navigation failed: https://login.example.test/callback#code=${authorizationCode}&state=${oauthState}&client_info=${clientInfo}`
+
+    instance.pageView.webContents._emit('console-message', 3, message)
+
+    const [entry] = manager.getConsoleLogs('console-oauth', { level: 'all', limit: 10 })
+    expect(entry.message).toContain('code=[REDACTED]')
+    expect(entry.message).toContain('state=[REDACTED]')
+    expect(entry.message).toContain('client_info=[REDACTED]')
+    expect(entry.message).not.toContain(authorizationCode)
+    expect(entry.message).not.toContain(oauthState)
+    expect(entry.message).not.toContain(clientInfo)
   })
 
   it('applies observer theme signal and skips regular console logging for it', () => {
@@ -1167,6 +1401,19 @@ describe('BrowserPaneManager', () => {
       await Promise.resolve()
 
       expect(instance.nativeOverlayView.webContents.executeJavaScript.mock.calls.length).toBeGreaterThan(callCountAfterSet)
+    })
+
+    it('ignores late page lifecycle events after the browser window is destroyed', () => {
+      manager.createInstance('ac-late-page-event')
+      manager.bindSession('ac-late-page-event', 'sess-late-page-event')
+      manager.setAgentControl('sess-late-page-event', { displayName: 'Navigate Page' })
+
+      const instance = (manager as any).instances.get('ac-late-page-event')
+      manager.destroyInstance('ac-late-page-event')
+
+      expect(() => instance.pageView.webContents._emit('did-stop-loading')).not.toThrow()
+      expect(() => instance.pageView.webContents._emit('did-navigate', 'https://example.com/late')).not.toThrow()
+      expect(() => instance.window._emit('show')).not.toThrow()
     })
 
     it('reapplies native overlay after hide/show while control is active', async () => {

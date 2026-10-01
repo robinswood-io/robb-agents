@@ -10,6 +10,7 @@ export interface HandleErrorMessageActionOptions {
   onOpenSettings?: () => void
   onRetryFocus?: (detail?: { sessionId?: string }) => void
   onRetry?: () => void
+  onReconnectRuntime?: () => void
 }
 
 /**
@@ -27,6 +28,7 @@ export function handleErrorMessageAction(
     onOpenSettings = () => navigate(routes.view.settings()),
     onRetryFocus = dispatchFocusInputEvent,
     onRetry,
+    onReconnectRuntime,
   }: HandleErrorMessageActionOptions = {},
 ): void {
   if (action.action === 'open_url') {
@@ -46,6 +48,13 @@ export function handleErrorMessageAction(
       onRetry()
     } else {
       onRetryFocus({ sessionId })
+    }
+    return
+  }
+
+  if (action.action === 'reconnect_runtime') {
+    if (onReconnectRuntime) {
+      onReconnectRuntime()
     }
   }
 }

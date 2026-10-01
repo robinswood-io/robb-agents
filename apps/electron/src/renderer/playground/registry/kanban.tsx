@@ -491,7 +491,7 @@ export const kanbanComponents: ComponentEntry[] = [
     name: 'Task Tile (anatomy)',
     category: 'Kanban',
     description:
-      'A single parent-session tile: project color, status badge (independent from column), orchestrator model, a collapsable auto-routed subtask list, an inline "+ Add subtask" composer (type a title → Add → creates a pending subtask), and a Play (▶) button that dispatches all pending subtasks.',
+      'A single parent-session tile: project color, status badge (independent from column), orchestrator model, a collapsable subtask list with explicit model selections, an inline "+ Add subtask" composer (type a title → Add → creates a pending subtask), and a Play (▶) button that dispatches all pending subtasks.',
     component: TaskTilePreview,
     layout: 'centered',
     props: [

@@ -28,13 +28,15 @@ interface ProvenanceContract {
   signing: string
 }
 
+export type WindowsSigningMode = 'unsigned' | 'pfx' | 'azure'
+
 export interface ValidateReleaseBundleOptions {
   releaseDir: string
   version: string
   sourceCommit?: string
   tag?: string
   requireSigned?: boolean
-  allowUnsignedWindows?: boolean
+  windowsSigningMode?: WindowsSigningMode
   requireSbom?: boolean
 }
 
@@ -269,6 +271,11 @@ export function validateReleaseBundle(
     throw new Error('Updater manifests must share one releaseDate')
   }
 
+  const windowsSigningMode = options.windowsSigningMode ?? 'pfx'
+  if (!['unsigned', 'pfx', 'azure'].includes(windowsSigningMode)) {
+    throw new Error(`Unsupported Windows signing mode ${windowsSigningMode}`)
+  }
+
   const provenanceFiles: string[] = []
   for (const contract of PROVENANCE_CONTRACTS) {
     const path = join(options.releaseDir, contract.fileName)
@@ -291,11 +298,11 @@ export function validateReleaseBundle(
       throw new Error(`${contract.fileName} has invalid source_commit ${provenance.source_commit}`)
     }
     if (options.requireSigned) {
-      const allowedSigningStates = options.allowUnsignedWindows && contract.platform === 'windows-x64'
-        ? [contract.signing, 'unsigned-github-release']
-        : [contract.signing]
       const signingState = provenance.signing
-      if (typeof signingState !== 'string' || !allowedSigningStates.includes(signingState)) {
+      const expectedSigning = contract.platform === 'windows-x64' && windowsSigningMode === 'unsigned'
+        ? 'unsigned-public-release'
+        : contract.signing
+      if (signingState !== expectedSigning) {
         throw new Error(`${contract.fileName} has invalid signing state ${signingState}`)
       }
     }
@@ -343,17 +350,19 @@ if (import.meta.main) {
   if (!releaseDir || !version) {
     throw new Error(
       'Usage: bun scripts/validate-release-bundle.ts --release-dir <dir> --version <X.Y.Z> '
-      + '[--source-commit <sha>] [--tag <vX.Y.Z>] [--require-signed] [--allow-unsigned-windows] [--require-sbom]',
+      + '[--source-commit <sha>] [--tag <vX.Y.Z>] [--require-signed] '
+      + '[--windows-signing-mode <unsigned|pfx|azure>] [--require-sbom]',
     )
   }
 
+  const windowsSigningMode = readArgument('--windows-signing-mode') as WindowsSigningMode | undefined
   const report = validateReleaseBundle({
     releaseDir,
     version,
     sourceCommit: readArgument('--source-commit'),
     tag: readArgument('--tag'),
     requireSigned: process.argv.includes('--require-signed'),
-    allowUnsignedWindows: process.argv.includes('--allow-unsigned-windows'),
+    windowsSigningMode,
     requireSbom: process.argv.includes('--require-sbom'),
   })
   console.log(

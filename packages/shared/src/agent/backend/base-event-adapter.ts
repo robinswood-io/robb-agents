@@ -207,6 +207,7 @@ export abstract class BaseEventAdapter {
     result: string,
     isError: boolean,
     parentToolUseId?: string,
+    continuationRequired?: boolean,
   ): AgentEvent {
     return {
       type: 'tool_result',
@@ -216,6 +217,7 @@ export abstract class BaseEventAdapter {
       isError,
       turnId: this.currentTurnId || undefined,
       parentToolUseId,
+      ...(continuationRequired ? { continuationRequired: true } : {}),
     };
   }
 

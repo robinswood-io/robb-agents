@@ -463,20 +463,6 @@
       }
     },
     {
-      "schedule_id": "sched.provider-routing-guard",
-      "workflow_id": "rbw.provider-routing-guard",
-      "task_queue": "watchdog",
-      "cron": "*/30 * * * *",
-      "timezone": "Europe/Paris",
-      "enabled": true,
-      "payload": {
-        "legacy_id": "provider-routing-guard",
-        "name": "Guard routage providers LLM",
-        "llm_connection": "openrouter",
-        "model": "nvidia/nemotron-3-super-120b-a12b:free"
-      }
-    },
-    {
       "schedule_id": "sched.campaigns-autonomy-loop",
       "workflow_id": "rbw.campaigns-autonomy-loop",
       "task_queue": "campaigns",

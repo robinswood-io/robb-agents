@@ -45,7 +45,7 @@ import {
 } from "@craft-agent/ui"
 import { useFocusZone } from "@/hooks/keyboard"
 import { useTheme } from "@/hooks/useTheme"
-import type { Session, Message, FileAttachment, StoredAttachment, PermissionRequest, CredentialRequest, CredentialResponse, LoadedSource, LoadedSkill } from "../../../shared/types"
+import type { Session, Message, FileAttachment, StoredAttachment, PermissionRequest, CredentialRequest, CredentialResponse, LoadedSkill } from "../../../shared/types"
 import type { PermissionMode } from "@craft-agent/shared/agent/modes"
 import type { ThinkingLevel } from "@craft-agent/shared/agent/thinking-levels"
 import {
@@ -78,7 +78,6 @@ import { CHAT_LAYOUT } from "@/config/layout"
 import { collectFileChangesFromActivities, getFirstFileChangeIdForActivity } from "@/lib/file-changes"
 import { resolveBranchNewPanelOption } from "./branching"
 import { handleErrorMessageAction } from "./error-message-actions"
-import { RoutingAuditPanel } from "./RoutingAuditPanel"
 import { AutonomyPanel } from "./AutonomyPanel"
 
 // ============================================================================
@@ -183,11 +182,6 @@ interface ChatDisplayProps {
   attachmentsValue?: FileAttachment[]
   /** Callback when attachment draft changes (add, remove, clear on send) */
   onAttachmentsChange?: (attachments: FileAttachment[]) => void
-  // Source selection
-  /** Available sources (enabled only) */
-  sources?: LoadedSource[]
-  /** Callback when source selection changes */
-  onSourcesChange?: (slugs: string[]) => void
   // Skill selection (for @mentions)
   /** Available skills for @mention autocomplete */
   skills?: LoadedSkill[]
@@ -410,23 +404,40 @@ function ProcessingIndicator({ startTime, statusMessage }: ProcessingIndicatorPr
 }
 
 /**
- * Scrolls to target element on mount, before browser paint.
- * Uses useLayoutEffect to ensure scroll happens before content is visible.
+ * Positions a loaded transcript at the bottom before browser paint.
+ * `resetKey` also covers compact layouts where the transcript wrapper stays
+ * mounted while the active session changes.
  */
 function ScrollOnMount({
-  targetRef,
+  viewportRef,
+  resetKey,
   onScroll,
   skip = false
 }: {
-  targetRef: React.RefObject<HTMLDivElement | null>
+  viewportRef: React.RefObject<HTMLDivElement | null>
+  resetKey: string
   onScroll?: () => void
   skip?: boolean
 }) {
+  const skippedResetKeyRef = React.useRef<string | null>(null)
+
   React.useLayoutEffect(() => {
-    if (skip) return
-    targetRef.current?.scrollIntoView({ behavior: 'instant' })
+    // If search consumed this session reset, a follow-up render where `skip`
+    // becomes false must not override the selected match. Normal resets remain
+    // repeatable so React StrictMode's second layout pass can settle at bottom.
+    if (skip) {
+      skippedResetKeyRef.current = resetKey
+      return
+    }
+    if (skippedResetKeyRef.current === resetKey) return
+    const viewport = viewportRef.current
+    if (!viewport) return
+
+    // Target the Radix viewport directly. scrollIntoView() can also move
+    // scrollable ancestors and is less reliable while mobile layout settles.
+    viewport.scrollTop = viewport.scrollHeight
     onScroll?.()
-  }, [skip])
+  }, [onScroll, resetKey, skip, viewportRef])
   return null
 }
 
@@ -466,9 +477,6 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
   onInputChange,
   attachmentsValue,
   onAttachmentsChange,
-  // Sources
-  sources,
-  onSourcesChange,
   // Skills (for @mentions)
   skills,
   // Labels (for #labels)
@@ -523,6 +531,10 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
   isFocusedPanelRef.current = isFocusedPanel
   // Skip smooth scroll briefly after session switch (instant scroll already happened)
   const skipSmoothScrollUntilRef = React.useRef(0)
+  const handleInitialTranscriptScroll = React.useCallback(() => {
+    isStickToBottomRef.current = true
+    skipSmoothScrollUntilRef.current = Date.now() + 500
+  }, [])
   // Track message commit boundaries so we can auto-scroll when a new user message
   // actually lands in state (important when attachments delay optimistic insertion).
   const prevLastMessageIdRef = React.useRef<string | null>(null)
@@ -1170,13 +1182,24 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
       // Clear pending scroll and wait for layout to settle
       if (debounceTimer) clearTimeout(debounceTimer)
       debounceTimer = setTimeout(() => {
-        // Skip smooth scroll if we just did an instant scroll (session switch/lazy load)
-        if (Date.now() < skipSmoothScrollUntilRef.current) return
+        // The user may have scrolled up while this debounced callback was pending.
+        if (!isStickToBottomRef.current) return
+
+        // Layout commonly changes again just after the initial session scroll
+        // (input hydration, rich blocks, mobile safe areas). Keep the viewport
+        // pinned instantly during that settling window instead of dropping the
+        // only follow-up scroll.
+        if (Date.now() < skipSmoothScrollUntilRef.current) {
+          viewport.scrollTop = viewport.scrollHeight
+          return
+        }
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
       }, 200)
     })
 
-    // Observe the scroll content container (first child of viewport)
+    // Observe both the viewport (mobile keyboard/browser chrome/safe-area
+    // changes) and its content (streaming and late-rendered rich blocks).
+    resizeObserver.observe(viewport)
     const content = viewport.firstElementChild
     if (content) {
       resizeObserver.observe(content)
@@ -1581,13 +1604,12 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
                   {/* Scroll to bottom before paint - fires via useLayoutEffect */}
                   {/* Skip when search is active on session switch - scroll to first match instead */}
                   <ScrollOnMount
-                    targetRef={messagesEndRef}
+                    viewportRef={scrollViewportRef}
+                    resetKey={session.id}
                     skip={skipScrollToBottom}
-                    onScroll={() => {
-                      skipSmoothScrollUntilRef.current = Date.now() + 500
-                    }}
+                    onScroll={handleInitialTranscriptScroll}
                   />
-                  {!compactMode && <><AutonomyPanel session={session} /><RoutingAuditPanel session={session} /></>}
+                  {!compactMode && <AutonomyPanel session={session} />}
                   {/* Empty state for compact mode - inviting conversational prompt, centered in full popover */}
                   {compactMode && turns.length === 0 && (
                     <div className="absolute inset-0 flex flex-col items-center justify-center select-none gap-1 pointer-events-none">
@@ -1954,9 +1976,6 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
               onInputChange,
               attachmentsValue,
               onAttachmentsChange,
-              sources,
-              enabledSourceSlugs: session.enabledSourceSlugs,
-              onSourcesChange,
               skills,
               workspaceId,
               workingDirectory,
@@ -1968,7 +1987,9 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
               onConnectionChange,
               contextStatus: {
                 isCompacting: session.currentStatus?.statusType === 'compacting',
-                inputTokens: session.tokenUsage?.inputTokens,
+                // Display the current provider context, not aggregate billed
+                // input across the turn's tool-call loop.
+                inputTokens: session.tokenUsage?.contextTokens ?? session.tokenUsage?.inputTokens,
                 contextWindow: session.tokenUsage?.contextWindow,
               },
               followUpItems: followUpInputItems,
@@ -2157,8 +2178,16 @@ function ErrorMessage({ message, onOpenUrl, sessionId, onRetry }: { message: Mes
   const [detailsOpen, setDetailsOpen] = React.useState(false)
   const actions = message.errorActions?.filter(a => {
     if (a.action === 'open_url') return !!a.url && !!onOpenUrl
+    if (a.action === 'reconnect_runtime') return !!sessionId
     return true
   })
+  const handleReconnectRuntime = React.useCallback(() => {
+    if (!sessionId) return
+    void window.electronAPI.sessionCommand(sessionId, { type: 'restartRuntime' }).catch(error => {
+      const detail = error instanceof Error ? error.message : String(error)
+      toast.error(t('toast.reconnectFailed'), { description: detail })
+    })
+  }, [sessionId, t])
 
   return (
     <div className="flex justify-start mt-4">
@@ -2186,6 +2215,7 @@ function ErrorMessage({ message, onOpenUrl, sessionId, onRetry }: { message: Mes
                     sessionId,
                     onOpenUrl,
                     onRetry,
+                    onReconnectRuntime: handleReconnectRuntime,
                   })
                 }}
                 className="text-xs px-2 py-0.5 rounded border border-destructive/20 text-destructive/70 hover:text-destructive hover:border-destructive/40 transition-colors"
@@ -2221,102 +2251,6 @@ function ErrorMessage({ message, onOpenUrl, sessionId, onRetry }: { message: Mes
         )}
       </div>
     </div>
-  )
-}
-
-function RoutingMetaBadge({ message }: { message: Message }) {
-  const meta = message.routingMeta
-  if (!meta || message.isStreaming) return null
-
-  const provider = meta.providerType ?? meta.connectionSlug
-  const model = meta.model
-  if (!provider && !model) return null
-
-  const label = [provider, model].filter(Boolean).join(' · ')
-  const reason = meta.reason ?? 'session-connection'
-  const policyRuleIds = meta.policyRuleIds?.filter(Boolean) ?? []
-  const estimatedCostEur = typeof meta.estimatedCostEur === 'number' ? meta.estimatedCostEur : undefined
-  const estimatedCostUsd = typeof meta.estimatedCostUsd === 'number' ? meta.estimatedCostUsd : undefined
-  const actualCostEur = typeof meta.actualCostEur === 'number' ? meta.actualCostEur : undefined
-  const actualCostUsd = typeof meta.actualCostUsd === 'number' ? meta.actualCostUsd : undefined
-  const hasCost = estimatedCostEur !== undefined || estimatedCostUsd !== undefined || actualCostEur !== undefined || actualCostUsd !== undefined
-  const actualCostLabel = actualCostEur !== undefined
-    ? `${actualCostEur.toFixed(6)} € réel`
-    : actualCostUsd !== undefined
-      ? `$${actualCostUsd.toFixed(6)} réel`
-      : undefined
-  const estimatedCostLabel = estimatedCostEur !== undefined
-    ? `${estimatedCostEur.toFixed(6)} € estimé`
-    : estimatedCostUsd !== undefined
-      ? `$${estimatedCostUsd.toFixed(6)} estimé`
-      : undefined
-
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <div className="mt-2 inline-flex max-w-full cursor-help select-none items-center gap-1 truncate rounded-sm text-[10px] text-foreground/35 hover:text-foreground/55">
-          <span className="truncate">{label}</span>
-          {reason === 'router' && <span className="shrink-0 text-foreground/30">policy</span>}
-          {meta.fallbackFromConnectionSlug && <span className="shrink-0 text-foreground/30">fallback</span>}
-        </div>
-      </TooltipTrigger>
-      <TooltipContent side="bottom" sideOffset={4} className="max-w-sm text-left">
-        <div className="space-y-1 text-xs">
-          <div className="font-medium text-foreground">Routage IA</div>
-          {meta.connectionSlug && <div><span className="text-muted-foreground">Connexion:</span> {meta.connectionSlug}</div>}
-          {meta.providerType && <div><span className="text-muted-foreground">Provider:</span> {meta.providerType}</div>}
-          {meta.model && <div className="break-all"><span className="text-muted-foreground">Modèle:</span> {meta.model}</div>}
-          <div><span className="text-muted-foreground">Raison:</span> {reason}</div>
-          {meta.sensitivity && <div><span className="text-muted-foreground">Sensibilité:</span> {meta.sensitivity}</div>}
-          {meta.routingDifficulty && <div><span className="text-muted-foreground">Difficulté:</span> {meta.routingDifficulty}</div>}
-          {(meta.requiredCapabilities?.length ?? 0) > 0 && (
-            <div><span className="text-muted-foreground">Capacités:</span> {meta.requiredCapabilities?.join(', ')}</div>
-          )}
-          {meta.routingExplanation && (
-            <div className="break-words"><span className="text-muted-foreground">Pourquoi:</span> {meta.routingExplanation}</div>
-          )}
-          {meta.fallbackFromConnectionSlug && <div><span className="text-muted-foreground">Fallback depuis:</span> {meta.fallbackFromConnectionSlug}</div>}
-          {meta.fallbackReason && <div><span className="text-muted-foreground">Raison fallback:</span> {meta.fallbackReason}</div>}
-          {meta.budgetDecision && (
-            <div>
-              <span className="text-muted-foreground">Budget:</span>{' '}
-              {meta.budgetDecision.status}
-              {meta.budgetDecision.exceededScopes.length > 0
-                ? ` (${meta.budgetDecision.exceededScopes.join(', ')})`
-                : ''}
-            </div>
-          )}
-          {(meta.rejectedConnections?.length ?? 0) > 0 && (
-            <div className="space-y-0.5 break-words">
-              <span className="text-muted-foreground">Alternatives rejetées:</span>
-              {meta.rejectedConnections?.map(candidate => (
-                <div key={candidate.slug} className="pl-2">
-                  {candidate.slug}: {candidate.reasons.join(', ')}
-                </div>
-              ))}
-            </div>
-          )}
-          {hasCost && (
-            <div>
-              <span className="text-muted-foreground">Coût:</span>{' '}
-              {actualCostLabel ?? estimatedCostLabel}
-            </div>
-          )}
-          {meta.costProvenance?.source && meta.costProvenance.source !== 'unavailable' && <div><span className="text-muted-foreground">Source coût:</span> {meta.costProvenance.source}</div>}
-          {meta.costProvenance?.exchangeRateAsOf && (
-            <div>
-              <span className="text-muted-foreground">Conversion:</span>{' '}
-              {meta.costProvenance.exchangeRateSource} · {meta.costProvenance.exchangeRateAsOf}
-            </div>
-          )}
-          {policyRuleIds.length > 0 && (
-            <div className="break-words">
-              <span className="text-muted-foreground">Règles:</span> {policyRuleIds.join(', ')}
-            </div>
-          )}
-        </div>
-      </TooltipContent>
-    </Tooltip>
   )
 }
 
@@ -2387,7 +2321,6 @@ function MessageBubble({
               </Markdown>
             </CollapsibleMarkdownProvider>
           )}
-          <RoutingMetaBadge message={message} />
         </div>
       </div>
     )

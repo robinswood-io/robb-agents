@@ -1,6 +1,6 @@
 {
   "name": "@craft-agent/pi-agent-server",
-  "version": "0.11.5",
+  "version": "0.12.7",
   "license": "MIT",
   "description": "Out-of-process Pi agent server communicating via JSONL over stdio",
   "type": "module",
@@ -9,22 +9,23 @@
     "pi-agent-server": "./dist/index.js"
   },
   "scripts": {
-    "build": "bun build src/index.ts src/vibe-acp-server.ts --outdir=dist --target=bun --format=esm --external koffi",
-    "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
+    "build": "bun build src/index.ts src/vibe-acp-server.ts src/antigravity-server.ts --outdir=dist --target=bun --format=esm --external koffi",
+    "typecheck": "node ../../scripts/run-typescript.mjs native --noEmit -p tsconfig.typecheck.json",
     "validate": "bun run typecheck && bun run build"
   },
   "dependencies": {
-    "@agentclientprotocol/sdk": "1.2.1",
+    "@agentclientprotocol/sdk": "1.4.0",
+    "@craft-agent/core": "workspace:*",
     "@earendil-works/pi-agent-core": "0.80.3",
     "@earendil-works/pi-ai": "0.80.3",
     "@earendil-works/pi-coding-agent": "0.80.3",
     "@sinclair/typebox": "^0.34.0",
     "duck-duck-scrape": "^2.2.7",
-    "node-html-parser": "^6.1.0",
-    "pdfjs-dist": "^5.4.0",
+    "node-html-parser": "^9.0.1",
+    "pdfjs-dist": "^6.2.108",
     "turndown": "^7.2.0"
   },
   "devDependencies": {
-    "@types/node": "^22.0.0"
+    "@types/node": "^26.2.0"
   }
 }

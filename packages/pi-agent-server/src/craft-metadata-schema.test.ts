@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 import { createEditToolDefinition } from '@earendil-works/pi-coding-agent';
-import { allowCraftMetadataProperties, stripCraftMetadata } from './craft-metadata-schema.ts';
+import { allowCraftMetadataProperties, normalizeForPiTool, stripCraftMetadata } from './craft-metadata-schema.ts';
 
 describe('Craft metadata schema compatibility for Pi tools', () => {
   it('widens a strict Edit-like schema with optional Craft metadata properties', () => {
@@ -40,7 +40,7 @@ describe('Craft metadata schema compatibility for Pi tools', () => {
 
   it('widens the actual Pi Edit tool schema without making metadata required', () => {
     const editTool = createEditToolDefinition('/tmp');
-    const widened = allowCraftMetadataProperties(editTool.parameters);
+    const widened = allowCraftMetadataProperties(editTool.parameters, 'Edit');
     const widenedSchema = widened as {
       additionalProperties?: unknown;
       properties: Record<string, unknown>;
@@ -52,6 +52,38 @@ describe('Craft metadata schema compatibility for Pi tools', () => {
     expect(widenedSchema.properties._intent).toBeDefined();
     expect(widenedSchema.required ?? []).not.toContain('_displayName');
     expect(widenedSchema.required ?? []).not.toContain('_intent');
+    expect(widenedSchema.properties.file_path).toBeDefined();
+    expect(widenedSchema.properties.old_string).toBeDefined();
+    expect(widenedSchema.properties.new_string).toBeDefined();
+    expect((widened as { anyOf?: unknown[] }).anyOf).toEqual([
+      { required: ['path', 'edits'] },
+      { required: ['file_path', 'old_string', 'new_string'] },
+    ]);
+  });
+
+  it('normalizes the legacy Craft Edit shape for the strict Pi implementation', () => {
+    expect(normalizeForPiTool('Edit', {
+      file_path: '/tmp/example.ts',
+      old_string: 'before',
+      new_string: 'after',
+    })).toEqual({
+      path: '/tmp/example.ts',
+      edits: [{ oldText: 'before', newText: 'after' }],
+    });
+  });
+
+  it('preserves native multi-edit arrays while removing permission aliases', () => {
+    const edits = [
+      { oldText: 'a', newText: 'b' },
+      { oldText: 'c', newText: 'd' },
+    ];
+    expect(normalizeForPiTool('Edit', {
+      path: '/tmp/example.ts',
+      file_path: '/tmp/example.ts',
+      old_string: 'a',
+      new_string: 'b',
+      edits,
+    })).toEqual({ path: '/tmp/example.ts', edits });
   });
 
   it('preserves upstream metadata properties if Pi defines them later', () => {

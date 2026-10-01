@@ -5,6 +5,7 @@ import { successResponse, errorResponse } from '../response.ts';
 export interface SendAgentMessageArgs {
   sessionId: string;
   message: string;
+  messageType?: 'progress' | 'result' | 'question' | 'decision';
   attachments?: Array<{ path: string; name?: string }>;
 }
 
@@ -32,9 +33,12 @@ export async function handleSendAgentMessage(
   try {
     // Build sender envelope so the target session knows who sent the message
     const senderName = ctx.getSessionInfo?.()?.name ?? ctx.sessionId;
+    const messageType = args.messageType ?? 'progress';
     const wrappedMessage = [
-      `[Message from session "${ctx.sessionId}" (${senderName})]`,
-      `Use send_agent_message with sessionId "${ctx.sessionId}" to reply.`,
+      `[Agent message type="${messageType}" from_session="${ctx.sessionId}" sender="${senderName}"]`,
+      messageType === 'question' || messageType === 'decision'
+        ? `Reply to session "${ctx.sessionId}" only when the requested answer or decision is ready.`
+        : 'No acknowledgement is required. Reply only with a new decision, blocker, requested answer, or terminal handoff.',
       '',
       '---',
       '',
@@ -49,9 +53,8 @@ export async function handleSendAgentMessage(
     // app restarted") — for actual task status, call list_background_tasks.
     if (result.delivery === 'queued') {
       return successResponse(
-        `Message queued for session ${args.sessionId} — it is currently processing another turn. ` +
-          `It will handle your message after the current turn finishes. Do not assume it was read yet; ` +
-          `wait for a reply or query status before concluding anything.`
+        `Message queued for session ${args.sessionId}. It may be coalesced with adjacent agent updates. ` +
+          `Do not send an acknowledgement or poll for a reply; query status only when a decision depends on it.`
       );
     }
 

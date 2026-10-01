@@ -33,6 +33,7 @@ import {
   Info,
   MailOpen,
   FolderKanban,
+  Workflow,
 } from "lucide-react"
 // SessionStatusIcons no longer used - icons come from dynamic sessionStatuses
 import { SourceAvatar } from "@/components/ui/source-avatar"
@@ -40,7 +41,7 @@ import { TopBar } from "./TopBar"
 import { SquarePenRounded } from "../icons/SquarePenRounded"
 import { McpIcon } from "../icons/McpIcon"
 import { cn } from "@/lib/utils"
-import { isMac } from "@/lib/platform"
+import { isMac, isWebUI } from "@/lib/platform"
 import { Button } from "@/components/ui/button"
 import { HeaderIconButton } from "@/components/ui/HeaderIconButton"
 import { Separator } from "@/components/ui/separator"
@@ -116,6 +117,7 @@ import {
   isSkillsNavigation,
   isAutomationsNavigation,
   isProjectsNavigation,
+  isMissionsNavigation,
   type NavigationState,
 } from "@/contexts/NavigationContext"
 import type { SettingsSubpage } from "../../../shared/types"
@@ -562,8 +564,12 @@ function AppShellContent({
   // desktop (narrow window or small screen).
   const shellRef = useRef<HTMLDivElement>(null)
   const shellWidth = useContainerWidth(shellRef)
-  const MOBILE_THRESHOLD = 768
-  const isAutoCompact = shellWidth > 0 && shellWidth < MOBILE_THRESHOLD
+  // Touch tablets need the same single-panel navigation as phones. Three
+  // columns at 800–1024px leave the chat below its usable minimum width.
+  // Keep Electron's established breakpoint while giving the browser PWA a
+  // tablet-aware threshold.
+  const MOBILE_THRESHOLD = isWebUI ? 1024 : 768
+  const isAutoCompact = shellWidth > 0 && shellWidth <= MOBILE_THRESHOLD
 
   const effectiveSidebarAndNavigatorHidden = isSidebarAndNavigatorHidden || isAutoCompact
 
@@ -634,6 +640,8 @@ function AppShellContent({
   // Board view replaces the session-list navigator with the full-width Kanban panel,
   // so the navigator (and its resize handle) collapse to zero width while it's active.
   const isBoardView = isSessionsNavigation(navState) && navState.viewMode === 'board'
+  const isMissionControlView = isMissionsNavigation(navState)
+  const isFullWidthView = isBoardView || isMissionControlView
 
   // Derive source filter from navigation state (only when in sources navigator)
   const sourceFilter: SourceFilter | null = isSourcesNavigation(navState) ? navState.filter ?? null : null
@@ -1038,16 +1046,6 @@ function AppShellContent({
     })
     return cleanup
   }, [activeWorkspaceId])
-
-  // Handle session source selection changes
-  const handleSessionSourcesChange = React.useCallback(async (sessionId: string, sourceSlugs: string[]) => {
-    try {
-      await window.electronAPI.sessionCommand(sessionId, { type: 'setSources', sourceSlugs })
-      // Session will emit a 'sources_changed' event that updates the session state
-    } catch (err) {
-      console.error('[Chat] Failed to set session sources:', err)
-    }
-  }, [])
 
   // Handle session label changes (add/remove via # menu or badge X)
   const handleSessionLabelsChange = React.useCallback(async (sessionId: string, labels: string[]) => {
@@ -1703,7 +1701,6 @@ function AppShellContent({
     onSessionLabelsChange: handleSessionLabelsChange,
     enabledModes,
     sessionStatuses: effectiveSessionStatuses,
-    onSessionSourcesChange: handleSessionSourcesChange,
     onJumpToTaskSessions: handleJumpToTaskSessions,
     rightSidebarButton: null,
     isCompactMode: isAutoCompact,
@@ -1719,7 +1716,7 @@ function AppShellContent({
     automationTestResults,
     getAutomationHistory,
     onReplayAutomation: handleReplayAutomation,
-  }), [contextValue, handleDeleteSession, sources, skills, activeSessionWorkingDirectory, displayLabelConfigs, handleSessionLabelsChange, enabledModes, effectiveSessionStatuses, handleSessionSourcesChange, handleJumpToTaskSessions, isAutoCompact, searchActive, searchQuery, handleChatMatchInfoChange, handleTestAutomation, handleToggleAutomation, handleDuplicateAutomation, handleDeleteAutomation, automationTestResults, getAutomationHistory, handleReplayAutomation])
+  }), [contextValue, handleDeleteSession, sources, skills, activeSessionWorkingDirectory, displayLabelConfigs, handleSessionLabelsChange, enabledModes, effectiveSessionStatuses, handleJumpToTaskSessions, isAutoCompact, searchActive, searchQuery, handleChatMatchInfoChange, handleTestAutomation, handleToggleAutomation, handleDuplicateAutomation, handleDeleteAutomation, automationTestResults, getAutomationHistory, handleReplayAutomation])
 
   // Persist expanded folders to localStorage (workspace-scoped)
   React.useEffect(() => {
@@ -1830,6 +1827,10 @@ function AppShellContent({
   // Handler for projects view
   const handleProjectsClick = useCallback(() => {
     navigate(routes.view.projects())
+  }, [])
+
+  const handleMissionsClick = useCallback(() => {
+    navigate(routes.view.missions())
   }, [])
 
   const handleAutomationsScheduledClick = useCallback(() => {
@@ -2138,12 +2139,14 @@ function AppShellContent({
     // 3. Sources, Skills, Settings
     result.push({ id: 'nav:sources', type: 'nav', action: handleSourcesClick })
     result.push({ id: 'nav:skills', type: 'nav', action: handleSkillsClick })
+    result.push({ id: 'nav:projects', type: 'nav', action: handleProjectsClick })
+    result.push({ id: 'nav:missions', type: 'nav', action: handleMissionsClick })
     result.push({ id: 'nav:automations', type: 'nav', action: handleAutomationsClick })
     result.push({ id: 'nav:settings', type: 'nav', action: () => handleSettingsClick() })
     result.push({ id: 'nav:whats-new', type: 'nav', action: handleWhatsNewClick })
 
     return result
-  }, [handleAllSessionsClick, handleFlaggedClick, handleArchivedClick, handleSessionStatusClick, effectiveSessionStatuses, handleLabelClick, labelConfigs, labelTree, viewConfigs, handleViewClick, handleSourcesClick, handleSkillsClick, handleAutomationsClick, handleSettingsClick, handleWhatsNewClick])
+  }, [handleAllSessionsClick, handleFlaggedClick, handleArchivedClick, handleSessionStatusClick, effectiveSessionStatuses, handleLabelClick, labelConfigs, labelTree, viewConfigs, handleViewClick, handleSourcesClick, handleSkillsClick, handleProjectsClick, handleMissionsClick, handleAutomationsClick, handleSettingsClick, handleWhatsNewClick])
 
   // Toggle folder expanded state
   const handleToggleFolder = React.useCallback((path: string) => {
@@ -2265,6 +2268,10 @@ function AppShellContent({
     // Projects navigator
     if (isProjectsNavigation(navState)) {
       return t("sidebar.allProjects")
+    }
+
+    if (isMissionsNavigation(navState)) {
+      return t("sidebar.missions")
     }
 
     // Automations navigator
@@ -2630,6 +2637,13 @@ function AppShellContent({
                         variant: (sessionFilter?.kind === 'allSessions' && projectFilter.get(p.config.id) === 'include') ? "default" as const : "ghost" as const,
                         onClick: () => handleJumpToProjectSessions(p.config.id),
                       })),
+                    },
+                    {
+                      id: "nav:missions",
+                      title: t("sidebar.missions"),
+                      icon: Workflow,
+                      variant: isMissionsNavigation(navState) ? "default" : "ghost",
+                      onClick: handleMissionsClick,
                     },
                     {
                       id: "nav:automations",
@@ -3603,7 +3617,7 @@ function AppShellContent({
             )}
             </div>
           }
-          navigatorWidth={isAutoCompact ? sessionListWidth : (effectiveSidebarAndNavigatorHidden || isBoardView ? 0 : sessionListWidth)}
+          navigatorWidth={isAutoCompact ? sessionListWidth : (effectiveSidebarAndNavigatorHidden || isFullWidthView ? 0 : sessionListWidth)}
           isSidebarAndNavigatorHidden={effectiveSidebarAndNavigatorHidden}
           isRightSidebarVisible={false}
           isCompact={isAutoCompact}
@@ -3644,7 +3658,7 @@ function AppShellContent({
         )}
 
         {/* Session List Resize Handle (absolute, hidden in focused mode and board view) */}
-        {!effectiveSidebarAndNavigatorHidden && !isBoardView && (
+        {!effectiveSidebarAndNavigatorHidden && !isFullWidthView && (
         <div
           ref={sessionListHandleRef}
           onMouseDown={(e) => { e.preventDefault(); setIsResizing('session-list') }}

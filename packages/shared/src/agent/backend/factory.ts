@@ -39,7 +39,7 @@ import {
 import { parseValidationError, type LlmValidationResult } from '../../config/llm-validation.ts';
 import type { ModelFetchResult } from '../../config/model-fetcher.ts';
 // Model resolution utilities
-import { getModelProvider, DEFAULT_MODEL, normalizeDeprecatedModelId } from '../../config/models.ts';
+import { getModelProvider, DEFAULT_MODEL } from '../../config/models.ts';
 import { homedir } from 'node:os';
 import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -325,14 +325,12 @@ export function resolveSessionConnection(
 ): LlmConnection | null {
   // 1. Session-level connection (locked after first message)
   if (sessionConnection) {
-    const connection = getLlmConnection(sessionConnection);
-    if (connection) return connection;
+    return getLlmConnection(sessionConnection);
   }
 
   // 2. Workspace default
   if (workspaceDefaultConnection) {
-    const connection = getLlmConnection(workspaceDefaultConnection);
-    if (connection) return connection;
+    return getLlmConnection(workspaceDefaultConnection);
   }
 
   // 3. Global default
@@ -359,6 +357,10 @@ export function resolveBackendContext(args: {
     args.sessionConnectionSlug,
     args.workspaceDefaultConnectionSlug
   );
+
+  if (!connection && (args.sessionConnectionSlug || args.workspaceDefaultConnectionSlug || getDefaultLlmConnection())) {
+    throw new Error('The selected LLM connection is unavailable. Select a configured connection before continuing.');
+  }
 
   const provider = connection
     ? providerTypeToAgentProvider(connection.providerType || 'anthropic')
@@ -615,9 +617,9 @@ export function getDefaultAuthType(provider: AgentProvider): LlmAuthType | undef
 /**
  * Resolve the model ID for a given provider, validating against the connection's model list.
  *
- * Each provider has different defaults and validation:
- * - Anthropic: falls back to DEFAULT_MODEL (Opus)
- * - Pi: falls back to empty string (Pi selects model internally)
+ * Explicit models are validated without replacement. For a new session without
+ * a selection, the configured connection default or provider initialization
+ * default applies.
  *
  * @param provider - The agent provider
  * @param managedModel - The model stored on the session (user's choice)
@@ -629,27 +631,20 @@ export function resolveModelForProvider(
   managedModel: string | undefined,
   connection: LlmConnection | null
 ): string {
-  // Cross-provider guard: if the model belongs to a different provider, fall back
-  // to the connection's default. This prevents e.g. sending a Claude model to Pi.
+  // An explicit model is never replaced by a provider/catalog fallback.
   if (managedModel) {
-    managedModel = normalizeDeprecatedModelId(managedModel);
     const modelProvider = getModelProvider(managedModel);
     if (modelProvider && modelProvider !== provider) {
-      managedModel = undefined; // Clear — will fall through to connection default
+      throw new Error(`Selected model "${managedModel}" is incompatible with provider "${provider}".`);
     }
   }
 
-  let connectionDefault = connection?.defaultModel
-    ? normalizeDeprecatedModelId(connection.defaultModel)
-    : undefined;
-
+  const connectionDefault = connection?.defaultModel;
   if (provider === 'pi' && connection?.models?.length) {
     const connectionModelIds = connection.models.map(m => typeof m === 'string' ? m : m.id);
-    if (managedModel && !connectionModelIds.includes(managedModel)) {
-      managedModel = undefined;
-    }
-    if (connectionDefault && !connectionModelIds.includes(connectionDefault)) {
-      connectionDefault = connectionModelIds[0];
+    const selected = managedModel || connectionDefault;
+    if (selected && !connectionModelIds.includes(selected)) {
+      throw new Error(`Selected model "${selected}" is unavailable in the configured connection.`);
     }
   }
 

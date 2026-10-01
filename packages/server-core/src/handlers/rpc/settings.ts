@@ -2,27 +2,21 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { randomUUID } from 'node:crypto'
 import { dirname } from 'path'
 import { RPC_CHANNELS } from '@craft-agent/shared/protocol'
-import { getPreferencesPath, getSessionDraft, setSessionDraft, deleteSessionDraft, getAllSessionDrafts, getWorkspaceByNameOrId, getDefaultThinkingLevel, setDefaultThinkingLevel } from '@craft-agent/shared/config'
+import { getPreferencesPath, getSessionDraft, setSessionDraft, deleteSessionDraft, getAllSessionDrafts, getWorkspaceByNameOrId, getDefaultThinkingLevel, setDefaultThinkingLevel, resolveAgentCostControlPolicy, type AgentCostControlPolicy } from '@craft-agent/shared/config'
 import { isValidThinkingLevel, normalizeThinkingLevel, THINKING_LEVEL_IDS } from '@craft-agent/shared/agent/thinking-levels'
 
 const VALID_THINKING_LEVELS_LIST = THINKING_LEVEL_IDS.map(id => `'${id}'`).join(', ')
 import { getWorkspaceOrThrow } from '@craft-agent/server-core/handlers'
 import {
   assertRequestWorkspace,
+  assertRequestWorkspaceAccess,
   type RequestContext,
   type RpcServer,
 } from '@craft-agent/server-core/transport'
+import { filterDraftsForWorkspace } from './draft-workspace-filter'
 import type { HandlerDeps } from '../handler-deps'
 import { requestClientOpenFileDialog } from '@craft-agent/server-core/transport'
 import { isValidWorkingDirectory } from '../../utils/path-validation'
-import { getLlmConnections } from '@craft-agent/shared/config/storage'
-import {
-  ALL_ROUTING_SENSITIVITIES,
-  simulateRoutingPolicy,
-  validateRoutingPolicy,
-  type RoutingPolicy,
-  type RoutingPolicyContext,
-} from '@craft-agent/shared/config/routing-policy'
 import {
   createDefaultWorkspaceGovernance,
   parseWorkspaceGovernanceProfile,
@@ -73,7 +67,6 @@ export const HANDLED_CHANNELS = [
   RPC_CHANNELS.workspace.SETTINGS_GET,
   RPC_CHANNELS.workspace.SETTINGS_UPDATE,
   RPC_CHANNELS.workspace.GOVERNANCE_UPDATE,
-  RPC_CHANNELS.workspace.ROUTING_SIMULATE,
   RPC_CHANNELS.workspace.REMOTE_SUPERVISION_GRANT,
   RPC_CHANNELS.workspace.REMOTE_SUPERVISION_REVOKE,
   RPC_CHANNELS.preferences.READ,
@@ -114,6 +107,11 @@ export const HANDLED_CHANNELS = [
 ] as const
 
 export function registerSettingsHandlers(server: RpcServer, deps: HandlerDeps): void {
+  const defaultThinkingLevelStore = deps.defaultThinkingLevelStore ?? {
+    get: getDefaultThinkingLevel,
+    set: setDefaultThinkingLevel,
+  }
+
   const assertSessionAccess = async (context: RequestContext, sessionId: string): Promise<void> => {
     const session = await deps.sessionManager.getSession(sessionId)
     if (!session) throw new Error(`Session not found: ${sessionId}`)
@@ -189,14 +187,14 @@ export function registerSettingsHandlers(server: RpcServer, deps: HandlerDeps): 
   // ============================================================
 
   server.handle(RPC_CHANNELS.settings.GET_DEFAULT_THINKING_LEVEL, async () => {
-    return getDefaultThinkingLevel()
+    return defaultThinkingLevelStore.get()
   })
 
   server.handle(RPC_CHANNELS.settings.SET_DEFAULT_THINKING_LEVEL, async (_ctx, level: string) => {
     if (!isValidThinkingLevel(level)) {
       throw new Error(`Invalid thinking level: ${level}. Valid values: ${VALID_THINKING_LEVELS_LIST}`)
     }
-    const success = setDefaultThinkingLevel(level)
+    const success = defaultThinkingLevelStore.set(level)
     if (!success) {
       throw new Error('Failed to persist default thinking level')
     }
@@ -264,13 +262,14 @@ export function registerSettingsHandlers(server: RpcServer, deps: HandlerDeps): 
       name: config.name,
       model: config.defaults?.model,
       permissionMode: config.defaults?.permissionMode,
+      externalActionPolicy: config.defaults?.externalActionPolicy ?? 'confirm',
       cyclablePermissionModes: config.defaults?.cyclablePermissionModes,
       thinkingLevel: normalizeThinkingLevel(config.defaults?.thinkingLevel),
       workingDirectory: config.defaults?.workingDirectory,
       localMcpEnabled: config.localMcpServers?.enabled ?? true,
       defaultLlmConnection: config.defaults?.defaultLlmConnection,
       enabledSourceSlugs: config.defaults?.enabledSourceSlugs ?? [],
-      routingPolicy: config.routingPolicy,
+      costControl: resolveAgentCostControlPolicy(config.costControl),
       governance: governanceDocument.profile,
       governanceRevision: governanceDocument.revision,
       governanceUpdatedAt: governanceDocument.updatedAt,
@@ -350,31 +349,6 @@ export function registerSettingsHandlers(server: RpcServer, deps: HandlerDeps): 
     },
   )
 
-  // Explain the current persisted policy without starting a provider, checking a
-  // credential, or writing any workspace/session state.
-  server.handle(RPC_CHANNELS.workspace.ROUTING_SIMULATE, async (ctx, workspaceId: string, context: RoutingPolicyContext = {}) => {
-    await authorizeWorkspaceAction(ctx, workspaceId, 'policy.read')
-    const workspace = getWorkspaceOrThrow(workspaceId)
-    const { loadWorkspaceConfig } = await import('@craft-agent/shared/workspaces')
-    const config = loadWorkspaceConfig(workspace.rootPath)
-    if (!config) throw new Error(`Failed to load workspace config: ${workspaceId}`)
-
-    if (context.sensitivity && !ALL_ROUTING_SENSITIVITIES.includes(context.sensitivity)) {
-      throw new Error(`Invalid routing sensitivity: ${context.sensitivity}`)
-    }
-    const sanitizeStrings = (value: unknown): string[] | undefined => Array.isArray(value)
-      ? value.filter((item): item is string => typeof item === 'string')
-      : undefined
-    const safeContext: RoutingPolicyContext = {
-      sensitivity: context.sensitivity,
-      requestedConnectionSlug: typeof context.requestedConnectionSlug === 'string' ? context.requestedConnectionSlug : undefined,
-      tags: sanitizeStrings(context.tags),
-      sourceSlugs: sanitizeStrings(context.sourceSlugs),
-    }
-    const connections = getLlmConnections().map(({ slug, providerType }) => ({ slug, providerType }))
-    return simulateRoutingPolicy(config.routingPolicy, connections, safeContext)
-  })
-
   // Update a workspace setting
   server.handle(RPC_CHANNELS.workspace.SETTINGS_UPDATE, async (ctx, workspaceId: string, key: string, value: unknown) => {
     await authorizeWorkspaceAction(ctx, workspaceId, 'policy.update')
@@ -384,7 +358,7 @@ export function registerSettingsHandlers(server: RpcServer, deps: HandlerDeps): 
       : value
 
     // Validate key is a known workspace setting
-    const validKeys = ['name', 'model', 'enabledSourceSlugs', 'permissionMode', 'cyclablePermissionModes', 'thinkingLevel', 'workingDirectory', 'localMcpEnabled', 'defaultLlmConnection', 'routingPolicy']
+    const validKeys = ['name', 'model', 'enabledSourceSlugs', 'permissionMode', 'externalActionPolicy', 'cyclablePermissionModes', 'thinkingLevel', 'workingDirectory', 'localMcpEnabled', 'defaultLlmConnection', 'costControl']
     if (!validKeys.includes(key)) {
       throw new Error(`Invalid workspace setting key: ${key}. Valid keys: ${validKeys.join(', ')}`)
     }
@@ -397,12 +371,17 @@ export function registerSettingsHandlers(server: RpcServer, deps: HandlerDeps): 
       }
     }
 
-    if (key === 'routingPolicy' && normalizedValue !== undefined && normalizedValue !== null) {
-      const knownSlugs = getLlmConnections().map(connection => connection.slug)
-      const validation = validateRoutingPolicy(normalizedValue as RoutingPolicy, knownSlugs)
-      if (!validation.valid) {
-        throw new Error(validation.errors.join('; '))
+    if (key === 'costControl' && normalizedValue !== undefined && normalizedValue !== null) {
+      if (typeof normalizedValue !== 'object' || Array.isArray(normalizedValue)) {
+        throw new Error('costControl must be a JSON object')
       }
+      // Resolve once at the trust boundary so invalid numeric values are bounded
+      // before the policy can reach a live session.
+      resolveAgentCostControlPolicy(normalizedValue as AgentCostControlPolicy)
+    }
+
+    if (key === 'externalActionPolicy' && !['confirm', 'allow-in-execute'].includes(String(normalizedValue))) {
+      throw new Error('externalActionPolicy must be "confirm" or "allow-in-execute"')
     }
 
     if (key === 'workingDirectory' && normalizedValue !== undefined && normalizedValue !== null) {
@@ -421,10 +400,10 @@ export function registerSettingsHandlers(server: RpcServer, deps: HandlerDeps): 
     // Handle 'name' specially - it's a top-level config property, not in defaults
     if (key === 'name') {
       config.name = String(normalizedValue).trim()
-    } else if (key === 'routingPolicy') {
-      config.routingPolicy = normalizedValue === undefined || normalizedValue === null
+    } else if (key === 'costControl') {
+      config.costControl = normalizedValue === undefined || normalizedValue === null
         ? undefined
-        : normalizedValue as RoutingPolicy
+        : resolveAgentCostControlPolicy(normalizedValue as AgentCostControlPolicy)
     } else if (key === 'localMcpEnabled') {
       // Store in localMcpServers.enabled (top-level, not in defaults)
       config.localMcpServers = config.localMcpServers || { enabled: true }
@@ -437,6 +416,12 @@ export function registerSettingsHandlers(server: RpcServer, deps: HandlerDeps): 
 
     // Save the config
     saveWorkspaceConfig(workspace.rootPath, config)
+    if (key === 'externalActionPolicy') {
+      await deps.sessionManager.refreshWorkspaceExternalActionPolicy(
+        workspaceId,
+        normalizedValue as 'confirm' | 'allow-in-execute',
+      )
+    }
     deps.platform.logger.info(`Workspace setting updated: ${key} = ${JSON.stringify(normalizedValue)}`)
   })
 
@@ -490,17 +475,15 @@ export function registerSettingsHandlers(server: RpcServer, deps: HandlerDeps): 
 
   // Get all drafts (for loading on app start)
   server.handle(RPC_CHANNELS.drafts.GET_ALL, async (ctx) => {
+    const workspaceId = ctx.workspaceId
+    if (!workspaceId) return {}
+    assertRequestWorkspaceAccess(ctx, workspaceId)
     const drafts = getAllSessionDrafts()
-    if (ctx.allowedWorkspaceIds === '*') return drafts
-
-    const allowedDrafts: typeof drafts = {}
-    await Promise.all(Object.entries(drafts).map(async ([sessionId, draft]) => {
-      const session = await deps.sessionManager.getSession(sessionId)
-      if (session && ctx.allowedWorkspaceIds.includes(session.workspaceId)) {
-        allowedDrafts[sessionId] = draft
-      }
-    }))
-    return allowedDrafts
+    return filterDraftsForWorkspace(
+      drafts,
+      workspaceId,
+      async (sessionId) => (await deps.sessionManager.getSession(sessionId))?.workspaceId ?? null,
+    )
   })
 
   // ============================================================

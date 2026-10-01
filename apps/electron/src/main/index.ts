@@ -12,6 +12,7 @@ import {
   getDefaultDeepLinkScheme,
   resolveAppChannel,
 } from './app-channel'
+import { configurePlatformWebAuthn } from './webauthn'
 
 const APP_CHANNEL = resolveAppChannel(app.isPackaged)
 const IS_DEVELOPMENT_CHANNEL = APP_CHANNEL === 'development'
@@ -96,7 +97,7 @@ import { SessionManager, setSessionPlatform, setSessionRuntimeHooks } from '@cra
 import { registerAllRpcHandlers } from './handlers/index'
 import { registerCoreRpcHandlers, cleanupSessionFileWatchForClient } from '@craft-agent/server-core/handlers/rpc'
 import type { PlatformServices } from '../runtime/platform'
-import { createElectronPlatform } from './platform'
+import { createElectronPlatform, resolveElectronRuntimeAppRoot } from './platform'
 import type { HandlerDeps } from './handlers/handler-deps'
 import { bootstrapServer, releaseServerLock } from '@craft-agent/server-core/bootstrap'
 import { createMessagingBootstrap, type MessagingBootstrapHandle } from '@craft-agent/messaging-gateway'
@@ -107,7 +108,14 @@ import { createApplicationMenu } from './menu'
 import { WindowManager } from './window-manager'
 import { loadWindowState, saveWindowState } from './window-state'
 import { CONFIG_DIR, getWorkspaces, getWorkspaceByNameOrId, loadStoredConfig, addWorkspace, saveConfig } from '@craft-agent/shared/config'
-import { getDefaultWorkspacesDir } from '@craft-agent/shared/workspaces'
+import {
+  isLoopbackHost,
+  remoteServerNeedsRestart,
+  resolveAllowedSessionCookieOrigins,
+  resolveRemoteServerUrls,
+  resolveSecureRemoteHost,
+} from './remote-access-security'
+import { getDefaultWorkspacesDir, loadWorkspaceConfig } from '@craft-agent/shared/workspaces'
 import { initializeDocs } from '@craft-agent/shared/docs'
 import { initializeReleaseNotes } from '@craft-agent/shared/release-notes'
 import { validateBundle, type SessionBundle } from '@craft-agent/shared/sessions'
@@ -125,9 +133,16 @@ import { setPerfEnabled, enableDebug } from '@craft-agent/shared/utils'
 import { registerPiModelResolver } from '@craft-agent/shared/config'
 import { getPiModelsForAuthProvider, getAllPiModels } from '@craft-agent/shared/config'
 import { initNotificationService, initBadgeIcon, initInstanceBadge, updateBadgeCount } from './notifications'
-import { setAutoUpdateEventSink, isUpdating, setBeforeUpdateQuitHook } from './auto-update'
+import {
+  isUpdating,
+  setAutoUpdateEventSink,
+  setBeforeUpdateQuitHook,
+  startAutomaticUpdateChecks,
+  stopAutomaticUpdateChecks,
+} from './auto-update'
 import type { EventSink } from '@craft-agent/server-core/transport'
 import { validateGitBashPath, checkVCRedistInstalled } from '@craft-agent/server-core/services'
+import { createLocalRpcEndpoint } from '../transport/local-rpc-endpoint'
 import {
   createWebuiHandler,
   nodeHttpAdapter,
@@ -154,6 +169,8 @@ if (isDebugMode) {
   setPerfEnabled(true)
 }
 
+const runtimeAppRoot = resolveElectronRuntimeAppRoot(app)
+
 // Bundle CLI tools: resolve platform-specific uv binary and wrapper scripts.
 // These are available to all agent Bash sessions via CRAFT_UV, CRAFT_SCRIPTS env vars
 // and PATH prepend. uv auto-downloads Python 3.12 on first use (~5s, then cached).
@@ -175,7 +192,7 @@ if (isDebugMode) {
   // Runtime resolver hints for shared session tools
   process.env.CRAFT_IS_PACKAGED = app.isPackaged ? '1' : '0'
   process.env.CRAFT_RESOURCES_BASE = resourcesBase
-  process.env.CRAFT_APP_ROOT = app.isPackaged ? app.getAppPath() : process.cwd()
+  process.env.CRAFT_APP_ROOT = runtimeAppRoot
 
   process.env.CRAFT_UV = bundledUvExists ? uvBinary : (fallbackUv ?? uvBinary)
 
@@ -187,10 +204,10 @@ if (isDebugMode) {
 
   process.env.CRAFT_SCRIPTS = scriptsDir
   process.env.CRAFT_COMMANDS_ENTRY = app.isPackaged
-    ? join(app.getAppPath(), 'packages', 'craft-agents-commands', 'src', 'main.ts')
+    ? join(runtimeAppRoot, 'packages', 'craft-agents-commands', 'src', 'main.ts')
     : join(process.cwd(), 'packages', 'craft-agents-commands', 'src', 'main.ts')
   process.env.CRAFT_CLI_ENTRY = app.isPackaged
-    ? join(app.getAppPath(), 'packages', 'craft-cli', 'src', 'cli.ts')
+    ? join(runtimeAppRoot, 'packages', 'craft-cli', 'src', 'cli.ts')
     : join(process.cwd(), 'packages', 'craft-cli', 'src', 'cli.ts')
   process.env.CRAFT_COMMANDS_DOC_PATH = app.isPackaged
     ? join(resourcesBase, 'resources', 'docs', 'craft-cli.md')
@@ -419,14 +436,24 @@ app.whenReady().then(async () => {
   // Export packaged state as env var so logger.ts (and headless Bun) don't need 'electron'
   process.env.CRAFT_IS_PACKAGED = app.isPackaged ? 'true' : 'false'
 
+  const webAuthnConfiguration = configurePlatformWebAuthn(app, {
+    platform: process.platform,
+    channel: APP_CHANNEL,
+  })
+  if (webAuthnConfiguration.enabled) {
+    mainLog.info('[webauthn] Touch ID platform authenticator enabled')
+  } else if (webAuthnConfiguration.reason === 'configuration-failed') {
+    mainLog.warn('[webauthn] Touch ID platform authenticator configuration failed', webAuthnConfiguration.error)
+  }
+
   // Register bundled assets root so all seeding functions can find their files
   // (docs, permissions, themes, tool-icons resolve via getBundledAssetsDir)
-  setBundledAssetsRoot(__dirname)
+  setBundledAssetsRoot(app.isPackaged ? runtimeAppRoot : __dirname)
 
   // Initialize backend runtime bootstrapping (Codex vendor root, Claude SDK runtime paths).
   initializeBackendHostRuntime({
     hostRuntime: {
-      appRootPath: app.isPackaged ? app.getAppPath() : process.cwd(),
+      appRootPath: runtimeAppRoot,
       resourcesPath: process.resourcesPath,
       isPackaged: app.isPackaged,
     },
@@ -434,7 +461,7 @@ app.whenReady().then(async () => {
 
   // Register PowerShell validator root so it can find the bundled parser script
   // (Windows only: validates PowerShell commands in Explore mode using AST analysis)
-  setPowerShellValidatorRoot(join(__dirname, 'resources'))
+  setPowerShellValidatorRoot(join(app.isPackaged ? runtimeAppRoot : __dirname, 'resources'))
 
   // Initialize bundled docs
   initializeDocs()
@@ -534,6 +561,14 @@ app.whenReady().then(async () => {
       nativeTheme,
       logger: log,
       isDebugMode: IS_DEVELOPMENT_CHANNEL || isDebugMode,
+      buildCommit: process.env.ROBB_BUILD_COMMIT,
+      buildChannel: APP_CHANNEL,
+      buildDirty: process.env.ROBB_BUILD_DIRTY === 'true'
+        ? true
+        : process.env.ROBB_BUILD_DIRTY === 'false'
+          ? false
+          : undefined,
+      runtimeAppRoot,
       getLogFilePath,
       captureError: (err) => Sentry.captureException(err),
     })
@@ -639,15 +674,33 @@ app.whenReady().then(async () => {
       const resolveClientId = (wcId: number) => clientMap.get(wcId)
 
       // Read embedded server config (Server settings page)
-      const { getServerConfig } = await import('@craft-agent/shared/config')
-      const embeddedServerConfig = getServerConfig()
+      const {
+        getServerConfig,
+        normalizeServerConfigPublicUrls,
+      } = await import('@craft-agent/shared/config')
+      const persistedEmbeddedServerConfig = getServerConfig()
+      let embeddedServerConfig = persistedEmbeddedServerConfig
+      try {
+        embeddedServerConfig = normalizeServerConfigPublicUrls(persistedEmbeddedServerConfig)
+      } catch {
+        // A manually edited or corrupted public endpoint must never be trusted
+        // at startup. Keep the local app available and require the owner to
+        // correct the persisted settings before Remote can start again.
+        embeddedServerConfig = {
+          ...persistedEmbeddedServerConfig,
+          enabled: false,
+          publicWebuiUrl: undefined,
+          publicWsUrl: undefined,
+        }
+        mainLog.error('[server-mode] Invalid public Remote URL configuration; Remote access is disabled')
+      }
       const serverModeEnabled = embeddedServerConfig.enabled && !isClientOnly
 
       // Derive host/port/token from server config (or env overrides)
       const serverToken = serverModeEnabled && embeddedServerConfig.token
         ? embeddedServerConfig.token
         : randomUUID()
-      const rpcHost = process.env.CRAFT_RPC_HOST
+      let rpcHost = process.env.CRAFT_RPC_HOST
         ?? (serverModeEnabled ? '0.0.0.0' : '127.0.0.1')
       const rpcPort = process.env.CRAFT_RPC_PORT
         ? parseInt(process.env.CRAFT_RPC_PORT, 10)
@@ -666,6 +719,26 @@ app.whenReady().then(async () => {
           mainLog.error('[server-mode] Failed to load TLS certificates:', err)
         }
       }
+
+      const hasPublicReverseProxy = Boolean(
+        embeddedServerConfig.publicWebuiUrl && embeddedServerConfig.publicWsUrl,
+      )
+      const hasSecureBrowserTransport = Boolean(tls) || hasPublicReverseProxy
+
+      const secureHost = resolveSecureRemoteHost(rpcHost, Boolean(tls))
+      if (secureHost.networkBindRejected) {
+        if (hasPublicReverseProxy) {
+          mainLog.info(
+            '[server-mode] TLS terminates at the configured reverse proxy; restricting its plaintext upstream to 127.0.0.1.',
+          )
+        } else {
+          mainLog.error(
+            '[server-mode] TLS is unavailable; refusing the network bind and falling back to 127.0.0.1. ' +
+            'Configure a certificate and private key, then restart to enable Remote access.'
+          )
+        }
+      }
+      rpcHost = secureHost.host
 
       if (serverModeEnabled) {
         mainLog.info(`[server-mode] Enabled — binding ${rpcHost}:${rpcPort}${tls ? ' (TLS)' : ''}`)
@@ -688,7 +761,10 @@ app.whenReady().then(async () => {
         embeddedWebuiHandler = createWebuiHandler({
           webuiDir,
           secret: serverToken,
-          secureCookies: tls ? true : false,
+          secureCookies: hasSecureBrowserTransport,
+          publicWebuiUrl: embeddedServerConfig.publicWebuiUrl,
+          publicWsUrl: embeddedServerConfig.publicWsUrl,
+          remoteAuthMode: embeddedServerConfig.remoteAuthMode,
           wsProtocol: tls ? 'wss' : 'ws',
           wsPort: rpcPort,
           hostLabel: hostname(),
@@ -700,7 +776,11 @@ app.whenReady().then(async () => {
             .map((workspace) => workspace.id),
           onRemoteDeviceRevoked: (deviceId) => disconnectRemoteDevice?.(deviceId),
         })
-        webuiNodeHandler = nodeHttpAdapter(embeddedWebuiHandler.fetch)
+        webuiNodeHandler = nodeHttpAdapter(embeddedWebuiHandler.fetch, {
+          onError: (context) => {
+            mainLog.error('[server-mode] Remote mobile UI request failed', context)
+          },
+        })
         mainLog.info(`[server-mode] Remote mobile UI enabled from ${webuiDir}`)
       } else if (serverModeEnabled) {
         mainLog.error(`[server-mode] Remote mobile UI assets are missing from ${webuiDir}`)
@@ -712,7 +792,7 @@ app.whenReady().then(async () => {
         rpcHost,
         rpcPort,
         tls,
-        validateSessionCookie: embeddedWebuiHandler
+        validateSessionCookie: embeddedWebuiHandler && hasSecureBrowserTransport
           ? async (cookieHeader) => {
               const remoteSession = await validateSession(cookieHeader, serverToken)
               if (!remoteSession) return false
@@ -740,6 +820,9 @@ app.whenReady().then(async () => {
               }
             }
           : undefined,
+        allowedSessionCookieOrigins: resolveAllowedSessionCookieOrigins(
+          embeddedServerConfig.publicWebuiUrl,
+        ),
         authorizeRequest: embeddedWebuiHandler ? authorizeWebuiRpcRequest : undefined,
         httpHandler: webuiNodeHandler,
         bundledAssetsRoot: __dirname,
@@ -842,6 +925,17 @@ app.whenReady().then(async () => {
 
       // Capture module-level references for before-quit cleanup and deep-link handlers
       sessionManager = instance.sessionManager
+      browserPaneManager?.setPermissionAutonomyResolver(({ sessionId, workspaceId }) => {
+        const permissionMode = sessionManager?.getSessionPermissionModeState(sessionId)?.permissionMode
+        const workspace = getWorkspaceByNameOrId(workspaceId)
+        const workspaceConfig = workspace ? loadWorkspaceConfig(workspace.rootPath) : null
+
+        if (!permissionMode || !workspaceConfig) return null
+        return {
+          permissionMode,
+          externalActionPolicy: workspaceConfig.defaults?.externalActionPolicy,
+        }
+      })
       oauthFlowStore = instance.oauthFlowStore
       moduleSink = instance.wsServer.push.bind(instance.wsServer)
       moduleClientResolver = resolveClientId
@@ -1038,6 +1132,9 @@ app.whenReady().then(async () => {
       ipcMain.on('__get-ws-port', (e) => {
         e.returnValue = instance.port
       })
+      ipcMain.on('__get-ws-endpoint', (e) => {
+        e.returnValue = createLocalRpcEndpoint(instance.port, Boolean(tls))
+      })
       ipcMain.on('__get-ws-token', (e) => {
         e.returnValue = instance.token
       })
@@ -1053,8 +1150,14 @@ app.whenReady().then(async () => {
         host: rpcHost,
         port: instance.port,
         tls: !!tls,
+        tlsCertPath: tls ? embeddedServerConfig.tlsCertPath : undefined,
+        tlsKeyPath: tls ? embeddedServerConfig.tlsKeyPath : undefined,
         token: serverToken,
         enabled: serverModeEnabled,
+        publicWebuiUrl: embeddedServerConfig.publicWebuiUrl,
+        publicWsUrl: embeddedServerConfig.publicWsUrl,
+        tunnelProvider: embeddedServerConfig.tunnelProvider,
+        remoteAuthMode: embeddedServerConfig.remoteAuthMode,
       }
 
       disconnectRemoteDevice = (deviceId) => {
@@ -1072,10 +1175,11 @@ app.whenReady().then(async () => {
         return '127.0.0.1'
       }
 
-      const getWebUrl = (): string => {
-        const protocol = runningServerState.tls ? 'https' : 'http'
-        return `${protocol}://${getDisplayHost()}:${runningServerState.port}`
-      }
+      const getRunningRemoteUrls = () => resolveRemoteServerUrls(
+        runningServerState,
+        getDisplayHost(),
+        Boolean(embeddedWebuiHandler),
+      )
 
       instance.wsServer.handle(RPC_CHANNELS.settings.GET_SERVER_CONFIG, async () => {
         const { getServerConfig: getConfig } = await import('@craft-agent/shared/config')
@@ -1084,7 +1188,7 @@ app.whenReady().then(async () => {
 
       instance.wsServer.handle(RPC_CHANNELS.settings.SET_SERVER_CONFIG, async (_ctx: unknown, config: unknown) => {
         const { setServerConfig: setConfig } = await import('@craft-agent/shared/config')
-        const cfg = config as import('@craft-agent/shared/config/server-config').ServerConfig
+        const cfg = config as import('@craft-agent/shared/config').ServerConfig
         // Validate port range
         if (cfg.port < 1024 || cfg.port > 65535) {
           throw new Error(`Port must be between 1024 and 65535, got ${cfg.port}`)
@@ -1102,28 +1206,19 @@ app.whenReady().then(async () => {
       instance.wsServer.handle(RPC_CHANNELS.settings.GET_SERVER_STATUS, async () => {
         const { getServerConfig: getConfig } = await import('@craft-agent/shared/config')
         const saved = getConfig()
-        const protocol = runningServerState.tls ? 'wss' : 'ws'
-
-        // Determine display host (LAN IP if bound to 0.0.0.0)
-        const displayHost = getDisplayHost()
-
         // Only compare port/tls/token when at least one side has server mode enabled.
         // When both are disabled, the running port is random — comparing it to the
         // saved default (9100) would always produce a false "restart required" banner.
-        const needsRestart = saved.enabled !== runningServerState.enabled
-          || ((saved.enabled || runningServerState.enabled) && (
-            saved.port !== runningServerState.port
-            || (!!saved.tlsCertPath) !== runningServerState.tls
-            || (saved.token ?? '') !== runningServerState.token
-          ))
+        const needsRestart = remoteServerNeedsRestart(saved, runningServerState)
+        const publicUrls = getRunningRemoteUrls()
 
         return {
           running: true,
           host: runningServerState.host,
           port: runningServerState.port,
-          tls: runningServerState.tls,
-          url: `${protocol}://${displayHost}:${runningServerState.port}`,
-          webUrl: embeddedWebuiHandler ? getWebUrl() : undefined,
+          tls: hasSecureBrowserTransport,
+          url: publicUrls.url,
+          webUrl: publicUrls.webUrl,
           token: runningServerState.token,
           needsRestart,
           insecureWarning: isInsecureBind,
@@ -1134,7 +1229,14 @@ app.whenReady().then(async () => {
         if (!serverModeEnabled || !embeddedWebuiHandler) {
           throw new Error('Enable Remote access and restart Robb Agents before pairing a phone')
         }
-        return embeddedWebuiHandler.createRemotePairing(getWebUrl(), hostname())
+        if (!hasSecureBrowserTransport) {
+          throw new Error('Configure TLS or an HTTPS/WSS reverse proxy, then restart Robb Agents before pairing a phone')
+        }
+        const publicWebUrl = getRunningRemoteUrls().webUrl
+        if (!publicWebUrl) {
+          throw new Error('Remote Web UI is unavailable')
+        }
+        return embeddedWebuiHandler.createRemotePairing(publicWebUrl, hostname())
       })
 
       instance.wsServer.handle(RPC_CHANNELS.settings.LIST_REMOTE_DEVICES, async () => {
@@ -1146,11 +1248,10 @@ app.whenReady().then(async () => {
         return embeddedWebuiHandler.revokeRemoteDevice(deviceId)
       })
 
-      // TLS enforcement — warn when server mode binds to a network address without TLS
-      // Mirrors the hard guard in packages/server/src/index.ts but warns instead of blocking,
-      // since the user explicitly enabled server mode via UI (may be on a trusted LAN).
+      // Defensive status guard. Startup has already forced an insecure network
+      // bind back to loopback, so this should remain false in normal operation.
       const isInsecureBind = serverModeEnabled && !tls
-        && !['127.0.0.1', 'localhost', '::1'].includes(rpcHost)
+        && !isLoopbackHost(rpcHost)
       if (isInsecureBind) {
         mainLog.warn(
           '[server-mode] WARNING: Listening on a network address without TLS. ' +
@@ -1223,8 +1324,8 @@ app.whenReady().then(async () => {
       mainLog.warn('Failed to set Sentry context tags:', err)
     }
 
-    // Register the update bridge without making a network request. Production
-    // checks and downloads are initiated exclusively by the Settings button.
+    // Register the update bridge, then schedule bounded availability checks in
+    // the main process. Downloads and installs always require explicit consent.
     // Development builds are rejected by the updater itself.
     if (moduleSink) setAutoUpdateEventSink(moduleSink)
     // Snapshot multi-window state BEFORE quitAndInstall. electron-updater
@@ -1232,9 +1333,10 @@ app.whenReady().then(async () => {
     // before-quit firing; saving from before-quit alone would overwrite
     // window-state.json with an empty array.
     setBeforeUpdateQuitHook(() => captureAndSaveWindowState('pre-update'))
+    startAutomaticUpdateChecks()
     mainLog.info(
       APP_CHANNEL === 'production'
-        ? '[auto-update] Stable updates are available only from the Settings button'
+        ? '[auto-update] Stable update checks enabled; downloads require confirmation'
         : '[auto-update] Disabled for the development channel',
     )
 
@@ -1315,6 +1417,7 @@ app.on('before-quit', async (event) => {
   // Avoid re-entry when we call app.exit()
   if (isQuitting) return
   isQuitting = true
+  stopAutomaticUpdateChecks()
 
   // Ensure Cmd+Q/app quit bypasses layered window close interception (Cmd+W behavior).
   windowManager?.setAppQuitting(true)
@@ -1358,7 +1461,7 @@ app.on('before-quit', async (event) => {
       mainLog.error('Failed to flush sessions:', error)
     }
     // Clean up SessionManager resources (file watchers, timers, etc.)
-    sessionManager.cleanup()
+    await sessionManager.cleanup()
 
     // Clean up browser pane instances
     if (browserPaneManager) {
@@ -1414,6 +1517,12 @@ process.on('uncaughtException', (error) => {
 })
 
 process.on('unhandledRejection', (reason, promise) => {
-  mainLog.error('Unhandled rejection at:', promise, 'reason:', reason)
-  Sentry.captureException(reason instanceof Error ? reason : new Error(String(reason)))
+  const error = reason instanceof Error ? reason : new Error(String(reason))
+  mainLog.error('Unhandled rejection:', {
+    name: error.name,
+    message: error.message,
+    stack: error.stack,
+    promise: String(promise),
+  })
+  Sentry.captureException(error)
 })
