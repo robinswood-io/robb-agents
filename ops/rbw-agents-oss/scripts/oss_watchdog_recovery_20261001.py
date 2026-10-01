@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Scoped, archive-backed recovery. Never deploy/restart infrastructure."""
 from __future__ import annotations
-import argparse, asyncio, hashlib, json, sys
+import argparse, ast, asyncio, hashlib, json, sys
 from datetime import datetime,timezone
 from pathlib import Path
 ROOT=Path('/srv/rbw-agents-oss')
@@ -79,6 +79,36 @@ def prepare():
         proof_path.write_text(json.dumps(proof,ensure_ascii=False,indent=2)+'\n')
         print(json.dumps({'ok':True,'phase':'prepared','scope':sorted(SPECS),'proof':str(proof_path)}))
 
+def export_classifications():
+    """Keep tenant-specific labels out of public source; preserve reviewed rules."""
+    path=ROOT/'config/registry/oss-business-gate-classification-policy.json'
+    source=ROOT/'scripts/oss_agent_business_gate_classifier.py'
+    with ConfigMutation('oss-watchdog-classification-export-20261001') as mut:
+        if path.exists():
+            existing=mut.load_json(path)
+            if existing.get('schemaVersion')!='oss-business-gate-classification-policy-v1' or not existing.get('expectedBusinessGates'):
+                raise ValueError('existing_classification_policy_invalid')
+            print(json.dumps({'ok':True,'alreadyExported':True,'rows':len(existing['expectedBusinessGates'])}))
+            return
+        raw=source.read_bytes()
+        digest=hashlib.sha256(raw).hexdigest()
+        if digest!='b64dd3373a0d78a0d789160866e7d191de351205392f4b0c696c98c819a2df2e':
+            raise ValueError('classification_export_source_changed')
+        tree=ast.parse(raw)
+        rules=None
+        for node in tree.body:
+            if isinstance(node,ast.Assign) and any(isinstance(t,ast.Name) and t.id=='EXPECTED_BUSINESS_GATES' for t in node.targets):
+                rules=ast.literal_eval(node.value)
+        if not isinstance(rules,dict) or not rules or not all(isinstance(v,dict) and all(v.get(k) for k in ('gateType','owner','reason')) for v in rules.values()):
+            raise ValueError('classification_export_invalid')
+        mut.write_json(path,{'schemaVersion':'oss-business-gate-classification-policy-v1',
+                             'generatedAt':datetime.now(timezone.utc).isoformat(),
+                             'sourceSha256':digest,'expectedBusinessGates':rules,
+                             'updatedBy':'oss-watchdog-recovery-20261001'})
+        proof={'ok':True,'rows':len(rules),'config':str(path),'sourceSha256':digest,'backups':mut.backups}
+        (ROOT/'logs/oss-watchdog-recovery-20261001-classification-export.json').write_text(json.dumps(proof,indent=2)+'\n')
+        print(json.dumps(proof))
+
 async def resume():
     from temporalio.client import Client
     proof_path=ROOT/'logs/oss-watchdog-recovery-20261001-native-proof.json'
@@ -112,7 +142,8 @@ async def resume():
 
 if __name__=='__main__':
     sys.path.insert(0,str(ROOT/'packages'))
-    parser=argparse.ArgumentParser();parser.add_argument('phase',choices=['prepare','resume'])
+    parser=argparse.ArgumentParser();parser.add_argument('phase',choices=['prepare','resume','export-classifications'])
     args=parser.parse_args()
     if args.phase=='prepare':prepare()
+    elif args.phase=='export-classifications':export_classifications()
     else:asyncio.run(resume())

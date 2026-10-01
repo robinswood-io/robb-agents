@@ -12,7 +12,7 @@ def funcs(file,names,constants=()):
  tree=ast.parse((SCRIPTS/file).read_text())
  nodes=[n for n in tree.body if isinstance(n,(ast.FunctionDef,ast.AsyncFunctionDef)) and n.name in names or
         isinstance(n,ast.Assign) and any(isinstance(x,ast.Name) and x.id in constants for x in n.targets)]
- scope={'Any':Any,'Path':Path,'str':str,'hashlib':__import__('hashlib')}
+ scope={'Any':Any,'Path':Path,'str':str,'hashlib':__import__('hashlib'),'json':json}
  exec(compile(ast.Module(body=nodes,type_ignores=[]),file,'exec'),scope)
  return scope
 
@@ -36,7 +36,17 @@ class RecoveryTests(unittest.TestCase):
   self.assertEqual(f({'id':'traid-onchain-liquidation-shadow-monitor','reportStatus':'blocked',
                     '_bucket':'technicalReportFailures'})['classification'],'technical_defect')
   self.assertEqual(f({'id':'traid-onchain-liquidation-shadow-monitor','reportStatus':'blocked',
-                    '_bucket':'businessGates'})['classification'],'expected_business_gate')
+                    '_bucket':'businessGates'}, {'traid-onchain-liquidation-shadow-monitor':{'gateType':'safety_gate','owner':'domain_owner','reason':'domain readiness remains blocked'}})['classification'],'expected_business_gate')
+ def test_private_classification_policy_fails_closed(self):
+  scope=funcs('oss_agent_business_gate_classifier.py',['read_json','load_classification_policy'])
+  f=scope['load_classification_policy']
+  with tempfile.TemporaryDirectory() as t:
+   path=Path(t)/'rules.json'
+   with self.assertRaises(ValueError):f(path)
+   path.write_text(json.dumps({'schemaVersion':'oss-business-gate-classification-policy-v1','expectedBusinessGates':{'monitor':{'gateType':'business','owner':'domain','reason':'reviewed gate'}}}))
+   self.assertEqual(f(path)['monitor']['owner'],'domain')
+   path.write_text(json.dumps({'schemaVersion':'oss-business-gate-classification-policy-v1','expectedBusinessGates':{'monitor':{'owner':'domain'}}}))
+   with self.assertRaises(ValueError):f(path)
  def test_safety_negations_and_mutations(self):
   f=funcs('oss_runtime_warning_processor.py',['side_effects','is_safe_refresh'])['is_safe_refresh']
   policy={'explicitAllowIds':['safe'],'safeRiskClasses':['observability'],
