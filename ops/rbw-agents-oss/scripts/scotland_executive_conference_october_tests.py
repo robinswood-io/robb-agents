@@ -193,6 +193,71 @@ class CampaignTests(unittest.TestCase):
         self.assertEqual(a['audienceContacts'],300)
         self.assertEqual(g.send_calls,1)
         self.assertIn('paced_run_cap_reached',a['decisions'][1]['blockingReasons'])
+    def pacing_audience(self):
+        self.c['limits'].update(hourlyTouches=3,minimumSendIntervalSeconds=1200,maxRunTouches=1)
+        self.c['items']=[self.item|{'id':str(n),'domain':f'company{n}.co.uk','email':f'alex@company{n}.co.uk'} for n in range(6)]
+        self.write()
+
+    def test_twenty_minute_spacing_survives_a_new_process(self):
+        self.pacing_audience();g=Fake();self.runit(g)
+        blocked=self.runit(g,t=T+timedelta(minutes=19,seconds=59))
+        self.assertEqual(g.send_calls,1)
+        self.assertIn('minimum_send_interval_not_elapsed',blocked['decisions'][1]['blockingReasons'])
+        self.runit(g,t=T+timedelta(minutes=20))
+        self.assertEqual(g.send_calls,2)
+
+    def test_three_in_rolling_hour_and_no_burst_at_clock_hour(self):
+        self.pacing_audience();g=Fake()
+        for n in range(3):self.runit(g,t=T+timedelta(minutes=20*n))
+        blocked=self.runit(g,t=T+timedelta(minutes=59,seconds=59))
+        self.assertEqual(g.send_calls,3)
+        self.assertIn('rolling_hourly_touch_cap_reached',blocked['decisions'][3]['blockingReasons'])
+        self.runit(g,t=T+timedelta(minutes=60))
+        self.assertEqual(g.send_calls,4)
+
+    def test_unknown_reservation_consumes_hourly_capacity(self):
+        self.pacing_audience();g=Fake(uncertain=True);self.runit(g)
+        db=m.database(self.root)
+        p=m.pacing(db,self.c['limits'],T+timedelta(minutes=1));db.close()
+        self.assertEqual(p['hourlyTouchesUsed'],1)
+        self.assertIn('minimum_send_interval_not_elapsed',p['blockingReasons'])
+        self.assertEqual(g.send_calls,1)
+
+    def test_spacing_uses_gmail_effect_time_after_a_slow_send(self):
+        self.pacing_audience();g=Fake();self.runit(g)
+        db=m.database(self.root)
+        row=db.execute('SELECT checks FROM touches').fetchone()
+        checks=json.loads(row['checks']);checks['gmailSentAt']=m.stamp(T+timedelta(minutes=1))
+        db.execute('UPDATE touches SET checks=?',(json.dumps(checks),));db.commit();db.close()
+        blocked=self.runit(g,t=T+timedelta(minutes=20))
+        self.assertEqual(g.send_calls,1)
+        self.assertIn('minimum_send_interval_not_elapsed',blocked['decisions'][1]['blockingReasons'])
+        self.runit(g,t=T+timedelta(minutes=21));self.assertEqual(g.send_calls,2)
+
+    def test_future_reservation_cannot_bypass_pacing(self):
+        self.pacing_audience();g=Fake();self.runit(g)
+        db=m.database(self.root)
+        p=m.pacing(db,self.c['limits'],T-timedelta(seconds=1));db.close()
+        self.assertEqual(p['hourlyTouchesUsed'],1)
+        self.assertGreater(p['waitSeconds'],1200)
+
+    def test_hourly_and_spacing_limits_fail_closed(self):
+        for limits in [{'hourlyTouches':4,'minimumSendIntervalSeconds':1200},{'hourlyTouches':3,'minimumSendIntervalSeconds':1199},{'hourlyTouches':True,'minimumSendIntervalSeconds':1200},{'hourlyTouches':3},{'minimumSendIntervalSeconds':1200}]:
+            with self.subTest(limits=limits):
+                c=copy.deepcopy(self.c);c['limits'].update(limits)
+                c['authorization']['scopeSha256']=m.digest(m.signed_scope(c))
+                with self.assertRaises(AssertionError):m.verify_contract(c)
+
+    def test_regular_pacing_does_not_raise_the_daily_cap(self):
+        self.pacing_audience();self.c['limits']['dailyTouches']=2;self.write();g=Fake()
+        self.runit(g);self.runit(g,t=T+timedelta(minutes=20))
+        blocked=self.runit(g,t=T+timedelta(minutes=40))
+        self.assertEqual(g.send_calls,2)
+        self.assertIn('touch_cap_reached',blocked['decisions'][2]['blockingReasons'])
+        self.assertEqual(blocked['hourlyTouchCap'],3)
+        self.assertEqual(blocked['minimumSendIntervalSeconds'],1200)
+        self.assertEqual(blocked['dailyTouchesUsed'],2)
+
     def test_london_start_is_exactly_nine_am(self):
         g=Fake();self.runit(g,t=datetime(2026,10,1,7,59,tzinfo=timezone.utc))
         self.assertEqual(g.send_calls,0)

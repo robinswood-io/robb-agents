@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Bounded Scottish executive conference campaign. No advertising or CRM mutation."""
 from __future__ import annotations
-import argparse, base64, fcntl, hashlib, html, json, os, random, re, sqlite3, sys
+import argparse, base64, fcntl, hashlib, html, json, os, random, re, sqlite3, sys, time
 from datetime import datetime, timedelta, timezone
 from email.message import EmailMessage
 from email.utils import getaddresses
@@ -62,11 +62,31 @@ def verify_contract(c):
     require(len({x['id'] for x in c['items']}) == len(c['items']), 'duplicate_item_id')
     require(len({x['domain'] for x in c['items']}) <= c['limits']['maxCompanies'])
     require(0 < c['limits'].get('maxRunTouches', 10) <= 10)
+    pacing_keys = ['hourlyTouches', 'minimumSendIntervalSeconds']
+    if any(k in c['limits'] for k in pacing_keys):
+        require(all(k in c['limits'] for k in pacing_keys), 'incomplete_pacing_limits')
+        require(type(c['limits']['hourlyTouches']) is int and 0 < c['limits']['hourlyTouches'] <= 3, 'unsafe_hourly_touch_limit')
+        require(type(c['limits']['minimumSendIntervalSeconds']) is int and c['limits']['minimumSendIntervalSeconds'] >= 1200, 'unsafe_minimum_send_interval')
     require(c['limits']['firstOutboundDate'] == '2026-10-01')
     require(c['limits']['lastInitialDate'] <= '2026-10-08' and c['limits']['lastOutboundDate'] <= '2026-10-13')
     require(c['limits']['maxFollowups'] == 1)
     require(c['paidAdsAllowed'] is False and c['crmMutationAllowed'] is False)
     require(c['activation'] in ['prepared', 'active', 'paused', 'complete'])
+
+def pacing(db, limits, t):
+    # Every durable reservation consumes capacity, including unresolved sends.
+    stamps = []
+    for row in db.execute('SELECT created,checks FROM touches'):
+        verified_at = json.loads(row['checks'] or '{}').get('gmailSentAt', row['created'])
+        stamps.append(max(dt(row['created']),dt(verified_at)))
+    hourly = sum(x > t - timedelta(hours=1) for x in stamps)
+    remaining = max(0, (max(stamps) + timedelta(seconds=limits.get('minimumSendIntervalSeconds', 0)) - t).total_seconds()) if stamps else 0
+    reasons = []
+    if 'hourlyTouches' in limits and hourly >= limits['hourlyTouches']:
+        reasons.append('rolling_hourly_touch_cap_reached')
+    if 'minimumSendIntervalSeconds' in limits and remaining > 0:
+        reasons.append('minimum_send_interval_not_elapsed')
+    return {'hourlyTouchesUsed':hourly, 'waitSeconds':remaining, 'blockingReasons':reasons}
 
 def fresh(value, t, days):
     try:
@@ -262,6 +282,7 @@ def learn(db, t):
     return {'arms':result,'winner':winner,'allocation':'balanced' if not winner else '75_percent_winner_25_percent_exploration','reward':'one_qualified_interest_per_company','probabilityABeatsB':probability_a,'minMaturedCompaniesPerArm':8,'opensUsed':False,'automaticBudgetOrAudienceChanges':False}
 
 def run(root=ROOT, gateway=None, apply=False, t=None, suppression_path=GLOBAL_SUPPRESSION):
+    realtime = t is None
     t = t or now()
     c = read(root / 'campaign-contract.json')
     verify_contract(c)
@@ -288,6 +309,7 @@ def run(root=ROOT, gateway=None, apply=False, t=None, suppression_path=GLOBAL_SU
                 item = next(x for x in c['items'] if x['id'] == row['item'])
                 ok,m,checks = verify_effect(g,matches[0]['id'],item,json.loads(row['draft']),row['operation'],row['expected'],row['thread_id'])
                 if ok:
+                    checks['gmailSentAt'] = stamp(datetime.fromtimestamp(int(m['internalDate'])/1000,timezone.utc))
                     db.execute("UPDATE touches SET state='sent_verified',gmail_id=?,thread_id=?,checks=? WHERE item=? AND step=?", (m['id'],m['threadId'],json.dumps(checks),row['item'],row['step']))
                     db.commit()
         verified_initials=db.execute("SELECT * FROM touches WHERE step='initial' AND state='sent_verified'").fetchall()
@@ -323,6 +345,13 @@ def run(root=ROOT, gateway=None, apply=False, t=None, suppression_path=GLOBAL_SU
                         db.execute("INSERT OR IGNORE INTO replies VALUES(?,?,?,?,?)",(m['id'],item['id'],'delivery_failure',stamp(t),text[:600]))
                         add_suppression(item['email'],'delivery_failure',m['id'])
             db.commit()
+    if realtime:
+        t = now()
+        # Absorb small scheduler/network jitter without turning a tick into a burst.
+        wait = pacing(db, c['limits'], t)['waitSeconds']
+        if 0 < wait <= 30:
+            time.sleep(wait)
+            t = now()
     learning = learn(db,t)
     danger = db.execute("SELECT count(*) FROM replies WHERE kind IN ('complaint','delivery_failure')").fetchone()[0]
     unknown = db.execute("SELECT count(*) FROM touches WHERE state!='sent_verified'").fetchone()[0]
@@ -365,6 +394,7 @@ def run(root=ROOT, gateway=None, apply=False, t=None, suppression_path=GLOBAL_SU
             reasons.append('campaign_paused_negative_or_unknown_effect')
         if sent_this_run >= c['limits'].get('maxRunTouches',10):
             reasons.append('paced_run_cap_reached')
+        reasons.extend(pacing(db,c['limits'],t)['blockingReasons'])
         if daily>=c['limits']['dailyTouches'] or weekly>=c['limits']['weeklyTouches']:
             reasons.append('touch_cap_reached')
         if learning['winner'] and sum(arm_counts.values())%4!=3 and step=='initial':
@@ -392,6 +422,8 @@ def run(root=ROOT, gateway=None, apply=False, t=None, suppression_path=GLOBAL_SU
                     db.execute("UPDATE touches SET gmail_id=?,thread_id=? WHERE item=? AND step=?",(sent['id'],sent['threadId'],item['id'],step))
                     db.commit()
                     ok,m,checks=verify_effect(g,sent['id'],item,draft,operation,expected,thread)
+                    if ok:
+                        checks['gmailSentAt'] = stamp(datetime.fromtimestamp(int(m['internalDate'])/1000,timezone.utc))
                     db.execute("UPDATE touches SET state=?,checks=? WHERE item=? AND step=?",('sent_verified' if ok else 'sent_unverified',json.dumps(checks),item['id'],step))
                     db.commit()
                     row.update(status='sent_verified' if ok else 'sent_unverified',gmailMessageId=sent['id'],gmailThreadId=sent['threadId'])
@@ -404,6 +436,7 @@ def run(root=ROOT, gateway=None, apply=False, t=None, suppression_path=GLOBAL_SU
         decision.append(row)
     counts={s:sum(x['status']==s for x in decision) for s in sorted({x['status'] for x in decision})}
     report={'generatedAt':stamp(t),'ok':not danger and not unknown,'capabilityId':c['campaignId'],'campaignId':c['campaignId'],'status':'active' if c['activation']=='active' and not danger and not unknown else 'prepared_or_paused','externalSendsThisRun':counts.get('sent_verified',0),'verifiedSendsTotal':db.execute("SELECT count(*) FROM touches WHERE state='sent_verified'").fetchone()[0],'qualifiedCompanies':db.execute("SELECT count(DISTINCT item) FROM replies WHERE kind='qualified_interest'").fetchone()[0],'counts':counts,'decisions':decision,'learning':learning,'summary':f'Scottish conference: {len(c["items"])} audience contacts, {counts.get("sent_verified",0)} verified sends this run; qualified responses drive learning','blockingReasons':(['unknown_gmail_effect'] if unknown else [])+(['complaint_or_delivery_failure'] if danger else []),'authorizationScopeSha256':c['authorization']['scopeSha256'],'simulation':not apply,'sender':SENDER,'audienceContacts':len(c['items']),'audienceCompanies':len({x['domain'] for x in c['items']}),'qualifiedAudienceContacts':sum(not eligible(x,proofs.get(x['email']),t) for x in c['items']),'qualifiedAudienceCompanies':len({x['domain'] for x in c['items'] if not eligible(x,proofs.get(x['email']),t)}),'dailyTouchCap':c['limits']['dailyTouches'],'weeklyTouchCap':c['limits']['weeklyTouches'],'nextBusinessWindow':'2026-10-01T09:00:00+01:00' if local.date().isoformat()<'2026-10-01' else None}
+    report.update(hourlyTouchCap=c['limits'].get('hourlyTouches'), minimumSendIntervalSeconds=c['limits'].get('minimumSendIntervalSeconds'), hourlyTouchesUsed=pacing(db,c['limits'],t)['hourlyTouchesUsed'], dailyTouchesUsed=daily, weeklyTouchesUsed=weekly)
     save(root/'campaign-last.json',report)
     save(root/'qualified-leads.json',{'generatedAt':stamp(t),'items':[dict(x, contact=next(i for i in c['items'] if i['id']==x['item'])) for x in db.execute("SELECT * FROM replies WHERE kind='qualified_interest'")]})
     db.close()
