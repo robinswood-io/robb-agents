@@ -195,13 +195,17 @@ def qualify_item(original,pages):
  for page in pages:
   text=page['text']
   if re.search(r'\b(?:'+re.escape(item['company'])+r')\s+(?:group\s+)?(?:limited|ltd|plc)\b|company (?:registration )?(?:number|no\.)\s*(?:SC[0-9]{6}|[0-9]{8})|registered in scotland no[:. ]*SC[0-9]{6}',text,re.I):legal=page
-  pos=text.lower().find(item['contactName'].lower())
-  if pos>=0:
-   excerpt=text[max(0,pos-180):pos+len(item['contactName'])+250]
-   aliases={'Chief Executive Officer':'CEO|chief executive','Managing Director':'managing director','Chief Financial Officer':'CFO|chief financial','Chief Operating Officer':'COO|chief operating','Chief Technology Officer':'CTO|chief technology|chief technical','Chief Information Officer':'CIO|chief information','Chief Marketing Officer':'CMO|chief marketing'}
-   if re.search(r'\b(?:'+aliases.get(item['role'],re.escape(item['role']))+r')\b',excerpt,re.I):
-    if re.search(r'\b(?:former|retired|previous|resigned)\b',excerpt,re.I):contradiction=True
-    else:role_page=page;item['roleEvidenceExcerpt']=excerpt[:400]
+  aliases={'Chief Executive Officer':'CEO|chief executive(?: officer)?','Managing Director':'managing director','Chief Financial Officer':'CFO|chief financial(?: officer)?','Chief Operating Officer':'COO|chief operating(?: officer)?','Chief Technology Officer':'CTO|chief technology officer|chief technical officer','Chief Information Officer':'CIO|chief information(?: officer)?','Chief Marketing Officer':'CMO|chief marketing(?: officer)?'}
+  title=aliases.get(item['role'],re.escape(item['role']))
+  # Only the title attached after this person's name is evidence. Nearby cards
+  # and biography references to other executives cannot qualify this recipient.
+  prefix=r'^[\s,:;–—\-()|&]*(?:(?:group|global|joint|co-founder|founder|and|is|our|the|serves|as)[\s,:;–—\-()|&]+){0,6}'
+  for name in re.finditer(r'\b'+re.escape(item['contactName'])+r'\b',text,re.I):
+   tail=text[name.end():name.end()+150]
+   if re.search(prefix+r'(?:former|retired|previous)\s+(?:'+title+r')\b',tail,re.I):contradiction=True
+   elif re.search(prefix+r'(?:'+title+r')\b',tail,re.I):
+    role_page=page;item['roleEvidenceExcerpt']=text[max(0,name.start()-30):name.end()+250][:400]
+
  if legal and role_page and not contradiction:
   item.update(corporateType='limited_company',legalEvidenceUrl=legal['url'],roleEvidenceUrl=role_page['url'],roleCheckedAt=role_page['checkedAt'],qualification=QUALIFIED)
   if item.get('addressSourceType')=='generated':

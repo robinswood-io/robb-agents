@@ -287,6 +287,17 @@ class PublicQualificationTests(unittest.TestCase):
         result=audience.qualify_item(self.item,[self.page|{'text':'Example Scotland Limited. Alex Example, former Chief Executive Officer.'}])
         self.assertNotEqual(result['qualification'],audience.QUALIFIED)
         self.assertIsNone(result['roleCheckedAt'])
+    def test_adjacent_executive_cannot_qualify_a_different_director(self):
+        item=self.item|{'contactName':'Alan Mclean','role':'Managing Director','qualification':'candidate'}
+        page=self.page|{'text':'Example Scotland Limited. Alan Bailey Managing Director – Fabrication Bio > Alan Mclean Contracts & Commercial Director Bio > Alasdair Noble Director'}
+        self.assertNotEqual(audience.qualify_item(item,[page])['qualification'],audience.QUALIFIED)
+    def test_former_role_of_another_person_does_not_reject_current_executive(self):
+        page=self.page|{'text':'Example Scotland Limited. Previous Person former Chief Executive Officer > Alex Example Group Chief Executive Officer.'}
+        self.assertEqual(audience.qualify_item(self.item,[page])['qualification'],audience.QUALIFIED)
+    def test_all_name_occurrences_are_checked_for_attached_role(self):
+        page=self.page|{'text':'Example Scotland Limited. Alex Example Menu Contact > Careers. Executive team: Alex Example Co-Founder & Chief Executive Officer.'}
+        result=audience.qualify_item(self.item|{'qualification':'candidate'},[page])
+        self.assertEqual(result['qualification'],audience.QUALIFIED)
     def test_original_provider_source_type_is_recovered_without_api_calls(self):
         with tempfile.TemporaryDirectory() as directory:
             root=Path(directory)
