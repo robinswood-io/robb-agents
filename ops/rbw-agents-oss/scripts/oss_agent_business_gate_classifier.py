@@ -106,6 +106,13 @@ def classify(row):
     aid=str(row.get('id') or '')
     blocking=[str(x) for x in row.get('reportBlocking') or row.get('runtimeBlocking') or []]
     status=str(row.get('reportStatus') or row.get('runtimeStatus') or '')
+    if (row.get('_bucket') in {'strictReportFailures', 'strictRuntimeFailures',
+                                'technicalReportFailures', 'technicalRuntimeFailures'}
+            or status.lower() in {'technical_failed', 'timeout', 'failed', 'error'}
+            or row.get('reportReadError') or row.get('runtimeReadError')):
+        return {'agentId':aid,'classification':'technical_defect','status':status,
+                'blockingReasons':blocking,'gateType':'technical','owner':'agent_runtime',
+                'reason':'failed technical report/runtime evidence takes precedence over business labels'}
     if aid in EXPECTED_BUSINESS_GATES:
         return {'agentId':aid,'classification':'expected_business_gate','status':status,'blockingReasons':blocking,**EXPECTED_BUSINESS_GATES[aid]}
     hay='\n'.join([status]+blocking).lower()

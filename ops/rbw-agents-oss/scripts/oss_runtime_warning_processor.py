@@ -67,20 +67,39 @@ def side_effects(entry: dict[str, Any]) -> list[str]:
 
 def is_safe_refresh(legacy_id: str, entry: dict[str, Any], policy: dict[str, Any]) -> tuple[bool, list[str]]:
     effects = side_effects(entry)
-    effects_lower = [x.lower().replace('_', '') for x in effects]
-    joined = ' '.join(effects_lower + [str(entry.get('command') or '').lower()])
-    for denied in policy.get('denySideEffectSubstrings') or []:
-        if str(denied).lower().replace('_', '') in joined:
+    # Only exact prohibitions are negated. Combined/unknown claims fail closed.
+    prohibitions = {
+        'no_external_send', 'no_external_outbound_message', 'no_outbound_message',
+        'no_external_api_mutation', 'no_crm_mutation', 'no_finance_mutation',
+        'no_ads_mutation', 'no_client_server_mutation_without_explicit_approval',
+    }
+    positive_effects = [x.lower() for x in effects if x.lower() not in prohibitions]
+    def normalized(value: str) -> str:
+        return value.lower().replace('_', '').replace('-', '').replace(' ', '')
+    joined = normalized(' '.join(positive_effects + [str(entry.get('command') or '')]))
+    denies = list(policy.get('denySideEffectSubstrings') or []) + [
+        'ssh-mutate', 'docker-restart', 'systemctl-restart',
+        'infrastructure_mutation', 'runtime_restart', 'ovh-unblock',
+    ]
+    for denied in denies:
+        if normalized(str(denied)) in joined:
             return False, [f'denied_side_effect:{denied}']
     if legacy_id in set(policy.get('explicitAllowIds') or []):
         return True, ['explicit_allow_id']
     risk = str(entry.get('riskClass') or '')
     if risk and risk in set(policy.get('safeRiskClasses') or []):
         return True, [f'safe_risk_class:{risk}']
-    required = [str(x).lower() for x in (policy.get('requiredSafeSideEffectTokensAny') or [])]
-    if required and effects and any(any(req in eff.lower() for req in required) for eff in effects):
-        return True, ['safe_side_effect_token']
+    # A negative outbound claim alone cannot authorize unrelated side effects.
+    if (effects and positive_effects and all(
+        x.startswith(('filesystem-read:', 'filesystem-write:ops-report',
+                      'filesystem-write:agent-action-queue')) or
+        x in {'writes_report', 'writes_reports', 'writes_governance_report',
+              'writes_internal_reports', 'writes_action_queue'}
+        for x in positive_effects
+    ) and 'no_external_send' in [x.lower() for x in effects]):
+        return True, ['report_only_effects']
     return False, ['not_in_safe_allowlist']
+
 
 def refresh_one(legacy_id: str, entry: dict[str, Any], policy: dict[str, Any]) -> dict[str, Any]:
     payload = {'legacy_id': legacy_id, 'name': entry.get('name') or legacy_id, 'event': {'source': 'oss-runtime-warning-processor', 'generatedAt': now_iso()}}

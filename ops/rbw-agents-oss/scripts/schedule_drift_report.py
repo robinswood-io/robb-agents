@@ -464,6 +464,12 @@ async def run(manifest_path: Path, runs_log_path: Path, control_path: Path, admi
     return report
 
 
+def compact_summary(report: dict) -> dict:
+    """Detailed rows remain in the report artifact, never in workflow history."""
+    return {key: report.get(key) for key in
+            ('ok', 'status', 'summary', 'counts', 'blockingReasons', 'artifacts')}
+
+
 async def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument('--manifest', default=str(DEFAULT_MANIFEST))
@@ -482,7 +488,7 @@ async def main() -> None:
         Path(args.out_json),
         Path(args.out_md),
     )
-    print(json.dumps(report, ensure_ascii=False, indent=2))
+    print(json.dumps(compact_summary(report), ensure_ascii=False))
 
 
 if __name__ == '__main__':

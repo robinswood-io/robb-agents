@@ -74,14 +74,17 @@ def parse_smtp_sockets():
     return rows
 
 def docker_rows():
-    p = run("docker ps -a --format '{{json .}}' 2>/dev/null", timeout=15)
+    command = ("/opt/ia-webdev/bin/rbw-docker-guard docker -- ps -a --format '{{json .}}'"
+               if os.environ.get('RBW_DEV_DIAGNOSTICS') == '1'
+               else "docker ps -a --format '{{json .}}' 2>/dev/null")
+    p = run(command, timeout=15)
     rows = []
     for line in p['stdout'].splitlines():
         try:
             rows.append(json.loads(line))
         except Exception:
             pass
-    issues = []
+    issues = [] if p['ok'] else [{'issue': 'docker_probe_failed', 'status': 'diagnostic_unavailable'}]
     for r in rows:
         status = str(r.get('Status') or '')
         issue = None
@@ -199,6 +202,8 @@ def ssh_command(server: dict[str, Any], remote: str, timeout: int = 60) -> dict[
 
 def probe_server(server: dict[str, Any], policy: dict[str, Any]) -> dict[str, Any]:
     env = 'UNSAFE_PROXY_PORTS=' + shlex.quote(' '.join(map(str, policy.get('unsafePublicProxyPorts') or []))) + ' MAIL_SERVICES=' + shlex.quote(' '.join((policy.get('smtp') or {}).get('mailServices') or [])) + ' '
+    if server.get('alias') == 'dev':
+        env += 'RBW_DEV_DIAGNOSTICS=1 '
     result = ssh_command(server, env + REMOTE_PROBE, timeout=90)
     parsed = None
     if result.get('ok'):
