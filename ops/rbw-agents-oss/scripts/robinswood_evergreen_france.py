@@ -100,6 +100,8 @@ def import_reserves(db,ops=OPS,cfg=Path('/srv/rbw-agents-oss/config')):
   domain=email.split('@')[1];primary=url if url.startswith('https://') and (parse.urlparse(url).hostname or '').removeprefix('www.')==domain.removeprefix('www.') else 'https://'+domain+'/'
   put_candidate(db,{'email':email,'name':x.get('contactName',''),'company':x.get('media',''),'lane':'presse','domain':domain,
    'sourceUrls':[primary],'discoverySource':url,'topic':x.get('angle',''),'fitScore':x.get('fitScore',0),'segment':x.get('segment','')})
+ for c in read(cfg/'robinswood-evergreen-france-primary-seeds.json').get('contacts',[]):
+  if c.get('lane')=='presse' and EMAIL.fullmatch(c.get('email','')) and c.get('domain') and c.get('sourceUrls') and all(owned_domain(u,c['domain']) for u in c['sourceUrls']):put_candidate(db,c)
  for x in read(ops/'robinswood-media-contact-base-2026-enriched.json').get('contacts',[]):
   email=str(x.get('email') or x.get('enrichedEmail') or '').lower()
   if x.get('country')!='FR' or x.get('countryConfidence')=='medium_francophone' or not EMAIL.fullmatch(email):continue
@@ -139,6 +141,16 @@ def fetch(url):
   safe_url(r.url);data=r.read(700001)
   if len(data)>700000:raise ValueError('source_too_large')
   return data.decode('utf-8',errors='replace'),r.url
+def published_emails(data):
+ emails={x.lower() for x in EMAIL.findall(html.unescape(data))}
+ # Decode only mailbox literals published in the site's public HTML template.
+ for token in re.findall(r'data-cfemail=[\"\x27]([0-9a-fA-F]+)',data):
+  if len(token)>512:continue
+  try:
+   value=bytes.fromhex(token);email=bytes(x^value[0] for x in value[1:]).decode('utf-8')
+   if EMAIL.fullmatch(email):emails.add(email.lower())
+  except (ValueError,IndexError,UnicodeDecodeError):pass
+ return emails
 def public_page(url):
  data,final=fetch(url);text=html.unescape(re.sub('<[^>]+>',' ',re.sub(r'<(script|style)\b[^>]*>.*?</\1>',' ',data,flags=re.S|re.I)))
  text=re.sub(r'\s+',' ',text).strip()
@@ -153,7 +165,7 @@ def public_page(url):
  for tag,body in re.findall(r'<(p|li|h[1-6]|td|div)\b[^>]*>(.*?)</\1>',data,re.I|re.S):
   block=re.sub(r'\s+',' ',html.unescape(re.sub('<[^>]+>',' ',body))).strip()
   if 0<len(block)<=260:blocks.append(block)
- return {'url':final,'sha256':hashlib.sha256(data.encode()).hexdigest(),'text':text,'emails':set(EMAIL.findall(html.unescape(data))),'contactLinks':links[:3],'roleBlocks':blocks,'language':next(iter(re.findall(r'<html[^>]*lang=[\"\x27]([^\"\x27]+)',data,re.I)), '')}
+ return {'url':final,'sha256':hashlib.sha256(data.encode()).hexdigest(),'text':text,'emails':published_emails(data),'contactLinks':links[:3],'roleBlocks':blocks,'language':next(iter(re.findall(r'<html[^>]*lang=[\"\x27]([^\"\x27]+)',data,re.I)), '')}
 def cached_delivery(email,t,ops=OPS):
  obj=read(ops/'contact-quality-verification-cache.json')
  v=obj.get('items',{}).get(hashlib.sha256(email.encode()).hexdigest(),{})
@@ -477,15 +489,25 @@ def lane_capacity(db,lane,t,c):
  nday=sum(dt(x['created']).astimezone(ZoneInfo('Europe/Paris')).date()==day for x in effects)
  nweek=sum(dt(x['created']).astimezone(ZoneInfo('Europe/Paris')).date()>=monday for x in effects)
  return nday<daily and nweek<c['lanes'][lane]['weeklyMax'],{'dailyCap':daily,'dailyUsed':nday,'weeklyCap':c['lanes'][lane]['weeklyMax'],'weeklyUsed':nweek,'historicalMetricsReset':False}
+def audience_counts(db,lane,t,c):
+ rows=db.execute('SELECT * FROM candidates WHERE lane=?',(lane,)).fetchall()
+ legacy={r['email'] for r in db.execute('SELECT email FROM legacy')}
+ blocked=suppressed();qualified=[]
+ for r in rows:
+  if r['email'] in legacy or r['email'] in blocked or not r['proof']:continue
+  proof=json.loads(r['proof'])
+  if proof.get('ok') is True and proof.get('checkedAt') and 0<=(t-dt(proof['checkedAt'])).total_seconds()<c['proofMaxAgeDays']*86400:qualified.append(r)
+ contacted={r['email'] for r in db.execute('SELECT email FROM touches')}
+ touched_accounts={r['account'] for r in db.execute('SELECT c.account FROM candidates c JOIN touches t ON c.email=t.email')}
+ return {'reserve':len(rows),'qualified':len(qualified),'readyForInitial':sum(r['email'] not in contacted and r['account'] not in touched_accounts for r in qualified),
+  'historicalContactsExcluded':len(legacy),'laneHistoricalReserveExcluded':sum(r['email'] in legacy for r in rows)}
 def run(lane,apply=False,research_only=False,root=ROOT,c=None,gateway=None,t=None,research_batch=2,maintain=False):
  assert lane in LANES;report_id=IDS[lane]+('-maintenance' if maintain else '');c=c or contract();t=t or now();root.mkdir(parents=True,exist_ok=True)
  with (root/'campaign.lock').open('a') as lock:
   fcntl.flock(lock,fcntl.LOCK_EX);db=db_open(root)
   try:
    import_reserves(db);research_result=research(db,t,research_batch,lane) if research_batch else {}
-   counts={'reserve':db.execute('SELECT count(*) n FROM candidates WHERE lane=?',(lane,)).fetchone()['n'],
-    'qualified':sum(json.loads(r['proof']).get('ok') is True and 0<=(t-dt(json.loads(r['proof'])['checkedAt'])).total_seconds()<c['proofMaxAgeDays']*86400 for r in db.execute('SELECT proof FROM candidates WHERE lane=? AND proof IS NOT NULL',(lane,))),
-    'historicalContactsExcluded':db.execute('SELECT count(*) n FROM legacy').fetchone()['n']}
+   counts=audience_counts(db,lane,t,c)
    status='outside_business_window';sent=0;reply_count=0
    if research_only or maintain:
     if maintain:

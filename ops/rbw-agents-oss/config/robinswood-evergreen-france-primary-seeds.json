@@ -1,0 +1,48 @@
+{
+  "generatedAt": "2026-10-02",
+  "purpose": "Public current editorial mailbox sources for year-round French authority campaign; source does not constitute send eligibility.",
+  "contacts": [
+    {
+      "email": "redaction@alliancy.fr",
+      "name": "Rédaction",
+      "company": "Alliancy",
+      "lane": "presse",
+      "domain": "alliancy.fr",
+      "sourceUrls": [
+        "https://alliancy.fr/pages/contact",
+        "https://alliancy.fr/"
+      ],
+      "topic": "décisions IA et transformation des PME et ETI",
+      "fitScore": 95,
+      "segment": "press_editor"
+    },
+    {
+      "email": "redaction@batiweb.com",
+      "name": "Rédaction",
+      "company": "Batiweb",
+      "lane": "presse",
+      "domain": "batiweb.com",
+      "sourceUrls": [
+        "https://www.batiweb.com/a-propos",
+        "https://www.batiweb.com/"
+      ],
+      "topic": "flux métier et usages IA des entreprises du bâtiment",
+      "fitScore": 85,
+      "segment": "press_editor"
+    },
+    {
+      "email": "redaction@lemondeduchiffre.fr",
+      "name": "Rédaction",
+      "company": "Le Monde du Chiffre",
+      "lane": "presse",
+      "domain": "lemondeduchiffre.fr",
+      "sourceUrls": [
+        "https://www.lemondeduchiffre.fr/nous-contacter.html",
+        "https://www.lemondeduchiffre.fr/"
+      ],
+      "topic": "décisions IA, données et flux des cabinets comptables",
+      "fitScore": 90,
+      "segment": "press_editor"
+    }
+  ]
+}

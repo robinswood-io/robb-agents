@@ -284,4 +284,34 @@ class ProfessionalMandateTests(unittest.TestCase):
     self.assertEqual(engine.reserve_national(db,T,'pme'),0)
    self.assertIn('tranche_effectif_salarie=21%2C22%2C31',request.call_args[0][0]);self.assertEqual(db.execute('select count(*) from candidates').fetchone()[0],0);db.close()
 
+
+class AudienceReportingTests(unittest.TestCase):
+ def test_qualified_historical_hold_is_not_reported_ready(self):
+  with tempfile.TemporaryDirectory() as tmp:
+   db=engine.db_open(Path(tmp));c=engine.contract(Path(__file__).parent.parent/'config/robinswood-evergreen-france.json')
+   item={'email':'alice@fixture.invalid','name':'Alice Martin','company':'Fixture','domain':'fixture.invalid','lane':'presse','sourceUrls':['https://fixture.invalid/']}
+   engine.put_candidate(db,item);db.execute('update candidates set proof=?',(json.dumps({'ok':True,'checkedAt':T.isoformat()}),));db.commit()
+   with patch.object(engine,'suppressed',lambda:set()):
+    self.assertEqual(engine.audience_counts(db,'presse',T,c)['readyForInitial'],1)
+    engine.append_legacy(db,{'email':item['email'],'status':'operator_legacy_hold'});db.commit()
+    report=engine.audience_counts(db,'presse',T,c)
+   self.assertEqual(report['qualified'],0);self.assertEqual(report['readyForInitial'],0);self.assertEqual(report['laneHistoricalReserveExcluded'],1);db.close()
+
+
+class PublishedMailboxTests(unittest.TestCase):
+ def test_public_html_mailbox_encoding_is_exactly_decoded(self):
+  key=0x47;email='redaction@fixture.invalid';token=bytes([key]+[x^key for x in email.encode()]).hex()
+  self.assertEqual(engine.published_emails('<a data-cfemail="'+token+'">email</a>'),{email})
+  self.assertEqual(engine.published_emails('alice&#64;fixture.invalid'),{'alice@fixture.invalid'})
+ def test_malformed_encoding_never_constructs_an_address(self):
+  self.assertEqual(engine.published_emails('<a data-cfemail="0">broken</a><a data-cfemail="00ff">broken</a>'),set())
+ def test_primary_editorial_seed_keeps_legacy_hold(self):
+  with tempfile.TemporaryDirectory() as tmp:
+   root=Path(tmp);cfg=root/'config';cfg.mkdir();ops=root/'campaigns/ops';ops.mkdir(parents=True);db=engine.db_open(root/'state')
+   contact={'email':'redaction@fixture.invalid','name':'Rédaction','company':'Fixture','domain':'fixture.invalid','lane':'presse','sourceUrls':['https://fixture.invalid/contact'],'fitScore':90}
+   (cfg/'robinswood-evergreen-france-primary-seeds.json').write_text(json.dumps({'contacts':[contact]}))
+   engine.append_legacy(db,{'email':contact['email'],'status':'operator_legacy_hold'});db.commit();engine.import_reserves(db,ops,cfg)
+   self.assertEqual(db.execute('select count(*) from candidates').fetchone()[0],1)
+   self.assertEqual(db.execute('select count(*) from legacy').fetchone()[0],1);db.close()
+
 if __name__=='__main__':unittest.main()
