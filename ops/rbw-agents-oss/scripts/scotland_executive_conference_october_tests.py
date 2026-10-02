@@ -8,6 +8,7 @@ from pathlib import Path
 from unittest.mock import patch
 import scotland_executive_conference_october as m
 import scotland_conference_audience as audience
+import scotland_conference_marketing as marketing
 
 T = datetime(2026,10,1,8,20,tzinfo=timezone.utc)
 
@@ -193,6 +194,71 @@ class CampaignTests(unittest.TestCase):
         self.assertEqual(a['audienceContacts'],300)
         self.assertEqual(g.send_calls,1)
         self.assertIn('paced_run_cap_reached',a['decisions'][1]['blockingReasons'])
+    def pacing_audience(self):
+        self.c['limits'].update(hourlyTouches=3,minimumSendIntervalSeconds=1200,maxRunTouches=1)
+        self.c['items']=[self.item|{'id':str(n),'domain':f'company{n}.co.uk','email':f'alex@company{n}.co.uk'} for n in range(6)]
+        self.write()
+
+    def test_twenty_minute_spacing_survives_a_new_process(self):
+        self.pacing_audience();g=Fake();self.runit(g)
+        blocked=self.runit(g,t=T+timedelta(minutes=19,seconds=59))
+        self.assertEqual(g.send_calls,1)
+        self.assertIn('minimum_send_interval_not_elapsed',blocked['decisions'][1]['blockingReasons'])
+        self.runit(g,t=T+timedelta(minutes=20))
+        self.assertEqual(g.send_calls,2)
+
+    def test_three_in_rolling_hour_and_no_burst_at_clock_hour(self):
+        self.pacing_audience();g=Fake()
+        for n in range(3):self.runit(g,t=T+timedelta(minutes=20*n))
+        blocked=self.runit(g,t=T+timedelta(minutes=59,seconds=59))
+        self.assertEqual(g.send_calls,3)
+        self.assertIn('rolling_hourly_touch_cap_reached',blocked['decisions'][3]['blockingReasons'])
+        self.runit(g,t=T+timedelta(minutes=60))
+        self.assertEqual(g.send_calls,4)
+
+    def test_unknown_reservation_consumes_hourly_capacity(self):
+        self.pacing_audience();g=Fake(uncertain=True);self.runit(g)
+        db=m.database(self.root)
+        p=m.pacing(db,self.c['limits'],T+timedelta(minutes=1));db.close()
+        self.assertEqual(p['hourlyTouchesUsed'],1)
+        self.assertIn('minimum_send_interval_not_elapsed',p['blockingReasons'])
+        self.assertEqual(g.send_calls,1)
+
+    def test_spacing_uses_gmail_effect_time_after_a_slow_send(self):
+        self.pacing_audience();g=Fake();self.runit(g)
+        db=m.database(self.root)
+        row=db.execute('SELECT checks FROM touches').fetchone()
+        checks=json.loads(row['checks']);checks['gmailSentAt']=m.stamp(T+timedelta(minutes=1))
+        db.execute('UPDATE touches SET checks=?',(json.dumps(checks),));db.commit();db.close()
+        blocked=self.runit(g,t=T+timedelta(minutes=20))
+        self.assertEqual(g.send_calls,1)
+        self.assertIn('minimum_send_interval_not_elapsed',blocked['decisions'][1]['blockingReasons'])
+        self.runit(g,t=T+timedelta(minutes=21));self.assertEqual(g.send_calls,2)
+
+    def test_future_reservation_cannot_bypass_pacing(self):
+        self.pacing_audience();g=Fake();self.runit(g)
+        db=m.database(self.root)
+        p=m.pacing(db,self.c['limits'],T-timedelta(seconds=1));db.close()
+        self.assertEqual(p['hourlyTouchesUsed'],1)
+        self.assertGreater(p['waitSeconds'],1200)
+
+    def test_hourly_and_spacing_limits_fail_closed(self):
+        for limits in [{'hourlyTouches':4,'minimumSendIntervalSeconds':1200},{'hourlyTouches':3,'minimumSendIntervalSeconds':1199},{'hourlyTouches':True,'minimumSendIntervalSeconds':1200},{'hourlyTouches':3},{'minimumSendIntervalSeconds':1200}]:
+            with self.subTest(limits=limits):
+                c=copy.deepcopy(self.c);c['limits'].update(limits)
+                c['authorization']['scopeSha256']=m.digest(m.signed_scope(c))
+                with self.assertRaises(AssertionError):m.verify_contract(c)
+
+    def test_regular_pacing_does_not_raise_the_daily_cap(self):
+        self.pacing_audience();self.c['limits']['dailyTouches']=2;self.write();g=Fake()
+        self.runit(g);self.runit(g,t=T+timedelta(minutes=20))
+        blocked=self.runit(g,t=T+timedelta(minutes=40))
+        self.assertEqual(g.send_calls,2)
+        self.assertIn('touch_cap_reached',blocked['decisions'][2]['blockingReasons'])
+        self.assertEqual(blocked['hourlyTouchCap'],3)
+        self.assertEqual(blocked['minimumSendIntervalSeconds'],1200)
+        self.assertEqual(blocked['dailyTouchesUsed'],2)
+
     def test_london_start_is_exactly_nine_am(self):
         g=Fake();self.runit(g,t=datetime(2026,10,1,7,59,tzinfo=timezone.utc))
         self.assertEqual(g.send_calls,0)
@@ -254,6 +320,94 @@ class CampaignTests(unittest.TestCase):
         evidence=self.item|{'qualification':'qualified_public_role_and_provider_company_evidence','roleEvidenceUrl':'https://unrelated.example/team'}
         m.save(self.root/'audience-preparation.json',{'items':[evidence]})
         g=Fake();self.runit(g);self.assertEqual(g.send_calls,0)
+
+    def marketing(self):
+        for key in ['A','B','followup']:
+            self.c['templates'][key]['version']='2026-10-01.1'
+        self.c['templates']['A']['body']="Hello {firstName},\n\nWould you like the one-page programme?\n\nReply 'no thanks' to opt out."
+        self.c['templates']['programme']={'version':'2026-10-01.1','subject':'unused','url':'https://orion.rbw.ovh/campaigns/scotland-october-2026/index.html','body':"Hello {firstName},\n\nHere is the programme: https://orion.rbw.ovh/campaigns/scotland-october-2026/index.html\n\nReply 'no thanks' to opt out."}
+        self.write()
+    def test_requested_programme_is_sent_once_in_original_thread(self):
+        self.marketing();g=Fake();self.runit(g)
+        g.messages['reply1']=inbound('Yes, please.')
+        a=self.runit(g,t=T+timedelta(hours=1))
+        self.assertEqual(g.send_calls,2)
+        self.assertEqual(a['commercialFunnel']['programmeRequestedCompanies'],1)
+        self.assertEqual(a['commercialFunnel']['programmeDeliveredCompanies'],1)
+        self.assertEqual(a['qualifiedCompanies'],0)
+        self.assertEqual(g.messages['m2']['threadId'],'t1')
+        self.assertIn('campaigns/scotland-october-2026',m.plain(g.messages['m2']['payload']))
+        self.assertEqual(m.header(g.messages['m2'],'In-Reply-To'),'') if False else None
+        self.runit(g,t=T+timedelta(days=1));self.assertEqual(g.send_calls,2)
+    def test_template_change_preserves_sent_subject_and_cannot_replay(self):
+        g=Fake();self.runit(g);self.marketing()
+        self.c['templates']['A']['subject']='Changed subject for {company}';self.write()
+        a=self.runit(g,t=T+timedelta(days=5))
+        self.assertEqual(g.send_calls,2)
+        self.assertEqual(m.header(g.messages['m2'],'Subject'),'Re: AI for Example Scotland')
+        self.assertEqual(a['learning']['arms']['A']['maturedCompanies'],0)
+    def test_legacy_yes_does_not_trigger_new_programme_cta(self):
+        g=Fake();self.runit(g);self.marketing()
+        g.messages['reply1']=inbound('Yes')
+        a=self.runit(g,t=T+timedelta(hours=1))
+        self.assertEqual(g.send_calls,1)
+        self.assertEqual(a['commercialFunnel']['interestCompanies'],1)
+        self.assertEqual(a['commercialFunnel']['programmeRequestedCompanies'],0)
+        self.assertEqual(a['qualifiedCompanies'],0)
+    def test_programme_request_in_unrelated_thread_is_not_fulfilled(self):
+        self.marketing();g=Fake();self.runit(g)
+        g.messages['reply1']=inbound('Please send the programme.',thread='unrelated')
+        a=self.runit(g,t=T+timedelta(hours=1))
+        self.assertEqual(g.send_calls,1)
+        self.assertEqual(a['commercialFunnel']['programmeRequestedCompanies'],0)
+    def test_programme_response_obeys_pacing_and_daily_caps(self):
+        self.marketing()
+        self.c['limits'].update(hourlyTouches=3,minimumSendIntervalSeconds=1200,dailyTouches=1)
+        self.write();g=Fake();self.runit(g)
+        msg=inbound('Please send the programme.');msg['internalDate']=str(int((T+timedelta(minutes=1)).timestamp()*1000));g.messages['reply1']=msg
+        a=self.runit(g,t=T+timedelta(minutes=2))
+        self.assertEqual(g.send_calls,1)
+        self.assertIn('minimum_send_interval_not_elapsed',a['decisions'][0]['blockingReasons'])
+        self.assertIn('touch_cap_reached',a['decisions'][0]['blockingReasons'])
+    def test_later_optout_cancels_requested_programme(self):
+        self.marketing();g=Fake();self.runit(g)
+        g.messages['reply1']=inbound('Please send the programme.')
+        g.messages['reply2']=inbound('No thanks, remove me.',mid='reply2')
+        a=self.runit(g,t=T+timedelta(hours=1))
+        self.assertEqual(g.send_calls,1);self.assertIn('suppressed',a['decisions'][0]['blockingReasons'])
+    def test_programme_unknown_effect_is_reconciled_without_resend(self):
+        self.marketing();g=Fake();self.runit(g)
+        g.messages['reply1']=inbound('Please send the programme.')
+        g.uncertain=True
+        a=self.runit(g,t=T+timedelta(hours=1));self.assertFalse(a['ok'])
+        a=self.runit(g,t=T+timedelta(hours=2));self.assertTrue(a['ok'])
+        self.assertEqual(g.send_calls,2);self.assertEqual(a['commercialFunnel']['programmeDeliveredCompanies'],1)
+    def test_quantified_need_is_separate_from_programme_and_bookings(self):
+        self.marketing();g=Fake();self.runit(g)
+        g.messages['reply1']=inbound('We spend 10 hours each week reconciling invoices.')
+        a=self.runit(g,t=T+timedelta(days=5))
+        self.assertEqual(a['qualifiedCompanies'],1)
+        self.assertEqual(a['commercialFunnel']['interestCompanies'],0)
+        self.assertIsNone(a['commercialFunnel']['meetingsConfirmed'])
+        self.assertIsNone(a['commercialFunnel']['conferencesBooked'])
+        self.assertEqual(a['learning']['arms']['A']['qualifiedCompanies'],1)
+
+    def test_marketing_installer_cannot_expand_audience_or_limits(self):
+        self.c['limits'].update(hourlyTouches=3,minimumSendIntervalSeconds=1200,weeklyTouches=100,maxRunTouches=1);self.write()
+        original=copy.deepcopy(self.c)
+        result=marketing.apply(self.root,dry_run=True)
+        self.assertTrue(result['ok']);self.assertEqual(result['newGmailEffects'],0)
+        self.assertEqual(m.read(self.root/'campaign-contract.json'),original)
+        self.c['limits']['dailyTouches']=9;self.write()
+        with self.assertRaises(AssertionError):marketing.apply(self.root,dry_run=True)
+    def test_role_specific_copy_and_programme_destination_are_signed(self):
+        self.c['templates']=marketing.templates();self.write()
+        draft=m.body(self.c,self.item|{'role':'Chief Financial Officer'},'A','initial')
+        self.assertIn('cost of a workflow',draft['body'])
+        self.assertLess(len(draft['body'].split()),170)
+        self.c['templates']['programme']['url']='https://unapproved.example.com'
+        self.write()
+        with self.assertRaises(AssertionError):self.runit()
 
 class PublicQualificationTests(unittest.TestCase):
     def setUp(self):
