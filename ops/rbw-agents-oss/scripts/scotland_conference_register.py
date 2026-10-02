@@ -75,7 +75,7 @@ def own_row(rows, key, value):
  if len(matches)!=1:raise RuntimeError('expected_one_registered_campaign_row:'+key)
  return matches[0]
 
-async def update_cadence():
+async def update_cadence(daily40=False):
  import scotland_executive_conference_october as campaign
  campaign_root=campaign.ROOT
  client=await Client.connect('127.0.0.1:57233')
@@ -85,14 +85,19 @@ async def update_cadence():
   original=campaign.read(campaign_root/'campaign-contract.json')
   campaign.verify_contract(original)
   campaign.require(original['activation']=='active','campaign_must_be_active')
-  campaign.require(original['limits']['dailyTouches']==10 and original['limits']['weeklyTouches']==100 and original['limits']['maxRunTouches']==1,'unexpected_existing_campaign_caps')
-  updated=copy.deepcopy(original)
-  updated['limits'].update(hourlyTouches=3,minimumSendIntervalSeconds=1200)
-  scope=campaign.digest(campaign.signed_scope(updated))
-  if scope!=original['authorization']['scopeSha256']:
-   updated['authorization']['cadenceChange']={'source':'human_campaign_delivery_pacing_request_2026-10-01','authorizedAt':STAMP(),'previousScopeSha256':original['authorization']['scopeSha256'],'hourlyTouches':3,'minimumSendIntervalSeconds':1200,'dailyTouchesUnchanged':10,'weeklyTouchesUnchanged':100,'rationale':'Gradual first-day pacing, never a Google-guaranteed safe hourly quota.'}
-   updated['authorization']['scopeSha256']=scope
-  campaign.verify_contract(updated)
+  cron=campaign.DAILY40_CRON if daily40 else CRON
+  if daily40:
+   updated=campaign.daily40_contract(original)
+   scope=updated['authorization']['scopeSha256']
+  else:
+   campaign.require(original['limits']['dailyTouches']==10 and original['limits']['weeklyTouches']==100 and original['limits']['maxRunTouches']==1,'unexpected_existing_campaign_caps')
+   updated=copy.deepcopy(original)
+   updated['limits'].update(hourlyTouches=3,minimumSendIntervalSeconds=1200)
+   scope=campaign.digest(campaign.signed_scope(updated))
+   if scope!=original['authorization']['scopeSha256']:
+    updated['authorization']['cadenceChange']={'source':'human_campaign_delivery_pacing_request_2026-10-01','authorizedAt':STAMP(),'previousScopeSha256':original['authorization']['scopeSha256'],'hourlyTouches':3,'minimumSendIntervalSeconds':1200,'dailyTouchesUnchanged':10,'weeklyTouchesUnchanged':100,'rationale':'Gradual first-day pacing, never a Google-guaranteed safe hourly quota.'}
+    updated['authorization']['scopeSha256']=scope
+   campaign.verify_contract(updated)
   # Backfill actual Gmail effect timestamps before tightening spacing. No mail is sent.
   db=campaign.database(campaign_root)
   pending=db.execute("SELECT count(*) FROM touches WHERE state!='sent_verified'").fetchone()[0]
@@ -127,15 +132,15 @@ async def update_cadence():
      row=own_row(rows,key,value)
      campaign.require(row['timezone']=='Europe/London','unexpected_config_timezone')
      before_others=campaign.digest([x for x in rows if x is not row])
-     row['cron']=CRON
+     row['cron']=cron
      campaign.require(before_others==campaign.digest([x for x in rows if x is not row]),'unrelated_campaign_rows_changed')
      mut.write_json(cfg/rel,obj);changed.append(rel)
     obj=mut.load_json(cfg/'registry/side-effects-policy.json')
     row=own_row(obj['capabilities'],'legacy_id',ID)
     old_others=campaign.digest([x for x in obj['capabilities'] if x is not row])
     row['guardrails']=[x for x in row['guardrails'] if not x.startswith('one Gmail effect per run;')]
-    row['guardrails'].append('one Gmail effect per run; three touches per rolling hour; at least twenty minutes between Gmail effects; ten touches per day; one hundred per week')
-    row['updatedAt']=STAMP();row['updatedBy']=ID+'-human-cadence-2026-10-01'
+    row['guardrails'].append('one Gmail effect per run; six touches per rolling hour; at least ten minutes between Gmail effects; forty touches per day; two hundred per week; weekdays 09:00-12:00 and 14:00-18:00 Europe/London' if daily40 else 'one Gmail effect per run; three touches per rolling hour; at least twenty minutes between Gmail effects; ten touches per day; one hundred per week')
+    row['updatedAt']=STAMP();row['updatedBy']=ID+('-human-daily40-2026-10-02' if daily40 else '-human-cadence-2026-10-01')
     campaign.require(old_others==campaign.digest([x for x in obj['capabilities'] if x is not row]),'unrelated_side_effect_policy_changed')
     mut.write_json(cfg/'registry/side-effects-policy.json',obj);changed.append('registry/side-effects-policy.json')
     for path in (cfg/'agents-v2').rglob('*.json'):mut.backup(path)
@@ -143,13 +148,13 @@ async def update_cadence():
     campaign.require(built['ok'] and valid['ok'],'catalog_validation_failed')
     def change_schedule(update):
      schedule=update.description.schedule
-     schedule.spec=replace(schedule.spec,calendars=[],intervals=[],cron_expressions=[CRON])
+     schedule.spec=replace(schedule.spec,calendars=[],intervals=[],cron_expressions=[cron])
      return ScheduleUpdate(schedule=schedule)
     native_changed=True
     await handle.update(change_schedule)
     final=await handle.describe()
     campaign.require(not final.schedule.state.paused and final.schedule.spec.time_zone_name=='Europe/London','cadence_activation_failed')
-    result={'ok':True,'checkedAt':STAMP(),'scheduleId':SID,'cron':CRON,'timezone':'Europe/London','paused':final.schedule.state.paused,'nextActions':[x.isoformat() for x in final.info.next_action_times[:5]],'limits':updated['limits'],'authorizationScopeSha256':scope,'previousScopeSha256':original['authorization']['scopeSha256'],'alreadyVerifiedGmailEffects':len(verified_rows),'newGmailEffects':0,'contractBackup':str(contract_backup),'configurationBackups':mut.backups,'changedConfigurationFiles':changed,'unrelatedRowsPreserved':True,'catalogValidation':valid,'sourceSha256':{name:hashlib.sha256((ROOT/'scripts'/name).read_bytes()).hexdigest() for name in ['scotland_executive_conference_october.py','scotland_conference_register.py']}}
+    result={'ok':True,'checkedAt':STAMP(),'scheduleId':SID,'cron':cron,'timezone':'Europe/London','paused':final.schedule.state.paused,'nextActions':[x.isoformat() for x in final.info.next_action_times[:5]],'limits':updated['limits'],'authorizationScopeSha256':scope,'previousScopeSha256':original['authorization']['scopeSha256'],'alreadyVerifiedGmailEffects':len(verified_rows),'newGmailEffects':0,'contractBackup':str(contract_backup),'configurationBackups':mut.backups,'changedConfigurationFiles':changed,'unrelatedRowsPreserved':True,'catalogValidation':valid,'sourceSha256':{name:hashlib.sha256((ROOT/'scripts'/name).read_bytes()).hexdigest() for name in ['scotland_executive_conference_october.py','scotland_conference_register.py']}}
     campaign.save(campaign_root/'cadence-activation.json',result)
     return result
    except Exception:
@@ -167,6 +172,6 @@ async def update_cadence():
     raise
 
 if __name__=='__main__':
- ap=argparse.ArgumentParser();group=ap.add_mutually_exclusive_group();group.add_argument('--activate',action='store_true');group.add_argument('--update-cadence',action='store_true');args=ap.parse_args()
- out=asyncio.run(update_cadence()) if args.update_cadence else {'temporal':asyncio.run(temporal(True))} if args.activate else {'registration':register(),'temporal':asyncio.run(temporal())}
+ ap=argparse.ArgumentParser();group=ap.add_mutually_exclusive_group();group.add_argument('--activate',action='store_true');group.add_argument('--update-cadence',action='store_true');group.add_argument('--update-daily40',action='store_true');args=ap.parse_args()
+ out=asyncio.run(update_cadence(daily40=args.update_daily40)) if (args.update_cadence or args.update_daily40) else {'temporal':asyncio.run(temporal(True))} if args.activate else {'registration':register(),'temporal':asyncio.run(temporal())}
  print(json.dumps(out,ensure_ascii=False))

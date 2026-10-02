@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Bounded Scottish executive conference campaign. No advertising or CRM mutation."""
 from __future__ import annotations
-import argparse, base64, fcntl, hashlib, html, json, os, random, re, sqlite3, sys, time
+import argparse, base64, copy, fcntl, hashlib, html, json, os, random, re, sqlite3, sys, time
 from datetime import datetime, timedelta, timezone
 from email.message import EmailMessage
 from email.utils import getaddresses
@@ -15,6 +15,10 @@ GLOBAL_SUPPRESSION = WS / 'campaigns/contact-suppression.json'
 OPS_REPORT = WS / 'campaigns/ops/scotland-executive-conference-october-last.json'
 SENDER = 'thibault@robinswood.io'
 GMAIL = 'https://gmail.googleapis.com/gmail/v1/users/me'
+DAILY40_PROFILE = '2026-10-02.40-split'
+DAILY40_WINDOWS = [['09:00', '12:00'], ['14:00', '18:00']]
+DAILY40_CRON = '*/10 9-11,14-17 * * 1-5'
+
 GENERIC = re.compile(r'^(info|hello|contact|sales|support|admin|press|jobs|office|team|noreply)@', re.I)
 
 def now():
@@ -56,14 +60,32 @@ def verify_contract(c):
     require(c['authorization']['source'] == 'human_campaign_launch_request_2026-09-30')
     require(c['sender'] == SENDER and c['language'] == 'en-GB')
     require(c['event']['start'] == '2026-10-07' and c['event']['end'] == '2026-10-14')
-    require(0 < c['limits']['dailyTouches'] <= 10 and 0 < c['limits']['weeklyTouches'] <= 100)
+    profile = c['limits'].get('cadenceProfile')
+    require(profile in (None, DAILY40_PROFILE), 'unapproved_cadence_profile')
+    if profile == DAILY40_PROFILE:
+        limits = c['limits']
+        expected = {'dailyTouches':40, 'weeklyTouches':200, 'hourlyTouches':6,
+                    'minimumSendIntervalSeconds':600, 'maxRunTouches':1}
+        require(all(type(limits.get(k)) is int and limits[k] == v for k,v in expected.items()), 'unapproved_daily40_caps')
+        require(limits.get('timezone') == 'Europe/London' and limits.get('sendingWindows') == DAILY40_WINDOWS, 'unapproved_daily40_windows')
+        change = c['authorization'].get('dailyScheduleChange', {})
+        require(change.get('source') == 'human_campaign_daily40_split_window_request_2026-10-02', 'daily40_authorization_missing')
+        prior = change.get('previousLimits', {})
+        require(all(prior.get(k) == v for k,v in {'dailyTouches':10, 'weeklyTouches':100,
+                    'hourlyTouches':3, 'minimumSendIntervalSeconds':1200, 'maxRunTouches':1}.items())
+                    and 'cadenceProfile' not in prior and 'sendingWindows' not in prior, 'unapproved_previous_cadence')
+        previous_scope = signed_scope(c) | {'limits':prior}
+        require(digest(previous_scope) == change.get('previousScopeSha256'), 'daily40_prior_scope_mismatch')
+    else:
+        require('sendingWindows' not in c['limits'], 'unapproved_sending_windows')
+        require(0 < c['limits']['dailyTouches'] <= 10 and 0 < c['limits']['weeklyTouches'] <= 100)
     require(0 < c['limits']['maxCompanies'] <= 500 and len(c['items']) <= c['limits'].get('maxContacts', c['limits']['maxCompanies']) <= 500)
     require(len({x['email'] for x in c['items']}) == len(c['items']), 'duplicate_recipient')
     require(len({x['id'] for x in c['items']}) == len(c['items']), 'duplicate_item_id')
     require(len({x['domain'] for x in c['items']}) <= c['limits']['maxCompanies'])
     require(0 < c['limits'].get('maxRunTouches', 10) <= 10)
     pacing_keys = ['hourlyTouches', 'minimumSendIntervalSeconds']
-    if any(k in c['limits'] for k in pacing_keys):
+    if profile is None and any(k in c['limits'] for k in pacing_keys):
         require(all(k in c['limits'] for k in pacing_keys), 'incomplete_pacing_limits')
         require(type(c['limits']['hourlyTouches']) is int and 0 < c['limits']['hourlyTouches'] <= 3, 'unsafe_hourly_touch_limit')
         require(type(c['limits']['minimumSendIntervalSeconds']) is int and c['limits']['minimumSendIntervalSeconds'] >= 1200, 'unsafe_minimum_send_interval')
@@ -118,9 +140,35 @@ def eligible(item, proof, t):
         reasons.append('deliverability_stale_or_unproven')
     return reasons
 
-def window(t):
+def window(t, limits=None):
     local = t.astimezone(ZoneInfo('Europe/London'))
+    if limits and limits.get('cadenceProfile') == DAILY40_PROFILE:
+        minute = local.hour * 60 + local.minute
+        return local.weekday() < 5 and (540 <= minute < 720 or 840 <= minute < 1080)
     return local.weekday() < 5 and 9 <= local.hour < 17
+
+def daily40_contract(original):
+    """Change pacing only; bind unchanged recipients/copy to the previous scope."""
+    verify_contract(original)
+    if original['limits'].get('cadenceProfile') == DAILY40_PROFILE:
+        return copy.deepcopy(original)
+    require(all(original['limits'].get(k) == v for k,v in {
+        'dailyTouches':10, 'weeklyTouches':100, 'hourlyTouches':3,
+        'minimumSendIntervalSeconds':1200, 'maxRunTouches':1}.items()), 'unexpected_existing_campaign_caps')
+    updated = copy.deepcopy(original)
+    updated['limits'].update(dailyTouches=40, weeklyTouches=200, hourlyTouches=6,
+        minimumSendIntervalSeconds=600, maxRunTouches=1, cadenceProfile=DAILY40_PROFILE,
+        timezone='Europe/London', sendingWindows=copy.deepcopy(DAILY40_WINDOWS),
+        hours='09:00-12:00 and 14:00-18:00 Monday-Friday')
+    updated['authorization']['dailyScheduleChange'] = {
+        'source':'human_campaign_daily40_split_window_request_2026-10-02',
+        'authorizedAt':stamp(now()), 'previousScopeSha256':original['authorization']['scopeSha256'],
+        'previousLimits':copy.deepcopy(original['limits']),
+        'humanInstruction':"il faut augmenter à 40 l'envoi journalier de 9h à 12h et de 14h à 18h",
+        'audienceAndCopyUnchanged':True, 'weeklyTouches':200}
+    updated['authorization']['scopeSha256'] = digest(signed_scope(updated))
+    verify_contract(updated)
+    return updated
 
 def role_focus(item):
     role = item.get('role', '').lower()
@@ -433,7 +481,7 @@ def run(root=ROOT, gateway=None, apply=False, t=None, suppression_path=GLOBAL_SU
             reasons.append('initial_window_expired')
         if local.date().isoformat()>c['limits']['lastOutboundDate']:
             reasons.append('campaign_outbound_expired')
-        if not window(t):
+        if not window(t, c['limits']):
             reasons.append('outside_london_business_window')
         if local.date().isoformat()<c['limits']['firstOutboundDate']:
             reasons.append('campaign_not_started')
