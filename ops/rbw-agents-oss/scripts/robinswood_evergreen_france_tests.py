@@ -263,4 +263,25 @@ class PrimaryIdentityRegressionTests(unittest.TestCase):
   for v in ['A','B']:
    d=engine.draft(c,v);self.assertNotIn('Industrial',d['body']);self.assertNotIn('99%',d['body']);self.assertIn('les validations',d['body'])
 
+
+class ProfessionalMandateTests(unittest.TestCase):
+ def page(self,path,block):return {'url':'https://fixture.invalid/'+path,'sha256':'fixture','roleBlocks':[block]}
+ def test_current_company_professional_role_is_valid_without_legal_signatory_match(self):
+  p=self.page('notre-equipe','Alice Martin, Directrice générale')
+  role=engine.primary_mandate([p],'Alice Martin')
+  self.assertEqual(role['qualite'],'directrice generale');self.assertEqual(role['basis'],'primary_company_professional_mandate')
+ def test_old_articles_past_roles_and_unrelated_names_are_rejected(self):
+  for p in [self.page('actualites/notre-equipe','Alice Martin, directrice générale'),self.page('notre-equipe','Ancienne directrice générale Alice Martin'),self.page('notre-equipe','Alice Martin, assistante. Bob Durand, directeur général')]:
+   self.assertIsNone(engine.primary_mandate([p],'Alice Martin'))
+ def test_legal_host_company_cannot_be_candidate_identity(self):
+  pages=[{'text':'Fixture Services RCS Paris 424 281 392. OVH SIREN 424761419.'}]
+  self.assertIn('424281392',engine.primary_sirens(pages))
+  self.assertIsNone(engine.primary_mandate([self.page('mentions-legales','OVH, directeur Pierre Dupont')],'Alice Martin'))
+ def test_national_reserve_query_filters_size_and_keeps_registry_separate(self):
+  with tempfile.TemporaryDirectory() as tmp:
+   db=engine.db_open(Path(tmp))
+   with patch.object(engine,'fetch',return_value=('{"results":[],"total_pages":1}','https://registry.invalid')) as request:
+    self.assertEqual(engine.reserve_national(db,T,'pme'),0)
+   self.assertIn('tranche_effectif_salarie=21%2C22%2C31',request.call_args[0][0]);self.assertEqual(db.execute('select count(*) from candidates').fetchone()[0],0);db.close()
+
 if __name__=='__main__':unittest.main()

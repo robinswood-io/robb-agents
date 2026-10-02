@@ -146,10 +146,14 @@ def public_page(url):
  for link in re.findall(r'href=["\x27]([^"\x27]+)',html.unescape(data)):
   target=parse.urljoin(final,link)
   target=parse.urldefrag(target)[0];path=parse.urlparse(target).path
-  relevant=re.search(r'contact|redaction|rédaction|mentions|presse|gouvernance|direction|(?:^|[-/])equipes?(?:[-/]|$)',path,re.I)
+  relevant=re.search(r'contact|redaction|rédaction|mentions|presse|gouvernance|direction|societe|a-propos|about|company|(?:^|[-/])equipes?(?:[-/]|$)',path,re.I)
   asset=re.search(r'\.(css|js|json|png|jpg|jpeg|svg|woff2?|pdf)$',path,re.I)
   if parse.urlparse(target).hostname==parse.urlparse(final).hostname and relevant and not asset and target not in links:links.append(target)
- return {'url':final,'sha256':hashlib.sha256(data.encode()).hexdigest(),'text':text,'emails':set(EMAIL.findall(html.unescape(data))),'contactLinks':links[:3],'language':next(iter(re.findall(r'<html[^>]*lang=[\"\x27]([^\"\x27]+)',data,re.I)), '')}
+ blocks=[]
+ for tag,body in re.findall(r'<(p|li|h[1-6]|td|div)\b[^>]*>(.*?)</\1>',data,re.I|re.S):
+  block=re.sub(r'\s+',' ',html.unescape(re.sub('<[^>]+>',' ',body))).strip()
+  if 0<len(block)<=260:blocks.append(block)
+ return {'url':final,'sha256':hashlib.sha256(data.encode()).hexdigest(),'text':text,'emails':set(EMAIL.findall(html.unescape(data))),'contactLinks':links[:3],'roleBlocks':blocks,'language':next(iter(re.findall(r'<html[^>]*lang=[\"\x27]([^\"\x27]+)',data,re.I)), '')}
 def cached_delivery(email,t,ops=OPS):
  obj=read(ops/'contact-quality-verification-cache.json')
  v=obj.get('items',{}).get(hashlib.sha256(email.encode()).hexdigest(),{})
@@ -170,6 +174,21 @@ def owned_domain(url,domain):
  host=(parse.urlparse(url).hostname or '').lower().removeprefix('www.')
  domain=domain.lower().removeprefix('www.')
  return host==domain or host.endswith('.'+domain)
+def primary_mandate(pages,name):
+ tokens=norm(name).split()
+ if len(tokens)<2:return None
+ fullname=r'\s+'.join(re.escape(x) for x in tokens)
+ role=r'(?:president(?:e)?|direct(?:eur|rice)(?:\s+general[e]?)?|ceo|chief executive officer|gerant(?:e)?)'
+ pattern=re.compile(r'(?:'+fullname+r'\W{0,12}(?:notre\s+|est\s+|le\s+|la\s+)?(?P<after>'+role+r')|(?P<before>'+role+r')\W{0,12}'+fullname+r')')
+ for p in pages:
+  path=norm(parse.urlparse(p['url']).path)
+  if not re.search(r'societe|a-propos|about|company|groupe|equipe|team|gouvernance|direction|mentions',path) or re.search(r'actualit|news|blog|article|archive|histoire',path):continue
+  for block in p.get('roleBlocks',[]):
+   text=norm(block)
+   if re.search(r'\bancien|\bancienne|\bex-|jusqu|etait|historique',text):continue
+   match=pattern.search(text)
+   if match:return {'qualite':match['after'] or match['before'],'sourceUrl':p['url'],'sourceSha256':p['sha256'],'basis':'primary_company_professional_mandate'}
+ return None
 def primary_sirens(pages):
  values=[]
  for page in pages:
@@ -231,13 +250,14 @@ def refresh_proof(c,t,fetch_page=public_page,get_json=None,ops=OPS):
   lower=EMPLOYEES.get(row.get('tranche_effectif_salarie'),0)
   name=norm(c.get('name','')).split();leaders=row.get('dirigeants',[])
   role=next((x for x in leaders if name and name[-1] in norm(x.get('nom','')).split() and name[0] in norm(x.get('prenoms','')).split() and ROLE.search(x.get('qualite',''))),None)
+  if not role:role=primary_mandate(pages,c.get('name',''))
   matched_domain=c['siren'] in primary_sirens(pages)
   category=row.get('categorie_entreprise');lane='eti' if category=='ETI' else 'pme'
   individual=name and name[0] in text and name[-1] in text
   capacity=bool(individual) and row.get('statut_diffusion')=='O' and category in ['PME','ETI'] and lower>=50 and row.get('etat_administratif')=='A' and not row.get('siege',{}).get('code_pays_etranger') and int(row.get('annee_tranche_effectif_salarie') or 0)>=t.year-3
   proof.update(ok=bool(role and matched_domain and capacity),reason='qualified_registry_and_exact_email' if role and matched_domain and capacity else 'company_identity_capacity_or_mandate_unproven',
    registryUrl=url,registrySha256=digest(row),category=category,lane=lane,employeeLowerBound=lower,employeeYear=row.get('annee_tranche_effectif_salarie'),
-   verifiedRole=role.get('qualite') if role else None,budgetConfirmed=False)
+   verifiedRole=role.get('qualite') if role else None,mandateBasis=role.get('basis','current_registry') if role else None,mandateSource=role.get('sourceUrl',url) if role else None,budgetConfirmed=False)
  return proof
 def research(db,t,batch=4,lane=None):
  rows=db.execute('SELECT * FROM candidates WHERE (checked IS NULL OR checked<?) AND (? IS NULL OR lane=?) AND email NOT IN (SELECT email FROM legacy) ORDER BY checked IS NOT NULL,checked,email LIMIT ?', (stamp(t-timedelta(days=7)),lane,lane,batch)).fetchall()
@@ -251,7 +271,7 @@ def research(db,t,batch=4,lane=None):
 def reserve_national(db,t,lane):
  # INSEE/RNE company reserve is separate from qualified contacts, and includes all France.
  key='registry_page_'+lane;old=db.execute('SELECT value FROM metadata WHERE key=?',(key,)).fetchone();page=int(old['value']) if old else 1
- url='https://recherche-entreprises.api.gouv.fr/search?'+parse.urlencode({'categorie_entreprise':'ETI' if lane=='eti' else 'PME','etat_administratif':'A','statut_diffusion':'O','per_page':25,'page':page})
+ url='https://recherche-entreprises.api.gouv.fr/search?'+parse.urlencode({'categorie_entreprise':'ETI' if lane=='eti' else 'PME','etat_administratif':'A','statut_diffusion':'O','tranche_effectif_salarie':','.join(EMPLOYEES),'per_page':25,'page':page})
  data=json.loads(fetch(url)[0]);added=0
  for r in data.get('results',[]):
   if not str(r.get('nature_juridique','')).startswith(('5','6')) or r.get('statut_diffusion')!='O' or r.get('categorie_entreprise') not in ['PME','ETI'] or not r.get('dirigeants') or EMPLOYEES.get(r.get('tranche_effectif_salarie'),0)<50:continue
