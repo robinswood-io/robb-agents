@@ -36,6 +36,14 @@ def entries():
     'approvedForApply':True,'approvedForExternalSend':not maintenance,'approvalSource':'human_evergreen_campaign_request_2026-10-02'}
    result.append((e,payload,cron,maintenance))
  return result
+def calendar_matches(spec,cron):
+ if spec.end_at is not None or spec.time_zone_name!='Europe/Paris':return False
+ if list(spec.cron_expressions)==[cron]:return True
+ if len(spec.calendars)!=1:return False
+ cal=spec.calendars[0]
+ def values(rs):return {i for r in rs for i in range(r.start,(r.end if r.end is not None else r.start)+1,r.step or 1)}
+ maintenance=cron=='5,35 * * * *'
+ return values(cal.second)=={0} and values(cal.minute)==({5,35} if maintenance else set(range(0,60,10))) and values(cal.hour)==(set(range(24)) if maintenance else set(range(9,12))|set(range(14,18))) and values(cal.day_of_week)==(set(range(7)) if maintenance else set(range(1,6))) and values(cal.day_of_month)==set(range(1,32)) and values(cal.month)==set(range(1,13)) and not cal.year
 def add(rows,row,key):
  existing=[x for x in rows if isinstance(x,dict) and x.get(key)==row[key]]
  if existing:
@@ -59,7 +67,7 @@ async def install():
      prior=None
     if prior:
      action=prior.schedule.action
-     if prior.schedule.spec.time_zone_name!='Europe/Paris' or list(prior.schedule.spec.cron_expressions)!=[cron] or prior.schedule.spec.end_at is not None or getattr(action,'id',None)!='rbw.'+id or getattr(action,'task_queue',None)!='campaigns':raise RuntimeError('existing_schedule_ownership_mismatch:'+sid)
+     if not calendar_matches(prior.schedule.spec,cron) or getattr(action,'id',None)!='rbw.'+id or getattr(action,'task_queue',None)!='campaigns' or getattr(action,'workflow',None)!='RbwAutomationWorkflow' or len(action.args)!=1 or json.loads(action.args[0].data)!=payload:raise RuntimeError('existing_schedule_ownership_mismatch:'+sid)
     else:
      await client.create_schedule(sid,Schedule(action=RecurringAction(RbwAutomationWorkflow.run,payload,id='rbw.'+id,task_queue='campaigns',retry_policy=RetryPolicy(maximum_attempts=1)),spec=spec,state=ScheduleState(paused=True,note='Prepared: human authorized evergreen campaigns 2026-10-02; verification pending')))
     created.append(sid)
@@ -93,7 +101,9 @@ async def install():
     handle=client.get_schedule_handle(sid);await handle.unpause(note='Human request 2026-10-02: evergreen press and France SME/ETI; targeted tests and safety contract verified')
     unpaused.append(sid);d=await handle.describe()
     if d.schedule.state.paused or d.schedule.spec.end_at is not None or d.schedule.spec.time_zone_name!='Europe/Paris':raise RuntimeError('native_schedule_readback_failed')
-    description.append({'id':sid,'paused':d.schedule.state.paused,'cron':list(d.schedule.spec.cron_expressions),'endAt':None,'timezone':d.schedule.spec.time_zone_name,'nextActions':[x.isoformat() for x in d.info.next_action_times[:3]]})
+    native_cron=next(x[2]['cron'] for x in specs if x[2]['schedule_id']==sid)
+    if not calendar_matches(d.schedule.spec,native_cron):raise RuntimeError('native_calendar_mismatch')
+    description.append({'id':sid,'paused':d.schedule.state.paused,'cron':native_cron,'nativeCalendarMatches':True,'endAt':None,'timezone':d.schedule.spec.time_zone_name,'nextActions':[x.isoformat() for x in d.info.next_action_times[:3]]})
    result={'ok':True,'activatedAt':STAMP(),'contractScopeSha256':campaign.contract()['authorization']['scopeSha256'],'schedules':description,'catalogValidation':valid,'counts':built['counts'],'configurationBackups':mut.backups,'externalSendsDuringActivation':0}
    campaign.save(campaign.ROOT/'activation.json',result);return result
   except Exception:
