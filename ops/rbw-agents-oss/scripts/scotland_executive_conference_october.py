@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 from email.message import EmailMessage
 from email.utils import getaddresses
 from pathlib import Path
-from urllib import request, parse
+from urllib import request, parse, error
 from zoneinfo import ZoneInfo
 
 WS = Path('/home/craft/.craft-agent/workspaces/my-workspace-2')
@@ -204,8 +204,23 @@ class Gateway:
         headers = {'Authorization': 'Bearer ' + self.token}
         if data is not None:
             headers['Content-Type'] = 'application/json'
-        with request.urlopen(request.Request(GMAIL + path, data=json.dumps(data).encode() if data is not None else None, headers=headers), timeout=25) as r:
-            return json.load(r)
+        # Only idempotent reads may retry. A Gmail write with an ambiguous
+        # outcome remains reserved in SQLite and is reconciled on the next run.
+        attempts = 3 if data is None else 1
+        for attempt in range(attempts):
+            try:
+                with request.urlopen(request.Request(GMAIL + path, data=json.dumps(data).encode() if data is not None else None, headers=headers), timeout=25) as r:
+                    return json.load(r)
+            except error.HTTPError as exc:
+                if exc.code not in (500, 502, 503, 504) or attempt + 1 >= attempts:
+                    raise
+                retry_after = exc.headers.get('Retry-After', '') if exc.headers else ''
+                # A long or dated server cooldown is left to the next native tick.
+                if retry_after and (not retry_after.isdecimal() or int(retry_after) > 30):
+                    raise
+                delay = max(2 ** (attempt + 1), int(retry_after or 0))
+                exc.close()
+                time.sleep(delay)
 
     def search(self, query):
         return self.call('/messages?' + parse.urlencode({'q': query, 'maxResults': 100})).get('messages', [])
