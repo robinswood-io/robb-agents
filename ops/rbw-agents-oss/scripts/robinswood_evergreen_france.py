@@ -23,7 +23,7 @@ EMPLOYEES={'21':50,'22':100,'31':200,'32':250,'41':500,'42':1000,'51':2000}
 def now():return datetime.now(timezone.utc)
 def stamp(t):return t.isoformat().replace('+00:00','Z')
 def dt(s):return datetime.fromisoformat(s.replace('Z','+00:00'))
-def norm(s):return ''.join(c for c in unicodedata.normalize('NFKD',str(s).lower()) if not unicodedata.combining(c))
+def norm(s):return ''.join(c for c in unicodedata.normalize('NFKD',str(s or '').lower()) if not unicodedata.combining(c))
 def read(p,default=None):
  try:return json.loads(Path(p).read_text())
  except FileNotFoundError:return {} if default is None else default
@@ -37,7 +37,7 @@ def contract(path=POLICY):
  assert c['lanes']=={'presse':{'dailyMax':5,'weeklyMax':20},'pme':{'dailyMax':3,'weeklyMax':10},'eti':{'dailyMax':2,'weeklyMax':10}}
  assert c['canaryDailyMax']==1 and c['maxTouchesWithoutReply']==2
  assert c['windows']==[['09:00','12:00'],['14:00','18:00']] and c['minimumIntervalSeconds']==600
- assert c['proofMaxAgeDays']==7 and c['copyVersion']=='2026-10-02.1'
+ assert c['proofMaxAgeDays']==7 and c['copyVersion']=='2026-10-02.2'
  assert c['autoRecovery']=={'cooldownDays':7,'minimumFreshSmtpContacts':3,'complaintRecoveryAllowed':False,'capAfterRecovery':1}
  return c
 def in_window(t,c):
@@ -145,7 +145,10 @@ def public_page(url):
  links=[]
  for link in re.findall(r'href=["\x27]([^"\x27]+)',html.unescape(data)):
   target=parse.urljoin(final,link)
-  if parse.urlparse(target).hostname==parse.urlparse(final).hostname and re.search(r'contact|equipe|redaction|rédaction|mentions|presse',target,re.I) and target not in links:links.append(target)
+  target=parse.urldefrag(target)[0];path=parse.urlparse(target).path
+  relevant=re.search(r'contact|redaction|rédaction|mentions|presse|gouvernance|direction|(?:^|[-/])equipes?(?:[-/]|$)',path,re.I)
+  asset=re.search(r'\.(css|js|json|png|jpg|jpeg|svg|woff2?|pdf)$',path,re.I)
+  if parse.urlparse(target).hostname==parse.urlparse(final).hostname and relevant and not asset and target not in links:links.append(target)
  return {'url':final,'sha256':hashlib.sha256(data.encode()).hexdigest(),'text':text,'emails':set(EMAIL.findall(html.unescape(data))),'contactLinks':links[:3],'language':next(iter(re.findall(r'<html[^>]*lang=[\"\x27]([^\"\x27]+)',data,re.I)), '')}
 def cached_delivery(email,t,ops=OPS):
  obj=read(ops/'contact-quality-verification-cache.json')
@@ -163,22 +166,41 @@ def delivery_blocker(c,t,ops=OPS):
   if checked and 0<=(t-dt(checked)).total_seconds()<30*86400 and (v.get('result') in ['risky','undeliverable'] or (v.get('accept_all') is True or v.get('acceptAll') is True)):
    return 'recent_adverse_delivery_evidence'
  return None
+def owned_domain(url,domain):
+ host=(parse.urlparse(url).hostname or '').lower().removeprefix('www.')
+ domain=domain.lower().removeprefix('www.')
+ return host==domain or host.endswith('.'+domain)
+def primary_sirens(pages):
+ values=[]
+ for page in pages:
+  for m in re.finditer(r'\b(?:SIREN|SIRET|RCS)\b',page['text'],re.I):
+   tail=page['text'][m.end():m.end()+80]
+   number=re.search(r'(?<!\d)(\d(?:[\s.]*\d){13}|\d(?:[\s.]*\d){8})(?!\d)',tail)
+   if number:
+    digits=re.sub(r'\D','',number[1]);siren=digits[:9]
+    if siren not in values:values.append(siren)
+ return values[:3]
 def refresh_proof(c,t,fetch_page=public_page,get_json=None,ops=OPS):
  if c['lane']!='presse' and transport.GENERIC.match(c['email']):return {'ok':False,'reason':'generic_mailbox_does_not_bind_executive','checkedAt':stamp(t)}
  bad=delivery_blocker(c,t,ops)
  if bad:return {'ok':False,'reason':bad,'checkedAt':stamp(t)}
  pages=[]
  for u in c['sourceUrls'][:3]:
-  if (parse.urlparse(u).hostname or '').removeprefix('www.')!=c['domain'].removeprefix('www.'):continue
-  try:pages.append(fetch_page(u))
+  if not owned_domain(u,c['domain']):continue
+  try:
+   page=fetch_page(u)
+   if owned_domain(page['url'],c['domain']):pages.append(page)
   except Exception:pass
- if c['lane']=='presse' and pages:
+ if pages:
   for u in pages[0].get('contactLinks',[])[:3]:
    if u in {p['url'] for p in pages}:continue
-   try:pages.append(fetch_page(u))
+   if not owned_domain(u,c['domain']):continue
+   try:
+    page=fetch_page(u)
+    if owned_domain(page['url'],c['domain']):pages.append(page)
    except Exception:pass
  if not pages:return {'ok':False,'reason':'primary_sources_unavailable','checkedAt':stamp(t)}
- email=c['email'];literal=any(email in {x.lower() for x in p['emails']} and (parse.urlparse(p['url']).hostname or '').removeprefix('www.')==c['domain'].removeprefix('www.') for p in pages)
+ email=c['email'];literal=any(email in {x.lower() for x in p['emails']} and owned_domain(p['url'],c['domain']) for p in pages)
  if literal:
   try:
    mx=json.loads(fetch('https://dns.google/resolve?'+parse.urlencode({'name':c['domain'],'type':'MX'}))[0])
@@ -194,15 +216,22 @@ def refresh_proof(c,t,fetch_page=public_page,get_json=None,ops=OPS):
   if not french:french=sum(w in text for w in [' les ',' des ',' pour ',' dans ',' une '])>=4
   proof.update(ok=editorial and fit and french,reason='qualified_editorial_primary_source' if editorial and fit and french else 'editorial_role_language_or_business_beat_unproven')
  else:
-  if not c.get('siren'):return {**proof,'ok':False,'reason':'siren_missing'}
-  url='https://recherche-entreprises.api.gouv.fr/search?'+parse.urlencode({'q':c['siren']})
-  try:d=get_json(url) if get_json else json.loads(fetch(url)[0])
-  except Exception:return {**proof,'ok':False,'reason':'registry_unavailable'}
-  row=next((x for x in d.get('results',[]) if x.get('siren')==c['siren']),{})
+  sirens=[c['siren']] if c.get('siren') else primary_sirens(pages)
+  if not sirens:return {**proof,'ok':False,'reason':'siren_missing'}
+  words=[w for w in norm(c.get('company','')).split() if len(w)>=3 and w not in ['sas','sarl','societe','societes','sa']]
+  rows=[];registry_failed=False
+  for siren in sirens:
+   url='https://recherche-entreprises.api.gouv.fr/search?'+parse.urlencode({'q':siren})
+   try:d=get_json(url) if get_json else json.loads(fetch(url)[0])
+   except Exception:registry_failed=True;continue
+   row=next((x for x in d.get('results',[]) if x.get('siren')==siren),{})
+   if row and words and all(w in norm(row.get('nom_complet','')) and w in text for w in words) and siren in primary_sirens(pages):rows.append((row,url))
+  if len(rows)!=1:return {**proof,'ok':False,'reason':'registry_unavailable' if not rows and registry_failed else 'primary_company_identity_ambiguous_or_unproven'}
+  row,url=rows[0];c['siren']=row['siren']
   lower=EMPLOYEES.get(row.get('tranche_effectif_salarie'),0)
   name=norm(c.get('name','')).split();leaders=row.get('dirigeants',[])
   role=next((x for x in leaders if name and name[-1] in norm(x.get('nom','')).split() and name[0] in norm(x.get('prenoms','')).split() and ROLE.search(x.get('qualite',''))),None)
-  matched_domain=str(c['siren']) in text and any(w in text for w in norm(row.get('nom_complet','')).split() if len(w)>4)
+  matched_domain=c['siren'] in primary_sirens(pages)
   category=row.get('categorie_entreprise');lane='eti' if category=='ETI' else 'pme'
   individual=name and name[0] in text and name[-1] in text
   capacity=bool(individual) and row.get('statut_diffusion')=='O' and category in ['PME','ETI'] and lower>=50 and row.get('etat_administratif')=='A' and not row.get('siege',{}).get('code_pays_etranger') and int(row.get('annee_tranche_effectif_salarie') or 0)>=t.year-3
@@ -216,7 +245,7 @@ def research(db,t,batch=4,lane=None):
  for r in rows:
   c=json.loads(r['payload']);proof=refresh_proof(c,t)
   lane=proof.get('lane',r['lane']);c['lane']=lane
-  db.execute('UPDATE candidates SET lane=?,payload=?,proof=?,checked=?,reason=? WHERE email=?',(lane,json.dumps(c,ensure_ascii=False),json.dumps(proof,ensure_ascii=False),stamp(t),proof['reason'],r['email']))
+  db.execute('UPDATE candidates SET lane=?,account=?,payload=?,proof=?,checked=?,reason=? WHERE email=?',(lane,c.get('siren') or r['account'],json.dumps(c,ensure_ascii=False),json.dumps(proof,ensure_ascii=False),stamp(t),proof['reason'],r['email']))
   counts[proof['reason']]=counts.get(proof['reason'],0)+1
  db.commit();return counts
 def reserve_national(db,t,lane):
@@ -259,10 +288,11 @@ def draft(c,v,step='initial',subject=None):
     "Je vous propose un angle terrain pour votre rédaction : qui possède les données, comment les équipes adoptent l’outil et comment mesurer un flux avant et après sa transformation.")
   text=greeting+'\n\n'+main+'\n\nChez Robinswood, nous travaillons sur les flux métier, les outils IA et l’adoption. Exemple de périmètre réalisé : pour Cerfrance Picardie Nord de Seine, conception, développement et maintenance d’une application de gestion des lettres de mission.\n\nSouhaitez-vous une note d’angle courte avec les questions à poser aux dirigeants ? Aucun placement payant ni exclusivité proposés.'
  else:
-  topic=c.get('topic','')[:180].split(' — ')[0] or 'les validations, les documents et le passage entre équipes'
+  # Imported historical angles may be English or unproven; outgoing copy stays French.
+  topic='les validations, les documents et le passage entre équipes'
   title=c['company']+' : quel flux mérite d’être simplifié ?' if v=='A' else c['company']+' : un usage IA que vos équipes maîtrisent'
-  main=("Dans votre activité, "+topic+" peut concentrer du temps et des reprises. C’est une hypothèse à vérifier avec vous, sans supposer un gain déjà obtenu." if v=='A' else
-    "Dans votre activité, "+topic+" pose une question pratique : quelle étape améliorer en gardant la maîtrise des données, des décisions et de l’outil ?")
+  main=("Un sujet possible chez "+c['company']+" : "+topic+". Où se situent le temps perdu et les reprises ? C’est une hypothèse à vérifier avec vous, sans supposer un gain déjà obtenu." if v=='A' else
+    "Un sujet possible chez "+c['company']+" : "+topic+". Quelle étape améliorer en gardant la maîtrise des données, des décisions et de l’outil ?")
   text=greeting+'\n\n'+main+'\n\nRobinswood accompagne les PME et ETI de l’étude du flux à la mise en œuvre. Notre audit stratégique IA (5 000 € HT, dix jours) établit une situation de départ et permet de décider : arrêt, outil, accompagnement ou combinaison.\n\nQuel flux vous coûte aujourd’hui le plus de temps, et dans quel ordre de grandeur ? Une réponse de deux lignes suffit.'
  if step=='followup':text=greeting+'\n\nJe reviens une seule fois sur ma proposition ci-dessous. '+('Une note d’angle sur les décisions IA des PME/ETI serait-elle utile à votre rédaction ?' if c['lane']=='presse' else 'Le sujet est-il pertinent pour votre entreprise, ou faut-il le laisser de côté ?')
  if step=='reply':
@@ -297,7 +327,7 @@ def discover_company(db,t,fetch_page=public_page):
     except Exception:pass
    text=norm(' '.join(p['text'] for p in pages))
    # A search engine only discovers a URL. The official SIREN proves identity.
-   if r['siren'] not in text:continue
+   if r['siren'] not in primary_sirens(pages):continue
    domain=(parse.urlparse(origin).hostname or '').removeprefix('www.')
    for leader in item['leaders']:
     last=norm(leader.get('nom','')).replace(' ','');first=norm(leader.get('prenoms','')).split()

@@ -34,7 +34,7 @@
   ],
   "minimumIntervalSeconds": 600,
   "proofMaxAgeDays": 7,
-  "copyVersion": "2026-10-02.1",
+  "copyVersion": "2026-10-02.2",
   "paidAllowed": false,
   "crmWriteAllowed": false,
   "linkedinWriteAllowed": false,
@@ -97,6 +97,7 @@
     "source": "human_evergreen_campaign_request_2026-10-02",
     "approvedBy": "Thibault",
     "request": "Campagnes presse et prospection PME et ETI françaises actives toute l’année avec itérations autonomes et auto améliorations",
-    "scopeSha256": "55e07c86c0178870b42b0f7aed4671a3391d8c9df9dfa5c75bf451705d723bd3"
+    "scopeSha256": "8afbbe98e546d61072d77fd5cf622831c6c63e72566e37c539dcd93421af082e",
+    "previousScopeSha256": "55e07c86c0178870b42b0f7aed4671a3391d8c9df9dfa5c75bf451705d723bd3"
   }
 }

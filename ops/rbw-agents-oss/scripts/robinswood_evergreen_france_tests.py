@@ -229,4 +229,38 @@ class EndToEndTests(unittest.TestCase):
    self.assertEqual(case.runit(g)['externalSendsThisRun'],1)
   finally:case.tearDown()
 
+
+class PrimaryIdentityRegressionTests(unittest.TestCase):
+ def test_siren_and_siret_spacing_and_publisher_identity(self):
+  pages=[{'text':'Éditeur Fixture Services. RCS Paris 424 281 392. Hébergeur OVH SIRET 424 761 419 00045.'}]
+  self.assertEqual(engine.primary_sirens(pages),['424281392','424761419'])
+  self.assertEqual(engine.primary_sirens([{'text':'Téléphone 012345678. Aucun identifiant légal.'}]),[])
+ def test_owned_subdomain_and_foreign_redirect(self):
+  self.assertTrue(engine.owned_domain('https://fr.fixture.invalid/contact','fixture.invalid'))
+  self.assertFalse(engine.owned_domain('https://fixture.invalid.attacker.invalid/','fixture.invalid'))
+  self.assertFalse(engine.owned_domain('https://other.invalid/','fixture.invalid'))
+ def test_contact_links_exclude_assets_and_equipment(self):
+  html='<html lang="fr"><a href="/wp-content/contact-form.css">CSS</a><a href="/les-equipements">Équipement</a><a href="/mentions-legales">Mentions</a><a href="/decouvrir-les-equipes#dirigeants">Équipe</a></html>'
+  with patch.object(engine,'fetch',return_value=(html,'https://fixture.invalid/')):
+   page=engine.public_page('https://fixture.invalid/')
+  self.assertEqual(page['contactLinks'],['https://fixture.invalid/mentions-legales','https://fixture.invalid/decouvrir-les-equipes'])
+ def test_missing_siren_is_bound_to_official_publisher_not_host(self):
+  c={'email':'alice.martin@fixture.invalid','name':'Alice Martin','company':'Fixture Services','domain':'fixture.invalid','lane':'pme','sourceUrls':['https://fixture.invalid/']}
+  page={'url':c['sourceUrls'][0],'text':'Fixture Services, présidente Alice Martin. RCS Paris 424 281 392. Hébergeur OVH SIREN 424761419.','emails':{c['email']},'sha256':'fixture','contactLinks':[]}
+  row={'siren':'424281392','nom_complet':'FIXTURE SERVICES','categorie_entreprise':'PME','tranche_effectif_salarie':'21','annee_tranche_effectif_salarie':'2024','statut_diffusion':'O','etat_administratif':'A','siege':{},'dirigeants':[{'nom':'MARTIN','prenoms':'ALICE','qualite':'Présidente de SAS'}]}
+  def registry(url):
+   return {'results':[row if url.endswith('424281392') else {**row,'siren':'424761419','nom_complet':'OVH'}]}
+  with tempfile.TemporaryDirectory() as tmp,patch.object(engine,'fetch',return_value=('{"Answer":[{"type":15,"data":"10 mail.fixture.invalid."}]}','https://dns.google/')):
+   result=engine.refresh_proof(c,T,lambda u:page,registry,Path(tmp))
+  self.assertTrue(result['ok']);self.assertEqual(c['siren'],'424281392')
+ def test_redirect_does_not_prove_company_identity(self):
+  c={'email':'a@fixture.invalid','name':'Alice Martin','company':'Fixture Services','domain':'fixture.invalid','lane':'presse','sourceUrls':['https://fixture.invalid/']}
+  with tempfile.TemporaryDirectory() as tmp:
+   result=engine.refresh_proof(c,T,lambda u:{'url':'https://unrelated.invalid/','text':'','emails':set()},ops=Path(tmp))
+  self.assertFalse(result['ok']);self.assertEqual(result['reason'],'primary_sources_unavailable')
+ def test_french_copy_does_not_include_imported_english_claim(self):
+  c={'email':'alice@fixture.invalid','name':'Alice Martin','company':'Fixture','lane':'pme','sourceUrls':['https://fixture.invalid/'],'topic':'Industrial maintenance group has already achieved 99% gains'}
+  for v in ['A','B']:
+   d=engine.draft(c,v);self.assertNotIn('Industrial',d['body']);self.assertNotIn('99%',d['body']);self.assertIn('les validations',d['body'])
+
 if __name__=='__main__':unittest.main()
