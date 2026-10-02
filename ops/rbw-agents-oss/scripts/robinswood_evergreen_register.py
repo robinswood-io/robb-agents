@@ -51,7 +51,17 @@ async def install():
    for e,payload,cron,maintenance in entries():
     id=e['legacy_id'];sid='sched.'+id
     spec=ScheduleSpec(cron_expressions=[cron],time_zone_name='Europe/Paris')
-    await client.create_schedule(sid,Schedule(action=RecurringAction(RbwAutomationWorkflow.run,payload,id='rbw.'+id,task_queue='campaigns',retry_policy=RetryPolicy(maximum_attempts=1)),spec=spec,state=ScheduleState(paused=True,note='Prepared: human authorized evergreen campaigns 2026-10-02; verification pending')))
+    try:
+     prior=await client.get_schedule_handle(sid).describe()
+    except Exception as exc:
+     from temporalio.service import RPCError,RPCStatusCode
+     if not isinstance(exc,RPCError) or exc.status!=RPCStatusCode.NOT_FOUND:raise
+     prior=None
+    if prior:
+     action=prior.schedule.action
+     if prior.schedule.spec.time_zone_name!='Europe/Paris' or list(prior.schedule.spec.cron_expressions)!=[cron] or prior.schedule.spec.end_at is not None or getattr(action,'id',None)!='rbw.'+id or getattr(action,'task_queue',None)!='campaigns':raise RuntimeError('existing_schedule_ownership_mismatch:'+sid)
+    else:
+     await client.create_schedule(sid,Schedule(action=RecurringAction(RbwAutomationWorkflow.run,payload,id='rbw.'+id,task_queue='campaigns',retry_policy=RetryPolicy(maximum_attempts=1)),spec=spec,state=ScheduleState(paused=True,note='Prepared: human authorized evergreen campaigns 2026-10-02; verification pending')))
     created.append(sid)
     schedule={'schedule_id':sid,'workflow_id':'rbw.'+id,'task_queue':'campaigns','cron':cron,'timezone':'Europe/Paris','enabled':True,'payload':payload}
     specs.append((e,payload,schedule))
@@ -83,7 +93,7 @@ async def install():
     handle=client.get_schedule_handle(sid);await handle.unpause(note='Human request 2026-10-02: evergreen press and France SME/ETI; targeted tests and safety contract verified')
     unpaused.append(sid);d=await handle.describe()
     if d.schedule.state.paused or d.schedule.spec.end_at is not None or d.schedule.spec.time_zone_name!='Europe/Paris':raise RuntimeError('native_schedule_readback_failed')
-    description.append({'id':sid,'paused':d.schedule.state.paused,'cron':d.schedule.spec.cron_expressions,'endAt':None,'timezone':d.schedule.spec.time_zone_name,'nextActions':[x.isoformat() for x in d.info.next_action_times[:3]]})
+    description.append({'id':sid,'paused':d.schedule.state.paused,'cron':list(d.schedule.spec.cron_expressions),'endAt':None,'timezone':d.schedule.spec.time_zone_name,'nextActions':[x.isoformat() for x in d.info.next_action_times[:3]]})
    result={'ok':True,'activatedAt':STAMP(),'contractScopeSha256':campaign.contract()['authorization']['scopeSha256'],'schedules':description,'catalogValidation':valid,'counts':built['counts'],'configurationBackups':mut.backups,'externalSendsDuringActivation':0}
    campaign.save(campaign.ROOT/'activation.json',result);return result
   except Exception:
