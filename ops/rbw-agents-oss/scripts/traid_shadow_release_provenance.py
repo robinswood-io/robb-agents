@@ -113,7 +113,7 @@ def live_baselines(proof, sha, digest, *, now=None):
 
 def inspect_reviewed_release(current, *, registry=REGISTRY, releases=RELEASES, authority_uid=0, release_uid=1000):
     current = Path(current)
-    result = {'valid': False, 'kind': 'invalid', 'restartBaselines': {}}
+    result = {'valid': False, 'kind': 'invalid', 'restartBaselines': {}, 'liveProofVerified': False}
     try:
         if current.parent != releases or re.fullmatch('[0-9a-f]{40}', current.name) is None or current.is_symlink():
             raise ProvenanceValidationError('release_path_invalid')
@@ -166,9 +166,10 @@ def inspect_reviewed_release(current, *, registry=REGISTRY, releases=RELEASES, a
         proof_path = registry / (current.name + '.live-verification.json')
         if os.path.lexists(proof_path):
             result['restartBaselines'] = live_baselines(trusted_json(proof_path, authority_uid), current.name, declared)
+            result['liveProofVerified'] = True
         return result
     except Exception as error:
-        return {**result, 'valid': False, 'kind': 'invalid', 'restartBaselines': {}, 'error': str(error) if isinstance(error, ProvenanceValidationError) and str(error) in SAFE_ERROR_CODES else 'provenance_validation_failed'}
+        return {**result, 'valid': False, 'kind': 'invalid', 'restartBaselines': {}, 'liveProofVerified': False, 'error': str(error) if isinstance(error, ProvenanceValidationError) and str(error) in SAFE_ERROR_CODES else 'provenance_validation_failed'}
 
 def restart_count_ok(service, baseline):
     count = service.get('restartCount')

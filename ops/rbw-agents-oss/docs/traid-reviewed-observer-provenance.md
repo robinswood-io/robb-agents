@@ -9,3 +9,5 @@ Historical systemd restart counts can be accepted only through a root-owned, reg
 After an accepted receipt, any PID, monotonic start or restart-count change blocks the control, including a restart-count reset to zero. Without a receipt, zero restart count is allowed only with a real positive process identity. Parsing failures return fixed diagnostics; supplied timestamp strings and provider messages are never returned.
 
 The checker has no activation, restart, order, signing or chain-mutation capability. Release publication and root live-proof publication remain the reviewed observer activator's responsibility, after exact-SHA canonical and independent hostile review gates. Source-only CLI tests use disposable Git fixtures and do not modify a deployed runtime.
+
+A reviewed candidate without a validated joint live receipt remains blocked with reviewed_release_completed_cycle_proof_missing, even if its current process has zero restarts and one successful cycle. This separates package trust from completed runtime verification.

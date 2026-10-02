@@ -252,6 +252,8 @@ def main() -> None:
     if service.get('activeState') != 'active' or service.get('subState') != 'running' or service.get('result') != 'success':
         blocking.append('observer_service_not_healthy')
     provenance = data.get('releaseProvenance') if isinstance(data.get('releaseProvenance'), dict) else {}
+    if provenance.get('valid') is True and provenance.get('kind') == 'reviewed_manifest' and provenance.get('liveProofVerified') is not True:
+        blocking.append('reviewed_release_completed_cycle_proof_missing')
     baselines = provenance.get('restartBaselines') if provenance.get('valid') is True and isinstance(provenance.get('restartBaselines'), dict) else {}
     if not restart_count_ok(service, baselines.get('primary')):
         blocking.append('observer_restart_count_nonzero')

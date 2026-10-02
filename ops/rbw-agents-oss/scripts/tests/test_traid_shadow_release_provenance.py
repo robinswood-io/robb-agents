@@ -35,7 +35,7 @@ class ProvenanceTests(unittest.TestCase):
     def inspect(self, **kwargs):
         return p.inspect_reviewed_release(self.current,registry=self.registry,releases=self.releases,authority_uid=os.getuid(),release_uid=os.getuid(),**kwargs)
     def test_registered_exact_content_accepted_without_main_alignment(self):
-        result=self.inspect();self.assertTrue(result['valid']);self.assertEqual(result['kind'],'reviewed_manifest');self.assertEqual(result['restartBaselines'],{})
+        result=self.inspect();self.assertTrue(result['valid']);self.assertEqual(result['kind'],'reviewed_manifest');self.assertEqual(result['restartBaselines'],{});self.assertFalse(result['liveProofVerified'])
     def test_changed_content_fails_despite_same_git_head(self):
         f=self.current/'source.py';f.chmod(0o644);f.write_text('tampered observer\n');f.chmod(0o444)
         self.assertFalse(self.inspect()['valid'])
@@ -123,3 +123,20 @@ class ProvenanceTests(unittest.TestCase):
         result=self.inspect();raw=json.dumps(result)
         self.assertFalse(result['valid']);self.assertEqual(result['error'],'live_proof_timestamp_invalid')
         self.assertNotIn('private-token',raw);self.assertNotIn('https://',raw)
+
+    def test_monitor_blocks_reviewed_release_until_joint_live_proof(self):
+        fake=types.ModuleType('lib.agent_runtime');fake.OPS=self.base
+        captured={}
+        def report(**kwargs):
+            captured.update(kwargs)
+            return {'generatedAt':'2026-10-02T12:00:00Z','capabilityId':'test','ok':kwargs['ok'],'status':kwargs['status'],'summary':kwargs['summary'],'counts':kwargs['counts']}
+        fake.standard_report=report
+        for name in ('append_jsonl','write_json_atomic'):setattr(fake,name,lambda *a,**k:None)
+        with patch.dict(sys.modules,{'lib.agent_runtime':fake}):
+            spec=importlib.util.spec_from_file_location('monitor_main_under_test',Path(__file__).resolve().parents[1]/'traid_onchain_liquidation_shadow_monitor.py')
+            m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
+        for verified in (False,True):
+            remote={'ok':True,'parsed':{'releaseProvenance':{'valid':True,'kind':'reviewed_manifest','liveProofVerified':verified}}}
+            with patch.object(m,'remote_snapshot',return_value=remote),patch.object(m,'write_markdown'),patch('builtins.print'):
+                with self.assertRaises(SystemExit):m.main()
+            self.assertEqual('reviewed_release_completed_cycle_proof_missing' in captured['blocking_reasons'],not verified)
