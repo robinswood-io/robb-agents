@@ -38,6 +38,7 @@ def contract(path=POLICY):
  assert c['canaryDailyMax']==1 and c['maxTouchesWithoutReply']==2
  assert c['windows']==[['09:00','12:00'],['14:00','18:00']] and c['minimumIntervalSeconds']==600
  assert c['proofMaxAgeDays']==7 and c['copyVersion']=='2026-10-02.1'
+ assert c['autoRecovery']=={'cooldownDays':7,'minimumFreshSmtpContacts':3,'complaintRecoveryAllowed':False,'capAfterRecovery':1}
  return c
 def in_window(t,c):
  x=t.astimezone(ZoneInfo(c['timezone']));h=x.strftime('%H:%M')
@@ -96,13 +97,32 @@ def import_reserves(db,ops=OPS,cfg=Path('/srv/rbw-agents-oss/config')):
   if not isinstance(x,dict) or x.get('language') not in (None,'fr','fr-FR'):continue
   email=str(x.get('email','')).lower();url=x.get('sourceUrl','')
   if not EMAIL.fullmatch(email) or not url:continue
-  put_candidate(db,{'email':email,'name':x.get('contactName',''),'company':x.get('media',''),'lane':'presse','domain':email.split('@')[1],
-   'sourceUrls':[url],'topic':x.get('angle',''),'fitScore':x.get('fitScore',0),'segment':x.get('segment','')})
+  domain=email.split('@')[1];primary=url if url.startswith('https://') and (parse.urlparse(url).hostname or '').removeprefix('www.')==domain.removeprefix('www.') else 'https://'+domain+'/'
+  put_candidate(db,{'email':email,'name':x.get('contactName',''),'company':x.get('media',''),'lane':'presse','domain':domain,
+   'sourceUrls':[primary],'discoverySource':url,'topic':x.get('angle',''),'fitScore':x.get('fitScore',0),'segment':x.get('segment','')})
+ for x in read(ops/'robinswood-media-contact-base-2026-enriched.json').get('contacts',[]):
+  email=str(x.get('email') or x.get('enrichedEmail') or '').lower()
+  if x.get('country')!='FR' or x.get('countryConfidence')=='medium_francophone' or not EMAIL.fullmatch(email):continue
+  if x.get('legacyPrStatus') or x.get('suppressionStatus') or str(x.get('outreachStatus','')).startswith('not_eligible'):continue
+  domain=email.split('@')[1];url=x.get('sourceUrl') or ''
+  put_candidate(db,{'email':email,'name':x.get('contactName',''),'company':x.get('media',''),'lane':'presse','domain':domain,
+   'sourceUrls':[url if url.startswith('https://') and (parse.urlparse(url).hostname or '').removeprefix('www.')==domain.removeprefix('www.') else 'https://'+domain+'/'],'discoverySource':url,
+   'topic':'IA et décisions des dirigeants PME/ETI','fitScore':x.get('qualityScore',0),'segment':'journalist','emailVerification':x.get('emailVerification',{})})
  db.commit()
 def put_candidate(db,c):
  if c['lane'] not in LANES:return
  account=c.get('siren') or c.get('company','').lower() or c['domain']
- db.execute('INSERT OR IGNORE INTO candidates VALUES(?,?,?,?,?,?,?)',(c['email'],c['lane'],account,json.dumps(c,ensure_ascii=False),None,None,'needs_primary_requalification'))
+ existing=db.execute('SELECT payload FROM candidates WHERE email=?',(c['email'],)).fetchone()
+ if existing:
+  old=json.loads(existing['payload'])
+  if old.get('name')!=c.get('name') or old.get('company')!=c.get('company'):return
+  repaired=bool(old.get('sourceUrls') and not old['sourceUrls'][0].startswith('https://') and c.get('sourceUrls') and c['sourceUrls'][0].startswith('https://'))
+  verification=c.get('emailVerification')
+  if repaired or (verification and verification!=old.get('emailVerification')):
+   if repaired:old['sourceUrls']=c['sourceUrls'];old['discoverySource']=c.get('discoverySource')
+   if verification:old['emailVerification']=verification
+   db.execute('UPDATE candidates SET payload=?,checked=NULL,proof=NULL,reason=? WHERE email=?',(json.dumps(old,ensure_ascii=False),'primary_source_or_delivery_evidence_refreshed',c['email']))
+ else:db.execute('INSERT INTO candidates VALUES(?,?,?,?,?,?,?)',(c['email'],c['lane'],account,json.dumps(c,ensure_ascii=False),None,None,'needs_primary_requalification'))
 def safe_url(url):
  u=parse.urlparse(url)
  if u.scheme!='https' or u.username or u.password or u.port not in (None,443):raise ValueError('unsafe_source_url')
@@ -126,15 +146,30 @@ def public_page(url):
  for link in re.findall(r'href=["\x27]([^"\x27]+)',html.unescape(data)):
   target=parse.urljoin(final,link)
   if parse.urlparse(target).hostname==parse.urlparse(final).hostname and re.search(r'contact|equipe|redaction|rédaction|mentions|presse',target,re.I) and target not in links:links.append(target)
- return {'url':final,'sha256':hashlib.sha256(data.encode()).hexdigest(),'text':text,'emails':set(EMAIL.findall(html.unescape(data))),'contactLinks':links[:3]}
+ return {'url':final,'sha256':hashlib.sha256(data.encode()).hexdigest(),'text':text,'emails':set(EMAIL.findall(html.unescape(data))),'contactLinks':links[:3],'language':next(iter(re.findall(r'<html[^>]*lang=[\"\x27]([^\"\x27]+)',data,re.I)), '')}
 def cached_delivery(email,t,ops=OPS):
  obj=read(ops/'contact-quality-verification-cache.json')
  v=obj.get('items',{}).get(hashlib.sha256(email.encode()).hexdigest(),{})
  q=v.get('verification',{})
  return bool(v.get('updatedAt') and 0<=(t-dt(v['updatedAt'])).total_seconds()<7*86400 and q.get('result') in ['deliverable','valid'] and q.get('smtp_check') is True and q.get('accept_all') is False and q.get('block') is False)
+def provider_delivery(c,t):
+ v=c.get('emailVerification',{});checked=v.get('checkedAt')
+ return bool(checked and 0<=(t-dt(checked)).total_seconds()<7*86400 and v.get('provider')=='hunter' and v.get('statusCode')==200 and v.get('result') in ['deliverable','valid'] and int(v.get('score') or 0)>=95 and v.get('smtpCheck') is True and v.get('acceptAll') is False and v.get('block') is False)
+def delivery_blocker(c,t,ops=OPS):
+ obj=read(ops/'contact-quality-verification-cache.json')
+ cached=obj.get('items',{}).get(hashlib.sha256(c['email'].encode()).hexdigest(),{})
+ evidence=[(cached.get('updatedAt'),cached.get('verification',{})),(c.get('emailVerification',{}).get('checkedAt'),c.get('emailVerification',{}))]
+ for checked,v in evidence:
+  if checked and 0<=(t-dt(checked)).total_seconds()<30*86400 and (v.get('result') in ['risky','undeliverable'] or (v.get('accept_all') is True or v.get('acceptAll') is True)):
+   return 'recent_adverse_delivery_evidence'
+ return None
 def refresh_proof(c,t,fetch_page=public_page,get_json=None,ops=OPS):
+ if c['lane']!='presse' and transport.GENERIC.match(c['email']):return {'ok':False,'reason':'generic_mailbox_does_not_bind_executive','checkedAt':stamp(t)}
+ bad=delivery_blocker(c,t,ops)
+ if bad:return {'ok':False,'reason':bad,'checkedAt':stamp(t)}
  pages=[]
  for u in c['sourceUrls'][:3]:
+  if (parse.urlparse(u).hostname or '').removeprefix('www.')!=c['domain'].removeprefix('www.'):continue
   try:pages.append(fetch_page(u))
   except Exception:pass
  if c['lane']=='presse' and pages:
@@ -149,13 +184,15 @@ def refresh_proof(c,t,fetch_page=public_page,get_json=None,ops=OPS):
    mx=json.loads(fetch('https://dns.google/resolve?'+parse.urlencode({'name':c['domain'],'type':'MX'}))[0])
    if not any(a.get('type')==15 and a.get('data','').split()[-1]!='.' for a in mx.get('Answer',[])):literal=False
   except Exception:literal=False
- if not literal and not cached_delivery(email,t,ops):return {'ok':False,'reason':'fresh_exact_email_or_valid_non_catchall_proof_missing','checkedAt':stamp(t)}
+ if not literal and not (cached_delivery(email,t,ops) or provider_delivery(c,t)):return {'ok':False,'reason':'fresh_exact_email_or_valid_non_catchall_proof_missing','checkedAt':stamp(t)}
  text=norm(' '.join(p['text'] for p in pages));proof={'checkedAt':stamp(t),'emailBasis':'primary_public_exact_email' if literal else 'fresh_valid_non_catchall_cache',
- 'sources':[{'url':p['url'],'sha256':p['sha256']} for p in pages]}
+ 'sources':[{'url':p['url'],'sha256':p['sha256']} for p in pages], 'smtpVerified':cached_delivery(email,t,ops) or provider_delivery(c,t)}
  if c['lane']=='presse':
   editorial=bool(EDITORIAL.match(email)) or bool(c.get('name') and norm(c['name']) in text and ROLE.search(text)) or (c.get('segment')=='podcast' and email.startswith('contact@') and 'podcast' in text)
   fit=c.get('fitScore',0)>=72 and any(w in text for w in ['entrepris','econom','business','dirigeant','pme','eti','industrie','technolog','innovation','intelligence artificielle'])
-  proof.update(ok=editorial and fit,reason='qualified_editorial_primary_source' if editorial and fit else 'editorial_role_or_business_beat_unproven')
+  french=any(p.get('language','').lower().startswith('fr') for p in pages)
+  if not french:french=sum(w in text for w in [' les ',' des ',' pour ',' dans ',' une '])>=4
+  proof.update(ok=editorial and fit and french,reason='qualified_editorial_primary_source' if editorial and fit and french else 'editorial_role_language_or_business_beat_unproven')
  else:
   if not c.get('siren'):return {**proof,'ok':False,'reason':'siren_missing'}
   url='https://recherche-entreprises.api.gouv.fr/search?'+parse.urlencode({'q':c['siren']})
@@ -168,7 +205,7 @@ def refresh_proof(c,t,fetch_page=public_page,get_json=None,ops=OPS):
   matched_domain=str(c['siren']) in text and any(w in text for w in norm(row.get('nom_complet','')).split() if len(w)>4)
   category=row.get('categorie_entreprise');lane='eti' if category=='ETI' else 'pme'
   individual=name and name[0] in text and name[-1] in text
-  capacity=bool(individual) and category in ['PME','ETI'] and lower>=50 and row.get('etat_administratif')=='A' and not row.get('siege',{}).get('code_pays_etranger') and int(row.get('annee_tranche_effectif_salarie') or 0)>=t.year-3
+  capacity=bool(individual) and row.get('statut_diffusion')=='O' and category in ['PME','ETI'] and lower>=50 and row.get('etat_administratif')=='A' and not row.get('siege',{}).get('code_pays_etranger') and int(row.get('annee_tranche_effectif_salarie') or 0)>=t.year-3
   proof.update(ok=bool(role and matched_domain and capacity),reason='qualified_registry_and_exact_email' if role and matched_domain and capacity else 'company_identity_capacity_or_mandate_unproven',
    registryUrl=url,registrySha256=digest(row),category=category,lane=lane,employeeLowerBound=lower,employeeYear=row.get('annee_tranche_effectif_salarie'),
    verifiedRole=role.get('qualite') if role else None,budgetConfirmed=False)
@@ -290,6 +327,7 @@ def classify_reply(m,lane):
  if any(x in text for x in ['spam','plainte','signaler votre message']):return 'complaint'
  if any(x in text for x in ['unsubscribe','desabonn','ne plus','stop','pas interesse']):return 'opposition'
  if any(x in text for x in ['mailer-daemon','delivery status','undeliver','550 ','adresse introuvable']):return 'bounce'
+ if re.search(r'placement payant|tribune payante|publireportage|publi.reportage|advertorial|sponsorise|participation financiere',text):return 'paid_editorial_request'
  # Evidence comes from the new message, never the quoted original invitation.
  if lane=='presse' and re.search(r'\b(interview|article|note d.angle|tribune|podcast)\b',text) and re.search(r'\b(envoy|souhait|interess|prepar|propos|pouvez)\w*',text):return 'editorial_request'
  if lane!='presse' and re.search(r'\b\d+\s*(heure|jour|minute|dossier|facture|devis|euro|€)',text) and re.search(r'\b(flux|process|cout|temps|volume|validation|document|commande|factur|devis)\w*',text):return 'qualified_need'
@@ -347,7 +385,7 @@ def next_item(db,lane,t,c):
   if not sent and row and r['email'] not in exclusions:return row,'reply',learn
  rows=db.execute('SELECT * FROM candidates WHERE lane=? AND proof IS NOT NULL ORDER BY email',(lane,)).fetchall()
  for r in rows:
-  if r['email'] in exclusions or db.execute('SELECT 1 FROM legacy WHERE email=?',(r['email'],)).fetchone():continue
+  if r['email'] in exclusions or delivery_blocker(json.loads(r['payload']),t) or db.execute('SELECT 1 FROM legacy WHERE email=?',(r['email'],)).fetchone():continue
   proof=json.loads(r['proof'])
   if not proof.get('ok') or not 0<=(t-dt(proof['checkedAt'])).total_seconds()<c['proofMaxAgeDays']*86400:continue
   touches=db.execute('SELECT * FROM touches WHERE email=? ORDER BY created',(r['email'],)).fetchall()
@@ -362,8 +400,29 @@ def lane_capacity(db,lane,t,c):
  effects=db.execute("SELECT * FROM touches WHERE lane=?",(lane,)).fetchall();local=t.astimezone(ZoneInfo('Europe/Paris'));day=local.date();monday=day-timedelta(days=day.weekday())
  learn=learning(db,lane,t,c);matured=sum(x['matured'] for x in learn['variants'].values());qualified=sum(x['qualified'] for x in learn['variants'].values())
  adverse=db.execute("SELECT count(*) n FROM replies WHERE lane=? AND kind IN ('bounce','complaint')",(lane,)).fetchone()['n']
- if db.execute("SELECT 1 FROM replies WHERE lane=? AND kind='bounce'",(lane,)).fetchone():return False,'new_cohort_bounce_pause'
+ bounce=db.execute("SELECT max(observed) observed FROM replies WHERE lane=? AND kind='bounce'",(lane,)).fetchone()['observed']
  if db.execute("SELECT 1 FROM replies WHERE lane=? AND kind='complaint'",(lane,)).fetchone():return False,'complaint_pause'
+ if bounce:
+  key='recovery_epoch_'+lane;epoch=db.execute('SELECT value FROM metadata WHERE key=?',(key,)).fetchone()
+  recovered=bool(epoch and json.loads(epoch['value'])['afterBounce']==bounce)
+  if not recovered:
+   eligible=[]
+   if (t-dt(bounce)).total_seconds()>=c['autoRecovery']['cooldownDays']*86400:
+    for row in db.execute('SELECT * FROM candidates WHERE lane=? AND proof IS NOT NULL AND email NOT IN(SELECT email FROM touches) AND email NOT IN(SELECT email FROM legacy)',(lane,)):
+     proof=json.loads(row['proof'])
+     if proof.get('ok') and proof.get('smtpVerified') is True and dt(proof['checkedAt'])>dt(bounce) and 0<=(t-dt(proof['checkedAt'])).total_seconds()<7*86400 and row['email'] not in suppressed() and not delivery_blocker(json.loads(row['payload']),t):
+      eligible.append(row['email'])
+   if len(eligible)<c['autoRecovery']['minimumFreshSmtpContacts']:return False,'new_cohort_bounce_pause_awaiting_independent_smtp_proofs'
+   db.execute('INSERT OR REPLACE INTO metadata VALUES(?,?)',(key,json.dumps({'activatedAt':stamp(t),'afterBounce':bounce,'freshContactHashes':[digest(e) for e in eligible],'historicalMetricsPreserved':True})));db.commit()
+   recovered=True
+  if recovered:
+   # Keep the new recovery canary at one/day; allow only independently verified SMTP contacts.
+   for row in db.execute('SELECT email,proof FROM candidates WHERE lane=? AND proof IS NOT NULL',(lane,)):
+    proof=json.loads(row['proof'])
+    if proof.get('smtpVerified') is not True and proof.get('ok'):
+     proof['ok']=False;proof['reason']='recovery_requires_independent_smtp_proof'
+     db.execute('UPDATE candidates SET proof=?,reason=? WHERE email=?',(json.dumps(proof),proof['reason'],row['email']))
+   db.commit()
  daily=c['lanes'][lane]['dailyMax'] if matured>=10 and qualified>=1 and not adverse else c['canaryDailyMax']
  nday=sum(dt(x['created']).astimezone(ZoneInfo('Europe/Paris')).date()==day for x in effects)
  nweek=sum(dt(x['created']).astimezone(ZoneInfo('Europe/Paris')).date()>=monday for x in effects)

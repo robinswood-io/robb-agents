@@ -121,7 +121,7 @@ class EngineTests(unittest.TestCase):
    m['payload']['body']['data']=base64.urlsafe_b64encode(text.encode()).decode();self.assertEqual(engine.classify_reply(m,lane),kind)
  def test_new_cohort_bounce_stops_lane(self):
   self.db.execute('INSERT INTO replies VALUES(?,?,?,?,?,?)',('b','a@fixture.invalid','pme','bounce',T.isoformat(),'{}'));self.db.commit()
-  self.assertEqual(engine.lane_capacity(self.db,'pme',T,self.c),(False,'new_cohort_bounce_pause'))
+  self.assertEqual(engine.lane_capacity(self.db,'pme',T,self.c),(False,'new_cohort_bounce_pause_awaiting_independent_smtp_proofs'))
  def test_canary_and_all_effects_share_one_daily_budget(self):
   data=raw();self.db.execute('INSERT INTO touches VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)',('op','a@fixture.invalid','pme','reply','A',self.c['copyVersion'],T.isoformat(),'verified',data,'body','s','id','thread','{}'));self.db.commit()
   ok,info=engine.lane_capacity(self.db,'pme',T,self.c);self.assertFalse(ok);self.assertEqual(info['dailyCap'],1)
@@ -136,6 +136,46 @@ class EngineTests(unittest.TestCase):
   engine.append_legacy(self.db,{'recipientEmail':'a@fixture.invalid','status':'sent','campaignId':'old'});self.db.commit()
   with patch.object(engine,'suppressed',return_value=set()):row,step,_=engine.next_item(self.db,'pme',T,self.c)
   self.assertIsNone(row)
+
+ def test_recovery_requires_three_fresh_independent_smtp_proofs(self):
+  self.db.execute('INSERT INTO replies VALUES(?,?,?,?,?,?)',('b','old@fixture.invalid','pme','bounce',(T-timedelta(days=8)).isoformat(),'{}'))
+  for i in range(3):
+   engine.put_candidate(self.db,{'email':str(i)+'@fixture.invalid','lane':'pme','name':'Fixture Person','company':'Fixture '+str(i),'domain':'fixture.invalid','sourceUrls':['https://fixture.invalid/']})
+  self.db.execute('UPDATE candidates SET proof=?',(json.dumps({'ok':True,'smtpVerified':False,'checkedAt':T.isoformat()}),));self.db.commit()
+  with patch.object(engine,'suppressed',return_value=set()):
+   self.assertFalse(engine.lane_capacity(self.db,'pme',T,self.c)[0])
+   self.db.execute('UPDATE candidates SET proof=?',(json.dumps({'ok':True,'smtpVerified':True,'checkedAt':T.isoformat()}),));self.db.commit()
+   allowed,info=engine.lane_capacity(self.db,'pme',T,self.c)
+  self.assertTrue(allowed);self.assertEqual(info['dailyCap'],1)
+  self.assertEqual(self.db.execute("SELECT count(*) FROM replies WHERE kind='bounce'").fetchone()[0],1)
+ def test_complaints_are_never_auto_recovered(self):
+  self.db.execute('INSERT INTO replies VALUES(?,?,?,?,?,?)',('c','old@fixture.invalid','pme','complaint',(T-timedelta(days=30)).isoformat(),'{}'));self.db.commit()
+  self.assertEqual(engine.lane_capacity(self.db,'pme',T,self.c),(False,'complaint_pause'))
+ def test_recent_risky_provider_evidence_blocks_public_mailbox(self):
+  c={'email':'a@fixture.invalid','emailVerification':{'checkedAt':T.isoformat(),'result':'risky'}}
+  self.assertEqual(engine.delivery_blocker(c,T,self.root),'recent_adverse_delivery_evidence')
+
+ def test_provider_proof_requires_fresh_smtp_no_catchall(self):
+  c={'emailVerification':{'provider':'hunter','statusCode':200,'result':'deliverable','score':100,'checkedAt':T.isoformat(),'smtpCheck':True,'acceptAll':False,'block':False}}
+  self.assertTrue(engine.provider_delivery(c,T))
+  c['emailVerification']['acceptAll']=True;self.assertFalse(engine.provider_delivery(c,T))
+  c['emailVerification']['acceptAll']=False;c['emailVerification']['checkedAt']=(T-timedelta(days=8)).isoformat();self.assertFalse(engine.provider_delivery(c,T))
+ def test_media_enrichment_preserves_budget_and_holds(self):
+  import robinswood_media_contact_enrichment_2026 as helper
+  row={'id':'fixture','recordType':'email_contact','email':'a@fixture.invalid','contactName':'Alice Martin'}
+  data={'result':'deliverable','score':100,'smtp_check':True,'accept_all':False,'block':False,'mx_records':True}
+  with patch.object(helper,'verify_email',return_value={'statusCode':200,'body':{'data':data}}) as call:
+   updated,left,event=helper.row_outcome(row,'fixture-key',1)
+  self.assertEqual(call.call_count,1);self.assertEqual(left,0);self.assertEqual(event['hunterCalls'],1)
+  self.assertTrue(updated['emailVerification']['smtpCheck']);self.assertFalse(updated['outreachEligible'])
+  self.assertEqual(updated['email'],row['email'])
+  updated['outreachStatus']='not_eligible_legacy_pr_hold';self.assertFalse(helper.eligible_for_processing(updated))
+ def test_media_high_score_risky_is_not_verified(self):
+  import robinswood_media_contact_enrichment_2026 as helper
+  row={'id':'fixture','recordType':'email_contact','email':'a@fixture.invalid'}
+  with patch.object(helper,'verify_email',return_value={'statusCode':200,'body':{'data':{'result':'risky','score':100,'smtp_check':True,'accept_all':True,'block':False}}}):
+   updated,left,event=helper.row_outcome(row,'fixture-key',1)
+  self.assertEqual(updated['enrichmentStatus'],'email_not_verified_review_or_replace');self.assertFalse(updated['outreachEligible'])
 
 class EndGateway(engine.Gateway,FakeGateway):
  def __init__(self,root,t=T):
