@@ -253,3 +253,4 @@ jobs:
           python3 ops/rbw-agents-oss/scripts/scotland_executive_conference_october_tests.py
           python3 ops/rbw-agents-oss/scripts/scotland_gateway_read_retry_tests.py
           python3 ops/rbw-agents-oss/scripts/scotland_daily40_tests.py
+          python3 ops/rbw-agents-oss/scripts/robinswood_evergreen_france_tests.py

@@ -301,7 +301,8 @@ class Gateway:
         data = {'raw': raw}
         if thread_id:
             data['threadId'] = thread_id
-        return self.call('/messages/send', data)
+        from outbound_sender_guard import shared_send
+        return shared_send(self, raw, thread_id, lambda: self.call('/messages/send', data))
 
 def verify_effect(gateway, sent_id, item, draft, operation, expected, thread_id=None):
     m = gateway.get(sent_id)
@@ -534,8 +535,16 @@ def run(root=ROOT, gateway=None, apply=False, t=None, suppression_path=GLOBAL_SU
                     if not ok:
                         unknown+=1
                 except Exception as e:
-                    row.update(status='send_effect_unknown',errorType=type(e).__name__)
-                    unknown+=1
+                    from outbound_sender_guard import SenderGuardBlocked
+                    if isinstance(e,SenderGuardBlocked) and not e.write_attempted:
+                        # A proven pre-send refusal is not an ambiguous Gmail effect.
+                        db.execute("DELETE FROM touches WHERE item=? AND step=? AND state='pending' AND gmail_id IS NULL",(item['id'],step))
+                        db.commit()
+                        if step=='initial':arm_counts[variant]-=1
+                        row.update(status='sender_preflight_blocked',blockingReasons=[str(e)])
+                    else:
+                        row.update(status='send_effect_unknown',errorType=type(e).__name__)
+                        unknown+=1
         decision.append(row)
     counts={s:sum(x['status']==s for x in decision) for s in sorted({x['status'] for x in decision})}
     funnel={k:db.execute("SELECT count(DISTINCT item) FROM replies WHERE kind=?",(kind,)).fetchone()[0] for k,kind in [('programmeRequestedCompanies','programme_requested'),('interestCompanies','qualified_interest'),('qualifiedNeedCompanies','qualified_need')]}

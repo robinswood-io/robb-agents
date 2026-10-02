@@ -1,0 +1,96 @@
+{
+  "contractVersion": "robinswood-evergreen-france-v1",
+  "effectiveAt": "2026-10-02",
+  "sender": "thibault@robinswood.io",
+  "timezone": "Europe/Paris",
+  "yearRound": true,
+  "endDate": null,
+  "lanes": {
+    "presse": {
+      "dailyMax": 5,
+      "weeklyMax": 20
+    },
+    "pme": {
+      "dailyMax": 3,
+      "weeklyMax": 10
+    },
+    "eti": {
+      "dailyMax": 2,
+      "weeklyMax": 10
+    }
+  },
+  "canaryDailyMax": 1,
+  "maxTouchesWithoutReply": 2,
+  "followupBusinessDays": 10,
+  "windows": [
+    [
+      "09:00",
+      "12:00"
+    ],
+    [
+      "14:00",
+      "18:00"
+    ]
+  ],
+  "minimumIntervalSeconds": 600,
+  "proofMaxAgeDays": 7,
+  "copyVersion": "2026-10-02.1",
+  "paidAllowed": false,
+  "crmWriteAllowed": false,
+  "linkedinWriteAllowed": false,
+  "geography": "France",
+  "offer": {
+    "name": "Audit stratégique IA",
+    "priceHT": 5000,
+    "durationDays": 10
+  },
+  "proofRules": [
+    "exact_primary_company_identity",
+    "registry_current_active_PME_or_ETI",
+    "public_current_professional_mandate",
+    "exact_public_email_or_fresh_valid_non_catchall_verification",
+    "no_guessed_email",
+    "no_inferred_budget",
+    "no_legacy_contact_replay"
+  ],
+  "learningRules": [
+    "only_attributable_editorial_requests_or_quantified_business_needs",
+    "no_send_open_download_booking_reward",
+    "minimum_8_matured_per_variant_3_qualified",
+    "25_percent_exploration",
+    "one_new_cohort_bounce_pauses_lane",
+    "no_unbounded_copy_or_budget_changes"
+  ],
+  "sharedSender": {
+    "dailyMax": 40,
+    "weeklyMax": 200,
+    "hourlyMax": 6,
+    "minimumIntervalSeconds": 600
+  },
+  "sourceStrategy": "/srv/rbw-agents-oss/config/robinswood-flow-strategy.json",
+  "historicalHDF": {
+    "sent": 48,
+    "hardBounces": 5,
+    "neverReset": true,
+    "legacyLaneRemainsPaused": true
+  },
+  "humanGates": [
+    "new_paid_budget",
+    "new_external_price_or_promise",
+    "named_testimonial_not_previously_authorized",
+    "binding_interview_or_commercial_commitment"
+  ],
+  "autonomousAllowed": [
+    "bounded_first_contacts_in_three_lanes",
+    "one_original_thread_followup",
+    "one_factual_original_thread_response",
+    "primary_source_research",
+    "variant_selection_from_verified_qualified_results"
+  ],
+  "authorization": {
+    "source": "human_evergreen_campaign_request_2026-10-02",
+    "approvedBy": "Thibault",
+    "request": "Campagnes presse et prospection PME et ETI françaises actives toute l’année avec itérations autonomes et auto améliorations",
+    "scopeSha256": "c988a7d45fdbefaee9fdc4665111f84f8b0283fb449af35ee1c3a1128dd877ca"
+  }
+}
