@@ -98,6 +98,18 @@ def workpaper_for(action: dict[str, Any], status: str, reason: str, guard_notes:
     else: payload['performedSteps']=['detected_explicit_mutating_allowed_effect','blocked_execution','left_native_accounting_state_unchanged']
     path=WORKDIR / f'{slug}.json'; write_json(path, payload)
     return {'dispatchKey':dispatch_key,'status':status,'reason':reason,'guardNotes':guard_notes,'workpaperJson':str(path),'target':action.get('target'),'title':action.get('title'),'owner':action.get('owner'),'priority':action.get('priority')}
+
+def pending_review_results(actions: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    active={str(a.get('dedupeKey') or a.get('id') or sha(a)) for a in actions if a.get('actionableNow') is True}
+    latest={}
+    if LEDGER.exists():
+        for line in LEDGER.read_text(encoding='utf-8').splitlines():
+            try:
+                row=json.loads(line);key=str(row.get('dispatchKey'))
+                if key in active: latest[key]=row
+            except (ValueError,TypeError): pass
+    return [row for row in latest.values() if row.get('status') in {'escalated_human_gate','blocked_mutation_guard'}]
+
 def build_followup_queue(results: list[dict[str, Any]]) -> list[dict[str, Any]]:
     actions=[]
     for r in results:
@@ -124,7 +136,7 @@ def main() -> None:
         decision, reason, guard_notes=classify_action(action)
         status={'execute_prepare_only':'executed_prepare_only','escalate_human_gate':'escalated_human_gate','blocked_mutation_guard':'blocked_mutation_guard'}[decision]
         row=workpaper_for(action,status,reason,guard_notes,generated_at); results.append(row); append_ledger({'generatedAt':generated_at,**row,'mutationAttempted':False})
-    followup=build_followup_queue(results); write_json(FOLLOWUP_QUEUE, followup)
+    followup=build_followup_queue(pending_review_results(actions)); write_json(FOLLOWUP_QUEUE, followup)
     counts={'sourceActions':len(actions),'executedPrepareOnly':len([r for r in results if r['status']=='executed_prepare_only']),'escalatedHumanGate':len([r for r in results if r['status']=='escalated_human_gate']),'blockedMutationGuard':len([r for r in results if r['status']=='blocked_mutation_guard']),'skippedAlreadyDone':len(skipped),'followupQueue':len(followup),'validationIssues':len(validation_issues),'guardAutoEnriched':sum(1 for r in results if r.get('guardNotes'))}
     blocking=[]
     if counts['blockedMutationGuard']: blocking.append('mutation_guard_blocked_actions')

@@ -178,6 +178,18 @@ class DispatcherTests(unittest.TestCase):
     def test_guidance_and_expert_queues_are_consumed(self):
         self.assertIn(dispatcher.OPS/'inqom-operator-guidance-action-queue.json',dispatcher.QUEUE_FILES)
         self.assertIn(dispatcher.OPS/'inqom-source-quality-logical-review-queue.json',dispatcher.QUEUE_FILES)
+    def test_unresolved_expert_followup_survives_repeat_cycle(self):
+        with tempfile.TemporaryDirectory() as td:
+            p=Path(td)
+            q=normalize_action_list([{'owner':'agent_then_expert_accountant','actionType':'review_source_quality_logical_classification_residual',
+                'target':'synthetic_tax_review','priority':'medium','actionableNow':True,'blockingReason':'expert_review',
+                'doneCondition':'Decision documented','data':{'allowedEffects':['writes_reports']}}],origin_automation='synthetic_review')
+            with patch.multiple(dispatcher,WORKDIR=p/'papers',OUT_JSON=p/'report.json',OUT_MD=p/'report.md',LEDGER=p/'ledger.jsonl',FOLLOWUP_QUEUE=p/'followup.json'),patch.object(dispatcher,'load_actions',return_value=q):
+                dispatcher.main()
+                first=json.loads((p/'followup.json').read_text());self.assertEqual(len(first),1)
+                dispatcher.main()
+                second=json.loads((p/'followup.json').read_text());self.assertEqual(second,first)
+                report=json.loads((p/'report.json').read_text());self.assertEqual(report['counts']['skippedAlreadyDone'],1)
     def test_documented_wait_not_dispatched(self):
         with tempfile.TemporaryDirectory() as td:
             p=Path(td)
