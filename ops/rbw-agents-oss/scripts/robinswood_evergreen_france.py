@@ -39,6 +39,26 @@ def contract(path=POLICY):
  assert c['windows']==[['09:00','12:00'],['14:00','18:00']] and c['minimumIntervalSeconds']==600
  assert c['proofMaxAgeDays']==7 and c['copyVersion']=='2026-10-02.2'
  assert c['autoRecovery']=={'cooldownDays':7,'minimumFreshSmtpContacts':3,'complaintRecoveryAllowed':False,'capAfterRecovery':1}
+ r=c.get('postScotlandRamp')
+ if r:
+  assert r['authorizationSource']=='human_post_scotland_daily_ramp_request_2026-10-04' and r['approvedBy']=='Thibault'
+  assert r['scope']=='combined_french_portfolio_including_replies_and_followups'
+  assert r['predecessorCampaignId']=='scotland-executive-conference-october-2026'
+  assert (r['dailyMax'],r['weeklyMax'],r['steadyDailyMax'],r['steadyWeeklyMax'])==(20,100,30,150)
+  assert r['laneDailyMax']=={'presse':4,'pme':10,'eti':6}
+  change=r.get('allocationChange')
+  expected={'presse':6,'pme':15,'eti':9}
+  if change:
+   assert change['source']=='human_post_scotland_daily30_press10_request_2026-10-04' and change['approvedBy']=='Thibault'
+   assert change['scope']=='target_30_total_press_10_prospecting_20'
+   assert change['previousSteadyLaneDailyMax']==expected
+   previous={k:v for k,v in c.items() if k!='authorization'}
+   previous['postScotlandRamp']={k:v for k,v in r.items() if k!='allocationChange'}|{'steadyLaneDailyMax':expected}
+   assert digest(previous)==change['previousScopeSha256'],'allocation_prior_scope_changed'
+   expected={'presse':10,'pme':12,'eti':8}
+  assert r['steadyLaneDailyMax']==expected
+  assert (r['healthyCompletedBusinessDays'],r['minimumVerifiedEffectsPerHealthyDay'])==(5,10)
+  assert all(r[k] is True for k in ['requireCurrentPredecessorContractExpiry','requireNoUnknownEffects','preserveRecoveryCanary'])
  return c
 def in_window(t,c):
  x=t.astimezone(ZoneInfo(c['timezone']));h=x.strftime('%H:%M')
@@ -458,6 +478,48 @@ def next_item(db,lane,t,c):
   replied=db.execute('SELECT 1 FROM replies WHERE email=?',(r['email'],)).fetchone()
   if initial and not replied and len(touches)<c['maxTouchesWithoutReply'] and business_days(dt(initial['created']),t)>=10:return r,'followup',learn
  return None,None,learn
+def portfolio_ramp(db,t,c,predecessor_root=None):
+ """Read current authorised expiry and durable effects; a pause is never completion."""
+ r=c.get('postScotlandRamp')
+ info={'phase':'predecessor_active','dailyCap':None,'weeklyCap':None,'reason':'no_post_scotland_authorization'}
+ if not r:return info
+ predecessor_root=predecessor_root or OPS/'product-campaigns'/r['predecessorCampaignId']
+ try:
+  sc=read(predecessor_root/'campaign-contract.json');transport.verify_contract(sc)
+  limits=sc['limits'];end=limits['lastOutboundDate'];local=t.astimezone(ZoneInfo(limits['timezone']))
+  info.update(predecessorCampaignId=sc['campaignId'],predecessorLastOutboundDate=end,
+   predecessorScopeSha256=sc['authorization']['scopeSha256'],reason='awaiting_authorized_predecessor_expiry')
+  if local.date().isoformat()<=end:return info
+  with sqlite3.connect('file:'+str(predecessor_root/'campaign-state.sqlite3')+'?mode=ro',uri=True) as prior:
+   unknown=prior.execute("SELECT count(*) FROM touches WHERE state IS NULL OR state!='sent_verified'").fetchone()[0]
+   adverse=prior.execute("SELECT count(*) FROM replies WHERE kind IN ('bounce','complaint','delivery_failure')").fetchone()[0]
+   info.update(predecessorUnknownEffects=unknown,predecessorAdverseSignals=adverse)
+   if unknown or adverse:
+    info['reason']='predecessor_unknown_effect' if unknown else 'predecessor_adverse_signal_requires_review';return info
+ except Exception as e:
+  info['reason']='predecessor_completion_unproven:'+type(e).__name__;return info
+ effects=db.execute('SELECT * FROM touches').fetchall()
+ if any(x['state']!='verified' for x in effects):
+  info.update(phase='blocked',reason='portfolio_unknown_gmail_effect');return info
+ day=t.astimezone(ZoneInfo(c['timezone'])).date();monday=day-timedelta(days=day.weekday())
+ daily_used=sum(dt(x['created']).astimezone(ZoneInfo(c['timezone'])).date()==day for x in effects)
+ weekly_used=sum(monday<=dt(x['created']).astimezone(ZoneInfo(c['timezone'])).date()<=day for x in effects)
+ days={}
+ for x in effects:
+  created=dt(x['created']);d=created.astimezone(ZoneInfo(c['timezone'])).date()
+  if created.astimezone(ZoneInfo(limits['timezone'])).date().isoformat()>end and d<day and d.weekday()<5:
+   days[d]=days.get(d,0)+1
+ healthy=sorted(d.isoformat() for d,n in days.items() if n>=r['minimumVerifiedEffectsPerHealthyDay'])
+ adverse=db.execute("SELECT count(*) FROM replies WHERE kind IN ('bounce','complaint')").fetchone()[0]
+ steady=len(healthy)>=r['healthyCompletedBusinessDays'] and not adverse
+ info.update(phase='steady_30' if steady else 'initial_20',reason='verified_predecessor_expiry',
+  dailyCap=r['steadyDailyMax'] if steady else r['dailyMax'],
+  weeklyCap=r['steadyWeeklyMax'] if steady else r['weeklyMax'],
+  laneDailyMax=r['steadyLaneDailyMax'] if steady else r['laneDailyMax'],
+  dailyUsed=daily_used,weeklyUsed=weekly_used,healthyCompletedDays=healthy,
+  adverseSignalsPreserved=adverse,countsRepliesAndFollowups=True)
+ return info
+
 def lane_capacity(db,lane,t,c):
  effects=db.execute("SELECT * FROM touches WHERE lane=?",(lane,)).fetchall();local=t.astimezone(ZoneInfo('Europe/Paris'));day=local.date();monday=day-timedelta(days=day.weekday())
  learn=learning(db,lane,t,c);matured=sum(x['matured'] for x in learn['variants'].values());qualified=sum(x['qualified'] for x in learn['variants'].values())
@@ -485,10 +547,15 @@ def lane_capacity(db,lane,t,c):
      proof['ok']=False;proof['reason']='recovery_requires_independent_smtp_proof'
      db.execute('UPDATE candidates SET proof=?,reason=? WHERE email=?',(json.dumps(proof),proof['reason'],row['email']))
    db.commit()
- daily=c['lanes'][lane]['dailyMax'] if matured>=10 and qualified>=1 and not adverse else c['canaryDailyMax']
+ ramp=portfolio_ramp(db,t,c)
+ if ramp['phase']=='blocked':return False,ramp['reason']
+ active=ramp['phase'] in ['initial_20','steady_30']
+ daily=ramp['laneDailyMax'][lane] if active and not adverse else c['lanes'][lane]['dailyMax'] if matured>=10 and qualified>=1 and not adverse else c['canaryDailyMax']
+ weekly=(ramp['laneDailyMax'][lane]*5) if active else c['lanes'][lane]['weeklyMax']
  nday=sum(dt(x['created']).astimezone(ZoneInfo('Europe/Paris')).date()==day for x in effects)
  nweek=sum(dt(x['created']).astimezone(ZoneInfo('Europe/Paris')).date()>=monday for x in effects)
- return nday<daily and nweek<c['lanes'][lane]['weeklyMax'],{'dailyCap':daily,'dailyUsed':nday,'weeklyCap':c['lanes'][lane]['weeklyMax'],'weeklyUsed':nweek,'historicalMetricsReset':False}
+ portfolio_ok=not active or (ramp['dailyUsed']<ramp['dailyCap'] and ramp['weeklyUsed']<ramp['weeklyCap'])
+ return nday<daily and nweek<weekly and portfolio_ok,{'dailyCap':daily,'dailyUsed':nday,'weeklyCap':weekly,'weeklyUsed':nweek,'historicalMetricsReset':False,'portfolioRamp':ramp}
 def audience_counts(db,lane,t,c):
  rows=db.execute('SELECT * FROM candidates WHERE lane=?',(lane,)).fetchall()
  legacy={r['email'] for r in db.execute('SELECT email FROM legacy')}
@@ -559,7 +626,7 @@ def run(lane,apply=False,research_only=False,root=ROOT,c=None,gateway=None,t=Non
    report={'generatedAt':stamp(now()),'contractVersion':'robinswood-evergreen-france-v1','capabilityId':report_id,
     'ok':True,'status':status,'mode':'apply' if apply else 'dry_run','counts':{**counts,'sentNow':sent,'newReplies':reply_count},
     'summary':lane+': '+status+'; sends='+str(sent),'blockingReasons':[] if status not in ['awaiting_qualified_contact'] else ['fresh_primary_qualification_required'],
-    'warningReasons':['historical_HDF_bounces_5_of_48_preserved','SENT_is_not_inbox_delivery','new_cohort_canary_one_per_lane_per_day'],
+    'warningReasons':['historical_HDF_bounces_5_of_48_preserved','SENT_is_not_inbox_delivery','recovery_canary_one_per_lane_per_day_preserved'],
     'research':research_result,'learning':learning(db,lane,t,c),'yearRound':True,'endDate':None,
     'artifacts':{'state':str(root/'campaign-state.sqlite3'),'contract':str(POLICY)},
     'systemsOfRecord':{'classification':'none','crmWrites':0,'gmailProof':'exact_SENT_message_thread_body_signature'},
