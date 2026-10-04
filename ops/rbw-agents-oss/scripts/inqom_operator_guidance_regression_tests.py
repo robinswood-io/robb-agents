@@ -86,6 +86,12 @@ class CycleTests(unittest.TestCase):
         self.assertEqual(pipeline.completion_for_cycle(self.terminal(),[],stamp(-10))[0],'blocked_incomplete_work')
     def test_future_timestamp_cannot_close(self):
         self.assertFalse(pipeline.artifact_from_cycle(self.terminal(100),stamp(-10)))
+    def test_old_artifact_counts_are_not_current_results(self):
+        with tempfile.TemporaryDirectory() as td:
+            path=Path(td)/'old.json';path.write_text(json.dumps({'generatedAt':stamp(-100),'ok':True,'counts':{'terminalClosed':1}}))
+            result=pipeline.compact_for_cycle(path,stamp(-10))
+            self.assertFalse(result['fromCurrentCycle']);self.assertEqual(result['counts'],{})
+            self.assertEqual(result['cachedCounts'],{'terminalClosed':1});self.assertIsNone(result['ok'])
     def test_new_cycle_replaces_old_completion_before_any_step(self):
         start=pipeline.initial_cycle_payload(stamp(),'scheduled')
         self.assertFalse(start['ok']);self.assertEqual(start['businessCompletionStatus'],'blocked_incomplete_work')
