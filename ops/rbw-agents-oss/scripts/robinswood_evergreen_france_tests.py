@@ -404,6 +404,16 @@ class PostScotlandRampTests(unittest.TestCase):
   allowed,info=engine.lane_capacity(self.db,'pme',self.t,self.c)
   self.assertTrue(allowed);self.assertEqual(info['dailyCap'],1)
   self.assertEqual(self.db.execute("SELECT count(*) FROM replies WHERE kind='bounce'").fetchone()[0],1)
+ def test_new_press_allocation_requires_exact_human_authorization(self):
+  altered=copy.deepcopy(self.c);altered['postScotlandRamp'].pop('allocationChange')
+  altered['authorization']['scopeSha256']=engine.digest({k:v for k,v in altered.items() if k!='authorization'})
+  p=self.root/'unauthorized.json';engine.save(p,altered)
+  with self.assertRaises(AssertionError):engine.contract(p)
+ def test_new_press_allocation_preserves_previous_authorized_scope(self):
+  altered=copy.deepcopy(self.c);altered['postScotlandRamp']['allocationChange']['previousScopeSha256']='not_the_previous_contract'
+  altered['authorization']['scopeSha256']=engine.digest({k:v for k,v in altered.items() if k!='authorization'})
+  p=self.root/'bad-previous.json';engine.save(p,altered)
+  with self.assertRaisesRegex(AssertionError,'allocation_prior_scope_changed'):engine.contract(p)
  def test_future_dispatch_simulation_stops_exactly_at_twenty_and_thirty(self):
   for steady,expected in [(False,20),(True,30)]:
    with self.subTest(steady=steady):
@@ -427,6 +437,10 @@ class PostScotlandRampTests(unittest.TestCase):
       report=engine.run(lane,apply=True,root=self.root,c=self.c,gateway=g,t=t,research_batch=0)
      self.assertEqual(report['status'],'sent_verified')
     self.assertEqual(g.posts,expected)
+    if steady:
+     press=sum(guard.header(m,'X-RBW-Campaign')==engine.IDS['presse'] for m in g.messages.values())
+     prospecting=sum(guard.header(m,'X-RBW-Campaign') in [engine.IDS['pme'],engine.IDS['eti']] for m in g.messages.values())
+     self.assertEqual((press,prospecting),(10,20))
     for lane in engine.LANES:self.assertFalse(engine.lane_capacity(self.db,lane,t,self.c)[0])
 
 if __name__=='__main__':unittest.main()

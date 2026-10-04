@@ -45,7 +45,18 @@ def contract(path=POLICY):
   assert r['scope']=='combined_french_portfolio_including_replies_and_followups'
   assert r['predecessorCampaignId']=='scotland-executive-conference-october-2026'
   assert (r['dailyMax'],r['weeklyMax'],r['steadyDailyMax'],r['steadyWeeklyMax'])==(20,100,30,150)
-  assert r['laneDailyMax']=={'presse':4,'pme':10,'eti':6} and r['steadyLaneDailyMax']=={'presse':6,'pme':15,'eti':9}
+  assert r['laneDailyMax']=={'presse':4,'pme':10,'eti':6}
+  change=r.get('allocationChange')
+  expected={'presse':6,'pme':15,'eti':9}
+  if change:
+   assert change['source']=='human_post_scotland_daily30_press10_request_2026-10-04' and change['approvedBy']=='Thibault'
+   assert change['scope']=='target_30_total_press_10_prospecting_20'
+   assert change['previousSteadyLaneDailyMax']==expected
+   previous={k:v for k,v in c.items() if k!='authorization'}
+   previous['postScotlandRamp']={k:v for k,v in r.items() if k!='allocationChange'}|{'steadyLaneDailyMax':expected}
+   assert digest(previous)==change['previousScopeSha256'],'allocation_prior_scope_changed'
+   expected={'presse':10,'pme':12,'eti':8}
+  assert r['steadyLaneDailyMax']==expected
   assert (r['healthyCompletedBusinessDays'],r['minimumVerifiedEffectsPerHealthyDay'])==(5,10)
   assert all(r[k] is True for k in ['requireCurrentPredecessorContractExpiry','requireNoUnknownEffects','preserveRecoveryCanary'])
  return c

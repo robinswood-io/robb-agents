@@ -97,9 +97,9 @@
     "source": "human_evergreen_campaign_request_2026-10-02",
     "approvedBy": "Thibault",
     "request": "Campagnes presse et prospection PME et ETI françaises actives toute l’année avec itérations autonomes et auto améliorations",
-    "scopeSha256": "bf17caf3e7d7535efafbe9ee7ed36e4c2ba4e9b714b6933d9c689683be9d48a4",
-    "previousScopeSha256": "8afbbe98e546d61072d77fd5cf622831c6c63e72566e37c539dcd93421af082e",
-    "latestApprovalSource": "human_post_scotland_daily_ramp_request_2026-10-04"
+    "scopeSha256": "263e3bc6879eb1936762e96b06eff31329815995b82691326e36fc9b22624270",
+    "previousScopeSha256": "bf17caf3e7d7535efafbe9ee7ed36e4c2ba4e9b714b6933d9c689683be9d48a4",
+    "latestApprovalSource": "human_post_scotland_daily30_press10_request_2026-10-04"
   },
   "postScotlandRamp": {
     "authorizationSource": "human_post_scotland_daily_ramp_request_2026-10-04",
@@ -118,14 +118,27 @@
       "eti": 6
     },
     "steadyLaneDailyMax": {
-      "presse": 6,
-      "pme": 15,
-      "eti": 9
+      "presse": 10,
+      "pme": 12,
+      "eti": 8
     },
     "healthyCompletedBusinessDays": 5,
     "minimumVerifiedEffectsPerHealthyDay": 10,
     "requireCurrentPredecessorContractExpiry": true,
     "requireNoUnknownEffects": true,
-    "preserveRecoveryCanary": true
+    "preserveRecoveryCanary": true,
+    "allocationChange": {
+      "source": "human_post_scotland_daily30_press10_request_2026-10-04",
+      "approvedBy": "Thibault",
+      "approvedAt": "2026-10-04",
+      "request": "30 envois plutôt, 10 pour presse et le reste en prospection",
+      "previousScopeSha256": "bf17caf3e7d7535efafbe9ee7ed36e4c2ba4e9b714b6933d9c689683be9d48a4",
+      "previousSteadyLaneDailyMax": {
+        "presse": 6,
+        "pme": 15,
+        "eti": 9
+      },
+      "scope": "target_30_total_press_10_prospecting_20"
+    }
   }
 }
