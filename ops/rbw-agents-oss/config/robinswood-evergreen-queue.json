@@ -1,0 +1,28 @@
+{
+  "version": "2026-10-04.queue.1",
+  "authorization": {
+    "source": "human_queue_continuity_and_historical_followup_request_2026-10-04",
+    "approvedBy": "Thibault",
+    "request": "contrôle que la queue avance bien et qu’elle ne tombera jamais à 0, ne serait-ce que parce qu’elle doit relancer d’anciens contacts",
+    "campaignScopeSha256": "9a54b413638f3d5e9810d18854af73378fb22e1c4c7e7e2883af24a2d2c7cf3d"
+  },
+  "readyBusinessDays": 3,
+  "minimumCompanyResearchReserve": 100,
+  "registryMinimumIntervalSeconds": 3600,
+  "registryMaximumCallsPerDayPerLane": 8,
+  "failedProofRetryHours": 24,
+  "discoveryRetryHours": 24,
+  "validProofMaxAgeDays": 7,
+  "historicalAuditBatch": 2,
+  "historicalFollowupCampaigns": [
+    "robinswood-media-authority-2026"
+  ],
+  "preserveOperatorHolds": true,
+  "preserveHistoricalHdfPause": true,
+  "historicalFollowupMaximum": 1,
+  "followupBusinessDays": 10,
+  "unknownEffectBlocks": true,
+  "replyStopsFollowup": true,
+  "allExistingCapsPreserved": true,
+  "paidAllowed": false
+}
