@@ -2,7 +2,7 @@
   "tasks": {
     "inqom_operator_guidance_20261004": {
       "taskId": "inqom_operator_guidance_20261004",
-      "status": "dev_verified_ready_for_promotion",
+      "status": "runtime_qualified_full_cycle_approval_pending",
       "target": {
         "devServer": "164.132.161.150",
         "gitRoot": "/srv/workspace/robinswood-agents",
@@ -31,11 +31,26 @@
           "inqom_accounting_action_dispatcher.py": "7aad88de97d32d1c644a811710676d834700bf2743751630ac5cbe376ff3512e",
           "inqom_lettering_autonomy_batcher.py": "af1736fd943c2b25f91db70b41b22405ac7f13667d4903be1a8018fda587d475",
           "inqom_operator_guidance_materializer.py": "ae827c3ec2a5f382caf17c3095878074cb9c987a4d12e64bed1930366b4c8838"
-        }
+        },
+        "regressionTestsPassed": 38,
+        "runtimeHashesMatchDEV": true,
+        "qualificationStepsPassed": 4,
+        "nativeLinesRead": 4918,
+        "foldersCovered": 3,
+        "prepareCases": 207,
+        "documentedWaits": 5,
+        "expertFollowupsPersisted": 7,
+        "executableLetteringLots": 0,
+        "workerRestarted": false,
+        "originalCorrectionsRechecked": 6,
+        "originalLinesClosed": 11,
+        "bankSourceLinesUnchanged": 6,
+        "devSourceCommit": "dd22f68c566123608d4db61da454a23c6301c4b7"
       },
       "limits": [
         "Outstanding invoices, rental effective date, PNS expert arbitration and JLM bank payout require external evidence.",
-        "No accounting mutation permission broadened."
+        "No accounting mutation permission broadened.",
+        "Full mutating pipeline launch rejected by automatic approval review; explicit user authorization requested; no bypass or execution."
       ],
       "do_not_repeat": [
         "Do not replay the six already verified correction entries or seven letterings.",
