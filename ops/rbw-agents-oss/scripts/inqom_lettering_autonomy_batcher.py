@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from action_queue_contract import normalize_action_list, validate_action_item
+from inqom_operator_guidance_materializer import filter_candidates, open_candidates, fresh_snapshot
 
 ROOT = Path('/srv/rbw-agents-oss')
 CONFIG = ROOT / 'config'
@@ -410,8 +411,8 @@ def batch(kind: str, candidates: list[dict[str, Any]], policy: dict[str, Any], e
         'highConfidenceExecutableCount': len(confidence_executable),
         'ambiguousCount': len(ambiguous),
         'safeOneToOneReadOnly': safe[:200],
-        'humanReplicatedExecutable': human_executable[:200],
-        'highConfidenceExecutable': confidence_executable[:200],
+        'humanReplicatedExecutable': human_executable,
+        'highConfidenceExecutable': confidence_executable,
         'ambiguous': ambiguous[:200],
         'byThirdParty': third_rows,
     }
@@ -475,15 +476,27 @@ def main() -> None:
     policy = read_json(POLICY_JSON, {})
     evidence = read_json(THIRD_PARTY_EVIDENCE_JSON, {})
     raw = workbench.get('rawOutputs') or {}
-    client = batch('client', (raw.get('clientLettering') or {}).get('candidates') or [], policy, evidence)
-    supplier = batch('supplier', (raw.get('supplierLettering') or {}).get('candidates') or [], policy, evidence)
+    native_snapshot = read_json(OPS / 'inqom-operator-guidance-native-snapshot.json', {})
+    native_candidates = open_candidates(native_snapshot, 18627)
+    filtered = {}; excluded = []
+    for kind in ('client','supplier'):
+        rows = (raw.get(kind + 'Lettering') or {}).get('candidates') or []
+        all_rows = {candidate_identity(c): c for c in rows}
+        for c in native_candidates[kind]: all_rows.setdefault(candidate_identity(c), c)
+        filtered[kind], rejected = filter_candidates(list(all_rows.values()), native_snapshot, 18627)
+        excluded.extend(rejected)
+    client = batch('client', filtered['client'], policy, evidence)
+    supplier = batch('supplier', filtered['supplier'], policy, evidence)
     queue, executable_queue = build_action_queues(client, supplier, policy)
     validation = []
+    if not fresh_snapshot(native_snapshot): validation.append({'issues':['operator_native_snapshot_missing_or_stale']})
     for item in queue:
         issues = validate_action_item(item)
         if issues:
             validation.append({'id': item.get('id'), 'issues': issues})
     counts = {
+        'operatorGuidanceExcludedCandidates': len(excluded),
+        'completeNativeReferenceCandidates': sum(len(v) for v in native_candidates.values()),
         'clientCandidates': client['candidateCount'],
         'supplierCandidates': supplier['candidateCount'],
         'humanReplicatedExecutable': client['humanReplicatedExecutableCount'] + supplier['humanReplicatedExecutableCount'],
@@ -512,6 +525,8 @@ def main() -> None:
             'policyPath': str(POLICY_JSON),
             'thirdPartyEvidencePath': str(THIRD_PARTY_EVIDENCE_JSON),
         },
+        'operatorGuidanceExcluded': excluded,
+        'operatorNativeSnapshotGeneratedAt': native_snapshot.get('generatedAt'),
         'client': client,
         'supplier': supplier,
         'queue': queue,

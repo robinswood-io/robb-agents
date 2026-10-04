@@ -1,0 +1,47 @@
+{
+  "tasks": {
+    "inqom_operator_guidance_20261004": {
+      "taskId": "inqom_operator_guidance_20261004",
+      "status": "dev_verified_ready_for_promotion",
+      "target": {
+        "devServer": "164.132.161.150",
+        "gitRoot": "/srv/workspace/robinswood-agents",
+        "worktree": "/opt/ia-webdev/agent-dev/worktrees/robinswood-agents/inqom-operator-guidance-20261004",
+        "branch": "codex/inqom-operator-guidance-20261004",
+        "runtimeServer": "146.59.230.253",
+        "runtimeRoot": "/srv/rbw-agents-oss",
+        "observationUrl": "https://orion.rbw.ovh/missions",
+        "devContainer": "not_applicable_operational_python_cli"
+      },
+      "authorization": "User authorized applying operational Python scripts DEV → INTERNE without restart; immutable tested files only.",
+      "acceptanceCriteria": [
+        "Consistent expert queues pass; inconsistent or mutating queues fail.",
+        "Fatal or stale terminal artifacts cannot mark the cycle complete.",
+        "Operator guidance consumed at start of every cycle with complete paged native coverage of all three folders.",
+        "Matched native rows excluded from lettering; full canonical candidates retained.",
+        "EDF/Antonini and JLM confirmed payout remain documented waits without duplicate collection.",
+        "Native accounting and worker remain unchanged by the read-only materializer."
+      ],
+      "evidence": {
+        "tests": "34 passed, 0 failed",
+        "reproduction": "Actual live expert queue: old exit 1 no_residual_queue_needed; corrected exit 0, three expert routes retained.",
+        "testedHashes": {
+          "inqom_accounting_autonomy_pipeline.py": "349d150b316f5a42e9c4997e3d8b7a64e0b34a737869c77626239b3356ea4d9c",
+          "inqom_source_quality_logical_review_tests.py": "a2db5248b95d25499b42968bb1570b7d7d513ba52a36c93f855a73a47edb9626",
+          "inqom_accounting_action_dispatcher.py": "7aad88de97d32d1c644a811710676d834700bf2743751630ac5cbe376ff3512e",
+          "inqom_lettering_autonomy_batcher.py": "af1736fd943c2b25f91db70b41b22405ac7f13667d4903be1a8018fda587d475",
+          "inqom_operator_guidance_materializer.py": "ae827c3ec2a5f382caf17c3095878074cb9c987a4d12e64bed1930366b4c8838"
+        }
+      },
+      "limits": [
+        "Outstanding invoices, rental effective date, PNS expert arbitration and JLM bank payout require external evidence.",
+        "No accounting mutation permission broadened."
+      ],
+      "do_not_repeat": [
+        "Do not replay the six already verified correction entries or seven letterings.",
+        "Do not restart worker, modify Docker or write integration/runner checkout.",
+        "Do not retry a native mutation after an error before reading native state."
+      ]
+    }
+  }
+}

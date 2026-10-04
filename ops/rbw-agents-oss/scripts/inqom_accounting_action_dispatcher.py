@@ -18,6 +18,8 @@ FOLLOWUP_QUEUE = OPS / 'inqom-accounting-action-dispatcher-followup-queue.json'
 ORIGIN = 'inqom-accounting-action-dispatcher'
 MUTATING = {'inqom_mutation','native_reconciliation','native_lettering','entry_creation','entry_update','entry_delete','external_delivery','sellsy_mutation'}
 QUEUE_FILES = [
+    OPS / 'inqom-operator-guidance-action-queue.json',
+    OPS / 'inqom-source-quality-logical-review-queue.json',
     OPS / 'inqom-manual-reconciliation-action-queue.json',
     OPS / 'inqom-group-accounting-order-action-queue.json',
     OPS / 'inqom-quality-autonomy-action-queue.json',
@@ -112,6 +114,8 @@ def main() -> None:
     generated_at=now_iso(); WORKDIR.mkdir(parents=True, exist_ok=True)
     actions=load_actions(); done=read_ledger(); results=[]; skipped=[]; validation_issues=[]
     for action in actions:
+        if action.get('actionableNow') is False:
+            skipped.append({'dispatchKey': action.get('dedupeKey') or action.get('id'), 'reason': 'documented_wait_not_actionable', 'title': action.get('title')}); continue
         issues=validate_action_item(action)
         if issues: validation_issues.append({'id':action.get('id'),'issues':issues,'sourceQueue':action.get('_sourceQueue')})
         dispatch_key=str(action.get('dedupeKey') or action.get('id') or sha(action))

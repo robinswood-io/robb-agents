@@ -5,6 +5,7 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from action_queue_contract import validate_action_item
 
 OPS = Path('/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops')
 REPORT = OPS / 'inqom-source-quality-logical-review.json'
@@ -46,6 +47,62 @@ def sample_contract_ok(item: dict[str, Any]) -> bool:
     sample_count = as_int(item.get('sampleCount'), -1)
     fingerprints = item.get('sampleFingerprints') if isinstance(item.get('sampleFingerprints'), list) else []
     return bool(item.get('sourceClass')) and sample_count > 0 and sample_count == len(fingerprints)
+
+
+
+def residual_queue_issues(report: dict[str, Any]) -> list[str]:
+    """An expert wait is valid work; a missing, unsafe or inconsistent route is not."""
+    issues = []
+    counts = report.get('counts') or {}
+    items = report.get('items') or []
+    queue = report.get('actionQueue') or []
+    if not isinstance(items, list) or not isinstance(queue, list):
+        return ['items_or_queue_not_list']
+    expected = {}
+    for item in items:
+        if not isinstance(item, dict) or not sample_contract_ok(item):
+            issues.append('invalid_item_contract'); continue
+        key = item['sourceClass']
+        if key in expected:
+            issues.append('duplicate_source_class')
+        expected[key] = item
+        if (item.get('closedNoAction') is True) == (item.get('expertReviewRequired') is True):
+            issues.append('item_neither_closed_nor_routed')
+        if any(item.get(k) is not False for k in ('mutationAllowed', 'externalSendAllowed', 'nativeReclassificationAllowed')):
+            issues.append('unsafe_item_effect')
+    expert = {k: v for k, v in expected.items() if v.get('expertReviewRequired') is True}
+    seen, ids, dedupes = set(), set(), set()
+    for action in queue:
+        if not isinstance(action, dict):
+            issues.append('invalid_queue_item'); continue
+        issues.extend(validate_action_item(action))
+        data = action.get('data') or {}
+        key = data.get('sourceClass')
+        item = expert.get(key)
+        if key in seen or action.get('id') in ids or action.get('dedupeKey') in dedupes:
+            issues.append('duplicate_expert_route')
+        seen.add(key); ids.add(action.get('id')); dedupes.add(action.get('dedupeKey'))
+        if not item:
+            issues.append('orphan_expert_route'); continue
+        if (action.get('owner') != 'agent_then_expert_accountant'
+            or action.get('originAutomation') != 'inqom-source-quality-logical-review'
+            or action.get('actionType') != 'review_source_quality_logical_classification_residual'
+            or action.get('target') != f'inqom:source-quality-logical-review:{key}'
+            or action.get('blockingReason') != 'source_quality_logical_review_residual_requires_expert'
+            or action.get('actionableNow') is not True
+            or not action.get('dedupeKey')):
+            issues.append('expert_route_contract_mismatch')
+        if data.get('classification') != item.get('classification') or data.get('sampleFingerprints') != item.get('sampleFingerprints'):
+            issues.append('expert_evidence_mismatch')
+        if any(data.get(k) is not False for k in ('mutationAllowed', 'externalSendAllowed', 'nativeReclassificationAllowed')):
+            issues.append('unsafe_expert_route_effect')
+    if seen != set(expert):
+        issues.append('expert_route_coverage_mismatch')
+    if (as_int(counts.get('expertReviewItems'), -1) != len(expert)
+        or as_int(counts.get('queue'), -1) != len(queue)
+        or as_int(counts.get('closedNoAction'), -1) != len(items) - len(expert)):
+        issues.append('review_counts_mismatch')
+    return sorted(set(issues))
 
 
 def main() -> None:
@@ -114,6 +171,7 @@ def main() -> None:
     paired = waiting_item.get('pairedDocRefs') if waiting_applicable and isinstance(waiting_item.get('pairedDocRefs'), list) else []
     waiting_closed_ok = (
         not waiting_applicable
+        or waiting_item.get('expertReviewRequired') is True
         or (
             waiting_item.get('closedNoAction') is True
             and waiting_item.get('expertReviewRequired') is False
@@ -130,6 +188,7 @@ def main() -> None:
 
     pairs_ok = (
         not waiting_applicable
+        or waiting_item.get('expertReviewRequired') is True
         or (
             bool(paired)
             and all(
@@ -151,9 +210,9 @@ def main() -> None:
 
     check(
         checks,
-        'no_residual_queue_needed',
-        as_int(counts.get('expertReviewItems')) == 0 and len(report.get('actionQueue') or []) == 0,
-        {'counts': counts, 'queue': report.get('actionQueue')},
+        'residual_expert_queue_consistent_and_readonly',
+        not residual_queue_issues(report),
+        {'issues': residual_queue_issues(report), 'counts': counts},
     )
 
     failed = [c for c in checks if not c['ok']]
@@ -161,7 +220,7 @@ def main() -> None:
     high_failed = [c for c in failed if c.get('severity') == 'high']
     payload = {
         'generatedAt': gen,
-        'contractVersion': 'standard-v2-dynamic-inqom-source-quality-logical-review-tests',
+        'contractVersion': 'standard-v3-routed-expert-review-queue',
         'capabilityId': ORIGIN,
         'ok': not failed,
         'status': 'pass' if not failed else 'fail',
