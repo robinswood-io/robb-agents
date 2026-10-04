@@ -9,6 +9,8 @@ from pathlib import Path
 from urllib import request, parse
 from zoneinfo import ZoneInfo
 import scotland_executive_conference_october as transport
+import evergreen_sender_pilot as sender_pilot
+from email.message import EmailMessage
 
 WS=Path('/home/craft/.craft-agent/workspaces/my-workspace-2')
 OPS=WS/'campaigns/ops'
@@ -52,13 +54,14 @@ def contract(path=POLICY):
    assert change['source']=='human_post_scotland_daily30_press10_request_2026-10-04' and change['approvedBy']=='Thibault'
    assert change['scope']=='target_30_total_press_10_prospecting_20'
    assert change['previousSteadyLaneDailyMax']==expected
-   previous={k:v for k,v in c.items() if k!='authorization'}
+   previous={k:v for k,v in c.items() if k not in ['authorization','senderPilot']}
    previous['postScotlandRamp']={k:v for k,v in r.items() if k!='allocationChange'}|{'steadyLaneDailyMax':expected}
    assert digest(previous)==change['previousScopeSha256'],'allocation_prior_scope_changed'
    expected={'presse':10,'pme':12,'eti':8}
   assert r['steadyLaneDailyMax']==expected
   assert (r['healthyCompletedBusinessDays'],r['minimumVerifiedEffectsPerHealthyDay'])==(5,10)
   assert all(r[k] is True for k in ['requireCurrentPredecessorContractExpiry','requireNoUnknownEffects','preserveRecoveryCanary'])
+ sender_pilot.verify_contract(c,digest)
  return c
 def in_window(t,c):
  x=t.astimezone(ZoneInfo(c['timezone']));h=x.strftime('%H:%M')
@@ -73,7 +76,7 @@ def db_open(root):
  CREATE TABLE IF NOT EXISTS legacy(email TEXT PRIMARY KEY,campaign TEXT,message_id TEXT,subject TEXT,state TEXT);
  CREATE TABLE IF NOT EXISTS research(siren TEXT PRIMARY KEY,payload TEXT,checked TEXT,reason TEXT);
  CREATE TABLE IF NOT EXISTS metadata(key TEXT PRIMARY KEY,value TEXT);
- """);db.commit();return db
+ """);db.commit();sender_pilot.ensure_schema(db,root);return db
 def suppressed(root=OPS.parent):
  obj=read(root/'contact-suppression.json');out=set()
  for k in ['records','blockedRecipients','items']:
@@ -319,15 +322,27 @@ def business_days(a,b):
  while d<end:
   d+=timedelta(days=1);n+=d.weekday()<5
  return n
-def learning(db,lane,t,c):
+def learning(db,lane,t,c,sender=None,strategy=None):
  out={}
  for v in ['A','B']:
-  matured={r['email'] for r in db.execute("SELECT * FROM touches WHERE lane=? AND step='initial' AND state='verified' AND variant=? AND copy_version=?",(lane,v,c['copyVersion'])) if business_days(dt(r['created']),t)>=5}
+  rows=db.execute("SELECT * FROM touches WHERE lane=? AND step='initial' AND state='verified' AND variant=? AND copy_version=?",(lane,v,c['copyVersion'])).fetchall()
+  if sender is not None:
+   matched=[]
+   for row in rows:
+    try:identity=sender_pilot.touch_identity(row)
+    except Exception:continue
+    if identity==(sender,strategy):matched.append(row)
+   rows=matched
+  matured={r['email'] for r in rows if business_days(dt(r['created']),t)>=5}
   successes={r['email'] for r in db.execute("SELECT * FROM replies WHERE lane=? AND kind=?",(lane,'editorial_request' if lane=='presse' else 'qualified_need'))}&matured
   out[v]={'matured':len(matured),'qualified':len(successes),'posterior':(1+len(successes))/(2+len(matured))}
  enough=all(x['matured']>=8 for x in out.values()) and sum(x['qualified'] for x in out.values())>=3
  winner=max(out,key=lambda v:out[v]['posterior']) if enough and abs(out['A']['posterior']-out['B']['posterior'])>=.1 else None
- return {'copyVersion':c['copyVersion'],'variants':out,'winner':winner,'explorationFloor':.25,'technicalSendsRewarded':False,'bookingsInferred':False}
+ result={'copyVersion':c['copyVersion'],'variants':out,'winner':winner,'explorationFloor':.25,'technicalSendsRewarded':False,'bookingsInferred':False,'sender':sender,'senderStrategyVersion':strategy}
+ if c.get('senderPilot') and sender is None:
+  result['winner']=None
+  result['cohorts']={s:learning(db,lane,t,c,s,sender_pilot.VERSION) for s in [sender_pilot.PRIMARY,sender_pilot.ROBB]}
+ return result
 def choose_variant(email,learn):
  bucket=int(hashlib.sha256(email.encode()).hexdigest(),16)%4
  return learn['winner'] if learn['winner'] and bucket!=0 else ('A' if bucket%2==0 else 'B')
@@ -350,6 +365,8 @@ def draft(c,v,step='initial',subject=None):
  if step=='reply':
   text=greeting+'\n\nMerci pour votre retour. '+('Voici notre angle : partir d’un flux réel, établir le coût total, puis décider de poursuivre ou d’arrêter. Nous pouvons documenter la méthode et le périmètre de nos missions ; aucun gain chiffré n’est annoncé sans mesure. Pour quel format et quelle échéance préparez-vous ce sujet ?' if c['lane']=='presse' else
     'Notre démarche commence par un flux précis, une situation de départ et un coût total. L’audit stratégique IA est proposé à 5 000 € HT sur dix jours ; sa conclusion peut recommander l’arrêt, un outil ou un accompagnement. Quel flux, quel volume et quelle échéance souhaiteriez-vous examiner ?')
+ if c.get('_sender')==sender_pilot.ROBB:
+  text=text.replace(greeting+'\n\n',greeting+'\n\n'+sender_pilot.DISCLOSURE+'\n\n',1)
  text+='\n\nVotre adresse professionnelle provient de sources publiques en lien avec votre activité. Source : '+c['sourceUrls'][0]+'\nInformations et droits sur vos données : https://robinswood.io/confidentialite — contact : thibault@robinswood.io. Pour ne plus recevoir de message, répondez simplement « STOP » ; l’opposition est gratuite et prise en compte automatiquement.'
  return {'subject':subject or title,'body':text}
 
@@ -399,10 +416,32 @@ def discover_company(db,t,fetch_page=public_page):
 
 class Gateway(transport.Gateway):
  def prepare(self,item,draft,operation,parent=None):
-  raw,expected,sig=super().prepare(item,draft,operation,parent);m=BytesParser(policy=email_policy.default).parsebytes(base64.urlsafe_b64decode(raw))
-  m.replace_header('X-RBW-Campaign',item['campaignId']);m['Reply-To']=transport.SENDER
-  m['List-Unsubscribe']='<mailto:thibault@robinswood.io?subject=STOP>'
-  return base64.urlsafe_b64encode(m.as_bytes()).decode(),expected,sig
+  sender=item.get('_sender',transport.SENDER);version=item.get('_sender_strategy_version','legacy')
+  if sender not in [sender_pilot.PRIMARY,sender_pilot.ROBB]:raise RuntimeError('sender_not_authorized')
+  if sender==sender_pilot.ROBB and (item['lane']=='presse' or version!=sender_pilot.VERSION):raise RuntimeError('robb_scope_not_authorized')
+  if parent:
+   if transport.addresses(transport.header(parent,'From'))!=[sender] or transport.addresses(transport.header(parent,'To'))!=[item['email']] or transport.header(parent,'Subject')!=draft['subject']:
+    raise RuntimeError('original_sender_recipient_or_subject_changed')
+  if sender==transport.SENDER:
+   raw,expected,sig=super().prepare(item,draft,operation,parent)
+   m=BytesParser(policy=email_policy.default).parsebytes(base64.urlsafe_b64decode(raw))
+  else:
+   identity=next((x for x in self.call('/settings/sendAs')['sendAs'] if x['sendAsEmail'].lower()==sender),None)
+   if not identity or identity.get('verificationStatus')!='accepted' or identity.get('replyToAddress','').lower()!=sender or not identity.get('signature','').strip():raise RuntimeError('robb_signature_or_verified_identity_not_ready')
+   signature=identity['signature'].strip()
+   sig_text=html.unescape(re.sub('<[^>]+>',' ',re.sub(r'<br\s*/?>','\n',signature)))
+   expected=draft['body'].strip()+'\n\n'+sig_text.strip()+'\n'
+   m=EmailMessage();m['From']=sender;m['To']=item['email'];m['Subject']=draft['subject']
+   m['Message-ID']='<'+operation+'@robinswood.io>';m['X-RBW-Operation']=operation;m['X-RBW-Campaign']=item['campaignId']
+   if parent:m['In-Reply-To']=transport.header(parent,'Message-ID');m['References']=transport.header(parent,'Message-ID')
+   m.set_content(expected);m.add_alternative('<div>'+html.escape(draft['body']).replace('\n','<br>')+'</div><br>'+signature,subtype='html')
+   sig=hashlib.sha256(signature.encode()).hexdigest()
+  m.replace_header('X-RBW-Campaign',item['campaignId']);m['Reply-To']=sender
+  m['List-Unsubscribe']='<mailto:'+sender+'?subject=STOP>'
+  if version==sender_pilot.VERSION:m['X-RBW-Sender-Strategy']=version
+  from outbound_sender_guard import expected as check_payload
+  raw=base64.urlsafe_b64encode(m.as_bytes()).decode();check_payload(raw)
+  return raw,expected,sig
 def classify_reply(m,lane):
  text=norm(transport.plain(m.get('payload',{}))+'\n'+m.get('snippet',''));headers={h['name'].lower():h['value'] for h in m.get('payload',{}).get('headers',[])}
  if headers.get('auto-submitted','no').lower()!='no' or any(x in text for x in ['out of office','absence du bureau','reponse automatique','automatic reply']):return 'automatic_reply'
@@ -430,10 +469,13 @@ def reply_scan(db,gateway,lane,t):
   thread=gateway.call('/threads/'+r['thread']+'?format=full')
   for m in thread.get('messages',[]):
    froms=transport.addresses(transport.header(m,'From'))
-   if transport.SENDER in froms or db.execute('SELECT 1 FROM replies WHERE message_id=?',(m['id'],)).fetchone():continue
+   if 'SENT' in m.get('labelIds',[]) or any(s in froms for s in [sender_pilot.PRIMARY,sender_pilot.ROBB]) or db.execute('SELECT 1 FROM replies WHERE message_id=?',(m['id'],)).fetchone():continue
    # Only a reply from the exact recipient or a delivery failure may act on that contact.
    kind=classify_reply(new_reply_text(m),lane)
+   if int(m.get('internalDate',0))<=dt(r['created']).timestamp()*1000:continue
    if froms!=[r['email']] and kind!='bounce':continue
+   sender,_=sender_pilot.touch_identity(r)
+   if kind not in ['bounce','opposition','complaint'] and (m.get('threadId')!=r['thread'] or sender not in transport.addresses(transport.header(m,'To'))+transport.addresses(transport.header(m,'Cc'))):continue
    evidence={'gmailMessageId':m['id'],'threadId':r['thread'],'sourceTextSha256':hashlib.sha256(transport.plain(new_reply_text(m)['payload']).encode()).hexdigest(),'verifiedFrom':froms}
    db.execute('INSERT OR IGNORE INTO replies VALUES(?,?,?,?,?,?)',(m['id'],r['email'],lane,kind,stamp(t),json.dumps(evidence)))
    if kind in ['opposition','complaint','bounce']:suppress(r['email'],kind,m['id'])
@@ -459,12 +501,14 @@ def recover_pending(db,gateway):
   if not ok:raise RuntimeError('campaign_effect_verification_failed')
   db.execute("UPDATE touches SET state='verified',gmail_id=?,thread=?,checks=? WHERE operation=?",(m['id'],m['threadId'],json.dumps(checks),r['operation']));db.commit()
 def next_item(db,lane,t,c):
- exclusions=suppressed();learn=learning(db,lane,t,c)
+ exclusions=suppressed();learn=learning(db,lane,t,c);cap=lane_capacity(db,lane,t,c)[1]
+ def available(row,step):
+  return sender_pilot.plan(db,row,step,c,t,cap)[0] is not None
  # Explicit requests take precedence; every reply/followup consumes the same caps.
  for r in db.execute("SELECT DISTINCT email FROM replies WHERE lane=? AND kind IN ('interest','qualified_need','editorial_request')",(lane,)):
   sent=db.execute("SELECT 1 FROM touches WHERE email=? AND step='reply'",(r['email'],)).fetchone()
   row=db.execute('SELECT * FROM candidates WHERE email=?',(r['email'],)).fetchone()
-  if not sent and row and r['email'] not in exclusions:return row,'reply',learn
+  if not sent and row and r['email'] not in exclusions and available(row,'reply'):return row,'reply',learn
  rows=db.execute('SELECT * FROM candidates WHERE lane=? AND proof IS NOT NULL ORDER BY email',(lane,)).fetchall()
  for r in rows:
   if r['email'] in exclusions or delivery_blocker(json.loads(r['payload']),t) or db.execute('SELECT 1 FROM legacy WHERE email=?',(r['email'],)).fetchone():continue
@@ -473,10 +517,11 @@ def next_item(db,lane,t,c):
   touches=db.execute('SELECT * FROM touches WHERE email=? ORDER BY created',(r['email'],)).fetchall()
   if not touches:
    if db.execute('SELECT 1 FROM touches JOIN candidates ON candidates.email=touches.email WHERE candidates.account=?',(r['account'],)).fetchone():continue
-   return r,'initial',learn
+   if available(r,'initial'):return r,'initial',learn
+   continue
   initial=next((x for x in touches if x['step']=='initial'),None)
   replied=db.execute('SELECT 1 FROM replies WHERE email=?',(r['email'],)).fetchone()
-  if initial and not replied and len(touches)<c['maxTouchesWithoutReply'] and business_days(dt(initial['created']),t)>=10:return r,'followup',learn
+  if initial and not replied and len(touches)<c['maxTouchesWithoutReply'] and business_days(dt(initial['created']),t)>=10 and available(r,'followup'):return r,'followup',learn
  return None,None,learn
 def portfolio_ramp(db,t,c,predecessor_root=None):
  """Read current authorised expiry and durable effects; a pause is never completion."""
@@ -593,9 +638,18 @@ def run(lane,apply=False,research_only=False,root=ROOT,c=None,gateway=None,t=Non
     capacity,cap=lane_capacity(db,lane,t,c);row,step,learn=next_item(db,lane,t,c)
     status='lane_cap_reached' if not capacity else 'awaiting_qualified_contact' if not row else 'prepared'
     if capacity and row:
-     item=json.loads(row['payload']);item['campaignId']=IDS[lane];v=choose_variant(row['email'],learn)
+     item=json.loads(row['payload']);item['campaignId']=IDS[lane]
+     sender,version=sender_pilot.plan(db,row,step,c,t,cap)
+     if not sender:raise RuntimeError('sender_capacity_changed')
+     item['_sender']=sender;item['_sender_strategy_version']=version
+     learn=learning(db,lane,t,c,sender,version) if c.get('senderPilot') else learn
+     v=choose_variant(row['email'],learn)
      parent_row=db.execute("SELECT * FROM touches WHERE email=? AND step='initial' AND state='verified'",(row['email'],)).fetchone()
      parent=gateway.get(parent_row['gmail_id']) if parent_row and step!='initial' else None
+     if parent:
+      from outbound_sender_guard import verify as verify_parent
+      verified,checks=verify_parent(parent,parent_row['raw'],parent_row['thread'])
+      if not verified:raise RuntimeError('original_conversation_effect_changed')
      if step=='initial' and gateway.search('in:sent to:'+row['email']):
       append_legacy(db,{'email':row['email'],'status':'prior_contact_found_in_gmail','campaignId':'gmail_history'});db.commit()
       status='historical_contact_deduplicated'
@@ -606,6 +660,7 @@ def run(lane,apply=False,research_only=False,root=ROOT,c=None,gateway=None,t=Non
      d=draft(item,v,step,parent_row['subject'] if parent else None)
      op='rbw-eg-'+hashlib.sha256((row['email']+'|'+step+'|'+c['copyVersion']).encode()).hexdigest()[:32]
      raw,expected,sig=gateway.prepare(item,d,op,parent)
+     if c.get('senderPilot'):sender_pilot.bind(db,row,sender,version,t)
      thread=parent_row['thread'] if parent else None
      # Shared capacity is checked before reservation so a pacing rejection is a no-op.
      from outbound_sender_guard import SenderGuardBlocked
@@ -631,7 +686,7 @@ def run(lane,apply=False,research_only=False,root=ROOT,c=None,gateway=None,t=Non
     'artifacts':{'state':str(root/'campaign-state.sqlite3'),'contract':str(POLICY)},
     'systemsOfRecord':{'classification':'none','crmWrites':0,'gmailProof':'exact_SENT_message_thread_body_signature'},
     'durability':{'idempotency':'email_step_copy_version_operation','unknownEffect':'pause_and_reconcile_no_retry'},
-    'senderSharedCaps':{'daily':40,'weekly':200,'hourly':6,'intervalSeconds':600},'laneCapacity':lane_capacity(db,lane,t,c)[1]}
+    'senderSharedCaps':{'daily':40,'weekly':200,'hourly':6,'intervalSeconds':600},'senderPilot':c.get('senderPilot'),'senderPilotDailyUsage':sender_pilot.daily_usage(db,t) if c.get('senderPilot') else None,'authorizationScopeSha256':c['authorization']['scopeSha256'],'laneCapacity':lane_capacity(db,lane,t,c)[1]}
    save(OPS/(report_id+'-last.json'),report);save(root/(lane+('-maintenance' if maintain else '')+'-last.json'),report);return report
   finally:db.close()
 def main():
