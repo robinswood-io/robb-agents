@@ -90,6 +90,10 @@ class CycleTests(unittest.TestCase):
         start=pipeline.initial_cycle_payload(stamp(),'scheduled')
         self.assertFalse(start['ok']);self.assertEqual(start['businessCompletionStatus'],'blocked_incomplete_work')
         self.assertEqual(start['status'],'running');self.assertEqual(start['steps'],[])
+    def test_qualification_is_bounded_and_contains_no_execution(self):
+        specs=pipeline.build_specs('qualification',False)
+        self.assertEqual([s['id'] for s in specs],['inqom-operator-guidance-materializer','inqom-source-quality-logical-review-tests','inqom-lettering-autonomy-batcher','inqom-accounting-action-dispatcher'])
+        self.assertTrue(all(not s.get('extra') for s in specs))
     def test_guidance_is_first_scheduled_step(self):
         self.assertEqual(pipeline.build_specs('scheduled',False)[0]['id'],'inqom-operator-guidance-materializer')
 
