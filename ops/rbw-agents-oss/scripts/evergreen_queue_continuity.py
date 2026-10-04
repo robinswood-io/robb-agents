@@ -37,8 +37,14 @@ def hold(db,row,reason):
 def no_other_relationship(gateway,row,observer=None):
  thread=gateway.call('/threads/'+row['thread']+'?format=full')
  others=[m for m in thread.get('messages',[]) if m['id']!=row['message_id']]
- for ref in gateway.search('from:'+row['email']+' -in:sent after:'+dt(row['sent_at']).date().isoformat()):
-  if ref['id'] not in {m['id'] for m in others}:others.append(gateway.get(ref['id']))
+ # Search both directions across threads; a manual later outbound may use a new thread.
+ date=(dt(row['sent_at'])-timedelta(days=1)).date().isoformat()
+ cutoff=int(dt(row['sent_at']).timestamp()*1000)
+ for query in ['from:'+row['email']+' -in:sent after:'+date,'in:sent to:'+row['email']+' after:'+date]:
+  for ref in gateway.search(query):
+   if ref['id']==row['message_id'] or ref['id'] in {m['id'] for m in others}:continue
+   message=gateway.get(ref['id'])
+   if int(message['internalDate'])>=cutoff:others.append(message)
  if observer:
   for m in others:observer(row,m)
  return not others
@@ -86,6 +92,6 @@ def coverage(db,lane,t,c,audience,cfg):
   p=json.loads(row['proof']) if row['proof'] else {}
   if row['status']=='eligible' and p.get('ok') and p.get('checkedAt') and 0<=(t-dt(p['checkedAt'])).total_seconds()<c['proofMaxAgeDays']*86400:due+=1
   else:held+=1
- pending=db.execute("SELECT count(*) FROM research WHERE json_extract(payload,'$.categorie_entreprise')=? AND (reason='needs_official_domain_and_exact_contact' OR checked<?)",('PME' if lane=='pme' else 'ETI', (t-timedelta(hours=cfg['discoveryRetryHours'])).isoformat().replace('+00:00','Z'))).fetchone()[0] if lane!='presse' else 0
+ pending=db.execute("SELECT count(*) FROM research WHERE json_extract(payload,'$.categorie_entreprise')=? AND (reason='needs_official_domain_and_exact_contact' OR (checked<? AND reason IN ('official_domain_or_public_executive_email_not_found','public_discovery_unavailable_backoff')))",('PME' if lane=='pme' else 'ETI', (t-timedelta(hours=cfg['discoveryRetryHours'])).isoformat().replace('+00:00','Z'))).fetchone()[0] if lane!='presse' else 0
  ready=initial+due;target_count=daily*cfg['readyBusinessDays']
  return {'readyInitials':initial,'followupsDueBeforeFreshChecks':due,'followupsScheduledLater':future,'historicalHeldOrNeedsProof':held,'readyPotentialBeforeGmailAndQuotaChecks':ready,'targetQualifiedReserve':target_count,'readySupplyBelowTarget':ready<target_count,'companyResearchPending':pending,'refillRequired':ready<target_count or pending<cfg['minimumCompanyResearchReserve'],'nextAction':'audit_qualify_or_refill' if ready<target_count else 'maintain_fresh_proofs','qualifiedSupplyCanBeZero':True,'contactsOrRepliesRepeatedToFillQueue':False}

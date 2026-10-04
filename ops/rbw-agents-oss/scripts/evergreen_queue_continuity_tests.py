@@ -19,7 +19,7 @@ class QueueTests(unittest.TestCase):
   self.g=fixture.EndGateway(self.root)
   def search(query):
    if query.startswith('in:sent to:'):
-    email=query.split('to:')[-1]
+    email=query.split('to:')[-1].split(' ')[0]
     return [{'id':m['id']} for m in self.g.messages.values() if 'SENT' in m.get('labelIds',[]) and e.transport.addresses(guard.header(m,'To'))==[email]]
    if query.startswith('from:'):
     email=query.split('from:')[1].split(' ')[0]
@@ -164,5 +164,17 @@ class QueueTests(unittest.TestCase):
   self.assertEqual(result['addedContacts'],1)
   self.assertTrue(any('Public+Registry+Company' in url for url in urls));self.assertFalse(any('Private' in url for url in urls))
   self.assertEqual(self.db.execute("SELECT reason FROM research WHERE siren='222222222'").fetchone()[0],'needs_official_domain_and_exact_contact')
+
+ def test_later_manual_outbound_in_another_thread_holds_historical_audit(self):
+  row,parent=self.legacy();later=copy.deepcopy(parent);later.update(id='manual-later',threadId='new-manual-thread',internalDate=str(int(T.timestamp()*1000)));self.g.messages['manual-later']=later
+  self.assertEqual(self.audit()['eligible'],0);self.assertEqual(self.g.posts,0)
+ def test_later_separate_thread_outbound_after_audit_blocks_before_post(self):
+  row,parent=self.legacy();self.audit();later=copy.deepcopy(parent);later.update(id='manual-later',threadId='new-manual-thread',internalDate=str(int(T.timestamp()*1000)));self.g.messages['manual-later']=later
+  self.assertEqual(self.runit()['status'],'historical_followup_held');self.assertEqual(self.g.posts,0)
+ def test_completed_discovery_is_not_counted_as_pending_refill_work(self):
+  for i,reason in enumerate(['needs_official_domain_and_exact_contact','official_domain_or_public_executive_email_not_found','public_exact_contacts_discovered']):
+   self.db.execute('INSERT INTO research VALUES(?,?,?,?)',(str(i),json.dumps({'categorie_entreprise':'PME'}),e.stamp(T-timedelta(days=2)),reason))
+  self.db.commit();state=q.coverage(self.db,'pme',T,self.c,e.audience_counts(self.db,'pme',T,self.c),self.cfg)
+  self.assertEqual(state['companyResearchPending'],2)
 
 if __name__=='__main__':unittest.main()

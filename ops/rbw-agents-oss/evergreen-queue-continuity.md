@@ -24,7 +24,7 @@ global suppression without becoming adverse metrics for a new cohort.
 
 Fresh primary qualification is still required. Before one permitted followup,
 the original Gmail effect hash is checked again and relationship searches run
-again. The original sender, subject and thread are retained. No original touch
+again in both directions across Gmail threads, including later manual outbound. The original sender, subject and thread are retained. No original touch
 is synthesized, no fake maturation reward is created, and no legacy initial is
 replayed. The resulting real followup has the existing durable reservation,
 single POST and exact SENT checks. Ambiguous effects reconcile without resend.
