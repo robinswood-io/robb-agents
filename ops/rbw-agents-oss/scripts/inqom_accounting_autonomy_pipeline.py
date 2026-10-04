@@ -236,8 +236,16 @@ def write_md(payload):
     lines += ['','## Key artifacts']
     for name,a in (payload.get('artifactsSummary') or {}).items(): lines.append(f"- **{name}** — {a.get('summary') or a.get('status') or a.get('exists')}")
     OUT_MD.write_text('\n'.join(lines)+'\n',encoding='utf-8')
+def initial_cycle_payload(gen, mode):
+    return {'generatedAt':gen,'capabilityId':'inqom-accounting-autonomy-pipeline','ok':False,'status':'running','mode':mode,
+            'summary':'inqom_accounting_pipeline: current cycle running; completion requires fresh terminal proof',
+            'businessCompletionStatus':'blocked_incomplete_work','safetyStatus':'unknown','steps':[],
+            'counts':{'steps':0,'failedSteps':0,'fatalSteps':0},
+            'blockingReasons':['current_cycle_in_progress']}
+
 def main():
     ap=argparse.ArgumentParser(); ap.add_argument('--mode',choices=['scheduled','full'],default='scheduled'); ap.add_argument('--refresh-6m',action='store_true'); args=ap.parse_args(); gen=now_iso(); steps=[]
+    write_json(OUT_JSON,initial_cycle_payload(gen,args.mode))
     for spec in build_specs(args.mode,args.refresh_6m):
         row=run_step(spec['id'],spec['script'],int(spec['timeout']),bool(spec.get('continue')),spec.get('extra')); steps.append(row)
         if row.get('fatal'): break

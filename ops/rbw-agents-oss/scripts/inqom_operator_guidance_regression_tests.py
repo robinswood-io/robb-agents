@@ -86,6 +86,10 @@ class CycleTests(unittest.TestCase):
         self.assertEqual(pipeline.completion_for_cycle(self.terminal(),[],stamp(-10))[0],'blocked_incomplete_work')
     def test_future_timestamp_cannot_close(self):
         self.assertFalse(pipeline.artifact_from_cycle(self.terminal(100),stamp(-10)))
+    def test_new_cycle_replaces_old_completion_before_any_step(self):
+        start=pipeline.initial_cycle_payload(stamp(),'scheduled')
+        self.assertFalse(start['ok']);self.assertEqual(start['businessCompletionStatus'],'blocked_incomplete_work')
+        self.assertEqual(start['status'],'running');self.assertEqual(start['steps'],[])
     def test_guidance_is_first_scheduled_step(self):
         self.assertEqual(pipeline.build_specs('scheduled',False)[0]['id'],'inqom-operator-guidance-materializer')
 
