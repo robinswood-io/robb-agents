@@ -50,6 +50,34 @@ def compact_lot(lot: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def verified_empty_current_queue(live: dict, tests: dict, now: datetime | None = None) -> bool:
+    now = now or datetime.now(timezone.utc)
+    try:
+        generated = datetime.fromisoformat(str(live['generatedAt']).replace('Z', '+00:00'))
+        tested = datetime.fromisoformat(str(tests['generatedAt']).replace('Z', '+00:00'))
+        if not (0 <= (now - generated).total_seconds() <= 3600 and generated <= tested <= now):
+            return False
+    except (KeyError, ValueError, TypeError):
+        return False
+    counts = live.get('counts') or {}
+    test_counts = tests.get('counts') or {}
+    checks = tests.get('checks')
+    return (
+        live.get('ok') is True and live.get('status') == 'processed'
+        and live.get('records') == [] and live.get('freshReadyLots') == []
+        and all(type(counts.get(key)) is int and counts[key] == 0 for key in [
+            'queuePairs', 'eligibleForLivePreflight', 'alreadyLettered', 'freshReady',
+            'declaredCanonicalCandidates', 'uniqueCanonicalCandidates', 'validationIssues',
+            'mutationAttempted', 'activeApprovalWritten'])
+        and counts.get('canonicalCoverageComplete') == 1
+        and tests.get('ok') is True and tests.get('status') == 'pass'
+        and test_counts.get('queuePairs') == 0 and test_counts.get('failed') == 0
+        and isinstance(checks, list) and len(checks) >= 8
+        and all(check.get('ok') is True for check in checks)
+        and len([check for check in checks if check.get('checkId') == 'queue_pairs_classified']) == 1
+    )
+
+
 def main() -> None:
     gen = now_iso()
     live = read_json(LIVE_JSON, {})
@@ -104,13 +132,14 @@ def main() -> None:
         'mutationAttempted': int(live_counts.get('mutationAttempted') or 0) + int(zero_counts.get('mutationAttempted') or 0),
         'nativeLetteringAttempted': 0,
         'validationIssues': 0,
+        'verifiedEmptyCurrentQueue': 1 if verified_empty_current_queue(live, live_tests) else 0,
     }
 
     if counts['activeApprovalPathExists']:
         validation.append({'code': 'active_approval_path_exists', 'detail': str(ACTIVE_APPROVAL)})
     if counts['freshReady'] != 0:
         validation.append({'code': 'fresh_ready_lots_present', 'detail': counts['freshReady']})
-    if counts['eligibleForLivePreflight'] <= 0 or counts['eligibleForLivePreflight'] != counts['alreadyLettered']:
+    if (counts['eligibleForLivePreflight'] <= 0 and not counts['verifiedEmptyCurrentQueue']) or counts['eligibleForLivePreflight'] != counts['alreadyLettered']:
         validation.append({'code': 'eligible_lots_not_all_already_lettered', 'detail': counts})
     if missing_current_line_keys or counts['currentAlreadyLetteredLotsCoveredByDenylist'] != counts['alreadyLettered']:
         validation.append({'code': 'denylist_missing_current_already_lettered_lots', 'detail': {'counts': counts, 'missingSortedLineKeys': missing_current_line_keys}})

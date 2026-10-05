@@ -5,6 +5,7 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from inqom_native_lettering_denylist_closure import verified_empty_current_queue, LIVE_JSON, LIVE_TESTS_JSON
 
 OPS = Path('/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops')
 REPORT = OPS / 'inqom-native-lettering-denylist-closure.json'
@@ -45,7 +46,7 @@ def main() -> None:
     check(checks, 'active_approval_absent', not ACTIVE_APPROVAL.exists() and int(counts.get('activeApprovalPathExists') if counts.get('activeApprovalPathExists') is not None else 0) == 0, {'activePath': str(ACTIVE_APPROVAL), 'counts': counts})
     check(checks, 'no_mutation_attempted', int(counts.get('mutationAttempted') if counts.get('mutationAttempted') is not None else 0) == 0 and int(counts.get('nativeLetteringAttempted') if counts.get('nativeLetteringAttempted') is not None else 0) == 0 and int(counts.get('activeApprovalWritten') if counts.get('activeApprovalWritten') is not None else 0) == 0, counts)
     check(checks, 'fresh_ready_zero', int(counts.get('freshReady') if counts.get('freshReady') is not None else -1) == 0, counts)
-    check(checks, 'eligible_all_already_lettered', int(counts.get('eligibleForLivePreflight') if counts.get('eligibleForLivePreflight') is not None else 0) > 0 and int(counts.get('eligibleForLivePreflight') if counts.get('eligibleForLivePreflight') is not None else 0) == int(counts.get('alreadyLettered') if counts.get('alreadyLettered') is not None else -1), counts)
+    check(checks, 'eligible_all_already_lettered', (int(counts.get('eligibleForLivePreflight') if counts.get('eligibleForLivePreflight') is not None else 0) > 0 or (counts.get('verifiedEmptyCurrentQueue') == 1 and verified_empty_current_queue(read_json(LIVE_JSON, {}), read_json(LIVE_TESTS_JSON, {})))) and int(counts.get('eligibleForLivePreflight') if counts.get('eligibleForLivePreflight') is not None else 0) == int(counts.get('alreadyLettered') if counts.get('alreadyLettered') is not None else -1), counts)
     check(checks, 'denylist_covers_current_already_lettered', int(counts.get('denylistMissingCurrentLots') if counts.get('denylistMissingCurrentLots') is not None else -1) == 0 and int(counts.get('currentAlreadyLetteredLotsCoveredByDenylist') if counts.get('currentAlreadyLetteredLotsCoveredByDenylist') is not None else -1) == int(counts.get('alreadyLettered') if counts.get('alreadyLettered') is not None else -2) and int(counts.get('denylistBlockedLots') if counts.get('denylistBlockedLots') is not None else 0) >= int(counts.get('alreadyLettered') if counts.get('alreadyLettered') is not None else -1), counts)
     check(checks, 'closed_lots_are_already_lettered_not_ready', bool(lots) and all(l.get('liveStatus') == 'already_lettered_live' and l.get('preflightReady') is False and l.get('mutationAttempted') is False and l.get('matchedLetters') for l in lots), lots[:5])
     check(checks, 'denylist_policy_is_antireplay_only', ((report.get('mutationPolicy') or {}).get('denylistOnlyBlocksReplay') is True and (report.get('mutationPolicy') or {}).get('denylistAuthorizesMutation') is False), report.get('mutationPolicy'))
