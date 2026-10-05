@@ -11,6 +11,9 @@ REPORT = OPS / 'inqom-native-lettering-live-state-reconciler.json'
 DENYLIST = OPS / 'inqom-native-lettering-live-preflight-denylist.json'
 OUT_JSON = OPS / 'inqom-native-lettering-live-state-reconciler-tests.json'
 OUT_MD = OPS / 'inqom-native-lettering-live-state-reconciler-tests.md'
+BATCHER = OPS / 'inqom-lettering-autonomy-batcher.json'
+QUEUE = OPS / 'inqom-human-replicated-lettering-executable-queue.json'
+SNAPSHOT = OPS / 'inqom-operator-guidance-native-snapshot.json'
 
 
 def now_iso() -> str:
@@ -33,6 +36,68 @@ def add(checks: list[dict[str, Any]], check_id: str, ok: bool, severity: str = '
     checks.append({'checkId': check_id, 'ok': bool(ok), 'severity': severity, 'detail': detail})
 
 
+def recent(value: Any, now: datetime) -> bool:
+    try:
+        timestamp = datetime.fromisoformat(str(value).replace('Z', '+00:00'))
+        return 0 <= (now - timestamp).total_seconds() <= 3600
+    except (ValueError, TypeError):
+        return False
+
+
+def queue_pairs_classified(report: dict, batcher: dict, queue: Any,
+                           snapshot: dict, queue_exists: bool,
+                           now: datetime | None = None) -> bool:
+    counts = report.get('counts') or {}
+    records = report.get('records')
+    declared = counts.get('queuePairs')
+    if type(declared) is not int or declared < 0 or not isinstance(records, list) or declared != len(records):
+        return False
+    if declared > 0:
+        return True
+    now = now or datetime.now(timezone.utc)
+    producer_counts = batcher.get('counts') or {}
+    coverage = snapshot.get('coverage')
+    if not isinstance(coverage, list) or not coverage:
+        return False
+    folders = {18627, 124920, 124921}
+    expected_months = set(range(1, now.month + 1))
+    covered = {folder: set() for folder in folders}
+    for row in coverage:
+        try:
+            start = datetime.fromisoformat(row['period']['startDate']).date()
+            end = datetime.fromisoformat(row['period']['endDate']).date()
+            folder = row['folderId']
+            if folder not in folders or row.get('complete') is not True or start.year != now.year or start.day != 1 or start.month != end.month:
+                return False
+            import calendar
+            expected_end = now.date() if start.month == now.month else start.replace(day=calendar.monthrange(start.year, start.month)[1])
+            if end != expected_end or start.month in covered[folder]:
+                return False
+            covered[folder].add(start.month)
+        except (KeyError, TypeError, ValueError):
+            return False
+    return (
+        all(months == expected_months for months in covered.values())
+        and snapshot.get('ok') is True and isinstance(snapshot.get('lines'), list)
+        and len(snapshot['lines']) > 0
+        and sum(row.get('lines', 0) for row in coverage) == len(snapshot['lines'])
+        and recent(snapshot.get('generatedAt'), now)
+        and batcher.get('operatorNativeSnapshotGeneratedAt') == snapshot.get('generatedAt')
+        and batcher.get('ok') is True and batcher.get('status') == 'processed'
+        and recent(batcher.get('generatedAt'), now)
+        and producer_counts.get('executableQueue') == 0
+        and producer_counts.get('validationIssues') == 0
+        and batcher.get('executableQueue') == []
+        and queue_exists and isinstance(queue, list) and queue == []
+        and counts.get('canonicalCoverageComplete') == 1
+        and counts.get('declaredCanonicalCandidates') == 0
+        and counts.get('uniqueCanonicalCandidates') == 0
+        and counts.get('validationIssues') == 0
+        and counts.get('eligibleForLivePreflight') == 0
+        and counts.get('freshReady') == 0 and report.get('freshReadyLots') == []
+    )
+
+
 def main() -> None:
     generated_at = now_iso()
     report = read_json(REPORT, {})
@@ -44,7 +109,7 @@ def main() -> None:
     checks: list[dict[str, Any]] = []
     add(checks, 'report_exists', REPORT.exists(), detail=str(REPORT))
     add(checks, 'report_ok_processed', report.get('ok') is True and report.get('status') == 'processed', detail={'summary': report.get('summary'), 'blockingReasons': report.get('blockingReasons')})
-    add(checks, 'queue_pairs_classified', int(counts.get('queuePairs') if counts.get('queuePairs') is not None else 0) == len(records) and len(records) > 0, detail={'queuePairs': counts.get('queuePairs'), 'records': len(records)})
+    add(checks, 'queue_pairs_classified', queue_pairs_classified(report, read_json(BATCHER, {}), read_json(QUEUE, None), read_json(SNAPSHOT, {}), QUEUE.exists()), detail={'queuePairs': counts.get('queuePairs'), 'records': len(records)})
     add(checks, 'eligible_preflight_accounted', int(counts.get('eligibleForLivePreflight') if counts.get('eligibleForLivePreflight') is not None else 0) == int(counts.get('freshReady') if counts.get('freshReady') is not None else 0) + int(counts.get('alreadyLettered') if counts.get('alreadyLettered') is not None else 0) + int(counts.get('blockedByLiveDrift') if counts.get('blockedByLiveDrift') is not None else 0) + int(counts.get('blockedByLivePreflight') if counts.get('blockedByLivePreflight') is not None else 0), detail=counts)
     add(checks, 'denylist_exists_when_blocked', (int(counts.get('alreadyLettered') if counts.get('alreadyLettered') is not None else 0) + int(counts.get('blockedByLiveDrift') if counts.get('blockedByLiveDrift') is not None else 0) + int(counts.get('blockedByLivePreflight') if counts.get('blockedByLivePreflight') is not None else 0) == 0) or (DENYLIST.exists() and len(deny.get('blockedLots') or []) >= int(counts.get('alreadyLettered') if counts.get('alreadyLettered') is not None else 0)), detail={'denylist': len(deny.get('blockedLots') or []) if isinstance(deny, dict) else None, 'counts': counts})
     add(checks, 'fresh_lots_are_live_ready', all(r.get('liveReady') is True and r.get('liveStatus') == 'fresh_ready_for_approvalonly_preflight' for r in fresh), detail=fresh[:3])
