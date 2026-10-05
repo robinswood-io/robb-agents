@@ -177,8 +177,35 @@ def treatment(rule):
       'gocardless_current_status_and_chargeback':"Identifier le paymentId et la facture, lire le statut courant et les événements. Rechercher un rejet existant avant de préparer la restauration de créance puis lettrer l'avoir exact.",
       'namourland_rent':"Classer les flux locatifs concernés en loyers, aucun apport en compte courant. Vérifier période et date d'effet de la réévaluation et électricité voiture auprès de Laure.",
       'namourland_distinguish_rent_deposit_return':"Distinguer loyer, dépôt de garantie et retour d'erreur par pièces et deux mouvements bancaires. Pour un retour prouvé, OD entre contreparties et lettrage séparé par compte, aucune écriture bancaire artificielle.",
+      'existing_waiting_reclassification_lettering':"OD de reclassement déjà présente : relire les deux écritures et leur contrepartie de charge, conserver banque et charge, préparer uniquement le lettrage des deux lignes 473 exactes. Aucun nouvel OD, aucune nouvelle dépense. Le préflight natif et une approbation bornée doivent précéder tout lettrage.",
       'zero_movement_review':"Ligne sans mouvement financier ; documenter le statut, ne pas créer d'écart ou de règlement.",
     }.get(rule,"Rechercher facture et règlement par dossier, tiers, référence et période. Rechercher Gmail/notifications/portail puis demander au fournisseur l'envoi à l'adresse Inqom vérifiée du dossier. Aucun rapprochement sur montant seul.")
+
+def existing_waiting_reclass_pair(rows):
+    """Identify an existing 473 reclassification for read-only preparation."""
+    if len(rows) != 2 or any(not open_compact(r) for r in rows):
+        return False
+    a, b = rows
+    if (not str(a.get('account') or '').startswith('473')
+        or any(a.get(k) != b.get(k) for k in ['folderId','account','accountId','subAccountId','date'])
+        or not a.get('accountId') or not a.get('subAccountId')
+        or not a.get('date') or a.get('entryId') == b.get('entryId')
+        or not a.get('lineId') or not b.get('lineId') or a['lineId'] == b['lineId']):
+        return False
+    banks = [r for r in rows if r.get('source') == 'Banking'
+             and re.fullmatch(r'BQ[0-9]+', str(r.get('docRef') or ''))]
+    ods = [r for r in rows if r.get('source') == 'ByUser'
+           and str(r.get('docRef') or '').startswith('OD-RECLASS-')
+           and 'RECLASS' in str(r.get('entryLabel') or '').upper()]
+    if len(banks) != 1 or len(ods) != 1:
+        return False
+    try:
+        bank_amount = float(banks[0]['amount'])
+        od_amount = float(ods[0]['amount'])
+        return bank_amount < 0 < od_amount and round(bank_amount + od_amount, 2) == 0
+    except (KeyError, TypeError, ValueError):
+        return False
+
 
 def materialize(g, native):
     errors=[]; lines=[]; coverage=[]
@@ -204,9 +231,21 @@ def materialize(g, native):
         rule,actionable=classify(line)
         key=(line['folderId'],rule,line['account'],line['subAccountId'],reference(line),actionable)
         groups[key].append(line)
+    waiting_groups=defaultdict(list)
+    for line in lines:
+        if open_compact(line) and line['account'].startswith('473'):
+            waiting_groups[(line['folderId'],line['account'],line['subAccountId'])].append(line)
+    waiting_pair_ids = {
+        tuple(sorted(r['lineId'] for r in rows))
+        for rows in waiting_groups.values()
+        if not errors and existing_waiting_reclass_pair(rows)
+    }
     actions=[]
     rules={r['id']:r for r in g['rules']}
     for (folder,rule,acc,sub,ref,actionable),rows in sorted(groups.items(),key=lambda x:str(x[0])):
+        existing_pair = tuple(sorted(r['lineId'] for r in rows)) in waiting_pair_ids
+        if existing_pair:
+            rule, actionable = 'existing_waiting_reclassification_lettering', True
         identity=hashlib.sha256(json.dumps([folder,rule,sorted(r['lineId'] for r in rows)]).encode()).hexdigest()[:20]
         actions.append({'owner':'agent' if actionable else 'expert_accountant' if rule=='pns_credit_note' else 'finance-ops',
           'actionType':'prepare_operator_guided_accounting_case' if actionable else 'wait_documented_accounting_evidence',
