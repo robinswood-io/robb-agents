@@ -65,10 +65,10 @@
         "foldersCovered": 3,
         "prepareCases": 242,
         "documentedWaits": 5,
-        "executableLetteringLots": 0,
+        "executableLetteringLots": null,
         "workerRestarted": false,
         "workerPID": 2237669,
-        "fullCycleRunId": "manual-inqom-accounting-autonomy-pipeline-20261005T102559Z",
+        "fullCycleRunId": "manual-inqom-accounting-autonomy-pipeline-20261005T123204Z",
         "fullCycle": {
           "generatedAt": "2026-10-05T12:32:05.720730Z",
           "ok": false,
@@ -141,7 +141,8 @@
             "duplicateVATNeutralized": 371.2
           }
         },
-        "verificationArtifact": "bmad/inqom-operator-guidance-20261005-verification.json"
+        "verificationArtifact": "bmad/inqom-operator-guidance-20261005-verification.json",
+        "executableLetteringLotsNote": "Latest complete cycle halted before the queue producers; older zero is historical, not current proof."
       },
       "limits": [
         "Outstanding invoices, rental effective date, PNS expert arbitration and JLM bank payout require external evidence.",
