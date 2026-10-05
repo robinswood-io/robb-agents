@@ -5,6 +5,7 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from inqom_approvalonly_lot_zero_protocol import verified_empty_registry_queue, REGISTRY, LIVE_JSON, LIVE_TESTS_JSON
 
 OPS = Path('/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops')
 REPORT = OPS / 'inqom-approvalonly-lot-zero-protocol.json'
@@ -66,7 +67,7 @@ def main() -> None:
     add(checks, 'preflight_requirement_exists', PREFLIGHT.exists(), detail=str(PREFLIGHT))
     add(checks, 'ledger_exists', LEDGER.exists(), detail=str(LEDGER))
     add(checks, 'report_ok_guarded', report.get('ok') is True and (status.startswith('ready_but_') or no_fresh_guarded), detail={'status': report.get('status'), 'summary': report.get('summary'), 'blockingReasons': report.get('blockingReasons')})
-    add(checks, 'candidate_state_consistent', (fresh_candidate and counts.get('lineCount') == 2 and round(float(lot.get('expectedAmountSum') or 0), 2) == 0.0 and len(lot.get('lineIds') or []) == 2) or (no_fresh_guarded and counts.get('candidate') == 0 and int(counts.get('skippedByLivePreflightDenylist') if counts.get('skippedByLivePreflightDenylist') is not None else 0) > 0), detail={'counts': counts, 'lot': {k: lot.get(k) for k in ['lotId','lineIds','expectedAmountSum']}, 'status': status})
+    add(checks, 'candidate_state_consistent', (fresh_candidate and counts.get('lineCount') == 2 and round(float(lot.get('expectedAmountSum') or 0), 2) == 0.0 and len(lot.get('lineIds') or []) == 2) or (no_fresh_guarded and counts.get('candidate') == 0 and (int(counts.get('skippedByLivePreflightDenylist') if counts.get('skippedByLivePreflightDenylist') is not None else 0) > 0 or (counts.get('verifiedEmptyCurrentQueue') == 1 and verified_empty_registry_queue(read_json(REGISTRY, {}), read_json(LIVE_JSON, {}), read_json(LIVE_TESTS_JSON, {}))))), detail={'counts': counts, 'lot': {k: lot.get(k) for k in ['lotId','lineIds','expectedAmountSum']}, 'status': status})
     add(checks, 'line_hash_present_when_candidate', (isinstance(lot.get('lineHash'), str) and len(lot.get('lineHash')) == 64) if fresh_candidate else no_fresh_guarded, detail=lot.get('lineHash'))
     add(checks, 'confidence_threshold_met_when_candidate', (float(lot.get('confidenceScore') or 0) >= float(lot.get('confidenceThreshold') or 0.9)) if fresh_candidate else no_fresh_guarded, detail={'confidence': lot.get('confidenceScore'), 'threshold': lot.get('confidenceThreshold'), 'status': status})
     add(checks, 'draft_is_not_active_approval', draft.get('draftOnly') is True and draft.get('notActiveApprovalFile') is True and draft.get('mustNotBeTreatedAsAuthorization') is True and (report.get('approvalDraft') or {}).get('draftOnly') is True, detail={'draftOnly': draft.get('draftOnly'), 'status': draft.get('status'), 'activeApprovalPath': draft.get('activeApprovalPathIfSeparatelyApproved')})

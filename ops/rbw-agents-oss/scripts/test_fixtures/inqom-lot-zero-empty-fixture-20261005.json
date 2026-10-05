@@ -1,0 +1,181 @@
+{
+  "live": {
+    "generatedAt": "2026-10-05T09:10:11.847637Z",
+    "ok": true,
+    "status": "processed",
+    "counts": {
+      "activeApprovalWritten": 0,
+      "alreadyLettered": 0,
+      "blockedByLiveDrift": 0,
+      "blockedByLivePreflight": 0,
+      "canonicalCoverageComplete": 1,
+      "declaredCanonicalCandidates": 0,
+      "denylistBlockedLots": 38,
+      "eligibleForLivePreflight": 0,
+      "freshReady": 0,
+      "mutationAttempted": 0,
+      "notEligible": 0,
+      "preflightCalled": 0,
+      "preflightGroups": 0,
+      "queuePairs": 0,
+      "uniqueCanonicalCandidates": 0,
+      "validationIssues": 0
+    },
+    "records": [],
+    "freshReadyLots": []
+  },
+  "tests": {
+    "generatedAt": "2026-10-05T09:10:11.896136Z",
+    "ok": true,
+    "status": "pass",
+    "counts": {
+      "checks": 8,
+      "criticalFailed": 0,
+      "eligibleForLivePreflight": 0,
+      "failed": 0,
+      "freshReady": 0,
+      "highFailed": 0,
+      "mutationAttempted": 0,
+      "queuePairs": 0
+    },
+    "checks": [
+      {
+        "checkId": "report_exists",
+        "detail": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/inqom-native-lettering-live-state-reconciler.json",
+        "ok": true,
+        "severity": "critical"
+      },
+      {
+        "checkId": "report_ok_processed",
+        "detail": {
+          "blockingReasons": [],
+          "summary": "inqom_native_lettering_live_state_reconciler: pairs=0 eligible=0 fresh=0 already=0 drift=0 not_eligible=0 mutation_attempted=0 active_approval_written=0 validation_issues=0"
+        },
+        "ok": true,
+        "severity": "critical"
+      },
+      {
+        "checkId": "queue_pairs_classified",
+        "detail": {
+          "queuePairs": 0,
+          "records": 0
+        },
+        "ok": true,
+        "severity": "critical"
+      },
+      {
+        "checkId": "eligible_preflight_accounted",
+        "detail": {
+          "activeApprovalWritten": 0,
+          "alreadyLettered": 0,
+          "blockedByLiveDrift": 0,
+          "blockedByLivePreflight": 0,
+          "canonicalCoverageComplete": 1,
+          "declaredCanonicalCandidates": 0,
+          "denylistBlockedLots": 38,
+          "eligibleForLivePreflight": 0,
+          "freshReady": 0,
+          "mutationAttempted": 0,
+          "notEligible": 0,
+          "preflightCalled": 0,
+          "preflightGroups": 0,
+          "queuePairs": 0,
+          "uniqueCanonicalCandidates": 0,
+          "validationIssues": 0
+        },
+        "ok": true,
+        "severity": "critical"
+      },
+      {
+        "checkId": "denylist_exists_when_blocked",
+        "detail": {
+          "counts": {
+            "activeApprovalWritten": 0,
+            "alreadyLettered": 0,
+            "blockedByLiveDrift": 0,
+            "blockedByLivePreflight": 0,
+            "canonicalCoverageComplete": 1,
+            "declaredCanonicalCandidates": 0,
+            "denylistBlockedLots": 38,
+            "eligibleForLivePreflight": 0,
+            "freshReady": 0,
+            "mutationAttempted": 0,
+            "notEligible": 0,
+            "preflightCalled": 0,
+            "preflightGroups": 0,
+            "queuePairs": 0,
+            "uniqueCanonicalCandidates": 0,
+            "validationIssues": 0
+          },
+          "denylist": 38
+        },
+        "ok": true,
+        "severity": "critical"
+      },
+      {
+        "checkId": "fresh_lots_are_live_ready",
+        "detail": [],
+        "ok": true,
+        "severity": "critical"
+      },
+      {
+        "checkId": "no_mutation_or_active_approval_write",
+        "detail": {
+          "counts": {
+            "activeApprovalWritten": 0,
+            "alreadyLettered": 0,
+            "blockedByLiveDrift": 0,
+            "blockedByLivePreflight": 0,
+            "canonicalCoverageComplete": 1,
+            "declaredCanonicalCandidates": 0,
+            "denylistBlockedLots": 38,
+            "eligibleForLivePreflight": 0,
+            "freshReady": 0,
+            "mutationAttempted": 0,
+            "notEligible": 0,
+            "preflightCalled": 0,
+            "preflightGroups": 0,
+            "queuePairs": 0,
+            "uniqueCanonicalCandidates": 0,
+            "validationIssues": 0
+          },
+          "guardrails": {
+            "activeApprovalNotWritten": true,
+            "denylistDoesNotAuthorizeMutation": true,
+            "noExternalSend": true,
+            "noInqomMutation": true,
+            "noNativeLetteringExecuted": true,
+            "noNativeRevisionMarking": true,
+            "noTaxFiling": true,
+            "noTaxPayment": true,
+            "readOnlyPreflight": true
+          }
+        },
+        "ok": true,
+        "severity": "critical"
+      },
+      {
+        "checkId": "tax_revision_external_blocked",
+        "detail": {
+          "activeApprovalNotWritten": true,
+          "denylistDoesNotAuthorizeMutation": true,
+          "noExternalSend": true,
+          "noInqomMutation": true,
+          "noNativeLetteringExecuted": true,
+          "noNativeRevisionMarking": true,
+          "noTaxFiling": true,
+          "noTaxPayment": true,
+          "readOnlyPreflight": true
+        },
+        "ok": true,
+        "severity": "critical"
+      }
+    ]
+  },
+  "registry": {
+    "ok": true,
+    "counts": {
+      "readyNativeLetteringPreflightCandidates": 0
+    }
+  }
+}

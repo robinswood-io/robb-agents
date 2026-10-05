@@ -7,6 +7,7 @@ import os
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
+from inqom_native_lettering_denylist_closure import verified_empty_current_queue, LIVE_JSON, LIVE_TESTS_JSON
 
 OPS = Path('/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops')
 INQOM_SOURCE = Path('/home/craft/.craft-agent/workspaces/my-workspace-2/sources/inqom')
@@ -289,6 +290,15 @@ def active_approval_matches(active: Any, lot: dict[str, Any]) -> tuple[bool, lis
     return not reasons, reasons
 
 
+def verified_empty_registry_queue(registry: dict, live: dict, tests: dict,
+                                  now: datetime | None = None) -> bool:
+    return (
+        registry.get('ok') is True
+        and (registry.get('counts') or {}).get('readyNativeLetteringPreflightCandidates') == 0
+        and verified_empty_current_queue(live, tests, now)
+    )
+
+
 def main() -> None:
     generated_at = now_iso()
     registry = read_json(REGISTRY, {})
@@ -298,9 +308,10 @@ def main() -> None:
     if registry.get('ok') is not True:
         validation_issues.append('execution_readiness_registry_not_ok')
     action, candidate, selection_stats = find_lettering_candidate()
+    empty_queue_verified = verified_empty_registry_queue(registry, read_json(LIVE_JSON, {}), read_json(LIVE_TESTS_JSON, {}))
     no_fresh_candidate_after_live_denylist = False
     if not action or not candidate:
-        if int(selection_stats.get('skippedByLivePreflightDenylist') or 0) > 0:
+        if int(selection_stats.get('skippedByLivePreflightDenylist') or 0) > 0 or empty_queue_verified:
             no_fresh_candidate_after_live_denylist = True
         else:
             validation_issues.append('no_native_lettering_lot_zero_candidate')
@@ -400,7 +411,7 @@ def main() -> None:
             'generatedAt': generated_at,
             'status': 'not_required_no_fresh_lot_zero_candidate_after_live_preflight_denylist',
             'requiredBeforeAnyFutureActiveApproval': True,
-            'reason': 'all_current_lot_zero_candidates_blocked_by_live_preflight_denylist',
+            'reason': 'verified_empty_executable_queue' if empty_queue_verified else 'all_current_lot_zero_candidates_blocked_by_live_preflight_denylist',
             'readOnlyTool': None,
             'expectedReadOnlyResult': None,
             'selectionStats': selection_stats,
@@ -440,6 +451,7 @@ def main() -> None:
         'summary': f"inqom_approvalonly_lot_zero_protocol: candidate={'yes' if lot else 'no'} line_count={(lot or {}).get('expectedLineCount',0)} active_approval_present={active_present} active_matches={active_matches} execute_requested={execute_requested} mutation_attempted=false active_approval_written=false skipped_live_denylist={selection_stats.get('skippedByLivePreflightDenylist')} validation_issues={len(validation_issues)}",
         'counts': {
             'candidate': 1 if lot else 0,
+            'verifiedEmptyCurrentQueue': 1 if empty_queue_verified and not lot else 0,
             'lineCount': (lot or {}).get('expectedLineCount', 0),
             'entryCount': len((lot or {}).get('entryIds') or []),
             'activeApprovalPresent': 1 if active_present else 0,
