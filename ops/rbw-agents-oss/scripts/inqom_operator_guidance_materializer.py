@@ -169,7 +169,7 @@ def classify(line):
 def treatment(rule):
     return {
       'pns_credit_note':"Attendre l'arbitrage Laure sur l'annulation manuelle 2025 et AV-00130 ; ne pas relettrer FC-02120 déjà fermé.",
-      'jlm_5000_balance':"Attendre paid_out et la contrepartie bancaire de PM01XVZ3DZ248PH9GQMV16YXK8RX ; aucune relance ni nouveau prélèvement.",
+      'jlm_5000_balance':"Relire le statut courant de PM01XVZ3DZ248PH9GQMV16YXK8RX. Si paid_out, identifier le payout, sa ventilation et ses frais puis sa contrepartie bancaire native au montant net du lot avant rapprochement ; ne pas attendre de nouveau paid_out ni apparier 5000 EUR au montant bancaire global. Aucune relance ni nouveau prélèvement.",
       'edf_annual_upload':"Collecte/upload annuel EDF ; aucune relance mensuelle.",
       'antonini_final_invoice':"Attendre la facture de solde complète Antonini ; conserver les acomptes documentés.",
       'ursaff_settlement_difference_030':"Confirmer une paire unique déclaration 606.30/prélèvement 606.00 de la même échéance. Vérifier 758 actif et le précédent expert, préparer OD 431 -0.30 / 758 +0.30 puis lettrage à trois lignes. Exclure 610 et les autres montants.",

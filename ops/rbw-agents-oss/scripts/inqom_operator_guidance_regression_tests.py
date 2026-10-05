@@ -150,6 +150,9 @@ class NativeGuidanceTests(unittest.TestCase):
         self.assertEqual(guidance.classify(line(1,606.30,folderId=124920,account='43100000'))[0],'ursaff_settlement_difference_030')
         self.assertNotEqual(guidance.classify(line(1,610,folderId=124920,account='43100000'))[0],'ursaff_settlement_difference_030')
         self.assertNotEqual(guidance.classify(line(1,606.30,account='43100000'))[0],'ursaff_settlement_difference_030')
+    def test_jlm_paid_out_requires_current_payout_and_native_net_bank_evidence(self):
+        text=guidance.treatment('jlm_5000_balance')
+        self.assertIn('statut courant',text);self.assertIn('montant net',text);self.assertNotIn('Attendre paid_out et',text)
     def test_pns_wait_and_jlm_balance_wait(self):
         self.assertEqual(guidance.classify(line(2593322531)),('pns_credit_note',False))
         self.assertEqual(guidance.classify(line(1,docRef='FC-02147')),('jlm_5000_balance',False))
