@@ -32,7 +32,7 @@
           "inqom_lettering_autonomy_batcher.py": "af1736fd943c2b25f91db70b41b22405ac7f13667d4903be1a8018fda587d475",
           "inqom_operator_guidance_materializer.py": "ae827c3ec2a5f382caf17c3095878074cb9c987a4d12e64bed1930366b4c8838"
         },
-        "regressionTestsPassed": 60,
+        "regressionTestsPassed": 69,
         "runtimeHashesMatchDEV": true,
         "qualificationStepsPassed": 4,
         "nativeLinesRead": 4918,
@@ -53,7 +53,12 @@
         "fullCycle": "Temporal manual-inqom-accounting-autonomy-pipeline-20261005T081932Z; 24 steps, failure reproduced: three suspense balances 32/125/125, old live tests falsely require zero instead of routed pending work.",
         "runtimeConcurrentDelta": "Pipeline changed 2026-10-05T06:08Z: removed dispatcher from qualification only. Full/scheduled commands identical. Preserve live change; no pipeline promotion.",
         "cleanerTestsHash": "f65c3427c0a8a9b5ba958d195ea46a73ed11e1f3ed352487770f83f216566a0e",
-        "fullCycleAfterFirstFix": "Temporal 20261005T083126Z: 25 steps; compliance contract passes, cleaner test repeats same false zero balance assumption; native actionsTaken empty."
+        "fullCycleAfterFirstFix": "Temporal 20261005T083126Z: 25 steps; compliance contract passes, cleaner test repeats same false zero balance assumption; native actionsTaken empty.",
+        "vatPeriodHashes": {
+          "finance_inqom_vat_cash_basis_monthly_tests.py": "2326cb7c828b1c2273dfdc7df7d933e5a110ad56cac3edf7e5acd757a2f1c744",
+          "inqom_vat_period_contract.py": "ac332a5a526d453414815b71d1ca8259fcab549f21a539ac255d86dd65f1d64b"
+        },
+        "vatPeriodReproduction": "66 pipeline steps; old tests apply August constants to native September preparation. September evidence: 7 collections, net VAT draft 2593.79; August exact checks retained conditionally for August. Nine DEV tests verify real September and block independent evidence/arithmetic/period drift."
       },
       "limits": [
         "Outstanding invoices, rental effective date, PNS expert arbitration and JLM bank payout require external evidence.",

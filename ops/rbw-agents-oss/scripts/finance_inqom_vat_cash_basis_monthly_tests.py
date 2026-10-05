@@ -5,6 +5,7 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from inqom_vat_period_contract import current_period_checks
 
 OPS = Path('/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops')
 JULY_PACK = OPS / 'finance-inqom-vat-july-2026-cash-basis-preparation.json'
@@ -99,21 +100,27 @@ def main() -> None:
     monthly_deductible = ((monthly.get('cashCollections') or {}).get('deductibleVat') or {})
     monthly_controls = monthly.get('controls') or {}
     monthly_quorum = monthly_controls.get('internalFiscalQuorum') or {}
+    checks.extend(current_period_checks(monthly))
     monthly_ordinary = monthly_controls.get('ordinaryAccountingFollowup') or {}
     fc02245 = [p for p in monthly_payments if p.get('invoiceNumber') == 'FC-02245']
     add(checks, 'august_v8_contract_live', monthly.get('contractVersion') == 'finance-inqom-vat-cash-basis-monthly-preparer-v10-2026-09-05-disputed-fail-closed', detail=monthly.get('contractVersion'))
-    add(checks, 'august_ten_collections_exact', len(monthly_payments) == 10 and money(monthly_totals.get('grossCollectedTtc')) == 26496.00 and money(monthly_totals.get('taxableBaseHt')) == 22080.00 and money(monthly_totals.get('vatCollected')) == 4416.00, detail={'count': len(monthly_payments), 'totals': monthly_totals})
-    add(checks, 'august_fc02245_included_with_full_evidence', len(fc02245) == 1 and money(fc02245[0].get('grossCollectedTtc')) == 2160.00 and money(fc02245[0].get('taxableBaseHt')) == 1800.00 and money(fc02245[0].get('vatCollected')) == 360.00 and fc02245[0].get('entryId') == 945484951 and fc02245[0].get('docRef') == 'BQ109730243' and fc02245[0].get('matching411TransferVerified') is True and ((fc02245[0].get('taxAllocationEvidence') or {}).get('method') == 'inqom_sellsy_invoice_prorata'), detail=fc02245)
-    add(checks, 'august_deductible_net_after_regularizations', money(monthly_deductible.get('postedDebitVatInvoiceControl')) == 722.35 and money(monthly_deductible.get('postedCreditVatRegularizations')) == 544.55 and money(monthly_deductible.get('inqom4456NetMovement')) == 177.80 and money(monthly_deductible.get('deductibleVat')) == 204.06 and monthly_deductible.get('reconciliationOk') is True, detail=monthly_deductible)
+    if (monthly.get('period') or {}).get('startDate') == '2026-08-01' and (monthly.get('period') or {}).get('endDate') == '2026-08-31':
+        add(checks, 'august_ten_collections_exact', len(monthly_payments) == 10 and money(monthly_totals.get('grossCollectedTtc')) == 26496.00 and money(monthly_totals.get('taxableBaseHt')) == 22080.00 and money(monthly_totals.get('vatCollected')) == 4416.00, detail={'count': len(monthly_payments), 'totals': monthly_totals})
+    if (monthly.get('period') or {}).get('startDate') == '2026-08-01' and (monthly.get('period') or {}).get('endDate') == '2026-08-31':
+        add(checks, 'august_fc02245_included_with_full_evidence', len(fc02245) == 1 and money(fc02245[0].get('grossCollectedTtc')) == 2160.00 and money(fc02245[0].get('taxableBaseHt')) == 1800.00 and money(fc02245[0].get('vatCollected')) == 360.00 and fc02245[0].get('entryId') == 945484951 and fc02245[0].get('docRef') == 'BQ109730243' and fc02245[0].get('matching411TransferVerified') is True and ((fc02245[0].get('taxAllocationEvidence') or {}).get('method') == 'inqom_sellsy_invoice_prorata'), detail=fc02245)
+    if (monthly.get('period') or {}).get('startDate') == '2026-08-01' and (monthly.get('period') or {}).get('endDate') == '2026-08-31':
+        add(checks, 'august_deductible_net_after_regularizations', money(monthly_deductible.get('postedDebitVatInvoiceControl')) == 722.35 and money(monthly_deductible.get('postedCreditVatRegularizations')) == 544.55 and money(monthly_deductible.get('inqom4456NetMovement')) == 177.80 and money(monthly_deductible.get('deductibleVat')) == 204.06 and monthly_deductible.get('reconciliationOk') is True, detail=monthly_deductible)
     adjustment_evidence = monthly_deductible.get('verifiedCashBasisAdjustments') or []
-    add(checks, 'august_deductible_independent_live_evidence', money(monthly_deductible.get('independentSigned4456NetMovement')) == 177.80 and monthly_deductible.get('componentReconciliationOk') is True and monthly_deductible.get('configuredAdjustmentCount') == 1 and monthly_deductible.get('verifiedAdjustmentCount') == 1 and not (monthly_deductible.get('adjustmentEvidenceErrors') or []) and len(adjustment_evidence) == 1 and adjustment_evidence[0].get('invoiceEntryId') == 628648298 and adjustment_evidence[0].get('bankEntryId') == 955471299 and adjustment_evidence[0].get('bankDocRef') == 'BQ110725027' and adjustment_evidence[0].get('evidenceStatus') == 'live_readback_verified' and all((adjustment_evidence[0].get('checks') or {}).values()) and bool(monthly_deductible.get('sourceLineDigestSha256')) and bool(adjustment_evidence[0].get('sourceLineDigestSha256')), detail=monthly_deductible)
+    if (monthly.get('period') or {}).get('startDate') == '2026-08-01' and (monthly.get('period') or {}).get('endDate') == '2026-08-31':
+        add(checks, 'august_deductible_independent_live_evidence', money(monthly_deductible.get('independentSigned4456NetMovement')) == 177.80 and monthly_deductible.get('componentReconciliationOk') is True and monthly_deductible.get('configuredAdjustmentCount') == 1 and monthly_deductible.get('verifiedAdjustmentCount') == 1 and not (monthly_deductible.get('adjustmentEvidenceErrors') or []) and len(adjustment_evidence) == 1 and adjustment_evidence[0].get('invoiceEntryId') == 628648298 and adjustment_evidence[0].get('bankEntryId') == 955471299 and adjustment_evidence[0].get('bankDocRef') == 'BQ110725027' and adjustment_evidence[0].get('evidenceStatus') == 'live_readback_verified' and all((adjustment_evidence[0].get('checks') or {}).values()) and bool(monthly_deductible.get('sourceLineDigestSha256')) and bool(adjustment_evidence[0].get('sourceLineDigestSha256')), detail=monthly_deductible)
     monthly_collection_errors = ((monthly.get('controls') or {}).get('collectionEvidenceErrors') or [])
     add(checks, 'august_collection_evidence_fail_closed', not monthly_collection_errors and ((monthly.get('controls') or {}).get('refundCheckMethod') == 'explicit_failed_cancelled_refunded_reversed_event_exclusion') and int(((monthly.get('controls') or {}).get('sourceReadback') or {}).get('invoiceTaxFallbackCount') or 0) == 0, detail={'errors': monthly_collection_errors, 'sourceReadback': ((monthly.get('controls') or {}).get('sourceReadback') or {}), 'refunds': ((monthly.get('cashCollections') or {}).get('refunds') or [])})
     wrapper_text = Path('/srv/rbw-agents-oss/scripts/finance_inqom_vat_cash_basis_monthly_preparer.py').read_text(encoding='utf-8')
     add(checks, 'wrapper_has_no_assumed_rate_allocation_path', 'fallback_assumed_20_percent' not in wrapper_text and 'allocation = allocate(' in wrapper_text and 'missing_reconciled_invoice_tax_evidence' in wrapper_text, detail='fail_closed_invoice_tax_evidence')
     add(checks, 'wrapper_has_explicit_disallowed_status_filter', 'DISALLOWED_COLLECTION_STATUS_TOKENS' in wrapper_text and 'disallowed_collection_status(label)' in wrapper_text and "'DISPUTED'" in wrapper_text and "'CONTESTED'" in wrapper_text, detail='failed_cancelled_refunded_reversed_chargeback')
     add(checks, 'wrapper_has_no_hardcoded_august_deductible_literal', 'expert_rh_adjustment = 26.26' not in wrapper_text and 'verifiedDeductibleVatCashBasisAdjustments' in wrapper_text and 'verify_deductible_adjustment_live' in wrapper_text, detail='policy_configured_live_readback')
-    add(checks, 'august_declaration_exact_supersedes_incomplete_3333_65', money(monthly_exact.get('grossVatDue20Percent')) == 4416.00 and money(monthly_exact.get('deductibleVatOtherGoodsServices')) == 204.06 and money(monthly_exact.get('netVatDue')) == 4211.94 and money(monthly_exact.get('netVatDue')) != 3333.65, detail=monthly_exact)
+    if (monthly.get('period') or {}).get('startDate') == '2026-08-01' and (monthly.get('period') or {}).get('endDate') == '2026-08-31':
+        add(checks, 'august_declaration_exact_supersedes_incomplete_3333_65', money(monthly_exact.get('grossVatDue20Percent')) == 4416.00 and money(monthly_exact.get('deductibleVatOtherGoodsServices')) == 204.06 and money(monthly_exact.get('netVatDue')) == 4211.94 and money(monthly_exact.get('netVatDue')) != 3333.65, detail=monthly_exact)
     add(checks, 'august_internal_fiscal_quorum_unanimous', monthly_quorum.get('passed') is True and monthly_quorum.get('status') == 'passed' and int(monthly_quorum.get('passVotes') or 0) == 5 and int(monthly_quorum.get('requiredVotes') or 0) == 5 and not (monthly_quorum.get('failedAgents') or []), detail=monthly_quorum)
     add(checks, 'august_no_invoice_tax_fallback', all(((p.get('taxAllocationEvidence') or {}).get('method') == 'inqom_sellsy_invoice_prorata') for p in monthly_payments), detail=[{'invoice':p.get('invoiceNumber'),'method':(p.get('taxAllocationEvidence') or {}).get('method')} for p in monthly_payments])
     add(checks, 'period_lettering_accounting_followup_non_fiscal', int(monthly_ordinary.get('unresolvedCandidateCount') or 0) > 0 and monthly_ordinary.get('fiscalBlocking') is False and monthly_controls.get('portalEntryBlockedByFiscalControls') is False and monthly_controls.get('readyForHumanPortalValidation') is True and not (monthly.get('blockingReasons') or []), detail={'ordinary': monthly_ordinary, 'monthlyBlocking': monthly.get('blockingReasons'), 'letteringStatus': lettering.get('status')})
@@ -146,11 +153,11 @@ def main() -> None:
     warnings = [c for c in failed if c.get('severity') == 'warning']
     payload = {
         'generatedAt': generated_at,
-        'contractVersion': 'finance-inqom-vat-cash-basis-monthly-tests-v5-2026-09-05-disputed-fail-closed',
+        'contractVersion': 'finance-inqom-vat-cash-basis-monthly-tests-v6-current-period-contract',
         'capabilityId': 'finance-inqom-vat-cash-basis-monthly-tests',
         'ok': not critical_failed and not high_failed,
         'status': 'pass_with_warnings' if warnings and not critical_failed and not high_failed else ('pass' if not failed else 'failed'),
-        'summary': f"finance_inqom_vat_cash_basis_monthly_tests: checks={len(checks)} failed={len(failed)} critical_failed={len(critical_failed)} high_failed={len(high_failed)} warnings={len(warnings)} july_net_vat=2824 august_net_vat=4211.94 quorum=5/5 fail_closed_evidence=true prepare_only=true",
+        'summary': f"finance_inqom_vat_cash_basis_monthly_tests: checks={len(checks)} failed={len(failed)} critical_failed={len(critical_failed)} high_failed={len(high_failed)} warnings={len(warnings)} july_net_vat=2824 current_period={monthly.get('period')} current_net_vat={monthly_exact.get('netVatDue')} quorum=5/5 fail_closed_evidence=true prepare_only=true",
         'counts': {'checks': len(checks), 'failed': len(failed), 'criticalFailed': len(critical_failed), 'highFailed': len(high_failed), 'warnings': len(warnings)},
         'blockingReasons': [c['checkId'] for c in critical_failed + high_failed],
         'warningReasons': [c['checkId'] for c in warnings],
@@ -167,7 +174,7 @@ def main() -> None:
             'internalFiscalQuorumRequired': True,
         },
         'artifacts': {'reportJson': str(OUT_JSON), 'reportMd': str(OUT_MD), 'julyPack': str(JULY_PACK), 'monthlyLast': str(MONTHLY_LAST), 'letteringControl': str(LETTERING_CONTROL), 'sellsyControl': str(SELLY_CONTROL) if False else str(SELLSY_CONTROL), 'gocardlessReceipts': str(GOCARDLESS_RECEIPTS), 'directBankReceipts': str(DIRECT_BANK_RECEIPTS), 'allocator': str(ALLOCATOR), 'deductibleCrosscheck': str(DEDUCTIBLE_CROSSCHECK)},
-        'updatedBy': 'finance-inqom-vat-cash-basis-monthly-tests-v5-disputed-fail-closed',
+        'updatedBy': 'finance-inqom-vat-cash-basis-monthly-tests-v6-current-period-contract',
     }
     write_json(OUT_JSON, payload)
     OUT_MD.write_text('\n'.join([f"# Finance Inqom TVA cash-basis monthly tests — {generated_at}", '', f"- Summary: {payload['summary']}", f"- OK: **{payload['ok']}**", f"- Warnings: {len(warnings)}", '', '## Checks', *[f"- {'✅' if c['ok'] else '⚠️' if c['severity']=='warning' else '❌'} {c['checkId']} ({c['severity']})" for c in checks]]) + '\n', encoding='utf-8')
