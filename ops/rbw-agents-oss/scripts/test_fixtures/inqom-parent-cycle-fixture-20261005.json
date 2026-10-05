@@ -1,0 +1,23 @@
+{
+  "data": {
+    "generatedAt": "2026-10-05T11:15:27.051322Z",
+    "status": "running",
+    "ok": false,
+    "businessCompletionStatus": "blocked_incomplete_work",
+    "blockingReasons": [
+      "current_cycle_in_progress"
+    ],
+    "counts": {
+      "steps": 0,
+      "failedSteps": 0,
+      "fatalSteps": 0
+    }
+  },
+  "context": {
+    "parentScript": "/srv/rbw-agents-oss/scripts/inqom_accounting_autonomy_pipeline.py",
+    "parentStartedAt": 1791198926.9510002,
+    "now": 1791199047.051,
+    "nativeApprovalsAbsent": true,
+    "childGuardsCurrentAndSafe": true
+  }
+}
