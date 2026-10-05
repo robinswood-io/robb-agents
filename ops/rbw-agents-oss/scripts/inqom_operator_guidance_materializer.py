@@ -180,8 +180,33 @@ def treatment(rule):
       'existing_waiting_reclassification_lettering':"OD de reclassement déjà présente : relire les deux écritures et leur contrepartie de charge, conserver banque et charge, préparer uniquement le lettrage des deux lignes 473 exactes. Aucun nouvel OD, aucune nouvelle dépense. Le préflight natif et une approbation bornée doivent précéder tout lettrage.",
       'typographic_account_reimport_review':"Nouveau solde sur compte comportant une virgule : relire les lignes importées, la pièce et l'OD de correction antérieure. Vérifier le compte maître actif natif et préparer seulement la correction du nouveau résiduel par référence exacte ; préserver les corrections antérieures, TVA et banque. Ne pas solder par montant seul.",
       'credit_expense_invoice_discount_review':"Lire la facture pour distinguer remise, avoir, erreur de signe ou remboursement. Une remise intégrée doit réduire la charge concernée selon la pièce et le précédent expert ; vérifier total HT, TTC et TVA avant de préparer une OD bornée, sans nouvelle TVA ni paiement. Aucun reclassement automatique sur solde créditeur seul.",
+      'duplicate_import_against_matched_native_invoice_review':"Réimport susceptible de doubler une facture déjà lettrée : relire les deux écritures exactes, les pièces, HT/TTC et la TVA. Conserver la facture canonique et ses lettrages. Si la TVA et la réalité documentaire sont identiques, préparer l'extourne du seul nouvel import et son lettrage avec l'annulation. Si la TVA diffère d'une OD forfaitaire antérieure, demander l'arbitrage de l'expert. Aucune nouvelle relance, aucun paiement et aucune clôture sur le seul montant.",
       'zero_movement_review':"Ligne sans mouvement financier ; documenter le statut, ne pas créer d'écart ou de règlement.",
     }.get(rule,"Rechercher facture et règlement par dossier, tiers, référence et période. Rechercher Gmail/notifications/portail puis demander au fournisseur l'envoi à l'adresse Inqom vérifiée du dossier. Aucun rapprochement sur montant seul.")
+
+def duplicate_invoice_review_map(lines):
+    """Review an exact reimport against one already matched native invoice."""
+    grouped=defaultdict(list)
+    for row in lines:
+        ref=re.sub(r'[^A-Z0-9]', '', str(row.get('docRef') or '').upper())
+        if (not str(row.get('account') or '').startswith('401')
+            or float(row.get('amount') or 0) <= 0 or not ref
+            or ref.startswith(('BQ','OD','REG','PAY','CB'))
+            or ref == 'FACT2019061200001'):
+            continue
+        key=(row.get('folderId'),row.get('date'),ref,row.get('accountId'),
+             row.get('subAccountId'),round(float(row['amount']),2))
+        grouped[key].append(row)
+    review={}
+    for rows in grouped.values():
+        if len(rows)!=2 or len({r.get('entryId') for r in rows})!=2:
+            continue
+        prior=[r for r in rows if not open_compact(r) and r.get('source') in ('ByUser','Chaintrust','Sellsy','PublicApi')]
+        incoming=[r for r in rows if open_compact(r) and r.get('source') in ('Chaintrust','Sellsy')]
+        if len(prior)==len(incoming)==1:
+            review[incoming[0]['lineId']]=prior[0]
+    return review
+
 
 def existing_waiting_reclass_pair(rows):
     """Identify an existing 473 reclassification for read-only preparation."""
@@ -227,6 +252,7 @@ def materialize(g, native):
     keys=[(l['folderId'],l['lineId']) for l in lines]
     if len(keys)!=len(set(keys)): errors.append('duplicate_line_across_periods')
     if set(l['folderId'] for l in lines)!=set(FOLDERS): errors.append('missing_folder_coverage')
+    duplicate_reviews=duplicate_invoice_review_map(lines)
     account_balances=defaultdict(float)
     for line in lines:
         account_balances[(line['folderId'],line['account'])] += float(line['amount'])
@@ -242,6 +268,8 @@ def materialize(g, native):
             rule,actionable='typographic_account_reimport_review',True
         elif credit_expense:
             rule,actionable='credit_expense_invoice_discount_review',True
+        elif line['lineId'] in duplicate_reviews:
+            rule,actionable='duplicate_import_against_matched_native_invoice_review',True
         else:
             rule,actionable=classify(line)
         key=(line['folderId'],rule,line['account'],line['subAccountId'],reference(line),actionable)
@@ -271,7 +299,7 @@ def materialize(g, native):
           'title':f'{folder} — {rule} — {acc} {ref}',
           'summary':treatment(rule),'dedupeKey':f'{ORIGIN}:{identity}',
           'data':{'folderId':folder,'ruleId':rule,'account':acc,'subAccountId':sub,'reference':ref,
-                  'canonicalLines':rows,'operatorRule':rules.get(rule) or rules['invoice_collection'],
+                  'canonicalLines':rows,'existingMatchedInvoiceEvidence':[duplicate_reviews[r['lineId']] for r in rows if r['lineId'] in duplicate_reviews],'operatorRule':rules.get(rule) or rules['invoice_collection'],
                   'process':g['process']['steps'],'allowedEffects':['writes_reports','writes_action_queue','prepare_expert_pack'],
                   'blockedEffects':BLOCKED,'mutationAllowed':False,'externalSendAllowed':False,
                   'retryPolicy':'After any mutation error read the native reference and matched IDs before any retry; never replay an unknown result.'}})
@@ -290,8 +318,10 @@ def fresh_snapshot(snapshot, max_age_seconds=3600):
 
 def open_candidates(snapshot,folder):
     """Complete unique native reference pairs; never join on amount alone."""
+    duplicate_reviews=duplicate_invoice_review_map(snapshot.get('lines') or [])
     grouped=defaultdict(list)
     for line in snapshot.get('lines') or []:
+        if line['lineId'] in duplicate_reviews: continue
         if line['folderId']!=folder or not open_compact(line) or not line['account'].startswith(('401','411')):continue
         ref=reference(line)
         if not ref or ref.startswith('AV'):continue
@@ -309,12 +339,14 @@ def filter_candidates(candidates,snapshot,folder=18627):
     by_id={r['lineId']:r for r in snapshot.get('lines') or [] if r['folderId']==folder}
     accepted=[]; rejected=[]
     fresh=fresh_snapshot(snapshot)
+    duplicate_reviews=duplicate_invoice_review_map(snapshot.get('lines') or [])
     for c in candidates:
         source=[by_id.get((c.get(side) or {}).get('lineId')) for side in ('positive','negative')]
         reason=None
         if not fresh:reason='native_snapshot_missing_or_stale'
         elif not all(source):reason='native_line_missing'
         elif not all(open_compact(r) for r in source):reason='already_lettered_native'
+        elif any(r['lineId'] in duplicate_reviews for r in source):reason='native_duplicate_invoice_review_required'
         elif any(abs(float((c.get(side) or {}).get('amount') or 0)-float(source[i]['amount']))>.005 or (c.get(side) or {}).get('account')!=source[i]['account'] for i,side in enumerate(('positive','negative'))):
             reason='native_candidate_drift'
         elif source[0]['accountId']!=source[1]['accountId'] or source[0]['subAccountId']!=source[1]['subAccountId']:

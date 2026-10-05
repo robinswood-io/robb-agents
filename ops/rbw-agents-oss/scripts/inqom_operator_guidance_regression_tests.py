@@ -112,6 +112,30 @@ def snapshot(rows,delta=0):
     return {'ok':True,'generatedAt':stamp(delta),'lines':rows}
 
 class NativeGuidanceTests(unittest.TestCase):
+    def duplicate_rows(self):
+        return [line(1,118.8,source='Chaintrust'),line(9,118.8,231946556,source='ByUser'),line(2,-118.8,source='Banking')]
+    def test_exact_reimport_links_matched_native_invoice(self):
+        review=guidance.duplicate_invoice_review_map(self.duplicate_rows())
+        self.assertEqual(review[1]['entryId'],9);self.assertEqual(review[1]['matchedId'],231946556)
+    def test_reimport_amount_without_reference_insufficient(self):
+        rows=self.duplicate_rows();rows[0]['docRef']='F202699999'
+        self.assertEqual(guidance.duplicate_invoice_review_map(rows),{})
+    def test_reimport_other_folder_is_separate(self):
+        rows=self.duplicate_rows();rows[0]['folderId']=124920
+        self.assertEqual(guidance.duplicate_invoice_review_map(rows),{})
+    def test_reimport_other_period_is_separate(self):
+        rows=self.duplicate_rows();rows[0]['date']='2026-02-01'
+        self.assertEqual(guidance.duplicate_invoice_review_map(rows),{})
+    def test_canonical_unmatched_is_not_canonical_proof(self):
+        rows=self.duplicate_rows();rows[1]['matchedId']=None
+        self.assertEqual(guidance.duplicate_invoice_review_map(rows),{})
+    def test_duplicate_reimport_excluded_from_amount_pairing(self):
+        self.assertEqual(guidance.open_candidates(snapshot(self.duplicate_rows()),18627)['supplier'],[])
+    def test_previous_workbench_candidate_cannot_replay_reimport(self):
+        rows=self.duplicate_rows();candidate={'positive':rows[0],'negative':rows[2]}
+        accepted,rejected=guidance.filter_candidates([candidate],snapshot(rows))
+        self.assertEqual(accepted,[]);self.assertEqual(rejected[0]['reason'],'native_duplicate_invoice_review_required')
+
     def test_matched_rows_are_excluded(self):
         a,b=line(1,10,1),line(2,-10)
         self.assertEqual(guidance.open_candidates(snapshot([a,b]),18627),{'client':[],'supplier':[]})
