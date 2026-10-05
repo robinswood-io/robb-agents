@@ -256,6 +256,39 @@ def build_production_gate(
     return gate
 
 
+def denylist_respected(records: list[dict], report: dict, blocked_ids: set[int]) -> bool:
+    counts = report.get('counts') or {}
+    guards = report.get('guardrails') or {}
+    applied = report.get('livePreflightDenylist') or {}
+    if guards.get('livePreflightDenylistApplied') is not True:
+        return False
+    if set(applied.get('blockedLineIds') or []) != blocked_ids:
+        return False
+    intersecting = []
+    flagged = []
+    for row in records:
+        ids = {int(value) for value in (row.get('lineIds') or []) if str(value).isdigit()}
+        intersects = bool(ids & blocked_ids)
+        if intersects and row.get('readinessStatus') == 'ready_for_autonomous_preflight':
+            return False
+        if row.get('family') != 'native_lettering' or row.get('mutationType') != 'native_lettering':
+            continue
+        if row.get('livePreflightBlockedByDenylist') is True:
+            flagged.append(row)
+        if intersects:
+            intersecting.append(row)
+            if (row.get('livePreflightBlockedByDenylist') is not True
+                or row.get('readinessStatus') not in {'completed_no_action_required','blocked_by_live_drift'}
+                or row.get('canEnterApprovalOnlyPreflight') is not False):
+                return False
+    return (
+        type(counts.get('livePreflightDenylistRecordsBlocked')) is int
+        and counts['livePreflightDenylistRecordsBlocked'] == len(intersecting)
+        and applied.get('recordsBlocked') == len(intersecting)
+        and len(flagged) == len(intersecting)
+    )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument('--phase', choices=['baseline', 'post-resolution'], default='post-resolution')
@@ -310,7 +343,7 @@ def main() -> None:
     add(checks, 'ready_mutations_require_approval', all((not r.get('approvalOnlyRequired')) or (r.get('activeApprovalRequired') is True and r.get('livePreflightRequired') is True and r.get('postMutationReadbackRequired') is True) for r in records if r.get('readinessStatus') == 'ready_for_autonomous_preflight'), detail=[r for r in records if r.get('readinessStatus') == 'ready_for_autonomous_preflight'][:3])
     add(checks, 'global_guardrails_closed', guardrails.get('noInqomMutation') is True and guardrails.get('noNativeLettering') is True and guardrails.get('noNativeRevisionMarking') is True and guardrails.get('noTaxFiling') is True and guardrails.get('registryCannotAuthorizeExecution') is True, detail=guardrails)
     ready_records_with_blocked_lines = [r for r in records if r.get('readinessStatus') == 'ready_for_autonomous_preflight' and blocked_ids.intersection(set(int(x) for x in (r.get('lineIds') or []) if str(x).isdigit()))]
-    add(checks, 'live_preflight_denylist_respected', not blocked_ids or (guardrails.get('livePreflightDenylistApplied') is True and not ready_records_with_blocked_lines and int(counts.get('livePreflightDenylistRecordsBlocked') or 0) >= 1), detail={'blockedIds': sorted(blocked_ids), 'violations': ready_records_with_blocked_lines[:3], 'counts': counts})
+    add(checks, 'live_preflight_denylist_respected', denylist_respected(records, report, blocked_ids), detail={'blockedIds': sorted(blocked_ids), 'violations': ready_records_with_blocked_lines[:3], 'counts': counts})
     add(checks, 'source_report_shadow_tracked_not_hidden', int(counts.get('sourceReports') or 0) >= 10 and int(counts.get('benignSystemOfRecordShadowReports') or 0) >= 0, detail=counts)
     add(checks, 'sales_duplicate_identifiers_preserved_exactly', len(sales_identifier_checks) == len(sales_actions) and all(row['entriesExact'] and row['linesExact'] and row['approvalOnlyRequired'] and row['mutationAllowedCurrent'] for row in sales_identifier_checks), detail=sales_identifier_checks)
     add(checks, 'production_states_are_distinct', True, detail=['internalInterimSituation', 'boundedAccountingExecution', 'finalFrenchAccountingProduction'])
