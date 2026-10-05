@@ -256,6 +256,25 @@ def build_production_gate(
     return gate
 
 
+def protected_residuals_consistent(records: list[dict], residuals: list[dict]) -> bool:
+    statuses = {'requires_human_doctrine', 'requires_expert_decision', 'manual_only'}
+    protected = [r for r in records if r.get('readinessStatus') in statuses]
+    ids = [r.get('registryId') for r in protected]
+    human_ids = [r.get('registryId') for r in residuals]
+    if (not ids or any(not isinstance(i, str) or not i for i in ids + human_ids)
+        or len(set(ids)) != len(ids) or len(set(human_ids)) != len(human_ids)
+        or set(ids) != set(human_ids)):
+        return False
+    by_id = {r['registryId']: r for r in protected}
+    return (
+        all(not isinstance(r.get('autonomousResolution'), dict)
+            and r.get('mutationAllowedCurrent') is False
+            and r.get('canEnterApprovalOnlyPreflight') is False for r in protected)
+        and all(r.get('mutationAllowed') is False and r.get('externalSendAllowed') is False
+            and r.get('readinessStatus') == by_id[r['registryId']]['readinessStatus']
+            for r in residuals)
+    )
+
 def denylist_respected(records: list[dict], report: dict, blocked_ids: set[int]) -> bool:
     counts = report.get('counts') or {}
     guards = report.get('guardrails') or {}
@@ -357,7 +376,7 @@ def main() -> None:
     )
     if autonomous_resolver.get('ok') is True:
         auto_records = [r for r in records if isinstance(r.get('autonomousResolution'), dict)]
-        protected = [r for r in records if r.get('readinessStatus') in {'requires_human_doctrine', 'manual_only'}]
+        protected = [r for r in records if r.get('readinessStatus') in {'requires_human_doctrine', 'requires_expert_decision', 'manual_only'}]
         protected_ids = {str(r.get('registryId')) for r in protected}
         resolver_human_ids = {str(r.get('registryId')) for r in (autonomous_resolver.get('humanResiduals') or []) if isinstance(r, dict)}
         resolver_decisions = autonomous_resolver.get('decisions') or []
@@ -378,7 +397,7 @@ def main() -> None:
         else:
             add(checks, 'autonomous_resolution_overlay_applied', int(counts.get('autonomousResolutionsApplied') if counts.get('autonomousResolutionsApplied') is not None else -1) == len(resolver_decisions) == len(auto_records), detail={'phase': phase, 'registry': autonomous_resolution, 'counts': counts})
             add(checks, 'autonomous_resolution_overlay_zero_rejected', int(counts.get('autonomousResolutionsRejected') or 0) == 0 and rejected == 0, detail={'phase': phase, 'registry': autonomous_resolution})
-            add(checks, 'human_doctrine_and_missing_evidence_not_autoclosed', protected_ids == resolver_human_ids and len(protected_ids) >= 1 and all(not isinstance(r.get('autonomousResolution'), dict) for r in protected), detail={'phase': phase, 'registryProtected': sorted(protected_ids), 'resolverHumanResiduals': sorted(resolver_human_ids)})
+            add(checks, 'human_doctrine_and_missing_evidence_not_autoclosed', protected_residuals_consistent(records, autonomous_resolver.get('humanResiduals') or []), detail={'phase': phase, 'registryProtected': sorted(protected_ids), 'resolverHumanResiduals': sorted(resolver_human_ids)})
 
     failed = [c for c in checks if not c['ok']]
     critical_failed = [c for c in failed if c.get('severity') == 'critical']
