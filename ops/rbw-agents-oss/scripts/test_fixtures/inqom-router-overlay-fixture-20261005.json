@@ -1,0 +1,559 @@
+{
+  "router": {
+    "counts": {
+      "activeApprovalWritten": 0,
+      "agentRoutes": 1,
+      "closedNoAction": 40,
+      "engineeringRoutes": 0,
+      "expertRoutes": 3,
+      "mutationAttempted": 0,
+      "queue": 4,
+      "records": 50,
+      "routes": 5,
+      "validationIssues": 0
+    },
+    "routeCounts": {
+      "closed_no_action": 40,
+      "doctrine_question": 3,
+      "expert_review": 2,
+      "manual_only": 2,
+      "source_quality_review": 3
+    },
+    "guardrails": {
+      "activeApprovalNotWritten": true,
+      "noExternalSend": true,
+      "noInqomMutation": true,
+      "noNativeLettering": true,
+      "noNativeRevisionMarking": true,
+      "noTaxFiling": true,
+      "noTaxPayment": true,
+      "prepareOnly": true
+    }
+  },
+  "resolver": {
+    "ok": true,
+    "status": "resolved_with_human_inputs_only",
+    "counts": {
+      "activeApprovalWritten": 0,
+      "externalActionAttempted": 0,
+      "humanResiduals": 10,
+      "inputRecords": 50,
+      "mutationAttempted": 0,
+      "orangeQuarantinedNoop": 2,
+      "policyTerminal": 1,
+      "resolved": 34,
+      "unrecognizedTechnicalResiduals": 0,
+      "validationIssues": 0
+    },
+    "decisions": [
+      {
+        "registryId": "exec-reg:2edc9c2fb4a988e67bd7"
+      },
+      {
+        "registryId": "exec-reg:d56c94f7f55e06eb816c"
+      },
+      {
+        "registryId": "exec-reg:5221ca16efbf4811ca1e"
+      },
+      {
+        "registryId": "exec-reg:74a98825011265214d86"
+      },
+      {
+        "registryId": "exec-reg:64a5d16a3a80fa813bdb"
+      },
+      {
+        "registryId": "exec-reg:c94b499a90ee99393a00"
+      },
+      {
+        "registryId": "exec-reg:5fb28914956817249242"
+      },
+      {
+        "registryId": "exec-reg:ed8eaac2aa295fc8fc90"
+      },
+      {
+        "registryId": "exec-reg:9f131ed60a6265650885"
+      },
+      {
+        "registryId": "exec-reg:adca69f9c9de0f7cd09d"
+      },
+      {
+        "registryId": "exec-reg:a9ba3cdaea05ac6a047e"
+      },
+      {
+        "registryId": "exec-reg:52157b92b5af0b0b4591"
+      },
+      {
+        "registryId": "exec-reg:8d0f95a9604ec40ad2cc"
+      },
+      {
+        "registryId": "exec-reg:6692d65639ed13cba38c"
+      },
+      {
+        "registryId": "exec-reg:c7893eceef9a17fd7734"
+      },
+      {
+        "registryId": "exec-reg:93e3a283c3399b162f5e"
+      },
+      {
+        "registryId": "exec-reg:2ac33fee7bddcbcbcd15"
+      },
+      {
+        "registryId": "exec-reg:7193e1e612389d906c60"
+      },
+      {
+        "registryId": "exec-reg:316f76a159e2c7f76a20"
+      },
+      {
+        "registryId": "exec-reg:6e143fe0dfe405f2afc2"
+      },
+      {
+        "registryId": "exec-reg:a1f1542321778fb1b6b7"
+      },
+      {
+        "registryId": "exec-reg:b0d8f1f73d2daea54d2f"
+      },
+      {
+        "registryId": "exec-reg:56800c1954013a349e8b"
+      },
+      {
+        "registryId": "exec-reg:271ca60a01c579184d01"
+      },
+      {
+        "registryId": "exec-reg:616eaf87aa33fcc745c5"
+      },
+      {
+        "registryId": "exec-reg:92517dbd4ac3e654e5fb"
+      },
+      {
+        "registryId": "exec-reg:c89c146bb3585f54bae9"
+      },
+      {
+        "registryId": "exec-reg:ef6a5e5ed0a37e2f217b"
+      },
+      {
+        "registryId": "exec-reg:a12fdd2e5f670ddb6553"
+      },
+      {
+        "registryId": "exec-reg:e96735bfd46ecaa6b43d"
+      },
+      {
+        "registryId": "exec-reg:347e952907a112743ea7"
+      },
+      {
+        "registryId": "exec-reg:65e4ca5143de7be518d8"
+      },
+      {
+        "registryId": "exec-reg:31591b47f123a5dc29ad"
+      },
+      {
+        "registryId": "exec-reg:b2ee12fb62d34de05326"
+      }
+    ],
+    "humanResiduals": [
+      {
+        "registryId": "exec-reg:a5f00433a287cc20e49b",
+        "readinessStatus": "requires_expert_decision",
+        "mutationAllowed": false,
+        "externalSendAllowed": false
+      },
+      {
+        "registryId": "exec-reg:d9f60817e56f4b2c2b0e",
+        "readinessStatus": "requires_expert_decision",
+        "mutationAllowed": false,
+        "externalSendAllowed": false
+      },
+      {
+        "registryId": "exec-reg:a4d40d0f5b8842e50faa",
+        "readinessStatus": "requires_expert_decision",
+        "mutationAllowed": false,
+        "externalSendAllowed": false
+      },
+      {
+        "registryId": "exec-reg:3aedbea94ae726619698",
+        "readinessStatus": "manual_only"
+      },
+      {
+        "registryId": "exec-reg:4c1c964c6b63998fb182",
+        "readinessStatus": "requires_expert_decision",
+        "mutationAllowed": false,
+        "externalSendAllowed": false
+      },
+      {
+        "registryId": "exec-reg:7ca67cf9512a27ac8c50",
+        "readinessStatus": "requires_human_doctrine"
+      },
+      {
+        "registryId": "exec-reg:580221e45da4329fd8db",
+        "readinessStatus": "requires_human_doctrine"
+      },
+      {
+        "registryId": "exec-reg:a2f7b832fe013580afef",
+        "readinessStatus": "requires_human_doctrine"
+      },
+      {
+        "registryId": "exec-reg:337f9c8a755fb449ad27",
+        "readinessStatus": "manual_only",
+        "mutationAllowed": false,
+        "externalSendAllowed": false
+      },
+      {
+        "registryId": "exec-reg:197ad746d72a87d8f8db",
+        "readinessStatus": "requires_expert_decision",
+        "mutationAllowed": false,
+        "externalSendAllowed": false
+      }
+    ]
+  },
+  "records": [
+    {
+      "registryId": "exec-reg:6e7fe45d24c34c29c145",
+      "family": "source_quality",
+      "readinessStatus": "completed_no_action_required",
+      "mutationAllowedCurrent": false,
+      "canEnterApprovalOnlyPreflight": false
+    },
+    {
+      "registryId": "exec-reg:a5f00433a287cc20e49b",
+      "family": "source_quality",
+      "readinessStatus": "requires_expert_decision",
+      "mutationAllowedCurrent": false,
+      "canEnterApprovalOnlyPreflight": false
+    },
+    {
+      "registryId": "exec-reg:d9f60817e56f4b2c2b0e",
+      "family": "source_quality",
+      "readinessStatus": "requires_expert_decision",
+      "mutationAllowedCurrent": false,
+      "canEnterApprovalOnlyPreflight": false
+    },
+    {
+      "registryId": "exec-reg:a4d40d0f5b8842e50faa",
+      "family": "source_quality",
+      "readinessStatus": "requires_expert_decision",
+      "mutationAllowedCurrent": false,
+      "canEnterApprovalOnlyPreflight": false
+    },
+    {
+      "registryId": "exec-reg:d9b7697ffd2ea656de1d",
+      "family": "document_evidence",
+      "readinessStatus": "completed_no_action_required",
+      "mutationAllowedCurrent": false,
+      "canEnterApprovalOnlyPreflight": false
+    },
+    {
+      "registryId": "exec-reg:3aedbea94ae726619698",
+      "family": "document_evidence",
+      "readinessStatus": "manual_only",
+      "mutationAllowedCurrent": false,
+      "canEnterApprovalOnlyPreflight": false
+    },
+    {
+      "registryId": "exec-reg:2edc9c2fb4a988e67bd7",
+      "family": "unrevised_revision",
+      "readinessStatus": "completed_no_action_required",
+      "mutationAllowedCurrent": false,
+      "canEnterApprovalOnlyPreflight": false
+    },
+    {
+      "registryId": "exec-reg:d56c94f7f55e06eb816c",
+      "family": "unrevised_revision",
+      "readinessStatus": "completed_no_action_required",
+      "mutationAllowedCurrent": false,
+      "canEnterApprovalOnlyPreflight": false
+    },
+    {
+      "registryId": "exec-reg:5221ca16efbf4811ca1e",
+      "family": "unrevised_revision",
+      "readinessStatus": "completed_no_action_required",
+      "mutationAllowedCurrent": false,
+      "canEnterApprovalOnlyPreflight": false
+    },
+    {
+      "registryId": "exec-reg:74a98825011265214d86",
+      "family": "unrevised_revision",
+      "readinessStatus": "completed_no_action_required",
+      "mutationAllowedCurrent": false,
+      "canEnterApprovalOnlyPreflight": false
+    },
+    {
+      "registryId": "exec-reg:64a5d16a3a80fa813bdb",
+      "family": "unrevised_revision",
+      "readinessStatus": "completed_no_action_required",
+      "mutationAllowedCurrent": false,
+      "canEnterApprovalOnlyPreflight": false
+    },
+    {
+      "registryId": "exec-reg:c94b499a90ee99393a00",
+      "family": "unrevised_revision",
+      "readinessStatus": "completed_no_action_required",
+      "mutationAllowedCurrent": false,
+      "canEnterApprovalOnlyPreflight": false
+    },
+    {
+      "registryId": "exec-reg:5fb28914956817249242",
+      "family": "waiting_account",
+      "readinessStatus": "completed_no_action_required",
+      "mutationAllowedCurrent": false,
+      "canEnterApprovalOnlyPreflight": false
+    },
+    {
+      "registryId": "exec-reg:ed8eaac2aa295fc8fc90",
+      "family": "waiting_account",
+      "readinessStatus": "completed_no_action_required",
+      "mutationAllowedCurrent": false,
+      "canEnterApprovalOnlyPreflight": false
+    },
+    {
+      "registryId": "exec-reg:4c1c964c6b63998fb182",
+      "family": "waiting_account",
+      "readinessStatus": "requires_expert_decision",
+      "mutationAllowedCurrent": false,
+      "canEnterApprovalOnlyPreflight": false
+    },
+    {
+      "registryId": "exec-reg:7ca67cf9512a27ac8c50",
+      "family": "waiting_account",
+      "readinessStatus": "requires_human_doctrine",
+      "mutationAllowedCurrent": false,
+      "canEnterApprovalOnlyPreflight": false
+    },
+    {
+      "registryId": "exec-reg:580221e45da4329fd8db",
+      "family": "waiting_account",
+      "readinessStatus": "requires_human_doctrine",
+      "mutationAllowedCurrent": false,
+      "canEnterApprovalOnlyPreflight": false
+    },
+    {
+      "registryId": "exec-reg:a2f7b832fe013580afef",
+      "family": "waiting_account",
+      "readinessStatus": "requires_human_doctrine",
+      "mutationAllowedCurrent": false,
+      "canEnterApprovalOnlyPreflight": false
+    },
+    {
+      "registryId": "exec-reg:583ef46871e9dbdf41df",
+      "family": "waiting_account",
+      "readinessStatus": "completed_no_action_required",
+      "mutationAllowedCurrent": false,
+      "canEnterApprovalOnlyPreflight": false
+    },
+    {
+      "registryId": "exec-reg:337f9c8a755fb449ad27",
+      "family": "native_lettering",
+      "readinessStatus": "manual_only",
+      "mutationAllowedCurrent": false,
+      "canEnterApprovalOnlyPreflight": false
+    },
+    {
+      "registryId": "exec-reg:197ad746d72a87d8f8db",
+      "family": "native_lettering",
+      "readinessStatus": "requires_expert_decision",
+      "mutationAllowedCurrent": false,
+      "canEnterApprovalOnlyPreflight": false
+    },
+    {
+      "registryId": "exec-reg:7819525f505e437c3554",
+      "family": "bank_reconciliation",
+      "readinessStatus": "completed_no_action_required",
+      "mutationAllowedCurrent": false,
+      "canEnterApprovalOnlyPreflight": false
+    },
+    {
+      "registryId": "exec-reg:9f131ed60a6265650885",
+      "family": "bank_reconciliation",
+      "readinessStatus": "completed_no_action_required",
+      "mutationAllowedCurrent": false,
+      "canEnterApprovalOnlyPreflight": false
+    },
+    {
+      "registryId": "exec-reg:3558f68000da4a107f86",
+      "family": "bank_reconciliation",
+      "readinessStatus": "completed_no_action_required",
+      "mutationAllowedCurrent": false,
+      "canEnterApprovalOnlyPreflight": false
+    },
+    {
+      "registryId": "exec-reg:adca69f9c9de0f7cd09d",
+      "family": "bank_reconciliation",
+      "readinessStatus": "completed_no_action_required",
+      "mutationAllowedCurrent": false,
+      "canEnterApprovalOnlyPreflight": false
+    },
+    {
+      "registryId": "exec-reg:a9ba3cdaea05ac6a047e",
+      "family": "bank_reconciliation",
+      "readinessStatus": "completed_no_action_required",
+      "mutationAllowedCurrent": false,
+      "canEnterApprovalOnlyPreflight": false
+    },
+    {
+      "registryId": "exec-reg:52157b92b5af0b0b4591",
+      "family": "bank_reconciliation",
+      "readinessStatus": "completed_no_action_required",
+      "mutationAllowedCurrent": false,
+      "canEnterApprovalOnlyPreflight": false
+    },
+    {
+      "registryId": "exec-reg:8d0f95a9604ec40ad2cc",
+      "family": "bank_reconciliation",
+      "readinessStatus": "completed_no_action_required",
+      "mutationAllowedCurrent": false,
+      "canEnterApprovalOnlyPreflight": false
+    },
+    {
+      "registryId": "exec-reg:6692d65639ed13cba38c",
+      "family": "bank_reconciliation",
+      "readinessStatus": "completed_no_action_required",
+      "mutationAllowedCurrent": false,
+      "canEnterApprovalOnlyPreflight": false
+    },
+    {
+      "registryId": "exec-reg:c7893eceef9a17fd7734",
+      "family": "bank_reconciliation",
+      "readinessStatus": "completed_no_action_required",
+      "mutationAllowedCurrent": false,
+      "canEnterApprovalOnlyPreflight": false
+    },
+    {
+      "registryId": "exec-reg:93e3a283c3399b162f5e",
+      "family": "bank_reconciliation",
+      "readinessStatus": "completed_no_action_required",
+      "mutationAllowedCurrent": false,
+      "canEnterApprovalOnlyPreflight": false
+    },
+    {
+      "registryId": "exec-reg:2ac33fee7bddcbcbcd15",
+      "family": "bank_reconciliation",
+      "readinessStatus": "completed_no_action_required",
+      "mutationAllowedCurrent": false,
+      "canEnterApprovalOnlyPreflight": false
+    },
+    {
+      "registryId": "exec-reg:7193e1e612389d906c60",
+      "family": "bank_reconciliation",
+      "readinessStatus": "completed_no_action_required",
+      "mutationAllowedCurrent": false,
+      "canEnterApprovalOnlyPreflight": false
+    },
+    {
+      "registryId": "exec-reg:316f76a159e2c7f76a20",
+      "family": "bank_reconciliation",
+      "readinessStatus": "completed_no_action_required",
+      "mutationAllowedCurrent": false,
+      "canEnterApprovalOnlyPreflight": false
+    },
+    {
+      "registryId": "exec-reg:6e143fe0dfe405f2afc2",
+      "family": "bank_reconciliation",
+      "readinessStatus": "completed_no_action_required",
+      "mutationAllowedCurrent": false,
+      "canEnterApprovalOnlyPreflight": false
+    },
+    {
+      "registryId": "exec-reg:a1f1542321778fb1b6b7",
+      "family": "vat_cash_basis",
+      "readinessStatus": "completed_no_action_required",
+      "mutationAllowedCurrent": false,
+      "canEnterApprovalOnlyPreflight": false
+    },
+    {
+      "registryId": "exec-reg:b0d8f1f73d2daea54d2f",
+      "family": "fixed_assets_closing",
+      "readinessStatus": "completed_no_action_required",
+      "mutationAllowedCurrent": false,
+      "canEnterApprovalOnlyPreflight": false
+    },
+    {
+      "registryId": "exec-reg:56800c1954013a349e8b",
+      "family": "fixed_assets_closing",
+      "readinessStatus": "completed_no_action_required",
+      "mutationAllowedCurrent": false,
+      "canEnterApprovalOnlyPreflight": false
+    },
+    {
+      "registryId": "exec-reg:271ca60a01c579184d01",
+      "family": "fixed_assets_closing",
+      "readinessStatus": "completed_no_action_required",
+      "mutationAllowedCurrent": false,
+      "canEnterApprovalOnlyPreflight": false
+    },
+    {
+      "registryId": "exec-reg:616eaf87aa33fcc745c5",
+      "family": "fixed_assets_closing",
+      "readinessStatus": "completed_no_action_required",
+      "mutationAllowedCurrent": false,
+      "canEnterApprovalOnlyPreflight": false
+    },
+    {
+      "registryId": "exec-reg:92517dbd4ac3e654e5fb",
+      "family": "fixed_assets_closing",
+      "readinessStatus": "completed_no_action_required",
+      "mutationAllowedCurrent": false,
+      "canEnterApprovalOnlyPreflight": false
+    },
+    {
+      "registryId": "exec-reg:c89c146bb3585f54bae9",
+      "family": "fixed_assets_closing",
+      "readinessStatus": "completed_no_action_required",
+      "mutationAllowedCurrent": false,
+      "canEnterApprovalOnlyPreflight": false
+    },
+    {
+      "registryId": "exec-reg:ef6a5e5ed0a37e2f217b",
+      "family": "fixed_assets_closing",
+      "readinessStatus": "completed_no_action_required",
+      "mutationAllowedCurrent": false,
+      "canEnterApprovalOnlyPreflight": false
+    },
+    {
+      "registryId": "exec-reg:a12fdd2e5f670ddb6553",
+      "family": "fixed_assets_closing",
+      "readinessStatus": "completed_no_action_required",
+      "mutationAllowedCurrent": false,
+      "canEnterApprovalOnlyPreflight": false
+    },
+    {
+      "registryId": "exec-reg:e96735bfd46ecaa6b43d",
+      "family": "fixed_assets_closing",
+      "readinessStatus": "completed_no_action_required",
+      "mutationAllowedCurrent": false,
+      "canEnterApprovalOnlyPreflight": false
+    },
+    {
+      "registryId": "exec-reg:347e952907a112743ea7",
+      "family": "fixed_assets_closing",
+      "readinessStatus": "completed_no_action_required",
+      "mutationAllowedCurrent": false,
+      "canEnterApprovalOnlyPreflight": false
+    },
+    {
+      "registryId": "exec-reg:65e4ca5143de7be518d8",
+      "family": "fixed_assets_closing",
+      "readinessStatus": "completed_no_action_required",
+      "mutationAllowedCurrent": false,
+      "canEnterApprovalOnlyPreflight": false
+    },
+    {
+      "registryId": "exec-reg:31591b47f123a5dc29ad",
+      "family": "fixed_assets_closing",
+      "readinessStatus": "completed_no_action_required",
+      "mutationAllowedCurrent": false,
+      "canEnterApprovalOnlyPreflight": false
+    },
+    {
+      "registryId": "exec-reg:b2ee12fb62d34de05326",
+      "family": "fixed_assets_closing",
+      "readinessStatus": "completed_no_action_required",
+      "mutationAllowedCurrent": false,
+      "canEnterApprovalOnlyPreflight": false
+    },
+    {
+      "registryId": "exec-reg:1b4d3cd226db1c4c6a03",
+      "family": "closing_balance",
+      "readinessStatus": "completed_no_action_required",
+      "mutationAllowedCurrent": false,
+      "canEnterApprovalOnlyPreflight": false
+    }
+  ]
+}
