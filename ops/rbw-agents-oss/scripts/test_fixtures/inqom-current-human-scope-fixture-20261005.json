@@ -1,0 +1,163 @@
+{
+  "registry": {
+    "ok": true,
+    "records": [
+      {
+        "registryId": "exec-reg:a5f00433a287cc20e49b",
+        "family": "source_quality",
+        "readinessStatus": "requires_expert_decision",
+        "mutationAllowedCurrent": false,
+        "canEnterApprovalOnlyPreflight": false,
+        "autonomousResolution": null,
+        "sourceActionHash": "ad9b2e3610c6cc7b6deb16b25abb1c50da84674bad77105a2ba43a0c53f655e3"
+      },
+      {
+        "registryId": "exec-reg:d9f60817e56f4b2c2b0e",
+        "family": "source_quality",
+        "readinessStatus": "requires_expert_decision",
+        "mutationAllowedCurrent": false,
+        "canEnterApprovalOnlyPreflight": false,
+        "autonomousResolution": null,
+        "sourceActionHash": "5bcc10a0ddf568749f7f707394e5740cbf9d25ad87a0d3fcd2e94c4dccc0cc8b"
+      },
+      {
+        "registryId": "exec-reg:a4d40d0f5b8842e50faa",
+        "family": "source_quality",
+        "readinessStatus": "requires_expert_decision",
+        "mutationAllowedCurrent": false,
+        "canEnterApprovalOnlyPreflight": false,
+        "autonomousResolution": null,
+        "sourceActionHash": "78678b00bb86c9e05bd821ccd771269e67198809535d312a3f6cb24eb6bf8170"
+      },
+      {
+        "registryId": "exec-reg:3aedbea94ae726619698",
+        "family": "document_evidence",
+        "readinessStatus": "manual_only",
+        "mutationAllowedCurrent": false,
+        "canEnterApprovalOnlyPreflight": false,
+        "autonomousResolution": null,
+        "sourceActionHash": "1bbf23e3decb309c069251302198b3f8093a7ea6d9e5b5dcc1cffdecf8256b5b"
+      },
+      {
+        "registryId": "exec-reg:4c1c964c6b63998fb182",
+        "family": "waiting_account",
+        "readinessStatus": "requires_expert_decision",
+        "mutationAllowedCurrent": false,
+        "canEnterApprovalOnlyPreflight": false,
+        "autonomousResolution": null,
+        "sourceActionHash": "328959fbccf4f15ced6a75cea2faf89aedbb8c6e7d09de4967954cc776509018"
+      },
+      {
+        "registryId": "exec-reg:7ca67cf9512a27ac8c50",
+        "family": "waiting_account",
+        "readinessStatus": "requires_human_doctrine",
+        "mutationAllowedCurrent": false,
+        "canEnterApprovalOnlyPreflight": false,
+        "autonomousResolution": null,
+        "sourceActionHash": "da9c6b7ec05ca096d665c878d6679ffc6607aaaca9e25584017b575aeaeb8a24"
+      },
+      {
+        "registryId": "exec-reg:580221e45da4329fd8db",
+        "family": "waiting_account",
+        "readinessStatus": "requires_human_doctrine",
+        "mutationAllowedCurrent": false,
+        "canEnterApprovalOnlyPreflight": false,
+        "autonomousResolution": null,
+        "sourceActionHash": "d64e4c545592102c5a2d429add02e23ca3e7d31c76af3d93fd538508bcdbdb24"
+      },
+      {
+        "registryId": "exec-reg:a2f7b832fe013580afef",
+        "family": "waiting_account",
+        "readinessStatus": "requires_human_doctrine",
+        "mutationAllowedCurrent": false,
+        "canEnterApprovalOnlyPreflight": false,
+        "autonomousResolution": null,
+        "sourceActionHash": "d4657dfb711a9044041036b69d170a98beeea952c50967b90fda88d518ab0446"
+      },
+      {
+        "registryId": "exec-reg:337f9c8a755fb449ad27",
+        "family": "native_lettering",
+        "readinessStatus": "manual_only",
+        "mutationAllowedCurrent": false,
+        "canEnterApprovalOnlyPreflight": false,
+        "autonomousResolution": null,
+        "sourceActionHash": "bee97c17a5cd40bd8ef8cab853e219d5b7445cc3a80ac28052d1d4cd23a44904"
+      },
+      {
+        "registryId": "exec-reg:197ad746d72a87d8f8db",
+        "family": "native_lettering",
+        "readinessStatus": "requires_expert_decision",
+        "mutationAllowedCurrent": false,
+        "canEnterApprovalOnlyPreflight": false,
+        "autonomousResolution": null,
+        "sourceActionHash": "49b7f99d2eb914bce9a1e652d81e6ce4bf4bd9e6106d2d431f40208d3724efce"
+      }
+    ]
+  },
+  "resolver": {
+    "ok": true,
+    "status": "resolved_with_human_inputs_only",
+    "humanResiduals": [
+      {
+        "registryId": "exec-reg:a5f00433a287cc20e49b",
+        "readinessStatus": "requires_expert_decision",
+        "mutationAllowed": false,
+        "externalSendAllowed": false
+      },
+      {
+        "registryId": "exec-reg:d9f60817e56f4b2c2b0e",
+        "readinessStatus": "requires_expert_decision",
+        "mutationAllowed": false,
+        "externalSendAllowed": false
+      },
+      {
+        "registryId": "exec-reg:a4d40d0f5b8842e50faa",
+        "readinessStatus": "requires_expert_decision",
+        "mutationAllowed": false,
+        "externalSendAllowed": false
+      },
+      {
+        "registryId": "exec-reg:3aedbea94ae726619698",
+        "readinessStatus": "manual_only"
+      },
+      {
+        "registryId": "exec-reg:4c1c964c6b63998fb182",
+        "readinessStatus": "requires_expert_decision",
+        "mutationAllowed": false,
+        "externalSendAllowed": false
+      },
+      {
+        "registryId": "exec-reg:7ca67cf9512a27ac8c50",
+        "readinessStatus": "requires_human_doctrine"
+      },
+      {
+        "registryId": "exec-reg:580221e45da4329fd8db",
+        "readinessStatus": "requires_human_doctrine"
+      },
+      {
+        "registryId": "exec-reg:a2f7b832fe013580afef",
+        "readinessStatus": "requires_human_doctrine"
+      },
+      {
+        "registryId": "exec-reg:337f9c8a755fb449ad27",
+        "readinessStatus": "manual_only",
+        "mutationAllowed": false,
+        "externalSendAllowed": false
+      },
+      {
+        "registryId": "exec-reg:197ad746d72a87d8f8db",
+        "readinessStatus": "requires_expert_decision",
+        "mutationAllowed": false,
+        "externalSendAllowed": false
+      }
+    ],
+    "counts": {
+      "inputRecords": 10,
+      "humanResiduals": 10,
+      "unrecognizedTechnicalResiduals": 0,
+      "mutationAttempted": 0,
+      "externalActionAttempted": 0,
+      "activeApprovalWritten": 0
+    }
+  }
+}
