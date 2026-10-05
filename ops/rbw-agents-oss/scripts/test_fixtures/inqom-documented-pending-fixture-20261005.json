@@ -1,0 +1,1474 @@
+{
+  "records": [
+    {
+      "actionType": "review_logical_source_classification",
+      "activeApprovalRequired": false,
+      "amountSignals": [],
+      "approvalOnlyRequired": false,
+      "blockersBeforeExecution": [
+        "expert_or_agent_review_required"
+      ],
+      "canEnterApprovalOnlyPreflight": false,
+      "entryIds": [],
+      "evidenceRefs": {
+        "queue": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/inqom-source-quality-normalizer-action-queue.json",
+        "report": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/inqom-source-quality-normalizer-last.json",
+        "reportArtifacts": {
+          "evidenceClassifierJson": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/inqom-document-evidence-autonomy-classifier.json",
+          "knowledgeJson": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/finance-inqom-robinswood-s1-2026-agent-knowledge-latest.json",
+          "linesJsonl": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/inqom-source-quality-normalizer-lines.jsonl",
+          "qualityJson": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/inqom-quality-autonomy-workbench.json",
+          "queueJson": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/inqom-source-quality-normalizer-action-queue.json",
+          "reportJson": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/inqom-source-quality-normalizer-last.json",
+          "reportMd": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/inqom-source-quality-normalizer.md",
+          "supplierRulesJson": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/finance-inqom-robinswood-401-supplier-user-rules-latest.json",
+          "waitingClassifierJson": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/inqom-waiting-account-autonomy-classifier.json"
+        }
+      },
+      "executabilityScore": 45,
+      "failClosedIf": [
+        "source_report_stale_or_non_benign_blocking_reason",
+        "live_line_state_differs_from_registry_hash",
+        "line_already_lettered_or_revised_when_protocol_requires_unmatched_unrevised",
+        "approval_missing_expired_or_not_matching_exact_lot",
+        "post_mutation_readback_unavailable"
+      ],
+      "family": "source_quality",
+      "lineCountObservedInPayload": 0,
+      "lineIds": [],
+      "livePreflightRequired": false,
+      "mutationAllowedCurrent": false,
+      "mutationType": "logical_source_review_only",
+      "owner": "agent_then_expert_accountant",
+      "postMutationReadbackRequired": false,
+      "priority": "medium",
+      "readinessReasons": [
+        "logical_classification_review_required_no_native_source_mutation"
+      ],
+      "readinessStatus": "requires_expert_decision",
+      "registryId": "exec-reg:a5f00433a287cc20e49b",
+      "rollbackOrCompensationRequired": false,
+      "sourceAction": {
+        "actionType": "review_logical_source_classification",
+        "actionableNow": true,
+        "blockingReason": "logical_source_classification_requires_review_not_mutation",
+        "data": {
+          "externalSendAllowed": false,
+          "mutationAllowed": false,
+          "nativeReclassificationAllowed": false,
+          "sampleCount": 4,
+          "sampleFingerprints": [
+            "5fc86260f0aa4daf",
+            "e23c4f5aa3cbc52f",
+            "bbbd530d65e9b5b0",
+            "42741f86a0d1576e"
+          ],
+          "sourceClass": "OtherLogicalSourceReview"
+        },
+        "dedupeKey": "inqom-source-quality-normalizer:OtherLogicalSourceReview:4",
+        "doneCondition": "La classe est confirm\u00e9e, affin\u00e9e ou transform\u00e9e en question/preuve. Aucun reclassement natif Inqom dans cette action.",
+        "id": "6a2914b67cb593ee",
+        "originAutomation": "inqom-source-quality-normalizer",
+        "owner": "agent_then_expert_accountant",
+        "priority": "medium",
+        "summary": "4 ligne(s) \u00e9chantillon \u00e0 revue logique ; aucune requalification native Inqom.",
+        "target": "inqom:source-quality:OtherLogicalSourceReview",
+        "title": "Source logique OSS \u2014 OtherLogicalSourceReview"
+      },
+      "sourceActionHash": "ad9b2e3610c6cc7b6deb16b25abb1c50da84674bad77105a2ba43a0c53f655e3",
+      "sourceActionId": "6a2914b67cb593ee",
+      "sourceAutomation": "inqom-source-quality-normalizer",
+      "sourceDedupeKey": "inqom-source-quality-normalizer:OtherLogicalSourceReview:4",
+      "sourceGeneratedAt": "2026-10-05T09:38:16.222252Z",
+      "sourceQueue": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/inqom-source-quality-normalizer-action-queue.json",
+      "sourceReport": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/inqom-source-quality-normalizer-last.json",
+      "sourceTarget": "inqom:source-quality:OtherLogicalSourceReview",
+      "summary": "4 ligne(s) \u00e9chantillon \u00e0 revue logique ; aucune requalification native Inqom.",
+      "title": "Source logique OSS \u2014 OtherLogicalSourceReview"
+    },
+    {
+      "actionType": "review_logical_source_classification",
+      "activeApprovalRequired": false,
+      "amountSignals": [],
+      "approvalOnlyRequired": false,
+      "blockersBeforeExecution": [
+        "expert_or_agent_review_required"
+      ],
+      "canEnterApprovalOnlyPreflight": false,
+      "entryIds": [],
+      "evidenceRefs": {
+        "queue": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/inqom-source-quality-normalizer-action-queue.json",
+        "report": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/inqom-source-quality-normalizer-last.json",
+        "reportArtifacts": {
+          "evidenceClassifierJson": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/inqom-document-evidence-autonomy-classifier.json",
+          "knowledgeJson": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/finance-inqom-robinswood-s1-2026-agent-knowledge-latest.json",
+          "linesJsonl": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/inqom-source-quality-normalizer-lines.jsonl",
+          "qualityJson": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/inqom-quality-autonomy-workbench.json",
+          "queueJson": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/inqom-source-quality-normalizer-action-queue.json",
+          "reportJson": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/inqom-source-quality-normalizer-last.json",
+          "reportMd": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/inqom-source-quality-normalizer.md",
+          "supplierRulesJson": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/finance-inqom-robinswood-401-supplier-user-rules-latest.json",
+          "waitingClassifierJson": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/inqom-waiting-account-autonomy-classifier.json"
+        }
+      },
+      "executabilityScore": 45,
+      "failClosedIf": [
+        "source_report_stale_or_non_benign_blocking_reason",
+        "live_line_state_differs_from_registry_hash",
+        "line_already_lettered_or_revised_when_protocol_requires_unmatched_unrevised",
+        "approval_missing_expired_or_not_matching_exact_lot",
+        "post_mutation_readback_unavailable"
+      ],
+      "family": "source_quality",
+      "lineCountObservedInPayload": 0,
+      "lineIds": [],
+      "livePreflightRequired": false,
+      "mutationAllowedCurrent": false,
+      "mutationType": "logical_source_review_only",
+      "owner": "agent_then_expert_accountant",
+      "postMutationReadbackRequired": false,
+      "priority": "medium",
+      "readinessReasons": [
+        "logical_classification_review_required_no_native_source_mutation"
+      ],
+      "readinessStatus": "requires_expert_decision",
+      "registryId": "exec-reg:d9f60817e56f4b2c2b0e",
+      "rollbackOrCompensationRequired": false,
+      "sourceAction": {
+        "actionType": "review_logical_source_classification",
+        "actionableNow": true,
+        "blockingReason": "logical_source_classification_requires_review_not_mutation",
+        "data": {
+          "externalSendAllowed": false,
+          "mutationAllowed": false,
+          "nativeReclassificationAllowed": false,
+          "sampleCount": 1,
+          "sampleFingerprints": [
+            "6a13ecf73edadcbc"
+          ],
+          "sourceClass": "SupplierExpenseSupport"
+        },
+        "dedupeKey": "inqom-source-quality-normalizer:SupplierExpenseSupport:1",
+        "doneCondition": "La classe est confirm\u00e9e, affin\u00e9e ou transform\u00e9e en question/preuve. Aucun reclassement natif Inqom dans cette action.",
+        "id": "ee01bec0c3103cff",
+        "originAutomation": "inqom-source-quality-normalizer",
+        "owner": "agent_then_expert_accountant",
+        "priority": "medium",
+        "summary": "1 ligne(s) \u00e9chantillon \u00e0 revue logique ; aucune requalification native Inqom.",
+        "target": "inqom:source-quality:SupplierExpenseSupport",
+        "title": "Source logique OSS \u2014 SupplierExpenseSupport"
+      },
+      "sourceActionHash": "5bcc10a0ddf568749f7f707394e5740cbf9d25ad87a0d3fcd2e94c4dccc0cc8b",
+      "sourceActionId": "ee01bec0c3103cff",
+      "sourceAutomation": "inqom-source-quality-normalizer",
+      "sourceDedupeKey": "inqom-source-quality-normalizer:SupplierExpenseSupport:1",
+      "sourceGeneratedAt": "2026-10-05T09:38:16.222252Z",
+      "sourceQueue": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/inqom-source-quality-normalizer-action-queue.json",
+      "sourceReport": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/inqom-source-quality-normalizer-last.json",
+      "sourceTarget": "inqom:source-quality:SupplierExpenseSupport",
+      "summary": "1 ligne(s) \u00e9chantillon \u00e0 revue logique ; aucune requalification native Inqom.",
+      "title": "Source logique OSS \u2014 SupplierExpenseSupport"
+    },
+    {
+      "actionType": "review_logical_source_classification",
+      "activeApprovalRequired": false,
+      "amountSignals": [],
+      "approvalOnlyRequired": false,
+      "blockersBeforeExecution": [
+        "expert_or_agent_review_required"
+      ],
+      "canEnterApprovalOnlyPreflight": false,
+      "entryIds": [],
+      "evidenceRefs": {
+        "queue": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/inqom-source-quality-normalizer-action-queue.json",
+        "report": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/inqom-source-quality-normalizer-last.json",
+        "reportArtifacts": {
+          "evidenceClassifierJson": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/inqom-document-evidence-autonomy-classifier.json",
+          "knowledgeJson": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/finance-inqom-robinswood-s1-2026-agent-knowledge-latest.json",
+          "linesJsonl": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/inqom-source-quality-normalizer-lines.jsonl",
+          "qualityJson": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/inqom-quality-autonomy-workbench.json",
+          "queueJson": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/inqom-source-quality-normalizer-action-queue.json",
+          "reportJson": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/inqom-source-quality-normalizer-last.json",
+          "reportMd": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/inqom-source-quality-normalizer.md",
+          "supplierRulesJson": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/finance-inqom-robinswood-401-supplier-user-rules-latest.json",
+          "waitingClassifierJson": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/inqom-waiting-account-autonomy-classifier.json"
+        }
+      },
+      "executabilityScore": 45,
+      "failClosedIf": [
+        "source_report_stale_or_non_benign_blocking_reason",
+        "live_line_state_differs_from_registry_hash",
+        "line_already_lettered_or_revised_when_protocol_requires_unmatched_unrevised",
+        "approval_missing_expired_or_not_matching_exact_lot",
+        "post_mutation_readback_unavailable"
+      ],
+      "family": "source_quality",
+      "lineCountObservedInPayload": 0,
+      "lineIds": [],
+      "livePreflightRequired": false,
+      "mutationAllowedCurrent": false,
+      "mutationType": "logical_source_review_only",
+      "owner": "agent_then_expert_accountant",
+      "postMutationReadbackRequired": false,
+      "priority": "high",
+      "readinessReasons": [
+        "logical_classification_review_required_no_native_source_mutation"
+      ],
+      "readinessStatus": "requires_expert_decision",
+      "registryId": "exec-reg:a4d40d0f5b8842e50faa",
+      "rollbackOrCompensationRequired": false,
+      "sourceAction": {
+        "actionType": "review_logical_source_classification",
+        "actionableNow": true,
+        "blockingReason": "logical_source_classification_requires_review_not_mutation",
+        "data": {
+          "externalSendAllowed": false,
+          "mutationAllowed": false,
+          "nativeReclassificationAllowed": false,
+          "sampleCount": 2,
+          "sampleFingerprints": [
+            "ffe884c9c961a084",
+            "3fb7c9f1516f9c90"
+          ],
+          "sourceClass": "TaxVatSettlement"
+        },
+        "dedupeKey": "inqom-source-quality-normalizer:TaxVatSettlement:2",
+        "doneCondition": "La classe est confirm\u00e9e, affin\u00e9e ou transform\u00e9e en question/preuve. Aucun reclassement natif Inqom dans cette action.",
+        "id": "91eda5cce2eea01b",
+        "originAutomation": "inqom-source-quality-normalizer",
+        "owner": "agent_then_expert_accountant",
+        "priority": "high",
+        "summary": "2 ligne(s) \u00e9chantillon \u00e0 revue logique ; aucune requalification native Inqom.",
+        "target": "inqom:source-quality:TaxVatSettlement",
+        "title": "Source logique OSS \u2014 TaxVatSettlement"
+      },
+      "sourceActionHash": "78678b00bb86c9e05bd821ccd771269e67198809535d312a3f6cb24eb6bf8170",
+      "sourceActionId": "91eda5cce2eea01b",
+      "sourceAutomation": "inqom-source-quality-normalizer",
+      "sourceDedupeKey": "inqom-source-quality-normalizer:TaxVatSettlement:2",
+      "sourceGeneratedAt": "2026-10-05T09:38:16.222252Z",
+      "sourceQueue": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/inqom-source-quality-normalizer-action-queue.json",
+      "sourceReport": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/inqom-source-quality-normalizer-last.json",
+      "sourceTarget": "inqom:source-quality:TaxVatSettlement",
+      "summary": "2 ligne(s) \u00e9chantillon \u00e0 revue logique ; aucune requalification native Inqom.",
+      "title": "Source logique OSS \u2014 TaxVatSettlement"
+    },
+    {
+      "actionType": "prepare_waiting_account_line_correction_and_lettering",
+      "activeApprovalRequired": true,
+      "amountSignals": [],
+      "approvalOnlyRequired": true,
+      "blockersBeforeExecution": [
+        "expert_review_required"
+      ],
+      "canEnterApprovalOnlyPreflight": false,
+      "entryIds": [
+        1054705607
+      ],
+      "evidenceRefs": {
+        "queue": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/inqom-waiting-account-resolution-batcher-queue.json",
+        "report": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/inqom-waiting-account-resolution-batcher.json",
+        "reportArtifacts": {
+          "classifierJson": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/inqom-waiting-account-autonomy-classifier.json",
+          "detailCache": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/inqom-user-actions-6m-cache.json",
+          "queueJson": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/inqom-waiting-account-resolution-batcher-queue.json",
+          "reportJson": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/inqom-waiting-account-resolution-batcher.json",
+          "reportMd": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/inqom-waiting-account-resolution-batcher.md"
+        }
+      },
+      "executabilityScore": 45,
+      "failClosedIf": [
+        "source_report_stale_or_non_benign_blocking_reason",
+        "live_line_state_differs_from_registry_hash",
+        "line_already_lettered_or_revised_when_protocol_requires_unmatched_unrevised",
+        "approval_missing_expired_or_not_matching_exact_lot",
+        "post_mutation_readback_unavailable"
+      ],
+      "family": "waiting_account",
+      "lineCountObservedInPayload": 1,
+      "lineIds": [
+        3961791128
+      ],
+      "livePreflightRequired": true,
+      "mutationAllowedCurrent": false,
+      "mutationType": "native_lettering",
+      "owner": "agent_then_expert_accountant",
+      "postMutationReadbackRequired": true,
+      "priority": "high",
+      "readinessReasons": [
+        "review_required_before_preflight"
+      ],
+      "readinessStatus": "requires_expert_decision",
+      "registryId": "exec-reg:4c1c964c6b63998fb182",
+      "rollbackOrCompensationRequired": true,
+      "sourceAction": {
+        "actionType": "prepare_waiting_account_line_correction_and_lettering",
+        "actionableNow": true,
+        "blockingReason": "exact_line_correction_and_native_lettering_require_bounded_approvals",
+        "data": {
+          "lotId": "waiting-line:4731conceptualexpertise:1054705607:3961791128:369b7111bf71ffaa",
+          "mutationAllowed": false,
+          "nativeLetteringPlan": {
+            "createdCounterpart": {
+              "account": "4731CONCEPTUALEXPERTISE",
+              "entryRef": "PREP-LIGNE-4731CONCEPTUALEXPERTISE-BQ122121588",
+              "expectedAmount": 125.0
+            },
+            "expectedAmountSum": 0,
+            "letterType": "PublicApi",
+            "lotId": "waiting-line:4731conceptualexpertise:1054705607:3961791128:369b7111bf71ffaa:native-lettering",
+            "required": true,
+            "requiredBeforeCompletion": [
+              "read_created_entry_and_exact_counterpart_lineId",
+              "native_lettering_preflight_on_source_and_created_counterpart",
+              "create_native_lettering_with_exact_two_line_approval",
+              "post_mutation_readback_confirms_same_letter"
+            ],
+            "sourceLine": {
+              "account": "4731CONCEPTUALEXPERTISE",
+              "entryId": 1054705607,
+              "expectedAmount": -125.0,
+              "expectedDocRef": "BQ122121588",
+              "lineId": 3961791128
+            },
+            "status": "pending_created_counterpart_readback"
+          }
+        },
+        "dedupeKey": "inqom-waiting-account-resolution-batcher:waiting-line:4731conceptualexpertise:1054705607:3961791128:369b7111bf71ffaa",
+        "doneCondition": "L\u2019\u00e9criture cr\u00e9\u00e9e pour cette seule ligne est relue puis lettr\u00e9e avec sa contrepartie exacte, ou le lot est rejet\u00e9 sans mutation.",
+        "id": "604b43e019de3500",
+        "originAutomation": "inqom-waiting-account-resolution-batcher",
+        "owner": "agent_then_expert_accountant",
+        "priority": "high",
+        "summary": "Une seule ligne source 1054705607/3961791128 pour -125.0 EUR ; lettrage source\u2013contrepartie obligatoire.",
+        "target": "inqom:waiting-line:1054705607:3961791128",
+        "title": "Ligne sans pi\u00e8ce \u2014 correction et lettrage 4731CONCEPTUALEXPERTISE / 3961791128"
+      },
+      "sourceActionHash": "328959fbccf4f15ced6a75cea2faf89aedbb8c6e7d09de4967954cc776509018",
+      "sourceActionId": "604b43e019de3500",
+      "sourceAutomation": "inqom-waiting-account-resolution-batcher",
+      "sourceDedupeKey": "inqom-waiting-account-resolution-batcher:waiting-line:4731conceptualexpertise:1054705607:3961791128:369b7111bf71ffaa",
+      "sourceGeneratedAt": "2026-10-05T09:38:57.861381Z",
+      "sourceQueue": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/inqom-waiting-account-resolution-batcher-queue.json",
+      "sourceReport": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/inqom-waiting-account-resolution-batcher.json",
+      "sourceTarget": "inqom:waiting-line:1054705607:3961791128",
+      "summary": "Une seule ligne source 1054705607/3961791128 pour -125.0 EUR ; lettrage source\u2013contrepartie obligatoire.",
+      "title": "Ligne sans pi\u00e8ce \u2014 correction et lettrage 4731CONCEPTUALEXPERTISE / 3961791128"
+    },
+    {
+      "actionType": "prepare_readonly_lettering_safe_batch",
+      "activeApprovalRequired": true,
+      "amountSignals": [
+        125.0,
+        -125.0,
+        125.0,
+        -125.0,
+        118.8,
+        -118.8,
+        118.8,
+        -118.8
+      ],
+      "approvalOnlyRequired": true,
+      "blockersBeforeExecution": [
+        "manual_only_or_out_of_scope"
+      ],
+      "canEnterApprovalOnlyPreflight": false,
+      "entryIds": [
+        994410354,
+        994410357,
+        995527739,
+        1047200107,
+        1047267039
+      ],
+      "evidenceRefs": {
+        "queue": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/inqom-lettering-autonomy-batcher-queue.json",
+        "report": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/inqom-lettering-autonomy-batcher.json",
+        "reportArtifacts": {
+          "executableQueueJson": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/inqom-human-replicated-lettering-executable-queue.json",
+          "policyJson": "/srv/rbw-agents-oss/config/finance-inqom-human-replicated-lettering-policy.json",
+          "queueJson": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/inqom-lettering-autonomy-batcher-queue.json",
+          "reportJson": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/inqom-lettering-autonomy-batcher.json",
+          "reportMd": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/inqom-lettering-autonomy-batcher.md",
+          "thirdPartyEvidenceJson": "/srv/rbw-agents-oss/config/finance-inqom-third-party-evidence.json",
+          "workbenchJson": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/inqom-quality-autonomy-workbench.json"
+        }
+      },
+      "executabilityScore": 0,
+      "failClosedIf": [
+        "source_report_stale_or_non_benign_blocking_reason",
+        "live_line_state_differs_from_registry_hash",
+        "line_already_lettered_or_revised_when_protocol_requires_unmatched_unrevised",
+        "approval_missing_expired_or_not_matching_exact_lot",
+        "post_mutation_readback_unavailable"
+      ],
+      "family": "native_lettering",
+      "lineCountObservedInPayload": 5,
+      "lineIds": [
+        3749384946,
+        3749384948,
+        3753361691,
+        3936193001,
+        3936384821
+      ],
+      "livePreflightRequired": true,
+      "mutationAllowedCurrent": false,
+      "mutationType": "native_lettering",
+      "owner": "agent",
+      "postMutationReadbackRequired": true,
+      "priority": "medium",
+      "readinessReasons": [
+        "no_safe_autonomous_execution_path_identified"
+      ],
+      "readinessStatus": "manual_only",
+      "registryId": "exec-reg:337f9c8a755fb449ad27",
+      "rollbackOrCompensationRequired": true,
+      "sourceAction": {
+        "actionType": "prepare_readonly_lettering_safe_batch",
+        "actionableNow": true,
+        "blockingReason": "lettering_candidates_safe_readonly",
+        "data": {
+          "allowedEffects": [
+            "writes_reports",
+            "writes_action_queue",
+            "prepare_readonly_batch"
+          ],
+          "blockedEffects": [
+            "native_lettering",
+            "inqom_update",
+            "mark_revised"
+          ],
+          "byThirdParty": [
+            {
+              "ambiguous": 2,
+              "amountAbs": 250.0,
+              "candidateCount": 2,
+              "highConfidenceExecutable": 0,
+              "humanReplicatedExecutable": 0,
+              "safeOneToOne": 0,
+              "sample": [
+                {
+                  "classification": "ambiguous_many_to_many",
+                  "confidenceBlockReasons": [
+                    "not_safe_one_to_one"
+                  ],
+                  "confidenceChecks": null,
+                  "confidenceComponents": null,
+                  "confidenceEvidenceRuleIds": null,
+                  "confidencePublicEvidence": null,
+                  "confidenceRuleId": null,
+                  "confidenceScore": 0.0,
+                  "confidenceThreshold": null,
+                  "hasMutationIdentifiers": true,
+                  "humanReplicaBlockReasons": [
+                    "not_safe_one_to_one"
+                  ],
+                  "humanReplicaChecks": null,
+                  "humanReplicaModelId": null,
+                  "humanReplicaSignal": false,
+                  "mutationAllowed": false,
+                  "mutationType": null,
+                  "negative": {
+                    "account": "4011CONCEPTUAL EXPERTISE",
+                    "amount": -125,
+                    "date": "2026-08-31",
+                    "docRef": "PREP-LIGNE-4731CONCEPTUALEXPERTISE-BQ113249068",
+                    "entryId": 994410357,
+                    "fileId": null,
+                    "label": "CORRECTION LIGNE SANS PI\u00c8CE \u2014 D\u00c9BIT COMPTE CIBLE",
+                    "lineId": 3749384948,
+                    "revision": "Unrevised",
+                    "source": "PublicApi",
+                    "sourceType": "PublicApi"
+                  },
+                  "negativeFingerprint": "1fe5ec8ec1958145",
+                  "negativeReferenceToken": "BQ113249068",
+                  "positive": {
+                    "account": "4011CONCEPTUAL EXPERTISE",
+                    "amount": 125,
+                    "date": "2026-09-02",
+                    "docRef": "REGULARISATION-CONTREPASSATION-OD-994410354-20260902",
+                    "entryId": 995527739,
+                    "fileId": null,
+                    "label": "CONTREPASSATION \u2014 CR\u00c9DIT DU COMPTE FOURNISSEUR",
+                    "lineId": 3753361691,
+                    "revision": "Unrevised",
+                    "source": "PublicApi",
+                    "sourceType": "PublicApi"
+                  },
+                  "positiveFingerprint": "bd45fa6d85b6124b",
+                  "positiveReferenceToken": "",
+                  "residual": 0,
+                  "sharedReferenceToken": "",
+                  "thirdPartyKey": "4011CONCEPTUAL EXPERTISE",
+                  "type": "pair_exact_offset"
+                },
+                {
+                  "classification": "ambiguous_many_to_many",
+                  "confidenceBlockReasons": [
+                    "not_safe_one_to_one"
+                  ],
+                  "confidenceChecks": null,
+                  "confidenceComponents": null,
+                  "confidenceEvidenceRuleIds": null,
+                  "confidencePublicEvidence": null,
+                  "confidenceRuleId": null,
+                  "confidenceScore": 0.0,
+                  "confidenceThreshold": null,
+                  "hasMutationIdentifiers": true,
+                  "humanReplicaBlockReasons": [
+                    "not_safe_one_to_one"
+                  ],
+                  "humanReplicaChecks": null,
+                  "humanReplicaModelId": null,
+                  "humanReplicaSignal": false,
+                  "mutationAllowed": false,
+                  "mutationType": null,
+                  "negative": {
+                    "account": "4011CONCEPTUAL EXPERTISE",
+                    "amount": -125,
+                    "date": "2026-06-01",
+                    "docRef": "PREP-LIGNE-4731CONCEPTUALEXPERTISE-BQ96679721",
+                    "entryId": 994410354,
+                    "fileId": null,
+                    "label": "CORRECTION LIGNE SANS PI\u00c8CE \u2014 D\u00c9BIT COMPTE CIBLE",
+                    "lineId": 3749384946,
+                    "revision": "Unrevised",
+                    "source": "PublicApi",
+                    "sourceType": "PublicApi"
+                  },
+                  "negativeFingerprint": "c27c1b031cb27d24",
+                  "negativeReferenceToken": "BQ96679721",
+                  "positive": {
+                    "account": "4011CONCEPTUAL EXPERTISE",
+                    "amount": 125,
+                    "date": "2026-09-02",
+                    "docRef": "REGULARISATION-CONTREPASSATION-OD-994410354-20260902",
+                    "entryId": 995527739,
+                    "fileId": null,
+                    "label": "CONTREPASSATION \u2014 CR\u00c9DIT DU COMPTE FOURNISSEUR",
+                    "lineId": 3753361691,
+                    "revision": "Unrevised",
+                    "source": "PublicApi",
+                    "sourceType": "PublicApi"
+                  },
+                  "positiveFingerprint": "bd45fa6d85b6124b",
+                  "positiveReferenceToken": "",
+                  "residual": 0,
+                  "sharedReferenceToken": "",
+                  "thirdPartyKey": "4011CONCEPTUAL EXPERTISE",
+                  "type": "pair_exact_offset"
+                }
+              ],
+              "thirdPartyKey": "4011CONCEPTUAL EXPERTISE"
+            },
+            {
+              "ambiguous": 0,
+              "amountAbs": 118.8,
+              "candidateCount": 1,
+              "highConfidenceExecutable": 0,
+              "humanReplicatedExecutable": 0,
+              "safeOneToOne": 1,
+              "sample": [
+                {
+                  "classification": "safe_one_to_one_readonly",
+                  "confidenceBlockReasons": [
+                    "confidence_below_threshold",
+                    "insufficient_independent_evidence_sources",
+                    "same-thirdparty-exact-reference-one-to-one:missing_shared_reference_token",
+                    "qonto-stripe-card-payment-exact-reference:missing_shared_reference_token",
+                    "noSharedReferenceTokenMaxScore"
+                  ],
+                  "confidenceChecks": {
+                    "hasNegativeIdentifier": true,
+                    "hasPositiveIdentifier": true,
+                    "hasSharedReferenceToken": false,
+                    "pairExactOffset": true,
+                    "residualOk": true,
+                    "uniqueNegativeFingerprint": true,
+                    "uniquePositiveFingerprint": true
+                  },
+                  "confidenceComponents": [
+                    {
+                      "component": "exactOneToOneOffset",
+                      "evidence": "exact offset, residual <= 0.01, unique fingerprints",
+                      "score": 0.3
+                    },
+                    {
+                      "component": "stableMutationIdentifiers",
+                      "evidence": "entryId/lineId present on both sides",
+                      "score": 0.15
+                    },
+                    {
+                      "component": "revisedOrTrustedSourceEvidence",
+                      "evidence": "Revised status or trusted source",
+                      "score": 0.05
+                    },
+                    {
+                      "component": "authorizedRuleBaseModel",
+                      "evidence": "same-thirdparty-exact-reference-one-to-one",
+                      "score": 0.15
+                    }
+                  ],
+                  "confidenceEvidenceRuleIds": [
+                    "same-thirdparty-exact-reference-one-to-one"
+                  ],
+                  "confidencePublicEvidence": null,
+                  "confidenceRuleId": null,
+                  "confidenceScore": 0.65,
+                  "confidenceThreshold": 0.9,
+                  "hasMutationIdentifiers": true,
+                  "humanReplicaBlockReasons": [
+                    "hasSharedReferenceToken",
+                    "authorizedHumanReplicaModel",
+                    "conceptual-expertise-monthly-direct-debit-human-template:missing_shared_reference_token"
+                  ],
+                  "humanReplicaChecks": {
+                    "authorizedHumanReplicaModel": false,
+                    "hasNegativeIdentifier": true,
+                    "hasPositiveIdentifier": true,
+                    "hasSharedReferenceToken": false,
+                    "pairExactOffset": true,
+                    "residualOk": true,
+                    "uniqueNegativeFingerprint": true,
+                    "uniquePositiveFingerprint": true
+                  },
+                  "humanReplicaModelId": null,
+                  "humanReplicaSignal": false,
+                  "mutationAllowed": false,
+                  "mutationType": null,
+                  "negative": {
+                    "account": "4011INQOM",
+                    "amount": -118.8,
+                    "date": "2026-09-14",
+                    "docRef": "OD-HARMONISATION-FOURNISSEUR-INQOM",
+                    "entryId": 1047267039,
+                    "fileId": null,
+                    "label": "PRLV SEPA INQOM 026082724088 RECLASSEMENT SUR COMPTE FOURNISSEUR PRINCIPAL",
+                    "lineId": 3936384821,
+                    "revision": "Revised",
+                    "source": "ByUser",
+                    "sourceType": "Unknown"
+                  },
+                  "negativeFingerprint": "aad39072ba601f03",
+                  "negativeReferenceToken": "",
+                  "positive": {
+                    "account": "4011INQOM",
+                    "amount": 118.8,
+                    "date": "2026-09-04",
+                    "docRef": "OD-RECLASS-INQOM-CLIENT-TO-FOURNISSEUR",
+                    "entryId": 1047200107,
+                    "fileId": null,
+                    "label": "TRANSFERT R\u00c8GLEMENT VERS FOURNISSEUR 4011INQOM",
+                    "lineId": 3936193001,
+                    "revision": "Revised",
+                    "source": "ByUser",
+                    "sourceType": "Unknown"
+                  },
+                  "positiveFingerprint": "546155bb08373bd8",
+                  "positiveReferenceToken": "",
+                  "residual": 0,
+                  "sharedReferenceToken": "",
+                  "thirdPartyKey": "4011INQOM",
+                  "type": "pair_exact_offset"
+                }
+              ],
+              "thirdPartyKey": "4011INQOM"
+            }
+          ],
+          "candidateSample": [
+            {
+              "classification": "safe_one_to_one_readonly",
+              "confidenceBlockReasons": [
+                "confidence_below_threshold",
+                "insufficient_independent_evidence_sources",
+                "same-thirdparty-exact-reference-one-to-one:missing_shared_reference_token",
+                "qonto-stripe-card-payment-exact-reference:missing_shared_reference_token",
+                "noSharedReferenceTokenMaxScore"
+              ],
+              "confidenceChecks": {
+                "hasNegativeIdentifier": true,
+                "hasPositiveIdentifier": true,
+                "hasSharedReferenceToken": false,
+                "pairExactOffset": true,
+                "residualOk": true,
+                "uniqueNegativeFingerprint": true,
+                "uniquePositiveFingerprint": true
+              },
+              "confidenceComponents": [
+                {
+                  "component": "exactOneToOneOffset",
+                  "evidence": "exact offset, residual <= 0.01, unique fingerprints",
+                  "score": 0.3
+                },
+                {
+                  "component": "stableMutationIdentifiers",
+                  "evidence": "entryId/lineId present on both sides",
+                  "score": 0.15
+                },
+                {
+                  "component": "revisedOrTrustedSourceEvidence",
+                  "evidence": "Revised status or trusted source",
+                  "score": 0.05
+                },
+                {
+                  "component": "authorizedRuleBaseModel",
+                  "evidence": "same-thirdparty-exact-reference-one-to-one",
+                  "score": 0.15
+                }
+              ],
+              "confidenceEvidenceRuleIds": [
+                "same-thirdparty-exact-reference-one-to-one"
+              ],
+              "confidencePublicEvidence": null,
+              "confidenceRuleId": null,
+              "confidenceScore": 0.65,
+              "confidenceThreshold": 0.9,
+              "hasMutationIdentifiers": true,
+              "humanReplicaBlockReasons": [
+                "hasSharedReferenceToken",
+                "authorizedHumanReplicaModel",
+                "conceptual-expertise-monthly-direct-debit-human-template:missing_shared_reference_token"
+              ],
+              "humanReplicaChecks": {
+                "authorizedHumanReplicaModel": false,
+                "hasNegativeIdentifier": true,
+                "hasPositiveIdentifier": true,
+                "hasSharedReferenceToken": false,
+                "pairExactOffset": true,
+                "residualOk": true,
+                "uniqueNegativeFingerprint": true,
+                "uniquePositiveFingerprint": true
+              },
+              "humanReplicaModelId": null,
+              "humanReplicaSignal": false,
+              "mutationAllowed": false,
+              "mutationType": null,
+              "negative": {
+                "account": "4011INQOM",
+                "amount": -118.8,
+                "date": "2026-09-14",
+                "docRef": "OD-HARMONISATION-FOURNISSEUR-INQOM",
+                "entryId": 1047267039,
+                "fileId": null,
+                "label": "PRLV SEPA INQOM 026082724088 RECLASSEMENT SUR COMPTE FOURNISSEUR PRINCIPAL",
+                "lineId": 3936384821,
+                "revision": "Revised",
+                "source": "ByUser",
+                "sourceType": "Unknown"
+              },
+              "negativeFingerprint": "aad39072ba601f03",
+              "negativeReferenceToken": "",
+              "positive": {
+                "account": "4011INQOM",
+                "amount": 118.8,
+                "date": "2026-09-04",
+                "docRef": "OD-RECLASS-INQOM-CLIENT-TO-FOURNISSEUR",
+                "entryId": 1047200107,
+                "fileId": null,
+                "label": "TRANSFERT R\u00c8GLEMENT VERS FOURNISSEUR 4011INQOM",
+                "lineId": 3936193001,
+                "revision": "Revised",
+                "source": "ByUser",
+                "sourceType": "Unknown"
+              },
+              "positiveFingerprint": "546155bb08373bd8",
+              "positiveReferenceToken": "",
+              "residual": 0,
+              "sharedReferenceToken": "",
+              "thirdPartyKey": "4011INQOM",
+              "type": "pair_exact_offset"
+            }
+          ],
+          "canonicalCandidateCount": 0,
+          "canonicalCandidateKeys": [],
+          "canonicalCandidateSetDigest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "canonicalCandidates": [],
+          "classification": "safe_one_to_one_readonly",
+          "confidenceThreshold": 0.9,
+          "count": 1,
+          "kind": "supplier",
+          "requiresEnv": null
+        },
+        "dedupeKey": "inqom-lettering-autonomy-batcher:supplier:safe_one_to_one_readonly:1:9fc632c75cf3a01d",
+        "doneCondition": "Les lots de lettrage ex\u00e9cutables sont ex\u00e9cut\u00e9s uniquement si endpoint natif disponible, env autorisation pr\u00e9sent, et classe autoris\u00e9e (human_replicated ou confidence >=90%); les autres restent en lecture seule.",
+        "id": "20b9f48988b8e354",
+        "originAutomation": "inqom-lettering-autonomy-batcher",
+        "owner": "agent",
+        "priority": "medium",
+        "summary": "1 candidats supplier / safe_one_to_one_readonly",
+        "target": "quality:411-401-lettering:supplier:safe_one_to_one_readonly",
+        "title": "Lettrage supplier \u2014 safe_one_to_one_readonly"
+      },
+      "sourceActionHash": "bee97c17a5cd40bd8ef8cab853e219d5b7445cc3a80ac28052d1d4cd23a44904",
+      "sourceActionId": "20b9f48988b8e354",
+      "sourceAutomation": "inqom-lettering-autonomy-batcher",
+      "sourceDedupeKey": "inqom-lettering-autonomy-batcher:supplier:safe_one_to_one_readonly:1:9fc632c75cf3a01d",
+      "sourceGeneratedAt": "2026-10-05T09:38:48.100577Z",
+      "sourceQueue": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/inqom-lettering-autonomy-batcher-queue.json",
+      "sourceReport": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/inqom-lettering-autonomy-batcher.json",
+      "sourceTarget": "quality:411-401-lettering:supplier:safe_one_to_one_readonly",
+      "summary": "1 candidats supplier / safe_one_to_one_readonly",
+      "title": "Lettrage supplier \u2014 safe_one_to_one_readonly"
+    },
+    {
+      "actionType": "prepare_readonly_lettering_ambiguous_review",
+      "activeApprovalRequired": true,
+      "amountSignals": [
+        125.0,
+        -125.0,
+        125.0,
+        -125.0,
+        118.8,
+        -118.8,
+        125.0,
+        -125.0,
+        125.0,
+        -125.0
+      ],
+      "approvalOnlyRequired": true,
+      "blockersBeforeExecution": [
+        "expert_review_required"
+      ],
+      "canEnterApprovalOnlyPreflight": false,
+      "entryIds": [
+        994410354,
+        994410357,
+        995527739,
+        1047200107,
+        1047267039
+      ],
+      "evidenceRefs": {
+        "queue": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/inqom-lettering-autonomy-batcher-queue.json",
+        "report": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/inqom-lettering-autonomy-batcher.json",
+        "reportArtifacts": {
+          "executableQueueJson": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/inqom-human-replicated-lettering-executable-queue.json",
+          "policyJson": "/srv/rbw-agents-oss/config/finance-inqom-human-replicated-lettering-policy.json",
+          "queueJson": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/inqom-lettering-autonomy-batcher-queue.json",
+          "reportJson": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/inqom-lettering-autonomy-batcher.json",
+          "reportMd": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/inqom-lettering-autonomy-batcher.md",
+          "thirdPartyEvidenceJson": "/srv/rbw-agents-oss/config/finance-inqom-third-party-evidence.json",
+          "workbenchJson": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/inqom-quality-autonomy-workbench.json"
+        }
+      },
+      "executabilityScore": 30,
+      "failClosedIf": [
+        "source_report_stale_or_non_benign_blocking_reason",
+        "live_line_state_differs_from_registry_hash",
+        "line_already_lettered_or_revised_when_protocol_requires_unmatched_unrevised",
+        "approval_missing_expired_or_not_matching_exact_lot",
+        "post_mutation_readback_unavailable"
+      ],
+      "family": "native_lettering",
+      "lineCountObservedInPayload": 5,
+      "lineIds": [
+        3749384946,
+        3749384948,
+        3753361691,
+        3936193001,
+        3936384821
+      ],
+      "livePreflightRequired": true,
+      "mutationAllowedCurrent": false,
+      "mutationType": "native_lettering",
+      "owner": "agent",
+      "postMutationReadbackRequired": true,
+      "priority": "high",
+      "readinessReasons": [
+        "review_required_before_preflight"
+      ],
+      "readinessStatus": "requires_expert_decision",
+      "registryId": "exec-reg:197ad746d72a87d8f8db",
+      "rollbackOrCompensationRequired": true,
+      "sourceAction": {
+        "actionType": "prepare_readonly_lettering_ambiguous_review",
+        "actionableNow": true,
+        "blockingReason": "lettering_candidates_ambiguous",
+        "data": {
+          "allowedEffects": [
+            "writes_reports",
+            "writes_action_queue",
+            "prepare_readonly_batch"
+          ],
+          "blockedEffects": [
+            "native_lettering",
+            "inqom_update",
+            "mark_revised"
+          ],
+          "byThirdParty": [
+            {
+              "ambiguous": 2,
+              "amountAbs": 250.0,
+              "candidateCount": 2,
+              "highConfidenceExecutable": 0,
+              "humanReplicatedExecutable": 0,
+              "safeOneToOne": 0,
+              "sample": [
+                {
+                  "classification": "ambiguous_many_to_many",
+                  "confidenceBlockReasons": [
+                    "not_safe_one_to_one"
+                  ],
+                  "confidenceChecks": null,
+                  "confidenceComponents": null,
+                  "confidenceEvidenceRuleIds": null,
+                  "confidencePublicEvidence": null,
+                  "confidenceRuleId": null,
+                  "confidenceScore": 0.0,
+                  "confidenceThreshold": null,
+                  "hasMutationIdentifiers": true,
+                  "humanReplicaBlockReasons": [
+                    "not_safe_one_to_one"
+                  ],
+                  "humanReplicaChecks": null,
+                  "humanReplicaModelId": null,
+                  "humanReplicaSignal": false,
+                  "mutationAllowed": false,
+                  "mutationType": null,
+                  "negative": {
+                    "account": "4011CONCEPTUAL EXPERTISE",
+                    "amount": -125,
+                    "date": "2026-08-31",
+                    "docRef": "PREP-LIGNE-4731CONCEPTUALEXPERTISE-BQ113249068",
+                    "entryId": 994410357,
+                    "fileId": null,
+                    "label": "CORRECTION LIGNE SANS PI\u00c8CE \u2014 D\u00c9BIT COMPTE CIBLE",
+                    "lineId": 3749384948,
+                    "revision": "Unrevised",
+                    "source": "PublicApi",
+                    "sourceType": "PublicApi"
+                  },
+                  "negativeFingerprint": "1fe5ec8ec1958145",
+                  "negativeReferenceToken": "BQ113249068",
+                  "positive": {
+                    "account": "4011CONCEPTUAL EXPERTISE",
+                    "amount": 125,
+                    "date": "2026-09-02",
+                    "docRef": "REGULARISATION-CONTREPASSATION-OD-994410354-20260902",
+                    "entryId": 995527739,
+                    "fileId": null,
+                    "label": "CONTREPASSATION \u2014 CR\u00c9DIT DU COMPTE FOURNISSEUR",
+                    "lineId": 3753361691,
+                    "revision": "Unrevised",
+                    "source": "PublicApi",
+                    "sourceType": "PublicApi"
+                  },
+                  "positiveFingerprint": "bd45fa6d85b6124b",
+                  "positiveReferenceToken": "",
+                  "residual": 0,
+                  "sharedReferenceToken": "",
+                  "thirdPartyKey": "4011CONCEPTUAL EXPERTISE",
+                  "type": "pair_exact_offset"
+                },
+                {
+                  "classification": "ambiguous_many_to_many",
+                  "confidenceBlockReasons": [
+                    "not_safe_one_to_one"
+                  ],
+                  "confidenceChecks": null,
+                  "confidenceComponents": null,
+                  "confidenceEvidenceRuleIds": null,
+                  "confidencePublicEvidence": null,
+                  "confidenceRuleId": null,
+                  "confidenceScore": 0.0,
+                  "confidenceThreshold": null,
+                  "hasMutationIdentifiers": true,
+                  "humanReplicaBlockReasons": [
+                    "not_safe_one_to_one"
+                  ],
+                  "humanReplicaChecks": null,
+                  "humanReplicaModelId": null,
+                  "humanReplicaSignal": false,
+                  "mutationAllowed": false,
+                  "mutationType": null,
+                  "negative": {
+                    "account": "4011CONCEPTUAL EXPERTISE",
+                    "amount": -125,
+                    "date": "2026-06-01",
+                    "docRef": "PREP-LIGNE-4731CONCEPTUALEXPERTISE-BQ96679721",
+                    "entryId": 994410354,
+                    "fileId": null,
+                    "label": "CORRECTION LIGNE SANS PI\u00c8CE \u2014 D\u00c9BIT COMPTE CIBLE",
+                    "lineId": 3749384946,
+                    "revision": "Unrevised",
+                    "source": "PublicApi",
+                    "sourceType": "PublicApi"
+                  },
+                  "negativeFingerprint": "c27c1b031cb27d24",
+                  "negativeReferenceToken": "BQ96679721",
+                  "positive": {
+                    "account": "4011CONCEPTUAL EXPERTISE",
+                    "amount": 125,
+                    "date": "2026-09-02",
+                    "docRef": "REGULARISATION-CONTREPASSATION-OD-994410354-20260902",
+                    "entryId": 995527739,
+                    "fileId": null,
+                    "label": "CONTREPASSATION \u2014 CR\u00c9DIT DU COMPTE FOURNISSEUR",
+                    "lineId": 3753361691,
+                    "revision": "Unrevised",
+                    "source": "PublicApi",
+                    "sourceType": "PublicApi"
+                  },
+                  "positiveFingerprint": "bd45fa6d85b6124b",
+                  "positiveReferenceToken": "",
+                  "residual": 0,
+                  "sharedReferenceToken": "",
+                  "thirdPartyKey": "4011CONCEPTUAL EXPERTISE",
+                  "type": "pair_exact_offset"
+                }
+              ],
+              "thirdPartyKey": "4011CONCEPTUAL EXPERTISE"
+            },
+            {
+              "ambiguous": 0,
+              "amountAbs": 118.8,
+              "candidateCount": 1,
+              "highConfidenceExecutable": 0,
+              "humanReplicatedExecutable": 0,
+              "safeOneToOne": 1,
+              "sample": [
+                {
+                  "classification": "safe_one_to_one_readonly",
+                  "confidenceBlockReasons": [
+                    "confidence_below_threshold",
+                    "insufficient_independent_evidence_sources",
+                    "same-thirdparty-exact-reference-one-to-one:missing_shared_reference_token",
+                    "qonto-stripe-card-payment-exact-reference:missing_shared_reference_token",
+                    "noSharedReferenceTokenMaxScore"
+                  ],
+                  "confidenceChecks": {
+                    "hasNegativeIdentifier": true,
+                    "hasPositiveIdentifier": true,
+                    "hasSharedReferenceToken": false,
+                    "pairExactOffset": true,
+                    "residualOk": true,
+                    "uniqueNegativeFingerprint": true,
+                    "uniquePositiveFingerprint": true
+                  },
+                  "confidenceComponents": [
+                    {
+                      "component": "exactOneToOneOffset",
+                      "evidence": "exact offset, residual <= 0.01, unique fingerprints",
+                      "score": 0.3
+                    },
+                    {
+                      "component": "stableMutationIdentifiers",
+                      "evidence": "entryId/lineId present on both sides",
+                      "score": 0.15
+                    },
+                    {
+                      "component": "revisedOrTrustedSourceEvidence",
+                      "evidence": "Revised status or trusted source",
+                      "score": 0.05
+                    },
+                    {
+                      "component": "authorizedRuleBaseModel",
+                      "evidence": "same-thirdparty-exact-reference-one-to-one",
+                      "score": 0.15
+                    }
+                  ],
+                  "confidenceEvidenceRuleIds": [
+                    "same-thirdparty-exact-reference-one-to-one"
+                  ],
+                  "confidencePublicEvidence": null,
+                  "confidenceRuleId": null,
+                  "confidenceScore": 0.65,
+                  "confidenceThreshold": 0.9,
+                  "hasMutationIdentifiers": true,
+                  "humanReplicaBlockReasons": [
+                    "hasSharedReferenceToken",
+                    "authorizedHumanReplicaModel",
+                    "conceptual-expertise-monthly-direct-debit-human-template:missing_shared_reference_token"
+                  ],
+                  "humanReplicaChecks": {
+                    "authorizedHumanReplicaModel": false,
+                    "hasNegativeIdentifier": true,
+                    "hasPositiveIdentifier": true,
+                    "hasSharedReferenceToken": false,
+                    "pairExactOffset": true,
+                    "residualOk": true,
+                    "uniqueNegativeFingerprint": true,
+                    "uniquePositiveFingerprint": true
+                  },
+                  "humanReplicaModelId": null,
+                  "humanReplicaSignal": false,
+                  "mutationAllowed": false,
+                  "mutationType": null,
+                  "negative": {
+                    "account": "4011INQOM",
+                    "amount": -118.8,
+                    "date": "2026-09-14",
+                    "docRef": "OD-HARMONISATION-FOURNISSEUR-INQOM",
+                    "entryId": 1047267039,
+                    "fileId": null,
+                    "label": "PRLV SEPA INQOM 026082724088 RECLASSEMENT SUR COMPTE FOURNISSEUR PRINCIPAL",
+                    "lineId": 3936384821,
+                    "revision": "Revised",
+                    "source": "ByUser",
+                    "sourceType": "Unknown"
+                  },
+                  "negativeFingerprint": "aad39072ba601f03",
+                  "negativeReferenceToken": "",
+                  "positive": {
+                    "account": "4011INQOM",
+                    "amount": 118.8,
+                    "date": "2026-09-04",
+                    "docRef": "OD-RECLASS-INQOM-CLIENT-TO-FOURNISSEUR",
+                    "entryId": 1047200107,
+                    "fileId": null,
+                    "label": "TRANSFERT R\u00c8GLEMENT VERS FOURNISSEUR 4011INQOM",
+                    "lineId": 3936193001,
+                    "revision": "Revised",
+                    "source": "ByUser",
+                    "sourceType": "Unknown"
+                  },
+                  "positiveFingerprint": "546155bb08373bd8",
+                  "positiveReferenceToken": "",
+                  "residual": 0,
+                  "sharedReferenceToken": "",
+                  "thirdPartyKey": "4011INQOM",
+                  "type": "pair_exact_offset"
+                }
+              ],
+              "thirdPartyKey": "4011INQOM"
+            }
+          ],
+          "candidateSample": [
+            {
+              "classification": "ambiguous_many_to_many",
+              "confidenceBlockReasons": [
+                "not_safe_one_to_one"
+              ],
+              "confidenceChecks": null,
+              "confidenceComponents": null,
+              "confidenceEvidenceRuleIds": null,
+              "confidencePublicEvidence": null,
+              "confidenceRuleId": null,
+              "confidenceScore": 0.0,
+              "confidenceThreshold": null,
+              "hasMutationIdentifiers": true,
+              "humanReplicaBlockReasons": [
+                "not_safe_one_to_one"
+              ],
+              "humanReplicaChecks": null,
+              "humanReplicaModelId": null,
+              "humanReplicaSignal": false,
+              "mutationAllowed": false,
+              "mutationType": null,
+              "negative": {
+                "account": "4011CONCEPTUAL EXPERTISE",
+                "amount": -125,
+                "date": "2026-08-31",
+                "docRef": "PREP-LIGNE-4731CONCEPTUALEXPERTISE-BQ113249068",
+                "entryId": 994410357,
+                "fileId": null,
+                "label": "CORRECTION LIGNE SANS PI\u00c8CE \u2014 D\u00c9BIT COMPTE CIBLE",
+                "lineId": 3749384948,
+                "revision": "Unrevised",
+                "source": "PublicApi",
+                "sourceType": "PublicApi"
+              },
+              "negativeFingerprint": "1fe5ec8ec1958145",
+              "negativeReferenceToken": "BQ113249068",
+              "positive": {
+                "account": "4011CONCEPTUAL EXPERTISE",
+                "amount": 125,
+                "date": "2026-09-02",
+                "docRef": "REGULARISATION-CONTREPASSATION-OD-994410354-20260902",
+                "entryId": 995527739,
+                "fileId": null,
+                "label": "CONTREPASSATION \u2014 CR\u00c9DIT DU COMPTE FOURNISSEUR",
+                "lineId": 3753361691,
+                "revision": "Unrevised",
+                "source": "PublicApi",
+                "sourceType": "PublicApi"
+              },
+              "positiveFingerprint": "bd45fa6d85b6124b",
+              "positiveReferenceToken": "",
+              "residual": 0,
+              "sharedReferenceToken": "",
+              "thirdPartyKey": "4011CONCEPTUAL EXPERTISE",
+              "type": "pair_exact_offset"
+            },
+            {
+              "classification": "ambiguous_many_to_many",
+              "confidenceBlockReasons": [
+                "not_safe_one_to_one"
+              ],
+              "confidenceChecks": null,
+              "confidenceComponents": null,
+              "confidenceEvidenceRuleIds": null,
+              "confidencePublicEvidence": null,
+              "confidenceRuleId": null,
+              "confidenceScore": 0.0,
+              "confidenceThreshold": null,
+              "hasMutationIdentifiers": true,
+              "humanReplicaBlockReasons": [
+                "not_safe_one_to_one"
+              ],
+              "humanReplicaChecks": null,
+              "humanReplicaModelId": null,
+              "humanReplicaSignal": false,
+              "mutationAllowed": false,
+              "mutationType": null,
+              "negative": {
+                "account": "4011CONCEPTUAL EXPERTISE",
+                "amount": -125,
+                "date": "2026-06-01",
+                "docRef": "PREP-LIGNE-4731CONCEPTUALEXPERTISE-BQ96679721",
+                "entryId": 994410354,
+                "fileId": null,
+                "label": "CORRECTION LIGNE SANS PI\u00c8CE \u2014 D\u00c9BIT COMPTE CIBLE",
+                "lineId": 3749384946,
+                "revision": "Unrevised",
+                "source": "PublicApi",
+                "sourceType": "PublicApi"
+              },
+              "negativeFingerprint": "c27c1b031cb27d24",
+              "negativeReferenceToken": "BQ96679721",
+              "positive": {
+                "account": "4011CONCEPTUAL EXPERTISE",
+                "amount": 125,
+                "date": "2026-09-02",
+                "docRef": "REGULARISATION-CONTREPASSATION-OD-994410354-20260902",
+                "entryId": 995527739,
+                "fileId": null,
+                "label": "CONTREPASSATION \u2014 CR\u00c9DIT DU COMPTE FOURNISSEUR",
+                "lineId": 3753361691,
+                "revision": "Unrevised",
+                "source": "PublicApi",
+                "sourceType": "PublicApi"
+              },
+              "positiveFingerprint": "bd45fa6d85b6124b",
+              "positiveReferenceToken": "",
+              "residual": 0,
+              "sharedReferenceToken": "",
+              "thirdPartyKey": "4011CONCEPTUAL EXPERTISE",
+              "type": "pair_exact_offset"
+            }
+          ],
+          "canonicalCandidateCount": 0,
+          "canonicalCandidateKeys": [],
+          "canonicalCandidateSetDigest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "canonicalCandidates": [],
+          "classification": "ambiguous_many_to_many",
+          "confidenceThreshold": 0.9,
+          "count": 2,
+          "kind": "supplier",
+          "requiresEnv": null
+        },
+        "dedupeKey": "inqom-lettering-autonomy-batcher:supplier:ambiguous_many_to_many:2:ce615407fddf9e16",
+        "doneCondition": "Les lots de lettrage ex\u00e9cutables sont ex\u00e9cut\u00e9s uniquement si endpoint natif disponible, env autorisation pr\u00e9sent, et classe autoris\u00e9e (human_replicated ou confidence >=90%); les autres restent en lecture seule.",
+        "id": "c2a42887ef2bd859",
+        "originAutomation": "inqom-lettering-autonomy-batcher",
+        "owner": "agent",
+        "priority": "high",
+        "summary": "2 candidats supplier / ambiguous_many_to_many",
+        "target": "quality:411-401-lettering:supplier:ambiguous_many_to_many",
+        "title": "Lettrage supplier \u2014 ambiguous_many_to_many"
+      },
+      "sourceActionHash": "49b7f99d2eb914bce9a1e652d81e6ce4bf4bd9e6106d2d431f40208d3724efce",
+      "sourceActionId": "c2a42887ef2bd859",
+      "sourceAutomation": "inqom-lettering-autonomy-batcher",
+      "sourceDedupeKey": "inqom-lettering-autonomy-batcher:supplier:ambiguous_many_to_many:2:ce615407fddf9e16",
+      "sourceGeneratedAt": "2026-10-05T09:38:48.100577Z",
+      "sourceQueue": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/inqom-lettering-autonomy-batcher-queue.json",
+      "sourceReport": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/inqom-lettering-autonomy-batcher.json",
+      "sourceTarget": "quality:411-401-lettering:supplier:ambiguous_many_to_many",
+      "summary": "2 candidats supplier / ambiguous_many_to_many",
+      "title": "Lettrage supplier \u2014 ambiguous_many_to_many"
+    }
+  ],
+  "native": {
+    "generatedAt": "2026-10-05T09:37:52.528942Z",
+    "ok": true,
+    "lines": [
+      {
+        "folderId": 18627,
+        "entryId": 994410354,
+        "lineId": 3749384946,
+        "account": "4011CONCEPTUAL EXPERTISE",
+        "accountId": 548,
+        "subAccountId": 21462519,
+        "amount": -125,
+        "date": "2026-06-01",
+        "docRef": "PREP-LIGNE-4731CONCEPTUALEXPERTISE-BQ96679721",
+        "label": "CORRECTION LIGNE SANS PI\u00c8CE \u2014 D\u00c9BIT COMPTE CIBLE",
+        "entryLabel": "CORRECTION LIGNE SANS PI\u00c8CE 4731CONCEPTUALEXPERTISE \u2014 ENTR\u00c9E 803441701 LIGNE 2969164664",
+        "source": "PublicApi",
+        "sourceType": "PublicApi",
+        "matchedId": null,
+        "matchedLetter": null
+      },
+      {
+        "folderId": 18627,
+        "entryId": 994410357,
+        "lineId": 3749384948,
+        "account": "4011CONCEPTUAL EXPERTISE",
+        "accountId": 548,
+        "subAccountId": 21462519,
+        "amount": -125,
+        "date": "2026-08-31",
+        "docRef": "PREP-LIGNE-4731CONCEPTUALEXPERTISE-BQ113249068",
+        "label": "CORRECTION LIGNE SANS PI\u00c8CE \u2014 D\u00c9BIT COMPTE CIBLE",
+        "entryLabel": "CORRECTION LIGNE SANS PI\u00c8CE 4731CONCEPTUALEXPERTISE \u2014 ENTR\u00c9E 987082954 LIGNE 3723094553",
+        "source": "PublicApi",
+        "sourceType": "PublicApi",
+        "matchedId": null,
+        "matchedLetter": null
+      },
+      {
+        "folderId": 18627,
+        "entryId": 1054705607,
+        "lineId": 3961791128,
+        "account": "4731CONCEPTUALEXPERTISE",
+        "accountId": 674,
+        "subAccountId": 29976590,
+        "amount": -125,
+        "date": "2026-09-30",
+        "docRef": "BQ122121588",
+        "label": "PRLV SEPA CONCEPTUAL EXP F20260901401 494726E61 - 0C2KCH2",
+        "entryLabel": "PRLV SEPA CONCEPTUAL EXP F20260901401 494726E61 - 0C2KCH2",
+        "source": "Banking",
+        "sourceType": "PublicApi",
+        "matchedId": null,
+        "matchedLetter": null
+      },
+      {
+        "folderId": 18627,
+        "entryId": 1047267039,
+        "lineId": 3936384821,
+        "account": "4011INQOM",
+        "accountId": 548,
+        "subAccountId": 4922656,
+        "amount": -118.8,
+        "date": "2026-09-14",
+        "docRef": "OD-HARMONISATION-FOURNISSEUR-INQOM",
+        "label": "PRLV SEPA INQOM 026082724088 RECLASSEMENT SUR COMPTE FOURNISSEUR PRINCIPAL",
+        "entryLabel": "FUSION DU SOUS-COMPTE 40110INQOM VERS COMPTE FOURNISSEUR UNIQUE 4011INQOM",
+        "source": "ByUser",
+        "sourceType": "Unknown",
+        "matchedId": null,
+        "matchedLetter": null
+      },
+      {
+        "folderId": 18627,
+        "entryId": 1047200107,
+        "lineId": 3936193001,
+        "account": "4011INQOM",
+        "accountId": 548,
+        "subAccountId": 4922656,
+        "amount": 118.8,
+        "date": "2026-09-04",
+        "docRef": "OD-RECLASS-INQOM-CLIENT-TO-FOURNISSEUR",
+        "label": "TRANSFERT R\u00c8GLEMENT VERS FOURNISSEUR 4011INQOM",
+        "entryLabel": "RECLASSEMENT COMPTE CLIENT INQOM VERS FOURNISSEUR 4011INQOM",
+        "source": "ByUser",
+        "sourceType": "Unknown",
+        "matchedId": null,
+        "matchedLetter": null
+      },
+      {
+        "folderId": 18627,
+        "entryId": 995527739,
+        "lineId": 3753361691,
+        "account": "4011CONCEPTUAL EXPERTISE",
+        "accountId": 548,
+        "subAccountId": 21462519,
+        "amount": 125,
+        "date": "2026-09-02",
+        "docRef": "REGULARISATION-CONTREPASSATION-OD-994410354-20260902",
+        "label": "CONTREPASSATION \u2014 CR\u00c9DIT DU COMPTE FOURNISSEUR",
+        "entryLabel": "CONTREPASSATION OD CORRECTIVE EN DOUBLON \u2014 OD 994410354",
+        "source": "PublicApi",
+        "sourceType": "PublicApi",
+        "matchedId": null,
+        "matchedLetter": null
+      }
+    ]
+  },
+  "guidance": [
+    {
+      "data": {
+        "ruleId": "native_reference_and_document_research",
+        "operatorRule": {
+          "id": "invoice_collection"
+        },
+        "mutationAllowed": false,
+        "externalSendAllowed": false,
+        "canonicalLines": [
+          {
+            "folderId": 18627,
+            "entryId": 1054705607,
+            "lineId": 3961791128,
+            "account": "4731CONCEPTUALEXPERTISE",
+            "accountId": 674,
+            "subAccountId": 29976590,
+            "amount": -125,
+            "date": "2026-09-30",
+            "docRef": "BQ122121588",
+            "label": "PRLV SEPA CONCEPTUAL EXP F20260901401 494726E61 - 0C2KCH2",
+            "entryLabel": "PRLV SEPA CONCEPTUAL EXP F20260901401 494726E61 - 0C2KCH2",
+            "source": "Banking",
+            "sourceType": "PublicApi",
+            "matchedId": null,
+            "matchedLetter": null
+          }
+        ]
+      }
+    }
+  ],
+  "reports": {
+    "inqom-source-quality-normalizer-last.json": {
+      "generatedAt": "2026-10-05T09:38:16.222252Z",
+      "ok": true,
+      "status": "processed",
+      "counts": {
+        "actionQueue": 4,
+        "autoQualifiedCount": 35,
+        "logicalUnknownRemaining": 4,
+        "rawUnknownCount": 800,
+        "reviewRequiredCount": 21,
+        "sampledUnknownLines": 56,
+        "validationIssues": 0,
+        "waitingAccountsLiveGroups": 2
+      },
+      "executableQueue": null
+    },
+    "inqom-waiting-account-resolution-batcher.json": {
+      "generatedAt": "2026-10-05T09:38:57.861381Z",
+      "ok": true,
+      "status": "prepared",
+      "counts": {
+        "actionQueue": 7,
+        "autoPreflightBatches": 3,
+        "humanDoctrineQuestions": 3,
+        "liveOpenAccounts": 4,
+        "mandatoryNativeLetteringPlans": 3,
+        "staleArtifactItems": 1,
+        "unattachedSourceLines": 6,
+        "validationIssues": 0
+      },
+      "executableQueue": null
+    },
+    "inqom-lettering-autonomy-batcher.json": {
+      "generatedAt": "2026-10-05T09:38:48.100577Z",
+      "ok": true,
+      "status": "processed",
+      "counts": {
+        "operatorGuidanceExcludedCandidates": 397,
+        "completeNativeReferenceCandidates": 2,
+        "clientCandidates": 0,
+        "supplierCandidates": 3,
+        "humanReplicatedExecutable": 0,
+        "highConfidenceExecutable": 0,
+        "safeOneToOneReadOnly": 1,
+        "safeOneToOne": 1,
+        "ambiguous": 2,
+        "queue": 2,
+        "executableQueue": 0,
+        "validationIssues": 0
+      },
+      "executableQueue": []
+    }
+  }
+}

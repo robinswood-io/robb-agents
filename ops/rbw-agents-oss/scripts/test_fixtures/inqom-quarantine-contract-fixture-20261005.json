@@ -1,0 +1,94 @@
+{
+  "manifest": {
+    "schemaVersion": "inqom-accounting-entry-correction-execution-manifest-v2-blocked",
+    "operations": [],
+    "mutationAttempted": 0,
+    "quarantinedLots": [
+      {
+        "lotId": "waiting-line:4731conceptualexpertise:803441701:2969164664:c72a72e9917a0f15",
+        "source": {
+          "lineIds": [
+            2969164664
+          ]
+        }
+      },
+      {
+        "lotId": "waiting-line:4731conceptualexpertise:987082954:3723094553:3ed513e3f746f6d9",
+        "source": {
+          "lineIds": [
+            3723094553
+          ]
+        }
+      }
+    ]
+  },
+  "decisions": [
+    {
+      "activeApprovalWritten": false,
+      "decisionId": "autonomous-resolution:exec-reg:5fb28914956817249242",
+      "evidence": {
+        "executorSha256": "0c42a09662c91f74f7d9117b88b6084a6bb3b54bf469f3fa7263faaf86f46ed8",
+        "manifestSha256": "1f871bca7a1ba1e4d2fb03cebf25ce01518e86bbaa77fe8235e25fbfdeafbd61",
+        "producerSha256": "e6b4382ff800bba0aca612bcdb790bda4a3fecbf3d8db02eefa1db1ef2fd188a",
+        "quarantinedLots": 2
+      },
+      "externalActionExecuted": false,
+      "family": "waiting_account",
+      "mutationExecuted": false,
+      "originalReadinessStatus": "requires_expert_decision",
+      "readinessReasons": [
+        "blocked_manifest_has_zero_operations",
+        "recursive_or_existing_correction_lineage_forbids_execution"
+      ],
+      "registryId": "exec-reg:5fb28914956817249242",
+      "resolutionClass": "unsafe_orange_correction_quarantined_noop",
+      "sourceActionHash": "933c10430b7ece979b9e9ef39aa339d6b2f973175962410f79e60c000679b491",
+      "sourceGeneratedAt": "2026-10-05T09:38:57.861381Z",
+      "sourceReport": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/inqom-waiting-account-resolution-batcher.json",
+      "sourceReportSha256": "309445da5473a77e0dcc4c05d058b000b5a5a93560f84c4199c9c7887c8c5c33",
+      "targetReadinessStatus": "completed_no_action_required"
+    },
+    {
+      "activeApprovalWritten": false,
+      "decisionId": "autonomous-resolution:exec-reg:ed8eaac2aa295fc8fc90",
+      "evidence": {
+        "executorSha256": "0c42a09662c91f74f7d9117b88b6084a6bb3b54bf469f3fa7263faaf86f46ed8",
+        "manifestSha256": "1f871bca7a1ba1e4d2fb03cebf25ce01518e86bbaa77fe8235e25fbfdeafbd61",
+        "producerSha256": "e6b4382ff800bba0aca612bcdb790bda4a3fecbf3d8db02eefa1db1ef2fd188a",
+        "quarantinedLots": 2
+      },
+      "externalActionExecuted": false,
+      "family": "waiting_account",
+      "mutationExecuted": false,
+      "originalReadinessStatus": "requires_expert_decision",
+      "readinessReasons": [
+        "blocked_manifest_has_zero_operations",
+        "recursive_or_existing_correction_lineage_forbids_execution"
+      ],
+      "registryId": "exec-reg:ed8eaac2aa295fc8fc90",
+      "resolutionClass": "unsafe_orange_correction_quarantined_noop",
+      "sourceActionHash": "0f53ff5236770bd32c96287629a53e81e57b49f2912af29ae5086969eeffc0d5",
+      "sourceGeneratedAt": "2026-10-05T09:38:57.861381Z",
+      "sourceReport": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/inqom-waiting-account-resolution-batcher.json",
+      "sourceReportSha256": "309445da5473a77e0dcc4c05d058b000b5a5a93560f84c4199c9c7887c8c5c33",
+      "targetReadinessStatus": "completed_no_action_required"
+    }
+  ],
+  "records": [
+    {
+      "registryId": "exec-reg:5fb28914956817249242",
+      "lineIds": [
+        2969164664
+      ],
+      "sourceActionHash": "933c10430b7ece979b9e9ef39aa339d6b2f973175962410f79e60c000679b491"
+    },
+    {
+      "registryId": "exec-reg:ed8eaac2aa295fc8fc90",
+      "lineIds": [
+        3723094553
+      ],
+      "sourceActionHash": "0f53ff5236770bd32c96287629a53e81e57b49f2912af29ae5086969eeffc0d5"
+    }
+  ],
+  "digest": "1f871bca7a1ba1e4d2fb03cebf25ce01518e86bbaa77fe8235e25fbfdeafbd61"
+}

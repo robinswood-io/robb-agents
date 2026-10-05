@@ -35,6 +35,13 @@ ALLOWED_HUMAN_RESIDUALS = {
     ('waiting_account', 'requires_human_doctrine'),
     ('document_evidence', 'manual_only'),
 }
+DOCUMENTED_PENDING_INPUTS = {
+    ('source_quality', 'requires_expert_decision'): ('inqom-source-quality-normalizer-last.json', 'inqom-source-quality-normalizer-action-queue.json', 'logical_source_review_only', {'review_logical_source_classification'}),
+    ('waiting_account', 'requires_expert_decision'): ('inqom-waiting-account-resolution-batcher.json', 'inqom-waiting-account-resolution-batcher-queue.json', 'native_lettering', {'prepare_waiting_account_line_correction_and_lettering'}),
+    ('native_lettering', 'manual_only'): ('inqom-lettering-autonomy-batcher.json', 'inqom-lettering-autonomy-batcher-queue.json', 'native_lettering', {'prepare_readonly_lettering_safe_batch'}),
+    ('native_lettering', 'requires_expert_decision'): ('inqom-lettering-autonomy-batcher.json', 'inqom-lettering-autonomy-batcher-queue.json', 'native_lettering', {'prepare_readonly_lettering_ambiguous_review'}),
+}
+
 RESOLVABLE_SOURCE_REPORTS = {
     'inqom-native-reconciliation-no-link-candidate-review.json',
     'inqom-manual-reconciliation-packs.json',
@@ -281,6 +288,99 @@ def decision_for(record: dict[str, Any]) -> tuple[str | None, list[str], dict[st
     return None, ['no_allowlisted_autonomous_resolution_rule_matched'], {}
 
 
+def pending_input_contract(record: dict, report: dict, queue: list, native: dict,
+                           guidance_queue: list, quarantine_ids: set[int],
+                           native_empty_verified: bool, logical_review_verified: bool,
+                           now: datetime | None = None) -> bool:
+    now = now or datetime.now(timezone.utc)
+    pair = (record.get('family'), record.get('readinessStatus'))
+    rule = DOCUMENTED_PENDING_INPUTS.get(pair)
+    if not rule or not native_empty_verified:
+        return False
+    report_name, queue_name, mutation_type, action_types = rule
+    if (record.get('sourceReport') != str(OPS / report_name)
+        or record.get('sourceQueue') != str(OPS / queue_name)
+        or record.get('mutationType') != mutation_type
+        or record.get('actionType') not in action_types
+        or record.get('mutationAllowedCurrent') is not False
+        or record.get('canEnterApprovalOnlyPreflight') is not False):
+        return False
+    try:
+        generated = datetime.fromisoformat(str(report['generatedAt']).replace('Z','+00:00'))
+        native_time = datetime.fromisoformat(str(native['generatedAt']).replace('Z','+00:00'))
+        if not (0 <= (now-generated).total_seconds() <= 3600 and 0 <= (now-native_time).total_seconds() <= 3600):
+            return False
+    except (KeyError, ValueError, TypeError):
+        return False
+    if (report.get('ok') is not True or report.get('status') not in {'processed','prepared'}
+        or (report.get('counts') or {}).get('validationIssues') != 0
+        or record.get('sourceGeneratedAt') != report.get('generatedAt') or native.get('ok') is not True):
+        return False
+    action = record.get('sourceAction')
+    if not isinstance(action, dict) or canonical_digest(action) != record.get('sourceActionHash'):
+        return False
+    if not isinstance(queue, list) or sum(canonical_digest(a) == record['sourceActionHash'] for a in queue if isinstance(a,dict)) != 1:
+        return False
+    flag_names = {'mutationAllowed','externalSendAllowed','nativeReclassificationAllowed','nativeLetteringAllowed','nativeRevisionAllowed','nativeReconciliationAllowed'}
+    def safe_flags(value):
+        if isinstance(value, dict):
+            return all((item is False if key in flag_names else safe_flags(item)) for key,item in value.items())
+        if isinstance(value,list): return all(safe_flags(item) for item in value)
+        return True
+    if not safe_flags(action.get('data') or {}):
+        return False
+    if pair[0] == 'source_quality':
+        data = action.get('data') or {}
+        return (logical_review_verified
+                and data.get('sourceClass') in {'OtherLogicalSourceReview','SupplierExpenseSupport','TaxVatSettlement'}
+                and all(data.get(k) is False for k in ['mutationAllowed','externalSendAllowed','nativeReclassificationAllowed']))
+    ids = record.get('lineIds')
+    if not isinstance(ids,list) or not ids or len(ids) != len(set(ids)):
+        return False
+    native_rows = {r.get('lineId'):r for r in native.get('lines',[]) if isinstance(r,dict)}
+    if any(i not in native_rows or native_rows[i].get('matchedId') or native_rows[i].get('matchedLetter') for i in ids):
+        return False
+    if pair[0] == 'native_lettering':
+        data = action.get('data') or {}
+        return ((report.get('counts') or {}).get('executableQueue') == 0
+                and report.get('executableQueue') == []
+                and 'native_lettering' in (data.get('blockedEffects') or []))
+    if set(ids).issubset(quarantine_ids):
+        return False
+    source = ((action.get('data') or {}).get('nativeLetteringPlan') or {}).get('sourceLine') or {}
+    if len(ids) != 1 or source.get('lineId') != ids[0]:
+        return False
+    row = native_rows[ids[0]]
+    if (not str(row.get('account','')).startswith('473')
+        or source.get('account') != row.get('account')
+        or source.get('entryId') != row.get('entryId')
+        or float(source.get('expectedAmount',0)) != float(row.get('amount',0))):
+        return False
+    routed = [a for a in guidance_queue if isinstance(a,dict)
+              and (a.get('data') or {}).get('ruleId') == 'native_reference_and_document_research'
+              and ((a.get('data') or {}).get('operatorRule') or {}).get('id') == 'invoice_collection'
+              and (a.get('data') or {}).get('mutationAllowed') is False
+              and (a.get('data') or {}).get('externalSendAllowed') is False
+              and any(r.get('lineId') == ids[0] and r.get('entryId') == row.get('entryId')
+                      for r in (a.get('data') or {}).get('canonicalLines',[]))]
+    return len(routed) == 1
+
+
+def documented_pending_input(record: dict) -> bool:
+    rule = DOCUMENTED_PENDING_INPUTS.get((record.get('family'), record.get('readinessStatus')))
+    if not rule: return False
+    from inqom_native_lettering_denylist_closure import verified_empty_current_queue, LIVE_JSON, LIVE_TESTS_JSON
+    native = read_json(OPS/'inqom-operator-guidance-native-snapshot.json',{})
+    logical_tests = read_json(OPS/'inqom-source-quality-logical-review-tests.json',{})
+    native_proof = verified_empty_current_queue(read_json(LIVE_JSON,{}),read_json(LIVE_TESTS_JSON,{}))
+    quarantine = read_json(CORRECTION_MANIFEST,{})
+    ids = {int(x) for x in collect_values(quarantine.get('quarantinedLots') or [],{'lineId','lineIds'}) if str(x).isdigit()}
+    return pending_input_contract(
+        record, read_json(OPS/rule[0],{}), read_json(OPS/rule[1],[]), native,
+        read_json(OPS/'inqom-operator-guidance-action-queue.json',[]), ids,
+        native_proof, logical_tests.get('ok') is True and (logical_tests.get('counts') or {}).get('failed') == 0)
+
+
 def main() -> None:
     generated_at = now_iso()
     registry = read_json(REGISTRY_JSON, {})
@@ -305,6 +405,16 @@ def main() -> None:
         if original_status == 'completed_no_action_required':
             continue
         family = str(record.get('family') or '')
+        if documented_pending_input({**record, 'readinessStatus': original_status}):
+            human_residuals.append({
+                'registryId': record.get('registryId'), 'family': family,
+                'readinessStatus': original_status, 'title': record.get('title'),
+                'reason': 'genuine_doctrine_or_missing_external_evidence',
+                'documentedPendingProof': True, 'sourceActionHash': record.get('sourceActionHash'),
+                'sourceReportSha256': file_sha256(Path(str(record.get('sourceReport')))),
+                'mutationAllowed': False, 'externalSendAllowed': False,
+            })
+            continue
         if (family, original_status) in ALLOWED_HUMAN_RESIDUALS:
             human_residuals.append({
                 'registryId': record.get('registryId'),

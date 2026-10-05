@@ -5,6 +5,7 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from inqom_expert_route_autonomous_resolver import DOCUMENTED_PENDING_INPUTS, CORRECTION_MANIFEST, REGISTRY_JSON, collect_values, file_sha256
 
 OPS = Path('/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops')
 SCRIPT = Path('/srv/rbw-agents-oss/scripts/inqom_expert_route_autonomous_resolver.py')
@@ -35,6 +36,33 @@ def add(checks: list[dict[str, Any]], check_id: str, ok: bool, detail: Any = Non
     checks.append({'checkId': check_id, 'ok': bool(ok), 'severity': 'critical', 'detail': detail})
 
 
+def quarantine_decisions_consistent(manifest: dict, decisions: list, records: list, digest: str | None) -> bool:
+    lots = manifest.get('quarantinedLots')
+    if (manifest.get('schemaVersion') != 'inqom-accounting-entry-correction-execution-manifest-v2-blocked'
+        or manifest.get('operations') != [] or manifest.get('mutationAttempted') != 0
+        or not isinstance(lots,list) or not lots or not digest):
+        return False
+    if len({lot.get('lotId') for lot in lots}) != len(lots):
+        return False
+    ids = {int(x) for x in collect_values(lots,{'lineId','lineIds'}) if str(x).isdigit()}
+    orange = [d for d in decisions if d.get('resolutionClass') == 'unsafe_orange_correction_quarantined_noop']
+    if len(orange) != len(lots) or len({d.get('registryId') for d in orange}) != len(orange):
+        return False
+    by_id = {r.get('registryId'):r for r in records}
+    observed = []
+    for decision in orange:
+        record = by_id.get(decision.get('registryId'),{})
+        lines = record.get('lineIds')
+        if (not isinstance(lines,list) or not lines or not set(lines).issubset(ids)
+            or decision.get('sourceActionHash') != record.get('sourceActionHash')
+            or (decision.get('evidence') or {}).get('manifestSha256') != digest
+            or decision.get('targetReadinessStatus') != 'completed_no_action_required'
+            or any(decision.get(key) is not False for key in ['mutationExecuted','activeApprovalWritten','externalActionExecuted'])):
+            return False
+        observed.extend(lines)
+    return len(observed) == len(set(observed)) and set(observed) == ids
+
+
 def main() -> None:
     generated_at = now_iso()
     report = read_json(REPORT, {})
@@ -51,10 +79,12 @@ def main() -> None:
     add(checks, 'resolver_report_ok', report.get('ok') is True and report.get('status') == 'resolved_with_human_inputs_only', report.get('status'))
     add(checks, 'resolver_contract_version', report.get('contractVersion') == 'inqom-expert-route-autonomous-resolver-v1', report.get('contractVersion'))
     add(checks, 'all_technical_routes_resolved', int(counts.get('unrecognizedTechnicalResiduals') if counts.get('unrecognizedTechnicalResiduals') is not None else -1) == 0 and int(counts.get('resolved') if counts.get('resolved') is not None else -1) == len(decisions), {'counts': counts, 'decisionCount': len(decisions)})
-    add(checks, 'only_genuine_human_inputs_remain', len(residuals) == int(counts.get('humanResiduals') if counts.get('humanResiduals') is not None else -1) and all(r.get('reason') == 'genuine_doctrine_or_missing_external_evidence' and (r.get('family'), r.get('readinessStatus')) in {('waiting_account', 'requires_human_doctrine'), ('document_evidence', 'manual_only')} for r in residuals), residuals)
-    expected_orange_quarantine = int(waiting_counts.get('autoPreflightBatches') if waiting_counts.get('autoPreflightBatches') is not None else -1)
+    add(checks, 'only_genuine_human_inputs_remain', len(residuals) == int(counts.get('humanResiduals') if counts.get('humanResiduals') is not None else -1) and all(r.get('reason') == 'genuine_doctrine_or_missing_external_evidence' and ((r.get('family'), r.get('readinessStatus')) in {('waiting_account', 'requires_human_doctrine'), ('document_evidence', 'manual_only')} or ((r.get('family'), r.get('readinessStatus')) in DOCUMENTED_PENDING_INPUTS and r.get('documentedPendingProof') is True and r.get('mutationAllowed') is False and r.get('externalSendAllowed') is False and len(str(r.get('sourceActionHash') or '')) == 64 and len(str(r.get('sourceReportSha256') or '')) == 64)) for r in residuals), residuals)
+    manifest = read_json(CORRECTION_MANIFEST, {})
+    expected_orange_quarantine = len(manifest.get('quarantinedLots') or [])
+    registry_records = (read_json(REGISTRY_JSON, {}).get('records') or [])
     observed_orange_decisions = sum(1 for d in decisions if d.get('resolutionClass') == 'unsafe_orange_correction_quarantined_noop')
-    add(checks, 'orange_is_quarantined_noop', waiting_batcher.get('ok') is True and expected_orange_quarantine >= 0 and int(counts.get('orangeQuarantinedNoop') if counts.get('orangeQuarantinedNoop') is not None else -1) == expected_orange_quarantine == observed_orange_decisions, {'resolverCounts': counts, 'waitingBatcherCounts': waiting_counts, 'observedOrangeDecisions': observed_orange_decisions})
+    add(checks, 'orange_is_quarantined_noop', waiting_batcher.get('ok') is True and quarantine_decisions_consistent(manifest, decisions, registry_records, file_sha256(CORRECTION_MANIFEST)) and expected_orange_quarantine >= 0 and int(counts.get('orangeQuarantinedNoop') if counts.get('orangeQuarantinedNoop') is not None else -1) == expected_orange_quarantine == observed_orange_decisions, {'resolverCounts': counts, 'waitingBatcherCounts': waiting_counts, 'observedOrangeDecisions': observed_orange_decisions})
     add(checks, 'tax_submission_is_policy_terminal', int(counts.get('policyTerminal') or 0) == 1 and sum(1 for d in decisions if d.get('resolutionClass') == 'policy_terminal_tax_submission_not_agent_work') == 1, counts)
     add(checks, 'decision_ids_and_hashes_are_exact', len(decisions) == len({d.get('registryId') for d in decisions}) and all(d.get('registryId') and len(str(d.get('sourceActionHash') or '')) == 64 and len(str(d.get('sourceReportSha256') or '')) == 64 for d in decisions))
     add(checks, 'all_decisions_are_noop_closures', all(d.get('targetReadinessStatus') == 'completed_no_action_required' and d.get('mutationExecuted') is False and d.get('activeApprovalWritten') is False and d.get('externalActionExecuted') is False for d in decisions))
