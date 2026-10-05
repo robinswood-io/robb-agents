@@ -270,7 +270,7 @@ def protected_residuals_consistent(records: list[dict], residuals: list[dict]) -
         all(not isinstance(r.get('autonomousResolution'), dict)
             and r.get('mutationAllowedCurrent') is False
             and r.get('canEnterApprovalOnlyPreflight') is False for r in protected)
-        and all(r.get('mutationAllowed') is False and r.get('externalSendAllowed') is False
+        and all(r.get('mutationAllowed', False) is False and r.get('externalSendAllowed', False) is False
             and r.get('readinessStatus') == by_id[r['registryId']]['readinessStatus']
             for r in residuals)
     )

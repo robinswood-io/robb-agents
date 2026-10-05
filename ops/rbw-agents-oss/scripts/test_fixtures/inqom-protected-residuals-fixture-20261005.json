@@ -112,9 +112,7 @@
     },
     {
       "registryId": "exec-reg:3aedbea94ae726619698",
-      "readinessStatus": "manual_only",
-      "mutationAllowed": false,
-      "externalSendAllowed": false
+      "readinessStatus": "manual_only"
     },
     {
       "registryId": "exec-reg:4c1c964c6b63998fb182",
@@ -124,21 +122,15 @@
     },
     {
       "registryId": "exec-reg:7ca67cf9512a27ac8c50",
-      "readinessStatus": "requires_human_doctrine",
-      "mutationAllowed": false,
-      "externalSendAllowed": false
+      "readinessStatus": "requires_human_doctrine"
     },
     {
       "registryId": "exec-reg:580221e45da4329fd8db",
-      "readinessStatus": "requires_human_doctrine",
-      "mutationAllowed": false,
-      "externalSendAllowed": false
+      "readinessStatus": "requires_human_doctrine"
     },
     {
       "registryId": "exec-reg:a2f7b832fe013580afef",
-      "readinessStatus": "requires_human_doctrine",
-      "mutationAllowed": false,
-      "externalSendAllowed": false
+      "readinessStatus": "requires_human_doctrine"
     },
     {
       "registryId": "exec-reg:337f9c8a755fb449ad27",

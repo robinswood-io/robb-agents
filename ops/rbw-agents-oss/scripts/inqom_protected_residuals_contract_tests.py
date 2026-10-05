@@ -20,4 +20,8 @@ class ProtectedResidualsContract(unittest.TestCase):
         self.data['records'][0]['canEnterApprovalOnlyPreflight']=True;self.assertFalse(self.valid())
     def test_residual_wrong_status(self):
         self.data['residuals'][0]['readinessStatus']='completed_no_action_required';self.assertFalse(self.valid())
+    def test_explicit_residual_mutation_rejected(self):
+        self.data['residuals'][3]['mutationAllowed']=True;self.assertFalse(self.valid())
+    def test_explicit_external_send_rejected(self):
+        self.data['residuals'][3]['externalSendAllowed']=True;self.assertFalse(self.valid())
 if __name__=='__main__': unittest.main()
