@@ -178,6 +178,8 @@ def treatment(rule):
       'namourland_rent':"Classer les flux locatifs concernés en loyers, aucun apport en compte courant. Vérifier période et date d'effet de la réévaluation et électricité voiture auprès de Laure.",
       'namourland_distinguish_rent_deposit_return':"Distinguer loyer, dépôt de garantie et retour d'erreur par pièces et deux mouvements bancaires. Pour un retour prouvé, OD entre contreparties et lettrage séparé par compte, aucune écriture bancaire artificielle.",
       'existing_waiting_reclassification_lettering':"OD de reclassement déjà présente : relire les deux écritures et leur contrepartie de charge, conserver banque et charge, préparer uniquement le lettrage des deux lignes 473 exactes. Aucun nouvel OD, aucune nouvelle dépense. Le préflight natif et une approbation bornée doivent précéder tout lettrage.",
+      'typographic_account_reimport_review':"Nouveau solde sur compte comportant une virgule : relire les lignes importées, la pièce et l'OD de correction antérieure. Vérifier le compte maître actif natif et préparer seulement la correction du nouveau résiduel par référence exacte ; préserver les corrections antérieures, TVA et banque. Ne pas solder par montant seul.",
+      'credit_expense_invoice_discount_review':"Lire la facture pour distinguer remise, avoir, erreur de signe ou remboursement. Une remise intégrée doit réduire la charge concernée selon la pièce et le précédent expert ; vérifier total HT, TTC et TVA avant de préparer une OD bornée, sans nouvelle TVA ni paiement. Aucun reclassement automatique sur solde créditeur seul.",
       'zero_movement_review':"Ligne sans mouvement financier ; documenter le statut, ne pas créer d'écart ou de règlement.",
     }.get(rule,"Rechercher facture et règlement par dossier, tiers, référence et période. Rechercher Gmail/notifications/portail puis demander au fournisseur l'envoi à l'adresse Inqom vérifiée du dossier. Aucun rapprochement sur montant seul.")
 
@@ -225,10 +227,23 @@ def materialize(g, native):
     keys=[(l['folderId'],l['lineId']) for l in lines]
     if len(keys)!=len(set(keys)): errors.append('duplicate_line_across_periods')
     if set(l['folderId'] for l in lines)!=set(FOLDERS): errors.append('missing_folder_coverage')
+    account_balances=defaultdict(float)
+    for line in lines:
+        account_balances[(line['folderId'],line['account'])] += float(line['amount'])
     groups=defaultdict(list)
     for line in lines:
-        if not open_compact(line) or not line['account'].startswith(('401','411','421','431','437','438','47')): continue
-        rule,actionable=classify(line)
+        if not open_compact(line): continue
+        acc=line['account']
+        balance=round(account_balances[(line['folderId'],acc)],2)
+        malformed=',' in acc and abs(balance)>0.005
+        credit_expense=acc.startswith('6') and balance>0.005
+        if not acc.startswith(('401','411','421','431','437','438','47')) and not malformed and not credit_expense: continue
+        if malformed:
+            rule,actionable='typographic_account_reimport_review',True
+        elif credit_expense:
+            rule,actionable='credit_expense_invoice_discount_review',True
+        else:
+            rule,actionable=classify(line)
         key=(line['folderId'],rule,line['account'],line['subAccountId'],reference(line),actionable)
         groups[key].append(line)
     waiting_groups=defaultdict(list)

@@ -44,4 +44,18 @@ class WaitingReclassContract(unittest.TestCase):
  def test_partial_native_coverage_cannot_qualify_existing_pair(self):
   result=self.materialized(True);self.assertIn('incomplete_period_coverage',result['issues'])
   self.assertFalse(any(x['data']['ruleId']=='existing_waiting_reclassification_lettering' for x in result['actions']))
+ def test_new_typographic_import_prepared_with_native_ids_only(self):
+  self.rows[0]['account']='62571000,'
+  result=self.materialized();case=next(x for x in result['actions'] if x['data']['ruleId']=='typographic_account_reimport_review')
+  self.assertEqual(case['data']['canonicalLines'][0]['lineId'],3759529492);self.assertFalse(case['data']['mutationAllowed'])
+ def test_previously_cleared_typographic_account_not_reopened(self):
+  for r in self.rows:r['account']='62571000,'
+  result=self.materialized();self.assertFalse(any(x['data']['ruleId']=='typographic_account_reimport_review' for x in result['actions']))
+ def test_credit_expense_requires_invoice_review(self):
+  self.rows[1]['account']='62480000'
+  result=self.materialized();case=next(x for x in result['actions'] if x['data']['ruleId']=='credit_expense_invoice_discount_review')
+  self.assertIn('Lire la facture',case['summary']);self.assertFalse(case['data']['mutationAllowed'])
+ def test_corrected_discount_account_zero_is_not_actionable(self):
+  for r in self.rows:r['account']='62480000'
+  result=self.materialized();self.assertFalse(any(x['data']['ruleId']=='credit_expense_invoice_discount_review' for x in result['actions']))
 if __name__=='__main__':unittest.main()
