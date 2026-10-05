@@ -4,7 +4,7 @@ from pathlib import Path
 from inqom_native_reconciliation_no_link_candidate_review_tests import closed_review_consistent
 class NoLinkContractTests(unittest.TestCase):
     @classmethod
-    def setUpClass(cls):cls.fixture=json.loads(Path(sys.argv[1]).read_text())
+    def setUpClass(cls):cls.fixture=json.loads((Path(__file__).with_name('test_fixtures') / 'inqom-no-link-fixture.json').read_text())
     def valid(self,data):return closed_review_consistent(data['rows'],data['queue'],data['counts'],data['classCounts'])
     def check(self,edit):
         data=copy.deepcopy(self.fixture);edit(data);self.assertFalse(self.valid(data))

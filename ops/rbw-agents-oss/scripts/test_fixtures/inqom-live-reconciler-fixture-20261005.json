@@ -1,0 +1,383 @@
+{
+  "report": {
+    "counts": {
+      "activeApprovalWritten": 0,
+      "alreadyLettered": 0,
+      "blockedByLiveDrift": 0,
+      "blockedByLivePreflight": 0,
+      "canonicalCoverageComplete": 1,
+      "declaredCanonicalCandidates": 0,
+      "denylistBlockedLots": 38,
+      "eligibleForLivePreflight": 0,
+      "freshReady": 0,
+      "mutationAttempted": 0,
+      "notEligible": 0,
+      "preflightCalled": 0,
+      "preflightGroups": 0,
+      "queuePairs": 0,
+      "uniqueCanonicalCandidates": 0,
+      "validationIssues": 0
+    },
+    "records": [],
+    "freshReadyLots": []
+  },
+  "batcher": {
+    "generatedAt": "2026-10-05T08:56:04.243714Z",
+    "ok": true,
+    "status": "processed",
+    "counts": {
+      "operatorGuidanceExcludedCandidates": 397,
+      "completeNativeReferenceCandidates": 2,
+      "clientCandidates": 0,
+      "supplierCandidates": 3,
+      "humanReplicatedExecutable": 0,
+      "highConfidenceExecutable": 0,
+      "safeOneToOneReadOnly": 1,
+      "safeOneToOne": 1,
+      "ambiguous": 2,
+      "queue": 2,
+      "executableQueue": 0,
+      "validationIssues": 0
+    },
+    "executableQueue": [],
+    "operatorNativeSnapshotGeneratedAt": "2026-10-05T08:55:06.670437Z"
+  },
+  "queue": [],
+  "snapshot": {
+    "generatedAt": "2026-10-05T08:55:06.670437Z",
+    "ok": true,
+    "coverage": [
+      {
+        "folderId": 18627,
+        "period": {
+          "startDate": "2026-01-01",
+          "endDate": "2026-01-31"
+        },
+        "pages": 1,
+        "entries": 204,
+        "lines": 515,
+        "complete": true
+      },
+      {
+        "folderId": 18627,
+        "period": {
+          "startDate": "2026-02-01",
+          "endDate": "2026-02-28"
+        },
+        "pages": 1,
+        "entries": 222,
+        "lines": 591,
+        "complete": true
+      },
+      {
+        "folderId": 18627,
+        "period": {
+          "startDate": "2026-03-01",
+          "endDate": "2026-03-31"
+        },
+        "pages": 1,
+        "entries": 229,
+        "lines": 591,
+        "complete": true
+      },
+      {
+        "folderId": 18627,
+        "period": {
+          "startDate": "2026-04-01",
+          "endDate": "2026-04-30"
+        },
+        "pages": 1,
+        "entries": 165,
+        "lines": 405,
+        "complete": true
+      },
+      {
+        "folderId": 18627,
+        "period": {
+          "startDate": "2026-05-01",
+          "endDate": "2026-05-31"
+        },
+        "pages": 1,
+        "entries": 161,
+        "lines": 410,
+        "complete": true
+      },
+      {
+        "folderId": 18627,
+        "period": {
+          "startDate": "2026-06-01",
+          "endDate": "2026-06-30"
+        },
+        "pages": 1,
+        "entries": 200,
+        "lines": 506,
+        "complete": true
+      },
+      {
+        "folderId": 18627,
+        "period": {
+          "startDate": "2026-07-01",
+          "endDate": "2026-07-31"
+        },
+        "pages": 1,
+        "entries": 213,
+        "lines": 487,
+        "complete": true
+      },
+      {
+        "folderId": 18627,
+        "period": {
+          "startDate": "2026-08-01",
+          "endDate": "2026-08-31"
+        },
+        "pages": 1,
+        "entries": 222,
+        "lines": 507,
+        "complete": true
+      },
+      {
+        "folderId": 18627,
+        "period": {
+          "startDate": "2026-09-01",
+          "endDate": "2026-09-30"
+        },
+        "pages": 1,
+        "entries": 148,
+        "lines": 379,
+        "complete": true
+      },
+      {
+        "folderId": 18627,
+        "period": {
+          "startDate": "2026-10-01",
+          "endDate": "2026-10-05"
+        },
+        "pages": 1,
+        "entries": 24,
+        "lines": 52,
+        "complete": true
+      },
+      {
+        "folderId": 124920,
+        "period": {
+          "startDate": "2026-01-01",
+          "endDate": "2026-01-31"
+        },
+        "pages": 1,
+        "entries": 12,
+        "lines": 32,
+        "complete": true
+      },
+      {
+        "folderId": 124920,
+        "period": {
+          "startDate": "2026-02-01",
+          "endDate": "2026-02-28"
+        },
+        "pages": 1,
+        "entries": 9,
+        "lines": 26,
+        "complete": true
+      },
+      {
+        "folderId": 124920,
+        "period": {
+          "startDate": "2026-03-01",
+          "endDate": "2026-03-31"
+        },
+        "pages": 1,
+        "entries": 10,
+        "lines": 28,
+        "complete": true
+      },
+      {
+        "folderId": 124920,
+        "period": {
+          "startDate": "2026-04-01",
+          "endDate": "2026-04-30"
+        },
+        "pages": 1,
+        "entries": 11,
+        "lines": 30,
+        "complete": true
+      },
+      {
+        "folderId": 124920,
+        "period": {
+          "startDate": "2026-05-01",
+          "endDate": "2026-05-31"
+        },
+        "pages": 1,
+        "entries": 10,
+        "lines": 28,
+        "complete": true
+      },
+      {
+        "folderId": 124920,
+        "period": {
+          "startDate": "2026-06-01",
+          "endDate": "2026-06-30"
+        },
+        "pages": 1,
+        "entries": 25,
+        "lines": 57,
+        "complete": true
+      },
+      {
+        "folderId": 124920,
+        "period": {
+          "startDate": "2026-07-01",
+          "endDate": "2026-07-31"
+        },
+        "pages": 1,
+        "entries": 11,
+        "lines": 24,
+        "complete": true
+      },
+      {
+        "folderId": 124920,
+        "period": {
+          "startDate": "2026-08-01",
+          "endDate": "2026-08-31"
+        },
+        "pages": 1,
+        "entries": 17,
+        "lines": 41,
+        "complete": true
+      },
+      {
+        "folderId": 124920,
+        "period": {
+          "startDate": "2026-09-01",
+          "endDate": "2026-09-30"
+        },
+        "pages": 1,
+        "entries": 10,
+        "lines": 21,
+        "complete": true
+      },
+      {
+        "folderId": 124920,
+        "period": {
+          "startDate": "2026-10-01",
+          "endDate": "2026-10-05"
+        },
+        "pages": 1,
+        "entries": 1,
+        "lines": 2,
+        "complete": true
+      },
+      {
+        "folderId": 124921,
+        "period": {
+          "startDate": "2026-01-01",
+          "endDate": "2026-01-31"
+        },
+        "pages": 1,
+        "entries": 13,
+        "lines": 28,
+        "complete": true
+      },
+      {
+        "folderId": 124921,
+        "period": {
+          "startDate": "2026-02-01",
+          "endDate": "2026-02-28"
+        },
+        "pages": 1,
+        "entries": 9,
+        "lines": 20,
+        "complete": true
+      },
+      {
+        "folderId": 124921,
+        "period": {
+          "startDate": "2026-03-01",
+          "endDate": "2026-03-31"
+        },
+        "pages": 1,
+        "entries": 11,
+        "lines": 24,
+        "complete": true
+      },
+      {
+        "folderId": 124921,
+        "period": {
+          "startDate": "2026-04-01",
+          "endDate": "2026-04-30"
+        },
+        "pages": 1,
+        "entries": 8,
+        "lines": 16,
+        "complete": true
+      },
+      {
+        "folderId": 124921,
+        "period": {
+          "startDate": "2026-05-01",
+          "endDate": "2026-05-31"
+        },
+        "pages": 1,
+        "entries": 8,
+        "lines": 20,
+        "complete": true
+      },
+      {
+        "folderId": 124921,
+        "period": {
+          "startDate": "2026-06-01",
+          "endDate": "2026-06-30"
+        },
+        "pages": 1,
+        "entries": 9,
+        "lines": 18,
+        "complete": true
+      },
+      {
+        "folderId": 124921,
+        "period": {
+          "startDate": "2026-07-01",
+          "endDate": "2026-07-31"
+        },
+        "pages": 1,
+        "entries": 9,
+        "lines": 18,
+        "complete": true
+      },
+      {
+        "folderId": 124921,
+        "period": {
+          "startDate": "2026-08-01",
+          "endDate": "2026-08-31"
+        },
+        "pages": 1,
+        "entries": 13,
+        "lines": 26,
+        "complete": true
+      },
+      {
+        "folderId": 124921,
+        "period": {
+          "startDate": "2026-09-01",
+          "endDate": "2026-09-30"
+        },
+        "pages": 1,
+        "entries": 10,
+        "lines": 20,
+        "complete": true
+      },
+      {
+        "folderId": 124921,
+        "period": {
+          "startDate": "2026-10-01",
+          "endDate": "2026-10-05"
+        },
+        "pages": 1,
+        "entries": 3,
+        "lines": 6,
+        "complete": true
+      }
+    ],
+    "fixtureNativeLineCount": 4928
+  }
+}

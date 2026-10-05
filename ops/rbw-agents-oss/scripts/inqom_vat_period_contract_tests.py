@@ -7,7 +7,7 @@ from inqom_vat_period_contract import current_period_checks
 class PeriodContractTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.fixture=json.loads(Path(sys.argv[1]).read_text())
+        cls.fixture=json.loads((Path(__file__).with_name('test_fixtures') / 'inqom-september-fixture-20261005.json').read_text())
     def check(self,edit,check_id):
         data=copy.deepcopy(self.fixture);edit(data)
         rows=current_period_checks(data)

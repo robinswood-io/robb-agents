@@ -2,7 +2,7 @@ import copy,json,unittest
 from datetime import datetime,timezone
 from pathlib import Path
 from inqom_native_lettering_denylist_closure import verified_empty_current_queue
-FIXTURE=json.loads(Path('/tmp/inqom-deny-closure-fixture-20261005.json').read_text())
+FIXTURE=json.loads((Path(__file__).with_name('test_fixtures') / 'inqom-deny-closure-fixture-20261005.json').read_text())
 NOW=datetime(2026,10,5,9,20,tzinfo=timezone.utc)
 class ClosureContract(unittest.TestCase):
     def setUp(self): self.data=copy.deepcopy(FIXTURE)

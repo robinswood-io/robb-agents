@@ -1,7 +1,7 @@
 import copy,json,unittest
 from pathlib import Path
 from inqom_execution_readiness_registry_tests import denylist_respected
-F=json.loads(Path('/tmp/inqom-registry-deny-fixture-20261005.json').read_text())
+F=json.loads((Path(__file__).with_name('test_fixtures') / 'inqom-registry-deny-fixture-20261005.json').read_text())
 class DenylistContract(unittest.TestCase):
     def setUp(self): self.data=copy.deepcopy(F)
     def valid(self): return denylist_respected(self.data['records'],self.data['report'],set(self.data['blockedIds']))

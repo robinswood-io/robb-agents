@@ -2,7 +2,8 @@ import copy, json, unittest
 from datetime import datetime, timezone
 from pathlib import Path
 from inqom_native_lettering_live_state_reconciler_tests import queue_pairs_classified
-FIXTURE = json.loads(Path('/tmp/inqom-live-reconciler-fixture-20261005.json').read_text())
+FIXTURE = json.loads((Path(__file__).with_name('test_fixtures') / 'inqom-live-reconciler-fixture-20261005.json').read_text())
+FIXTURE['snapshot']['lines'] = [{} for _ in range(FIXTURE['snapshot'].pop('fixtureNativeLineCount'))]
 NOW = datetime(2026,10,5,9,5,tzinfo=timezone.utc)
 class EmptyQueueContract(unittest.TestCase):
     def setUp(self): self.data=copy.deepcopy(FIXTURE)
