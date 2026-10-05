@@ -33,6 +33,40 @@ def add(checks: list[dict[str, Any]], check_id: str, ok: bool, severity: str = '
     checks.append({'checkId': check_id, 'ok': bool(ok), 'severity': severity, 'detail': detail})
 
 
+def closed_review_consistent(rows, queue, counts, class_counts):
+    from collections import Counter
+    if not rows or Counter(row.get('classification') for row in rows) != Counter(class_counts):
+        return False
+    if any(row.get('approvalRequestAllowed') is not False or row.get('mutationAllowed') is not False
+           or row.get('nativeReconciliationAttempted') is not False for row in rows):
+        return False
+    closed_rows = [row for row in rows if row.get('owner') == 'closed' and str(row.get('classification', '')).startswith('closed_')]
+    expert_rows = [row for row in rows if row.get('owner') == 'expert_accountant'
+                   and row.get('classification') == 'expert_review_psp_internal_transfer_without_native_bank_transaction_id']
+    if len(closed_rows) != counts.get('closedNoAction') or len(expert_rows) != counts.get('expertReviewItems') or len(closed_rows) + len(expert_rows) != len(rows):
+        return False
+    def key(row):
+        return (row.get('packSlug'), row.get('packIndex'))
+    if len({key(row) for row in rows}) != len(rows):
+        return False
+    routed = [item.get('data') or {} for item in queue]
+    if Counter(key(row) for row in routed) != Counter(key(row) for row in expert_rows):
+        return False
+    expected = {key(row): row for row in expert_rows}
+    for item, data in zip(queue, routed):
+        row = expected.get(key(data))
+        if row is None or item.get('owner') != 'expert_accountant' or item.get('actionType') != 'review_native_bank_reconciliation_no_link_candidate':
+            return False
+        if not item.get('id') or not item.get('dedupeKey') or not item.get('target') or not item.get('doneCondition'):
+            return False
+        if data.get('mutationAllowed') is not False or data.get('externalSendAllowed') is not False or data.get('approvalRequestAllowed') is not False or data.get('nativeReconciliationAttempted') is not False:
+            return False
+        if data.get('bankTransactionIds') or not data.get('lineIds') or not data.get('entryIds'):
+            return False
+        if any(data.get(name) != row.get(name) for name in ('classification', 'lineIds', 'entryIds', 'accounts', 'amounts', 'targetLines')):
+            return False
+    return True
+
 def main() -> None:
     generated_at = now_iso()
     report = read_json(REPORT, {})
@@ -50,7 +84,7 @@ def main() -> None:
     approvals = int(counts.get('approvalRequests') if counts.get('approvalRequests') is not None else -1)
     classified = sum(int(value or 0) for value in class_counts.values())
     add(checks, 'all_current_items_classified', items > 0 and len(rows) == items and classified == items and closed + expert + approvals == items, detail={'counts': counts, 'rows': len(rows), 'classified': classified, 'classCounts': class_counts})
-    add(checks, 'majority_closed_no_action', items > 0 and closed >= items - 3 and 0 <= expert <= 3, detail={'counts': counts, 'classCounts': class_counts})
+    add(checks, 'closed_and_expert_routes_consistent', closed_review_consistent(rows, queue, counts, class_counts), detail={'counts': counts, 'classCounts': class_counts})
     add(checks, 'no_approval_or_mutation', int(counts.get('approvalRequests', -1)) == 0 and int(counts.get('mutationAttempted', -1)) == 0 and int(counts.get('nativeReconciliationAttempted', -1)) == 0 and guardrails.get('noApprovalRequest') is True and guardrails.get('noInqomMutation') is True and guardrails.get('activeApprovalExists') is False and not ACTIVE_APPROVAL.exists(), detail={'counts': counts, 'guardrails': guardrails})
     add(checks, 'expert_queue_only_for_missing_transaction_id', len(queue) == int(counts.get('expertReviewItems') if counts.get('expertReviewItems') is not None else -1) and all(isinstance(item, dict) and item.get('owner') == 'expert_accountant' and (item.get('data') or {}).get('approvalRequestAllowed') is False for item in queue), detail=queue)
     add(checks, 'completed_od_not_sent_to_approval', any(key == 'closed_completed_od_correction_no_native_bank_link_applicable' and int(value or 0) >= 1 for key, value in class_counts.items()), detail=class_counts)
