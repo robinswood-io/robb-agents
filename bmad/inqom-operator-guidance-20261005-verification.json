@@ -1,0 +1,130 @@
+{
+  "verifiedAt": "2026-10-05T13:25:15.680615+00:00",
+  "sourceCommit": "0ea3c62228e9dc101ebc105d94c72753a961bfc3",
+  "guidanceSha256": "16073d6456ed3cd89b0cc8c505558a941d3e5844fdf81061324baa804764ffe2",
+  "regressionTests": 214,
+  "sourceFiles": 27,
+  "allRuntimeHashesMatchDEV": true,
+  "sourceHashes": {
+    "inqom_operator_guidance_materializer.py": "8ee48d268fe778847c97157bfd2ba8e274e5c6b8ca8cef97a5d048847e78d7cf",
+    "inqom_source_quality_logical_review_tests.py": "a2db5248b95d25499b42968bb1570b7d7d513ba52a36c93f855a73a47edb9626",
+    "inqom_accounting_action_dispatcher.py": "553a2aa96ccb42c2c7a7d350207a76b19857eafd9c3ad6554b1f3a8d0d1cb173",
+    "inqom_lettering_autonomy_batcher.py": "af1736fd943c2b25f91db70b41b22405ac7f13667d4903be1a8018fda587d475",
+    "inqom_expert_compliance_gate.py": "5cf675d1efd4964f14fd10989246e11c178aecf1b6545e3002dd0a14cde51914",
+    "inqom_accounting_expert_rules_guardian_tests.py": "5dea0f162b2c936f83b23de1ee1857120cbced29316a271fe7dc6a7d6605c2b4",
+    "inqom_autonomous_accounting_cleaner_tests.py": "f65c3427c0a8a9b5ba958d195ea46a73ed11e1f3ed352487770f83f216566a0e",
+    "finance_inqom_vat_cash_basis_monthly_tests.py": "2326cb7c828b1c2273dfdc7df7d933e5a110ad56cac3edf7e5acd757a2f1c744",
+    "inqom_vat_period_contract.py": "ac332a5a526d453414815b71d1ca8259fcab549f21a539ac255d86dd65f1d64b",
+    "inqom_native_reconciliation_no_link_candidate_review_tests.py": "6226751c20faf892cdbbfa569dc43f0ace4a0087d762f99dd6040b3af3a352a6",
+    "inqom_native_lettering_live_state_reconciler_tests.py": "740011be370d4528a8ce3eff14a7279e20f273a56bd3513edcf6d571800a04dc",
+    "inqom_native_lettering_denylist_closure.py": "d018ac9bc87383e7d2a4a8e1ca230fe4c6e8b0a2ffdfe4e3e8be73a92b6dbcb4",
+    "inqom_native_lettering_denylist_closure_tests.py": "00c2efb6f6960f53a602aeb404adc877754a6ce7a9dd5a7e9029196a18d39d6f",
+    "inqom_execution_readiness_registry_tests.py": "c79e04ba305581d95d269a73e496a6eaddbdd27d2cb6830ab7ccbaa5a024894c",
+    "inqom_approvalonly_lot_zero_protocol.py": "7c61b758ded39c8c385c26a0ee563b2b0cdd65ee2b2efabfe75baa7c2abfa812",
+    "inqom_approvalonly_lot_zero_protocol_tests.py": "ce1b991c0495d5ca557f4e2896982467703f1940a722c4a8a21744a863889c05",
+    "inqom_expert_route_autonomous_resolver.py": "773b023186e00cd5d7be66975a8efdbac2ec6df244bd28617a4be9810dd0b879",
+    "inqom_expert_route_autonomous_resolver_tests.py": "f37bc71c8a6c6283637021e9358936ec811a1ab0264e3a88061554665f1fbeec",
+    "inqom_execution_blocker_burndown_router_tests.py": "dc458254e3bce0f46a1ed6e2bf3c8aab1d362f0f91da366c1f74639d911afbca",
+    "inqom_residual_expert_handoff_coverage.py": "b2bac85a1d3b12010f1645554c0799b5c00024820c6405b650f3ad0f64cb2d2b",
+    "inqom_residual_expert_handoff_coverage_tests.py": "92b8a3239e2422750d209ea8b5e7ead6e65b14e5f7ebdf43fd4c6a704081cf7f",
+    "inqom_business_autonomy_control_plane.py": "8c95f43fb2d7553734ebe99e4e5ad66831d0ab9fbfb679e238611ba769cc385a",
+    "inqom_business_autonomy_control_plane_tests.py": "321416c77ba14b5a8b0512c32165df599447ca638ed3e04624825738a7d2c5c6",
+    "inqom_terminal_execution_state_guardrail.py": "23ae0b7abcdca3f5b3b000a676f7ae277eff60c8d41fb78cfbccca0f745e9036",
+    "inqom_terminal_execution_state_guardrail_tests.py": "71698144df4315a17deadd4372418d17e174d2280d4aeba539aabbfd1d151f9f",
+    "inqom_agent_work_expectation_controller.py": "d20c00543e3af07718765b1f3881e46e03b32070ec554ad2c3e4b0c05d35abd2",
+    "inqom_agent_work_expectation_controller_tests.py": "3e74874056230633dbd88c16b964f8f291bb0beb6ecdc5b4af266822fca10f66"
+  },
+  "materializer": {
+    "generatedAt": "2026-10-05T13:20:37.685604Z",
+    "finishedAt": "2026-10-05T13:21:08.143975Z",
+    "ok": true,
+    "guidanceSha256": "16073d6456ed3cd89b0cc8c505558a941d3e5844fdf81061324baa804764ffe2",
+    "counts": {
+      "rulesConsumed": 7,
+      "processStepsConsumed": 16,
+      "foldersCovered": 3,
+      "nativeLines": 5404,
+      "openThirdParty": 419,
+      "actions": 247,
+      "pendingActions": 247,
+      "actionablePreparation": 242,
+      "documentedWaits": 5
+    },
+    "completePeriods": 30,
+    "allCoverageComplete": true
+  },
+  "native": {
+    "allTargetCorrectionsOk": true,
+    "booksComplete": false,
+    "snapshotGeneratedAt": "2026-10-05T13:21:07.871045Z",
+    "nativeLineCount": 5404,
+    "correctionEntries": 17,
+    "letteringGroups": 18,
+    "sourceLinesClosed": 23,
+    "bankLinesVerifiedUnchanged": 7,
+    "currentBalances": {
+      "62480000": -42,
+      "62571000,": -140.29,
+      "4011DYLANBRASSE": 0,
+      "40119BIPG001": 273.65,
+      "40111DIVERSCARBURANT": 62.64
+    },
+    "preserved": {
+      "dylanCanonical": true,
+      "eightCanonicalInvoices": true,
+      "maxicoffeeSeptemberVAT": true,
+      "jlmOldMatch": true,
+      "dylanOldAuxiliary": true,
+      "wemindExpense": true,
+      "wemindOctoberStillOpen": true
+    },
+    "tenDuplicateInvoices": {
+      "grossAmount": 3097.2,
+      "duplicateVATNeutralized": 371.2
+    }
+  },
+  "latestFullCycle": {
+    "generatedAt": "2026-10-05T12:32:05.720730Z",
+    "ok": false,
+    "status": "failed",
+    "steps": 24,
+    "fatalSteps": 1,
+    "failedSteps": 2,
+    "blockingReasons": [
+      "pipeline_step_failed",
+      "current_cycle_terminal_evidence_missing",
+      "current_cycle_fatal_step",
+      "operator_guidance_pending_evidence_or_expert_review"
+    ]
+  },
+  "worker": {
+    "pid": 2237669,
+    "restarted": false
+  },
+  "outreach": {
+    "laureSeptember": {
+      "messageId": "1a10b8e27107f635",
+      "sentVerified": true
+    },
+    "annualReseau": {
+      "messageId": "1a10b3fce19a9795",
+      "sentVerified": true
+    },
+    "wemind": {
+      "sent": false,
+      "approvalPending": true
+    },
+    "laureTaxArbitrage": {
+      "sent": false,
+      "approvalPending": true
+    }
+  },
+  "remainingCases": [
+    "MaxiCoffee 154.41 EUR TTC, TVA nouvelle 9.57 EUR versus OD sans TVA",
+    "NEWREST 14.10 EUR TTC, TVA nouvelle 1.02 EUR versus OD sans TVA",
+    "BIP&GO compte deprecie 273.65 EUR",
+    "Carburant compte deprecie 62.64 EUR, TVA 10.44 EUR a justifier selon vehicule",
+    "JLM paiement paid_out, payout paye 12195.20 EUR, banque non identifiee",
+    "Pieces manquantes, effet loyer NAMOURLAND et adresses Inqom AOLENIA/NAMOURLAND, PNS decision expert"
+  ]
+}
