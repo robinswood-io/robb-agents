@@ -2,7 +2,7 @@
   "tasks": {
     "inqom_operator_guidance_20261004": {
       "taskId": "inqom_operator_guidance_20261004",
-      "status": "runtime_qualified_full_cycle_approval_pending",
+      "status": "full_cycle_authorized_suspense_contract_fix_tested",
       "target": {
         "devServer": "164.132.161.150",
         "gitRoot": "/srv/workspace/robinswood-agents",
@@ -13,7 +13,7 @@
         "observationUrl": "https://orion.rbw.ovh/missions",
         "devContainer": "not_applicable_operational_python_cli"
       },
-      "authorization": "User authorized applying operational Python scripts DEV → INTERNE without restart; immutable tested files only.",
+      "authorization": "User explicitly confirmed full pipeline execution on 2026-10-05; bounded scripts DEV to INTERNE without restart remains authorized.",
       "acceptanceCriteria": [
         "Consistent expert queues pass; inconsistent or mutating queues fail.",
         "Fatal or stale terminal artifacts cannot mark the cycle complete.",
@@ -32,7 +32,7 @@
           "inqom_lettering_autonomy_batcher.py": "af1736fd943c2b25f91db70b41b22405ac7f13667d4903be1a8018fda587d475",
           "inqom_operator_guidance_materializer.py": "ae827c3ec2a5f382caf17c3095878074cb9c987a4d12e64bed1930366b4c8838"
         },
-        "regressionTestsPassed": 38,
+        "regressionTestsPassed": 54,
         "runtimeHashesMatchDEV": true,
         "qualificationStepsPassed": 4,
         "nativeLinesRead": 4918,
@@ -45,12 +45,18 @@
         "originalCorrectionsRechecked": 6,
         "originalLinesClosed": 11,
         "bankSourceLinesUnchanged": 6,
-        "devSourceCommit": "dd22f68c566123608d4db61da454a23c6301c4b7"
+        "devSourceCommit": "dd22f68c566123608d4db61da454a23c6301c4b7",
+        "newTestedHashes": {
+          "inqom_expert_compliance_gate.py": "5cf675d1efd4964f14fd10989246e11c178aecf1b6545e3002dd0a14cde51914",
+          "inqom_accounting_expert_rules_guardian_tests.py": "5dea0f162b2c936f83b23de1ee1857120cbced29316a271fe7dc6a7d6605c2b4"
+        },
+        "fullCycle": "Temporal manual-inqom-accounting-autonomy-pipeline-20261005T081932Z; 24 steps, failure reproduced: three suspense balances 32/125/125, old live tests falsely require zero instead of routed pending work.",
+        "runtimeConcurrentDelta": "Pipeline changed 2026-10-05T06:08Z: removed dispatcher from qualification only. Full/scheduled commands identical. Preserve live change; no pipeline promotion."
       },
       "limits": [
         "Outstanding invoices, rental effective date, PNS expert arbitration and JLM bank payout require external evidence.",
         "No accounting mutation permission broadened.",
-        "Full mutating pipeline launch rejected by automatic approval review; explicit user authorization requested; no bypass or execution."
+        "Pending suspense remains business-incomplete; strict accounting failures, missing native evidence, uncovered routes or unsafe permissions still block."
       ],
       "do_not_repeat": [
         "Do not replay the six already verified correction entries or seven letterings.",
