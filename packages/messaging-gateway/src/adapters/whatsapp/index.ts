@@ -59,6 +59,19 @@ const NOOP_LOGGER: MessagingLogger = {
  */
 const DEFAULT_SEND_TIMEOUT_MS = 30_000
 
+const SAFE_WORKER_DIAGNOSTIC_PATTERNS = [
+  /^\[wa-worker\] starting — build=\S+ sha=\S+ provenance=\S+ selfChatMode=(?:true|false) pairingMode=(?:qr|code)$/,
+  /^\[wa-worker\] upsert type=(?:notify|append) count=\d+$/,
+  /^\[wa-worker\] upsert skip: history \(ts=\d+ cutoff=\d+\)$/,
+  /^\[wa-worker\] upsert msg fromMe=(?:true|false) remoteJid=\S+ selfJid=\S+ selfLid=\S+ bareRemote=\S+ msgKeys=(?:<no message>|\S*)$/,
+  /^\[wa-worker\] upsert skip: (?:malformed|own_echo_id|own_echo_prefix|own_outbound|non_self_chat_inbound|empty)$/,
+  /^\[wa-worker\] upsert emit: channelId=\S+ textLen=\d+ attachments=\d+$/,
+] as const
+
+function isSafeWorkerDiagnostic(line: string): boolean {
+  return SAFE_WORKER_DIAGNOSTIC_PATTERNS.some((pattern) => pattern.test(line))
+}
+
 type PendingEntry = {
   resolve: (r: { ok: boolean; messageId?: string; error?: string }) => void
   timer: ReturnType<typeof setTimeout>
@@ -175,6 +188,7 @@ export class WhatsAppAdapter implements PlatformAdapter {
       kind: 'messaging-worker',
       ownerId: 'whatsapp',
       maxIdleMs: cfg.workerIdleTimeoutMs ?? 12 * 60 * 60 * 1000,
+      isBusy: () => this.connected,
       metadata: { platform: 'whatsapp' },
     })
 
@@ -189,10 +203,15 @@ export class WhatsAppAdapter implements PlatformAdapter {
     this.proc.stderr?.on('data', (chunk: Buffer) => {
       const lines = chunk.toString('utf8').split('\n').filter(Boolean)
       for (const line of lines) {
-        this.log.warn('WhatsApp worker stderr', {
+        const meta = {
           event: 'whatsapp_worker_stderr',
           line,
-        })
+        }
+        if (isSafeWorkerDiagnostic(line)) {
+          this.log.info('WhatsApp worker stderr', meta)
+        } else {
+          this.log.warn('WhatsApp worker stderr', meta)
+        }
       }
     })
 

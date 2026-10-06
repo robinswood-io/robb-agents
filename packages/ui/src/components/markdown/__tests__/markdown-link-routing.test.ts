@@ -62,6 +62,40 @@ describe('resolveMarkdownLinkTarget', () => {
     })
   })
 
+  it('routes agent sandbox-prefixed host documents to the same file reader without changing their root', () => {
+    for (const target of ['sandbox:/Users/tester/session/data/rapport.pdf',
+      'sandbox:///Users/tester/session/data/rapport.pdf']) {
+      expect(resolveMarkdownLinkTarget(target)).toEqual({ kind: 'file', path: '/Users/tester/session/data/rapport.pdf' })
+    }
+    expect(resolveMarkdownLinkTarget('sandbox:/mnt/data/rapport.pdf')).toEqual({ kind: 'file', path: '/mnt/data/rapport.pdf' })
+    expect(resolveMarkdownLinkTarget('sandbox:/Users/tester/Compte%20rendu%20%C3%A9t%C3%A9.pdf'))
+      .toEqual({ kind: 'file', path: '/Users/tester/Compte rendu été.pdf' })
+  })
+
+  it('does not reinterpret remote sandbox authorities or other schemes as local files', () => {
+    for (const target of ['sandbox://remote.example/rapport.pdf', 'sandbox:////remote/rapport.pdf',
+      'sandbox:rapport.pdf', 'javascript:rapport.pdf', 'data:application/pdf;base64,AA',
+      'https://example.com/rapport.pdf']) {
+      expect(resolveMarkdownLinkTarget(target)).toEqual({ kind: 'url', url: target })
+    }
+  })
+
+  it('accepts explicit raw HTML destinations with spaces, Unicode and relative paths', () => {
+    for (const path of ['/Users/tester/Compte rendu été.pdf', 'documents/Compte rendu été.pdf',
+      './Compte rendu été.pdf', '../Compte rendu été.pdf', 'Compte rendu été.pdf']) {
+      expect(resolveMarkdownLinkTarget(path)).toEqual({ kind: 'file', path })
+    }
+  })
+
+  it('opens relative PDFs with a standard page fragment while preserving literal hashes in filenames', () => {
+    expect(resolveMarkdownLinkTarget('documents/rapport.pdf#page=2'))
+      .toEqual({ kind: 'file', path: 'documents/rapport.pdf' })
+    expect(resolveMarkdownLinkTarget('/tmp/rapport#2.pdf')).toEqual({ kind: 'file', path: '/tmp/rapport#2.pdf' })
+    expect(resolveMarkdownLinkTarget('/tmp/rapport%23page%3D2.pdf')).toEqual({ kind: 'file', path: '/tmp/rapport#page=2.pdf' })
+    const web = 'https://example.com/rapport.pdf#page=2'
+    expect(resolveMarkdownLinkTarget(web)).toEqual({ kind: 'url', url: web })
+  })
+
   it('resolves mailto links as url targets', () => {
     expect(resolveMarkdownLinkTarget('mailto:test@example.com')).toEqual({
       kind: 'url',
@@ -106,6 +140,17 @@ describe('ReactMarkdown anchor rendering with markdownUrlTransform', () => {
     const html = render('[report](file:///Users/tester/report.pdf)')
     expect(html).toContain('data-raw-href="file:///Users/tester/report.pdf"')
     expect(html).not.toContain('<a href="file:///Users/tester/report.pdf"')
+  })
+
+  it('preserves a sandbox document target for dispatch without a navigable sandbox href', () => {
+    const html = render('[Rapport](sandbox:/Users/tester/session/data/rapport.pdf)')
+    expect(html).toContain('data-raw-href="sandbox:/Users/tester/session/data/rapport.pdf"')
+    expect(html).not.toContain('<a href="sandbox:')
+  })
+
+  it('preserves CommonMark destinations containing spaces and accents', () => {
+    const html = render('[Rapport](</Users/tester/Compte rendu été.pdf>)')
+    expect(html).toContain('data-raw-href="/Users/tester/Compte%20rendu%20%C3%A9t%C3%A9.pdf"')
   })
 
   it('lets javascript links reach the custom anchor while keeping the DOM href sanitized', () => {

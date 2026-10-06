@@ -14,7 +14,7 @@
  * - Turn lifecycle (reset on new turn)
  */
 
-import type { AgentEvent } from '@craft-agent/core/types';
+import type { AgentEvent, ToolExecutionCheckpoint } from '@craft-agent/core/types';
 import { parseReadCommand, type ReadCommandInfo } from './read-patterns.ts';
 import { createLogger } from '../../utils/debug.ts';
 /** MCP server name used by the pool server */
@@ -208,6 +208,9 @@ export abstract class BaseEventAdapter {
     isError: boolean,
     parentToolUseId?: string,
     continuationRequired?: boolean,
+    executed?: boolean,
+    checkpoint?: ToolExecutionCheckpoint,
+    input?: Record<string, unknown>,
   ): AgentEvent {
     return {
       type: 'tool_result',
@@ -217,7 +220,10 @@ export abstract class BaseEventAdapter {
       isError,
       turnId: this.currentTurnId || undefined,
       parentToolUseId,
+      ...(input ? { input } : {}),
       ...(continuationRequired ? { continuationRequired: true } : {}),
+      ...(typeof executed === 'boolean' ? { executed } : {}),
+      ...(checkpoint ? { checkpoint } : {}),
     };
   }
 

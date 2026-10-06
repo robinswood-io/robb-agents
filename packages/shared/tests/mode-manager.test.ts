@@ -49,6 +49,7 @@ const TEST_MODE_CONFIG = {
     { regex: /^la\b/, source: '^la\\b', comment: 'List all including hidden' },
     { regex: /^tree\b/, source: '^tree\\b', comment: 'Display directory tree structure' },
     { regex: /^file\b/, source: '^file\\b', comment: 'Determine file type' },
+    { regex: /^test\b/, source: '^test\\b', comment: 'Evaluate file and value conditions' },
     { regex: /^stat\b/, source: '^stat\\b', comment: 'Display file status' },
     { regex: /^du\b/, source: '^du\\b', comment: 'Estimate disk usage' },
     { regex: /^df\b/, source: '^df\\b', comment: 'Report filesystem disk space' },
@@ -217,6 +218,8 @@ const TEST_MODE_CONFIG = {
   displayName: 'Test Safe Mode',
   shortcutHint: 'SHIFT+TAB',
 };
+
+const SAFE_GIT = 'git --no-optional-locks -c core.fsmonitor=false -c core.hooksPath=/dev/null -c log.showSignature=false -c format.pretty=medium --no-pager';
 
 describe('hasDangerousSubstitution', () => {
   describe('command substitution $() (should be blocked)', () => {
@@ -418,15 +421,12 @@ describe('isReadOnlyBashCommand (full integration)', () => {
       'pwd',
       'which node',
       'type bun',
-      'git status',
-      'git log --oneline -10',
-      'git diff HEAD~1',
-      'git show HEAD:package.json',
-      'git branch -a',
-      'git remote -v',
-      'git tag -l',
-      'git ls-files',
-      'git ls-tree HEAD',
+      `${SAFE_GIT} log --oneline -10`,
+      `${SAFE_GIT} branch --show-current`,
+      `${SAFE_GIT} rev-parse --show-toplevel`,
+      `${SAFE_GIT} ls-files`,
+      `${SAFE_GIT} merge-base HEAD main`,
+      `${SAFE_GIT} grep -n function -- packages`,
       'npm list',
       'npm ls --depth=0',
       'npm view react version',
@@ -487,6 +487,24 @@ describe('isReadOnlyBashCommand (full integration)', () => {
       'git commit',
       'git checkout branch',
       'git merge branch',
+      'git status',
+      'git log --oneline -10',
+      'git diff HEAD~1',
+      'git branch -a',
+      'git remote -v',
+      'git tag -l',
+      'git ls-files',
+      'git ls-tree HEAD',
+      `${SAFE_GIT} status`,
+      `${SAFE_GIT} diff --check`,
+      `${SAFE_GIT} show HEAD`,
+      `${SAFE_GIT} log -p -n 1`,
+      `${SAFE_GIT} grep -f /tmp/patterns`,
+      `${SAFE_GIT} grep --file=/tmp/patterns needle`,
+      `${SAFE_GIT} ls-files --exclude-from=/tmp/excludes`,
+      '/tmp/git --no-optional-locks -c core.fsmonitor=false -c core.hooksPath=/dev/null -c log.showSignature=false -c format.pretty=medium --no-pager rev-parse HEAD',
+      './git --no-optional-locks -c core.fsmonitor=false -c core.hooksPath=/dev/null -c log.showSignature=false -c format.pretty=medium --no-pager rev-parse HEAD',
+      'Git --no-optional-locks -c core.fsmonitor=false -c core.hooksPath=/dev/null --no-pager rev-parse HEAD',
       'git rebase main',
       'git reset --hard',
       'sudo anything',
@@ -510,6 +528,28 @@ describe('isReadOnlyBashCommand (full integration)', () => {
         expect(isReadOnlyBashCommandWithConfig(cmd, TEST_MODE_CONFIG)).toBe(false);
       });
     }
+  });
+
+  describe('test builtin in Explore mode', () => {
+    it('allows direct read-only condition checks', () => {
+      for (const command of [
+        'test -f package.json',
+        'test -d packages',
+        'test ! -e missing-file',
+        'test safe = safe',
+        'test -s report.csv && echo present',
+        'test -f report.md && grep -q anti-doublon report.md && echo documented',
+      ]) expect(isReadOnlyBashCommandWithConfig(command, TEST_MODE_CONFIG)).toBe(true);
+    });
+
+    it('still blocks command substitutions and output redirections', () => {
+      for (const command of [
+        'test -f "$(touch marker)"',
+        'test -n `whoami`',
+        'test -f package.json > result.txt',
+        'test -d packages 2> errors.txt',
+      ]) expect(isReadOnlyBashCommandWithConfig(command, TEST_MODE_CONFIG)).toBe(false);
+    });
   });
 
   describe('multi-line commands with unsafe parts (should be blocked via AST)', () => {
@@ -537,8 +577,8 @@ describe('isReadOnlyBashCommand (full integration)', () => {
     // These should now work because all commands in the multi-line input are safe
     // Note: \r (carriage return) is treated as whitespace by bash-parser, not a command separator
     const safeMultiLineCommands = [
-      'ls\ngit status',
-      'git status\nls -la',
+      `ls\n${SAFE_GIT} rev-parse HEAD`,
+      `${SAFE_GIT} rev-parse HEAD\nls -la`,
       'cat file.txt\ngrep pattern file',
       'cat file\nwhoami',  // Both cat and whoami are in the allowlist
       'ls\rrm',           // \r is whitespace, so this is just `ls rm` (ls with arg)
@@ -794,15 +834,15 @@ describe('AST-based compound command validation', () => {
     // When ALL commands in a && chain are safe read-only operations,
     // the entire compound command should be allowed
     const safeCompoundCommands = [
-      'git status && git log',
-      'git status && git log --oneline',
+      `${SAFE_GIT} rev-parse HEAD && ${SAFE_GIT} log`,
+      `${SAFE_GIT} branch --show-current && ${SAFE_GIT} log --oneline`,
       'ls && pwd',
       'cat file.txt && head -n 10 file.txt',
       'ls -la && tree -L 2',
-      'git status && git diff',
+      `${SAFE_GIT} rev-parse HEAD && ${SAFE_GIT} ls-files`,
       'pwd && whoami && hostname',
       'npm list && npm outdated',
-      'git branch && git remote -v',
+      `${SAFE_GIT} branch --show-current && ${SAFE_GIT} rev-parse --show-toplevel`,
       'ps aux && uptime',
     ];
 
@@ -816,7 +856,7 @@ describe('AST-based compound command validation', () => {
   describe('safe compound commands with || (should be ALLOWED)', () => {
     // OR chains where all parts are safe should also be allowed
     const safeOrCommands = [
-      'git status || git log',
+      `${SAFE_GIT} rev-parse HEAD || ${SAFE_GIT} log`,
       'ls || pwd',
       'cat file.txt || head file.txt',
     ];
@@ -831,7 +871,7 @@ describe('AST-based compound command validation', () => {
   describe('mixed safe compound commands (should be ALLOWED)', () => {
     // Mixed && and || where all parts are safe
     const mixedSafeCommands = [
-      'git status && git log || git diff',
+      `${SAFE_GIT} rev-parse HEAD && ${SAFE_GIT} log || ${SAFE_GIT} ls-files`,
       'ls && pwd || whoami',
     ];
 
@@ -867,10 +907,10 @@ describe('AST-based compound command validation', () => {
     const safePipelineCommands = [
       'ls | head',
       'cat file | grep pattern',
-      'git log | head -n 10',
+      `${SAFE_GIT} log | head -n 10`,
       'ps aux | grep node',
       'ls -la | wc -l',
-      'git diff | head',
+      `${SAFE_GIT} ls-files | head`,
     ];
 
     for (const cmd of safePipelineCommands) {
@@ -935,7 +975,7 @@ describe('AST-based compound command validation', () => {
     const devNullRedirectCommands = [
       'ls > /dev/null',
       'cat file 2>/dev/null',
-      'git status >/dev/null 2>&1',
+      `${SAFE_GIT} rev-parse HEAD >/dev/null 2>&1`,
     ];
 
     for (const cmd of devNullRedirectCommands) {
@@ -950,7 +990,7 @@ describe('AST-based compound command validation', () => {
     const safeSubshellCommands = [
       '(ls)',
       '(pwd && whoami)',
-      '(git status)',
+      `(${SAFE_GIT} rev-parse HEAD)`,
     ];
 
     for (const cmd of safeSubshellCommands) {

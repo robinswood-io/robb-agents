@@ -87,6 +87,13 @@ export interface CredentialId {
  * which don't have a clientId.
  */
 export interface StoredCredential {
+  /**
+   * Host-minted opaque identity for the authenticated credential generation.
+   * It is deliberately independent from rotating access/refresh tokens so a
+   * refresh preserves bindings, while replacing credentials creates a new
+   * authority identity without exposing or hashing the secret itself.
+   */
+  bindingId?: string;
   /** The secret value (API key, access token, or primary credential) */
   value: string;
   /** OAuth refresh token */

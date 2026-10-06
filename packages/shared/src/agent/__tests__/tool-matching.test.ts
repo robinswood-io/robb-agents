@@ -1009,6 +1009,11 @@ describe('isToolResultError', () => {
     expect(isToolResultError('[ERROR] command failed')).toBe(true)
   })
 
+  it('detects rbw transfer failures returned with a completed transport status', () => {
+    expect(isToolResultError('❌ Download error: ENOENT: no such file or directory')).toBe(true)
+    expect(isToolResultError('  ❌ Upload error: remote write failed')).toBe(true)
+  })
+
   it('detects is_error flag in object', () => {
     expect(isToolResultError({ is_error: true, message: 'fail' })).toBe(true)
   })
@@ -1019,6 +1024,7 @@ describe('isToolResultError', () => {
 
   it('returns false for normal results', () => {
     expect(isToolResultError('success')).toBe(false)
+    expect(isToolResultError('Upload completed without error.')).toBe(false)
     expect(isToolResultError({ data: 'ok' })).toBe(false)
   })
 })

@@ -1,3 +1,4 @@
+import { isProtectedApplicationPath, APPLICATION_PROTECTION_REASON } from './runtime/application-protection.ts';
 /**
  * Session Tools Core - Context Interface
  *
@@ -322,8 +323,15 @@ export interface SessionToolContext {
   /** List sessions in the workspace with pagination. Injected by backend. */
   listSessions?(options?: ListSessionsOptions): ListSessionsResult;
 
-  /** Wait for the first target session to finish a turn, without polling. */
-  waitForSessions?(sessionIds: string[], timeoutMs: number): Promise<WaitSessionsResult>;
+  /** Wait for delegated sessions without polling. `mode` is part of the exact
+   * host-authorized invocation and is therefore forwarded unchanged. */
+  waitForSessions?(
+    sessionIds: string[],
+    timeoutMs?: number,
+    afterCursors?: Record<string, string>,
+    terminalCapability?: string,
+    mode?: WaitSessionsMode,
+  ): Promise<WaitSessionsResult>;
 
   /**
    * List background tasks (running + recently-terminal) for a session from the
@@ -338,6 +346,11 @@ export interface SessionToolContext {
 
   /** Resolve a status display name to its ID against configured statuses. Injected by backend. */
   resolveStatus?(status: string): ResolvedStatusResult;
+  /** Strengthen the current objective; never grants tool permissions. */
+  setCompletionCriteria?(criteria: import('@craft-agent/core/types').ObjectiveAcceptanceCriterion[], procedure?: import('@craft-agent/core/types').ObjectiveProcedureId, terminalCapability?: string): Promise<unknown>;
+  /** Register questions with the host; resolves before the user answers. */
+  requestUserInput?(questions: import('@craft-agent/core/types').UserInputQuestion[]): Promise<{ requestId: string; status: 'pending' }>;
+  projectLearning?(request: import('./handlers/project-learning.ts').ProjectLearningArgs): Promise<unknown>;
 
   // ============================================================
   // Inter-Session Messaging
@@ -349,7 +362,12 @@ export interface SessionToolContext {
    * a truthful ack (delivered immediately vs. queued behind a busy turn) instead
    * of an unconditional "message sent".
    */
-  sendAgentMessage?(sessionId: string, message: string, attachments?: Array<{ path: string; name?: string }>): Promise<SendAgentMessageResult>;
+  sendAgentMessage?(
+    sessionId: string,
+    message: string,
+    attachments?: Array<{ path: string; name?: string }>,
+    messageType?: AgentMessageType,
+  ): Promise<SendAgentMessageResult>;
 
   /**
    * Activate a source in the running session: add to enabledSourceSlugs,
@@ -405,6 +423,9 @@ export interface SessionToolContext {
   dataPath?: string;
 }
 
+/** Host-persisted semantic kind for one inter-session delivery. */
+export type AgentMessageType = 'progress' | 'result' | 'question' | 'decision';
+
 // ============================================================
 // Session Self-Management Types — Resolution
 // ============================================================
@@ -456,6 +477,8 @@ export interface SessionInfo {
   llmConnection?: string;
   model?: string;
   isActive: boolean;
+  /** Own-session host-selected evidence IDs; metadata is never itself target evidence. */
+  objectiveEvidenceContext?: string;
 }
 
 /** Compact session summary (returned by list_sessions). */
@@ -484,6 +507,22 @@ export interface ListSessionsResult {
   sessions: SessionListItem[];
 }
 
+/** Host-selected failure context only: never a completion receipt or new authority. */
+export interface WaitSessionDiagnostic {
+  verified: false;
+  objectiveId: string;
+  source: 'current-generation' | 'persisted-objective';
+  processingGeneration?: number;
+  messageId?: string;
+  text?: string;
+  textTruncated?: boolean;
+  errorMessageId?: string;
+  errorText?: string;
+  errorTextTruncated?: boolean;
+  validationGaps?: string[];
+  validationGapsTruncated?: boolean;
+}
+
 export interface WaitSessionSnapshot {
   sessionId: string;
   state: 'active' | 'idle' | 'missing';
@@ -491,12 +530,24 @@ export interface WaitSessionSnapshot {
   processingGeneration?: number;
   reason?: 'complete' | 'interrupted' | 'error' | 'timeout';
   finalText?: string;
+  /** Opaque host cursor; only a delivery position, never an acceptance proof. */
+  cursor?: string;
+  changed?: boolean;
+  finalMessageId?: string;
+  finalTextTruncated?: boolean;
+  diagnostic?: WaitSessionDiagnostic;
+  needsAttention?: boolean;
+  /** Host objective state explains a validation stop without inventing a user question. */
+  objectiveState?: string;
 }
 
 export interface WaitSessionsResult {
   outcome: 'completed' | 'timeout';
+  mode?: WaitSessionsMode;
   sessions: WaitSessionSnapshot[];
 }
+
+export type WaitSessionsMode = 'first' | 'all';
 
 /**
  * Result of delivering a cross-session message (send_agent_message).
@@ -504,13 +555,15 @@ export interface WaitSessionsResult {
  */
 export interface SendAgentMessageResult {
   /**
-   * - `delivered`: the target was idle, so it will start processing the message now.
-   * - `queued`: the target was mid-turn; the message is enqueued and will be
-   *   processed after the current turn finishes.
+   * - `delivered`: the durable receipt has advanced beyond queued.
+   * - `queued`: the durable receipt still says queued, whether because the
+   *   target was busy or because its processing transition is not durable yet.
    */
   delivery: 'delivered' | 'queued';
   /** Whether the target session was processing a turn when the message arrived. */
   targetBusy: boolean;
+  receiptId?: string;
+  status?: 'queued' | 'processing' | 'processed' | 'failed';
 }
 
 /**
@@ -610,7 +663,10 @@ export function createNodeFileSystem(): FileSystemInterface {
     exists: (path: string) => fs.existsSync(path),
     readFile: (path: string) => fs.readFileSync(path, 'utf-8'),
     readFileBuffer: (path: string) => fs.readFileSync(path),
-    writeFile: (path: string, content: string) => fs.writeFileSync(path, content, 'utf-8'),
+    writeFile: (path: string, content: string) => {
+      if (isProtectedApplicationPath(path)) throw new Error(APPLICATION_PROTECTION_REASON);
+      fs.writeFileSync(path, content, 'utf-8');
+    },
     isDirectory: (path: string) => fs.existsSync(path) && fs.statSync(path).isDirectory(),
     readdir: (path: string) => fs.readdirSync(path),
     stat: (path: string) => {

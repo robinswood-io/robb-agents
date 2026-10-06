@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
-import { existsSync, mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import type { SessionToolContext } from '../context.ts';
@@ -75,6 +75,8 @@ describe('script_sandbox', () => {
 
     const text = result.content[0]?.text ?? '';
 
+    expect(text).not.toContain('sandbox_apply');
+
     if (result.isError) {
       expect(text.length > 0).toBe(true);
       expect(
@@ -104,10 +106,11 @@ describe('script_sandbox', () => {
 
     const text = result.content[0]?.text ?? '';
 
+    expect(text).not.toContain('sandbox_apply');
+
     if (
       text.includes('filesystem isolation') ||
       text.includes('network isolation') ||
-      text.includes('sandbox_apply') ||
       text.includes('Operation not permitted')
     ) {
       // Backend unavailable or host sandbox denied in this environment.
@@ -119,6 +122,42 @@ describe('script_sandbox', () => {
     expect(existsSync(outsidePath)).toBe(false);
   });
 
+  it('cannot widen the macOS profile through a nested sandbox', async () => {
+    if (process.platform !== 'darwin') return;
+    const outsidePath = join(rootDir, 'nested-outside-write.txt');
+
+    const result = await handleScriptSandbox(ctx(), {
+      language: 'node',
+      script: `require('node:child_process').execFileSync('/usr/bin/sandbox-exec', ['-p', '(version 1) (allow default)', '/usr/bin/touch', ${JSON.stringify(outsidePath)}]);`,
+      timeoutMs: 1500,
+    });
+
+    expect(result.isError).toBe(true);
+    expect(existsSync(outsidePath)).toBe(false);
+  });
+
+  it('never resolves the macOS sandbox executable through a hostile PATH', async () => {
+    if (process.platform !== 'darwin') return;
+    const hostileBin = join(rootDir, 'hostile-bin');
+    const marker = join(rootDir, 'shadow-sandbox-ran');
+    mkdirSync(hostileBin);
+    const shadow = join(hostileBin, 'sandbox-exec');
+    writeFileSync(shadow, `#!/bin/sh\n/usr/bin/touch ${JSON.stringify(marker)}\nexit 0\n`);
+    chmodSync(shadow, 0o755);
+    const previousPath = process.env.PATH;
+    process.env.PATH = `${hostileBin}:${previousPath ?? ''}`;
+    try {
+      const result = await handleScriptSandbox(ctx(), {
+        language: 'node', script: "console.log('system sandbox')", timeoutMs: 1500,
+      });
+      expect(result.content[0]?.text ?? '').not.toContain('sandbox_apply');
+    } finally {
+      if (previousPath === undefined) delete process.env.PATH;
+      else process.env.PATH = previousPath;
+    }
+    expect(existsSync(marker)).toBe(false);
+  });
+
   it('passes stdin through when sandbox backend is available', async () => {
     const result = await handleScriptSandbox(ctx(), {
       language: 'node',
@@ -128,12 +167,12 @@ describe('script_sandbox', () => {
     });
 
     const text = result.content[0]?.text ?? '';
+    expect(text).not.toContain('sandbox_apply');
     if (
       result.isError &&
       (
         text.includes('filesystem isolation') ||
         text.includes('network isolation') ||
-        text.includes('sandbox_apply') ||
         text.includes('Operation not permitted')
       )
     ) {
@@ -153,12 +192,12 @@ describe('script_sandbox', () => {
     });
 
     const text = result.content[0]?.text ?? '';
+    expect(text).not.toContain('sandbox_apply');
     if (
       result.isError &&
       (
         text.includes('filesystem isolation') ||
         text.includes('network isolation') ||
-        text.includes('sandbox_apply') ||
         text.includes('Operation not permitted')
       )
     ) {

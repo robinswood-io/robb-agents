@@ -11,7 +11,7 @@
 
 import * as React from 'react'
 import { useTranslation } from 'react-i18next'
-import { Trash2, CalendarDays, ExternalLink } from 'lucide-react'
+import { Trash2, CalendarDays, ExternalLink, ListFilter } from 'lucide-react'
 import { Popover, PopoverTrigger, PopoverContent } from './popover'
 import { Calendar } from './calendar'
 import { cn } from '@/lib/utils'
@@ -29,6 +29,8 @@ export interface LabelValuePopoverProps {
   onValueChange?: (newValue: string | undefined) => void
   /** Called when user clicks "Remove" */
   onRemove?: () => void
+  /** Quick filter callback for this label */
+  onFilterByLabel?: () => void
   /** Controlled open state */
   open: boolean
   /** Open state change handler */
@@ -44,6 +46,7 @@ export function LabelValuePopover({
   value,
   onValueChange,
   onRemove,
+  onFilterByLabel,
   open,
   onOpenChange,
   sessionId,
@@ -303,6 +306,24 @@ export function LabelValuePopover({
             >
               <ExternalLink className="w-3.5 h-3.5" />
               <span>{t('common.openLink')}</span>
+            </button>
+          )}
+          {onFilterByLabel && (
+            <button
+              type="button"
+              onClick={() => {
+                onFilterByLabel()
+                onOpenChange(false)
+              }}
+              className={cn(
+                'w-full flex items-center gap-2 px-2 py-1.5 rounded-[4px]',
+                'text-[13px] text-foreground',
+                'hover:bg-foreground/[0.03] focus:bg-foreground/[0.03]',
+                'transition-colors cursor-pointer outline-none'
+              )}
+            >
+              <ListFilter className="w-3.5 h-3.5 text-muted-foreground" />
+              <span>{t('sidebar.filterByLabel', 'Filter by this tag')}</span>
             </button>
           )}
           <button

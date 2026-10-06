@@ -42,6 +42,8 @@ export type ChatGroupingMode = 'date' | 'status' | 'unread' | 'project'
 
 interface SessionListProps {
   items: SessionMeta[]
+  /** Full workspace family used only to project delegated activity onto visible parents. */
+  relatedItems?: SessionMeta[]
   onDelete: (sessionId: string, skipConfirmation?: boolean) => Promise<boolean>
   onFlag?: (sessionId: string) => void
   onUnflag?: (sessionId: string) => void
@@ -76,6 +78,8 @@ interface SessionListProps {
   labels?: LabelConfig[]
   /** Callback when session labels are toggled (for labels submenu in SessionMenu) */
   onLabelsChange?: (sessionId: string, labels: string[]) => void
+  /** Quick filter/toggle sessions by a specific label */
+  onToggleLabelFilter?: (labelId: string) => void
   /** Workspace projects (for the Projects submenu in SessionMenu) */
   projects?: Array<{ id: string; slug: string; name: string; color?: string }>
   /** Callback to bind/unbind a session to a project (null = unbind) */
@@ -119,6 +123,7 @@ function formatDateGroupLabel(date: Date, t: (key: string) => string, lang: stri
  */
 export function SessionList({
   items,
+  relatedItems,
   onDelete,
   onFlag,
   onUnflag,
@@ -138,6 +143,7 @@ export function SessionList({
   evaluateViews,
   labels = [],
   onLabelsChange,
+  onToggleLabelFilter,
   projects,
   onSetProjectId,
   groupingMode = 'date',
@@ -171,7 +177,10 @@ export function SessionList({
   const {
     topLevelSessions,
     subagentsBySessionId,
-  } = useMemo(() => summarizeSessionsForSidebar(items), [items])
+  } = useMemo(
+    () => summarizeSessionsForSidebar(items, relatedItems ?? items),
+    [items, relatedItems],
+  )
 
   // Get current filter from navigation state (for preserving context in tab routes)
   const currentFilter = isSessionsNavigation(navState) ? navState.filter : undefined
@@ -702,6 +711,7 @@ export function SessionList({
     onMarkUnread,
     onDelete: handleDeleteWithToast,
     onLabelsChange,
+    onToggleLabelFilter,
     projects,
     onSetProjectId,
     onSelectSessionById: handleSelectSessionById,
@@ -723,7 +733,7 @@ export function SessionList({
     handleRenameClick, onSessionStatusChange,
     onFlag, handleFlagWithToast, onUnflag, handleUnflagWithToast,
     onArchive, handleArchiveWithToast, onUnarchive, handleUnarchiveWithToast,
-    onMarkUnread, handleDeleteWithToast, onLabelsChange,
+    onMarkUnread, handleDeleteWithToast, onLabelsChange, onToggleLabelFilter,
     projects, onSetProjectId,
     handleSelectSessionById, handleOpenInNewWindow, setSendToWorkspace, handleFocusZone, handleKeyDown,
     sessionStatuses, flatLabels, labels, resolvedSearchQuery,

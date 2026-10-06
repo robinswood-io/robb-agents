@@ -173,6 +173,21 @@ describe('cold-session metadata persistence', () => {
     expect(readDiskMessageIds(sessionId)).toEqual(['m1', 'm2', 'm3'])
   })
 
+  it('workspace authorization lookup does not hydrate a cold transcript', () => {
+    const sessionId = 'cold-workspace-lookup'
+    seedColdSession(sessionId, {
+      messages: [makeUserMessage('m1', 'large transcript stays on disk')],
+    })
+    const managed = (sm as unknown as {
+      sessions: Map<string, { messagesLoaded: boolean; messages: unknown[] }>
+    }).sessions.get(sessionId)!
+
+    expect(managed.messagesLoaded).toBe(false)
+    expect(sm.getSessionWorkspaceId(sessionId)).toBe('ws_test')
+    expect(managed.messagesLoaded).toBe(false)
+    expect(managed.messages).toEqual([])
+  })
+
   it('concurrent cold-session status changes serialize to last-writer-wins on disk', async () => {
     const sessionId = 'cold-concurrent'
     seedColdSession(sessionId, { sessionStatus: 'todo' })

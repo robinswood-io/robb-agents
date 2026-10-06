@@ -50,6 +50,7 @@ export function SessionListMobilePreview({
         <div className="flex flex-col h-full bg-background">
           <SessionList
             items={items}
+            relatedItems={items}
             onDelete={async (id) => {
               console.log('[Mobile SessionList] onDelete', id)
               return true

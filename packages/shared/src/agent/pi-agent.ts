@@ -1,3 +1,4 @@
+import { protectApplicationCommand, SpawnSessionInputError } from '@craft-agent/session-tools-core';
 /**
  * Pi Backend (Subprocess RPC Client)
  *
@@ -14,6 +15,7 @@
  */
 
 import { spawn, type ChildProcess } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
 import { createInterface, type Interface as ReadlineInterface } from 'node:readline';
 import type { AgentEvent } from '@craft-agent/core/types';
 import type { FileAttachment } from '../utils/files.ts';
@@ -31,7 +33,7 @@ import type {
   ChatOptions,
   SdkMcpServerConfig,
 } from './backend/types.ts';
-import { AbortReason } from './backend/types.ts';
+import { AbortReason, ProviderDispatchRejectedError, ToolAdmissionRecoveryError } from './backend/types.ts';
 import { getBackendRuntime } from './backend/internal/driver-types.ts';
 import { SourceActivationDrainController } from './source-activation-drain.ts';
 
@@ -50,7 +52,7 @@ import { PiEventAdapter } from './backend/pi/event-adapter.ts';
 import { EventQueue } from './backend/event-queue.ts';
 
 // System prompt for Craft Agent context
-import { getSystemPrompt } from '../prompts/system.ts';
+import { getSystemPromptAsync } from '../prompts/system.ts';
 import { getCoAuthorPreference } from '../config/preferences.ts';
 import { loadProjectById, getProjectAssetsPath, listProjectAssets, getProjectMemoryPath, loadProjectMemory } from '../projects/storage.ts';
 import type { ProjectPromptContext } from '../projects/types.ts';
@@ -87,7 +89,7 @@ import { getPermissionModeDiagnostics } from './mode-manager.ts';
 // call_llm pre-execution pipeline
 
 // McpClientPool for source tool proxying (centralized pool from main process)
-import type { McpClientPool } from '../mcp/mcp-pool.ts';
+import type { McpClientPool, McpToolResult } from '../mcp/mcp-pool.ts';
 
 // Path utilities
 import { join } from 'path';
@@ -98,9 +100,20 @@ import { getSessionDataPath, getSessionPath, getSessionPlansPath } from '../sess
 
 // Error typing
 import { parseError, type AgentError } from './errors.ts';
+import { assertExistingWorkingDirectory, InvalidWorkingDirectoryError } from './spawn-helpers.ts';
 
 // Centralized PreToolUse pipeline
-import { runPreToolUseChecks, type PreToolUseCheckResult } from './core/pre-tool-use.ts';
+import {
+  beginContextualGmailHostExecution,
+  confirmContextualGmailRuntimeTeardown,
+  hasContextualGmailInFlightForRuntime,
+  invalidateContextualGmailSessionState,
+  recordContextualGmailToolResult,
+  resolveContextualGmailPromptReservation,
+  runPreToolUseChecks,
+  settleContextualGmailHostExecution,
+  type PreToolUseCheckResult,
+} from './core/pre-tool-use.ts';
 import { getRtkPath } from './core/rtk-detector.ts';
 import { getRtkEnabled, getBrowserToolEnabled } from '../config/storage.ts';
 import type { RtkContext } from './core/rtk-rewrite.ts';
@@ -118,6 +131,12 @@ import { redactSecretLikeMaterial } from '../utils/redaction.ts';
 const RUNTIME_DIAGNOSTIC_MAX_CHARS = 4_000;
 const DEFAULT_SUBPROCESS_STARTUP_TIMEOUT_MS = 20_000;
 const MAX_SUBPROCESS_STARTUP_TIMEOUT_MS = 120_000;
+export const PI_SUBPROCESS_FORCE_KILL_DELAY_MS = 2_000;
+
+interface PiSubprocessRuntimeContext {
+  runtimeId: string;
+  sessionId: string;
+}
 
 type PiRuntimeInterruptionCode = Extract<AgentEvent, { type: 'runtime_interrupted' }>['code'];
 
@@ -267,7 +286,7 @@ type PiAuthPayload = {
 
 type TokenRefreshOutcome =
   | { refreshed: false }
-  | { refreshed: true; piAuth: PiAuthPayload };
+  | { refreshed: true; piAuth: PiAuthPayload; bindingId?: string };
 
 const PREEMPTIVE_PI_OAUTH_PROVIDERS = new Set([
   'openai-codex',
@@ -399,11 +418,19 @@ export class PiAgent extends BaseAgent {
 
   // Subprocess process handle
   private subprocess: ChildProcess | null = null;
+  /** Exact host runtime generation owning the current subprocess. */
+  private subprocessRuntimeContext: PiSubprocessRuntimeContext | null = null;
+  /** Retains the generation identity until a late, confirmed child exit arrives. */
+  private subprocessRuntimeContexts = new WeakMap<ChildProcess, PiSubprocessRuntimeContext>();
+  /** Diagnostic retained until exit/close proves that the matching child stopped. */
+  private subprocessErrorsAwaitingExit = new WeakMap<ChildProcess, Error>();
   private subprocessSupervisorHandle: LongRunningProcessHandle | null = null;
   /** Deduplicates concurrent cold-start callers into one process generation. */
   private subprocessSpawnInFlight: Promise<void> | null = null;
   /** Child processes whose next exit is owner-requested, not a runtime failure. */
   private expectedSubprocessExits = new WeakSet<ChildProcess>();
+  /** One bounded SIGKILL escalation per retiring subprocess generation. */
+  private subprocessForceKillTimers = new WeakMap<ChildProcess, ReturnType<typeof setTimeout>>();
   private readline: ReadlineInterface | null = null;
   private subprocessReady: Promise<void> | null = null;
   private subprocessReadyResolve: (() => void) | null = null;
@@ -419,12 +446,17 @@ export class PiAgent extends BaseAgent {
   // State
   private _isProcessing: boolean = false;
   private abortReason?: AbortReason;
+  private promptPreparationRevision = 0;
 
   // Event adapter
   private adapter: PiEventAdapter;
 
   // Event queue for streaming (AsyncGenerator pattern over subprocess JSONL)
   private eventQueue = new EventQueue();
+
+  /** Provider-start acknowledgements keyed by the exact child prompt id. */
+  private pendingProviderHandoffs = new Map<string, () => void>();
+  private pendingProviderDispatchRejections = new Map<string, () => void>();
 
   // Error deduplication — suppress identical consecutive errors after a threshold
   // to prevent a broken subprocess from flooding the user's session.
@@ -457,7 +489,7 @@ export class PiAgent extends BaseAgent {
           sizeBytes: a.sizeBytes,
         })),
         memoryPath: getProjectMemoryPath(root, slug),
-        memoryContent: loadProjectMemory(root, slug) ?? undefined,
+        memoryContent: loadProjectMemory(root, slug, 5000, { includeStructured: false }) ?? undefined,
       };
     } catch (error) {
       this.debug(`[resolveProjectContext] Failed to load project ${projectId}: ${error instanceof Error ? error.message : error}`);
@@ -689,12 +721,19 @@ export class PiAgent extends BaseAgent {
 
     const nodePath = runtime.paths?.node || process.execPath;
     const cwd = this.resolvedCwd();
+    // Node reports spawn(command) ENOENT for an invalid cwd, even when the
+    // protected runtime executable exists. Surface the directory issue first.
+    await assertExistingWorkingDirectory(cwd);
 
     this.debug(`Spawning Pi subprocess: ${nodePath} ${piServerPath}`);
     this.resetSubprocessErrorDedup();
 
     // Build session ID and session dir path upfront (used for spawn env + init command)
     const sessionId = this.config.session?.id || `agent-${Date.now()}`;
+    const subprocessRuntimeContext: PiSubprocessRuntimeContext = {
+      runtimeId: `pi-${randomUUID()}`,
+      sessionId,
+    };
     const sessionDir = this.config.session
       ? join(this.config.workspace.rootPath, 'sessions', sessionId)
       : undefined;
@@ -716,13 +755,16 @@ export class PiAgent extends BaseAgent {
     // refreshAndPushTokens guards this.subprocess internally — safe to call pre-spawn.
     if (this.config.authType === 'oauth' && runtime.piAuthProvider) {
       const slug = this.config.connectionSlug || 'pi';
-      const stored = await getCredentialManager().getLlmOAuth(slug);
+      const expectedBindingId = this.config.expectedLlmCredentialBindingId;
+      const stored = await getCredentialManager().getLlmOAuth(slug, expectedBindingId);
       if (shouldRefreshPiOAuthBeforeSpawn({
         authType: this.config.authType,
         piAuthProvider: runtime.piAuthProvider,
         refreshToken: stored?.refreshToken,
         expiresAt: stored?.expiresAt,
-        refreshInFlight: PiAgent.globalRefreshMutex.has(slug),
+        refreshInFlight: PiAgent.globalRefreshMutex.has(
+          `${slug}\u0000${expectedBindingId ?? 'unsealed'}`,
+        ),
       })) {
         this.debug(`${runtime.piAuthProvider} token expired or expiring soon — refreshing before session start`);
         await this.refreshAndPushTokens();
@@ -754,7 +796,8 @@ export class PiAgent extends BaseAgent {
     // Spawn the subprocess
     let child: ChildProcess;
     try {
-      child = spawn(nodePath, args, {
+      const protectedCommand = protectApplicationCommand(nodePath, args);
+      child = spawn(protectedCommand.command, protectedCommand.args, {
         cwd,
         stdio: ['pipe', 'pipe', 'pipe'],
         env: buildPiSubprocessEnvironment({
@@ -778,6 +821,8 @@ export class PiAgent extends BaseAgent {
     }
 
     this.subprocess = child;
+    this.subprocessRuntimeContext = subprocessRuntimeContext;
+    this.subprocessRuntimeContexts.set(child, subprocessRuntimeContext);
     const configuredIdleMs = Number(process.env.CRAFT_AGENT_PROCESS_IDLE_TIMEOUT_MS);
     this.subprocessSupervisorHandle = registerLongRunningProcess(child, {
       id: `pi-agent:${sessionId}:${child.pid ?? Date.now()}`,
@@ -800,7 +845,7 @@ export class PiAgent extends BaseAgent {
     });
 
     this.readline.on('line', (line: string) => {
-      this.handleLine(line);
+      this.handleLine(line, child, subprocessRuntimeContext);
     });
 
     // Always capture stderr into a bounded ring buffer so callers (e.g. the
@@ -822,13 +867,20 @@ export class PiAgent extends BaseAgent {
       this.debug(`Pi subprocess stdin closed while sending command: ${error.code || error.message}`);
     });
 
-    // Handle subprocess exit
-    child.on('exit', (code, signal) => {
-      this.handleSubprocessExit(code, signal, child);
-    });
+    // `error` does not prove process termination and Node may emit `close`
+    // without `exit` after a spawn failure. Converge both terminal signals
+    // exactly once while preserving the diagnostic captured below.
+    let terminationHandled = false;
+    const handleConfirmedTermination = (code: number | null, signal: NodeJS.Signals | null) => {
+      if (terminationHandled) return;
+      terminationHandled = true;
+      this.handleSubprocessExit(code, signal, child, undefined, subprocessRuntimeContext);
+    };
+    child.on('exit', handleConfirmedTermination);
+    child.on('close', handleConfirmedTermination);
 
     child.on('error', (error) => {
-      this.handleSubprocessError(error, child);
+      this.handleSubprocessError(error, child, subprocessRuntimeContext);
     });
 
     const startupTimeoutMs = resolvePiSubprocessStartupTimeoutMs(
@@ -848,6 +900,7 @@ export class PiAgent extends BaseAgent {
       } else {
         child.kill('SIGTERM');
       }
+      this.scheduleSubprocessForceKill(child, subprocessRuntimeContext);
     }, startupTimeoutMs);
     this.subprocessReadyTimer.unref?.();
 
@@ -862,6 +915,7 @@ export class PiAgent extends BaseAgent {
       type: 'init',
       apiKey: legacyApiKey || '',
       model: this._model,
+      modelRoutePinned: this.modelRoutePinned(),
       cwd,
       thinkingLevel: this._thinkingLevel,
       workspaceRootPath: this.config.workspace.rootPath,
@@ -958,14 +1012,15 @@ export class PiAgent extends BaseAgent {
       const slug = this.config.connectionSlug || 'pi';
 
       if (this.config.authType === 'oauth') {
-        const oauth = await credentialManager.getLlmOAuth(slug);
+        const oauth = await credentialManager.getLlmOAuth(
+          slug,
+          this.config.expectedLlmCredentialBindingId,
+        );
         if (oauth?.accessToken) {
-          // Copilot: pass full OAuth credential so the Pi SDK can derive the
-          // correct API endpoint from the Copilot token's proxy-ep field.
-          // The refresh token is the GitHub access token used to obtain fresh
-          // Copilot tokens when they expire (~1 hour).
-          if (piAuthProvider === 'github-copilot' && oauth.refreshToken) {
-            this.debug(`Retrieved Copilot OAuth credential for Pi provider: ${piAuthProvider}`);
+          // Copilot and OpenAI Codex: pass full OAuth credential so the Pi SDK can derive the
+          // correct API endpoint and perform native token refresh.
+          if ((piAuthProvider === 'github-copilot' || piAuthProvider === 'openai-codex') && oauth.refreshToken) {
+            this.debug(`Retrieved ${piAuthProvider} OAuth credential for Pi provider`);
             return {
               provider: piAuthProvider,
               credential: {
@@ -987,7 +1042,10 @@ export class PiAgent extends BaseAgent {
         // AWS IAM credentials — pass structured fields so the subprocess can
         // identify the credential type. Actual AWS env var injection happens
         // at spawn time (see spawnSubprocess) for proper process isolation.
-        const iam = await credentialManager.getLlmIamCredentials(slug);
+        const iam = await credentialManager.getLlmIamCredentials(
+          slug,
+          this.config.expectedLlmCredentialBindingId,
+        );
         if (iam) {
           this.debug(`Retrieved IAM credentials for Pi provider: ${piAuthProvider}`);
           return {
@@ -1007,7 +1065,10 @@ export class PiAgent extends BaseAgent {
         // intentionally falls through here, finds no API key, and returns null.
         // buildAwsEnv() grants the AWS credential chain only to the selected
         // Bedrock subprocess; it is not part of generic process.env inheritance.
-        const apiKey = await credentialManager.getLlmApiKey(slug);
+        const apiKey = await credentialManager.getLlmApiKey(
+          slug,
+          this.config.expectedLlmCredentialBindingId,
+        );
         if (apiKey) {
           this.debug(`Retrieved API key credential for Pi provider: ${piAuthProvider}`);
           return {
@@ -1082,17 +1143,21 @@ export class PiAgent extends BaseAgent {
     if (this.config.authType !== 'oauth') return;
 
     const slug = this.config.connectionSlug || 'pi';
+    const expectedBindingId = this.config.expectedLlmCredentialBindingId;
+    const refreshKey = `${slug}\u0000${expectedBindingId ?? 'unsealed'}`;
 
     // Global mutex — if another PiAgent instance on the same connection slug
     // is already refreshing, just wait for that to finish and push the
     // (now-fresh) credentials to our subprocess.
-    const existing = PiAgent.globalRefreshMutex.get(slug);
+    const existing = PiAgent.globalRefreshMutex.get(refreshKey);
     if (existing) {
       this.debug(`Waiting on existing refresh for slug "${slug}"`);
       const outcome = await existing;
       // Reuse the credential returned by the successful owner. Re-reading the
       // store after a failed refresh could return and push the expired token.
-      if (outcome.refreshed && this.subprocess) {
+      if (outcome.refreshed
+        && outcome.bindingId === expectedBindingId
+        && this.subprocess) {
         this.send({ type: 'token_update', piAuth: outcome.piAuth });
         this.debug('Pushed credentials refreshed by sibling instance');
       }
@@ -1102,7 +1167,7 @@ export class PiAgent extends BaseAgent {
     const refreshPromise: Promise<TokenRefreshOutcome> = (async () => {
       const piAuthProvider = getBackendRuntime(this.config).piAuthProvider;
       const credentialManager = getCredentialManager();
-      const stored = await credentialManager.getLlmOAuth(slug);
+      const stored = await credentialManager.getLlmOAuth(slug, expectedBindingId);
 
       if (!stored?.refreshToken) {
         this.debug('No refresh token available — re-auth required');
@@ -1115,29 +1180,29 @@ export class PiAgent extends BaseAgent {
           // Copilot: refresh the short-lived Copilot token using the GitHub access token
           const { refreshGitHubCopilotToken } = await import('@earendil-works/pi-ai/oauth');
           const newCreds = await refreshGitHubCopilotToken(stored.refreshToken);
-          await credentialManager.setLlmOAuth(slug, {
+          await credentialManager.refreshLlmOAuth(slug, {
             accessToken: newCreds.access,
             refreshToken: newCreds.refresh,
             expiresAt: newCreds.expires,
-          });
+          }, expectedBindingId);
         } else if (piAuthProvider === 'google-gemini-code-assist') {
           const { refreshGoogleGeminiTokens } = await import('@craft-agent/shared/auth');
           const newTokens = await refreshGoogleGeminiTokens(stored.refreshToken);
-          await credentialManager.setLlmOAuth(slug, {
+          await credentialManager.refreshLlmOAuth(slug, {
             accessToken: newTokens.accessToken,
             idToken: newTokens.idToken,
             refreshToken: newTokens.refreshToken ?? stored.refreshToken,
             expiresAt: newTokens.expiresAt,
-          });
+          }, expectedBindingId);
         } else {
           // ChatGPT Plus: use existing refresh utility
           const newTokens = await refreshChatGptTokens(stored.refreshToken);
-          await credentialManager.setLlmOAuth(slug, {
+          await credentialManager.refreshLlmOAuth(slug, {
             accessToken: newTokens.accessToken,
             idToken: newTokens.idToken,
             refreshToken: newTokens.refreshToken,
             expiresAt: newTokens.expiresAt,
-          });
+          }, expectedBindingId);
         }
         this.debug('Token refresh successful');
 
@@ -1154,7 +1219,7 @@ export class PiAgent extends BaseAgent {
           this.send({ type: 'token_update', piAuth });
           this.debug('Pushed refreshed credentials to subprocess');
         }
-        return { refreshed: true, piAuth };
+        return { refreshed: true, piAuth, bindingId: expectedBindingId };
       } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
         this.debug(`Token refresh failed: ${msg}`);
@@ -1165,15 +1230,15 @@ export class PiAgent extends BaseAgent {
 
     // Store in both instance and global mutex
     this.tokenRefreshInProgress = refreshPromise;
-    PiAgent.globalRefreshMutex.set(slug, refreshPromise);
+    PiAgent.globalRefreshMutex.set(refreshKey, refreshPromise);
 
     try {
       await refreshPromise;
     } finally {
       this.tokenRefreshInProgress = null;
       // Only clear global if it's still our promise (no newer refresh started)
-      if (PiAgent.globalRefreshMutex.get(slug) === refreshPromise) {
-        PiAgent.globalRefreshMutex.delete(slug);
+      if (PiAgent.globalRefreshMutex.get(refreshKey) === refreshPromise) {
+        PiAgent.globalRefreshMutex.delete(refreshKey);
       }
     }
   }
@@ -1189,14 +1254,19 @@ export class PiAgent extends BaseAgent {
       const slug = this.config.connectionSlug || 'pi';
 
       // Try LLM OAuth first (for OAuth-based connections)
-      const oauth = await credentialManager.getLlmOAuth(slug);
+      const oauth = await credentialManager.getLlmOAuth(
+        slug,
+        this.config.expectedLlmCredentialBindingId,
+      );
       if (oauth?.accessToken) {
         this.debug('Retrieved API key from LLM OAuth');
         return oauth.accessToken;
       }
 
       // Try Anthropic API key
-      const apiKey = await credentialManager.getApiKey();
+      const apiKey = this.config.expectedLlmCredentialBindingId
+        ? await credentialManager.getLlmApiKey(slug, this.config.expectedLlmCredentialBindingId)
+        : await credentialManager.getApiKey();
       if (apiKey) {
         this.debug('Retrieved Anthropic API key');
         return apiKey;
@@ -1213,21 +1283,54 @@ export class PiAgent extends BaseAgent {
   /**
    * Send a JSONL command to the subprocess stdin.
    */
-  private send(cmd: Record<string, unknown>): void {
+  private send(cmd: Record<string, unknown>): boolean {
     if (!this.subprocess?.stdin?.writable) {
       this.debug('Cannot send to subprocess: stdin not writable');
-      return;
+      return false;
     }
     const line = JSON.stringify(cmd);
     this.subprocessSupervisorHandle?.touch();
-    this.subprocess.stdin.write(line + '\n');
+    try {
+      this.subprocess.stdin.write(line + '\n');
+      return true;
+    } catch (error) {
+      this.debug(`Cannot send to subprocess: ${error instanceof Error ? error.message : String(error)}`);
+      return false;
+    }
+  }
+
+  /** Never deliver an older generation's delayed response to a replacement subprocess. */
+  private sendForRuntime(
+    cmd: Record<string, unknown>,
+    runtimeContext?: PiSubprocessRuntimeContext,
+  ): boolean {
+    if (runtimeContext
+      && this.subprocessRuntimeContext?.runtimeId !== runtimeContext.runtimeId) {
+      this.debug(`Dropping delayed Pi response for stale runtime ${runtimeContext.runtimeId}`);
+      return false;
+    }
+    this.send(cmd);
+    return true;
+  }
+
+  private isRuntimeCurrent(runtimeContext?: PiSubprocessRuntimeContext): boolean {
+    return !runtimeContext
+      || this.subprocessRuntimeContext?.runtimeId === runtimeContext.runtimeId;
   }
 
   /**
    * Parse a JSONL line from subprocess stdout and dispatch by type.
    */
-  private handleLine(line: string): void {
+  private handleLine(
+    line: string,
+    child?: ChildProcess,
+    runtimeContext?: PiSubprocessRuntimeContext,
+  ): void {
     if (!line.trim()) return;
+    if (child && (this.subprocess !== child || !this.isRuntimeCurrent(runtimeContext))) {
+      this.debug('Ignoring output from stale Pi subprocess generation');
+      return;
+    }
 
     let msg: Record<string, unknown>;
     try {
@@ -1254,6 +1357,19 @@ export class PiAgent extends BaseAgent {
         this.resolveSubprocessReady();
         break;
 
+      case 'provider_handoff': {
+        const id = typeof msg.id === 'string' ? msg.id : undefined;
+        const acknowledge = id ? this.pendingProviderHandoffs.get(id) : undefined;
+        if (id && acknowledge) {
+          this.pendingProviderHandoffs.delete(id);
+          this.pendingProviderDispatchRejections.delete(id);
+          acknowledge();
+        } else {
+          this.debug(`Ignoring unmatched provider handoff acknowledgement: ${id ?? 'missing id'}`);
+        }
+        break;
+      }
+
       case 'event':
         // Pi SDK event -- forward through PiEventAdapter
         this.handleSubprocessEvent(msg.event as Record<string, unknown>);
@@ -1261,21 +1377,22 @@ export class PiAgent extends BaseAgent {
 
       case 'pre_tool_use_request':
         // Subprocess needs permission check + transforms before tool execution
-        this.handlePreToolUseRequest(msg as {
+        void this.handlePreToolUseRequest(msg as {
           requestId: string;
           toolName: string;
           toolCallId?: string;
           input: Record<string, unknown>;
-        });
+        }, runtimeContext ?? this.subprocessRuntimeContext ?? undefined);
         break;
 
       case 'tool_execute_request':
         // Subprocess wants main process to execute a proxy tool (MCP/API/session)
-        this.handleToolExecuteRequest(msg as {
+        void this.handleToolExecuteRequest(msg as {
           requestId: string;
           toolName: string;
+          toolCallId?: string;
           args: Record<string, unknown>;
-        });
+        }, runtimeContext ?? this.subprocessRuntimeContext ?? undefined);
         break;
 
       case 'session_tool_completed':
@@ -1336,6 +1453,13 @@ export class PiAgent extends BaseAgent {
       case 'error': {
         const errorCode = typeof msg.code === 'string' ? msg.code : undefined;
         const rawMessage = String(msg.message || 'Unknown subprocess error');
+
+        if (errorCode === 'prompt_error' && typeof msg.id === 'string') {
+          this.pendingProviderHandoffs.delete(msg.id);
+          const reject = this.pendingProviderDispatchRejections.get(msg.id);
+          this.pendingProviderDispatchRejections.delete(msg.id);
+          reject?.();
+        }
 
         this.debug(`Subprocess error${errorCode ? ` (${errorCode})` : ''}: ${rawMessage}`);
         const errorMsg = rawMessage.toLowerCase();
@@ -1473,6 +1597,7 @@ export class PiAgent extends BaseAgent {
     if (eventType === 'tool_execution_end') {
       const toolCallId = event.toolCallId as string | undefined;
       if (toolCallId) {
+        this.settleAdmittedToolExecution(toolCallId);
         this.preToolMetadataByCallId.delete(toolCallId);
       }
     }
@@ -1494,9 +1619,27 @@ export class PiAgent extends BaseAgent {
         });
       }
 
-      // Track Read tool calls for prerequisite checking
-      if (agentEvent.type === 'tool_start' && agentEvent.toolName === 'Read') {
-        this.prerequisiteManager.trackReadTool(agentEvent.input as Record<string, unknown>);
+      // Correlate the successful result with its acquisition input; start alone earns no credit.
+      if (agentEvent.type === 'tool_start') {
+        this.prerequisiteManager.trackToolStart(agentEvent.toolUseId, agentEvent.toolName, agentEvent.input);
+      }
+      if (agentEvent.type === 'tool_result') {
+        this.prerequisiteManager.trackToolCompletion(agentEvent.toolUseId,
+          agentEvent.result, agentEvent.isError, agentEvent.executed !== false);
+        const currentRequest = this.getCurrentTurnUserMessage() ?? undefined;
+        const currentAuthority = this.config.getObjectiveMutationAuthority?.(currentRequest);
+        recordContextualGmailToolResult({
+          sessionId: this.config.session?.id || this._sessionId,
+          toolUseId: agentEvent.toolUseId,
+          toolName: agentEvent.toolName,
+          toolInput: agentEvent.input,
+          result: agentEvent.result,
+          isError: agentEvent.isError,
+          executed: agentEvent.executed,
+          objectiveAuthorizationSegments: typeof currentAuthority === 'object'
+            ? currentAuthority.authorizationSegments
+            : currentRequest ? [currentRequest] : [],
+        });
       }
       // Reset prerequisite state on compaction (LLM loses guide content)
       if (agentEvent.type === 'info' && typeof agentEvent.message === 'string' && agentEvent.message.startsWith('Compacted')) {
@@ -1539,9 +1682,22 @@ export class PiAgent extends BaseAgent {
     toolName: string;
     toolCallId?: string;
     input: Record<string, unknown>;
-  }): Promise<void> {
+  }, runtimeContext?: PiSubprocessRuntimeContext): Promise<void> {
     const { requestId, toolName, toolCallId, input } = req;
-    const debugSessionId = this.config.session?.id || this._sessionId;
+    const authorizationEpoch = this.promptPreparationRevision;
+    const debugSessionId = runtimeContext?.sessionId
+      ?? this.config.session?.id
+      ?? this._sessionId;
+    const respond = (message: Record<string, unknown>) => {
+      this.sendPreToolUseDecision({
+        requestId,
+        toolName,
+        toolCallId,
+        originalInput: input,
+        runtimeContext,
+        authorizationEpoch,
+      }, message);
+    };
     this.debug(`PreToolUse request from subprocess: ${toolName} (${requestId}, sessionId=${debugSessionId})`);
 
     // Capture metadata BEFORE centralized checks strip it out.
@@ -1563,10 +1719,13 @@ export class PiAgent extends BaseAgent {
       tool_name: toolName,
       tool_input: input,
     });
+    if (!this.isRuntimeCurrent(runtimeContext)) return;
 
     const rootPath = this.config.workspace.rootPath ?? this.workingDirectory;
     const workspaceSlug = extractWorkspaceSlug(rootPath, this.config.workspace.id);
-    const sessionId = this.config.session?.id || this._sessionId;
+    const sessionId = runtimeContext?.sessionId
+      ?? this.config.session?.id
+      ?? this._sessionId;
     const plansFolderPath = sessionId
       ? getSessionPlansPath(rootPath, sessionId)
       : undefined;
@@ -1580,10 +1739,25 @@ export class PiAgent extends BaseAgent {
       ? { enabled: true, path: getRtkPath(), exclude: [] }
       : undefined;
 
+    const currentUserRequest = this.getCurrentTurnUserMessage() ?? undefined;
+    const objectiveAuthority = this.config.getObjectiveMutationAuthority?.(currentUserRequest);
+    try {
+      await getSessionScopedToolCallbacks(sessionId)?.validateMissionCapabilitiesFn?.(toolName, input);
+    } catch (error) {
+      respond({
+        type: 'pre_tool_use_response',
+        requestId,
+        action: 'block',
+        reason: `Specialized Mission capability lease rejected this tool: ${error instanceof Error ? error.message : String(error)}`,
+      });
+      return;
+    }
     const checkResult = runPreToolUseChecks({
       toolName,
       input,
       sessionId,
+      toolUseId: toolCallId,
+      runtimeId: runtimeContext?.runtimeId,
       permissionMode: this.permissionManager.getPermissionMode(),
       workspaceRootPath: rootPath,
       workspaceId: workspaceSlug,
@@ -1591,25 +1765,38 @@ export class PiAgent extends BaseAgent {
       dataFolderPath,
       workingDirectory: this.config.session?.workingDirectory,
       executionIsolation: this.config.session?.executionIsolation,
+      missionCapabilityLock: this.config.missionCapabilityLock,
       activeSourceSlugs: Array.from(this.sourceManager.getActiveSlugs()),
       allSourceSlugs: this.sourceManager.getAllSources().map(s => s.config.slug),
       hasSourceActivation: !!this.onSourceActivationRequest,
       permissionManager: this.permissionManager,
       prerequisiteManager: this.prerequisiteManager,
       preloadedSourceGuidePaths: this.sourceManager.getPreloadedSourceGuidePaths(),
-      currentUserRequest: this.getCurrentTurnUserMessage() ?? undefined,
+      currentUserRequest,
+      declaredToolCapabilities: this.mcpPool?.getProxyToolCapabilities(toolName),
       externalActionPolicy: this.config.externalActionPolicy,
+      humanInputAllowed: this.config.getHumanInputAllowed?.(),
+      objectiveMutationAuthorized: typeof objectiveAuthority === 'boolean'
+        ? objectiveAuthority : objectiveAuthority?.authorized,
+      objectiveSensitiveActionAuthorized: typeof objectiveAuthority === 'object'
+        ? objectiveAuthority.sensitiveActionAuthorized : objectiveAuthority,
+      objectiveAuthorizationSegments: typeof objectiveAuthority === 'object'
+        ? objectiveAuthority.authorizationSegments : undefined,
+      authenticatedUserAuthorizationSegments: typeof objectiveAuthority === 'object'
+        ? objectiveAuthority.authenticatedUserAuthorizationSegments : undefined,
+      objectiveTerminalReconciliationPolicy: typeof objectiveAuthority === 'object'
+        ? objectiveAuthority.terminalReconciliationPolicy : undefined,
       rtkContext,
       onDebug: (msg) => this.debug(`PreToolUse(sessionId=${sessionId}): ${msg}`),
     });
 
     switch (checkResult.type) {
       case 'allow':
-        this.send({ type: 'pre_tool_use_response', requestId, action: 'allow' });
+        respond({ type: 'pre_tool_use_response', requestId, action: 'allow' });
         return;
 
       case 'modify':
-        this.send({ type: 'pre_tool_use_response', requestId, action: 'modify', input: checkResult.input });
+        respond({ type: 'pre_tool_use_response', requestId, action: 'modify', input: checkResult.input });
         return;
 
       case 'block': {
@@ -1623,7 +1810,7 @@ export class PiAgent extends BaseAgent {
           changedAt: diagnostics.lastChangedAt,
           reason: checkResult.reason,
         })}`);
-        this.send({ type: 'pre_tool_use_response', requestId, action: 'block', reason: checkResult.reason });
+        respond({ type: 'pre_tool_use_response', requestId, action: 'block', reason: checkResult.reason });
         return;
       }
 
@@ -1631,14 +1818,25 @@ export class PiAgent extends BaseAgent {
         const { sourceSlug, sourceExists } = checkResult;
         this.debug(`PreToolUse(sessionId=${sessionId}): Source "${sourceSlug}" not active, attempting activation...`);
 
+        if (!this.onSourceActivationRequest) {
+          respond({
+            type: 'pre_tool_use_response',
+            requestId,
+            action: 'block',
+            reason: `Source "${sourceSlug}" is not active and no host activation handler is available. The tool was not executed.`,
+          });
+          return;
+        }
+
         if (this.onSourceActivationRequest) {
           try {
             const activated = await this.onSourceActivationRequest(sourceSlug);
+            if (!this.isRuntimeCurrent(runtimeContext)) return;
             if (!activated) {
               const reason = sourceExists
                 ? `Source "${sourceSlug}" is not active. Activate it by @mentioning it in your message or via the source icon at the bottom of the input field.`
                 : `Source "${sourceSlug}" is not available yet. It needs to be created and configured first.`;
-              this.send({ type: 'pre_tool_use_response', requestId, action: 'block', reason });
+              respond({ type: 'pre_tool_use_response', requestId, action: 'block', reason });
               return;
             }
             this.debug(`PreToolUse(sessionId=${sessionId}): Source "${sourceSlug}" activated successfully`);
@@ -1651,16 +1849,21 @@ export class PiAgent extends BaseAgent {
             const reason = sourceExists
               ? `Source "${sourceSlug}" could not be activated: ${err}`
               : `Source "${sourceSlug}" is not available yet. It needs to be created and configured first.`;
-            this.send({ type: 'pre_tool_use_response', requestId, action: 'block', reason });
+            respond({ type: 'pre_tool_use_response', requestId, action: 'block', reason });
             return;
           }
         }
 
         // Re-run pipeline after activation
+        const postCurrentUserRequest = this.getCurrentTurnUserMessage() ?? undefined;
+        const postObjectiveAuthority = this.config.getObjectiveMutationAuthority?.(postCurrentUserRequest);
         const postResult = runPreToolUseChecks({
           toolName,
           input,
           sessionId,
+          toolUseId: toolCallId,
+          runtimeId: runtimeContext?.runtimeId,
+          sourceActivationReentry: true,
           permissionMode: this.permissionManager.getPermissionMode(),
           workspaceRootPath: rootPath,
           workspaceId: workspaceSlug,
@@ -1668,38 +1871,106 @@ export class PiAgent extends BaseAgent {
           dataFolderPath,
           workingDirectory: this.config.session?.workingDirectory,
           executionIsolation: this.config.session?.executionIsolation,
+          missionCapabilityLock: this.config.missionCapabilityLock,
           activeSourceSlugs: Array.from(this.sourceManager.getActiveSlugs()),
           allSourceSlugs: this.sourceManager.getAllSources().map(s => s.config.slug),
           hasSourceActivation: !!this.onSourceActivationRequest,
           permissionManager: this.permissionManager,
           prerequisiteManager: this.prerequisiteManager,
           preloadedSourceGuidePaths: this.sourceManager.getPreloadedSourceGuidePaths(),
-          currentUserRequest: this.getCurrentTurnUserMessage() ?? undefined,
+          currentUserRequest: postCurrentUserRequest,
+          declaredToolCapabilities: this.mcpPool?.getProxyToolCapabilities(toolName),
           externalActionPolicy: this.config.externalActionPolicy,
+          humanInputAllowed: this.config.getHumanInputAllowed?.(),
+          objectiveMutationAuthorized: typeof postObjectiveAuthority === 'boolean'
+            ? postObjectiveAuthority : postObjectiveAuthority?.authorized,
+          objectiveSensitiveActionAuthorized: typeof postObjectiveAuthority === 'object'
+            ? postObjectiveAuthority.sensitiveActionAuthorized : postObjectiveAuthority,
+          objectiveAuthorizationSegments: typeof postObjectiveAuthority === 'object'
+            ? postObjectiveAuthority.authorizationSegments : undefined,
+          authenticatedUserAuthorizationSegments: typeof postObjectiveAuthority === 'object'
+            ? postObjectiveAuthority.authenticatedUserAuthorizationSegments : undefined,
+          objectiveTerminalReconciliationPolicy: typeof postObjectiveAuthority === 'object'
+            ? postObjectiveAuthority.terminalReconciliationPolicy : undefined,
           rtkContext,
           onDebug: (msg) => this.debug(`PreToolUse(sessionId=${sessionId}): ${msg}`),
         });
 
-        if (postResult.type === 'modify') {
-          this.send({ type: 'pre_tool_use_response', requestId, action: 'modify', input: postResult.input });
-        } else if (postResult.type === 'block') {
-          this.send({ type: 'pre_tool_use_response', requestId, action: 'block', reason: postResult.reason });
-        } else if (postResult.type === 'prompt') {
-          await this.handlePreToolUsePrompt(requestId, toolName, sessionId, postResult);
-        } else {
-          this.send({ type: 'pre_tool_use_response', requestId, action: 'allow' });
+        switch (postResult.type) {
+          case 'allow':
+            respond({ type: 'pre_tool_use_response', requestId, action: 'allow' });
+            break;
+          case 'modify':
+            respond({ type: 'pre_tool_use_response', requestId, action: 'modify', input: postResult.input });
+            break;
+          case 'block':
+            respond({ type: 'pre_tool_use_response', requestId, action: 'block', reason: postResult.reason });
+            break;
+          case 'prompt':
+            await this.handlePreToolUsePrompt(
+              requestId,
+              toolName,
+              input,
+              sessionId,
+              postResult,
+              toolCallId,
+              runtimeContext,
+              authorizationEpoch,
+            );
+            break;
+          case 'source_activation_needed':
+            respond({
+              type: 'pre_tool_use_response',
+              requestId,
+              action: 'block',
+              reason: `Source "${postResult.sourceSlug}" is still inactive after the activation attempt. The tool was not executed; retry only after the host reports the source active.`,
+            });
+            break;
+          case 'call_llm_intercept': {
+            const constrainedInput = { ...postResult.input, model: this.getModel() };
+            respond({
+              type: 'pre_tool_use_response',
+              requestId,
+              action: constrainedInput === postResult.input ? 'allow' : 'modify',
+              ...(constrainedInput === postResult.input ? {} : { input: constrainedInput }),
+            });
+            break;
+          }
+          case 'spawn_session_intercept':
+            respond({ type: 'pre_tool_use_response', requestId, action: 'modify', input: postResult.input });
+            break;
         }
         return;
       }
 
-      case 'call_llm_intercept':
+      case 'call_llm_intercept': {
+        // Re-read the live pin after every permission/automation await. The
+        // subprocess receives the authoritative active model when Manual won.
+        const constrainedInput = { ...checkResult.input, model: this.getModel() };
+        respond({
+          type: 'pre_tool_use_response',
+          requestId,
+          action: constrainedInput === checkResult.input ? 'allow' : 'modify',
+          ...(constrainedInput === checkResult.input ? {} : { input: constrainedInput }),
+        });
+        return;
+      }
+
       case 'spawn_session_intercept':
-        // These tools are proxy tools handled via tool_execute_request — just allow
-        this.send({ type: 'pre_tool_use_response', requestId, action: 'allow' });
+        respond({ type: 'pre_tool_use_response', requestId, action: 'modify', input: checkResult.input });
         return;
 
       case 'prompt': {
-        await this.handlePreToolUsePrompt(requestId, toolName, sessionId, checkResult);
+        await this.handlePreToolUsePrompt(
+          requestId,
+          toolName,
+          input,
+          sessionId,
+          checkResult,
+          toolCallId,
+          runtimeContext,
+          authorizationEpoch,
+        );
         return;
       }
     }
@@ -1708,22 +1979,59 @@ export class PiAgent extends BaseAgent {
   private async handlePreToolUsePrompt(
     requestId: string,
     toolName: string,
+    toolInput: Record<string, unknown>,
     sessionId: string,
     checkResult: Extract<PreToolUseCheckResult, { type: 'prompt' }>,
+    toolUseId?: string,
+    runtimeContext?: PiSubprocessRuntimeContext,
+    authorizationEpoch = this.promptPreparationRevision,
   ): Promise<void> {
+    const respond = (message: Record<string, unknown>) => {
+      this.sendPreToolUseDecision({
+        requestId,
+        toolName,
+        toolCallId: toolUseId,
+        originalInput: toolInput,
+        runtimeContext,
+        authorizationEpoch,
+      }, message);
+    };
     if (!this.onPermissionRequest) {
+      const gmailDecision = this.resolveContextualGmailPromptDecision(
+        sessionId,
+        toolName,
+        toolInput,
+        toolUseId,
+        false,
+      );
+      if (gmailDecision.applies) {
+        respond({
+          type: 'pre_tool_use_response',
+          requestId,
+          action: 'block',
+          reason: 'Explicit host approval is unavailable for this reserved Gmail reply. No reply was executed; run a fresh canonical preflight before any later retry.',
+        });
+        return;
+      }
       if (checkResult.requiresExplicitConfirmation) {
-        this.send({
+        respond({
           type: 'pre_tool_use_response',
           requestId,
           action: 'block',
           reason: 'Explicit confirmation is required for this sensitive external action, but no permission handler is available.',
         });
       } else if (checkResult.modifiedInput) {
-        // Preserve the existing headless behavior for ordinary Ask-mode prompts.
-        this.send({ type: 'pre_tool_use_response', requestId, action: 'modify', input: checkResult.modifiedInput });
+        // Ordinary Ask prompts retain the established headless behavior. Only
+        // explicitly sensitive actions and reserved Gmail replies require a
+        // live host decision.
+        respond({
+          type: 'pre_tool_use_response',
+          requestId,
+          action: 'modify',
+          input: checkResult.modifiedInput,
+        });
       } else {
-        this.send({ type: 'pre_tool_use_response', requestId, action: 'allow' });
+        respond({ type: 'pre_tool_use_response', requestId, action: 'allow' });
       }
       return;
     }
@@ -1741,6 +2049,7 @@ export class PiAgent extends BaseAgent {
     this.onPermissionRequest({
       requestId: permRequestId,
       toolName,
+      toolUseId,
       command: checkResult.command,
       description: checkResult.description,
       type: checkResult.promptType,
@@ -1753,18 +2062,205 @@ export class PiAgent extends BaseAgent {
       approvalTtlSeconds: checkResult.approvalTtlSeconds,
       sensitiveActionCategory: checkResult.sensitiveActionCategory,
       sensitiveActionTargets: checkResult.sensitiveActionTargets,
+      sensitiveActionOperationHash: checkResult.sensitiveActionOperationHash,
     });
 
     const allowed = await permissionPromise;
     this.pendingPermissions.delete(permRequestId);
+    if (!this.isRuntimeCurrent(runtimeContext)) return;
+    let approvedInput = checkResult.modifiedInput ?? toolInput;
+    if (allowed) {
+      const rootPath = this.config.workspace.rootPath ?? this.workingDirectory;
+      const workspaceSlug = extractWorkspaceSlug(rootPath, this.config.workspace.id);
+      const currentUserRequest = this.getCurrentTurnUserMessage() ?? undefined;
+      const objectiveAuthority = this.config.getObjectiveMutationAuthority?.(currentUserRequest);
+      const rtkContext: RtkContext | undefined = getRtkEnabled()
+        ? { enabled: true, path: getRtkPath(), exclude: [] }
+        : undefined;
+      const approvalCheck = runPreToolUseChecks({
+        toolName,
+        input: approvedInput,
+        sessionId,
+        toolUseId,
+        runtimeId: runtimeContext?.runtimeId,
+        permissionApprovalReentry: true,
+        permissionMode: this.permissionManager.getPermissionMode(),
+        workspaceRootPath: rootPath,
+        workspaceId: workspaceSlug,
+        plansFolderPath: getSessionPlansPath(rootPath, sessionId),
+        dataFolderPath: getSessionDataPath(rootPath, sessionId),
+        workingDirectory: this.config.session?.workingDirectory,
+        executionIsolation: this.config.session?.executionIsolation,
+        missionCapabilityLock: this.config.missionCapabilityLock,
+        activeSourceSlugs: Array.from(this.sourceManager.getActiveSlugs()),
+        allSourceSlugs: this.sourceManager.getAllSources().map(s => s.config.slug),
+        hasSourceActivation: !!this.onSourceActivationRequest,
+        permissionManager: this.permissionManager,
+        prerequisiteManager: this.prerequisiteManager,
+        preloadedSourceGuidePaths: this.sourceManager.getPreloadedSourceGuidePaths(),
+        currentUserRequest,
+        declaredToolCapabilities: this.mcpPool?.getProxyToolCapabilities(toolName),
+        externalActionPolicy: this.config.externalActionPolicy,
+        humanInputAllowed: this.config.getHumanInputAllowed?.(),
+        objectiveMutationAuthorized: typeof objectiveAuthority === 'boolean'
+          ? objectiveAuthority : objectiveAuthority?.authorized,
+        objectiveSensitiveActionAuthorized: typeof objectiveAuthority === 'object'
+          ? objectiveAuthority.sensitiveActionAuthorized : objectiveAuthority,
+        objectiveAuthorizationSegments: typeof objectiveAuthority === 'object'
+          ? objectiveAuthority.authorizationSegments : undefined,
+        authenticatedUserAuthorizationSegments: typeof objectiveAuthority === 'object'
+          ? objectiveAuthority.authenticatedUserAuthorizationSegments : undefined,
+        objectiveTerminalReconciliationPolicy: typeof objectiveAuthority === 'object'
+          ? objectiveAuthority.terminalReconciliationPolicy : undefined,
+        rtkContext,
+        onDebug: msg => this.debug(`PostPermissionPreToolUse(sessionId=${sessionId}): ${msg}`),
+      });
+      if (approvalCheck.type === 'block' || approvalCheck.type === 'source_activation_needed') {
+        respond({
+          type: 'pre_tool_use_response',
+          requestId,
+          action: 'block',
+          reason: approvalCheck.type === 'block'
+            ? approvalCheck.reason
+            : `Source "${approvalCheck.sourceSlug}" changed while permission was pending. The approved tool was not executed.`,
+        });
+        return;
+      }
+      if (approvalCheck.type === 'modify') approvedInput = approvalCheck.input;
+      else if (approvalCheck.type === 'prompt' && approvalCheck.modifiedInput) {
+        approvedInput = approvalCheck.modifiedInput;
+      }
+    }
+    const gmailDecision = this.resolveContextualGmailPromptDecision(
+      sessionId,
+      toolName,
+      toolInput,
+      toolUseId,
+      allowed,
+    );
 
     if (!allowed) {
-      this.send({ type: 'pre_tool_use_response', requestId, action: 'block', reason: 'Permission denied by user.' });
-    } else if (checkResult.modifiedInput) {
-      this.send({ type: 'pre_tool_use_response', requestId, action: 'modify', input: checkResult.modifiedInput });
+      respond({ type: 'pre_tool_use_response', requestId, action: 'block', reason: 'Permission denied by user.' });
+    } else if (gmailDecision.applies && !gmailDecision.allowed) {
+      respond({
+        type: 'pre_tool_use_response',
+        requestId,
+        action: 'block',
+        reason: gmailDecision.reason,
+      });
+    } else if (approvedInput !== toolInput) {
+      respond({ type: 'pre_tool_use_response', requestId, action: 'modify', input: approvedInput });
     } else {
-      this.send({ type: 'pre_tool_use_response', requestId, action: 'allow' });
+      respond({ type: 'pre_tool_use_response', requestId, action: 'allow' });
     }
+  }
+
+  private resolveContextualGmailPromptDecision(
+    sessionId: string,
+    toolName: string,
+    toolInput: Record<string, unknown>,
+    toolUseId: string | undefined,
+    approved: boolean,
+  ) {
+    const currentRequest = this.getCurrentTurnUserMessage() ?? undefined;
+    const currentAuthority = this.config.getObjectiveMutationAuthority?.(currentRequest);
+    return resolveContextualGmailPromptReservation({
+      sessionId,
+      toolUseId,
+      toolName,
+      toolInput,
+      approved,
+      permissionMode: getPermissionModeDiagnostics(sessionId).permissionMode,
+      activeSourceSlugs: Array.from(this.sourceManager.getActiveSlugs()),
+      objectiveAuthorizationSegments: typeof currentAuthority === 'object'
+        ? currentAuthority.authorizationSegments
+        : currentRequest ? [currentRequest] : [],
+    });
+  }
+
+  /**
+   * Keep the PreToolUse admission entirely in host memory. No bearer value is
+   * serialized into the provider input, transcript, result or diagnostics.
+   */
+  private sendPreToolUseDecision(
+    request: {
+      requestId: string;
+      toolName: string;
+      toolCallId?: string;
+      originalInput: Record<string, unknown>;
+      runtimeContext?: PiSubprocessRuntimeContext;
+      authorizationEpoch: number;
+    },
+    decision: Record<string, unknown>,
+  ): void {
+    const action = decision.action;
+    if (action === 'allow' || action === 'modify') {
+      const approvedInput = action === 'modify'
+        ? decision.input as Record<string, unknown> | undefined
+        : request.originalInput;
+      const sessionId = request.runtimeContext?.sessionId
+        ?? this.config.session?.id
+        ?? this._sessionId;
+      const runtimeId = request.runtimeContext?.runtimeId
+        ?? this.subprocessRuntimeContext?.runtimeId
+        ?? '';
+      const executionStillCurrent = () => request.authorizationEpoch === this.promptPreparationRevision
+        && this.isRuntimeCurrent(request.runtimeContext)
+        && sessionId.length > 0 && runtimeId.length > 0
+        && !!approvedInput;
+      const block = (reason: string) => {
+        this.sendForRuntime({
+          type: 'pre_tool_use_response',
+          requestId: request.requestId,
+          action: 'block',
+          reason,
+        }, request.runtimeContext);
+      };
+      const admitAndSend = () => {
+        const admitted = executionStillCurrent() && this.admitToolExecution({
+          toolUseId: request.toolCallId,
+          toolName: request.toolName,
+          toolInput: approvedInput!,
+          sessionId,
+          runtimeId,
+          authorizationEpoch: request.authorizationEpoch,
+        });
+        if (!admitted) {
+          block('The host could not bind this tool approval to one exact execution. The tool was not executed.');
+          return;
+        }
+        this.sendForRuntime(decision, request.runtimeContext);
+      };
+      if (!executionStillCurrent()) {
+        block('The host could not bind this tool approval to one exact execution. The tool was not executed.');
+        return;
+      }
+
+      const durabilityBarrier = this.config.beforeToolExecution;
+      if (durabilityBarrier) {
+        void (async () => {
+          try {
+            await durabilityBarrier({
+              toolUseId: request.toolCallId,
+              toolName: request.toolName,
+              toolInput: approvedInput!,
+            });
+          } catch (error) {
+            block(error instanceof ToolAdmissionRecoveryError
+              ? error.safeReason
+              : 'The host could not durably record this tool admission. The tool was not executed.');
+            return;
+          }
+          // Stop, steering, or runtime replacement may win while durability is
+          // being established. Admission remains exact and fail-closed.
+          admitAndSend();
+        })();
+        return;
+      }
+      admitAndSend();
+      return;
+    }
+    this.sendForRuntime(decision, request.runtimeContext);
   }
 
   /**
@@ -1777,28 +2273,86 @@ export class PiAgent extends BaseAgent {
   private async handleToolExecuteRequest(request: {
     requestId: string;
     toolName: string;
+    toolCallId?: string;
     args: Record<string, unknown>;
-  }): Promise<void> {
-    // Prerequisite check: block source tools until guide.md is read
-    const prereqResult = this.prerequisiteManager.checkPrerequisites(request.toolName);
-    if (!prereqResult.allowed) {
-      this.send({
+  }, runtimeContext?: PiSubprocessRuntimeContext): Promise<void> {
+    if (!this.isRuntimeCurrent(runtimeContext)) return;
+    const respond = (message: Record<string, unknown>) => {
+      this.sendForRuntime(message, runtimeContext);
+    };
+    const sessionId = runtimeContext?.sessionId
+      ?? this.config.session?.id
+      ?? this._sessionId;
+    const runtimeId = runtimeContext?.runtimeId
+      ?? this.subprocessRuntimeContext?.runtimeId
+      ?? '';
+    if (!this.beginAdmittedToolExecution({
+      toolUseId: request.toolCallId,
+      toolName: request.toolName,
+      toolInput: request.args,
+      sessionId,
+      runtimeId,
+      authorizationEpoch: this.promptPreparationRevision,
+    })) {
+      respond({
         type: 'tool_execute_response',
         requestId: request.requestId,
-        result: { content: prereqResult.blockReason!, isError: true },
+        result: {
+          content: 'The host did not find one exact current PreToolUse admission for this execution. The tool was not executed.',
+          isError: true,
+        },
       });
       return;
     }
+    // Claim a bound Gmail invocation before any local routing branch. Even if
+    // prerequisites changed or the proxy disappeared after PreToolUse, the
+    // exact reservation must reach a terminal state instead of remaining
+    // locked forever.
+    const hostGuard = this.beginContextualGmailHostExecution({
+      sessionId,
+      runtimeId,
+      toolUseId: request.toolCallId,
+      toolName: request.toolName,
+      toolInput: request.args,
+    });
+    if (hostGuard.applies && !hostGuard.allowed) {
+      this.settleAdmittedToolExecution(request.toolCallId);
+      respond({
+        type: 'tool_execute_response',
+        requestId: request.requestId,
+        result: { content: hostGuard.reason, isError: true },
+      });
+      return;
+    }
+    const ticket = hostGuard.applies && hostGuard.allowed
+      ? hostGuard.ticket
+      : undefined;
 
     try {
-      const result = await this.routeToolCall(request.toolName, request.args);
-      this.send({
+      // Prerequisite check: block source tools until guide.md is read
+      const prereqResult = this.prerequisiteManager.checkPrerequisites(request.toolName);
+      if (!prereqResult.allowed) {
+        respond({
+          type: 'tool_execute_response',
+          requestId: request.requestId,
+          result: { content: prereqResult.blockReason!, isError: true },
+        });
+        return;
+      }
+      const result = await this.routeToolCall(
+        request.toolName,
+        request.args,
+        request.toolCallId,
+        runtimeContext,
+        hostGuard.applies,
+      );
+      respond({
         type: 'tool_execute_response',
         requestId: request.requestId,
         result,
       });
     } catch (error) {
-      this.send({
+      respond({
         type: 'tool_execute_response',
         requestId: request.requestId,
         result: {
@@ -1806,6 +2360,11 @@ export class PiAgent extends BaseAgent {
           isError: true,
         },
       });
+    } finally {
+      this.settleAdmittedToolExecution(request.toolCallId);
+      if (ticket && !this.settleContextualGmailHostExecution(ticket)) {
+        this.debug(`Gmail host execution ticket was already settled or invalid for ${request.toolName}`);
+      }
     }
   }
 
@@ -1821,8 +2380,11 @@ export class PiAgent extends BaseAgent {
    */
   private async routeToolCall(
     toolName: string,
-    args: Record<string, unknown>
-  ): Promise<{ content: string; isError: boolean }> {
+    args: Record<string, unknown>,
+    toolUseId?: string,
+    runtimeContext?: PiSubprocessRuntimeContext,
+    hostExecutionClaimed = false,
+  ): Promise<McpToolResult> {
     // Session-scoped tools — strip mcp__session__ prefix added by the Pi SDK
     // registration (tools are registered as mcp__session__SubmitPlan, etc.)
     const strippedName = toolName.startsWith('mcp__session__')
@@ -1835,7 +2397,38 @@ export class PiAgent extends BaseAgent {
 
     // MCP source tools — route through centralized pool
     if (this.mcpPool?.isProxyTool(toolName)) {
-      return this.mcpPool.callTool(toolName, args);
+      if (hostExecutionClaimed) {
+        return this.mcpPool.callTool(toolName, args);
+      }
+      const sessionId = runtimeContext?.sessionId
+        ?? this.config.session?.id
+        ?? this._sessionId;
+      const runtimeId = runtimeContext?.runtimeId
+        ?? this.subprocessRuntimeContext?.runtimeId
+        ?? '';
+      const hostGuard = this.beginContextualGmailHostExecution({
+        sessionId,
+        runtimeId,
+        toolUseId,
+        toolName,
+        toolInput: args,
+      });
+      if (hostGuard.applies && !hostGuard.allowed) {
+        return {
+          content: hostGuard.reason,
+          isError: true,
+        };
+      }
+      const ticket = hostGuard.applies && hostGuard.allowed
+        ? hostGuard.ticket
+        : undefined;
+      try {
+        return await this.mcpPool.callTool(toolName, args);
+      } finally {
+        if (ticket && !this.settleContextualGmailHostExecution(ticket)) {
+          this.debug(`Gmail host execution ticket was already settled or invalid for ${toolName}`);
+        }
+      }
     }
 
     // Unknown tool
@@ -1843,6 +2436,25 @@ export class PiAgent extends BaseAgent {
       content: `Unknown proxy tool: ${toolName}`,
       isError: true,
     };
+  }
+
+  /** Narrow seams keep the host lifecycle directly unit-testable without a subprocess. */
+  private beginContextualGmailHostExecution(
+    input: Parameters<typeof beginContextualGmailHostExecution>[0],
+  ): ReturnType<typeof beginContextualGmailHostExecution> {
+    return beginContextualGmailHostExecution(input);
+  }
+
+  private settleContextualGmailHostExecution(
+    ticket: Parameters<typeof settleContextualGmailHostExecution>[0],
+  ): boolean {
+    return settleContextualGmailHostExecution(ticket);
+  }
+
+  private confirmContextualGmailRuntimeTeardown(
+    runtimeContext: Parameters<typeof confirmContextualGmailRuntimeTeardown>[0],
+  ): boolean {
+    return confirmContextualGmailRuntimeTeardown(runtimeContext);
   }
 
   /**
@@ -1901,6 +2513,9 @@ export class PiAgent extends BaseAgent {
           const result = await this.preExecuteSpawnSession(args);
           return { content: JSON.stringify(result, null, 2), isError: false };
         } catch (error) {
+          if (error instanceof SpawnSessionInputError) {
+            return { content: JSON.stringify(error), isError: true };
+          }
           const msg = error instanceof Error ? error.message : String(error);
           return { content: `spawn_session failed: ${msg}`, isError: true };
         }
@@ -2105,6 +2720,7 @@ export class PiAgent extends BaseAgent {
    */
   private hasPendingSubprocessWork(): boolean {
     return this._isProcessing
+      || this.pendingPermissions.size > 0
       || this.pendingMiniCompletions.size > 0
       || this.pendingLlmQueries.size > 0
       || this.pendingEnsureSessionReady.size > 0
@@ -2135,12 +2751,24 @@ export class PiAgent extends BaseAgent {
     reject?.(error);
   }
 
-  private handleSubprocessError(error: Error, child: ChildProcess): void {
+  private handleSubprocessError(
+    error: Error,
+    child: ChildProcess,
+    runtimeContext?: PiSubprocessRuntimeContext,
+  ): void {
     if (this.subprocess !== child) {
       this.debug(`Ignoring error from stale Pi subprocess: ${error.message}`);
       return;
     }
-    this.handleSubprocessExit(null, null, child, error);
+    // A process-level error is not proof that the child exited. Retain both the
+    // child and its runtime identity until exit/close confirms termination, so
+    // exact-once authority is neither released early nor orphaned forever.
+    this.subprocessErrorsAwaitingExit.set(child, error);
+    this.debug(`Pi subprocess error while awaiting confirmed termination: ${error.message}`);
+    this.rejectSubprocessReady(new PiRuntimeInterruptedError(
+      `Pi subprocess error (${error.message})`,
+      'process_error',
+    ));
   }
 
   private handleSubprocessExit(
@@ -2148,25 +2776,41 @@ export class PiAgent extends BaseAgent {
     signal: string | null,
     child?: ChildProcess,
     processError?: Error,
+    runtimeContext?: PiSubprocessRuntimeContext,
   ): void {
+    if (child) {
+      const forceKillTimer = this.subprocessForceKillTimers.get(child);
+      if (forceKillTimer) clearTimeout(forceKillTimer);
+      this.subprocessForceKillTimers.delete(child);
+    }
+    const exitingRuntime = runtimeContext
+      ?? (child ? this.subprocessRuntimeContexts.get(child) : undefined);
+    const confirmedProcessError = processError
+      ?? (child ? this.subprocessErrorsAwaitingExit.get(child) : undefined);
+    if (child) this.subprocessErrorsAwaitingExit.delete(child);
     // A terminated generation may emit its exit after its replacement is
     // already live. Never let that late event tear down the new generation.
     if (child && this.subprocess !== child) {
       this.expectedSubprocessExits.delete(child);
+      if (exitingRuntime) {
+        this.confirmContextualGmailRuntimeTeardown(exitingRuntime);
+      }
       this.debug('Ignoring termination from stale Pi subprocess generation');
       return;
     }
 
-    this.debug(processError
-      ? `Pi subprocess error: ${processError.message}`
+    this.revokeAdmittedToolExecutions();
+
+    this.debug(confirmedProcessError
+      ? `Pi subprocess error followed by confirmed exit: ${confirmedProcessError.message}`
       : `Pi subprocess exited: code=${code}, signal=${signal}`);
 
     const expectedExit = child ? this.expectedSubprocessExits.delete(child) : false;
     const hadPendingWork = this.hasPendingSubprocessWork();
-    const interruptionCode: PiRuntimeInterruptionCode = processError
+    const interruptionCode: PiRuntimeInterruptionCode = confirmedProcessError
       ? 'process_error'
       : 'process_exit';
-    const exitReason = processError?.message
+    const exitReason = confirmedProcessError?.message
       ?? (signal ? `signal ${signal}` : `code ${code}`);
     const interruptionError = new PiRuntimeInterruptedError(
       `Pi subprocess exited unexpectedly (${exitReason})`,
@@ -2191,6 +2835,10 @@ export class PiAgent extends BaseAgent {
     }
 
     this.subprocess = null;
+    if (!runtimeContext
+      || this.subprocessRuntimeContext?.runtimeId === runtimeContext.runtimeId) {
+      this.subprocessRuntimeContext = null;
+    }
     this.subprocessSupervisorHandle = null;
     this.readline = null;
     this.resetSubprocessErrorDedup();
@@ -2224,6 +2872,10 @@ export class PiAgent extends BaseAgent {
     }
     this.pendingLlmQueries.clear();
 
+    // A dead runtime can never acknowledge any prompt that it owned.
+    this.pendingProviderHandoffs.clear();
+    this.pendingProviderDispatchRejections.clear();
+
     // Reject pending ensure_session_ready requests
     for (const [, pending] of this.pendingEnsureSessionReady) {
       pending.reject(new Error(`Pi subprocess exited unexpectedly (${exitReason})`));
@@ -2252,8 +2904,17 @@ export class PiAgent extends BaseAgent {
     }
     this.pendingToolExecutions.clear();
 
+    // A permission prompt suspends handlePreToolUsePrompt. Runtime loss must
+    // settle it fail-closed or the request and any sensitive-action reservation
+    // remain live forever.
+    this.denyAllPendingPermissions();
+
     // Drop any cached pre-tool metadata for the dead subprocess.
     this.preToolMetadataByCallId.clear();
+    this.adapter.resetOverflowState();
+    if (exitingRuntime) {
+      this.confirmContextualGmailRuntimeTeardown(exitingRuntime);
+    }
   }
 
   /**
@@ -2443,6 +3104,9 @@ export class PiAgent extends BaseAgent {
     options?: ChatOptions
   ): AsyncGenerator<AgentEvent> {
     let message = messageParam;
+    let providerHandoffTurnId: string | undefined;
+    const preparationRevision = this.promptPreparationRevision;
+    this.revokeAdmittedToolExecutions();
     // Reset state for new turn
     this._isProcessing = true;
     this.abortReason = undefined;
@@ -2488,6 +3152,27 @@ export class PiAgent extends BaseAgent {
         return;
       }
 
+      // For OAuth providers with short-lived access tokens: proactively ensure tokens
+      // are fresh before turn start so getPiAuth() or the running subprocess has valid credentials.
+      const runtime = getBackendRuntime(this.config);
+      if (this.config.authType === 'oauth' && runtime.piAuthProvider) {
+        const slug = this.config.connectionSlug || 'pi';
+        const expectedBindingId = this.config.expectedLlmCredentialBindingId;
+        const stored = await getCredentialManager().getLlmOAuth(slug, expectedBindingId);
+        if (shouldRefreshPiOAuthBeforeSpawn({
+          authType: this.config.authType,
+          piAuthProvider: runtime.piAuthProvider,
+          refreshToken: stored?.refreshToken,
+          expiresAt: stored?.expiresAt,
+          refreshInFlight: PiAgent.globalRefreshMutex.has(
+            `${slug}\u0000${expectedBindingId ?? 'unsealed'}`,
+          ),
+        })) {
+          this.debug(`${runtime.piAuthProvider} token expired or expiring soon — proactively refreshing before chat turn`);
+          await this.refreshAndPushTokens();
+        }
+      }
+
       // Ensure subprocess is spawned and ready
       try {
         await this.ensureSubprocess();
@@ -2496,7 +3181,7 @@ export class PiAgent extends BaseAgent {
         this.debug(`Failed to spawn Pi subprocess: ${errorMsg}`);
 
         // If resume failed, clear and try fresh
-        if (this.piSessionId && !options?.isRetry) {
+        if (this.piSessionId && !options?.isRetry && !(subprocessError instanceof InvalidWorkingDirectoryError)) {
           this.piSessionId = null;
           this.killSubprocess();
           this.clearSessionForRecovery();
@@ -2515,7 +3200,7 @@ export class PiAgent extends BaseAgent {
 
       const trimmedMessage = message.trim();
       const compactCommand = parseCompactCommand(trimmedMessage);
-      if (compactCommand) {
+      if (compactCommand && !attachments?.length) {
         const { customInstructions } = compactCommand;
         const compactResult = await this.requestCompact(customInstructions);
         if (compactResult) {
@@ -2532,7 +3217,7 @@ export class PiAgent extends BaseAgent {
 
       // Build system prompt
       const projectContext = this.resolveProjectContext();
-      const systemPrompt = getSystemPrompt(
+      const systemPrompt = await getSystemPromptAsync(
         undefined, // pinnedPreferencesPrompt
         this.config.debugMode,
         this.config.workspace.rootPath,
@@ -2542,6 +3227,9 @@ export class PiAgent extends BaseAgent {
         getCoAuthorPreference(), // respect user's includeCoAuthoredBy preference (#576)
         projectContext ?? undefined,
       );
+
+      // Stop can be handled while asynchronous filesystem discovery is pending.
+      if (preparationRevision !== this.promptPreparationRevision) return;
 
       // Build context from sources
       const sourceContext = this.sourceManager.formatSourceState();
@@ -2607,15 +3295,42 @@ export class PiAgent extends BaseAgent {
       ].filter(Boolean);
       const userMessage = userParts.join('\n\n');
 
+      if (preparationRevision !== this.promptPreparationRevision) return;
+
       // Send prompt to subprocess
       const turnId = `turn-${++this.rpcIdCounter}`;
-      this.send({
-        type: 'prompt',
-        id: turnId,
-        message: userMessage,
-        systemPrompt: fullSystemPrompt,
-        images: images.length > 0 ? images : undefined,
-      });
+      providerHandoffTurnId = turnId;
+      this.pendingProviderHandoffs.set(turnId, this.captureProviderHandoffAcknowledgement());
+      this.pendingProviderDispatchRejections.set(turnId, this.captureProviderDispatchRejection());
+      const acknowledgeUncertainDispatch = this.captureProviderDispatchUncertainAcknowledgement();
+      try {
+        const accepted = await this.performProviderDispatchWriteAhead(() => {
+          if (preparationRevision !== this.promptPreparationRevision) {
+            throw new ProviderDispatchRejectedError('Pi prompt preparation changed before provider dispatch');
+          }
+          return this.send({
+            type: 'prompt',
+            id: turnId,
+            message: userMessage,
+            systemPrompt: fullSystemPrompt,
+            images: images.length > 0 ? images : undefined,
+            modelRoutePinned: this.modelRoutePinned(),
+          });
+        });
+        // Test doubles historically returned void; only the real send path's
+        // explicit false means the prompt was dropped before reaching stdin.
+        if (accepted === false) {
+          throw new ProviderDispatchRejectedError('Pi subprocess stdin is not writable');
+        }
+        // The child now owns the prompt, but its correlated preflight result
+        // travels back on stdout. Stop in that inter-process window must not
+        // restore/replay a delivery that the child may already have accepted.
+        acknowledgeUncertainDispatch();
+      } catch (error) {
+        this.pendingProviderHandoffs.delete(turnId);
+        this.pendingProviderDispatchRejections.delete(turnId);
+        throw error;
+      }
 
       // Yield events as they arrive. The source-activation drain controller
       // captures a pending restart on the first triggering tool_result and
@@ -2656,7 +3371,7 @@ export class PiAgent extends BaseAgent {
         return;
       }
     } catch (error) {
-      if (error instanceof Error && error.message.includes('abort')) {
+      if (error instanceof Error && !(error instanceof InvalidWorkingDirectoryError) && error.message.includes('abort')) {
         if (this.abortReason === AbortReason.PlanSubmitted) {
           return;
         }
@@ -2686,6 +3401,10 @@ export class PiAgent extends BaseAgent {
 
       yield { type: 'complete' };
     } finally {
+      if (providerHandoffTurnId) {
+        this.pendingProviderHandoffs.delete(providerHandoffTurnId);
+        this.pendingProviderDispatchRejections.delete(providerHandoffTurnId);
+      }
       this._isProcessing = false;
     }
   }
@@ -2789,22 +3508,52 @@ export class PiAgent extends BaseAgent {
   // Lifecycle
   // ============================================================
 
+  private invalidateContextualGmailStateForCurrentSession(): void {
+    const sessionId = this.subprocessRuntimeContext?.sessionId
+      ?? this.config.session?.id
+      ?? this._sessionId;
+    if (sessionId) invalidateContextualGmailSessionState(sessionId);
+  }
+
+  private hasContextualGmailInFlightForCurrentRuntime(): boolean {
+    const runtimeContext = this.subprocessRuntimeContext;
+    return !!runtimeContext && hasContextualGmailInFlightForRuntime(runtimeContext);
+  }
+
+  /** Settle every host permission wait fail-closed before runtime teardown. */
+  private denyAllPendingPermissions(): void {
+    if (this.pendingPermissions.size === 0) return;
+    const pendingPermissions = [...this.pendingPermissions.values()];
+    this.pendingPermissions.clear();
+    for (const pending of pendingPermissions) {
+      pending.resolve(false);
+    }
+  }
+
   isProcessing(): boolean {
     return this._isProcessing;
   }
 
   async abort(reason?: string): Promise<void> {
+    const requiresRuntimeTeardown = this.hasContextualGmailInFlightForCurrentRuntime()
+      || this.hasAdmittedToolExecutions();
+    this.promptPreparationRevision++;
+    this.revokeAdmittedToolExecutions();
     // Fire Stop hook event (fire-and-forget)
     this.emitAutomationEvent('Stop', { hook_event_name: 'Stop' });
 
     // Deny all pending permissions
-    for (const [, pending] of this.pendingPermissions) {
-      pending.resolve(false);
-    }
-    this.pendingPermissions.clear();
+    this.denyAllPendingPermissions();
+    this.invalidateContextualGmailStateForCurrentSession();
 
-    // Send abort to subprocess
-    this.send({ type: 'abort' });
+    // A plain SDK abort leaves the subprocess able to emit a delayed proxy
+    // request. An admitted Gmail mutation therefore requires confirmed process
+    // teardown before its not-yet-started reservation can be released.
+    if (requiresRuntimeTeardown) {
+      await this.killSubprocessGracefully();
+    } else {
+      this.send({ type: 'abort' });
+    }
     this.eventQueue.complete();
 
     // Clear bridge cache for this interrupted turn.
@@ -2812,6 +3561,10 @@ export class PiAgent extends BaseAgent {
   }
 
   forceAbort(reason: AbortReason): void {
+    const requiresRuntimeTeardown = this.hasContextualGmailInFlightForCurrentRuntime()
+      || this.hasAdmittedToolExecutions();
+    this.promptPreparationRevision++;
+    this.revokeAdmittedToolExecutions();
     // Fire Stop hook event (fire-and-forget)
     this.emitAutomationEvent('Stop', { hook_event_name: 'Stop' });
 
@@ -2819,10 +3572,8 @@ export class PiAgent extends BaseAgent {
     this._isProcessing = false;
 
     // Reject all pending permissions
-    for (const [, pending] of this.pendingPermissions) {
-      pending.resolve(false);
-    }
-    this.pendingPermissions.clear();
+    this.denyAllPendingPermissions();
+    this.invalidateContextualGmailStateForCurrentSession();
 
     // Reject all pending tool executions
     for (const [, pending] of this.pendingToolExecutions) {
@@ -2835,6 +3586,11 @@ export class PiAgent extends BaseAgent {
 
     // Clear bridge cache for aborted turn.
     this.preToolMetadataByCallId.clear();
+
+    if (requiresRuntimeTeardown) {
+      this.killSubprocess();
+      return;
+    }
 
     // For PlanSubmitted and AuthRequest, just interrupt the turn
     if (reason === AbortReason.PlanSubmitted || reason === AbortReason.AuthRequest) {
@@ -2852,10 +3608,19 @@ export class PiAgent extends BaseAgent {
    * Events flow through the existing generator — no abort needed.
    */
   override redirect(message: string): boolean {
-    // ACP Vibe has no steering operation. Returning false keeps the user input
-    // in SessionManager's durable queue, including when steer was explicitly
-    // selected. Do not abort the ongoing Vibe turn just to enqueue its follow-up.
-    if (getBackendRuntime(this.config).piAuthProvider === 'mistral-vibe') return false;
+    if ((this.pendingPermissions?.size ?? 0) > 0 || this.hasAdmittedToolExecutions()) {
+      this.forceAbort(AbortReason.Redirect);
+      return false;
+    }
+    // Vibe and Antigravity cannot deliver an authenticated mid-stream steer.
+    // Tear down the old turn before returning false so SessionManager can keep
+    // the complete replacement instruction in its durable queue.
+    if (['mistral-vibe', 'google-antigravity'].includes(
+      getBackendRuntime(this.config).piAuthProvider ?? '',
+    )) {
+      this.forceAbort(AbortReason.Redirect);
+      return false;
+    }
 
     if (!this._isProcessing || !this.subprocess) {
       // Not streaming or no subprocess — fall back to abort
@@ -2863,7 +3628,16 @@ export class PiAgent extends BaseAgent {
       return false;
     }
     this.debug(`Steering mid-stream: "${message.slice(0, 100)}"`);
-    this.send({ type: 'steer', message });
+    this.promptPreparationRevision++;
+    if (!this.send({ type: 'steer', message })) {
+      // A rejected stdin write is not a delivered steer. Stop the old runtime
+      // before returning false so the host can durably replay this instruction.
+      this.forceAbort(AbortReason.Redirect);
+      return false;
+    }
+    // Pi skips the model's remaining queued tools before continuing from this
+    // steer. Bind subsequent PreToolUse authority to the accepted steer text.
+    this.setCurrentTurnUserMessage(message);
     return true;
   }
 
@@ -2898,6 +3672,7 @@ export class PiAgent extends BaseAgent {
 
     // Unregister session-scoped tool callbacks
     if (this.config.session?.id) {
+      invalidateContextualGmailSessionState(this.config.session.id);
       unregisterSessionScopedToolCallbacks(this.config.session.id);
     }
 
@@ -2911,6 +3686,7 @@ export class PiAgent extends BaseAgent {
     this.stopConfigWatcher();
 
     if (this.config.session?.id) {
+      invalidateContextualGmailSessionState(this.config.session.id);
       unregisterSessionScopedToolCallbacks(this.config.session.id);
     }
 
@@ -2932,11 +3708,15 @@ export class PiAgent extends BaseAgent {
    * Used before an idle runtime restart so we don't leave transient children behind.
    */
   private async killSubprocessGracefully(timeoutMs = 2_000): Promise<void> {
+    this.denyAllPendingPermissions();
+    this.invalidateContextualGmailStateForCurrentSession();
     const child = this.subprocess;
     if (!child) {
       this.killSubprocess();
       return;
     }
+    const runtimeContext = this.subprocessRuntimeContext
+      ?? this.subprocessRuntimeContexts.get(child);
 
     this.expectedSubprocessExits.add(child);
 
@@ -2980,6 +3760,10 @@ export class PiAgent extends BaseAgent {
     }
     if (this.subprocess === child) {
       this.subprocess = null;
+      if (!runtimeContext
+        || this.subprocessRuntimeContext?.runtimeId === runtimeContext.runtimeId) {
+        this.subprocessRuntimeContext = null;
+      }
     }
     this.subprocessSupervisorHandle = null;
     this.subprocessReady = null;
@@ -2989,6 +3773,9 @@ export class PiAgent extends BaseAgent {
     this.callbackPort = 0;
     this.preToolMetadataByCallId.clear();
     this.adapter.resetOverflowState();
+    if (result && runtimeContext) {
+      this.confirmContextualGmailRuntimeTeardown(runtimeContext);
+    }
 
     if (result) {
       this.debug(`Pi subprocess ${pid ?? '(unknown pid)'} stopped for restart: code=${result.code}, signal=${result.signal}`);
@@ -2998,9 +3785,42 @@ export class PiAgent extends BaseAgent {
   }
 
   /**
+   * Escalate an owner-requested stop without ever targeting a replacement
+   * generation. Exact-once Gmail state remains locked until exit/close invokes
+   * handleSubprocessExit and confirms teardown for this same runtime.
+   */
+  private scheduleSubprocessForceKill(
+    child: ChildProcess,
+    runtimeContext?: PiSubprocessRuntimeContext,
+    delayMs = PI_SUBPROCESS_FORCE_KILL_DELAY_MS,
+  ): void {
+    if (this.subprocessForceKillTimers.has(child)) return;
+    const expectedRuntimeId = runtimeContext?.runtimeId
+      ?? this.subprocessRuntimeContexts.get(child)?.runtimeId;
+    const timer = setTimeout(() => {
+      this.subprocessForceKillTimers.delete(child);
+      if (!this.expectedSubprocessExits.has(child)
+        || child.exitCode !== null
+        || child.signalCode !== null) return;
+      const registeredRuntimeId = this.subprocessRuntimeContexts.get(child)?.runtimeId;
+      if (expectedRuntimeId && registeredRuntimeId !== expectedRuntimeId) {
+        this.debug(`Skipping SIGKILL for Pi subprocess ${child.pid ?? '(unknown pid)'} after runtime correlation changed`);
+        return;
+      }
+      this.debug(`Pi subprocess ${child.pid ?? '(unknown pid)'} ignored SIGTERM; sending SIGKILL`);
+      try { child.kill('SIGKILL'); } catch { /* exit/close remains the teardown authority */ }
+    }, Math.max(0, delayMs));
+    timer.unref?.();
+    this.subprocessForceKillTimers.set(child, timer);
+  }
+
+  /**
    * Kill the subprocess and clean up resources.
    */
   private killSubprocess(): void {
+    this.revokeAdmittedToolExecutions();
+    this.denyAllPendingPermissions();
+    this.invalidateContextualGmailStateForCurrentSession();
     if (this.readline) {
       this.readline.close();
       this.readline = null;
@@ -3020,7 +3840,17 @@ export class PiAgent extends BaseAgent {
       } else {
         child.kill('SIGTERM');
       }
+      this.scheduleSubprocessForceKill(
+        child,
+        this.subprocessRuntimeContext ?? this.subprocessRuntimeContexts.get(child),
+      );
       this.subprocess = null;
+      if (this.subprocessRuntimeContext?.runtimeId
+        === this.subprocessRuntimeContexts.get(child)?.runtimeId) {
+        this.subprocessRuntimeContext = null;
+      }
+    } else {
+      this.subprocessRuntimeContext = null;
     }
     this.subprocessSupervisorHandle = null;
 
@@ -3045,6 +3875,10 @@ export class PiAgent extends BaseAgent {
    * Sends a mini_completion request and waits for the result.
    */
   async runMiniCompletion(prompt: string): Promise<string | null> {
+    await this.config.beforeProviderExecution?.();
+    if (this.config.missionCapabilityLock) {
+      throw new ProviderDispatchRejectedError('Auxiliary mini-model completion is disabled for a specialized Mission');
+    }
     // If subprocess isn't running, spawn it
     await this.ensureSubprocess();
 
@@ -3053,7 +3887,12 @@ export class PiAgent extends BaseAgent {
       this.pendingMiniCompletions.set(id, { resolve, reject });
     });
 
-    this.send({ type: 'mini_completion', id, prompt });
+    this.send({
+      type: 'mini_completion',
+      id,
+      prompt,
+      allowModelSubstitution: false,
+    });
 
     // Keep this aligned with the subprocess-side queryLlm timeout.
     const timeout = new Promise<string | null>((resolve) => {
@@ -3084,6 +3923,8 @@ export class PiAgent extends BaseAgent {
   async queryLlm(request: LLMQueryRequest): Promise<LLMQueryResult> {
     this.debug('[PiAgent.queryLlm] Starting');
 
+    await this.config.beforeProviderExecution?.();
+
     await this.ensureSubprocess();
 
     const id = `llm-${++this.rpcIdCounter}`;
@@ -3091,7 +3932,14 @@ export class PiAgent extends BaseAgent {
       this.pendingLlmQueries.set(id, { resolve, reject });
     });
 
-    this.send({ type: 'llm_query', id, request: { ...request, model: request.model ?? this.getModel() } });
+    const model = this.getModel();
+    this.send({
+      type: 'llm_query',
+      id,
+      request: { ...request, model },
+      allowModelSubstitution: false,
+
+    });
 
     // Keep this aligned with the subprocess-side queryLlm timeout.
     const timeout = new Promise<LLMQueryResult>((_, reject) => {
@@ -3129,6 +3977,7 @@ export class PiAgent extends BaseAgent {
    * Parse a Pi error into a typed AgentError.
    */
   private parsePiError(error: Error): AgentError {
+    if (error instanceof InvalidWorkingDirectoryError) return parseError(error);
     const errorMessage = error.message.toLowerCase();
 
     // Auth errors

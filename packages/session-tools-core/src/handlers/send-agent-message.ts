@@ -1,11 +1,11 @@
-import type { SessionToolContext } from '../context.ts';
+import type { AgentMessageType, SessionToolContext } from '../context.ts';
 import type { ToolResult } from '../types.ts';
 import { successResponse, errorResponse } from '../response.ts';
 
 export interface SendAgentMessageArgs {
   sessionId: string;
   message: string;
-  messageType?: 'progress' | 'result' | 'question' | 'decision';
+  messageType?: AgentMessageType;
   attachments?: Array<{ path: string; name?: string }>;
 }
 
@@ -45,12 +45,24 @@ export async function handleSendAgentMessage(
       args.message,
     ].join('\n');
 
-    const result = await ctx.sendAgentMessage(args.sessionId, wrappedMessage, args.attachments);
+    const result = await ctx.sendAgentMessage(
+      args.sessionId,
+      wrappedMessage,
+      args.attachments,
+      messageType,
+    );
 
     // Report the real delivery status instead of an unconditional "sent". A busy
     // target queues the message behind its current turn; an idle target starts
     // now. This is what lets the sender avoid guessing (e.g. never invent "the
     // app restarted") — for actual task status, call list_background_tasks.
+    if (result.receiptId) return successResponse(JSON.stringify({
+      sessionId: args.sessionId, receiptId: result.receiptId, status: result.status,
+      delivery: result.delivery,
+      meaning: result.delivery === 'queued'
+        ? 'Persisted transport receipt remains queued; recipient processing has not been durably acknowledged.'
+        : 'Persisted transport receipt has advanced beyond queued. Processing does not certify that the delegated business objective succeeded.',
+    }));
     if (result.delivery === 'queued') {
       return successResponse(
         `Message queued for session ${args.sessionId}. It may be coalesced with adjacent agent updates. ` +

@@ -225,6 +225,18 @@ async function downloadUvForServer(config: ServerBuildConfig): Promise<void> {
   console.log(`  uv binary installed (${(lstatSync(uvDest).size / 1024 / 1024).toFixed(1)} MB)`);
 }
 
+/** Use exactly the desktop's pinned/checksummed artifact for standalone hosts. */
+async function stageRtkForServer(config: ServerBuildConfig): Promise<void> {
+  await $`${process.execPath} run ${join(config.rootDir, 'scripts', 'prepare-rtk.ts')} --platform ${config.platform} --arch ${config.arch}`;
+  const targetKey = `${config.platform}-${config.arch}`;
+  const source = join(config.electronDir, 'resources', 'bin', targetKey, 'rtk');
+  const targetDir = join(config.outputDir, 'resources', 'bin', targetKey);
+  mkdirSync(targetDir, { recursive: true });
+  copyFileSync(source, join(targetDir, 'rtk'));
+  copyFileSync(`${source}.provenance.json`, join(targetDir, 'rtk.provenance.json'));
+  chmodSync(join(targetDir, 'rtk'), 0o755);
+}
+
 // ---------------------------------------------------------------------------
 // Bun runtime — download into output dir
 // ---------------------------------------------------------------------------
@@ -841,6 +853,7 @@ async function main(): Promise<void> {
   // Step 3: Download uv
   console.log(`\n[3/8] Downloading uv ${UV_VERSION}...`);
   await downloadUvForServer(config);
+  await stageRtkForServer(config);
 
   // Step 4: Build MCP servers
   console.log('\n[4/8] Building MCP servers...');

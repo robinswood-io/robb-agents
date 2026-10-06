@@ -224,6 +224,10 @@ export const LOCAL_ONLY_CHANNELS = new Set<string>([
   RPC_CHANNELS.settings.CREATE_REMOTE_PAIRING,
   RPC_CHANNELS.settings.LIST_REMOTE_DEVICES,
   RPC_CHANNELS.settings.REVOKE_REMOTE_DEVICE,
+
+  // private routing diagnostics — available only from the local Electron host
+  RPC_CHANNELS.workspace.ROUTING_SIMULATE,
+  RPC_CHANNELS.workspace.ROUTING_SHADOW_ANALYZE,
 ])
 
 // ---------------------------------------------------------------------------
@@ -254,6 +258,7 @@ export const REMOTE_ELIGIBLE_CHANNELS = new Set<string>([
   RPC_CHANNELS.sessions.KILL_SHELL,
   RPC_CHANNELS.sessions.RESPOND_TO_PERMISSION,
   RPC_CHANNELS.sessions.RESPOND_TO_CREDENTIAL,
+  RPC_CHANNELS.sessions.RESPOND_TO_USER_INPUT,
   RPC_CHANNELS.sessions.COMMAND,
   RPC_CHANNELS.sessions.GET_PENDING_PLAN_EXECUTION,
   RPC_CHANNELS.sessions.GET_PERMISSION_MODE_STATE,

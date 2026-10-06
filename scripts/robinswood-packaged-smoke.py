@@ -15,13 +15,17 @@ import hashlib
 import json
 import os
 import pathlib
+import platform
 import plistlib
+import re
 import shutil
 import signal
+import stat
 import subprocess
 import sys
 import tempfile
 import time
+import zipfile
 
 from robb_package_audit import (
     audit_package,
@@ -44,7 +48,9 @@ PACKAGED_ASAR = APP_DIR / "Contents" / "Resources" / "app.asar"
 PACKAGED_PI_AGENT_SERVER = APP_DIR / "Contents" / "Resources" / "app" / "resources" / "pi-agent-server" / "index.js"
 PACKAGED_ANTIGRAVITY_BRIDGE = APP_DIR / "Contents" / "Resources" / "app" / "resources" / "pi-agent-server" / "antigravity-server.js"
 PACKAGED_VIBE_ACP_BRIDGE = APP_DIR / "Contents" / "Resources" / "app" / "resources" / "pi-agent-server" / "vibe-acp-server.js"
+PACKAGED_UV = APP_DIR / "Contents" / "Resources" / "app" / "resources" / "bin" / "darwin-arm64" / "uv"
 SOURCE_ICON = ELECTRON_DIR / "resources" / "robinswood-icon.icns"
+UV_VERSION_SOURCE = ROOT / "scripts" / "build" / "common.ts"
 DMG = RELEASE_DIR / "Robb-Agents-arm64.dmg"
 ZIP = RELEASE_DIR / "Robb-Agents-arm64.zip"
 PACKAGE_JSON = ELECTRON_DIR / "package.json"
@@ -53,7 +59,7 @@ ARCH = "arm64"
 
 def configure_arch(arch: str) -> None:
     global APP_DIR, APP_BIN, PLIST, PACKAGED_ICON, PACKAGED_ASAR, PACKAGED_PI_AGENT_SERVER
-    global PACKAGED_ANTIGRAVITY_BRIDGE, PACKAGED_VIBE_ACP_BRIDGE, DMG, ZIP, ARCH
+    global PACKAGED_ANTIGRAVITY_BRIDGE, PACKAGED_VIBE_ACP_BRIDGE, PACKAGED_UV, DMG, ZIP, ARCH
 
     ARCH = arch
     app_output_directory = "mac-arm64" if arch == "arm64" else "mac"
@@ -83,6 +89,7 @@ def configure_arch(arch: str) -> None:
         / "pi-agent-server"
         / "antigravity-server.js"
     )
+    PACKAGED_UV = APP_DIR / "Contents" / "Resources" / "app" / "resources" / "bin" / f"darwin-{arch}" / "uv"
     DMG = RELEASE_DIR / f"Robb-Agents-{arch}.dmg"
     ZIP = RELEASE_DIR / f"Robb-Agents-{arch}.zip"
 
@@ -94,6 +101,14 @@ def expected_app_version() -> str:
     if not isinstance(version, str) or not version:
         fail(f"Invalid Electron package version in {PACKAGE_JSON}")
     return version
+
+
+def expected_uv_version() -> str:
+    source = UV_VERSION_SOURCE.read_text(encoding="utf-8")
+    match = re.search(r"export const UV_VERSION = ['\"]([^'\"]+)['\"]", source)
+    if match is None:
+        fail(f"Unable to read the pinned uv version from {UV_VERSION_SOURCE}")
+    return match.group(1)
 
 
 def fail(message: str) -> None:
@@ -198,6 +213,7 @@ def check_bundle(require_release_signing: bool = False) -> None:
     require(PACKAGED_PI_AGENT_SERVER, "packaged Pi agent server")
     require(PACKAGED_VIBE_ACP_BRIDGE, "packaged Mistral Vibe ACP bridge")
     require(PACKAGED_ANTIGRAVITY_BRIDGE, "packaged Google Antigravity bridge")
+    require(PACKAGED_UV, "packaged uv runtime")
     require(SOURCE_ICON, "Robinswood source icon")
 
     with PLIST.open("rb") as handle:
@@ -224,6 +240,22 @@ def check_bundle(require_release_signing: bool = False) -> None:
 
     if sha256(PACKAGED_ICON) != sha256(SOURCE_ICON):
         fail("Packaged icon.icns does not match resources/robinswood-icon.icns")
+    if not os.access(PACKAGED_UV, os.X_OK):
+        fail(f"Packaged uv runtime is not executable: {PACKAGED_UV}")
+    uv_file = run(["file", str(PACKAGED_UV)])
+    expected_uv_architecture = "arm64" if ARCH == "arm64" else "x86_64"
+    if uv_file.returncode != 0 or expected_uv_architecture not in uv_file.stdout:
+        fail(f"Packaged uv runtime has the wrong architecture: {uv_file.stdout}{uv_file.stderr}")
+    native_arch = "arm64" if platform.machine().lower() in {"arm64", "aarch64"} else "x64"
+    if ARCH == native_arch:
+        uv_version = run([str(PACKAGED_UV), "--version"])
+        uv_version_parts = uv_version.stdout.strip().split()
+        if (
+            uv_version.returncode != 0
+            or len(uv_version_parts) < 2
+            or uv_version_parts[:2] != ["uv", expected_uv_version()]
+        ):
+            fail(f"Packaged uv runtime version check failed: {uv_version.stdout}{uv_version.stderr}")
 
     main_bundle = read_asar_entry(PACKAGED_ASAR, "dist/main.cjs")
     required_runtime_markers = (
@@ -260,6 +292,10 @@ def check_bundle(require_release_signing: bool = False) -> None:
     else:
         print("✓ packaged signature identifier")
 
+    uv_signature = run(["codesign", "--verify", "--strict", "--verbose=2", str(PACKAGED_UV)])
+    if signing_mode != "unsigned" and uv_signature.returncode != 0:
+        fail(f"Packaged uv runtime signature verification failed: {uv_signature.stdout}{uv_signature.stderr}")
+
     if require_release_signing:
         verify_result = run(["codesign", "--verify", "--deep", "--strict", "--verbose=2", str(APP_DIR)])
         gatekeeper_result = run(["spctl", "--assess", "--verbose", "--type", "exec", str(APP_DIR)])
@@ -278,8 +314,77 @@ def check_bundle(require_release_signing: bool = False) -> None:
     print("✓ packaged app bundle metadata")
     print(f"✓ packaged app architecture {expected_architecture}")
     print("✓ packaged Robinswood icon")
-    print("✓ packaged Pi agent server and Mistral Vibe ACP bridge")
+    print("✓ packaged Pi agent server, Mistral Vibe ACP bridge and verified uv runtime")
     print("✓ packaged updater and session-runtime recovery contract")
+
+
+def check_zip() -> None:
+    """Read every ZIP member and compare it to the bundle already validated.
+
+    Reading through ZipFile checks CRCs without extracting untrusted paths.
+    Exact files, symlink targets and executable bits also catch a valid ZIP
+    containing an older, incomplete or differently signed application.
+    """
+    expected = {
+        f"{APP_NAME}/{path.relative_to(APP_DIR).as_posix()}": path
+        for path in APP_DIR.rglob("*")
+    }
+    expected_files = {name for name, path in expected.items() if path.is_symlink() or path.is_file()}
+    seen: set[str] = set()
+    seen_files: set[str] = set()
+    try:
+        with zipfile.ZipFile(ZIP) as archive:
+            for entry in archive.infolist():
+                name = entry.filename.rstrip("/")
+                parts = pathlib.PurePosixPath(name)
+                if (entry.orig_filename != entry.filename or "\\" in name or parts.is_absolute()
+                        or ".." in parts.parts or parts.as_posix() != name
+                        or not (name == APP_NAME or name.startswith(APP_NAME + "/"))):
+                    fail(f"Unsafe ZIP member: {entry.filename}")
+                if name in seen:
+                    fail(f"Duplicate ZIP member: {name}")
+                seen.add(name)
+                if name == APP_NAME and entry.is_dir():
+                    continue
+                source = expected.get(name)
+                if source is None:
+                    fail(f"Unexpected ZIP member: {name}")
+                if entry.is_dir():
+                    if not source.is_dir() or source.is_symlink():
+                        fail(f"ZIP directory type differs from packaged bundle: {name}")
+                    continue
+                if name not in expected_files:
+                    fail(f"ZIP file type differs from packaged bundle: {name}")
+                mode = entry.external_attr >> 16
+                is_link = stat.S_ISLNK(mode)
+                if is_link != source.is_symlink() or stat.S_IFMT(mode) not in (0, stat.S_IFREG, stat.S_IFLNK):
+                    fail(f"ZIP file type differs from packaged bundle: {name}")
+                expected_executable = source.stat().st_mode & 0o111 if not is_link else 0
+                # unzip ignores Unix mode/type bits on DOS-origin entries. A
+                # matching hash then still yields a non-executable file or a
+                # flattened symlink, so these require explicit Unix metadata.
+                if (is_link or expected_executable) and entry.create_system != 3:
+                    fail(f"ZIP member lacks required POSIX type/permissions: {name}")
+                link_bytes = os.fsencode(os.readlink(source)) if is_link else None
+                expected_size = len(link_bytes) if link_bytes is not None else source.stat().st_size
+                if entry.file_size != expected_size:
+                    fail(f"ZIP member size differs from packaged bundle: {name}")
+                if not is_link and entry.create_system == 3 and mode & 0o111 != expected_executable:
+                    fail(f"ZIP executable permissions differ from packaged bundle: {name}")
+                digest = hashlib.sha256()
+                with archive.open(entry) as handle:
+                    for block in iter(lambda: handle.read(1024 * 1024), b""):
+                        digest.update(block)
+                expected_digest = hashlib.sha256(link_bytes).hexdigest() if link_bytes is not None else sha256(source)
+                if digest.hexdigest() != expected_digest:
+                    fail(f"ZIP member content differs from packaged bundle: {name}")
+                seen_files.add(name)
+    except (OSError, ValueError, RuntimeError, zipfile.BadZipFile) as exc:
+        fail(f"Invalid packaged ZIP: {exc}")
+    missing = expected_files - seen_files
+    if missing:
+        fail("ZIP is missing packaged bundle members: " + ", ".join(sorted(missing)[:8]))
+    print(f"✓ ZIP CRCs and {len(seen_files)} bundle files/symlinks match the validated app")
 
 
 def check_dmg() -> None:
@@ -290,6 +395,7 @@ def check_dmg() -> None:
         if finding is not None:
             fail(f"{finding.path}: {finding.reason}")
         print(f"✓ {artifact.name} size {format_bytes(artifact.stat().st_size)}")
+    check_zip()
     if shutil.which("hdiutil") is None:
         print("- hdiutil unavailable; skipping DMG mount check")
         return

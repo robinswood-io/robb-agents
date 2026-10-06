@@ -1,5 +1,5 @@
 {
-  "version": "2026-03-07",
+  "version": "2026-09-16.5",
   "allowedBashPatterns": [
     {
       "pattern": "^ls\\b",
@@ -14,12 +14,24 @@
       "comment": "List all including hidden (ls -la alias)"
     },
     {
-      "pattern": "^tree\\b",
-      "comment": "Display directory tree structure"
+      "pattern": "^tree\\b(?![^\\r\\n]*\\s(?:-[^-\\s]*o\\S*|--output(?:=\\S*)?)(?:\\s|$))",
+      "comment": "Display directory tree structure without writing an output file"
     },
     {
-      "pattern": "^file\\b",
-      "comment": "Determine file type"
+      "pattern": "^file\\b(?![^\\r\\n]*\\s(?:-[^-\\s]*C\\S*|--compile)(?:\\s|$))",
+      "comment": "Determine file type without compiling a magic database"
+    },
+    {
+      "pattern": "^test\\b",
+      "comment": "Evaluate file and value conditions without modifying them"
+    },
+    {
+      "pattern": "^cmp\\s+-s\\s+(?!-)(?!\\.\\.(?:/|\\s))(?![^\\s]*/\\.\\.(?:/|\\s))[A-Za-z0-9_@%+=:,./-]+\\s+(?!-)(?!\\.\\.(?:/|$))(?![^\\s]*/\\.\\.(?:/|$))[A-Za-z0-9_@%+=:,./-]+$",
+      "comment": "Silently compare exactly two static file paths"
+    },
+    {
+      "pattern": "^shasum\\s+-a\\s+256\\s+(?!-)(?!\\.\\.(?:/|$))(?![^\\s]*/\\.\\.(?:/|$))[A-Za-z0-9_@%+=:,./-]+$",
+      "comment": "Compute SHA-256 for one static file path"
     },
     {
       "pattern": "^stat\\b",
@@ -54,48 +66,32 @@
       "comment": "Concatenate and display file contents"
     },
     {
-      "pattern": "^less\\b",
-      "comment": "View file contents with paging"
+      "pattern": "^pdf-tool\\s+(?:extract|info)\\b(?![^\\r\\n]*\\s(?:-o\\S*|--output(?:=\\S*)?|--set)(?:\\s|$))",
+      "comment": "PDF extraction and info to stdout without metadata edits"
     },
     {
-      "pattern": "^more\\b",
-      "comment": "View file contents with paging"
+      "pattern": "^xlsx-tool\\s+(?:read|info|export)\\b(?![^\\r\\n]*\\s(?:-o\\S*|--output(?:=\\S*)?)(?:\\s|$))",
+      "comment": "Excel read, info and export operations to stdout"
     },
     {
-      "pattern": "^bat\\b",
-      "comment": "Cat clone with syntax highlighting"
+      "pattern": "^doc-diff\\b(?![^\\r\\n]*\\s(?:-o\\S*|--output(?:=\\S*)?)(?:\\s|$))",
+      "comment": "Document comparison to stdout"
     },
     {
-      "pattern": "^markitdown\\b",
-      "comment": "Convert documents to Markdown (read-only)"
+      "pattern": "^img-tool\\s+info\\b(?![^\\r\\n]*\\s(?:-o\\S*|--output(?:=\\S*)?)(?:\\s|$))",
+      "comment": "Image metadata/info to stdout"
     },
     {
-      "pattern": "^pdf-tool\\s+(extract|info)\\b",
-      "comment": "PDF read operations: extract text/pages, view info"
+      "pattern": "^docx-tool\\s+(?:info|extract)\\b(?![^\\r\\n]*\\s(?:-o\\S*|--output(?:=\\S*)?)(?:\\s|$))",
+      "comment": "Word info and text extraction to stdout"
     },
     {
-      "pattern": "^xlsx-tool\\s+(read|info|export)\\b",
-      "comment": "Excel read operations: read cells, view info, export"
+      "pattern": "^pptx-tool\\s+(?:info|extract)\\b(?![^\\r\\n]*\\s(?:-o\\S*|--output(?:=\\S*)?)(?:\\s|$))",
+      "comment": "PowerPoint info and text extraction to stdout"
     },
     {
-      "pattern": "^doc-diff\\b",
-      "comment": "Document comparison (read-only)"
-    },
-    {
-      "pattern": "^img-tool\\s+info\\b",
-      "comment": "Image read operations: view metadata/info"
-    },
-    {
-      "pattern": "^docx-tool\\s+(info|extract)\\b",
-      "comment": "Word read operations: view info, extract text"
-    },
-    {
-      "pattern": "^pptx-tool\\s+(info|extract)\\b",
-      "comment": "PowerPoint read operations: view info, extract text"
-    },
-    {
-      "pattern": "^ical-tool\\s+(read|filter)\\b",
-      "comment": "Calendar read operations: read events, filter by date"
+      "pattern": "^ical-tool\\s+(?:read|filter)\\b(?![^\\r\\n]*\\s(?:-o\\S*|--output(?:=\\S*)?)(?:\\s|$))",
+      "comment": "Calendar read and filter operations to stdout"
     },
     {
       "pattern": "^(pdf-tool|xlsx-tool|img-tool|docx-tool|pptx-tool|ical-tool)\\s*$",
@@ -166,39 +162,71 @@
       "comment": "Search file contents with patterns"
     },
     {
-      "pattern": "^rg\\b",
-      "comment": "Ripgrep - fast recursive search"
+      "pattern": "^rg\\b(?![^\\r\\n]*\\s--(?:pre|hostname-bin)(?:=\\S*)?(?:\\s|$))",
+      "comment": "Ripgrep search without executable preprocessors or hostname helpers"
     },
     {
-      "pattern": "^ag\\b",
-      "comment": "The Silver Searcher - fast code search"
+      "pattern": "^fd\\b(?![^\\r\\n]*\\s(?:-[^-\\s]*[xX]\\S*|--exec(?:-batch)?(?:=\\S*)?)(?:\\s|$))",
+      "comment": "Find files without executing a command for results"
     },
     {
-      "pattern": "^ack\\b",
-      "comment": "Ack - grep-like tool for programmers"
+      "pattern": "^git\\s+(?:(?:-C\\s+(?!-)[^\\s]+|--(?:no-pager|paginate|literal-pathspecs|no-replace-objects))\\s+)*(?:status|log|show|shortlog|blame|annotate|describe|rev-parse|ls-files|ls-tree|cherry|whatchanged)\\b(?![^\\r\\n]*\\s--(?:output|ext-diff|textconv|exec)(?:=\\S*)?(?:\\s|$))",
+      "comment": "Git inspection operations with a closed set of safe global flags"
     },
     {
-      "pattern": "^fd\\b",
-      "comment": "Fast and user-friendly find alternative"
+      "pattern": "^git\\s+(?:-C\\s+(?!-)[^\\s]+\\s+)?(?:grep|merge-base)\\b",
+      "comment": "Git grep and merge-base; the host validator separately requires the exact hardened prefix and closed per-operation grammar"
     },
     {
-      "pattern": "^fzf\\b",
-      "comment": "Fuzzy finder for files and commands"
+      "pattern": "^git\\s+(?:(?:-C\\s+(?!-)[^\\s]+|--(?:no-pager|paginate|literal-pathspecs|no-replace-objects))\\s+)*diff\\b(?![^\\r\\n]*\\s--(?:output|ext-diff|textconv)(?:=\\S*)?(?:\\s|$))",
+      "comment": "Git diff without output files or executable diff helpers"
     },
     {
-      "pattern": "^git\\s+((-[A-Za-z]|--[a-z][-a-z]*)(\\s+[^\\s-][^\\s]*)?\\s+)*(status|log|diff|show|branch|tag|remote|stash\\s+list|describe|rev-parse|config\\s+--get|config\\s+-l|ls-files|ls-tree|shortlog|blame|annotate|reflog|cherry|whatchanged|ls-remote|history)\\b",
-      "comment": "Git read-only operations (supports flags like -C, --no-pager before subcommand)"
+      "pattern": "^git\\s+(?:(?:-C\\s+(?!-)[^\\s]+|--(?:no-pager|paginate|literal-pathspecs|no-replace-objects))\\s+)*branch(?:\\s+(?:-[arv]+|--(?:all|remotes|verbose|list|show-current|contains|no-contains|merged|no-merged|points-at|format|sort|column|color)(?:=\\S+)?))*\\s*$",
+      "comment": "List Git branches or show the current branch without changing refs"
+    },
+    {
+      "pattern": "^git\\s+(?:(?:-C\\s+(?!-)[^\\s]+|--(?:no-pager|paginate|literal-pathspecs|no-replace-objects))\\s+)*tag(?:\\s+(?:-l|--list)(?:\\s+(?!-)[^\\s]+)?)?\\s*$",
+      "comment": "List Git tags without creating, deleting or verifying tags"
+    },
+    {
+      "pattern": "^git\\s+(?:(?:-C\\s+(?!-)[^\\s]+|--(?:no-pager|paginate|literal-pathspecs|no-replace-objects))\\s+)*remote(?:\\s+-v)?\\s*$",
+      "comment": "List configured Git remotes"
+    },
+    {
+      "pattern": "^git\\s+(?:(?:-C\\s+(?!-)[^\\s]+|--(?:no-pager|paginate|literal-pathspecs|no-replace-objects))\\s+)*remote\\s+show(?:\\s+-n)?(?:\\s+(?!-)[^\\s]+)?\\s*$",
+      "comment": "Inspect a configured Git remote"
+    },
+    {
+      "pattern": "^git\\s+(?:(?:-C\\s+(?!-)[^\\s]+|--(?:no-pager|paginate|literal-pathspecs|no-replace-objects))\\s+)*remote\\s+get-url(?:\\s+(?:--all|--push))*\\s+(?!-)[^\\s]+\\s*$",
+      "comment": "Read a configured Git remote URL"
+    },
+    {
+      "pattern": "^git\\s+(?:(?:-C\\s+(?!-)[^\\s]+|--(?:no-pager|paginate|literal-pathspecs|no-replace-objects))\\s+)*reflog(?:\\s+show)?(?:\\s+(?:--all|-n\\s+[0-9]+|--date=\\S+))*\\s*$",
+      "comment": "Inspect Git reflogs without deleting or expiring entries"
+    },
+    {
+      "pattern": "^git\\s+(?:(?:-C\\s+(?!-)[^\\s]+|--(?:no-pager|paginate|literal-pathspecs|no-replace-objects))\\s+)*stash\\s+list\\b(?![^\\r\\n]*\\s--(?:output|ext-diff|textconv)(?:=\\S*)?(?:\\s|$))",
+      "comment": "List Git stash entries"
+    },
+    {
+      "pattern": "^git\\s+(?:(?:-C\\s+(?!-)[^\\s]+|--(?:no-pager|paginate|literal-pathspecs|no-replace-objects))\\s+)*config\\s+(?:--get(?:-all|-regexp)?\\s+[^\\s]+(?:\\s+[^\\s]+)?|-l|--list)\\s*$",
+      "comment": "Read Git configuration values"
+    },
+    {
+      "pattern": "^git\\s+(?:(?:-C\\s+(?!-)[^\\s]+|--(?:no-pager|paginate|literal-pathspecs|no-replace-objects))\\s+)*ls-remote\\b(?![^\\r\\n]*\\s--(?:upload-pack|exec)(?:=\\S*)?(?:\\s|$))",
+      "comment": "List remote Git refs without a custom upload-pack executable"
     },
     {
       "pattern": "^gh\\s+(pr|issue|repo|release|run|workflow|gist|project)\\s+(view|list|status|diff|checks|comments)\\b",
       "comment": "GitHub CLI read operations: view PRs, issues, releases"
     },
     {
-      "pattern": "^gh\\s+api\\b.*--method\\s+GET\\b",
+      "pattern": "^gh\\s+api\\b(?=[^\\r\\n]*\\s(?:--method(?:=|\\s+)GET|-X(?:=?GET|\\s+GET))(?:\\s|$))(?![^\\r\\n]*\\s(?:--method(?:=(?!GET(?:\\s|$))\\S+|\\s+(?!GET(?:\\s|$))\\S+)|-X(?:=?(?!GET(?:\\s|$))\\S+|\\s+(?!GET(?:\\s|$))\\S+)))(?![^\\r\\n]*\\s(?:-[fF]\\S*|--(?:field|raw-field|input)(?:=\\S*)?)(?:\\s|$))",
       "comment": "GitHub API with explicit GET method"
     },
     {
-      "pattern": "^gh\\s+api\\b(?!.*--method)",
+      "pattern": "^gh\\s+api\\b(?![^\\r\\n]*\\s(?:--method(?:=\\S*)?|-X\\S*)(?:\\s|$))(?![^\\r\\n]*\\s(?:-[fF]\\S*|--(?:field|raw-field|input)(?:=\\S*)?)(?:\\s|$))",
       "comment": "GitHub API without method (defaults to GET)"
     },
     {
@@ -210,16 +238,24 @@
       "comment": "Read GitHub CLI configuration"
     },
     {
-      "pattern": "^npm\\s+(ls|list|view|info|show|outdated|audit|search|explain|why|config\\s+get|config\\s+list)\\b",
+      "pattern": "^npm\\s+(?:ls|list|view|info|show|outdated|search|explain|why|config\\s+get|config\\s+list)\\b",
       "comment": "npm read operations: list packages, view info, check outdated"
+    },
+    {
+      "pattern": "^npm\\s+audit\\b(?![^\\r\\n]*\\s(?:fix|--fix(?:=\\S*)?)(?:\\s|$))",
+      "comment": "Audit npm dependencies without applying fixes"
     },
     {
       "pattern": "^yarn\\s+(list|info|why|outdated|audit)\\b",
       "comment": "Yarn read operations: list packages, check outdated"
     },
     {
-      "pattern": "^pnpm\\s+(list|ls|why|outdated|audit)\\b",
+      "pattern": "^pnpm\\s+(?:list|ls|why|outdated)\\b",
       "comment": "pnpm read operations: list packages, check outdated"
+    },
+    {
+      "pattern": "^pnpm\\s+audit\\b(?![^\\r\\n]*\\s(?:fix|--fix(?:=\\S*)?)(?:\\s|$))",
+      "comment": "Audit pnpm dependencies without applying fixes"
     },
     {
       "pattern": "^bun\\s+(pm\\s+ls)\\b",
@@ -310,12 +346,12 @@
       "comment": "Print system information"
     },
     {
-      "pattern": "^hostname\\b",
-      "comment": "Print system hostname"
+      "pattern": "^hostname(?:\\s+(?:-f|-i|-I|-s|-d|--(?:fqdn|ip-address|all-ip-addresses|short|domain)))?\\s*$",
+      "comment": "Print hostname or derived host information without changing it"
     },
     {
-      "pattern": "^date\\b",
-      "comment": "Print current date and time"
+      "pattern": "^date(?:\\s+(?:-u|--utc|--universal|-R|--rfc-email|-I(?:date|hours|minutes|seconds|ns)?|--iso-8601(?:=(?:date|hours|minutes|seconds|ns))?|\\+\\S+))*\\s*$",
+      "comment": "Print the current date in bounded display formats without setting it"
     },
     {
       "pattern": "^uptime\\b",
@@ -334,16 +370,16 @@
       "comment": "Print text to stdout (read-only; redirects/substitution still blocked)"
     },
     {
+      "pattern": "^printf\\b(?!\\s+-v(?:[A-Za-z_][A-Za-z0-9_]*)?(?:\\s|$))(?![^\\r\\n]*%(?:[0-9]+\\$)?[-+ #0']*(?:\\*|[0-9]+)?(?:\\.(?:\\*|[0-9]+))?(?:hh|h|ll|l|j|z|t|L)?n)",
+      "comment": "Print formatted text to stdout; variable assignment formats/options, redirects, expansions and substitutions remain blocked"
+    },
+    {
       "pattern": "^ps\\b",
       "comment": "List running processes"
     },
     {
       "pattern": "^top\\s+-[lb]",
       "comment": "Process viewer in batch/list mode only"
-    },
-    {
-      "pattern": "^htop\\b",
-      "comment": "Interactive process viewer"
     },
     {
       "pattern": "^free\\b",
@@ -382,28 +418,28 @@
       "comment": "Docker read operations: list containers, images, logs, inspect"
     },
     {
-      "pattern": "^docker-compose\\s+(ps|logs|config|images|top|version)\\b",
+      "pattern": "^docker-compose\\s+(?:(?:ps|logs|images|top|version)\\b|config\\b(?![^\\r\\n]*\\s(?:-o\\S*|--output(?:=\\S*)?)(?:\\s|$)))",
       "comment": "Docker Compose read operations: list services, view logs"
     },
     {
-      "pattern": "^docker\\s+compose\\s+(ps|logs|config|images|top|version)\\b",
+      "pattern": "^docker\\s+compose\\s+(?:(?:ps|logs|images|top|version)\\b|config\\b(?![^\\r\\n]*\\s(?:-o\\S*|--output(?:=\\S*)?)(?:\\s|$)))",
       "comment": "Docker Compose (v2) read operations"
     },
     {
-      "pattern": "^kubectl\\s+(get|describe|logs|top|explain|api-resources|api-versions|cluster-info|config\\s+view|config\\s+get-contexts|version)\\b",
+      "pattern": "^systemctl\\s+(show|status|cat|is-active|is-enabled|is-failed|list-units|list-unit-files|list-timers)\\b",
+      "comment": "Systemd read operations: inspect units, status and timers"
+    },
+    {
+      "pattern": "^kubectl\\s+(?:get|describe|logs|top|explain|api-resources|api-versions|cluster-info|config\\s+view|config\\s+get-contexts|version)\\b(?![^\\r\\n]*\\s--(?:output-directory|kubeconfig)(?:=\\S*)?(?:\\s|$))",
       "comment": "Kubernetes read operations: get resources, describe, view logs"
     },
     {
-      "pattern": "^sed\\s+-n\\b",
-      "comment": "sed in print-only mode (no editing)"
-    },
-    {
-      "pattern": "^sort\\b",
+      "pattern": "^sort\\b(?![^\\r\\n]*\\s(?:-[^-\\s]*[oT]\\S*|--(?:output|temporary-directory|compress-program)(?:=\\S*)?)(?:\\s|$))",
       "comment": "Sort lines of text files"
     },
     {
-      "pattern": "^uniq\\b",
-      "comment": "Report or filter repeated lines"
+      "pattern": "^uniq(?:\\s+(?:-[cdiuDz]+|--(?:count|repeated|all-repeated(?:=(?:none|prepend|separate))?|ignore-case|zero-terminated|group(?:=(?:separate|prepend|append|both))?)))*\\s*$",
+      "comment": "Report repeated stdin lines without an output-file operand"
     },
     {
       "pattern": "^cut\\b",
@@ -418,32 +454,28 @@
       "comment": "Columnate lists"
     },
     {
-      "pattern": "^(?:gawk|mawk|nawk|awk)\\b",
-      "comment": "Awk text processing (dangerous execution forms are blocked by validator)"
-    },
-    {
       "pattern": "^jq\\b",
       "comment": "JSON processor"
     },
     {
-      "pattern": "^yq\\b",
-      "comment": "YAML processor"
+      "pattern": "^yq\\b(?![^\\r\\n]*\\s(?:-[^-\\s]*[is]\\S*|--(?:in-?place|split-exp(?:-file)?)(?:=\\S*)?)(?:\\s|$))",
+      "comment": "YAML processor without in-place editing"
     },
     {
-      "pattern": "^xq\\b",
-      "comment": "XML processor (via yq)"
+      "pattern": "^xq\\b(?![^\\r\\n]*\\s(?:-[^-\\s]*[is]\\S*|--(?:in-?place|split-exp(?:-file)?)(?:=\\S*)?)(?:\\s|$))",
+      "comment": "XML processor without in-place editing"
     },
     {
-      "pattern": "^xmllint\\b",
-      "comment": "XML linter and formatter"
+      "pattern": "^xmllint\\b(?![^\\r\\n]*\\s(?:-o\\S*|--(?:output|shell)(?:=\\S*)?)(?:\\s|$))",
+      "comment": "XML linter and formatter without output files or interactive shell"
     },
     {
       "pattern": "^json_pp\\b",
       "comment": "JSON pretty printer"
     },
     {
-      "pattern": "^python\\s+-m\\s+json\\.tool\\b",
-      "comment": "Python JSON formatter"
+      "pattern": "^python\\s+-m\\s+json\\.tool(?:\\s+(?:--(?:sort-keys|no-ensure-ascii|json-lines|compact|tab|no-indent)|--indent(?:=(?:[0-9]+|\\\\t)|\\s+(?:[0-9]+|\\\\t))))*(?:\\s+(?:-|[^-\\s][^\\s]*))?\\s*$",
+      "comment": "Python JSON formatter with stdin or at most one input file and no output file"
     },
     {
       "pattern": "^ping\\b",
@@ -482,84 +514,72 @@
       "comment": "Socket statistics"
     },
     {
-      "pattern": "^ip\\s+(addr|link|route|neigh)\\s*(show)?\\b",
-      "comment": "IP address/link/route information"
+      "pattern": "^ip\\s+(?:(?:-brief|-br|-json|-j|-details|-d|-statistics|-s|-pretty|-p|-human-readable|-h|-iec)\\s+)*(?:addr(?:ess)?|link|route|neigh(?:bour)?|neighbor|rule)\\s+(?:show|list)\\b",
+      "comment": "Show IP address, link, route, neighbour or rule information"
     },
     {
-      "pattern": "^ifconfig\\b",
-      "comment": "Network interface configuration (read)"
+      "pattern": "^ifconfig(?:\\s+(?:-a|-l|-s|-m|-v|[A-Za-z0-9_.:-]+))?\\s*$",
+      "comment": "Show all interfaces or one named interface without configuration arguments"
     },
     {
-      "pattern": "^node\\s+(--version|-v)\\b",
+      "pattern": "^node\\s+(?:--version|-v)\\s*$",
       "comment": "Node.js version"
     },
     {
-      "pattern": "^npm\\s+(--version|-v)\\b",
+      "pattern": "^npm\\s+(?:--version|-v)\\s*$",
       "comment": "npm version"
     },
     {
-      "pattern": "^yarn\\s+(--version|-v)\\b",
+      "pattern": "^yarn\\s+(?:--version|-v)\\s*$",
       "comment": "Yarn version"
     },
     {
-      "pattern": "^pnpm\\s+(--version|-v)\\b",
+      "pattern": "^pnpm\\s+(?:--version|-v)\\s*$",
       "comment": "pnpm version"
     },
     {
-      "pattern": "^bun\\s+(--version|-v)\\b",
+      "pattern": "^bun\\s+(?:--version|-v)\\s*$",
       "comment": "Bun version"
     },
     {
-      "pattern": "^python\\s+(--version|-V)\\b",
+      "pattern": "^python\\s+(?:--version|-V)\\s*$",
       "comment": "Python version"
     },
     {
-      "pattern": "^python3\\s+(--version|-V)\\b",
+      "pattern": "^python3\\s+(?:--version|-V)\\s*$",
       "comment": "Python 3 version"
     },
     {
-      "pattern": "^ruby\\s+(--version|-v)\\b",
+      "pattern": "^ruby\\s+(?:--version|-v)\\s*$",
       "comment": "Ruby version"
     },
     {
-      "pattern": "^go\\s+version\\b",
+      "pattern": "^go\\s+version\\s*$",
       "comment": "Go version"
     },
     {
-      "pattern": "^rustc\\s+(--version|-V)\\b",
+      "pattern": "^rustc\\s+(?:--version|-V)\\s*$",
       "comment": "Rust compiler version"
     },
     {
-      "pattern": "^cargo\\s+(--version|-V)\\b",
+      "pattern": "^cargo\\s+(?:--version|-V)\\s*$",
       "comment": "Cargo version"
     },
     {
-      "pattern": "^java\\s+(-version|--version)\\b",
+      "pattern": "^java\\s+(?:-version|--version)\\s*$",
       "comment": "Java version"
     },
     {
-      "pattern": "^dotnet\\s+--version\\b",
+      "pattern": "^dotnet\\s+--version\\s*$",
       "comment": ".NET version"
     },
     {
-      "pattern": "^php\\s+(--version|-v)\\b",
+      "pattern": "^php\\s+(?:--version|-v)\\s*$",
       "comment": "PHP version"
     },
     {
-      "pattern": "^perl\\s+(--version|-v)\\b",
+      "pattern": "^perl\\s+(?:--version|-v)\\s*$",
       "comment": "Perl version"
-    },
-    {
-      "pattern": "^man\\b",
-      "comment": "Display manual pages"
-    },
-    {
-      "pattern": "--help\\b",
-      "comment": "Display command help"
-    },
-    {
-      "pattern": "-h\\b$",
-      "comment": "Display command help (short flag)"
     },
     {
       "pattern": "^Get-ChildItem\\b",
@@ -829,49 +849,49 @@
   "blockedCommandHints": [
     {
       "command": "printf",
-      "reason": "printf is not in the default Explore-mode read-only allowlist.",
-      "context": "Explore mode keeps a narrow command surface so harmless-looking shell forms do not accidentally expand capability.",
+      "reason": "printf -v is not read-only because it assigns a shell variable.",
+      "context": "Plain stdout-only printf is allowed; redirects, substitutions and expansions remain blocked by the shell validator.",
+      "whenNotMatching": "^printf\\b(?!\\s+-v(?:[A-Za-z_][A-Za-z0-9_]*)?(?:\\s|$))(?![^\\r\\n]*%(?:[0-9]+\\$)?[-+ #0']*(?:\\*|[0-9]+)?(?:\\.(?:\\*|[0-9]+))?(?:hh|h|ll|l|j|z|t|L)?n)",
       "tryInstead": [
-        "Use `echo` for simple separators and labels.",
-        "Switch to Ask mode for this command.",
-        "Allowlist printf in permissions.json if your workspace wants it in Explore mode."
+        "Use plain `printf` without `-v` for separators and labels.",
+        "Use `echo` for simple output."
       ],
       "example": "echo '--- files ---'"
     },
     {
       "command": "sed",
-      "reason": "Only print-only sed is allowed in Explore mode by default.",
-      "context": "Default safe pattern is `^sed\\s+-n\\b` (inspection, not in-place transformation).",
-      "whenNotMatching": "^sed\\s+-n\\b",
+      "reason": "sed is not allowlisted in Explore mode because its program can write files or execute commands even with -n.",
+      "context": "sed commands such as `w`, `e`, and their variants have side effects that shell redirection checks cannot see.",
       "tryInstead": [
-        "Use `sed -n ...` for read-only inspection.",
-        "Switch to Ask mode for transform commands."
+        "Use `head`, `tail`, or `grep` for bounded read-only inspection.",
+        "Switch to Ask mode when sed is necessary."
       ],
-      "example": "sed -n '1,80p' file.txt"
+      "example": "head -n 80 file.txt"
     },
     {
       "command": "awk",
-      "reason": "awk is blocked when the command appears to execute external commands.",
-      "context": "Forms like `system(...)`, command-pipe `getline`, or `print | \"cmd\"` can run arbitrary processes.",
+      "reason": "awk is not allowlisted in Explore mode because its program can write files or execute external commands.",
+      "context": "awk side effects include output redirection inside the program, `system(...)`, command-pipe `getline`, and `print | \"cmd\"`.",
       "tryInstead": [
-        "Use awk without execution primitives for read-only text extraction.",
-        "Switch to Ask mode for advanced scripts."
-      ]
+        "Use `grep`, `cut`, or `jq` for bounded read-only extraction.",
+        "Switch to Ask mode when awk is necessary."
+      ],
+      "example": "cut -d: -f1 file.txt"
     },
     {
       "command": "gawk",
-      "reason": "gawk is blocked when the command appears to execute external commands.",
-      "context": "Forms like `system(...)`, command-pipe `getline`, or `print | \"cmd\"` can run arbitrary processes."
+      "reason": "gawk is not allowlisted in Explore mode because its program can write files or execute external commands.",
+      "context": "Use `grep`, `cut`, or `jq` for bounded inspection, or switch to Ask mode when gawk is necessary."
     },
     {
       "command": "mawk",
-      "reason": "mawk is blocked when the command appears to execute external commands.",
-      "context": "Forms like `system(...)`, command-pipe `getline`, or `print | \"cmd\"` can run arbitrary processes."
+      "reason": "mawk is not allowlisted in Explore mode because its program can write files or execute external commands.",
+      "context": "Use `grep`, `cut`, or `jq` for bounded inspection, or switch to Ask mode when mawk is necessary."
     },
     {
       "command": "nawk",
-      "reason": "nawk is blocked when the command appears to execute external commands.",
-      "context": "Forms like `system(...)`, command-pipe `getline`, or `print | \"cmd\"` can run arbitrary processes."
+      "reason": "nawk is not allowlisted in Explore mode because its program can write files or execute external commands.",
+      "context": "Use `grep`, `cut`, or `jq` for bounded inspection, or switch to Ask mode when nawk is necessary."
     },
     {
       "command": "xargs",
@@ -883,6 +903,10 @@
     }
   ],
   "allowedMcpPatterns": [
+    {
+      "pattern": "^mcp__google-contacts__.*_preflight$",
+      "comment": "Google Workspace preflights are bounded, non-executing validations"
+    },
     {
       "pattern": "search",
       "comment": "Search operations across MCP sources"

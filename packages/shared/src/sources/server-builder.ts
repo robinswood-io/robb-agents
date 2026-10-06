@@ -1,3 +1,4 @@
+import { protectApplicationCommand } from '@craft-agent/session-tools-core';
 /**
  * SourceServerBuilder
  *
@@ -110,8 +111,7 @@ export class SourceServerBuilder {
       }
       return {
         type: 'stdio',
-        command: resolved.command,
-        args: resolved.args,
+        ...protectApplicationCommand(resolved.command, resolved.args),
         env: resolved.env,
         cwd: source.folderPath,
       };

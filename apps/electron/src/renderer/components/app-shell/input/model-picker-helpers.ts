@@ -1,5 +1,7 @@
+import type { ModelDefinition } from '@config/models'
 import {
   isLocalConnection,
+  isModelAllowedForAuthProvider,
   type LlmConnection,
 } from '@config/llm-connections'
 import { ROBINSWOOD_BACKEND_NAME } from '@craft-agent/shared/robinswood-branding'
@@ -53,4 +55,13 @@ export function groupConnectionsByProvider<T extends LlmConnection>(
     }
   }
   return Object.entries(groups).filter(([, conns]) => conns.length > 0)
+}
+
+export function getSelectableConnectionModels(
+  connection: Pick<LlmConnection, 'models' | 'piAuthProvider'>,
+  fallback: Array<ModelDefinition | string> = [],
+): Array<ModelDefinition | string> {
+  return (connection.models ?? fallback).filter(model =>
+    isModelAllowedForAuthProvider(typeof model === 'string' ? model : model.id, connection.piAuthProvider),
+  )
 }

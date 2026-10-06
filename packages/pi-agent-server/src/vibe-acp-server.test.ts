@@ -6,6 +6,100 @@ import { spawn } from 'node:child_process';
 import { createInterface } from 'node:readline';
 
 describe('Mistral Vibe ACP bridge host instructions', () => {
+  it('correlates a prompt rejected before any ACP provider write', async () => {
+    const child = spawn(process.execPath, ['src/vibe-acp-server.ts'], {
+      cwd: join(import.meta.dir, '..'),
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+    const output: Array<Record<string, any>> = [];
+    const lines = createInterface({ input: child.stdout!, crlfDelay: Infinity });
+    lines.on('line', line => output.push(JSON.parse(line)));
+    const exit = new Promise<void>(resolve => child.once('exit', () => resolve()));
+    const waitFor = async (predicate: () => boolean) => {
+      const deadline = Date.now() + 5_000;
+      while (!predicate()) {
+        if (Date.now() > deadline) throw new Error(`Vibe bridge timed out: ${JSON.stringify(output)}`);
+        await Bun.sleep(10);
+      }
+    };
+    const send = (message: Record<string, unknown>) => child.stdin!.write(`${JSON.stringify(message)}\n`);
+
+    try {
+      send({ type: 'prompt', id: 'pre-write-turn', message: 'never sent' });
+      await waitFor(() => output.some(message => message.type === 'error'));
+
+      expect(output).toContainEqual({
+        type: 'error',
+        code: 'prompt_error',
+        id: 'pre-write-turn',
+        message: 'Mistral Vibe rejected this turn before sending it to the provider. Confirm that Vibe is available, then try again.',
+      });
+      expect(output.some(message => message.type === 'provider_handoff')).toBe(false);
+    } finally {
+      send({ type: 'shutdown' });
+      const timer = setTimeout(() => child.kill('SIGKILL'), 1_000);
+      await exit;
+      clearTimeout(timer);
+      lines.close();
+    }
+  });
+
+  it('keeps a child exit after the ACP prompt write uncorrelated', async () => {
+    const directory = mkdtempSync(join(tmpdir(), 'robb-vibe-acp-exit-test-'));
+    const executable = join(directory, 'vibe-acp');
+    writeFileSync(executable, `#!/usr/bin/env bun
+import { createInterface } from 'node:readline';
+const send = (message) => console.log(JSON.stringify(message));
+const input = createInterface({ input: process.stdin, crlfDelay: Infinity });
+input.on('line', (line) => {
+  const message = JSON.parse(line);
+  if (message.method === 'initialize') {
+    send({ jsonrpc: '2.0', id: message.id, result: { protocolVersion: 1, agentCapabilities: {}, authMethods: [] } });
+  } else if (message.method === 'session/new') {
+    send({ jsonrpc: '2.0', id: message.id, result: { sessionId: 'vibe-exit-session' } });
+  } else if (message.method === 'session/prompt') {
+    setTimeout(() => process.exit(17), 20);
+  }
+});
+`);
+    chmodSync(executable, 0o755);
+    const child = spawn(process.execPath, ['src/vibe-acp-server.ts'], {
+      cwd: join(import.meta.dir, '..'),
+      stdio: ['pipe', 'pipe', 'pipe'],
+      env: { HOME: directory, PATH: process.env.PATH, ROBB_VIBE_ACP_COMMAND: executable },
+    });
+    const output: Array<Record<string, any>> = [];
+    const lines = createInterface({ input: child.stdout!, crlfDelay: Infinity });
+    lines.on('line', line => output.push(JSON.parse(line)));
+    const exit = new Promise<void>(resolve => child.once('exit', () => resolve()));
+    const waitFor = async (predicate: () => boolean) => {
+      const deadline = Date.now() + 5_000;
+      while (!predicate()) {
+        if (Date.now() > deadline) throw new Error(`Vibe bridge timed out: ${JSON.stringify(output)}`);
+        await Bun.sleep(10);
+      }
+    };
+    const send = (message: Record<string, unknown>) => child.stdin!.write(`${JSON.stringify(message)}\n`);
+
+    try {
+      send({ type: 'init', cwd: directory, model: 'pi/mistral-vibe' });
+      await waitFor(() => output.some(message => message.type === 'ready'));
+      send({ type: 'prompt', id: 'bound-turn', message: 'written before exit' });
+      await waitFor(() => output.some(message => message.event?.type === 'agent_end'));
+
+      expect(output).toContainEqual({ type: 'provider_handoff', id: 'bound-turn' });
+      expect(output.some(message => message.type === 'error' && message.code === 'prompt_error')).toBe(false);
+      expect(output.some(message => message.type === 'error' && message.id === 'bound-turn')).toBe(false);
+    } finally {
+      if (child.exitCode === null) send({ type: 'shutdown' });
+      const timer = setTimeout(() => child.kill('SIGKILL'), 1_000);
+      await exit;
+      clearTimeout(timer);
+      lines.close();
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
   it.each([
     { action: 'allow', expectedOption: 'allow-once' },
     { action: 'modify', expectedOption: 'reject-once' },
@@ -83,6 +177,12 @@ input.on('line', (line) => {
         send({ type: 'prompt', id: `turn-${index}`, message: `User input ${index}`, systemPrompt });
         await waitFor(() => output.filter(message => message.event?.type === 'agent_end').length === index + 1);
       }
+
+      expect(output.filter(message => message.type === 'provider_handoff')).toEqual([
+        { type: 'provider_handoff', id: 'turn-0' },
+        { type: 'provider_handoff', id: 'turn-1' },
+        { type: 'provider_handoff', id: 'turn-2' },
+      ]);
 
       const prompts = readFileSync(promptLog, 'utf8').trim().split('\n')
         .map(line => (JSON.parse(line) as Array<{ text?: string }>).map(block => block.text ?? '').join(''));

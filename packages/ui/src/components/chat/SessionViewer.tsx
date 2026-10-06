@@ -9,15 +9,18 @@
 
 import type { ReactNode } from 'react'
 import { useMemo, useState, useCallback } from 'react'
-import type { StoredSession } from '@craft-agent/core'
+import type { StoredSession, UserInputRequest } from '@craft-agent/core'
+import { UserInputCard } from './UserInputCard'
 import { cn } from '../../lib/utils'
 import { CHAT_LAYOUT, CHAT_CLASSES } from '../../lib/layout'
 import { PlatformProvider, type PlatformActions } from '../../context'
 import { TurnCard } from './TurnCard'
 import { UserMessageBubble } from './UserMessageBubble'
 import { SystemMessage } from './SystemMessage'
+import { projectConversation } from './conversation-presentation'
+import { buildUserInputTimeline } from './user-input-timeline'
+import { JourneyOutcome } from './JourneyProgress'
 import {
-  groupMessagesByTurn,
   storedToMessage,
   getAssistantTurnUiKey,
   type ActivityItem,
@@ -28,6 +31,7 @@ export type SessionViewerMode = 'interactive' | 'readonly'
 export interface SessionViewerProps {
   /** Session data to display */
   session: StoredSession
+  userInputRequests?: UserInputRequest[]
   /** View mode - 'readonly' for web viewer, 'interactive' for Electron */
   mode?: SessionViewerMode
   /** Platform-specific actions (file opening, URL handling, etc.) */
@@ -74,6 +78,7 @@ function CraftAgentLogo({ className }: { className?: string }) {
  */
 export function SessionViewer({
   session,
+  userInputRequests = [],
   mode = 'readonly',
   platformActions = {},
   className,
@@ -84,13 +89,12 @@ export function SessionViewer({
   footer,
   sessionFolderPath,
 }: SessionViewerProps) {
-  // Convert StoredMessage[] to Message[] and group into turns.
-  // Viewer is always a snapshot of a finished session, so we mark it as not processing
-  // to force the open turn (if any) to flush with the intermediate-text fallback applied.
-  const turns = useMemo(
-    () => groupMessagesByTurn(session.messages.map(storedToMessage), { isSessionProcessing: false }),
+  const presentation = useMemo(
+    () => projectConversation(session.messages.map(storedToMessage), { isProcessing: false }),
     [session.messages]
   )
+  const turns = presentation.turns
+  const timeline = useMemo(() => buildUserInputTimeline(turns, userInputRequests), [turns, userInputRequests])
 
   // Track expanded turns (for controlled state)
   const [expandedTurns, setExpandedTurns] = useState<Set<string>>(() => {
@@ -160,7 +164,11 @@ export function SessionViewer({
         >
           <div className="h-full overflow-y-auto">
             <div className={cn(CHAT_LAYOUT.maxWidth, "mx-auto", CHAT_LAYOUT.containerPadding, CHAT_LAYOUT.messageSpacing)}>
-            {turns.map((turn, index) => {
+            {timeline.map(entry => {
+              if (entry.type === 'user-input') {
+                return <UserInputCard key={`user-input-${entry.request.id}`} request={entry.request} readOnly />
+              }
+              const { turn, turnIndex: index } = entry
               if (turn.type === 'user') {
                 return (
                   <div key={turn.message.id} className={CHAT_LAYOUT.userMessagePadding}>
@@ -224,6 +232,8 @@ export function SessionViewer({
 
               return null
             })}
+
+            {presentation.outcome && <JourneyOutcome outcome={presentation.outcome} />}
 
             {/* Bottom branding */}
             <div className={CHAT_CLASSES.brandingContainer}>

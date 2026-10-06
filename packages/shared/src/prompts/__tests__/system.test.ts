@@ -10,12 +10,55 @@ mock.module('../../config/preferences.ts', () => ({
 }))
 
 import { getSystemPrompt, formatProjectContextForPrompt } from '../system'
+import { FINAL_RESPONSE_GUIDANCE, DOCUMENT_DELIVERY_GUIDANCE, PROGRESS_GUIDANCE } from '../result-presentation'
 import type { ProjectPromptContext } from '../../projects/types.ts'
 
 const GIT_CONVENTIONS_HEADING = '## Git Conventions'
 const CO_AUTHOR_TRAILER = 'Co-Authored-By: Craft Agent <agents-noreply@craft.do>'
 
 describe('system prompt guidance', () => {
+  it('uses plans selectively instead of making checklist maintenance a prerequisite', () => {
+    expect(PROGRESS_GUIDANCE).toContain('when a checklist materially helps')
+    expect(PROGRESS_GUIDANCE).toContain('only when the scope or a step status changes materially')
+    expect(PROGRESS_GUIDANCE).toContain('skip it for a simple task, direct answer, or bounded review')
+    expect(PROGRESS_GUIDANCE).not.toContain('before substantive tool work')
+    expect(PROGRESS_GUIDANCE).not.toContain('as each step starts or finishes')
+
+    const prompt = getSystemPrompt('', undefined, '/tmp/workspace', '/tmp/workspace', 'default', 'Codex', false)
+    expect(prompt).toContain('Optional live task tracking')
+    expect(prompt).toContain('not after every tool call')
+    expect(prompt).not.toContain('Start multi-step work with `update_plan`')
+    expect(prompt).not.toContain('continue using `update_plan` for granular progress')
+  })
+
+  it('assembles the same factual conclusion and usable document guidance for both full agent backends', () => {
+    for (const backend of ['Claude Code', 'Robb Agents Backend']) {
+      const prompt = getSystemPrompt('', undefined, undefined, undefined, 'default', backend, false)
+      expect(prompt.split(PROGRESS_GUIDANCE)).toHaveLength(2)
+      expect(prompt.split(FINAL_RESPONSE_GUIDANCE)).toHaveLength(2)
+      expect(prompt.split(DOCUMENT_DELIVERY_GUIDANCE)).toHaveLength(2)
+      expect(prompt).toContain('a simple answer or small change usually needs one or two sentences')
+      expect(prompt).toContain('Respect an explicitly requested exact response or document format')
+      expect(prompt).toContain('Name the checks that actually ran and what their results establish')
+      expect(prompt).toContain('Distinguish created from inspected, attempted from confirmed')
+      expect(prompt).toContain('do not impose a fixed report template')
+      expect(prompt).toContain('[Report](</absolute/path/Report final.pdf>)')
+      expect(prompt).toContain('The example is a format, never a real deliverable')
+      expect(prompt).toContain('Do not invent paths, download URLs or sandbox links')
+      expect(prompt).toContain('confirm that the final version exists and can be read')
+      expect(prompt).toContain('inspect its rendered layout')
+      expect(prompt).toContain('out of delivered documents')
+    }
+  })
+
+  it('keeps quick-edit confirmation short and conditional on the actual result', () => {
+    const prompt = getSystemPrompt('', undefined, undefined, undefined, 'mini', undefined, false)
+    expect(prompt).toContain('Briefly state the requested change and the actual validation result')
+    expect(prompt).toContain('if either failed or remains unchecked, say so without claiming completion')
+    expect(prompt).toContain('Keep responses short and to the point')
+    expect(prompt).not.toContain(DOCUMENT_DELIVERY_GUIDANCE)
+  })
+
   it('uses backend-neutral debug log querying guidance (rg/grep via Bash)', () => {
     const prompt = getSystemPrompt(
       undefined,

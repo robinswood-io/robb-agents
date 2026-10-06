@@ -14,6 +14,7 @@ import {
   resolveAntigravityCommand,
   spawnAntigravitySubprocess,
 } from './antigravity-subprocess.ts';
+import { writeProviderPromptWithHandoff } from './provider-handoff.ts';
 
 interface InitMessage {
   type: 'init';
@@ -59,6 +60,13 @@ interface ActiveTurn {
 }
 
 const SETUP_GUIDANCE = 'Install the official Antigravity CLI, run `agy`, and sign in with your Google account.';
+
+class AntigravityPromptRejectedBeforeWriteError extends Error {
+  constructor(cause: unknown) {
+    super(cause instanceof Error ? cause.message : String(cause));
+    this.name = 'AntigravityPromptRejectedBeforeWriteError';
+  }
+}
 
 let initConfig: InitMessage | null = null;
 let antigravityProcess: ChildProcess | null = null;
@@ -231,7 +239,13 @@ function classifyResultError(result: Record<string, unknown>): { code: string; m
   if (detail.includes('quota') || detail.includes('license') || detail.includes('subscription')) {
     return {
       code: 'GOOGLE_ANTIGRAVITY_ENTITLEMENT_REQUIRED',
-      message: 'This Google account does not currently have usable Antigravity quota. Check the account plan or organization assignment in Antigravity.',
+      message: 'This Google account does not currently have usable Antigravity quota. Check the account plan or personal AI subscription in Antigravity.',
+    };
+  }
+  if (detail.includes('capacity') || detail.includes('high traffic') || detail.includes('unavailable') || detail.includes('503')) {
+    return {
+      code: 'GOOGLE_ANTIGRAVITY_CAPACITY_LIMIT',
+      message: 'Google Antigravity servers are experiencing high traffic for this model. Please try again in a moment or switch models.',
     };
   }
   return {
@@ -273,13 +287,17 @@ async function startAntigravity(init: InitMessage): Promise<void> {
     args.push('--new-project');
   }
   const model = selectedModel(init.model);
-  if (model) args.push('--model', model);
-  // Current Antigravity model slugs already encode their supported effort
-  // (for example gemini-3.7-flash-low). Only add the generic effort flag for
-  // future/default model selectors that do not carry an explicit suffix.
-  const modelHasEffort = /-(?:low|medium|high)$/.test(model ?? '');
-  const effort = modelHasEffort ? undefined : mapEffort(init.thinkingLevel);
-  if (effort) args.push('--effort', effort);
+  if (model) {
+    args.push('--model', model);
+  } else {
+    // Current Antigravity CLI models encode reasoning in the model slug (for
+    // example gemini-3.8-flash-high, gpt-oss-120b-medium) or natively enable it
+    // (claude-sonnet-4-6, claude-opus-4-6-thinking), and agy explicitly rejects
+    // --effort whenever a specific --model is passed. Only add the generic effort
+    // flag when delegating to the CLI default model.
+    const effort = mapEffort(init.thinkingLevel);
+    if (effort) args.push('--effort', effort);
+  }
 
   debug('Launching the official Google Antigravity CLI in sandboxed headless mode.');
   const child = spawnAntigravitySubprocess(command, cwd, { args });
@@ -299,6 +317,11 @@ async function startAntigravity(init: InitMessage): Promise<void> {
     // Antigravity-owned diagnostics can contain account or workspace context.
     // Drain them without forwarding their contents into Robb logs.
     debug('The official Antigravity CLI emitted a private diagnostic.');
+  });
+  child.stdin?.on('error', () => {
+    // Write failures are reported through the per-prompt callback below. Keep
+    // a permanent listener so an EPIPE cannot terminate the bridge process.
+    debug('The official Antigravity CLI input stream rejected a write.');
   });
   child.on('exit', () => {
     const pending = activeTurn;
@@ -359,83 +382,121 @@ function buildPrompt(message: string, systemPrompt?: string): string {
   ].join('\n');
 }
 
-async function runPrompt(message: string, systemPrompt?: string): Promise<void> {
-  if (!initConfig) throw new Error('Google Antigravity bridge is not initialized');
-  if (runtimeRestartPending) {
-    await stopAntigravity();
-    runtimeRestartPending = false;
-  }
-  await startAntigravity(initConfig);
-  const child = antigravityProcess;
-  if (!child?.stdin?.writable) throw new Error('Google Antigravity stdin is unavailable');
-
-  emitEvent({ type: 'agent_start' });
-  emitEvent({ type: 'turn_start' });
-
-  let resolveResult!: (result: Record<string, unknown>) => void;
-  let rejectResult!: (error: Error) => void;
-  const resultPromise = new Promise<Record<string, unknown>>((resolve, reject) => {
-    resolveResult = resolve;
-    rejectResult = reject;
-  });
-  activeTurn = {
-    text: '',
-    toolStarts: new Set(),
-    resolve: resolveResult,
-    reject: rejectResult,
-  };
-
-  child.stdin.write(`${JSON.stringify({
-    event: 'user',
-    message: { content: buildPrompt(message, systemPrompt) },
-  })}\n`);
-
+async function runPrompt(id: string, message: string, systemPrompt?: string): Promise<void> {
+  let promptWriteReturned = false;
   try {
-    const result = await resultPromise;
-    const status = String(result.status ?? '').toUpperCase();
-    if (status !== 'SUCCESS') {
-      const classified = classifyResultError(result);
-      reportError(classified.code, classified.message);
-      emitEvent({ type: 'agent_end' });
-      return;
+    if (!initConfig) throw new Error('Google Antigravity bridge is not initialized');
+    if (runtimeRestartPending) {
+      await stopAntigravity();
+      runtimeRestartPending = false;
     }
+    await startAntigravity(initConfig);
+    const child = antigravityProcess;
+    if (!child?.stdin?.writable) throw new Error('Google Antigravity stdin is unavailable');
 
-    const turn = activeTurn;
-    const text = stringValue(result.response) ?? turn?.text ?? '';
-    const usage = perTurnUsage(result.usage);
-    const sdkMessageId = `antigravity-message-${Date.now()}`;
-    emitEvent({
-      type: 'message_end',
-      sdkMessageId,
-      message: {
-        id: sdkMessageId,
-        role: 'assistant',
-        content: [{ type: 'text', text }],
-        stopReason: 'stop',
-        usage: {
-          input: usage.input_tokens,
-          output: usage.output_tokens,
-          cacheRead: usage.cache_read_tokens,
-          cacheWrite: 0,
-          totalTokens: usage.total_tokens,
-          // Antigravity account/subscription usage has no API price exposed by
-          // the official CLI. Pi's adapter still requires the complete cost
-          // object when aggregating a finished turn.
-          cost: {
-            input: 0,
-            output: 0,
-            cacheRead: 0,
-            cacheWrite: 0,
-            total: 0,
-          },
-        },
-        provider: 'google-antigravity',
-      },
+    emitEvent({ type: 'agent_start' });
+    emitEvent({ type: 'turn_start' });
+
+    let resolveResult!: (result: Record<string, unknown>) => void;
+    let rejectResult!: (error: Error) => void;
+    const resultPromise = new Promise<Record<string, unknown>>((resolve, reject) => {
+      resolveResult = resolve;
+      rejectResult = reject;
     });
-    emitEvent({ type: 'turn_end' });
-    emitEvent({ type: 'agent_end' });
-  } finally {
-    activeTurn = null;
+    // If the runtime exits while its prompt write is still pending, its exit
+    // handler rejects this promise before runPrompt reaches the result await.
+    // Attach a handler immediately so that rejection is never reported as an
+    // unhandled promise while the write boundary settles.
+    void resultPromise.catch(() => undefined);
+    const turn: ActiveTurn = {
+      text: '',
+      toolStarts: new Set(),
+      resolve: resolveResult,
+      reject: rejectResult,
+    };
+    activeTurn = turn;
+
+    const sentSystemPromptBeforeWrite = sentSystemPrompt;
+    const serializedPrompt = `${JSON.stringify({
+      event: 'user',
+      message: { content: buildPrompt(message, systemPrompt) },
+    })}\n`;
+    let providerHandoffCommitted = false;
+
+    try {
+      // The official CLI exposes no downstream HTTP acknowledgement. Its stdin
+      // write callback is the narrowest observable non-replay boundary: it fires
+      // only after this exact turn has been accepted by the child stream.
+      const acceptedByCurrentRuntime = await writeProviderPromptWithHandoff(
+        done => {
+          child.stdin!.write(serializedPrompt, error => done(error));
+          promptWriteReturned = true;
+        },
+        () => send({ type: 'provider_handoff', id }),
+        () => antigravityProcess === child && activeTurn === turn,
+      );
+      if (!acceptedByCurrentRuntime) {
+        throw new Error('Antigravity prompt write completed on a superseded runtime');
+      }
+      providerHandoffCommitted = true;
+
+      const result = await resultPromise;
+      const status = String(result.status ?? '').toUpperCase();
+      if (status !== 'SUCCESS') {
+        const classified = classifyResultError(result);
+        reportError(classified.code, classified.message);
+        emitEvent({ type: 'agent_end' });
+        return;
+      }
+
+      const text = stringValue(result.response) ?? turn.text;
+      const usage = perTurnUsage(result.usage);
+      const sdkMessageId = `antigravity-message-${Date.now()}`;
+      emitEvent({
+        type: 'message_end',
+        sdkMessageId,
+        message: {
+          id: sdkMessageId,
+          role: 'assistant',
+          content: [{ type: 'text', text }],
+          stopReason: 'stop',
+          usage: {
+            input: usage.input_tokens,
+            output: usage.output_tokens,
+            cacheRead: usage.cache_read_tokens,
+            cacheWrite: 0,
+            totalTokens: usage.total_tokens,
+            // Antigravity account/subscription usage has no API price exposed by
+            // the official CLI. Pi's adapter still requires the complete cost
+            // object when aggregating a finished turn.
+            cost: {
+              input: 0,
+              output: 0,
+              cacheRead: 0,
+              cacheWrite: 0,
+              total: 0,
+            },
+          },
+          provider: 'google-antigravity',
+        },
+      });
+      emitEvent({ type: 'turn_end' });
+      emitEvent({ type: 'agent_end' });
+    } finally {
+      if (!providerHandoffCommitted && antigravityProcess === child) {
+        sentSystemPrompt = sentSystemPromptBeforeWrite;
+      }
+      if (activeTurn === turn) activeTurn = null;
+    }
+  } catch (error) {
+    // A synchronous failure before stdin.write returns proves that no prompt
+    // was accepted by this child. Callback errors and stale-runtime outcomes
+    // occur after the write call crossed the only observable boundary, so they
+    // deliberately remain ambiguous and uncorrelated.
+    if (!promptWriteReturned) {
+      throw new AntigravityPromptRejectedBeforeWriteError(error);
+    }
+    throw error;
   }
 }
 
@@ -449,10 +510,19 @@ async function handle(message: InboundMessage): Promise<void> {
       return;
     case 'prompt':
       promptQueue = promptQueue.then(
-        () => runPrompt(message.message, message.systemPrompt),
-        () => runPrompt(message.message, message.systemPrompt),
-      ).catch(() => {
-        reportError('GOOGLE_ANTIGRAVITY_PROMPT_FAILED', 'Google Antigravity stopped before the turn completed. Confirm that `agy` is signed in, then try again.');
+        () => runPrompt(message.id, message.message, message.systemPrompt),
+        () => runPrompt(message.id, message.message, message.systemPrompt),
+      ).catch(error => {
+        if (error instanceof AntigravityPromptRejectedBeforeWriteError) {
+          send({
+            type: 'error',
+            code: 'prompt_error',
+            id: message.id,
+            message: 'Google Antigravity rejected this turn before sending it to the provider. Confirm that `agy` is signed in, then try again.',
+          });
+        } else {
+          reportError('GOOGLE_ANTIGRAVITY_PROMPT_FAILED', 'Google Antigravity stopped before the turn completed. Confirm that `agy` is signed in, then try again.');
+        }
         emitEvent({ type: 'agent_end' });
       });
       return;

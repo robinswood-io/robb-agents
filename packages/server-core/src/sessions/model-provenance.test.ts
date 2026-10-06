@@ -29,6 +29,8 @@ describe('assistant model provenance persistence', () => {
     managed.agent = {
       getModel: () => configuredModel,
     } as never
+    ;(sessionManager as unknown as { sessions: Map<string, typeof managed> })
+      .sessions.set(managed.id, managed)
     return managed
   }
 

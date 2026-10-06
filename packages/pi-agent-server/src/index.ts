@@ -15,33 +15,15 @@
  */
 
 import http from 'node:http';
+import { installStructuredToolErrors } from './structured-tool-errors.ts';
 import { createInterface } from 'node:readline';
 import { join } from 'node:path';
-import { mkdirSync, readdirSync, statSync, existsSync } from 'node:fs';
+import { mkdirSync, readdirSync, statSync, existsSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 
 // Pi SDK
-import {
-  createAgentSession,
-  SessionManager as PiSessionManager,
-  AuthStorage as PiAuthStorage,
-  ModelRegistry as PiModelRegistry,
-  createReadToolDefinition,
-  createBashToolDefinition,
-  createEditToolDefinition,
-  createWriteToolDefinition,
-  createGrepToolDefinition,
-  createFindToolDefinition,
-  createLsToolDefinition,
-} from '@earendil-works/pi-coding-agent';
-import type {
-  AgentSession,
-  AgentSessionEvent,
-  AgentToolResult,
-  AuthCredential,
-  CreateAgentSessionOptions,
-  ToolDefinition,
-} from '@earendil-works/pi-coding-agent';
+import { createAgentSession, SessionManager as PiSessionManager, AuthStorage as PiAuthStorage, ModelRegistry as PiModelRegistry, createReadToolDefinition, createBashToolDefinition, createEditToolDefinition, createWriteToolDefinition, createGrepToolDefinition, createFindToolDefinition, createLsToolDefinition } from '@earendil-works/pi-coding-agent';
+import type { AgentSession, AgentSessionEvent, AgentToolResult, AuthCredential, CreateAgentSessionOptions, ToolDefinition } from '@earendil-works/pi-coding-agent';
 
 // Pi AI types
 import type { TextContent as PiTextContent } from '@earendil-works/pi-ai';
@@ -56,26 +38,16 @@ import { bedrockProviderModule } from '@earendil-works/pi-ai/bedrock-provider';
 setBedrockProviderModule(bedrockProviderModule);
 
 // Model resolution (extracted for testability + custom-endpoint precedence)
-import {
-  requireExplicitPiModel,
-  resolvePiModel,
-} from './model-resolution.ts';
+import { resolvePiModelWithCustomFallback, requireExplicitPiModel } from './model-resolution.ts';
 import { registerSupplementalCatalogModels } from './catalog-model-registration.ts';
-import {
-  activateEphemeralQueryModel,
-  resolveQueryModel,
-} from './query-model.ts';
+import { activateEphemeralQueryModel, resolveEphemeralQueryThinkingLevel, resolveQueryModel } from './query-model.ts';
 import { applyTokenUpdate, type PiCredential } from './token-update.ts';
-import {
-  buildCustomEndpointModelDef,
-  normalizeCustomEndpointModelEntry,
-  stripPiPrefix,
-  type CustomEndpointModelEntry,
-  type CustomEndpointModelOverrides,
-} from './custom-endpoint-models.ts';
+import { buildCustomEndpointModelDef, normalizeCustomEndpointModelEntry, type CustomEndpointModelEntry, type CustomEndpointModelOverrides } from './custom-endpoint-models.ts';
 
 // Direct source imports from shared (bundled by bun build)
 import { handleLargeResponse, estimateTokens, tokenLimitFor } from '../../shared/src/utils/large-response.ts';
+import { resolveAgentCostControlPolicy, resolveEffectiveAgentContextLimits } from '../../shared/src/config/agent-cost-control.ts';
+import { loadWorkspaceConfig } from '../../shared/src/workspaces/storage.ts';
 import { getSessionPlansPath, getSessionPath } from '../../shared/src/sessions/storage.ts';
 import { buildCallLlmRequest, withTimeout, LLM_QUERY_TIMEOUT_MS } from '../../shared/src/agent/llm-tool.ts';
 import type { LLMQueryRequest, LLMQueryResult } from '../../shared/src/agent/llm-tool.ts';
@@ -84,30 +56,23 @@ import { createWebFetchTool } from './tools/web-fetch.ts';
 import { resolveSearchProvider } from './tools/search/resolve-provider.ts';
 import { createSearchTool } from './tools/search/create-search-tool.ts';
 import { compactSelectedModel } from './compact-selected-model.ts';
+
 import { applySelectedThinkingLevel } from './selected-thinking-level.ts';
 import { allowCraftMetadataProperties, normalizeForPiTool, stripCraftMetadata } from './craft-metadata-schema.ts';
 import { applySystemPromptOverride } from './system-prompt-override.ts';
+import { createProviderHandoffPreflight } from './provider-handoff.ts';
 import { registerGoogleCodeAssistProvider } from './google-code-assist-provider.ts';
 import { assertPiAuthProviderContractEnabled } from './provider-contract-guard.ts';
-import {
-  OVERFLOW_RECOVERY_COMPACTION_INSTRUCTIONS,
-  prepareMessagesForOverflowContinuation,
-} from './overflow-recovery.ts';
-import {
-  IncompleteToolTailRecovery,
-  prepareMessagesForIncompleteTailContinuation,
-} from './incomplete-tool-tail-recovery.ts';
+import { OVERFLOW_RECOVERY_COMPACTION_INSTRUCTIONS, prepareMessagesForOverflowContinuation } from './overflow-recovery.ts';
+import { IncompleteToolTailRecovery, prepareMessagesForIncompleteTailContinuation } from './incomplete-tool-tail-recovery.ts';
 import { ToolLoopBudget } from './tool-loop-budget.ts';
+import { finishToolLoopResult, installToolLoopFeedback } from './tool-loop-feedback.ts';
+import { INTRA_TURN_CONTEXT_CHECKPOINT_ERROR, estimateIntraTurnContextTokens, needsIntraTurnContextCheckpoint } from './intra-turn-context-guard.ts';
+import { createToolExecutionCheckpointResult } from './tool-execution-checkpoint.ts';
 import { normalizeSessionPathTokens } from './session-path-normalization.ts';
-import {
-  ReadToolTimeoutError,
-  resolveReadToolTimeoutMs,
-  withReadToolTimeout,
-} from './read-tool-timeout.ts';
-import {
-  extractRecentUserTexts,
-  SourceToolActivationController,
-} from './source-tool-activation.ts';
+import { ReadToolTimeoutError, resolveReadToolTimeoutMs, withReadToolTimeout } from './read-tool-timeout.ts';
+import { extractRecentUserTexts, SourceToolActivationController } from './source-tool-activation.ts';
+import { waitForProxyToolResponse, type PendingProxyToolExecution } from './proxy-tool-response-watchdog.ts';
 
 // ============================================================
 // Types — JSONL Protocol
@@ -121,6 +86,7 @@ interface InitMessage {
   type: 'init';
   apiKey: string;
   model: string;
+  modelRoutePinned?: boolean;
   cwd: string;
   thinkingLevel: string;
   workspaceRootPath: string;
@@ -153,16 +119,26 @@ interface RuntimeConfigUpdateMessage {
   customModels?: Array<string | { id: string; contextWindow?: number; supportsImages?: boolean }>;
 }
 
+/** Read the workspace-owned kill switch at the last responsible moment. The
+ * subprocess can outlive a settings toggle, so the init snapshot is not an
+ * authoritative live value. Missing/malformed configuration fails closed. */
+
+
+/** Automatic workspace routing is only model-authoritative while the session
+ * has no manual model pin. The prompt/init protocol refreshes that host-owned
+ * pin for direct subprocess call_llm callbacks. */
+
+
 /** Messages from main process (stdin) */
 type InboundMessage =
   | InitMessage
-  | { type: 'prompt'; id: string; message: string; systemPrompt: string; images?: Array<{ type: 'image'; data: string; mimeType: string }> }
+  | { type: 'prompt'; id: string; message: string; systemPrompt: string; images?: Array<{ type: 'image'; data: string; mimeType: string }>; modelRoutePinned?: boolean }
   | { type: 'register_tools'; tools: ProxyToolDef[] }
-  | { type: 'tool_execute_response'; requestId: string; result: { content: string; isError: boolean } }
+  | { type: 'tool_execute_response'; requestId: string; result: { content: string; isError: boolean; structuredContent?: Record<string, unknown> } }
   | { type: 'pre_tool_use_response'; requestId: string; action: 'allow' | 'block' | 'modify'; input?: Record<string, unknown>; reason?: string }
   | { type: 'abort' }
-  | { type: 'mini_completion'; id: string; prompt: string }
-  | { type: 'llm_query'; id: string; request: LLMQueryRequest }
+  | { type: 'mini_completion'; id: string; prompt: string; allowModelSubstitution?: boolean }
+  | { type: 'llm_query'; id: string; request: LLMQueryRequest; allowModelSubstitution?: boolean }
   | { type: 'ensure_session_ready'; id: string }
   | { type: 'set_model'; model: string }
   | { type: 'set_thinking_level'; level: string }
@@ -180,8 +156,11 @@ interface ProxyToolDef {
   name: string;
   description: string;
   inputSchema: Record<string, unknown>;
+  outputSchema?: Record<string, unknown>;
   readOnly?: boolean;
   idempotent?: boolean;
+  destructive?: boolean;
+  openWorld?: boolean;
   parallelSafe?: boolean;
 }
 
@@ -208,7 +187,13 @@ interface OutboundPreToolUseReq {
   toolCallId?: string;
   input: Record<string, unknown>;
 }
-interface OutboundToolExecReq { type: 'tool_execute_request'; requestId: string; toolName: string; args: Record<string, unknown> }
+interface OutboundToolExecReq {
+  type: 'tool_execute_request';
+  requestId: string;
+  toolName: string;
+  toolCallId?: string;
+  args: Record<string, unknown>;
+}
 interface OutboundSessionToolCompleted { type: 'session_tool_completed'; toolName: string; args: Record<string, unknown>; isError: boolean }
 interface OutboundMiniResult { type: 'mini_completion_result'; id: string; text: string | null }
 interface OutboundLlmQueryResult {
@@ -245,7 +230,8 @@ interface OutboundRuntimeConfigUpdateResult {
   errorMessage?: string;
 }
 interface OutboundSessionIdUpdate { type: 'session_id_update'; sessionId: string }
-interface OutboundError { type: 'error'; message: string; code?: string }
+interface OutboundProviderHandoff { type: 'provider_handoff'; id: string }
+interface OutboundError { type: 'error'; id?: string; message: string; code?: string }
 
 type OutboundMessage =
   | OutboundReady
@@ -260,6 +246,7 @@ type OutboundMessage =
   | OutboundSetAutoCompactionResult
   | OutboundRuntimeConfigUpdateResult
   | OutboundSessionIdUpdate
+  | OutboundProviderHandoff
   | OutboundError;
 
 // ============================================================
@@ -282,24 +269,13 @@ const toolLoopBudget = new ToolLoopBudget();
 
 // Pending promises for async handshakes
 const pendingPreToolUse = new Map<string, { resolve: (response: { action: string; input?: Record<string, unknown>; reason?: string }) => void }>();
-const pendingToolExecutions = new Map<string, { resolve: (result: { content: string; isError: boolean }) => void }>();
+const pendingToolExecutions = new Map<string, PendingProxyToolExecution>();
 
 // Pending session MCP tool calls for completion detection
 const pendingSessionToolCalls = new Map<string, { toolName: string; arguments: Record<string, unknown> }>();
 
 // Proxy tool definitions from main process
 let proxyToolDefs: ProxyToolDef[] = [];
-
-// Speculative prefetch for explicitly parallel-safe read-only session tools.
-// The batch is capped because Pi's SDK loop is sequential and upstream services
-// may enforce rate limits. Source MCP annotations are propagated separately but
-// never opt a tool into this permission-bypassing prefetch path.
-const MAX_PARALLEL_PREFETCH = 4;
-const prefetchCache = new Map<string, Promise<{ content: string; isError: boolean }>>();
-
-function isPrefetchableTool(toolName: string): boolean {
-  return proxyToolDefs.some(def => def.name === toolName && def.readOnly === true && def.parallelSafe === true);
-}
 
 // Flag: proxy tools changed since last session creation — session needs recreation
 let toolsChanged = false;
@@ -688,6 +664,28 @@ async function ensureSession(): Promise<AgentSession> {
   }
   if (piThinkingLevel) session.setThinkingLevel(piThinkingLevel);
   piSession = session;
+  const previousTransformContext = session.agent.transformContext;
+  session.agent.transformContext = async (messages, signal) => {
+    const transformed = previousTransformContext
+      ? await previousTransformContext(messages, signal)
+      : messages;
+    const modelContextWindow = session.agent.state.model?.contextWindow;
+    const policy = resolveAgentCostControlPolicy(
+      loadWorkspaceConfig(initConfig!.workspaceRootPath)?.costControl,
+    );
+    const compactAtTokens = policy.enabled
+      ? resolveEffectiveAgentContextLimits(policy.context, modelContextWindow).compactAtTokens
+      : Number.isFinite(modelContextWindow) && modelContextWindow! > 0
+        ? Math.floor(modelContextWindow! * 0.75)
+        : 0;
+    if (needsIntraTurnContextCheckpoint(transformed, compactAtTokens)) {
+      debugLog(`Intra-turn context checkpoint: estimated=${estimateIntraTurnContextTokens(transformed)} threshold=${compactAtTokens}`);
+      throw new Error(INTRA_TURN_CONTEXT_CHECKPOINT_ERROR);
+    }
+    return transformed;
+  };
+  installToolLoopFeedback(session);
+  installStructuredToolErrors(session);
 
   toolsChanged = false;
   debugLog(`Created Pi session: ${session.sessionId} (${wrappedAll.length} tools)`);
@@ -762,6 +760,7 @@ function wrapSingleTool(tool: ToolDefinition<any, any>): ToolDefinition<any, any
     onUpdate,
     ctx,
   ) => {
+    const feedbackSession = piSession;
     let inputObj: Record<string, unknown> = { ...(params as Record<string, unknown>) };
 
     if (initConfig) {
@@ -795,15 +794,15 @@ function wrapSingleTool(tool: ToolDefinition<any, any>): ToolDefinition<any, any
 
     const loopDecision = toolLoopBudget.observe(sdkToolName, inputObj);
     if (loopDecision.action === 'block') {
-      return {
-        content: [{ type: 'text', text: loopDecision.message ?? 'Repeated unchanged tool call blocked.' }],
-        details: {
-          costControlBlocked: true,
-          continuationRequired: true,
-          checkpoint: 'tool-call-budget',
-        },
-      };
+      const reason = loopDecision.message ?? 'Repeated unchanged tool call blocked.';
+      return createToolExecutionCheckpointResult(reason);
     }
+
+    const finishResult = (result: AgentToolResult<any>) => finishToolLoopResult(result, loopDecision, {
+      session: feedbackSession, isCurrentSession: () => piSession === feedbackSession, toolCallId, signal,
+      onHint: message => handleSessionEvent({ type: 'message_end', message }),
+      onError: error => debugLog(`Tool-loop guidance unavailable: ${error instanceof Error ? error.message : String(error)}`),
+    });
 
     // Execute original tool with (potentially modified) input
     let result: AgentToolResult<any>;
@@ -852,15 +851,10 @@ function wrapSingleTool(tool: ToolDefinition<any, any>): ToolDefinition<any, any
         });
 
         if (largeResult) {
-          return {
-            content: [{
-              type: 'text',
-              text: loopDecision.action === 'hint' && loopDecision.message
-                ? `${largeResult.message}\n\n${loopDecision.message}`
-                : largeResult.message,
-            }],
+          return finishResult({
+            content: [{ type: 'text', text: largeResult.message }],
             details: result.details,
-          };
+          });
         }
       } catch (error) {
         debugLog(
@@ -869,17 +863,7 @@ function wrapSingleTool(tool: ToolDefinition<any, any>): ToolDefinition<any, any
       }
     }
 
-    if (loopDecision.action === 'hint' && loopDecision.message) {
-      return {
-        ...result,
-        content: [
-          ...result.content,
-          { type: 'text', text: `\n\n${loopDecision.message}` },
-        ],
-      };
-    }
-
-    return result;
+    return finishResult(result);
   };
 
   return {
@@ -914,42 +898,40 @@ function buildProxyTools(): ToolDefinition<any, any>[] {
       toolCallId: string,
       params: any,
     ): Promise<AgentToolResult<any>> => {
-      // Check speculative prefetch cache first (parallel call_llm optimization).
-      // If this tool was prefetched on message_end, the request is already in-flight —
-      // just await the result instead of sending a duplicate request.
-      const prefetched = prefetchCache.get(toolCallId);
-      if (prefetched) {
-        prefetchCache.delete(toolCallId);
-        debugLog(`Prefetch cache hit for ${def.name} (toolCallId: ${toolCallId})`);
-        const result = await prefetched;
-        return {
-          content: [{ type: 'text', text: result.content }],
-          details: result.isError ? { isError: true } : undefined,
-        };
-      }
-
-      const inputObj = params as Record<string, unknown>;
-
-      // Permission checking via main process
-      const approvedInput = await requestPreToolUseApproval(def.name, inputObj, toolCallId);
+      // Every proxy definition is installed through wrapToolsWithHooks(), whose
+      // outer execute wrapper has already completed the host PreToolUse check
+      // and passed the approved (possibly modified) input here. Rechecking in
+      // this inner proxy executor used to emit two pre_tool_use_request messages
+      // with the same canonical toolCallId. Besides wasting a round trip, that
+      // makes exact-once lifecycle guards correctly treat the second request as
+      // an ambiguous collision. Keep one host admission per SDK invocation.
+      const approvedInput = params as Record<string, unknown>;
 
       // Execute via main process
       const requestId = `proxy-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
-      send({
-        type: 'tool_execute_request',
+      const result = await waitForProxyToolResponse({
+        pending: pendingToolExecutions,
         requestId,
         toolName: def.name,
         args: approvedInput,
-      });
-
-      const result = await new Promise<{ content: string; isError: boolean }>((resolve) => {
-        pendingToolExecutions.set(requestId, { resolve });
+        dispatch: () => send({
+          type: 'tool_execute_request',
+          requestId,
+          toolName: def.name,
+          toolCallId,
+          args: approvedInput,
+        }),
       });
 
       return {
         content: [{ type: 'text', text: result.content }],
-        details: result.isError ? { isError: true } : undefined,
+        details: result.isError || result.structuredContent
+          ? {
+              ...(result.isError ? { isError: true } : {}),
+              ...(result.structuredContent ? { structuredContent: result.structuredContent } : {}),
+            }
+          : undefined,
       };
     },
   }));
@@ -959,15 +941,19 @@ function buildProxyTools(): ToolDefinition<any, any>[] {
 // LLM Query (ephemeral session for call_llm + mini completions)
 // ============================================================
 
-async function queryLlm(request: LLMQueryRequest): Promise<LLMQueryResult> {
+async function queryLlm(
+  request: LLMQueryRequest,
+  systemOptions: { thinkingLevel?: AgentSession['thinkingLevel'] } = {},
+): Promise<LLMQueryResult> {
   if (!initConfig) throw new Error('Cannot run queryLlm: init not received');
   assertPiAuthProviderContractEnabled(initConfig.piAuth?.provider, process.env);
 
   debugLog('[queryLlm] Starting');
 
-  // Auxiliary task work inherits the user's selected model unless its caller
-  // explicitly supplies another model. A missing model is an error, never a
-  // reason to search other providers or mini-model candidates.
+  // `queryLlm` is the generic backend primitive used by call_llm. Its hard
+  // contract is inheritance: without an explicit override, keep the session's
+  // model/provider/reasoning route exactly. Utility routing belongs only in
+  // explicitly identified system paths such as mini_completion and compact.
   const model = resolveQueryModel(request.model, initConfig.model);
   const { authStorage, modelRegistry } = createAuthenticatedRegistry();
 
@@ -995,8 +981,11 @@ async function queryLlm(request: LLMQueryRequest): Promise<LLMQueryResult> {
     // Pi SDK ignores options.model for ephemeral sessions (same issue as options.tools).
     // Explicitly set the model after creation to ensure the selected model is used.
     await activateEphemeralQueryModel(ephemeralSession, piModel, modelId);
-    const thinkingLevel = piSession?.thinkingLevel
-      ?? THINKING_TO_PI[initConfig!.thinkingLevel as keyof typeof THINKING_TO_PI];
+    const thinkingLevel = resolveEphemeralQueryThinkingLevel(
+      systemOptions.thinkingLevel,
+      piSession?.thinkingLevel,
+      THINKING_TO_PI[initConfig!.thinkingLevel as keyof typeof THINKING_TO_PI],
+    );
     if (thinkingLevel) ephemeralSession.setThinkingLevel(thinkingLevel);
 
     debugLog(`[queryLlm] Created ephemeral session: ${ephemeralSession.sessionId}`);
@@ -1075,7 +1064,12 @@ async function preExecuteCallLlm(input: Record<string, unknown>): Promise<LLMQue
   const sessionPath = initConfig
     ? getSessionPath(initConfig.workspaceRootPath, initConfig.sessionId)
     : undefined;
-  const request = await buildCallLlmRequest(input, { backendName: 'Pi', sessionPath });
+  const { model: _ignoredModelOverride, ...requestInput } = input;
+  const request = await buildCallLlmRequest(requestInput, { backendName: 'Pi', sessionPath });
+  // Re-read the explicit selection after asynchronous attachment reads.
+  if (initConfig?.model) {
+    request.model = initConfig.model;
+  }
   return queryLlm(request);
 }
 
@@ -1154,9 +1148,8 @@ function handleSessionEvent(event: AgentSessionEvent): void {
         });
       }
 
-      // Speculative prefetch: if the assistant message contains 2+ prefetchable tool calls,
-      // fire all requests to the main process in parallel NOW, before executeToolCalls
-      // iterates sequentially. Each proxy tool's execute() will hit the cache.
+      // Register the planned batch for loop-budget diagnostics only. Proxy
+      // execution remains sequential behind each invocation's PreToolUse gate.
       const content = (msg as { content?: Array<{ type: string; id?: string; name?: string; arguments?: unknown }> }).content;
       if (Array.isArray(content)) {
         const plannedToolCalls = content.flatMap((item) => {
@@ -1172,29 +1165,6 @@ function handleSessionEvent(event: AgentSessionEvent): void {
         });
         toolLoopBudget.registerPlannedBatch(plannedToolCalls);
 
-        const allPrefetchableToolCalls = content.filter(
-          (c) => c.type === 'toolCall' && c.name && isPrefetchableTool(c.name),
-        );
-        const prefetchableToolCalls = allPrefetchableToolCalls.slice(0, MAX_PARALLEL_PREFETCH);
-        if (prefetchableToolCalls.length >= 2) {
-          const firstToolCall = prefetchableToolCalls[0];
-          const toolLabel = firstToolCall?.name ?? 'tool';
-          debugLog(`Prefetching ${prefetchableToolCalls.length}/${allPrefetchableToolCalls.length} parallel-safe ${toolLabel} calls (cap ${MAX_PARALLEL_PREFETCH})`);
-          for (const tc of prefetchableToolCalls) {
-            if (!tc.id || !tc.name) continue;
-            const requestId = `prefetch-${tc.id}`;
-            const promise = new Promise<{ content: string; isError: boolean }>((resolve) => {
-              pendingToolExecutions.set(requestId, { resolve });
-            });
-            send({
-              type: 'tool_execute_request',
-              requestId,
-              toolName: tc.name!,
-              args: (tc.arguments ?? {}) as Record<string, unknown>,
-            });
-            prefetchCache.set(tc.id!, promise);
-          }
-        }
       }
     }
   }
@@ -1306,6 +1276,9 @@ async function waitForCompaction(session: { isCompacting: boolean }, timeoutMs =
 }
 
 async function handlePrompt(msg: Extract<InboundMessage, { type: 'prompt' }>): Promise<void> {
+  if (initConfig && typeof msg.modelRoutePinned === 'boolean') {
+    initConfig.modelRoutePinned = msg.modelRoutePinned;
+  }
   currentUserMessage = msg.message;
   incompleteToolTailRecovery.beginPrompt();
   toolLoopBudget.beginPrompt();
@@ -1374,6 +1347,9 @@ async function handlePrompt(msg: Extract<InboundMessage, { type: 'prompt' }>): P
     await session.prompt(msg.message, {
       images: msg.images && msg.images.length > 0 ? msg.images : undefined,
       streamingBehavior: 'followUp',
+      preflightResult: createProviderHandoffPreflight(
+        () => send({ type: 'provider_handoff', id: msg.id }),
+      ),
     });
 
     const recoveryResult = await incompleteToolTailRecovery.recover(async () => {
@@ -1409,7 +1385,7 @@ async function handlePrompt(msg: Extract<InboundMessage, { type: 'prompt' }>): P
     // reaches the UI.
 
     debugLog(`Prompt failed: ${errorMsg}`);
-    send({ type: 'error', message: errorMsg, code: 'prompt_error' });
+    send({ type: 'error', id: msg.id, message: errorMsg, code: 'prompt_error' });
     // Send synthetic agent_end so the main process event queue unblocks.
     // willRetry: false — this is the terminal error path, no retry follows.
     send({ type: 'event', event: { type: 'agent_end', messages: [], willRetry: false } });
@@ -1438,7 +1414,6 @@ function handleRegisterTools(msg: Extract<InboundMessage, { type: 'register_tool
 function handleToolExecuteResponse(msg: Extract<InboundMessage, { type: 'tool_execute_response' }>): void {
   const pending = pendingToolExecutions.get(msg.requestId);
   if (pending) {
-    pendingToolExecutions.delete(msg.requestId);
     pending.resolve(msg.result);
   } else {
     debugLog(`No pending tool execution for requestId: ${msg.requestId}`);
@@ -1471,15 +1446,24 @@ async function handleAbort(): Promise<void> {
   }
   pendingPreToolUse.clear();
 
-  // Clear speculative prefetch cache — in-flight prefetches will resolve but never be consumed
-  prefetchCache.clear();
 }
 
 async function handleMiniCompletion(msg: Extract<InboundMessage, { type: 'mini_completion' }>): Promise<void> {
   // Call queryLlm directly (not runMiniCompletion) so auth errors propagate
   // as 'error' messages instead of being swallowed and returned as null.
   try {
-    const result = await queryLlm({ prompt: msg.prompt, model: initConfig?.miniModel ?? initConfig?.model });
+    if (!initConfig) throw new Error('Cannot run mini completion: init not received');
+    const { modelRegistry } = createAuthenticatedRegistry();
+    const activeModel = requireExplicitPiModel(
+      modelRegistry,
+      initConfig.model,
+      initConfig.piAuth?.provider,
+      shouldPreferCustomEndpoint(),
+    );
+    const result = await queryLlm(
+      { prompt: msg.prompt, model: activeModel.id },
+      { thinkingLevel: THINKING_TO_PI[initConfig.thinkingLevel as keyof typeof THINKING_TO_PI] },
+    );
     send({ type: 'mini_completion_result', id: msg.id, text: result.text || null });
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
@@ -1494,7 +1478,10 @@ async function handleMiniCompletion(msg: Extract<InboundMessage, { type: 'mini_c
 // request-propagation + request-honoring are independent (see #596).
 async function handleLlmQuery(msg: Extract<InboundMessage, { type: 'llm_query' }>): Promise<void> {
   try {
-    const result = await queryLlm(msg.request);
+    const request = initConfig?.model
+      ? { ...msg.request, model: initConfig.model }
+      : msg.request;
+    const result = await queryLlm(request);
     send({ type: 'llm_query_result', id: msg.id, result });
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
@@ -1529,6 +1516,8 @@ async function handleCompact(msg: Extract<InboundMessage, { type: 'compact' }>):
     if (!settled) {
       throw new Error('Previous compaction did not settle before the safety deadline');
     }
+    {}
+    {}
     const result = await compactSelectedModel(session, msg.customInstructions);
     send({
       type: 'compact_result',
@@ -1675,13 +1664,16 @@ async function handleUpdateRuntimeConfig(msg: RuntimeConfigUpdateMessage): Promi
     }
 
     if (piSession && piModelRegistry) {
-      let piModel = resolvePiModel(piModelRegistry, msg.model, initConfig.piAuth?.provider, shouldPreferCustomEndpoint());
-      if (!piModel && initConfig.baseUrl?.trim() && initConfig.customEndpoint) {
-        const bareId = stripPiPrefix(msg.model);
-        registerCustomEndpointModels(piModelRegistry, initConfig.customEndpoint.api, initConfig.baseUrl.trim(), [{ id: bareId }]);
-        piModel = piModelRegistry.find('custom-endpoint', bareId) ?? undefined;
-        debugLog(`[runtime_config] Dynamically registered custom endpoint model: ${bareId}`);
-      }
+      const registry = piModelRegistry;
+      const endpoint = initConfig.customEndpoint;
+      const baseUrl = initConfig.baseUrl?.trim();
+      const piModel = resolvePiModelWithCustomFallback(
+        registry, msg.model, initConfig.piAuth?.provider, shouldPreferCustomEndpoint(),
+        endpoint && baseUrl ? (bareId) => {
+          registerCustomEndpointModels(registry, endpoint.api, baseUrl, [{ id: bareId }]);
+          debugLog(`[runtime_config] Dynamically registered custom endpoint model: ${bareId}`);
+        } : undefined,
+      );
 
       if (!piModel) {
         throw new Error(`Could not resolve model after runtime update: ${msg.model}`);
@@ -1716,17 +1708,20 @@ async function handleSetModel(msg: Extract<InboundMessage, { type: 'set_model' }
     return;
   }
   try {
-    let piModel = resolvePiModel(piModelRegistry, msg.model, initConfig.piAuth?.provider, shouldPreferCustomEndpoint());
-
-  // For custom endpoints, dynamically register unknown models so mid-session switching works.
-  // Uses registerCustomEndpointModels which accumulates into the existing model set
-  // (registerProvider replaces, so we track all IDs and re-register the full set).
-    if (!piModel && initConfig.baseUrl?.trim() && initConfig.customEndpoint) {
-      const bareId = stripPiPrefix(msg.model);
-      registerCustomEndpointModels(piModelRegistry, initConfig.customEndpoint.api, initConfig.baseUrl.trim(), [{ id: bareId }]);
-      piModel = piModelRegistry.find('custom-endpoint', bareId) ?? undefined;
-      debugLog(`[set_model] Dynamically registered custom endpoint model: ${bareId}`);
-    }
+    // For custom endpoints, dynamically register unknown models so mid-session
+    // switching works while keeping the selected provider as a strict boundary.
+    const endpoint = initConfig.customEndpoint;
+    const baseUrl = initConfig.baseUrl?.trim();
+    const piModel = resolvePiModelWithCustomFallback(
+      piModelRegistry,
+      msg.model,
+      initConfig.piAuth?.provider,
+      shouldPreferCustomEndpoint(),
+      endpoint && baseUrl ? (bareId) => {
+        registerCustomEndpointModels(piModelRegistry!, endpoint.api, baseUrl, [{ id: bareId }]);
+        debugLog(`[set_model] Dynamically registered custom endpoint model: ${bareId}`);
+      } : undefined,
+    );
 
     if (!piModel) {
       throw new Error(`Could not resolve selected model: ${msg.model}`);

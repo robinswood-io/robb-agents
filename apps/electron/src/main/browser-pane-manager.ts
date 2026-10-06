@@ -9,10 +9,11 @@
 import { join, parse as parsePath } from 'path'
 import { existsSync, mkdirSync } from 'fs'
 import { validateFilePath, getWorkspaceAllowedDirs } from '@craft-agent/server-core/handlers'
-import { BrowserWindow, WebContentsView, app, dialog, ipcMain, nativeTheme, session, shell, type Session as ElectronSession } from 'electron'
+import { BrowserWindow, WebContentsView, app, dialog, ipcMain, nativeImage, nativeTheme, session, shell, type Session as ElectronSession } from 'electron'
 import { mainLog } from './logger'
 import type { WindowManager } from './window-manager'
 import { BrowserCDP, type AccessibilitySnapshot, type ElementGeometry } from './browser-cdp'
+import { CANVAS_CAPTURE_LIMITS } from './browser-canvas-capture'
 import {
   type BrowserEmptyStateLaunchPayload,
   type BrowserEmptyStateLaunchResult,
@@ -30,6 +31,7 @@ import {
 import type {
   IBrowserPaneManager,
   BrowserInstanceSnapshot,
+  BrowserMutationUrlPolicy,
 } from '@craft-agent/server-core/handlers'
 import type {
   BrowserCapabilityRequest,
@@ -46,6 +48,17 @@ const MAX_CONSOLE_LOG_ENTRIES = 500
 const MAX_NETWORK_LOG_ENTRIES = 500
 const MAX_DOWNLOAD_LOG_ENTRIES = 200
 const DEFAULT_WAIT_TIMEOUT_MS = 10_000
+const POLICY_MUTATION_CAPABILITY_METHODS = new Set([
+  'clickElement',
+  'clickAtCoordinates',
+  'drag',
+  'fillElement',
+  'typeText',
+  'selectOption',
+  'sendKey',
+  'evaluate',
+  'setClipboard',
+])
 const DEFAULT_WAIT_POLL_MS = 100
 const SCREENSHOT_HIDDEN_CAPTURE_ATTEMPTS = 3
 const SCREENSHOT_RETRY_DELAY_MS = 120
@@ -148,6 +161,8 @@ interface BrowserInstance {
   window: BrowserWindow
   toolbarView: WebContentsView
   pageView: WebContentsView
+  /** Native wrappers may already be gone when Electron emits shutdown events. */
+  pageWebContentsId: number
   nativeOverlayView: WebContentsView
   cdp: BrowserCDP
   currentUrl: string
@@ -229,6 +244,7 @@ export interface BrowserConsoleOptions {
 }
 
 export interface BrowserScreenshotRegionTarget {
+  source?: 'canvas'
   x?: number
   y?: number
   width?: number
@@ -272,6 +288,8 @@ export interface BrowserWaitResult {
 }
 
 export interface BrowserKeyArgs {
+  /** Explicit printable keyboard text (type-keys), never a clipboard operation. */
+  text?: string
   key: string
   modifiers?: Array<'shift' | 'control' | 'alt' | 'meta'>
 }
@@ -298,7 +316,13 @@ export interface BrowserScreenshotResult {
   imageBuffer: Buffer
   imageFormat: 'png' | 'jpeg'
   metadata?: {
-    mode: 'raw' | 'agent'
+    mode: 'raw' | 'agent' | 'canvas'
+    source?: 'canvas-bitmap'
+    canvasBox?: { x: number; y: number; width: number; height: number }
+    sourceRect?: { x: number; y: number; width: number; height: number }
+    intrinsicSize?: { width: number; height: number }
+    capturedAt?: number
+    imageToViewport?: { x: number; y: number; scaleX: number; scaleY: number }
     viewport?: {
       width: number
       height: number
@@ -357,6 +381,9 @@ export class BrowserPaneManager implements IBrowserPaneManager {
   private windowManager: WindowManager | null = null
   private sessionPathResolver: ((sessionId: string) => string | null) | null = null
   private permissionAutonomyResolver: BrowserPanePermissionAutonomyResolver | null = null
+  /** Serialize URL-changing operations and page mutations per instance. This
+   * keeps the URL fence and the following effect in one ordered host section. */
+  private serializedOperationTails = new Map<string, Promise<void>>()
 
   setWindowManager(windowManager: WindowManager): void {
     this.windowManager = windowManager
@@ -454,17 +481,16 @@ export class BrowserPaneManager implements IBrowserPaneManager {
       },
     })
 
-    // Set WebContentsView backgrounds to match theme so about:blank doesn't flash white
-    const toolbarWcWithBg = toolbarView.webContents as typeof toolbarView.webContents & { setBackgroundColor?: (color: string) => void }
-    toolbarWcWithBg.setBackgroundColor?.('#00000000')
-    const pageWcWithBg = pageView.webContents as typeof pageView.webContents & { setBackgroundColor?: (color: string) => void }
-    pageWcWithBg.setBackgroundColor?.(bgColor)
-    const overlayWcWithBg = nativeOverlayView.webContents as typeof nativeOverlayView.webContents & { setBackgroundColor?: (color: string) => void }
-    overlayWcWithBg.setBackgroundColor?.('#00000000')
+    // WebContentsView defaults to opaque white. CSS transparency alone cannot
+    // reveal the page beneath the toolbar or the agent/menu overlay.
+    toolbarView.setBackgroundColor('#00000000')
+    pageView.setBackgroundColor(bgColor)
+    nativeOverlayView.setBackgroundColor('#00000000')
 
     const cdp = new BrowserCDP(pageView.webContents)
 
     const instance: BrowserInstance = {
+      pageWebContentsId: pageView.webContents.id,
       id: instanceId,
       window,
       toolbarView,
@@ -567,7 +593,7 @@ export class BrowserPaneManager implements IBrowserPaneManager {
     instance.pendingShowToken += 1
 
     // Clean up in-flight network tracking for this instance's webContents
-    const wcId = instance.pageView.webContents.id
+    const wcId = instance.pageWebContentsId
     this.inFlightRequestsByWebContentsId.delete(wcId)
     this.lastNetworkActivityByWebContentsId.delete(wcId)
 
@@ -619,6 +645,78 @@ export class BrowserPaneManager implements IBrowserPaneManager {
       throw new Error(`Browser window was closed (instance: ${id})`)
     }
     return instance
+  }
+
+  private async runSerializedBrowserOperation<T>(
+    id: string,
+    operation: () => Promise<T> | T,
+  ): Promise<T> {
+    const expectedInstance = this.requireAliveInstance(id)
+    const expectedOwnerSessionId = expectedInstance.ownerSessionId
+    const expectedBoundSessionId = expectedInstance.boundSessionId
+    const previous = this.serializedOperationTails.get(id) ?? Promise.resolve()
+    let release!: () => void
+    const gate = new Promise<void>((resolve) => { release = resolve })
+    const tail = previous.catch(() => {}).then(() => gate)
+    this.serializedOperationTails.set(id, tail)
+
+    await previous.catch(() => {})
+    try {
+      if (this.instances.get(id) !== expectedInstance
+        || expectedInstance.window.isDestroyed()
+        || expectedInstance.ownerSessionId !== expectedOwnerSessionId
+        || expectedInstance.boundSessionId !== expectedBoundSessionId) {
+        throw new Error(`Browser instance changed before serialized operation: ${id}`)
+      }
+      return await operation()
+    } finally {
+      release()
+      if (this.serializedOperationTails.get(id) === tail) {
+        this.serializedOperationTails.delete(id)
+      }
+    }
+  }
+
+  private mutationUrlAllowed(
+    instance: BrowserInstance,
+    policy?: BrowserMutationUrlPolicy,
+  ): boolean {
+    if (!policy) return true
+    if (policy.reason !== 'contextual-gmail-reply'
+      || !Array.isArray(policy.blockedHosts)
+      || policy.blockedHosts.length === 0
+      || policy.blockedHosts.length > 16
+      || policy.blockedHosts.some(host => typeof host !== 'string'
+        || host !== host.trim().toLowerCase()
+        || !/^[a-z0-9.-]+$/u.test(host))) {
+      throw new Error('Invalid browser mutation URL policy received by the desktop host.')
+    }
+
+    let target: URL
+    try {
+      const liveUrl = instance.pageView.webContents.getURL() || instance.currentUrl
+      target = new URL(liveUrl)
+    } catch {
+      // Under a host-issued mutation policy, an unknown transition target is
+      // not evidence that the page is outside the blocked origin. Fail closed
+      // until Electron exposes one parseable live URL.
+      return false
+    }
+    const targetHostname = target.hostname.toLowerCase().replace(/\.+$/u, '')
+    return !policy.blockedHosts.some(host => targetHostname === host
+      || policy.matchSubdomains === true && targetHostname.endsWith(`.${host}`))
+  }
+
+  private assertMutationUrlAllowed(
+    instance: BrowserInstance,
+    policy?: BrowserMutationUrlPolicy,
+  ): void {
+    if (this.mutationUrlAllowed(instance, policy)) return
+    throw new Error(
+      'Validation failed: browser mutations on Gmail are disabled for this contextual reply. '
+        + 'Use only gmail_reply_preflight + gmail_reply_bound or '
+        + 'gmail_reply_all_preflight + gmail_reply_all with the signed closed payload.',
+    )
   }
 
   async handleEmptyStateLaunchFromRenderer(
@@ -756,6 +854,10 @@ export class BrowserPaneManager implements IBrowserPaneManager {
   }
 
   async navigate(id: string, url: string): Promise<{ url: string; title: string }> {
+    return this.runSerializedBrowserOperation(id, () => this.navigateAtCurrentInstance(id, url))
+  }
+
+  private async navigateAtCurrentInstance(id: string, url: string): Promise<{ url: string; title: string }> {
     const instance = this.requireAliveInstance(id)
 
     let normalizedUrl = url.trim()
@@ -790,17 +892,84 @@ export class BrowserPaneManager implements IBrowserPaneManager {
   }
 
   async goBack(id: string): Promise<void> {
-    const instance = this.requireAliveInstance(id)
-    if (instance.pageView.webContents.canGoBack()) {
-      instance.pageView.webContents.goBack()
-    }
+    await this.runSerializedBrowserOperation(id, () => this.navigateHistoryAtCurrentInstance(id, 'back'))
   }
 
   async goForward(id: string): Promise<void> {
+    await this.runSerializedBrowserOperation(id, () => this.navigateHistoryAtCurrentInstance(id, 'forward'))
+  }
+
+  private async navigateHistoryAtCurrentInstance(
+    id: string,
+    direction: 'back' | 'forward',
+  ): Promise<void> {
     const instance = this.requireAliveInstance(id)
-    if (instance.pageView.webContents.canGoForward()) {
-      instance.pageView.webContents.goForward()
-    }
+    const webContents = instance.pageView.webContents
+    const canNavigate = direction === 'back'
+      ? webContents.canGoBack()
+      : webContents.canGoForward()
+    if (!canNavigate) return
+
+    // Electron's goBack/goForward calls return before the history navigation
+    // commits. Keep the per-instance operation queue held until the new live
+    // URL is observable, otherwise a queued mutation can validate the previous
+    // CMS URL and execute while the window is already moving to Gmail.
+    await new Promise<void>((resolve, reject) => {
+      let settled = false
+      const timeoutMs = 30_000
+      const cleanup = () => {
+        clearTimeout(timer)
+        webContents.removeListener('did-navigate', onMainFrameNavigate)
+        webContents.removeListener('did-navigate-in-page', onInPageNavigate)
+        webContents.removeListener('did-fail-load', onFail)
+        webContents.removeListener('destroyed', onDestroyed)
+      }
+      const finish = (error?: Error) => {
+        if (settled) return
+        settled = true
+        cleanup()
+        if (error) reject(error)
+        else resolve()
+      }
+      const onMainFrameNavigate = () => finish()
+      const onInPageNavigate = (
+        _event: unknown,
+        _url: string,
+        isMainFrame: boolean,
+      ) => {
+        if (isMainFrame === false) return
+        finish()
+      }
+      const onFail = (
+        _event: unknown,
+        errorCode: number,
+        errorDescription: string,
+        validatedURL: string,
+        isMainFrame: boolean,
+      ) => {
+        if (isMainFrame === false) return
+        finish(new Error(
+          `Browser history ${direction} navigation failed (${errorCode}) for "${validatedURL}": ${errorDescription}`,
+        ))
+      }
+      const onDestroyed = () => finish(new Error(`Browser instance was destroyed during history ${direction}: ${id}`))
+      const timer = setTimeout(() => finish(new Error(
+        `Browser history ${direction} navigation timed out after ${timeoutMs / 1000}s`,
+      )), timeoutMs)
+
+      // Use persistent listeners plus explicit cleanup: a sub-frame in-page
+      // event or failure must not consume the main-frame completion guard.
+      webContents.on('did-navigate', onMainFrameNavigate)
+      webContents.on('did-navigate-in-page', onInPageNavigate)
+      webContents.on('did-fail-load', onFail)
+      webContents.on('destroyed', onDestroyed)
+      try {
+        if (direction === 'back') webContents.goBack()
+        else webContents.goForward()
+      } catch (error) {
+        finish(error instanceof Error ? error : new Error(String(error)))
+      }
+    })
   }
 
   reload(id: string): void {
@@ -891,10 +1060,15 @@ export class BrowserPaneManager implements IBrowserPaneManager {
     return instance.cdp.getAccessibilitySnapshot()
   }
 
-  async clickAtCoordinates(id: string, x: number, y: number): Promise<void> {
+  async clickAtCoordinates(id: string, x: number, y: number, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> {
+    return this.runSerializedBrowserOperation(id, () => this.clickAtCoordinatesAtCurrentUrl(id, x, y, mutationPolicy))
+  }
+
+  private async clickAtCoordinatesAtCurrentUrl(id: string, x: number, y: number, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> {
     const instance = this.requireAliveInstance(id)
 
     try {
+      this.assertMutationUrlAllowed(instance, mutationPolicy)
       await instance.cdp.clickAtCoordinates(x, y)
       instance.lastAction = {
         tool: 'browser_click_at',
@@ -911,10 +1085,15 @@ export class BrowserPaneManager implements IBrowserPaneManager {
     }
   }
 
-  async drag(id: string, x1: number, y1: number, x2: number, y2: number): Promise<void> {
+  async drag(id: string, x1: number, y1: number, x2: number, y2: number, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> {
+    return this.runSerializedBrowserOperation(id, () => this.dragAtCurrentUrl(id, x1, y1, x2, y2, mutationPolicy))
+  }
+
+  private async dragAtCurrentUrl(id: string, x1: number, y1: number, x2: number, y2: number, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> {
     const instance = this.requireAliveInstance(id)
 
     try {
+      this.assertMutationUrlAllowed(instance, mutationPolicy)
       await instance.cdp.drag(x1, y1, x2, y2)
       instance.lastAction = {
         tool: 'browser_drag',
@@ -931,10 +1110,15 @@ export class BrowserPaneManager implements IBrowserPaneManager {
     }
   }
 
-  async typeText(id: string, text: string): Promise<void> {
+  async typeText(id: string, text: string, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> {
+    return this.runSerializedBrowserOperation(id, () => this.typeTextAtCurrentUrl(id, text, mutationPolicy))
+  }
+
+  private async typeTextAtCurrentUrl(id: string, text: string, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> {
     const instance = this.requireAliveInstance(id)
 
     try {
+      this.assertMutationUrlAllowed(instance, mutationPolicy)
       await instance.cdp.typeText(text)
       instance.lastAction = {
         tool: 'browser_type',
@@ -951,20 +1135,43 @@ export class BrowserPaneManager implements IBrowserPaneManager {
     }
   }
 
-  async setClipboard(id: string, text: string): Promise<void> {
+  async setClipboard(id: string, text: string, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> {
+    return this.runSerializedBrowserOperation(id, () => this.setClipboardAtCurrentUrl(id, text, mutationPolicy))
+  }
+
+  private async setClipboardAtCurrentUrl(id: string, text: string, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> {
     const instance = this.requireAliveInstance(id)
+    // Apply the host policy before invoking page-controlled JavaScript. A page
+    // cannot authorize OS clipboard access by replacing navigator.clipboard.
+    if (!isBrowserPanePermissionAllowed('clipboard-sanitized-write')) {
+      throw new Error('Clipboard write is denied by browser policy. No paste shortcut was sent. Use a DOM field or explicit type-keys; do not repeat paste or change permissions.')
+    }
+    this.assertMutationUrlAllowed(instance, mutationPolicy)
     await instance.cdp.setClipboard(text)
   }
 
   async getClipboard(id: string): Promise<string> {
     const instance = this.requireAliveInstance(id)
+    if (!isBrowserPanePermissionAllowed('clipboard-read')) {
+      throw new Error('Clipboard read is denied by browser policy; its contents are unknown, not empty.')
+    }
     return instance.cdp.getClipboard()
   }
 
   async clickElement(
     id: string,
     ref: string,
-    options?: { waitFor?: 'none' | 'navigation' | 'network-idle'; timeoutMs?: number }
+    options?: { waitFor?: 'none' | 'navigation' | 'network-idle'; timeoutMs?: number },
+    mutationPolicy?: BrowserMutationUrlPolicy,
+  ): Promise<void> {
+    return this.runSerializedBrowserOperation(id, () => this.clickElementAtCurrentUrl(id, ref, options, mutationPolicy))
+  }
+
+  private async clickElementAtCurrentUrl(
+    id: string,
+    ref: string,
+    options?: { waitFor?: 'none' | 'navigation' | 'network-idle'; timeoutMs?: number },
+    mutationPolicy?: BrowserMutationUrlPolicy,
   ): Promise<void> {
     const instance = this.requireAliveInstance(id)
     const waitFor = options?.waitFor ?? 'none'
@@ -974,7 +1181,16 @@ export class BrowserPaneManager implements IBrowserPaneManager {
     if (waitFor === 'navigation') {
       const timeoutMs = Math.max(100, options?.timeoutMs ?? DEFAULT_WAIT_TIMEOUT_MS)
       navigationWait = new Promise<void>((resolve, reject) => {
-        const onNav = () => {
+        const onMainFrameNavigate = () => {
+          cleanup()
+          resolve()
+        }
+        const onInPageNavigate = (
+          _event: unknown,
+          _url: string,
+          isMainFrame: boolean,
+        ) => {
+          if (isMainFrame === false) return
           cleanup()
           resolve()
         }
@@ -987,17 +1203,21 @@ export class BrowserPaneManager implements IBrowserPaneManager {
         }, timeoutMs)
         const cleanup = () => {
           clearTimeout(timer)
-          instance.pageView.webContents.removeListener('did-navigate', onNav)
-          instance.pageView.webContents.removeListener('did-navigate-in-page', onNav)
+          instance.pageView.webContents.removeListener('did-navigate', onMainFrameNavigate)
+          instance.pageView.webContents.removeListener('did-navigate-in-page', onInPageNavigate)
         }
 
         cleanupNavigationWait = cleanup
-        instance.pageView.webContents.once('did-navigate', onNav)
-        instance.pageView.webContents.once('did-navigate-in-page', onNav)
+        instance.pageView.webContents.once('did-navigate', onMainFrameNavigate)
+        // A sub-frame in-page event must not release the serialized operation
+        // before the top-level navigation commits. Keep listening until a
+        // main-frame event arrives, then remove both listeners in cleanup.
+        instance.pageView.webContents.on('did-navigate-in-page', onInPageNavigate)
       })
     }
 
     try {
+      this.assertMutationUrlAllowed(instance, mutationPolicy)
       const clickPromise = instance.cdp.clickElement(ref)
       const geometry = navigationWait
         ? (await Promise.all([clickPromise, navigationWait]))[0]
@@ -1026,10 +1246,15 @@ export class BrowserPaneManager implements IBrowserPaneManager {
     }
   }
 
-  async fillElement(id: string, ref: string, value: string): Promise<void> {
+  async fillElement(id: string, ref: string, value: string, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> {
+    return this.runSerializedBrowserOperation(id, () => this.fillElementAtCurrentUrl(id, ref, value, mutationPolicy))
+  }
+
+  private async fillElementAtCurrentUrl(id: string, ref: string, value: string, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> {
     const instance = this.requireAliveInstance(id)
 
     try {
+      this.assertMutationUrlAllowed(instance, mutationPolicy)
       const geometry = await instance.cdp.fillElement(ref, value)
       instance.lastAction = {
         tool: 'browser_fill',
@@ -1049,10 +1274,15 @@ export class BrowserPaneManager implements IBrowserPaneManager {
     }
   }
 
-  async selectOption(id: string, ref: string, value: string): Promise<void> {
+  async selectOption(id: string, ref: string, value: string, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> {
+    return this.runSerializedBrowserOperation(id, () => this.selectOptionAtCurrentUrl(id, ref, value, mutationPolicy))
+  }
+
+  private async selectOptionAtCurrentUrl(id: string, ref: string, value: string, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> {
     const instance = this.requireAliveInstance(id)
 
     try {
+      this.assertMutationUrlAllowed(instance, mutationPolicy)
       const geometry = await instance.cdp.selectOption(ref, value)
       instance.lastAction = {
         tool: 'browser_select',
@@ -1231,6 +1461,37 @@ export class BrowserPaneManager implements IBrowserPaneManager {
   async screenshotRegion(id: string, target: BrowserScreenshotRegionTarget): Promise<BrowserScreenshotResult> {
     const instance = this.instances.get(id)
     if (!instance) throw new Error(`Browser instance not found: ${id}`)
+
+    if (target.source !== undefined) {
+      if (target.source !== 'canvas' || typeof target.selector !== 'string' || !target.selector.trim()
+        || Object.keys(target).some(key => !['source', 'selector', 'format'].includes(key))
+        || (target.format !== undefined && target.format !== 'png')) {
+        throw new Error('Canvas capture requires only source=canvas and a unique selector; PNG only, no padding, ref or coordinates')
+      }
+      const owner = instance.ownerSessionId, bound = instance.boundSessionId, workspace = instance.workspaceId
+      const current = () => this.instances.get(id) === instance && !instance.window.isDestroyed()
+        && !instance.pageView.webContents.isDestroyed() && instance.ownerSessionId === owner
+        && instance.boundSessionId === bound && instance.workspaceId === workspace
+      const { receipt, png } = await instance.cdp.captureCanvasBitmap(target.selector, current)
+      if (!current()) throw new Error('Canvas capture ownership changed; no image was returned')
+      const original = nativeImage.createFromBuffer(png)
+      if (original.isEmpty() || original.getSize().width !== receipt.width || original.getSize().height !== receipt.height) throw new Error('Canvas capture bitmap decoding failed')
+      const image = original.crop(receipt.sourceRect)
+      const pixels = image.toBitmap()
+      let hasVisiblePixel = false
+      for (let i = 3; i < pixels.length; i += 4) { if (pixels[i] !== 0) { hasVisiblePixel = true; break } }
+      if (image.isEmpty() || !hasVisiblePixel) throw new Error('Canvas bitmap is empty or transparent; this does not prove that the remote screen is empty. No repaint was forced.')
+      const imageBuffer = image.toPNG()
+      if (!imageBuffer.length || imageBuffer.length > CANVAS_CAPTURE_LIMITS.pngBytes) throw new Error('Canvas capture output exceeds the image limit')
+      return { imageBuffer, imageFormat: 'png', metadata: {
+        source: 'canvas-bitmap', mode: 'canvas', viewport: receipt.viewport, region: receipt.region,
+        canvasBox: receipt.canvasBox, intrinsicSize: { width: receipt.width, height: receipt.height },
+        sourceRect: receipt.sourceRect, capturedAt: receipt.capturedAt,
+        imageToViewport: { x: receipt.region.x, y: receipt.region.y,
+          scaleX: receipt.region.width / receipt.sourceRect.width, scaleY: receipt.region.height / receipt.sourceRect.height },
+        warnings: ['Selected canvas bitmap only; DOM overlays, other canvas layers and composited CSS effects are excluded.', 'Sample time is not a remote execution acknowledgement or a guarantee of a fresh repaint.'],
+      } }
+    }
 
     const hasCoords = [target.x, target.y, target.width, target.height].every((v) => typeof v === 'number')
     const hasRef = typeof target.ref === 'string' && target.ref.length > 0
@@ -1609,14 +1870,34 @@ export class BrowserPaneManager implements IBrowserPaneManager {
     throw new Error(`Unknown wait kind: ${args.kind}`)
   }
 
-  async sendKey(id: string, args: BrowserKeyArgs): Promise<void> {
+  async sendKey(id: string, args: BrowserKeyArgs, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> {
+    return this.runSerializedBrowserOperation(id, () => this.sendKeyAtCurrentUrl(id, args, mutationPolicy))
+  }
+
+  private async sendKeyAtCurrentUrl(id: string, args: BrowserKeyArgs, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> {
     const instance = this.requireAliveInstance(id)
+
+    if (args.text !== undefined) {
+      if (args.key !== 'Unidentified' || (args.modifiers !== undefined && (!Array.isArray(args.modifiers) || args.modifiers.length !== 0))) throw new Error('Keyboard text cannot include shortcut modifiers')
+      const owner = instance.ownerSessionId
+      const bound = instance.boundSessionId
+      const controlled = instance.agentControl
+      this.assertMutationUrlAllowed(instance, mutationPolicy)
+      return instance.cdp.typeKeys(args.text, () => {
+        const current = this.instances.get(id)
+        return current === instance && !instance.pageView.webContents.isDestroyed()
+          && instance.ownerSessionId === owner && instance.boundSessionId === bound
+          && instance.agentControl === controlled
+          && this.mutationUrlAllowed(instance, mutationPolicy)
+      })
+    }
 
     const key = args.key?.trim()
     if (!key) throw new Error('browser_key requires key')
 
     const modifiers = (args.modifiers ?? []) as Array<'shift' | 'control' | 'alt' | 'meta'>
 
+    this.assertMutationUrlAllowed(instance, mutationPolicy)
     instance.pageView.webContents.sendInputEvent({
       type: 'keyDown',
       keyCode: key,
@@ -1650,7 +1931,11 @@ export class BrowserPaneManager implements IBrowserPaneManager {
 
   // validateUploadFilePath removed — uses shared validateFilePath from @craft-agent/server-core/handlers
 
-  async uploadFile(id: string, ref: string, filePaths: string[]): Promise<ElementGeometry> {
+  async uploadFile(id: string, ref: string, filePaths: string[], mutationPolicy?: BrowserMutationUrlPolicy): Promise<ElementGeometry> {
+    return this.runSerializedBrowserOperation(id, () => this.uploadFileAtCurrentUrl(id, ref, filePaths, mutationPolicy))
+  }
+
+  private async uploadFileAtCurrentUrl(id: string, ref: string, filePaths: string[], mutationPolicy?: BrowserMutationUrlPolicy): Promise<ElementGeometry> {
     const instance = this.requireAliveInstance(id)
 
     const safePaths: string[] = []
@@ -1661,6 +1946,7 @@ export class BrowserPaneManager implements IBrowserPaneManager {
       safePaths.push(safePath)
     }
 
+    this.assertMutationUrlAllowed(instance, mutationPolicy)
     return instance.cdp.setFileInputFiles(ref, safePaths)
   }
 
@@ -1681,8 +1967,13 @@ export class BrowserPaneManager implements IBrowserPaneManager {
     }
   }
 
-  async evaluate(id: string, expression: string): Promise<unknown> {
+  async evaluate(id: string, expression: string, mutationPolicy?: BrowserMutationUrlPolicy): Promise<unknown> {
+    return this.runSerializedBrowserOperation(id, () => this.evaluateAtCurrentUrl(id, expression, mutationPolicy))
+  }
+
+  private async evaluateAtCurrentUrl(id: string, expression: string, mutationPolicy?: BrowserMutationUrlPolicy): Promise<unknown> {
     const instance = this.requireAliveInstance(id)
+    this.assertMutationUrlAllowed(instance, mutationPolicy)
     return instance.pageView.webContents.executeJavaScript(expression)
   }
 
@@ -2219,6 +2510,7 @@ export class BrowserPaneManager implements IBrowserPaneManager {
     runCleanup('updateNativeOverlayState', () => this.updateNativeOverlayState(instance))
     runCleanup('cdp.detach', () => instance.cdp.detach())
     this.instances.delete(instance.id)
+    this.serializedOperationTails.delete(instance.id)
     this.removedCallback?.(instance.id)
     mainLog.info(`[browser-pane] Destroyed instance: ${instance.id} (${source})`)
   }
@@ -2624,12 +2916,18 @@ export class BrowserPaneManager implements IBrowserPaneManager {
 
   /** Main dispatcher. Strongly-typed `switch` over `IBrowserPaneManager` methods. */
   private async dispatchCapability(req: BrowserCapabilityRequest): Promise<unknown> {
-    if (!req || req.v !== 1) {
+    if (!req || (req.v !== 1 && req.v !== 2)) {
       throw new CodedError('HANDLER_ERROR',
         `Unsupported browser capability request shape (v=${(req as { v?: unknown })?.v}).`)
     }
+    if (req.v === 2 && (!POLICY_MUTATION_CAPABILITY_METHODS.has(req.method)
+      || !req.mutationUrlPolicy || typeof req.mutationUrlPolicy !== 'object')) {
+      throw new CodedError('HANDLER_ERROR',
+        'Browser capability v2 is reserved for a policy-bearing page mutation.')
+    }
     const ownerKey = this.toOwnerKey(req.workspaceId, req.sessionId)
     const args = req.args ?? []
+    const mutationPolicy = req.v === 2 ? req.mutationUrlPolicy : undefined
 
     switch (req.method) {
       // -- Session-scoped (no instanceId arg, takes a sessionId) ----------------
@@ -2757,37 +3055,37 @@ export class BrowserPaneManager implements IBrowserPaneManager {
           { waitFor?: 'none' | 'navigation' | 'network-idle'; timeoutMs?: number } | undefined,
         ]
         this.requireOwnedInstance(instanceId, ownerKey)
-        return this.clickElement(instanceId, ref, options)
+        return this.clickElement(instanceId, ref, options, mutationPolicy)
       }
       case 'clickAtCoordinates': {
         const [instanceId, x, y] = args as [string, number, number]
         this.requireOwnedInstance(instanceId, ownerKey)
-        return this.clickAtCoordinates(instanceId, x, y)
+        return this.clickAtCoordinates(instanceId, x, y, mutationPolicy)
       }
       case 'drag': {
         const [instanceId, x1, y1, x2, y2] = args as [string, number, number, number, number]
         this.requireOwnedInstance(instanceId, ownerKey)
-        return this.drag(instanceId, x1, y1, x2, y2)
+        return this.drag(instanceId, x1, y1, x2, y2, mutationPolicy)
       }
       case 'fillElement': {
         const [instanceId, ref, value] = args as [string, string, string]
         this.requireOwnedInstance(instanceId, ownerKey)
-        return this.fillElement(instanceId, ref, value)
+        return this.fillElement(instanceId, ref, value, mutationPolicy)
       }
       case 'typeText': {
         const [instanceId, text] = args as [string, string]
         this.requireOwnedInstance(instanceId, ownerKey)
-        return this.typeText(instanceId, text)
+        return this.typeText(instanceId, text, mutationPolicy)
       }
       case 'selectOption': {
         const [instanceId, ref, value] = args as [string, string, string]
         this.requireOwnedInstance(instanceId, ownerKey)
-        return this.selectOption(instanceId, ref, value)
+        return this.selectOption(instanceId, ref, value, mutationPolicy)
       }
       case 'sendKey': {
         const [instanceId, keyArgs] = args as [string, BrowserKeyArgs]
         this.requireOwnedInstance(instanceId, ownerKey)
-        return this.sendKey(instanceId, keyArgs)
+        return this.sendKey(instanceId, keyArgs, mutationPolicy)
       }
       case 'scroll': {
         const [instanceId, direction, amount] = args as [
@@ -2808,14 +3106,14 @@ export class BrowserPaneManager implements IBrowserPaneManager {
           throw new CodedError('BROWSER_REMOTE_EVALUATE_BLOCKED',
             'JavaScript evaluation from remote agents is disabled in this client.')
         }
-        return this.evaluate(instanceId, expression)
+        return this.evaluate(instanceId, expression, mutationPolicy)
       }
 
       // -- Clipboard -----------------------------------------------------------
       case 'setClipboard': {
         const [instanceId, text] = args as [string, string]
         this.requireOwnedInstance(instanceId, ownerKey)
-        return this.setClipboard(instanceId, text)
+        return this.setClipboard(instanceId, text, mutationPolicy)
       }
       case 'getClipboard': {
         const [instanceId] = args as [string]
@@ -3141,7 +3439,7 @@ export class BrowserPaneManager implements IBrowserPaneManager {
 
   private getInstanceByWebContentsId(webContentsId: number): BrowserInstance | undefined {
     for (const instance of this.instances.values()) {
-      if (instance.pageView.webContents.id === webContentsId) return instance
+      if (instance.pageWebContentsId === webContentsId) return instance
     }
     return undefined
   }

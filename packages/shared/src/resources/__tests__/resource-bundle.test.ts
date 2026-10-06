@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
-import { mkdirSync, writeFileSync, rmSync, existsSync, readFileSync, readdirSync } from 'fs'
+import { mkdirSync, writeFileSync, rmSync, existsSync, readFileSync, readdirSync, symlinkSync } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
 import { exportResources, importResources, validateResourceBundle } from '../resource-bundle'
@@ -208,6 +208,93 @@ describe('resource-bundle', () => {
       expect(paths).not.toContain('config.json')
     })
 
+    it('does not export a source managed by a protected local overlay', () => {
+      const wsDir = createTestWorkspace(tmpDir)
+      createTestSource(wsDir, 'protected-source')
+      writeFileSync(
+        join(wsDir, 'sources', 'protected-source', '.robb-source-overlay.json'),
+        '{"schemaVersion":1}',
+      )
+
+      const { bundle, warnings } = exportResources(wsDir, { sources: ['protected-source'] })
+
+      expect(bundle.resources.sources).toEqual([])
+      expect(warnings).toContain(
+        "Source 'protected-source' uses a protected local overlay and cannot be exported as a portable resource",
+      )
+    })
+
+    it('never exports source or skill data through a top-level symlink', () => {
+      const wsDir = createTestWorkspace(tmpDir)
+      const outsideSource = join(tmpDir, 'outside-source')
+      const outsideSkill = join(tmpDir, 'outside-skill')
+      mkdirSync(outsideSource)
+      mkdirSync(outsideSkill)
+      writeFileSync(join(outsideSource, 'config.json'), JSON.stringify({
+        id: 'linked_1', name: 'linked', slug: 'linked', enabled: true,
+        provider: 'custom', type: 'api', api: { baseUrl: 'https://example.com', authType: 'none' },
+      }))
+      writeFileSync(join(outsideSource, 'private.txt'), 'OUTSIDE PRIVATE DATA')
+      writeFileSync(join(outsideSkill, 'SKILL.md'), 'OUTSIDE SKILL DATA')
+      symlinkSync(outsideSource, join(wsDir, 'sources', 'linked'), 'dir')
+      symlinkSync(outsideSkill, join(wsDir, 'skills', 'linked'), 'dir')
+
+      const { bundle, warnings } = exportResources(wsDir, { sources: ['linked'], skills: ['linked'] })
+
+      expect(bundle.resources.sources).toEqual([])
+      expect(bundle.resources.skills).toEqual([])
+      expect(warnings.filter(warning => warning.includes('trusted resource boundary'))).toHaveLength(2)
+      expect(JSON.stringify(bundle)).not.toContain('OUTSIDE')
+    })
+
+    it('rejects a symlinked source config before reading external JSON', () => {
+      const wsDir = createTestWorkspace(tmpDir)
+      createTestSource(wsDir, 'linked-config')
+      const externalConfig = join(tmpDir, 'external-config.json')
+      writeFileSync(externalConfig, JSON.stringify({
+        id: 'external', name: 'external', slug: 'linked-config', enabled: true,
+        provider: 'custom', type: 'api', api: { baseUrl: 'https://outside.example', authType: 'none' },
+      }))
+      rmSync(join(wsDir, 'sources', 'linked-config', 'config.json'))
+      symlinkSync(externalConfig, join(wsDir, 'sources', 'linked-config', 'config.json'))
+
+      const { bundle, warnings } = exportResources(wsDir, { sources: ['linked-config'] })
+
+      expect(bundle.resources.sources).toEqual([])
+      expect(warnings.some(warning => warning.includes('unsafe config'))).toBe(true)
+    })
+
+    it('skips export while an overlay transaction holds the shared source lock', () => {
+      const wsDir = createTestWorkspace(tmpDir)
+      createTestSource(wsDir, 'google-contacts')
+      const lockPath = join(wsDir, 'sources', '.robb-source-transaction-google-contacts.lock')
+      writeFileSync(lockPath, JSON.stringify({
+        schemaVersion: 1,
+        slug: 'google-contacts',
+        pid: 999999,
+        operation: 'overlay-install',
+        createdAtUnixMs: Date.now(),
+      }) + '\n', { mode: 0o600 })
+
+      const { bundle, warnings } = exportResources(wsDir, { sources: ['google-contacts'] })
+
+      expect(bundle.resources.sources).toEqual([])
+      expect(warnings.some(warning => warning.includes('could not be locked for a consistent export'))).toBe(true)
+      expect(existsSync(lockPath)).toBe(true)
+    })
+
+    it('does not strand unrelated sources behind an unrecoverable overlay lock', () => {
+      const wsDir = createTestWorkspace(tmpDir)
+      createTestSource(wsDir, 'postgres')
+      const unrelatedLock = join(wsDir, 'sources', '.robb-source-transaction-postgres.lock')
+      writeFileSync(unrelatedLock, '{"legacy":"stale"}\n', { mode: 0o600 })
+
+      const { bundle } = exportResources(wsDir, { sources: ['postgres'] })
+
+      expect(bundle.resources.sources?.map(source => source.slug)).toEqual(['postgres'])
+      expect(existsSync(unrelatedLock)).toBe(true)
+    })
+
     it('excludes non-hidden credential and private-key files from exports', () => {
       const wsDir = createTestWorkspace(tmpDir)
       createTestSource(wsDir, 'safe-source')
@@ -402,6 +489,17 @@ describe('resource-bundle', () => {
       expect(warnings.some(w => w.includes('nonexistent'))).toBe(true)
     })
 
+    it('rejects non-canonical source and skill export selectors before path access', () => {
+      const wsDir = createTestWorkspace(tmpDir)
+      const sourceExport = exportResources(wsDir, { sources: ['../outside'] })
+      const skillExport = exportResources(wsDir, { skills: [String.raw`..\outside`] })
+
+      expect(sourceExport.bundle.resources.sources).toEqual([])
+      expect(sourceExport.warnings.some(w => w.includes('not canonical'))).toBe(true)
+      expect(skillExport.bundle.resources.skills).toEqual([])
+      expect(skillExport.warnings.some(w => w.includes('not canonical'))).toBe(true)
+    })
+
     it('skips skills without SKILL.md', () => {
       const wsDir = createTestWorkspace(tmpDir)
       // Create a skill dir with no SKILL.md
@@ -563,6 +661,51 @@ describe('resource-bundle', () => {
       expect(errors.some(e => e.includes('does not match'))).toBe(true)
     })
 
+    it('rejects traversing source and skill slugs before filesystem I/O', () => {
+      const invalidSlugs = ['../victim', 'x/../../outside', String.raw`x\..\victim`, '..']
+      for (const slug of invalidSlugs) {
+        const sourceBundle = {
+          version: 1,
+          exportedAt: Date.now(),
+          resources: {
+            sources: [{
+              slug,
+              config: { id: '1', name: 'Unsafe', slug, enabled: true, provider: 'x', type: 'api' },
+              files: [],
+            }],
+          },
+        }
+        const skillBundle = {
+          version: 1,
+          exportedAt: Date.now(),
+          resources: {
+            skills: [{ slug, files: [makeBundleFile('SKILL.md', '# Unsafe')] }],
+          },
+        }
+
+        expect(validateResourceBundle(sourceBundle).valid).toBe(false)
+        expect(validateResourceBundle(skillBundle).valid).toBe(false)
+      }
+    })
+
+    it('accepts canonical bounded source and skill slugs', () => {
+      const slug = `a${'b'.repeat(62)}-`
+      const bundle = {
+        version: 1,
+        exportedAt: Date.now(),
+        resources: {
+          sources: [{
+            slug,
+            config: { id: '1', name: 'Safe', slug, enabled: true, provider: 'x', type: 'api' },
+            files: [],
+          }],
+          skills: [{ slug, files: [makeBundleFile('SKILL.md', '# Safe')] }],
+        },
+      }
+
+      expect(validateResourceBundle(bundle).valid).toBe(true)
+    })
+
     it('accepts valid automation entries', () => {
       const bundle = {
         version: 1,
@@ -663,6 +806,29 @@ describe('resource-bundle', () => {
       expect(valid).toBe(false)
       expect(errors.some(e => e.includes('duplicate path'))).toBe(true)
     })
+
+    it('rejects source files that shadow the reserved staged config', () => {
+      for (const relativePath of ['config.json', './config.json']) {
+        const bundle: ResourceBundle = {
+          version: 1,
+          exportedAt: Date.now(),
+          resources: {
+            sources: [{
+              slug: 'shadow',
+              config: {
+                id: 'shadow_1', name: 'shadow', slug: 'shadow', enabled: true,
+                provider: 'custom', type: 'api', api: { baseUrl: 'https://safe.example', authType: 'none' },
+              },
+              files: [makeBundleFile(relativePath, JSON.stringify({
+                slug: 'shadow', type: 'mcp', mcp: { transport: 'stdio', command: '/bin/sh' },
+              }))],
+            }],
+          },
+        }
+        const validation = validateResourceBundle(bundle)
+        expect({ relativePath, validation }).toMatchObject({ relativePath, validation: { valid: false } })
+      }
+    })
   })
 
   // ============================================================
@@ -701,6 +867,37 @@ describe('resource-bundle', () => {
       expect(existsSync(join(wsDir, 'sources', 'imported-api', 'config.json'))).toBe(true)
       expect(existsSync(join(wsDir, 'sources', 'imported-api', 'guide.md'))).toBe(true)
       expect(readFileSync(join(wsDir, 'sources', 'imported-api', 'guide.md'), 'utf-8')).toBe('# Imported\n\nGuide content.')
+    })
+
+    it('refuses imports when sources or skills escape through collection symlinks', async () => {
+      const wsDir = createTestWorkspace(tmpDir)
+      const outside = join(tmpDir, 'outside-collection')
+      mkdirSync(outside)
+      rmSync(join(wsDir, 'sources'), { recursive: true })
+      rmSync(join(wsDir, 'skills'), { recursive: true })
+      symlinkSync(outside, join(wsDir, 'sources'), 'dir')
+      symlinkSync(outside, join(wsDir, 'skills'), 'dir')
+      const bundle: ResourceBundle = {
+        version: 1,
+        exportedAt: Date.now(),
+        resources: {
+          sources: [{
+            slug: 'escaped',
+            config: {
+              id: 'escaped_1', name: 'escaped', slug: 'escaped', enabled: true,
+              provider: 'custom', type: 'api', api: { baseUrl: 'https://safe.example', authType: 'none' },
+            },
+            files: [makeBundleFile('guide.md', '# safe')],
+          }],
+          skills: [{ slug: 'escaped-skill', files: [makeBundleFile('SKILL.md', '# safe')] }],
+        },
+      }
+
+      const result = await importResources(wsDir, bundle, 'overwrite', noopDeps)
+
+      expect(result.sources.failed[0]?.error).toContain('workspace boundary is unsafe')
+      expect(result.skills.failed[0]?.error).toContain('workspace boundary is unsafe')
+      expect(readdirSync(outside)).toEqual([])
     })
 
     it('rejects new legacy SSE sources from resource bundles', async () => {
@@ -829,6 +1026,78 @@ describe('resource-bundle', () => {
       expect(existsSync(join(wsDir, 'sources', 'target', 'old-file.txt'))).toBe(false)
     })
 
+    it('refuses to overwrite a protected source even when no caller hook is provided', async () => {
+      const wsDir = createTestWorkspace(tmpDir)
+      createTestSource(wsDir, 'protected-source')
+      const sourceDir = join(wsDir, 'sources', 'protected-source')
+      writeFileSync(join(sourceDir, '.robb-source-overlay.json'), '{"schemaVersion":1}')
+      let credentialsCleared = false
+      const bundle: ResourceBundle = {
+        version: 1,
+        exportedAt: Date.now(),
+        resources: {
+          sources: [{
+            slug: 'protected-source',
+            config: {
+              id: 'protected-source_new',
+              name: 'Protected Source',
+              slug: 'protected-source',
+              enabled: true,
+              provider: 'custom',
+              type: 'api',
+              api: { baseUrl: 'https://replacement.example.com', authType: 'none' },
+              createdAt: Date.now(),
+              updatedAt: Date.now(),
+            },
+            files: [makeBundleFile('guide.md', '# Replacement')],
+          }],
+        },
+      }
+
+      const result = await importResources(wsDir, bundle, 'overwrite', {
+        clearSourceCredentials: async () => { credentialsCleared = true },
+      })
+
+      expect(result.sources.imported).toEqual([])
+      expect(result.sources.failed[0]?.error).toContain('Protected source overlay cannot be replaced')
+      expect(credentialsCleared).toBe(false)
+      expect(readFileSync(join(sourceDir, 'guide.md'), 'utf-8')).toContain('Usage guide')
+    })
+
+    it('refuses a staged overlay marker on an unprotected or new source', async () => {
+      const wsDir = createTestWorkspace(tmpDir)
+      const bundle: ResourceBundle = {
+        version: 1,
+        exportedAt: Date.now(),
+        resources: {
+          sources: [{
+            slug: 'forged-overlay',
+            config: {
+              id: 'forged-overlay_x',
+              name: 'Forged Overlay',
+              slug: 'forged-overlay',
+              enabled: true,
+              provider: 'custom',
+              type: 'api',
+              api: { baseUrl: 'https://example.com', authType: 'none' },
+              createdAt: Date.now(),
+              updatedAt: Date.now(),
+            },
+            files: [
+              makeBundleFile('guide.md', '# Guide'),
+              makeBundleFile('.robb-source-overlay.json', '{"schemaVersion":1}'),
+            ],
+          }],
+        },
+      }
+
+      const result = await importResources(wsDir, bundle, 'overwrite', noopDeps)
+
+      expect(result.sources.imported).toEqual([])
+      expect(result.sources.failed[0]?.error).toContain('cannot create a protected source overlay marker')
+      expect(existsSync(join(wsDir, 'sources', 'forged-overlay'))).toBe(false)
+    })
+
     it('calls clearSourceCredentials on source overwrite', async () => {
       const wsDir = createTestWorkspace(tmpDir)
       createTestSource(wsDir, 'creds-test')
@@ -864,6 +1133,291 @@ describe('resource-bundle', () => {
 
       await importResources(wsDir, bundle, 'overwrite', deps)
       expect(cleared).toEqual(['creds-test'])
+    })
+
+    it('calls validateStagedSource with the fully restored source before import', async () => {
+      const wsDir = createTestWorkspace(tmpDir)
+      const observed: Array<{ workspaceId: string; slug: string; stagedDir: string; guide: string }> = []
+      const bundle: ResourceBundle = {
+        version: 1,
+        exportedAt: Date.now(),
+        resources: {
+          sources: [{
+            slug: 'validated-source',
+            config: {
+              id: 'validated-source_x',
+              name: 'Validated Source',
+              slug: 'validated-source',
+              enabled: true,
+              provider: 'custom',
+              type: 'api',
+              api: { baseUrl: 'https://api.example.com', authType: 'none' },
+              createdAt: Date.now(),
+              updatedAt: Date.now(),
+            },
+            files: [makeBundleFile('guide.md', '# Validated guide')],
+          }],
+        },
+      }
+
+      const result = await importResources(wsDir, bundle, 'skip', {
+        ...noopDeps,
+        validateStagedSource: async (workspaceId, slug, stagedDir) => {
+          observed.push({
+            workspaceId,
+            slug,
+            stagedDir,
+            guide: readFileSync(join(stagedDir, 'guide.md'), 'utf-8'),
+          })
+          expect(existsSync(join(stagedDir, 'config.json'))).toBe(true)
+          expect(existsSync(join(wsDir, 'sources', slug))).toBe(false)
+        },
+      })
+
+      expect(result.sources.imported).toEqual(['validated-source'])
+      expect(observed).toHaveLength(1)
+      expect(observed[0]?.workspaceId).toBe('workspace')
+      expect(observed[0]?.slug).toBe('validated-source')
+      expect(observed[0]?.stagedDir).toContain('.tmp-validated-source-')
+      expect(observed[0]?.guide).toBe('# Validated guide')
+    })
+
+    it('keeps the live source and credentials intact when staged source validation rejects', async () => {
+      const wsDir = createTestWorkspace(tmpDir)
+      createTestSource(wsDir, 'protected-source')
+      const sourceDir = join(wsDir, 'sources', 'protected-source')
+      writeFileSync(join(sourceDir, 'old-file.txt'), 'keep me')
+      const originalConfig = readFileSync(join(sourceDir, 'config.json'), 'utf-8')
+      let clearCredentialsCalls = 0
+
+      const bundle: ResourceBundle = {
+        version: 1,
+        exportedAt: Date.now(),
+        resources: {
+          sources: [{
+            slug: 'protected-source',
+            config: {
+              id: 'protected-source_new',
+              name: 'Protected Source',
+              slug: 'protected-source',
+              enabled: true,
+              provider: 'custom',
+              type: 'api',
+              api: { baseUrl: 'https://new-api.example.com', authType: 'none' },
+              createdAt: Date.now(),
+              updatedAt: Date.now(),
+            },
+            files: [makeBundleFile('guide.md', '# Replacement guide')],
+          }],
+        },
+      }
+
+      const result = await importResources(wsDir, bundle, 'overwrite', {
+        clearSourceCredentials: async () => {
+          clearCredentialsCalls++
+        },
+        validateStagedSource: async () => {
+          throw new Error('staged source rejected')
+        },
+      })
+
+      expect(result.sources.imported).toEqual([])
+      expect(result.sources.failed).toEqual([{ id: 'protected-source', error: 'staged source rejected' }])
+      expect(clearCredentialsCalls).toBe(0)
+      expect(readFileSync(join(sourceDir, 'config.json'), 'utf-8')).toBe(originalConfig)
+      expect(readFileSync(join(sourceDir, 'guide.md'), 'utf-8')).toContain('Usage guide')
+      expect(readFileSync(join(sourceDir, 'old-file.txt'), 'utf-8')).toBe('keep me')
+      expect(readdirSync(join(wsDir, 'sources')).some(name => name.startsWith('.tmp-protected-source-'))).toBe(false)
+    })
+
+    it.each([
+      ['a protected overlay marker', (stagedDir: string) => {
+        writeFileSync(join(stagedDir, '.robb-source-overlay.json'), '{"forged":true}')
+      }],
+      ['the staged config', (stagedDir: string) => {
+        const configPath = join(stagedDir, 'config.json')
+        const config = JSON.parse(readFileSync(configPath, 'utf-8'))
+        config.slug = 'retargeted-source'
+        writeFileSync(configPath, JSON.stringify(config))
+      }],
+      ['a restored source file', (stagedDir: string) => {
+        writeFileSync(join(stagedDir, 'guide.md'), '# Changed after validation')
+      }],
+    ] as const)('rejects when validateStagedSource writes %s', async (_label, mutateStaging) => {
+      const wsDir = createTestWorkspace(tmpDir)
+      const bundle: ResourceBundle = {
+        version: 1,
+        exportedAt: Date.now(),
+        resources: {
+          sources: [{
+            slug: 'hook-source',
+            config: {
+              id: 'hook-source_x',
+              name: 'Hook Source',
+              slug: 'hook-source',
+              enabled: true,
+              provider: 'custom',
+              type: 'api',
+              api: { baseUrl: 'https://api.example.com', authType: 'none' },
+              createdAt: Date.now(),
+              updatedAt: Date.now(),
+            },
+            files: [makeBundleFile('guide.md', '# Original guide')],
+          }],
+        },
+      }
+      let credentialsCleared = false
+
+      const result = await importResources(wsDir, bundle, 'skip', {
+        clearSourceCredentials: async () => { credentialsCleared = true },
+        validateStagedSource: async (_workspaceId, _slug, stagedDir) => {
+          mutateStaging(stagedDir)
+        },
+      })
+
+      expect(result.sources.imported).toEqual([])
+      expect(result.sources.failed[0]?.error).toContain('changed during validateStagedSource')
+      expect(credentialsCleared).toBe(false)
+      expect(existsSync(join(wsDir, 'sources', 'hook-source'))).toBe(false)
+      expect(readdirSync(join(wsDir, 'sources')).some(name => name.startsWith('.tmp-hook-source-'))).toBe(false)
+    })
+
+    it('rejects staged bytes changed by asynchronous credential cleanup before live promotion', async () => {
+      const wsDir = createTestWorkspace(tmpDir)
+      createTestSource(wsDir, 'credential-race-source')
+      const sourceDir = join(wsDir, 'sources', 'credential-race-source')
+      const originalGuide = readFileSync(join(sourceDir, 'guide.md'), 'utf-8')
+      let credentialCleanupCompleted = false
+      const bundle: ResourceBundle = {
+        version: 1,
+        exportedAt: Date.now(),
+        resources: {
+          sources: [{
+            slug: 'credential-race-source',
+            config: {
+              id: 'credential-race-source_new',
+              name: 'Credential Race Source',
+              slug: 'credential-race-source',
+              enabled: true,
+              provider: 'custom',
+              type: 'api',
+              api: { baseUrl: 'https://new-api.example.com', authType: 'none' },
+              createdAt: Date.now(),
+              updatedAt: Date.now(),
+            },
+            files: [makeBundleFile('guide.md', '# Validated replacement')],
+          }],
+        },
+      }
+
+      const result = await importResources(wsDir, bundle, 'overwrite', {
+        validateStagedSource: async () => undefined,
+        clearSourceCredentials: async () => {
+          credentialCleanupCompleted = true
+          const stagedName = readdirSync(join(wsDir, 'sources'))
+            .find(name => name.startsWith('.tmp-credential-race-source-'))
+          expect(stagedName).toBeDefined()
+          writeFileSync(
+            join(wsDir, 'sources', stagedName!, 'guide.md'),
+            '# Changed while credential cleanup awaited',
+          )
+        },
+      })
+
+      expect(credentialCleanupCompleted).toBe(true)
+      expect(result.sources.imported).toEqual([])
+      expect(result.sources.failed[0]?.error).toContain('changed during credential cleanup')
+      expect(readFileSync(join(sourceDir, 'guide.md'), 'utf-8')).toBe(originalGuide)
+      expect(readdirSync(join(wsDir, 'sources'))
+        .some(name => name.startsWith('.tmp-credential-race-source-'))).toBe(false)
+    })
+
+    it('replaces a source only after validateStagedSource authorizes it', async () => {
+      const wsDir = createTestWorkspace(tmpDir)
+      createTestSource(wsDir, 'authorized-source')
+      const events: string[] = []
+      const bundle: ResourceBundle = {
+        version: 1,
+        exportedAt: Date.now(),
+        resources: {
+          sources: [{
+            slug: 'authorized-source',
+            config: {
+              id: 'authorized-source_new',
+              name: 'Authorized Source',
+              slug: 'authorized-source',
+              enabled: true,
+              provider: 'custom',
+              type: 'api',
+              api: { baseUrl: 'https://new-api.example.com', authType: 'none' },
+              createdAt: Date.now(),
+              updatedAt: Date.now(),
+            },
+            files: [makeBundleFile('guide.md', '# Authorized replacement')],
+          }],
+        },
+      }
+
+      const result = await importResources(wsDir, bundle, 'overwrite', {
+        validateStagedSource: async (_workspaceId, _slug, stagedDir) => {
+          expect(readFileSync(join(stagedDir, 'guide.md'), 'utf-8')).toBe('# Authorized replacement')
+          expect(readFileSync(join(wsDir, 'sources', 'authorized-source', 'guide.md'), 'utf-8')).toContain('Usage guide')
+          events.push('validated')
+        },
+        clearSourceCredentials: async () => {
+          events.push('credentials-cleared')
+        },
+      })
+
+      expect(result.sources.imported).toEqual(['authorized-source'])
+      expect(events).toEqual(['validated', 'credentials-cleared'])
+      expect(readFileSync(join(wsDir, 'sources', 'authorized-source', 'guide.md'), 'utf-8')).toBe('# Authorized replacement')
+    })
+
+    it('never imports the protected overlay slug from a portable bundle', async () => {
+      const wsDir = createTestWorkspace(tmpDir)
+      createTestSource(wsDir, 'google-contacts')
+      const sourceDir = join(wsDir, 'sources', 'google-contacts')
+      const lockPath = join(wsDir, 'sources', '.robb-source-transaction-google-contacts.lock')
+      writeFileSync(lockPath, JSON.stringify({
+        schemaVersion: 1,
+        slug: 'google-contacts',
+        pid: 999999,
+        operation: 'overlay-install',
+        createdAtUnixMs: Date.now(),
+      }) + '\n', { mode: 0o600 })
+      let credentialsCleared = false
+      const bundle: ResourceBundle = {
+        version: 1,
+        exportedAt: Date.now(),
+        resources: {
+          sources: [{
+            slug: 'google-contacts',
+            config: {
+              id: 'google-contacts_new',
+              name: 'Locked Source',
+              slug: 'google-contacts',
+              enabled: true,
+              provider: 'custom',
+              type: 'api',
+              api: { baseUrl: 'https://replacement.example.com', authType: 'none' },
+              createdAt: Date.now(),
+              updatedAt: Date.now(),
+            },
+            files: [makeBundleFile('guide.md', '# Replacement')],
+          }],
+        },
+      }
+
+      const result = await importResources(wsDir, bundle, 'overwrite', {
+        clearSourceCredentials: async () => { credentialsCleared = true },
+      })
+
+      expect(result.sources.imported).toEqual([])
+      expect(result.sources.failed[0]?.error).toContain('cannot be imported from a portable resource bundle')
+      expect(credentialsCleared).toBe(false)
+      expect(readFileSync(join(sourceDir, 'guide.md'), 'utf-8')).toContain('Usage guide')
+      expect(existsSync(lockPath)).toBe(true)
     })
 
     it('imports automations into workspace with no existing file', async () => {

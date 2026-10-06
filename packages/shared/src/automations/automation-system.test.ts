@@ -375,6 +375,180 @@ describe('AutomationSystem', () => {
       await system.dispose();
     });
 
+    it('serializes duplicate watcher snapshots into one status transition', async () => {
+      const system = new AutomationSystem({
+        workspaceRootPath: tempDir,
+        workspaceId: 'test-workspace',
+      });
+
+      system.setInitialSessionMetadata('session-1', { sessionStatus: 'todo' });
+      const emitSpy = spyOn(system.eventBus, 'emit');
+
+      const [first, duplicate] = await Promise.all([
+        system.updateSessionMetadata('session-1', { sessionStatus: 'in-progress' }),
+        system.updateSessionMetadata('session-1', { sessionStatus: 'in-progress' }),
+      ]);
+
+      expect(first).toEqual(['SessionStatusChange']);
+      expect(duplicate).toEqual([]);
+      expect(emitSpy).toHaveBeenCalledTimes(1);
+      expect(system.getSessionMetadata('session-1')?.sessionStatus).toBe('in-progress');
+
+      await system.dispose();
+    });
+
+    it('orders transitions per session without serializing unrelated sessions', async () => {
+      const system = new AutomationSystem({
+        workspaceRootPath: tempDir,
+        workspaceId: 'test-workspace',
+      });
+      system.setInitialSessionMetadata('session-1', { sessionStatus: 'todo' });
+      system.setInitialSessionMetadata('session-2', { sessionStatus: 'todo' });
+      let releaseFirst!: () => void;
+      const firstHeld = new Promise<void>(resolve => { releaseFirst = resolve; });
+      let firstEntered!: () => void;
+      const entered = new Promise<void>(resolve => { firstEntered = resolve; });
+      const transitions: string[] = [];
+      system.eventBus.on('SessionStatusChange', async payload => {
+        transitions.push(`${payload.sessionId}:${payload.oldState}->${payload.newState}`);
+        if (payload.sessionId === 'session-1' && payload.newState === 'in-progress') {
+          firstEntered();
+          await firstHeld;
+        }
+      });
+
+      const first = system.updateSessionMetadata('session-1', { sessionStatus: 'in-progress' });
+      await entered;
+      const nextSameSession = system.updateSessionMetadata('session-1', { sessionStatus: 'needs-review' });
+      const unrelated = await system.updateSessionMetadata('session-2', { sessionStatus: 'done' });
+
+      expect(unrelated).toEqual(['SessionStatusChange']);
+      expect(transitions).toEqual([
+        'session-1:todo->in-progress',
+        'session-2:todo->done',
+      ]);
+      releaseFirst();
+      expect(await Promise.all([first, nextSameSession])).toEqual([
+        ['SessionStatusChange'],
+        ['SessionStatusChange'],
+      ]);
+      expect(transitions).toEqual([
+        'session-1:todo->in-progress',
+        'session-2:todo->done',
+        'session-1:in-progress->needs-review',
+      ]);
+
+      await system.dispose();
+    });
+
+    it('does not resurrect removed metadata from running or queued updates', async () => {
+      const system = new AutomationSystem({
+        workspaceRootPath: tempDir,
+        workspaceId: 'test-workspace',
+      });
+      system.setInitialSessionMetadata('session-1', { sessionStatus: 'todo' });
+      let releaseFirst!: () => void;
+      const firstHeld = new Promise<void>(resolve => { releaseFirst = resolve; });
+      let firstEntered!: () => void;
+      const entered = new Promise<void>(resolve => { firstEntered = resolve; });
+      const transitions: string[] = [];
+      system.eventBus.on('SessionStatusChange', async payload => {
+        transitions.push(`${payload.oldState}->${payload.newState}`);
+        if (payload.newState === 'in-progress') {
+          firstEntered();
+          await firstHeld;
+        }
+      });
+
+      const running = system.updateSessionMetadata('session-1', { sessionStatus: 'in-progress' });
+      await entered;
+      const queued = system.updateSessionMetadata('session-1', { sessionStatus: 'needs-review' });
+      system.removeSessionMetadata('session-1');
+
+      expect(system.getSessionMetadata('session-1')).toBeUndefined();
+      releaseFirst();
+      expect(await Promise.all([running, queued])).toEqual([
+        ['SessionStatusChange'],
+        [],
+      ]);
+      expect(transitions).toEqual(['todo->in-progress']);
+      expect(system.getSessionMetadata('session-1')).toBeUndefined();
+
+      await system.dispose();
+    });
+
+    it('does not overwrite a fresh initial snapshot with stale queued updates', async () => {
+      const system = new AutomationSystem({
+        workspaceRootPath: tempDir,
+        workspaceId: 'test-workspace',
+      });
+      system.setInitialSessionMetadata('session-1', { sessionStatus: 'todo' });
+      let releaseFirst!: () => void;
+      const firstHeld = new Promise<void>(resolve => { releaseFirst = resolve; });
+      let firstEntered!: () => void;
+      const entered = new Promise<void>(resolve => { firstEntered = resolve; });
+      const transitions: string[] = [];
+      system.eventBus.on('SessionStatusChange', async payload => {
+        transitions.push(`${payload.oldState}->${payload.newState}`);
+        if (payload.newState === 'in-progress') {
+          firstEntered();
+          await firstHeld;
+        }
+      });
+
+      const running = system.updateSessionMetadata('session-1', { sessionStatus: 'in-progress' });
+      await entered;
+      const queued = system.updateSessionMetadata('session-1', { sessionStatus: 'needs-review' });
+      system.setInitialSessionMetadata('session-1', { sessionStatus: 'done' });
+
+      releaseFirst();
+      expect(await Promise.all([running, queued])).toEqual([
+        ['SessionStatusChange'],
+        [],
+      ]);
+      expect(transitions).toEqual(['todo->in-progress']);
+      expect(system.getSessionMetadata('session-1')?.sessionStatus).toBe('done');
+
+      await system.dispose();
+    });
+
+    it('invalidates running and queued metadata updates when disposed', async () => {
+      const system = new AutomationSystem({
+        workspaceRootPath: tempDir,
+        workspaceId: 'test-workspace',
+      });
+      system.setInitialSessionMetadata('session-1', { sessionStatus: 'todo' });
+      let releaseFirst!: () => void;
+      const firstHeld = new Promise<void>(resolve => { releaseFirst = resolve; });
+      let firstEntered!: () => void;
+      const entered = new Promise<void>(resolve => { firstEntered = resolve; });
+      const transitions: string[] = [];
+      system.eventBus.on('SessionStatusChange', async payload => {
+        transitions.push(`${payload.oldState}->${payload.newState}`);
+        if (payload.newState === 'in-progress') {
+          firstEntered();
+          await firstHeld;
+        }
+      });
+
+      const running = system.updateSessionMetadata('session-1', { sessionStatus: 'in-progress' });
+      await entered;
+      const queued = system.updateSessionMetadata('session-1', { sessionStatus: 'needs-review' });
+      const disposing = system.dispose();
+
+      expect(system.isDisposed()).toBe(true);
+      await disposing;
+      expect(system.getSessionMetadata('session-1')).toBeUndefined();
+      releaseFirst();
+      expect(await Promise.all([running, queued])).toEqual([
+        ['SessionStatusChange'],
+        [],
+      ]);
+      expect(transitions).toEqual(['todo->in-progress']);
+      expect(await system.updateSessionMetadata('session-1', { sessionStatus: 'done' })).toEqual([]);
+      expect(system.getSessionMetadata('session-1')).toBeUndefined();
+    });
+
     it('should not emit events when metadata unchanged', async () => {
       const system = new AutomationSystem({
         workspaceRootPath: tempDir,
@@ -436,6 +610,9 @@ describe('AutomationSystem', () => {
       system.removeSessionMetadata('session-1');
 
       expect(system.getSessionMetadata('session-1')).toBeUndefined();
+      expect((system as unknown as {
+        sessionMetadataTokens: Map<string, object>;
+      }).sessionMetadataTokens.size).toBe(0);
 
       await system.dispose();
     });
@@ -565,6 +742,42 @@ describe('AutomationSystem', () => {
       await system.dispose();
       await system.dispose(); // Should not throw
       expect(system.isDisposed()).toBe(true);
+    });
+
+    it('makes concurrent dispose calls join the same teardown', async () => {
+      const system = new AutomationSystem({
+        workspaceRootPath: tempDir,
+        workspaceId: 'test-workspace',
+      });
+      const eventLogHandler = (system as unknown as {
+        eventLogHandler: { dispose(): Promise<void> } | null;
+      }).eventLogHandler;
+      expect(eventLogHandler).not.toBeNull();
+      const originalDispose = eventLogHandler!.dispose.bind(eventLogHandler);
+      let releaseDispose!: () => void;
+      const disposeHeld = new Promise<void>(resolve => { releaseDispose = resolve; });
+      let disposeEntered!: () => void;
+      const entered = new Promise<void>(resolve => { disposeEntered = resolve; });
+      spyOn(eventLogHandler!, 'dispose').mockImplementation(async () => {
+        disposeEntered();
+        await disposeHeld;
+        await originalDispose();
+      });
+
+      const first = system.dispose();
+      await entered;
+      const concurrent = system.dispose();
+      let concurrentSettled = false;
+      void concurrent.then(() => { concurrentSettled = true; });
+      await Promise.resolve();
+
+      expect(concurrent).toBe(first);
+      expect(concurrentSettled).toBe(false);
+      expect(system.eventBus.isDisposed()).toBe(false);
+      releaseDispose();
+      await Promise.all([first, concurrent]);
+      expect(concurrentSettled).toBe(true);
+      expect(system.eventBus.isDisposed()).toBe(true);
     });
   });
 });

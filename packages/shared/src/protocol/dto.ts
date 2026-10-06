@@ -1,3 +1,4 @@
+import type { AgentCostControlPolicy } from '../config/agent-cost-control'
 /**
  * Server DTO types — data shapes used by RPC handlers and SessionManager.
  *
@@ -8,18 +9,19 @@
 
 import type {
   Message,
+  UserInputRequest,
   TypedError,
   ContentBadge,
   ToolDisplayMeta,
   AnnotationV1,
   RoutingMeta,
   AutonomyEvent,
+  ToolExecutionCheckpoint,
   PermissionRequest as BasePermissionRequest,
 } from '@craft-agent/core/types'
 import type { PermissionMode } from '../agent/mode-types'
 import type { ThinkingLevel } from '../agent/thinking-levels'
 import type { CustomEndpointConfig } from '../config/llm-connections'
-import type { AgentCostControlPolicy } from '../config/agent-cost-control'
 import type { SessionExecutionIsolation } from '../tasks/durable-execution'
 import type {
   MissionDigitalTwinReport,
@@ -30,7 +32,7 @@ import type {
   ProofPassportTrustAnchor,
   SignedProofPassport,
 } from '../missions'
-import type { SessionAppProvenance } from '../sessions/types'
+import type { ActiveSessionObjective, MissionOrdinaryRouteLock, PendingTurnRecovery, SessionAppProvenance, SessionDelegation } from '../sessions/types'
 import type {
   DurableTaskCockpitProjections,
   DurableTaskExternalRefs,
@@ -82,6 +84,14 @@ export interface Session {
   lastMessageAt: number
   messages: Message[]
   isProcessing: boolean
+  /** Durable objective state. Only host-validated terminalState confirms success. */
+  activeObjective?: ActiveSessionObjective
+  /** A pending continuation is not a terminal result, even after a text_complete event. */
+  pendingTurnRecovery?: PendingTurnRecovery
+  /** Includes questions from this session and its descendants in the same workspace. */
+  userInputRequests?: UserInputRequest[]
+  /** Runtime auth card exposed without loading the session transcript. */
+  pendingAuthRequestMessage?: Message
   isFlagged?: boolean
   /** Permission mode for this session ('safe', 'ask', 'allow-all') */
   permissionMode?: PermissionMode
@@ -101,8 +111,14 @@ export interface Session {
   sharedUrl?: string
   sharedId?: string
   model?: string
+  /** Preserve this caller-selected model across automatic cost routing. */
+  modelRoutePinned?: boolean
   llmConnection?: string
+  /** Preserve this caller-selected connection across automatic policy routing. */
+  connectionRoutePinned?: boolean
   thinkingLevel?: ThinkingLevel
+  /** Preserve this caller-selected reasoning level across automatic cost routing. */
+  thinkingLevelPinned?: boolean
   lastMessageRole?: 'user' | 'assistant' | 'plan' | 'tool' | 'error'
   lastFinalMessageId?: string
   isAsyncOperationOngoing?: boolean
@@ -140,6 +156,8 @@ export interface Session {
   projectId?: string
   /** Parent session id — when set, this session is a subtask of the parent (undefined = top-level task) */
   parentSessionId?: string
+  /** Host-owned autonomous delegation lineage; never supplied by an agent payload. */
+  delegation?: SessionDelegation
   /** Kanban board column id ('todo' | 'in-progress' | 'done'); independent of sessionStatus */
   kanbanColumn?: string
   /** Tasks Conductor: slug of the task spec this session belongs to. */
@@ -162,6 +180,10 @@ export interface Session {
   missionDispatchId?: string
   /** Mission role assigned to this session. */
   missionRole?: 'planner' | 'worker' | 'reviewer' | 'supervisor'
+  /** Immutable evaluated route identity for a specialized Mission session. */
+  missionRouteLockSha256?: string
+  /** Host-owned immutable route for an automatically routed ordinary Mission session. */
+  missionOrdinaryRouteLock?: MissionOrdinaryRouteLock
 }
 
 export interface CreateSessionOptions {
@@ -182,7 +204,13 @@ export interface CreateSessionOptions {
    */
   workingDirectory?: string | 'user_default' | 'none'
   model?: string
+  /** Preserve this caller-selected model across automatic cost routing. */
+  modelRoutePinned?: boolean
   llmConnection?: string
+  /** Preserve this caller-selected connection across automatic policy routing. */
+  connectionRoutePinned?: boolean
+  /** Preserve this caller-selected reasoning level across automatic cost routing. */
+  thinkingLevelPinned?: boolean
   systemPromptPreset?: 'default' | 'mini' | string
   hidden?: boolean
   sessionStatus?: SessionStatus
@@ -220,6 +248,8 @@ export interface CreateSessionOptions {
   missionDispatchId?: string
   /** Mission role assigned to this session. */
   missionRole?: 'planner' | 'worker' | 'reviewer' | 'supervisor'
+  /** Immutable evaluated route identity for a specialized Mission session. */
+  missionRouteLockSha256?: string
   /**
    * Apply the reserved "Task" label (valueType 'number') after creation. Top-level sessions
    * allocate the next task number; sessions with a `parentSessionId` inherit the parent's
@@ -703,12 +733,14 @@ export interface PermissionModeState {
 // turnId: Correlation ID from the API's message.id, groups all events in an assistant turn
 export type SessionEvent =
   | { type: 'text_delta'; sessionId: string; delta: string; turnId?: string }
-  | { type: 'text_complete'; sessionId: string; text: string; isIntermediate?: boolean; turnId?: string; parentToolUseId?: string; timestamp?: number; messageId?: string; routingMeta?: RoutingMeta }
+  | { type: 'text_complete'; sessionId: string; text: string; isIntermediate?: boolean; turnId?: string; parentToolUseId?: string; timestamp?: number; messageId?: string; routingMeta?: RoutingMeta; objectiveOutcome?: Message['objectiveOutcome'] | null; objectiveOutcomeError?: string | null }
   | { type: 'tool_start'; sessionId: string; toolName: string; toolUseId: string; toolInput: Record<string, unknown>; toolIntent?: string; toolDisplayName?: string; toolDisplayMeta?: ToolDisplayMeta; turnId?: string; parentToolUseId?: string; timestamp?: number }
-  | { type: 'tool_result'; sessionId: string; toolUseId: string; toolName: string; result: string; turnId?: string; parentToolUseId?: string; isError?: boolean; timestamp?: number }
+  | { type: 'tool_result'; sessionId: string; toolUseId: string; toolName: string; result: string; turnId?: string; parentToolUseId?: string; isError?: boolean; executed?: boolean; checkpoint?: ToolExecutionCheckpoint; timestamp?: number }
   | { type: 'error'; sessionId: string; error: string; timestamp?: number }
   | { type: 'typed_error'; sessionId: string; error: TypedError; timestamp?: number }
   | { type: 'complete'; sessionId: string; reason?: 'complete' | 'interrupted' | 'error' | 'timeout'; tokenUsage?: Session['tokenUsage']; hasUnread?: boolean; backgroundTasksAlive?: boolean }
+  /** Complete snapshots; null explicitly clears previously published state. */
+  | { type: 'objective_changed'; sessionId: string; activeObjective: ActiveSessionObjective | null; pendingTurnRecovery: PendingTurnRecovery | null }
   | { type: 'interrupted'; sessionId: string; message?: Message; queuedMessages?: string[] }
   | { type: 'status'; sessionId: string; message: string; statusType?: 'compacting' }
   | { type: 'info'; sessionId: string; message: string; statusType?: 'compaction_complete'; level?: 'info' | 'warning' | 'error' | 'success'; timestamp?: number }
@@ -716,6 +748,7 @@ export type SessionEvent =
   | { type: 'title_regenerating'; sessionId: string; isRegenerating: boolean }
   | { type: 'async_operation'; sessionId: string; isOngoing: boolean }
   | { type: 'working_directory_changed'; sessionId: string; workingDirectory: string }
+  | { type: 'user_input_changed'; sessionId: string; requests: UserInputRequest[] }
   | { type: 'permission_request'; sessionId: string; request: PermissionRequest }
   | { type: 'credential_request'; sessionId: string; request: CredentialRequest }
   | { type: 'permission_mode_changed'; sessionId: string; permissionMode: PermissionMode; previousPermissionMode?: PermissionMode; transitionDisplay?: string; modeVersion?: number; changedAt?: string; changedBy?: PermissionModeState['changedBy'] }
@@ -736,9 +769,15 @@ export type SessionEvent =
   | { type: 'session_archived'; sessionId: string }
   | { type: 'session_unarchived'; sessionId: string }
   | { type: 'name_changed'; sessionId: string; name?: string }
-  | { type: 'session_model_changed'; sessionId: string; model: string | null }
+  | {
+      type: 'session_model_changed'
+      sessionId: string
+      model: string | null
+      /** Whether the effective model is an explicit user choice. */
+      modelRoutePinned?: boolean
+    }
   | { type: 'session_status_changed'; sessionId: string; sessionStatus: SessionStatus }
-  | { type: 'session_metadata_changed'; sessionId: string; changes: Partial<Pick<Session, 'taskNodeCount' | 'kanbanColumn' | 'taskDraft' | 'taskSlug' | 'projectId'>> }
+  | { type: 'session_metadata_changed'; sessionId: string; changes: Partial<Pick<Session, 'taskNodeCount' | 'kanbanColumn' | 'taskDraft' | 'taskSlug' | 'projectId' | 'isProcessing'>> }
   | { type: 'session_deleted'; sessionId: string }
   | { type: 'session_created'; sessionId: string }
   | { type: 'session_shared'; sessionId: string; sharedUrl: string }
@@ -779,18 +818,45 @@ export interface SendMessageOptions {
    */
   automaticRecovery?: {
     originalUserMessageId: string
-    cause: 'app_restart' | 'stream_ended' | 'runtime_error' | 'premature_final' | 'tool_checkpoint' | 'evidence_gate' | 'objective_incomplete'
+    cause: 'app_restart' | 'stream_ended' | 'runtime_error' | 'premature_final' | 'tool_checkpoint' | 'evidence_gate' | 'objective_incomplete' | 'objective_continue' | 'user_retry'
+    /** Private host-issued dispatch identity. RPC callers cannot supply the
+     * enclosing automaticRecovery provenance. */
+    dispatchId?: string
+    dispatchAttempt?: number
+    dispatchOrigin?: 'restart' | 'retry' | 'automatic'
+    dispatchAllocatedAt?: number
+    /** Host-authenticated bounded handoff. Public RPC rejects the enclosing
+     * automaticRecovery object, so callers cannot mint a context reset. */
+    cleanContinuationId?: string
   }
-  /** Provenance for model-driven turns that were not directly sent by the user. */
+  /** Host-routed provenance. user-input requires a validated, persisted question response. */
   internalOrigin?: {
-    kind: 'agent-message' | 'browser-fallback' | 'spawned-session' | 'automation'
+    /** source-activation is minted by the host's private restart capability. */
+    kind: 'agent-message' | 'auth-result' | 'auth-retry' | 'browser-fallback' | 'source-activation' | 'spawned-session' | 'automation' | 'user-input'
+    /** Host-only durable source-activation binding; public RPC rejects the
+     * enclosing internalOrigin object. */
+    objectiveId?: string
+    objectiveRevision?: string
+    /** Host-only source identity and nonce for durable restart provenance. */
+    sourceSlug?: string
+    sourceActivationId?: string
     senderSessionId?: string
+    deliveryId?: string
+    attachmentsSha256?: string
+    /** Host-persisted semantic kind for an inter-session delivery. */
+    agentMessageType?: 'progress' | 'result' | 'question' | 'decision'
+    /** Host-only Task assignment; client RPC rejects the entire internalOrigin object. */
+    authenticatedTaskText?: string
   }
 }
 
 // ---------------------------------------------------------------------------
 // Session commands (consolidated operations)
 // ---------------------------------------------------------------------------
+
+export interface RetryTurnResult {
+  status: 'started' | 'already_running'
+}
 
 export type SessionCommand =
   | { type: 'flag' }
@@ -816,6 +882,7 @@ export type SessionCommand =
   | { type: 'revokeShare' }
   | { type: 'refreshTitle' }
   | { type: 'restartRuntime' }
+  | { type: 'retryTurn'; userMessageId: string }
   | { type: 'setConnection'; connectionSlug: string }
   | { type: 'setPendingPlanExecution'; planPath: string; draftInputSnapshot?: string }
   | { type: 'markCompactionComplete' }
@@ -1092,6 +1159,7 @@ export interface UpdateInfo {
 // ---------------------------------------------------------------------------
 
 export interface WorkspaceSettings {
+  costControl?: AgentCostControlPolicy
   name?: string
   model?: string
   permissionMode?: PermissionMode
@@ -1100,9 +1168,9 @@ export interface WorkspaceSettings {
   thinkingLevel?: ThinkingLevel
   workingDirectory?: string
   localMcpEnabled?: boolean
+
   defaultLlmConnection?: string
   enabledSourceSlugs?: string[]
-  costControl?: AgentCostControlPolicy
   governance?: WorkspaceGovernanceProfile
   governanceRevision?: number
   governanceUpdatedAt?: string

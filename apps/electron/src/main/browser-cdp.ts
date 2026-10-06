@@ -11,6 +11,7 @@
 
 import type { WebContents } from 'electron'
 import { mainLog } from './logger'
+import { buildCanvasCaptureExpression, validateCanvasBitmapReceipt } from './browser-canvas-capture'
 
 export interface AccessibilityNode {
   ref: string           // "@e1", "@e2", etc.
@@ -456,6 +457,30 @@ export class BrowserCDP {
   // Screenshot Annotation Helpers
   // ---------------------------------------------------------------------------
 
+  /** Reads only the selected canvas bitmap; it never calls capturePage or page-supplied JS. */
+  async captureCanvasBitmap(selector: string, isCurrent: () => boolean = () => true) {
+    const expression = buildCanvasCaptureExpression(selector)
+    const url = this.webContents.getURL()
+    const check = () => {
+      if (!isCurrent() || this.webContents.getURL() !== url) throw new Error('Canvas capture target changed; no image was returned')
+    }
+    check()
+    const before = await this.send('Page.getFrameTree')
+    check()
+    const frame = before?.frameTree?.frame
+    if (typeof frame?.id !== 'string' || typeof frame?.loaderId !== 'string') throw new Error('Canvas capture document identity unavailable')
+    const world = await this.send('Page.createIsolatedWorld', { frameId: frame.id, worldName: 'robb-canvas-capture', grantUniveralAccess: false })
+    check()
+    if (!Number.isInteger(world?.executionContextId)) throw new Error('Canvas capture isolated context unavailable')
+    const result = await this.send('Runtime.evaluate', { expression, contextId: world.executionContextId, returnByValue: true, timeout: 2000 })
+    check()
+    if (result?.exceptionDetails) throw new Error('Canvas capture unavailable: selector, visibility, transform, clipping, origin or bitmap limit was not satisfied. No page screenshot was substituted.')
+    const after = await this.send('Page.getFrameTree')
+    check()
+    if (after?.frameTree?.frame?.id !== frame.id || after?.frameTree?.frame?.loaderId !== frame.loaderId) throw new Error('Canvas capture document changed; no image was returned')
+    return validateCanvasBitmapReceipt(result?.result?.value)
+  }
+
   async getElementGeometry(ref: string): Promise<ElementGeometry> {
     const backendNodeId = this.refMap.get(ref)
     if (!backendNodeId) {
@@ -854,15 +879,93 @@ export class BrowserCDP {
 
   async typeText(text: string): Promise<void> {
     if (!text) return
+    const url = this.webContents.getURL()
+    const focused = await this.send('Runtime.evaluate', {
+      expression: `(() => {
+        let el = document.activeElement;
+        for (let depth = 0; depth < 16; depth++) {
+          if (el?.shadowRoot?.activeElement) { el = el.shadowRoot.activeElement; continue; }
+          if (el && ['IFRAME','FRAME'].includes(el.tagName)) {
+            // Preserve the existing CDP path for cross-origin frame editors.
+            // The tool reports insertion requested, never verified application state.
+            let child;
+            try { child = el.contentDocument; } catch { return true; }
+            if (!child) return true;
+            el = child.activeElement;
+            continue;
+          }
+          break;
+        }
+        if (!el || el.disabled || el.readOnly || el.getClientRects().length === 0) return false;
+        const style = el.ownerDocument.defaultView.getComputedStyle(el);
+        if (style.visibility === 'hidden' || style.display === 'none') return false;
+        return el.isContentEditable || el.tagName === 'TEXTAREA'
+          || (el.tagName === 'INPUT' && ['text','search','email','url','tel','password','number'].includes(el.type));
+      })()`,
+      returnByValue: true,
+    })
+    if (focused.exceptionDetails || focused.result?.value !== true || this.webContents.getURL() !== url) {
+      throw new Error('DOM typing requires a focused, visible editable field. For a canvas/remote desktop, focus its keyboard receiver and use type-keys explicitly; verify the remote text before submitting. No text was inserted.')
+    }
     await this.send('Input.insertText', { text })
   }
 
+  /** Explicit keyboard delivery for canvas/RDP receivers; never uses the OS clipboard. */
+  async typeKeys(text: string, isCurrent: () => boolean = () => true): Promise<void> {
+    if (typeof text !== 'string' || !text || text.length > 256 || /[\u0000-\u001f\u007f-\u009f\u2028\u2029\ud800-\udfff]/.test(text) || /[\p{C}\p{Zl}\p{Zp}]/u.test(text)) {
+      throw new Error('type-keys requires 1–256 printable BMP characters, without control characters or line breaks. Use a separate key command to submit only after verifying the remote text.')
+    }
+    const url = this.webContents.getURL()
+    const started = Date.now()
+    let objectId: string | undefined
+    try {
+      if (!isCurrent()) throw new Error('Browser ownership changed')
+      const target = await this.send('Runtime.evaluate', {
+        expression: `(() => {
+          let el = document.activeElement;
+          while (el?.shadowRoot?.activeElement) el = el.shadowRoot.activeElement;
+          if (!el || ['IFRAME','FRAME'].includes(el.tagName)) return null;
+          return el;
+        })()`,
+      })
+      objectId = target.result?.objectId
+      if (target.exceptionDetails || !objectId) throw new Error('Focused receiver unavailable')
+      for (const key of text) {
+        if (!isCurrent() || this.webContents.getURL() !== url || Date.now() - started > 10_000) throw new Error('Browser target changed or input deadline reached')
+        const current = await this.send('Runtime.callFunctionOn', {
+          objectId,
+          functionDeclaration: `function() {
+            let el = document.activeElement;
+            while (el?.shadowRoot?.activeElement) el = el.shadowRoot.activeElement;
+            return document.hasFocus() && this.isConnected && this === el;
+          }`,
+          returnByValue: true,
+        })
+        if (current.exceptionDetails || current.result?.value !== true || !isCurrent() || this.webContents.getURL() !== url) throw new Error('Focused receiver changed')
+        try {
+          await this.send('Input.dispatchKeyEvent', { type: 'keyDown', key, text: key, unmodifiedText: key })
+        } finally {
+          // A failed/down or changed target must not leave a key held. Never replay it.
+          await this.send('Input.dispatchKeyEvent', { type: 'keyUp', key })
+        }
+      }
+    } catch {
+      throw new Error('Keyboard text delivery stopped; input may be partial. Inspect the focused remote receiver before any retry; do not replay or submit the text blindly. Clipboard permissions were not changed.')
+    } finally {
+      if (objectId) await this.send('Runtime.releaseObject', { objectId }).catch(() => {})
+    }
+  }
+
   async setClipboard(text: string): Promise<void> {
-    await this.send('Runtime.evaluate', {
-      expression: `navigator.clipboard.writeText(${JSON.stringify(text)})`,
+    const result = await this.send('Runtime.evaluate', {
+      expression: `navigator.clipboard.writeText(${JSON.stringify(text)}).then(() => true)`,
       awaitPromise: true,
       userGesture: true,
+      returnByValue: true,
     })
+    if (result.exceptionDetails || result.result?.value !== true) {
+      throw new Error('Clipboard write failed or was denied by browser policy. No paste shortcut was sent. Do not repeat this route or change permissions; use a focused DOM field or explicit type-keys for a remote keyboard receiver.')
+    }
   }
 
   async getClipboard(): Promise<string> {
@@ -870,8 +973,12 @@ export class BrowserCDP {
       expression: 'navigator.clipboard.readText()',
       awaitPromise: true,
       userGesture: true,
+      returnByValue: true,
     })
-    return (result as any).result?.value ?? ''
+    if (result.exceptionDetails || typeof result.result?.value !== 'string') {
+      throw new Error('Clipboard read failed or was denied by browser policy; clipboard contents are unknown. Do not interpret this as an empty clipboard or change permissions.')
+    }
+    return result.result.value
   }
 
   async clickElement(ref: string): Promise<ElementGeometry> {
@@ -1121,9 +1228,46 @@ export class BrowserCDP {
   async setFileInputFiles(ref: string, filePaths: string[]): Promise<ElementGeometry> {
     try {
       const resolved = await this.resolveElementRef(ref)
+      const inputObject = await this.send('Runtime.callFunctionOn', {
+        objectId: resolved.objectId,
+        functionDeclaration: `function() {
+          const isFileInput = (el) => el instanceof HTMLInputElement && el.type === 'file';
+          if (isFileInput(this)) return this;
+
+          if (this instanceof HTMLLabelElement && isFileInput(this.control)) {
+            return this.control;
+          }
+
+          const forAttr = this instanceof Element ? this.getAttribute('for') : null;
+          if (forAttr) {
+            const labelled = document.getElementById(forAttr);
+            if (isFileInput(labelled)) return labelled;
+          }
+
+          if (this instanceof Element) {
+            const nested = this.querySelector('input[type="file"]');
+            if (isFileInput(nested)) return nested;
+
+            let parent = this.parentElement;
+            for (let depth = 0; parent && depth < 4; depth += 1, parent = parent.parentElement) {
+              const nearby = parent.querySelector('input[type="file"]');
+              if (isFileInput(nearby)) return nearby;
+            }
+          }
+
+          const candidates = Array.from(document.querySelectorAll('input[type="file"]'));
+          return candidates.length === 1 ? candidates[0] : null;
+        }`,
+      })
+      const objectId = inputObject?.result?.objectId
+
+      if (!objectId) {
+        throw new Error(`Element ${resolved.ref} is not a file input and no unambiguous file input was found nearby`)
+      }
+
       await this.send('DOM.setFileInputFiles', {
         files: filePaths,
-        backendNodeId: resolved.backendNodeId,
+        objectId,
       })
 
       return await this.getElementGeometry(resolved.ref)

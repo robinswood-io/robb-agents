@@ -190,6 +190,76 @@ describe('BaseAgent', () => {
       expect(events.some(e => e.type === 'complete')).toBe(true);
     });
 
+    it('signals provider handoff independently from the event stream', async () => {
+      let handoffs = 0;
+      agent.onProviderHandoff = () => { handoffs += 1; };
+
+      await collectEvents(agent.chat('test message'));
+
+      expect(handoffs).toBe(1);
+    });
+
+    it('does not signal provider handoff for a local skill validation failure', async () => {
+      let handoffs = 0;
+      agent.onProviderHandoff = () => { handoffs += 1; };
+
+      const events = await collectEvents(agent.chat('Use [skill:missing-skill] now'));
+
+      expect(events).toEqual([
+        { type: 'error', message: 'Skill(s) not found: missing-skill' },
+        { type: 'complete' },
+      ]);
+      expect(handoffs).toBe(0);
+      expect(agent.chatCalls).toHaveLength(0);
+    });
+
+    it('consumes a specialized skill from host-sealed inline bytes without reopening disk', async () => {
+      const sealedAgent = new TestAgent(createMockBackendConfig({
+        sealedSkillPackages: [{
+          slug: 'documents',
+          name: 'Documents',
+          content: '--- file: SKILL.md ---\nUse the sealed workflow.\n\n--- file: scripts/run.sh ---\nsealed-script',
+        }],
+      }));
+
+      await collectEvents(sealedAgent.chat('Use [skill:documents] now'));
+
+      expect(sealedAgent.chatCalls).toHaveLength(1);
+      expect(sealedAgent.chatCalls[0]!.message).toContain('<host_sealed_skill_package slug="documents">');
+      expect(sealedAgent.chatCalls[0]!.message).toContain('sealed-script');
+      expect(sealedAgent.chatCalls[0]!.message).not.toContain('MUST read the following skill instruction files');
+    });
+
+    it('does not infer provider handoff from a local info event before setup fails', async () => {
+      class LocalInfoThenFailureAgent extends TestAgent {
+        protected override async *chatImpl(): AsyncGenerator<import('@craft-agent/core/types').AgentEvent> {
+          yield { type: 'info', message: 'Preparing local context' };
+          throw new Error('ETIMEDOUT');
+        }
+      }
+      const localAgent = new LocalInfoThenFailureAgent(createMockBackendConfig());
+      let handoffs = 0;
+      localAgent.onProviderHandoff = () => { handoffs += 1; };
+      const seen: import('@craft-agent/core/types').AgentEvent[] = [];
+
+      const consume = async () => {
+        for await (const event of localAgent.chat('test message')) seen.push(event);
+      };
+      await expect(consume()).rejects.toThrow('ETIMEDOUT');
+
+      expect(seen).toEqual([{ type: 'info', message: 'Preparing local context' }]);
+      expect(handoffs).toBe(0);
+    });
+
+    it('does not let a host callback failure turn a dispatched prompt into a setup failure', async () => {
+      agent.onProviderHandoff = () => { throw new Error('host callback failed'); };
+
+      const events = await collectEvents(agent.chat('test message'));
+
+      expect(events).toContainEqual({ type: 'complete' });
+      expect(agent.chatCalls).toHaveLength(1);
+    });
+
     it('should track chat calls', async () => {
       await collectEvents(agent.chat('test message'));
       expect(agent.chatCalls).toHaveLength(1);

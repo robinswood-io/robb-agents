@@ -5,8 +5,19 @@
  * Format: Line 1 = SessionHeader, Lines 2+ = StoredMessage (one per line)
  */
 
-import { existsSync, openSync, readSync, closeSync, readFileSync, writeFileSync, renameSync, unlinkSync } from 'fs';
-import { open, readFile } from 'fs/promises';
+import {
+  closeSync,
+  constants,
+  existsSync,
+  lstatSync,
+  openSync,
+  readFileSync,
+  readSync,
+  renameSync,
+  unlinkSync,
+  writeFileSync,
+} from 'fs';
+import { open } from 'fs/promises';
 import { dirname } from 'path';
 import type { SessionHeader, StoredSession, StoredMessage, SessionTokenUsage } from './types.ts';
 import type { PermissionMode } from '../agent/mode-types.ts';
@@ -15,7 +26,7 @@ import { toPortablePath, expandPath, normalizePath } from '../utils/paths.ts';
 import { debug } from '../utils/debug.ts';
 import { safeJsonParse } from '../utils/files.ts';
 import { sanitizeMessagePreviewText } from '../utils/text-sanitization.ts';
-import { pickSessionFields } from './utils.ts';
+import { pickSessionFields, sanitizeContextCompactionAttemptState } from './utils.ts';
 import { z } from 'zod';
 
 // ============================================================
@@ -26,6 +37,29 @@ const SESSION_PATH_TOKEN = '{{SESSION_PATH}}';
 const SESSION_HEADER_READ_CHUNK_BYTES = 8192;
 const SESSION_HEADER_MAX_BYTES = 1024 * 1024;
 export const SESSION_HEADER_SCHEMA_VERSION = 1 as const;
+
+function noFollowFlag(): number {
+  return typeof constants.O_NOFOLLOW === 'number' ? constants.O_NOFOLLOW : 0;
+}
+
+function assertPhysicalSessionFileParents(sessionFile: string): void {
+  const sessionDir = dirname(sessionFile);
+  const sessionsDir = dirname(sessionDir);
+  for (const [path, label] of [
+    [sessionsDir, 'sessions directory'],
+    [sessionDir, 'session directory'],
+  ] as const) {
+    const directory = lstatSync(path);
+    if (!directory.isDirectory() || directory.isSymbolicLink()) {
+      throw new Error(`Unsafe ${label}: expected a physical directory at ${path}`);
+    }
+  }
+}
+
+function openSessionFileNoFollow(sessionFile: string): number {
+  assertPhysicalSessionFileParents(sessionFile);
+  return openSync(sessionFile, constants.O_RDONLY | noFollowFlag());
+}
 
 const SessionHeaderStorageSchema = z.object({
   schemaVersion: z.literal(SESSION_HEADER_SCHEMA_VERSION),
@@ -114,6 +148,7 @@ function normalizePermissionMode(value: unknown): PermissionMode | undefined {
 function normalizeHeaderPermissionModes<T extends SessionHeader>(header: T): T {
   const permissionMode = normalizePermissionMode(header.permissionMode);
   const previousPermissionMode = normalizePermissionMode(header.previousPermissionMode);
+  const contextCompactionAttempt = sanitizeContextCompactionAttemptState(header.contextCompactionAttempt);
 
   if (permissionMode) {
     header.permissionMode = permissionMode;
@@ -125,6 +160,12 @@ function normalizeHeaderPermissionModes<T extends SessionHeader>(header: T): T {
     header.previousPermissionMode = previousPermissionMode;
   } else {
     delete (header as Partial<SessionHeader>).previousPermissionMode;
+  }
+
+  if (contextCompactionAttempt) {
+    header.contextCompactionAttempt = contextCompactionAttempt;
+  } else {
+    delete (header as Partial<SessionHeader>).contextCompactionAttempt;
   }
 
   return header;
@@ -179,7 +220,7 @@ function replaceFileAtomicallySync(tmpFile: string, finalFile: string): void {
 export function readSessionHeader(sessionFile: string): SessionHeader | null {
   let fd: number | null = null;
   try {
-    fd = openSync(sessionFile, 'r');
+    fd = openSessionFileNoFollow(sessionFile);
     const chunks: Buffer[] = [];
     let totalBytesRead = 0;
     let newlineIndex = -1;
@@ -220,8 +261,10 @@ export function readSessionHeader(sessionFile: string): SessionHeader | null {
  * Parses header and all message lines.
  */
 export function readSessionJsonl(sessionFile: string): StoredSession | null {
+  let fd: number | null = null;
   try {
-    const content = readFileSync(sessionFile, 'utf-8');
+    fd = openSessionFileNoFollow(sessionFile);
+    const content = readFileSync(fd, 'utf-8');
     const lines = content.split('\n').filter(Boolean);
 
     const firstLine = lines[0];
@@ -254,6 +297,10 @@ export function readSessionJsonl(sessionFile: string): StoredSession | null {
     if (error instanceof UnsupportedSessionHeaderVersionError) throw error;
     debug('[jsonl] Failed to read session:', sessionFile, error);
     return null;
+  } finally {
+    if (fd !== null) {
+      try { closeSync(fd); } catch { /* ignore close errors */ }
+    }
   }
 }
 
@@ -279,7 +326,17 @@ export function writeSessionJsonl(sessionFile: string, session: StoredSession): 
   ];
 
   const tmpFile = sessionFile + '.tmp';
-  writeFileSync(tmpFile, lines.join('\n') + '\n');
+  assertPhysicalSessionFileParents(sessionFile);
+  const tmpFd = openSync(
+    tmpFile,
+    constants.O_WRONLY | constants.O_CREAT | constants.O_TRUNC | noFollowFlag(),
+    0o600,
+  );
+  try {
+    writeFileSync(tmpFd, lines.join('\n') + '\n', 'utf8');
+  } finally {
+    closeSync(tmpFd);
+  }
   replaceFileAtomicallySync(tmpFile, sessionFile);
 }
 
@@ -356,7 +413,8 @@ function extractPreview(messages: StoredMessage[]): string | undefined {
  */
 export async function readSessionHeaderAsync(sessionFile: string): Promise<SessionHeader | null> {
   try {
-    const handle = await open(sessionFile, 'r');
+    assertPhysicalSessionFileParents(sessionFile);
+    const handle = await open(sessionFile, constants.O_RDONLY | noFollowFlag());
     try {
       const chunks: Buffer[] = [];
       let totalBytesRead = 0;
@@ -401,8 +459,10 @@ export async function readSessionHeaderAsync(sessionFile: string): Promise<Sessi
  * Resilient to corrupted/truncated lines (skips them instead of failing entirely).
  */
 export function readSessionMessages(sessionFile: string): StoredMessage[] {
+  let fd: number | null = null;
   try {
-    const content = readFileSync(sessionFile, 'utf-8');
+    fd = openSessionFileNoFollow(sessionFile);
+    const content = readFileSync(fd, 'utf-8');
     const lines = content.split('\n').filter(Boolean);
     // Skip first line (header), expand session path tokens, parse rest as messages resiliently
     const sessionDir = dirname(sessionFile);
@@ -411,6 +471,10 @@ export function readSessionMessages(sessionFile: string): StoredMessage[] {
   } catch (error) {
     debug('[jsonl] Failed to read session messages:', sessionFile, error);
     return [];
+  } finally {
+    if (fd !== null) {
+      try { closeSync(fd); } catch { /* ignore close errors */ }
+    }
   }
 }
 

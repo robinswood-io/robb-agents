@@ -31,7 +31,12 @@ describe('sendMessage OAuth refresh ordering (#710)', () => {
     sm = new SessionManager()
   })
 
-  afterEach(() => {
+  afterEach(async () => {
+    // sendMessage persists admission state through the shared async queue even
+    // when provider setup fails. Drain those writes before removing the exact
+    // persistence root, otherwise their fail-closed identity check correctly
+    // reports that the fixture root disappeared/reappeared in a later test.
+    await sm.cleanup()
     rmSync(tmpRoot, { recursive: true, force: true })
   })
 

@@ -10,12 +10,40 @@ import type { CredentialId, CredentialType, StoredCredential, CredentialHealthSt
 import type { LlmAuthType, LlmProviderType } from '../config/llm-connections.ts';
 import { SecureStorageBackend } from './backends/secure-storage.ts';
 import { debug } from '../utils/debug.ts';
+import { randomUUID } from 'node:crypto';
+
+export interface LlmCredentialBinding {
+  /** Exact encrypted-vault slot used by the selected auth mechanism. */
+  slot: 'llm_api_key' | 'llm_oauth' | 'llm_iam' | 'llm_service_account' | 'none';
+  /** Host-minted generation. It never contains or hashes credential material. */
+  bindingId: string;
+}
 
 export class CredentialManager {
   private backends: CredentialBackend[] = [];
   private writeBackend: CredentialBackend | null = null;
   private initialized = false;
   private initPromise: Promise<void> | null = null;
+  private mutationTails = new Map<string, Promise<void>>();
+
+  private async serializeMutation<T>(key: string, mutation: () => Promise<T>): Promise<T> {
+    const previous = this.mutationTails.get(key) ?? Promise.resolve();
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    const tail = previous.catch(() => undefined).then(() => gate);
+    this.mutationTails.set(key, tail);
+    await previous.catch(() => undefined);
+    try {
+      return await mutation();
+    } finally {
+      release();
+      if (this.mutationTails.get(key) === tail) this.mutationTails.delete(key);
+    }
+  }
+
+  private llmMutationKey(type: CredentialType, connectionSlug: string): string {
+    return `${type}\u0000${connectionSlug}`;
+  }
 
   /**
    * Explicitly initialize the credential manager.
@@ -354,8 +382,11 @@ export class CredentialManager {
    * @param connectionSlug - The connection slug
    * @returns API key or null if not found
    */
-  async getLlmApiKey(connectionSlug: string): Promise<string | null> {
+  async getLlmApiKey(connectionSlug: string, expectedBindingId?: string): Promise<string | null> {
     const cred = await this.get({ type: 'llm_api_key', connectionSlug });
+    if (expectedBindingId && cred?.bindingId !== expectedBindingId) {
+      throw new Error(`LLM credential generation drifted for "${connectionSlug}"`);
+    }
     return cred?.value || null;
   }
 
@@ -365,7 +396,12 @@ export class CredentialManager {
    * @param apiKey - The API key to store
    */
   async setLlmApiKey(connectionSlug: string, apiKey: string): Promise<void> {
-    await this.set({ type: 'llm_api_key', connectionSlug }, { value: apiKey });
+    await this.serializeMutation(this.llmMutationKey('llm_api_key', connectionSlug), async () => {
+      await this.set({ type: 'llm_api_key', connectionSlug }, {
+        value: apiKey,
+        bindingId: randomUUID(),
+      });
+    });
   }
 
   /**
@@ -374,7 +410,8 @@ export class CredentialManager {
    * @returns true if deleted, false if not found
    */
   async deleteLlmApiKey(connectionSlug: string): Promise<boolean> {
-    return this.delete({ type: 'llm_api_key', connectionSlug });
+    return this.serializeMutation(this.llmMutationKey('llm_api_key', connectionSlug), () =>
+      this.delete({ type: 'llm_api_key', connectionSlug }));
   }
 
   /**
@@ -382,20 +419,26 @@ export class CredentialManager {
    * @param connectionSlug - The connection slug
    * @returns OAuth credentials or null if not found
    */
-  async getLlmOAuth(connectionSlug: string): Promise<{
+  async getLlmOAuth(connectionSlug: string, expectedBindingId?: string): Promise<{
     accessToken: string;
     refreshToken?: string;
     expiresAt?: number;
     /** OIDC id_token (used by OpenAI/Codex) */
     idToken?: string;
+    /** Opaque host generation; never derived from token material. */
+    bindingId?: string;
   } | null> {
     const cred = await this.get({ type: 'llm_oauth', connectionSlug });
+    if (expectedBindingId && cred?.bindingId !== expectedBindingId) {
+      throw new Error(`LLM credential generation drifted for "${connectionSlug}"`);
+    }
     if (!cred) return null;
     return {
       accessToken: cred.value,
       refreshToken: cred.refreshToken,
       expiresAt: cred.expiresAt,
       idToken: cred.idToken,
+      bindingId: cred.bindingId,
     };
   }
 
@@ -411,11 +454,47 @@ export class CredentialManager {
     /** OIDC id_token (used by OpenAI/Codex) */
     idToken?: string;
   }): Promise<void> {
-    await this.set({ type: 'llm_oauth', connectionSlug }, {
-      value: credentials.accessToken,
-      refreshToken: credentials.refreshToken,
-      expiresAt: credentials.expiresAt,
-      idToken: credentials.idToken,
+    await this.serializeMutation(this.llmMutationKey('llm_oauth', connectionSlug), async () => {
+      await this.set({ type: 'llm_oauth', connectionSlug }, {
+        value: credentials.accessToken,
+        refreshToken: credentials.refreshToken,
+        expiresAt: credentials.expiresAt,
+        idToken: credentials.idToken,
+        bindingId: randomUUID(),
+      });
+    });
+  }
+
+  /**
+   * Persist an automatic refresh of the credential already bound to this slot.
+   * Re-authentication must use setLlmOAuth() instead, which deliberately rotates
+   * the binding generation. A legacy unbound credential is assigned its first
+   * generation only for an unsealed refresh; a specialized caller always supplies
+   * expectedBindingId and therefore continues to fail closed on legacy state.
+   */
+  async refreshLlmOAuth(connectionSlug: string, credentials: {
+    accessToken: string;
+    refreshToken?: string;
+    expiresAt?: number;
+    /** OIDC id_token (used by OpenAI/Codex) */
+    idToken?: string;
+  }, expectedBindingId?: string): Promise<void> {
+    await this.serializeMutation(this.llmMutationKey('llm_oauth', connectionSlug), async () => {
+      const current = await this.get({ type: 'llm_oauth', connectionSlug });
+      if (!current) {
+        throw new Error(`Cannot refresh missing LLM OAuth credential "${connectionSlug}"`);
+      }
+      if (expectedBindingId && current.bindingId !== expectedBindingId) {
+        throw new Error(`LLM credential generation drifted for "${connectionSlug}"`);
+      }
+      const bindingId = current.bindingId ?? randomUUID();
+      await this.set({ type: 'llm_oauth', connectionSlug }, {
+        value: credentials.accessToken,
+        refreshToken: credentials.refreshToken,
+        expiresAt: credentials.expiresAt,
+        idToken: credentials.idToken,
+        bindingId,
+      });
     });
   }
 
@@ -424,10 +503,12 @@ export class CredentialManager {
    * @param connectionSlug - The connection slug
    */
   async deleteLlmCredentials(connectionSlug: string): Promise<void> {
-    await this.delete({ type: 'llm_api_key', connectionSlug });
-    await this.delete({ type: 'llm_oauth', connectionSlug });
-    await this.delete({ type: 'llm_iam', connectionSlug });
-    await this.delete({ type: 'llm_service_account', connectionSlug });
+    for (const type of [
+      'llm_api_key', 'llm_oauth', 'llm_iam', 'llm_service_account',
+    ] as const) {
+      await this.serializeMutation(this.llmMutationKey(type, connectionSlug), () =>
+        this.delete({ type, connectionSlug }));
+    }
   }
 
   // ============================================================
@@ -439,13 +520,16 @@ export class CredentialManager {
    * @param connectionSlug - The connection slug
    * @returns IAM credentials or null if not found
    */
-  async getLlmIamCredentials(connectionSlug: string): Promise<{
+  async getLlmIamCredentials(connectionSlug: string, expectedBindingId?: string): Promise<{
     accessKeyId: string;
     secretAccessKey: string;
     region?: string;
     sessionToken?: string;
   } | null> {
     const cred = await this.get({ type: 'llm_iam', connectionSlug });
+    if (expectedBindingId && cred?.bindingId !== expectedBindingId) {
+      throw new Error(`LLM credential generation drifted for "${connectionSlug}"`);
+    }
     if (!cred || !cred.awsAccessKeyId) return null;
     return {
       accessKeyId: cred.awsAccessKeyId,
@@ -466,11 +550,14 @@ export class CredentialManager {
     region?: string;
     sessionToken?: string;
   }): Promise<void> {
-    await this.set({ type: 'llm_iam', connectionSlug }, {
-      value: credentials.secretAccessKey, // Primary secret in value field
-      awsAccessKeyId: credentials.accessKeyId,
-      awsRegion: credentials.region,
-      awsSessionToken: credentials.sessionToken,
+    await this.serializeMutation(this.llmMutationKey('llm_iam', connectionSlug), async () => {
+      await this.set({ type: 'llm_iam', connectionSlug }, {
+        value: credentials.secretAccessKey, // Primary secret in value field
+        awsAccessKeyId: credentials.accessKeyId,
+        awsRegion: credentials.region,
+        awsSessionToken: credentials.sessionToken,
+        bindingId: randomUUID(),
+      });
     });
   }
 
@@ -483,13 +570,16 @@ export class CredentialManager {
    * @param connectionSlug - The connection slug
    * @returns Service account JSON and metadata or null if not found
    */
-  async getLlmServiceAccount(connectionSlug: string): Promise<{
+  async getLlmServiceAccount(connectionSlug: string, expectedBindingId?: string): Promise<{
     serviceAccountJson: string;
     projectId?: string;
     region?: string;
     email?: string;
   } | null> {
     const cred = await this.get({ type: 'llm_service_account', connectionSlug });
+    if (expectedBindingId && cred?.bindingId !== expectedBindingId) {
+      throw new Error(`LLM credential generation drifted for "${connectionSlug}"`);
+    }
     if (!cred) return null;
     return {
       serviceAccountJson: cred.value, // Full JSON stored in value field
@@ -510,12 +600,38 @@ export class CredentialManager {
     region?: string;
     email?: string;
   }): Promise<void> {
-    await this.set({ type: 'llm_service_account', connectionSlug }, {
-      value: credentials.serviceAccountJson, // Full JSON in value field
-      gcpProjectId: credentials.projectId,
-      gcpRegion: credentials.region,
-      serviceAccountEmail: credentials.email,
+    await this.serializeMutation(this.llmMutationKey('llm_service_account', connectionSlug), async () => {
+      await this.set({ type: 'llm_service_account', connectionSlug }, {
+        value: credentials.serviceAccountJson, // Full JSON in value field
+        gcpProjectId: credentials.projectId,
+        gcpRegion: credentials.region,
+        serviceAccountEmail: credentials.email,
+        bindingId: randomUUID(),
+      });
     });
+  }
+
+  /**
+   * Resolve the non-secret generation selected by the exact connection auth
+   * mechanism. Environment credentials are intentionally not attestable: their
+   * principal can change outside the encrypted host store without a generation.
+   */
+  async getLlmCredentialBinding(
+    connectionSlug: string,
+    authType: LlmAuthType,
+  ): Promise<LlmCredentialBinding | null> {
+    if (authType === 'none' || authType === 'environment') return null;
+    const slot: LlmCredentialBinding['slot'] = authType === 'oauth'
+      ? 'llm_oauth'
+      : authType === 'iam_credentials'
+        ? 'llm_iam'
+        : authType === 'service_account_file'
+          ? 'llm_service_account'
+          : 'llm_api_key';
+    const credential = await this.get({ type: slot, connectionSlug });
+    return credential?.bindingId
+      ? { slot, bindingId: credential.bindingId }
+      : null;
   }
 
   // ============================================================
@@ -585,7 +701,18 @@ export class CredentialManager {
     providerType?: LlmProviderType
   ): Promise<boolean> {
     const oauth = await this.getLlmOAuth(connectionSlug);
-    if (!oauth) return false;
+    if (!oauth) {
+      if (providerType === 'anthropic') {
+        const legacy = await this.getClaudeOAuthCredentials().catch(() => null);
+        if (legacy?.accessToken) {
+          if (legacy.expiresAt && this.isExpired({ value: legacy.accessToken, expiresAt: legacy.expiresAt })) {
+            return !!legacy.refreshToken;
+          }
+          return true;
+        }
+      }
+      return false;
+    }
 
     // Check if expired
     if (oauth.expiresAt && this.isExpired({ value: oauth.accessToken, expiresAt: oauth.expiresAt })) {
@@ -736,4 +863,8 @@ export function getCredentialManager(): CredentialManager {
     manager = new CredentialManager();
   }
   return manager;
+}
+
+export function setCredentialManagerForTesting(instance: CredentialManager | null): void {
+  manager = instance;
 }

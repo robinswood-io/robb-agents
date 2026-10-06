@@ -1,3 +1,4 @@
+import { isAgentRuntimeActivity } from '@craft-agent/core/types'
 /**
  * Session Event Handlers
  *
@@ -16,6 +17,7 @@ import type {
   ProjectIdChangedEvent,
   SessionStatusChangedEvent,
   SessionMetadataChangedEvent,
+  ObjectiveChangedEvent,
   SessionFlaggedEvent,
   SessionUnflaggedEvent,
   SessionArchivedEvent,
@@ -45,6 +47,7 @@ import type {
 } from '../types'
 import type { Message } from '../../../shared/types'
 import { generateMessageId, appendMessage } from '../helpers'
+import { markSessionProcessingState } from '../../lib/session-processing-state'
 
 /**
  * Handle complete - agent loop finished
@@ -83,23 +86,10 @@ export function handleComplete(
     })
   }
 
-  // Clear isQueued from any user messages once the turn completes. Pi's steer
-  // path never emits a 'processing' status update to clear it (the message is
-  // injected mid-stream and absorbed into the current response), so this is
-  // the natural place to drop the indicator. Claude's queued path has already
-  // cleared via the 'processing' status update before this fires; this is
-  // a safe no-op for that case.
-  const hasQueuedUserBubbles = updatedMessages.some(m => m.role === 'user' && m.isQueued)
-  if (hasQueuedUserBubbles) {
-    updatedMessages = updatedMessages.map(m =>
-      m.role === 'user' && m.isQueued ? { ...m, isQueued: false } : m
-    )
-  }
-
   return {
     state: {
       session: {
-        ...session,
+        ...markSessionProcessingState(session),
         messages: updatedMessages,
         isProcessing: false,
         currentStatus: undefined,  // Clear any lingering status
@@ -124,10 +114,11 @@ export function handleError(
 ): ProcessResult {
   const { session } = state
 
-  // Fail-safe: Mark any running tools as failed
+  // Stop the activity indicator without inventing an execution receipt. A
+  // transport failure does not tell us whether an external operation completed.
   const messagesWithFailedTools = session.messages.map(m =>
     m.role === 'tool' && m.toolResult === undefined && m.toolStatus !== 'completed' && m.toolStatus !== 'error'
-      ? { ...m, toolStatus: 'error' as const, toolResult: 'Error occurred', isError: true }
+      ? { ...m, toolStatus: 'error' as const, isError: true }
       : m
   )
 
@@ -141,7 +132,7 @@ export function handleError(
   return {
     state: {
       session: {
-        ...session,
+        ...markSessionProcessingState(session),
         messages: [...messagesWithFailedTools, errorMessage],
         isProcessing: false,
         currentStatus: undefined,  // Clear any lingering status
@@ -161,10 +152,10 @@ export function handleTypedError(
 ): ProcessResult {
   const { session } = state
 
-  // Fail-safe: Mark any running tools as failed
+  // Preserve unknown execution/result state when only the transport failed.
   const messagesWithFailedTools = session.messages.map(m =>
     m.role === 'tool' && m.toolResult === undefined && m.toolStatus !== 'completed' && m.toolStatus !== 'error'
-      ? { ...m, toolStatus: 'error' as const, toolResult: 'Error occurred', isError: true }
+      ? { ...m, toolStatus: 'error' as const, isError: true }
       : m
   )
 
@@ -192,7 +183,7 @@ export function handleTypedError(
   return {
     state: {
       session: {
-        ...session,
+        ...markSessionProcessingState(session),
         messages: [...messagesWithFailedTools, errorMessage],
         isProcessing: false,
         currentStatus: undefined,  // Clear any lingering status
@@ -212,6 +203,18 @@ export function handleStatus(
   event: StatusEvent
 ): ProcessResult {
   const { session, streaming } = state
+  const runtimePhase = isAgentRuntimeActivity(event.message)
+  if (event.message === '') {
+    return { state: { ...state, session: { ...session,
+      messages: session.messages.filter(message => message.role !== 'status' || !isAgentRuntimeActivity(message.content)),
+      currentStatus: isAgentRuntimeActivity(session.currentStatus?.message) ? undefined : session.currentStatus,
+    } }, effects: [] }
+  }
+  if (runtimePhase && session.currentStatus?.message === event.message) {
+    return { state: { ...state, session: { ...session } }, effects: [] }
+  }
+  const baseSession = runtimePhase ? { ...session, messages: session.messages.filter(message =>
+    message.role !== 'status' || !isAgentRuntimeActivity(message.content)) } : session
 
   const statusMessage: Message = {
     id: generateMessageId(),
@@ -221,7 +224,7 @@ export function handleStatus(
     statusType: event.statusType,
   }
 
-  const updatedSession = appendMessage(session, statusMessage)
+  const updatedSession = appendMessage(baseSession, statusMessage)
 
   return {
     state: {
@@ -346,7 +349,7 @@ export function handleInterrupted(
   return {
     state: {
       session: {
-        ...session,
+        ...markSessionProcessingState(session),
         isProcessing: false,
         messages,
         currentStatus: undefined,  // Clear any lingering status
@@ -475,7 +478,15 @@ export function handleSessionModelChanged(
 
   return {
     state: {
-      session: { ...session, model: event.model ?? undefined },
+      session: {
+        ...session,
+        model: event.model ?? undefined,
+        ...(event.modelRoutePinned !== undefined
+          ? { modelRoutePinned: event.modelRoutePinned }
+          : event.model === null
+            ? { modelRoutePinned: false }
+            : {}),
+      },
       streaming,
     },
     effects: [],
@@ -519,14 +530,20 @@ export function handleUserMessage(
   const { session, streaming } = state
   const { message, status } = event
 
-  // Find existing message by ID match (backend ID, optimistic ID, or content+timestamp fallback)
-  const existingIndex = session.messages.findIndex(m =>
+  // IDs win over the legacy content fallback: two genuine sends can have the
+  // same text and adjacent timestamps. Only an unacknowledged optimistic row
+  // may be reconciled by content when an older server omits its optimistic ID.
+  let existingIndex = session.messages.findIndex(m =>
     m.role === 'user' && (
       m.id === message.id ||
-      (event.optimisticMessageId && m.id === event.optimisticMessageId) ||
-      (m.content === message.content && Math.abs(m.timestamp - message.timestamp) < 5000)
+      (event.optimisticMessageId && m.id === event.optimisticMessageId)
     )
   )
+  if (existingIndex < 0 && !event.optimisticMessageId) {
+    existingIndex = session.messages.findIndex(m => m.role === 'user' && m.isPending
+      && !m.hidden && !m.internalOrigin && !message.hidden && !message.internalOrigin
+      && m.content === message.content && Math.abs(m.timestamp - message.timestamp) < 5000)
+  }
 
   let updatedMessages: Message[]
 
@@ -535,7 +552,8 @@ export function handleUserMessage(
 
     // Event sequence protection: don't regress from 'processing' back to 'queued'
     // This handles out-of-order events (e.g., 'processing' arrives before 'queued')
-    if (status === 'queued' && existingMessage.isQueued === false) {
+    if (status === 'queued' && existingMessage.isQueued === false
+      && !existingMessage.isPending && existingMessage.id === message.id) {
       // Already progressed past queued state, ignore this late 'queued' event
       return { state, effects: [] }
     }
@@ -546,16 +564,14 @@ export function handleUserMessage(
     // - 'processing' → isQueued = false (queued message is now actually running)
     // - 'accepted'   → isQueued = false (Pi steer path: agent has the message)
     //
-    // We deliberately do NOT swap `m.id` to the backend's canonical id here.
-    // ChatDisplay's `getTurnKey` keys user-message bubbles by id, and a swap
-    // would unmount/remount the UserMessageBubble — wiping its local timer
-    // state and dropping the queued chip mid-flight. The canonical backend
-    // id is irrelevant to subsequent events: they all use
-    // `event.optimisticMessageId` for routing (see the findIndex above).
+    // Once accepted, the host ID is the message identity used by objectives,
+    // retry and subsequent events. Keeping the optimistic ID makes live retry
+    // target an unknown message until the conversation is rehydrated.
     updatedMessages = session.messages.map((m, i) => {
       if (i === existingIndex) {
         return {
           ...m,
+          ...message,
           isPending: false,
           isQueued: status === 'queued',
         }
@@ -575,12 +591,13 @@ export function handleUserMessage(
   return {
     state: {
       session: {
-        ...session,
+        ...(status === 'queued' ? session : markSessionProcessingState(session)),
         messages: updatedMessages,
         lastMessageAt: Date.now(),
         lastMessageRole: 'user',  // Clear plan badge when user responds
-        // Set isProcessing when message is accepted/processing (enables multi-window sync)
-        isProcessing: status === 'accepted' || status === 'processing',
+        // Queue acceptance does not stop the currently executing turn. Only
+        // its complete/interrupted event can do that; dispatch starts the next.
+        isProcessing: status === 'queued' ? session.isProcessing : true,
       },
       streaming,
     },
@@ -705,7 +722,10 @@ export function handleSessionMetadataChanged(
   const { session, streaming } = state
   return {
     state: {
-      session: { ...session, ...event.changes },
+      session: {
+        ...(typeof event.changes.isProcessing === 'boolean' ? markSessionProcessingState(session) : session),
+        ...event.changes,
+      },
       streaming,
     },
     effects: [],
@@ -904,7 +924,8 @@ export function handleAuthRequest(
   return {
     state: {
       session: {
-        ...appendMessage(session, event.message),
+        ...markSessionProcessingState(appendMessage(session, event.message)),
+        pendingAuthRequestMessage: event.message,
         isProcessing: false,  // Agent execution is paused
       },
       streaming: null,  // Clear any streaming state
@@ -948,6 +969,8 @@ export function handleAuthCompleted(
       session: {
         ...session,
         messages: updatedMessages,
+        pendingAuthRequestMessage: session.pendingAuthRequestMessage?.authRequestId === event.requestId
+          ? undefined : session.pendingAuthRequestMessage,
       },
       streaming,
     },
@@ -989,3 +1012,21 @@ export function handleUsageUpdate(
   }
 }
 
+
+/** Apply host objective truth without treating a checkpoint as turn completion. */
+export function handleObjectiveChanged(
+  state: SessionState,
+  event: ObjectiveChangedEvent,
+): ProcessResult {
+  return {
+    state: {
+      ...state,
+      session: {
+        ...state.session,
+        activeObjective: event.activeObjective ?? undefined,
+        pendingTurnRecovery: event.pendingTurnRecovery ?? undefined,
+      },
+    },
+    effects: [],
+  }
+}

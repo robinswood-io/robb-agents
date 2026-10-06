@@ -27,7 +27,7 @@ export interface PrerequisiteRule {
   resolveRequiredPath: (toolName: string, workspaceRootPath: string) => string | null;
   /** Block message template. {filePath} is replaced with the required path. */
   blockMessage: string;
-  /** If true, always block until file is read (no graceful fallback). */
+  /** Retained for compatibility; every prerequisite now requires a successful read. */
   strict?: boolean;
 }
 
@@ -49,6 +49,28 @@ export interface PrerequisiteManagerConfig {
 
 /** Slugs that are exempt from prerequisite checks (internal sources) */
 const EXEMPT_SLUGS = new Set(['session', 'craft-agents-docs']);
+
+/** A deliberately small acquisition grammar: no pipelines, substitution or redirection. */
+function fullCatPaths(command: unknown): string[] {
+  if (typeof command !== 'string' || command.length > 16_384 || /[\r\n]/.test(command)) return [];
+  const tokens: string[] = [];
+  const token = /\s*(?:'([^']*)'|"([^"$`\\]*)"|([^\s'"$`\\;&|<>()]+))/y;
+  let offset = 0;
+  while (offset < command.length) {
+    token.lastIndex = offset;
+    const match = token.exec(command);
+    if (!match) return command.slice(offset).trim() ? [] : paths();
+    tokens.push(match[1] ?? match[2] ?? match[3]!);
+    offset = token.lastIndex;
+    if (offset < command.length && !/\s/.test(command[offset]!)) return [];
+  }
+  return paths();
+  function paths(): string[] {
+    if (tokens[0] !== 'cat' && tokens[0] !== '/bin/cat') return [];
+    const files = tokens.slice(tokens[1] === '--' ? 2 : 1);
+    return files.length && files.every(file => file.length > 0 && !file.startsWith('-')) ? files : [];
+  }
+}
 
 /** Global browser tools docs path required before browser tool usage. */
 function getBrowserToolsDocPath(): string {
@@ -83,7 +105,7 @@ const RULES: PrerequisiteRule[] = [
       return existsSync(guidePath) ? guidePath : null;
     },
     blockMessage:
-      'You must read the source guide before using this tool. Please read the file at {filePath} first, then retry.',
+      'You must read the source guide before using this tool. Use Read on {filePath} without offset or limit, then retry after it succeeds.',
   },
 
   // API source tools: api_{slug} format
@@ -97,7 +119,7 @@ const RULES: PrerequisiteRule[] = [
       return existsSync(guidePath) ? guidePath : null;
     },
     blockMessage:
-      'You must read the source guide before using this tool. Please read the file at {filePath} first, then retry.',
+      'You must read the source guide before using this tool. Use Read on {filePath} without offset or limit, then retry after it succeeds.',
   },
 
   // Built-in browser tool: require browser-tools.md first.
@@ -112,7 +134,7 @@ const RULES: PrerequisiteRule[] = [
       return existsSync(browserToolsDocPath) ? browserToolsDocPath : null;
     },
     blockMessage:
-      'You must read the browser tools guide before using browser automation. Please read the file at {filePath} first, then retry.',
+      'You must read the browser tools guide before using browser automation. Use Read on {filePath} without offset or limit, then retry after it succeeds.',
     strict: true,
   },
 ];
@@ -122,13 +144,11 @@ const RULES: PrerequisiteRule[] = [
 // ============================================================
 
 export class PrerequisiteManager {
-  /** Max times to block a tool for the same prerequisite before allowing through */
-  private static readonly MAX_REJECTIONS = 1;
-
   private readFiles: Set<string> = new Set();
   private persistentContextFiles: Set<string> = new Set();
-  private rejectionCounts: Map<string, number> = new Map();
   private pendingSkillPaths: Set<string> = new Set();
+  private registeredSkillPaths: Set<string> = new Set();
+  private readAttempts = new Map<string, { toolName: string; input: Record<string, unknown> }>();
   private workspaceRootPath: string;
   private onDebug?: (message: string) => void;
 
@@ -154,7 +174,8 @@ export class PrerequisiteManager {
   registerSkillPrerequisites(paths: string[]): void {
     for (const path of paths) {
       const expanded = expandPath(path);
-      this.pendingSkillPaths.add(expanded);
+      this.registeredSkillPaths.add(expanded);
+      if (!this.readFiles.has(expanded)) this.pendingSkillPaths.add(expanded);
       this.onDebug?.(`Prerequisite: registered skill prerequisite ${expanded}`);
     }
   }
@@ -187,7 +208,6 @@ export class PrerequisiteManager {
       }
 
       this.readFiles.add(expanded);
-      this.rejectionCounts.delete(expanded);
       this.onDebug?.(`Prerequisite: source guide already loaded in context ${expanded}`);
     }
   }
@@ -195,7 +215,7 @@ export class PrerequisiteManager {
   /**
    * Check if a tool call's prerequisites are met.
    * Iterates rules, checks if required files have been read.
-   * After MAX_REJECTIONS blocks for the same path, allows through gracefully.
+   * Retrying a blocked tool never satisfies its prerequisite.
    */
   checkPrerequisites(toolName: string): PrerequisiteCheckResult {
     // Check dynamic skill prerequisites first
@@ -209,22 +229,9 @@ export class PrerequisiteManager {
       if (!requiredPath) continue; // No guide.md exists, skip
 
       if (!this.readFiles.has(requiredPath)) {
-        const count = (this.rejectionCounts.get(requiredPath) ?? 0) + 1;
-        this.rejectionCounts.set(requiredPath, count);
-
         const blockReason = rule.blockMessage.replace('{filePath}', requiredPath);
-
-        if (rule.strict) {
-          this.onDebug?.(`Prerequisite blocked (strict): ${toolName} requires ${requiredPath}`);
-          return { allowed: false, blockReason };
-        }
-
-        if (count <= PrerequisiteManager.MAX_REJECTIONS) {
-          this.onDebug?.(`Prerequisite blocked (${count}/${PrerequisiteManager.MAX_REJECTIONS}): ${toolName} requires ${requiredPath}`);
-          return { allowed: false, blockReason };
-        }
-        // Exceeded max rejections — allow through gracefully
-        this.onDebug?.(`Prerequisite: allowing ${toolName} after ${count} rejections (max reached)`);
+        this.onDebug?.(`Prerequisite blocked: ${toolName} requires ${requiredPath}`);
+        return { allowed: false, blockReason };
       }
     }
 
@@ -242,28 +249,19 @@ export class PrerequisiteManager {
     if (toolName === 'Read') return { allowed: true };
 
     const pendingList = [...this.pendingSkillPaths].join(', ');
-    const key = `skill:${pendingList}`;
-    const count = (this.rejectionCounts.get(key) ?? 0) + 1;
-    this.rejectionCounts.set(key, count);
-
-    if (count <= PrerequisiteManager.MAX_REJECTIONS) {
-      const blockReason = `You must read the skill instruction files before proceeding. Use Read or \`cat\` via Bash to read: ${pendingList}`;
-      this.onDebug?.(`Skill prerequisite blocked (${count}/${PrerequisiteManager.MAX_REJECTIONS}): ${toolName} — pending: ${pendingList}`);
-      return { allowed: false, blockReason };
-    }
-
-    // Exceeded max rejections — allow through and clear
-    this.onDebug?.(`Skill prerequisite: allowing ${toolName} after ${count} rejections (max reached)`);
-    this.pendingSkillPaths.clear();
-    return { allowed: true };
+    const blockReason = `You must read the skill instruction files before proceeding. Use Read without offset or limit, or a single \`cat -- <paths>\` command to read: ${pendingList}. Repeating another tool does not clear this prerequisite.`;
+    this.onDebug?.(`Skill prerequisite blocked: ${toolName} — pending: ${pendingList}`);
+    return { allowed: false, blockReason };
   }
 
   /**
-   * Track a Read tool call. Extracts file_path from tool input,
+   * Credit a completed full-file read, never a tool start or attempted invocation.
+   * Extracts file_path from tool input,
    * normalizes it, and adds to the read set.
    * Also clears matching pending skill paths.
    */
   trackReadTool(toolInput: Record<string, unknown>): void {
+    if (toolInput.offset !== undefined || toolInput.limit !== undefined) return;
     const filePath = (toolInput.file_path as string) || (toolInput.path as string);
     if (!filePath) return;
 
@@ -280,30 +278,40 @@ export class PrerequisiteManager {
   }
 
   /**
-   * Check if a Bash command is reading a pending skill file.
-   * If it matches, clear the prerequisite and return true.
+   * Permit an exact full-file acquisition command without crediting it yet.
    * Called from the pre-tool-use pipeline to allow targeted Bash reads through.
    */
   trackBashSkillRead(input: Record<string, unknown>): boolean {
-    const command = input.command as string;
-    if (!command || this.pendingSkillPaths.size === 0) return false;
+    const paths = fullCatPaths(input.command);
+    return paths.length > 0 && paths.every(path => this.pendingSkillPaths.has(expandPath(path)));
+  }
 
-    let matched = false;
-    for (const path of this.pendingSkillPaths) {
-      if (command.includes(path)) {
-        this.pendingSkillPaths.delete(path);
-        this.readFiles.add(path);
-        this.onDebug?.(`Prerequisite: cleared skill prerequisite via Bash: ${path}`);
-        matched = true;
-      }
+  trackToolStart(toolUseId: string, toolName: string, input: Record<string, unknown>): void {
+    if (toolName !== 'Read' && toolName !== 'Bash') return;
+    if (this.readAttempts.size >= 128) this.readAttempts.delete(this.readAttempts.keys().next().value!);
+    this.readAttempts.set(toolUseId, { toolName, input: { ...input } });
+  }
+
+  trackToolCompletion(toolUseId: string, result: unknown, isError: boolean, executed = true): void {
+    const attempt = this.readAttempts.get(toolUseId);
+    this.readAttempts.delete(toolUseId);
+    if (attempt) this.trackToolResult(attempt.toolName, attempt.input, result, isError, executed);
+  }
+
+  /** Called only with backend-observed results, before later tools are released. */
+  trackToolResult(toolName: string, input: Record<string, unknown>, result: unknown, isError: boolean, executed = true): void {
+    if (isError || !executed || result == null || result === ''
+      || (typeof result === 'object' && (result as { isError?: unknown }).isError === true)) return;
+    if (toolName === 'Read') this.trackReadTool(input);
+    if (toolName === 'Bash') {
+      for (const path of fullCatPaths(input.command)) this.trackReadTool({ file_path: path });
     }
-    return matched;
   }
 
   /**
    * Reset read state. Called on context compaction since the LLM
    * loses the guide content and needs to re-read.
-   * Also clears pending skill paths (model lost the directive).
+   * Registered skills must be read again because their contents were compacted.
    */
   resetReadState(): void {
     const count = this.readFiles.size;
@@ -312,8 +320,8 @@ export class PrerequisiteManager {
     for (const filePath of this.persistentContextFiles) {
       this.readFiles.add(filePath);
     }
-    this.rejectionCounts.clear();
-    this.pendingSkillPaths.clear();
+    this.pendingSkillPaths = new Set(this.registeredSkillPaths);
+    this.readAttempts.clear();
     this.onDebug?.(`Prerequisite: reset read state (cleared ${count} reads, ${skillCount} skill prerequisites)`);
   }
 

@@ -4,6 +4,7 @@ import type { Session, Message } from "../../shared/types"
 import type { SessionMeta } from "../atoms/sessions"
 import type { SessionStatusId } from "../config/session-status-config"
 import { sanitizeMessagePreviewText } from "@craft-agent/shared/utils/text-sanitization"
+import { resolveObjectiveSessionStatus, type ObjectiveSessionStatusInput } from "./session-status"
 
 /** Common session fields used by getSessionTitle */
 type SessionLike = Pick<Session, 'name' | 'preview'> & { messages?: Session['messages'] }
@@ -172,8 +173,8 @@ export function countUnreadMessages(session: Session): number {
 // SessionMeta helpers (lightweight, no full Session needed)
 // ---------------------------------------------------------------------------
 
-export function getSessionStatus(session: SessionMeta): SessionStatusId {
-  return (session.sessionStatus as SessionStatusId) || 'todo'
+export function getSessionStatus(session: ObjectiveSessionStatusInput): SessionStatusId {
+  return resolveObjectiveSessionStatus(session) as SessionStatusId
 }
 
 export function hasUnreadMeta(session: SessionMeta): boolean {

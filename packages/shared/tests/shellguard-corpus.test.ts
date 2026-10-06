@@ -117,6 +117,8 @@ const TEST_MODE_CONFIG = {
   ],
 };
 
+const SAFE_GIT = 'git --no-optional-locks -c core.fsmonitor=false -c core.hooksPath=/dev/null -c log.showSignature=false -c format.pretty=medium --no-pager';
+
 // ============================================================
 // Group 1: Command Substitution Attacks
 // ============================================================
@@ -191,7 +193,7 @@ describe('ShellGuard corpus: redirections', () => {
 
   const shouldAllow = [
     'ls 2>&1',
-    'git status 2>/dev/null',
+    `${SAFE_GIT} rev-parse HEAD 2>/dev/null`,
     'grep pattern file.txt 2>/dev/null',
   ];
 

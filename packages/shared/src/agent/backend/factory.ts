@@ -35,11 +35,16 @@ import type { LlmConnectionType, CustomEndpointConfig } from '../../config/llm-c
 // Import validation helpers for provider-auth combinations
 import {
   isValidProviderAuthCombination,
+  isModelAllowedForAuthProvider,
 } from '../../config/llm-connections.ts';
 import { parseValidationError, type LlmValidationResult } from '../../config/llm-validation.ts';
 import type { ModelFetchResult } from '../../config/model-fetcher.ts';
 // Model resolution utilities
-import { getModelProvider, DEFAULT_MODEL } from '../../config/models.ts';
+import {
+  getModelProvider,
+  DEFAULT_MODEL,
+  normalizeDeprecatedModelId,
+} from '../../config/models.ts';
 import { homedir } from 'node:os';
 import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -639,13 +644,36 @@ export function resolveModelForProvider(
     }
   }
 
-  const connectionDefault = connection?.defaultModel;
+  let connectionDefault = connection?.defaultModel
+    ? normalizeDeprecatedModelId(connection.defaultModel)
+    : undefined;
+
+  const authProvider = provider === 'pi' ? connection?.piAuthProvider : undefined;
+  // A stored/explicit session choice is user intent. Reject an incompatible
+  // choice before runtime creation; do not silently substitute a default model.
+  if (managedModel && !isModelAllowedForAuthProvider(managedModel, authProvider)) {
+    throw new Error(`The selected model "${managedModel}" cannot be used with ChatGPT-account Codex authentication. Choose another model for this conversation, then retry. The saved selection was preserved.`);
+  }
+  const retiredSelection = connectionDefault && !isModelAllowedForAuthProvider(connectionDefault, authProvider);
+  if (retiredSelection) connectionDefault = undefined;
+
   if (provider === 'pi' && connection?.models?.length) {
-    const connectionModelIds = connection.models.map(m => typeof m === 'string' ? m : m.id);
-    const selected = managedModel || connectionDefault;
-    if (selected && !connectionModelIds.includes(selected)) {
-      throw new Error(`Selected model "${selected}" is unavailable in the configured connection.`);
+    const connectionModelIds = connection.models.map(m => typeof m === 'string' ? m : m.id)
+      .filter(modelId => isModelAllowedForAuthProvider(modelId, authProvider));
+    if (managedModel && !connectionModelIds.includes(managedModel)) {
+      throw new Error(`Selected model "${managedModel}" is unavailable in the configured connection.`);
     }
+    if (connectionDefault && !connectionModelIds.includes(connectionDefault)) {
+      if (!retiredSelection) {
+        throw new Error(`Selected model "${connectionDefault}" is unavailable in the configured connection.`);
+      }
+      connectionDefault = connectionModelIds[0];
+    }
+    if (retiredSelection && !connectionDefault) connectionDefault = connectionModelIds[0];
+  }
+
+  if (retiredSelection && !managedModel && !connectionDefault) {
+    throw new Error(`No supported model is configured for connection "${connection?.slug ?? '(unknown)'}"`);
   }
 
   switch (provider) {

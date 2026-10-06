@@ -125,6 +125,29 @@ describe('attachSessionSelfManagementBindings', () => {
     unregisterSessionScopedToolCallbacks(sessionId);
   });
 
+  it('routes user input through current host callbacks and fails closed after disposal', async () => {
+    const ctx = createBaseContext(sessionId);
+    attachSessionSelfManagementBindings(ctx, sessionId);
+    const handler = SESSION_TOOL_REGISTRY.get('request_user_input')!.handler!;
+    const args = { questions: [{ id: 'scope', question: 'Which scope?' }] };
+    expect((await handler(ctx, args)).isError).toBe(true);
+    const calls: string[] = [];
+    mergeSessionScopedToolCallbacks(sessionId, {
+      requestUserInputFn: async questions => {
+        calls.push(questions[0]!.id);
+        return { requestId: 'first', status: 'pending' };
+      },
+    });
+    expect(JSON.parse((await handler(ctx, args)).content[0]!.text).requestId).toBe('first');
+    mergeSessionScopedToolCallbacks(sessionId, {
+      requestUserInputFn: async () => ({ requestId: 'replacement', status: 'pending' }),
+    });
+    expect(JSON.parse((await handler(ctx, args)).content[0]!.text).requestId).toBe('replacement');
+    unregisterSessionScopedToolCallbacks(sessionId);
+    expect((await handler(ctx, args)).isError).toBe(true);
+    expect(calls).toEqual(['scope']);
+  });
+
   it('absent callback → property is undefined for all 6 fields', () => {
     const ctx = createBaseContext(sessionId);
     attachSessionSelfManagementBindings(ctx, sessionId);

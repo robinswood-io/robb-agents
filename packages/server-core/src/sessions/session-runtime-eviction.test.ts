@@ -78,6 +78,50 @@ describe('session runtime eviction', () => {
     expect(runtime.managed.mcpPool).toBeUndefined()
   })
 
+  it('releases default idle runtimes after five minutes while preserving conversation state', async () => {
+    delete process.env.CRAFT_SESSION_RUNTIME_IDLE_TIMEOUT_MS
+    const manager = new SessionManager()
+    const runtime = addRuntime(manager, 'default-idle', { lastActiveAt: 1 })
+    const messages = [{ id: 'message-1', role: 'user' as const, content: 'Keep this conversation', timestamp: 1 }]
+    runtime.managed.messages = messages
+    runtime.managed.sdkSessionId = 'persisted-provider-session'
+    const sweep = (now: number) => (manager as unknown as {
+      evictIdleSessionRuntimes: (now: number) => Promise<number>
+    }).evictIdleSessionRuntimes(now)
+
+    expect(await sweep(5 * 60_000)).toBe(0)
+    expect(await sweep(5 * 60_000 + 1)).toBe(1)
+    expect(runtime.managed.messages).toBe(messages)
+    expect(runtime.managed.messagesLoaded).toBe(true)
+    expect(runtime.managed.sdkSessionId).toBe('persisted-provider-session')
+    expect(runtime.disconnectAll).toHaveBeenCalledTimes(1)
+  })
+
+  it('honors explicitly disabled runtime eviction', async () => {
+    process.env.CRAFT_SESSION_RUNTIME_IDLE_TIMEOUT_MS = '0'
+    const manager = new SessionManager()
+    const runtime = addRuntime(manager, 'keep-runtime')
+    expect(await (manager as unknown as {
+      evictIdleSessionRuntimes: (now: number) => Promise<number>
+    }).evictIdleSessionRuntimes(60 * 60_000)).toBe(0)
+    expect(runtime.disposeForRestart).not.toHaveBeenCalled()
+  })
+
+  it('keeps runtimes with queued messages or an ongoing configuration refresh', async () => {
+    const manager = new SessionManager()
+    const queued = addRuntime(manager, 'queued')
+    queued.managed.messageQueue.push({ message: 'next turn' } as never)
+    const refreshing = addRuntime(manager, 'refreshing')
+    ;(manager as unknown as { agentRefreshLocks: Map<string, Promise<void>> })
+      .agentRefreshLocks.set('refreshing', Promise.resolve())
+
+    expect(await (manager as unknown as {
+      evictIdleSessionRuntimes: (now: number) => Promise<number>
+    }).evictIdleSessionRuntimes(60_002)).toBe(0)
+    expect(queued.disposeForRestart).not.toHaveBeenCalled()
+    expect(refreshing.disposeForRestart).not.toHaveBeenCalled()
+  })
+
   it('preserves runtimes that are processing or own a running background task', async () => {
     const manager = new SessionManager()
     const processing = addRuntime(manager, 'processing', { processing: true, lastActiveAt: 1 })

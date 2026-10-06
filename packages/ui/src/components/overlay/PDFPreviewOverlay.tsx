@@ -105,7 +105,7 @@ export function PDFPreviewOverlay({
   }, [])
 
   const onDocumentLoadError = useCallback((error: Error) => {
-    setError(`Failed to load PDF: ${error.message}`)
+    setError(error.message)
   }, [])
 
   // Memoize file object to prevent unnecessary re-renders (react-pdf uses === equality)
@@ -133,7 +133,7 @@ export function PDFPreviewOverlay({
         variant: 'orange',
       }}
       filePath={activeItem?.src || filePath}
-      error={error ? { label: 'Load Failed', message: error } : undefined}
+      error={error ? { label: t('toast.failedToOpenFile'), message: error } : undefined}
       headerActions={headerActions}
     >
       <div className="h-full flex flex-col items-center overflow-auto">

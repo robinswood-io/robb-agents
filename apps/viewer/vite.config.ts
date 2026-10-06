@@ -2,6 +2,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { resolve } from 'path'
+import { resolveReactPdfWorker } from '../../scripts/pdf-worker-resolution'
 
 const configDir = import.meta.dirname
 
@@ -13,6 +14,7 @@ export default defineConfig({
   base: '/s/',
   resolve: {
     alias: {
+      'pdfjs-dist/build/pdf.worker.min.mjs?url': `${resolveReactPdfWorker()}?url`,
       '@': resolve(configDir, './src'),
       // Ensure all React imports resolve to the hoisted root node_modules
       'react': resolve(configDir, '../../node_modules/react'),
@@ -28,6 +30,7 @@ export default defineConfig({
   },
   optimizeDeps: {
     include: ['react', 'react-dom'],
+    exclude: ['pdfjs-dist/build/pdf.worker.min.mjs?url'],
   },
   server: {
     port: 5174, // Different from Electron dev server

@@ -9,12 +9,25 @@ import {
   type StructuredMissionVerdict,
   type WorkSubmission,
 } from '@craft-agent/shared/missions';
+import type { SpecializedMissionProfileBinding } from '@craft-agent/shared/specialized-profiles';
+import type { MissionOrdinaryRouteLock } from '@craft-agent/shared/sessions';
 import { MissionController } from './MissionController.ts';
+
+/**
+ * Host-created, privacy-safe identity of one ordinary Mission provider
+ * dispatch. It is persisted in the reservation before execute and reused as
+ * the immutable session/provider fence after restart.
+ */
+export type OrdinaryMissionRoutePin = MissionOrdinaryRouteLock;
 
 export interface MissionExecutionInput {
   mission: MissionSnapshot['spec'];
   item: MissionWorkItem;
   profile: AgentProfile;
+  /** Host-verified registry binding. Presence never grants a capability. */
+  specializedProfile?: SpecializedMissionProfileBinding;
+  /** Exact ordinary route admitted for this dispatch; absent for specialists/connectors. */
+  ordinaryRoutePin?: OrdinaryMissionRoutePin;
   dispatchId: string;
   upstream: Array<{
     workItemId: string;
@@ -73,6 +86,12 @@ export interface MissionRuntimeOptions {
   genDispatchId?: (missionId: string, workItemId: string, attempt: number) => string;
   onSnapshot?: (snapshot: MissionSnapshot) => void;
   onError?: (context: { missionId: string; workItemId?: string; error: Error }) => void;
+  /** Journal commit fence used by hosts to retire per-attempt reservations in O(1). */
+  onAttemptSettled?: (attempt: {
+    missionId: string;
+    workItemId: string;
+    dispatchId: string;
+  }) => void;
   /** Host-owned admission/continuation policy, evaluated before and between attempts. */
   evaluateRunPolicy?: (
     snapshot: MissionSnapshot,
@@ -126,10 +145,11 @@ export class MissionRuntime {
     return this.loops.get(missionId) ?? started;
   }
 
-  recoverNonTerminalMissions(): string[] {
+  recoverNonTerminalMissions(admittedMissionIds?: ReadonlySet<string>): string[] {
     const recovered: string[] = [];
     for (const missionId of listMissionIds(this.options.workspaceRoot)) {
       const snapshot = this.options.controller.getMission(missionId);
+      if (admittedMissionIds && !admittedMissionIds.has(missionId)) continue;
       if (snapshot.status !== 'draft' && !TERMINAL.has(snapshot.status)) this.armDeadline(missionId);
       if (snapshot.status === 'draft' || TERMINAL_OR_WAITING.has(snapshot.status)) continue;
       this.ensureLoop(missionId);
@@ -239,7 +259,10 @@ export class MissionRuntime {
       result.telemetry,
       { workItemId, dispatchId: runtime.dispatchId },
     );
-    if (policyHalt) return;
+    if (policyHalt) {
+      this.options.onAttemptSettled?.({ missionId, workItemId, dispatchId: runtime.dispatchId });
+      return;
+    }
     if (result.status === 'approval-required') {
       snapshot = this.options.controller.waitForWorkItemApproval(
         missionId,
@@ -269,6 +292,7 @@ export class MissionRuntime {
       );
     }
     this.emit(snapshot);
+    this.options.onAttemptSettled?.({ missionId, workItemId, dispatchId: runtime.dispatchId });
   }
 
   private buildInput(snapshot: MissionSnapshot, item: MissionWorkItem, dispatchId: string): MissionExecutionInput {
@@ -321,6 +345,7 @@ export class MissionRuntime {
         ambiguousMutation: runtime.definition.effect !== 'read',
       });
       this.emit(failed);
+      this.options.onAttemptSettled?.({ missionId, workItemId, dispatchId: runtime.dispatchId });
     } catch (failureError) {
       this.options.onError?.({
         missionId,

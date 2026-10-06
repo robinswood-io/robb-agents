@@ -25,6 +25,7 @@ import type {
   BrowserNetworkOptions,
   BrowserNetworkEntry,
   BrowserKeyArgs,
+  BrowserMutationUrlPolicy,
   BrowserWaitArgs,
   BrowserWaitResult,
   BrowserDownloadOptions,
@@ -36,6 +37,7 @@ import {
   CLIENT_BROWSER_INVOKE,
   requestClientBrowserInvoke,
   type BrowserCapabilityMethod,
+  type BrowserPolicyMutationCapabilityMethod,
   type ScreenshotResultWire,
 } from '../transport'
 import type { RpcServer } from '../transport/types'
@@ -88,6 +90,41 @@ export class RemoteBrowserPaneManager implements IBrowserPaneManager {
       v: 1,
       method,
       args,
+      sessionId: this.sessionId,
+      workspaceId: this.workspaceId,
+    })
+  }
+
+  /**
+   * Policy-bearing mutations use wire v2. A pre-policy Electron client only
+   * understands v1 and therefore rejects the whole request before dispatch;
+   * it can never silently discard the URL fence and perform the effect.
+   */
+  private async invokePolicyMutation<T>(
+    method: BrowserPolicyMutationCapabilityMethod,
+    args: unknown[],
+    mutationPolicy?: BrowserMutationUrlPolicy,
+  ): Promise<T> {
+    if (!mutationPolicy) return await this.invoke<T>(method, args)
+    const clientId = this.getHostClient()
+    if (!clientId) {
+      throw new CodedError(
+        'BROWSER_NO_CAPABLE_CLIENT',
+        'No connected desktop client supports browser tools for this session. ' +
+        'Open this workspace from the Robb Agents desktop app and try again.',
+      )
+    }
+    if (!this.rpcServer.hasClientCapability(clientId, CLIENT_BROWSER_INVOKE)) {
+      throw new CodedError(
+        'CAPABILITY_UNAVAILABLE',
+        `Client ${clientId} does not advertise the ${CLIENT_BROWSER_INVOKE} capability.`,
+      )
+    }
+    return await requestClientBrowserInvoke<T>(this.rpcServer, clientId, {
+      v: 2,
+      method,
+      args,
+      mutationUrlPolicy: mutationPolicy,
       sessionId: this.sessionId,
       workspaceId: this.workspaceId,
     })
@@ -245,26 +282,27 @@ export class RemoteBrowserPaneManager implements IBrowserPaneManager {
   async clickElement(
     id: string, ref: string,
     options?: { waitFor?: 'none' | 'navigation' | 'network-idle'; timeoutMs?: number },
+    mutationPolicy?: BrowserMutationUrlPolicy,
   ): Promise<void> {
-    await this.invoke('clickElement', [id, ref, options])
+    await this.invokePolicyMutation('clickElement', [id, ref, options], mutationPolicy)
   }
-  async clickAtCoordinates(id: string, x: number, y: number): Promise<void> {
-    await this.invoke('clickAtCoordinates', [id, x, y])
+  async clickAtCoordinates(id: string, x: number, y: number, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> {
+    await this.invokePolicyMutation('clickAtCoordinates', [id, x, y], mutationPolicy)
   }
-  async drag(id: string, x1: number, y1: number, x2: number, y2: number): Promise<void> {
-    await this.invoke('drag', [id, x1, y1, x2, y2])
+  async drag(id: string, x1: number, y1: number, x2: number, y2: number, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> {
+    await this.invokePolicyMutation('drag', [id, x1, y1, x2, y2], mutationPolicy)
   }
-  async fillElement(id: string, ref: string, value: string): Promise<void> {
-    await this.invoke('fillElement', [id, ref, value])
+  async fillElement(id: string, ref: string, value: string, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> {
+    await this.invokePolicyMutation('fillElement', [id, ref, value], mutationPolicy)
   }
-  async typeText(id: string, text: string): Promise<void> {
-    await this.invoke('typeText', [id, text])
+  async typeText(id: string, text: string, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> {
+    await this.invokePolicyMutation('typeText', [id, text], mutationPolicy)
   }
-  async selectOption(id: string, ref: string, value: string): Promise<void> {
-    await this.invoke('selectOption', [id, ref, value])
+  async selectOption(id: string, ref: string, value: string, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> {
+    await this.invokePolicyMutation('selectOption', [id, ref, value], mutationPolicy)
   }
-  async setClipboard(id: string, text: string): Promise<void> {
-    await this.invoke('setClipboard', [id, text])
+  async setClipboard(id: string, text: string, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> {
+    await this.invokePolicyMutation('setClipboard', [id, text], mutationPolicy)
   }
   async getClipboard(id: string): Promise<string> {
     return await this.invoke('getClipboard', [id])
@@ -272,18 +310,18 @@ export class RemoteBrowserPaneManager implements IBrowserPaneManager {
   async scroll(id: string, direction: 'up' | 'down' | 'left' | 'right', amount?: number): Promise<void> {
     await this.invoke('scroll', [id, direction, amount])
   }
-  async sendKey(id: string, args: BrowserKeyArgs): Promise<void> {
-    await this.invoke('sendKey', [id, args])
+  async sendKey(id: string, args: BrowserKeyArgs, mutationPolicy?: BrowserMutationUrlPolicy): Promise<void> {
+    await this.invokePolicyMutation('sendKey', [id, args], mutationPolicy)
   }
-  async uploadFile(_id: string, _ref: string, _filePaths: string[]): Promise<unknown> {
+  async uploadFile(_id: string, _ref: string, _filePaths: string[], _mutationPolicy?: BrowserMutationUrlPolicy): Promise<unknown> {
     throw new CodedError(
       'BROWSER_REMOTE_UPLOAD_NOT_SUPPORTED',
       'File upload from a remote agent is not supported. ' +
       'Ask the user to attach the file to the session instead.',
     )
   }
-  async evaluate(id: string, expression: string): Promise<unknown> {
-    return await this.invoke('evaluate', [id, expression])
+  async evaluate(id: string, expression: string, mutationPolicy?: BrowserMutationUrlPolicy): Promise<unknown> {
+    return await this.invokePolicyMutation('evaluate', [id, expression], mutationPolicy)
   }
 
   async screenshot(id: string, options?: BrowserScreenshotOptions): Promise<BrowserScreenshotResult> {

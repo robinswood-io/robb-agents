@@ -1045,7 +1045,9 @@ export function EditPopover({
                   onOpenFile={onOpenFile || (() => {})}
                   onOpenUrl={onOpenUrl || (() => {})}
                   currentModel={currentModel}
-                  onModelChange={setCurrentModel}
+                  onModelChange={(model) => {
+                    if (model !== null) setCurrentModel(model)
+                  }}
                   pendingPermission={pendingPermission}
                   onRespondToPermission={onRespondToPermission}
                   pendingCredential={pendingCredential}

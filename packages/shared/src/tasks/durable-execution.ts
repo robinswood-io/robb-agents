@@ -14,11 +14,24 @@ export interface ExecutionIsolationPolicy {
   workspaceRoot: string;
   allowedReadPaths: readonly string[];
   allowedWritePaths: readonly string[];
+  /**
+   * Host-preflighted connector observations available to a read-only Mission
+   * reviewer. The central permission pipeline must still classify the live
+   * invocation as a read; this only prevents the task-isolation layer from
+   * rejecting the exact same source/tool/input tuple afterwards.
+   */
+  allowedReadToolInvocations?: readonly ExactReadToolInvocation[];
   networkAccess: NetworkAccessMode;
   allowedHosts: readonly string[];
   maxCpuPercent: number;
   maxMemoryMb: number;
   timeoutMs: number;
+}
+
+export interface ExactReadToolInvocation {
+  toolName: string;
+  /** Canonical JSON object produced by canonicalExecutionIsolationToolInput. */
+  inputJson: string;
 }
 
 export type ExecutionEffect = 'read' | 'workspace-write' | 'external-mutation';
@@ -37,6 +50,62 @@ export interface SessionExecutionIsolation {
 export interface GuardDecision {
   allowed: boolean;
   reason?: string;
+}
+
+const MAX_ISOLATED_TOOL_INPUT_BYTES = 64 * 1024;
+const MAX_ISOLATED_TOOL_INPUT_DEPTH = 12;
+const MAX_ISOLATED_TOOL_INPUT_FIELDS = 512;
+const MAX_ISOLATED_READ_TOOL_INVOCATIONS = 16;
+const INERT_TOOL_INPUT_KEYS = new Set(['_intent', '_displayName']);
+const FORBIDDEN_TOOL_INPUT_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+
+function canonicalToolInputValue(
+  value: unknown,
+  depth: number,
+  counter: { fields: number },
+): unknown | undefined {
+  if (depth > MAX_ISOLATED_TOOL_INPUT_DEPTH) return undefined;
+  if (value === null || typeof value === 'string' || typeof value === 'boolean') return value;
+  if (typeof value === 'number') return Number.isFinite(value) ? value : undefined;
+  if (Array.isArray(value)) {
+    const result: unknown[] = [];
+    for (const item of value) {
+      const canonical = canonicalToolInputValue(item, depth + 1, counter);
+      if (canonical === undefined) return undefined;
+      result.push(canonical);
+    }
+    return result;
+  }
+  if (!value || typeof value !== 'object' || Object.getPrototypeOf(value) !== Object.prototype) {
+    return undefined;
+  }
+  const result: Record<string, unknown> = {};
+  for (const key of Object.keys(value as Record<string, unknown>).sort()) {
+    if (depth === 0 && INERT_TOOL_INPUT_KEYS.has(key)) continue;
+    if (!key || key.length > 128 || FORBIDDEN_TOOL_INPUT_KEYS.has(key)) return undefined;
+    counter.fields += 1;
+    if (counter.fields > MAX_ISOLATED_TOOL_INPUT_FIELDS) return undefined;
+    const canonical = canonicalToolInputValue(
+      Object.getOwnPropertyDescriptor(value, key)?.value,
+      depth + 1,
+      counter,
+    );
+    if (canonical === undefined) return undefined;
+    result[key] = canonical;
+  }
+  return result;
+}
+
+/** Canonical, bounded JSON identity for one exact host-preflighted tool input. */
+export function canonicalExecutionIsolationToolInput(
+  input: Record<string, unknown>,
+): string | undefined {
+  const canonical = canonicalToolInputValue(input, 0, { fields: 0 });
+  if (!canonical || typeof canonical !== 'object' || Array.isArray(canonical)) return undefined;
+  const encoded = JSON.stringify(canonical);
+  return Buffer.byteLength(encoded, 'utf8') <= MAX_ISOLATED_TOOL_INPUT_BYTES
+    ? encoded
+    : undefined;
 }
 
 export interface ResolvedNetworkAddress {
@@ -309,6 +378,38 @@ export function validateExecutionIsolationPolicy(
     if (!pathDecision.allowed) {
       return { allowed: false, reason: `Isolation path "${path}" rejected: ${pathDecision.reason}` };
     }
+  }
+
+  const allowedReadToolInvocations = policy.allowedReadToolInvocations ?? [];
+  if (allowedReadToolInvocations.length > MAX_ISOLATED_READ_TOOL_INVOCATIONS) {
+    return {
+      allowed: false,
+      reason: `Read tool invocation allow-list exceeds ${MAX_ISOLATED_READ_TOOL_INVOCATIONS} entries`,
+    };
+  }
+  const invocationIdentities = new Set<string>();
+  for (const invocation of allowedReadToolInvocations) {
+    if (!invocation || typeof invocation.toolName !== 'string'
+      || !/^mcp__[A-Za-z0-9._-]+__[A-Za-z0-9._-]+$/.test(invocation.toolName)
+      || invocation.toolName.length > 512
+      || typeof invocation.inputJson !== 'string') {
+      return { allowed: false, reason: 'Read tool invocation allow-list entry is malformed' };
+    }
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(invocation.inputJson);
+    } catch {
+      return { allowed: false, reason: 'Read tool invocation input is not valid JSON' };
+    }
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)
+      || canonicalExecutionIsolationToolInput(parsed as Record<string, unknown>) !== invocation.inputJson) {
+      return { allowed: false, reason: 'Read tool invocation input is not canonical' };
+    }
+    const identity = `${invocation.toolName}\u0000${invocation.inputJson}`;
+    if (invocationIdentities.has(identity)) {
+      return { allowed: false, reason: 'Read tool invocation allow-list contains duplicates' };
+    }
+    invocationIdentities.add(identity);
   }
 
   if (

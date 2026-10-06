@@ -395,7 +395,7 @@ export function serializeResult(value: unknown): string {
 export function isToolResultError(result: unknown): boolean {
   if (typeof result === 'string') {
     // Check for common error patterns
-    return /^\s*(\[ERROR\]|Error:|error:)/.test(result);
+    return /^\s*(?:\[ERROR\]|Error:|error:|❌\s*(?:Download|Upload) error:)/u.test(result);
   }
   if (result && typeof result === 'object') {
     // Check for error flag in result object

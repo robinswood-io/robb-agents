@@ -12,7 +12,9 @@
  * - Message lookup by ID - never position-based
  */
 
+import { isAgentRuntimeActivity } from '@craft-agent/core/types'
 import type { SessionState, AgentEvent, ProcessResult } from './types'
+import { handleUserInputChanged } from './handlers/user-input'
 import { handleTextDelta, handleTextComplete } from './handlers/text'
 import { handleToolStart, handleToolResult, handleTaskBackgrounded, handleShellBackgrounded, handleTaskProgress, handleTaskCompleted } from './handlers/tool'
 import {
@@ -24,6 +26,7 @@ import {
   handleProjectIdChanged,
   handleSessionStatusChanged,
   handleSessionMetadataChanged,
+  handleObjectiveChanged,
   handleSessionFlagged,
   handleSessionUnflagged,
   handleSessionArchived,
@@ -65,6 +68,15 @@ export function processEvent(
   state: SessionState,
   event: AgentEvent
 ): ProcessResult {
+  // Runtime phase labels are transient. Concrete output/activity supersedes
+  // them immediately; they must not linger in ProcessingIndicator or Journey.
+  if (['text_delta', 'text_complete', 'tool_start', 'tool_result', 'complete', 'error', 'typed_error', 'interrupted'].includes(event.type)
+    && isAgentRuntimeActivity(state.session.currentStatus?.message)) {
+    state = { ...state, session: { ...state.session,
+      messages: state.session.messages.filter(message => message.role !== 'status' || !isAgentRuntimeActivity(message.content)),
+      currentStatus: isAgentRuntimeActivity(state.session.currentStatus?.message) ? undefined : state.session.currentStatus,
+    } }
+  }
   switch (event.type) {
     case 'text_delta': {
       const newState = handleTextDelta(state, event)
@@ -181,6 +193,9 @@ export function processEvent(
     case 'session_status_changed':
       return handleSessionStatusChanged(state, event)
 
+    case 'objective_changed':
+      return handleObjectiveChanged(state, event)
+
     case 'session_metadata_changed':
       return handleSessionMetadataChanged(state, event)
 
@@ -219,6 +234,9 @@ export function processEvent(
 
     case 'session_unshared':
       return handleSessionUnshared(state, event)
+
+    case 'user_input_changed':
+      return handleUserInputChanged(state, event)
 
     case 'auth_request':
       return handleAuthRequest(state, event)

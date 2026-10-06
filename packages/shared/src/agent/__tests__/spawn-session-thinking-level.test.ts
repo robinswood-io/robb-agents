@@ -1,13 +1,4 @@
-/**
- * Verifies that `spawn_session` forwards `thinkingLevel` through the
- * `SpawnSessionRequest` object so `SessionManager.onSpawnSession` can
- * pass it along to `createSession()`.
- *
- * Pairs with the corresponding fix in SessionManager.createSession that
- * reads `options?.thinkingLevel` as the first-precedence source (before
- * workspace default and global default). Without that fix, this field
- * on the request would be silently dropped.
- */
+/** Verifies that model-authored delegation cannot select routing fields. */
 import { describe, it, expect, beforeEach } from 'bun:test';
 import type { SpawnSessionRequest, SpawnSessionResult } from '../base-agent.ts';
 import { TestAgent, createMockBackendConfig } from './test-utils.ts';
@@ -33,7 +24,7 @@ function setup() {
   return { agent, captured };
 }
 
-describe('spawn_session thinkingLevel forwarding', () => {
+describe('spawn_session route authority', () => {
   let agent: SpawnTestAgent;
   let captured: SpawnSessionRequest[];
 
@@ -41,37 +32,47 @@ describe('spawn_session thinkingLevel forwarding', () => {
     ({ agent, captured } = setup());
   });
 
-  it('forwards an explicit thinkingLevel to onSpawnSession', async () => {
-    await agent.invokeSpawn({ prompt: 'hi', thinkingLevel: 'high' });
-    expect(captured).toHaveLength(1);
-    expect(captured[0]?.thinkingLevel).toBe('high');
-  });
-
-  it('forwards each valid thinking level unchanged', async () => {
-    const levels = ['off', 'low', 'medium', 'high', 'xhigh', 'max'] as const;
-    for (const level of levels) {
-      const { agent: a, captured: c } = setup();
-      await a.invokeSpawn({ prompt: 'hi', thinkingLevel: level });
-      expect(c[0]?.thinkingLevel).toBe(level);
-    }
-  });
-
-  it('passes through undefined when thinkingLevel is omitted', async () => {
+  it('leaves every route field host-owned when omitted', async () => {
     await agent.invokeSpawn({ prompt: 'hi' });
-    expect(captured[0]?.thinkingLevel).toBeUndefined();
+    expect(captured).toHaveLength(1);
+    expect(captured[0]).not.toHaveProperty('thinkingLevel');
+    expect(captured[0]).not.toHaveProperty('model');
+    expect(captured[0]).not.toHaveProperty('llmConnection');
   });
 
-  it('does not drop thinkingLevel when other optional fields are also set', async () => {
+  it('preserves non-routing delegation fields', async () => {
     await agent.invokeSpawn({
       prompt: 'hi',
-      thinkingLevel: 'xhigh',
       permissionMode: 'ask',
-      model: 'claude-opus-4-7',
       labels: ['test'],
     });
-    expect(captured[0]?.thinkingLevel).toBe('xhigh');
     expect(captured[0]?.permissionMode).toBe('ask');
-    expect(captured[0]?.model).toBe('claude-opus-4-7');
     expect(captured[0]?.labels).toEqual(['test']);
+  });
+
+  it.each([
+    { model: 'pi/gpt-5.6-luna' },
+    { llmConnection: 'another-provider' },
+    { thinkingLevel: 'off' },
+  ])('rejects model-authored route field %j before the host callback', async (route) => {
+    await expect(agent.invokeSpawn({ prompt: 'hi', ...route }))
+      .rejects.toThrow('Invalid spawn_session arguments');
+    expect(captured).toHaveLength(0);
+  });
+
+  it('never reaches the host callback for an invalid permission or malformed attachment', async () => {
+    for (const input of [
+      { permissionMode: 'read-only' }, { permissionMode: 'execute' }, { permissionMode: 'Explore' },
+      { permission_mode: 'safe' }, { attachments: ['/tmp/evidence'] },
+    ]) {
+      await expect(agent.invokeSpawn({ prompt: 'Independent review', ...input })).rejects.toThrow('Invalid spawn_session arguments');
+    }
+    expect(captured).toHaveLength(0);
+  });
+
+  it('preserves the project and reviewer role without manufacturing permissions', async () => {
+    await agent.invokeSpawn({ prompt: 'Inspect the exact target', projectId: 'project-1', role: 'reviewer' });
+    expect(captured[0]).toMatchObject({ projectId: 'project-1', role: 'reviewer' });
+    expect(captured[0]?.permissionMode).toBeUndefined();
   });
 });

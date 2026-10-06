@@ -710,6 +710,11 @@ function InputContainerPlayground({
     if (inputMode === 'admin_approval') {
       return {
         type: 'admin_approval' as const,
+        request: {
+          ...samplePermissionRequest,
+          requestId: 'admin-approval-1',
+          type: 'admin_approval' as const,
+        },
         data: mockAdminApprovalRequest({
           appName: 'Docker Desktop',
           reason: 'Homebrew needs admin access to complete post-install steps.',
@@ -757,7 +762,9 @@ function InputContainerPlayground({
             onWorkingDirectoryChange: showWorkingDirectory ? setCwd : undefined,
             followUpItems,
             onSubmit: mockInputCallbacks.onSubmit,
-            onModelChange: setModel,
+            onModelChange: (nextModel) => {
+              if (nextModel !== null) setModel(nextModel)
+            },
             onInputChange: setInputValue,
             inputValue,
             onHeightChange: mockInputCallbacks.onHeightChange,

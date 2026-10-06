@@ -28,7 +28,11 @@ import type {
 import type { SessionStatus as SessionStatusConfig } from '@/config/session-status-config'
 import type { SessionOptions, SessionOptionUpdates } from '../hooks/useSessionOptions'
 import { defaultSessionOptions } from '../hooks/useSessionOptions'
-import { sessionAtomFamily } from '../atoms/sessions'
+import { sessionAtomFamily, sessionMetaMapAtom } from '../atoms/sessions'
+import { pendingSessionAuthRequestsAtom, type PendingSessionAuthRequest } from '../atoms/session-auth-requests'
+import { sessionPermissionRecoveryRequestsAtom, type SessionPermissionRecovery } from '../atoms/session-permission-recovery'
+import { conversationAgentActivityAtom } from '../atoms/session-journey-activity'
+import { findPendingRequestForConversation, getActiveSessionDescendantIds, getUserFacingSessionId } from '../utils/session-visibility'
 
 export interface AppShellContextType {
   // Data
@@ -43,6 +47,7 @@ export interface AppShellContextType {
   llmConnections: LlmConnectionWithStatus[]
   /** Default LLM connection slug for the current workspace */
   workspaceDefaultLlmConnection?: string
+  /** Whether this workspace allows automatic model selection. */
   /** Refresh LLM connections from config */
   refreshLlmConnections: () => Promise<void>
   pendingPermissions: Map<string, PermissionRequest[]>
@@ -92,6 +97,7 @@ export interface AppShellContextType {
   onSetActiveViewingSession: (sessionId: string) => void
   onSessionStatusChange: (sessionId: string, state: SessionStatus) => void
   onDeleteSession: (sessionId: string, skipConfirmation?: boolean) => Promise<boolean>
+  onNewChat?: (newPanel?: boolean) => void
 
   // Permission handling
   onRespondToPermission?: (
@@ -107,7 +113,7 @@ export interface AppShellContextType {
     sessionId: string,
     requestId: string,
     response: CredentialResponse
-  ) => void
+  ) => void | Promise<void>
 
   // File/URL handlers - these can open in tabs or external apps
   onOpenFile: (path: string) => void
@@ -225,7 +231,8 @@ export function useActiveWorkspace(): Workspace | null {
  */
 export function usePendingPermission(sessionId: string): PermissionRequest | undefined {
   const { pendingPermissions } = useAppShellContext()
-  return pendingPermissions.get(sessionId)?.[0]
+  const sessions = useAtomValue(sessionMetaMapAtom)
+  return findPendingRequestForConversation(sessionId, pendingPermissions, sessions)
 }
 
 /**
@@ -233,7 +240,38 @@ export function usePendingPermission(sessionId: string): PermissionRequest | und
  */
 export function usePendingCredential(sessionId: string): CredentialRequest | undefined {
   const { pendingCredentials } = useAppShellContext()
-  return pendingCredentials.get(sessionId)?.[0]
+  const sessions = useAtomValue(sessionMetaMapAtom)
+  return findPendingRequestForConversation(sessionId, pendingCredentials, sessions)
+}
+
+/** Processing state of delegated sessions, excluding background shell tasks. */
+export function useActiveDescendantSessionIds(sessionId: string): string[] {
+  const sessions = useAtomValue(sessionMetaMapAtom)
+  return React.useMemo(() => getActiveSessionDescendantIds(sessionId, sessions), [sessionId, sessions])
+}
+
+export function useHasActiveDescendants(sessionId: string): boolean {
+  return useActiveDescendantSessionIds(sessionId).length > 0
+}
+
+export function useConversationAgentActivity(sessionId: string) {
+  return useAtomValue(conversationAgentActivityAtom(sessionId))
+}
+
+/** OAuth and inline credential cards emitted in a delegated session's messages. */
+export function usePendingDescendantAuthRequests(sessionId: string): PendingSessionAuthRequest[] {
+  const requests = useAtomValue(pendingSessionAuthRequestsAtom)
+  const sessions = useAtomValue(sessionMetaMapAtom)
+  return React.useMemo(() => requests.filter(request => request.sessionId !== sessionId
+    && getUserFacingSessionId(request.sessionId, sessions) === sessionId), [requests, sessionId, sessions])
+}
+
+/** Show restart-interrupted permission waits in the task and its parent conversation. */
+export function useConversationPermissionRecoveries(sessionId: string): SessionPermissionRecovery[] {
+  const requests = useAtomValue(sessionPermissionRecoveryRequestsAtom)
+  const sessions = useAtomValue(sessionMetaMapAtom)
+  return React.useMemo(() => requests.filter(request => request.sessionId === sessionId
+    || getUserFacingSessionId(request.sessionId, sessions) === sessionId), [requests, sessionId, sessions])
 }
 
 /**

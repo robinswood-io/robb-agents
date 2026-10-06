@@ -59,6 +59,28 @@ function captureFetch(): {
 }
 
 describe('createApiTool: credential freshness', () => {
+  test('a rejected credential-generation fence blocks fetch entirely', async () => {
+    let getterCalls = 0;
+    const tool = createApiTool(makeBearerConfig(), async () => {
+      getterCalls += 1;
+      throw new Error('ordinary Mission source credential binding drifted');
+    }) as unknown as MinimalTool;
+
+    const f = captureFetch();
+    try {
+      const result = await tool.handler({ path: '/ping', method: 'GET' }) as {
+        isError?: boolean;
+        content?: Array<{ text?: string }>;
+      };
+      expect(result.isError).toBe(true);
+      expect(result.content?.[0]?.text).toContain('credential binding drifted');
+      expect(getterCalls).toBe(1);
+      expect(f.callCount()).toBe(0);
+    } finally {
+      f.restore();
+    }
+  });
+
   test('bearer auth — getter is called on every request, latest value wins', async () => {
     let currentToken = 'token-A';
     const getter = async () => currentToken;

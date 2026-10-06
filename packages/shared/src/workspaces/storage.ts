@@ -67,6 +67,8 @@ const WorkspaceConfigStorageSchema = z.object({
     colorTheme: z.string().optional(),
   }).passthrough().optional(),
   localMcpServers: z.object({ enabled: z.boolean() }).strict().optional(),
+
+  automaticToolFallbackEnabled: z.boolean().optional(),
   costControl: z.unknown().optional(),
   governance: z.unknown().optional(),
   remoteSupervision: z.unknown().optional(),

@@ -55,6 +55,7 @@ import { RenameDialog } from '@/components/ui/rename-dialog'
 import { useAppShellContext } from '@/context/AppShellContext'
 import { getModelShortName, type ModelDefinition } from '@config/models'
 import { getModelsForProviderType, resolveMidStreamBehavior, type CustomEndpointApi, type MidStreamBehavior } from '@config/llm-connections'
+import { getSelectableConnectionModels } from '@/components/app-shell/input/model-picker-helpers'
 import { toast } from 'sonner'
 
 /**
@@ -77,26 +78,14 @@ function getModelOptionsForConnection(
 ): Array<{ value: string; label: string; description: string; descriptionKey?: string }> {
   if (!connection) return []
 
-  // If connection has explicit models, use those
-  if (connection.models && connection.models.length > 0) {
-    return connection.models.map((m) => {
-      if (typeof m === 'string') {
-        return { value: m, label: getModelShortName(m), description: '' }
-      }
-      // ModelDefinition object
-      const def = m as ModelDefinition
-      return { value: def.id, label: def.name, description: def.description, descriptionKey: def.descriptionKey }
-    })
-  }
-
-  // Fall back to registry models for this provider type
-  const registryModels = getModelsForProviderType(connection.providerType, connection.piAuthProvider)
-  return registryModels.map((m) => ({
-    value: m.id,
-    label: m.name,
-    description: m.description,
-    descriptionKey: m.descriptionKey,
-  }))
+  const models = getSelectableConnectionModels(
+    { ...connection, models: connection.models?.length ? connection.models : undefined },
+    getModelsForProviderType(connection.providerType, connection.piAuthProvider),
+  )
+  return models.map((model) => typeof model === 'string'
+    ? { value: model, label: getModelShortName(model), description: '' }
+    : { value: model.id, label: model.name, description: model.description, descriptionKey: model.descriptionKey },
+  )
 }
 
 export const meta: DetailsPageMeta = {

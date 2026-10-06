@@ -387,21 +387,45 @@ client.onConnectionStateChanged((state) => {
 // ── performChatGptOAuth ──────────────────────────────────────────────────
 // Same shape as performOAuth: callback server (port 1455) → chatgpt:startOAuth →
 // browser → callback → chatgpt:completeOAuth.
+// Track active OAuth callback servers so re-invocations cleanly close stale servers
+let activeChatGptCallbackServer: Awaited<ReturnType<typeof createCallbackServer>> | null = null
+let activeGeminiCallbackServer: Awaited<ReturnType<typeof createCallbackServer>> | null = null
+
 // Overrides the startChatGptOAuth API method so the renderer call is unchanged.
 ;(api as any).startChatGptOAuth = async (
   connectionSlug: string,
 ): Promise<{ success: boolean; error?: string }> => {
+  if (activeChatGptCallbackServer) {
+    try {
+      activeChatGptCallbackServer.close()
+    } catch {
+      // Ignore cleanup error
+    }
+    activeChatGptCallbackServer = null
+  }
+
   let callbackServer: Awaited<ReturnType<typeof createCallbackServer>> | null = null
   let flowId: string | undefined
   let state: string | undefined
 
   try {
     // 1. Start callback server on ChatGPT's fixed port with /auth/callback path
-    callbackServer = await createCallbackServer({
-      appType: 'electron',
-      port: CHATGPT_OAUTH_CONFIG.CALLBACK_PORT,
-      callbackPaths: ['/auth/callback'],
-    })
+    try {
+      callbackServer = await createCallbackServer({
+        appType: 'electron',
+        port: CHATGPT_OAUTH_CONFIG.CALLBACK_PORT,
+        callbackPaths: ['/auth/callback'],
+      })
+      activeChatGptCallbackServer = callbackServer
+    } catch (bindErr: any) {
+      const msg = bindErr instanceof Error ? bindErr.message : String(bindErr)
+      if (msg.includes('already in use') || bindErr?.code === 'EADDRINUSE') {
+        throw new Error(
+          `Port ${CHATGPT_OAUTH_CONFIG.CALLBACK_PORT} is in use by another application. Please ensure no other process is using port ${CHATGPT_OAUTH_CONFIG.CALLBACK_PORT} and try again.`
+        )
+      }
+      throw bindErr
+    }
 
     // 2. Ask server to prepare the flow (PKCE, auth URL, store pending flow)
     const startResult = await client.invoke('chatgpt:startOAuth', connectionSlug)
@@ -411,8 +435,20 @@ client.onConnectionStateChanged((state) => {
     // 3. Open browser for user consent
     await openSafeExternalUrl(startResult.authUrl, (safeUrl) => shell.openExternal(safeUrl))
 
-    // 4. Wait for OpenAI to redirect to our callback server
-    const callback = await callbackServer.promise
+    // 4. Wait for OpenAI to redirect to our callback server (with 5-minute timeout)
+    let timeoutId: any
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutId = setTimeout(() => {
+        reject(new Error('ChatGPT authentication timed out. Please try again.'))
+      }, 300_000)
+    })
+
+    let callback: any
+    try {
+      callback = await Promise.race([callbackServer.promise, timeoutPromise])
+    } finally {
+      clearTimeout(timeoutId)
+    }
 
     // 5. Check for errors from the provider
     if (callback.query.error) {
@@ -440,6 +476,9 @@ client.onConnectionStateChanged((state) => {
     }
   } finally {
     callbackServer?.close()
+    if (activeChatGptCallbackServer === callbackServer) {
+      activeChatGptCallbackServer = null
+    }
   }
 }
 
@@ -449,17 +488,38 @@ client.onConnectionStateChanged((state) => {
 ;(api as any).startGeminiOAuth = async (
   connectionSlug: string,
 ): Promise<{ success: boolean; error?: string }> => {
+  if (activeGeminiCallbackServer) {
+    try {
+      activeGeminiCallbackServer.close()
+    } catch {
+      // Ignore cleanup error
+    }
+    activeGeminiCallbackServer = null
+  }
+
   let callbackServer: Awaited<ReturnType<typeof createCallbackServer>> | null = null
   let flowId: string | undefined
   let state: string | undefined
 
   try {
-    callbackServer = await createCallbackServer({
-      appType: 'electron',
-      port: GOOGLE_GEMINI_OAUTH_CONFIG.CALLBACK_PORT,
-      callbackPaths: [GOOGLE_GEMINI_OAUTH_CONFIG.CALLBACK_PATH],
-      host: '127.0.0.1',
-    })
+    try {
+      callbackServer = await createCallbackServer({
+        appType: 'electron',
+        port: GOOGLE_GEMINI_OAUTH_CONFIG.CALLBACK_PORT,
+        callbackPaths: [GOOGLE_GEMINI_OAUTH_CONFIG.CALLBACK_PATH],
+        host: '127.0.0.1',
+      })
+      activeGeminiCallbackServer = callbackServer
+    } catch (bindErr: any) {
+      const msg = bindErr instanceof Error ? bindErr.message : String(bindErr)
+      if (msg.includes('already in use') || bindErr?.code === 'EADDRINUSE') {
+        throw new Error(
+          `Port ${GOOGLE_GEMINI_OAUTH_CONFIG.CALLBACK_PORT} is in use by another application. Please ensure no other process is using port ${GOOGLE_GEMINI_OAUTH_CONFIG.CALLBACK_PORT} and try again.`
+        )
+      }
+      throw bindErr
+    }
+
     const redirectUri = `${callbackServer.url}${GOOGLE_GEMINI_OAUTH_CONFIG.CALLBACK_PATH}`
 
     const startResult = await client.invoke('gemini:startOAuth', { connectionSlug, redirectUri })
@@ -468,7 +528,20 @@ client.onConnectionStateChanged((state) => {
 
     await openSafeExternalUrl(startResult.authUrl, (safeUrl) => shell.openExternal(safeUrl))
 
-    const callback = await callbackServer.promise
+    let timeoutId: any
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutId = setTimeout(() => {
+        reject(new Error('Google Gemini authentication timed out. Please try again.'))
+      }, 300_000)
+    })
+
+    let callback: any
+    try {
+      callback = await Promise.race([callbackServer.promise, timeoutPromise])
+    } finally {
+      clearTimeout(timeoutId)
+    }
+
     if (callback.query.error) {
       const error = callback.query.error_description || callback.query.error
       await client.invoke('gemini:cancelOAuth', { state })
@@ -493,6 +566,9 @@ client.onConnectionStateChanged((state) => {
     }
   } finally {
     callbackServer?.close()
+    if (activeGeminiCallbackServer === callbackServer) {
+      activeGeminiCallbackServer = null
+    }
   }
 }
 

@@ -1,11 +1,15 @@
 import type { HumanEscalationReason } from '@craft-agent/core/types'
+import { SESSION_TOOL_NAMES } from '@craft-agent/session-tools-core'
 import {
   classifyAgentFailure,
   type AgentFailureSignal,
 } from './failure-taxonomy.ts'
+import { isBrowserToolNameOrAlias } from './browser-tool-names.ts'
+import { YOLO_AUTONOMY_GUIDANCE } from './yolo-policy.ts'
 
 export type AutonomyDecision =
   | { kind: 'fallback_browser' }
+  | { kind: 'fallback_structured' }
   | { kind: 'reconnect_runtime' }
   | { kind: 'escalate'; reason: HumanEscalationReason }
   | { kind: 'none' }
@@ -39,18 +43,25 @@ export function formatAutonomyContract(
   return [
     '<autonomy_contract>',
     'Continue through all safe, reversible, in-scope work until the requested outcome is complete and verified.',
-    'Make routine implementation choices from repository evidence; ask only when a missing choice would materially change the result or requires new authority.',
+    externalActionPolicy === 'allow-in-execute'
+      ? `When the effective permission mode is allow-all: ${YOLO_AUTONOMY_GUIDANCE} In Ask or Safe, retain the configured human-input boundaries.`
+      : 'Make routine implementation choices from repository evidence; ask only when a missing choice would materially change the result or requires new authority.',
     `Apply safe, ask, and allow-all exactly as configured for tool execution. ${externalActionAuthorization}`,
     'Treat secret or credential disclosure or transfer, git push or deployment, service restart, payment or financial submission, and publication or sending to an external audience as sensitive external actions.',
     externalActionPolicy === 'allow-in-execute'
       ? 'In Execute, act on sensitive external actions without another prompt when they are within the user-requested scope and have a concrete target. A generic continuation does not create authority for a new action, target, audience, or broader scope.'
       : 'Before the first sensitive external action, require an explicit user instruction that identifies the action and target or audience well enough to remove material ambiguity. A generic continuation such as "continue", "proceed", or "poursuis" does not authorize a new sensitive external action; when the current request is already explicit, do not ask again.',
+    'A conversational correction or status observation such as “we are waiting for X” or “those tasks are useless” does not authorize sending, deleting, deploying, or changing external state. Acknowledge it, update the remaining-work interpretation, and act externally only when the accepted objective actually requests that action.',
+    'When the user asks to reply to people already identified by an email or to answer in the same or existing thread, use the connector\'s thread-bound reply operation and the concrete message identifier already read. Do not convert that instruction into a new send with model-supplied recipients; preserve reply-all only when the objective explicitly preserves all thread recipients.',
     'Continue safe, reversible local edits and local verification without extra confirmation.',
     'After a failure, inspect and classify the exact cause. Never repeat the same action unchanged.',
     'Use a phase budget before calling tools: for a routine lookup, target 3-5 calls total (one targeted search, one batched read, one action, one verification). Escalate that budget only when new evidence proves the task is materially more complex.',
     'Batch independent searches and reads in a single tool call whenever supported. Prefer exact identifiers returned by the first search; do not restart broad discovery after sufficient evidence is available.',
     'Set an output budget before broad reads: request only the fields, date range, page size, log lines, or result count needed for the next decision. Start narrow and expand only when the returned evidence is insufficient.',
-    'Prefer a connected structured source or API for repeatable data access. Use browser automation for UI-only steps, a verified equivalent fallback, or final rendered-journey validation.',
+    'Prefer a connected structured source or API for repeatable data access. A connector transport/output failure (including ENOBUFS or maxBuffer) must stay on a bounded structured recovery path: narrow the output, retry a read once when safe, or use another documented connector operation. Never invent a raw host URL or browser route from the connector transport. Use browser automation for UI-only steps, a documented equivalent browser endpoint after structured recovery is exhausted, or final rendered-journey validation.',
+    'Treat an explicit user access-channel correction as binding. If the user says to use an API, connector, database, SSH, or server instead of the browser or interface, do not use browser automation for equivalent operational reads or writes. The browser remains allowed only for an explicitly needed authentication handoff or requested final visual validation; immediately return to the specified structured channel afterwards.',
+    'Treat host-application build identifiers such as buildCommit, routingMeta, or a local staging label as provenance for the Robb Agents runtime only. Never infer that such an identifier is the target project revision, deployment, artifact, branch, or tag; require explicit target-bound evidence for those claims.',
+    'For RDP, Guacamole, VNC, or other remote desktops, prefer a native remote agent, SSH, database connection, or application API for diagnosis and repeatable execution. Use coordinate/pixel automation only for unavoidable UI-only steps, authentication handoff, or final journey verification. After one browser transport failure or two materially different UI attempts without progress, switch to the structured route instead of continuing pixel retries.',
     'For remote SSH work, keep a stable remote working directory and combine related diagnostics. When several files must move or change, prefer an available sync/worktree operation over repeated one-file upload/download calls, then verify once at the destination.',
     'After delegating to known sessions, wait on a structured completion primitive when available. Do not poll session lists or send acknowledgement-only status messages.',
     'Before any mutation, reserve enough tool budget for verification and cleanup. Once a mutation starts, finish its verification and close its guards before unrelated exploration.',
@@ -61,7 +72,10 @@ export function formatAutonomyContract(
     'Operate like a senior owner: convert uncertainty into tests, prefer reversible experiments over speculation, clean up temporary changes, and continue until the end-user outcome is demonstrated.',
     'Recovery order: repair invalid input or local configuration; retry transient read-only work with bounded backoff; use a policy-authorized provider or tool fallback; use the integrated browser only for an equivalent safe access path.',
     'Never broaden permissions, bypass policy, expose secrets, or automatically replay an external mutation whose outcome is ambiguous.',
-    'Escalate only for interactive authentication or MFA, missing credentials, an external authorization, a material business decision, a destructive action outside the request, or exhausted safe recovery paths.',
+    externalActionPolicy === 'allow-in-execute'
+      ? 'In YOLO, finish independent work and report proved unavailable dependencies or exhausted recovery as incomplete without human solicitation. In Ask or Safe, escalate only for genuinely required authentication, credentials, authorization or business decisions.'
+      : 'Escalate only for interactive authentication or MFA, missing credentials, an external authorization, a material business decision, a destructive action outside the request, or exhausted safe recovery paths.',
+    'Before asking for a missing credential, endpoint, key, or access grant, inspect the accepted objective and current evidence. If they already establish that the exact item is pending from an identified third party and no immediate user action can supply it, do not ask the user to choose the same wait state again. Finish every independent safe step, record the exact third-party dependency and evidence, and use an authorized monitor or scheduled follow-up when one exists.',
     'A provider quota, rate limit, transient service failure, recoverable tool error, searchable uncertainty, or per-turn cost checkpoint is not a human blocker. Use the authorized fallback or automatic continuation path.',
     'Completion requires executed verification. Report exact evidence and name every remaining unverified item or blocker.',
     '</autonomy_contract>',
@@ -73,7 +87,15 @@ export function formatAutonomyContract(
  * This is deliberately pure: SessionManager owns persistence, prompts and UI.
  */
 export function decideAutonomyRecovery(input: AutonomyDecisionInput): AutonomyDecision {
-  const isBrowserTool = /browser_tool|browser:|\bbrowser\b/i.test(input.toolName)
+  const isBrowserTool = isBrowserToolNameOrAlias(input.toolName)
+  // Session contracts, questions and coordination have no equivalent external
+  // access path. Preserve their original error for correction at that boundary;
+  // its text must not invent a browser, host-repair or authentication task.
+  // Browser tools keep their existing structured fallback, and an identically
+  // named operation on a real external connector is not a local session tool.
+  const localToolName = input.toolName.trim().toLowerCase()
+  if (!isBrowserTool && (/^(?:mcp__session__|session__)/.test(localToolName)
+    || SESSION_TOOL_NAMES.has(input.toolName.trim()) || SESSION_TOOL_NAMES.has(localToolName))) return { kind: 'none' }
   const signal: AgentFailureSignal = {
     toolName: input.toolName,
     message: input.result,
@@ -92,15 +114,20 @@ export function decideAutonomyRecovery(input: AutonomyDecisionInput): AutonomyDe
   if (failure.recovery === 'runtime-reconnect') {
     return { kind: 'reconnect_runtime' }
   }
-  if (isBrowserTool || !input.browserEnabled) {
-    return { kind: 'escalate', reason: 'access_unavailable_after_fallback' }
-  }
   if (
     failure.recovery === 'fix-input'
     || failure.recovery === 'request-authorization'
     || failure.recovery === 'stop'
   ) {
     return { kind: 'none' }
+  }
+  if (isBrowserTool) {
+    return input.fallbackAlreadyAttempted
+      ? { kind: 'escalate', reason: 'access_unavailable_after_fallback' }
+      : { kind: 'fallback_structured' }
+  }
+  if (!input.browserEnabled) {
+    return { kind: 'escalate', reason: 'access_unavailable_after_fallback' }
   }
   if (input.fallbackAlreadyAttempted) return { kind: 'none' }
   if (input.browserFallbackEligible === false) return { kind: 'none' }

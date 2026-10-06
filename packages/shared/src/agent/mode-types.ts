@@ -87,6 +87,15 @@ export function parsePermissionMode(mode: string): PermissionMode | null {
   return null;
 }
 
+/** Normalize an untrusted API value before it can become a permission decision. */
+export function requirePermissionMode(value: unknown): PermissionMode {
+  const mode = typeof value === 'string' ? parsePermissionMode(value) : null;
+  if (!mode) {
+    throw new Error('Invalid permissionMode. Use safe (explore), ask, or allow-all (execute).');
+  }
+  return mode;
+}
+
 // ============================================================
 // Permissions Config Types (Browser-safe Zod schemas)
 // ============================================================

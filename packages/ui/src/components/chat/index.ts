@@ -5,6 +5,10 @@
 // Turn utilities (pure functions, no React)
 export * from './turn-utils'
 export * from './follow-up-helpers'
+export * from './conversation-presentation'
+export * from './user-input-timeline'
+export { JourneyProgress, JourneyOutcome } from './JourneyProgress'
+export { UserInputCard, userInputAnswersComplete, type UserInputCardProps } from './UserInputCard'
 
 // Components
 export { TurnCard, ResponseCard, SIZE_CONFIG, ActivityStatusIcon, type TurnCardProps, type ResponseCardProps, type ActivityItem, type ActivityStatus, type ResponseContent, type TodoItem } from './TurnCard'

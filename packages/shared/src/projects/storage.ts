@@ -156,9 +156,12 @@ export function loadProjectMemory(
   workspaceRootPath: string,
   projectSlug: string,
   maxTokens = 5000,
+  options: { query?: string; includeStructured?: boolean } = {},
 ): string | null {
-  const structured = loadProjectMemoryV2Context(workspaceRootPath, projectSlug, {
+  const structured = options.includeStructured === false ? null : loadProjectMemoryV2Context(workspaceRootPath, projectSlug, {
     maxTokens: Math.max(1, Math.floor(maxTokens * 0.65)),
+    query: options.query,
+    requireQueryMatch: !!options.query,
   });
   const legacy = loadLegacyProjectMemory(workspaceRootPath, projectSlug, maxTokens);
 

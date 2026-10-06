@@ -1,4 +1,6 @@
-import { query, createSdkMcpServer, tool, AbortError, type Query, type SDKMessage, type SDKUserMessage, type SDKAssistantMessageError, type Options } from '@anthropic-ai/claude-agent-sdk';
+import { randomUUID } from 'node:crypto';
+import { protectedClaudeQuery as query } from './claude-process.ts';
+import { createSdkMcpServer, tool, AbortError, type Query, type SDKMessage, type SDKUserMessage, type SDKAssistantMessageError, type Options } from '@anthropic-ai/claude-agent-sdk';
 import { getDefaultOptions, resetClaudeConfigCheck } from './options.ts';
 // Local type for SDK user message content blocks (text, image, document)
 // Replaces import from @anthropic-ai/sdk/resources — keeps SDK as agent-only dependency
@@ -7,9 +9,9 @@ type ContentBlockParam =
   | { type: 'image'; source: { type: 'base64'; media_type: string; data: string } }
   | { type: 'document'; source: { type: 'base64'; media_type: string; data: string } };
 import { z } from 'zod';
-import { getSystemPrompt } from '../prompts/system.ts';
+import { getSystemPromptAsync } from '../prompts/system.ts';
 import { BaseAgent, type MiniAgentConfig, MINI_AGENT_TOOLS, MINI_AGENT_MCP_KEYS } from './base-agent.ts';
-import type { BackendConfig, PostInitResult, PermissionRequestType, SdkMcpServerConfig } from './backend/types.ts';
+import { ProviderDispatchRejectedError, ToolAdmissionRecoveryError, type BackendConfig, type PostInitResult, type PermissionRequestType, type SdkMcpServerConfig } from './backend/types.ts';
 // Plan types are used by UI components; not needed in craft-agent.ts since Safe Mode is user-controlled
 import { parseError, type AgentError } from './errors.ts';
 import { mapClaudeSdkAssistantError, type ClaudeSdkApiError } from './claude-sdk-error-mapper.ts';
@@ -20,13 +22,14 @@ import {
   clearClaudeBedrockRoutingEnvVars,
   resolveAuthEnvVars,
 } from '../config/llm-connections.ts';
-import type { McpClientPool } from '../mcp/mcp-pool.ts';
+import type { McpClientPool, McpToolResult } from '../mcp/mcp-pool.ts';
 import { loadPlanFromPath, type SessionConfig as Session } from '../sessions/storage.ts';
 import { loadProjectById, getProjectAssetsPath, listProjectAssets, getProjectMemoryPath, loadProjectMemory } from '../projects/storage.ts';
 import { DEFAULT_MODEL, isClaudeModel, isAdaptiveThinkingAlwaysOnModel, getModelContextWindow } from '../config/models.ts';
 import { getCredentialManager } from '../credentials/index.ts';
 import { loadPreferences, formatPreferencesForPrompt, getCoAuthorPreference } from '../config/preferences.ts';
 import type { FileAttachment } from '../utils/files.ts';
+import { expandPath } from '../utils/paths.ts';
 import type { LLMQueryRequest, LLMQueryResult } from './llm-tool.ts';
 import { consumeLlmQueryMessages } from './claude-llm-query.ts';
 import { debug } from '../utils/debug.ts';
@@ -39,6 +42,7 @@ import {
   clearPlanFileState,
   registerSessionScopedToolCallbacks,
   unregisterSessionScopedToolCallbacks,
+  getSessionScopedToolCallbacks,
   getSessionScopedTools,
   cleanupSessionScopedTools,
   type AuthRequest,
@@ -66,7 +70,14 @@ import {
 } from '../config/watcher.ts';
 // Centralized PreToolUse pipeline
 import {
+  beginContextualGmailHostExecution,
+  confirmContextualGmailRuntimeTeardown,
+  hasContextualGmailInFlightForRuntime,
+  invalidateContextualGmailSessionState,
+  recordContextualGmailToolResult,
+  resolveContextualGmailPromptReservation,
   runPreToolUseChecks,
+  settleContextualGmailHostExecution,
   type PreToolUseCheckResult,
   BUILT_IN_TOOLS,
 } from './core/pre-tool-use.ts';
@@ -75,6 +86,7 @@ import { getRtkEnabled } from '../config/storage.ts';
 import type { RtkContext } from './core/rtk-rewrite.ts';
 import { type ThinkingLevel, THINKING_TO_EFFORT, getThinkingTokens, DEFAULT_THINKING_LEVEL } from './thinking-levels.ts';
 import { generateConversationSummary } from './conversation-summary.ts';
+import { parseCompactCommand } from './compact-command.ts';
 import type { LoadedSource } from '../sources/types.ts';
 import { sourceNeedsAuthentication } from '../sources/credential-manager.ts';
 import type {
@@ -89,6 +101,7 @@ import type {
 import { existsSync } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import {
+  assertExistingWorkingDirectory,
   isExistingDirectory,
   extractSdkReportedBinaryPath,
   isSpawnEnoent as detectSpawnEnoent,
@@ -188,12 +201,24 @@ export function resolveClaudeThinkingOptions(args: {
   };
 }
 
+/** Remove a model-authored nested-route override before the in-process
+ * call_llm tool validates its model enum. The public selected-model contract
+ * active session route is authoritative, including for unknown override IDs. */
+export function resolveClaudeCallLlmInterceptInput(input:Record<string,unknown>):Record<string,unknown>{const {model:_ignoredModelOverride,...selectedInput}=input;return selectedInput;}
+
+export function resolveClaudeNestedQueryModel(input:{activeModel:string;requestedModel?:string}):string{return input.activeModel;}
+
+export function resolveClaudeMiniCompletionRoute(input:{activeModel:string;activeThinkingLevel:ThinkingLevel;providerType?:BackendConfig['providerType']}):{model:string;thinkingOptions:Partial<Options>}{return {model:input.activeModel,thinkingOptions:resolveClaudeThinkingOptions({thinkingLevel:input.activeThinkingLevel,model:input.activeModel,providerType:input.providerType,minimizeThinking:false})};}
+
 export interface ClaudeAgentConfig {
   workspace: Workspace;
   session?: Session;           // Current session (primary isolation boundary)
   mcpToken?: string;           // Override token (for testing)
   model?: string;
   thinkingLevel?: ThinkingLevel; // Initial thinking level (defaults to 'medium')
+
+  /** Live host-owned manual model authority. */
+  isModelRoutePinned?: () => boolean;
   onSdkSessionIdUpdate?: (sdkSessionId: string) => void;  // Callback when SDK session ID is captured
   onSdkSessionIdCleared?: () => void;  // Callback when SDK session ID is cleared (e.g., after failed resume)
   /**
@@ -444,7 +469,58 @@ function jsonSchemaToZodShape(schema: Record<string, unknown>, depth = 0): Recor
  * as the server key and original tool names to get the correct final names
  * (e.g., `mcp__linear__createIssue`).
  */
-function createSourceProxyServers(pool: McpClientPool): Record<string, ReturnType<typeof createSdkMcpServer>> {
+interface SourceProxyGmailLifecycleContext {
+  sessionId: string;
+  runtimeId: string;
+}
+
+interface SourceProxyExecutionGuard {
+  begin(toolName: string, args: Record<string, unknown>): string | undefined;
+  settle(toolUseId: string): void;
+}
+
+/** Execute a source proxy behind the host-owned Gmail exact-once boundary. */
+export async function executeSourceProxyCall(
+  pool: Pick<McpClientPool, 'callTool'>,
+  proxyName: string,
+  args: Record<string, unknown>,
+  gmailLifecycle: SourceProxyGmailLifecycleContext,
+  executionGuard?: SourceProxyExecutionGuard,
+): Promise<McpToolResult> {
+  const admittedToolUseId = executionGuard?.begin(proxyName, args);
+  if (executionGuard && !admittedToolUseId) {
+    return {
+      content: 'The host did not find one exact current PreToolUse admission for this source tool. The tool was not executed.',
+      isError: true,
+    };
+  }
+  const hostExecution = beginContextualGmailHostExecution({
+    sessionId: gmailLifecycle.sessionId,
+    runtimeId: gmailLifecycle.runtimeId,
+    toolName: proxyName,
+    toolInput: args,
+  });
+  if (hostExecution.applies && !hostExecution.allowed) {
+    if (admittedToolUseId) executionGuard?.settle(admittedToolUseId);
+    return { content: hostExecution.reason, isError: true };
+  }
+
+  const ticket = hostExecution.applies && hostExecution.allowed
+    ? hostExecution.ticket
+    : undefined;
+  try {
+    return await pool.callTool(proxyName, args);
+  } finally {
+    if (admittedToolUseId) executionGuard?.settle(admittedToolUseId);
+    if (ticket) settleContextualGmailHostExecution(ticket);
+  }
+}
+
+function createSourceProxyServers(
+  pool: McpClientPool,
+  gmailLifecycle: SourceProxyGmailLifecycleContext,
+  executionGuard: SourceProxyExecutionGuard,
+): Record<string, ReturnType<typeof createSdkMcpServer>> {
   const servers: Record<string, ReturnType<typeof createSdkMcpServer>> = {};
 
   for (const slug of pool.getConnectedSlugs()) {
@@ -463,12 +539,16 @@ function createSourceProxyServers(pool: McpClientPool): Record<string, ReturnTyp
           ...z.object({}).catchall(z.unknown()).shape,
         },
         async (args: Record<string, unknown>) => {
-          const result = await pool.callTool(proxyName, args);
+          const result = await executeSourceProxyCall(pool, proxyName, args, gmailLifecycle, executionGuard);
           return {
             content: [{ type: 'text' as const, text: result.content }],
             ...(result.isError ? { isError: true } : {}),
+            ...(result.structuredContent ? { structuredContent: result.structuredContent } : {}),
           };
-        }
+        },
+        mcpTool.annotations && Object.values(mcpTool.annotations).some(value => value !== undefined)
+          ? { annotations: { ...mcpTool.annotations } }
+          : undefined,
       );
     });
 
@@ -491,6 +571,10 @@ export class ClaudeAgent extends BaseAgent {
   private currentQuery: Query | null = null;
   private currentQueryAbortController: AbortController | null = null;
   private lastAbortReason: AbortReason | null = null;
+  private promptPreparationRevision = 0;
+  private persistentGmailRuntimeId: string | null = null;
+  private persistentGmailSessionId: string | null = null;
+  private activeTurnGmailRuntime: SourceProxyGmailLifecycleContext | null = null;
   private sessionId: string | null = null;
   // Whether the most recent user turn included image/PDF attachments. Read by
   // mapSDKErrorToTypedError to decide whether attachment-related hints belong
@@ -518,8 +602,6 @@ export class ClaudeAgent extends BaseAgent {
   private preferencesDriftNotified: boolean = false;
   // Captured stderr from SDK subprocess (for error diagnostics when process exits with code 1)
   private lastStderrOutput: string[] = [];
-  /** Pending steer message — injected via additionalContext on next PreToolUse */
-  private pendingSteerMessage: string | null = null;
 
   /**
    * WS2 keep-alive: when true, use one long-lived streaming-input `query()` per
@@ -537,8 +619,10 @@ export class ClaudeAgent extends BaseAgent {
   private persistentIterator: AsyncIterator<SDKMessage> | null = null;
   /** AbortController bound to the persistent query for its whole life (hard-kill backstop). */
   private persistentAbortController: AbortController | null = null;
-  /** True while the single always-on consumer loop is running. */
-  private persistentConsumerActive = false;
+  /** Monotonic identity for the persistent query owned by this agent instance. */
+  private persistentQueryGeneration = 0;
+  /** Generation currently owned by the consumer attached to the live iterator. */
+  private persistentConsumerGeneration: number | null = null;
   /** The current turn's SDK-message channel; the consumer routes into it, chatImpl drains it. */
   private activeTurnChannel: PushableInputStream<SDKMessage> | null = null;
   /** Sink for background task events that arrive between turns (wired by the session layer). */
@@ -551,20 +635,55 @@ export class ClaudeAgent extends BaseAgent {
    * iterator, and — as a hard backstop — aborts the controller (SIGTERM/SIGKILL)
    * so the subprocess dies even if the graceful close is ignored.
    */
-  private teardownPersistentQuery(reason: string = 'teardown'): void {
+  private teardownPersistentQuery(
+    reason: string = 'teardown',
+    runtimeTerminationAlreadyConfirmed = false,
+  ): void {
+    // A PreToolUse hook can be suspended while the host is showing a permission
+    // prompt. Tearing down the SDK query without settling that promise leaves
+    // the hook (and any reserved sensitive action) alive forever.
+    this.denyAllPendingPermissions();
+    this.revokeAdmittedToolExecutions();
     if (!this.persistentInput && !this.persistentIterator && !this.persistentAbortController) {
       return; // already torn down
     }
+    const gmailRuntimeId = this.persistentGmailRuntimeId;
+    const gmailSessionId = this.persistentGmailSessionId;
+    const persistentIterator = this.persistentIterator;
+    const retiringGeneration = this.persistentQueryGeneration;
+    if (runtimeTerminationAlreadyConfirmed && gmailRuntimeId && gmailSessionId) {
+      this.confirmContextualGmailRuntimeTeardown({
+        sessionId: gmailSessionId,
+        runtimeId: gmailRuntimeId,
+      });
+    }
+    // Revoke the retiring consumer before requesting asynchronous iterator
+    // closure. A replacement may start while return()/abort propagates, but the
+    // old consumer can no longer observe the replacement's shared turn channel.
+    this.persistentQueryGeneration++;
+    if (this.persistentConsumerGeneration === retiringGeneration) {
+      this.persistentConsumerGeneration = null;
+    }
     debug(`[bg-lifecycle] teardownPersistentQuery (${reason})`, { sessionId: this.config.session?.id });
     try { this.persistentInput?.end(); } catch { /* already ended */ }
-    try { void this.persistentIterator?.return?.(undefined); } catch { /* best-effort */ }
+    try {
+      // Request closure, but never treat return() itself as proof that the
+      // consumer or subprocess actually stopped. Its exact finally below is
+      // the sole asynchronous teardown authority.
+      const iteratorClose = persistentIterator?.return?.(undefined);
+      if (iteratorClose) void Promise.resolve(iteratorClose).catch(() => undefined);
+    } catch {
+      // The AbortController below remains the hard backstop. The consumer's
+      // own finally confirms teardown only once its iterator really exits.
+    }
     try { this.persistentAbortController?.abort(); } catch { /* best-effort hard backstop */ }
     try { this.activeTurnChannel?.end(); } catch { /* best-effort */ }
     this.persistentInput = null;
     this.persistentIterator = null;
     this.persistentAbortController = null;
+    this.persistentGmailRuntimeId = null;
+    this.persistentGmailSessionId = null;
     this.activeTurnChannel = null;
-    this.persistentConsumerActive = false;
   }
 
   /**
@@ -575,9 +694,16 @@ export class ClaudeAgent extends BaseAgent {
    * ending that channel at `result` completes the turn WITHOUT closing the real
    * query (the subprocess, and its background sub-agents, stay alive).
    */
-  private beginPersistentTurn(prompt: SDKUserMessage, options: Options): AsyncIterable<SDKMessage> {
+  private beginPersistentTurn(
+    prompt: SDKUserMessage,
+    options: Options,
+    gmailLifecycle: SourceProxyGmailLifecycleContext,
+  ): AsyncIterable<SDKMessage> {
     if (!this.persistentInput || !this.currentQuery) {
       // First turn: create the persistent query + consumer.
+      this.persistentQueryGeneration++;
+      this.persistentGmailRuntimeId = gmailLifecycle.runtimeId;
+      this.persistentGmailSessionId = gmailLifecycle.sessionId;
       this.persistentInput = createPushableInputStream<SDKUserMessage>();
       this.persistentAbortController = this.currentQueryAbortController;
       this.currentQuery = query({ prompt: this.persistentInput.stream, options });
@@ -592,8 +718,50 @@ export class ClaudeAgent extends BaseAgent {
     }
     const channel = createPushableInputStream<SDKMessage>();
     this.activeTurnChannel = channel;
-    this.persistentInput.push(prompt);
+    this.persistentInput.push(prompt, this.captureProviderHandoffAcknowledgement());
     return channel.stream;
+  }
+
+  /** Synchronous provider-dispatch constructor. A throw cannot have crossed an
+   * async transport write, so it is the narrow correlated rejection boundary
+   * paired with the host WAL. Iteration failures deliberately occur outside. */
+  private createProviderTurnMessageSource(
+    effectiveUserMessage: string,
+    attachments: FileAttachment[] | undefined,
+    options: Options,
+    gmailRuntimeContext: SourceProxyGmailLifecycleContext,
+  ): AsyncIterable<SDKMessage> {
+    const rejectExactPreProviderDispatch = this.captureProviderDispatchRejection();
+    try {
+      if (this.keepBackgroundTasksAlive) {
+        const sdkMessage = this.buildSDKUserMessage(effectiveUserMessage, attachments);
+        return this.beginPersistentTurn(sdkMessage, options, gmailRuntimeContext);
+      }
+      const sdkMessage = this.buildSDKUserMessage(effectiveUserMessage, attachments);
+      this.currentQuery = query({
+        prompt: this.createOneShotProviderInput(sdkMessage),
+        options,
+      });
+      return this.currentQuery;
+    } catch (error) {
+      rejectExactPreProviderDispatch();
+      throw error;
+    }
+  }
+
+  /**
+   * Build a one-message SDK input whose acknowledgement fires only after the
+   * SDK asks for the next item. Its streaming-input loop awaits
+   * `transport.write(message)` before doing that, so a rejected first write
+   * closes the iterator without falsely reporting handoff. This means accepted
+   * by the Claude CLI runtime, not proven remote HTTP delivery; waiting for a
+   * response frame instead could replay a request already sent without reply.
+   */
+  private createOneShotProviderInput(prompt: SDKUserMessage): AsyncIterable<SDKUserMessage> {
+    const input = createPushableInputStream<SDKUserMessage>();
+    input.push(prompt, this.captureProviderHandoffAcknowledgement());
+    input.end();
+    return input.stream;
   }
 
   /**
@@ -605,18 +773,32 @@ export class ClaudeAgent extends BaseAgent {
    * draining so the subprocess never stalls on pipe backpressure.
    */
   private startPersistentConsumer(): void {
-    if (this.persistentConsumerActive) return;
-    this.persistentConsumerActive = true;
     const iterator = this.persistentIterator;
-    if (!iterator) {
-      this.persistentConsumerActive = false;
-      return;
-    }
+    const consumerGeneration = this.persistentQueryGeneration;
+    const gmailRuntimeId = this.persistentGmailRuntimeId;
+    const gmailSessionId = this.persistentGmailSessionId;
+    if (!iterator || this.persistentConsumerGeneration === consumerGeneration) return;
+    this.persistentConsumerGeneration = consumerGeneration;
     void (async () => {
+      let reportedStaleConsumer = false;
       try {
         while (true) {
           const { done, value } = await iterator.next();
           if (done) break;
+          const isCurrentConsumer = this.persistentIterator === iterator
+            && this.persistentQueryGeneration === consumerGeneration
+            && this.persistentGmailRuntimeId === gmailRuntimeId
+            && this.persistentGmailSessionId === gmailSessionId;
+          if (!isCurrentConsumer) {
+            // teardownPersistentQuery() may need time to close the SDK iterator.
+            // Keep draining it until a real terminal signal, but never let a
+            // buffered old-generation event reach or close the new turn channel.
+            if (!reportedStaleConsumer) {
+              reportedStaleConsumer = true;
+              this.debug(`[bg-lifecycle] dropping events from retired persistent generation ${consumerGeneration}`);
+            }
+            continue;
+          }
           const channel = this.activeTurnChannel;
           if (channel) {
             channel.push(value);
@@ -634,7 +816,24 @@ export class ClaudeAgent extends BaseAgent {
       } catch (err) {
         this.debug(`[bg-lifecycle] persistent consumer error: ${err instanceof Error ? err.message : String(err)}`);
       } finally {
-        this.teardownPersistentQuery('consumer-exit');
+        if (this.persistentConsumerGeneration === consumerGeneration) {
+          this.persistentConsumerGeneration = null;
+        }
+        // An older consumer may finish after forceAbort already created a new
+        // persistent generation. Never let that late exit tear down or clear
+        // the replacement runtime.
+        if (this.persistentIterator === iterator
+          && this.persistentQueryGeneration === consumerGeneration) {
+          // Reaching this consumer's finally is direct proof that its exact
+          // iterator stopped. Confirm that captured runtime here rather than
+          // relying on optional iterator.return(), which may be absent or throw.
+          this.teardownPersistentQuery('consumer-exit', true);
+        } else if (gmailRuntimeId && gmailSessionId) {
+          this.confirmContextualGmailRuntimeTeardown({
+            sessionId: gmailSessionId,
+            runtimeId: gmailRuntimeId,
+          });
+        }
       }
     })();
   }
@@ -714,7 +913,7 @@ export class ClaudeAgent extends BaseAgent {
           sizeBytes: a.sizeBytes,
         })),
         memoryPath: getProjectMemoryPath(this.workspaceRootPath, slug),
-        memoryContent: loadProjectMemory(this.workspaceRootPath, slug) ?? undefined,
+        memoryContent: loadProjectMemory(this.workspaceRootPath, slug, 5000, { includeStructured: false }) ?? undefined,
       };
     } catch (error) {
       debug(`[resolveProjectContext] Failed to load project ${projectId}:`, error);
@@ -726,6 +925,7 @@ export class ClaudeAgent extends BaseAgent {
   public onPermissionRequest: ((request: {
     requestId: string;
     toolName: string;
+    toolUseId?: string;
     command?: string;
     description: string;
     type?: PermissionRequestType;
@@ -738,6 +938,7 @@ export class ClaudeAgent extends BaseAgent {
     approvalTtlSeconds?: number;
     sensitiveActionCategory?: import('./core/sensitive-external-action.ts').SensitiveExternalActionCategory;
     sensitiveActionTargets?: string[];
+    sensitiveActionOperationHash?: string;
   }) => void) | null = null;
 
   // Debug callback for status messages
@@ -780,6 +981,8 @@ export class ClaudeAgent extends BaseAgent {
       session: config.session,
       model,
       thinkingLevel: config.thinkingLevel,
+
+      isModelRoutePinned: config.isModelRoutePinned,
       mcpToken: config.mcpToken,
       isHeadless: config.isHeadless,
       skipConfigWatcher: config.skipConfigWatcher,
@@ -875,7 +1078,7 @@ export class ClaudeAgent extends BaseAgent {
       return { authInjected: false, authWarning: 'No connection slug available', authWarningLevel: 'error' };
     }
 
-    const connection = getLlmConnection(slug);
+    const connection = this.config.sealedLlmConnection ?? getLlmConnection(slug);
     if (!connection) {
       return { authInjected: false, authWarning: `Connection not found: ${slug}`, authWarningLevel: 'error' };
     }
@@ -890,11 +1093,29 @@ export class ClaudeAgent extends BaseAgent {
 
     // Resolve auth env vars via shared utility
     const manager = getCredentialManager();
-    const result = await resolveAuthEnvVars(connection, slug, manager, getValidClaudeOAuthToken);
+    const result = await resolveAuthEnvVars(
+      connection,
+      slug,
+      manager,
+      getValidClaudeOAuthToken,
+      this.config.expectedLlmCredentialBindingId,
+    );
 
     if (!result.success) {
       return { authInjected: false, authWarning: result.warning, authWarningLevel: 'error' };
     }
+
+    // Preserve the authenticated per-instance snapshot. SDK options merge
+    // these values after process.env, so another agent's postInit cannot swap
+    // this governed route's endpoint or credential.
+    this.config.envOverrides = {
+      ...this.config.envOverrides,
+      ANTHROPIC_API_KEY: '',
+      CLAUDE_CODE_OAUTH_TOKEN: '',
+      ANTHROPIC_BASE_URL: '',
+      ...result.envVars,
+      ANTHROPIC_DEFAULT_HAIKU_MODEL: this.getModel(),
+    };
 
     // Apply env vars to process.env (for SDK subprocess) and envOverrides (per-session isolation)
     for (const [key, value] of Object.entries(result.envVars)) {
@@ -945,6 +1166,44 @@ export class ClaudeAgent extends BaseAgent {
     }
   }
 
+  /**
+   * Fail closed and settle every permission promise owned by this agent.
+   *
+   * Detach the entries before resolving them so continuations cannot observe a
+   * stale request or resolve it a second time while teardown is in progress.
+   */
+  private denyAllPendingPermissions(): void {
+    if (this.pendingPermissions.size === 0) return;
+    const pendingPermissions = [...this.pendingPermissions.values()];
+    this.pendingPermissions.clear();
+    for (const pending of pendingPermissions) {
+      pending.resolve(false);
+    }
+  }
+
+  private resolveContextualGmailPromptDecision(
+    sessionId: string,
+    toolName: string,
+    toolInput: Record<string, unknown>,
+    toolUseId: string | undefined,
+    approved: boolean,
+  ) {
+    const currentRequest = this.getCurrentTurnUserMessage() ?? undefined;
+    const currentAuthority = this.config.getObjectiveMutationAuthority?.(currentRequest);
+    return resolveContextualGmailPromptReservation({
+      sessionId,
+      toolUseId,
+      toolName,
+      toolInput,
+      approved,
+      permissionMode: getPermissionMode(sessionId),
+      activeSourceSlugs: Array.from(this.sourceManager.getActiveSlugs()),
+      objectiveAuthorizationSegments: typeof currentAuthority === 'object'
+        ? currentAuthority.authorizationSegments
+        : currentRequest ? [currentRequest] : [],
+    });
+  }
+
   // isInSafeMode() is now inherited from BaseAgent
 
   /**
@@ -977,6 +1236,7 @@ export class ClaudeAgent extends BaseAgent {
         this.onPermissionRequest({
           requestId,
           toolName,
+          toolUseId,
           command,
           description: `Execute bash command: ${command}`,
         });
@@ -1001,6 +1261,18 @@ export class ClaudeAgent extends BaseAgent {
     return this.config.mcpToken ?? null;
   }
 
+  /** Globally unique across overlapping agent instances and SDK processes. */
+  private createGmailRuntimeId(sessionId: string): string {
+    return `${sessionId}:claude:${randomUUID()}`;
+  }
+
+  /** Narrow seam for exact runtime teardown tests and generation correlation. */
+  private confirmContextualGmailRuntimeTeardown(
+    runtime: Parameters<typeof confirmContextualGmailRuntimeTeardown>[0],
+  ): boolean {
+    return confirmContextualGmailRuntimeTeardown(runtime);
+  }
+
   protected async *chatImpl(
     userMessage: string,
     attachments?: FileAttachment[],
@@ -1008,12 +1280,43 @@ export class ClaudeAgent extends BaseAgent {
   ): AsyncGenerator<AgentEvent> {
     // Extract options (ChatOptions interface from AgentBackend)
     const _isRetry = options?.isRetry ?? false;
+    const preparationRevision = this.promptPreparationRevision;
+    this.revokeAdmittedToolExecutions();
 
-    // Clear any leftover steer from a previous turn (safety net — should already be null)
-    this.pendingSteerMessage = null;
-
+    const sessionId = this.config.session?.id || `temp-${Date.now()}`;
+    const slashCommandRunsOutsidePersistentRuntime = parseCompactCommand(userMessage.trim()) !== null
+      && !attachments?.length;
+    const usesPersistentGmailRuntime = this.keepBackgroundTasksAlive
+      && !slashCommandRunsOutsidePersistentRuntime;
+    const gmailRuntimeId = usesPersistentGmailRuntime && this.persistentGmailRuntimeId
+      ? this.persistentGmailRuntimeId
+      : this.createGmailRuntimeId(sessionId);
+    const gmailRuntimeContext = { sessionId, runtimeId: gmailRuntimeId };
+    this.activeTurnGmailRuntime = gmailRuntimeContext;
     try {
-      const sessionId = this.config.session?.id || `temp-${Date.now()}`;
+      if (this.config.session?.workingDirectory) {
+        await assertExistingWorkingDirectory(expandPath(this.config.session.workingDirectory));
+      }
+
+      // For Claude OAuth connections: ensure token is fresh before turn starts
+      if (this.config.authType === 'oauth') {
+        const slug = this.config.connectionSlug || 'claude-max';
+        const freshToken = await getValidClaudeOAuthToken(slug);
+        if (freshToken.accessToken) {
+          this.config.envOverrides = {
+            ...this.config.envOverrides,
+            CLAUDE_CODE_OAUTH_TOKEN: freshToken.accessToken,
+          };
+          process.env.CLAUDE_CODE_OAUTH_TOKEN = freshToken.accessToken;
+        } else if (freshToken.migrationRequired) {
+          yield {
+            type: 'error',
+            message: freshToken.migrationRequired.message,
+          };
+          yield { type: 'complete' };
+          return;
+        }
+      }
 
       // Pin system prompt components on first chat() call for consistency after compaction
       // The SDK's resume mechanism expects system prompt consistency within a session
@@ -1082,7 +1385,21 @@ export class ClaudeAgent extends BaseAgent {
       // Regular agents: full set including preferences, docs, and user sources
 
       // Build per-source proxy servers from centralized MCP pool (if available)
-      const sourceProxies = this.config.mcpPool ? createSourceProxyServers(this.config.mcpPool) : {};
+      const toolExecutionGuard = {
+        begin: (toolName: string, args: Record<string, unknown>) => (
+          this.beginAdmittedToolExecutionBySignature({
+            toolName,
+            toolInput: args,
+            sessionId,
+            runtimeId: gmailRuntimeId,
+            authorizationEpoch: this.promptPreparationRevision,
+          })
+        ),
+        settle: (toolUseId: string) => this.settleAdmittedToolExecution(toolUseId),
+      };
+      const sourceProxies = this.config.mcpPool
+        ? createSourceProxyServers(this.config.mcpPool, gmailRuntimeContext, toolExecutionGuard)
+        : {};
       const sourceProxyCount = Object.keys(sourceProxies).length;
       if (sourceProxyCount > 0) {
         debug('[chat] Source proxy servers created for', sourceProxyCount, 'sources');
@@ -1091,7 +1408,12 @@ export class ClaudeAgent extends BaseAgent {
       // Build full MCP servers set first, then filter for mini agents
       const fullMcpServers: Options['mcpServers'] = {
         // Session-scoped tools (SubmitPlan, source_test, update_user_preferences, transform_data, etc.)
-        session: getSessionScopedTools(sessionId, this.workspaceRootPath),
+        session: getSessionScopedTools(
+          sessionId,
+          this.workspaceRootPath,
+          this.config.workspace.id,
+          toolExecutionGuard,
+        ),
         // Craft Agents documentation - always available for searching setup guides
         // This is a public Mintlify MCP server, no auth needed
         'craft-agents-docs': {
@@ -1109,7 +1431,7 @@ export class ClaudeAgent extends BaseAgent {
       const mcpServers: Options['mcpServers'] = miniConfig.enabled
         ? this.filterMcpServersForMiniAgent(fullMcpServers, miniConfig.mcpServerKeys)
         : fullMcpServers;
-      
+
       // Configure SDK options
       // Model is always set by caller via connection config
       const model = this._model;
@@ -1170,6 +1492,7 @@ export class ClaudeAgent extends BaseAgent {
       // field) so the catch handler reads the value passed to *this*
       // chatImpl invocation, not state left over from an earlier call.
       const resolvedCwd = this.resolveSpawnCwd({ isRetry: _isRetry, sessionId });
+      await assertExistingWorkingDirectory(resolvedCwd);
 
       const options: Options = {
         ...getDefaultOptions({ ...this.config.envOverrides, ANTHROPIC_DEFAULT_HAIKU_MODEL: this.getModel() }),
@@ -1223,7 +1546,7 @@ export class ClaudeAgent extends BaseAgent {
               type: 'preset' as const,
               preset: 'claude_code' as const,
               // Working directory included for monorepo context file discovery
-              append: getSystemPrompt(
+              append: await getSystemPromptAsync(
                 this.pinnedPreferencesPrompt ?? undefined,
                 this.config.debugMode,
                 this.workspaceRootPath,
@@ -1274,14 +1597,49 @@ export class ClaudeAgent extends BaseAgent {
               }
               // Validate the fields we depend on are actually present
               if (!_hookInput.tool_name || !_hookInput.tool_use_id) {
-                return { continue: true };
+                return blockWithReason('The host could not correlate this tool to one exact SDK invocation. The tool was not executed.');
               }
               const input = _hookInput as Required<Pick<typeof _hookInput, 'tool_name' | 'tool_use_id'>> & typeof _hookInput;
+              const toolInput = input.tool_input as Record<string, unknown>;
+              const authorizationEpoch = this.promptPreparationRevision;
+              const admit = async (approvedInput: Record<string, unknown>) => {
+                if (authorizationEpoch !== this.promptPreparationRevision) {
+                  return blockWithReason('The host could not bind this tool approval to one exact current execution. The tool was not executed.');
+                }
+                try {
+                  await this.config.beforeToolExecution?.({
+                    toolUseId: input.tool_use_id,
+                    toolName: input.tool_name,
+                    toolInput: approvedInput,
+                  });
+                } catch (error) {
+                  return blockWithReason(error instanceof ToolAdmissionRecoveryError
+                    ? error.safeReason
+                    : 'The host could not durably record this tool admission. The tool was not executed.');
+                }
+                if (authorizationEpoch !== this.promptPreparationRevision || !this.admitToolExecution({
+                  toolUseId: input.tool_use_id,
+                  toolName: input.tool_name,
+                  toolInput: approvedInput,
+                  sessionId,
+                  runtimeId: gmailRuntimeId,
+                  authorizationEpoch,
+                })) {
+                  return blockWithReason('The host could not bind this tool approval to one exact current execution. The tool was not executed.');
+                }
+                if (approvedInput !== toolInput) {
+                  return {
+                    continue: true,
+                    hookSpecificOutput: {
+                      hookEventName: 'PreToolUse' as const,
+                      updatedInput: approvedInput,
+                    },
+                  };
+                }
+                return { continue: true };
+              };
 
-              // Track Read tool calls for prerequisite checking
-              if (input.tool_name === 'Read') {
-                this.prerequisiteManager.trackReadTool(input.tool_input as Record<string, unknown>);
-              }
+              this.prerequisiteManager.trackToolStart(input.tool_use_id, input.tool_name, input.tool_input ?? {});
 
               // --- Image size guard for Read tool ---
               // Must run before runPreToolUseChecks. Once an oversized image enters
@@ -1303,13 +1661,7 @@ export class ClaudeAgent extends BaseAgent {
                           const resizedPath = await this.config.onImageResize(filePath, IMAGE_LIMITS.MAX_RAW_SIZE);
                           if (resizedPath) {
                             this.onDebug?.(`Image resized, redirecting Read to: ${resizedPath}`);
-                            return {
-                              continue: true,
-                              hookSpecificOutput: {
-                                hookEventName: 'PreToolUse' as const,
-                                updatedInput: { ...input.tool_input as Record<string, unknown>, file_path: resizedPath },
-                              },
-                            };
+                            return admit({ ...toolInput, file_path: resizedPath });
                           }
                         }
 
@@ -1330,8 +1682,6 @@ export class ClaudeAgent extends BaseAgent {
               const permissionMode = getPermissionMode(sessionId);
               this.onDebug?.(`PreToolUse hook: ${input.tool_name} (sessionId=${sessionId}, permissionMode=${permissionMode})`);
 
-              const toolInput = input.tool_input as Record<string, unknown>;
-
               // Build RTK context fresh per call so toggling the preference
               // takes effect without restart. `getRtkPath()` is cached per
               // process; only the storage read happens each time.
@@ -1339,11 +1689,27 @@ export class ClaudeAgent extends BaseAgent {
                 ? { enabled: true, path: getRtkPath(), exclude: [] }
                 : undefined;
 
+              const currentUserRequest = this.getCurrentTurnUserMessage() ?? undefined;
+              const objectiveAuthority = this.config.getObjectiveMutationAuthority?.(currentUserRequest);
+
+              try {
+                await getSessionScopedToolCallbacks(sessionId)?.validateMissionCapabilitiesFn?.(
+                  input.tool_name,
+                  toolInput,
+                );
+              } catch (error) {
+                return blockWithReason(
+                  `Specialized Mission capability lease rejected this tool: ${error instanceof Error ? error.message : String(error)}`,
+                );
+              }
+
               // Run centralized PreToolUse checks
               const checkResult = runPreToolUseChecks({
                 toolName: input.tool_name,
                 input: toolInput,
                 sessionId,
+                toolUseId: input.tool_use_id,
+                runtimeId: gmailRuntimeId,
                 permissionMode,
                 workspaceRootPath: this.workspaceRootPath,
                 workspaceId: extractWorkspaceSlug(this.workspaceRootPath, this.config.workspace.id),
@@ -1351,48 +1717,38 @@ export class ClaudeAgent extends BaseAgent {
                 dataFolderPath: sessionId ? getSessionDataPath(this.workspaceRootPath, sessionId) : undefined,
                 workingDirectory: this.config.session?.workingDirectory,
                 executionIsolation: this.config.session?.executionIsolation,
+                missionCapabilityLock: this.config.missionCapabilityLock,
                 activeSourceSlugs: Array.from(this.sourceManager.getActiveSlugs()),
                 allSourceSlugs: this.sourceManager.getAllSources().map(s => s.config.slug),
                 hasSourceActivation: !!this.onSourceActivationRequest,
                 permissionManager: this.permissionManager,
                 prerequisiteManager: this.prerequisiteManager,
                 preloadedSourceGuidePaths: this.sourceManager.getPreloadedSourceGuidePaths(),
-                currentUserRequest: this.getCurrentTurnUserMessage() ?? undefined,
+                currentUserRequest,
+                declaredToolCapabilities: this.config.mcpPool?.getProxyToolCapabilities(input.tool_name),
                 externalActionPolicy: this.config.externalActionPolicy,
+                humanInputAllowed: this.config.getHumanInputAllowed?.(),
+                objectiveMutationAuthorized: typeof objectiveAuthority === 'boolean'
+                  ? objectiveAuthority : objectiveAuthority?.authorized,
+                objectiveSensitiveActionAuthorized: typeof objectiveAuthority === 'object'
+                  ? objectiveAuthority.sensitiveActionAuthorized : objectiveAuthority,
+                objectiveAuthorizationSegments: typeof objectiveAuthority === 'object'
+                  ? objectiveAuthority.authorizationSegments : undefined,
+                authenticatedUserAuthorizationSegments: typeof objectiveAuthority === 'object'
+                  ? objectiveAuthority.authenticatedUserAuthorizationSegments : undefined,
+                objectiveTerminalReconciliationPolicy: typeof objectiveAuthority === 'object'
+                  ? objectiveAuthority.terminalReconciliationPolicy : undefined,
                 rtkContext,
                 onDebug: (msg) => this.onDebug?.(msg),
               });
 
-              // Consume pending steer message (if any) — will be injected via additionalContext
-              const steerMsg = this.pendingSteerMessage;
-              if (steerMsg) {
-                this.pendingSteerMessage = null;
-                this.debug(`Injecting steer via additionalContext on ${input.tool_name}`);
-              }
-
               // Translate result to SDK format
               switch (checkResult.type) {
                 case 'allow':
-                  if (steerMsg) {
-                    return {
-                      continue: true,
-                      hookSpecificOutput: {
-                        hookEventName: 'PreToolUse' as const,
-                        additionalContext: `The user just sent a new message while you were working. Stop what you are currently doing and address their message instead:\n\n${steerMsg}`,
-                      },
-                    };
-                  }
-                  return { continue: true };
+                  return admit(toolInput);
 
                 case 'modify':
-                  return {
-                    continue: true,
-                    hookSpecificOutput: {
-                      hookEventName: 'PreToolUse' as const,
-                      updatedInput: checkResult.input,
-                      ...(steerMsg ? { additionalContext: `The user just sent a new message while you were working. Stop what you are currently doing and address their message instead:\n\n${steerMsg}` } : {}),
-                    },
-                  };
+                  return admit(checkResult.input);
 
                 case 'block': {
                   const diagnostics = getPermissionModeDiagnostics(sessionId);
@@ -1460,10 +1816,14 @@ export class ClaudeAgent extends BaseAgent {
                   }
                 }
 
-                case 'call_llm_intercept':
+                case 'call_llm_intercept': {
+                  // Claude's session tool validates `model` after this hook. A
+                  // disabled router must remove the override before validation.
+                  return admit(resolveClaudeCallLlmInterceptInput(checkResult.input));
+                }
+
                 case 'spawn_session_intercept':
-                  // Claude's session tools run in-process via SDK — just allow
-                  return { continue: true };
+                  return admit(checkResult.input);
 
                 case 'prompt': {
                   const requestId = `perm-${input.tool_use_id}`;
@@ -1485,6 +1845,7 @@ export class ClaudeAgent extends BaseAgent {
                     this.onPermissionRequest({
                       requestId,
                       toolName: input.tool_name,
+                      toolUseId: input.tool_use_id,
                       command,
                       description: checkResult.description,
                       type: checkResult.promptType,
@@ -1497,9 +1858,17 @@ export class ClaudeAgent extends BaseAgent {
                       approvalTtlSeconds: checkResult.approvalTtlSeconds,
                       sensitiveActionCategory: checkResult.sensitiveActionCategory,
                       sensitiveActionTargets: checkResult.sensitiveActionTargets,
+                      sensitiveActionOperationHash: checkResult.sensitiveActionOperationHash,
                     });
                   } else {
                     this.pendingPermissions.delete(requestId);
+                    this.resolveContextualGmailPromptDecision(
+                      sessionId,
+                      input.tool_name,
+                      toolInput,
+                      input.tool_use_id,
+                      false,
+                    );
                     return {
                       continue: false,
                       decision: 'block' as const,
@@ -1508,6 +1877,65 @@ export class ClaudeAgent extends BaseAgent {
                   }
 
                   const allowed = await permissionPromise;
+                  let approvedInput = checkResult.modifiedInput ?? toolInput;
+                  if (allowed) {
+                    const approvalUserRequest = this.getCurrentTurnUserMessage() ?? undefined;
+                    const approvalAuthority = this.config.getObjectiveMutationAuthority?.(approvalUserRequest);
+                    const approvalCheck = runPreToolUseChecks({
+                      toolName: input.tool_name,
+                      input: approvedInput,
+                      sessionId,
+                      toolUseId: input.tool_use_id,
+                      runtimeId: gmailRuntimeId,
+                      permissionApprovalReentry: true,
+                      permissionMode: getPermissionMode(sessionId),
+                      workspaceRootPath: this.workspaceRootPath,
+                      workspaceId: extractWorkspaceSlug(this.workspaceRootPath, this.config.workspace.id),
+                      plansFolderPath: sessionId ? getSessionPlansPath(this.workspaceRootPath, sessionId) : undefined,
+                      dataFolderPath: sessionId ? getSessionDataPath(this.workspaceRootPath, sessionId) : undefined,
+                      workingDirectory: this.config.session?.workingDirectory,
+                      executionIsolation: this.config.session?.executionIsolation,
+                      missionCapabilityLock: this.config.missionCapabilityLock,
+                      activeSourceSlugs: Array.from(this.sourceManager.getActiveSlugs()),
+                      allSourceSlugs: this.sourceManager.getAllSources().map(s => s.config.slug),
+                      hasSourceActivation: !!this.onSourceActivationRequest,
+                      permissionManager: this.permissionManager,
+                      prerequisiteManager: this.prerequisiteManager,
+                      preloadedSourceGuidePaths: this.sourceManager.getPreloadedSourceGuidePaths(),
+                      currentUserRequest: approvalUserRequest,
+                      declaredToolCapabilities: this.config.mcpPool?.getProxyToolCapabilities(input.tool_name),
+                      externalActionPolicy: this.config.externalActionPolicy,
+                      humanInputAllowed: this.config.getHumanInputAllowed?.(),
+                      objectiveMutationAuthorized: typeof approvalAuthority === 'boolean'
+                        ? approvalAuthority : approvalAuthority?.authorized,
+                      objectiveSensitiveActionAuthorized: typeof approvalAuthority === 'object'
+                        ? approvalAuthority.sensitiveActionAuthorized : approvalAuthority,
+                      objectiveAuthorizationSegments: typeof approvalAuthority === 'object'
+                        ? approvalAuthority.authorizationSegments : undefined,
+                      authenticatedUserAuthorizationSegments: typeof approvalAuthority === 'object'
+                        ? approvalAuthority.authenticatedUserAuthorizationSegments : undefined,
+                      objectiveTerminalReconciliationPolicy: typeof approvalAuthority === 'object'
+                        ? approvalAuthority.terminalReconciliationPolicy : undefined,
+                      rtkContext,
+                      onDebug: msg => this.onDebug?.(`PostPermissionPreToolUse: ${msg}`),
+                    });
+                    if (approvalCheck.type === 'block' || approvalCheck.type === 'source_activation_needed') {
+                      return blockWithReason(approvalCheck.type === 'block'
+                        ? approvalCheck.reason
+                        : `Source "${approvalCheck.sourceSlug}" changed while permission was pending. The approved tool was not executed.`);
+                    }
+                    if (approvalCheck.type === 'modify') approvedInput = approvalCheck.input;
+                    else if (approvalCheck.type === 'prompt' && approvalCheck.modifiedInput) {
+                      approvedInput = approvalCheck.modifiedInput;
+                    }
+                  }
+                  const gmailDecision = this.resolveContextualGmailPromptDecision(
+                    sessionId,
+                    input.tool_name,
+                    toolInput,
+                    input.tool_use_id,
+                    allowed,
+                  );
                   if (!allowed) {
                     return {
                       continue: false,
@@ -1515,23 +1943,39 @@ export class ClaudeAgent extends BaseAgent {
                       reason: 'User denied permission',
                     };
                   }
-
-                  // User approved — return with modified input if transforms were applied
-                  if (checkResult.modifiedInput) {
+                  if (gmailDecision.applies && !gmailDecision.allowed) {
                     return {
-                      continue: true,
-                      hookSpecificOutput: {
-                        hookEventName: 'PreToolUse' as const,
-                        updatedInput: checkResult.modifiedInput,
-                      },
+                      continue: false,
+                      decision: 'block' as const,
+                      reason: gmailDecision.reason,
                     };
                   }
-                  return { continue: true };
+
+                  // User approved — return with modified input if transforms were applied
+                  return admit(approvedInput);
                 }
               }
             }],
           }],
-          // NOTE: PostToolUse hook was removed because updatedMCPToolOutput is not a valid SDK output field.
+          // Observe successful reads only; this hook does not modify SDK tool output.
+          PostToolUse: [{
+            hooks: [async (input) => {
+              if (input.hook_event_name === 'PostToolUse' && input.tool_use_id) {
+                this.settleAdmittedToolExecution(input.tool_use_id);
+                this.prerequisiteManager.trackToolCompletion(input.tool_use_id, input.tool_response, false);
+              }
+              return { continue: true };
+            }],
+          }],
+          PostToolUseFailure: [{
+            hooks: [async (input) => {
+              if (input.tool_use_id) {
+                this.settleAdmittedToolExecution(input.tool_use_id);
+                this.prerequisiteManager.trackToolCompletion(input.tool_use_id, undefined, true);
+              }
+              return { continue: true };
+            }],
+          }],
           // For API tools (api_*), summarization happens in api-tools.ts.
           // For external MCP servers (stdio/HTTP), we cannot modify their output - they're responsible
           // for their own size management via pagination or filtering.
@@ -1635,6 +2079,9 @@ export class ClaudeAgent extends BaseAgent {
         debug(`[ClaudeAgent] Starting fresh SDK session (no resume)`);
       }
 
+      // Stop can be handled while asynchronous filesystem discovery is pending.
+      if (preparationRevision !== this.promptPreparationRevision) return;
+
       // Create AbortController for this query - allows force-stopping via forceAbort()
       this.currentQueryAbortController = new AbortController();
       const optionsWithAbort = {
@@ -1642,19 +2089,11 @@ export class ClaudeAgent extends BaseAgent {
         abortController: this.currentQueryAbortController,
       };
 
-      // Known SDK slash commands that bypass context wrapping.
-      // These are sent directly to the SDK without date/session/source context.
-      // Currently only 'compact' is supported - add more here as needed.
-      const SDK_SLASH_COMMANDS = ['compact'] as const;
-
-      // Detect SDK slash commands - must be sent directly without context wrapping.
-      // Pattern: /command or /command <instructions>
+      // Detect the local SDK command once, using the same exact parser as Pi.
+      // It bypasses context wrapping and the provider-dispatch WAL because it
+      // only asks the already-running local runtime to compact its own state.
       const trimmedMessage = userMessage.trim();
-      const commandMatch = trimmedMessage.match(/^\/([a-z]+)(\s|$)/i);
-      const commandName = commandMatch?.[1]?.toLowerCase();
-      const isSlashCommand = commandName &&
-        SDK_SLASH_COMMANDS.includes(commandName as typeof SDK_SLASH_COMMANDS[number]) &&
-        !attachments?.length;
+      const isSlashCommand = slashCommandRunsOutsidePersistentRuntime;
 
       // For SDK-fork branches: prepend a one-time context hint so the model treats
       // the parent conversation history (already in the SDK's messages via --fork-session)
@@ -1679,27 +2118,21 @@ This is a branched conversation. All prior messages in this conversation are par
       // at `result` finishes the turn without closing the subprocess. Slash commands
       // (e.g. /compact) always use the per-turn path (they mutate session state).
       let turnMessageSource: AsyncIterable<SDKMessage>;
-      if (this.keepBackgroundTasksAlive && !isSlashCommand) {
-        const sdkMessage = this.buildSDKUserMessage(effectiveUserMessage, attachments);
-        turnMessageSource = this.beginPersistentTurn(sdkMessage, optionsWithAbort);
-      } else if (isSlashCommand) {
-        // Send slash commands directly to SDK without context wrapping.
-        // The SDK processes these as internal commands (e.g., /compact triggers compaction).
+      if (isSlashCommand) {
+        // Send slash commands directly to SDK without context wrapping. This
+        // is a local maintenance operation, not a provider-visible model turn.
         debug(`[chat] Detected SDK slash command: ${trimmedMessage}`);
         this.currentQuery = query({ prompt: trimmedMessage, options: optionsWithAbort });
         turnMessageSource = this.currentQuery;
-      } else if (hasBinaryAttachments) {
-        const sdkMessage = this.buildSDKUserMessage(effectiveUserMessage, attachments);
-        async function* singleMessage(): AsyncIterable<SDKUserMessage> {
-          yield sdkMessage;
-        }
-        this.currentQuery = query({ prompt: singleMessage(), options: optionsWithAbort });
-        turnMessageSource = this.currentQuery;
       } else {
-        // Simple string prompt for text-only messages (may include text file contents)
-        const prompt = this.buildTextPrompt(effectiveUserMessage, attachments);
-        this.currentQuery = query({ prompt, options: optionsWithAbort });
-        turnMessageSource = this.currentQuery;
+        turnMessageSource = await this.performProviderDispatchWriteAhead<AsyncIterable<SDKMessage>>(
+          () => this.createProviderTurnMessageSource(
+            effectiveUserMessage,
+            attachments,
+            optionsWithAbort,
+            gmailRuntimeContext,
+          ),
+        );
       }
 
       // Initialize event adapter for this turn
@@ -1757,6 +2190,22 @@ This is a branched conversation. All prior messages in this conversation are par
 
           const events = await this.eventAdapter.adapt(message);
           for (const event of events) {
+            if (event.type === 'tool_result') {
+              const currentRequest = this.getCurrentTurnUserMessage() ?? undefined;
+              const currentAuthority = this.config.getObjectiveMutationAuthority?.(currentRequest);
+              recordContextualGmailToolResult({
+                sessionId,
+                toolUseId: event.toolUseId,
+                toolName: event.toolName,
+                toolInput: event.input,
+                result: event.result,
+                isError: event.isError,
+                executed: event.executed,
+                objectiveAuthorizationSegments: typeof currentAuthority === 'object'
+                  ? currentAuthority.authorizationSegments
+                  : currentRequest ? [currentRequest] : [],
+              });
+            }
             // After source_test (or any session-scoped tool) successfully activates a
             // new source, activateSourceInSessionFn stashes a restart descriptor on the
             // agent. The drain controller captures the descriptor on the first
@@ -2416,6 +2865,19 @@ This is a branched conversation. All prior messages in this conversation are par
       // emit complete even on error so application knows we're done
       yield { type: 'complete' };
     } finally {
+      // A per-turn SDK iterator ending is a confirmed runtime boundary. The
+      // persistent query is confirmed separately by its sole consumer when it
+      // actually exits; a normal turn boundary must not invalidate that live
+      // process or its background work.
+      if (!usesPersistentGmailRuntime || this.persistentGmailRuntimeId !== gmailRuntimeId) {
+        this.confirmContextualGmailRuntimeTeardown({
+          sessionId,
+          runtimeId: gmailRuntimeId,
+        });
+      }
+      if (this.activeTurnGmailRuntime?.runtimeId === gmailRuntimeId) {
+        this.activeTurnGmailRuntime = null;
+      }
       // [bg-lifecycle] Nulling currentQuery closes the SDK query iterator, which
       // tears down the per-turn subprocess and any background sub-agents it
       // launched. This is the teardown point referenced by WS2-step0: background
@@ -2431,14 +2893,6 @@ This is a branched conversation. All prior messages in this conversation are par
         this.currentQuery = null;
       }
 
-      // If a steer message was never delivered (no PreToolUse fired), notify the session
-      // layer so it can re-queue the message for the next turn.
-      const undeliveredSteer = this.pendingSteerMessage;
-      if (undeliveredSteer) {
-        this.pendingSteerMessage = null;
-        this.debug(`Steer message was not delivered (no tool call fired) — emitting steer_undelivered`);
-        yield { type: 'steer_undelivered' as const, message: undeliveredSteer };
-      }
     }
   }
 
@@ -2446,52 +2900,6 @@ This is a branched conversation. All prior messages in this conversation are par
 
   // buildRecoveryContext() is now inherited from BaseAgent
   // formatWorkspaceCapabilities() is now in PromptBuilder
-
-  /**
-   * Build a simple text prompt with embedded text file contents (for text-only messages)
-   * Prepends date/time context for prompt caching optimization (keeps system prompt static)
-   * Injects session state (including mode state) for every message
-   */
-  private buildTextPrompt(text: string, attachments?: FileAttachment[]): string {
-    const parts: string[] = [];
-
-    // Add context parts using centralized PromptBuilder
-    // This includes: date/time, session state (with plansFolderPath),
-    // workspace capabilities, and working directory context
-    const textPromptDiagnostics = getPermissionModeDiagnostics(this.modeSessionId)
-    this.debug(
-      `[ModeSnapshot] sessionId=${this.modeSessionId} buildTextPrompt mode=${textPromptDiagnostics.permissionMode} ` +
-      `modeVersion=${textPromptDiagnostics.modeVersion} changedBy=${textPromptDiagnostics.lastChangedBy} changedAt=${textPromptDiagnostics.lastChangedAt}`
-    )
-    const contextParts = this.promptBuilder.buildContextParts(
-      { plansFolderPath: getSessionPlansPath(this.workspaceRootPath, this.modeSessionId) },
-      this.sourceManager.formatSourceState()
-    );
-
-    parts.push(...contextParts);
-
-    // Add file attachments with stored path info (agent uses Read tool to access content)
-    // Text files are NOT embedded inline to prevent context overflow from large files
-    if (attachments) {
-      for (const attachment of attachments) {
-        if (attachment.storedPath) {
-          let pathInfo = `[Attached file: ${attachment.name}]`;
-          pathInfo += `\n[Stored at: ${attachment.storedPath}]`;
-          if (attachment.markdownPath) {
-            pathInfo += `\n[Markdown version: ${attachment.markdownPath}]`;
-          }
-          parts.push(pathInfo);
-        }
-      }
-    }
-
-    // Add user's message
-    if (text) {
-      parts.push(text);
-    }
-
-    return parts.join('\n\n');
-  }
 
   /**
    * Build an SDK user message with proper content blocks for binary attachments
@@ -2769,6 +3177,11 @@ This is a branched conversation. All prior messages in this conversation are par
   }
 
   clearHistory(): void {
+    this.revokeAdmittedToolExecutions();
+    this.denyAllPendingPermissions();
+    const configSessionId = this.config.session?.id;
+    if (configSessionId) invalidateContextualGmailSessionState(configSessionId);
+    this.teardownPersistentQuery('clear-history');
     // Clear session to start fresh conversation
     this.sessionId = null;
     // Clear pinned state so next chat() will capture fresh values
@@ -2780,20 +3193,12 @@ This is a branched conversation. All prior messages in this conversation are par
   }
 
   /**
-   * Redirect mid-stream via additionalContext injection.
-   * Stores the message; the next PreToolUse hook injects it into the conversation.
-   * If no tool call fires before the turn ends, yields steer_undelivered so the
-   * session layer can re-queue the message.
+   * Claude has no native, acknowledged mid-turn redirect. Stop the old turn
+   * before the host durably queues the complete new message and its authority.
    */
-  override redirect(message: string): boolean {
-    if (!this.currentQuery || !this.currentQueryAbortController) {
-      // Not actively streaming — fall back to abort + queue
-      this.forceAbort(AbortReason.Redirect);
-      return false;
-    }
-    this.debug(`Steering mid-stream: "${message.slice(0, 100)}"`);
-    this.pendingSteerMessage = message;
-    return true;
+  override redirect(_message: string): boolean {
+    this.forceAbort(AbortReason.Redirect);
+    return false;
   }
 
   /**
@@ -2804,8 +3209,25 @@ This is a branched conversation. All prior messages in this conversation are par
    * AbortController mid-control-write.
    */
   override interruptForHandoff(reason: AbortReason): void {
+    const gmailRuntime = this.activeTurnGmailRuntime
+      ?? (this.persistentGmailRuntimeId && this.persistentGmailSessionId
+        ? {
+            sessionId: this.persistentGmailSessionId,
+            runtimeId: this.persistentGmailRuntimeId,
+          }
+        : null);
+    if ((gmailRuntime && hasContextualGmailInFlightForRuntime(gmailRuntime))
+      || this.hasAdmittedToolExecutions()) {
+      // Cooperative interrupt keeps the SDK runtime alive and therefore cannot
+      // prove that an admitted host call will never start. Use the confirmed
+      // teardown path only for this exact unresolved mutation.
+      this.forceAbort(reason);
+      return;
+    }
+    this.promptPreparationRevision++;
+    this.revokeAdmittedToolExecutions();
     this.lastAbortReason = reason;
-    this.pendingSteerMessage = null; // Clear any undelivered steer
+    this.denyAllPendingPermissions();
 
     if (!this.currentQuery) {
       return;
@@ -2824,12 +3246,31 @@ This is a branched conversation. All prior messages in this conversation are par
    * @param reason - Why the abort is happening (affects UI feedback)
    */
   forceAbort(reason: AbortReason = AbortReason.UserStop): void {
+    this.promptPreparationRevision++;
+    this.revokeAdmittedToolExecutions();
     this.lastAbortReason = reason;
-    this.pendingSteerMessage = null; // Clear any undelivered steer
-    if (this.currentQueryAbortController) {
-      this.currentQueryAbortController.abort(reason);
-      this.currentQueryAbortController = null;
+    const abortSessionIds = new Set<string>();
+    if (this.activeTurnGmailRuntime?.sessionId) {
+      abortSessionIds.add(this.activeTurnGmailRuntime.sessionId);
     }
+    if (this.persistentGmailSessionId) {
+      abortSessionIds.add(this.persistentGmailSessionId);
+    }
+    if (abortSessionIds.size === 0 && this.config?.session?.id) {
+      abortSessionIds.add(this.config.session.id);
+    }
+    for (const sessionId of abortSessionIds) {
+      // AbortController termination is asynchronous. Invalidate first so a
+      // delayed SDK proxy callback cannot enter host execution after Stop.
+      invalidateContextualGmailSessionState(sessionId);
+    }
+    this.denyAllPendingPermissions();
+    if (this.persistentInput || this.persistentIterator || this.persistentAbortController) {
+      this.teardownPersistentQuery(`force-abort:${reason}`);
+    } else if (this.currentQueryAbortController) {
+      this.currentQueryAbortController.abort(reason);
+    }
+    this.currentQueryAbortController = null;
     this.currentQuery = null;
   }
 
@@ -2881,6 +3322,10 @@ This is a branched conversation. All prior messages in this conversation are par
   }
 
   setWorkspace(workspace: Workspace): void {
+    this.denyAllPendingPermissions();
+    const configSessionId = this.config.session?.id;
+    if (configSessionId) invalidateContextualGmailSessionState(configSessionId);
+    this.teardownPersistentQuery('set-workspace');
     this.config.workspace = workspace;
     // Clear session when switching workspaces - caller should set session separately if needed
     this.sessionId = null;
@@ -2940,12 +3385,18 @@ This is a branched conversation. All prior messages in this conversation are par
    * Calls super.destroy() for base cleanup, then Claude-specific cleanup.
    */
   destroy(): void {
+    const configSessionId = this.config.session?.id;
+    if (configSessionId) {
+      // Invalidate before signalling the SDK process so a delayed source-proxy
+      // callback cannot cross the host boundary during teardown.
+      invalidateContextualGmailSessionState(configSessionId);
+    }
     // Claude-specific cleanup first
     this.currentQueryAbortController?.abort();
     // WS2: tear down the persistent streaming-input query (if any) so no
     // subprocess/background sub-agents leak past the agent's lifetime.
     this.teardownPersistentQuery('destroy');
-    this.pendingPermissions.clear();
+    this.denyAllPendingPermissions();
 
     // Clear pinned system prompt state
     this.pinnedPreferencesPrompt = null;
@@ -2959,7 +3410,6 @@ This is a branched conversation. All prior messages in this conversation are par
     this.onUsageUpdate = null;
 
     // Clean up session-specific state
-    const configSessionId = this.config.session?.id;
     if (configSessionId) {
       clearPlanFileState(configSessionId);
       unregisterSessionScopedToolCallbacks(configSessionId);
@@ -3037,17 +3487,23 @@ This is a branched conversation. All prior messages in this conversation are par
    * Uses the same auth infrastructure as the main agent.
    */
   async runMiniCompletion(prompt: string): Promise<string | null> {
-    if (!this.config.miniModel) {
-      throw new Error('ClaudeAgent.runMiniCompletion: config.miniModel is required');
+    await this.config.beforeProviderExecution?.();
+    if (this.config.missionCapabilityLock) {
+      throw new ProviderDispatchRejectedError('Auxiliary mini-model completion is disabled for a specialized Mission');
     }
-    const model = this.config.miniModel;
+    const { model, thinkingOptions } = resolveClaudeMiniCompletionRoute({
+      activeModel: this.getModel(),
+
+      activeThinkingLevel: this.getThinkingLevel(),
+      providerType: this.config.providerType,
+    });
 
     const options = {
       ...getDefaultOptions({ ...this.config.envOverrides, ANTHROPIC_DEFAULT_HAIKU_MODEL: this.getModel() }),
       model,
       maxTurns: 1,
       systemPrompt: 'Reply with ONLY the requested text. No explanation.', // Minimal - no Claude Code preset
-      thinking: { type: 'disabled' as const },
+      ...thinkingOptions,
     };
 
     let result = '';
@@ -3170,7 +3626,11 @@ This is a branched conversation. All prior messages in this conversation are par
   // ============================================================
 
   async queryLlm(request: LLMQueryRequest): Promise<LLMQueryResult> {
-    const model = request.model ?? this.getModel();
+    await this.config.beforeProviderExecution?.();
+    const model = resolveClaudeNestedQueryModel({
+      activeModel: this.getModel(),
+      requestedModel: request.model,
+    });
 
     const options = {
       ...getDefaultOptions({ ...this.config.envOverrides, ANTHROPIC_DEFAULT_HAIKU_MODEL: this.getModel() }),

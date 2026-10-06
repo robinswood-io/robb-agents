@@ -23,4 +23,15 @@ describe('ChatDisplay transcript positioning', () => {
     expect(source).toContain('Date.now() < skipSmoothScrollUntilRef.current')
     expect(source).toContain('resizeObserver.observe(viewport)')
   })
+
+  it('keeps the Codex turn presentation and offers an accessible route back to the live edge', () => {
+    expect(source).toContain('presentation="codex"')
+    expect(source).toContain('displayMode="informative"')
+    expect(source).toMatch(/<JourneyProgress[\s\S]*presentation="codex"/)
+    expect(source).toContain('const [showScrollToLatest, setShowScrollToLatest]')
+    expect(source).toContain('const handleReturnToLatestMessage')
+    expect(source).toContain('{!compactMode && showScrollToLatest &&')
+    expect(source).toContain("aria-label={t('chat.returnToLatestMessage'")
+    expect(source).toContain("viewport.scrollTo({ top: viewport.scrollHeight, behavior: 'smooth' })")
+  })
 })

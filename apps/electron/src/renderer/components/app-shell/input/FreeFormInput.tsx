@@ -86,6 +86,7 @@ import { CompactPermissionModeSelector } from './CompactPermissionModeSelector'
 import { CompactModelSelector } from './CompactModelSelector'
 import {
   formatTokenCount,
+  getSelectableConnectionModels,
   groupConnectionsByProvider,
   stripPiPrefixForDisplay,
 } from './model-picker-helpers'
@@ -142,7 +143,9 @@ export interface FreeFormInputProps {
   /** Current model ID */
   currentModel: string
   /** Callback when model changes (includes connection slug for proper persistence) */
-  onModelChange: (model: string, connection?: string) => void
+  onModelChange: (model: string | null, connection?: string) => void
+  /** Whether the workspace allows returning this session to automatic selection. */
+  /** Whether the current effective model was selected automatically. */
   // Thinking level (session-level setting)
   /** Current thinking level ('off', 'think', 'max') */
   thinkingLevel?: ThinkingLevel
@@ -353,7 +356,7 @@ export function FreeFormInput({
       return ANTHROPIC_MODELS // Safety net — shouldn't happen
     }
 
-    return connection.models || ANTHROPIC_MODELS
+    return getSelectableConnectionModels(connection, ANTHROPIC_MODELS)
   }, [llmConnections, currentConnection, workspaceDefaultConnection, connectionUnavailable])
 
   const availableThinkingLevels = THINKING_LEVELS
@@ -405,7 +408,9 @@ export function FreeFormInput({
     return llmConnections.find(c => c.slug === effectiveConnection) ?? null
   }, [llmConnections, effectiveConnection])
 
-  const selectorDisplayName = currentModelDisplayName
+  const selectorDisplayName = `${t(
+    'chat.modelPicker.manual',
+  )} · ${currentModelDisplayName}`
 
   // Access sessionStatuses and onSessionStatusChange from context for the # menu state picker
   const sessionStatuses = appShellCtx?.sessionStatuses ?? []
@@ -1837,7 +1842,7 @@ export function FreeFormInput({
                     ) : (
                       <>
                         {effectiveConnectionDetails && llmConnections.length > 1 && storage.get(storage.KEYS.showConnectionIcons, true) && <ConnectionIcon connection={effectiveConnectionDetails} size={14} showTooltip />}
-                        {selectorDisplayName}
+                        <span className="truncate max-w-[180px]">{selectorDisplayName}</span>
                         {!isProcessing && pickerMode !== 'locked-single' && <ChevronDown className="h-3 w-3 opacity-50 shrink-0" />}
                       </>
                     )}
@@ -1913,7 +1918,9 @@ export function FreeFormInput({
                             </TooltipContent>
                           </Tooltip>
                         )}
-                        <Check className="h-3 w-3 text-foreground" />
+                        {(
+                          <Check className="h-3 w-3 text-foreground" />
+                        )}
                       </div>
                     </StyledDropdownMenuItem>
                   )
@@ -1953,12 +1960,13 @@ export function FreeFormInput({
                           {isAuthenticated && (
                             <StyledDropdownMenuSubContent className="min-w-[220px]">
                               {/* Show models for this connection - use provider-specific models as fallback */}
-                              {(conn.models || ANTHROPIC_MODELS).map((model) => {
+                              {getSelectableConnectionModels(conn, ANTHROPIC_MODELS).map((model) => {
                                 const modelId = typeof model === 'string' ? model : model.id
                                 const modelName = typeof model === 'string'
                                   ? stripPiPrefixForDisplay(getModelShortName(model))
                                   : (model.name ?? stripPiPrefixForDisplay(model.id))
-                                const isSelectedModel = isCurrentConnection && currentModel === modelId
+                                const isSelectedModel =
+                                                                    isCurrentConnection && currentModel === modelId
                                 const showVisionToggle = isCompatProvider(conn.providerType)
                                 const visionOn = showVisionToggle && modelSupportsImages(conn, modelId)
                                 return (
@@ -2228,7 +2236,7 @@ export function FreeFormInput({
               size="icon"
               variant="secondary"
               aria-label={t('chat.stopResponse')}
-              className="send-btn h-7 w-7 rounded-full shrink-0 hover:bg-foreground/15 active:bg-foreground/20 ml-2"
+              className="send-btn h-7 w-7 rounded-full shrink-0 hover:bg-foreground/15 active:bg-foreground/20 active:scale-95 ml-2 shadow-minimal transition-transform"
               onClick={() => handleStop(false)}
             >
               <Square className="h-3 w-3 fill-current" />
@@ -2238,7 +2246,7 @@ export function FreeFormInput({
               type="submit"
               size="icon"
               aria-label={t('shortcuts.sendMessage')}
-              className="send-btn h-7 w-7 rounded-full shrink-0 ml-2"
+              className="send-btn h-7 w-7 rounded-full shrink-0 ml-2 shadow-minimal transition-transform active:scale-95"
               disabled={!hasContent || disabled || disableSend}
               data-tutorial="send-button"
             >

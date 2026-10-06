@@ -6,6 +6,7 @@ const gate = z.enum(['oauth_or_mfa', 'credential_required', 'business_decision_r
 
 const schema = z.object({
   version: z.literal(1),
+  procedure: z.enum(['document-package', 'document-delivery', 'campaign-preparation', 'software-change', 'software-deployment']).optional(),
   slug,
   name: z.string().min(1),
   description: z.string().min(1),

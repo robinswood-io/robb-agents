@@ -244,6 +244,9 @@ export function serializeSession(
     missionWorkItemId: undefined,
     missionDispatchId: undefined,
     missionRole: undefined,
+    missionRouteLockSha256: undefined,
+    missionOrdinaryRouteLock: undefined,
+    missionCapabilityLock: undefined,
   })
 
   return {

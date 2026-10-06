@@ -51,7 +51,12 @@ import type { ThinkingLevel } from "@craft-agent/shared/agent/thinking-levels"
 import {
   TurnCard,
   UserMessageBubble,
-  groupMessagesByTurn,
+  projectConversation,
+  buildUserInputTimeline,
+  JourneyProgress,
+  JourneyOutcome,
+  UserInputCard,
+  type UserInputCardProps,
   formatTurnAsMarkdown,
   formatActivityAsMarkdown,
   getAssistantTurnUiKey,
@@ -67,18 +72,21 @@ import {
   type AuthRequestTurn,
 } from "@craft-agent/ui"
 import { MemoizedAuthRequestCard } from "@/components/chat/AuthRequestCard"
-import { ChatInputZone, type StructuredInputState, type StructuredResponse, type PermissionResponse, type AdminApprovalResponse } from "./input"
+import { ChatInputZone, type StructuredInputState, type StructuredResponse, type PermissionResponse, type AdminApprovalResponse, type StructuredCredentialResponse } from "./input"
 import type { RichTextInputHandle } from "@/components/ui/rich-text-input"
-import { useBackgroundTasks } from "@/hooks/useBackgroundTasks"
 import { useTurnCardExpansion } from "@/hooks/useTurnCardExpansion"
 import { useNavigation } from "@/contexts/NavigationContext"
-import { useAppShellContext } from "@/context/AppShellContext"
+import { useAppShellContext, useActiveDescendantSessionIds, usePendingDescendantAuthRequests, useConversationPermissionRecoveries, useConversationAgentActivity } from "@/context/AppShellContext"
+import { PermissionRecoveryCard } from './PermissionRecoveryCard'
 import { navigate, routes } from "@/lib/navigate"
 import { CHAT_LAYOUT } from "@/config/layout"
 import { collectFileChangesFromActivities, getFirstFileChangeIdForActivity } from "@/lib/file-changes"
-import { resolveBranchNewPanelOption } from "./branching"
+import { stopConversation } from "./stop-conversation"
+import { buildBranchSessionOptions, resolveBranchNewPanelOption } from "./branching"
 import { handleErrorMessageAction } from "./error-message-actions"
+import { createRetryTurnAction } from "./retry-turn-action"
 import { AutonomyPanel } from "./AutonomyPanel"
+import { getSessionStatus } from "@/utils/session"
 
 // ============================================================================
 // CSS Custom Highlight API helper
@@ -140,7 +148,8 @@ interface ChatDisplayProps {
   onOpenUrl: (url: string) => void
   // Model selection
   currentModel: string
-  onModelChange: (model: string, connection?: string) => void
+  onModelChange: (model: string | null, connection?: string) => void
+  /** Whether the workspace allows the model to be selected automatically. */
   // Connection selection (locked after first message)
   /** Callback when LLM connection changes (only works when session is empty) */
   onConnectionChange?: (connectionSlug: string) => void
@@ -158,10 +167,11 @@ interface ChatDisplayProps {
     alwaysAllow: boolean,
     options?: import('../../../shared/types').PermissionResponseOptions
   ) => void
+  onRespondToUserInput?: UserInputCardProps['onRespond']
   /** Pending credential request for this session */
   pendingCredential?: CredentialRequest
   /** Callback to respond to credential request */
-  onRespondToCredential?: (sessionId: string, requestId: string, response: CredentialResponse) => void
+  onRespondToCredential?: (sessionId: string, requestId: string, response: CredentialResponse) => void | Promise<void>
   // Thinking level (session-level setting)
   /** Current thinking level ('off', 'think', 'max') */
   thinkingLevel?: ThinkingLevel
@@ -258,150 +268,7 @@ export interface ChatDisplayHandle {
   isHighlighting: boolean
 }
 
-/**
- * Processing status messages - cycles through these randomly
- * Inspired by Claude Code's playful status messages
- */
-const PROCESSING_MESSAGE_KEYS = [
-  'chat.processing.thinking',
-  'chat.processing.pondering',
-  'chat.processing.contemplating',
-  'chat.processing.reasoning',
-  'chat.processing.processing',
-  'chat.processing.computing',
-  'chat.processing.considering',
-  'chat.processing.reflecting',
-  'chat.processing.deliberating',
-  'chat.processing.cogitating',
-  'chat.processing.ruminating',
-  'chat.processing.musing',
-  'chat.processing.workingOnIt',
-  'chat.processing.onIt',
-  'chat.processing.crunching',
-  'chat.processing.brewing',
-  'chat.processing.connectingDots',
-  'chat.processing.mullingItOver',
-  'chat.processing.deepInThought',
-  'chat.processing.hmm',
-  'chat.processing.letMeSee',
-  'chat.processing.oneMoment',
-  'chat.processing.holdOn',
-  'chat.processing.bearWithMe',
-  'chat.processing.justASec',
-  'chat.processing.hangTight',
-  'chat.processing.gettingThere',
-  'chat.processing.almost',
-  'chat.processing.working',
-  'chat.processing.busyBusy',
-  'chat.processing.whirring',
-  'chat.processing.churning',
-  'chat.processing.percolating',
-  'chat.processing.simmering',
-  'chat.processing.cooking',
-  'chat.processing.baking',
-  'chat.processing.stirring',
-  'chat.processing.spinningUp',
-  'chat.processing.warmingUp',
-  'chat.processing.revving',
-  'chat.processing.buzzing',
-  'chat.processing.humming',
-  'chat.processing.ticking',
-  'chat.processing.clicking',
-  'chat.processing.whizzing',
-  'chat.processing.zooming',
-  'chat.processing.zipping',
-  'chat.processing.chugging',
-  'chat.processing.trucking',
-  'chat.processing.rolling',
-]
 
-/**
- * Format elapsed time: "45s" under a minute, "1:02" for 1+ minutes
- */
-function formatElapsed(seconds: number): string {
-  if (seconds < 60) return `${seconds}s`
-  const minutes = Math.floor(seconds / 60)
-  const remainingSeconds = seconds % 60
-  return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`
-}
-
-interface ProcessingIndicatorProps {
-  /** Start timestamp (persists across remounts) */
-  startTime?: number
-  /** Override cycling messages with explicit status (e.g., "Compacting...") */
-  statusMessage?: string
-}
-
-/**
- * ProcessingIndicator - Shows cycling status messages with elapsed time
- * Matches TurnCard header layout for visual continuity
- */
-function ProcessingIndicator({ startTime, statusMessage }: ProcessingIndicatorProps) {
-  const { t } = useTranslation()
-  const [elapsed, setElapsed] = React.useState(0)
-  const [messageIndex, setMessageIndex] = React.useState(() =>
-    Math.floor(Math.random() * PROCESSING_MESSAGE_KEYS.length)
-  )
-
-  // Update elapsed time every second using provided startTime
-  React.useEffect(() => {
-    const start = startTime || Date.now()
-    // Set initial elapsed immediately
-    setElapsed(Math.floor((Date.now() - start) / 1000))
-
-    const interval = setInterval(() => {
-      setElapsed(Math.floor((Date.now() - start) / 1000))
-    }, 1000)
-    return () => clearInterval(interval)
-  }, [startTime])
-
-  // Cycle through messages every 10 seconds (only when not showing status)
-  React.useEffect(() => {
-    if (statusMessage) return  // Don't cycle when showing status
-    const interval = setInterval(() => {
-      setMessageIndex(prev => {
-        // Pick a random different message
-        let next = Math.floor(Math.random() * PROCESSING_MESSAGE_KEYS.length)
-        while (next === prev && PROCESSING_MESSAGE_KEYS.length > 1) {
-          next = Math.floor(Math.random() * PROCESSING_MESSAGE_KEYS.length)
-        }
-        return next
-      })
-    }, 10000)
-    return () => clearInterval(interval)
-  }, [statusMessage])
-
-  // Use status message if provided, otherwise cycle through default messages
-  const displayMessage = statusMessage || t(PROCESSING_MESSAGE_KEYS[messageIndex])
-
-  return (
-    <div className="flex items-center gap-2 px-3 py-1 -mb-1 text-[13px] text-muted-foreground">
-      {/* Spinner in same location as TurnCard chevron */}
-      <div className="w-3 h-3 flex items-center justify-center shrink-0">
-        <Spinner className="text-[10px]" />
-      </div>
-      {/* Label with crossfade animation on content change only */}
-      <span className="relative h-5 flex items-center">
-        <AnimatePresence mode="wait" initial={false}>
-          <motion.span
-            key={displayMessage}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.4, ease: 'easeInOut' }}
-          >
-            {displayMessage}
-          </motion.span>
-        </AnimatePresence>
-        {elapsed >= 1 && (
-          <span className="text-muted-foreground/60 ml-1 tabular-nums">
-            {formatElapsed(elapsed)}
-          </span>
-        )}
-      </span>
-    </div>
-  )
-}
 
 /**
  * Positions a loaded transcript at the bottom before browser paint.
@@ -465,6 +332,7 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
   onRespondToPermission,
   pendingCredential,
   onRespondToCredential,
+  onRespondToUserInput,
   // Thinking level
   thinkingLevel = 'medium',
   onThinkingLevelChange,
@@ -526,6 +394,10 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
   const [visibleTurnCount, setVisibleTurnCount] = React.useState(TURNS_PER_PAGE)
   // Sticky-bottom: When true, auto-scroll on content changes. Toggled by user scroll behavior.
   const isStickToBottomRef = React.useRef(true)
+  // The visual counterpart to sticky-bottom. It stays hidden while the latest
+  // turn is in view and gives the user a deliberate way back after reading
+  // earlier transcript content.
+  const [showScrollToLatest, setShowScrollToLatest] = React.useState(false)
   // Mirror isFocusedPanel into a ref so the ResizeObserver closure reads the latest value
   const isFocusedPanelRef = React.useRef(isFocusedPanel)
   isFocusedPanelRef.current = isFocusedPanel
@@ -533,6 +405,7 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
   const skipSmoothScrollUntilRef = React.useRef(0)
   const handleInitialTranscriptScroll = React.useCallback(() => {
     isStickToBottomRef.current = true
+    setShowScrollToLatest(false)
     skipSmoothScrollUntilRef.current = Date.now() + 500
   }, [])
   // Track message commit boundaries so we can auto-scroll when a new user message
@@ -572,10 +445,57 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
     },
   })
 
-  // Background tasks management
-  const { tasks: backgroundTasks, killTask } = useBackgroundTasks({
-    sessionId: session?.id ?? ''
-  })
+  const activeDescendantIds = useActiveDescendantSessionIds(session?.id ?? '')
+  const agentActivity = useConversationAgentActivity(session?.id ?? '')
+  const pendingDescendantAuthRequests = usePendingDescendantAuthRequests(session?.id ?? '')
+  const permissionRecoveries = useConversationPermissionRecoveries(session?.id ?? '')
+  const isConversationProcessing = !!session?.isProcessing || activeDescendantIds.length > 0
+  const conversationProcessingRef = React.useRef(isConversationProcessing)
+  conversationProcessingRef.current = isConversationProcessing
+  const [retryingSessionId, setRetryingSessionId] = React.useState<string | null>(null)
+  const retryTurn = React.useMemo(() => createRetryTurnAction({
+    sessionId: session?.id ?? '',
+    sessionCommand: (sessionId, command) => window.electronAPI.sessionCommand(sessionId, command),
+    isProcessing: () => conversationProcessingRef.current,
+    onPendingChange: pending => setRetryingSessionId(current => pending
+      ? session?.id ?? null : current === session?.id ? null : current),
+    onAlreadyRunning: () => toast.info(t('chat.retryAlreadyRunning')),
+    onError: error => toast.error(t('chat.retryFailed'), {
+      description: error instanceof Error ? error.message : String(error),
+    }),
+  }), [session?.id, t])
+  const hasPendingUserInput = session?.userInputRequests?.some(request => request.status === 'pending') ?? false
+  const retryAvailabilitySessionRef = React.useRef(session?.id)
+  retryAvailabilitySessionRef.current = session?.id
+  const [recordedAnswerRetries, setRecordedAnswerRetries] = React.useState<{ sessionId?: string; requestIds: Set<string> }>({ requestIds: new Set() })
+  const onRecordedRetryChange = React.useCallback((requestId: string, available: boolean) => {
+    if (retryAvailabilitySessionRef.current !== session?.id) return
+    setRecordedAnswerRetries(current => {
+      const requestIds = current.sessionId === session?.id ? new Set(current.requestIds) : new Set<string>()
+      if (available) requestIds.add(requestId)
+      else requestIds.delete(requestId)
+      return { sessionId: session?.id, requestIds }
+    })
+  }, [session?.id])
+  const hasRecordedAnswerRetry = recordedAnswerRetries.sessionId === session?.id && recordedAnswerRetries.requestIds.size > 0
+  const respondToUserInput = React.useCallback<NonNullable<UserInputCardProps['onRespond']>>(
+    (originSessionId, response) => onRespondToUserInput
+      ? onRespondToUserInput(originSessionId, response)
+      : window.electronAPI.respondToUserInput(originSessionId, response), [onRespondToUserInput])
+
+  // One user-facing projection powers rendering, search and pagination alike.
+  // Keep the persisted execution transcript intact for runtime and diagnostics.
+  const presentation = useMemo(() => projectConversation(session?.messages ?? [], {
+    isProcessing: !!session?.isProcessing,
+    sessionId: session?.id,
+    parentSessionId: session?.parentSessionId,
+    hasActiveDescendants: activeDescendantIds.length > 0,
+    activeObjective: session?.activeObjective,
+    pendingTurnRecovery: session?.pendingTurnRecovery,
+    awaitingInput: !!pendingPermission || !!pendingCredential || pendingDescendantAuthRequests.length > 0 || permissionRecoveries.length > 0
+      || hasPendingUserInput,
+  }), [session?.id, session?.parentSessionId, session?.messages, session?.isProcessing, activeDescendantIds.length, session?.activeObjective, session?.pendingTurnRecovery, pendingPermission, pendingCredential, pendingDescendantAuthRequests.length, permissionRecoveries.length, hasPendingUserInput])
+  const allTurns = presentation.turns
 
   // TurnCard expansion state — persisted to localStorage across session switches
   const {
@@ -681,7 +601,7 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
     if (!searchQuery.trim() || !session?.messages) return []
     const startTime = performance.now()
     const query = searchQuery.toLowerCase()
-    const turns = groupMessagesByTurn(session.messages, { isSessionProcessing: session.isProcessing })
+    const turns = allTurns
     const matches: { matchId: string; turnId: string; turnIndex: number; matchIndexInTurn: number }[] = []
 
     for (let turnIndex = 0; turnIndex < turns.length; turnIndex++) {
@@ -722,7 +642,7 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
       }
     }
     return matches
-  }, [searchQuery, session?.messages, session?.isProcessing, countOccurrences])
+  }, [searchQuery, allTurns, countOccurrences])
 
   // Auto-expand pagination when search is active to show all matching turns
   // This ensures match count is stable and all matches are highlightable from the start
@@ -734,7 +654,7 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
       (min, m) => m.turnIndex < min ? m.turnIndex : min,
       matchingOccurrences[0]!.turnIndex
     )
-    const totalTurns = groupMessagesByTurn(session?.messages || [], { isSessionProcessing: session?.isProcessing }).length
+    const totalTurns = allTurns.length
 
     // Calculate how many turns we need to show to include all matches
     // totalTurns - visibleTurnCount = startIndex, so we need visibleTurnCount = totalTurns - earliestMatchTurnIndex + buffer
@@ -743,7 +663,7 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
     if (requiredVisibleCount > visibleTurnCount) {
       setVisibleTurnCount(requiredVisibleCount)
     }
-  }, [isSearchActive, matchingOccurrences, session?.messages, session?.isProcessing, visibleTurnCount])
+  }, [isSearchActive, matchingOccurrences, allTurns, visibleTurnCount])
 
   // Extract unique turn IDs that have matches (for highlighting)
   const matchingTurnIds = useMemo(() => {
@@ -1120,7 +1040,9 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
     const { scrollTop, scrollHeight, clientHeight } = viewport
     const distanceFromBottom = scrollHeight - scrollTop - clientHeight
     // 20px threshold for "at bottom" detection
-    isStickToBottomRef.current = distanceFromBottom < 20
+    const isAtBottom = distanceFromBottom < 20
+    isStickToBottomRef.current = isAtBottom
+    setShowScrollToLatest(!isAtBottom)
 
     // Load more turns when scrolling near top (within 100px)
     if (scrollTop < 100) {
@@ -1143,6 +1065,17 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
     }
   }, [])
 
+  const handleReturnToLatestMessage = React.useCallback(() => {
+    const viewport = scrollViewportRef.current
+    if (!viewport) return
+
+    // Rejoining the live edge intentionally re-enables the existing streaming
+    // and input-height auto-scroll behavior.
+    isStickToBottomRef.current = true
+    setShowScrollToLatest(false)
+    viewport.scrollTo({ top: viewport.scrollHeight, behavior: 'smooth' })
+  }, [])
+
   // Set up scroll event listener
   React.useEffect(() => {
     const viewport = scrollViewportRef.current
@@ -1163,6 +1096,7 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
     // On session switch: reset UI state (scroll handled by ScrollOnMount)
     if (isSessionSwitch) {
       isStickToBottomRef.current = true
+      setShowScrollToLatest(false)
       setVisibleTurnCount(TURNS_PER_PAGE)
     }
 
@@ -1172,6 +1106,8 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
     const resizeObserver = new ResizeObserver(() => {
       // Unfocused panels: always scroll to bottom instantly (user isn't reading them)
       if (!isFocusedPanelRef.current) {
+        isStickToBottomRef.current = true
+        setShowScrollToLatest(false)
         messagesEndRef.current?.scrollIntoView({ behavior: 'instant' })
         return
       }
@@ -1239,6 +1175,7 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
 
     // Sending a message should always re-stick to bottom.
     isStickToBottomRef.current = true
+    setShowScrollToLatest(false)
 
     requestAnimationFrame(() => {
       messagesEndRef.current?.scrollIntoView({
@@ -1261,6 +1198,7 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
 
     // Force stick-to-bottom when user sends a message
     isStickToBottomRef.current = true
+    setShowScrollToLatest(false)
     onSendMessage(normalizedMessage, attachments, skillSlugs)
 
     // Persist sent marker on follow-up annotations so TurnCard can distinguish
@@ -1326,21 +1264,22 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
   // Handle stop request from InputContainer
   // silent=true when redirecting (sending new message), silent=false when user clicks Stop button
   const handleStop = (silent = false) => {
-    if (!session?.isProcessing) return
+    if (!session || !isConversationProcessing) return
 
     // Explicit Stop (not a redirect/new-message send): put the in-flight prompt
     // back in the input so the user can tweak and resend. Append to any draft.
     // Exclude isQueued messages — those are restored separately by the backend
     // `restore_input` effect (App.tsx) and would otherwise double up here.
     if (!silent) {
-      const lastUserMsg = [...session.messages].reverse().find(m => m.role === 'user' && !m.isQueued)
+      const lastUserMsg = [...session.messages].reverse().find(m => m.role === 'user' && !m.isQueued && !m.hidden && !m.internalOrigin)
       const restoredText = coerceInputText(lastUserMsg?.content)
       if (restoredText) {
         onInputChange?.(appendRestoredInput(inputValue, restoredText))
       }
     }
 
-    window.electronAPI.cancelProcessing(session.id, silent).catch(error => {
+    stopConversation(session.id, activeDescendantIds, silent,
+      (id, quiet) => window.electronAPI.cancelProcessing(id, quiet)).catch(error => {
       console.error('[ChatDisplay] Failed to cancel processing:', error)
     })
   }
@@ -1357,32 +1296,32 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
 
   // Handle structured input responses (permissions and credentials)
   const handleStructuredResponse = (response: StructuredResponse) => {
-    if ((response.type === 'permission' || response.type === 'admin_approval') && pendingPermission && onRespondToPermission) {
+    if ((response.type === 'permission' || response.type === 'admin_approval') && onRespondToPermission) {
       if (response.type === 'permission') {
         const permResponse = response as PermissionResponse
-        onRespondToPermission(
-          pendingPermission.sessionId,
-          pendingPermission.requestId,
+        return onRespondToPermission(
+          permResponse.request.sessionId,
+          permResponse.request.requestId,
           permResponse.allowed,
           permResponse.alwaysAllow
         )
-        return
       }
 
       const adminResponse = response as AdminApprovalResponse
-      onRespondToPermission(
-        pendingPermission.sessionId,
-        pendingPermission.requestId,
+      return onRespondToPermission(
+        adminResponse.request.sessionId,
+        adminResponse.request.requestId,
         adminResponse.approved,
         false,
         { rememberForMinutes: adminResponse.rememberForMinutes }
       )
-    } else if (response.type === 'credential' && pendingCredential && onRespondToCredential) {
-      const credResponse = response as CredentialResponse
-      onRespondToCredential(
-        pendingCredential.sessionId,
-        pendingCredential.requestId,
-        credResponse
+    } else if (response.type === 'credential' && onRespondToCredential) {
+      const credResponse = response as StructuredCredentialResponse
+      const { request, ...credentialPayload } = credResponse
+      return onRespondToCredential(
+        request.sessionId,
+        request.requestId,
+        credentialPayload
       )
     }
   }
@@ -1393,6 +1332,7 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
       if (pendingPermission.type === 'admin_approval') {
         return {
           type: 'admin_approval',
+          request: pendingPermission,
           data: {
             appName: pendingPermission.appName || pendingPermission.toolName || 'System action',
             reason: pendingPermission.reason || pendingPermission.description,
@@ -1411,18 +1351,16 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
     return undefined
   }, [pendingPermission, pendingCredential])
 
-  // Memoize turn grouping - avoids O(n) iteration on every render/keystroke
-  const allTurns = React.useMemo(() => {
-    if (!session) return []
-    return groupMessagesByTurn(session.messages, { isSessionProcessing: session.isProcessing })
-  }, [session?.messages, session?.isProcessing])
-
   // Keep ref in sync for scroll handler
   totalTurnCountRef.current = allTurns.length
 
   // Reverse pagination: only render last N turns for fast initial render
   const startIndex = Math.max(0, allTurns.length - visibleTurnCount)
   const turns = allTurns.slice(startIndex)
+  const timeline = useMemo(() => buildUserInputTimeline(allTurns, session?.userInputRequests ?? [], {
+    pendingAtEnd: true,
+  }), [allTurns, session?.userInputRequests])
+  const visibleTimeline = timeline.filter(entry => entry.turnIndex >= startIndex)
   const hasMoreAbove = startIndex > 0
 
   const assistantTurnIndexByMessageId = useMemo(() => {
@@ -1511,9 +1449,7 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
   // At render time, prevSessionIdForScrollRef still has the OLD session ID, so we can detect the switch
   const isSessionSwitchForScroll = prevSessionIdForScrollRef.current !== null && prevSessionIdForScrollRef.current !== session?.id
   const skipScrollToBottom = isSessionSwitchForScroll && isSearchActive
-  const hasUnrenderedLoadedMessages = !messagesLoading
-    && turns.length === 0
-    && ((session?.messages?.length ?? 0) > 0 || (session?.messageCount ?? 0) > 0)
+
 
   return (
     <div ref={zoneRef} className="flex h-full flex-col min-w-0" data-focus-zone="chat">
@@ -1578,7 +1514,6 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
                         >
                           <AlertTriangle className="mx-auto mb-2 h-4 w-4 text-destructive/70" />
                           <div className="text-sm font-medium text-destructive">{t("chat.failedToLoadConversation")}</div>
-                          <p className="mt-1 break-words text-xs text-destructive/70">{messagesLoadError}</p>
                           {onRetryMessagesLoad && (
                             <button
                               type="button"
@@ -1617,22 +1552,19 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
                       <span className="text-xs text-muted-foreground/50">{t("editPopover.justDescribe")}</span>
                     </div>
                   )}
-                  {!compactMode && hasUnrenderedLoadedMessages && (
-                    <div className="flex h-64 items-center justify-center px-4 text-center">
-                      <div className="max-w-sm rounded-[8px] border border-border/50 bg-foreground/[0.03] px-4 py-3">
-                        <CircleAlert className="mx-auto mb-2 h-4 w-4 text-foreground/50" />
-                        <div className="text-sm font-medium text-foreground/70">Conversation loaded, but no renderable messages were found.</div>
-                        <p className="mt-1 text-xs text-foreground/50">Try reloading the session. If this persists, the message history may contain an unsupported format.</p>
-                      </div>
-                    </div>
-                  )}
                   {/* Load more indicator - shown when there are older messages */}
                   {hasMoreAbove && (
                     <div className="text-center text-muted-foreground/60 text-xs py-3 select-none">
                       ↑ {t('chat.scrollUpForEarlier', { count: startIndex })}
                     </div>
                   )}
-                  {turns.map((turn, index) => {
+                  {visibleTimeline.map(entry => {
+                    if (entry.type === 'user-input') {
+                      return <UserInputCard key={`user-input-${entry.request.id}`} request={entry.request}
+                        onRespond={respondToUserInput} onRecordedRetryChange={onRecordedRetryChange} />
+                    }
+                    const { turn } = entry
+                    const index = entry.turnIndex - startIndex
                     // Compute turn key and check if it's a search match
                     const turnKey = getTurnKey(turn)
                     const isCurrentMatch = isSearchActive && matchingTurnIds[currentMatchIndex] === turnKey
@@ -1680,15 +1612,6 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
                             onOpenFile={onOpenFile}
                             onOpenUrl={onOpenUrl}
                             sessionId={session?.id}
-                            onRetry={turn.message.role === 'error' ? () => {
-                              const msgs = session?.messages
-                              if (!msgs) return
-                              const errorIdx = msgs.findIndex(m => m.id === turn.message.id)
-                              const lastUserMsg = msgs.slice(0, errorIdx).findLast(m => m.role === 'user')
-                              if (lastUserMsg) {
-                                onSendMessage(lastUserMsg.content)
-                              }
-                            } : undefined}
                           />
                         </div>
                       )
@@ -1754,24 +1677,17 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
                         onOpenUrl={onOpenUrl}
                         isLastResponse={isLastResponse}
                         compactMode={compactMode}
+                        presentation="codex"
+                        displayMode="informative"
                         sendMessageKey={sendMessageKey}
                         openAnnotationRequest={openAnnotationRequest}
+                        onQuickAction={(actionText) => onSendMessage(actionText)}
                         onBranch={session?.supportsBranching ? async (messageId: string, options?: { newPanel?: boolean }) => {
                           if (!session) return
                           try {
                             const child = await appShellContext.onCreateSession(
                               session.workspaceId,
-                              {
-                                branchFromMessageId: messageId,
-                                branchFromSessionId: session.id,
-                                name: `Branch of ${session.name || 'Untitled'}`,
-                                // Keep branch on the same backend/provider by inheriting parent session settings.
-                                llmConnection: session.llmConnection,
-                                model: session.model,
-                                permissionMode: session.permissionMode,
-                                workingDirectory: session.workingDirectory,
-                                enabledSourceSlugs: session.enabledSourceSlugs,
-                              }
+                              buildBranchSessionOptions(session, messageId)
                             )
                             navigate(routes.view.allSessions(child.id), { newPanel: resolveBranchNewPanelOption(options) })
                           } catch (error) {
@@ -1922,22 +1838,56 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
                     </AnimatePresence>
                   </motion.div>
                 </AnimatePresence>
-                {/* Processing Indicator - always visible while processing */}
-                {session.isProcessing && (() => {
-                  // Find the last user message timestamp for accurate elapsed time
-                  const lastUserMsg = [...session.messages].reverse().find(m => m.role === 'user')
-                  return (
-                    <ProcessingIndicator
-                      startTime={lastUserMsg?.timestamp}
-                      statusMessage={session.currentStatus?.message}
+                {pendingDescendantAuthRequests.map(request => (
+                  <div key={`auth-${request.sessionId}-${request.message.id}`} className="mt-2">
+                    <MemoizedAuthRequestCard
+                      message={request.message}
+                      sessionId={request.sessionId}
+                      onRespondToCredential={onRespondToCredential}
+                      isInteractive
                     />
-                  )
-                })()}
+                  </div>
+                ))}
+                {permissionRecoveries.map(request => (
+                  <PermissionRecoveryCard key={`${request.sessionId}-${request.requestId}`} request={request}
+                    showSessionName={request.sessionId !== session.id} />
+                ))}
+                {!messagesLoading && !messagesLoadError && presentation.progress && (
+                  <JourneyProgress progress={presentation.progress} agents={agentActivity} presentation="codex" />
+                )}
+                {!messagesLoading && !messagesLoadError && presentation.outcome && (
+                  <JourneyOutcome
+                    outcome={presentation.outcome}
+                    retrying={retryingSessionId === session?.id || isConversationProcessing}
+                    onRetry={!hasRecordedAnswerRetry && presentation.outcome.retryUserMessageId
+                      ? () => { void retryTurn(presentation.outcome!.retryUserMessageId!) } : undefined}
+                  />
+                )}
                 {/* Scroll Anchor: For auto-scroll to bottom */}
                 <div ref={messagesEndRef} />
               </div>
               </ScrollArea>
             </div>
+            <AnimatePresence initial={false}>
+              {!compactMode && showScrollToLatest && (
+                <motion.button
+                  type="button"
+                  aria-label={t('chat.returnToLatestMessage', { defaultValue: 'Return to latest message' })}
+                  title={t('chat.returnToLatestMessage', { defaultValue: 'Return to latest message' })}
+                  onClick={handleReturnToLatestMessage}
+                  className="absolute bottom-3 left-1/2 z-20 inline-flex h-8 w-8 -translate-x-1/2 items-center justify-center rounded-full border border-border/70 bg-background/95 text-muted-foreground shadow-minimal backdrop-blur-sm transition-colors hover:bg-foreground/[0.06] hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                  initial={{ opacity: 0, scale: 0.92, y: 4 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.92, y: 4 }}
+                  transition={{ duration: 0.16, ease: 'easeOut' }}
+                >
+                  <ChevronDown className="h-4 w-4" aria-hidden="true" />
+                  <span className="sr-only">
+                    {t('chat.returnToLatestMessage', { defaultValue: 'Return to latest message' })}
+                  </span>
+                </motion.button>
+              )}
+            </AnimatePresence>
           </div>
 
           {/* === INPUT CONTAINER: FreeForm or Structured Input === */}
@@ -1945,21 +1895,19 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
             compactMode={compactMode}
             permissionMode={permissionMode}
             onPermissionModeChange={onPermissionModeChange}
-            tasks={backgroundTasks}
             sessionId={session.id}
             sessionFolderPath={sessionFolderPath}
-            onKillTask={(taskId) => killTask(taskId, backgroundTasks.find(t => t.id === taskId)?.type === 'shell' ? 'shell' : 'agent')}
             onInsertMessage={onInputChange}
             sessionLabels={session.labels}
             labels={labels}
             onLabelsChange={onLabelsChange}
             sessionStatuses={sessionStatuses}
-            currentSessionStatus={session.sessionStatus || 'todo'}
+            currentSessionStatus={getSessionStatus(session)}
             onSessionStatusChange={onSessionStatusChange}
             inputProps={{
               placeholder,
               disabled: isInputDisabled,
-              isProcessing: session.isProcessing,
+              isProcessing: isConversationProcessing,
               onAnimatedHeightChange: handleAnimatedHeightChange,
               onSubmit: handleSubmit,
               onStop: handleStop,
@@ -1985,13 +1933,6 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
               isEmptySession: session.messages.length === 0,
               currentConnection: session.llmConnection,
               onConnectionChange,
-              contextStatus: {
-                isCompacting: session.currentStatus?.statusType === 'compacting',
-                // Display the current provider context, not aggregate billed
-                // input across the turn's tool-call loop.
-                inputTokens: session.tokenUsage?.contextTokens ?? session.tokenUsage?.inputTokens,
-                contextWindow: session.tokenUsage?.contextWindow,
-              },
               followUpItems: followUpInputItems,
               onFollowUpClick: handleFollowUpChipClick,
               onFollowUpIndexClick: handleFollowUpIndexClick,
@@ -2165,7 +2106,7 @@ interface MessageBubbleProps {
   onPopOut?: (message: Message) => void
   /** Compact mode - reduces padding for popover embedding */
   compactMode?: boolean
-  /** Callback to resend the user message that preceded an error */
+  /** Callback to resume an existing request without adding a user message. */
   onRetry?: () => void
 }
 
@@ -2177,6 +2118,9 @@ function ErrorMessage({ message, onOpenUrl, sessionId, onRetry }: { message: Mes
   const hasDetails = (message.errorDetails && message.errorDetails.length > 0) || message.errorOriginal
   const [detailsOpen, setDetailsOpen] = React.useState(false)
   const actions = message.errorActions?.filter(a => {
+    // The request summary owns its anchored retry; never resend message text
+    // or leave a second button that merely focuses the composer.
+    if (a.action === 'retry') return !!onRetry
     if (a.action === 'open_url') return !!a.url && !!onOpenUrl
     if (a.action === 'reconnect_runtime') return !!sessionId
     return true

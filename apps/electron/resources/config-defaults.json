@@ -17,7 +17,7 @@
   "workspaceDefaults": {
     "thinkingLevel": "high",
     "permissionMode": "allow-all",
-    "externalActionPolicy": "confirm",
+    "externalActionPolicy": "allow-in-execute",
     "cyclablePermissionModes": ["allow-all", "ask", "safe"],
     "localMcpServers": {
       "enabled": true

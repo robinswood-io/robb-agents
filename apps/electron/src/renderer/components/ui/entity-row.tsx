@@ -279,12 +279,12 @@ export function EntityRow({
         className={cn(
           "entity-row-btn flex w-full items-start gap-2 text-left text-sm outline-none",
           isCompactMode
-            ? "min-h-[68px] rounded-[14px] px-3 py-3.5"
-            : "rounded-[8px] pl-2 pr-4 py-3",
-          "transition-[background-color] duration-75",
+            ? "min-h-[68px] rounded-[14px] px-3 py-3"
+            : "rounded-xl pl-2.5 pr-3.5 py-2.5",
+          "transition-[background-color] duration-150 ease-out",
           (isSelected || isInMultiSelect)
-            ? "bg-foreground/3"
-            : "hover:bg-foreground/2",
+            ? "bg-foreground/[0.055]"
+            : "hover:bg-foreground/[0.035]",
           (buttonProps as Record<string, unknown>)?.className as string | undefined,
         )}
         onMouseDown={wrappedOnMouseDown}
@@ -369,7 +369,7 @@ export function EntityRow({
           ) : (
             <div className="flex items-center gap-[10px] w-full pr-6 min-w-0">
               {icon && (
-                <div className="shrink-0 flex items-center gap-[10px] [&>*]:w-3 [&>*]:h-3">
+                <div className="shrink-0 flex items-center justify-center">
                   {icon}
                 </div>
               )}
@@ -387,9 +387,7 @@ export function EntityRow({
               isCompactMode ? "text-[13px]" : "text-[12px]",
             )}>
               {icon && (
-                <div className="shrink-0 flex items-center gap-[10px] [&>*]:w-3 [&>*]:h-3 invisible" aria-hidden="true">
-                  {icon}
-                </div>
+                <div className="shrink-0 w-5 h-5 invisible pointer-events-none" aria-hidden="true" />
               )}
               <div className={cn("min-w-0 flex-1 leading-[1.35]", isCompactMode ? "line-clamp-1" : "line-clamp-2")}>
                 {subtitle}
@@ -402,9 +400,7 @@ export function EntityRow({
             <div className="flex items-center gap-[10px] text-xs text-foreground/70 w-full -mb-[2px] min-w-0">
               {/* Invisible spacer matching icon container width */}
               {icon && (
-                <div className="shrink-0 flex items-center gap-[10px] [&>*]:w-3 [&>*]:h-3 invisible" aria-hidden="true">
-                  {icon}
-                </div>
+                <div className="shrink-0 w-5 h-5 invisible pointer-events-none" aria-hidden="true" />
               )}
               {badges && (
                 <div

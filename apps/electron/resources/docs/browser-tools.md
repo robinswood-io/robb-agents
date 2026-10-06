@@ -156,25 +156,20 @@ Notes:
 - Files must exist and pass safety validation (sensitive paths are blocked).
 
 ### `type <text>`
-Insert text into the **currently focused element** without needing a ref. The full value is sent in one CDP round-trip. Use this when:
-- The target is a canvas-based input (no DOM ref available)
-- You've already focused an element via `click` or `click-at`
-- The application uses a custom input mechanism
+Request text insertion into the currently focused DOM editor without replacing its value. `fill` instead focuses a ref and replaces its value. This uses CDP text insertion, which does not generate the keyboard events required by a canvas/RDP receiver. An observed non-editor (such as BODY or canvas) fails explicitly. Same-origin frame and shadow-root editors are resolved; an inaccessible frame retains the existing CDP insertion path, without claiming its application state is verified.
 
-Difference from `fill`: `fill` focuses a ref and replaces its value. `type` sends keystrokes to whatever is currently focused.
+### `type-keys <text>`
+Explicit keyboard text for a focused canvas/remote-desktop receiver in the main document or a shadow root. Prefer array input, e.g. `["type-keys", "AZERTY éèàçù € @[]"]`, to preserve punctuation and spaces. It dispatches trusted character keyDown/keyUp events in a single bounded operation (1–256 printable BMP characters; no line breaks or control characters). It does not use the system clipboard, shortcut modifiers, or Enter, and does not grant permissions. A receiver inside an unresolved iframe is refused.
+
+Focus the intended receiver first. `focus browser-1` only focuses the window; its toolbar may still hold focus. Click the intended page receiver using `click` or `click-at`, then inspect `document.hasFocus()` and `document.activeElement` without reading field contents before `type-keys`. No hidden focus transfer is performed. Inspect its received text once before issuing a separate submit key. Dispatch is not proof that the remote server applied anything. A focus, navigation, ownership or transport change stops delivery, which may be partial: do not replay or submit blindly. If the receiver does not accept the text, select a different already-authorized route instead of looping through typing and screenshots.
 
 ### `set-clipboard <text>` / `get-clipboard`
-Read or write the page clipboard programmatically.
-- `set-clipboard` writes text and interprets common escape sequences:
-  - `\t` → tab
-  - `\n` → newline
-  - `\r` → carriage return
-  - `\\` → literal backslash
-- Unknown escapes are preserved literally (example: `\\x` stays `\\x`)
-- `get-clipboard` reads the current clipboard text content as raw text (tabs/newlines are returned as actual characters)
+Request page clipboard access under the existing browser permission policy. Clipboard access may be denied, including in Execute mode. A denial is an error, not an empty clipboard or a successful write; never bypass or broaden permissions to make these commands work.
+- `set-clipboard` interprets `\t`, `\n`, `\r` and `\\`; unknown escapes remain literal.
+- `get-clipboard` returns text only when the browser confirms the read.
 
 ### `paste <text>`
-Convenience command: writes text to clipboard then triggers Ctrl+V (or Cmd+V on Mac). Equivalent to `set-clipboard <text>` followed by `key v meta`/`key v control`. Escape handling is identical to `set-clipboard`, which makes TSV-style bulk data entry reliable.
+Request a clipboard write, then dispatch Ctrl+V (Cmd+V on Mac) only if the write is confirmed. A rejected write prevents the shortcut, so it cannot paste an old clipboard value. A successful shortcut is not proof of page/remote receipt. On denial, do not repeat this path: use a DOM editor or explicit `type-keys` for a supported remote receiver, then verify the actual text.
 
 ### `screenshot` / `screenshot --annotated` / `screenshot-region ...`
 Capture full-window or targeted screenshots. `--annotated` overlays `@eN` labels on interactive elements for easier ref debugging.
@@ -251,14 +246,14 @@ key F2
 type Hello World
 key Enter
 
-# 4. Bulk write via TSV clipboard paste
+# 4. Optional TSV paste only where existing browser policy permits it; stop on denial
 snapshot
 click @nameBoxRef
 type A1
 key Enter
 paste Name\tAge\tCity\nAlice\t30\tNYC\nBob\t25\tLA
 
-# 5. Read data via clipboard
+# 5. Optional clipboard read; denial is an error, not empty data
 key a meta           # Select all (Cmd+A)
 key c meta           # Copy (Cmd+C)
 get-clipboard        # Returns TSV string
@@ -278,7 +273,7 @@ navigate https://docs.google.com/spreadsheets/d/{id}/export?format=csv&gid=0
 - **Cells are canvas pixels** — use `click-at` or keyboard navigation, not `click`
 - **Charts and objects are moveable** — use `drag` to reposition elements on the canvas
 - **Keyboard shortcuts are more reliable than clicking** — use `key` for navigation
-- **Clipboard TSV is the fastest bulk data path** — `paste` with tab-separated values
+- **Clipboard is policy-controlled** — stop on denial; use a DOM editor or an already-authorized connector instead of repeating paste attempts
 - **Export URLs work with session cookies** — no API key needed for reads
 
 ---

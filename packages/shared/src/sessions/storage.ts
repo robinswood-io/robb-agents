@@ -13,21 +13,30 @@
  */
 
 import {
+  closeSync,
+  constants,
   existsSync,
+  fsyncSync,
+  lstatSync,
   mkdirSync,
+  openSync,
   readFileSync,
   writeFileSync,
   readdirSync,
+  realpathSync,
+  rmdirSync,
   rmSync,
   statSync,
   unlinkSync,
   renameSync,
+  type BigIntStats,
 } from 'fs';
 import { join, basename } from 'path';
+import { createHash, randomUUID } from 'crypto';
 import { getWorkspaceSessionsPath } from '../workspaces/storage.ts';
 import { generateUniqueSessionId } from './slug-generator.ts';
 import { toPortablePath, expandPath } from '../utils/paths.ts';
-import { sanitizeSessionId } from './validation.ts';
+import { sanitizeSessionId, validateSessionId } from './validation.ts';
 import { perf } from '../utils/perf.ts';
 import type {
   SessionConfig,
@@ -43,8 +52,10 @@ import { debug } from '../utils/debug.ts';
 import { getStatusCategory } from '../statuses/storage.ts';
 import { readSessionHeader, readSessionJsonl } from './jsonl.ts';
 import {
+  assertSessionPersistenceRootIdentity,
   isSessionPersistenceWriteInProgress,
   sessionPersistenceQueue,
+  type SessionPersistenceRootIdentity,
 } from './persistence-queue.ts';
 
 // Re-export types for convenience
@@ -54,15 +65,27 @@ export type { SessionConfig } from './types.ts';
 // Directory Utilities
 // ============================================================
 
+function ensurePhysicalDirectory(path: string, label: string): string {
+  let directory: ReturnType<typeof lstatSync>;
+  try {
+    directory = lstatSync(path);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+    mkdirSync(path, { recursive: true });
+    directory = lstatSync(path);
+  }
+  if (!directory.isDirectory() || directory.isSymbolicLink()) {
+    throw new Error(`Unsafe ${label}: expected a physical directory at ${path}`);
+  }
+  return path;
+}
+
 /**
  * Ensure sessions directory exists for a workspace
  */
 export function ensureSessionsDir(workspaceRootPath: string): string {
   const dir = getWorkspaceSessionsPath(workspaceRootPath);
-  if (!existsSync(dir)) {
-    mkdirSync(dir, { recursive: true });
-  }
-  return dir;
+  return ensurePhysicalDirectory(dir, 'session persistence directory');
 }
 
 /**
@@ -133,10 +156,9 @@ function recoverInterruptedSessionWrite(sessionFile: string): void {
  * Ensure session directory exists with all subdirectories
  */
 export function ensureSessionDir(workspaceRootPath: string, sessionId: string): string {
+  ensureSessionsDir(workspaceRootPath);
   const sessionDir = getSessionPath(workspaceRootPath, sessionId);
-  if (!existsSync(sessionDir)) {
-    mkdirSync(sessionDir, { recursive: true });
-  }
+  ensurePhysicalDirectory(sessionDir, `session directory for ${sessionId}`);
   // Also create plans, attachments, long_responses, and downloads directories
   const plansDir = join(sessionDir, 'plans');
   if (!existsSync(plansDir)) {
@@ -213,7 +235,13 @@ function getExistingSessionIds(workspaceRootPath: string): Set<string> {
  */
 export function generateSessionId(workspaceRootPath: string): string {
   const existingIds = getExistingSessionIds(workspaceRootPath);
-  return generateUniqueSessionId(existingIds);
+  while (true) {
+    const candidate = generateUniqueSessionId(existingIds);
+    if (!sessionPersistenceQueue.isRetired(candidate, workspaceRootPath)) return candidate;
+    // A deleted ID remains reserved until process restart so stale callbacks
+    // can never target a newly-created session with the same human slug.
+    existingIds.add(candidate);
+  }
 }
 
 // ============================================================
@@ -231,13 +259,18 @@ export async function createSession(
     permissionMode?: SessionConfig['permissionMode'];
     enabledSourceSlugs?: string[];
     model?: string;
+    modelRoutePinned?: boolean;
     llmConnection?: string;
+    connectionRoutePinned?: boolean;
+    thinkingLevel?: SessionConfig['thinkingLevel'];
+    thinkingLevelPinned?: boolean;
     hidden?: boolean;
     sessionStatus?: SessionConfig['sessionStatus'];
     labels?: string[];
     isFlagged?: boolean;
     projectId?: string;
     parentSessionId?: string;
+    delegation?: SessionConfig['delegation'];
     taskSlug?: string;
     taskRunId?: string;
     taskNodeId?: string;
@@ -247,6 +280,8 @@ export async function createSession(
     missionWorkItemId?: string;
     missionDispatchId?: string;
     missionRole?: SessionConfig['missionRole'];
+    missionRouteLockSha256?: string;
+    missionOrdinaryRouteLock?: SessionConfig['missionOrdinaryRouteLock'];
     playbookSlug?: string;
     createdByApp?: SessionConfig['createdByApp'];
     lastUsedByApp?: SessionConfig['lastUsedByApp'];
@@ -278,13 +313,18 @@ export async function createSession(
     permissionMode: options?.permissionMode,
     enabledSourceSlugs: options?.enabledSourceSlugs,
     model: options?.model,
+    modelRoutePinned: options?.modelRoutePinned,
     llmConnection: options?.llmConnection,
+    connectionRoutePinned: options?.connectionRoutePinned,
+    thinkingLevel: options?.thinkingLevel,
+    thinkingLevelPinned: options?.thinkingLevelPinned,
     hidden: options?.hidden,
     sessionStatus: options?.sessionStatus,
     labels: options?.labels,
     isFlagged: options?.isFlagged,
     projectId: options?.projectId,
     parentSessionId: options?.parentSessionId,
+    delegation: options?.delegation,
     taskSlug: options?.taskSlug,
     taskRunId: options?.taskRunId,
     taskNodeId: options?.taskNodeId,
@@ -294,6 +334,8 @@ export async function createSession(
     missionWorkItemId: options?.missionWorkItemId,
     missionDispatchId: options?.missionDispatchId,
     missionRole: options?.missionRole,
+    missionRouteLockSha256: options?.missionRouteLockSha256,
+    missionOrdinaryRouteLock: options?.missionOrdinaryRouteLock,
     playbookSlug: options?.playbookSlug,
   };
 
@@ -309,7 +351,7 @@ export async function createSession(
       costUsd: 0,
     },
   };
-  await saveSession(storedSession);
+  await saveSession(storedSession, workspaceRootPath);
 
   return session;
 }
@@ -336,6 +378,10 @@ export async function getOrCreateSessionById(
       sdkCwd: existing.sdkCwd,
       workingDirectory: existing.workingDirectory,
     };
+  }
+
+  if (sessionPersistenceQueue.isRetired(sessionId, workspaceRootPath)) {
+    throw new Error(`Session ID was deleted during this app run and cannot be reused: ${sessionId}`);
   }
 
   // Create new session with the specified ID
@@ -367,7 +413,7 @@ export async function getOrCreateSessionById(
       costUsd: 0,
     },
   };
-  await saveSession(storedSession);
+  await saveSession(storedSession, workspaceRootPath);
 
   return session;
 }
@@ -381,9 +427,16 @@ export async function getOrCreateSessionById(
  *
  * Writes in JSONL format: line 1 = header, lines 2+ = messages
  */
-export async function saveSession(session: StoredSession): Promise<void> {
-  sessionPersistenceQueue.enqueue(session);
-  await sessionPersistenceQueue.flush(session.id);
+export async function saveSession(
+  session: StoredSession,
+  persistenceRootPath: string = session.workspaceRootPath,
+  persistenceRootIdentity?: SessionPersistenceRootIdentity,
+): Promise<void> {
+  if (persistenceRootIdentity) {
+    persistenceRootPath = assertSessionPersistenceRootIdentity(persistenceRootIdentity);
+  }
+  sessionPersistenceQueue.enqueue(session, persistenceRootPath, persistenceRootIdentity);
+  await sessionPersistenceQueue.flush(session.id, persistenceRootPath);
 }
 
 /**
@@ -391,7 +444,15 @@ export async function saveSession(session: StoredSession): Promise<void> {
  * Multiple rapid calls are coalesced into a single write.
  * Use this during active sessions to avoid blocking the main thread.
  */
-export { sessionPersistenceQueue, getHeaderMetadataSignature } from './persistence-queue.js'
+export {
+  assertSessionPersistenceRootIdentity,
+  captureSessionPersistenceRootIdentity,
+  captureSessionPersistenceRootPath,
+  SessionPersistenceRootIdentityError,
+  sessionPersistenceQueue,
+  getHeaderMetadataSignature,
+} from './persistence-queue.js'
+export type { SessionPersistenceRootIdentity } from './persistence-queue.js'
 
 /**
  * Load session by ID
@@ -422,6 +483,11 @@ export function loadSession(workspaceRootPath: string, sessionId: string): Store
  */
 export function listSessions(workspaceRootPath: string): SessionMetadata[] {
   const span = perf.span('session.listSessions');
+  if (!recoveredDeletionQuarantines.has(workspaceRootPath)) {
+    if (purgeSessionDeletionQuarantine(workspaceRootPath)) {
+      recoveredDeletionQuarantines.add(workspaceRootPath);
+    }
+  }
   const sessionsDir = getWorkspaceSessionsPath(workspaceRootPath);
   if (!existsSync(sessionsDir)) {
     span.end();
@@ -514,6 +580,339 @@ export function deleteSession(workspaceRootPath: string, sessionId: string): boo
   }
 }
 
+const LEGACY_SESSION_DELETION_QUARANTINE = '.session-deletions';
+const LEGACY_SESSION_DELETION_STAGING_PREFIX = '.robb-agents-session-deletion-legacy-v1-';
+const SESSION_DELETION_ENTRY_PREFIX = '.robb-agents-session-deletion-v1-';
+// A move is not eligible for automatic purge until its source, destination,
+// and both physical parents have been verified. Pending entries intentionally
+// use a different namespace so a failed/raced verification preserves data.
+const SESSION_DELETION_PENDING_PREFIX = '.robb-agents-session-deletion-pending-v1-';
+const UUID_V4_PATTERN_SOURCE =
+  '[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}';
+const LEGACY_SESSION_DELETION_ENTRY_PATTERN = new RegExp(
+  `^[a-f0-9]{64}-${UUID_V4_PATTERN_SOURCE}$`,
+);
+const SESSION_DELETION_ENTRY_PATTERN = new RegExp(
+  `^\\.robb-agents-session-deletion-v1-[a-f0-9]{64}-${UUID_V4_PATTERN_SOURCE}$`,
+);
+const LEGACY_SESSION_DELETION_STAGING_PATTERN = new RegExp(
+  `^\\.robb-agents-session-deletion-legacy-v1-${UUID_V4_PATTERN_SOURCE}$`,
+);
+const recoveredDeletionQuarantines = new Set<string>();
+
+function syncDirectory(path: string): boolean {
+  if (process.platform === 'win32') return false;
+  const directoryFlag = typeof constants.O_DIRECTORY === 'number' ? constants.O_DIRECTORY : 0;
+  const noFollowFlag = typeof constants.O_NOFOLLOW === 'number' ? constants.O_NOFOLLOW : 0;
+  const descriptor = openSync(path, constants.O_RDONLY | directoryFlag | noFollowFlag);
+  try {
+    fsyncSync(descriptor);
+  } finally {
+    closeSync(descriptor);
+  }
+  return true;
+}
+
+function syncDirectoryForMaintenance(path: string): boolean {
+  // Windows does not provide the same directory-fsync contract through Node.
+  // A completed logical purge is still complete and must be cached; durability
+  // remains explicitly false for atomic deletion results on that platform.
+  return process.platform === 'win32' || syncDirectory(path);
+}
+
+function purgeLegacySessionDeletionQuarantine(canonicalWorkspaceRoot: string): boolean {
+  const legacyRoot = join(canonicalWorkspaceRoot, LEGACY_SESSION_DELETION_QUARANTINE);
+  const stagedNames = readdirSync(canonicalWorkspaceRoot, { withFileTypes: true })
+    .map((entry) => entry.name)
+    .filter((name) => LEGACY_SESSION_DELETION_STAGING_PATTERN.test(name));
+
+  // Atomically detach the well-known legacy path before inspecting contents.
+  // This prevents a check/use race where it is replaced with a symlink between
+  // lstat/readdir/rm. The random sibling name is never traversed before rename.
+  const stagedName = `${LEGACY_SESSION_DELETION_STAGING_PREFIX}${randomUUID()}`;
+  const stagedPath = join(canonicalWorkspaceRoot, stagedName);
+  try {
+    renameSync(legacyRoot, stagedPath);
+    stagedNames.push(stagedName);
+    if (!syncDirectoryForMaintenance(canonicalWorkspaceRoot)) return false;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      debug('[sessions] Failed to isolate the legacy session deletion quarantine:', error);
+      return false;
+    }
+  }
+
+  let completelyPurged = true;
+  for (const name of stagedNames) {
+    const candidatePath = join(canonicalWorkspaceRoot, name);
+    let candidate: ReturnType<typeof lstatSync>;
+    try {
+      candidate = lstatSync(candidatePath);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') continue;
+      completelyPurged = false;
+      continue;
+    }
+
+    if (!candidate.isDirectory() || candidate.isSymbolicLink()) {
+      // Preserve unexpected legacy data without ever following it. Restore the
+      // familiar path when possible; otherwise leave the isolated sibling for
+      // a later, equally conservative retry.
+      try {
+        renameSync(candidatePath, legacyRoot);
+        syncDirectoryForMaintenance(canonicalWorkspaceRoot);
+      } catch {
+        // A concurrent creator may now own the legacy path.
+      }
+      completelyPurged = false;
+      continue;
+    }
+
+    let removedEntry = false;
+    try {
+      for (const entry of readdirSync(candidatePath, { withFileTypes: true })) {
+        if (!LEGACY_SESSION_DELETION_ENTRY_PATTERN.test(entry.name)) continue;
+        try {
+          rmSync(join(candidatePath, entry.name), { recursive: true, force: true });
+          removedEntry = true;
+        } catch (error) {
+          completelyPurged = false;
+          debug(`[sessions] Failed to purge legacy quarantined session entry ${entry.name}:`, error);
+        }
+      }
+      if (removedEntry && !syncDirectoryForMaintenance(candidatePath)) {
+        completelyPurged = false;
+      }
+
+      if (readdirSync(candidatePath).length === 0) {
+        rmdirSync(candidatePath);
+        if (!syncDirectoryForMaintenance(canonicalWorkspaceRoot)) completelyPurged = false;
+      } else {
+        // Preserve files outside our strict namespace at the original path.
+        renameSync(candidatePath, legacyRoot);
+        if (!syncDirectoryForMaintenance(canonicalWorkspaceRoot)) completelyPurged = false;
+      }
+    } catch (error) {
+      completelyPurged = false;
+      debug('[sessions] Failed to purge an isolated legacy session deletion quarantine:', error);
+    }
+  }
+  return completelyPurged;
+}
+
+/**
+ * Remove entries left after a deletion committed but its best-effort purge was
+ * interrupted. New entries live directly below the canonical workspace so the
+ * atomic rename never traverses a replaceable quarantine symlink. The legacy
+ * quarantine directory is also purged conservatively for upgrades.
+ */
+export function purgeSessionDeletionQuarantine(workspaceRootPath: string): boolean {
+  let completelyPurged = true;
+  try {
+    let canonicalWorkspaceRoot: string;
+    try {
+      canonicalWorkspaceRoot = realpathSync(workspaceRootPath);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return true;
+      throw error;
+    }
+    const workspace = lstatSync(canonicalWorkspaceRoot);
+    if (!workspace.isDirectory() || workspace.isSymbolicLink()) return false;
+
+    let removedWorkspaceEntry = false;
+    for (const entry of readdirSync(canonicalWorkspaceRoot, { withFileTypes: true })) {
+      if (!SESSION_DELETION_ENTRY_PATTERN.test(entry.name)) continue;
+      try {
+        rmSync(join(canonicalWorkspaceRoot, entry.name), { recursive: true, force: true });
+        removedWorkspaceEntry = true;
+      } catch (error) {
+        completelyPurged = false;
+        debug(`[sessions] Failed to purge quarantined session entry ${entry.name}:`, error);
+      }
+    }
+    if (removedWorkspaceEntry && !syncDirectoryForMaintenance(canonicalWorkspaceRoot)) {
+      completelyPurged = false;
+    }
+
+    if (!purgeLegacySessionDeletionQuarantine(canonicalWorkspaceRoot)) completelyPurged = false;
+  } catch (error) {
+    debug('[sessions] Failed to inspect the session deletion quarantine:', error);
+    return false;
+  }
+  return completelyPurged;
+}
+
+export interface AtomicSessionDeletionResult {
+  /** The live session path is proven absent because it never existed or was renamed. */
+  committed: boolean;
+  /** The directory rename was verified and fsynced in both parent directories. */
+  durable: boolean;
+  /** Why the commit could not be proven. Unsafe paths must never be traversed
+   * by rollback persistence; a plain rename failure retains the verified source. */
+  failureReason?: 'unsafe-path' | 'rename-failed';
+}
+
+/** @internal Deterministic race injection for filesystem contract tests. */
+export interface AtomicSessionDeletionTestHooks {
+  afterRename?: (paths: { sourcePath: string; pendingPath: string }) => void;
+}
+
+/**
+ * Commit an explicit session deletion with an atomic rename before recursively
+ * purging its contents. A purge failure can leave a hidden quarantine entry,
+ * but it cannot expose a partially deleted session or let startup reload it.
+ */
+export function deleteSessionAtomically(
+  workspaceRootPath: string,
+  sessionId: string,
+  testHooks?: AtomicSessionDeletionTestHooks,
+): AtomicSessionDeletionResult {
+  validateSessionId(sessionId);
+  let canonicalWorkspaceRoot: string;
+  let workspaceIdentity: BigIntStats;
+  try {
+    canonicalWorkspaceRoot = realpathSync(workspaceRootPath);
+    workspaceIdentity = lstatSync(canonicalWorkspaceRoot, { bigint: true });
+    if (!workspaceIdentity.isDirectory() || workspaceIdentity.isSymbolicLink()) {
+      return { committed: false, durable: false, failureReason: 'unsafe-path' };
+    }
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return { committed: true, durable: true };
+    }
+    return { committed: false, durable: false, failureReason: 'unsafe-path' };
+  }
+
+  const sessionDir = getSessionPath(canonicalWorkspaceRoot, sessionId);
+  const sessionsDir = getWorkspaceSessionsPath(canonicalWorkspaceRoot);
+  let sessionsIdentity: BigIntStats;
+  let source: BigIntStats;
+  try {
+    sessionsIdentity = lstatSync(sessionsDir, { bigint: true });
+    if (!sessionsIdentity.isDirectory() || sessionsIdentity.isSymbolicLink()) {
+      return { committed: false, durable: false, failureReason: 'unsafe-path' };
+    }
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return { committed: true, durable: true };
+    }
+    return { committed: false, durable: false, failureReason: 'unsafe-path' };
+  }
+  try {
+    source = lstatSync(sessionDir, { bigint: true });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return { committed: true, durable: true };
+    }
+    return { committed: false, durable: false, failureReason: 'unsafe-path' };
+  }
+  if (!source.isDirectory() || source.isSymbolicLink()) {
+    return { committed: false, durable: false, failureReason: 'unsafe-path' };
+  }
+
+  // Revalidate every source object immediately before rename. Node does not
+  // expose renameat(), so the post-rename proof below remains mandatory too.
+  try {
+    const currentWorkspace = lstatSync(canonicalWorkspaceRoot, { bigint: true });
+    const currentSessions = lstatSync(sessionsDir, { bigint: true });
+    const currentSource = lstatSync(sessionDir, { bigint: true });
+    if (!currentWorkspace.isDirectory() || currentWorkspace.isSymbolicLink()
+      || currentWorkspace.dev !== workspaceIdentity.dev || currentWorkspace.ino !== workspaceIdentity.ino
+      || !currentSessions.isDirectory() || currentSessions.isSymbolicLink()
+      || currentSessions.dev !== sessionsIdentity.dev || currentSessions.ino !== sessionsIdentity.ino
+      || !currentSource.isDirectory() || currentSource.isSymbolicLink()
+      || currentSource.dev !== source.dev || currentSource.ino !== source.ino) {
+      return { committed: false, durable: false, failureReason: 'unsafe-path' };
+    }
+  } catch {
+    return { committed: false, durable: false, failureReason: 'unsafe-path' };
+  }
+
+  // Keep the destination as an immediate child of the canonical workspace.
+  // A pending namespace is deliberately not startup-purgeable: until the move
+  // is verified, preserving an ambiguous object is safer than deleting it.
+  const deletionSuffix = `${createHash('sha256').update(sessionId).digest('hex')}-${randomUUID()}`;
+  const pendingPath = join(
+    canonicalWorkspaceRoot,
+    `${SESSION_DELETION_PENDING_PREFIX}${deletionSuffix}`,
+  );
+  const quarantinePath = join(canonicalWorkspaceRoot, `${SESSION_DELETION_ENTRY_PREFIX}${deletionSuffix}`);
+  try {
+    renameSync(sessionDir, pendingPath);
+  } catch {
+    return { committed: false, durable: false, failureReason: 'rename-failed' };
+  }
+  testHooks?.afterRename?.({ sourcePath: sessionDir, pendingPath });
+  // A previous successful startup purge may already be cached. This newly
+  // created entry must remain eligible for a later retry if immediate removal
+  // fails (notably on Windows, where directory fsync is unavailable).
+  recoveredDeletionQuarantines.delete(workspaceRootPath);
+  recoveredDeletionQuarantines.delete(canonicalWorkspaceRoot);
+
+  // The rename is not a proven commit until the exact moved inode, source
+  // absence, and both physical parents still match. A concurrent recreation or
+  // path swap must be reported as unsafe and its pending data left untouched.
+  let verified = false;
+  try {
+    const quarantined = lstatSync(pendingPath, { bigint: true });
+    const currentWorkspace = lstatSync(canonicalWorkspaceRoot, { bigint: true });
+    const currentSessions = lstatSync(sessionsDir, { bigint: true });
+    let sourceAbsent = false;
+    try {
+      lstatSync(sessionDir, { bigint: true });
+    } catch (error) {
+      sourceAbsent = (error as NodeJS.ErrnoException).code === 'ENOENT';
+    }
+    verified = quarantined.isDirectory() && !quarantined.isSymbolicLink()
+      && quarantined.dev === source.dev && quarantined.ino === source.ino
+      && sourceAbsent
+      && currentWorkspace.isDirectory() && !currentWorkspace.isSymbolicLink()
+      && currentWorkspace.dev === workspaceIdentity.dev && currentWorkspace.ino === workspaceIdentity.ino
+      && currentSessions.isDirectory() && !currentSessions.isSymbolicLink()
+      && currentSessions.dev === sessionsIdentity.dev && currentSessions.ino === sessionsIdentity.ino;
+    if (!verified) {
+      debug(`[sessions] Session ${sessionId} deletion move could not be fully verified`);
+    }
+  } catch (error) {
+    debug(`[sessions] Session ${sessionId} deletion move could not be verified:`, error);
+  }
+  if (!verified) {
+    return { committed: false, durable: false, failureReason: 'unsafe-path' };
+  }
+
+  let sourceParentSynced = false;
+  let workspaceParentSynced = false;
+  try {
+    sourceParentSynced = syncDirectory(sessionsDir);
+  } catch (error) {
+    debug(`[sessions] Session ${sessionId} source directory rename could not be synced:`, error);
+  }
+  try {
+    // The quarantine entry is created by rename in the workspace itself. Sync
+    // that parent before reporting durable=true, as well as the source parent.
+    workspaceParentSynced = syncDirectory(canonicalWorkspaceRoot);
+  } catch (error) {
+    debug(`[sessions] Session ${sessionId} quarantine rename could not be synced:`, error);
+  }
+
+  const durable = sourceParentSynced && workspaceParentSynced;
+  try {
+    rmSync(pendingPath, { recursive: true, force: true });
+    syncDirectoryForMaintenance(canonicalWorkspaceRoot);
+  } catch (error) {
+    // Only a fully verified move may enter the purgeable namespace. If the
+    // immediate recursive removal fails, retain it for conservative recovery.
+    try {
+      renameSync(pendingPath, quarantinePath);
+      syncDirectoryForMaintenance(canonicalWorkspaceRoot);
+    } catch {
+      // The pending namespace remains non-purgeable if promotion cannot finish.
+    }
+    debug(`[sessions] Session ${sessionId} was detached but its quarantine purge failed:`, error);
+  }
+  return { committed: true, durable };
+}
+
 /**
  * Clear messages from a session while preserving metadata.
  * Used for /clear command to reset conversation without creating a new session.
@@ -527,6 +926,7 @@ export async function clearSessionMessages(workspaceRootPath: string, sessionId:
     session.sdkSessionId = undefined;
     session.pendingTurnRecovery = undefined;
     session.activeObjective = undefined;
+    session.userInputRequests = undefined;
     // Reset token usage to zero
     session.tokenUsage = {
       inputTokens: 0,
@@ -535,7 +935,7 @@ export async function clearSessionMessages(workspaceRootPath: string, sessionId:
       contextTokens: 0,
       costUsd: 0,
     };
-    await saveSession(session);
+    await saveSession(session, workspaceRootPath);
   }
 }
 
@@ -576,7 +976,7 @@ export async function updateSessionSdkId(
   const session = loadSession(workspaceRootPath, sessionId);
   if (session) {
     session.sdkSessionId = sdkSessionId;
-    await saveSession(session);
+    await saveSession(session, workspaceRootPath);
   }
 }
 
@@ -616,12 +1016,19 @@ export async function updateSessionMetadata(
     | 'sharedUrl'
     | 'sharedId'
     | 'model'
+    | 'modelRoutePinned'
     | 'llmConnection'
+    | 'connectionRoutePinned'
+    | 'thinkingLevelPinned'
     | 'isArchived'
     | 'archivedAt'
     | 'projectId'
-  >>
+  >>,
+  persistenceRootIdentity?: SessionPersistenceRootIdentity,
 ): Promise<void> {
+  if (persistenceRootIdentity) {
+    workspaceRootPath = assertSessionPersistenceRootIdentity(persistenceRootIdentity);
+  }
   const session = loadSession(workspaceRootPath, sessionId);
   if (!session) return;
 
@@ -637,13 +1044,16 @@ export async function updateSessionMetadata(
   if ('hasUnread' in updates) session.hasUnread = updates.hasUnread;
   if ('sharedUrl' in updates) session.sharedUrl = updates.sharedUrl;
   if ('sharedId' in updates) session.sharedId = updates.sharedId;
-  if (updates.model !== undefined) session.model = updates.model;
+  if ('model' in updates) session.model = updates.model;
+  if (updates.modelRoutePinned !== undefined) session.modelRoutePinned = updates.modelRoutePinned;
   if (updates.llmConnection !== undefined) session.llmConnection = updates.llmConnection;
+  if (updates.connectionRoutePinned !== undefined) session.connectionRoutePinned = updates.connectionRoutePinned;
+  if (updates.thinkingLevelPinned !== undefined) session.thinkingLevelPinned = updates.thinkingLevelPinned;
   if (updates.isArchived !== undefined) session.isArchived = updates.isArchived;
   if ('archivedAt' in updates) session.archivedAt = updates.archivedAt;
   if ('projectId' in updates) session.projectId = updates.projectId;
 
-  await saveSession(session);
+  await saveSession(session, workspaceRootPath, persistenceRootIdentity);
 }
 
 /**
@@ -711,7 +1121,7 @@ export async function unbindProjectFromSessions(
     const full = loadSession(workspaceRootPath, meta.id);
     if (full?.projectId === projectId) {
       full.projectId = undefined;
-      await saveSession(full);
+      await saveSession(full, workspaceRootPath);
       touched++;
     }
   }
@@ -752,7 +1162,11 @@ export async function setPendingPlanExecution(
   sessionId: string,
   planPath: string,
   draftInputSnapshot?: string,
+  persistenceRootIdentity?: SessionPersistenceRootIdentity,
 ): Promise<void> {
+  if (persistenceRootIdentity) {
+    workspaceRootPath = assertSessionPersistenceRootIdentity(persistenceRootIdentity);
+  }
   const session = loadSession(workspaceRootPath, sessionId);
   if (!session) return;
 
@@ -762,7 +1176,7 @@ export async function setPendingPlanExecution(
     awaitingCompaction: true,
     executionDispatched: false,
   };
-  await saveSession(session);
+  await saveSession(session, workspaceRootPath, persistenceRootIdentity);
 }
 
 /**
@@ -772,13 +1186,17 @@ export async function setPendingPlanExecution(
  */
 export async function markCompactionComplete(
   workspaceRootPath: string,
-  sessionId: string
+  sessionId: string,
+  persistenceRootIdentity?: SessionPersistenceRootIdentity,
 ): Promise<void> {
+  if (persistenceRootIdentity) {
+    workspaceRootPath = assertSessionPersistenceRootIdentity(persistenceRootIdentity);
+  }
   const session = loadSession(workspaceRootPath, sessionId);
   if (!session?.pendingPlanExecution) return;
 
   session.pendingPlanExecution.awaitingCompaction = false;
-  await saveSession(session);
+  await saveSession(session, workspaceRootPath, persistenceRootIdentity);
 }
 
 /**
@@ -788,13 +1206,17 @@ export async function markCompactionComplete(
  */
 export async function markPendingPlanExecutionDispatched(
   workspaceRootPath: string,
-  sessionId: string
+  sessionId: string,
+  persistenceRootIdentity?: SessionPersistenceRootIdentity,
 ): Promise<void> {
+  if (persistenceRootIdentity) {
+    workspaceRootPath = assertSessionPersistenceRootIdentity(persistenceRootIdentity);
+  }
   const session = loadSession(workspaceRootPath, sessionId);
   if (!session?.pendingPlanExecution) return;
 
   session.pendingPlanExecution.executionDispatched = true;
-  await saveSession(session);
+  await saveSession(session, workspaceRootPath, persistenceRootIdentity);
 }
 
 /**
@@ -804,13 +1226,17 @@ export async function markPendingPlanExecutionDispatched(
  */
 export async function clearPendingPlanExecution(
   workspaceRootPath: string,
-  sessionId: string
+  sessionId: string,
+  persistenceRootIdentity?: SessionPersistenceRootIdentity,
 ): Promise<void> {
+  if (persistenceRootIdentity) {
+    workspaceRootPath = assertSessionPersistenceRootIdentity(persistenceRootIdentity);
+  }
   const session = loadSession(workspaceRootPath, sessionId);
   if (!session) return;
 
   delete session.pendingPlanExecution;
-  await saveSession(session);
+  await saveSession(session, workspaceRootPath, persistenceRootIdentity);
 }
 
 /**
@@ -819,8 +1245,12 @@ export async function clearPendingPlanExecution(
  */
 export function getPendingPlanExecution(
   workspaceRootPath: string,
-  sessionId: string
+  sessionId: string,
+  persistenceRootIdentity?: SessionPersistenceRootIdentity,
 ): { planPath: string; draftInputSnapshot?: string; awaitingCompaction: boolean; executionDispatched: boolean } | null {
+  if (persistenceRootIdentity) {
+    workspaceRootPath = assertSessionPersistenceRootIdentity(persistenceRootIdentity);
+  }
   const session = loadSession(workspaceRootPath, sessionId);
   if (!session?.pendingPlanExecution) return null;
   return {

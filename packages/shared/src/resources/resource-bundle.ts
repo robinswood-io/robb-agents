@@ -13,9 +13,27 @@
  * - Relies on existing ConfigWatcher for change notifications (no manual events)
  */
 
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync, renameSync, rmSync } from 'fs'
+import {
+  constants,
+  closeSync,
+  existsSync,
+  fstatSync,
+  fsyncSync,
+  lstatSync,
+  linkSync,
+  mkdirSync,
+  openSync,
+  readdirSync,
+  readFileSync,
+  realpathSync,
+  renameSync,
+  rmSync,
+  unlinkSync,
+  writeFileSync,
+} from 'fs'
 import { join, basename } from 'path'
-import { randomUUID } from 'crypto'
+import { createHash, randomUUID } from 'crypto'
+import { execFileSync } from 'node:child_process'
 import {
   type BundleFile,
   MAX_BUNDLE_SIZE_BYTES,
@@ -23,8 +41,12 @@ import {
   restoreFiles,
   validateBundleFile,
 } from '../utils/bundle-files.ts'
-import { getWorkspaceSourcesPath, getWorkspaceSkillsPath } from '../workspaces/storage.ts'
-import { loadSourceConfig, getSourcePath } from '../sources/storage.ts'
+import {
+  canonicalConfinementRoot,
+  ensureConfinedDirectory,
+  openConfinedRegularFile,
+} from '../missions/confined-file.ts'
+import { safeJsonParse } from '../utils/files.ts'
 import { assertMcpTransportWriteAllowed } from '../sources/mcp-transport-policy.ts'
 import { isBuiltinSource } from '../sources/builtin-sources.ts'
 import { validateSourceConfig } from '../config/validators.ts'
@@ -131,6 +153,287 @@ const SENSITIVE_RESOURCE_FILE_NAMES = new Set([
   'oauth.json',
 ])
 const SENSITIVE_RESOURCE_FILE_EXTENSIONS = ['.pem', '.key', '.p12', '.pfx', '.kdbx']
+const PROTECTED_SOURCE_OVERLAY_MARKER = '.robb-source-overlay.json'
+const SOURCE_TRANSACTION_LOCK_PREFIX = '.robb-source-transaction-'
+const PROTECTED_SOURCE_TRANSACTION_SLUG = 'google-contacts'
+const RESOURCE_SLUG_PATTERN = /^[a-z0-9][a-z0-9-]{0,63}$/
+
+function isCanonicalResourceSlug(slug: string): boolean {
+  return RESOURCE_SLUG_PATTERN.test(slug)
+}
+
+function sourceTransactionLockPath(sourcesDir: string, slug: string): string {
+  if (!isCanonicalResourceSlug(slug)) {
+    throw new Error(`Invalid source transaction slug '${slug}'`)
+  }
+  return join(sourcesDir, `${SOURCE_TRANSACTION_LOCK_PREFIX}${slug}.lock`)
+}
+
+function fsyncDirectorySync(directory: string): void {
+  if (process.platform === 'win32') return
+  const descriptor = openSync(directory, 'r')
+  try {
+    fsyncSync(descriptor)
+  } finally {
+    closeSync(descriptor)
+  }
+}
+
+function processStartIdentity(pid: number): string | undefined {
+  try {
+    if (process.platform === 'linux') {
+      const bootId = readFileSync('/proc/sys/kernel/random/boot_id', 'utf8').trim()
+      const raw = readFileSync(`/proc/${pid}/stat`, 'utf8')
+      const commandEnd = raw.lastIndexOf(')')
+      if (commandEnd < 0) return undefined
+      const fieldsAfterCommand = raw.slice(commandEnd + 2).trim().split(/\s+/u)
+      const startTicks = fieldsAfterCommand[19]
+      return bootId && startTicks ? `linux:${bootId}:${startTicks}` : undefined
+    }
+    if (process.platform === 'darwin' || process.platform === 'freebsd') {
+      const value = execFileSync('/bin/ps', ['-p', String(pid), '-o', 'lstart='], {
+        encoding: 'utf8',
+        env: { ...process.env, LC_ALL: 'C' },
+        stdio: ['ignore', 'pipe', 'ignore'],
+      }).trim().replace(/\s+/gu, ' ')
+      return value ? `ps-lstart:${value}` : undefined
+    }
+  } catch {
+    return undefined
+  }
+  return undefined
+}
+
+function acquireSourceTransactionLock(
+  sourcesDir: string,
+  slug: string,
+  operation: 'resource-import' | 'resource-export',
+): () => string | undefined {
+  const lockPath = sourceTransactionLockPath(sourcesDir, slug)
+  const partialPath = `${lockPath}.partial-${process.pid}-${randomUUID()}`
+  let descriptor: number
+  try {
+    descriptor = openSync(partialPath, 'wx', 0o600)
+  } catch (error) {
+    throw new Error(`Cannot initialize source transaction lock for '${slug}': ${error}`)
+  }
+
+  let acquired: ReturnType<typeof fstatSync> | undefined
+  let published = false
+  let conflict = false
+  try {
+    acquired = fstatSync(descriptor)
+    const identity = processStartIdentity(process.pid)
+    writeFileSync(descriptor, JSON.stringify({
+      schemaVersion: 1,
+      slug,
+      pid: process.pid,
+      operation,
+      createdAtUnixMs: Date.now(),
+      ...(identity ? { ownerProcessIdentity: identity } : {}),
+    }) + '\n')
+    fsyncSync(descriptor)
+    try {
+      // The public lock pathname becomes visible only after its complete,
+      // durable receipt exists. link(2) supplies atomic no-replace semantics.
+      linkSync(partialPath, lockPath)
+      published = true
+    } catch (error) {
+      if (errnoCode(error) === 'EEXIST') conflict = true
+      throw error
+    }
+    fsyncDirectorySync(sourcesDir)
+    unlinkSync(partialPath)
+    fsyncDirectorySync(sourcesDir)
+  } catch (error) {
+    const cleanupErrors: string[] = []
+    try {
+      if (published && acquired) {
+        const current = lstatSync(lockPath)
+        if (current.isFile() && current.dev === acquired.dev && current.ino === acquired.ino) {
+          unlinkSync(lockPath)
+          fsyncDirectorySync(sourcesDir)
+        } else {
+          cleanupErrors.push(`lock changed before initialization cleanup: ${lockPath}`)
+        }
+      } else if (published) {
+        cleanupErrors.push(`lock identity was not captured: ${lockPath}`)
+      }
+    } catch (cleanupError) {
+      cleanupErrors.push(`cannot clean up uninitialized lock: ${cleanupError}`)
+    }
+    try {
+      if (acquired && hasFilesystemEntry(partialPath)) {
+        const partial = lstatSync(partialPath)
+        if (partial.isFile() && partial.dev === acquired.dev && partial.ino === acquired.ino) {
+          unlinkSync(partialPath)
+          fsyncDirectorySync(sourcesDir)
+        } else {
+          cleanupErrors.push(`partial lock changed before cleanup: ${partialPath}`)
+        }
+      }
+    } catch (cleanupError) {
+      cleanupErrors.push(`cannot clean up partial lock: ${cleanupError}`)
+    } finally {
+      try {
+        closeSync(descriptor)
+      } catch (closeError) {
+        cleanupErrors.push(`cannot close lock descriptor: ${closeError}`)
+      }
+    }
+    const cleanupDetail = cleanupErrors.length > 0 ? `; ${cleanupErrors.join('; ')}` : ''
+    if (conflict) {
+      throw new Error(`Another source transaction is already active for '${slug}': ${lockPath}${cleanupDetail}`)
+    }
+    throw new Error(`Cannot initialize source transaction lock for '${slug}': ${error}${cleanupDetail}`)
+  }
+
+  let released = false
+  return () => {
+    if (released) return undefined
+    released = true
+    const cleanupErrors: string[] = []
+    try {
+      const current = lstatSync(lockPath)
+      if (!current.isFile() || current.dev !== acquired.dev || current.ino !== acquired.ino) {
+        cleanupErrors.push(`Source transaction lock changed while held; refusing cleanup: ${lockPath}`)
+      } else {
+        unlinkSync(lockPath)
+        fsyncDirectorySync(sourcesDir)
+      }
+    } catch (error) {
+      const code = error instanceof Error && 'code' in error ? error.code : undefined
+      cleanupErrors.push(
+        code === 'ENOENT'
+          ? `Source transaction lock disappeared while held: ${lockPath}`
+          : `Cannot inspect or remove source transaction lock ${lockPath}: ${error}`,
+      )
+    } finally {
+      try {
+        closeSync(descriptor)
+      } catch (error) {
+        cleanupErrors.push(`Cannot close source transaction lock descriptor: ${error}`)
+      }
+    }
+    return cleanupErrors.length > 0 ? cleanupErrors.join('; ') : undefined
+  }
+}
+
+async function withSourceTransactionLock<T>(
+  sourcesDir: string,
+  slug: string,
+  operation: () => Promise<T>,
+  onCleanupWarning?: (warning: string) => void,
+): Promise<T> {
+  if (slug !== PROTECTED_SOURCE_TRANSACTION_SLUG) return operation()
+  const release = acquireSourceTransactionLock(sourcesDir, slug, 'resource-import')
+  try {
+    return await operation()
+  } finally {
+    const warning = release()
+    if (warning) onCleanupWarning?.(warning)
+  }
+}
+
+function hasFilesystemEntry(path: string): boolean {
+  try {
+    lstatSync(path)
+    return true
+  } catch (error) {
+    const code = error instanceof Error && 'code' in error ? error.code : undefined
+    if (code === 'ENOENT') return false
+    throw new Error(`Cannot inspect protected source overlay boundary: ${path}`)
+  }
+}
+
+function errnoCode(error: unknown): string | undefined {
+  return error && typeof error === 'object' && 'code' in error
+    && typeof error.code === 'string' ? error.code : undefined
+}
+
+function existingConfinedCollectionDirectory(
+  workspaceRootPath: string,
+  collection: 'sources' | 'skills',
+): string | undefined {
+  const workspaceRoot = canonicalConfinementRoot(workspaceRootPath)
+  const directory = join(workspaceRoot, collection)
+  let info: ReturnType<typeof lstatSync>
+  try {
+    info = lstatSync(directory)
+  } catch (error) {
+    if (errnoCode(error) === 'ENOENT') return undefined
+    throw error
+  }
+  if (!info.isDirectory() || info.isSymbolicLink() || realpathSync(directory) !== directory) {
+    throw new Error(`Resource ${collection} directory is not a real confined directory: ${directory}`)
+  }
+  return directory
+}
+
+function ensureConfinedCollectionDirectory(
+  workspaceRootPath: string,
+  collection: 'sources' | 'skills',
+): string {
+  return ensureConfinedDirectory(workspaceRootPath, collection)
+}
+
+function existingConfinedResourceDirectory(
+  collectionDirectory: string,
+  slug: string,
+): string | undefined {
+  const target = join(collectionDirectory, slug)
+  let info: ReturnType<typeof lstatSync>
+  try {
+    info = lstatSync(target)
+  } catch (error) {
+    if (errnoCode(error) === 'ENOENT') return undefined
+    throw error
+  }
+  if (!info.isDirectory() || info.isSymbolicLink() || realpathSync(target) !== target) {
+    throw new Error(`Resource '${slug}' is not a real confined directory: ${target}`)
+  }
+  return target
+}
+
+function loadConfinedSourceConfig(sourceDirectory: string): FolderSourceConfig | null {
+  const configPath = join(sourceDirectory, 'config.json')
+  let handle: ReturnType<typeof openConfinedRegularFile>
+  try {
+    handle = openConfinedRegularFile(sourceDirectory, configPath, {
+      flags: constants.O_RDONLY,
+    })
+  } catch (error) {
+    if (errnoCode(error) === 'ENOENT') return null
+    throw new Error(`Source config must be a confined regular file: ${configPath}: ${error}`)
+  }
+  try {
+    const raw = readFileSync(handle.descriptor, 'utf8')
+    handle.assertStillBound()
+    try {
+      const parsed = safeJsonParse(raw)
+      return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+        ? parsed as FolderSourceConfig
+        : null
+    } catch {
+      return null
+    }
+  } finally {
+    handle.close()
+  }
+}
+
+function assertPortableSourceImportAllowed(targetDir: string, stagedDir: string): void {
+  if (hasFilesystemEntry(join(targetDir, PROTECTED_SOURCE_OVERLAY_MARKER))) {
+    throw new Error(
+      'Protected source overlay cannot be replaced through resource import; use its verified overlay installer',
+    )
+  }
+  if (hasFilesystemEntry(join(stagedDir, PROTECTED_SOURCE_OVERLAY_MARKER))) {
+    throw new Error(
+      'Portable resource imports cannot create a protected source overlay marker; use a verified overlay installer',
+    )
+  }
+}
 
 export function isSensitiveResourceBundleFile(relativePath: string): boolean {
   const fileName = basename(relativePath).toLowerCase()
@@ -221,9 +524,14 @@ function exportSources(
   warnings: string[],
 ): SourceBundleEntry[] {
   const entries: SourceBundleEntry[] = []
-  const sourcesDir = getWorkspaceSourcesPath(workspaceRootPath)
-
-  if (!existsSync(sourcesDir)) return entries
+  let sourcesDir: string | undefined
+  try {
+    sourcesDir = existingConfinedCollectionDirectory(workspaceRootPath, 'sources')
+  } catch (error) {
+    warnings.push(`Sources export rejected because its workspace boundary is unsafe: ${error}`)
+    return entries
+  }
+  if (!sourcesDir) return entries
 
   // Determine which slugs to export
   let slugs: string[]
@@ -236,32 +544,70 @@ function exportSources(
   }
 
   for (const slug of slugs) {
-    const sourcePath = getSourcePath(workspaceRootPath, slug)
-    if (!existsSync(sourcePath)) {
+    if (!isCanonicalResourceSlug(slug)) {
+      warnings.push(`Source slug '${slug}' is not canonical, skipping`)
+      continue
+    }
+    let sourcePath: string | undefined
+    try {
+      sourcePath = existingConfinedResourceDirectory(sourcesDir, slug)
+    } catch (error) {
+      warnings.push(`Source '${slug}' is outside the trusted resource boundary, skipping: ${error}`)
+      continue
+    }
+    if (!sourcePath) {
       warnings.push(`Source '${slug}' not found, skipping`)
       continue
     }
 
-    const config = loadSourceConfig(workspaceRootPath, slug)
-    if (!config) {
-      warnings.push(`Source '${slug}' has invalid config, skipping`)
-      continue
+    let releaseSourceLock: () => string | undefined = () => undefined
+    if (slug === PROTECTED_SOURCE_TRANSACTION_SLUG) {
+      try {
+        releaseSourceLock = acquireSourceTransactionLock(sourcesDir, slug, 'resource-export')
+      } catch (error) {
+        warnings.push(`Source '${slug}' could not be locked for a consistent export: ${error}`)
+        continue
+      }
     }
 
-    // Sanitize config
-    const { config: sanitizedConfig, warnings: sanitizeWarnings } = sanitizeSourceConfig(config)
-    warnings.push(...sanitizeWarnings)
+    try {
+      if (hasFilesystemEntry(join(sourcePath, PROTECTED_SOURCE_OVERLAY_MARKER))) {
+        warnings.push(`Source '${slug}' uses a protected local overlay and cannot be exported as a portable resource`)
+        continue
+      }
 
-    // Collect all files except config.json (which travels as structured data)
-    const files = collectPortableResourceFiles(sourcePath, `Source '${slug}'`, warnings, {
-      skipFiles: new Set(['config.json']),
-    })
+      let config: FolderSourceConfig | null
+      try {
+        config = loadConfinedSourceConfig(sourcePath)
+      } catch (error) {
+        warnings.push(`Source '${slug}' has unsafe config, skipping: ${error}`)
+        continue
+      }
+      if (!config) {
+        warnings.push(`Source '${slug}' has invalid config, skipping`)
+        continue
+      }
 
-    entries.push({
-      slug,
-      config: sanitizedConfig,
-      files,
-    })
+      // Sanitize config
+      const { config: sanitizedConfig, warnings: sanitizeWarnings } = sanitizeSourceConfig(config)
+      warnings.push(...sanitizeWarnings)
+
+      // Collect all files except config.json (which travels as structured data)
+      const files = collectPortableResourceFiles(sourcePath, `Source '${slug}'`, warnings, {
+        skipFiles: new Set(['config.json']),
+      })
+
+      entries.push({
+        slug,
+        config: sanitizedConfig,
+        files,
+      })
+    } finally {
+      const cleanupWarning = releaseSourceLock()
+      if (cleanupWarning) {
+        warnings.push(`Source '${slug}': ${cleanupWarning}`)
+      }
+    }
   }
 
   return entries
@@ -273,9 +619,14 @@ function exportSkills(
   warnings: string[],
 ): SkillBundleEntry[] {
   const entries: SkillBundleEntry[] = []
-  const skillsDir = getWorkspaceSkillsPath(workspaceRootPath)
-
-  if (!existsSync(skillsDir)) return entries
+  let skillsDir: string | undefined
+  try {
+    skillsDir = existingConfinedCollectionDirectory(workspaceRootPath, 'skills')
+  } catch (error) {
+    warnings.push(`Skills export rejected because its workspace boundary is unsafe: ${error}`)
+    return entries
+  }
+  if (!skillsDir) return entries
 
   // Determine which slugs to export
   let slugs: string[]
@@ -288,8 +639,18 @@ function exportSkills(
   }
 
   for (const slug of slugs) {
-    const skillDir = join(skillsDir, slug)
-    if (!existsSync(skillDir)) {
+    if (!isCanonicalResourceSlug(slug)) {
+      warnings.push(`Skill slug '${slug}' is not canonical, skipping`)
+      continue
+    }
+    let skillDir: string | undefined
+    try {
+      skillDir = existingConfinedResourceDirectory(skillsDir, slug)
+    } catch (error) {
+      warnings.push(`Skill '${slug}' is outside the trusted resource boundary, skipping: ${error}`)
+      continue
+    }
+    if (!skillDir) {
       warnings.push(`Skill '${slug}' not found, skipping`)
       continue
     }
@@ -505,6 +866,10 @@ export function validateResourceBundle(bundle: unknown): { valid: boolean; error
           errors.push(`${prefix}: missing or invalid slug`)
           continue
         }
+        if (!isCanonicalResourceSlug(e.slug)) {
+          errors.push(`${prefix}: slug must be 1-64 lowercase alphanumeric characters or hyphens`)
+          continue
+        }
 
         if (slugs.has(e.slug as string)) {
           errors.push(`${prefix}: duplicate slug '${e.slug}'`)
@@ -528,6 +893,13 @@ export function validateResourceBundle(bundle: unknown): { valid: boolean; error
         if (!Array.isArray(e.files)) {
           errors.push(`${prefix}: files must be an array`)
         } else {
+          for (let j = 0; j < e.files.length; j++) {
+            const file = e.files[j] as BundleFile | undefined
+            if (file && typeof file.relativePath === 'string'
+              && file.relativePath.toLowerCase() === 'config.json') {
+              errors.push(`${prefix}.files[${j}]: reserved source path 'config.json' is not allowed`)
+            }
+          }
           validateFileEntries(e.files as BundleFile[], prefix, errors)
         }
       }
@@ -553,6 +925,10 @@ export function validateResourceBundle(bundle: unknown): { valid: boolean; error
 
         if (typeof e.slug !== 'string' || !e.slug) {
           errors.push(`${prefix}: missing or invalid slug`)
+          continue
+        }
+        if (!isCanonicalResourceSlug(e.slug)) {
+          errors.push(`${prefix}: slug must be 1-64 lowercase alphanumeric characters or hyphens`)
           continue
         }
 
@@ -673,7 +1049,7 @@ function validateFileEntries(files: BundleFile[], prefix: string, errors: string
  * @param workspaceRootPath - Absolute path to target workspace
  * @param bundle - The validated ResourceBundle to import
  * @param mode - 'skip' (keep existing) or 'overwrite' (replace)
- * @param deps - Injected dependencies for credential cleanup
+ * @param deps - Injected dependencies for staged-source validation and credential cleanup
  */
 export async function importResources(
   workspaceRootPath: string,
@@ -719,6 +1095,50 @@ function emptyBucketResult(): ImportBucketResult {
   return { imported: [], skipped: [], failed: [], warnings: [] }
 }
 
+/** Bind validation to the exact staged bytes that may be promoted. A caller
+ * validation hook is observational: if it changes a file, directory, link, or
+ * hidden marker while it runs, its verdict no longer applies to the staged
+ * source and the import must fail closed. */
+function stagedSourceTreeFingerprint(stagedDir: string): string {
+  const root = canonicalConfinementRoot(stagedDir)
+  const hash = createHash('sha256')
+
+  const walk = (directory: string, relativeDirectory: string): void => {
+    const entries = readdirSync(directory, { withFileTypes: true })
+      .sort((left, right) => left.name.localeCompare(right.name))
+    for (const entry of entries) {
+      const relativePath = relativeDirectory
+        ? `${relativeDirectory}/${entry.name}`
+        : entry.name
+      const path = join(directory, entry.name)
+      if (entry.isSymbolicLink()) {
+        throw new Error(`Staged source contains a symbolic link: ${relativePath}`)
+      }
+      if (entry.isDirectory()) {
+        hash.update(`directory\0${relativePath}\0`)
+        walk(path, relativePath)
+        continue
+      }
+      if (!entry.isFile()) {
+        throw new Error(`Staged source contains an unsupported filesystem entry: ${relativePath}`)
+      }
+      const handle = openConfinedRegularFile(root, path, { flags: constants.O_RDONLY })
+      try {
+        handle.assertStillBound()
+        const content = readFileSync(handle.descriptor)
+        handle.assertStillBound()
+        hash.update(`file\0${relativePath}\0${content.length}\0`)
+        hash.update(content)
+      } finally {
+        handle.close()
+      }
+    }
+  }
+
+  walk(root, '')
+  return hash.digest('hex')
+}
+
 // ============================================================
 // Import: Sources
 // ============================================================
@@ -731,10 +1151,13 @@ async function importSources(
   deps: ResourceImportDeps,
 ): Promise<ImportBucketResult> {
   const result = emptyBucketResult()
-  const sourcesDir = getWorkspaceSourcesPath(workspaceRootPath)
-
-  if (!existsSync(sourcesDir)) {
-    mkdirSync(sourcesDir, { recursive: true })
+  let sourcesDir: string
+  try {
+    sourcesDir = ensureConfinedCollectionDirectory(workspaceRootPath, 'sources')
+  } catch (error) {
+    const message = `Sources import rejected because its workspace boundary is unsafe: ${error}`
+    for (const entry of entries) result.failed.push({ id: entry.slug, error: message })
+    return result
   }
 
   for (const entry of entries) {
@@ -744,61 +1167,108 @@ async function importSources(
         result.failed.push({ id: entry.slug, error: 'Cannot import builtin source slug' })
         continue
       }
-
-      const targetDir = getSourcePath(workspaceRootPath, entry.slug)
-      const exists = existsSync(targetDir)
-
-      if (exists && mode === 'skip') {
-        result.skipped.push(entry.slug)
+      if (entry.slug === PROTECTED_SOURCE_TRANSACTION_SLUG) {
+        result.failed.push({
+          id: entry.slug,
+          error: 'Protected google-contacts source cannot be imported from a portable resource bundle; use its verified local overlay installer',
+        })
         continue
       }
 
-      assertMcpTransportWriteAllowed(
-        entry.config,
-        exists ? loadSourceConfig(workspaceRootPath, entry.slug) : null,
-      )
+      await withSourceTransactionLock(sourcesDir, entry.slug, async () => {
+        const targetDir = join(sourcesDir, entry.slug)
+        const existingTarget = existingConfinedResourceDirectory(sourcesDir, entry.slug)
+        const exists = existingTarget !== undefined
 
-      // Stage: build in temp dir
-      const tmpDir = join(sourcesDir, `.tmp-${entry.slug}-${randomUUID().slice(0, 8)}`)
-      mkdirSync(tmpDir, { recursive: true })
-
-      try {
-        // Write sanitized config.json
-        writeFileSync(join(tmpDir, 'config.json'), JSON.stringify(entry.config, null, 2))
-
-        // Restore all other files
-        restoreFiles(tmpDir, entry.files)
-
-        // Validate: config should load correctly
-        const validation = validateSourceConfig(entry.config)
-        if (!validation.valid) {
-          const msgs = validation.errors.map(e => `${e.path}: ${e.message}`).join(', ')
-          result.failed.push({ id: entry.slug, error: `Invalid source config: ${msgs}` })
-          rmSync(tmpDir, { recursive: true })
-          continue
+        if (exists && mode === 'skip') {
+          result.skipped.push(entry.slug)
+          return
         }
 
-        // On overwrite: clear credentials + remove old dir
-        if (exists) {
-          // Clear all credential types for this slug
-          try {
-            await deps.clearSourceCredentials(workspaceId, entry.slug)
-          } catch (err) {
-            result.warnings.push(`Source '${entry.slug}': failed to clear credentials: ${err}`)
+        const existingConfig = existingTarget ? loadConfinedSourceConfig(existingTarget) : null
+
+        // Stage: build in temp dir while holding the same per-source lock as
+        // the private overlay installer.
+        const tmpDir = join(sourcesDir, `.tmp-${entry.slug}-${randomUUID().slice(0, 8)}`)
+        mkdirSync(tmpDir, { recursive: true })
+
+        try {
+          // Write sanitized config.json
+          writeFileSync(join(tmpDir, 'config.json'), JSON.stringify(entry.config, null, 2))
+
+          // Restore all other files
+          restoreFiles(tmpDir, entry.files)
+
+          const validateStagedImport = (): FolderSourceConfig => {
+            // Validate the exact descriptor-bound staged config that will be
+            // committed. Bundle metadata is not a substitute for staged bytes.
+            const stagedConfig = loadConfinedSourceConfig(tmpDir)
+            if (!stagedConfig) {
+              throw new Error('Invalid staged source config: unreadable config.json')
+            }
+            const validation = validateSourceConfig(stagedConfig)
+            if (!validation.valid) {
+              const msgs = validation.errors.map(e => `${e.path}: ${e.message}`).join(', ')
+              throw new Error(`Invalid source config: ${msgs}`)
+            }
+            if (stagedConfig.slug !== entry.slug) {
+              throw new Error(`Staged source config slug '${stagedConfig.slug}' does not match '${entry.slug}'`)
+            }
+            assertMcpTransportWriteAllowed(stagedConfig, existingConfig)
+
+            // This host-owned invariant is deliberately inside the shared
+            // import path so a future caller cannot bypass it by omitting an
+            // optional dependency hook. Protected overlays are installed and
+            // rolled back only by their manifest-verifying installer.
+            assertPortableSourceImportAllowed(targetDir, tmpDir)
+            return stagedConfig
           }
-          rmSync(targetDir, { recursive: true })
-        }
 
-        // Atomic replace: rename temp → target
-        renameSync(tmpDir, targetDir)
-        result.imported.push(entry.slug)
-      } catch (err) {
-        // Clean up temp dir on failure
-        if (existsSync(tmpDir)) {
-          rmSync(tmpDir, { recursive: true })
+          validateStagedImport()
+          const stagedFingerprint = stagedSourceTreeFingerprint(tmpDir)
+
+          // Give callers a final chance to validate the completely restored
+          // source while the current live source and its credentials are still
+          // untouched. Throwing/rejecting aborts this entry and only removes the
+          // temporary staging directory in the enclosing catch block.
+          await deps.validateStagedSource?.(workspaceId, entry.slug, tmpDir)
+          if (stagedSourceTreeFingerprint(tmpDir) !== stagedFingerprint) {
+            throw new Error('Staged source changed during validateStagedSource; import rejected')
+          }
+          // Re-run the semantic/overlay invariants immediately before the live
+          // source is touched, even though the byte fingerprint is unchanged.
+          validateStagedImport()
+
+          // On overwrite: clear credentials + remove old dir
+          if (exists) {
+            // Clear all credential types for this slug
+            try {
+              await deps.clearSourceCredentials(workspaceId, entry.slug)
+            } catch (err) {
+              result.warnings.push(`Source '${entry.slug}': failed to clear credentials: ${err}`)
+            }
+            // Credential cleanup is asynchronous and therefore re-opens the
+            // staging TOCTOU window even after the validation hook returned.
+            // Bind the promotion to the original staged bytes one final time;
+            // from this point through rename there are no further awaits.
+            if (stagedSourceTreeFingerprint(tmpDir) !== stagedFingerprint) {
+              throw new Error('Staged source changed during credential cleanup; import rejected')
+            }
+            validateStagedImport()
+            rmSync(targetDir, { recursive: true })
+          }
+
+          // Atomic replace: rename temp → target
+          renameSync(tmpDir, targetDir)
+          result.imported.push(entry.slug)
+        } catch (err) {
+          // Clean up temp dir on failure
+          if (existsSync(tmpDir)) {
+            rmSync(tmpDir, { recursive: true })
+          }
+          throw err
         }
-        throw err
-      }
+      }, warning => result.warnings.push(`Source '${entry.slug}': ${warning}`))
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
       result.failed.push({ id: entry.slug, error: message })
@@ -818,16 +1288,19 @@ function importSkills(
   mode: ResourceImportMode,
 ): ImportBucketResult {
   const result = emptyBucketResult()
-  const skillsDir = getWorkspaceSkillsPath(workspaceRootPath)
-
-  if (!existsSync(skillsDir)) {
-    mkdirSync(skillsDir, { recursive: true })
+  let skillsDir: string
+  try {
+    skillsDir = ensureConfinedCollectionDirectory(workspaceRootPath, 'skills')
+  } catch (error) {
+    const message = `Skills import rejected because its workspace boundary is unsafe: ${error}`
+    for (const entry of entries) result.failed.push({ id: entry.slug, error: message })
+    return result
   }
 
   for (const entry of entries) {
     try {
       const targetDir = join(skillsDir, entry.slug)
-      const exists = existsSync(targetDir)
+      const exists = existingConfinedResourceDirectory(skillsDir, entry.slug) !== undefined
 
       if (exists && mode === 'skip') {
         result.skipped.push(entry.slug)

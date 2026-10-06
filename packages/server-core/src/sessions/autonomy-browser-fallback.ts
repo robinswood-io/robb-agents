@@ -1,7 +1,30 @@
 export const AUTONOMY_BROWSER_FALLBACK_MARKER = '<automatic_browser_fallback';
+export const AUTONOMY_STRUCTURED_FALLBACK_MARKER = '<automatic_structured_fallback';
+
+export interface AutonomyFallbackIntent {
+  kind: 'browser_fallback' | 'structured_fallback';
+  failedToolName: string;
+}
+
+function safeFallbackToolName(toolName: string): string {
+  return toolName.replace(/[^A-Za-z0-9_.:-]/g, '_').slice(0, 160);
+}
+
+export function createAutonomyFallbackIntent(
+  kind: AutonomyFallbackIntent['kind'],
+  toolName: string,
+): AutonomyFallbackIntent {
+  return { kind, failedToolName: safeFallbackToolName(toolName) };
+}
+
+export function buildAutonomyFallbackPrompt(intent: AutonomyFallbackIntent): string {
+  return intent.kind === 'browser_fallback'
+    ? buildAutonomyBrowserFallbackPrompt(intent.failedToolName)
+    : buildAutonomyStructuredFallbackPrompt(intent.failedToolName);
+}
 
 export function buildAutonomyBrowserFallbackPrompt(toolName: string): string {
-  const safeToolName = toolName.replace(/[^A-Za-z0-9_.:-]/g, '_').slice(0, 160);
+  const safeToolName = safeFallbackToolName(toolName);
   return [
     `<automatic_browser_fallback failed_tool="${safeToolName}">`,
     'The preceding tool failed. Use the integrated browser now as the next materially different access path when it can reach the same in-scope outcome.',
@@ -13,4 +36,33 @@ export function buildAutonomyBrowserFallbackPrompt(toolName: string): string {
 
 export function isAutonomyBrowserFallbackPrompt(message: string): boolean {
   return message.trimStart().startsWith(AUTONOMY_BROWSER_FALLBACK_MARKER);
+}
+
+export function buildAutonomyStructuredFallbackPrompt(toolName: string): string {
+  const safeToolName = safeFallbackToolName(toolName);
+  return [
+    `<automatic_structured_fallback failed_tool="${safeToolName}">`,
+    'The browser or remote-desktop path failed. Stop coordinate and pixel retries now.',
+    'Inspect the connected tools and continue through the narrowest equivalent structured route: native remote agent, SSH, database connection, application API, or source connector.',
+    'Do not replay an external mutation whose result is ambiguous. Read back state first, keep the original objective and scope, then verify the observable outcome.',
+    'Use the browser again only for an unavoidable UI-only step, interactive authentication, or final rendered-journey verification.',
+    '</automatic_structured_fallback>',
+  ].join('\n');
+}
+
+export function isAutonomyStructuredFallbackPrompt(message: string): boolean {
+  return message.trimStart().startsWith(AUTONOMY_STRUCTURED_FALLBACK_MARKER);
+}
+
+/** Accept only an exact host-built prompt; provider text cannot smuggle a
+ * free-form instruction into a future durable recovery allocation. */
+export function parseAutonomyFallbackIntent(message: string): AutonomyFallbackIntent | undefined {
+  const normalized = message.trim();
+  const match = normalized.match(/^<automatic_(browser|structured)_fallback failed_tool="([A-Za-z0-9_.:-]{1,160})">/);
+  if (!match) return undefined;
+  const intent: AutonomyFallbackIntent = {
+    kind: match[1] === 'browser' ? 'browser_fallback' : 'structured_fallback',
+    failedToolName: match[2]!,
+  };
+  return buildAutonomyFallbackPrompt(intent) === normalized ? intent : undefined;
 }

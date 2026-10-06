@@ -72,6 +72,7 @@ export const CHANNEL_MAP = {
   onMissionChanged: listener(RPC_CHANNELS.missions.CHANGED),
   respondToPermission: invoke(RPC_CHANNELS.sessions.RESPOND_TO_PERMISSION),
   respondToCredential: invoke(RPC_CHANNELS.sessions.RESPOND_TO_CREDENTIAL),
+  respondToUserInput: invoke(RPC_CHANNELS.sessions.RESPOND_TO_USER_INPUT),
   sessionCommand: invoke(RPC_CHANNELS.sessions.COMMAND),
   exportSession: invoke(RPC_CHANNELS.sessions.EXPORT),
   importSession: invoke(RPC_CHANNELS.sessions.IMPORT),
@@ -231,6 +232,7 @@ export const CHANNEL_MAP = {
   updateWorkspaceGovernance: invoke(RPC_CHANNELS.workspace.GOVERNANCE_UPDATE),
   grantRemoteSupervision: invoke(RPC_CHANNELS.workspace.REMOTE_SUPERVISION_GRANT),
   revokeRemoteSupervision: invoke(RPC_CHANNELS.workspace.REMOTE_SUPERVISION_REVOKE),
+
 
   // Folder dialog
   openFolderDialog: invoke(RPC_CHANNELS.dialog.OPEN_FOLDER),

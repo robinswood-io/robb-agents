@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'bun:test';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
@@ -7,6 +7,7 @@ import {
   readSessionHeader,
   readSessionHeaderAsync,
   readSessionJsonl,
+  readSessionMessages,
   writeSessionJsonl,
 } from '../jsonl.ts';
 import type { StoredSession } from '../types.ts';
@@ -91,6 +92,26 @@ describe('session JSONL schema envelope', () => {
     writeFileSync(path, future);
     await expect(readSessionHeaderAsync(path)).rejects.toBeInstanceOf(UnsupportedSessionHeaderVersionError);
     expect(readFileSync(path, 'utf8')).toBe(future);
+  });
+
+  it('fails closed for every reader when the session directory is a symlink', async () => {
+    if (process.platform === 'win32') return;
+    const root = mkdtempSync(join(tmpdir(), 'session-reader-symlink-'));
+    roots.push(root);
+    const sessions = join(root, 'sessions');
+    const outside = join(root, 'outside-session');
+    mkdirSync(sessions);
+    mkdirSync(outside);
+    const path = join(outside, 'session.jsonl');
+    writeFileSync(path, `${JSON.stringify(legacyHeader())}\n${JSON.stringify({ id: 'message-1', type: 'user', content: 'outside', timestamp: 1 })}\n`);
+    const linkedSession = join(sessions, 'session-1');
+    symlinkSync(outside, linkedSession, 'dir');
+    const linkedFile = join(linkedSession, 'session.jsonl');
+
+    expect(readSessionHeader(linkedFile)).toBeNull();
+    expect(await readSessionHeaderAsync(linkedFile)).toBeNull();
+    expect(readSessionJsonl(linkedFile)).toBeNull();
+    expect(readSessionMessages(linkedFile)).toEqual([]);
   });
 
   it('emits schema version 1 on every atomic session write', () => {

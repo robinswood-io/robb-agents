@@ -14,6 +14,28 @@ function makeState(messages: any[]): SessionState {
 }
 
 describe('handleTextComplete messageId synchronization', () => {
+  it('synchronizes receipt metadata on creation, late updates and explicit clearing', () => {
+    const event: TextCompleteEvent = {
+      type: 'text_complete', sessionId: 'session-1', messageId: 'host-final', turnId: 'turn',
+      text: 'Human report.', timestamp: 2,
+      objectiveOutcome: { state: 'continue', criteria: [], remainingWork: ['Verify the report'], blocker: null },
+      objectiveOutcomeError: null,
+    }
+    const created = handleTextComplete(makeState([]), event)
+    expect(created.session.messages[0]?.objectiveOutcome).toEqual(event.objectiveOutcome!)
+    // An old sender or a partial cost update must not erase known receipt data.
+    const legacy = { type: event.type, sessionId: event.sessionId, messageId: event.messageId, text: event.text, isIntermediate: true } as const
+    const updated = handleTextComplete(created, legacy)
+    expect(updated.session.messages).toHaveLength(1)
+    expect(updated.session.messages[0]).toMatchObject({ objectiveOutcome: event.objectiveOutcome, isIntermediate: true })
+    const invalid = handleTextComplete(updated, { ...event, objectiveOutcome: null, objectiveOutcomeError: 'malformed objective outcome receipt' })
+    expect(invalid.session.messages[0]?.objectiveOutcome).toBeUndefined()
+    expect(invalid.session.messages[0]?.objectiveOutcomeError).toBe('malformed objective outcome receipt')
+    const cleared = handleTextComplete(invalid, { ...event, objectiveOutcome: null, objectiveOutcomeError: null })
+    expect(cleared.session.messages[0]?.objectiveOutcome).toBeUndefined()
+    expect(cleared.session.messages[0]?.objectiveOutcomeError).toBeUndefined()
+  })
+
   it('overwrites existing streaming message id with authoritative messageId', () => {
     const state = makeState([
       {
@@ -102,5 +124,59 @@ describe('handleTextComplete messageId synchronization', () => {
 
     expect(id.startsWith('msg-')).toBe(true)
     expect(id).not.toBe('')
+  })
+
+  it('reclassifies the same authoritative final message as intermediate in place', () => {
+    const state = makeState([{
+      id: 'msg-host-1',
+      role: 'assistant',
+      content: 'Premature final response',
+      isStreaming: false,
+      isPending: false,
+      isIntermediate: false,
+      turnId: 'turn-original',
+      timestamp: 500,
+    }])
+    const event: TextCompleteEvent = {
+      type: 'text_complete',
+      sessionId: 'session-1',
+      text: 'Premature final response',
+      turnId: 'turn-reclassified',
+      messageId: 'msg-host-1',
+      isIntermediate: true,
+      timestamp: 500,
+    }
+
+    const next = handleTextComplete(state, event)
+    expect(next.session.messages).toHaveLength(1)
+    expect(next.session.messages[0]).toMatchObject({
+      id: 'msg-host-1',
+      isIntermediate: true,
+      isStreaming: false,
+      isPending: false,
+      turnId: 'turn-reclassified',
+    })
+  })
+
+  it('is idempotent when the same completed intermediate event is delivered twice', () => {
+    const state = makeState([])
+    const event: TextCompleteEvent = {
+      type: 'text_complete',
+      sessionId: 'session-1',
+      text: 'Continue automatically.',
+      turnId: 'turn-continue',
+      messageId: 'msg-continue-1',
+      isIntermediate: true,
+      timestamp: 600,
+    }
+
+    const once = handleTextComplete(state, event)
+    const twice = handleTextComplete(once, event)
+    expect(twice.session.messages).toHaveLength(1)
+    expect(twice.session.messages[0]).toMatchObject({
+      id: 'msg-continue-1',
+      content: 'Continue automatically.',
+      isIntermediate: true,
+    })
   })
 })

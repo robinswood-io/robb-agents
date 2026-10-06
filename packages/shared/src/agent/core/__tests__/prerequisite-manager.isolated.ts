@@ -6,7 +6,7 @@
  */
 import { describe, it, expect, beforeEach, mock } from 'bun:test';
 import { existsSync, readFileSync } from 'node:fs';
-import { homedir } from 'node:os';
+import { CONFIG_DIR } from '../../../config/paths.ts';
 import { resolve, join } from 'node:path';
 import { PrerequisiteManager } from '../prerequisite-manager.ts';
 
@@ -21,6 +21,9 @@ mock.module('node:fs', () => ({
   readFileSync: originalReadFileSync,
 }));
 
+// Prerequisite tests must not read or seed real user configuration.
+mock.module('../../../config/storage.ts', () => ({ getBrowserToolEnabled: () => true }));
+
 const WORKSPACE_ROOT = '/test/workspace';
 
 function guidePath(slug: string): string {
@@ -28,7 +31,7 @@ function guidePath(slug: string): string {
 }
 
 function browserDocPath(): string {
-  return resolve(join(homedir(), '.craft-agent', 'docs', 'browser-tools.md'));
+  return resolve(join(CONFIG_DIR, 'docs', 'browser-tools.md'));
 }
 
 describe('PrerequisiteManager', () => {
@@ -301,136 +304,90 @@ describe('PrerequisiteManager', () => {
   });
 
   // ============================================================
-  // Max Rejection (graceful fallback)
+  // Prerequisites require successful acquisition, including after retries/compaction.
   // ============================================================
 
-  describe('max rejection', () => {
-    it('blocks on first attempt, allows on second for same path', () => {
+  describe('effective prerequisite acquisition', () => {
+    const skillPath = '/test/workspace/skills/my-skill/SKILL.md';
+
+    it('keeps source guides and skills pending through repeated rejected calls', () => {
       mockExistsPaths.add(guidePath('linear'));
-
-      // First attempt — blocked
-      const first = manager.checkPrerequisites('mcp__linear__createIssue');
-      expect(first.allowed).toBe(false);
-
-      // Second attempt (same source, guide still not read) — allowed through
-      const second = manager.checkPrerequisites('mcp__linear__createIssue');
-      expect(second.allowed).toBe(true);
-    });
-
-    it('tracks rejection counts per source independently', () => {
-      mockExistsPaths.add(guidePath('linear'));
-      mockExistsPaths.add(guidePath('slack'));
-
-      // Block linear once
-      expect(manager.checkPrerequisites('mcp__linear__createIssue').allowed).toBe(false);
-
-      // Slack should still block on first attempt
-      expect(manager.checkPrerequisites('mcp__slack__sendMessage').allowed).toBe(false);
-
-      // Linear second attempt — allowed
-      expect(manager.checkPrerequisites('mcp__linear__createIssue').allowed).toBe(true);
-    });
-
-    it('resets rejection counts on resetReadState', () => {
-      mockExistsPaths.add(guidePath('linear'));
-
-      // Exhaust rejections
-      manager.checkPrerequisites('mcp__linear__createIssue'); // blocked
-      manager.checkPrerequisites('mcp__linear__createIssue'); // allowed (max reached)
-
-      // Reset
-      manager.resetReadState();
-
-      // Should block again (rejection count reset)
-      expect(manager.checkPrerequisites('mcp__linear__createIssue').allowed).toBe(false);
-    });
-
-    it('allows different tools from same source after one rejection', () => {
-      mockExistsPaths.add(guidePath('linear'));
-
-      // First tool blocked
-      expect(manager.checkPrerequisites('mcp__linear__createIssue').allowed).toBe(false);
-
-      // Different tool from same source — same guide path, already rejected once
-      expect(manager.checkPrerequisites('mcp__linear__listIssues').allowed).toBe(true);
-    });
-
-    it('does not bypass strict browser prerequisite after repeated rejections', () => {
-      const docsPath = browserDocPath();
-      mockExistsPaths.add(docsPath);
-
-      expect(manager.checkPrerequisites('browser_tool').allowed).toBe(false);
-      expect(manager.checkPrerequisites('browser_tool').allowed).toBe(false);
-
-      manager.trackReadTool({ file_path: docsPath });
-      expect(manager.checkPrerequisites('browser_tool').allowed).toBe(true);
-    });
-  });
-
-  // ============================================================
-  // Bash Skill Read Tracking
-  // ============================================================
-
-  describe('trackBashSkillRead', () => {
-    it('clears skill prerequisite when Bash command contains the skill path', () => {
-      const skillPath = '/test/workspace/skills/my-skill/SKILL.md';
+      for (let i = 0; i < 6; i++) expect(manager.checkPrerequisites('mcp__linear__createIssue').allowed).toBe(false);
       manager.registerSkillPrerequisites([skillPath]);
+      for (let i = 0; i < 6; i++) expect(manager.checkPrerequisites('WebSearch').allowed).toBe(false);
+    });
 
-      // WebSearch should be blocked (skill prerequisite pending)
+    it('does not credit a start, failure, or a nonexecuted checkpoint', () => {
+      manager.registerSkillPrerequisites([skillPath]);
+      manager.trackToolStart('read-1', 'Read', { file_path: skillPath });
       expect(manager.checkPrerequisites('WebSearch').allowed).toBe(false);
+      manager.trackToolCompletion('read-1', 'ENOENT', true);
+      expect(manager.checkPrerequisites('WebSearch').allowed).toBe(false);
+      manager.trackToolStart('read-2', 'Read', { file_path: skillPath });
+      manager.trackToolCompletion('read-2', 'Cost guard checkpoint', false, false);
+      expect(manager.checkPrerequisites('WebSearch').allowed).toBe(false);
+      manager.trackToolStart('read-3', 'Read', { file_path: skillPath });
+      manager.trackToolCompletion('read-3', 'The actual skill contents', false);
+      expect(manager.checkPrerequisites('WebSearch').allowed).toBe(true);
+    });
 
-      // Reset rejection count so we can test the block again after clearing
+    it('requires another successful read after compaction and ignores stale results', () => {
+      manager.registerSkillPrerequisites([skillPath]);
+      manager.trackToolStart('old-read', 'Read', { file_path: skillPath });
       manager.resetReadState();
+      manager.trackToolCompletion('old-read', 'Contents from the old context', false);
+      expect(manager.checkPrerequisites('WebSearch').allowed).toBe(false);
+      manager.trackToolStart('new-read', 'Read', { file_path: skillPath });
+      manager.trackToolCompletion('new-read', 'Current skill contents', false);
+      expect(manager.checkPrerequisites('WebSearch').allowed).toBe(true);
+      manager.resetReadState();
+      expect(manager.checkPrerequisites('WebSearch').allowed).toBe(false);
+    });
+
+    it('permits cat acquisition without crediting it before success', () => {
       manager.registerSkillPrerequisites([skillPath]);
-
-      // Bash cat targeting the skill path should clear the prerequisite
-      const result = manager.trackBashSkillRead({ command: `cat ${skillPath}` });
-      expect(result).toBe(true);
-
-      // Now other tools should be allowed
+      const input = { command: `cat -- '${skillPath}'` };
+      expect(manager.trackBashSkillRead(input)).toBe(true);
+      expect(manager.checkPrerequisites('WebSearch').allowed).toBe(false);
+      manager.trackToolStart('cat-1', 'Bash', input);
+      manager.trackToolCompletion('cat-1', 'cat: permission denied', true);
+      expect(manager.checkPrerequisites('WebSearch').allowed).toBe(false);
+      manager.trackToolStart('cat-2', 'Bash', input);
+      manager.trackToolCompletion('cat-2', 'Actual instructions', false);
       expect(manager.checkPrerequisites('WebSearch').allowed).toBe(true);
     });
 
-    it('returns false when Bash command does not contain a pending skill path', () => {
-      const skillPath = '/test/workspace/skills/my-skill/SKILL.md';
+    it('never treats a mention, substitution, or compound command as a full file read', () => {
       manager.registerSkillPrerequisites([skillPath]);
-
-      const result = manager.trackBashSkillRead({ command: 'ls -la /some/other/path' });
-      expect(result).toBe(false);
+      for (const command of [
+        `echo '${skillPath}'`, `true ${skillPath}`, `cat ${skillPath} && touch /tmp/side-effect`,
+        `cat ${skillPath} > /tmp/hidden`, `cat ${skillPath} | head -n 1`, `cat $(echo ${skillPath})`,
+        `cat '${skillPath}'garbage`, `cat ${skillPath}\necho done`,
+      ]) {
+        expect(manager.trackBashSkillRead({ command })).toBe(false);
+        manager.trackToolResult('Bash', { command }, 'irrelevant output', false);
+        expect(manager.checkPrerequisites('WebSearch').allowed).toBe(false);
+      }
     });
 
-    it('returns false when there are no pending skill paths', () => {
-      const result = manager.trackBashSkillRead({ command: 'cat /any/file' });
-      expect(result).toBe(false);
-    });
-
-    it('returns false when command is missing', () => {
-      manager.registerSkillPrerequisites(['/some/skill/SKILL.md']);
-      const result = manager.trackBashSkillRead({});
-      expect(result).toBe(false);
-    });
-
-    it('clears multiple skill prerequisites from a single command', () => {
-      const skill1 = '/test/workspace/skills/alpha/SKILL.md';
-      const skill2 = '/test/workspace/skills/beta/SKILL.md';
-      manager.registerSkillPrerequisites([skill1, skill2]);
-
-      // Command that contains both paths
-      const result = manager.trackBashSkillRead({
-        command: `cat ${skill1} && cat ${skill2}`,
-      });
-      expect(result).toBe(true);
-
-      // Both should be cleared
+    it('supports multiple full files and paths containing spaces in one cat command', () => {
+      const second = '/test/workspace/skills/second skill/SKILL.md';
+      manager.registerSkillPrerequisites([skillPath, second]);
+      const input = { command: `cat -- '${skillPath}' "${second}" ` };
+      expect(manager.trackBashSkillRead(input)).toBe(true);
+      manager.trackToolResult('Bash', input, 'Both complete skill documents', false);
       expect(manager.checkPrerequisites('WebSearch').allowed).toBe(true);
     });
 
-    it('logs debug message when clearing via Bash', () => {
-      const skillPath = '/test/workspace/skills/my-skill/SKILL.md';
+    it('does not credit partial reads or absent result contents', () => {
       manager.registerSkillPrerequisites([skillPath]);
-
-      manager.trackBashSkillRead({ command: `cat ${skillPath}` });
-      expect(debugMessages.some(m => m.includes('cleared skill prerequisite via Bash'))).toBe(true);
+      for (const input of [{ file_path: skillPath, offset: 20 }, { file_path: skillPath, limit: 1 }]) {
+        manager.trackToolResult('Read', input, 'one line', false);
+        expect(manager.checkPrerequisites('WebSearch').allowed).toBe(false);
+      }
+      manager.trackToolResult('Read', { file_path: skillPath }, undefined, false);
+      manager.trackToolResult('Read', { file_path: skillPath }, { isError: true, content: 'failed' }, false);
+      expect(manager.checkPrerequisites('WebSearch').allowed).toBe(false);
     });
   });
 

@@ -1,0 +1,98 @@
+{
+  "sessionId": "260908-quiet-slate",
+  "objective": {
+    "schemaVersion": 1,
+    "originalText": "Le déplacement d'une ligne du gantt n'est toujours pas fluide",
+    "objectiveId": "msg-1788937956188-usilf1",
+    "userMessageId": "msg-1788937956188-usilf1",
+    "lastUserMessageId": "msg-1788937956188-usilf1",
+    "startedAt": 1788937956225,
+    "budgetBaselineUsd": 28.811622,
+    "tokenBaseline": 332350,
+    "continuationCount": 0,
+    "orchestrationMode": "direct",
+    "risk": "standard",
+    "completionCriteria": [
+      "requested-outcome-delivered",
+      "relevant-checks-passed",
+      "no-safe-work-remaining"
+    ],
+    "terminalState": "complete_verified",
+    "model": "pi/gpt-5.6-sol",
+    "thinkingLevel": "max",
+    "acceptanceCriteria": [
+      {
+        "id": "gantt-drag-commit-once",
+        "description": "Les tests ciblés prouvent que les changements de date successifs pendant un glissement ne déclenchent qu’une sauvegarde au relâchement, sans régression du planning.",
+        "toolName": "mcp__rbw-servers__ssh_execute",
+        "input": {
+          "server": "dev",
+          "cwd": "/srv/workspace/sample-planner-worktrees/drag-save-once",
+          "command": "npm exec vitest run app/components/planning/gantt/__tests__/FrappeGanttCanvas.runtime.test.tsx app/components/features/planning/__tests__/AllProjectsGantt.runtime.test.tsx app/components/features/planning/__tests__/WorkloadPanel.runtime.test.tsx >/tmp/sample-gantt-drag-tests.log 2>&1 && printf '{\"tests\":\"passed\"}'",
+          "timeout": 120000
+        },
+        "checks": [
+          {
+            "path": "$.success",
+            "equals": true
+          },
+          {
+            "path": "$.stdout",
+            "equals": "{\"tests\":\"passed\"}"
+          }
+        ]
+      },
+      {
+        "id": "gantt-drag-build-deployed",
+        "description": "Le conteneur actif est sain, sert exactement la révision du worktree et contient le marqueur du mécanisme de sauvegarde différée du Gantt.",
+        "toolName": "mcp__rbw-servers__ssh_execute",
+        "input": {
+          "server": "dev",
+          "cwd": "/srv/workspace/sample-planner-worktrees/drag-save-once",
+          "command": "cid=$(docker ps -q --filter name=^sample-planner-dev-app$); test -n \"$cid\"; test \"$(docker inspect -f '{{.State.Health.Status}}' \"$cid\")\" = healthy; test \"$(docker inspect -f '{{ index .Config.Labels \"org.opencontainers.image.revision\" }}' \"$cid\")\" = \"$(git rev-parse HEAD)\"; docker exec \"$cid\" sh -lc \"grep -Rqs 'sample-gantt-drag-commit' /app/.next\"; printf '{\"container\":\"healthy\",\"revisionMatchesWorktree\":true,\"dragCommitMarker\":true}'",
+          "timeout": 120000
+        },
+        "checks": [
+          {
+            "path": "$.success",
+            "equals": true
+          },
+          {
+            "path": "$.stdout",
+            "equals": "{\"container\":\"healthy\",\"revisionMatchesWorktree\":true,\"dragCommitMarker\":true}"
+          }
+        ]
+      },
+      {
+        "id": "gantt-drag-endpoint-accessible",
+        "description": "Le planning déployé reste accessible sans défi HTTP Basic après le correctif de fluidité.",
+        "toolName": "mcp__rbw-servers__ssh_execute",
+        "input": {
+          "server": "dev",
+          "cwd": "/srv/workspace/sample-planner-worktrees/drag-save-once",
+          "command": "headers=$(curl -ksS -D - -o /dev/null --max-time 20 https://planner.example.test/planning); status=$(printf '%s' \"$headers\" | awk 'toupper($1) ~ /^HTTP\\// {code=$2} END {print code}'); if printf '%s' \"$headers\" | grep -qi '^www-authenticate: *basic'; then basic=present; else basic=absent; fi; test \"$status\" = 200; test \"$basic\" = absent; printf '{\"status\":200,\"basicAuth\":\"absent\"}'",
+          "timeout": 120000
+        },
+        "checks": [
+          {
+            "path": "$.success",
+            "equals": true
+          },
+          {
+            "path": "$.stdout",
+            "equals": "{\"status\":200,\"basicAuth\":\"absent\"}"
+          }
+        ]
+      }
+    ],
+    "acceptanceRegisteredAt": 1788938549632,
+    "completedAt": 1788941773597
+  },
+  "final": {
+    "role": "assistant",
+    "id": "msg-1788941773581-qukq3x",
+    "timestamp": 1788941773581,
+    "content": "Le déplacement du Gantt est **corrigé et vérifié en conditions réelles** sur [JLM](https://planner.example.test/planning) : mouvement immédiat sans sauvegarde intermédiaire, puis une seule mise à jour métier au relâchement.\n\nLes tests ciblés passent, le conteneur est sain sur la révision `f97f61ec`, l’accès répond en HTTP 200 sans authentification Basic et les données d’essai ont été restaurées. Aucun travail complémentaire ne reste.\n\n<!--\n{\n  \"state\": \"complete_verified\",\n  \"criteria\": [\n    {\n      \"id\": \"requested-outcome-delivered\",\n      \"satisfied\": true,\n      \"evidence\": [\n        \"call_ROBixmw8kz6y6pNpPOVgBoRw|fc_084979eb21132374016aa111723dec87d2b56e7decc3191a92\",\n        \"call_lh2eg0ZpS111Amgivw888JcL|fc_084979eb21132374016aa111f7da6087d2a53d15ab766b695e\"\n      ]\n    },\n    {\n      \"id\": \"relevant-checks-passed\",\n      \"satisfied\": true,\n      \"evidence\": [\n        \"call_qYl3KkNiUmdfwKHMnLJoh3T9|fc_084979eb21132374016aa1122cbfa087d29cf8fdc4be4017fa\",\n        \"call_gctkL2eCEcOnS82EOWiLbXzQ|fc_084979eb21132374016aa1122cbfb487d28f09e880359c425a\",\n        \"call_ULjauwxKSmH7nnrqmiiMtjgU|fc_084979eb21132374016aa1122cbfc087d2be2f38c588cfe295\",\n        \"call_cRWCbsw4oJQfqXc3WI56OCLY|fc_084979eb21132374016aa11498f02487d29a0316b32efa476c\"\n      ]\n    },\n    {\n      \"id\": \"no-safe-work-remaining\",\n      \"satisfied\": true,\n      \"evidence\": [\n        \"call_gBcd2uOp3id2t8jfCZn3RMEb|fc_084979eb21132374016aa11135f88c87d2b36b670892f1aa30\",\n        \"call_cRWCbsw4oJQfqXc3WI56OCLY|fc_084979eb21132374016aa11498f02487d29a0316b32efa476c\"\n      ]\n    },\n    {\n      \"id\": \"gantt-drag-commit-once\",\n      \"satisfied\": true,\n      \"evidence\": [\n        \"call_qYl3KkNiUmdfwKHMnLJoh3T9|fc_084979eb21132374016aa1122cbfa087d29cf8fdc4be4017fa\"\n      ]\n    },\n    {\n      \"id\": \"gantt-drag-build-deployed\",\n      \"satisfied\": true,\n      \"evidence\": [\n        \"call_gctkL2eCEcOnS82EOWiLbXzQ|fc_084979eb21132374016aa1122cbfb487d28f09e880359c425a\"\n      ]\n    },\n    {\n      \"id\": \"gantt-drag-endpoint-accessible\",\n      \"satisfied\": true,\n      \"evidence\": [\n        \"call_ULjauwxKSmH7nnrqmiiMtjgU|fc_084979eb21132374016aa1122cbfc087d2be2f38c588cfe295\"\n      ]\n    }\n  ],\n  \"independentReview\": {\n    \"verdict\": \"PASS\",\n    \"findings\": [],\n    \"objectiveId\": \"msg-1788937956188-usilf1\",\n    \"acceptanceSha256\": \"33ec72c2921050656adb958088c0b91f4af1a0a5a11eb0bebd438fed92e895e0\"\n  },\n  \"remainingWork\": [],\n  \"blocker\": null\n}\n-->",
+    "isIntermediate": false
+  }
+}

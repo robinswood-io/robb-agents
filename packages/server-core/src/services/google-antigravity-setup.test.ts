@@ -68,7 +68,7 @@ describe('Google Antigravity account setup', () => {
       ) as unknown as ChildProcess),
       launchInteractive: async () => { launched = true },
     })
-    expect(result).toEqual({ success: true })
+    expect(result).toEqual({ success: true, models: ['gemini-3.7-flash-low'] })
     expect(launched).toBe(false)
   })
 
@@ -80,5 +80,16 @@ describe('Google Antigravity account setup', () => {
       ) as unknown as ChildProcess),
     })
     expect(result).toEqual({ status: 'unauthenticated' })
+  })
+
+  it('parses models across carriage returns and includes Claude and GPT partner models', async () => {
+    const rawOutput = 'Fetching available models...\rclaude-sonnet-4-6\tClaude Sonnet 4.6 (Thinking)\r\nclaude-opus-4-6-thinking\tClaude Opus 4.6 (Thinking)\ngpt-oss-120b-medium\tGPT-OSS 120B (Medium)\n'
+    const result = await probeGoogleAntigravity('/test/agy', {
+      spawnImpl: (() => new FakeAgyProcess(rawOutput, 0) as unknown as ChildProcess),
+    })
+    expect(result).toEqual({
+      status: 'ready',
+      models: ['claude-sonnet-4-6', 'claude-opus-4-6-thinking', 'gpt-oss-120b-medium'],
+    })
   })
 })

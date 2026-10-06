@@ -28,7 +28,14 @@ export function setupI18n(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   plugins: any[] = [],
 ): I18nInstance {
-  if (initialized) return i18n;
+  if (initialized) {
+    for (const [code, entry] of Object.entries(LOCALE_REGISTRY)) {
+      if (!i18n.hasResourceBundle(code, "translation") || !i18n.getResourceBundle(code, "translation")?.["transport.failed"]) {
+        i18n.addResourceBundle(code, "translation", entry.messages, true, true);
+      }
+    }
+    return i18n;
+  }
 
   let instance = i18n;
   for (const plugin of plugins) {

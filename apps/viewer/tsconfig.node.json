@@ -9,12 +9,12 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "composite": true,
-    "rootDir": ".",
+    "rootDir": "../..",
     "types": ["node"],
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["vite.config.ts"]
+  "include": ["vite.config.ts", "../../scripts/pdf-worker-resolution.ts"]
 }

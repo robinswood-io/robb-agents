@@ -20,6 +20,11 @@ import { debug } from '../utils/debug.ts';
  * Callbacks that can be registered per-session
  */
 export interface SessionScopedToolCallbacks {
+  /** Fail-closed host lease check immediately before a specialized Mission tool effect. */
+  validateMissionCapabilitiesFn?: (
+    toolName: string,
+    input: Readonly<Record<string, unknown>>,
+  ) => Promise<void>;
   /**
    * Called when a plan is submitted via SubmitPlan tool.
    * Receives the path to the plan markdown file.
@@ -60,15 +65,30 @@ export interface SessionScopedToolCallbacks {
   /** List sessions in the workspace with pagination. */
   listSessionsFn?: (options?: import('@craft-agent/session-tools-core').ListSessionsOptions) => import('@craft-agent/session-tools-core').ListSessionsResult;
   /** Wait for delegated-session completion via the in-process completion seam. */
-  waitForSessionsFn?: (sessionIds: string[], timeoutMs: number) => Promise<import('@craft-agent/session-tools-core').WaitSessionsResult>;
+  waitForSessionsFn?: (
+    sessionIds: string[],
+    timeoutMs?: number,
+    afterCursors?: Record<string, string>,
+    terminalCapability?: string,
+    mode?: import('@craft-agent/session-tools-core').WaitSessionsMode,
+  ) => Promise<import('@craft-agent/session-tools-core').WaitSessionsResult>;
   /** List background tasks (running + terminal) for a session from the main-process registry. */
   listBackgroundTasksFn?: (sessionId?: string) => import('@craft-agent/session-tools-core').BackgroundTaskInfo[];
   /** Resolve label display names to IDs. */
   resolveLabelsFn?: (labels: string[]) => import('@craft-agent/session-tools-core').ResolvedLabelsResult;
   /** Resolve a status display name to its ID. */
   resolveStatusFn?: (status: string) => import('@craft-agent/session-tools-core').ResolvedStatusResult;
+  setCompletionCriteriaFn?: (criteria: import('@craft-agent/core/types').ObjectiveAcceptanceCriterion[], procedure?: import('@craft-agent/core/types').ObjectiveProcedureId, terminalCapability?: string) => Promise<unknown>;
+  /** Registers questions without interrupting the agent or waiting for answers. */
+  requestUserInputFn?: NonNullable<import('@craft-agent/session-tools-core').SessionToolContext['requestUserInput']>;
+  projectLearningFn?: NonNullable<import('@craft-agent/session-tools-core').SessionToolContext['projectLearning']>;
   /** Send a message to another session (inter-session messaging). Resolves with delivery status. */
-  sendAgentMessageFn?: (sessionId: string, message: string, attachments?: Array<{ path: string; name?: string }>) => Promise<import('@craft-agent/session-tools-core').SendAgentMessageResult>;
+  sendAgentMessageFn?: (
+    sessionId: string,
+    message: string,
+    attachments?: Array<{ path: string; name?: string }>,
+    messageType?: import('@craft-agent/session-tools-core').AgentMessageType,
+  ) => Promise<import('@craft-agent/session-tools-core').SendAgentMessageResult>;
   /**
    * Activate a source in the running session (source_test auto-enable flow).
    * Wired by SessionManager to the per-session onSourceActivationRequest callback

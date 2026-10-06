@@ -134,7 +134,9 @@ function SlashCommandDemo() {
         <FreeFormInput
           placeholder="Type / to see commands..."
           currentModel={model}
-          onModelChange={setModel}
+          onModelChange={(nextModel) => {
+            if (nextModel !== null) setModel(nextModel)
+          }}
           permissionMode={permissionMode}
           onPermissionModeChange={setPermissionMode}
           inputValue={inputValue}

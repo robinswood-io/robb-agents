@@ -6,7 +6,12 @@ export * from './models.ts';
 export * from './models-pi.ts';
 export * from './model-fetcher.ts';
 export * from './preferences.ts';
+
 export * from './agent-cost-control.ts';
+
+
+
+
 export * from './storage.ts';
 export * from './theme.ts';
 export * from './server-config.ts';
@@ -17,3 +22,7 @@ export {
   createConfigWatcher,
   type ConfigWatcherCallbacks,
 } from './watcher.ts';
+
+export * from './selection-provenance.ts';
+
+export * from './objective-mutation-risk.ts';

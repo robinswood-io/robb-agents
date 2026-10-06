@@ -52,7 +52,7 @@ import {
 import { routes, type Route, type ViewRoute } from '../../shared/routes'
 import { parsePermissionMode } from '@craft-agent/shared/agent/mode-types'
 import { NAVIGATE_EVENT, type NavigateOptions } from '../lib/navigate'
-import { normalizePanelRouteForReconcile } from './navigation-reconcile'
+import { filterUserFacingSessionPanels, normalizePanelRouteForReconcile, normalizeUserFacingSessionRoute } from './navigation-reconcile'
 import { buildSemanticHistoryKey, canRunInitialRestore } from './navigation-history'
 import * as storage from '@/lib/local-storage'
 import type {
@@ -88,6 +88,7 @@ import {
   parseSessionIdFromRoute,
 } from '@/atoms/panel-stack'
 import { shouldAutoDeleteEmptySession } from './navigation-empty-session-cleanup'
+import { isUserFacingSession } from '@/utils/session-visibility'
 
 // Re-export routes for convenience
 export { routes }
@@ -466,6 +467,13 @@ export function NavigationProvider({
       }
 
       if (entries.length > 0) {
+        const visible = filterUserFacingSessionPanels(entries, focusedIndex, store.get(sessionMetaMapAtom))
+        entries = visible.entries
+        focusedIndex = visible.focusedIndex
+        if (entries.length === 0) {
+          const route = normalizePanelRouteForReconcile('allSessions', (state) => resolveAutoSelectionRef.current(state))
+          entries = [{ route, proportion: 1 }]
+        }
         store.set(reconcilePanelStackAtom, { entries, focusedIndex })
       }
     },
@@ -526,7 +534,7 @@ export function NavigationProvider({
         // pollution during workspace switch, when workspaceId changed but navigationState
         // still reflects the old workspace's focused panel)
         const meta = store.get(sessionMetaMapAtom).get(navigationState.details.sessionId)
-        if (meta && meta.workspaceId === workspaceId) {
+        if (meta && isUserFacingSession(meta) && meta.workspaceId === workspaceId) {
           storage.set(storage.KEYS.lastSelectedSessionId, navigationState.details.sessionId, workspaceId)
         }
       }
@@ -538,12 +546,12 @@ export function NavigationProvider({
   // =========================================================================
 
   // Helper: Filter sessions by SessionFilter
-  // Always excludes hidden sessions - they should never appear in navigation
+  // Use the same conversation visibility as sidebar counts and search.
   const filterSessionsByFilter = useCallback(
     (filter: SessionFilter): SessionMeta[] => {
-      // First filter out hidden sessions - they should never appear in any view
       const visibleSessions = sessionMetas.filter(
-        s => !s.hidden && (!workspaceId || s.workspaceId === workspaceId)
+        s => isUserFacingSession(s) && (!workspaceId || s.workspaceId === workspaceId
+          || (!!remoteWorkspaceId && s.workspaceId === remoteWorkspaceId))
       )
 
       return visibleSessions.filter((session) => {
@@ -570,7 +578,7 @@ export function NavigationProvider({
         }
       })
     },
-    [sessionMetas, workspaceId, labelConfigs]
+    [sessionMetas, workspaceId, remoteWorkspaceId, labelConfigs]
   )
 
   const getFirstSessionId = useCallback(
@@ -890,6 +898,17 @@ export function NavigationProvider({
         return
       }
 
+      const normalizedRoute = normalizeUserFacingSessionRoute(
+        route as ViewRoute,
+        store.get(sessionMetaMapAtom),
+      )
+      const requestedState = parseRouteToNavigationState(route)
+      const normalizedState = parseRouteToNavigationState(normalizedRoute)
+      const removedInternalDetail = requestedState?.navigator === 'sessions'
+        && !!requestedState.details
+        && normalizedState?.navigator === 'sessions'
+        && !normalizedState.details
+
       // For view routes with newPanel: push a panel using lane-aware routing.
       //
       // Important distinction:
@@ -897,8 +916,9 @@ export function NavigationProvider({
       // - implicit navigation (updateFocusedPanelRouteAtom path) applies lock/fallback
       // This mirrors VS Code-style "locked group" behavior.
       if (options?.newPanel) {
+        if (removedInternalDetail) suppressAutoSelectRef.current = true
         pushPanel({
-          route: route as ViewRoute,
+          route: normalizedRoute,
           targetLaneId: options.targetLaneId,
           intent: 'explicit',
         })
@@ -909,21 +929,26 @@ export function NavigationProvider({
       // navigator-only view in compact mode, App-page fallback on desktop. We
       // intentionally do NOT auto-redirect to the last-visited subpage; doing so
       // would defeat the compact-mode drill-in UX.
-      const newNavState = parseRouteToNavigationState(route)
+      const newNavState = normalizedState
 
       // Suppress auto-select effect
-      if (options?.skipAutoSelect) {
+      if (options?.skipAutoSelect || removedInternalDetail) {
         suppressAutoSelectRef.current = true
       }
 
       if (newNavState) {
         // Resolve auto-selection (pure — no side effects)
-        const resolvedState = resolveAutoSelection(newNavState, options)
+        const resolvedState = removedInternalDetail
+          ? newNavState
+          : resolveAutoSelection(newNavState, options)
         const finalRoute = buildRouteFromNavigationState(resolvedState) as ViewRoute
 
         // Persist last selected session for auto-select on next visit
         if (isSessionsNavigation(resolvedState) && resolvedState.details && workspaceId) {
-          storage.set(storage.KEYS.lastSelectedSessionId, resolvedState.details.sessionId, workspaceId)
+          const meta = store.get(sessionMetaMapAtom).get(resolvedState.details.sessionId)
+          if (meta && isUserFacingSession(meta)) {
+            storage.set(storage.KEYS.lastSelectedSessionId, resolvedState.details.sessionId, workspaceId)
+          }
         }
 
         // Update the focused panel's route (atom update is synchronous)

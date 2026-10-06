@@ -7,6 +7,7 @@
 
 import { describe, it, expect, beforeEach } from 'bun:test'
 import { createBrowserTools, type BrowserPaneFns, type BrowserWaitArgs } from '../browser-tools'
+import { setContextualGmailBrowserMutationGuard } from '../browser-tool-runtime'
 
 // ============================================================================
 // Mock BrowserPaneFns
@@ -15,6 +16,11 @@ import { createBrowserTools, type BrowserPaneFns, type BrowserWaitArgs } from '.
 function createMockFns(): BrowserPaneFns {
   return {
     openPanel: async () => ({ instanceId: 'browser-test-1' }),
+    resolveCurrentWindow: async () => ({
+      instanceId: 'browser-1',
+      title: 'Example Domain',
+      url: 'https://example.com',
+    }),
     navigate: async (url: string) => ({ url: `https://${url}`, title: 'Test Page' }),
     snapshot: async () => ({
       url: 'https://example.com',
@@ -96,6 +102,7 @@ describe('createBrowserTools', () => {
   let tools: ReturnType<typeof createBrowserTools>
 
   beforeEach(() => {
+    setContextualGmailBrowserMutationGuard('test-session', false)
     mockFns = createMockFns()
     tools = createBrowserTools({
       sessionId: 'test-session',
@@ -339,6 +346,113 @@ describe('createBrowserTools', () => {
       expect(result.content[0].text).toContain('Clicked element @e1')
     })
 
+    it('blocks opaque mutations only on the session Gmail window when contextual reply guard is active', async () => {
+      setContextualGmailBrowserMutationGuard('test-session', true)
+      mockFns.resolveCurrentWindow = async () => ({
+        instanceId: 'browser-1',
+        title: 'Inbox',
+        url: 'https://mail.google.com/mail/u/0/#inbox',
+      })
+      let clicked = false
+      mockFns.click = async () => { clicked = true }
+      const blocked = await executeTool(tools, 'browser_tool', { command: 'click @e1' })
+      expect(clicked).toBe(false)
+      expect(blocked.isError).toBe(true)
+      expect(blocked.content[0].text).toContain('browser mutations on Gmail are disabled')
+
+      mockFns.resolveCurrentWindow = async () => ({
+        instanceId: 'browser-1',
+        title: 'CMS',
+        url: 'https://cms.example.com/form',
+      })
+      const allowed = await executeTool(tools, 'browser_tool', { command: 'click @e1' })
+      expect(clicked).toBe(true)
+      expect(allowed.isError).not.toBe(true)
+
+      clicked = false
+      mockFns.listWindows = async () => ([
+        {
+          id: 'old-gmail',
+          title: 'Inbox',
+          url: 'https://mail.google.com/mail/u/0/#inbox',
+          isVisible: true,
+          ownerType: 'session',
+          ownerSessionId: 'test-session',
+          boundSessionId: null,
+          agentControlActive: false,
+        },
+        {
+          id: 'current-cms',
+          title: 'CMS',
+          url: 'https://cms.example.com/form',
+          isVisible: true,
+          ownerType: 'session',
+          ownerSessionId: 'test-session',
+          boundSessionId: 'test-session',
+          agentControlActive: true,
+        },
+      ])
+      mockFns.resolveCurrentWindow = async () => ({
+        instanceId: 'current-cms',
+        title: 'CMS',
+        url: 'https://cms.example.com/form',
+      })
+      const currentCms = await executeTool(tools, 'browser_tool', { command: 'click @e1' })
+      expect(clicked).toBe(true)
+      expect(currentCms.isError).not.toBe(true)
+
+      clicked = false
+      mockFns.listWindows = async () => ([
+        {
+          id: 'current-gmail',
+          title: 'Inbox',
+          url: 'https://mail.google.com/mail/u/0/#inbox',
+          isVisible: true,
+          ownerType: 'session',
+          ownerSessionId: 'test-session',
+          boundSessionId: 'test-session',
+          agentControlActive: true,
+        },
+        {
+          id: 'old-cms',
+          title: 'CMS',
+          url: 'https://cms.example.com/form',
+          isVisible: true,
+          ownerType: 'session',
+          ownerSessionId: 'test-session',
+          boundSessionId: null,
+          agentControlActive: false,
+        },
+      ])
+      mockFns.resolveCurrentWindow = async () => ({
+        instanceId: 'current-gmail',
+        title: 'Inbox',
+        url: 'https://mail.google.com/mail/u/0/#inbox',
+      })
+      const currentGmail = await executeTool(tools, 'browser_tool', { command: 'click @e1' })
+      expect(clicked).toBe(false)
+      expect(currentGmail.isError).toBe(true)
+    })
+
+    it('allows local window lifecycle commands while the contextual Gmail guard is active', async () => {
+      setContextualGmailBrowserMutationGuard('test-session', true)
+      mockFns.listWindows = async () => ([{
+        id: 'browser-1',
+        title: 'Inbox',
+        url: 'https://mail.google.com/mail/u/0/#inbox',
+        isVisible: true,
+        ownerType: 'session',
+        ownerSessionId: 'test-session',
+        boundSessionId: 'test-session',
+        agentControlActive: true,
+      }])
+      for (const command of ['release', 'close', 'hide', 'open', 'window-resize 1024 768']) {
+        const result = await executeTool(tools, 'browser_tool', { command })
+        expect({ command, isError: result.isError }).toEqual({ command, isError: undefined })
+        expect(result.content[0].text).not.toContain('browser mutations on Gmail are disabled')
+      }
+    })
+
     it('routes click with wait arguments', async () => {
       const result = await executeTool(tools, 'browser_tool', { command: 'click @e1 network-idle 5000' })
       expect(result.content[0].text).toContain('waitFor=network-idle')
@@ -474,7 +588,7 @@ describe('createBrowserTools', () => {
       mockFns.type = async (text) => { typedText = text }
       const result = await executeTool(tools, 'browser_tool', { command: 'type Hello World' })
       expect(typedText).toBe('Hello World')
-      expect(result.content[0].text).toContain('Typed 11 characters into focused element')
+      expect(result.content[0].text).toContain('Requested insertion of 11 characters')
     })
 
     it('returns error for type with no text', async () => {
@@ -656,6 +770,28 @@ describe('createBrowserTools', () => {
       expect(result.content[0].text).toContain('(empty clipboard)')
     })
 
+    it('does not send a paste shortcut after a rejected clipboard write', async () => {
+      let shortcuts = 0
+      mockFns.setClipboard = async () => { throw new Error('Clipboard write failed') }
+      mockFns.sendKey = async () => { shortcuts++ }
+      const result = await executeTool(tools, 'browser_tool', { command: ['paste', 'private text'] })
+      expect(result.isError).toBe(true)
+      expect(shortcuts).toBe(0)
+      expect(result.content[0].text).not.toContain('private text')
+    })
+
+    it('routes explicit keyboard text once without clipboard, Enter, or a success claim about the remote application', async () => {
+      const sent: unknown[] = []
+      mockFns.sendKey = async (args) => { sent.push(args) }
+      mockFns.setClipboard = async () => { throw new Error('must never touch clipboard') }
+      const text = 'é € a  b;[]'
+      const result = await executeTool(tools, 'browser_tool', { command: ['type-keys', text] })
+      expect(result.isError).not.toBe(true)
+      expect(sent).toEqual([{ key: 'Unidentified', text }])
+      expect(result.content[0].text).toContain('not verified')
+      expect(result.content[0].text).not.toContain(text)
+    })
+
     it('routes paste command (set-clipboard + key)', async () => {
       let clipboardText = ''
       let keySent = ''
@@ -664,7 +800,7 @@ describe('createBrowserTools', () => {
       const result = await executeTool(tools, 'browser_tool', { command: 'paste Hello World' })
       expect(clipboardText).toBe('Hello World')
       expect(keySent).toBe('v')
-      expect(result.content[0].text).toContain('Pasted 11 characters')
+      expect(result.content[0].text).toContain('paste shortcut dispatched for 11 characters')
     })
 
     it('decodes escaped tab/newline sequences for paste', async () => {
@@ -677,7 +813,7 @@ describe('createBrowserTools', () => {
       })
       expect(clipboardText).toBe('Hello\tWorld\nFoo\tBar')
       expect(keySent).toBe('v')
-      expect(result.content[0].text).toContain('Pasted 19 characters')
+      expect(result.content[0].text).toContain('paste shortcut dispatched for 19 characters')
     })
 
     it('returns error for paste with no text', async () => {
@@ -711,6 +847,44 @@ describe('createBrowserTools', () => {
       expect(result.content[0].text).toContain('Region screenshot captured')
       expect(result.content[1].type).toBe('image')
       expect((result.content[1] as any).mimeType).toBe('image/png')
+    })
+
+    it('returns canvas bytes as a full MCP image, independently of evaluate text truncation', async () => {
+      let actual: unknown
+      const bytes = Buffer.alloc(9000, 42)
+      mockFns.screenshotRegion = async args => {
+        actual = args
+        return { imageBuffer: bytes, imageFormat: 'png', metadata: { source: 'canvas-bitmap', region: { x: 0, y: 0, width: 1200, height: 852 } } }
+      }
+      const result = await executeTool(tools, 'browser_tool', { command: ['screenshot-region', '--canvas', '--selector', '#display canvas'] })
+      expect(actual).toEqual({ source: 'canvas', selector: '#display canvas', format: 'png' })
+      expect(result.isError).toBeUndefined()
+      expect(result.content[0].text).toContain('not a composited page screenshot')
+      expect(result.content[1]).toEqual({ type: 'image', data: bytes.toString('base64'), mimeType: 'image/png' })
+    })
+
+    it('rejects ambiguous canvas modes and does not silently fall back to a screenshot', async () => {
+      let calls = 0
+      mockFns.screenshotRegion = async () => { calls++; throw Error('should not be called') }
+      for (const command of ['screenshot-region --canvas --ref @e1', 'screenshot-region --canvas 1 2 3 4', 'screenshot-region --canvas --selector canvas --padding 2', 'screenshot-region --canvas --canvas --selector canvas']) {
+        const result = await executeTool(tools, 'browser_tool', { command })
+        expect(result.isError).toBe(true)
+      }
+      expect(calls).toBe(0)
+    })
+
+    it('rejects an empty, oversized or mislabeled canvas image receipt', async () => {
+      for (const value of [
+        { imageBuffer: Buffer.alloc(0), imageFormat: 'png' as const, metadata: { source: 'canvas-bitmap' } },
+        { imageBuffer: Buffer.alloc(4 * 1024 * 1024 + 1), imageFormat: 'png' as const, metadata: { source: 'canvas-bitmap' } },
+        { imageBuffer: Buffer.from('data'), imageFormat: 'jpeg' as const, metadata: { source: 'canvas-bitmap' } },
+        { imageBuffer: Buffer.from('data'), imageFormat: 'png' as const, metadata: { source: 'page' } },
+      ]) {
+        mockFns.screenshotRegion = async () => value
+        const result = await executeTool(tools, 'browser_tool', { command: ['screenshot-region', '--canvas', '--selector', 'canvas'] })
+        expect(result.isError).toBe(true)
+        expect(result.content.some((x: any) => x.type === 'image')).toBe(false)
+      }
     })
 
     it('returns error for screenshot when PNG is empty', async () => {
@@ -1011,7 +1185,7 @@ describe('createBrowserTools', () => {
         command: ['paste', 'Name\tAge\nAlice\t30'],
       })
       expect(clipboardText).toBe('Name\tAge\nAlice\t30')
-      expect(result.content[0].text).toContain('Pasted')
+      expect(result.content[0].text).toContain('paste shortcut dispatched')
     })
 
     it('set-clipboard preserves semicolons and special characters', async () => {
@@ -1049,7 +1223,7 @@ describe('createBrowserTools', () => {
         command: ['type', 'Hello\tWorld'],
       })
       expect(typedText).toBe('Hello\tWorld')
-      expect(result.content[0].text).toContain('Typed')
+      expect(result.content[0].text).toContain('Requested insertion')
     })
 
     it('--help works in array mode', async () => {

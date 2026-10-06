@@ -7,26 +7,36 @@ import { registerOAuthProvider, unregisterOAuthProvider } from '@earendil-works/
 import { hasApi } from '@earendil-works/pi-ai';
 import { streamSimple as streamAnthropic } from '@earendil-works/pi-ai/api/anthropic-messages';
 import { streamSimple as streamOpenAi } from '@earendil-works/pi-ai/api/openai-responses';
+import { streamSimple as streamCodex } from '@earendil-works/pi-ai/api/openai-codex-responses';
 
 import { registerSupplementalCatalogModels } from './catalog-model-registration.ts';
 import { resolvePiModel } from './model-resolution.ts';
 
 const OPENAI_SUPPLEMENTAL_IDS = [
+  'gpt-6.1-sol',
   'gpt-6-astra',
+  'gpt-6-sol',
+  'gpt-6-luna',
   'gpt-5.6-sol',
   'gpt-5.6-terra',
   'gpt-5.6-luna',
 ];
 
 const OPENAI_SUPPLEMENTAL_COSTS = {
+  'gpt-6.1-sol': { input: 2, output: 10, cacheRead: 0.1, cacheWrite: 2.5 },
   'gpt-6-astra': { input: 10, output: 50, cacheRead: 1, cacheWrite: 12.5 },
+  'gpt-6-sol': { input: 2, output: 10, cacheRead: 0.2, cacheWrite: 2.5 },
+  'gpt-6-luna': { input: 0.1, output: 0.5, cacheRead: 0.01, cacheWrite: 0.125 },
   'gpt-5.6-sol': { input: 4, output: 20, cacheRead: 0.4, cacheWrite: 5 },
   'gpt-5.6-terra': { input: 2, output: 12, cacheRead: 0.2, cacheWrite: 2.5 },
   'gpt-5.6-luna': { input: 0.2, output: 1.2, cacheRead: 0.02, cacheWrite: 0.25 },
 };
 
 const OPENAI_SUPPLEMENTAL_CONTEXT_WINDOWS = {
+  'gpt-6.1-sol': 272_000,
   'gpt-6-astra': 272_000,
+  'gpt-6-sol': 272_000,
+  'gpt-6-luna': 272_000,
   'gpt-5.6-sol': 1_048_576,
   'gpt-5.6-terra': 1_048_576,
   'gpt-5.6-luna': 1_048_576,
@@ -95,6 +105,44 @@ describe('registerSupplementalCatalogModels', () => {
         providerModelCountBefore + OPENAI_SUPPLEMENTAL_IDS.length,
       );
     });
+  }
+
+  for (const provider of ['openai', 'openai-codex']) {
+    for (const reasoning of ['off', 'minimal', 'low', 'medium', 'high', 'xhigh'] as const) {
+      it(`serializes GPT-6.1 tool calls for ${provider} with supported ${reasoning} reasoning`, async () => {
+        const authStorage = PiAuthStorage.inMemory({
+          [provider]: { type: 'api_key', key: 'test-api-key' },
+        });
+        const registry = PiModelRegistry.inMemory(authStorage);
+        registerSupplementalCatalogModels(registry, provider);
+        const model = registry.find(provider, 'gpt-6.1-sol')!;
+        expect(model).toBeDefined();
+        let payload: unknown;
+        const context = {
+          messages: [],
+          tools: [{ name: 'read_fixture', description: 'Read a local fixture', parameters: { type: 'object' as const, properties: {} } }],
+        };
+        const options = {
+          // Syntactically valid account token, containing no actual credential.
+          apiKey: provider === 'openai-codex'
+            ? `test.${Buffer.from(JSON.stringify({ 'https://api.openai.com/auth': { chatgpt_account_id: 'test-account' } })).toString('base64url')}.test`
+            : 'test-api-key',
+          reasoning,
+          onPayload(body: unknown) { payload = body; throw new Error('offline-payload-captured'); },
+        };
+        const result = hasApi(model, 'openai-responses')
+          ? await streamOpenAi(model, context, options).result()
+          : hasApi(model, 'openai-codex-responses')
+            ? await streamCodex(model, context, options).result()
+            : (() => { throw new Error('Unexpected OpenAI transport'); })();
+        expect(result.errorMessage).toContain('offline-payload-captured');
+        expect(payload).toMatchObject({
+          model: 'gpt-6.1-sol',
+          reasoning: { effort: reasoning === 'off' || reasoning === 'minimal' ? 'low' : reasoning },
+          tools: [expect.objectContaining({ type: 'function', name: 'read_fixture' })],
+        });
+      });
+    }
   }
 
   it('registers current Anthropic models with adaptive thinking and their own prices', () => {

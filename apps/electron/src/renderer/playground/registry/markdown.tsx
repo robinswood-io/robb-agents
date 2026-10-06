@@ -1,5 +1,6 @@
 import * as React from 'react'
 import type { ComponentEntry } from './types'
+import { LocalPdfPreviewDemo } from '../demos/LocalPdfPreviewDemo'
 import { Markdown, CollapsibleMarkdownProvider, CodeBlock, InlineCode, MarkdownDatatableBlock, MarkdownSpreadsheetBlock, MarkdownImageBlock, ImageCardStack, PlatformProvider } from '@craft-agent/ui'
 
 const sampleMarkdown = `# Welcome to Markdown
@@ -249,6 +250,11 @@ function ImageCardStackPlayground({
 }
 
 export const markdownComponents: ComponentEntry[] = [
+  {
+    id: 'local-pdf-preview', name: 'Local PDF Preview', category: 'Markdown',
+    description: 'Local document links, sandbox/file references, spaces, Unicode and useful missing-file errors.',
+    component: LocalPdfPreviewDemo, layout: 'top', props: [], variants: [],
+  },
   {
     id: 'markdown',
     name: 'Markdown',

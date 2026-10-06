@@ -16,6 +16,7 @@
 import { getProviders, getModels } from '@earendil-works/pi-ai/compat';
 import type { KnownProvider, Model, Api } from '@earendil-works/pi-ai';
 import { MODEL_REGISTRY, type ModelDefinition } from './models.ts';
+import { isModelAllowedForAuthProvider } from './llm-connections.ts';
 
 // ============================================
 // PI MODEL DISCOVERY
@@ -53,6 +54,18 @@ const GOOGLE_GEMINI_CODE_ASSIST_MODELS: ModelDefinition[] = [
 
 const OPENAI_SUPPLEMENTAL_MODELS: ModelDefinition[] = [
   {
+    id: 'pi/gpt-6.1-sol',
+    name: 'GPT-6.1 Sol',
+    shortName: '6.1 Sol',
+    description: 'OpenAI GPT-6.1 model for coding and agentic work via Robb Agents Backend',
+    provider: 'pi',
+    // Official maximum: 1.05M. Keep the standard-price operational cap until
+    // Pi can represent the higher input/cache/output tariffs above 272K.
+    contextWindow: 272_000,
+    supportsThinking: true,
+    supportsImages: true,
+  },
+  {
     id: 'pi/gpt-6-astra',
     name: 'GPT-6 Astra',
     shortName: 'Astra',
@@ -61,6 +74,26 @@ const OPENAI_SUPPLEMENTAL_MODELS: ModelDefinition[] = [
     // Astra supports up to 1.05M tokens, but standard pricing changes above
     // 272K and Pi 0.80.3 cannot represent tiered costs. Use the same safe
     // operational cap as the current upstream Pi catalogue.
+    contextWindow: 272_000,
+    supportsThinking: true,
+    supportsImages: true,
+  },
+  {
+    id: 'pi/gpt-6-sol',
+    name: 'GPT-6 Sol',
+    shortName: '6 Sol',
+    description: 'OpenAI GPT-6 model for coding and agentic work via Robb Agents Backend',
+    provider: 'pi',
+    contextWindow: 272_000,
+    supportsThinking: true,
+    supportsImages: true,
+  },
+  {
+    id: 'pi/gpt-6-luna',
+    name: 'GPT-6 Luna',
+    shortName: '6 Luna',
+    description: 'OpenAI GPT-6 efficient model for focused tasks via Robb Agents Backend',
+    provider: 'pi',
     contextWindow: 272_000,
     supportsThinking: true,
     supportsImages: true,
@@ -134,34 +167,68 @@ const MISTRAL_SUPPLEMENTAL_MODELS: ModelDefinition[] = [
   },
 ];
 
-const GOOGLE_ANTIGRAVITY_MODELS: ModelDefinition[] = ([
-  // Verified with the official `agy models` command on 2026-09-08.
-  ['gemini-3.8-flash-high', 'Gemini 3.8 Flash (High)', '3.8 High'],
-  ['gemini-3.8-flash-medium', 'Gemini 3.8 Flash (Medium)', '3.8 Medium'],
-  ['gemini-3.8-flash-low', 'Gemini 3.8 Flash (Low)', '3.8 Low'],
-  ['gemini-3.7-flash-high', 'Gemini 3.7 Flash (High)', '3.7 High'],
-  ['gemini-3.7-flash-medium', 'Gemini 3.7 Flash (Medium)', '3.7 Medium'],
-  ['gemini-3.7-flash-low', 'Gemini 3.7 Flash (Low)', '3.7 Low'],
-  ['gemini-3.6-flash-high', 'Gemini 3.6 Flash (High)', '3.6 High'],
-  ['gemini-3.6-flash-medium', 'Gemini 3.6 Flash (Medium)', '3.6 Medium'],
-  ['gemini-3.6-flash-low', 'Gemini 3.6 Flash (Low)', '3.6 Low'],
-  ['gemini-3.1-pro-high', 'Gemini 3.1 Pro (High)', '3.1 Pro High'],
-  ['gemini-3.1-pro-low', 'Gemini 3.1 Pro (Low)', '3.1 Pro Low'],
-] as const).map(([id, name, shortName]) => ({
-  id: `pi/${id}`,
-  name,
-  shortName,
-  description: 'Gemini model through the official Google Antigravity CLI and account quota',
-  provider: 'pi',
-  contextWindow: 1_048_576,
-  // Effort is encoded in the selected CLI model slug. The separate reasoning
-  // selector cannot override it, although thinking events still stream.
-  supportsThinking: false,
-  supportsImages: false,
-}));
+const GOOGLE_ANTIGRAVITY_MODELS: ModelDefinition[] = [
+  // Verified with the official `agy models` command on 2026-09-22.
+  // Gemini models (accessible via Google account / Google One AI Premium quota)
+  ...([
+    ['gemini-3.8-flash-high', 'Gemini 3.8 Flash (High)', '3.8 High', 'Gemini 3.8 Flash with high reasoning effort via Google Antigravity'],
+    ['gemini-3.8-flash-medium', 'Gemini 3.8 Flash (Medium)', '3.8 Medium', 'Gemini 3.8 Flash with medium reasoning effort via Google Antigravity'],
+    ['gemini-3.8-flash-low', 'Gemini 3.8 Flash (Low)', '3.8 Low', 'Gemini 3.8 Flash with low reasoning effort via Google Antigravity'],
+    ['gemini-3.7-flash-high', 'Gemini 3.7 Flash (High)', '3.7 High', 'Gemini 3.7 Flash with high reasoning effort via Google Antigravity'],
+    ['gemini-3.7-flash-medium', 'Gemini 3.7 Flash (Medium)', '3.7 Medium', 'Gemini 3.7 Flash with medium reasoning effort via Google Antigravity'],
+    ['gemini-3.7-flash-low', 'Gemini 3.7 Flash (Low)', '3.7 Low', 'Gemini 3.7 Flash with low reasoning effort via Google Antigravity'],
+    ['gemini-3.6-flash-high', 'Gemini 3.6 Flash (High)', '3.6 High', 'Gemini 3.6 Flash with high reasoning effort via Google Antigravity'],
+    ['gemini-3.6-flash-medium', 'Gemini 3.6 Flash (Medium)', '3.6 Medium', 'Gemini 3.6 Flash with medium reasoning effort via Google Antigravity'],
+    ['gemini-3.6-flash-low', 'Gemini 3.6 Flash (Low)', '3.6 Low', 'Gemini 3.6 Flash with low reasoning effort via Google Antigravity'],
+    ['gemini-3.1-pro-high', 'Gemini 3.1 Pro (High)', '3.1 Pro High', 'Gemini 3.1 Pro frontier reasoning via Google Antigravity and personal AI quota'],
+    ['gemini-3.1-pro-low', 'Gemini 3.1 Pro (Low)', '3.1 Pro Low', 'Gemini 3.1 Pro lightweight reasoning via Google Antigravity and personal AI quota'],
+  ] as const).map(([id, name, shortName, description]) => ({
+    id: `pi/${id}`,
+    name,
+    shortName,
+    description,
+    provider: 'pi' as const,
+    contextWindow: 1_048_576,
+    // Effort is encoded in the selected CLI model slug. The separate reasoning
+    // selector cannot override it, although thinking events still stream.
+    supportsThinking: false,
+    supportsImages: false,
+  })),
+  // Frontier partner models accessible through Google Antigravity and personal subscriptions
+  {
+    id: 'pi/claude-sonnet-4-6',
+    name: 'Claude Sonnet 4.6 (Thinking)',
+    shortName: 'Sonnet 4.6',
+    description: 'Anthropic Claude Sonnet 4.6 with thinking enabled via Google Antigravity and personal AI subscription',
+    provider: 'pi' as const,
+    contextWindow: 200_000,
+    supportsThinking: false,
+    supportsImages: false,
+  },
+  {
+    id: 'pi/claude-opus-4-6-thinking',
+    name: 'Claude Opus 4.6 (Thinking)',
+    shortName: 'Opus 4.6 Thinking',
+    description: 'Anthropic Claude Opus 4.6 deep thinking via Google Antigravity and personal AI subscription',
+    provider: 'pi' as const,
+    contextWindow: 200_000,
+    supportsThinking: false,
+    supportsImages: false,
+  },
+  {
+    id: 'pi/gpt-oss-120b-medium',
+    name: 'GPT-OSS 120B (Medium)',
+    shortName: 'GPT-OSS 120B',
+    description: 'Open-weight 120B frontier model with medium reasoning via Google Antigravity',
+    provider: 'pi' as const,
+    contextWindow: 131_072,
+    supportsThinking: false,
+    supportsImages: false,
+  },
+];
 
 const PI_MODEL_SUPPLEMENTS: Record<string, ModelDefinition[]> = {
-  // Pi SDK 0.80.3 predates OpenAI's GPT-5.6 and GPT-6 Astra launches. Keep
+  // Pi SDK 0.80.3 predates OpenAI's GPT-5.6, GPT-6 and GPT-6.1 launches. Keep
   // Robb current by injecting the official IDs until the upstream catalogue
   // catches up.
   openai: OPENAI_SUPPLEMENTAL_MODELS,
@@ -177,12 +244,14 @@ const PI_MODEL_SUPPLEMENTS: Record<string, ModelDefinition[]> = {
 };
 
 function withSupplementalPiModels(piAuthProvider: string, models: ModelDefinition[]): ModelDefinition[] {
-  const supplements = PI_MODEL_SUPPLEMENTS[piAuthProvider] ?? [];
-  if (supplements.length === 0) return models;
-  const seenBareIds = new Set(models.map(m => m.id.replace(/^pi\//, '')));
+  const eligibleModels = models.filter(m => isModelAllowedForAuthProvider(m.id, piAuthProvider));
+  const supplements = (PI_MODEL_SUPPLEMENTS[piAuthProvider] ?? [])
+    .filter(m => isModelAllowedForAuthProvider(m.id, piAuthProvider));
+  if (supplements.length === 0) return eligibleModels;
+  const seenBareIds = new Set(eligibleModels.map(m => m.id.replace(/^pi\//, '')));
   return [
     ...supplements.filter(m => !seenBareIds.has(m.id.replace(/^pi\//, ''))),
-    ...models,
+    ...eligibleModels,
   ];
 }
 

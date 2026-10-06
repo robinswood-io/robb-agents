@@ -75,6 +75,75 @@ describe('RemoteBrowserPaneManager — wire packaging', () => {
     expect(id).toBe('browser-7')
   })
 
+  it('carries the mutation URL policy to the desktop point of effect', async () => {
+    const { server, calls } = createFakeServer()
+    const bridge = new RemoteBrowserPaneManager({
+      sessionId: 'sess-1',
+      workspaceId: 'ws-1',
+      rpcServer: server,
+      getHostClient: () => 'client-A',
+    })
+    const policy = {
+      reason: 'contextual-gmail-reply' as const,
+      blockedHosts: ['mail.google.com'],
+      matchSubdomains: true,
+    }
+
+    await bridge.clickElement('inst-1', '@send', undefined, policy)
+
+    const req = calls[0]!.args[0] as BrowserCapabilityRequest
+    expect(req.v).toBe(2)
+    expect(req.method).toBe('clickElement')
+    expect(req.args).toEqual(['inst-1', '@send', undefined])
+    expect(req).toMatchObject({ mutationUrlPolicy: policy })
+  })
+
+  it('keeps an unguarded mutation on v1 for existing desktop compatibility', async () => {
+    const { server, calls } = createFakeServer()
+    const bridge = new RemoteBrowserPaneManager({
+      sessionId: 'sess-1',
+      workspaceId: 'ws-1',
+      rpcServer: server,
+      getHostClient: () => 'client-A',
+    })
+
+    await bridge.clickElement('inst-1', '@ordinary-button')
+
+    expect(calls).toHaveLength(1)
+    expect(calls[0]!.args[0]).toEqual({
+      v: 1,
+      method: 'clickElement',
+      args: ['inst-1', '@ordinary-button', undefined],
+      sessionId: 'sess-1',
+      workspaceId: 'ws-1',
+    })
+  })
+
+  it('fails closed when an old v1-only desktop receives a guarded mutation', async () => {
+    const { server, calls } = createFakeServer({
+      invokeImpl: (call) => {
+        const req = call.args[0] as BrowserCapabilityRequest
+        if (req.v !== 1) throw new Error(`Unsupported browser capability request shape (v=${req.v}).`)
+      },
+    })
+    const bridge = new RemoteBrowserPaneManager({
+      sessionId: 'sess-1',
+      workspaceId: 'ws-1',
+      rpcServer: server,
+      getHostClient: () => 'old-client',
+    })
+    const policy = {
+      reason: 'contextual-gmail-reply' as const,
+      blockedHosts: ['mail.google.com'],
+      matchSubdomains: true,
+    }
+
+    await expect(bridge.clickElement('inst-1', '@send', undefined, policy))
+      .rejects.toThrow('Unsupported browser capability request shape (v=2)')
+    expect(calls).toHaveLength(1)
+    expect((calls[0]!.args[0] as BrowserCapabilityRequest).v).toBe(2)
+  })
+
   it('throws BROWSER_NO_CAPABLE_CLIENT when no host client is connected', async () => {
     const { server } = createFakeServer()
     const bridge = new RemoteBrowserPaneManager({

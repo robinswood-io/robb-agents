@@ -9,9 +9,11 @@
  * Claude / Codex / Copilot backends.
  */
 
+import { AGENT_RUNTIME_ACTIVITY } from '@craft-agent/core/types';
 import type {
   AgentEvent as CraftAgentEvent,
   AgentModelProvenance,
+  ToolExecutionCheckpoint,
 } from '@craft-agent/core/types';
 import type {
   AgentEvent as PiAgentEvent,
@@ -22,6 +24,7 @@ import type {
 import type { AssistantMessage, AssistantMessageEvent, Usage } from '@earendil-works/pi-ai';
 import { isContextOverflow } from '@earendil-works/pi-ai';
 import { BaseEventAdapter } from '../base-event-adapter.ts';
+import { parseReadCommand } from '../read-patterns.ts';
 import { PI_TOOL_NAME_MAP } from './constants.ts';
 import { toolMetadataStore } from '../../../interceptor-common.ts';
 import { parseError } from '../../errors.ts';
@@ -71,9 +74,19 @@ type PiEvent = PiAgentEvent | AgentSessionEvent;
 export class PiEventAdapter extends BaseEventAdapter {
   // Track tool names from execution_start for proper tool_result correlation
   private toolNames: Map<string, string> = new Map();
+  // Preserve the exact normalized execution input until the terminal event so
+  // host-side capability receipts can be correlated to the call that minted
+  // them. Pi's terminal SDK event otherwise carries only the call id/result.
+  private toolInputs: Map<string, Record<string, unknown>> = new Map();
+  // A repeated id has no occurrence nonce in Pi terminal events. Once seen,
+  // discard correlation for every terminal carrying that id until teardown.
+  private poisonedToolCallIds: Set<string> = new Set();
 
   // Track whether streaming deltas have been received for the current message
   private hasStreamedDeltas: boolean = false;
+
+  // One fixed activity label per model phase, never one event per reasoning delta.
+  private composingActivity = false;
 
   // Track whether a final (non-intermediate) text_complete has been emitted this turn
   private hasEmittedFinalText: boolean = false;
@@ -187,6 +200,10 @@ export class PiEventAdapter extends BaseEventAdapter {
    * fallback timer doesn't fire on a torn-down adapter.
    */
   resetOverflowState(): void {
+    this.composingActivity = false;
+    this.toolNames.clear();
+    this.toolInputs.clear();
+    this.poisonedToolCallIds.clear();
     this.cancelOverflowFallbackTimer();
     this.overflowState = 'none';
     this.heldOverflowError = null;
@@ -272,7 +289,9 @@ export class PiEventAdapter extends BaseEventAdapter {
   }
 
   protected onTurnStart(): void {
+    this.composingActivity = false;
     this.toolNames.clear();
+    this.toolInputs.clear();
     this.hasStreamedDeltas = false;
     this.hasEmittedFinalText = false;
     this.subTurnCounter = 0;
@@ -368,6 +387,7 @@ export class PiEventAdapter extends BaseEventAdapter {
         break;
 
       case 'agent_end':
+        this.composingActivity = false;
         // Overflow recovery: hold the queue open while the SDK runs
         // _runAutoCompaction("overflow") + agent.continue(). The recovered
         // turn will arrive as a fresh agent_start … agent_end pair.
@@ -438,13 +458,23 @@ export class PiEventAdapter extends BaseEventAdapter {
       // ============================================================
 
       case 'message_start':
-        // Pi SDK emits message_start for user messages too — skip non-assistant
+        // The SDK starts an assistant message when the provider call begins.
+        // Expose the phase, never its thinking content or encrypted signature.
+        if (event.message?.role === 'assistant' && !this.composingActivity) {
+          this.composingActivity = true;
+          yield { type: 'status', message: AGENT_RUNTIME_ACTIVITY.composingResponse };
+        }
         break;
 
       case 'message_update': {
         // Pi SDK emits message_update only for assistant messages (streaming deltas)
         const amEvent: AssistantMessageEvent = event.assistantMessageEvent;
+        if ((amEvent.type === 'thinking_start' || amEvent.type === 'thinking_delta') && !this.composingActivity) {
+          this.composingActivity = true;
+          yield { type: 'status', message: AGENT_RUNTIME_ACTIVITY.composingResponse };
+        }
         if (amEvent.type === 'text_delta' && amEvent.delta) {
+          this.composingActivity = false;
           this.hasStreamedDeltas = true;
           if (!this.messageSubTurnId) {
             this.messageSubTurnId = this.nextSubTurnId('m');
@@ -471,12 +501,25 @@ export class PiEventAdapter extends BaseEventAdapter {
           responseModel?: string;
           provider?: string;
           api?: string;
+          customType?: string;
+          content?: unknown;
+          details?: { schemaVersion?: unknown; toolCallId?: unknown };
         } | undefined;
+        // Host guidance has its own SDK message, never part of a tool receipt
+        // or an assistant final. Unknown custom messages remain ignored.
+        if (msg?.role === 'custom' && msg.customType === 'robb-tool-loop-hint'
+          && msg.details?.schemaVersion === 1 && typeof msg.details.toolCallId === 'string'
+          && msg.details.toolCallId.length > 0 && typeof msg.content === 'string'
+          && msg.content.length > 0 && msg.content.length <= 2048) {
+          yield { type: 'info', message: msg.content };
+          break;
+        }
         // SDK message id, set by pi-agent-server when forwarding the event.
         // SessionManager uses this to correlate the follow-up `pi_turn_anchor`
         // event to the Craft assistant message created here (#782).
         const sdkMessageId = (event as { sdkMessageId?: string }).sdkMessageId ?? msg?.id;
         if (msg?.role !== 'assistant') break;
+        this.composingActivity = false;
         const modelProvenance = this.getModelProvenance(msg);
 
         // Record usage before branching on stopReason so failed/retried calls
@@ -563,13 +606,23 @@ export class PiEventAdapter extends BaseEventAdapter {
       // ============================================================
 
       case 'tool_execution_start': {
+        this.composingActivity = false;
         const toolCallId = event.toolCallId;
         const toolName = this.resolveToolName(event.toolName);
-        this.toolNames.set(toolCallId, toolName);
 
         // Normalize Pi field names to Claude Code format for UI compatibility
         // (diff stats, diff overlay, document routing all expect Claude Code format)
         const args = this.normalizeToolInput(toolName, (event.args ?? {}) as Record<string, unknown>);
+        if (this.toolNames.has(toolCallId)
+          || this.toolInputs.has(toolCallId)
+          || this.poisonedToolCallIds.has(toolCallId)) {
+          this.poisonedToolCallIds.add(toolCallId);
+          this.toolNames.delete(toolCallId);
+          this.toolInputs.delete(toolCallId);
+        } else {
+          this.toolNames.set(toolCallId, toolName);
+          this.toolInputs.set(toolCallId, args);
+        }
 
         // For call_llm, fill in the default display model when the caller didn't
         // specify one — Pi's call_llm defaults to callLlmModel. We only fill the gap;
@@ -617,41 +670,36 @@ export class PiEventAdapter extends BaseEventAdapter {
           hasDisplayName: !!displayName,
         });
 
-        // Classify bash commands that are actually file reads
-        if (toolName === 'Bash' && typeof args.command === 'string') {
-          const readInfo = this.classifyReadCommand(toolCallId, args.command);
-          if (readInfo) {
-            yield this.createReadToolStart(
-              toolCallId,
-              readInfo,
-              intent,
-              'Read File',
-            );
-            break;
-          }
-        }
+        // A read-like shell command is still a Bash invocation. Pi emits this
+        // event before PreToolUse's durable admission, so changing its identity
+        // to Read makes the host reject its own live receipt as a reused id.
+        // Keep the executed name/input throughout the lifecycle; classify only
+        // the display label, never the evidence or admission identity.
+        const isReadCommand = toolName === 'Bash'
+          && typeof args.command === 'string'
+          && parseReadCommand(args.command) !== null;
 
         yield this.createToolStart(
           toolCallId,
           toolName,
           args,
           intent,
-          displayName,
+          isReadCommand ? 'Read File' : displayName,
         );
         break;
       }
 
       case 'tool_execution_update': {
-        // Accumulate partial output for streaming tool results
+        // Pi updates are cumulative snapshots, not deltas. Keep only the latest
+        // snapshot as a fallback when the terminal event has no result.
         const partialResult = event.partialResult;
         if (partialResult && typeof partialResult === 'object') {
           const content = (partialResult as { content?: Array<{ type: string; text?: string }> }).content;
           if (Array.isArray(content)) {
-            for (const part of content) {
-              if (part.type === 'text' && part.text) {
-                this.accumulateOutput(event.toolCallId, part.text);
-              }
-            }
+            this.commandOutput.set(event.toolCallId, content
+              .filter(part => part.type === 'text' && typeof part.text === 'string')
+              .map(part => part.text!)
+              .join('\n'));
           }
         }
         break;
@@ -659,43 +707,90 @@ export class PiEventAdapter extends BaseEventAdapter {
 
       case 'tool_execution_end': {
         const toolCallId = event.toolCallId;
-        const resolvedToolName = this.toolNames.get(toolCallId) || 'tool';
+        const poisonedToolCallId = this.poisonedToolCallIds.has(toolCallId);
+        const resolvedToolName = poisonedToolCallId
+          ? 'tool'
+          : this.toolNames.get(toolCallId) || 'tool';
         this.toolNames.delete(toolCallId);
+        const resolvedToolInput = poisonedToolCallId
+          ? undefined
+          : this.toolInputs.get(toolCallId);
+        this.toolInputs.delete(toolCallId);
 
         // Check for block reason
         const blockReason = this.consumeBlockReason(toolCallId, resolvedToolName);
 
-        // Use accumulated output from partial results if available
-        const accumulatedOutput = this.consumeOutput(toolCallId);
+        // Drain the snapshot even when a final result or block takes precedence.
+        const partialOutput = this.consumeOutput(toolCallId);
 
-        const isError = event.isError;
-        const continuationRequired = Boolean(
-          event.result
-          && typeof event.result === 'object'
-          && (event.result as { details?: { continuationRequired?: unknown } }).details?.continuationRequired === true
-        );
+        const details = event.result && typeof event.result === 'object'
+          ? (event.result as {
+              details?: {
+                isError?: unknown;
+                continuationRequired?: unknown;
+                costControlBlocked?: unknown;
+                executed?: unknown;
+                checkpoint?: unknown;
+              };
+            }).details
+          : undefined;
+        // Defensive for direct/legacy SDK events: a structured tool failure
+        // cannot become execution evidence just because execute() resolved.
+        const isError = event.isError || details?.isError === true;
+        const continuationRequired = details?.continuationRequired === true;
+        const costControlBlocked = details?.costControlBlocked === true;
+        const executed = details?.executed === false || costControlBlocked
+          ? false
+          : details?.executed === true
+            ? true
+            : undefined;
         let result: string;
 
-        if (accumulatedOutput) {
-          result = accumulatedOutput;
-        } else if (blockReason) {
+        if (blockReason) {
           result = blockReason;
+        } else if (event.result !== undefined && event.result !== null) {
+          // The completed result includes the final output, truncation notices,
+          // and execution errors. A streamed preview must never replace it.
+          result = this.extractToolResult(event.result, isError);
+        } else if (!isError && partialOutput !== undefined) {
+          result = partialOutput;
         } else {
           result = this.extractToolResult(event.result, isError);
+        }
+
+        let checkpoint: ToolExecutionCheckpoint | undefined;
+        const rawCheckpoint = details?.checkpoint;
+        if (
+          rawCheckpoint
+          && typeof rawCheckpoint === 'object'
+          && (rawCheckpoint as { kind?: unknown }).kind === 'tool-call-budget'
+        ) {
+          const reason = (rawCheckpoint as { reason?: unknown }).reason;
+          checkpoint = {
+            schemaVersion: 1,
+            kind: 'tool-call-budget',
+            reason: typeof reason === 'string' && reason.length > 0 ? reason : result,
+          };
+        } else if (rawCheckpoint === 'tool-call-budget' || costControlBlocked) {
+          // Normalize results emitted by older packaged Pi runtimes.
+          checkpoint = { schemaVersion: 1, kind: 'tool-call-budget', reason: result };
         }
 
         // After tool completion, the assistant may generate new text
         this.hasEmittedFinalText = false;
         this.messageSubTurnId = null;
 
-        // Check if this was classified as a file read
-        const readInfo = this.consumeReadCommand(toolCallId);
-        if (readInfo) {
-          yield this.createToolResult(toolCallId, 'Read', result, isError, undefined, continuationRequired);
-          break;
-        }
-
-        yield this.createToolResult(toolCallId, resolvedToolName, result, isError, undefined, continuationRequired);
+        yield this.createToolResult(
+          toolCallId,
+          resolvedToolName,
+          result,
+          isError,
+          undefined,
+          continuationRequired,
+          executed,
+          checkpoint,
+          resolvedToolInput,
+        );
         break;
       }
 
@@ -704,6 +799,7 @@ export class PiEventAdapter extends BaseEventAdapter {
       // ============================================================
 
       case 'compaction_start':
+        this.composingActivity = false;
         // Cancel the overflow fallback timer — the SDK is now actively
         // recovering, so we no longer need the "no compaction event arrived"
         // safety net. State transitions: held|awaiting → compacting.
@@ -975,11 +1071,11 @@ export class PiEventAdapter extends BaseEventAdapter {
    * Extract a string result from Pi tool execution result.
    */
   private extractToolResult(result: unknown, isError: boolean): string {
-    if (!result) {
+    if (typeof result === 'string') return result;
+
+    if (result === undefined || result === null) {
       return isError ? 'Tool execution failed' : 'Success';
     }
-
-    if (typeof result === 'string') return result;
 
     // Pi tool results follow the AgentToolResult shape: { content: [...], details: ... }
     const typed = result as {
@@ -988,8 +1084,9 @@ export class PiEventAdapter extends BaseEventAdapter {
     };
 
     if (Array.isArray(typed.content)) {
+      if (typed.content.length === 0) return '';
       const texts = typed.content
-        .filter((c) => c.type === 'text' && c.text)
+        .filter((c) => c.type === 'text' && typeof c.text === 'string')
         .map((c) => c.text!);
       if (texts.length > 0) return texts.join('\n');
     }

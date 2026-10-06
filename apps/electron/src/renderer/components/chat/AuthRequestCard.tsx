@@ -142,7 +142,7 @@ function AuthCardActions({ primary, secondary, hint }: AuthCardActionsProps) {
 interface AuthRequestCardProps {
   message: Message
   /** Callback to respond to credential request */
-  onRespondToCredential?: (sessionId: string, requestId: string, response: CredentialResponse) => void
+  onRespondToCredential?: (sessionId: string, requestId: string, response: CredentialResponse) => void | Promise<void>
   /** Session ID for this auth request */
   sessionId: string
   /** Whether the card is interactive (last message, no user message after). Default true. */
@@ -168,6 +168,8 @@ export function AuthRequestCard({ message, onRespondToCredential, sessionId, isI
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const credentialResponseInFlightRef = React.useRef(false)
+  const oauthInFlightRef = React.useRef(false)
 
   const {
     authRequestId,
@@ -210,13 +212,30 @@ export function AuthRequestCard({ message, onRespondToCredential, sessionId, isI
     ? authHeaderNames?.every(name => headerValues[name]?.trim().length > 0) ?? false
     : value.trim().length > 0
 
-  const handleSubmit = useCallback(() => {
-    if (!isValid || !authRequestId || !onRespondToCredential) return
-
+  const submitCredentialResponse = useCallback(async (response: CredentialResponse) => {
+    if (!authRequestId || !onRespondToCredential || credentialResponseInFlightRef.current) return
+    credentialResponseInFlightRef.current = true
     setIsSubmitting(true)
+    // Retain the immutable payload only for the RPC; remove credential values
+    // from component state immediately so historical cards do not keep them.
+    setValue('')
+    setUsername('')
+    setPassword('')
+    setHeaderValues(current => Object.fromEntries(Object.keys(current).map(key => [key, ''])))
+    try {
+      await onRespondToCredential(sessionId, authRequestId, response)
+    } catch (error) {
+      console.error('[AuthRequestCard] Failed to submit credential response:', error)
+    } finally {
+      credentialResponseInFlightRef.current = false
+      setIsSubmitting(false)
+    }
+  }, [onRespondToCredential, sessionId, authRequestId])
 
+  const handleSubmit = useCallback(() => {
+    if (!isValid) return
     if (isBasicAuth) {
-      onRespondToCredential(sessionId, authRequestId, {
+      void submitCredentialResponse({
         type: 'credential',
         username: username.trim(),
         password: getPasswordValue(password, passwordRequired),
@@ -228,24 +247,23 @@ export function AuthRequestCard({ message, onRespondToCredential, sessionId, isI
       for (const [key, val] of Object.entries(headerValues)) {
         trimmedHeaders[key] = val.trim()
       }
-      onRespondToCredential(sessionId, authRequestId, {
+      void submitCredentialResponse({
         type: 'credential',
         headers: trimmedHeaders,
         cancelled: false
       })
     } else {
-      onRespondToCredential(sessionId, authRequestId, {
+      void submitCredentialResponse({
         type: 'credential',
         value: value.trim(),
         cancelled: false
       })
     }
-  }, [isBasicAuth, isMultiHeader, username, password, value, headerValues, isValid, onRespondToCredential, sessionId, authRequestId, passwordRequired])
+  }, [isBasicAuth, isMultiHeader, username, password, value, headerValues, isValid, passwordRequired, submitCredentialResponse])
 
   const handleCancel = useCallback(() => {
-    if (!authRequestId || !onRespondToCredential) return
-    onRespondToCredential(sessionId, authRequestId, { type: 'credential', cancelled: true })
-  }, [onRespondToCredential, sessionId, authRequestId])
+    void submitCredentialResponse({ type: 'credential', cancelled: true })
+  }, [submitCredentialResponse])
 
   const handleFormSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault()
@@ -262,6 +280,7 @@ export function AuthRequestCard({ message, onRespondToCredential, sessionId, isI
 
   const handleOAuthClick = useCallback(async () => {
     // Client-driven OAuth: callback server runs locally, server owns tokens
+    if (oauthInFlightRef.current) return
     if (!authRequestId || !authSourceSlug) {
       console.warn('[AuthRequestCard] handleOAuthClick bailed: missing', {
         authRequestId: authRequestId ?? 'MISSING',
@@ -270,6 +289,7 @@ export function AuthRequestCard({ message, onRespondToCredential, sessionId, isI
       })
       return
     }
+    oauthInFlightRef.current = true
     setIsSubmitting(true)
     try {
       const result = await window.electronAPI.performOAuth({
@@ -283,6 +303,7 @@ export function AuthRequestCard({ message, onRespondToCredential, sessionId, isI
     } catch (error) {
       console.error('[AuthRequestCard] performOAuth threw:', error)
     } finally {
+      oauthInFlightRef.current = false
       setIsSubmitting(false)
     }
   }, [sessionId, authRequestId, authSourceSlug])

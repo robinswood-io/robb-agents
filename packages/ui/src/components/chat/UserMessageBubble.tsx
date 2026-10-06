@@ -42,7 +42,7 @@ function isEditRequestBadge(badge: ContentBadge): boolean {
 function EditRequestBadge({ badge }: { badge: ContentBadge }) {
   const displayLabel = badge.collapsedLabel || badge.label
   return (
-    <span className="inline-flex items-center h-[28px] px-2.5 rounded-[8px] bg-background shadow-minimal text-[13px] text-muted-foreground">
+    <span className="inline-flex items-center h-[28px] px-2.5 rounded-lg bg-background/90 shadow-xs border border-border/40 text-[13px] text-muted-foreground">
       {displayLabel}
     </span>
   )
@@ -427,7 +427,7 @@ export function UserMessageBubble({
               >
                 {isImage ? (
                   /* IMAGE: Square thumbnail only */
-                  <div className="h-14 w-14 rounded-[8px] overflow-hidden bg-background shadow-minimal">
+                  <div className="h-14 w-14 rounded-[10px] border border-border/50 overflow-hidden bg-background shadow-minimal">
                     {hasThumbnail ? (
                       <img
                         src={`data:image/png;base64,${att.thumbnailBase64}`}
@@ -442,7 +442,7 @@ export function UserMessageBubble({
                   </div>
                 ) : (
                   /* DOCUMENT: Bubble with thumbnail/icon + 2-line text */
-                  <div className="flex items-center gap-2.5 rounded-[8px] bg-user-message-bubble pl-1.5 pr-3 py-1.5">
+                  <div className="flex items-center gap-2.5 rounded-[10px] border border-border/50 bg-user-message-bubble pl-1.5 pr-3 py-1.5 shadow-minimal">
                     <div className="h-11 w-8 rounded-[6px] overflow-hidden bg-background shadow-minimal flex items-center justify-center shrink-0">
                       {hasThumbnail ? (
                         <img
@@ -486,8 +486,8 @@ export function UserMessageBubble({
           (#616 follow-up). */}
       <div
         className={cn(
-          "max-w-[80%] bg-user-message-bubble rounded-[16px] break-words min-w-0 select-text [&_p]:m-0",
-          compactMode ? "px-4 py-2" : "px-5 py-3.5"
+          "max-w-[80%] bg-user-message-bubble rounded-2xl border border-foreground/[0.04] shadow-xs break-words min-w-0 select-text [&_p]:m-0",
+          compactMode ? "px-4 py-2" : "px-5 py-3"
         )}
       >
         {showQueued && (
