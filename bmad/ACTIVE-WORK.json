@@ -319,7 +319,7 @@
     },
     "inqom_fuel_vat_80_20261008": {
       "taskId": "inqom_fuel_vat_80_20261008",
-      "status": "implemented_verified_targeted",
+      "status": "implemented_verified_pending_runtime_approval",
       "target": {
         "devServer": "164.132.161.150",
         "gitRoot": "/srv/workspace/robinswood-agents",
@@ -339,18 +339,26 @@
       "evidence": {
         "testsPassed": {
           "inqom_vat_period_contract_tests.py": 11,
-          "inqom_operator_guidance_regression_tests.py": 46
+          "inqom_operator_guidance_regression_tests.py": 46,
+          "inqom_fuel_vat_policy_tests.py": 21
         },
         "compile": "python3 -m py_compile scripts/inqom_vat_period_contract.py scripts/inqom_vat_period_contract_tests.py scripts/inqom_operator_guidance_materializer.py",
         "compileExit": 0,
         "monthlyControlAttempted": "finance_inqom_vat_cash_basis_monthly_tests.py",
         "monthlyControlResult": "blocked_by_missing_host_runtime_wrapper:/srv/rbw-agents-oss/scripts/finance_inqom_vat_cash_basis_monthly_preparer.py",
         "workerRestarted": false,
-        "mutationAttempted": false
+        "mutationAttempted": false,
+        "testedDefaultExample": {"sourceVat": 10, "deductibleVat": 8, "nonDeductibleVat": 2},
+        "runtimePromotionAttempted": true,
+        "runtimePromotionApplied": false,
+        "runtimePromotionBlock": "auto_review_requires_explicit_live_oss_promotion_authorization",
+        "gitPushApplied": false,
+        "verificationArtifact": "bmad/inqom-fuel-vat-80-20261008-verification.json"
       },
       "limits": [
-        "Le contrôle mensuel complet n'a pas pu être exécuté sur l'hôte DEV car il dépend d'un wrapper runtime /srv/rbw-agents-oss absent côté hôte.",
-        "Aucune promotion runtime INTERNE ni exécution native Inqom n'a été réalisée dans cette tâche."
+        "Le préparateur opérationnel a été importé et testé sur DEV avec relectures natives simulées ; le cycle fiscal réel complet n'a pas été exécuté.",
+        "La promotion des quatre fichiers OSS live a été refusée par la revue automatique ; le premier fichier n'a pas été modifié.",
+        "Le push vers GitHub reste refusé sans autorisation explicite après le rejet initial pour propriété/confidentialité du dépôt non vérifiées."
       ]
     }
   }

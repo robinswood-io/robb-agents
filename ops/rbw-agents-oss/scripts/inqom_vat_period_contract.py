@@ -4,6 +4,7 @@ from __future__ import annotations
 import calendar
 from datetime import date
 from decimal import Decimal
+import re
 
 FUEL_TOKENS = ('carburant', 'fuel', 'essence', 'gazole', 'diesel')
 
@@ -13,13 +14,14 @@ def amount(value):
     return value.quantize(Decimal('0.01'))
 
 def adjustment_text(row):
-    keys=('taxCategory','category','account','accountName','label','description','supplier','vendor','docRef')
+    keys=('taxCategory','category','account','accountName','label','entryLabel','description','supplier','vendor','docRef')
     nested=row.get('evidence') if isinstance(row.get('evidence'),dict) else {}
     return ' '.join(str(row.get(k) or nested.get(k) or '').lower() for k in keys)
 
 def is_fuel_adjustment(row):
     text=adjustment_text(row)
-    return any(token in text for token in FUEL_TOKENS)
+    account=str(row.get('account') or row.get('accountName') or '').lower()
+    return ('carburant' in account or bool(re.search(r'\b(?:carburants?|fuels?|essence|gazole|gasoil|diesel)\b',text)))
 
 def adjustment_source_vat(row):
     for key in ('sourceVat','invoiceVat','originalVat','vatBeforeDeduction','grossVat'):
@@ -27,24 +29,62 @@ def adjustment_source_vat(row):
             return amount(row[key])
     return None
 
+def fuel_vat_breakdown(row):
+    source=adjustment_source_vat(row)
+    if source is None:
+        raise ValueError('fuel_invoice_source_vat_required')
+    rate=Decimal('0.80')
+    for key in ('deductionRate','deductibleRate','vatDeductionRate'):
+        if row.get(key) is not None:
+            rate=Decimal(str(row[key]));break
+    if not rate.is_finite() or not Decimal('0') <= rate <= Decimal('1'):
+        raise ValueError('fuel_deduction_rate_invalid')
+    override=row.get('deductionOverrideEvidence')
+    if rate > Decimal('0.80'):
+        if (not isinstance(override,dict) or
+            not all(isinstance(override.get(key),str) and override[key].strip() for key in ('vehicleId','documentRef','reason')) or
+            Decimal(str(override.get('deductionRate'))) != rate):
+            raise ValueError('fuel_deduction_override_evidence_required')
+    deductible=amount(source*rate)
+    result={'sourceVat':float(source),'deductionRate':float(rate),
+            'deductibleVat':float(deductible),'nonDeductibleVat':float(source-deductible)}
+    if rate > Decimal('0.80'):
+        result['deductionOverrideEvidence']=dict(override)
+    return result
+
 def fuel_adjustments_policy_good(adjustments):
     for row in adjustments:
+        if not isinstance(row,dict):
+            return False
         if not is_fuel_adjustment(row):
             continue
         try:
-            source=adjustment_source_vat(row)
             declared=amount(row['vat'])
-            rate=Decimal(str(row.get('deductionRate') or row.get('deductibleRate') or row.get('vatDeductionRate') or '0.80'))
-        except (ValueError,ArithmeticError,KeyError):
+            expected=fuel_vat_breakdown(row)
+        except (ValueError,TypeError,ArithmeticError,KeyError):
             return False
-        if source is None:
-            return False
-        override=row.get('vehicleDeductionOverride') is True or row.get('deductionOverride') is True
-        if rate > Decimal('0.80') and not override:
-            return False
-        if declared != amount(source * rate):
+        if declared != amount(expected['deductibleVat']):
             return False
     return True
+
+def fuel_ledger_policy_good(deductible):
+    rows=deductible.get('fuelVatTreatments') or []
+    if deductible.get('fuelVatEvidenceErrors') or deductible.get('fuelVatInvoiceCount',0) != len(rows):
+        return False
+    try:
+        corrections=Decimal('0')
+        identities=[]
+        for row in rows:
+            expected=fuel_vat_breakdown(row)
+            if (not row.get('invoiceEntryId') or not row.get('invoiceDocRef') or not row.get('sourceDocumentRef') or
+                amount(row['deductibleVat']) != amount(expected['deductibleVat']) or
+                amount(row['nonDeductibleVat']) != amount(expected['nonDeductibleVat'])):
+                return False
+            corrections+=amount(expected['deductibleVat'])-amount(row['postedVat'])
+            identities.append(row['invoiceEntryId'])
+        return len(identities)==len(set(identities)) and corrections==amount(deductible.get('fuelVatAdjustmentTotal',0))
+    except (ValueError,TypeError,ArithmeticError,KeyError):
+        return False
 
 def current_period_checks(monthly):
     checks=[]
@@ -86,13 +126,14 @@ def current_period_checks(monthly):
         adjustments_total=sum((amount(a['vat']) for a in adjustments),Decimal('0'))
     except (ValueError,ArithmeticError,KeyError):
         movement=None;signed=None;adjustments_total=None
-    add('current_period_deductible_reconciliation',movement is not None and movement==signed and signed==amount(deductible.get('inqom4456NetMovement',0)) and adjustments_total is not None and amount(deductible.get('adjustmentTotal',0))==adjustments_total and amount(deductible.get('deductibleVat',0))==signed+adjustments_total and deductible.get('reconciliationOk') is True and deductible.get('componentReconciliationOk') is True,{'period':period,'netMovement':str(movement),'independentMovement':str(signed)})
+    add('current_period_deductible_reconciliation',movement is not None and movement==signed and signed==amount(deductible.get('inqom4456NetMovement',0)) and adjustments_total is not None and amount(deductible.get('adjustmentTotal',0))==adjustments_total and amount(deductible.get('deductibleVat',0))==signed+adjustments_total+amount(deductible.get('fuelVatAdjustmentTotal',0)) and deductible.get('reconciliationOk') is True and deductible.get('componentReconciliationOk') is True,{'period':period,'netMovement':str(movement),'independentMovement':str(signed)})
     evidence_good=(deductible.get('configuredAdjustmentCount')==deductible.get('verifiedAdjustmentCount')==len(adjustments) and
                    not deductible.get('adjustmentEvidenceErrors') and len(str(deductible.get('sourceLineDigestSha256') or ''))==64 and
                    bool(deductible.get('referenceChecks')) and all(deductible['referenceChecks'].values()) and
                    all(a.get('evidenceStatus')=='live_readback_verified' and bool(a.get('invoiceEntryId')) and bool(a.get('bankEntryId')) and bool(a.get('bankDocRef')) and len(str(a.get('sourceLineDigestSha256') or ''))==64 and bool(a.get('checks')) and all(a['checks'].values()) for a in adjustments))
     add('current_period_deductible_live_evidence',evidence_good,{'period':period,'configured':deductible.get('configuredAdjustmentCount'),'verified':deductible.get('verifiedAdjustmentCount')})
     add('current_period_fuel_vat_default_80_percent',fuel_adjustments_policy_good(adjustments),{'period':period,'fuelAdjustments':[a for a in adjustments if is_fuel_adjustment(a)]})
+    add('current_period_fuel_vat_ledger_evidence',fuel_ledger_policy_good(deductible),{'period':period,'fuelInvoiceCount':deductible.get('fuelVatInvoiceCount',0),'errors':deductible.get('fuelVatEvidenceErrors') or []})
     exact=(monthly.get('declarationDraft') or {}).get('exact') or {}
     try:
         declared=(amount(exact['taxableBase20Percent'])==sums['taxableBaseHt'] and

@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any
 import oss_process
 from action_queue_contract import normalize_action_list, validate_action_item
+from inqom_vat_period_contract import is_fuel_adjustment
 
 WS = Path(os.environ.get('RBW_OSS_WORKSPACE', '/home/craft/.craft-agent/workspaces/my-workspace-2'))
 OPS = WS / 'campaigns' / 'ops'
@@ -152,8 +153,6 @@ def classify(line):
     text=f"{line.get('account')} {line.get('label')} {line.get('entryLabel')} {line.get('docRef')}".upper()
     folder=line['folderId']; amount=round(float(line['amount']),2); ref=reference(line)
     if amount==0: return 'zero_movement_review',False
-    if any(token in text for token in ('CARBURANT','FUEL','ESSENCE','GAZOLE','DIESEL')):
-        return 'fuel_invoice_vat_80_default_review',True
     if line['lineId']==2593322531: return 'pns_credit_note',False
     if ref=='FC02147' and folder==18627: return 'jlm_5000_balance',False
     if 'EDF' in text: return 'edf_annual_upload',False
@@ -166,6 +165,8 @@ def classify(line):
     if ((folder==124921 and 'YOUCO' in text) or (folder==18627 and 'NAMOU' in text)):
         if 'LOYER' in text: return 'namourland_rent',True
         return 'namourland_distinguish_rent_deposit_return',True
+    if not str(line.get('account') or '').startswith('411') and is_fuel_adjustment(line):
+        return 'fuel_invoice_vat_80_default_review',True
     return 'native_reference_and_document_research',True
 
 def treatment(rule):
@@ -303,6 +304,7 @@ def materialize(g, native):
           'summary':treatment(rule),'dedupeKey':f'{ORIGIN}:{identity}',
           'data':{'folderId':folder,'ruleId':rule,'account':acc,'subAccountId':sub,'reference':ref,
                   'canonicalLines':rows,'existingMatchedInvoiceEvidence':[duplicate_reviews[r['lineId']] for r in rows if r['lineId'] in duplicate_reviews],'operatorRule':rules.get(rule) or rules['invoice_collection'],
+                  'fuelVatPolicy':{'defaultDeductionRate':0.80,'sourceInvoiceVatRequired':True,'nonDeductibleVatToExpense':True,'documentedVehicleOverrideRequired':True} if any(is_fuel_adjustment(r) for r in rows) else None,
                   'process':g['process']['steps'],'allowedEffects':['writes_reports','writes_action_queue','prepare_expert_pack'],
                   'blockedEffects':BLOCKED,'mutationAllowed':False,'externalSendAllowed':False,
                   'retryPolicy':'After any mutation error read the native reference and matched IDs before any retry; never replay an unknown result.'}})

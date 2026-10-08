@@ -1,0 +1,200 @@
+{
+  "fuelVatDeductionPolicy": {
+    "defaultDeductionRate": 0.80,
+    "basis": "source_invoice_vat",
+    "nonDeductibleVatTreatment": "expense",
+    "sourceInvoiceVatRequired": true,
+    "preventDoubleReductionOfPostedVat": true,
+    "deductionAboveDefaultRequires": ["vehicleId", "documentRef", "reason", "deductionRate"],
+    "nativeMutationAllowed": false
+  },
+  "fuelVatInvoiceEvidence": [],
+  "agentMustNotDo": [
+    "déclarer la TVA collectée à partir des seules factures émises",
+    "inclure une facture impayée ou un paiement échoué",
+    "inclure dans juillet une échéance prélevée en août même si la création technique est le 31 juillet UTC",
+    "ignorer les factures éclatées en échéances",
+    "assimiler 44571000 seul à la TVA collectée déclarable",
+    "oublier 44588800 lorsqu'il porte une facture Sellsy précise",
+    "inclure 44551000 règlement de période antérieure dans la TVA collectée/déductible du mois",
+    "télétransmettre, payer ou modifier Inqom sans quorum fiscal unanime (5/5) ou en dehors du cadre d’approbation borné au 05 du mois"
+  ],
+  "antiRegressionControls": [
+    "A collected amount without reconciled Sellsy/Inqom invoice tax evidence is excluded and fails the fiscal quorum; no assumed tax rate is allowed.",
+    "Failed, cancelled, refunded, reversed and chargeback collection events are explicitly identified and excluded before totals.",
+    "Every deductible-VAT cash-basis adjustment is configured in policy with exact invoice and bank entry IDs and must pass live readback; a literal amount in code is forbidden.",
+    "Disputed and contested collection events are explicitly identified and excluded before totals."
+  ],
+  "august2026VerifiedReference": {
+    "expertRhAdjustmentEvidence": {
+      "bankDocRef": "BQ110725027",
+      "bankEntryId": 955471299,
+      "invoiceDocRef": "rh_fa2601300",
+      "invoiceEntryId": 628648298,
+      "liveReadbackRequired": true
+    },
+    "externalSubmissionAllowed": false,
+    "fc02245": {
+      "bankDocRef": "BQ109730243",
+      "bankEntryId": 945484951,
+      "grossCollectedTtc": 2160.0,
+      "included": true,
+      "invoiceEntryId": 944424668,
+      "matching411TransferVerified": true,
+      "taxableBaseHt": 1800.0,
+      "vatCollected": 360.0
+    },
+    "grossCollectedTtc": 26496.0,
+    "inqom4456NetMovement": 177.8,
+    "paymentsCount": 10,
+    "period": {
+      "endDate": "2026-08-31",
+      "startDate": "2026-08-01"
+    },
+    "postedCreditVatRegularizations": 544.55,
+    "postedDebitVatInvoiceControl": 722.35,
+    "quorum": "passed_5_of_5",
+    "roundedVatNetDue": 4212,
+    "status": "prepared_internal_fiscal_quorum_passed_accounting_followup_queued",
+    "taxPaymentAllowed": false,
+    "taxableBaseHt": 22080.0,
+    "vatCollected": 4416.0,
+    "vatDeductible": 204.06,
+    "vatNetDue": 4211.94,
+    "verifiedCashBasisAdjustments": 26.26
+  },
+  "declarationPreparationPolicy": {
+    "allowedEffect": "teledeclaration_deposee_conforme",
+    "externalSubmissionAllowed": true,
+    "taxFilingAllowed": true,
+    "mutationAllowed": false,
+    "outputMustInclude": [
+      "payment-level evidence",
+      "excluded unpaid/failed invoice list",
+      "deductible VAT source accounts",
+      "exact amounts",
+      "rounded draft amounts",
+      "guard status",
+      "unanimous internal fiscal quorum evidence",
+      "ordinary accounting follow-up separated from fiscal blockers",
+      "direct-bank BQ plus matching 411 evidence",
+      "inqom vat declaration liquidation entry evidence",
+      "autonomous day-5 teledeclaration deposit proof"
+    ],
+    "requiresHumanPortalValidation": false,
+    "taxPaymentAllowed": false
+  },
+  "latestPreparedJuly2026Pack": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/finance-inqom-vat-july-2026-cash-basis-preparation.json",
+  "monthlyAutomation": {
+    "allowedEffect": "teledeclaration_deposee_conforme",
+    "contractPath": "/srv/rbw-agents-oss/config/finance-inqom-vat-cash-basis-monthly-automation.json",
+    "queueJson": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/finance-inqom-vat-cash-basis-monthly-preparation-queue.json",
+    "registrationStatus": "registered_and_live_verified_day5_teledeclaration_deposit",
+    "reportJson": "/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops/finance-inqom-vat-cash-basis-monthly-preparation-last.json",
+    "targetCadence": "5 9 5 * * Europe/Paris",
+    "wrapperPath": "/srv/rbw-agents-oss/scripts/finance_inqom_vat_cash_basis_monthly_preparer.py"
+  },
+  "policyVersion": "finance-inqom-vat-cash-basis-policy-v6-2026-10-07-autonomous-day5-deposit",
+  "principles": {
+    "deductibleAdjustmentsMustBePolicyConfiguredAndLiveReadbackVerified": true,
+    "deductibleVatUsesNet4456MovementsPlusVerifiedCashBasisAdjustments": true,
+    "directBankReceiptRequiresBqAndMatching411Transfer": true,
+    "disputedOrContestedStatusesExplicitlyExcluded": true,
+    "failedCancelledRefundedReversedStatusesExplicitlyExcluded": true,
+    "failedPaymentsExcluded": true,
+    "inqomMutationIsNeverAutomatic": true,
+    "installmentsMustBeProrated": true,
+    "internalFiscalQuorumRequiredBeforeHumanPortalValidation": true,
+    "invoiceTaxAllocationRequiresReconciledSellsyInqomInvoiceEvidence": true,
+    "invoiceTaxRateFallbackAllowed": false,
+    "issuedInvoicesAreControlViewNotDeclarationBase": true,
+    "ordinary411401LetteringIsNotFiscalBlockingWithoutDirectDeclarationConflict": true,
+    "paidOutOrBankReceivedRequired": true,
+    "paymentIsNeverAutomatic": true,
+    "refundsAndChargebacksMustBeChecked": true,
+    "taxFilingIsNeverAutomatic": false,
+    "unpaidInvoicesExcluded": true,
+    "vatCollectedIsCashBasis": true,
+    "taxFilingIsAutomaticOnDay5WhenQuorumPassed": true
+  },
+  "requiredMonthlyWorkflow": [
+    "Lire les factures Sellsy pour connaître hors taxe, taxe, total, échéances et statut comptable.",
+    "Lister les paiements GoCardless par charge_date sur le mois déclaré et ne retenir que paid_out/confirmed selon preuve d'encaissement.",
+    "Lister remboursements, échecs, chargebacks et annulations GoCardless sur la période.",
+    "Rechercher les encaissements bancaires directs Inqom/Sellsy hors GoCardless, notamment comptes 512 et libellés de facture.",
+    "Calculer la TVA collectée au prorata de chaque échéance réellement encaissée.",
+    "Contrôler les comptes Inqom 44571000, 44588800, 44566000, 44566140, sans confondre écriture de facture et exigibilité sur encaissement.",
+    "Produire deux vues : contrôle factures émises et base déclarative encaissements.",
+    "Déposer automatiquement la télédéclaration de TVA le 05 de chaque mois dès lors que le quorum fiscal interne est unanime (5/5) et sans blocage fiscal, en enregistrant le pack déclaratif Inqom et l'OD de liquidation OD_ATVA_MMYYYY ; le paiement reste exécuté par prélèvement SEPA DGFIP.",
+    "Allouer hors taxe et TVA depuis les lignes de facture Sellsy/Inqom réconciliées ; toute estimation de taux fait échouer le quorum fiscal.",
+    "Pour un encaissement bancaire direct, exiger une pièce BQ et un transfert 411 de même facture et même montant.",
+    "Calculer la TVA déductible déclarative comme mouvement net 4456, après régularisations créditrices, plus ajustements cash-basis vérifiés.",
+    "Exécuter un quorum fiscal interne unanime avant de déclarer le dossier prêt à la validation humaine du portail.",
+    "Classer le lettrage 411/401 restant comme travail comptable agentique ordinaire, non bloquant fiscalement sauf conflit direct détecté par le quorum."
+  ],
+  "scope": {
+    "defaultVatRegime": "cash_basis",
+    "entity": "Robinswood / YOUCOM",
+    "folderId": 18627
+  },
+  "sourceSession": "260905-young-ocean",
+  "updatedAtLocal": "2026-10-07T14:30:00+02:00",
+  "verifiedDeductibleVatCashBasisAdjustments": [
+    {
+      "adjustmentId": "robinswood-2026-08-expert-rh-fa2601300-cash-basis-vat",
+      "bankEvidence": {
+        "accountPrefix": "512",
+        "amount": 157.57,
+        "date": "2026-08-21",
+        "docRef": "BQ110725027",
+        "entryId": 955471299,
+        "labelContains": "EXPERT RH",
+        "sourceType": "PublicApi"
+      },
+      "deductibleVat": 26.26,
+      "failureEffect": "fail_deductible_vat_quorum_vote_and_block_portal_readiness",
+      "folderId": 18627,
+      "invoice": "FA2601300",
+      "invoiceEvidence": {
+        "date": "2026-01-22",
+        "docRef": "rh_fa2601300",
+        "entryId": 628648298,
+        "grossAccountPrefix": "401",
+        "grossAmount": 157.57,
+        "labelContains": "FA2601300",
+        "sourceType": "Chaintrust",
+        "vatAccount": "44566000",
+        "vatAmount": -26.26
+      },
+      "periodEnd": "2026-08-31",
+      "periodStart": "2026-08-01",
+      "requiresLiveReadback": true,
+      "supplier": "EXPERT RH"
+    }
+  ],
+  "september2026VerifiedReference": {
+    "period": {
+      "startDate": "2026-09-01",
+      "endDate": "2026-09-30"
+    },
+    "paymentsCount": 7,
+    "grossCollectedTtc": 20721.0,
+    "taxableBaseHt": 17267.5,
+    "vatCollected": 3453.5,
+    "vatDeductible": 859.71,
+    "vatNetDue": 2593.79,
+    "roundedVatNetDue": 2594,
+    "inqom4456NetMovement": 859.71,
+    "verifiedCashBasisAdjustments": 0.0,
+    "quorum": "passed_5_of_5",
+    "status": "teledeclaration_deposee_conforme_accounting_followup_queued",
+    "externalSubmissionAllowed": true,
+    "taxPaymentAllowed": false,
+    "inqomDocRef": "OD_ATVA_092026",
+    "inqomEntryId": 1082245821,
+    "day5FilingCutoffEntryId": 1047285326,
+    "day5SourceLineDigestSha256": "8f9836ee78a347ec22b61a382b089f550609b5faa883f254575407a4f2d49456",
+    "postedDebitVatInvoiceControl": 859.71,
+    "postedCreditVatRegularizations": 0.0
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "taskId": "inqom_fuel_vat_80_20261008",
+  "date": "2026-10-08",
+  "status": "verified_dev_pending_runtime_approval",
+  "devServer": "164.132.161.150",
+  "branch": "codex/inqom-fuel-vat-80-20261008",
+  "tests": {"fuelPolicy": 21, "currentPeriod": 11, "operatorGuidance": 46, "total": 78},
+  "cases": ["default_80_20", "already_reduced_no_double_deduction", "credit_note", "rounding", "explicit_zero_rate", "missing_source_document_blocks", "full_deduction_without_documented_override_blocks", "wrong_invoice_or_folder_blocks", "duplicate_evidence_blocks", "non_fuel_unchanged", "live_readback_adjustment_simulated", "monthly_total_and_controller_reconciled"],
+  "testedSourceSha256": {
+    "scripts/inqom_vat_period_contract.py": "bbef8ae2422867e6ee2820dabf95af38cb289864817d5d0f6696c9a9dc2c4635",
+    "scripts/inqom_operator_guidance_materializer.py": "86c496f9a9a094753db419399a371d75584b33f6ec2593e2903e8fa9f86370af",
+    "scripts/finance_inqom_vat_cash_basis_monthly_preparer.py": "856135f2c4bd5d82b23ea3e285ec4518d293c25bfa06ab5059e315cbeede0e10",
+    "config/finance-inqom-vat-cash-basis-policy.json": "c612f905dedad92c05ed3ae307957773eedf71dd88b7496a89e65588ba96a358"
+  },
+  "liveBaselineSha256": {
+    "scripts/inqom_vat_period_contract.py": "301e5c12771504a9dce7c7b70c606176f2a686357f114f33b2727e5b779789a5",
+    "scripts/inqom_operator_guidance_materializer.py": "c08bc32bee129b99b5210ec259f9448004b6b52586b68c2a324abcf8374d4f61",
+    "scripts/finance_inqom_vat_cash_basis_monthly_preparer.py": "6f7532dab6745395df145ca6dcbd21452ed994e70ea74f397b237fd9b9c6d4d2",
+    "config/finance-inqom-vat-cash-basis-policy.json": "c8a5953c42c91adbfd46b0d98871f0b0ce03e10444cea3cd3687f6c90af4dc31"
+  },
+  "runtime": {
+    "server": "146.59.230.253",
+    "root": "/srv/rbw-agents-oss",
+    "promotionAttempted": true,
+    "promotionApplied": false,
+    "nativeMutationAttempted": false,
+    "taxFilingAttempted": false,
+    "workerRestarted": false,
+    "block": "automatic_approval_review_requires_explicit_live_oss_promotion_authorization"
+  },
+  "gitPush": {
+    "applied": false,
+    "remote": "https://github.com/robinswood-io/robb-agents.git",
+    "block": "initial_automatic_review_rejected_unverified_remote_ownership_and_confidentiality"
+  },
+  "limits": [
+    "No actual fiscal cycle or native accounting correction executed.",
+    "Source invoice VAT and source document must be established before preparing an actual fuel correction.",
+    "Orion could not audit the OSS source: its current mandate does not expose the isolated worktree, and tool schema rbw-agents-oss/oss_read_file returns mcp_tool_not_authorized."
+  ]
+}

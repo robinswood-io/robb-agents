@@ -1,6 +1,14 @@
 # Inqom operator guidance — 4 octobre 2026
 
 ## 2026-10-08 — TVA carburant déductible à 80 % par défaut
+- Complément de vérification : le premier commit ne couvrait que la consigne et les ajustements du contrôleur. Le préparateur réel INTERNE a été lu, importé dans le worktree DEV dédié et complété avec le calcul 80/20.
+- Calcul partagé : 10 EUR de TVA source donnent 8 EUR déductibles et 2 EUR non déductibles. Les mouvements 4456 d'origine restent disponibles, et seule la différence entre déduction attendue et TVA déjà comptabilisée est préparée ; pas de double réduction.
+- Preuves exigées : TVA source, identifiant et référence de facture, document source ; une déduction supérieure à 80% exige véhicule, document, motif et taux concordant. Un booléen seul ne suffit pas. Les avoirs inversent les deux parts et les preuves manquantes bloquent la réconciliation fiscale.
+- Périmètre vérifié : matérialiseur des consignes, préparateur mensuel TVA, contrat de contrôle et configuration TVA. Les préparateurs de résolution fiscale et d'audit copilot inspectés ne calculent pas cette TVA.
+- Vérifications DEV : 21 nouveaux tests carburant, 11 tests du contrat mensuel, 46 régressions de consignes ; syntaxe Python, JSON et diff contrôlés. Baselines opérationnelles comparées aux fichiers testés, sans écrasement de changements concurrents.
+- Promotion tentée via oss_write_file avec précondition SHA-256 et sauvegarde atomique : refus avant écriture du premier fichier par la revue automatique, qui exige une autorisation de promotion OSS live. Aucun fichier runtime changé, aucune mutation Inqom, déclaration ou redémarrage.
+- Orion : deux audits partiels et diagnostic de transport terminé ; le schéma providerId=rbw-agents-oss/name=oss_read_file renvoie mcp_tool_not_authorized. Son catalogue autorisé ne contient pas ce fournisseur/outillage et son mandat ne couvre pas le worktree OSS. Aucun élargissement ni contournement de ces droits ; l'ancien checkout web Robinswood n'est pas une cible OSS.
+- Push : refus initial de revue automatique pour propriété/confidentialité du dépôt GitHub non établies ; aucune nouvelle tentative. État courant : correctif DEV vérifié, promotion runtime et push en attente d'autorisation explicite.
 - Worktree dédié : `/opt/ia-webdev/agent-dev/worktrees/robinswood-agents/inqom-fuel-vat-80-20261008`, branche `codex/inqom-fuel-vat-80-20261008`.
 - Changement minimal : les lignes/factures carburant sont routées vers `fuel_invoice_vat_80_default_review`; la consigne prépare TVA source, taux appliqué, TVA déductible plafonnée et TVA non déductible, sans mutation native.
 - Contrat TVA : nouveau contrôle `current_period_fuel_vat_default_80_percent`; par défaut une ligne carburant prend `deductionRate=0.80`, une déduction supérieure exige une exception explicite.
