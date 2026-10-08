@@ -1,6 +1,12 @@
 # Inqom operator guidance — 4 octobre 2026
 
 ## 2026-10-08 — TVA carburant déductible à 80 % par défaut
+- Autorisation explicite reçue (« oui ») pour la promotion des quatre fichiers OSS live et le push de la branche dédiée vers robinswood-io/robb-agents.
+- Promotion atomique vérifiée 10:40–10:41 UTC : contrat TVA, matérialiseur, politique JSON, préparateur mensuel ; quatre sauvegardes archivées, quatre SHA-256 runtime identiques aux fichiers testés DEV. Pas de redémarrage ni mutation Inqom.
+- La lecture MCP retire la fin de ligne ; son empreinte de texte diffère donc de celle des octets bruts. Le premier essai a échoué sans écriture ; les SHA-256 bruts des baselines copiées ont été vérifiés puis utilisés comme préconditions.
+- 20 tests synthétiques passent sur les modules effectivement chargés depuis /srv/rbw-agents-oss/scripts via PYTHONPATH explicite. La copie de la fixture comptable a été refusée par revue automatique ; aucun transfert alternatif. Le test d'intégration sur cette fixture reste prouvé sur DEV parmi les 78 tests réussis.
+- Push autorisé effectué : commit source 9b2d89ab publié sur origin/codex/inqom-fuel-vat-80-20261008. Orion a terminé son audit en lecture seule mais son fournisseur oss_read_file reste non autorisé ; les preuves runtime directes sont consignées dans l'artefact de vérification.
+- Les mentions de refus ci-dessous constituent l'historique avant autorisation, et non le statut courant. Statut courant : implemented_verified_runtime.
 - Complément de vérification : le premier commit ne couvrait que la consigne et les ajustements du contrôleur. Le préparateur réel INTERNE a été lu, importé dans le worktree DEV dédié et complété avec le calcul 80/20.
 - Calcul partagé : 10 EUR de TVA source donnent 8 EUR déductibles et 2 EUR non déductibles. Les mouvements 4456 d'origine restent disponibles, et seule la différence entre déduction attendue et TVA déjà comptabilisée est préparée ; pas de double réduction.
 - Preuves exigées : TVA source, identifiant et référence de facture, document source ; une déduction supérieure à 80% exige véhicule, document, motif et taux concordant. Un booléen seul ne suffit pas. Les avoirs inversent les deux parts et les preuves manquantes bloquent la réconciliation fiscale.

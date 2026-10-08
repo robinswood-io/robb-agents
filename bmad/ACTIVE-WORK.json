@@ -319,7 +319,8 @@
     },
     "inqom_fuel_vat_80_20261008": {
       "taskId": "inqom_fuel_vat_80_20261008",
-      "status": "implemented_verified_pending_runtime_approval",
+      "status": "implemented_verified_runtime",
+      "authorization": "User explicitly answered oui to four-file OSS live promotion and push to robinswood-io/robb-agents on 2026-10-08.",
       "target": {
         "devServer": "164.132.161.150",
         "gitRoot": "/srv/workspace/robinswood-agents",
@@ -350,15 +351,16 @@
         "mutationAttempted": false,
         "testedDefaultExample": {"sourceVat": 10, "deductibleVat": 8, "nonDeductibleVat": 2},
         "runtimePromotionAttempted": true,
-        "runtimePromotionApplied": false,
-        "runtimePromotionBlock": "auto_review_requires_explicit_live_oss_promotion_authorization",
-        "gitPushApplied": false,
+        "runtimePromotionApplied": true,
+        "runtimePromotionBlock": null,
+        "runtimeSyntheticTestsPassed": 20,
+        "gitPushApplied": true,
         "verificationArtifact": "bmad/inqom-fuel-vat-80-20261008-verification.json"
       },
       "limits": [
-        "Le préparateur opérationnel a été importé et testé sur DEV avec relectures natives simulées ; le cycle fiscal réel complet n'a pas été exécuté.",
-        "La promotion des quatre fichiers OSS live a été refusée par la revue automatique ; le premier fichier n'a pas été modifié.",
-        "Le push vers GitHub reste refusé sans autorisation explicite après le rejet initial pour propriété/confidentialité du dépôt non vérifiées."
+        "Le cycle fiscal réel et les corrections comptables natives ne sont pas exécutés ; la tâche change le comportement des agents.",
+        "La fixture comptable existante n'a pas été transférée après refus de revue automatique ; 78 tests DEV et 20 tests synthétiques sur les modules OSS installés passent.",
+        "L'audit Orion reste limité par mcp_tool_not_authorized sur le catalogue RBW Agents OSS ; aucune permission Orion élargie."
       ]
     }
   }

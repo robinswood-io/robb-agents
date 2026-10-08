@@ -1,10 +1,12 @@
 {
   "taskId": "inqom_fuel_vat_80_20261008",
   "date": "2026-10-08",
-  "status": "verified_dev_pending_runtime_approval",
+  "status": "verified_runtime",
+  "authorization": "Direct user confirmation oui for four-file OSS live promotion and branch push to robinswood-io/robb-agents.",
+  "sourceCommit": "9b2d89ab",
   "devServer": "164.132.161.150",
   "branch": "codex/inqom-fuel-vat-80-20261008",
-  "tests": {"fuelPolicy": 21, "currentPeriod": 11, "operatorGuidance": 46, "total": 78},
+  "tests": {"fuelPolicy": 21, "currentPeriod": 11, "operatorGuidance": 46, "total": 78, "liveSyntheticPassed": 20},
   "cases": ["default_80_20", "already_reduced_no_double_deduction", "credit_note", "rounding", "explicit_zero_rate", "missing_source_document_blocks", "full_deduction_without_documented_override_blocks", "wrong_invoice_or_folder_blocks", "duplicate_evidence_blocks", "non_fuel_unchanged", "live_readback_adjustment_simulated", "monthly_total_and_controller_reconciled"],
   "testedSourceSha256": {
     "scripts/inqom_vat_period_contract.py": "bbef8ae2422867e6ee2820dabf95af38cb289864817d5d0f6696c9a9dc2c4635",
@@ -13,29 +15,40 @@
     "config/finance-inqom-vat-cash-basis-policy.json": "c612f905dedad92c05ed3ae307957773eedf71dd88b7496a89e65588ba96a358"
   },
   "liveBaselineSha256": {
-    "scripts/inqom_vat_period_contract.py": "301e5c12771504a9dce7c7b70c606176f2a686357f114f33b2727e5b779789a5",
-    "scripts/inqom_operator_guidance_materializer.py": "c08bc32bee129b99b5210ec259f9448004b6b52586b68c2a324abcf8374d4f61",
-    "scripts/finance_inqom_vat_cash_basis_monthly_preparer.py": "6f7532dab6745395df145ca6dcbd21452ed994e70ea74f397b237fd9b9c6d4d2",
-    "config/finance-inqom-vat-cash-basis-policy.json": "c8a5953c42c91adbfd46b0d98871f0b0ce03e10444cea3cd3687f6c90af4dc31"
+    "scripts/inqom_vat_period_contract.py": "ac332a5a526d453414815b71d1ca8259fcab549f21a539ac255d86dd65f1d64b",
+    "scripts/inqom_operator_guidance_materializer.py": "8ee48d268fe778847c97157bfd2ba8e274e5c6b8ca8cef97a5d048847e78d7cf",
+    "scripts/finance_inqom_vat_cash_basis_monthly_preparer.py": "06f215f5782a656c899d19e07cd3951abff4cf9093083b0f7ad52a68a6fc7f75",
+    "config/finance-inqom-vat-cash-basis-policy.json": "1b3e04d637a93e1b6c1f3d81048c1e59f62c71804e3b29059bfd23cd2da9bdbc"
   },
   "runtime": {
     "server": "146.59.230.253",
     "root": "/srv/rbw-agents-oss",
     "promotionAttempted": true,
-    "promotionApplied": false,
+    "promotionApplied": true,
     "nativeMutationAttempted": false,
     "taxFilingAttempted": false,
     "workerRestarted": false,
-    "block": "automatic_approval_review_requires_explicit_live_oss_promotion_authorization"
+    "block": null,
+    "installedHashesMatchTestedSource": true,
+    "syntheticTestsPassed": 20,
+    "loadedModulePath": "/srv/rbw-agents-oss/scripts",
+    "backups": [
+      "/srv/rbw-agents-oss/archive/2026-10/mcp-oss-write-file/scripts/inqom_vat_period_contract.py.20261008T104058Z.bak",
+      "/srv/rbw-agents-oss/archive/2026-10/mcp-oss-write-file/scripts/inqom_operator_guidance_materializer.py.20261008T104101Z.bak",
+      "/srv/rbw-agents-oss/archive/2026-10/mcp-oss-write-file/config/finance-inqom-vat-cash-basis-policy.json.20261008T104103Z.bak",
+      "/srv/rbw-agents-oss/archive/2026-10/mcp-oss-write-file/scripts/finance_inqom_vat_cash_basis_monthly_preparer.py.20261008T104107Z.bak"
+    ]
   },
   "gitPush": {
-    "applied": false,
+    "applied": true,
     "remote": "https://github.com/robinswood-io/robb-agents.git",
-    "block": "initial_automatic_review_rejected_unverified_remote_ownership_and_confidentiality"
+    "publishedSourceCommit": "9b2d89ab",
+    "block": null
   },
   "limits": [
     "No actual fiscal cycle or native accounting correction executed.",
     "Source invoice VAT and source document must be established before preparing an actual fuel correction.",
+    "No sensitive accounting fixture transferred after automatic approval review rejected the copy; the fixture-based integration test passed on DEV only.",
     "Orion could not audit the OSS source: its current mandate does not expose the isolated worktree, and tool schema rbw-agents-oss/oss_read_file returns mcp_tool_not_authorized."
   ]
 }
