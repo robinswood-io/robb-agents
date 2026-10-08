@@ -152,6 +152,8 @@ def classify(line):
     text=f"{line.get('account')} {line.get('label')} {line.get('entryLabel')} {line.get('docRef')}".upper()
     folder=line['folderId']; amount=round(float(line['amount']),2); ref=reference(line)
     if amount==0: return 'zero_movement_review',False
+    if any(token in text for token in ('CARBURANT','FUEL','ESSENCE','GAZOLE','DIESEL')):
+        return 'fuel_invoice_vat_80_default_review',True
     if line['lineId']==2593322531: return 'pns_credit_note',False
     if ref=='FC02147' and folder==18627: return 'jlm_5000_balance',False
     if 'EDF' in text: return 'edf_annual_upload',False
@@ -181,6 +183,7 @@ def treatment(rule):
       'typographic_account_reimport_review':"Nouveau solde sur compte comportant une virgule : relire les lignes importées, la pièce et l'OD de correction antérieure. Vérifier le compte maître actif natif et préparer seulement la correction du nouveau résiduel par référence exacte ; préserver les corrections antérieures, TVA et banque. Ne pas solder par montant seul.",
       'credit_expense_invoice_discount_review':"Lire la facture pour distinguer remise, avoir, erreur de signe ou remboursement. Une remise intégrée doit réduire la charge concernée selon la pièce et le précédent expert ; vérifier total HT, TTC et TVA avant de préparer une OD bornée, sans nouvelle TVA ni paiement. Aucun reclassement automatique sur solde créditeur seul.",
       'duplicate_import_against_matched_native_invoice_review':"Réimport susceptible de doubler une facture déjà lettrée : relire les deux écritures exactes, les pièces, HT/TTC et la TVA. Conserver la facture canonique et ses lettrages. Si la TVA et la réalité documentaire sont identiques, préparer l'extourne du seul nouvel import et son lettrage avec l'annulation. Si la TVA diffère d'une OD forfaitaire antérieure, demander l'arbitrage de l'expert. Aucune nouvelle relance, aucun paiement et aucune clôture sur le seul montant.",
+      'fuel_invoice_vat_80_default_review':"Facture de carburant : appliquer par défaut une TVA déductible à 80% de la TVA portée par la facture, sauf preuve explicite d'un régime véhicule différent. Préparer la correction avec TVA source, taux appliqué, TVA déductible plafonnée et TVA non déductible ; aucune mutation native sans approbation.",
       'zero_movement_review':"Ligne sans mouvement financier ; documenter le statut, ne pas créer d'écart ou de règlement.",
     }.get(rule,"Rechercher facture et règlement par dossier, tiers, référence et période. Rechercher Gmail/notifications/portail puis demander au fournisseur l'envoi à l'adresse Inqom vérifiée du dossier. Aucun rapprochement sur montant seul.")
 

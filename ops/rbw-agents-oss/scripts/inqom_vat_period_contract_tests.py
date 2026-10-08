@@ -17,6 +17,25 @@ class PeriodContractTests(unittest.TestCase):
         self.assertTrue(all(r['ok'] for r in rows),rows)
         self.assertEqual(self.fixture['period']['startDate'],'2026-09-01')
         self.assertEqual(self.fixture['declarationDraft']['exact']['netVatDue'],2593.79)
+    def add_fuel_adjustment(self,data,vat=8.0,source_vat=10.0,rate=None):
+        row={'vat':vat,'sourceVat':source_vat,'taxCategory':'carburant','label':'Facture carburant gazole','evidenceStatus':'live_readback_verified','invoiceEntryId':101,'bankEntryId':202,'bankDocRef':'BQ-FUEL','sourceLineDigestSha256':'a'*64,'checks':{'invoiceRead':True,'bankRead':True}}
+        if rate is not None:
+            row['deductionRate']=rate
+        deductible=data['cashCollections']['deductibleVat']
+        deductible['verifiedCashBasisAdjustments']=[row]
+        deductible['configuredAdjustmentCount']=1
+        deductible['verifiedAdjustmentCount']=1
+        deductible['adjustmentTotal']=vat
+        deductible['deductibleVat']=round(deductible['independentSigned4456NetMovement']+vat,2)
+        data['declarationDraft']['exact']['deductibleVatOtherGoodsServices']=deductible['deductibleVat']
+        data['declarationDraft']['exact']['netVatDue']=round(data['declarationDraft']['exact']['grossVatDue20Percent']-deductible['deductibleVat'],2)
+    def test_fuel_vat_defaults_to_80_percent(self):
+        data=copy.deepcopy(self.fixture)
+        self.add_fuel_adjustment(data)
+        rows=current_period_checks(data)
+        self.assertTrue(all(r['ok'] for r in rows),rows)
+    def test_full_fuel_vat_without_override_blocks(self):
+        self.check(lambda d:self.add_fuel_adjustment(d,vat=10.0,source_vat=10.0),'current_period_fuel_vat_default_80_percent')
     def test_collection_drift_blocks(self):
         self.check(lambda d:d['cashCollections']['totalsExact'].update(grossCollectedTtc=26496),'current_period_collections_exact')
     def test_invoice_unreconciled_blocks(self):

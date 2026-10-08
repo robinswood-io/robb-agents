@@ -316,6 +316,42 @@
         },
         "verificationArtifact": "bmad/inqom-operator-guidance-20261005-verification.json"
       }
+    },
+    "inqom_fuel_vat_80_20261008": {
+      "taskId": "inqom_fuel_vat_80_20261008",
+      "status": "implemented_verified_targeted",
+      "target": {
+        "devServer": "164.132.161.150",
+        "gitRoot": "/srv/workspace/robinswood-agents",
+        "worktree": "/opt/ia-webdev/agent-dev/worktrees/robinswood-agents/inqom-fuel-vat-80-20261008",
+        "branch": "codex/inqom-fuel-vat-80-20261008",
+        "runtimeServer": "146.59.230.253",
+        "runtimeRoot": "/srv/rbw-agents-oss",
+        "observationUrl": "https://orion.rbw.ovh/missions",
+        "devContainer": "not_applicable_operational_python_cli"
+      },
+      "acceptanceCriteria": [
+        "Les factures de carburant sont routées vers une préparation comptable dédiée.",
+        "La TVA carburant est plafonnée à 80% par défaut dans le contrat TVA courant.",
+        "Une déduction carburant à 100% sans exception explicite échoue.",
+        "Aucune mutation Inqom, lettrage natif, déclaration fiscale ou redémarrage runtime n'est effectué."
+      ],
+      "evidence": {
+        "testsPassed": {
+          "inqom_vat_period_contract_tests.py": 11,
+          "inqom_operator_guidance_regression_tests.py": 46
+        },
+        "compile": "python3 -m py_compile scripts/inqom_vat_period_contract.py scripts/inqom_vat_period_contract_tests.py scripts/inqom_operator_guidance_materializer.py",
+        "compileExit": 0,
+        "monthlyControlAttempted": "finance_inqom_vat_cash_basis_monthly_tests.py",
+        "monthlyControlResult": "blocked_by_missing_host_runtime_wrapper:/srv/rbw-agents-oss/scripts/finance_inqom_vat_cash_basis_monthly_preparer.py",
+        "workerRestarted": false,
+        "mutationAttempted": false
+      },
+      "limits": [
+        "Le contrôle mensuel complet n'a pas pu être exécuté sur l'hôte DEV car il dépend d'un wrapper runtime /srv/rbw-agents-oss absent côté hôte.",
+        "Aucune promotion runtime INTERNE ni exécution native Inqom n'a été réalisée dans cette tâche."
+      ]
     }
   }
 }

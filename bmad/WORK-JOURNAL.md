@@ -1,5 +1,12 @@
 # Inqom operator guidance — 4 octobre 2026
 
+## 2026-10-08 — TVA carburant déductible à 80 % par défaut
+- Worktree dédié : `/opt/ia-webdev/agent-dev/worktrees/robinswood-agents/inqom-fuel-vat-80-20261008`, branche `codex/inqom-fuel-vat-80-20261008`.
+- Changement minimal : les lignes/factures carburant sont routées vers `fuel_invoice_vat_80_default_review`; la consigne prépare TVA source, taux appliqué, TVA déductible plafonnée et TVA non déductible, sans mutation native.
+- Contrat TVA : nouveau contrôle `current_period_fuel_vat_default_80_percent`; par défaut une ligne carburant prend `deductionRate=0.80`, une déduction supérieure exige une exception explicite.
+- Vérifications : `inqom_vat_period_contract_tests.py` 11 tests OK ; `inqom_operator_guidance_regression_tests.py` 46 tests OK ; `py_compile` des 3 fichiers modifiés OK.
+- Limite : `finance_inqom_vat_cash_basis_monthly_tests.py` échoue sur wrapper runtime absent côté hôte (`/srv/rbw-agents-oss/scripts/finance_inqom_vat_cash_basis_monthly_preparer.py`) avant validation mensuelle complète. Aucun restart, aucune mutation Inqom, aucune promotion runtime.
+
 Travail isolé DEV, baseline runtime vérifiée par SHA-256, 34 tests exécutés et reproduction du blocage réel avant/après. Promotion limitée de scripts CLI vers INTERNE autorisée, sans runtime/container/restart. Critères et limites détaillés dans ACTIVE-WORK.json.
 
 Qualification INTERNE vérifiée : 4 étapes passées, 4918 lignes dans 3 dossiers, 207 dossiers préparés, 5 attentes, 397 candidats écartés, 0 lot natif exécutable. 38 tests DEV, 9/14/7 contrôles runtime passés. 7 suivis expert conservés entre cycles. Les 6 corrections natives / 7 lettrages / 11 lignes fermées sont relus, banque inchangée sur les 6 lignes sources. Aucun redémarrage. Lancement complet bloqué par revue automatique ; autorisation explicite demandée.
