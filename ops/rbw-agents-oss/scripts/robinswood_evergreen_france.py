@@ -11,6 +11,7 @@ from zoneinfo import ZoneInfo
 import scotland_executive_conference_october as transport
 import evergreen_sender_pilot as sender_pilot
 from email.message import EmailMessage
+import evergreen_queue_continuity as continuity
 
 WS=Path('/home/craft/.craft-agent/workspaces/my-workspace-2')
 OPS=WS/'campaigns/ops'
@@ -76,7 +77,7 @@ def db_open(root):
  CREATE TABLE IF NOT EXISTS legacy(email TEXT PRIMARY KEY,campaign TEXT,message_id TEXT,subject TEXT,state TEXT);
  CREATE TABLE IF NOT EXISTS research(siren TEXT PRIMARY KEY,payload TEXT,checked TEXT,reason TEXT);
  CREATE TABLE IF NOT EXISTS metadata(key TEXT PRIMARY KEY,value TEXT);
- """);db.commit();sender_pilot.ensure_schema(db,root);return db
+ """);db.commit();sender_pilot.ensure_schema(db,root);continuity.ensure_schema(db,root);return db
 def suppressed(root=OPS.parent):
  obj=read(root/'contact-suppression.json');out=set()
  for k in ['records','blockedRecipients','items']:
@@ -295,7 +296,8 @@ def refresh_proof(c,t,fetch_page=public_page,get_json=None,ops=OPS):
    verifiedRole=role.get('qualite') if role else None,mandateBasis=role.get('basis','current_registry') if role else None,mandateSource=role.get('sourceUrl',url) if role else None,budgetConfirmed=False)
  return proof
 def research(db,t,batch=4,lane=None):
- rows=db.execute('SELECT * FROM candidates WHERE (checked IS NULL OR checked<?) AND (? IS NULL OR lane=?) AND email NOT IN (SELECT email FROM legacy) ORDER BY checked IS NOT NULL,checked,email LIMIT ?', (stamp(t-timedelta(days=7)),lane,lane,batch)).fetchall()
+ q=continuity.policy()
+ rows=db.execute("SELECT * FROM candidates WHERE (checked IS NULL OR checked<? OR (? AND COALESCE(json_extract(proof,'$.ok'),0)!=1 AND checked<?)) AND (? IS NULL OR lane=?) AND (email NOT IN(SELECT email FROM legacy) OR (? AND email IN(SELECT email FROM historical_threads WHERE status='eligible'))) ORDER BY checked IS NOT NULL,checked,email LIMIT ?", (stamp(t-timedelta(days=7)),bool(q),stamp(t-timedelta(hours=q['failedProofRetryHours'] if q else 168)),lane,lane,bool(q),batch)).fetchall()
  counts={}
  for r in rows:
   c=json.loads(r['payload']);proof=refresh_proof(c,t)
@@ -370,12 +372,20 @@ def draft(c,v,step='initial',subject=None):
  text+='\n\nVotre adresse professionnelle provient de sources publiques en lien avec votre activité. Source : '+c['sourceUrls'][0]+'\nInformations et droits sur vos données : https://robinswood.io/confidentialite — contact : thibault@robinswood.io. Pour ne plus recevoir de message, répondez simplement « STOP » ; l’opposition est gratuite et prise en compte automatiquement.'
  return {'subject':subject or title,'body':text}
 
-def discover_company(db,t,fetch_page=public_page):
- r=db.execute("SELECT * FROM research WHERE reason='needs_official_domain_and_exact_contact' OR (checked<datetime('now','-7 days') AND reason IN ('official_domain_or_public_executive_email_not_found','public_discovery_unavailable_backoff')) ORDER BY checked,siren LIMIT 1").fetchone()
+def discover_company(db,t,fetch_page=public_page,lane=None,retry_hours=168):
+ r=db.execute("SELECT * FROM research WHERE (? IS NULL OR json_extract(payload,'$.categorie_entreprise')=?) AND (reason='needs_official_domain_and_exact_contact' OR (checked<? AND reason IN ('official_domain_or_public_executive_email_not_found','public_discovery_unavailable_backoff'))) ORDER BY checked,siren LIMIT 1",(lane,'PME' if lane=='pme' else 'ETI',stamp(t-timedelta(hours=retry_hours)))).fetchone()
  if not r:return {'checked':0,'addedContacts':0}
  item=json.loads(r['payload']);query=item['nom_complet']+' '+r['siren']+' site officiel'
  added=0;reason='official_domain_or_public_executive_email_not_found'
  try:
+  q=continuity.policy()
+  if q:
+   origin=parse.urlparse(item.get('sourceUrl',''))
+   allowed={'categorie_entreprise','etat_administratif','statut_diffusion','tranche_effectif_salarie','per_page','page'}
+   if origin.scheme!='https' or origin.hostname!='recherche-entreprises.api.gouv.fr' or origin.path!='/search' or not set(parse.parse_qs(origin.query))<=allowed:raise ValueError('public_registry_origin_unproven')
+   # Build search terms only from freshly fetched public registry data.
+   public=next(x for x in json.loads(fetch(item['sourceUrl'])[0]).get('results',[]) if x.get('siren')==r['siren'] and x.get('statut_diffusion')=='O')
+   query='"'+public['nom_complet']+'" site officiel'
   data,_=fetch('https://www.bing.com/search?'+parse.urlencode({'q':query}))
   urls=[]
   for raw in re.findall(r'href=["\'](https://[^"\']+)',html.unescape(data)):
@@ -398,6 +408,10 @@ def discover_company(db,t,fetch_page=public_page):
    # A search engine only discovers a URL. The official SIREN proves identity.
    if r['siren'] not in primary_sirens(pages):continue
    domain=(parse.urlparse(origin).hostname or '').removeprefix('www.')
+   for link in list(dict.fromkeys(x for page in pages for x in page.get('contactLinks',[])))[:3]:
+    if len(pages)>=6:break
+    try:pages.append(fetch_page(link))
+    except Exception:pass
    for leader in item['leaders']:
     last=norm(leader.get('nom','')).replace(' ','');first=norm(leader.get('prenoms','')).split()
     if not last or not first:continue
@@ -465,7 +479,7 @@ def new_reply_text(m):
  return out
 def reply_scan(db,gateway,lane,t):
  done=0
- for r in db.execute("SELECT * FROM touches WHERE lane=? AND state='verified' AND step='initial' ORDER BY created DESC LIMIT 120",(lane,)).fetchall():
+ for r in db.execute("SELECT * FROM touches WHERE lane=? AND state='verified' AND (step='initial' OR (step='followup' AND email IN(SELECT email FROM historical_threads))) ORDER BY created DESC LIMIT 120",(lane,)).fetchall():
   thread=gateway.call('/threads/'+r['thread']+'?format=full')
   for m in thread.get('messages',[]):
    froms=transport.addresses(transport.header(m,'From'))
@@ -492,6 +506,14 @@ def reply_scan(db,gateway,lane,t):
    db.execute('INSERT OR IGNORE INTO replies VALUES(?,?,?,?,?,?)',(m['id'],target['email'],lane,'bounce',stamp(t),json.dumps(evidence)))
    suppress(target['email'],'bounce',m['id']);done+=1
  db.commit();return done
+def observe_historical_negative(row,message):
+ if 'SENT' in message.get('labelIds',[]):return
+ kind=classify_reply(new_reply_text(message),'presse')
+ if kind not in ['opposition','complaint','bounce']:return
+ sender=transport.addresses(transport.header(message,'From'))
+ if sender!=[row['email']] and (kind!='bounce' or row['email'].lower() not in transport.plain(message.get('payload',{})).lower()):return
+ # Historical negatives suppress globally without contaminating new-cohort metrics.
+ suppress(row['email'],kind,message['id'])
 def recover_pending(db,gateway):
  for r in db.execute("SELECT * FROM touches WHERE state!='verified'").fetchall():
   matches=gateway.search('in:sent rfc822msgid:'+r['operation']+'@robinswood.io')
@@ -509,12 +531,18 @@ def next_item(db,lane,t,c):
   sent=db.execute("SELECT 1 FROM touches WHERE email=? AND step='reply'",(r['email'],)).fetchone()
   row=db.execute('SELECT * FROM candidates WHERE email=?',(r['email'],)).fetchone()
   if not sent and row and r['email'] not in exclusions and available(row,'reply'):return row,'reply',learn
- rows=db.execute('SELECT * FROM candidates WHERE lane=? AND proof IS NOT NULL ORDER BY email',(lane,)).fetchall()
+ q=continuity.policy()
+ rows=db.execute("SELECT * FROM candidates WHERE lane=? AND proof IS NOT NULL ORDER BY CASE WHEN email IN(SELECT email FROM touches WHERE step='initial') OR email IN(SELECT email FROM historical_threads WHERE status='eligible') THEN 0 ELSE 1 END,email",(lane,)).fetchall()
  for r in rows:
-  if r['email'] in exclusions or delivery_blocker(json.loads(r['payload']),t) or db.execute('SELECT 1 FROM legacy WHERE email=?',(r['email'],)).fetchone():continue
+  historical=continuity.historical_parent(db,r['email']) if q else None
+  if r['email'] in exclusions or delivery_blocker(json.loads(r['payload']),t) or (not historical and db.execute('SELECT 1 FROM legacy WHERE email=?',(r['email'],)).fetchone()):continue
   proof=json.loads(r['proof'])
   if not proof.get('ok') or not 0<=(t-dt(proof['checkedAt'])).total_seconds()<c['proofMaxAgeDays']*86400:continue
   touches=db.execute('SELECT * FROM touches WHERE email=? ORDER BY created',(r['email'],)).fetchall()
+  if historical and not db.execute("SELECT 1 FROM touches WHERE email=? AND step='followup'",(r['email'],)).fetchone():
+   if db.execute('SELECT 1 FROM touches JOIN candidates ON candidates.email=touches.email WHERE candidates.account=?',(r['account'],)).fetchone():continue
+   if available(r,'followup'):return r,'followup',learn
+   continue
   if not touches:
    if db.execute('SELECT 1 FROM touches JOIN candidates ON candidates.email=touches.email WHERE candidates.account=?',(r['account'],)).fetchone():continue
    if available(r,'initial'):return r,'initial',learn
@@ -618,7 +646,14 @@ def run(lane,apply=False,research_only=False,root=ROOT,c=None,gateway=None,t=Non
  with (root/'campaign.lock').open('a') as lock:
   fcntl.flock(lock,fcntl.LOCK_EX);db=db_open(root)
   try:
-   import_reserves(db);research_result=research(db,t,research_batch,lane) if research_batch else {}
+   q=continuity.policy()
+   if q:assert q['authorization']['campaignScopeSha256']==c['authorization']['scopeSha256'],'queue_campaign_scope_changed'
+   import_reserves(db)
+   historical_audit={}
+   if maintain and q:
+    gateway=gateway or Gateway()
+    historical_audit=continuity.audit_historical(db,gateway,lane,t,suppressed(),business_days,q,observe_historical_negative)
+   research_result=research(db,t,research_batch,lane) if research_batch else {}
    counts=audience_counts(db,lane,t,c)
    status='outside_business_window';sent=0;reply_count=0
    if research_only or maintain:
@@ -626,12 +661,16 @@ def run(lane,apply=False,research_only=False,root=ROOT,c=None,gateway=None,t=Non
      gateway=gateway or Gateway();recover_pending(db,gateway);reply_count=reply_scan(db,gateway,lane,t)
     key='registry_last_day_'+lane;prior=db.execute('SELECT value FROM metadata WHERE key=?',(key,)).fetchone()
     added=0
-    if lane!='presse' and (not prior or prior['value']!=t.date().isoformat()):
+    coverage=continuity.coverage(db,lane,t,c,counts,q)
+    refill=continuity.refill_allowed(db,lane,t,coverage['refillRequired'],q) if q else False
+    if lane!='presse' and (refill if q else (not prior or prior['value']!=t.date().isoformat())):
      # Record a daily attempt before the free public API request; failures back off.
      db.execute('INSERT OR REPLACE INTO metadata VALUES(?,?)',(key,t.date().isoformat()));db.commit()
      try:added=reserve_national(db,t,lane)
      except Exception:research_result['national_registry_unavailable_backoff']=1
-    discovered=discover_company(db,t) if lane!='presse' else {'checked':0,'addedContacts':0}
+    discovered=(discover_company(db,t,lane=lane,retry_hours=q['discoveryRetryHours']) if q else discover_company(db,t)) if lane!='presse' else {'checked':0,'addedContacts':0}
+    research_result.update(companyDiscovery=discovered,historicalThreadAudit=historical_audit)
+    counts=audience_counts(db,lane,t,c)
     status='maintenance_no_send';counts['nationalCompanyReservesAdded']=added;counts['publicContactsDiscovered']=discovered['addedContacts']
    elif in_window(t,c) and apply:
     gateway=gateway or Gateway();recover_pending(db,gateway);reply_count=reply_scan(db,gateway,lane,t)
@@ -645,11 +684,18 @@ def run(lane,apply=False,research_only=False,root=ROOT,c=None,gateway=None,t=Non
      learn=learning(db,lane,t,c,sender,version) if c.get('senderPilot') else learn
      v=choose_variant(row['email'],learn)
      parent_row=db.execute("SELECT * FROM touches WHERE email=? AND step='initial' AND state='verified'",(row['email'],)).fetchone()
+     historical_parent=continuity.historical_parent(db,row['email']) if q and parent_row is None and step!='initial' else None
+     if historical_parent:parent_row={'gmail_id':historical_parent['message_id'],'subject':historical_parent['subject'],'thread':historical_parent['thread']}
      parent=gateway.get(parent_row['gmail_id']) if parent_row and step!='initial' else None
      if parent:
       from outbound_sender_guard import verify as verify_parent
-      verified,checks=verify_parent(parent,parent_row['raw'],parent_row['thread'])
-      if not verified:raise RuntimeError('original_conversation_effect_changed')
+      if historical_parent:
+       verified=continuity.validate_parent(parent,historical_parent)
+       if step=='followup' and not continuity.no_other_relationship(gateway,historical_parent,observe_historical_negative):continuity.hold(db,historical_parent,'historical_reply_or_later_touch_before_send')
+      else:verified,checks=verify_parent(parent,parent_row['raw'],parent_row['thread'])
+      if not verified:
+       if historical_parent:continuity.hold(db,historical_parent,'original_conversation_effect_changed')
+       raise RuntimeError('original_conversation_effect_changed')
      if step=='initial' and gateway.search('in:sent to:'+row['email']):
       append_legacy(db,{'email':row['email'],'status':'prior_contact_found_in_gmail','campaignId':'gmail_history'});db.commit()
       status='historical_contact_deduplicated'
@@ -682,11 +728,14 @@ def run(lane,apply=False,research_only=False,root=ROOT,c=None,gateway=None,t=Non
     'ok':True,'status':status,'mode':'apply' if apply else 'dry_run','counts':{**counts,'sentNow':sent,'newReplies':reply_count},
     'summary':lane+': '+status+'; sends='+str(sent),'blockingReasons':[] if status not in ['awaiting_qualified_contact'] else ['fresh_primary_qualification_required'],
     'warningReasons':['historical_HDF_bounces_5_of_48_preserved','SENT_is_not_inbox_delivery','recovery_canary_one_per_lane_per_day_preserved'],
-    'research':research_result,'learning':learning(db,lane,t,c),'yearRound':True,'endDate':None,
+    'queueCoverage':continuity.coverage(db,lane,t,c,audience_counts(db,lane,t,c),q),'queuePolicyVersion':q['version'] if q else None,'research':research_result,'learning':learning(db,lane,t,c),'yearRound':True,'endDate':None,
     'artifacts':{'state':str(root/'campaign-state.sqlite3'),'contract':str(POLICY)},
     'systemsOfRecord':{'classification':'none','crmWrites':0,'gmailProof':'exact_SENT_message_thread_body_signature'},
     'durability':{'idempotency':'email_step_copy_version_operation','unknownEffect':'pause_and_reconcile_no_retry'},
     'senderSharedCaps':{'daily':40,'weekly':200,'hourly':6,'intervalSeconds':600},'senderPilot':c.get('senderPilot'),'senderPilotDailyUsage':sender_pilot.daily_usage(db,t) if c.get('senderPilot') else None,'authorizationScopeSha256':c['authorization']['scopeSha256'],'laneCapacity':lane_capacity(db,lane,t,c)[1]}
+   save(OPS/(report_id+'-last.json'),report);save(root/(lane+('-maintenance' if maintain else '')+'-last.json'),report);return report
+  except continuity.HistoricalHold as err:
+   report={'generatedAt':stamp(now()),'capabilityId':report_id,'ok':True,'status':'historical_followup_held','summary':str(err),'counts':{**counts,'sentNow':0},'blockingReasons':[str(err)],'queuePolicyVersion':q['version'],'queueCoverage':continuity.coverage(db,lane,t,c,audience_counts(db,lane,t,c),q),'authorizationScopeSha256':c['authorization']['scopeSha256']}
    save(OPS/(report_id+'-last.json'),report);save(root/(lane+('-maintenance' if maintain else '')+'-last.json'),report);return report
   finally:db.close()
 def main():

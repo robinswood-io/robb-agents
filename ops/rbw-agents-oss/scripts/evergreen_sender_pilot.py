@@ -74,7 +74,12 @@ def plan(db,row,step,c,t,cap):
  if original:
   sender,version=touch_identity(original)
   if binding and (binding['sender'],binding['strategy'])!=(sender,version):raise RuntimeError('company_sender_binding_changed')
- elif step!='initial':raise RuntimeError('original_conversation_unproven')
+ elif step!='initial':
+  import evergreen_queue_continuity as continuity
+  historical=continuity.historical_parent(db,row['email']) if continuity.policy() else None
+  if not historical or historical['sender']!=PRIMARY:raise RuntimeError('original_conversation_unproven')
+  sender,version=PRIMARY,'legacy'
+  if binding and (binding['sender'],binding['strategy'])!=(sender,version):return None,None
  elif binding:sender,version=binding['sender'],binding['strategy']
  elif row['lane']=='presse':sender,version=PRIMARY,VERSION
  else:
