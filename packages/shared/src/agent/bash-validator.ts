@@ -120,7 +120,9 @@ export function inspectReadOnlyReviewCommand(command: string, target: string, in
   const targetPath = posix.normalize(target);
   let cwd = initialCwd?.startsWith('/') ? posix.normalize(initialCwd) : undefined;
   let observed = false; let hasHead = false; let onlyHeadProbes = true;
-  const underTarget = (path: string) => path === targetPath || path.startsWith(`${targetPath}/`);
+  const underTarget = (path: string) => targetPath === '/'
+    ? path.startsWith('/') && path !== '/'
+    : path === targetPath || path.startsWith(`${targetPath}/`);
   const absolute = (path: string) => path.startsWith('/') ? posix.normalize(path) : cwd ? posix.resolve(cwd, path) : undefined;
   let ast: ScriptNode;
   try { ast = bashParser(command) as ScriptNode; } catch { return no; }
@@ -155,7 +157,9 @@ export function inspectReadOnlyReviewCommand(command: string, target: string, in
       const head = operation === 'rev-parse' && (JSON.stringify(scopedArgs) === '["HEAD"]' || JSON.stringify(scopedArgs) === '["--verify","HEAD"]');
       const branch = (operation === 'rev-parse' && JSON.stringify(scopedArgs) === '["--abbrev-ref","HEAD"]')
         || (operation === 'branch' && JSON.stringify(scopedArgs) === '["--show-current"]');
-      const bound = gitCwd === targetPath;
+      const bound = targetPath === '/'
+        ? !!gitCwd && gitCwd.startsWith('/') && gitCwd !== '/'
+        : gitCwd === targetPath;
       if (!bound) return false;
       const pathBoundary = scopedArgs.indexOf('--');
       if (pathBoundary >= 0) {
@@ -196,6 +200,16 @@ export function inspectReadOnlyReviewCommand(command: string, target: string, in
         : undefined;
       const path = pathArg && staticPath(pathArg) ? absolute(pathArg) : undefined;
       if (!path || !underTarget(path)) return false;
+      observed = true;
+      onlyHeadProbes = false;
+      return true;
+    }
+    if (name === 'sed') {
+      if (args.length < 3 || !['-n', '--quiet', '--silent'].includes(args[0]!)
+        || !/^[1-9]\d*(?:,[1-9]\d*)?p$/.test(args[1]!)
+        || !args.slice(2).every(staticPath)) return false;
+      const paths = args.slice(2).map(absolute).filter((path): path is string => !!path);
+      if (paths.length !== args.length - 2 || !paths.every(underTarget)) return false;
       observed = true;
       onlyHeadProbes = false;
       return true;

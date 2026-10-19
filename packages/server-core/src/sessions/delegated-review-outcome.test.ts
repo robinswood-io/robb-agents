@@ -1187,4 +1187,116 @@ describe('completion of a delegated read-only review', () => {
     expect(result.valid).toBe(false);
     expect(result.gaps).toContain('criterion lacks observed evidence: independent-review-passed');
   });
+
+  it('accepts local Bash targetChecks without cwd when paths are explicit and ignores blocked Explore interpreter attempts', () => {
+    const targetChecks: ObjectiveAcceptanceCriterion[] = [
+      {
+        id: 'csv-sha',
+        description: 'Verify CSV SHA-256.',
+        toolName: 'Bash',
+        input: { command: 'shasum -a 256 /private/tmp/robb-yolo-live-artifacts/mesures.csv' },
+        checks: [{ path: '$text', equals: '82a3dda6562f10eeffead00c415c386d18d969e8ebb9bcc3128d3f0ae029c6d7  /private/tmp/robb-yolo-live-artifacts/mesures.csv' }],
+      },
+      {
+        id: 'report-head',
+        description: 'Verify report lines.',
+        toolName: 'Bash',
+        input: { command: 'sed -n 1,5p /private/tmp/robb-yolo-live-artifacts/rapport.md' },
+        checks: [{ path: '$text', equals: '# Rapport\nlignes=12\ntotal=650' }],
+      },
+    ];
+    const criteriaIds = [...ids, ...targetChecks.map(check => check.id)];
+    const contract = {
+      protocol: 'host-review-v2',
+      ...binding,
+      criteria: criteriaIds,
+      targetChecks,
+      instruction: HOST_PARENT_REVIEW_INSTRUCTION,
+    };
+    const originalText = `${prependHostDelegatedReviewerScope('Vérifie en lecture seule les artefacts générés.')}\n\n<host_parent_review_contract>${JSON.stringify(contract)}</host_parent_review_contract>`;
+    const objective = transitionObjectiveContract({
+      messageId: 'local-bash-review',
+      text: originalText,
+      delegatedRole: 'reviewer',
+      nowMs: 1,
+    });
+    const root: Message = {
+      id: objective.userMessageId,
+      role: 'user',
+      content: originalText,
+      timestamp: 1,
+      internalOrigin: { kind: 'spawned-session', senderSessionId: 'parent-session' },
+    };
+    const blockedInlineInterpreter: Message = {
+      id: 'blocked-python',
+      role: 'tool',
+      content: '',
+      timestamp: 10,
+      toolName: 'Bash',
+      toolUseId: 'blocked-python-call',
+      toolStatus: 'error',
+      isError: true,
+      toolExecuted: true,
+      toolInput: { command: 'python3 -c "import csv; print(12)"' },
+      toolResult: 'Bash command blocked: compound command contains unsafe operations.\nEffective mode: Explore',
+    };
+    const csvObs: Message = {
+      id: 'csv-obs',
+      role: 'tool',
+      content: '',
+      timestamp: 11,
+      toolName: 'Bash',
+      toolUseId: 'csv-call',
+      toolStatus: 'completed',
+      toolExecuted: true,
+      toolInput: { command: 'shasum -a 256 /private/tmp/robb-yolo-live-artifacts/mesures.csv' },
+      toolResult: '82a3dda6562f10eeffead00c415c386d18d969e8ebb9bcc3128d3f0ae029c6d7  /private/tmp/robb-yolo-live-artifacts/mesures.csv\n',
+    };
+    const reportObs: Message = {
+      id: 'report-obs',
+      role: 'tool',
+      content: '',
+      timestamp: 12,
+      toolName: 'Bash',
+      toolUseId: 'report-call',
+      toolStatus: 'completed',
+      toolExecuted: true,
+      toolInput: { command: 'sed -n 1,5p /private/tmp/robb-yolo-live-artifacts/rapport.md' },
+      toolResult: '# Rapport\nlignes=12\ntotal=650\n',
+    };
+    const extraWcObs: Message = {
+      id: 'extra-wc',
+      role: 'tool',
+      content: '',
+      timestamp: 13,
+      toolName: 'Bash',
+      toolUseId: 'extra-wc-call',
+      toolStatus: 'completed',
+      toolExecuted: true,
+      toolInput: { command: 'wc -l /private/tmp/robb-yolo-live-artifacts/mesures.csv' },
+      toolResult: '      13 /private/tmp/robb-yolo-live-artifacts/mesures.csv\n',
+    };
+    const finalMessage: Message = {
+      id: 'local-bash-final',
+      role: 'assistant',
+      timestamp: 20,
+      content: JSON.stringify({
+        verdict: 'PASS',
+        ...binding,
+        criteria: criteriaIds.map(id => ({ id, passed: true })),
+        findings: [],
+      }),
+    };
+    const validation = validateDelegatedReviewCompletion({
+      parentSessionId: 'parent-session',
+      objective,
+      messages: [root, blockedInlineInterpreter, csvObs, reportObs, extraWcObs, finalMessage],
+      finalMessage,
+    });
+    expect(validation).toMatchObject({
+      valid: true,
+      state: 'complete_verified',
+      declaration: { criteria: [{ id: 'delegated-review-delivered', satisfied: true }] },
+    });
+  });
 });

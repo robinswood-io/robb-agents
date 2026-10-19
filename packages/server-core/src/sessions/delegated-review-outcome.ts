@@ -496,7 +496,7 @@ export function buildDelegatedReviewPrompt(input: {
     ...(request.remote ? [
       `This target is remote: use mcp__${request.remote.source}__ssh_execute with server=${JSON.stringify(request.remote.server)} and cwd=${JSON.stringify(request.target)} exactly. A local path or another connector/server cannot prove this review.`,
     ] : []),
-    `Use simple read-only inspection commands with their actual stdout. Every Git probe must start exactly with ${safeGit}; this neutralizes repository-configured filesystem, hook, pager, default-format and signature helpers. For example: ${safeGit} rev-parse HEAD. If -C is needed, place the exact static target path after --no-pager and before the subcommand. Only the closed metadata/search operations rev-parse, branch --show-current, merge-base, ls-files, grep without a pattern file, and non-patch log are accepted. Git status, diff, show and patch/stat log are not accepted because repository attributes and filters can execute helpers; inspect literal target files with direct target-bound read/cmp commands instead. Pipelines, scripts, computed verdicts and echoed constants are not accepted as inspection evidence. If an existing registered check cannot establish an inspection, preserve the gap and report that limitation; do not rewrite its criteria or obtain another reviewer to bypass it.`,
+    `Use simple read-only inspection commands with their actual stdout. Never use inline interpreters (python3 -c, node -e, bash -c); use Read or simple read-only commands (cat, head, tail, wc, stat, ls, cmp -s, diff, shasum -a 256, sed -n) with explicit target paths. Every Git probe must start exactly with ${safeGit}; this neutralizes repository-configured filesystem, hook, pager, default-format and signature helpers. For example: ${safeGit} rev-parse HEAD. If -C is needed, place the exact static target path after --no-pager and before the subcommand. Only the closed metadata/search operations rev-parse, branch --show-current, merge-base, ls-files, grep without a pattern file, and non-patch log are accepted. Git status, diff, show and patch/stat log are not accepted because repository attributes and filters can execute helpers; inspect literal target files with direct target-bound read/cmp commands instead. Pipelines, scripts, computed verdicts and echoed constants are not accepted as inspection evidence. If an existing registered check cannot establish an inspection, preserve the gap and report that limitation; do not rewrite its criteria or obtain another reviewer to bypass it.`,
     'PASS requires every criterion to have passed=true and findings to be exactly []. FAIL requires a non-empty findings array of concrete strings consistent with the observed failed conditions or inspection limitation; each criterion passed value must still report its actual result. Never return an incomplete shorthand such as {"verdict":"FAIL"}. A substantiated FAIL is a completed review; it does not certify the parent’s deliverable or authorize a correction.',
     'Do not call update_plan or SubmitPlan. Complete this review in the current turn with its requested PASS or substantiated FAIL receipt.',
     'If the host reports only a receipt syntax, field or shape mismatch, immediately return the corrected JSON from the evidence already collected. Do not call a tool, repeat an inspection, re-register checks or reopen the review.',
@@ -599,8 +599,9 @@ function criterionInvocationMatches(criterion: ObjectiveAcceptanceCriterion, mes
 
 /**
  * An exact shell invocation is still opaque executable code. It becomes a
- * review observation only when the registered check binds an absolute cwd and
- * the closed reviewer grammar proves the command read-only for that target.
+ * review observation only when the registered check binds an absolute cwd (or,
+ * for local Bash where the tool schema has no cwd field, explicit absolute
+ * target paths) and the closed reviewer grammar proves the command read-only.
  */
 function isBoundReadOnlyHostTargetCheck(criterion: ObjectiveAcceptanceCriterion, message: Message): boolean {
   if (!criterionInvocationMatches(criterion, message)
@@ -612,11 +613,18 @@ function isBoundReadOnlyHostTargetCheck(criterion: ObjectiveAcceptanceCriterion,
   if (!LOCAL_REVIEW_SHELL_TOOLS.has(message.toolName ?? '')
     && message.toolName !== 'mcp__rbw-servers__ssh_execute') return false;
   const command = shellCommand(message);
+  if (!command) return false;
   const cwdBinding = Object.entries(criterion.input).find(([path]) => {
     const keys = completionCriterionPathKeys(path);
     return keys?.length === 1 && keys[0] === 'cwd';
   })?.[1];
-  if (!command || typeof cwdBinding !== 'string' || !cwdBinding.startsWith('/')
+  if (cwdBinding === undefined) {
+    if (!LOCAL_REVIEW_SHELL_TOOLS.has(message.toolName ?? '')
+      || message.toolInput?.cwd !== undefined) return false;
+    const inspection = inspectReadOnlyReviewCommand(command, '/');
+    return inspection.safe && inspection.observesTarget;
+  }
+  if (typeof cwdBinding !== 'string' || !cwdBinding.startsWith('/')
     || message.toolInput?.cwd !== cwdBinding) return false;
   const inspection = inspectReadOnlyReviewCommand(command, cwdBinding, cwdBinding);
   return inspection.safe && inspection.observesTarget;
@@ -627,7 +635,7 @@ function isExplicitHostPolicyRefusal(message: Message): boolean {
   if (message.toolStatus !== 'error' || !message.isError || isObjectiveToolExecutedSuccessfully(message)) return false;
   const result = message.toolResult ?? '';
   return /(?:MCP write operations are blocked in Explore|blocked \(Explore mode\)|operation denied by policy|high-stakes evidence gate)/i.test(result)
-    || /is not in the read-only allowlist[\s\S]{0,2048}Effective mode:\s*Explore/i.test(result);
+    || /(?:Bash command blocked:|is not in the read-only allowlist|not allowed in Explore mode|blocked in Explore mode)[\s\S]{0,2048}Effective mode:\s*Explore/i.test(result);
 }
 
 /**
@@ -682,20 +690,27 @@ export function validateDelegatedReviewCompletion(input: {
     : findings.length === 0) return reject('The review verdict, criterion results and findings must agree');
   const scoped = input.messages.slice(rootIndex + 1, finalIndex);
   if (scoped.some(message => message.role === 'tool' && message.toolExecuted !== false && !COORDINATION.test(message.toolName ?? '')
+    && !isExplicitHostPolicyRefusal(message)
     && isObjectiveEvidenceInvalidatingMutation(message)
     && !request.targetChecks?.some(criterion => criterionInvocationMatches(criterion, message)
-      && (isExplicitHostPolicyRefusal(message) || isBoundReadOnlyHostTargetCheck(criterion, message))))) {
+      && isBoundReadOnlyHostTargetCheck(criterion, message)))) {
     return reject('A review with a target mutation requires the normal objective validation');
   }
   if (scoped.some(message => {
-    if (message.role !== 'tool' || message.toolExecuted === false || message.toolCheckpoint !== undefined || COORDINATION.test(message.toolName ?? '')) return false;
+    if (message.role !== 'tool' || message.toolExecuted === false || message.toolCheckpoint !== undefined || COORDINATION.test(message.toolName ?? '')
+      || isExplicitHostPolicyRefusal(message)) return false;
     const command = shellCommand(message);
     if (command === undefined) return false;
     if (request.targetChecks) {
       if (!isShellTool(message)) return false;
       const targetCheck = request.targetChecks.find(criterion => criterionInvocationMatches(criterion, message));
-      return !targetCheck || !isExplicitHostPolicyRefusal(message)
-        && !isBoundReadOnlyHostTargetCheck(targetCheck, message);
+      if (targetCheck) return !isBoundReadOnlyHostTargetCheck(targetCheck, message);
+      return !(LOCAL_REVIEW_SHELL_TOOLS.has(message.toolName ?? '')
+        && inspectReadOnlyReviewCommand(
+          command,
+          '/',
+          typeof message.toolInput?.cwd === 'string' ? message.toolInput.cwd : undefined,
+        ).safe);
     }
     return !reviewCommand(message, request).safe;
   })) return reject('An opaque or mutating shell command requires normal objective validation');

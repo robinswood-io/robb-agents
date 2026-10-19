@@ -1098,7 +1098,14 @@ function hostEvidenceRefs(
       .find((value): value is string => typeof value === 'string');
     const registeredShellCheck = isObjectiveShellExecutorToolName(message.toolName ?? '')
       && command !== undefined && isObjectiveShellEvidenceCommand(command);
-    if (observationOrValidationTool(message) || registeredShellCheck) addRefs(checks, message, index);
+    const isCheck = observationOrValidationTool(message) || registeredShellCheck;
+    if (isCheck) addRefs(checks, message, index);
+    if (message.toolName) {
+      for (const alias of toolAliasDescriptor(message.toolName).aliases) {
+        successful.add(alias);
+        if (isCheck) checks.add(alias);
+      }
+    }
   }
   for (const [refs, candidatesByTool] of toolAliasCandidates) {
     for (const candidate of candidatesByTool.values()) {

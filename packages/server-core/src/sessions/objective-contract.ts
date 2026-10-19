@@ -1948,7 +1948,49 @@ const MUTATION_BASH_PATTERN = /(?:^|\s)(?:apply_patch|chmod|chown|cp|install|ln|
 export function hasObjectiveExecutionEvidence(messages: Message[], userMessageId: string): boolean {
   const userIndex = messages.findIndex(message => message.id === userMessageId && message.role === 'user');
   if (userIndex < 0) return false;
-  return messages.slice(userIndex + 1).some(message => {
+  const scoped = messages.slice(userIndex + 1);
+  const nonReviewerSpawnedIds = new Set<string>();
+  for (const message of scoped) {
+    if (message.role === 'tool' && isObjectiveToolExecutedSuccessfully(message)
+      && (message.toolName === 'mcp__session__spawn_session' || message.toolName === 'spawn_session')) {
+      const role = typeof message.toolInput?.role === 'string' ? message.toolInput.role.trim().toLowerCase() : 'worker';
+      if (role !== 'reviewer' && typeof message.toolResult === 'string') {
+        try {
+          const parsed = JSON.parse(message.toolResult) as { sessionId?: unknown };
+          if (typeof parsed?.sessionId === 'string' && parsed.sessionId) {
+            nonReviewerSpawnedIds.add(parsed.sessionId);
+          }
+        } catch {}
+      }
+    }
+  }
+  return scoped.some(message => {
+    if (message.role === 'user' && message.internalOrigin?.kind === 'agent-message'
+      && typeof message.content === 'string' && message.content.startsWith('[host-delegated-terminal-result-v1]\n')) {
+      const headerLine = message.content.split('\n', 2)[1];
+      if (headerLine) {
+        try {
+          const envelope = JSON.parse(headerLine) as { role?: unknown; state?: unknown; parentObjectiveId?: unknown };
+          if (envelope?.state === 'complete_verified' && envelope?.role !== 'reviewer'
+            && (!envelope.parentObjectiveId || envelope.parentObjectiveId === userMessageId)) {
+            return true;
+          }
+        } catch {}
+      }
+    }
+    if (message.role === 'tool' && isObjectiveToolExecutedSuccessfully(message)
+      && (message.toolName === 'mcp__session__wait_sessions' || message.toolName === 'wait_sessions')
+      && typeof message.toolResult === 'string' && nonReviewerSpawnedIds.size > 0) {
+      try {
+        const parsed = JSON.parse(message.toolResult) as { sessions?: Array<{ sessionId?: unknown; objectiveState?: unknown }> };
+        if (Array.isArray(parsed?.sessions) && parsed.sessions.some(item => (
+          typeof item?.sessionId === 'string' && nonReviewerSpawnedIds.has(item.sessionId)
+          && item.objectiveState === 'complete_verified'
+        ))) {
+          return true;
+        }
+      } catch {}
+    }
     // Potential/unknown mutations invalidate stale observations, but they do
     // not positively prove that the requested action occurred.
     return isObjectiveToolExecutedSuccessfully(message)

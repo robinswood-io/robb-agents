@@ -745,6 +745,7 @@ export function FreeFormInput({
         || message.includes('Client disconnected')
         || message.includes('transport')
         || message.includes('socket')
+        || message.includes('Session not found')
     }
 
     const executePendingPlan = async () => {

@@ -49,14 +49,26 @@ function canonicalToolName(name: string): string {
   return builtinToolNames.get(candidate.toLowerCase()) ?? name;
 }
 
-const builtinBashEvidenceNames = new Set(['Bash', 'bash', 'functions.bash']);
+const builtinToolEvidenceAliasGroups: ReadonlyArray<ReadonlySet<string>> = [
+  new Set(['Bash', 'bash', 'functions.bash']),
+  new Set(['Read', 'read', 'functions.read']),
+  new Set(['Write', 'write', 'functions.write']),
+  new Set(['Edit', 'edit', 'functions.edit']),
+  new Set(['Find', 'find', 'functions.find']),
+  new Set(['Glob', 'glob', 'functions.glob']),
+  new Set(['Grep', 'grep', 'functions.grep']),
+  new Set(['Ls', 'ls', 'functions.ls']),
+  new Set(['WebFetch', 'webfetch', 'web_fetch', 'functions.webfetch', 'functions.web_fetch']),
+  new Set(['WebSearch', 'websearch', 'web_search', 'functions.websearch', 'functions.web_search']),
+];
 
 function referencesToolAlias(evidence: readonly string[], observedToolName: string): boolean {
-  return evidence.some(ref => ref.startsWith('tool:')
-    && ref.length > 'tool:'.length
-    && (ref.slice('tool:'.length) === observedToolName
-      || builtinBashEvidenceNames.has(observedToolName)
-        && builtinBashEvidenceNames.has(ref.slice('tool:'.length))));
+  const aliasGroup = builtinToolEvidenceAliasGroups.find(group => group.has(observedToolName));
+  return evidence.some(ref => {
+    if (!ref.startsWith('tool:') || ref.length <= 'tool:'.length) return false;
+    const target = ref.slice('tool:'.length);
+    return target === observedToolName || Boolean(aliasGroup?.has(target));
+  });
 }
 
 // Only use high-confidence partition keys to prove that a mutation is about a
@@ -277,12 +289,23 @@ function criterionInputValueMatches(
   return canonicalActual !== undefined && canonicalActual === canonicalPersistedMcpWorkspacePath(expected);
 }
 
+const NATIVE_FILE_PATH_TOOLS = new Set(['read', 'write', 'edit']);
+
 function criterionInputMatchesToolInput(
   criterion: ObjectiveAcceptanceCriterion,
   toolInput: Record<string, unknown> | undefined,
 ): boolean {
+  const canonicalTool = canonicalToolName(criterion.toolName);
   return Object.entries(criterion.input).every(([path, expected]) => {
-    return criterionInputValueMatches(criterion.toolName, path, atPath(toolInput, path), expected);
+    let actual = atPath(toolInput, path);
+    if (actual === undefined && NATIVE_FILE_PATH_TOOLS.has(canonicalTool)) {
+      if (path === 'path' || path === '$.path') {
+        actual = atPath(toolInput, 'file_path');
+      } else if (path === 'file_path' || path === '$.file_path') {
+        actual = atPath(toolInput, 'path');
+      }
+    }
+    return criterionInputValueMatches(criterion.toolName, path, actual, expected);
   });
 }
 

@@ -284,9 +284,9 @@ async function validateRemoteMobileFlow() {
     });
     const devUpdaterHidden = await developmentUpdateButtons.count() === 0;
 
-    await navigateToRoute(page, 'settings/server');
+    await navigateToRoute(page, 'settings/messaging');
     await page.getByTestId('remote-mobile-setup').waitFor({ timeout: 20_000 });
-    await page.getByRole('button', { name: /Appairer un téléphone|Pair a phone/i }).click();
+    await page.getByRole('button', { name: /Appairer un (téléphone|appareil)|Pair a (phone|device)/i }).click();
     const desktopQr = page.getByTestId('remote-pairing-qr');
     await desktopQr.waitFor({ timeout: 10_000 });
     const desktopQrVisible = await desktopQr.locator('svg[role="img"]').isVisible();
@@ -330,21 +330,19 @@ async function validateRemoteMobileFlow() {
     await page.reload();
     await page.locator('h2:visible').filter({ hasText: /^ChatDisplay \(Mobile\)$/ }).waitFor({ timeout: 20_000 });
 
-    const providerTrigger = page.getByTestId('provider-selector-trigger');
-    await providerTrigger.waitFor({ timeout: 20_000 });
-    const providerTriggerCount = await providerTrigger.count();
-    await providerTrigger.first().click();
-    const providerDrawer = page.locator('[role="dialog"]:visible');
-    await providerDrawer.waitFor({ timeout: 10_000 });
-    const providerOptionCount = await page.getByTestId('provider-option').count();
-    const modelSelectorTriggerCount = await page.getByTestId('model-selector-trigger').count();
+    const modelTrigger = page.getByTestId('model-selector-trigger');
+    await modelTrigger.waitFor({ timeout: 20_000 });
+    await modelTrigger.first().click();
+    const modelDrawer = page.locator('[role="dialog"]:visible');
+    await modelDrawer.waitFor({ timeout: 10_000 });
+    const connections = page.getByTestId('model-connection-option');
+    const connectionOptionCount = await connections.count();
+    await page.locator('[data-testid="model-connection-option"]:not(:disabled)').first().click();
     const modelOptionCount = await page.getByTestId('model-option').count();
     const thinkingOptionCount = await page.getByTestId('thinking-option').count();
-    const providerOnlyRoutingControls = providerTriggerCount > 0
-      && providerOptionCount >= 2
-      && modelSelectorTriggerCount === 0
-      && modelOptionCount === 0
-      && thinkingOptionCount === 0;
+    const manualModelControlsVisible = connectionOptionCount >= 2
+      && modelOptionCount > 0
+      && thinkingOptionCount > 0;
     await page.keyboard.press('Escape');
 
     await page.evaluate(() => {
@@ -388,7 +386,7 @@ async function validateRemoteMobileFlow() {
     console.log(`Updater:  ${devUpdaterHidden ? 'hidden in development' : 'unexpectedly visible'}`);
     console.log(`Desktop QR: ${desktopQrVisible ? 'visible and scannable' : 'missing'}`);
     console.log(`Desktop Remote screenshot: ${desktopRemoteScreenshot}`);
-    console.log(`Routing controls: ${providerOnlyRoutingControls ? `${providerOptionCount} providers, no manual model/reasoning` : 'invalid'}`);
+    console.log(`Model controls: ${manualModelControlsVisible ? `${connectionOptionCount} connections, explicit model and reasoning` : 'missing controls'}`);
     console.log(`Delegation: ${delegatedActivityProjected ? 'children hidden, activity projected onto parent' : 'invalid hierarchy rendering'}`);
     console.log(`Overflow: ${governanceOverflow || playgroundOverflow ? 'horizontal overflow detected' : 'none'}`);
     console.log(`Console errors: ${filteredConsoleErrors.length}`);
@@ -408,7 +406,7 @@ async function validateRemoteMobileFlow() {
       && darkThemeApplied
       && devUpdaterHidden
       && desktopQrVisible
-      && providerOnlyRoutingControls
+      && manualModelControlsVisible
       && delegatedActivityProjected
       && !governanceOverflow
       && !playgroundOverflow

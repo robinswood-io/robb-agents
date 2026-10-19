@@ -685,9 +685,19 @@ export const mockElectronAPI = {
  * `window.electronAPI` at import time.
  */
 export function ensureMockElectronAPI() {
-  if (!window.electronAPI) {
-    ;(window as any).electronAPI = mockElectronAPI
-    console.log('[Playground] Injected mock electronAPI')
+  try {
+    const merged = window.electronAPI
+      ? { ...window.electronAPI, ...mockElectronAPI }
+      : mockElectronAPI
+    Object.defineProperty(window, 'electronAPI', {
+      value: merged,
+      configurable: true,
+      writable: true,
+    })
+  } catch {
+    if (!window.electronAPI) {
+      ;(window as any).electronAPI = mockElectronAPI
+    }
   }
   if (!(window as any).__playgroundMessaging) {
     ;(window as any).__playgroundMessaging = playgroundMessagingHandle

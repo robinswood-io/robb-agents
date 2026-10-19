@@ -76,7 +76,7 @@ import { extractObjectiveOutcome, hasCurrentObjectiveIndependentReviewPass, vali
 import { waitForSessionChange } from './session-wait';
 import { buildSessionWaitDiagnostic, type WaitDiagnosticBoundary } from './session-wait-diagnostic';
 import { ActiveDelegationDeduplicator, evaluateReviewDelegation, makeActiveDelegationKey } from './review-delegation-policy';
-import { canonicalTerminalReconciliationToolInput, isProvablyReadOnlyShellCommand, deriveTerminalReconciliationInvocationCapability, TERMINAL_RECONCILIATION_CAPABILITY_FIELD, type SpawnSessionResult, type TerminalReconciliationPolicy } from '@craft-agent/shared/agent';
+import { canonicalTerminalReconciliationToolInput, isObjectiveShellEvidenceCommand, isProvablyReadOnlyShellCommand, deriveTerminalReconciliationInvocationCapability, TERMINAL_RECONCILIATION_CAPABILITY_FIELD, type SpawnSessionResult, type TerminalReconciliationPolicy } from '@craft-agent/shared/agent';
 import { buildDelegatedReviewPrompt, deriveHostDelegatedReviewSingleTarget, getDelegatedReviewRequest, HOST_PARENT_REVIEW_INSTRUCTION, prependHostDelegatedReviewerScope, validateDelegatedReviewCompletion } from './delegated-review-outcome';
 import { buildObjectiveValidationEvidenceContext } from './objective-validation-context';
 
@@ -28894,14 +28894,35 @@ export class SessionManager implements ISessionManager {
       && item.options.internalOrigin.deliveryId === message.internalOrigin.deliveryId
       && message.agentDelivery?.id === message.internalOrigin.deliveryId
     )).length === 1
-    const isDeferredMachineInboxUser = (message: Message): boolean => (
-      message.role === 'user'
-      && message.hidden === true
-      && message.isQueued === true
-      && message.agentDelivery?.status === 'queued'
+    const isWaitConsumedDelegatedReceipt = (message: {
+      hidden?: boolean
+      isQueued?: boolean
+      providerDispatch?: Message['providerDispatch']
+      content: string
+      internalOrigin?: Message['internalOrigin']
+      agentDelivery?: Message['agentDelivery']
+    }): boolean => (
+      message.hidden === true
+      && message.isQueued !== true
+      && !message.providerDispatch
+      && message.agentDelivery?.status === 'processed'
       && message.internalOrigin?.kind === 'agent-message'
       && message.internalOrigin.deliveryId === message.agentDelivery.id
-      && hasExactDeferredMachineInboxFifo(message)
+      && message.content.startsWith(DELEGATED_TERMINAL_RESULT_PROTOCOL)
+    )
+    const isDeferredMachineInboxUser = (message: Message): boolean => (
+      message.role === 'user'
+      && (
+        (
+          message.hidden === true
+          && message.isQueued === true
+          && message.agentDelivery?.status === 'queued'
+          && message.internalOrigin?.kind === 'agent-message'
+          && message.internalOrigin.deliveryId === message.agentDelivery.id
+          && hasExactDeferredMachineInboxFifo(message)
+        )
+        || isWaitConsumedDelegatedReceipt(message)
+      )
     )
     const boundAgentDelivery = binding.userMessage.internalOrigin?.kind === 'agent-message'
       && binding.userMessage.agentDelivery?.id === binding.userMessage.internalOrigin.deliveryId
@@ -29041,12 +29062,17 @@ export class SessionManager implements ISessionManager {
     ))
     const isDeferredDurableMachineInboxUser = (message: typeof durableMessages[number]): boolean => (
       message.type === 'user'
-      && message.hidden === true
-      && message.isQueued === true
-      && message.agentDelivery?.status === 'queued'
-      && message.internalOrigin?.kind === 'agent-message'
-      && message.internalOrigin.deliveryId === message.agentDelivery.id
-      && hasExactDeferredMachineInboxFifo(message)
+      && (
+        (
+          message.hidden === true
+          && message.isQueued === true
+          && message.agentDelivery?.status === 'queued'
+          && message.internalOrigin?.kind === 'agent-message'
+          && message.internalOrigin.deliveryId === message.agentDelivery.id
+          && hasExactDeferredMachineInboxFifo(message)
+        )
+        || isWaitConsumedDelegatedReceipt(message)
+      )
     )
     const latestDurableUserIndex = durableMessages.findLastIndex(message => (
       message.type === 'user' && !isDeferredDurableMachineInboxUser(message)
@@ -29189,24 +29215,38 @@ export class SessionManager implements ISessionManager {
           if (priorReceiptIsRead(message.toolName, priorOperationalInput)) {
             return false
           }
-          // A missing first command in this exact, bounded test script cannot
-          // have run the tests or changed the campaign. Dependency installation
-          // may repair the runner; its failed receipt must remain in history.
-          if (message.toolName === 'mcp__rbw-servers__ssh_execute'
-            && priorOperationalInput.server === 'dev'
-            && priorOperationalInput.cwd === '/opt/ia-webdev/agent-dev/worktrees/orion/scotland-ai-executive-day-20260930'
-            && priorOperationalInput.command === 'bun run test:scotland-campaign') {
+          if ((message.toolName === 'Bash' || message.toolName === 'mcp__rbw-servers__ssh_execute')
+            && typeof priorOperationalInput.command === 'string'
+            && isObjectiveShellEvidenceCommand(priorOperationalInput.command)) {
             try {
-              const failed: unknown = JSON.parse(message.toolResult)
-              if (failed && typeof failed === 'object' && !Array.isArray(failed)) {
-                const envelope = failed as Record<string, unknown>
-                if (envelope.server === priorOperationalInput.server
-                  && envelope.command === `cd ${priorOperationalInput.cwd} && ${priorOperationalInput.command}`
-                  && envelope.success === false && envelope.code === 127
-                  && envelope.stdout === ''
-                  && envelope.stderr === '$ vitest run tests/scotland-ai-executive-day.test.ts\n/usr/bin/bash: line 1: vitest: command not found\nerror: script "test:scotland-campaign" exited with code 127\n') return false
+              const parsed: unknown = JSON.parse(message.toolResult)
+              if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+                const envelope = parsed as Record<string, unknown>
+                if (envelope.success === false || (typeof envelope.code === 'number' && envelope.code !== 0)) {
+                  return false
+                }
               }
-            } catch { /* Malformed results retain the exactly-once fence. */ }
+            } catch { /* Plain text or malformed results proceed to mutation-chronology check. */ }
+            const laterMutationCompleted = durableMessages.slice(index + 1).some(later => {
+              if (later.type !== 'tool'
+                || later.toolStatus !== 'completed'
+                || later.toolExecuted !== true
+                || later.toolResult === undefined
+                || later.isError === true
+                || isToolResultError(later.toolResult)
+                || typeof later.toolName !== 'string') return false
+              const laterInput = later.toolInput
+                && typeof later.toolInput === 'object'
+                && !Array.isArray(later.toolInput)
+                ? later.toolInput
+                : {}
+              const {
+                [TERMINAL_RECONCILIATION_CAPABILITY_FIELD]: _laterTerminalCapability,
+                ...laterOperationalInput
+              } = laterInput
+              return !priorReceiptIsRead(later.toolName, laterOperationalInput)
+            })
+            if (laterMutationCompleted) return false
           }
           const priorCanonicalInput = priorInput
             ? canonicalTerminalReconciliationToolInput(priorOperationalInput)

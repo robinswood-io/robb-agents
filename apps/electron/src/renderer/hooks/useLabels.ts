@@ -48,8 +48,11 @@ export function useLabels(workspaceId: string | null): UseLabelsResult {
       setLabels(configs)
       setError(null)
     } catch (err) {
-      console.error('[useLabels] Failed to load labels:', err)
-      setError(err instanceof Error ? err.message : 'Failed to load labels')
+      const message = err instanceof Error ? err.message : 'Failed to load labels'
+      if (!message.includes('Workspace not found')) {
+        console.error('[useLabels] Failed to load labels:', err)
+      }
+      setError(message)
     } finally {
       setIsLoading(false)
     }

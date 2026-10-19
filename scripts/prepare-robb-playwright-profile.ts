@@ -44,11 +44,14 @@ if (!config) {
   }
 }
 
+const publicHost = process.env.ROBB_PLAYWRIGHT_PUBLIC_HOST?.trim() || 'remote.robb.local'
 config.setupDeferred = true
 config.serverConfig = {
   enabled: true,
   port: serverPort,
   token: config.serverConfig?.token ?? randomUUID(),
+  publicWebuiUrl: `https://${publicHost}/`,
+  publicWsUrl: `wss://${publicHost}/`,
 }
 
 saveConfig(config)

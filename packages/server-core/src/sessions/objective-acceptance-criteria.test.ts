@@ -2210,4 +2210,50 @@ describe('business criteria and durable goal — E01 E03 E04 E11 E12', () => {
     expect(inspect.requiresExecutionEvidence).toBeUndefined();
     expect(buildObjectiveContractPrompt(inspect)).toContain('machine-readable');
   });
+
+  it('matches native file parameter aliases (path vs file_path) and canonical tool aliases (functions.read vs tool:Read)', () => {
+    const readCriterion: ObjectiveAcceptanceCriterion = {
+      id: 'worker-artifact-read',
+      description: 'Read confirms the worker artifact JSON content',
+      toolName: 'functions.read',
+      input: { path: '/tmp/mission-2/worker-artifact.json' },
+      checks: [
+        { path: '$.worker', equals: 'ok' },
+        { path: '$.sum', equals: 60 },
+      ],
+    };
+    const readObjective = registerObjectiveAcceptanceCriteria(
+      transitionObjectiveContract({ messageId: 'u1', text: 'Inspecte /tmp/mission-2/worker-artifact.json.', nowMs: 1 }),
+      [readCriterion],
+      2,
+    );
+    const readMessage: Message = {
+      id: 'read-msg-1',
+      toolUseId: 'call-read-1',
+      role: 'tool',
+      content: '',
+      toolName: 'Read',
+      toolStatus: 'completed',
+      toolExecuted: true,
+      timestamp: 3,
+      toolInput: { file_path: '/tmp/mission-2/worker-artifact.json' },
+      toolResult: '{"worker":"ok","items":[10,20,30],"sum":60}\n',
+    };
+    const claim: ObjectiveOutcomeDeclaration = {
+      state: 'complete_verified',
+      blocker: null,
+      remainingWork: [],
+      criteria: [
+        { id: 'worker-artifact-read', satisfied: true, evidence: ['tool:Read'] },
+        ...readObjective.completionCriteria.map(id => ({
+          id,
+          satisfied: true,
+          evidence: [id === 'relevant-checks-passed' ? 'tool:Read' : 'assistant-final'],
+        })),
+      ],
+    };
+    expect(validateObjectiveAcceptanceCriteria(readObjective, [root, readMessage], claim)).toEqual([]);
+    expect(validateObjectiveOutcome(claim, { objective: readObjective, messages: [root, readMessage] }).valid).toBe(true);
+  });
 });
+
