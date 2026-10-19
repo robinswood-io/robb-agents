@@ -248,8 +248,11 @@ jobs:
         uses: actions/setup-python@v7
         with:
           python-version: '3.12'
+      - name: Install existing HTTP helper dependency for offline tests
+        run: python3 -m pip install 'requests>=2.31,<3'
       - name: Test bounded campaign without external effects
         run: |
           python3 ops/rbw-agents-oss/scripts/scotland_executive_conference_october_tests.py
           python3 ops/rbw-agents-oss/scripts/scotland_gateway_read_retry_tests.py
           python3 ops/rbw-agents-oss/scripts/scotland_daily40_tests.py
+          python3 ops/rbw-agents-oss/scripts/robinswood_evergreen_france_tests.py
