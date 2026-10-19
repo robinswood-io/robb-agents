@@ -314,4 +314,133 @@ class PublishedMailboxTests(unittest.TestCase):
    self.assertEqual(db.execute('select count(*) from candidates').fetchone()[0],1)
    self.assertEqual(db.execute('select count(*) from legacy').fetchone()[0],1);db.close()
 
+
+class PostScotlandRampTests(unittest.TestCase):
+ def setUp(self):
+  import scotland_executive_conference_october_tests as prior
+  self.prior=prior.CampaignTests();self.prior.setUp()
+  self.prior.c['limits']['timezone']='Europe/London';self.prior.write()
+  db=engine.transport.database(self.prior.root);db.close()
+  self.tmp=tempfile.TemporaryDirectory();self.root=Path(self.tmp.name);self.db=engine.db_open(self.root)
+  self.c=engine.contract(Path(__file__).parent.parent/'config/robinswood-evergreen-france.json')
+  self.t=datetime(2026,10,14,7,tzinfo=timezone.utc)
+  self.old_ramp=engine.portfolio_ramp
+  self.ramp_patch=patch.object(engine,'portfolio_ramp',lambda db,t,c:self.old_ramp(db,t,c,self.prior.root));self.ramp_patch.start()
+ def tearDown(self):
+  self.ramp_patch.stop();self.db.close();self.tmp.cleanup();self.prior.tearDown()
+ def effect(self,op,lane='pme',t=None,state='verified',step='initial'):
+  self.db.execute('INSERT INTO touches VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+   (op,op+'@fixture.invalid',lane,step,'A',self.c['copyVersion'],engine.stamp(t or self.t),state,'raw','body','subject',op,'thread-'+op,'{}'));self.db.commit()
+ def healthy_days(self):
+  for day in [14,15,16,19,20]:
+   for i in range(10):self.effect('healthy-'+str(day)+'-'+str(i),t=datetime(2026,10,day,7,tzinfo=timezone.utc))
+ def test_before_end_pause_and_last_authorized_date_do_not_trigger_ramp(self):
+  for activation in ['active','paused','complete']:
+   self.prior.c['activation']=activation;self.prior.write()
+   t=datetime(2026,10,13,22,tzinfo=timezone.utc)
+   info=engine.portfolio_ramp(self.db,t,self.c)
+   self.assertEqual(info['phase'],'predecessor_active')
+   self.assertEqual(engine.lane_capacity(self.db,'pme',t,self.c)[1]['dailyCap'],1)
+ def test_first_french_window_after_end_has_twenty_total(self):
+  info=engine.portfolio_ramp(self.db,self.t,self.c)
+  self.assertEqual((info['phase'],info['dailyCap'],info['weeklyCap']),('initial_20',20,100))
+  self.assertEqual(sum(engine.lane_capacity(self.db,l,self.t,self.c)[1]['dailyCap'] for l in engine.LANES),20)
+ def test_unknown_scotland_effect_and_adverse_signal_do_not_release_ramp(self):
+  db=engine.transport.database(self.prior.root)
+  db.execute("INSERT INTO touches(item,step,created,state,operation) VALUES('fixture','initial',?,'pending','pending')",(engine.stamp(self.t),));db.commit()
+  self.assertEqual(engine.portfolio_ramp(self.db,self.t,self.c)['reason'],'predecessor_unknown_effect')
+  db.execute("UPDATE touches SET state='sent_verified'");db.execute("INSERT INTO replies VALUES('b','fixture','delivery_failure',?,'{}')",(engine.stamp(self.t),));db.commit();db.close()
+  self.assertEqual(engine.portfolio_ramp(self.db,self.t,self.c)['reason'],'predecessor_adverse_signal_requires_review')
+ def test_missing_ledger_or_tampered_current_contract_never_uses_cached_completion(self):
+  (self.prior.root/'campaign-state.sqlite3').unlink()
+  self.assertTrue(engine.portfolio_ramp(self.db,self.t,self.c)['reason'].startswith('predecessor_completion_unproven'))
+  self.prior.c['limits']['lastOutboundDate']='2026-10-20'
+  engine.save(self.prior.root/'campaign-contract.json',self.prior.c)
+  self.assertTrue(engine.portfolio_ramp(self.db,self.t,self.c)['reason'].startswith('predecessor_completion_unproven'))
+ def test_current_authorized_deadline_is_read_each_time(self):
+  self.prior.c['limits']['lastOutboundDate']='2026-10-12';self.prior.write()
+  t=datetime(2026,10,13,7,tzinfo=timezone.utc)
+  self.assertEqual(engine.portfolio_ramp(self.db,t,self.c)['phase'],'initial_20')
+  self.prior.c['limits']['lastOutboundDate']='2026-10-13';self.prior.write()
+  self.assertEqual(engine.portfolio_ramp(self.db,t,self.c)['phase'],'predecessor_active')
+ def test_replies_followups_and_all_lanes_share_daily_twenty(self):
+  for lane,cap in self.c['postScotlandRamp']['laneDailyMax'].items():
+   for i in range(cap):self.effect(lane+str(i),lane=lane,step=['initial','reply','followup'][i%3])
+  for lane in engine.LANES:
+   allowed,info=engine.lane_capacity(self.db,lane,self.t,self.c)
+   self.assertFalse(allowed);self.assertEqual(info['portfolioRamp']['dailyUsed'],20)
+ def test_five_completed_healthy_business_days_release_thirty(self):
+  self.healthy_days()
+  t=datetime(2026,10,21,7,tzinfo=timezone.utc)
+  info=engine.portfolio_ramp(self.db,t,self.c)
+  self.assertEqual((info['phase'],info['dailyCap'],info['weeklyCap']),('steady_30',30,150))
+  self.assertEqual(sum(engine.lane_capacity(self.db,l,t,self.c)[1]['dailyCap'] for l in engine.LANES),30)
+ def test_time_elapsed_or_current_incomplete_day_does_not_release_thirty(self):
+  self.assertEqual(engine.portfolio_ramp(self.db,self.t+timedelta(days=40),self.c)['phase'],'initial_20')
+  self.healthy_days()
+  self.assertEqual(engine.portfolio_ramp(self.db,datetime(2026,10,20,17,tzinfo=timezone.utc),self.c)['phase'],'initial_20')
+ def test_french_unknown_effect_blocks_portfolio_and_complaint_remains_paused(self):
+  self.effect('pending',state='reserved')
+  self.assertEqual(engine.lane_capacity(self.db,'pme',self.t,self.c),(False,'portfolio_unknown_gmail_effect'))
+  self.db.execute("UPDATE touches SET state='verified'")
+  self.db.execute("INSERT INTO replies VALUES('complaint','old@fixture.invalid','pme','complaint',?,'{}')",(engine.stamp(self.t),));self.db.commit()
+  self.assertEqual(engine.lane_capacity(self.db,'pme',self.t,self.c),(False,'complaint_pause'))
+ def test_daily_reset_uses_paris_and_weekly_history_is_not_reset(self):
+  self.effect('yesterday',lane='presse',t=self.t-timedelta(days=1))
+  info=engine.portfolio_ramp(self.db,self.t,self.c)
+  self.assertEqual((info['dailyUsed'],info['weeklyUsed']),(0,1))
+  later=datetime(2026,10,26,8,tzinfo=timezone.utc)
+  self.assertTrue(engine.in_window(later,self.c))
+  self.assertEqual(engine.portfolio_ramp(self.db,later,self.c)['weeklyUsed'],0)
+ def test_ramp_cannot_increase_above_authorized_thirty_even_with_new_digest(self):
+  altered=copy.deepcopy(self.c);altered['postScotlandRamp']['steadyDailyMax']=31
+  altered['authorization']['scopeSha256']=engine.digest({k:v for k,v in altered.items() if k!='authorization'})
+  p=self.root/'altered.json';engine.save(p,altered)
+  with self.assertRaises(AssertionError):engine.contract(p)
+ def test_recovered_bounce_keeps_one_daily_and_historical_signal(self):
+  bounce=self.t-timedelta(days=8)
+  self.db.execute("INSERT INTO replies VALUES('bounce','old@fixture.invalid','pme','bounce',?,'{}')",(engine.stamp(bounce),))
+  self.db.execute("INSERT INTO metadata VALUES('recovery_epoch_pme',?)",(json.dumps({'afterBounce':engine.stamp(bounce)}),));self.db.commit()
+  allowed,info=engine.lane_capacity(self.db,'pme',self.t,self.c)
+  self.assertTrue(allowed);self.assertEqual(info['dailyCap'],1)
+  self.assertEqual(self.db.execute("SELECT count(*) FROM replies WHERE kind='bounce'").fetchone()[0],1)
+ def test_new_press_allocation_requires_exact_human_authorization(self):
+  altered=copy.deepcopy(self.c);altered['postScotlandRamp'].pop('allocationChange')
+  altered['authorization']['scopeSha256']=engine.digest({k:v for k,v in altered.items() if k!='authorization'})
+  p=self.root/'unauthorized.json';engine.save(p,altered)
+  with self.assertRaises(AssertionError):engine.contract(p)
+ def test_new_press_allocation_preserves_previous_authorized_scope(self):
+  altered=copy.deepcopy(self.c);altered['postScotlandRamp']['allocationChange']['previousScopeSha256']='not_the_previous_contract'
+  altered['authorization']['scopeSha256']=engine.digest({k:v for k,v in altered.items() if k!='authorization'})
+  p=self.root/'bad-previous.json';engine.save(p,altered)
+  with self.assertRaisesRegex(AssertionError,'allocation_prior_scope_changed'):engine.contract(p)
+ def test_future_dispatch_simulation_stops_exactly_at_twenty_and_thirty(self):
+  for steady,expected in [(False,20),(True,30)]:
+   with self.subTest(steady=steady):
+    self.db.execute('DELETE FROM touches');self.db.execute('DELETE FROM candidates');self.db.commit()
+    if steady:self.healthy_days()
+    base=datetime(2026,10,21 if steady else 14,7,tzinfo=timezone.utc)
+    g=EndGateway(self.root/('gateway-'+str(steady)))
+    g.search=lambda q:[{'id':m['id']} for m in g.messages.values() if guard.header(m,'To')==q.split('to:')[-1]] if q.startswith('in:sent to:') else FakeGateway.search(g,q)
+    caps=self.c['postScotlandRamp']['steadyLaneDailyMax' if steady else 'laneDailyMax']
+    order=[l for l in engine.LANES for _ in range(caps[l])]
+    for lane in engine.LANES:
+     for i in range(caps[lane]+1):
+      item={'email':lane+str(i)+'@fixture.invalid','name':'Fixture Person','company':lane+str(i),'domain':lane+str(i)+'.invalid','lane':lane,'sourceUrls':['https://fixture.invalid/']}
+      engine.put_candidate(self.db,item)
+    self.db.execute('UPDATE candidates SET proof=?',(json.dumps({'ok':True,'checkedAt':engine.stamp(base)}),));self.db.commit()
+    for i,lane in enumerate(order):
+     # Eighteen morning slots, then afternoon; every effect is ten minutes apart.
+     t=base+timedelta(minutes=10*i) if i<18 else base+timedelta(hours=5,minutes=10*(i-18))
+     g.time=t
+     with patch.object(engine,'OPS',self.root/'reports'),patch.object(engine,'now',lambda:t),patch.object(engine,'import_reserves',lambda db:None),patch.object(engine,'suppressed',return_value=set()):
+      report=engine.run(lane,apply=True,root=self.root,c=self.c,gateway=g,t=t,research_batch=0)
+     self.assertEqual(report['status'],'sent_verified')
+    self.assertEqual(g.posts,expected)
+    if steady:
+     press=sum(guard.header(m,'X-RBW-Campaign')==engine.IDS['presse'] for m in g.messages.values())
+     prospecting=sum(guard.header(m,'X-RBW-Campaign') in [engine.IDS['pme'],engine.IDS['eti']] for m in g.messages.values())
+     self.assertEqual((press,prospecting),(10,20))
+    for lane in engine.LANES:self.assertFalse(engine.lane_capacity(self.db,lane,t,self.c)[0])
+
 if __name__=='__main__':unittest.main()
