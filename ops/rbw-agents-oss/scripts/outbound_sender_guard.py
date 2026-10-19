@@ -12,6 +12,9 @@ from zoneinfo import ZoneInfo
 
 OPS=Path('/home/craft/.craft-agent/workspaces/my-workspace-2/campaigns/ops')
 SENDER='thibault@robinswood.io'
+ROBB='robb@robinswood.io'
+SENDER_STRATEGY='2026-10-04.1'
+PROSPECTING={'robinswood-evergreen-france-pme','robinswood-evergreen-france-eti'}
 LIMITS={'daily':40,'weekly':200,'hourly':6,'intervalSeconds':600}
 ALLOWED={'scotland-executive-conference-october-2026',
  'robinswood-evergreen-france-presse','robinswood-evergreen-france-pme','robinswood-evergreen-france-eti'}
@@ -29,7 +32,12 @@ def parse_raw(raw):return BytesParser(policy=policy.default).parsebytes(base64.u
 def expected(raw):
  m=parse_raw(raw);op=m.get('X-RBW-Operation','');cid=m.get('X-RBW-Campaign','')
  if cid not in ALLOWED or not op or m.get('Message-ID')!='<'+op+'@robinswood.io>':raise SenderGuardBlocked('unapproved_campaign_or_operation')
- if values(m,'From')!=[SENDER] or len(values(m,'To'))!=1 or m.get('Cc') or m.get('Bcc'):raise SenderGuardBlocked('invalid_sender_or_recipients')
+ sender=values(m,'From')
+ if sender not in [[SENDER],[ROBB]] or len(values(m,'To'))!=1 or m.get('Cc') or m.get('Bcc'):raise SenderGuardBlocked('invalid_sender_or_recipients')
+ if sender==[ROBB]:
+  if cid not in PROSPECTING or m.get('X-RBW-Sender-Strategy')!=SENDER_STRATEGY:raise SenderGuardBlocked('unapproved_robb_campaign_or_strategy')
+  body=m.get_body(preferencelist=('plain',))
+  if values(m,'Reply-To')!=[ROBB] or not body or 'Je suis Robb, l’assistant IA de Robinswood.' not in body.get_content():raise SenderGuardBlocked('robb_disclosure_or_reply_identity_missing')
  if any(p.get_content_disposition()=='attachment' for p in m.walk()):raise SenderGuardBlocked('attachments_forbidden')
  return m,op,cid
 def plain(payload):
@@ -43,17 +51,20 @@ def verify(msg,raw,thread=None):
  def addr(n):return [a.lower() for _,a in getaddresses([header(msg,n)])]
  content=m.get_body(preferencelist=('plain',)).get_content().replace('\r\n','\n')
  def attached(p):return bool(p.get('filename')) or any(attached(x) for x in p.get('parts',[]))
- checks={'sent':'SENT' in msg.get('labelIds',[]),'sender':addr('From')==[SENDER],
+ checks={'sent':'SENT' in msg.get('labelIds',[]),'sender':addr('From')==values(m,'From'),
  'recipient':addr('To')==values(m,'To'),'noCcBcc':not header(msg,'Cc') and not header(msg,'Bcc'),
  'subject':header(msg,'Subject')==str(m['Subject']),'bodySignature':plain(msg['payload']).replace('\r\n','\n')==content,
  'operation':header(msg,'X-RBW-Operation')==op,'campaign':header(msg,'X-RBW-Campaign')==cid,
  'messageId':header(msg,'Message-ID')==str(m['Message-ID']),'noAttachments':not attached(msg['payload']),
- 'thread':not thread or msg.get('threadId')==thread}
+ 'thread':not thread or msg.get('threadId')==thread,
+ 'replyIdentity':not m.get('Reply-To') or addr('Reply-To')==values(m,'Reply-To'),
+ 'senderStrategy':not m.get('X-RBW-Sender-Strategy') or header(msg,'X-RBW-Sender-Strategy')==str(m['X-RBW-Sender-Strategy'])}
  return all(checks.values()),checks
 def sent_messages(gateway,t,metadata_cache=None):
  monday=t.astimezone(ZoneInfo('Europe/Paris')).replace(hour=0,minute=0,second=0,microsecond=0)
  monday-=timedelta(days=monday.weekday())
- q='in:sent from:'+SENDER+' after:'+str(int(monday.timestamp())-3600)
+ # Every identity shares this authenticated Gmail account; manual sends count too.
+ q='in:sent after:'+str(int(monday.timestamp())-3600)
  result=[];token=None
  for _ in range(6):
   params={'q':q,'maxResults':100}
@@ -66,7 +77,7 @@ def sent_messages(gateway,t,metadata_cache=None):
     m=gateway.call('/messages/'+x['id']+'?format=metadata&metadataHeaders=From&fields=id,internalDate,labelIds,payload(headers)')
     if metadata_cache:
      metadata_cache.execute('INSERT OR REPLACE INTO sender_metadata VALUES(?,?)',(x['id'],json.dumps(m)));metadata_cache.commit()
-   if 'SENT' in m.get('labelIds',[]) and [a.lower() for _,a in getaddresses([header(m,'From')])]==[SENDER]:
+   if 'SENT' in m.get('labelIds',[]):
     result.append(m)
   token=page.get('nextPageToken')
   if not token:return result

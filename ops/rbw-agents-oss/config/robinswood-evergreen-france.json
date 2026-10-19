@@ -97,9 +97,9 @@
     "source": "human_evergreen_campaign_request_2026-10-02",
     "approvedBy": "Thibault",
     "request": "Campagnes presse et prospection PME et ETI françaises actives toute l’année avec itérations autonomes et auto améliorations",
-    "scopeSha256": "263e3bc6879eb1936762e96b06eff31329815995b82691326e36fc9b22624270",
-    "previousScopeSha256": "bf17caf3e7d7535efafbe9ee7ed36e4c2ba4e9b714b6933d9c689683be9d48a4",
-    "latestApprovalSource": "human_post_scotland_daily30_press10_request_2026-10-04"
+    "scopeSha256": "9a54b413638f3d5e9810d18854af73378fb22e1c4c7e7e2883af24a2d2c7cf3d",
+    "previousScopeSha256": "263e3bc6879eb1936762e96b06eff31329815995b82691326e36fc9b22624270",
+    "latestApprovalSource": "human_robb_sender_pilot_approval_2026-10-04"
   },
   "postScotlandRamp": {
     "authorizationSource": "human_post_scotland_daily_ramp_request_2026-10-04",
@@ -140,5 +140,34 @@
       },
       "scope": "target_30_total_press_10_prospecting_20"
     }
+  },
+  "senderPilot": {
+    "version": "2026-10-04.1",
+    "authorizationSource": "human_robb_sender_pilot_approval_2026-10-04",
+    "approvedBy": "Thibault",
+    "approvedAt": "2026-10-04",
+    "previousScopeSha256": "263e3bc6879eb1936762e96b06eff31329815995b82691326e36fc9b22624270",
+    "primaryAccount": "thibault@robinswood.io",
+    "pressSender": "thibault@robinswood.io",
+    "prospectingSenders": [
+      "thibault@robinswood.io",
+      "robb@robinswood.io"
+    ],
+    "initialLaneDailyMax": {
+      "pme": 5,
+      "eti": 3
+    },
+    "steadyLaneDailyMax": {
+      "pme": 6,
+      "eti": 4
+    },
+    "initialProspectingDailyMaxPerSender": 8,
+    "steadyProspectingDailyMaxPerSender": 10,
+    "assignment": "balanced_immutable_company_with_hashed_ties",
+    "existingConversations": "preserve_actual_sender_subject_thread",
+    "allEffectsConsumeQuota": true,
+    "robbDisclosure": "Je suis Robb, l’assistant IA de Robinswood.",
+    "learning": "isolate_sender_strategy_and_copy_version",
+    "sharedAccountCapsPreserved": true
   }
 }

@@ -181,6 +181,8 @@ class EndGateway(engine.Gateway,FakeGateway):
  def __init__(self,root,t=T):
   FakeGateway.__init__(self);self.root=root;self.time=t;self.identity={'signature':'<div>Thibault Fritsch<br>Robinswood</div>','verificationStatus':'accepted'}
  def call(self,path,data=None):
+  if path=='/settings/sendAs':
+   return {'sendAs':[{'sendAsEmail':guard.ROBB,'verificationStatus':'accepted','replyToAddress':guard.ROBB,'signature':'<div>Robb — assistant IA<br>Robinswood</div>'}]}
   if path.startswith('/threads/'):
    tid=path.split('/')[2].split('?')[0];return {'messages':[m for m in self.messages.values() if m['threadId']==tid]}
   return FakeGateway.call(self,path)
