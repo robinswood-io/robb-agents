@@ -88,12 +88,14 @@ export const DEFAULT_AGENT_COST_CONTROL_POLICY: ResolvedAgentCostControlPolicy =
 };
 
 const MIN_CONTEXT_LIMIT_TOKENS = 8_000;
+const LEGACY_BASELINE_CONTEXT_WINDOW_TOKENS = 200_000;
 const COMPACT_CONTEXT_WINDOW_RATIO = 0.7;
 const HARD_CONTEXT_WINDOW_RATIO = 0.85;
 
 /**
- * Clamp absolute policy limits to the active model's real context window.
- * Without this, the default 80k/100k policy cannot protect a 64k model.
+ * Clamp absolute policy limits to the active model's real context window,
+ * and scale default limits proportionally for long-context (>200k) models
+ * so 272k and 1M+ subscription models are not artificially capped at 80k/100k.
  */
 export function resolveEffectiveAgentContextLimits(
   context: ResolvedAgentCostControlPolicy['context'],
@@ -104,16 +106,30 @@ export function resolveEffectiveAgentContextLimits(
   }
 
   const windowTokens = Math.floor(contextWindow as number);
-  const compactAtTokens = Math.min(
-    context.compactAtTokens,
-    Math.max(MIN_CONTEXT_LIMIT_TOKENS, Math.floor(windowTokens * COMPACT_CONTEXT_WINDOW_RATIO)),
+  const ratioCompactTokens = Math.max(
+    MIN_CONTEXT_LIMIT_TOKENS,
+    Math.floor(windowTokens * COMPACT_CONTEXT_WINDOW_RATIO),
   );
+  const ratioHardLimitTokens = Math.max(
+    MIN_CONTEXT_LIMIT_TOKENS,
+    Math.floor(windowTokens * HARD_CONTEXT_WINDOW_RATIO),
+  );
+
+  const isDefaultContextPolicy =
+    context.compactAtTokens === DEFAULT_AGENT_COST_CONTROL_POLICY.context.compactAtTokens
+    && context.hardLimitTokens === DEFAULT_AGENT_COST_CONTROL_POLICY.context.hardLimitTokens;
+
+  if (isDefaultContextPolicy && windowTokens > LEGACY_BASELINE_CONTEXT_WINDOW_TOKENS) {
+    return {
+      compactAtTokens: ratioCompactTokens,
+      hardLimitTokens: Math.max(ratioCompactTokens, ratioHardLimitTokens),
+    };
+  }
+
+  const compactAtTokens = Math.min(context.compactAtTokens, ratioCompactTokens);
   const hardLimitTokens = Math.max(
     compactAtTokens,
-    Math.min(
-      context.hardLimitTokens,
-      Math.max(MIN_CONTEXT_LIMIT_TOKENS, Math.floor(windowTokens * HARD_CONTEXT_WINDOW_RATIO)),
-    ),
+    Math.min(context.hardLimitTokens, ratioHardLimitTokens),
   );
 
   return { compactAtTokens, hardLimitTokens };
@@ -245,9 +261,20 @@ export function monetaryBudgetCostUsd(
   connection: LlmConnection | null | undefined,
   providerReportedCostUsd: number | undefined,
 ): number | undefined {
-  if (connection?.providerType === 'pi'
-    && connection.authType === 'oauth'
-    && connection.piAuthProvider === 'openai-codex') return undefined;
+  if (!connection) return providerReportedCostUsd;
+  // Subscription OAuth plans (Claude Max/Pro, ChatGPT Plus/Pro Codex, GitHub Copilot,
+  // Gemini Code Assist) and CLI subscription bridges (Google Antigravity, Mistral Vibe)
+  // have no per-token USD billing (while pi_compat local models already have 0 cost in buildCustomEndpointModelDef).
+  if (
+    connection.authType === 'oauth'
+    || connection.piAuthProvider === 'openai-codex'
+    || connection.piAuthProvider === 'github-copilot'
+    || connection.piAuthProvider === 'google-gemini-code-assist'
+    || connection.piAuthProvider === 'google-antigravity'
+    || connection.piAuthProvider === 'mistral-vibe'
+  ) {
+    return undefined;
+  }
   return providerReportedCostUsd;
 }
 export function decideCostProviderAdmission(input: {

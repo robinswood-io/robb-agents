@@ -123,6 +123,8 @@ export interface ModelDefinition {
   supportsThinking?: boolean;
   /** Explicit per-model image input capability hint, primarily for custom endpoints. */
   supportsImages?: boolean;
+  /** Optional explicit maximum output token limit for custom/local endpoints. */
+  maxOutputTokens?: number;
 }
 
 // ============================================

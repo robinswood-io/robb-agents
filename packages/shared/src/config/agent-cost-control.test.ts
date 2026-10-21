@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import {
   isContextDependentDirectTurn,
   isBrowserFallbackEligibleTool,
+  monetaryBudgetCostUsd,
   resolveEffectiveAgentContextLimits,
   resolveAgentCostControlPolicy,
 } from './agent-cost-control.ts';
@@ -30,6 +31,58 @@ describe('public agent context and recovery controls', () => {
   test('clamps context limits to smaller model windows', () => {
     expect(resolveEffectiveAgentContextLimits(resolveAgentCostControlPolicy().context, 64_000))
       .toEqual({ compactAtTokens: 44_800, hardLimitTokens: 54_400 });
+  });
+
+  test('scales default context limits proportionally for >200k long-context models', () => {
+    const context = resolveAgentCostControlPolicy().context;
+    expect(resolveEffectiveAgentContextLimits(context, 200_000))
+      .toEqual({ compactAtTokens: 80_000, hardLimitTokens: 100_000 });
+    expect(resolveEffectiveAgentContextLimits(context, 272_000))
+      .toEqual({ compactAtTokens: 190_400, hardLimitTokens: 231_200 });
+    expect(resolveEffectiveAgentContextLimits(context, 1_000_000))
+      .toEqual({ compactAtTokens: 700_000, hardLimitTokens: 850_000 });
+  });
+
+  test('exempts OAuth subscriptions and CLI subscription bridges from USD budget limits', () => {
+    expect(monetaryBudgetCostUsd({
+      slug: 'claude-max',
+      name: 'Claude Max',
+      providerType: 'anthropic',
+      authType: 'oauth',
+      createdAt: 1,
+    }, 42)).toBeUndefined();
+    expect(monetaryBudgetCostUsd({
+      slug: 'copilot',
+      name: 'GitHub Copilot',
+      providerType: 'pi',
+      piAuthProvider: 'github-copilot',
+      authType: 'oauth',
+      createdAt: 1,
+    }, 42)).toBeUndefined();
+    expect(monetaryBudgetCostUsd({
+      slug: 'antigravity',
+      name: 'Google Antigravity',
+      providerType: 'pi',
+      piAuthProvider: 'google-antigravity',
+      authType: 'none',
+      createdAt: 1,
+    }, 42)).toBeUndefined();
+    expect(monetaryBudgetCostUsd({
+      slug: 'vibe',
+      name: 'Mistral Vibe',
+      providerType: 'pi',
+      piAuthProvider: 'mistral-vibe',
+      authType: 'none',
+      createdAt: 1,
+    }, 42)).toBeUndefined();
+    expect(monetaryBudgetCostUsd({
+      slug: 'paid-api',
+      name: 'Paid API',
+      providerType: 'pi',
+      piAuthProvider: 'openai',
+      authType: 'api_key',
+      createdAt: 1,
+    }, 42)).toBe(42);
   });
 
   test('retains limits when the active context window is unknown or malformed', () => {

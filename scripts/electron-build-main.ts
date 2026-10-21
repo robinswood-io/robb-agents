@@ -110,6 +110,9 @@ function getBuildDefines(): string[] {
 
   return definedVars.map((varName) => {
     let value = process.env[varName] || "";
+    if (varName === "SENTRY_ELECTRON_INGEST_URL" && process.env.ROBB_ENABLE_SENTRY !== "1") {
+      value = "";
+    }
     if (varName === "ROBB_BUILD_CHANNEL") value = buildChannel;
     if (varName === "ROBB_BUILD_COMMIT") value = buildCommit;
     if (varName === "ROBB_BUILD_DIRTY") {

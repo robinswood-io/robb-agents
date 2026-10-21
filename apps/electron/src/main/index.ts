@@ -31,9 +31,8 @@ Sentry.init({
   dsn: process.env.SENTRY_ELECTRON_INGEST_URL,
   environment: APP_CHANNEL,
   release: app.getVersion(),
-  // Enabled whenever the ingest URL is available — works in both production (baked via CI)
-  // and development (injected via .env / 1Password). Filter by environment in Sentry dashboard.
-  enabled: !!process.env.SENTRY_ELECTRON_INGEST_URL,
+  // Opt-in only (ROBB_ENABLE_SENTRY=1) to preserve strict local confidentiality by default.
+  enabled: !!process.env.SENTRY_ELECTRON_INGEST_URL && process.env.ROBB_ENABLE_SENTRY === '1',
 
   // Scrub sensitive data before sending to Sentry.
   // Removes authorization headers, API keys/tokens, and credential-like values.
@@ -88,8 +87,10 @@ if (persistedUiLanguage) {
 
 // Set anonymous machine ID for Sentry user tracking (no PII — just a hash).
 // Uses hostname + homedir to produce a stable per-machine identifier.
-const machineId = createHash('sha256').update(hostname() + homedir()).digest('hex').slice(0, 16)
-Sentry.setUser({ id: machineId })
+if (process.env.ROBB_ENABLE_SENTRY === '1') {
+  const machineId = createHash('sha256').update(hostname() + homedir()).digest('hex').slice(0, 16)
+  Sentry.setUser({ id: machineId })
+}
 
 import { join, delimiter } from 'path'
 import { existsSync, readFileSync } from 'fs'
@@ -166,6 +167,8 @@ mainLog.info('[i18n] startup hydration', {
 // Enable debug/perf in dev mode (running from source)
 if (isDebugMode) {
   process.env.CRAFT_DEBUG = '1'
+  // Do not implicitly enable developer feedback in dev mode unless explicitly opted in.
+  process.env.CRAFT_FEATURE_DEVELOPER_FEEDBACK ??= '0'
   enableDebug()
   setPerfEnabled(true)
 }
@@ -838,6 +841,7 @@ app.whenReady().then(async () => {
             onSessionStarted,
             onSessionStopped,
             captureException: (error, context) => {
+              if (process.env.ROBB_ENABLE_SENTRY !== '1') return
               Sentry.captureException(error instanceof Error ? error : new Error(String(error)), {
                 tags: {
                   ...(context?.errorSource ? { errorSource: context.errorSource } : {}),

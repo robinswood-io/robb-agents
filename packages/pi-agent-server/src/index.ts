@@ -104,7 +104,7 @@ interface InitMessage {
   branchFromSessionPath?: string;
   branchFromSdkTurnId?: string;
   customEndpoint?: { api: CustomEndpointApi; supportsImages?: boolean };
-  customModels?: Array<string | { id: string; contextWindow?: number; supportsImages?: boolean }>;
+  customModels?: Array<string | { id: string; contextWindow?: number; supportsImages?: boolean; supportsThinking?: boolean; maxTokens?: number }>;
   piAuth?: { provider: string; credential: PiCredential };
 }
 
@@ -116,7 +116,7 @@ interface RuntimeConfigUpdateMessage {
   authType?: string;
   baseUrl?: string;
   customEndpoint?: { api: CustomEndpointApi; supportsImages?: boolean };
-  customModels?: Array<string | { id: string; contextWindow?: number; supportsImages?: boolean }>;
+  customModels?: Array<string | { id: string; contextWindow?: number; supportsImages?: boolean; supportsThinking?: boolean; maxTokens?: number }>;
 }
 
 /** Read the workspace-owned kill switch at the last responsible moment. The
@@ -265,7 +265,7 @@ let initConfig: Extract<InboundMessage, { type: 'init' }> | null = null;
 let currentUserMessage = '';
 const sourceToolActivation = new SourceToolActivationController();
 const incompleteToolTailRecovery = new IncompleteToolTailRecovery();
-const toolLoopBudget = new ToolLoopBudget();
+const toolLoopBudget = new ToolLoopBudget(8, 5, 48, 64, 4, 16, 256, 0.2);
 
 // Pending promises for async handshakes
 const pendingPreToolUse = new Map<string, { resolve: (response: { action: string; input?: Record<string, unknown>; reason?: string }) => void }>();
@@ -433,6 +433,55 @@ function isLocalhostUrl(url: string): boolean {
   }
 }
 
+function isStrictLocalEndpointMode(): boolean {
+  return Boolean(
+    initConfig?.baseUrl
+    && isLocalhostUrl(initConfig.baseUrl)
+    && process.env.ROBB_ALLOW_LOCAL_MODEL_WEB_TOOLS !== '1',
+  );
+}
+
+function syncStrictLocalEndpointNetworkGuard(): void {
+  const strictLocal = isStrictLocalEndpointMode();
+  process.env.CRAFT_STRICT_LOCAL_ENDPOINT = strictLocal ? '1' : '0';
+  if (strictLocal) {
+    debugLog(`[privacy-guard] Strict loopback-only network guard active for local endpoint: ${initConfig?.baseUrl}`);
+  }
+}
+
+// Install process-level outbound fetch guard for strict local model sessions.
+{
+  const baseFetch = globalThis.fetch.bind(globalThis);
+  const guardedFetch = async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
+    const url = typeof input === 'string'
+      ? input
+      : input instanceof URL
+        ? input.toString()
+        : input.url;
+    if (
+      (isStrictLocalEndpointMode() || process.env.CRAFT_STRICT_LOCAL_ENDPOINT === '1')
+      && process.env.ROBB_ALLOW_LOCAL_MODEL_WEB_TOOLS !== '1'
+      && !isLocalhostUrl(url)
+    ) {
+      throw new Error(
+        `[Privacy Guard] Blocked outbound network request to "${url}" in strict local model mode. Set ROBB_ALLOW_LOCAL_MODEL_WEB_TOOLS=1 to allow external network access.`,
+      );
+    }
+    return baseFetch(input, init);
+  };
+  (globalThis as unknown as { fetch: unknown }).fetch = new Proxy(guardedFetch, {
+    apply(target, thisArg, args) {
+      return Reflect.apply(target, thisArg, args);
+    },
+    get(target, prop, receiver) {
+      if (prop in baseFetch) {
+        return (baseFetch as unknown as Record<string | symbol, unknown>)[prop];
+      }
+      return Reflect.get(target, prop, receiver);
+    },
+  });
+}
+
 /** Model IDs currently registered under the custom-endpoint provider */
 let customEndpointModelIds: Set<string> = new Set();
 
@@ -451,10 +500,17 @@ function registerCustomEndpointModels(
 ): void {
   for (const m of models) {
     customEndpointModelIds.add(m.id);
-    if (m.contextWindow || m.supportsImages !== undefined) {
+    if (
+      m.contextWindow
+      || m.supportsImages !== undefined
+      || m.supportsThinking !== undefined
+      || m.maxTokens !== undefined
+    ) {
       customModelOverrides.set(m.id, {
         ...(m.contextWindow ? { contextWindow: m.contextWindow } : {}),
         ...(m.supportsImages !== undefined ? { supportsImages: m.supportsImages } : {}),
+        ...(m.supportsThinking !== undefined ? { supportsThinking: m.supportsThinking } : {}),
+        ...(m.maxTokens !== undefined ? { maxTokens: m.maxTokens } : {}),
       });
     }
   }
@@ -566,7 +622,12 @@ async function ensureSession(): Promise<AgentSession> {
   const webFetchTool = createWebFetchTool(() =>
     initConfig ? getSessionPath(initConfig.workspaceRootPath, initConfig.sessionId) : null
   );
-  const webTools = [searchTool, webFetchTool];
+  // Strict local confidentiality: when connected to a local endpoint (Ollama, LM Studio, etc.),
+  // do not expose external web_search (DuckDuckGo fallback) or web_fetch unless explicitly opted in.
+  const isStrictLocalEndpoint = !!initConfig?.baseUrl
+    && isLocalhostUrl(initConfig.baseUrl)
+    && process.env.ROBB_ALLOW_LOCAL_MODEL_WEB_TOOLS !== '1';
+  const webTools = isStrictLocalEndpoint ? [] : [searchTool, webFetchTool];
 
   // Pi SDK 0.70.0 registration contract:
   //   - `customTools` accepts ToolDefinition[] — our hook-wrapped objects go here
@@ -1232,6 +1293,7 @@ async function handleInit(msg: Extract<InboundMessage, { type: 'init' }>): Promi
   }
 
   initConfig = msg;
+  syncStrictLocalEndpointNetworkGuard();
 
   // Azure OpenAI requires a tenant-specific endpoint URL.
   // The Pi SDK (via Vercel AI SDK) reads AZURE_OPENAI_BASE_URL from env.
@@ -1651,6 +1713,7 @@ async function handleUpdateRuntimeConfig(msg: RuntimeConfigUpdateMessage): Promi
       customEndpoint: msg.customEndpoint,
       customModels: msg.customModels,
     };
+    syncStrictLocalEndpointNetworkGuard();
 
     if (piModelRegistry && initConfig.baseUrl?.trim() && initConfig.customEndpoint) {
       const modelEntries: CustomEndpointModelEntry[] = (initConfig.customModels?.length

@@ -2140,6 +2140,18 @@ function synthesizeMalformedBodyResponse(
 
 const originalFetch = globalThis.fetch.bind(globalThis);
 
+function isLoopbackFetchUrl(urlStr: string): boolean {
+  try {
+    const hostname = new URL(urlStr).hostname;
+    const normalized = hostname.startsWith('[') && hostname.endsWith(']')
+      ? hostname.slice(1, -1)
+      : hostname;
+    return normalized === 'localhost' || normalized === '127.0.0.1' || normalized === '::1';
+  } catch {
+    return false;
+  }
+}
+
 async function interceptedFetch(
   input: string | URL | Request,
   init?: RequestInit
@@ -2150,6 +2162,16 @@ async function interceptedFetch(
       : input instanceof URL
         ? input.toString()
         : input.url;
+
+  if (
+    process.env.CRAFT_STRICT_LOCAL_ENDPOINT === '1'
+    && process.env.ROBB_ALLOW_LOCAL_MODEL_WEB_TOOLS !== '1'
+    && !isLoopbackFetchUrl(url)
+  ) {
+    throw new Error(
+      `[Privacy Guard] Blocked outbound network request to "${url}" in strict local model mode. Set ROBB_ALLOW_LOCAL_MODEL_WEB_TOOLS=1 to allow external network access.`
+    );
+  }
 
   const startTime = Date.now();
 

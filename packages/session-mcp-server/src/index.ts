@@ -281,6 +281,11 @@ let docsTools: Tool[] = [];
  * Falls back gracefully if the server is unreachable (tools will just be empty).
  */
 async function connectDocsUpstream(): Promise<void> {
+  if (process.env.ROBB_ENABLE_CRAFT_DOCS_MCP !== '1' || process.env.CRAFT_DISABLE_DOCS === '1') {
+    docsClient = null;
+    docsTools = [];
+    return;
+  }
   try {
     const client = new Client(
       { name: 'craft-agent-session-proxy', version: '1.0.0' },

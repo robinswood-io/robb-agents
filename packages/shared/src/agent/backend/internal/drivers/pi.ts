@@ -267,11 +267,19 @@ export const piDriver: ProviderDriver = {
         const supportsImages = typeof m.supportsImages === 'boolean'
           ? m.supportsImages
           : undefined;
-        if (m.contextWindow || supportsImages !== undefined) {
+        const supportsThinking = typeof m.supportsThinking === 'boolean'
+          ? m.supportsThinking
+          : undefined;
+        const maxTokens = typeof m.maxOutputTokens === 'number'
+          ? m.maxOutputTokens
+          : undefined;
+        if (m.contextWindow || supportsImages !== undefined || supportsThinking !== undefined || maxTokens !== undefined) {
           return {
             id: m.id,
             ...(m.contextWindow ? { contextWindow: m.contextWindow } : {}),
             ...(supportsImages !== undefined ? { supportsImages } : {}),
+            ...(supportsThinking !== undefined ? { supportsThinking } : {}),
+            ...(maxTokens !== undefined ? { maxTokens } : {}),
           };
         }
         return m.id;
@@ -286,6 +294,43 @@ export const piDriver: ProviderDriver = {
     if (connection.piAuthProvider === 'github-copilot' && copilotGitHubToken) {
       const models = await fetchCopilotModels(copilotGitHubToken, timeoutMs);
       return { models };
+    }
+
+    // Local / Custom OpenAI-compatible endpoints (Ollama, LM Studio, vLLM):
+    // Discover installed models directly from GET {baseUrl}/models when no cloud piAuthProvider is set.
+    if (connection.baseUrl && !connection.piAuthProvider) {
+      const base = connection.baseUrl.replace(/\/+$/, '');
+      const modelsUrl = base.endsWith('/v1') ? `${base}/models` : `${base}/v1/models`;
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), Math.min(timeoutMs || 5_000, 5_000));
+      try {
+        const headers: Record<string, string> = { Accept: 'application/json' };
+        if (credentials.apiKey) headers.Authorization = `Bearer ${credentials.apiKey}`;
+        const res = await fetch(modelsUrl, { signal: controller.signal, headers });
+        if (res.ok) {
+          const payload = await res.json() as { data?: Array<{ id?: string; name?: string }> };
+          const discovered = (payload.data ?? [])
+            .map(entry => entry.id || entry.name)
+            .filter((id): id is string => typeof id === 'string' && id.trim().length > 0)
+            .map<ModelDefinition>(id => ({
+              id,
+              name: id,
+              shortName: id.replace(/:latest$/, ''),
+              description: 'Local model discovered via OpenAI-compatible /v1/models endpoint',
+              provider: 'pi',
+              contextWindow: 131_072,
+              supportsThinking: /r1|reason|think|qwq/i.test(id),
+              supportsImages: /vision|vl|llava|pixtral|gemma3/i.test(id),
+            }));
+          if (discovered.length > 0) {
+            return { models: discovered, serverDefault: discovered[0]!.id };
+          }
+        }
+      } catch {
+        // Fall through to static registry if local server is offline
+      } finally {
+        clearTimeout(timer);
+      }
     }
 
     // All other Pi providers: use static Pi SDK model registry

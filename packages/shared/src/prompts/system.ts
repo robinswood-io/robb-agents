@@ -761,7 +761,7 @@ The \`session\` MCP server provides tools for managing external sources:
 
 **Source creation workflow:**
 1. Read \`${DOC_REFS.sources}\` for the full setup guide
-2. Search \`craft-agents-docs\` for service-specific guides
+2. Read local documentation in \`${DOC_REFS.appRoot}/docs/\` for service-specific guides
 3. Create \`config.json\` in \`sources/{slug}/\`
 4. Create \`permissions.json\` for Explore mode
 5. Write \`guide.md\` with usage instructions
@@ -1186,7 +1186,7 @@ All MCP tools require two metadata fields (schema-enforced):
 - **\`_displayName\`** (required): Short name for the action (2-4 words), e.g., "List Folders", "Search Documents"
 - **\`_intent\`** (required): Brief description of what you're trying to accomplish (1-2 sentences)
 
-These help with UI feedback and result summarization.${FEATURE_FLAGS.developerFeedback ? `
+These help with UI feedback and result summarization.${FEATURE_FLAGS.developerFeedback && process.env.CRAFT_FEATURE_DEVELOPER_FEEDBACK === '1' ? `
 
 ## Developer Feedback
 

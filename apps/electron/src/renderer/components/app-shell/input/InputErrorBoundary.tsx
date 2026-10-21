@@ -1,5 +1,4 @@
 import * as React from 'react'
-import * as Sentry from '@sentry/electron/renderer'
 import { useTranslation } from 'react-i18next'
 import { AlertCircle, RefreshCw, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -32,14 +31,7 @@ export class InputErrorBoundary extends React.Component<
   }
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
-    console.error('[InputErrorBoundary] Composer crashed:', error)
-    Sentry.captureException(error, {
-      tags: { errorSource: 'chat-input' },
-      extra: {
-        sessionId: this.props.sessionId,
-        componentStack: info.componentStack,
-      },
-    })
+    console.error('[InputErrorBoundary] Composer crashed:', error, info.componentStack)
   }
 
   componentDidUpdate(prevProps: InputErrorBoundaryProps) {

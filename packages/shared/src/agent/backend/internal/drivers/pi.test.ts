@@ -49,6 +49,40 @@ describe('piDriver.buildRuntime custom endpoint models', () => {
       'plain-model',
     ]);
   });
+
+  it('forwards explicit per-model supportsThinking and maxOutputTokens values for local reasoning models', () => {
+    const runtime = piDriver.buildRuntime({
+      context: {
+        provider: 'pi',
+        authType: 'none',
+        resolvedModel: 'deepseek-r1-local',
+        capabilities: { needsHttpPoolServer: false },
+        connection: {
+          slug: 'ollama-local',
+          name: 'Ollama (Local)',
+          providerType: 'pi_compat',
+          authType: 'none',
+          baseUrl: 'http://127.0.0.1:11434/v1',
+          customEndpoint: { api: 'openai-completions' },
+          models: [
+            { id: 'deepseek-r1-local', contextWindow: 131_072, supportsThinking: true, maxOutputTokens: 32_768 },
+          ],
+          createdAt: Date.now(),
+        } as any,
+      },
+      coreConfig: {} as any,
+      hostRuntime: {} as any,
+      resolvedPaths: {
+        piServerPath: '/tmp/pi-agent-server.js',
+        interceptorBundlePath: '/tmp/interceptor.cjs',
+        nodeRuntimePath: '/usr/bin/node',
+      },
+    });
+
+    expect(runtime.customModels).toEqual([
+      { id: 'deepseek-r1-local', contextWindow: 131_072, supportsThinking: true, maxTokens: 32_768 },
+    ]);
+  });
 });
 
 describe('piDriver external subscription bridges', () => {

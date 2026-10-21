@@ -1378,7 +1378,7 @@ export class ClaudeAgent extends BaseAgent {
       // - EnterPlanMode/ExitPlanMode: We use safe mode instead (user-controlled via UI)
       // - AskUserQuestion: Requires interactive UI to show question options to user
       // Note: Mini agents use a minimal tool list directly, so no additional blocking needed
-      const disallowedTools: string[] = ['EnterPlanMode', 'ExitPlanMode', 'AskUserQuestion', 'Skill'];
+      const disallowedTools: string[] = ['EnterPlanMode', 'ExitPlanMode', 'AskUserQuestion'];
 
       // Build MCP servers config
       // Mini agents: only session tools (config_validate) to minimize token usage
@@ -1414,12 +1414,15 @@ export class ClaudeAgent extends BaseAgent {
           this.config.workspace.id,
           toolExecutionGuard,
         ),
-        // Craft Agents documentation - always available for searching setup guides
-        // This is a public Mintlify MCP server, no auth needed
-        'craft-agents-docs': {
-          type: 'http',
-          url: 'https://agents.craft.do/docs/mcp',
-        },
+        // Craft Agents documentation - opt-in only for strict privacy/confidentiality
+        ...(process.env.ROBB_ENABLE_CRAFT_DOCS_MCP === '1' && process.env.CRAFT_DISABLE_DOCS !== '1'
+          ? {
+              'craft-agents-docs': {
+                type: 'http' as const,
+                url: 'https://agents.craft.do/docs/mcp',
+              },
+            }
+          : {}),
         // Per-source proxy servers from centralized MCP pool (MCP + API sources)
         // Each source gets its own SDK server keyed by slug (e.g., 'linear', 'github', 'gmail')
         // so the SDK produces correct tool names: mcp__{slug}__{toolName}

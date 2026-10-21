@@ -1,8 +1,5 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { init as sentryInit } from '@sentry/electron/renderer'
-import * as Sentry from '@sentry/react'
-import { captureConsoleIntegration } from '@sentry/react'
 import { Provider as JotaiProvider, useAtomValue } from 'jotai'
 import App from './App'
 import { ThemeProvider } from './context/ThemeContext'
@@ -23,10 +20,6 @@ setupI18n([LanguageDetector, initReactI18next])
 // app would still generate titles in English until the user manually re-picks
 // the language in Appearance.
 const resolvedLanguage = i18n.resolvedLanguage
-// Diagnostic: console-log the bootstrap push so it shows up in DevTools and
-// (via captureConsoleIntegration) in Sentry, alongside the main-process
-// [i18n] startup hydration log. If these two diverge, the renderer's
-// localStorage isn't tracking the user's Appearance selection.
 console.info('[i18n] renderer bootstrap push', {
   resolvedLanguage: resolvedLanguage ?? null,
   localStorageI18nextLng: typeof window !== 'undefined' ? window.localStorage?.getItem('i18nextLng') : null,
@@ -35,68 +28,9 @@ if (resolvedLanguage) {
   void window.electronAPI?.changeLanguage?.(resolvedLanguage)
 }
 
-// Known-harmless console messages that should NOT be sent to Sentry.
-// These are dev-mode noise or expected warnings that aren't actionable.
-const IGNORED_CONSOLE_PATTERNS = [
-  // React StrictMode dev warnings about non-boolean DOM attributes
-  'Received `true` for a non-boolean attribute',
-  'Received `false` for a non-boolean attribute',
-  // Duplicate Shiki theme registration (expected on HMR reload)
-  'theme name already registered',
-]
-
-// Initialize Sentry in the renderer process using the dual-init pattern.
-// Combines Electron IPC transport (sentryInit) with React error boundary support (sentryReactInit).
-// DSN and config are inherited from the main process init.
-//
-// captureConsoleIntegration promotes console.error calls into Sentry events,
-// giving Sentry the same rich context visible in DevTools without needing sourcemaps.
-//
-// NOTE: Source map upload is intentionally disabled — see main/index.ts for details.
-sentryInit(
-  {
-    // @sentry/electron and @sentry/react can resolve separate @sentry/core copies;
-    // the integration object is runtime-compatible, but TypeScript treats the
-    // protected Client types as nominal. Cast locally to keep renderer init typed.
-    integrations: [captureConsoleIntegration({ levels: ['error'] }) as never],
-
-    beforeSend(event) {
-      // Drop events matching known-harmless console patterns to avoid Sentry quota waste
-      const message = event.message || event.exception?.values?.[0]?.value || ''
-      if (IGNORED_CONSOLE_PATTERNS.some((pattern) => message.includes(pattern))) {
-        return null
-      }
-
-      // Scrub sensitive data from breadcrumbs (mirrors main process scrubbing in main/index.ts)
-      if (event.breadcrumbs) {
-        for (const breadcrumb of event.breadcrumbs) {
-          if (breadcrumb.data) {
-            for (const key of Object.keys(breadcrumb.data)) {
-              const lowerKey = key.toLowerCase()
-              if (
-                lowerKey.includes('token') ||
-                lowerKey.includes('key') ||
-                lowerKey.includes('secret') ||
-                lowerKey.includes('password') ||
-                lowerKey.includes('credential') ||
-                lowerKey.includes('auth')
-              ) {
-                breadcrumb.data[key] = '[REDACTED]'
-              }
-            }
-          }
-        }
-      }
-
-      return event
-    },
-  },
-  Sentry.init as never,
-)
-
 /**
  * Minimal fallback UI shown when the entire React tree crashes.
- * Sentry.ErrorBoundary captures the error and sends it to Sentry automatically.
+ * Handled purely locally by RootErrorBoundary (no external telemetry).
  */
 function CrashFallback({ error }: { error?: unknown }) {
   const errorMessage = error instanceof Error
@@ -138,12 +72,34 @@ function Root() {
   )
 }
 
+class RootErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { error: unknown; hasError: boolean }
+> {
+  state = { error: undefined as unknown, hasError: false }
+
+  static getDerivedStateFromError(error: unknown) {
+    return { error, hasError: true }
+  }
+
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    console.error('[RootErrorBoundary] Renderer crashed:', error, info.componentStack)
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return <CrashFallback error={this.state.error} />
+    }
+    return this.props.children
+  }
+}
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <Sentry.ErrorBoundary fallback={({ error }) => <CrashFallback error={error} />}>
+    <RootErrorBoundary>
       <JotaiProvider>
         <Root />
       </JotaiProvider>
-    </Sentry.ErrorBoundary>
+    </RootErrorBoundary>
   </React.StrictMode>
 )

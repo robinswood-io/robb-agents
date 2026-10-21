@@ -782,8 +782,33 @@ export class PiAgent extends BaseAgent {
     }
 
     // Derive AWS env vars from the piAuth credential (single fetch, no race).
-    const awsEnv = this.buildAwsEnv(piAuth, runtime);
-    const providerEnv = this.buildProviderEnv(runtime);
+    const isStrictLocalEndpoint = Boolean(
+      runtime.baseUrl
+      && (() => {
+        try {
+          const h = new URL(runtime.baseUrl).hostname.replace(/^\[|\]$/g, '');
+          return h === 'localhost' || h === '127.0.0.1' || h === '::1';
+        } catch {
+          return false;
+        }
+      })()
+      && process.env.ROBB_ALLOW_LOCAL_MODEL_WEB_TOOLS !== '1',
+    );
+    const awsEnv = isStrictLocalEndpoint ? {} : this.buildAwsEnv(piAuth, runtime);
+    const providerEnv = isStrictLocalEndpoint
+      ? {
+          CRAFT_STRICT_LOCAL_ENDPOINT: '1',
+          NO_PROXY: 'localhost,127.0.0.1,::1',
+          no_proxy: 'localhost,127.0.0.1,::1',
+          HTTP_PROXY: '',
+          HTTPS_PROXY: '',
+          ALL_PROXY: '',
+          http_proxy: '',
+          https_proxy: '',
+          all_proxy: '',
+        }
+      : this.buildProviderEnv(runtime);
+    const proxyEnv = isStrictLocalEndpoint ? {} : getProxyEnvVars();
 
     // Set up the handshake only after all pre-spawn async work succeeded. This
     // avoids leaving an unreachable pending promise when credential resolution
@@ -801,7 +826,7 @@ export class PiAgent extends BaseAgent {
         cwd,
         stdio: ['pipe', 'pipe', 'pipe'],
         env: buildPiSubprocessEnvironment({
-          proxyEnv: getProxyEnvVars(),
+          proxyEnv,
           envOverrides: this.config.envOverrides,
           providerEnv,
           awsEnv,
@@ -966,6 +991,16 @@ export class PiAgent extends BaseAgent {
     // inconsistently depending on backend.
     if (!getBrowserToolEnabled()) {
       sessionToolDefs = sessionToolDefs.filter(d => d.name !== 'mcp__session__browser_tool');
+    }
+    if (isStrictLocalEndpoint) {
+      const blockedLocalSessionTools = new Set([
+        'mcp__session__send_developer_feedback',
+        'mcp__session__source_oauth_trigger',
+        'mcp__session__source_google_oauth_trigger',
+        'mcp__session__source_slack_oauth_trigger',
+        'mcp__session__source_microsoft_oauth_trigger',
+      ]);
+      sessionToolDefs = sessionToolDefs.filter(d => !blockedLocalSessionTools.has(d.name));
     }
 
     this.send({

@@ -1802,6 +1802,9 @@ function resolveManagedSessionContextWindow(managed: ManagedSession): number | u
     return managed.tokenUsage.contextWindow
   }
   const modelName = (managed.activeObjective?.model ?? managed.model ?? '').toLowerCase()
+  if (modelName.includes('[1m]')) return 1_000_000
+  if (modelName.includes('gpt-5.6')) return 1_050_000
+  if (modelName.includes('gpt-6')) return 272_000
   if (modelName.includes('gemini')) return 1_000_000
   if (modelName.includes('claude') || modelName.includes('anthropic')) return 200_000
   if (modelName.includes('gpt-4') || modelName.includes('o1') || modelName.includes('o3')) return 128_000
@@ -13893,6 +13896,12 @@ export class SessionManager implements ISessionManager {
   private async loadMissionDocsToolCatalog(
     workspace: Workspace,
   ): Promise<MissionSourceToolCatalogDecision> {
+    if (process.env.ROBB_ENABLE_CRAFT_DOCS_MCP !== '1' || process.env.CRAFT_DISABLE_DOCS === '1') {
+      return {
+        allowed: false,
+        reason: 'Mission source "craft-agents-docs" is disabled by local privacy policy (ROBB_ENABLE_CRAFT_DOCS_MCP!=1)',
+      }
+    }
     return this.discoverMissionToolCatalog(workspace, 'craft-agents-docs', {
       'craft-agents-docs': {
         type: 'http',
@@ -16139,11 +16148,15 @@ export class SessionManager implements ISessionManager {
             customModels: connection.models?.map(model => {
               if (typeof model === 'string') return model
               const supportsImages = typeof model.supportsImages === 'boolean' ? model.supportsImages : undefined
-              if (model.contextWindow || supportsImages !== undefined) {
+              const supportsThinking = typeof model.supportsThinking === 'boolean' ? model.supportsThinking : undefined
+              const maxTokens = typeof model.maxOutputTokens === 'number' ? model.maxOutputTokens : undefined
+              if (model.contextWindow || supportsImages !== undefined || supportsThinking !== undefined || maxTokens !== undefined) {
                 return {
                   id: model.id,
                   ...(model.contextWindow ? { contextWindow: model.contextWindow } : {}),
                   ...(supportsImages !== undefined ? { supportsImages } : {}),
+                  ...(supportsThinking !== undefined ? { supportsThinking } : {}),
+                  ...(maxTokens !== undefined ? { maxTokens } : {}),
                 }
               }
               return model.id

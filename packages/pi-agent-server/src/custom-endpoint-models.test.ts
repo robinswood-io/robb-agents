@@ -65,4 +65,10 @@ describe('buildCustomEndpointModelDef', () => {
     expect(model.input).toEqual(['text', 'image'])
     expect(model.contextWindow).toBe(262_144)
   })
+
+  it('lets per-model overrides enable reasoning and custom maxTokens for local models', () => {
+    const model = buildCustomEndpointModelDef('deepseek-r1-local', undefined, { supportsThinking: true, maxTokens: 32_768 })
+    expect(model.reasoning).toBe(true)
+    expect(model.maxTokens).toBe(32_768)
+  })
 })
