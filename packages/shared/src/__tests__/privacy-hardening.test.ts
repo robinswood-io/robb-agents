@@ -29,7 +29,7 @@ describe('Robb Agent privacy & confidentiality hardening', () => {
     globalThis.fetch = (async () => {
       fetchCalled = true;
       return new Response(JSON.stringify({ version: '9.9.9' }), { status: 200 });
-    }) as typeof fetch;
+    }) as unknown as typeof fetch;
 
     try {
       const latest = await getLatestVersion();
@@ -48,7 +48,7 @@ describe('Robb Agent privacy & confidentiality hardening', () => {
 
     const prompt = getSystemPrompt(
       undefined,
-      { enabled: true, condensed: false },
+      { enabled: true },
       '/tmp/test-workspace',
       '/tmp/test-workspace',
     );

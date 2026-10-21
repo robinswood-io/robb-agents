@@ -10,9 +10,9 @@
  *    for separate-port deployments or development.
  */
 
-import { join, extname } from 'node:path'
+import { join, extname, resolve, sep } from 'node:path'
 import { randomUUID } from 'node:crypto'
-import { readFile } from 'node:fs/promises'
+import { readFile, realpath } from 'node:fs/promises'
 import {
   RateLimiter,
   createPasswordVerifier,
@@ -114,10 +114,36 @@ function getForwardedValue(req: Request, key: 'proto' | 'host'): string | null {
   return match?.[1]?.trim() || null
 }
 
-function getRequestHost(req: Request): string | null {
-  return req.headers.get('x-forwarded-host')?.split(',')[0]?.trim()
-    || getForwardedValue(req, 'host')
-    || req.headers.get('host')
+function sanitizeHostHeader(raw: string | null | undefined): string | null {
+  if (!raw) return null
+  const trimmed = raw.trim()
+  if (!trimmed || trimmed.length > 255 || /[\s/@?#"\\<>]/.test(trimmed)) return null
+  try {
+    const parsed = new URL(`http://${trimmed}`)
+    if (
+      parsed.username
+      || parsed.password
+      || parsed.pathname !== '/'
+      || parsed.search !== ''
+      || parsed.hash !== ''
+    ) {
+      return null
+    }
+    return trimmed
+  } catch {
+    return null
+  }
+}
+
+function getRequestHost(req: Request, allowForwardedHost = true): string | null {
+  if (allowForwardedHost) {
+    const forwardedHost = sanitizeHostHeader(
+      req.headers.get('x-forwarded-host')?.split(',')[0]?.trim()
+        || getForwardedValue(req, 'host'),
+    )
+    if (forwardedHost) return forwardedHost
+  }
+  return sanitizeHostHeader(req.headers.get('host'))
 }
 
 function formatHostWithPort(host: string, port: number): string {
@@ -153,6 +179,7 @@ const BROWSER_SECURITY_HEADERS: Readonly<Record<string, string>> = {
     "worker-src 'self'",
     "manifest-src 'self'",
   ].join('; '),
+  'Cross-Origin-Opener-Policy': 'same-origin',
   'Cross-Origin-Resource-Policy': 'same-origin',
   'Permissions-Policy': 'camera=(), geolocation=(), microphone=(), payment=(), usb=()',
   'Referrer-Policy': 'no-referrer',
@@ -160,10 +187,13 @@ const BROWSER_SECURITY_HEADERS: Readonly<Record<string, string>> = {
   'X-Frame-Options': 'DENY',
 }
 
-function withBrowserSecurityHeaders(response: Response, noStore = false): Response {
+function withBrowserSecurityHeaders(response: Response, noStore = false, isHttps = false): Response {
   const headers = new Headers(response.headers)
   for (const [name, value] of Object.entries(BROWSER_SECURITY_HEADERS)) {
     if (!headers.has(name)) headers.set(name, value)
+  }
+  if (isHttps && !headers.has('Strict-Transport-Security')) {
+    headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
   }
   if ((noStore || headers.has('Set-Cookie')) && !headers.has('Cache-Control')) {
     headers.set('Cache-Control', 'no-store')
@@ -179,15 +209,16 @@ export interface ResolveWebSocketUrlOptions {
   publicWsUrl?: string
   wsProtocol: 'ws' | 'wss'
   wsPort: number
+  trustedProxy?: boolean
 }
 
 export function resolveWebSocketUrl(
   req: Request,
-  { publicWsUrl, wsProtocol, wsPort }: ResolveWebSocketUrlOptions,
+  { publicWsUrl, wsProtocol, wsPort, trustedProxy = true }: ResolveWebSocketUrlOptions,
 ): string {
   if (publicWsUrl) return publicWsUrl
 
-  const host = getRequestHost(req)
+  const host = getRequestHost(req, trustedProxy)
   if (host) {
     return `${wsProtocol}://${formatHostWithPort(host, wsPort)}`
   }
@@ -373,6 +404,12 @@ export function createWebuiHandler(options: WebuiHandlerOptions): WebuiHandler {
     }
   }
 
+  function isTrustedProxyRequest(req: Request): boolean {
+    if (trustedProxySet.size === 0) return true
+    const transportPeer = getNodeRequestRemoteAddress(req)
+    return Boolean(transportPeer && trustedProxySet.has(transportPeer))
+  }
+
   /** Extract client IP — only trusts proxy headers when trustedProxies is configured. */
   function getClientIp(req: Request): string {
     const transportPeer = getNodeRequestRemoteAddress(req)
@@ -393,7 +430,7 @@ export function createWebuiHandler(options: WebuiHandlerOptions): WebuiHandler {
 
   function getHostLabel(req: Request): string {
     if (hostLabel?.trim()) return hostLabel.trim().slice(0, 80)
-    const requestHost = getRequestHost(req)
+    const requestHost = getRequestHost(req, isTrustedProxyRequest(req))
     if (!requestHost) return 'Robb Agents host'
     try {
       return new URL(`http://${requestHost}`).hostname
@@ -402,16 +439,31 @@ export function createWebuiHandler(options: WebuiHandlerOptions): WebuiHandler {
     }
   }
 
+  const resolvedWebuiDir = resolve(webuiDir)
+  const webuiPrefix = resolvedWebuiDir.endsWith(sep) ? resolvedWebuiDir : `${resolvedWebuiDir}${sep}`
+
   async function serveFile(path: string, headers: Record<string, string> = {}): Promise<Response | null> {
+    if (path.includes('\0')) return null
+    const resolvedTarget = resolve(path)
+    if (resolvedTarget !== resolvedWebuiDir && !resolvedTarget.startsWith(webuiPrefix)) {
+      return null
+    }
     try {
-      const contents = await readFile(path)
+      const realTarget = await realpath(resolvedTarget)
+      const realRoot = await realpath(resolvedWebuiDir).catch(() => resolvedWebuiDir)
+      const realPrefix = realRoot.endsWith(sep) ? realRoot : `${realRoot}${sep}`
+      if (!realTarget.startsWith(realPrefix)) {
+        return null
+      }
+      const contents = await readFile(realTarget)
       return new Response(contents, {
         headers: {
           ...headers,
         },
       })
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null
+      const code = (error as NodeJS.ErrnoException).code
+      if (code === 'ENOENT' || code === 'EISDIR' || code === 'ENOTDIR') return null
       throw error
     }
   }
@@ -780,7 +832,7 @@ export function createWebuiHandler(options: WebuiHandlerOptions): WebuiHandler {
           return Response.json({ error: 'Unauthorized' }, { status: 401 })
         }
         return Response.json({
-          wsUrl: resolveWebSocketUrl(req, { publicWsUrl, wsProtocol, wsPort }),
+          wsUrl: resolveWebSocketUrl(req, { publicWsUrl, wsProtocol, wsPort, trustedProxy: isTrustedProxyRequest(req) }),
           session: {
             kind: 'pairing',
             deviceId: null,
@@ -792,7 +844,7 @@ export function createWebuiHandler(options: WebuiHandlerOptions): WebuiHandler {
         })
       }
       return Response.json({
-        wsUrl: resolveWebSocketUrl(req, { publicWsUrl, wsProtocol, wsPort }),
+        wsUrl: resolveWebSocketUrl(req, { publicWsUrl, wsProtocol, wsPort, trustedProxy: isTrustedProxyRequest(req) }),
         session: {
           kind: configSession.kind,
           deviceId: configSession.deviceId ?? null,
@@ -849,7 +901,9 @@ export function createWebuiHandler(options: WebuiHandlerOptions): WebuiHandler {
 
   async function fetch(req: Request): Promise<Response> {
     const response = await routeRequest(req)
-    return withBrowserSecurityHeaders(response, new URL(req.url).pathname.startsWith('/api/'))
+    const parsedUrl = new URL(req.url)
+    const isHttps = parsedUrl.protocol === 'https:' || isConfiguredHttpsProxy()
+    return withBrowserSecurityHeaders(response, parsedUrl.pathname.startsWith('/api/'), isHttps)
   }
 
   return {
@@ -877,21 +931,24 @@ export function createWebuiHandler(options: WebuiHandlerOptions): WebuiHandler {
 export interface WebuiHttpServerOptions extends WebuiHandlerOptions {
   /** Port to bind on. Use 0 for an ephemeral port in tests. */
   port: number
+  /** Hostname to bind on (defaults to 127.0.0.1). */
+  host?: string
 }
 
 export async function startWebuiHttpServer(
   options: WebuiHttpServerOptions,
 ): Promise<{ port: number, stop: () => void }> {
-  const { port, logger, ...handlerOpts } = options
+  const { port, host = '127.0.0.1', logger, ...handlerOpts } = options
   const handler = createWebuiHandler({ ...handlerOpts, logger })
 
   const server = Bun.serve({
+    hostname: host,
     port,
     fetch: handler.fetch,
   })
 
   const boundPort = server.port ?? port
-  logger.info(`[webui] Web UI server listening on http://0.0.0.0:${boundPort}`)
+  logger.info(`[webui] Web UI server listening on http://${host}:${boundPort}`)
 
   return {
     port: boundPort,

@@ -1,0 +1,8 @@
+{
+  "name": "sprintf-js",
+  "version": "1.1.4",
+  "description": "JavaScript sprintf implementation (hardened against GHSA-hp3w-g68c-fv3c precision/width DoS)",
+  "author": "Alexandru Mărășteanu <hello@alexei.ro>",
+  "main": "src/sprintf.js",
+  "license": "BSD-3-Clause"
+}

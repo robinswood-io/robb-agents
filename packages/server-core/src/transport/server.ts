@@ -42,6 +42,7 @@ interface BufferedEvent {
   seq: number
   /** Shared serialized envelope — one allocation referenced by all client buffers. */
   data: string
+  bytes: number
   timestamp: number
 }
 
@@ -59,10 +60,16 @@ interface ClientConnection {
   alive: boolean
   /** Ring buffer of recent events for replay on reconnect. */
   eventBuffer: BufferedEvent[]
+  /** Total byte size of buffered event strings for O(1) memory cap enforcement. */
+  bufferedBytes: number
+  /** Active concurrent RPC requests from this client. */
+  inFlightRequests: number
   /** Highest per-client seq the client has acknowledged. */
   lastAckedSeq: number
   /** Highest per-client seq assigned to this client. */
   lastSentSeq: number
+  /** Set when authorization is explicitly revoked so close handler does not retain reconnect buffer. */
+  revoked?: boolean
 }
 
 interface PendingInvoke {
@@ -177,6 +184,12 @@ export interface WsRpcServerOptions {
   maxClients?: number
   /** Maximum WebSocket message size in bytes. Default: 8 MiB. */
   maxPayloadBytes?: number
+  /** Maximum concurrent in-flight RPC requests per client. Default: 64. */
+  maxInFlightRequestsPerClient?: number
+  /** Maximum buffered event replay bytes per client. Default: 8 MiB. */
+  maxEventBufferBytes?: number
+  /** Maximum failed auth handshakes per IP per 60s window. Default: 15. */
+  maxFailedHandshakesPerIp?: number
   /** Called when a client completes handshake. */
   onClientConnected?: (info: ConnectedClientInfo) => void
   /** Called when a client disconnects. */
@@ -202,9 +215,11 @@ export class WsRpcServer implements RpcServer {
   private httpServer: HttpServer | null = null
   private httpsServer: HttpsServer | null = null
   private clients = new Map<string, ClientConnection>()
+  private clientByWs = new WeakMap<WebSocket, ClientConnection>()
   private handlers = new Map<string, HandlerFn>()
   private pendingInvokes = new Map<string, PendingInvoke>()
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null
+  private failedHandshakesByIp = new Map<string, { count: number; windowStart: number }>()
   private _port = 0
   private _protocol: 'ws' | 'wss' = 'ws'
 
@@ -224,6 +239,9 @@ export class WsRpcServer implements RpcServer {
   private readonly serverVersion: string
   private readonly maxClients: number
   private readonly maxPayloadBytes: number
+  private readonly maxInFlightRequestsPerClient: number
+  private readonly maxEventBufferBytes: number
+  private readonly maxFailedHandshakesPerIp: number
   private readonly onClientConnected: WsRpcServerOptions['onClientConnected']
   private readonly onClientDisconnected: WsRpcServerOptions['onClientDisconnected']
   private readonly httpHandler: WsRpcServerOptions['httpHandler']
@@ -244,6 +262,9 @@ export class WsRpcServer implements RpcServer {
     this.tlsOptions = opts?.tls ?? null
     this.maxClients = opts?.maxClients ?? 50
     this.maxPayloadBytes = opts?.maxPayloadBytes ?? 8 * 1024 * 1024
+    this.maxInFlightRequestsPerClient = opts?.maxInFlightRequestsPerClient ?? 64
+    this.maxEventBufferBytes = opts?.maxEventBufferBytes ?? 8 * 1024 * 1024
+    this.maxFailedHandshakesPerIp = opts?.maxFailedHandshakesPerIp ?? 15
     this.onClientConnected = opts?.onClientConnected
     this.onClientDisconnected = opts?.onClientDisconnected
     this.httpHandler = opts?.httpHandler
@@ -276,7 +297,21 @@ export class WsRpcServer implements RpcServer {
   }
 
   push(channel: string, target: PushTarget, ...args: any[]): void {
+    if (this.clients.size === 0 && this.disconnectedClients.size === 0) return
     const timestamp = Date.now()
+
+    if (target.to === 'client') {
+      const activeClient = this.clients.get(target.clientId)
+      if (activeClient) {
+        this.bufferAndMaybeSendEvent(activeClient, channel, args, timestamp, true)
+        return
+      }
+      const disconnectedEntry = this.disconnectedClients.get(target.clientId)
+      if (disconnectedEntry) {
+        this.bufferAndMaybeSendEvent(disconnectedEntry.client, channel, args, timestamp, false)
+      }
+      return
+    }
 
     for (const client of this.clients.values()) {
       if (!this.matchesTarget(client, target)) continue
@@ -349,6 +384,39 @@ export class WsRpcServer implements RpcServer {
   // Lifecycle
   // -------------------------------------------------------------------------
 
+  private configureNodeHttpTimeouts(server: HttpServer | HttpsServer): void {
+    server.headersTimeout = 15_000
+    server.requestTimeout = 60_000
+    server.keepAliveTimeout = 5_000
+    server.maxHeadersCount = 100
+  }
+
+  private isHandshakeIpRateLimited(ip: string): boolean {
+    if (this.maxFailedHandshakesPerIp <= 0) return false
+    const entry = this.failedHandshakesByIp.get(ip)
+    if (!entry) return false
+    if (Date.now() - entry.windowStart > 60_000) {
+      this.failedHandshakesByIp.delete(ip)
+      return false
+    }
+    return entry.count >= this.maxFailedHandshakesPerIp
+  }
+
+  private recordFailedHandshake(ip: string): void {
+    if (this.maxFailedHandshakesPerIp <= 0) return
+    const now = Date.now()
+    const existing = this.failedHandshakesByIp.get(ip)
+    if (!existing || now - existing.windowStart > 60_000) {
+      if (!existing && this.failedHandshakesByIp.size >= 4096) {
+        const oldestKey = this.failedHandshakesByIp.keys().next().value
+        if (oldestKey !== undefined) this.failedHandshakesByIp.delete(oldestKey)
+      }
+      this.failedHandshakesByIp.set(ip, { count: 1, windowStart: now })
+      return
+    }
+    existing.count += 1
+  }
+
   async listen(): Promise<void> {
     return new Promise((resolve, reject) => {
       if (this.tlsOptions) {
@@ -368,6 +436,7 @@ export class WsRpcServer implements RpcServer {
           },
           this.httpHandler,
         )
+        this.configureNodeHttpTimeouts(this.httpsServer)
 
         this.wss = new WebSocketServer({
           server: this.httpsServer,
@@ -389,6 +458,7 @@ export class WsRpcServer implements RpcServer {
         // Plain WS + HTTP handler: create an HTTP server for both.
         this._protocol = 'ws'
         this.httpServer = createHttpServer(this.httpHandler)
+        this.configureNodeHttpTimeouts(this.httpServer)
         this.wss = new WebSocketServer({
           server: this.httpServer,
           perMessageDeflate: false,
@@ -435,6 +505,7 @@ export class WsRpcServer implements RpcServer {
           req.headers.cookie ?? null,
           req.headers.origin ?? null,
           req.headers.host ?? null,
+          req.socket?.remoteAddress ?? 'direct',
         )
       })
     })
@@ -479,6 +550,7 @@ export class WsRpcServer implements RpcServer {
     upgradeRequestCookie: string | null,
     upgradeRequestOrigin: string | null,
     upgradeRequestHost: string | null,
+    remoteAddress = 'direct',
   ): void {
     // Reject if at capacity
     if (this.maxClients > 0 && this.clients.size >= this.maxClients) {
@@ -487,6 +559,12 @@ export class WsRpcServer implements RpcServer {
         current: this.clients.size,
       })
       ws.close(4008, 'Server at capacity')
+      return
+    }
+
+    if (this.requireAuth && this.isHandshakeIpRateLimited(remoteAddress)) {
+      transportLog.warn('Connection rejected: handshake auth rate limit exceeded', { remoteAddress })
+      ws.close(4029, 'Too many authentication attempts')
       return
     }
 
@@ -578,6 +656,7 @@ export class WsRpcServer implements RpcServer {
           } else if (authenticationResult === true && !this.requireAuthoritativePrincipal) {
             principal = legacyAuthenticatedPrincipal(requestedWorkspaceId, requestedCapabilities)
           } else {
+            this.recordFailedHandshake(remoteAddress)
             const reason = envelope.token ? 'Invalid token' : 'Token required'
             this.sendError(ws, envelope.id, 'AUTH_FAILED', reason)
             ws.close(4005, 'Auth failed')
@@ -585,6 +664,7 @@ export class WsRpcServer implements RpcServer {
           }
 
           if (!principalAllowsWorkspace(principal, requestedWorkspaceId)) {
+            this.recordFailedHandshake(remoteAddress)
             this.sendError(ws, envelope.id, 'AUTH_FAILED', 'Workspace access denied')
             ws.close(4005, 'Auth failed')
             return
@@ -687,6 +767,7 @@ export class WsRpcServer implements RpcServer {
               // AFTER replay is complete so push() can't target this client mid-replay.
               this.disconnectedClients.delete(envelope.reconnectClientId)
               this.clients.set(prevClient.id, prevClient)
+              this.clientByWs.set(ws, prevClient)
 
               this.setupClientHandlers(ws, prevClient)
               this.onClientConnected?.({
@@ -729,10 +810,13 @@ export class WsRpcServer implements RpcServer {
           missedPongs: 0,
           alive: true,
           eventBuffer: [],
+          bufferedBytes: 0,
+          inFlightRequests: 0,
           lastAckedSeq: 0,
           lastSentSeq: 0,
         }
         this.clients.set(clientId, client)
+        this.clientByWs.set(ws, client)
         handshakeCompleted = true
 
         // Send handshake_ack
@@ -779,7 +863,7 @@ export class WsRpcServer implements RpcServer {
       if (envelope.type === 'request') {
         await this.onRequest(client, envelope)
       } else if (envelope.type === 'response') {
-        this.onClientResponse(envelope)
+        this.onClientResponse(client, envelope)
       } else if (envelope.type === 'sequence_ack') {
         const ackSeq = envelope.lastSeq
         if (typeof ackSeq === 'number' && ackSeq > client.lastAckedSeq) {
@@ -787,11 +871,14 @@ export class WsRpcServer implements RpcServer {
           // Evict acknowledged events
           const buf = client.eventBuffer
           let removeCount = 0
+          let removedBytes = 0
           while (removeCount < buf.length && buf[removeCount]!.seq <= ackSeq) {
+            removedBytes += buf[removeCount]!.bytes
             removeCount++
           }
           if (removeCount > 0) {
             buf.splice(0, removeCount)
+            client.bufferedBytes = Math.max(0, client.bufferedBytes - removedBytes)
           }
         }
       }
@@ -838,6 +925,20 @@ export class WsRpcServer implements RpcServer {
       return
     }
 
+    if (
+      this.maxInFlightRequestsPerClient > 0
+      && client.inFlightRequests >= this.maxInFlightRequestsPerClient
+    ) {
+      this.sendResponseError(
+        client.ws,
+        id,
+        channel,
+        'HANDLER_ERROR',
+        `Too many concurrent in-flight requests (max ${this.maxInFlightRequestsPerClient})`,
+      )
+      return
+    }
+
     const ctx: RequestContext = {
       clientId: client.id,
       workspaceId: client.workspaceId,
@@ -850,6 +951,7 @@ export class WsRpcServer implements RpcServer {
         : [...client.allowedWorkspaceIds],
     }
 
+    client.inFlightRequests += 1
     try {
       if (this.authorizeRequest && !await this.authorizeRequest(ctx, channel, args ?? [])) {
         this.sendResponseError(client.ws, id, channel, 'AUTH_FAILED', `RPC channel denied: ${channel}`)
@@ -874,6 +976,8 @@ export class WsRpcServer implements RpcServer {
       const rawCode = (err as { code?: unknown } | null)?.code
       const code: ErrorCode = isErrorCode(rawCode) ? rawCode : 'HANDLER_ERROR'
       this.sendResponseError(client.ws, id, channel, code, message)
+    } finally {
+      client.inFlightRequests = Math.max(0, client.inFlightRequests - 1)
     }
   }
 
@@ -883,6 +987,13 @@ export class WsRpcServer implements RpcServer {
 
   private startHeartbeat(): void {
     this.heartbeatTimer = setInterval(() => {
+      const now = Date.now()
+      for (const [ip, entry] of this.failedHandshakesByIp.entries()) {
+        if (now - entry.windowStart > 60_000) {
+          this.failedHandshakesByIp.delete(ip)
+        }
+      }
+
       for (const [, client] of this.clients) {
         // Skip sockets that are already closing/closed (e.g. terminated on a previous tick)
         if (client.ws.readyState !== client.ws.OPEN) continue
@@ -912,19 +1023,21 @@ export class WsRpcServer implements RpcServer {
       transportLog.info('Client disconnected', { clientId: client.id })
       this.clients.delete(client.id)
 
-      // Retain buffer for potential reconnect
-      const timer = setTimeout(() => {
-        this.disconnectedClients.delete(client.id)
-      }, DISCONNECTED_CLIENT_TTL_MS)
-      this.disconnectedClients.set(client.id, { client, timer })
+      if (!client.revoked) {
+        // Retain buffer for potential reconnect
+        const timer = setTimeout(() => {
+          this.disconnectedClients.delete(client.id)
+        }, DISCONNECTED_CLIENT_TTL_MS)
+        this.disconnectedClients.set(client.id, { client, timer })
 
-      // Cap disconnectedClients to prevent unbounded growth
-      if (this.disconnectedClients.size > 50) {
-        const oldestKey = this.disconnectedClients.keys().next().value
-        if (oldestKey) {
-          const oldest = this.disconnectedClients.get(oldestKey)
-          if (oldest) clearTimeout(oldest.timer)
-          this.disconnectedClients.delete(oldestKey)
+        // Cap disconnectedClients to prevent unbounded growth
+        if (this.disconnectedClients.size > 50) {
+          const oldestKey = this.disconnectedClients.keys().next().value
+          if (oldestKey) {
+            const oldest = this.disconnectedClients.get(oldestKey)
+            if (oldest) clearTimeout(oldest.timer)
+            this.disconnectedClients.delete(oldestKey)
+          }
         }
       }
 
@@ -959,7 +1072,9 @@ export class WsRpcServer implements RpcServer {
     }
 
     const data = serializeEnvelope(envelope)
-    client.eventBuffer.push({ seq, data, timestamp })
+    const bytes = Buffer.byteLength(data, 'utf8')
+    client.eventBuffer.push({ seq, data, bytes, timestamp })
+    client.bufferedBytes += bytes
     this.evictBuffer(client)
 
     if (shouldSend) {
@@ -974,22 +1089,40 @@ export class WsRpcServer implements RpcServer {
 
     const now = Date.now()
     let removeCount = 0
+    let removedBytes = 0
 
     // Evict by TTL
     while (removeCount < buf.length &&
            now - buf[removeCount]!.timestamp > EVENT_BUFFER_TTL_MS) {
+      removedBytes += buf[removeCount]!.bytes
       removeCount++
     }
 
-    // Evict by size (keep at most EVENT_BUFFER_MAX_SIZE after TTL eviction)
+    // Evict by count (keep at most EVENT_BUFFER_MAX_SIZE after TTL eviction)
     const remaining = buf.length - removeCount
     if (remaining > EVENT_BUFFER_MAX_SIZE) {
-      removeCount += remaining - EVENT_BUFFER_MAX_SIZE
+      const extra = remaining - EVENT_BUFFER_MAX_SIZE
+      for (let i = 0; i < extra; i++) {
+        removedBytes += buf[removeCount + i]!.bytes
+      }
+      removeCount += extra
+    }
+
+    // Evict by byte cap (keep at least the newest event if single event exceeds cap)
+    if (this.maxEventBufferBytes > 0) {
+      while (
+        removeCount < buf.length - 1 &&
+        client.bufferedBytes - removedBytes > this.maxEventBufferBytes
+      ) {
+        removedBytes += buf[removeCount]!.bytes
+        removeCount++
+      }
     }
 
     // Single splice instead of O(n) shift loop
     if (removeCount > 0) {
       buf.splice(0, removeCount)
+      client.bufferedBytes = Math.max(0, client.bufferedBytes - removedBytes)
     }
   }
 
@@ -1020,18 +1153,37 @@ export class WsRpcServer implements RpcServer {
 
   /** Close every active connection for an actor whose authorization was revoked. */
   disconnectClientsByActor(actorId: string): number {
+    for (const [id, entry] of this.disconnectedClients.entries()) {
+      if (entry.client.actorId !== actorId) continue
+      clearTimeout(entry.timer)
+      entry.client.eventBuffer.length = 0
+      entry.client.bufferedBytes = 0
+      this.disconnectedClients.delete(id)
+    }
+
     let disconnected = 0
     for (const client of this.clients.values()) {
       if (client.actorId !== actorId) continue
       disconnected++
+      client.revoked = true
+      client.eventBuffer.length = 0
+      client.bufferedBytes = 0
+      this.clients.delete(client.id)
+      this.clientByWs.delete(client.ws)
+      this.rejectPendingInvokesForClient(client.id)
       client.ws.close(4005, 'Authorization revoked')
     }
     return disconnected
   }
 
   private findClientByWs(ws: WebSocket): ClientConnection | undefined {
+    const fast = this.clientByWs.get(ws)
+    if (fast && this.clients.has(fast.id)) return fast
     for (const client of this.clients.values()) {
-      if (client.ws === ws) return client
+      if (client.ws === ws) {
+        this.clientByWs.set(ws, client)
+        return client
+      }
     }
     return undefined
   }
@@ -1060,9 +1212,17 @@ export class WsRpcServer implements RpcServer {
     this.safeSend(ws, serializeEnvelope(envelope))
   }
 
-  private onClientResponse(envelope: MessageEnvelope): void {
+  private onClientResponse(client: ClientConnection, envelope: MessageEnvelope): void {
     const pending = this.pendingInvokes.get(envelope.id)
     if (!pending) return
+    if (pending.clientId !== client.id) {
+      transportLog.warn('Ignored spoofed client response for pending invoke', {
+        invokeId: envelope.id,
+        expectedClientId: pending.clientId,
+        actualClientId: client.id,
+      })
+      return
+    }
 
     this.pendingInvokes.delete(envelope.id)
     clearTimeout(pending.timeout)

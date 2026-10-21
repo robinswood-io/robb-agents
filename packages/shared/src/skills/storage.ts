@@ -14,7 +14,7 @@ import {
 } from 'fs';
 import type { Dirent } from 'fs';
 import { homedir } from 'os';
-import { join } from 'path';
+import { join, resolve, sep } from 'path';
 import matter from 'gray-matter';
 import type { LoadedSkill, SkillMetadata, SkillSource } from './types.ts';
 import { getWorkspaceSkillsPath } from '../workspaces/storage.ts';
@@ -111,6 +111,37 @@ function isDirectoryOrSymlinkToDirectory(parentDir: string, entry: Dirent): bool
   }
 }
 
+/**
+ * Validate that a skill slug is a single safe path segment confined inside `skillsDir`.
+ */
+export function isValidSkillSlug(skillsDir: string, slug: string): boolean {
+  if (
+    typeof slug !== 'string'
+    || slug.length === 0
+    || slug === '.'
+    || slug === '..'
+    || slug.includes('/')
+    || slug.includes('\\')
+    || slug.includes('\0')
+  ) {
+    return false;
+  }
+  const baseDir = resolve(skillsDir);
+  const candidate = resolve(baseDir, slug);
+  const prefix = baseDir.endsWith(sep) ? baseDir : `${baseDir}${sep}`;
+  return candidate.startsWith(prefix);
+}
+
+/**
+ * Resolve a skill directory inside `skillsDir`, throwing if `slug` attempts path traversal.
+ */
+export function resolveSkillDir(skillsDir: string, slug: string): string {
+  if (!isValidSkillSlug(skillsDir, slug)) {
+    throw new Error(`Invalid skill slug: ${slug}`);
+  }
+  return join(skillsDir, slug);
+}
+
 // ============================================================
 // Load Operations
 // ============================================================
@@ -122,6 +153,9 @@ function isDirectoryOrSymlinkToDirectory(parentDir: string, entry: Dirent): bool
  * @param source - Where this skill is loaded from
  */
 function loadSkillFromDir(skillsDir: string, slug: string, source: SkillSource): LoadedSkill | null {
+  if (!isValidSkillSlug(skillsDir, slug)) {
+    return null;
+  }
   const skillDir = join(skillsDir, slug);
   const skillFile = join(skillDir, 'SKILL.md');
 
@@ -294,6 +328,9 @@ export function loadSkillBySlug(workspaceRoot: string, slug: string, projectRoot
  */
 export function getSkillIconPath(workspaceRoot: string, slug: string): string | null {
   const skillsDir = getWorkspaceSkillsPath(workspaceRoot);
+  if (!isValidSkillSlug(skillsDir, slug)) {
+    return null;
+  }
   const skillDir = join(skillsDir, slug);
 
   if (!existsSync(skillDir)) {
@@ -314,7 +351,7 @@ export function getSkillIconPath(workspaceRoot: string, slug: string): string | 
  */
 export function deleteSkill(workspaceRoot: string, slug: string): boolean {
   const skillsDir = getWorkspaceSkillsPath(workspaceRoot);
-  const skillDir = join(skillsDir, slug);
+  const skillDir = resolveSkillDir(skillsDir, slug);
 
   if (!existsSync(skillDir)) {
     return false;
@@ -339,6 +376,9 @@ export function deleteSkill(workspaceRoot: string, slug: string): boolean {
  */
 export function skillExists(workspaceRoot: string, slug: string): boolean {
   const skillsDir = getWorkspaceSkillsPath(workspaceRoot);
+  if (!isValidSkillSlug(skillsDir, slug)) {
+    return false;
+  }
   const skillDir = join(skillsDir, slug);
   const skillFile = join(skillDir, 'SKILL.md');
 

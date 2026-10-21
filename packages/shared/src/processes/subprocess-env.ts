@@ -99,13 +99,49 @@ function isSafeHostKey(key: string, platform: NodeJS.Platform): boolean {
   return false;
 }
 
+const FORBIDDEN_EXPLICIT_ENV_KEYS = new Set([
+  'LD_PRELOAD',
+  'LD_LIBRARY_PATH',
+  'LD_AUDIT',
+  'LD_DEBUG',
+  'LD_PROFILE',
+  'DYLD_INSERT_LIBRARIES',
+  'DYLD_LIBRARY_PATH',
+  'DYLD_FRAMEWORK_PATH',
+  'DYLD_FALLBACK_LIBRARY_PATH',
+  'DYLD_FORCE_FLAT_NAMESPACE',
+  'NODE_OPTIONS',
+  'BUN_OPTIONS',
+  'BASH_ENV',
+  'ENV',
+  'PROMPT_COMMAND',
+  'SHELLOPTS',
+  'BASHOPTS',
+  'PERL5OPT',
+  'PYTHONINSPECT',
+  'RUBYOPT',
+  'CRAFT_SERVER_TOKEN',
+  'CRAFT_WEBUI_PASSWORD',
+]);
+
+export function isForbiddenSubprocessEnvKey(key: string): boolean {
+  const upper = key.trim().toUpperCase();
+  if (!upper || key.includes('\0')) return true;
+  if (FORBIDDEN_EXPLICIT_ENV_KEYS.has(upper)) return true;
+  if (upper.startsWith('LD_') || upper.startsWith('DYLD_')) return true;
+  return false;
+}
+
 function copyDefinedValues(
   target: Record<string, string>,
   source: NodeJS.ProcessEnv | Record<string, string | undefined> | undefined,
 ): void {
   if (!source) return;
   for (const [key, value] of Object.entries(source)) {
-    if (typeof value === 'string') target[key] = value;
+    if (typeof value !== 'string') continue;
+    if (isForbiddenSubprocessEnvKey(key)) continue;
+    if (value.includes('\0') || value.startsWith('()')) continue;
+    target[key] = value;
   }
 }
 

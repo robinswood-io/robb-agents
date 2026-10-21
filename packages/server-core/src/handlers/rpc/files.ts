@@ -1,4 +1,4 @@
-import { readFile, writeFile, unlink, mkdir, readdir, stat } from 'fs/promises'
+import { readFile, writeFile, unlink, mkdir, readdir, stat, realpath } from 'fs/promises'
 import { isAbsolute, join, resolve, dirname, parse as parsePath } from 'path'
 import { homedir } from 'os'
 import { validatePathFormat } from '../../utils/path-validation'
@@ -13,7 +13,7 @@ import {
   resizeImageForAPI,
   inspectImageBuffer,
 } from '@craft-agent/server-core/services'
-import { sanitizeFilename, validateFilePath, getWorkspaceAllowedDirs } from '@craft-agent/server-core/handlers'
+import { sanitizeFilename, validateFilePath, getWorkspaceAllowedDirs, isSensitiveFilePath } from '@craft-agent/server-core/handlers'
 import type { RpcServer } from '@craft-agent/server-core/transport'
 import type { HandlerDeps } from '../handler-deps'
 import { requestClientOpenFileDialog } from '@craft-agent/server-core/transport'
@@ -171,19 +171,28 @@ export function registerFilesHandlers(server: RpcServer, deps: HandlerDeps): voi
   // NOT exposed to agent code — no equivalent MCP tool. Kept separate from readFileAttachment
   // on purpose to preserve the agent-facing read's narrow trust boundary.
   const USER_ATTACHMENT_MAX_BYTES = 50 * 1024 * 1024
-  server.handle(RPC_CHANNELS.file.READ_USER_ATTACHMENT, async (_ctx, path: string) => {
+  server.handle(RPC_CHANNELS.file.READ_USER_ATTACHMENT, async (ctx, path: string) => {
     try {
-      if (!path || typeof path !== 'string' || !isAbsolute(path)) return null
-      const info = await stat(path).catch(() => null)
-      if (!info || !info.isFile()) return null
-      if (info.size > USER_ATTACHMENT_MAX_BYTES) {
-        deps.platform.logger.warn(`[readUserAttachment] file exceeds ${USER_ATTACHMENT_MAX_BYTES} bytes, skipping: ${path}`)
+      if (!path || typeof path !== 'string' || path.includes('\0') || !isAbsolute(path)) return null
+      if (ctx?.roles?.includes('remote-device') || (ctx?.allowedWorkspaceIds && ctx.allowedWorkspaceIds !== '*')) {
+        const workspaceId = ctx.workspaceId ?? deps.windowManager?.getWorkspaceForWindow(ctx.webContentsId!)
+        await validateFilePath(path, getWorkspaceAllowedDirs(workspaceId))
+      }
+      const realPath = await realpath(path).catch(() => null)
+      if (!realPath || isSensitiveFilePath(realPath) || isSensitiveFilePath(path)) {
+        deps.platform.logger.warn(`[readUserAttachment] blocked sensitive or unresolved file path: ${path}`)
         return null
       }
-      const attachment = readFileAttachment(path)
+      const info = await stat(realPath).catch(() => null)
+      if (!info || !info.isFile()) return null
+      if (info.size > USER_ATTACHMENT_MAX_BYTES) {
+        deps.platform.logger.warn(`[readUserAttachment] file exceeds ${USER_ATTACHMENT_MAX_BYTES} bytes, skipping: ${realPath}`)
+        return null
+      }
+      const attachment = readFileAttachment(realPath)
       if (!attachment) return null
       try {
-        const thumbBuffer = await deps.platform.imageProcessor.process(path, {
+        const thumbBuffer = await deps.platform.imageProcessor.process(realPath, {
           resize: { width: 200, height: 200 },
           format: 'png',
         })
@@ -443,7 +452,7 @@ export function registerFilesHandlers(server: RpcServer, deps: HandlerDeps): voi
   // Parallel BFS walk that skips ignored directories BEFORE entering them,
   // avoiding reading node_modules/etc. contents entirely. Uses withFileTypes
   // to get entry types without separate stat calls.
-  server.handle(RPC_CHANNELS.fs.SEARCH, async (_ctx, basePath: string, query: string) => {
+  server.handle(RPC_CHANNELS.fs.SEARCH, async (ctx, basePath: string, query: string) => {
     deps.platform.logger.info('[FS_SEARCH] called:', basePath, query)
     const MAX_RESULTS = 50
 
@@ -458,6 +467,7 @@ export function registerFilesHandlers(server: RpcServer, deps: HandlerDeps): voi
     const results: Array<{ name: string; path: string; type: 'file' | 'directory'; relativePath: string }> = []
 
     try {
+      const safeBasePath = await validateFilePath(basePath, getWorkspaceAllowedDirs(ctx?.workspaceId))
       // BFS queue: each entry is a relative path prefix ('' for root)
       let queue = ['']
 
@@ -467,7 +477,7 @@ export function registerFilesHandlers(server: RpcServer, deps: HandlerDeps): voi
 
         const dirResults = await Promise.all(
           queue.map(async (relDir) => {
-            const absDir = relDir ? join(basePath, relDir) : basePath
+            const absDir = relDir ? join(safeBasePath, relDir) : safeBasePath
             try {
               return { relDir, entries: await readdir(absDir, { withFileTypes: true }) }
             } catch {
@@ -501,7 +511,7 @@ export function registerFilesHandlers(server: RpcServer, deps: HandlerDeps): voi
             if (lowerName.includes(lowerQuery) || lowerRelative.includes(lowerQuery)) {
               results.push({
                 name,
-                path: join(basePath, relativePath),
+                path: join(safeBasePath, relativePath),
                 type: isDir ? 'directory' : 'file',
                 relativePath,
               })
@@ -528,7 +538,11 @@ export function registerFilesHandlers(server: RpcServer, deps: HandlerDeps): voi
 
   // List directories in a given path (for remote directory browsing).
   // Returns only directories (not files) — this is a folder picker.
-  server.handle(RPC_CHANNELS.fs.LIST_DIRECTORY, async (_ctx, dirPath: string) => {
+  server.handle(RPC_CHANNELS.fs.LIST_DIRECTORY, async (ctx, dirPath: string) => {
+    if (ctx?.roles?.includes('remote-device')) {
+      throw new Error('Access denied: directory listing is not permitted for remote devices')
+    }
+
     // Resolve ~ to server's home directory (thin clients don't know the server's home)
     if (dirPath === '~' || dirPath.startsWith('~/')) {
       dirPath = dirPath === '~' ? homedir() : join(homedir(), dirPath.slice(2))
@@ -542,6 +556,12 @@ export function registerFilesHandlers(server: RpcServer, deps: HandlerDeps): voi
 
     // Normalize (collapses .. segments, trailing slashes, etc.)
     const resolved = resolve(dirPath)
+    if (isSensitiveFilePath(resolved)) {
+      throw new Error('Access denied: cannot list sensitive directory')
+    }
+    if (ctx?.allowedWorkspaceIds && ctx.allowedWorkspaceIds !== '*') {
+      await validateFilePath(resolved, getWorkspaceAllowedDirs(ctx.workspaceId))
+    }
 
     // Read entries, filter to directories
     const raw = await readdir(resolved, { withFileTypes: true })

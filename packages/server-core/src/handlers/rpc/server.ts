@@ -90,6 +90,7 @@ export function registerServerHandlers(
 
     const mem = process.memoryUsage()
     const processHealth = getLongRunningHealthSnapshot()
+    const isFullAccess = requestContext.allowedWorkspaceIds === '*'
     const status: ServerStatus = {
       serverId: serverCtx.serverId,
       version: deps.platform.appVersion,
@@ -104,26 +105,28 @@ export function registerServerHandlers(
       longRunning: {
         status: processHealth.status,
         parent: {
-          pid: processHealth.parent.pid,
+          pid: isFullAccess ? processHealth.parent.pid : 0,
           cpuPercent: processHealth.parent.cpuPercent,
           cpuCount: processHealth.parent.cpuCount,
           rssBytes: processHealth.parent.rssBytes,
         },
         summary: processHealth.summary,
-        processes: processHealth.processes.map((child) => ({
-          id: child.id,
-          kind: child.kind,
-          ownerId: child.ownerId,
-          ...(child.pid !== undefined ? { pid: child.pid } : {}),
-          status: child.status,
-          idleForMs: child.idleForMs,
-          maxIdleMs: child.maxIdleMs,
-          ...(child.cpuPercent !== undefined ? { cpuPercent: child.cpuPercent } : {}),
-          ...(child.rssBytes !== undefined ? { rssBytes: child.rssBytes } : {}),
-          ...(child.terminationReason !== undefined ? { terminationReason: child.terminationReason } : {}),
-        })),
-        suspectedOrphanPids: processHealth.suspectedOrphanPids,
-        ...(processHealth.reportError ? { reportError: processHealth.reportError } : {}),
+        processes: isFullAccess
+          ? processHealth.processes.map((child) => ({
+              id: child.id,
+              kind: child.kind,
+              ownerId: child.ownerId,
+              ...(child.pid !== undefined ? { pid: child.pid } : {}),
+              status: child.status,
+              idleForMs: child.idleForMs,
+              maxIdleMs: child.maxIdleMs,
+              ...(child.cpuPercent !== undefined ? { cpuPercent: child.cpuPercent } : {}),
+              ...(child.rssBytes !== undefined ? { rssBytes: child.rssBytes } : {}),
+              ...(child.terminationReason !== undefined ? { terminationReason: child.terminationReason } : {}),
+            }))
+          : [],
+        suspectedOrphanPids: isFullAccess ? processHealth.suspectedOrphanPids : [],
+        ...(isFullAccess && processHealth.reportError ? { reportError: processHealth.reportError } : {}),
       },
     }
 

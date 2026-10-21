@@ -11,6 +11,7 @@ import type { OAuthProvider } from './oauth-flow-types.ts';
 
 const FLOW_TTL_MS = 5 * 60 * 1000; // 5 minutes
 const CLEANUP_INTERVAL_MS = 60 * 1000; // sweep every minute
+const DEFAULT_MAX_FLOWS = 256;
 
 export interface PendingOAuthFlow {
   flowId: string;
@@ -39,12 +40,26 @@ export interface PendingOAuthFlow {
 export class OAuthFlowStore {
   private flows = new Map<string, PendingOAuthFlow>();
   private cleanupTimer: ReturnType<typeof setInterval> | null = null;
+  private readonly maxFlows: number;
 
-  constructor() {
+  constructor(maxFlows = DEFAULT_MAX_FLOWS) {
+    this.maxFlows = Math.max(1, maxFlows);
     this.cleanupTimer = setInterval(() => this.cleanup(), CLEANUP_INTERVAL_MS);
+    this.cleanupTimer.unref?.();
   }
 
   store(flow: PendingOAuthFlow): void {
+    if (!flow.state || typeof flow.state !== 'string') {
+      throw new Error('OAuth flow state is required');
+    }
+    if (this.flows.size >= this.maxFlows && !this.flows.has(flow.state)) {
+      this.cleanup();
+      while (this.flows.size >= this.maxFlows) {
+        const oldestKey = this.flows.keys().next().value;
+        if (oldestKey === undefined) break;
+        this.flows.delete(oldestKey);
+      }
+    }
     this.flows.set(flow.state, flow);
   }
 
@@ -58,6 +73,14 @@ export class OAuthFlowStore {
       return null;
     }
 
+    return flow;
+  }
+
+  /** Atomically retrieve and remove a pending flow by state (one-shot anti-replay). */
+  consumeByState(state: string): PendingOAuthFlow | null {
+    const flow = this.getByState(state);
+    if (!flow) return null;
+    this.flows.delete(state);
     return flow;
   }
 

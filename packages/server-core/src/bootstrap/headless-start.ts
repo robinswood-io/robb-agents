@@ -1,3 +1,4 @@
+import { createHash, timingSafeEqual } from 'node:crypto'
 import { writeFileSync, readFileSync, unlinkSync, existsSync } from 'node:fs'
 import { uptime as osUptime } from 'node:os'
 import { join } from 'node:path'
@@ -325,12 +326,17 @@ export async function bootstrapServer<TSessionManager, THandlerDeps>(
     authorizationGeneration: 0,
   }
 
+  const expectedTokenDigest = createHash('sha256').update(serverToken).digest()
   const wsServer = new WsRpcServer({
     host: rpcHost,
     port: rpcPort,
     requireAuth: true,
     requireAuthoritativePrincipal: true,
-    validateToken: async (t) => t === serverToken ? serverOwnerPrincipal : false,
+    validateToken: async (t) => {
+      if (typeof t !== 'string' || t.length === 0) return false
+      const actualDigest = createHash('sha256').update(t).digest()
+      return timingSafeEqual(actualDigest, expectedTokenDigest) ? serverOwnerPrincipal : false
+    },
     validateSessionCookie: options.validateSessionCookie,
     allowedSessionCookieOrigins: options.allowedSessionCookieOrigins,
     authorizeRequest: options.authorizeRequest,
@@ -468,6 +474,7 @@ export async function bootstrapServer<TSessionManager, THandlerDeps>(
 
 export interface HealthHttpServerOptions {
   port: number
+  host?: string
   deps: { sessionManager: { getWorkspaces(): unknown[] } }
   wsServer: WsRpcServer
   platform: PlatformServices
@@ -480,12 +487,15 @@ export interface HealthHttpServerOptions {
 export async function startHealthHttpServer(options: HealthHttpServerOptions): Promise<{ stop: () => void } | null> {
   if (options.port <= 0) return null
 
+  const bindHost = options.host ?? process.env.CRAFT_HEALTH_HOST ?? '127.0.0.1'
+
   // Dynamic import — getHealthCheck uses HandlerDeps shape
   const { getHealthCheck } = await import('../handlers/rpc/server')
 
   // Use Bun.serve if available, otherwise skip (Node.js/Electron doesn't need HTTP health)
   if (typeof globalThis.Bun !== 'undefined') {
     const server = Bun.serve({
+      hostname: bindHost,
       port: options.port,
       fetch(req: Request) {
         const path = new URL(req.url).pathname
@@ -499,7 +509,7 @@ export async function startHealthHttpServer(options: HealthHttpServerOptions): P
       },
     })
 
-    options.platform.logger.info(`[bootstrap] Health endpoint listening on http://0.0.0.0:${options.port}/health`)
+    options.platform.logger.info(`[bootstrap] Health endpoint listening on http://${bindHost}:${options.port}/health`)
 
     return {
       stop: () => server.stop(),

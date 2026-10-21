@@ -19,8 +19,10 @@
  */
 
 import { protocol, nativeImage } from 'electron'
-import { stat } from 'fs/promises'
-import { isAbsolute } from 'path'
+import { realpath, stat } from 'fs/promises'
+import { homedir, tmpdir } from 'os'
+import { isAbsolute, normalize, sep } from 'path'
+import { isSensitiveFilePath } from '@craft-agent/server-core/handlers'
 import { mainLog } from './logger'
 
 /** Thumbnail output size in pixels (width and height) */
@@ -28,6 +30,9 @@ const THUMBNAIL_SIZE = 64
 
 /** Maximum entries in the in-memory LRU cache */
 const MAX_CACHE_ENTRIES = 200
+
+/** Maximum source file size eligible for thumbnail generation (100 MB) */
+const MAX_THUMBNAIL_SOURCE_BYTES = 100 * 1024 * 1024
 
 /** File extensions that support thumbnail generation */
 const IMAGE_EXTENSIONS = new Set([
@@ -44,6 +49,9 @@ const ALL_PREVIEWABLE = new Set([...IMAGE_EXTENSIONS, ...OS_THUMBNAIL_EXTENSIONS
 
 // In-memory LRU cache: path -> { mtime, data }
 const cache = new Map<string, { mtime: number; data: Buffer }>()
+
+// In-flight singleflight deduplication: `${filePath}:${mtime}` -> Promise<Buffer | null>
+const inFlight = new Map<string, Promise<Buffer | null>>()
 
 /**
  * Evict oldest entries when cache exceeds max size.
@@ -112,13 +120,24 @@ export function registerThumbnailScheme(): void {
         supportFetchAPI: true,
         // Standard scheme allows normal URL parsing (host, path, etc.)
         standard: true,
-        // Allow cross-origin access from the renderer
-        corsEnabled: true,
+        // Disable cross-origin fetch access from untrusted origins
+        corsEnabled: false,
         // Stream support for efficient response delivery
         stream: true,
       },
     },
   ])
+}
+
+function isWithinAllowedRoots(resolvedPath: string): boolean {
+  const roots = [homedir(), tmpdir()].filter(Boolean)
+  for (const root of roots) {
+    const normalizedRoot = normalize(root)
+    if (resolvedPath === normalizedRoot || resolvedPath.startsWith(normalizedRoot + sep)) {
+      return true
+    }
+  }
+  return false
 }
 
 /**
@@ -131,30 +150,62 @@ export function registerThumbnailScheme(): void {
  *   macOS:   thumbnail://thumb/%2FUsers%2Ffoo%2Fimage.png
  *   Windows: thumbnail://thumb/C%3A%5CUsers%5Cfoo%5Cimage.png
  */
+function isAllowedThumbnailOrigin(origin: string | null): boolean {
+  if (!origin || origin === 'null' || origin.startsWith('file://') || origin.startsWith('thumbnail://')) {
+    return true
+  }
+  const devUrl = process.env.VITE_DEV_SERVER_URL
+  if (devUrl) {
+    try {
+      return new URL(origin).origin === new URL(devUrl).origin
+    } catch {
+      return false
+    }
+  }
+  return false
+}
+
 export function registerThumbnailHandler(): void {
   protocol.handle('thumbnail', async (request) => {
     try {
+      if (!isAllowedThumbnailOrigin(request.headers.get('origin'))) {
+        return new Response(null, { status: 403 })
+      }
+
       // Parse the file path from the URL
       // Format: thumbnail://thumb/<encoded-path>
       // URL.pathname includes a leading /, so we strip it before decoding
       const url = new URL(request.url)
-      const filePath = decodeURIComponent(url.pathname.slice(1))
+      const rawFilePath = decodeURIComponent(url.pathname.slice(1))
 
-      // Basic validation: must be an absolute path (works on all platforms)
-      if (!filePath || !isAbsolute(filePath)) {
+      // Basic validation: must be an absolute path without null bytes or '..' traversal
+      if (
+        !rawFilePath ||
+        rawFilePath.includes('\0') ||
+        rawFilePath.split(/[/\\]/).includes('..') ||
+        !isAbsolute(rawFilePath)
+      ) {
         return new Response(null, { status: 400 })
       }
 
       // Check file extension is previewable
-      const ext = filePath.split('.').pop()?.toLowerCase() || ''
+      const ext = rawFilePath.split('.').pop()?.toLowerCase() || ''
       if (!ALL_PREVIEWABLE.has(ext)) {
         return new Response(null, { status: 404 })
       }
 
-      // Get file mtime for cache validation
+      // Resolve symlinks and verify containment + sensitive path denylist
+      let filePath: string
       let mtime: number
       try {
+        filePath = await realpath(rawFilePath)
+        if (!isWithinAllowedRoots(filePath) || isSensitiveFilePath(filePath)) {
+          return new Response(null, { status: 403 })
+        }
         const fileStat = await stat(filePath)
+        if (!fileStat.isFile() || fileStat.size > MAX_THUMBNAIL_SOURCE_BYTES) {
+          return new Response(null, { status: 404 })
+        }
         mtime = fileStat.mtimeMs
       } catch {
         // File doesn't exist or is inaccessible
@@ -172,8 +223,16 @@ export function registerThumbnailHandler(): void {
         })
       }
 
-      // Cache miss — generate thumbnail
-      const data = await generateThumbnail(filePath, ext)
+      // Cache miss — deduplicate concurrent thumbnail generation for the same file+mtime
+      const inFlightKey = `${filePath}:${mtime}`
+      let pending = inFlight.get(inFlightKey)
+      if (!pending) {
+        pending = generateThumbnail(filePath, ext).finally(() => {
+          inFlight.delete(inFlightKey)
+        })
+        inFlight.set(inFlightKey, pending)
+      }
+      const data = await pending
       if (!data) {
         return new Response(null, { status: 404 })
       }

@@ -99,7 +99,8 @@ RUN mkdir -p /home/craftagents/.craft-agent
 # entire tree (node_modules alone has hundreds of thousands of entries).
 RUN find /app -not -perm -o=r -exec chmod o+r {} + && \
     find /app -type d -not -perm -o=x -exec chmod o+x {} + && \
-    chmod -R 777 /home/craftagents
+    chown -R craftagents:root /home/craftagents && \
+    chmod -R 770 /home/craftagents
 
 USER craftagents
 

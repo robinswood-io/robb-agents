@@ -28,9 +28,18 @@ const DANGEROUS_SCHEMES: ReadonlyMap<string, string> = new Map([
     'file:',
     'file: URLs are blocked because shell.openExternal can launch local executables on Windows (Electron RCE class). Use an in-app preview block (html-preview, pdf-preview, image-preview, markdown-preview) or open the file from your OS file manager.',
   ],
+  ['ms-msdt:', 'ms-msdt: URLs can invoke the Windows Support Diagnostic Tool (Follina RCE vector).'],
+  ['search-ms:', 'search-ms: URLs can open remote shares and stage executable payloads on Windows.'],
+  ['smb:', 'smb: URLs can leak NTLM credentials or mount untrusted network shares.'],
+  ['dav:', 'WebDAV URLs can mount untrusted remote shares.'],
+  ['davs:', 'WebDAV URLs can mount untrusted remote shares.'],
 ])
 
-const INTERNAL_DEEPLINK_SCHEME = 'craftagents:'
+const INTERNAL_DEEPLINK_SCHEMES: ReadonlySet<string> = new Set([
+  'craftagents:',
+  'robbagents:',
+  'robbagentsdev:',
+])
 
 export function classifyExternalUrl(rawUrl: string): UrlClassification {
   if (typeof rawUrl !== 'string' || rawUrl.trim() === '') {
@@ -51,7 +60,12 @@ export function classifyExternalUrl(rawUrl: string): UrlClassification {
     return { kind: 'dangerous', scheme: protocol, reason: blockedReason }
   }
 
-  if (protocol === INTERNAL_DEEPLINK_SCHEME) {
+  const customScheme = process.env.CRAFT_DEEPLINK_SCHEME?.trim().toLowerCase()
+  const customProtocol = customScheme
+    ? (customScheme.endsWith(':') ? customScheme : `${customScheme}:`)
+    : null
+
+  if (INTERNAL_DEEPLINK_SCHEMES.has(protocol) || (customProtocol && protocol === customProtocol)) {
     return { kind: 'internal-deeplink' }
   }
 

@@ -1,11 +1,10 @@
 import { RPC_CHANNELS } from '@craft-agent/shared/protocol'
 import { getWorkspaceByNameOrId } from '@craft-agent/shared/config'
 import { loadWorkspaceSources } from '@craft-agent/shared/sources'
-import { pushTyped } from '@craft-agent/server-core/transport'
+import { assertRequestWorkspaceAccess, pushTyped, type RpcServer } from '@craft-agent/server-core/transport'
 import { safeJsonParse } from '@craft-agent/shared/utils/files'
 import { resolveStdioConfig } from '@craft-agent/shared/utils'
 import { getCredentialManager } from '@craft-agent/shared/credentials'
-import type { RpcServer } from '@craft-agent/server-core/transport'
 import type { HandlerDeps } from '../handler-deps'
 
 export const HANDLED_CHANNELS = [
@@ -25,19 +24,22 @@ export function registerSourcesHandlers(server: RpcServer, deps: HandlerDeps): v
   const log = deps.platform.logger
 
   // Get all sources for a workspace
-  server.handle(RPC_CHANNELS.sources.GET, async (_ctx, workspaceId: string) => {
+  server.handle(RPC_CHANNELS.sources.GET, async (ctx, workspaceId: string) => {
     const workspace = getWorkspaceByNameOrId(workspaceId)
     if (!workspace) {
+      assertRequestWorkspaceAccess(ctx, workspaceId)
       log.error(`SOURCES_GET: Workspace not found: ${workspaceId}`)
       return []
     }
+    assertRequestWorkspaceAccess(ctx, workspaceId, workspace.id)
     return loadWorkspaceSources(workspace.rootPath)
   })
 
   // Create a new source
-  server.handle(RPC_CHANNELS.sources.CREATE, async (_ctx, workspaceId: string, config: Partial<import('@craft-agent/shared/sources').CreateSourceInput>) => {
+  server.handle(RPC_CHANNELS.sources.CREATE, async (ctx, workspaceId: string, config: Partial<import('@craft-agent/shared/sources').CreateSourceInput>) => {
     const workspace = getWorkspaceByNameOrId(workspaceId)
     if (!workspace) throw new Error(`Workspace not found: ${workspaceId}`)
+    assertRequestWorkspaceAccess(ctx, workspaceId, workspace.id)
     const { createSource } = await import('@craft-agent/shared/sources')
     return createSource(workspace.rootPath, {
       name: config.name || 'New Source',
@@ -52,9 +54,10 @@ export function registerSourcesHandlers(server: RpcServer, deps: HandlerDeps): v
   })
 
   // Update an existing source config
-  server.handle(RPC_CHANNELS.sources.UPDATE_CONFIG, async (_ctx, workspaceId: string, sourceSlug: string, updates: Omit<Partial<import('@craft-agent/shared/sources').FolderSourceConfig>, 'routingSensitivity'> & { routingSensitivity?: import('@craft-agent/shared/sources').FolderSourceConfig['routingSensitivity'] | null }) => {
+  server.handle(RPC_CHANNELS.sources.UPDATE_CONFIG, async (ctx, workspaceId: string, sourceSlug: string, updates: Omit<Partial<import('@craft-agent/shared/sources').FolderSourceConfig>, 'routingSensitivity'> & { routingSensitivity?: import('@craft-agent/shared/sources').FolderSourceConfig['routingSensitivity'] | null }) => {
     const workspace = getWorkspaceByNameOrId(workspaceId)
     if (!workspace) throw new Error(`Workspace not found: ${workspaceId}`)
+    assertRequestWorkspaceAccess(ctx, workspaceId, workspace.id)
     const { loadSourceConfig, saveSourceConfig } = await import('@craft-agent/shared/sources')
     const existing = loadSourceConfig(workspace.rootPath, sourceSlug)
     if (!existing) throw new Error(`Source not found: ${sourceSlug}`)
@@ -79,9 +82,10 @@ export function registerSourcesHandlers(server: RpcServer, deps: HandlerDeps): v
   })
 
   // Delete a source
-  server.handle(RPC_CHANNELS.sources.DELETE, async (_ctx, workspaceId: string, sourceSlug: string) => {
+  server.handle(RPC_CHANNELS.sources.DELETE, async (ctx, workspaceId: string, sourceSlug: string) => {
     const workspace = getWorkspaceByNameOrId(workspaceId)
     if (!workspace) throw new Error(`Workspace not found: ${workspaceId}`)
+    assertRequestWorkspaceAccess(ctx, workspaceId, workspace.id)
     const { deleteSource } = await import('@craft-agent/shared/sources')
     deleteSource(workspace.rootPath, sourceSlug)
 
@@ -104,9 +108,10 @@ export function registerSourcesHandlers(server: RpcServer, deps: HandlerDeps): v
   })
 
   // Save credentials for a source (bearer token or API key)
-  server.handle(RPC_CHANNELS.sources.SAVE_CREDENTIALS, async (_ctx, workspaceId: string, sourceSlug: string, credential: string) => {
+  server.handle(RPC_CHANNELS.sources.SAVE_CREDENTIALS, async (ctx, workspaceId: string, sourceSlug: string, credential: string) => {
     const workspace = getWorkspaceByNameOrId(workspaceId)
     if (!workspace) throw new Error(`Workspace not found: ${workspaceId}`)
+    assertRequestWorkspaceAccess(ctx, workspaceId, workspace.id)
     const { loadSource, getSourceCredentialManager } = await import('@craft-agent/shared/sources')
 
     const source = loadSource(workspace.rootPath, sourceSlug)
@@ -122,12 +127,15 @@ export function registerSourcesHandlers(server: RpcServer, deps: HandlerDeps): v
   })
 
   // Get permissions config for a source (raw format for UI display)
-  server.handle(RPC_CHANNELS.sources.GET_PERMISSIONS, async (_ctx, workspaceId: string, sourceSlug: string) => {
+  server.handle(RPC_CHANNELS.sources.GET_PERMISSIONS, async (ctx, workspaceId: string, sourceSlug: string) => {
     const workspace = getWorkspaceByNameOrId(workspaceId)
     if (!workspace) return null
+    assertRequestWorkspaceAccess(ctx, workspaceId, workspace.id)
 
     const { existsSync, readFileSync } = await import('fs')
+    const { getSourcePath } = await import('@craft-agent/shared/sources')
     const { getSourcePermissionsPath } = await import('@craft-agent/shared/agent')
+    getSourcePath(workspace.rootPath, sourceSlug)
     const path = getSourcePermissionsPath(workspace.rootPath, sourceSlug)
 
     if (!existsSync(path)) return null
@@ -142,9 +150,10 @@ export function registerSourcesHandlers(server: RpcServer, deps: HandlerDeps): v
   })
 
   // Get permissions config for a workspace (raw format for UI display)
-  server.handle(RPC_CHANNELS.workspace.GET_PERMISSIONS, async (_ctx, workspaceId: string) => {
+  server.handle(RPC_CHANNELS.workspace.GET_PERMISSIONS, async (ctx, workspaceId: string) => {
     const workspace = getWorkspaceByNameOrId(workspaceId)
     if (!workspace) return null
+    assertRequestWorkspaceAccess(ctx, workspaceId, workspace.id)
 
     const { existsSync, readFileSync } = await import('fs')
     const { getWorkspacePermissionsPath } = await import('@craft-agent/shared/agent')

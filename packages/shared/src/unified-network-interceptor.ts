@@ -93,6 +93,12 @@ function shouldBypassProxy(url: string): boolean {
 
 /** Get the proxy URL for a given request URL, or undefined to go direct. */
 function getProxyForUrl(url: string): string | undefined {
+  if (
+    process.env.CRAFT_STRICT_LOCAL_ENDPOINT === '1' &&
+    process.env.ROBB_ALLOW_LOCAL_MODEL_WEB_TOOLS !== '1'
+  ) {
+    return undefined;
+  }
   if (!PROXY_URL || shouldBypassProxy(url)) return undefined;
   return PROXY_URL;
 }
@@ -1927,7 +1933,15 @@ function headersToCurl(headers: HeadersInitType | undefined): string {
         ? Object.fromEntries(headers)
         : (headers as Record<string, string>);
 
-  const sensitiveKeys = ['x-api-key', 'authorization', 'cookie'];
+  const sensitiveKeys = [
+    'x-api-key',
+    'api-key',
+    'x-goog-api-key',
+    'authorization',
+    'proxy-authorization',
+    'cookie',
+    'set-cookie',
+  ];
 
   return Object.entries(headerObj)
     .map(([key, value]) => {
@@ -1975,9 +1989,17 @@ async function logResponse(response: Response, url: string, startTime: number, a
   debugLog(`\n\u2190 RESPONSE ${response.status} ${response.statusText} (${duration}ms)`);
   debugLog(`  URL: ${url}`);
 
+  const sensitiveRespKeys = new Set([
+    'set-cookie',
+    'authorization',
+    'proxy-authorization',
+    'x-api-key',
+    'api-key',
+    'x-goog-api-key',
+  ]);
   const respHeaders: Record<string, string> = {};
   response.headers.forEach((value, key) => {
-    respHeaders[key] = value;
+    respHeaders[key] = sensitiveRespKeys.has(key.toLowerCase()) ? '[REDACTED]' : value;
   });
   debugLog('  Headers:', respHeaders);
 

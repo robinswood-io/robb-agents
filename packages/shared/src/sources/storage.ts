@@ -9,7 +9,7 @@
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync, rmSync } from 'fs';
-import { join, basename } from 'path';
+import { join, basename, resolve, sep } from 'path';
 import { randomUUID } from 'crypto';
 import type {
   FolderSourceConfig,
@@ -44,7 +44,25 @@ import {
  * Get path to a source folder within a workspace
  */
 export function getSourcePath(workspaceRootPath: string, sourceSlug: string): string {
-  return join(getWorkspaceSourcesPath(workspaceRootPath), sourceSlug);
+  const sourcesDir = getWorkspaceSourcesPath(workspaceRootPath);
+  if (
+    typeof sourceSlug !== 'string'
+    || sourceSlug.length === 0
+    || sourceSlug === '.'
+    || sourceSlug === '..'
+    || sourceSlug.includes('/')
+    || sourceSlug.includes('\\')
+    || sourceSlug.includes('\0')
+  ) {
+    throw new Error(`Invalid source slug: ${sourceSlug}`);
+  }
+  const baseDir = resolve(sourcesDir);
+  const candidate = resolve(baseDir, sourceSlug);
+  const prefix = baseDir.endsWith(sep) ? baseDir : `${baseDir}${sep}`;
+  if (!candidate.startsWith(prefix)) {
+    throw new Error(`Invalid source slug: ${sourceSlug}`);
+  }
+  return join(sourcesDir, sourceSlug);
 }
 
 /**

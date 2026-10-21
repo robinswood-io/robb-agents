@@ -31,10 +31,10 @@
     "@craft-agent/core": "workspace:*",
     "@craft-agent/session-tools-core": "workspace:*",
     "@craft-agent/shared": "workspace:*",
-    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@modelcontextprotocol/sdk": "^1.32.1",
     "jose": "^6.0.0",
     "ws": "^8.19.0",
-    "sharp": "0.35.4",
+    "sharp": "0.35.5",
     "@earendil-works/pi-ai": "0.80.3"
   },
   "devDependencies": {

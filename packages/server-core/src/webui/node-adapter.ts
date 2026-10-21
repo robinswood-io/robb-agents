@@ -102,6 +102,40 @@ function requestPathname(requestTarget: string | undefined): string {
   }
 }
 
+function sanitizeAdapterHost(rawHost: string | undefined): string {
+  if (!rawHost) return 'localhost'
+  const trimmed = rawHost.trim()
+  if (!trimmed || trimmed.length > 255 || /[\s/@?#"\\<>]/.test(trimmed)) return 'localhost'
+  try {
+    const parsed = new URL(`http://${trimmed}`)
+    if (
+      parsed.username ||
+      parsed.password ||
+      parsed.pathname !== '/' ||
+      parsed.search !== '' ||
+      parsed.hash !== ''
+    ) {
+      return 'localhost'
+    }
+    return trimmed
+  } catch {
+    return 'localhost'
+  }
+}
+
+function sanitizeRequestTarget(rawTarget: string | undefined): string {
+  if (!rawTarget || typeof rawTarget !== 'string') return '/'
+  if (!rawTarget.startsWith('/') || rawTarget.startsWith('//') || rawTarget.includes('\0')) {
+    try {
+      const parsed = new URL(rawTarget, 'http://localhost')
+      return `${parsed.pathname}${parsed.search}`
+    } catch {
+      return '/'
+    }
+  }
+  return rawTarget
+}
+
 async function handleRequest(
   handler: WebHandler,
   nodeReq: IncomingMessage,
@@ -110,8 +144,9 @@ async function handleRequest(
   // Build web-standard Request from Node IncomingMessage
   const encrypted = Boolean((nodeReq.socket as typeof nodeReq.socket & { encrypted?: boolean }).encrypted)
   const protocol = encrypted ? 'https' : 'http'
-  const host = nodeReq.headers.host ?? 'localhost'
-  const url = `${protocol}://${host}${nodeReq.url ?? '/'}`
+  const host = sanitizeAdapterHost(nodeReq.headers.host)
+  const target = sanitizeRequestTarget(nodeReq.url)
+  const url = `${protocol}://${host}${target}`
 
   const headers = new Headers()
   const raw = nodeReq.rawHeaders

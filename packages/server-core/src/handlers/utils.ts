@@ -1,4 +1,4 @@
-import { normalize, isAbsolute, sep } from 'path'
+import { normalize, isAbsolute, sep, dirname, basename, join } from 'path'
 import { homedir, tmpdir } from 'os'
 import { realpath } from 'fs/promises'
 import { getWorkspaceByNameOrId, type Workspace } from '@craft-agent/shared/config'
@@ -76,6 +76,41 @@ export function getWorkspaceAllowedDirs(workspaceId?: string | null): string[] {
   return dirs
 }
 
+const SENSITIVE_FILE_PATTERNS = [
+  /\.ssh[\\/]/,
+  /\.gnupg[\\/]/,
+  /\.aws[\\/]credentials/,
+  /\.kube[\\/]config$/,
+  /\.env$/,
+  /\.env\./,
+  /credentials\.json$/,
+  /credentials\.enc(?:\.lock|\.tmp)?$/,
+  /\.credential-cache\.json$/,
+  /remote-devices\.json$/,
+  /\.netrc$/,
+  /\.npmrc$/,
+  /\.git-credentials$/,
+  /id_(?:rsa|ed25519|ecdsa|dsa)$/,
+  /secrets?\./i,
+  /\.pem$/,
+  /\.key$/,
+]
+
+export function isSensitiveFilePath(filePath: string): boolean {
+  return SENSITIVE_FILE_PATTERNS.some(pattern => pattern.test(filePath))
+}
+
+async function resolveRealOrAncestorPath(targetPath: string): Promise<string> {
+  try {
+    return await realpath(targetPath)
+  } catch {
+    const parent = dirname(targetPath)
+    if (parent === targetPath) return targetPath
+    const realParent = await resolveRealOrAncestorPath(parent)
+    return join(realParent, basename(targetPath))
+  }
+}
+
 /**
  * Validates that a file path is within allowed directories to prevent path traversal attacks.
  * Allowed directories: user's home directory, /tmp, and any additional dirs passed by the caller
@@ -85,6 +120,10 @@ export async function validateFilePath(
   filePath: string,
   additionalAllowedDirs?: string[],
 ): Promise<string> {
+  if (typeof filePath !== 'string' || filePath.includes('\0')) {
+    throw new Error('Invalid file path')
+  }
+
   // Normalize the path to resolve . and .. components
   let normalizedPath = normalize(filePath)
 
@@ -98,48 +137,32 @@ export async function validateFilePath(
     throw new Error('Only absolute file paths are allowed')
   }
 
-  // Resolve symlinks to get the real path
-  let realFilePath: string
-  try {
-    realFilePath = await realpath(normalizedPath)
-  } catch {
-    // File doesn't exist or can't be resolved - use normalized path
-    realFilePath = normalizedPath
-  }
+  // Resolve symlinks to get the real path (or real ancestor path for non-existent files)
+  const realFilePath = await resolveRealOrAncestorPath(normalizedPath)
 
   // Define allowed base directories
-  const allowedDirs = [
+  const rawAllowedDirs = [
     homedir(),
     tmpdir(),
     ...(additionalAllowedDirs ?? []),
   ].filter(Boolean)
 
+  const resolvedAllowedDirs = await Promise.all(
+    rawAllowedDirs.map(async dir => normalize(await resolveRealOrAncestorPath(normalize(dir))))
+  )
+
   // Check if the real path is within an allowed directory (cross-platform)
-  const isAllowed = allowedDirs.some(dir => {
-    const normalizedDir = normalize(dir)
-    const normalizedReal = normalize(realFilePath)
-    return normalizedReal.startsWith(normalizedDir + sep) || normalizedReal === normalizedDir
+  const normalizedReal = normalize(realFilePath)
+  const isAllowed = resolvedAllowedDirs.some(normalizedDir => {
+    const prefix = normalizedDir.endsWith(sep) ? normalizedDir : `${normalizedDir}${sep}`
+    return normalizedReal === normalizedDir || normalizedReal.startsWith(prefix)
   })
 
   if (!isAllowed) {
     throw new Error('Access denied: file path is outside allowed directories')
   }
 
-  // Block sensitive files even within allowed directories.
-  // Use [\\/] to match both Unix / and Windows \ separators.
-  const sensitivePatterns = [
-    /\.ssh[\\/]/,
-    /\.gnupg[\\/]/,
-    /\.aws[\\/]credentials/,
-    /\.env$/,
-    /\.env\./,
-    /credentials\.json$/,
-    /secrets?\./i,
-    /\.pem$/,
-    /\.key$/,
-  ]
-
-  if (sensitivePatterns.some(pattern => pattern.test(realFilePath))) {
+  if (isSensitiveFilePath(realFilePath) || isSensitiveFilePath(normalizedPath)) {
     throw new Error('Access denied: cannot read sensitive files')
   }
 

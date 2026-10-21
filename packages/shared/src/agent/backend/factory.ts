@@ -49,6 +49,7 @@ import { homedir } from 'node:os';
 import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { getCredentialManager } from '../../credentials/index.ts';
+import { getSourcePath } from '../../sources/storage.ts';
 import type {
   BackendModelFetchCredentials,
   BackendProviderOptions,
@@ -697,8 +698,13 @@ export async function cleanupSourceRuntimeArtifacts(
   disabledSourceSlugs: string[],
 ): Promise<void> {
   for (const sourceSlug of disabledSourceSlugs) {
-    const cachePath = join(workspaceRootPath, 'sources', sourceSlug, '.credential-cache.json');
-    await rm(cachePath, { force: true });
+    try {
+      const sourceDir = getSourcePath(workspaceRootPath, sourceSlug);
+      const cachePath = join(sourceDir, '.credential-cache.json');
+      await rm(cachePath, { force: true });
+    } catch {
+      // Ignore invalid or traversal slugs
+    }
   }
 }
 

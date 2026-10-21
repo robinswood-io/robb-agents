@@ -314,12 +314,23 @@ function normalizeOriginForCert(urlStr: string): string {
 
 if (process.env.CRAFT_SERVER_URL) {
   let serverOrigin: string | undefined
+  let allowSelfSignedCert = false
   try {
     serverOrigin = normalizeOriginForCert(process.env.CRAFT_SERVER_URL)
+    const parsedHost = new URL(serverOrigin).hostname.replace(/^\[|\]$/g, '').toLowerCase()
+    const isLoopbackServer =
+      parsedHost === '127.0.0.1' ||
+      parsedHost === 'localhost' ||
+      parsedHost === '::1'
+    const insecureTlsFlag = process.env.CRAFT_ALLOW_INSECURE_TLS?.trim().toLowerCase()
+    allowSelfSignedCert =
+      isLoopbackServer ||
+      insecureTlsFlag === '1' ||
+      insecureTlsFlag === 'true'
   } catch {
     // Invalid URL — will fail later during connection, no need to handle here
   }
-  if (serverOrigin) {
+  if (serverOrigin && allowSelfSignedCert) {
     app.on('certificate-error', (event, _webContents, url, _error, _certificate, callback) => {
       try {
         if (normalizeOriginForCert(url) === serverOrigin) {

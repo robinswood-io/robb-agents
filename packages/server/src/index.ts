@@ -220,6 +220,29 @@ const waNodeBin = process.env.CRAFT_MESSAGING_NODE_BIN ?? 'node'
 // publisher after bootstrapServer resolves.
 let messagingHandle: MessagingBootstrapHandle | null = null
 
+// Block binding to a non-localhost address without TLS BEFORE listening — tokens would be sent in cleartext.
+// Override with --allow-insecure-bind for explicitly trusted networks.
+const configuredRpcHost = process.env.CRAFT_RPC_HOST ?? '127.0.0.1'
+const isLocalBind = configuredRpcHost === '127.0.0.1' || configuredRpcHost === 'localhost' || configuredRpcHost === '::1'
+if (!isLocalBind && !tls) {
+  if (process.argv.includes('--allow-insecure-bind')) {
+    console.warn(
+      '\n⚠️  WARNING: Server is listening on a network address without TLS.\n' +
+      '   Authentication tokens will be sent in cleartext.\n' +
+      '   Set CRAFT_RPC_TLS_CERT and CRAFT_RPC_TLS_KEY to enable wss://.\n'
+    )
+  } else {
+    console.error(
+      '\n❌  Refusing to bind to a network address without TLS.\n' +
+      '   Authentication tokens would be sent in cleartext.\n\n' +
+      '   Options:\n' +
+      '     1. Set CRAFT_RPC_TLS_CERT and CRAFT_RPC_TLS_KEY to enable wss://\n' +
+      '     2. Pass --allow-insecure-bind to override (NOT recommended for production)\n'
+    )
+    process.exit(1)
+  }
+}
+
 const instance = await (async () => {
   try {
     return await bootstrapServer<SessionManager, HandlerDeps>({
@@ -398,32 +421,13 @@ const healthServer = await startHealthHttpServer({
 
 const serverProto = instance.protocol === 'wss' ? 'https' : 'http'
 console.log(`CRAFT_SERVER_URL=${instance.protocol}://${instance.host}:${instance.port}`)
-console.log(`CRAFT_SERVER_TOKEN=${instance.token}`)
-if (webuiHandler) {
-  console.log(`CRAFT_WEBUI_URL=${serverProto}://0.0.0.0:${instance.port}`)
+if (serverToken) {
+  console.log('CRAFT_SERVER_TOKEN=[set via environment]')
+} else {
+  console.log(`CRAFT_SERVER_TOKEN=${instance.token}`)
 }
-
-// Block binding to a non-localhost address without TLS — tokens would be sent in cleartext.
-// Override with --allow-insecure-bind for explicitly trusted networks.
-const isLocalBind = instance.host === '127.0.0.1' || instance.host === 'localhost' || instance.host === '::1'
-if (!isLocalBind && instance.protocol === 'ws') {
-  if (process.argv.includes('--allow-insecure-bind')) {
-    console.warn(
-      '\n⚠️  WARNING: Server is listening on a network address without TLS.\n' +
-      '   Authentication tokens will be sent in cleartext.\n' +
-      '   Set CRAFT_RPC_TLS_CERT and CRAFT_RPC_TLS_KEY to enable wss://.\n'
-    )
-  } else {
-    console.error(
-      '\n❌  Refusing to bind to a network address without TLS.\n' +
-      '   Authentication tokens would be sent in cleartext.\n\n' +
-      '   Options:\n' +
-      '     1. Set CRAFT_RPC_TLS_CERT and CRAFT_RPC_TLS_KEY to enable wss://\n' +
-      '     2. Pass --allow-insecure-bind to override (NOT recommended for production)\n'
-    )
-    await instance.stop()
-    process.exit(1)
-  }
+if (webuiHandler) {
+  console.log(`CRAFT_WEBUI_URL=${serverProto}://${instance.host}:${instance.port}`)
 }
 
 const shutdown = async () => {

@@ -36,6 +36,10 @@ interface TransferState {
 }
 
 const DEFAULT_TRANSFER_TTL_MS = 5 * 60 * 1000
+const MAX_TRANSFER_BYTES = 100 * 1024 * 1024 // 100 MB cap per chunked transfer
+const MAX_CHUNK_COUNT = 10_000
+const MAX_CHUNK_DATA_LENGTH = 16 * 1024 * 1024 // 16 MB base64 string per chunk
+const MAX_ACTIVE_TRANSFERS_PER_CLIENT = 8
 
 export const HANDLED_CHANNELS = [
   RPC_CHANNELS.transfer.START,
@@ -116,10 +120,10 @@ export function registerTransferHandlers(server: RpcServer): void {
     largeArgIndex: number
     checksum?: string
   }) => {
-    if (!opts || typeof opts.chunkCount !== 'number' || opts.chunkCount < 1) {
+    if (!opts || typeof opts.chunkCount !== 'number' || !Number.isInteger(opts.chunkCount) || opts.chunkCount < 1 || opts.chunkCount > MAX_CHUNK_COUNT) {
       throw new Error('Invalid chunkCount')
     }
-    if (typeof opts.totalBytes !== 'number' || opts.totalBytes < 0) {
+    if (typeof opts.totalBytes !== 'number' || !Number.isFinite(opts.totalBytes) || opts.totalBytes < 0 || opts.totalBytes > MAX_TRANSFER_BYTES) {
       throw new Error('Invalid totalBytes')
     }
     if (!opts.channel || typeof opts.channel !== 'string') {
@@ -135,9 +139,17 @@ export function registerTransferHandlers(server: RpcServer): void {
       throw new Error('Invalid largeArgIndex')
     }
 
+    let clientActiveTransfers = 0
+    for (const active of activeTransfers.values()) {
+      if (active.ownerClientId === ctx.clientId) clientActiveTransfers++
+    }
+    if (clientActiveTransfers >= MAX_ACTIVE_TRANSFERS_PER_CLIENT) {
+      throw new Error('Too many concurrent transfers for this client')
+    }
+
     const transferId = randomUUID()
     const dir = join(tmpdir(), `craft-transfer-${transferId}`)
-    await mkdir(dir, { recursive: true })
+    await mkdir(dir, { recursive: true, mode: 0o700 })
 
     const transfer: TransferState = {
       id: transferId,
@@ -177,7 +189,7 @@ export function registerTransferHandlers(server: RpcServer): void {
     if (!Number.isInteger(opts.index) || opts.index < 0 || opts.index >= transfer.chunkCount) {
       throw new Error(`Invalid chunk index: ${opts.index}`)
     }
-    if (typeof opts.data !== 'string' || opts.data.length === 0) {
+    if (typeof opts.data !== 'string' || opts.data.length === 0 || opts.data.length > MAX_CHUNK_DATA_LENGTH) {
       throw new Error('Missing chunk data')
     }
 
@@ -185,7 +197,7 @@ export function registerTransferHandlers(server: RpcServer): void {
     // expiry callback. The generation guard makes already-queued callbacks inert.
     rescheduleTransferCleanup(transfer)
     const chunkPath = join(transfer.dir, `chunk-${String(opts.index).padStart(6, '0')}`)
-    await writeFile(chunkPath, opts.data, 'utf-8')
+    await writeFile(chunkPath, opts.data, { encoding: 'utf-8', mode: 0o600 })
     transfer.received.add(opts.index)
     rescheduleTransferCleanup(transfer)
 

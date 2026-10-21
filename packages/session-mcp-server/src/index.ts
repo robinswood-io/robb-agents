@@ -29,7 +29,7 @@ import {
   type Tool,
 } from '@modelcontextprotocol/client';
 import { existsSync, readFileSync, readdirSync, statSync, writeFileSync, mkdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, resolve, sep } from 'node:path';
 import { isDeveloperFeedbackEnabled } from '@craft-agent/shared/feature-flags';
 // Import from session-tools-core
 import {
@@ -86,12 +86,33 @@ interface CredentialCacheEntry {
   expiresAt?: number;
 }
 
+function isSafeSingleSegment(segment: string): boolean {
+  return (
+    typeof segment === 'string' &&
+    segment.length > 0 &&
+    segment !== '.' &&
+    segment !== '..' &&
+    !segment.includes('..') &&
+    !segment.includes('/') &&
+    !segment.includes('\\') &&
+    !segment.includes('\0')
+  );
+}
+
 /**
  * Get the path to a source's credential cache file.
  * The main process writes decrypted credentials to these files.
  */
 function getCredentialCachePath(workspaceRootPath: string, sourceSlug: string): string {
-  return join(workspaceRootPath, 'sources', sourceSlug, '.credential-cache.json');
+  if (!isSafeSingleSegment(sourceSlug)) {
+    throw new Error(`Invalid source slug: "${sourceSlug}"`);
+  }
+  const sourcesDir = resolve(workspaceRootPath, 'sources');
+  const cachePath = resolve(sourcesDir, sourceSlug, '.credential-cache.json');
+  if (!cachePath.startsWith(sourcesDir + sep)) {
+    throw new Error(`Invalid source slug: "${sourceSlug}"`);
+  }
+  return cachePath;
 }
 
 /**
@@ -99,9 +120,8 @@ function getCredentialCachePath(workspaceRootPath: string, sourceSlug: string): 
  * Returns null if the cache doesn't exist or is expired.
  */
 function readCredentialCache(workspaceRootPath: string, sourceSlug: string): string | null {
-  const cachePath = getCredentialCachePath(workspaceRootPath, sourceSlug);
-
   try {
+    const cachePath = getCredentialCachePath(workspaceRootPath, sourceSlug);
     if (!existsSync(cachePath)) {
       return null;
     }
@@ -232,7 +252,7 @@ function createCodexContext(config: SessionConfig): SessionToolContext {
             : current.location,
           updatedAt: Date.now(),
         };
-        writeFileSync(prefsPath, JSON.stringify(merged, null, 2), 'utf-8');
+        writeFileSync(prefsPath, JSON.stringify(merged, null, 2), { encoding: 'utf-8', mode: 0o600 });
       } catch (err) {
         console.error('Failed to update preferences:', err);
       }
@@ -240,11 +260,19 @@ function createCodexContext(config: SessionConfig): SessionToolContext {
 
     // Developer feedback: write one JSON file per entry to {configDir}/feedback/
     submitFeedback: (feedback) => {
+      const rawId = typeof feedback?.id === 'string' ? feedback.id.trim() : '';
+      const safeId = rawId.replace(/[^a-zA-Z0-9._-]/g, '_');
+      if (!safeId || !isSafeSingleSegment(safeId)) {
+        throw new Error('Invalid feedback ID');
+      }
       const configDir = process.env.CRAFT_CONFIG_DIR || join(workspaceRootPath, '..', '..');
-      const feedbackDir = join(configDir, 'feedback');
-      mkdirSync(feedbackDir, { recursive: true });
-      const filePath = join(feedbackDir, `${feedback.id}.json`);
-      writeFileSync(filePath, JSON.stringify(feedback, null, 2), 'utf-8');
+      const feedbackDir = resolve(configDir, 'feedback');
+      mkdirSync(feedbackDir, { recursive: true, mode: 0o700 });
+      const filePath = resolve(feedbackDir, `${safeId}.json`);
+      if (!filePath.startsWith(feedbackDir + sep)) {
+        throw new Error('Invalid feedback ID');
+      }
+      writeFileSync(filePath, JSON.stringify(feedback, null, 2), { encoding: 'utf-8', mode: 0o600 });
     },
 
     // Note: saveSourceConfig, validators, renderMermaid
@@ -502,12 +530,28 @@ async function main() {
     process.exit(1);
   }
 
+  if (!isSafeSingleSegment(sessionId)) {
+    console.error('Invalid --session-id: must be a single path segment');
+    process.exit(1);
+  }
+
+  const rawCallbackPort = callbackPort || process.env.CRAFT_LLM_CALLBACK_PORT;
+  let validatedCallbackPort: string | undefined;
+  if (rawCallbackPort !== undefined && rawCallbackPort !== '') {
+    const portNum = Number(rawCallbackPort);
+    if (!Number.isInteger(portNum) || portNum < 1 || portNum > 65535 || String(portNum) !== rawCallbackPort.trim()) {
+      console.error(`Invalid callback port: "${rawCallbackPort}"`);
+      process.exit(1);
+    }
+    validatedCallbackPort = String(portNum);
+  }
+
   const config: SessionConfig = {
     sessionId,
     workspaceRootPath,
     plansFolderPath,
     // CLI arg takes priority, env var as fallback (Copilot CLI may not forward env to subprocesses)
-    callbackPort: callbackPort || process.env.CRAFT_LLM_CALLBACK_PORT,
+    callbackPort: validatedCallbackPort,
   };
 
   // Create the Codex context

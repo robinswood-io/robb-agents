@@ -4,7 +4,7 @@ import { homedir } from 'os'
 import { RPC_CHANNELS } from '@craft-agent/shared/protocol'
 import { getWorkspaceByNameOrId, addWorkspace, setActiveWorkspace, updateWorkspaceRemoteServer } from '@craft-agent/shared/config'
 import { perf } from '@craft-agent/shared/utils'
-import { pushTyped, type RpcServer } from '@craft-agent/server-core/transport'
+import { assertRequestWorkspaceAccess, pushTyped, type RpcServer } from '@craft-agent/server-core/transport'
 import type { HandlerDeps } from '../handler-deps'
 import { isValidWorkspaceRootPath } from '../../utils/path-validation'
 import type { ThemeOverrides } from '@craft-agent/shared/config/theme'
@@ -95,6 +95,17 @@ export function registerWorkspaceCoreHandlers(server: RpcServer, deps: HandlerDe
 
   // Check if a workspace slug already exists (for validation before creation)
   server.handle(RPC_CHANNELS.workspaces.CHECK_SLUG, async (_ctx, slug: string) => {
+    if (
+      typeof slug !== 'string'
+      || slug.length === 0
+      || slug === '.'
+      || slug === '..'
+      || slug.includes('/')
+      || slug.includes('\\')
+      || slug.includes('\0')
+    ) {
+      throw new Error('Invalid workspace slug')
+    }
     const defaultWorkspacesDir = join(homedir(), '.craft-agent', 'workspaces')
     const workspacePath = join(defaultWorkspacesDir, slug)
     const exists = existsSync(workspacePath)
@@ -182,19 +193,20 @@ export function registerWorkspaceCoreHandlers(server: RpcServer, deps: HandlerDe
   // ============================================================
 
   // Generic workspace image loading (for source icons, status icons, etc.)
-  server.handle(RPC_CHANNELS.workspace.READ_IMAGE, async (_ctx, workspaceId: string, relativePath: string) => {
+  server.handle(RPC_CHANNELS.workspace.READ_IMAGE, async (ctx, workspaceId: string, relativePath: string) => {
     const workspace = getWorkspaceByNameOrId(workspaceId)
     if (!workspace) throw new Error('Workspace not found')
+    assertRequestWorkspaceAccess(ctx, workspaceId, workspace.id)
 
-    const { readFileSync, existsSync } = await import('fs')
-    const { join, normalize } = await import('path')
+    const { readFileSync, existsSync, realpathSync } = await import('fs')
+    const { join, resolve, sep } = await import('path')
 
     // Security: validate path
-    // - Must not contain .. (path traversal)
+    // - Must not contain .. (path traversal) or null bytes
     // - Must be a valid image extension
     const ALLOWED_EXTENSIONS = ['.svg', '.png', '.jpg', '.jpeg', '.webp', '.ico', '.gif']
 
-    if (relativePath.includes('..')) {
+    if (typeof relativePath !== 'string' || relativePath.includes('..') || relativePath.includes('\0')) {
       throw new Error('Invalid path: directory traversal not allowed')
     }
 
@@ -203,16 +215,31 @@ export function registerWorkspaceCoreHandlers(server: RpcServer, deps: HandlerDe
       throw new Error(`Invalid file type: ${ext}. Allowed: ${ALLOWED_EXTENSIONS.join(', ')}`)
     }
 
-    // Resolve path relative to workspace root
-    const absolutePath = normalize(join(workspace.rootPath, relativePath))
+    // Resolve path relative to workspace root with trailing separator check
+    const workspaceRoot = resolve(workspace.rootPath)
+    const workspacePrefix = workspaceRoot.endsWith(sep) ? workspaceRoot : `${workspaceRoot}${sep}`
+    const absolutePath = resolve(workspaceRoot, relativePath)
 
-    // Double-check the resolved path is still within workspace
-    if (!absolutePath.startsWith(workspace.rootPath)) {
+    // Double-check the resolved path is strictly within workspace
+    if (!absolutePath.startsWith(workspacePrefix)) {
       throw new Error('Invalid path: outside workspace directory')
     }
 
     if (!existsSync(absolutePath)) {
       return null  // Missing optional files - silent fallback to default icons
+    }
+
+    // Resolve symlinks to prevent symlink escape outside workspace
+    try {
+      const realTarget = realpathSync(absolutePath)
+      const realRoot = realpathSync(workspaceRoot)
+      const realPrefix = realRoot.endsWith(sep) ? realRoot : `${realRoot}${sep}`
+      if (!realTarget.startsWith(realPrefix)) {
+        throw new Error('Invalid path: outside workspace directory')
+      }
+    } catch (err) {
+      if (err instanceof Error && err.message.startsWith('Invalid path:')) throw err
+      return null
     }
 
     // Read file as buffer
@@ -238,17 +265,18 @@ export function registerWorkspaceCoreHandlers(server: RpcServer, deps: HandlerDe
 
   // Generic workspace image writing (for workspace icon, etc.)
   // Resizes images to max 256x256 to keep file sizes small
-  server.handle(RPC_CHANNELS.workspace.WRITE_IMAGE, async (_ctx, workspaceId: string, relativePath: string, base64: string, mimeType: string) => {
+  server.handle(RPC_CHANNELS.workspace.WRITE_IMAGE, async (ctx, workspaceId: string, relativePath: string, base64: string, mimeType: string) => {
     const workspace = getWorkspaceByNameOrId(workspaceId)
     if (!workspace) throw new Error('Workspace not found')
+    assertRequestWorkspaceAccess(ctx, workspaceId, workspace.id)
 
-    const { writeFileSync, existsSync, unlinkSync, readdirSync } = await import('fs')
-    const { join, normalize, basename } = await import('path')
+    const { writeFileSync, existsSync, unlinkSync, readdirSync, realpathSync, lstatSync } = await import('fs')
+    const { join, resolve, sep, basename, dirname } = await import('path')
 
     // Security: validate path
     const ALLOWED_EXTENSIONS = ['.svg', '.png', '.jpg', '.jpeg', '.webp', '.gif']
 
-    if (relativePath.includes('..')) {
+    if (typeof relativePath !== 'string' || relativePath.includes('..') || relativePath.includes('\0')) {
       throw new Error('Invalid path: directory traversal not allowed')
     }
 
@@ -257,12 +285,32 @@ export function registerWorkspaceCoreHandlers(server: RpcServer, deps: HandlerDe
       throw new Error(`Invalid file type: ${ext}. Allowed: ${ALLOWED_EXTENSIONS.join(', ')}`)
     }
 
-    // Resolve path relative to workspace root
-    const absolutePath = normalize(join(workspace.rootPath, relativePath))
+    // Resolve path relative to workspace root with trailing separator check
+    const workspaceRoot = resolve(workspace.rootPath)
+    const workspacePrefix = workspaceRoot.endsWith(sep) ? workspaceRoot : `${workspaceRoot}${sep}`
+    const absolutePath = resolve(workspaceRoot, relativePath)
 
-    // Double-check the resolved path is still within workspace
-    if (!absolutePath.startsWith(workspace.rootPath)) {
+    // Double-check the resolved path is strictly within workspace
+    if (!absolutePath.startsWith(workspacePrefix)) {
       throw new Error('Invalid path: outside workspace directory')
+    }
+
+    // Prevent writing through a symlinked file or symlinked parent directory outside workspace
+    if (existsSync(workspaceRoot)) {
+      const realRoot = realpathSync(workspaceRoot)
+      const realPrefix = realRoot.endsWith(sep) ? realRoot : `${realRoot}${sep}`
+      const parentDir = dirname(absolutePath)
+      if (existsSync(parentDir)) {
+        const realParent = realpathSync(parentDir)
+        if (realParent !== realRoot && !realParent.startsWith(realPrefix)) {
+          throw new Error('Invalid path: outside workspace directory')
+        }
+      }
+      if (existsSync(absolutePath)) {
+        if (lstatSync(absolutePath).isSymbolicLink()) {
+          throw new Error('Invalid path: refusing to overwrite symbolic link')
+        }
+      }
     }
 
     // If this is an icon file (icon.*), delete any existing icon files with different extensions
@@ -357,7 +405,8 @@ export function registerWorkspaceCoreHandlers(server: RpcServer, deps: HandlerDe
   })
 
   // Workspace-level theme overrides
-  server.handle(RPC_CHANNELS.theme.GET_WORKSPACE_COLOR_THEME, async (_ctx, workspaceId: string) => {
+  server.handle(RPC_CHANNELS.theme.GET_WORKSPACE_COLOR_THEME, async (ctx, workspaceId: string) => {
+    assertRequestWorkspaceAccess(ctx, workspaceId)
     const { getWorkspaces } = await import('@craft-agent/shared/config/storage')
     const { getWorkspaceColorTheme } = await import('@craft-agent/shared/workspaces/storage')
     const workspaces = getWorkspaces()
@@ -366,7 +415,8 @@ export function registerWorkspaceCoreHandlers(server: RpcServer, deps: HandlerDe
     return getWorkspaceColorTheme(workspace.rootPath) ?? null
   })
 
-  server.handle(RPC_CHANNELS.theme.SET_WORKSPACE_COLOR_THEME, async (_ctx, workspaceId: string, themeId: string | null) => {
+  server.handle(RPC_CHANNELS.theme.SET_WORKSPACE_COLOR_THEME, async (ctx, workspaceId: string, themeId: string | null) => {
+    assertRequestWorkspaceAccess(ctx, workspaceId)
     const { getWorkspaces } = await import('@craft-agent/shared/config/storage')
     const { setWorkspaceColorTheme } = await import('@craft-agent/shared/workspaces/storage')
     const workspaces = getWorkspaces()
@@ -399,18 +449,20 @@ export function registerWorkspaceCoreHandlers(server: RpcServer, deps: HandlerDe
   // ============================================================
 
   // List views for a workspace (dynamic expression-based filters stored in views.json)
-  server.handle(RPC_CHANNELS.views.LIST, async (_ctx, workspaceId: string) => {
+  server.handle(RPC_CHANNELS.views.LIST, async (ctx, workspaceId: string) => {
     const workspace = getWorkspaceByNameOrId(workspaceId)
     if (!workspace) throw new Error('Workspace not found')
+    assertRequestWorkspaceAccess(ctx, workspaceId, workspace.id)
 
     const { listViews } = await import('@craft-agent/shared/views/storage')
     return listViews(workspace.rootPath)
   })
 
   // Save views (replaces full array)
-  server.handle(RPC_CHANNELS.views.SAVE, async (_ctx, workspaceId: string, views: import('@craft-agent/shared/views').ViewConfig[]) => {
+  server.handle(RPC_CHANNELS.views.SAVE, async (ctx, workspaceId: string, views: import('@craft-agent/shared/views').ViewConfig[]) => {
     const workspace = getWorkspaceByNameOrId(workspaceId)
     if (!workspace) throw new Error('Workspace not found')
+    assertRequestWorkspaceAccess(ctx, workspaceId, workspace.id)
 
     const { saveViews } = await import('@craft-agent/shared/views/storage')
     saveViews(workspace.rootPath, views)

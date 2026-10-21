@@ -6,7 +6,12 @@ import { parse as parseHtml } from 'node-html-parser';
 import { join } from 'node:path';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { lookup } from 'node:dns/promises';
+import { request as httpRequest } from 'node:http';
+import { request as httpsRequest } from 'node:https';
+import { Readable } from 'node:stream';
 import { randomUUID } from 'node:crypto';
+
+const INITIAL_GLOBAL_FETCH = globalThis.fetch;
 
 const schema = Type.Object({
   url: Type.String({ description: 'URL to fetch' }),
@@ -40,55 +45,290 @@ const MIME_TO_EXT: Record<string, string> = {
 // SSRF protection
 // ============================================================
 
-const PRIVATE_IP_PATTERNS = [
-  /^127\./,                                   // IPv4 loopback
-  /^10\./,                                    // Class A private
-  /^172\.(1[6-9]|2\d|3[01])\./,              // Class B private
-  /^192\.168\./,                              // Class C private
-  /^169\.254\./,                              // link-local
-  /^0\./,                                     // "this" network
-  /^100\.(6[4-9]|[7-9]\d|1[0-2]\d)\./,       // Carrier-grade NAT (100.64.0.0/10)
-  /^::1$/,                                    // IPv6 loopback
-  /^fe80:/i,                                  // IPv6 link-local
-  /^f[cd]/i,                                  // IPv6 unique local (fc00::/7)
+const MAX_REDIRECTS = 5;
+
+function parseIpv4Uint32(ip: string): number | null {
+  const parts = ip.split('.');
+  if (parts.length !== 4) return null;
+  let value = 0;
+  for (const part of parts) {
+    if (!/^\d{1,3}$/.test(part)) return null;
+    const octet = Number(part);
+    if (octet < 0 || octet > 255) return null;
+    value = ((value << 8) | octet) >>> 0;
+  }
+  return value >>> 0;
+}
+
+function isReservedIpv4Uint32(ipv4: number): boolean {
+  const u = ipv4 >>> 0;
+  return (
+    (u & 0xff000000) >>> 0 === 0x00000000 || // 0.0.0.0/8 ("this" network)
+    (u & 0xff000000) >>> 0 === 0x0a000000 || // 10.0.0.0/8 (RFC 1918)
+    (u & 0xffc00000) >>> 0 === 0x64400000 || // 100.64.0.0/10 (RFC 6598 CGNAT)
+    (u & 0xff000000) >>> 0 === 0x7f000000 || // 127.0.0.0/8 (Loopback)
+    (u & 0xffff0000) >>> 0 === 0xa9fe0000 || // 169.254.0.0/16 (Link-local / Cloud metadata)
+    (u & 0xfff00000) >>> 0 === 0xac100000 || // 172.16.0.0/12 (RFC 1918)
+    (u & 0xffffff00) >>> 0 === 0xc0000000 || // 192.0.0.0/24 (IETF protocol assignments)
+    (u & 0xffffff00) >>> 0 === 0xc0000200 || // 192.0.2.0/24 (TEST-NET-1)
+    (u & 0xffff0000) >>> 0 === 0xc0a80000 || // 192.168.0.0/16 (RFC 1918)
+    (u & 0xfffe0000) >>> 0 === 0xc6120000 || // 198.18.0.0/15 (Benchmarking)
+    (u & 0xffffff00) >>> 0 === 0xc6336400 || // 198.51.100.0/24 (TEST-NET-2)
+    (u & 0xffffff00) >>> 0 === 0xcb007100 || // 203.0.113.0/24 (TEST-NET-3)
+    (u & 0xf0000000) >>> 0 === 0xe0000000 || // 224.0.0.0/4 (Multicast)
+    (u & 0xf0000000) >>> 0 === 0xf0000000    // 240.0.0.0/4 (Reserved & Broadcast)
+  );
+}
+
+const PRIVATE_IPV6_PATTERNS = [
+  /^::1$/i,                                   // IPv6 loopback
+  /^0:0:0:0:0:0:0:1$/i,                       // IPv6 loopback expanded
+  /^::$/i,                                    // IPv6 unspecified
+  /^0:0:0:0:0:0:0:0$/i,                       // IPv6 unspecified expanded
+  /^fe[89ab][0-9a-f]:/i,                      // IPv6 link-local (fe80::/10)
+  /^f[cd][0-9a-f]{2}:/i,                      // IPv6 unique local (fc00::/7)
+  /^f[cd]/i,                                  // IPv6 unique local short forms
+  /^ff[0-9a-f]{2}:/i,                         // IPv6 multicast (ff00::/8)
+  /^100::/i,                                  // Discard-only address block (100::/64)
+  /^2001:db8:/i,                              // Documentation (2001:db8::/32)
+  /^2001:2:/i,                                // Benchmarking (2001:2::/48)
+  /^64:ff9b:/i,                               // NAT64 (64:ff9b::/96 & 64:ff9b:1::/48)
 ];
 
-function isPrivateIp(ip: string): boolean {
-  return PRIVATE_IP_PATTERNS.some(r => r.test(ip));
+function extractEmbeddedIpv4FromIpv6(normalizedIp: string): number | null {
+  const lower = normalizedIp.toLowerCase();
+  const dottedMatch = lower.match(/^(?:::ffff:|::ffff:0:0:|::)(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/);
+  if (dottedMatch?.[1]) {
+    return parseIpv4Uint32(dottedMatch[1]);
+  }
+  const hexMatch = lower.match(/^(?:::ffff:|0:0:0:0:0:ffff:)([0-9a-f]{1,4}):([0-9a-f]{1,4})$/);
+  if (hexMatch?.[1] && hexMatch?.[2]) {
+    const hi = parseInt(hexMatch[1], 16);
+    const lo = parseInt(hexMatch[2], 16);
+    return (((hi & 0xffff) << 16) | (lo & 0xffff)) >>> 0;
+  }
+  const singleHexMatch = lower.match(/^::ffff:([0-9a-f]{1,4})$/);
+  if (singleHexMatch?.[1]) {
+    return parseInt(singleHexMatch[1], 16) >>> 0;
+  }
+  return null;
+}
+
+export function isPrivateIp(ip: string): boolean {
+  const normalized = ip.trim().replace(/^\[|\]$/g, '');
+  const ipv4 = parseIpv4Uint32(normalized);
+  if (ipv4 !== null) {
+    return isReservedIpv4Uint32(ipv4);
+  }
+  const embeddedIpv4 = extractEmbeddedIpv4FromIpv6(normalized);
+  if (embeddedIpv4 !== null) {
+    return isReservedIpv4Uint32(embeddedIpv4);
+  }
+  return PRIVATE_IPV6_PATTERNS.some(r => r.test(normalized));
+}
+
+export type DnsLookupFn = (
+  hostname: string,
+  options: { all: true },
+) => Promise<Array<{ address: string }> | { address: string }>;
+
+export interface ValidatedUrlTarget {
+  url: string;
+  hostname: string;
+  pinnedAddress: string;
+  family: 4 | 6;
+  addresses: string[];
 }
 
 /**
- * Validate URL before fetching — blocks non-HTTP schemes and private/reserved IPs.
- *
- * Always resolves through dns.lookup() (getaddrinfo) to get the canonical IP form,
- * which normalizes IPv6 (0:0:0:0:0:0:0:1 → ::1) and platform-specific IPv4 forms
- * (octal 0177.0.0.1, hex 0x7f.0.0.1 → 127.0.0.1). This avoids regex-bypass attacks
- * using non-standard IP representations.
- *
- * Note: there is an inherent TOCTOU gap between this DNS check and the subsequent
- * fetch(). This is defense-in-depth, not a complete SSRF mitigation.
+ * Validate URL before fetching — blocks non-HTTP schemes, private/reserved IPs,
+ * and TTL=0 DNS rebinding flips via dual-resolution consistency verification,
+ * returning the validated & pinned IP target for socket-level connection pinning.
  */
-async function validateUrl(url: string): Promise<void> {
+export async function validateUrl(
+  url: string,
+  dnsLookup: DnsLookupFn = lookup as unknown as DnsLookupFn,
+): Promise<ValidatedUrlTarget> {
   const parsed = new URL(url);
 
   if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
     throw new Error(`Blocked: unsupported protocol "${parsed.protocol}"`);
   }
 
-  const hostname = parsed.hostname;
+  const hostname = parsed.hostname.replace(/^\[|\]$/g, '');
+  if (!hostname) {
+    throw new Error('Blocked: missing hostname');
+  }
 
-  // Resolve to canonical IP — works for both hostnames and IP literals.
-  try {
-    const { address } = await lookup(hostname);
-    if (isPrivateIp(address)) {
-      throw new Error('Blocked: resolves to private/reserved IP address');
+  if (isPrivateIp(hostname)) {
+    throw new Error('Blocked: resolves to private/reserved IP address');
+  }
+
+  const resolveAndValidate = async (): Promise<Set<string>> => {
+    const resolved = await dnsLookup(hostname, { all: true });
+    const records = Array.isArray(resolved) ? resolved : [resolved];
+    if (records.length === 0) {
+      throw new Error(`Blocked: hostname "${hostname}" could not be resolved`);
     }
+    const addresses = new Set<string>();
+    for (const record of records) {
+      if (isPrivateIp(record.address)) {
+        throw new Error('Blocked: resolves to private/reserved IP address');
+      }
+      addresses.add(record.address);
+    }
+    return addresses;
+  };
+
+  try {
+    const firstPass = await resolveAndValidate();
+    let verifiedAddresses = [...firstPass];
+    // Dual-resolution check for domain names to detect TTL=0 DNS rebinding flips
+    if (parseIpv4Uint32(hostname) === null && !hostname.includes(':')) {
+      const secondPass = await resolveAndValidate();
+      verifiedAddresses = [...firstPass].filter(addr => secondPass.has(addr));
+      if (verifiedAddresses.length === 0) {
+        throw new Error('Blocked: DNS resolution changed inconsistently (potential DNS rebinding)');
+      }
+    }
+    const pinnedAddress = verifiedAddresses[0]!;
+    const family: 4 | 6 = parseIpv4Uint32(pinnedAddress) !== null ? 4 : 6;
+    return {
+      url: parsed.toString(),
+      hostname,
+      pinnedAddress,
+      family,
+      addresses: verifiedAddresses,
+    };
   } catch (err: any) {
     if (err.code === 'ENOTFOUND') {
       throw new Error(`Blocked: hostname "${hostname}" could not be resolved`);
     }
     throw err;
   }
+}
+
+/**
+ * Create a socket-level `lookup` callback that pins TCP/TLS connections to the
+ * exact IP address(es) validated by `validateUrl()`, completely eliminating the
+ * DNS rebinding TOCTOU window between validation and socket connection.
+ */
+export function createPinnedDnsLookup(target: ValidatedUrlTarget) {
+  return (
+    hostname: string,
+    options: { all?: boolean } | number | undefined,
+    callback?: (err: Error | null, address?: any, family?: number) => void,
+  ): void => {
+    const cb = typeof options === 'function' ? options : callback;
+    const opts = typeof options === 'object' && options !== null ? options : {};
+    if (!cb) return;
+
+    const normalizedRequested = hostname.trim().replace(/^\[|\]$/g, '').toLowerCase();
+    const normalizedExpected = target.hostname.trim().replace(/^\[|\]$/g, '').toLowerCase();
+    if (normalizedRequested !== normalizedExpected) {
+      cb(new Error(`Blocked: socket lookup hostname "${hostname}" does not match pinned "${target.hostname}"`));
+      return;
+    }
+
+    if (isPrivateIp(target.pinnedAddress) || target.addresses.some(addr => isPrivateIp(addr))) {
+      cb(new Error('Blocked: pinned address resolves to private/reserved IP address'));
+      return;
+    }
+
+    if (opts.all) {
+      cb(
+        null,
+        target.addresses.map(address => ({
+          address,
+          family: parseIpv4Uint32(address) !== null ? 4 : 6,
+        })),
+      );
+      return;
+    }
+
+    cb(null, target.pinnedAddress, target.family);
+  };
+}
+
+/**
+ * Perform an HTTP/HTTPS GET pinned to the pre-validated IP address from `validateUrl()`,
+ * while preserving the `Host` header, TLS SNI (`servername`), and certificate hostname verification.
+ */
+export async function fetchWithPinnedDns(
+  target: ValidatedUrlTarget,
+  init: {
+    headers?: Record<string, string>;
+    signal?: AbortSignal;
+    forceSocketPinning?: boolean;
+  } = {},
+): Promise<Response> {
+  const hasEnvProxy = Boolean(
+    process.env.HTTPS_PROXY ||
+    process.env.HTTP_PROXY ||
+    process.env.https_proxy ||
+    process.env.http_proxy ||
+    process.env.ALL_PROXY ||
+    process.env.all_proxy,
+  );
+  if (!init.forceSocketPinning && (globalThis.fetch !== INITIAL_GLOBAL_FETCH || hasEnvProxy)) {
+    return globalThis.fetch(target.url, {
+      headers: init.headers,
+      redirect: 'manual',
+      signal: init.signal,
+    });
+  }
+
+  const parsed = new URL(target.url);
+  const isHttps = parsed.protocol === 'https:';
+  const requestFn = isHttps ? httpsRequest : httpRequest;
+  const pinnedLookup = createPinnedDnsLookup(target);
+
+  return new Promise<Response>((resolvePromise, rejectPromise) => {
+    const req = requestFn(
+      parsed,
+      {
+        method: 'GET',
+        headers: init.headers,
+        lookup: pinnedLookup as any,
+        ...(isHttps ? { servername: target.hostname } : {}),
+        signal: init.signal,
+      },
+      (res) => {
+        const responseHeaders = new Headers();
+        for (const [key, value] of Object.entries(res.headers)) {
+          if (Array.isArray(value)) {
+            for (const item of value) responseHeaders.append(key, item);
+          } else if (typeof value === 'string') {
+            responseHeaders.set(key, value);
+          }
+        }
+        const status = res.statusCode ?? 200;
+        const isRedirect =
+          status === 301 || status === 302 || status === 303 || status === 307 || status === 308;
+        const isNullBody =
+          isRedirect || status === 101 || status === 204 || status === 205 || status === 304;
+        if (isNullBody) {
+          res.resume();
+        }
+        const bodyStream = isNullBody
+          ? null
+          : (Readable.toWeb(res) as unknown as ReadableStream<Uint8Array>);
+        const response = new Response(bodyStream, {
+          status,
+          statusText: res.statusMessage ?? '',
+          headers: responseHeaders,
+        });
+        Object.defineProperty(response, 'url', { value: target.url, configurable: true });
+        resolvePromise(response);
+      },
+    );
+
+    req.on('error', (err) => {
+      rejectPromise(err);
+    });
+
+    req.end();
+  });
 }
 
 // ============================================================
@@ -337,9 +577,10 @@ export function createWebFetchTool(
     async execute(toolCallId, params) {
       const { url, prompt } = params;
 
-      // SSRF protection: block non-HTTP schemes and private/reserved IPs
+      // SSRF protection: block non-HTTP schemes, private/reserved IPs, and pin validated DNS resolution
+      let currentTarget: ValidatedUrlTarget;
       try {
-        await validateUrl(url);
+        currentTarget = await validateUrl(url);
       } catch (err) {
         return result(
           `Refused to fetch ${url}: ${err instanceof Error ? err.message : String(err)}`,
@@ -348,16 +589,46 @@ export function createWebFetchTool(
       }
 
       let response: Response;
+      let currentUrl = currentTarget.url;
       try {
-        response = await fetch(url, {
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (compatible; CraftAgent/1.0)',
-            Accept:
-              'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-          },
-          redirect: 'follow',
-          signal: AbortSignal.timeout(30_000),
-        });
+        for (let hop = 0; ; hop++) {
+          response = await fetchWithPinnedDns(currentTarget, {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (compatible; CraftAgent/1.0)',
+              Accept:
+                'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            },
+            signal: AbortSignal.timeout(30_000),
+          });
+
+          const isRedirect =
+            response.status === 301 ||
+            response.status === 302 ||
+            response.status === 303 ||
+            response.status === 307 ||
+            response.status === 308;
+          if (!isRedirect) break;
+
+          if (hop >= MAX_REDIRECTS) {
+            return result(`Failed to fetch ${url}: Too many redirects (max ${MAX_REDIRECTS})`, true);
+          }
+
+          const location = response.headers.get('location');
+          if (!location) {
+            return result(`Failed to fetch ${url}: Redirect missing Location header`, true);
+          }
+
+          const nextUrl = new URL(location, currentUrl).toString();
+          try {
+            currentTarget = await validateUrl(nextUrl);
+          } catch (err) {
+            return result(
+              `Refused redirect from ${currentUrl} to ${nextUrl}: ${err instanceof Error ? err.message : String(err)}`,
+              true,
+            );
+          }
+          currentUrl = currentTarget.url;
+        }
       } catch (err) {
         return result(
           `Failed to fetch ${url}: ${err instanceof Error ? err.message : String(err)}`,
@@ -373,7 +644,7 @@ export function createWebFetchTool(
       }
 
       // Use the final URL after redirects for all output messages
-      const finalUrl = response.url || url;
+      const finalUrl = response.url || currentUrl;
 
       const contentType = ((response.headers.get('content-type') || '')
         .toLowerCase()

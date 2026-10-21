@@ -53,7 +53,7 @@ fi
 
 info "Installing dependencies..."
 cd "$REPO_ROOT"
-bun install --frozen-lockfile 2>/dev/null || bun install
+bun install --frozen-lockfile
 
 info "Building subprocess servers..."
 bun run server:build:subprocess

@@ -6,7 +6,7 @@
  * shared session/cookie partition and CDP automation support.
  */
 
-import { join, parse as parsePath } from 'path'
+import { basename, join, parse as parsePath } from 'path'
 import { existsSync, mkdirSync } from 'fs'
 import { validateFilePath, getWorkspaceAllowedDirs } from '@craft-agent/server-core/handlers'
 import { BrowserWindow, WebContentsView, app, dialog, ipcMain, nativeImage, nativeTheme, session, shell, type Session as ElectronSession } from 'electron'
@@ -457,7 +457,7 @@ export class BrowserPaneManager implements IBrowserPaneManager {
         session: ses,
         contextIsolation: true,
         nodeIntegration: false,
-        sandbox: false,
+        sandbox: true,
       },
     })
 
@@ -869,6 +869,18 @@ export class BrowserPaneManager implements IBrowserPaneManager {
         normalizedUrl = `https://${normalizedUrl}`
       } else {
         normalizedUrl = `https://duckduckgo.com/?q=${encodeURIComponent(normalizedUrl)}`
+      }
+    }
+
+    if (normalizedUrl !== 'about:blank' && !this.isBrowserEmptyStateUrl(normalizedUrl)) {
+      let parsed: URL
+      try {
+        parsed = new URL(normalizedUrl)
+      } catch {
+        throw new Error(`Invalid navigation URL: "${normalizedUrl}"`)
+      }
+      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+        throw new Error(`Blocked navigation to unsupported protocol "${parsed.protocol}"`)
       }
     }
 
@@ -3558,8 +3570,10 @@ export class BrowserPaneManager implements IBrowserPaneManager {
   }
 
   private uniqueFilename(dir: string, filename: string): string {
-    if (!existsSync(join(dir, filename))) return filename
-    const { name, ext } = parsePath(filename)
+    const rawBase = basename(String(filename || '').replace(/\\/g, '/')).replace(/[\x00-\x1f]/g, '').trim()
+    const safeFilename = !rawBase || rawBase === '.' || rawBase === '..' ? 'download' : rawBase
+    if (!existsSync(join(dir, safeFilename))) return safeFilename
+    const { name, ext } = parsePath(safeFilename)
     let counter = 1
     while (existsSync(join(dir, `${name}_${counter}${ext}`))) {
       counter++
@@ -4041,6 +4055,22 @@ export class BrowserPaneManager implements IBrowserPaneManager {
       if (url.startsWith(CRAFT_DEEPLINK_SCHEME_PREFIX)) {
         event.preventDefault()
         void this.handleDeepLinkUrl(url)
+        return
+      }
+
+      if (url === 'about:blank' || this.isBrowserEmptyStateUrl(url)) {
+        return
+      }
+
+      try {
+        const parsed = new URL(url)
+        if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+          mainLog.warn(`[browser-pane] will-navigate denied id=${instance.id} reason=unsupported_protocol protocol=${parsed.protocol} url=${url}`)
+          event.preventDefault()
+        }
+      } catch {
+        mainLog.warn(`[browser-pane] will-navigate denied id=${instance.id} reason=invalid_url url=${url}`)
+        event.preventDefault()
       }
     })
 

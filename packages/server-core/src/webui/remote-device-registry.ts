@@ -1,4 +1,16 @@
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
+import {
+  chmodSync,
+  closeSync,
+  existsSync,
+  fsyncSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  renameSync,
+  unlinkSync,
+  writeFileSync,
+} from 'node:fs'
+import { randomBytes } from 'node:crypto'
 import { dirname } from 'node:path'
 
 export interface RemoteDeviceRecord {
@@ -167,8 +179,20 @@ export class RemoteDeviceRegistry {
   private persist(): void {
     if (!this.filePath) return
     mkdirSync(dirname(this.filePath), { recursive: true, mode: 0o700 })
-    const temporaryPath = `${this.filePath}.tmp`
-    writeFileSync(temporaryPath, `${JSON.stringify(this.document, null, 2)}\n`, { mode: 0o600 })
-    renameSync(temporaryPath, this.filePath)
+    const temporaryPath = `${this.filePath}.${process.pid}.${randomBytes(8).toString('hex')}.tmp`
+    let fd: number | null = null
+    try {
+      fd = openSync(temporaryPath, 'wx', 0o600)
+      writeFileSync(fd, `${JSON.stringify(this.document, null, 2)}\n`, 'utf8')
+      fsyncSync(fd)
+      closeSync(fd)
+      fd = null
+      renameSync(temporaryPath, this.filePath)
+      chmodSync(this.filePath, 0o600)
+    } catch (error) {
+      if (fd !== null) closeSync(fd)
+      if (existsSync(temporaryPath)) unlinkSync(temporaryPath)
+      throw error
+    }
   }
 }

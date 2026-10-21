@@ -42,10 +42,25 @@ export function assertRequestWorkspace(context: RequestContext, requestedWorkspa
 }
 
 /** Authorize an explicitly targeted workspace without trusting the request payload. */
-export function assertRequestWorkspaceAccess(context: RequestContext, requestedWorkspaceId: string): void {
-  if (context.allowedWorkspaceIds !== '*' && !context.allowedWorkspaceIds.includes(requestedWorkspaceId)) {
-    throw new Error(`Workspace access denied for \"${requestedWorkspaceId}\"`)
+export function assertRequestWorkspaceAccess(
+  context: RequestContext,
+  requestedWorkspaceId: string,
+  resolvedWorkspaceId?: string,
+): void {
+  if (!context || context.allowedWorkspaceIds === undefined) {
+    if (
+      context?.workspaceId
+      && context.workspaceId !== requestedWorkspaceId
+      && context.workspaceId !== resolvedWorkspaceId
+    ) {
+      throw new Error(`Workspace access denied for "${requestedWorkspaceId}"`)
+    }
+    return
   }
+  if (context.allowedWorkspaceIds === '*') return
+  if (context.allowedWorkspaceIds.includes(requestedWorkspaceId)) return
+  if (resolvedWorkspaceId && context.allowedWorkspaceIds.includes(resolvedWorkspaceId)) return
+  throw new Error(`Workspace access denied for "${requestedWorkspaceId}"`)
 }
 
 export type HandlerFn = (ctx: RequestContext, ...args: any[]) => Promise<any> | any

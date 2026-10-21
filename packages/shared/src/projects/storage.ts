@@ -18,7 +18,7 @@ import {
   unlinkSync,
   readFileSync,
 } from 'fs';
-import { basename, extname, join } from 'path';
+import { basename, extname, join, resolve, sep } from 'path';
 import { randomUUID } from 'crypto';
 import { atomicWriteFileSync, readJsonFileSync, getMimeType } from '../utils/files.ts';
 import { debug } from '../utils/debug.ts';
@@ -47,7 +47,25 @@ export function getWorkspaceProjectsPath(workspaceRootPath: string): string {
  * Get path to a project folder within a workspace.
  */
 export function getProjectPath(workspaceRootPath: string, projectSlug: string): string {
-  return join(getWorkspaceProjectsPath(workspaceRootPath), projectSlug);
+  const projectsDir = getWorkspaceProjectsPath(workspaceRootPath);
+  if (
+    typeof projectSlug !== 'string'
+    || projectSlug.length === 0
+    || projectSlug === '.'
+    || projectSlug === '..'
+    || projectSlug.includes('/')
+    || projectSlug.includes('\\')
+    || projectSlug.includes('\0')
+  ) {
+    throw new Error(`Invalid project slug: ${projectSlug}`);
+  }
+  const baseDir = resolve(projectsDir);
+  const candidate = resolve(baseDir, projectSlug);
+  const prefix = baseDir.endsWith(sep) ? baseDir : `${baseDir}${sep}`;
+  if (!candidate.startsWith(prefix)) {
+    throw new Error(`Invalid project slug: ${projectSlug}`);
+  }
+  return join(projectsDir, projectSlug);
 }
 
 /**

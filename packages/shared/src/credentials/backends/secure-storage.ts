@@ -31,7 +31,7 @@ import {
   pbkdf2Sync,
   createHash,
 } from 'crypto';
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import {
   chmodSync,
   closeSync,
@@ -79,16 +79,18 @@ function getStableMachineId(): string {
   try {
     if (process.platform === 'darwin') {
       // macOS: IOPlatformUUID - tied to logic board, never changes
-      const output = execSync(
-        'ioreg -rd1 -c IOPlatformExpertDevice | grep IOPlatformUUID',
+      const output = execFileSync(
+        '/usr/sbin/ioreg',
+        ['-rd1', '-c', 'IOPlatformExpertDevice'],
         { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }
       );
       const match = output.match(/"IOPlatformUUID"\s*=\s*"([^"]+)"/);
       if (match?.[1]) return match[1];
     } else if (process.platform === 'win32') {
       // Windows: MachineGuid from registry - set at OS install
-      const output = execSync(
-        'reg query HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Cryptography /v MachineGuid',
+      const output = execFileSync(
+        'reg',
+        ['query', 'HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Cryptography', '/v', 'MachineGuid'],
         { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }
       );
       const match = output.match(/MachineGuid\s+REG_SZ\s+(\S+)/);
@@ -170,6 +172,8 @@ export class SecureStorageBackend implements CredentialBackend {
   private cachedStore: CredentialStore | null = null;
   private encryptionKey: Buffer | null = null;
   private salt: Buffer | null = null;
+  private readonly keyCacheBySalt = new Map<string, Buffer>();
+  private readonly stableMachineIdDigest: Buffer;
   private readonly credentialsFile: string;
   private readonly credentialsDir: string;
   private readonly machineId: string;
@@ -178,6 +182,10 @@ export class SecureStorageBackend implements CredentialBackend {
     this.credentialsFile = options.credentialsFile ?? DEFAULT_CREDENTIALS_FILE;
     this.credentialsDir = dirname(this.credentialsFile);
     this.machineId = options.machineId ?? getStableMachineId();
+    this.stableMachineIdDigest = createHash('sha256')
+      .update(this.machineId)
+      .update('craft-agent-v2')
+      .digest();
   }
 
   async isAvailable(): Promise<boolean> {
@@ -251,6 +259,8 @@ export class SecureStorageBackend implements CredentialBackend {
     return ids.filter((id) => {
       if (filter.type && id.type !== filter.type) return false;
       if (filter.workspaceId && id.workspaceId !== filter.workspaceId) return false;
+      if (filter.sourceId && id.sourceId !== filter.sourceId) return false;
+      if (filter.connectionSlug && id.connectionSlug !== filter.connectionSlug) return false;
       if (filter.name && id.name !== filter.name) return false;
       return true;
     });
@@ -399,19 +409,31 @@ export class SecureStorageBackend implements CredentialBackend {
   }
 
   private getEncryptionKey(salt: Buffer): Buffer {
-    if (this.encryptionKey) return this.encryptionKey;
+    const saltHex = salt.toString('hex');
+    const cached = this.keyCacheBySalt.get(saltHex);
+    if (cached) {
+      this.encryptionKey = cached;
+      return cached;
+    }
 
-    // New stable machine ID using hardware UUID (v2)
-    // This is far more stable than hostname which can change with network/DHCP
-    const stableMachineId = createHash('sha256')
-      .update(this.machineId)
-      .update('craft-agent-v2') // Bumped version for new key derivation
-      .digest();
+    // Derive key using PBKDF2 from precomputed stable machine digest
+    const derived = pbkdf2Sync(
+      this.stableMachineIdDigest,
+      salt,
+      PBKDF2_ITERATIONS,
+      KEY_SIZE,
+      'sha256',
+    );
+    if (this.keyCacheBySalt.size >= 8) {
+      const oldestKey = this.keyCacheBySalt.keys().next().value;
+      if (oldestKey !== undefined) {
+        this.keyCacheBySalt.delete(oldestKey);
+      }
+    }
+    this.keyCacheBySalt.set(saltHex, derived);
+    this.encryptionKey = derived;
 
-    // Derive key using PBKDF2
-    this.encryptionKey = pbkdf2Sync(stableMachineId, salt, PBKDF2_ITERATIONS, KEY_SIZE, 'sha256');
-
-    return this.encryptionKey;
+    return derived;
   }
 
   /**

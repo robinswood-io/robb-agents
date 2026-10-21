@@ -190,13 +190,16 @@ export class RateLimiter {
   private readonly windowMs: number
   /** Global counter — blocks all IPs after too many total failures (defeats IP spoofing). */
   private readonly maxGlobalAttempts: number
+  /** Maximum tracked per-IP buckets to bound memory under distributed floods. */
+  private readonly maxEntries: number
   private globalAttempts = 0
   private globalWindowStart = Date.now()
 
-  constructor(maxAttempts = 5, windowMs = 60_000, maxGlobalAttempts = 20) {
+  constructor(maxAttempts = 5, windowMs = 60_000, maxGlobalAttempts = 20, maxEntries = 4096) {
     this.maxAttempts = maxAttempts
     this.windowMs = windowMs
     this.maxGlobalAttempts = maxGlobalAttempts
+    this.maxEntries = maxEntries
   }
 
   /** Returns true if the request should be allowed, false if rate-limited. */
@@ -217,6 +220,12 @@ export class RateLimiter {
     const entry = this.entries.get(ip)
 
     if (!entry || now - entry.windowStart > this.windowMs) {
+      if (!entry && this.entries.size >= this.maxEntries) {
+        const oldestIp = this.entries.keys().next().value
+        if (oldestIp !== undefined) {
+          this.entries.delete(oldestIp)
+        }
+      }
       this.entries.set(ip, { attempts: 1, windowStart: now })
       return true
     }
