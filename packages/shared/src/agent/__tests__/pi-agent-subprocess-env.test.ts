@@ -47,6 +47,7 @@ describe('PiAgent subprocess environment boundary', () => {
     expect(childEnv.EXPLICIT_PROVIDER_VALUE).toBe('granted');
     expect(childEnv.GOOGLE_CLOUD_PROJECT).toBe('project-id');
     expect(childEnv.CRAFT_DEBUG).toBe('0');
+    expect(childEnv.RTK_TELEMETRY_DISABLED).toBe('1');
 
     expect(childEnv.ROBB_SENTINEL_SECRET).toBeUndefined();
     expect(childEnv.LC_SENTINEL_SECRET).toBeUndefined();

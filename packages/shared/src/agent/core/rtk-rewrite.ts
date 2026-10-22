@@ -43,7 +43,7 @@ export function getRtkOutputFilter(command: string, exclude: string[] = []): str
   if (!name || exclude.includes(name)) return undefined;
   // Explicit machine-readable/raw requests and output-file/report contracts
   // always retain their byte-for-byte native output.
-  if (args.some(arg => /^(?:--(?:json|jsonl|ndjson|xml|csv|tsv|porcelain|raw|binary|null|null-data|null-output|print0|format|pretty|name-only|name-status|numstat|output|output-file|reporter|junitxml)(?:[=\-]|$)|-[^-]*[z0][^-]*$|-print0$|-printf$|-o$)/i.test(arg))) return undefined;
+  if (args.some(arg => /^(?:--(?:json|jsonl|ndjson|xml|csv|tsv|porcelain|raw|binary|null|null-data|null-output|print0|format|pretty|name-only|name-status|numstat|output|output-file|reporter|junitxml|watch)(?:[=\-]|$)|-[^-]*[z0][^-]*$|-print0$|-printf$|-o$)/i.test(arg))) return undefined;
   if (name === 'git') {
     // Git global options can alter output/dispatch; use only literal forms.
     if (args[0] === 'status') return 'git-status';
@@ -51,7 +51,11 @@ export function getRtkOutputFilter(command: string, exclude: string[] = []): str
     // Patches, show output and source reads stay intact for review/evidence.
     return undefined;
   }
-  if (name === 'cargo' && args[0] === 'test') return 'cargo-test';
+  if (name === 'cargo' && (args[0] === 'test' || args[0] === 'check' || args[0] === 'clippy')) return 'cargo-test';
+  if (name === 'go' && args[0] === 'test') return 'go-test';
+  if (name === 'go' && args[0] === 'build') return 'go-build';
+  if (name === 'ruff' && args[0] === 'check' && !args.includes('--fix')) return 'ruff-check';
+  if (name === 'ruff' && args[0] === 'format' && args.includes('--check')) return 'ruff-format';
   if (name === 'pytest') return 'pytest';
   if (name === 'tsc') return 'tsc';
   if (name === 'vitest') return 'vitest';
@@ -60,9 +64,21 @@ export function getRtkOutputFilter(command: string, exclude: string[] = []): str
   if (name === 'rg' || name === 'grep') return 'grep';
   if (name === 'fd') return 'find';
   if (name === 'find' && !args.some(arg => /^-(?:exec|execdir|ok|okdir|delete|fprint|fprintf)/.test(arg))) return 'find';
+  if ((name === 'bun' || name === 'npm' || name === 'pnpm' || name === 'yarn') && args[0] === 'test') return 'vitest';
   // Supported direct runners; no arbitrary npm scripts or nested shell eval.
-  if ((name === 'npx' || name === 'bunx') && ['tsc', 'vitest', 'prettier'].includes(args[0] ?? '')) {
+  const DIRECT_RUNNER_TOOLS = ['tsc', 'vitest', 'prettier', 'pytest', 'mypy', 'ruff'];
+  if ((name === 'npx' || name === 'bunx' || name === 'pnpm' || name === 'yarn') && DIRECT_RUNNER_TOOLS.includes(args[0] ?? '')) {
     return getRtkOutputFilter(quote(args), exclude);
+  }
+  if ((name === 'pnpm' || name === 'npm' || name === 'yarn' || name === 'bun' || name === 'uv' || name === 'poetry')
+    && (args[0] === 'exec' || args[0] === 'run')
+    && DIRECT_RUNNER_TOOLS.includes(args[1] ?? '')) {
+    return getRtkOutputFilter(quote(args.slice(1)), exclude);
+  }
+  if ((name === 'python' || name === 'python3')
+    && args[0] === '-m'
+    && ['pytest', 'mypy', 'ruff'].includes(args[1] ?? '')) {
+    return getRtkOutputFilter(quote(args.slice(1)), exclude);
   }
   return undefined;
 }

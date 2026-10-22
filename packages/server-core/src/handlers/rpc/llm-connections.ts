@@ -395,20 +395,41 @@ export function registerLlmConnectionsHandlers(server: RpcServer, deps: HandlerD
 
   server.handle(RPC_CHANNELS.pi.GET_PROVIDER_MODELS, async (_ctx, provider: string) => {
     const { getModels } = await import('@earendil-works/pi-ai/compat')
+    const { getPiModelsForAuthProvider } = await import('@craft-agent/shared/config')
+    const SUPPLEMENTAL_COSTS: Readonly<Record<string, { input: number; output: number }>> = {
+      'claude-fable-5-1': { input: 10, output: 50 },
+      'claude-opus-5': { input: 5, output: 25 },
+      'gpt-6-astra': { input: 10, output: 50 },
+      'gpt-5.6-sol': { input: 4, output: 20 },
+      'gpt-6.1-sol': { input: 2, output: 10 },
+      'gpt-6-sol': { input: 2, output: 10 },
+      'gpt-5.6-terra': { input: 2, output: 12 },
+      'gpt-5.6-luna': { input: 0.2, output: 1.2 },
+      'gpt-6-luna': { input: 0.1, output: 0.5 },
+      'mistral-medium-3-5': { input: 0.4, output: 2 },
+    }
     try {
-      const models = getModels(provider as Parameters<typeof getModels>[0])
-        .filter(model => isModelAllowedForAuthProvider(model.id, provider))
-      const sorted = [...models].sort((a, b) => b.cost.output - a.cost.output || b.cost.input - a.cost.input)
-      return {
-        models: sorted.map(m => ({
+      const sdkCostById = new Map<string, { input: number; output: number }>()
+      for (const m of getModels(provider as Parameters<typeof getModels>[0])) {
+        sdkCostById.set(m.id, { input: m.cost.input, output: m.cost.output })
+      }
+      const catalog = getPiModelsForAuthProvider(provider)
+      const enriched = catalog.map(m => {
+        const bareId = m.id.startsWith('pi/') ? m.id.slice(3) : m.id
+        const cost = sdkCostById.get(bareId) ?? SUPPLEMENTAL_COSTS[bareId] ?? { input: 0, output: 0 }
+        return {
           id: m.id.startsWith('pi/') ? m.id : `pi/${m.id}`,
           name: m.name,
-          costInput: m.cost.input,
-          costOutput: m.cost.output,
+          costInput: cost.input,
+          costOutput: cost.output,
           contextWindow: m.contextWindow,
-          reasoning: m.reasoning,
-        })),
-        totalCount: models.length,
+          reasoning: m.supportsThinking ?? true,
+        }
+      })
+      const sorted = [...enriched].sort((a, b) => b.costOutput - a.costOutput || b.costInput - a.costInput)
+      return {
+        models: sorted,
+        totalCount: enriched.length,
       }
     } catch {
       return { models: [], totalCount: 0 }

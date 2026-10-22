@@ -45,6 +45,7 @@ describe('accepted amendments promote completion evidence without replacing the 
   }finally{await manager.cleanup();rmSync(directory,{recursive:true,force:true});}
  });
  it('the real host refuses an unregistered artifact completion after accepting a new instruction',async()=>{
+  process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT='1';
   const directory=mkdtempSync(join(tmpdir(),'objective-amendment-'));
   const manager=new SessionManager();const host=manager as any;
   try{
@@ -62,7 +63,7 @@ describe('accepted amendments promote completion evidence without replacing the 
    expect(managed.activeObjective).toMatchObject({objectiveId:'root',requiresExecutionEvidence:true,requiresAcceptanceCriteria:true});
    expect(managed.activeObjective?.terminalState).not.toBe('complete_verified');
    expect(recovery).toContain('objective_incomplete');
-  }finally{await manager.cleanup();rmSync(directory,{recursive:true,force:true});}
+  }finally{delete process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT;await manager.cleanup();rmSync(directory,{recursive:true,force:true});}
  });
  it('rejects a bare success claim after a direct discussion becomes artifact work',()=>{
   const first=original();

@@ -42,10 +42,10 @@ import { resolvePiModelWithCustomFallback, requireExplicitPiModel } from './mode
 import { registerSupplementalCatalogModels } from './catalog-model-registration.ts';
 import { activateEphemeralQueryModel, resolveEphemeralQueryThinkingLevel, resolveQueryModel } from './query-model.ts';
 import { applyTokenUpdate, type PiCredential } from './token-update.ts';
-import { buildCustomEndpointModelDef, normalizeCustomEndpointModelEntry, type CustomEndpointModelEntry, type CustomEndpointModelOverrides } from './custom-endpoint-models.ts';
+import { buildCustomEndpointModelDef, normalizeCustomEndpointBaseUrl, normalizeCustomEndpointModelEntry, type CustomEndpointModelEntry, type CustomEndpointModelOverrides } from './custom-endpoint-models.ts';
 
 // Direct source imports from shared (bundled by bun build)
-import { handleLargeResponse, estimateTokens, tokenLimitFor } from '../../shared/src/utils/large-response.ts';
+import { handleLargeResponse, estimateTokens, estimateTokensDensityAware, isAlreadyGuardedLargeResponse, tokenLimitFor } from '../../shared/src/utils/large-response.ts';
 import { resolveAgentCostControlPolicy, resolveEffectiveAgentContextLimits } from '../../shared/src/config/agent-cost-control.ts';
 import { loadWorkspaceConfig } from '../../shared/src/workspaces/storage.ts';
 import { getSessionPlansPath, getSessionPath } from '../../shared/src/sessions/storage.ts';
@@ -67,7 +67,7 @@ import { OVERFLOW_RECOVERY_COMPACTION_INSTRUCTIONS, prepareMessagesForOverflowCo
 import { IncompleteToolTailRecovery, prepareMessagesForIncompleteTailContinuation } from './incomplete-tool-tail-recovery.ts';
 import { ToolLoopBudget } from './tool-loop-budget.ts';
 import { finishToolLoopResult, installToolLoopFeedback } from './tool-loop-feedback.ts';
-import { INTRA_TURN_CONTEXT_CHECKPOINT_ERROR, estimateIntraTurnContextTokens, needsIntraTurnContextCheckpoint } from './intra-turn-context-guard.ts';
+import { INTRA_TURN_CONTEXT_CHECKPOINT_ERROR, estimateIntraTurnContextTokens, needsIntraTurnContextCheckpoint, pruneIntraTurnToolResults } from './intra-turn-context-guard.ts';
 import { createToolExecutionCheckpointResult } from './tool-execution-checkpoint.ts';
 import { normalizeSessionPathTokens } from './session-path-normalization.ts';
 import { ReadToolTimeoutError, resolveReadToolTimeoutMs, withReadToolTimeout } from './read-tool-timeout.ts';
@@ -265,7 +265,7 @@ let initConfig: Extract<InboundMessage, { type: 'init' }> | null = null;
 let currentUserMessage = '';
 const sourceToolActivation = new SourceToolActivationController();
 const incompleteToolTailRecovery = new IncompleteToolTailRecovery();
-const toolLoopBudget = new ToolLoopBudget(8, 5, 48, 64, 4, 16, 256, 0.2);
+const toolLoopBudget = new ToolLoopBudget(32, 12, 512, 1024, 0, 64, 2048, 0.05);
 
 // Pending promises for async handshakes
 const pendingPreToolUse = new Map<string, { resolve: (response: { action: string; input?: Record<string, unknown>; reason?: string }) => void }>();
@@ -515,8 +515,9 @@ function registerCustomEndpointModels(
     }
   }
   const allIds = [...customEndpointModelIds];
+  const normalizedBaseUrl = normalizeCustomEndpointBaseUrl(baseUrl, api);
   registry.registerProvider('custom-endpoint', {
-    baseUrl,
+    baseUrl: normalizedBaseUrl,
     apiKey: resolveCustomEndpointApiKey(),
     api,
     authHeader: true,
@@ -524,9 +525,10 @@ function registerCustomEndpointModels(
       id,
       { supportsImages: initConfig?.customEndpoint?.supportsImages === true },
       customModelOverrides.get(id),
+      api,
     )),
   });
-  debugLog(`Registered custom endpoint: ${baseUrl} with ${allIds.length} model(s) [${allIds.join(', ')}], api: ${api}`);
+  debugLog(`Registered custom endpoint: ${normalizedBaseUrl} with ${allIds.length} model(s) [${allIds.join(', ')}], api: ${api}`);
 }
 
 /**
@@ -741,7 +743,10 @@ async function ensureSession(): Promise<AgentSession> {
         : 0;
     if (needsIntraTurnContextCheckpoint(transformed, compactAtTokens)) {
       debugLog(`Intra-turn context checkpoint: estimated=${estimateIntraTurnContextTokens(transformed)} threshold=${compactAtTokens}`);
-      throw new Error(INTRA_TURN_CONTEXT_CHECKPOINT_ERROR);
+      if (process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT === '1') {
+        throw new Error(INTRA_TURN_CONTEXT_CHECKPOINT_ERROR);
+      }
+      return pruneIntraTurnToolResults(transformed, compactAtTokens);
     }
     return transformed;
   };
@@ -856,7 +861,9 @@ function wrapSingleTool(tool: ToolDefinition<any, any>): ToolDefinition<any, any
     const loopDecision = toolLoopBudget.observe(sdkToolName, inputObj);
     if (loopDecision.action === 'block') {
       const reason = loopDecision.message ?? 'Repeated unchanged tool call blocked.';
-      return createToolExecutionCheckpointResult(reason);
+      return process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT === '1'
+        ? createToolExecutionCheckpointResult(reason)
+        : makeErrorResult(reason);
     }
 
     const finishResult = (result: AgentToolResult<any>) => finishToolLoopResult(result, loopDecision, {
@@ -891,7 +898,32 @@ function wrapSingleTool(tool: ToolDefinition<any, any>): ToolDefinition<any, any
     // tracks set_model mid-session, not the model that was active at session
     // creation. Falls back to the fixed default when the model isn't set yet.
     const modelContextWindow = piSession?.agent.state.model?.contextWindow;
-    if (estimateTokens(resultText) > tokenLimitFor(modelContextWindow) && initConfig) {
+    const baseTokenLimit = tokenLimitFor(modelContextWindow);
+    const plainEstimatedTokens = estimateTokens(resultText);
+    const estimatedResultTokens = estimateTokensDensityAware(resultText);
+    const isDensePayload = estimatedResultTokens > plainEstimatedTokens;
+    // Built-in Read already caps files at 2,000 lines / 50KB (~12,500 tokens).
+    // Allow normal code/text Read results up to 12.5k tokens on standard-window
+    // models so reading source files does not replace exact lines with a summary,
+    // while base64-dense Read payloads still spill at baseTokenLimit.
+    const effectiveTokenLimit =
+      sdkToolName === 'Read'
+      && !isDensePayload
+      && (modelContextWindow === undefined || modelContextWindow >= 100_000)
+        ? Math.max(baseTokenLimit, 12_500)
+        : baseTokenLimit;
+    const isLocalCodingTool =
+      sdkToolName === 'Bash'
+      || sdkToolName === 'Grep'
+      || sdkToolName === 'Find'
+      || sdkToolName === 'Ls'
+      || sdkToolName === 'Read';
+
+    if (
+      initConfig
+      && !isAlreadyGuardedLargeResponse(resultText)
+      && estimatedResultTokens > effectiveTokenLimit
+    ) {
       try {
         const sessionPath = getSessionPath(
           initConfig.workspaceRootPath,
@@ -907,7 +939,11 @@ function wrapSingleTool(tool: ToolDefinition<any, any>): ToolDefinition<any, any
             intent,
             userRequest: currentUserMessage,
           },
-          summarize: async prompt => (await queryLlm({ prompt })).text,
+          // Local deterministic coding tools use zero-LLM-cost head+tail preview +
+          // saved file reference; external tools use minimal thinking budget.
+          summarize: isLocalCodingTool
+            ? undefined
+            : async prompt => (await queryLlm({ prompt }, { thinkingLevel: 'minimal' })).text,
           contextWindow: modelContextWindow,
         });
 
@@ -950,10 +986,12 @@ function buildProxyTools(): ToolDefinition<any, any>[] {
     description: def.description,
     // Pi SDK omits tools without promptSnippet from the system prompt's
     // "Available tools" section, making them invisible to the LLM.
-    // Derive a snippet from the description so proxy tools are listed.
-    promptSnippet: def.description.length > 200
-      ? def.description.slice(0, 197) + '...'
-      : def.description,
+    // Derive a compact snippet from the first paragraph of the description
+    // (excluding appended budget/efficiency hints already in the tool schema).
+    promptSnippet: (() => {
+      const lead = def.description.split('\n\n')[0]?.trim() || def.description;
+      return lead.length > 140 ? lead.slice(0, 137) + '...' : lead;
+    })(),
     parameters: def.inputSchema,
     execute: async (
       toolCallId: string,
@@ -1524,7 +1562,7 @@ async function handleMiniCompletion(msg: Extract<InboundMessage, { type: 'mini_c
     );
     const result = await queryLlm(
       { prompt: msg.prompt, model: activeModel.id },
-      { thinkingLevel: THINKING_TO_PI[initConfig.thinkingLevel as keyof typeof THINKING_TO_PI] },
+      { thinkingLevel: 'minimal' },
     );
     send({ type: 'mini_completion_result', id: msg.id, text: result.text || null });
   } catch (error) {

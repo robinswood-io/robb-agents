@@ -30,7 +30,10 @@ describe('Google Code Assist provider', () => {
     expect(registry.getAvailable().filter(m => m.provider === 'google-gemini-code-assist').map(m => m.id)).toEqual([
       'gemini-2.5-flash',
       'gemini-2.5-pro',
+      'gemini-3.5-flash',
+      'gemini-3.1-pro-preview',
       'gemini-3-flash-preview',
+      'gemini-3.1-flash-lite',
     ]);
   });
 
@@ -353,6 +356,77 @@ describe('Google Code Assist provider', () => {
       } else {
         process.env.ROBB_DISABLE_GOOGLE_CODE_ASSIST_V1INTERNAL = originalKillSwitch;
       }
+    }
+  });
+
+  it('streams thought parts as separate thinking blocks before visible text', async () => {
+    const originalFetch = globalThis.fetch;
+    const fetchMock = mock(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes(':loadCodeAssist')) {
+        return new Response(JSON.stringify({
+          currentTier: { id: 'STANDARD', name: 'Gemini Code Assist' },
+          cloudaicompanionProject: 'test-project',
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      }
+      if (url.includes(':streamGenerateContent')) {
+        return sseResponse([
+          {
+            traceId: 'trace-thought',
+            response: {
+              candidates: [{
+                content: {
+                  parts: [
+                    { thought: true, text: 'Analyse du probleme...', thoughtSignature: 'sig-1' },
+                  ],
+                },
+              }],
+            },
+          },
+          {
+            response: {
+              candidates: [{
+                content: {
+                  parts: [
+                    { text: 'Reponse finale.' },
+                  ],
+                },
+                finishReason: 'STOP',
+              }],
+              usageMetadata: { promptTokenCount: 4, candidatesTokenCount: 5, thoughtsTokenCount: 6, totalTokenCount: 15 },
+            },
+          },
+        ]);
+      }
+      throw new Error(`Unexpected fetch URL: ${url}`);
+    });
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+    try {
+      const auth = AuthStorage.inMemory({
+        'google-gemini-code-assist': { type: 'api_key', key: 'test-access-token' },
+      });
+      const registry = ModelRegistry.inMemory(auth);
+      registerGoogleCodeAssistProvider(registry);
+      const model = registry.find('google-gemini-code-assist', 'gemini-3.5-flash');
+      expect(model).toBeDefined();
+
+      const stream = streamGoogleCodeAssist(
+        model!,
+        { messages: [{ role: 'user', content: 'Explique', timestamp: Date.now() }] },
+        { apiKey: 'test-access-token', reasoning: 'high' },
+      );
+      const events: AssistantMessageEvent[] = [];
+      for await (const event of stream) events.push(event);
+
+      const done = events.find((event): event is Extract<AssistantMessageEvent, { type: 'done' }> => event.type === 'done');
+      expect(done?.message.content).toEqual([
+        { type: 'thinking', thinking: 'Analyse du probleme...', thinkingSignature: 'sig-1' },
+        { type: 'text', text: 'Reponse finale.' },
+      ]);
+      expect(events.some(e => e.type === 'thinking_delta')).toBe(true);
+    } finally {
+      globalThis.fetch = originalFetch;
     }
   });
 });

@@ -9280,8 +9280,14 @@ export class SessionManager implements ISessionManager {
         )
         const reviewValidation = validateDelegatedReviewCompletion({ parentSessionId: managed.parentSessionId, sessionId: managed.id, sourceSlugs: managed.enabledSourceSlugs,
           objective, messages: managed.messages, finalMessage })
-        const evidenceGap = !reviewValidation && objective.evidenceRequirement ? getObjectiveEvidenceCompletionGap(managed.id) : undefined
-        const executionEvidenceMissing = !reviewValidation && objectiveRequiresExecutionEvidence(objective, findObjectiveText(managed.messages, objective))
+        const explicitStructuredTracking = this.hasExplicitStructuredObjectiveTracking(
+          managed,
+          objective,
+          finalMessage,
+          pending,
+        )
+        const evidenceGap = !reviewValidation && explicitStructuredTracking && objective.evidenceRequirement ? getObjectiveEvidenceCompletionGap(managed.id) : undefined
+        const executionEvidenceMissing = !reviewValidation && explicitStructuredTracking && objectiveRequiresExecutionEvidence(objective, findObjectiveText(managed.messages, objective))
           && !hasObjectiveExecutionEvidence(managed.messages, objective.userMessageId)
         const validation = reviewValidation ?? validateObjectiveOutcome(finalMessage.objectiveOutcome, {
           objective: completionObjective, messages: managed.messages, sessionId: managed.id, extractionError: finalMessage.objectiveOutcomeError,
@@ -9292,13 +9298,16 @@ export class SessionManager implements ISessionManager {
         if (validation.declaration && !finalMessage.objectiveOutcome) {
           finalMessage.objectiveOutcome = validation.declaration
         }
-        const state = reviewValidation?.state ?? classifyObjectiveTerminalState(finalMessage.content, {
+        const rawState = reviewValidation?.state ?? classifyObjectiveTerminalState(finalMessage.content, {
           evidenceGap, executionEvidenceMissing,
-          structuredOutcomeRequired: requiresStructuredObjectiveOutcome(completionObjective),
+          structuredOutcomeRequired: explicitStructuredTracking && requiresStructuredObjectiveOutcome(completionObjective),
           ...(finalMessage.objectiveOutcome || finalMessage.objectiveOutcomeError || validation.declaration ? {
             declaredState: validation.state, structuredOutcomeValid: validation.valid,
           } : {}),
         })
+        const state = !reviewValidation && !explicitStructuredTracking && rawState === 'continue'
+          ? 'complete_verified'
+          : rawState
         invalidFinal = state === 'continue'
         if (invalidFinal) {
           const validContinuation = validation.valid && validation.state === 'continue'
@@ -11833,20 +11842,34 @@ export class SessionManager implements ISessionManager {
       return denyAll('terminal-reconciliation')
     }
     const pendingSteers = managed.pendingUserSteers
-    if (pendingSteers?.size) {
-      // New authority is usable only by the request that introduced it. An old
-      // request, an uncorrelated retry, or a provider reentry after permission/
-      // source activation receives no capabilities at all.
-      const accepted = currentUserRequest
-        ? pendingSteers.get(currentUserRequest)?.objectiveAfter
-        : undefined
-      if (accepted) return this.resolveObjectiveMutationAuthority(managed, accepted)
-      const terminalLocked = [...pendingSteers.values()].some(pending => (
-        !!pending.objectiveAfter?.terminalReconciliation
-      ))
-      return denyAll(terminalLocked ? 'terminal-reconciliation' : 'invalid-lineage')
+    const resolveBaseAuthority = () => {
+      if (pendingSteers?.size) {
+        // New authority is usable only by the request that introduced it. An old
+        // request, an uncorrelated retry, or a provider reentry after permission/
+        // source activation receives no capabilities at all.
+        const accepted = currentUserRequest
+          ? pendingSteers.get(currentUserRequest)?.objectiveAfter
+          : undefined
+        if (accepted) return this.resolveObjectiveMutationAuthority(managed, accepted)
+        const terminalLocked = [...pendingSteers.values()].some(pending => (
+          !!pending.objectiveAfter?.terminalReconciliation
+        ))
+        return denyAll(terminalLocked ? 'terminal-reconciliation' : 'invalid-lineage')
+      }
+      return this.resolveObjectiveMutationAuthority(managed, managed.activeObjective)
     }
-    return this.resolveObjectiveMutationAuthority(managed, managed.activeObjective)
+    const authority = resolveBaseAuthority()
+    if (this.isLegacyHostObjectiveContractEnabled(managed)) {
+      return authority
+    }
+    return {
+      authorized: undefined as unknown as boolean,
+      sensitiveActionAuthorized: undefined as unknown as boolean,
+      authorizationSegments: authority.authorizationSegments ?? [],
+      ...(authority.authenticatedUserAuthorizationSegments ? {
+        authenticatedUserAuthorizationSegments: authority.authenticatedUserAuthorizationSegments,
+      } : {}),
+    }
   }
 
   /**
@@ -20386,6 +20409,24 @@ export class SessionManager implements ISessionManager {
     } catch (error) { sessionLog.warn('User correction capture unavailable', { sessionId: managed.id, error: String(error) }) }
   }
 
+  private isLegacyHostObjectiveContractEnabled(managed: ManagedSession): boolean {
+    return process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT === '1' || isTerminalReviewSession(managed)
+  }
+
+  private hasExplicitStructuredObjectiveTracking(
+    managed: ManagedSession,
+    objective: ObjectiveContract | undefined,
+    finalMessage: Message | undefined,
+    pendingRecovery: PendingTurnRecovery | undefined,
+  ): boolean {
+    if (this.isLegacyHostObjectiveContractEnabled(managed)) return true
+    if (finalMessage?.objectiveOutcome || finalMessage?.objectiveOutcomeError) return true
+    if (objective?.acceptanceCriteria?.length) return true
+    if (pendingRecovery?.validationGaps?.length) return true
+    if (objective?.lastOutcome?.state === 'continue' && pendingRecovery?.budgetHistoryUnavailable === true) return true
+    return false
+  }
+
   private rehydrateObjectiveEvidence(managed: ManagedSession): void {
     const objective = managed.activeObjective
     const contractSegments = objective ? objectiveEvidenceContractSegments(managed.messages, objective) : []
@@ -21209,7 +21250,7 @@ export class SessionManager implements ISessionManager {
       const agent = managed.agent
       let steered = false
       let finishToolAdmissionRebind: ((committed: boolean) => void) | undefined
-      const steeringMessage = steeredObjective
+      const steeringMessage = steeredObjective && this.isLegacyHostObjectiveContractEnabled(managed)
         ? `${message}\n\n${this.buildObjectiveRuntimePrompt(managed, steeredObjective)}`
         : message
       // Redirect transports only text. Keep attachments and model-input options
@@ -23125,10 +23166,18 @@ export class SessionManager implements ISessionManager {
       const directCostLimitContinuation = admissionOriginKind === 'user-input'
         && !!trustedUserInput
         && isCostLimitContinuationAnswer(trustedUserInput)
+      const directHumanTurn = admissionTurnKind === 'direct'
+        && !options?.hidden
+        && !options?.internalOrigin
+        && !options?.automaticRecovery
+      const hasExplicitHardUsdBudget = typeof admissionWorkspaceConfig?.costControl?.budgets?.hardSessionUsd === 'number'
       const costProviderAdmission = decideCostProviderAdmission({
         budgetState: admissionBudgetState,
         turnKind: admissionTurnKind,
-        hostAuthenticatedUserOverride: directCostLimitContinuation || !!queuedCostLimitContinuation,
+        hostAuthenticatedUserOverride: directHumanTurn
+          || directCostLimitContinuation
+          || !!queuedCostLimitContinuation
+          || (this.isManagedSessionYolo(managed) && !hasExplicitHardUsdBudget),
       })
       if (admissionCostPolicy.enabled && costProviderAdmission.action === 'pause-for-user') {
         sessionLog.warn('cost-control blocked autonomous provider admission at the hard session limit', {
@@ -23951,7 +24000,8 @@ export class SessionManager implements ISessionManager {
         }
       } catch (error) { sessionLog.warn('Completed-chat context unavailable', { sessionId, error: String(error) }) }
       assertActivePreparation()
-      if (!cleanRecoveryHandoffPrompt && managed.activeObjective?.terminalState === 'active') {
+      if (!cleanRecoveryHandoffPrompt && managed.activeObjective?.terminalState === 'active'
+        && this.isLegacyHostObjectiveContractEnabled(managed)) {
         effectiveMessage = `${effectiveMessage}\n\n${this.buildObjectiveRuntimePrompt(managed, managed.activeObjective)}`
       }
       if (!cleanRecoveryHandoffPrompt && managed.projectId) {
@@ -24570,7 +24620,15 @@ export class SessionManager implements ISessionManager {
             && (emittedTerminalState === 'final-assistant' || emittedTerminalState === 'premature-final-assistant')
             ? validateDelegatedReviewCompletion({ parentSessionId: managed.parentSessionId, sessionId: managed.id, sourceSlugs: managed.enabledSourceSlugs,
               objective: managed.activeObjective, messages: managed.messages, finalMessage }) : undefined
-          const latestTurnTerminalState = reviewValidation ? 'final-assistant' : emittedTerminalState
+          const explicitStructuredTracking = this.hasExplicitStructuredObjectiveTracking(
+            managed,
+            managed.activeObjective,
+            finalMessage,
+            managed.pendingTurnRecovery,
+          )
+          const latestTurnTerminalState = reviewValidation || (!explicitStructuredTracking && emittedTerminalState === 'premature-final-assistant')
+            ? 'final-assistant'
+            : emittedTerminalState
           if (managed.pendingTurnRecovery?.continuationRequired) {
             sessionLog.warn(`Session ${sessionId} reached a host-authored tool checkpoint`)
             const recoveryQueued = await this.enqueueAutomaticTurnRecovery(managed, 'tool_checkpoint')
@@ -24715,12 +24773,12 @@ export class SessionManager implements ISessionManager {
               managed.messages,
               managed.activeObjective.userMessageId,
             )
-            const evidenceGap = !reviewValidation && managed.activeObjective.evidenceRequirement
+            const evidenceGap = !reviewValidation && explicitStructuredTracking && managed.activeObjective.evidenceRequirement
               ? getObjectiveEvidenceCompletionGap(managed.id)
               : undefined
-            const executionEvidenceMissing = !reviewValidation && objectiveRequiresExecutionEvidence(managed.activeObjective, findObjectiveText(managed.messages, managed.activeObjective))
+            const executionEvidenceMissing = !reviewValidation && explicitStructuredTracking && objectiveRequiresExecutionEvidence(managed.activeObjective, findObjectiveText(managed.messages, managed.activeObjective))
               && !hasExecutionEvidence
-            const structuredOutcomeRequired = requiresStructuredObjectiveOutcome(completionObjective)
+            const structuredOutcomeRequired = explicitStructuredTracking && requiresStructuredObjectiveOutcome(completionObjective)
             const outcomeValidation = reviewValidation ?? validateObjectiveOutcome(finalMessage?.objectiveOutcome, {
               objective: completionObjective,
               messages: managed.messages,
@@ -24735,7 +24793,7 @@ export class SessionManager implements ISessionManager {
             if (finalMessage && outcomeValidation.declaration && !finalMessage.objectiveOutcome) {
               finalMessage.objectiveOutcome = outcomeValidation.declaration
             }
-            const objectiveTerminalState = reviewValidation?.state ?? classifyObjectiveTerminalState(
+            const rawObjectiveTerminalState = reviewValidation?.state ?? classifyObjectiveTerminalState(
               finalMessage?.content ?? '',
               {
                 evidenceGap,
@@ -24747,6 +24805,9 @@ export class SessionManager implements ISessionManager {
                 } : {}),
               },
             )
+            const objectiveTerminalState = !reviewValidation && !explicitStructuredTracking && rawObjectiveTerminalState === 'continue'
+              ? 'complete_verified'
+              : rawObjectiveTerminalState
 
             // The provider cannot terminalize a parent while a child bound to
             // this exact objective is still running. Keep the objective active

@@ -327,11 +327,20 @@ export function streamGoogleCodeAssist(model: Model<any>, context: Context, opti
       stream.push({ type: 'start', partial: output });
       let currentTextIndex: number | null = null;
       let currentText = '';
+      let currentThinkingIndex: number | null = null;
+      let currentThinking = '';
       const endText = () => {
         if (currentTextIndex !== null) {
           stream.push({ type: 'text_end', contentIndex: currentTextIndex, content: currentText, partial: output });
           currentTextIndex = null;
           currentText = '';
+        }
+      };
+      const endThinking = () => {
+        if (currentThinkingIndex !== null) {
+          stream.push({ type: 'thinking_end', contentIndex: currentThinkingIndex, content: currentThinking, partial: output });
+          currentThinkingIndex = null;
+          currentThinking = '';
         }
       };
 
@@ -340,7 +349,27 @@ export function streamGoogleCodeAssist(model: Model<any>, context: Context, opti
         const response = chunk.response;
         const candidate = response?.candidates?.[0];
         for (const part of candidate?.content?.parts ?? []) {
+          if (part.thought === true && typeof part.text === 'string') {
+            endText();
+            if (currentThinkingIndex === null) {
+              output.content.push({
+                type: 'thinking',
+                thinking: '',
+                ...(part.thoughtSignature ? { thinkingSignature: part.thoughtSignature } : {}),
+              });
+              currentThinkingIndex = output.content.length - 1;
+              stream.push({ type: 'thinking_start', contentIndex: currentThinkingIndex, partial: output });
+            }
+            const thinkingBlock = output.content[currentThinkingIndex] as { type: 'thinking'; thinking: string; thinkingSignature?: string };
+            thinkingBlock.thinking += part.text;
+            if (part.thoughtSignature) thinkingBlock.thinkingSignature = part.thoughtSignature;
+            currentThinking += part.text;
+            stream.push({ type: 'thinking_delta', contentIndex: currentThinkingIndex, delta: part.text, partial: output });
+            continue;
+          }
+
           if (part.text !== undefined) {
+            endThinking();
             if (currentTextIndex === null) {
               output.content.push({ type: 'text', text: '' });
               currentTextIndex = output.content.length - 1;
@@ -353,12 +382,14 @@ export function streamGoogleCodeAssist(model: Model<any>, context: Context, opti
           }
 
           if (part.functionCall) {
+            endThinking();
             endText();
             const toolCall = {
               type: 'toolCall' as const,
               id: part.functionCall.id || `${part.functionCall.name}_${Date.now()}_${++toolCallCounter}`,
               name: part.functionCall.name || '',
               arguments: part.functionCall.args ?? {},
+              ...(part.thoughtSignature ? { thoughtSignature: part.thoughtSignature } : {}),
             };
             output.content.push(toolCall);
             const idx = output.content.length - 1;
@@ -387,6 +418,7 @@ export function streamGoogleCodeAssist(model: Model<any>, context: Context, opti
         }
       }
 
+      endThinking();
       endText();
       if (options?.signal?.aborted) throw new Error('Request was aborted');
       if (output.stopReason === 'error' || output.stopReason === 'aborted') throw new Error('Google Gemini Code Assist returned an error finish reason.');
@@ -431,8 +463,38 @@ export function registerGoogleCodeAssistProvider(modelRegistry: ModelRegistry): 
         maxTokens: 65536,
       },
       {
+        id: 'gemini-3.5-flash',
+        name: 'Gemini 3.5 Flash',
+        api: API,
+        reasoning: true,
+        input: ['text', 'image'],
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+        contextWindow: 1048576,
+        maxTokens: 65536,
+      },
+      {
+        id: 'gemini-3.1-pro-preview',
+        name: 'Gemini 3.1 Pro Preview',
+        api: API,
+        reasoning: true,
+        input: ['text', 'image'],
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+        contextWindow: 1048576,
+        maxTokens: 65536,
+      },
+      {
         id: 'gemini-3-flash-preview',
         name: 'Gemini 3 Flash Preview',
+        api: API,
+        reasoning: true,
+        input: ['text', 'image'],
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+        contextWindow: 1048576,
+        maxTokens: 65536,
+      },
+      {
+        id: 'gemini-3.1-flash-lite',
+        name: 'Gemini 3.1 Flash Lite',
         api: API,
         reasoning: true,
         input: ['text', 'image'],

@@ -31,6 +31,7 @@ const GOOGLE_GEMINI_CODE_ASSIST_MODELS: ModelDefinition[] = [
     provider: 'pi',
     contextWindow: 1048576,
     supportsThinking: true,
+    supportsImages: true,
   },
   {
     id: 'pi/gemini-2.5-pro',
@@ -40,6 +41,27 @@ const GOOGLE_GEMINI_CODE_ASSIST_MODELS: ModelDefinition[] = [
     provider: 'pi',
     contextWindow: 1048576,
     supportsThinking: true,
+    supportsImages: true,
+  },
+  {
+    id: 'pi/gemini-3.5-flash',
+    name: 'Gemini 3.5 Flash',
+    shortName: '3.5 Flash',
+    description: 'Google Gemini 3.5 Flash model via a licensed organization Gemini Code Assist account',
+    provider: 'pi',
+    contextWindow: 1048576,
+    supportsThinking: true,
+    supportsImages: true,
+  },
+  {
+    id: 'pi/gemini-3.1-pro-preview',
+    name: 'Gemini 3.1 Pro Preview',
+    shortName: '3.1 Pro',
+    description: 'Google Gemini 3.1 Pro frontier model via a licensed organization Gemini Code Assist account',
+    provider: 'pi',
+    contextWindow: 1048576,
+    supportsThinking: true,
+    supportsImages: true,
   },
   {
     id: 'pi/gemini-3-flash-preview',
@@ -49,6 +71,17 @@ const GOOGLE_GEMINI_CODE_ASSIST_MODELS: ModelDefinition[] = [
     provider: 'pi',
     contextWindow: 1048576,
     supportsThinking: true,
+    supportsImages: true,
+  },
+  {
+    id: 'pi/gemini-3.1-flash-lite',
+    name: 'Gemini 3.1 Flash Lite',
+    shortName: '3.1 Flash Lite',
+    description: 'Google Gemini 3.1 Flash Lite utility model via a licensed organization Gemini Code Assist account',
+    provider: 'pi',
+    contextWindow: 1048576,
+    supportsThinking: true,
+    supportsImages: true,
   },
 ];
 

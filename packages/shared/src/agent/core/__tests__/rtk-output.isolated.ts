@@ -185,6 +185,18 @@ describe('RTK output contract eligibility', () => {
     expect(getRtkOutputFilter('git status', ['git'])).toBeUndefined();
     expect(getRtkOutputFilter('npx vitest run')).toBe('vitest');
     expect(getRtkOutputFilter('npx vitest run', ['vitest'])).toBeUndefined();
+    expect(getRtkOutputFilter('pnpm tsc --noEmit')).toBe('tsc');
+    expect(getRtkOutputFilter('uv run pytest tests/')).toBe('pytest');
+    expect(getRtkOutputFilter('python3 -m pytest -q')).toBe('pytest');
+    expect(getRtkOutputFilter('go test ./...')).toBe('go-test');
+    expect(getRtkOutputFilter('go build ./...')).toBe('go-build');
+    expect(getRtkOutputFilter('cargo check')).toBe('cargo-test');
+    expect(getRtkOutputFilter('cargo clippy')).toBe('cargo-test');
+    expect(getRtkOutputFilter('ruff check src')).toBe('ruff-check');
+    expect(getRtkOutputFilter('ruff check --fix src')).toBeUndefined();
+    expect(getRtkOutputFilter('ruff format --check src')).toBe('ruff-format');
+    expect(getRtkOutputFilter('ruff format src')).toBeUndefined();
+    expect(getRtkOutputFilter('vitest --watch')).toBeUndefined();
   });
   it('rejects malformed accounting and computes weighted byte-based savings', () => {
     const stats = parseRtkOutputMetrics('400 100 1000\n1200 1000 3000\nmalformed\n1 2 3\n');

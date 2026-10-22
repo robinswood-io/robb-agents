@@ -741,6 +741,22 @@ export async function guardLargeResult(
   return result?.message ?? null;
 }
 
+export function buildHeadTailPreview(text: string, maxChars = 2_000): string {
+  if (text.length <= maxChars) return text;
+  const headChars = Math.floor(maxChars * 0.7);
+  const tailChars = maxChars - headChars;
+  const omitted = text.length - maxChars;
+  return `${text.slice(0, headChars)}\n... [${omitted} chars omitted] ...\n${text.slice(-tailChars)}`;
+}
+
+export function isAlreadyGuardedLargeResponse(text: string): boolean {
+  return text.startsWith('[Large response (')
+    || text.startsWith('[Response too large (')
+    || text.startsWith('[Binary content detected')
+    || text.startsWith('[Base64-encoded binary detected')
+    || text.startsWith('[Structured media assets extracted and saved]');
+}
+
 /**
  * Full pipeline: save to disk, optionally summarize, format result message.
  *
@@ -754,6 +770,9 @@ export async function handleLargeResponse(
   opts: HandleLargeResponseOptions
 ): Promise<HandleLargeResponseResult | null> {
   const { text, sessionPath, context, summarize, contextWindow } = opts;
+  if (isAlreadyGuardedLargeResponse(text)) {
+    return null;
+  }
   const estimatedTokens = estimateTokensDensityAware(text);
 
   if (estimatedTokens <= tokenLimitFor(contextWindow)) {
@@ -772,7 +791,7 @@ export async function handleLargeResponse(
 
   if (!saveResult) {
     // File save failed — return preview without file references
-    const preview = text.substring(0, 2000);
+    const preview = buildHeadTailPreview(text);
     return {
       message: `[Response too large (~${estimatedTokens} tokens)]\n\nPreview:\n${preview}...`,
       filePath: '',
@@ -802,7 +821,7 @@ export async function handleLargeResponse(
     relativePath,
     absolutePath,
     summary,
-    preview: summary ? undefined : text.substring(0, 2000),
+    preview: summary ? undefined : buildHeadTailPreview(text),
     resultMetadataJson: extractLargeResultMetadataJson(text, context),
     fullDataSha256: createHash('sha256').update(text).digest('hex'),
   });

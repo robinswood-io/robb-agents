@@ -179,6 +179,7 @@ export function buildPiSubprocessEnvironment(
 ): Record<string, string> {
   return buildRestrictedSubprocessEnvironment(
     {
+      RTK_TELEMETRY_DISABLED: '1',
       ...options.proxyEnv,
       ...options.envOverrides,
       ...options.providerEnv,

@@ -624,15 +624,15 @@ export const PI_PREFERRED_DEFAULTS: Record<string, string[]> = {
   anthropic: ['claude-opus-5', 'claude-opus-4-8', 'claude-opus-4-7', 'claude-fable-5-1', 'claude-fable-5', 'claude-sonnet-5', 'claude-sonnet-4-6', 'claude-haiku-4-5'],
   // Keep Sol as the default/utility model. Adaptive routing selects Astra only
   // for work whose policy classification requires the flagship tier.
-  openai: ['gpt-5.6-sol', 'gpt-6-astra', 'gpt-5.6-terra', 'gpt-5.6-luna', 'gpt-5.5', 'gpt-5.2', 'gpt-5.1', 'gpt-5', 'o4-mini', 'o3', 'gpt-4o'],
-  'openai-codex': ['gpt-5.6-sol', 'gpt-6-astra', 'gpt-5.6-terra', 'gpt-5.6-luna', 'gpt-5.5', 'gpt-5.2', 'gpt-5.1', 'gpt-5', 'o4-mini', 'o3', 'gpt-4o'],
+  openai: ['gpt-5.6-sol', 'gpt-6.1-sol', 'gpt-6-astra', 'gpt-6-sol', 'gpt-6-luna', 'gpt-5.6-terra', 'gpt-5.6-luna', 'gpt-5.5', 'gpt-5.4-pro', 'gpt-5.4', 'gpt-5.3-codex', 'gpt-5.2', 'gpt-5.1', 'gpt-5', 'o4-mini', 'o3', 'gpt-4o'],
+  'openai-codex': ['gpt-5.6-sol', 'gpt-6.1-sol', 'gpt-6-astra', 'gpt-6-sol', 'gpt-6-luna', 'gpt-5.6-terra', 'gpt-5.6-luna', 'gpt-5.5', 'gpt-5.4-pro', 'gpt-5.3-codex', 'gpt-5.2', 'gpt-5.1', 'gpt-5', 'o4-mini', 'o3', 'gpt-4o'],
   // Stable models first so the connection-setup test (which uses
   // getDefaultModelForConnection) lands on a reliable model.
   // gemini-3-pro-preview and gemini-3.1-pro-preview are intermittently
   // unresponsive on generateContent — verified against the live API in
   // April 2026 — and are deliberately excluded from defaults.
-  google: ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-3-flash-preview', 'gemini-3.1-flash-lite-preview'],
-  'google-gemini-code-assist': ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-3-flash-preview'],
+  google: ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-3.5-flash', 'gemini-3-flash-preview', 'gemini-3.1-flash-lite', 'gemini-3.1-flash-lite-preview', 'gemma-4-31b-it', 'gemma-4-26b-a4b-it'],
+  'google-gemini-code-assist': ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-3.5-flash', 'gemini-3.1-pro-preview', 'gemini-3-flash-preview', 'gemini-3.1-flash-lite'],
   'google-antigravity': [
     'gemini-3.8-flash-high',
     'gemini-3.8-flash-medium',
@@ -653,8 +653,15 @@ export const PI_PREFERRED_DEFAULTS: Record<string, string[]> = {
   // profile. Robb intentionally stores no token or model API credential.
   'mistral-vibe': ['mistral-vibe'],
   deepseek: ['deepseek-v4-pro', 'deepseek-v4-flash'],
-  'github-copilot': ['claude-sonnet-4-6', 'gpt-5', 'o4-mini', 'claude-haiku-4-5'],
+  'github-copilot': ['claude-fable-5', 'claude-opus-4.8', 'claude-opus-4.7', 'claude-sonnet-4.6', 'claude-sonnet-4-6', 'gemini-3.5-flash', 'gemini-3.1-pro-preview', 'gpt-5.4', 'gpt-5.3-codex', 'gpt-5', 'o4-mini', 'claude-haiku-4.5', 'claude-haiku-4-5'],
   'amazon-bedrock': ['claude-opus-5', 'claude-opus-4-8', 'claude-opus-4-7', 'claude-sonnet-5', 'claude-sonnet-4-6', 'claude-haiku-4-5'],
+  xai: ['grok-4.3', 'grok-4.20-0309-reasoning', 'grok-4.20-0309-non-reasoning', 'grok-code-fast-1', 'grok-4-fast-reasoning'],
+  zai: ['glm-5.2', 'glm-5.1', 'glm-5', 'glm-5-turbo', 'glm-5v-turbo', 'glm-4.7', 'glm-4.7-flash'],
+  minimax: ['MiniMax-M3', 'MiniMax-M2.7', 'MiniMax-M2.7-highspeed', 'MiniMax-M2.5', 'MiniMax-M2.5-highspeed'],
+  'minimax-cn': ['MiniMax-M3', 'MiniMax-M2.7', 'MiniMax-M2.7-highspeed', 'MiniMax-M2.5', 'MiniMax-M2.5-highspeed'],
+  'kimi-coding': ['k2p7', 'kimi-for-coding', 'kimi-k2-thinking', 'k2p5'],
+  groq: ['openai/gpt-oss-120b', 'qwen/qwen3-32b', 'meta-llama/llama-4-maverick-17b-128e-instruct', 'meta-llama/llama-4-scout-17b-16e-instruct', 'openai/gpt-oss-20b'],
+  cerebras: ['gpt-oss-120b', 'zai-glm-4.7', 'qwen-3-235b-a22b-instruct-2507'],
 };
 
 export function getDefaultModelsForConnection(providerType: LlmProviderType, piAuthProvider?: string): Array<ModelDefinition | string> {

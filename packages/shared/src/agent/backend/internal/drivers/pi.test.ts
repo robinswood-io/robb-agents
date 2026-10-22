@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'bun:test';
+import { afterEach, describe, expect, it, mock } from 'bun:test';
 import { piDriver } from './pi.ts';
 
 const originalCopilotKillSwitch = process.env.ROBB_DISABLE_GITHUB_COPILOT_PROXY;
@@ -134,5 +134,64 @@ describe('piDriver GitHub Copilot contract', () => {
 
     expect(result.models.length).toBeGreaterThan(0);
     expect(result.models.every(model => model.provider === 'pi')).toBe(true);
+  });
+});
+
+describe('piDriver local & custom endpoint model discovery', () => {
+  it('discovers local models via /v1/models or Ollama /api/tags fallback, infers capabilities, and preserves user models', async () => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = mock(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url === 'http://localhost:11434/v1/models') {
+        return new Response('Not Found', { status: 404 });
+      }
+      if (url === 'http://localhost:11434/api/tags') {
+        return new Response(JSON.stringify({
+          models: [
+            { name: 'qwen3:32b' },
+            { name: 'gemma4:27b' },
+            { name: 'qwen3-coder:30b' },
+          ],
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      }
+      throw new Error(`Unexpected URL: ${url}`);
+    }) as unknown as typeof fetch;
+
+    try {
+      const result = await piDriver.fetchModels!({
+        connection: {
+          slug: 'ollama-local',
+          name: 'Local Model',
+          providerType: 'pi_compat',
+          authType: 'none',
+          baseUrl: 'http://localhost:11434',
+          customEndpoint: { api: 'openai-completions' },
+          defaultModel: 'qwen3-coder:30b',
+          models: ['custom-local-alias'],
+          createdAt: Date.now(),
+        } as any,
+        credentials: {},
+        timeoutMs: 2_000,
+        hostRuntime: {} as any,
+        resolvedPaths: {
+          piServerPath: '/tmp/pi-agent-server.js',
+          interceptorBundlePath: '/tmp/interceptor.cjs',
+          nodeRuntimePath: '/usr/bin/node',
+        },
+      });
+
+      expect(result.serverDefault).toBe('qwen3-coder:30b');
+      expect(result.models.map(m => m.id)).toEqual([
+        'qwen3:32b',
+        'gemma4:27b',
+        'qwen3-coder:30b',
+        'custom-local-alias',
+      ]);
+      expect(result.models.find(m => m.id === 'qwen3:32b')?.supportsThinking).toBe(true);
+      expect(result.models.find(m => m.id === 'gemma4:27b')?.supportsImages).toBe(true);
+      expect(result.models.find(m => m.id === 'qwen3-coder:30b')?.supportsThinking).toBe(false);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
   });
 });

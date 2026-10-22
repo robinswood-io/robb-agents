@@ -193,9 +193,11 @@ function activeObjective(userMessageId: string): NonNullable<Managed['activeObje
 beforeEach(() => {
   roots.length = 0
   sessionIds.length = 0
+  process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT = '1'
 })
 
 afterEach(() => {
+  delete process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT
   for (const sessionId of sessionIds) clearObjectiveEvidenceGate(sessionId)
   for (const root of roots) rmSync(root, { recursive: true, force: true })
 })
@@ -3127,5 +3129,59 @@ ${outcomeComment(receipt)}` },
     })
     expect(harness.managed.messages).toHaveLength(1)
     expect(harness.managed.wasInterrupted).toBe(true)
+  })
+
+  it('uses provider-driven execution by default without injecting host_objective_contract or rejecting receipt-free completions', async () => {
+    delete process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT
+    const harness = makeHarness('default-provider-driven-mode')
+    const capturedPrompts: string[] = []
+    const redirected: string[] = []
+    let activeAuthority: {
+      authorized?: boolean
+      sensitiveActionAuthorized?: boolean
+      authorizationSegments: string[]
+    } | undefined
+    const agent = {
+      async *chat(prompt: string): AsyncGenerator<AgentEvent> {
+        capturedPrompts.push(prompt)
+        activeAuthority = (harness.manager as unknown as {
+          resolveRuntimeObjectiveMutationAuthority: (session: Managed, request?: string) => {
+            authorized?: boolean
+            sensitiveActionAuthorized?: boolean
+            authorizationSegments: string[]
+          }
+        }).resolveRuntimeObjectiveMutationAuthority(harness.managed)
+        yield { type: 'text_complete', text: 'Le changement est terminé.' }
+        yield { type: 'complete' }
+      },
+      getModel: () => 'test/objective-model',
+      getSessionId: () => null,
+      isProcessing: () => false,
+      setAllSources: () => {},
+      redirect: (message: string) => {
+        redirected.push(message)
+        return true
+      },
+    }
+    harness.managed.agent = agent as never
+    ;(harness.manager as unknown as {
+      getOrCreateAgent: (session: Managed) => Promise<typeof agent>
+    }).getOrCreateAgent = async session => {
+      session.agent = agent as never
+      return agent
+    }
+
+    await harness.manager.sendMessage(harness.managed.id, 'Implémente la correction puis teste-la.')
+
+    expect(capturedPrompts).toHaveLength(1)
+    expect(capturedPrompts[0]).toBe('Implémente la correction puis teste-la.')
+    expect(capturedPrompts[0]).not.toContain('<host_objective_contract')
+    expect(harness.managed.activeObjective?.terminalState).toBe('complete_verified')
+    expect(harness.managed.pendingTurnRecovery).toBeUndefined()
+    expect(harness.managed.messageQueue).toEqual([])
+    expect(activeAuthority).toBeDefined()
+    expect(activeAuthority!.authorized).toBeUndefined()
+    expect(activeAuthority!.sensitiveActionAuthorized).toBeUndefined()
+    expect(activeAuthority!.authorizationSegments.length).toBeGreaterThan(0)
   })
 })

@@ -296,40 +296,113 @@ export const piDriver: ProviderDriver = {
       return { models };
     }
 
-    // Local / Custom OpenAI-compatible endpoints (Ollama, LM Studio, vLLM):
-    // Discover installed models directly from GET {baseUrl}/models when no cloud piAuthProvider is set.
-    if (connection.baseUrl && !connection.piAuthProvider) {
-      const base = connection.baseUrl.replace(/\/+$/, '');
+    // Local / Custom OpenAI-compatible endpoints (Ollama, LM Studio, vLLM, llama.cpp):
+    // Discover installed models directly from GET {baseUrl}/v1/models (or Ollama /api/tags fallback).
+    const isCustomOrLocalEndpoint = Boolean(
+      connection.baseUrl
+      && (!connection.piAuthProvider || connection.providerType === 'pi_compat' || Boolean(connection.customEndpoint)),
+    );
+    if (isCustomOrLocalEndpoint && connection.baseUrl) {
+      const base = connection.baseUrl.trim().replace(/\/+$/, '');
       const modelsUrl = base.endsWith('/v1') ? `${base}/models` : `${base}/v1/models`;
+      const ollamaOrigin = base.replace(/\/v1$/, '');
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), Math.min(timeoutMs || 5_000, 5_000));
       try {
         const headers: Record<string, string> = { Accept: 'application/json' };
         if (credentials.apiKey) headers.Authorization = `Bearer ${credentials.apiKey}`;
-        const res = await fetch(modelsUrl, { signal: controller.signal, headers });
-        if (res.ok) {
-          const payload = await res.json() as { data?: Array<{ id?: string; name?: string }> };
-          const discovered = (payload.data ?? [])
-            .map(entry => entry.id || entry.name)
-            .filter((id): id is string => typeof id === 'string' && id.trim().length > 0)
-            .map<ModelDefinition>(id => ({
-              id,
-              name: id,
-              shortName: id.replace(/:latest$/, ''),
-              description: 'Local model discovered via OpenAI-compatible /v1/models endpoint',
-              provider: 'pi',
-              contextWindow: 131_072,
-              supportsThinking: /r1|reason|think|qwq/i.test(id),
-              supportsImages: /vision|vl|llava|pixtral|gemma3/i.test(id),
-            }));
-          if (discovered.length > 0) {
-            return { models: discovered, serverDefault: discovered[0]!.id };
+
+        const rawIds: string[] = [];
+        try {
+          const res = await fetch(modelsUrl, { signal: controller.signal, headers });
+          if (res.ok) {
+            const payload = await res.json() as {
+              data?: Array<{ id?: string; name?: string }>;
+              models?: Array<{ id?: string; name?: string; model?: string }>;
+            };
+            for (const entry of payload.data ?? payload.models ?? []) {
+              const id = entry.id || entry.name || entry.model;
+              if (typeof id === 'string' && id.trim().length > 0) {
+                rawIds.push(id.trim());
+              }
+            }
+          }
+        } catch {
+          // Try Ollama /api/tags fallback below
+        }
+
+        if (rawIds.length === 0) {
+          try {
+            const tagsRes = await fetch(`${ollamaOrigin}/api/tags`, { signal: controller.signal, headers });
+            if (tagsRes.ok) {
+              const payload = await tagsRes.json() as { models?: Array<{ name?: string; model?: string }> };
+              for (const entry of payload.models ?? []) {
+                const id = entry.name || entry.model;
+                if (typeof id === 'string' && id.trim().length > 0) {
+                  rawIds.push(id.trim());
+                }
+              }
+            }
+          } catch {
+            // Local server offline or non-Ollama
           }
         }
-      } catch {
-        // Fall through to static registry if local server is offline
+
+        if (rawIds.length > 0) {
+          const existingById = new Map<string, ModelDefinition>();
+          for (const existing of connection.models ?? []) {
+            if (typeof existing !== 'string') {
+              existingById.set(existing.id, existing);
+            }
+          }
+
+          const buildLocalModelDef = (id: string): ModelDefinition => {
+            const prev = existingById.get(id);
+            const supportsThinking = prev?.supportsThinking
+              ?? /(?:deepseek-r1|(?:\b|[-_/:])r1(?:\b|[-_/:])|qwq|qwen3(?!.*coder)|gpt-oss|magistral|kimi-k2-thinking|glm-z1|glm-5|minimax-m2|minimax-m3|thinking|reason|(?:\b|[-_/:])(?:o1|o3|o4)(?:\b|[-_/:])|openthinker|marco-o1|skywork-o1|nemotron-nano|phi-?4-reasoning)/i.test(id);
+            const supportsImages = prev?.supportsImages
+              ?? /(?:vision|(?:\b|[-_/:])vl(?:\b|[-_/:])|llava|pixtral|gemma-?[34]|llama-?4|minicpm-v|internvl|molmo|glm-[45](?:\.\d+)?v|mistral-small-(?:3\.[12]|4))/i.test(id);
+            return {
+              id,
+              name: prev?.name || id,
+              shortName: prev?.shortName || id.replace(/:latest$/, ''),
+              description: prev?.description || 'Local model discovered via OpenAI-compatible endpoint',
+              provider: 'pi',
+              contextWindow: prev?.contextWindow ?? 131_072,
+              supportsThinking,
+              supportsImages,
+              ...(prev?.maxOutputTokens ? { maxOutputTokens: prev.maxOutputTokens } : {}),
+            };
+          };
+
+          const seen = new Set<string>();
+          const discovered: ModelDefinition[] = [];
+          for (const id of rawIds) {
+            if (seen.has(id)) continue;
+            seen.add(id);
+            discovered.push(buildLocalModelDef(id));
+          }
+          // Preserve any user-configured model IDs that were not in the live server list
+          for (const existing of connection.models ?? []) {
+            const id = typeof existing === 'string' ? existing : existing.id;
+            if (!id || seen.has(id)) continue;
+            seen.add(id);
+            discovered.push(buildLocalModelDef(id));
+          }
+
+          return {
+            models: discovered,
+            serverDefault: connection.defaultModel && seen.has(connection.defaultModel)
+              ? connection.defaultModel
+              : discovered[0]!.id,
+          };
+        }
       } finally {
         clearTimeout(timer);
+      }
+
+      if (connection.providerType === 'pi_compat' || Boolean(connection.customEndpoint)) {
+        throw new Error(`No models discovered from custom/local endpoint: ${connection.baseUrl}`);
       }
     }
 

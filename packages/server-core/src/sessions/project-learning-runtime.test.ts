@@ -167,18 +167,23 @@ describe('SessionManager runtime project learning', () => {
   });
 
   it('captures the exhausted terminal error through real event processing, never as a learned rule', async () => {
-    const h = harness([
-      { type: 'tool_start', toolName: 'Bash', toolUseId: 'failed-render', input: { command: 'fixture-render' } },
-      { type: 'tool_result', toolName: 'Bash', toolUseId: 'failed-render', result: 'Fixture renderer unavailable', isError: true, executed: true },
-      { type: 'text_complete', text: 'Le document est prêt.' },
-      { type: 'complete' },
-    ]);
-    await h.manager.sendMessage(h.managed.id, 'Poursuit');
-    expect(h.managed.activeObjective?.terminalState).toBe('exhausted');
-    const entries = loadProjectMemoryJournal(h.root, h.project.slug).entries;
-    expect(entries.some(e => e.provenance.sourceId === 'failed-render')).toBe(true);
-    expect(entries.some(e => e.content.includes('host:objective_validation_failed'))).toBe(true);
-    expect(entries.every(e => e.status === 'proposed' && e.scope?.version === 'fixture-build')).toBe(true);
+    process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT = '1';
+    try {
+      const h = harness([
+        { type: 'tool_start', toolName: 'Bash', toolUseId: 'failed-render', input: { command: 'fixture-render' } },
+        { type: 'tool_result', toolName: 'Bash', toolUseId: 'failed-render', result: 'Fixture renderer unavailable', isError: true, executed: true },
+        { type: 'text_complete', text: 'Le document est prêt.' },
+        { type: 'complete' },
+      ]);
+      await h.manager.sendMessage(h.managed.id, 'Poursuit');
+      expect(h.managed.activeObjective?.terminalState).toBe('exhausted');
+      const entries = loadProjectMemoryJournal(h.root, h.project.slug).entries;
+      expect(entries.some(e => e.provenance.sourceId === 'failed-render')).toBe(true);
+      expect(entries.some(e => e.content.includes('host:objective_validation_failed'))).toBe(true);
+      expect(entries.every(e => e.status === 'proposed' && e.scope?.version === 'fixture-build')).toBe(true);
+    } finally {
+      delete process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT;
+    }
   });
 
   it('captures a terminal transport failure even when no complete event was emitted', async () => {

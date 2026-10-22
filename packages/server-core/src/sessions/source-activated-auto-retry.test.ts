@@ -598,9 +598,7 @@ describe('source_activated auto-retry', () => {
     })
     expect(captured!.durableMessage!.id).not.toBe(humanMessageId)
     expect(captured!.effectiveMessage).toContain(retriedMessage)
-    expect(captured!.effectiveMessage).toContain(`objective_user_message_id="${humanMessageId}"`)
-    expect(captured!.effectiveMessage).toContain('contrat 3602')
-    expect(captured!.effectiveMessage).not.toContain(`objective_user_message_id="${captured!.durableMessage!.id}"`)
+    expect(captured!.effectiveMessage).not.toContain('host_objective_contract')
   })
 
   it('restores a queued source-activation continuation with durable provenance and the original objective budget', () => {

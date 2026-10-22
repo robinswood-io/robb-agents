@@ -184,6 +184,7 @@ async function prepareStartedRecoveryAdmission(
 }
 
 afterEach(async () => {
+  delete process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT
   spies.splice(0).forEach(spy => spy.mockRestore())
   for (const manager of managers.splice(0)) {
     for (const id of (manager as any).sessions.keys()) clearObjectiveEvidenceGate(id)
@@ -2563,6 +2564,7 @@ describe('authenticated cost checkpoint durability', () => {
 
   it.each(['tool_checkpoint', 'objective_incomplete'] as const)(
     'cannot exhaust a newer human objective when Stop finishes during %s persistence', async cause => {
+      process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT = '1'
       const h = harness(); const managed = h.make(`checkpoint-stop-race-${cause}`)
       managed.activeObjective!.orchestrationMode = 'mission'
       managed.pendingTurnRecovery = { ...managed.pendingTurnRecovery!, attempts: 99 }
@@ -2612,6 +2614,7 @@ describe('authenticated cost checkpoint durability', () => {
 
   it.each(['tool_checkpoint', 'objective_incomplete', 'premature_final', 'stream_ended'] as const)(
     'explains unavailable legacy budget after %s without claiming a retry limit was reached', async cause => {
+      process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT = '1'
       const h = harness(); const managed = h.make(`legacy-diagnostic-${cause}`)
       managed.activeObjective!.terminalState = 'exhausted'
       managed.activeObjective!.orchestrationMode = 'mission'
@@ -4277,6 +4280,7 @@ describe('bounded automatic admission', () => {
   })
 
   it('surfaces an exhausted invalid final after restart as a durable typed validation failure', async () => {
+    process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT = '1'
     const h = harness(); const managed = h.make('restart-invalid-final-exhausted')
     managed.activeObjective!.requiresExecutionEvidence = true
     managed.pendingTurnRecovery = {
@@ -4348,6 +4352,7 @@ describe('bounded automatic admission', () => {
   })
 
   it('retains a rejected final behind a new ancestor decision without declaring exhaustion, then wakes once', async () => {
+    process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT = '1'
     const h = harness(); const parent = h.make('final-parent'); const child = h.make('final-child', parent.id)
     child.activeObjective!.requiresExecutionEvidence = true
     Object.assign(child.pendingTurnRecovery!, { attempts: 0, stagnantAttempts: 0 })
