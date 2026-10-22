@@ -1801,16 +1801,27 @@ function resolveManagedSessionContextWindow(managed: ManagedSession): number | u
   if (managed.tokenUsage?.contextWindow && Number.isFinite(managed.tokenUsage.contextWindow)) {
     return managed.tokenUsage.contextWindow
   }
-  const modelName = (managed.activeObjective?.model ?? managed.model ?? '').toLowerCase()
+  const modelName = (managed.activeObjective?.model ?? managed.model ?? '').trim().toLowerCase()
+  if (!modelName) return undefined
   if (modelName.includes('[1m]')) return 1_000_000
+  const bareModelName = modelName.includes('/') ? modelName.split('/').pop()! : modelName
+  const registered = MODEL_REGISTRY.find(entry => {
+    const id = entry.id.toLowerCase()
+    return id === modelName || id === bareModelName
+  })
+  if (registered?.contextWindow && Number.isFinite(registered.contextWindow)) {
+    return registered.contextWindow
+  }
   if (modelName.includes('gpt-5.6')) return 1_050_000
-  if (modelName.includes('gpt-6')) return 272_000
+  if (modelName.includes('gpt-6') || modelName.includes('gpt-5') || modelName.includes('codex')) return 272_000
   if (modelName.includes('gemini')) return 1_000_000
+  if (modelName.includes('opus-5') || modelName.includes('opus-4-7') || modelName.includes('opus-4-8')
+    || modelName.includes('sonnet-5') || modelName.includes('fable-5')) return 1_000_000
+  if (modelName.includes('mistral-vibe')) return 262_144
   if (modelName.includes('claude') || modelName.includes('anthropic')) return 200_000
   if (modelName.includes('gpt-4') || modelName.includes('o1') || modelName.includes('o3')) return 128_000
   if (modelName.includes('deepseek')) return 128_000
-  if (modelName) return 200_000
-  return undefined
+  return 200_000
 }
 
 function isExactContextLimitNextStepQuestion(request: UserInputRequest): boolean {
@@ -6457,6 +6468,42 @@ export class SessionManager implements ISessionManager {
     return { evidence, responseMessageIds }
   }
 
+  private boundObjectiveForCleanHandoff(
+    managed: ManagedSession,
+    objective: ActiveSessionObjective,
+  ): { objective: ActiveSessionObjective; objectiveText: string } {
+    const rawObjectiveText = (findObjectiveText(managed.messages, objective) ?? objective.originalText ?? '').trim()
+    const boundedObjectiveText = rawObjectiveText.length > 16_000
+      ? `${rawObjectiveText.slice(0, 12_000)}\n...\n${rawObjectiveText.slice(-3_990)}`
+      : rawObjectiveText
+    const rawAmendments = (objective.amendments ?? [])
+      .filter(amendment => (
+        typeof amendment?.messageId === 'string' && amendment.messageId.trim().length > 0
+        && typeof amendment?.text === 'string' && amendment.text.trim().length > 0
+      ))
+      .slice(-16)
+    const maxAmendmentChars = Math.min(4_000, Math.max(256, Math.floor(16_000 / Math.max(1, rawAmendments.length))))
+    const headChars = Math.floor(maxAmendmentChars * 0.75)
+    const tailChars = Math.max(32, maxAmendmentChars - headChars - 10)
+    const boundedAmendments = rawAmendments.map(amendment => {
+      const trimmed = amendment.text.trim()
+      return {
+        ...amendment,
+        text: trimmed.length > maxAmendmentChars
+          ? `${trimmed.slice(0, headChars)}\n...\n${trimmed.slice(-tailChars)}`
+          : trimmed,
+      }
+    })
+    return {
+      objective: {
+        ...objective,
+        originalText: boundedObjectiveText || objective.originalText,
+        ...(objective.amendments ? { amendments: boundedAmendments } : {}),
+      },
+      objectiveText: boundedObjectiveText,
+    }
+  }
+
   private createContextLimitRetryHandoff(
     managed: ManagedSession,
     pending: PendingTurnRecovery,
@@ -6474,7 +6521,7 @@ export class SessionManager implements ISessionManager {
       ...(objective?.amendments ?? []).map(amendment => amendment.messageId),
     ].filter((id): id is string => !!id))
     if (!objective || objective.terminalState !== 'active'
-      || !criteria?.length || criteria.length > 16
+      || !criteria?.length
       || objective.acceptanceNeedsReview === true
       || !registeredRevision || !lineage.has(registeredRevision)
       || !this.hasAuthenticatedObjectiveRoot(managed, objective)
@@ -6506,15 +6553,22 @@ export class SessionManager implements ISessionManager {
 
     const hostGaps = (pending.validationGaps ?? []).flatMap(gap => {
       const bounded = gap.trim()
-      return bounded && bounded.length <= 1_500 ? [`Resolve host validation gap: ${bounded}`] : []
+      if (!bounded) return []
+      const text = bounded.length > 1_450 ? `${bounded.slice(0, 1_445)}...` : bounded
+      return [`Resolve host validation gap: ${text}`]
     })
     const criterionWork: string[] = []
     const outcomeCriteria: NonNullable<ActiveSessionObjective['lastOutcome']>['criteria'] = []
-    for (const criterion of criteria) {
+    for (const criterion of criteria.slice(0, 16)) {
       const id = typeof criterion?.id === 'string' ? criterion.id.trim() : ''
-      const description = typeof criterion?.description === 'string' ? criterion.description.trim() : ''
-      if (!id || id.length > 512 || !description || description.length > 1_500) return undefined
-      criterionWork.push(`Reconcile the current target state against registered acceptance criterion ${id}; only if it is unmet, complete it idempotently, then verify it: ${description}`)
+      const rawDescription = typeof criterion?.description === 'string' ? criterion.description.trim() : ''
+      if (!id || id.length > 512 || !rawDescription) return undefined
+      const prefix = `Reconcile the current target state against registered acceptance criterion ${id}; only if it is unmet, complete it idempotently, then verify it: `
+      const maxDescLen = Math.max(64, 1_500 - prefix.length)
+      const description = rawDescription.length > maxDescLen
+        ? `${rawDescription.slice(0, maxDescLen - 3)}...`
+        : rawDescription
+      criterionWork.push(`${prefix}${description}`)
       outcomeCriteria.push({ id, satisfied: false, evidence: [] })
     }
     const remainingWork = [...new Set([...hostGaps, ...criterionWork])].slice(0, 16)
@@ -6528,10 +6582,11 @@ export class SessionManager implements ISessionManager {
         remainingWork,
       },
     }
+    const bounded = this.boundObjectiveForCleanHandoff(managed, derivedObjective)
     return createCleanRecoveryContinuationHandoff({
-      objective: derivedObjective,
+      objective: bounded.objective,
       pending: { ...handoffPending, lastCause: 'user_retry' },
-      objectiveText: findObjectiveText(managed.messages, objective),
+      objectiveText: bounded.objectiveText,
       evidence: authenticatedAnswers.evidence,
       remainingWork,
     })
@@ -6553,17 +6608,30 @@ export class SessionManager implements ISessionManager {
     if (!objective || objective.terminalState !== 'active'
       || !this.hasAuthenticatedObjectiveRoot(managed, objective)) return undefined
 
-    // Source activation is a host-issued continuation of the current visible
-    // revision. Its hidden row is never itself an objective root, but an exact
-    // origin binding permits projection back to the accepted visible request.
+    // Source activation or authenticated internal continuation (e.g., subagent
+    // result, auth result, background/scheduled task) is a host-issued
+    // continuation of the current visible revision. Its hidden row is never
+    // itself an objective root, but an exact origin binding permits projection
+    // back to the accepted visible request.
+    const rootIndex = managed.messages.findIndex(message => message.id === objective.userMessageId)
+    const activationIndex = managed.messages.findIndex(message => message.id === pending.userMessageId)
     const activationRows = managed.messages.filter(message => message.id === pending.userMessageId)
     const activation = activationRows.length === 1 ? activationRows[0] : undefined
     const authenticatedActivation = !!activation && activation.role === 'user'
       && activation.hidden === true && !activation.isQueued && !activation.isPending
       && !activation.agentDelivery && !activation.providerDispatch
       && isSourceActivationOriginCurrent(objective, activation.internalOrigin)
+    const authenticatedInternalTurn = !!activation && activation.role === 'user'
+      && activation.hidden === true && !activation.isPending
+      && rootIndex >= 0 && activationIndex >= rootIndex
+      && (activation.internalOrigin?.kind === 'agent-message'
+        || activation.internalOrigin?.kind === 'auth-result'
+        || activation.internalOrigin?.kind === 'auth-retry'
+        || activation.internalOrigin?.kind === 'browser-fallback'
+        || activation.internalOrigin?.kind === 'automation')
+    const projectedInternalOrigin = authenticatedActivation || authenticatedInternalTurn
     if (!this.pendingRecoveryBelongsToCurrentObjective(managed, pending)
-      && !authenticatedActivation) return undefined
+      && !projectedInternalOrigin) return undefined
 
     const visibleSourceUserMessageId = objective.lastUserMessageId ?? objective.userMessageId
     const sourceIsVisible = pending.userMessageId === objective.userMessageId
@@ -6571,11 +6639,11 @@ export class SessionManager implements ISessionManager {
     const authenticatedAnswers = this.contextLimitAuthenticatedAnswerEvidence(
       managed,
       objective,
-      sourceIsVisible || authenticatedActivation ? undefined : pending.userMessageId,
+      sourceIsVisible || projectedInternalOrigin ? undefined : pending.userMessageId,
       pending,
     )
     if (!authenticatedAnswers) return undefined
-    if (!sourceIsVisible && !authenticatedActivation
+    if (!sourceIsVisible && !projectedInternalOrigin
       && !authenticatedAnswers.responseMessageIds.has(pending.userMessageId)) {
       return undefined
     }
@@ -6587,9 +6655,9 @@ export class SessionManager implements ISessionManager {
     const boundedWork = (value: unknown, prefix = ''): string | undefined => {
       if (typeof value !== 'string') return undefined
       const normalized = value.trim()
-      if (!normalized || normalized.length > 1_500) return undefined
-      const result = `${prefix}${normalized}`
-      return result.length <= 1_500 ? result : undefined
+      if (!normalized) return undefined
+      const combined = `${prefix}${normalized}`
+      return combined.length <= 1_500 ? combined : `${combined.slice(0, 1_497)}...`
     }
     const work: string[] = []
     for (const gap of pending.validationGaps ?? []) {
@@ -6608,8 +6676,7 @@ export class SessionManager implements ISessionManager {
     }
 
     const acceptanceNeedsReview = objective.acceptanceNeedsReview === true
-    const acceptanceCriteria = acceptanceNeedsReview ? [] : objective.acceptanceCriteria ?? []
-    if (acceptanceCriteria.length > 16) return undefined
+    const acceptanceCriteria = (acceptanceNeedsReview ? [] : objective.acceptanceCriteria ?? []).slice(0, 16)
     if (acceptanceNeedsReview || (objective.requiresAcceptanceCriteria === true && !acceptanceCriteria.length)) {
       work.unshift('Re-register the current target-bound acceptance contract from the preserved objective and amendments before completing work or claiming success.')
     }
@@ -6619,7 +6686,8 @@ export class SessionManager implements ISessionManager {
       const description = boundedWork(criterion?.description)
       if (!id || !description) return undefined
       const criterionWork = boundedWork(
-        `Reconcile registered acceptance criterion ${id}; complete it idempotently if unmet, then verify it: ${description}`,
+        description,
+        `Reconcile registered acceptance criterion ${id}; complete it idempotently if unmet, then verify it: `,
       )
       if (!criterionWork) return undefined
       work.push(criterionWork)
@@ -6653,10 +6721,11 @@ export class SessionManager implements ISessionManager {
         remainingWork,
       },
     }
+    const bounded = this.boundObjectiveForCleanHandoff(managed, derivedObjective)
     return createCleanRecoveryContinuationHandoff({
-      objective: derivedObjective,
+      objective: bounded.objective,
       pending: handoffPending,
-      objectiveText: findObjectiveText(managed.messages, objective),
+      objectiveText: bounded.objectiveText,
       evidence: authenticatedAnswers.evidence,
       remainingWork,
     })
@@ -7451,15 +7520,16 @@ export class SessionManager implements ISessionManager {
       const autonomousHandoff = this.createAutonomousContextLimitHandoff(managed, pending)
       const objective = managed.activeObjective
       const remainingWork = pending.continuationWork ?? objective?.lastOutcome?.remainingWork
-      const continuationHandoff = objective && remainingWork
+      const boundedObjective = objective ? this.boundObjectiveForCleanHandoff(managed, objective) : undefined
+      const continuationHandoff = boundedObjective && remainingWork
         ? createCleanRecoveryContinuationHandoff({
-            objective,
+            objective: boundedObjective.objective,
             pending,
-            objectiveText: findObjectiveText(managed.messages, objective),
+            objectiveText: boundedObjective.objectiveText,
             // Only fixed host-owned state crosses this boundary. Raw provider
             // or tool text is deliberately excluded.
             evidence: [],
-            remainingWork,
+            remainingWork: remainingWork.slice(0, 16),
           })
         : undefined
       // Different clean-boundary gates deliberately project different bounded
@@ -8115,45 +8185,11 @@ export class SessionManager implements ISessionManager {
 
     let advanced = plan.recovery
     let cleanContinuationId: string | undefined
+    let detachProviderWithoutCleanHandoff = false
     if (plan.action === 'clean-continuation') {
       const objective = managed.activeObjective
       const remainingWork = plan.recovery.continuationWork ?? objective?.lastOutcome?.remainingWork
-      const handoff = objective && remainingWork
-        ? createCleanRecoveryContinuationHandoff({
-            objective,
-            pending: plan.recovery,
-            objectiveText: findObjectiveText(managed.messages, objective),
-            evidence: [],
-            remainingWork,
-          })
-        : undefined
-      if (!handoff || !buildCleanRecoveryContinuationPrompt(handoff)) {
-        managed.pendingTurnRecovery = plan.recovery
-        this.persistSession(managed)
-        await this.flushSession(managed.id)
-        if (this.isManagedSessionYolo(managed)) {
-          await this.stopYoloHumanHandoff(managed, 'YOLO recovery stopped: durable evidence is insufficient for a clean continuation. Existing results were preserved; no dispatch or external effect was replayed.')
-          return false
-        }
-        await this.requestUserInput(managed.id, [{
-          id: 'clean-continuation-unavailable',
-          question: 'Le contexte actuel ne peut pas être transféré de façon sûre vers une reprise autonome. Quelle suite souhaitez-vous ?',
-          options: [
-            {
-              id: 'provide-guidance',
-              label: 'Préciser la reprise',
-              description: 'Fournissez le fait ou la priorité manquante pour reprendre sans reconstruire l’historique.',
-              recommended: true,
-            },
-            {
-              id: 'stop-objective',
-              label: 'Arrêter cette mission',
-              description: 'Conserver les résultats actuels et arrêter la récupération.',
-            },
-          ],
-        }])
-        return true
-      }
+      const boundedObjective = objective ? this.boundObjectiveForCleanHandoff(managed, objective) : undefined
       const cleanDispatchPlan = planAutomaticTurnRecovery({
         pending: plan.recovery,
         ...planInput,
@@ -8162,21 +8198,23 @@ export class SessionManager implements ISessionManager {
       if (cleanDispatchPlan.action !== 'dispatch') {
         throw new Error('A clean recovery continuation could not allocate its first bounded dispatch')
       }
-      advanced = cleanDispatchPlan.recovery
-      const dispatchedHandoff = createCleanRecoveryContinuationHandoff({
-        objective: objective!,
-        pending: advanced,
-        objectiveText: findObjectiveText(managed.messages, objective),
-        evidence: [],
-        remainingWork: remainingWork!,
-      })
-      if (!dispatchedHandoff || !buildCleanRecoveryContinuationPrompt(dispatchedHandoff)) {
-        throw new Error('The clean recovery handoff changed while allocating its durable dispatch')
-      }
-      cleanContinuationId = dispatchedHandoff.id
       advanced = {
-        ...advanced,
+        ...cleanDispatchPlan.recovery,
         cleanContextBoundaryMessageId: undefined,
+      }
+      const dispatchedHandoff = (boundedObjective && remainingWork
+        ? createCleanRecoveryContinuationHandoff({
+            objective: boundedObjective.objective,
+            pending: advanced,
+            objectiveText: boundedObjective.objectiveText,
+            evidence: [],
+            remainingWork: remainingWork.slice(0, 16),
+          })
+        : undefined) ?? this.createAutonomousContextLimitHandoff(managed, advanced)
+      if (dispatchedHandoff && buildCleanRecoveryContinuationPrompt(dispatchedHandoff)) {
+        cleanContinuationId = dispatchedHandoff.id
+      } else {
+        detachProviderWithoutCleanHandoff = true
       }
     }
     if (requiresCleanProviderBoundary && !cleanContinuationId) {
@@ -8187,50 +8225,14 @@ export class SessionManager implements ISessionManager {
       }
       const handoff = this.createAutonomousContextLimitHandoff(managed, cleanPending)
       const cleanPrompt = handoff && buildCleanRecoveryContinuationPrompt(handoff)
-      if (!handoff || !cleanPrompt) {
-        // Quarantine the provider that already saw the revoked fallback before
-        // exposing any human clarification path. A later answer may start a
-        // fresh turn, but can never resume that SDK/branch context.
+      if (handoff && cleanPrompt) {
+        cleanContinuationId = handoff.id
+        advanced = cleanPending
+      } else {
         await this.disposeManagedAgentRuntime(managed, 'disabled routing fallback quarantine')
-        managed.sdkSessionId = undefined
-        managed.branchFromSdkSessionId = undefined
-        managed.branchFromSessionPath = undefined
-        managed.branchFromSdkCwd = undefined
-        managed.branchFromSdkTurnId = undefined
-        managed.branchContextStrategy = undefined
-        managed.branchSeedApplied = true
-        managed.providerContextBoundaryMessageId = undefined
-        managed.contextCompactionAttempt = undefined
-        managed.transferredSessionSummary = undefined
-        managed.transferredSessionSummaryApplied = undefined
-        managed.pendingTurnRecovery = cleanPending
-        this.persistSession(managed)
-        await this.flushSession(managed.id)
-        if (this.isManagedSessionYolo(managed)) {
-          await this.stopYoloHumanHandoff(managed, 'YOLO recovery stopped: the revoked provider was isolated, but durable evidence is insufficient for a new context. Existing results were preserved.')
-          return false
-        }
-        await this.requestUserInput(managed.id, [{
-          id: 'disabled-routing-clean-continuation-unavailable',
-          question: 'L’ancien fallback de routage est isolé, mais les éléments durables ne suffisent pas pour reprendre dans un contexte neuf. Quelle suite souhaitez-vous ?',
-          options: [
-            {
-              id: 'provide-guidance',
-              label: 'Préciser la reprise',
-              description: 'Fournissez uniquement le fait ou la priorité manquante pour reprendre sans réutiliser l’ancien contexte fournisseur.',
-              recommended: true,
-            },
-            {
-              id: 'stop-objective',
-              label: 'Arrêter cette mission',
-              description: 'Conserver les résultats actuels et arrêter la récupération.',
-            },
-          ],
-        }])
-        return true
+        detachProviderWithoutCleanHandoff = true
+        advanced = cleanPending
       }
-      cleanContinuationId = handoff.id
-      advanced = cleanPending
     }
 
     const recoveryDispatch = {
@@ -8255,14 +8257,16 @@ export class SessionManager implements ISessionManager {
       continuationWork: nextContinuationWork,
       continuationOrigin,
       recoveryDispatch,
-      ...(cleanContinuationId ? { cleanContextBoundaryMessageId: recoveryDispatch.id } : {}),
+      ...(cleanContinuationId || detachProviderWithoutCleanHandoff
+        ? { cleanContextBoundaryMessageId: recoveryDispatch.id }
+        : {}),
     }
     const recoveryPrompt = this.buildRecoveryDispatchMessage(
       managed,
       managed.pendingTurnRecovery,
       recoveryDispatch,
     )
-    if (cleanContinuationId) {
+    if (cleanContinuationId || detachProviderWithoutCleanHandoff) {
       // The allocation flush is the crash fence for a clean provider handoff.
       // Detach every persisted resume path in that same snapshot; the send
       // path will dispose any still-live in-memory runtime before admission.
@@ -16436,7 +16440,7 @@ export class SessionManager implements ISessionManager {
     })
 
 
-    if (costTurn && !hasImmutableMissionRoute(managed)) { const policy = resolveAgentCostControlPolicy(workspaceConfig?.costControl); const contextTokens = resolveContextTokenEstimate(managed.tokenUsage?.contextTokens, managed.messages); const limits = resolveEffectiveAgentContextLimits(policy.context, managed.tokenUsage?.contextWindow); const budgetState = resolveAgentCostBudgetState(monetaryBudgetCostUsd(availableContext.connection, objectiveCostUsd(managed.activeObjective, managed.tokenUsage?.costUsd)), policy.budgets); managed.pendingRoutingMeta = { ...managed.pendingRoutingMeta, costControl: { turnKind: costTurn.options?.automaticRecovery ? 'automatic-recovery' : 'direct', budgetState, thinkingLevel: managed.thinkingLevel ?? getDefaultThinkingLevel(), contextTokensBefore: contextTokens, compactAtTokens: limits.compactAtTokens, hardLimitTokens: limits.hardLimitTokens, hardContextLimitReached: contextTokens >= limits.hardLimitTokens } }; }
+    if (costTurn && !hasImmutableMissionRoute(managed)) { const policy = resolveAgentCostControlPolicy(workspaceConfig?.costControl); const contextTokens = resolveContextTokenEstimate(managed.tokenUsage?.contextTokens, managed.messages); const limits = resolveEffectiveAgentContextLimits(policy.context, resolveManagedSessionContextWindow(managed)); const budgetState = resolveAgentCostBudgetState(monetaryBudgetCostUsd(availableContext.connection, objectiveCostUsd(managed.activeObjective, managed.tokenUsage?.costUsd)), policy.budgets); managed.pendingRoutingMeta = { ...managed.pendingRoutingMeta, costControl: { turnKind: costTurn.options?.automaticRecovery ? 'automatic-recovery' : 'direct', budgetState, thinkingLevel: managed.thinkingLevel ?? getDefaultThinkingLevel(), contextTokensBefore: contextTokens, compactAtTokens: limits.compactAtTokens, hardLimitTokens: limits.hardLimitTokens, hardContextLimitReached: contextTokens >= limits.hardLimitTokens } }; }
 
     // Refresh runtime config in-place when the connection has drifted since
     // the agent was created. May null out `managed.agent` if the in-place
@@ -23406,7 +23410,6 @@ export class SessionManager implements ISessionManager {
           const canOpenCleanContinuation = !!objective && !!pending && !!dispatch
             && dispatch.phase === 'started' && dispatch.id === userMessage.id
             && !dispatch.cleanContinuationId
-            && (trustedContextLimitAnswer !== undefined || (pending.cleanContinuationCount ?? 0) < MAX_SAFE_VALIDATED_CONTINUATION_ATTEMPTS)
           const cleanPending: PendingTurnRecovery | undefined = canOpenCleanContinuation
             ? {
                 ...pending,
@@ -23432,7 +23435,7 @@ export class SessionManager implements ISessionManager {
             && !options?.automaticRecovery
             && contextHardLimitReached
             && (!objective || objective.userMessageId === userMessage.id || objective.lastUserMessageId === userMessage.id)
-            && message.length > 0 && message.length <= 16_000
+            && message.length > 0
           if (safeFreshDirectObjective) {
             await this.cancelPendingUserInput(managed, true)
             managed.pendingTurnRecovery = {
@@ -23499,7 +23502,7 @@ export class SessionManager implements ISessionManager {
             const isContextLimitAnswerOrigin = trustedContextLimitAnswer !== undefined
               || answeredContextLimit !== undefined
               || (options?.internalOrigin?.kind === 'user-input' && hasPendingOrRecentContextLimit)
-            if (isContextLimitAnswerOrigin && message.length > 0 && message.length <= 16_000) {
+            if (isContextLimitAnswerOrigin && message.length > 0) {
               await this.cancelPendingUserInput(managed, true)
               managed.pendingTurnRecovery = {
                 ...(managed.pendingTurnRecovery ?? createPendingTurnRecovery(userMessage.id)),
@@ -23536,41 +23539,42 @@ export class SessionManager implements ISessionManager {
               )
               assertActivePreparation()
             } else {
-              let contextDispatch = dispatch
-              if (!contextDispatch || !this.contextLimitHostAdmissionBoundary(managed)) {
-                const basePending = managed.pendingTurnRecovery ?? createPendingTurnRecovery(userMessage.id)
-                const allocated = this.nextRecoveryDispatch(
-                  basePending,
-                  'user_retry',
-                  'retry',
-                  Date.now(),
-                )
-                allocated.phase = 'allocated'
-                contextDispatch = allocated
-                managed.pendingTurnRecovery = {
-                  ...basePending,
-                  recoveryDispatch: allocated,
+              await this.cancelPendingUserInput(managed, true)
+              managed.pendingTurnRecovery = {
+                ...(managed.pendingTurnRecovery ?? createPendingTurnRecovery(userMessage.id)),
+                cleanContextBoundaryMessageId: userMessage.id,
+              }
+              managed.providerContextBoundaryMessageId = userMessage.id
+              await this.disposeManagedAgentRuntime(managed, 'hard-limit autonomous provider boundary reset')
+              assertActivePreparation()
+              managed.sdkSessionId = undefined
+              managed.branchFromSdkSessionId = undefined
+              managed.branchFromSessionPath = undefined
+              managed.branchFromSdkCwd = undefined
+              managed.branchFromSdkTurnId = undefined
+              managed.branchContextStrategy = undefined
+              managed.branchSeedApplied = true
+              managed.transferredSessionSummary = undefined
+              managed.transferredSessionSummaryApplied = undefined
+              managed.contextCompactionAttempt = undefined
+              if (managed.tokenUsage) {
+                managed.tokenUsage = {
+                  ...managed.tokenUsage,
+                  contextTokens: Math.max(1, Math.ceil(message.length / 4)),
                 }
               }
-              this.persistSession(managed)
-              await this.flushSession(managed.id)
-              if (this.isManagedSessionYolo(managed)) {
-                await this.stopYoloHumanHandoff(managed, 'YOLO context recovery exhausted: the next provider call could not be admitted safely. Existing objective, results and operation identities were preserved.')
-                sendSpan.mark('context.hard-limit-yolo-exhausted')
-                sendSpan.end()
-                await this.onProcessingStopped(sessionId, 'interrupted', myGeneration)
-                return
+              if (!this.persistSession(managed)) {
+                throw new Error('The fresh hard-limit provider boundary could not be queued for durable storage')
               }
-              await this.requestUserInput(
-                managed.id,
-                CONTEXT_LIMIT_NEXT_STEP_QUESTIONS,
-                this.contextLimitUserInputCapability,
-                contextDispatch.id,
+              await this.flushSession(managed.id)
+              assertActivePreparation()
+              cleanRecoveryProviderReset = true
+              agent = await this.getOrCreateAgent(
+                managed,
+                { message, messageId: userMessage.id, options },
+                assertActivePreparation,
               )
-              sendSpan.mark(`context.hard-limit-${providerAdmission.reason}`)
-              sendSpan.end()
-              await this.onProcessingStopped(sessionId, 'interrupted', myGeneration)
-              return
+              assertActivePreparation()
             }
           } else {
           let cleanDispatch = { ...dispatch!, cleanContinuationId: provisionalHandoff.id }

@@ -6,6 +6,7 @@ import type {
 
 export const COST_CONTROL_COMPACTION_INSTRUCTIONS = [
   'Create a precise, fact-preserving operational handoff for the current task.',
+  'Format the summary using these exact Markdown headings: ## Goal, ## Constraints & Preferences, ## Progress, ## Key Decisions, ## Next Steps, and ## Critical Context.',
   'Use concise sections for: current objective; verified state and evidence; decisions and user constraints;',
   'exact paths, identifiers, values, and external effects; unresolved work, blockers, and the next safe action.',
   'Distinguish verified facts from hypotheses, preserve negative findings and pending approvals, and do not invent details.',
@@ -53,12 +54,12 @@ const SPLIT_TURN_SUMMARY_MARKER = '**Turn Context (split turn):**'
 const UNRESOLVED_TEMPLATE_PATTERN = /\[(?:What is the user trying|Any constraints|Completed tasks|Current work|Issues preventing|Decision|Ordered list|Any data)/i
 
 const BILINGUAL_REQUIRED_SUMMARY_SECTION_PATTERNS = [
-  /(?:^|\n)#{1,3}\s*(?:Goal|Objectif|But)\b/iu,
-  /(?:^|\n)#{1,3}\s*(?:Constraints(?:\s*(?:&|and)\s*Preferences)?|Contraintes(?:\s*(?:&|et)\s*Pr[ée]f[ée]rences)?)\b/iu,
-  /(?:^|\n)#{1,3}\s*(?:Progress|Progr[èe]s|Avancement)\b/iu,
-  /(?:^|\n)#{1,3}\s*(?:(?:Key\s+)?Decisions?|D[ée]cisions?(?:\s+Cl[ée]s?)?)\b/iu,
-  /(?:^|\n)#{1,3}\s*(?:Next\s+Steps?|Prochaines?\s+[ée]tapes?|[ée]tapes?\s+suivantes?)\b/iu,
-  /(?:^|\n)#{1,3}\s*(?:Critical\s+Context|Contexte(?:\s+critique)?)\b/iu,
+  /(?:^|\n)#{1,3}\s*(?:(?:Current\s+)?Goal|(?:Current\s+)?Objective|Objectif(?:\s+actuel)?|But)\b/iu,
+  /(?:^|\n)#{1,3}\s*(?:Constraints(?:\s*(?:&|and)\s*Preferences)?|User\s+Constraints|Decisions\s+and\s+User\s+Constraints|Contraintes(?:\s*(?:&|et)\s*Pr[ée]f[ée]rences)?)\b/iu,
+  /(?:^|\n)#{1,3}\s*(?:Progress|Verified\s+State(?:\s+and\s+Evidence)?|State\s+and\s+Evidence|Progr[èe]s|Avancement|[ÉE]tat\s+v[ée]rifi[ée])\b/iu,
+  /(?:^|\n)#{1,3}\s*(?:(?:Key\s+)?Decisions?(?:\s+and\s+User\s+Constraints)?|D[ée]cisions?(?:\s+Cl[ée]s?)?)\b/iu,
+  /(?:^|\n)#{1,3}\s*(?:Next\s+(?:Safe\s+)?(?:Steps?|Actions?)|Unresolved\s+Work(?:\s*,\s*Blockers)?|Prochaines?\s+[ée]tapes?|[ée]tapes?\s+suivantes?)\b/iu,
+  /(?:^|\n)#{1,3}\s*(?:Critical\s+Context|Exact\s+Paths(?:\s*,\s*Identifiers)?|Contexte(?:\s+critique)?)\b/iu,
 ] as const
 
 const BILINGUAL_SPLIT_TURN_SECTION_PATTERNS = [

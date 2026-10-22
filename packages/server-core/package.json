@@ -1,6 +1,6 @@
 {
   "name": "@craft-agent/server-core",
-  "version": "0.12.9",
+  "version": "0.12.10",
   "license": "MIT",
   "description": "Reusable headless server infrastructure for Craft Agent",
   "type": "module",

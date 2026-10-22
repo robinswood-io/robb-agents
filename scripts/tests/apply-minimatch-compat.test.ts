@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
   applyMinimatchCompatibility,
+  applySprintfJsCompatibility,
   patchMinimatchSource,
 } from '../apply-minimatch-compat'
 
@@ -98,5 +99,49 @@ describe('minimatch compatibility installer', () => {
     const result = applyMinimatchCompatibility(temporaryDirectory!)
     expect(result).toEqual({ matched: [], changed: [] })
     expect(readFileSync(join(packageDir, 'minimatch.js'), 'utf8')).toBe(`${LEGACY_IMPORT}\n`)
+  })
+
+  it('materializes the vendor sprintf-js override for hoisted and nested argparse consumers', () => {
+    temporaryDirectory = mkdtempSync(join(tmpdir(), 'robb-sprintf-compat-'))
+    const vendorDir = join(temporaryDirectory, 'scripts', 'vendor', 'sprintf-js', 'src')
+    mkdirSync(vendorDir, { recursive: true })
+    writeFileSync(
+      join(temporaryDirectory, 'scripts', 'vendor', 'sprintf-js', 'package.json'),
+      JSON.stringify({ name: 'sprintf-js', version: '1.1.4', main: 'src/sprintf.js' }),
+    )
+    writeFileSync(
+      join(vendorDir, 'sprintf.js'),
+      "exports.sprintf = (fmt, val) => fmt.replace('%s', String(val))\n",
+    )
+
+    const argparseDir = join(
+      temporaryDirectory,
+      'node_modules',
+      'gray-matter',
+      'node_modules',
+      'js-yaml',
+      'node_modules',
+      'argparse',
+    )
+    mkdirSync(argparseDir, { recursive: true })
+    writeFileSync(
+      join(argparseDir, 'package.json'),
+      JSON.stringify({
+        name: 'argparse',
+        version: '1.0.10',
+        dependencies: { 'sprintf-js': '~1.0.2' },
+      }),
+    )
+
+    const first = applySprintfJsCompatibility(temporaryDirectory)
+    expect(first.matched).toEqual([
+      join(argparseDir, 'node_modules', 'sprintf-js'),
+      join(temporaryDirectory, 'node_modules', 'sprintf-js'),
+    ])
+    expect(first.changed).toEqual(first.matched)
+
+    const second = applySprintfJsCompatibility(temporaryDirectory)
+    expect(second.matched).toEqual(first.matched)
+    expect(second.changed).toEqual([])
   })
 })

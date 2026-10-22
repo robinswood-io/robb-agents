@@ -38,6 +38,39 @@ describe('context compaction', () => {
     expect(COST_CONTROL_COMPACTION_INSTRUCTIONS).toContain('exact paths, identifiers, values')
     expect(COST_CONTROL_COMPACTION_INSTRUCTIONS).toContain('do not invent details')
     expect(COST_CONTROL_COMPACTION_INSTRUCTIONS).toContain('pending approvals')
+    expect(COST_CONTROL_COMPACTION_INSTRUCTIONS).toContain('## Goal')
+    expect(COST_CONTROL_COMPACTION_INSTRUCTIONS).toContain('## Constraints & Preferences')
+    expect(COST_CONTROL_COMPACTION_INSTRUCTIONS).toContain('## Progress')
+    expect(COST_CONTROL_COMPACTION_INSTRUCTIONS).toContain('## Key Decisions')
+    expect(COST_CONTROL_COMPACTION_INSTRUCTIONS).toContain('## Next Steps')
+    expect(COST_CONTROL_COMPACTION_INSTRUCTIONS).toContain('## Critical Context')
+  })
+
+  test('accepts a measured compaction using prose operational handoff headings', () => {
+    const operationalSummary = [
+      '## Current Objective',
+      'Complete the accounting reconciliation for April.',
+      '## Decisions and User Constraints',
+      '- Preserve verified entries and do not duplicate bank imports.',
+      '## Verified State and Evidence',
+      '- 42 invoices matched against bank lines.',
+      '## Key Decisions',
+      '- Use Inqom folder 1042.',
+      '## Unresolved Work, Blockers',
+      '1. Reconcile the remaining 3 supplier invoices.',
+      '## Exact Paths, Identifiers',
+      '- Folder ID: 1042.',
+    ].join('\n')
+
+    expect(assessContextCompactionResult({
+      summary: operationalSummary,
+      firstKeptEntryId: 'entry-42',
+      tokensBefore: 110_000,
+      estimatedTokensAfter: 24_000,
+    })).toMatchObject({
+      outcome: 'succeeded',
+      issues: [],
+    })
   })
 
   test('accepts a measured, effective compaction', () => {
