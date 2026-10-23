@@ -1,3 +1,4 @@
+import { withScopeReview } from './__fixtures__/scope-review.ts';
 import { describe, expect, it } from 'bun:test';
 import type { Message, ObjectiveOutcomeDeclaration, ObjectiveAcceptanceCriterion } from '@craft-agent/core/types';
 import { isObjectiveShellExecutorToolName } from '@craft-agent/shared/agent';
@@ -641,25 +642,25 @@ describe('business criteria and durable goal — E01 E03 E04 E11 E12', () => {
     );
     const exactResult = { ...observation, toolResult: 'OK' };
     expect(validateObjectiveAcceptanceCriteria(textObjective, [root, exactResult], receipt)).toEqual([]);
-    expect(validateObjectiveOutcome(receipt, { objective: textObjective, messages: [root, exactResult] }).valid).toBe(true);
+    expect(validateObjectiveOutcome(receipt, { objective: textObjective, messages: withScopeReview(textObjective, [root, exactResult]) }).valid).toBe(true);
     for (const changed of [
       { toolInput: { host: 'production', timer: 'cleanup' } },
       { toolExecuted: false }, { toolStatus: 'error' as const }, { isError: true },
       { toolResult: 'OK but target differs' },
     ]) {
       expect(validateObjectiveAcceptanceCriteria(textObjective, [root, { ...exactResult, ...changed }], receipt)).toHaveLength(1);
-      expect(validateObjectiveOutcome(receipt, { objective: textObjective, messages: [root, { ...exactResult, ...changed }] }).valid).toBe(false);
+      expect(validateObjectiveOutcome(receipt, { objective: textObjective, messages: withScopeReview(textObjective, [root, { ...exactResult, ...changed }]) }).valid).toBe(false);
     }
     const genericOnly = { ...textObjective, requiresAcceptanceCriteria: false, acceptanceCriteria: undefined };
-    expect(validateObjectiveOutcome(receipt, { objective: genericOnly, messages: [root, exactResult] }).valid).toBe(false);
+    expect(validateObjectiveOutcome(receipt, { objective: genericOnly, messages: withScopeReview(genericOnly, [root, exactResult]) }).valid).toBe(false);
     expect(validateObjectiveOutcome({ ...receipt, criteria: receipt.criteria.map(item => (
       item.id === 'relevant-checks-passed' ? { ...item, evidence: [`tool:${criterion.toolName}`] } : item
-    )) }, { objective: textObjective, messages: [root, exactResult] }).valid).toBe(true);
+    )) }, { objective: textObjective, messages: withScopeReview(textObjective, [root, exactResult]) }).valid).toBe(true);
     expect(validateObjectiveOutcome({ ...receipt, criteria: receipt.criteria.map(item => (
       item.id === criterion.id || item.id === 'relevant-checks-passed'
         ? { ...item, evidence: [`tool:${criterion.toolName}`] }
         : item
-    )) }, { objective: textObjective, messages: [root, exactResult] }).valid).toBe(true);
+    )) }, { objective: textObjective, messages: withScopeReview(textObjective, [root, exactResult]) }).valid).toBe(true);
   });
   it('resolves persisted CRM and Gmail selectors without requiring a connector or data mutation', () => {
     const crmCriterion = { ...criterion, checks: [
@@ -1003,7 +1004,7 @@ describe('business criteria and durable goal — E01 E03 E04 E11 E12', () => {
       }
       const registered = registerObjectiveAcceptanceCriteria(base, [candidate], 2);
       const result = { ...observation, toolName, toolInput: input, toolResult: 'OK' };
-      const outcome = validateObjectiveOutcome(receipt, { objective: registered, messages: [root, result] });
+      const outcome = validateObjectiveOutcome(receipt, { objective: registered, messages: withScopeReview(registered, [root, result]) });
       expect(outcome.valid).toBe(valid);
       if (!valid) expect(outcome.gaps).toContain('criterion lacks observed evidence: relevant-checks-passed');
     }
@@ -1134,7 +1135,7 @@ describe('business criteria and durable goal — E01 E03 E04 E11 E12', () => {
         })),
       ],
     };
-    expect(validateObjectiveOutcome(claim, { objective: registered, messages: [root, result] }))
+    expect(validateObjectiveOutcome(claim, { objective: registered, messages: withScopeReview(registered, [root, result]) }))
       .toMatchObject({ state: 'complete_verified', valid: true, gaps: [] });
     for (const changed of [
       { toolExecuted: false }, { toolStatus: 'error' as const },
@@ -1144,7 +1145,7 @@ describe('business criteria and durable goal — E01 E03 E04 E11 E12', () => {
       { toolResult: JSON.stringify({ ...envelope, code: '0' }) },
     ] satisfies Array<Partial<Message>>) {
       expect(validateObjectiveOutcome(claim, {
-        objective: registered, messages: [root, { ...result, ...changed }],
+        objective: registered, messages: withScopeReview(registered, [root, { ...result, ...changed }]),
       }).valid).toBe(false);
     }
   });
@@ -1156,19 +1157,19 @@ describe('business criteria and durable goal — E01 E03 E04 E11 E12', () => {
       [{ ...criterion, toolName: 'Bash', input: { command }, checks: [{ path: '$text', equals: '{"ok":true}' }] }], 2,
     );
     const result = { ...observation, toolName: 'Bash', toolInput: { command }, toolResult: '{"ok":true}\n' };
-    expect(validateObjectiveOutcome(receipt, { objective: registered, messages: [root, result] }).valid).toBe(true);
+    expect(validateObjectiveOutcome(receipt, { objective: registered, messages: withScopeReview(registered, [root, result]) }).valid).toBe(true);
     for (const changes of [
       { toolInput: { command: 'python3 /tmp/validate_other_campaign.py' } },
       { timestamp: 0 }, { toolUseId: 'different-call', id: 'different-message' },
       { toolExecuted: false }, { toolStatus: 'error' as const }, { isError: true },
       { toolResult: '{"ok":false}\n' }, { toolResult: '{"ok":true}\nERROR' },
-    ]) expect(validateObjectiveOutcome(receipt, { objective: registered, messages: [root, { ...result, ...changes }] }).valid).toBe(false);
+    ]) expect(validateObjectiveOutcome(receipt, { objective: registered, messages: withScopeReview(registered, [root, { ...result, ...changes }]) }).valid).toBe(false);
     const mutation: Message = { ...observation, id: 'later-write', toolUseId: 'later-write', toolName: 'Write', toolInput: { file_path: '/tmp/campaign' }, timestamp: 5 };
-    expect(validateObjectiveOutcome(receipt, { objective: registered, messages: [root, result, mutation] }).valid).toBe(false);
+    expect(validateObjectiveOutcome(receipt, { objective: registered, messages: withScopeReview(registered, [root, result, mutation]) }).valid).toBe(false);
     const otherRoot: Message = { ...root, id: 'other-objective', timestamp: 6 };
     expect(validateObjectiveOutcome(receipt, { objective: { ...registered, userMessageId: otherRoot.id }, messages: [root, result, otherRoot] }).valid).toBe(false);
     const invented = { ...receipt, criteria: receipt.criteria.map(item => ({ ...item, evidence: ['t_invented'] })) };
-    expect(validateObjectiveOutcome(invented, { objective: registered, messages: [root, result] }).valid).toBe(false);
+    expect(validateObjectiveOutcome(invented, { objective: registered, messages: withScopeReview(registered, [root, result]) }).valid).toBe(false);
   });
   it('preserves sequential sibling observations from exact bounded registered inspections', () => {
     const fields = ['state', 'mergeStateStatus', 'statusCheckRollup'];
@@ -1206,7 +1207,7 @@ describe('business criteria and durable goal — E01 E03 E04 E11 E12', () => {
       ],
     };
     expect(validateObjectiveOutcome(claimed, {
-      objective: registered, messages: [root, ...observations],
+      objective: registered, messages: withScopeReview(registered, [root, ...observations]),
     })).toMatchObject({ state: 'complete_verified', valid: true, gaps: [] });
 
     const laterMutation: Message = {
@@ -1214,7 +1215,7 @@ describe('business criteria and durable goal — E01 E03 E04 E11 E12', () => {
       toolName: 'Bash', toolInput: { command: 'git checkout main' }, toolResult: 'Switched to main',
     };
     expect(validateObjectiveOutcome(claimed, {
-      objective: registered, messages: [root, ...observations, laterMutation],
+      objective: registered, messages: withScopeReview(registered, [root, ...observations, laterMutation]),
     }).valid).toBe(false);
   });
   it('rejects mutually invalidating opaque validators before freezing an impossible contract', () => {
@@ -1534,6 +1535,40 @@ describe('business criteria and durable goal — E01 E03 E04 E11 E12', () => {
       'timer-active',
       'timer-active_v2',
     ]);
+
+    const shaHash = 'a'.repeat(64);
+    const shellCriterion: ObjectiveAcceptanceCriterion = {
+      id: 'proxy-artifact-sha256',
+      description: 'Verify SHA-256 of generated artifact',
+      toolName: 'Bash',
+      input: { command: 'shasum -a 256 dist/app.js' },
+      checks: [{ path: '$.proxySha256', equals: shaHash }],
+    };
+    const shellObjective = registerObjectiveAcceptanceCriteria(
+      transitionObjectiveContract({ messageId: root.id, text: root.content, nowMs: 1 }),
+      [shellCriterion],
+      2,
+    );
+    const plainTextObservation: Message = {
+      id: 'sha-obs', toolUseId: 'sha-obs', role: 'tool', content: '', toolName: 'Bash',
+      toolStatus: 'completed', toolExecuted: true, timestamp: 5,
+      toolInput: { command: 'shasum -a 256 dist/app.js' },
+      toolResult: `${shaHash}  dist/app.js\n`,
+    };
+    const repairedToText = registerObjectiveAcceptanceCriteria(
+      shellObjective,
+      [{
+        ...shellCriterion,
+        id: 'proxy-artifact-sha256_v2',
+        supersedes: 'proxy-artifact-sha256',
+        checks: [{ path: '$text', equals: `${shaHash}  dist/app.js` }],
+      }],
+      10,
+      undefined,
+      [root, plainTextObservation],
+    );
+    expect(repairedToText.acceptanceCriteria?.[0]?.id).toBe('proxy-artifact-sha256_v2');
+    expect(repairedToText.acceptanceCriteria?.[0]?.checks).toEqual([{ path: '$text', equals: `${shaHash}  dist/app.js` }]);
   });
   it('allows only a complete identical criteria replay during terminal reconciliation', () => {
     const additional: ObjectiveAcceptanceCriterion = {
@@ -1937,7 +1972,7 @@ describe('business criteria and durable goal — E01 E03 E04 E11 E12', () => {
     expect(collectObjectiveAcceptanceObservations(registered, [root, failed, repair, verified]))
       .toMatchObject([{ criterionId: reportCriterion.id, passed: true,
         message: { toolUseId: verified.toolUseId } }]);
-    expect(validateObjectiveOutcome(claimed, { objective: registered, messages: [root, failed, repair, verified] }))
+    expect(validateObjectiveOutcome(claimed, { objective: registered, messages: withScopeReview(registered, [root, failed, repair, verified]) }))
       .toMatchObject({ state: 'complete_verified', valid: true, gaps: [] });
   });
   it('rejects a new JSON selector when the exact prior observation is demonstrably text-only', () => {
@@ -2086,7 +2121,7 @@ describe('business criteria and durable goal — E01 E03 E04 E11 E12', () => {
       toolInput: { workspaceId: 'workspace-b', timer: 'cleanup', enabled: false }, toolResult: '{"updated":true}' };
     expect(validateObjectiveAcceptanceCriteria(isolatedObjective, [root, isolatedObservation, unrelatedMutation], receipt)).toEqual([]);
     expect(validateObjectiveOutcome(receipt, { objective: isolatedObjective,
-      messages: [root, isolatedObservation, unrelatedMutation] }).valid).toBe(true);
+      messages: withScopeReview(isolatedObjective, [root, isolatedObservation, unrelatedMutation]) }).valid).toBe(true);
 
     const relevantMutation = { ...unrelatedMutation, id: 'same-mutation', toolUseId: 'same-mutation',
       toolInput: { workspaceId: 'workspace-a', timer: 'cleanup', enabled: false } };
@@ -2094,7 +2129,7 @@ describe('business criteria and durable goal — E01 E03 E04 E11 E12', () => {
       'Business criterion lacks matching post-action evidence: timer-active',
     ]);
     expect(validateObjectiveOutcome(receipt, { objective: isolatedObjective,
-      messages: [root, isolatedObservation, relevantMutation] }).valid).toBe(false);
+      messages: withScopeReview(isolatedObjective, [root, isolatedObservation, relevantMutation]) }).valid).toBe(false);
     expect(validateObjectiveAcceptanceCriteria(isolatedObjective, [root, isolatedObservation, relevantMutation, {
       ...isolatedObservation, id: 'after-mutation', toolUseId: 'after-mutation', timestamp: 6,
     }], { ...receipt, criteria: receipt.criteria.map(item => item.id === criterion.id
@@ -2253,7 +2288,7 @@ describe('business criteria and durable goal — E01 E03 E04 E11 E12', () => {
       ],
     };
     expect(validateObjectiveAcceptanceCriteria(readObjective, [root, readMessage], claim)).toEqual([]);
-    expect(validateObjectiveOutcome(claim, { objective: readObjective, messages: [root, readMessage] }).valid).toBe(true);
+    expect(validateObjectiveOutcome(claim, { objective: readObjective, messages: withScopeReview(readObjective, [root, readMessage]) }).valid).toBe(true);
   });
 });
 

@@ -1,6 +1,7 @@
+import { scopeReviewFixture } from './__fixtures__/scope-review.ts'
 import { registerObjectiveAcceptanceCriteria } from './objective-acceptance-criteria.ts'
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { messageToStored, storedToMessage, type AgentEvent, type Message, type ObjectiveOutcomeDeclaration } from '@craft-agent/core/types'
@@ -17,6 +18,7 @@ import {
 } from './autonomy-browser-fallback.ts'
 import { SessionManager, createManagedSession } from './SessionManager.ts'
 import { transitionObjectiveContract, turnProgressFingerprint } from './objective-contract.ts'
+import { incompletePlanSteps } from './turn-completion.ts'
 
 type Managed = ReturnType<typeof createManagedSession>
 
@@ -94,12 +96,19 @@ function makeHarness(id: string): Harness {
   return { manager, managed, sentEvents, telemetryNames, resumedSessionIds, completions }
 }
 
-function installAgent(harness: Harness, events: AgentEvent[], beforeChat?: () => void): string[] {
+function installAgent(harness: Harness, events: AgentEvent[], beforeChat?: () => void, reviewed = false): string[] {
   const redirected: string[] = []
   const agent = {
     async *chat(): AsyncGenerator<AgentEvent> {
       beforeChat?.()
-      for (const event of events) yield event
+      for (const event of events) {
+        if (reviewed && event.type === 'text_complete' && harness.managed.activeObjective?.acceptanceCriteria?.length) {
+          const review = scopeReviewFixture(harness.managed.activeObjective, harness.managed.messages)
+          yield { type: 'tool_start', toolName: review.toolName!, toolUseId: review.toolUseId!, input: review.toolInput! }
+          yield { type: 'tool_result', toolName: review.toolName!, toolUseId: review.toolUseId!, result: review.toolResult!, executed: true, isError: false }
+        }
+        yield event
+      }
     },
     getModel: () => 'test/objective-model',
     getSessionId: () => null,
@@ -118,6 +127,10 @@ function installAgent(harness: Harness, events: AgentEvent[], beforeChat?: () =>
     return agent
   }
   return redirected
+}
+
+function installReviewedAgent(harness: Harness, events: AgentEvent[], beforeChat?: () => void): string[] {
+  return installAgent(harness, events, beforeChat, true)
 }
 
 function bindLiveToolAdmission(harness: Harness): void {
@@ -1266,7 +1279,7 @@ ${outcomeComment(receipt)}` },
       },
     }
     let reviewer!: Managed
-    installAgent(harness, [
+    installReviewedAgent(harness, [
       { type: 'tool_start', toolName: 'Write', toolUseId: 'write-parent', input: { file_path: 'target.ts', content: 'export {}' } },
       { type: 'tool_result', toolName: 'Write', toolUseId: 'write-parent', result: 'Updated target.ts', isError: false, executed: true },
       { type: 'tool_start', toolName: 'Bash', toolUseId: 'check-parent', input: { command: 'bun test target.ts' } },
@@ -1342,7 +1355,7 @@ ${outcomeComment(receipt)}` },
     reviewer.activeObjective!.terminalState = 'complete_verified'
     runtime.automaticAdmissionReservations.delete(harness.managed.id)
 
-    installAgent(harness, [
+    installReviewedAgent(harness, [
       { type: 'text_complete', text: `Delegated result consumed; the existing implementation and checks remain verified.\n${outcomeComment(finalReceipt)}` },
       { type: 'complete' },
     ])
@@ -1705,7 +1718,7 @@ ${outcomeComment(receipt)}` },
       ],
       remainingWork: [], blocker: null,
     }
-    installAgent(harness, [
+    installReviewedAgent(harness, [
       { type: 'tool_start', toolName: 'Write', toolUseId: 'write-parent', input: { file_path: 'target.ts', content: 'export {}' } },
       { type: 'tool_result', toolName: 'Write', toolUseId: 'write-parent', result: 'Updated target.ts', isError: false, executed: true },
       { type: 'tool_start', toolName: 'Bash', toolUseId: 'check-parent', input: { command: 'bun test target.ts' } },
@@ -1831,7 +1844,7 @@ ${outcomeComment(receipt)}` },
       remainingWork: [],
       blocker: null,
     }
-    installAgent(harness, [
+    installReviewedAgent(harness, [
       { type: 'tool_start', toolName: 'Write', toolUseId: 'write-1', input: { file_path: 'result.ts', content: 'export {}' } },
       { type: 'tool_result', toolName: 'Write', toolUseId: 'write-1', result: 'Wrote result.ts', isError: false, executed: true },
       { type: 'tool_start', toolName: 'Bash', toolUseId: 'check-1', input: { command: 'bun test result.ts' } },
@@ -2970,7 +2983,7 @@ ${outcomeComment(receipt)}` },
         { id: 'no-safe-work-remaining', satisfied: true, evidence: ['assistant-final'] },
       ],
     }
-    installAgent(harness, [
+    installReviewedAgent(harness, [
       { type: 'tool_start', toolName: 'Bash', toolUseId: 'verify-document', input: { command } },
       { type: 'tool_result', toolName: 'Bash', toolUseId: 'verify-document', result, isError: false, executed: true },
       { type: 'text_complete', text: `Document vérifié.\n${outcomeComment(receipt)}` },
@@ -3130,6 +3143,111 @@ ${outcomeComment(receipt)}` },
     expect(harness.managed.messages).toHaveLength(1)
     expect(harness.managed.wasInterrupted).toBe(true)
   })
+
+  it('recovers a native unfinished plan after restart without demanding a legacy receipt', async () => {
+    delete process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT
+    const harness = makeHarness('native-restart-plan')
+    const user: Message = { id: 'native-root', role: 'user', content: 'Crée premier.md et second.md puis vérifie les deux.', timestamp: 1 }
+    harness.managed.messages.push(user, {
+      id: 'native-plan', role: 'tool', content: 'Plan updated', timestamp: 2,
+      toolName: 'mcp__session__update_plan', toolStatus: 'completed', toolExecuted: true,
+      toolInput: { plan: [{ step: 'Créer premier.md', status: 'completed' }, { step: 'Créer second.md et vérifier les deux', status: 'pending' }] },
+    }, { id: 'native-false-final', role: 'assistant', content: 'Premier fichier livré.', timestamp: 3 })
+    harness.managed.activeObjective = transitionObjectiveContract({ messageId: user.id, text: user.content, nowMs: 1 })
+    harness.managed.pendingTurnRecovery = createPendingTurnRecovery(user.id)
+    await (harness.manager as unknown as {
+      resumePendingTurnAfterRestart: (sessionId: string) => Promise<void>
+    }).resumePendingTurnAfterRestart(harness.managed.id)
+    expect(harness.managed.activeObjective?.terminalState).toBe('active')
+    expect(harness.managed.pendingTurnRecovery).toMatchObject({ attempts: 1, lastCause: 'premature_final' })
+    expect(harness.managed.pendingTurnRecovery?.validationGaps ?? []).toEqual([])
+    expect(harness.managed.messageQueue).toHaveLength(1)
+    expect(harness.managed.messages.find(message => message.id === 'native-false-final')?.isIntermediate).toBe(true)
+    expect(harness.resumedSessionIds).toEqual([harness.managed.id])
+  })
+
+  it('finishes a two-deliverable mission after an omitted step, with real files, automatic dispatch and persisted completion', async () => {
+    delete process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT
+    const harness = makeHarness('native-complete-mission')
+    const dir = harness.managed.workspace.rootPath
+    const first = join(dir, 'premier.md')
+    const second = join(dir, 'second.md')
+    const path = join(dir, 'session.jsonl')
+    const prompts: string[] = []
+    let firstModifiedAt: number | undefined
+    const runtime = harness.manager as unknown as {
+      enqueuePersist: (session: Managed) => boolean
+      flushSession: () => Promise<void>
+      processNextQueuedMessage?: (sessionId: string) => void
+      getOrCreateAgent: (session: Managed) => Promise<typeof agent>
+    }
+    const persist = (session: Managed) => {
+      writeSessionJsonl(path, { ...pickSessionFields(session), workspaceRootPath: dir,
+        createdAt: 1, lastUsedAt: Date.now(), messages: session.messages.map(messageToStored),
+        tokenUsage: { inputTokens: 0, outputTokens: 0, totalTokens: 0, contextTokens: 0, costUsd: 0 },
+      } as never)
+      return true
+    }
+    runtime.enqueuePersist = persist
+    runtime.flushSession = async () => { persist(harness.managed) }
+    // Use the real queue dispatcher, including its automatic admission checks.
+    delete runtime.processNextQueuedMessage
+    async function* publishPlan(id: string, finished: boolean): AsyncGenerator<AgentEvent> {
+      yield { type: 'tool_start', toolName: 'mcp__session__update_plan', toolUseId: id, input: { plan: [
+        { step: 'Créer premier.md', status: 'completed' },
+        ...(finished ? [{ step: 'Créer second.md', status: 'completed' }, { step: 'Vérifier les deux fichiers', status: 'completed' }]
+          : [{ step: 'Créer second.md', status: 'pending' }, { step: 'Vérifier les deux fichiers', status: 'pending' }]),
+      ] } }
+      yield { type: 'tool_result', toolName: 'mcp__session__update_plan', toolUseId: id, result: 'Plan updated', executed: true, isError: false }
+    }
+    const agent = {
+      async *chat(prompt: string): AsyncGenerator<AgentEvent> {
+        prompts.push(prompt)
+        const current = prompts.length === 1 ? first : second
+        yield { type: 'tool_start', toolName: 'Write', toolUseId: `write-${prompts.length}`, input: { file_path: current, content: 'Livrable vérifié' } }
+        writeFileSync(current, 'Livrable vérifié')
+        yield { type: 'tool_result', toolName: 'Write', toolUseId: `write-${prompts.length}`, result: `Wrote ${current}`, executed: true, isError: false }
+        if (prompts.length === 1) {
+          firstModifiedAt = statSync(first).mtimeMs
+          yield* publishPlan('partial-plan', false)
+          yield { type: 'text_complete', text: 'Les livrables sont prêts.' }
+        } else {
+          for (const file of [first, second]) {
+            yield { type: 'tool_start', toolName: 'Read', toolUseId: `read-${file}`, input: { file_path: file } }
+            yield { type: 'tool_result', toolName: 'Read', toolUseId: `read-${file}`, result: readFileSync(file, 'utf8'), executed: true, isError: false }
+          }
+          yield* publishPlan('complete-plan', true)
+          yield { type: 'text_complete', text: `Les deux fichiers sont écrits et relus : [premier.md](<${first}>) et [second.md](<${second}>).` }
+        }
+        yield { type: 'complete' }
+      },
+      getModel: () => 'test/objective-model', getSessionId: () => null,
+      isProcessing: () => false, setAllSources: () => {}, redirect: () => true,
+    }
+    harness.managed.agent = agent as never
+    runtime.getOrCreateAgent = async session => { session.agent = agent as never; return agent }
+    const completed = new Promise<void>(resolve => {
+      const off = harness.manager.onSessionComplete(event => {
+        if (event.sessionId === harness.managed.id && event.reason === 'complete') { off(); resolve() }
+      })
+    })
+    await harness.manager.sendMessage(harness.managed.id, 'Crée premier.md et second.md, vérifie les deux fichiers puis livre leurs liens.')
+    await completed
+    expect(prompts).toHaveLength(2)
+    expect(prompts[1]).toContain('premier.md et second.md')
+    expect(prompts[1]).toContain('Créer second.md')
+    expect(prompts[1]).not.toContain('host_objective_contract')
+    expect(prompts[1]).not.toContain('robb_objective_outcome')
+    expect(readFileSync(first, 'utf8')).toBe('Livrable vérifié')
+    expect(readFileSync(second, 'utf8')).toBe('Livrable vérifié')
+    if (firstModifiedAt === undefined) throw new Error('The first delivery was not observed')
+    expect(statSync(first).mtimeMs).toBe(firstModifiedAt)
+    const persisted = readSessionJsonl(path)!
+    expect(persisted.activeObjective?.terminalState).toBe('complete_verified')
+    expect(persisted.pendingTurnRecovery).toBeUndefined()
+    expect(incompletePlanSteps(persisted.messages.map(storedToMessage), persisted.activeObjective!.userMessageId)).toEqual([])
+    expect(harness.completions).toHaveLength(1)
+  }, 15_000)
 
   it('uses provider-driven execution by default without injecting host_objective_contract or rejecting receipt-free completions', async () => {
     delete process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT

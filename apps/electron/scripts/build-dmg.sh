@@ -27,8 +27,9 @@ Options:
              signing and Apple notarization, then verify the final application
              with codesign, spctl and stapler.
   --local-production
-             Build an ad-hoc signed local package which uses the production
-             identity and ~/.craft-agent profile. Requires a clean Git source.
+             Build a Developer ID signed local package using CSC_NAME from the
+             keychain, the production identity and ~/.craft-agent profile.
+             Requires clean Git source; keeps macOS permissions stable across updates.
              Never distribute this unnotarized artifact.
 
 Release credentials (provided by the operator/CI; never committed):
@@ -99,11 +100,15 @@ elif [[ "$LOCAL_PRODUCTION_BUILD" == true ]]; then
   export ROBB_BUILD_DIRTY=false
   unset CRAFT_DEV_RUNTIME
 
-  echo "WARNING: building an ad-hoc local production-profile package." >&2
+  if [[ -z "${CSC_NAME:-}" ]]; then
+    echo "ERROR: --local-production requires CSC_NAME (a Developer ID Application identity) to preserve macOS permissions." >&2
+    exit 1
+  fi
+  echo "WARNING: building a Developer ID signed local production-profile package." >&2
   echo "WARNING: it reads and writes ~/.craft-agent and must never be distributed." >&2
 
   export CSC_IDENTITY_AUTO_DISCOVERY=false
-  unset CSC_LINK CSC_KEY_PASSWORD CSC_NAME
+  unset CSC_LINK CSC_KEY_PASSWORD
 else
   # The default contract is a development-channel local smoke artifact.
   export ROBB_BUILD_CHANNEL=development
@@ -189,10 +194,15 @@ cd "$ELECTRON_DIR"
 # Publishing is handled only by the verified GitHub Release job, never by
 # electron-builder's CI auto-detection.
 BUILDER_ARGS=(--config electron-builder.yml --mac --"$ARCH" --publish never)
-if [[ "$RELEASE_BUILD" == true ]]; then
+if [[ "$RELEASE_BUILD" == true || "$LOCAL_PRODUCTION_BUILD" == true ]]; then
   # Repeat the production config's fail-closed setting at the invocation
   # boundary so a future config regression cannot silently disable it.
   BUILDER_ARGS+=(--config.mac.forceCodeSigning=true)
+  if [[ "$LOCAL_PRODUCTION_BUILD" == true ]]; then
+    BUILDER_ARGS+=(--config.mac.identity="$CSC_NAME" --config.mac.notarize=false)
+  else
+    BUILDER_ARGS+=(--config.mac.notarize=true)
+  fi
 else
   # Preserve explicitly non-release local smoke builds without a certificate.
   # Apple Silicon refuses to launch a mutated Electron bundle without a valid

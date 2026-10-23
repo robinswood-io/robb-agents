@@ -85,8 +85,9 @@ export class PiEventAdapter extends BaseEventAdapter {
   // Track whether streaming deltas have been received for the current message
   private hasStreamedDeltas: boolean = false;
 
-  // One fixed activity label per model phase, never one event per reasoning delta.
+  // One fixed activity label per model phase, with a 30s heartbeat during long reasoning/toolcall streams.
   private composingActivity = false;
+  private lastComposingActivityAt = 0;
 
   // Track whether a final (non-intermediate) text_complete has been emitted this turn
   private hasEmittedFinalText: boolean = false;
@@ -462,6 +463,7 @@ export class PiEventAdapter extends BaseEventAdapter {
         // Expose the phase, never its thinking content or encrypted signature.
         if (event.message?.role === 'assistant' && !this.composingActivity) {
           this.composingActivity = true;
+          this.lastComposingActivityAt = Date.now();
           yield { type: 'status', message: AGENT_RUNTIME_ACTIVITY.composingResponse };
         }
         break;
@@ -469,12 +471,22 @@ export class PiEventAdapter extends BaseEventAdapter {
       case 'message_update': {
         // Pi SDK emits message_update only for assistant messages (streaming deltas)
         const amEvent: AssistantMessageEvent = event.assistantMessageEvent;
-        if ((amEvent.type === 'thinking_start' || amEvent.type === 'thinking_delta') && !this.composingActivity) {
-          this.composingActivity = true;
-          yield { type: 'status', message: AGENT_RUNTIME_ACTIVITY.composingResponse };
+        if (
+          amEvent.type === 'thinking_start'
+          || amEvent.type === 'thinking_delta'
+          || amEvent.type === 'toolcall_start'
+          || amEvent.type === 'toolcall_delta'
+        ) {
+          const now = Date.now();
+          if (!this.composingActivity || now - this.lastComposingActivityAt >= 30_000) {
+            this.composingActivity = true;
+            this.lastComposingActivityAt = now;
+            yield { type: 'status', message: AGENT_RUNTIME_ACTIVITY.composingResponse };
+          }
         }
         if (amEvent.type === 'text_delta' && amEvent.delta) {
           this.composingActivity = false;
+          this.lastComposingActivityAt = Date.now();
           this.hasStreamedDeltas = true;
           if (!this.messageSubTurnId) {
             this.messageSubTurnId = this.nextSubTurnId('m');

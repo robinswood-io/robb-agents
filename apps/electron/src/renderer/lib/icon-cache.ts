@@ -67,6 +67,21 @@ export const iconCache = new Map<string, string>()
  */
 export const logoUrlCache = new Map<string, string | null>()
 
+// Composers and avatars can request the same image before its icon is cached.
+// Share that read instead of consuming another RPC slot for each consumer.
+const pendingWorkspaceImages = new Map<string, Promise<string | null>>()
+
+function readWorkspaceImage(workspaceId: string, relativePath: string): Promise<string | null> {
+  const key = `${workspaceId}:${relativePath}`
+  const pending = pendingWorkspaceImages.get(key)
+  if (pending) return pending
+
+  const request = window.electronAPI.readWorkspaceImage(workspaceId, relativePath)
+    .finally(() => { pendingWorkspaceImages.delete(key) })
+  pendingWorkspaceImages.set(key, request)
+  return request
+}
+
 // ============================================================================
 // Legacy exports (for backward compatibility during migration)
 // These are views into the unified cache, not separate maps.
@@ -259,7 +274,7 @@ export async function loadSourceIcon(
  */
 async function loadWorkspaceIcon(workspaceId: string, relativePath: string): Promise<string | null> {
   try {
-    const result = await window.electronAPI.readWorkspaceImage(workspaceId, relativePath)
+    const result = await readWorkspaceImage(workspaceId, relativePath)
     // IPC returns null for missing files (silent fallback)
     if (!result) {
       return null
@@ -672,7 +687,7 @@ async function loadIconFile(
   relativePath: string
 ): Promise<{ dataUrl: string; colorable: boolean; rawSvg?: string } | null> {
   try {
-    const content = await window.electronAPI.readWorkspaceImage(workspaceId, relativePath)
+    const content = await readWorkspaceImage(workspaceId, relativePath)
     // IPC returns null for missing files (silent fallback)
     if (!content) {
       return null
@@ -750,8 +765,7 @@ export function sanitizeSvgForInline(svg: string): string {
 
 /**
  * Auto-discover an icon file in a workspace directory.
- * Probes all extensions (.svg, .png, .jpg, .jpeg) in parallel via IPC,
- * then returns the first successful result by priority order.
+ * Tries extensions in priority order and stops at the first existing file.
  * Default fileName is 'icon' (e.g. icon.svg). Override for entities
  * that use identifier-based naming (e.g. statuses use '{statusId}.svg').
  */
@@ -762,16 +776,9 @@ async function discoverIconFile(
 ): Promise<{ dataUrl: string; colorable: boolean; rawSvg?: string } | null> {
   const name = fileName ?? 'icon'
 
-  // Probe all extensions in parallel — reduces round-trips from N to 1
-  const results = await Promise.allSettled(
-    ICON_FILE_EXTENSIONS.map(ext =>
-      loadIconFile(workspaceId, `${iconDir}/${name}${ext}`)
-    )
-  )
-
-  // Return first successful result in priority order (svg > png > jpg > jpeg)
-  for (const result of results) {
-    if (result.status === 'fulfilled' && result.value) return result.value
+  for (const ext of ICON_FILE_EXTENSIONS) {
+    const result = await loadIconFile(workspaceId, `${iconDir}/${name}${ext}`)
+    if (result) return result
   }
   return null
 }

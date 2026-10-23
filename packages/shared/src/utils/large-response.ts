@@ -238,16 +238,27 @@ function gmailMessageResultMetadata(parsed: unknown, toolName: string): string |
   const normalizedToolName = toolName.startsWith('functions.')
     ? toolName.slice('functions.'.length)
     : toolName;
-  if (normalizedToolName !== 'mcp__google-contacts__gmail_get_message'
-    || !parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return undefined;
-  const source = parsed as Record<string, unknown>;
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return undefined;
+  const envelope = parsed as Record<string, unknown>;
+  const isDirectGmailRead = normalizedToolName === 'mcp__google-contacts__gmail_get_message'
+    || normalizedToolName === 'mcp__google-contacts__gmail_get_message_by_url';
+  const isOrionGmailRead = (normalizedToolName === 'mcp__orion-mcp__orion_mcp_read'
+    || normalizedToolName === 'mcp__orion-mcp__orion_mcp_call')
+    && (envelope.tool === 'gmail_get_message' || envelope.tool === 'gmail_get_message_by_url')
+    && envelope.data !== null && typeof envelope.data === 'object' && !Array.isArray(envelope.data);
+  if (!isDirectGmailRead && !isOrionGmailRead) return undefined;
+  const rawSource = isOrionGmailRead ? envelope.data as Record<string, unknown> : envelope;
+  const latest = rawSource.latestMessage && typeof rawSource.latestMessage === 'object' && !Array.isArray(rawSource.latestMessage)
+    ? rawSource.latestMessage as Record<string, unknown>
+    : undefined;
+  const source = typeof rawSource.id === 'string' ? rawSource : (latest ?? rawSource);
   const metadata: Record<string, unknown> = {};
   for (const key of ['id', 'threadId', 'subject', 'from', 'to', 'cc', 'bcc', 'date', 'messageIdHeader']) {
-    const descriptor = Object.getOwnPropertyDescriptor(source, key);
+    const descriptor = Object.getOwnPropertyDescriptor(source, key) ?? Object.getOwnPropertyDescriptor(rawSource, key);
     if (descriptor && 'value' in descriptor && typeof descriptor.value === 'string'
       && descriptor.value.length <= 2_048) metadata[key] = descriptor.value;
   }
-  const labels = Object.getOwnPropertyDescriptor(source, 'labelIds');
+  const labels = Object.getOwnPropertyDescriptor(source, 'labelIds') ?? Object.getOwnPropertyDescriptor(rawSource, 'labelIds');
   if (labels && 'value' in labels && Array.isArray(labels.value) && labels.value.length <= 32
     && labels.value.every(value => typeof value === 'string' && value.length <= 128)) {
     metadata.labelIds = [...labels.value];

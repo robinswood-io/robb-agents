@@ -36,7 +36,7 @@ const OBJECTIVE_READ_ONLY_SHELL_PATTERNS: CompiledBashPattern[] = [
     source: 'diff without output-file mutation',
   },
   {
-    regex: /^(?:cmp\s+-s\s+[A-Za-z0-9_@%+=:,./-]+\s+[A-Za-z0-9_@%+=:,./-]+|shasum\s+-a\s+256\s+[A-Za-z0-9_@%+=:,./-]+)$/,
+    regex: /^(?:cmp\s+-s\s+[A-Za-z0-9_@%+=:,./-]+(?: [A-Za-z0-9_@%+=:,./-]+)*\s+[A-Za-z0-9_@%+=:,./-]+(?: [A-Za-z0-9_@%+=:,./-]+)*|shasum\s+-a\s+256\s+[A-Za-z0-9_@%+=:,./-]+(?: [A-Za-z0-9_@%+=:,./-]+)*)$/,
     source: 'closed static file integrity checks',
   },
   {

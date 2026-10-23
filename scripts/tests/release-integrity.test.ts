@@ -446,6 +446,8 @@ describe('public release policy', () => {
   it('keeps production-profile packaging explicit and source-verified', () => {
     expect(macBuild).toContain('--local-production')
     expect(macBuild).toContain('LOCAL_PRODUCTION_BUILD=true')
+    expect(macBuild).toContain('--config.mac.identity="$CSC_NAME" --config.mac.notarize=false')
+    expect(macBuild).toContain('BUILDER_ARGS+=(--config.mac.notarize=true)')
     expect(macBuild).toContain('LOCAL_COMMIT="$(node "$SCRIPT_DIR/releaseIntegrity.cjs" --check-source "$ROOT_DIR")"')
     expect(macBuild).toContain('it reads and writes ~/.craft-agent and must never be distributed')
     expect(windowsBuild).toContain('$env:ROBB_BUILD_CHANNEL = "production"')

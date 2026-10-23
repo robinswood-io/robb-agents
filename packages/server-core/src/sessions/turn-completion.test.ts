@@ -27,6 +27,12 @@ describe('classifyObjectiveTerminalState', () => {
     expect(classifyObjectiveTerminalState(
       'La politique de sécurité interdit cette mutation et la permission est refusée.',
     )).toBe('blocked_policy');
+    expect(classifyObjectiveTerminalState(
+      '**Réponse préparée, mais non envoyée** : l’application bloque l’envoi dans le fil de Cindy, malgré les vérifications Gmail réussies.',
+    )).toBe('blocked_policy');
+    expect(classifyObjectiveTerminalState(
+      '**Le nettoyage reste bloqué ; aucun compte ni aucune facture n’a été modifié.** Le connecteur actuel impose la lecture seule.',
+    )).toBe('blocked_policy');
     expect(classifyObjectiveTerminalState('Reste à exécuter : les tests.')).toBe('continue');
   });
 

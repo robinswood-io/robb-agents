@@ -63,12 +63,8 @@ export function pruneIntraTurnToolResults(
 
   for (const index of prunableIndices) {
     if (currentTokens <= targetTokens) break;
-    const original = messages[index] as {
-      role?: string;
-      content?: Array<{ type?: string; text?: string; [key: string]: unknown }>;
-      [key: string]: unknown;
-    };
-    if (!Array.isArray(original.content)) continue;
+    const original = messages[index];
+    if (!original || original.role !== 'toolResult' || !Array.isArray(original.content)) continue;
 
     let modified = false;
     const nextContent = original.content.map(block => {

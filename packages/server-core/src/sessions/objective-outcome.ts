@@ -23,6 +23,7 @@ import {
   objectiveAllowsContentCheckReview,
   objectiveRequiresExecutionEvidence,
   objectiveReviewBinding,
+  objectiveRequiresScopeCoverageReview,
   findObjectiveText,
   transitionObjectiveContract,
 } from './objective-contract.ts';
@@ -59,7 +60,7 @@ export interface ObjectiveOutcomeValidation {
   declaration?: HostNativeQuestionOutcome;
 }
 
-const OUTCOME_COMMENT_PATTERN = /<!--\s*robb_objective_outcome\s+([\s\S]*?)-->/gi;
+const OUTCOME_COMMENT_PATTERN = /<!--\s*robb_objective_outcome:?\s+([\s\S]*?)-->/gi;
 const MAX_DECLARATION_CHARS = 16_000;
 const MAX_CRITERIA = 32;
 const MAX_EVIDENCE_PER_ITEM = 64;
@@ -1473,6 +1474,12 @@ export function validateObjectiveOutcome(
       continue;
     }
     if (!receipt.satisfied) gaps.push(`unsatisfied criterion: ${expected}`);
+    const scopeReviewRequired = expected === 'requested-outcome-delivered'
+      && objectiveRequiresScopeCoverageReview(options.objective)
+      && nativeQuestionCompletionRefs(options.objective, options.messages).size !== 4;
+    if (scopeReviewRequired && refs.review.size === 0) {
+      gaps.push('Full-request coverage requires the current independent review, not only a successful registered observation');
+    }
     const allowedRefs = expected === 'independent-review-passed'
       ? refs.review
       : expected === 'relevant-checks-passed'

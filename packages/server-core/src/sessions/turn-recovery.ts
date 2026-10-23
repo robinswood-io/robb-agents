@@ -933,10 +933,11 @@ export function turnStillNeedsRecovery(
   const userIndex = messages.findIndex(message => message.id === userMessageId && message.role === 'user');
   if (userIndex < 0) return false;
 
-  for (let index = userIndex + 1; index < messages.length; index += 1) {
+  for (let index = messages.length - 1; index > userIndex; index -= 1) {
     const message = messages[index];
     if (!message) continue;
     if (message.role === 'error') return false;
+    if (message.role === 'tool' || message.role === 'user') return true;
     if (
       message.role === 'assistant'
       && !message.isIntermediate

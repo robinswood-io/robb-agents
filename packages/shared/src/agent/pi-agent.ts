@@ -1630,6 +1630,14 @@ export class PiAgent extends BaseAgent {
       }
     }
 
+    if (eventType === 'compaction_start' && this.pendingProviderHandoffs.size > 0) {
+      for (const [id, acknowledge] of this.pendingProviderHandoffs) {
+        this.pendingProviderHandoffs.delete(id);
+        this.pendingProviderDispatchRejections.delete(id);
+        acknowledge();
+      }
+    }
+
     if (eventType === 'tool_execution_end') {
       const toolCallId = event.toolCallId as string | undefined;
       if (toolCallId) {

@@ -6,8 +6,10 @@ import { GoogleSearchProvider } from './providers/google.ts';
 import { DDGSearchProvider } from './providers/ddg.ts';
 
 const originalChatGptKillSwitch = process.env.ROBB_DISABLE_CHATGPT_CODEX_BACKEND;
+const originalFetch = globalThis.fetch;
 
 afterEach(() => {
+  globalThis.fetch = originalFetch;
   if (originalChatGptKillSwitch === undefined) {
     delete process.env.ROBB_DISABLE_CHATGPT_CODEX_BACKEND;
   } else {
@@ -27,6 +29,19 @@ function makeJwt(accountId: string): string {
 }
 
 describe('resolveSearchProvider', () => {
+  it('uses the selected session model for ChatGPT search instead of a fixed legacy model', async () => {
+    let requestedModel: string | undefined;
+    globalThis.fetch = (async (_input: RequestInfo | URL, init?: RequestInit) => {
+      requestedModel = JSON.parse(init!.body as string).model;
+      return new Response(JSON.stringify({ output_text: 'Search result' }), { status: 200 });
+    }) as typeof fetch;
+    const provider = resolveSearchProvider({
+      provider: 'openai-codex', credential: { type: 'api_key', key: makeJwt('qa-account') },
+    }, 'pi/gpt-6.1-sol');
+    await provider.search('public test query', 1);
+    expect(requestedModel).toBe('gpt-6.1-sol');
+  });
+
   // --- OpenAI (API key) ---
 
   it('selects ResponsesApiSearchProvider for openai + api_key', () => {

@@ -5680,8 +5680,12 @@ export function contextualGmailReplyPreflightAttestationFromObjective(
   }
   const objectiveEmails = constraints.recipients;
   const objectiveSenderEmails = constraints.senders;
+  const validOptionalSenderEmail = input.expectedSenderEmail === undefined
+    || typeof input.expectedSenderEmail === 'string'
+      && input.expectedSenderEmail === input.expectedSenderEmail.trim().toLowerCase()
+      && /^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(input.expectedSenderEmail);
   if (objectiveSenderEmails.length > 1
-    || objectiveSenderEmails.length === 0 && input.expectedSenderEmail !== undefined
+    || !validOptionalSenderEmail
     || objectiveSenderEmails.length === 1
       && input.expectedSenderEmail !== objectiveSenderEmails[0]) return undefined;
   if (requested.scope === 'reply-all') {
@@ -5706,7 +5710,9 @@ export function contextualGmailReplyPreflightAttestationFromObjective(
       : {}),
     ...(objectiveSenderEmails.length === 1
       ? { expectedSenderEmail: objectiveSenderEmails[0] }
-      : {}),
+      : typeof input.expectedSenderEmail === 'string'
+        ? { expectedSenderEmail: input.expectedSenderEmail }
+        : {}),
     ...(exactEffect?.expectedCc !== undefined
       ? { expectedCc: exactEffect.expectedCc }
       : {}),
@@ -5790,7 +5796,7 @@ export function isContextualGmailReplyAuthorizedByObjective(
       || String(input.body) === exactBody && input.isHtml !== true)
     && objectiveSenderEmails.length <= 1
     && (objectiveSenderEmails.length === 0
-      ? input.expectedSenderEmail === undefined
+      ? input.expectedSenderEmail === undefined || typeof input.expectedSenderEmail === 'string'
       : input.expectedSenderEmail === objectiveSenderEmails[0])
     && (requested.scope === 'reply-all'
       ? objectiveEmails.length === 0
@@ -5894,9 +5900,8 @@ export function contextualGmailReplyRecoveryReason(
   if (toolName === (requestedScope === 'reply-all'
     ? CONTEXTUAL_GMAIL_REPLY_ALL_TOOL
     : CONTEXTUAL_GMAIL_REPLY_TOOL)
-    && (objectiveSenderEmails.length === 0
-      ? input.expectedSenderEmail !== undefined
-      : input.expectedSenderEmail !== objectiveSenderEmails[0])) {
+    && objectiveSenderEmails.length === 1
+    && input.expectedSenderEmail !== objectiveSenderEmails[0]) {
     return 'Validation failed: expectedSenderEmail does not match the exact From identity named in the accepted human objective. Re-run the signed preflight for that authenticated Gmail profile; do not select another account or alias.';
   }
   if (requestedScope === 'reply'

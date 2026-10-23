@@ -85,7 +85,7 @@ export function DocumentFormattedMarkdownOverlay({
       filePath={filePath}
       typeBadge={typeBadge}
       copyContent={content}
-      error={error ? { label: 'Write Failed', message: error } : undefined}
+      error={error ? { label: 'Document unavailable', message: error } : undefined}
     >
       {/* Content wrapper — min-h-full for vertical centering within FullscreenOverlayBase's scroll container.
           Scrolling and gradient fade mask are handled by FullscreenOverlayBase. */}

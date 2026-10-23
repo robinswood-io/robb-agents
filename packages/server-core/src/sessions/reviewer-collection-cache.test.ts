@@ -51,7 +51,9 @@ it('keeps a host-declared reviewer fresh through real spawn, creation and turn p
   await host.spawnDelegatedSession(parent,{role:'reviewer',prompt:'Inspect the target /fixture/collection.json.'})
   await dispatched
   expect(seen).toBeDefined()
-  expect(seen.reviewTarget).toBe('/fixture/collection.json')
+  // Native reviews retain their host role/freshness without the legacy envelope.
+  expect(seen.delegationRole).toBe('reviewer')
+  expect(seen.reviewTarget).toBeUndefined()
   expect(seen.childScope.freshEvidence).toBe(true)
   expect(seen.generations).toBe(3)
   // Either host-persisted role is sufficient after hydration/migration.

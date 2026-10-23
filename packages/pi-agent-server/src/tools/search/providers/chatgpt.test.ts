@@ -58,6 +58,21 @@ describe('extractChatGptAccountId', () => {
 });
 
 describe('ChatGPTBackendSearchProvider', () => {
+  it('keeps completed streamed items when the final response omits its output', async () => {
+    const item = { type: 'message', content: [{ type: 'output_text', text: 'OpenAI agents guide', annotations: [
+      { type: 'url_citation', url: 'https://openai.com/index/new-tools-for-building-agents/', title: 'OpenAI agents' },
+    ] }] };
+    globalThis.fetch = (async () => new Response([
+      `data: ${JSON.stringify({ type: 'response.output_item.done', output_index: 0, item })}`,
+      '',
+      'data: {"type":"response.completed","response":{"status":"completed","output":[]}}',
+      '',
+    ].join('\n'), { status: 200 })) as typeof fetch;
+    const results = await new ChatGPTBackendSearchProvider('test-token', 'test-account', { model: 'selected-model' })
+      .search('OpenAI agents guide', 2);
+    expect(results[0]?.url).toBe('https://openai.com/index/new-tools-for-building-agents/');
+  });
+
   it('fails closed before fetch when the contract kill switch is active', async () => {
     let fetched = false;
     globalThis.fetch = (async () => {
@@ -111,7 +126,7 @@ describe('ChatGPTBackendSearchProvider', () => {
     expect(calledUrl).toBe('https://chatgpt.com/backend-api/codex/responses');
     expect(calledHeaders.Authorization).toBe('Bearer my-access-token');
     expect(calledHeaders['chatgpt-account-id']).toBe('acc_12345');
-    expect(calledBody.model).toBe('gpt-5.4-mini');
+    expect(calledBody.model).toBe('gpt-5.3-codex');
     expect(calledBody.store).toBe(false);
     expect(calledBody.stream).toBe(true);
     expect(calledBody.instructions).toContain('web search assistant');

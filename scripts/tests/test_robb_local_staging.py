@@ -179,20 +179,24 @@ class LocalStagingTests(unittest.TestCase):
                 repo,
                 app,
                 expected_commit=COMMIT,
-                require_adhoc=True,
-                runner=make_runner(),
+                require_developer_id=True,
+                runner=make_runner(signature="Authority=Developer ID Application: Example (ABCDEFGHIJ)"),
             )
-            self.assertEqual(result["signatureKind"], "adhoc")
+            self.assertEqual(result["signatureKind"], "developer-id")
             self.assertIn("arm64", result["architecture"])
 
-            with self.assertRaisesRegex(staging.StagingError, "ad-hoc"):
+            # Historical ad-hoc installations/backups remain verifiable for rollback.
+            historical = staging.validate_bundle(repo, app, expected_commit=COMMIT, runner=make_runner())
+            self.assertEqual(historical["signatureKind"], "adhoc")
+
+            with self.assertRaisesRegex(staging.StagingError, "Developer ID Application"):
                 staging.validate_bundle(
                     repo,
                     app,
                     expected_commit=COMMIT,
-                    require_adhoc=True,
+                    require_developer_id=True,
                     runner=make_runner(
-                        signature="Authority=Developer ID Application: Example (ABCDEFGHIJ)"
+                        signature="Signature=adhoc"
                     ),
                 )
             with self.assertRaisesRegex(staging.StagingError, "requires an arm64"):
@@ -1478,7 +1482,7 @@ class LocalStagingTests(unittest.TestCase):
                 held / staging.APP_NAME,
                 COMMIT,
                 old_commit,
-                require_candidate_adhoc=False,
+                require_candidate_developer_id=False,
             )
             self.assertEqual(protect.call_args.kwargs["expected_commit"], old_commit)
 

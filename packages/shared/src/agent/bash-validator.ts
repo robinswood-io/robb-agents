@@ -427,7 +427,7 @@ const DANGEROUS_COMMAND_ARGS: Record<string, Set<string>> = {
 };
 
 const AWK_COMMANDS = new Set(['awk', 'gawk', 'mawk', 'nawk']);
-const STATIC_INTEGRITY_PATH_PATTERN = /^(?!-)(?!.*(?:^|\/)\.\.(?:\/|$))[A-Za-z0-9_@%+=:,./-]+$/;
+const STATIC_INTEGRITY_PATH_PATTERN = /^(?!-)(?!.*(?:^|\/)\.\.(?:\/|$))[A-Za-z0-9_@%+=:,./-]+(?: [A-Za-z0-9_@%+=:,./-]+)*$/;
 
 function getIntegrityCheckReason(commandParts: string[]): string | null {
   const [command, ...args] = commandParts;
@@ -487,12 +487,15 @@ export function validateBashCommand(
   try {
     ast = bashParser(command) as ScriptNode;
   } catch (error) {
-    debug('[BashValidator] Parse error:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    if (!command.includes('<<')) {
+      debug('[BashValidator] Parse error:', errorMessage);
+    }
     return {
       allowed: false,
       reason: {
         type: 'parse_error',
-        error: error instanceof Error ? error.message : String(error),
+        error: errorMessage,
       },
     };
   }

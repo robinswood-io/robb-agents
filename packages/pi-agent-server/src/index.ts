@@ -614,10 +614,10 @@ async function ensureSession(): Promise<AgentSession> {
   // are used without recreating the session.
   const searchProvider = {
     get name() {
-      return resolveSearchProvider(initConfig?.piAuth).name;
+      return resolveSearchProvider(initConfig?.piAuth, initConfig?.model).name;
     },
     async search(query: string, count: number) {
-      return resolveSearchProvider(initConfig?.piAuth).search(query, count);
+      return resolveSearchProvider(initConfig?.piAuth, initConfig?.model).search(query, count);
     },
   };
   const searchTool = createSearchTool(searchProvider);

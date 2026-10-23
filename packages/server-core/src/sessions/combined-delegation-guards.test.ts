@@ -67,7 +67,7 @@ describe('combined delegation retains lifecycle guards', () => {
     expect(h.created[1]!.permissionMode).toBe('safe')
   })
 
-  it.each(['global', 'legacy-family'] as const)('preserves the %s capacity boundary', async scope => {
+  it.each(['global', 'legacy-family'] as const)('preserves the %s capacity boundary while allowing a single parent-slot reviewer', async scope => {
     const h = fixture()
     for (let i = 0; i < (scope === 'global' ? 7 : 3); i++) {
       const child = createManagedSession({ id: `existing-${i}`, ...(scope === 'legacy-family' ? { parentSessionId: h.parent.id } : {}) }, h.workspace)
@@ -75,6 +75,10 @@ describe('combined delegation retains lifecycle guards', () => {
     }
     await expect(h.spawn()).rejects.toThrow(scope === 'global' ? 'global_capacity' : 'root_capacity')
     expect(h.created).toHaveLength(0); expect(h.sent).toHaveLength(0)
+    const reviewer = await h.spawn({ role: 'reviewer', prompt: 'Inspect the exact target /srv/review.' })
+    expect(reviewer.sessionId).toBe('child-0')
+    await expect(h.spawn({ role: 'reviewer', prompt: 'Inspect a second target /srv/review-2.' }))
+      .rejects.toThrow(scope === 'global' ? 'global_capacity' : 'root_capacity')
   })
 
   it('refuses a missing attachment without creating an incomplete child', async () => {

@@ -5,6 +5,7 @@ import { assertCanonicalPermissionMode, type PermissionMode } from '@craft-agent
 export const DELEGATION_LIMITS = Object.freeze({ maxDepth: 2, maxChildren: 8, maxConcurrent: 4 });
 export interface DelegationSession {
   id: string;
+  parentSessionId?: string;
   delegation?: SessionDelegation;
   activeObjective?: ActiveSessionObjective;
   isProcessing: boolean;
@@ -73,8 +74,20 @@ export class DelegationBudget {
     const family = all.filter(session => belongs(session.delegation));
     const pending = [...this.reservations.values()].filter(belongs).length;
     // A just-created child without an objective is already dispatched, including after restart.
-    const active = family.filter(session => session.isProcessing || (!session.delegation?.finishedAt
-      && (!session.activeObjective || session.activeObjective.terminalState === 'active'))).length;
+    const isSessionActive = (session: DelegationSession) => session.isProcessing || (!session.delegation?.finishedAt
+      && (!session.activeObjective || session.activeObjective.terminalState === 'active'));
+    const activeSessions = family.filter(isSessionActive);
+    const activeParentIdsWithReviewer = new Set<string>();
+    for (const session of activeSessions) {
+      if (session.delegation?.role === 'reviewer' && session.parentSessionId
+        && activeSessions.some(candidate => candidate.id === session.parentSessionId)) {
+        activeParentIdsWithReviewer.add(session.parentSessionId);
+      }
+    }
+    if (role === 'reviewer' && belongs(parent.delegation) && isSessionActive(parent)) {
+      activeParentIdsWithReviewer.add(parent.id);
+    }
+    const active = activeSessions.length - activeParentIdsWithReviewer.size;
     if (delegation.depth > DELEGATION_LIMITS.maxDepth) throw new DelegationBudgetError('Maximum delegation depth reached; finish the bounded work in this session.');
     if (family.length + pending >= DELEGATION_LIMITS.maxChildren) throw new DelegationBudgetError('Objective child-session budget reached; consolidate existing results and finish remaining work locally.');
     if (active + pending >= DELEGATION_LIMITS.maxConcurrent) throw new DelegationBudgetError('Concurrent child-session budget reached; wait for existing children before dispatching independent work.');

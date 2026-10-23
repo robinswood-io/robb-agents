@@ -91,4 +91,23 @@ describe('host delegation admission', () => {
     resumed[0]!.isProcessing = false;
     expect(() => budget.reserve(root, [root, ...resumed])).not.toThrow();
   });
+
+  it('allows an active delegated worker at concurrent capacity to spawn its single read-only reviewer', () => {
+    const root = parent(); const budget = new DelegationBudget();
+    const workers = Array.from({ length: DELEGATION_LIMITS.maxConcurrent }, (_, index) => {
+      const r = budget.reserve(root, [root]); r.release();
+      return { ...parent(`worker-${index}`), parentSessionId: root.id, delegation: r.delegation };
+    });
+    expect(() => budget.reserve(workers[0]!, [root, ...workers], 'worker')).toThrow('Concurrent');
+    const reviewReservation = budget.reserve(workers[0]!, [root, ...workers], 'reviewer');
+    const reviewer = {
+      ...parent('reviewer-0'),
+      parentSessionId: workers[0]!.id,
+      delegation: reviewReservation.delegation,
+    };
+    reviewReservation.release();
+    expect(() => budget.reserve(workers[0]!, [root, ...workers, reviewer], 'reviewer')).toThrow('Concurrent');
+    const secondWorkerReview = budget.reserve(workers[1]!, [root, ...workers, reviewer], 'reviewer');
+    secondWorkerReview.release();
+  });
 });

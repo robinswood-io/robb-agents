@@ -31,13 +31,14 @@ To update the local production application as a staging candidate, start from
 a clean, identifiable commit and run:
 
 ```bash
-bash apps/electron/scripts/build-dmg.sh arm64 --local-production
+CSC_NAME="<Developer ID Application from your keychain>" bash apps/electron/scripts/build-dmg.sh arm64 --local-production
 ```
 
 Back up the installed bundle before replacement, then verify the embedded
 commit, the `~/.craft-agent/robb-electron` runtime path, historical sessions,
-configured connections, and relevant MCP processes. This ad-hoc package must
-remain local. Merging a pull request into `main` does not publish a GitHub
+configured connections, and relevant MCP processes. A stable Developer ID
+signature preserves macOS permissions across local updates. This unnotarized
+package must remain local. Merging a pull request into `main` does not publish a GitHub
 Release; create a release tag only after the staging result has been explicitly
 accepted.
 

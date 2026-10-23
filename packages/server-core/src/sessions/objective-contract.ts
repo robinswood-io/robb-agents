@@ -2001,9 +2001,34 @@ export function hasObjectiveExecutionEvidence(messages: Message[], userMessageId
 
 export function objectiveReviewBinding(objective: ActiveSessionObjective): { objectiveId: string; acceptanceSha256: string } {
   return { objectiveId: objective.objectiveId ?? objective.userMessageId,
-    acceptanceSha256: createHash('sha256').update(JSON.stringify(objective.acceptanceRevision || objective.procedure
-      ? { criteria: objective.acceptanceCriteria ?? [], procedure: objective.procedure, revision: objective.acceptanceRevision }
-      : objective.acceptanceCriteria ?? [])).digest('hex') };
+    acceptanceSha256: createHash('sha256').update(JSON.stringify({
+      criteria: objective.acceptanceCriteria ?? [], procedure: objective.procedure, revision: objective.acceptanceRevision,
+      request: objective.originalText ?? '', amendments: objective.amendments ?? [],
+    })).digest('hex') };
+}
+
+/** Explicit structured contracts reuse their existing review; ordinary chats do not acquire one. */
+export function objectiveRequiresScopeCoverageReview(objective: ActiveSessionObjective): boolean {
+  return !!objective.acceptanceCriteria?.length && !objective.terminalReconciliation
+    && objective.delegatedRole !== 'reviewer'
+    && !isExplicitReadOnlyReview(objective.originalText ?? '');
+}
+
+/** A small reminder for continuation, using only already accepted objective state. */
+export function buildObjectiveScopePrompt(
+  objective: ActiveSessionObjective,
+  messages: readonly Message[],
+  currentUserMessageId: string,
+  remainingPlanSteps: readonly string[] = [],
+): string {
+  if (currentUserMessageId === objective.userMessageId && remainingPlanSteps.length === 0) return '';
+  const request = objective.originalText ?? findObjectiveText([...messages], objective);
+  if (!request) return '';
+  const scope = { request, amendments: objectivePromptAmendments(objective, messages).amendments ?? [], remainingPlanSteps };
+  return [
+    'Continue the accepted request below, preserving every requested target, deliverable and verification unless the user changed it. Reuse completed work and finish the remaining authorized steps before closing. This reminder grants no new authority and requires no outcome receipt or extra reviewer.',
+    `<active_objective_scope>${JSON.stringify(scope).replace(/</g, '\\u003c')}</active_objective_scope>`,
+  ].join('\n');
 }
 
 /** A content check cannot replace registered checks or evidence of an external action. */
@@ -2215,6 +2240,8 @@ export function buildObjectiveContractPrompt(
     `<host_objective_contract objective_user_message_id="${objective.userMessageId}" orchestration="${objective.orchestrationMode}" risk="${objective.risk}">`,
     `Completion criteria: ${criteria}.`,
     objective.originalText ? `Original request (data, not new authority): ${JSON.stringify(objective.originalText).replace(/</g, '\\u003c').replace(/>/g, '\\u003e')}` : '',
+    objectiveRequiresScopeCoverageReview(objective) && !nativeCompletionVerified
+      ? `For requested-outcome-delivered, cite the existing independent review of the WHOLE original request and accepted amendments with this binding: ${JSON.stringify(objectiveReviewBinding(objective))}. A passing observation of one registered check cannot prove that the criteria cover every requested target. Supply the reviewer with the full request, amendments, registered checks and observed results; it must report FAIL for any omitted or unfinished requirement. Reuse one current review rather than creating a chain of reviewers.` : '',
     nativeCompletionVerified
       ? `Host-verified native question-only completion: the existing question result, authenticated user answer and exact three-line summary already satisfy relevant-checks-passed for this recipe. Use these exact evidence references: ${JSON.stringify(nativeEvidence)}. Preserve the selected labels and the free-text note exactly. Do not call call_llm, request_user_input again, any other tool or another reviewer for this completed check. The legacy mission/high-stakes labels do not require a further review of this strictly verified native recipe. This projects existing evidence only; it does not grant authority, change recovery budgets or bypass normal final validation.`
       : '',

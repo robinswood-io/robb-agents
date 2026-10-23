@@ -42,13 +42,20 @@ function validateReleaseVerificationResults({ codesign, gatekeeper, stapler }) {
   }
 }
 
-function verifyReleaseApplication(appPath) {
+function verifyReleaseApplication(appPath, requireNotarization = true) {
   const inspection = commandResult('/usr/bin/codesign', ['-dv', '--verbose=4', appPath])
   validateDeveloperIdInspection(inspection.returncode, inspection.text)
+  const codesign = commandResult('/usr/bin/codesign', [
+    '--verify', '--deep', '--strict', '--verbose=2', appPath,
+  ])
+  if (!requireNotarization) {
+    if (codesign.returncode !== 0) {
+      throw new Error(`Developer ID signature verification failed: ${codesign.text}`)
+    }
+    return
+  }
   validateReleaseVerificationResults({
-    codesign: commandResult('/usr/bin/codesign', [
-      '--verify', '--deep', '--strict', '--verbose=2', appPath,
-    ]),
+    codesign,
     gatekeeper: commandResult('/usr/sbin/spctl', [
       '--assess', '--type', 'execute', '--verbose=4', appPath,
     ]),
@@ -60,8 +67,9 @@ module.exports = async function afterSign(context) {
   if (!requiresMacReleaseIntegrity(context)) return
   const productFilename = context.packager?.appInfo?.productFilename || 'Robb Agents'
   const appPath = path.join(context.appOutDir, `${productFilename}.app`)
-  verifyReleaseApplication(appPath)
-  console.log(`release integrity: verified Developer ID signature and notarization for ${appPath}`)
+  const requireNotarization = context.packager?.platformSpecificBuildOptions?.notarize !== false
+  verifyReleaseApplication(appPath, requireNotarization)
+  console.log(`release integrity: verified Developer ID signature${requireNotarization ? ' and notarization' : ' (local staging)'} for ${appPath}`)
 }
 
 module.exports.validateDeveloperIdInspection = validateDeveloperIdInspection

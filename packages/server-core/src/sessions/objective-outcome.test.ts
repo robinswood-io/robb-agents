@@ -1,3 +1,4 @@
+import { withScopeReview } from './__fixtures__/scope-review.ts';
 import { describe, expect, it } from 'bun:test';
 import type { Message, ObjectiveAcceptanceCriterion } from '@craft-agent/core/types';
 import type { ActiveSessionObjective } from '@craft-agent/shared/sessions';
@@ -2100,7 +2101,7 @@ describe('objective outcome receipt', () => {
     ).declaration;
     expect(validateObjectiveOutcome(declaration, {
       objective: multiReadObjective,
-      messages: multiReadMessages,
+      messages: withScopeReview(multiReadObjective, multiReadMessages),
     })).toEqual({ state: 'complete_verified', valid: true, gaps: [] });
   });
 });

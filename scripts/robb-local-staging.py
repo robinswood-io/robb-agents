@@ -369,7 +369,7 @@ def validate_bundle(
     app: Path,
     *,
     expected_commit: str | None,
-    require_adhoc: bool = False,
+    require_developer_id: bool = False,
     runner: Runner = run_command,
 ) -> dict[str, str]:
     app = require_bundle(app)
@@ -390,8 +390,8 @@ def validate_bundle(
         signature_kind = "developer-id"
     else:
         raise StagingError(f"Unsupported application signing identity at {app}")
-    if require_adhoc and signature_kind != "adhoc":
-        raise StagingError("Local-production staging candidate must use the expected ad-hoc signature")
+    if require_developer_id and signature_kind != "developer-id":
+        raise StagingError("Local-production staging candidate requires a stable Developer ID Application signature")
     validator_env = os.environ.copy()
     if expected_commit:
         validator_env["ROBB_BUILD_COMMIT"] = require_exact_commit(expected_commit)
@@ -1281,7 +1281,7 @@ class LocalStagingInstaller:
         expected_commit: str,
         artifact_commit: str | None = None,
         *,
-        require_candidate_adhoc: bool = True,
+        require_candidate_developer_id: bool = True,
     ) -> dict[str, object]:
         retention_helper_sha256 = verify_installed_retention_helper(
             self.repo,
@@ -1293,7 +1293,7 @@ class LocalStagingInstaller:
             self.repo,
             candidate_app,
             expected_commit=bundle_commit,
-            require_adhoc=require_candidate_adhoc,
+            require_developer_id=require_candidate_developer_id,
             runner=self.runner,
         )
         current_identity = validate_bundle(
@@ -1347,13 +1347,13 @@ class LocalStagingInstaller:
         expected_commit: str,
         artifact_commit: str,
         *,
-        require_candidate_adhoc: bool,
+        require_candidate_developer_id: bool,
     ) -> dict[str, object]:
         preflight = self.preflight(
             candidate_app,
             expected_commit,
             artifact_commit,
-            require_candidate_adhoc=require_candidate_adhoc,
+            require_candidate_developer_id=require_candidate_developer_id,
         )
         checkout_commit = str(preflight["checkoutCommit"])
         bundle_commit = str(preflight["artifactCommit"])
@@ -1791,7 +1791,7 @@ class LocalStagingInstaller:
                 candidate_app,
                 commit,
                 commit,
-                require_candidate_adhoc=True,
+                require_candidate_developer_id=True,
             )
 
     def verify(
@@ -1859,7 +1859,7 @@ class LocalStagingInstaller:
                     held / APP_NAME,
                     checkout,
                     artifact,
-                    require_candidate_adhoc=False,
+                    require_candidate_developer_id=False,
                 )
             except BaseException as error:
                 raise StagingError(

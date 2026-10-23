@@ -495,4 +495,51 @@ describe('durable agent inbox — E05 E13', () => {
       await new Promise<void>(resolve => setImmediate(resolve));
     } finally { await manager.flushAllSessions(); rmSync(root, { recursive: true, force: true }); }
   });
+  it('coalesces repeated queued progress deliveries from the same sender and preserves result capacity', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'agent-progress-coalesce-'));
+    const manager = new SessionManager();
+    const workspace = { id: 'ws', name: 'Workspace', rootPath: root, createdAt: 1 } as never;
+    const managed = createManagedSession({ id: 'parent', name: 'Parent' }, workspace, { messagesLoaded: true });
+    const sender = createManagedSession({
+      id: 'worker-1',
+      name: 'Worker 1',
+      parentSessionId: 'parent',
+      delegation: { rootSessionId: 'parent', rootObjectiveId: 'obj-1', parentObjectiveId: 'obj-1', depth: 1, role: 'worker' },
+    }, workspace, { messagesLoaded: true });
+    managed.isProcessing = true;
+    managed.activeObjective = {
+      ...transitionObjectiveContract({ messageId: 'obj-1', text: 'Fixture task.', nowMs: 1 }),
+      objectiveId: 'obj-1',
+    };
+    const sessions = (manager as unknown as { sessions: Map<string, typeof managed> }).sessions;
+    sessions.set(managed.id, managed);
+    sessions.set(sender.id, sender);
+    try {
+      for (let i = 1; i <= 5; i++) {
+        await manager.sendMessage('parent', `Progress step ${i}`, undefined, undefined, {
+          hidden: true,
+          internalOrigin: {
+            kind: 'agent-message',
+            senderSessionId: 'worker-1',
+            deliveryId: `progress-${i}`,
+            agentMessageType: 'progress',
+          },
+        });
+      }
+      expect(managed.messageQueue).toHaveLength(1);
+      expect(managed.messageQueue[0]?.message).toContain('Progress step 1');
+      expect(managed.messageQueue[0]?.message).toContain('Progress step 5');
+      expect(managed.messageQueue[0]?.options?.internalOrigin?.deliveryId).toBe('progress-5');
+      await manager.sendMessage('parent', 'Final worker result', undefined, undefined, {
+        hidden: true,
+        internalOrigin: {
+          kind: 'agent-message',
+          senderSessionId: 'worker-1',
+          deliveryId: 'result-1',
+          agentMessageType: 'result',
+        },
+      });
+      expect(managed.messageQueue).toHaveLength(2);
+    } finally { await manager.flushAllSessions(); rmSync(root, { recursive: true, force: true }); }
+  });
 });

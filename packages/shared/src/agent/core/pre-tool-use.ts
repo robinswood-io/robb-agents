@@ -63,6 +63,7 @@ import { enforceTaskToolIsolation } from './task-tool-isolation.ts';
 import {
   classifySensitiveExternalAction,
   contextualGmailClosedExactEffectExpectationFromObjective,
+  contextualGmailExactEffectExpectationFromObjective,
   contextualGmailReplyPreflightAttestationFromObjective,
   contextualGmailReplyRecoveryReason,
   contextualGmailTargetScopedAuthorizationSegments,
@@ -848,6 +849,8 @@ const GMAIL_API_MESSAGE_ID = /^[0-9a-f]{12,32}$/iu;
 const CONTEXTUAL_GMAIL_READ_TOOLS = new Set([
   'mcp__google-contacts__gmail_get_message',
   'mcp__google-contacts__gmail_get_message_by_url',
+  'mcp__orion-mcp__orion_mcp_read',
+  'mcp__orion-mcp__orion_mcp_call',
 ]);
 const CONTEXTUAL_GMAIL_PREFLIGHT_TOOLS = new Set([
   'mcp__google-contacts__gmail_reply_preflight',
@@ -998,12 +1001,24 @@ function contextualGmailObjectiveProvidesClosedExactHumanAnchor(
 
 function contextualGmailToolReceipt(value: string): Record<string, unknown> | undefined {
   if (!value || value.length > 2_000_000) return undefined;
+  const trimmed = value.trim();
   try {
-    const parsed: unknown = JSON.parse(value.trim());
+    const parsed: unknown = JSON.parse(trimmed);
     return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
       ? parsed as Record<string, unknown>
       : undefined;
   } catch {
+    const metadataMatch = /\bResult metadata JSON:\s*(\{[^\r\n]+\})/u.exec(trimmed);
+    if (metadataMatch?.[1]) {
+      try {
+        const parsedMetadata: unknown = JSON.parse(metadataMatch[1]);
+        if (parsedMetadata && typeof parsedMetadata === 'object' && !Array.isArray(parsedMetadata)) {
+          return parsedMetadata as Record<string, unknown>;
+        }
+      } catch {
+        // Fall through.
+      }
+    }
     return undefined;
   }
 }
@@ -1049,19 +1064,35 @@ function exactObservedGmailMessageId(
   result: Record<string, unknown>,
 ): string | undefined {
   if (!CONTEXTUAL_GMAIL_READ_TOOLS.has(toolName) || result.error !== undefined) return undefined;
-  const directId = typeof result.id === 'string' && GMAIL_API_MESSAGE_ID.test(result.id)
-    ? result.id.toLowerCase()
+  if (toolName === 'mcp__orion-mcp__orion_mcp_read' || toolName === 'mcp__orion-mcp__orion_mcp_call') {
+    const innerTool = typeof input?.name === 'string' ? input.name : typeof result.tool === 'string' ? result.tool : '';
+    if (innerTool !== 'gmail_get_message' && innerTool !== 'gmail_get_message_by_url') return undefined;
+  }
+  const payload = result.data && typeof result.data === 'object' && !Array.isArray(result.data)
+    ? result.data as Record<string, unknown>
+    : result;
+  if (payload.error !== undefined) return undefined;
+  const directId = typeof payload.id === 'string' && GMAIL_API_MESSAGE_ID.test(payload.id)
+    ? payload.id.toLowerCase()
     : undefined;
-  const latest = result.latestMessage && typeof result.latestMessage === 'object'
-    ? result.latestMessage as Record<string, unknown>
+  const latest = payload.latestMessage && typeof payload.latestMessage === 'object'
+    ? payload.latestMessage as Record<string, unknown>
     : undefined;
   const latestId = typeof latest?.id === 'string' && GMAIL_API_MESSAGE_ID.test(latest.id)
     ? latest.id.toLowerCase()
     : undefined;
   const messageId = directId ?? latestId;
   if (!messageId) return undefined;
-  const requestedId = typeof input?.messageId === 'string' && GMAIL_API_MESSAGE_ID.test(input.messageId.trim())
-    ? input.messageId.trim().toLowerCase()
+  const nestedArgs = input?.arguments && typeof input.arguments === 'object' && !Array.isArray(input.arguments)
+    ? input.arguments as Record<string, unknown>
+    : undefined;
+  const rawRequestedId = typeof input?.messageId === 'string'
+    ? input.messageId
+    : typeof nestedArgs?.messageId === 'string'
+      ? nestedArgs.messageId
+      : undefined;
+  const requestedId = rawRequestedId && GMAIL_API_MESSAGE_ID.test(rawRequestedId.trim())
+    ? rawRequestedId.trim().toLowerCase()
     : undefined;
   if (requestedId && requestedId !== messageId) return undefined;
   return messageId;
@@ -3625,6 +3656,16 @@ function isHostOwnedConnectorObservation(
   if (toolName === 'mcp__atria-sellsy__atria_sellsy_authenticate') {
     return keys.every(displayOnly);
   }
+  if (toolName === 'mcp__orion-mcp__orion_providers_list'
+    || toolName === 'mcp__orion-mcp__orion_tool_search'
+    || toolName === 'mcp__orion-mcp__orion_tool_schema'
+    || toolName === 'mcp__orion-mcp__orion_mcp_read'
+    || toolName === 'mcp__orion-mcp__memory_context'
+    || toolName === 'mcp__orion-mcp__memory_search'
+    || toolName === 'mcp__orion-mcp__memory_list'
+    || toolName === 'mcp__orion-mcp__memory_audit') {
+    return true;
+  }
   if (toolName === 'mcp__atria-sellsy__atria_sellsy_oauth_start') {
     if (typeof input.scopes !== 'string'
       || !keys.every(key => key === 'scopes' || displayOnly(key))) return false;
@@ -4388,7 +4429,8 @@ export function runPreToolUseChecks(ctx: PreToolUseInput): PreToolUseCheckResult
   );
   if (contextualGmailPreflightTool
     && targetScopedContextualGmailSegments !== policyAuthorizationSegments
-    && !observedContextualGmailPreflight
+    && (!observedContextualGmailPreflight
+      || contextualGmailExactEffectExpectationFromObjective(targetScopedContextualGmailSegments)?.expectedSenderEmail === undefined)
     && input.expectedSenderEmail !== undefined) {
     return {
       type: 'block',

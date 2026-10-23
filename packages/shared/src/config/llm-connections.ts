@@ -445,7 +445,7 @@ export function authTypeRequiresEndpoint(authType: LlmAuthType): boolean {
  * @param providerType - Provider type to check
  * @returns true if this is a compat provider (pi_compat)
  */
-export function isCompatProvider(providerType: LlmProviderType): boolean {
+export function isCompatProvider(providerType: LlmProviderType): providerType is 'pi_compat' {
   return providerType === 'pi_compat';
 }
 

@@ -1,3 +1,4 @@
+import { scopeReviewFixture } from './__fixtures__/scope-review.ts';
 import { describe, expect, it } from 'bun:test';
 import type { Message, ObjectiveOutcomeDeclaration } from '@craft-agent/core/types';
 import type { ActiveSessionObjective } from '@craft-agent/shared/sessions';
@@ -108,7 +109,7 @@ describe('registered criteria always govern objective completion', () => {
     const observation: Message = { id: 'check', role: 'tool', content: '', timestamp: 3, toolName: 'Read', toolUseId: 'check-call', toolInput: { file_path: '/srv/check.json' }, toolResult: '{"ready":true}', toolExecuted: true, toolStatus: 'completed' };
     const declaration: ObjectiveOutcomeDeclaration = { state: 'complete_verified', criteria: [...objective.completionCriteria, 'target-ready'].map(id => ({ id, satisfied: true, evidence: ['check-call'] })), remainingWork: [], blocker: null };
     const final: Message = { id: 'final', role: 'assistant', content: 'Le résultat est vérifié.', timestamp: 4, objectiveOutcome: declaration };
-    const messages: Message[] = [{ id: objective.userMessageId, role: 'user', content: objective.originalText!, timestamp: 1 }, observation, final];
+    const messages: Message[] = [{ id: objective.userMessageId, role: 'user', content: objective.originalText!, timestamp: 1 }, observation, scopeReviewFixture(objective, [observation]), final];
     const before = structuredClone({ objective, messages });
     expect(terminal(objective, messages, { ...final, objectiveOutcome: undefined })).toBe('continue');
     expect(terminal(objective, messages, final)).toBe('complete_verified');

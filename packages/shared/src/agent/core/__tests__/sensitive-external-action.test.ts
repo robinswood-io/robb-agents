@@ -8705,4 +8705,105 @@ describe('host-authenticated multi-target Gmail selection', () => {
     )).toEqual([root, first, exactThreads]);
 
   });
+
+  it('authorizes a natural-language reply when gmail_get_message extracted media assets and the agent supplied expectedSenderEmail', () => {
+    const sessionId = `cindy-sellsy-${randomUUID()}`;
+    usedSessionIds.push(sessionId);
+    initializeModeState(sessionId, 'allow-all');
+    const segments = [
+      'Répond au mail de cindy sur comment créer une facture avce TVA internationnal dans notre sellsy et mention à apposer dessus',
+    ];
+    const run = (toolName: string, toolInput: Record<string, unknown>, toolUseId: string) =>
+      runPreToolUseChecks({
+        toolName,
+        input: toolInput,
+        sessionId,
+        toolUseId,
+        permissionMode: 'allow-all',
+        workspaceRootPath: '/tmp/robb-sensitive-action-test',
+        workspaceId: 'sensitive-action-test',
+        activeSourceSlugs: ['google-contacts', 'orion-mcp'],
+        allSourceSlugs: ['google-contacts', 'orion-mcp'],
+        hasSourceActivation: false,
+        externalActionPolicy: 'allow-in-execute',
+        objectiveMutationAuthorized: true,
+        objectiveSensitiveActionAuthorized: true,
+        objectiveAuthorizationSegments: segments,
+        permissionManager: whitelistedPermissionManager,
+        currentUserRequest: segments[0],
+      });
+
+    expect(run('mcp__orion-mcp__orion_tool_schema', {
+      name: 'gmail_reply_bound',
+      providerId: 'google-workspace',
+    }, 'schema-1').type).toBe('allow');
+
+    const messageId = '1a16478d254f26a8';
+    const mediaWrappedReadResult = [
+      '[Structured media assets extracted and saved]',
+      '',
+      `Result metadata JSON: ${JSON.stringify({
+        id: messageId,
+        threadId: messageId,
+        subject: 'IMPORTANT',
+        from: 'Cindy Steenkeste <cindy@robinswood.io>',
+        to: 'Thibault Fritsch <thibault@youcom.io>',
+      })}`,
+      '',
+      'Original JSON SHA256: c81b2d256f23756dfd80c339725d6a63c798307d71982e5fd3420b0a94611f1a',
+    ].join('\n');
+
+    recordContextualGmailToolResult({
+      sessionId,
+      toolUseId: 'cindy-read',
+      toolName: 'mcp__google-contacts__gmail_get_message',
+      toolInput: { messageId },
+      result: mediaWrappedReadResult,
+      executed: true,
+      isError: false,
+      objectiveAuthorizationSegments: segments,
+    });
+
+    const replyPayload = {
+      messageId,
+      expectedRecipientEmail: 'cindy@robinswood.io',
+      expectedSenderEmail: 'thibault@robinswood.io',
+      body: '<p>Hello Cindy,</p><p>TVA à 0 et mention article 259, 1° du CGI.</p>',
+      isHtml: true,
+    };
+    const binding = gmailRecipientBinding('c');
+
+    expect(run('mcp__google-contacts__gmail_reply_preflight', replyPayload, 'cindy-preflight').type).toBe('allow');
+    recordContextualGmailToolResult({
+      sessionId,
+      toolUseId: 'cindy-preflight',
+      toolName: 'mcp__google-contacts__gmail_reply_preflight',
+      toolInput: replyPayload,
+      result: JSON.stringify({
+        ok: true,
+        willSend: false,
+        messageId,
+        threadId: messageId,
+        subject: 'Re: IMPORTANT',
+        resolvedRecipients: { to: ['cindy@robinswood.io'], cc: [] },
+        selfSentAnchor: false,
+        replyAll: false,
+        bodySha256: createHash('sha256').update(replyPayload.body, 'utf8').digest('hex'),
+        isHtml: true,
+        expectedRecipientEmail: 'cindy@robinswood.io',
+        expectedSenderEmail: 'thibault@robinswood.io',
+        primarySenderEmail: 'thibault@robinswood.io',
+        recipientBinding: binding,
+        bindingExpiresInSeconds: 600,
+      }),
+      executed: true,
+      isError: false,
+      objectiveAuthorizationSegments: segments,
+    });
+
+    expect(run('mcp__google-contacts__gmail_reply_bound', {
+      ...replyPayload,
+      recipientBinding: binding,
+    }, 'cindy-bound').type).toBe('allow');
+  });
 });

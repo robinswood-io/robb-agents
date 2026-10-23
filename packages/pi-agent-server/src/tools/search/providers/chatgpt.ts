@@ -19,7 +19,7 @@ import {
 
 /**
  * Codex backend request contract (search path):
- * - model: current provider-contract default (gpt-5.4-mini)
+ * - model: current provider-contract default (gpt-5.3-codex)
  * - store: false
  * - stream: true (backend may return JSON or SSE)
  * - instructions + tool_choice + text.verbosity
@@ -148,6 +148,7 @@ async function parseResponsePayload(response: Response): Promise<ResponsesApiRes
 
 function parseSseResponsePayload(sseText: string): ResponsesApiResponse {
   let completed: ResponsesApiResponse | null = null;
+  const streamedOutput: NonNullable<ResponsesApiResponse['output']> = [];
 
   for (const chunk of sseText.split('\n\n')) {
     const dataLines = chunk
@@ -166,6 +167,10 @@ function parseSseResponsePayload(sseText: string): ResponsesApiResponse {
         continue;
       }
 
+      if (event?.type === 'response.output_item.done' && event.item && typeof event.item === 'object') {
+        streamedOutput.push(event.item);
+      }
+
       if (event?.type === 'response.completed' || event?.type === 'response.done') {
         if (event.response && typeof event.response === 'object') {
           completed = event.response as ResponsesApiResponse;
@@ -178,7 +183,9 @@ function parseSseResponsePayload(sseText: string): ResponsesApiResponse {
     throw new Error('ChatGPT search stream returned no completed response payload');
   }
 
-  return completed;
+  // Some Codex streams finish with output:[] after delivering the complete items.
+  // Keep those items, including their citations, instead of discarding the result.
+  return completed.output?.length ? completed : { ...completed, output: streamedOutput };
 }
 
 function buildRequestFingerprint(body: {

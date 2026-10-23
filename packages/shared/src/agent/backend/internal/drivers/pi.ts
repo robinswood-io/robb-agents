@@ -317,7 +317,7 @@ export const piDriver: ProviderDriver = {
           const res = await fetch(modelsUrl, { signal: controller.signal, headers });
           if (res.ok) {
             const payload = await res.json() as {
-              data?: Array<{ id?: string; name?: string }>;
+              data?: Array<{ id?: string; name?: string; model?: string }>;
               models?: Array<{ id?: string; name?: string; model?: string }>;
             };
             for (const entry of payload.data ?? payload.models ?? []) {

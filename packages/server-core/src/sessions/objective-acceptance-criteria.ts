@@ -1124,10 +1124,22 @@ function applyExplicitCriterionSupersessions(
     if (replacement.requirementId !== previous.requirementId) {
       throw new Error(`Criterion ${replacement.id} must preserve requirementId from ${previousId}`);
     }
-    if (criterionSupersessionIdentity(replacement) !== criterionSupersessionIdentity(previous)) {
+    const observation = observations.get(previousId);
+    const repairsUnprojectedShellTextSelector = !!observation
+      && !observation.passed
+      && isObjectiveShellExecutorToolName(previous.toolName)
+      && resultJson(observation.message.toolResult ?? '') === undefined
+      && previous.checks.length > 0
+      && previous.checks.some(check => check.path !== '$text' && pathKeys(check.path)?.[0] !== 'transport')
+      && criterionSupersessionIdentity({ ...replacement, checks: previous.checks }) === criterionSupersessionIdentity(previous)
+      && replacement.checks.length === 1
+      && replacement.checks[0]?.path === '$text'
+      && typeof replacement.checks[0].equals === 'string'
+      && previous.checks.every(check => typeof check.equals === 'string' && (replacement.checks[0]!.equals as string).includes(check.equals));
+    if (criterionSupersessionIdentity(replacement) !== criterionSupersessionIdentity(previous)
+      && !repairsUnprojectedShellTextSelector) {
       throw new Error(`Criterion ${replacement.id} must preserve the exact description, tool, target input and checks from ${previousId}; only a user amendment may change acceptance semantics`);
     }
-    const observation = observations.get(previousId);
     if (!observation || observation.passed) {
       throw new Error(`Criterion ${previousId} can be superseded only after its exact current observation completed with a negative result`);
     }

@@ -2227,6 +2227,7 @@ function FilePreviewRenderer({
           content={state.content ?? ''}
           filePath={state.filePath}
           variant={isPlanFile ? 'plan' : 'response'}
+          error={state.error}
         />
       )
     }

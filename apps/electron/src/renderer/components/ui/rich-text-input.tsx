@@ -534,19 +534,23 @@ export const RichTextInput = React.forwardRef<RichTextInputHandle, RichTextInput
     const skillSlugs = React.useMemo(() => skills.map(s => s.slug), [skills])
     const sourceSlugs = React.useMemo(() => sources.map(s => s.config.slug), [sources])
 
-    // Preload icons for sources and skills
+    // Icons are optional: preload sequentially so new messages keep RPC capacity.
     React.useEffect(() => {
       if (!workspaceId) return
+      let cancelled = false
 
-      // Preload source icons
-      for (const source of sources) {
-        loadSourceIcon({ config: source.config, workspaceId })
+      async function preloadIcons() {
+        for (const source of sources) {
+          if (cancelled) return
+          await loadSourceIcon({ config: source.config, workspaceId: workspaceId! })
+        }
+        for (const skill of skills) {
+          if (cancelled) return
+          await loadSkillIcon(skill, workspaceId!)
+        }
       }
-
-      // Preload skill icons (handles emoji, URL, file, and auto-discovery)
-      for (const skill of skills) {
-        loadSkillIcon(skill, workspaceId)
-      }
+      void preloadIcons()
+      return () => { cancelled = true }
     }, [sources, skills, workspaceId])
 
     // Expose imperative handle

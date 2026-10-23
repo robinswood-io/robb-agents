@@ -32,7 +32,10 @@ describe('default Explore permissions for reviewer integrity checks', () => {
 
   it.each([
     'cmp -s /srv/workspace/orion/dist/app.js /srv/workspace/orion/dist/app.expected.js',
+    'cmp -s "/Users/thibault/Documents/Robb Agents/dist/app.js" "/Users/thibault/Documents/Robb Agents/dist/app.expected.js"',
     'shasum -a 256 /srv/workspace/orion/dist/app.js',
+    'shasum -a 256 "/Users/thibault/Documents/Robb Agents/dist/app.js"',
+    'diff -u /srv/workspace/orion/dist/app.js /srv/workspace/orion/dist/app.expected.js',
     'cmp -s dist/app.js dist/app.expected.js && shasum -a 256 dist/app.js',
     `cd /srv/workspace/orion && printf '%s\\n' '--- revision ---' && ${SAFE_GIT} rev-parse HEAD`,
   ])('allows only the bounded static read: %s', command => {
@@ -42,6 +45,7 @@ describe('default Explore permissions for reviewer integrity checks', () => {
   it.each([
     'bun run test:orion-contract',
     'bun run test:orion-contract --update',
+    'diff -u dist/app.js dist/app.expected.js --output=/tmp/patch.diff',
     'cmp dist/app.js dist/app.expected.js',
     'cmp -s dist/app.js',
     'cmp -s dist/app.js ../outside.js',

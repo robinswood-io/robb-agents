@@ -70,7 +70,7 @@ import { GenerationTelemetryLifecycle, LocalJsonlTelemetrySink, OtlpHttpTelemetr
 
 
 import { getPlatformSessionAppProvenance, resolveImportedSessionAppProvenance, toRoutingMetaAppProvenance } from './session-app-provenance';
-import { classifyLatestTurnTerminalState, classifyObjectiveTerminalState } from './turn-completion';
+import { classifyLatestTurnTerminalState, classifyObjectiveTerminalState, incompletePlanSteps } from './turn-completion';
 import { isYoloMode, yoloHumanHandoffBlock, YOLO_AUTONOMY_GUIDANCE } from '@craft-agent/shared/agent';
 import { extractObjectiveOutcome, hasCurrentObjectiveIndependentReviewPass, validateObjectiveOutcome } from './objective-outcome';
 import { waitForSessionChange } from './session-wait';
@@ -99,7 +99,7 @@ import { pendingPermissionCanReplay, pendingPermissionWatchdogRemainingMs, resol
 import { buildAutonomyFallbackPrompt, createAutonomyFallbackIntent, isAutonomyBrowserFallbackPrompt, isAutonomyStructuredFallbackPrompt, parseAutonomyFallbackIntent, type AutonomyFallbackIntent } from './autonomy-browser-fallback';
 import { appendCoalescedInternalMessage, selectInternalMessageCoalesceTarget } from './internal-message-coalescing';
 import { resolveContextTokenEstimate } from './context-token-estimate';
-import { buildObjectiveContractPrompt, objectiveEvidenceContractSegments, classifyAuthorizedObjectiveEvidenceDomain, findObjectiveText, hasObjectiveExecutionEvidence, hasObjectiveSubstantiveToolResult, isObjectiveEvidenceInvalidatingMutation, isObjectiveToolExecutedSuccessfully, isHostSyntheticObjectiveMessage, isHostSyntheticObjectiveText, isLegacyContextualObjectiveRoot, isLegacyPlanImplementationRequest, objectiveCostUsd, objectiveRequiresExecutionEvidence, objectiveReviewBinding, projectLegacyObjectiveCompletionRequirements, reconstructObjectiveForBranch, isExplicitReadOnlyReview, isExplicitReadOnlyClosureRequest, transitionObjectiveContract, turnProgressFingerprint } from './objective-contract';
+import { buildObjectiveContractPrompt, buildObjectiveScopePrompt, objectiveEvidenceContractSegments, classifyAuthorizedObjectiveEvidenceDomain, findObjectiveText, hasObjectiveExecutionEvidence, hasObjectiveSubstantiveToolResult, isObjectiveEvidenceInvalidatingMutation, isObjectiveToolExecutedSuccessfully, isHostSyntheticObjectiveMessage, isHostSyntheticObjectiveText, isLegacyContextualObjectiveRoot, isLegacyPlanImplementationRequest, objectiveCostUsd, objectiveRequiresExecutionEvidence, objectiveReviewBinding, projectLegacyObjectiveCompletionRequirements, reconstructObjectiveForBranch, isExplicitReadOnlyReview, isExplicitReadOnlyClosureRequest, transitionObjectiveContract, turnProgressFingerprint } from './objective-contract';
 import { COST_CONTROL_COMPACTION_INSTRUCTIONS, assessContextCompactionResult, captureProviderContextBaseline, classifyContextCompactionFailure, consumeContextProviderBaselineAdmission, decideContextProviderAdmission, isHardLimitFollowUpContextCompaction, isHardLimitRecoveryContextCompaction, shouldAttemptContextCompaction, type ContextCompactionAttemptState } from './context-compaction';
 import { buildExtractiveTransferSummary, selectTransferSummaryMessages } from './transfer-summary-context';
 
@@ -4335,6 +4335,9 @@ export class SessionManager implements ISessionManager {
               this.scheduleDelegatedTerminalResultRetry(child.id)
             }
           }
+          if (this.deferredAutomaticSessions.size > 0) {
+            await this.drainDeferredAutomaticSessions()
+          }
         })().catch(error => sessionLog.error('Durable inbox recovery failed', error))
       })
     } catch (error) {
@@ -6600,6 +6603,7 @@ export class SessionManager implements ISessionManager {
     managed: ManagedSession,
     pending: PendingTurnRecovery,
   ): ReturnType<typeof createCleanRecoveryContinuationHandoff> {
+    if (!this.isLegacyHostObjectiveContractEnabled(managed)) return undefined
     const storedObjective = managed.activeObjective
     const objective = storedObjective?.terminalState === 'blocked_human'
       && this.isCleanSetupRetryBlocked(pending.recoveryDispatch)
@@ -6992,7 +6996,8 @@ export class SessionManager implements ISessionManager {
             managed.activeObjective && (recovery.validationGaps?.length
               || managed.activeObjective.terminalReconciliation)
               ? buildObjectiveValidationEvidenceContext(managed.messages, managed.activeObjective, managed.id) : undefined,
-            retryDispatch.attempt, managed.activeObjective),
+            retryDispatch.attempt,
+            this.isLegacyHostObjectiveContractEnabled(managed) ? managed.activeObjective : undefined),
           'The latest user message below refines the preserved objective. Resume from existing evidence and the current external state; do not redo completed actions or treat retry as a new authorization.',
           `<existing_user_message id=${JSON.stringify(anchor.id)}>`, anchor.content, '</existing_user_message>',
         ].join('\n\n')
@@ -7567,7 +7572,11 @@ export class SessionManager implements ISessionManager {
       : undefined
     return [
       buildAutomaticTurnRecoveryPrompt(
-        pending, dispatch.cause, evidenceContext, dispatch.attempt, managed.activeObjective,
+        pending,
+        dispatch.cause,
+        evidenceContext,
+        dispatch.attempt,
+        this.isLegacyHostObjectiveContractEnabled(managed) ? managed.activeObjective : undefined,
       ),
       authenticatedAnswerContext,
       dispatch.fallbackIntent ? buildAutonomyFallbackPrompt(dispatch.fallbackIntent) : undefined,
@@ -8932,9 +8941,13 @@ export class SessionManager implements ISessionManager {
     // Indexes are hydration hints, never human authority: spawned-session and
     // older agent messages may also appear in pendingQueuedMessageIds.
     const hasInboxHint = !!managed.pendingQueuedMessageIds?.length || !!managed.pendingAgentDeliveryIds?.length
+    const hasDelegatedDescendants = [...this.sessions.values()].some(
+      candidate => candidate.parentSessionId === managed.id || candidate.delegation?.rootSessionId === managed.id,
+    )
     const needsLocalReconciliation = managed.lastMessageRole === 'assistant' || !!managed.lastFinalMessageId
       || !!managed.pendingTurnRecovery.waitingForPermission || !!managed.pendingAuthRequestId
       || !!managed.parentSessionId && !this.sessions.has(managed.parentSessionId)
+      || hasDelegatedDescendants
     if (!humanRecovery && !allocatedCleanHint?.cleanContinuationId
       && !hasInboxHint && !needsLocalReconciliation) {
       if (await this.stopImmutableRestartRecovery(managed)) return
@@ -9269,9 +9282,16 @@ export class SessionManager implements ISessionManager {
     const objective = managed.activeObjective
     if (objective?.terminalState === 'active') {
       const userIndex = recoveryMessages.findIndex(message => message.id === pending.userMessageId)
-      const finalMessage = userIndex < 0 ? undefined : recoveryMessages.slice(userIndex + 1).findLast(message => (
+      const lastAssistantOffset = userIndex < 0 ? -1 : recoveryMessages.slice(userIndex + 1).findLastIndex(message => (
         message.role === 'assistant' && !message.isIntermediate
       ))
+      const finalMessageIndex = lastAssistantOffset < 0 ? -1 : userIndex + 1 + lastAssistantOffset
+      const hasSubsequentTurnActivity = finalMessageIndex >= 0 && recoveryMessages.slice(finalMessageIndex + 1).some(message => (
+        message.role === 'user' || message.role === 'tool'
+      ))
+      const finalMessage = finalMessageIndex >= 0 && !hasSubsequentTurnActivity
+        ? recoveryMessages[finalMessageIndex]
+        : undefined
       if (finalMessage) {
         this.rehydrateObjectiveEvidence(managed)
         const completionObjective = projectLegacyObjectiveCompletionRequirements(
@@ -9280,12 +9300,8 @@ export class SessionManager implements ISessionManager {
         )
         const reviewValidation = validateDelegatedReviewCompletion({ parentSessionId: managed.parentSessionId, sessionId: managed.id, sourceSlugs: managed.enabledSourceSlugs,
           objective, messages: managed.messages, finalMessage })
-        const explicitStructuredTracking = this.hasExplicitStructuredObjectiveTracking(
-          managed,
-          objective,
-          finalMessage,
-          pending,
-        )
+        const explicitStructuredTracking = this.hasExplicitStructuredObjectiveTracking(managed)
+        const remainingPlanSteps = incompletePlanSteps(managed.messages, objective.userMessageId)
         const evidenceGap = !reviewValidation && explicitStructuredTracking && objective.evidenceRequirement ? getObjectiveEvidenceCompletionGap(managed.id) : undefined
         const executionEvidenceMissing = !reviewValidation && explicitStructuredTracking && objectiveRequiresExecutionEvidence(objective, findObjectiveText(managed.messages, objective))
           && !hasObjectiveExecutionEvidence(managed.messages, objective.userMessageId)
@@ -9298,31 +9314,30 @@ export class SessionManager implements ISessionManager {
         if (validation.declaration && !finalMessage.objectiveOutcome) {
           finalMessage.objectiveOutcome = validation.declaration
         }
-        const rawState = reviewValidation?.state ?? classifyObjectiveTerminalState(finalMessage.content, {
+        const state = reviewValidation?.state ?? classifyObjectiveTerminalState(finalMessage.content, {
+          remainingPlanSteps,
           evidenceGap, executionEvidenceMissing,
           structuredOutcomeRequired: explicitStructuredTracking && requiresStructuredObjectiveOutcome(completionObjective),
-          ...(finalMessage.objectiveOutcome || finalMessage.objectiveOutcomeError || validation.declaration ? {
+          ...(explicitStructuredTracking && (finalMessage.objectiveOutcome || finalMessage.objectiveOutcomeError || validation.declaration) ? {
             declaredState: validation.state, structuredOutcomeValid: validation.valid,
           } : {}),
         })
-        const state = !reviewValidation && !explicitStructuredTracking && rawState === 'continue'
-          ? 'complete_verified'
-          : rawState
         invalidFinal = state === 'continue'
         if (invalidFinal) {
           const validContinuation = validation.valid && validation.state === 'continue'
             && !finalMessage.objectiveOutcomeError
-          restartRecoveryCause = validContinuation
+          restartRecoveryCause = !explicitStructuredTracking ? 'premature_final' : validContinuation
             ? 'objective_continue'
             : evidenceGap ? 'evidence_gate' : 'objective_incomplete'
-          validationGaps = validContinuation ? [] : [...new Set([
+          validationGaps = !explicitStructuredTracking || validContinuation ? [] : [...new Set([
             ...validation.gaps,
             ...(evidenceGap ? [evidenceGap] : []),
             ...(executionEvidenceMissing ? ['required execution evidence is missing'] : []),
           ])]
           const effectiveContinuation = ('effectiveDeclaration' in validation
             ? validation.effectiveDeclaration : undefined) ?? finalMessage.objectiveOutcome
-          continuationWork = validContinuation ? effectiveContinuation?.remainingWork : undefined
+          continuationWork = !explicitStructuredTracking ? remainingPlanSteps
+            : validContinuation ? effectiveContinuation?.remainingWork : undefined
           if (validContinuation) objective.lastOutcome = effectiveContinuation
         }
         if (state !== 'continue') {
@@ -10115,7 +10130,12 @@ export class SessionManager implements ISessionManager {
     return true
   }
 
-  private autonomousAdmissionBlock(managed: ManagedSession, spawning = false, checkCapacity = true): string | undefined {
+  private autonomousAdmissionBlock(
+    managed: ManagedSession,
+    spawning = false,
+    checkCapacity = true,
+    spawningRole?: 'worker' | 'reviewer',
+  ): string | undefined {
     if (this.providerDispatchAcceptanceUnknown(managed)) return 'provider_acceptance_unknown'
     const lineage = inspectAutonomousLineage(managed, id => this.sessions.get(id), spawning,
       id => { const session = this.sessions.get(id); return !!session && this.hasPendingDecision(session) })
@@ -10124,6 +10144,21 @@ export class SessionManager implements ISessionManager {
     const occupied = new Set([...this.sessions.values()].filter(s => s.isProcessing).map(s => s.id))
     for (const id of this.automaticAdmissionReservations) occupied.add(id)
     if (!spawning) occupied.delete(managed.id)
+    const reviewerParentsToDiscount = new Set<string>()
+    for (const id of occupied) {
+      const session = this.sessions.get(id)
+      if (session?.delegation?.role === 'reviewer' && session.parentSessionId) {
+        reviewerParentsToDiscount.add(session.parentSessionId)
+      }
+    }
+    if (spawning && spawningRole === 'reviewer') {
+      reviewerParentsToDiscount.add(managed.id)
+    } else if (!spawning && managed.delegation?.role === 'reviewer' && managed.parentSessionId) {
+      reviewerParentsToDiscount.add(managed.parentSessionId)
+    }
+    for (const parentId of reviewerParentsToDiscount) {
+      occupied.delete(parentId)
+    }
     if (occupied.size + this.pendingSpawnRoots.size >= AUTONOMOUS_SESSION_LIMITS.maxRestartConcurrent) return 'global_capacity'
     let family = [...this.pendingSpawnRoots.values()].filter(root => root === lineage.rootId).length
     for (const id of occupied) {
@@ -10159,7 +10194,7 @@ export class SessionManager implements ISessionManager {
       'app_restart',
       evidenceContext,
       pending.attempts + 1,
-      managed.activeObjective,
+      this.isLegacyHostObjectiveContractEnabled(managed) ? managed.activeObjective : undefined,
     )
   }
 
@@ -10994,8 +11029,8 @@ export class SessionManager implements ISessionManager {
     return managed.activeObjective?.terminalState === 'active'
   }
 
-  private reserveSpawnAdmission(managed: ManagedSession): symbol {
-    const block = this.autonomousAdmissionBlock(managed, true)
+  private reserveSpawnAdmission(managed: ManagedSession, spawningRole?: 'worker' | 'reviewer'): symbol {
+    const block = this.autonomousAdmissionBlock(managed, true, true, spawningRole)
     if (block) throw new Error(`Delegation deferred (${block}). Resolve the ancestor decision or finish an existing delegation before spawning again. For a changed parent objective, create a new scoped delegation. Do not recursively delegate a delegated review.`)
     const token = Symbol('spawn-admission')
     this.pendingSpawnRoots.set(token, inspectAutonomousLineage(managed, id => this.sessions.get(id)).rootId)
@@ -11866,7 +11901,7 @@ export class SessionManager implements ISessionManager {
       authorized: undefined as unknown as boolean,
       sensitiveActionAuthorized: undefined as unknown as boolean,
       authorizationSegments: authority.authorizationSegments ?? [],
-      ...(authority.authenticatedUserAuthorizationSegments ? {
+      ...('authenticatedUserAuthorizationSegments' in authority && authority.authenticatedUserAuthorizationSegments ? {
         authenticatedUserAuthorizationSegments: authority.authenticatedUserAuthorizationSegments,
       } : {}),
     }
@@ -12482,10 +12517,18 @@ export class SessionManager implements ISessionManager {
     if (recoveredConsumedAgentDeliveryNeedsContinuation || recoveredProviderDispatchNeedsContinuation) {
       this.deferredAutomaticSessions.add(managed.id)
     }
-    for (const message of managed.messages) {
+    const providerBoundaryIndex = managed.providerContextBoundaryMessageId
+      ? managed.messages.findIndex(message => message.id === managed.providerContextBoundaryMessageId)
+      : -1
+    for (const [messageIndex, message] of managed.messages.entries()) {
       if (message.role !== 'user' || !message.isQueued || managed.messageQueue.some(item => item.messageId === message.id)) continue
       if (message.providerDispatch) {
         message.isQueued = false
+        continue
+      }
+      if (message.agentDelivery && providerBoundaryIndex >= 0 && messageIndex < providerBoundaryIndex) {
+        message.isQueued = false
+        message.agentDelivery.status = 'processed'
         continue
       }
       const isBoundAutomaticRecovery = allocatedRecovery?.cause !== 'user_retry'
@@ -20409,22 +20452,13 @@ export class SessionManager implements ISessionManager {
     } catch (error) { sessionLog.warn('User correction capture unavailable', { sessionId: managed.id, error: String(error) }) }
   }
 
-  private isLegacyHostObjectiveContractEnabled(managed: ManagedSession): boolean {
-    return process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT === '1' || isTerminalReviewSession(managed)
+  private isLegacyHostObjectiveContractEnabled(_managed: ManagedSession): boolean {
+    return process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT === '1'
   }
 
-  private hasExplicitStructuredObjectiveTracking(
-    managed: ManagedSession,
-    objective: ObjectiveContract | undefined,
-    finalMessage: Message | undefined,
-    pendingRecovery: PendingTurnRecovery | undefined,
-  ): boolean {
-    if (this.isLegacyHostObjectiveContractEnabled(managed)) return true
-    if (finalMessage?.objectiveOutcome || finalMessage?.objectiveOutcomeError) return true
-    if (objective?.acceptanceCriteria?.length) return true
-    if (pendingRecovery?.validationGaps?.length) return true
-    if (objective?.lastOutcome?.state === 'continue' && pendingRecovery?.budgetHistoryUnavailable === true) return true
-    return false
+  private hasExplicitStructuredObjectiveTracking(managed: ManagedSession): boolean {
+    return this.isLegacyHostObjectiveContractEnabled(managed)
+      || !!managed.activeObjective?.acceptanceCriteria?.length
   }
 
   private rehydrateObjectiveEvidence(managed: ManagedSession): void {
@@ -21299,6 +21333,46 @@ export class SessionManager implements ISessionManager {
         }
       }
 
+      if (isInternalMessage && deliveryId
+        && options?.internalOrigin?.kind === 'agent-message'
+        && options.internalOrigin.agentMessageType === 'progress'
+        && options.internalOrigin.senderSessionId
+        && !options.internalOrigin.attachmentsSha256
+        && !storedAttachments?.length) {
+        const senderSessionId = options.internalOrigin.senderSessionId
+        const coalesceCandidate = [...managed.messageQueue].reverse().find(candidate => {
+          const origin = candidate.options?.internalOrigin
+          if (origin?.kind !== 'agent-message'
+            || origin.senderSessionId !== senderSessionId
+            || origin.agentMessageType !== 'progress'
+            || origin.attachmentsSha256) return false
+          const receipt = this.exactQueuedAgentDeliveryReceipt(managed, candidate)
+          return !!receipt
+            && !this.queuedAgentDeliveryDispatches.has(receipt.id)
+            && managed.messages.every(existing => existing === receipt || existing.agentDelivery?.id !== deliveryId)
+        })
+        const receipt = coalesceCandidate
+          ? this.exactQueuedAgentDeliveryReceipt(managed, coalesceCandidate)
+          : undefined
+        if (coalesceCandidate && receipt?.agentDelivery && receipt.internalOrigin?.kind === 'agent-message') {
+          appendCoalescedInternalMessage(coalesceCandidate, message)
+          receipt.content = coalesceCandidate.message
+          coalesceCandidate.options!.internalOrigin!.deliveryId = deliveryId
+          receipt.internalOrigin.deliveryId = deliveryId
+          receipt.agentDelivery.id = deliveryId
+          this.persistSession(managed)
+          await this.flushSession(managed.id)
+          onAck?.(receipt.id)
+          sessionLog.info('coalesced queued agent progress delivery', {
+            sessionId,
+            senderSessionId,
+            deliveryId,
+            queueLength: managed.messageQueue.length,
+          })
+          return
+        }
+      }
+
       const deliverySender = deliveryId && options?.internalOrigin?.senderSessionId
         ? this.sessions.get(options.internalOrigin.senderSessionId)
         : undefined
@@ -21313,19 +21387,26 @@ export class SessionManager implements ISessionManager {
         ? resolveAgentCostControlPolicy(loadWorkspaceConfig(managed.workspace.rootPath)?.costControl)
           .coordination.maxQueuedMessages
         : Number.POSITIVE_INFINITY
+      const countQueuedDelegatedDeliveries = (includeProgress: boolean) => managed.messageQueue.filter(item => {
+        const origin = item.options?.internalOrigin
+        if (!includeProgress && origin?.kind === 'agent-message' && origin.agentMessageType === 'progress') {
+          return false
+        }
+        const sender = origin?.kind === 'agent-message' && origin.deliveryId && origin.senderSessionId
+          ? this.sessions.get(origin.senderSessionId) : undefined
+        return !!sender && this.isCurrentDelegatedDescendant(managed, sender)
+      }).length
       const queuedDelegatedDeliveryCount = relevantDelegatedDelivery
-        ? managed.messageQueue.filter(item => {
-          const origin = item.options?.internalOrigin
-          const sender = origin?.kind === 'agent-message' && origin.deliveryId && origin.senderSessionId
-            ? this.sessions.get(origin.senderSessionId) : undefined
-          return !!sender && this.isCurrentDelegatedDescendant(managed, sender)
-        }).length
+        ? countQueuedDelegatedDeliveries(options?.internalOrigin?.agentMessageType === 'progress')
+        : 0
+      const queuedDescendantDeliveriesForNonDescendant = !relevantDelegatedDelivery && deliveryId
+        ? countQueuedDelegatedDeliveries(true)
         : 0
       const inboxFull = relevantDelegatedDelivery
         // Every bounded child must be able to return one durable result even
         // when siblings are still active and the ordinary inbox limit is one.
         ? queuedDelegatedDeliveryCount >= DELEGATION_LIMITS.maxChildren
-        : managed.messageQueue.length - yieldingRecoveries.length >= maxQueuedMessages
+        : managed.messageQueue.length - yieldingRecoveries.length - queuedDescendantDeliveriesForNonDescendant >= maxQueuedMessages
       if (deliveryId && inboxFull) {
         throw new Error('Target inbox is full; wait for a terminal result before retrying')
       }
@@ -24000,9 +24081,12 @@ export class SessionManager implements ISessionManager {
         }
       } catch (error) { sessionLog.warn('Completed-chat context unavailable', { sessionId, error: String(error) }) }
       assertActivePreparation()
-      if (!cleanRecoveryHandoffPrompt && managed.activeObjective?.terminalState === 'active'
-        && this.isLegacyHostObjectiveContractEnabled(managed)) {
-        effectiveMessage = `${effectiveMessage}\n\n${this.buildObjectiveRuntimePrompt(managed, managed.activeObjective)}`
+      if (managed.activeObjective?.terminalState === 'active') {
+        const objectivePrompt = this.isLegacyHostObjectiveContractEnabled(managed)
+          ? !cleanRecoveryHandoffPrompt ? this.buildObjectiveRuntimePrompt(managed, managed.activeObjective) : ''
+          : buildObjectiveScopePrompt(managed.activeObjective, managed.messages, userMessage.id,
+            incompletePlanSteps(managed.messages, managed.activeObjective.userMessageId))
+        if (objectivePrompt) effectiveMessage += `\n\n${objectivePrompt}`
       }
       if (!cleanRecoveryHandoffPrompt && managed.projectId) {
         try {
@@ -24607,9 +24691,12 @@ export class SessionManager implements ISessionManager {
           // results alone are progress, not completion.
           const terminalMessages = managed.pendingTurnRecovery
             ? messagesForPendingRecovery(managed.messages, managed.pendingTurnRecovery) : managed.messages
+          const remainingPlanSteps = incompletePlanSteps(managed.messages,
+            managed.activeObjective?.userMessageId ?? managed.pendingTurnRecovery?.userMessageId ?? userMessage.id)
           const emittedTerminalState = classifyLatestTurnTerminalState(
             terminalMessages,
             managed.pendingTurnRecovery?.userMessageId ?? userMessage.id,
+            remainingPlanSteps,
           )
           const finalMessage = [...terminalMessages].reverse().find(candidate => (
             candidate.role === 'assistant' && !candidate.isIntermediate
@@ -24620,13 +24707,8 @@ export class SessionManager implements ISessionManager {
             && (emittedTerminalState === 'final-assistant' || emittedTerminalState === 'premature-final-assistant')
             ? validateDelegatedReviewCompletion({ parentSessionId: managed.parentSessionId, sessionId: managed.id, sourceSlugs: managed.enabledSourceSlugs,
               objective: managed.activeObjective, messages: managed.messages, finalMessage }) : undefined
-          const explicitStructuredTracking = this.hasExplicitStructuredObjectiveTracking(
-            managed,
-            managed.activeObjective,
-            finalMessage,
-            managed.pendingTurnRecovery,
-          )
-          const latestTurnTerminalState = reviewValidation || (!explicitStructuredTracking && emittedTerminalState === 'premature-final-assistant')
+          const explicitStructuredTracking = this.hasExplicitStructuredObjectiveTracking(managed)
+          const latestTurnTerminalState = reviewValidation
             ? 'final-assistant'
             : emittedTerminalState
           if (managed.pendingTurnRecovery?.continuationRequired) {
@@ -24793,21 +24875,19 @@ export class SessionManager implements ISessionManager {
             if (finalMessage && outcomeValidation.declaration && !finalMessage.objectiveOutcome) {
               finalMessage.objectiveOutcome = outcomeValidation.declaration
             }
-            const rawObjectiveTerminalState = reviewValidation?.state ?? classifyObjectiveTerminalState(
+            const objectiveTerminalState = reviewValidation?.state ?? classifyObjectiveTerminalState(
               finalMessage?.content ?? '',
               {
                 evidenceGap,
                 executionEvidenceMissing,
                 structuredOutcomeRequired,
-                ...(finalMessage?.objectiveOutcome || finalMessage?.objectiveOutcomeError || outcomeValidation.declaration ? {
+                remainingPlanSteps,
+                ...(explicitStructuredTracking && (finalMessage?.objectiveOutcome || finalMessage?.objectiveOutcomeError || outcomeValidation.declaration) ? {
                   declaredState: outcomeValidation.state,
                   structuredOutcomeValid: outcomeValidation.valid,
                 } : {}),
               },
             )
-            const objectiveTerminalState = !reviewValidation && !explicitStructuredTracking && rawObjectiveTerminalState === 'continue'
-              ? 'complete_verified'
-              : rawObjectiveTerminalState
 
             // The provider cannot terminalize a parent while a child bound to
             // this exact objective is still running. Keep the objective active
@@ -24827,7 +24907,7 @@ export class SessionManager implements ISessionManager {
               const validContinuation = outcomeValidation.valid
                 && outcomeValidation.state === 'continue'
                 && !finalMessage?.objectiveOutcomeError
-              const recoveryCause: AutomaticTurnRecoveryCause = validContinuation
+              const recoveryCause: AutomaticTurnRecoveryCause = !explicitStructuredTracking ? 'premature_final' : validContinuation
                 ? 'objective_continue'
                 : evidenceGap ? 'evidence_gate' : 'objective_incomplete'
               const outcomeLogDetails = {
@@ -24852,14 +24932,15 @@ export class SessionManager implements ISessionManager {
               // Parsing can fail before the validator reaches the independent
               // evidence gates. Preserve every current reason in the retry and
               // terminal diagnostic, including those early-return cases.
-              const validationGaps = validContinuation ? [] : [...new Set([
+              const validationGaps = !explicitStructuredTracking || validContinuation ? [] : [...new Set([
                 ...outcomeValidation.gaps,
                 ...(evidenceGap ? [evidenceGap] : []),
                 ...(executionEvidenceMissing ? ['required execution evidence is missing'] : []),
               ])]
               const recoveryQueued = await this.enqueueAutomaticTurnRecovery(
                 managed, recoveryCause, validationGaps,
-                validContinuation ? effectiveContinuation?.remainingWork : undefined,
+                !explicitStructuredTracking ? remainingPlanSteps
+                  : validContinuation ? effectiveContinuation?.remainingWork : undefined,
               )
               if (recoveryHandoffPaused()) {
                 sendSpan.end()
@@ -25907,18 +25988,24 @@ export class SessionManager implements ISessionManager {
     }
     try {
     const sourceSlugs = request.enabledSourceSlugs ?? managed.enabledSourceSlugs
+    const enforceLegacyReviewContract = !!objective && (
+      this.isLegacyHostObjectiveContractEnabled(managed)
+      || !!objective.acceptanceCriteria?.length
+      || !!objective.terminalReconciliation
+    )
+    // A reviewer must not spawn a review of its own review, including native chats.
     if (objective) {
       const decision = evaluateReviewDelegation({ parentSessionId: managed.parentSessionId,
         objective, prompt, proposedRole: request.role, sourceSlugs })
       if (!decision.allowed) throw new Error(decision.message)
     }
-    const hostTargetChecks = request.role === 'reviewer' && objective
+    const hostTargetChecks = request.role === 'reviewer' && objective && enforceLegacyReviewContract
       ? objective.acceptanceCriteria ?? []
       : []
-    const hostSingleTarget = request.role === 'reviewer' && objective && !hostTargetChecks.length
+    const hostSingleTarget = request.role === 'reviewer' && objective && enforceLegacyReviewContract && !hostTargetChecks.length
       ? deriveHostDelegatedReviewSingleTarget(prompt, sourceSlugs)
       : undefined
-    if (request.role === 'reviewer' && objective && !hostTargetChecks.length && !hostSingleTarget) {
+    if (request.role === 'reviewer' && objective && enforceLegacyReviewContract && !hostTargetChecks.length && !hostSingleTarget) {
       throw new Error('Reviewer delegation requires immutable host target checks or one explicit, unambiguous inspection target.')
     }
     // Resolve attachments before creation: the key binds actual bytes, and a
@@ -25979,7 +26066,7 @@ export class SessionManager implements ISessionManager {
       let admission: symbol | undefined
       let child: ManagedSession | undefined
       try {
-        admission = this.reserveSpawnAdmission(managed)
+        admission = this.reserveSpawnAdmission(managed, request.role)
         const delegation: SessionDelegation = terminalReviewBinding
           ? { ...budget.delegation, reviewBinding: { ...terminalReviewBinding } }
           : budget.delegation
@@ -25997,13 +26084,15 @@ export class SessionManager implements ISessionManager {
         // A permission reduction during any asynchronous preparation applies at dispatch.
         const dispatchMode = resolveDelegatedPermissionMode(managed.permissionMode ?? 'ask', child.permissionMode, request.role)
         if (child.permissionMode !== dispatchMode) this.setSessionPermissionMode(child.id, dispatchMode)
-        const delegatedPrompt = request.role === 'reviewer' && objective
+        const delegatedPrompt = request.role === 'reviewer' && objective && enforceLegacyReviewContract
           ? `${prependHostDelegatedReviewerScope(prompt)}\n\n<host_parent_review_contract>${JSON.stringify({
             protocol: 'host-review-v2',
             ...objectiveReviewBinding(objective),
             criteria: [...objective.completionCriteria.filter(id => id !== 'independent-review-passed'),
               ...hostTargetChecks.map(item => item.id)],
             targetChecks: hostTargetChecks,
+            request: findObjectiveText(managed.messages, objective),
+            amendments: (objective.amendments ?? []).map(amendment => amendment.text),
             ...(hostSingleTarget ? { singleTarget: hostSingleTarget } : {}),
             instruction: HOST_PARENT_REVIEW_INSTRUCTION,
           }).replace(/</g, '\\u003c')}</host_parent_review_contract>` : prompt
@@ -29212,8 +29301,9 @@ export class SessionManager implements ISessionManager {
     // start any new mutation while an earlier mutation in this objective may
     // already have executed. Tool aliases and changed payload spellings are
     // intentionally irrelevant: only read-only reconciliation is admitted.
-    const quarantinesUncertainObjectiveEffect = (recovery?.cause !== 'user_retry'
-      || cleanExplicitRetryBoundary)
+    const quarantinesUncertainObjectiveEffect = this.isLegacyHostObjectiveContractEnabled(managed)
+      && (recovery?.cause !== 'user_retry'
+        || cleanExplicitRetryBoundary)
       && (!!recovery || (binding.userMessage.agentDelivery?.attempts ?? 0) > 1)
     if (quarantinesUncertainObjectiveEffect) {
       const permissionsContext = {
@@ -29251,6 +29341,7 @@ export class SessionManager implements ISessionManager {
         }
         const unresolvedPriorToolReceipt = durableMessages.find((message, index) => {
           if (index <= objectiveRootIndexes[0]!
+            || index > latestDurableUserIndex
             || message.type !== 'tool'
             || message.toolUseId === toolUseId
             || message.toolStatus !== 'executing'
