@@ -1,0 +1,226 @@
+{
+  "candidateCommit": "76e185d9dbd95a652319825eae8fc7dea1ad3a2e",
+  "passed": true,
+  "sourceHashesMatchCandidate": true,
+  "checks": [
+    {
+      "mission": "two-targets",
+      "sessionId": "261024-gentle-nebula",
+      "passed": true,
+      "completedAt": 1792864565124,
+      "pendingTurnRecoveryCleared": true,
+      "persistedDistinctToolCalls": 3,
+      "toolErrorsRecovered": 0,
+      "checks": [
+        "Both named targets read and represented",
+        "True and false states preserved",
+        "Deliverable linked"
+      ],
+      "files": {
+        "archive.json": {
+          "sha256": "997ba5db06dcc303576a561a2b0d0a0ad402be46ecef6bde9904578cbdc1be70",
+          "bytes": 35
+        },
+        "cleanup.json": {
+          "sha256": "174b3089e82a540cd3cc785335f534d7cfbf9f4f0cb2f9f3f187cf76be3ef479",
+          "bytes": 34
+        },
+        "observations.json": {
+          "sha256": "26db342dbf67f548ed1117e610648d258f81f421d027e428ad98140feb4f8553",
+          "bytes": 86
+        }
+      }
+    },
+    {
+      "mission": "three-deliverables",
+      "sessionId": "261024-aware-inlet",
+      "passed": true,
+      "completedAt": 1792864606589,
+      "pendingTurnRecoveryCleared": true,
+      "persistedDistinctToolCalls": 4,
+      "toolErrorsRecovered": 0,
+      "checks": [
+        "Correct count and total",
+        "Three real deliverables inspected independently",
+        "All final files linked"
+      ],
+      "files": {
+        "delivery.txt": {
+          "sha256": "99ef26ae9a9cf96fa51c197d151688821c151153f41f1558d3d210698a1d9e22",
+          "bytes": 23
+        },
+        "source.csv": {
+          "sha256": "1fb3c77a79e059084b70accc552be00f52bf08de4827c83005c6788bee825c49",
+          "bytes": 24
+        },
+        "rapport.md": {
+          "sha256": "18c6ee43e972962ba5c14ea7a84f9e8c4e0ed5893e3c1fe4a08a7e555d61db82",
+          "bytes": 328
+        },
+        "totals.json": {
+          "sha256": "483648557a2f191f517343173c64f156cefb918c184c21229bee31c0a9f6f114",
+          "bytes": 32
+        }
+      }
+    },
+    {
+      "mission": "missing-input-recovery",
+      "sessionId": "261024-ready-beaver",
+      "passed": true,
+      "completedAt": 1792864629128,
+      "pendingTurnRecoveryCleared": true,
+      "persistedDistinctToolCalls": 4,
+      "toolErrorsRecovered": 1,
+      "checks": [
+        "Missing initial input did not block completion",
+        "Fallback source identified",
+        "Both outputs checked independently"
+      ],
+      "files": {
+        "resultat.json": {
+          "sha256": "41cb2d22ed6c4344eef7da59d094bf34b23d5340a04762c989290c99920ad72f",
+          "bytes": 32
+        },
+        "rapport.md": {
+          "sha256": "6562f4050212be59595677df2a1047ada7233bd03f9d5a15b8426efd038f5104",
+          "bytes": 439
+        },
+        "secours/entree.csv": {
+          "sha256": "8a7d24c38b080b5d3d114c9d169a8b0adfabfbbc469d28ada2957823b27bdd22",
+          "bytes": 21
+        }
+      }
+    },
+    {
+      "mission": "midstream-amendment",
+      "sessionId": "261024-lean-twilight",
+      "passed": true,
+      "completedAt": 1792864647960,
+      "pendingTurnRecoveryCleared": true,
+      "persistedDistinctToolCalls": 2,
+      "toolErrorsRecovered": 1,
+      "checks": [
+        "A real human correction arrived during tool execution",
+        "Latest requested content retained",
+        "Additional requirement delivered and linked"
+      ],
+      "files": {
+        "resultat.txt": {
+          "sha256": "c0461c447116f96d64ce7de602979c4a5ae88501e5828574ed4d8dc81a2763b1",
+          "bytes": 12
+        },
+        "pret.txt": {
+          "sha256": "1cf77e7418ff2acc35882f3a8b031ca99cca56684cf85efdf5b69cbaa45c0db9",
+          "bytes": 4
+        },
+        "controle.json": {
+          "sha256": "b8bfbdac8a367f6da7f4510e2bf4349dbe35316a789ee66dbea3aeea71b5cab5",
+          "bytes": 34
+        }
+      }
+    },
+    {
+      "mission": "source-activation-amendment",
+      "sessionId": "261024-bold-river",
+      "passed": true,
+      "completedAt": 1792864697311,
+      "pendingTurnRecoveryCleared": true,
+      "persistedDistinctToolCalls": 7,
+      "toolErrorsRecovered": 1,
+      "checks": [
+        "A correction arrived during source testing",
+        "Corrected arithmetic came from the read-only local connector",
+        "Both corrected requirements delivered and linked"
+      ],
+      "files": {
+        "calcul.json": {
+          "sha256": "4873c11ed0c1b76f1ab225f06e45ffe86588b2e0b4f252ee490cdfb897208e30",
+          "bytes": 41
+        },
+        "controle.txt": {
+          "sha256": "b551a907d3a60c9530965d6a660f50eecf191735e062b7a402e4087a67fb23b4",
+          "bytes": 11
+        }
+      },
+      "qaSourceResult": {
+        "sum": 42,
+        "fixture": "synthetic-local-qa"
+      }
+    },
+    {
+      "mission": "compaction-continuation",
+      "sessionId": "261024-airy-heron",
+      "passed": true,
+      "completedAt": 1792864738485,
+      "pendingTurnRecoveryCleared": true,
+      "persistedDistinctToolCalls": 4,
+      "toolErrorsRecovered": 0,
+      "checks": [
+        "Real SDK compaction completed",
+        "Previously accepted objective and presentation requirement retained",
+        "Acquired file unchanged",
+        "New outputs and hashes verified"
+      ],
+      "files": {
+        "acquis.json": {
+          "sha256": "ffa57f0a7e4f4ad20e7bd758b6e8f173009e08c5f30b8779122aedc811ecba17",
+          "bytes": 22
+        },
+        "manifest.json": {
+          "sha256": "e40f387193be67bcd90cba67a9d8bb6bbcf1872ddc79493e218f91967e6c1e2d",
+          "bytes": 176
+        },
+        "final.md": {
+          "sha256": "dbe90052d976c8edbbd6da0a10f626d79dfb77ba60b624b6e2e2eeb1a8746571",
+          "bytes": 57
+        }
+      },
+      "actualSdkCompactions": [
+        {
+          "tokensBefore": 43414,
+          "retainedEarlierRule": true
+        }
+      ]
+    },
+    {
+      "mission": "continuation",
+      "sessionId": "261024-fluid-gorge",
+      "passed": true,
+      "completedAt": 1792864757984,
+      "pendingTurnRecoveryCleared": true,
+      "persistedDistinctToolCalls": 3,
+      "toolErrorsRecovered": 0,
+      "checks": [
+        "Original result preserved without rewrite",
+        "Amendment delivered",
+        "Independent byte hashes match",
+        "Final deliverables linked"
+      ],
+      "files": {
+        "brouillon.md": {
+          "sha256": "3825dc7d19eaec5d5cc07c133f5454202a2186e0e1e864f812115bc8dd257b4a",
+          "bytes": 26
+        },
+        "manifest.json": {
+          "sha256": "82b1a7f5337f81c7ef90c5daf102c466586582146974763ab9fe0a91e73262d9",
+          "bytes": 173
+        },
+        "final.md": {
+          "sha256": "b4d3898642af8273486f44a4ad503c20caa17514a4996ac5e0345e189c3bb80f",
+          "bytes": 51
+        }
+      }
+    }
+  ],
+  "limits": [
+    "Seven synthetic missions do not establish a generalized autonomy rate or numerical speedup",
+    "Failed stream cleanup verified in unit/renderer tests; no forced provider-stream failure in this real campaign"
+  ],
+  "evidenceRetentionNote": {
+    "observed": "QA sessions added after the verified 2321-session baseline were later absent from the normal profile; all 2321 original session IDs remained present",
+    "observedDirectoryUpdateUtc": "2026-10-24T18:00:37.719063+00:00",
+    "independentVerification": "Performed before that removal; actual persisted closure, tool result and SDK compaction entries were read successfully",
+    "retainedEvidence": "Campaign report, independently verified files/hashes and independent verification JSON remain under this workspace",
+    "attribution": "Not established; not attributed to Robb without evidence"
+  }
+}
