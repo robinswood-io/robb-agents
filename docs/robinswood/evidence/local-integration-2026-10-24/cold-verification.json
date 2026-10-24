@@ -1,0 +1,14 @@
+{
+  "passed": true,
+  "sessionId": "261024-spry-woods",
+  "groupCount": 2,
+  "realQuitAndRelaunch": true,
+  "originalFilesAndModificationTimesPreserved": true,
+  "initialMarkerUnchanged": true,
+  "controlInventoryMatchesBytes": true,
+  "humanRequests": 2,
+  "hiddenAutomaticRecoveryRequests": 1,
+  "completedAt": 1792869088044,
+  "pendingTurnRecovery": false,
+  "controlSha256": "cadcd91edea2ff9b030f946fa529e375985255807f77cef61f84c7a38de5a66c"
+}

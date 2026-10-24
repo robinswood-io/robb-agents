@@ -1,0 +1,10 @@
+{
+  "passed": true,
+  "baseCommit": "1387187593f23718e35088a5f5cbfeb3da332ce1",
+  "preservedPriorChangesCommit": "c288f98ecb4de2ce2a9d29391e3870f4a3d50428",
+  "preservedPriorFileCount": 39,
+  "primaryCommit": "ed245ccc12a303f89ece6671b70f185a9ea7f87d",
+  "primaryClean": true,
+  "candidateTreeMatchesPrimary": true,
+  "method": "Exact snapshot commit reuse then fast-forward; no stash or reset."
+}

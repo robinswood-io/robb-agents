@@ -1,0 +1,134 @@
+{
+  "passed": true,
+  "verifiedMissions": 7,
+  "scope": "Synthetic local files and one disposable read-only MCP fixture; real provider calls.",
+  "results": [
+    {
+      "mission": "two-targets",
+      "sessionId": "261024-sunny-prairie",
+      "passed": true,
+      "completedAt": 1792868537369,
+      "pendingTurnRecovery": false,
+      "uniqueToolCalls": 3,
+      "outputs": {
+        "observations.json": {
+          "bytes": 86,
+          "sha256": "26db342dbf67f548ed1117e610648d258f81f421d027e428ad98140feb4f8553"
+        }
+      }
+    },
+    {
+      "mission": "three-deliverables",
+      "sessionId": "261024-vivid-marble",
+      "passed": true,
+      "completedAt": 1792868553491,
+      "pendingTurnRecovery": false,
+      "uniqueToolCalls": 3,
+      "outputs": {
+        "totals.json": {
+          "bytes": 32,
+          "sha256": "483648557a2f191f517343173c64f156cefb918c184c21229bee31c0a9f6f114"
+        },
+        "rapport.md": {
+          "bytes": 145,
+          "sha256": "d2aedcaac88123f29acc8af73ab64e11a72272b27847844de3564d8aa46ad3c5"
+        },
+        "delivery.txt": {
+          "bytes": 23,
+          "sha256": "99ef26ae9a9cf96fa51c197d151688821c151153f41f1558d3d210698a1d9e22"
+        }
+      }
+    },
+    {
+      "mission": "missing-input-recovery",
+      "sessionId": "261024-airy-shark",
+      "passed": true,
+      "completedAt": 1792868575138,
+      "pendingTurnRecovery": false,
+      "uniqueToolCalls": 4,
+      "outputs": {
+        "resultat.json": {
+          "bytes": 32,
+          "sha256": "41cb2d22ed6c4344eef7da59d094bf34b23d5340a04762c989290c99920ad72f"
+        },
+        "rapport.md": {
+          "bytes": 398,
+          "sha256": "fc6e0236b44c9fd03f73a7c9183890052c8a77698f728dbcde00f29b8231bf7a"
+        }
+      }
+    },
+    {
+      "mission": "midstream-amendment",
+      "sessionId": "261024-sunny-bobcat",
+      "passed": true,
+      "completedAt": 1792868592169,
+      "pendingTurnRecovery": false,
+      "uniqueToolCalls": 2,
+      "outputs": {
+        "resultat.txt": {
+          "bytes": 12,
+          "sha256": "c0461c447116f96d64ce7de602979c4a5ae88501e5828574ed4d8dc81a2763b1"
+        },
+        "controle.json": {
+          "bytes": 34,
+          "sha256": "b8bfbdac8a367f6da7f4510e2bf4349dbe35316a789ee66dbea3aeea71b5cab5"
+        }
+      }
+    },
+    {
+      "mission": "source-activation-amendment",
+      "sessionId": "261024-steady-flow",
+      "passed": true,
+      "completedAt": 1792868641229,
+      "pendingTurnRecovery": false,
+      "uniqueToolCalls": 7,
+      "outputs": {
+        "calcul.json": {
+          "bytes": 41,
+          "sha256": "4873c11ed0c1b76f1ab225f06e45ffe86588b2e0b4f252ee490cdfb897208e30"
+        },
+        "controle.txt": {
+          "bytes": 11,
+          "sha256": "b551a907d3a60c9530965d6a660f50eecf191735e062b7a402e4087a67fb23b4"
+        }
+      }
+    },
+    {
+      "mission": "compaction-continuation",
+      "sessionId": "261024-misty-owl",
+      "passed": true,
+      "completedAt": 1792868673274,
+      "pendingTurnRecovery": false,
+      "uniqueToolCalls": 5,
+      "outputs": {
+        "final.md": {
+          "bytes": 58,
+          "sha256": "70a548a34f0a9ff440bc5c6769cb81b39802230cec16b222e3783c375b5e6c02"
+        },
+        "manifest.json": {
+          "bytes": 176,
+          "sha256": "4c2cbb5e1d1c085ee71eac38b0cb468972d7e5cb27b86991b0e90cc89f395e6f"
+        }
+      }
+    },
+    {
+      "mission": "continuation",
+      "sessionId": "261024-windy-stream",
+      "passed": true,
+      "completedAt": 1792868694607,
+      "pendingTurnRecovery": false,
+      "uniqueToolCalls": 3,
+      "outputs": {
+        "final.md": {
+          "bytes": 51,
+          "sha256": "b4d3898642af8273486f44a4ad503c20caa17514a4996ac5e0345e189c3bb80f"
+        },
+        "manifest.json": {
+          "bytes": 173,
+          "sha256": "82b1a7f5337f81c7ef90c5daf102c466586582146974763ab9fe0a91e73262d9"
+        }
+      }
+    }
+  ],
+  "qaSourceRetired": true
+}

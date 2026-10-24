@@ -1,0 +1,218 @@
+{
+  "status": "Intégré dans le dépôt local principal, installé signé et vérifié sur ce Mac",
+  "generatedAt": "2026-10-24T19:14:25.959895+00:00",
+  "target": {
+    "application": "/Applications/Robb Agents.app",
+    "source": "/Users/thibault/Documents/Robb Agents",
+    "profile": "/Users/thibault/.craft-agent",
+    "environment": "Local staging, production identity",
+    "codeCommit": "ed245ccc12a303f89ece6671b70f185a9ea7f87d",
+    "publicRelease": false
+  },
+  "integration": {
+    "passed": true,
+    "baseCommit": "1387187593f23718e35088a5f5cbfeb3da332ce1",
+    "preservedPriorChangesCommit": "c288f98ecb4de2ce2a9d29391e3870f4a3d50428",
+    "preservedPriorFileCount": 39,
+    "primaryCommit": "ed245ccc12a303f89ece6671b70f185a9ea7f87d",
+    "primaryClean": true,
+    "candidateTreeMatchesPrimary": true,
+    "method": "Exact snapshot commit reuse then fast-forward; no stash or reset."
+  },
+  "priorWork": {
+    "trackedFilesPreserved": 39,
+    "snapshotCommit": "c288f98ecb4de2ce2a9d29391e3870f4a3d50428",
+    "snapshotPatchSha256": "5b24f3042340887a6e578ce8492cb98eb430ca4c65e451c2fac64fa25484bbda",
+    "byteIdenticalPriorFiles": 38,
+    "remainingFile": "SessionManager.ts: prior changes retained, with only the explicitly authorized legacy-scope recovery correction added",
+    "previousAcceptedCodeCommit": "76e185d9dbd95a652319825eae8fc7dea1ad3a2e"
+  },
+  "checks": {
+    "unit": {
+      "command": [
+        "bun",
+        "test",
+        "packages/server-core/src/sessions/restart-recovery.test.ts",
+        "packages/server-core/src/sessions/turn-recovery.test.ts",
+        "packages/server-core/src/sessions/turn-completion.test.ts",
+        "packages/server-core/src/sessions/objective-contract.test.ts",
+        "packages/server-core/src/sessions/objective-outcome.test.ts",
+        "packages/server-core/src/sessions/tool-start-durability.test.ts",
+        "packages/server-core/src/sessions/runtime-interruption-recovery.test.ts",
+        "packages/server-core/src/sessions/session-shutdown-fences.test.ts",
+        "packages/server-core/src/sessions/source-activated-auto-retry.test.ts",
+        "packages/server-core/src/sessions/context-compaction.test.ts",
+        "packages/server-core/src/sessions/pi-retry-streaming.test.ts",
+        "packages/server-core/src/sessions/native-question-completion.test.ts",
+        "packages/server-core/src/sessions/native-question-retry.test.ts",
+        "packages/server-core/src/sessions/objective-amendment-evidence.test.ts",
+        "packages/server-core/src/sessions/objective-legacy-context.test.ts",
+        "packages/server-core/src/sessions/adopt-task-draft.test.ts",
+        "packages/server-core/src/__tests__/security-hardening.test.ts",
+        "packages/server-core/src/handlers/rpc/oauth-capability.test.ts",
+        "packages/server-core/src/webui/__tests__/oauth-callback.test.ts",
+        "packages/shared/src/config/__tests__/storage-migrations.test.ts",
+        "packages/shared/src/config/__tests__/storage-startup-migration.test.ts",
+        "packages/shared/src/config/__tests__/storage-update-llm-connection.test.ts",
+        "packages/shared/src/projects/__tests__/storage.test.ts",
+        "packages/shared/src/automations/sdk-bridge.test.ts",
+        "packages/shared/src/telemetry/local-jsonl-telemetry.test.ts",
+        "packages/server-core/src/services/vcredist.test.ts"
+      ],
+      "exitCode": 0,
+      "tail": [
+        "(pass) OAuth session capability binding > does not complete an obsolete card when cancellation wins during token exchange [0.12ms]",
+        "(pass) OAuth session capability binding > completes a still-current bound request exactly once [0.08ms]",
+        "(pass) OAuth session capability binding > allows only one of two OAuth flows bound to the same pending request to store credentials [0.22ms]",
+        "",
+        " 1328 pass",
+        " 0 fail",
+        " 7465 expect() calls",
+        "Ran 1328 tests across 26 files. [39.35s]"
+      ],
+      "passedTests": 1328
+    },
+    "renderer": {
+      "exitCode": 0,
+      "seconds": 0.19,
+      "command": [
+        "bun",
+        "test",
+        "apps/electron/src/renderer/event-processor/handlers/__tests__"
+      ],
+      "passedTests": 38
+    },
+    "installer": {
+      "exitCode": 0,
+      "seconds": 17.62,
+      "command": [
+        "python3",
+        "-m",
+        "unittest",
+        "scripts.tests.test_robb_local_staging",
+        "scripts.tests.test_installer_transactions",
+        "scripts.tests.test_installers"
+      ],
+      "rerunReason": "macOS sandbox denies ps in installer subprocess tests",
+      "passedTests": 59,
+      "skippedTests": 1
+    },
+    "sharedTypes": {
+      "command": [
+        "bun",
+        "run",
+        "typecheck:shared"
+      ],
+      "exitCode": 0
+    },
+    "electronTypes": {
+      "command": [
+        "bun",
+        "run",
+        "typecheck:electron"
+      ],
+      "exitCode": 0
+    },
+    "releaseContractTypes": {
+      "command": [
+        "bun",
+        "run",
+        "typecheck:release-contract"
+      ],
+      "exitCode": 0
+    },
+    "build": {
+      "exitCode": 0,
+      "seconds": 316.2,
+      "command": [
+        "bash",
+        "apps/electron/scripts/build-dmg.sh",
+        "arm64",
+        "--local-production"
+      ],
+      "commit": "ed245ccc12a303f89ece6671b70f185a9ea7f87d"
+    },
+    "preflight": {
+      "exitCode": 0,
+      "seconds": 3.21,
+      "command": [
+        "python3",
+        "scripts/robb-local-staging.py",
+        "preflight",
+        "--repo",
+        "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/robb-autonomy-candidate",
+        "--expected-commit",
+        "ed245ccc12a303f89ece6671b70f185a9ea7f87d",
+        "--candidate-app",
+        "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/robb-autonomy-candidate/apps/electron/release/mac-arm64/Robb Agents.app"
+      ]
+    },
+    "install": {
+      "exitCode": 0,
+      "seconds": 37.51,
+      "command": [
+        "python3",
+        "scripts/robb-local-staging.py",
+        "install",
+        "--repo",
+        "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/robb-autonomy-candidate",
+        "--expected-commit",
+        "ed245ccc12a303f89ece6671b70f185a9ea7f87d",
+        "--candidate-app",
+        "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/robb-autonomy-candidate/apps/electron/release/mac-arm64/Robb Agents.app",
+        "--confirm-target",
+        "io.robinswood.robbagents"
+      ]
+    },
+    "primaryDependencies": {
+      "exitCode": 0,
+      "seconds": 2.4,
+      "command": [
+        "bun",
+        "install",
+        "--frozen-lockfile"
+      ]
+    }
+  },
+  "realMissionResults": {
+    "passed": 7,
+    "independentFileAndSessionVerification": true,
+    "sdkCompactionActuallyObserved": true,
+    "sourceActivation": "Disposable read-only local arithmetic MCP, retired after tests",
+    "nativeUiMission": "Completed with three verified deliverables; populated report preview",
+    "coldRestart": "Real application quit/relaunch; one automatic recovery; acquired bytes and modification times preserved; initial marker unchanged",
+    "finalPreview": "Populated JSON control with 2 groups and 4 verified file rows"
+  },
+  "preservation": {
+    "passed": true,
+    "originalSessionsPreserved": 2321,
+    "currentSessionCount": 2330,
+    "connectionsPreserved": 6,
+    "defaultConnectionPreserved": true,
+    "workspaceIdsPreserved": true,
+    "allSourceConfigHashesUnchanged": 35,
+    "realAccountingDataModified": false,
+    "scope": "Only synthetic QA sessions/files and a retired read-only fixture used in this validation."
+  },
+  "backupCheckpoint": "/Users/thibault/Library/Application Support/Robb Agents/Staging Backups/20261024-190827-955523",
+  "backupCheckpointConfirmed": true,
+  "proofs": [
+    "local-integration-2026-10-24/preservation-verification.json",
+    "local-integration-2026-10-24/independent-campaign-verification.json",
+    "local-integration-2026-10-24/native-first-verification.json",
+    "local-integration-2026-10-24/cold-verification.json",
+    "local-integration-2026-10-24/ui-preview-verification.json",
+    "local-integration-2026-10-24/profile-verification.json",
+    "local-integration-2026-10-24/primary-integration-verification.json",
+    "local-integration-2026-10-24/installed-verification.json",
+    "local-integration-2026-10-24/workspace-lint-results.json"
+  ],
+  "limits": [
+    "Synthetic QA files and read-only local MCP fixture; no mutation of real accounting data or business connector configuration.",
+    "Targeted combined tests and native UI acceptance, not a proof of universal autonomous success.",
+    "Workspace lint of changed TS/TSX files: 0 errors; 122 server-core warnings remain.",
+    "Installer suite: 1 platform-specific test skipped.",
+    "Local signed, unnotarized staging; no tag, push or public publication.",
+    "The final proof commit changes documentation only; embedded application code remains pinned to codeCommit."
+  ]
+}

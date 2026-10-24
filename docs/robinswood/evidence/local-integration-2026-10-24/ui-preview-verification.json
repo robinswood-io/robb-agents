@@ -1,0 +1,21 @@
+{
+  "passed": true,
+  "application": "/Applications/Robb Agents.app",
+  "sessionId": "261024-spry-woods",
+  "reportPreview": {
+    "populated": true,
+    "title": "Rapport de détection des doublons de TVA",
+    "groupsVisible": [
+      "FRQA123: S101, S102",
+      "FRQA456: S103, S104"
+    ],
+    "emptyVatExclusionVisible": true
+  },
+  "recoveredControlPreview": {
+    "populated": true,
+    "groupCount": 2,
+    "status": "complete",
+    "fileRowsVisible": 4
+  },
+  "finalUiState": "Terminé"
+}

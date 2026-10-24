@@ -1,0 +1,26 @@
+{
+  "artifactCommit": "ed245ccc12a303f89ece6671b70f185a9ea7f87d",
+  "checkoutCommit": "ed245ccc12a303f89ece6671b70f185a9ea7f87d",
+  "identity": {
+    "architecture": "Mach-O 64-bit executable arm64",
+    "asarSha256": "010cd913fa20f931df3d116f73a5d94e108eb9dc9ef0c98605615249a3c632f9",
+    "buildChannel": "production",
+    "buildCommit": "ed245ccc12a303f89ece6671b70f185a9ea7f87d",
+    "buildDirty": "false",
+    "bundleIdentifier": "io.robinswood.robbagents",
+    "bundleTreeSha256": "5f0b75ddf8f0bb6a1ccd1fe1311ce7498e9b281374f8022d3446b35a908b13dc",
+    "executable": "Robb Agents",
+    "executableSha256": "9b236f04158ec7f36b5c8a14bc3b10657afb625fc1dd74713ef17025097a81ba",
+    "infoPlistSha256": "1cef8974445b6eb57409aeaaa92d179350da6b744b22cd2eac28146b020c4d05",
+    "signatureKind": "developer-id",
+    "version": "0.12.10"
+  },
+  "profile": "/Users/thibault/.craft-agent",
+  "runtime": {
+    "command": "/Applications/Robb Agents.app/Contents/MacOS/Robb Agents",
+    "pid": 87278,
+    "startedAt": 1792869063827
+  },
+  "status": "verified",
+  "target": "/Applications/Robb Agents.app"
+}

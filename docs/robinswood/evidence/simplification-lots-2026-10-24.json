@@ -1,11 +1,11 @@
 {
-  "status": "Local signed application installed and verified; integration into the primary source repository deferred to preserve concurrent edits",
+  "status": "Local source integration completed, preserving all 39 pre-existing changes; signed application installed and verified.",
   "baselineAcceptedCommit": "4d7b32694e5fca84cfe0ce75d9292c937bdd2805",
   "lot1": {
-    "state": "Clean accepted local candidate pinned to the installed commit; primary source fast-forward deferred because of concurrent uncommitted edits",
-    "targetCommit": "4d7b32694e5fca84cfe0ce75d9292c937bdd2805",
-    "officialPreflight": "passed on Desktop source reference; only documentation differs from installed f287ca3f",
-    "method": "serialized clean fast-forward; backup refs retained"
+    "state": "Integrated into the primary local repository after combining and testing pre-existing changes",
+    "targetCommit": "ed245ccc12a303f89ece6671b70f185a9ea7f87d",
+    "officialPreflight": "Passed on the exact combined source and signed candidate",
+    "method": "Exact prior snapshot commit reused, then serialized fast-forward; backup ref retained"
   },
   "lot2": {
     "state": "Installed and verified locally: native cold recovery completes; strict legacy quarantine retained after explicit human scope authorization",
@@ -134,5 +134,6 @@
     "delivery": "Local signed staging on this Mac",
     "publicRelease": false
   },
-  "runtimeCommit": "76e185d9dbd95a652319825eae8fc7dea1ad3a2e"
+  "runtimeCommit": "ed245ccc12a303f89ece6671b70f185a9ea7f87d",
+  "localIntegrationEvidence": "integration-locale-2026-10-24.json"
 }
