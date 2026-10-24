@@ -220,6 +220,12 @@ try {
     await send(sessionId, `${boundary}\nPour cette première étape, crée uniquement acquis.json avec {"count":3,"total":15}, relis-le et termine. Garde pour nos prochains livrables la règle suivante : un rapport final devra contenir la mention QA-COMPACT-23. Ne crée pas ce rapport maintenant.`);
     const acquired = join(dir, 'acquis.json');
     const before = { sha256: sha(acquired), modifiedAt: statSync(acquired).mtimeMs };
+    // The SDK retains its most recent 20k tokens. A short task correctly has
+    // nothing to compact; a bounded synthetic history makes the first task old
+    // enough to exercise a real summary without changing runtime settings.
+    const history = 'Observation QA synthétique sans exigence supplémentaire.\n'.repeat(1_800);
+    const archived = await send(sessionId, `${boundary}\nToutes les exigences précédentes restent applicables. Les observations fictives ci-dessous servent uniquement à tester la compaction. N'exécute aucun outil et réponds uniquement HISTORY_READY.\n${history}`);
+    requireCheck(archived.includes('HISTORY_READY'), 'Synthetic history was not accepted.');
     const objectiveBefore = (await manager.getSession(sessionId))?.activeObjective?.objectiveId;
     await manager.sendMessage(sessionId, '/compact Préserve toutes les exigences utilisateur, règles de présentation, résultats acquis et chemins de fichiers.');
     requireCheck(compactions.has(sessionId), 'No actual compaction success event observed.');

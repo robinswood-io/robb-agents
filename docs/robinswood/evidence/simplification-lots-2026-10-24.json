@@ -88,6 +88,11 @@
       "readOnly": true
     },
     "metricsLimit": "Instrumented baseline only: no performance percentage claimed from different prompts or reasoning settings.",
-    "preDelivery": "All final DEV test/typecheck jobs exited zero; platform-specific installer/signature cases will also run on Mac."
+    "preDelivery": "All final DEV test/typecheck jobs exited zero; platform-specific installer/signature cases will also run on Mac.",
+    "compactionFixtureCorrection": {
+      "observedFailure": "SDK: Nothing to compact (session too small)",
+      "correction": "Bounded synthetic history above the existing 20k recent-token threshold; production compaction unchanged",
+      "status": "real rerun pending"
+    }
   }
 }
