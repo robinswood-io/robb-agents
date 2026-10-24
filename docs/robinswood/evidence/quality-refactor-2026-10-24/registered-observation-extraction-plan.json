@@ -1,0 +1,474 @@
+{
+  "source": "packages/shared/src/agent/core/registered-observation.ts",
+  "units": [
+    {
+      "names": [
+        "OBJECTIVE_SHELL_EXECUTOR_TOOL_NAME"
+      ],
+      "group": "shell-vocabulary",
+      "bodySha256": "4da6a147c822b2300ae9a69157e802aaab87105d99d1c79a256c061e86643cea"
+    },
+    {
+      "names": [
+        "isObjectiveShellExecutorToolName"
+      ],
+      "group": "shell-vocabulary",
+      "bodySha256": "26cba011fde58194ec442adda9b76239d893887ae256b1bbb7d3f58946f1301a"
+    },
+    {
+      "names": [
+        "OBJECTIVE_READ_ONLY_SHELL_PATTERNS"
+      ],
+      "group": "shell-vocabulary",
+      "bodySha256": "346ed75cb24b8e20ff87df98b45d3f6334798a95cb27965b844ef0111b9428f6"
+    },
+    {
+      "names": [
+        "OBJECTIVE_TEST_SHELL_PATTERNS"
+      ],
+      "group": "shell-vocabulary",
+      "bodySha256": "b65b2fa3a75d2cb44e9a3e53ca534f64ca7597c21358ce7372905cb343698dd0"
+    },
+    {
+      "names": [
+        "isTrustedCurlExecutable"
+      ],
+      "group": "shell-vocabulary",
+      "bodySha256": "b7de2409e097d06d8e43ba832f3fc9daa6be217dc240f36f64744a7b645d63d2"
+    },
+    {
+      "names": [
+        "literalCommand"
+      ],
+      "group": "shell-vocabulary",
+      "bodySha256": "aac0a6b310618a3f8213be43acaef0f57e6ccd51fc65575b426da1e6e607b36e"
+    },
+    {
+      "names": [
+        "isProvablyReadOnlyShellCommand"
+      ],
+      "group": "git-observations",
+      "bodySha256": "26fec211f8d2932b2e03462c6369447c9495c9dcdd82154c1b2bad4510f25a03"
+    },
+    {
+      "names": [
+        "objectiveGitReadsUseAllowlistedOptions"
+      ],
+      "group": "git-observations",
+      "bodySha256": "173ff349d025f234d9031a06008446f4c3cdcac08662491e8cf3b91faaf34f51"
+    },
+    {
+      "names": [
+        "isHardenableGitRead"
+      ],
+      "group": "git-observations",
+      "bodySha256": "6b9182fc461848c2f7611e0f4979435132836184de59bd27eaac9079a2e53d38"
+    },
+    {
+      "names": [
+        "isUnsupportedGitObservationCandidate"
+      ],
+      "group": "git-observations",
+      "bodySha256": "4cf14418e3dbb5cd609ea0e55c4b1d1d25986ab0e8c92ff8af862a758b5d9781"
+    },
+    {
+      "names": [
+        "isRecoverablePlainGitStatus"
+      ],
+      "group": "git-observations",
+      "bodySha256": "476dbe3814748b3bb0ad32a68a856537131b8e5ead05de8f9db71feb3290cf70"
+    },
+    {
+      "names": [
+        "isRegisteredShellObservation"
+      ],
+      "group": "git-observations",
+      "bodySha256": "120fe9d41ba9a73997a711ec55981b8210b44bfb05ef01d0bec0f0a38d9cdfb5"
+    },
+    {
+      "names": [
+        "isReadOnlyRegisteredShellObservation"
+      ],
+      "group": "git-observations",
+      "bodySha256": "1d8b8cb1650ff7523bfd9a7278693d5d289df047df7e60ddb2d1a96e05fa473f"
+    },
+    {
+      "names": [
+        "isObjectiveShellEvidenceCommand"
+      ],
+      "group": "git-observations",
+      "bodySha256": "f4188afd502bf315b4f305871dde867e4c601ec397f031479072583c7b5b3ae8"
+    },
+    {
+      "names": [
+        "isObjectiveShellObservationCommand"
+      ],
+      "group": "git-observations",
+      "bodySha256": "d0898ef24cb2fec2e29fedf5b39ee9145ee2a72a625cf360356d82aaff70a8ae"
+    },
+    {
+      "names": [
+        "isStaticSourceInspectionInvocation"
+      ],
+      "group": "read-policy",
+      "bodySha256": "d5db5bb45dae1ed92cc5466f03a43bdc52e266affb92e0a428e6451256f4eef8"
+    },
+    {
+      "names": [
+        "staticSourceInspectionInvocation"
+      ],
+      "group": "read-policy",
+      "bodySha256": "8286d1c8e7c5bd2c20a178880ecd1cc2f13af82e2d73254365f5f04a20da3284"
+    },
+    {
+      "names": [
+        "isRemoteStaticSourceInspectionCandidate"
+      ],
+      "group": "read-policy",
+      "bodySha256": "b74fb171a9575e10d0023c770d0edee907dfcc76752597a4aab8ed1cd4a93046"
+    },
+    {
+      "names": [
+        "remoteStaticSourceInspectionLiteralPath"
+      ],
+      "group": "read-policy",
+      "bodySha256": "f1b273168237671020d40435197906e2257bcf267b55bba4fc8471812039c458"
+    },
+    {
+      "names": [
+        "remoteStaticSourceInspectionLiteralPaths"
+      ],
+      "group": "read-policy",
+      "bodySha256": "052bb693348402840c5d920ea619eb4c78b3251f7f40acce888626d47635a2d3"
+    },
+    {
+      "names": [
+        "containsRemoteStaticSourceInspectionCandidate"
+      ],
+      "group": "read-policy",
+      "bodySha256": "8169d103bdf9e69f7b1864d5bdf27cfc0fc9511a7434f0f0f51aa3e1820d4170"
+    },
+    {
+      "names": [
+        "isBoundedRemoteStaticSourceInspection"
+      ],
+      "group": "read-policy",
+      "bodySha256": "659b721a59b22bfd9b6448b3328c4bf44037cb4ff05a812bd60b70c227c2702b"
+    },
+    {
+      "names": [
+        "isPlausiblyReadOnlyPostgresRepairQuery"
+      ],
+      "group": "read-policy",
+      "bodySha256": "0f249eecf20a005427933b9a967274ba3f4d89ecd78c89d69b6f28bb45715d7f"
+    },
+    {
+      "names": [
+        "isPlausiblyReadOnlyComposite"
+      ],
+      "group": "read-policy",
+      "bodySha256": "40028a604e209f15070c808e878d83109ed92b0cad0dea93427e88bfbb68fde6"
+    },
+    {
+      "names": [
+        "BoundedTargetedRemoteOperationalInspection"
+      ],
+      "group": "operational-inspection",
+      "bodySha256": "608d1947aa7344fc54fb1eb42a028c26c5afea25fdeaaaa5a42142603011440b"
+    },
+    {
+      "names": [
+        "BoundedDockerImageInspection"
+      ],
+      "group": "operational-inspection",
+      "bodySha256": "512ac4610f4f00acb4d322c72671e85b0b49cbe23843136988cb20ac1b6385bf"
+    },
+    {
+      "names": [
+        "boundedDockerImageInspection"
+      ],
+      "group": "operational-inspection",
+      "bodySha256": "7f7ce8bca14e1e112120c288f7d2e8d41e1c084eaf06d72639f80aa901a93dc4"
+    },
+    {
+      "names": [
+        "classifyBoundedTargetedRemoteOperationalInspection"
+      ],
+      "group": "operational-inspection",
+      "bodySha256": "b870ee911d5ddf5accf972cdbe6854eaa79732ee203d0ae7a77e379f0f7afe51"
+    },
+    {
+      "names": [
+        "isBoundedTargetedRemoteOperationalInspection"
+      ],
+      "group": "operational-inspection",
+      "bodySha256": "21de456e84add582c36eb0f255e29021e5715e881670564dcd5220f347c98cda"
+    },
+    {
+      "names": [
+        "isBoundedRegisteredInspection"
+      ],
+      "group": "operational-inspection",
+      "bodySha256": "8ef71e5d8b715f3c38372ceb0036a11340d78f5308cf4c7ce781b659d0a923b4"
+    },
+    {
+      "names": [
+        "isTrustedOperationalExecutable"
+      ],
+      "group": "operational-inspection",
+      "bodySha256": "dbdda9ef789a47f292aa73fc27fbb7ba03fef9f41d7a1b5ebcdddf2ec62ec33d"
+    },
+    {
+      "names": [
+        "isBoundedDockerInspection"
+      ],
+      "group": "operational-inspection",
+      "bodySha256": "14e81fd607b3325e55212138d8227f190dcfe8c4162bc6a5d92a496527f36cab"
+    },
+    {
+      "names": [
+        "POSTGRES_EXECUTABLES"
+      ],
+      "group": "operational-inspection",
+      "bodySha256": "608f289ad6b6b58805cc916f8ef3b61ebc60a4f98952f0798c185a13b07162f7"
+    },
+    {
+      "names": [
+        "isBoundedGitHubPullRequestInspection"
+      ],
+      "group": "operational-inspection",
+      "bodySha256": "8b6f57379105559a7b846e93f1b3a792da7a7b13deb9c3b671813fc85729e7c7"
+    },
+    {
+      "names": [
+        "isLiteralGitHubRepository"
+      ],
+      "group": "operational-inspection",
+      "bodySha256": "d4bba934554d2e9067b06d822c30733c424026e64d5b3a1d3bd1717aa5aa989c"
+    },
+    {
+      "names": [
+        "isValidationScript"
+      ],
+      "group": "operational-inspection",
+      "bodySha256": "8a37c278dfd4f1e1014fd30909d5fd3cc7b9b54316fcde880340111f966709d9"
+    },
+    {
+      "names": [
+        "isRemoteValidation"
+      ],
+      "group": "operational-inspection",
+      "bodySha256": "c3ce438a75c16d201d8e25a664153e5ac43a8f6a287eec08c6aeb82b1fd3c424"
+    },
+    {
+      "names": [
+        "isSingleHttpRead"
+      ],
+      "group": "operational-inspection",
+      "bodySha256": "aa88dbd0915cd7d2f8a8339b16db58098556fbe81fe875d7da776de4be07bb8d"
+    },
+    {
+      "names": [
+        "ReadOnlyRemoteObservationRepair"
+      ],
+      "group": "remote-read-repair",
+      "bodySha256": "5f309c26e9a57146cac480213de6a7f99ce7c3b5d58b2461fa32c30ad72d522b"
+    },
+    {
+      "names": [
+        "classifyReadOnlyRemoteObservationRepair"
+      ],
+      "group": "remote-read-repair",
+      "bodySha256": "a6c2556187a920e2ee1885368648b8a9a58dfc443f62e76a317ba09b3930363b"
+    },
+    {
+      "names": [
+        "classifyNestedSshReadOnlyRemoteObservationRepair"
+      ],
+      "group": "remote-read-repair",
+      "bodySha256": "f03e9cdc54e4e92fd0ecd4af6a687e14059ed6a638a9002f053f39982fbadaba"
+    },
+    {
+      "names": [
+        "containsLocalSshTransportInvocation"
+      ],
+      "group": "remote-read-repair",
+      "bodySha256": "243c32c5d1296c44233fc6dd11ad899e1c2b3be12ff3177719f574ff1b7460af"
+    },
+    {
+      "names": [
+        "isBoundedNodeTestCommand"
+      ],
+      "group": "success-markers",
+      "bodySha256": "484b2d00720583623ff4e3e95311313d598312c8013a6277d1cc4efb4e6dcf96"
+    },
+    {
+      "names": [
+        "isStaticNodeTestPath"
+      ],
+      "group": "success-markers",
+      "bodySha256": "1e55a890a5cb35ee5586a81fd62a2b79ddd06b03f2ed2db41fb3b7a97aec808a"
+    },
+    {
+      "names": [
+        "hasLiteralSuccessMarker"
+      ],
+      "group": "success-markers",
+      "bodySha256": "ec87d1c1acc3bf0200599e6e37d9a420d1fae23ba84229ac2476dedf6de9f805"
+    },
+    {
+      "names": [
+        "literalAndSequence"
+      ],
+      "group": "success-markers",
+      "bodySha256": "5a76157aa32443407ae0bb4da66be012465ae3d1f43094122adced59d6835c09"
+    },
+    {
+      "names": [
+        "objectiveShellExitZeroProvesSuccess"
+      ],
+      "group": "success-markers",
+      "bodySha256": "707e6f09a8b8963a4b259b100b9bb35759c744d4aa5376821772efd79247801b"
+    },
+    {
+      "names": [
+        "isLiteralSuccessMarker"
+      ],
+      "group": "success-markers",
+      "bodySha256": "268803f28dfcddc211e1d9c9bdfc29e7ca3b53344e6884bc98118b04ae48ef98"
+    },
+    {
+      "names": [
+        "serializeLiteralCommand"
+      ],
+      "group": "success-markers",
+      "bodySha256": "a46151f70fe454f9470d9ff32608cdc4c96f86b86785f6221eb05a493240218f"
+    },
+    {
+      "names": [
+        "hasBoundedObjectiveShellSuccessMarker"
+      ],
+      "group": "success-markers-has-bounded-objective-shell-success-marker",
+      "bodySha256": "c4b7b8d570b49ce5efce8c78ae4239937f2607dce2eeec131c4d9f0d4b2cd3c4"
+    },
+    {
+      "names": [
+        "isBoundedPostgresInspectionArgs"
+      ],
+      "group": "database-inspection",
+      "bodySha256": "a948a5f76d96d5d382db42deaabd577c51555f6a6d608f1a4719172d5dafee25"
+    },
+    {
+      "names": [
+        "extractBoundedPostgresInspectionQuery"
+      ],
+      "group": "database-inspection",
+      "bodySha256": "d2a8bb3d7f14ee2e89c820a072a00dfbaeecc45d50d419a225b8f56c594eab31"
+    },
+    {
+      "names": [
+        "isLiteralPostgresIdentifier"
+      ],
+      "group": "database-inspection",
+      "bodySha256": "fea43dea06844bb9a1dc3dbf8be833e1c8e3aff63d1e1b349bbfd044f5389fb8"
+    },
+    {
+      "names": [
+        "sqlCodeOutsideQuotes"
+      ],
+      "group": "database-inspection",
+      "bodySha256": "ddf38566a5028f2eb7fb2cdd8cbdd688d4279338d1ac23a9e1d55e1ac3dea458"
+    },
+    {
+      "names": [
+        "isBoundedReadOnlyPostgresQuery"
+      ],
+      "group": "database-inspection",
+      "bodySha256": "ea01ae803f4dd507551f1840af649ebcbc0241718a0899bed9b006629934222f"
+    },
+    {
+      "names": [
+        "isAuditedPnsPostgresSelect"
+      ],
+      "group": "database-inspection",
+      "bodySha256": "f6ce7357b8c9e7e3a24637cf9c4ecd69c8be293b7fd0fe74d3d25677a56ab1df"
+    },
+    {
+      "names": [
+        "isBoundedSystemctlInspection"
+      ],
+      "group": "database-inspection",
+      "bodySha256": "f418e0bb77f72756e8eef0215f91a3ac24b8699ab6d5a77420140ab09a96193a"
+    }
+  ],
+  "modules": [
+    {
+      "name": "shell-vocabulary",
+      "lines": 104
+    },
+    {
+      "name": "git-observations",
+      "lines": 177
+    },
+    {
+      "name": "read-policy",
+      "lines": 268
+    },
+    {
+      "name": "operational-inspection",
+      "lines": 358
+    },
+    {
+      "name": "remote-read-repair",
+      "lines": 333
+    },
+    {
+      "name": "success-markers",
+      "lines": 87
+    },
+    {
+      "name": "success-markers-has-bounded-objective-shell-success-marker",
+      "lines": 17
+    },
+    {
+      "name": "database-inspection",
+      "lines": 216
+    }
+  ],
+  "dependencies": {
+    "shell-vocabulary": [],
+    "git-observations": [
+      "shell-vocabulary",
+      "operational-inspection",
+      "success-markers"
+    ],
+    "read-policy": [
+      "shell-vocabulary",
+      "database-inspection",
+      "success-markers",
+      "git-observations"
+    ],
+    "operational-inspection": [
+      "shell-vocabulary",
+      "database-inspection"
+    ],
+    "remote-read-repair": [
+      "git-observations",
+      "shell-vocabulary",
+      "operational-inspection",
+      "read-policy"
+    ],
+    "success-markers": [
+      "shell-vocabulary"
+    ],
+    "success-markers-has-bounded-objective-shell-success-marker": [
+      "success-markers",
+      "git-observations",
+      "operational-inspection",
+      "shell-vocabulary"
+    ],
+    "database-inspection": []
+  },
+  "unitCycles": [],
+  "moduleCycles": []
+}

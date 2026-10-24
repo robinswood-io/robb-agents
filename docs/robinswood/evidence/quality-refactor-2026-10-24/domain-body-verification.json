@@ -1,0 +1,74 @@
+[
+  {
+    "source": "packages/server-core/src/sessions/objective-contract.ts",
+    "declarations": 140,
+    "unchangedDeclarationBodies": true,
+    "relocationNormalization": "Relative dynamic and type imports resolved against their original module directory",
+    "maxModuleLines": 307,
+    "moduleCycles": [],
+    "issues": []
+  },
+  {
+    "source": "packages/shared/src/config/storage.ts",
+    "declarations": 138,
+    "unchangedDeclarationBodies": true,
+    "relocationNormalization": "Relative dynamic and type imports resolved against their original module directory",
+    "maxModuleLines": 349,
+    "moduleCycles": [],
+    "issues": []
+  },
+  {
+    "source": "packages/server-core/src/sessions/objective-acceptance-criteria.ts",
+    "declarations": 86,
+    "unchangedDeclarationBodies": true,
+    "relocationNormalization": "Relative dynamic and type imports resolved against their original module directory",
+    "maxModuleLines": 377,
+    "moduleCycles": [],
+    "issues": []
+  },
+  {
+    "source": "packages/server-core/src/sessions/objective-outcome.ts",
+    "declarations": 114,
+    "unchangedDeclarationBodies": true,
+    "relocationNormalization": "Relative dynamic and type imports resolved against their original module directory",
+    "maxModuleLines": 314,
+    "moduleCycles": [],
+    "issues": []
+  },
+  {
+    "source": "packages/shared/src/agent/core/registered-observation.ts",
+    "declarations": 57,
+    "unchangedDeclarationBodies": true,
+    "relocationNormalization": "Relative dynamic and type imports resolved against their original module directory",
+    "maxModuleLines": 357,
+    "moduleCycles": [],
+    "issues": []
+  },
+  {
+    "source": "packages/shared/src/config/validators.ts",
+    "declarations": 73,
+    "unchangedDeclarationBodies": true,
+    "relocationNormalization": "Relative dynamic and type imports resolved against their original module directory",
+    "maxModuleLines": 338,
+    "moduleCycles": [],
+    "issues": []
+  },
+  {
+    "source": "packages/shared/src/sessions/storage.ts",
+    "declarations": 71,
+    "unchangedDeclarationBodies": true,
+    "relocationNormalization": "Relative dynamic and type imports resolved against their original module directory",
+    "maxModuleLines": 240,
+    "moduleCycles": [],
+    "issues": []
+  },
+  {
+    "source": "packages/shared/src/resources/resource-bundle.ts",
+    "declarations": 41,
+    "unchangedDeclarationBodies": true,
+    "relocationNormalization": "Relative dynamic and type imports resolved against their original module directory",
+    "maxModuleLines": 233,
+    "moduleCycles": [],
+    "issues": []
+  }
+]

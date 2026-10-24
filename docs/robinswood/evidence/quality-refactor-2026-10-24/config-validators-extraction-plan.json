@@ -1,0 +1,602 @@
+{
+  "source": "packages/shared/src/config/validators.ts",
+  "units": [
+    {
+      "names": [
+        "CONFIG_FILE"
+      ],
+      "group": "validation-types",
+      "bodySha256": "54d54472c491815382f9cf997a44d4515f12d58609d8eefb1400aecc50765ec9"
+    },
+    {
+      "names": [
+        "PREFERENCES_FILE"
+      ],
+      "group": "validation-types",
+      "bodySha256": "bae3b5f5b40a7b84f09f3184e45d8d31370a6b15e7bb86627c0decc343bc70eb"
+    },
+    {
+      "names": [
+        "ValidationIssue"
+      ],
+      "group": "validation-types",
+      "bodySha256": "68e8df5b1fc0ed8bfabe2e1ba1bafafe2fcc42e0f5be9d35d2c9586f6d5600ee"
+    },
+    {
+      "names": [
+        "ValidationResult"
+      ],
+      "group": "validation-types",
+      "bodySha256": "ab694cec1eddb56c905313b790a0c0e15ed9e71a40019b86f3de94a826846636"
+    },
+    {
+      "names": [
+        "WorkspaceSchema"
+      ],
+      "group": "validation-types",
+      "bodySha256": "8b56af77910865ddf3140dcab7306f945d3bff2a5aed6acf8defd34b06f0a926"
+    },
+    {
+      "names": [
+        "LlmProviderTypeSchema"
+      ],
+      "group": "validation-types",
+      "bodySha256": "c171cf79c28d54c75a7048459f4c622bcb5751ea38e3e9c2e0fc35ea6650c0dd"
+    },
+    {
+      "names": [
+        "LlmAuthTypeSchema"
+      ],
+      "group": "validation-types",
+      "bodySha256": "788877cc8f73fff40a97b50294014dd813b29e6c03c64e0da82e8c93124ba9fc"
+    },
+    {
+      "names": [
+        "CustomEndpointSchema"
+      ],
+      "group": "validation-types",
+      "bodySha256": "5cc43c5fb06c83b834e0b0bdaf2695cfc6cca3be54dac61d93f176a0b0220485"
+    },
+    {
+      "names": [
+        "LlmConnectionSchema"
+      ],
+      "group": "validation-types",
+      "bodySha256": "2823a9ca2ec463fb1f6f7b0621c06ac0b8c448237b9b2aad6b163f8b004770ab"
+    },
+    {
+      "names": [
+        "StoredConfigSchema"
+      ],
+      "group": "validation-types",
+      "bodySha256": "080bb410f75d8ddfc5c9f1c002d96dc1c6672ea92819e524c387baa7d0108fa6"
+    },
+    {
+      "names": [
+        "LocationSchema"
+      ],
+      "group": "validation-types",
+      "bodySha256": "14ef6f7b11990aa3a33bdb1513655d30cfca76dfd4f7d481381e99f8c0fff2c1"
+    },
+    {
+      "names": [
+        "UserPreferencesSchema"
+      ],
+      "group": "validation-types",
+      "bodySha256": "e32a00d15eba1e871a015b49f81faa09cd61b9b74fc9c8b91a7e05814cd74628"
+    },
+    {
+      "names": [
+        "zodErrorToIssues"
+      ],
+      "group": "validation-types",
+      "bodySha256": "630838fff9dce7c8e3e6780732729338a9a7007ab3c786b2d8aedd22867ee65b"
+    },
+    {
+      "names": [
+        "validateConfig"
+      ],
+      "group": "app-config",
+      "bodySha256": "c0058dcac621b4abadf587f48bb8fa9653320657a6196ec8030ee2dd75ebf50d"
+    },
+    {
+      "names": [
+        "validatePreferences"
+      ],
+      "group": "app-config",
+      "bodySha256": "564c9d5f33cc7c7338c7f59d36decfba2e738b9ea82e5cbe13eca29983289fc7"
+    },
+    {
+      "names": [
+        "validateAll"
+      ],
+      "group": "app-config",
+      "bodySha256": "01b3fa06d5deb942f43e3a2b75e691afb8e826c1e83bdfd73b0662dc9755df26"
+    },
+    {
+      "names": [
+        "SourceTypeSchema"
+      ],
+      "group": "sources",
+      "bodySha256": "0a3662ba3ce5d6ce71dc5c82e1a482d06a5996a3c53d73c5e577f0b6ac5ad0a6"
+    },
+    {
+      "names": [
+        "McpSourceConfigSchema"
+      ],
+      "group": "sources",
+      "bodySha256": "a2e6f0eda45a53c82d92583f5f8ac304ead0c6e9358f1b921f06f617cb5285ee"
+    },
+    {
+      "names": [
+        "ApiOAuthConfigSchema"
+      ],
+      "group": "sources",
+      "bodySha256": "821c1d48da2d8fc45295a89b0d320aeff6bc75a91b65a5634276da19d2d02a8f"
+    },
+    {
+      "names": [
+        "ApiSourceConfigSchema"
+      ],
+      "group": "sources",
+      "bodySha256": "b9565ae50c393de162bc99424b0d694f04f1762ec9aaec65d14f536942df3143"
+    },
+    {
+      "names": [
+        "LocalSourceConfigSchema"
+      ],
+      "group": "sources",
+      "bodySha256": "8253153205d2bc5b6a7e132690b8cdee35fe5013fbdf7dbdc56fe426dc1073ad"
+    },
+    {
+      "names": [
+        "SourceBrandSchema"
+      ],
+      "group": "sources",
+      "bodySha256": "2792b84a530066b71f05c3e2e64b7c54b6551ea56569e6a587ab044c1f396301"
+    },
+    {
+      "names": [
+        "FolderSourceConfigSchema"
+      ],
+      "group": "sources",
+      "bodySha256": "4d05a5e798b21e18d8bc058435d84206e8643312ec9ca14e4820f4e46ca57232"
+    },
+    {
+      "names": [
+        "validateSourceConfig"
+      ],
+      "group": "sources",
+      "bodySha256": "1b675bd78549dd8bbb082fe8596ac89f1acdae05f416fdc22f760a6d6865813c"
+    },
+    {
+      "names": [
+        "validateSourceConfigContent"
+      ],
+      "group": "sources",
+      "bodySha256": "01194353ec20327eb8a81f5c5b0288fe78897462284a1828b1dedaa699294497"
+    },
+    {
+      "names": [
+        "validateSource"
+      ],
+      "group": "sources",
+      "bodySha256": "74d0fa6068e130bc04f4796fb4d5506062eab16ea04cc1b6ab7bd5b2beeefaf8"
+    },
+    {
+      "names": [
+        "validateAllSources"
+      ],
+      "group": "sources",
+      "bodySha256": "f7a200b80942a57c98ae3d6cee666492091696af33701ff35fd44b647f745317"
+    },
+    {
+      "names": [
+        "SkillMetadataSchema"
+      ],
+      "group": "skills",
+      "bodySha256": "fb59b14c011baa1001906422dd46a0cc463447031a424f17d6d299bc500db45f"
+    },
+    {
+      "names": [
+        "findSkillIconForValidation"
+      ],
+      "group": "skills",
+      "bodySha256": "0238d39dac20f286bb59a01dc549d9ea201058a42ae8f35be727919e900d95e3"
+    },
+    {
+      "names": [
+        "validateSkill"
+      ],
+      "group": "skills",
+      "bodySha256": "3e8f1d5e9a6d8f999e542be51ec5159106fc8952539ee606cb4b12cd08a06386"
+    },
+    {
+      "names": [
+        "validateSkillContent"
+      ],
+      "group": "skills",
+      "bodySha256": "794d8efb3c777b54444680300c3859d16322d7b729752406377c1ef12c8761ab"
+    },
+    {
+      "names": [
+        "isLowercaseSlug"
+      ],
+      "group": "skills",
+      "bodySha256": "24e2482969909748e86e67c47acddb705bc571d142e7f2d549da48cf0e26b0f9"
+    },
+    {
+      "names": [
+        "suggestLowercaseSlug"
+      ],
+      "group": "skills",
+      "bodySha256": "39a7a7a7335f681225aaf5dd68252fcda0fda727c93cc03fe2f1f81b6bed12fb"
+    },
+    {
+      "names": [
+        "validateAllSkills"
+      ],
+      "group": "skills",
+      "bodySha256": "56418aa939e4d41a236f75c35e0173c7c10e8b046a54f8e718e596659012ed11"
+    },
+    {
+      "names": [
+        "STATUS_CONFIG_FILE"
+      ],
+      "group": "statuses",
+      "bodySha256": "3c780aa203c30ec8bdf6d9175951413ce3b5cf6061f563f65a62e9d86b9c1a49"
+    },
+    {
+      "names": [
+        "REQUIRED_FIXED_STATUS_IDS"
+      ],
+      "group": "statuses",
+      "bodySha256": "1ca9f4cf293defba2973c7f3f6057f6ea2614fc8fa9c27d9d47a521a35f8737f"
+    },
+    {
+      "names": [
+        "StatusIconSchema"
+      ],
+      "group": "statuses",
+      "bodySha256": "d2dcfa7cfd7c92736a1b256214b83eba6eebdeafe506bca730b77252cb17880c"
+    },
+    {
+      "names": [
+        "StatusConfigSchema"
+      ],
+      "group": "statuses",
+      "bodySha256": "ecdabc1af290534b64571c2265ae1e0904df3b8c2f571910df724d6d0aeb9f42"
+    },
+    {
+      "names": [
+        "WorkspaceStatusConfigSchema"
+      ],
+      "group": "statuses",
+      "bodySha256": "e261ed797d1adf2e8f7c89b9afdf9dceeea2230550af550488e975f868e40c4a"
+    },
+    {
+      "names": [
+        "validateStatuses"
+      ],
+      "group": "statuses",
+      "bodySha256": "4c14310cae35663417ab82a9ffdd5a2271e92fffaf63aa99904c35b9603a87d2"
+    },
+    {
+      "names": [
+        "validateStatusesContent"
+      ],
+      "group": "statuses",
+      "bodySha256": "fdf20b9da02bff13be399784dbfc53f6b057b3e40148c32b74be392dda246772"
+    },
+    {
+      "names": [
+        "LABEL_CONFIG_FILE"
+      ],
+      "group": "labels",
+      "bodySha256": "e58d58d7501ad3506b5df3c6c71b68c937be6a2fd800deaab9326448eadbf3e2"
+    },
+    {
+      "names": [
+        "MAX_LABEL_DEPTH"
+      ],
+      "group": "labels",
+      "bodySha256": "d9614f90d444e4bb0df3dabcb37f81c73d0bdb8e722ab12d8942f1e8548b8fd3"
+    },
+    {
+      "names": [
+        "AutoLabelRuleSchema"
+      ],
+      "group": "labels",
+      "bodySha256": "6105e456d259ecea913f15a3152cadce771cf7c4fdf001fd8b2f15b5e01efcd8"
+    },
+    {
+      "names": [
+        "BaseLabelConfigSchema"
+      ],
+      "group": "labels",
+      "bodySha256": "c4917dd9f0e659a73634b8d259cf0cbb43b1ad2dceee08f4a2b349e6691a5149"
+    },
+    {
+      "names": [
+        "LabelConfigSchemaType"
+      ],
+      "group": "labels",
+      "bodySha256": "c4a73561c2062dd7617e5268d31272c6ddcc9e30afdddafa606c3e6192a4f9ff"
+    },
+    {
+      "names": [
+        "LabelConfigSchema"
+      ],
+      "group": "labels",
+      "bodySha256": "33f37ce62fa247538bf0472a2fb0b0add9bbfe16c41ffce00c68544ca0f0f8c8"
+    },
+    {
+      "names": [
+        "WorkspaceLabelConfigSchema"
+      ],
+      "group": "labels",
+      "bodySha256": "160aed9d408fa049b1480fc38c4c52980053337964aa3765f55d6282eb185018"
+    },
+    {
+      "names": [
+        "validateLabels"
+      ],
+      "group": "labels",
+      "bodySha256": "e8b1949ef7351e5b1bcae35f5e2e83ad55e6bfd078b5dac35bcb5a7ed532c435"
+    },
+    {
+      "names": [
+        "validateLabelsContent"
+      ],
+      "group": "labels",
+      "bodySha256": "94917c77bbff608adb346267786cdb5f92370ac3a9a9515ae4ca32cf499d300b"
+    },
+    {
+      "names": [
+        "validatePermissionsFile"
+      ],
+      "group": "permissions",
+      "bodySha256": "6639e3becbf0159da7e4a57bd8e58f5a330ded34eaa7b7ef45fbd0a451906f9f"
+    },
+    {
+      "names": [
+        "validatePermissionsContent"
+      ],
+      "group": "permissions",
+      "bodySha256": "d8d84424fa1c4cc02de996c181c32925387567b0ed35485fcefe93c188fb3a6d"
+    },
+    {
+      "names": [
+        "validateWorkspacePermissions"
+      ],
+      "group": "permissions",
+      "bodySha256": "a3c16c403804261cf130f58a517769c017723013e7f3102a9cbbd10f9b1eb91a"
+    },
+    {
+      "names": [
+        "validateSourcePermissions"
+      ],
+      "group": "permissions",
+      "bodySha256": "0f5df255475177e62fe9c70e8ff05dea5a5aa33d95d452ae96d9a03d00aaf0a6"
+    },
+    {
+      "names": [
+        "validateDefaultPermissions"
+      ],
+      "group": "permissions",
+      "bodySha256": "fc6de0628862938c99cae65d6e85d520016664342a7d87cfafceaa8f761f642e"
+    },
+    {
+      "names": [
+        "validateAllPermissions"
+      ],
+      "group": "permissions",
+      "bodySha256": "e66de28bc369e68d397db2647040b3200351ea3c01f731a6ecfa859a42399fc0"
+    },
+    {
+      "names": [
+        "isValidPermissionsFile"
+      ],
+      "group": "permissions",
+      "bodySha256": "1c7840f68ffc7f8f097b5a2724a97ae25b8b2230028cc064d6a5161939e8701d"
+    },
+    {
+      "names": [
+        "CSSColorSchema"
+      ],
+      "group": "themes",
+      "bodySha256": "5f2684bb8c046d2d5d5815a68a0f427f56a862f61668f19bc9c24c7ccaf1634f"
+    },
+    {
+      "names": [
+        "ThemeDarkOverrideSchema"
+      ],
+      "group": "themes",
+      "bodySha256": "950aebfeb4855473ab3826b71ac19a78187f2e84bcab00cd24c7f7a6debebaee"
+    },
+    {
+      "names": [
+        "ThemeOverrideSchema"
+      ],
+      "group": "themes",
+      "bodySha256": "4669083aec376bf259b90d595f2ef77e9428c971421b40c76acebb4a42a14e5f"
+    },
+    {
+      "names": [
+        "PresetThemeSchema"
+      ],
+      "group": "themes",
+      "bodySha256": "d6ab2745efd16e3e8a2b8588f37705e3c9783196919f161608bcd441fd32caa9"
+    },
+    {
+      "names": [
+        "validateThemeContent"
+      ],
+      "group": "themes",
+      "bodySha256": "a70c74b3ae6491628c429fafe72aab29bf80460dba5159244e23def9e4b35ea7"
+    },
+    {
+      "names": [
+        "validateThemeOverrideContent"
+      ],
+      "group": "themes",
+      "bodySha256": "b319be74ce76728f02ad48e2540922eb719bcf2b2dfe1a97dc4184c0036cf358"
+    },
+    {
+      "names": [
+        "isValidThemeFile"
+      ],
+      "group": "themes",
+      "bodySha256": "cb9bd840b240042ef3f7fc13aeae9b19abd1aa77970a39d0df422d18976eb1c6"
+    },
+    {
+      "names": [
+        "ToolIconEntrySchema"
+      ],
+      "group": "tool-icons",
+      "bodySha256": "3e648266348b26b0278014d713369b5ee2a3a429277363493eaec1be5b34378d"
+    },
+    {
+      "names": [
+        "ToolIconsConfigSchema"
+      ],
+      "group": "tool-icons",
+      "bodySha256": "eaf981eafd3c6e1f5f7409589dd4de380abfb102ac73ea38ad41507bbaabc93a"
+    },
+    {
+      "names": [
+        "validateToolIconsContent"
+      ],
+      "group": "tool-icons",
+      "bodySha256": "8f7896efdec22b050803948fd7636897decd36936e095e62dae7e09488c3a46a"
+    },
+    {
+      "names": [
+        "validateToolIcons"
+      ],
+      "group": "tool-icons",
+      "bodySha256": "13c2e84f19001b497c560fe455a8ee757db4f1a3950734ea6a61f66dc01aa114"
+    },
+    {
+      "names": [
+        "formatValidationResult"
+      ],
+      "group": "file-detection",
+      "bodySha256": "308bb61991fc7e17fb617cdad722bb4f0778d0bd0bb6dcd1eef5d2acb8614e4a"
+    },
+    {
+      "names": [
+        "ConfigFileDetection"
+      ],
+      "group": "file-detection",
+      "bodySha256": "4f896cd5c8f8c963e6d4fc6a65fe14eeab471bdc5ed34ddcc4bf62ce65a99998"
+    },
+    {
+      "names": [
+        "detectConfigFileType"
+      ],
+      "group": "file-detection",
+      "bodySha256": "a0c3494c5100bbd4c2bbc7c022e7b97c4e9f256a93cb3981401719aef393b375"
+    },
+    {
+      "names": [
+        "detectAppConfigFileType"
+      ],
+      "group": "file-detection",
+      "bodySha256": "0fae30de5a4c8108ae73e1985a4d3ce0cd8399f5c8eb17c01651e29aef03012c"
+    },
+    {
+      "names": [
+        "validateConfigFileContent"
+      ],
+      "group": "file-detection",
+      "bodySha256": "4b2b938007bc33113d75918f698c557874ac63c42b4f23ce1662c082f1b4ecca"
+    }
+  ],
+  "modules": [
+    {
+      "name": "validation-types",
+      "lines": 142
+    },
+    {
+      "name": "app-config",
+      "lines": 237
+    },
+    {
+      "name": "sources",
+      "lines": 339
+    },
+    {
+      "name": "skills",
+      "lines": 295
+    },
+    {
+      "name": "statuses",
+      "lines": 225
+    },
+    {
+      "name": "labels",
+      "lines": 255
+    },
+    {
+      "name": "permissions",
+      "lines": 183
+    },
+    {
+      "name": "themes",
+      "lines": 207
+    },
+    {
+      "name": "tool-icons",
+      "lines": 206
+    },
+    {
+      "name": "file-detection",
+      "lines": 202
+    }
+  ],
+  "dependencies": {
+    "validation-types": [],
+    "app-config": [
+      "validation-types",
+      "tool-icons",
+      "sources",
+      "skills",
+      "statuses",
+      "labels",
+      "permissions"
+    ],
+    "sources": [
+      "validation-types"
+    ],
+    "skills": [
+      "validation-types"
+    ],
+    "statuses": [
+      "validation-types"
+    ],
+    "labels": [
+      "validation-types"
+    ],
+    "permissions": [
+      "validation-types"
+    ],
+    "themes": [
+      "validation-types"
+    ],
+    "tool-icons": [
+      "validation-types"
+    ],
+    "file-detection": [
+      "validation-types",
+      "sources",
+      "skills",
+      "statuses",
+      "labels",
+      "permissions",
+      "tool-icons"
+    ]
+  },
+  "unitCycles": [],
+  "moduleCycles": []
+}

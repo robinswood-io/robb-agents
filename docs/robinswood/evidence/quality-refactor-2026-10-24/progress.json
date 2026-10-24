@@ -20,7 +20,9 @@
     "Métadonnées modèles natives, conservation des anciens identifiants acceptés par le fournisseur",
     "SDK MCP 2.4.0 : compatibilité positive 2026 et 2025 sans contournement",
     "CLI : 40 étapes conservées en ordre, 26 fichiers de 430 lignes au plus, aucun any ; tests, typage et lint réussis",
-    "Adaptateur Pi : 80 scénarios extraits par comportement avec corps inchangés pendant le découpage ; entrées historiques typées à une frontière de fixture explicite ; événements de sortie discriminés ; typage, tests et lint réussis"
+    "Adaptateur Pi : 80 scénarios extraits par comportement avec corps inchangés pendant le découpage ; entrées historiques typées à une frontière de fixture explicite ; événements de sortie discriminés ; typage, tests et lint réussis",
+    "8 modules historiques décomposés par responsabilité ; 720 déclarations préservées, normalisation des imports déplacés, aucune dépendance cyclique entre modules extraits",
+    "Nouvelle suite complète du dépôt réussie après extraction, 16 configurations TypeScript et lint ciblé sans avertissement"
   ],
   "pending": [
     "Découpage des autres fichiers au-delà de 500 lignes",
@@ -28,9 +30,9 @@
     "Lint global sans erreur ni avertissement",
     "Parcours complets réels en staging local, compilation signée et intégration"
   ],
-  "updatedAt": "2026-10-24T22:27:59.072479+00:00",
+  "updatedAt": "2026-10-24T22:37:58.659419+00:00",
   "current": {
-    "over500": 257,
+    "over500": 249,
     "explicitAny": 1163
   }
 }

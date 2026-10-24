@@ -1,0 +1,18 @@
+{
+  "command": [
+    "rtk",
+    "node",
+    "node_modules/eslint/bin/eslint.js",
+    "packages/server-core/src/sessions/objective-acceptance-criteria.ts",
+    "packages/server-core/src/sessions/objective-acceptance-criteria",
+    "packages/server-core/src/sessions/objective-outcome.ts",
+    "packages/server-core/src/sessions/objective-outcome",
+    "packages/shared/src/agent/core/registered-observation.ts",
+    "packages/shared/src/agent/core/registered-observation",
+    "--max-warnings",
+    "0"
+  ],
+  "exitCode": 0,
+  "seconds": 3.15,
+  "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/objective-domains-lint.log"
+}
