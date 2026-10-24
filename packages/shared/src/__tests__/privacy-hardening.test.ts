@@ -1,5 +1,6 @@
 import { describe, it, expect, afterEach } from 'bun:test';
-import { readFileSync } from 'node:fs';
+import { readFileSync, mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { getLatestVersion, getManifest } from '../version/manifest.ts';
 import { getSystemPrompt } from '../prompts/system.ts';
@@ -73,12 +74,34 @@ describe('Robb Agent privacy & confidentiality hardening', () => {
   });
 
   it('enforces loopback-only fetch guard in unified-network-interceptor when CRAFT_STRICT_LOCAL_ENDPOINT=1', async () => {
-    await import('../unified-network-interceptor.ts');
-    process.env.CRAFT_STRICT_LOCAL_ENDPOINT = '1';
-    delete process.env.ROBB_ALLOW_LOCAL_MODEL_WEB_TOOLS;
-
-    await expect(
-      globalThis.fetch('https://agents.craft.do/docs/mcp'),
-    ).rejects.toThrow('[Privacy Guard] Blocked outbound network request');
+    // Auto-install is a process-start contract. Other suites intentionally disable
+    // it or replace fetch, so exercise a fresh runtime with an offline transport.
+    const moduleUrl = new URL('../unified-network-interceptor.ts', import.meta.url).href;
+    const script = `
+      let networkCalls = 0;
+      globalThis.fetch = async () => { networkCalls += 1; return new Response('offline fixture'); };
+      await import(${JSON.stringify(moduleUrl)});
+      try {
+        await globalThis.fetch('https://agents.craft.do/docs/mcp');
+        console.log(JSON.stringify({ blocked: false, networkCalls }));
+      } catch (error) {
+        console.log(JSON.stringify({ blocked: true, networkCalls, message: error.message }));
+      }
+    `;
+    const directory = mkdtempSync(join(tmpdir(), 'robb-fetch-guard-'));
+    const config = join(directory, 'bunfig.toml');
+    writeFileSync(config, '');
+    try {
+      const child = Bun.spawnSync([process.execPath, `--config=${config}`, '--no-env-file', '--eval', script], {
+        env: { ...process.env, CRAFT_DEBUG: '0', CRAFT_INTERCEPTOR_DISABLE_AUTO_INSTALL: '0',
+          CRAFT_STRICT_LOCAL_ENDPOINT: '1', ROBB_ALLOW_LOCAL_MODEL_WEB_TOOLS: '0' },
+        stdout: 'pipe', stderr: 'pipe',
+      });
+      expect(child.exitCode).toBe(0);
+      const result: { blocked: boolean; networkCalls: number; message?: string } = JSON.parse(child.stdout.toString());
+      expect(result.blocked).toBe(true);
+      expect(result.networkCalls).toBe(0);
+      expect(result.message).toContain('[Privacy Guard] Blocked outbound network request');
+    } finally { rmSync(directory, { recursive: true, force: true }); }
   });
 });

@@ -168,17 +168,16 @@ export async function writeProviderPromptWithHandoff(
 
 /**
  * Adapt Pi AgentSession's preflight callback to the host handoff protocol.
- * Pi reports `false` for every local validation/setup failure and `true` only
- * after those checks, immediately before its provider loop (or after a native
- * follow-up has been accepted into Pi's own queue). Duplicate callbacks are
+ * A started request or a natively queued follow-up crosses this boundary.
+ * Locally handled input never reaches the provider. Duplicate callbacks are
  * harmless and never acknowledge more than once.
  */
 export function createProviderHandoffPreflight(
   acknowledge: () => void,
-): (ready: boolean) => void {
+): NonNullable<import('@earendil-works/pi-coding-agent').PromptOptions['preflightResult']> {
   let acknowledged = false;
-  return ready => {
-    if (!ready || acknowledged) return;
+  return disposition => {
+    if ((disposition !== 'started' && disposition !== 'queued') || acknowledged) return;
     acknowledged = true;
     acknowledge();
   };

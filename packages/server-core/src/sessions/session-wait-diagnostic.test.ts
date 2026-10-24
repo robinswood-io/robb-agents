@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'bun:test'
+import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
 import { SessionManager, createManagedSession } from './SessionManager'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -243,3 +243,14 @@ describe('unverified delegated diagnostics through the host wait', () => {
       .rejects.toThrow('Wait targets must be current delegated descendants')
   })
 })
+
+// These fixtures exercise the opt-in historical host contract.
+let previousLegacyContract: string | undefined;
+beforeEach(() => {
+  previousLegacyContract = process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT;
+  process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT = '1';
+});
+afterEach(() => {
+  if (previousLegacyContract === undefined) delete process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT;
+  else process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT = previousLegacyContract;
+});

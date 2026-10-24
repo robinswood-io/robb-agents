@@ -46,7 +46,7 @@ function modernMeta(): Record<string, unknown> {
   return {
     'io.modelcontextprotocol/protocolVersion': MODERN_PROTOCOL_VERSION,
     'io.modelcontextprotocol/clientInfo': {
-      name: 'robb-agents-sdk-gap-test',
+      name: 'robb-agents-sdk-compat-test',
       version: '1.0.0',
     },
     'io.modelcontextprotocol/clientCapabilities': {
@@ -88,7 +88,7 @@ async function probeModernMethod(method: string): Promise<{
   const invoked: string[] = []
   const handle = serveStdio(() => {
     const server = new Server(
-      { name: 'modern-tasks-gap-probe', version: '1.0.0' },
+      { name: 'modern-tasks-compat-probe', version: '1.0.0' },
       { capabilities: { extensions: { [TASKS_EXTENSION]: {} } } },
     )
     registerModernProbeHandler(server, method, invoked)
@@ -166,7 +166,7 @@ async function probeLegacyMethod(method: 'tasks/get' | 'tasks/cancel'): Promise<
       params: {
         protocolVersion: LEGACY_PROTOCOL_VERSION,
         capabilities: { tasks: { list: {}, cancel: {} } },
-        clientInfo: { name: 'legacy-sdk-gap-test', version: '1.0.0' },
+        clientInfo: { name: 'legacy-sdk-compat-test', version: '1.0.0' },
       },
     })
     await responseFor(transport, 1)
@@ -187,7 +187,7 @@ async function probeLegacyMethod(method: 'tasks/get' | 'tasks/cancel'): Promise<
   }
 }
 
-describe('MCP SDK v2 Tasks server gap (#2598)', () => {
+describe('MCP SDK v2 Tasks protocol compatibility', () => {
   test('reaches the new 2026 tasks/update extension method', async () => {
     const result = await probeModernMethod('tasks/update')
 
@@ -199,14 +199,13 @@ describe('MCP SDK v2 Tasks server gap (#2598)', () => {
   })
 
   test.each(['tasks/get', 'tasks/cancel'])(
-    'rejects the legacy-name collision %s before its 2026 custom handler',
+    'dispatches the modern %s extension despite its legacy method name',
     async (method) => {
       const result = await probeModernMethod(method)
 
-      expect(result.invoked).toEqual([])
+      expect(result.invoked).toEqual([method])
       expect(result.response).toMatchObject({
-        id: 1,
-        error: { code: -32601, message: 'Method not found' },
+        id: 1, result: { resultType: 'complete' },
       })
     },
   )

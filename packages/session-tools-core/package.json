@@ -13,9 +13,9 @@
     "typecheck": "node ../../scripts/run-typescript.mjs native --noEmit"
   },
   "dependencies": {
-    "beautiful-mermaid": "*",
+    "beautiful-mermaid": "1.1.3",
     "zod": "^4.6.7",
-    "zod-to-json-schema": "^3.25.0",
+    "zod-to-json-schema": "^3.25.2",
     "gray-matter": "^4.0.3"
   },
   "devDependencies": {

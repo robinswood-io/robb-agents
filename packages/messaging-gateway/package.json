@@ -17,11 +17,11 @@
     "@craft-agent/messaging-whatsapp-worker": "workspace:*",
     "@craft-agent/server-core": "workspace:*",
     "@craft-agent/shared": "workspace:*",
-    "@larksuiteoapi/node-sdk": "^1.71.1",
-    "grammy": "^1.35.0"
+    "@larksuiteoapi/node-sdk": "^1.76.0",
+    "grammy": "^1.46.0"
   },
   "devDependencies": {
     "typescript": "~7.0.2",
-    "@types/node": "^26.2.0"
+    "@types/node": "^26.6.5"
   }
 }

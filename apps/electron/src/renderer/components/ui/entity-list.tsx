@@ -60,7 +60,7 @@ export interface EntityListProps<T> {
   /** Props spread on the inner list container (role, aria-label, data-focus-zone) */
   containerProps?: Record<string, string>
   /** Ref to the ScrollArea viewport element (for scroll-based pagination) */
-  viewportRef?: React.RefObject<HTMLDivElement>
+  viewportRef?: React.RefObject<HTMLDivElement | null>
   /** Additional ScrollArea class */
   scrollAreaClassName?: string
   className?: string

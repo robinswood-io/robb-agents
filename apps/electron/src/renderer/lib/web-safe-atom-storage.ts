@@ -1,8 +1,6 @@
 import { createJSONStorage } from 'jotai/utils'
-import type {
-  SyncStorage,
-  SyncStringStorage,
-} from 'jotai/vanilla/utils/atomWithStorage'
+type SyncStorage<Value> = ReturnType<typeof createJSONStorage<Value>>
+type SyncStringStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>
 
 const volatileStringStorage: SyncStringStorage = {
   getItem: (_key: string) => null,

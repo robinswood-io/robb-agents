@@ -22,11 +22,13 @@ import { mkdirSync, readdirSync, statSync, existsSync, readFileSync } from 'node
 import { homedir } from 'node:os';
 
 // Pi SDK
-import { createAgentSession, SessionManager as PiSessionManager, AuthStorage as PiAuthStorage, ModelRegistry as PiModelRegistry, createReadToolDefinition, createBashToolDefinition, createEditToolDefinition, createWriteToolDefinition, createGrepToolDefinition, createFindToolDefinition, createLsToolDefinition } from '@earendil-works/pi-coding-agent';
-import type { AgentSession, AgentSessionEvent, AgentToolResult, AuthCredential, CreateAgentSessionOptions, ToolDefinition } from '@earendil-works/pi-coding-agent';
+import { createAgentSession, getAgentDir, SessionManager as PiSessionManager, ModelRegistry as PiModelRegistry, createReadToolDefinition, createBashToolDefinition, createEditToolDefinition, createWriteToolDefinition, createGrepToolDefinition, createFindToolDefinition, createLsToolDefinition } from '@earendil-works/pi-coding-agent';
+import type { AgentSession, AgentSessionEvent, AgentToolResult, CreateAgentSessionOptions, ToolDefinition } from '@earendil-works/pi-coding-agent';
 
 // Pi AI types
+import { InMemoryCredentialStore } from '@earendil-works/pi-ai';
 import type { TextContent as PiTextContent } from '@earendil-works/pi-ai';
+import { createAuthenticatedModelRuntime, storePiCredential } from './authenticated-model-runtime.ts';
 
 // Pre-register the Bedrock provider module so the Pi SDK doesn't attempt a
 // dynamic import of "./amazon-bedrock.js" — which fails in the bundled output
@@ -59,7 +61,7 @@ import { compactSelectedModel } from './compact-selected-model.ts';
 
 import { applySelectedThinkingLevel } from './selected-thinking-level.ts';
 import { allowCraftMetadataProperties, normalizeForPiTool, stripCraftMetadata } from './craft-metadata-schema.ts';
-import { applySystemPromptOverride } from './system-prompt-override.ts';
+import { createSystemPromptController } from './system-prompt-override.ts';
 import { createProviderHandoffPreflight } from './provider-handoff.ts';
 import { registerGoogleCodeAssistProvider } from './google-code-assist-provider.ts';
 import { assertPiAuthProviderContractEnabled } from './provider-contract-guard.ts';
@@ -254,8 +256,9 @@ type OutboundMessage =
 // ============================================================
 
 let piSession: AgentSession | null = null;
+let systemPromptController: Awaited<ReturnType<typeof createSystemPromptController>> | null = null;
 let piModelRegistry: PiModelRegistry | null = null;
-let moduleAuthStorage: PiAuthStorage | null = null;
+let moduleAuthStorage: InMemoryCredentialStore | null = null;
 let unsubscribeEvents: (() => void) | null = null;
 
 // Init config (set on 'init' message)
@@ -536,30 +539,13 @@ function registerCustomEndpointModels(
  * and a model registry backed by it. Used by both the main session and
  * ephemeral queryLlm sessions.
  */
-function createAuthenticatedRegistry(): {
-  authStorage: PiAuthStorage;
-  modelRegistry: PiModelRegistry;
-} {
-  // Reuse module-level authStorage if already created (allows token_update to mutate it).
-  // Only create a new one on first call or after re-init.
-  if (!moduleAuthStorage) {
-    moduleAuthStorage = PiAuthStorage.inMemory();
-  }
-  const authStorage = moduleAuthStorage;
-  if (initConfig?.piAuth) {
-    const { provider, credential } = initConfig.piAuth;
-    // Pi SDK 0.70.0's AuthCredential union (ApiKeyCredential | OAuthCredential) doesn't
-    // include 'iam' as a first-class member, but the auth storage accepts it at runtime
-    // — the Bedrock provider module reads AWS env directly; this `set` keeps Pi SDK's
-    // internal provider-tracking consistent regardless of credential shape.
-    authStorage.set(provider, credential as unknown as AuthCredential);
-    debugLog(`Injected ${credential.type} credential for provider: ${provider}`);
-  } else if (initConfig?.apiKey) {
-    authStorage.set('anthropic', { type: 'api_key', key: initConfig.apiKey });
-    debugLog('Injected API key into auth storage (legacy fallback)');
-  }
-
-  const modelRegistry = PiModelRegistry.inMemory(authStorage);
+async function createAuthenticatedRegistry() {
+  moduleAuthStorage ??= new InMemoryCredentialStore();
+  const { modelRuntime, modelRegistry } = await createAuthenticatedModelRuntime(
+    moduleAuthStorage,
+    initConfig?.piAuth,
+    initConfig?.apiKey,
+  );
 
   if (initConfig?.piAuth?.provider) {
     const registeredIds = registerSupplementalCatalogModels(modelRegistry, initConfig.piAuth.provider);
@@ -589,7 +575,7 @@ function createAuthenticatedRegistry(): {
     debugLog('Custom endpoint without protocol config — models may not resolve. Set customEndpoint.api for proper routing.');
   }
 
-  return { authStorage, modelRegistry };
+  return { modelRuntime, modelRegistry };
 }
 
 async function ensureSession(): Promise<AgentSession> {
@@ -599,7 +585,7 @@ async function ensureSession(): Promise<AgentSession> {
 
   const cwd = resolvedCwd();
 
-  const { authStorage, modelRegistry } = createAuthenticatedRegistry();
+  const { modelRuntime, modelRegistry } = await createAuthenticatedRegistry();
   // Store at module scope for set_model handler
   piModelRegistry = modelRegistry;
 
@@ -657,8 +643,7 @@ async function ensureSession(): Promise<AgentSession> {
   // Build session options
   const sessionOptions: CreateAgentSessionOptions = {
     cwd,
-    authStorage,
-    modelRegistry,
+    modelRuntime,
     customTools: wrappedAll,
     tools: toolAllowlist,
   };
@@ -719,6 +704,13 @@ async function ensureSession(): Promise<AgentSession> {
   if (piThinkingLevel) {
     sessionOptions.thinkingLevel = piThinkingLevel;
   }
+
+  systemPromptController = await createSystemPromptController({
+    cwd,
+    agentDir: sessionOptions.agentDir ?? getAgentDir(),
+    settingsManager: sessionOptions.settingsManager,
+  });
+  sessionOptions.resourceLoader = systemPromptController.resourceLoader;
 
   // Create the session — tools flow through customTools + allowlist (see comment above).
   const { session } = await createAgentSession(sessionOptions);
@@ -1054,7 +1046,7 @@ async function queryLlm(
   // model/provider/reasoning route exactly. Utility routing belongs only in
   // explicitly identified system paths such as mini_completion and compact.
   const model = resolveQueryModel(request.model, initConfig.model);
-  const { authStorage, modelRegistry } = createAuthenticatedRegistry();
+  const { modelRuntime, modelRegistry } = await createAuthenticatedRegistry();
 
   const runQueryWithModel = async (modelId: string): Promise<string> => {
     debugLog(`[queryLlm] Using model: ${modelId}`);
@@ -1068,13 +1060,19 @@ async function queryLlm(
     // Create minimal ephemeral session
     const ephemeralOptions: CreateAgentSessionOptions = {
       cwd: resolvedCwd(),
-      authStorage,
-      modelRegistry,
+      modelRuntime,
       tools: [],
       sessionManager: PiSessionManager.inMemory(),
       model: piModel,
     };
 
+    const agentDir = initConfig!.agentDir ?? (initConfig!.sessionPath
+      ? join(initConfig!.sessionPath, '.pi-agent') : getAgentDir());
+    const promptController = await createSystemPromptController({
+      cwd: ephemeralOptions.cwd!, agentDir,
+    });
+    ephemeralOptions.agentDir = agentDir;
+    ephemeralOptions.resourceLoader = promptController.resourceLoader;
     const { session: ephemeralSession } = await createAgentSession(ephemeralOptions);
 
     // Pi SDK ignores options.model for ephemeral sessions (same issue as options.tools).
@@ -1089,11 +1087,10 @@ async function queryLlm(
 
     debugLog(`[queryLlm] Created ephemeral session: ${ephemeralSession.sessionId}`);
 
-    // Force the system prompt — see system-prompt-override.ts for why direct
-    // assignment to `state.systemPrompt` doesn't survive `session.prompt()`.
+    // The public before_agent_start hook reapplies instructions on each turn.
     const promptForSession =
       request.systemPrompt ?? 'Reply with ONLY the requested text. No explanation.';
-    applySystemPromptOverride(ephemeralSession, promptForSession);
+    promptController.setPrompt(promptForSession);
 
     // Collect response text and errors from events
     let result = '';
@@ -1399,11 +1396,9 @@ async function handlePrompt(msg: Extract<InboundMessage, { type: 'prompt' }>): P
 
     const session = await ensureSession();
 
-    // Force the Craft-built system prompt onto the Pi session. Direct assignment
-    // to `state.systemPrompt` is wiped on every `session.prompt()` call by the Pi
-    // SDK (see system-prompt-override.ts).
+    // Keep Robb's instructions current through the public per-turn hook.
     if (msg.systemPrompt) {
-      applySystemPromptOverride(session, msg.systemPrompt);
+      systemPromptController!.setPrompt(msg.systemPrompt);
     }
 
     // Large workspace aggregators can expose hundreds of unrelated schemas.
@@ -1553,7 +1548,7 @@ async function handleMiniCompletion(msg: Extract<InboundMessage, { type: 'mini_c
   // as 'error' messages instead of being swallowed and returned as null.
   try {
     if (!initConfig) throw new Error('Cannot run mini completion: init not received');
-    const { modelRegistry } = createAuthenticatedRegistry();
+    const { modelRegistry } = await createAuthenticatedRegistry();
     const activeModel = requireExplicitPiModel(
       modelRegistry,
       initConfig.model,
@@ -1965,14 +1960,11 @@ async function processMessage(msg: InboundMessage): Promise<void> {
       break;
 
     case 'token_update':
-      if (applyTokenUpdate(
+      if (await applyTokenUpdate(
         msg.piAuth,
         initConfig,
         moduleAuthStorage
-          ? (provider, credential) => {
-            // See ambient comment at the initial `authStorage.set` call — same shape reason.
-            moduleAuthStorage!.set(provider, credential as unknown as AuthCredential);
-          }
+          ? (provider, credential) => storePiCredential(moduleAuthStorage!, provider, credential)
           : undefined,
       )) {
         debugLog(`Updated ${msg.piAuth.credential.type} credential for provider: ${msg.piAuth.provider}`);

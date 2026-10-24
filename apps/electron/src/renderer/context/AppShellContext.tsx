@@ -161,7 +161,7 @@ export interface AppShellContextType {
   /** Callback to update session list search query */
   setSessionListSearchQuery?: (query: string) => void
   /** Ref to ChatDisplay for navigation between matches */
-  chatDisplayRef?: React.RefObject<ChatDisplayHandle>
+  chatDisplayRef?: React.RefObject<ChatDisplayHandle | null>
   /** Callback when ChatDisplay match info changes (for immediate UI updates) */
   onChatMatchInfoChange?: (info: { sessionId: string | null; count: number; index: number; isHighlighting: boolean }) => void
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { validateToolArguments, type Tool } from '@earendil-works/pi-ai';
+import { validateToolArguments, parseToolCallArguments, type Tool } from '@earendil-works/pi-ai';
 import { getToolDefsAsJsonSchema, SESSION_TOOL_REGISTRY, type SessionToolContext } from '@craft-agent/session-tools-core';
 import type { Message, ObjectiveAcceptanceCriterion, ObjectiveOutcomeDeclaration } from '@craft-agent/core/types';
 import { transitionObjectiveContract } from './objective-contract.ts';
@@ -34,7 +34,7 @@ async function registerThroughPi(criteria: ObjectiveAcceptanceCriterion[], prefi
   // to the main process. No observation tool or provider is executed here.
   const validated = validateToolArguments({
     name: definition.name, description: definition.description, parameters: definition.inputSchema,
-  } as Tool, { type: 'toolCall', id: 'registration', name: definition.name, arguments: args });
+  } as Tool, { type: 'toolCall', id: 'registration', name: definition.name, arguments: parseToolCallArguments(JSON.stringify(args)).arguments });
   let objective = transitionObjectiveContract({ messageId: root.id, text: root.content, nowMs: 1 });
   const result = await SESSION_TOOL_REGISTRY.get('set_completion_criteria')!.handler!({
     sessionId: 'isolated-contract-test',

@@ -38,7 +38,7 @@ async function listModelsViaHttp(
   githubToken: string,
   timeoutMs: number,
 ): Promise<RawCopilotModel[]> {
-  const { refreshGitHubCopilotToken } = await import('@earendil-works/pi-ai/oauth');
+  const { refreshGitHubCopilotToken } = await import('../../../../auth/copilot-oauth.ts');
 
   // Step 1: Exchange GitHub OAuth token → Copilot API token
   const creds = await refreshGitHubCopilotToken(githubToken);
@@ -491,7 +491,7 @@ export const piDriver: ProviderDriver = {
               expiresAt: refreshed.expiresAt,
             });
           } else if (connection.piAuthProvider === 'github-copilot') {
-            const { refreshGitHubCopilotToken } = await import('@earendil-works/pi-ai/oauth');
+            const { refreshGitHubCopilotToken } = await import('../../../../auth/copilot-oauth.ts');
             const newCreds = await refreshGitHubCopilotToken(stored.refreshToken);
             await credentialManager.refreshLlmOAuth(slug, {
               accessToken: newCreds.access,

@@ -35,7 +35,7 @@ export interface SessionSearchHeaderProps {
   /** Whether the result count exceeded the display limit (shows "100+" instead of exact count) */
   exceededLimit?: boolean
   /** Ref for the input element (for focus management) */
-  inputRef?: React.RefObject<HTMLInputElement>
+  inputRef?: React.RefObject<HTMLInputElement | null>
   /** Placeholder text */
   placeholder?: string
   /** Whether the input is read-only (for playground demos) */

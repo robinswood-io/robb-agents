@@ -47,7 +47,7 @@ describe('Craft metadata schema compatibility for Pi tools', () => {
       required?: string[];
     };
 
-    expect(widenedSchema.additionalProperties).toBe(false);
+    expect(widenedSchema.additionalProperties).toBe(editTool.parameters.additionalProperties);
     expect(widenedSchema.properties._displayName).toBeDefined();
     expect(widenedSchema.properties._intent).toBeDefined();
     expect(widenedSchema.required ?? []).not.toContain('_displayName');

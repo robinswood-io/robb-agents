@@ -1,3 +1,4 @@
+import { offlineMissionRouteOptions, withOfflineMissionRoutes } from './testing/mission-route-fixture.ts';
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import { generateKeyPairSync } from 'node:crypto';
 import { mkdtempSync, rmSync } from 'fs';
@@ -25,7 +26,7 @@ import { MissionProofPassportService } from './MissionProofPassportService.ts';
 import type { SubagentAutonomyContext } from '../subagents/autonomy-inheritance.ts';
 
 function fixture(overrides: Record<string, unknown> = {}): MissionSpec {
-  return MissionSpecSchema.parse({
+  return withOfflineMissionRoutes(MissionSpecSchema.parse({
     schemaVersion: 2,
     id: 'service-demo',
     title: 'Service demo',
@@ -54,7 +55,7 @@ function fixture(overrides: Record<string, unknown> = {}): MissionSpec {
       },
     ],
     ...overrides,
-  });
+  }));
 }
 
 class SuccessfulExecutor implements MissionWorkExecutor {
@@ -113,6 +114,7 @@ describe('MissionRuntimeService', () => {
     proofPassports?: MissionProofPassportService,
   ): MissionRuntimeService {
     return new MissionRuntimeService({
+      ...offlineMissionRouteOptions,
       sessionManager,
       resolveWorkspace: (id) => id === 'workspace-1' ? { id, rootPath: root } : null,
       listWorkspaces: () => [{ id: 'workspace-1', rootPath: root }],
@@ -128,6 +130,7 @@ describe('MissionRuntimeService', () => {
     let executorInitializations = 0;
     let proofInitializations = 0;
     const runtimeService = new MissionRuntimeService({
+      ...offlineMissionRouteOptions,
       sessionManager,
       resolveWorkspace: (id) => id === 'workspace-1' ? { id, rootPath: root } : null,
       listWorkspaces: () => [{ id: 'workspace-1', rootPath: root }],
@@ -206,6 +209,7 @@ describe('MissionRuntimeService', () => {
 
   it('refuses all dispatch while an emergency stop is active', async () => {
     const runtimeService = new MissionRuntimeService({
+      ...offlineMissionRouteOptions,
       sessionManager,
       resolveWorkspace: (id) => id === 'workspace-1' ? { id, rootPath: root } : null,
       listWorkspaces: () => [{ id: 'workspace-1', rootPath: root }],
@@ -243,6 +247,7 @@ describe('MissionRuntimeService', () => {
       cancelProcessing: async (sessionId: string) => { cancelledSessions.push(sessionId); },
     } as unknown as ISessionManager;
     const runtimeService = new MissionRuntimeService({
+      ...offlineMissionRouteOptions,
       sessionManager,
       resolveWorkspace: (id) => id === 'workspace-1' ? { id, rootPath: root } : null,
       listWorkspaces: () => [{ id: 'workspace-1', rootPath: root }],

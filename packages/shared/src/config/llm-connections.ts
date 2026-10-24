@@ -652,7 +652,7 @@ export const PI_PREFERRED_DEFAULTS: Record<string, string[]> = {
   // Mistral Vibe manages the selected model inside the authenticated Vibe
   // profile. Robb intentionally stores no token or model API credential.
   'mistral-vibe': ['mistral-vibe'],
-  deepseek: ['deepseek-v4-pro', 'deepseek-v4-flash'],
+  deepseek: ['deepseek-v4-pro', 'deepseek-flash'],
   'github-copilot': ['claude-fable-5', 'claude-opus-4.8', 'claude-opus-4.7', 'claude-sonnet-4.6', 'claude-sonnet-4-6', 'gemini-3.5-flash', 'gemini-3.1-pro-preview', 'gpt-5.4', 'gpt-5.3-codex', 'gpt-5', 'o4-mini', 'claude-haiku-4.5', 'claude-haiku-4-5'],
   'amazon-bedrock': ['claude-opus-5', 'claude-opus-4-8', 'claude-opus-4-7', 'claude-sonnet-5', 'claude-sonnet-4-6', 'claude-haiku-4-5'],
   xai: ['grok-4.3', 'grok-4.20-0309-reasoning', 'grok-4.20-0309-non-reasoning', 'grok-code-fast-1', 'grok-4-fast-reasoning'],

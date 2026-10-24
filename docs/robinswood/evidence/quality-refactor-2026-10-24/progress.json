@@ -1,0 +1,34 @@
+{
+  "status": "en cours",
+  "scope": "Tout le code maintenu, tests compris",
+  "target": "Robb Agents local, candidat isolé codex/quality-500-types-20261024",
+  "baseCommit": "d9d1ae82efb3c17fa3be1d75cb880690114d73df",
+  "installedApplication": "Inchangée depuis la validation précédente ; aucun candidat qualité installé",
+  "workTracking": "Rattachement Work non résolu ; trace locale à resynchroniser",
+  "baseline": {
+    "oversizedCodeFiles": 264,
+    "explicitAny": 1463
+  },
+  "verified": [
+    "16 configurations TypeScript",
+    "Compatibilité TypeScript 6 Electron",
+    "Build Electron et Viewer",
+    "Extraction de 326 déclarations des actions sensibles, corps identiques et graphe acyclique",
+    "Tests des contrats de mission avec connexion fictive explicite",
+    "Suite complète du dépôt : succès (142,81 s)",
+    "Styles : règles et ordre conservés, quatre assets compilés identiques octet pour octet",
+    "Métadonnées modèles natives, conservation des anciens identifiants acceptés par le fournisseur",
+    "SDK MCP 2.4.0 : compatibilité positive 2026 et 2025 sans contournement"
+  ],
+  "pending": [
+    "Découpage des autres fichiers au-delà de 500 lignes",
+    "Suppression des any explicites restants",
+    "Lint global sans erreur ni avertissement",
+    "Parcours complets réels en staging local, compilation signée et intégration"
+  ],
+  "updatedAt": "2026-10-24T22:02:52.547291+00:00",
+  "current": {
+    "over500": 259,
+    "explicitAny": 1437
+  }
+}

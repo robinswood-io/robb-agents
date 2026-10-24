@@ -1,5 +1,6 @@
 import { describe, expect, it, mock } from 'bun:test';
-import { AuthStorage, ModelRegistry } from '@earendil-works/pi-coding-agent';
+import { InMemoryCredentialStore } from '@earendil-works/pi-ai';
+import { createAuthenticatedModelRuntime } from './authenticated-model-runtime.ts';
 import type { AssistantMessageEvent, Context } from '@earendil-works/pi-ai';
 import { registerGoogleCodeAssistProvider, streamGoogleCodeAssist } from './google-code-assist-provider.ts';
 
@@ -15,11 +16,10 @@ function sseResponse(payloads: unknown[]): Response {
 }
 
 describe('Google Code Assist provider', () => {
-  it('registers Gemini models under the subscription OAuth provider', () => {
-    const auth = AuthStorage.inMemory({
-      'google-gemini-code-assist': { type: 'api_key', key: 'test-access-token' },
+  it('registers Gemini models under the subscription OAuth provider', async () => {
+    const { modelRegistry: registry } = await createAuthenticatedModelRuntime(new InMemoryCredentialStore(), {
+      provider: 'google-gemini-code-assist', credential: { type: 'api_key', key: 'test-access-token' },
     });
-    const registry = ModelRegistry.inMemory(auth);
 
     registerGoogleCodeAssistProvider(registry);
 
@@ -69,10 +69,9 @@ describe('Google Code Assist provider', () => {
     globalThis.fetch = fetchMock as unknown as typeof fetch;
 
     try {
-      const auth = AuthStorage.inMemory({
-        'google-gemini-code-assist': { type: 'api_key', key: 'test-access-token' },
-      });
-      const registry = ModelRegistry.inMemory(auth);
+      const { modelRegistry: registry } = await createAuthenticatedModelRuntime(new InMemoryCredentialStore(), {
+      provider: 'google-gemini-code-assist', credential: { type: 'api_key', key: 'test-access-token' },
+    });
       registerGoogleCodeAssistProvider(registry);
       const model = registry.find('google-gemini-code-assist', 'gemini-2.5-flash');
       expect(model).toBeDefined();
@@ -140,10 +139,9 @@ describe('Google Code Assist provider', () => {
     delete process.env.GOOGLE_CLOUD_PROJECT_ID;
 
     try {
-      const auth = AuthStorage.inMemory({
-        'google-gemini-code-assist': { type: 'api_key', key: 'organization-onboard-access-token' },
-      });
-      const registry = ModelRegistry.inMemory(auth);
+      const { modelRegistry: registry } = await createAuthenticatedModelRuntime(new InMemoryCredentialStore(), {
+      provider: 'google-gemini-code-assist', credential: { type: 'api_key', key: 'organization-onboard-access-token' },
+    });
       registerGoogleCodeAssistProvider(registry);
       const model = registry.find('google-gemini-code-assist', 'gemini-2.5-flash');
       const stream = streamGoogleCodeAssist(
@@ -193,10 +191,9 @@ describe('Google Code Assist provider', () => {
     delete process.env.GOOGLE_CLOUD_PROJECT_ID;
 
     try {
-      const auth = AuthStorage.inMemory({
-        'google-gemini-code-assist': { type: 'api_key', key: 'organization-missing-project-access-token' },
-      });
-      const registry = ModelRegistry.inMemory(auth);
+      const { modelRegistry: registry } = await createAuthenticatedModelRuntime(new InMemoryCredentialStore(), {
+      provider: 'google-gemini-code-assist', credential: { type: 'api_key', key: 'organization-missing-project-access-token' },
+    });
       registerGoogleCodeAssistProvider(registry);
       const model = registry.find('google-gemini-code-assist', 'gemini-2.5-flash');
       const stream = streamGoogleCodeAssist(
@@ -242,10 +239,9 @@ describe('Google Code Assist provider', () => {
     delete process.env.GOOGLE_CLOUD_PROJECT_ID;
 
     try {
-      const auth = AuthStorage.inMemory({
-        'google-gemini-code-assist': { type: 'api_key', key: 'individual-access-token' },
-      });
-      const registry = ModelRegistry.inMemory(auth);
+      const { modelRegistry: registry } = await createAuthenticatedModelRuntime(new InMemoryCredentialStore(), {
+      provider: 'google-gemini-code-assist', credential: { type: 'api_key', key: 'individual-access-token' },
+    });
       registerGoogleCodeAssistProvider(registry);
       const model = registry.find('google-gemini-code-assist', 'gemini-2.5-flash');
       const stream = streamGoogleCodeAssist(
@@ -295,10 +291,9 @@ describe('Google Code Assist provider', () => {
     globalThis.fetch = fetchMock as unknown as typeof fetch;
 
     try {
-      const auth = AuthStorage.inMemory({
-        'google-gemini-code-assist': { type: 'api_key', key: 'expired-license-token' },
-      });
-      const registry = ModelRegistry.inMemory(auth);
+      const { modelRegistry: registry } = await createAuthenticatedModelRuntime(new InMemoryCredentialStore(), {
+      provider: 'google-gemini-code-assist', credential: { type: 'api_key', key: 'expired-license-token' },
+    });
       registerGoogleCodeAssistProvider(registry);
       const model = registry.find('google-gemini-code-assist', 'gemini-2.5-flash');
       const stream = streamGoogleCodeAssist(
@@ -329,10 +324,9 @@ describe('Google Code Assist provider', () => {
     process.env.ROBB_DISABLE_GOOGLE_CODE_ASSIST_V1INTERNAL = '1';
 
     try {
-      const auth = AuthStorage.inMemory({
-        'google-gemini-code-assist': { type: 'api_key', key: 'must-not-leak' },
-      });
-      const registry = ModelRegistry.inMemory(auth);
+      const { modelRegistry: registry } = await createAuthenticatedModelRuntime(new InMemoryCredentialStore(), {
+      provider: 'google-gemini-code-assist', credential: { type: 'api_key', key: 'must-not-leak' },
+    });
       registerGoogleCodeAssistProvider(registry);
       const model = registry.find('google-gemini-code-assist', 'gemini-2.5-flash');
       const stream = streamGoogleCodeAssist(
@@ -403,10 +397,9 @@ describe('Google Code Assist provider', () => {
     globalThis.fetch = fetchMock as unknown as typeof fetch;
 
     try {
-      const auth = AuthStorage.inMemory({
-        'google-gemini-code-assist': { type: 'api_key', key: 'test-access-token' },
-      });
-      const registry = ModelRegistry.inMemory(auth);
+      const { modelRegistry: registry } = await createAuthenticatedModelRuntime(new InMemoryCredentialStore(), {
+      provider: 'google-gemini-code-assist', credential: { type: 'api_key', key: 'test-access-token' },
+    });
       registerGoogleCodeAssistProvider(registry);
       const model = registry.find('google-gemini-code-assist', 'gemini-3.5-flash');
       expect(model).toBeDefined();

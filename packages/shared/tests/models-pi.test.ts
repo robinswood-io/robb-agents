@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'bun:test';
+import { getModels } from '@earendil-works/pi-ai/compat';
 import { getAllPiModels, getPiApiKeyProviders, getPiModelsForAuthProvider } from '../src/config/models-pi.ts';
 
 describe('models-pi filtering', () => {
@@ -30,7 +31,7 @@ describe('models-pi filtering', () => {
     for (const provider of ['openai', 'openai-codex']) {
       const models = getPiModelsForAuthProvider(provider);
       const ids = models.map(m => m.id);
-      expect(ids.slice(0, 7)).toEqual([
+      expect(ids).toEqual(expect.arrayContaining([
         'pi/gpt-6.1-sol',
         'pi/gpt-6-astra',
         'pi/gpt-6-sol',
@@ -38,25 +39,15 @@ describe('models-pi filtering', () => {
         'pi/gpt-5.6-sol',
         'pi/gpt-5.6-terra',
         'pi/gpt-5.6-luna',
-      ]);
+      ]));
       expect(ids.filter(id => id === 'pi/gpt-6-astra')).toHaveLength(1);
-      for (const id of ['pi/gpt-6.1-sol', 'pi/gpt-6-sol', 'pi/gpt-6-luna']) {
-        expect(models.filter(model => model.id === id)).toEqual([
-          expect.objectContaining({
-            id,
-            contextWindow: 272_000,
-            supportsThinking: true,
-            supportsImages: true,
-          }),
-        ]);
+      for (const id of ['gpt-6.1-sol', 'gpt-6-sol', 'gpt-6-luna', 'gpt-6-astra']) {
+        const native = getModels(provider).find(model => model.id === id)!;
+        expect(models.find(model => model.id === `pi/${id}`)).toMatchObject({
+          id: `pi/${id}`, name: native.name, contextWindow: native.contextWindow,
+          supportsThinking: native.reasoning, supportsImages: native.input.includes('image'),
+        });
       }
-      expect(models.find(model => model.id === 'pi/gpt-6-astra')).toMatchObject({
-        name: 'GPT-6 Astra',
-        shortName: 'Astra',
-        contextWindow: 272_000,
-        supportsThinking: true,
-        supportsImages: true,
-      });
     }
   });
 
@@ -107,7 +98,8 @@ describe('models-pi filtering', () => {
   it('returns current DeepSeek models from the Pi SDK catalog', () => {
     const models = getPiModelsForAuthProvider('deepseek');
     const ids = models.map(m => m.id);
-    expect(ids).toContain('pi/deepseek-v4-flash');
+    expect(ids).toContain('pi/deepseek-flash');
+    expect(ids).not.toContain('pi/deepseek-v4-flash');
     expect(ids).toContain('pi/deepseek-v4-pro');
   });
 

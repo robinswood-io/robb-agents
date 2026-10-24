@@ -276,7 +276,7 @@ function parseModelIds(text: string): string[] {
 }
 
 async function defaultCopilotTokenExchange(githubToken: string): Promise<{ access: string }> {
-  const { refreshGitHubCopilotToken } = await import('@earendil-works/pi-ai/oauth');
+  const { refreshGitHubCopilotToken } = await import('../packages/shared/src/auth/copilot-oauth.ts');
   return refreshGitHubCopilotToken(githubToken);
 }
 

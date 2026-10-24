@@ -1,0 +1,13 @@
+{
+  "command": [
+    "rtk",
+    "bun",
+    "test",
+    "packages/shared/src/agent/core/__tests__/sensitive-external-action.test.ts",
+    "packages/shared/src/agent/core/__tests__/tool-effect-permissions.test.ts",
+    "packages/shared/src/agent/core/__tests__/structured-gmail-send-resume.test.ts"
+  ],
+  "exitCode": 0,
+  "seconds": 3.33,
+  "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/sensitive-action-extraction-tests.log"
+}

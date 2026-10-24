@@ -30,7 +30,7 @@ const ZONE_ORDER: FocusZoneId[] = ['sidebar', 'navigator', 'chat']
 
 interface FocusZone {
   id: FocusZoneId
-  ref: React.RefObject<HTMLElement>
+  ref: React.RefObject<HTMLElement | null>
   focusFirst?: () => void // Optional: custom focus behavior
 }
 

@@ -1,10 +1,12 @@
+import { InMemoryCredentialStore } from '@earendil-works/pi-ai';
+import { createAuthenticatedModelRuntime } from './authenticated-model-runtime.ts';
 import { expect, it } from 'bun:test';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Type } from '@sinclair/typebox';
 import { createAssistantMessageEventStream, type AssistantMessage } from '@earendil-works/pi-ai';
-import { AuthStorage, ModelRegistry, SettingsManager, SessionManager, DefaultResourceLoader, createAgentSession, type AgentSession } from '@earendil-works/pi-coding-agent';
+import { SettingsManager, SessionManager, DefaultResourceLoader, createAgentSession, type AgentSession } from '@earendil-works/pi-coding-agent';
 import type { AgentEvent, Message } from '@craft-agent/core/types';
 import { PiAgent } from '../../shared/src/agent/pi-agent.ts';
 import { registerSessionScopedToolCallbacks, unregisterSessionScopedToolCallbacks } from '../../shared/src/agent/session-scoped-tool-callback-registry.ts';
@@ -29,8 +31,7 @@ it('real browser backend failure remains an error through the real Pi loop, mode
     registerSessionScopedToolCallbacks(sessionId, { browserPaneFns: {
       screenshotRegion: async () => { captures++; throw new Error(captureError); },
     } as unknown as BrowserPaneFns });
-    const authStorage = AuthStorage.inMemory(); authStorage.set('openai', { type: 'api_key', key: 'fixture-no-network' });
-    const modelRegistry = ModelRegistry.inMemory(authStorage);
+    const { modelRuntime, modelRegistry } = await createAuthenticatedModelRuntime(new InMemoryCredentialStore(), { provider: 'openai', credential: { type: 'api_key', key: 'fixture-no-network' } });
     const settingsManager = SettingsManager.inMemory({ compaction: { enabled: false } });
     const sessionManager = SessionManager.inMemory(directory);
     const resourceLoader = new DefaultResourceLoader({ cwd: directory, agentDir: directory, settingsManager,
@@ -40,7 +41,7 @@ it('real browser backend failure remains an error through the real Pi loop, mode
     const adapter = new PiEventAdapter(); const adapted: AgentEvent[] = [];
     const toolName = 'mcp__session__browser_tool';
     let backendResponse: { content: string; isError: boolean } | undefined;
-    ({ session } = await createAgentSession({ cwd: directory, agentDir: directory, authStorage, modelRegistry,
+    ({ session } = await createAgentSession({ cwd: directory, agentDir: directory, modelRuntime,
       settingsManager, sessionManager, resourceLoader, model, tools: [toolName], customTools: [{
         name: toolName, label: 'Capture fixture', description: 'Read-only canvas capture fixture',
         parameters: Type.Object({ command: Type.Array(Type.String()) }),
@@ -52,7 +53,7 @@ it('real browser backend failure remains an error through the real Pi loop, mode
       }] }));
     installStructuredToolErrors(session);
     let requests = 0; let modelError: boolean | undefined; let modelContent: unknown;
-    session.agent.streamFn = (_model, context) => {
+    session.agent.streamFunction = (_model, context) => {
       const receipt = context.messages.find(message => message.role === 'toolResult');
       if (receipt?.role === 'toolResult') { modelError = receipt.isError; modelContent = receipt.content; }
       const reason = ++requests === 1 ? 'toolUse' : 'stop';

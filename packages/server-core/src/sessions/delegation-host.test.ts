@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -524,4 +524,15 @@ describe('real host delegated-session dispatch', () => {
     ))).toMatchObject({ errorCanRetry: true });
     expect(h.sent).toHaveLength(0);
   });
+});
+
+// These fixtures exercise the opt-in historical host contract.
+let previousLegacyContract: string | undefined;
+beforeEach(() => {
+  previousLegacyContract = process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT;
+  process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT = '1';
+});
+afterEach(() => {
+  if (previousLegacyContract === undefined) delete process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT;
+  else process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT = previousLegacyContract;
 });

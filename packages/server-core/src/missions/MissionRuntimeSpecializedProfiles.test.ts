@@ -1,3 +1,4 @@
+import { offlineMissionRouteOptions, withOfflineMissionRoutes } from './testing/mission-route-fixture.ts';
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import { createHash } from 'node:crypto';
 import { mkdtempSync, rmSync } from 'node:fs';
@@ -36,7 +37,7 @@ const CAPABILITY_HASH = createHash('sha256').update(JSON.stringify([
 ])).digest('hex');
 
 function mission(id = 'specialized-runtime'): MissionSpec {
-  return MissionSpecSchema.parse({
+  return withOfflineMissionRoutes(MissionSpecSchema.parse({
     schemaVersion: 2,
     id,
     title: 'Document production',
@@ -77,7 +78,7 @@ function mission(id = 'specialized-runtime'): MissionSpec {
         requiredEvidence: [], effect: 'read',
       },
     ],
-  });
+  }));
 }
 
 function definition(): SpecializedAgentProfileDefinition {
@@ -311,6 +312,7 @@ describe('MissionRuntimeService specialized profiles', () => {
 
   function service(loadRegistry: () => Promise<SpecializedProfileRegistryDocument | null>) {
     return new MissionRuntimeService({
+      ...offlineMissionRouteOptions,
       sessionManager,
       resolveWorkspace: (id) => id === 'workspace-1' ? { id, rootPath: root } : null,
       listWorkspaces: () => [{ id: 'workspace-1', rootPath: root }],
@@ -404,6 +406,7 @@ describe('MissionRuntimeService specialized profiles', () => {
       ],
     });
     const runtime = new MissionRuntimeService({
+      ...offlineMissionRouteOptions,
       sessionManager,
       resolveWorkspace: id => id === 'workspace-1' ? { id, rootPath: root } : null,
       listWorkspaces: () => [],

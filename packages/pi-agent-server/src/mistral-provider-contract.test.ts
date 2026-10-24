@@ -75,7 +75,7 @@ describe('Mistral Pi transport through the request interceptor', () => {
       expect(requests).toHaveLength(15);
       for (const [index, request] of requests.entries()) {
         expect(request.url).toBe('https://api.mistral.ai/v1/chat/completions');
-        if (index % 5 === 0) expect(request.body).not.toHaveProperty('reasoning_effort');
+        if (index % 5 === 0) expect(request.body).toHaveProperty('reasoning_effort', 'none');
         else expect(request.body).toMatchObject({ reasoning_effort: 'high' });
         expect(request.body).not.toHaveProperty('prompt_mode');
         expect(request.body.prompt_cache_key).toBe('offline-session');

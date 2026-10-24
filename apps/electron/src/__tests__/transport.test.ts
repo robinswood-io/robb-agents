@@ -10,7 +10,7 @@ import { randomUUID } from 'node:crypto'
 import { WebSocket } from 'ws'
 import { EVENT_BUFFER_MAX_SIZE, type MessageEnvelope } from '@craft-agent/shared/protocol'
 import { WsRpcServer } from '../transport/server'
-import { WsRpcClient } from '../transport/client'
+import { WsRpcClient, type TransportConnectionState } from '../transport/client'
 import { serializeEnvelope } from '../transport/codec'
 
 // Helpers to manage cleanup
@@ -36,19 +36,26 @@ async function waitConnected(client: WsRpcClient, timeoutMs = 2000): Promise<voi
   }
 }
 
-/** Wait for specific transport status. */
-async function waitForStatus(
+/** Wait for observable transport state, including transient reconnect events. */
+async function waitForState(
   client: WsRpcClient,
-  predicate: (status: ReturnType<WsRpcClient['getConnectionState']>['status']) => boolean,
+  predicate: (state: TransportConnectionState) => boolean,
   timeoutMs = 2000,
 ): Promise<void> {
-  const start = Date.now()
-  while (!predicate(client.getConnectionState().status)) {
-    if (Date.now() - start > timeoutMs) {
-      throw new Error(`Status wait timeout. Last status: ${client.getConnectionState().status}`)
-    }
-    await new Promise(r => setTimeout(r, 10))
-  }
+  if (predicate(client.getConnectionState())) return;
+  await new Promise<void>((resolve, reject) => {
+    let unsubscribe = () => {};
+    const timeout = setTimeout(() => {
+      unsubscribe();
+      reject(new Error(`Status wait timeout. Last status: ${client.getConnectionState().status}`));
+    }, timeoutMs);
+    unsubscribe = client.onConnectionStateChanged((state) => {
+      if (!predicate(state)) return;
+      clearTimeout(timeout);
+      unsubscribe();
+      resolve();
+    });
+  });
 }
 
 async function waitUntil(predicate: () => boolean, timeoutMs = 2000): Promise<void> {
@@ -115,8 +122,9 @@ describe('handshake', () => {
     expect(await client.invoke('workspace')).toBe('test-workspace')
 
     client.setWorkspaceId('next-workspace')
+    const reconnecting = waitForState(client, (state) => state.status !== 'connected')
     client.reconnectNow()
-    await waitForStatus(client, (status) => status !== 'connected')
+    await reconnecting
     await waitConnected(client)
 
     expect(await client.invoke('workspace')).toBe('next-workspace')
@@ -445,7 +453,7 @@ describe('reliable delivery', () => {
     await waitUntil(() => receivedA.includes('before-a'))
 
     ;((clientA as any).ws as WebSocket).close()
-    await waitForStatus(clientA, (status) => status === 'disconnected')
+    await waitForState(clientA, (state) => state.status === 'disconnected')
 
     server.push('stream', { to: 'workspace', workspaceId: 'ws-b' }, 'only-b')
     server.push('stream', { to: 'workspace', workspaceId: 'ws-a' }, 'missed-a')
@@ -486,7 +494,7 @@ describe('reliable delivery', () => {
     await waitUntil(() => received.includes('before-stale'))
 
     ;((client as any).ws as WebSocket).close()
-    await waitForStatus(client, (status) => status === 'disconnected')
+    await waitForState(client, (state) => state.status === 'disconnected')
 
     for (let i = 0; i < EVENT_BUFFER_MAX_SIZE + 25; i++) {
       server.push('stream', { to: 'workspace', workspaceId: 'test-workspace' }, `missed-${i}`)
@@ -636,7 +644,7 @@ describe('connection state', () => {
     }))
 
     client.connect()
-    await waitForStatus(client, (s) => s === 'failed')
+    await waitForState(client, (state) => state.status === 'failed')
 
     const state = client.getConnectionState()
     expect(state.lastError?.kind).toBe('auth')
@@ -646,7 +654,7 @@ describe('connection state', () => {
     const { server, client } = await createPair({}, { autoReconnect: true, maxReconnectDelay: 200 })
 
     server.close()
-    await waitForStatus(client, (s) => s === 'reconnecting' || s === 'failed')
+    await waitForState(client, (state) => state.status === 'reconnecting' || state.status === 'failed')
 
     const state = client.getConnectionState()
     expect(['reconnecting', 'failed']).toContain(state.status)
@@ -667,7 +675,7 @@ describe('connection state', () => {
     }))
 
     client.connect()
-    await waitForStatus(client, (s) => s === 'failed')
+    await waitForState(client, (state) => state.status === 'failed' && state.lastClose !== undefined)
 
     const state = client.getConnectionState()
     expect(state.lastClose?.code).toBe(4005)

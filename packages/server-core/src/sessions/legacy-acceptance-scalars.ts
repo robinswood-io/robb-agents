@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import type { Message, ObjectiveAcceptanceCriterion } from '@craft-agent/core/types';
 import type { ActiveSessionObjective } from '@craft-agent/shared/sessions';
 import { parseIndependentReviewReceipt } from '@craft-agent/shared/agent';
+import { objectiveReviewBinding } from './objective-contract.ts';
 
 export interface LegacyAcceptanceScalarDiagnostic {
   kind: 'legacy-scalar-coercion';
@@ -85,7 +86,7 @@ export function recoverLegacyAcceptanceScalars(
   const rootIndex = messages.findIndex(message => message.role === 'user' && message.id === objective.userMessageId);
   if (rootIndex < 0) return undefined;
   const scoped = messages.slice(rootIndex + 1);
-  const persistedCriteriaSha256 = hash(saved);
+  const persistedCriteriaSha256 = objectiveReviewBinding(objective).acceptanceSha256;
   // Changing expected scalar types changes the meaning/hash of a bound review.
   // Never reuse such a review across the projection, even in a standard-risk task.
   for (const message of scoped) {
@@ -128,7 +129,7 @@ export function recoverLegacyAcceptanceScalars(
   return { criteria: original, diagnostic: {
     kind: 'legacy-scalar-coercion', objectiveId: objective.objectiveId,
     registrationMessageId: witness.id, registrationToolUseId: witness.toolUseId!, scalarChangeCount: changes,
-    persistedCriteriaSha256, projectedCriteriaSha256: hash(original),
+    persistedCriteriaSha256, projectedCriteriaSha256: objectiveReviewBinding({ ...objective, acceptanceCriteria: original }).acceptanceSha256,
   } };
 }
 

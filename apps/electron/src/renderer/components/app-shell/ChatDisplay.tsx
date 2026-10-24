@@ -152,7 +152,7 @@ interface ChatDisplayProps {
   /** Callback when LLM connection changes (only works when session is empty) */
   onConnectionChange?: (connectionSlug: string) => void
   /** Ref for the input, used for external focus control */
-  textareaRef?: React.RefObject<RichTextInputHandle>
+  textareaRef?: React.RefObject<RichTextInputHandle | null>
   /** When true, disables input (e.g., when agent needs activation) */
   disabled?: boolean
   /** Pending permission request for this session */

@@ -17,12 +17,11 @@ const context = {} as RequestContext
 describe('provider model discovery RPC', () => {
   it('hides every observed ChatGPT-incompatible model with an accurate total', async () => {
     const sdkModels = getModels('openai-codex')
-    expect(sdkModels.some(model => model.id === 'gpt-5.4')).toBe(true)
     const result = await providerModelsHandler()(context, 'openai-codex')
-    const rejected = ['gpt-5.4', 'gpt-5.4-mini', 'gpt-5.3-codex-spark']
-      .filter(id => sdkModels.some(model => model.id === id))
+    const incompatible = ['gpt-5.4', 'gpt-5.4-mini', 'gpt-5.3-codex-spark']
+    const rejected = incompatible.filter(id => sdkModels.some(model => model.id === id))
     const returnedIds = result.models.map((model: { id: string }) => model.id)
-    for (const id of rejected) expect(returnedIds).not.toContain(`pi/${id}`)
+    for (const id of incompatible) expect(returnedIds).not.toContain(`pi/${id}`)
     expect(result.totalCount).toBe(sdkModels.length - rejected.length)
     expect(result.models).toHaveLength(result.totalCount)
   })
@@ -36,6 +35,10 @@ describe('provider model discovery RPC', () => {
       contextWindow: full.contextWindow, reasoning: full.reasoning,
     })
     expect(result.models.map((model: { id: string }) => model.id)).toContain('pi/gpt-5.4-mini')
-    expect(result.totalCount).toBe(sdkModels.length)
+    // Historical GPT-4 and the stale Codex alias remain intentionally hidden.
+    const eligible = sdkModels.filter(model => !model.id.startsWith('gpt-4') && model.id !== 'codex-mini-latest')
+    expect(result.totalCount).toBe(eligible.length)
+    expect(result.models).toHaveLength(result.totalCount)
+    expect(result.models.every((model: { id: string }) => !model.id.startsWith('pi/gpt-4'))).toBe(true)
   })
 })

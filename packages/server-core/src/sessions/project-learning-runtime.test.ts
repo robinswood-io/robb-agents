@@ -99,36 +99,44 @@ describe('SessionManager runtime project learning', () => {
   });
 
   it('binds the selected playbook before chat and refuses closure with only a generic technical check', async () => {
-    const stream: AgentEvent[] = [];
-    const h = harness(stream, () => {
+    const previousLegacyMode = process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT;
+    process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT = '1';
+    try {
+      const stream: AgentEvent[] = [];
+      const h = harness(stream, () => {
+        expect(h.managed.activeObjective?.procedure).toEqual({ id: 'software-change', version: 1 });
+        // The model deliberately omits procedure and business requirement IDs.
+        h.managed.activeObjective = registerObjectiveAcceptanceCriteria(h.managed.activeObjective!, [{
+          id: 'generic-tests-pass', description: 'The fixture test command succeeds', toolName: 'Bash',
+          input: { command: 'bun test fixture.test.ts' }, checks: [{ path: 'passed', equals: true }],
+        }], Date.now() - 1);
+        const objective = h.managed.activeObjective;
+        stream.push(
+          { type: 'tool_start', toolName: 'Bash', toolUseId: 'generic-check', input: { command: 'bun test fixture.test.ts' } },
+          { type: 'tool_result', toolName: 'Bash', toolUseId: 'generic-check', result: '{"passed":true}', isError: false, executed: true },
+          { type: 'text_complete', text: `Les tests passent. <!-- robb_objective_outcome ${JSON.stringify({
+            state: 'complete_verified', blocker: null, remainingWork: [],
+            criteria: [...objective.completionCriteria, 'generic-tests-pass'].map(id => ({ id, satisfied: true, evidence: ['generic-check'] })),
+          })} -->` },
+          { type: 'complete' },
+        );
+      });
+      h.managed.playbookSlug = 'verified-software-change';
+      await h.manager.sendMessage(h.managed.id, 'Poursuit');
       expect(h.managed.activeObjective?.procedure).toEqual({ id: 'software-change', version: 1 });
-      // The model deliberately omits procedure and business requirement IDs.
-      h.managed.activeObjective = registerObjectiveAcceptanceCriteria(h.managed.activeObjective!, [{
-        id: 'generic-tests-pass', description: 'The fixture test command succeeds', toolName: 'Bash',
-        input: { command: 'bun test fixture.test.ts' }, checks: [{ path: 'passed', equals: true }],
-      }], Date.now() - 1);
-      const objective = h.managed.activeObjective;
-      stream.push(
-        { type: 'tool_start', toolName: 'Bash', toolUseId: 'generic-check', input: { command: 'bun test fixture.test.ts' } },
-        { type: 'tool_result', toolName: 'Bash', toolUseId: 'generic-check', result: '{"passed":true}', isError: false, executed: true },
-        { type: 'text_complete', text: `Les tests passent. <!-- robb_objective_outcome ${JSON.stringify({
-          state: 'complete_verified', blocker: null, remainingWork: [],
-          criteria: [...objective.completionCriteria, 'generic-tests-pass'].map(id => ({ id, satisfied: true, evidence: ['generic-check'] })),
-        })} -->` },
-        { type: 'complete' },
-      );
-    });
-    h.managed.playbookSlug = 'verified-software-change';
-    await h.manager.sendMessage(h.managed.id, 'Poursuit');
-    expect(h.managed.activeObjective?.procedure).toEqual({ id: 'software-change', version: 1 });
-    expect(h.managed.activeObjective?.terminalState).toBe('exhausted');
-    expect(h.managed.messages.some(message => message.role === 'tool' && message.toolUseId === 'generic-check' && !message.isError)).toBe(true);
-    const rejection = h.managed.messages.find(message => message.role === 'error' && message.errorCode === 'objective_validation_failed');
-    expect(rejection?.errorDetails).toEqual([
-      'Business procedure lacks outcome coverage: requested-behavior',
-      'Business procedure lacks outcome coverage: regression-checks',
-      'Business procedure lacks outcome coverage: user-journey',
-    ]);
+      expect(h.managed.activeObjective?.terminalState).toBe('exhausted');
+      expect(h.managed.messages.some(message => message.role === 'tool' && message.toolUseId === 'generic-check' && !message.isError)).toBe(true);
+      const rejection = h.managed.messages.find(message => message.role === 'error' && message.errorCode === 'objective_validation_failed');
+      expect(rejection?.errorDetails).toEqual([
+        'Business procedure lacks outcome coverage: requested-behavior',
+        'Business procedure lacks outcome coverage: regression-checks',
+        'Business procedure lacks outcome coverage: user-journey',
+        'Full-request coverage requires the current independent review, not only a successful registered observation',
+      ]);
+    } finally {
+      if (previousLegacyMode === undefined) delete process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT;
+      else process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT = previousLegacyMode;
+    }
   });
 
   it('persists an actual user correction as a version-bound inactive observation', async () => {

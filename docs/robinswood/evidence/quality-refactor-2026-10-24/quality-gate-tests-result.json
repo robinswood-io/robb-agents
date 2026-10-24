@@ -1,0 +1,11 @@
+{
+  "command": [
+    "rtk",
+    "bun",
+    "test",
+    "scripts/tests/source-quality.test.ts"
+  ],
+  "exitCode": 0,
+  "seconds": 0.33,
+  "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/quality-gate-tests.log"
+}

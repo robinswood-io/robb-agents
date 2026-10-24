@@ -58,7 +58,7 @@ export interface UseSessionSearchOptions {
   /** Grouping mode — needed to compute group keys for collapse-aware pagination */
   groupingMode?: 'date' | 'status' | 'unread' | 'project'
   /** Ref to the ScrollArea viewport element — used for scroll-based pagination */
-  scrollViewportRef?: React.RefObject<HTMLDivElement>
+  scrollViewportRef?: React.RefObject<HTMLDivElement | null>
 }
 
 export interface UseSessionSearchResult {
@@ -87,7 +87,7 @@ export interface UseSessionSearchResult {
   collapsedGroupsMeta: CollapsedGroupMeta[]
 
   // Refs
-  searchInputRef: React.RefObject<HTMLInputElement>
+  searchInputRef: React.RefObject<HTMLInputElement | null>
 }
 
 // ---------------------------------------------------------------------------

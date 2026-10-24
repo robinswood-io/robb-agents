@@ -121,7 +121,7 @@ export function UnifiedDiffViewer({
     ? '[data-diffs-header] { cursor: pointer; } [data-diffs-header]:hover [data-title] { text-decoration: underline; }'
     : undefined
 
-  const options: FileDiffProps<undefined>['options'] = useMemo(() => ({
+  const options: FileDiffProps<undefined, undefined>['options'] = useMemo(() => ({
     theme: resolvedThemeName,
     diffStyle,
     diffIndicators: 'bars',

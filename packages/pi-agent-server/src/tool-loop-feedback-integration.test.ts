@@ -1,10 +1,12 @@
+import { InMemoryCredentialStore } from '@earendil-works/pi-ai';
+import { createAuthenticatedModelRuntime } from './authenticated-model-runtime.ts';
 import { expect, it } from 'bun:test';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Type } from '@sinclair/typebox';
 import { createAssistantMessageEventStream, type AssistantMessage } from '@earendil-works/pi-ai';
-import { AuthStorage, ModelRegistry, SettingsManager, SessionManager, DefaultResourceLoader, createAgentSession, type AgentSession } from '@earendil-works/pi-coding-agent';
+import { SettingsManager, SessionManager, DefaultResourceLoader, createAgentSession, type AgentSession } from '@earendil-works/pi-coding-agent';
 import { PiEventAdapter } from '../../shared/src/agent/backend/pi/event-adapter.ts';
 import { registerObjectiveAcceptanceCriteria, validateObjectiveAcceptanceCriteria } from '../../server-core/src/sessions/objective-acceptance-criteria.ts';
 import { transitionObjectiveContract } from '../../server-core/src/sessions/objective-contract.ts';
@@ -16,8 +18,7 @@ it('real Pi loop keeps JSON authoritative, delivers one model/UI guidance and va
   const directory = mkdtempSync(join(tmpdir(), 'robb-tool-hint-'));
   let session: AgentSession | undefined;
   try {
-    const authStorage = AuthStorage.inMemory(); authStorage.set('openai', { type: 'api_key', key: 'fixture-no-network' });
-    const modelRegistry = ModelRegistry.inMemory(authStorage);
+    const { modelRuntime, modelRegistry } = await createAuthenticatedModelRuntime(new InMemoryCredentialStore(), { provider: 'openai', credential: { type: 'api_key', key: 'fixture-no-network' } });
     const settingsManager = SettingsManager.inMemory({ compaction: { enabled: false } });
     const sessionManager = SessionManager.inMemory(directory);
     const resourceLoader = new DefaultResourceLoader({ cwd: directory, agentDir: directory, settingsManager,
@@ -27,7 +28,7 @@ it('real Pi loop keeps JSON authoritative, delivers one model/UI guidance and va
     const budget = new ToolLoopBudget(); budget.beginPrompt(); let executions = 0;
     const adapter = new PiEventAdapter(); const adapted: any[] = [];
     const toolName = 'mcp__ops__get_state'; const authoritative = '{"code":0,"success":true}';
-    ({ session } = await createAgentSession({ cwd: directory, agentDir: directory, authStorage, modelRegistry,
+    ({ session } = await createAgentSession({ cwd: directory, agentDir: directory, modelRuntime,
       settingsManager, sessionManager, resourceLoader, model, tools: [toolName], customTools: [{
         name: toolName, label: 'Read state', description: 'Fixture read-only state', parameters: Type.Object({ item: Type.Number() }),
         execute: async (toolCallId, input, signal) => {
@@ -39,7 +40,7 @@ it('real Pi loop keeps JSON authoritative, delivers one model/UI guidance and va
       }] }));
     installToolLoopFeedback(session);
     let requests = 0; const payloadRoles: string[][] = []; let modelSawGuidance = false;
-    session.agent.streamFn = (_model, context) => {
+    session.agent.streamFunction = (_model, context) => {
       payloadRoles.push(context.messages.map(m => m.role));
       modelSawGuidance ||= context.messages.some(m => m.role === 'user' && Array.isArray(m.content)
         && m.content.some(c => c.type === 'text' && c.text.startsWith('Cost guard: 3 consecutive')));
@@ -91,15 +92,15 @@ it('only the dedicated SDK custom message is UI info, never a tool receipt or as
 it('Stop after recording guidance starts no new live request and preserves a queued human',async()=>{
  const directory=mkdtempSync(join(tmpdir(),'hint-stop-independent-'));let session:AgentSession|undefined;
  try{
-  const authStorage=AuthStorage.inMemory();authStorage.set('openai',{type:'api_key',key:'fixture-no-network'});const modelRegistry=ModelRegistry.inMemory(authStorage),settingsManager=SettingsManager.inMemory({compaction:{enabled:false}}),sessionManager=SessionManager.inMemory(directory);
+  const { modelRuntime, modelRegistry } = await createAuthenticatedModelRuntime(new InMemoryCredentialStore(), { provider: 'openai', credential: { type: 'api_key', key: 'fixture-no-network' } });const settingsManager=SettingsManager.inMemory({compaction:{enabled:false}}),sessionManager=SessionManager.inMemory(directory);
   const resourceLoader=new DefaultResourceLoader({cwd:directory,agentDir:directory,settingsManager,noExtensions:true,noSkills:true,noPromptTemplates:true,noThemes:true,noContextFiles:true});await resourceLoader.reload();const model=modelRegistry.find('openai','gpt-5.5')!;
   const budget=new ToolLoopBudget();budget.beginPrompt();for(let i=0;i<2;i++)budget.observe('mcp__ops__get_state',{item:i});
-  ({session}=await createAgentSession({cwd:directory,agentDir:directory,authStorage,modelRegistry,settingsManager,sessionManager,resourceLoader,model,tools:['mcp__ops__get_state'],customTools:[{name:'mcp__ops__get_state',label:'fixture',description:'fixture',parameters:Type.Object({}),execute:async(id,input,signal)=>{
+  ({session}=await createAgentSession({cwd:directory,agentDir:directory,modelRuntime,settingsManager,sessionManager,resourceLoader,model,tools:['mcp__ops__get_state'],customTools:[{name:'mcp__ops__get_state',label:'fixture',description:'fixture',parameters:Type.Object({}),execute:async(id,input,signal)=>{
    await session!.steer('AUTHENTIC_HUMAN_ALREADY_ACCEPTED');
    const result=await finishToolLoopResult({content:[{type:'text',text:'{"ok":true}'}],details:{}},budget.observe('mcp__ops__get_state',{item:2}),{session:session!,isCurrentSession:()=>true,toolCallId:id,signal});session!.agent.abort();return result;
   }}]}));
   installToolLoopFeedback(session);
-  let phase=1,calls=0;const contexts:any[]=[];session.agent.streamFn=(_m,context,options)=>{
+  let phase=1,calls=0;const contexts:any[]=[];session.agent.streamFunction=(_m,context,options)=>{
    const stopped=options?.signal?.aborted===true;contexts.push({phase,stopped,content:context.messages});const n=++calls;
    const reason=stopped?'aborted':phase===1&&n===1?'toolUse':'stop';const msg:any={role:'assistant',api:model.api,provider:model.provider,model:model.id,content:reason==='toolUse'?[{type:'toolCall',id:'old-tool',name:'mcp__ops__get_state',arguments:{}}]:[{type:'text',text:reason==='aborted'?'':'New question answered'}],stopReason:reason,timestamp:Date.now(),usage:{input:1,output:1,cacheRead:0,cacheWrite:0,totalTokens:2,cost:{input:0,output:0,cacheRead:0,cacheWrite:0,total:0}}};
    const stream=createAssistantMessageEventStream();if(reason==='aborted')stream.push({type:'error',reason:'aborted',error:msg});else stream.push({type:'done',reason,message:msg});stream.end();return stream;

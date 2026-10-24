@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'bun:test';
-import { validateToolArguments } from '@earendil-works/pi-ai';
+import { validateToolArguments, type JsonObject } from '@earendil-works/pi-ai';
 import { getToolDefsAsJsonSchema } from '@craft-agent/session-tools-core';
 
 // No tools execute: exercise the same SDK argument validation used by Pi.
-const samples: Record<string, Record<string, unknown>> = {
+const samples: Record<string, JsonObject> = {
   SubmitPlan: { planPath: '/fixture/plan.md' },
   update_plan: { explanation: 'The document is ready for review.', plan: [{ step: 'Create document', status: 'completed' }, { step: 'Review document', status: 'in_progress' }] },
   config_validate: { target: 'config' },
@@ -37,7 +37,7 @@ const samples: Record<string, Record<string, unknown>> = {
   unbind_messaging_channel: { platform: 'telegram' },
 };
 const definitions = getToolDefsAsJsonSchema({ includeDeveloperFeedback: true });
-function validate(name: string, args: Record<string, unknown>) {
+function validate(name: string, args: JsonObject) {
   const definition = definitions.find(tool => tool.name === name)!;
   return validateToolArguments({ name, description: definition.description, parameters: definition.inputSchema as never },
     { id: 'fixture', type: 'toolCall', name, arguments: args });
@@ -66,9 +66,10 @@ describe('Pi session tool argument contracts', () => {
     }
   });
   it('rejects invalid enums and collection bounds before dispatch', () => {
-    for (const input of [
+    const invalidInputs: JsonObject[] = [
       { prompt: 'Review', permissionMode: 'execute' }, { prompt: 'Review', role: 'administrator' },
-    ]) expect(() => validate('spawn_session', input)).toThrow();
+    ];
+    for (const input of invalidInputs) expect(() => validate('spawn_session', input)).toThrow();
     expect(() => validate('send_agent_message', { sessionId: 'fixture', message: 'note', messageType: 'human' })).toThrow();
     expect(() => validate('wait_sessions', { sessionIds: [], timeoutMs: 0 })).toThrow();
     expect(() => validate('wait_sessions', { sessionIds: ['fixture'], timeoutMs: -1 })).toThrow();

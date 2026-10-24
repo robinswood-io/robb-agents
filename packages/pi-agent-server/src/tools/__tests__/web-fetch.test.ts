@@ -101,10 +101,10 @@ describe('Web Fetch SSRF & Redirect Protection', () => {
       const tool = createWebFetchTool(() => null);
       const res = await tool.execute(
         'call-1',
-        { url: 'https://example.com/start' },
-        undefined as any,
-        undefined as any,
-        undefined as any,
+        { url: 'https://93.184.216.34/start' },
+        undefined,
+        undefined,
+        undefined,
       );
       const text = (res.content[0] as { type: 'text'; text: string }).text;
       expect((res.details as { isError?: boolean })?.isError).toBe(true);

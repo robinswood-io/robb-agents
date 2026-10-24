@@ -16,7 +16,7 @@ interface UseFocusZoneOptions {
 
 interface UseFocusZoneReturn {
   /** Ref to attach to zone container */
-  zoneRef: React.RefObject<HTMLDivElement>
+  zoneRef: React.RefObject<HTMLDivElement | null>
   /** Whether this zone currently has focus */
   isFocused: boolean
   /** Whether DOM focus should move to this zone (true only for explicit keyboard navigation) */
@@ -63,7 +63,7 @@ export function useFocusZone({
 
     registerZone({
       id: zoneId,
-      ref: zoneRef as React.RefObject<HTMLElement>,
+      ref: zoneRef as React.RefObject<HTMLElement | null>,
       focusFirst,
     })
 

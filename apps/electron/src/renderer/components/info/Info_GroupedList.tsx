@@ -85,7 +85,7 @@ function Info_GroupedListRoot({
 
   // Check if there are any items
   const hasItems = React.Children.toArray(children).some((child) => {
-    if (React.isValidElement(child) && child.type === Info_GroupedListGroup) {
+    if (React.isValidElement<Info_GroupedListGroupProps>(child) && child.type === Info_GroupedListGroup) {
       return React.Children.count(child.props.children) > 0
     }
     return false

@@ -1,3 +1,4 @@
+import { offlineMissionRouteOptions, withOfflineMissionRoutes } from './testing/mission-route-fixture.ts';
 import { afterEach, describe, expect, it } from 'bun:test';
 import {
   existsSync,
@@ -50,7 +51,7 @@ afterEach(() => {
 });
 
 function spec(): MissionSpec {
-  return MissionSpecSchema.parse({
+  return withOfflineMissionRoutes(MissionSpecSchema.parse({
     schemaVersion: 2,
     id: 'connector-mission',
     title: 'Connector mission',
@@ -89,7 +90,7 @@ function spec(): MissionSpec {
         },
       },
     ],
-  });
+  }));
 }
 
 function executionInput(): MissionExecutionInput {
@@ -669,6 +670,7 @@ describe('BrokeredMissionConnectorExecutor', () => {
       cancelProcessing: async () => {},
     } as unknown as ISessionManager;
     const service = new MissionRuntimeService({
+      ...offlineMissionRouteOptions,
       sessionManager,
       resolveWorkspace: (id) => id === 'workspace-1' ? { id, rootPath: broker.root } : null,
       listWorkspaces: () => [{ id: 'workspace-1', rootPath: broker.root }],
@@ -707,7 +709,7 @@ describe('BrokeredMissionConnectorExecutor', () => {
       executorFactory: () => new ReviewExecutor(),
       connectorExecutorFactory: () => broker.executor,
     };
-    const firstService = new MissionRuntimeService(options);
+    const firstService = new MissionRuntimeService({ ...offlineMissionRouteOptions, ...options });
     await firstService.createAndStart('workspace-1', spec());
     await eventually(async () => (await firstService.getMission('workspace-1', 'connector-mission')).status === 'waiting-approval');
     const pending = await firstService.getPendingConnectorApproval('workspace-1', 'connector-mission', 'publish');
@@ -717,7 +719,7 @@ describe('BrokeredMissionConnectorExecutor', () => {
       decision: 'approved', resolvedBy: 'human-approver-1',
     });
 
-    const restartedService = new MissionRuntimeService(options);
+    const restartedService = new MissionRuntimeService({ ...offlineMissionRouteOptions, ...options });
     expect(await restartedService.start()).toContain('workspace-1:connector-mission');
     await eventually(async () => (await restartedService.getMission('workspace-1', 'connector-mission')).status === 'completed');
     expect(broker.runtime.mutationCount).toBe(1);

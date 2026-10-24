@@ -395,27 +395,20 @@ export function registerLlmConnectionsHandlers(server: RpcServer, deps: HandlerD
   server.handle(RPC_CHANNELS.pi.GET_PROVIDER_MODELS, async (_ctx, provider: string) => {
     const { getModels } = await import('@earendil-works/pi-ai/compat')
     const { getPiModelsForAuthProvider } = await import('@craft-agent/shared/config')
-    const SUPPLEMENTAL_COSTS: Readonly<Record<string, { input: number; output: number }>> = {
-      'claude-fable-5-1': { input: 10, output: 50 },
-      'claude-opus-5': { input: 5, output: 25 },
-      'gpt-6-astra': { input: 10, output: 50 },
-      'gpt-5.6-sol': { input: 4, output: 20 },
-      'gpt-6.1-sol': { input: 2, output: 10 },
-      'gpt-6-sol': { input: 2, output: 10 },
-      'gpt-5.6-terra': { input: 2, output: 12 },
-      'gpt-5.6-luna': { input: 0.2, output: 1.2 },
-      'gpt-6-luna': { input: 0.1, output: 0.5 },
-      'mistral-medium-3-5': { input: 0.4, output: 2 },
-    }
     try {
       const sdkCostById = new Map<string, { input: number; output: number }>()
       for (const m of getModels(provider as Parameters<typeof getModels>[0])) {
         sdkCostById.set(m.id, { input: m.cost.input, output: m.cost.output })
       }
+      // The saved Mistral alias shares its native transport and current price.
+      if (provider === 'mistral') {
+        const cost = sdkCostById.get('mistral-medium-2604')
+        if (cost) sdkCostById.set('mistral-medium-3-5', cost)
+      }
       const catalog = getPiModelsForAuthProvider(provider)
       const enriched = catalog.map(m => {
         const bareId = m.id.startsWith('pi/') ? m.id.slice(3) : m.id
-        const cost = sdkCostById.get(bareId) ?? SUPPLEMENTAL_COSTS[bareId] ?? { input: 0, output: 0 }
+        const cost = sdkCostById.get(bareId) ?? { input: 0, output: 0 }
         return {
           id: m.id.startsWith('pi/') ? m.id : `pi/${m.id}`,
           name: m.name,
@@ -943,7 +936,9 @@ export function registerLlmConnectionsHandlers(server: RpcServer, deps: HandlerD
     error?: string
   }> => {
     try {
-      const { loginGitHubCopilot } = await import('@earendil-works/pi-ai/oauth')
+      const { githubCopilotProvider } = await import('@earendil-works/pi-ai/providers/github-copilot')
+      const oauth = githubCopilotProvider().auth?.oauth
+      if (!oauth) throw new Error('The installed Pi SDK has no GitHub Copilot OAuth provider.')
       const credentialManager = getCredentialManager()
 
       // Cancel any previous in-flight flow
@@ -955,9 +950,14 @@ export function registerLlmConnectionsHandlers(server: RpcServer, deps: HandlerD
       // Use Pi SDK's login flow — this handles the device code flow AND
       // the critical Copilot token exchange that determines the correct
       // API endpoint for the user's subscription tier (individual/business/enterprise).
-      const credentials = await loginGitHubCopilot({
-        onDeviceCode: ({ userCode, verificationUri }) => {
-          deps.platform.logger?.info(`[GitHub OAuth] Device code: ${userCode}`)
+      const credentials = await oauth.login({
+        notify: event => {
+          if (event.type === 'progress') {
+            deps.platform.logger?.info(`[GitHub OAuth] ${event.message}`)
+            return
+          }
+          if (event.type !== 'device_code') return
+          const { userCode, verificationUri } = event
           pushTyped(server, RPC_CHANNELS.copilot.DEVICE_CODE, { to: 'client', clientId: ctx.clientId }, {
             userCode,
             verificationUri,
@@ -967,12 +967,9 @@ export function registerLlmConnectionsHandlers(server: RpcServer, deps: HandlerD
             deps.platform.logger?.warn(`Failed to open browser for GitHub OAuth: ${err}`)
           })
         },
-        onPrompt: async () => {
+        prompt: async () => {
           // Pi SDK asks for GitHub Enterprise domain — return empty for github.com
           return ''
-        },
-        onProgress: (message) => {
-          deps.platform.logger?.info(`[GitHub OAuth] ${message}`)
         },
         signal: copilotOAuthAbort.signal,
       })

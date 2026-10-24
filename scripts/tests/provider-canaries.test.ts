@@ -182,13 +182,13 @@ describe('provider contract canaries', () => {
     const shared = await Bun.file('packages/shared/package.json').json() as any;
     const piServer = await Bun.file('packages/pi-agent-server/package.json').json() as any;
 
-    expect(root.dependencies['@earendil-works/pi-ai']).toBe('0.80.3');
-    expect(root.dependencies['@earendil-works/pi-coding-agent']).toBe('0.80.3');
-    expect(shared.dependencies['@earendil-works/pi-ai']).toBe('0.80.3');
-    expect(shared.dependencies['@earendil-works/pi-coding-agent']).toBe('0.80.3');
-    expect(piServer.dependencies['@earendil-works/pi-agent-core']).toBe('0.80.3');
-    expect(piServer.dependencies['@earendil-works/pi-ai']).toBe('0.80.3');
-    expect(piServer.dependencies['@earendil-works/pi-coding-agent']).toBe('0.80.3');
+    expect(root.dependencies['@earendil-works/pi-ai']).toBe('1.4.0');
+    expect(root.dependencies['@earendil-works/pi-coding-agent']).toBe('1.4.0');
+    expect(shared.dependencies['@earendil-works/pi-ai']).toBe('1.4.0');
+    expect(shared.dependencies['@earendil-works/pi-coding-agent']).toBe('1.4.0');
+    expect(piServer.dependencies['@earendil-works/pi-agent-core']).toBe('1.4.0');
+    expect(piServer.dependencies['@earendil-works/pi-ai']).toBe('1.4.0');
+    expect(piServer.dependencies['@earendil-works/pi-coding-agent']).toBe('1.4.0');
     expect(piServer.dependencies['@craft-agent/core']).toBe('workspace:*');
   });
 });

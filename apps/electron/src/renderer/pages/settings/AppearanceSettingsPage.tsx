@@ -8,7 +8,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { LANGUAGES, type LanguageCode } from '@craft-agent/shared/i18n'
-import type { ColumnDef } from '@tanstack/react-table'
+import type { ColumnDef } from '@/components/ui/data-table'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { HeaderMenu } from '@/components/ui/HeaderMenu'

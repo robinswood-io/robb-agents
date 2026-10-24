@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { validateToolArguments, type Tool } from '@earendil-works/pi-ai';
+import Ajv from 'ajv';
 import type { Message, ObjectiveAcceptanceCriterion, ObjectiveOutcomeDeclaration } from '@craft-agent/core/types';
 import { buildObjectiveContractPrompt, objectiveReviewBinding, transitionObjectiveContract } from './objective-contract.ts';
 import { collectObjectiveAcceptanceObservations, projectObjectiveAcceptanceCriteria, registerObjectiveAcceptanceCriteria,
@@ -18,15 +18,20 @@ const typed: ObjectiveAcceptanceCriterion = {
 // The historical SDK transport: the first matching AJV anyOf branch coerces
 // each JSON scalar to string before the host receives the registration.
 const oldScalar = { anyOf: [{ type: 'string', maxLength: 2048 }, { type: 'number' }, { type: 'boolean' }, { type: 'null' }] };
+// Freeze the historical AJV configuration. The current SDK intentionally no longer
+// coerces scalars; using it here would stop exercising saved legacy contracts.
+const validateLegacyArguments = new Ajv({ coerceTypes: true, strict: false }).compile({
+  type: 'object', properties: { criteria: { type: 'array', items: { type: 'object', properties: {
+    input: { type: 'object', additionalProperties: oldScalar },
+    checks: { type: 'array', items: { type: 'object', properties: { equals: oldScalar } } },
+  } } } },
+});
 function throughOldSdk(criteria: ObjectiveAcceptanceCriterion[]): ObjectiveAcceptanceCriterion[] {
-  const args = validateToolArguments({ name: 'set_completion_criteria', description: '', parameters: {
-    type: 'object', properties: { criteria: { type: 'array', items: { type: 'object', properties: {
-      input: { type: 'object', additionalProperties: oldScalar },
-      checks: { type: 'array', items: { type: 'object', properties: { equals: oldScalar } } },
-    } } } },
-  } } as Tool, { type: 'toolCall', id: 'register-call', name: 'set_completion_criteria', arguments: { criteria: structuredClone(criteria) } });
-  return args.criteria as ObjectiveAcceptanceCriterion[];
+  const args = { criteria: structuredClone(criteria) };
+  if (!validateLegacyArguments(args)) throw new Error('Invalid historical registration fixture');
+  return args.criteria;
 }
+
 function fixture(criteria = [typed]) {
   const stored = throughOldSdk(criteria);
   const objective = registerObjectiveAcceptanceCriteria(
@@ -63,7 +68,7 @@ describe('evaluation-only legacy scalar transport recovery', () => {
     expect(registerObjectiveAcceptanceCriteria(f.objective, structuredClone(stored), 99)).toEqual(f.objective);
     expect(f).toEqual(before);
   });
-  it('replays the actual historical SDK coercion and repairs types without mutating the saved contract or transcript', () => {
+  it('replays the historical SDK validation configuration and repairs types without mutating the saved contract or transcript', () => {
     const f = fixture();
     const before = JSON.stringify(f);
     expect(f.objective.acceptanceCriteria![0]!.input.timeout).toBe('120');
@@ -76,12 +81,15 @@ describe('evaluation-only legacy scalar transport recovery', () => {
     expect(projected.diagnostic!.persistedCriteriaSha256).toBe(objectiveReviewBinding(f.objective).acceptanceSha256);
     expect(projected.diagnostic!.projectedCriteriaSha256).not.toBe(projected.diagnostic!.persistedCriteriaSha256);
     expect(validateObjectiveAcceptanceCriteria(f.objective, f.messages, f.receipt)).toEqual([]);
-    expect(validateObjectiveOutcome(f.receipt, { objective: f.objective, messages: f.messages }).valid).toBe(true);
+    // Repairing old scalar types proves the observation, not coverage of the whole request.
+    expect(validateObjectiveOutcome(f.receipt, { objective: f.objective, messages: f.messages })).toMatchObject({
+      valid: false, state: 'continue', gaps: ['Full-request coverage requires the current independent review, not only a successful registered observation'],
+    });
     expect(collectObjectiveAcceptanceObservations(f.objective, f.messages).map(x => x.passed)).toEqual([true]);
     expect(JSON.stringify(f)).toBe(before);
   });
 
-  it('recovers original false from the real SDK without accepting string false as an observed boolean', () => {
+  it('recovers original false from the historical validator without accepting string false as an observed boolean', () => {
     const disabled: ObjectiveAcceptanceCriterion = { ...typed, checks: [{ path: '$.disabled', equals: false }] };
     const f = fixture([disabled]);
     f.observation.toolResult = '{"disabled":false}';

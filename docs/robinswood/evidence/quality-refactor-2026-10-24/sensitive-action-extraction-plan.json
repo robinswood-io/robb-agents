@@ -1,0 +1,2641 @@
+{
+  "source": "packages/shared/src/agent/core/sensitive-external-action.ts",
+  "units": [
+    {
+      "names": [
+        "SensitiveExternalActionCategory"
+      ],
+      "group": "types",
+      "bodySha256": "d959b2d2508b66067aa0d69dca7c1d33acfb70ac70eb0b311c14da3e405f003e"
+    },
+    {
+      "names": [
+        "SensitiveConditionalTargetKind"
+      ],
+      "group": "types",
+      "bodySha256": "3da1933611b07f44202375f22584087413b7513e7efeafac39874a5c95f6da1c"
+    },
+    {
+      "names": [
+        "SensitiveConditionalTarget"
+      ],
+      "group": "types",
+      "bodySha256": "cee5165a69f770aded848bf8a7548712b625a6b54722e6f8a12e740dd2cee088"
+    },
+    {
+      "names": [
+        "SensitiveExternalAction"
+      ],
+      "group": "types",
+      "bodySha256": "81b5c5564ce065da1b8831aa7193ec2ee462533e13098a146e46bdab047cbd05"
+    },
+    {
+      "names": [
+        "AstNode"
+      ],
+      "group": "types",
+      "bodySha256": "43a3cc3f4003ab677be191140e771d371d2fabbe5fc8f286fb70fce80e7831d5"
+    },
+    {
+      "names": [
+        "ACTION_DETAILS"
+      ],
+      "group": "host-authorization",
+      "bodySha256": "c542e857a234eeb6533fb03895477eaca62a32690853a9c55ccdaddc077b1d58"
+    },
+    {
+      "names": [
+        "TARGET_FIELD_NAMES"
+      ],
+      "group": "host-authorization",
+      "bodySha256": "07ffbd7ff225f538787c0674f8c2951099e9939089a14e0b7bb596559864b6c7"
+    },
+    {
+      "names": [
+        "UNRESOLVED_REMOTE_SCOPE"
+      ],
+      "group": "host-authorization",
+      "bodySha256": "58cefdee6676eda5cf23efc2b32cedb9dd885ec7be5fae129b9b18616b1d9b57"
+    },
+    {
+      "names": [
+        "UNRESOLVED_EXTERNAL_TARGET"
+      ],
+      "group": "host-authorization",
+      "bodySha256": "45b44e70a914f12f0425efba23daad84aaed4b5fffff740d334d9f905faa14df"
+    },
+    {
+      "names": [
+        "UNRESOLVED_EXTERNAL_AUDIENCE"
+      ],
+      "group": "host-authorization",
+      "bodySha256": "bf9dfdd74b9986cb020f6f6677ad4e07d8ab746073cb6ca3b68bf995859db584"
+    },
+    {
+      "names": [
+        "ADDITIONAL_UNRESOLVED_TARGETS"
+      ],
+      "group": "host-authorization",
+      "bodySha256": "58e3164dfbd60ae1ce5b00b271965947ae2ce02fc0f5bab559558455069c4ba4"
+    },
+    {
+      "names": [
+        "UNRESOLVED_TARGET_SENTINELS"
+      ],
+      "group": "host-authorization",
+      "bodySha256": "e027fad7d55392ad0bddb34c8ce1d8ca7d8f6e246ac2f62a533e601ec4c6582a"
+    },
+    {
+      "names": [
+        "HOST_AUTHENTICATED_USER_AUTHORIZATION_MARKER"
+      ],
+      "group": "host-authorization",
+      "bodySha256": "44e3c3e9b0457da71f3d5604a80eb5b3d6bc01eb07a2d1670d6c30d65389481e"
+    },
+    {
+      "names": [
+        "parseHostAuthenticatedUserAuthorization"
+      ],
+      "group": "host-authorization",
+      "bodySha256": "49e97bfb01dad5f69ed91accf714217d2f162bba709a8273a5edc54ba272a8d2"
+    },
+    {
+      "names": [
+        "hostAuthenticatedAuthorizationContainsNoEffectDirective"
+      ],
+      "group": "host-authorization",
+      "bodySha256": "3a8d4dd4119e13d6e36f4fadf232bfc4dbaafe82df99892d7659edb213a77eb6"
+    },
+    {
+      "names": [
+        "hasUnresolvedRemoteScopeTarget"
+      ],
+      "group": "host-authorization",
+      "bodySha256": "31b5b9899c04eed6ff739e7d39cbdf6509ccc1fcd46fc6e273e6478689f7be8f"
+    },
+    {
+      "names": [
+        "hasUnresolvedSensitiveExternalActionTarget"
+      ],
+      "group": "host-authorization",
+      "bodySha256": "c9c2d4dbf140934e030e4cd1e4da0cc8ba0b4cffccb3a63fe47a02aa9d181565"
+    },
+    {
+      "names": [
+        "structuredGmailPolicyRequest"
+      ],
+      "group": "host-authorization",
+      "bodySha256": "7ef600808058caea5c03df4666050c84be8cdbad3b8c5376fd65014ac134558c"
+    },
+    {
+      "names": [
+        "externalActionAuthorityPolicySegments"
+      ],
+      "group": "host-authorization",
+      "bodySha256": "5332e535899443d549232f133077c149e321dff73b098fa5c5e0ea10c0d6d9ec"
+    },
+    {
+      "names": [
+        "hasDynamicOrGlobTargetSyntax"
+      ],
+      "group": "host-authorization",
+      "bodySha256": "3442c07d7042126322de747ee5d1604ea4d92e1e9f88a5cba2703bc3f4e06bb8"
+    },
+    {
+      "names": [
+        "genericHostAuthenticatedUserAuthorization"
+      ],
+      "group": "host-authorization-policy",
+      "bodySha256": "0ab2ce68df067a5c89396e8d78a2c5084fa43e24100779c52447a4223321285d"
+    },
+    {
+      "names": [
+        "isSensitiveExternalActionOtherwiseAuthorizedByObjective"
+      ],
+      "group": "objective-authorization-policy",
+      "bodySha256": "42b3c772d48eecf36678b13aab0aee3fe150fccba4f27706d0d349723dc60047"
+    },
+    {
+      "names": [
+        "GENERIC_CONTINUATIONS"
+      ],
+      "group": "target-syntax",
+      "bodySha256": "ba823d50c806c3455f3a7ccd9a966fdc40d9267b92fe4e837cdff468ddb10e14"
+    },
+    {
+      "names": [
+        "NON_AUTHORIZING_QUESTION_PREFIX"
+      ],
+      "group": "target-syntax",
+      "bodySha256": "2b384481f5bcf8ffa764111ec9e89b7a4e145e677c85965f5f1a41247d667b95"
+    },
+    {
+      "names": [
+        "NON_AUTHORIZING_INFORMATION_PREFIX"
+      ],
+      "group": "target-syntax",
+      "bodySha256": "b03f0e2614bd62bfe79d7b25589e94d47c6471ead8ad0638cc063771b93af666"
+    },
+    {
+      "names": [
+        "normalizeForMatch"
+      ],
+      "group": "target-syntax",
+      "bodySha256": "136da40a4b5c431b9e31f2df0ebea89e0569527fe92014c27c8ce3fadce9e094"
+    },
+    {
+      "names": [
+        "basename"
+      ],
+      "group": "target-syntax",
+      "bodySha256": "73e44f4e95fcb124a35bece3f371421baeacd2997af0b7331a0e8a6474e6563f"
+    },
+    {
+      "names": [
+        "isCanonicalEmailAddress"
+      ],
+      "group": "target-syntax",
+      "bodySha256": "8db6f52d7b4ba1010c0b49405c32ab4d54cef0ad2ccb3bd179a0f4bc6143d28f"
+    },
+    {
+      "names": [
+        "isBoundedSessionPdfAttachmentPath"
+      ],
+      "group": "target-syntax",
+      "bodySha256": "d6fb2591a0cead599b7b00cef48ba5d2436673a1afee5a019670d90c06096b3f"
+    },
+    {
+      "names": [
+        "hasBoundedSessionPdfAttachment"
+      ],
+      "group": "target-syntax",
+      "bodySha256": "f46f2936633308b5e45932fc5e3976bf8e0fba532ee3184340ff429f0914e411"
+    },
+    {
+      "names": [
+        "uniqueTargets"
+      ],
+      "group": "action-targets",
+      "bodySha256": "d27d30bf120644cdb059cf94dbd34861f4f56ddf6285a1dfa5b866706efdf394"
+    },
+    {
+      "names": [
+        "extractCanonicalGmailSendTargets"
+      ],
+      "group": "action-targets",
+      "bodySha256": "6821512e1b1540d8e9ef32557147bf4a4b4d51aeea2ff7cf64dba7afa9669df7"
+    },
+    {
+      "names": [
+        "extractInputTargets"
+      ],
+      "group": "action-targets",
+      "bodySha256": "9075fd62fd6f032ad674d62f7f1b0bc533e99269ca22e3445aafe4013f1a388d"
+    },
+    {
+      "names": [
+        "stringInput"
+      ],
+      "group": "remote-paths",
+      "bodySha256": "8e6bf85c86114da8a3371734c70bf2c5ceb07c6ce9c858330567b394ffa3b838"
+    },
+    {
+      "names": [
+        "rawRemotePathInput"
+      ],
+      "group": "remote-paths",
+      "bodySha256": "917aac00fd8348079058fb40aaf57ac70530281fb5ecceb03618e1ebf75fed24"
+    },
+    {
+      "names": [
+        "normalizeStaticRemotePath"
+      ],
+      "group": "remote-paths",
+      "bodySha256": "46a012a501603c359217ca77237f602852e160801360ad6924fda17673216a00"
+    },
+    {
+      "names": [
+        "humanizeRemoteIdentifier"
+      ],
+      "group": "remote-paths",
+      "bodySha256": "86eeafead0b9bf5cce341dfab3c360ceaa806d92b43c6e4cf76b14eca07ddf99"
+    },
+    {
+      "names": [
+        "remoteScopeFromPath"
+      ],
+      "group": "remote-paths",
+      "bodySha256": "bcda841858c8c4f37d7f521047281e5ece4073edad08be7679a918abef7aeb73"
+    },
+    {
+      "names": [
+        "pathReferences"
+      ],
+      "group": "remote-paths",
+      "bodySha256": "5b7f1f5944b0438842a88a0fd3480cb32f69f9bbdc13c879cf4f0a45b52925e2"
+    },
+    {
+      "names": [
+        "commandFromActionInput"
+      ],
+      "group": "remote-paths",
+      "bodySha256": "ad25d00995f8f3f7922639e48f12e2f78b8ef3d93b3fb7398cb2876b784a8453"
+    },
+    {
+      "names": [
+        "hasUnsupportedRemoteScopeNode"
+      ],
+      "group": "remote-paths",
+      "bodySha256": "98564fd63f8eef893d71d79676449a2ad823e21b9d29af56a2bea96a2ca9b334"
+    },
+    {
+      "names": [
+        "remoteCdTransitionsAreSafelyChained"
+      ],
+      "group": "remote-paths",
+      "bodySha256": "a1180e3b545360c1bd991222ed55968b3e73b375ff5954a8c4bcc7ca1bf49509"
+    },
+    {
+      "names": [
+        "hasDynamicShellExpansion"
+      ],
+      "group": "remote-paths",
+      "bodySha256": "1ab1ddef9b92978cf1fb681485a11aa88e8d7145c28f74d913653a3a93548629"
+    },
+    {
+      "names": [
+        "hasUnsafeRemoteInvocationMetadata"
+      ],
+      "group": "remote-paths",
+      "bodySha256": "5fe0fb249989477ba3206d0f1b55c9ae69f0493a7ab7ba35278a0c61111cfe51"
+    },
+    {
+      "names": [
+        "PROJECT_SCOPED_REMOTE_EXECUTABLES"
+      ],
+      "group": "remote-paths",
+      "bodySha256": "eae85a8ac706d4077b1cfa5f2850ff02ab16649aca3fe4e8c85003e8a986b174"
+    },
+    {
+      "names": [
+        "REMOTE_FILE_MUTATOR_EXECUTABLES"
+      ],
+      "group": "remote-paths",
+      "bodySha256": "a87b6702c78cbc5e613da13bbc49b7167dab476bfa0f67f17ab8ecbe37061080"
+    },
+    {
+      "names": [
+        "REMOTE_FILESYSTEM_MUTATION_EXECUTABLES"
+      ],
+      "group": "remote-paths",
+      "bodySha256": "addb42c75acc9d25578be8caf329de5e90ae3e050a7756591ac53097deb4ffef"
+    },
+    {
+      "names": [
+        "hasUnsafeRemoteWrapperChain"
+      ],
+      "group": "remote-paths",
+      "bodySha256": "e97f41ad1e977f430c586cd05f9e7ab963cac6878439d9fa87249ace5cdae7a8"
+    },
+    {
+      "names": [
+        "STATIC_REMOTE_FILE_OPERAND_PATTERN"
+      ],
+      "group": "remote-paths",
+      "bodySha256": "2fd844498ec0a952b5b4ec47d2218210a0c17838e4049d436a7b3ee899425b60"
+    },
+    {
+      "names": [
+        "PACKAGE_MANAGER_EXECUTABLES"
+      ],
+      "group": "remote-paths",
+      "bodySha256": "d154233859e06b05d36a767a91c9eea6e90a2fb7719c24d3a18954db2e1429e4"
+    },
+    {
+      "names": [
+        "LOCAL_PACKAGE_SCRIPT"
+      ],
+      "group": "remote-paths",
+      "bodySha256": "32ddff753d25effa169d49d22f16360d22d9b32ff54849dace7a77053c76ecc0"
+    },
+    {
+      "names": [
+        "BOUNDED_DEPLOYMENT_SCRIPT"
+      ],
+      "group": "remote-paths",
+      "bodySha256": "3ddba53a6dcaeab0989f4be9dec50d1b093e2732702d7eca33ccb84d7944946e"
+    },
+    {
+      "names": [
+        "EXTERNAL_PACKAGE_OPERATIONS"
+      ],
+      "group": "remote-paths",
+      "bodySha256": "96b525d3872c0400c1cf2f4b1aa796c01b5bd5cffee6098d608d1550212a85e4"
+    },
+    {
+      "names": [
+        "PACKAGE_MANAGER_OPTIONS_WITH_VALUES"
+      ],
+      "group": "remote-paths",
+      "bodySha256": "fd3701833d41c088798757b21c7e45482b4c2689da59cec0ab2933479b140735"
+    },
+    {
+      "names": [
+        "packageManagerActionIndex"
+      ],
+      "group": "remote-mutation-targets",
+      "bodySha256": "74ac1d05a510ff4f4b3938a403803e7d054a71154be607bcb754273acde4cf6d"
+    },
+    {
+      "names": [
+        "isBoundedProjectPackageCommand"
+      ],
+      "group": "remote-mutation-targets",
+      "bodySha256": "c0614421fa4e8cb0bae25cdccbcb8fb2a3ce681686ce4f0a36f62ec4ec014232"
+    },
+    {
+      "names": [
+        "packageManagerExternalOperation"
+      ],
+      "group": "remote-mutation-targets",
+      "bodySha256": "2e9931dc924f0c0f2bdaf131b77597495627972b1d71aec8199c6c3a7df70015"
+    },
+    {
+      "names": [
+        "CONTAINER_MULTI_TARGET_COMMANDS"
+      ],
+      "group": "remote-mutation-targets",
+      "bodySha256": "57c75c12fdac4f497c7f6e95dd1b156b415e03a303bf202c2134adb8c9802a8e"
+    },
+    {
+      "names": [
+        "CONTAINER_OPTIONS_WITH_VALUES"
+      ],
+      "group": "remote-mutation-targets",
+      "bodySha256": "ec6e20067de260618ff6f28d77e5233f16999e97b9119ca6cc2d7fbfb3e59dda"
+    },
+    {
+      "names": [
+        "BOUNDED_COMPOSE_MUTATIONS"
+      ],
+      "group": "remote-mutation-targets",
+      "bodySha256": "39c0a9d33722064a5cdea39bc96d12affe5c060a8ba4ffbcb44d6583c9475660"
+    },
+    {
+      "names": [
+        "BOUNDED_COMPOSE_ACTION_OPTIONS"
+      ],
+      "group": "remote-mutation-targets",
+      "bodySha256": "a6c7b8bc59751a7f296d3079cbbde02afdf209133e794f12b77ac44dac22b1bf"
+    },
+    {
+      "names": [
+        "containerMutationScopeTargets"
+      ],
+      "group": "remote-mutation-targets",
+      "bodySha256": "a9da6248004959d2dfdb7ecb20df43e0e120843e7a574aa950a7680c0a685e1e"
+    },
+    {
+      "names": [
+        "sedInPlaceMutationFileOperands"
+      ],
+      "group": "remote-mutation-targets",
+      "bodySha256": "3630ae58b4cb73bd71699def90f937bf73fa6c801200709906d99896518d4dbe"
+    },
+    {
+      "names": [
+        "remoteServiceMutationScopeTargets"
+      ],
+      "group": "remote-mutation-targets",
+      "bodySha256": "ecb13d6ef18b4cbebb5bd057c36c4e4f439d72e674a19e845ce1ace7f753a7a3"
+    },
+    {
+      "names": [
+        "GNU_TARGET_DIRECTORY_MUTATORS"
+      ],
+      "group": "remote-mutation-targets",
+      "bodySha256": "dfba483bbc29d9e4280f924780254f3ea4754a3b8adc3318f344016d3906eb04"
+    },
+    {
+      "names": [
+        "fileMutationTargetDirectoryOperands"
+      ],
+      "group": "remote-mutation-targets",
+      "bodySha256": "e601fa460df6e1b5fb3f9b64d2f6acb165a94e9d7dd75f7a405e00d105cde0fe"
+    },
+    {
+      "names": [
+        "installMutationFileOperands"
+      ],
+      "group": "remote-mutation-targets",
+      "bodySha256": "ceac076c31f536a4892c1653f91c3ec3a7aa0468b1d988693c824dda3a076d0a"
+    },
+    {
+      "names": [
+        "SYSTEMD_UNIT_FILE_MUTATORS"
+      ],
+      "group": "remote-mutation-targets",
+      "bodySha256": "ebc28cfc23e64d124ee178e6705794e4774e6483b5d92913edd02304a76b1417"
+    },
+    {
+      "names": [
+        "exactCompanionRemoteServiceTargets"
+      ],
+      "group": "remote-mutation-targets",
+      "bodySha256": "60f8a6b31226f91742e71e428e3f66ae1342c32c9b94537b6c18618fcb9898b0"
+    },
+    {
+      "names": [
+        "extractRemoteCommandScopeTargets"
+      ],
+      "group": "remote-scope-targets",
+      "bodySha256": "72d5a98cb518ab738120dade6239124591485624050fffb1579950b533583398"
+    },
+    {
+      "names": [
+        "extractRemoteTransferScopeTargets"
+      ],
+      "group": "remote-scope-targets",
+      "bodySha256": "a181830bafaa507a8512647b47a225292ecdfbe6798fbc78993c6e6fc9aeb3d5"
+    },
+    {
+      "names": [
+        "isSensitiveRemoteTransferSource"
+      ],
+      "group": "remote-scope-targets",
+      "bodySha256": "b5bd5dc2828c4e8b1075aa3cbc5806635c0aa42690321c4e4a224a26ad43f31a"
+    },
+    {
+      "names": [
+        "remoteTransferPermissionPreview"
+      ],
+      "group": "remote-scope-targets",
+      "bodySha256": "8cc66f39ee5516796c9ef14655a0194d73e84c7f4d494850cf1cfef089803b7b"
+    },
+    {
+      "names": [
+        "collectSimpleCommands"
+      ],
+      "group": "shell-parser",
+      "bodySha256": "2b35fe0c2158acd4225a942138ce39810b4ef0266076619f9aa5fae76292072d"
+    },
+    {
+      "names": [
+        "parseSimpleCommands"
+      ],
+      "group": "shell-parser",
+      "bodySha256": "c91e84627c1eba0aa698706a8f35eecca4223f069b92bf82a2d8925b6c37ce62"
+    },
+    {
+      "names": [
+        "unwrapCommand"
+      ],
+      "group": "shell-parser",
+      "bodySha256": "b2711df805b3f4c351721841a5a1d67cf98e9105d0a4bbde1df6c6ebf1078e89"
+    },
+    {
+      "names": [
+        "optionValue"
+      ],
+      "group": "shell-parser",
+      "bodySha256": "a20139c43c5232f8d6c9d45d0e7223ce9d6a08e160fe470ebf245a2f4e121a50"
+    },
+    {
+      "names": [
+        "firstCliActionIndex"
+      ],
+      "group": "shell-parser",
+      "bodySha256": "bc71e0add54419ad61a6cace066d23ac849829ebdf550c8d257f5a8681b4cf2f"
+    },
+    {
+      "names": [
+        "BOUNDED_IMPLEMENTATION_READ_EXECUTABLES"
+      ],
+      "group": "shell-parser",
+      "bodySha256": "274ce1552f1e58c4f8ba4e363c9482a99f6f78e7f181b2bb51b88e868c6dd354"
+    },
+    {
+      "names": [
+        "BOUNDED_IMPLEMENTATION_GIT_ACTIONS"
+      ],
+      "group": "shell-parser",
+      "bodySha256": "378ab5d126ba4778034b2461bb71554c03b794666b7e8d01a9cd42a509a7ff73"
+    },
+    {
+      "names": [
+        "BOUNDED_IMPLEMENTATION_COMPOSE_ACTIONS"
+      ],
+      "group": "shell-parser",
+      "bodySha256": "8cbd41c102c26e8c1354e391990d5cd7664f4d4c959cbbe55e983ba67e4d2786"
+    },
+    {
+      "names": [
+        "BOUNDED_IMPLEMENTATION_FILE_MUTATORS"
+      ],
+      "group": "remote-project-lifecycle",
+      "bodySha256": "19bfa3fc552c246baac86f038e4608691ef265c95990cd05bd6cf58d9fc710bc"
+    },
+    {
+      "names": [
+        "boundedImplementationSensitiveControlPath"
+      ],
+      "group": "remote-project-lifecycle",
+      "bodySha256": "692302329f7b396b346db287899311d01d9534afd6da3f112965858ec0c27bc1"
+    },
+    {
+      "names": [
+        "boundedImplementationPath"
+      ],
+      "group": "remote-project-lifecycle",
+      "bodySha256": "4b018cfc66d35a7efc7cc2a8d7a3ac3ca300700c2cbb127944b2b19352aaab23"
+    },
+    {
+      "names": [
+        "boundedImplementationTouchesGitControl"
+      ],
+      "group": "remote-project-lifecycle",
+      "bodySha256": "e82fd297c0b163307023618327055f52c831811601d73da0ec79c0d472dbd3bb"
+    },
+    {
+      "names": [
+        "boundedImplementationOperandEscapesCwd"
+      ],
+      "group": "remote-project-lifecycle",
+      "bodySha256": "f7c33044c36027001eba17be403301bef36cdf5873d0376a55a5d6e551094dd5"
+    },
+    {
+      "names": [
+        "isExactBoundedParentRulesProbe"
+      ],
+      "group": "remote-project-lifecycle",
+      "bodySha256": "a6fcb078c1e82fe97a2b9c1f3f5064cac7c273119c2c97c4bc33025ea77cd00c"
+    },
+    {
+      "names": [
+        "boundedImplementationRedirects"
+      ],
+      "group": "remote-project-lifecycle",
+      "bodySha256": "278287bd55d518005b386c03bfbea3e551cb5ade1e8bae681708afc2d52b7fc8"
+    },
+    {
+      "names": [
+        "boundedImplementationGitCommand"
+      ],
+      "group": "remote-project-lifecycle",
+      "bodySha256": "27c3d27dde0b23b9a5a01c4e90ca793d249f0b3425df57f5feb8831064a53783"
+    },
+    {
+      "names": [
+        "boundedImplementationPackageTestArguments"
+      ],
+      "group": "remote-project-lifecycle",
+      "bodySha256": "3a7d18d0affb872aca40ff298a09e4923f0b622f4556c50fe56dc62aad3f6412"
+    },
+    {
+      "names": [
+        "boundedImplementationPackageCommand"
+      ],
+      "group": "remote-project-lifecycle",
+      "bodySha256": "16ecdccd6c96cdc31969ed24efd6ac8c820cb2fe9b412ee968a52ce2f6352227"
+    },
+    {
+      "names": [
+        "boundedImplementationComposeCommand"
+      ],
+      "group": "remote-project-lifecycle",
+      "bodySha256": "182f9a722d32d162d54e07d0766cbb7b47a0bc725a01f2bc5ba1f69571539b7a"
+    },
+    {
+      "names": [
+        "boundedImplementationFileMutation"
+      ],
+      "group": "remote-project-lifecycle",
+      "bodySha256": "f1c8aac7f01bdd07c58c6b10ce2ef6cd1288bb8630838ae3b7515516677f712e"
+    },
+    {
+      "names": [
+        "boundedImplementationSimpleCommand"
+      ],
+      "group": "remote-project-lifecycle",
+      "bodySha256": "44d0ce6f09bfd1594870b923e32d56097a8acd24824114797e10642383c95c21"
+    },
+    {
+      "names": [
+        "boundedImplementationHasOutputRedirect"
+      ],
+      "group": "remote-project-lifecycle",
+      "bodySha256": "ba04c9f4c11ad69a307246934578c4c0ab9a88e2a379454448664a1fc63aa412"
+    },
+    {
+      "names": [
+        "boundedImplementationWritesProjectFiles"
+      ],
+      "group": "remote-project-lifecycle",
+      "bodySha256": "9b55147cedbd6b4b80c8ccf14735bb01a8e8e695756ef1d2489996c976077195"
+    },
+    {
+      "names": [
+        "boundedImplementationInvokesMutableRuntime"
+      ],
+      "group": "remote-project-lifecycle",
+      "bodySha256": "d3e795c76356299acea8ddb49a28509b4297daa5e3e2622ddb998073ec591618"
+    },
+    {
+      "names": [
+        "isBoundedRemoteImplementationLifecycleCommand"
+      ],
+      "group": "remote-project-lifecycle",
+      "bodySha256": "f840592ff93a88c01282be7a7be9013776330ef3e0c23fc3473b833877cdabba"
+    },
+    {
+      "names": [
+        "boundedRemoteReadHasHiddenSideEffect"
+      ],
+      "group": "remote-read-effects",
+      "bodySha256": "94ba20145bf983a7a01be6363f7d3698654410323af979a0190e31987ec719f6"
+    },
+    {
+      "names": [
+        "findSshHostIndex"
+      ],
+      "group": "action-presentation",
+      "bodySha256": "9658652b08532e8012c17fee8a9759e5dde0fcdf8a8487bc8afaca40dc189238"
+    },
+    {
+      "names": [
+        "positionalAfter"
+      ],
+      "group": "action-presentation",
+      "bodySha256": "b97209f881d5a60a4f5d166c73efb5ab58d74bb86eb8c96f273c25e05b51468e"
+    },
+    {
+      "names": [
+        "redactAuthenticationHeaders"
+      ],
+      "group": "action-presentation",
+      "bodySha256": "1ee6167c5322531d02963facb63faf0ab413c8e4c5a339e568425a06fef44304"
+    },
+    {
+      "names": [
+        "redactCommandPreview"
+      ],
+      "group": "action-presentation",
+      "bodySha256": "8cc794e4cada2b30f8528bcf6a1eb6769f88d7eb343e0549364b0fc4cf224274"
+    },
+    {
+      "names": [
+        "safeHttpHost"
+      ],
+      "group": "action-presentation",
+      "bodySha256": "bf4fcbcf6e378bcc0b1b56c051e41f9dcc2402c6692e4c62a9a9c69b7f44ef9d"
+    },
+    {
+      "names": [
+        "makeAction"
+      ],
+      "group": "action-presentation",
+      "bodySha256": "03a51b58069bc85a9898dca8b1b04a188d59116e2abc15e92ac65ea01b58e385"
+    },
+    {
+      "names": [
+        "uniqueConditionalTargets"
+      ],
+      "group": "action-presentation",
+      "bodySha256": "685849c55e685df2bbb944b180d9a8653e518e55a2c9459b82d933789a377c3d"
+    },
+    {
+      "names": [
+        "GENERIC_MUTATION_TERM_ALIASES"
+      ],
+      "group": "action-vocabulary",
+      "bodySha256": "f543b63fcd6845c8323af0aed58801dbbf80888ac3c37633c55add7f628d4712"
+    },
+    {
+      "names": [
+        "NON_DESTRUCTIVE_IMPLEMENTATION_TOKENS"
+      ],
+      "group": "action-vocabulary",
+      "bodySha256": "cec5b5d95c6d74f5763f00b995430b57c1a87f6883c73e045243ef5038be44f0"
+    },
+    {
+      "names": [
+        "IN_SCOPE_IMPLEMENTATION_ALIASES"
+      ],
+      "group": "action-vocabulary",
+      "bodySha256": "aecf63dcbdf9cedf384fdfca5aee3340eea3b9b13b830fb2a756b58f7c8f0eaa"
+    },
+    {
+      "names": [
+        "REMOTE_SERVICE_LIFECYCLE_AUTHORIZATION_TERMS"
+      ],
+      "group": "action-vocabulary",
+      "bodySha256": "3341dfd51a8f3a1b0a5a9a6d92f280d0d801ab8659e9061d2523ae593965066f"
+    },
+    {
+      "names": [
+        "genericMutationAuthorizationTerms"
+      ],
+      "group": "action-vocabulary",
+      "bodySha256": "e5b246b1edae813e8ecf4f65783d8889bbfbdd6aa600448f15edc95ab7d80157"
+    },
+    {
+      "names": [
+        "getGitPush"
+      ],
+      "group": "shell-effects",
+      "bodySha256": "2810ebcecc01dad5ce86af8685b009819c146e0f93d1c1d2df3fef1915bd1c2e"
+    },
+    {
+      "names": [
+        "classifyDeployment"
+      ],
+      "group": "shell-effects",
+      "bodySha256": "5721380267917fe4b5653124264412f0dc2212852f0a9d5369d2c7762deee000"
+    },
+    {
+      "names": [
+        "isRemotePythonSecretWrite"
+      ],
+      "group": "shell-effects",
+      "bodySha256": "97741370aaaf322e9d70ae3e26ee82cdf93a028f426aed4e75f6148abcda4757"
+    },
+    {
+      "names": [
+        "isRemoteShellSecretWrite"
+      ],
+      "group": "shell-effects",
+      "bodySha256": "8440e5bdfece250e041f83c705b7bb9508d15603d1c37555b48c7035993fbb42"
+    },
+    {
+      "names": [
+        "isRemoteInlineSecretWrite"
+      ],
+      "group": "shell-effects",
+      "bodySha256": "0635eade3f08b22b0dd8ad134134a1064be55e9bf38142fb48832b95a80f53cb"
+    },
+    {
+      "names": [
+        "classifyRestart"
+      ],
+      "group": "shell-effects",
+      "bodySha256": "8fc53f0803547d1d8c992dbf2ca13d4d833f50fb639e23aa146e13c30556ee96"
+    },
+    {
+      "names": [
+        "classifySecretWrite"
+      ],
+      "group": "shell-effects",
+      "bodySha256": "86294515508febeb97fe64531c9cae7d805b6532159cf5023e164c21819ec8ea"
+    },
+    {
+      "names": [
+        "HttpMutationDetails"
+      ],
+      "group": "shell-effects",
+      "bodySha256": "427339a5f7e62c1fae0ac4f406b8dad4daf0133b53d9e1ed38eb640b574f0548"
+    },
+    {
+      "names": [
+        "classifyHttpMutation"
+      ],
+      "group": "shell-effects",
+      "bodySha256": "c18a77b7c087ec6c28db07b716a34e4ef71aa30d87538bae15626d4a980887df"
+    },
+    {
+      "names": [
+        "httpMutationCategory"
+      ],
+      "group": "shell-effects",
+      "bodySha256": "59799437554639df174fefe0b29925e22edec4d5577b0867dfc63739c56f4eb0"
+    },
+    {
+      "names": [
+        "classifyPaymentCli"
+      ],
+      "group": "shell-effects",
+      "bodySha256": "14eab7d69b04e4b5e01eb9cdd30e110a7805e953bfe1e27eddce02013061c8bf"
+    },
+    {
+      "names": [
+        "extractLiteralBusinessTargets"
+      ],
+      "group": "http-audience-payload",
+      "bodySha256": "cf116df442a30af18f807daf3ad364fc9f9ec157003b7ccf52d62e399700e0d5"
+    },
+    {
+      "names": [
+        "HTTP_CONDITIONAL_TARGET_FIELDS"
+      ],
+      "group": "http-audience-payload",
+      "bodySha256": "b68f3e1bcab9290664ed50897f45bed622aaaff8fa9cf1e3fe75249c47603c8a"
+    },
+    {
+      "names": [
+        "HttpExternalSendTargets"
+      ],
+      "group": "http-audience-payload",
+      "bodySha256": "bd380abf2a93a6c168346794fcfffd77de9ca5308ed0f2d0fd6eed49bfbcf284"
+    },
+    {
+      "names": [
+        "HttpExternalSendAccumulator"
+      ],
+      "group": "http-audience-payload",
+      "bodySha256": "199472993f16a0c9557f7c8ac86ef7ccbb9ab1326e718171a1b2f2b1c9ae1ee3"
+    },
+    {
+      "names": [
+        "normalizedPayloadFieldName"
+      ],
+      "group": "http-audience-payload",
+      "bodySha256": "c7602e88739bbd20b508106750e8d6d2cd8e9367ff2b86ee78ad72b16ebf7126"
+    },
+    {
+      "names": [
+        "hasDynamicShellValue"
+      ],
+      "group": "http-audience-payload",
+      "bodySha256": "80f767d8da414957bf001d9d29ff73b621111aaa4b730f0e1bf14d0b3a32a6c4"
+    },
+    {
+      "names": [
+        "decodedLiteralValue"
+      ],
+      "group": "http-audience-payload",
+      "bodySha256": "54e56fd92542c13e81eee0d46d101a1e134d2583f02359747ee7314f29b63f66"
+    },
+    {
+      "names": [
+        "literalAudienceValues"
+      ],
+      "group": "http-audience-payload",
+      "bodySha256": "c6522ae0db32f91781801dab2fdb79df1922677329ed9448d75c8ad050eb274a"
+    },
+    {
+      "names": [
+        "literalConditionalValues"
+      ],
+      "group": "http-audience-payload",
+      "bodySha256": "fe8093794322da95bf3d8a8e997e5bf1afa5371dcea7b604be17817799e10a90"
+    },
+    {
+      "names": [
+        "collectHttpExternalSendPayload"
+      ],
+      "group": "http-audience-payload",
+      "bodySha256": "57277410317776c708f53118e0caa5b5ba3d9741423617b98690502d6c72e45d"
+    },
+    {
+      "names": [
+        "collectEmailsFromLiteral"
+      ],
+      "group": "http-audience-payload",
+      "bodySha256": "c080b2db03200ce09c45f79bff2b4898148878a18a5145bea4877ab9a3be91b2"
+    },
+    {
+      "names": [
+        "collectConditionalTargetsFromHttpPath"
+      ],
+      "group": "http-audience-payload",
+      "bodySha256": "f935227be2691179f0d47c7c78f2d498665e5cc7bd6063205b4a8d6d755884e4"
+    },
+    {
+      "names": [
+        "parseHttpExternalSendPayload"
+      ],
+      "group": "http-audience-payload",
+      "bodySha256": "f7f1dab30c4ad027cddec3c6fa0e727578eaff0cb4a4aeded03b6c07d3149d58"
+    },
+    {
+      "names": [
+        "HTTP_EXTERNAL_AUDIENCE_FIELDS"
+      ],
+      "group": "http-audience-fields",
+      "bodySha256": "872fab177c4013ecb62907468f0d09d54f630789192638418cbed047343a8af3"
+    },
+    {
+      "names": [
+        "HTTP_EXTERNAL_SEND_NON_AUDIENCE_FIELDS"
+      ],
+      "group": "http-audience-fields",
+      "bodySha256": "380f40c640668f9b4c9106d9dd1bd7c114b5aaa292fae5251762d3eb39f60dfc"
+    },
+    {
+      "names": [
+        "isHttpExternalAudienceField"
+      ],
+      "group": "http-audience-fields",
+      "bodySha256": "808a98bf7b4ee9e5e67c6fa8f053bb5a0f6900635ba267fd33c210c7bd89c90e"
+    },
+    {
+      "names": [
+        "resemblesUnknownExternalAudienceField"
+      ],
+      "group": "http-audience-fields",
+      "bodySha256": "c87915d8d0e6109102b12f7174349031d00eb2a90db5887fabaf880e456754d6"
+    },
+    {
+      "names": [
+        "isKnownHttpExternalSendNonAudienceField"
+      ],
+      "group": "http-audience-fields",
+      "bodySha256": "0f7eed888bf9455a9cb78d07d58a6d7e05b3494071c10f40bdf974aad621fa8b"
+    },
+    {
+      "names": [
+        "extractHttpExternalSendTargets"
+      ],
+      "group": "http-send-targets",
+      "bodySha256": "d6d9abc296521725b3cf446264cc404188035490e194c1632c3f3c56418a835c"
+    },
+    {
+      "names": [
+        "isLoopbackHost"
+      ],
+      "group": "http-send-targets",
+      "bodySha256": "3eb58c98164a07f403764942c8b31456c7cb7f69104dbf78f7142620bfc9deeb"
+    },
+    {
+      "names": [
+        "mergeSensitiveShellActions"
+      ],
+      "group": "http-send-targets",
+      "bodySha256": "9f9d8eaae48cb9180f26942aa67f49d2fb21e6ae84314a48b5e3ba2bc9588c37"
+    },
+    {
+      "names": [
+        "classifyBash"
+      ],
+      "group": "shell-classification",
+      "bodySha256": "d2bf6958cac8957940d39c2b84322915aa0faabb91228c8a57e4907f17688d2c"
+    },
+    {
+      "names": [
+        "normalizedToolAction"
+      ],
+      "group": "connector-classification",
+      "bodySha256": "e21ecaf30fc32c21e7f4ae745e8426d61493eb6b4fb787d6e10d37f1e2266a48"
+    },
+    {
+      "names": [
+        "READ_ONLY_ACTION_TOKENS"
+      ],
+      "group": "connector-classification",
+      "bodySha256": "ae5a4f166dcd645ca69c938b263adfb5a89b5482786167536eaa1c35121a6eed"
+    },
+    {
+      "names": [
+        "MUTATING_ACTION_TOKENS"
+      ],
+      "group": "connector-classification",
+      "bodySha256": "b5f5ac49b26812889a8173e1006668b72a688a3c42bee71dd1952837465560b3"
+    },
+    {
+      "names": [
+        "COMPOUND_ACTION_TOKENS"
+      ],
+      "group": "connector-classification",
+      "bodySha256": "d855e5d752826c8456fb29eed679cc9dd3ded94009dbd3ebb70a207a7f7c3be3"
+    },
+    {
+      "names": [
+        "CONDITIONAL_MUTATION_TOKENS"
+      ],
+      "group": "connector-classification",
+      "bodySha256": "bbf074e168db143d6149784e5ebbbb2c6448019e20652e05bf443cfa6b4e001e"
+    },
+    {
+      "names": [
+        "isMutatingActionToken"
+      ],
+      "group": "connector-classification",
+      "bodySha256": "f292cc1f71aca9d4e9126912bdac8d29643a2f8d052c182c2de257249fccd47e"
+    },
+    {
+      "names": [
+        "hasCompoundMutationBridge"
+      ],
+      "group": "connector-classification",
+      "bodySha256": "423e4ee9802df4244bf6a5b2344cc8617b9737c02e96da5a1b86d4d3b5510a7f"
+    },
+    {
+      "names": [
+        "isClearlyReadOnlyToolAction"
+      ],
+      "group": "connector-classification",
+      "bodySha256": "42d0e36f569148ed4ab82a690696d512a8d88358c70bfff09eaf11d0cb546933"
+    },
+    {
+      "names": [
+        "ATRIA_GRAPH_REQUEST_TOOL"
+      ],
+      "group": "connector-classification",
+      "bodySha256": "a0f290b7d126b3fb38b7c0015a867b61f4c027c3ec4000d0de1f8772418ce267"
+    },
+    {
+      "names": [
+        "GMAIL_SEND_TOOL"
+      ],
+      "group": "connector-classification",
+      "bodySha256": "b50a45307df3f0a812db5282473e4b051937c3b461bfe16f5a4e6653be5f5a4d"
+    },
+    {
+      "names": [
+        "BOUNDED_OSS_ATOMIC_WRITE_TOOL"
+      ],
+      "group": "connector-classification",
+      "bodySha256": "521f7104efbb12e2250d728bc99a7a85f000b360fdea626c6069bafca147b5f2"
+    },
+    {
+      "names": [
+        "BOUNDED_OSS_ATOMIC_WRITE_ROOT"
+      ],
+      "group": "connector-classification",
+      "bodySha256": "b60f21c38b78fc7ed0fc891c2cdfd173bf3426abec5ac61c61be7d89692f310c"
+    },
+    {
+      "names": [
+        "GRAPH_UUID"
+      ],
+      "group": "connector-classification",
+      "bodySha256": "dfa2c2c72596241891a57866840dc3852bdc9bbb774b3be9cd4d8e9fb243b20f"
+    },
+    {
+      "names": [
+        "ATRIA_APP_CONSENT_APPROVAL_ENDPOINT"
+      ],
+      "group": "connector-classification",
+      "bodySha256": "ddf17168438cd3a4d429450e69a71f076d52292b5a6634862219784d64a52a83"
+    },
+    {
+      "names": [
+        "ATRIA_APP_CONSENT_APPROVAL_TERMS"
+      ],
+      "group": "connector-classification",
+      "bodySha256": "dfe10a40180f7e06fcfb07fea02681e6a29a45d9d367f49f91fd1efd9fd389d1"
+    },
+    {
+      "names": [
+        "safePermissionPromptValue"
+      ],
+      "group": "connector-classification",
+      "bodySha256": "8d92871178b517e5e4742bc1dbaa92d2d30058539d9df816c64f024899d1a62b"
+    },
+    {
+      "names": [
+        "exactGmailSendPermissionPreview"
+      ],
+      "group": "connector-classification",
+      "bodySha256": "4d94580fdf9d2bc7d6b9af21ddd448a1cab75b934b881217c60ddf468509f745"
+    },
+    {
+      "names": [
+        "exactAtriaApprovalPermissionPreview"
+      ],
+      "group": "connector-classification",
+      "bodySha256": "dc2f938cc750b8d8e484aa6609dbb18058b4e489ce816be15a5bb904a8966562"
+    },
+    {
+      "names": [
+        "exactAtriaAppConsentApprovalEndpoint"
+      ],
+      "group": "connector-classification",
+      "bodySha256": "f9b5680dea2c0fe8d50326a7e7d8ba21ac100c007fcfefefeb3cb2a3314f346f"
+    },
+    {
+      "names": [
+        "classifyMcp"
+      ],
+      "group": "connector-classification",
+      "bodySha256": "693ff75690416fd99710cb09b3bec8c5f58aabbbe4e98b52b3b30d2946291a14"
+    },
+    {
+      "names": [
+        "pathTargets"
+      ],
+      "group": "connector-classification",
+      "bodySha256": "bbe6e4b30cc0443ab2fd33e8347cd554c7dad19c078e58dc6fbfae181532ac51"
+    },
+    {
+      "names": [
+        "apiSensitiveCategory"
+      ],
+      "group": "connector-classification",
+      "bodySha256": "710e35eff1f243d308277ca897d0a0731e76d8544f195aa4d3fd900f458c736d"
+    },
+    {
+      "names": [
+        "classifyApi"
+      ],
+      "group": "connector-classification",
+      "bodySha256": "dce06db7e15fe7e14ae7c6f280e46f0af4799100261c12c761db12e474b335f4"
+    },
+    {
+      "names": [
+        "BOUNDED_REMOTE_HOST_PROMPT_TOOLS"
+      ],
+      "group": "signed-oss-write",
+      "bodySha256": "4c9ee0f4cd50ea696c5d868855f0e29c4c691cfa4ee3151c82b50216e5830b17"
+    },
+    {
+      "names": [
+        "literalCanonicalAbsolutePosixPath"
+      ],
+      "group": "signed-oss-write",
+      "bodySha256": "f158142d9e56e1fec7ed92057a1f52b345588e6ea06d4b39fac636efa1dbf0c3"
+    },
+    {
+      "names": [
+        "boundedOssAtomicWriteLiteralPath"
+      ],
+      "group": "signed-oss-write",
+      "bodySha256": "6130c42c43f6b2cc1d8c37242a738569d4c5c25e15550fce1bc5a871d59a126e"
+    },
+    {
+      "names": [
+        "boundedOssAtomicWritePath"
+      ],
+      "group": "signed-oss-write",
+      "bodySha256": "1775eaf039cea8dbd0c755097f3cbe2e8451a0895d8320fedcfd3f99f5f02d2e"
+    },
+    {
+      "names": [
+        "SignedOssAtomicWriteDecision"
+      ],
+      "group": "signed-oss-write",
+      "bodySha256": "2f861984326db35b4283d7976f6952b31912d4b11f84e1615a19894f332cb86c"
+    },
+    {
+      "names": [
+        "signedOssAtomicWriteDecision"
+      ],
+      "group": "signed-oss-write",
+      "bodySha256": "1568b2655433925f256909d303a9d37851472d4ac72d11da018eb415d37bec28"
+    },
+    {
+      "names": [
+        "signedOssAtomicWriteAuthorizedSessionId"
+      ],
+      "group": "signed-oss-write",
+      "bodySha256": "5c4d9a6216d2bdee994ccb0ed26bff665e240217b897ee515e016ef9720ad7a5"
+    },
+    {
+      "names": [
+        "BOUNDED_REMOTE_EXACT_SCOPE_DECLARATION"
+      ],
+      "group": "signed-oss-write",
+      "bodySha256": "486c4e7217a2b776ed89240183b3111fab86fef4e62e98f49cba2b3a230f6ed3"
+    },
+    {
+      "names": [
+        "AFFIRMATIVE_BOUNDED_REMOTE_EXACT_SCOPE_DECLARATION"
+      ],
+      "group": "signed-oss-write",
+      "bodySha256": "6707e003c4c4394ae0d337bc04c49317cc9c90fff21100554fc59f7b4d027d09"
+    },
+    {
+      "names": [
+        "COLON_BOUNDED_REMOTE_EXACT_SCOPE_DECLARATION"
+      ],
+      "group": "signed-oss-write",
+      "bodySha256": "adeaacad1227e31c3fe2bb9448cc48264e498c4e0fddc770e0e60d76f2e65fdd"
+    },
+    {
+      "names": [
+        "NEGATIVE_EXACT_SCOPE_VALUE"
+      ],
+      "group": "signed-oss-write",
+      "bodySha256": "420ff00f751260b1bd927575a3c5ca557e610f72c314a9729ed4deb0707dbfb1"
+    },
+    {
+      "names": [
+        "READ_ONLY_EXACT_SCOPE_QUALIFIER"
+      ],
+      "group": "signed-oss-write",
+      "bodySha256": "5ecd1c0a8124558ca4986b30968ce794093ae53f1e59526aac4154b3fa88b72d"
+    },
+    {
+      "names": [
+        "EXPLICIT_BOUNDED_REMOTE_EXECUTION_AUTHORIZATION"
+      ],
+      "group": "signed-oss-write",
+      "bodySha256": "6e4f50cfa3f6e91ee2233ebcc9b03a84a01597505f20806ff9670ee12342d5b4"
+    },
+    {
+      "names": [
+        "NEGATED_BOUNDED_REMOTE_EXECUTION_AUTHORIZATION"
+      ],
+      "group": "signed-oss-write",
+      "bodySha256": "e9fbc66ca4a3f645dc08a3e0b86994199cd596a487cc60556a69656901678e24"
+    },
+    {
+      "names": [
+        "classifySensitiveExternalAction"
+      ],
+      "group": "classification",
+      "bodySha256": "08eafedd3e7d8f865fa20b478a9ae577d42b32a502229390c8682088cc8719cb"
+    },
+    {
+      "names": [
+        "containsPhrase"
+      ],
+      "group": "request-authorization",
+      "bodySha256": "62cca81941e1e6ddb26706dff71f1b8178f880bcd4bfa58cb49b166421aca860"
+    },
+    {
+      "names": [
+        "containsNonNegatedPhrase"
+      ],
+      "group": "request-authorization",
+      "bodySha256": "9a65fdea2efcf726b0ceb989cbe998d3e91d9e2f2485265c55b94d770eb90f7d"
+    },
+    {
+      "names": [
+        "targetIsNamed"
+      ],
+      "group": "request-authorization",
+      "bodySha256": "b4395e71e2c94d6f991f87043b96aa2a612b7915bf905b7ca1e2f0d50854fe5c"
+    },
+    {
+      "names": [
+        "requestClauses"
+      ],
+      "group": "request-authorization",
+      "bodySha256": "6b5a2ad0c18e87cf351d7650b6eaee157e942f76f792d06ab3d0b11da11bd980"
+    },
+    {
+      "names": [
+        "targetIsNegatedInClause"
+      ],
+      "group": "request-authorization",
+      "bodySha256": "ac8ef3aee0885833674cead5d78581e7e76e0983bbe91c5e555b25c6e4777fa8"
+    },
+    {
+      "names": [
+        "CONDITIONAL_TARGET_TERMS"
+      ],
+      "group": "request-authorization",
+      "bodySha256": "bf98e5055c16ed54fa9c60aeaa86c3adfab703ad4660b95e6fc094c0fbfacae4"
+    },
+    {
+      "names": [
+        "explicitConditionalTargetValues"
+      ],
+      "group": "request-authorization",
+      "bodySha256": "ca4396ac43c28ec5faedc0fbdb4e89cc92bd1b5ad03759c642827bea7de4a296"
+    },
+    {
+      "names": [
+        "requestHasExplicitConditionalTarget"
+      ],
+      "group": "request-authorization",
+      "bodySha256": "9eed953d50618bed2292f179bcdabf808dd7d1c6935072c8852292fce5ee3425"
+    },
+    {
+      "names": [
+        "isNonAuthorizingRequest"
+      ],
+      "group": "request-authorization",
+      "bodySha256": "eab9f5d686471506e809be916f04f76a8498629681bfe2f06c92e42529f8c1ea"
+    },
+    {
+      "names": [
+        "RETARGETING_MARKER"
+      ],
+      "group": "request-authorization",
+      "bodySha256": "bd846fa90813e8a3f15eca9f07f3fec95b87532e6e4b4a6375efffe3d6d1e152"
+    },
+    {
+      "names": [
+        "TARGET_FIELD_RETARGET"
+      ],
+      "group": "request-authorization",
+      "bodySha256": "c3130b9caf3b99ae3407261fb30f17057440573494920aebe1f1b7b080b4639b"
+    },
+    {
+      "names": [
+        "DEICTIC_RETARGET"
+      ],
+      "group": "request-authorization",
+      "bodySha256": "e48f5870692d6b24717bdfc20f1b38033da560597d660f402ab942f8dcc28281"
+    },
+    {
+      "names": [
+        "ALTERNATIVE_RETARGET"
+      ],
+      "group": "request-authorization",
+      "bodySha256": "97e39a0bdfa5309db4c26ecaaf6876aab12d868f32496b6c4f3aad075143ebb5"
+    },
+    {
+      "names": [
+        "requestExplicitlyRetargets"
+      ],
+      "group": "request-authorization",
+      "bodySha256": "a711c8d14dade1a17c5b62a22fa9d4a8dfff803f52c686ed6d600e09d1d90323"
+    },
+    {
+      "names": [
+        "OBJECTIVE_EMAIL_ADDRESS_SOURCE"
+      ],
+      "group": "request-authorization",
+      "bodySha256": "a08d4587b65e57b1d13ce62a684591a763f5b6ac8905203043a78dd7321fa0cf"
+    },
+    {
+      "names": [
+        "directInvoiceEmailFulfillmentRequester"
+      ],
+      "group": "request-authorization",
+      "bodySha256": "c4b80154e84554ec8a853df3991f196150f4d86f6ad2f3265f881a7b08d89ceb"
+    },
+    {
+      "names": [
+        "EXPLICIT_STOP_BEFORE_EXTERNAL_ACTION"
+      ],
+      "group": "request-authorization",
+      "bodySha256": "e42f9de7a254d0b18edb649f749d1fbe3cf2ae7a4f488332f5b55471dda35425"
+    },
+    {
+      "names": [
+        "EXPLICIT_ACTION_AFTER_CONFIRMATION"
+      ],
+      "group": "request-authorization",
+      "bodySha256": "24254600408b498a76448a9909e853b003740fe27db570269833950a4c21f339"
+    },
+    {
+      "names": [
+        "GLOBAL_EXTERNAL_ACTION_REVOCATION_CORE"
+      ],
+      "group": "request-authorization",
+      "bodySha256": "85c40b395373b9de37222b5f71e32b8b1be5598d2f5e9c5ba5b2b3918aecb291"
+    },
+    {
+      "names": [
+        "EXTERNAL_ACTION_REVOCATION_POLITENESS_PREFIX"
+      ],
+      "group": "request-authorization",
+      "bodySha256": "124a1462bc31c901843b6c8b099763d960d01fe56455ddef8fda376cc853a430"
+    },
+    {
+      "names": [
+        "EXTERNAL_ACTION_REVOCATION_SUFFIX"
+      ],
+      "group": "request-authorization",
+      "bodySha256": "f161364809cfd568d781bd82647a87dd5f7e694febb983c64e2974fcd184fcc7"
+    },
+    {
+      "names": [
+        "GENERIC_EXTERNAL_CONFIRMATION_CONTINUATION"
+      ],
+      "group": "request-authorization",
+      "bodySha256": "50d0c9e34df4fd76043157d8667f5f6e69241a1574fa1a0bae35e20710875fbd"
+    },
+    {
+      "names": [
+        "TARGETED_EXTERNAL_CONFIRMATION_CONTINUATION"
+      ],
+      "group": "request-authorization",
+      "bodySha256": "c3f1f0279a7192aec9d27821e76e255e95b5eff9d8355ad67d5a2d30c2dbd368"
+    },
+    {
+      "names": [
+        "externalConfirmationContinuationAlias"
+      ],
+      "group": "request-authorization",
+      "bodySha256": "78a98ad739fd5f3eef280b71d8afc9c3391730e6a7a31c48434722fcceee4b7c"
+    },
+    {
+      "names": [
+        "hasGlobalExternalActionRevocation"
+      ],
+      "group": "request-authorization",
+      "bodySha256": "6d7f43f59b4792567bdbadf74ac232b7688ccd082da7a9d5bc06c58510b2bfe6"
+    },
+    {
+      "names": [
+        "authorizingRequestClauses"
+      ],
+      "group": "request-authority-clauses",
+      "bodySha256": "1d36650c2c834907c9bc5944441ddf65aa7337e68aa26ca7575d450a8cc0f82c"
+    },
+    {
+      "names": [
+        "requestMatchesConditionalTargets"
+      ],
+      "group": "request-authority-clauses",
+      "bodySha256": "cf9a8df3fa143be4fd3f5904d06f8fbd5c47fba0268414d718b35209c07f17da"
+    },
+    {
+      "names": [
+        "requestNamesSensitiveAction"
+      ],
+      "group": "request-authority-clauses",
+      "bodySha256": "14dcbe9daa0a3fb381b4041ac3964c5e0187e6ccc08e5f580df038a9f57624b7"
+    },
+    {
+      "names": [
+        "requestMentionsSensitiveAction"
+      ],
+      "group": "request-authority-clauses",
+      "bodySha256": "091e5a8f7b233a3b0272c142d15b78c5081110671eec385ca3305d059245bc52"
+    },
+    {
+      "names": [
+        "requestNamesSensitiveActionCategory"
+      ],
+      "group": "request-authority-clauses",
+      "bodySha256": "8ca9cbea59ae5e018e63fa2023030883084ed1a7d1e74bdd33899971c6be2d1d"
+    },
+    {
+      "names": [
+        "isSensitiveExternalActionExplicitlyAuthorized"
+      ],
+      "group": "request-authority-clauses",
+      "bodySha256": "0a1afc3d317b650cd1b49f200331c8f8f7c81dad122e749c1729fff56d6fec4e"
+    },
+    {
+      "names": [
+        "StructuredGmailSendResumePayload"
+      ],
+      "group": "structured-gmail-send",
+      "bodySha256": "e837c031fc628e78cc5fc3357013ba73029a11f03c4045213235dce2c4607cf0"
+    },
+    {
+      "names": [
+        "StructuredGmailSendAuthorizationDecision"
+      ],
+      "group": "structured-gmail-send",
+      "bodySha256": "4f4fb41d67dc400b10e8fb2f4a67532d2b657acdef385b7039165e19c4c18511"
+    },
+    {
+      "names": [
+        "StructuredGmailSendMismatchCategory"
+      ],
+      "group": "structured-gmail-send",
+      "bodySha256": "a8d7f485ae5f22bec6a0eeba84659cebd25663bc6794e7c612447cd5106be2a9"
+    },
+    {
+      "names": [
+        "StructuredGmailSendAuthorizationDiagnostic"
+      ],
+      "group": "structured-gmail-send",
+      "bodySha256": "bdbbf6ea9da9c910e107efafbc76053333234438b8cecbc57dfcb5e20a2a46ec"
+    },
+    {
+      "names": [
+        "STRUCTURED_GMAIL_SEND_MARKER"
+      ],
+      "group": "structured-gmail-send",
+      "bodySha256": "8297156b2fea5f51fa1b7079372b37c46a1e9855e367fcb2d4f61b378d150aaa"
+    },
+    {
+      "names": [
+        "STRUCTURED_GMAIL_SEND_PAYLOAD_HEADER"
+      ],
+      "group": "structured-gmail-send",
+      "bodySha256": "3eea46483d2e11c39fb1acb0a95ae6365e092b290fa791e9746a9d7689b5eaaa"
+    },
+    {
+      "names": [
+        "STRUCTURED_GMAIL_SEND_DIRECT_IMPERATIVE"
+      ],
+      "group": "structured-gmail-send",
+      "bodySha256": "af0bf33aed1f06a3a395d2f300b7659c326aa9409b90c9ad01b6e046d09babbb"
+    },
+    {
+      "names": [
+        "STRUCTURED_GMAIL_SEND_NO_SEND_DIRECTIVE"
+      ],
+      "group": "structured-gmail-send",
+      "bodySha256": "4d04af4b99515e2cf88bfb1a461188736086821d31f7462d3249b97405157e90"
+    },
+    {
+      "names": [
+        "STRUCTURED_GMAIL_SEND_SAFE_ABSENCE_GUARD"
+      ],
+      "group": "structured-gmail-send",
+      "bodySha256": "b01ae487b6a1c77b52022bb0b4d21d3bd7b5dbdb1ae06f2e13fc480401775be8"
+    },
+    {
+      "names": [
+        "STRUCTURED_GMAIL_SEND_RETARGET"
+      ],
+      "group": "structured-gmail-send",
+      "bodySha256": "f08da8e11279abe68313931f3dd995cbe8cf516b2c4d497322741ee2e7593f5c"
+    },
+    {
+      "names": [
+        "exactlyOneStructuredField"
+      ],
+      "group": "structured-gmail-send",
+      "bodySha256": "b746bd60ad8ca696ac7c6f71ea9975468e295213dcdd495e4a603d992f416db0"
+    },
+    {
+      "names": [
+        "structuredGmailSendAttachmentPaths"
+      ],
+      "group": "structured-gmail-send",
+      "bodySha256": "83bc509adc6451870f756d6efe5dcdb1f202f2f62fe07301a05cc8ad852f9d80"
+    },
+    {
+      "names": [
+        "parseStructuredGmailSendResumeSegment"
+      ],
+      "group": "structured-gmail-send",
+      "bodySha256": "4d1902ed129b75388a8ed4563f79bcef06e5acbe035b0a102eec3f1d8757b81e"
+    },
+    {
+      "names": [
+        "STRUCTURED_GMAIL_SEND_ALLOWED_INPUT_KEYS"
+      ],
+      "group": "structured-gmail-send",
+      "bodySha256": "c50cf5a8a11047a5b8e25ed50d0c20f2cd293b01857c60cc726038ee07e8c5b8"
+    },
+    {
+      "names": [
+        "canonicalGmailSendInputMismatchCategories"
+      ],
+      "group": "structured-gmail-send",
+      "bodySha256": "e5f119f0006b5088b676f4748230af44d610c4106d7e3f41cbf1a2381e006c89"
+    },
+    {
+      "names": [
+        "isTargetFreeGenericContinuation"
+      ],
+      "group": "structured-gmail-send",
+      "bodySha256": "03382c3bacc36a9702d53f6e7b9e445f0c1f77ea8cbffad36394cc1610544cda"
+    },
+    {
+      "names": [
+        "isClosedTargetFreeProgressFollowUp"
+      ],
+      "group": "structured-gmail-send",
+      "bodySha256": "f464eb19b5375f436428bf2fce20e8f9b59cb2cb6792336074e82b0502d5bd6c"
+    },
+    {
+      "names": [
+        "structuredGmailSendAuthorizationDiagnostic"
+      ],
+      "group": "structured-gmail-authorization",
+      "bodySha256": "9f851f70439b8c64a4d6bf2b61682d97dc4c3bf7b9baaceb30f178e9e524a5c6"
+    },
+    {
+      "names": [
+        "structuredGmailSendAuthorizationDecision"
+      ],
+      "group": "structured-gmail-authorization",
+      "bodySha256": "a4bdbcfe2eb305e5f202cdd2539e03e9ede2e0c30ba6dc8d4d84e89b5e46cbb0"
+    },
+    {
+      "names": [
+        "isStructuredGmailSendAuthorizedByObjective"
+      ],
+      "group": "structured-gmail-authorization",
+      "bodySha256": "24fa4cd55675cf687527a5f86a62fcea10b2a8e875d285b4e64c742b46fe98b0"
+    },
+    {
+      "names": [
+        "LEGACY_CONTEXTUAL_GMAIL_REPLY_TOOL"
+      ],
+      "group": "gmail-reply-parsing",
+      "bodySha256": "1aa13a799ef6c71e1fbdc15bc183842d7bb8b0592558036dc57d40adf52d5746"
+    },
+    {
+      "names": [
+        "CONTEXTUAL_GMAIL_REPLY_PREFLIGHT_TOOL"
+      ],
+      "group": "gmail-reply-parsing",
+      "bodySha256": "f745f0291d24b7f8a2ca0f4c915b11ab061af92a369a0119c7cf2a35ee54496a"
+    },
+    {
+      "names": [
+        "CONTEXTUAL_GMAIL_REPLY_ALL_PREFLIGHT_TOOL"
+      ],
+      "group": "gmail-reply-parsing",
+      "bodySha256": "5cc67a58982fe14f1ddc65d3795734d6ffd3872d6a3a85335456a5a8e230628e"
+    },
+    {
+      "names": [
+        "CONTEXTUAL_GMAIL_REPLY_TOOL"
+      ],
+      "group": "gmail-reply-parsing",
+      "bodySha256": "94fb44dd4104ffc64d97d014641f4b8b14d57ff966db9e289663cdd11909bb18"
+    },
+    {
+      "names": [
+        "CONTEXTUAL_GMAIL_REPLY_ALL_TOOL"
+      ],
+      "group": "gmail-reply-parsing",
+      "bodySha256": "18b78b2ea99191a9bf5c7c0f5dec4cf54effa8e2aafcfda218467892f1f7957b"
+    },
+    {
+      "names": [
+        "CONTEXTUAL_GMAIL_SEND_TOOL"
+      ],
+      "group": "gmail-reply-parsing",
+      "bodySha256": "e94490a8eccdf16ed4561511b80074bb86097d6be8bd1e196b4280fd65b4d0fa"
+    },
+    {
+      "names": [
+        "GMAIL_MESSAGE_ID"
+      ],
+      "group": "gmail-reply-parsing",
+      "bodySha256": "ddca45d3a43ea373150a1c9e176fa5724d3e690ba96a18559cf02fc0335cc4c4"
+    },
+    {
+      "names": [
+        "CONTEXTUAL_GMAIL_REPLY_KEYS"
+      ],
+      "group": "gmail-reply-parsing",
+      "bodySha256": "7e3dc2f4cf86ba31848768d90e92a8f09b85bfa848261e665683a27ad3008371"
+    },
+    {
+      "names": [
+        "CONTEXTUAL_GMAIL_REPLY_ALL_KEYS"
+      ],
+      "group": "gmail-reply-parsing",
+      "bodySha256": "dd38f772e4465c04a4bdd97a2557bdc236840068d25ab9225d8b28e5fbfdde91"
+    },
+    {
+      "names": [
+        "CONTEXTUAL_GMAIL_REPLY_PREFLIGHT_KEYS"
+      ],
+      "group": "gmail-reply-parsing",
+      "bodySha256": "fd3c0490b7b593a11ef281ccffa77ddb4973c2f2b028f80362f718a7836528d4"
+    },
+    {
+      "names": [
+        "CONTEXTUAL_GMAIL_REPLY_ALL_PREFLIGHT_KEYS"
+      ],
+      "group": "gmail-reply-parsing",
+      "bodySha256": "19c4b986af4d00fd5b37bf2e44962675ed317e1cb83f257cfbaca2e7fbbe0328"
+    },
+    {
+      "names": [
+        "CONTEXTUAL_REPLY_VERB"
+      ],
+      "group": "gmail-reply-parsing",
+      "bodySha256": "f6b32211232970f8617b6092273d2dc4909c0beae9964801ae4a3df270764f86"
+    },
+    {
+      "names": [
+        "CONTEXTUAL_REPLY_PREPARATION"
+      ],
+      "group": "gmail-reply-parsing",
+      "bodySha256": "bc1454344b9d8a3bd89188f39fa581fcb6ac3918c2d046b318803e231c9d1ed6"
+    },
+    {
+      "names": [
+        "CONTEXTUAL_SEND_VERB"
+      ],
+      "group": "gmail-reply-parsing",
+      "bodySha256": "e05454f6a043e17b5e2523251fea50ac9bf546a0849aac74c8ec63d7c236c9ad"
+    },
+    {
+      "names": [
+        "CONTEXTUAL_REPLY_PRONOUN"
+      ],
+      "group": "gmail-reply-parsing",
+      "bodySha256": "f818fe17767f708bb124d41e5dc2ae58ba6772f85f6ef7af1048a8487bbc50f3"
+    },
+    {
+      "names": [
+        "CONTEXTUAL_REPLY_THREAD"
+      ],
+      "group": "gmail-reply-parsing",
+      "bodySha256": "7536883099429b6874556f7c931372a6d67a215f8e534dabe8cda9b19cf1d80f"
+    },
+    {
+      "names": [
+        "CONTEXTUAL_REPLY_ALL_SCOPE"
+      ],
+      "group": "gmail-reply-parsing",
+      "bodySha256": "d15d8688e83fb20cc3790edde69d1507208e5a49f9fffed74c1157eb87d2c9f1"
+    },
+    {
+      "names": [
+        "CONTEXTUAL_REPLY_NEGATION"
+      ],
+      "group": "gmail-reply-parsing",
+      "bodySha256": "deb75733b50e429e0c9b4c17edb9e24bf36039a8c17421e83c19a768ef637aed"
+    },
+    {
+      "names": [
+        "CONTEXTUAL_REPLY_EXPLICIT_RETARGET"
+      ],
+      "group": "gmail-reply-parsing",
+      "bodySha256": "c910d5affab20bcdf3b3fc8ee24347f4947c9a226ae7b6022231bae39177b2ed"
+    },
+    {
+      "names": [
+        "CONTEXTUAL_REPLY_THREAD_REJECTION"
+      ],
+      "group": "gmail-reply-parsing",
+      "bodySha256": "570d840e1f6c88d41d0c6340ad66216c25ea17732a546df30f7279417ff7ba09"
+    },
+    {
+      "names": [
+        "CONTEXTUAL_GMAIL_INLINE_REPLY_TO_FIELD"
+      ],
+      "group": "gmail-reply-parsing",
+      "bodySha256": "f09134f6fef49fec7726248e8ebe3bc5bd44b493cbe760a32302b3ab42ab914e"
+    },
+    {
+      "names": [
+        "CONTEXTUAL_REPLY_CONFIRMATION_BOUNDARY"
+      ],
+      "group": "gmail-reply-parsing",
+      "bodySha256": "53c6f1a953621e555906cdd883543baef0f7bc5dded37c63007b6afe2b28b8bc"
+    },
+    {
+      "names": [
+        "CONTEXTUAL_REPLY_AUDIENCE_CHANGE"
+      ],
+      "group": "gmail-reply-parsing",
+      "bodySha256": "4c1a7b475001246b59ef2ed51c0c6c99a9581d9b61bda1453a82d915a625737e"
+    },
+    {
+      "names": [
+        "CONTEXTUAL_REPLY_NAMED_AUDIENCE_CHANGE"
+      ],
+      "group": "gmail-reply-parsing",
+      "bodySha256": "bca89904a623b246184b3e88de09ac2842233edb3038f0598932b4d0cae6e53a"
+    },
+    {
+      "names": [
+        "CONTEXTUAL_REPLY_EXPLICIT_NO_AUDIENCE_CHANGE"
+      ],
+      "group": "gmail-reply-parsing",
+      "bodySha256": "fd8f20da61ca7b79b2c2ecaad8862c301e456125fb2307cbab6c52e921fc9b84"
+    },
+    {
+      "names": [
+        "CONTEXTUAL_REPLY_NON_AUDIENCE_CONSTRAINT"
+      ],
+      "group": "gmail-reply-parsing",
+      "bodySha256": "06510c51b552e4781d9066bd5ff16033fb25e8697cfa77a5408dad95c6c15197"
+    },
+    {
+      "names": [
+        "CONTEXTUAL_REPLY_DUPLICATE_CHECK"
+      ],
+      "group": "gmail-reply-parsing",
+      "bodySha256": "8c5e03fe7b90aa2c7fe755d6fde2e0e8396b0373b613b9f33cc14d9767ff758a"
+    },
+    {
+      "names": [
+        "CONTEXTUAL_REPLY_SIGNED_PREFLIGHT_FIELDS"
+      ],
+      "group": "gmail-reply-parsing",
+      "bodySha256": "373acf2867f9f1eff890114388c882d06e88a9b404977906c186040f866bddb7"
+    },
+    {
+      "names": [
+        "CONTEXTUAL_REPLY_IDEMPOTENT_SEND_CONDITION"
+      ],
+      "group": "gmail-reply-parsing",
+      "bodySha256": "6549b043e4a45a5b7c90e68ae2f3c7f346e4824b2f21da3d2ff00bb7375bd982"
+    },
+    {
+      "names": [
+        "CONTEXTUAL_REPLY_POSITIVE_EXISTENCE_NO_RESEND"
+      ],
+      "group": "gmail-reply-parsing",
+      "bodySha256": "6861d91a29704ddb4a4591b46643bf926c97b844c4832d819a016d74bc3f5eff"
+    },
+    {
+      "names": [
+        "CONTEXTUAL_REPLY_EXACT_EFFECT_CONTINUATION"
+      ],
+      "group": "gmail-reply-parsing",
+      "bodySha256": "79165e8db0d981a20613a84fbd903f40bdd980a135cb7577b8cd0ea5de90e0cf"
+    },
+    {
+      "names": [
+        "CONTEXTUAL_REPLY_CONCLUSIVE_ABSENCE_CONTINUATION"
+      ],
+      "group": "gmail-reply-parsing",
+      "bodySha256": "8ab8e920cde94c243668a6d7fcb5dec5cefe67e683f89a8f3d002c19819c0a2c"
+    },
+    {
+      "names": [
+        "CONTEXTUAL_REPLY_STRUCTURED_IMMUTABLE_PAYLOAD"
+      ],
+      "group": "gmail-reply-parsing",
+      "bodySha256": "559a4395eb75fa6d44c624b9954c7b5d53133628c5fe30ba6e2b9bd3c338641b"
+    },
+    {
+      "names": [
+        "CONTEXTUAL_REPLY_STRUCTURED_EXACT_EFFECT_CONTINUATION"
+      ],
+      "group": "gmail-reply-parsing",
+      "bodySha256": "feb3b85cf8835be2978ee7fd39b167406017c8bd5179a17e47ef6014a40fbb6b"
+    },
+    {
+      "names": [
+        "CONTEXTUAL_REPLY_DUPLICATE_AMBIGUITY_NO_SEND"
+      ],
+      "group": "gmail-reply-parsing",
+      "bodySha256": "53c9c74f45d7ea0ece06d82115aa94323d4cf26ff4e24f15a2fcd78675faffc5"
+    },
+    {
+      "names": [
+        "CONTEXTUAL_REPLY_STRUCTURED_BOUND_EXECUTION"
+      ],
+      "group": "gmail-reply-parsing",
+      "bodySha256": "18eebf9435bc93d5f6d9aaff3aff308a64d1909c67205e796d7047e94ffb2bc8"
+    },
+    {
+      "names": [
+        "CONTEXTUAL_REPLY_STRUCTURED_RECONCILIATION"
+      ],
+      "group": "gmail-reply-parsing",
+      "bodySha256": "0de0eb00a16c6eefefa7a9baf1048f7985a3fb2b72f07817e425620455b6e9a1"
+    },
+    {
+      "names": [
+        "CONTEXTUAL_REPLY_STRUCTURED_UNCERTAIN_RESULT"
+      ],
+      "group": "gmail-reply-parsing",
+      "bodySha256": "a3c1ea6f066e1a22ed94bdf1be0e85187e2383d05aadbd154cded74606839ff2"
+    },
+    {
+      "names": [
+        "CONTEXTUAL_REPLY_SENT_DRAFTS_RECONCILIATION"
+      ],
+      "group": "gmail-reply-parsing",
+      "bodySha256": "78da176c75ed1b10c631ecba97b452c2d0b5e89bda40d9200d82326f4513ec8a"
+    },
+    {
+      "names": [
+        "CONTEXTUAL_REPLY_NAMED_AUDIENCE_REMOVAL"
+      ],
+      "group": "gmail-reply-parsing",
+      "bodySha256": "b8bed74512b56ae79245b37d96dd0c4004731d07dd4232668059cff5ba44af5f"
+    },
+    {
+      "names": [
+        "CONTEXTUAL_REPLY_NO_SEND_BOUNDARY"
+      ],
+      "group": "gmail-reply-parsing",
+      "bodySha256": "29f6a55dc5b289172e88feae4ebe453c1d7dc75368dba0ea1d84c5030d7dbaf2"
+    },
+    {
+      "names": [
+        "CONTEXTUAL_REPLY_REPORTED_SPEECH"
+      ],
+      "group": "gmail-reply-parsing",
+      "bodySha256": "8584abe68f48d07957a34bf11c1a189e3bd5f9a4cb209c8d4ced28cd1a909844"
+    },
+    {
+      "names": [
+        "CONTEXTUAL_REPLY_META_INSTRUCTION"
+      ],
+      "group": "gmail-reply-parsing",
+      "bodySha256": "f4f6f006f6cbd3ded401c974c829ce5588cc11a9ce9c1d5495811e6aedc77441"
+    },
+    {
+      "names": [
+        "CONTEXTUAL_REPLY_UNSATISFIED_CONDITION"
+      ],
+      "group": "gmail-reply-parsing",
+      "bodySha256": "33c527f63a78652c5d87d166d99eec4ebbf15f0d20fd52da7f92cc52f0e7861c"
+    },
+    {
+      "names": [
+        "CONTEXTUAL_REPLY_NON_DIRECTIVE"
+      ],
+      "group": "gmail-reply-parsing",
+      "bodySha256": "8e88f2f58d7dc83cf75c58ea370c867f6a5ba87c566637a81d266d8fc30df20d"
+    },
+    {
+      "names": [
+        "CONTEXTUAL_REPLY_REPLACED_BY_READ_ONLY"
+      ],
+      "group": "gmail-reply-parsing",
+      "bodySha256": "82796024f486a9887b6f23ea572e3fda1c0401aa18a7eef24be5ec6d4d5bfcc8"
+    },
+    {
+      "names": [
+        "CONTEXTUAL_UNRELATED_ADDITIONAL_SEND"
+      ],
+      "group": "gmail-reply-parsing",
+      "bodySha256": "0663fe473f53ec6fe32c3de6a6d02c01f3c72136e7e1c62eb7382948ba20bf86"
+    },
+    {
+      "names": [
+        "CONTEXTUAL_REPLY_DEFERRED_BOUNDARY"
+      ],
+      "group": "gmail-reply-parsing",
+      "bodySha256": "dd10d11ac559ac1e02185b34ca61b995e8dba49fc70216a633a9c6765d39443b"
+    },
+    {
+      "names": [
+        "hasContextualReplyUnsatisfiedCondition"
+      ],
+      "group": "gmail-reply-parsing",
+      "bodySha256": "70eb6d5249eb1ef7290d11e08fe173032ee660bf65d2a5fc82066b78ba84172e"
+    },
+    {
+      "names": [
+        "isCanonicalContextualGmailReplyInput"
+      ],
+      "group": "gmail-reply-parsing",
+      "bodySha256": "08b2554ee209234fe2ab36f4e7ddc7ed927c5f4f59dad7b431f833107d87820f"
+    },
+    {
+      "names": [
+        "ContextualGmailReplyScope"
+      ],
+      "group": "gmail-reply-parsing",
+      "bodySha256": "1c2580b055660a13beee6e4a98f35824c60cb628f86d3ac45ae7ac1717ea426c"
+    },
+    {
+      "names": [
+        "ContextualGmailReplyObjective"
+      ],
+      "group": "gmail-reply-parsing",
+      "bodySha256": "a9263e3f95bb23a060da85361bf0c82d4a1f51763876c2580cdb8e9b1eacb057"
+    },
+    {
+      "names": [
+        "contextualGmailBodyMaskedText"
+      ],
+      "group": "gmail-reply-parsing",
+      "bodySha256": "cb7a477810044efc8e0e1c58227286a407b5df8e7e3cdda979e25a193e11ae25"
+    },
+    {
+      "names": [
+        "contextualGmailRoutingText"
+      ],
+      "group": "gmail-reply-parsing",
+      "bodySha256": "d6a5d56dbbe3a5cd585799ccff7e3cd0ef3c83d747a4adfa6346fa9d2709bdc2"
+    },
+    {
+      "names": [
+        "contextualGmailStructuredImmutableControlText"
+      ],
+      "group": "gmail-reply-parsing",
+      "bodySha256": "7888622e5c828df89ebc1ab3bc78b4d8d40469962d6837ec811c279c673b130d"
+    },
+    {
+      "names": [
+        "contextualGmailMessageIds"
+      ],
+      "group": "gmail-reply-parsing",
+      "bodySha256": "6792a32d9ec253f3954c80a6bc82d63848d92d0be925bfb6062fb429d59c7d15"
+    },
+    {
+      "names": [
+        "contextualGmailTargetEmails"
+      ],
+      "group": "gmail-reply-parsing",
+      "bodySha256": "da92646fe464de9a55f706da0c9da2c06258d72710557eed1e9d41b79ead088d"
+    },
+    {
+      "names": [
+        "contextualGmailExpectedSenderEmails"
+      ],
+      "group": "gmail-reply-parsing",
+      "bodySha256": "4034c0b8b2aafa716b76e37a163d22ad035aa0c0708c5db6a153093b3969ea33"
+    },
+    {
+      "names": [
+        "latestContextualGmailMention"
+      ],
+      "group": "gmail-reply-parsing",
+      "bodySha256": "310718054e76df145c97713c006489e6ee9af4be227ded50545dcf7fbde8ae97"
+    },
+    {
+      "names": [
+        "contextualGmailExactBodySpan"
+      ],
+      "group": "gmail-reply-parsing",
+      "bodySha256": "e954240bee4cc0ea4a6171af147a38c01c9e0e0d67f4b10e7a7b832461bf4c76"
+    },
+    {
+      "names": [
+        "contextualGmailExactBody"
+      ],
+      "group": "gmail-reply-parsing",
+      "bodySha256": "2c1446ad53c0619a079262dbf071d04e4a7a6945b502e19ea31cb58c37dabd3b"
+    },
+    {
+      "names": [
+        "hasClosedExactContextualGmailReplyContract"
+      ],
+      "group": "gmail-reply-contract",
+      "bodySha256": "8bde1a2ead089391da54c89807b4834edf68628c63297683a4df589f2b57b601"
+    },
+    {
+      "names": [
+        "contextualGmailTargetScopedAuthorizationSegments"
+      ],
+      "group": "gmail-reply-objective",
+      "bodySha256": "f78fc9fe402969432d0abe92bcd199fdbca14f27da0a8fa7026eb3daa8c742bf"
+    },
+    {
+      "names": [
+        "contextualGmailReplyObjective"
+      ],
+      "group": "gmail-reply-objective",
+      "bodySha256": "af1319c27070f7eb8ea410bff0573b1409bc86a9f3ed6590f2e57d6302314f3c"
+    },
+    {
+      "names": [
+        "contextualGmailReplyObjectiveScope"
+      ],
+      "group": "gmail-reply-objective",
+      "bodySha256": "19b565e9c66439d5d7a6b923b6938fb89bd421e333f6231048d22c73f5694bf7"
+    },
+    {
+      "names": [
+        "gmailBodyEnvelopeSpans"
+      ],
+      "group": "gmail-body-envelopes",
+      "bodySha256": "133081d64cdf989c7456974f442edc53aa3127b200381be1d697d46640554dbf"
+    },
+    {
+      "names": [
+        "contextualGmailExpectedSubjects"
+      ],
+      "group": "gmail-reply-constraints",
+      "bodySha256": "886b8f10e595a54cfdfe8741cc67515047eb5333ea5d908aee1125c41ce9c0fb"
+    },
+    {
+      "names": [
+        "contextualGmailExpectedCc"
+      ],
+      "group": "gmail-reply-constraints",
+      "bodySha256": "2172d3775d0fcf0635f36fa5137bd7d5b7746cf424bdf9e209f52240c9ad39f3"
+    },
+    {
+      "names": [
+        "contextualGmailHasSingleEmptyStructuredAudienceField"
+      ],
+      "group": "gmail-reply-constraints",
+      "bodySha256": "7cb6c786ca258d8c6fa1b7a8005511cdb61a227bbcf229894fd41ceb77609b30"
+    },
+    {
+      "names": [
+        "contextualGmailExactConstraintSegment"
+      ],
+      "group": "gmail-reply-constraints",
+      "bodySha256": "0e7aa1f6f26007e8dcbedc2176f0f4b34d941bedbff4dcb53096b59244caae26"
+    },
+    {
+      "names": [
+        "contextualGmailHasNegatedExactField"
+      ],
+      "group": "gmail-reply-constraints",
+      "bodySha256": "a5bf536e027a758efc3439bcf0378c37883c6466cbe180eb4fc59c016b5de0f7"
+    },
+    {
+      "names": [
+        "contextualGmailHasUnsupportedExactEffectRequirement"
+      ],
+      "group": "gmail-reply-constraints",
+      "bodySha256": "e5bf4c5bc4456b5e1d696e0c9e6c465965383052a01defe71dcc720b06d09fa7"
+    },
+    {
+      "names": [
+        "contextualGmailHasStrictClosedFields"
+      ],
+      "group": "gmail-reply-constraints",
+      "bodySha256": "a939c1cf257f11e2dcfd25cd810995fa5d9248b9d78c0b7a0803771bd32c0c0a"
+    },
+    {
+      "names": [
+        "ContextualGmailResolvedConstraints"
+      ],
+      "group": "gmail-reply-constraints",
+      "bodySha256": "56e6b04e9e550c335d4d4fba741c47802623ab14936b1a9a83bb4f8498f92e42"
+    },
+    {
+      "names": [
+        "contextualGmailResolvedConstraints"
+      ],
+      "group": "gmail-reply-constraints",
+      "bodySha256": "94014d9f99d60f61cdd265e46502a3fe605e5f45410c46b76e9439a5e08d1987"
+    },
+    {
+      "names": [
+        "ContextualGmailExactEffectExpectation"
+      ],
+      "group": "gmail-reply-constraints",
+      "bodySha256": "18ae3e63b3d839ad3da661e91662c9fe7e90d8012872dcf5897b154e67bab47d"
+    },
+    {
+      "names": [
+        "contextualGmailExactEffectExpectationFromObjective"
+      ],
+      "group": "gmail-reply-expectation",
+      "bodySha256": "d7854a4d77cd7e4f026c352bab2989666b06607482af14690510b1f00fbecb3f"
+    },
+    {
+      "names": [
+        "contextualGmailClosedExactEffectExpectationFromObjective"
+      ],
+      "group": "gmail-reply-expectation",
+      "bodySha256": "cfe59f6d7c464eea08518c7bce392bbe9ac89d34d1f20ff47fce18d876c94e1b"
+    },
+    {
+      "names": [
+        "ContextualGmailReplyPreflightIntent"
+      ],
+      "group": "gmail-reply-authorization",
+      "bodySha256": "b29bf7536dcf080a3303e17eca2dfe576ce5cb1dd257d20687030e1424c5b772"
+    },
+    {
+      "names": [
+        "ContextualGmailReplyPreflightAttestationBase"
+      ],
+      "group": "gmail-reply-authorization",
+      "bodySha256": "39f0bf8d8fbaf460391104f834fadc7215cc40eb49aa121198210fdb9c3e32b3"
+    },
+    {
+      "names": [
+        "ContextualGmailReplyPreflightAttestation"
+      ],
+      "group": "gmail-reply-authorization",
+      "bodySha256": "f7d28c5460c4e350d2a22214cdb29bc3eb9de941ce784c09d56af7efaf1c0c99"
+    },
+    {
+      "names": [
+        "contextualGmailReplyPreflightAttestationFromObjective"
+      ],
+      "group": "gmail-reply-authorization",
+      "bodySha256": "f0d265b79ec924368deafb3b304600e41909c765e0e0b7d6a58439c7dfe45dc2"
+    },
+    {
+      "names": [
+        "contextualGmailReplyMatchesPreflightAttestation"
+      ],
+      "group": "gmail-reply-authorization",
+      "bodySha256": "0d9e6a02942ac52774423ed98fecba20fe098de708c804963c2f877c3716610c"
+    },
+    {
+      "names": [
+        "isContextualGmailReplyAuthorizedByObjective"
+      ],
+      "group": "gmail-reply-authorization",
+      "bodySha256": "39ca283b926df6235381e51b1d4bd1cec4ea671a1532991f72123bdfadfb87c3"
+    },
+    {
+      "names": [
+        "isContextualGmailReplyRequestedByObjective"
+      ],
+      "group": "gmail-reply-authorization",
+      "bodySha256": "6228587b69998304160160cf8336b51c546999adba6188c7d51825037e3b1d01"
+    },
+    {
+      "names": [
+        "hasContextualGmailReplyMention"
+      ],
+      "group": "gmail-reply-authorization",
+      "bodySha256": "ea8ddec463b164a5be8e9f74d7ff378d98146410fa85b481c12ab846023ca437"
+    },
+    {
+      "names": [
+        "contextualGmailReplyRecoveryReason"
+      ],
+      "group": "gmail-reply-authorization",
+      "bodySha256": "eb0cdb81cc3c23102ae1d83320e952d185fcd59521b8b4cb771ee16adaa40197"
+    },
+    {
+      "names": [
+        "hasAffirmativeBoundedRemoteExactScopeDeclaration"
+      ],
+      "group": "objective-authorization",
+      "bodySha256": "7c6c3d78e60916a4a8cc5e11c012ebbd424816b9abc4ab057812b1a577f9f151"
+    },
+    {
+      "names": [
+        "boundedRemoteCommandHostPromptRequested"
+      ],
+      "group": "objective-authorization",
+      "bodySha256": "9badef0588e3aafdcb35233dd56cdce507ba02d937d14004f05dd30d7c239563"
+    },
+    {
+      "names": [
+        "boundedRemoteCommandDirectExecutionAuthorized"
+      ],
+      "group": "objective-authorization",
+      "bodySha256": "2607c2d73882012a3dc9dbb035618ad11988987057438e5aa0fba3b60b4fa79e"
+    },
+    {
+      "names": [
+        "confirmationAliasIsBoundInSegment"
+      ],
+      "group": "objective-authorization",
+      "bodySha256": "fc00aa8eb805c067dcddf4017933aec3da20cc6ec28b8980b829b4ad355cde76"
+    },
+    {
+      "names": [
+        "isSensitiveExternalActionConfirmationRequestedByObjective"
+      ],
+      "group": "objective-authorization",
+      "bodySha256": "2514fb4475e98bac1ad70375848f2bbb749ea0b58f27f1a421775f1532c2c7db"
+    },
+    {
+      "names": [
+        "isSensitiveExternalActionAuthorizedByObjective"
+      ],
+      "group": "objective-authorization",
+      "bodySha256": "e31e780ac0c362e3f3bbbea9a36a4af351bdfbc842ff8002747e19fb7ccc2a0a"
+    }
+  ],
+  "modules": [
+    {
+      "name": "types",
+      "lines": 77
+    },
+    {
+      "name": "host-authorization",
+      "lines": 312
+    },
+    {
+      "name": "host-authorization-policy",
+      "lines": 28
+    },
+    {
+      "name": "objective-authorization-policy",
+      "lines": 35
+    },
+    {
+      "name": "target-syntax",
+      "lines": 74
+    },
+    {
+      "name": "action-targets",
+      "lines": 186
+    },
+    {
+      "name": "remote-paths",
+      "lines": 242
+    },
+    {
+      "name": "remote-mutation-targets",
+      "lines": 407
+    },
+    {
+      "name": "remote-scope-targets",
+      "lines": 286
+    },
+    {
+      "name": "shell-parser",
+      "lines": 147
+    },
+    {
+      "name": "remote-project-lifecycle",
+      "lines": 414
+    },
+    {
+      "name": "remote-read-effects",
+      "lines": 45
+    },
+    {
+      "name": "action-presentation",
+      "lines": 124
+    },
+    {
+      "name": "action-vocabulary",
+      "lines": 79
+    },
+    {
+      "name": "shell-effects",
+      "lines": 308
+    },
+    {
+      "name": "http-audience-payload",
+      "lines": 304
+    },
+    {
+      "name": "http-audience-fields",
+      "lines": 119
+    },
+    {
+      "name": "http-send-targets",
+      "lines": 177
+    },
+    {
+      "name": "shell-classification",
+      "lines": 208
+    },
+    {
+      "name": "connector-classification",
+      "lines": 420
+    },
+    {
+      "name": "signed-oss-write",
+      "lines": 148
+    },
+    {
+      "name": "classification",
+      "lines": 122
+    },
+    {
+      "name": "request-authorization",
+      "lines": 250
+    },
+    {
+      "name": "request-authority-clauses",
+      "lines": 131
+    },
+    {
+      "name": "structured-gmail-send",
+      "lines": 218
+    },
+    {
+      "name": "structured-gmail-authorization",
+      "lines": 81
+    },
+    {
+      "name": "gmail-reply-parsing",
+      "lines": 424
+    },
+    {
+      "name": "gmail-reply-contract",
+      "lines": 18
+    },
+    {
+      "name": "gmail-reply-objective",
+      "lines": 252
+    },
+    {
+      "name": "gmail-body-envelopes",
+      "lines": 20
+    },
+    {
+      "name": "gmail-reply-constraints",
+      "lines": 253
+    },
+    {
+      "name": "gmail-reply-expectation",
+      "lines": 53
+    },
+    {
+      "name": "gmail-reply-authorization",
+      "lines": 338
+    },
+    {
+      "name": "objective-authorization",
+      "lines": 278
+    }
+  ],
+  "dependencies": {
+    "types": [],
+    "host-authorization": [
+      "types",
+      "target-syntax",
+      "structured-gmail-send"
+    ],
+    "host-authorization-policy": [
+      "types",
+      "host-authorization",
+      "target-syntax",
+      "request-authorization",
+      "request-authority-clauses"
+    ],
+    "objective-authorization-policy": [
+      "types",
+      "host-authorization",
+      "action-vocabulary",
+      "objective-authorization"
+    ],
+    "target-syntax": [],
+    "action-targets": [
+      "host-authorization",
+      "target-syntax",
+      "http-audience-fields"
+    ],
+    "remote-paths": [
+      "host-authorization",
+      "action-targets",
+      "target-syntax",
+      "shell-parser"
+    ],
+    "remote-mutation-targets": [
+      "remote-paths",
+      "target-syntax",
+      "types",
+      "host-authorization",
+      "action-targets",
+      "shell-parser",
+      "action-presentation"
+    ],
+    "remote-scope-targets": [
+      "remote-paths",
+      "host-authorization",
+      "action-targets",
+      "shell-parser",
+      "remote-mutation-targets",
+      "target-syntax",
+      "connector-classification"
+    ],
+    "shell-parser": [
+      "types",
+      "target-syntax"
+    ],
+    "remote-project-lifecycle": [
+      "host-authorization",
+      "remote-paths",
+      "shell-parser",
+      "remote-mutation-targets",
+      "target-syntax",
+      "types"
+    ],
+    "remote-read-effects": [
+      "shell-parser",
+      "target-syntax"
+    ],
+    "action-presentation": [
+      "types",
+      "host-authorization",
+      "action-targets"
+    ],
+    "action-vocabulary": [
+      "host-authorization"
+    ],
+    "shell-effects": [
+      "target-syntax",
+      "action-targets",
+      "shell-parser",
+      "action-presentation",
+      "host-authorization",
+      "types",
+      "connector-classification"
+    ],
+    "http-audience-payload": [
+      "action-targets",
+      "types",
+      "http-audience-fields"
+    ],
+    "http-audience-fields": [],
+    "http-send-targets": [
+      "http-audience-payload",
+      "http-audience-fields",
+      "action-targets",
+      "host-authorization",
+      "action-presentation",
+      "types"
+    ],
+    "shell-classification": [
+      "types",
+      "remote-paths",
+      "shell-parser",
+      "target-syntax",
+      "action-presentation",
+      "remote-scope-targets",
+      "action-targets",
+      "shell-effects",
+      "remote-mutation-targets",
+      "host-authorization",
+      "action-vocabulary",
+      "http-send-targets",
+      "http-audience-payload"
+    ],
+    "connector-classification": [
+      "host-authorization",
+      "target-syntax",
+      "types",
+      "action-presentation",
+      "gmail-reply-parsing",
+      "action-targets",
+      "action-vocabulary"
+    ],
+    "signed-oss-write": [
+      "host-authorization",
+      "connector-classification",
+      "remote-scope-targets",
+      "types",
+      "target-syntax",
+      "structured-gmail-send",
+      "request-authorization"
+    ],
+    "classification": [
+      "types",
+      "shell-classification",
+      "signed-oss-write",
+      "remote-scope-targets",
+      "host-authorization",
+      "connector-classification",
+      "remote-paths",
+      "action-presentation",
+      "remote-read-effects",
+      "remote-project-lifecycle",
+      "action-vocabulary"
+    ],
+    "request-authorization": [
+      "target-syntax",
+      "types"
+    ],
+    "request-authority-clauses": [
+      "types",
+      "request-authorization",
+      "target-syntax",
+      "host-authorization",
+      "action-vocabulary",
+      "structured-gmail-send"
+    ],
+    "structured-gmail-send": [
+      "target-syntax",
+      "request-authorization"
+    ],
+    "structured-gmail-authorization": [
+      "structured-gmail-send",
+      "connector-classification",
+      "target-syntax",
+      "request-authorization"
+    ],
+    "gmail-reply-parsing": [
+      "request-authorization",
+      "target-syntax",
+      "structured-gmail-send",
+      "gmail-body-envelopes"
+    ],
+    "gmail-reply-contract": [
+      "gmail-reply-parsing",
+      "gmail-reply-constraints"
+    ],
+    "gmail-reply-objective": [
+      "gmail-reply-parsing",
+      "host-authorization",
+      "target-syntax",
+      "request-authorization",
+      "structured-gmail-send",
+      "gmail-reply-constraints",
+      "gmail-reply-contract"
+    ],
+    "gmail-body-envelopes": [],
+    "gmail-reply-constraints": [
+      "gmail-reply-parsing",
+      "request-authorization",
+      "target-syntax",
+      "gmail-body-envelopes"
+    ],
+    "gmail-reply-expectation": [
+      "gmail-reply-constraints",
+      "gmail-reply-objective",
+      "gmail-reply-contract"
+    ],
+    "gmail-reply-authorization": [
+      "gmail-reply-parsing",
+      "gmail-reply-objective",
+      "gmail-reply-constraints",
+      "gmail-reply-expectation"
+    ],
+    "objective-authorization": [
+      "signed-oss-write",
+      "target-syntax",
+      "request-authorization",
+      "types",
+      "request-authority-clauses",
+      "structured-gmail-send",
+      "host-authorization",
+      "connector-classification",
+      "host-authorization-policy"
+    ]
+  },
+  "unitCycles": [],
+  "moduleCycles": []
+}

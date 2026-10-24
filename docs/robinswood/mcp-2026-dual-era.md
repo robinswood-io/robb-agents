@@ -41,23 +41,14 @@ cacheable core results, inline terminal results/errors, cooperative
 cancellation, and input-response acknowledgements. It never sends
 `initialize`, `tasks/result`, or `tasks/list` in the modern era.
 
-Server-side registration of the extension methods is not claimed here. With
-the pinned `@modelcontextprotocol/server@2.0.0`, the SDK classifies
-`tasks/get` and `tasks/cancel` as historical core methods, then rejects them
-with `-32601` in a 2026 session before consulting an explicitly registered
-custom handler. The new `tasks/update` name remains reachable, and the same
-`tasks/get` / `tasks/cancel` handlers remain reachable on the 2025 path. This
-exact asymmetry is reproduced through the public `Server` + `serveStdio` APIs
-by `packages/session-mcp-server/src/mcp-tasks-sdk-gap.test.ts` and matches the
-still-open [upstream issue #2598](https://github.com/modelcontextprotocol/typescript-sdk/issues/2598).
-
-Intercepting the colliding methods before the SDK transport can bypass the
-gate, but it also bypasses the SDK's era and request-schema validation. Robb
-Agents does not ship that interception as a production workaround: it would
-need a separately reviewed raw extension router plus a durable Tasks backend,
-authorization, cancellation and lifecycle ownership. Until those pieces exist
-or the SDK fixes the dispatch gate, the server capability remains disabled;
-the local projection and external wire conformance runner remain usable.
+Server-side registration of application Tasks remains disabled until Robb owns
+its durable backend, authorization, cancellation and lifecycle contract.
+The former SDK 2.0.0 dispatch collision (#2598) is no longer reproduced with
+`@modelcontextprotocol/server@2.4.0`: the positive regression test
+`packages/session-mcp-server/src/mcp-tasks-sdk-compat.test.ts` reaches custom
+2026 `tasks/get`, `tasks/cancel` and `tasks/update` handlers, while retaining
+the 2025 core methods. No raw transport interception is needed. The local
+projection and external wire conformance runner remain available.
 
 ## Legacy SSE policy
 

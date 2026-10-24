@@ -7,15 +7,15 @@
 
 import * as React from 'react'
 import { useTranslation } from "react-i18next"
-import type { ColumnDef } from '@tanstack/react-table'
+import type { ColumnDef } from '@/components/ui/data-table'
 import { DataTable, SortableHeader } from '@/components/ui/data-table'
 import { Input } from '@/components/ui/input'
 import { Spinner } from '@craft-agent/ui'
 import { cn } from '@/lib/utils'
 
-export interface Info_DataTableProps<TData, TValue> {
+export interface Info_DataTableProps<TData extends object> {
   /** TanStack Table column definitions */
-  columns: ColumnDef<TData, TValue>[]
+  columns: ColumnDef<TData>[]
   /** Table data */
   data: TData[]
   /** Show search input in toolbar */
@@ -66,7 +66,7 @@ export interface Info_DataTableProps<TData, TValue> {
  * />
  * ```
  */
-export function Info_DataTable<TData, TValue>({
+export function Info_DataTable<TData extends object>({
   columns,
   data,
   searchable = false,
@@ -77,7 +77,7 @@ export function Info_DataTable<TData, TValue>({
   floatingAction,
   getSubRows,
   className,
-}: Info_DataTableProps<TData, TValue>) {
+}: Info_DataTableProps<TData>) {
   const { t } = useTranslation()
   const [searchValue, setSearchValue] = React.useState('')
 
@@ -157,4 +157,4 @@ export function Info_DataTable<TData, TValue>({
 
 // Re-export SortableHeader for convenience
 export { SortableHeader } from '@/components/ui/data-table'
-export type { ColumnDef } from '@tanstack/react-table'
+export type { ColumnDef } from '@/components/ui/data-table'
