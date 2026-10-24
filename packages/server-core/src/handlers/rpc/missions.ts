@@ -35,7 +35,8 @@ import {
   type RequestContext,
   type RpcServer,
 } from '@craft-agent/server-core/transport'
-import { MissionPlanner, MissionRuntimeService } from '../../missions/index.ts'
+import { MissionPlanner } from '../../missions/MissionPlanner.ts'
+import { MissionRuntimeService } from '../../missions/MissionRuntimeService.ts'
 import type { HandlerDeps } from '../handler-deps.ts'
 import { createHash } from 'node:crypto'
 

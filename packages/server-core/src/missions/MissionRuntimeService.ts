@@ -279,9 +279,11 @@ export class MissionRuntimeService {
     const recovered: string[] = [];
     for (const workspace of this.listWorkspaces()) {
       try {
+        const missionIds = listMissionIds(workspace.rootPath);
+        if (missionIds.length === 0) continue;
         const context = await this.contextFor(workspace.id);
         const admittedMissionIds = new Set<string>();
-        for (const missionId of listMissionIds(workspace.rootPath)) {
+        for (const missionId of missionIds) {
           const snapshot = context.controller.getMission(missionId);
           try {
             await context.specializedProfiles.revalidateMissionSpec(snapshot.spec);
@@ -302,7 +304,7 @@ export class MissionRuntimeService {
         }
         recovered.push(...context.runtime.recoverNonTerminalMissions(admittedMissionIds)
           .map((missionId) => `${workspace.id}:${missionId}`));
-        for (const missionId of listMissionIds(workspace.rootPath)) {
+        for (const missionId of missionIds) {
           if (!admittedMissionIds.has(missionId)) continue;
           let snapshot = context.controller.getMission(missionId);
           if (snapshot.status === 'waiting-approval' && context.connectorExecutor) {

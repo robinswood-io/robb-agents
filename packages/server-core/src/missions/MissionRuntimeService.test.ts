@@ -124,6 +124,26 @@ describe('MissionRuntimeService', () => {
     });
   }
 
+  it('keeps Mission v2 dormant at empty startup and still starts an explicitly requested mission', async () => {
+    let executorInitializations = 0;
+    let proofInitializations = 0;
+    const runtimeService = new MissionRuntimeService({
+      sessionManager,
+      resolveWorkspace: (id) => id === 'workspace-1' ? { id, rootPath: root } : null,
+      listWorkspaces: () => [{ id: 'workspace-1', rootPath: root }],
+      executorFactory: () => { executorInitializations += 1; return executor; },
+      proofPassportFactory: () => { proofInitializations += 1; return undefined; },
+    });
+    expect(await runtimeService.start()).toEqual([]);
+    expect(executorInitializations).toBe(0);
+    expect(proofInitializations).toBe(0);
+    const started = await runtimeService.createAndStart('workspace-1', fixture({ cwd: root }));
+    expect(started.status).toBe('running');
+    await eventually(async () => (await runtimeService.getMission('workspace-1', 'service-demo')).status === 'completed');
+    expect(executorInitializations).toBe(1);
+    expect(proofInitializations).toBe(1);
+  });
+
   it('creates, runs, lists, and completes a mission through independent reviews', async () => {
     const runtimeService = service();
     const started = await runtimeService.createAndStart('workspace-1', fixture({ cwd: root }));

@@ -30,9 +30,25 @@
     "limit": "No wholesale deletion of still-referenced legacy modules. Existing bounded recovery, persistence and permission machinery is reused."
   },
   "remainingLots": [
-    3,
     4,
     5
   ],
-  "workAttachment": "Unresolved Robb Work target; versioned technical trace retained."
+  "workAttachment": "Unresolved Robb Work target; versioned technical trace retained.",
+  "lot3": {
+    "state": "Tested DEV isolated branch",
+    "changes": [
+      "Skip executor and proof-passport context initialization when no persisted Mission exists",
+      "Reuse the initial mission ID list during startup recovery",
+      "Import Mission runtime classes directly and remove unused evaluation re-export from production barrel"
+    ],
+    "acceptance": {
+      "pass": 128,
+      "fail": 0,
+      "files": 15,
+      "electronTypecheck": "pass"
+    },
+    "fixturePrerequisite": "Mission route checks require an explicit connection, even with a fake executor. Two non-network fictitious connections are seeded only in CRAFT_CONFIG_DIR test profile.",
+    "fixtureFile": "mission-v2-unit-profile-fixture.json",
+    "freezeDecision": "No new Mission v2 features or ordinary-chat dependency. Whole engine is retained because UI/RPC and recovery references are active. No persisted mission data removed."
+  }
 }
