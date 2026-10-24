@@ -1,0 +1,35 @@
+{
+  "status": "Application locale installée et vérifiée ; intégration du dépôt principal différée pour préserver des modifications concurrentes",
+  "generatedAt": "2026-10-24T18:18:44.869450+00:00",
+  "installedCommit": "76e185d9dbd95a652319825eae8fc7dea1ad3a2e",
+  "application": "/Applications/Robb Agents.app",
+  "sourceCheckout": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/robb-autonomy-candidate",
+  "sourceIntegration": "Deferred: concurrent uncommitted changes in the primary local repository",
+  "checks": {
+    "localUnitTests": 1138,
+    "failedUnitTests": 0,
+    "testFiles": 11,
+    "typechecks": 3,
+    "completeRealSyntheticMissions": 7,
+    "nativeMissionOutputsAndPreviews": "pass",
+    "actualNativeColdRestart": "pass",
+    "markerAndFourAcquiredFilesBytesAndMtimesRetained": true
+  },
+  "preserved": {
+    "existingSessions": 2321,
+    "connections": 6,
+    "unchangedSourceConfigs": 35
+  },
+  "backupCheckpoint": "/Users/thibault/Library/Application Support/Robb Agents/Staging Backups/20261024-181003-297443",
+  "evidence": {
+    "campaign": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/robb-autonomy-candidate/docs/robinswood/evidence/lots-approved-independent-verification.json",
+    "nativeMission": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/robb-autonomy-candidate/docs/robinswood/evidence/lots-approved-native-first-verification.json",
+    "coldRestart": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/robb-autonomy-candidate/docs/robinswood/evidence/lots-approved-cold-verification.json",
+    "runtimeProvenance": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/robb-autonomy-candidate/docs/robinswood/evidence/lots-approved-runtime-provenance.json"
+  },
+  "limits": [
+    "Essais sur données synthétiques ; aucun taux général d’autonomie ou gain de vitesse chiffré établi",
+    "Périmètre du verrou natif réduit à sa portée legacy antérieure, avec accord humain explicite",
+    "Intégration au dépôt principal non réalisée à cause de modifications concurrentes en cours"
+  ]
+}

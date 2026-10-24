@@ -1,18 +1,18 @@
 {
-  "status": "in progress",
+  "status": "Local signed application installed and verified; integration into the primary source repository deferred to preserve concurrent edits",
   "baselineAcceptedCommit": "4d7b32694e5fca84cfe0ce75d9292c937bdd2805",
   "lot1": {
-    "state": "Integrated DEV and local source reference",
+    "state": "Clean accepted local candidate pinned to the installed commit; primary source fast-forward deferred because of concurrent uncommitted edits",
     "targetCommit": "4d7b32694e5fca84cfe0ce75d9292c937bdd2805",
     "officialPreflight": "passed on Desktop source reference; only documentation differs from installed f287ca3f",
     "method": "serialized clean fast-forward; backup refs retained"
   },
   "lot2": {
-    "state": "Tested DEV isolated branch; runtime integration pending final official preflight",
+    "state": "Installed and verified locally: native cold recovery completes; strict legacy quarantine retained after explicit human scope authorization",
     "changes": [
-      "Remove legacy-mode dependency from bounded context-limit recovery",
-      "Remove legacy-mode dependency from uncertain-effect recovery guard",
-      "Include earlier admissions in the same recovery turn in the existing serialized guard"
+      "Keep bounded context-limit recovery independent of legacy mode",
+      "Restore the global uncertain-effect quarantine to the explicit legacy contract after the native cold-restart regression",
+      "Include earlier admissions in the same strict legacy recovered turn"
     ],
     "baseline": {
       "pass": 494,
@@ -27,14 +27,29 @@
       "electronTypecheck": "pass"
     },
     "fixtureCorrection": "The native generic allocation fixture now uses the existing lightweight prompt, while retaining dispatch identity and no-replay assertions.",
-    "limit": "No wholesale deletion of still-referenced legacy modules. Existing bounded recovery, persistence and permission machinery is reused."
+    "limit": "No wholesale deletion of still-referenced legacy modules. Existing bounded recovery, persistence and permission machinery is reused.",
+    "approvedScopeCorrection": {
+      "authorization": "Human replied Oui to the precise request to restore the prior legacy-only quarantine scope",
+      "sourceLocation": "Local checkout on the target Mac, following explicit clarification that Robb is local",
+      "newChecks": {
+        "pass": 1138,
+        "fail": 0,
+        "files": 11,
+        "sharedTypes": "pass",
+        "electronTypes": "pass",
+        "releaseContractTypes": "pass"
+      },
+      "beforeRegression": "Native recovery case failed with exactly-once global fence before the correction",
+      "afterRegression": "Native continuation admitted; strict legacy uncertainty quarantine still enforced",
+      "tradeoff": "Native mode no longer globally prohibits every later mutation after an unresolved operation; durable receipts and existing SDK recovery/read-first instructions remain"
+    }
   },
   "remainingLots": [
-    5
+    "Integrate the accepted commit into the primary local repository when concurrent edits can be serialized; do not overwrite those edits"
   ],
-  "workAttachment": "Unresolved Robb Work target; versioned technical trace retained.",
+  "workAttachment": "Robb Work project unresolved; keep technical evidence versioned without writing into an unrelated project",
   "lot3": {
-    "state": "Tested DEV isolated branch",
+    "state": "Included in installed candidate: Mission v2 remains dormant at empty startup and retains explicit creation/recovery",
     "changes": [
       "Skip executor and proof-passport context initialization when no persisted Mission exists",
       "Reuse the initial mission ID list during startup recovery",
@@ -51,7 +66,7 @@
     "freezeDecision": "No new Mission v2 features or ordinary-chat dependency. Whole engine is retained because UI/RPC and recovery references are active. No persisted mission data removed."
   },
   "lot4": {
-    "state": "Tested DEV isolated branch; real-provider complete missions pending lot 5",
+    "state": "Included in installed candidate; targeted retry/renderer checks passed; no new retry engine or SDK upgrade",
     "upstreamReference": "Craft 8df01c5d0ac73c35add5954e6f190ce038d35845",
     "changes": [
       "Forward one transient text_discard event for the exact failed SDK stream identity",
@@ -75,7 +90,7 @@
     }
   },
   "lot5": {
-    "state": "QA harness prepared and typechecked; real-provider acceptance and signed local delivery pending",
+    "state": "Seven real synthetic missions passed; native outputs, populated previews, actual cold restart, no marker rewrite and all output hashes verified",
     "changes": [
       "Extend existing report with unique tool IDs, failed-tool counts, first-tool latency and SDK usage",
       "Add one local read-only arithmetic MCP fixture; its source is retired after testing",
@@ -92,7 +107,32 @@
     "compactionFixtureCorrection": {
       "observedFailure": "SDK: Nothing to compact (session too small)",
       "correction": "Bounded synthetic history above the existing 20k recent-token threshold; production compaction unchanged",
-      "status": "real rerun pending"
-    }
-  }
+      "status": "Real SDK compaction passed in targeted and full seven-mission campaigns"
+    },
+    "nativeAcceptance": {
+      "sessionId": "261024-lively-coyote",
+      "passed": true,
+      "humanRequests": 2,
+      "automaticRecoveries": 1,
+      "controlPreviewOpened": true,
+      "acquiredFilesAndMarkerMtimesRetained": true
+    },
+    "currentProfilePreservation": {
+      "originalSessions": 2321,
+      "connections": 6,
+      "unchangedSourceConfigurations": 35
+    },
+    "limitations": [
+      "Seven synthetic missions do not establish a generalized autonomy rate or numerical speedup",
+      "Failed stream cleanup verified in unit/renderer tests; no forced provider-stream failure in this real campaign",
+      "QA sessions added after the verified 2321-session baseline were later absent from the normal profile; all 2321 original session IDs remained present"
+    ]
+  },
+  "target": {
+    "application": "/Applications/Robb Agents.app",
+    "profile": "~/.craft-agent",
+    "delivery": "Local signed staging on this Mac",
+    "publicRelease": false
+  },
+  "runtimeCommit": "76e185d9dbd95a652319825eae8fc7dea1ad3a2e"
 }

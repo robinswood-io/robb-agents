@@ -1,0 +1,35 @@
+{
+  "passed": true,
+  "candidateCommit": "76e185d9dbd95a652319825eae8fc7dea1ad3a2e",
+  "sessionId": "261024-lively-coyote",
+  "checks": [
+    "Two exact non-empty VAT groups with complete identifiers",
+    "All three outputs and actual manifest hashes verified",
+    "CSV unchanged in bytes and modification time",
+    "Native report preview shows the seven rows, two groups and empty VAT exclusions",
+    "Durable objective completed and pendingTurnRecovery clear"
+  ],
+  "files": {
+    "fournisseurs-qa.csv": {
+      "sha256": "5b1585ed97bc50639a14bd52b6584ee20ad60a47882aac1c26491280505cdc38",
+      "bytes": 169,
+      "mtimeNs": 1792864574763413060
+    },
+    "duplicates.json": {
+      "sha256": "ac01ce1fad1b9ed3133df55f1c0305c8dbfa5b5c5d52f57f9f15372ed984646e",
+      "bytes": 222,
+      "mtimeNs": 1792865476436201327
+    },
+    "manifest.json": {
+      "sha256": "e36db51cfef54bc3e63df7ac1a2499f508201610c3fe94985e23ace75618855f",
+      "bytes": 293,
+      "mtimeNs": 1792865476437066325
+    },
+    "rapport.md": {
+      "sha256": "566ff48cf2bfe5c058c0e679010786ca3cbf1b1878e6c0b3fb475772a3ee4ece",
+      "bytes": 890,
+      "mtimeNs": 1792865476436688118
+    }
+  },
+  "observedAtMs": 1792865535942
+}
