@@ -22,7 +22,6 @@ function createGatedSourceRuntime() {
 
   const agent = {
     setAllSources: () => { sourceRuntimeApplications.push('all-sources') },
-    applyBridgeUpdates: async () => { sourceRuntimeApplications.push('bridge') },
     setSourceServers: async () => { sourceRuntimeApplications.push('servers') },
     forceAbort: () => undefined,
     dispose: () => undefined,

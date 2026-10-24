@@ -1,0 +1,11 @@
+{
+  "command": [
+    "rtk",
+    "bun",
+    "run",
+    "electron:build"
+  ],
+  "exitCode": 0,
+  "seconds": 14.33,
+  "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/bridge-retirement-electron-build.log"
+}

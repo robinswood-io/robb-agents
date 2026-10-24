@@ -59,10 +59,11 @@ path is introduced. They can always migrate to Streamable HTTP or stdio. The
 same policy is applied to storage writes, agent-authored config writes, and
 resource-bundle imports.
 
-The legacy bridge bundle under `apps/electron/resources/bridge-mcp-server/` is
-a generated compatibility artifact whose source package is no longer present
-in this repository. It was not hand-edited; doing so would create an
-unverifiable second source of truth.
+The obsolete API bridge bundle has been removed. The maintained Claude and Pi
+backends use their native source/server APIs; no backend reads the old bridge
+runtime path or implements its former update hook. Source activation keeps its
+revocation checks, rollback and quarantine around the actual server update.
+Builds remove stale copies of the retired bundle from staged Electron resources.
 
 ## External conformance
 

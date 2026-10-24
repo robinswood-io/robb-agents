@@ -25,7 +25,12 @@
     "Nouvelle suite complète du dépôt réussie après extraction, 16 configurations TypeScript et lint ciblé sans avertissement",
     "12 modules supplémentaires : types session/transport, mémoire projet, validation Bash/PowerShell, fichiers, réponses volumineuses, schémas profils, sondes protocoles, routes et présentation des tours",
     "20 extractions contrôlées : corps des déclarations préservés et références entre modules vérifiées ; aucune référence importée omise",
-    "Suite complète du dépôt et 16 configurations TypeScript réussies après les 12 découpages ; audit ESLint global : aucun problème sur les modules extraits"
+    "Suite complète du dépôt et 16 configurations TypeScript réussies après les 12 découpages ; audit ESLint global : aucun problème sur les modules extraits",
+    "8 découpages supplémentaires : sources et OAuth, validation MCP, fabrique backends, journaux de tâches, schémas missions et automatisations ; typage et tests ciblés réussis",
+    "Ancien serveur bridge MCP retiré : aucun backend maintenu ne l’appelait ; ancien hook vide et phase vide d’activation supprimés, révocation/rollback/quarantaine conservés autour de la vraie mise à jour",
+    "Suite complète du dépôt, 16 configurations TypeScript, contrats d’activation et d’intégrité du paquet réussis après retrait du pont",
+    "Build Electron réussi ; ancien bundle absent des ressources et des 506 entrées du manifeste protégé",
+    "Seuil de lignes étendu aux workflows YAML, au SQL et au TOML ; un workflow historique supplémentaire dépasse le seuil"
   ],
   "pending": [
     "Découpage des autres fichiers au-delà de 500 lignes",
@@ -33,9 +38,9 @@
     "Lint global sans erreur ni avertissement",
     "Parcours complets réels en staging local, compilation signée et intégration"
   ],
-  "updatedAt": "2026-10-24T22:46:38.865322+00:00",
+  "updatedAt": "2026-10-24T23:10:33.022006+00:00",
   "current": {
-    "over500": 237,
+    "over500": 230,
     "explicitAny": 1163
   }
 }

@@ -1,0 +1,15 @@
+{
+  "command": [
+    "rtk",
+    "bun",
+    "test",
+    "packages/server-core/src/sessions/source-activated-auto-retry.test.ts",
+    "packages/server-core/src/sessions/session-source-delete-fence.test.ts",
+    "packages/shared/src/agent/backend/__tests__/runtime-resolver.test.ts",
+    "scripts/tests/release-integrity.test.ts",
+    "scripts/tests/source-quality.test.ts"
+  ],
+  "exitCode": 0,
+  "seconds": 4.52,
+  "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/bridge-retirement-contract-tests-2.log"
+}

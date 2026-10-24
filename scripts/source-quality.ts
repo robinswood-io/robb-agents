@@ -10,15 +10,14 @@ export interface SourceQualityIssue {
   actual: number;
 }
 
-// Generated third-party artifacts and historical rendered audit reports are
+// Unmodified third-party fixtures and historical rendered audit reports are
 // deliverables, not maintained source. Authored fixtures and tests remain covered.
 export const sourceArtifacts = new Map([
-  ['apps/electron/resources/bridge-mcp-server/index.js', 'Generated bundled MCP bridge'],
   ['apps/electron/src/main/__tests__/fixtures/guacamole-keyboard-1.5.5.js', 'Unmodified upstream keyboard fixture'],
   ['audit/robb-0.11.6-2026-08-18/report.html', 'Historical rendered audit report'],
   ['docs/robinswood/reports/robb-agentic-audit-2026-08-27/report.html', 'Historical rendered audit report'],
 ]);
-const codeExtension = /\.(?:[cm]?[jt]sx?|py|sh|bash|zsh|ps1|css|scss|html)$/;
+const codeExtension = /\.(?:[cm]?[jt]sx?|py|sh|bash|zsh|ps1|css|scss|html|sql|ya?ml|toml)$/;
 const typedExtension = /\.[cm]?[jt]sx?$/;
 
 export function inspectSource(file: string, content: string): SourceQualityIssue[] {

@@ -1,0 +1,380 @@
+{
+  "source": "packages/shared/src/missions/schema.ts",
+  "units": [
+    {
+      "names": [
+        "MISSION_SCHEMA_VERSION"
+      ],
+      "group": "work-items",
+      "bodySha256": "4e9902a28a5b24127a6481177707c95a15133dd6bbaa6b4d4306a1752141b2af"
+    },
+    {
+      "names": [
+        "MISSION_ID_RE"
+      ],
+      "group": "work-items",
+      "bodySha256": "d782eda500d8b11c6ee997c9c970cd2c8ab551025006b124d7e100c5aeeb9618"
+    },
+    {
+      "names": [
+        "slug"
+      ],
+      "group": "work-items",
+      "bodySha256": "1801618d8917881d91f19a18ffc8a41dbc05ca73909b7dec56c62c87fd189b1c"
+    },
+    {
+      "names": [
+        "MISSION_STATUSES"
+      ],
+      "group": "work-items",
+      "bodySha256": "f8f95d3a5cf4197545cdde49d2836d319d83a4f01fd92832912ca7183be115ad"
+    },
+    {
+      "names": [
+        "WORK_ITEM_KINDS"
+      ],
+      "group": "work-items",
+      "bodySha256": "f6852b24195b59244c6e25d2540366150763445c82acde60f2e0295141e88b19"
+    },
+    {
+      "names": [
+        "WORK_ITEM_STATUSES"
+      ],
+      "group": "work-items",
+      "bodySha256": "850bec2174275044924039b08867536c9237e0a9da03988915b768eb11f272b3"
+    },
+    {
+      "names": [
+        "AGENT_PROFILE_ROLES"
+      ],
+      "group": "work-items",
+      "bodySha256": "4033be500d2eda212e3dc7b1a2bf0ad5812a2293021ad309178c3dd6fc98261e"
+    },
+    {
+      "names": [
+        "EVIDENCE_KINDS"
+      ],
+      "group": "work-items",
+      "bodySha256": "7552f171ba87b407d91ac3bee663a5c1eb78e5927eb6221920773c619c3c6b4e"
+    },
+    {
+      "names": [
+        "WORK_ITEM_EFFECTS"
+      ],
+      "group": "work-items",
+      "bodySha256": "78a272afafaa811eabbbe0d113324ad6a564fe384abb426ac392395d35453d94"
+    },
+    {
+      "names": [
+        "MAX_CONNECTOR_PAYLOAD_BYTES"
+      ],
+      "group": "work-items",
+      "bodySha256": "409a53af35a86821521839ee0440598f75e6656d7fa47a72338be1c2e638fd04"
+    },
+    {
+      "names": [
+        "MAX_CONNECTOR_PAYLOAD_DEPTH"
+      ],
+      "group": "work-items",
+      "bodySha256": "4482b204f46040b68708de5a35d4d9c400a656e896c65f5626e137a491bdd972"
+    },
+    {
+      "names": [
+        "MAX_CONNECTOR_PAYLOAD_FIELDS"
+      ],
+      "group": "work-items",
+      "bodySha256": "f3404cb29f746506455e942c6a38ce850d89dd88dd929585873a6e5f0e830dcf"
+    },
+    {
+      "names": [
+        "FORBIDDEN_STRUCTURED_KEYS"
+      ],
+      "group": "work-items",
+      "bodySha256": "8fc5e5b146f4ef1c002e117ffe871f68d7b23763539914b61b50abee8c61bab3"
+    },
+    {
+      "names": [
+        "validateStructuredConnectorPayload"
+      ],
+      "group": "work-items",
+      "bodySha256": "8a1655c8c29b5c8c00147b8d16e7fb316d9fb0c561f44c44ed7c80c8b3e265db"
+    },
+    {
+      "names": [
+        "StructuredConnectorPayloadSchema"
+      ],
+      "group": "work-items",
+      "bodySha256": "b36b9539a11a99c83ef86cdbfc779d553d0f20cd61a4f3484b03cb4d8278d1ee"
+    },
+    {
+      "names": [
+        "MissionConnectorInvocationSchema"
+      ],
+      "group": "work-items",
+      "bodySha256": "9e9ae7c1b31c66acc1b30a746779e991f9a1eadf73f5bcb97cb73930d4f8d968"
+    },
+    {
+      "names": [
+        "MissionCriterionSchema"
+      ],
+      "group": "work-items",
+      "bodySha256": "ffaa641d773d5a101c0250bd13c1c1ef11b61eb2a33e19845ff9ce541d88070e"
+    },
+    {
+      "names": [
+        "EvidenceRequirementSchema"
+      ],
+      "group": "work-items",
+      "bodySha256": "4b3596200243ab7f19627c8d6ec10c33040ba8bd34cdd98688ebb7f2fe96d1a9"
+    },
+    {
+      "names": [
+        "EvidenceRefSchema"
+      ],
+      "group": "work-items",
+      "bodySha256": "fbd84295cd625f8a1e373418068d328f0113bfaf8bd965de746811927ee3b1e4"
+    },
+    {
+      "names": [
+        "WorkSubmissionSchema"
+      ],
+      "group": "work-items",
+      "bodySha256": "a6a5d9cf74748117a8c9b79eef8b416402769f73ed68b179791f19791a5d5c90"
+    },
+    {
+      "names": [
+        "MissionAttemptTelemetrySchema"
+      ],
+      "group": "work-items",
+      "bodySha256": "1c2d011c34a658227e23208e928612041e8c6ea016dd37a7bb49e17839039f4a"
+    },
+    {
+      "names": [
+        "MissionExecutionBindingSchema"
+      ],
+      "group": "work-items",
+      "bodySha256": "0e1632776c0cc7cd93e22a47a8c6c5f2c5844fed873ddf54c7bd8302a10cd08e"
+    },
+    {
+      "names": [
+        "AgentProfileSchema"
+      ],
+      "group": "work-items",
+      "bodySha256": "245d4afa7480d0df157e5ec56e6f21b0924dd4685d06a6603deaef5ede42c875"
+    },
+    {
+      "names": [
+        "MissionWorkItemSchema"
+      ],
+      "group": "work-items",
+      "bodySha256": "52cc8cf47e711d1c13fe1ced56a3eab2855cf7c4ada910712b2dfa1cc2ed19ee"
+    },
+    {
+      "names": [
+        "MissionPolicySchema"
+      ],
+      "group": "work-items",
+      "bodySha256": "64489450da18efeb60af986aae9419a3ec8599e36ffcfe62617fb1b034191b47"
+    },
+    {
+      "names": [
+        "MissionStatus"
+      ],
+      "group": "work-items",
+      "bodySha256": "68532470b87b0d3659e24992b6a7c44c155b4838ff0510db997e1220f0b62e84"
+    },
+    {
+      "names": [
+        "WorkItemKind"
+      ],
+      "group": "work-items",
+      "bodySha256": "ece3c8081e3ce6a6a537e82b9a5363c97ef91f89bd5e88cedaa0548754879d32"
+    },
+    {
+      "names": [
+        "WorkItemStatus"
+      ],
+      "group": "work-items",
+      "bodySha256": "40daac387d7147a33c78f6dfb3a8601de716d67e881d15d99eacacfc12ddaa8d"
+    },
+    {
+      "names": [
+        "MissionCriterion"
+      ],
+      "group": "work-items",
+      "bodySha256": "e919ace2a70536cf8a1659959cb7955facd4ee8e54ba7c29d4489037ec0609ef"
+    },
+    {
+      "names": [
+        "EvidenceRequirement"
+      ],
+      "group": "work-items",
+      "bodySha256": "19a8805b4706d9802b27bc2a50efcf0d7f98feb559365d7e26ed8b907f277de2"
+    },
+    {
+      "names": [
+        "EvidenceRef"
+      ],
+      "group": "work-items",
+      "bodySha256": "208f738fdacfa56aa05d49618844484af6e0bbdd892e95fdc3f5279e34b5673d"
+    },
+    {
+      "names": [
+        "WorkSubmission"
+      ],
+      "group": "work-items",
+      "bodySha256": "9e8cee90fd6f822758372f250dc1aee41970a8f821c18a606c2d8e8ddebab1b6"
+    },
+    {
+      "names": [
+        "MissionAttemptTelemetry"
+      ],
+      "group": "work-items",
+      "bodySha256": "4f732e12db7d182993e60856e1daa7929816a04f1faaea6c80c8a60459ff440d"
+    },
+    {
+      "names": [
+        "MissionExecutionBinding"
+      ],
+      "group": "work-items",
+      "bodySha256": "9e0dcaa345743f1b9bc154ef61a82c38f5f7908bb6ce3b50d4332c87a148667a"
+    },
+    {
+      "names": [
+        "MissionConnectorInvocation"
+      ],
+      "group": "work-items",
+      "bodySha256": "7e85b7c432b004cd55d29a86e28b6bf04050f6f9b9a8e93fcfe805dcf2503ee6"
+    },
+    {
+      "names": [
+        "AgentProfile"
+      ],
+      "group": "work-items",
+      "bodySha256": "8a5b6209f69ce2d727ae395903eb7f2a724cabe7ea1b866fed458190df5b329c"
+    },
+    {
+      "names": [
+        "MissionWorkItem"
+      ],
+      "group": "work-items",
+      "bodySha256": "497f4a4a40fdc45fd9bbdda934675bdfab8e0a3643bad9266461d93f858ce634"
+    },
+    {
+      "names": [
+        "MissionPolicy"
+      ],
+      "group": "work-items",
+      "bodySha256": "f52a2d1bc467672a52f01163262ebd530578bcd4199eb367706bee1c0319a330"
+    },
+    {
+      "names": [
+        "INITIAL_WORK_ITEM_KINDS"
+      ],
+      "group": "mission-spec",
+      "bodySha256": "c1b256a60418caf396e49ea89e807cbd23be9f1aa5226fba88aa9ae414cd1ba5"
+    },
+    {
+      "names": [
+        "findCycle"
+      ],
+      "group": "mission-spec",
+      "bodySha256": "cbd6e9b25dbcda6fa933bc835d8792b7871d9b81464a8fd78dd35ce2b6ea2f8c"
+    },
+    {
+      "names": [
+        "MissionSpecSchema"
+      ],
+      "group": "mission-spec",
+      "bodySha256": "e6897d700957526aa274b648873b56eaa12f7e82c33bfc3e4b1c0c636080b3bf"
+    },
+    {
+      "names": [
+        "MissionSpec"
+      ],
+      "group": "mission-spec",
+      "bodySha256": "6e026e8d3be540772ed7debe84dc1ecf4581f32ae25c620c62cd047c8d47ae42"
+    },
+    {
+      "names": [
+        "MissionExecutionPolicy"
+      ],
+      "group": "mission-spec",
+      "bodySha256": "afb0243c5b736e4bd709b5ea65f94d4caa97b285b78cea409c81d310dfa23504"
+    },
+    {
+      "names": [
+        "parseMissionSpec"
+      ],
+      "group": "mission-spec",
+      "bodySha256": "6a4ef35b8c3b8ea9ced4a9297af75a2e4890c789953413ffb82cce8aa6264f5c"
+    },
+    {
+      "names": [
+        "CriterionVerdictSchema"
+      ],
+      "group": "mission-verdict",
+      "bodySha256": "18c804f24ae07ce95808a5b52fec67a057a837f07b57440904ef238f763e57d9"
+    },
+    {
+      "names": [
+        "CorrectionBriefSchema"
+      ],
+      "group": "mission-verdict",
+      "bodySha256": "2b3d0058f681a5ac2dc660f9ca0a80f62b2000636cba7d2cf205cee6a297672f"
+    },
+    {
+      "names": [
+        "StructuredMissionVerdictSchema"
+      ],
+      "group": "mission-verdict",
+      "bodySha256": "1c99722f28d94c559f01b1283b8574d72491985af1d650158211813e1976e4ad"
+    },
+    {
+      "names": [
+        "CriterionVerdict"
+      ],
+      "group": "mission-verdict",
+      "bodySha256": "9d686e8602decabc1227664b038ed1f14c2c20103848b107d7336b5af83dc0b3"
+    },
+    {
+      "names": [
+        "CorrectionBrief"
+      ],
+      "group": "mission-verdict",
+      "bodySha256": "9c49b73fff2ebce3b836aa1092cae5ceeb10e79293256b4f42d2bbf948c9ac39"
+    },
+    {
+      "names": [
+        "StructuredMissionVerdict"
+      ],
+      "group": "mission-verdict",
+      "bodySha256": "5d997cb06bc89831c67ac7f53c557e21b6c19651f3733fff874a462b84977a34"
+    }
+  ],
+  "modules": [
+    {
+      "name": "work-items",
+      "lines": 387
+    },
+    {
+      "name": "mission-spec",
+      "lines": 196
+    },
+    {
+      "name": "mission-verdict",
+      "lines": 61
+    }
+  ],
+  "dependencies": {
+    "work-items": [],
+    "mission-spec": [
+      "work-items"
+    ],
+    "mission-verdict": [
+      "work-items"
+    ]
+  },
+  "unitCycles": [],
+  "moduleCycles": []
+}

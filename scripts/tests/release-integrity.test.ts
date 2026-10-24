@@ -201,7 +201,6 @@ function prepareSecurityLayout(): string {
   writeFixtureFile(join(resourcesDir, 'app.asar'))
   for (const relativePath of [
     'dist/interceptor.cjs',
-    'resources/bridge-mcp-server/index.js',
     'resources/session-mcp-server/index.js',
     'resources/pi-agent-server/index.js',
     'resources/pi-agent-server/antigravity-server.js',
@@ -242,7 +241,7 @@ describe('packaged Electron security contract', () => {
     const layout = validateElectronPackageSecurityLayout(resourcesDir)
 
     expect(layout.appAsarPath).toBe(join(resourcesDir, 'app.asar'))
-    expect(layout.requiredRuntimeFiles).toHaveLength(7)
+    expect(layout.requiredRuntimeFiles).toHaveLength(6)
 
     writeFixtureFile(join(resourcesDir, 'app', 'dist', 'main.cjs'))
     expect(() => validateElectronPackageSecurityLayout(resourcesDir))

@@ -20,7 +20,6 @@ describe('maintained-source quality contract', () => {
   });
   it('exempts only named upstream artifacts and historical rendered reports', () => {
     expect([...sourceArtifacts.keys()]).toEqual([
-      'apps/electron/resources/bridge-mcp-server/index.js',
       'apps/electron/src/main/__tests__/fixtures/guacamole-keyboard-1.5.5.js',
       'audit/robb-0.11.6-2026-08-18/report.html',
       'docs/robinswood/reports/robb-agentic-audit-2026-08-27/report.html',

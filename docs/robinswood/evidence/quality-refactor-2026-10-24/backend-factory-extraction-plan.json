@@ -1,0 +1,253 @@
+{
+  "source": "packages/shared/src/agent/backend/factory.ts",
+  "units": [
+    {
+      "names": [
+        "DRIVER_REGISTRY"
+      ],
+      "group": "provider-registry",
+      "bodySha256": "e46ea732f33b3aad5fcbd482a0320914c8b481bc5b24bb5e541394cb6ebc27e0"
+    },
+    {
+      "names": [
+        "getProviderDriver"
+      ],
+      "group": "provider-registry",
+      "bodySha256": "c367c522ce5937f396365dad2b3ca1435fe3ee8bf9518708c164d6ae8b3ab895"
+    },
+    {
+      "names": [
+        "resolveDriverRuntime"
+      ],
+      "group": "provider-registry",
+      "bodySha256": "24fdcbd0a33967ccbfdcaafc1b4732ad4b21adfc0de8c27a38b2afabc67fe355"
+    },
+    {
+      "names": [
+        "detectProvider"
+      ],
+      "group": "provider-registry",
+      "bodySha256": "2c70b6b645af830735166e7c769c94310f2c39b2c80ade5cf27018de62b0cbeb"
+    },
+    {
+      "names": [
+        "createBackend"
+      ],
+      "group": "provider-registry",
+      "bodySha256": "8374e11233141b9b86517b5933b59b6589805fa9141eb2e0959b94f7cf7aa107"
+    },
+    {
+      "names": [
+        "createAgent"
+      ],
+      "group": "provider-registry",
+      "bodySha256": "0958b8014009b114871abe0b72be788b8b83f66c9e5ec23c33cbfa247f785f3e"
+    },
+    {
+      "names": [
+        "createBackendFromResolvedContext"
+      ],
+      "group": "provider-registry",
+      "bodySha256": "c30db76dae931f7af6795f307b4e7f39149232da1306f9bec8c51c19df111dd8"
+    },
+    {
+      "names": [
+        "initializeBackendHostRuntime"
+      ],
+      "group": "provider-registry",
+      "bodySha256": "31b6aee47e87684931e9438633c9ef9b37afbe47386d6ad9a91ed23a059b93be"
+    },
+    {
+      "names": [
+        "resolveBackendHostTooling"
+      ],
+      "group": "provider-registry",
+      "bodySha256": "9aa364e3dc2a66160996b8eb0c2978c3cbe08db588f0dcaf37a7a5d69d92cf59"
+    },
+    {
+      "names": [
+        "createBackendFromConnection"
+      ],
+      "group": "provider-registry",
+      "bodySha256": "c246dd77c721269e218577c00c782d094de2607f9432dd124b308196c5c30c7f"
+    },
+    {
+      "names": [
+        "getAvailableProviders"
+      ],
+      "group": "provider-policy",
+      "bodySha256": "7bf5997170841eb1290d0e2ef3d5e38ea0577f31b0d7f8b4dca1f7462e8650c9"
+    },
+    {
+      "names": [
+        "isProviderAvailable"
+      ],
+      "group": "provider-policy",
+      "bodySha256": "020c0be6fe03e812f78297509e0a5a02d50f849a9d11771169ee310cf593ee3a"
+    },
+    {
+      "names": [
+        "providerTypeToAgentProvider"
+      ],
+      "group": "provider-policy",
+      "bodySha256": "2cf806261487a2dfa98266a8f4ad61a5d5278fd10e9945211d4b1a0627f578ff"
+    },
+    {
+      "names": [
+        "connectionTypeToProvider"
+      ],
+      "group": "provider-policy",
+      "bodySha256": "169dec29a30e8ef9150e4e39760747fa648fba9e61a40c1170008a9bb5ec3091"
+    },
+    {
+      "names": [
+        "connectionAuthTypeToBackendAuthType"
+      ],
+      "group": "provider-policy",
+      "bodySha256": "dd4cff4a49070265bd8cc1f4782ec09b116033aa0bdf15939caa620aae5285dd"
+    },
+    {
+      "names": [
+        "BACKEND_CAPABILITIES"
+      ],
+      "group": "provider-policy",
+      "bodySha256": "7b5cbc5fb03a03db56a94fbb69a45a56358bb27bc8ad5f1feffce179b36733ea"
+    },
+    {
+      "names": [
+        "getDefaultAuthType"
+      ],
+      "group": "provider-policy",
+      "bodySha256": "842d3c76a711bb97ebeaa7ae35a6975489d1ea233c761529aeaf304fdd6c1991"
+    },
+    {
+      "names": [
+        "resolveSessionConnection"
+      ],
+      "group": "connection-context",
+      "bodySha256": "09d8ddf6050db829871142723258cbfccffb9d4d55f95721199282bcbe876180"
+    },
+    {
+      "names": [
+        "ResolvedBackendContext"
+      ],
+      "group": "connection-context",
+      "bodySha256": "fd53634e4ab96e6cb3dc07b57ccb8776dc2a018c7b29fdef274a1f33e80090e1"
+    },
+    {
+      "names": [
+        "resolveBackendContext"
+      ],
+      "group": "connection-context",
+      "bodySha256": "51a7d54dc8a825e73f50266ac1ca82b58df45821403e935ddaeaff984220dad1"
+    },
+    {
+      "names": [
+        "resolveSetupTestConnectionHint"
+      ],
+      "group": "connection-context",
+      "bodySha256": "c6826940559678b57689cfebad8b70b4cdf4a96e17dbdebd2be99fab39e65187"
+    },
+    {
+      "names": [
+        "fetchBackendModels"
+      ],
+      "group": "connection-models-fetch-backend-models",
+      "bodySha256": "a810f7d3edec0be1dc4b6f2a66f70c39365fb6b6b66e425f4fbc0083e701082d"
+    },
+    {
+      "names": [
+        "validateStoredBackendConnection"
+      ],
+      "group": "connection-models-fetch-backend-models",
+      "bodySha256": "1af25fbce97ad1ead478177d8eafe96f98a2f4f171f610895bc09971c64141e0"
+    },
+    {
+      "names": [
+        "createConfigFromConnection"
+      ],
+      "group": "connection-models",
+      "bodySha256": "fc1f098c77c92a2bde9645020c844276691f1d9bbda0e008bb5712d7b136488c"
+    },
+    {
+      "names": [
+        "resolveModelForProvider"
+      ],
+      "group": "connection-models",
+      "bodySha256": "58f78ec001173b38ef681861c4da565db1bdec2e5826181404aab0c749d06c67"
+    },
+    {
+      "names": [
+        "cleanupSourceRuntimeArtifacts"
+      ],
+      "group": "connection-test",
+      "bodySha256": "9ecd614fd9d2e3a4d9707dbb89751ba0d59346b564e465fe06fa27c8bdd76b51"
+    },
+    {
+      "names": [
+        "testBackendConnection"
+      ],
+      "group": "connection-test",
+      "bodySha256": "850ee5c136320643b2c2d5647f3e7c0e26d67ed74fe47065bfac5f3714e258ec"
+    },
+    {
+      "names": [
+        "validateConnection"
+      ],
+      "group": "connection-test",
+      "bodySha256": "315d7d40e90376b21c236067debf5cf0eae5c740efa9848a640c23922f252fc3"
+    }
+  ],
+  "modules": [
+    {
+      "name": "provider-registry",
+      "lines": 242
+    },
+    {
+      "name": "provider-policy",
+      "lines": 149
+    },
+    {
+      "name": "connection-context",
+      "lines": 123
+    },
+    {
+      "name": "connection-models-fetch-backend-models",
+      "lines": 106
+    },
+    {
+      "name": "connection-models",
+      "lines": 118
+    },
+    {
+      "name": "connection-test",
+      "lines": 230
+    }
+  ],
+  "dependencies": {
+    "provider-registry": [
+      "connection-context",
+      "provider-policy",
+      "connection-models"
+    ],
+    "provider-policy": [],
+    "connection-context": [
+      "provider-policy",
+      "connection-models"
+    ],
+    "connection-models-fetch-backend-models": [
+      "provider-policy",
+      "provider-registry"
+    ],
+    "connection-models": [
+      "provider-policy"
+    ],
+    "connection-test": [
+      "connection-context",
+      "provider-policy",
+      "provider-registry"
+    ]
+  },
+  "unitCycles": [],
+  "moduleCycles": []
+}

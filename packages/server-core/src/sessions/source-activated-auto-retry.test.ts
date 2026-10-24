@@ -136,41 +136,23 @@ describe('source activation stream boundary', () => {
 })
 
 describe('revocable source runtime commit', () => {
-  it('restores the prior bridge state when a steer lands during bridge application', async () => {
-    let current = true
-    let runtime = 'previous'
-    let releaseBridge!: () => void
-    const bridgeBlocked = new Promise<void>(resolve => { releaseBridge = resolve })
+  it('does not apply source servers after the activation was already revoked', async () => {
     let serverCalls = 0
-    const stages: string[] = []
-    const commit = commitRevocableSourceActivationRuntime({
-      isCurrent: () => current,
-      applyBridge: async () => {
-        runtime = 'candidate-bridge'
-        await bridgeBlocked
-      },
-      applyServers: async () => {
-        serverCalls += 1
-        runtime = 'candidate-servers'
-      },
-      restorePrevious: async stage => {
-        stages.push(stage)
-        runtime = 'previous'
-      },
-      quarantine: async () => { runtime = 'quarantined' },
+    let restoreCalls = 0
+    let quarantines = 0
+    const result = await commitRevocableSourceActivationRuntime({
+      isCurrent: () => false,
+      applyServers: async () => { serverCalls += 1 },
+      restorePrevious: async () => { restoreCalls += 1 },
+      quarantine: async () => { quarantines += 1 },
     })
-
-    await Promise.resolve()
-    expect(runtime).toBe('candidate-bridge')
-    current = false
-    releaseBridge()
-    expect(await commit).toBe('superseded')
-    expect(runtime).toBe('previous')
-    expect(serverCalls).toBe(0)
-    expect(stages).toEqual(['bridge-superseded'])
+    expect(result).toBe('superseded')
+    expect({ serverCalls, restoreCalls, quarantines }).toEqual({
+      serverCalls: 0, restoreCalls: 0, quarantines: 0,
+    })
   })
 
-  it('restores both source-server and bridge state when a steer lands during server application', async () => {
+  it('restores the prior source servers when a steer lands during server application', async () => {
     let current = true
     let runtime = 'previous'
     let releaseServers!: () => void
@@ -178,7 +160,6 @@ describe('revocable source runtime commit', () => {
     const stages: string[] = []
     const commit = commitRevocableSourceActivationRuntime({
       isCurrent: () => current,
-      applyBridge: async () => { runtime = 'candidate-bridge' },
       applyServers: async () => {
         runtime = 'candidate-servers'
         await serversBlocked
@@ -206,11 +187,10 @@ describe('revocable source runtime commit', () => {
     let quarantines = 0
     const commit = commitRevocableSourceActivationRuntime({
       isCurrent: () => current,
-      applyBridge: async () => {
-        runtime = 'candidate-bridge'
+      applyServers: async () => {
+        runtime = 'candidate-servers'
         current = false
       },
-      applyServers: async () => { runtime = 'candidate-servers' },
       restorePrevious: async () => {
         throw new Error('rollback transport unavailable')
       },

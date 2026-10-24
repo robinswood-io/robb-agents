@@ -810,42 +810,13 @@ async function refreshExpiredCredentials(
 
   return { refreshedCount: refreshed.length, failedSources }
 }
-
-/**
- * Apply bridge-mcp-server updates for backends that use it.
- * Delegates to the backend's own applyBridgeUpdates() method.
- * Each backend handles its own strategy via applyBridgeUpdates().
- */
-async function applyBridgeUpdates(
-  agent: AgentInstance,
-  sessionPath: string,
-  enabledSources: LoadedSource[],
-  mcpServers: Record<string, import('@craft-agent/shared/agent/backend').SdkMcpServerConfig>,
-  sessionId: string,
-  workspaceRootPath: string,
-  context: string,
-  poolServerUrl?: string
-): Promise<void> {
-  await agent.applyBridgeUpdates({
-    sessionPath,
-    enabledSources,
-    mcpServers,
-    sessionId,
-    workspaceRootPath,
-    context,
-    poolServerUrl,
-  })
-}
-
 export async function commitRevocableSourceActivationRuntime(input: {
   isCurrent: () => boolean
-  applyBridge: () => Promise<void>
   applyServers: () => Promise<void>
-  restorePrevious: (stage: 'bridge-error' | 'bridge-superseded' | 'servers-error' | 'servers-superseded') => Promise<void>
+  restorePrevious: (stage: 'servers-error' | 'servers-superseded') => Promise<void>
   quarantine: () => Promise<void>
 }): Promise<'committed' | 'superseded' | 'failed' | 'quarantined'> {
-  const restore = async (
-    stage: 'bridge-error' | 'bridge-superseded' | 'servers-error' | 'servers-superseded',
+  const restore = async (stage: 'servers-error' | 'servers-superseded',
     fallback: 'superseded' | 'failed',
   ): Promise<'superseded' | 'failed' | 'quarantined'> => {
     try {
@@ -858,21 +829,11 @@ export async function commitRevocableSourceActivationRuntime(input: {
   }
   if (!input.isCurrent()) return 'superseded'
   try {
-    await input.applyBridge()
-  } catch {
-    return restore('bridge-error', 'failed')
-  }
-  if (!input.isCurrent()) {
-    return restore('bridge-superseded', 'superseded')
-  }
-  try {
     await input.applyServers()
   } catch {
     return restore('servers-error', 'failed')
   }
-  if (!input.isCurrent()) {
-    return restore('servers-superseded', 'superseded')
-  }
+  if (!input.isCurrent()) return restore('servers-superseded', 'superseded')
   return 'committed'
 }
 
@@ -3900,9 +3861,6 @@ export class SessionManager implements ISessionManager {
     this.assertSessionRuntimeOperationOwner(managed, agent)
     agent.setAllSources(allSources)
     const intendedSlugs = enabledSources.map(s => s.config.slug)
-
-    // Update bridge-mcp-server config/credentials for backends that need it
-    await applyBridgeUpdates(agent, sessionPath, enabledSources, mcpServers, managed.id, workspaceRootPath, 'source reload', managed.poolServer?.url)
     this.assertSessionRuntimeOperationOwner(managed, agent)
 
     await agent.setSourceServers(mcpServers, apiServers, intendedSlugs)
@@ -13361,7 +13319,6 @@ export class SessionManager implements ISessionManager {
     // Persist session with updated auth message and enabled sources
     this.persistSession(managed)
 
-    // Update bridge-mcp-server config/credentials for backends that need it
     const refreshAgent = managed.agent
     if (result.success && result.sourceSlug && refreshAgent && ownsSession()) {
       const workspaceRootPath = managed.workspace.rootPath
@@ -13379,7 +13336,6 @@ export class SessionManager implements ISessionManager {
           this.ordinaryMissionSourceBuildOptions(managed),
         )
         if (ownsSession() && managed.agent === refreshAgent) {
-          await applyBridgeUpdates(refreshAgent, sessionPath, enabledSources, mcpServers, managed.id, workspaceRootPath, 'source auth', managed.poolServer?.url)
         } else {
           sessionLog.info('Skipped source bridge refresh for a retired auth session', {
             sessionId,
@@ -18063,16 +18019,6 @@ export class SessionManager implements ISessionManager {
           })
           const rollbackErrors: unknown[] = []
           try {
-            await applyBridgeUpdates(
-              activationAgent,
-              sessionPath,
-              originalEnabledSources,
-              rollbackMcpServers,
-              managed.id,
-              workspaceRootPath,
-              'superseded source-enable rollback',
-              managed.poolServer?.url,
-            )
           } catch (error) {
             rollbackErrors.push(error)
             sessionLog.warn('Failed to restore bridge state after superseded source activation', {
@@ -18126,22 +18072,11 @@ export class SessionManager implements ISessionManager {
           }
         }
 
-        // Update bridge-mcp-server config/credentials for backends that need it.
         // These provider operations can mutate before their promises settle;
         // therefore every stale or failed commit restores the exact preceding
         // runtime snapshot before another activation transaction can start.
         const runtimeCommit = await commitRevocableSourceActivationRuntime({
           isCurrent: activationCurrent,
-          applyBridge: () => applyBridgeUpdates(
-            activationAgent,
-            sessionPath,
-            allEnabledSources,
-            mcpServers,
-            managed.id,
-            workspaceRootPath,
-            'source enable',
-            managed.poolServer?.url,
-          ),
           applyServers: async () => {
             await activationAgent.setSourceServers(mcpServers, apiServers, intendedSlugs)
           },
@@ -19061,9 +18996,7 @@ export class SessionManager implements ISessionManager {
       // Set active source servers (tools are only available from these)
       const intendedSlugs = sources.filter(isSourceUsable).map(s => s.config.slug)
 
-      // Update bridge-mcp-server config/credentials for backends that need it
       const usableSources = sources.filter(isSourceUsable)
-      await applyBridgeUpdates(agent, sessionPath, usableSources, mcpServers, managed.id, workspaceRootPath, 'source config change', managed.poolServer?.url)
       this.assertSessionRuntimeOperationOwner(managed, agent)
 
       await agent.setSourceServers(mcpServers, apiServers, intendedSlugs)
@@ -23816,7 +23749,6 @@ export class SessionManager implements ISessionManager {
           const intendedSlugs = usableSources.map(s => s.config.slug)
           await agent.setSourceServers(mcpServers, apiServers, intendedSlugs)
           assertActivePreparation()
-          await applyBridgeUpdates(agent, sessionPath, usableSources, mcpServers, sessionId, workspaceRootPath, 'send message', managed.poolServer?.url)
           assertActivePreparation()
           sessionLog.info(`Applied ${mcpCount} MCP + ${apiCount} API sources to session ${sessionId} (${allSources.length} total)`)
         }

@@ -1,0 +1,8 @@
+{
+  "build": "bridge-retirement-electron-build",
+  "sourceBundleAbsent": true,
+  "stagedBundleAbsent": true,
+  "stagedDirectoryAbsent": true,
+  "sealedRuntimeEntries": 506,
+  "manifestHasRetiredBridge": false
+}

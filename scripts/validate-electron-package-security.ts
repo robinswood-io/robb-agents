@@ -19,7 +19,6 @@ const REQUIRED_FUSES = [
 
 const REQUIRED_EXTERNAL_RUNTIME_FILES = [
   'dist/interceptor.cjs',
-  'resources/bridge-mcp-server/index.js',
   'resources/session-mcp-server/index.js',
   'resources/pi-agent-server/index.js',
   'resources/pi-agent-server/antigravity-server.js',

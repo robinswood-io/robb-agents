@@ -42,7 +42,7 @@ import type {
   SdkMcpServerConfig,
   BackendConfig,
   PostInitResult,
-  BridgeUpdateContext,
+
   SourceServerSnapshot,
   RecoveryMessage,
 } from './backend/types.ts';
@@ -1050,7 +1050,7 @@ ${formattedMessages}
   }
 
   // ============================================================
-  // Lifecycle (postInit, applyBridgeUpdates)
+  // Lifecycle (postInit)
   // ============================================================
 
   /**
@@ -1060,15 +1060,6 @@ ${formattedMessages}
    */
   async postInit(): Promise<PostInitResult> {
     return { authInjected: true };
-  }
-
-  /**
-   * Apply bridge/config updates mid-session.
-   * Default: no-op for backends that don't use bridge-mcp-server (Claude, Pi).
-   * Override in Codex/Copilot to regenerate config or write bridge files.
-   */
-  async applyBridgeUpdates(_context: BridgeUpdateContext): Promise<void> {
-    // No-op by default
   }
 
   /**

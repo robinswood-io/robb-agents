@@ -13,7 +13,7 @@
  * no-auth sources are incorrectly filtered out.
  *
  * Allowed in:
- *   - storage.ts (where isSourceUsable is defined)
+ *   - source-inventory.ts (where isSourceUsable is defined)
  *   - credential-manager.ts (state-setting operations, inverse check)
  *   - server-builder.ts (documented exceptions for OAuth providers)
  *
@@ -46,7 +46,7 @@ module.exports = {
   create(context) {
     // Files where direct isAuthenticated access is allowed
     const allowedFiles = [
-      'storage.ts', // isSourceUsable is defined here
+      'source-inventory.ts', // isSourceUsable is defined here
       'credential-manager.ts', // State-setting and inverse check
       'server-builder.ts', // OAuth provider checks (documented)
     ]

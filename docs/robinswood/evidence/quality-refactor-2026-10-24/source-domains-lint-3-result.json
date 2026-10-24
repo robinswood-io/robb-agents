@@ -1,0 +1,28 @@
+{
+  "command": [
+    "rtk",
+    "node",
+    "node_modules/eslint/bin/eslint.js",
+    "packages/session-tools-core/src/handlers/source-test.ts",
+    "packages/session-tools-core/src/handlers/source-test",
+    "packages/shared/src/sources/storage.ts",
+    "packages/shared/src/sources/storage",
+    "packages/shared/src/sources/types.ts",
+    "packages/shared/src/sources/types",
+    "packages/shared/src/mcp/validation.ts",
+    "packages/shared/src/mcp/validation",
+    "packages/shared/src/agent/backend/factory.ts",
+    "packages/shared/src/agent/backend/factory",
+    "packages/shared/src/tasks/storage.ts",
+    "packages/shared/src/tasks/storage",
+    "packages/shared/src/missions/schema.ts",
+    "packages/shared/src/missions/schema",
+    "packages/shared/src/automations/validation.ts",
+    "packages/shared/src/automations/validation",
+    "--max-warnings",
+    "0"
+  ],
+  "exitCode": 0,
+  "seconds": 1.89,
+  "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/source-domains-lint-3.log"
+}

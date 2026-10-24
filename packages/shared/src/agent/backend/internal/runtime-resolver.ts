@@ -27,7 +27,6 @@ export interface ResolvedBackendRuntimePaths {
    */
   interceptorBundlePath?: string;
   sessionServerPath?: string;
-  bridgeServerPath?: string;
   piServerPath?: string;
   /** ACP-to-Robb bridge for Mistral Vibe subscription sessions. */
   vibeAcpServerPath?: string;
@@ -260,7 +259,6 @@ export function resolveBackendRuntimePaths(hostRuntime: BackendHostRuntimeContex
     claudeCliPath: resolveClaudeBinaryPath(hostRuntime),
     interceptorBundlePath: resolveInterceptorBundlePath(hostRuntime),
     sessionServerPath: resolveServerPath(hostRuntime, 'session-mcp-server'),
-    bridgeServerPath: resolveServerPath(hostRuntime, 'bridge-mcp-server'),
     piServerPath: resolveServerPath(hostRuntime, 'pi-agent-server'),
     vibeAcpServerPath: hostRuntime.isPackaged
       ? firstExistingPath([
