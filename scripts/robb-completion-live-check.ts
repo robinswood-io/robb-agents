@@ -4,15 +4,17 @@
  * No credential export, external business action or new connection.
  * Run from the repo: CRAFT_CONFIG_DIR=~/.craft-agent-dev bun scripts/robb-completion-live-check.ts <evidence-directory>
  */
-import { mkdirSync, readFileSync, writeFileSync, existsSync, statSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync, existsSync, statSync, renameSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
+import { saveSourceConfig, getSourcePath } from '../packages/shared/src/sources/storage.ts';
 import { SessionManager, setSessionPlatform } from '../packages/server-core/src/sessions/SessionManager.ts';
 import { createHeadlessPlatform } from '../packages/server-core/src/runtime/platform-headless.ts';
 import { getDefaultLlmConnection, getLlmConnection, getWorkspaces } from '../packages/shared/src/config/storage.ts';
 import { CONFIG_DIR } from '../packages/shared/src/config/paths.ts';
 
 const localStaging = process.argv.includes('--local-staging');
+const selectedMission = process.argv.find(arg => arg.startsWith('--mission='))?.slice('--mission='.length);
 if (!CONFIG_DIR.endsWith('/.craft-agent-dev') && !(localStaging && CONFIG_DIR.endsWith('/.craft-agent'))) {
   throw new Error('Use the development profile, or explicitly select --local-staging for the normal profile.');
 }
@@ -34,22 +36,38 @@ platform.logger = {
 setSessionPlatform(platform);
 const manager = new SessionManager();
 // Deliberately do not initialize/recover other sessions from the development profile.
-const events: Array<{ sessionId?: string; type?: string; toolName?: string; isError?: boolean }> = [];
-const firstTool = new Map<string, () => void>();
+type ObservedEvent = { sessionId?: string; type?: string; toolName?: string; toolUseId?: string; isError?: boolean; executed?: boolean; a?: number; b?: number; observedAt: number };
+const events: ObservedEvent[] = [];
+const firstTool = new Map<string, (event: ObservedEvent) => boolean>();
+const compactions = new Set<string>();
+let qaSourcePath: string | undefined;
+let qaSourceSlug: string | undefined;
 manager.setEventSink((_channel, _target, ...payload: unknown[]) => {
   const value = payload[0];
   if (!value || typeof value !== 'object') return;
-  const event = value as { sessionId?: string; type?: string; toolName?: string; isError?: boolean };
-  events.push({ sessionId: event.sessionId, type: event.type, toolName: event.toolName, isError: event.isError });
+  const event = value as { sessionId?: string; type?: string; toolName?: string; toolUseId?: string; isError?: boolean; executed?: boolean; toolInput?: { a?: number; b?: number }; message?: string };
+  const observed = { sessionId: event.sessionId, type: event.type, toolName: event.toolName, toolUseId: event.toolUseId, isError: event.isError, executed: event.executed, ...(event.toolName?.endsWith('qa_sum') ? { a: event.toolInput?.a, b: event.toolInput?.b } : {}), observedAt: Date.now() };
+  events.push(observed);
+  if (event.type === 'info' && event.message?.startsWith('Compacted') && event.sessionId) compactions.add(event.sessionId);
   if (event.type === 'tool_start' && event.sessionId) {
     const resolveTool = firstTool.get(event.sessionId);
-    firstTool.delete(event.sessionId);
-    resolveTool?.();
+    if (resolveTool?.(observed)) firstTool.delete(event.sessionId);
   }
 });
 
-type Result = { name: string; passed: boolean; sessionId: string; checks: string[]; durationMs: number; toolCalls: number; sourceErrors: number; limit?: string };
+type Result = { name: string; passed: boolean; sessionId: string; checks: string[]; durationMs: number; toolCalls: number; toolErrors: number; firstToolLatencyMs?: number; sourceErrors: number; tokenUsage?: unknown; limit?: string };
 const results: Result[] = [];
+function metrics(sessionId: string, startedAt: number) {
+  const scoped = events.filter(event => event.sessionId === sessionId);
+  const calls = scoped.filter(event => event.type === 'tool_start');
+  const errors = scoped.filter(event => event.type === 'tool_result' && event.isError);
+  return {
+    toolCalls: new Set(calls.map(event => event.toolUseId).filter(Boolean)).size,
+    toolErrors: new Set(errors.map(event => event.toolUseId).filter(Boolean)).size,
+    firstToolLatencyMs: calls[0] ? calls[0].observedAt - startedAt : undefined,
+    sourceErrors: scoped.filter(event => event.type === 'typed_error').length,
+  };
+}
 const sha = (path: string) => createHash('sha256').update(readFileSync(path)).digest('hex');
 const requireCheck = (condition: boolean, label: string) => { if (!condition) throw new Error(label); };
 
@@ -63,6 +81,8 @@ async function send(sessionId: string, prompt: string): Promise<string> {
     }, 180_000);
     release = manager.onSessionComplete(event => {
       if (event.sessionId !== sessionId) return;
+      const owned = (manager as any).sessions.get(sessionId);
+      if (owned?.autoRetryPending && !owned.autoRetryPending.cancelled && !owned.autoRetryPending.committed) return;
       clearTimeout(timer); release();
       if (event.reason !== 'complete') reject(new Error(`Mission stopped: ${event.reason}`));
       else resolveDone(event.finalText ?? '');
@@ -75,26 +95,26 @@ async function send(sessionId: string, prompt: string): Promise<string> {
 }
 
 async function mission(name: string, body: (dir: string, sessionId: string) => Promise<string[]>) {
+  if (selectedMission && selectedMission !== name) return;
   const started = Date.now();
   const dir = join(output, name);
   mkdirSync(dir, { recursive: true });
-  const session = await manager.createSession(workspace.id, {
+  const session = await manager.createSession(workspace!.id, {
     name: `QA completion ${name}`, workingDirectory: dir, llmConnection: connection!.slug,
     model: connection!.defaultModel, connectionRoutePinned: true, modelRoutePinned: true,
-    permissionMode: 'allow-all', enabledSourceSlugs: [], thinkingLevel: 'standard',
+    permissionMode: 'allow-all', enabledSourceSlugs: [], thinkingLevel: 'medium',
   });
   try {
     const checks = await body(dir, session.id);
     const state = await manager.getSession(session.id);
     requireCheck(state?.activeObjective?.terminalState === 'complete_verified', 'The host did not complete the mission.');
     requireCheck(!state?.pendingTurnRecovery, 'Automatic recovery is still pending.');
-    results.push({ name, passed: true, sessionId: session.id, checks, durationMs: Date.now() - started,
-      toolCalls: events.filter(event => event.sessionId === session.id && event.type === 'tool_start').length,
-      sourceErrors: events.filter(event => event.sessionId === session.id && event.type === 'typed_error').length });
+    results.push({ name, passed: true, sessionId: session.id, checks, durationMs: Date.now() - started, tokenUsage: state?.tokenUsage,
+      ...metrics(session.id, started) });
   } catch (error) {
+    await manager.cancelProcessing(session.id, false).catch(() => {});
     results.push({ name, passed: false, sessionId: session.id, checks: [], durationMs: Date.now() - started,
-      toolCalls: events.filter(event => event.sessionId === session.id && event.type === 'tool_start').length,
-      sourceErrors: events.filter(event => event.sessionId === session.id && event.type === 'typed_error').length,
+      ...metrics(session.id, started),
       limit: error instanceof Error ? error.message : 'Unknown live mission failure' });
   }
   console.log(`${name}: ${results.at(-1)!.passed ? 'PASS' : 'FAIL'}`);
@@ -138,7 +158,7 @@ try {
     return ['Missing initial input did not block completion', 'Fallback source identified', 'Both outputs checked independently'];
   });
   await mission('midstream-amendment', async (dir, sessionId) => {
-    const toolStarted = new Promise<void>(resolveTool => firstTool.set(sessionId, resolveTool));
+    const toolStarted = new Promise<void>(resolveTool => firstTool.set(sessionId, () => { resolveTool(); return true; }));
     const initial = send(sessionId, `${boundary}\nCrée pret.txt contenant PRET, puis attends 5 secondes avec un outil local avant de continuer. Crée ensuite resultat.txt contenant exactement VERSION ALPHA et livre un lien vers ce résultat.`);
     await Promise.race([toolStarted, initial.then(() => { throw new Error('No tool observed before the first completion.'); })]);
     await manager.sendMessage(sessionId, `${boundary}\nCorrection de la demande en cours : le résultat définitif doit contenir exactement VERSION BETA (et aucune occurrence de ALPHA). Ajoute aussi controle.json contenant {"version":"BETA","complete":true}. Vérifie les DEUX fichiers et cite-les dans la réponse finale.`);
@@ -159,6 +179,60 @@ try {
     requireCheck(final.includes('resultat.txt') && final.includes('controle.json'), 'Corrected final deliverables are not linked.');
     return ['A real human correction arrived during tool execution', 'Latest requested content retained', 'Additional requirement delivered and linked'];
   });
+  await mission('source-activation-amendment', async (dir, sessionId) => {
+    qaSourceSlug = `qa-autonomy-${randomUUID().slice(0, 8)}`;
+    qaSourcePath = getSourcePath(workspace!.rootPath, qaSourceSlug);
+    requireCheck(!existsSync(qaSourcePath), 'The QA source path must be new.');
+    saveSourceConfig(workspace!.rootPath, {
+      id: qaSourceSlug, slug: qaSourceSlug, name: 'Disposable local autonomy QA',
+      provider: 'qa-local', type: 'mcp', enabled: true, isAuthenticated: false,
+      mcp: { transport: 'stdio', command: process.execPath, args: [join(import.meta.dir, 'robb-qa-local-source.mjs')], authType: 'none' },
+      tagline: 'Read-only synthetic arithmetic fixture; qa_sum has no side effects.',
+    });
+    writeFileSync(join(qaSourcePath, 'guide.md'), '# QA local source\n\nRead-only synthetic fixture. Use qa_sum with a and b; result has sum and fixture. No authentication, filesystem writes or network.\n');
+    const activationStarted = new Promise<void>(resolveTool => firstTool.set(sessionId, event => {
+      if (!event.toolName?.endsWith('source_test')) return false;
+      resolveTool(); return true;
+    }));
+    const initial = send(sessionId, `${boundary}\nException limitée au seul connecteur local fictif ${qaSourceSlug} (aucun réseau). Lis son guide, exécute source_test sur ce slug pour activer les outils, puis utilise son outil qa_sum avec a=1 et b=2. Livre calcul.json contenant exactement le résultat de cet outil et cite le fichier.`);
+    await Promise.race([activationStarted, initial.then(() => { throw new Error('Source activation was not observed before completion.'); })]);
+    await manager.sendMessage(sessionId, `${boundary}\nCorrection de la demande en cours : utilise uniquement le même connecteur local fictif ${qaSourceSlug}, avec qa_sum a=19 et b=23. Le calcul final doit venir de ce connecteur et valoir 42. Crée aussi controle.txt contenant exactement SOURCE_BETA. Vérifie et cite les DEUX fichiers calcul.json et controle.txt. Aucun autre connecteur ni réseau.`);
+    await initial;
+    const deadline = Date.now() + 180_000;
+    let final = '';
+    while (Date.now() < deadline) {
+      const state = await manager.getSession(sessionId);
+      if (!state?.isProcessing && existsSync(join(dir, 'controle.txt'))) {
+        final = state?.messages.filter(message => message.role === 'assistant' && !message.isIntermediate).at(-1)?.content ?? '';
+        break;
+      }
+      await new Promise(resolveTick => setTimeout(resolveTick, 250));
+    }
+    const data = JSON.parse(readFileSync(join(dir, 'calcul.json'), 'utf8')) as { sum?: number; fixture?: string };
+    requireCheck(data.sum === 42 && data.fixture === 'synthetic-local-qa', 'The corrected source result is missing.');
+    requireCheck(readFileSync(join(dir, 'controle.txt'), 'utf8').trim() === 'SOURCE_BETA', 'The correction requirement was omitted.');
+    requireCheck(final.includes('calcul.json') && final.includes('controle.txt'), 'The source deliverables are not linked.');
+    const correctedCalls = new Set(events.filter(event => event.sessionId === sessionId && event.type === 'tool_start' && event.toolName?.endsWith('qa_sum') && event.a === 19 && event.b === 23).map(event => event.toolUseId));
+    requireCheck(events.some(event => event.sessionId === sessionId && event.type === 'tool_result' && correctedCalls.has(event.toolUseId) && !event.isError && event.executed !== false), 'No successful corrected QA connector result observed.');
+    return ['A correction arrived during source testing', 'Corrected arithmetic came from the read-only local connector', 'Both corrected requirements delivered and linked'];
+  });
+  await mission('compaction-continuation', async (dir, sessionId) => {
+    await send(sessionId, `${boundary}\nPour cette première étape, crée uniquement acquis.json avec {"count":3,"total":15}, relis-le et termine. Garde pour nos prochains livrables la règle suivante : un rapport final devra contenir la mention QA-COMPACT-23. Ne crée pas ce rapport maintenant.`);
+    const acquired = join(dir, 'acquis.json');
+    const before = { sha256: sha(acquired), modifiedAt: statSync(acquired).mtimeMs };
+    const objectiveBefore = (await manager.getSession(sessionId))?.activeObjective?.objectiveId;
+    await manager.sendMessage(sessionId, '/compact Préserve toutes les exigences utilisateur, règles de présentation, résultats acquis et chemins de fichiers.');
+    requireCheck(compactions.has(sessionId), 'No actual compaction success event observed.');
+    requireCheck((await manager.getSession(sessionId))?.activeObjective?.objectiveId === objectiveBefore, 'Compaction replaced the accepted objective.');
+    const answer = await send(sessionId, `${boundary}\nReprends acquis.json sans le réécrire. Crée final.md contenant les chiffres acquis et applique la règle de présentation convenue avant la compaction. Crée manifest.json avec acquiredSha256 et finalSha256 calculés réellement. Vérifie les deux nouveaux fichiers et donne leurs liens.`);
+    requireCheck(sha(acquired) === before.sha256 && statSync(acquired).mtimeMs === before.modifiedAt, 'Compaction continuation rewrote acquired work.');
+    const final = readFileSync(join(dir, 'final.md'), 'utf8');
+    requireCheck(final.includes('15') && final.includes('QA-COMPACT-23'), 'Compaction lost a requirement.');
+    const manifest = JSON.parse(readFileSync(join(dir, 'manifest.json'), 'utf8')) as { acquiredSha256?: string; finalSha256?: string };
+    requireCheck(manifest.acquiredSha256 === sha(acquired) && manifest.finalSha256 === sha(join(dir, 'final.md')), 'Compaction manifest hashes do not match.');
+    requireCheck(answer.includes('final.md') && answer.includes('manifest.json'), 'Compaction deliverables are not linked.');
+    return ['Real SDK compaction completed', 'Previously accepted objective and presentation requirement retained', 'Acquired file unchanged', 'New outputs and hashes verified'];
+  });
   await mission('continuation', async (dir, sessionId) => {
     await send(sessionId, `${boundary}\nCrée uniquement brouillon.md contenant exactement « ALPHA — résultat acquis ». N'écris pas encore la version finale : je donnerai sa consigne ensuite.`);
     const draft = join(dir, 'brouillon.md');
@@ -175,11 +249,12 @@ try {
   });
 } finally {
   await manager.cleanup();
+  if (qaSourcePath && existsSync(qaSourcePath)) renameSync(qaSourcePath, join(output, 'retired-qa-source'));
   const sourceFiles = ['packages/server-core/src/sessions/SessionManager.ts', 'packages/server-core/src/sessions/turn-completion.ts', 'packages/shared/src/prompts/result-presentation.ts'];
-  writeFileSync(join(output, 'report.json'), JSON.stringify({ generatedAt: new Date().toISOString(), environment: localStaging ? 'local-staging-profile' : 'local-development-profile',
+  writeFileSync(join(output, 'report.json'), JSON.stringify({ generatedAt: new Date().toISOString(), missionSelection: selectedMission ?? 'all-seven', environment: localStaging ? 'local-staging-profile' : 'local-development-profile',
     connection: { slug: connection.slug, provider: connection.providerType, model: connection.defaultModel },
     sourceFiles: Object.fromEntries(sourceFiles.map(path => [path, sha(path)])), results, diagnosticCounts,
     limitations: ['Real provider calls and real file operations; headless session runtime, not an Electron UI journey.',
-      'Five synthetic local missions do not establish a general success rate.'] }, null, 2) + '\n');
+      'Seven synthetic local missions do not establish a general success rate; the QA connector is local and read-only.'] }, null, 2) + '\n');
 }
-if (results.length !== 5 || results.some(result => !result.passed)) process.exitCode = 1;
+if (results.length !== (selectedMission ? 1 : 7) || results.some(result => !result.passed)) process.exitCode = 1;

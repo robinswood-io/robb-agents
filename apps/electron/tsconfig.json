@@ -27,6 +27,6 @@
       "@craft-agent/shared/*": ["../../packages/shared/src/*"]
     }
   },
-  "include": ["src/**/*", "../../packages/shared/src/**/*.d.ts"],
+  "include": ["src/**/*", "../../packages/shared/src/**/*.d.ts", "../../scripts/robb-completion-live-check.ts"],
   "exclude": ["node_modules", "dist"]
 }

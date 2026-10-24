@@ -73,5 +73,21 @@
       "electronTypecheck": "pass",
       "releaseTypecheck": "pass"
     }
+  },
+  "lot5": {
+    "state": "QA harness prepared and typechecked; real-provider acceptance and signed local delivery pending",
+    "changes": [
+      "Extend existing report with unique tool IDs, failed-tool counts, first-tool latency and SDK usage",
+      "Add one local read-only arithmetic MCP fixture; its source is retired after testing",
+      "Exercise a correction during source testing and a real SDK compaction continuation",
+      "Include QA script in the actual Electron typecheck and use valid medium thinking level"
+    ],
+    "fixtureHealth": {
+      "tools": 1,
+      "sum": 42,
+      "readOnly": true
+    },
+    "metricsLimit": "Instrumented baseline only: no performance percentage claimed from different prompts or reasoning settings.",
+    "preDelivery": "All final DEV test/typecheck jobs exited zero; platform-specific installer/signature cases will also run on Mac."
   }
 }
