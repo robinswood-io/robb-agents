@@ -22,12 +22,6 @@
     "installerContract": "pass",
     "piDriverTests": "pass"
   },
-  "pendingAcceptance": [
-    "Five real-provider file missions with independent content checks",
-    "Native Electron mission, file preview and cold restart checks",
-    "Stable Developer ID build, official staging preflight/install/verify",
-    "Profile, existing sessions, connections and source configuration retention"
-  ],
   "constraints": [
     "No real accounting mutation",
     "No other connector change",
@@ -39,5 +33,15 @@
     "Unit tests are not autonomy success measurements.",
     "Five synthetic missions do not guarantee completion of arbitrary business missions.",
     "Work reference unresolved; preserve this versioned trace and local evidence for later reconciliation."
-  ]
+  ],
+  "completedAcceptance": [
+    "Five real-provider file missions with independent content checks",
+    "Native Electron mission, file preview and cold restart checks",
+    "Stable Developer ID build, official staging preflight/install/verify",
+    "Profile, existing sessions, connections and source configuration retention"
+  ],
+  "pendingAcceptance": [],
+  "status": "Installed and independently verified on the local Mac",
+  "installedCommit": "f287ca3fd634c8ef5a65cd0850fab3e6451cb0b2",
+  "acceptanceEvidenceFile": "docs/robinswood/evidence/autonomy-simplification-2026-10-24-acceptance.json"
 }
