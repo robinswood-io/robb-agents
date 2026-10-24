@@ -395,7 +395,9 @@ export function registerSettingsHandlers(server: RpcServer, deps: HandlerDeps): 
       config.name = String(normalizedValue).trim()
     } else if (key === 'costControl') {
       const { resolveAgentCostControlPolicy } = await import('@craft-agent/shared/config')
-      config.costControl = resolveAgentCostControlPolicy(value as any)
+      config.costControl = resolveAgentCostControlPolicy(
+        value as Parameters<typeof resolveAgentCostControlPolicy>[0],
+      )
     } else if (key === 'localMcpEnabled') {
       // Store in localMcpServers.enabled (top-level, not in defaults)
       config.localMcpServers = config.localMcpServers || { enabled: true }

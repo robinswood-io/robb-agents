@@ -87,7 +87,7 @@ export interface MissionRuntimeServiceOptions {
   ) => Promise<BrokeredMissionConnectorExecutor> | BrokeredMissionConnectorExecutor;
   proofPassportFactory?: (
     workspace: MissionWorkspace,
-  ) => Promise<MissionProofPassportService | null> | MissionProofPassportService | null;
+  ) => Promise<MissionProofPassportService | null | undefined> | MissionProofPassportService | null | undefined;
   connectorReadiness?: MissionConnectorReadinessResolver;
   preflightCostEstimator?: MissionPreflightCostEstimator;
   preflightConnections?: () => MissionPreflightConnection[];
@@ -393,7 +393,7 @@ export class MissionRuntimeService {
     const profileById = new Map(spec.agentProfiles.map(profile => [profile.id, profile]));
     const routingContextFor = (
       profileId: string,
-      assignment: string,
+      _assignment: string,
     ): MissionSelectionContext => {
       const profile = profileById.get(profileId);
       if (!profile) return {};
@@ -406,7 +406,6 @@ export class MissionRuntimeService {
       const sources = sourceSlugs.length > 0
         ? getSourcesBySlugs(workspace.rootPath, sourceSlugs)
         : [];
-      const authenticatedTaskText = [spec.objective, assignment].join('\n');
       const classification = {difficulty:undefined,requiredCapabilities:[]};
       return {
         sensitivity: maxSourceSensitivity(sources.map(source => source.config.routingSensitivity)),

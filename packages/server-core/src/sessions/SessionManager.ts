@@ -12,7 +12,7 @@ import type { ISessionManager, IBrowserPaneManager, BrowserMutationUrlPolicy, Ex
 import { RemoteBrowserPaneManager } from './RemoteBrowserPaneManager';
 import { validateFilePath, getWorkspaceAllowedDirs } from '@craft-agent/server-core/handlers';
 import { createScopedLogger, CONSOLE_LOGGER, type PlatformServices, type Logger } from '@craft-agent/server-core/runtime';
-import { basename, dirname, join } from 'path';
+import { basename, join } from 'path';
 import { existsSync, readFileSync } from 'fs';
 import { readFile, writeFile, mkdir } from 'fs/promises';
 import { randomUUID, createHash } from 'node:crypto';
@@ -21,8 +21,8 @@ import { LEGACY_USER_INPUT_ANSWER_MESSAGE_PREFIX, USER_INPUT_ANSWER_MESSAGE_PREF
 import type { AgentEventUsage } from '@craft-agent/core/types';
 import { requirePermissionMode } from '@craft-agent/shared/agent/mode-types';
 import { type AgentEvent, setPermissionMode, hydratePreviousPermissionMode, getPermissionModeDiagnostics, type PermissionMode, unregisterSessionScopedToolCallbacks, mergeSessionScopedToolCallbacks, AbortReason, type AuthRequest, type AuthResult, type CredentialAuthRequest, type BrowserPaneFns, generateConversationSummary, resolveKeepBackgroundTasksAlive, decideAutonomyRecovery, permissionModeAfterPlanApproval, beginObjectiveEvidenceGate, checkObjectiveEvidenceBeforeMutation, clearObjectiveEvidenceGate, destroyContextualGmailSessionState, getObjectiveEvidenceCompletionGap, recordObjectiveEvidence, detectHighStakesEvidenceDomain, assertContextualGmailBrowserMutationTargetAllowed, isContextualGmailBrowserMutationGuardEnabled, resolveBrowserChannelDirective, classifyToolEffect, classifyAgentFailure, isToolResultError, ToolAdmissionRecoveryError, parseCompactCommand } from '@craft-agent/shared/agent';
-import { resolveSessionConnection, createBackendFromConnection, resolveBackendContext, createBackendFromResolvedContext, cleanupSourceRuntimeArtifacts, providerTypeToAgentProvider, type AgentBackend, type BackendHostRuntimeContext, type PostInitResult, ProviderDispatchRejectedError } from '@craft-agent/shared/agent/backend';
-import { getLlmConnection, getLlmConnections, getDefaultLlmConnection, getDefaultThinkingLevel, getBrowserToolEnabled, resetManagedAnthropicAuthEnvVars, resolveMidStreamBehavior, getPersistedUiLanguage, resolveTitleLanguageName, AGENT_COST_CONTROL_DECISION_VERSION, decideCostProviderAdmission, isBrowserFallbackEligibleTool, monetaryBudgetCostUsd, resolveAgentCostBudgetState, resolveAgentCostControlPolicy, resolveEffectiveAgentContextLimits, MAX_SAFE_VALIDATED_CONTINUATION_ATTEMPTS, type CostControlledTurnKind, type LlmConnection } from '@craft-agent/shared/config';
+import { resolveSessionConnection, createBackendFromConnection, resolveBackendContext, createBackendFromResolvedContext, cleanupSourceRuntimeArtifacts, type AgentBackend, type BackendHostRuntimeContext, ProviderDispatchRejectedError } from '@craft-agent/shared/agent/backend';
+import { getLlmConnection, getDefaultLlmConnection, getDefaultThinkingLevel, getBrowserToolEnabled, resetManagedAnthropicAuthEnvVars, resolveMidStreamBehavior, getPersistedUiLanguage, resolveTitleLanguageName, decideCostProviderAdmission, isBrowserFallbackEligibleTool, monetaryBudgetCostUsd, resolveAgentCostBudgetState, resolveAgentCostControlPolicy, resolveEffectiveAgentContextLimits, type CostControlledTurnKind, type LlmConnection } from '@craft-agent/shared/config';
 import { formatPlaybookPrompt, getBuiltinPlaybook, loadWorkspacePlaybook } from '@craft-agent/shared/playbooks';
 import { readRunLog, validateSessionExecutionIsolation, type SessionExecutionIsolation } from '@craft-agent/shared/tasks';
 import { loadMissionSnapshot } from '@craft-agent/shared/missions';
@@ -31,11 +31,11 @@ import { PrivilegedExecutionBroker } from '@craft-agent/server-core/services';
 import { isValidWorkingDirectory } from '../utils/path-validation';
 import { InitGate } from '@craft-agent/server-core/domain';
 import { i18n } from '@craft-agent/shared/i18n';
-import { getWorkspaces, getWorkspaceByNameOrId, loadConfigDefaults, loadPreferences, migrateLegacyCredentials, migrateLegacyLlmConnectionsConfig, migrateOrphanedDefaultConnections, MODEL_REGISTRY, type Workspace, type WorkspaceInfo } from '@craft-agent/shared/config';
+import { getWorkspaces, getWorkspaceByNameOrId, loadConfigDefaults, migrateLegacyCredentials, migrateLegacyLlmConnectionsConfig, migrateOrphanedDefaultConnections, MODEL_REGISTRY, type Workspace, type WorkspaceInfo } from '@craft-agent/shared/config';
 import type { ActiveSessionInfo, SessionProcessingStatus } from '@craft-agent/core/types';
 import { isWorkspaceAutomaticToolFallbackEnabled, loadWorkspaceConfig, type ExternalActionPolicy } from '@craft-agent/shared/workspaces';
-import { listSessions as listStoredSessions, loadSession as loadStoredSession, saveSession as saveStoredSession, createSession as createStoredSession, deleteSession as deleteStoredSession, deleteSessionAtomically as deleteStoredSessionAtomically, updateSessionMetadata, canUpdateSdkCwd, setPendingPlanExecution as setStoredPendingPlanExecution, markCompactionComplete as markStoredCompactionComplete, markPendingPlanExecutionDispatched as markStoredPendingPlanExecutionDispatched, clearPendingPlanExecution as clearStoredPendingPlanExecution, getPendingPlanExecution as getStoredPendingPlanExecution, getSessionAttachmentsPath, getSessionPath as getSessionStoragePath, ensureSessionDir, getSessionFilePath, generateSessionId, assertSessionPersistenceRootIdentity, captureSessionPersistenceRootIdentity, captureSessionPersistenceRootPath, SessionPersistenceRootIdentityError, sessionPersistenceQueue, getHeaderMetadataSignature, writeSessionJsonl, createImportedSessionIsolation, serializeSession, validateBundle, type SessionBundle, type DispatchMode, type StoredSession, type StoredMessage, type SessionMetadata, type SessionStatus, type SessionHeader, type SessionAppProvenance, type SessionPersistenceRootIdentity, type PendingTurnRecovery, type ActiveSessionObjective, type SessionDelegation, type ExternalActionAuthorization, type ExternalActionAuthorizationCategory, type MissionCapabilityLock, type MissionOrdinaryRouteLock, type MissionOrdinarySourceBinding, pickSessionFields } from '@craft-agent/shared/sessions';
-import { loadWorkspaceSources, loadAllSources, getSourcesBySlugs, isSourceUsable, type LoadedSource, type McpServerConfig, getSourcesNeedingAuth, getSourceCredentialManager, getSourceServerBuilder, type SourceWithCredential, isApiOAuthProvider, hasRenewEndpoint, SERVER_BUILD_ERRORS, TokenRefreshManager, createTokenGetter } from '@craft-agent/shared/sources';
+import { listSessions as listStoredSessions, loadSession as loadStoredSession, saveSession as saveStoredSession, createSession as createStoredSession, deleteSession as deleteStoredSession, deleteSessionAtomically as deleteStoredSessionAtomically, updateSessionMetadata, setPendingPlanExecution as setStoredPendingPlanExecution, markCompactionComplete as markStoredCompactionComplete, markPendingPlanExecutionDispatched as markStoredPendingPlanExecutionDispatched, clearPendingPlanExecution as clearStoredPendingPlanExecution, getPendingPlanExecution as getStoredPendingPlanExecution, getSessionPath as getSessionStoragePath, ensureSessionDir, getSessionFilePath, generateSessionId, assertSessionPersistenceRootIdentity, captureSessionPersistenceRootIdentity, captureSessionPersistenceRootPath, SessionPersistenceRootIdentityError, sessionPersistenceQueue, getHeaderMetadataSignature, writeSessionJsonl, createImportedSessionIsolation, serializeSession, validateBundle, type SessionBundle, type DispatchMode, type StoredSession, type StoredMessage, type SessionStatus, type SessionHeader, type SessionAppProvenance, type SessionPersistenceRootIdentity, type PendingTurnRecovery, type ActiveSessionObjective, type SessionDelegation, type ExternalActionAuthorization, type ExternalActionAuthorizationCategory, type MissionCapabilityLock, type MissionOrdinaryRouteLock, type MissionOrdinarySourceBinding, pickSessionFields } from '@craft-agent/shared/sessions';
+import { loadWorkspaceSources, loadAllSources, getSourcesBySlugs, isSourceUsable, type LoadedSource, getSourceCredentialManager, getSourceServerBuilder, type SourceWithCredential, isApiOAuthProvider, hasRenewEndpoint, SERVER_BUILD_ERRORS, TokenRefreshManager, createTokenGetter } from '@craft-agent/shared/sources';
 import { ConfigWatcher, type ConfigWatcherCallbacks } from '@craft-agent/shared/config';
 import { getValidClaudeOAuthToken } from '@craft-agent/shared/auth';
 import { resolveAuthEnvVars } from '@craft-agent/shared/config';
@@ -43,26 +43,26 @@ import { toolMetadataStore, getLastApiError } from '@craft-agent/shared/intercep
 import { isParentTaskTool } from '@craft-agent/shared/utils/toolNames';
 import { restoreFiles } from '@craft-agent/shared/utils/bundle-files';
 import { getCredentialManager, type LlmCredentialBinding } from '@craft-agent/shared/credentials';
-import { CraftMcpClient, McpClientPool, McpPoolServer, collectionSummaryCache, type CollectionCacheScope } from '@craft-agent/shared/mcp';
+import { McpClientPool, McpPoolServer, collectionSummaryCache, type CollectionCacheScope } from '@craft-agent/shared/mcp';
 import { getAppPermissionsDir, getWorkspacePermissionsPath, getSourcePermissionsPath } from '@craft-agent/shared/agent/permissions-config';
 import { type Session, type SessionEvent, type CreateSessionOptions, type FileAttachment, type SendMessageOptions, type PermissionRequest, type UnreadSummary, type RemoteSessionTransferPayload, type ImportRemoteSessionTransferResult, CodedError, RPC_CHANNELS, generateMessageId } from '@craft-agent/shared/protocol';
 import { messageToStored, storedToMessage, type Message, type StoredAttachment, type ToolDisplayMeta, type RoutingMeta, type TokenUsage } from '@craft-agent/core/types';
 import { perf, encodeIconToDataUrlAsync, getEmojiIcon, resetSummarizationClient, resolveToolIcon, readFileAttachment, selectSpreadMessages, normalizePath, redactSecretLikeMaterial } from '@craft-agent/shared/utils';
-import { loadAllSkills, loadSkillBySlug, invalidateSkillsCache, type LoadedSkill } from '@craft-agent/shared/skills';
+import { loadAllSkills, loadSkillBySlug, invalidateSkillsCache } from '@craft-agent/shared/skills';
 import { loadSpecializedSkillPackageSnapshot, resolveSpecializedSkillCapabilityIdentity, resolveSpecializedSourceCapabilityIdentity, specializedCapabilityIdentity, specializedSourceCapabilityBindingFromSnapshot } from '../specialized-profiles/capability-identity.ts';
 import { effectiveOrdinaryMissionSourceSlugs, ordinaryMissionConnectionIdentity, ordinaryMissionRouteConfigIdentity, ordinaryMissionSourceBindings, ordinaryMissionSourceIdentityFromBindings } from '../missions/mission-route-identity.ts';
 import { canonicalMissionWorkingDirectory } from '../missions/mission-workspace-path.ts';
 import { invalidateContextFileCache } from '@craft-agent/shared/prompts/system';
 import { getToolIconsDir, getMiniModel, getGitBashPath } from '@craft-agent/shared/config';
 import type { SummarizeCallback } from '@craft-agent/shared/sources';
-import { type ThinkingLevel, DEFAULT_THINKING_LEVEL, normalizeThinkingLevel } from '@craft-agent/shared/agent/thinking-levels';
+import { type ThinkingLevel, normalizeThinkingLevel } from '@craft-agent/shared/agent/thinking-levels';
 import { SESSION_TOOL_REGISTRY, type AgentMessageType } from '@craft-agent/session-tools-core';
 import { evaluateAutoLabels } from '@craft-agent/shared/labels/auto';
 import { listLabels, loadLabelConfig } from '@craft-agent/shared/labels/storage';
 import { extractLabelId, resolveSessionLabels, findTaskItemLabelId, findLabelById, formatLabelEntry } from '@craft-agent/shared/labels';
 import { ensureLabelsExist, ensureTaskItemLabel } from '@craft-agent/shared/labels/crud';
 import { loadStatusConfig } from '@craft-agent/shared/statuses/storage';
-import { AutomationSystem, createPromptHistoryEntry, appendAutomationHistoryEntry, type AutomationSystemMetadataSnapshot } from '@craft-agent/shared/automations';
+import { AutomationSystem, createPromptHistoryEntry, appendAutomationHistoryEntry } from '@craft-agent/shared/automations';
 import { buildBackendRuntimeSignature, buildRestartRequiredSignature, filterAttachmentsForModelInput } from './runtime-config';
 import { ExecutionProofCollector } from './execution-proof-collector';
 import { buildRoutingCostMeta, applyRoutingCostMetaToLatestAssistantMessage, resolveRoutingCostOptions } from '@craft-agent/shared/audit';
@@ -13589,7 +13589,7 @@ export class SessionManager implements ISessionManager {
   }
 
   getWorkspacesInfo(): WorkspaceInfo[] {
-    return getWorkspaces().map(({ rootPath, createdAt, ...info }) => info)
+    return getWorkspaces().map(({ rootPath: _rootPath, createdAt: _createdAt, ...info }) => info)
   }
 
   getActiveSessionCount(workspaceId?: string): number {
@@ -26457,7 +26457,7 @@ export class SessionManager implements ISessionManager {
     if (managed.terminalErrorGeneration === generationKey) {
       managed.terminalErrorGeneration = undefined
     }
-    const runtimeRoutingOutcome = this.finishGenerationTelemetry(
+    this.finishGenerationTelemetry(
       managed,
       generationKey,
       reason === 'complete'
@@ -27778,7 +27778,7 @@ export class SessionManager implements ISessionManager {
           } else {
             sessionLog.info(`No processes found matching command`)
           }
-        } catch (pgrepErr) {
+        } catch {
           // pgrep returns exit code 1 when no processes found, which is fine
           sessionLog.info(`No matching processes found (pgrep returned no results)`)
         }
@@ -29849,8 +29849,6 @@ export class SessionManager implements ISessionManager {
 
         const routingConnection = managed.llmConnection ? getLlmConnection(managed.llmConnection) : undefined
         const modelProvenance = event.modelProvenance
-        const telemetryReference = managed.executionTelemetryGenerations?.get(generationKey)
-        {}
         const responseAppProvenance = toRoutingMetaAppProvenance(
           getPlatformSessionAppProvenance(_platform),
         )
@@ -32133,7 +32131,7 @@ export class SessionManager implements ISessionManager {
     this.automationSystems.clear()
 
     // Clear all pending delta flush timers
-    for (const [sessionId, timer] of this.deltaFlushTimers) {
+    for (const [_sessionId, timer] of this.deltaFlushTimers) {
       clearTimeout(timer)
     }
     this.deltaFlushTimers.clear()

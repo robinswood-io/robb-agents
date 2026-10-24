@@ -28,7 +28,7 @@ interface TransferState {
   chunkCount: number
   received: Set<number>
   channel: string
-  args: any[]
+  args: unknown[]
   largeArgIndex: number
   checksum?: string
   timer: ReturnType<typeof setTimeout> | null
@@ -116,7 +116,7 @@ export function registerTransferHandlers(server: RpcServer): void {
     totalBytes: number
     chunkCount: number
     channel: string
-    args: any[]
+    args: unknown[]
     largeArgIndex: number
     checksum?: string
   }) => {
@@ -251,7 +251,7 @@ export function registerTransferHandlers(server: RpcServer): void {
       console.log(`[Transfer:server] Checksum verified: ${actual.slice(0, 12)}...`)
     }
 
-    let payload: any
+    let payload: unknown
     try {
       payload = JSON.parse(reassembled.toString('utf-8'))
     } catch {

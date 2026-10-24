@@ -142,8 +142,6 @@ function assertLocalWorkspace(ctx: { workspaceId: string | null }, action: strin
 }
 
 export function registerSystemCoreHandlers(server: RpcServer, deps: HandlerDeps): void {
-  const windowManager = deps.windowManager
-
   // Get system theme preference (dark = true, light = false)
   server.handle(RPC_CHANNELS.theme.GET_SYSTEM_PREFERENCE, async () => {
     return deps.platform.systemDarkMode?.() ?? false

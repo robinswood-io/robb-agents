@@ -324,7 +324,7 @@ export function MissionDigitalTwinPanel({
           aria-live="polite"
         >
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-            <span className={preflight.readyToStart ? 'text-emerald-700 dark:text-emerald-300' : 'text-amber-700 dark:text-amber-300'}>
+            <span className={preflight.readyToStart ? 'text-success' : 'text-info'}>
               <strong>{preflight.readyToStart ? t('missionControl.preflightReady') : t('missionControl.preflightNotReady')}</strong>
             </span>
             <span>{t('missionControl.preflightMutations', { count: preflight.projectedExternalMutations })}</span>
@@ -339,12 +339,12 @@ export function MissionDigitalTwinPanel({
                 key={gate.id}
                 className={cn(
                   'flex items-start gap-2 rounded px-2 py-1.5',
-                  gate.status === 'fail' && 'bg-red-500/[0.04] text-red-700 dark:text-red-300',
-                  gate.status === 'unknown' && 'bg-amber-500/[0.04] text-amber-700 dark:text-amber-300',
+                  gate.status === 'fail' && 'bg-destructive/[0.04] text-destructive',
+                  gate.status === 'unknown' && 'bg-info/[0.04] text-info',
                 )}
               >
                 {gate.status === 'pass'
-                  ? <CheckCircle2 className="mt-0.5 size-3.5 shrink-0 text-emerald-600" />
+                  ? <CheckCircle2 className="mt-0.5 size-3.5 shrink-0 text-success" />
                   : <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />}
                 <span><strong>{gate.category}</strong> · {gate.detail}</span>
               </li>

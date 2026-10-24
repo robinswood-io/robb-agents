@@ -9,6 +9,36 @@ import { RateLimiter } from '../webui/auth.ts';
 import { resolveWebSocketUrl } from '../webui/http-server.ts';
 import { nodeHttpAdapter } from '../webui/node-adapter.ts';
 import { Readable } from 'node:stream';
+import type { IncomingMessage, ServerResponse } from 'node:http';
+
+interface WsRpcServerTestInternal {
+  pendingInvokes: Map<
+    string,
+    {
+      clientId: string;
+      resolve: (val: unknown) => void;
+      reject: (err: unknown) => void;
+      timeout: ReturnType<typeof setTimeout>;
+    }
+  >;
+  onClientResponse: (
+    client: { id: string },
+    msg: { id: string; type: string; result?: unknown },
+  ) => void;
+  bufferAndMaybeSendEvent: (
+    client: unknown,
+    channel: string,
+    args: unknown[],
+    timestamp: number,
+    isLive: boolean,
+  ) => void;
+  onRequest: (
+    client: unknown,
+    msg: { id: string; type: string; channel: string; args: unknown[] },
+  ) => Promise<void>;
+  isHandshakeIpRateLimited: (ip: string) => boolean;
+  recordFailedHandshake: (ip: string) => void;
+}
 
 describe('Server-Core Security Hardening Regressions', () => {
   describe('Sensitive File Path Guards', () => {
@@ -58,9 +88,10 @@ describe('Server-Core Security Hardening Regressions', () => {
   describe('WsRpcServer Client Response Spoofing, Memory Caps & DoS Guards', () => {
     it('ignores invoke responses sent by a different client than the target clientId', () => {
       const server = new WsRpcServer({ host: '127.0.0.1', port: 0, requireAuth: false });
+      const internal = server as unknown as WsRpcServerTestInternal;
       let resolvedValue: unknown = null;
 
-      (server as any).pendingInvokes.set('req-1', {
+      internal.pendingInvokes.set('req-1', {
         clientId: 'legit-client',
         resolve: (val: unknown) => {
           resolvedValue = val;
@@ -69,25 +100,25 @@ describe('Server-Core Security Hardening Regressions', () => {
         timeout: setTimeout(() => {}, 10_000),
       });
 
-      const attackerClient = { id: 'attacker-client' } as any;
-      (server as any).onClientResponse(attackerClient, {
+      const attackerClient = { id: 'attacker-client' };
+      internal.onClientResponse(attackerClient, {
         id: 'req-1',
         type: 'response',
         result: 'spoofed',
       });
 
       expect(resolvedValue).toBeNull();
-      expect((server as any).pendingInvokes.has('req-1')).toBe(true);
+      expect(internal.pendingInvokes.has('req-1')).toBe(true);
 
-      const legitClient = { id: 'legit-client' } as any;
-      (server as any).onClientResponse(legitClient, {
+      const legitClient = { id: 'legit-client' };
+      internal.onClientResponse(legitClient, {
         id: 'req-1',
         type: 'response',
         result: 'authentic',
       });
 
       expect(resolvedValue).toBe('authentic');
-      expect((server as any).pendingInvokes.has('req-1')).toBe(false);
+      expect(internal.pendingInvokes.has('req-1')).toBe(false);
     });
 
     it('enforces maxEventBufferBytes per client to prevent memory exhaustion', () => {
@@ -97,6 +128,7 @@ describe('Server-Core Security Hardening Regressions', () => {
         requireAuth: false,
         maxEventBufferBytes: 1024,
       });
+      const internal = server as unknown as WsRpcServerTestInternal;
 
       const fakeClient = {
         id: 'client-buf',
@@ -119,7 +151,7 @@ describe('Server-Core Security Hardening Regressions', () => {
 
       const chunk = 'x'.repeat(400);
       for (let i = 0; i < 10; i++) {
-        (server as any).bufferAndMaybeSendEvent(fakeClient, 'test:event', [chunk], Date.now(), false);
+        internal.bufferAndMaybeSendEvent(fakeClient, 'test:event', [chunk], Date.now(), false);
       }
 
       expect(fakeClient.bufferedBytes).toBeLessThanOrEqual(1024);
@@ -135,6 +167,7 @@ describe('Server-Core Security Hardening Regressions', () => {
         maxInFlightRequestsPerClient: 1,
         maxFailedHandshakesPerIp: 2,
       });
+      const internal = server as unknown as WsRpcServerTestInternal;
 
       let releaseHandler!: () => void;
       server.handle('slow:op', async () => {
@@ -168,13 +201,13 @@ describe('Server-Core Security Hardening Regressions', () => {
         lastSentSeq: 0,
       };
 
-      const req1 = (server as any).onRequest(fakeClient, {
+      const req1 = internal.onRequest(fakeClient, {
         id: 'r1',
         type: 'request',
         channel: 'slow:op',
         args: [],
       });
-      await (server as any).onRequest(fakeClient, {
+      await internal.onRequest(fakeClient, {
         id: 'r2',
         type: 'request',
         channel: 'slow:op',
@@ -188,10 +221,10 @@ describe('Server-Core Security Hardening Regressions', () => {
       await req1;
       expect(fakeClient.inFlightRequests).toBe(0);
 
-      expect((server as any).isHandshakeIpRateLimited('203.0.113.9')).toBe(false);
-      (server as any).recordFailedHandshake('203.0.113.9');
-      (server as any).recordFailedHandshake('203.0.113.9');
-      expect((server as any).isHandshakeIpRateLimited('203.0.113.9')).toBe(true);
+      expect(internal.isHandshakeIpRateLimited('203.0.113.9')).toBe(false);
+      internal.recordFailedHandshake('203.0.113.9');
+      internal.recordFailedHandshake('203.0.113.9');
+      expect(internal.isHandshakeIpRateLimited('203.0.113.9')).toBe(true);
     });
   });
 
@@ -201,7 +234,7 @@ describe('Server-Core Security Hardening Regressions', () => {
       for (let i = 0; i < 100; i++) {
         expect(limiter.check(`198.51.100.${i}`)).toBe(true);
       }
-      expect((limiter as any).entries.size).toBeLessThanOrEqual(16);
+      expect((limiter as unknown as { entries: Map<string, unknown> }).entries.size).toBeLessThanOrEqual(16);
     });
 
     it('sanitizes spoofed X-Forwarded-Host containing userinfo, paths, or fragments', () => {
@@ -256,7 +289,10 @@ describe('Server-Core Security Hardening Regressions', () => {
             resolve();
           },
         };
-        adapter(fakeReq as any, fakeRes as any);
+        adapter(
+          fakeReq as unknown as IncomingMessage,
+          fakeRes as unknown as ServerResponse,
+        );
       });
 
       expect(statusCode).toBe(200);

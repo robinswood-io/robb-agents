@@ -628,7 +628,7 @@ export default function GovernanceSettingsPage() {
                   <div data-testid="kill-switch-section">
                     <SettingsCard>
                       <div className="flex items-center gap-3 border-b border-border/60 px-4 py-3.5">
-                        <ShieldAlert className="size-4 text-red-500" />
+                        <ShieldAlert className="size-4 text-destructive" />
                         <div className="min-w-0 flex-1">
                           <div className="text-sm font-medium">
                             {killSwitches && (
@@ -703,7 +703,7 @@ export default function GovernanceSettingsPage() {
                             </div>
                           </label>
                           {killSwitches?.missionIds.map((missionId) => (
-                            <div key={missionId} className="flex items-center gap-2 rounded-md border border-red-500/20 bg-red-500/[0.04] px-2.5 py-2">
+                            <div key={missionId} className="flex items-center gap-2 rounded-md border border-destructive/20 bg-destructive/[0.04] px-2.5 py-2">
                               <span className="min-w-0 flex-1 truncate text-xs font-medium">{missionId}</span>
                               <Button
                                 type="button"
@@ -740,7 +740,7 @@ export default function GovernanceSettingsPage() {
                             </div>
                           </label>
                           {killSwitches?.connectorIds.map((connectorId) => (
-                            <div key={connectorId} className="flex items-center gap-2 rounded-md border border-red-500/20 bg-red-500/[0.04] px-2.5 py-2">
+                            <div key={connectorId} className="flex items-center gap-2 rounded-md border border-destructive/20 bg-destructive/[0.04] px-2.5 py-2">
                               <span className="min-w-0 flex-1 truncate text-xs font-medium">{connectorId}</span>
                               <Button
                                 type="button"
@@ -766,7 +766,7 @@ export default function GovernanceSettingsPage() {
                   <div data-testid="remote-supervision-section">
                     <SettingsCard>
                     <div className="flex items-center gap-3 px-4 py-3.5 border-b border-border/60">
-                      <div className={`size-2.5 rounded-full ${activeRemoteConsent ? 'bg-emerald-500' : 'bg-muted-foreground/50'}`} />
+                      <div className={`size-2.5 rounded-full ${activeRemoteConsent ? 'bg-success' : 'bg-muted-foreground/50'}`} />
                       <div className="min-w-0 flex-1">
                         <div className="text-sm font-medium">
                           {activeRemoteConsent
@@ -868,7 +868,7 @@ export default function GovernanceSettingsPage() {
                   <SettingsCard>
                     <div className="flex items-center gap-2 px-4 py-3 border-b border-border/60">
                       {auditVerification.valid ? (
-                        <CheckCircle2 className="size-4 text-emerald-500" />
+                        <CheckCircle2 className="size-4 text-success" />
                       ) : (
                         <ShieldAlert className="size-4 text-destructive" />
                       )}

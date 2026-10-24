@@ -373,10 +373,10 @@ async function runCopilotCanaries(
 }
 
 function googleCurrentProject(text: string): string | undefined {
-  const parsed = JSON.parse(text) as Record<string, any>;
+  const parsed = JSON.parse(text) as Record<string, unknown>;
   if (!parsed.currentTier) {
     const reasons = (Array.isArray(parsed.ineligibleTiers) ? parsed.ineligibleTiers : [])
-      .map((tier: Record<string, unknown>) => tier?.reasonMessage)
+      .map((tier: unknown) => (tier && typeof tier === 'object' ? (tier as Record<string, unknown>).reasonMessage : undefined))
       .filter((reason: unknown): reason is string => typeof reason === 'string' && reason.trim().length > 0);
     if (reasons.some(reason => /no longer supported for Gemini Code Assist for individuals|Antigravity suite of products/i.test(reason))) {
       throw new Error(

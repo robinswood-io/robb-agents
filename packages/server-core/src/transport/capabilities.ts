@@ -55,7 +55,7 @@ export async function requestClientOpenExternal(
     await server.invokeClient(clientId, CLIENT_OPEN_EXTERNAL, url)
     return { opened: true }
   } catch (err) {
-    const code = (err as any)?.code
+    const code = (err as { code?: unknown } | null)?.code
     const message = err instanceof Error ? err.message : String(err)
     return { opened: false, error: `${code ?? 'UNKNOWN'}: ${message}`, authUrl: url }
   }

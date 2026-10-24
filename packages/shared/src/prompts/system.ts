@@ -339,7 +339,6 @@ function defangProjectBlockTags(content: string): string {
  * Preserves tab/newline/CR so multi-line markdown body fields keep their formatting.
  */
 function stripDangerousControlChars(content: string): string {
-  // eslint-disable-next-line no-control-regex
   return content.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, '');
 }
 
@@ -356,7 +355,6 @@ function sanitizeProjectBodyText(content: string): string {
  * the prompt regardless of upload-time sanitizing; this is the robust, last-line defense.
  */
 function sanitizeProjectFilename(name: string): string {
-  // eslint-disable-next-line no-control-regex
   return defangProjectBlockTags(name.replace(/[\x00-\x1f\x7f]/g, ''));
 }
 

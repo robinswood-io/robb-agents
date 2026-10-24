@@ -17,11 +17,12 @@ function questions(value: unknown): Question[] | undefined {
   for (const item of value) {
     if (!item || typeof item.id !== 'string' || !item.id || typeof item.question !== 'string' || !item.question
       || (item.multiSelect !== undefined && typeof item.multiSelect !== 'boolean')) return;
-    if (item.options !== undefined && (!Array.isArray(item.options) || item.options.length < 2 || item.options.length > 20
-      || item.options.some((option: any) => !option || typeof option.id !== 'string' || !option.id || typeof option.label !== 'string' || !option.label)
-      || new Set(item.options.map((option: any) => option.id)).size !== item.options.length)) return;
+    const rawOptions = item.options as Array<{ id?: unknown; label?: unknown }> | undefined;
+    if (rawOptions !== undefined && (!Array.isArray(rawOptions) || rawOptions.length < 2 || rawOptions.length > 20
+      || rawOptions.some(option => !option || typeof option.id !== 'string' || !option.id || typeof option.label !== 'string' || !option.label)
+      || new Set(rawOptions.map(option => option.id)).size !== rawOptions.length)) return;
     result.push({ id: item.id, question: item.question,
-      ...(item.options ? { options: item.options.map((option: any) => ({ id: option.id, label: option.label })) } : {}),
+      ...(rawOptions ? { options: rawOptions.map(option => ({ id: String(option.id), label: String(option.label) })) } : {}),
       multiSelect: item.multiSelect === true });
   }
   if (new Set(result.map(question => question.id)).size !== 3 || !result[0]!.options || result[0]!.multiSelect
@@ -80,7 +81,7 @@ export function nativeQuestionCompletionRefs(objective: ActiveSessionObjective, 
     || tool.toolExecuted !== true || tool.isError || tool.toolStatus !== 'completed' || !tool.toolUseId
     || messages.filter(message => message.toolUseId === tool.toolUseId).length !== 1
     || JSON.stringify(questions(tool.toolInput?.questions)) !== JSON.stringify(expected)) return empty;
-  let request: any;
+  let request: { status?: unknown; requestId?: unknown } | null = null;
   try { request = JSON.parse(tool.toolResult ?? ''); } catch { return empty; }
   if (!request || request.status !== 'pending' || typeof request.requestId !== 'string' || !request.requestId) return empty;
   const answers = scoped.filter(message => message.role === 'user' && message.hidden
@@ -92,14 +93,18 @@ export function nativeQuestionCompletionRefs(objective: ActiveSessionObjective, 
   if (answer.timestamp < tool.timestamp || scoped.indexOf(answer) <= scoped.indexOf(tool)) return empty;
   const answerPrefix = ANSWER_PREFIXES.find(prefix => answer.content.startsWith(prefix));
   if (!answerPrefix) return empty;
-  let payload: any;
+  let payload: {
+    requestId?: unknown;
+    questions?: unknown;
+    answers?: Array<{ questionId?: unknown; optionIds?: unknown; text?: unknown }>;
+  } | null = null;
   try { payload = JSON.parse(answer.content.slice(answerPrefix.length)); } catch { return empty; }
   if (!payload || payload.requestId !== request.requestId || JSON.stringify(questions(payload.questions)) !== JSON.stringify(expected)
     || !Array.isArray(payload.answers) || payload.answers.length !== 3
-    || new Set(payload.answers.map((item: any) => item?.questionId)).size !== 3) return empty;
+    || new Set(payload.answers.map(item => item?.questionId)).size !== 3) return empty;
   const values: string[] = [];
   for (const question of expected) {
-    const response = payload.answers.find((item: any) => item?.questionId === question.id);
+    const response = payload.answers.find(item => item?.questionId === question.id);
     if (!response || !Array.isArray(response.optionIds)) return empty;
     if (question.options) {
       if (response.text || response.optionIds.length < 1 || (!question.multiSelect && response.optionIds.length !== 1)

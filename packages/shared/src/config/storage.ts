@@ -1662,15 +1662,14 @@ function migrateCodexCopilotToPi(config: StoredConfig): boolean {
 
   for (const connection of config.llmConnections) {
     // Cast to string for legacy providerType values that were removed from LlmProviderType
-    // but may still exist on disk in old configs. Cast to any for legacy codexPath field.
+    // but may still exist on disk in old configs. Cast to record for legacy codexPath field.
     const providerStr = connection.providerType as string;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const connAny = connection as any;
+    const connRecord = connection as unknown as Record<string, unknown>;
     if (providerStr === 'openai' && connection.authType === 'oauth') {
       connection.providerType = 'pi';
       connection.piAuthProvider = 'openai-codex';
       connection.name = 'ChatGPT Plus (via Pi)';
-      delete connAny.codexPath;
+      delete connRecord.codexPath;
       connection.defaultModel = undefined; // reset — backfill picks Pi default
       connection.models = undefined;
       changed = true;
@@ -1678,7 +1677,7 @@ function migrateCodexCopilotToPi(config: StoredConfig): boolean {
       connection.providerType = 'pi';
       connection.piAuthProvider = 'openai';
       connection.name = 'OpenAI API (via Pi)';
-      delete connAny.codexPath;
+      delete connRecord.codexPath;
       connection.defaultModel = undefined;
       connection.models = undefined;
       changed = true;
@@ -1686,7 +1685,7 @@ function migrateCodexCopilotToPi(config: StoredConfig): boolean {
       connection.providerType = 'pi';
       connection.piAuthProvider = 'openai';
       // keep baseUrl for custom endpoints
-      delete connAny.codexPath;
+      delete connRecord.codexPath;
       connection.defaultModel = undefined;
       connection.models = undefined;
       changed = true;
@@ -1694,7 +1693,7 @@ function migrateCodexCopilotToPi(config: StoredConfig): boolean {
       connection.providerType = 'pi';
       connection.piAuthProvider = 'github-copilot';
       connection.name = 'GitHub Copilot (via Pi)';
-      delete connAny.codexPath;
+      delete connRecord.codexPath;
       connection.defaultModel = undefined;
       connection.models = undefined;
       changed = true;
@@ -1702,10 +1701,9 @@ function migrateCodexCopilotToPi(config: StoredConfig): boolean {
   }
 
   // Clean up openaiVariant config field (Codex-specific A/B testing, no longer relevant)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const configAny = config as any;
-  if (configAny.openaiVariant) {
-    delete configAny.openaiVariant;
+  const configRecord = config as unknown as Record<string, unknown>;
+  if (configRecord.openaiVariant) {
+    delete configRecord.openaiVariant;
     changed = true;
   }
 
@@ -1937,13 +1935,14 @@ function normalizePiBedrockId(id: string): string {
  * Same for openai. Then remove modelDefaults from config.
  */
 function migrateModelDefaultsToConnections(config: StoredConfig): boolean {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const configAny = config as any;
-  if (!configAny.modelDefaults || !config.llmConnections) return false;
+  const configRecord = config as unknown as {
+    modelDefaults?: { anthropic?: string; openai?: string };
+  };
+  if (!configRecord.modelDefaults || !config.llmConnections) return false;
   let changed = false;
 
   // Apply anthropic model default to the default anthropic connection
-  if (configAny.modelDefaults.anthropic) {
+  if (configRecord.modelDefaults.anthropic) {
     const defaultSlug = config.defaultLlmConnection;
     const anthropicConn = config.llmConnections.find(c =>
       c.slug === defaultSlug && c.providerType === 'anthropic'
@@ -1951,25 +1950,25 @@ function migrateModelDefaultsToConnections(config: StoredConfig): boolean {
       c.providerType === 'anthropic'
     );
     if (anthropicConn) {
-      anthropicConn.defaultModel = configAny.modelDefaults.anthropic;
+      anthropicConn.defaultModel = configRecord.modelDefaults.anthropic;
       changed = true;
     }
   }
 
   // Apply openai model default to the default openai connection
   // Cast providerType to string for legacy values removed from LlmProviderType
-  if (configAny.modelDefaults.openai) {
+  if (configRecord.modelDefaults.openai) {
     const openaiConn = config.llmConnections.find(c =>
       (c.providerType as string) === 'openai' || (c.providerType as string) === 'openai_compat'
     );
     if (openaiConn) {
-      openaiConn.defaultModel = configAny.modelDefaults.openai;
+      openaiConn.defaultModel = configRecord.modelDefaults.openai;
       changed = true;
     }
   }
 
   // Delete modelDefaults
-  delete configAny.modelDefaults;
+  delete configRecord.modelDefaults;
   changed = true;
 
   return changed;
@@ -2046,27 +2045,32 @@ export function migrateLegacyLlmConnectionsConfig(): void {
   if (config.llmConnections !== undefined) {
     // Clean up any remaining legacy fields from previous runs
     let needsSave = false;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const configAny = config as any;
+    const configRecord = config as unknown as {
+      authType?: AuthType;
+      anthropicBaseUrl?: string;
+      customModel?: string;
+      model?: string;
+      modelDefaults?: Record<string, string>;
+    };
     if ('authType' in config) {
-      delete configAny.authType;
+      delete configRecord.authType;
       needsSave = true;
     }
     if ('anthropicBaseUrl' in config) {
-      delete configAny.anthropicBaseUrl;
+      delete configRecord.anthropicBaseUrl;
       needsSave = true;
     }
     if ('customModel' in config) {
-      delete configAny.customModel;
+      delete configRecord.customModel;
       needsSave = true;
     }
     if ('model' in config) {
-      const legacyModel = configAny.model as string | undefined;
+      const legacyModel = configRecord.model;
       if (legacyModel) {
         const provider = getModelProvider(legacyModel) ?? 'anthropic';
-        configAny.modelDefaults = { ...(configAny.modelDefaults ?? {}), [provider]: legacyModel };
+        configRecord.modelDefaults = { ...(configRecord.modelDefaults ?? {}), [provider]: legacyModel };
       }
-      delete configAny.model;
+      delete configRecord.model;
       needsSave = true;
     }
     // Note: applyCompatDefaults() is NOT called here for already-migrated configs.
@@ -2104,12 +2108,17 @@ export function migrateLegacyLlmConnectionsConfig(): void {
   config.llmConnections = [];
 
   // Legacy migration: if user had authType set, create a connection for them
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const configAny = config as any;
-  const legacyAuthType = configAny.authType as AuthType | undefined;
-  const legacyBaseUrl = configAny.anthropicBaseUrl as string | undefined;
-  const legacyCustomModel = configAny.customModel as string | undefined;
-  const legacyModel = configAny.model as string | undefined;
+  const configRecord = config as unknown as {
+    authType?: AuthType;
+    anthropicBaseUrl?: string;
+    customModel?: string;
+    model?: string;
+    modelDefaults?: Record<string, string>;
+  };
+  const legacyAuthType = configRecord.authType;
+  const legacyBaseUrl = configRecord.anthropicBaseUrl;
+  const legacyCustomModel = configRecord.customModel;
+  const legacyModel = configRecord.model;
 
   if (legacyAuthType) {
     let migrated: LlmConnection | null = null;
@@ -2199,14 +2208,14 @@ export function migrateLegacyLlmConnectionsConfig(): void {
   }
 
   // Delete legacy fields after migration
-  delete configAny.authType;
-  delete configAny.anthropicBaseUrl;
-  delete configAny.customModel;
-  delete configAny.model;
+  delete configRecord.authType;
+  delete configRecord.anthropicBaseUrl;
+  delete configRecord.customModel;
+  delete configRecord.model;
 
   if (legacyModel) {
     const provider = getModelProvider(legacyModel) ?? 'anthropic';
-    configAny.modelDefaults = { ...(configAny.modelDefaults ?? {}), [provider]: legacyModel };
+    configRecord.modelDefaults = { ...(configRecord.modelDefaults ?? {}), [provider]: legacyModel };
   }
 
   // Run the same backfill and migration on newly created connections

@@ -25,8 +25,7 @@ let initialized = false;
  * (e.g. initReactI18next for React apps, LanguageDetector for browser apps).
  */
 export function setupI18n(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  plugins: any[] = [],
+  plugins: Array<Parameters<I18nInstance["use"]>[0]> = [],
 ): I18nInstance {
   if (initialized) {
     for (const [code, entry] of Object.entries(LOCALE_REGISTRY)) {

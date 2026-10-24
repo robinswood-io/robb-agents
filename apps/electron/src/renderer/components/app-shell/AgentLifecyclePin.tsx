@@ -73,7 +73,7 @@ export function AgentLifecyclePin({
     return (
       <span
         title={t('session.hasPendingPrompt', 'Confirmation requise')}
-        className={cn('flex items-center justify-center text-amber-500 animate-pulse shrink-0', className)}
+        className={cn('flex items-center justify-center text-info animate-pulse shrink-0', className)}
       >
         <ShieldAlert className={cn(size === 'sm' ? 'w-3 h-3' : 'w-3.5 h-3.5')} />
       </span>
@@ -87,12 +87,13 @@ export function AgentLifecyclePin({
         className={cn('relative flex items-center justify-center shrink-0', className)}
       >
         <span
+          style={{ '--shadow-color': 'var(--destructive-rgb)' } as React.CSSProperties}
           className={cn(
-            'rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)] shrink-0 transition-transform duration-150',
+            'rounded-full bg-destructive shadow-tinted shrink-0 transition-transform duration-150',
             size === 'sm' ? 'w-2 h-2' : 'w-2.5 h-2.5'
           )}
         />
-        <span className="absolute w-1 h-1 rounded-full bg-white/40" />
+        <span className="absolute w-1 h-1 rounded-full bg-background/40" />
       </span>
     )
   }
@@ -104,12 +105,13 @@ export function AgentLifecyclePin({
         className={cn('relative flex items-center justify-center shrink-0', className)}
       >
         <span
+          style={{ '--shadow-color': 'var(--success-rgb)' } as React.CSSProperties}
           className={cn(
-            'rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)] shrink-0 transition-transform duration-150',
+            'rounded-full bg-success shadow-tinted shrink-0 transition-transform duration-150',
             size === 'sm' ? 'w-2 h-2' : 'w-2.5 h-2.5'
           )}
         />
-        <span className="absolute w-1 h-1 rounded-full bg-white/40" />
+        <span className="absolute w-1 h-1 rounded-full bg-background/40" />
       </span>
     )
   }
@@ -121,12 +123,13 @@ export function AgentLifecyclePin({
         className={cn('relative flex items-center justify-center shrink-0', className)}
       >
         <span
+          style={{ '--shadow-color': 'var(--info-rgb)' } as React.CSSProperties}
           className={cn(
-            'rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)] shrink-0 transition-transform duration-150 animate-pulse',
+            'rounded-full bg-info shadow-tinted shrink-0 transition-transform duration-150 animate-pulse',
             size === 'sm' ? 'w-2 h-2' : 'w-2.5 h-2.5'
           )}
         />
-        <span className="absolute w-1 h-1 rounded-full bg-white/60" />
+        <span className="absolute w-1 h-1 rounded-full bg-background/60" />
       </span>
     )
   }
@@ -139,7 +142,7 @@ export function AgentLifecyclePin({
     >
       <span
         className={cn(
-          'rounded-full bg-sky-500/80 dark:bg-sky-400/80 shadow-[0_0_4px_rgba(14,165,233,0.3)] shrink-0 transition-transform duration-150',
+          'rounded-full bg-accent/80 shadow-xs shrink-0 transition-transform duration-150',
           size === 'sm' ? 'w-1.5 h-1.5' : 'w-2 h-2'
         )}
       />

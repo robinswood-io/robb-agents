@@ -252,8 +252,7 @@ export function registerSourcesHandlers(server: RpcServer, deps: HandlerDeps): v
       const tools = await client.listTools()
       await client.close()
 
-      const { loadSourcePermissionsConfig, permissionsConfigCache } = await import('@craft-agent/shared/agent')
-      const permissionsConfig = loadSourcePermissionsConfig(workspace.rootPath, sourceSlug)
+      const { permissionsConfigCache } = await import('@craft-agent/shared/agent')
 
       const mergedConfig = permissionsConfigCache.getMergedConfig({
         workspaceRootPath: workspace.rootPath,

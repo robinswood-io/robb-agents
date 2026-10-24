@@ -14,11 +14,22 @@ const root: Message = { id: 'original-user', role: 'user', content: initialText,
 const amendment: Message = { id: 'latest-user', role: 'user', content: currentText, timestamp: 10 };
 const managers: SessionManager[] = [];
 const directories: string[] = [];
+
+type ManagedSessionRecord = ReturnType<typeof createManagedSession>;
+
+interface SessionManagerLegacyContextTestHost {
+  sessions: Map<string, ManagedSessionRecord>;
+  sendEvent: () => void;
+  buildObjectiveRuntimePrompt: (session: ManagedSessionRecord, objective: ManagedSessionRecord['activeObjective']) => string;
+  persistSession: (session: ManagedSessionRecord) => void;
+  flushSession: (sessionId: string) => Promise<void>;
+}
+
 function harness() {
   const rootPath = mkdtempSync(join(tmpdir(), 'legacy-objective-context-')); directories.push(rootPath);
   const workspace = { id: 'legacy-context', slug: 'legacy-context', name: 'Legacy context', rootPath, createdAt: 1 };
   const manager = new SessionManager(); managers.push(manager);
-  const host = manager as any; host.sendEvent = () => {};
+  const host = manager as unknown as SessionManagerLegacyContextTestHost; host.sendEvent = () => {};
   const managed = createManagedSession({ id: 'legacy' }, workspace, { messagesLoaded: true });
   managed.messages = [structuredClone(root), structuredClone(amendment)];
   managed.activeObjective = { ...transitionObjectiveContract({ messageId: root.id, text: root.content,

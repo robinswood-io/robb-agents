@@ -491,11 +491,11 @@ function ApprovalInbox({
   const { t } = useTranslation()
   const missionTitles = new Map(missions.map((mission) => [mission.spec.id, mission.spec.title]))
   return (
-    <section className="rounded-xl border border-amber-500/25 bg-amber-500/[0.035] p-3" aria-labelledby="mission-approval-inbox-title">
+    <section className="rounded-xl border border-info/25 bg-info/[0.035] p-3" aria-labelledby="mission-approval-inbox-title">
       <h2 id="mission-approval-inbox-title" className="mb-3 flex items-center gap-2 text-sm font-semibold">
-        <ShieldCheck className="size-4 text-amber-600 dark:text-amber-300" />
+        <ShieldCheck className="size-4 text-info" />
         {t('tasks.approvalInbox')}
-        <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-xs tabular-nums">
+        <span className="rounded-full bg-info/10 px-2 py-0.5 text-xs tabular-nums">
           {connectorApprovals.length + taskApprovals.length}
         </span>
       </h2>
@@ -614,8 +614,8 @@ function SummaryCard({
   return (
     <div className={cn(
       'rounded-xl border px-3 py-3',
-      tone === 'danger' ? 'border-red-500/20 bg-red-500/[0.04]'
-        : tone === 'warning' ? 'border-amber-500/20 bg-amber-500/[0.04]'
+      tone === 'danger' ? 'border-destructive/20 bg-destructive/[0.04]'
+        : tone === 'warning' ? 'border-info/20 bg-info/[0.04]'
           : 'border-foreground/10 bg-foreground/[0.02]',
     )}>
       <div className="flex items-center gap-2 text-muted-foreground"><Icon className="size-3.5" /><span className="text-xs">{label}</span></div>
@@ -682,10 +682,10 @@ function StatusBadge({ status }: { status: MissionSnapshotDto['status'] }) {
   return (
     <span className={cn(
       'inline-flex rounded-full border px-2 py-0.5 font-medium',
-      status === 'failed' || status === 'blocked' ? 'border-red-500/25 bg-red-500/5 text-red-600 dark:text-red-300'
-        : status === 'waiting-approval' || status === 'correcting' ? 'border-amber-500/25 bg-amber-500/5 text-amber-700 dark:text-amber-300'
-          : status === 'completed' ? 'border-emerald-500/25 bg-emerald-500/5 text-emerald-700 dark:text-emerald-300'
-            : terminal ? 'border-foreground/10 text-muted-foreground' : 'border-blue-500/20 bg-blue-500/5 text-blue-700 dark:text-blue-300',
+      status === 'failed' || status === 'blocked' ? 'border-destructive/25 bg-destructive/5 text-destructive'
+        : status === 'waiting-approval' || status === 'correcting' ? 'border-info/25 bg-info/5 text-info'
+          : status === 'completed' ? 'border-success/25 bg-success/5 text-success'
+            : terminal ? 'border-foreground/10 text-muted-foreground' : 'border-accent/20 bg-accent/5 text-accent',
     )}>{t(`missionControl.status.${status}`)}</span>
   )
 }
@@ -695,9 +695,9 @@ function SignalBadge({ signal, labelKey }: { signal: MissionRisk; labelKey: stri
   return (
     <span className={cn(
       'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 font-medium',
-      signal === 'breach' ? 'border-red-500/25 bg-red-500/5 text-red-600 dark:text-red-300'
-        : signal === 'watch' ? 'border-amber-500/25 bg-amber-500/5 text-amber-700 dark:text-amber-300'
-          : 'border-emerald-500/20 bg-emerald-500/5 text-emerald-700 dark:text-emerald-300',
+      signal === 'breach' ? 'border-destructive/25 bg-destructive/5 text-destructive'
+        : signal === 'watch' ? 'border-info/25 bg-info/5 text-info'
+          : 'border-success/20 bg-success/5 text-success',
     )}>
       {signal === 'breach' ? <AlertTriangle className="size-3" /> : <CheckCircle2 className="size-3" />}
       {t(labelKey)}
@@ -895,7 +895,7 @@ function MissionDetail({
           <DetailCard title={t('tasks.blockers')} icon={AlertTriangle}>
             {analytics.blockerReasons.length ? (
               <ul className="space-y-2 text-sm">
-                {analytics.blockerReasons.map((reason) => <li key={reason} className="rounded-md bg-red-500/[0.04] px-2.5 py-2 text-red-700 dark:text-red-300">{reason}</li>)}
+                {analytics.blockerReasons.map((reason) => <li key={reason} className="rounded-md bg-destructive/[0.04] px-2.5 py-2 text-destructive">{reason}</li>)}
               </ul>
             ) : <p className="text-sm text-muted-foreground">{t('missionControl.noBlockers')}</p>}
           </DetailCard>
@@ -953,7 +953,7 @@ function MissionDetail({
                   <PassportField label={t('tasks.proof')} value={`${passport.evidence.length} · SHA-256`} />
                 </div>
                 {verification && (
-                  <p className={cn('flex items-center gap-1.5 text-sm', verification.valid ? 'text-emerald-600 dark:text-emerald-300' : 'text-destructive')}>
+                  <p className={cn('flex items-center gap-1.5 text-sm', verification.valid ? 'text-success' : 'text-destructive')}>
                     {verification.valid ? <ShieldCheck className="size-4" /> : <AlertTriangle className="size-4" />}
                     {verification.valid ? t('missionControl.passportValid') : t('missionControl.passportInvalid', { reason: verification.reason })}
                   </p>

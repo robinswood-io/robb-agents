@@ -112,7 +112,6 @@ describe('bindExistingSessionToTask guards', () => {
 // must NOT churn the agent when nothing changed. We stub the (separately-tested) mutators + the
 // persistence seam so these tests isolate the delegation contract without full storage wiring.
 describe('adopt/bind route changed fields through canonical live-update mutators', () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   function harness(seedFields: Record<string, unknown>) {
     const sm = new SessionManager()
     const calls = { model: [] as unknown[], cwd: [] as unknown[], mode: [] as unknown[] }

@@ -199,7 +199,7 @@ export function registerWorkspaceCoreHandlers(server: RpcServer, deps: HandlerDe
     assertRequestWorkspaceAccess(ctx, workspaceId, workspace.id)
 
     const { readFileSync, existsSync, realpathSync } = await import('fs')
-    const { join, resolve, sep } = await import('path')
+    const { resolve, sep } = await import('path')
 
     // Security: validate path
     // - Must not contain .. (path traversal) or null bytes

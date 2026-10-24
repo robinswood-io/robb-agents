@@ -3,7 +3,6 @@ import { getLlmConnections, getLlmConnection, addLlmConnection, updateLlmConnect
 import { getCredentialManager } from '@craft-agent/shared/credentials'
 import { setSetupDeferred } from '@craft-agent/shared/config/storage'
 import { ROBINSWOOD_BACKEND_NAME } from '@craft-agent/shared/robinswood-branding'
-import { isModelAllowedForAuthProvider } from '@craft-agent/shared/config/llm-connections'
 import {
   resolveSetupTestConnectionHint,
   testBackendConnection,

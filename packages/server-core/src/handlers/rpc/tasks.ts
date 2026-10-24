@@ -14,7 +14,7 @@
  */
 import { RPC_CHANNELS } from '@craft-agent/shared/protocol';
 import { join } from 'node:path';
-import type { TaskCreateRequest, TaskCreateResult, TaskGenerateRequest, TaskGenerateAck, TaskGenerateResult, TaskRunRequest, TaskRepairRequest, TaskValidationResultDto, TaskGetResult, TaskResultsDto, TaskResultNodeDto, TaskApprovalRequestDto, TaskApprovalDecisionRequest, TaskKillSwitchSnapshotDto, TaskKillSwitchUpdateRequest, DurableTaskSnapshotDto, DurableTaskMetadataUpdateRequest, DurableTaskCockpitProjectionsDto } from '@craft-agent/shared/protocol';
+import type { TaskCreateRequest, TaskCreateResult, TaskGenerateRequest, TaskGenerateAck, TaskRunRequest, TaskRepairRequest, TaskValidationResultDto, TaskGetResult, TaskResultsDto, TaskResultNodeDto, TaskApprovalRequestDto, TaskApprovalDecisionRequest, TaskKillSwitchSnapshotDto, TaskKillSwitchUpdateRequest, DurableTaskSnapshotDto, DurableTaskMetadataUpdateRequest, DurableTaskCockpitProjectionsDto } from '@craft-agent/shared/protocol';
 import { getDefaultLlmConnection, getLlmConnections, getLlmConnection, getDefaultThinkingLevel, getWorkspaceByNameOrId, resolveConfigDir, maxSourceSensitivity } from '@craft-agent/shared/config';
 import { getSourcesBySlugs } from '@craft-agent/shared/sources';
 import { loadWorkspaceConfig } from '@craft-agent/shared/workspaces';

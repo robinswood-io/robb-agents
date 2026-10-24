@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'bun:test';
 import { chmod, link, mkdir, mkdtemp, readFile, rm, stat, symlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { LocalJsonlTelemetrySink } from './execution-telemetry.ts';
+import { LocalJsonlTelemetrySink, type CoreExecutionTelemetryEvent } from './execution-telemetry.ts';
 
 let directory: string | undefined;
 
@@ -25,7 +25,7 @@ describe('LocalJsonlTelemetrySink', () => {
       toolName: 'Read',
       durationMs: 12,
       secretSentinel: 'must-not-persist',
-    } as any);
+    } as unknown as CoreExecutionTelemetryEvent);
 
     const persisted = await readFile(filePath, 'utf8');
     expect(persisted).toContain('tool.completed');
