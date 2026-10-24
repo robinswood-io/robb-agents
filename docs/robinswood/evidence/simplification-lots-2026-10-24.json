@@ -1,0 +1,38 @@
+{
+  "status": "in progress",
+  "baselineAcceptedCommit": "4d7b32694e5fca84cfe0ce75d9292c937bdd2805",
+  "lot1": {
+    "state": "Integrated DEV and local source reference",
+    "targetCommit": "4d7b32694e5fca84cfe0ce75d9292c937bdd2805",
+    "officialPreflight": "passed on Desktop source reference; only documentation differs from installed f287ca3f",
+    "method": "serialized clean fast-forward; backup refs retained"
+  },
+  "lot2": {
+    "state": "Tested DEV isolated branch; runtime integration pending final official preflight",
+    "changes": [
+      "Remove legacy-mode dependency from bounded context-limit recovery",
+      "Remove legacy-mode dependency from uncertain-effect recovery guard",
+      "Include earlier admissions in the same recovery turn in the existing serialized guard"
+    ],
+    "baseline": {
+      "pass": 494,
+      "fail": 26,
+      "cases": 520
+    },
+    "acceptance": {
+      "pass": 1260,
+      "fail": 0,
+      "files": 11,
+      "sharedTypecheck": "pass",
+      "electronTypecheck": "pass"
+    },
+    "fixtureCorrection": "The native generic allocation fixture now uses the existing lightweight prompt, while retaining dispatch identity and no-replay assertions.",
+    "limit": "No wholesale deletion of still-referenced legacy modules. Existing bounded recovery, persistence and permission machinery is reused."
+  },
+  "remainingLots": [
+    3,
+    4,
+    5
+  ],
+  "workAttachment": "Unresolved Robb Work target; versioned technical trace retained."
+}

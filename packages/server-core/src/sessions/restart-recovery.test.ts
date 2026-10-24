@@ -573,7 +573,7 @@ describe('provider dispatch write-ahead recovery', () => {
         'stream_ended',
         undefined,
         3,
-        managed.activeObjective,
+        undefined, // Native recovery keeps objective tracking in the bounded host scope.
       )
       managed.messageQueue.push({
         message: genericPrompt,

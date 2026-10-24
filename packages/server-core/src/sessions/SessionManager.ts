@@ -6603,7 +6603,6 @@ export class SessionManager implements ISessionManager {
     managed: ManagedSession,
     pending: PendingTurnRecovery,
   ): ReturnType<typeof createCleanRecoveryContinuationHandoff> {
-    if (!this.isLegacyHostObjectiveContractEnabled(managed)) return undefined
     const storedObjective = managed.activeObjective
     const objective = storedObjective?.terminalState === 'blocked_human'
       && this.isCleanSetupRetryBlocked(pending.recoveryDispatch)
@@ -29301,9 +29300,8 @@ export class SessionManager implements ISessionManager {
     // start any new mutation while an earlier mutation in this objective may
     // already have executed. Tool aliases and changed payload spellings are
     // intentionally irrelevant: only read-only reconciliation is admitted.
-    const quarantinesUncertainObjectiveEffect = this.isLegacyHostObjectiveContractEnabled(managed)
-      && (recovery?.cause !== 'user_retry'
-        || cleanExplicitRetryBoundary)
+    const quarantinesUncertainObjectiveEffect = (recovery?.cause !== 'user_retry'
+      || cleanExplicitRetryBoundary)
       && (!!recovery || (binding.userMessage.agentDelivery?.attempts ?? 0) > 1)
     if (quarantinesUncertainObjectiveEffect) {
       const permissionsContext = {
@@ -29340,8 +29338,8 @@ export class SessionManager implements ISessionManager {
           throw new Error('Automatic recovery exactly-once fence has no unique durable objective root')
         }
         const unresolvedPriorToolReceipt = durableMessages.find((message, index) => {
+          // Include earlier admissions from this same recovered turn.
           if (index <= objectiveRootIndexes[0]!
-            || index > latestDurableUserIndex
             || message.type !== 'tool'
             || message.toolUseId === toolUseId
             || message.toolStatus !== 'executing'
