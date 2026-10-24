@@ -1,0 +1,14 @@
+{
+  "command": [
+    "rtk",
+    "node",
+    "scripts/run-typescript.mjs",
+    "native",
+    "--noEmit",
+    "-p",
+    "apps/cli/tsconfig.json"
+  ],
+  "exitCode": 0,
+  "seconds": 1.3,
+  "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/cli-complete-types.log"
+}

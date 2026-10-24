@@ -1,0 +1,13 @@
+{
+  "command": [
+    "rtk",
+    "node",
+    "node_modules/eslint/bin/eslint.js",
+    "apps/cli/src",
+    "--max-warnings",
+    "0"
+  ],
+  "exitCode": 0,
+  "seconds": 1.89,
+  "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/cli-complete-lint.log"
+}

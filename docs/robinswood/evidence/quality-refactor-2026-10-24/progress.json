@@ -18,7 +18,9 @@
     "Suite complète du dépôt : succès (142,81 s)",
     "Styles : règles et ordre conservés, quatre assets compilés identiques octet pour octet",
     "Métadonnées modèles natives, conservation des anciens identifiants acceptés par le fournisseur",
-    "SDK MCP 2.4.0 : compatibilité positive 2026 et 2025 sans contournement"
+    "SDK MCP 2.4.0 : compatibilité positive 2026 et 2025 sans contournement",
+    "CLI : 40 étapes conservées en ordre, 26 fichiers de 430 lignes au plus, aucun any ; tests, typage et lint réussis",
+    "Adaptateur Pi : 80 scénarios extraits par comportement avec corps inchangés pendant le découpage ; entrées historiques typées à une frontière de fixture explicite ; événements de sortie discriminés ; typage, tests et lint réussis"
   ],
   "pending": [
     "Découpage des autres fichiers au-delà de 500 lignes",
@@ -26,9 +28,9 @@
     "Lint global sans erreur ni avertissement",
     "Parcours complets réels en staging local, compilation signée et intégration"
   ],
-  "updatedAt": "2026-10-24T22:02:52.547291+00:00",
+  "updatedAt": "2026-10-24T22:27:59.072479+00:00",
   "current": {
-    "over500": 259,
-    "explicitAny": 1437
+    "over500": 257,
+    "explicitAny": 1163
   }
 }

@@ -1,0 +1,20 @@
+{
+  "command": [
+    "rtk",
+    "node",
+    "node_modules/eslint/bin/eslint.js",
+    "packages/shared/src/agent/__tests__/pi-event-adapter.compaction.test.ts",
+    "packages/shared/src/agent/__tests__/pi-event-adapter.correlation.test.ts",
+    "packages/shared/src/agent/__tests__/pi-event-adapter.errors.test.ts",
+    "packages/shared/src/agent/__tests__/pi-event-adapter.messages.test.ts",
+    "packages/shared/src/agent/__tests__/pi-event-adapter.test.ts",
+    "packages/shared/src/agent/__tests__/pi-event-adapter.tool-metadata.test.ts",
+    "packages/shared/src/agent/__tests__/pi-event-adapter.tool-results.test.ts",
+    "packages/shared/src/agent/__tests__/fixtures/pi-event-fixtures.ts",
+    "--max-warnings",
+    "0"
+  ],
+  "exitCode": 0,
+  "seconds": 0.81,
+  "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/pi-fixture-split-lint.log"
+}

@@ -1,3 +1,4 @@
+import type { ServerWebSocket } from 'bun'
 import { describe, it, expect, afterEach } from 'bun:test'
 import { CliRpcClient } from './client.ts'
 import {
@@ -24,7 +25,7 @@ function createMockServer(opts?: {
   tls?: { cert: string; key: string }
 }): MockServer {
   let lastMsg: MessageEnvelope | null = null
-  const clients = new Set<any>()
+  const clients = new Set<ServerWebSocket<unknown>>()
 
   const server = Bun.serve({
     port: 0,
@@ -99,7 +100,7 @@ function createMockServer(opts?: {
 
 function createErrorServer(): MockServer {
   let lastMsg: MessageEnvelope | null = null
-  const clients = new Set<any>()
+  const clients = new Set<ServerWebSocket<unknown>>()
 
   const server = Bun.serve({
     port: 0,
@@ -294,7 +295,7 @@ describe('CliRpcClient', () => {
     await new Promise((r) => setTimeout(r, 50))
 
     expect(events.length).toBe(1)
-    expect((events[0][0] as any).delta).toBe('hello')
+    expect(events[0]?.[0]).toMatchObject({ delta: 'hello' })
 
     // Unsubscribe stops delivery
     unsub()
