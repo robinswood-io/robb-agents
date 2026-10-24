@@ -43,6 +43,32 @@ describe('PiEventAdapter', () => {
   let adapter: PiEventAdapter;
   let sessionDir: string;
 
+  it('discards only the failed partial before an SDK retry starts a fresh response', () => {
+    const first = collect(adapter.adaptEvent({
+      type: 'message_update',
+      assistantMessageEvent: { type: 'text_delta', delta: 'FAILED_PARTIAL' },
+    } as any));
+    const failedTurn = first.find(event => event.type === 'text_delta')!.turnId;
+    const failed = collect(adapter.adaptEvent({
+      type: 'message_end',
+      message: { role: 'assistant', stopReason: 'error', errorMessage: '503 overloaded', content: [{ type: 'text', text: 'FAILED_PARTIAL' }] },
+    } as any));
+    expect(failed).toContainEqual({ type: 'text_discard', turnId: failedTurn });
+    expect(failed.some(event => event.type === 'text_complete')).toBe(false);
+    const recovered = collect(adapter.adaptEvent({
+      type: 'message_update',
+      assistantMessageEvent: { type: 'text_delta', delta: 'RECOVERED' },
+    } as any));
+    expect(recovered.find(event => event.type === 'text_delta')!.turnId).not.toBe(failedTurn);
+    const complete = collect(adapter.adaptEvent({
+      type: 'message_end',
+      message: { role: 'assistant', stopReason: 'stop', content: [{ type: 'text', text: 'RECOVERED' }] },
+    } as any));
+    expect(complete.filter(event => event.type === 'text_complete')).toEqual([
+      expect.objectContaining({ text: 'RECOVERED' }),
+    ]);
+  });
+
   beforeEach(() => {
     adapter = new PiEventAdapter();
     sessionDir = mkdtempSync(join(tmpdir(), 'pi-adapter-'));

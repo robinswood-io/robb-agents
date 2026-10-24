@@ -1170,6 +1170,7 @@ interface ManagedSession {
   /** Last time this process used the lazily-created agent/MCP runtime. */
   runtimeLastActiveAt?: number
   streamingText: string
+  streamingTurnId?: string
   // Incremented each time a new message starts processing.
   // Used to detect if a follow-up message has superseded the current one (stale-request guard).
   processingGeneration: number
@@ -22400,6 +22401,7 @@ export class SessionManager implements ISessionManager {
       && parseCompactCommand(message.trim()) !== null
     managed.lastMessageAt = Date.now()
     managed.streamingText = ''
+    managed.streamingTurnId = undefined
     managed.pendingRuntimeProviderFallback = undefined
     managed.turnStartFinalMessageId = this.getLastFinalAssistantMessageId(managed.messages)
 
@@ -29817,9 +29819,26 @@ export class SessionManager implements ISessionManager {
     switch (event.type) {
       case 'text_delta':
         managed.streamingText += event.text
+        managed.streamingTurnId = event.turnId
         // Queue delta for batched sending (performance: reduces IPC from 50+/sec to ~20/sec)
         this.queueDelta(sessionId, workspaceId, event.text, event.turnId)
         break
+
+      case 'text_discard': {
+        const pending = this.pendingDeltas.get(sessionId)
+        if (pending?.turnId === event.turnId) {
+          const timer = this.deltaFlushTimers.get(sessionId)
+          if (timer) clearTimeout(timer)
+          this.deltaFlushTimers.delete(sessionId)
+          this.pendingDeltas.delete(sessionId)
+        }
+        if (managed.streamingTurnId === event.turnId) {
+          managed.streamingText = ''
+          managed.streamingTurnId = undefined
+        }
+        this.sendEvent({ type: 'text_discard', sessionId, turnId: event.turnId }, workspaceId)
+        break
+      }
 
       case 'text_complete': {
         // Flush any pending deltas before sending complete (ensures renderer has all content)
@@ -29867,6 +29886,7 @@ export class SessionManager implements ISessionManager {
         }
         managed.messages.push(assistantMessage)
         managed.streamingText = ''
+        managed.streamingTurnId = undefined
 
         // Update lastMessageRole and lastFinalMessageId for badge/unread display (only for final messages)
         if (!event.isIntermediate) {
@@ -31280,7 +31300,11 @@ export class SessionManager implements ISessionManager {
    * Instead of sending 50+ IPC events per second, batches deltas and flushes every 50ms
    */
   private queueDelta(sessionId: string, workspaceId: string, delta: string, turnId?: string): void {
-    const existing = this.pendingDeltas.get(sessionId)
+    let existing = this.pendingDeltas.get(sessionId)
+    if (existing && existing.turnId !== turnId) {
+      this.flushDelta(sessionId, workspaceId)
+      existing = undefined
+    }
     if (existing) {
       // Append to existing batch
       existing.delta += delta

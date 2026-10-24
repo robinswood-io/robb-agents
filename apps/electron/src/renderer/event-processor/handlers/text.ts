@@ -5,7 +5,7 @@
  * Pure functions that return new state - no side effects.
  */
 
-import type { SessionState, StreamingState, TextDeltaEvent, TextCompleteEvent } from '../types'
+import type { SessionState, StreamingState, TextDeltaEvent, TextCompleteEvent, TextDiscardEvent } from '../types'
 import type { Message } from '../../../shared/types'
 import {
   findStreamingMessage,
@@ -170,5 +170,19 @@ export function handleTextComplete(
   return {
     session: appendMessage(session, newMessage, shouldUpdateTimestamp),
     streaming: null,
+  }
+}
+
+
+/** Remove only the identified unfinished attempt; completed work remains intact. */
+export function handleTextDiscard(state: SessionState, event: TextDiscardEvent): SessionState {
+  const messages = state.session.messages.filter(message => !(
+    message.role === 'assistant' && message.isStreaming && message.turnId === event.turnId
+  ))
+  const clearsStream = state.streaming?.turnId === event.turnId
+  if (messages.length === state.session.messages.length && !clearsStream) return state
+  return {
+    session: messages.length === state.session.messages.length ? state.session : { ...state.session, messages },
+    streaming: clearsStream ? null : state.streaming,
   }
 }

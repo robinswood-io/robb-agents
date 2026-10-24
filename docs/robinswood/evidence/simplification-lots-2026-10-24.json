@@ -30,7 +30,6 @@
     "limit": "No wholesale deletion of still-referenced legacy modules. Existing bounded recovery, persistence and permission machinery is reused."
   },
   "remainingLots": [
-    4,
     5
   ],
   "workAttachment": "Unresolved Robb Work target; versioned technical trace retained.",
@@ -50,5 +49,29 @@
     "fixturePrerequisite": "Mission route checks require an explicit connection, even with a fake executor. Two non-network fictitious connections are seeded only in CRAFT_CONFIG_DIR test profile.",
     "fixtureFile": "mission-v2-unit-profile-fixture.json",
     "freezeDecision": "No new Mission v2 features or ordinary-chat dependency. Whole engine is retained because UI/RPC and recovery references are active. No persisted mission data removed."
+  },
+  "lot4": {
+    "state": "Tested DEV isolated branch; real-provider complete missions pending lot 5",
+    "upstreamReference": "Craft 8df01c5d0ac73c35add5954e6f190ce038d35845",
+    "changes": [
+      "Forward one transient text_discard event for the exact failed SDK stream identity",
+      "Discard its pending batch and timer without touching acquired messages or newer streams",
+      "Separate batched deltas from different stream identities",
+      "Remove only the matching unfinished renderer draft"
+    ],
+    "sdkUpgrade": false,
+    "newRetryEngine": false,
+    "sourceDecision": "Keep Robb source provenance/revision/cancellation fences. Do not replace them with the broader Craft retry implementation. Exercise activation with amendment in lot 5.",
+    "regressionBefore": "New adapter case failed before the port",
+    "acceptance": {
+      "retryAndRendererTests": {
+        "pass": 175,
+        "fail": 0,
+        "files": 16
+      },
+      "sharedTypecheck": "pass",
+      "electronTypecheck": "pass",
+      "releaseTypecheck": "pass"
+    }
   }
 }

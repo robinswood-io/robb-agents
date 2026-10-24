@@ -38,6 +38,12 @@ export interface TextDeltaEvent {
 /**
  * Text complete event - finalizes streaming text
  */
+export interface TextDiscardEvent {
+  type: 'text_discard'
+  sessionId: string
+  turnId: string
+}
+
 export interface TextCompleteEvent {
   type: 'text_complete'
   sessionId: string
@@ -548,6 +554,7 @@ export interface UsageUpdateEvent {
  */
 export type AgentEvent =
   | TextDeltaEvent
+  | TextDiscardEvent
   | TextCompleteEvent
   | ToolStartEvent
   | ToolResultEvent

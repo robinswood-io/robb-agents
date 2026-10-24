@@ -15,7 +15,7 @@
 import { isAgentRuntimeActivity } from '@craft-agent/core/types'
 import type { SessionState, AgentEvent, ProcessResult } from './types'
 import { handleUserInputChanged } from './handlers/user-input'
-import { handleTextDelta, handleTextComplete } from './handlers/text'
+import { handleTextDelta, handleTextComplete, handleTextDiscard } from './handlers/text'
 import { handleToolStart, handleToolResult, handleTaskBackgrounded, handleShellBackgrounded, handleTaskProgress, handleTaskCompleted } from './handlers/tool'
 import {
   handleComplete,
@@ -83,6 +83,9 @@ export function processEvent(
       return { state: newState, effects: [] }
     }
 
+    case 'text_discard': {
+      return { state: handleTextDiscard(state, event), effects: [] }
+    }
     case 'text_complete': {
       const newState = handleTextComplete(state, event)
       return { state: newState, effects: [] }

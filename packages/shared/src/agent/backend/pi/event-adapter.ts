@@ -543,6 +543,12 @@ export class PiEventAdapter extends BaseEventAdapter {
 
         // Surface API errors — Pi SDK sets stopReason: 'error' and errorMessage on failures
         if (msg.stopReason === 'error' && msg.errorMessage) {
+          // Craft 8df01c5: failed partials must not survive into a retried response.
+          if (this.messageSubTurnId) {
+            yield { type: 'text_discard', turnId: this.messageSubTurnId };
+            this.messageSubTurnId = null;
+            this.hasStreamedDeltas = false;
+          }
           // Context overflow: hand recovery to the SDK's _runAutoCompaction
           // and keep the UI quiet until we know the outcome (recovered turn
           // arrives, or compaction fails). Suppress the raw provider error.
