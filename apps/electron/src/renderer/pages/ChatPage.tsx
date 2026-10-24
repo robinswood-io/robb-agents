@@ -8,7 +8,7 @@
 import * as React from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAtomValue, useSetAtom } from 'jotai'
-import { AlertCircle, Globe, Copy, RefreshCw, Link2Off, Info, Pencil, CheckCircle2, Plus, X, RotateCcw } from 'lucide-react'
+import { AlertCircle, Globe, Copy, RefreshCw, Link2Off, Info, Pencil } from 'lucide-react'
 import { ChatDisplay, type ChatDisplayHandle } from '@/components/app-shell/ChatDisplay'
 import { PanelHeader } from '@/components/app-shell/PanelHeader'
 import { SessionMenu } from '@/components/app-shell/SessionMenu'
@@ -16,7 +16,6 @@ import { CompactSessionMenu } from '@/components/app-shell/CompactSessionMenu'
 import { AgentLifecyclePin } from '@/components/app-shell/AgentLifecyclePin'
 import { SessionInfoPopover } from '@/components/app-shell/SessionInfoPopover'
 import { RenameDialog } from '@/components/ui/rename-dialog'
-import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { PanelHeaderCenterButton } from '@/components/ui/PanelHeaderCenterButton'
 import { DropdownMenu, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
@@ -73,7 +72,6 @@ const ChatPage = React.memo(function ChatPage({ sessionId }: ChatPageProps) {
     onUnarchiveSession,
     onSessionStatusChange,
     onDeleteSession,
-    onNewChat,
     rightSidebarButton,
     leadingAction,
     isCompactMode,
@@ -101,18 +99,6 @@ const ChatPage = React.memo(function ChatPage({ sessionId }: ChatPageProps) {
   // Check if session exists in metadata (for loading state detection)
   const sessionMetaMap = useAtomValue(sessionMetaMapAtom)
   const sessionMeta = sessionMetaMap.get(sessionId)
-
-  // Detect a completed response. This state alone does not prove every external effect.
-  const isMissionCompleted = sessionMeta?.activeObjective?.terminalState === 'complete_verified'
-  const [dismissedMissionCompletedSessionId, setDismissedMissionCompletedSessionId] = React.useState<string | null>(null)
-  const showMissionCompletedPrompt = isMissionCompleted && dismissedMissionCompletedSessionId !== sessionId
-
-  // Detect when an objective has been reopened for precision/completeness
-  const isObjectiveReopened =
-    sessionMeta?.activeObjective?.terminalState === 'active' &&
-    (sessionMeta?.activeObjective?.acceptanceNeedsReview === true || (sessionMeta?.activeObjective?.amendments?.length ?? 0) > 0)
-  const [dismissedObjectiveReopenedSessionId, setDismissedObjectiveReopenedSessionId] = React.useState<string | null>(null)
-  const showObjectiveReopenedPrompt = !showMissionCompletedPrompt && isObjectiveReopened && dismissedObjectiveReopenedSessionId !== sessionId
 
   // Fallback: ensure messages are loaded when session is viewed
   const ensureMessagesLoaded = useSetAtom(ensureSessionMessagesLoadedAtom)
@@ -836,71 +822,6 @@ const ChatPage = React.memo(function ChatPage({ sessionId }: ChatPageProps) {
           rightSidebarButton={rightSidebarButton}
           isRegeneratingTitle={isAsyncOperationOngoing}
         />
-        {showMissionCompletedPrompt && (
-          <div className="mx-4 mt-2 mb-1 p-2.5 rounded-xl border border-emerald-500/20 bg-emerald-500/[0.06] backdrop-blur-sm flex items-center justify-between gap-3 text-xs animate-in fade-in slide-in-from-top-1 duration-200">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400 shrink-0">
-                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-              </span>
-              <div className="min-w-0">
-                <div className="font-medium text-foreground text-xs">
-                  {t('chat.missionCompletedTitle', 'Réponse terminée')}
-                </div>
-                <div className="text-[11px] text-muted-foreground truncate">
-                  {t('chat.missionCompletedPrompt', 'Pour limiter la taille du contexte et maintenir une réactivité maximale, démarrez un nouveau chat.')}
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center gap-1.5 shrink-0">
-              {onNewChat && (
-                <Button
-                  size="sm"
-                  variant="default"
-                  onClick={() => onNewChat()}
-                  className="h-7 px-2.5 text-xs gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-medium shadow-sm transition-colors"
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  {t('chat.newChat', 'Nouveau chat')}
-                </Button>
-              )}
-              <button
-                type="button"
-                onClick={() => setDismissedMissionCompletedSessionId(sessionId)}
-                className="h-7 w-7 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-foreground/5 transition-colors"
-                title={t('common.dismiss', 'Ignorer')}
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          </div>
-        )}
-        {showObjectiveReopenedPrompt && (
-          <div className="mx-4 mt-2 mb-1 p-2.5 rounded-xl border border-amber-500/20 bg-amber-500/[0.06] backdrop-blur-sm flex items-center justify-between gap-3 text-xs animate-in fade-in slide-in-from-top-1 duration-200">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-amber-500/20 text-amber-500 shrink-0">
-                <RotateCcw className="h-3.5 w-3.5 text-amber-500" />
-              </span>
-              <div className="min-w-0">
-                <div className="font-medium text-foreground text-xs">
-                  {t('chat.objectiveReopenedTitle', 'Objectif rouvert pour approfondissement')}
-                </div>
-                <div className="text-[11px] text-muted-foreground truncate">
-                  {t('chat.objectiveReopenedPrompt', 'L\'agent poursuit la mission pour intégrer vos exigences de précision et de complétude.')}
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center gap-1.5 shrink-0">
-              <button
-                type="button"
-                onClick={() => setDismissedObjectiveReopenedSessionId(sessionId)}
-                className="h-7 w-7 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-foreground/5 transition-colors"
-                title={t('common.dismiss', 'Ignorer')}
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          </div>
-        )}
         <div className="flex-1 flex flex-col min-h-0">
           <ChatDisplay
             ref={chatDisplayRef}

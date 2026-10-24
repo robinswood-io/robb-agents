@@ -5,6 +5,8 @@ import { join } from 'node:path'
 // ChatDisplay has no RTL/jsdom harness. Keep a focused source guard for the
 // reset wiring; browser-level validation remains necessary for scroll metrics.
 const source = readFileSync(join(__dirname, '../ChatDisplay.tsx'), 'utf8')
+const chatPageSource = readFileSync(join(__dirname, '../../../pages/ChatPage.tsx'), 'utf8')
+const sessionViewerSource = readFileSync(join(__dirname, '../../../../../../../packages/ui/src/components/chat/SessionViewer.tsx'), 'utf8')
 
 describe('ChatDisplay transcript positioning', () => {
   it('repositions compact transcripts when the active session changes', () => {
@@ -28,6 +30,11 @@ describe('ChatDisplay transcript positioning', () => {
     expect(source).toContain('presentation="codex"')
     expect(source).toContain('displayMode="informative"')
     expect(source).toMatch(/<JourneyProgress[\s\S]*presentation="codex"/)
+    expect(source).not.toContain('<JourneyOutcome')
+    expect(sessionViewerSource).not.toContain('<JourneyOutcome')
+    expect(chatPageSource).not.toContain('showMissionCompletedPrompt')
+    expect(chatPageSource).not.toContain('showObjectiveReopenedPrompt')
+    expect(chatPageSource).not.toContain('chat.missionCompletedTitle')
     expect(source).toContain('const [showScrollToLatest, setShowScrollToLatest]')
     expect(source).toContain('const handleReturnToLatestMessage')
     expect(source).toContain('{!compactMode && showScrollToLatest &&')
