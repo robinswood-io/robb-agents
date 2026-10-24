@@ -29298,11 +29298,11 @@ export class SessionManager implements ISessionManager {
       durableBoundaryTimestamp = Math.max(durableBoundaryTimestamp, dispatch!.startedAt!)
 
     }
-    // A host-authored recovery or a replayed durable agent delivery cannot
-    // start any new mutation while an earlier mutation in this objective may
-    // already have executed. Tool aliases and changed payload spellings are
-    // intentionally irrelevant: only read-only reconciliation is admitted.
-    const quarantinesUncertainObjectiveEffect = (recovery?.cause !== 'user_retry'
+    // Keep the strict uncertain-effect quarantine within the opt-in legacy
+    // contract. Native SDK recovery retains durable admissions and read-first
+    // instructions without inheriting a global lock it cannot reconcile.
+    const quarantinesUncertainObjectiveEffect = this.isLegacyHostObjectiveContractEnabled(managed)
+      && (recovery?.cause !== 'user_retry'
       || cleanExplicitRetryBoundary)
       && (!!recovery || (binding.userMessage.agentDelivery?.attempts ?? 0) > 1)
     if (quarantinesUncertainObjectiveEffect) {

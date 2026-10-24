@@ -1,5 +1,5 @@
 {
-  "status": "in progress",
+  "status": "Approved native-recovery scope correction tested locally; real missions, signed installation and cold restart acceptance pending.",
   "baselineAcceptedCommit": "4d7b32694e5fca84cfe0ce75d9292c937bdd2805",
   "lot1": {
     "state": "Integrated DEV and local source reference",
@@ -8,11 +8,11 @@
     "method": "serialized clean fast-forward; backup refs retained"
   },
   "lot2": {
-    "state": "Tested DEV isolated branch; runtime integration pending final official preflight",
+    "state": "Source correction and strict/native regression cases pass locally; runtime installation pending",
     "changes": [
-      "Remove legacy-mode dependency from bounded context-limit recovery",
-      "Remove legacy-mode dependency from uncertain-effect recovery guard",
-      "Include earlier admissions in the same recovery turn in the existing serialized guard"
+      "Keep bounded context-limit recovery independent of legacy mode",
+      "Restore the global uncertain-effect quarantine to the explicit legacy contract after the native cold-restart regression",
+      "Include earlier admissions in the same strict legacy recovered turn"
     ],
     "baseline": {
       "pass": 494,
@@ -27,12 +27,29 @@
       "electronTypecheck": "pass"
     },
     "fixtureCorrection": "The native generic allocation fixture now uses the existing lightweight prompt, while retaining dispatch identity and no-replay assertions.",
-    "limit": "No wholesale deletion of still-referenced legacy modules. Existing bounded recovery, persistence and permission machinery is reused."
+    "limit": "No wholesale deletion of still-referenced legacy modules. Existing bounded recovery, persistence and permission machinery is reused.",
+    "approvedScopeCorrection": {
+      "authorization": "Human replied Oui to the precise request to restore the prior legacy-only quarantine scope",
+      "sourceLocation": "Local checkout on the target Mac, following explicit clarification that Robb is local",
+      "newChecks": {
+        "pass": 1138,
+        "fail": 0,
+        "files": 11,
+        "sharedTypes": "pass",
+        "electronTypes": "pass",
+        "releaseContractTypes": "pass"
+      },
+      "beforeRegression": "Native recovery case failed with exactly-once global fence before the correction",
+      "afterRegression": "Native continuation admitted; strict legacy uncertainty quarantine still enforced",
+      "tradeoff": "Native mode no longer globally prohibits every later mutation after an unresolved operation; durable receipts and existing SDK recovery/read-first instructions remain"
+    }
   },
   "remainingLots": [
-    5
+    "Rerun seven real missions",
+    "Build and install signed local candidate after official preflight",
+    "Verify native complete mission, previews and actual cold restart"
   ],
-  "workAttachment": "Unresolved Robb Work target; versioned technical trace retained.",
+  "workAttachment": "Robb Work project unresolved; keep technical evidence versioned without writing into an unrelated project",
   "lot3": {
     "state": "Tested DEV isolated branch",
     "changes": [
@@ -75,7 +92,7 @@
     }
   },
   "lot5": {
-    "state": "QA harness prepared and typechecked; real-provider acceptance and signed local delivery pending",
+    "state": "Seven earlier real missions and native outputs/previews passed; earlier cold restart failed and is being retested after the authorized correction",
     "changes": [
       "Extend existing report with unique tool IDs, failed-tool counts, first-tool latency and SDK usage",
       "Add one local read-only arithmetic MCP fixture; its source is retired after testing",
@@ -92,7 +109,13 @@
     "compactionFixtureCorrection": {
       "observedFailure": "SDK: Nothing to compact (session too small)",
       "correction": "Bounded synthetic history above the existing 20k recent-token threshold; production compaction unchanged",
-      "status": "real rerun pending"
+      "status": "Real SDK compaction passed in targeted and full seven-mission campaigns"
     }
+  },
+  "target": {
+    "application": "/Applications/Robb Agents.app",
+    "profile": "~/.craft-agent",
+    "delivery": "Local signed staging on this Mac",
+    "publicRelease": false
   }
 }

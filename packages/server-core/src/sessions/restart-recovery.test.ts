@@ -5338,6 +5338,7 @@ describe('durable restart recovery', () => {
   })
 
   it('admits a reconciliation Read from a clean Retry boundary but quarantines an uncertain prior mutation', async () => {
+    process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT = '1'
     const h = harness(); const managed = h.make('clean-context-retry-tool-admission')
     const rootId = `${managed.id}-user`
     const allocatedAt = Date.now() - 2_000
@@ -5704,6 +5705,7 @@ describe('durable restart recovery', () => {
   })
 
   it('serializes concurrent recovery mutation admissions so exactly one external effect can start', async () => {
+    process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT = '1'
     const h = harness()
     const { managed, runtimeAgent } = await prepareStartedRecoveryAdmission(h, 'concurrent-mutation-admission', 17)
     const entered = deferred(); const release = deferred()
@@ -5789,6 +5791,7 @@ describe('durable restart recovery', () => {
   })
 
   it('reuses bounded Orion reads and retries only a test that never launched its missing runner', async () => {
+    process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT = '1'
     const h = harness()
     const { managed, runtimeAgent } = await prepareStartedRecoveryAdmission(h, 'orion-read-and-test-retry', 22)
     const cwd = '/opt/ia-webdev/agent-dev/worktrees/orion/scotland-ai-executive-day-20260930'
@@ -6187,151 +6190,175 @@ describe('durable restart recovery', () => {
     })
   })
 
-  it('blocks every mutation after an unresolved restart effect while admitting reconciliation reads', async () => {
-    const h = harness(); const managed = h.make('ambiguous-effect-exactly-once')
-    const allocatedAt = Date.now() - 3_000
-    const startedAt = allocatedAt + 1_000
-    const dispatchId = 'ambiguous-effect-dispatch-2'
-    const attemptOneInput = {
-      file_path: '/fixture/production-target.json',
-      new_string: 'possibly applied',
-      _displayName: 'Attempt one',
-      [TERMINAL_RECONCILIATION_CAPABILITY_FIELD]: 'stale-attempt-one-capability',
-    }
-    managed.messages.push({
-      id: 'attempt-1-receipt',
-      role: 'tool',
-      content: 'Running Edit...',
-      timestamp: allocatedAt - 1_000,
-      toolName: 'Edit',
-      toolUseId: 'attempt-1-id-a',
-      toolInput: attemptOneInput,
-      toolStatus: 'executing',
-    })
-    managed.messages.push({
-      id: 'same-objective-amendment',
-      role: 'user',
-      content: 'Keep the same objective, but report the reconciled result concisely.',
-      timestamp: allocatedAt - 500,
-    })
-    managed.activeObjective = {
-      ...managed.activeObjective!,
-      lastUserMessageId: 'same-objective-amendment',
-      amendments: [{
-        messageId: 'same-objective-amendment',
-        text: 'Keep the same objective, but report the reconciled result concisely.',
+  for (const legacyContract of [true, false]) {
+    it(legacyContract
+      ? 'blocks every mutation after an unresolved restart effect in the strict legacy contract'
+      : 'continues native recovery after a read without a global legacy mutation quarantine', async () => {
+      if (legacyContract) process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT = '1'
+      else delete process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT
+      const h = harness(); const managed = h.make('ambiguous-effect-exactly-once')
+      const allocatedAt = Date.now() - 3_000
+      const startedAt = allocatedAt + 1_000
+      const dispatchId = 'ambiguous-effect-dispatch-2'
+      const attemptOneInput = {
+        file_path: '/fixture/production-target.json',
+        new_string: 'possibly applied',
+        _displayName: 'Attempt one',
+        [TERMINAL_RECONCILIATION_CAPABILITY_FIELD]: 'stale-attempt-one-capability',
+      }
+      managed.messages.push({
+        id: 'attempt-1-receipt',
+        role: 'tool',
+        content: 'Running Edit...',
+        timestamp: allocatedAt - 1_000,
+        toolName: 'Edit',
+        toolUseId: 'attempt-1-id-a',
+        toolInput: attemptOneInput,
+        toolStatus: 'executing',
+      })
+      managed.messages.push({
+        id: 'same-objective-amendment',
+        role: 'user',
+        content: 'Keep the same objective, but report the reconciled result concisely.',
         timestamp: allocatedAt - 500,
-      }],
-    }
-    managed.pendingTurnRecovery = {
-      ...managed.pendingTurnRecovery!,
-      userMessageId: 'same-objective-amendment',
-      attempts: 2,
-      stagnantAttempts: 0,
-      leaseExpiresAt: Date.now() + 60_000,
-      lastCause: 'objective_incomplete',
-      validationGaps: ['reconcile the ambiguous prior tool effect'],
-      recoveryDispatch: {
-        schemaVersion: 1,
-        id: dispatchId,
-        attempt: 2,
-        cause: 'objective_incomplete',
-        origin: 'automatic',
-        allocatedAt,
-        phase: 'started',
-        startedAt,
-        preToolExecutionReceiptVersion: 1,
-      },
-    }
-    managed.messages.push({
-      id: dispatchId,
-      role: 'user',
-      content: buildAutomaticTurnRecoveryPrompt(
-        managed.pendingTurnRecovery,
-        'objective_incomplete',
-        undefined,
-        2,
-        managed.activeObjective,
-      ),
-      timestamp: startedAt + 1,
-      hidden: true,
-    })
-    await h.save(managed)
-
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
-    await cold.runtime.ensureMessagesLoaded(restored)
-    cold.runtime.emitExecutionTelemetry = () => {}
-    const runtimeAgent = {} as never
-    const generation = 12
-    restored.agent = runtimeAgent
-    restored.isProcessing = true
-    restored.processingGeneration = generation
-    restored.lastSentOptions = {
-      hidden: true,
-      automaticRecovery: {
-        originalUserMessageId: restored.pendingTurnRecovery.userMessageId,
-        cause: 'objective_incomplete',
-        dispatchId,
-        dispatchAttempt: 2,
-        dispatchOrigin: 'automatic',
-        dispatchAllocatedAt: allocatedAt,
-      },
-    }
-    bindToolAdmissionTurn(cold.runtime, restored, runtimeAgent, generation)
-
-    await expect(cold.runtime.durablyRecordAutomaticRecoveryToolAdmission(
-      restored,
-      runtimeAgent,
-      {
-        toolUseId: 'attempt-2-id-b',
-        toolName: 'Write',
-        toolInput: {
-          file_path: attemptOneInput.file_path,
-          new_string: attemptOneInput.new_string,
-          _intent: 'Retry the same operation under a new provider ID.',
+      })
+      managed.activeObjective = {
+        ...managed.activeObjective!,
+        lastUserMessageId: 'same-objective-amendment',
+        amendments: [{
+          messageId: 'same-objective-amendment',
+          text: 'Keep the same objective, but report the reconciled result concisely.',
+          timestamp: allocatedAt - 500,
+        }],
+      }
+      managed.pendingTurnRecovery = {
+        ...managed.pendingTurnRecovery!,
+        userMessageId: 'same-objective-amendment',
+        attempts: 2,
+        stagnantAttempts: 0,
+        leaseExpiresAt: Date.now() + 60_000,
+        lastCause: 'objective_incomplete',
+        validationGaps: ['reconcile the ambiguous prior tool effect'],
+        recoveryDispatch: {
+          schemaVersion: 1,
+          id: dispatchId,
+          attempt: 2,
+          cause: 'objective_incomplete',
+          origin: 'automatic',
+          allocatedAt,
+          phase: 'started',
+          startedAt,
+          preToolExecutionReceiptVersion: 1,
         },
-      },
-    )).rejects.toThrow('Automatic recovery exactly-once fence')
+      }
+      managed.messages.push({
+        id: dispatchId,
+        role: 'user',
+        content: buildAutomaticTurnRecoveryPrompt(
+          managed.pendingTurnRecovery,
+          'objective_incomplete',
+          undefined,
+          2,
+          managed.activeObjective,
+        ),
+        timestamp: startedAt + 1,
+        hidden: true,
+      })
+      await h.save(managed)
 
-    await expect(cold.runtime.durablyRecordAutomaticRecoveryToolAdmission(
-      restored,
-      runtimeAgent,
-      {
-        toolUseId: 'attempt-2-disjoint-mutation',
-        toolName: 'Bash',
-        toolInput: { file_path: attemptOneInput.file_path, new_string: 'different operation' },
-      },
-    )).rejects.toThrow('no new mutation')
-    expect(restored.messages.some((message: any) => (
-      message.toolUseId === 'attempt-2-disjoint-mutation'
-    ))).toBe(false)
-    expect(restored.messages.some((message: any) => message.toolUseId === 'attempt-2-id-b')).toBe(false)
+      const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+      await cold.runtime.ensureMessagesLoaded(restored)
+      cold.runtime.emitExecutionTelemetry = () => {}
+      const runtimeAgent = {} as never
+      const generation = 12
+      restored.agent = runtimeAgent
+      restored.isProcessing = true
+      restored.processingGeneration = generation
+      restored.lastSentOptions = {
+        hidden: true,
+        automaticRecovery: {
+          originalUserMessageId: restored.pendingTurnRecovery.userMessageId,
+          cause: 'objective_incomplete',
+          dispatchId,
+          dispatchAttempt: 2,
+          dispatchOrigin: 'automatic',
+          dispatchAllocatedAt: allocatedAt,
+        },
+      }
+      bindToolAdmissionTurn(cold.runtime, restored, runtimeAgent, generation)
 
-    await cold.runtime.durablyRecordAutomaticRecoveryToolAdmission(
-      restored,
-      runtimeAgent,
-      {
-        toolUseId: 'attempt-2-reconciliation-read',
+      if (!legacyContract) {
+        await cold.runtime.durablyRecordAutomaticRecoveryToolAdmission(restored, runtimeAgent, {
+          toolUseId: 'native-reconciliation-read', toolName: 'Read',
+          toolInput: { file_path: '/fixture/production-target.json' },
+        })
+        await cold.runtime.durablyRecordAutomaticRecoveryToolAdmission(restored, runtimeAgent, {
+          toolUseId: 'native-continuation-write', toolName: 'Write',
+          toolInput: { file_path: '/fixture/continuation.json', content: '{"verified":true}' },
+        })
+        expect(restored.messages.find((message: any) => message.toolUseId === 'native-continuation-write'))
+          .toMatchObject({ toolName: 'Write', toolStatus: 'executing' })
+        expect(readFileSync(getSessionFilePath(h.rootPath, restored.id), 'utf8'))
+          .toContain('native-continuation-write')
+        restored.agent = null
+        restored.isProcessing = false
+        return
+      }
+
+      await expect(cold.runtime.durablyRecordAutomaticRecoveryToolAdmission(
+        restored,
+        runtimeAgent,
+        {
+          toolUseId: 'attempt-2-id-b',
+          toolName: 'Write',
+          toolInput: {
+            file_path: attemptOneInput.file_path,
+            new_string: attemptOneInput.new_string,
+            _intent: 'Retry the same operation under a new provider ID.',
+          },
+        },
+      )).rejects.toThrow('Automatic recovery exactly-once fence')
+
+      await expect(cold.runtime.durablyRecordAutomaticRecoveryToolAdmission(
+        restored,
+        runtimeAgent,
+        {
+          toolUseId: 'attempt-2-disjoint-mutation',
+          toolName: 'Bash',
+          toolInput: { file_path: attemptOneInput.file_path, new_string: 'different operation' },
+        },
+      )).rejects.toThrow('no new mutation')
+      expect(restored.messages.some((message: any) => (
+        message.toolUseId === 'attempt-2-disjoint-mutation'
+      ))).toBe(false)
+      expect(restored.messages.some((message: any) => message.toolUseId === 'attempt-2-id-b')).toBe(false)
+
+      await cold.runtime.durablyRecordAutomaticRecoveryToolAdmission(
+        restored,
+        runtimeAgent,
+        {
+          toolUseId: 'attempt-2-reconciliation-read',
+          toolName: 'Read',
+          toolInput: { file_path: '/fixture/production-target.json' },
+        },
+      )
+      expect(restored.messages.find((message: any) => (
+        message.toolUseId === 'attempt-2-reconciliation-read'
+      ))).toMatchObject({
+        role: 'tool',
         toolName: 'Read',
+        toolStatus: 'executing',
         toolInput: { file_path: '/fixture/production-target.json' },
-      },
-    )
-    expect(restored.messages.find((message: any) => (
-      message.toolUseId === 'attempt-2-reconciliation-read'
-    ))).toMatchObject({
-      role: 'tool',
-      toolName: 'Read',
-      toolStatus: 'executing',
-      toolInput: { file_path: '/fixture/production-target.json' },
+      })
+      const persisted = readFileSync(getSessionFilePath(h.rootPath, restored.id), 'utf8')
+      expect(persisted).toContain('attempt-1-id-a')
+      expect(persisted).not.toContain('attempt-2-disjoint-mutation')
+      expect(persisted).toContain('attempt-2-reconciliation-read')
+      expect(persisted).not.toContain('attempt-2-id-b')
+      restored.agent = null
+      restored.isProcessing = false
     })
-    const persisted = readFileSync(getSessionFilePath(h.rootPath, restored.id), 'utf8')
-    expect(persisted).toContain('attempt-1-id-a')
-    expect(persisted).not.toContain('attempt-2-disjoint-mutation')
-    expect(persisted).toContain('attempt-2-reconciliation-read')
-    expect(persisted).not.toContain('attempt-2-id-b')
-    restored.agent = null
-    restored.isProcessing = false
-  })
+  }
 
   it.each([
     ['download', '❌ Download error: ENOENT: no such file or directory', false],
@@ -6381,6 +6408,7 @@ describe('durable restart recovery', () => {
   ] as const)(
     'classifies %s before admitting a later operation',
     async (label, priorToolName, priorToolInput, nextToolName, nextToolInput, operationAdmitted) => {
+      process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT = '1'
       const h = harness(); const managed = h.make(`${label}-effect`)
       const allocatedAt = Date.now() - 3_000
       const startedAt = allocatedAt + 1_000
