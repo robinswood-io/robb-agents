@@ -54,7 +54,6 @@ import {
   projectConversation,
   buildUserInputTimeline,
   JourneyProgress,
-  JourneyOutcome,
   UserInputCard,
   type UserInputCardProps,
   formatTurnAsMarkdown,
@@ -84,7 +83,6 @@ import { collectFileChangesFromActivities, getFirstFileChangeIdForActivity } fro
 import { stopConversation } from "./stop-conversation"
 import { buildBranchSessionOptions, resolveBranchNewPanelOption } from "./branching"
 import { handleErrorMessageAction } from "./error-message-actions"
-import { createRetryTurnAction } from "./retry-turn-action"
 import { AutonomyPanel } from "./AutonomyPanel"
 import { getSessionStatus } from "@/utils/session"
 
@@ -450,34 +448,7 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
   const pendingDescendantAuthRequests = usePendingDescendantAuthRequests(session?.id ?? '')
   const permissionRecoveries = useConversationPermissionRecoveries(session?.id ?? '')
   const isConversationProcessing = !!session?.isProcessing || activeDescendantIds.length > 0
-  const conversationProcessingRef = React.useRef(isConversationProcessing)
-  conversationProcessingRef.current = isConversationProcessing
-  const [retryingSessionId, setRetryingSessionId] = React.useState<string | null>(null)
-  const retryTurn = React.useMemo(() => createRetryTurnAction({
-    sessionId: session?.id ?? '',
-    sessionCommand: (sessionId, command) => window.electronAPI.sessionCommand(sessionId, command),
-    isProcessing: () => conversationProcessingRef.current,
-    onPendingChange: pending => setRetryingSessionId(current => pending
-      ? session?.id ?? null : current === session?.id ? null : current),
-    onAlreadyRunning: () => toast.info(t('chat.retryAlreadyRunning')),
-    onError: error => toast.error(t('chat.retryFailed'), {
-      description: error instanceof Error ? error.message : String(error),
-    }),
-  }), [session?.id, t])
   const hasPendingUserInput = session?.userInputRequests?.some(request => request.status === 'pending') ?? false
-  const retryAvailabilitySessionRef = React.useRef(session?.id)
-  retryAvailabilitySessionRef.current = session?.id
-  const [recordedAnswerRetries, setRecordedAnswerRetries] = React.useState<{ sessionId?: string; requestIds: Set<string> }>({ requestIds: new Set() })
-  const onRecordedRetryChange = React.useCallback((requestId: string, available: boolean) => {
-    if (retryAvailabilitySessionRef.current !== session?.id) return
-    setRecordedAnswerRetries(current => {
-      const requestIds = current.sessionId === session?.id ? new Set(current.requestIds) : new Set<string>()
-      if (available) requestIds.add(requestId)
-      else requestIds.delete(requestId)
-      return { sessionId: session?.id, requestIds }
-    })
-  }, [session?.id])
-  const hasRecordedAnswerRetry = recordedAnswerRetries.sessionId === session?.id && recordedAnswerRetries.requestIds.size > 0
   const respondToUserInput = React.useCallback<NonNullable<UserInputCardProps['onRespond']>>(
     (originSessionId, response) => onRespondToUserInput
       ? onRespondToUserInput(originSessionId, response)
@@ -1561,7 +1532,7 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
                   {visibleTimeline.map(entry => {
                     if (entry.type === 'user-input') {
                       return <UserInputCard key={`user-input-${entry.request.id}`} request={entry.request}
-                        onRespond={respondToUserInput} onRecordedRetryChange={onRecordedRetryChange} />
+                        onRespond={respondToUserInput} />
                     }
                     const { turn } = entry
                     const index = entry.turnIndex - startIndex
@@ -1854,14 +1825,6 @@ export const ChatDisplay = React.forwardRef<ChatDisplayHandle, ChatDisplayProps>
                 ))}
                 {!messagesLoading && !messagesLoadError && presentation.progress && (
                   <JourneyProgress progress={presentation.progress} agents={agentActivity} presentation="codex" />
-                )}
-                {!messagesLoading && !messagesLoadError && presentation.outcome && (
-                  <JourneyOutcome
-                    outcome={presentation.outcome}
-                    retrying={retryingSessionId === session?.id || isConversationProcessing}
-                    onRetry={!hasRecordedAnswerRetry && presentation.outcome.retryUserMessageId
-                      ? () => { void retryTurn(presentation.outcome!.retryUserMessageId!) } : undefined}
-                  />
                 )}
                 {/* Scroll Anchor: For auto-scroll to bottom */}
                 <div ref={messagesEndRef} />

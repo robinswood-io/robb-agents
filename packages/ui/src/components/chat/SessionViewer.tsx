@@ -19,7 +19,6 @@ import { UserMessageBubble } from './UserMessageBubble'
 import { SystemMessage } from './SystemMessage'
 import { projectConversation } from './conversation-presentation'
 import { buildUserInputTimeline } from './user-input-timeline'
-import { JourneyOutcome } from './JourneyProgress'
 import {
   storedToMessage,
   getAssistantTurnUiKey,
@@ -232,8 +231,6 @@ export function SessionViewer({
 
               return null
             })}
-
-            {presentation.outcome && <JourneyOutcome outcome={presentation.outcome} />}
 
             {/* Bottom branding */}
             <div className={CHAT_CLASSES.brandingContainer}>
