@@ -1,92 +1,11 @@
-/**
- * Claude Event Adapter
- *
- * Maps Claude SDK messages (SDKMessage) to Craft Agent's AgentEvent format.
- * Extracted from ClaudeAgent.convertSDKMessage() for testability and to share
- * lifecycle scaffolding with PiEventAdapter via BaseEventAdapter.
- *
- * Key Claude-specific behavior:
- * - Uses extractToolStarts/extractToolResults from tool-matching.ts (stateless, ID-based)
- * - Handles stream_event for real-time text deltas and tool start detection
- * - Manages pendingText for deferred text_complete (waits for stop_reason from message_delta)
- * - Tracks usage per-message (not cumulative) for accurate context window display
- */
-
-import type { SDKMessage, SDKAssistantMessageError } from '@anthropic-ai/claude-agent-sdk';
+import type { SDKMessage } from '@anthropic-ai/claude-agent-sdk';
 import type { AgentEvent } from '@craft-agent/core/types';
-import type { AgentError } from '../../errors.ts';
 import { BaseEventAdapter } from '../base-event-adapter.ts';
 import { ToolIndex, extractToolStarts, extractToolResults, isParentTaskTool, type ContentBlock } from '../../tool-matching.ts';
-
-/**
- * Callbacks injected by ClaudeAgent for operations that depend on agent state.
- */
-export interface ClaudeAdapterCallbacks {
-  /** Debug logger — wired to ClaudeAgent.onDebug */
-  onDebug?: (msg: string) => void;
-  /** Maps SDK error codes to typed AgentErrors (depends on debug log parsing) */
-  mapSDKError: (errorCode: SDKAssistantMessageError) => Promise<{ type: 'typed_error'; error: AgentError }>;
-  /** Session directory for tool metadata (prevents cross-session race condition) */
-  sessionDir?: string;
-}
-
-/**
- * Pure function: build a typed_error event for Windows SDK setup issues.
- * Returns null if the error doesn't match the pattern.
- */
-export function buildWindowsSkillsDirError(errorText: string): { type: 'typed_error'; error: AgentError } | null {
-  if (!errorText.includes('ENOENT') || !errorText.includes('skills')) {
-    return null;
-  }
-
-  const pathMatch = errorText.match(/scandir\s+'([^']+)'/);
-  const missingPath = pathMatch?.[1] || 'C:\\ProgramData\\ClaudeCode\\.claude\\skills';
-
-  return {
-    type: 'typed_error',
-    error: {
-      code: 'unknown_error',
-      title: 'Windows Setup Required',
-      message: `The SDK requires a directory that doesn't exist: ${missingPath} — Create this folder in File Explorer, then restart the app.`,
-      details: [
-        `PowerShell (run as Administrator):`,
-        `New-Item -ItemType Directory -Force -Path "${missingPath}"`,
-      ],
-      actions: [],
-      canRetry: true,
-      originalError: errorText,
-    },
-  };
-}
-
-/**
- * Per-message usage snapshot for accurate context window display.
- * result.modelUsage is cumulative; we need per-message granularity.
- */
-interface AssistantUsage {
-  input_tokens: number;
-  cache_read_input_tokens: number;
-  cache_creation_input_tokens: number;
-}
-
-/**
- * Shape of the SDK's `task_notification` system message.
- * The SDK doesn't export a type for this, so we define it locally
- * and validate fields before use to catch silent breakage.
- */
-interface TaskNotificationMessage {
-  type: 'system';
-  subtype: 'task_notification';
-  task_id: string;
-  status?: string;
-  output_file?: string;
-  summary?: string;
-  session_id?: string;
-}
-
-/** Valid terminal statuses for background tasks */
-const VALID_TASK_STATUSES = ['completed', 'failed', 'stopped'] as const;
-type TaskStatus = typeof VALID_TASK_STATUSES[number];
+import { buildWindowsSkillsDirError, VALID_TASK_STATUSES } from './event-contracts.ts';
+import type { ClaudeAdapterCallbacks, AssistantUsage, TaskNotificationMessage, TaskStatus } from './event-contracts.ts';
+export { buildWindowsSkillsDirError } from './event-contracts.ts';
+export type { ClaudeAdapterCallbacks } from './event-contracts.ts';
 
 export class ClaudeEventAdapter extends BaseEventAdapter {
   // Per-turn state (reset on each startTurn)
@@ -133,7 +52,7 @@ export class ClaudeEventAdapter extends BaseEventAdapter {
     // Debug: log non-streaming SDK message types (stream_event is too frequent)
     if (this.callbacks.onDebug && message.type !== 'stream_event') {
       const msgInfo = message.type === 'user' && 'tool_use_result' in message
-        ? `user (tool_result for ${(message as any).parent_tool_use_id})`
+        ? `user (tool_result for ${message.parent_tool_use_id})`
         : message.type;
       this.callbacks.onDebug(`SDK message: ${msgInfo}`);
     }
@@ -169,7 +88,7 @@ export class ClaudeEventAdapter extends BaseEventAdapter {
 
       default:
         if (this.callbacks.onDebug) {
-          this.callbacks.onDebug(`Unhandled SDK message type: ${(message as any).type}`);
+          this.callbacks.onDebug(`Unhandled SDK message type: ${message.type}`);
         }
         break;
     }
@@ -228,11 +147,11 @@ export class ClaudeEventAdapter extends BaseEventAdapter {
   // Per-message-type Handlers
   // ============================================================
 
-  private async adaptAssistant(message: SDKMessage, events: AgentEvent[]): Promise<void> {
+  private async adaptAssistant(message: Extract<SDKMessage, { type: 'assistant' }>, events: AgentEvent[]): Promise<void> {
     // Check for SDK-level errors FIRST (auth, network, rate limits, etc.)
     if ('error' in message && message.error) {
       const errorEvent = await this.callbacks.mapSDKError(
-        message.error as SDKAssistantMessageError,
+        message.error,
       );
       events.push(errorEvent);
       return;
@@ -244,9 +163,9 @@ export class ClaudeEventAdapter extends BaseEventAdapter {
     }
 
     // Track usage from non-sidechain assistant messages
-    const isSidechain = (message as any).parent_tool_use_id !== null;
-    if (!isSidechain && (message as any).message?.usage) {
-      const usage = (message as any).message.usage;
+    const isSidechain = message.parent_tool_use_id !== null;
+    if (!isSidechain && message.message?.usage) {
+      const usage = message.message.usage;
       this.lastAssistantUsage = {
         input_tokens: usage.input_tokens,
         cache_read_input_tokens: usage.cache_read_input_tokens ?? 0,
@@ -268,7 +187,7 @@ export class ClaudeEventAdapter extends BaseEventAdapter {
     }
 
     // Full assistant message with content blocks
-    const content = (message as any).message?.content ?? [];
+    const content = message.message?.content ?? [];
 
     // Extract text from content blocks
     let textContent = '';
@@ -279,7 +198,7 @@ export class ClaudeEventAdapter extends BaseEventAdapter {
     }
 
     // Stateless tool start extraction
-    const sdkParentId = (message as any).parent_tool_use_id;
+    const sdkParentId = message.parent_tool_use_id;
     const toolStartEvents = extractToolStarts(
       content as ContentBlock[],
       sdkParentId,
@@ -305,8 +224,8 @@ export class ClaudeEventAdapter extends BaseEventAdapter {
     }
   }
 
-  private adaptStreamEvent(message: SDKMessage, events: AgentEvent[]): void {
-    const event = (message as any).event;
+  private adaptStreamEvent(message: Extract<SDKMessage, { type: 'stream_event' }>, events: AgentEvent[]): void {
+    const event = message.event;
 
     // Debug: log key stream events only (skip per-chunk deltas and frequent pings)
     if (this.callbacks.onDebug && (event.type === 'message_start' || event.type === 'message_stop')) {
@@ -333,7 +252,7 @@ export class ClaudeEventAdapter extends BaseEventAdapter {
           text: this.pendingText,
           isIntermediate,
           turnId: this.currentTurnId || undefined,
-          parentToolUseId: (message as any).parent_tool_use_id || undefined,
+          parentToolUseId: message.parent_tool_use_id || undefined,
         });
         this.pendingText = null;
       }
@@ -344,12 +263,12 @@ export class ClaudeEventAdapter extends BaseEventAdapter {
         type: 'text_delta',
         text: event.delta.text,
         turnId: this.currentTurnId || undefined,
-        parentToolUseId: (message as any).parent_tool_use_id || undefined,
+        parentToolUseId: message.parent_tool_use_id || undefined,
       });
     } else if (event.type === 'content_block_start' && event.content_block.type === 'tool_use') {
       // Stream events arrive with empty input — the full input comes later
       const toolBlock = event.content_block;
-      const sdkParentId = (message as any).parent_tool_use_id;
+      const sdkParentId = message.parent_tool_use_id;
       const streamBlocks: ContentBlock[] = [{
         type: 'tool_use' as const,
         id: toolBlock.id,
@@ -377,21 +296,21 @@ export class ClaudeEventAdapter extends BaseEventAdapter {
     }
   }
 
-  private adaptUser(message: SDKMessage, events: AgentEvent[]): void {
+  private adaptUser(message: Extract<SDKMessage, { type: 'user' }>, events: AgentEvent[]): void {
     // Skip replayed messages when resuming
     if ('isReplay' in message && message.isReplay) {
       return;
     }
 
     // Tool result matching
-    if ((message as any).tool_use_result !== undefined || ('message' in message && (message as any).message)) {
-      const msgContent = ('message' in message && (message as any).message)
-        ? (((message as any).message as { content?: unknown[] }).content ?? [])
+    if (message.tool_use_result !== undefined || ('message' in message && message.message)) {
+      const msgContent = ('message' in message && message.message)
+        ? ((message.message as { content?: unknown[] }).content ?? [])
         : [];
       const contentBlocks = (Array.isArray(msgContent) ? msgContent : []) as ContentBlock[];
 
-      const sdkParentId = (message as any).parent_tool_use_id;
-      const toolUseResultValue = (message as any).tool_use_result;
+      const sdkParentId = message.parent_tool_use_id;
+      const toolUseResultValue = message.tool_use_result;
 
       const resultEvents = extractToolResults(
         contentBlocks,
@@ -459,8 +378,8 @@ export class ClaudeEventAdapter extends BaseEventAdapter {
     }
   }
 
-  private adaptResult(message: SDKMessage, events: AgentEvent[]): void {
-    const msg = message as any;
+  private adaptResult(message: Extract<SDKMessage, { type: 'result' }>, events: AgentEvent[]): void {
+    const msg = message;
 
     // Debug logging
     console.error(
@@ -469,7 +388,7 @@ export class ClaudeEventAdapter extends BaseEventAdapter {
 
     // Get contextWindow from modelUsage
     const modelUsageEntries = Object.values(msg.modelUsage || {});
-    const primaryModelUsage = modelUsageEntries[0] as any;
+    const primaryModelUsage = modelUsageEntries[0];
 
     if (primaryModelUsage?.contextWindow) {
       this.cachedContextWindow = primaryModelUsage.contextWindow;
@@ -516,8 +435,8 @@ export class ClaudeEventAdapter extends BaseEventAdapter {
     }
   }
 
-  private adaptSystem(message: SDKMessage, events: AgentEvent[]): void {
-    const msg = message as any;
+  private adaptSystem(message: Extract<SDKMessage, { type: 'system' }>, events: AgentEvent[]): void {
+    const msg = message;
 
     if (msg.subtype === 'init') {
       // Capture tools list from SDK init message
@@ -552,8 +471,8 @@ export class ClaudeEventAdapter extends BaseEventAdapter {
     }
   }
 
-  private adaptAuthStatus(message: SDKMessage, events: AgentEvent[]): void {
-    const msg = message as any;
+  private adaptAuthStatus(message: Extract<SDKMessage, { type: 'auth_status' }>, events: AgentEvent[]): void {
+    const msg = message;
     if (msg.error) {
       events.push({
         type: 'error',

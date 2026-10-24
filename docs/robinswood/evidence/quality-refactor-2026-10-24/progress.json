@@ -30,7 +30,9 @@
     "Ancien serveur bridge MCP retiré : aucun backend maintenu ne l’appelait ; ancien hook vide et phase vide d’activation supprimés, révocation/rollback/quarantaine conservés autour de la vraie mise à jour",
     "Suite complète du dépôt, 16 configurations TypeScript, contrats d’activation et d’intégrité du paquet réussis après retrait du pont",
     "Build Electron réussi ; ancien bundle absent des ressources et des 506 entrées du manifeste protégé",
-    "Seuil de lignes étendu aux workflows YAML, au SQL et au TOML ; un workflow historique supplémentaire dépasse le seuil"
+    "Seuil de lignes étendu aux workflows YAML, au SQL et au TOML ; un workflow historique supplémentaire dépasse le seuil",
+    "Adaptateur Claude : 21 any remplacés par les branches natives discriminées SDKMessage ; contrat public préservé ; adaptateur 483 lignes, contrats 73 lignes",
+    "Tests Claude : 48 any retirés, fixtures historiques bornées et typées à une frontière de test explicite ; 37 scénarios conservés dans trois fichiers de 340 lignes au plus ; tests, typage et lint sans avertissement réussis"
   ],
   "pending": [
     "Découpage des autres fichiers au-delà de 500 lignes",
@@ -38,9 +40,9 @@
     "Lint global sans erreur ni avertissement",
     "Parcours complets réels en staging local, compilation signée et intégration"
   ],
-  "updatedAt": "2026-10-24T23:10:33.022006+00:00",
+  "updatedAt": "2026-10-24T23:21:40.684088+00:00",
   "current": {
-    "over500": 230,
-    "explicitAny": 1163
+    "over500": 228,
+    "explicitAny": 1094
   }
 }
