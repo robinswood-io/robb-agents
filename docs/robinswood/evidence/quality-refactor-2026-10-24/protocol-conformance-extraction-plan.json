@@ -1,0 +1,330 @@
+{
+  "source": "packages/shared/src/interop/protocol-conformance.ts",
+  "units": [
+    {
+      "names": [
+        "MCP_TASKS_PROTOCOL_VERSION"
+      ],
+      "group": "probe-types",
+      "bodySha256": "63f36f8784e28aa0162d2a2322f8ee71e7e171e62433608969d883e00fbea13c"
+    },
+    {
+      "names": [
+        "A2A_PROTOCOL_VERSION"
+      ],
+      "group": "probe-types",
+      "bodySha256": "be048192b382116db2be1de7e05a6d2ae768d1d360faf3c1be13925bb6f425e2"
+    },
+    {
+      "names": [
+        "McpConformanceEra"
+      ],
+      "group": "probe-types",
+      "bodySha256": "5ddb539d6627136a5dfe78f0d29928ce690556fe9336aab84a16ba58da7ed2f4"
+    },
+    {
+      "names": [
+        "ExternalInteropProtocol"
+      ],
+      "group": "probe-types",
+      "bodySha256": "468eba8d06890718dba5f1c2737db14bb87a120faf651eb1653ada148170a4ef"
+    },
+    {
+      "names": [
+        "InteropConformanceHttpRequest"
+      ],
+      "group": "probe-types",
+      "bodySha256": "e824e88d60514a33538b8309c7c65b79b8b9627190255029f044fc9849a58333"
+    },
+    {
+      "names": [
+        "InteropConformanceHttpResponse"
+      ],
+      "group": "probe-types",
+      "bodySha256": "3f5649b940d7606f5735dd2e5237f59804923935f02016767ececab69770740c"
+    },
+    {
+      "names": [
+        "InteropConformanceTransport"
+      ],
+      "group": "probe-types",
+      "bodySha256": "e997354dd6adc2a9c7dc4e9fab31ffadc3c966a1daa5983d04dd807d6996a40e"
+    },
+    {
+      "names": [
+        "InteropConformanceCheck"
+      ],
+      "group": "probe-types",
+      "bodySha256": "c354847c243c17ce5c48dca06c0f4facc7cfb701735da26c02019647a1f2bc46"
+    },
+    {
+      "names": [
+        "InteropConformanceReport"
+      ],
+      "group": "probe-types",
+      "bodySha256": "196b3c5a5d21ddced9fce18975180ced9be390b6bb344d676615ee56e820083b"
+    },
+    {
+      "names": [
+        "endpointUrl"
+      ],
+      "group": "probe-types",
+      "bodySha256": "d03551fb8ec57bcee01545e252576872dc9571c72dd2eacaa6ca0a2378c81a42"
+    },
+    {
+      "names": [
+        "recordValue"
+      ],
+      "group": "probe-types",
+      "bodySha256": "e7b38cbdfd8881790e1c399acffb1f6321231fa7730e2ba4f5cf0ffe863778f1"
+    },
+    {
+      "names": [
+        "stringValue"
+      ],
+      "group": "probe-types",
+      "bodySha256": "3aba1f0dd16ce1b10c94e39fc6844e9a1eb236d58bf0957f3ded50bd9e1a6ae0"
+    },
+    {
+      "names": [
+        "parseJsonOrSse"
+      ],
+      "group": "probe-types",
+      "bodySha256": "73db227191e53b920f5a3cca16b37e81ad64218fe7ff1a9ade549e6b33ba63ff"
+    },
+    {
+      "names": [
+        "parseSseEvents"
+      ],
+      "group": "probe-types",
+      "bodySha256": "ce3a3ecdfe10513eea50b9cb7d766209c2393271b38ec24f4529760e5f5388e1"
+    },
+    {
+      "names": [
+        "report"
+      ],
+      "group": "probe-types",
+      "bodySha256": "e6f51897452d534f3fa8d0757e075379fdaab620d6754dc93cd7ce04d4a9393f"
+    },
+    {
+      "names": [
+        "check"
+      ],
+      "group": "probe-types",
+      "bodySha256": "2a391c2f6683dc01508eccd1a2de79db7e7a924bf9abb6302b6a40d89ef586bb"
+    },
+    {
+      "names": [
+        "authorizationHeaders"
+      ],
+      "group": "probe-types",
+      "bodySha256": "ba6e9fb40016588ab0b7e26cc50d13465d6c31e7df33895361ab1b504d6df643"
+    },
+    {
+      "names": [
+        "jsonRpcResult"
+      ],
+      "group": "probe-types",
+      "bodySha256": "f426c52ac4e2ffded0aeb7774373ad82b2a9c6c7cb5b9eb2ebba5b29c5dcafac"
+    },
+    {
+      "names": [
+        "mcpTaskStatuses"
+      ],
+      "group": "probe-types",
+      "bodySha256": "d26a5eb6a395ca1d4ba83c0a3e70088e86b865b735da48514e2ef69a1b5e6c23"
+    },
+    {
+      "names": [
+        "mcpTask"
+      ],
+      "group": "probe-types",
+      "bodySha256": "5a648bbffe0f085ffa27a0273ae5142e22393344338b11d8cbac29ae8469972e"
+    },
+    {
+      "names": [
+        "jsonRpcError"
+      ],
+      "group": "probe-types",
+      "bodySha256": "a144bb120a12dd3a091339b99813446478a4d0a9d2ee14514d7dd1c8e82696d6"
+    },
+    {
+      "names": [
+        "isSuccessfulHttpStatus"
+      ],
+      "group": "probe-types",
+      "bodySha256": "f88c7423e49f987381561900725f17a9b1ecbd2ab90a313114af54cf40558de7"
+    },
+    {
+      "names": [
+        "hasModernCacheContract"
+      ],
+      "group": "probe-types",
+      "bodySha256": "a828509317b1a3b703997f17644a1056d4e78a038299646eb1e019dc70ebfb8e"
+    },
+    {
+      "names": [
+        "hasTaskTtl"
+      ],
+      "group": "probe-types",
+      "bodySha256": "ca5e45e1aa8934950e72a0b4c76f954a24bc4da1cdc4f0eb74b112b938dd98e5"
+    },
+    {
+      "names": [
+        "McpTasksConformanceInput"
+      ],
+      "group": "legacy-mcp",
+      "bodySha256": "0b2e257bdcd575568d6e0182efbc83b63fd7b36fedcc2b8562258d672a579643"
+    },
+    {
+      "names": [
+        "runLegacyMcpTasksConformance"
+      ],
+      "group": "legacy-mcp",
+      "bodySha256": "d77f6c45e2041759a58129f93a3150e45ca1f36aac53ca777c45dae5f0f8721b"
+    },
+    {
+      "names": [
+        "modernRequestMeta"
+      ],
+      "group": "mcp-negotiation",
+      "bodySha256": "e5d3288b5393afc94c1a70e911b2de71a677d74ba92233b36fcefb1b9ec3f40b"
+    },
+    {
+      "names": [
+        "modernMcpHeaders"
+      ],
+      "group": "mcp-negotiation",
+      "bodySha256": "6c3938d0b5f0c4d7d8729aa7175d555d47b25583fb7b64a4f3302b3ff3cf152e"
+    },
+    {
+      "names": [
+        "sendModernProbe"
+      ],
+      "group": "mcp-negotiation",
+      "bodySha256": "62dda90b590a10bb07892b969a70ae6224f3d23a6f3a7a71d70fd307a965343f"
+    },
+    {
+      "names": [
+        "negotiateMcpEra"
+      ],
+      "group": "mcp-negotiation",
+      "bodySha256": "fa0295238f4206738f8500969bf0367bd925958274a38309d9494c3295495e60"
+    },
+    {
+      "names": [
+        "runModernMcpTasksConformance"
+      ],
+      "group": "modern-mcp",
+      "bodySha256": "5cf6e6dad04903c71478798bb8f293dd40a6d63e792e751fc5582365f3f0c8a9"
+    },
+    {
+      "names": [
+        "runMcpTasksConformance"
+      ],
+      "group": "mcp-probe",
+      "bodySha256": "49bdbe2cdbacf7a6e906c5f0ce7644fb68f4f9422db600145185a37f301654ae"
+    },
+    {
+      "names": [
+        "a2aTaskStates"
+      ],
+      "group": "a2a",
+      "bodySha256": "4f23c42b642c2e2a0505dbdc9693f83126850e5b2e5e26f22f3555f231ba9d16"
+    },
+    {
+      "names": [
+        "a2aTask"
+      ],
+      "group": "a2a",
+      "bodySha256": "b20ee004d526979c675373e4fa8dd6fc7e985f0f1159087a5d2b885050dacb0f"
+    },
+    {
+      "names": [
+        "runA2AConformance"
+      ],
+      "group": "a2a",
+      "bodySha256": "5775ddc6e3e45f6af34d1dc3dc4f5143c11f3e8d02d516c7e8751ec8525a124f"
+    },
+    {
+      "names": [
+        "validateAgUiSequence"
+      ],
+      "group": "ag-ui",
+      "bodySha256": "7e50c96ea21247fef1a98843b1106858059710554c85dcf4d249b5c6211c7217"
+    },
+    {
+      "names": [
+        "runAgUiConformance"
+      ],
+      "group": "ag-ui",
+      "bodySha256": "0a12382f06f23d08801e6f7522886b696b58f0640c62f689e4e01b4c628ac8a4"
+    },
+    {
+      "names": [
+        "fetchInteropConformanceTransport"
+      ],
+      "group": "ag-ui",
+      "bodySha256": "0ef55ecc1b3fbad17406ea6255b81c45c979b8b594838ff9724ddd0371452619"
+    }
+  ],
+  "modules": [
+    {
+      "name": "probe-types",
+      "lines": 172
+    },
+    {
+      "name": "legacy-mcp",
+      "lines": 180
+    },
+    {
+      "name": "mcp-negotiation",
+      "lines": 125
+    },
+    {
+      "name": "modern-mcp",
+      "lines": 201
+    },
+    {
+      "name": "mcp-probe",
+      "lines": 36
+    },
+    {
+      "name": "a2a",
+      "lines": 134
+    },
+    {
+      "name": "ag-ui",
+      "lines": 141
+    }
+  ],
+  "dependencies": {
+    "probe-types": [],
+    "legacy-mcp": [
+      "probe-types"
+    ],
+    "mcp-negotiation": [
+      "probe-types",
+      "legacy-mcp"
+    ],
+    "modern-mcp": [
+      "legacy-mcp",
+      "probe-types",
+      "mcp-negotiation"
+    ],
+    "mcp-probe": [
+      "legacy-mcp",
+      "probe-types",
+      "modern-mcp",
+      "mcp-negotiation"
+    ],
+    "a2a": [
+      "probe-types"
+    ],
+    "ag-ui": [
+      "probe-types"
+    ]
+  },
+  "unitCycles": [],
+  "moduleCycles": []
+}

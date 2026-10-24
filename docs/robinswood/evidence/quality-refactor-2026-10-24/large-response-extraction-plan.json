@@ -1,0 +1,300 @@
+{
+  "source": "packages/shared/src/utils/large-response.ts",
+  "units": [
+    {
+      "names": [
+        "TOKEN_LIMIT"
+      ],
+      "group": "token-budget",
+      "bodySha256": "983d6e69b18145697e141c96510848a7b641568b58d7e82096b742d7006cdcfd"
+    },
+    {
+      "names": [
+        "MAX_SUMMARIZATION_INPUT"
+      ],
+      "group": "token-budget",
+      "bodySha256": "118bcfa35008f80845128805426183933b54aedba02cb21d93cec522af29cff7"
+    },
+    {
+      "names": [
+        "LONG_RESPONSES_DIR"
+      ],
+      "group": "token-budget",
+      "bodySha256": "e451f227af34204743949e8069411075c8b51c1e4b59c3c7b726746bc1c5b904"
+    },
+    {
+      "names": [
+        "TOKEN_LIMIT_FLOOR"
+      ],
+      "group": "token-budget",
+      "bodySha256": "b43d4e98d409aa1dcff6d08fe521305ca743fc4e328a60472ee3aef13e2b5f19"
+    },
+    {
+      "names": [
+        "PER_RESULT_CONTEXT_FRACTION"
+      ],
+      "group": "token-budget",
+      "bodySha256": "21370fa3cd0607c94b30be8c296c2a5e5fcba381aceddda33d70e463a998665d"
+    },
+    {
+      "names": [
+        "estimateTokens"
+      ],
+      "group": "token-budget",
+      "bodySha256": "7a8d5bca5f5d95a0e76451d0cd48c858c534f44fe38b16a07fa20a2e6d29de9a"
+    },
+    {
+      "names": [
+        "DENSITY_AWARE_MIN_LENGTH"
+      ],
+      "group": "token-budget",
+      "bodySha256": "3e7738da91d32154ced1a3d5a39e5e02c9fe0936b512b60284ee11faa95dd9fd"
+    },
+    {
+      "names": [
+        "BASE64_RUN_MIN"
+      ],
+      "group": "token-budget",
+      "bodySha256": "e9292a26f0800165278438ed6d99b8778c42606088b277ee1264a74040558e8a"
+    },
+    {
+      "names": [
+        "BASE64_DENSITY_THRESHOLD"
+      ],
+      "group": "token-budget",
+      "bodySha256": "1646681ded86d9e1d493268682297baf43ce61179e03cc9a2ab3c0c7ffc35355"
+    },
+    {
+      "names": [
+        "BASE64_CHARS_PER_TOKEN"
+      ],
+      "group": "token-budget",
+      "bodySha256": "84fa3ae53545bbecb8aaf1eaba4aec5cc2fb850bdd5253822085b45d2b4b82d3"
+    },
+    {
+      "names": [
+        "estimateTokensDensityAware"
+      ],
+      "group": "token-budget",
+      "bodySha256": "e7ce7f6b91f05a570c6da32b651ff5c00e6e0c00ed869dc6a30b6342fc4b0206"
+    },
+    {
+      "names": [
+        "tokenLimitFor"
+      ],
+      "group": "token-budget",
+      "bodySha256": "5610d2102ab1b12e97113b725fec3cba1d8a2ef42be9a8327046026b724fc78a"
+    },
+    {
+      "names": [
+        "SaveResult"
+      ],
+      "group": "artifact-storage",
+      "bodySha256": "312f232ea01483e3b5c498e4e96fc586cc0cdb6b0bce9b4f72e1ed2a6f84d3ef"
+    },
+    {
+      "names": [
+        "saveLargeResponse"
+      ],
+      "group": "artifact-storage",
+      "bodySha256": "8226037042ca625ff6bb03c638585d73063d8bee221e04a9c82e80f2c874faca"
+    },
+    {
+      "names": [
+        "SavedJsonArtifact"
+      ],
+      "group": "json-assets",
+      "bodySha256": "f12f94ab78c2b77cfb4e99356873e48dd0f33778816495f0b19fbe021226b24f"
+    },
+    {
+      "names": [
+        "SavedAsset"
+      ],
+      "group": "json-assets",
+      "bodySha256": "d81108d32db978cc0966bfccb1bfc2f14eaf1fa011a3c0e6be9434d6ffed6ff6"
+    },
+    {
+      "names": [
+        "JsonAssetExtractionResult"
+      ],
+      "group": "json-assets",
+      "bodySha256": "3543a2f16becbd6825c41014da00cfa1b316e2409ecdd94a88d09eb1c7bab3e1"
+    },
+    {
+      "names": [
+        "gmailMessageResultMetadata"
+      ],
+      "group": "json-assets",
+      "bodySha256": "24c550ecfb32a70ada975389bba0b80792f32a2fa57124bcdf172cc0f9390491"
+    },
+    {
+      "names": [
+        "extractGmailMessageResultMetadataJson"
+      ],
+      "group": "json-assets",
+      "bodySha256": "b255df7c02390592438b7973dab9ec8d5334036af7dd575ae39cbf3a1ad24a6f"
+    },
+    {
+      "names": [
+        "saveJsonArtifact"
+      ],
+      "group": "json-assets",
+      "bodySha256": "9e5775cb1c10588053ca1a48dae301f8b81b9ed261c0861c067e8ef0b0701dfe"
+    },
+    {
+      "names": [
+        "inferMimeFromContext"
+      ],
+      "group": "json-assets",
+      "bodySha256": "14187ec2fea27f81d2925aa9a2f2f5f08dbc74e009388432792178e22c70606c"
+    },
+    {
+      "names": [
+        "saveExtractedAsset"
+      ],
+      "group": "json-assets",
+      "bodySha256": "49be5fbce2b0908477a9a725b5ebbc7b620e66dcc54a8d9b9bc2904d3ccbb34e"
+    },
+    {
+      "names": [
+        "extractAssetsFromStructuredJson"
+      ],
+      "group": "json-assets",
+      "bodySha256": "6b74a800a13eb60ac7e8ec7e2a7aa38c8bd84867daa57187f2c67a1b489c26f4"
+    },
+    {
+      "names": [
+        "formatStructuredMediaExtractionMessage"
+      ],
+      "group": "json-assets",
+      "bodySha256": "6877937c24eee03e7034d9328cf9fc35ef6421395bc16d994eaa9b7e991059f8"
+    },
+    {
+      "names": [
+        "SummarizationContext"
+      ],
+      "group": "response-format",
+      "bodySha256": "c10c972af2236e2d6663b8cc4d45bdf3e38669446343974368061b61b6727392"
+    },
+    {
+      "names": [
+        "buildSummarizationPrompt"
+      ],
+      "group": "response-format",
+      "bodySha256": "49fd4e7e8fd6c10cd493299652821ab0f4245cbbd4ccf0cde87cad6d2253f7e1"
+    },
+    {
+      "names": [
+        "FormatOptions"
+      ],
+      "group": "response-format",
+      "bodySha256": "814033fd7bc2a951171421d83aded4824373314e5141191017cf8b19214fb598"
+    },
+    {
+      "names": [
+        "LARGE_RESULT_METADATA_KEYS"
+      ],
+      "group": "response-format",
+      "bodySha256": "c25d13d198106a33acbaa2a223fe1d9b36a56bb9d2cb56d23d58c094125e6a90"
+    },
+    {
+      "names": [
+        "extractLargeResultMetadataJson"
+      ],
+      "group": "response-format",
+      "bodySha256": "272b3ee84121550098eecda876935fe087c162b5ff620ac40a2126493e4f3a53"
+    },
+    {
+      "names": [
+        "formatLargeResponseMessage"
+      ],
+      "group": "response-format",
+      "bodySha256": "89b2cc46fe928f7437ff1a96f9d2bf58bb87f2148737ecb444ee98e4f86c679a"
+    },
+    {
+      "names": [
+        "HandleLargeResponseOptions"
+      ],
+      "group": "result-guard",
+      "bodySha256": "d837568228889ef2f9219bac4ea7afe89a50e3692b3511068fa2eaefc1e7c5eb"
+    },
+    {
+      "names": [
+        "HandleLargeResponseResult"
+      ],
+      "group": "result-guard",
+      "bodySha256": "da8972a231da31b97cff24d40cd57ac2072b2a81d8e477d26e8a13384a62f345"
+    },
+    {
+      "names": [
+        "guardLargeResult"
+      ],
+      "group": "result-guard",
+      "bodySha256": "cda6a5afaa3f7699b57565d895369c8248a7f7bdb79d84a7ace4bb46cf44cd3e"
+    },
+    {
+      "names": [
+        "buildHeadTailPreview"
+      ],
+      "group": "result-guard",
+      "bodySha256": "6b10d3b50a93a3f64166d0e355fae4d0ed2f8f6a6fc7dced2354f45a7be94f37"
+    },
+    {
+      "names": [
+        "isAlreadyGuardedLargeResponse"
+      ],
+      "group": "result-guard",
+      "bodySha256": "2a4de91ee6119c766709ebbe805da8d58d7051f9a984925e9e22dd32fc427796"
+    },
+    {
+      "names": [
+        "handleLargeResponse"
+      ],
+      "group": "result-guard",
+      "bodySha256": "4a44ca4dd044a4d5eda9cce6237c6d29cbe6ec2bea8bae8351ab8d95ccf07daa"
+    }
+  ],
+  "modules": [
+    {
+      "name": "token-budget",
+      "lines": 116
+    },
+    {
+      "name": "artifact-storage",
+      "lines": 85
+    },
+    {
+      "name": "json-assets",
+      "lines": 286
+    },
+    {
+      "name": "response-format",
+      "lines": 171
+    },
+    {
+      "name": "result-guard",
+      "lines": 205
+    }
+  ],
+  "dependencies": {
+    "token-budget": [],
+    "artifact-storage": [
+      "token-budget"
+    ],
+    "json-assets": [
+      "artifact-storage",
+      "token-budget"
+    ],
+    "response-format": [
+      "token-budget"
+    ],
+    "result-guard": [
+      "response-format",
+      "json-assets",
+      "token-budget",
+      "artifact-storage"
+    ]
+  },
+  "unitCycles": [],
+  "moduleCycles": []
+}

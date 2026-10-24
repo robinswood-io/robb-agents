@@ -70,5 +70,113 @@
     "maxModuleLines": 233,
     "moduleCycles": [],
     "issues": []
+  },
+  {
+    "source": "packages/shared/src/protocol/dto.ts",
+    "declarations": 96,
+    "unchangedDeclarationBodies": true,
+    "relocationNormalization": "Relative dynamic and type imports resolved against their original module directory",
+    "maxModuleLines": 258,
+    "moduleCycles": [],
+    "issues": []
+  },
+  {
+    "source": "packages/shared/src/sessions/types.ts",
+    "declarations": 24,
+    "unchangedDeclarationBodies": true,
+    "relocationNormalization": "Relative dynamic and type imports resolved against their original module directory",
+    "maxModuleLines": 205,
+    "moduleCycles": [],
+    "issues": []
+  },
+  {
+    "source": "packages/shared/src/config/llm-connections.ts",
+    "declarations": 57,
+    "unchangedDeclarationBodies": true,
+    "relocationNormalization": "Relative dynamic and type imports resolved against their original module directory",
+    "maxModuleLines": 226,
+    "moduleCycles": [],
+    "issues": []
+  },
+  {
+    "source": "packages/shared/src/projects/memory-v2.ts",
+    "declarations": 73,
+    "unchangedDeclarationBodies": true,
+    "relocationNormalization": "Relative dynamic and type imports resolved against their original module directory",
+    "maxModuleLines": 282,
+    "moduleCycles": [],
+    "issues": []
+  },
+  {
+    "source": "packages/shared/src/agent/powershell-validator.ts",
+    "declarations": 51,
+    "unchangedDeclarationBodies": true,
+    "relocationNormalization": "Relative dynamic and type imports resolved against their original module directory",
+    "maxModuleLines": 352,
+    "moduleCycles": [],
+    "issues": []
+  },
+  {
+    "source": "packages/shared/src/agent/bash-validator.ts",
+    "declarations": 35,
+    "unchangedDeclarationBodies": true,
+    "relocationNormalization": "Relative dynamic and type imports resolved against their original module directory",
+    "maxModuleLines": 415,
+    "moduleCycles": [],
+    "issues": []
+  },
+  {
+    "source": "packages/ui/src/components/chat/turn-utils.ts",
+    "declarations": 34,
+    "unchangedDeclarationBodies": true,
+    "relocationNormalization": "Relative dynamic and type imports resolved against their original module directory",
+    "maxModuleLines": 357,
+    "moduleCycles": [],
+    "issues": []
+  },
+  {
+    "source": "packages/shared/src/utils/files.ts",
+    "declarations": 35,
+    "unchangedDeclarationBodies": true,
+    "relocationNormalization": "Relative dynamic and type imports resolved against their original module directory",
+    "maxModuleLines": 166,
+    "moduleCycles": [],
+    "issues": []
+  },
+  {
+    "source": "packages/shared/src/utils/large-response.ts",
+    "declarations": 36,
+    "unchangedDeclarationBodies": true,
+    "relocationNormalization": "Relative dynamic and type imports resolved against their original module directory",
+    "maxModuleLines": 285,
+    "moduleCycles": [],
+    "issues": []
+  },
+  {
+    "source": "packages/shared/src/specialized-profiles/schema.ts",
+    "declarations": 65,
+    "unchangedDeclarationBodies": true,
+    "relocationNormalization": "Relative dynamic and type imports resolved against their original module directory",
+    "maxModuleLines": 290,
+    "moduleCycles": [],
+    "issues": []
+  },
+  {
+    "source": "packages/shared/src/interop/protocol-conformance.ts",
+    "declarations": 38,
+    "unchangedDeclarationBodies": true,
+    "relocationNormalization": "Relative dynamic and type imports resolved against their original module directory",
+    "maxModuleLines": 200,
+    "moduleCycles": [],
+    "issues": []
+  },
+  {
+    "source": "apps/electron/src/shared/route-parser.ts",
+    "declarations": 17,
+    "unchangedDeclarationBodies": true,
+    "relocationNormalization": "Relative dynamic and type imports resolved against their original module directory",
+    "maxModuleLines": 318,
+    "moduleCycles": [],
+    "issues": []
   }
 ]

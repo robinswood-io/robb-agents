@@ -1,0 +1,308 @@
+{
+  "source": "packages/shared/src/agent/bash-validator.ts",
+  "units": [
+    {
+      "names": [
+        "READ_ONLY_GIT_HARDENING_ARGS"
+      ],
+      "group": "read-only-review",
+      "bodySha256": "40f9162791f128fa9d0fdac4781ec50c130304aad274a2df03741b4eb374d25d"
+    },
+    {
+      "names": [
+        "isAllowlistedReadOnlyGitArguments"
+      ],
+      "group": "read-only-review",
+      "bodySha256": "54ce25f02424e0d8805ea2d213987be935577e19f5147093b15af7347e2cb8f8"
+    },
+    {
+      "names": [
+        "inspectReadOnlyReviewCommand"
+      ],
+      "group": "read-only-review",
+      "bodySha256": "60c64ca40ef2396fd5e4e87c32c4daea2dca699af9fdb81dca8cd3f2e6102073"
+    },
+    {
+      "names": [
+        "hasShellOutputRedirection"
+      ],
+      "group": "read-only-review",
+      "bodySha256": "b19457f3d4f4c925a8e7890f748d8ce9db22159fe528bc94b360e11556425fc3"
+    },
+    {
+      "names": [
+        "BashValidationResult"
+      ],
+      "group": "ast-types",
+      "bodySha256": "668a710123ad8f3e2d0a440a7d2eaf691a13fd3a731379dc914c9db08254d59a"
+    },
+    {
+      "names": [
+        "SubcommandResult"
+      ],
+      "group": "ast-types",
+      "bodySha256": "1cccd605aa654e38f398d09f2b688f97d6e9d9b892007aaae502d03c5260f8bd"
+    },
+    {
+      "names": [
+        "BashValidationReason"
+      ],
+      "group": "ast-types",
+      "bodySha256": "28ccd0a9bc5808e79b7400c9e94560101d814a814b9ddfa536d3e74285afb679"
+    },
+    {
+      "names": [
+        "ASTNode"
+      ],
+      "group": "ast-types",
+      "bodySha256": "d05262b5859d1ef428122f6a221fa0736bcdb8522a6b19d3acf0403fe8a0ee04"
+    },
+    {
+      "names": [
+        "WordNode"
+      ],
+      "group": "ast-types",
+      "bodySha256": "b255735fb469ee2cd518503f456388e2c677f649e45d30aee84018ffcb5b19f5"
+    },
+    {
+      "names": [
+        "CommandNode"
+      ],
+      "group": "ast-types",
+      "bodySha256": "03d66a7fc33a6336dfb9118dc99914d4eedbf99e7f8762501b29865b80968e58"
+    },
+    {
+      "names": [
+        "LogicalExpressionNode"
+      ],
+      "group": "ast-types",
+      "bodySha256": "c088b4a2ad26417bca40f07133d7a6eb5d4cabc0c26fa6b24832c1f3ff34a04b"
+    },
+    {
+      "names": [
+        "PipelineNode"
+      ],
+      "group": "ast-types",
+      "bodySha256": "eaa1485670b6479670aeb74f9abdf7f262c63f17803d4364ab3d487d73f04c49"
+    },
+    {
+      "names": [
+        "SubshellNode"
+      ],
+      "group": "ast-types",
+      "bodySha256": "5f9ab11f1eb8bb17806e449c1e6ad9e5ec0f66e706d4092e0fa56fa63e61e2c4"
+    },
+    {
+      "names": [
+        "CompoundListNode"
+      ],
+      "group": "ast-types",
+      "bodySha256": "28405758e66782a76cbdbe6d5606e3dae069093def9345eb9cf87f244521fe43"
+    },
+    {
+      "names": [
+        "RedirectNode"
+      ],
+      "group": "ast-types",
+      "bodySha256": "6f12ed3d509b4dedc9d82d3f22905cb8db537b5618ffca0a1f7e133ae5c2a92c"
+    },
+    {
+      "names": [
+        "ExpansionNode"
+      ],
+      "group": "ast-types",
+      "bodySha256": "3478735e82a9ecfc3bdcf1e1f4c62cae5cc99e958f13f00087dc4c7b97954675"
+    },
+    {
+      "names": [
+        "ScriptNode"
+      ],
+      "group": "ast-types",
+      "bodySha256": "5fbc7b3d7923db384a45506e4e777c8320147e563075144e44e89d2de9ee45f4"
+    },
+    {
+      "names": [
+        "DANGEROUS_COMMAND_ARGS"
+      ],
+      "group": "awk-policy",
+      "bodySha256": "93081d6ece91266c50af579371a7ac2db1180ae652701d74673354f4efb182d6"
+    },
+    {
+      "names": [
+        "AWK_COMMANDS"
+      ],
+      "group": "awk-policy",
+      "bodySha256": "b442eac5db02fbbfefda9f620213c69f24518d2465f86bb74b834a63045b5925"
+    },
+    {
+      "names": [
+        "STATIC_INTEGRITY_PATH_PATTERN"
+      ],
+      "group": "awk-policy",
+      "bodySha256": "37d2d2f3627f2024b6c5ae7b361f826f56d92a18c8f921905447283c05101c84"
+    },
+    {
+      "names": [
+        "getIntegrityCheckReason"
+      ],
+      "group": "awk-policy",
+      "bodySha256": "b3b2da0ade71efc156f77ba4d9f5ce6724ef13289d53d5960b237668f8f71caa"
+    },
+    {
+      "names": [
+        "getDangerousAwkReason"
+      ],
+      "group": "awk-policy",
+      "bodySha256": "2b9c7befce900fb3d23245133c31fa9a3c162d0a14d24110cf0899e60635a4fa"
+    },
+    {
+      "names": [
+        "validateBashCommand"
+      ],
+      "group": "ast-policy",
+      "bodySha256": "95aa04bd2fe28e8780e45d10d3ccf65c8472942a1622a9039dbfa9234d676aae"
+    },
+    {
+      "names": [
+        "validateNode"
+      ],
+      "group": "ast-policy",
+      "bodySha256": "cd93d5ea36a8b05d6a37e574f7049d3b9ff636ab4ce4f8225b9f5011024467db"
+    },
+    {
+      "names": [
+        "validateScript"
+      ],
+      "group": "ast-policy",
+      "bodySha256": "2f04115bdc0ce31e7c89db3fec33754460a7876448c337567e16d45310acf8dd"
+    },
+    {
+      "names": [
+        "validateCommand"
+      ],
+      "group": "ast-policy",
+      "bodySha256": "7824aa2ee85f72fd20c8ead3457d15e6a487f54e5f7f75c94e72f0c478db6e2d"
+    },
+    {
+      "names": [
+        "validateLogicalExpression"
+      ],
+      "group": "ast-policy",
+      "bodySha256": "4d21d5ccb2d04d2c42299cef0f410d91f23bea40c2e677eb4fe16189977442e6"
+    },
+    {
+      "names": [
+        "validatePipeline"
+      ],
+      "group": "ast-policy",
+      "bodySha256": "5a87d234dd9388e51724d15caecbbc288f5984910ee4bb2628de20bc08ba1980"
+    },
+    {
+      "names": [
+        "validateSubshell"
+      ],
+      "group": "ast-policy",
+      "bodySha256": "09f2d5b8ec31476fd5c73162bc83ff9e8c1b1ba8df0982672a3d482ada1b3d3f"
+    },
+    {
+      "names": [
+        "validateCompoundList"
+      ],
+      "group": "ast-policy",
+      "bodySha256": "2159e21ffc6a835c5b9cc25f8803267d0a0986e4de803a00fc58e4f2dc7cb508"
+    },
+    {
+      "names": [
+        "checkWordForExpansions"
+      ],
+      "group": "ast-policy-check-word-for-expansions",
+      "bodySha256": "894836042d0be38de7ee19483a27b537a046f7f1b9484ac02fac18e874e016a6"
+    },
+    {
+      "names": [
+        "SAFE_INPUT_REDIRECTS"
+      ],
+      "group": "redirect-policy",
+      "bodySha256": "4da37049f498f4c54cb79c4cd2bbb6cf5247b30c6b6e651379bf84ed2430a5a1"
+    },
+    {
+      "names": [
+        "isRedirectSafe"
+      ],
+      "group": "redirect-policy",
+      "bodySha256": "840e2803b220ee842d9a65dd8d02e6a6590dc9c7ee72c47e3404d9d33da139c9"
+    },
+    {
+      "names": [
+        "getRedirectExplanation"
+      ],
+      "group": "redirect-policy",
+      "bodySha256": "212c45269378b04fd766311707e04af79dfe2c99a1e6c8fe7ce8b482ac9aac17"
+    },
+    {
+      "names": [
+        "hasControlCharacters"
+      ],
+      "group": "redirect-policy",
+      "bodySha256": "ef7c7f0c7e2fd7e26cc5cb1e14587c9c9b145510259231742d734055d181b0e5"
+    }
+  ],
+  "modules": [
+    {
+      "name": "read-only-review",
+      "lines": 305
+    },
+    {
+      "name": "ast-types",
+      "lines": 103
+    },
+    {
+      "name": "awk-policy",
+      "lines": 65
+    },
+    {
+      "name": "ast-policy",
+      "lines": 416
+    },
+    {
+      "name": "ast-policy-check-word-for-expansions",
+      "lines": 43
+    },
+    {
+      "name": "redirect-policy",
+      "lines": 80
+    }
+  ],
+  "dependencies": {
+    "read-only-review": [
+      "ast-types",
+      "awk-policy"
+    ],
+    "ast-types": [],
+    "awk-policy": [],
+    "ast-policy": [
+      "ast-types",
+      "ast-policy-check-word-for-expansions",
+      "redirect-policy",
+      "awk-policy",
+      "read-only-review"
+    ],
+    "ast-policy-check-word-for-expansions": [
+      "ast-types"
+    ],
+    "redirect-policy": [
+      "ast-types"
+    ]
+  },
+  "unitCycles": [
+    [
+      "validateCompoundList",
+      "validateSubshell",
+      "validatePipeline",
+      "validateLogicalExpression",
+      "validateScript",
+      "validateNode"
+    ]
+  ],
+  "moduleCycles": []
+}
