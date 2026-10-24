@@ -2003,7 +2003,14 @@ export function objectiveReviewBinding(objective: ActiveSessionObjective): { obj
   return { objectiveId: objective.objectiveId ?? objective.userMessageId,
     acceptanceSha256: createHash('sha256').update(JSON.stringify({
       criteria: objective.acceptanceCriteria ?? [], procedure: objective.procedure, revision: objective.acceptanceRevision,
-      request: objective.originalText ?? '', amendments: objective.amendments ?? [],
+      request: objective.originalText ?? '',
+      // Reconciliation and reply-only follow-ups retain the accepted work.
+      // Reuse the closed authority/presentation classifiers so only a real
+      // scope change invalidates a persisted review; the conversation remains intact.
+      amendments: objectiveAuthorityAmendments(objective).filter(amendment => (
+        !isObjectiveStatusOnly(amendment.text)
+          && !isResponsePresentationOnlyAmendment(objectiveAmendmentAuthorityText(amendment.text))
+      )),
     })).digest('hex') };
 }
 

@@ -140,7 +140,7 @@ describe('piDriver GitHub Copilot contract', () => {
 describe('piDriver local & custom endpoint model discovery', () => {
   it('discovers local models via /v1/models or Ollama /api/tags fallback, infers capabilities, and preserves user models', async () => {
     const originalFetch = globalThis.fetch;
-    globalThis.fetch = mock(async (input: RequestInfo | URL) => {
+    globalThis.fetch = mock(async (input: Parameters<typeof originalFetch>[0]) => {
       const url = String(input);
       if (url === 'http://localhost:11434/v1/models') {
         return new Response('Not Found', { status: 404 });

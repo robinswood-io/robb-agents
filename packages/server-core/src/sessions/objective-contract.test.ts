@@ -435,6 +435,8 @@ describe('durable objective contract', () => {
     'Réponds brièvement et utilise autre@example.com comme destinataire.',
     'Keep the final response concise and retransmit the message.',
     'Keep it brief and switch the target to production.',
+    'Réponds plus brièvement et remplace le contenu par « nouvelle demande ».',
+    'Où en es-tu ? Envoie ensuite une copie à autre@example.com.',
   ])('lets an operational instruction override a presentation preference under terminal reconciliation: %s', text => {
     const original: ActiveSessionObjective = {
       ...transitionObjectiveContract({ messageId: 'root', text: 'Envoie le message exact.', nowMs: 1 }),

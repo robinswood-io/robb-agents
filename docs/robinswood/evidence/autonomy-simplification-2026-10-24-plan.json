@@ -1,0 +1,43 @@
+{
+  "date": "2026-10-24",
+  "target": "Robb Agents Desktop, DEV isolated worktree then signed local staging on this Mac",
+  "baseCommit": "25d89e5047459709e82833cc32b93ea847544d2f",
+  "scope": [
+    "Exclude status, closed receipt reconciliation and response-presentation amendments from the accepted-work review hash using existing closed classifiers.",
+    "Keep operational amendments, recipients, content, criteria and procedure changes bound to review.",
+    "Replace overclaiming completion banner with neutral response completion wording.",
+    "Use the existing live acceptance harness for five complete QA missions; no new runtime orchestrator.",
+    "Replace DOM-only fetch test input type with the runtime fetch parameter type."
+  ],
+  "checks": {
+    "core": {
+      "pass": 764,
+      "fail": 0,
+      "files": 11
+    },
+    "sharedTypecheck": "pass after portable test type correction",
+    "electronTypecheck": "pass",
+    "releaseTypecheck": "pass",
+    "releaseContract": "pass; platform-specific skips recorded in log",
+    "installerContract": "pass",
+    "piDriverTests": "pass"
+  },
+  "pendingAcceptance": [
+    "Five real-provider file missions with independent content checks",
+    "Native Electron mission, file preview and cold restart checks",
+    "Stable Developer ID build, official staging preflight/install/verify",
+    "Profile, existing sessions, connections and source configuration retention"
+  ],
+  "constraints": [
+    "No real accounting mutation",
+    "No other connector change",
+    "No SDK major upgrade in this lot",
+    "Keep cancellation, source provenance, mutation permissions and durable delivery guards",
+    "Do not activate or expand Mission v2 for ordinary chats"
+  ],
+  "limits": [
+    "Unit tests are not autonomy success measurements.",
+    "Five synthetic missions do not guarantee completion of arbitrary business missions.",
+    "Work reference unresolved; preserve this versioned trace and local evidence for later reconciliation."
+  ]
+}

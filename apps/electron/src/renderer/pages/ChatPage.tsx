@@ -102,7 +102,7 @@ const ChatPage = React.memo(function ChatPage({ sessionId }: ChatPageProps) {
   const sessionMetaMap = useAtomValue(sessionMetaMapAtom)
   const sessionMeta = sessionMetaMap.get(sessionId)
 
-  // Detect when an agent has verified and completed its mission
+  // Detect a completed response. This state alone does not prove every external effect.
   const isMissionCompleted = sessionMeta?.activeObjective?.terminalState === 'complete_verified'
   const [dismissedMissionCompletedSessionId, setDismissedMissionCompletedSessionId] = React.useState<string | null>(null)
   const showMissionCompletedPrompt = isMissionCompleted && dismissedMissionCompletedSessionId !== sessionId
@@ -844,7 +844,7 @@ const ChatPage = React.memo(function ChatPage({ sessionId }: ChatPageProps) {
               </span>
               <div className="min-w-0">
                 <div className="font-medium text-foreground text-xs">
-                  {t('chat.missionCompletedTitle', 'Mission validée et terminée')}
+                  {t('chat.missionCompletedTitle', 'Réponse terminée')}
                 </div>
                 <div className="text-[11px] text-muted-foreground truncate">
                   {t('chat.missionCompletedPrompt', 'Pour limiter la taille du contexte et maintenir une réactivité maximale, démarrez un nouveau chat.')}

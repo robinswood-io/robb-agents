@@ -34,12 +34,18 @@ platform.logger = {
 setSessionPlatform(platform);
 const manager = new SessionManager();
 // Deliberately do not initialize/recover other sessions from the development profile.
-const events: Array<{ sessionId?: string; type?: string; toolName?: string }> = [];
+const events: Array<{ sessionId?: string; type?: string; toolName?: string; isError?: boolean }> = [];
+const firstTool = new Map<string, () => void>();
 manager.setEventSink((_channel, _target, ...payload: unknown[]) => {
   const value = payload[0];
   if (!value || typeof value !== 'object') return;
-  const event = value as { sessionId?: string; type?: string; toolName?: string };
-  events.push({ sessionId: event.sessionId, type: event.type, toolName: event.toolName });
+  const event = value as { sessionId?: string; type?: string; toolName?: string; isError?: boolean };
+  events.push({ sessionId: event.sessionId, type: event.type, toolName: event.toolName, isError: event.isError });
+  if (event.type === 'tool_start' && event.sessionId) {
+    const resolveTool = firstTool.get(event.sessionId);
+    firstTool.delete(event.sessionId);
+    resolveTool?.();
+  }
 });
 
 type Result = { name: string; passed: boolean; sessionId: string; checks: string[]; durationMs: number; toolCalls: number; sourceErrors: number; limit?: string };
@@ -121,6 +127,38 @@ try {
     return ['Correct count and total', 'Three real deliverables inspected independently', 'All final files linked'];
   });
 
+  await mission('missing-input-recovery', async (dir, sessionId) => {
+    mkdirSync(join(dir, 'secours'), { recursive: true });
+    writeFileSync(join(dir, 'secours', 'entree.csv'), 'label,value\na,8\nb,13\n');
+    const answer = await send(sessionId, `${boundary}\nEssaie d'abord de lire entree.csv à la racine. S'il est absent, trouve sa copie dans ce dossier et poursuis sans demander mon aide. Livre resultat.json avec count et total, puis rapport.md décrivant le chemin réellement utilisé. Cite les deux fichiers dans la réponse finale.`);
+    const data = JSON.parse(readFileSync(join(dir, 'resultat.json'), 'utf8')) as { count?: number; total?: number };
+    requireCheck(data.count === 2 && data.total === 21, 'Fallback calculation is incomplete.');
+    requireCheck(readFileSync(join(dir, 'rapport.md'), 'utf8').includes('secours'), 'Actual fallback input is not identified.');
+    requireCheck(answer.includes('resultat.json') && answer.includes('rapport.md'), 'Fallback deliverables are not linked.');
+    return ['Missing initial input did not block completion', 'Fallback source identified', 'Both outputs checked independently'];
+  });
+  await mission('midstream-amendment', async (dir, sessionId) => {
+    const toolStarted = new Promise<void>(resolveTool => firstTool.set(sessionId, resolveTool));
+    const initial = send(sessionId, `${boundary}\nCrée pret.txt contenant PRET, puis attends 5 secondes avec un outil local avant de continuer. Crée ensuite resultat.txt contenant exactement VERSION ALPHA et livre un lien vers ce résultat.`);
+    await Promise.race([toolStarted, initial.then(() => { throw new Error('No tool observed before the first completion.'); })]);
+    await manager.sendMessage(sessionId, `${boundary}\nCorrection de la demande en cours : le résultat définitif doit contenir exactement VERSION BETA (et aucune occurrence de ALPHA). Ajoute aussi controle.json contenant {"version":"BETA","complete":true}. Vérifie les DEUX fichiers et cite-les dans la réponse finale.`);
+    await initial;
+    const deadline = Date.now() + 180_000;
+    let final = '';
+    while (Date.now() < deadline) {
+      const state = await manager.getSession(sessionId);
+      if (!state?.isProcessing && existsSync(join(dir, 'controle.json'))) {
+        final = state?.messages.filter(message => message.role === 'assistant' && !message.isIntermediate).at(-1)?.content ?? '';
+        break;
+      }
+      await new Promise(resolveTick => setTimeout(resolveTick, 250));
+    }
+    requireCheck(readFileSync(join(dir, 'resultat.txt'), 'utf8').trim() === 'VERSION BETA', 'The midstream correction was lost.');
+    const control = JSON.parse(readFileSync(join(dir, 'controle.json'), 'utf8')) as { version?: string; complete?: boolean };
+    requireCheck(control.version === 'BETA' && control.complete === true, 'The additional requirement was omitted.');
+    requireCheck(final.includes('resultat.txt') && final.includes('controle.json'), 'Corrected final deliverables are not linked.');
+    return ['A real human correction arrived during tool execution', 'Latest requested content retained', 'Additional requirement delivered and linked'];
+  });
   await mission('continuation', async (dir, sessionId) => {
     await send(sessionId, `${boundary}\nCrée uniquement brouillon.md contenant exactement « ALPHA — résultat acquis ». N'écris pas encore la version finale : je donnerai sa consigne ensuite.`);
     const draft = join(dir, 'brouillon.md');
@@ -142,6 +180,6 @@ try {
     connection: { slug: connection.slug, provider: connection.providerType, model: connection.defaultModel },
     sourceFiles: Object.fromEntries(sourceFiles.map(path => [path, sha(path)])), results, diagnosticCounts,
     limitations: ['Real provider calls and real file operations; headless session runtime, not an Electron UI journey.',
-      'Three synthetic local missions do not establish a general success rate.'] }, null, 2) + '\n');
+      'Five synthetic local missions do not establish a general success rate.'] }, null, 2) + '\n');
 }
-if (results.length !== 3 || results.some(result => !result.passed)) process.exitCode = 1;
+if (results.length !== 5 || results.some(result => !result.passed)) process.exitCode = 1;
