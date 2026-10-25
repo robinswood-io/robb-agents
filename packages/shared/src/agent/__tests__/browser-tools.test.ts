@@ -83,7 +83,7 @@ function createMockFns(): BrowserPaneFns {
 
 function findTool(tools: ReturnType<typeof createBrowserTools>, name: string) {
   // SDK tool objects have a .name property
-  return tools.find((t: any) => t.name === name)
+  return tools.find((t) => t.name === name)
 }
 
 async function executeTool(tools: ReturnType<typeof createBrowserTools>, name: string, args: Record<string, unknown> = {}) {
@@ -115,7 +115,7 @@ describe('createBrowserTools', () => {
   })
 
   it('exposes only browser_tool', () => {
-    const names = tools.map((t: any) => t.name)
+    const names = tools.map((t) => t.name)
     expect(names).toEqual(['browser_tool'])
   })
 

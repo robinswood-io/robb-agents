@@ -1,0 +1,13 @@
+[
+  {
+    "file": "packages/shared/src/agent/__tests__/browser-tools.test.ts",
+    "removedAnnotations": 2,
+    "javascriptHash": "2c7f383f8be3cffa0dc7e60bc310a1ef9fc98a8a0269d9bc65859044cd890119",
+    "beforeHash": "71c5e48f722cd83600fd2ded6523ac35742c3c0ee58652ab2918d1d7ef2299a8",
+    "afterHash": "200fb5cfefea46cfe46109f6deb177189e3fd0ed3e69f4f67bf240a165813a42",
+    "backup": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/contextual-any-browser-1fa9bf55202d-before.ts",
+    "expectedTypes": [
+      "SdkMcpToolDefinition<{ command: ZodUnion<readonly [ZodString, ZodArray<ZodString>]>; }>"
+    ]
+  }
+]

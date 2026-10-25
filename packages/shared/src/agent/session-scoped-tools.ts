@@ -254,7 +254,7 @@ export function getSessionScopedTools(
     // types (ZodType<string>) flow into Record<string, ZodType<unknown>>.
     function registryTool(name: string, schema: any) {
       const def = SESSION_TOOL_REGISTRY.get(name)!;
-      return tool(name, TOOL_DESCRIPTIONS[name] || def.description, schema, async (args: any) => {
+      return tool(name, TOOL_DESCRIPTIONS[name] || def.description, schema, async (args) => {
         const result = await def.handler!(ctx, args);
         return convertResult(result);
       }, def.readOnly ? { annotations: { readOnlyHint: true } } : undefined);

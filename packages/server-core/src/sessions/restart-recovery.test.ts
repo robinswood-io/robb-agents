@@ -2510,8 +2510,8 @@ describe('authenticated cost checkpoint durability', () => {
     expect(restored.pendingTurnRecovery).toMatchObject({ attempts: 2, leaseExpiresAt: before.recovery!.leaseExpiresAt })
     expect(restored.messageQueue).toHaveLength(1)
     expect(restored.messageQueue[0].message).toContain('Do not repeat an external mutation')
-    expect(restored.messages.find((m: any) => m.id === 'already-written')).toEqual(before.receipt)
-    expect(requiredTestValue(restored.messages.find((m: any) => m.toolUseId === 'unexecuted-edit')).toolExecuted).toBe(false)
+    expect(restored.messages.find((m) => m.id === 'already-written')).toEqual(before.receipt)
+    expect(requiredTestValue(restored.messages.find((m) => m.toolUseId === 'unexecuted-edit')).toolExecuted).toBe(false)
     expect(restored.activeObjective).toEqual(before.objective)
   })
 
@@ -2542,8 +2542,8 @@ describe('authenticated cost checkpoint durability', () => {
     await preparing.promise
     expect(requiredTestValue(restored.pendingTurnRecovery).budgetHistoryUnavailable).toBe(true)
     expect(restored.activeObjective).toMatchObject({ ...beforeObjective, terminalState: 'active' })
-    expect(restored.messages.filter((m: any) => m.toolUseId === 'unexecuted-edit')).toHaveLength(1)
-    expect(requiredTestValue(restored.messages.find((m: any) => m.toolUseId === 'unexecuted-edit')).toolExecuted).toBe(false)
+    expect(restored.messages.filter((m) => m.toolUseId === 'unexecuted-edit')).toHaveLength(1)
+    expect(requiredTestValue(restored.messages.find((m) => m.toolUseId === 'unexecuted-edit')).toolExecuted).toBe(false)
     release.resolve(); await dispatch; await cold.manager.cleanup()
   })
 
@@ -2571,7 +2571,7 @@ describe('authenticated cost checkpoint durability', () => {
       expect(requiredTestValue(restored.pendingTurnRecovery).budgetHistoryUnavailable).toBe(true)
       expect(requiredTestValue(restored.pendingTurnRecovery).exhaustedAt).toBeGreaterThan(0)
       expect(restored.activeObjective).toEqual({ ...requiredTestValue(before.objective), terminalState: 'active', completedAt: undefined })
-      expect(restored.messages.filter((m: any) => m.role === 'tool')).toEqual(before.receipts)
+      expect(restored.messages.filter((m) => m.role === 'tool')).toEqual(before.receipts)
       expect(await cold.runtime.enqueueAutomaticTurnRecovery(restored, 'tool_checkpoint')).toBe(false)
       expect(restored.messageQueue).toEqual([])
       await cold.manager.flushSession(restored.id)
@@ -4073,8 +4073,8 @@ describe('bounded automatic admission', () => {
     expect(providerStarts).toBe(0)
     expect(requiredTestValue(restored.activeObjective).terminalState).toBe('blocked_policy')
     expect(restored.pendingTurnRecovery).toBeUndefined()
-    expect(restored.messageQueue.map((item: any) => item.messageId)).toEqual(['retained-machine-delivery'])
-    expect(restored.messages.find((message: any) => message.id === 'retained-machine-delivery')?.isQueued).toBe(true)
+    expect(restored.messageQueue.map((item) => item.messageId)).toEqual(['retained-machine-delivery'])
+    expect(restored.messages.find((message) => message.id === 'retained-machine-delivery')?.isQueued).toBe(true)
     expect(sessionRuntimeStateForTest(cold.runtime).deferredAutomaticSessions.has(restored.id)).toBe(false)
     expect(sessionRuntimeStateForTest(cold.runtime).automaticAdmissionReservations.has(restored.id)).toBe(false)
   })
@@ -4102,8 +4102,8 @@ describe('bounded automatic admission', () => {
 
     expect(providerStarts).toBe(0)
     expect(requiredTestValue(restored.activeObjective).terminalState).toBe('complete_verified')
-    expect(restored.messageQueue.map((item: any) => item.messageId)).toEqual(['retained-review-delivery'])
-    expect(restored.messages.find((message: any) => message.id === 'retained-review-delivery')?.isQueued).toBe(true)
+    expect(restored.messageQueue.map((item) => item.messageId)).toEqual(['retained-review-delivery'])
+    expect(restored.messages.find((message) => message.id === 'retained-review-delivery')?.isQueued).toBe(true)
     expect(sessionRuntimeStateForTest(cold.runtime).deferredAutomaticSessions.has(restored.id)).toBe(false)
     expect(restored.sessionStatus).not.toBe('in-progress')
     expect(h.events.filter(event => event.type === 'complete' && event.sessionId === restored.id)).toHaveLength(1)
@@ -4115,7 +4115,7 @@ describe('bounded automatic admission', () => {
     for (let index = 0; index < 3; index += 1) await tick()
 
     expect(providerStarts).toBe(0)
-    expect(secondRestored.messageQueue.map((item: any) => item.messageId)).toEqual(['retained-review-delivery'])
+    expect(secondRestored.messageQueue.map((item) => item.messageId)).toEqual(['retained-review-delivery'])
     expect(h.events.filter(event => event.type === 'complete' && event.sessionId === secondRestored.id)).toHaveLength(1)
   })
 
@@ -4156,7 +4156,7 @@ describe('bounded automatic admission', () => {
     await cold.runtime.resumePendingTurnAfterRestart(parent.id)
     await tick(); await tick()
     expect(starts).toBe(0)
-    expect(restored.messageQueue.map((item: any) => item.messageId)).toEqual(['delegation'])
+    expect(restored.messageQueue.map((item) => item.messageId)).toEqual(['delegation'])
   })
 
   it('admits only the accepted human behind a held machine delivery, preserving that delivery and attachments', async () => {
@@ -4854,7 +4854,7 @@ describe('durable restart recovery', () => {
         startedAt: expect.any(Number),
       })
       expect(persistedAtPreparation.recoveryDispatch).toEqual(requiredTestValue(restored.pendingTurnRecovery).recoveryDispatch)
-      expect(restored.messages.filter((message: any) => message.hidden
+      expect(restored.messages.filter((message) => message.hidden
         && message.content.includes('attempt="4"'))).toHaveLength(1)
       const persistedRows = readFileSync(getSessionFilePath(h.rootPath, restored.id), 'utf8')
         .trim().split('\n').map(line => JSON.parse(line))
@@ -4941,7 +4941,7 @@ describe('durable restart recovery', () => {
         },
       })
       expect(requiredTestValue(restored.pendingTurnRecovery).exhaustedAt).toBeUndefined()
-      expect(restored.messages.filter((message: any) => (
+      expect(restored.messages.filter((message) => (
         message.id === 'started-no-output-dispatch-2'
         && message.role === 'user' && message.hidden
       ))).toHaveLength(1)
@@ -6038,7 +6038,7 @@ describe('durable restart recovery', () => {
     expect(readFileSync(join(h.rootPath, 'external-mutation.txt'), 'utf8')).toBe('mutated')
     expect(scheduled).toBe(0)
     expect(restored.messageQueue).toEqual([])
-    expect(restored.messages.find((message: any) => (
+    expect(restored.messages.find((message) => (
       message.toolUseId === 'mutation-before-tool-start'
     ))).toMatchObject({
       role: 'tool', toolName: 'Edit', toolStatus: 'executing', toolInput: safeInput,
@@ -6203,7 +6203,7 @@ describe('durable restart recovery', () => {
     expect(scheduled).toBe(0)
     expect(preparations).toBe(0)
     expect(restored.messageQueue).toEqual([])
-    expect(restored.messages.filter((message: any) => message.toolUseId === toolUseId)).toHaveLength(1)
+    expect(restored.messages.filter((message) => message.toolUseId === toolUseId)).toHaveLength(1)
     expect(restored.messages.some((message: { id: string }) => message.id === dispatchId)).toBe(true)
     expect(restored.pendingTurnRecovery).toMatchObject({
       attempts: 2,
@@ -6318,7 +6318,7 @@ describe('durable restart recovery', () => {
           toolUseId: 'native-continuation-write', toolName: 'Write',
           toolInput: { file_path: '/fixture/continuation.json', content: '{"verified":true}' },
         })
-        expect(restored.messages.find((message: any) => message.toolUseId === 'native-continuation-write'))
+        expect(restored.messages.find((message) => message.toolUseId === 'native-continuation-write'))
           .toMatchObject({ toolName: 'Write', toolStatus: 'executing' })
         expect(readFileSync(getSessionFilePath(h.rootPath, restored.id), 'utf8'))
           .toContain('native-continuation-write')
@@ -6350,10 +6350,10 @@ describe('durable restart recovery', () => {
           toolInput: { file_path: attemptOneInput.file_path, new_string: 'different operation' },
         },
       )).rejects.toThrow('no new mutation')
-      expect(restored.messages.some((message: any) => (
+      expect(restored.messages.some((message) => (
         message.toolUseId === 'attempt-2-disjoint-mutation'
       ))).toBe(false)
-      expect(restored.messages.some((message: any) => message.toolUseId === 'attempt-2-id-b')).toBe(false)
+      expect(restored.messages.some((message) => message.toolUseId === 'attempt-2-id-b')).toBe(false)
 
       await cold.runtime.durablyRecordAutomaticRecoveryToolAdmission(
         restored,
@@ -6364,7 +6364,7 @@ describe('durable restart recovery', () => {
           toolInput: { file_path: '/fixture/production-target.json' },
         },
       )
-      expect(restored.messages.find((message: any) => (
+      expect(restored.messages.find((message) => (
         message.toolUseId === 'attempt-2-reconciliation-read'
       ))).toMatchObject({
         role: 'tool',
@@ -6591,7 +6591,7 @@ describe('durable restart recovery', () => {
           id: `started-after-${activity}-dispatch-2`, attempt: 2, phase: 'started',
         },
       })
-      expect(restored.messages.some((message: any) => (
+      expect(restored.messages.some((message) => (
         message.id === `started-after-${activity}-dispatch-2`
       ))).toBe(true)
       expect(restored.activeObjective?.terminalState).toBe('exhausted')
@@ -8443,7 +8443,7 @@ describe('durable restart recovery', () => {
       expect(restored.userInputRequests).toEqual([expect.objectContaining({
         id: request.requestId, status: 'answered', responseMessageId: responseMessage.id,
       })])
-      expect(requiredTestValue(restored.userInputRequests).some((candidate: any) => candidate.status === 'pending')).toBe(false)
+      expect(requiredTestValue(restored.userInputRequests).some((candidate) => candidate.status === 'pending')).toBe(false)
       expect(restored.providerContextBoundaryMessageId).toBe(responseMessage.id)
       expect(restored.sdkSessionId).toBeUndefined()
       const resumedDispatch = requiredTestValue(requiredTestValue(restored.pendingTurnRecovery).recoveryDispatch)
@@ -8579,7 +8579,7 @@ describe('durable restart recovery', () => {
       expect(restored.providerContextBoundaryMessageId).toBe(requiredTestValue(requiredTestValue(restored.pendingTurnRecovery).recoveryDispatch).id)
       expect(requiredTestValue(restored.tokenUsage).contextTokens).toBeLessThan(100_000)
       expect(requiredTestValue(restored.userInputRequests)[0]).toMatchObject({ status: 'cancelled' })
-      const boundaries = restored.messages.filter((message: any) => (
+      const boundaries = restored.messages.filter((message) => (
         message.id === requiredTestValue(requiredTestValue(restored.pendingTurnRecovery).recoveryDispatch).id
       ))
       expect(boundaries).toHaveLength(1)
@@ -8863,7 +8863,7 @@ describe('durable restart recovery', () => {
       const created = await h.runtime.requestUserInput(
         managed.id, questions, sessionRuntimeStateForTest(h.runtime).contextLimitUserInputCapability, dispatchId,
       )
-      const contextRequest = managed.userInputRequests.find((request: any) => request.id === created.requestId)!
+      const contextRequest = managed.userInputRequests.find((request) => request.id === created.requestId)!
       expect(contextRequest).toMatchObject({
         objectiveUserMessageId: rootId,
         hostPrompt: { objectiveId: rootId, recoveryDispatchId: dispatchId },
@@ -9100,7 +9100,7 @@ describe('durable restart recovery', () => {
     expect(requiredTestValue(restored.userInputRequests)[0]).toMatchObject({
       status: 'answered', objectiveUserMessageId: originalId,
     })
-    expect(restored.messages.find((message: any) => (
+    expect(restored.messages.find((message) => (
       message.id === requiredTestValue(restored.userInputRequests)[0].responseMessageId
     ))).toMatchObject({ role: 'user', hidden: true, isQueued: true,
       internalOrigin: { kind: 'user-input' } })
@@ -9184,9 +9184,9 @@ describe('durable restart recovery', () => {
       expect(repairedHeader.userInputRequests[0].objectiveUserMessageId).toBe(originalId)
       expect(repairedHeader.userInputRequests[1].objectiveUserMessageId).toBe(contextualId)
 
-      const response = restored.messages.find((message: any) => message.id === responseId)!
+      const response = restored.messages.find((message) => message.id === responseId)!
       response.isQueued = false
-      restored.messageQueue = restored.messageQueue.filter((item: any) => item.messageId !== responseId)
+      restored.messageQueue = restored.messageQueue.filter((item) => item.messageId !== responseId)
       const authority = cold.runtime.authenticatedObjectiveAuthorizationSegments(
         restored,
         restored.activeObjective,
@@ -9434,7 +9434,7 @@ describe('durable restart recovery', () => {
       expect(coldRestored.branchFromSdkSessionId).toBeUndefined()
       expect(coldRestored.contextCompactionAttempt).toBeUndefined()
       expect(requiredTestValue(coldRestored.tokenUsage).contextTokens).toBeLessThan(100_000)
-      expect(coldRestored.messages.filter((entry: any) => (
+      expect(coldRestored.messages.filter((entry) => (
         entry.id === coldRestored.providerContextBoundaryMessageId
       ))).toHaveLength(1)
     } finally {
@@ -10313,7 +10313,7 @@ describe('durable restart recovery', () => {
     runtime.sendMessage = async (id: string, _text: string, _attachments: unknown, _stored: unknown, _options: unknown, messageId: string) => {
       delivered.push(messageId)
       const session = requiredTestValue(sessionRuntimeStateForTest(restarted).sessions.get(id))
-      requiredTestValue(session.messages.find((message: any) => message.id === messageId)).isQueued = false
+      requiredTestValue(session.messages.find((message) => message.id === messageId)).isQueued = false
       sessionRuntimeStateForTest(restarted).queuedMessageDispatches.delete(id)
       runtime.processNextQueuedMessage(id)
     }
@@ -10322,7 +10322,7 @@ describe('durable restart recovery', () => {
     await Promise.all([runtime.ensureMessagesLoaded(restored), runtime.ensureMessagesLoaded(restored)])
     for (let i = 0; i < 5; i++) await tick()
     expect(delivered).toEqual(['a', 'b'])
-    expect(restored.messages.filter((message: any) => ['a', 'b'].includes(message.id))).toHaveLength(2)
+    expect(restored.messages.filter((message) => ['a', 'b'].includes(message.id))).toHaveLength(2)
   })
 
   it('lets a human continuation supersede a dequeued fallback during hydration without resetting its budget', async () => {
@@ -10458,9 +10458,9 @@ describe('durable restart recovery', () => {
     coldBeforeRelease.runtime.processNextQueuedMessage = () => {}
     const restoredBeforeRelease = requiredTestValue(sessionRuntimeStateForTest(coldBeforeRelease.runtime).sessions.get(managed.id))
     await coldBeforeRelease.runtime.ensureMessagesLoaded(restoredBeforeRelease)
-    expect(restoredBeforeRelease.messages.some((row: any) => row.role === 'user' && row.hidden
+    expect(restoredBeforeRelease.messages.some((row) => row.role === 'user' && row.hidden
       && row.content.includes('<automatic_turn_recovery '))).toBe(false)
-    expect(restoredBeforeRelease.messageQueue.some((item: any) => item.messageId === humanId)).toBe(true)
+    expect(restoredBeforeRelease.messageQueue.some((item) => item.messageId === humanId)).toBe(true)
     expect(requiredTestValue(restoredBeforeRelease.pendingTurnRecovery).recoveryDispatch).toBeUndefined()
 
     releaseDispatchFlush.resolve()
@@ -10610,7 +10610,7 @@ describe('durable restart recovery', () => {
     await cold.runtime.resumePendingTurnAfterRestart(managed.id)
     const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     expect(restored.messageQueue[0]?.options?.automaticRecovery?.dispatchId).toBe(dispatchId)
-    expect(restored.messages.some((message: any) => message.role === 'user' && message.hidden
+    expect(restored.messages.some((message) => message.role === 'user' && message.hidden
       && message.content.includes('<automatic_turn_recovery '))).toBe(false)
 
   })
@@ -10846,9 +10846,9 @@ describe('durable restart recovery', () => {
     expect(restored.pendingTurnRecovery).toEqual(originalRecovery)
     expect(restored.activeObjective).toEqual(originalObjective)
     expect(restored.messageQueue).toHaveLength(0)
-    expect(restored.messages.filter((message: any) => message.role === 'user' && !message.hidden)).toHaveLength(1)
-    expect(restored.messages.filter((message: any) => message.id === 'already-persisted-recovery')).toHaveLength(1)
-    expect(requiredTestValue(restored.messages.find((message: any) => message.id === 'already-persisted-recovery')).isQueued).toBe(false)
+    expect(restored.messages.filter((message) => message.role === 'user' && !message.hidden)).toHaveLength(1)
+    expect(restored.messages.filter((message) => message.id === 'already-persisted-recovery')).toHaveLength(1)
+    expect(requiredTestValue(restored.messages.find((message) => message.id === 'already-persisted-recovery')).isQueued).toBe(false)
     releaseAgent.resolve(); await dispatch; await cold.manager.cleanup()
   })
 
@@ -11276,7 +11276,7 @@ describe('durable restart recovery', () => {
     let accepted = ''
     await cold.manager.sendMessage(managed.id, 'Newer instruction', undefined, undefined, undefined, undefined, false, id => { accepted = id })
     expect(preparations).toBe(0)
-    expect(restored.messageQueue.map((item: any) => item.messageId)).toEqual(['older', accepted])
+    expect(restored.messageQueue.map((item) => item.messageId)).toEqual(['older', accepted])
     expect(listSessions(h.rootPath)[0]?.pendingQueuedMessageIds).toEqual(['older', accepted])
   })
 
@@ -11298,7 +11298,7 @@ describe('durable restart recovery', () => {
     for (const id of ['cold-stop', 'scheduled-stop']) {
       const managed = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(id))
       expect(managed.messageQueue).toHaveLength(0)
-      expect(managed.messages.some((message: any) => message.isQueued)).toBe(false)
+      expect(managed.messages.some((message) => message.isQueued)).toBe(false)
       expect(listSessions(h.rootPath).find(meta => meta.id === id)?.pendingQueuedMessageIds).toEqual([])
     }
   })
@@ -12123,7 +12123,7 @@ describe('durable restart recovery', () => {
 
     expect(await h.runtime.ensureDelegatedTerminalResultDelivery(child)).toBe(true)
     expect(await h.runtime.ensureDelegatedTerminalResultDelivery(child)).toBe(true)
-    const pending = parent.userInputRequests?.filter((request: any) => request.status === 'pending') ?? []
+    const pending = parent.userInputRequests?.filter((request) => request.status === 'pending') ?? []
     expect(pending).toHaveLength(1)
     parent.activeObjective = { ...parent.activeObjective!, terminalState: 'complete_verified', completedAt: 5 }
 
@@ -12159,7 +12159,7 @@ describe('durable restart recovery', () => {
     h.runtime.processNextQueuedMessage = () => { providerDispatches++ }
 
     expect(await h.runtime.ensureDelegatedTerminalResultDelivery(child)).toBe(true)
-    const question = parent.userInputRequests?.find((request: any) => request.status === 'pending')
+    const question = parent.userInputRequests?.find((request) => request.status === 'pending')
     expect(question?.questions[0]?.id).toBe(`retry-child-result-${child.id}`.slice(0, 80))
 
     await expect(h.manager.respondToUserInput(parent.id, {
@@ -12172,12 +12172,12 @@ describe('durable restart recovery', () => {
     expect(receipt).toMatchObject({ isQueued: false, agentDelivery: { status: 'processed', attempts: 3 } })
     expect(parent.activeObjective).toMatchObject({ terminalState: 'exhausted', completedAt: expect.any(Number) })
     expect(parent.pendingTurnRecovery).toBeUndefined()
-    expect(parent.userInputRequests?.filter((request: any) => request.status === 'pending')).toEqual([])
+    expect(parent.userInputRequests?.filter((request) => request.status === 'pending')).toEqual([])
     expect(parent.messageQueue).toEqual([])
     expect(providerDispatches).toBe(0)
     expect(sessionRuntimeStateForTest(h.runtime).delegatedTerminalResultRetryTimers.has(child.id)).toBe(false)
     expect(await h.runtime.ensureDelegatedTerminalResultDelivery(child)).toBe(false)
-    expect(parent.userInputRequests?.filter((request: any) => request.status === 'pending')).toEqual([])
+    expect(parent.userInputRequests?.filter((request) => request.status === 'pending')).toEqual([])
   })
 
   it.each([
@@ -12221,7 +12221,7 @@ describe('durable restart recovery', () => {
 
     expect(await runtime.ensureDelegatedTerminalResultDelivery(child)).toBe(false)
     expect(sessionRuntimeStateForTest(runtime).delegatedTerminalResultRetryTimers.has(child.id)).toBe(true)
-    expect(parent.userInputRequests?.filter((request: any) => request.status === 'pending'))
+    expect(parent.userInputRequests?.filter((request) => request.status === 'pending'))
       .toHaveLength(1)
     expect(parent.messages.filter((message: Managed['messages'][number]) => (
       message.content.startsWith('[host-delegated-terminal-result-v1]')
@@ -12230,7 +12230,7 @@ describe('durable restart recovery', () => {
     await manager.respondToUserInput(parent.id, { requestId: unrelated.requestId, cancelled: true })
     await tick(); await tick(); await tick()
 
-    const pending = parent.userInputRequests?.filter((request: any) => request.status === 'pending') ?? []
+    const pending = parent.userInputRequests?.filter((request) => request.status === 'pending') ?? []
     expect(pending).toHaveLength(1)
     expect(pending[0]?.questions).toMatchObject([{
       id: `retry-child-result-${child.id}`.slice(0, 80),
@@ -12392,13 +12392,13 @@ describe('durable restart recovery', () => {
     cold.runtime.processNextQueuedMessage = () => {}
     await cold.runtime.ensureMessagesLoaded(restored)
 
-    expect(restored.messages.find((message: any) => message.id === receiptA.id))
+    expect(restored.messages.find((message) => message.id === receiptA.id))
       .toMatchObject({ isQueued: true, agentDelivery: { status: 'queued', attempts: 1 } })
-    expect(restored.messages.find((message: any) => message.id === receiptB.id))
+    expect(restored.messages.find((message) => message.id === receiptB.id))
       .toMatchObject({ isQueued: true, agentDelivery: { status: 'queued', attempts: 0 } })
-    expect(restored.messageQueue.map((item: any) => item.messageId)).toEqual([receiptA.id, receiptB.id])
-    expect(restored.messageQueue.filter((item: any) => item.messageId === receiptA.id)).toHaveLength(1)
-    expect(restored.messageQueue.filter((item: any) => item.messageId === receiptB.id)).toHaveLength(1)
+    expect(restored.messageQueue.map((item) => item.messageId)).toEqual([receiptA.id, receiptB.id])
+    expect(restored.messageQueue.filter((item) => item.messageId === receiptA.id)).toHaveLength(1)
+    expect(restored.messageQueue.filter((item) => item.messageId === receiptB.id)).toHaveLength(1)
   })
 
   it.each([
@@ -12437,9 +12437,9 @@ describe('durable restart recovery', () => {
     await cold.manager.flushSession(restored.id)
     await tick()
 
-    expect(restored.messages.find((message: any) => message.id === 'processing-delivery'))
+    expect(restored.messages.find((message) => message.id === 'processing-delivery'))
       .toMatchObject({ isQueued: false, agentDelivery: { status: 'processed', attempts: 1 } })
-    expect(restored.messageQueue.some((item: any) => item.messageId === 'processing-delivery')).toBe(false)
+    expect(restored.messageQueue.some((item) => item.messageId === 'processing-delivery')).toBe(false)
     expect(restored.pendingTurnRecovery).toMatchObject({
       userMessageId: managed.activeObjective!.userMessageId,
       lastCause: 'app_restart',
@@ -12477,12 +12477,12 @@ describe('durable restart recovery', () => {
     await cold.manager.flushSession(restored.id)
     await tick()
 
-    expect(restored.messages.find((message: any) => message.id === 'processing-delivery'))
+    expect(restored.messages.find((message) => message.id === 'processing-delivery'))
       .toMatchObject({ isQueued: false, agentDelivery: { status: 'processed' } })
     expect(restored.pendingTurnRecovery).toMatchObject({
       userMessageId: 'new-human-objective', lastCause: 'app_restart', continuationRequired: true,
     })
-    expect(restored.messageQueue.some((item: any) => item.messageId === 'processing-delivery')).toBe(false)
+    expect(restored.messageQueue.some((item) => item.messageId === 'processing-delivery')).toBe(false)
     expect(rawDispatches).toBe(0)
   })
 
@@ -12515,7 +12515,7 @@ describe('durable restart recovery', () => {
     await cold.manager.flushSession(restored.id)
     await cold.runtime.resumePendingTurnAfterRestart(restored.id)
 
-    expect(restored.messages.find((message: any) => message.id === 'processing-delivery'))
+    expect(restored.messages.find((message) => message.id === 'processing-delivery'))
       .toMatchObject({ isQueued: false, agentDelivery: { status: 'processed' } })
     expect(restored.activeObjective?.terminalState).toBe('complete_verified')
     expect(restored.pendingTurnRecovery).toBeUndefined()
@@ -12541,7 +12541,7 @@ describe('durable restart recovery', () => {
     await cold.manager.flushSession(restored.id)
     await tick()
 
-    expect(restored.messages.find((message: any) => message.id === 'processing-delivery'))
+    expect(restored.messages.find((message) => message.id === 'processing-delivery'))
       .toMatchObject({ isQueued: false, agentDelivery: { status: 'processed' } })
     expect(restored.pendingTurnRecovery).toBeUndefined()
     expect(restored.messageQueue).toEqual([])
@@ -12689,7 +12689,7 @@ describe('durable restart recovery', () => {
     expect(restored.messageQueue).toEqual([])
     expect(restored.pendingTurnRecovery?.recoveryDispatch?.setupRetryNotBefore)
       .toBeGreaterThan(Date.now())
-    expect(restored.messages.find((message: any) => message.id === 'discarded-history-sentinel')?.content)
+    expect(restored.messages.find((message) => message.id === 'discarded-history-sentinel')?.content)
       .toBe('OLD_HISTORY_MUST_NOT_RETURN')
   })
 
@@ -12898,7 +12898,7 @@ describe('automatic channel-fallback kill switch recovery boundaries', () => {
       expect(firstRestored.messageQueue).toHaveLength(1)
       expect(firstRestored.messageQueue[0]?.messageId).toBe(allocated.id)
       expect(firstRestored.messageQueue[0]?.options?.internalOrigin).toBeUndefined()
-      expect(firstRestored.messages.find((message: any) => message.id === allocated.id)?.internalOrigin)
+      expect(firstRestored.messages.find((message) => message.id === allocated.id)?.internalOrigin)
         .toBeUndefined()
       const firstPersistedRows = readFileSync(getSessionFilePath(h.rootPath, managed.id), 'utf8')
         .trim().split('\n').map(line => JSON.parse(line))
@@ -12934,7 +12934,7 @@ describe('automatic channel-fallback kill switch recovery boundaries', () => {
       expect(secondRestored.messageQueue[0]?.message).toContain('<automatic_turn_recovery')
       expect(secondRestored.messageQueue[0]?.message).not.toContain(`<${specializedMarker}`)
       expect(secondRestored.messageQueue[0]?.message).not.toContain(failedToolName)
-      expect(secondRestored.messages.find((message: any) => message.id === allocated.id)?.internalOrigin)
+      expect(secondRestored.messages.find((message) => message.id === allocated.id)?.internalOrigin)
         .toBeUndefined()
     },
   )
@@ -13142,8 +13142,8 @@ describe('automatic channel-fallback kill switch recovery boundaries', () => {
     expect(newDispatch.id).not.toBe(oldDispatchId)
     expect(newDispatch.fallbackIntent).toBeUndefined()
     expect(requiredTestValue(restored.pendingTurnRecovery).cleanContextBoundaryMessageId).toBe(newDispatch.id)
-    expect(restored.messages.filter((message: any) => message.id === oldDispatchId)).toHaveLength(1)
-    expect(restored.messages.find((message: any) => (
+    expect(restored.messages.filter((message) => message.id === oldDispatchId)).toHaveLength(1)
+    expect(restored.messages.find((message) => (
       message.id === 'persisted-provider-intermediate-output'
     ))).toMatchObject({ role: 'assistant', isIntermediate: true })
     expect(restored.messageQueue).toHaveLength(1)

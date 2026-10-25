@@ -71,7 +71,8 @@
     "95 scénarios, preuve indépendante des corps et de l’ordre, 16 configurations TypeScript, suite complète (140,42 s), build et lint du module sans avertissement réussis ; import de type manquant corrigé sans changement du code exécuté",
     "Domaine PreToolUse entièrement sous 500 lignes et sans any explicite : pipeline de 417 lignes ; gardes d’admission dans trois modules de 123, 222 et 136 lignes ; données et instructions comparées indépendamment",
     "Lint de tout le domaine sans erreur ni avertissement ; 95 scénarios ciblés, 16 configurations TypeScript, suite globale (142,56 s) et build réussis après achèvement du découpage",
-    "Gestion des modes et outil LLM décomposés ; surcharges et chargements paresseux vérifiés ; suite complète, 16 types, build et lint ciblé réussis"
+    "Gestion des modes et outil LLM décomposés ; surcharges et chargements paresseux vérifiés ; suite complète, 16 types, build et lint ciblé réussis",
+    "Preuves de mission : neuf modules ≤391 lignes et zéro any ; 62 annotations contextuelles retirées, JavaScript identique ; 16 types, suite complète et build réussis"
   ],
   "pending": [
     "Découpage des autres fichiers au-delà de 500 lignes",
@@ -79,9 +80,9 @@
     "Lint global sans erreur ni avertissement",
     "Parcours complets réels en staging local, compilation signée et intégration"
   ],
-  "updatedAt": "2026-10-25T04:00:20.416919+00:00",
+  "updatedAt": "2026-10-25T04:05:44.239095+00:00",
   "current": {
-    "oversizedCodeFiles": 206,
-    "explicitAny": 708
+    "oversizedCodeFiles": 205,
+    "explicitAny": 646
   }
 }

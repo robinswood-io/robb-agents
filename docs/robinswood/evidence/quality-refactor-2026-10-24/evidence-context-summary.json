@@ -1,0 +1,101 @@
+{
+  "status": "testé dans le candidat local, non intégré",
+  "scope": "Exigences de preuves de mission et annotations contextuelles de tests",
+  "modules": [
+    {
+      "name": "contracts",
+      "lines": 42
+    },
+    {
+      "name": "lifecycle",
+      "lines": 174
+    },
+    {
+      "name": "patterns",
+      "lines": 391
+    },
+    {
+      "name": "mutation-classification",
+      "lines": 94
+    },
+    {
+      "name": "operational-context",
+      "lines": 119
+    },
+    {
+      "name": "sources",
+      "lines": 218
+    },
+    {
+      "name": "mutation-negations",
+      "lines": 108
+    },
+    {
+      "name": "classification",
+      "lines": 62
+    },
+    {
+      "name": "review-receipts",
+      "lines": 104
+    }
+  ],
+  "proof": [
+    "145 déclarations, corps conservés, ordre des trois surcharges conservé, graphe acyclique",
+    "62 annotations any retirées uniquement lorsque le contrat natif fournit un type concret ; JavaScript émis identique, compilation des 16 projets réussie"
+  ],
+  "checks": {
+    "evidence-context-types": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 22.01,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/evidence-context-types.log"
+    },
+    "evidence-context-tests": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 143.04,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/evidence-context-tests.log"
+    },
+    "evidence-context-build": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 20.77,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/evidence-context-build.log"
+    },
+    "evidence-context-lint": {
+      "command": [
+        "rtk",
+        "bun",
+        "x",
+        "eslint",
+        "packages/shared/src/agent/core/objective-evidence-gate.ts",
+        "packages/shared/src/agent/core/objective-evidence-gate",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 1.27,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/evidence-context-lint.log"
+    }
+  },
+  "remaining": {
+    "oversizedCodeFiles": 205,
+    "explicitAny": 646
+  },
+  "installedApplication": "Inchangée"
+}
