@@ -1,0 +1,426 @@
+{
+  "status": "passed",
+  "sources": 9,
+  "nativeDeclarations": 148,
+  "nativeBodiesStateAndExternalImportOrderPreserved": true,
+  "nativePublicExportsAndImportBindingsPreserved": true,
+  "runtimeImportCycles": 0,
+  "additionalStateOrWorkflow": 0,
+  "maximumFileLines": 474,
+  "files": [
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/ActiveOptionBadges.tsx",
+      "lines": 204,
+      "sha256": "0a6f6090fe85742c129b3af293bba9d40014ea43f3018abbc18b39df0955e0a9"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/active-option-controls.tsx",
+      "lines": 376,
+      "sha256": "cae0a35c0bdfb7a50c406f14cd35b9c0de6e71bf80bd5977836ea642c7b80183"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/CompactSessionMenu.tsx",
+      "lines": 276,
+      "sha256": "31112484137621e5ab738ad5bdca9e8acdd85555c14c85ede1acf25ddc79ac28"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/compact-session-panes.tsx",
+      "lines": 342,
+      "sha256": "5162290ea712fa37501717527c04bcfa1da26d59075cd3ab992e55db6becb481"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/LeftSidebar.tsx",
+      "lines": 216,
+      "sha256": "bcc20775691b1bd07cbef9caefd1f0482591017e55cf4fa893454cdcf0439dfd"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/app-shell/left-sidebar-items.tsx",
+      "lines": 410,
+      "sha256": "c544c62aefd202788483fbe3631429843d68d022566fb62d1a885c3421fb3038"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/ui/entity-row.tsx",
+      "lines": 433,
+      "sha256": "9971a0ae4f0edcf14530b8b12ae2cf213af031139aee93138d9ad981c6c29e87"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/ui/entity-row-types.ts",
+      "lines": 95,
+      "sha256": "ac2a3815c4804cdb0cd927dd07c9788769ed87c8c440411de0f6daf9dab97240"
+    },
+    {
+      "file": "packages/ui/src/components/chat/UserMessageBubble.tsx",
+      "lines": 223,
+      "sha256": "28f353fccd1866183853e1b4b04098791ea47b27522be70d0d85716f1448947d"
+    },
+    {
+      "file": "packages/ui/src/components/chat/user-message-badges.tsx",
+      "lines": 333,
+      "sha256": "8c3eb85eea15cc139dd9ca2932a09ff83f06a421ff7ca115338670624f48a4bc"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/ui/mention-menu.tsx",
+      "lines": 307,
+      "sha256": "e70453e2296278dbacf85bb77719795e7362ca3e8b68b72caf7e6f1a599e17a0"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/ui/mention-menu-view.tsx",
+      "lines": 474,
+      "sha256": "30a7b456cd93ff16c0f73f62524e76e359ff4a876aa8010135a77bb484b746e2"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/ui/slash-command-menu.tsx",
+      "lines": 363,
+      "sha256": "1252938e7df8104d68c2fd5e30d2c57fe1ec1d4bedc0ebe4b7b26ec00881b59f"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/ui/slash-command-view.tsx",
+      "lines": 409,
+      "sha256": "3e08e73fa84256e28c77c058b0d9339b070d13a4e31715a94d2b661ad93a6f26"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/right-sidebar/SessionFilesSection.tsx",
+      "lines": 246,
+      "sha256": "4b9547cdd876fc041ab0054b8ba878dc89a4643081796ff56e1445a5985ae171"
+    },
+    {
+      "file": "apps/electron/src/renderer/components/right-sidebar/session-file-tree.tsx",
+      "lines": 411,
+      "sha256": "9d0e5da2811192251beafb21fee5e0341923374649378bbe62e96e145f8d8e05"
+    },
+    {
+      "file": "apps/webui/src/components/RemoteAccessScreen.tsx",
+      "lines": 163,
+      "sha256": "52fdfc81f86722349fcd6d1afe86290142efcb7478f19acfba298ca87c764884"
+    },
+    {
+      "file": "apps/webui/src/components/remote-pair-device.tsx",
+      "lines": 376,
+      "sha256": "ec43a601af96ffc11400d89281263fe6e5167a4c2f5151b3890909346b8f3dd1"
+    }
+  ],
+  "proofs": [
+    {
+      "status": "passed",
+      "source": "apps/electron/src/renderer/components/app-shell/ActiveOptionBadges.tsx",
+      "nativeSourceHash": "9f84fc8613452d5217a40928ba4034277230a14252ccc60da2e24e25e5f91487",
+      "nativeDeclarations": 9,
+      "extractedDeclarations": 8,
+      "nativeBodiesStateAndEffectOrderPreserved": true,
+      "nativePublicExportsAndImportedBindingsPreserved": true,
+      "nativeExternalImportOrder": [
+        "react",
+        "react-i18next",
+        "@/lib/utils",
+        "@/components/ui/popover",
+        "@/components/ui/slash-command-menu",
+        "lucide-react",
+        "@craft-agent/shared/agent/modes",
+        "./ActiveTasksBar",
+        "@/components/ui/label-icon",
+        "@/components/ui/label-value-popover",
+        "@craft-agent/shared/labels",
+        "@craft-agent/shared/colors",
+        "@/context/ThemeContext",
+        "@/hooks/useDynamicStack",
+        "@/config/session-status-config",
+        "@/components/ui/session-status-menu",
+        "@/components/ui/metadata-badge",
+        "@/lib/open-label-link",
+        "./SessionInfoPopover"
+      ],
+      "runtimeImportCycles": 0,
+      "newStateOrWorkflowAdded": false,
+      "maximumFileLines": 376,
+      "files": [
+        {
+          "file": "apps/electron/src/renderer/components/app-shell/ActiveOptionBadges.tsx",
+          "lines": 204,
+          "sha256": "0a6f6090fe85742c129b3af293bba9d40014ea43f3018abbc18b39df0955e0a9"
+        },
+        {
+          "file": "apps/electron/src/renderer/components/app-shell/active-option-controls.tsx",
+          "lines": 376,
+          "sha256": "cae0a35c0bdfb7a50c406f14cd35b9c0de6e71bf80bd5977836ea642c7b80183"
+        }
+      ]
+    },
+    {
+      "status": "passed",
+      "source": "apps/electron/src/renderer/components/app-shell/CompactSessionMenu.tsx",
+      "nativeSourceHash": "fed9181043bd92a0ad7c26331d59bf17902a9bcbb68fb6f3e658239e3ccde63e",
+      "nativeDeclarations": 12,
+      "extractedDeclarations": 11,
+      "nativeBodiesStateAndEffectOrderPreserved": true,
+      "nativePublicExportsAndImportedBindingsPreserved": true,
+      "nativeExternalImportOrder": [
+        "react",
+        "react-i18next",
+        "motion/react",
+        "lucide-react",
+        "@/lib/utils",
+        "@/components/ui/drawer",
+        "@/components/ui/label-icon",
+        "@/components/ui/label-menu-utils",
+        "@/config/session-status-config",
+        "@/utils/session",
+        "@/lib/platform",
+        "@/components/messaging/MessagingSessionMenuItem",
+        "@/hooks/useSessionMenuActions"
+      ],
+      "runtimeImportCycles": 0,
+      "newStateOrWorkflowAdded": false,
+      "maximumFileLines": 342,
+      "files": [
+        {
+          "file": "apps/electron/src/renderer/components/app-shell/CompactSessionMenu.tsx",
+          "lines": 276,
+          "sha256": "31112484137621e5ab738ad5bdca9e8acdd85555c14c85ede1acf25ddc79ac28"
+        },
+        {
+          "file": "apps/electron/src/renderer/components/app-shell/compact-session-panes.tsx",
+          "lines": 342,
+          "sha256": "5162290ea712fa37501717527c04bcfa1da26d59075cd3ab992e55db6becb481"
+        }
+      ]
+    },
+    {
+      "status": "passed",
+      "source": "apps/electron/src/renderer/components/app-shell/LeftSidebar.tsx",
+      "nativeSourceHash": "db426aca9e7519b16237c6e0d57d6b6d2492ba27e33f85f366bd15e923bc1dec",
+      "nativeDeclarations": 16,
+      "extractedDeclarations": 14,
+      "nativeBodiesStateAndEffectOrderPreserved": true,
+      "nativePublicExportsAndImportedBindingsPreserved": true,
+      "nativeExternalImportOrder": [
+        "react",
+        "motion/react",
+        "lucide-react",
+        "@/lib/utils",
+        "@/components/ui/styled-context-menu",
+        "@/components/ui/menu-context",
+        "./SidebarMenu",
+        "@/components/ui/sortable-list"
+      ],
+      "runtimeImportCycles": 0,
+      "newStateOrWorkflowAdded": false,
+      "maximumFileLines": 410,
+      "files": [
+        {
+          "file": "apps/electron/src/renderer/components/app-shell/LeftSidebar.tsx",
+          "lines": 216,
+          "sha256": "bcc20775691b1bd07cbef9caefd1f0482591017e55cf4fa893454cdcf0439dfd"
+        },
+        {
+          "file": "apps/electron/src/renderer/components/app-shell/left-sidebar-items.tsx",
+          "lines": 410,
+          "sha256": "c544c62aefd202788483fbe3631429843d68d022566fb62d1a885c3421fb3038"
+        }
+      ]
+    },
+    {
+      "status": "passed",
+      "source": "apps/electron/src/renderer/components/ui/entity-row.tsx",
+      "nativeSourceHash": "c34ca70f09813b97fa82fc4499c3c8136a176138468e4b291ef3cdd4e2bbab9a",
+      "nativeDeclarations": 3,
+      "extractedDeclarations": 2,
+      "nativeBodiesStateAndEffectOrderPreserved": true,
+      "nativePublicExportsAndImportedBindingsPreserved": true,
+      "nativeExternalImportOrder": [
+        "react",
+        "react",
+        "lucide-react",
+        "@/components/ui/separator",
+        "@/components/ui/styled-dropdown",
+        "@/components/ui/styled-context-menu",
+        "@/components/ui/menu-context",
+        "@/components/ui/long-press-state",
+        "@/lib/utils"
+      ],
+      "runtimeImportCycles": 0,
+      "newStateOrWorkflowAdded": false,
+      "maximumFileLines": 433,
+      "files": [
+        {
+          "file": "apps/electron/src/renderer/components/ui/entity-row.tsx",
+          "lines": 433,
+          "sha256": "9971a0ae4f0edcf14530b8b12ae2cf213af031139aee93138d9ad981c6c29e87"
+        },
+        {
+          "file": "apps/electron/src/renderer/components/ui/entity-row-types.ts",
+          "lines": 95,
+          "sha256": "ac2a3815c4804cdb0cd927dd07c9788769ed87c8c440411de0f6daf9dab97240"
+        }
+      ]
+    },
+    {
+      "status": "passed",
+      "source": "packages/ui/src/components/chat/UserMessageBubble.tsx",
+      "nativeSourceHash": "ecd6917559fae87cb1cfbe4c326bb66803671affe5ab60b38df711729012b7eb",
+      "nativeDeclarations": 16,
+      "extractedDeclarations": 15,
+      "nativeBodiesStateAndEffectOrderPreserved": true,
+      "nativePublicExportsAndImportedBindingsPreserved": true,
+      "nativeExternalImportOrder": [
+        "react",
+        "lucide-react",
+        "@craft-agent/core/utils",
+        "../../lib/utils",
+        "../markdown",
+        "./attachment-helpers",
+        "../tooltip",
+        "react-i18next"
+      ],
+      "runtimeImportCycles": 0,
+      "newStateOrWorkflowAdded": false,
+      "maximumFileLines": 333,
+      "files": [
+        {
+          "file": "packages/ui/src/components/chat/UserMessageBubble.tsx",
+          "lines": 223,
+          "sha256": "28f353fccd1866183853e1b4b04098791ea47b27522be70d0d85716f1448947d"
+        },
+        {
+          "file": "packages/ui/src/components/chat/user-message-badges.tsx",
+          "lines": 333,
+          "sha256": "8c3eb85eea15cc139dd9ca2932a09ff83f06a421ff7ca115338670624f48a4bc"
+        }
+      ]
+    },
+    {
+      "status": "passed",
+      "source": "apps/electron/src/renderer/components/ui/mention-menu.tsx",
+      "nativeSourceHash": "afda504b314afdba99a9c914b6988ab5dc136e68ce7bd7edcd1e7ef040be38e8",
+      "nativeDeclarations": 24,
+      "extractedDeclarations": 23,
+      "nativeBodiesStateAndEffectOrderPreserved": true,
+      "nativePublicExportsAndImportedBindingsPreserved": true,
+      "nativeExternalImportOrder": [
+        "react",
+        "react-i18next",
+        "@/lib/utils",
+        "@/components/ui/fading-text",
+        "@/components/ui/skill-avatar",
+        "@/components/ui/source-avatar",
+        "@craft-agent/shared/skills/types",
+        "./mention-trigger",
+        "./mention-trigger"
+      ],
+      "runtimeImportCycles": 0,
+      "newStateOrWorkflowAdded": false,
+      "maximumFileLines": 474,
+      "files": [
+        {
+          "file": "apps/electron/src/renderer/components/ui/mention-menu.tsx",
+          "lines": 307,
+          "sha256": "e70453e2296278dbacf85bb77719795e7362ca3e8b68b72caf7e6f1a599e17a0"
+        },
+        {
+          "file": "apps/electron/src/renderer/components/ui/mention-menu-view.tsx",
+          "lines": 474,
+          "sha256": "30a7b456cd93ff16c0f73f62524e76e359ff4a876aa8010135a77bb484b746e2"
+        }
+      ]
+    },
+    {
+      "status": "passed",
+      "source": "apps/electron/src/renderer/components/ui/slash-command-menu.tsx",
+      "nativeSourceHash": "dc915cbc9099a42280255b8ca76031f298dbb9676f9dac1c50ccfb1f94c5e25e",
+      "nativeDeclarations": 34,
+      "extractedDeclarations": 32,
+      "nativeBodiesStateAndEffectOrderPreserved": true,
+      "nativePublicExportsAndImportedBindingsPreserved": true,
+      "nativeExternalImportOrder": [
+        "react",
+        "react-i18next",
+        "cmdk",
+        "lucide-react",
+        "@craft-agent/ui",
+        "@/lib/utils",
+        "@craft-agent/shared/agent/modes"
+      ],
+      "runtimeImportCycles": 0,
+      "newStateOrWorkflowAdded": false,
+      "maximumFileLines": 409,
+      "files": [
+        {
+          "file": "apps/electron/src/renderer/components/ui/slash-command-menu.tsx",
+          "lines": 363,
+          "sha256": "1252938e7df8104d68c2fd5e30d2c57fe1ec1d4bedc0ebe4b7b26ec00881b59f"
+        },
+        {
+          "file": "apps/electron/src/renderer/components/ui/slash-command-view.tsx",
+          "lines": 409,
+          "sha256": "3e08e73fa84256e28c77c058b0d9339b070d13a4e31715a94d2b661ad93a6f26"
+        }
+      ]
+    },
+    {
+      "status": "passed",
+      "source": "apps/electron/src/renderer/components/right-sidebar/SessionFilesSection.tsx",
+      "nativeSourceHash": "0a036274f8c33b7fc83a97cedf5b5501cc1a587f36a8b66c860b665e3774f0ca",
+      "nativeDeclarations": 14,
+      "extractedDeclarations": 13,
+      "nativeBodiesStateAndEffectOrderPreserved": true,
+      "nativePublicExportsAndImportedBindingsPreserved": true,
+      "nativeExternalImportOrder": [
+        "react",
+        "react-i18next",
+        "react",
+        "motion/react",
+        "lucide-react",
+        "@/components/ui/styled-context-menu",
+        "@/lib/utils",
+        "@/lib/local-storage",
+        "@/context/AppShellContext",
+        "@/lib/platform",
+        "./session-files-watch"
+      ],
+      "runtimeImportCycles": 0,
+      "newStateOrWorkflowAdded": false,
+      "maximumFileLines": 411,
+      "files": [
+        {
+          "file": "apps/electron/src/renderer/components/right-sidebar/SessionFilesSection.tsx",
+          "lines": 246,
+          "sha256": "4b9547cdd876fc041ab0054b8ba878dc89a4643081796ff56e1445a5985ae171"
+        },
+        {
+          "file": "apps/electron/src/renderer/components/right-sidebar/session-file-tree.tsx",
+          "lines": 411,
+          "sha256": "9d0e5da2811192251beafb21fee5e0341923374649378bbe62e96e145f8d8e05"
+        }
+      ]
+    },
+    {
+      "status": "passed",
+      "source": "apps/webui/src/components/RemoteAccessScreen.tsx",
+      "nativeSourceHash": "b9db4d9e97f761bbb942dc936b549a3a8eca056649520ce62cc6bf44ba2a523c",
+      "nativeDeclarations": 20,
+      "extractedDeclarations": 18,
+      "nativeBodiesStateAndEffectOrderPreserved": true,
+      "nativePublicExportsAndImportedBindingsPreserved": true,
+      "nativeExternalImportOrder": [
+        "react",
+        "react-i18next",
+        "qrcode",
+        "lucide-react"
+      ],
+      "runtimeImportCycles": 0,
+      "newStateOrWorkflowAdded": false,
+      "maximumFileLines": 376,
+      "files": [
+        {
+          "file": "apps/webui/src/components/RemoteAccessScreen.tsx",
+          "lines": 163,
+          "sha256": "52fdfc81f86722349fcd6d1afe86290142efcb7478f19acfba298ca87c764884"
+        },
+        {
+          "file": "apps/webui/src/components/remote-pair-device.tsx",
+          "lines": 376,
+          "sha256": "ec43a601af96ffc11400d89281263fe6e5167a4c2f5151b3890909346b8f3dd1"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,1777 @@
+{
+  "status": "passed",
+  "catalogBefore": {
+    "url": "http://127.0.0.1:6184/playground.html",
+    "browser": "145.0.7632.6",
+    "headless": false,
+    "testedAt": "2026-10-25T23:27:54.541Z",
+    "entries": [
+      {
+        "registry": "automations",
+        "id": "automations-list-panel",
+        "name": "AutomationsListPanel",
+        "category": "Automations",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Daily Weather Report\nScheduled\nPrompt\n2m ago\nUrgent Label Notification\nLabel Added\nPrompt\n5m ago\nDone after 9 AM (priority)\nStatus Changed\nPrompt\n10m ago\nHourly Health Check\nScheduled\nPrompt\n15m ago\nLabel Change Logger\nLabel Added\nPrompt\n1h ago\nWelcome Prompt\nSession Started\nPrompt\n2h ago\nError Alert\nWhen Tool Fails\nPrompt\n1d ago\nMorning AI News (Weekdays)\nScheduled\nPrompt\n1d ago\nBuild Artifact Logger\nAfter Tool Runs\nPrompt\n2d ago\nGit Pre-commit Check\nBefore Tool Runs\nPrompt"
+        }
+      },
+      {
+        "registry": "automations",
+        "id": "automation-info-page",
+        "name": "AutomationInfoPage",
+        "category": "Automations",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Daily Weather Report\nDaily Weather Report\n\nWeekdays at 9:00 AM\n\nModifier\nQuand\n\nCe qui déclenche cette automatisation\n\nModifier\nÉvénement\nScheduled\nProgrammation\nScheduled\nRépétitions\nWeekdays at 09:00\nExpression de planification\n0 9 * * 1-5\nProchaines exécutions\nOct 26 09:00\nOct 27 09:00\nOct 28 09:00\nFuseau horaire\nEurope/Budapest\nAlors\n\n1 action à effectuer\n\nModifier\n1.\nRun the @weather skill and give me today's forecast for Budapest\nParamètres\nModifier\nNiveau d'accès\nExplore\nStatut\nActif\nÉtiq"
+        }
+      },
+      {
+        "registry": "automations",
+        "id": "automation-card",
+        "name": "AutomationCard",
+        "category": "Automations",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Daily Weather Report\nWeekdays at 9:00 AM"
+        }
+      },
+      {
+        "registry": "automations",
+        "id": "cron-builder",
+        "name": "CronBuilder",
+        "category": "Automations",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "COMMON SCHEDULES\nEvery minute\nEvery 15 min\nEvery hour\nDaily at midnight\nDaily at 9am\nWeekdays at 9am\nMonthly on 1st\nCUSTOM SCHEDULE\nMINUTE\nHOUR\nDAY\nMONTH\nWEEKDAY\nADVANCED\nWeekdays at 09:00\nNext runs:\nMon, Oct 26 09:00\nTue, Oct 27 09:00\nWed, Oct 28 09:00\nFuseau horaire:\nEurope/Budapest"
+        }
+      },
+      {
+        "registry": "automations",
+        "id": "automation-avatar",
+        "name": "AutomationAvatar",
+        "category": "Automations",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "SIZES\nxs\nsm\nmd\nlg\nALL EVENTS\nScheduled\nLabel Added\nLabel Removed\nLabel Settings Changed\nPermission Changed\nFlag Changed\nTask Updated\nBefore Tool Runs\nAfter Tool Runs\nWhen Tool Fails\nNotification\nMessage Sent\nSession Started\nSession Ended\nAgent Stopped\nSub-agent Started\nSub-agent Stopped\nBefore Memory Cleanup\nPermission Requested\nInitial Setup"
+        }
+      },
+      {
+        "registry": "automations",
+        "id": "automation-test-panel",
+        "name": "AutomationTestPanel",
+        "category": "Automations",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Test réussi42ms"
+        }
+      },
+      {
+        "registry": "automations",
+        "id": "automation-event-timeline",
+        "name": "AutomationEventTimeline",
+        "category": "Automations",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "2m ago\nprompt → @weather forecast\n5m ago\necho \"[...] Added: urgent\"\n15m ago\nConnection refused\n1h ago\ngit diff --cached --check\n1d ago\nprompt → @weather forecast\n2d ago\necho \"[...] Tool completed: Bash\"\n1m ago\nWebhook POST http://localhost:8888/status-change\n10m ago\nWebhook POST https://api.example.com/notify (2 attempts)\n30m ago\nWebhook PUT https://hooks.slack.com/services/T.../B.../xxx"
+        }
+      },
+      {
+        "registry": "browser-ui",
+        "id": "browser-frame-playground",
+        "name": "Browser Frame (Dedicated Controls)",
+        "category": "Browser",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "This browser is ready for your Agents - and you ;)\n\nAsk any session to use this browser (or open another one) to complete tasks like research, form filling, QA checks, or data extraction.\n\n1.\nHN: summarize top 10 stories in a table\n2.\nProduct Hunt: compare today's top 5 launches\n3.\nObservability pricing matrix (DD/New Relic/Grafana)\n4.\nGitHub Docs: latest Actions updates\n5.\nUK policy feed: 5 latest announcements\n6.\nBooking.com: best Budapest stays next weekend\n7.\nKaggle: shortlist 8 churn datase"
+        }
+      },
+      {
+        "registry": "browser-ui",
+        "id": "browser-empty-state-playground",
+        "name": "Browser Empty State (Agent Guidance)",
+        "category": "Browser",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "This browser is ready for your Agents - and you ;)\n\nAsk any session to use this browser (or open another one) to complete tasks like research, form filling, QA checks, or data extraction.\n\n1.\nHN: summarize top 10 stories in a table\n2.\nProduct Hunt: compare today's top 5 launches\n3.\nObservability pricing matrix (DD/New Relic/Grafana)\n4.\nGitHub Docs: latest Actions updates\n5.\nUK policy feed: 5 latest announcements\n6.\nBooking.com: best Budapest stays next weekend\n7.\nKaggle: shortlist 8 churn datase"
+        }
+      },
+      {
+        "registry": "browser-ui",
+        "id": "browser-tab-strip-playground",
+        "name": "Browser Tab Strip (Top Bar)",
+        "category": "Browser",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Top Bar Browser Strip\nMock preview states\n7 tabs • 2 loading • 1 hidden • 1 agent-controlled\nlocalhost\nCraft Agents OSS Repo with a Surprisingly Long Branch and Compare View Name\nTelex - friss hírek, hiteles információk\n+4\n\nAccent 1px border indicates a browser currently controlled by an agent."
+        }
+      },
+      {
+        "registry": "chat",
+        "id": "empty-state-hint",
+        "name": "EmptyStateHint",
+        "category": "Chat",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Résumer votre boîte de réception Gmail, rédiger des réponses et sauvegarder des notes dans Craft"
+        }
+      },
+      {
+        "registry": "chat",
+        "id": "attachment-preview",
+        "name": "AttachmentPreview",
+        "category": "Chat",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "design.pdf\nPDF"
+        }
+      },
+      {
+        "registry": "chat",
+        "id": "setup-auth-banner",
+        "name": "SetupAuthBanner",
+        "category": "Chat",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Connexion requise\nConnecter"
+        }
+      },
+      {
+        "registry": "chat",
+        "id": "active-option-badges",
+        "name": "ActiveOptionBadges",
+        "category": "Chat",
+        "status": "passed",
+        "shape": {
+          "children": 2,
+          "width": 800,
+          "height": 600,
+          "text": "Tâche\nExplore codebase structure\n47s\nShell\nshell-xy...\n2m 36s\nDemander\nInfo"
+        }
+      },
+      {
+        "registry": "chat",
+        "id": "permission-input-toggle",
+        "name": "Permission ↔ Input Toggle",
+        "category": "Chat",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Show Permission\nShow Input\nCurrent: Input View\nDemander\n\n\nMessage Craft Agent...\ncraft-agent\nManuel · Sonnet 4.6"
+        }
+      },
+      {
+        "registry": "chat",
+        "id": "turn-card-flat",
+        "name": "TurnCard (Flat Tools)",
+        "category": "Turn Cards",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "3\nÉtapes terminées\n\nI found the pattern across the codebase and made the necessary edits.\n\nCopier"
+        }
+      },
+      {
+        "registry": "chat",
+        "id": "turn-card-nested-complete",
+        "name": "TurnCard (Nested - Complete)",
+        "category": "Turn Cards",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "5\nÉtapes terminées\nExplore codebase structure\n\nExploration complete. I found 24 React components with 156 exported functions. The codebase follows a modular pattern.\n\nCopier"
+        }
+      },
+      {
+        "registry": "chat",
+        "id": "turn-card-nested-progress",
+        "name": "TurnCard (Nested - In Progress)",
+        "category": "Turn Cards",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "4\nÉtapes terminées\nExplore codebase structure\nImplement new feature"
+        }
+      },
+      {
+        "registry": "chat",
+        "id": "turn-card-multi-task",
+        "name": "TurnCard (Multiple Tasks)",
+        "category": "Turn Cards",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "7\nÉtapes terminées\nExplore codebase structure\nImplement new feature\nAnalyze code quality\n\nAnalysis and fixes complete. I found 23 TODO/FIXME issues, removed deprecated code, and created a modern replacement component.\n\nCopier"
+        }
+      },
+      {
+        "registry": "chat",
+        "id": "turn-card-deep-nested",
+        "name": "TurnCard (Deep Nesting)",
+        "category": "Turn Cards",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "6\nÉtapes terminées\nExplore codebase structure\nImplement new feature\nAnalyze code quality\nRefactor authentication\n\nAuthentication refactoring complete. I implemented OAuth with PKCE, created a callback handler, and all tests pass.\n\nCopier"
+        }
+      },
+      {
+        "registry": "chat",
+        "id": "active-tasks-bar-context",
+        "name": "Active Tasks & Badges",
+        "category": "Chat",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Can you explore the codebase structure and analyze the API endpoints?\n\nI'll explore the codebase and analyze the API endpoints. Let me start by running a background task to search for API route definitions...\n\nTâche\nExplore codebase structure\n48s\nShell\nshell-xy...\n2m 37s\nDemander\nInfo\n\n\nMessage Craft Agent...\ncraft-agent\nManuel · Sonnet 4.6"
+        }
+      },
+      {
+        "registry": "chat",
+        "id": "input-container",
+        "name": "InputContainer",
+        "category": "Chat Inputs",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Tâche\nExplore codebase structure\n48s\nShell\nshell-xy...\n2m 37s\nDemander\nIn Progress\nBug\nPriorité\n·\n2\nDue Date\n·\nMar 15, 2026\nInfo\n\n\nMessage Craft Agent...\ncraft-agent\nManuel · Sonnet 4.6"
+        }
+      },
+      {
+        "registry": "edit-popover",
+        "id": "edit-popover",
+        "name": "EditPopover",
+        "category": "Edit Popover",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Edit\n\nClick the button to open the popover"
+        }
+      },
+      {
+        "registry": "edit-popover",
+        "id": "compact-chat-display",
+        "name": "Compact ChatDisplay",
+        "category": "Edit Popover",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Add a \"Bug\" label with red color\n\nAdded the Bug label with red color to your labels configuration.\n\nThe label is now available in the # menu and will appear as a red circle badge on sessions.\n\n🔍\nPlus de détails techniques\n📁\nFouiller dans Drive\n📝\nRédiger un brouillon d'email\n\n\nDescribe what you'd like to change..."
+        }
+      },
+      {
+        "registry": "entity-lists",
+        "id": "entity-row",
+        "name": "EntityRow",
+        "category": "Entity Lists",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Sample Entity\nMCP\nA short description"
+        }
+      },
+      {
+        "registry": "entity-lists",
+        "id": "entity-list-sessions",
+        "name": "Session List",
+        "category": "Entity Lists",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Fix authentication bug in login flow\nNew\n5m\nImplement search functionality across sessions\nfeature\npriority::high\n30m\nReview pull request #42\n1h\nDebug API response handling and error states\n2h"
+        }
+      },
+      {
+        "registry": "entity-lists",
+        "id": "entity-list-sources",
+        "name": "Source List",
+        "category": "Entity Lists",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "GitHub\nMCP\nRepositories, issues, and pull requests\nLinear\nAPI\nIssue tracking and project management\nSlack\nMCP\nAuth Required\nChannels, messages, and search\nProject Files\nLocal\n~/Documents/projects\nStripe\nAPI\nNot Tested\nPayments and subscriptions"
+        }
+      },
+      {
+        "registry": "entity-lists",
+        "id": "entity-list-skills",
+        "name": "Skill List",
+        "category": "Entity Lists",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "📝\nCommit\nCreate well-structured git commits with conventional messages\n🔍\nReview PR\nThorough code review with security and performance analysis\nRefactor\nSafely restructure code while preserving behavior\n🧪\nWrite Tests\nGenerate comprehensive unit and integration tests"
+        }
+      },
+      {
+        "registry": "entity-lists",
+        "id": "entity-list-mixed",
+        "name": "Mixed Entity List",
+        "category": "Entity Lists",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "SESSIONS\nFix authentication bug in login flow\nNew\n5m\nImplement search functionality across sessions\n30m\nSOURCES\nGitHub\nMCP\nRepositories, issues, and pull requests\nLinear\nAPI\nIssue tracking and project management\nSKILLS\n📝\nCommit\nCreate well-structured git commits with conventional messages\n🔍\nReview PR\nThorough code review with security and performance analysis"
+        }
+      },
+      {
+        "registry": "entity-lists",
+        "id": "entity-list-interactive",
+        "name": "Interactive Entity List",
+        "category": "Entity Lists",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "13 items\nFix authentication bug in login flow\nNew\n5m\nImplement search functionality across sessions\n30m\nReview pull request #42\n1h\nDebug API response handling and error states\n2h\nGitHub\nMCP\nRepositories, issues, and pull requests\nLinear\nAPI\nIssue tracking and project management\nSlack\nMCP\nAuth Required\nChannels, messages, and search\nProject Files\nLocal\n~/Documents/projects\nStripe\nAPI\nNot Tested\nPayments and subscriptions\n📝\nCommit\nCreate well-structured git commits with conventional messages\n🔍\nR"
+        }
+      },
+      {
+        "registry": "kanban",
+        "id": "kanban-board",
+        "name": "Kanban Board",
+        "category": "Kanban",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "All Tasks\nList\nBoard\nÀ FAIRE\n3\nNouvelle tâche\nEngineering\nRedesign onboarding flow\nTodo\n0j\n3\nGrowth\nDraft Q3 launch announcement\nTodo\nInvestigate flaky CI on Windows runners\nTodo\nEN COURS\n2\nEngineering\nMigrate auth to new session model\nIn Progress\n1/3\n2 min\n14\nResearch\nSynthesize user interviews\nNeeds Review\n2/2\n3h\n8\nTERMINÉ\n2\nGrowth\nShip pricing page copy\nDone\n2/2\n1j\n22\nLegacy CSV export tool\nCancelled"
+        }
+      },
+      {
+        "registry": "kanban",
+        "id": "kanban-task-tile",
+        "name": "Task Tile (anatomy)",
+        "category": "Kanban",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Engineering\nMigrate auth to new session model\nIn Progress\n1/3"
+        }
+      },
+      {
+        "registry": "kanban",
+        "id": "kanban-task-window",
+        "name": "Task Window (chat-only)",
+        "category": "Kanban",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Migrate auth to new session model\nIn Progress\nMigrate our auth layer to the new session model. Coordinate the work and use the best model for each part.\nTask mode · orchestrator\nOpus 4.7\n\nI'll act as the orchestrator for this task — breaking it into focused subtasks and routing each to the best-fit model rather than doing everything inline:\n\nSPAWNED SUBTASKS\nAudit current auth middleware\nHaiku\nDraft migration plan\nSonnet\nUpdate integration tests\nSonnet\n\nThe migration plan is in progress. I'll up"
+        }
+      },
+      {
+        "registry": "markdown",
+        "id": "local-pdf-preview",
+        "name": "Local PDF Preview",
+        "category": "Markdown",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Données fictives · PDF de démonstration · aucune ouverture externe\n\nPDF sandbox\n\nPDF file URL\n\nPDF absolu\n\nPDF relatif\n\nPDF avec fragment\n\nPDF HTML\n\nPDF introuvable\n\nAperçu du document local\nChargement..."
+        }
+      },
+      {
+        "registry": "markdown",
+        "id": "markdown",
+        "name": "Markdown",
+        "category": "Markdown",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Welcome to Markdown\n\nThis is a bold statement and this is italic.\n\nCode Examples\n\nHere's some inline code: const x = 42\n\nTYPESCRIPT\nfunction greet(name: string): string {\n  return `Hello, ${name}!`\n}\n\n// Call the function\nconsole.log(greet(\"World\"))\nLists\nFirst item\nSecond item\nNested item\nThird item\nNumbered one\nNumbered two\nNumbered three\nTable\nName\tRole\tStatus\nAlice\tDeveloper\tActive\nBob\tDesigner\tAway\nBlockquote\n\nThis is a blockquote with some important information that spans multiple lines.\n\n"
+        }
+      },
+      {
+        "registry": "markdown",
+        "id": "code-block",
+        "name": "CodeBlock",
+        "category": "Markdown",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "TYPESCRIPT\nimport { useState, useEffect } from 'react'\n\ninterface Todo {\n  id: number\n  title: string\n  completed: boolean\n}\n\nexport function useTodos() {\n  const [todos, setTodos] = useState<Todo[]>([])\n  const [loading, setLoading] = useState(true)\n\n  useEffect(() => {\n    fetch('/api/todos')\n      .then(res => res.json())\n      .then(data => {\n        setTodos(data)\n        setLoading(false)\n      })\n  }, [])\n\n  return { todos, loading }\n}"
+        }
+      },
+      {
+        "registry": "markdown",
+        "id": "inline-code",
+        "name": "InlineCode",
+        "category": "Markdown",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "const x = 42"
+        }
+      },
+      {
+        "registry": "markdown",
+        "id": "datatable-block",
+        "name": "MarkdownDatatableBlock",
+        "category": "Markdown",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Sales by Region\nRegion\n\tRevenue\n\tGrowth\n\tUnits Sold\n\tStatus\n\nNorth America\t$1,250,000\t+12.4%\t8 420\tActive\nEurope\t$980,000\t+8.7%\t6 230\tActive\nAsia Pacific\t$1,580,000\t+21.5%\t12 100\tActive\nLatin America\t$420,000\t-3.2%\t2 800\tRevoked\nMiddle East\t$310,000\t+15.6%\t1 900\tActive"
+        }
+      },
+      {
+        "registry": "markdown",
+        "id": "spreadsheet-block",
+        "name": "MarkdownSpreadsheetBlock",
+        "category": "Markdown",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Q1_Revenue.xlsx — Summary\n\tA\tB\tC\tD\tE\n1\tRegion\tQ1\tQ2\tChange\tTotal\n2\tNorth\t$500,000\t$620,000\t+24.0%\t1 120 000\n3\tSouth\t$340,000\t$310,000\t-8.8%\t650 000\n4\tEast\t$780,000\t$850,000\t+9.0%\t1 630 000\n5\tWest\t$420,000\t$480,000\t+14.3%\t900 000"
+        }
+      },
+      {
+        "registry": "markdown",
+        "id": "image-card-stack",
+        "name": "ImageCardStack",
+        "category": "Markdown",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Active card: 1 / 3\nSwipe left/right on top card"
+        }
+      },
+      {
+        "registry": "markdown",
+        "id": "markdown-image-block",
+        "name": "MarkdownImageBlock",
+        "category": "Markdown",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Chargement..."
+        }
+      },
+      {
+        "registry": "markdown",
+        "id": "rich-block-interaction-parity",
+        "name": "RichBlockInteractionParity",
+        "category": "Markdown",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Rich Block Interaction Parity\n\nUse this fixture to compare inline and fullscreen interactions for Mermaid and image blocks.\n\nTap/click inline content to open fullscreen\nIn fullscreen: wheel/pinch zoom, drag pan, double-click reset\nKeyboard: Cmd/Ctrl +, -, 0\nMermaid block\nValid\nInvalid\nInput\nValidate\nPersist\nShow Error\nNotify\nImage block\nChargement..."
+        }
+      },
+      {
+        "registry": "messages",
+        "id": "message-gallery",
+        "name": "Message Gallery",
+        "category": "Chat Messages",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Status & Dividers\nCompacting conversation...\nConversation Compacted\nConnecting to server...\nProcessing States\nBusy busy…\nUser Messages\n\nHow do I authenticate with the API?\n\nCan you search for all files that contain 'handleError' and show me how they work?\n\nAssistant Messages\n\nI found the authentication handlers in src/auth/. The main handler is AuthHandler which manages OAuth flows and token validation.\n\nHere's a more detailed response with markdown formatting:\n\nFirst, check the config.ts file\nT"
+        }
+      },
+      {
+        "registry": "messages",
+        "id": "user-message-bubble",
+        "name": "UserMessageBubble",
+        "category": "Chat Messages",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "How do I authenticate with the API?"
+        }
+      },
+      {
+        "registry": "messages",
+        "id": "assistant-message",
+        "name": "AssistantMessage",
+        "category": "Chat Messages",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "I found the authentication handlers in src/auth/. The main handler is AuthHandler which manages OAuth flows."
+        }
+      },
+      {
+        "registry": "messages",
+        "id": "status-message",
+        "name": "StatusMessage",
+        "category": "Chat Messages",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Compacting conversation..."
+        }
+      },
+      {
+        "registry": "messages",
+        "id": "system-message",
+        "name": "SystemMessage",
+        "category": "Chat Messages",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "This is a system message."
+        }
+      },
+      {
+        "registry": "messages",
+        "id": "compaction-divider",
+        "name": "CompactionDivider",
+        "category": "Chat Messages",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Conversation Compacted"
+        }
+      },
+      {
+        "registry": "messages",
+        "id": "processing-indicator",
+        "name": "ProcessingIndicator",
+        "category": "Chat Messages",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Reflecting…"
+        }
+      },
+      {
+        "registry": "messages",
+        "id": "auth-request-card",
+        "name": "AuthRequestCard",
+        "category": "Chat Messages",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "GitHub Authentication\n\nEnter your personal access token to connect.\n\nBearer Token\nSave\nCancel\nCredentials are encrypted at rest"
+        }
+      },
+      {
+        "registry": "planner",
+        "id": "planner-things-board",
+        "name": "Planner Board",
+        "category": "Planner",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Planner\nPersonal\nMacBook · my-workspace\nPlanner V2\nMacBook · my-workspace\nCraft App\nImport mounted locally\nMarkdown Samples\nEditor test fixtures\nPlanner V2\nAdd\nToday\nBuild planner shell in playground\nToday · 21:00\nAdd linked session cards with sync-state badges\nToday · 22:00\nWire up drag-to-reorder between headings\nToday · 14:00\nKeyboard navigation for task list\nToday · 23:00\nQuick-add input autofocus on Cmd+N\nToday · 12:00\nUpcoming\nTask timeline tab with append-only events\nTomorrow\nPortable cor"
+        }
+      },
+      {
+        "registry": "planner",
+        "id": "planner-sync-palette",
+        "name": "Planner Sync Palette",
+        "category": "Planner",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Sync States (task_session_links_local)\nLocal only\nSnapshot card always visible; live session resolution is optional enhancement.\nPending upload\nSnapshot card always visible; live session resolution is optional enhancement.\nUploaded\nSnapshot card always visible; live session resolution is optional enhancement.\nRemote only\nSnapshot card always visible; live session resolution is optional enhancement.\nUnavailable\nSnapshot card always visible; live session resolution is optional enhancement.\nUpload "
+        }
+      },
+      {
+        "registry": "session-list",
+        "id": "session-list-search",
+        "name": "SessionList Search States",
+        "category": "Session List",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "TODAY\nFix authentication bug in login flow\nImplement search functionality\nReview pull request #42\nDebug API response handling"
+        }
+      },
+      {
+        "registry": "session-list",
+        "id": "session-item-search",
+        "name": "SessionItem States",
+        "category": "Session List",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Fix authentication bug in login flow\n5 min"
+        }
+      },
+      {
+        "registry": "task-editor",
+        "id": "task-editor",
+        "name": "Task Editor",
+        "category": "Kanban",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Board\n/\nNew Task\nprepares only — nothing runs yet\nSave draft\nPrepare task\nTask definition\nGenerate\nManual\nTitle\nGoal / prompt\norchestrator's first message\nProject\nEngineering\nOrchestrator model\nOpus 4.7\nInitial status\nTodo\nSubtasks\nAI\nAI generates the subtasks\n\nWhen you prepare this task, the orchestrator (Opus 4.7) reads your goal and breaks it into subtasks — picking a best-fit model and wiring dependencies for each. You don't define them here.\n\nOr author them by hand →\nDrafted on Prepare · ea"
+        }
+      },
+      {
+        "registry": "turn-card",
+        "id": "turn-card",
+        "name": "TurnCard",
+        "category": "Turn Cards",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "3\nSearching for authentication handlers\n\nI found the authentication handlers in src/auth/. The main handler is AuthHandler which manages OAuth flows and token validation.\n\nCopier"
+        }
+      },
+      {
+        "registry": "turn-card",
+        "id": "turn-card-streaming-sim",
+        "name": "TurnCard (Streaming Sim)",
+        "category": "Turn Cards",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "2\nSearching for authentication handlers\nAnalyzing the authentication system"
+        }
+      },
+      {
+        "registry": "turn-card",
+        "id": "document-overlay",
+        "name": "DocumentFormattedMarkdownOverlay",
+        "category": "Fullscreen",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Open Document Overlay"
+        }
+      },
+      {
+        "registry": "turn-card",
+        "id": "code-preview-overlay",
+        "name": "CodePreviewOverlay",
+        "category": "Fullscreen",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Read\nauth/tokens.ts\nCode\n1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n13\n14\n15\n16\n17\n18\n19\n20\n21\n22\n23\n24\n25\n26\n27\n28\n29\n30\n31\n32\n33\n34\n35\n36\n37\n38\n39\n40\n41\n42\n43\n44\n45\n46\n47\n48\n49\n50\n51\n52\n53\n54\n55\n56\n57\n58\n59\n60\n61\n62\n63\n64\n65\n66\n67\n68\n69\n70\n71\n72\n73\n74\n75\n76\n77\n78\n79\n80\n81\n82\n83\n84\n85\n86\n87\n88\n89\n90\n91\n92\n93\n94\n95\n96\n97\n98\n99\nimport { useState, useEffect, useCallback } from 'react'\nimport type { Session, AuthToken } from '../types'\nimport { encryptToken, decryptToken } from '../lib/crypto'\n\n/**\n * TokenManager"
+        }
+      },
+      {
+        "registry": "turn-card",
+        "id": "multi-diff-overlay",
+        "name": "MultiDiffPreviewOverlay",
+        "category": "Fullscreen",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "4 edits\n4 edits across 4 files\n-11\n+62"
+        }
+      },
+      {
+        "registry": "turn-card",
+        "id": "terminal-preview-overlay",
+        "name": "TerminalPreviewOverlay",
+        "category": "Fullscreen",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Bash\nRunning tests\nTerminal\nCommand\nnpm test\nSortie\nexit 0\n> npm test\n\n PASS  src/auth/__tests__/handler.test.ts (2.341s)\n  AuthHandler\n    ✓ should authenticate with valid credentials (45ms)\n    ✓ should reject invalid credentials (12ms)\n    ✓ should refresh expired tokens (23ms)\n    ✓ should handle token revocation (8ms)\n    ✓ should validate PKCE challenge (15ms)\n\n PASS  src/auth/__tests__/tokens.test.ts (1.892s)\n  TokenManager\n    ✓ should encrypt tokens at rest (34ms)\n    ✓ should decrypt s"
+        }
+      },
+      {
+        "registry": "turn-card",
+        "id": "json-preview-overlay",
+        "name": "JSONPreviewOverlay",
+        "category": "Fullscreen",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "JSON\nJSON Result\nJSON\n{\n3 items\n\"user\"\n:\n{\n6 items\n\"id\":\"usr_2x8kM9pQ\"\n\"name\":\"Jane Developer\"\n\"email\":\"jane@example.com\"\n\"role\":\"admin\"\n\"permissions\"\n:\n[\n4 items\n0:\"read\"\n1:\"write\"\n2:\"delete\"\n3:\"manage_users\"\n]\n\"metadata\"\n:\n{\n4 items\n\"created_at\":\"2024-01-15T10:30:00Z\"\n\"last_login\":\"2025-01-24T14:22:00Z\"\n\"login_count\":342\n\"preferences\"\n:\n{\n3 items\n\"theme\":\"dark\"\n\"language\":\"en\"\n\"notifications\"\n:\n{\n3 items\n\"email\":true\n\"push\":false\n\"slack\":true\n}\n}\n}\n}\n\"organization\"\n:\n{\n6 items\n\"id\":\"org_4k2nR7"
+        }
+      },
+      {
+        "registry": "turn-card",
+        "id": "generic-overlay",
+        "name": "GenericOverlay",
+        "category": "Fullscreen",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "markdown\nActivity\nAperçu\n# WebFetch Result\n\nFetched content from https://docs.example.com/api/authentication\n\n## Authentication\n\nAll API requests require authentication using a Bearer token in the Authorization header:\n\n```\nAuthorization: Bearer YOUR_API_KEY\n```\n\n### Rate Limits\n\n| Plan       | Requests/min | Burst |\n|-----------|-------------|-------|\n| Free       | 60          | 10    |\n| Pro        | 600         | 100   |\n| Enterprise | 6000        | 1000  |\n\n### Error Responses\n\nWhen authent"
+        }
+      },
+      {
+        "registry": "turn-card",
+        "id": "data-table-overlay",
+        "name": "DataTableOverlay",
+        "category": "Fullscreen",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Open Data Table"
+        }
+      }
+    ],
+    "pageErrors": [],
+    "consoleErrors": [],
+    "passed": 64,
+    "failed": 0
+  },
+  "catalogAfter": {
+    "url": "http://127.0.0.1:6184/playground.html",
+    "browser": "145.0.7632.6",
+    "headless": false,
+    "testedAt": "2026-10-25T23:29:25.443Z",
+    "entries": [
+      {
+        "registry": "automations",
+        "id": "automations-list-panel",
+        "name": "AutomationsListPanel",
+        "category": "Automations",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Daily Weather Report\nScheduled\nPrompt\n2m ago\nUrgent Label Notification\nLabel Added\nPrompt\n5m ago\nDone after 9 AM (priority)\nStatus Changed\nPrompt\n10m ago\nHourly Health Check\nScheduled\nPrompt\n15m ago\nLabel Change Logger\nLabel Added\nPrompt\n1h ago\nWelcome Prompt\nSession Started\nPrompt\n2h ago\nError Alert\nWhen Tool Fails\nPrompt\n1d ago\nMorning AI News (Weekdays)\nScheduled\nPrompt\n1d ago\nBuild Artifact Logger\nAfter Tool Runs\nPrompt\n2d ago\nGit Pre-commit Check\nBefore Tool Runs\nPrompt"
+        }
+      },
+      {
+        "registry": "automations",
+        "id": "automation-info-page",
+        "name": "AutomationInfoPage",
+        "category": "Automations",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Daily Weather Report\nDaily Weather Report\n\nWeekdays at 9:00 AM\n\nModifier\nQuand\n\nCe qui déclenche cette automatisation\n\nModifier\nÉvénement\nScheduled\nProgrammation\nScheduled\nRépétitions\nWeekdays at 09:00\nExpression de planification\n0 9 * * 1-5\nProchaines exécutions\nOct 26 09:00\nOct 27 09:00\nOct 28 09:00\nFuseau horaire\nEurope/Budapest\nAlors\n\n1 action à effectuer\n\nModifier\n1.\nRun the @weather skill and give me today's forecast for Budapest\nParamètres\nModifier\nNiveau d'accès\nExplore\nStatut\nActif\nÉtiq"
+        }
+      },
+      {
+        "registry": "automations",
+        "id": "automation-card",
+        "name": "AutomationCard",
+        "category": "Automations",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Daily Weather Report\nWeekdays at 9:00 AM"
+        }
+      },
+      {
+        "registry": "automations",
+        "id": "cron-builder",
+        "name": "CronBuilder",
+        "category": "Automations",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "COMMON SCHEDULES\nEvery minute\nEvery 15 min\nEvery hour\nDaily at midnight\nDaily at 9am\nWeekdays at 9am\nMonthly on 1st\nCUSTOM SCHEDULE\nMINUTE\nHOUR\nDAY\nMONTH\nWEEKDAY\nADVANCED\nWeekdays at 09:00\nNext runs:\nMon, Oct 26 09:00\nTue, Oct 27 09:00\nWed, Oct 28 09:00\nFuseau horaire:\nEurope/Budapest"
+        }
+      },
+      {
+        "registry": "automations",
+        "id": "automation-avatar",
+        "name": "AutomationAvatar",
+        "category": "Automations",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "SIZES\nxs\nsm\nmd\nlg\nALL EVENTS\nScheduled\nLabel Added\nLabel Removed\nLabel Settings Changed\nPermission Changed\nFlag Changed\nTask Updated\nBefore Tool Runs\nAfter Tool Runs\nWhen Tool Fails\nNotification\nMessage Sent\nSession Started\nSession Ended\nAgent Stopped\nSub-agent Started\nSub-agent Stopped\nBefore Memory Cleanup\nPermission Requested\nInitial Setup"
+        }
+      },
+      {
+        "registry": "automations",
+        "id": "automation-test-panel",
+        "name": "AutomationTestPanel",
+        "category": "Automations",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Test réussi42ms"
+        }
+      },
+      {
+        "registry": "automations",
+        "id": "automation-event-timeline",
+        "name": "AutomationEventTimeline",
+        "category": "Automations",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "2m ago\nprompt → @weather forecast\n5m ago\necho \"[...] Added: urgent\"\n15m ago\nConnection refused\n1h ago\ngit diff --cached --check\n1d ago\nprompt → @weather forecast\n2d ago\necho \"[...] Tool completed: Bash\"\n1m ago\nWebhook POST http://localhost:8888/status-change\n10m ago\nWebhook POST https://api.example.com/notify (2 attempts)\n30m ago\nWebhook PUT https://hooks.slack.com/services/T.../B.../xxx"
+        }
+      },
+      {
+        "registry": "browser-ui",
+        "id": "browser-frame-playground",
+        "name": "Browser Frame (Dedicated Controls)",
+        "category": "Browser",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "This browser is ready for your Agents - and you ;)\n\nAsk any session to use this browser (or open another one) to complete tasks like research, form filling, QA checks, or data extraction.\n\n1.\nHN: summarize top 10 stories in a table\n2.\nProduct Hunt: compare today's top 5 launches\n3.\nObservability pricing matrix (DD/New Relic/Grafana)\n4.\nGitHub Docs: latest Actions updates\n5.\nUK policy feed: 5 latest announcements\n6.\nBooking.com: best Budapest stays next weekend\n7.\nKaggle: shortlist 8 churn datase"
+        }
+      },
+      {
+        "registry": "browser-ui",
+        "id": "browser-empty-state-playground",
+        "name": "Browser Empty State (Agent Guidance)",
+        "category": "Browser",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "This browser is ready for your Agents - and you ;)\n\nAsk any session to use this browser (or open another one) to complete tasks like research, form filling, QA checks, or data extraction.\n\n1.\nHN: summarize top 10 stories in a table\n2.\nProduct Hunt: compare today's top 5 launches\n3.\nObservability pricing matrix (DD/New Relic/Grafana)\n4.\nGitHub Docs: latest Actions updates\n5.\nUK policy feed: 5 latest announcements\n6.\nBooking.com: best Budapest stays next weekend\n7.\nKaggle: shortlist 8 churn datase"
+        }
+      },
+      {
+        "registry": "browser-ui",
+        "id": "browser-tab-strip-playground",
+        "name": "Browser Tab Strip (Top Bar)",
+        "category": "Browser",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Top Bar Browser Strip\nMock preview states\n7 tabs • 2 loading • 1 hidden • 1 agent-controlled\nlocalhost\nCraft Agents OSS Repo with a Surprisingly Long Branch and Compare View Name\nTelex - friss hírek, hiteles információk\n+4\n\nAccent 1px border indicates a browser currently controlled by an agent."
+        }
+      },
+      {
+        "registry": "chat",
+        "id": "empty-state-hint",
+        "name": "EmptyStateHint",
+        "category": "Chat",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Résumer votre boîte de réception Gmail, rédiger des réponses et sauvegarder des notes dans Craft"
+        }
+      },
+      {
+        "registry": "chat",
+        "id": "attachment-preview",
+        "name": "AttachmentPreview",
+        "category": "Chat",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "design.pdf\nPDF"
+        }
+      },
+      {
+        "registry": "chat",
+        "id": "setup-auth-banner",
+        "name": "SetupAuthBanner",
+        "category": "Chat",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Connexion requise\nConnecter"
+        }
+      },
+      {
+        "registry": "chat",
+        "id": "active-option-badges",
+        "name": "ActiveOptionBadges",
+        "category": "Chat",
+        "status": "passed",
+        "shape": {
+          "children": 2,
+          "width": 800,
+          "height": 600,
+          "text": "Tâche\nExplore codebase structure\n48s\nShell\nshell-xy...\n2m 37s\nDemander\nInfo"
+        }
+      },
+      {
+        "registry": "chat",
+        "id": "permission-input-toggle",
+        "name": "Permission ↔ Input Toggle",
+        "category": "Chat",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Show Permission\nShow Input\nCurrent: Input View\nDemander\n\n\nMessage Craft Agent...\ncraft-agent\nManuel · Sonnet 4.6"
+        }
+      },
+      {
+        "registry": "chat",
+        "id": "turn-card-flat",
+        "name": "TurnCard (Flat Tools)",
+        "category": "Turn Cards",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "3\nÉtapes terminées\n\nI found the pattern across the codebase and made the necessary edits.\n\nCopier"
+        }
+      },
+      {
+        "registry": "chat",
+        "id": "turn-card-nested-complete",
+        "name": "TurnCard (Nested - Complete)",
+        "category": "Turn Cards",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "5\nÉtapes terminées\nExplore codebase structure\n\nExploration complete. I found 24 React components with 156 exported functions. The codebase follows a modular pattern.\n\nCopier"
+        }
+      },
+      {
+        "registry": "chat",
+        "id": "turn-card-nested-progress",
+        "name": "TurnCard (Nested - In Progress)",
+        "category": "Turn Cards",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "4\nÉtapes terminées\nExplore codebase structure\nImplement new feature"
+        }
+      },
+      {
+        "registry": "chat",
+        "id": "turn-card-multi-task",
+        "name": "TurnCard (Multiple Tasks)",
+        "category": "Turn Cards",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "7\nÉtapes terminées\nExplore codebase structure\nImplement new feature\nAnalyze code quality\n\nAnalysis and fixes complete. I found 23 TODO/FIXME issues, removed deprecated code, and created a modern replacement component.\n\nCopier"
+        }
+      },
+      {
+        "registry": "chat",
+        "id": "turn-card-deep-nested",
+        "name": "TurnCard (Deep Nesting)",
+        "category": "Turn Cards",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "6\nÉtapes terminées\nExplore codebase structure\nImplement new feature\nAnalyze code quality\nRefactor authentication\n\nAuthentication refactoring complete. I implemented OAuth with PKCE, created a callback handler, and all tests pass.\n\nCopier"
+        }
+      },
+      {
+        "registry": "chat",
+        "id": "active-tasks-bar-context",
+        "name": "Active Tasks & Badges",
+        "category": "Chat",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Can you explore the codebase structure and analyze the API endpoints?\n\nI'll explore the codebase and analyze the API endpoints. Let me start by running a background task to search for API route definitions...\n\nTâche\nExplore codebase structure\n49s\nShell\nshell-xy...\n2m 38s\nDemander\nInfo\n\n\nMessage Craft Agent...\ncraft-agent\nManuel · Sonnet 4.6"
+        }
+      },
+      {
+        "registry": "chat",
+        "id": "input-container",
+        "name": "InputContainer",
+        "category": "Chat Inputs",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Tâche\nExplore codebase structure\n49s\nShell\nshell-xy...\n2m 38s\nDemander\nIn Progress\nBug\nPriorité\n·\n2\nDue Date\n·\nMar 15, 2026\nInfo\n\n\nMessage Craft Agent...\ncraft-agent\nManuel · Sonnet 4.6"
+        }
+      },
+      {
+        "registry": "edit-popover",
+        "id": "edit-popover",
+        "name": "EditPopover",
+        "category": "Edit Popover",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Edit\n\nClick the button to open the popover"
+        }
+      },
+      {
+        "registry": "edit-popover",
+        "id": "compact-chat-display",
+        "name": "Compact ChatDisplay",
+        "category": "Edit Popover",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Add a \"Bug\" label with red color\n\nAdded the Bug label with red color to your labels configuration.\n\nThe label is now available in the # menu and will appear as a red circle badge on sessions.\n\n🔍\nPlus de détails techniques\n📁\nFouiller dans Drive\n📝\nRédiger un brouillon d'email\n\n\nDescribe what you'd like to change..."
+        }
+      },
+      {
+        "registry": "entity-lists",
+        "id": "entity-row",
+        "name": "EntityRow",
+        "category": "Entity Lists",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Sample Entity\nMCP\nA short description"
+        }
+      },
+      {
+        "registry": "entity-lists",
+        "id": "entity-list-sessions",
+        "name": "Session List",
+        "category": "Entity Lists",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Fix authentication bug in login flow\nNew\n5m\nImplement search functionality across sessions\nfeature\npriority::high\n30m\nReview pull request #42\n1h\nDebug API response handling and error states\n2h"
+        }
+      },
+      {
+        "registry": "entity-lists",
+        "id": "entity-list-sources",
+        "name": "Source List",
+        "category": "Entity Lists",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "GitHub\nMCP\nRepositories, issues, and pull requests\nLinear\nAPI\nIssue tracking and project management\nSlack\nMCP\nAuth Required\nChannels, messages, and search\nProject Files\nLocal\n~/Documents/projects\nStripe\nAPI\nNot Tested\nPayments and subscriptions"
+        }
+      },
+      {
+        "registry": "entity-lists",
+        "id": "entity-list-skills",
+        "name": "Skill List",
+        "category": "Entity Lists",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "📝\nCommit\nCreate well-structured git commits with conventional messages\n🔍\nReview PR\nThorough code review with security and performance analysis\nRefactor\nSafely restructure code while preserving behavior\n🧪\nWrite Tests\nGenerate comprehensive unit and integration tests"
+        }
+      },
+      {
+        "registry": "entity-lists",
+        "id": "entity-list-mixed",
+        "name": "Mixed Entity List",
+        "category": "Entity Lists",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "SESSIONS\nFix authentication bug in login flow\nNew\n5m\nImplement search functionality across sessions\n30m\nSOURCES\nGitHub\nMCP\nRepositories, issues, and pull requests\nLinear\nAPI\nIssue tracking and project management\nSKILLS\n📝\nCommit\nCreate well-structured git commits with conventional messages\n🔍\nReview PR\nThorough code review with security and performance analysis"
+        }
+      },
+      {
+        "registry": "entity-lists",
+        "id": "entity-list-interactive",
+        "name": "Interactive Entity List",
+        "category": "Entity Lists",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "13 items\nFix authentication bug in login flow\nNew\n5m\nImplement search functionality across sessions\n30m\nReview pull request #42\n1h\nDebug API response handling and error states\n2h\nGitHub\nMCP\nRepositories, issues, and pull requests\nLinear\nAPI\nIssue tracking and project management\nSlack\nMCP\nAuth Required\nChannels, messages, and search\nProject Files\nLocal\n~/Documents/projects\nStripe\nAPI\nNot Tested\nPayments and subscriptions\n📝\nCommit\nCreate well-structured git commits with conventional messages\n🔍\nR"
+        }
+      },
+      {
+        "registry": "kanban",
+        "id": "kanban-board",
+        "name": "Kanban Board",
+        "category": "Kanban",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "All Tasks\nList\nBoard\nÀ FAIRE\n3\nNouvelle tâche\nEngineering\nRedesign onboarding flow\nTodo\n0j\n3\nGrowth\nDraft Q3 launch announcement\nTodo\nInvestigate flaky CI on Windows runners\nTodo\nEN COURS\n2\nEngineering\nMigrate auth to new session model\nIn Progress\n1/3\n2 min\n14\nResearch\nSynthesize user interviews\nNeeds Review\n2/2\n3h\n8\nTERMINÉ\n2\nGrowth\nShip pricing page copy\nDone\n2/2\n1j\n22\nLegacy CSV export tool\nCancelled"
+        }
+      },
+      {
+        "registry": "kanban",
+        "id": "kanban-task-tile",
+        "name": "Task Tile (anatomy)",
+        "category": "Kanban",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Engineering\nMigrate auth to new session model\nIn Progress\n1/3"
+        }
+      },
+      {
+        "registry": "kanban",
+        "id": "kanban-task-window",
+        "name": "Task Window (chat-only)",
+        "category": "Kanban",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Migrate auth to new session model\nIn Progress\nMigrate our auth layer to the new session model. Coordinate the work and use the best model for each part.\nTask mode · orchestrator\nOpus 4.7\n\nI'll act as the orchestrator for this task — breaking it into focused subtasks and routing each to the best-fit model rather than doing everything inline:\n\nSPAWNED SUBTASKS\nAudit current auth middleware\nHaiku\nDraft migration plan\nSonnet\nUpdate integration tests\nSonnet\n\nThe migration plan is in progress. I'll up"
+        }
+      },
+      {
+        "registry": "markdown",
+        "id": "local-pdf-preview",
+        "name": "Local PDF Preview",
+        "category": "Markdown",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Données fictives · PDF de démonstration · aucune ouverture externe\n\nPDF sandbox\n\nPDF file URL\n\nPDF absolu\n\nPDF relatif\n\nPDF avec fragment\n\nPDF HTML\n\nPDF introuvable\n\nAperçu du document local\nChargement..."
+        }
+      },
+      {
+        "registry": "markdown",
+        "id": "markdown",
+        "name": "Markdown",
+        "category": "Markdown",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Welcome to Markdown\n\nThis is a bold statement and this is italic.\n\nCode Examples\n\nHere's some inline code: const x = 42\n\nTYPESCRIPT\nfunction greet(name: string): string {\n  return `Hello, ${name}!`\n}\n\n// Call the function\nconsole.log(greet(\"World\"))\nLists\nFirst item\nSecond item\nNested item\nThird item\nNumbered one\nNumbered two\nNumbered three\nTable\nName\tRole\tStatus\nAlice\tDeveloper\tActive\nBob\tDesigner\tAway\nBlockquote\n\nThis is a blockquote with some important information that spans multiple lines.\n\n"
+        }
+      },
+      {
+        "registry": "markdown",
+        "id": "code-block",
+        "name": "CodeBlock",
+        "category": "Markdown",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "TYPESCRIPT\nimport { useState, useEffect } from 'react'\n\ninterface Todo {\n  id: number\n  title: string\n  completed: boolean\n}\n\nexport function useTodos() {\n  const [todos, setTodos] = useState<Todo[]>([])\n  const [loading, setLoading] = useState(true)\n\n  useEffect(() => {\n    fetch('/api/todos')\n      .then(res => res.json())\n      .then(data => {\n        setTodos(data)\n        setLoading(false)\n      })\n  }, [])\n\n  return { todos, loading }\n}"
+        }
+      },
+      {
+        "registry": "markdown",
+        "id": "inline-code",
+        "name": "InlineCode",
+        "category": "Markdown",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "const x = 42"
+        }
+      },
+      {
+        "registry": "markdown",
+        "id": "datatable-block",
+        "name": "MarkdownDatatableBlock",
+        "category": "Markdown",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Sales by Region\nRegion\n\tRevenue\n\tGrowth\n\tUnits Sold\n\tStatus\n\nNorth America\t$1,250,000\t+12.4%\t8 420\tActive\nEurope\t$980,000\t+8.7%\t6 230\tActive\nAsia Pacific\t$1,580,000\t+21.5%\t12 100\tActive\nLatin America\t$420,000\t-3.2%\t2 800\tRevoked\nMiddle East\t$310,000\t+15.6%\t1 900\tActive"
+        }
+      },
+      {
+        "registry": "markdown",
+        "id": "spreadsheet-block",
+        "name": "MarkdownSpreadsheetBlock",
+        "category": "Markdown",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Q1_Revenue.xlsx — Summary\n\tA\tB\tC\tD\tE\n1\tRegion\tQ1\tQ2\tChange\tTotal\n2\tNorth\t$500,000\t$620,000\t+24.0%\t1 120 000\n3\tSouth\t$340,000\t$310,000\t-8.8%\t650 000\n4\tEast\t$780,000\t$850,000\t+9.0%\t1 630 000\n5\tWest\t$420,000\t$480,000\t+14.3%\t900 000"
+        }
+      },
+      {
+        "registry": "markdown",
+        "id": "image-card-stack",
+        "name": "ImageCardStack",
+        "category": "Markdown",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Active card: 1 / 3\nSwipe left/right on top card"
+        }
+      },
+      {
+        "registry": "markdown",
+        "id": "markdown-image-block",
+        "name": "MarkdownImageBlock",
+        "category": "Markdown",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Chargement..."
+        }
+      },
+      {
+        "registry": "markdown",
+        "id": "rich-block-interaction-parity",
+        "name": "RichBlockInteractionParity",
+        "category": "Markdown",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Rich Block Interaction Parity\n\nUse this fixture to compare inline and fullscreen interactions for Mermaid and image blocks.\n\nTap/click inline content to open fullscreen\nIn fullscreen: wheel/pinch zoom, drag pan, double-click reset\nKeyboard: Cmd/Ctrl +, -, 0\nMermaid block\nValid\nInvalid\nInput\nValidate\nPersist\nShow Error\nNotify\nImage block\nChargement..."
+        }
+      },
+      {
+        "registry": "messages",
+        "id": "message-gallery",
+        "name": "Message Gallery",
+        "category": "Chat Messages",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Status & Dividers\nCompacting conversation...\nConversation Compacted\nConnecting to server...\nProcessing States\nCogitating…\nUser Messages\n\nHow do I authenticate with the API?\n\nCan you search for all files that contain 'handleError' and show me how they work?\n\nAssistant Messages\n\nI found the authentication handlers in src/auth/. The main handler is AuthHandler which manages OAuth flows and token validation.\n\nHere's a more detailed response with markdown formatting:\n\nFirst, check the config.ts file\n"
+        }
+      },
+      {
+        "registry": "messages",
+        "id": "user-message-bubble",
+        "name": "UserMessageBubble",
+        "category": "Chat Messages",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "How do I authenticate with the API?"
+        }
+      },
+      {
+        "registry": "messages",
+        "id": "assistant-message",
+        "name": "AssistantMessage",
+        "category": "Chat Messages",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "I found the authentication handlers in src/auth/. The main handler is AuthHandler which manages OAuth flows."
+        }
+      },
+      {
+        "registry": "messages",
+        "id": "status-message",
+        "name": "StatusMessage",
+        "category": "Chat Messages",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Compacting conversation..."
+        }
+      },
+      {
+        "registry": "messages",
+        "id": "system-message",
+        "name": "SystemMessage",
+        "category": "Chat Messages",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "This is a system message."
+        }
+      },
+      {
+        "registry": "messages",
+        "id": "compaction-divider",
+        "name": "CompactionDivider",
+        "category": "Chat Messages",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Conversation Compacted"
+        }
+      },
+      {
+        "registry": "messages",
+        "id": "processing-indicator",
+        "name": "ProcessingIndicator",
+        "category": "Chat Messages",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Bear with me…"
+        }
+      },
+      {
+        "registry": "messages",
+        "id": "auth-request-card",
+        "name": "AuthRequestCard",
+        "category": "Chat Messages",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "GitHub Authentication\n\nEnter your personal access token to connect.\n\nBearer Token\nSave\nCancel\nCredentials are encrypted at rest"
+        }
+      },
+      {
+        "registry": "planner",
+        "id": "planner-things-board",
+        "name": "Planner Board",
+        "category": "Planner",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Planner\nPersonal\nMacBook · my-workspace\nPlanner V2\nMacBook · my-workspace\nCraft App\nImport mounted locally\nMarkdown Samples\nEditor test fixtures\nPlanner V2\nAdd\nToday\nBuild planner shell in playground\nToday · 21:00\nAdd linked session cards with sync-state badges\nToday · 22:00\nWire up drag-to-reorder between headings\nToday · 14:00\nKeyboard navigation for task list\nToday · 23:00\nQuick-add input autofocus on Cmd+N\nToday · 12:00\nUpcoming\nTask timeline tab with append-only events\nTomorrow\nPortable cor"
+        }
+      },
+      {
+        "registry": "planner",
+        "id": "planner-sync-palette",
+        "name": "Planner Sync Palette",
+        "category": "Planner",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Sync States (task_session_links_local)\nLocal only\nSnapshot card always visible; live session resolution is optional enhancement.\nPending upload\nSnapshot card always visible; live session resolution is optional enhancement.\nUploaded\nSnapshot card always visible; live session resolution is optional enhancement.\nRemote only\nSnapshot card always visible; live session resolution is optional enhancement.\nUnavailable\nSnapshot card always visible; live session resolution is optional enhancement.\nUpload "
+        }
+      },
+      {
+        "registry": "session-list",
+        "id": "session-list-search",
+        "name": "SessionList Search States",
+        "category": "Session List",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "TODAY\nFix authentication bug in login flow\nImplement search functionality\nReview pull request #42\nDebug API response handling"
+        }
+      },
+      {
+        "registry": "session-list",
+        "id": "session-item-search",
+        "name": "SessionItem States",
+        "category": "Session List",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Fix authentication bug in login flow\n5 min"
+        }
+      },
+      {
+        "registry": "task-editor",
+        "id": "task-editor",
+        "name": "Task Editor",
+        "category": "Kanban",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Board\n/\nNew Task\nprepares only — nothing runs yet\nSave draft\nPrepare task\nTask definition\nGenerate\nManual\nTitle\nGoal / prompt\norchestrator's first message\nProject\nEngineering\nOrchestrator model\nOpus 4.7\nInitial status\nTodo\nSubtasks\nAI\nAI generates the subtasks\n\nWhen you prepare this task, the orchestrator (Opus 4.7) reads your goal and breaks it into subtasks — picking a best-fit model and wiring dependencies for each. You don't define them here.\n\nOr author them by hand →\nDrafted on Prepare · ea"
+        }
+      },
+      {
+        "registry": "turn-card",
+        "id": "turn-card",
+        "name": "TurnCard",
+        "category": "Turn Cards",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "3\nSearching for authentication handlers\n\nI found the authentication handlers in src/auth/. The main handler is AuthHandler which manages OAuth flows and token validation.\n\nCopier"
+        }
+      },
+      {
+        "registry": "turn-card",
+        "id": "turn-card-streaming-sim",
+        "name": "TurnCard (Streaming Sim)",
+        "category": "Turn Cards",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "2\nSearching for authentication handlers\nAnalyzing the authentication system"
+        }
+      },
+      {
+        "registry": "turn-card",
+        "id": "document-overlay",
+        "name": "DocumentFormattedMarkdownOverlay",
+        "category": "Fullscreen",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Open Document Overlay"
+        }
+      },
+      {
+        "registry": "turn-card",
+        "id": "code-preview-overlay",
+        "name": "CodePreviewOverlay",
+        "category": "Fullscreen",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Read\nauth/tokens.ts\nCode\n1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n13\n14\n15\n16\n17\n18\n19\n20\n21\n22\n23\n24\n25\n26\n27\n28\n29\n30\n31\n32\n33\n34\n35\n36\n37\n38\n39\n40\n41\n42\n43\n44\n45\n46\n47\n48\n49\n50\n51\n52\n53\n54\n55\n56\n57\n58\n59\n60\n61\n62\n63\n64\n65\n66\n67\n68\n69\n70\n71\n72\n73\n74\n75\n76\n77\n78\n79\n80\n81\n82\n83\n84\n85\n86\n87\n88\n89\n90\n91\n92\n93\n94\n95\n96\n97\n98\n99\nimport { useState, useEffect, useCallback } from 'react'\nimport type { Session, AuthToken } from '../types'\nimport { encryptToken, decryptToken } from '../lib/crypto'\n\n/**\n * TokenManager"
+        }
+      },
+      {
+        "registry": "turn-card",
+        "id": "multi-diff-overlay",
+        "name": "MultiDiffPreviewOverlay",
+        "category": "Fullscreen",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "4 edits\n4 edits across 4 files\n-11\n+62"
+        }
+      },
+      {
+        "registry": "turn-card",
+        "id": "terminal-preview-overlay",
+        "name": "TerminalPreviewOverlay",
+        "category": "Fullscreen",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Bash\nRunning tests\nTerminal\nCommand\nnpm test\nSortie\nexit 0\n> npm test\n\n PASS  src/auth/__tests__/handler.test.ts (2.341s)\n  AuthHandler\n    ✓ should authenticate with valid credentials (45ms)\n    ✓ should reject invalid credentials (12ms)\n    ✓ should refresh expired tokens (23ms)\n    ✓ should handle token revocation (8ms)\n    ✓ should validate PKCE challenge (15ms)\n\n PASS  src/auth/__tests__/tokens.test.ts (1.892s)\n  TokenManager\n    ✓ should encrypt tokens at rest (34ms)\n    ✓ should decrypt s"
+        }
+      },
+      {
+        "registry": "turn-card",
+        "id": "json-preview-overlay",
+        "name": "JSONPreviewOverlay",
+        "category": "Fullscreen",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "JSON\nJSON Result\nJSON\n{\n3 items\n\"user\"\n:\n{\n6 items\n\"id\":\"usr_2x8kM9pQ\"\n\"name\":\"Jane Developer\"\n\"email\":\"jane@example.com\"\n\"role\":\"admin\"\n\"permissions\"\n:\n[\n4 items\n0:\"read\"\n1:\"write\"\n2:\"delete\"\n3:\"manage_users\"\n]\n\"metadata\"\n:\n{\n4 items\n\"created_at\":\"2024-01-15T10:30:00Z\"\n\"last_login\":\"2025-01-24T14:22:00Z\"\n\"login_count\":342\n\"preferences\"\n:\n{\n3 items\n\"theme\":\"dark\"\n\"language\":\"en\"\n\"notifications\"\n:\n{\n3 items\n\"email\":true\n\"push\":false\n\"slack\":true\n}\n}\n}\n}\n\"organization\"\n:\n{\n6 items\n\"id\":\"org_4k2nR7"
+        }
+      },
+      {
+        "registry": "turn-card",
+        "id": "generic-overlay",
+        "name": "GenericOverlay",
+        "category": "Fullscreen",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "markdown\nActivity\nAperçu\n# WebFetch Result\n\nFetched content from https://docs.example.com/api/authentication\n\n## Authentication\n\nAll API requests require authentication using a Bearer token in the Authorization header:\n\n```\nAuthorization: Bearer YOUR_API_KEY\n```\n\n### Rate Limits\n\n| Plan       | Requests/min | Burst |\n|-----------|-------------|-------|\n| Free       | 60          | 10    |\n| Pro        | 600         | 100   |\n| Enterprise | 6000        | 1000  |\n\n### Error Responses\n\nWhen authent"
+        }
+      },
+      {
+        "registry": "turn-card",
+        "id": "data-table-overlay",
+        "name": "DataTableOverlay",
+        "category": "Fullscreen",
+        "status": "passed",
+        "shape": {
+          "children": 1,
+          "width": 800,
+          "height": 600,
+          "text": "Open Data Table"
+        }
+      }
+    ],
+    "pageErrors": [],
+    "consoleErrors": [],
+    "passed": 64,
+    "failed": 0
+  },
+  "interactions": {
+    "status": "passed",
+    "url": "http://127.0.0.1:6184/playground.html",
+    "browser": "145.0.7632.6",
+    "headless": false,
+    "steps": [
+      {
+        "action": "automation enable and keyboard expansion",
+        "status": "passed"
+      },
+      {
+        "action": "planner quick add creates visible task and clears input",
+        "status": "passed"
+      },
+      {
+        "action": "task title and goal update YAML; demo save reaches notification",
+        "status": "passed",
+        "writes": "UI demo only; no filesystem API called"
+      },
+      {
+        "action": "theme switch, preview resize and reload restore",
+        "status": "passed",
+        "width": 880
+      },
+      {
+        "action": "edit popover opens and closes with Escape",
+        "status": "passed"
+      },
+      {
+        "action": "mock preferences, async operations and install fallback",
+        "status": "passed",
+        "api": {
+          "preferencesEnvelope": true,
+          "writeSuccess": true,
+          "updateAvailable": false,
+          "fallbackSame": true,
+          "unwritableFallbackThrows": true
+        }
+      }
+    ],
+    "errors": [],
+    "consoleErrors": [],
+    "limits": [
+      "Playground data and browser storage only; this is not a real model mission."
+    ]
+  },
+  "remotePairing": {
+    "status": "passed",
+    "url": "http://127.0.0.1:6185",
+    "browser": "145.0.7632.6",
+    "headless": false,
+    "steps": [
+      "Invalid backend payload is shown as an error and permits retry",
+      "Retry submits the same QA code and reaches paired success",
+      "Setup renders the QR image and copies the one-time QA code",
+      "Code refresh remains usable at phone width without horizontal overflow",
+      "Offline setup shows its status and disables code refresh"
+    ],
+    "errors": [],
+    "consoleErrors": [],
+    "network": "Only two QA endpoints were fulfilled in Playwright; no real backend writes",
+    "requests": [
+      {
+        "code": "QA000001",
+        "deviceName": "Mobile browser"
+      },
+      {
+        "code": "QA000001",
+        "deviceName": "Mobile browser"
+      }
+    ]
+  },
+  "screenshots": [
+    {
+      "path": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/remote-pairing-success-browser.png",
+      "sha256": "229aec62ba64a45cda0c80db74ad4f22f6da1ada9766bff313d7870816b7a22e"
+    },
+    {
+      "path": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/remote-pairing-mobile-browser.png",
+      "sha256": "4ccba0c50b02594d279e93394668c8d4b9eb9a369616ac10694adfee7bf3b47b"
+    }
+  ],
+  "limits": [
+    "Chromium 145 en mode visible ; validation Electron et missions réelles de la nouvelle version encore à effectuer.",
+    "Appairage simulé par Playwright sur deux endpoints QA, sans écriture sur le serveur réel."
+  ]
+}
