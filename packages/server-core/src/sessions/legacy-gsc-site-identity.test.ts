@@ -1,3 +1,8 @@
+interface GscSiteListFixture {
+  rowCount: number;
+  sites: Array<{ siteUrl: string; permissionLevel: unknown } | null>;
+}
+
 import { sessionManagerForTest } from './testing/private-runtime-access.ts';
 import { describe, expect, it } from 'bun:test';
 import type { Message, ObjectiveAcceptanceCriterion, ObjectiveOutcomeDeclaration } from '@craft-agent/core/types';
@@ -64,16 +69,16 @@ describe('historically attested GSC property identity', () => {
   });
 
   it.each([
-    ['absent', (r: any) => { r.sites[1].siteUrl = 'https://different.example/'; }],
-    ['duplicate', (r: any) => { r.sites[2] = { ...r.sites[1] }; }],
-    ['wrong permission', (r: any) => { r.sites[1].permissionLevel = 'siteUnverifiedUser'; }],
-    ['wrong type', (r: any) => { r.sites[1].permissionLevel = true; }],
-    ['permission on another site', (r: any) => { r.sites[1].permissionLevel = 'siteFullUser'; r.sites[3].permissionLevel = 'siteOwner'; }],
-    ['changed URL', (r: any) => { r.sites[1].siteUrl = 'https://requested.example'; }],
-    ['count mismatch', (r: any) => { r.rowCount++; }],
-    ['invalid row', (r: any) => { r.sites[0] = null; }],
+    ['absent', (r: GscSiteListFixture) => { r.sites[1]!.siteUrl = 'https://different.example/'; }],
+    ['duplicate', (r: GscSiteListFixture) => { r.sites[2] = { ...r.sites[1]! }; }],
+    ['wrong permission', (r: GscSiteListFixture) => { r.sites[1]!.permissionLevel = 'siteUnverifiedUser'; }],
+    ['wrong type', (r: GscSiteListFixture) => { r.sites[1]!.permissionLevel = true; }],
+    ['permission on another site', (r: GscSiteListFixture) => { r.sites[1]!.permissionLevel = 'siteFullUser'; r.sites[3]!.permissionLevel = 'siteOwner'; }],
+    ['changed URL', (r: GscSiteListFixture) => { r.sites[1]!.siteUrl = 'https://requested.example'; }],
+    ['count mismatch', (r: GscSiteListFixture) => { r.rowCount++; }],
+    ['invalid row', (r: GscSiteListFixture) => { r.sites[0] = null; }],
   ])('rejects current result: %s', (_name, mutate) => {
-    const f = fixture(); const result = JSON.parse(f.current.toolResult!); mutate(result);
+    const f = fixture(); const result: GscSiteListFixture = JSON.parse(f.current.toolResult!); mutate(result);
     f.current.toolResult = JSON.stringify(result);
     expect(validateObjectiveAcceptanceCriteria(f.objective, f.messages, f.declaration)).toHaveLength(1);
     expect(collectObjectiveAcceptanceObservations(f.objective, f.messages).find(x => x.criterionId === criterion.id)?.passed).not.toBe(true);
