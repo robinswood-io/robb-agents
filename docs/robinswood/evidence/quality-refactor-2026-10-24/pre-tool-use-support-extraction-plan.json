@@ -1,0 +1,1774 @@
+{
+  "source": "packages/shared/src/agent/core/pre-tool-use.ts",
+  "units": [
+    {
+      "names": [
+        "PreToolUseContext"
+      ],
+      "group": "contracts",
+      "bodySha256": "79754b5f865429ee0796cc39af7dbfb5e4c77e24329ec881202375a239fbc233"
+    },
+    {
+      "names": [
+        "PathExpansionResult"
+      ],
+      "group": "contracts",
+      "bodySha256": "ac74c9ed34a059b9d9a1c93e22c1cfbc01d6277e50a54e9ebe7f0286e4f07280"
+    },
+    {
+      "names": [
+        "SkillQualificationResult"
+      ],
+      "group": "contracts",
+      "bodySha256": "be4f47e8cbf0e33d9df4b71685270f22f5770b3fd63d180cade3dbc22ff3ac0f"
+    },
+    {
+      "names": [
+        "MetadataStrippingResult"
+      ],
+      "group": "contracts",
+      "bodySha256": "b815ed4a4b1c2fe56c44db682a0a3c2566bad7291712b0b5303697ee721e0df7"
+    },
+    {
+      "names": [
+        "ConfigValidationResult"
+      ],
+      "group": "contracts",
+      "bodySha256": "d3e95732fd43ee2a922147f19891efd0486742b18ca1650795fca1d15f9bede9"
+    },
+    {
+      "names": [
+        "DeclaredToolCapabilities"
+      ],
+      "group": "contracts",
+      "bodySha256": "1d51283fc35b2f874e6631e1e4476d23e7f0d8b40f24472cf4a852902b11bfb5"
+    },
+    {
+      "names": [
+        "ToolEffectDescriptor"
+      ],
+      "group": "contracts",
+      "bodySha256": "a873c5c1372f52d466342fa7bb551b22d26befe7dea9c9fa44848af358a4cd16"
+    },
+    {
+      "names": [
+        "PreToolUseCheckResult"
+      ],
+      "group": "contracts",
+      "bodySha256": "44abb185abf4558bf95fa8428c7e123f8d861c607c5052182cca262cd45ebbe7"
+    },
+    {
+      "names": [
+        "PreToolUseInput"
+      ],
+      "group": "contracts",
+      "bodySha256": "42f30498925e6e6d86f692b9709bf63f4f16becb77de9deb3a63190e17ff1a8b"
+    },
+    {
+      "names": [
+        "PermissionManagerLike"
+      ],
+      "group": "contracts",
+      "bodySha256": "c50a5c3f89fb1d043c318c8ac2d1acdbe42f1dbde5710c5575edf85bea15a207"
+    },
+    {
+      "names": [
+        "PrerequisiteManagerLike"
+      ],
+      "group": "contracts",
+      "bodySha256": "42e4fc68db16369cea5d8f277c6ecb783b38a265dc49fbd3e8e67be525602667"
+    },
+    {
+      "names": [
+        "BUILT_IN_TOOLS"
+      ],
+      "group": "tool-names",
+      "bodySha256": "5cc93933e5230af16c555859341a4dcbf9bc6805528cb83c1584f0616628bbf0"
+    },
+    {
+      "names": [
+        "FILE_PATH_TOOLS"
+      ],
+      "group": "tool-names",
+      "bodySha256": "732c349145a54be654e765fca7f197f8b84d9fd48b3efe441d31d49140fd027f"
+    },
+    {
+      "names": [
+        "CONFIG_WRITE_TOOLS"
+      ],
+      "group": "tool-names",
+      "bodySha256": "103c8dcce1bb62bb0a8d5a3f7b05e091905bfd778c21b47855fd82cfa1f2d64b"
+    },
+    {
+      "names": [
+        "LABELS_BLOCKED_FILE_TOOLS"
+      ],
+      "group": "tool-names",
+      "bodySha256": "f0e8dd12a493d73360d972bc5c9a33a9cdd473a506db852ae62efda083c51406"
+    },
+    {
+      "names": [
+        "normalizeAutonomyGuardText"
+      ],
+      "group": "tool-names",
+      "bodySha256": "9deba1404ecaee096873a3cec7703c520bc3385e0331cd2b710b564a34de7adf"
+    },
+    {
+      "names": [
+        "BUILT_IN_MCP_SERVERS"
+      ],
+      "group": "tool-names",
+      "bodySha256": "2f31f5d3418b26c39ebbd12ba001f38592992d6af2a76a10c676c3b5faac4c40"
+    },
+    {
+      "names": [
+        "FILE_WRITE_TOOLS"
+      ],
+      "group": "tool-names",
+      "bodySha256": "3c0dec861e56e85e60cb994627ab53c927253cffc0daf12d1ee6bb6612280507"
+    },
+    {
+      "names": [
+        "BUILTIN_READ_TOOLS"
+      ],
+      "group": "tool-names",
+      "bodySha256": "b75bb0f36effac8c549723b0c5ce1bafb602e3ff56a94cb351d5c03320c31945"
+    },
+    {
+      "names": [
+        "REMOTE_COMMAND_TOOL_PATTERN"
+      ],
+      "group": "tool-names",
+      "bodySha256": "5504a2913bc4ff20c49c9669a474ba65a0bc405169c7a5238dfea0627b6393bb"
+    },
+    {
+      "names": [
+        "MUTATION_HTTP_METHOD_PATTERN"
+      ],
+      "group": "tool-names",
+      "bodySha256": "20ec754e2e38bb57de04dbb26a826014ba4aa544cf7b04aadb6fbea7c4562acf"
+    },
+    {
+      "names": [
+        "STRUCTURED_REMOTE_READ_LIFECYCLE_TOOLS"
+      ],
+      "group": "tool-names",
+      "bodySha256": "08c3d90f0a8d1b02d8f88ac2b1360d2116bdb095430f78801761215a4689f3ec"
+    },
+    {
+      "names": [
+        "expandToolPaths"
+      ],
+      "group": "input-transforms",
+      "bodySha256": "7d57fe91177830ef0a12adf84d6997c6eca1c96c33cb32b9a8d0ceef2bf0c819"
+    },
+    {
+      "names": [
+        "qualifySkillName"
+      ],
+      "group": "input-transforms",
+      "bodySha256": "7ea22f8e1efd2a14fa6e18a8688eb4178a5dd62b6c8bdf43315f5d37fb4dce77"
+    },
+    {
+      "names": [
+        "resolveSkillPlugin"
+      ],
+      "group": "input-transforms",
+      "bodySha256": "4670cb424353b12f7b03bd41084713906293a7d6a6fb12ee93d1495bd93850df"
+    },
+    {
+      "names": [
+        "stripToolMetadata"
+      ],
+      "group": "input-transforms",
+      "bodySha256": "f892e667b26a648476d121225fe8345e466aaa5224cbe691f7d817c130ec8d1b"
+    },
+    {
+      "names": [
+        "stripMcpMetadata"
+      ],
+      "group": "input-transforms",
+      "bodySha256": "fe1130406053ede2233ee00a76a6667ab5cc37298110a220ed2b0f57d1910284"
+    },
+    {
+      "names": [
+        "validateConfigWrite"
+      ],
+      "group": "config-validation",
+      "bodySha256": "af960e924cafbe376114b73dc5295a2695aaddf68f64bd3eefb35cfca3b24857"
+    },
+    {
+      "names": [
+        "buildCliDomainBlockMessage"
+      ],
+      "group": "cli-redirect",
+      "bodySha256": "42d8357aa334901dc66f62d9df746f5d43c3e782304b0a5051d45755b02443a7"
+    },
+    {
+      "names": [
+        "getWorkspaceRelativePath"
+      ],
+      "group": "cli-redirect",
+      "bodySha256": "f4df8911ad5d5038ac4731fe239814d4a956319aab0cd0552f145f8503096adf"
+    },
+    {
+      "names": [
+        "matchesPathScope"
+      ],
+      "group": "cli-redirect",
+      "bodySha256": "09ec90f9bb7c58714de6fd6ae0248ce7f99ecc942f55cc4519e08632ea56f012"
+    },
+    {
+      "names": [
+        "detectCliNamespaceFromConfigDetection"
+      ],
+      "group": "cli-redirect",
+      "bodySha256": "9e53da30f861ce063a5c5d2c312a3ea6d91005735bd16f870ef816edbc0545ec"
+    },
+    {
+      "names": [
+        "getConfigCliRedirect"
+      ],
+      "group": "cli-redirect",
+      "bodySha256": "359bb430e573c71ac2d93ee47c2fcf7b663343109c9d83fe350ba160c0161317"
+    },
+    {
+      "names": [
+        "getConfigDomainBashRedirect"
+      ],
+      "group": "cli-redirect",
+      "bodySha256": "0e2e5050cfbb5bc6a74bb271fb0f07462853d3b63f77cc2a48456776f9dfba61"
+    },
+    {
+      "names": [
+        "RBW_OSS_WHOLE_CATALOG_READ_TOOL"
+      ],
+      "group": "autonomy-request-guards",
+      "bodySha256": "da951e580aa90b133ee0c8efde7d19d2f78d3a33bde053585fe1c69255067021"
+    },
+    {
+      "names": [
+        "RBW_OSS_OVERSIZED_CATALOG_GUIDANCE"
+      ],
+      "group": "autonomy-request-guards",
+      "bodySha256": "4833b82d713d2fc93f6f135afc4ebc0634da5638556bd505dcff2d6ad974434e"
+    },
+    {
+      "names": [
+        "oversizedRbwOssCatalogReadGuidance"
+      ],
+      "group": "autonomy-request-guards",
+      "bodySha256": "59d70c8078c631aeec1e6890fd9943dfe0d409b467dbd6317e296e14a6b6b60f"
+    },
+    {
+      "names": [
+        "REQUEST_USER_INPUT_TOOL_NAMES"
+      ],
+      "group": "autonomy-request-guards",
+      "bodySha256": "be3f79fa9147d9c8e8e57adc42f49ace5353843ff4a3ea4a30da63692fe3c856"
+    },
+    {
+      "names": [
+        "redundantlyAsksPermissionForSellsyReadOnlyOAuth"
+      ],
+      "group": "autonomy-request-guards",
+      "bodySha256": "c0b1e6cc413b44a7ca1cdae0e1e5fd00f66b9767c983502ac79703f3c90af300"
+    },
+    {
+      "names": [
+        "CONTEXTUAL_GMAIL_PREFLIGHT_ATTESTATION_TTL_MS"
+      ],
+      "group": "gmail-state",
+      "bodySha256": "70f848438da36394ee43bea75c3aecd1fce1873e0b212481152a912a41c37177"
+    },
+    {
+      "names": [
+        "CONTEXTUAL_GMAIL_BINDING_MAX_TTL_MS"
+      ],
+      "group": "gmail-state",
+      "bodySha256": "2d46a7f9dc61873e91b35d586ed5e66e3e357323c2b2b713d573676f7d5acf82"
+    },
+    {
+      "names": [
+        "CONTEXTUAL_GMAIL_BINDING_FUTURE_SKEW_MS"
+      ],
+      "group": "gmail-state",
+      "bodySha256": "6d0db7baa5f8b09fb7a8111135c4cddab80d3bee206e0cec5f180bd6667b2244"
+    },
+    {
+      "names": [
+        "GMAIL_API_MESSAGE_ID"
+      ],
+      "group": "gmail-state",
+      "bodySha256": "e1cfb8dbcc2ba324dcf94a570e5b3e8d5400df1b73866f78721b214af85f4b5d"
+    },
+    {
+      "names": [
+        "CONTEXTUAL_GMAIL_READ_TOOLS"
+      ],
+      "group": "gmail-state",
+      "bodySha256": "3aed8f73655fc83ef2ef4fbe282ab8843a951c41275f103a60a585b336c1d946"
+    },
+    {
+      "names": [
+        "CONTEXTUAL_GMAIL_PREFLIGHT_TOOLS"
+      ],
+      "group": "gmail-state",
+      "bodySha256": "e8509582d2c77ece13df23a06f42af9483b2105130639951fd0d67786f6e0585"
+    },
+    {
+      "names": [
+        "CONTEXTUAL_GMAIL_BOUND_REPLY_TOOLS"
+      ],
+      "group": "gmail-state",
+      "bodySha256": "246646cc776ede843a324424c5c5bd0df2a2bdfaf53bffc9a7a8f4b878673fc2"
+    },
+    {
+      "names": [
+        "pendingContextualGmailPreflights"
+      ],
+      "group": "gmail-state",
+      "bodySha256": "30bde906fe009554170e24db000e98ab193aeb45a496534574637ff583db58ad"
+    },
+    {
+      "names": [
+        "observedContextualGmailReads"
+      ],
+      "group": "gmail-state",
+      "bodySha256": "3c26b8637eeda380297fb269c8338c15c6aa65ab5671ba652110ff1c06b34f6f"
+    },
+    {
+      "names": [
+        "contextualGmailPreflightAttestations"
+      ],
+      "group": "gmail-state",
+      "bodySha256": "93a630c1333bc99c1e150e0a00edff17133aab797e04699e5e1730ec04ecd1ef"
+    },
+    {
+      "names": [
+        "reservedContextualGmailReplyAttestations"
+      ],
+      "group": "gmail-state",
+      "bodySha256": "ce95e198fb96e0affbaba3963da928b5f0f04a171119743a135892a8df3a8ac8"
+    },
+    {
+      "names": [
+        "contextualGmailPreflightGenerations"
+      ],
+      "group": "gmail-state",
+      "bodySha256": "c81bd860cd9ec4104ae0524bc8d9e20b229837a4ac0a82ff94a2dbb9d25e193a"
+    },
+    {
+      "names": [
+        "ContextualGmailToolUseClaim"
+      ],
+      "group": "gmail-state",
+      "bodySha256": "44dc92d19201cb4b9c905ff09f3abdddc411ca912f77e2599943873349c996a1"
+    },
+    {
+      "names": [
+        "contextualGmailToolUseClaims"
+      ],
+      "group": "gmail-state",
+      "bodySha256": "4f35f8c2e196928d1313569644cf7eb97547916f55721004d199a16af94a3eee"
+    },
+    {
+      "names": [
+        "inFlightContextualGmailReplies"
+      ],
+      "group": "gmail-state",
+      "bodySha256": "5dab169bca2fb9baaed36b77b9b94121a8a44e033e3de36ecf31227bb9249e3b"
+    },
+    {
+      "names": [
+        "contextualGmailSessionsPendingFinalCleanup"
+      ],
+      "group": "gmail-state",
+      "bodySha256": "918485b467d2b5033733b8b30eb52d0869895733a0e646ced64d155db19dda1e"
+    },
+    {
+      "names": [
+        "observedThirdPartyDependencies"
+      ],
+      "group": "dependency-state",
+      "bodySha256": "a43633badff29995a04f34d431917f8af5dbe6cc2a3911b29c1404e6efe8ad98"
+    },
+    {
+      "names": [
+        "observedResolvedThirdPartyDependencies"
+      ],
+      "group": "dependency-state",
+      "bodySha256": "712d3d9246ebf5fd99cac383f2f7daeb0e0856fae3064151f214fb70648eddbc"
+    },
+    {
+      "names": [
+        "contextualGmailObjectiveFingerprint"
+      ],
+      "group": "gmail-evidence",
+      "bodySha256": "e57f93766cc161895fe4cc364c7a16f28cb9c12ad581d2831913afc14b6dff13"
+    },
+    {
+      "names": [
+        "nextContextualGmailPreflightGeneration"
+      ],
+      "group": "gmail-evidence",
+      "bodySha256": "31d6f50a51ae2af714f5bf38e6d0ddbef4ff371886f3ed2a6b95e606fcdfac85"
+    },
+    {
+      "names": [
+        "contextualGmailPreflightIntentsMatch"
+      ],
+      "group": "gmail-evidence",
+      "bodySha256": "696228e08f5e541fa1153f26a7aef4e2ada5ed472ddbc6f36214a3bb68b079aa"
+    },
+    {
+      "names": [
+        "contextualGmailBindingExpiresAt"
+      ],
+      "group": "gmail-evidence",
+      "bodySha256": "a3a51d35d41be63cc2424908c343096cdfebd60024d490bb20bb0d3bca021d3a"
+    },
+    {
+      "names": [
+        "contextualGmailObjectiveProvidesClosedExactHumanAnchor"
+      ],
+      "group": "gmail-evidence",
+      "bodySha256": "184320c4f6ff8af88310681ea53cce42db85b4b5fa624460a9c0e3a10dcbfffe"
+    },
+    {
+      "names": [
+        "contextualGmailToolReceipt"
+      ],
+      "group": "gmail-evidence",
+      "bodySha256": "f38a816d12472eaab07dcd4b2942fdbabd50fc99b5c019694862e538ead72c97"
+    },
+    {
+      "names": [
+        "canonicalGmailEmailSet"
+      ],
+      "group": "gmail-evidence",
+      "bodySha256": "0e72af4f5fe63e934b97a8ac4fc2a12fc7666a8fc7da237a5ebf9de482579ec9"
+    },
+    {
+      "names": [
+        "hasConclusiveContextualGmailExactEffectReconciliation"
+      ],
+      "group": "gmail-evidence",
+      "bodySha256": "0853da58c02f843d550fa01a2c4388d510d1ec7e61e9a60056e2eaf2aa235ea7"
+    },
+    {
+      "names": [
+        "exactObservedGmailMessageId"
+      ],
+      "group": "gmail-evidence",
+      "bodySha256": "3d739b765e72d90bc675ea51cc4fde2296042fc7f64a079a5998a3c9b61b6ab8"
+    },
+    {
+      "names": [
+        "currentContextualGmailPreflightAttestation"
+      ],
+      "group": "gmail-evidence",
+      "bodySha256": "b27738c7c124fb3d765dfc17d2326eafa40d5102abb2ecdd4bc15c4e182d937f"
+    },
+    {
+      "names": [
+        "clearContextualGmailMutationLifecycleState"
+      ],
+      "group": "gmail-cleanup",
+      "bodySha256": "f084360c8bacffcedc8e685cc65823049fe25efc8d2ae79109061bc423316e70"
+    },
+    {
+      "names": [
+        "clearContextualGmailPreflightAttestation"
+      ],
+      "group": "gmail-cleanup",
+      "bodySha256": "f0d64ccffe62a3ae4ac3d11e5d78359b386c2672ef80bec01a5a7d29b67520d5"
+    },
+    {
+      "names": [
+        "maybeFinalizeContextualGmailSessionCleanup"
+      ],
+      "group": "gmail-cleanup",
+      "bodySha256": "8798ea69355577a10ae11ff3b7c04e05d4a46ebd8f95d934992395031f1774ee"
+    },
+    {
+      "names": [
+        "destroyContextualGmailSessionState"
+      ],
+      "group": "gmail-cleanup",
+      "bodySha256": "856ce7eb40761ef3a3a3a4ebf4c1592cf1f01e5b89c536d6b2e63de26955f617"
+    },
+    {
+      "names": [
+        "invalidateContextualGmailSessionState"
+      ],
+      "group": "gmail-cleanup",
+      "bodySha256": "e5733b0f84cd9e2c26c3060f1e8e24f0179785e44daf26d173101dacb5d89d6c"
+    },
+    {
+      "names": [
+        "ContextualGmailHostExecutionTicket"
+      ],
+      "group": "gmail-execution",
+      "bodySha256": "571ee4fca62cb7ae5f14d6a5a037e2e609a262b173bedf456c9fc08eadb69d60"
+    },
+    {
+      "names": [
+        "ContextualGmailHostExecutionDecision"
+      ],
+      "group": "gmail-execution",
+      "bodySha256": "3f69d63057fad6449d0d3a9dc8d55e75dbf1a0458aa7cddacd6c88e1867b808c"
+    },
+    {
+      "names": [
+        "hasContextualGmailInFlightForRuntime"
+      ],
+      "group": "gmail-execution",
+      "bodySha256": "f08a025039623761b71d46a369bca54d8ec88df922e94bc8308ddd4d07457be0"
+    },
+    {
+      "names": [
+        "beginContextualGmailHostExecution"
+      ],
+      "group": "gmail-execution",
+      "bodySha256": "d49c08fdadde2739a884648a47715a5bad36d95f3ef84affa8bc5d6944b4b6ed"
+    },
+    {
+      "names": [
+        "settleContextualGmailHostExecution"
+      ],
+      "group": "gmail-execution",
+      "bodySha256": "94c536c38751adaeb23719c975998b292ac810041be6e5c3db2cd7f5bf50593e"
+    },
+    {
+      "names": [
+        "confirmContextualGmailRuntimeTeardown"
+      ],
+      "group": "gmail-execution",
+      "bodySha256": "c2917408046e9c2f5d8b063a6d03d73451a0fab9028deea495d0589e2c4ba3c1"
+    },
+    {
+      "names": [
+        "ContextualGmailPromptReservationDecision"
+      ],
+      "group": "gmail-reservations",
+      "bodySha256": "c372458feb3a639b94897c5cbee66331cb25791090744696b275ad71a499eaae"
+    },
+    {
+      "names": [
+        "resolveContextualGmailPromptReservation"
+      ],
+      "group": "gmail-reservations",
+      "bodySha256": "9c103948a27007deca3f40713f3371298e84d8c6cd103e38ee417fd952362201"
+    },
+    {
+      "names": [
+        "recordContextualGmailToolResult"
+      ],
+      "group": "gmail-receipts",
+      "bodySha256": "2c68f731801aca3fc68af27e0c8bd573025803526748b7adb6b4e510398bfd4e"
+    },
+    {
+      "names": [
+        "PendingDependencyKind"
+      ],
+      "group": "dependency-guards",
+      "bodySha256": "252e6c75dbd009646cb3ca0ce6685cd901e3e94f4a37c036fcbf585dd8dbb0ea"
+    },
+    {
+      "names": [
+        "PendingThirdPartyDependency"
+      ],
+      "group": "dependency-guards",
+      "bodySha256": "1090793a866697dce81a1cb9dc209b14d1acb32c53c15fed1325f0384d7f95ea"
+    },
+    {
+      "names": [
+        "NON_PARTY_NAME_TOKENS"
+      ],
+      "group": "dependency-guards",
+      "bodySha256": "78c2691a040fe049ff1f23a53d0e87da7e4297030da8282c57b7e40abf9e8d5a"
+    },
+    {
+      "names": [
+        "THIRD_PARTY_ALIAS_GROUPS"
+      ],
+      "group": "dependency-guards",
+      "bodySha256": "7f7f4ab6299b2419f3ebfca0dc1cc255edb9a8bc8e7da9c5a0450faaca11d770"
+    },
+    {
+      "names": [
+        "canonicalThirdPartyName"
+      ],
+      "group": "dependency-guards",
+      "bodySha256": "d6bb62524964ce66f5214c1db5e650668dc3ef5c2cfeb5f570de5858fc0402e6"
+    },
+    {
+      "names": [
+        "extractThirdPartyNames"
+      ],
+      "group": "dependency-guards",
+      "bodySha256": "dc43d73a7e73fd225b2a858c42b54c1924c1be9bc8481904b352c7c13a5e11ab"
+    },
+    {
+      "names": [
+        "extractPendingDependencyKinds"
+      ],
+      "group": "dependency-guards",
+      "bodySha256": "e48d04bffe924a327987bf6db44da675a841eaee7c8511b72f1b0980c783ca3e"
+    },
+    {
+      "names": [
+        "objectiveEstablishesThirdPartyDependency"
+      ],
+      "group": "dependency-guards",
+      "bodySha256": "50bf175d4bb8fb802fac002841c899337196ade55ed4c1d6ae1822d8fadad4b6"
+    },
+    {
+      "names": [
+        "isTrustedThirdPartyDependencyReceiptTool"
+      ],
+      "group": "dependency-guards",
+      "bodySha256": "94530030336f51061ca934028b32f14cc3e0ba7b4c76c139967dcaa1fc4f7b3e"
+    },
+    {
+      "names": [
+        "hostObservedThirdPartyDependencies"
+      ],
+      "group": "dependency-guards",
+      "bodySha256": "7ab79bfb9427e362eb03569a2d27b9c353ba20ec18929dc06fad9428a3437870"
+    },
+    {
+      "names": [
+        "hostObservedResolvedThirdPartyDependencies"
+      ],
+      "group": "dependency-guards",
+      "bodySha256": "b6ce3566af243acefef63d4f69d6d922948084596b20e18037be161772bfb996"
+    },
+    {
+      "names": [
+        "questionAndDecisionTexts"
+      ],
+      "group": "dependency-guards",
+      "bodySha256": "187844b1068f8b435c58de8e69d3c227cfac50e0d4be4f1f6b984351e4997327"
+    },
+    {
+      "names": [
+        "redundantlyAsksAboutEstablishedThirdPartyDependency"
+      ],
+      "group": "dependency-guards",
+      "bodySha256": "4c1f69bf97d83fe31bcf7ae02e8221678ef1ff5163432c4a006686c24a822cc1"
+    },
+    {
+      "names": [
+        "canonicalExternalActionInput"
+      ],
+      "group": "external-action-hash",
+      "bodySha256": "7255cc8eb2c2621944d37e2e0e4a45d20e0304de896854f25d10405ff8ef5ca4"
+    },
+    {
+      "names": [
+        "hashSensitiveExternalActionOperation"
+      ],
+      "group": "external-action-hash",
+      "bodySha256": "efac8e46b77c8283c5546c2be60c34bab488781b82cea1bcc11e619dd82d9a04"
+    },
+    {
+      "names": [
+        "objectiveNamesRemoteEndpoint"
+      ],
+      "group": "remote-identity",
+      "bodySha256": "3683fe1a1b791aad2de4f45be7efaf6bb00bb9407018f1fc2e2f4f43e8c783a3"
+    },
+    {
+      "names": [
+        "isCanonicalRemoteEndpoint"
+      ],
+      "group": "remote-identity",
+      "bodySha256": "4e654832d1e3de07cddb06f266f7d08394a3c8933baba129f7bb17d7ffa5042a"
+    },
+    {
+      "names": [
+        "structuredRemoteReadChannelSignals"
+      ],
+      "group": "remote-identity",
+      "bodySha256": "9797e441f907a395e0d75d2df28668663bd8e7cae26297191fa6b68724033d15"
+    },
+    {
+      "names": [
+        "explicitlyAuthorizesStructuredRemoteReadChannel"
+      ],
+      "group": "remote-identity",
+      "bodySha256": "e8977917b803ee404a9f8986d29b8c0a6f28577fae229cca9a458ae6803de08d"
+    },
+    {
+      "names": [
+        "explicitlyRestrictsStructuredRemoteReadChannel"
+      ],
+      "group": "remote-identity",
+      "bodySha256": "a5a88f93208d49a501d2b6ee21c38c8206479f97a4de0912e57e132533081ba7"
+    },
+    {
+      "names": [
+        "normalizedRemoteProjectIdentity"
+      ],
+      "group": "remote-identity",
+      "bodySha256": "09172a1caa859d3676ae027c15733e2a86693515c258f07601d5d032bd9a6870"
+    },
+    {
+      "names": [
+        "remoteProjectTargetMatchesEndpoint"
+      ],
+      "group": "remote-identity",
+      "bodySha256": "518e710fd36ea742a72dc5153b7a740c1e54fccd23f7b2855d7196934e9c0b24"
+    },
+    {
+      "names": [
+        "explicitDockerRegistryFromImageTarget"
+      ],
+      "group": "remote-identity",
+      "bodySha256": "1ac31564e52790dc7ccc28c39c91ff243c79a1eddd0b95dae6ffde6c6b240911"
+    },
+    {
+      "names": [
+        "objectiveExplicitlyAuthorizesDockerRegistry"
+      ],
+      "group": "remote-identity",
+      "bodySha256": "46167b0ac381885873a8160d9af0a3e16fc2bdb1b6fd40c5fe58f1d6864dedd8"
+    },
+    {
+      "names": [
+        "staticSourceInspectionRemotePath"
+      ],
+      "group": "remote-identity",
+      "bodySha256": "a7c1e42afe54316537ecc6ff44a998caa88b360b6487f66c9312e9cdd6d8f0a5"
+    },
+    {
+      "names": [
+        "boundedStructuredRemoteExecutionInput"
+      ],
+      "group": "remote-identity",
+      "bodySha256": "8be5e5172e8cc6f51999da0adc4f8672adfd5aa6f3fb243b82a73e67f59de1af"
+    },
+    {
+      "names": [
+        "targetBoundOperationalTechnicalReadAuthoritySegment"
+      ],
+      "group": "remote-read-authority",
+      "bodySha256": "fe6065aeb05504438cddc79d354bc7bba9b7ce309f098cde9c29bae019058f33"
+    },
+    {
+      "names": [
+        "hasTargetBoundOperationalTechnicalReadAuthority"
+      ],
+      "group": "remote-read-authority",
+      "bodySha256": "6d0770ae64f88e3df65257f1fe86d48b80153c415af2d136ef401c48fd294b6f"
+    },
+    {
+      "names": [
+        "remotePathMatchesOperationalObjective"
+      ],
+      "group": "remote-read-authority",
+      "bodySha256": "1d644ee90263c7ce935af2b659fac742e3ce738c98a8fa0b2feed8ac8f88b40e"
+    },
+    {
+      "names": [
+        "managedDevOrionPath"
+      ],
+      "group": "signed-resume-targets",
+      "bodySha256": "3f20537efc7b11b134840d8458bf5bc06aca1e7a525fb4eef80cf5e6e02b30f7"
+    },
+    {
+      "names": [
+        "isBoundedOrionWorktreeCommand"
+      ],
+      "group": "signed-resume-targets",
+      "bodySha256": "cc8841da4e079ad383680ee0ce6edd002b583240e6edc83d145f9a675e91cdcb"
+    },
+    {
+      "names": [
+        "boundedRemoteCwd"
+      ],
+      "group": "signed-resume-targets",
+      "bodySha256": "b9ac0e49dda80df748e31f016bf0787739f5045ae552a0ac4ecd083aa429accf"
+    },
+    {
+      "names": [
+        "resolveBoundedRemotePath"
+      ],
+      "group": "signed-resume-targets",
+      "bodySha256": "a6ec0a722f0c8bcfa52ab9a6ba45e951f1e7c9905bce500de700603a786834b2"
+    },
+    {
+      "names": [
+        "isSignedResumeSegment"
+      ],
+      "group": "signed-resume-targets",
+      "bodySha256": "d5912bb0650f5eb18df077a9b7c01b24626688abe757aa2753f5ccec850a539c"
+    },
+    {
+      "names": [
+        "latestSignedResumeAuthoritySegment"
+      ],
+      "group": "signed-resume-targets",
+      "bodySha256": "8e5760b58882df692111d6517871ef1aecee30fd6a917fe3ff1f0ff1aa806424"
+    },
+    {
+      "names": [
+        "objectiveSegmentPositivelyMentionsAny"
+      ],
+      "group": "signed-resume-targets",
+      "bodySha256": "d01e5edbfe4098b79eae6be2ae54bdf859074bca3179b20f6b71ab3ab5b41520"
+    },
+    {
+      "names": [
+        "resumedRemoteReadCommandMatchesObjective"
+      ],
+      "group": "resumed-remote-reads",
+      "bodySha256": "17b1b1d25330703a49e7451f1b74ba5f533c7b1580dd0ff220e30d11f4014d2c"
+    },
+    {
+      "names": [
+        "isBoundedJsonData"
+      ],
+      "group": "sharepoint-contract",
+      "bodySha256": "12190facd77b1cf55389f8bf79a8b54d7602eac6ca832da083f181c01dc7b830"
+    },
+    {
+      "names": [
+        "isBoundedSharePointColumnFacet"
+      ],
+      "group": "sharepoint-contract",
+      "bodySha256": "c73814596c1a9a747742fb77a424efca91bcb227a08d86555783c84c1436a80d"
+    },
+    {
+      "names": [
+        "BoundedResumedSharePointCreationContract"
+      ],
+      "group": "sharepoint-contract",
+      "bodySha256": "ea980f9cad95e000763a35bd2a697e7cf2f19708f11290c422edea114e491250"
+    },
+    {
+      "names": [
+        "boundedResumedSharePointCreationContract"
+      ],
+      "group": "sharepoint-contract",
+      "bodySha256": "29b7d534480e2bee74a22ecbdb27634951fd09c102d9e3a836cba1977a378a94"
+    },
+    {
+      "names": [
+        "isBoundedResumedSharePointCreation"
+      ],
+      "group": "sharepoint-contract",
+      "bodySha256": "fbb86d8914983f0c429c875e3e7a1e44a12791f87fc92fc84163dd7cdd6a1079"
+    },
+    {
+      "names": [
+        "operationalInspectionMatchesObjective"
+      ],
+      "group": "remote-observation",
+      "bodySha256": "ccf98eaa6d832c54ccfe1554ace44c857feb56711056fed01b4065fdf8d77dc8"
+    },
+    {
+      "names": [
+        "isBoundedStructuredRemoteTechnicalRead"
+      ],
+      "group": "remote-observation",
+      "bodySha256": "57fd9c4cc4d521125821e643ed57295281da6d2a7e840bfca214226727503eff"
+    },
+    {
+      "names": [
+        "BOUNDED_SOFTWARE_REMOTE_PATH_PATTERN"
+      ],
+      "group": "software-scope",
+      "bodySha256": "8cd7946406be207108afd52958a7df265cfbc8742d42ac9087feae56d2208b80"
+    },
+    {
+      "names": [
+        "BOUNDED_SOFTWARE_MUTATION_SOURCE"
+      ],
+      "group": "software-scope",
+      "bodySha256": "39a0177bb20952728a95b2c7091d8a43eed36ace8545375ffeb0def024fcc212"
+    },
+    {
+      "names": [
+        "BOUNDED_SOFTWARE_MUTATION_PATTERN"
+      ],
+      "group": "software-scope",
+      "bodySha256": "76538e361a03b286f09ee5c34ab5d6101f9a1d569937b0b96fe76a4a185cb829"
+    },
+    {
+      "names": [
+        "BOUNDED_SOFTWARE_READ_ONLY_PHASE_PATTERN"
+      ],
+      "group": "software-scope",
+      "bodySha256": "990ba854033c2894ba9382c797842db16c1835444f317188d979a942fcabb857"
+    },
+    {
+      "names": [
+        "BOUNDED_SOFTWARE_EXPLICIT_MUTATION_REVOCATION_PATTERN"
+      ],
+      "group": "software-scope",
+      "bodySha256": "2a35fd4a3fc9bc5cbc025ea142667140d9a1e2c96f89a9a814b6242d954e0355"
+    },
+    {
+      "names": [
+        "BOUNDED_SOFTWARE_OBSERVATION_PHASE_PATTERN"
+      ],
+      "group": "software-scope",
+      "bodySha256": "4f43b5197cb972413fe3c4771ba05a9feeead7400ac530bc24f6a57e62fefddf"
+    },
+    {
+      "names": [
+        "BOUNDED_SOFTWARE_SCOPE_DECLARATION_PATTERN"
+      ],
+      "group": "software-scope",
+      "bodySha256": "9a62005419a6bab96a377c6d7aeee7a442fffaee900792780f067dcb9357cea2"
+    },
+    {
+      "names": [
+        "BOUNDED_SOFTWARE_ENDPOINT_DECLARATION_PATTERN"
+      ],
+      "group": "software-scope",
+      "bodySha256": "237130769dd4125cc25ed8cd79fcb502c09240c8c9ec525f880d95071d16b360"
+    },
+    {
+      "names": [
+        "BoundedSoftwareRemoteRootOccurrence"
+      ],
+      "group": "software-scope",
+      "bodySha256": "b63a7ba3363bf8a8796fe1640f3985312b4dd8262eb7eca9fe364b6d802d14b9"
+    },
+    {
+      "names": [
+        "BoundedSoftwareRemoteEndpointOccurrence"
+      ],
+      "group": "software-scope",
+      "bodySha256": "792671d2ea80ccf7130a1f4770e0eae798c98285cf490443ca52f005ae642f20"
+    },
+    {
+      "names": [
+        "BoundedSoftwareRemoteTargetTuple"
+      ],
+      "group": "software-scope",
+      "bodySha256": "a7b5fe59c5e35c77621d16b7477717d6ff7e11871013c354b21e0903a6776f37"
+    },
+    {
+      "names": [
+        "boundedSoftwareInstructionPhases"
+      ],
+      "group": "software-scope",
+      "bodySha256": "75cef4f765379c09984df54752e7f58f0761be7b8ed8536fcab6e22d0a051930"
+    },
+    {
+      "names": [
+        "boundedSoftwareMutationIsRevoked"
+      ],
+      "group": "software-scope",
+      "bodySha256": "34856634c8563e310306ae78444ac2a205f764ae8a1a079743b48596f7852858"
+    },
+    {
+      "names": [
+        "boundedSoftwareTargetOccurrenceIsNegated"
+      ],
+      "group": "software-scope",
+      "bodySha256": "8b513bfa81d04a94c169b4241faba4d12d58a55d0c9f16406abd17d9f7f1aa3a"
+    },
+    {
+      "names": [
+        "explicitlyAuthorizesBoundedSoftwareMutationClause"
+      ],
+      "group": "software-scope",
+      "bodySha256": "b1bee121ef5df893866d716b4f0946a88f307cd6557c15b94814652695430faf"
+    },
+    {
+      "names": [
+        "boundedSoftwareRemotePathIsDirectlyQuoted"
+      ],
+      "group": "software-scope",
+      "bodySha256": "864d20b083d79dbaaa448337d124860766b157e60a9bbc57d35461c92bbe5828"
+    },
+    {
+      "names": [
+        "explicitBoundedSoftwareRemoteRootOccurrences"
+      ],
+      "group": "software-scope",
+      "bodySha256": "dca009cfac06dacc5763191c2779ba33a99b529d5d70f1d56afeb2b8dc29987a"
+    },
+    {
+      "names": [
+        "explicitBoundedSoftwareRemoteRoots"
+      ],
+      "group": "software-scope",
+      "bodySha256": "f1a4c887ae6848030b5caeadd9a3b7a0264975fe38a9326573b7933bc4118c6a"
+    },
+    {
+      "names": [
+        "remotePathIsWithinRoot"
+      ],
+      "group": "software-scope",
+      "bodySha256": "6047c484344da16976f4f5e3daa40d2baf4d3970ffa0407557f523b6e0820cb8"
+    },
+    {
+      "names": [
+        "explicitBoundedSoftwareRemoteEndpointOccurrences"
+      ],
+      "group": "software-targets",
+      "bodySha256": "fdd313c38a0d91064d799314bc10ea8f2f00e0e21f701899d2275951127c2c83"
+    },
+    {
+      "names": [
+        "explicitBoundedSoftwareRemoteTargetTuples"
+      ],
+      "group": "software-targets",
+      "bodySha256": "64b101103019881bc93ab0ec0561ea058a3399cbc0b76c0d3cea8084b0628dc5"
+    },
+    {
+      "names": [
+        "explicitlyAuthorizesBoundedSoftwareRemoteEndpoint"
+      ],
+      "group": "software-targets",
+      "bodySha256": "cab89fe41a366c4797ba4799c3974b3a408cd3b15e9eb35907ab42e6f9f643d9"
+    },
+    {
+      "names": [
+        "boundedSoftwareTupleAuthorizesRemotePath"
+      ],
+      "group": "software-targets",
+      "bodySha256": "8c564a95e921d451748e1447e1bcc06a254c7b987e96c3665717210db7dca396"
+    },
+    {
+      "names": [
+        "explicitlyAuthorizesBoundedSoftwareMutationScope"
+      ],
+      "group": "software-targets",
+      "bodySha256": "2bfada7935c4822829f19cde1d99f9f7df86c864a38a03849cef0d1e47488a74"
+    },
+    {
+      "names": [
+        "isNonSubstantiveBoundedSoftwareFollowUp"
+      ],
+      "group": "software-targets",
+      "bodySha256": "c46cee711d33f9c707f33c4974e8f9ae7c25028f2ed3b3fead863ae3ec117d1f"
+    },
+    {
+      "names": [
+        "PORTABLE_SESSION_PATH_TOKEN"
+      ],
+      "group": "portable-scope",
+      "bodySha256": "c1a492c85f238a5b45c75be4a10eedc85f545deb4c5397a9f818619b6e61d167"
+    },
+    {
+      "names": [
+        "BOUNDED_OSS_ATOMIC_WRITE_TOOL"
+      ],
+      "group": "portable-scope",
+      "bodySha256": "521f7104efbb12e2250d728bc99a7a85f000b360fdea626c6069bafca147b5f2"
+    },
+    {
+      "names": [
+        "pathUsesSymbolicLinkBelowBoundary"
+      ],
+      "group": "portable-scope",
+      "bodySha256": "d22468e789820cf84d03cafc4d431bd00d9997f89254759da14437fe0b02e6b7"
+    },
+    {
+      "names": [
+        "explicitPortableSessionDataRoots"
+      ],
+      "group": "portable-scope",
+      "bodySha256": "91407837a4342a7b642db49778996103830f7f87712cd07133401d4532a049a6"
+    },
+    {
+      "names": [
+        "isQuotedOrReportedBoundedSoftwareContract"
+      ],
+      "group": "portable-scope",
+      "bodySha256": "a32978556530049977f39dec74cb633c979b7a35a1475b38498a9ef278ffcd28"
+    },
+    {
+      "names": [
+        "isBoundedStructuredRemoteTechnicalUpload"
+      ],
+      "group": "remote-upload",
+      "bodySha256": "cd5836137fa9c569e06ae751ca0cdea1e6522bc37d8a1874bbba960a30ebdf5d"
+    },
+    {
+      "names": [
+        "commandFromInput"
+      ],
+      "group": "browser-channel",
+      "bodySha256": "4d7e418a32e3bc1c13ba2956a630400f6eb9338b36adeaf5255416ab07ab81f4"
+    },
+    {
+      "names": [
+        "NON_BROWSER_CHANNEL_PATTERN"
+      ],
+      "group": "browser-channel",
+      "bodySha256": "cd0c07e7759d9cf2922214cfad3912a288bfd6c582aab18d18f11132afbca238"
+    },
+    {
+      "names": [
+        "BROWSER_INTERFACE_PATTERN"
+      ],
+      "group": "browser-channel",
+      "bodySha256": "7edfdd6865c6bdae8d899c99309069e202d07a7eefd8c0995bba5855427db501"
+    },
+    {
+      "names": [
+        "BROWSER_LIFECYCLE_COMMANDS"
+      ],
+      "group": "browser-channel",
+      "bodySha256": "b96635a52ffc907aa2385bd47f8e88b359b81b39e3044669bf4b1588de755db9"
+    },
+    {
+      "names": [
+        "normalizeUserInstructionForChannelMatch"
+      ],
+      "group": "browser-channel",
+      "bodySha256": "a69365b39ec0b8b6184f325553bbf38775cb82b8101e77f9aeba50defe0436b4"
+    },
+    {
+      "names": [
+        "isBrowserLifecycleCommand"
+      ],
+      "group": "browser-channel",
+      "bodySha256": "63d02fc735786a90a64ee06a8b70f501793a81f3b4b994cd51c87b1c1ffa05bc"
+    },
+    {
+      "names": [
+        "preserveIndicesWithoutApiInterfaces"
+      ],
+      "group": "browser-channel",
+      "bodySha256": "ec6e146d211567ef706ffa8c0ecb8faa9b031d593d1a5f9c3f6e86cac8f27a59"
+    },
+    {
+      "names": [
+        "isNegatedDirectiveStart"
+      ],
+      "group": "browser-channel",
+      "bodySha256": "216f8350182ff5942615ccc2bbb64b95fe42f82e53ee68b985ed8c9a47079aab"
+    },
+    {
+      "names": [
+        "lastPatternMatchIndex"
+      ],
+      "group": "browser-channel",
+      "bodySha256": "53cfef687195d8c2ae9635204ab3847dcd88002dcdad76ec3e558f2470238f40"
+    },
+    {
+      "names": [
+        "lastBrowserHandoffIndex"
+      ],
+      "group": "browser-channel",
+      "bodySha256": "c7e23320bc3cde4a1bc00e583d88afeb9524ac5fd67ee70bbc22df84dc071000"
+    },
+    {
+      "names": [
+        "lastBrowserExclusionIndex"
+      ],
+      "group": "browser-channel",
+      "bodySha256": "4d579946b01586e65f0cd752a844ca11a531eaac0f99dba52882553bdcab3cc5"
+    },
+    {
+      "names": [
+        "lastBrowserRequestIndex"
+      ],
+      "group": "browser-channel",
+      "bodySha256": "09853d92b940ab745089063075f779bb85392bfb51a3b9fd40020a8ed73afed1"
+    },
+    {
+      "names": [
+        "lastNonBrowserChannelIndex"
+      ],
+      "group": "browser-channel",
+      "bodySha256": "8364c03483e245b8171f0e56294f38ab30d9c33f3b6f4867462c7b7110b30f9e"
+    },
+    {
+      "names": [
+        "BrowserChannelDirective"
+      ],
+      "group": "browser-channel",
+      "bodySha256": "7d329af02d6e51f5aaec74612f166a092f85c0db31273433c62e5d73954e5a43"
+    },
+    {
+      "names": [
+        "classifyBrowserChannelDirective"
+      ],
+      "group": "browser-channel",
+      "bodySha256": "efd0fe6b6c67ad85a767b9f9436d20540d4cff9c7afafc98146a33e02b41361e"
+    },
+    {
+      "names": [
+        "resolveBrowserChannelDirective"
+      ],
+      "group": "browser-channel",
+      "bodySha256": "22030626293095972bea194cf7eb354905cf1868af746aa5f94f0c991b7963ea"
+    },
+    {
+      "names": [
+        "isBrowserKeyboardText"
+      ],
+      "group": "gmail-channel",
+      "bodySha256": "20908ab09c8808bf2a6a23adfec24706803d92d2fda5b63d520f3ae43ed52da0"
+    },
+    {
+      "names": [
+        "explicitlyNamesGmailBrowserMutation"
+      ],
+      "group": "gmail-channel",
+      "bodySha256": "bf2c3cebe50b86002e06aea2d7028c4ac223bc88128a59bbbb85a50ae9e7d431"
+    },
+    {
+      "names": [
+        "CANONICAL_CONTEXTUAL_GMAIL_MUTATION_TOOLS"
+      ],
+      "group": "gmail-channel",
+      "bodySha256": "fedf16f45ef7d357d39aa31938d582fcc7731ea2f1a9b842a9564a59ab840e42"
+    },
+    {
+      "names": [
+        "CONTEXTUAL_GMAIL_COMPLETION_OBSERVATION_TOOLS"
+      ],
+      "group": "gmail-channel",
+      "bodySha256": "2ac8fcc91ebea04cd0e341bf44a923845d726ff674b917fa3284718db5034c46"
+    },
+    {
+      "names": [
+        "SET_COMPLETION_CRITERIA_TOOL_PATTERN"
+      ],
+      "group": "gmail-channel",
+      "bodySha256": "1e2212ec5e2ce6cdbdb8da2d77aaa71c3e5bf51d306ea97a2d360208cd1a4ce5"
+    },
+    {
+      "names": [
+        "containsOnlyContextualGmailCompletionObservations"
+      ],
+      "group": "gmail-channel",
+      "bodySha256": "41e4e9d5d6383134a69e71a93a01b41ea4b4f1cebf604bf1336b6327f66f6bea"
+    },
+    {
+      "names": [
+        "explicitlyNamesNonCanonicalContextualGmailMutation"
+      ],
+      "group": "gmail-channel",
+      "bodySha256": "61048d3008db61bf7cd1c94b065640ad0a8b2581d3cfed850f812736357c6da2"
+    },
+    {
+      "names": [
+        "OBSERVATIONAL_LEGACY_BROWSER_OPERATIONS"
+      ],
+      "group": "browser-authority",
+      "bodySha256": "3c2d19ee778b7027a0412f669e994656985d870a9ff48d0f1d10c1ab847101cd"
+    },
+    {
+      "names": [
+        "BrowserObjectiveAuthority"
+      ],
+      "group": "browser-authority",
+      "bodySha256": "36796b6b4e2bf6bc7135310b3864a4c7e8f81b0a9da0b6530e9bda6c575daa65"
+    },
+    {
+      "names": [
+        "classifyBrowserObjectiveAuthority"
+      ],
+      "group": "browser-authority",
+      "bodySha256": "6de3b0dbbf2befc8d376c65f0e16fc031a11ea211fbcfa0024a96b2200daa10c"
+    },
+    {
+      "names": [
+        "isHostOwnedConnectorObservation"
+      ],
+      "group": "connector-observation",
+      "bodySha256": "fab71b5fd02f2d6e254badee0982e9f6c5bb5536f8a8aa8d48ca5b51241c9814"
+    },
+    {
+      "names": [
+        "classifyToolEffect"
+      ],
+      "group": "tool-effects",
+      "bodySha256": "c553dd3ed78411e020ad5053f3de43d95eec21a385a0109f319a05774bab29d7"
+    },
+    {
+      "names": [
+        "withPermissionModeContext"
+      ],
+      "group": "permission-context",
+      "bodySha256": "4abf14bb71e0500069aface92cea262ec1452a4b500fad48ea2e512bcd843677"
+    },
+    {
+      "names": [
+        "readOnlyRemoteObservationRepairReason"
+      ],
+      "group": "permission-context",
+      "bodySha256": "e584a568254780ebd72b181514aadf994eecc05aa14927c7e932ad198fa55ca9"
+    },
+    {
+      "names": [
+        "canonicalTerminalReconciliationToolInput"
+      ],
+      "group": "terminal-reconciliation",
+      "bodySha256": "6c48a70fbc2c0c01006aad5714e2a2be90ecca46e559ee140cd8fd3c1983b723"
+    },
+    {
+      "names": [
+        "TERMINAL_RECONCILIATION_CAPABILITY_FIELD"
+      ],
+      "group": "terminal-reconciliation",
+      "bodySha256": "c6083de0372d840c17b392f9e7a81c6e9fd3222c27cd3730f35bd29dae42fd3a"
+    },
+    {
+      "names": [
+        "terminalReconciliationCoordinationTool"
+      ],
+      "group": "terminal-reconciliation",
+      "bodySha256": "3b0223aba90b02f5647af4f75df753e3e09c57b36e4bfe98ecdca7db6d8109e0"
+    },
+    {
+      "names": [
+        "deriveTerminalReconciliationInvocationCapability"
+      ],
+      "group": "terminal-reconciliation",
+      "bodySha256": "c8dfcebd9e7f33e305eda49cd3acb066a6e30f5bfcd0ee42212fecac29cc0c82"
+    },
+    {
+      "names": [
+        "terminalReconciliationToolAllowed"
+      ],
+      "group": "terminal-reconciliation",
+      "bodySha256": "40fa95642fb0033b3ddc513bb8982b26cb59fd152d184295e4af193e8888db23"
+    },
+    {
+      "names": [
+        "structuredGmailSendDiagnosticInput"
+      ],
+      "group": "gmail-send-diagnostics",
+      "bodySha256": "7255671a9d98fa289802766e53a08c4d428c664fcf2abe9b833ba61e24e9bf85"
+    },
+    {
+      "names": [
+        "runPreToolUseChecks"
+      ],
+      "group": "pipeline",
+      "bodySha256": "7ef5d37b8e04740e7bfdaf485fbfb70c7f1f03c6eaa577b957ba6261556810b2"
+    },
+    {
+      "names": [
+        "PromptInfo"
+      ],
+      "group": "ask-prompt",
+      "bodySha256": "428a0aa16bf6bf96b2272ba1165cbd6363db13558a09af85039a5f423bcdb99a"
+    },
+    {
+      "names": [
+        "hashCommand"
+      ],
+      "group": "ask-prompt",
+      "bodySha256": "420344be89c8ded669dc19a6591d90dced7e66d898844839db896b4bf7210a81"
+    },
+    {
+      "names": [
+        "toDisplayName"
+      ],
+      "group": "ask-prompt",
+      "bodySha256": "88437d28d7bbc3e516bfc4b7b3f9a7a99892cbea9e1112cdb5283e2e13a5bdbc"
+    },
+    {
+      "names": [
+        "classifyAdminApproval"
+      ],
+      "group": "ask-prompt",
+      "bodySha256": "479fa907f2f32109c512e26a9b018222fac86699f215e930ef1e97fe6d85f996"
+    },
+    {
+      "names": [
+        "wrapCommandForMacAdminPrompt"
+      ],
+      "group": "ask-prompt",
+      "bodySha256": "13203e2690135cf56facc68c126a77038a79fa292ba0fd7c2452482dbbdbc0a5"
+    },
+    {
+      "names": [
+        "shouldPromptInAskMode"
+      ],
+      "group": "ask-prompt",
+      "bodySha256": "ecefd624a0d3deab868057ef3cb9af6801cab37234a3c655934c8bf0f9df0188"
+    }
+  ],
+  "modules": [
+    {
+      "name": "contracts",
+      "lines": 205,
+      "file": "packages/shared/src/agent/core/pre-tool-use/contracts.ts",
+      "retained": false
+    },
+    {
+      "name": "tool-names",
+      "lines": 67,
+      "file": "packages/shared/src/agent/core/pre-tool-use/tool-names.ts",
+      "retained": false
+    },
+    {
+      "name": "input-transforms",
+      "lines": 200,
+      "file": "packages/shared/src/agent/core/pre-tool-use/input-transforms.ts",
+      "retained": false
+    },
+    {
+      "name": "config-validation",
+      "lines": 102,
+      "file": "packages/shared/src/agent/core/pre-tool-use/config-validation.ts",
+      "retained": false
+    },
+    {
+      "name": "cli-redirect",
+      "lines": 160,
+      "file": "packages/shared/src/agent/core/pre-tool-use/cli-redirect.ts",
+      "retained": false
+    },
+    {
+      "name": "autonomy-request-guards",
+      "lines": 70,
+      "file": "packages/shared/src/agent/core/pre-tool-use/autonomy-request-guards.ts",
+      "retained": false
+    },
+    {
+      "name": "gmail-state",
+      "lines": 91,
+      "file": "packages/shared/src/agent/core/pre-tool-use/gmail-state.ts",
+      "retained": false
+    },
+    {
+      "name": "dependency-state",
+      "lines": 14,
+      "file": "packages/shared/src/agent/core/pre-tool-use/dependency-state.ts",
+      "retained": false
+    },
+    {
+      "name": "gmail-evidence",
+      "lines": 191,
+      "file": "packages/shared/src/agent/core/pre-tool-use/gmail-evidence.ts",
+      "retained": false
+    },
+    {
+      "name": "gmail-cleanup",
+      "lines": 87,
+      "file": "packages/shared/src/agent/core/pre-tool-use/gmail-cleanup.ts",
+      "retained": false
+    },
+    {
+      "name": "gmail-execution",
+      "lines": 176,
+      "file": "packages/shared/src/agent/core/pre-tool-use/gmail-execution.ts",
+      "retained": false
+    },
+    {
+      "name": "gmail-reservations",
+      "lines": 97,
+      "file": "packages/shared/src/agent/core/pre-tool-use/gmail-reservations.ts",
+      "retained": false
+    },
+    {
+      "name": "gmail-receipts",
+      "lines": 258,
+      "file": "packages/shared/src/agent/core/pre-tool-use/gmail-receipts.ts",
+      "retained": false
+    },
+    {
+      "name": "dependency-guards",
+      "lines": 294,
+      "file": "packages/shared/src/agent/core/pre-tool-use/dependency-guards.ts",
+      "retained": false
+    },
+    {
+      "name": "external-action-hash",
+      "lines": 21,
+      "file": "packages/shared/src/agent/core/pre-tool-use/external-action-hash.ts",
+      "retained": false
+    },
+    {
+      "name": "remote-identity",
+      "lines": 138,
+      "file": "packages/shared/src/agent/core/pre-tool-use/remote-identity.ts",
+      "retained": false
+    },
+    {
+      "name": "remote-read-authority",
+      "lines": 54,
+      "file": "packages/shared/src/agent/core/pre-tool-use/remote-read-authority.ts",
+      "retained": false
+    },
+    {
+      "name": "signed-resume-targets",
+      "lines": 110,
+      "file": "packages/shared/src/agent/core/pre-tool-use/signed-resume-targets.ts",
+      "retained": false
+    },
+    {
+      "name": "resumed-remote-reads",
+      "lines": 48,
+      "file": "packages/shared/src/agent/core/pre-tool-use/resumed-remote-reads.ts",
+      "retained": false
+    },
+    {
+      "name": "sharepoint-contract",
+      "lines": 194,
+      "file": "packages/shared/src/agent/core/pre-tool-use/sharepoint-contract.ts",
+      "retained": false
+    },
+    {
+      "name": "remote-observation",
+      "lines": 151,
+      "file": "packages/shared/src/agent/core/pre-tool-use/remote-observation.ts",
+      "retained": false
+    },
+    {
+      "name": "software-scope",
+      "lines": 167,
+      "file": "packages/shared/src/agent/core/pre-tool-use/software-scope.ts",
+      "retained": false
+    },
+    {
+      "name": "software-targets",
+      "lines": 165,
+      "file": "packages/shared/src/agent/core/pre-tool-use/software-targets.ts",
+      "retained": false
+    },
+    {
+      "name": "portable-scope",
+      "lines": 68,
+      "file": "packages/shared/src/agent/core/pre-tool-use/portable-scope.ts",
+      "retained": false
+    },
+    {
+      "name": "remote-upload",
+      "lines": 121,
+      "file": "packages/shared/src/agent/core/pre-tool-use/remote-upload.ts",
+      "retained": false
+    },
+    {
+      "name": "browser-channel",
+      "lines": 203,
+      "file": "packages/shared/src/agent/core/pre-tool-use/browser-channel.ts",
+      "retained": false
+    },
+    {
+      "name": "gmail-channel",
+      "lines": 119,
+      "file": "packages/shared/src/agent/core/pre-tool-use/gmail-channel.ts",
+      "retained": false
+    },
+    {
+      "name": "browser-authority",
+      "lines": 77,
+      "file": "packages/shared/src/agent/core/pre-tool-use/browser-authority.ts",
+      "retained": false
+    },
+    {
+      "name": "connector-observation",
+      "lines": 132,
+      "file": "packages/shared/src/agent/core/pre-tool-use/connector-observation.ts",
+      "retained": false
+    },
+    {
+      "name": "tool-effects",
+      "lines": 178,
+      "file": "packages/shared/src/agent/core/pre-tool-use/tool-effects.ts",
+      "retained": false
+    },
+    {
+      "name": "permission-context",
+      "lines": 53,
+      "file": "packages/shared/src/agent/core/pre-tool-use/permission-context.ts",
+      "retained": false
+    },
+    {
+      "name": "terminal-reconciliation",
+      "lines": 169,
+      "file": "packages/shared/src/agent/core/pre-tool-use/terminal-reconciliation.ts",
+      "retained": false
+    },
+    {
+      "name": "gmail-send-diagnostics",
+      "lines": 45,
+      "file": "packages/shared/src/agent/core/pre-tool-use/gmail-send-diagnostics.ts",
+      "retained": false
+    },
+    {
+      "name": "pipeline",
+      "lines": 1162,
+      "file": "packages/shared/src/agent/core/pre-tool-use.ts",
+      "retained": true
+    },
+    {
+      "name": "ask-prompt",
+      "lines": 237,
+      "file": "packages/shared/src/agent/core/pre-tool-use/ask-prompt.ts",
+      "retained": false
+    }
+  ],
+  "dependencies": {
+    "contracts": [],
+    "tool-names": [],
+    "input-transforms": [
+      "contracts",
+      "tool-names"
+    ],
+    "config-validation": [
+      "contracts",
+      "tool-names"
+    ],
+    "cli-redirect": [
+      "tool-names"
+    ],
+    "autonomy-request-guards": [
+      "tool-names"
+    ],
+    "gmail-state": [],
+    "dependency-state": [
+      "dependency-guards"
+    ],
+    "gmail-evidence": [
+      "gmail-state"
+    ],
+    "gmail-cleanup": [
+      "gmail-state",
+      "dependency-state"
+    ],
+    "gmail-execution": [
+      "gmail-state",
+      "external-action-hash",
+      "gmail-cleanup"
+    ],
+    "gmail-reservations": [
+      "gmail-state",
+      "gmail-evidence",
+      "external-action-hash",
+      "gmail-cleanup"
+    ],
+    "gmail-receipts": [
+      "gmail-state",
+      "gmail-evidence",
+      "dependency-guards",
+      "dependency-state",
+      "gmail-cleanup"
+    ],
+    "dependency-guards": [
+      "tool-names",
+      "gmail-evidence",
+      "autonomy-request-guards"
+    ],
+    "external-action-hash": [],
+    "remote-identity": [
+      "browser-channel",
+      "software-scope"
+    ],
+    "remote-read-authority": [
+      "software-targets",
+      "remote-identity",
+      "software-scope"
+    ],
+    "signed-resume-targets": [
+      "browser-channel",
+      "software-targets",
+      "portable-scope",
+      "software-scope",
+      "remote-identity",
+      "remote-read-authority"
+    ],
+    "resumed-remote-reads": [
+      "signed-resume-targets"
+    ],
+    "sharepoint-contract": [
+      "signed-resume-targets"
+    ],
+    "remote-observation": [
+      "browser-channel",
+      "remote-read-authority",
+      "remote-identity",
+      "signed-resume-targets",
+      "resumed-remote-reads"
+    ],
+    "software-scope": [
+      "browser-channel"
+    ],
+    "software-targets": [
+      "software-scope",
+      "remote-identity",
+      "browser-channel",
+      "portable-scope"
+    ],
+    "portable-scope": [
+      "browser-channel"
+    ],
+    "remote-upload": [
+      "remote-identity",
+      "signed-resume-targets",
+      "portable-scope",
+      "browser-channel",
+      "software-targets",
+      "software-scope"
+    ],
+    "browser-channel": [],
+    "gmail-channel": [
+      "contracts",
+      "browser-channel",
+      "tool-names"
+    ],
+    "browser-authority": [],
+    "connector-observation": [],
+    "tool-effects": [
+      "contracts",
+      "tool-names",
+      "connector-observation",
+      "gmail-channel",
+      "browser-channel"
+    ],
+    "permission-context": [],
+    "terminal-reconciliation": [
+      "contracts"
+    ],
+    "gmail-send-diagnostics": [
+      "portable-scope"
+    ],
+    "pipeline": [
+      "contracts",
+      "gmail-state",
+      "gmail-evidence",
+      "external-action-hash",
+      "browser-channel",
+      "tool-effects",
+      "remote-observation",
+      "remote-upload",
+      "sharepoint-contract",
+      "tool-names",
+      "remote-read-authority",
+      "terminal-reconciliation",
+      "portable-scope",
+      "signed-resume-targets",
+      "browser-authority",
+      "dependency-state",
+      "autonomy-request-guards",
+      "dependency-guards",
+      "gmail-send-diagnostics",
+      "gmail-channel",
+      "permission-context",
+      "input-transforms",
+      "cli-redirect",
+      "config-validation",
+      "ask-prompt"
+    ],
+    "ask-prompt": [
+      "contracts",
+      "tool-names"
+    ]
+  },
+  "unitCycles": [
+    [
+      "clearContextualGmailPreflightAttestation",
+      "maybeFinalizeContextualGmailSessionCleanup",
+      "clearContextualGmailMutationLifecycleState"
+    ]
+  ],
+  "moduleCycles": []
+}
