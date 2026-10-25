@@ -1,0 +1,167 @@
+{
+  "status": "testé dans le candidat local, non intégré",
+  "tests": 95,
+  "explicitAnyRemoved": 21,
+  "maximumFileLines": 412,
+  "bodyProof": "12 groupes de scénarios comparés structurellement ; corps conservés après renommage des références aux mocks ; élargissement de deux paramètres de mock sans changement du JavaScript émis",
+  "runner": "Tous les nouveaux fichiers isolés sont référencés par le runner de compétences ; chaque fichier réussit dans son propre processus et les sept réussissent ensemble",
+  "checks": {
+    "pretool-split-tests": {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "./packages/shared/src/agent/core/__tests__/pre-tool-use-browser-channel.isolated.ts",
+        "./packages/shared/src/agent/core/__tests__/pre-tool-use-admission.isolated.ts",
+        "./packages/shared/src/agent/core/__tests__/pre-tool-use-input-transforms.isolated.ts",
+        "./packages/shared/src/agent/core/__tests__/pre-tool-use-ask-gate.isolated.ts",
+        "./packages/shared/src/agent/core/__tests__/pre-tool-use-pipeline-ordering.isolated.ts",
+        "./packages/shared/src/agent/core/__tests__/pre-tool-use-resume-authority.isolated.ts",
+        "./packages/shared/src/agent/core/__tests__/pre-tool-use-checks.isolated.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 0.92,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/pretool-split-tests.log"
+    },
+    "pretool-split-types": {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "native",
+        "--noEmit",
+        "-p",
+        "packages/shared/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 1.53,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/pretool-split-types.log"
+    },
+    "pretool-split-lint": {
+      "command": [
+        "rtk",
+        "bun",
+        "x",
+        "eslint",
+        "./packages/shared/src/agent/core/__tests__/pre-tool-use-browser-channel.isolated.ts",
+        "./packages/shared/src/agent/core/__tests__/pre-tool-use-admission.isolated.ts",
+        "./packages/shared/src/agent/core/__tests__/pre-tool-use-input-transforms.isolated.ts",
+        "./packages/shared/src/agent/core/__tests__/pre-tool-use-ask-gate.isolated.ts",
+        "./packages/shared/src/agent/core/__tests__/pre-tool-use-pipeline-ordering.isolated.ts",
+        "./packages/shared/src/agent/core/__tests__/pre-tool-use-resume-authority.isolated.ts",
+        "./packages/shared/src/agent/core/__tests__/pre-tool-use-checks.isolated.ts",
+        "packages/shared/src/agent/core/__tests__/pre-tool-use-fixture.ts",
+        "scripts/test-agent-competence.ts",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 1.62,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/pretool-split-lint.log"
+    },
+    "pretool-split-all-types": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 14.93,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/pretool-split-all-types.log"
+    },
+    "pretool-split-full-suite": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 139.85,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/pretool-split-full-suite.log"
+    },
+    "pre-tool-use-browser-channel-standalone": {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "./packages/shared/src/agent/core/__tests__/pre-tool-use-browser-channel.isolated.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 0.26,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/pre-tool-use-browser-channel-standalone.log"
+    },
+    "pre-tool-use-admission-standalone": {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "./packages/shared/src/agent/core/__tests__/pre-tool-use-admission.isolated.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 0.22,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/pre-tool-use-admission-standalone.log"
+    },
+    "pre-tool-use-input-transforms-standalone": {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "./packages/shared/src/agent/core/__tests__/pre-tool-use-input-transforms.isolated.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 0.23,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/pre-tool-use-input-transforms-standalone.log"
+    },
+    "pre-tool-use-ask-gate-standalone": {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "./packages/shared/src/agent/core/__tests__/pre-tool-use-ask-gate.isolated.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 0.23,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/pre-tool-use-ask-gate-standalone.log"
+    },
+    "pre-tool-use-pipeline-ordering-standalone": {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "./packages/shared/src/agent/core/__tests__/pre-tool-use-pipeline-ordering.isolated.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 0.23,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/pre-tool-use-pipeline-ordering-standalone.log"
+    },
+    "pre-tool-use-resume-authority-standalone": {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "./packages/shared/src/agent/core/__tests__/pre-tool-use-resume-authority.isolated.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 0.83,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/pre-tool-use-resume-authority-standalone.log"
+    },
+    "pre-tool-use-checks-standalone": {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "./packages/shared/src/agent/core/__tests__/pre-tool-use-checks.isolated.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 0.21,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/pre-tool-use-checks-standalone.log"
+    }
+  },
+  "remaining": {
+    "oversizedCodeFiles": 209,
+    "explicitAny": 708
+  },
+  "installedApplication": "Inchangée"
+}
