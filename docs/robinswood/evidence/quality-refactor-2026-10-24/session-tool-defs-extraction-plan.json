@@ -1,0 +1,407 @@
+{
+  "source": "packages/session-tools-core/src/tool-defs.ts",
+  "units": [
+    {
+      "names": [
+        "SubmitPlanSchema"
+      ],
+      "group": "schemas",
+      "bodySha256": "d90e0b784db143d01a0e32ec4af23717e9e1e57cc64702f7c8f5d410c7da692b"
+    },
+    {
+      "names": [
+        "ConfigValidateSchema"
+      ],
+      "group": "schemas",
+      "bodySha256": "bc4e2e83458d5e20358d057154c5b4bc182ff30a20ff4220acd58ef0d40ae9f4"
+    },
+    {
+      "names": [
+        "SkillValidateSchema"
+      ],
+      "group": "schemas",
+      "bodySha256": "2440923f9f0ae7eb5ce7fbb0b759136a276fc301e31494e0704ee6d503cd8c54"
+    },
+    {
+      "names": [
+        "MermaidValidateSchema"
+      ],
+      "group": "schemas",
+      "bodySha256": "d4a90c1c502830f25fc9c0f11387c60e532c3a8df36cd7ae8c3cf5a3129ddb87"
+    },
+    {
+      "names": [
+        "SourceTestSchema"
+      ],
+      "group": "schemas",
+      "bodySha256": "ba324e968b249781984881eff0dbdf52d266986494cdb38c983578e698afffb6"
+    },
+    {
+      "names": [
+        "SourceOAuthTriggerSchema"
+      ],
+      "group": "schemas",
+      "bodySha256": "1b690bdfa9a1444f6551ddca6dbec2da6ab03bcb4f3a6df48e133712809fb8a5"
+    },
+    {
+      "names": [
+        "CredentialPromptSchema"
+      ],
+      "group": "schemas",
+      "bodySha256": "0e005202024de94c85e4087024a08eeeb3cef8d5d671f847364bf68b4f4c8db5"
+    },
+    {
+      "names": [
+        "CallLlmSchema"
+      ],
+      "group": "schemas",
+      "bodySha256": "d1d0120ed332ad478e0451015b7a32f3d35ffdeb5bdeb809a80cc6546f0bc3c6"
+    },
+    {
+      "names": [
+        "UpdatePreferencesSchema"
+      ],
+      "group": "schemas",
+      "bodySha256": "1311bc19a28d84df030bbbfb2f890f29a515a2dcaf4e1f816b90b5f6558ed2c3"
+    },
+    {
+      "names": [
+        "TransformFilterScalar"
+      ],
+      "group": "schemas",
+      "bodySha256": "0645616bd9fb0bfff9c0741507cb42d27a4566b3f8ac2859b66d1b63d351c541"
+    },
+    {
+      "names": [
+        "TransformDataSchema"
+      ],
+      "group": "schemas",
+      "bodySha256": "bfaa18e3c682195b76a86eaa38618548cefd2d8a80a9efa0f60f931339954921"
+    },
+    {
+      "names": [
+        "ScriptSandboxSchema"
+      ],
+      "group": "schemas",
+      "bodySha256": "0b3b892bbd7ef8d681021057736d67d236df4df8b2e299861694984c43dc4e01"
+    },
+    {
+      "names": [
+        "RenderTemplateSchema"
+      ],
+      "group": "schemas",
+      "bodySha256": "97790a694b92bf537f548bd37dabfa2d68a5952f6fe0faddf335cd8aa86caea5"
+    },
+    {
+      "names": [
+        "SendDeveloperFeedbackSchema"
+      ],
+      "group": "schemas",
+      "bodySha256": "5b45a314f132f06597dc0f894fdb6779167601d5e4078c09272232012759583d"
+    },
+    {
+      "names": [
+        "BrowserToolSchema"
+      ],
+      "group": "schemas",
+      "bodySha256": "3c5bb83705e549a6f46621ee05d4ccc7d25bf04ba83f91dd98963ed80132106f"
+    },
+    {
+      "names": [
+        "SetSessionLabelsSchema"
+      ],
+      "group": "schemas",
+      "bodySha256": "7e215d1b977fa9d85ff2a26836263d75ab86313cabe3c6b0784769363cf34586"
+    },
+    {
+      "names": [
+        "SetSessionStatusSchema"
+      ],
+      "group": "schemas",
+      "bodySha256": "5067eaad1900066373b9faf088b42d82271052cf7de8a11e522c06f77786c03e"
+    },
+    {
+      "names": [
+        "GetSessionInfoSchema"
+      ],
+      "group": "schemas",
+      "bodySha256": "b921df637226e7d19422087a2bcfa37312c1480254df5e0e8cd22e555c391ac0"
+    },
+    {
+      "names": [
+        "ProjectLearningSchema"
+      ],
+      "group": "schemas",
+      "bodySha256": "6933d741d8e3d1b4108eba84535d60c4ada64286f8aaabd28926b33bc82ccdd4"
+    },
+    {
+      "names": [
+        "ListSessionsSchema"
+      ],
+      "group": "schemas",
+      "bodySha256": "58b39c20bca5f21e2a6b00b699d86fdf06100812432f3990c20a7f0dde84cbd6"
+    },
+    {
+      "names": [
+        "WaitSessionsSchema"
+      ],
+      "group": "schemas",
+      "bodySha256": "4c2af8a7a8a43d25314a612594e404db90020ac796c019dad95f1d8912c4a8c1"
+    },
+    {
+      "names": [
+        "ListBackgroundTasksSchema"
+      ],
+      "group": "schemas",
+      "bodySha256": "9b3ecdac0d9cb4bb40355f343bb5f370bdb33294e23c61fb1250fc6ddd2bcb3f"
+    },
+    {
+      "names": [
+        "SendAgentMessageSchema"
+      ],
+      "group": "schemas",
+      "bodySha256": "0e604ff159b310ca6f8a17a185da7529b3f7a18f89fc3ba62a282a8502220479"
+    },
+    {
+      "names": [
+        "ListMessagingChannelsSchema"
+      ],
+      "group": "schemas",
+      "bodySha256": "c789900a4f871de73da19b50ba4d24e1fd747be749fdb7fb8cd55dca5e432e18"
+    },
+    {
+      "names": [
+        "UnbindMessagingChannelSchema"
+      ],
+      "group": "schemas",
+      "bodySha256": "817fa49b05136c5ace27eff59ecbf8c5307f9c6aa850aedf6db1d7d7e56e14a6"
+    },
+    {
+      "names": [
+        "TOOL_DESCRIPTIONS"
+      ],
+      "group": "descriptions",
+      "bodySha256": "81b13ac50b13610713d6946dbf3c3bf0c91a95311ec343b5d181d3a3569aabef"
+    },
+    {
+      "names": [
+        "SessionToolHandler"
+      ],
+      "group": "contracts",
+      "bodySha256": "99c26d1a714ea25113541b5ee7d10f5ebe8fe0f17953b0a9742f926a8e9768a3"
+    },
+    {
+      "names": [
+        "SessionToolExecutionMode"
+      ],
+      "group": "contracts",
+      "bodySha256": "2f3a084cb6c43cb84862cc369683ffa1fae4e65f5a74210a454445ce954c349c"
+    },
+    {
+      "names": [
+        "SessionToolSafeMode"
+      ],
+      "group": "contracts",
+      "bodySha256": "08efd3c7ebbb89ca416bdbf98b1b8255bc1237bc9c2966907ba0b5d3088d1e07"
+    },
+    {
+      "names": [
+        "SessionToolDefBase"
+      ],
+      "group": "contracts",
+      "bodySha256": "e3b6ae6bc42d4c7924da0a17f1b109ade13faf0097127f2d1ba6189fdd0f642c"
+    },
+    {
+      "names": [
+        "RegistrySessionToolDef"
+      ],
+      "group": "contracts",
+      "bodySha256": "d3c5a93eef7283c5be3d2f62eea31ac12904aa3715669d85e9525b7c9f9edd53"
+    },
+    {
+      "names": [
+        "BackendSessionToolDef"
+      ],
+      "group": "contracts",
+      "bodySha256": "5d5edfcfa4cfcdc0ac560a71e879ef21812602b6b96f7fd9b2c7a502d1794bdc"
+    },
+    {
+      "names": [
+        "SessionToolDef"
+      ],
+      "group": "contracts",
+      "bodySha256": "686ca14f870167ee0ee383161fed7812ccbc410b739166cbeb7e12425c405f86"
+    },
+    {
+      "names": [
+        "defineRegistryTool"
+      ],
+      "group": "contracts",
+      "bodySha256": "de77a759bf33cb535e56993b20d5bd3a2b11a7e6f2a4fc2950850c5935391c73"
+    },
+    {
+      "names": [
+        "SESSION_TOOL_DEFS"
+      ],
+      "group": "registry",
+      "bodySha256": "a8d2affa6f6c15e9049b1315bfcdc5bbde32a0ff3eb6472112fda0e8c9a948e7"
+    },
+    {
+      "names": [
+        "SessionToolFilterOptions"
+      ],
+      "group": "registry",
+      "bodySha256": "ab7c262a3c0ca613df3d99a641a08044fe03aca8aacd446573aed11ab4af85d6"
+    },
+    {
+      "names": [
+        "getSessionToolDefs"
+      ],
+      "group": "registry",
+      "bodySha256": "845e55c3cefb9097e1ed359b85d376d241a199d86d117e3addd95cb7bd514435"
+    },
+    {
+      "names": [
+        "getSessionToolRegistry"
+      ],
+      "group": "registry",
+      "bodySha256": "ff97d3e58ccdab1b0893782f72aea01879d9458d4c20ff3a0882e2c0f7728c48"
+    },
+    {
+      "names": [
+        "getSessionToolNames"
+      ],
+      "group": "registry",
+      "bodySha256": "7776c83d6d3767ced245387e8705f777b1d163c695d47a081611843939b89efc"
+    },
+    {
+      "names": [
+        "getSessionBackendToolNames"
+      ],
+      "group": "registry",
+      "bodySha256": "1ce25fe88a8083c8ec352b37a6de2cf79b1facb8598cbc23631c7543059ebe59"
+    },
+    {
+      "names": [
+        "getSessionRegistryToolNames"
+      ],
+      "group": "registry",
+      "bodySha256": "04ebbd0e114e51e71173270bf9a09ce7eb698f1049bcdca5083943e26eb5b717"
+    },
+    {
+      "names": [
+        "SessionToolNameOptions"
+      ],
+      "group": "registry",
+      "bodySha256": "ecba7ca849c78128791cb1061ff5f7482962bdc8736fd395e78562484bd32bdc"
+    },
+    {
+      "names": [
+        "getSessionSafeAllowedToolNames"
+      ],
+      "group": "registry",
+      "bodySha256": "118e342d772625c5ae2de9d7d82c33ed650ea8076c9e780571184fbcf05b2b92"
+    },
+    {
+      "names": [
+        "getSessionSafeBlockedToolNames"
+      ],
+      "group": "registry",
+      "bodySha256": "6a9cf18205acb48e9b5735a332569299fb842c1c9906f0c9209b3d1a73588287"
+    },
+    {
+      "names": [
+        "SESSION_TOOL_NAMES"
+      ],
+      "group": "registry",
+      "bodySha256": "f99b7a075020ccd1cb63e27d04ec0787ba497aa9d53b6f76b1f66c59e137aa3b"
+    },
+    {
+      "names": [
+        "SESSION_BACKEND_TOOL_NAMES"
+      ],
+      "group": "registry",
+      "bodySha256": "c77e10edcfe6724f2ffc1c452326254a101a8a991f1829888e8f30701fa22a97"
+    },
+    {
+      "names": [
+        "SESSION_REGISTRY_TOOL_NAMES"
+      ],
+      "group": "registry",
+      "bodySha256": "2edaf96d169f19c2d115e0092d1e8a27dcc55016ef564fcc3984b1fc67b806ba"
+    },
+    {
+      "names": [
+        "SESSION_SAFE_ALLOWED_TOOL_NAMES"
+      ],
+      "group": "registry",
+      "bodySha256": "d07732c304b8e2fb88fe0d97ac147455faae3fdbb73854c916711bcfc6609dc2"
+    },
+    {
+      "names": [
+        "SESSION_SAFE_BLOCKED_TOOL_NAMES"
+      ],
+      "group": "registry",
+      "bodySha256": "9beac4a3a292b3f94e138a20369726fbb3cf79407f724405bd6cad94e6f52685"
+    },
+    {
+      "names": [
+        "SESSION_TOOL_REGISTRY"
+      ],
+      "group": "registry",
+      "bodySha256": "f7e4bfa492daf39b6beaf5b17a1c9802f5024977d05d66d9e10c572757952935"
+    },
+    {
+      "names": [
+        "JsonSchemaToolDef"
+      ],
+      "group": "json-schema",
+      "bodySha256": "467490a4c39aebfc0c42bf2f49449c41b24038a8bf07af358c2d4207be4607e0"
+    },
+    {
+      "names": [
+        "getToolDefsAsJsonSchema"
+      ],
+      "group": "json-schema",
+      "bodySha256": "de18aa37c41a98d3de4fc325c4af1f9a1fd3a77d86af8e079055a35a4b627015"
+    }
+  ],
+  "modules": [
+    {
+      "name": "schemas",
+      "lines": 209
+    },
+    {
+      "name": "descriptions",
+      "lines": 291
+    },
+    {
+      "name": "contracts",
+      "lines": 81
+    },
+    {
+      "name": "registry",
+      "lines": 185
+    },
+    {
+      "name": "json-schema",
+      "lines": 76
+    }
+  ],
+  "dependencies": {
+    "schemas": [],
+    "descriptions": [],
+    "contracts": [],
+    "registry": [
+      "contracts",
+      "descriptions",
+      "schemas"
+    ],
+    "json-schema": [
+      "registry",
+      "schemas"
+    ]
+  },
+  "unitCycles": [],
+  "moduleCycles": []
+}

@@ -85,9 +85,14 @@
     "Lint global sans erreur ni avertissement",
     "Parcours complets réels en staging local, compilation signée et intégration"
   ],
-  "updatedAt": "2026-10-25T05:33:30.590580+00:00",
+  "updatedAt": "2026-10-25T06:10:44.753932+00:00",
   "current": {
-    "oversizedCodeFiles": 198,
-    "explicitAny": 565
+    "commitPending": "Validation canonique des arguments et décomposition des définitions des outils de session",
+    "sourceGate": {
+      "max-lines": 197,
+      "no-explicit-any": 564
+    },
+    "lastEvidence": "session-tool-validation-summary.json",
+    "globalStatus": "en cours ; validation finale et missions réelles sous nouvelles dépendances non réalisées"
   }
 }
