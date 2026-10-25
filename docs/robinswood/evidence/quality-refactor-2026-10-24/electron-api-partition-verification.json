@@ -1,0 +1,28 @@
+{
+  "valid": true,
+  "source": "apps/electron/src/shared/types.ts",
+  "propertiesPreserved": 348,
+  "publicInterface": "ElectronAPI",
+  "baseContracts": [
+    "SessionTaskApi",
+    "WorkspaceFilesApi",
+    "DesktopApi",
+    "ConnectionApi",
+    "WorkspaceResourcesApi"
+  ],
+  "propertiesAndTheirTypesUnchanged": true,
+  "runtimeUnchangedAtPartition": true,
+  "decompositionProof": "electron-api-types-extraction-plan.json",
+  "currentSourceHashes": {
+    "apps/electron/src/shared/types/browser.ts": "86d9e6a77413517a2f039beb50d5a7fa2582f24aa3e7a2511248012ba79d1db9",
+    "apps/electron/src/shared/types/connection-api.ts": "014b6db5ee94b70ef9a28efc64c202978142770d906f9be56f6d45fa8a43b382",
+    "apps/electron/src/shared/types/desktop-api.ts": "6e18bbe97a539963bce72a542a79fd783568f0287803361dce14bf157a3c36a1",
+    "apps/electron/src/shared/types/messaging.ts": "aab6c82fb1238fd9e2f57da93f5a9055829f0fd972fbb6889159d95228426d06",
+    "apps/electron/src/shared/types/navigation.ts": "5739cc04d9c6ba8b9863b0c80d9dbb63d400b0bc07aaf01a59e3a49f9cf17c78",
+    "apps/electron/src/shared/types/session-task-api.ts": "0dc12342920d44f91bd0fb628b9f6727294b9621f80eaf6ff308d782ee9f3871",
+    "apps/electron/src/shared/types/transport.ts": "e4abaaaae4aeb08f2511ab3e28f7a3204b5343a251630fe5c6fe476eaec84e24",
+    "apps/electron/src/shared/types/workspace-files-api.ts": "c45cba1158fb3ae349544f31c3967a538443cabc16be6e2908a9b58c3b0bf45a",
+    "apps/electron/src/shared/types/workspace-resources-api.ts": "c2ea95fcdfd0b9946bc98d774bea95fff4f140b45d86fb58da87feadf34535a0"
+  },
+  "issues": []
+}
