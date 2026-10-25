@@ -92,8 +92,8 @@ describe('Robinswood visible branding', () => {
   })
 
   it('loads the window icon from electron-builder extraResources in packaged builds', () => {
-    const windowManager = readRepoFile('apps/electron/src/main/window-manager.ts')
-    expect(windowManager).toContain("join(process.resourcesPath, 'app', 'resources', iconName)")
+    const windowCreation = readRepoFile('apps/electron/src/main/window-manager/creation.ts')
+    expect(windowCreation).toContain("join(process.resourcesPath, 'app', 'resources', iconName)")
   })
 
   it('does not ship a Robinswood Assets.car that is just the upstream Craft asset catalog', () => {

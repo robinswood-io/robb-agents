@@ -1,0 +1,82 @@
+{
+  "status": "passed",
+  "classes": [
+    {
+      "source": "apps/electron/src/main/window-manager.ts",
+      "nativeMethodBodies": 1,
+      "nativeClassReferenceMethods": 0,
+      "nativeGeneratorDelegates": 0,
+      "nativeModuleBindings": 1,
+      "relocatedNativeDynamicImports": 1,
+      "protocolAliasesExpandedToNativeShapes": 0,
+      "nativeFieldsConstructorsAndMovedSignatures": true,
+      "retainedTypeOnlyChanges": [
+        "eventSink",
+        "setRpcEventSink",
+        "getRpcEventSink",
+        "pushToWindow"
+      ],
+      "movedTypeOnlyChanges": [],
+      "nativePublicExports": true,
+      "noAdditionalSharedState": true
+    },
+    {
+      "source": "apps/webui/src/offline-vault.ts",
+      "nativeMethodBodies": 26,
+      "nativeClassReferenceMethods": 0,
+      "nativeGeneratorDelegates": 0,
+      "nativeModuleBindings": 0,
+      "relocatedNativeDynamicImports": 0,
+      "protocolAliasesExpandedToNativeShapes": 0,
+      "nativeFieldsConstructorsAndMovedSignatures": true,
+      "retainedTypeOnlyChanges": [],
+      "movedTypeOnlyChanges": [],
+      "nativePublicExports": true,
+      "noAdditionalSharedState": true
+    },
+    {
+      "source": "packages/server-core/src/missions/BrokeredMissionConnectorExecutor.ts",
+      "nativeMethodBodies": 18,
+      "nativeClassReferenceMethods": 0,
+      "nativeGeneratorDelegates": 0,
+      "nativeModuleBindings": 0,
+      "relocatedNativeDynamicImports": 0,
+      "protocolAliasesExpandedToNativeShapes": 0,
+      "nativeFieldsConstructorsAndMovedSignatures": true,
+      "retainedTypeOnlyChanges": [],
+      "movedTypeOnlyChanges": [],
+      "nativePublicExports": true,
+      "noAdditionalSharedState": true
+    },
+    {
+      "source": "packages/server-core/src/specialized-profiles/SpecializedProfileService.ts",
+      "nativeMethodBodies": 10,
+      "nativeClassReferenceMethods": 0,
+      "nativeGeneratorDelegates": 0,
+      "nativeModuleBindings": 0,
+      "relocatedNativeDynamicImports": 0,
+      "protocolAliasesExpandedToNativeShapes": 0,
+      "nativeFieldsConstructorsAndMovedSignatures": true,
+      "retainedTypeOnlyChanges": [],
+      "movedTypeOnlyChanges": [],
+      "nativePublicExports": true,
+      "noAdditionalSharedState": true
+    },
+    {
+      "source": "packages/shared/src/specialized-profiles/registry-store.ts",
+      "nativeMethodBodies": 25,
+      "nativeClassReferenceMethods": 0,
+      "nativeGeneratorDelegates": 0,
+      "nativeModuleBindings": 0,
+      "relocatedNativeDynamicImports": 0,
+      "protocolAliasesExpandedToNativeShapes": 0,
+      "nativeFieldsConstructorsAndMovedSignatures": true,
+      "retainedTypeOnlyChanges": [],
+      "movedTypeOnlyChanges": [],
+      "nativePublicExports": true,
+      "noAdditionalSharedState": true
+    }
+  ],
+  "runtimeImportCycles": 0,
+  "maximumFileLines": 403
+}
