@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from 'bun:test';
+import { ChildProcess } from 'node:child_process';
 
 import { PiAgent, shouldRefreshPiOAuthBeforeSpawn } from '../pi-agent.ts';
 import type { BackendConfig } from '../backend/types.ts';
@@ -12,20 +13,22 @@ function createAgent(slug: string, expectedBindingId?: string): PiAgent {
     workspace: {
       id: 'ws-oauth-refresh-test',
       name: 'OAuth Refresh Test',
+      slug: 'oauth-refresh-test',
+      createdAt: 1,
       rootPath: '/tmp/craft-agent-oauth-refresh-test',
-    } as any,
+    },
     session: {
       id: 'session-oauth-refresh-test',
       workspaceRootPath: '/tmp/craft-agent-oauth-refresh-test',
       createdAt: Date.now(),
       lastUsedAt: Date.now(),
-    } as any,
+    },
     isHeadless: true,
   };
   return new PiAgent(config);
 }
 
-const mutex = (PiAgent as any).globalRefreshMutex as Map<string, Promise<unknown>>;
+const mutex = PiAgent['globalRefreshMutex'];
 
 afterEach(() => {
   mutex.clear();
@@ -65,11 +68,11 @@ describe('PiAgent OAuth refresh mutex', () => {
   it('starts refresh for typed auth errors emitted as provider events', async () => {
     const agent = createAgent('typed-auth-refresh-test');
     let refreshAttempts = 0;
-    (agent as any).refreshAndPushTokens = async () => {
+    agent['refreshAndPushTokens'] = async () => {
       refreshAttempts += 1;
     };
 
-    (agent as any).handleSubprocessEvent({
+    agent['handleSubprocessEvent']({
       type: 'message_end',
       message: {
         role: 'assistant',
@@ -77,7 +80,7 @@ describe('PiAgent OAuth refresh mutex', () => {
         errorMessage: 'Provided authentication token is expired. Please try signing in again.',
       },
     });
-    (agent as any).handleSubprocessEvent({ type: 'agent_end', willRetry: false });
+    agent['handleSubprocessEvent']({ type: 'agent_settled', aborted: false });
     await Promise.resolve();
 
     expect(refreshAttempts).toBe(1);
@@ -92,9 +95,9 @@ describe('PiAgent OAuth refresh mutex', () => {
     let credentialReads = 0;
     let joinedConcurrentOwner = false;
 
-    (agent as any).subprocess = {};
-    (agent as any).send = (message: Record<string, unknown>) => sent.push(message);
-    (agent as any).getPiAuth = async () => {
+    agent['subprocess'] = new ChildProcess();
+    agent['send'] = (message: Record<string, unknown>) => { sent.push(message); return true; };
+    agent['getPiAuth'] = async () => {
       credentialReads += 1;
       return {
         provider: 'openai-codex',
@@ -106,12 +109,12 @@ describe('PiAgent OAuth refresh mutex', () => {
       return { refreshed: false, bindingId };
     }));
 
-    await (agent as any).refreshAndPushTokens();
+    await agent['refreshAndPushTokens']();
 
     expect(joinedConcurrentOwner).toBe(true);
     expect(credentialReads).toBe(0);
     expect(sent).toEqual([]);
-    (agent as any).subprocess = null;
+    agent['subprocess'] = null;
     agent.destroy();
   });
 
@@ -122,12 +125,12 @@ describe('PiAgent OAuth refresh mutex', () => {
     const sent: Array<Record<string, unknown>> = [];
     const freshAuth = {
       provider: 'openai-codex',
-      credential: { type: 'api_key', key: 'fresh-token' },
+      credential: { type: 'api_key' as const, key: 'fresh-token' },
     };
 
-    (agent as any).subprocess = {};
-    (agent as any).send = (message: Record<string, unknown>) => sent.push(message);
-    (agent as any).getPiAuth = async () => {
+    agent['subprocess'] = new ChildProcess();
+    agent['send'] = (message: Record<string, unknown>) => { sent.push(message); return true; };
+    agent['getPiAuth'] = async () => {
       throw new Error('waiters must use the successful owner outcome');
     };
     mutex.set(`${slug}\u0000${bindingId}`, Promise.resolve({
@@ -136,10 +139,10 @@ describe('PiAgent OAuth refresh mutex', () => {
       bindingId,
     }));
 
-    await (agent as any).refreshAndPushTokens();
+    await agent['refreshAndPushTokens']();
 
     expect(sent).toEqual([{ type: 'token_update', piAuth: freshAuth }]);
-    (agent as any).subprocess = null;
+    agent['subprocess'] = null;
     agent.destroy();
   });
 
@@ -150,8 +153,8 @@ describe('PiAgent OAuth refresh mutex', () => {
     const sent: Array<Record<string, unknown>> = [];
     let joinedConcurrentOwner = false;
 
-    (agent as any).subprocess = {};
-    (agent as any).send = (message: Record<string, unknown>) => sent.push(message);
+    agent['subprocess'] = new ChildProcess();
+    agent['send'] = (message: Record<string, unknown>) => { sent.push(message); return true; };
     mutex.set(`${slug}\u0000${bindingId}`, Promise.resolve().then(() => {
       joinedConcurrentOwner = true;
       return {
@@ -164,11 +167,11 @@ describe('PiAgent OAuth refresh mutex', () => {
       };
     }));
 
-    await (agent as any).refreshAndPushTokens();
+    await agent['refreshAndPushTokens']();
 
     expect(joinedConcurrentOwner).toBe(true);
     expect(sent).toEqual([]);
-    (agent as any).subprocess = null;
+    agent['subprocess'] = null;
     agent.destroy();
   });
 });

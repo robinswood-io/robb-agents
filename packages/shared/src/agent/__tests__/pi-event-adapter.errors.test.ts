@@ -36,7 +36,7 @@ describe('error surfacing', () => {
         },
       })));
       expect(attemptEvents).toHaveLength(0);
-      return collect(adapter.adaptEvent(recordedPiEvent({ type: 'agent_end', willRetry: false })));
+      return collect(adapter.adaptEvent(recordedPiEvent({ type: 'agent_settled', aborted: false })));
     }
 
     it('should emit plain error for unclassified error messages', () => {
@@ -127,7 +127,6 @@ describe('provider retry recovery', () => {
         willRetry: true,
       })));
       expect(retryingAgentEnd).toHaveLength(0);
-      expect(adapter.shouldCompleteQueue(true)).toBe(false);
 
       const retryStatus = collect(adapter.adaptEvent(recordedPiEvent({
         type: 'auto_retry_start',
@@ -145,9 +144,8 @@ describe('provider retry recovery', () => {
       expect(recovered).toMatchObject([{ type: 'text_complete', text: 'Recovered answer' }]);
       expect(collect(adapter.adaptEvent(recordedPiEvent({ type: 'auto_retry_end', success: true, attempt: 1 })))).toHaveLength(0);
 
-      const completed = collect(adapter.adaptEvent(recordedPiEvent({ type: 'agent_end', willRetry: false })));
+      const completed = collect(adapter.adaptEvent(recordedPiEvent({ type: 'agent_settled', aborted: false })));
       expect(completed).toMatchObject([{ type: 'complete' }]);
-      expect(adapter.shouldCompleteQueue(true)).toBe(true);
 
       const allEvents = [...attemptError, ...retryingAgentEnd, ...retryStatus, ...recovered, ...completed];
       expect(allEvents.filter(event => event.type === 'error' || event.type === 'typed_error')).toHaveLength(0);
@@ -161,13 +159,12 @@ describe('provider retry recovery', () => {
         message: { role: 'assistant', stopReason: 'error', errorMessage: firstError },
       })));
       collect(adapter.adaptEvent(recordedPiEvent({ type: 'agent_end', willRetry: true })));
-      expect(adapter.shouldCompleteQueue(true)).toBe(false);
 
       collect(adapter.adaptEvent(recordedPiEvent({
         type: 'message_end',
         message: { role: 'assistant', stopReason: 'error', errorMessage: finalError },
       })));
-      const terminal = collect(adapter.adaptEvent(recordedPiEvent({ type: 'agent_end', willRetry: false })));
+      const terminal = collect(adapter.adaptEvent(recordedPiEvent({ type: 'agent_settled', aborted: false })));
 
       expect(terminal).toHaveLength(2);
       expect(terminal[0]).toMatchObject({
@@ -180,7 +177,6 @@ describe('provider retry recovery', () => {
       });
       expect(terminal[1]).toEqual({ type: 'complete' });
       expect(JSON.stringify(terminal)).not.toContain('first-request-id');
-      expect(adapter.shouldCompleteQueue(true)).toBe(true);
     });
   });
 });

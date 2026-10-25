@@ -34,3 +34,17 @@ export function prepareMessagesForOverflowContinuation<T extends ContinuationMes
   }
   return { messages, removedTrailingError: false };
 }
+
+/** The caller claims its single fallback attempt before entering this sequence. */
+export async function recoverContextOverflow<T extends ContinuationMessage>(session: {
+  waitForIdle(): Promise<void>;
+  compact(instructions: string): Promise<unknown>;
+  agent: { state: { messages: T[] }; continue(): Promise<void> };
+}): Promise<void> {
+  await session.waitForIdle();
+  await session.compact(OVERFLOW_RECOVERY_COMPACTION_INSTRUCTIONS);
+  const prepared = prepareMessagesForOverflowContinuation(session.agent.state.messages);
+  if (prepared.removedTrailingError) session.agent.state.messages = prepared.messages;
+  await session.agent.continue();
+  await session.waitForIdle();
+}

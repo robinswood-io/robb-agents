@@ -17,6 +17,7 @@ type RecordedToolMetadata = { intent?: string; displayName?: string; source?: st
 export type RecordedPiEvent =
   | { type: 'agent_start' | 'turn_start' | 'turn_end' | 'message_start' }
   | { type: 'agent_end'; willRetry?: boolean }
+  | { type: 'agent_settled'; aborted: boolean }
   | { type: 'message_update'; assistantMessageEvent: RecordedAssistantUpdate }
   | { type: 'message_end'; message: RecordedMessage; sdkMessageId?: string }
   | { type: 'pi_turn_anchor'; sdkMessageId?: string; sdkTurnAnchor?: string }

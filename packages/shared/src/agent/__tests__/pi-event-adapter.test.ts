@@ -57,8 +57,8 @@ describe('agent lifecycle', () => {
       expect(events).toHaveLength(0);
     });
 
-    it('should emit complete for agent_end', () => {
-      const events = collect(adapter.adaptEvent(recordedPiEvent({ type: 'agent_end' })));
+    it('should emit complete for settled SDK execution', () => {
+      const events = collect(adapter.adaptEvent(recordedPiEvent({ type: 'agent_settled', aborted: false })));
       expect(events).toHaveLength(1);
       expect(events[0]).toMatchObject({ type: 'complete' });
     });
@@ -108,7 +108,7 @@ describe('turn usage aggregation', () => {
           usage: makeUsage(250, 30, 150, 25, 0.045),
         },
       })));
-      const completed = collect(adapter.adaptEvent(recordedPiEvent({ type: 'agent_end' })));
+      const completed = collect(adapter.adaptEvent(recordedPiEvent({ type: 'agent_settled', aborted: false })));
 
       expect(streamed).toMatchObject([{ type: 'text_delta', text: 'Checking' }]);
       expect(firstCall.map(event => event.type)).toEqual(['text_complete', 'usage_update']);
@@ -150,7 +150,7 @@ describe('turn usage aggregation', () => {
           usage: makeUsage(500, 50, 100, 20, 0.08),
         },
       })));
-      collect(adapter.adaptEvent(recordedPiEvent({ type: 'agent_end' })));
+      collect(adapter.adaptEvent(recordedPiEvent({ type: 'agent_settled', aborted: false })));
 
       adapter.startTurn();
       collect(adapter.adaptEvent(recordedPiEvent({ type: 'turn_start' })));
@@ -163,7 +163,7 @@ describe('turn usage aggregation', () => {
           usage: makeUsage(40, 5, 10, 2, 0.006),
         },
       })));
-      const completed = collect(adapter.adaptEvent(recordedPiEvent({ type: 'agent_end' })));
+      const completed = collect(adapter.adaptEvent(recordedPiEvent({ type: 'agent_settled', aborted: false })));
 
       expect(completed[0]).toEqual({
         type: 'complete',
@@ -200,7 +200,7 @@ describe('turn usage aggregation', () => {
           usage: makeUsage(90, 7, 30, 5, 0.02),
         },
       })));
-      const completed = collect(adapter.adaptEvent(recordedPiEvent({ type: 'agent_end', willRetry: false })));
+      const completed = collect(adapter.adaptEvent(recordedPiEvent({ type: 'agent_settled', aborted: false })));
 
       expect(completed).toEqual([{
         type: 'complete',

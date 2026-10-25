@@ -140,7 +140,7 @@ it('drops cached tool inputs after terminal results and lifecycle resets', () =>
         toolName: 'mcp__example__read',
         args: { value: 'stale runtime' },
       })));
-      adapter.resetOverflowState();
+      adapter.resetRuntimeState();
       expect(eventOfType(collect(adapter.adaptEvent(recordedPiEvent({
         type: 'tool_execution_end',
         toolCallId: 'runtime-reset',

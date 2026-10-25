@@ -1,4 +1,7 @@
 #!/usr/bin/env node
+import { isContextOverflow } from '@earendil-works/pi-ai';
+import { findSdkTurnAnchor } from './turn-history.ts';
+import { abortSessionWithPendingApprovals } from './tool-approval-abort.ts';
 /**
  * Pi Agent Server
  *
@@ -65,7 +68,7 @@ import { createSystemPromptController } from './system-prompt-override.ts';
 import { createProviderHandoffPreflight } from './provider-handoff.ts';
 import { registerGoogleCodeAssistProvider } from './google-code-assist-provider.ts';
 import { assertPiAuthProviderContractEnabled } from './provider-contract-guard.ts';
-import { OVERFLOW_RECOVERY_COMPACTION_INSTRUCTIONS, prepareMessagesForOverflowContinuation } from './overflow-recovery.ts';
+import { recoverContextOverflow } from './overflow-recovery.ts';
 import { IncompleteToolTailRecovery, prepareMessagesForIncompleteTailContinuation } from './incomplete-tool-tail-recovery.ts';
 import { ToolLoopBudget } from './tool-loop-budget.ts';
 import { finishToolLoopResult, installToolLoopFeedback } from './tool-loop-feedback.ts';
@@ -146,7 +149,6 @@ type InboundMessage =
   | { type: 'set_thinking_level'; level: string }
   | { type: 'compact'; id: string; customInstructions?: string }
   | { type: 'abort_compaction'; id: string }
-  | { type: 'recover_overflow'; id: string }
   | { type: 'set_auto_compaction'; id: string; enabled: boolean }
   | RuntimeConfigUpdateMessage
   | { type: 'steer'; message: string }
@@ -177,7 +179,9 @@ type EnrichedToolExecutionStartEvent = Extract<AgentSessionEvent, { type: 'tool_
   toolMetadata?: ToolExecutionMetadata;
 };
 
-type OutboundAgentEvent = AgentSessionEvent | EnrichedToolExecutionStartEvent;
+type OutboundAgentEvent = AgentSessionEvent | EnrichedToolExecutionStartEvent
+  | (Extract<AgentSessionEvent, { type: 'message_end' }> & { sdkMessageId: string })
+  | { type: 'pi_turn_anchor'; sdkTurnAnchor: string; sdkMessageId: string };
 
 /** Messages to main process (stdout) */
 interface OutboundReady { type: 'ready'; sessionId: string | null; callbackPort: number }
@@ -860,7 +864,7 @@ function wrapSingleTool(tool: ToolDefinition<any, any>): ToolDefinition<any, any
 
     const finishResult = (result: AgentToolResult<any>) => finishToolLoopResult(result, loopDecision, {
       session: feedbackSession, isCurrentSession: () => piSession === feedbackSession, toolCallId, signal,
-      onHint: message => handleSessionEvent({ type: 'message_end', message }),
+      onHint: message => { if (feedbackSession) handleSessionEvent({ type: 'message_end', message }, feedbackSession); },
       onError: error => debugLog(`Tool-loop guidance unavailable: ${error instanceof Error ? error.message : String(error)}`),
     });
 
@@ -1188,8 +1192,22 @@ function extractToolExecutionMetadata(args: Record<string, unknown> | undefined)
     source: 'interceptor',
   };
 }
+let lastNativeSettlement: Extract<AgentSessionEvent, { type: 'agent_settled' }> = { type: 'agent_settled', aborted: false };
+let overflowRecoveryAttempted = false;
+const sdkMessageCorrelations = new WeakMap<object, string>();
 
-function handleSessionEvent(event: AgentSessionEvent): void {
+function handleSessionEvent(event: AgentSessionEvent, sourceSession: AgentSession): void {
+  if (piSession !== sourceSession) return;
+  if (event.type === 'agent_settled') { lastNativeSettlement = event; return; }
+  if (event.type === 'agent_end') return;
+  if (event.type === 'agent_start') lastNativeSettlement = { type: 'agent_settled', aborted: false };
+  if (event.type === 'turn_end' && event.message.role === 'assistant') {
+    const sdkTurnAnchor = findSdkTurnAnchor(sourceSession.sessionManager, event.message);
+    const sdkMessageId = sdkMessageCorrelations.get(event.message);
+    if (sdkTurnAnchor && sdkMessageId) {
+      send({ type: 'event', event: { type: 'pi_turn_anchor', sdkMessageId, sdkTurnAnchor } });
+    }
+  }
   let forwardedEvent: OutboundAgentEvent = event;
 
   // Log API errors for debugging and attach provider-native turn anchor for branch cutoffs.
@@ -1200,50 +1218,11 @@ function handleSessionEvent(event: AgentSessionEvent): void {
     }
 
     if (msg?.role === 'assistant' && piSession) {
-      // CRITICAL: do NOT read `getLeafId()` here.
-      //
-      // The Pi SDK fires `message_end` synchronously BEFORE calling
-      // `appendMessage(event.message)` (see `agent-session.js:_processAgentEvent`).
-      // At this moment the assistant entry does not yet exist in the
-      // SessionManager — `leafId` still points at the *previous* leaf, which for
-      // a plain text turn is the user message that triggered the response.
-      // Recording that wrong anchor and using it for `branch()` makes the next
-      // turn a sibling of the assistant message, dropping the assistant reply
-      // from the LLM's view of history (craft-agents-oss#782).
-      //
-      // Instead, attach the SDK's message id to the forwarded event so the main
-      // process can correlate this turn, then queue a microtask to read the
-      // correct leaf AFTER `appendMessage` has run. The microtask drains before
-      // any subsequent SDK event is dispatched, so the follow-up
-      // `pi_turn_anchor` event is delivered to the main process in the right
-      // order (after this `message_end`, before the next event).
-      const sdkMessageId = (msg as { id?: string }).id;
-      if (sdkMessageId) {
-        forwardedEvent = {
-          ...(event as Record<string, unknown>),
-          sdkMessageId,
-        } as unknown as OutboundAgentEvent;
-
-        const sessionManagerSnapshot = piSession.sessionManager;
-        queueMicrotask(() => {
-          // Defensive: session may have been disposed between the message_end
-          // emit and the microtask drain.
-          if (!piSession || piSession.sessionManager !== sessionManagerSnapshot) {
-            return;
-          }
-          const sdkTurnAnchor = sessionManagerSnapshot.getLeafId();
-          if (!sdkTurnAnchor) return;
-          send({
-            type: 'event',
-            event: {
-              type: 'pi_turn_anchor',
-              sdkMessageId,
-              sdkTurnAnchor,
-            } as unknown as OutboundAgentEvent,
-          });
-        });
-      }
-
+      // Correlate the event with its later persisted turn, including providers
+      // that do not supply message IDs. The SDK message itself stays untouched.
+      const sdkMessageId = sdkMessageCorrelations.get(event.message) ?? crypto.randomUUID();
+      sdkMessageCorrelations.set(event.message, sdkMessageId);
+      forwardedEvent = { ...event, sdkMessageId };
       // Register the planned batch for loop-budget diagnostics only. Proxy
       // execution remains sequential behind each invocation's PreToolUse gate.
       const content = (msg as { content?: Array<{ type: string; id?: string; name?: string; arguments?: unknown }> }).content;
@@ -1296,14 +1275,6 @@ function handleSessionEvent(event: AgentSessionEvent): void {
         isError: !!event.isError,
       });
     }
-  }
-
-  if (
-    event.type === 'agent_end'
-    && incompleteToolTailRecovery.shouldSuppressAgentEnd(event.messages)
-  ) {
-    debugLog('Held premature agent_end with an incomplete tail; scheduling bounded continuation');
-    return;
   }
 
   // Forward all events to main process
@@ -1371,13 +1342,15 @@ async function waitForCompaction(session: { isCompacting: boolean }, timeoutMs =
   }
   return true;
 }
-
 async function handlePrompt(msg: Extract<InboundMessage, { type: 'prompt' }>): Promise<void> {
   if (initConfig && typeof msg.modelRoutePinned === 'boolean') {
     initConfig.modelRoutePinned = msg.modelRoutePinned;
   }
   currentUserMessage = msg.message;
-  incompleteToolTailRecovery.beginPrompt();
+  if (incompleteToolTailRecovery.beginPrompt()) {
+    lastNativeSettlement = { type: 'agent_settled', aborted: false };
+    overflowRecoveryAttempted = false;
+  }
   toolLoopBudget.beginPrompt();
 
   try {
@@ -1429,7 +1402,7 @@ async function handlePrompt(msg: Extract<InboundMessage, { type: 'prompt' }>): P
     if (unsubscribeEvents) {
       unsubscribeEvents();
     }
-    unsubscribeEvents = session.subscribe(handleSessionEvent);
+    unsubscribeEvents = session.subscribe(event => handleSessionEvent(event, session));
 
     // Wait for any in-flight auto-compaction to avoid race (craft-agents-oss#464)
     const compactionSettled = await waitForCompaction(session);
@@ -1447,45 +1420,39 @@ async function handlePrompt(msg: Extract<InboundMessage, { type: 'prompt' }>): P
       ),
     });
 
-    const recoveryResult = await incompleteToolTailRecovery.recover(async () => {
+    await session.waitForIdle();
+    const continueIncompleteTail = async () => {
       const prepared = prepareMessagesForIncompleteTailContinuation(session.agent.state.messages);
-      if (prepared.removedAbortedAssistant) {
-        session.agent.state.messages = prepared.messages;
-        debugLog('Removed aborted assistant tail before incomplete-turn continuation');
-      }
-      debugLog('Continuing Pi turn from the last durable user/tool-result tail after premature agent_end');
+      if (prepared.removedAbortedAssistant) session.agent.state.messages = prepared.messages;
       await session.agent.continue();
-    });
-
+      await session.waitForIdle();
+      incompleteToolTailRecovery.observeSettledTail(session.agent.state.messages);
+    };
+    incompleteToolTailRecovery.observeSettledTail(session.agent.state.messages);
+    let recoveryResult = await incompleteToolTailRecovery.recover(continueIncompleteTail);
+    const lastMessage = session.agent.state.messages.at(-1);
+    if (!overflowRecoveryAttempted && !incompleteToolTailRecovery.isAbortRequested
+      && session.autoCompactionEnabled && lastMessage?.role === 'assistant'
+      && isContextOverflow(lastMessage)) {
+      overflowRecoveryAttempted = true;
+      await recoverContextOverflow(session);
+      incompleteToolTailRecovery.observeSettledTail(session.agent.state.messages);
+      recoveryResult = await incompleteToolTailRecovery.recover(continueIncompleteTail);
+    }
     if (recoveryResult === 'exhausted') {
       const message = 'The agent repeatedly stopped with an incomplete turn before producing a final response. Completed tool results were preserved; retry to resume safely.';
       debugLog('Incomplete tool-tail recovery exhausted');
       send({ type: 'error', message, code: 'incomplete_tool_tail' });
-      send({ type: 'event', event: { type: 'agent_end', messages: [], willRetry: false } });
-    } else if (recoveryResult === 'aborted') {
-      // The original incomplete agent_end was withheld. Close the parent queue
-      // without surfacing an error because this path was explicitly cancelled.
-      send({ type: 'event', event: { type: 'agent_end', messages: [], willRetry: false } });
     }
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
 
-    // No wrapper-side overflow recovery here. The Pi SDK's _checkCompaction
-    // already runs `_runAutoCompaction("overflow", true)` on overflow and
-    // calls agent.continue() to retry once. Running our own session.compact()
-    // in parallel raced against the SDK and is the documented cause of the
-    // AbortController crash in `_runAutoCompaction` (see
-    // plans/fix-pi-gpt-compaction.md). PiEventAdapter holds the Craft event
-    // queue open across the SDK's recovery flow so the recovered turn
-    // reaches the UI.
-
     debugLog(`Prompt failed: ${errorMsg}`);
     send({ type: 'error', id: msg.id, message: errorMsg, code: 'prompt_error' });
-    // Send synthetic agent_end so the main process event queue unblocks.
-    // willRetry: false — this is the terminal error path, no retry follows.
-    send({ type: 'event', event: { type: 'agent_end', messages: [], willRetry: false } });
   } finally {
-    incompleteToolTailRecovery.endPrompt();
+    if (incompleteToolTailRecovery.endPrompt()) {
+      send({ type: 'event', event: lastNativeSettlement });
+    }
   }
 }
 
@@ -1527,20 +1494,11 @@ function handlePreToolUseResponse(msg: Extract<InboundMessage, { type: 'pre_tool
 
 async function handleAbort(): Promise<void> {
   incompleteToolTailRecovery.requestAbort();
-  if (piSession) {
-    try {
-      await piSession.abort();
-    } catch (error) {
-      debugLog(`Abort failed: ${error instanceof Error ? error.message : String(error)}`);
-    }
+  try {
+    await abortSessionWithPendingApprovals(piSession, pendingPreToolUse);
+  } catch (error) {
+    debugLog('Abort failed: ' + (error instanceof Error ? error.message : String(error)));
   }
-
-  // Reject all pending pre-tool-use requests
-  for (const [, pending] of pendingPreToolUse) {
-    pending.resolve({ action: 'block', reason: 'Aborted' });
-  }
-  pendingPreToolUse.clear();
-
 }
 
 async function handleMiniCompletion(msg: Extract<InboundMessage, { type: 'mini_completion' }>): Promise<void> {
@@ -1642,72 +1600,6 @@ function handleAbortCompaction(msg: Extract<InboundMessage, { type: 'abort_compa
   debugLog(`[${msg.id}] Aborting compaction after host timeout`);
   piSession?.abortCompaction();
 }
-
-/**
- * Last-resort recovery invoked only after PiEventAdapter confirms the SDK did
- * not start its native overflow recovery, exhausted its retry, or hit the known
- * auto-compaction race. The adapter allows this path once per user turn.
- */
-async function handleRecoverOverflow(msg: Extract<InboundMessage, { type: 'recover_overflow' }>): Promise<void> {
-  let compactionStarted = false;
-  let compactionSucceeded = false;
-
-  try {
-    const session = await ensureSession();
-
-    // A late native compaction may still be unwinding when the main process
-    // sends this request. Serialize behind it before starting the manual pass.
-    const compactionSettled = await waitForCompaction(session, 15_000);
-    if (!compactionSettled) {
-      throw new Error('A previous compaction did not finish in time');
-    }
-    debugLog(`[${msg.id}] Starting guarded manual overflow compaction`);
-    compactionStarted = true;
-    await session.compact(OVERFLOW_RECOVERY_COMPACTION_INSTRUCTIONS);
-    compactionSucceeded = true;
-
-    const prepared = prepareMessagesForOverflowContinuation(session.agent.state.messages);
-    if (prepared.removedTrailingError) {
-      session.agent.state.messages = prepared.messages;
-      debugLog(`[${msg.id}] Removed trailing assistant overflow error before continuation`);
-    }
-
-    // Continue the already-persisted user turn instead of sending the prompt a
-    // second time. This avoids duplicating both text and image attachments.
-    await session.agent.continue();
-    debugLog(`[${msg.id}] Guarded overflow recovery completed`);
-  } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : String(error);
-    debugLog(`[${msg.id}] Guarded overflow recovery failed: ${errorMsg}`);
-
-    if (!compactionStarted) {
-      // No SDK compaction event exists to drain the adapter's held state.
-      send({
-        type: 'event',
-        event: {
-          type: 'compaction_end',
-          reason: 'overflow',
-          result: undefined,
-          aborted: false,
-          willRetry: false,
-          errorMessage: `Context overflow recovery failed: ${errorMsg}`,
-        },
-      });
-    } else if (compactionSucceeded) {
-      // The compaction succeeded but continuation failed. Surface one friendly
-      // terminal error and an agent_end so the main event queue cannot hang.
-      send({
-        type: 'error',
-        code: 'prompt_error',
-        message: `Context was compacted, but the response could not resume: ${errorMsg}`,
-      });
-      send({ type: 'event', event: { type: 'agent_end', messages: [], willRetry: false } });
-    }
-    // If session.compact() itself failed, it already emitted compaction_end
-    // with the detailed error and the adapter will close the held queue.
-  }
-}
-
 async function handleSetAutoCompaction(msg: Extract<InboundMessage, { type: 'set_auto_compaction' }>): Promise<void> {
   try {
     const session = await ensureSession();
@@ -1936,10 +1828,6 @@ async function processMessage(msg: InboundMessage): Promise<void> {
       break;
     case 'abort_compaction':
       handleAbortCompaction(msg);
-      break;
-
-    case 'recover_overflow':
-      await handleRecoverOverflow(msg);
       break;
 
     case 'set_auto_compaction':

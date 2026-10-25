@@ -642,18 +642,6 @@ export class PiAgent extends BaseAgent {
       this.adapter.setSessionDir(join(config.workspace.rootPath, 'sessions', config.session.id));
     }
 
-    // Wire the adapter's async overflow fallback into the event queue. The
-    // fallback fires when the SDK doesn't emit a compaction_start after a
-    // held overflow agent_end (e.g. _overflowRecoveryAttempted was already
-    // true). It runs outside adaptEvent() so it can't yield through the
-    // generator — instead, it calls these callbacks to enqueue the buffered
-    // error and terminate the iterator.
-    this.adapter.setOverflowFallbackHandlers(
-      (event) => this.eventQueue.enqueue(event),
-      () => this.eventQueue.complete(),
-      () => this.requestOverflowRecovery(),
-    );
-
     if (!config.isHeadless) {
       this.startConfigWatcher();
     }
@@ -1538,6 +1526,7 @@ export class PiAgent extends BaseAgent {
           break;
         }
 
+        this.adapter.clearPendingError();
         // Reject pending ensure_session_ready requests (used by branch preflight)
         for (const [id, pending] of this.pendingEnsureSessionReady) {
           pending.reject(new Error(rawMessage));
@@ -1581,9 +1570,8 @@ export class PiAgent extends BaseAgent {
           });
         }
 
-        // Note: The subprocess should follow this with a synthetic agent_end event
-        // which will call eventQueue.complete(). If it doesn't, handleSubprocessExit()
-        // will complete the queue when the process exits.
+        // The worker follows this with agent_settled after all prompt calls finish.
+        // A subprocess exit also completes the queue through handleSubprocessExit().
         break;
       }
 
@@ -1706,13 +1694,8 @@ export class PiAgent extends BaseAgent {
       this.eventQueue.enqueue(agentEvent);
     }
 
-    // Turn-completion is now adapter-driven so overflow recovery can hold the
-    // queue open across the SDK's compaction → agent.continue() sequence
-    // (see PiEventAdapter overflow state machine). The adapter returns true
-    // when the queue should terminate — either on a normal agent_end with no
-    // recovery in flight, or on a compaction_end failure that drains a held
-    // overflow.
-    if (this.adapter.shouldCompleteQueue(eventType === 'agent_end')) {
+    // The worker settles only after the SDK and deferred continuations finish.
+    if (eventType === 'agent_settled') {
       this.eventQueue.complete();
     }
   }
@@ -2955,7 +2938,7 @@ export class PiAgent extends BaseAgent {
 
     // Drop any cached pre-tool metadata for the dead subprocess.
     this.preToolMetadataByCallId.clear();
-    this.adapter.resetOverflowState();
+    this.adapter.resetRuntimeState();
     if (exitingRuntime) {
       this.confirmContextualGmailRuntimeTeardown(exitingRuntime);
     }
@@ -3029,18 +3012,6 @@ export class PiAgent extends BaseAgent {
   /** Host-triggered bounded-context compaction used by the session cost controller. */
   async compactContext(customInstructions?: string): Promise<{ summary: string; firstKeptEntryId: string; tokensBefore: number; estimatedTokensAfter?: number; compactionModel?: string } | null> {
     return this.requestCompact(customInstructions);
-  }
-
-  /**
-   * Ask the subprocess for one serialized manual compact-and-continue attempt
-   * after the Pi SDK's native overflow recovery was skipped or exhausted.
-   * Completion remains event-driven: compaction and recovered agent events flow
-   * through PiEventAdapter, which owns the bounded recovery state machine.
-   */
-  private requestOverflowRecovery(): void {
-    const id = `overflow-recovery-${++this.rpcIdCounter}`;
-    this.debug(`Requesting guarded overflow recovery (${id})`);
-    this.send({ type: 'recover_overflow', id });
   }
 
   /**
@@ -3816,7 +3787,7 @@ export class PiAgent extends BaseAgent {
     this.clearSubprocessReadyTimer();
     this.callbackPort = 0;
     this.preToolMetadataByCallId.clear();
-    this.adapter.resetOverflowState();
+    this.adapter.resetRuntimeState();
     if (result && runtimeContext) {
       this.confirmContextualGmailRuntimeTeardown(runtimeContext);
     }
@@ -3907,7 +3878,7 @@ export class PiAgent extends BaseAgent {
 
     // Clear any in-flight overflow-recovery state so a stale fallback timer
     // doesn't fire on a torn-down adapter.
-    this.adapter.resetOverflowState();
+    this.adapter.resetRuntimeState();
   }
 
   // ============================================================

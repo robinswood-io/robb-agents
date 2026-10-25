@@ -32,7 +32,11 @@
     "Build Electron réussi ; ancien bundle absent des ressources et des 506 entrées du manifeste protégé",
     "Seuil de lignes étendu aux workflows YAML, au SQL et au TOML ; un workflow historique supplémentaire dépasse le seuil",
     "Adaptateur Claude : 21 any remplacés par les branches natives discriminées SDKMessage ; contrat public préservé ; adaptateur 483 lignes, contrats 73 lignes",
-    "Tests Claude : 48 any retirés, fixtures historiques bornées et typées à une frontière de test explicite ; 37 scénarios conservés dans trois fichiers de 340 lignes au plus ; tests, typage et lint sans avertissement réussis"
+    "Tests Claude : 48 any retirés, fixtures historiques bornées et typées à une frontière de test explicite ; 37 scénarios conservés dans trois fichiers de 340 lignes au plus ; tests, typage et lint sans avertissement réussis",
+    "Arrêt Pi et reprise nouvelle demande vérifiés avec le SDK réel hors réseau ; deux reproductions rouges puis correctifs verts",
+    "Clôture Pi après tous les traitements différés et références exactes du journal ; 87 tests adaptateur, suite worker, tests OAuth sans any, 16 configurations TypeScript et suite globale réussis",
+    "Adaptateur Pi décomposé en trois fichiers de 435, 251 et 150 lignes ; temporisations et commande de récupération inter-processus retirées",
+    "Build Electron complet réussi via la commande canonique ; application installée inchangée"
   ],
   "pending": [
     "Découpage des autres fichiers au-delà de 500 lignes",
@@ -40,9 +44,9 @@
     "Lint global sans erreur ni avertissement",
     "Parcours complets réels en staging local, compilation signée et intégration"
   ],
-  "updatedAt": "2026-10-24T23:21:40.684088+00:00",
+  "updatedAt": "2026-10-25T00:28:35.285836+00:00",
   "current": {
-    "over500": 228,
-    "explicitAny": 1094
+    "over500": 227,
+    "explicitAny": 1073
   }
 }
