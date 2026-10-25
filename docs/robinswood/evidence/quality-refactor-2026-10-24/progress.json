@@ -66,7 +66,9 @@
     "Autorisation finale extraite dans un module de 279 lignes ; corps des instructions et ordre conservés ; union native des résultats et références des claims/capacités préservées ; fichier principal réduit à 861 lignes",
     "95 scénarios ciblés, corps et imports, 16 configurations TypeScript, suite complète (141,28 s), build et lint du module sans avertissement réussis",
     "Calculs d’autorité d’un outil séparés dans un module de 180 lignes ; 19 instructions et rejets natifs conservés ; fichier principal réduit à 754 lignes",
-    "95 scénarios ciblés, preuve indépendante, corps et imports, 16 configurations TypeScript, suite complète (142,29 s), build et lint du module sans avertissement réussis"
+    "95 scénarios ciblés, preuve indépendante, corps et imports, 16 configurations TypeScript, suite complète (142,29 s), build et lint du module sans avertissement réussis",
+    "Autorité contextuelle Gmail séparée dans un module de 188 lignes au plus ; 23 instructions et leurs blocs conservés ; données d’entrée et observations existantes préservées ; fichier principal réduit à 647 lignes",
+    "95 scénarios, preuve indépendante des corps et de l’ordre, 16 configurations TypeScript, suite complète (140,42 s), build et lint du module sans avertissement réussis ; import de type manquant corrigé sans changement du code exécuté"
   ],
   "pending": [
     "Découpage des autres fichiers au-delà de 500 lignes",
@@ -74,7 +76,7 @@
     "Lint global sans erreur ni avertissement",
     "Parcours complets réels en staging local, compilation signée et intégration"
   ],
-  "updatedAt": "2026-10-25T03:21:07.480291+00:00",
+  "updatedAt": "2026-10-25T03:28:31.621884+00:00",
   "current": {
     "oversizedCodeFiles": 209,
     "explicitAny": 708

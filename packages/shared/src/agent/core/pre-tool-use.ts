@@ -24,21 +24,17 @@ import { resolve } from "node:path";
 import { expandPath } from "../../utils/paths.ts";
 import { shouldAllowToolInMode, getPermissionModeDiagnostics } from "../mode-manager.ts";
 import { type PermissionsContext } from "../permissions-config.ts";
-import { contextualGmailExactEffectExpectationFromObjective, contextualGmailReplyPreflightAttestationFromObjective, contextualGmailReplyRecoveryReason, contextualGmailTargetScopedAuthorizationSegments, externalActionAuthorityPolicySegments, hasContextualGmailReplyMention, hasUnresolvedRemoteScopeTarget, hasUnresolvedSensitiveExternalActionTarget, isContextualGmailReplyAuthorizedByObjective, isSensitiveExternalActionAuthorizedByObjective, isSensitiveExternalActionConfirmationRequestedByObjective, isSensitiveExternalActionOtherwiseAuthorizedByObjective, parseStructuredGmailSendResumeSegment, structuredGmailSendAuthorizationDiagnostic, type ContextualGmailReplyPreflightIntent } from "./sensitive-external-action.ts";
+import { contextualGmailTargetScopedAuthorizationSegments, externalActionAuthorityPolicySegments, hasContextualGmailReplyMention, hasUnresolvedRemoteScopeTarget, hasUnresolvedSensitiveExternalActionTarget, isSensitiveExternalActionAuthorizedByObjective, isSensitiveExternalActionConfirmationRequestedByObjective, isSensitiveExternalActionOtherwiseAuthorizedByObjective } from "./sensitive-external-action.ts";
 import { checkObjectiveEvidenceBeforeMutation } from "./objective-evidence-gate.ts";
 import { classifyReadOnlyRemoteObservationRepair, classifyNestedSshReadOnlyRemoteObservationRepair, containsLocalSshTransportInvocation } from "./registered-observation.ts";
-import { redundantlyAsksPermissionForSellsyReadOnlyOAuth } from "./pre-tool-use/autonomy-request-guards.ts";
 import { classifyBrowserObjectiveAuthority } from "./pre-tool-use/browser-authority.ts";
 import { isBrowserLifecycleCommand, resolveBrowserChannelDirective } from "./pre-tool-use/browser-channel.ts";
 import type { PreToolUseCheckResult, PreToolUseInput } from "./pre-tool-use/contracts.ts";
-import { redundantlyAsksAboutEstablishedThirdPartyDependency } from "./pre-tool-use/dependency-guards.ts";
-import { observedResolvedThirdPartyDependencies, observedThirdPartyDependencies } from "./pre-tool-use/dependency-state.ts";
 import { hashSensitiveExternalActionOperation } from "./pre-tool-use/external-action-hash.ts";
 import { explicitlyNamesGmailBrowserMutation, explicitlyNamesNonCanonicalContextualGmailMutation, isBrowserKeyboardText } from "./pre-tool-use/gmail-channel.ts";
-import { contextualGmailObjectiveFingerprint, contextualGmailObjectiveProvidesClosedExactHumanAnchor, currentContextualGmailPreflightAttestation } from "./pre-tool-use/gmail-evidence.ts";
-import { structuredGmailSendDiagnosticInput } from "./pre-tool-use/gmail-send-diagnostics.ts";
+import { contextualGmailObjectiveFingerprint } from "./pre-tool-use/gmail-evidence.ts";
 import type { ContextualGmailToolUseClaim } from "./pre-tool-use/gmail-state.ts";
-import { CONTEXTUAL_GMAIL_BOUND_REPLY_TOOLS, CONTEXTUAL_GMAIL_PREFLIGHT_TOOLS, contextualGmailPreflightAttestations, contextualGmailSessionsPendingFinalCleanup, contextualGmailToolUseClaims, inFlightContextualGmailReplies, observedContextualGmailReads, pendingContextualGmailPreflights } from "./pre-tool-use/gmail-state.ts";
+import { CONTEXTUAL_GMAIL_BOUND_REPLY_TOOLS, CONTEXTUAL_GMAIL_PREFLIGHT_TOOLS, contextualGmailPreflightAttestations, contextualGmailSessionsPendingFinalCleanup, contextualGmailToolUseClaims, inFlightContextualGmailReplies, pendingContextualGmailPreflights } from "./pre-tool-use/gmail-state.ts";
 import { stripToolMetadata } from "./pre-tool-use/input-transforms.ts";
 import { readOnlyRemoteObservationRepairReason, withPermissionModeContext } from "./pre-tool-use/permission-context.ts";
 import { TERMINAL_RECONCILIATION_CAPABILITY_FIELD, deriveTerminalReconciliationInvocationCapability } from "./pre-tool-use/terminal-reconciliation.ts";
@@ -46,7 +42,8 @@ import { BUILT_IN_MCP_SERVERS, FILE_WRITE_TOOLS, REMOTE_COMMAND_TOOL_PATTERN } f
 import { checkExecutionPrerequisites } from "./pre-tool-use/execution-prerequisites.ts";
 import { prepareToolInput } from "./pre-tool-use/tool-input-preparation.ts";
 import { authorizePreparedTool } from "./pre-tool-use/tool-authorization.ts";
-import { classifyToolAuthority } from './pre-tool-use/tool-authority.ts';
+import { classifyToolAuthority } from "./pre-tool-use/tool-authority.ts";
+import { evaluateGmailAuthority } from './pre-tool-use/gmail-authority.ts';
 
 export function runPreToolUseChecks(ctx: PreToolUseInput): PreToolUseCheckResult {
   const {
@@ -240,133 +237,29 @@ export function runPreToolUseChecks(ctx: PreToolUseInput): PreToolUseCheckResult
     onDebug?.(`User channel constraint: blocking ${toolName}`);
     return { type: 'block', reason };
   }
-  const contextualGmailObjective = contextualGmailObjectiveFingerprint(acceptedAuthorizationSegments);
-  const observedDependencyState = observedThirdPartyDependencies.get(sessionId);
-  const currentObservedDependencies = observedDependencyState
-    && observedDependencyState.expiresAt > Date.now()
-    && observedDependencyState.objectiveFingerprint === contextualGmailObjective
-    ? observedDependencyState.dependencies
-    : [];
-  if (observedDependencyState && currentObservedDependencies.length === 0) {
-    observedThirdPartyDependencies.delete(sessionId);
-  }
-  const observedResolvedDependencyState = observedResolvedThirdPartyDependencies.get(sessionId);
-  const currentObservedResolvedDependencies = observedResolvedDependencyState
-    && observedResolvedDependencyState.expiresAt > Date.now()
-    && observedResolvedDependencyState.objectiveFingerprint === contextualGmailObjective
-    ? observedResolvedDependencyState.dependencies
-    : [];
-  if (observedResolvedDependencyState && currentObservedResolvedDependencies.length === 0) {
-    observedResolvedThirdPartyDependencies.delete(sessionId);
-  }
-  const observedRead = observedContextualGmailReads.get(sessionId);
-  if (observedRead && (observedRead.expiresAt <= Date.now()
-    || observedRead.objectiveFingerprint !== contextualGmailObjective)) {
-    observedContextualGmailReads.delete(sessionId);
-  }
-  const observedContextualGmailPreflight = contextualGmailReplyPreflightAttestationFromObjective(
-    toolName,
-    input,
-    targetScopedContextualGmailSegments,
-  );
-  if (contextualGmailPreflightTool
-    && targetScopedContextualGmailSegments !== policyAuthorizationSegments
-    && (!observedContextualGmailPreflight
-      || contextualGmailExactEffectExpectationFromObjective(targetScopedContextualGmailSegments)?.expectedSenderEmail === undefined)
-    && input.expectedSenderEmail !== undefined) {
-    return {
-      type: 'block',
-      reason: 'Validation failed: this selected Gmail reply did not specify a From identity. Omit expectedSenderEmail and retry the same read-only preflight using the connected Gmail profile; the signed connector receipt will report its actual sender. Do not ask the user for another authorization or an internal message ID.',
-    };
-  }
-  let eligibleContextualGmailPreflight: ContextualGmailReplyPreflightIntent | undefined;
-  if (observedContextualGmailPreflight) {
-    const read = observedContextualGmailReads.get(sessionId);
-    const matchingRead = read && read.expiresAt > Date.now()
-      && read.objectiveFingerprint === contextualGmailObjective
-      && read.messageId === observedContextualGmailPreflight.messageId;
-    const exactHumanAnchor = contextualGmailObjectiveProvidesClosedExactHumanAnchor(
-      targetScopedContextualGmailSegments,
-      observedContextualGmailPreflight,
-    );
-    if (matchingRead || exactHumanAnchor) {
-      eligibleContextualGmailPreflight = observedContextualGmailPreflight;
-    }
-  }
-  const contextualGmailPreflightAttestation = currentContextualGmailPreflightAttestation(
+
+  const gmailAuthority = evaluateGmailAuthority({
     sessionId,
-    contextualGmailObjective,
-  );
-  if (redundantlyAsksPermissionForSellsyReadOnlyOAuth(toolName, input)) {
-    return {
-      type: 'block',
-      reason: 'Input request rejected: a read-only Sellsy OAuth handshake is already an admitted connector observation. Start mcp__atria-sellsy__atria_sellsy_oauth_start with only read scopes, then use the provider callback if it actually requires account consent or MFA. Do not ask for an additional Robb Agents permission.',
-    };
-  }
-  if (redundantlyAsksAboutEstablishedThirdPartyDependency(
     toolName,
     input,
+    dataFolderPath,
+  }, {
+    acceptedAuthorizationSegments,
+    targetScopedContextualGmailSegments,
+    contextualGmailPreflightTool,
     policyAuthorizationSegments,
-    currentObservedDependencies,
-    currentObservedResolvedDependencies,
-  )) {
-    return {
-      type: 'block',
-      reason: 'Input request rejected: the accepted objective already establishes that this exact access item is pending from an identified third party. Finish all independent safe work, report the precise external dependency and its evidence, and keep any already-authorized monitor active. Do not ask the user to choose the same wait state again.',
-    };
-  }
-  const structuredGmailSendDiagnostic = sensitiveAction
-    ? structuredGmailSendAuthorizationDiagnostic(
-      toolName,
-      structuredGmailSendDiagnosticInput(
-        input,
-        acceptedAuthorizationSegments,
-        dataFolderPath,
-      ),
-      acceptedAuthorizationSegments,
-    )
-    : { decision: 'not-applicable' as const, mismatchCategories: [] };
-  const structuredGmailSendDecision = structuredGmailSendDiagnostic.decision;
-  let contextualGmailPolicySegments = targetScopedContextualGmailSegments;
-  if (structuredGmailSendDecision === 'authorized') {
-    for (let index = acceptedAuthorizationSegments.length - 1; index >= 0; index -= 1) {
-      if (parseStructuredGmailSendResumeSegment(acceptedAuthorizationSegments[index] ?? '')) {
-        // The closed marker is a new-send authority boundary. Historical
-        // thread-reply context before it cannot reclassify this exact send,
-        // while same-segment and later reply directives remain visible.
-        contextualGmailPolicySegments = targetScopedContextualGmailSegments.slice(index);
-        break;
-      }
-    }
-  }
-  const contextualReplyRecovery = sensitiveAction
-    ? contextualGmailReplyRecoveryReason(
-      toolName,
-      input,
-      contextualGmailPolicySegments,
-      contextualGmailPreflightAttestation,
-    )
-    : undefined;
-  const contextualReplyAuthorizedByObjective = !!sensitiveAction
-    && !contextualReplyRecovery
-    && isContextualGmailReplyAuthorizedByObjective(
-      toolName,
-      input,
-      contextualGmailPolicySegments,
-      contextualGmailPreflightAttestation,
-    );
-  // A structured restart is a closed payload contract. If the current Gmail
-  // mutation diverges from it, neither the generic objective matcher nor a
-  // later permission prompt may widen that exact human authorization.
-  if (structuredGmailSendDecision === 'invalid') {
-    const mismatchCategories = structuredGmailSendDiagnostic.mismatchCategories.length > 0
-      ? structuredGmailSendDiagnostic.mismatchCategories.join(', ')
-      : 'closed-contract-mismatch';
-    return {
-      type: 'block',
-      reason: `Objective authority: this Gmail send does not exactly match the authenticated structured payload. Mismatch categories (field names only; no values reflected): ${mismatchCategories}. Canonical input contract: include exact "to", "sendAsEmail", "subject", "body", and "attachmentPaths" values from the authenticated payload, with "attachmentPaths" either empty or containing its one bounded session PDF, plus "isHtml": false; "cc" and "bcc" may be omitted or must be empty strings. Optional "requireKnownContacts", "allowExternal", and "checkContacts" must be booleans; optional "_displayName" and "_intent" must be strings. Do not include "from", "replyTo", aliases, or any unknown field. Reconcile with reads and retry only that canonical payload; do not request broader permission.`,
-    };
-  }
+    sensitiveAction,
+  });
+  if ('type' in gmailAuthority) return gmailAuthority;
+  const {
+    contextualGmailObjective,
+    eligibleContextualGmailPreflight,
+    contextualGmailPreflightAttestation,
+    structuredGmailSendDecision,
+    contextualGmailPolicySegments,
+    contextualReplyRecovery,
+    contextualReplyAuthorizedByObjective,
+  } = gmailAuthority;
   const uploadRequiresBoundedObjectiveAuthority = toolName === 'mcp__rbw-servers__ssh_upload'
     && !!dataFolderPath;
   const sensitiveActionAuthorizedByObjective = sensitiveAction
@@ -733,7 +626,7 @@ export function runPreToolUseChecks(ctx: PreToolUseInput): PreToolUseCheckResult
   });
 }
 
-/** Direct classification of tool authority with native early block decisions and immutable calculated facts. */
+/** Existing contextual Gmail and dependency authority evaluated directly with preserved observations and native block decisions. */
 export type { PreToolUseContext, PathExpansionResult, SkillQualificationResult, MetadataStrippingResult, ConfigValidationResult, DeclaredToolCapabilities, ToolEffectDescriptor, PreToolUseCheckResult, PreToolUseInput, PermissionManagerLike, PrerequisiteManagerLike } from './pre-tool-use/contracts.ts';
 export { BUILT_IN_TOOLS, FILE_PATH_TOOLS, CONFIG_WRITE_TOOLS, LABELS_BLOCKED_FILE_TOOLS } from './pre-tool-use/tool-names.ts';
 export { expandToolPaths, qualifySkillName, stripToolMetadata, stripMcpMetadata } from './pre-tool-use/input-transforms.ts';

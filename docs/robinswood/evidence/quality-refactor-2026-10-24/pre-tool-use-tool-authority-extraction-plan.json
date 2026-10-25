@@ -44,5 +44,8 @@
     "tool-authority": []
   },
   "unitCycles": [],
-  "moduleCycles": []
+  "moduleCycles": [],
+  "retainedTransformProofs": [
+    "pretool-gmail-authority-body-proof.json"
+  ]
 }

@@ -1774,6 +1774,7 @@
   "retainedTransformProofs": [
     "pretool-first-phases-body-proof.json",
     "pretool-authorization-body-proof.json",
-    "pretool-tool-authority-body-proof.json"
+    "pretool-tool-authority-body-proof.json",
+    "pretool-gmail-authority-body-proof.json"
   ]
 }
