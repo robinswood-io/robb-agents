@@ -103,27 +103,32 @@
     "Lint global sans erreur ni avertissement",
     "Parcours complets réels en staging local, compilation signée et intégration"
   ],
-  "updatedAt": "2026-10-25T18:24:23.017008+00:00",
+  "updatedAt": "2026-10-25T18:44:01.266444+00:00",
   "current": {
-    "lastEvidence": "pi-class-summary.json",
+    "lastEvidence": "cdp-class-summary.json",
     "sourceGate": {
-      "max-lines": 115,
-      "no-explicit-any": 373
+      "max-lines": 114,
+      "no-explicit-any": 369
     },
     "globalLint": {
-      "files": 3262,
-      "errors": 458,
+      "files": 3270,
+      "errors": 453,
       "warnings": 137,
       "fatal": 0,
       "rules": {
-        "@typescript-eslint/no-explicit-any": 354,
-        "max-lines": 104,
+        "@typescript-eslint/no-explicit-any": 350,
+        "max-lines": 103,
         "react-hooks/exhaustive-deps": 98,
         "directive": 12,
         "craft-agent/no-localstorage": 21,
         "@typescript-eslint/no-unused-vars": 6
       }
     },
-    "globalStatus": "en cours ; dernière grande opération des sessions, autres fichiers historiques, any, lint global et missions finales restants"
+    "globalStatus": "en cours ; dernière grande opération des sessions, autres fichiers historiques, any, lint global et missions finales restants",
+    "fullTestSummary": {
+      "pass": 10741,
+      "fail": 0,
+      "skip": 12
+    }
   }
 }
