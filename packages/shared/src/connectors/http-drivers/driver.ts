@@ -1,0 +1,329 @@
+import type { ConnectorPackDefinition, ConnectorPackDriver, ConnectorPackOperation } from "../pack-manifest";
+import { connectorPackManifestHash, connectorPackTemplates } from "../pack-manifest";
+import type { SecretLeaseConsumptionRequest } from "../../credentials/secret-lease-broker";
+import { operationValueHash } from "../../governance/capability-broker";
+import type { SignedExecutionProof } from "../../governance/execution-proof";
+import type { ConnectorCapabilityAuthorization, ConnectorCapabilityConsumer, ConnectorDriverOptions, ConnectorEgressObservation, ConnectorExecutionProofIssuer, ConnectorHttpTransport, ConnectorMutationReconciler, ConnectorRuntimeAdmissionVerifier, ConnectorSecretLeaseConsumer, ConnectorSecretResolver, InvocationEnvelope, PriorityConnectorPack } from './contracts.ts';
+import { ConnectorDriverError } from './contracts.ts';
+import { materializeConnectorHttpPayload, readInvocationEnvelope, renderPath } from './http-payload.ts';
+import type { PriorityDriverDefinition } from './priority-packs.ts';
+import { priorityConnectorDriverDefinitions } from './priority-packs.ts';
+
+class ConnectorRequestLimiter {
+  private windowStartedAt = 0
+  private requestCount = 0
+  private activeCount = 0
+
+  constructor(
+    private readonly requests: number,
+    private readonly windowMs: number,
+    private readonly maxConcurrency: number,
+    private readonly nowMs: () => number,
+  ) {}
+
+  async run<T>(operation: () => Promise<T>): Promise<T> {
+    const now = this.nowMs()
+    if (now - this.windowStartedAt >= this.windowMs) {
+      this.windowStartedAt = now
+      this.requestCount = 0
+    }
+    if (this.activeCount >= this.maxConcurrency) {
+      throw new ConnectorDriverError('CONCURRENCY_LIMIT', 'Connector concurrency limit reached')
+    }
+    if (this.requestCount >= this.requests) {
+      throw new ConnectorDriverError('RATE_LIMITED', 'Connector request rate limit reached')
+    }
+    this.requestCount += 1
+    this.activeCount += 1
+    try {
+      return await operation()
+    } finally {
+      this.activeCount -= 1
+    }
+  }
+}
+
+export class HttpConnectorPackDriver implements ConnectorPackDriver {
+  private readonly limiter: ConnectorRequestLimiter
+  private readonly baseOrigin: string
+  private readonly manifestHash: string
+
+  constructor(
+    private readonly manifest: ConnectorPackDefinition,
+    private readonly definition: PriorityDriverDefinition,
+    private readonly baseUrl: string,
+    private readonly secretReference: string,
+    private readonly resolveSecret: ConnectorSecretResolver,
+    private readonly transport: ConnectorHttpTransport,
+    private readonly consumeCapability: ConnectorCapabilityConsumer,
+    private readonly consumeSecretLease: ConnectorSecretLeaseConsumer,
+    private readonly assertRuntimeAdmission: ConnectorRuntimeAdmissionVerifier,
+    private readonly reconcileMutation: ConnectorMutationReconciler,
+    private readonly issueExecutionProof: ConnectorExecutionProofIssuer,
+    private readonly recordExecutionProof: (proof: SignedExecutionProof) => void,
+    private readonly createHealthAuthorization: () => ConnectorCapabilityAuthorization,
+    private readonly onEgress?: (observation: ConnectorEgressObservation) => void,
+    private readonly now: () => string = () => new Date().toISOString(),
+  ) {
+    const parsedBaseUrl = new URL(baseUrl)
+    if (
+      parsedBaseUrl.protocol !== 'https:'
+      || parsedBaseUrl.username
+      || parsedBaseUrl.password
+      || !manifest.allowedOrigins.includes(parsedBaseUrl.origin)
+    ) {
+      throw new ConnectorDriverError('ORIGIN_DENIED', `Connector origin is not allowed: ${parsedBaseUrl.origin}`)
+    }
+    this.baseOrigin = parsedBaseUrl.origin
+    this.manifestHash = connectorPackManifestHash(manifest)
+    this.limiter = new ConnectorRequestLimiter(
+      manifest.rateLimit.requests,
+      manifest.rateLimit.windowMs,
+      manifest.rateLimit.maxConcurrency,
+      () => Date.parse(this.now()),
+    )
+  }
+
+  async healthCheck(): Promise<{ healthy: boolean; latencyMs: number }> {
+    const startedAt = Date.parse(this.now())
+    try {
+      await this.invoke(this.manifest.healthCheck.operationId, {
+        authorization: this.createHealthAuthorization(),
+      })
+      return {
+        healthy: true,
+        latencyMs: Math.max(0, Date.parse(this.now()) - startedAt),
+      }
+    } catch {
+      return {
+        healthy: false,
+        latencyMs: Math.max(0, Date.parse(this.now()) - startedAt),
+      }
+    }
+  }
+
+  async invoke(operationId: string, input: Record<string, unknown>): Promise<Record<string, unknown>> {
+    if (input.contractProbe === true) {
+      const operation = this.staticOperation(operationId)
+      return {
+        operationId,
+        effect: operation.effect,
+        risk: operation.risk,
+        requiredScopes: [...operation.requiredScopes],
+      }
+    }
+
+    const operation = this.runtimeOperation(operationId)
+    const binding = this.definition.bindings[operationId]
+    if (!binding) throw new ConnectorDriverError('UNKNOWN_OPERATION', `No HTTP binding for ${operationId}`)
+    const rawEnvelope = readInvocationEnvelope(input)
+    const envelope: InvocationEnvelope = {
+      ...rawEnvelope,
+      payload: materializeConnectorHttpPayload(binding.method, rawEnvelope.payload),
+    }
+    this.authorizeOperation(operation, envelope)
+    return this.limiter.run(async () => {
+      const capabilityRequest = envelope.authorization?.request
+      if (!capabilityRequest) {
+        throw new ConnectorDriverError('CAPABILITY_REQUIRED', `Broker capability required for ${operation.id}`)
+      }
+      const secretLeaseRequest: SecretLeaseConsumptionRequest = {
+        secretReference: this.secretReference,
+        identity: {
+          clientId: capabilityRequest.identity.clientId,
+          workspaceId: capabilityRequest.identity.workspaceId,
+          sourceId: this.manifest.id,
+          missionId: capabilityRequest.identity.missionId,
+          nodeId: capabilityRequest.identity.nodeId,
+          agentId: capabilityRequest.identity.agentId,
+          connectorId: capabilityRequest.identity.connectorId,
+        },
+        operationId,
+        scopes: operation.requiredScopes,
+        authorizationGeneration: capabilityRequest.authorizationGeneration,
+      }
+      const lease = await this.resolveSecret(this.secretReference, secretLeaseRequest)
+      if (!lease) {
+        throw new ConnectorDriverError('SECRET_UNAVAILABLE', `Secret reference ${this.secretReference} is unavailable`)
+      }
+      const leaseDecision = this.consumeSecretLease(lease.grant, secretLeaseRequest)
+      if (!leaseDecision.allowed) {
+        const code = leaseDecision.code === 'LEASE_EXPIRED'
+          ? 'SECRET_EXPIRED'
+          : leaseDecision.code === 'LEASE_SCOPE_DENIED'
+            ? 'SCOPE_DENIED'
+            : 'SECRET_UNAVAILABLE'
+        throw new ConnectorDriverError(code, leaseDecision.reason)
+      }
+
+      const path = renderPath(binding.path, envelope.resourceId)
+      let normalizedBaseUrl = this.baseUrl
+      while (normalizedBaseUrl.endsWith('/')) normalizedBaseUrl = normalizedBaseUrl.slice(0, -1)
+      const url = new URL(path, `${normalizedBaseUrl}/`)
+      if (binding.method === 'GET') {
+        for (const [key, value] of Object.entries(envelope.payload)) {
+          url.searchParams.set(key, String(value))
+        }
+      }
+      this.runtimeOperation(operationId)
+      this.onEgress?.({
+        operationId,
+        destinationOrigin: url.origin,
+        payload: structuredClone(envelope.payload),
+      })
+      const response = await this.transport({
+        method: binding.method,
+        url: url.toString(),
+        headers: {
+          Authorization: `Bearer ${lease.value}`,
+          Accept: 'application/json',
+          ...(binding.method === 'GET' ? {} : { 'Content-Type': 'application/json' }),
+          ...(envelope.idempotencyKey ? { 'Idempotency-Key': envelope.idempotencyKey } : {}),
+        },
+        ...(binding.method === 'GET' ? {} : { body: envelope.payload }),
+        timeoutMs: this.manifest.healthCheck.timeoutMs,
+        redirect: 'manual',
+        security: {
+          allowedOrigins: [...operation.allowedOrigins],
+          blockPrivateAddresses: true,
+        },
+      })
+      if (response.redirected || (response.status >= 300 && response.status < 400)) {
+        throw new ConnectorDriverError('REDIRECT_DENIED', 'Connector redirects are forbidden for credentialed requests')
+      }
+      if (response.status < 200 || response.status >= 300) {
+        throw new ConnectorDriverError('UPSTREAM_ERROR', `Connector upstream returned HTTP ${response.status}`)
+      }
+      const baseResult: Record<string, unknown> = {
+        operationId,
+        status: response.status,
+        data: response.body,
+        trust: 'external-untrusted',
+      }
+      if (!operation.reconciliation.required) return baseResult
+      if (!response.requestId) {
+        throw new ConnectorDriverError(
+          'RECONCILIATION_REQUIRED',
+          `Connector ${operation.id} did not return a provider request identifier`,
+        )
+      }
+      if (!capabilityRequest.identity.nodeId || !envelope.idempotencyKey) {
+        throw new ConnectorDriverError(
+          'RECONCILIATION_REQUIRED',
+          `Connector ${operation.id} requires task-node and idempotency bindings for execution proof`,
+        )
+      }
+      const observation = await this.reconcileMutation({
+        operation,
+        capabilityRequest,
+        providerResponse: response,
+        ...(envelope.resourceId ? { resourceId: envelope.resourceId } : {}),
+      })
+      const executionProof = this.issueExecutionProof({
+        clientId: capabilityRequest.identity.clientId,
+        workspaceId: capabilityRequest.identity.workspaceId,
+        missionId: capabilityRequest.identity.missionId,
+        nodeId: capabilityRequest.identity.nodeId,
+        agentId: capabilityRequest.identity.agentId,
+        connectorId: this.manifest.id,
+        operationId,
+        idempotencyKey: envelope.idempotencyKey,
+        payloadHash: operationValueHash(envelope.payload),
+        resultHash: operationValueHash(response.body),
+        providerRequestId: response.requestId,
+        policyVersion: capabilityRequest.policyVersion,
+        authorizationGeneration: capabilityRequest.authorizationGeneration,
+        connectorManifestHash: this.manifestHash,
+        reconciliation: {
+          status: observation.status,
+          observedAt: observation.observedAt,
+          providerStateHash: operationValueHash(observation.providerState),
+          ...(observation.detailCode ? { detailCode: observation.detailCode } : {}),
+        },
+      })
+      this.recordExecutionProof(executionProof)
+      return {
+        ...baseResult,
+        reconciliationReceipt: {
+          providerRequestId: response.requestId,
+          observedAt: observation.observedAt,
+          payloadHash: operationValueHash(envelope.payload),
+          ...(envelope.resourceId ? { resourceId: envelope.resourceId } : {}),
+        },
+        executionProof,
+      }
+    })
+  }
+
+  private staticOperation(operationId: string): ConnectorPackOperation {
+    const operation = this.manifest.operations.find((candidate) => candidate.id === operationId)
+    if (!operation) throw new ConnectorDriverError('UNKNOWN_OPERATION', `Unknown connector operation ${operationId}`)
+    return operation
+  }
+
+  private runtimeOperation(operationId: string): ConnectorPackOperation {
+    try {
+      return this.assertRuntimeAdmission(this.manifest.id, operationId, this.manifestHash).operation
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      throw new ConnectorDriverError('CONNECTOR_NOT_ACTIVE', message)
+    }
+  }
+
+  private authorizeOperation(
+    operation: ConnectorPackOperation,
+    envelope: InvocationEnvelope,
+  ): void {
+    if (!envelope.authorization) {
+      throw new ConnectorDriverError('CAPABILITY_REQUIRED', `Broker capability required for ${operation.id}`)
+    }
+    if (!operation.idempotent && !envelope.idempotencyKey) {
+      throw new ConnectorDriverError('IDEMPOTENCY_REQUIRED', `Idempotency key required for ${operation.id}`)
+    }
+    const request = envelope.authorization.request
+    if (
+      request.operationId !== operation.id
+      || request.risk !== operation.risk
+      || request.identity.connectorId !== this.manifest.id
+      || request.target.origin !== this.baseOrigin
+      || !operation.targetResourceTypes.includes(request.target.resourceType)
+      || (request.target.resourceId ?? '') !== (envelope.resourceId ?? '')
+      || operationValueHash(request.payload) !== operationValueHash(envelope.payload)
+      || (request.idempotencyKey ?? '') !== (envelope.idempotencyKey ?? '')
+    ) {
+      throw new ConnectorDriverError('CAPABILITY_DENIED', `Capability context mismatch for ${operation.id}`)
+    }
+    const consumed = this.consumeCapability(envelope.authorization.capability, request)
+    if (!consumed.allowed) {
+      throw new ConnectorDriverError('CAPABILITY_DENIED', `${consumed.code}: ${consumed.reason}`)
+    }
+  }
+}
+
+export function createPriorityConnectorDriver(
+  pack: PriorityConnectorPack,
+  options: ConnectorDriverOptions,
+): HttpConnectorPackDriver {
+  const definition = priorityConnectorDriverDefinitions[pack]
+  const baseUrl = options.baseUrl ?? definition.defaultBaseUrl
+  if (!baseUrl) {
+    throw new ConnectorDriverError('INVALID_INPUT', `${pack} requires an explicit baseUrl`)
+  }
+  return new HttpConnectorPackDriver(
+    connectorPackTemplates[pack],
+    definition,
+    baseUrl,
+    options.secretReference,
+    options.resolveSecret,
+    options.transport,
+    options.consumeCapability,
+    options.consumeSecretLease,
+    options.assertRuntimeAdmission,
+    options.reconcileMutation,
+    options.issueExecutionProof,
+    options.recordExecutionProof,
+    options.createHealthAuthorization,
+    options.onEgress,
+    options.now,
+  )
+}

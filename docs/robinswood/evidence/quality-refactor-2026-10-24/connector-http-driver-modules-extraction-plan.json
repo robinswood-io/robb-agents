@@ -1,0 +1,235 @@
+{
+  "source": "packages/shared/src/connectors/http-drivers.ts",
+  "units": [
+    {
+      "names": [
+        "PriorityConnectorPack"
+      ],
+      "group": "contracts",
+      "bodySha256": "7aac4e4c1a287b792a5e9f031202d8e7fa78a763e67dcf69d5c518789443cc7d"
+    },
+    {
+      "names": [
+        "ConnectorSecretLease"
+      ],
+      "group": "contracts",
+      "bodySha256": "7effc2a2d6bb72015f4ae396aa39d5ad581f8797488d713f282e76fddbabb337"
+    },
+    {
+      "names": [
+        "ConnectorApprovalReceipt"
+      ],
+      "group": "contracts",
+      "bodySha256": "b84a605b7a0e35f586f9001bc9de0833a3f30dda63f52eab963a5de9d66622c7"
+    },
+    {
+      "names": [
+        "ConnectorCapabilityAuthorization"
+      ],
+      "group": "contracts",
+      "bodySha256": "025cecb3bbbdb306b5770e66be441e317a5112a2edd60bb0655b1df6b73d6621"
+    },
+    {
+      "names": [
+        "ConnectorCapabilityConsumer"
+      ],
+      "group": "contracts",
+      "bodySha256": "a9c05818a3d9c6db53be76628cab5ef254c9e70211669a82a7e08d9d74b09e2a"
+    },
+    {
+      "names": [
+        "ConnectorHttpRequest"
+      ],
+      "group": "contracts",
+      "bodySha256": "aa2065ff8795a89c329b9108db4a9211e77c1d8dcef3995af824f801d8707eb3"
+    },
+    {
+      "names": [
+        "ConnectorHttpResponse"
+      ],
+      "group": "contracts",
+      "bodySha256": "8c8c17dc5adc628b32b290e75a991a8c7b7c7605840c421d2497948b3c060e9f"
+    },
+    {
+      "names": [
+        "ConnectorSecretResolver"
+      ],
+      "group": "contracts",
+      "bodySha256": "8b0c3c9605380fce8083913943e42405fce5484a894505072986dc810f9e68ee"
+    },
+    {
+      "names": [
+        "ConnectorHttpTransport"
+      ],
+      "group": "contracts",
+      "bodySha256": "476bc7dc0921b2cedc0fd51ed5c86dc28fe83e0aacb4e8d61f47ebc1928184c4"
+    },
+    {
+      "names": [
+        "ConnectorEgressObservation"
+      ],
+      "group": "contracts",
+      "bodySha256": "2b57319b0186582d546a96557e46bce47a66cb7d49e9a9318e1967d2e3ccbeba"
+    },
+    {
+      "names": [
+        "ConnectorSecretLeaseConsumer"
+      ],
+      "group": "contracts",
+      "bodySha256": "fde25bdee47cfa7af923f659335df80253c18a1a6e39a36385886a155cbaf2b4"
+    },
+    {
+      "names": [
+        "ConnectorRuntimeAdmissionVerifier"
+      ],
+      "group": "contracts",
+      "bodySha256": "28f5aaa94c299bf0d77ca01aad31730bbcaafc7d77a1fe46f2f09b76f5f9de64"
+    },
+    {
+      "names": [
+        "ConnectorMutationReconciliationObservation"
+      ],
+      "group": "contracts",
+      "bodySha256": "21116019d00b1f2f4e91ff13ac1766ca6ff1e050b684519a7fc1d68da72555e3"
+    },
+    {
+      "names": [
+        "ConnectorMutationReconciliationRequest"
+      ],
+      "group": "contracts",
+      "bodySha256": "513b0dab662b367661bf2fbffb56bbc7e8505d560808f47aa6381d6d0e33aff5"
+    },
+    {
+      "names": [
+        "ConnectorMutationReconciler"
+      ],
+      "group": "contracts",
+      "bodySha256": "7e5c80aeb306d25f02c8bd39fe8f97cf5b53e3d41a745ef2cecc7d105b132975"
+    },
+    {
+      "names": [
+        "ConnectorExecutionProofIssuer"
+      ],
+      "group": "contracts",
+      "bodySha256": "6e4db7b8cec13a401c593bea2fee13e9f4a6b6e29b63ab949c1ff7d75324c93b"
+    },
+    {
+      "names": [
+        "ConnectorDriverError"
+      ],
+      "group": "contracts",
+      "bodySha256": "3603dbe54431e451209f077fd3361841c8456f85fb019b148f1d83ee7e949769"
+    },
+    {
+      "names": [
+        "ConnectorDriverOptions"
+      ],
+      "group": "contracts",
+      "bodySha256": "18b4e3c3b8b99a45b29d9a4468552512a0f5b814e30b7e57084476b3c62fe3df"
+    },
+    {
+      "names": [
+        "InvocationEnvelope"
+      ],
+      "group": "contracts",
+      "bodySha256": "7d1fe9965b68fb56528e54edc21879e44d3ece6463dfd81a5804e9302a0e0b69"
+    },
+    {
+      "names": [
+        "OperationBinding"
+      ],
+      "group": "priority-packs",
+      "bodySha256": "228d13a07a332860cfc8a8b8de482ee00f29078a03b45fd0c244585709770793"
+    },
+    {
+      "names": [
+        "PriorityDriverDefinition"
+      ],
+      "group": "priority-packs",
+      "bodySha256": "2ba29667b1858102f4402842d5c394219c2584c17ac576cfaf4a503322fdbba7"
+    },
+    {
+      "names": [
+        "priorityConnectorDriverDefinitions"
+      ],
+      "group": "priority-packs",
+      "bodySha256": "b1147184a4b80513365561e39acfac5442566e07c383301f1a9d8ca5f944350f"
+    },
+    {
+      "names": [
+        "readInvocationEnvelope"
+      ],
+      "group": "http-payload",
+      "bodySha256": "2a3498fed851cfe87de5386fb4799c9c6847004caf058aa3910ebb7a0c656553"
+    },
+    {
+      "names": [
+        "materializeConnectorHttpPayload"
+      ],
+      "group": "http-payload",
+      "bodySha256": "485c0bbb30cbb9ea1d52d9840f618f9bfaaf40e2f81067bbb1edc28e339155cd"
+    },
+    {
+      "names": [
+        "renderPath"
+      ],
+      "group": "http-payload",
+      "bodySha256": "40b23e9e187ac2cf8be8d47eaf5c6e88c08d99223fd3dad3d9c8a9246fb5d183"
+    },
+    {
+      "names": [
+        "ConnectorRequestLimiter"
+      ],
+      "group": "driver",
+      "bodySha256": "2701c650c430066a38f216657e595f81c8385bbf96dd9c0629a57ef3d942a8f5"
+    },
+    {
+      "names": [
+        "HttpConnectorPackDriver"
+      ],
+      "group": "driver",
+      "bodySha256": "c274a171d39713e76eca57d6fe3197901e24f512276dcb81a5acef559285304d"
+    },
+    {
+      "names": [
+        "createPriorityConnectorDriver"
+      ],
+      "group": "driver",
+      "bodySha256": "68b77f69850ae4c62ee651a809cd39da6e1049537ea7e81c4449fc92b241b505"
+    }
+  ],
+  "modules": [
+    {
+      "name": "contracts",
+      "lines": 148
+    },
+    {
+      "name": "priority-packs",
+      "lines": 53
+    },
+    {
+      "name": "http-payload",
+      "lines": 67
+    },
+    {
+      "name": "driver",
+      "lines": 330
+    }
+  ],
+  "dependencies": {
+    "contracts": [],
+    "priority-packs": [
+      "contracts"
+    ],
+    "http-payload": [
+      "contracts"
+    ],
+    "driver": [
+      "contracts",
+      "priority-packs",
+      "http-payload"
+    ]
+  },
+  "unitCycles": [],
+  "moduleCycles": []
+}

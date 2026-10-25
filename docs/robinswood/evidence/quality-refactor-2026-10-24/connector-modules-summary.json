@@ -1,0 +1,74 @@
+{
+  "status": "testé dans le candidat local ; chantier global en cours",
+  "scope": "Exécution des connecteurs, registre durable, HTTP, OAuth, stockage chiffré et sélection des profils de missions",
+  "declarationsPreserved": 161,
+  "maximumLines": 398,
+  "structure": "Classes et fonctions existantes réparties directement par responsabilité ; corps, imports, exports et graphe sans cycle vérifiés.",
+  "checks": {
+    "connector-modules-types": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 20.8,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/connector-modules-types.log"
+    },
+    "connector-modules-lint": {
+      "command": [
+        "rtk",
+        "bunx",
+        "eslint",
+        "--max-warnings",
+        "0",
+        "packages/server-core/src/services/connector-execution-runtime.ts",
+        "packages/server-core/src/services/connector-execution-runtime",
+        "packages/shared/src/connectors/durable-pack-registry.ts",
+        "packages/shared/src/connectors/durable-pack-registry",
+        "packages/shared/src/connectors/http-drivers.ts",
+        "packages/shared/src/connectors/http-drivers",
+        "packages/shared/src/connectors/oauth-client.ts",
+        "packages/shared/src/connectors/oauth-client",
+        "packages/shared/src/credentials/backends/secure-storage.ts",
+        "packages/shared/src/credentials/backends/secure-storage",
+        "packages/server-core/src/specialized-profiles/MissionSpecializedProfileResolver.ts",
+        "packages/server-core/src/specialized-profiles/MissionSpecializedProfileResolver",
+        "packages/shared/src/specialized-profiles/mission-selection.ts",
+        "packages/shared/src/specialized-profiles/mission-selection"
+      ],
+      "exitCode": 0,
+      "seconds": 0.75,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/connector-modules-lint.log"
+    },
+    "connector-modules-build": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 19.51,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/connector-modules-build.log"
+    },
+    "connector-modules-all-tests": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 140.79,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/connector-modules-all-tests.log"
+    }
+  },
+  "dataBoundary": "Tests dans le profil QA local ; aucun connecteur réel activé et aucune donnée comptable modifiée.",
+  "remaining": {
+    "max-lines": 174,
+    "no-explicit-any": 555
+  },
+  "installedApplication": "inchangée ; vérification UI et missions réelles finales sous nouvelles dépendances restantes"
+}

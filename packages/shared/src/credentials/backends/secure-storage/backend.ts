@@ -1,0 +1,392 @@
+/**
+ * Secure Storage Backend
+ *
+ * Stores credentials in an encrypted file at ~/.craft-agent/credentials.enc
+ * Uses AES-256-GCM for authenticated encryption.
+ *
+ * Encryption key is derived from OS-native hardware UUID using PBKDF2:
+ * - macOS: IOPlatformUUID (tied to logic board, never changes)
+ * - Windows: MachineGuid from registry (set at OS install)
+ * - Linux: /var/lib/dbus/machine-id (set at OS install)
+ *
+ * This is more stable than the previous hostname-based derivation, which could
+ * change with network/DHCP. Legacy credentials are auto-migrated on first load.
+ *
+ * File format:
+ *   [Header - 64 bytes]
+ *   ├── Magic: "CRAFT01\0" (8 bytes)
+ *   ├── Flags: uint32 LE (4 bytes) - reserved for future use
+ *   ├── Salt: 32 bytes (PBKDF2 salt)
+ *   ├── Reserved: 20 bytes
+ *   [Encrypted Payload]
+ *   ├── IV: 12 bytes (random per write)
+ *   ├── Auth Tag: 16 bytes (GCM authentication)
+ *   └── Ciphertext: variable (encrypted JSON)
+ */
+import { createCipheriv, createDecipheriv, randomBytes, pbkdf2Sync, createHash } from "crypto";
+import { chmodSync, closeSync, existsSync, fsyncSync, mkdirSync, openSync, readFileSync, renameSync, unlinkSync, writeFileSync } from "fs";
+import { hostname, userInfo, homedir } from "os";
+import { dirname } from "path";
+import type { CredentialBackend } from "../types.ts";
+import type { CredentialId, StoredCredential } from "../../types.ts";
+import { credentialIdToAccount, accountToCredentialId } from "../../types.ts";
+import type { CredentialStore, SecureStorageOptions } from './contracts.ts';
+import { CredentialStoreError, isCredentialStore } from './contracts.ts';
+import { AUTH_TAG_SIZE, DEFAULT_CREDENTIALS_FILE, FLAGS_SIZE, HEADER_SIZE, IV_SIZE, KEY_SIZE, MAGIC_BYTES, MAGIC_SIZE, PBKDF2_ITERATIONS, SALT_SIZE, getStableMachineId } from './key-derivation.ts';
+
+const mutationQueues = new Map<string, Promise<void>>();
+
+export class SecureStorageBackend implements CredentialBackend {
+  readonly name = 'secure-storage';
+  readonly priority = 100;
+
+  private cachedStore: CredentialStore | null = null;
+  private encryptionKey: Buffer | null = null;
+  private salt: Buffer | null = null;
+  private readonly keyCacheBySalt = new Map<string, Buffer>();
+  private readonly stableMachineIdDigest: Buffer;
+  private readonly credentialsFile: string;
+  private readonly credentialsDir: string;
+  private readonly machineId: string;
+
+  constructor(options: SecureStorageOptions = {}) {
+    this.credentialsFile = options.credentialsFile ?? DEFAULT_CREDENTIALS_FILE;
+    this.credentialsDir = dirname(this.credentialsFile);
+    this.machineId = options.machineId ?? getStableMachineId();
+    this.stableMachineIdDigest = createHash('sha256')
+      .update(this.machineId)
+      .update('craft-agent-v2')
+      .digest();
+  }
+
+  async isAvailable(): Promise<boolean> {
+    // File backend is always available - we can always write to filesystem
+    return true;
+  }
+
+  async get(id: CredentialId): Promise<StoredCredential | null> {
+    const store = await this.loadStore();
+    if (!store) return null;
+
+    const key = credentialIdToAccount(id);
+    return store.credentials[key] || null;
+  }
+
+  async set(id: CredentialId, credential: StoredCredential): Promise<void> {
+    const key = credentialIdToAccount(id);
+    await this.enqueueMutation(() => {
+      this.withFileLockSync(() => {
+        this.clearCache();
+        const store = this.loadStoreSync() ?? this.createEmptyStore();
+        store.credentials[key] = credential;
+        store.metadata.updatedAt = Date.now();
+        this.saveStoreSync(store);
+      });
+    });
+  }
+
+  async getOrCreate(id: CredentialId, create: () => StoredCredential): Promise<StoredCredential> {
+    const key = credentialIdToAccount(id);
+    return this.enqueueMutation(() => this.withFileLockSync(() => {
+      this.clearCache();
+      const store = this.loadStoreSync() ?? this.createEmptyStore();
+      const existing = store.credentials[key];
+      if (existing) return existing;
+
+      const credential = create();
+      store.credentials[key] = credential;
+      store.metadata.updatedAt = Date.now();
+      this.saveStoreSync(store);
+      return credential;
+    }));
+  }
+
+  async delete(id: CredentialId): Promise<boolean> {
+    const key = credentialIdToAccount(id);
+    return this.enqueueMutation(() => this.withFileLockSync(() => this.deleteByKeySync(key)));
+  }
+
+  deleteSync(id: CredentialId): boolean {
+    const key = credentialIdToAccount(id);
+    if (mutationQueues.has(this.credentialsFile)) {
+      throw new CredentialStoreError(
+        'write_conflict',
+        'Credential store has a pending write; synchronous deletion was refused',
+      );
+    }
+    return this.withFileLockSync(() => this.deleteByKeySync(key));
+  }
+
+  async list(filter?: Partial<CredentialId>): Promise<CredentialId[]> {
+    const store = await this.loadStore();
+    if (!store) return [];
+
+    const ids = Object.keys(store.credentials)
+      .map(accountToCredentialId)
+      .filter((id): id is CredentialId => id !== null);
+
+    if (!filter) return ids;
+
+    return ids.filter((id) => {
+      if (filter.type && id.type !== filter.type) return false;
+      if (filter.workspaceId && id.workspaceId !== filter.workspaceId) return false;
+      if (filter.sourceId && id.sourceId !== filter.sourceId) return false;
+      if (filter.connectionSlug && id.connectionSlug !== filter.connectionSlug) return false;
+      if (filter.name && id.name !== filter.name) return false;
+      return true;
+    });
+  }
+
+  // ============================================================
+  // Private Methods
+  // ============================================================
+
+  private async loadStore(): Promise<CredentialStore | null> {
+    return this.loadStoreSync();
+  }
+
+  private loadStoreSync(): CredentialStore | null {
+    // Return cached store if available
+    if (this.cachedStore) return this.cachedStore;
+
+    if (!existsSync(this.credentialsFile)) return null;
+
+    let fileData: Buffer;
+    try {
+      fileData = readFileSync(this.credentialsFile);
+    } catch (error) {
+      throw new CredentialStoreError('read_failed', 'Credential store could not be read', { cause: error });
+    }
+
+    // Validate minimum size
+    if (fileData.length < HEADER_SIZE + IV_SIZE + AUTH_TAG_SIZE) {
+      throw new CredentialStoreError('corrupted', 'Credential store is truncated');
+    }
+
+    // Validate magic bytes
+    if (!fileData.subarray(0, MAGIC_SIZE).equals(MAGIC_BYTES)) {
+      throw new CredentialStoreError('corrupted', 'Credential store header is invalid');
+    }
+
+    // Parse header
+    // const flags = fileData.readUInt32LE(MAGIC_SIZE); // Reserved for future use
+    const salt = fileData.subarray(MAGIC_SIZE + FLAGS_SIZE, MAGIC_SIZE + FLAGS_SIZE + SALT_SIZE);
+    this.salt = salt;
+
+    // Extract encrypted data
+    const encryptedData = fileData.subarray(HEADER_SIZE);
+
+    // Try new stable key first (v2 - hardware UUID based)
+    const newKey = this.getEncryptionKey(salt);
+    let store = this.tryDecrypt(encryptedData, newKey);
+
+    if (store) {
+      this.cachedStore = store;
+      return store;
+    }
+
+    // Try legacy key for migration (v1 - included hostname)
+    // This handles credentials encrypted with old key derivation
+    const legacyKey = this.getLegacyEncryptionKey(salt);
+    store = this.tryDecrypt(encryptedData, legacyKey);
+
+    if (store) {
+      // Migration: re-save with new stable key so future loads use hardware UUID
+      this.cachedStore = store;
+      this.saveStoreSync(store);
+      return store;
+    }
+
+    // Preserve the original bytes for recovery. Authentication failure can be
+    // caused by a machine migration and must never be treated as permission to
+    // delete the only copy of the user's credentials.
+    throw new CredentialStoreError(
+      'decryption_failed',
+      'Credential store authentication failed; the encrypted file was preserved',
+    );
+  }
+
+  /**
+   * Attempt to decrypt data with given key.
+   * Returns parsed store on success, null on failure.
+   */
+  private tryDecrypt(encryptedData: Buffer, key: Buffer): CredentialStore | null {
+    try {
+      const iv = encryptedData.subarray(0, IV_SIZE);
+      const authTag = encryptedData.subarray(IV_SIZE, IV_SIZE + AUTH_TAG_SIZE);
+      const ciphertext = encryptedData.subarray(IV_SIZE + AUTH_TAG_SIZE);
+
+      const decipher = createDecipheriv('aes-256-gcm', key, iv);
+      decipher.setAuthTag(authTag);
+      const decrypted = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
+      const parsed: unknown = JSON.parse(decrypted.toString('utf8'));
+      return isCredentialStore(parsed) ? parsed : null;
+    } catch {
+      return null;
+    }
+  }
+
+  private saveStoreSync(store: CredentialStore): void {
+    // Ensure directory exists
+    if (!existsSync(this.credentialsDir)) {
+      mkdirSync(this.credentialsDir, { recursive: true, mode: 0o700 });
+    }
+
+    // Use existing salt or generate new one
+    const salt = this.salt || randomBytes(SALT_SIZE);
+    this.salt = salt;
+
+    // Get encryption key
+    const key = this.getEncryptionKey(salt);
+
+    // Serialize payload
+    const plaintext = Buffer.from(JSON.stringify(store), 'utf8');
+
+    // Generate new IV for each write (critical for GCM security)
+    const iv = randomBytes(IV_SIZE);
+
+    // Encrypt
+    const cipher = createCipheriv('aes-256-gcm', key, iv);
+    const ciphertext = Buffer.concat([cipher.update(plaintext), cipher.final()]);
+    const authTag = cipher.getAuthTag();
+
+    // Build header
+    const header = Buffer.alloc(HEADER_SIZE);
+    MAGIC_BYTES.copy(header, 0);
+    header.writeUInt32LE(0, MAGIC_SIZE); // Flags (reserved)
+    salt.copy(header, MAGIC_SIZE + FLAGS_SIZE);
+
+    // Combine all parts
+    const fileData = Buffer.concat([header, iv, authTag, ciphertext]);
+
+    // Write atomically with restrictive permissions so a crash cannot leave a
+    // partially-written primary file. rename() is atomic on the same volume.
+    const tempFile = `${this.credentialsFile}.${process.pid}.${randomBytes(8).toString('hex')}.tmp`;
+    let tempFd: number | null = null;
+    try {
+      tempFd = openSync(tempFile, 'wx', 0o600);
+      writeFileSync(tempFd, fileData);
+      fsyncSync(tempFd);
+      closeSync(tempFd);
+      tempFd = null;
+      renameSync(tempFile, this.credentialsFile);
+      chmodSync(this.credentialsFile, 0o600);
+    } catch (error) {
+      if (tempFd !== null) closeSync(tempFd);
+      if (existsSync(tempFile)) unlinkSync(tempFile);
+      throw error;
+    }
+    this.cachedStore = store;
+  }
+
+  private getEncryptionKey(salt: Buffer): Buffer {
+    const saltHex = salt.toString('hex');
+    const cached = this.keyCacheBySalt.get(saltHex);
+    if (cached) {
+      this.encryptionKey = cached;
+      return cached;
+    }
+
+    // Derive key using PBKDF2 from precomputed stable machine digest
+    const derived = pbkdf2Sync(
+      this.stableMachineIdDigest,
+      salt,
+      PBKDF2_ITERATIONS,
+      KEY_SIZE,
+      'sha256',
+    );
+    if (this.keyCacheBySalt.size >= 8) {
+      const oldestKey = this.keyCacheBySalt.keys().next().value;
+      if (oldestKey !== undefined) {
+        this.keyCacheBySalt.delete(oldestKey);
+      }
+    }
+    this.keyCacheBySalt.set(saltHex, derived);
+    this.encryptionKey = derived;
+
+    return derived;
+  }
+
+  /**
+   * Legacy key derivation for migration from v1 (included hostname).
+   * Used to decrypt credentials from older versions before re-encrypting with stable key.
+   */
+  private getLegacyEncryptionKey(salt: Buffer): Buffer {
+    const legacyMachineId = createHash('sha256')
+      .update(hostname())
+      .update(userInfo().username)
+      .update(homedir())
+      .update('craft-agent-v1')
+      .digest();
+
+    return pbkdf2Sync(legacyMachineId, salt, PBKDF2_ITERATIONS, KEY_SIZE, 'sha256');
+  }
+
+  private createEmptyStore(): CredentialStore {
+    const now = Date.now();
+    return {
+      version: 1,
+      credentials: {},
+      metadata: { createdAt: now, updatedAt: now },
+    };
+  }
+
+  private deleteByKeySync(key: string): boolean {
+    this.clearCache();
+    const store = this.loadStoreSync();
+    if (!store || !(key in store.credentials)) return false;
+    delete store.credentials[key];
+    store.metadata.updatedAt = Date.now();
+    this.saveStoreSync(store);
+    return true;
+  }
+
+  private enqueueMutation<T>(operation: () => T): Promise<T> {
+    const previous = mutationQueues.get(this.credentialsFile) ?? Promise.resolve();
+    const result = previous.then(operation);
+    const tail = result.then(
+      () => undefined,
+      () => undefined,
+    );
+    mutationQueues.set(this.credentialsFile, tail);
+    void tail.finally(() => {
+      if (mutationQueues.get(this.credentialsFile) === tail) {
+        mutationQueues.delete(this.credentialsFile);
+      }
+    });
+    return result;
+  }
+
+  private withFileLockSync<T>(operation: () => T): T {
+    if (!existsSync(this.credentialsDir)) {
+      mkdirSync(this.credentialsDir, { recursive: true, mode: 0o700 });
+    }
+    const lockFile = `${this.credentialsFile}.lock`;
+    let lockFd: number;
+    try {
+      lockFd = openSync(lockFile, 'wx', 0o600);
+    } catch (error) {
+      throw new CredentialStoreError(
+        'write_conflict',
+        'Credential store is locked by another writer; mutation was refused',
+        { cause: error },
+      );
+    }
+
+    try {
+      writeFileSync(lockFd, `${process.pid}\n`, 'utf8');
+      fsyncSync(lockFd);
+      return operation();
+    } finally {
+      closeSync(lockFd);
+      if (existsSync(lockFile)) unlinkSync(lockFile);
+    }
+  }
+
+  /** Clear cached data (for testing or forced refresh) */
+  clearCache(): void {
+    this.cachedStore = null;
+    this.encryptionKey = null;
+    this.salt = null;
+  }
+}

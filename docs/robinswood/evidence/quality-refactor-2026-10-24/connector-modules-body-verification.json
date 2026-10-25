@@ -1,0 +1,72 @@
+[
+  {
+    "source": "packages/server-core/src/services/connector-execution-runtime.ts",
+    "declarations": 17,
+    "unchangedDeclarationBodies": true,
+    "relocationNormalization": "Relative dynamic/type imports and CommonJS require paths resolved against their original module directory; overload declaration order preserved",
+    "maxModuleLines": 397,
+    "retainedModuleLines": 0,
+    "moduleCycles": [],
+    "issues": []
+  },
+  {
+    "source": "packages/shared/src/connectors/durable-pack-registry.ts",
+    "declarations": 21,
+    "unchangedDeclarationBodies": true,
+    "relocationNormalization": "Relative dynamic/type imports and CommonJS require paths resolved against their original module directory; overload declaration order preserved",
+    "maxModuleLines": 378,
+    "retainedModuleLines": 0,
+    "moduleCycles": [],
+    "issues": []
+  },
+  {
+    "source": "packages/shared/src/connectors/http-drivers.ts",
+    "declarations": 28,
+    "unchangedDeclarationBodies": true,
+    "relocationNormalization": "Relative dynamic/type imports and CommonJS require paths resolved against their original module directory; overload declaration order preserved",
+    "maxModuleLines": 329,
+    "retainedModuleLines": 0,
+    "moduleCycles": [],
+    "issues": []
+  },
+  {
+    "source": "packages/shared/src/connectors/oauth-client.ts",
+    "declarations": 26,
+    "unchangedDeclarationBodies": true,
+    "relocationNormalization": "Relative dynamic/type imports and CommonJS require paths resolved against their original module directory; overload declaration order preserved",
+    "maxModuleLines": 302,
+    "retainedModuleLines": 0,
+    "moduleCycles": [],
+    "issues": []
+  },
+  {
+    "source": "packages/shared/src/credentials/backends/secure-storage.ts",
+    "declarations": 20,
+    "unchangedDeclarationBodies": true,
+    "relocationNormalization": "Relative dynamic/type imports and CommonJS require paths resolved against their original module directory; overload declaration order preserved",
+    "maxModuleLines": 392,
+    "retainedModuleLines": 0,
+    "moduleCycles": [],
+    "issues": []
+  },
+  {
+    "source": "packages/server-core/src/specialized-profiles/MissionSpecializedProfileResolver.ts",
+    "declarations": 17,
+    "unchangedDeclarationBodies": true,
+    "relocationNormalization": "Relative dynamic/type imports and CommonJS require paths resolved against their original module directory; overload declaration order preserved",
+    "maxModuleLines": 202,
+    "retainedModuleLines": 0,
+    "moduleCycles": [],
+    "issues": []
+  },
+  {
+    "source": "packages/shared/src/specialized-profiles/mission-selection.ts",
+    "declarations": 32,
+    "unchangedDeclarationBodies": true,
+    "relocationNormalization": "Relative dynamic/type imports and CommonJS require paths resolved against their original module directory; overload declaration order preserved",
+    "maxModuleLines": 274,
+    "retainedModuleLines": 0,
+    "moduleCycles": [],
+    "issues": []
+  }
+]

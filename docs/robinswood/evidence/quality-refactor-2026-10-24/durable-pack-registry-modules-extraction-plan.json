@@ -1,0 +1,170 @@
+{
+  "source": "packages/shared/src/connectors/durable-pack-registry.ts",
+  "units": [
+    {
+      "names": [
+        "OperationSchema"
+      ],
+      "group": "contracts",
+      "bodySha256": "37eaf10bf38fb14af7f78f3ade734ef2dbca18a8b1d99a07b14ddd32702f7041"
+    },
+    {
+      "names": [
+        "SignedManifestSchema"
+      ],
+      "group": "contracts",
+      "bodySha256": "5fe5d08b69ad6cd4f7230dd579245a0fd1d27388e0047cd88cf3da2b0ead3845"
+    },
+    {
+      "names": [
+        "ContractResultSchema"
+      ],
+      "group": "contracts",
+      "bodySha256": "9904d6e7a9df941fd2fec93465dafc2b0d21905acf6af405970ca7f4efbb6f1a"
+    },
+    {
+      "names": [
+        "ConnectorPackRegistryEventUnsignedSchema"
+      ],
+      "group": "contracts",
+      "bodySha256": "d47ae5255e0e29d463f9a34c59358cb953449938de72ccb5bde60d2f01cd34d4"
+    },
+    {
+      "names": [
+        "ConnectorPackRegistryEventSchema"
+      ],
+      "group": "contracts",
+      "bodySha256": "df74ab4d14edd22b66053a4782ffd2089e7665fd30d0fdd6c75881604733dd9a"
+    },
+    {
+      "names": [
+        "ConnectorPackRegistryEventUnsigned"
+      ],
+      "group": "contracts",
+      "bodySha256": "caab1c1b6ee8552404d902629f2748b6e2b029faa73f10f3be932e20487e1f77"
+    },
+    {
+      "names": [
+        "ConnectorPackRegistryEvent"
+      ],
+      "group": "contracts",
+      "bodySha256": "523370f2639d69916a214d66693c571b57b87a6f3ba66a123c884583ead408f0"
+    },
+    {
+      "names": [
+        "DurableConnectorPackStatus"
+      ],
+      "group": "contracts",
+      "bodySha256": "d221ad52511f80c7e5a319eedebef22660f2b0a344140221dbeb49a8eb0ccccd"
+    },
+    {
+      "names": [
+        "DurableConnectorPackRecord"
+      ],
+      "group": "contracts",
+      "bodySha256": "3437fcadf46404a95d4c43aacd632d0d5944fa2cc582b71f38c9e5e71833889f"
+    },
+    {
+      "names": [
+        "DurableConnectorPackSnapshot"
+      ],
+      "group": "contracts",
+      "bodySha256": "90ceacae655faa4df6969273348689ffc517247076bc75269c1bebc0e52ae382"
+    },
+    {
+      "names": [
+        "ConnectorPackLifecycleRequest"
+      ],
+      "group": "contracts",
+      "bodySha256": "36951b27649258ecb1d21a996704c8635faa076f4fbf2ce390b2d9069063fc43"
+    },
+    {
+      "names": [
+        "ConnectorPackContractVerifier"
+      ],
+      "group": "contracts",
+      "bodySha256": "7b2e5f68dc8e3d991008903d36699923e648f2882a18fdf3d10881842d241ce7"
+    },
+    {
+      "names": [
+        "ConnectorRuntimeAdmission"
+      ],
+      "group": "contracts",
+      "bodySha256": "e1d85cc9277b2677f780db25f7498fb3ea1270c2d751497e6322200b862d6db3"
+    },
+    {
+      "names": [
+        "canonicalValue"
+      ],
+      "group": "journal",
+      "bodySha256": "a5c3d8793048f6165be1ea46c515171eb3a53dc4f82f31eaae0b0f34ee161832"
+    },
+    {
+      "names": [
+        "hashEvent"
+      ],
+      "group": "journal",
+      "bodySha256": "98775d6324b5755b8716614671a80f1fe8860ad7e8f3e97a6129d4f8197eda46"
+    },
+    {
+      "names": [
+        "signedManifestHash"
+      ],
+      "group": "journal",
+      "bodySha256": "f382db09f7f7df298f2ad717b186cc9283187f705e9389c75f038fdd12312613"
+    },
+    {
+      "names": [
+        "emptySnapshot"
+      ],
+      "group": "journal",
+      "bodySha256": "d16b0f8a9665c185018582597799a9be1ca7c06254a65dfd53b59eb6b4400f2b"
+    },
+    {
+      "names": [
+        "cloneRecord"
+      ],
+      "group": "journal",
+      "bodySha256": "d6f911b250dcc720a68c85b4365952cfe3641d5318c771ef4493ea1fddd878c6"
+    },
+    {
+      "names": [
+        "cloneSnapshot"
+      ],
+      "group": "journal",
+      "bodySha256": "0b951128e645b3ac6dd3f3f37f66a418a6f890b130ebf6a03b5a7c7587ec616a"
+    },
+    {
+      "names": [
+        "applyEvent"
+      ],
+      "group": "journal",
+      "bodySha256": "bd381dcd6fb3ebf38ef82799248ced139565242c988f33865d0a2cdc0ec82405"
+    },
+    {
+      "names": [
+        "DurableConnectorPackRegistry"
+      ],
+      "group": "journal",
+      "bodySha256": "6d23dde4941f6b8745d2b8c3d406871362cd5d8a43b2d2658abb821cb723bf32"
+    }
+  ],
+  "modules": [
+    {
+      "name": "contracts",
+      "lines": 137
+    },
+    {
+      "name": "journal",
+      "lines": 379
+    }
+  ],
+  "dependencies": {
+    "contracts": [],
+    "journal": [
+      "contracts"
+    ]
+  },
+  "unitCycles": [],
+  "moduleCycles": []
+}
