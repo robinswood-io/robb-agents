@@ -1,0 +1,62 @@
+{
+  "status": "testé dans le candidat local ; chantier global en cours",
+  "scope": "Historique des automatismes et masquage des URL sensibles",
+  "change": "Trois fonctions sans état regroupées dans webhook-utils/history.ts ; exports publics conservés.",
+  "maximumLines": 456,
+  "proof": "Corps des trois fonctions et vingt autres déclarations ou instructions inchangés par comparaison AST, ordre conservé, dont les deux boucles d’initialisation des protections réseau.",
+  "checks": {
+    "webhook-history-types": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 20.81,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/webhook-history-types.log"
+    },
+    "webhook-history-lint": {
+      "command": [
+        "rtk",
+        "bunx",
+        "eslint",
+        "--max-warnings",
+        "0",
+        "packages/shared/src/automations/webhook-utils.ts",
+        "packages/shared/src/automations/webhook-utils/history.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 0.67,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/webhook-history-lint.log"
+    },
+    "webhook-history-build": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 18.92,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/webhook-history-build.log"
+    },
+    "webhook-history-tests": {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "./packages/shared/src/automations"
+      ],
+      "exitCode": 0,
+      "seconds": 0.38,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/webhook-history-tests.log"
+    }
+  },
+  "validationReason": "Extraction de fonctions sans état : comparaison des corps et imports, tous les tests des automatismes, seize configurations de types, lint ciblé et build.",
+  "remaining": {
+    "max-lines": 163,
+    "no-explicit-any": 506
+  },
+  "installedApplication": "inchangée ; validation globale, interface et missions réelles finales restantes"
+}
