@@ -1,0 +1,110 @@
+{
+  "functions": 43,
+  "responsibilityMap": {
+    "stdio": [
+      "send",
+      "debugLog",
+      "findMostRecentSessionFile"
+    ],
+    "callback-server": [
+      "startCallbackServer",
+      "stopCallbackServer"
+    ],
+    "endpoints": [
+      "resolvedCwd",
+      "shouldPreferCustomEndpoint",
+      "setInterceptorApiHints",
+      "resolveCustomEndpointApiKey",
+      "isLocalhostUrl",
+      "isStrictLocalEndpointMode",
+      "syncStrictLocalEndpointNetworkGuard",
+      "registerCustomEndpointModels",
+      "createAuthenticatedRegistry"
+    ],
+    "session": [
+      "ensureSession",
+      "handleInit",
+      "handleAbort",
+      "handleShutdown"
+    ],
+    "tool-execution": [
+      "requestPreToolUseApproval",
+      "wrapToolsWithHooks",
+      "makeErrorResult",
+      "wrapSingleTool",
+      "buildProxyTools"
+    ],
+    "queries": [
+      "queryLlm",
+      "preExecuteCallLlm",
+      "handleMiniCompletion",
+      "handleLlmQuery"
+    ],
+    "events": [
+      "extractToolExecutionMetadata",
+      "handleSessionEvent"
+    ],
+    "prompts": [
+      "waitForCompaction",
+      "handlePrompt",
+      "handleRegisterTools",
+      "handleToolExecuteResponse",
+      "handlePreToolUseResponse"
+    ],
+    "controls": [
+      "handleEnsureSessionReady",
+      "handleCompact",
+      "handleAbortCompaction",
+      "handleSetAutoCompaction",
+      "handleUpdateRuntimeConfig",
+      "handleSetModel",
+      "handleSetThinkingLevel"
+    ],
+    "entry": [
+      "processMessage",
+      "main"
+    ]
+  },
+  "files": [
+    {
+      "file": "packages/pi-agent-server/src/index/stdio.ts",
+      "lines": 36
+    },
+    {
+      "file": "packages/pi-agent-server/src/index/callback-server.ts",
+      "lines": 53
+    },
+    {
+      "file": "packages/pi-agent-server/src/index/endpoints.ts",
+      "lines": 160
+    },
+    {
+      "file": "packages/pi-agent-server/src/index/session.ts",
+      "lines": 253
+    },
+    {
+      "file": "packages/pi-agent-server/src/index/tool-execution.ts",
+      "lines": 245
+    },
+    {
+      "file": "packages/pi-agent-server/src/index/queries.ts",
+      "lines": 180
+    },
+    {
+      "file": "packages/pi-agent-server/src/index/events.ts",
+      "lines": 122
+    },
+    {
+      "file": "packages/pi-agent-server/src/index/prompts.ts",
+      "lines": 184
+    },
+    {
+      "file": "packages/pi-agent-server/src/index/controls.ts",
+      "lines": 214
+    },
+    {
+      "file": "packages/pi-agent-server/src/index.ts",
+      "lines": 181
+    }
+  ]
+}

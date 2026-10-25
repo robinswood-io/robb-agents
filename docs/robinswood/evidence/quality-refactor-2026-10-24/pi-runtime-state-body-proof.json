@@ -1,0 +1,294 @@
+{
+  "valid": true,
+  "fields": 22,
+  "functions": 43,
+  "statefulFunctions": 35,
+  "fieldTypesInitializersOrderAndMutabilityPreserved": true,
+  "functionBodiesAndContractsReversedExactly": true,
+  "entrypointSideEffectsPreserved": true,
+  "earlierInertAllocations": [
+    "customEndpointModelIds",
+    "customModelOverrides",
+    "lastNativeSettlement",
+    "overflowRecoveryAttempted",
+    "sdkMessageCorrelations"
+  ],
+  "moduleCycles": [],
+  "importIdentitiesPreserved": true,
+  "beforeDeclarations": [
+    {
+      "name": "piSession",
+      "hash": "2b98a8aad9dd18549d5b64c27494aebda2aa27d7ed3048a210483d2b40d88767"
+    },
+    {
+      "name": "systemPromptController",
+      "hash": "fac5444a39cb17a0e92bc2ea6ce637a815320f8dec79a38738655beaa6466ccc"
+    },
+    {
+      "name": "piModelRegistry",
+      "hash": "f32a6e1b36eeca8e09b6d58ff6bca4029dad2544553250cea929dcd38b7ecc33"
+    },
+    {
+      "name": "moduleAuthStorage",
+      "hash": "7181e0abc951666077304841c39afcf0778571967cca52902dd21e819bfda954"
+    },
+    {
+      "name": "unsubscribeEvents",
+      "hash": "7969f0c058001eef524a4efda28d7214da9c521c5211c5c0250efecabc0a1d31"
+    },
+    {
+      "name": "initConfig",
+      "hash": "fa89ec0658f53bb8ec2c9685b9ed6978783428391846e80605b564a70e6aae84"
+    },
+    {
+      "name": "currentUserMessage",
+      "hash": "1596582d1374cbd0945a7074c88758ddeb16a17f9a9033757ab64bbe80fed0c4"
+    },
+    {
+      "name": "sourceToolActivation",
+      "hash": "aa7864af63b7b571ff74be344d924cc2cd704127c5a5b69359adb7616fd78eeb"
+    },
+    {
+      "name": "incompleteToolTailRecovery",
+      "hash": "9338d794baab33b0204413c5e3aa236ace2fb6f2ae6f124ebca70b2757434e20"
+    },
+    {
+      "name": "toolLoopBudget",
+      "hash": "adbb6245fd14fd92efd6a15c1ba416081a6ba7c1e7a963e3947808e512e2915e"
+    },
+    {
+      "name": "pendingPreToolUse",
+      "hash": "83dac8eedb42670f0b4f1a2f6a58d6010d0d1e4e5146fbcdaf6c50e71ba25cf3"
+    },
+    {
+      "name": "pendingToolExecutions",
+      "hash": "966d8e2cdac0a0c297a4145af373e20597c7c62115d420512a08c237a3bf5622"
+    },
+    {
+      "name": "pendingSessionToolCalls",
+      "hash": "f6b3851095d0cdb444ffce39035a11f92cc7efeb82f682556f56c171e2c6ee29"
+    },
+    {
+      "name": "proxyToolDefs",
+      "hash": "615d3c8237989c4a47177d3eb92ac2f88e00e3a7018c7fda9c176a16b324dc19"
+    },
+    {
+      "name": "toolsChanged",
+      "hash": "680c4459363e41301f60fbb4cc42feeb59bed3c8c6bc5b950803650d0722a02d"
+    },
+    {
+      "name": "callbackServer",
+      "hash": "d649a1d99d221c1ae8985fa14e8ef0f35f283e85c451a07d2ea608559a9edfde"
+    },
+    {
+      "name": "callbackPort",
+      "hash": "32ad3536caeee50d830083977221bffbf3815e858fca999db16151ad83c4be8d"
+    },
+    {
+      "name": "send",
+      "hash": "56ceccef80cbeb944b55efb7cf6e69b8fd3d1c5e721a02c1dbbdb4ef404e9cde"
+    },
+    {
+      "name": "debugLog",
+      "hash": "07317b9bf639a7dc5498ed82dff08b59647f60a814e19820b5ccb862bc2475c6"
+    },
+    {
+      "name": "findMostRecentSessionFile",
+      "hash": "1de83d5d675168e8a5aeaf8eac694401bdc005f7801977d45721e05e36e10569"
+    },
+    {
+      "name": "startCallbackServer",
+      "hash": "f9f5daaaa10dc5e044e76b1f2af9c3d94bc4ada3dc0019622ccffaac5b2a8433"
+    },
+    {
+      "name": "stopCallbackServer",
+      "hash": "8ef828dc27e4d8b392ac353d646419006bcbc26aceca0b160155cbcda40924aa"
+    },
+    {
+      "name": "resolvedCwd",
+      "hash": "5d0bd241d18438b1aaf84e49cf761a37ce82732bd88400141ff0e9f16c30a8ab"
+    },
+    {
+      "name": "shouldPreferCustomEndpoint",
+      "hash": "2160ff7b94dce8805b6fd111721f484eeb779f975eff0f1785749bb437556675"
+    },
+    {
+      "name": "setInterceptorApiHints",
+      "hash": "61ca883a977976caf047916084dd8a24ddf4b646782c10d5c6c8809bebcfb9ed"
+    },
+    {
+      "name": "resolveCustomEndpointApiKey",
+      "hash": "0d4b7529ab7da352264d8dc3368a55fa4c41c29fd8ac0c3f8e68436fc56e03c6"
+    },
+    {
+      "name": "isLocalhostUrl",
+      "hash": "632b6dbe1bdf0ae44ca68ab562d5d1bd1f422fe4f87c89b3175d78fdbdf681e8"
+    },
+    {
+      "name": "isStrictLocalEndpointMode",
+      "hash": "75e9753e0ebb9dc4951fa994a51a6603ce66830eee5611bea12c4f51f1f74abb"
+    },
+    {
+      "name": "syncStrictLocalEndpointNetworkGuard",
+      "hash": "4696f34a534585f4689c8dd05cbe65779430452ad7d0a34a3dfcc34296a7dd99"
+    },
+    {
+      "name": "customEndpointModelIds",
+      "hash": "37080b91e89194c6085e33b6e6f58af146e42aabc6620530c109fecc4edf8e95"
+    },
+    {
+      "name": "customModelOverrides",
+      "hash": "05e0983a6dfb579fe17566b9e408b77a6145f466efcc44d441fab3f5e8f5df6c"
+    },
+    {
+      "name": "registerCustomEndpointModels",
+      "hash": "70110c28ff799b1cd62e220e05aefaab37cc0e04b3151ce409962c3caa70c4c6"
+    },
+    {
+      "name": "createAuthenticatedRegistry",
+      "hash": "48e4efd335c4ee66ce9ed78b74b8376c1f878251e70f37272f6accfd4d331419"
+    },
+    {
+      "name": "ensureSession",
+      "hash": "53d3ca2468823eac1d26b1a3f164335b372ede78ea4bc4de941577212908b357"
+    },
+    {
+      "name": "requestPreToolUseApproval",
+      "hash": "d2ea2096d5a7248110af9f60fc37c1a8e85d4456693572a74d37dd389b3787dd"
+    },
+    {
+      "name": "wrapToolsWithHooks",
+      "hash": "fec7926c03f05383e9ce7458d123361675e5ee14a1925e5e8c01a34851321a7e"
+    },
+    {
+      "name": "makeErrorResult",
+      "hash": "808ed4ff09c20027ec85523128681ac108ec965e5d2e80a9eefdc430d430fcba"
+    },
+    {
+      "name": "wrapSingleTool",
+      "hash": "7600ac8fc2e97c827658c90cf3ee7def407a3325f03cbbabbbca4733ce20d36b"
+    },
+    {
+      "name": "buildProxyTools",
+      "hash": "211e6f3c018f775e6d35ca20f278b159c6b0d8b80dde1fd71bdc95813eb2b307"
+    },
+    {
+      "name": "queryLlm",
+      "hash": "c5d21d9b63e9f76f6f4ddbbae84e3beadba3e8512c79f1662558e96ec6f089cc"
+    },
+    {
+      "name": "preExecuteCallLlm",
+      "hash": "80f125ede5f01a7281368f0c268e9280bc1e8b4c878e45324d91cf8b184326ac"
+    },
+    {
+      "name": "extractToolExecutionMetadata",
+      "hash": "3406501167bccc56ff972f03f1f37a6f06c18a3099ab1ee24e7cf9cbfdfc0ec3"
+    },
+    {
+      "name": "lastNativeSettlement",
+      "hash": "c18b6c2c02c5fb268031f52878d766997425ef7df2b6e8cf49eafe7e135d6647"
+    },
+    {
+      "name": "overflowRecoveryAttempted",
+      "hash": "60ddd1246c846219324009a9ebc8b4f10c1843c7acf08a51bc6fe8c906652a80"
+    },
+    {
+      "name": "sdkMessageCorrelations",
+      "hash": "864e8fba9b7e59aa95f676dd3421f918eb5c4845227e66cd7a08b96a071403aa"
+    },
+    {
+      "name": "handleSessionEvent",
+      "hash": "b33303a99cac0cf314108688e04972ae677d3af8d5a6ce8eeb202fff11e75eaf"
+    },
+    {
+      "name": "handleInit",
+      "hash": "e5f21f861a829beab8a9dd2815a661a090950a5083049854e868a7b5f69d5ae4"
+    },
+    {
+      "name": "waitForCompaction",
+      "hash": "4723b799d2acd91ae13117b21d5aa40fe1b4475295b876eb73a577a0e6dbfb86"
+    },
+    {
+      "name": "handlePrompt",
+      "hash": "645f948472b481d164d45d13edb6ad6de8d0e1acaf1c48f30008c9569500596d"
+    },
+    {
+      "name": "handleRegisterTools",
+      "hash": "c7704f0fb7019e5babb5163092ab97d9b60c7266cce93f0e49684fa57929df76"
+    },
+    {
+      "name": "handleToolExecuteResponse",
+      "hash": "ebf8320e4a6cf1b19905a31af11042e0356865f125fb9003d2c8699c972c4319"
+    },
+    {
+      "name": "handlePreToolUseResponse",
+      "hash": "2ce8cc334909620c65733d28e5139f3f1b1febbbb85b9605b87149fe5a92c110"
+    },
+    {
+      "name": "handleAbort",
+      "hash": "00d1809e5ea78d96ecf66ec4ea24aa98823de9d1f5406e7f4dda59fcba04779f"
+    },
+    {
+      "name": "handleMiniCompletion",
+      "hash": "afa7ce60cc5ab96fcf3aa4fb73a72590dc34b163d22326f154436e75c466bb3d"
+    },
+    {
+      "name": "handleLlmQuery",
+      "hash": "c54dcffc7b7e5031f839cd9ab8e33c35707fb288adf4da9e20205bd4a5a2f5e5"
+    },
+    {
+      "name": "handleEnsureSessionReady",
+      "hash": "358a617e2ba668fb631347b4ca48487598c1321e010d04a96c1bfc51d73d2146"
+    },
+    {
+      "name": "handleCompact",
+      "hash": "d8d30d33565775ce1916b41d4f89f06684c254f706096e2d2bd96ebd12f1454d"
+    },
+    {
+      "name": "handleAbortCompaction",
+      "hash": "a345987c379b552cdcb0d42ccba99e8c2b94ca78965ce660c92cacb477610a68"
+    },
+    {
+      "name": "handleSetAutoCompaction",
+      "hash": "e99ef98980ac6b6a953daa663df15a13a3dc1c95336a4cfd6c8fddd3b19654b5"
+    },
+    {
+      "name": "handleUpdateRuntimeConfig",
+      "hash": "d175b3f7e8174bdd7fc9b65b1836f6bd7122107f6ce7372ed55d3a974ca7ff36"
+    },
+    {
+      "name": "handleSetModel",
+      "hash": "45d14dc55e26a9d94fdf8442a2004029006bbae0df108c593ff7ccaaa0b6b9b0"
+    },
+    {
+      "name": "handleSetThinkingLevel",
+      "hash": "19c5cf79327a37e9ecc0f8bbdca42ac1328c7f5e2c7813a9ebad3aca64dc9797"
+    },
+    {
+      "name": "handleShutdown",
+      "hash": "7d4709df73c0559e5f24a9e49fcf3b3c86b92c36fded54a78dc505d0dad94f38"
+    },
+    {
+      "name": "processMessage",
+      "hash": "364670aefc75a277c2cdfe806a3def55fefeb0320901ba90b2059a1dd68f9f31"
+    },
+    {
+      "name": "main",
+      "hash": "8dd5455b3105e8c4e5d3e99b81d34732a7aff517db64bdc680cc13e5c737127e"
+    }
+  ],
+  "currentSourceHashes": {
+    "packages/pi-agent-server/src/index.ts": "fed127fe328723009cba54b6ad3ec56c66fc295193c143f57733db7055d67492",
+    "packages/pi-agent-server/src/index/callback-server.ts": "5af290b51ec81872b7b4c753e62c945d5e8eeb8ddf3102d737ff749805a78c74",
+    "packages/pi-agent-server/src/index/contracts.ts": "29bab5d40bdc437ea43b233901453e1144968daddc9bfc04cb14ff6f8147e730",
+    "packages/pi-agent-server/src/index/controls.ts": "e1d3812169604d783c5678077fbee299a27fd9b00d89616c06ca0e6ee89d7e5d",
+    "packages/pi-agent-server/src/index/endpoints.ts": "033bb01dfcc7a10e1c2eeecc73618f54e7ea2c0831bcec249a37318932c2feca",
+    "packages/pi-agent-server/src/index/events.ts": "980f9721e576137048de61d9e2526cc20869db6eb9ae11b1d48f0dc98ed7782b",
+    "packages/pi-agent-server/src/index/prompts.ts": "cafe3824e13e4ebb40a9a3101457cffb0c39e99ccce1669c0b1d7aa69feff081",
+    "packages/pi-agent-server/src/index/queries.ts": "e9c7190ddc334f5007c4312f9781db030e77b269d65b9d3be2a5e07bae9b6a3a",
+    "packages/pi-agent-server/src/index/runtime-state.ts": "1a6733d7ffc2e59bd4a0e5f1fdcd4a17dd172635cbaa37c977467bad7c4499ce",
+    "packages/pi-agent-server/src/index/session.ts": "516755483978b407cfc5d862da0c39e22e2b5138953a21050d532c1a0a17a33a",
+    "packages/pi-agent-server/src/index/stdio.ts": "b0fed44c46bfd57f931cc0a1c02d61b4ceb26f5eb28febe408f2a20e67245ab7",
+    "packages/pi-agent-server/src/index/tool-execution.ts": "bd3d39da299393f91d4974a44aafba598953392fb4823733f2a4d400bce17b7b"
+  }
+}

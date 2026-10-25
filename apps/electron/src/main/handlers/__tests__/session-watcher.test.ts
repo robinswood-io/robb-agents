@@ -122,7 +122,10 @@ async function waitUntil(predicate: () => boolean, timeoutMs = 3_000): Promise<v
 // ---------------------------------------------------------------------------
 
 describe('session file watcher isolation', () => {
-  afterEach(() => {
+  afterEach(async () => {
+    const { cleanupSessionFileWatchForClient } = await import('@craft-agent/server-core/handlers/rpc')
+    cleanupSessionFileWatchForClient('watcher-isolation-client-a')
+    cleanupSessionFileWatchForClient('watcher-isolation-client-b')
     for (const dir of tempDirs) {
       try { rmSync(dir, { recursive: true, force: true }) } catch {}
     }
@@ -142,8 +145,8 @@ describe('session file watcher isolation', () => {
     const unwatchHandler = handlers.get(RPC_CHANNELS.sessions.UNWATCH_FILES)!
 
     // Client A watches session s1, Client B watches session s2
-    await watchHandler(makeCtx('client-a'), 's1')
-    await watchHandler(makeCtx('client-b'), 's2')
+    await watchHandler(makeCtx('watcher-isolation-client-a'), 's1')
+    await watchHandler(makeCtx('watcher-isolation-client-b'), 's2')
     await wait(50)
 
     // Trigger a change in s1
@@ -151,21 +154,21 @@ describe('session file watcher isolation', () => {
 
     // Wait for debounce + fs.watch delivery without assuming an unloaded event loop.
     await waitUntil(() => pushCalls.some(
-      p => p.target.to === 'client' && p.target.clientId === 'client-a',
+      p => p.target.to === 'client' && p.target.clientId === 'watcher-isolation-client-a',
     ))
 
     // Only client-a should have received the notification
-    const clientAPushes = pushCalls.filter(p => p.target.to === 'client' && p.target.clientId === 'client-a')
-    const clientBPushes = pushCalls.filter(p => p.target.to === 'client' && p.target.clientId === 'client-b')
+    const clientAPushes = pushCalls.filter(p => p.target.to === 'client' && p.target.clientId === 'watcher-isolation-client-a')
+    const clientBPushes = pushCalls.filter(p => p.target.to === 'client' && p.target.clientId === 'watcher-isolation-client-b')
     expect(clientAPushes.length).toBeGreaterThanOrEqual(1)
     expect(clientBPushes.length).toBe(0)
 
     // Verify push target is client-specific, not broadcast
     expect(clientAPushes[0].channel).toBe(RPC_CHANNELS.sessions.FILES_CHANGED)
-    expect(clientAPushes[0].target).toEqual({ to: 'client', clientId: 'client-a' })
+    expect(clientAPushes[0].target).toEqual({ to: 'client', clientId: 'watcher-isolation-client-a' })
 
     // Unwatch client A — should not affect client B
-    await unwatchHandler(makeCtx('client-a'))
+    await unwatchHandler(makeCtx('watcher-isolation-client-a'))
 
     // Clear push history
     pushCalls.length = 0
@@ -173,18 +176,18 @@ describe('session file watcher isolation', () => {
     // Trigger a change in s2
     writeFileSync(join(dir2, 'data.json'), '{}')
     await waitUntil(() => pushCalls.some(
-      p => p.target.to === 'client' && p.target.clientId === 'client-b',
+      p => p.target.to === 'client' && p.target.clientId === 'watcher-isolation-client-b',
     ))
 
     // Client B should still receive notifications
-    const clientBAfter = pushCalls.filter(p => p.target.to === 'client' && p.target.clientId === 'client-b')
+    const clientBAfter = pushCalls.filter(p => p.target.to === 'client' && p.target.clientId === 'watcher-isolation-client-b')
     expect(clientBAfter.length).toBeGreaterThanOrEqual(1)
 
     // Disconnect cleanup for client B
-    cleanupSessionFileWatchForClient('client-b')
+    cleanupSessionFileWatchForClient('watcher-isolation-client-b')
 
     // Double cleanup is a no-op (doesn't throw)
-    cleanupSessionFileWatchForClient('client-b')
+    cleanupSessionFileWatchForClient('watcher-isolation-client-b')
   })
 
   it('cleans up previous watcher when same client watches a different session', async () => {
@@ -199,11 +202,11 @@ describe('session file watcher isolation', () => {
     const watchHandler = handlers.get(RPC_CHANNELS.sessions.WATCH_FILES)!
 
     // Client A watches s1
-    await watchHandler(makeCtx('client-a'), 's1')
+    await watchHandler(makeCtx('watcher-isolation-client-a'), 's1')
     await wait(50)
 
     // Client A switches to s2 — old watcher should be cleaned up
-    await watchHandler(makeCtx('client-a'), 's2')
+    await watchHandler(makeCtx('watcher-isolation-client-a'), 's2')
     await wait(50)
 
     // Write to s1 — should NOT trigger notification (old watcher closed)
@@ -226,7 +229,7 @@ describe('session file watcher isolation', () => {
     )
     expect(s2Pushes.length).toBeGreaterThanOrEqual(1)
 
-    cleanupSessionFileWatchForClient('client-a')
+    cleanupSessionFileWatchForClient('watcher-isolation-client-a')
   })
 
   it('ignores internal session.jsonl and hidden files', async () => {
@@ -238,7 +241,7 @@ describe('session file watcher isolation', () => {
     registerSessionsHandlers(server, deps)
 
     const watchHandler = handlers.get(RPC_CHANNELS.sessions.WATCH_FILES)!
-    await watchHandler(makeCtx('client-a'), 's1')
+    await watchHandler(makeCtx('watcher-isolation-client-a'), 's1')
     await wait(50)
 
     // Write internal files — should be ignored
@@ -254,6 +257,6 @@ describe('session file watcher isolation', () => {
 
     expect(pushCalls.length).toBeGreaterThanOrEqual(1)
 
-    cleanupSessionFileWatchForClient('client-a')
+    cleanupSessionFileWatchForClient('watcher-isolation-client-a')
   })
 })

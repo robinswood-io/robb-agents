@@ -644,5 +644,6 @@
     ]
   },
   "moduleCycles": [],
-  "unitCycles": []
+  "unitCycles": [],
+  "retainedStructuralProof": "pi-runtime-state-body-proof.json"
 }
