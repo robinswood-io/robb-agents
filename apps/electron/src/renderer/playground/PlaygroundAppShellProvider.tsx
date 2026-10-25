@@ -10,6 +10,8 @@
 
 import * as React from 'react'
 import { AppShellProvider, type AppShellContextType } from '../context/AppShellContext'
+import { NavigationProvider } from '../contexts/NavigationContext'
+import { ModalProvider } from '../context/ModalContext'
 import type { Workspace } from '../../shared/types'
 
 const PLAYGROUND_WORKSPACE: Workspace = {
@@ -74,5 +76,21 @@ const playgroundValue: AppShellContextType = {
 }
 
 export function PlaygroundAppShellProvider({ children }: { children: React.ReactNode }) {
-  return <AppShellProvider value={playgroundValue}>{children}</AppShellProvider>
+  return (
+    <AppShellProvider value={playgroundValue}>
+      <ModalProvider>
+        <NavigationProvider
+          workspaceId={PLAYGROUND_WORKSPACE.id}
+          workspaceSlug={PLAYGROUND_WORKSPACE.slug}
+          onCreateSession={playgroundValue.onCreateSession}
+          onInputChange={playgroundValue.onInputChange}
+          getDraft={playgroundValue.getDraft}
+          isReady
+          isSessionsReady
+        >
+          {children}
+        </NavigationProvider>
+      </ModalProvider>
+    </AppShellProvider>
+  )
 }

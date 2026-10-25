@@ -1,4 +1,4 @@
-import type { ComponentType, ReactNode } from 'react'
+import type { ComponentType, ElementType, ReactNode } from 'react'
 
 export type ControlType =
   | { type: 'boolean' }
@@ -27,7 +27,7 @@ export interface ComponentEntry {
   name: string
   category: Category
   description: string
-  component: ComponentType<any>
+  component: ElementType
   props: PropDefinition[]
   variants?: ComponentVariant[]
   /** Returns mock data to merge with props (callbacks, complex objects) */

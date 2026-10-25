@@ -42,34 +42,40 @@ export function AutomationCard({
       )}
     >
       {/* Collapsed header */}
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-foreground/2 transition-colors"
-      >
-        {/* Expand chevron */}
-        {expanded ? (
-          <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-        ) : (
-          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-        )}
+      <div className="flex w-full items-center hover:bg-foreground/2 transition-colors">
+        <button
+          type="button"
+          aria-expanded={expanded}
+          onClick={() => setExpanded(!expanded)}
+          className="flex min-w-0 flex-1 items-center gap-3 px-4 py-3 text-left"
+        >
+          {/* Expand chevron */}
+          {expanded ? (
+            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+          ) : (
+            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+          )}
 
-        {/* Avatar */}
-        <AutomationAvatar event={automation.event} size="sm" />
+          {/* Avatar */}
+          <AutomationAvatar event={automation.event} size="sm" />
 
-        {/* Name + summary */}
-        <div className="flex-1 min-w-0">
-          <div className="text-sm font-medium truncate">{automation.name}</div>
-          <div className="text-xs text-foreground/50 truncate">{automation.summary}</div>
-        </div>
+          {/* Name + summary */}
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-medium truncate">{automation.name}</div>
+            <div className="text-xs text-foreground/50 truncate">{automation.summary}</div>
+          </div>
 
-        {/* Enable toggle */}
-        <div onClick={(e) => e.stopPropagation()}>
+        </button>
+
+        {/* Enable toggle stays separate from the expansion button. */}
+        <div className="pr-4">
           <Switch
+            aria-label={automation.name}
             checked={automation.enabled}
             onCheckedChange={(checked) => onToggleEnabled?.(checked)}
           />
         </div>
-      </button>
+      </div>
 
       {/* Expanded content */}
       {expanded && (

@@ -291,7 +291,7 @@ export function TaskEditorPreview({ mode: initialMode = 'generate' }: { mode?: M
         {yamlOpen && (
           <div className="px-4 pb-4">
             <div className="max-h-[210px] overflow-auto rounded-lg border border-border/60 bg-foreground/[0.025] p-3">
-              <div className="font-mono text-[11.5px] leading-[1.55]">
+              <div className="font-mono whitespace-pre-wrap text-[11.5px] leading-[1.55]">
                 {yaml.split('\n').map((ln, i) => (
                   <YamlLine key={i} line={ln} />
                 ))}

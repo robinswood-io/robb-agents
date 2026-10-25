@@ -235,8 +235,8 @@ function VariantPreview({ variant }: { variant: AllowedShadowVariant }) {
     )
   }
 
-  const style: React.CSSProperties | undefined = variant.className === 'shadow-tinted'
-    ? { ['--shadow-color' as any]: 'var(--accent-rgb)' }
+  const style: (React.CSSProperties & { '--shadow-color'?: string }) | undefined = variant.className === 'shadow-tinted'
+    ? { '--shadow-color': 'var(--accent-rgb)' }
     : undefined
 
   return (

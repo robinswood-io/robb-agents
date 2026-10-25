@@ -9,6 +9,11 @@
  * These shims satisfy the bundler's static analysis without adding runtime bulk.
  */
 
+interface BrowserHashShim {
+  update(): BrowserHashShim
+  digest(): string
+}
+
 // fs
 export const readFileSync = () => { throw new Error('readFileSync not available in browser') }
 export const writeFileSync = () => { throw new Error('writeFileSync not available in browser') }
@@ -70,12 +75,12 @@ export const randomBytes = (n: number) => {
   return buf
 }
 export const randomUUID = () => globalThis.crypto.randomUUID()
-export const createHash = () => ({
-  update: function(this: any) { return this },
+export const createHash = (): BrowserHashShim => ({
+  update: function() { return this },
   digest: () => '',
 })
-export const createHmac = () => ({
-  update: function(this: any) { return this },
+export const createHmac = (): BrowserHashShim => ({
+  update: function() { return this },
   digest: () => '',
 })
 export const timingSafeEqual = (a: Uint8Array, b: Uint8Array) => {
@@ -91,14 +96,14 @@ export const request = () => { throw new Error('request not available in browser
 export const get = () => { throw new Error('get not available in browser') }
 
 // util
-export const promisify = (fn: any) => fn
-export const inspect = (obj: any) => String(obj)
-export const deprecate = (fn: any) => fn
+export const promisify = <Fn>(fn: Fn) => fn
+export const inspect = (obj: unknown) => String(obj)
+export const deprecate = <Fn>(fn: Fn) => fn
 export const inherits = () => {}
 
 // buffer
 export const Buffer = {
-  from: (data: any) => new Uint8Array(typeof data === 'string' ? new TextEncoder().encode(data) : data),
+  from: (data: string | ArrayBuffer | ArrayLike<number>) => new Uint8Array(typeof data === 'string' ? new TextEncoder().encode(data) : data),
   isBuffer: () => false,
   alloc: (size: number) => new Uint8Array(size),
   concat: (bufs: Uint8Array[]) => {
@@ -124,7 +129,7 @@ export class EventEmitter {
   private _events: Record<string, Function[]> = {}
   on(event: string, fn: Function) { (this._events[event] ??= []).push(fn); return this }
   off(event: string, fn: Function) { this._events[event] = (this._events[event] ?? []).filter(f => f !== fn); return this }
-  emit(event: string, ...args: any[]) { (this._events[event] ?? []).forEach(fn => fn(...args)); return true }
+  emit(event: string, ...args: unknown[]) { (this._events[event] ?? []).forEach(fn => fn(...args)); return true }
   removeAllListeners() { this._events = {}; return this }
   addListener(event: string, fn: Function) { return this.on(event, fn) }
   removeListener(event: string, fn: Function) { return this.off(event, fn) }
