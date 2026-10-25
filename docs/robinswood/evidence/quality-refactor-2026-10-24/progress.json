@@ -103,21 +103,21 @@
     "Lint global sans erreur ni avertissement",
     "Parcours complets réels en staging local, compilation signée et intégration"
   ],
-  "updatedAt": "2026-10-25T21:12:17.927694+00:00",
+  "updatedAt": "2026-10-25T21:19:47.768019+00:00",
   "current": {
-    "lastEvidence": "browser-pane-class-summary.json",
+    "lastEvidence": "playground-sections-summary.json",
     "sourceGate": {
-      "max-lines": 91,
+      "max-lines": 83,
       "no-explicit-any": 320
     },
     "globalLint": {
-      "files": 3445,
-      "errors": 381,
+      "files": 3468,
+      "errors": 373,
       "warnings": 137,
       "fatal": 0,
       "rules": {
         "@typescript-eslint/no-explicit-any": 301,
-        "max-lines": 80,
+        "max-lines": 72,
         "react-hooks/exhaustive-deps": 98,
         "directive": 12,
         "craft-agent/no-localstorage": 21,

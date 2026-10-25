@@ -1,0 +1,385 @@
+{
+  "status": "testé localement ; chantier global en cours",
+  "scope": "Huit ensembles d’exemples du playground : automatisations, navigateur, listes, kanban, Markdown, messages, sessions et éditeur de tâches",
+  "changes": [
+    "143 déclarations natives séparées entre données et composants ; les listes publiques restent au chemin existant, sans registre ni état supplémentaire.",
+    "Corps, fermetures et ordre des appels d’initialisation préservés ; aucun fichier du lot ne dépasse 448 lignes."
+  ],
+  "files": [
+    {
+      "file": "apps/electron/src/renderer/playground/registry/automations.tsx",
+      "lines": 340,
+      "sha256": "0a8e473406bb5c1a2a6667213dbf9f5f2e4216ced6e5eec92c043d171699a0f0"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/registry/automations/fixtures.tsx",
+      "lines": 185,
+      "sha256": "09dd0eb77734a3d73c98c61d9750ab8560a316a4a7e8d9f4e38787216d2ea1bc"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/registry/automations/previews.tsx",
+      "lines": 167,
+      "sha256": "61f7e2262c101f4c9beab680f0b1c7bb5fbebad9581061733050c9855577cf11"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/registry/browser-ui.tsx",
+      "lines": 188,
+      "sha256": "a4f411e32304cfc6326f9f3a439d1b6b7ec6160fb70ffe53fdc94742f1b6d0a7"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/registry/browser-ui/scenarios.tsx",
+      "lines": 201,
+      "sha256": "897a84bfc016e2596aab37b3024548ec88024d5f9d3b3368fc737adb8796c88e"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/registry/browser-ui/surface.tsx",
+      "lines": 323,
+      "sha256": "e3c96a58b7d461ccc3f2d66bb1849b4f6cf31f8bbdb312ad044a0b5f40d7b358"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/registry/browser-ui/tab-presets.tsx",
+      "lines": 318,
+      "sha256": "d969c5689126b740f5029177ea0709aa8052b918b835fe462ea00e460b2401a6"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/registry/browser-ui/tabs.tsx",
+      "lines": 70,
+      "sha256": "7224c2f3cc501fd5ba5391561ee31b498c4fb39335c48cd48b3777202d47410c"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/registry/entity-lists.tsx",
+      "lines": 245,
+      "sha256": "f6c5be701e4192d6ff83b73f920e54b64a6870b4fe22b11b0fefb09199276a86"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/registry/entity-lists/fixtures.tsx",
+      "lines": 161,
+      "sha256": "eb39b1980225eeac872b3f9328f69105e69b97a18cfaf2a6fb4a908b5017f41c"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/registry/entity-lists/interactive.tsx",
+      "lines": 181,
+      "sha256": "8fa8652c152b92d11e127ce988d46400ab5b57622ee8e516d4323b429e01409e"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/registry/entity-lists/lists.tsx",
+      "lines": 196,
+      "sha256": "49e39a9835b179cf189612e0681c2d6f92337e65c77c4d14fd52eaf455467de1"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/registry/entity-lists/mixed.tsx",
+      "lines": 167,
+      "sha256": "e2836e43e8db955915cacf20c6edad45d6b99ec69088f229857c5f53b365b261"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/registry/entity-lists/primitives.tsx",
+      "lines": 125,
+      "sha256": "47771cb40d3598d2765b1e75697842d25bc931ce54d42b903af4e93d048636d3"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/registry/kanban.tsx",
+      "lines": 104,
+      "sha256": "81ed257eebd6f3b97eb9e712733dda19bb46caae2fa6e4d3708e8b207037a80f"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/registry/kanban/fixtures.tsx",
+      "lines": 95,
+      "sha256": "bf9659b1a1eda7eebbf73c363292931a14fede2f5cd64bcaada01463f8e4002a"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/registry/kanban/previews.tsx",
+      "lines": 255,
+      "sha256": "d8f459ddcf40475a9dfc32d6a57dd7f1263c974fb91368c8ccd9664a6a2b8f5e"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/registry/kanban/windows.tsx",
+      "lines": 99,
+      "sha256": "671a085bc56e87c5648608757882146d745d1487b5e4ad3392f5c11a985cd168"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/registry/markdown.tsx",
+      "lines": 447,
+      "sha256": "affda9ff7238cb986ae7a571edaab7dd23428e9d59e38377459776368beae002"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/registry/markdown/fixtures.tsx",
+      "lines": 175,
+      "sha256": "0bb61e95be1eb34f9424e35ba7f4058506b300931ea2f5f898360009c1901e14"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/registry/markdown/previews.tsx",
+      "lines": 74,
+      "sha256": "e4ab97353b3e6ee23c57ef3db13379fffeb35736c686d1c1b6c5a5a787cc5778"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/registry/messages.tsx",
+      "lines": 348,
+      "sha256": "2a2b3d3ee79570d88106592cfed43c90c5c8500cbf08a5d5f41d583057b9d603"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/registry/messages/gallery.tsx",
+      "lines": 330,
+      "sha256": "3eeab064761093aadb7a8b9887a840c1803fd6b938eb3e1fd59d87e70f73622a"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/registry/messages/status.tsx",
+      "lines": 205,
+      "sha256": "78ab28e89ce0f20f25591c9d65d5df64faa29baab199be288d18634d02d669e6"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/registry/session-list.tsx",
+      "lines": 258,
+      "sha256": "50aebaee7661b463d1ce51a8791a67e6a033716b84010ebc011d4a88a275c188"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/registry/session-list/fixtures.tsx",
+      "lines": 98,
+      "sha256": "1e95ecfdb7e466ab8b06cda30be791282d3127567b4b209575e7e47ce1b16e37"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/registry/session-list/previews.tsx",
+      "lines": 184,
+      "sha256": "b9a26cd55096b7d7eaa42849ac8384b9d22c03c0ae9e4a4dd3050f930c2b1c24"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/registry/task-editor.tsx",
+      "lines": 42,
+      "sha256": "fe53ee36f8b61eef049aa204536c2575b424ce467acf3c523daf7b49cc14ac5f"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/registry/task-editor/controls.tsx",
+      "lines": 213,
+      "sha256": "f0db0b8bebef820b2e05fdcebf4dc37db4decb34976213b389e8fc4df81bcf09"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/registry/task-editor/fixtures.tsx",
+      "lines": 99,
+      "sha256": "636dd6352f4558ddaa3eaaea1e481d308b5fa3803a3e1720d5bb48c25deb57f6"
+    },
+    {
+      "file": "apps/electron/src/renderer/playground/registry/task-editor/preview.tsx",
+      "lines": 305,
+      "sha256": "74c592ccb588dfa59c37fdad3d8059719d51e80a7d08b9e7fef80a44bf4c7d14"
+    }
+  ],
+  "checks": [
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 16.75,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/playground-sections-types.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "apps/electron/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 22.95,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/playground-sections-compat.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "--config",
+        "eslint.config.mjs",
+        "apps/electron/src/renderer/playground/registry/automations/previews.tsx",
+        "apps/electron/src/renderer/playground/registry/automations/fixtures.tsx",
+        "apps/electron/src/renderer/playground/registry/automations.tsx",
+        "apps/electron/src/renderer/playground/registry/browser-ui/scenarios.tsx",
+        "apps/electron/src/renderer/playground/registry/browser-ui/surface.tsx",
+        "apps/electron/src/renderer/playground/registry/browser-ui/tab-presets.tsx",
+        "apps/electron/src/renderer/playground/registry/browser-ui/tabs.tsx",
+        "apps/electron/src/renderer/playground/registry/browser-ui.tsx",
+        "apps/electron/src/renderer/playground/registry/entity-lists/primitives.tsx",
+        "apps/electron/src/renderer/playground/registry/entity-lists/fixtures.tsx",
+        "apps/electron/src/renderer/playground/registry/entity-lists/lists.tsx",
+        "apps/electron/src/renderer/playground/registry/entity-lists/mixed.tsx",
+        "apps/electron/src/renderer/playground/registry/entity-lists/interactive.tsx",
+        "apps/electron/src/renderer/playground/registry/entity-lists.tsx",
+        "apps/electron/src/renderer/playground/registry/kanban/fixtures.tsx",
+        "apps/electron/src/renderer/playground/registry/kanban/previews.tsx",
+        "apps/electron/src/renderer/playground/registry/kanban/windows.tsx",
+        "apps/electron/src/renderer/playground/registry/kanban.tsx",
+        "apps/electron/src/renderer/playground/registry/markdown/fixtures.tsx",
+        "apps/electron/src/renderer/playground/registry/markdown/previews.tsx",
+        "apps/electron/src/renderer/playground/registry/markdown.tsx",
+        "apps/electron/src/renderer/playground/registry/messages/status.tsx",
+        "apps/electron/src/renderer/playground/registry/messages/gallery.tsx",
+        "apps/electron/src/renderer/playground/registry/messages.tsx",
+        "apps/electron/src/renderer/playground/registry/session-list/fixtures.tsx",
+        "apps/electron/src/renderer/playground/registry/session-list/previews.tsx",
+        "apps/electron/src/renderer/playground/registry/session-list.tsx",
+        "apps/electron/src/renderer/playground/registry/task-editor/fixtures.tsx",
+        "apps/electron/src/renderer/playground/registry/task-editor/controls.tsx",
+        "apps/electron/src/renderer/playground/registry/task-editor/preview.tsx",
+        "apps/electron/src/renderer/playground/registry/task-editor.tsx",
+        "--format",
+        "json",
+        "--output-file",
+        "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/playground-sections-owned-lint-report.json",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 1.05,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/playground-sections-owned-lint.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 16.03,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/playground-sections-build.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 136.65,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/playground-sections-test.log"
+    }
+  ],
+  "proof": {
+    "status": "passed",
+    "registries": [
+      {
+        "source": "apps/electron/src/renderer/playground/registry/automations.tsx",
+        "declarations": 14,
+        "nativePublicExports": true,
+        "unchangedBodiesAndClosures": true,
+        "nativeExternalImportOrder": true,
+        "nativeEagerCalls": 11,
+        "runtimeImportCycles": 0,
+        "moduleCount": 3
+      },
+      {
+        "source": "apps/electron/src/renderer/playground/registry/browser-ui.tsx",
+        "declarations": 26,
+        "nativePublicExports": true,
+        "unchangedBodiesAndClosures": true,
+        "nativeExternalImportOrder": true,
+        "nativeEagerCalls": 2,
+        "runtimeImportCycles": 0,
+        "moduleCount": 5
+      },
+      {
+        "source": "apps/electron/src/renderer/playground/registry/entity-lists.tsx",
+        "declarations": 30,
+        "nativePublicExports": true,
+        "unchangedBodiesAndClosures": true,
+        "nativeExternalImportOrder": true,
+        "nativeEagerCalls": 7,
+        "runtimeImportCycles": 0,
+        "moduleCount": 6
+      },
+      {
+        "source": "apps/electron/src/renderer/playground/registry/kanban.tsx",
+        "declarations": 19,
+        "nativePublicExports": true,
+        "unchangedBodiesAndClosures": true,
+        "nativeExternalImportOrder": true,
+        "nativeEagerCalls": 0,
+        "runtimeImportCycles": 0,
+        "moduleCount": 4
+      },
+      {
+        "source": "apps/electron/src/renderer/playground/registry/markdown.tsx",
+        "declarations": 11,
+        "nativePublicExports": true,
+        "unchangedBodiesAndClosures": true,
+        "nativeExternalImportOrder": true,
+        "nativeEagerCalls": 14,
+        "runtimeImportCycles": 0,
+        "moduleCount": 3
+      },
+      {
+        "source": "apps/electron/src/renderer/playground/registry/messages.tsx",
+        "declarations": 9,
+        "nativePublicExports": true,
+        "unchangedBodiesAndClosures": true,
+        "nativeExternalImportOrder": true,
+        "nativeEagerCalls": 0,
+        "runtimeImportCycles": 0,
+        "moduleCount": 3
+      },
+      {
+        "source": "apps/electron/src/renderer/playground/registry/session-list.tsx",
+        "declarations": 9,
+        "nativePublicExports": true,
+        "unchangedBodiesAndClosures": true,
+        "nativeExternalImportOrder": true,
+        "nativeEagerCalls": 4,
+        "runtimeImportCycles": 0,
+        "moduleCount": 3
+      },
+      {
+        "source": "apps/electron/src/renderer/playground/registry/task-editor.tsx",
+        "declarations": 25,
+        "nativePublicExports": true,
+        "unchangedBodiesAndClosures": true,
+        "nativeExternalImportOrder": true,
+        "nativeEagerCalls": 0,
+        "runtimeImportCycles": 0,
+        "moduleCount": 4
+      }
+    ],
+    "nativeDeclarations": 143,
+    "maximumFileLines": 448,
+    "runtimeImportCycles": 0,
+    "originalRegistryMechanismPreserved": true,
+    "addedStateOrIndirection": false
+  },
+  "fullTestSummary": {
+    "pass": 10741,
+    "fail": 0,
+    "skip": 12
+  },
+  "targeted": {},
+  "beforeAfter": null,
+  "sourceGate": {
+    "max-lines": 83,
+    "no-explicit-any": 320
+  },
+  "globalLint": {
+    "files": 3468,
+    "errors": 373,
+    "warnings": 137,
+    "fatal": 0,
+    "rules": {
+      "@typescript-eslint/no-explicit-any": 301,
+      "max-lines": 72,
+      "react-hooks/exhaustive-deps": 98,
+      "directive": 12,
+      "craft-agent/no-localstorage": 21,
+      "@typescript-eslint/no-unused-vars": 6
+    }
+  },
+  "resolvedFailures": [],
+  "limits": [
+    "83 fichiers trop longs et 320 any explicites subsistent dans le code maintenu.",
+    "Le lint global reste en échec ; missions avec la connexion habituelle et contrôle UI final encore à effectuer.",
+    "Aucune installation de ce lot effectuée."
+  ],
+  "updatedAt": "2026-10-25T21:19:47.768019+00:00"
+}
