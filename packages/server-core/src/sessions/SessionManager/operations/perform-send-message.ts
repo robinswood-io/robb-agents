@@ -1,25 +1,24 @@
+import { prepareSessionAgentRuntime } from './prepare-agent-runtime.ts';
 import { executeSessionProviderTurn } from './execute-provider-turn.ts';
 import type { ProviderTurnInput } from './provider-turn-input.ts';
 import { createProviderTurnState } from './provider-turn-state.ts';
 import { enqueueSessionMessage } from './enqueue-session-message.ts';
 import type { SessionOperationContext, SessionMessageState } from '../operation-context.ts';
-import { refreshInheritedWorkspaceSources, hasPendingLocalUserInput, queuedCostLimitContinuationForAgentDelivery, assertRetryTurnAnchor, queuedDirectHumanContinuationIndex, nextRecoveryDispatch, validAllocatedRecoveryDispatch, cleanRetrySetupFailureSignal, enqueueRecoveredMessageInTranscriptOrder, persistenceRootFor, isExactQueuedSourceActivation, cancelSourceActivationPending, commitSourceActivationPending, releaseSourceActivationClaim, projectLegacyObjectiveForUserTransition, repairLegacyContextualObjectiveAuthority, isDirectHumanContinuation, assertSpecializedMissionSourceSelection, captureSpecializedMissionSourceSnapshot, ordinaryMissionSourceBuildOptions, rehydrateObjectiveEvidence } from '../policy.ts';
-import { AGENT_RUNTIME_ACTIVITY } from '@craft-agent/core/types';
+import { refreshInheritedWorkspaceSources, hasPendingLocalUserInput, assertRetryTurnAnchor, queuedDirectHumanContinuationIndex, nextRecoveryDispatch, validAllocatedRecoveryDispatch, cleanRetrySetupFailureSignal, enqueueRecoveredMessageInTranscriptOrder, persistenceRootFor, isExactQueuedSourceActivation, cancelSourceActivationPending, commitSourceActivationPending, releaseSourceActivationClaim, projectLegacyObjectiveForUserTransition, repairLegacyContextualObjectiveAuthority, isDirectHumanContinuation, rehydrateObjectiveEvidence } from '../policy.ts';
+
 import { reopenCompletedChat } from '../../completed-chat-retention';
 import { restoreAgentDeliveryAttachments } from '../../agent-delivery.ts';
 
 import type { UserInputRequest } from '@craft-agent/core';
 
 import { classifyAgentFailure, parseCompactCommand } from '@craft-agent/shared/agent';
-import { resolveSessionConnection } from '@craft-agent/shared/agent/backend';
-import { decideCostProviderAdmission, monetaryBudgetCostUsd, resolveAgentCostBudgetState, resolveAgentCostControlPolicy, resolveEffectiveAgentContextLimits } from '@craft-agent/shared/config';
-import type { CostControlledTurnKind } from '@craft-agent/shared/config';
+
+import { resolveAgentCostControlPolicy } from '@craft-agent/shared/config';
 
 import { loadWorkspaceConfig } from '@craft-agent/shared/workspaces';
-import { clearPendingPlanExecution as clearStoredPendingPlanExecution, getSessionPath as getSessionStoragePath } from '@craft-agent/shared/sessions';
+import { clearPendingPlanExecution as clearStoredPendingPlanExecution } from '@craft-agent/shared/sessions';
 import type { PendingTurnRecovery } from '@craft-agent/shared/sessions';
-import { loadAllSources, getSourcesBySlugs, isSourceUsable } from '@craft-agent/shared/sources';
-import type { LoadedSource } from '@craft-agent/shared/sources';
+import { getSourcesBySlugs, isSourceUsable } from '@craft-agent/shared/sources';
 
 import type { FileAttachment, SendMessageOptions } from '@craft-agent/shared/protocol';
 import { CodedError, generateMessageId } from '@craft-agent/shared/protocol';
@@ -34,27 +33,26 @@ import { explicitRetryProgressFingerprint } from '../../explicit-retry-progress'
 import { shouldManageSessionStatusLifecycle } from '../../session-status-lifecycle';
 import { turnRecoveryValidationFingerprint, buildCleanRecoveryContinuationPrompt, createPendingTurnRecovery, grantExplicitRetryAllowance, reconstructLegacyTurnRecoveryBudget } from '../../turn-recovery';
 
-import { resolveContextTokenEstimate } from '../../context-token-estimate';
-import { isHostSyntheticObjectiveText, objectiveCostUsd, transitionObjectiveContract } from '../../objective-contract';
-import { COST_CONTROL_COMPACTION_INSTRUCTIONS, assessContextCompactionResult, classifyContextCompactionFailure, consumeContextProviderBaselineAdmission, decideContextProviderAdmission, isHardLimitFollowUpContextCompaction, isHardLimitRecoveryContextCompaction, shouldAttemptContextCompaction } from '../../context-compaction';
+import { isHostSyntheticObjectiveText, transitionObjectiveContract } from '../../objective-contract';
+
 import { sanitizeForTitle } from '@craft-agent/server-core/domain';
 import { normalizeRecoveryValidationGapsForProgress } from '../../recovery-progress';
 import type { ManagedSession } from '../managed-session.ts';
 import { hasImmutableMissionRoute } from '../mission-route.ts';
 import { delegatedObjectiveRoleForSession, isTerminalReviewSession } from '../review-lifecycle.ts';
-import { sessionLog, sessionRuntimeHooks } from '../runtime-platform.ts';
+import { sessionLog } from '../runtime-platform.ts';
 import { AutomaticRecoverySupersededError, AutonomousAdmissionDeferredError, CleanRecoveryDispatchAuthenticationError, DelegatedDispatchSupersededError, InternalContinuationSupersededError, RetryTurnAlreadyRunningError, SourceActivationSupersededError } from '../runtime-policy.ts';
-import type { AgentInstance } from '../runtime-types.ts';
+
 import type { SourceActivationOrigin } from '../source-activation.ts';
 import { claimAutoRetryPending, isSourceActivationOriginCurrent, sourceActivationObjectiveBinding } from '../source-activation.ts';
-import { buildServersFromSources, refreshExpiredCredentials } from '../source-build.ts';
-import { COST_LIMIT_NEXT_STEP_QUESTIONS, MAX_CLEAN_RETRY_CONDITIONAL_SETUP_FAILURES, MAX_CLEAN_RETRY_SAFE_SETUP_FAILURES, canonicalUserInputAnswerContents, isCostLimitContinuationAnswer, isExactContextLimitNextStepQuestion, resolveManagedSessionContextWindow } from '../user-input-authority.ts';
-import type { SessionOperations } from '../operation-types.ts';
+
+import { MAX_CLEAN_RETRY_CONDITIONAL_SETUP_FAILURES, MAX_CLEAN_RETRY_SAFE_SETUP_FAILURES, canonicalUserInputAnswerContents, isCostLimitContinuationAnswer, isExactContextLimitNextStepQuestion } from '../user-input-authority.ts';
+
 import { assertStrongCancellationAdmissionOpen as sessionOpAssertStrongCancellationAdmissionOpen } from './perform-cancel-processing-and-wait.ts';
 import { hasTerminalObjectiveState as sessionOpHasTerminalObjectiveState, repairLegacySyntheticObjectiveAuthority as sessionOpRepairLegacySyntheticObjectiveAuthority, revokePendingToolPermissionsForDirectContinuation as sessionOpRevokePendingToolPermissionsForDirectContinuation, dropDeferredSourceActivations as sessionOpDropDeferredSourceActivations, hasPendingDecision as sessionOpHasPendingDecision } from './repair-legacy-synthetic-objective-authority.ts';
 import { isFreshStaleTypedUpwardAgentDelivery as sessionOpIsFreshStaleTypedUpwardAgentDelivery, releasableUpwardAgentDeliverySenderId as sessionOpReleasableUpwardAgentDeliverySenderId, isStaleTypedUpwardAgentDelivery as sessionOpIsStaleTypedUpwardAgentDelivery, quarantineStaleTypedUpwardAgentDelivery as sessionOpQuarantineStaleTypedUpwardAgentDelivery } from './quarantine-stale-typed-upward-agent-delivery.ts';
 import { authenticatedInternalContinuationCurrent as sessionOpAuthenticatedInternalContinuationCurrent, consumeAuthenticatedInternalContinuation as sessionOpConsumeAuthenticatedInternalContinuation, delegatedDispatchContinuationCurrent as sessionOpDelegatedDispatchContinuationCurrent, consumeDelegatedDispatchContinuation as sessionOpConsumeDelegatedDispatchContinuation, claimAuthenticatedInternalContinuation as sessionOpClaimAuthenticatedInternalContinuation } from './message-authority.ts';
-import { stripDisabledAllocatedRoutingFallback as sessionOpStripDisabledAllocatedRoutingFallback, startRecoveryDispatch as sessionOpStartRecoveryDispatch, fenceCleanSetupPersistence as sessionOpFenceCleanSetupPersistence, clearDeferredAutomaticRetry as sessionOpClearDeferredAutomaticRetry } from './start-recovery-dispatch.ts';
+import { stripDisabledAllocatedRoutingFallback as sessionOpStripDisabledAllocatedRoutingFallback, startRecoveryDispatch as sessionOpStartRecoveryDispatch } from './start-recovery-dispatch.ts';
 import { buildRecoveryDispatchMessage as sessionOpBuildRecoveryDispatchMessage, isExactRepurposedUserInputCleanBoundary as sessionOpIsExactRepurposedUserInputCleanBoundary } from './user-input-recovery.ts';
 import { untrackSyntheticAutomaticMessage as sessionOpUntrackSyntheticAutomaticMessage, providerDispatchAdmissionBarrier as sessionOpProviderDispatchAdmissionBarrier } from './reconcile-live-provider-dispatch-uncertainty.ts';
 import { hasAcceptedHumanContinuationQueued as sessionOpHasAcceptedHumanContinuationQueued, cancelSupersededAutomaticRecoveries as sessionOpCancelSupersededAutomaticRecoveries, consumeLiveDirectHumanContinuation as sessionOpConsumeLiveDirectHumanContinuation, assertRetryTurnUnblocked as sessionOpAssertRetryTurnUnblocked, hasConsumedCleanRecoveryDispatch as sessionOpHasConsumedCleanRecoveryDispatch } from './create-autonomous-context-limit-handoff.ts';
@@ -65,11 +63,11 @@ import { isAutonomousMessage as sessionOpIsAutonomousMessage } from './is-curren
 import { canRetryRetainedMachineInbox as sessionOpCanRetryRetainedMachineInbox, hasOnlyMachineInbox as sessionOpHasOnlyMachineInbox, exactQueuedAgentDeliveryReceipt as sessionOpExactQueuedAgentDeliveryReceipt } from './restore-pre-ack-agent-delivery-dequeues.ts';
 import { retryableContextLimitRequest as sessionOpRetryableContextLimitRequest } from './retryable-context-limit-request.ts';
 import { exactUserInputResponse as sessionOpExactUserInputResponse, autonomousAdmissionBlock as sessionOpAutonomousAdmissionBlock } from './exact-user-input-response.ts';
-import { hasQueuedUserInput as sessionOpHasQueuedUserInput, contextLimitHostAdmissionBoundary as sessionOpContextLimitHostAdmissionBoundary, consumeQueuedCostLimitContinuation as sessionOpConsumeQueuedCostLimitContinuation } from './perform-request-user-input.ts';
+import { hasQueuedUserInput as sessionOpHasQueuedUserInput, contextLimitHostAdmissionBoundary as sessionOpContextLimitHostAdmissionBoundary } from './perform-request-user-input.ts';
 
 import { captureUserCorrection as sessionOpCaptureUserCorrection, loadSessionPlaybook as sessionOpLoadSessionPlaybook } from './capture-user-correction.ts';
 import { trackSyntheticAutomaticMessage as sessionOpTrackSyntheticAutomaticMessage, getInterruptedTurnRecovery as sessionOpGetInterruptedTurnRecovery, hasValidationExhaustionMarker as sessionOpHasValidationExhaustionMarker } from './reconcile-provider-acceptance-unknown-for-retry.ts';
-import { objectiveContractTextFor as sessionOpObjectiveContractTextFor, getCollectionSummarizer as sessionOpGetCollectionSummarizer } from './try-refresh-agent-runtime.ts';
+import { objectiveContractTextFor as sessionOpObjectiveContractTextFor } from './try-refresh-agent-runtime.ts';
 import { boundCleanUserInputRequest as sessionOpBoundCleanUserInputRequest } from './context-limit-authenticated-answer-evidence.ts';
 import { scheduleTitleGeneration as sessionOpScheduleTitleGeneration } from './schedule-title-generation.ts';
 import { evaluateAndApplyAutoLabels as sessionOpEvaluateAndApplyAutoLabels } from './perform-adopt-generated-task-orchestrator.ts';
@@ -77,8 +75,6 @@ import { getLastFinalAssistantMessageId as sessionOpGetLastFinalAssistantMessage
 import { createContextLimitRetryHandoff as sessionOpCreateContextLimitRetryHandoff } from './create-context-limit-retry-handoff.ts';
 import { reloadSessionSourcesWithinOperation as sessionOpReloadSessionSourcesWithinOperation } from './workspace-configuration.ts';
 import { hasRunningBackgroundTasks as sessionOpHasRunningBackgroundTasks } from './evict-idle-session-runtimes.ts';
-import { isManagedSessionYolo as sessionOpIsManagedSessionYolo, stopYoloHumanHandoff as sessionOpStopYoloHumanHandoff } from './is-managed-session-yolo.ts';
-import { retainFailedCleanRetrySetup as sessionOpRetainFailedCleanRetrySetup } from './retain-failed-clean-retry-setup.ts';
 
 async function sessionOpPerformSendMessage(sessionOperationContext: SessionOperationContext, sessionId: string, message: string, attachments?: FileAttachment[], storedAttachments?: StoredAttachment[], options?: SendMessageOptions, existingMessageId?: string, _isAuthRetry?: boolean, 
 /**
@@ -1767,7 +1763,7 @@ delegatedDispatchContinuationToken?: symbol): Promise<void> {
             return allocatedDispatch.id;
         };
     }
-    let cleanRecoveryProviderReset = (() => {
+    const cleanRecoveryProviderReset = (() => {
         const dispatch = managed.pendingTurnRecovery?.recoveryDispatch;
         if (!activeMessageState.options?.automaticRecovery || dispatch?.phase !== 'started'
             || !dispatch.cleanContinuationId || dispatch.id !== userMessage.id
@@ -1780,7 +1776,7 @@ delegatedDispatchContinuationToken?: symbol): Promise<void> {
             return false;
         }
     })();
-    let cleanRecoveryHandoffPrompt = cleanRecoveryProviderReset;
+
     if (directHumanContinuation && managed.pendingTurnRecovery?.recoveryDispatch) {
         managed.pendingTurnRecovery = {
             ...managed.pendingTurnRecovery,
@@ -2178,752 +2174,39 @@ delegatedDispatchContinuationToken?: symbol): Promise<void> {
     };
     const enabledSlugs = managed.enabledSourceSlugs ?? [];
     const hasSources = enabledSlugs.length > 0;
-    let agent: AgentInstance;
-    let cleanRecoveryConversionFlushFailed = false;
-    try {
-        // Monetary hard limits are provider-admission fences for every
-        // autonomous continuation. This check deliberately runs before runtime
-        // creation, source refresh, routing and compaction, so the blocked turn
-        // cannot spend more merely while preparing a fallback. It is independent
-        // from the automatic-routing switch: disabling routing preserves the
-        // selected model but must not disable the configured cost safety limit.
-        const admissionWorkspaceConfig = loadWorkspaceConfig(managed.workspace.rootPath);
-        const admissionCostPolicy = resolveAgentCostControlPolicy(admissionWorkspaceConfig?.costControl);
-        const admissionOriginKind = activeMessageState.options?.internalOrigin?.kind;
-        const admissionTurnKind: CostControlledTurnKind = (admissionOriginKind === 'user-input'
-            ? 'direct'
-            : admissionOriginKind)
-            ?? (activeMessageState.options?.automaticRecovery
-                ? 'automatic-recovery'
-                : (managed.triggeredBy ? 'automation' : 'direct'));
-        const admissionConnection = resolveSessionConnection(managed.llmConnection, admissionWorkspaceConfig?.defaults?.defaultLlmConnection);
-        const admissionSessionCostUsd = monetaryBudgetCostUsd(admissionConnection, objectiveCostUsd(managed.activeObjective, managed.tokenUsage?.costUsd));
-        const admissionBudgetState = resolveAgentCostBudgetState(admissionSessionCostUsd, admissionCostPolicy.budgets);
-        const queuedCostLimitContinuation = admissionOriginKind === 'agent-message'
-            && !!userMessage.agentDelivery
-            ? queuedCostLimitContinuationForAgentDelivery(managed)
-            : undefined;
-        const directCostLimitContinuation = admissionOriginKind === 'user-input'
-            && !!trustedUserInput
-            && isCostLimitContinuationAnswer(trustedUserInput);
-        const directHumanTurn = admissionTurnKind === 'direct'
-            && !activeMessageState.options?.hidden
-            && !activeMessageState.options?.internalOrigin
-            && !activeMessageState.options?.automaticRecovery;
-        const hasExplicitHardUsdBudget = typeof admissionWorkspaceConfig?.costControl?.budgets?.hardSessionUsd === 'number';
-        const costProviderAdmission = decideCostProviderAdmission({
-            budgetState: admissionBudgetState,
-            turnKind: admissionTurnKind,
-            hostAuthenticatedUserOverride: directHumanTurn
-                || directCostLimitContinuation
-                || !!queuedCostLimitContinuation
-                || (sessionOpIsManagedSessionYolo(sessionOperationContext, managed) && !hasExplicitHardUsdBudget),
-        });
-        if (admissionCostPolicy.enabled && costProviderAdmission.action === 'pause-for-user') {
-            sessionLog.warn('cost-control blocked autonomous provider admission at the hard session limit', {
-                sessionId: managed.id,
-                turnKind: admissionTurnKind,
-                sessionCostUsd: admissionSessionCostUsd,
-                hardSessionUsd: admissionCostPolicy.budgets.hardSessionUsd,
-            });
-            sessionOperationContext.owner["persistSession"](managed);
-            await sessionOperationContext.owner.flushSession(managed.id);
-            assertActivePreparation();
-            if (sessionOpIsManagedSessionYolo(sessionOperationContext, managed)) {
-                await sessionOpStopYoloHumanHandoff(sessionOperationContext, managed, 'YOLO stopped at the configured hard cost limit. The objective remains incomplete; no budget override or human request was created.');
-                assertActivePreparation();
-                sendSpan.mark('cost.hard-limit-yolo-exhausted');
-                sendSpan.end();
-                await sessionOperationContext.owner["onProcessingStopped"](sessionId, 'interrupted', myGeneration);
-                return;
-            }
-            const hasPendingQuestion = managed.userInputRequests?.some(request => request.status === 'pending') === true;
-            if (!hasPendingQuestion) {
-                await sessionOperationContext.owner.requestUserInput(managed.id, COST_LIMIT_NEXT_STEP_QUESTIONS);
-                assertActivePreparation();
-            }
-            sendSpan.mark('cost.hard-limit-provider-blocked');
-            sendSpan.end();
-            await sessionOperationContext.owner["onProcessingStopped"](sessionId, 'interrupted', myGeneration);
-            return;
-        }
-        if (queuedCostLimitContinuation) {
-            await sessionOpConsumeQueuedCostLimitContinuation(sessionOperationContext, managed, queuedCostLimitContinuation);
-            assertActivePreparation();
-        }
-        // Load enabled sources up-front so we can refresh tokens BEFORE getOrCreateAgent
-        // runs its internal cold-session build. Otherwise that build sees stale tokens
-        // and emits AUTH_REQUIRED, causing a brief "needs_auth" UI flicker before the
-        // post-build refresh restores state (#710).
-        let sources: LoadedSource[] = hasSources
-            ? getSourcesBySlugs(workspaceRootPath, enabledSlugs)
-            : [];
-        assertSpecializedMissionSourceSelection(managed, enabledSlugs);
-        if (managed.missionCapabilityLock) {
-            if (sources.length !== enabledSlugs.length) {
-                throw new Error('Specialized Mission source snapshot is incomplete');
-            }
-            sources = await captureSpecializedMissionSourceSnapshot(managed, sources);
-            managed.missionTurnSourceSnapshot = sources;
-        }
-        if (hasSources && managed.tokenRefreshManager && !managed.missionCapabilityLock) {
-            const refreshResult = await refreshExpiredCredentials(sources, managed.tokenRefreshManager);
-            assertActivePreparation();
-            if (refreshResult.failedSources.length > 0) {
-                sessionLog.warn('[OAuth] Some sources failed token refresh:', refreshResult.failedSources.map(f => f.slug));
-            }
-            if (refreshResult.refreshedCount > 0) {
-                sendSpan.mark('oauth.refreshed');
-            }
-        }
-        // Get or create the agent (lazy loading). Its internal cold-session build
-        // now sees fresh tokens. Every preparation failure is handled here so a
-        // rejected postInit/source setup cannot leave the session stuck processing.
-        managed.routingFallbackAttempts = 0;
-        managed.routingAttemptedConnectionSlugs = new Set();
-        while (true) {
-            assertActivePreparation();
-            try {
-                agent = await sessionOperationContext.owner["getOrCreateAgent"](managed, { message: activeMessageState.message, messageId: userMessage.id, options: activeMessageState.options }, assertActivePreparation);
-                assertActivePreparation();
-                break;
-            }
-            catch (error) {
-                assertActivePreparation();
-                const didFallback = false
-                    ? await false
-                    : false;
-                if (!didFallback)
-                    throw error;
-            }
-        }
-        sendSpan.mark('agent.ready');
-        const activeWorkspaceConfig = loadWorkspaceConfig(managed.workspace.rootPath);
-        const costPolicy = resolveAgentCostControlPolicy(activeWorkspaceConfig?.costControl);
-        const effectiveContextLimits = resolveEffectiveAgentContextLimits(costPolicy.context, resolveManagedSessionContextWindow(managed));
-        const contextTokens = resolveContextTokenEstimate(managed.tokenUsage?.contextTokens, managed.messages);
-        const contextCompactionObjectiveRootId = managed.activeObjective?.objectiveId
-            ?? managed.activeObjective?.userMessageId
-            ?? managed.pendingTurnRecovery?.userMessageId
-            ?? userMessage.id;
-        if (costPolicy.enabled
-            && contextTokens >= effectiveContextLimits.compactAtTokens
-            && agent.compactContext
-            && !hasImmutableMissionRoute(managed)) {
-            const now = Date.now();
-            const contextCompactionDecision = {
-                contextTokens,
-                compactAtTokens: effectiveContextLimits.compactAtTokens,
-                hardLimitTokens: effectiveContextLimits.hardLimitTokens,
-                objectiveRootId: contextCompactionObjectiveRootId,
-                now,
-                previous: managed.contextCompactionAttempt,
-            };
-            const shouldAttempt = shouldAttemptContextCompaction(contextCompactionDecision);
-            const immediateHardLimitFollowUpAttempt = shouldAttempt
-                && isHardLimitFollowUpContextCompaction(contextCompactionDecision);
-            const hardLimitRecoveryAttempt = shouldAttempt
-                && isHardLimitRecoveryContextCompaction(contextCompactionDecision);
-            const hardLimitFollowUpAttempted = immediateHardLimitFollowUpAttempt
-                || hardLimitRecoveryAttempt
-                    && managed.contextCompactionAttempt?.hardLimitFollowUpAttempted === true;
-            const hardLimitRecoveryAttempted = hardLimitRecoveryAttempt
-                && !immediateHardLimitFollowUpAttempt;
-            if (!shouldAttempt) {
-                if (managed.pendingRoutingMeta?.costControl) {
-                    managed.pendingRoutingMeta.costControl.compacted = false;
-                    managed.pendingRoutingMeta.costControl.compactionOutcome = 'skipped-cooldown';
-                }
-                sessionLog.info('cost-control context compaction skipped during retry cooldown', {
-                    sessionId: managed.id,
-                    contextTokens,
-                    previousOutcome: managed.contextCompactionAttempt?.outcome,
-                });
-            }
-            else {
-                try {
-                    sessionOperationContext.owner["sendEvent"]({ type: 'status', sessionId, message: AGENT_RUNTIME_ACTIVITY.preparingContext }, managed.workspace.id);
-                    const compacted = await agent.compactContext(COST_CONTROL_COMPACTION_INSTRUCTIONS);
-                    assertActivePreparation();
-                    const compactionDurationMs = Math.max(0, Date.now() - now);
-                    const assessment = assessContextCompactionResult(compacted);
-                    managed.contextCompactionAttempt = {
-                        attemptedAt: now,
-                        contextTokensBefore: contextTokens,
-                        outcome: assessment.outcome,
-                        objectiveRootId: contextCompactionObjectiveRootId,
-                        ...(assessment.outcome === 'succeeded'
-                            ? { awaitingProviderContextBaseline: true as const }
-                            : {}),
-                        hardLimitTokens: effectiveContextLimits.hardLimitTokens,
-                        ...(hardLimitFollowUpAttempted ? { hardLimitFollowUpAttempted: true as const } : {}),
-                        ...(hardLimitRecoveryAttempted ? { hardLimitRecoveryAttempted: true as const } : {}),
-                    };
-                    // estimatedTokensAfter is a retained-message estimate produced by
-                    // the SDK, not a provider-scale context measurement. Keep it in
-                    // telemetry only; the first subsequent provider usage event will
-                    // establish the durable like-for-like growth baseline.
-                    if (managed.pendingRoutingMeta?.costControl) {
-                        managed.pendingRoutingMeta.costControl.compacted = assessment.outcome === 'succeeded';
-                        managed.pendingRoutingMeta.costControl.compactionOutcome = assessment.outcome;
-                        managed.pendingRoutingMeta.costControl.compactionModel = compacted?.compactionModel;
-                        managed.pendingRoutingMeta.costControl.compactionDurationMs = compactionDurationMs;
-                        managed.pendingRoutingMeta.costControl.contextTokensAfter = assessment.tokensAfter;
-                        managed.pendingRoutingMeta.costControl.reclaimedTokens = assessment.reclaimedTokens;
-                        managed.pendingRoutingMeta.costControl.reductionRatio = assessment.reductionRatio;
-                        managed.pendingRoutingMeta.costControl.compactionIssueCodes = assessment.issues.length > 0
-                            ? assessment.issues
-                            : undefined;
-                    }
-                    sessionOperationContext.owner["persistSession"](managed);
-                    // The compaction itself is already billable and irreversible from
-                    // the host's perspective. Flush its bounded receipt before the
-                    // provider turn continues so a crash cannot replay the same work.
-                    await sessionOperationContext.owner.flushSession(managed.id);
-                    assertActivePreparation();
-                    if (assessment.outcome === 'succeeded') {
-                        sendSpan.mark('cost-control.compacted');
-                        sessionLog.info('cost-control context compacted and measured', {
-                            sessionId: managed.id,
-                            tokensBefore: assessment.tokensBefore,
-                            tokensAfter: assessment.tokensAfter,
-                            reclaimedTokens: assessment.reclaimedTokens,
-                            reductionRatio: assessment.reductionRatio,
-                            compactionModel: compacted?.compactionModel,
-                            durationMs: compactionDurationMs,
-                        });
-                    }
-                    else {
-                        sendSpan.mark(`cost-control.compaction-${assessment.outcome}`);
-                        sessionLog.warn('cost-control context compaction result was not effective and verifiable', {
-                            sessionId: managed.id,
-                            outcome: assessment.outcome,
-                            issues: assessment.issues,
-                            tokensBefore: assessment.tokensBefore,
-                            tokensAfter: assessment.tokensAfter,
-                        });
-                    }
-                }
-                catch (error) {
-                    assertActivePreparation();
-                    const issueCode = classifyContextCompactionFailure(error);
-                    const compactionOutcome = issueCode === 'not-needed'
-                        ? 'skipped-not-needed' as const
-                        : 'failed' as const;
-                    managed.contextCompactionAttempt = {
-                        attemptedAt: now,
-                        contextTokensBefore: contextTokens,
-                        outcome: compactionOutcome,
-                        objectiveRootId: contextCompactionObjectiveRootId,
-                        hardLimitTokens: effectiveContextLimits.hardLimitTokens,
-                        ...(hardLimitFollowUpAttempted ? { hardLimitFollowUpAttempted: true as const } : {}),
-                        ...(hardLimitRecoveryAttempted ? { hardLimitRecoveryAttempted: true as const } : {}),
-                        issueCode,
-                    };
-                    if (managed.pendingRoutingMeta?.costControl) {
-                        managed.pendingRoutingMeta.costControl.compacted = false;
-                        managed.pendingRoutingMeta.costControl.compactionOutcome = compactionOutcome;
-                        managed.pendingRoutingMeta.costControl.compactionDurationMs = Math.max(0, Date.now() - now);
-                        managed.pendingRoutingMeta.costControl.compactionIssueCodes = [issueCode];
-                    }
-                    sessionOperationContext.owner["persistSession"](managed);
-                    // Persist even failed/not-needed receipts synchronously: their
-                    // cooldown is what prevents a restart from re-billing the same
-                    // context immediately.
-                    await sessionOperationContext.owner.flushSession(managed.id);
-                    assertActivePreparation();
-                    const logCompactionIssue = issueCode === 'not-needed'
-                        ? sessionLog.info.bind(sessionLog)
-                        : sessionLog.warn.bind(sessionLog);
-                    logCompactionIssue(issueCode === 'not-needed'
-                        ? 'cost-control context compaction skipped because SDK found no compactable history'
-                        : 'cost-control context compaction failed; provider admission will be re-evaluated', {
-                        sessionId: managed.id,
-                        issueCode,
-                        error: error instanceof Error ? error.message : String(error),
-                    });
-                }
-                finally {
-                    // This preparation runs before the agent iterator is consumed.
-                    // Clear via the existing transient status channel even on failure,
-                    // but never publish late activity after Stop or a replaced turn.
-                    if (ownsActiveTurn())
-                        sessionOperationContext.owner["sendEvent"]({ type: 'status', sessionId, message: '' }, managed.workspace.id);
-                }
-            }
-        }
-        if (costPolicy.enabled && !cleanRecoveryProviderReset) {
-            const providerAdmissionInput = {
-                contextTokens,
-                compactAtTokens: effectiveContextLimits.compactAtTokens,
-                hardLimitTokens: effectiveContextLimits.hardLimitTokens,
-                objectiveRootId: contextCompactionObjectiveRootId,
-                now: Date.now(),
-                previous: managed.contextCompactionAttempt,
-                canCompactContext: typeof agent.compactContext === 'function',
-            };
-            const providerAdmission = decideContextProviderAdmission(providerAdmissionInput);
-            if (providerAdmission.action === 'allow-provider'
-                && providerAdmission.reason === 'compacted-context-awaiting-provider-baseline') {
-                const consumed = consumeContextProviderBaselineAdmission(managed.contextCompactionAttempt, Date.now());
-                if (!consumed) {
-                    throw new Error('The post-compaction provider admission was already consumed or is malformed');
-                }
-                managed.contextCompactionAttempt = consumed;
-                sessionOperationContext.owner["persistSession"](managed);
-                // This is the one-shot crash fence. No provider handoff is allowed
-                // until the consumed admission is durably visible after restart.
-                await sessionOperationContext.owner.flushSession(managed.id);
-                assertActivePreparation();
-            }
-            else if (providerAdmission.action !== 'allow-provider') {
-                const objective = managed.activeObjective;
-                const pending = managed.pendingTurnRecovery;
-                const dispatch = pending?.recoveryDispatch;
-                const canOpenCleanContinuation = !!objective && !!pending && !!dispatch
-                    && dispatch.phase === 'started' && dispatch.id === userMessage.id
-                    && !dispatch.cleanContinuationId;
-                const cleanPending: PendingTurnRecovery | undefined = canOpenCleanContinuation
-                    ? {
-                        ...pending,
-                        cleanContinuationCount: (pending.cleanContinuationCount ?? 0) + 1,
-                        recoveryDispatch: undefined,
-                    }
-                    : undefined;
-                const provisionalHandoff = objective && cleanPending
-                    ? sessionOperationContext.owner["createAutonomousContextLimitHandoff"](managed, cleanPending)
-                    : undefined;
-                const hasPendingContextLimit = (managed.userInputRequests ?? []).some(request => request.status === 'pending' && isExactContextLimitNextStepQuestion(request));
-                const hasPendingOrRecentContextLimit = (managed.userInputRequests ?? []).some(request => isExactContextLimitNextStepQuestion(request));
-                const contextHardLimitReached = hasPendingOrRecentContextLimit
-                    || managed.contextCompactionAttempt?.hardLimitFollowUpAttempted === true
-                    || (managed.contextCompactionAttempt?.hardLimitTokens !== undefined
-                        && (managed.tokenUsage?.contextTokens ?? 0) >= managed.contextCompactionAttempt.hardLimitTokens)
-                    || providerAdmission.action === 'start-clean-continuation';
-                const safeFreshDirectObjective = !activeMessageState.options?.hidden && !activeMessageState.options?.internalOrigin
-                    && !activeMessageState.options?.automaticRecovery
-                    && contextHardLimitReached
-                    && (!objective || objective.userMessageId === userMessage.id || objective.lastUserMessageId === userMessage.id)
-                    && activeMessageState.message.length > 0;
-                if (safeFreshDirectObjective) {
-                    await sessionOperationContext.owner["cancelPendingUserInput"](managed, true);
-                    managed.pendingTurnRecovery = {
-                        ...(managed.pendingTurnRecovery ?? createPendingTurnRecovery(userMessage.id)),
-                        cleanContextBoundaryMessageId: userMessage.id,
-                    };
-                    managed.providerContextBoundaryMessageId = userMessage.id;
-                    await sessionOperationContext.owner["disposeManagedAgentRuntime"](managed, 'hard-limit fresh direct objective');
-                    assertActivePreparation();
-                    managed.sdkSessionId = undefined;
-                    managed.branchFromSdkSessionId = undefined;
-                    managed.branchFromSessionPath = undefined;
-                    managed.branchFromSdkCwd = undefined;
-                    managed.branchFromSdkTurnId = undefined;
-                    managed.branchContextStrategy = undefined;
-                    managed.branchSeedApplied = true;
-                    managed.transferredSessionSummary = undefined;
-                    managed.transferredSessionSummaryApplied = undefined;
-                    if (managed.tokenUsage) {
-                        managed.tokenUsage = {
-                            ...managed.tokenUsage,
-                            contextTokens: Math.max(1, Math.ceil(activeMessageState.message.length / 4)),
-                        };
-                    }
-                    if (!sessionOperationContext.owner["persistSession"](managed)) {
-                        throw new Error('The fresh hard-limit provider boundary could not be queued for durable storage');
-                    }
-                    await sessionOperationContext.owner.flushSession(managed.id);
-                    assertActivePreparation();
-                    cleanRecoveryProviderReset = true;
-                    agent = await sessionOperationContext.owner["getOrCreateAgent"](managed, { message: activeMessageState.message, messageId: userMessage.id, options: activeMessageState.options }, assertActivePreparation);
-                    assertActivePreparation();
-                }
-                else if (!provisionalHandoff) {
-                    // A business-question answer is already a durable, authenticated
-                    // human turn. If the old SDK context is over its hard limit, keep
-                    // that answer row intact and allocate a separate bounded clean
-                    // continuation from its host-owned receipt and objective state.
-                    // Replacing the answer row would break its authorization lineage.
-                    const businessAnswerHandoff = trustedUserInput && !trustedContextLimitAnswer
-                        && pending && !hasPendingContextLimit
-                        ? sessionOperationContext.owner["createAutonomousContextLimitHandoff"](managed, pending)
-                        : undefined;
-                    if (businessAnswerHandoff) {
-                        const queued = await sessionOperationContext.owner["enqueueAutomaticTurnRecovery"](managed, 'objective_continue', pending?.validationGaps, businessAnswerHandoff.remainingWork, undefined, undefined, true);
-                        if (queued || managed.pendingTurnRecovery?.exhaustedAt) {
-                            sendSpan.mark(`context.hard-limit-business-answer-handoff`);
-                            sendSpan.end();
-                            await sessionOperationContext.owner["onProcessingStopped"](sessionId, 'interrupted', myGeneration);
-                            return;
-                        }
-                    }
-                    const answeredContextLimit = (managed.userInputRequests ?? []).find(request => request.status === 'answered'
-                        && request.responseMessageId === userMessage.id
-                        && isExactContextLimitNextStepQuestion(request));
-                    const isContextLimitAnswerOrigin = trustedContextLimitAnswer !== undefined
-                        || answeredContextLimit !== undefined
-                        || (activeMessageState.options?.internalOrigin?.kind === 'user-input' && hasPendingOrRecentContextLimit);
-                    if (isContextLimitAnswerOrigin && activeMessageState.message.length > 0) {
-                        await sessionOperationContext.owner["cancelPendingUserInput"](managed, true);
-                        managed.pendingTurnRecovery = {
-                            ...(managed.pendingTurnRecovery ?? createPendingTurnRecovery(userMessage.id)),
-                            cleanContextBoundaryMessageId: userMessage.id,
-                        };
-                        managed.providerContextBoundaryMessageId = userMessage.id;
-                        await sessionOperationContext.owner["disposeManagedAgentRuntime"](managed, 'hard-limit fresh direct objective from answered context limit');
-                        assertActivePreparation();
-                        managed.sdkSessionId = undefined;
-                        managed.branchFromSdkSessionId = undefined;
-                        managed.branchFromSessionPath = undefined;
-                        managed.branchFromSdkCwd = undefined;
-                        managed.branchFromSdkTurnId = undefined;
-                        managed.branchContextStrategy = undefined;
-                        managed.branchSeedApplied = true;
-                        managed.transferredSessionSummary = undefined;
-                        managed.transferredSessionSummaryApplied = undefined;
-                        if (managed.tokenUsage) {
-                            managed.tokenUsage = {
-                                ...managed.tokenUsage,
-                                contextTokens: Math.max(1, Math.ceil(activeMessageState.message.length / 4)),
-                            };
-                        }
-                        if (!sessionOperationContext.owner["persistSession"](managed)) {
-                            throw new Error('The fresh hard-limit provider boundary could not be queued for durable storage');
-                        }
-                        await sessionOperationContext.owner.flushSession(managed.id);
-                        assertActivePreparation();
-                        cleanRecoveryProviderReset = true;
-                        agent = await sessionOperationContext.owner["getOrCreateAgent"](managed, { message: activeMessageState.message, messageId: userMessage.id, options: activeMessageState.options }, assertActivePreparation);
-                        assertActivePreparation();
-                    }
-                    else {
-                        await sessionOperationContext.owner["cancelPendingUserInput"](managed, true);
-                        managed.pendingTurnRecovery = {
-                            ...(managed.pendingTurnRecovery ?? createPendingTurnRecovery(userMessage.id)),
-                            cleanContextBoundaryMessageId: userMessage.id,
-                        };
-                        managed.providerContextBoundaryMessageId = userMessage.id;
-                        await sessionOperationContext.owner["disposeManagedAgentRuntime"](managed, 'hard-limit autonomous provider boundary reset');
-                        assertActivePreparation();
-                        managed.sdkSessionId = undefined;
-                        managed.branchFromSdkSessionId = undefined;
-                        managed.branchFromSessionPath = undefined;
-                        managed.branchFromSdkCwd = undefined;
-                        managed.branchFromSdkTurnId = undefined;
-                        managed.branchContextStrategy = undefined;
-                        managed.branchSeedApplied = true;
-                        managed.transferredSessionSummary = undefined;
-                        managed.transferredSessionSummaryApplied = undefined;
-                        managed.contextCompactionAttempt = undefined;
-                        if (managed.tokenUsage) {
-                            managed.tokenUsage = {
-                                ...managed.tokenUsage,
-                                contextTokens: Math.max(1, Math.ceil(activeMessageState.message.length / 4)),
-                            };
-                        }
-                        if (!sessionOperationContext.owner["persistSession"](managed)) {
-                            throw new Error('The fresh hard-limit provider boundary could not be queued for durable storage');
-                        }
-                        await sessionOperationContext.owner.flushSession(managed.id);
-                        assertActivePreparation();
-                        cleanRecoveryProviderReset = true;
-                        agent = await sessionOperationContext.owner["getOrCreateAgent"](managed, { message: activeMessageState.message, messageId: userMessage.id, options: activeMessageState.options }, assertActivePreparation);
-                        assertActivePreparation();
-                    }
-                }
-                else {
-                    let cleanDispatch = { ...dispatch!, cleanContinuationId: provisionalHandoff.id };
-                    // A clean provider boundary is deliberately generic. A prior
-                    // browser/structured fallback instruction cannot cross it, even
-                    // when the hard limit is discovered while that fallback is live.
-                    delete cleanDispatch.fallbackIntent;
-                    const nextPending: PendingTurnRecovery = {
-                        ...cleanPending!,
-                        recoveryDispatch: cleanDispatch,
-                        cleanContextBoundaryMessageId: userMessage.id,
-                    };
-                    let finalHandoff: ReturnType<SessionOperations["createAutonomousContextLimitHandoff"]> = undefined;
-                    // The deterministic handoff includes bounded recovery state. Rebind
-                    // until the dispatch id and the rebuilt contract agree before either
-                    // is persisted; a one-pass rebind can leave an unrecoverable prompt.
-                    for (let iteration = 0; iteration < 4; iteration += 1) {
-                        nextPending.recoveryDispatch = cleanDispatch;
-                        const candidate = sessionOperationContext.owner["createAutonomousContextLimitHandoff"](managed, nextPending);
-                        if (!candidate)
-                            break;
-                        if (candidate.id === cleanDispatch.cleanContinuationId) {
-                            finalHandoff = candidate;
-                            break;
-                        }
-                        cleanDispatch = { ...cleanDispatch, cleanContinuationId: candidate.id };
-                    }
-                    const cleanPrompt = finalHandoff && buildCleanRecoveryContinuationPrompt(finalHandoff);
-                    if (!finalHandoff || !cleanPrompt) {
-                        throw new Error('The hard-limit clean continuation handoff could not be authenticated');
-                    }
-                    nextPending.recoveryDispatch = cleanDispatch;
-                    managed.pendingTurnRecovery = nextPending;
-                    managed.providerContextBoundaryMessageId = userMessage.id;
-                    userMessage.content = cleanPrompt;
-                    if (userMessage.internalOrigin?.kind === 'browser-fallback')
-                        delete userMessage.internalOrigin;
-                    if (activeMessageState.options?.internalOrigin?.kind === 'browser-fallback') {
-                        const { internalOrigin: _disabledFallbackOrigin, ...cleanOptions } = activeMessageState.options;
-                        activeMessageState.options = cleanOptions;
-                    }
-                    activeMessageState.message = cleanPrompt;
-                    managed.lastSentMessage = cleanPrompt;
-                    managed.lastSentOptions = activeMessageState.options;
-                    await sessionOperationContext.owner["disposeManagedAgentRuntime"](managed, 'hard-limit clean recovery continuation');
-                    assertActivePreparation();
-                    managed.sdkSessionId = undefined;
-                    managed.branchFromSdkSessionId = undefined;
-                    managed.branchFromSessionPath = undefined;
-                    managed.branchFromSdkCwd = undefined;
-                    managed.branchFromSdkTurnId = undefined;
-                    managed.branchContextStrategy = undefined;
-                    managed.branchSeedApplied = true;
-                    managed.transferredSessionSummary = undefined;
-                    managed.transferredSessionSummaryApplied = undefined;
-                    if (managed.tokenUsage) {
-                        managed.tokenUsage = {
-                            ...managed.tokenUsage,
-                            contextTokens: Math.max(1, Math.ceil(cleanPrompt.length / 4)),
-                        };
-                    }
-                    try {
-                        if (!sessionOperationContext.owner["persistSession"](managed)) {
-                            throw new Error('The clean hard-limit provider boundary could not be queued for durable storage');
-                        }
-                        await sessionOperationContext.owner.flushSession(managed.id);
-                    }
-                    catch (error) {
-                        cleanRecoveryConversionFlushFailed = true;
-                        throw error;
-                    }
-                    assertActivePreparation();
-                    cleanRecoveryProviderReset = true;
-                    cleanRecoveryHandoffPrompt = true;
-                    agent = await sessionOperationContext.owner["getOrCreateAgent"](managed, { message: cleanPrompt, messageId: userMessage.id, options: activeMessageState.options }, assertActivePreparation);
-                    assertActivePreparation();
-                }
-            }
-        }
-        // Always set all sources for context (even if none are enabled), including built-ins
-        const allSources = managed.missionCapabilityLock
-            ? (managed.missionTurnSourceSnapshot ?? [])
-            : loadAllSources(workspaceRootPath);
-        agent.setAllSources(allSources);
-        sendSpan.mark('sources.loaded');
-        // Apply source servers if any are enabled
-        if (hasSources) {
-            const sessionPath = getSessionStoragePath(persistenceRootFor(managed), sessionId);
-            // Single fresh build — tokens already refreshed above.
-            const { mcpServers, apiServers, errors } = await buildServersFromSources(sources, sessionPath, managed.tokenRefreshManager, sessionOpGetCollectionSummarizer(sessionOperationContext, managed), managed.missionCapabilityLock ? () => sessionOperationContext.owner["assertSpecializedMissionCapabilities"](managed) : undefined, managed.missionCapabilityLock, ordinaryMissionSourceBuildOptions(managed));
-            assertActivePreparation();
-            if (errors.length > 0) {
-                sessionLog.warn(`Source build errors:`, errors);
-            }
-            const mcpCount = Object.keys(mcpServers).length;
-            const apiCount = Object.keys(apiServers).length;
-            if (mcpCount > 0 || apiCount > 0 || enabledSlugs.length > 0) {
-                const usableSources = sources.filter(isSourceUsable);
-                const intendedSlugs = usableSources.map(s => s.config.slug);
-                await agent.setSourceServers(mcpServers, apiServers, intendedSlugs);
-                assertActivePreparation();
-                assertActivePreparation();
-                sessionLog.info(`Applied ${mcpCount} MCP + ${apiCount} API sources to session ${sessionId} (${allSources.length} total)`);
-            }
-            sendSpan.mark('servers.applied');
-        }
-    }
-    catch (error) {
-        if (error instanceof DelegatedDispatchSupersededError) {
-            sendSpan.mark('delegated_dispatch.superseded');
-            sendSpan.end();
-            await finishSupersededDelegatedDispatch();
-            return;
-        }
-        if (error instanceof InternalContinuationSupersededError) {
-            sendSpan.mark('authenticated_internal_continuation.superseded');
-            sendSpan.end();
-            await finishSupersededAuthenticatedInternalContinuation();
-            return;
-        }
-        if (error instanceof AutomaticRecoverySupersededError) {
-            sendSpan.mark('automatic_recovery.superseded');
-            sendSpan.end();
-            await finishSupersededAutomaticRecovery();
-            return;
-        }
-        if (error instanceof SourceActivationSupersededError) {
-            await finishSupersededSourceActivation();
-            return;
-        }
-        if (!ownsActiveTurn()) {
-            await finishCancelledPreparation();
-            return;
-        }
-        if (error instanceof AutonomousAdmissionDeferredError) {
-            await finishDeferredPreparation();
-            return;
-        }
-        if (cleanRecoveryConversionFlushFailed) {
-            let failedDispatchId = contextLimitAnswerSetupRollback?.();
-            if (!failedDispatchId) {
-                const started = managed.pendingTurnRecovery?.recoveryDispatch;
-                if (started?.phase === 'started' && started.cleanContinuationId
-                    && started.id === userMessage.id) {
-                    removeSyntheticAutomaticMessage();
-                    const allocated = { ...started, phase: 'allocated' as const };
-                    delete allocated.startedAt;
-                    managed.pendingTurnRecovery = {
-                        ...managed.pendingTurnRecovery!,
-                        recoveryDispatch: allocated,
-                    };
-                    managed.messageQueue = managed.messageQueue.filter(item => (item.messageId !== allocated.id
-                        && item.options?.automaticRecovery?.dispatchId !== allocated.id));
-                    sessionOperationContext.owner["setProcessing"](managed, false);
-                    failedDispatchId = allocated.id;
-                }
-            }
-            if (failedDispatchId) {
-                sessionOpFenceCleanSetupPersistence(sessionOperationContext, managed, failedDispatchId);
-                sendSpan.mark('clean_recovery.persistence_error');
-                sendSpan.end();
-                sessionOperationContext.owner["sendEvent"]({
-                    type: 'typed_error', sessionId: managed.id,
-                    error: {
-                        code: 'provider_error',
-                        title: 'Recovery state was not persisted',
-                        message: 'The clean recovery boundary could not be durably saved. No provider setup attempt was spent; Retry after storage is available.',
-                        actions: [{ key: 'r', label: 'Retry', action: 'retry' }],
-                        canRetry: true,
-                    },
-                }, managed.workspace.id);
-                await sessionOperationContext.owner["onProcessingStopped"](sessionId, 'error', myGeneration);
-                return;
-            }
-        }
-        sessionLog.error(`Failed to prepare agent runtime for session ${sessionId}:`, error);
-        sessionRuntimeHooks.captureException(error, { errorSource: 'chat_setup', sessionId });
-        sendSpan.mark('agent.setup_error');
-        sendSpan.setMetadata('error', error instanceof Error ? error.message : String(error));
-        sendSpan.end();
-        sessionOperationContext.owner["sendEvent"]({
-            type: 'error',
-            sessionId,
-            error: error instanceof Error ? error.message : 'Agent runtime setup failed',
-        }, managed.workspace.id);
-        const rolledBackQueuedAgentDelivery = await rollbackQueuedAgentDeliveryPreparation('runtime preparation failed before provider handoff', error);
-        if (rolledBackQueuedAgentDelivery) {
-            try {
-                await sessionOperationContext.owner["disposeManagedAgentRuntime"](managed, 'agent-delivery setup retry');
-            }
-            catch (disposeError) {
-                sessionLog.warn('Failed to dispose runtime after a pre-provider delivery error', {
-                    sessionId,
-                    error: disposeError instanceof Error ? disposeError.message : String(disposeError),
-                });
-            }
-            const persistenceFenced = Number.isFinite(userMessage.agentDelivery?.setupPersistenceFencedAt)
-                || sessionOperationContext.state.agentDeliverySetupPersistenceFences.get(sessionId) === userMessage.agentDelivery?.id;
-            const blockedAt = userMessage.agentDelivery?.setupRetryBlockedAt;
-            if (persistenceFenced) {
-                sessionOperationContext.state.deferredAutomaticSessions.delete(sessionId);
-                sessionOpClearDeferredAutomaticRetry(sessionOperationContext, sessionId);
-                sessionOperationContext.owner["sendEvent"]({
-                    type: 'typed_error', sessionId,
-                    error: {
-                        code: 'provider_error', title: 'Agent delivery state requires confirmation',
-                        message: 'The queued agent delivery was restored in memory, but its durable rollback could not be confirmed. No provider will start; use Retry after storage is available.',
-                        actions: [{ key: 'r', label: 'Retry', action: 'retry' }], canRetry: true,
-                    },
-                }, managed.workspace.id);
-            }
-            else if (blockedAt) {
-                sessionOperationContext.owner["sendEvent"]({
-                    type: 'typed_error', sessionId,
-                    error: {
-                        code: 'provider_error', title: 'Agent delivery setup paused',
-                        message: `The queued agent delivery remains safe, but provider setup is paused (${userMessage.agentDelivery?.lastSetupFailureClass ?? 'unknown'}). Resolve the provider issue, then Retry.`,
-                        actions: [{ key: 'r', label: 'Retry', action: 'retry' }], canRetry: true,
-                    },
-                }, managed.workspace.id);
-            }
-            else {
-                sessionOperationContext.state.deferredAutomaticSessions.add(sessionId);
-                sessionOperationContext.owner["scheduleDeferredAutomaticRetry"](sessionId, Math.max(0, (userMessage.agentDelivery?.setupRetryNotBefore ?? Date.now()) - Date.now()));
-            }
-            return;
-        }
-        const failedContextLimitAnswerDispatchId = contextLimitAnswerSetupRollback?.();
-        if (failedContextLimitAnswerDispatchId) {
-            try {
-                await sessionOperationContext.owner["disposeManagedAgentRuntime"](managed, 'clean pre-provider setup retry');
-            }
-            catch (disposeError) {
-                sessionLog.warn('Failed to dispose runtime after a clean pre-provider setup error', {
-                    sessionId,
-                    error: disposeError instanceof Error ? disposeError.message : String(disposeError),
-                });
-            }
-            await sessionOpRetainFailedCleanRetrySetup(sessionOperationContext, managed, failedContextLimitAnswerDispatchId, error);
-        }
-        else if (cleanRecoveryHandoffPrompt && cleanExplicitRetry && cleanExplicitRetrySetupRollback) {
-            // The boundary was durable but no provider runtime was created. Roll
-            // back only this new hidden row to its acknowledged allocation. The
-            // bounded helper persists its classified failure before arming a retry.
-            const failedDispatchId = cleanExplicitRetrySetupRollback();
-            if (failedDispatchId) {
-                try {
-                    await sessionOperationContext.owner["disposeManagedAgentRuntime"](managed, 'clean pre-provider setup retry');
-                }
-                catch (disposeError) {
-                    sessionLog.warn('Failed to dispose runtime after a clean pre-provider setup error', {
-                        sessionId,
-                        error: disposeError instanceof Error ? disposeError.message : String(disposeError),
-                    });
-                }
-                await sessionOpRetainFailedCleanRetrySetup(sessionOperationContext, managed, failedDispatchId, error);
-            }
-        }
-        else if (cleanRecoveryHandoffPrompt && activeMessageState.syntheticAutomaticMessage
-            && managed.pendingTurnRecovery?.recoveryDispatch?.cleanContinuationId) {
-            const failedDispatchId = managed.pendingTurnRecovery.recoveryDispatch.id;
-            if (restoreStartedAutomaticDispatch()) {
-                removeSyntheticAutomaticMessage();
-                sessionOperationContext.owner["setProcessing"](managed, false);
-                try {
-                    await sessionOperationContext.owner["disposeManagedAgentRuntime"](managed, 'clean pre-provider setup retry');
-                }
-                catch (disposeError) {
-                    sessionLog.warn('Failed to dispose runtime after a clean pre-provider setup error', {
-                        sessionId,
-                        error: disposeError instanceof Error ? disposeError.message : String(disposeError),
-                    });
-                }
-                await sessionOpRetainFailedCleanRetrySetup(sessionOperationContext, managed, failedDispatchId, error);
-            }
-        }
-        else if (removeSyntheticAutomaticMessage()) {
-            // No provider saw this recovery prompt. Persist its exact removal
-            // before publishing the terminal setup failure, otherwise a restart
-            // can inject the undelivered hidden row as SDK recovery history.
-            sessionOperationContext.owner["persistSession"](managed);
-            try {
-                await sessionOperationContext.owner.flushSession(sessionId);
-            }
-            catch (cleanupError) {
-                sessionLog.warn('Failed to flush undelivered automatic recovery cleanup', {
-                    sessionId,
-                    error: cleanupError instanceof Error ? cleanupError.message : String(cleanupError),
-                });
-            }
-        }
-        await sessionOperationContext.owner["onProcessingStopped"](sessionId, 'error', myGeneration);
-        return;
-    }
+
+
+    const runtimePreparation = await prepareSessionAgentRuntime({
+        managed,
+        activeMessageState,
+        userMessage,
+        trustedUserInput,
+        sessionOperationContext,
+        assertActivePreparation,
+        sendSpan,
+        sessionId,
+        myGeneration,
+        hasSources,
+        workspaceRootPath,
+        enabledSlugs,
+        ownsActiveTurn,
+        cleanRecoveryProviderReset,
+        trustedContextLimitAnswer,
+        finishSupersededDelegatedDispatch,
+        finishSupersededAuthenticatedInternalContinuation,
+        finishSupersededAutomaticRecovery,
+        finishSupersededSourceActivation,
+        finishCancelledPreparation,
+        finishDeferredPreparation,
+        contextLimitAnswerSetupRollback,
+        removeSyntheticAutomaticMessage,
+        rollbackQueuedAgentDeliveryPreparation,
+        cleanExplicitRetry,
+        cleanExplicitRetrySetupRollback,
+        restoreStartedAutomaticDispatch,
+    });
+    if (!runtimePreparation) return;
+    const { agent, cleanRecoveryHandoffPrompt } = runtimePreparation;
     const activeProviderState = createProviderTurnState();
     const providerTurnInput: ProviderTurnInput = {
         assertActivePreparation,

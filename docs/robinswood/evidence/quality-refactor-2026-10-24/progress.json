@@ -88,7 +88,8 @@
     "20 événements et 16 phases de runtime/reprise extraits ; 458 corps et paramètres préservés après regroupement des récursions, aucun cycle d’import des opérations.",
     "132 fichiers du lot sous 500 lignes sans erreur ni avertissement de lint ; 16 compilations, TypeScript 6, build Electron et suite complète réussis.",
     "Admission des messages actifs extraite : types natifs, ordre et callbacks conservés ; quatre nouveaux fichiers ≤ 396 lignes, zéro cycle, suite complète et build réussis.",
-    "Parcours fournisseur extrait en six fichiers de 40 à 426 lignes ; messages vivants, callbacks, retours et nettoyage préservés ; zéro cycle et contrôles complets réussis."
+    "Parcours fournisseur extrait en six fichiers de 40 à 426 lignes ; messages vivants, callbacks, retours et nettoyage préservés ; zéro cycle et contrôles complets réussis.",
+    "Préparation du modèle décomposée en modules de moins de 500 lignes : équivalence AST, deux compilateurs TypeScript, build Electron, lint ciblé et suite complète réussis."
   ],
   "pending": [
     "Découpage des autres fichiers au-delà de 500 lignes",
@@ -96,9 +97,9 @@
     "Lint global sans erreur ni avertissement",
     "Parcours complets réels en staging local, compilation signée et intégration"
   ],
-  "updatedAt": "2026-10-25T15:17:09.126882+00:00",
+  "updatedAt": "2026-10-25T15:52:55.725126+00:00",
   "current": {
-    "lastEvidence": "provider-regions-summary.json",
+    "lastEvidence": "runtime-preparation-summary.json",
     "sourceGate": {
       "max-lines": 126,
       "no-explicit-any": 403
