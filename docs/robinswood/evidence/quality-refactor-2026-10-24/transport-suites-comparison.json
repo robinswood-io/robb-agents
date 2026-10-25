@@ -1,0 +1,14 @@
+{
+  "before": {
+    "pass": 42,
+    "fail": 0,
+    "skip": 0,
+    "expectCalls": 65
+  },
+  "after": {
+    "pass": 42,
+    "fail": 0,
+    "skip": 0,
+    "expectCalls": 65
+  }
+}

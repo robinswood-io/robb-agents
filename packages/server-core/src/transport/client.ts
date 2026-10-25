@@ -818,7 +818,7 @@ export class WsRpcClient implements RpcClient {
   }
 
   /** Best-effort send that skips closing/closed sockets and swallows send races. */
-  private trySendEnvelope(ws: WebSocket | null, envelope: MessageEnvelope): boolean {
+  private trySendEnvelope(ws: Pick<WebSocket, 'readyState' | 'OPEN' | 'send'> | null, envelope: MessageEnvelope): boolean {
     if (!ws || ws.readyState !== ws.OPEN) return false
 
     try {

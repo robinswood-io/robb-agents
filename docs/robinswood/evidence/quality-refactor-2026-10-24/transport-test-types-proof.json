@@ -1,0 +1,10 @@
+{
+  "status": "passed",
+  "removedExplicitAny": 19,
+  "nativeTestBodiesPreservedExceptStrongerErrorAssertions": true,
+  "nativePrivateSocketAndSequenceTypes": true,
+  "rpcErrorAssertions": 8,
+  "errorAssertions": 1,
+  "nativeSocketSendParameterType": true,
+  "clientRuntimeByteIdentical": true
+}
