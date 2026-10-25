@@ -4,6 +4,12 @@ import type { PiAgent } from '@craft-agent/shared/agent';
 // Test access names each exercised private operation using its production signature.
 // The public class and its encapsulation remain unchanged.
 export type SessionManagerTestView = { [Key in keyof SessionManager]: SessionManager[Key] } & {
+  enqueuePersist: SessionManager['enqueuePersist'];
+  finishAutomaticSessionStatusLifecycle: SessionManager['finishAutomaticSessionStatusLifecycle'];
+  isSessionBeingViewed: SessionManager['isSessionBeingViewed'];
+  buildObjectiveRuntimePrompt: SessionManager['buildObjectiveRuntimePrompt'];
+  claimAutomaticAdmission: SessionManager['claimAutomaticAdmission'];
+  resolveObjectiveMutationAuthority: SessionManager['resolveObjectiveMutationAuthority'];
   activeRelevantDelegatedDescendants: SessionManager['activeRelevantDelegatedDescendants'];
   authenticatedObjectiveAuthorizationSegments: SessionManager['authenticatedObjectiveAuthorizationSegments'];
   beginAutomaticSessionStatusLifecycle: SessionManager['beginAutomaticSessionStatusLifecycle'];
