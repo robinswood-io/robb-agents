@@ -1,16 +1,33 @@
+import {
+  assertRetryTurnAnchor as policyAssertRetryTurnAnchor,
+  getQueuedPendingUserInputResponse as policyGetQueuedPendingUserInputResponse,
+  rehydrateObjectiveEvidence as policyRehydrateObjectiveEvidence,
+  delegatedTerminalResultContent as policyDelegatedTerminalResultContent,
+  delegatedTerminalResultDeliveryId as policyDelegatedTerminalResultDeliveryId,
+} from "./SessionManager/policy.ts";
 import { afterEach, describe, expect, it, spyOn } from 'bun:test'
 import { mkdtempSync, rmSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { USER_INPUT_ANSWER_MESSAGE_PREFIX } from '@craft-agent/core'
 import * as config from '@craft-agent/shared/config'
-import { clearObjectiveEvidenceGate, getObjectiveEvidenceCompletionGap, PiAgent, setPermissionMode,
-  TERMINAL_RECONCILIATION_CAPABILITY_FIELD } from '@craft-agent/shared/agent'
+import {
+  clearObjectiveEvidenceGate,
+  getObjectiveEvidenceCompletionGap,
+  PiAgent,
+  setPermissionMode,
+  TERMINAL_RECONCILIATION_CAPABILITY_FIELD,
+} from '@craft-agent/shared/agent';
 import { getSessionFilePath, listSessions } from '@craft-agent/shared/sessions/storage'
 import { getDefaultStatusConfig, saveStatusConfig } from '@craft-agent/shared/statuses'
 import { SessionManager, createManagedSession } from './SessionManager'
-import { createPendingTurnRecovery, buildAutomaticTurnRecoveryPrompt, buildCleanRecoveryContinuationPrompt,
-  createCleanRecoveryContinuationHandoff, DEFAULT_AUTOMATIC_TURN_RECOVERY_LEASE_MS } from './turn-recovery'
+import {
+  createPendingTurnRecovery,
+  buildAutomaticTurnRecoveryPrompt,
+  buildCleanRecoveryContinuationPrompt,
+  createCleanRecoveryContinuationHandoff,
+  DEFAULT_AUTOMATIC_TURN_RECOVERY_LEASE_MS,
+} from './turn-recovery';
 import { createAutonomyFallbackIntent } from './autonomy-browser-fallback'
 import { delegatedReviewFixture } from './__fixtures__/delegated-review'
 import { objectiveReviewBinding } from './objective-contract'
@@ -809,7 +826,7 @@ describe('provider dispatch write-ahead recovery', () => {
         && message.content.startsWith('/compact'))).toBe(false)
       expect(managed.activeObjective).toEqual(objectiveBefore)
       expect(managed.pendingTurnRecovery).toEqual(recoveryBefore)
-      expect(h.runtime.assertRetryTurnAnchor(managed, objectiveBefore!.userMessageId).id)
+      expect(policyAssertRetryTurnAnchor(managed, objectiveBefore!.userMessageId).id)
         .toBe(objectiveBefore!.userMessageId)
       expect(sessionCompletions).toBe(0)
       expect(managed.messageQueue).toEqual([])
@@ -9154,7 +9171,7 @@ describe('durable restart recovery', () => {
         id: `repaired-root-context-limit-${format}`,
         status: 'pending', objectiveUserMessageId: contextualId,
       })
-      expect(cold.runtime.getQueuedPendingUserInputResponse(restored)?.id).toBe(requestId)
+      expect(policyGetQueuedPendingUserInputResponse(restored)?.id).toBe(requestId)
       expect(cold.runtime.queuedHumanIndex(restored)).toBeGreaterThanOrEqual(0)
       const repairedHeader = JSON.parse(
         readFileSync(getSessionFilePath(h.rootPath, restored.id), 'utf8').split('\n')[0]!,
@@ -10242,7 +10259,7 @@ describe('durable restart recovery', () => {
 
     const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
     await cold.runtime.ensureMessagesLoaded(restored)
-    cold.runtime.rehydrateObjectiveEvidence(restored)
+    policyRehydrateObjectiveEvidence(restored)
 
     expect(getObjectiveEvidenceCompletionGap(restored.id)).toBe(
       'independent review must be repeated after subsequent mutation (Bash)',
@@ -12032,7 +12049,7 @@ describe('durable restart recovery', () => {
       { id: 'latest-child-error', role: 'error', content: 'Verification failed after the draft final.', timestamp: 3 },
     )
 
-    const envelope = h.runtime.delegatedTerminalResultContent(child)
+    const envelope = policyDelegatedTerminalResultContent(child)
 
     expect(envelope).toContain('"state":"exhausted"')
     expect(envelope).toContain('Verification failed after the draft final.')
@@ -12093,7 +12110,7 @@ describe('durable restart recovery', () => {
       depth: 1, role: 'worker', finishedAt: 3,
     }
     child.activeObjective = { ...child.activeObjective!, terminalState: 'complete_verified', completedAt: 3 }
-    const deliveryId = h.runtime.delegatedTerminalResultDeliveryId(parent, child)!
+    const deliveryId = policyDelegatedTerminalResultDeliveryId(parent, child)!
     parent.messages.push({
       id: 'failed-terminal-receipt', role: 'user', content: '[host-delegated-terminal-result-v1]\n{}\n\nChild result.', timestamp: 4,
       hidden: true, internalOrigin: { kind: 'agent-message', senderSessionId: child.id, deliveryId },
@@ -12127,7 +12144,7 @@ describe('durable restart recovery', () => {
     }
     child.activeObjective = { ...child.activeObjective!, terminalState: 'complete_verified', completedAt: 3 }
     child.pendingTurnRecovery = undefined
-    const deliveryId = h.runtime.delegatedTerminalResultDeliveryId(parent, child)!
+    const deliveryId = policyDelegatedTerminalResultDeliveryId(parent, child)!
     const receipt: Managed['messages'][number] = {
       id: 'cancel-failed-terminal-receipt', role: 'user',
       content: '[host-delegated-terminal-result-v1]\n{}\n\nChild result.', timestamp: 4,
@@ -12172,7 +12189,7 @@ describe('durable restart recovery', () => {
     }
     child.activeObjective = { ...child.activeObjective!, terminalState: 'complete_verified', completedAt: 3 }
     child.pendingTurnRecovery = undefined
-    const deliveryId = h.runtime.delegatedTerminalResultDeliveryId(parent, child)!
+    const deliveryId = policyDelegatedTerminalResultDeliveryId(parent, child)!
     parent.messages.push({
       id: 'occupied-failed-terminal-receipt', role: 'user',
       content: '[host-delegated-terminal-result-v1]\n{}\n\nChild result.', timestamp: 4,
@@ -12233,7 +12250,7 @@ describe('durable restart recovery', () => {
     }
     child.activeObjective = { ...child.activeObjective!, terminalState: 'complete_verified', completedAt: 3 }
     child.pendingTurnRecovery = undefined
-    const deliveryId = h.runtime.delegatedTerminalResultDeliveryId(parent, child)!
+    const deliveryId = policyDelegatedTerminalResultDeliveryId(parent, child)!
     const receipt: Managed['messages'][number] = {
       id: 'claimed-terminal-before-human', role: 'user' as const,
       content: '[host-delegated-terminal-result-v1]\n{}\n\nChild result.', timestamp: 4,
@@ -12310,7 +12327,7 @@ describe('durable restart recovery', () => {
     child.activeObjective = { ...child.activeObjective!, terminalState: 'complete_verified', completedAt: 3 }
     child.pendingTurnRecovery = undefined
     child.messages.push({ id: 'live-a-child-final', role: 'assistant', content: 'Child A result.', timestamp: 3 })
-    const deliveryId = h.runtime.delegatedTerminalResultDeliveryId(parent, child)!
+    const deliveryId = policyDelegatedTerminalResultDeliveryId(parent, child)!
     const boundary = parent.messages.length
     const receiptA: Managed['messages'][number] = {
       id: 'live-processing-a', role: 'user',
@@ -13566,7 +13583,6 @@ describe('automatic channel-fallback kill switch recovery boundaries', () => {
 
   it('projects subagent agent-message turns back to the visible objective root for clean context-limit handoffs', () => {
     const h = harness(); const managed = h.make('subagent-result-context-limit-handoff')
-    const rootId = `${managed.id}-user`
     const subagentDeliveryId = `${managed.id}-subagent-result`
     managed.messages.push({
       id: subagentDeliveryId,

@@ -1,3 +1,6 @@
+import {
+  projectLegacyObjectiveForUserTransition as policyProjectLegacyObjectiveForUserTransition,
+} from "./SessionManager/policy.ts";
 import { afterEach, describe, expect, it } from 'bun:test'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -7,7 +10,7 @@ import { cleanupModeState, initializeModeState, runPreToolUseChecks } from '@cra
 import { buildAutonomyBrowserFallbackPrompt } from './autonomy-browser-fallback.ts'
 import { SessionManager, createManagedSession } from './SessionManager.ts'
 import { createPendingTurnRecovery } from './turn-recovery.ts'
-import { objectiveRequiresExecutionEvidence, reconstructObjectiveForBranch, transitionObjectiveContract } from './objective-contract.ts'
+import { reconstructObjectiveForBranch, transitionObjectiveContract } from './objective-contract.ts';
 
 const managers: SessionManager[] = []
 const roots: string[] = []
@@ -49,7 +52,7 @@ afterEach(async () => {
 
 describe('host synthetic objective authority', () => {
   it('projects a transcript-backed legacy contract before terminal reconciliation', () => {
-    const { host, managed } = harness('legacy-terminal-registration')
+    const { managed } = harness('legacy-terminal-registration')
     const root: Message = {
       id: 'legacy-zero-root', role: 'user', timestamp: 1,
       content: 'Réactive le dev login Zero puis vérifie le résultat.',
@@ -66,7 +69,7 @@ describe('host synthetic objective authority', () => {
       terminalState: 'exhausted',
     }
 
-    const projected = host.projectLegacyObjectiveForUserTransition(managed)
+    const projected = policyProjectLegacyObjectiveForUserTransition(managed)
     expect(projected).toMatchObject({
       requiresExecutionEvidence: true,
       requiresAcceptanceCriteria: true,

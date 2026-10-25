@@ -1,13 +1,27 @@
+import {
+  rehydrateObjectiveEvidence as policyRehydrateObjectiveEvidence,
+  classifyAutomaticRecoveryWorkForSession as policyClassifyAutomaticRecoveryWorkForSession,
+} from "./SessionManager/policy.ts";
 import { scopeReviewFixture } from './__fixtures__/scope-review.ts'
 import { registerObjectiveAcceptanceCriteria } from './objective-acceptance-criteria.ts'
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
 import { mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { messageToStored, storedToMessage, type AgentEvent, type Message, type ObjectiveOutcomeDeclaration } from '@craft-agent/core/types'
+import {
+  messageToStored,
+  storedToMessage,
+  type AgentEvent,
+  type Message,
+  type ObjectiveOutcomeDeclaration,
+} from '@craft-agent/core/types';
 import { readSessionJsonl, writeSessionJsonl } from '@craft-agent/shared/sessions/jsonl'
 import { pickSessionFields } from '@craft-agent/shared/sessions/utils'
-import { checkObjectiveEvidenceBeforeMutation, clearObjectiveEvidenceGate, getObjectiveEvidenceCompletionGap } from '@craft-agent/shared/agent'
+import {
+  checkObjectiveEvidenceBeforeMutation,
+  clearObjectiveEvidenceGate,
+  getObjectiveEvidenceCompletionGap,
+} from '@craft-agent/shared/agent';
 import { READ_ONLY_GIT_HARDENING_ARGS } from '@craft-agent/shared/agent/bash-validator'
 import { StructuredMissionVerdictSchema } from '@craft-agent/shared/missions'
 import { createPendingTurnRecovery } from './turn-recovery.ts'
@@ -15,7 +29,7 @@ import {
   buildAutonomyStructuredFallbackPrompt,
   createAutonomyFallbackIntent,
   isAutonomyStructuredFallbackPrompt,
-} from './autonomy-browser-fallback.ts'
+} from './autonomy-browser-fallback.ts';
 import { SessionManager, createManagedSession } from './SessionManager.ts'
 import { transitionObjectiveContract, turnProgressFingerprint } from './objective-contract.ts'
 import { incompletePlanSteps } from './turn-completion.ts'
@@ -2246,9 +2260,7 @@ ${outcomeComment(receipt)}` },
       ],
     }
 
-    ;(harness.manager as unknown as {
-      rehydrateObjectiveEvidence: (session: Managed) => void
-    }).rehydrateObjectiveEvidence(harness.managed)
+    ;policyRehydrateObjectiveEvidence(harness.managed)
     expect(getObjectiveEvidenceCompletionGap(harness.managed.id)).toBe('authoritative evidence has not been inspected')
 
     harness.managed.messages.push({
@@ -2262,16 +2274,12 @@ ${outcomeComment(receipt)}` },
       toolExecuted: true,
       toolResult: 'Source officielle consultée sur https://legifrance.gouv.fr avec le texte en vigueur et son article applicable.',
     })
-    ;(harness.manager as unknown as {
-      rehydrateObjectiveEvidence: (session: Managed) => void
-    }).rehydrateObjectiveEvidence(harness.managed)
+    ;policyRehydrateObjectiveEvidence(harness.managed)
     expect(getObjectiveEvidenceCompletionGap(harness.managed.id)).toBe('independent review has not been completed')
   })
 
   it('rehydrates the high-stakes gate only from persisted objective authority', () => {
-    const rehydrate = (harness: Harness) => (harness.manager as unknown as {
-      rehydrateObjectiveEvidence: (session: Managed) => void
-    }).rehydrateObjectiveEvidence(harness.managed)
+    const rehydrate = (harness: Harness) => policyRehydrateObjectiveEvidence(harness.managed)
 
     const readOnly = makeHarness('read-only-negated-high-stakes-words')
     readOnly.managed.messages.push({
@@ -2301,9 +2309,7 @@ ${outcomeComment(receipt)}` },
   })
 
   it('rehydrates an amendment-promoted security gate and resets an older legal domain', () => {
-    const rehydrate = (harness: Harness) => (harness.manager as unknown as {
-      rehydrateObjectiveEvidence: (session: Managed) => void
-    }).rehydrateObjectiveEvidence(harness.managed)
+    const rehydrate = (harness: Harness) => policyRehydrateObjectiveEvidence(harness.managed)
 
     const promoted = makeHarness('amendment-promoted-security')
     const promotedRoot: Message = {
@@ -2376,9 +2382,7 @@ ${outcomeComment(receipt)}` },
       evidenceRequirement: 'authoritative-sources-before-mutation',
     })
 
-    ;(harness.manager as unknown as {
-      rehydrateObjectiveEvidence: (session: Managed) => void
-    }).rehydrateObjectiveEvidence(harness.managed)
+    ;policyRehydrateObjectiveEvidence(harness.managed)
     expect(checkObjectiveEvidenceBeforeMutation(harness.managed.id, 'Write', 'local-write'))
       .toMatchObject({ allowed: false, reason: expect.stringContaining('security source') })
   })
@@ -2409,9 +2413,7 @@ ${outcomeComment(receipt)}` },
       evidenceRequirement: 'authoritative-sources-before-mutation',
     })
 
-    ;(harness.manager as unknown as {
-      rehydrateObjectiveEvidence: (session: Managed) => void
-    }).rehydrateObjectiveEvidence(harness.managed)
+    ;policyRehydrateObjectiveEvidence(harness.managed)
     expect(checkObjectiveEvidenceBeforeMutation(harness.managed.id, 'Write', 'local-write'))
       .toMatchObject({ allowed: false, reason: expect.stringContaining('security source') })
   })
@@ -2458,9 +2460,7 @@ ${outcomeComment(receipt)}` },
       evidenceRequirement: 'authoritative-sources-before-mutation',
     })
 
-    ;(harness.manager as unknown as {
-      rehydrateObjectiveEvidence: (session: Managed) => void
-    }).rehydrateObjectiveEvidence(harness.managed)
+    ;policyRehydrateObjectiveEvidence(harness.managed)
     expect(checkObjectiveEvidenceBeforeMutation(harness.managed.id, 'Write', 'local-write'))
       .toMatchObject({ allowed: false, reason: expect.stringContaining('security source') })
   })
@@ -2678,13 +2678,7 @@ ${outcomeComment(receipt)}` },
       originalText: rootText,
       requiresExecutionEvidence: true,
     }
-    const classify = (harness.manager as unknown as {
-      classifyAutomaticRecoveryWorkForSession: (
-        managed: Managed,
-        cause: 'objective_incomplete',
-        gaps?: string[],
-      ) => string
-    }).classifyAutomaticRecoveryWorkForSession.bind(harness.manager)
+    const classify = policyClassifyAutomaticRecoveryWorkForSession.bind(harness.manager)
 
     expect(classify(harness.managed, 'objective_incomplete', [
       'missing structured objective outcome receipt',
@@ -2701,13 +2695,7 @@ ${outcomeComment(receipt)}` },
       requiresExecutionEvidence: true,
       terminalReconciliation: { messageId: 'terminal-close', timestamp: 2 },
     }
-    const classify = (harness.manager as unknown as {
-      classifyAutomaticRecoveryWorkForSession: (
-        managed: Managed,
-        cause: 'objective_incomplete',
-        gaps?: string[],
-      ) => string
-    }).classifyAutomaticRecoveryWorkForSession.bind(harness.manager)
+    const classify = policyClassifyAutomaticRecoveryWorkForSession.bind(harness.manager)
 
     expect(classify(harness.managed, 'objective_incomplete', [
       'missing structured objective outcome receipt',

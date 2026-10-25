@@ -46,7 +46,10 @@
     "10 suites Pi typées : 87 any supprimés ; 187 tests ciblés, lint sans avertissement et 16 configurations TypeScript réussis",
     "Suite globale du dépôt réussie après les lots CDP et fixtures Pi ; aucune donnée comptable réelle modifiée",
     "Gestionnaire de sessions : 146 déclarations de support extraites dans 14 modules de 377 lignes au plus ; corps de la classe inchangé et imports contrôlés",
-    "37 domaines contrôlés par empreintes et résolution des imports ; suite globale, 16 configurations TypeScript, lint des nouveaux modules, contrôle des noms d’outils et build Electron réussis"
+    "37 domaines contrôlés par empreintes et résolution des imports ; suite globale, 16 configurations TypeScript, lint des nouveaux modules, contrôle des noms d’outils et build Electron réussis",
+    "Gestionnaire : 47 politiques sans this extraites en sept modules de 344 lignes au plus ; appels directs ; 518 membres restants et 106 méthodes publiques conservés et comparés",
+    "499 tests ciblés, suite globale, 16 configurations TypeScript, build Electron, lint des nouveaux modules, noms d’outils et IPC réussis après extraction des politiques",
+    "38 domaines contrôlés ; preuve de transformation en chaîne pour la classe conservée, corps des politiques et imports vérifiés"
   ],
   "pending": [
     "Découpage des autres fichiers au-delà de 500 lignes",
@@ -54,7 +57,7 @@
     "Lint global sans erreur ni avertissement",
     "Parcours complets réels en staging local, compilation signée et intégration"
   ],
-  "updatedAt": "2026-10-25T01:18:43.229295+00:00",
+  "updatedAt": "2026-10-25T01:40:48.458246+00:00",
   "current": {
     "over500": 217,
     "explicitAny": 775
