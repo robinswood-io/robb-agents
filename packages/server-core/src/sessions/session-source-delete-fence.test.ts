@@ -1,3 +1,4 @@
+import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it } from 'bun:test'
 import { existsSync, mkdtempSync, readFileSync, renameSync, rmSync, symlinkSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -67,7 +68,7 @@ describe('session source deletion fence', () => {
       sessions: Map<string, typeof managed>
       buildSessionSourceServers: typeof gated.buildSessionSourceServers
     }
-    runtime.sessions.set(managed.id, managed)
+    sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
     runtime.buildSessionSourceServers = gated.buildSessionSourceServers
 
     const update = manager.setSessionSources(managed.id, ['source-requested-during-delete'])
@@ -77,7 +78,7 @@ describe('session source deletion fence', () => {
     const deletion = manager.deleteSession(managed.id).finally(() => { deletionSettled = true })
     await Promise.resolve()
     await Promise.resolve()
-    expect(runtime.sessions.has(managed.id)).toBe(false)
+    expect(sessionRuntimeStateForTest(manager).sessions.has(managed.id)).toBe(false)
     expect(deletionSettled).toBe(false)
     expect(existsSync(getSessionPath(root, managed.id))).toBe(true)
 
@@ -123,10 +124,10 @@ describe('session source deletion fence', () => {
       deferredAutomaticSessions: Set<string>
       automaticAdmissionReservations: Set<string>
     }
-    runtime.sessions.set(managed.id, managed)
+    sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
     runtime.buildSessionSourceServers = gated.buildSessionSourceServers
-    runtime.deferredAutomaticSessions.add(managed.id)
-    runtime.automaticAdmissionReservations.add(managed.id)
+    sessionRuntimeStateForTest(manager).deferredAutomaticSessions.add(managed.id)
+    sessionRuntimeStateForTest(manager).automaticAdmissionReservations.add(managed.id)
 
     const requestedSources = ['source-mutated-before-delete-drain']
     const update = manager.setSessionSources(managed.id, requestedSources)
@@ -137,7 +138,7 @@ describe('session source deletion fence', () => {
       () => undefined,
       error => error,
     )
-    expect(runtime.sessions.has(managed.id)).toBe(false)
+    expect(sessionRuntimeStateForTest(manager).sessions.has(managed.id)).toBe(false)
 
     gated.releaseBuild()
     await expect(update).rejects.toThrow(`Session ${managed.id} is being deleted`)
@@ -150,13 +151,13 @@ describe('session source deletion fence', () => {
     // filesystem failure must expose that object only as a stopped tombstone,
     // never persist it through the symlink, and never restore admissions.
     expect(managed.enabledSourceSlugs).toEqual(requestedSources)
-    expect(runtime.sessions.get(managed.id)).toBe(managed)
-    expect(runtime.retiringSessions.has(managed)).toBe(true)
+    expect(sessionRuntimeStateForTest(manager).sessions.get(managed.id)).toBe(managed)
+    expect(sessionRuntimeStateForTest(manager).retiringSessions.has(managed)).toBe(true)
     expect(managed.stopRequested).toBe(true)
     expect(sessionPersistenceQueue.isRetired(managed.id, root)).toBe(true)
     expect(runtime.persistSession(managed)).toBe(false)
-    expect(runtime.deferredAutomaticSessions.has(managed.id)).toBe(false)
-    expect(runtime.automaticAdmissionReservations.has(managed.id)).toBe(false)
+    expect(sessionRuntimeStateForTest(manager).deferredAutomaticSessions.has(managed.id)).toBe(false)
+    expect(sessionRuntimeStateForTest(manager).automaticAdmissionReservations.has(managed.id)).toBe(false)
     expect(gated.sourceRuntimeApplications).toEqual([])
     expect(sourceEvents).toEqual([])
     expect(readFileSync(join(preservedSessionPath, 'session.jsonl'))).toEqual(preservedSessionBytes)
@@ -164,7 +165,7 @@ describe('session source deletion fence', () => {
     rmSync(liveSessionPath, { recursive: true, force: true })
     renameSync(preservedSessionPath, liveSessionPath)
     await manager.deleteSession(managed.id)
-    expect(runtime.sessions.has(managed.id)).toBe(false)
+    expect(sessionRuntimeStateForTest(manager).sessions.has(managed.id)).toBe(false)
     expect(existsSync(liveSessionPath)).toBe(false)
   })
 
@@ -187,7 +188,7 @@ describe('session source deletion fence', () => {
       buildSessionSourceServers: typeof gated.buildSessionSourceServers
       reloadSourcesForWorkspace: (workspaceRootPath: string) => Promise<void>
     }
-    runtime.sessions.set(managed.id, managed)
+    sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
     runtime.buildSessionSourceServers = gated.buildSessionSourceServers
 
     const reload = runtime.reloadSourcesForWorkspace(root)
@@ -197,7 +198,7 @@ describe('session source deletion fence', () => {
     const deletion = manager.deleteSession(managed.id).finally(() => { deletionSettled = true })
     await Promise.resolve()
     await Promise.resolve()
-    expect(runtime.sessions.has(managed.id)).toBe(false)
+    expect(sessionRuntimeStateForTest(manager).sessions.has(managed.id)).toBe(false)
     expect(deletionSettled).toBe(false)
 
     gated.releaseBuild()

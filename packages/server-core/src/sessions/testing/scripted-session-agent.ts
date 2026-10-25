@@ -11,7 +11,7 @@ interface SessionScript {
 export class ScriptedSessionAgent extends BaseAgent {
   protected backendName = 'Offline session fixture';
 
-  constructor(workspace: Workspace, private readonly script: SessionScript) {
+  constructor(workspace: Workspace, private readonly script: SessionScript = { async *chat() {} }) {
     super({ workspace, provider: 'pi', authType: 'api_key', isHeadless: true }, 'fixture');
   }
 

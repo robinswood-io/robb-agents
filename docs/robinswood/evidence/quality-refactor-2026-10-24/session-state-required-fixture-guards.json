@@ -1,0 +1,22 @@
+[
+  {
+    "file": "packages/server-core/src/sessions/adopt-task-draft.test.ts",
+    "guardedValues": 5
+  },
+  {
+    "file": "packages/server-core/src/sessions/combined-delegation-guards.test.ts",
+    "guardedValues": 1
+  },
+  {
+    "file": "packages/server-core/src/sessions/native-question-retry.test.ts",
+    "guardedValues": 3
+  },
+  {
+    "file": "packages/server-core/src/sessions/restart-recovery.test.ts",
+    "guardedValues": 185
+  },
+  {
+    "file": "packages/server-core/src/sessions/reviewer-collection-cache.test.ts",
+    "guardedValues": 1
+  }
+]

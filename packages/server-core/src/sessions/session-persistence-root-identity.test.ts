@@ -1,3 +1,5 @@
+import { ScriptedSessionAgent } from './testing/scripted-session-agent.ts';
+import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it } from 'bun:test'
 import {
   existsSync,
@@ -122,7 +124,7 @@ function register(
     { messagesLoaded },
   )
   const runtime = manager as unknown as IdentityTestRuntime
-  runtime.sessions.set(managed.id, managed)
+  sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
   return { managed, runtime }
 }
 
@@ -340,19 +342,20 @@ describe('managed session physical persistence root', () => {
     const replacementBytes = readFileSync(replacementFile, 'utf8')
     fixture.retarget()
 
-    const runtimeAgent = { isProcessing: () => true, dispose: async () => {} }
-    managed.agent = runtimeAgent as never
+    const runtimeAgent = Object.assign(new ScriptedSessionAgent(managed.workspace, { async *chat() {}, isProcessing: () => true }), { dispose: async () => {} })
+    managed.agent = runtimeAgent
     managed.isProcessing = true
     managed.processingGeneration = 7
-    runtime.runtimeProcessingGenerations.set(runtimeAgent, 7)
-    runtime.runtimeToolAdmissionBindings.set(runtimeAgent, {
+    sessionRuntimeStateForTest(runtime).runtimeProcessingGenerations.set(runtimeAgent, 7)
+    sessionRuntimeStateForTest(runtime).runtimeToolAdmissionBindings.set(runtimeAgent, {
       managed,
       sessionId: id,
       generation: 7,
       activeObjective: managed.activeObjective,
-      authorityEpoch: runtime.objectiveAuthorityEpochs.get(managed) ?? 0,
+      authorityEpoch: sessionRuntimeStateForTest(runtime).objectiveAuthorityEpochs.get(managed) ?? 0,
       userMessage,
       userMessageId: userMessage.id,
+      messageCountAtHandoff: managed.messages.length,
       lastSentOptions: managed.lastSentOptions,
       automaticRecovery: undefined,
       pendingTurnRecovery: undefined,

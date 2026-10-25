@@ -1,3 +1,4 @@
+import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it } from 'bun:test'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -29,7 +30,7 @@ function fixture() {
   }
   managed.pendingTurnRecovery = { userMessageId: 'user', startedAt: 1, attempts: 2,
     exhaustedAt: 3, validationExhausted: true, stagnantAttempts: 0, leaseExpiresAt: 10, lastCause: 'tool_checkpoint' }
-  runtime.sessions.set(managed.id, managed)
+  sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
   runtime.sendEvent = () => {}
   runtime.enqueuePersist = () => true
   runtime.flushSession = async () => {}

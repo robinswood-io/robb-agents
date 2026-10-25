@@ -1,3 +1,4 @@
+import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { describe, expect, it, jest } from 'bun:test'
 import type { ExternalActionPolicy } from '@craft-agent/shared/workspaces'
 import { SessionManager, createManagedSession } from './SessionManager.ts'
@@ -19,7 +20,7 @@ function injectSession(
     isProcessing: () => processing.value,
     setExternalActionPolicy,
   } as never
-  ;(manager as unknown as { sessions: Map<string, unknown> }).sessions.set(id, managed)
+  ;sessionRuntimeStateForTest(manager).sessions.set(id, managed)
   return { managed, setExternalActionPolicy }
 }
 

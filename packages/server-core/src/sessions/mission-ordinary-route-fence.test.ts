@@ -1,3 +1,4 @@
+import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { describe, expect, it, spyOn } from 'bun:test';
 import { mkdirSync, mkdtempSync, renameSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -155,7 +156,7 @@ describe('ordinary Mission route provider fence', () => {
       controller.bindWorkItemSession(spec.id, 'task', 'dispatch-one', created.id);
 
       expect(loadSession(rootPath, created.id)?.missionOrdinaryRouteLock).toEqual(routeLock);
-      const managed = harness.sessions.get(created.id)!;
+      const managed = sessionRuntimeStateForTest(host).sessions.get(created.id)!;
       await expect(harness.resolveOrdinaryMissionRouteSnapshot(managed)).resolves.toMatchObject({
         connection: { slug: connection.slug, baseUrl: 'https://one.example.test' },
       });
@@ -177,7 +178,7 @@ describe('ordinary Mission route provider fence', () => {
       );
     } finally {
       loader.mockRestore();
-      for (const id of harness.sessions.keys()) cleanupModeState(id);
+      for (const id of sessionRuntimeStateForTest(host).sessions.keys()) cleanupModeState(id);
       rmSync(rootPath, { recursive: true, force: true });
     }
   });
@@ -278,7 +279,7 @@ describe('ordinary Mission route provider fence', () => {
             : {}),
         });
         controller.bindWorkItemSession(spec.id, 'task', 'cwd-dispatch', created.id);
-        const managed = harness.sessions.get(created.id)!;
+        const managed = sessionRuntimeStateForTest(host).sessions.get(created.id)!;
 
         if (routeKind === 'routing-off') {
           expect(() => host.updateWorkingDirectory(created.id, rootPath)).toThrow(/immutable/);
@@ -303,7 +304,7 @@ describe('ordinary Mission route provider fence', () => {
         expect(toolCalls).toBe(0);
       } finally {
         loader.mockRestore();
-        for (const id of harness.sessions.keys()) cleanupModeState(id);
+        for (const id of sessionRuntimeStateForTest(host).sessions.keys()) cleanupModeState(id);
         rmSync(rootPath, { recursive: true, force: true });
         rmSync(outside, { recursive: true, force: true });
       }

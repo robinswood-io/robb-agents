@@ -1,3 +1,5 @@
+import { permissionMetadataFixture } from './testing/permission-metadata.ts';
+import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, beforeEach, describe, expect, it, spyOn } from 'bun:test'
 import { mkdtempSync, rmSync, readdirSync, writeFileSync, readFileSync, existsSync, mkdirSync, symlinkSync, renameSync, unlinkSync, realpathSync } from 'node:fs'
 import { createHash } from 'node:crypto'
@@ -22,7 +24,7 @@ describe('completed-chat memory and retention', () => {
       const manager = new SessionManager(); const runtime = manager as any
       const managed = createManagedSession({ id: 'retained', name: 'Retained' },
         { id: 'ws', name: 'Test', rootPath: root, createdAt: 1 } as never, { messagesLoaded: true })
-      runtime.sessions.set(managed.id, managed); managed.sessionStatus = 'done'
+      sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed); managed.sessionStatus = 'done'
       if (blocker === 'question') managed.userInputRequests = [{ status: 'pending', sessionId: managed.id }] as never
       if (blocker === 'queued-answer') {
         managed.userInputRequests = [{ status: 'answered', responseMessageId: 'answer' }] as never
@@ -30,7 +32,7 @@ describe('completed-chat memory and retention', () => {
           internalOrigin: { kind: 'user-input' } }] as never
       }
       if (blocker === 'auth-id') managed.pendingAuthRequestId = 'auth'
-      if (blocker === 'permission') runtime.pendingPermissionRequests.set('permission', { sessionId: managed.id })
+      if (blocker === 'permission') sessionRuntimeStateForTest(manager).pendingPermissionRequests.set('permission', permissionMetadataFixture(managed.id))
       if (blocker.endsWith('objective')) managed.activeObjective = {
         terminalState: blocker === 'active-objective' ? 'active' : blocker === 'blocked-objective' ? 'blocked_human' : 'exhausted',
       } as never
@@ -45,7 +47,7 @@ describe('completed-chat memory and retention', () => {
     const manager = new SessionManager(); const runtime = manager as any
     const managed = createManagedSession({ id: 'terminal-source-activation', name: 'Terminal marker' },
       { id: 'ws', name: 'Test', rootPath: root, createdAt: 1 } as never, { messagesLoaded: true })
-    runtime.sessions.set(managed.id, managed)
+    sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
     managed.sessionStatus = 'done'
     managed.autoRetryPending = {
       cancelled: true,
@@ -72,14 +74,14 @@ describe('completed-chat memory and retention', () => {
       const workspace = { id: 'ws', name: 'Test', rootPath: root, createdAt: 1 }
       const parent = createManagedSession({ id: 'parent', name: 'Parent' }, workspace as never, { messagesLoaded: true })
       const child = createManagedSession({ id: 'child', parentSessionId: parent.id }, workspace as never, { messagesLoaded: true })
-      runtime.sessions.set(parent.id, parent); runtime.sessions.set(child.id, child); parent.sessionStatus = 'done'
+      sessionRuntimeStateForTest(manager).sessions.set(parent.id, parent); sessionRuntimeStateForTest(manager).sessions.set(child.id, child); parent.sessionStatus = 'done'
       if (blocker === 'question') child.userInputRequests = [{ status: 'pending', sessionId: child.id }] as never
       if (blocker === 'auth-id') child.pendingAuthRequestId = 'auth'
       if (blocker === 'active-objective') child.activeObjective = { terminalState: 'active' } as never
       if (blocker === 'nested-auth-id') {
         child.activeObjective = { terminalState: 'complete_verified' } as never
         const grandchild = createManagedSession({ id: 'grandchild', parentSessionId: child.id }, workspace as never, { messagesLoaded: true })
-        grandchild.pendingAuthRequestId = 'auth'; runtime.sessions.set(grandchild.id, grandchild)
+        grandchild.pendingAuthRequestId = 'auth'; sessionRuntimeStateForTest(manager).sessions.set(grandchild.id, grandchild)
       }
       expect(runtime.canRetainCompletedChat(parent)).toBe(false)
       await manager.cleanup()
@@ -88,7 +90,7 @@ describe('completed-chat memory and retention', () => {
 
   it('yields between skipped chats instead of monopolizing the event loop', async () => {
     const manager = new SessionManager(); const runtime = manager as any
-    for (let i = 0; i < 50; i++) runtime.sessions.set(`active-${i}`, createManagedSession({ id: `active-${i}` },
+    for (let i = 0; i < 50; i++) sessionRuntimeStateForTest(manager).sessions.set(`active-${i}`, createManagedSession({ id: `active-${i}` },
       { id: 'ws', name: 'Test', rootPath: root, createdAt: 1 } as never, { messagesLoaded: true }))
     let yielded = false; setImmediate(() => { yielded = true })
     await runtime.sweepCompletedChats()
@@ -101,7 +103,7 @@ describe('completed-chat memory and retention', () => {
     const manager = new SessionManager(); const runtime = manager as any
     const managed = createManagedSession(stored, { id: 'ws', name: 'Test', rootPath: root, createdAt: 1 } as never, { messagesLoaded: true })
     managed.messages = messages; managed.sessionStatus = 'done'; managed.lastMessageAt = 2
-    runtime.sessions.set(managed.id, managed)
+    sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
     await runtime.sweepCompletedChats(1000)
     const flush = manager.flushSession.bind(manager); let once = false
     manager.flushSession = async id => {
@@ -124,24 +126,24 @@ describe('completed-chat memory and retention', () => {
     managed.messages = messages
     managed.sessionStatus = 'done'
     managed.lastMessageAt = 2
-    runtime.sessions.set(managed.id, managed)
+    sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
     await runtime.sweepCompletedChats(1000)
 
     const latentTimer = setTimeout(() => {}, 60_000)
     latentTimer.unref?.()
     managed.autoRetryTimer = latentTimer
-    runtime.automaticAdmissionReservations.add(managed.id)
+    sessionRuntimeStateForTest(manager).automaticAdmissionReservations.add(managed.id)
 
     await runtime.sweepCompletedChats(1000 + MONTH)
 
     expect(existsSync(getSessionPath(root, managed.id))).toBe(true)
     expect(readCompletedChatMemory(root, managed.id)?.archivedAt).toBeUndefined()
     expect(managed.autoRetryTimer).toBe(latentTimer)
-    expect(runtime.automaticAdmissionReservations.has(managed.id)).toBe(true)
+    expect(sessionRuntimeStateForTest(manager).automaticAdmissionReservations.has(managed.id)).toBe(true)
 
     clearTimeout(latentTimer)
     managed.autoRetryTimer = undefined
-    runtime.automaticAdmissionReservations.delete(managed.id)
+    sessionRuntimeStateForTest(manager).automaticAdmissionReservations.delete(managed.id)
     await runtime.sweepCompletedChats(1000 + MONTH)
     expect(existsSync(getSessionPath(root, managed.id))).toBe(false)
     expect(readCompletedChatMemory(root, managed.id)?.archivedAt).toBe(1000 + MONTH)
@@ -299,7 +301,7 @@ describe('completed-chat memory and retention', () => {
     managed.sessionStatus = 'done'
     managed.lastMessageAt = 2
     const internal = manager as unknown as { sessions: Map<string, typeof managed>; sweepCompletedChats: (now: number) => Promise<void> }
-    internal.sessions.set(managed.id, managed)
+    sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
     await internal.sweepCompletedChats(1000)
     expect(existsSync(getSessionPath(root, managed.id))).toBe(true)
     managed.isProcessing = true
@@ -362,7 +364,7 @@ describe('completed-chat memory and retention', () => {
       sessions: Map<string, typeof managed>
       sweepCompletedChats: (now: number) => Promise<void>
     }
-    runtime.sessions.set(managed.id, managed)
+    sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
     const physicalRootA = realpathSync.native(rootA)
     expect(managed.persistenceRootPath).toBe(physicalRootA)
 
@@ -379,7 +381,7 @@ describe('completed-chat memory and retention', () => {
     expect(existsSync(getSessionPath(rootA, managed.id))).toBe(false)
     expect(loadSession(rootB, managed.id)?.name).toBe('Homonymous B must survive')
     expect(readCompletedChatMemory(rootB, managed.id)).toBeUndefined()
-    expect(runtime.sessions.has(managed.id)).toBe(false)
+    expect(sessionRuntimeStateForTest(manager).sessions.has(managed.id)).toBe(false)
     await manager.cleanup()
   })
 
@@ -426,7 +428,7 @@ describe('completed-chat memory and retention', () => {
     expect(finalized.archiveIntent).toBeUndefined()
     expect(finalized.archivedAt).toBe(1000 + MONTH)
     expect(finalized.archivePath).toBe(targetPath)
-    expect(runtime.sessions.has(stored.id)).toBe(false)
+    expect(sessionRuntimeStateForTest(restarted).sessions.has(stored.id)).toBe(false)
     expect(existsSync(sessionPath)).toBe(false)
     expect(existsSync(targetPath)).toBe(true)
     await restarted.cleanup()
@@ -462,7 +464,7 @@ describe('completed-chat memory and retention', () => {
       sessions: Map<string, typeof managed>
       sweepCompletedChats: (now: number) => Promise<void>
     }
-    runtime.sessions.set(managed.id, managed)
+    sessionRuntimeStateForTest(restarted).sessions.set(managed.id, managed)
     await runtime.sweepCompletedChats(1000 + MONTH)
 
     const finalized = readCompletedChatMemory(root, stored.id)!
@@ -471,7 +473,7 @@ describe('completed-chat memory and retention', () => {
     expect(finalized.archivedAt).toBe(1000 + MONTH)
     expect(existsSync(getSessionPath(root, stored.id))).toBe(false)
     expect(existsSync(targetPath)).toBe(true)
-    expect(runtime.sessions.has(stored.id)).toBe(false)
+    expect(sessionRuntimeStateForTest(restarted).sessions.has(stored.id)).toBe(false)
     await restarted.cleanup()
   })
 
@@ -495,7 +497,7 @@ describe('completed-chat memory and retention', () => {
         archiveChat?: typeof archiveCompletedChatDirectory,
       ) => Promise<void>
     }
-    runtime.sessions.set(managed.id, managed)
+    sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
 
     await runtime.sweepCompletedChats(1000)
     await runtime.sweepCompletedChats(1000 + MONTH, (_root, source, _id, plannedTarget) => {
@@ -514,7 +516,7 @@ describe('completed-chat memory and retention', () => {
     expect(isCompletedChatDue(receipt, MONTH * 100)).toBe(false)
     expect(existsSync(sessionPath)).toBe(false)
     expect(existsSync(archivePath!)).toBe(true)
-    expect(runtime.sessions.has(managed.id)).toBe(false)
+    expect(sessionRuntimeStateForTest(manager).sessions.has(managed.id)).toBe(false)
     await manager.cleanup()
   })
 
@@ -606,7 +608,7 @@ describe('completed-chat memory and retention', () => {
     const manager = new SessionManager(); const runtime = manager as any
     const managed = createManagedSession(stored, { id: 'ws', name: 'Test', rootPath: root, createdAt: 1 } as never, { messagesLoaded: true })
     managed.messages = messages; managed.sessionStatus = 'done'; managed.lastMessageAt = 2
-    runtime.sessions.set(managed.id, managed)
+    sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
     const sessionPath = getSessionPath(root, managed.id)
     const worktree = join(sessionPath, 'data', 'project'); mkdirSync(worktree, { recursive: true })
     writeFileSync(join(worktree, '.git'), 'gitdir: /fixture/preserved-worktree')

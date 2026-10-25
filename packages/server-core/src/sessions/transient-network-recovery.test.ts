@@ -1,3 +1,4 @@
+import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it } from 'bun:test'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -42,7 +43,7 @@ describe('transient network recovery', () => {
       },
     )
     const manager = new SessionManager()
-    ;(manager as unknown as { sessions: Map<string, unknown> }).sessions.set(managed.id, managed)
+    ;sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
     if (retryExisting) {
       managed.messages.push(
         { id: 'old-final', role: 'assistant', content: 'Done.', timestamp: 2 },
@@ -127,7 +128,7 @@ describe('transient network recovery', () => {
       },
     )
     const manager = new SessionManager()
-    ;(manager as unknown as { sessions: Map<string, unknown> }).sessions.set(managed.id, managed)
+    ;sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
     if (retryExisting) {
       managed.messages.push(
         { id: 'old-final', role: 'assistant', content: 'Done.', timestamp: 2 },
@@ -185,7 +186,7 @@ describe('transient network recovery', () => {
         },
       )
       const manager = new SessionManager()
-      ;(manager as unknown as { sessions: Map<string, unknown> }).sessions.set(managed.id, managed)
+      ;sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
 
       const event: AgentEvent = {
         type: 'typed_error',

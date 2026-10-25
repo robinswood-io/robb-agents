@@ -1,3 +1,4 @@
+import { sessionRuntimeStateForTest } from "../../sessions/testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it } from 'bun:test'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -44,7 +45,7 @@ async function harness() {
     enqueuePersist: (session: Managed) => void
     sendEvent: () => void
   }
-  for (const session of [parent, origin, foreign]) internals.sessions.set(session.id, session)
+  for (const session of [parent, origin, foreign]) sessionRuntimeStateForTest(manager).sessions.set(session.id, session)
   internals.enqueuePersist = session => snapshots.push({ id: session.id, requests: structuredClone(session.userInputRequests) })
   internals.sendEvent = () => {}
   manager.flushSession = async () => {}
@@ -53,7 +54,7 @@ async function harness() {
   // validates ownership, canonicalizes answers and creates its single receipt.
   manager.sendMessage = async (id, _text, _attachments, _stored, _options, messageId, _retry, ack, context) => {
     dispatches.push({ id, messageId, callerClientId: context?.callerClientId })
-    const message = internals.sessions.get(id)?.messages.find(item => item.id === messageId)
+    const message = sessionRuntimeStateForTest(manager).sessions.get(id)?.messages.find(item => item.id === messageId)
     if (!message) throw new Error('Missing durable response message')
     message.isQueued = false
     ack?.(message.id)

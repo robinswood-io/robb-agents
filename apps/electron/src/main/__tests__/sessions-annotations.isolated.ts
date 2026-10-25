@@ -1,3 +1,4 @@
+import { sessionRuntimeStateForTest } from "../../../../../packages/server-core/src/sessions/testing/runtime-state-access.ts";
 import { describe, expect, it, mock } from 'bun:test'
 import type { AnnotationV1 } from '@craft-agent/core/types'
 
@@ -26,6 +27,7 @@ mock.module('../notifications', () => ({
 }))
 
 const { SessionManager } = await import('@craft-agent/server-core/sessions')
+const { createManagedSession } = await import('../../../../../packages/server-core/src/sessions/SessionManager/session-creation.ts')
 
 function makeAnnotation(id: string, extraMeta?: Record<string, unknown>): AnnotationV1 {
   return {
@@ -46,22 +48,24 @@ function makeAnnotation(id: string, extraMeta?: Record<string, unknown>): Annota
 }
 
 function createHarness(initialAnnotations: AnnotationV1[] = []) {
-  const managed = {
-    id: 'session-1',
-    workspace: { id: 'ws-1' },
-    messages: [{ id: 'msg-1', content: 'hello world', annotations: initialAnnotations }],
-  }
+  const managed = createManagedSession({ id: 'session-1' }, {
+    id: 'ws-1', slug: 'annotation-fixture', name: 'Fixture', rootPath: '/tmp/annotation-fixture', createdAt: 1,
+  }, {
+    messages: [{ id: 'msg-1', role: 'assistant', timestamp: 1, content: 'hello world', annotations: initialAnnotations }],
+    messagesLoaded: true,
+  })
 
   let persistCalls = 0
-  const events: Array<{ event: any; workspaceId: string }> = []
+  const events: Array<{ event: Parameters<InstanceType<typeof SessionManager>['sendEvent']>[0]; workspaceId?: string }> = []
 
-  const manager = Object.create(SessionManager.prototype) as any
+  const manager = Object.create(SessionManager.prototype) as InstanceType<typeof SessionManager>
+  Object.defineProperty(manager, 'runtimeState', { value: manager, configurable: true });
   // Object.create() deliberately bypasses the constructor, so restore the
   // ownership state required by the real synchronous mutation guard.
-  manager.retiringSessions = new WeakSet()
-  manager.sessions = new Map([['session-1', managed]])
-  manager.persistSession = () => { persistCalls += 1 }
-  manager.sendEvent = (event: any, workspaceId: string) => {
+  sessionRuntimeStateForTest(manager).retiringSessions = new WeakSet()
+  sessionRuntimeStateForTest(manager).sessions = new Map([['session-1', managed]])
+  manager['persistSession'] = () => { persistCalls += 1; return true }
+  manager['sendEvent'] = (event, workspaceId) => {
     events.push({ event, workspaceId })
   }
 
@@ -110,7 +114,7 @@ describe('SessionManager annotation validation', () => {
     })
 
     expect(h.managed.messages[0].annotations).toHaveLength(1)
-    expect(h.managed.messages[0].annotations[0]?.id).toBe('ann-1')
+    expect(h.managed.messages[0].annotations?.[0]?.id).toBe('ann-1')
     expect(h.persistCalls).toBe(0)
     expect(h.events).toHaveLength(0)
   })

@@ -1,3 +1,4 @@
+import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import {
   rehydrateObjectiveEvidence as policyRehydrateObjectiveEvidence,
   classifyAutomaticRecoveryWorkForSession as policyClassifyAutomaticRecoveryWorkForSession,
@@ -90,7 +91,7 @@ function makeHarness(id: string): Harness {
     processNextQueuedMessage: (sessionId: string) => void
     disposeManagedAgentRuntime: () => Promise<void>
   }
-  internals.sessions.set(id, managed)
+  sessionRuntimeStateForTest(manager).sessions.set(id, managed)
   // Exercise the real persistence boundary's UI publication without disk writes.
   internals.enqueuePersist = () => true
   internals.flushSession = async () => {}
@@ -156,13 +157,13 @@ function bindLiveToolAdmission(harness: Harness): void {
     runtimeToolAdmissionBindings: WeakMap<object, Record<string, unknown>>
     objectiveAuthorityEpochs: WeakMap<Managed, number>
   }
-  runtime.runtimeProcessingGenerations.set(agent, harness.managed.processingGeneration)
-  runtime.runtimeToolAdmissionBindings.set(agent, {
+  sessionRuntimeStateForTest(runtime).runtimeProcessingGenerations.set(agent, harness.managed.processingGeneration)
+  sessionRuntimeStateForTest(runtime).runtimeToolAdmissionBindings.set(agent, {
     managed: harness.managed,
     sessionId: harness.managed.id,
     generation: harness.managed.processingGeneration,
     activeObjective: harness.managed.activeObjective,
-    authorityEpoch: runtime.objectiveAuthorityEpochs.get(harness.managed) ?? 0,
+    authorityEpoch: sessionRuntimeStateForTest(runtime).objectiveAuthorityEpochs.get(harness.managed) ?? 0,
     userMessage,
     userMessageId: userMessage.id,
     messageCountAtHandoff: harness.managed.messages.length,
@@ -457,7 +458,7 @@ describe('SessionManager objective outcome integration', () => {
   it('omits delegated children from unread workspace badges while retaining manual branches', () => {
     const parent = makeHarness('unread-parent')
     parent.managed.hasUnread = true
-    const sessions = (parent.manager as unknown as { sessions: Map<string, Managed> }).sessions
+    const sessions = sessionRuntimeStateForTest(parent.manager).sessions
     const add = (id: string, fields: Partial<Managed>) => {
       const managed = createManagedSession({ id }, parent.managed.workspace, { messagesLoaded: true, hasUnread: true, ...fields })
       sessions.set(id, managed)
@@ -1324,7 +1325,7 @@ ${outcomeComment(receipt)}` },
       reviewer.pendingTurnRecovery = createPendingTurnRecovery('review-request', 1)
       reviewer.isProcessing = true
       reviewer.processingGeneration = 1
-      ;(harness.manager as unknown as { sessions: Map<string, Managed> }).sessions.set(reviewer.id, reviewer)
+      ;sessionRuntimeStateForTest(harness.manager).sessions.set(reviewer.id, reviewer)
     })
 
     await harness.manager.sendMessage(harness.managed.id, 'Implement and verify the requested target.')
@@ -1367,7 +1368,7 @@ ${outcomeComment(receipt)}` },
     ])
 
     reviewer.activeObjective!.terminalState = 'complete_verified'
-    runtime.automaticAdmissionReservations.delete(harness.managed.id)
+    sessionRuntimeStateForTest(runtime).automaticAdmissionReservations.delete(harness.managed.id)
 
     installReviewedAgent(harness, [
       { type: 'text_complete', text: `Delegated result consumed; the existing implementation and checks remain verified.\n${outcomeComment(finalReceipt)}` },
@@ -1426,7 +1427,7 @@ ${outcomeComment(receipt)}` },
     reviewer.activeObjective = activeObjective('reviewer-root')
     reviewer.pendingTurnRecovery = createPendingTurnRecovery('reviewer-root', 1)
     reviewer.isProcessing = true
-    ;(harness.manager as unknown as { sessions: Map<string, Managed> }).sessions.set(reviewer.id, reviewer)
+    ;sessionRuntimeStateForTest(harness.manager).sessions.set(reviewer.id, reviewer)
 
     const deferred = await (harness.manager as unknown as {
       deferTerminalOutcomeForActiveDelegations: (session: Managed) => Promise<boolean>
@@ -1447,8 +1448,7 @@ ${outcomeComment(receipt)}` },
       id: 'premature-parent-final',
       isIntermediate: true,
     })
-    expect((harness.manager as unknown as { deferredAutomaticSessions: Set<string> })
-      .deferredAutomaticSessions.has(harness.managed.id)).toBe(true)
+    expect(sessionRuntimeStateForTest(harness.manager).deferredAutomaticSessions.has(harness.managed.id)).toBe(true)
 
     harness.managed.activeObjective!.requiresExecutionEvidence = false
     harness.managed.activeObjective!.completionCriteria = []
@@ -1543,7 +1543,7 @@ ${outcomeComment(receipt)}` },
     }, harness.managed.workspace, { messagesLoaded: true })
     reviewer.activeObjective = activeObjective('queued-verdict-reviewer-root')
     reviewer.isProcessing = true
-    ;(harness.manager as unknown as { sessions: Map<string, Managed> }).sessions.set(reviewer.id, reviewer)
+    ;sessionRuntimeStateForTest(harness.manager).sessions.set(reviewer.id, reviewer)
     harness.managed.messageQueue.push({
       message: 'Reviewer terminal verdict already accepted.',
       messageId: 'queued-reviewer-verdict',
@@ -1592,10 +1592,10 @@ ${outcomeComment(receipt)}` },
       automaticAdmissionReservations: Set<string>
       activeRelevantDelegatedDescendants: (session: Managed) => Managed[]
     }
-    runtime.sessions.set(reserved.id, reserved)
-    runtime.sessions.set(relaunched.id, relaunched)
-    runtime.sessions.set(restoredRecovery.id, restoredRecovery)
-    runtime.automaticAdmissionReservations.add(reserved.id)
+    sessionRuntimeStateForTest(runtime).sessions.set(reserved.id, reserved)
+    sessionRuntimeStateForTest(runtime).sessions.set(relaunched.id, relaunched)
+    sessionRuntimeStateForTest(runtime).sessions.set(restoredRecovery.id, restoredRecovery)
+    sessionRuntimeStateForTest(runtime).automaticAdmissionReservations.add(reserved.id)
 
     expect(runtime.activeRelevantDelegatedDescendants(harness.managed).map(session => session.id).sort())
       .toEqual(['relaunched-reviewer', 'reserved-reviewer', 'restored-recovery-reviewer'])
@@ -1620,7 +1620,7 @@ ${outcomeComment(receipt)}` },
       activeRelevantDelegatedDescendants: (session: Managed) => Managed[]
       deferTerminalOutcomeForActiveDelegations: (session: Managed) => Promise<boolean>
     }
-    runtime.sessions.set(orphan.id, orphan)
+    sessionRuntimeStateForTest(runtime).sessions.set(orphan.id, orphan)
 
     expect(orphan.messages).toEqual([])
     expect(orphan.activeObjective).toBeUndefined()
@@ -1671,7 +1671,7 @@ ${outcomeComment(receipt)}` },
       sessions: Map<string, Managed>
       resumePendingTurnAfterRestartOnce: (sessionId: string) => Promise<void>
     }
-    runtime.sessions.set(reviewer.id, reviewer)
+    sessionRuntimeStateForTest(runtime).sessions.set(reviewer.id, reviewer)
 
     await runtime.resumePendingTurnAfterRestartOnce(harness.managed.id)
 
@@ -1710,7 +1710,7 @@ ${outcomeComment(receipt)}` },
       sessions: Map<string, Managed>
       resumePendingTurnAfterRestartOnce: (sessionId: string) => Promise<void>
     }
-    runtime.sessions.set(reviewer.id, reviewer)
+    sessionRuntimeStateForTest(runtime).sessions.set(reviewer.id, reviewer)
 
     await runtime.resumePendingTurnAfterRestartOnce(harness.managed.id)
 
@@ -1757,7 +1757,7 @@ ${outcomeComment(receipt)}` },
       stale.activeObjective = activeObjective('stale-review-request')
       stale.pendingTurnRecovery = createPendingTurnRecovery('stale-review-request', 1)
       stale.isProcessing = true
-      ;(harness.manager as unknown as { sessions: Map<string, Managed> }).sessions.set(stale.id, stale)
+      ;sessionRuntimeStateForTest(harness.manager).sessions.set(stale.id, stale)
     })
 
     await harness.manager.sendMessage(harness.managed.id, 'Implement and verify the requested target.')
@@ -2880,7 +2880,7 @@ ${outcomeComment(receipt)}` },
       sessions: Map<string, Managed>; flushSession: () => Promise<void>;
       resumePendingTurnAfterRestart: (sessionId: string) => Promise<void>;
     }
-    internals.sessions.set(restored.id, restored)
+    sessionRuntimeStateForTest(internals).sessions.set(restored.id, restored)
     await internals.resumePendingTurnAfterRestart(restored.id)
     expect(restored.isProcessing).toBe(false)
     expect(restored.messageQueue).toEqual([])

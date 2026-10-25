@@ -1,3 +1,4 @@
+import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it } from 'bun:test'
 import { SessionManager, createManagedSession } from './SessionManager'
 import { objectiveReviewBinding, transitionObjectiveContract } from './objective-contract'
@@ -10,7 +11,7 @@ function harness() {
   const workspace = { id: 'wait-test', rootPath: '/tmp/robb-wait-test', name: 'Wait', createdAt: 1 }
   const make = (id: string, ws = workspace) => {
     const session = createManagedSession({ id, name: id }, ws as never, { messagesLoaded: true })
-    const parent = host.sessions.get('parent')
+    const parent = sessionRuntimeStateForTest(manager).sessions.get('parent')
     if (id === 'parent') {
       session.activeObjective = transitionObjectiveContract({
         messageId: 'parent-objective', text: 'Coordinate the delegated waits.', nowMs: 1,
@@ -27,7 +28,7 @@ function harness() {
         role: 'worker',
       }
     }
-    host.sessions.set(id, session)
+    sessionRuntimeStateForTest(manager).sessions.set(id, session)
     return session
   }
   return { host, make }
@@ -45,7 +46,7 @@ describe('delegated waits through SessionManager', () => {
 
     const pending = host.waitForDelegatedSessions(parent, [a.id, b.id], 1_000, undefined, 'all')
     await new Promise(resolve => setImmediate(resolve))
-    expect(host.sessionWaitListeners.size).toBe(1)
+    expect(sessionRuntimeStateForTest(host).sessionWaitListeners.size).toBe(1)
     b.isProcessing = false
     host.emitSessionComplete({
       sessionId: b.id, workspaceId: b.workspace.id, reason: 'complete',
@@ -61,7 +62,7 @@ describe('delegated waits through SessionManager', () => {
         { sessionId: b.id, reason: 'complete', finalText: 'B final' },
       ],
     })
-    expect(host.sessionWaitListeners.size).toBe(0)
+    expect(sessionRuntimeStateForTest(host).sessionWaitListeners.size).toBe(0)
   })
 
   it('mode:all returns an already-terminal unchanged snapshot without subscribing', async () => {
@@ -87,7 +88,7 @@ describe('delegated waits through SessionManager', () => {
       sessions: [{ sessionId: child.id, changed: false, reason: 'complete' }],
     })
     expect(result.sessions[0].finalText).toBeUndefined()
-    expect(host.sessionWaitListeners.size).toBe(0)
+    expect(sessionRuntimeStateForTest(host).sessionWaitListeners.size).toBe(0)
   })
 
   it('mode:all clears stale attention and diagnostics after a target resumes and succeeds', async () => {
@@ -99,14 +100,14 @@ describe('delegated waits through SessionManager', () => {
 
     const pending = host.waitForDelegatedSessions(parent, [a.id, b.id], 1_000, undefined, 'all')
     await new Promise(resolve => setImmediate(resolve))
-    expect(host.sessionWaitListeners.size).toBe(1)
+    expect(sessionRuntimeStateForTest(host).sessionWaitListeners.size).toBe(1)
 
     // External human authority resumes A while B is still active. Waking the
     // subscription must replace, not merge, A's prior attention snapshot.
     a.pendingTurnRecovery = undefined
     a.activeObjective!.terminalState = 'active'
     a.isProcessing = true
-    for (const listener of host.sessionWaitListeners) listener(a.id)
+    for (const listener of sessionRuntimeStateForTest(host).sessionWaitListeners) listener(a.id)
     await new Promise(resolve => setImmediate(resolve))
     a.isProcessing = false
     a.activeObjective!.terminalState = 'complete_verified'
@@ -139,7 +140,7 @@ describe('delegated waits through SessionManager', () => {
 
     a.processingGeneration = 2
     a.isProcessing = true
-    for (const listener of host.sessionWaitListeners) listener(a.id)
+    for (const listener of sessionRuntimeStateForTest(host).sessionWaitListeners) listener(a.id)
     await new Promise(resolve => setImmediate(resolve))
     a.isProcessing = false
     host.emitSessionComplete({
@@ -165,14 +166,14 @@ describe('delegated waits through SessionManager', () => {
     expect(first.sessions[0].finalText).toBe(receipt)
     const next = host.waitForDelegatedSessions(parent, ['a', 'b'], 1000)
     await new Promise(resolve => setImmediate(resolve))
-    expect(host.sessionWaitListeners.size).toBe(1)
+    expect(sessionRuntimeStateForTest(host).sessionWaitListeners.size).toBe(1)
     b.isProcessing = false
     host.emitSessionComplete({ sessionId: b.id, workspaceId: b.workspace.id, reason: 'error' })
     const result = await next
     expect(result.sessions[0].changed).toBe(false)
     expect(result.sessions[0].finalText).toBeUndefined()
     expect(result.sessions[1].reason).toBe('error')
-    expect(host.sessionWaitListeners.size).toBe(0)
+    expect(sessionRuntimeStateForTest(host).sessionWaitListeners.size).toBe(0)
   })
 
   it('keeps a deferred recovery active until its real terminal event', async () => {
@@ -180,15 +181,15 @@ describe('delegated waits through SessionManager', () => {
     parent.isProcessing = true; child.parentSessionId = parent.id; child.processingGeneration = 2
     child.activeObjective = { terminalState: 'active', startedAt: 1, userMessageId: 'request' } as any
     child.pendingTurnRecovery = { userMessageId: 'request', attempts: 1, continuationRequired: true } as any
-    host.deferredAutomaticSessions.add(child.id)
+    sessionRuntimeStateForTest(host).deferredAutomaticSessions.add(child.id)
     const pending = host.waitForDelegatedSessions(parent, [child.id], 1000)
     await new Promise(resolve => setImmediate(resolve))
-    expect(host.sessionWaitListeners.size).toBe(1)
-    child.pendingTurnRecovery = undefined; host.deferredAutomaticSessions.delete(child.id)
+    expect(sessionRuntimeStateForTest(host).sessionWaitListeners.size).toBe(1)
+    child.pendingTurnRecovery = undefined; sessionRuntimeStateForTest(host).deferredAutomaticSessions.delete(child.id)
     child.activeObjective!.terminalState = 'complete_verified'
     host.emitSessionComplete({ sessionId: child.id, workspaceId: child.workspace.id, reason: 'complete', finalText: 'Verified result' })
     expect((await pending).sessions[0].finalText).toBe('Verified result')
-    expect(host.sessionWaitListeners.size).toBe(0)
+    expect(sessionRuntimeStateForTest(host).sessionWaitListeners.size).toBe(0)
   })
 
   it('reports an exhausted target with a retained machine inbox and masks its older PASS', async () => {
@@ -198,7 +199,7 @@ describe('delegated waits through SessionManager', () => {
     child.pendingTurnRecovery = { userMessageId: 'request', attempts: 5, exhaustedAt: 10, validationExhausted: true } as any
     const held = { messageId: 'machine', message: 'Previous delivery', options: { internalOrigin: { kind: 'agent-message' as const, senderSessionId: parent.id } } }
     child.messageQueue.push(held)
-    host.deferredAutomaticSessions.add(child.id)
+    sessionRuntimeStateForTest(host).deferredAutomaticSessions.add(child.id)
     host.emitSessionComplete({ sessionId: child.id, workspaceId: child.workspace.id, reason: 'complete', finalMessageId: 'old-final', finalText: '{"status":"PASS"}' })
     const result = await host.waitForDelegatedSessions(parent, [child.id], 1000)
     expect(result.outcome).toBe('completed')
@@ -208,7 +209,7 @@ describe('delegated waits through SessionManager', () => {
     expect(result.sessions[0].finalMessageId).toBeUndefined()
     expect(child.messageQueue[0]).toBe(held)
     expect(child.pendingTurnRecovery?.attempts).toBe(5)
-    expect(host.sessionWaitListeners.size).toBe(0)
+    expect(sessionRuntimeStateForTest(host).sessionWaitListeners.size).toBe(0)
   })
 
   it('preserves verified completion when an older machine inbox remains held', async () => {
@@ -216,7 +217,7 @@ describe('delegated waits through SessionManager', () => {
     child.processingGeneration = 2
     child.activeObjective = { terminalState: 'complete_verified', startedAt: 1, userMessageId: 'request' } as any
     child.messageQueue.push({ messageId: 'machine', message: 'Previous delivery', options: { internalOrigin: { kind: 'agent-message', senderSessionId: parent.id } } })
-    host.deferredAutomaticSessions.add(child.id)
+    sessionRuntimeStateForTest(host).deferredAutomaticSessions.add(child.id)
     const receipt = '{"status":"PASS","objectiveId":"request"}'
     host.emitSessionComplete({ sessionId: child.id, workspaceId: child.workspace.id, reason: 'complete', finalMessageId: 'verified-final', finalText: receipt })
     const result = await host.waitForDelegatedSessions(parent, [child.id], 1000)
@@ -270,7 +271,7 @@ describe('delegated waits through SessionManager', () => {
     const result = await pending
     expect(result.sessions[0].needsAttention).toBe(true)
     expect(result.sessions[0].reason).toBeUndefined()
-    expect(host.sessionWaitListeners.size).toBe(0)
+    expect(sessionRuntimeStateForTest(host).sessionWaitListeners.size).toBe(0)
   })
 
   it('never falls back to generic lineage for a reviewer bound to an obsolete terminal SHA', async () => {

@@ -1,3 +1,4 @@
+import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it } from 'bun:test'
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -89,7 +90,7 @@ describe('internal tool failure recovery boundaries', () => {
       emitExecutionTelemetry: () => void
       processEvent: (session: typeof managed, event: AgentEvent, generation: number) => Promise<void>
     }
-    runtime.sessions.set(managed.id, managed)
+    sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
     runtime.enqueuePersist = () => {}
     runtime.sendEvent = () => {}
     runtime.emitExecutionTelemetry = () => {}
@@ -137,7 +138,7 @@ describe('internal tool failure recovery boundaries', () => {
     const runtime = manager as unknown as { sessions: Map<string, typeof managed>;
       enqueuePersist: () => void; sendEvent: () => void; emitExecutionTelemetry: () => void;
       processEvent: (session: typeof managed, event: AgentEvent, generation: number) => Promise<void> }
-    runtime.sessions.set(managed.id, managed)
+    sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
     runtime.enqueuePersist = () => {}
     runtime.sendEvent = () => {}
     runtime.emitExecutionTelemetry = () => {}

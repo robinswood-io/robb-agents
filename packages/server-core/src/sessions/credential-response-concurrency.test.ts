@@ -1,3 +1,4 @@
+import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it, spyOn } from 'bun:test'
 import * as credentials from '@craft-agent/shared/credentials'
 import { SessionManager, createManagedSession } from './SessionManager'
@@ -75,7 +76,7 @@ function harness(id: string) {
     processNextQueuedMessage: (sessionId: string) => void
     deferredAutomaticSessions: Set<string>
   }
-  runtime.sessions.set(id, managed)
+  sessionRuntimeStateForTest(manager).sessions.set(id, managed)
   runtime.sendEvent = (event: Record<string, unknown>) => events.push(event)
   return { manager, managed, request, runtime, events }
 }
@@ -106,7 +107,7 @@ describe('credential response concurrency', () => {
     expect(handled).toHaveLength(1)
     release.resolve()
     await expect(Promise.all([first, second])).resolves.toEqual([true, true])
-    expect(h.runtime.credentialResponsesInFlight.size).toBe(0)
+    expect(sessionRuntimeStateForTest(h.runtime).credentialResponsesInFlight.size).toBe(0)
   })
 
   it('does not activate or complete an old auth after cold-human cancellation wins during secure storage', async () => {
@@ -176,7 +177,7 @@ describe('credential response concurrency', () => {
     expect(resumed).toBe(1)
     expect(h.managed.pendingAuthRequestId).toBeUndefined()
     expect(h.managed.pendingAuthRequest).toBeUndefined()
-    expect(h.runtime.oauthResponsesInFlight.size).toBe(0)
+    expect(sessionRuntimeStateForTest(h.runtime).oauthResponsesInFlight.size).toBe(0)
     expect(h.managed.messages[0]?.authStatus).toBe('cancelled')
     expect(h.events.filter(event => event.type === 'auth_completed')).toHaveLength(1)
   })
@@ -208,17 +209,17 @@ describe('credential response concurrency', () => {
     let deletionSettled = false
     const deletion = h.manager.deleteSession(h.managed.id, () => true)
       .finally(() => { deletionSettled = true })
-    while (h.runtime.sessions.has(h.managed.id)) await Promise.resolve()
+    while (sessionRuntimeStateForTest(h.runtime).sessions.has(h.managed.id)) await Promise.resolve()
     await Promise.resolve()
 
     expect(deletionSettled).toBe(false)
-    expect(h.runtime.deferredAutomaticSessions.has(h.managed.id)).toBe(false)
+    expect(sessionRuntimeStateForTest(h.runtime).deferredAutomaticSessions.has(h.managed.id)).toBe(false)
 
     release.resolve()
     await expect(Promise.all([cancellation, deletion])).resolves.toEqual([true, undefined])
     expect(deletionSettled).toBe(true)
-    expect(h.runtime.sessions.has(h.managed.id)).toBe(false)
-    expect(h.runtime.deferredAutomaticSessions.has(h.managed.id)).toBe(false)
+    expect(sessionRuntimeStateForTest(h.runtime).sessions.has(h.managed.id)).toBe(false)
+    expect(sessionRuntimeStateForTest(h.runtime).deferredAutomaticSessions.has(h.managed.id)).toBe(false)
     expect(schedulerCalls).toBe(0)
   })
 
@@ -491,7 +492,7 @@ describe('credential response concurrency', () => {
       pendingCredentialResolvers: Map<string, (response: unknown) => void>
     }
     let deliveries = 0
-    runtime.pendingCredentialResolvers.set('legacy-request', () => { deliveries++ })
+    sessionRuntimeStateForTest(manager).pendingCredentialResolvers.set('legacy-request', () => { deliveries++ })
     const response = { type: 'credential' as const, cancelled: true }
 
     await expect(manager.respondToCredential('legacy-session', 'legacy-request', response)).resolves.toBe(true)

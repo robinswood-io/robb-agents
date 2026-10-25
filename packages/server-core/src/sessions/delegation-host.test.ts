@@ -1,3 +1,4 @@
+import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -48,7 +49,7 @@ function harness(permissionMode: PermissionMode = 'allow-all') {
       presented?: string,
     ) => boolean;
   };
-  internals.sessions.set(parent.id, parent);
+  sessionRuntimeStateForTest(manager).sessions.set(parent.id, parent);
   const creations: Array<{ options: CreateOptions; delegation: SessionDelegation }> = [];
   const sent: Array<{ sessionId: string; prompt: string; permissionMode?: PermissionMode }> = [];
   const persisted: Array<Pick<Managed, 'id' | 'permissionMode' | 'delegation'>> = [];
@@ -56,7 +57,7 @@ function harness(permissionMode: PermissionMode = 'allow-all') {
   internals.flushSession = async () => {};
   internals.sendEvent = () => {};
   internals.sendMessage = async (sessionId, prompt, ...args) => {
-    sent.push({ sessionId, prompt, permissionMode: internals.sessions.get(sessionId)?.permissionMode });
+    sent.push({ sessionId, prompt, permissionMode: sessionRuntimeStateForTest(manager).sessions.get(sessionId)?.permissionMode });
     const acknowledge = args[5] as ((messageId: string) => void) | undefined;
     acknowledge?.(`${sessionId}-durable-dispatch`);
   };
@@ -66,12 +67,12 @@ function harness(permissionMode: PermissionMode = 'allow-all') {
     creations.push({ options, delegation: internal.delegation });
     const child = createManagedSession({ id: `child-${creations.length}`, ...options,
       delegation: internal.delegation } as never, workspace);
-    internals.sessions.set(child.id, child);
+    sessionRuntimeStateForTest(manager).sessions.set(child.id, child);
     internals.persistSession(child);
     return child;
   };
   cleanup.push(() => {
-    for (const id of internals.sessions.keys()) cleanupModeState(id);
+    for (const id of sessionRuntimeStateForTest(manager).sessions.keys()) cleanupModeState(id);
     rmSync(rootPath, { recursive: true, force: true });
   });
   const spawn = (input: Record<string, unknown> = { prompt: 'Inspecte la cible précise.' }) => {
@@ -152,7 +153,7 @@ describe('real host delegated-session dispatch', () => {
     expect(h.sent[0]!.prompt).toContain('"protocol":"host-review-v2"');
     expect(h.sent[0]!.prompt).toContain('"singleTarget":{"target":"/srv/review"}');
     // The origin record remains current; a reviewer cannot delegate again.
-    restored.isProcessing = true; h.internals.sessions.set(restored.id, restored);
+    restored.isProcessing = true; sessionRuntimeStateForTest(h.internals).sessions.set(restored.id, restored);
     await expect(h.internals.spawnDelegatedSession(restored, { prompt: 'Sous-revue.' })).rejects.toThrow('reviewer');
   });
 
@@ -182,7 +183,7 @@ describe('real host delegated-session dispatch', () => {
     expect(h.sent[0]!.prompt).toContain('<host_parent_review_contract>');
     expect(h.sent[0]!.prompt).toContain('"protocol":"host-review-v2"');
     expect(h.sent[0]!.prompt).toContain('root-request');
-    const dispatched = h.internals.sessions.get('child-1');
+    const dispatched = sessionRuntimeStateForTest(h.internals).sessions.get('child-1');
     dispatched!.activeObjective = transitionObjectiveContract({
       messageId: 'review-root',
       text: 'Review the exact host-bound target in read-only mode.',
@@ -250,7 +251,7 @@ describe('real host delegated-session dispatch', () => {
     releaseHydration();
     await expect(spawning).rejects.toThrow('superseded');
 
-    const child = h.internals.sessions.get('child-1')!;
+    const child = sessionRuntimeStateForTest(h.internals).sessions.get('child-1')!;
     for (let attempt = 0; attempt < 50
       && (!child.delegation?.finishedAt || childFlushes < 2); attempt++) {
       await Bun.sleep(2);
@@ -352,7 +353,7 @@ describe('real host delegated-session dispatch', () => {
     reviewer.activeObjective = transitionObjectiveContract({
       messageId: 'reviewer-objective', text: 'Inspect the bound target.', nowMs: 4,
     });
-    h.internals.sessions.set(reviewer.id, reviewer);
+    sessionRuntimeStateForTest(h.internals).sessions.set(reviewer.id, reviewer);
 
     const consume = (mode: 'first' | 'all', presentedInput?: Record<string, unknown>) => {
       const policy = h.internals.resolveObjectiveMutationAuthority(
@@ -409,7 +410,7 @@ describe('real host delegated-session dispatch', () => {
     const orphan = createManagedSession({
       id: 'cold-orphan', parentSessionId: orphaned.parent.id, createdAt: 4, delegation: lineage,
     } as never, orphaned.parent.workspace, { messagesLoaded: false });
-    orphaned.internals.sessions.set(orphan.id, orphan);
+    sessionRuntimeStateForTest(orphaned.internals).sessions.set(orphan.id, orphan);
     await expect(orphaned.spawn({ prompt: 'Dispatch the recoverable review.', role: 'reviewer' }))
       .resolves.toMatchObject({ status: 'started' });
     expect(orphan.delegation?.finishedAt).toBeNumber();
@@ -434,7 +435,7 @@ describe('real host delegated-session dispatch', () => {
         delegatedRole: 'reviewer',
       }),
     } as never, durable.parent.workspace, { messagesLoaded: false });
-    durable.internals.sessions.set(persisted.id, persisted);
+    sessionRuntimeStateForTest(durable.internals).sessions.set(persisted.id, persisted);
     await expect(durable.spawn({ prompt: 'Do not duplicate the durable review.', role: 'reviewer' }))
       .rejects.toThrow('already dispatched the reviewer');
     expect(durable.creations).toHaveLength(0);
@@ -448,7 +449,7 @@ describe('real host delegated-session dispatch', () => {
       expect(loadSession(h.parent.workspace.rootPath, stored.id)?.delegation).toEqual(internal.delegation);
       expect(listSessions(h.parent.workspace.rootPath).find(item => item.id === stored.id)?.delegation).toEqual(internal.delegation);
       const child = createManagedSession(stored, h.parent.workspace);
-      h.internals.sessions.set(child.id, child);
+      sessionRuntimeStateForTest(h.internals).sessions.set(child.id, child);
       return child;
     };
     const result = await h.spawn({ prompt: 'Examine le document cible /srv/document.', role: 'reviewer' });
@@ -518,7 +519,7 @@ describe('real host delegated-session dispatch', () => {
     h.internals.sendMessage = async () => { throw new Error('Transport unavailable'); };
     await expect(h.spawn()).rejects.toThrow('Transport unavailable');
     expect(h.persisted.at(-1)?.delegation?.finishedAt).toBeNumber();
-    expect(h.internals.sessions.get('child-1')?.messages.find(message => (
+    expect(sessionRuntimeStateForTest(h.internals).sessions.get('child-1')?.messages.find(message => (
       message.role === 'error'
       && message.errorCode === 'delegated_dispatch_failed'
     ))).toMatchObject({ errorCanRetry: true });

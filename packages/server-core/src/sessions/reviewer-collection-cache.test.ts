@@ -1,3 +1,5 @@
+import { ScriptedSessionAgent } from './testing/scripted-session-agent.ts';
+import { sessionRuntimeStateForTest , requiredTestValue } from "./testing/runtime-state-access.ts";
 import { expect, it, spyOn } from 'bun:test'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -17,14 +19,14 @@ it('keeps a host-declared reviewer fresh through real spawn, creation and turn p
  try {
   host.sendEvent = () => {}; host.emitUnreadSummaryChanged = () => {}; host.notifySessionCreated = () => {}
   const created = await host.createSession(workspace.id,{name:'Worker',llmConnection:'test-route',model:'test-model',permissionMode:'safe'})
-  const parent = host.sessions.get(created.id)
+  const parent = requiredTestValue(sessionRuntimeStateForTest(host).sessions.get(created.id))
   parent.isProcessing=true
   parent.activeObjective=transitionObjectiveContract({messageId:'root-objective',text:'Compare the supplied collection.',nowMs:1})
   const realSend = host.sendMessage.bind(host)
   let dispatched: Promise<void> | undefined
   let child: any, seen: any
   let generations=0
-  const summaryAgent = {getSummarizeCallback:()=>async()=>{generations++; return `Synthesis ${generations}`}}
+  const summaryAgent = Object.assign(new ScriptedSessionAgent(workspace), {getSummarizeCallback:()=>async()=>{generations++; return `Synthesis ${generations}`}})
   parent.agent=summaryAgent
   host.enqueuePersist=()=>true;host.flushSession=async()=>{}
   host.beginAutomaticSessionStatusLifecycle=async()=>{};host.finishAutomaticSessionStatusLifecycle=async()=>{}
@@ -65,7 +67,7 @@ it('keeps a host-declared reviewer fresh through real spawn, creation and turn p
   expect(host.getCollectionCacheScope(child)?.freshEvidence).toBe(true)
  }finally{
   loader.mockRestore()
-  for(const id of host.sessions.keys())cleanupModeState(id)
+  for(const id of sessionRuntimeStateForTest(host).sessions.keys())cleanupModeState(id)
   rmSync(rootPath,{recursive:true,force:true})
  }
 })

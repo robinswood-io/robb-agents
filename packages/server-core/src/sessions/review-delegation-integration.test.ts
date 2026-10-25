@@ -1,3 +1,4 @@
+import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { mkdtempSync, realpathSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -24,20 +25,20 @@ function harness(review = false) {
     createSession: (workspaceId: string, options: Partial<Managed>) => Promise<Managed>;
     sendMessage: (id: string, prompt: string, ...args: unknown[]) => Promise<void>;
   };
-  host.sessions.set(parent.id, parent);
+  sessionRuntimeStateForTest(manager).sessions.set(parent.id, parent);
   if (review) {
     const root = createManagedSession({ id: 'root' }, workspace, { messagesLoaded: true });
     root.isProcessing = true;
     root.activeObjective = transitionObjectiveContract({ messageId: 'root-objective', text: 'Audit requested work.', nowMs: 1 });
-    host.sessions.set(root.id, root);
+    sessionRuntimeStateForTest(manager).sessions.set(root.id, root);
   }
   const created: Managed[] = []; const sent: string[] = [];
   host.createSession = async (_workspaceId, options) => {
     const child = createManagedSession({ ...options, id: `child-${created.length + 1}` }, workspace, { messagesLoaded: true });
-    host.sessions.set(child.id, child); created.push(child); return child;
+    sessionRuntimeStateForTest(manager).sessions.set(child.id, child); created.push(child); return child;
   };
   host.sendMessage = async (id, _prompt, ...args) => {
-    sent.push(id); const child = host.sessions.get(id)!; child.isProcessing = true; child.processingGeneration = 1;
+    sent.push(id); const child = sessionRuntimeStateForTest(manager).sessions.get(id)!; child.isProcessing = true; child.processingGeneration = 1;
     ;(args[5] as ((messageId: string) => void) | undefined)?.(`${id}-durable-dispatch`);
   };
   return { host, parent, created, sent, spawn: (request: SpawnSessionRequest) => host.spawnDelegatedSession(parent, request) };

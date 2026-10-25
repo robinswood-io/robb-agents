@@ -1,3 +1,5 @@
+import { ConfigWatcher } from '@craft-agent/shared/config';
+import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it } from 'bun:test'
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -40,7 +42,7 @@ describe('session deletion persistence retirement', () => {
       sessions: Map<string, typeof managed>
       persistSession: (candidate: typeof managed) => boolean
     }
-    runtime.sessions.set(managed.id, managed)
+    sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
 
     let releaseDisposal!: () => void
     const disposalGate = new Promise<void>(resolve => { releaseDisposal = resolve })
@@ -60,7 +62,7 @@ describe('session deletion persistence retirement', () => {
     let cleanup: Promise<void> | undefined
     try {
       await disposalStarted
-      expect(runtime.sessions.has(managed.id)).toBe(false)
+      expect(sessionRuntimeStateForTest(manager).sessions.has(managed.id)).toBe(false)
       expect(sessionPersistenceQueue.isRetired(managed.id, root)).toBe(true)
       expect(runtime.persistSession(managed)).toBe(false)
       expect(() => sessionPersistenceQueue.enqueue({
@@ -82,7 +84,7 @@ describe('session deletion persistence retirement', () => {
     await Promise.all([deletion, cleanup])
     expect(cleanupSettled).toBe(true)
     expect(existsSync(getSessionPath(root, managed.id))).toBe(false)
-    expect(runtime.sessions.has(managed.id)).toBe(false)
+    expect(sessionRuntimeStateForTest(manager).sessions.has(managed.id)).toBe(false)
     await expect(getOrCreateSessionById(root, managed.id))
       .rejects.toThrow(`Session ID was deleted during this app run and cannot be reused: ${managed.id}`)
   })
@@ -102,7 +104,7 @@ describe('session deletion persistence retirement', () => {
       sessions: Map<string, typeof managed>
       trackSessionOperation: <T>(candidate: typeof managed, operation: () => Promise<T>) => Promise<T>
     }
-    runtime.sessions.set(managed.id, managed)
+    sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
 
     let releaseWrite!: () => void
     const writeGate = new Promise<void>(resolve => { releaseWrite = resolve })
@@ -121,7 +123,7 @@ describe('session deletion persistence retirement', () => {
     const deletion = manager.deleteSession(managed.id).finally(() => { deletionSettled = true })
     await Promise.resolve()
     await Promise.resolve()
-    expect(runtime.sessions.has(managed.id)).toBe(false)
+    expect(sessionRuntimeStateForTest(manager).sessions.has(managed.id)).toBe(false)
     expect(sessionPersistenceQueue.isRetired(managed.id, root)).toBe(true)
     expect(deletionSettled).toBe(false)
     expect(existsSync(getSessionPath(root, managed.id))).toBe(true)
@@ -146,7 +148,7 @@ describe('session deletion persistence retirement', () => {
       sessions: Map<string, typeof managed>
       restartRecoveriesInFlight: Map<string, Promise<void>>
     }
-    runtime.sessions.set(managed.id, managed)
+    sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
 
     let releaseRecovery!: () => void
     const recoveryGate = new Promise<void>(resolve => { releaseRecovery = resolve })
@@ -160,11 +162,11 @@ describe('session deletion persistence retirement', () => {
       mkdirSync(metaPath, { recursive: true })
       writeFileSync(join(metaPath, 'late-restart-recovery.json'), '{}')
     })().finally(() => {
-      if (runtime.restartRecoveriesInFlight.get(managed.id) === recovery) {
-        runtime.restartRecoveriesInFlight.delete(managed.id)
+      if (sessionRuntimeStateForTest(manager).restartRecoveriesInFlight.get(managed.id) === recovery) {
+        sessionRuntimeStateForTest(manager).restartRecoveriesInFlight.delete(managed.id)
       }
     })
-    runtime.restartRecoveriesInFlight.set(managed.id, recovery)
+    sessionRuntimeStateForTest(manager).restartRecoveriesInFlight.set(managed.id, recovery)
     await recoveryStarted
 
     let deletionSettled = false
@@ -197,7 +199,7 @@ describe('session deletion persistence retirement', () => {
       retiringSessions: WeakSet<typeof managed>
       persistSession: (candidate: typeof managed) => boolean
     }
-    runtime.sessions.set(managed.id, managed)
+    sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
     managed.isProcessing = true
     managed.agent = {
       forceAbort: () => { throw new Error('fixture force-abort failure') },
@@ -222,7 +224,7 @@ describe('session deletion persistence retirement', () => {
     try {
       await retirementStarted
       await Promise.resolve()
-      expect(runtime.sessions.has(managed.id)).toBe(false)
+      expect(sessionRuntimeStateForTest(manager).sessions.has(managed.id)).toBe(false)
       expect(deletionSettled).toBe(false)
     } finally {
       releaseRetirement()
@@ -233,8 +235,8 @@ describe('session deletion persistence retirement', () => {
       sessionPersistenceQueue.retire = originalRetire
     }
 
-    expect(runtime.sessions.get(managed.id)).toBe(managed)
-    expect(runtime.retiringSessions.has(managed)).toBe(true)
+    expect(sessionRuntimeStateForTest(manager).sessions.get(managed.id)).toBe(managed)
+    expect(sessionRuntimeStateForTest(manager).retiringSessions.has(managed)).toBe(true)
     expect(managed.stopRequested).toBe(true)
     expect(sessionPersistenceQueue.isRetired(managed.id, root)).toBe(true)
     expect(runtime.persistSession(managed)).toBe(false)
@@ -270,11 +272,11 @@ describe('session deletion persistence retirement', () => {
       retiringSessions: WeakSet<typeof managed>
       persistSession: (candidate: typeof managed) => boolean
     }
-    runtime.sessions.set(id, managed)
+    sessionRuntimeStateForTest(manager).sessions.set(id, managed)
 
     await manager.deleteSession(id)
 
-    expect(runtime.sessions.has(id)).toBe(false)
+    expect(sessionRuntimeStateForTest(manager).sessions.has(id)).toBe(false)
     expect(sessionPersistenceQueue.isRetired(id, root)).toBe(true)
     expect(existsSync(getSessionPath(root, id))).toBe(false)
   })
@@ -330,7 +332,7 @@ describe('session deletion persistence retirement', () => {
       sessions: Map<string, typeof managed>
       persistSession: (candidate: typeof managed) => boolean
     }
-    runtime.sessions.set(id, managed)
+    sessionRuntimeStateForTest(manager).sessions.set(id, managed)
     managed.name = 'Pending write for target A'
     expect(runtime.persistSession(managed)).toBe(true)
     expect(sessionPersistenceQueue.hasPending(id, rootA)).toBe(true)
@@ -375,7 +377,7 @@ describe('session deletion persistence retirement', () => {
       { messagesLoaded: true },
     )
     const runtime = manager as unknown as { sessions: Map<string, typeof managed> }
-    runtime.sessions.set(id, managed)
+    sessionRuntimeStateForTest(manager).sessions.set(id, managed)
 
     let releaseDisposal!: () => void
     const disposalGate = new Promise<void>(resolve => { releaseDisposal = resolve })
@@ -405,7 +407,7 @@ describe('session deletion persistence retirement', () => {
     releaseDisposal()
 
     await expect(deletion).rejects.toThrow('Session persistence root was replaced')
-    expect(runtime.sessions.get(id)).toBe(managed)
+    expect(sessionRuntimeStateForTest(manager).sessions.get(id)).toBe(managed)
     expect(sessionPersistenceQueue.isRetired(id, managed.persistenceRootPath)).toBe(true)
     await expect(manager.markSessionUnread(id)).rejects.toThrow(`Session ${id} is being deleted`)
     await expect(manager.setPendingPlanExecution(id, '/tmp/replacement-plan.md')).rejects
@@ -439,14 +441,14 @@ describe('session deletion persistence retirement', () => {
       retiringSessions: WeakSet<typeof managed>
       persistSession: (candidate: typeof managed) => boolean
     }
-    runtime.sessions.set(managed.id, managed)
+    sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
     managed.name = 'Must never be written through the unsafe live symlink'
 
     await expect(manager.deleteSession(managed.id))
       .rejects.toThrow(`Could not atomically remove session files for ${managed.id}`)
 
-    expect(runtime.sessions.get(managed.id)).toBe(managed)
-    expect(runtime.retiringSessions.has(managed)).toBe(true)
+    expect(sessionRuntimeStateForTest(manager).sessions.get(managed.id)).toBe(managed)
+    expect(sessionRuntimeStateForTest(manager).retiringSessions.has(managed)).toBe(true)
     expect(managed.stopRequested).toBe(true)
     expect(sessionPersistenceQueue.isRetired(managed.id, root)).toBe(true)
     expect(runtime.persistSession(managed)).toBe(false)
@@ -473,7 +475,7 @@ describe('session deletion persistence retirement', () => {
     renameSync(preservedSessionPath, liveSessionPath)
     expect(loadSession(root, managed.id)?.name).toBe('Atomic rollback')
     await manager.deleteSession(managed.id)
-    expect(runtime.sessions.has(managed.id)).toBe(false)
+    expect(sessionRuntimeStateForTest(manager).sessions.has(managed.id)).toBe(false)
     expect(existsSync(liveSessionPath)).toBe(false)
   })
 
@@ -503,7 +505,7 @@ describe('session deletion persistence retirement', () => {
       processingTransitions.push(processing)
       originalSetProcessing(candidate, processing)
     }
-    runtime.sessions.set(managed.id, managed)
+    sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
     managed.isProcessing = true
     // This is the state observed while a user Stop is still draining. A
     // deletion rollback after proven teardown must not restore that stale
@@ -519,13 +521,13 @@ describe('session deletion persistence retirement', () => {
     await expect(manager.deleteSession(managed.id))
       .rejects.toThrow(`Could not atomically remove session files for ${managed.id}`)
 
-    expect(runtime.sessions.get(managed.id)).toBe(managed)
+    expect(sessionRuntimeStateForTest(manager).sessions.get(managed.id)).toBe(managed)
     expect(managed.isProcessing).toBe(false)
     expect(managed.stopRequested).toBe(true)
     expect(managed.wasInterrupted).toBe(true)
     expect(managed.agent).toBeNull()
     expect(processingTransitions).toEqual([false])
-    expect(runtime.retiringSessions.has(managed)).toBe(true)
+    expect(sessionRuntimeStateForTest(manager).retiringSessions.has(managed)).toBe(true)
     expect(sessionPersistenceQueue.isRetired(managed.id, root)).toBe(true)
     expect(existsSync(preservedSessionPath)).toBe(true)
   })
@@ -549,7 +551,7 @@ describe('session deletion persistence retirement', () => {
       getOrCreateAgent: (candidate: typeof managed) => Promise<unknown>
       runtimeDisposalBarriers: Map<string, Map<symbol, unknown>>
     }
-    runtime.sessions.set(managed.id, managed)
+    sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
     managed.isProcessing = true
     managed.stopRequested = false
     managed.wasInterrupted = false
@@ -567,14 +569,14 @@ describe('session deletion persistence retirement', () => {
     await expect(manager.deleteSession(managed.id))
       .rejects.toThrow(`Runtime destruction for session ${managed.id} is not yet proven`)
 
-    expect(runtime.sessions.get(managed.id)).toBe(managed)
+    expect(sessionRuntimeStateForTest(manager).sessions.get(managed.id)).toBe(managed)
     expect(managed.isProcessing).toBe(false)
     expect(managed.stopRequested).toBe(true)
     expect(managed.wasInterrupted).toBe(true)
     expect(managed.agent).toBeNull()
-    expect(runtime.retiringSessions.has(managed)).toBe(true)
+    expect(sessionRuntimeStateForTest(manager).retiringSessions.has(managed)).toBe(true)
     expect(sessionPersistenceQueue.isRetired(managed.id, root)).toBe(true)
-    expect(runtime.runtimeDisposalBarriers.get(managed.id)?.size).toBe(1)
+    expect(sessionRuntimeStateForTest(manager).runtimeDisposalBarriers.get(managed.id)?.size).toBe(1)
     expect(runtime.persistSession(managed)).toBe(false)
     const streamingBeforeLateEvent = managed.streamingText
     await runtime.processEvent(managed, {
@@ -595,7 +597,7 @@ describe('session deletion persistence retirement', () => {
     allowDisposal = true
     await manager.deleteSession(managed.id)
     expect(disposalCalls).toBe(3)
-    expect(runtime.sessions.has(managed.id)).toBe(false)
+    expect(sessionRuntimeStateForTest(manager).sessions.has(managed.id)).toBe(false)
     expect(existsSync(getSessionPath(root, managed.id))).toBe(false)
   })
 
@@ -611,7 +613,7 @@ describe('session deletion persistence retirement', () => {
       { messagesLoaded: true },
     )
     const runtime = manager as unknown as { sessions: Map<string, typeof managed> }
-    runtime.sessions.set(managed.id, managed)
+    sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
     let browserTeardownCalls = 0
     manager.getBrowserPaneManagerForSession = () => ({
       destroyForSession: () => {
@@ -629,7 +631,7 @@ describe('session deletion persistence retirement', () => {
     expect(archivePath).toBeDefined()
     expect(existsSync(archivePath!)).toBe(true)
     expect(existsSync(getSessionPath(root, managed.id))).toBe(false)
-    expect(runtime.sessions.has(managed.id)).toBe(false)
+    expect(sessionRuntimeStateForTest(manager).sessions.has(managed.id)).toBe(false)
     expect(sessionPersistenceQueue.isRetired(managed.id, root)).toBe(true)
     expect(browserTeardownCalls).toBe(1)
   })
@@ -646,7 +648,7 @@ describe('session deletion persistence retirement', () => {
       { messagesLoaded: true },
     )
     const runtime = manager as unknown as { sessions: Map<string, typeof managed> }
-    runtime.sessions.set(managed.id, managed)
+    sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
     const archivePath = join(root, 'committed-retention-archive')
 
     await expect(manager.deleteSession(managed.id, () => {
@@ -660,7 +662,7 @@ describe('session deletion persistence retirement', () => {
 
     expect(existsSync(archivePath)).toBe(true)
     expect(existsSync(getSessionPath(root, managed.id))).toBe(false)
-    expect(runtime.sessions.has(managed.id)).toBe(false)
+    expect(sessionRuntimeStateForTest(manager).sessions.has(managed.id)).toBe(false)
     expect(sessionPersistenceQueue.isRetired(managed.id, root)).toBe(true)
   })
 
@@ -680,27 +682,27 @@ describe('session deletion persistence retirement', () => {
       retiringSessions: WeakSet<typeof managed>
       persistSession: (candidate: typeof managed) => boolean
     }
-    runtime.sessions.set(managed.id, managed)
+    sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
     let callbackCount = 0
 
     await manager.deleteSession(managed.id, () => {
       callbackCount += 1
       expect(sessionPersistenceQueue.isRetired(managed.id, root)).toBe(true)
-      expect(runtime.sessions.has(managed.id)).toBe(false)
+      expect(sessionRuntimeStateForTest(manager).sessions.has(managed.id)).toBe(false)
       expect(existsSync(getSessionPath(root, managed.id))).toBe(true)
       return false
     })
 
     expect(callbackCount).toBe(1)
     expect(sessionPersistenceQueue.isRetired(managed.id, root)).toBe(true)
-    expect(runtime.sessions.get(managed.id)).toBe(managed)
-    expect(runtime.retiringSessions.has(managed)).toBe(true)
+    expect(sessionRuntimeStateForTest(manager).sessions.get(managed.id)).toBe(managed)
+    expect(sessionRuntimeStateForTest(manager).retiringSessions.has(managed)).toBe(true)
     expect(managed.stopRequested).toBe(true)
     expect(runtime.persistSession(managed)).toBe(false)
     expect(existsSync(getSessionPath(root, managed.id))).toBe(true)
 
     await manager.deleteSession(managed.id)
-    expect(runtime.sessions.has(managed.id)).toBe(false)
+    expect(sessionRuntimeStateForTest(manager).sessions.has(managed.id)).toBe(false)
     expect(existsSync(getSessionPath(root, managed.id))).toBe(false)
   })
 
@@ -718,7 +720,7 @@ describe('session deletion persistence retirement', () => {
       configWatchers: Map<string, { stop: () => void }>
       disposeManagedAgentRuntime: (candidate: typeof managed, reason: string) => Promise<void>
     }
-    runtime.sessions.set(managed.id, managed)
+    sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
     managed.agent = {} as never
     let disposalCalls = 0
     runtime.disposeManagedAgentRuntime = async candidate => {
@@ -726,7 +728,7 @@ describe('session deletion persistence retirement', () => {
       candidate.agent = null
     }
     let watcherStops = 0
-    runtime.configWatchers.set(root, { stop: () => { watcherStops += 1 } })
+    sessionRuntimeStateForTest(manager).configWatchers.set(root, Object.assign(new ConfigWatcher(root, {}), { stop: () => { watcherStops += 1 } }))
 
     const originalFlushAll = sessionPersistenceQueue.flushAll
     let flushCalls = 0

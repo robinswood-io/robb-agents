@@ -1,3 +1,4 @@
+import { sessionRuntimeStateForTest } from "../../../../../packages/server-core/src/sessions/testing/runtime-state-access.ts";
 import { beforeEach, describe, expect, it, mock } from 'bun:test'
 
 const workspaceRootPath = '/tmp/ws-rollback'
@@ -318,7 +319,7 @@ describe('session branch rollback on preflight failure', () => {
 
     expect(deletedIds).toEqual(['child-1'])
     expect(storedById.has('child-1')).toBe(false)
-    expect((manager as any).sessions.has('child-1')).toBe(false)
+    expect(sessionRuntimeStateForTest(manager).sessions.has('child-1')).toBe(false)
     expect(disposeCalled).toBe(true)
     expect(poolStopCalled).toBe(true)
   })

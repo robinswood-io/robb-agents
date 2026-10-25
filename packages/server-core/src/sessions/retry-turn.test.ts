@@ -1,3 +1,5 @@
+import { permissionMetadataFixture } from './testing/permission-metadata.ts';
+import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it, spyOn } from 'bun:test'
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -72,7 +74,7 @@ function harness() {
     ensureMessagesLoaded: (session: Managed) => Promise<void>
     onProcessingStopped: (sessionId: string, reason: 'timeout', generation: number) => Promise<void>
   }
-  internals.sessions.set(id, managed)
+  sessionRuntimeStateForTest(manager).sessions.set(id, managed)
   internals.enqueuePersist = () => true
   internals.flushSession = async () => {}
   internals.sendEvent = event => events.push(event)
@@ -128,7 +130,7 @@ describe('explicit retry of an existing turn', () => {
       await entered.promise
       expect(h.managed.activeObjective?.terminalState as string).toBe('active')
       expect(h.managed.pendingTurnRecovery?.waitingForPermission).toBeUndefined()
-      expect(h.internals.pendingPermissionRequests.size).toBe(0)
+      expect(sessionRuntimeStateForTest(h.internals).pendingPermissionRequests.size).toBe(0)
       expect(permissionResponses).toBe(0)
       expect(h.managed.sessionStatus).toBe('in-progress')
     } finally {
@@ -761,7 +763,7 @@ describe('explicit retry of an existing turn', () => {
       if (kind === 'question') child.managed.userInputRequests = [{ id: 'q', sessionId: child.managed.id,
         originWorkspaceId: child.managed.workspace.id, status: 'pending', createdAt: 1 }] as never
       if (kind === 'auth') child.managed.pendingAuthRequestId = 'auth'
-      if (kind === 'approval') child.internals.pendingPermissionRequests.set('permission', { sessionId: child.managed.id })
+      if (kind === 'approval') sessionRuntimeStateForTest(child.internals).pendingPermissionRequests.set('permission', permissionMetadataFixture(child.managed.id))
       if (kind === 'queue') child.managed.messageQueue.push({ message: 'waiting' })
       await expect(child.manager.retryTurn(child.managed.id, 'root-user')).rejects.toThrow()
       expect(child.managed.isProcessing).toBe(false)
@@ -773,7 +775,7 @@ describe('explicit retry of an existing turn', () => {
     const h = harness()
     if (kind === 'question') h.managed.userInputRequests = [{ id: 'q', sessionId: h.managed.id, originWorkspaceId: h.managed.workspace.id, status: 'pending', createdAt: 1 }] as never
     if (kind === 'auth') h.managed.pendingAuthRequestId = 'auth'
-    if (kind === 'approval') h.internals.pendingPermissionRequests.set('permission', { sessionId: h.managed.id })
+    if (kind === 'approval') sessionRuntimeStateForTest(h.internals).pendingPermissionRequests.set('permission', permissionMetadataFixture(h.managed.id))
     if (kind === 'queue') h.managed.messageQueue.push({ message: 'waiting' })
     await expect(h.manager.retryTurn(h.managed.id, 'latest-user')).rejects.toThrow()
     expect(h.managed.activeObjective?.terminalState).toBe('complete_verified')

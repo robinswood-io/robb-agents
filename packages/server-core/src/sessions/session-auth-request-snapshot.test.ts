@@ -1,3 +1,4 @@
+import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { describe, expect, it } from 'bun:test'
 import type { Message } from '@craft-agent/core/types'
 import { SessionManager, createManagedSession } from './SessionManager'
@@ -19,7 +20,7 @@ describe('pending auth in lightweight session snapshots', () => {
     managed.pendingAuthRequestId = 'oauth-current'
     const manager = new SessionManager()
     const internals = manager as unknown as { sessions: Map<string, typeof managed> }
-    internals.sessions.set(managed.id, managed)
+    sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
 
     const reloaded = manager.getSessions(managed.workspace.id)[0]!
     expect(reloaded.parentSessionId).toBe('parent')

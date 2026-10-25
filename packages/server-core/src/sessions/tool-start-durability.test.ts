@@ -1,3 +1,4 @@
+import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -27,7 +28,7 @@ describe('tool start durability before results arrive', () => {
       id: 'test-workspace', slug: 'test', name: 'Test workspace', rootPath: root, createdAt: 1,
     }, { messagesLoaded: true })
     runtime = manager as unknown as typeof runtime
-    runtime.sessions.set(managed.id, managed)
+    sessionRuntimeStateForTest(runtime).sessions.set(managed.id, managed)
     runtime.sendEvent = () => {}
     runtime.emitExecutionTelemetry = () => {}
   })

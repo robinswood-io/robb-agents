@@ -1,3 +1,4 @@
+import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import {
   projectLegacyObjectiveForUserTransition as policyProjectLegacyObjectiveForUserTransition,
 } from "./SessionManager/policy.ts";
@@ -40,7 +41,7 @@ function harness(id: string) {
     rootPath,
     createdAt: 1,
   } as never, { messagesLoaded: true })
-  host.sessions.set(managed.id, managed)
+  sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
   return { manager, host, managed, events }
 }
 

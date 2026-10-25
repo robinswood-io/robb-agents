@@ -1,3 +1,4 @@
+import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import * as configStorage from '@craft-agent/shared/config/storage';
 import { afterEach, describe, expect, it, spyOn } from 'bun:test';
 import { mkdtempSync, rmSync } from 'node:fs';
@@ -45,7 +46,7 @@ function harness(stream: AgentEvent[] = [], beforeChat?: () => void) {
     processEvent: (m: Managed, event: AgentEvent) => Promise<void>;
     onProcessingStopped: (id: string, reason: 'error') => Promise<void>;
   };
-  runtime.sessions.set(id, managed);
+  sessionRuntimeStateForTest(manager).sessions.set(id, managed);
   // Stub UI/session IO and the provider only. Real sendMessage, objective
   // transition, event processing, policy reads and project journal writes run.
   runtime.enqueuePersist = () => {}; runtime.persistSession = () => true; runtime.flushSession = async () => {};

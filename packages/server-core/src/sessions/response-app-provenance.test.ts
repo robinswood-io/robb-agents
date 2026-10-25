@@ -1,3 +1,4 @@
+import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { beforeEach, describe, expect, it } from 'bun:test'
 import { messageToStored } from '@craft-agent/core/types'
 import type { AgentEvent } from '@craft-agent/shared/agent'
@@ -46,8 +47,7 @@ describe('assistant response app provenance', () => {
       createdAt: Date.now(),
     } as never, { messagesLoaded: true })
     managed.agent = { getModel: () => 'effective-model' } as never
-    ;(sessionManager as unknown as { sessions: Map<string, typeof managed> })
-      .sessions.set(managed.id, managed)
+    ;sessionRuntimeStateForTest(sessionManager).sessions.set(managed.id, managed)
 
     await (sessionManager as unknown as {
       processEvent: (session: unknown, event: AgentEvent) => Promise<void>

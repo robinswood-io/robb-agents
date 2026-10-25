@@ -1,3 +1,4 @@
+import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
 import { mkdtempSync, rmSync } from 'fs'
 import { tmpdir } from 'os'
@@ -257,7 +258,7 @@ describe('source_activated auto-retry', () => {
       terminalState: 'active',
     }
     managed.pendingTurnRecovery = createPendingTurnRecovery(rootId, 100)
-    ;(sm as unknown as { sessions: Map<string, unknown> }).sessions.set(id, managed)
+    ;sessionRuntimeStateForTest(sm).sessions.set(id, managed)
     return managed
   }
 
@@ -327,11 +328,9 @@ describe('source_activated auto-retry', () => {
    */
   function spyOnSendMessage(sessionId: string) {
     const calls: string[] = []
-    const managed = (sm as unknown as { sessions: Map<string, { messages: unknown[] }> }).sessions.get(sessionId)!
+    const managed = sessionRuntimeStateForTest(sm).sessions.get(sessionId)!
     ;(sm as unknown as { sendMessage: (id: string, msg: string, ...args: unknown[]) => Promise<void> }).sendMessage = async (id, msg, ...args) => {
-      const m = (sm as unknown as { sessions: Map<string, AutoRetryPendingHost & {
-        messages: unknown[]
-      }> }).sessions.get(id)!
+      const m = sessionRuntimeStateForTest(sm).sessions.get(id)!
       const dispatchToken = args[11] as symbol | undefined
       const claim = claimAutoRetryPending(m, msg, Date.now(), dispatchToken)
       if (claim === 'drop' || claim === 'reserved') return
@@ -347,7 +346,7 @@ describe('source_activated auto-retry', () => {
     originalMessage: string,
     cleanRawMessage = originalMessage,
   ) {
-    const managed = (sm as unknown as { sessions: Map<string, ReturnType<typeof buildSession>> }).sessions.get(sessionId)!
+    const managed = sessionRuntimeStateForTest(sm).sessions.get(sessionId)!
     const binding = managed.activeObjective!
     managed.sourceActivationTurn = {
       generation: managed.processingGeneration,
@@ -1087,7 +1086,7 @@ describe('source_activated auto-retry', () => {
     if (managed.autoRetryTimer) clearTimeout(managed.autoRetryTimer)
     managed.autoRetryTimer = undefined
     managed.autoRetryPending = undefined
-    ;(sm as unknown as { sessions: Map<string, unknown> }).sessions.delete(sessionId)
+    ;sessionRuntimeStateForTest(sm).sessions.delete(sessionId)
 
     await new Promise(r => setTimeout(r, 200))
 

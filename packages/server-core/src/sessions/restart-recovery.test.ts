@@ -1,3 +1,6 @@
+import { ScriptedSessionAgent } from './testing/scripted-session-agent.ts';
+import { permissionMetadataFixture } from './testing/permission-metadata.ts';
+import { sessionRuntimeStateForTest , requiredTestValue } from "./testing/runtime-state-access.ts";
 import {
   assertRetryTurnAnchor as policyAssertRetryTurnAnchor,
   getQueuedPendingUserInputResponse as policyGetQueuedPendingUserInputResponse,
@@ -44,19 +47,19 @@ function deferred() { let resolve!: () => void; const promise = new Promise<void
 function bindToolAdmissionTurn(
   runtime: any,
   managed: Managed,
-  runtimeAgent: unknown,
+  runtimeAgent: NonNullable<Managed['agent']>,
   generation: number,
   userMessageId = managed.messages.filter(message => message.role === 'user').at(-1)?.id,
 ) {
   const userMessage = managed.messages.find(message => message.id === userMessageId && message.role === 'user')
   if (!userMessage) throw new Error(`Missing tool-admission user turn ${userMessageId ?? '<none>'}`)
-  runtime.runtimeProcessingGenerations.set(runtimeAgent, generation)
-  runtime.runtimeToolAdmissionBindings.set(runtimeAgent, {
+  sessionRuntimeStateForTest(runtime).runtimeProcessingGenerations.set(runtimeAgent, generation)
+  sessionRuntimeStateForTest(runtime).runtimeToolAdmissionBindings.set(runtimeAgent, {
     managed,
     sessionId: managed.id,
     generation,
     activeObjective: managed.activeObjective,
-    authorityEpoch: runtime.objectiveAuthorityEpochs.get(managed) ?? 0,
+    authorityEpoch: sessionRuntimeStateForTest(runtime).objectiveAuthorityEpochs.get(managed) ?? 0,
     userMessage,
     userMessageId: userMessage.id,
     messageCountAtHandoff: managed.messages.length,
@@ -77,7 +80,7 @@ function configureSpentDispatchBudget(h: ReturnType<typeof harness>): void {
 function harness() {
   const rootPath = mkdtempSync(join(tmpdir(), 'restart-recovery-'))
   roots.push(rootPath)
-  const workspace = { id: `restart-${roots.length}`, rootPath, name: 'Restart test', createdAt: 1 }
+  const workspace = { id: `restart-${roots.length}`, slug: `restart-${roots.length}`, rootPath, name: 'Restart test', createdAt: 1 }
   const manager = new SessionManager()
   const registerManager = (candidate: SessionManager) => {
     const cleanup = candidate.cleanup.bind(candidate)
@@ -85,7 +88,7 @@ function harness() {
       // Runtime fixtures in this file intentionally implement only the methods
       // exercised by recovery. Give partial fakes the AgentInstance teardown
       // contract so shutdown proof failures remain reserved for causal tests.
-      for (const managed of (candidate as any).sessions.values()) {
+      for (const managed of sessionRuntimeStateForTest(candidate).sessions.values()) {
         const agent = managed.agent as { dispose?: () => void; disposeForRestart?: () => void } | null
         if (agent && typeof agent.dispose !== 'function' && typeof agent.disposeForRestart !== 'function') {
           agent.dispose = () => {}
@@ -113,7 +116,7 @@ function harness() {
       orchestrationMode: 'direct', risk: 'standard', completionCriteria: ['requested-outcome-delivered'], terminalState: 'active',
     }
     managed.pendingTurnRecovery = { ...createPendingTurnRecovery(`${id}-user`), attempts: 2, stagnantAttempts: 1 }
-    runtime.sessions.set(id, managed)
+    sessionRuntimeStateForTest(manager).sessions.set(id, managed)
     return managed
   }
   const save = async (managed: Managed) => { runtime.persistSession(managed); await manager.flushSession(managed.id) }
@@ -121,7 +124,7 @@ function harness() {
     const next = new SessionManager(); registerManager(next)
     const coldRuntime = next as any
     coldRuntime.sendEvent = (event: unknown) => events.push(event)
-    for (const meta of listSessions(rootPath)) coldRuntime.sessions.set(meta.id, createManagedSession(meta, workspace as never))
+    for (const meta of listSessions(rootPath)) sessionRuntimeStateForTest(coldRuntime).sessions.set(meta.id, createManagedSession(meta, workspace as never))
     return { manager: next, runtime: coldRuntime }
   }
   return { manager, runtime, events, workspace, rootPath, make, save, cold }
@@ -181,8 +184,8 @@ async function prepareStartedRecoveryAdmission(
     hidden: true,
   })
   await h.save(managed)
-  const runtimeAgent = { isProcessing: () => true, dispose: async () => {} }
-  managed.agent = runtimeAgent as never
+  const runtimeAgent = Object.assign(new ScriptedSessionAgent(managed.workspace, { async *chat() {}, isProcessing: () => true }), { dispose: async () => {} })
+  managed.agent = runtimeAgent
   managed.isProcessing = true
   managed.processingGeneration = generation
   managed.lastSentOptions = {
@@ -204,7 +207,7 @@ afterEach(async () => {
   delete process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT
   spies.splice(0).forEach(spy => spy.mockRestore())
   for (const manager of managers.splice(0)) {
-    for (const id of (manager as any).sessions.keys()) clearObjectiveEvidenceGate(id)
+    for (const id of sessionRuntimeStateForTest(manager).sessions.keys()) clearObjectiveEvidenceGate(id)
     await manager.cleanup()
   }
   roots.splice(0).forEach(root => rmSync(root, { recursive: true, force: true }))
@@ -277,7 +280,7 @@ describe('provider dispatch write-ahead recovery', () => {
       await h.save(managed)
 
       const cold = h.cold()
-      const restored = cold.runtime.sessions.get(managed.id)
+      const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
       let providerStarts = 0
       let automaticContinuations = 0
       cold.runtime.getOrCreateAgent = async () => {
@@ -348,7 +351,7 @@ describe('provider dispatch write-ahead recovery', () => {
     }
     await h.save(managed)
 
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+    const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     let continuations = 0
     cold.runtime.enqueueAutomaticTurnRecovery = async (_managed: Managed, cause: string) => {
       continuations++; expect(cause).toBe('app_restart'); return true
@@ -383,7 +386,7 @@ describe('provider dispatch write-ahead recovery', () => {
     managed.pendingTurnRecovery = { ...createPendingTurnRecovery(current.id), attempts: 1 }
     await h.save(managed)
 
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+    const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     let continuations = 0
     cold.runtime.enqueueAutomaticTurnRecovery = async () => { continuations++; return true }
     await cold.runtime.ensureMessagesLoaded(restored)
@@ -410,7 +413,7 @@ describe('provider dispatch write-ahead recovery', () => {
     managed.userInputRequests = [{ status: 'pending', sessionId: managed.id }] as never
     await h.save(managed)
 
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+    const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     let continuations = 0
     cold.runtime.enqueueAutomaticTurnRecovery = async () => { continuations++; return true }
     await cold.runtime.ensureMessagesLoaded(restored)
@@ -460,7 +463,7 @@ describe('provider dispatch write-ahead recovery', () => {
       }
       await h.save(managed)
 
-      const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+      const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
       const prompts: string[] = []
       const releaseCompletion = deferred()
       const runtimeAgent = {
@@ -608,7 +611,7 @@ describe('provider dispatch write-ahead recovery', () => {
       })
       await h.save(managed)
 
-      const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+      const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
       const prompts: string[] = []
       const providerHandoff = deferred()
       const releaseCompletion = deferred()
@@ -706,7 +709,7 @@ describe('provider dispatch write-ahead recovery', () => {
     }
     await h.save(managed)
 
-    const firstCold = h.cold(); const first = firstCold.runtime.sessions.get(managed.id)
+    const firstCold = h.cold(); const first = requiredTestValue(sessionRuntimeStateForTest(firstCold.runtime).sessions.get(managed.id))
     const firstAck = deferred(); const releaseFirst = deferred()
     const firstPrompts: string[] = []
     const firstAgent = {
@@ -735,7 +738,7 @@ describe('provider dispatch write-ahead recovery', () => {
     await firstCold.manager.flushSession(first.id)
     const firstDispatch = structuredClone(first.pendingTurnRecovery?.recoveryDispatch)
 
-    const secondCold = h.cold(); const second = secondCold.runtime.sessions.get(managed.id)
+    const secondCold = h.cold(); const second = requiredTestValue(sessionRuntimeStateForTest(secondCold.runtime).sessions.get(managed.id))
     const secondPrompts: string[] = []
     const releaseSecond = deferred()
     const secondAgent = {
@@ -797,7 +800,7 @@ describe('provider dispatch write-ahead recovery', () => {
       h.manager.onSessionComplete(() => { sessionCompletions++ })
       let sawWriteAheadHook = false
       let sawHandoffHook = false
-      const runtimeAgent = {
+      const runtimeAgent = Object.assign(new ScriptedSessionAgent(h.workspace), {
         onProviderHandoff: null as (() => void) | null,
         onBeforeProviderDispatch: null as (() => Promise<void>) | null,
         onProviderDispatchRejected: null as (() => void) | null,
@@ -810,9 +813,9 @@ describe('provider dispatch write-ahead recovery', () => {
           yield { type: 'info' as const, message: 'Compacted context to fit within limits' }
           yield { type: 'complete' as const }
         },
-      }
+      })
       h.runtime.getOrCreateAgent = async () => {
-        managed.agent = runtimeAgent as never
+        managed.agent = runtimeAgent
         return runtimeAgent
       }
 
@@ -858,7 +861,7 @@ describe('provider dispatch write-ahead recovery', () => {
       await flushDurably(id)
       if (isMarkerFlush) durabilityOrder.push('sync-complete')
     }
-    const runtimeAgent = {
+    const runtimeAgent = Object.assign(new ScriptedSessionAgent(h.workspace), {
       onProviderHandoff: null as (() => void) | null,
       onBeforeProviderDispatch: null as (() => Promise<void>) | null,
       onProviderDispatchRejected: null as (() => void) | null,
@@ -876,9 +879,9 @@ describe('provider dispatch write-ahead recovery', () => {
         await finish.promise
         yield { type: 'complete' as const }
       },
-    }
+    })
     h.runtime.getOrCreateAgent = async () => {
-      managed.agent = runtimeAgent as never
+      managed.agent = runtimeAgent
       return runtimeAgent
     }
 
@@ -919,7 +922,7 @@ describe('provider dispatch write-ahead recovery', () => {
       leaseExpiresAt: Date.now() + 60_000,
     }
     const prompts: string[] = []
-    const runtimeAgent = {
+    const runtimeAgent = Object.assign(new ScriptedSessionAgent(h.workspace), {
       onProviderHandoff: null as (() => void) | null,
       onBeforeProviderDispatch: null as (() => Promise<void>) | null,
       onProviderDispatchRejected: null as (() => void) | null,
@@ -937,9 +940,9 @@ describe('provider dispatch write-ahead recovery', () => {
         yield { type: 'text_complete' as const, text: 'Recovered from current state.', isIntermediate: false }
         yield { type: 'complete' as const }
       },
-    }
+    })
     h.runtime.getOrCreateAgent = async () => {
-      managed.agent = runtimeAgent as never
+      managed.agent = runtimeAgent
       return runtimeAgent
     }
 
@@ -970,7 +973,7 @@ describe('provider dispatch write-ahead recovery', () => {
         ...(boundary === 'continuation-required' ? { continuationRequired: true } : {}),
       }
       const prompts: string[] = []
-      const runtimeAgent = {
+      const runtimeAgent = Object.assign(new ScriptedSessionAgent(h.workspace), {
         onProviderHandoff: null as (() => void) | null,
         onBeforeProviderDispatch: null as (() => Promise<void>) | null,
         onProviderDispatchRejected: null as (() => void) | null,
@@ -990,9 +993,9 @@ describe('provider dispatch write-ahead recovery', () => {
           yield { type: 'text_complete' as const, text: 'Recovered from the durable successor.', isIntermediate: false }
           yield { type: 'complete' as const }
         },
-      }
+      })
       h.runtime.getOrCreateAgent = async () => {
-        managed.agent = runtimeAgent as never
+        managed.agent = runtimeAgent
         return runtimeAgent
       }
 
@@ -1013,7 +1016,7 @@ describe('provider dispatch write-ahead recovery', () => {
       ))).toBe(false)
       expect(managed.messageQueue).toEqual([])
 
-      const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+      const cold = h.cold(); const restored = sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id)
       let coldStarts = 0
       cold.runtime.getOrCreateAgent = async () => {
         coldStarts++
@@ -1032,7 +1035,7 @@ describe('provider dispatch write-ahead recovery', () => {
       leaseExpiresAt: Date.now() + 60_000,
     }
     const prompts: string[] = []
-    const runtimeAgent = {
+    const runtimeAgent = Object.assign(new ScriptedSessionAgent(h.workspace), {
       onProviderHandoff: null as (() => void) | null,
       onBeforeProviderDispatch: null as (() => Promise<void>) | null,
       onProviderDispatchRejected: null as (() => void) | null,
@@ -1059,9 +1062,9 @@ describe('provider dispatch write-ahead recovery', () => {
         yield { type: 'text_complete' as const, text: 'The current provider state is explained.', isIntermediate: false }
         yield { type: 'complete' as const }
       },
-    }
+    })
     h.runtime.getOrCreateAgent = async () => {
-      managed.agent = runtimeAgent as never
+      managed.agent = runtimeAgent
       return runtimeAgent
     }
 
@@ -1092,7 +1095,7 @@ describe('provider dispatch write-ahead recovery', () => {
     const acknowledged = deferred(); const releaseFirst = deferred()
     const prompts: string[] = []
     let firstMessageId = ''
-    const runtimeAgent = {
+    const runtimeAgent = Object.assign(new ScriptedSessionAgent(h.workspace), {
       onProviderHandoff: null as (() => void) | null,
       onBeforeProviderDispatch: null as (() => Promise<void>) | null,
       onProviderDispatchRejected: null as (() => void) | null,
@@ -1126,9 +1129,9 @@ describe('provider dispatch write-ahead recovery', () => {
         }
         yield { type: 'complete' as const }
       },
-    }
+    })
     h.runtime.getOrCreateAgent = async () => {
-      managed.agent = runtimeAgent as never
+      managed.agent = runtimeAgent
       return runtimeAgent
     }
 
@@ -1159,7 +1162,7 @@ describe('provider dispatch write-ahead recovery', () => {
     const h = harness(); const managed = h.make('provider-acked-pending-question')
     const prompts: string[] = []
     let requestId = ''
-    const runtimeAgent = {
+    const runtimeAgent = Object.assign(new ScriptedSessionAgent(h.workspace), {
       onProviderHandoff: null as (() => void) | null,
       onBeforeProviderDispatch: null as (() => Promise<void>) | null,
       onProviderDispatchRejected: null as (() => void) | null,
@@ -1182,9 +1185,9 @@ describe('provider dispatch write-ahead recovery', () => {
         yield { type: 'text_complete' as const, text: 'Continued with the authenticated answer.', isIntermediate: false }
         yield { type: 'complete' as const }
       },
-    }
+    })
     h.runtime.getOrCreateAgent = async () => {
-      managed.agent = runtimeAgent as never
+      managed.agent = runtimeAgent
       return runtimeAgent
     }
 
@@ -1219,7 +1222,7 @@ describe('provider dispatch write-ahead recovery', () => {
       leaseExpiresAt: Date.now() + 60_000,
     }
     const prompts: string[] = []
-    const runtimeAgent = {
+    const runtimeAgent = Object.assign(new ScriptedSessionAgent(h.workspace), {
       onProviderHandoff: null as (() => void) | null,
       onBeforeProviderDispatch: null as (() => Promise<void>) | null,
       onProviderDispatchRejected: null as (() => void) | null,
@@ -1237,9 +1240,9 @@ describe('provider dispatch write-ahead recovery', () => {
         yield { type: 'text_complete' as const, text: 'Started the fresh human objective.', isIntermediate: false }
         yield { type: 'complete' as const }
       },
-    }
+    })
     h.runtime.getOrCreateAgent = async () => {
-      managed.agent = runtimeAgent as never
+      managed.agent = runtimeAgent
       return runtimeAgent
     }
 
@@ -1270,7 +1273,7 @@ describe('provider dispatch write-ahead recovery', () => {
       }
       await flushDurably(id)
     }
-    const runtimeAgent = {
+    const runtimeAgent = Object.assign(new ScriptedSessionAgent(h.workspace), {
       onProviderHandoff: null as (() => void) | null,
       onBeforeProviderDispatch: null as (() => Promise<void>) | null,
       onProviderDispatchRejected: null as (() => void) | null,
@@ -1282,9 +1285,9 @@ describe('provider dispatch write-ahead recovery', () => {
         providerWrite = true
         yield { type: 'complete' as const }
       },
-    }
+    })
     h.runtime.getOrCreateAgent = async () => {
-      managed.agent = runtimeAgent as never
+      managed.agent = runtimeAgent
       return runtimeAgent
     }
 
@@ -1305,7 +1308,7 @@ describe('provider dispatch write-ahead recovery', () => {
       await flushDurably(id)
     }
     const never = deferred()
-    const runtimeAgent = {
+    const runtimeAgent = Object.assign(new ScriptedSessionAgent(h.workspace), {
       onProviderHandoff: null as (() => void) | null,
       onBeforeProviderDispatch: null as (() => Promise<void>) | null,
       onProviderDispatchRejected: null as (() => void) | null,
@@ -1324,9 +1327,9 @@ describe('provider dispatch write-ahead recovery', () => {
         yield { type: 'text_complete' as const, text: 'Reconciled after the ACK durability failure.', isIntermediate: false }
         yield { type: 'complete' as const }
       },
-    }
+    })
     h.runtime.getOrCreateAgent = async () => {
-      managed.agent = runtimeAgent as never
+      managed.agent = runtimeAgent
       return runtimeAgent
     }
     const unhandled: unknown[] = []
@@ -1360,7 +1363,7 @@ describe('provider dispatch write-ahead recovery', () => {
   it('durably rolls back only an exact correlated preflight rejection', async () => {
     const h = harness(); const managed = h.make('provider-write-ahead-rejected')
     let dispatchedMessageId = ''
-    const runtimeAgent = {
+    const runtimeAgent = Object.assign(new ScriptedSessionAgent(h.workspace), {
       onProviderHandoff: null as (() => void) | null,
       onBeforeProviderDispatch: null as (() => Promise<void>) | null,
       onProviderDispatchRejected: null as (() => void) | null,
@@ -1374,9 +1377,9 @@ describe('provider dispatch write-ahead recovery', () => {
         yield { type: 'error' as const, message: 'Exact child preflight rejected the prompt' }
         yield { type: 'complete' as const }
       },
-    }
+    })
     h.runtime.getOrCreateAgent = async () => {
-      managed.agent = runtimeAgent as never
+      managed.agent = runtimeAgent
       return runtimeAgent
     }
 
@@ -1392,7 +1395,7 @@ describe('provider dispatch write-ahead recovery', () => {
     const h = harness(); const managed = h.make('provider-write-ahead-uncorrelated-error')
     let dispatchedMessageId = ''
     const prompts: string[] = []
-    const runtimeAgent = {
+    const runtimeAgent = Object.assign(new ScriptedSessionAgent(h.workspace), {
       onProviderHandoff: null as (() => void) | null,
       onBeforeProviderDispatch: null as (() => Promise<void>) | null,
       onProviderDispatchRejected: null as (() => void) | null,
@@ -1412,9 +1415,9 @@ describe('provider dispatch write-ahead recovery', () => {
         yield { type: 'text_complete' as const, text: 'Reconciled from current provider state.', isIntermediate: false }
         yield { type: 'complete' as const }
       },
-    }
+    })
     h.runtime.getOrCreateAgent = async () => {
-      managed.agent = runtimeAgent as never
+      managed.agent = runtimeAgent
       return runtimeAgent
     }
 
@@ -1447,7 +1450,7 @@ describe('provider dispatch write-ahead recovery', () => {
       && event.error?.title === 'Provider acceptance requires confirmation'
     ))).toBe(false)
 
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+    const cold = h.cold(); const restored = sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id)
     let coldContinuations = 0
     cold.runtime.enqueueAutomaticTurnRecovery = async () => { coldContinuations++; return true }
     await cold.runtime.ensureMessagesLoaded(restored)
@@ -1460,7 +1463,7 @@ describe('provider dispatch write-ahead recovery', () => {
     const firstWritten = deferred(); const releaseFirst = deferred()
     const prompts: string[] = []
     let firstMessageId = ''
-    const runtimeAgent = {
+    const runtimeAgent = Object.assign(new ScriptedSessionAgent(h.workspace), {
       onProviderHandoff: null as (() => void) | null,
       onBeforeProviderDispatch: null as (() => Promise<void>) | null,
       onProviderDispatchRejected: null as (() => void) | null,
@@ -1484,9 +1487,9 @@ describe('provider dispatch write-ahead recovery', () => {
         yield { type: 'text_complete' as const, text: 'Completed the newer human objective.', isIntermediate: false }
         yield { type: 'complete' as const }
       },
-    }
+    })
     h.runtime.getOrCreateAgent = async () => {
-      managed.agent = runtimeAgent as never
+      managed.agent = runtimeAgent
       return runtimeAgent
     }
 
@@ -1521,7 +1524,7 @@ describe('provider dispatch write-ahead recovery', () => {
     const h = harness(); const managed = h.make('provider-write-ahead-stop-after-write')
     const written = deferred(); const release = deferred()
     let dispatchedMessageId = ''
-    const runtimeAgent = {
+    const runtimeAgent = Object.assign(new ScriptedSessionAgent(h.workspace), {
       onProviderHandoff: null as (() => void) | null,
       onBeforeProviderDispatch: null as (() => Promise<void>) | null,
       onProviderDispatchRejected: null as (() => void) | null,
@@ -1538,9 +1541,9 @@ describe('provider dispatch write-ahead recovery', () => {
         error.name = 'AbortError'
         throw error
       },
-    }
+    })
     h.runtime.getOrCreateAgent = async () => {
-      managed.agent = runtimeAgent as never
+      managed.agent = runtimeAgent
       return runtimeAgent
     }
 
@@ -1554,7 +1557,7 @@ describe('provider dispatch write-ahead recovery', () => {
     release.resolve(); await run
     await h.manager.flushSession(managed.id)
 
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+    const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     let providerStarts = 0
     let genericContinuations = 0
     cold.runtime.getOrCreateAgent = async () => {
@@ -1585,7 +1588,7 @@ describe('provider dispatch write-ahead recovery', () => {
     const h = harness(); const managed = h.make('provider-write-ahead-stop-before-write')
     const ready = deferred(); const release = deferred()
     let providerWrite = false
-    const runtimeAgent = {
+    const runtimeAgent = Object.assign(new ScriptedSessionAgent(h.workspace), {
       onProviderHandoff: null as (() => void) | null,
       onBeforeProviderDispatch: null as (() => Promise<void>) | null,
       onProviderDispatchRejected: null as (() => void) | null,
@@ -1598,9 +1601,9 @@ describe('provider dispatch write-ahead recovery', () => {
         await runtimeAgent.onBeforeProviderDispatch?.()
         providerWrite = true
       },
-    }
+    })
     h.runtime.getOrCreateAgent = async () => {
-      managed.agent = runtimeAgent as never
+      managed.agent = runtimeAgent
       return runtimeAgent
     }
 
@@ -1664,7 +1667,7 @@ describe('provider dispatch write-ahead recovery', () => {
         })
       }
 
-      const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+      const cold = h.cold(); const restored = sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id)
       let continuations = 0
       cold.runtime.enqueueAutomaticTurnRecovery = async () => { continuations++; return true }
       await cold.runtime.ensureMessagesLoaded(restored)
@@ -1753,7 +1756,7 @@ describe('provider dispatch write-ahead recovery', () => {
 
       // Simulate a host crash at the exact boundary after the reconciliation
       // snapshot fsyncs but before retryTurn can allocate its generic prompt.
-      const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+      const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
       let genericContinuations = 0
       cold.runtime.enqueueAutomaticTurnRecovery = async (_session: Managed, cause: string) => {
         genericContinuations++
@@ -1797,7 +1800,7 @@ describe('provider dispatch write-ahead recovery', () => {
     }
     await h.save(managed)
 
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+    const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     let continuations = 0
     cold.runtime.enqueueAutomaticTurnRecovery = async () => { continuations++; return true }
     await cold.runtime.ensureMessagesLoaded(restored)
@@ -1857,7 +1860,7 @@ describe('provider dispatch write-ahead recovery', () => {
     }
     await h.save(managed)
 
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+    const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     await cold.runtime.ensureMessagesLoaded(restored)
     await tick(); await tick()
     expect(cold.runtime.providerDispatchAdmissionBarrier(restored)).toBeDefined()
@@ -1904,7 +1907,7 @@ describe('provider dispatch write-ahead recovery', () => {
       && message.providerDispatch.retirementReason === 'explicit-retry-reconciliation'
     ))).toHaveLength(2)
 
-    const afterCrash = h.cold(); const afterCrashRestored = afterCrash.runtime.sessions.get(managed.id)
+    const afterCrash = h.cold(); const afterCrashRestored = requiredTestValue(sessionRuntimeStateForTest(afterCrash.runtime).sessions.get(managed.id))
     let exactReplays = 0
     afterCrash.runtime.getOrCreateAgent = async () => {
       exactReplays++
@@ -1934,7 +1937,7 @@ describe('provider dispatch write-ahead recovery', () => {
     }
     await h.save(managed)
 
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+    const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     const entered = deferred(); const release = deferred()
     cold.manager.flushSessionDurably = async () => {
       entered.resolve()
@@ -1944,10 +1947,10 @@ describe('provider dispatch write-ahead recovery', () => {
     await cold.runtime.ensureMessagesLoaded(restored)
     await entered.promise
     await cold.manager.cancelProcessing(restored.id, false)
-    const stopEpoch = cold.runtime.turnCancellationEpochs.get(restored)
+    const stopEpoch = sessionRuntimeStateForTest(cold.runtime).turnCancellationEpochs.get(restored)
     release.resolve(); await tick(); await tick()
 
-    expect(cold.runtime.turnCancellationEpochs.get(restored)).toBe(stopEpoch)
+    expect(sessionRuntimeStateForTest(cold.runtime).turnCancellationEpochs.get(restored)).toBe(stopEpoch)
     expect(restored.pendingTurnRecovery).toBeUndefined()
     expect(restored.activeObjective?.interruptedTurnRecovery).toBeDefined()
     expect(h.events.some(event => event.error?.title === 'Provider recovery state was not persisted')).toBe(false)
@@ -1963,7 +1966,7 @@ describe('provider dispatch write-ahead recovery', () => {
     }
     await h.save(managed)
 
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+    const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     const entered = deferred(); const release = deferred()
     cold.manager.flushSessionDurably = async id => {
       entered.resolve()
@@ -2010,7 +2013,7 @@ describe('provider dispatch write-ahead recovery', () => {
     }]
     await h.save(managed)
 
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+    const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     const entered = deferred(); const release = deferred()
     const prompts: string[] = []
     let providerWrites = 0
@@ -2051,12 +2054,12 @@ describe('provider dispatch write-ahead recovery', () => {
       requestId: 'provider-race-question',
       answers: [{ questionId: 'scope', optionIds: ['same'] }],
     }).catch(() => undefined)
-    const responseMessageId = restored.userInputRequests[0]!.responseMessageId
+    const responseMessageId = requiredTestValue(restored.userInputRequests)[0]!.responseMessageId
     expect(responseMessageId).toEqual(expect.any(String))
     release.resolve(); await tick(); await tick()
     await cold.manager.flushSession(restored.id)
 
-    expect(restored.userInputRequests[0]).toMatchObject({
+    expect(requiredTestValue(restored.userInputRequests)[0]).toMatchObject({
       id: 'provider-race-question', status: 'answered', responseMessageId,
     })
     expect(restored.messages.find((message: Managed['messages'][number]) => message.id === responseMessageId))
@@ -2096,7 +2099,7 @@ describe('provider dispatch write-ahead recovery', () => {
       userStoppedAt: expect.any(Number),
     })
 
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+    const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     let automaticContinuations = 0
     cold.runtime.enqueueAutomaticTurnRecovery = async () => { automaticContinuations++; return true }
     await cold.runtime.ensureMessagesLoaded(restored)
@@ -2155,7 +2158,7 @@ describe('provider dispatch write-ahead recovery', () => {
     await h.manager.cancelProcessing(managed.id, false)
 
     let starts = 0
-    const runtimeAgent = {
+    const runtimeAgent = Object.assign(new ScriptedSessionAgent(h.workspace), {
       onProviderHandoff: null as (() => void) | null,
       onBeforeProviderDispatch: null as (() => Promise<void>) | null,
       onProviderDispatchRejected: null as (() => void) | null,
@@ -2169,9 +2172,9 @@ describe('provider dispatch write-ahead recovery', () => {
         yield { type: 'text_complete' as const, text: 'Fresh objective started.', isIntermediate: false }
         yield { type: 'complete' as const }
       },
-    }
+    })
     h.runtime.getOrCreateAgent = async () => {
-      managed.agent = runtimeAgent as never
+      managed.agent = runtimeAgent
       return runtimeAgent
     }
     await h.manager.sendMessage(managed.id, 'Start a distinct fresh objective.')
@@ -2226,7 +2229,7 @@ describe('provider dispatch write-ahead recovery', () => {
       })
       await h.save(managed)
 
-      const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+      const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
       let dequeues = 0
       const processNext = cold.runtime.processNextQueuedMessage.bind(cold.runtime)
       cold.runtime.processNextQueuedMessage = (sessionId: string) => {
@@ -2286,7 +2289,7 @@ describe('provider dispatch write-ahead recovery', () => {
     }
     await h.save(managed)
 
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+    const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     const entered = deferred(); const release = deferred()
     let providerWrites = 0
     const runtimeAgent = {
@@ -2433,7 +2436,7 @@ describe('provider dispatch write-ahead recovery', () => {
     await h.save(managed)
     const entered = deferred(); const release = deferred()
     let deliveredPrompt = ''
-    const runtimeAgent = {
+    const runtimeAgent = Object.assign(new ScriptedSessionAgent(h.workspace), {
       onProviderHandoff: null as (() => void) | null,
       onBeforeProviderDispatch: null as (() => Promise<void>) | null,
       onProviderDispatchRejected: null as (() => void) | null,
@@ -2448,8 +2451,8 @@ describe('provider dispatch write-ahead recovery', () => {
         yield { type: 'error' as const, message: 'End generic receipt reconciliation fixture' }
         yield { type: 'complete' as const }
       },
-    }
-    h.runtime.getOrCreateAgent = async () => { managed.agent = runtimeAgent as never; return runtimeAgent }
+    })
+    h.runtime.getOrCreateAgent = async () => { managed.agent = runtimeAgent; return runtimeAgent }
 
     expect(await h.manager.retryTurn(managed.id, anchor.id)).toEqual({ status: 'started' })
     await entered.promise
@@ -2501,14 +2504,14 @@ describe('authenticated cost checkpoint durability', () => {
     await checkpoint(h, managed)
     expect(managed.pendingTurnRecovery).toEqual({ ...before.recovery, continuationRequired: true })
     await h.save(managed)
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+    const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     cold.runtime.processNextQueuedMessage = () => {}
     await cold.runtime.resumePendingTurnAfterRestart(restored.id)
     expect(restored.pendingTurnRecovery).toMatchObject({ attempts: 2, leaseExpiresAt: before.recovery!.leaseExpiresAt })
     expect(restored.messageQueue).toHaveLength(1)
     expect(restored.messageQueue[0].message).toContain('Do not repeat an external mutation')
     expect(restored.messages.find((m: any) => m.id === 'already-written')).toEqual(before.receipt)
-    expect(restored.messages.find((m: any) => m.toolUseId === 'unexecuted-edit').toolExecuted).toBe(false)
+    expect(requiredTestValue(restored.messages.find((m: any) => m.toolUseId === 'unexecuted-edit')).toolExecuted).toBe(false)
     expect(restored.activeObjective).toEqual(before.objective)
   })
 
@@ -2528,19 +2531,19 @@ describe('authenticated cost checkpoint durability', () => {
     managed.activeObjective!.terminalState = 'exhausted'
     await h.runtime.onProcessingStopped(managed.id, 'interrupted', 1)
     await h.save(managed)
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+    const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     await cold.runtime.ensureMessagesLoaded(restored)
-    expect(restored.pendingTurnRecovery.budgetHistoryUnavailable).toBe(true)
+    expect(requiredTestValue(restored.pendingTurnRecovery).budgetHistoryUnavailable).toBe(true)
     const preparing = deferred(); const release = deferred(); let dispatch: Promise<void> | undefined
     cold.runtime.getOrCreateAgent = async () => { preparing.resolve(); await release.promise; throw new Error('Synthetic provider boundary') }
     const send = cold.manager.sendMessage.bind(cold.manager)
     cold.manager.sendMessage = (...args) => { dispatch = send(...args); return dispatch }
     expect(await cold.manager.retryTurn(restored.id, 'wide-fox-checkpoint-user')).toEqual({ status: 'started' })
     await preparing.promise
-    expect(restored.pendingTurnRecovery.budgetHistoryUnavailable).toBe(true)
+    expect(requiredTestValue(restored.pendingTurnRecovery).budgetHistoryUnavailable).toBe(true)
     expect(restored.activeObjective).toMatchObject({ ...beforeObjective, terminalState: 'active' })
     expect(restored.messages.filter((m: any) => m.toolUseId === 'unexecuted-edit')).toHaveLength(1)
-    expect(restored.messages.find((m: any) => m.toolUseId === 'unexecuted-edit').toolExecuted).toBe(false)
+    expect(requiredTestValue(restored.messages.find((m: any) => m.toolUseId === 'unexecuted-edit')).toolExecuted).toBe(false)
     release.resolve(); await dispatch; await cold.manager.cleanup()
   })
 
@@ -2556,7 +2559,7 @@ describe('authenticated cost checkpoint durability', () => {
     )
     const before = structuredClone({ objective: managed.activeObjective, receipts: managed.messages.slice(1) })
     await h.save(managed)
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+    const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     await cold.runtime.ensureMessagesLoaded(restored)
     const preparing = deferred(); const release = deferred(); let dispatch: Promise<void> | undefined
     cold.runtime.getOrCreateAgent = async () => { preparing.resolve(); await release.promise; throw new Error('Synthetic legacy Retry boundary') }
@@ -2565,9 +2568,9 @@ describe('authenticated cost checkpoint durability', () => {
     try {
       expect(await cold.manager.retryTurn(restored.id, 'legacy-wide-fox-user')).toEqual({ status: 'started' })
       await preparing.promise
-      expect(restored.pendingTurnRecovery.budgetHistoryUnavailable).toBe(true)
-      expect(restored.pendingTurnRecovery.exhaustedAt).toBeGreaterThan(0)
-      expect(restored.activeObjective).toEqual({ ...before.objective, terminalState: 'active', completedAt: undefined })
+      expect(requiredTestValue(restored.pendingTurnRecovery).budgetHistoryUnavailable).toBe(true)
+      expect(requiredTestValue(restored.pendingTurnRecovery).exhaustedAt).toBeGreaterThan(0)
+      expect(restored.activeObjective).toEqual({ ...requiredTestValue(before.objective), terminalState: 'active', completedAt: undefined })
       expect(restored.messages.filter((m: any) => m.role === 'tool')).toEqual(before.receipts)
       expect(await cold.runtime.enqueueAutomaticTurnRecovery(restored, 'tool_checkpoint')).toBe(false)
       expect(restored.messageQueue).toEqual([])
@@ -2733,7 +2736,7 @@ describe('cold automatic recovery lease', () => {
     const receipt = structuredClone(managed.messages[1])
     await h.save(managed)
 
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+    const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     let automaticStarts = 0
     cold.runtime.enqueueAutomaticTurnRecovery = async () => { automaticStarts++; return true }
     await cold.runtime.resumePendingTurnAfterRestart(restored.id)
@@ -2750,8 +2753,8 @@ describe('cold automatic recovery lease', () => {
       },
     })
     expect(restored.messages.find((message: { id: string }) => message.id === receipt.id)).toEqual(receipt)
-    expect(cold.runtime.deferredAutomaticSessions.has(restored.id)).toBe(false)
-    expect(cold.runtime.automaticAdmissionReservations.has(restored.id)).toBe(false)
+    expect(sessionRuntimeStateForTest(cold.runtime).deferredAutomaticSessions.has(restored.id)).toBe(false)
+    expect(sessionRuntimeStateForTest(cold.runtime).automaticAdmissionReservations.has(restored.id)).toBe(false)
     const header = listSessions(h.rootPath).find(meta => meta.id === managed.id)
     expect(header?.pendingTurnRecovery).toBeUndefined()
     expect(header?.activeObjective?.interruptedTurnRecovery?.recovery).toEqual(recovery)
@@ -2792,8 +2795,8 @@ describe('cold automatic recovery lease', () => {
     }
     await h.save(recent); await h.save(allocated)
     const cold = h.cold()
-    const restoredRecent = cold.runtime.sessions.get(recent.id)
-    const restoredAllocated = cold.runtime.sessions.get(allocated.id)
+    const restoredRecent = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(recent.id))
+    const restoredAllocated = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(allocated.id))
     const automatic: string[] = []
     cold.runtime.enqueueAutomaticTurnRecovery = async (session: Managed) => {
       automatic.push(session.id); session.isProcessing = true; return true
@@ -2820,7 +2823,7 @@ describe('cold automatic recovery lease', () => {
       lastCause: 'user_retry',
     }
     await h.save(managed)
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+    const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     let resumes = 0
     cold.runtime.enqueueAutomaticTurnRecovery = async () => { resumes++; return true }
 
@@ -2845,7 +2848,7 @@ describe('cold automatic recovery lease', () => {
       id: 'superseded-objective-user', role: 'user', content: 'Older objective.', timestamp: 0,
     })
     await h.save(managed)
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+    const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     let resumes = 0
     cold.runtime.enqueueAutomaticTurnRecovery = async () => { resumes++; return true }
 
@@ -3030,10 +3033,10 @@ describe('bounded automatic admission', () => {
       agentDelivery: { id: deliveryId, status: 'queued', attempts: 0 },
     })
     expect(root.messageQueue.map(entry => entry.messageId)).toEqual([receipt?.id])
-    expect(h.runtime.queuedAgentDeliveryDispatches.has(receipt?.id)).toBe(false)
+    expect(sessionRuntimeStateForTest(h.runtime).queuedAgentDeliveryDispatches.has(requiredTestValue(receipt).id)).toBe(false)
     await h.manager.flushSession(root.id)
 
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(root.id)
+    const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(root.id))
     cold.runtime.processNextQueuedMessage = () => {}
     await cold.runtime.ensureMessagesLoaded(restored)
     expect(restored.messages.find((message: Managed['messages'][number]) => message.agentDelivery?.id === deliveryId))
@@ -3081,7 +3084,7 @@ describe('bounded automatic admission', () => {
       },
     })
     expect(root.messageQueue.map(entry => entry.messageId)).toEqual([item.messageId])
-    expect(h.runtime.queuedAgentDeliveryDispatches.has(item.messageId)).toBe(false)
+    expect(sessionRuntimeStateForTest(h.runtime).queuedAgentDeliveryDispatches.has(item.messageId)).toBe(false)
   })
 
   it('keeps an agent delivery pre-provider when its async chat generator rejects before the first event', async () => {
@@ -3133,7 +3136,7 @@ describe('bounded automatic admission', () => {
     })
     expect(receipt.agentDelivery?.setupRetryNotBefore).toBeUndefined()
     expect(root.messageQueue.map(entry => entry.messageId)).toEqual([item.messageId])
-    expect(h.runtime.queuedAgentDeliveryDispatches.has(item.messageId)).toBe(false)
+    expect(sessionRuntimeStateForTest(h.runtime).queuedAgentDeliveryDispatches.has(item.messageId)).toBe(false)
   })
 
   it('does not infer provider handoff from a local event when the backend exposes the explicit boundary', async () => {
@@ -3190,7 +3193,7 @@ describe('bounded automatic admission', () => {
     })
     expect(receipt.agentDelivery?.setupRetryNotBefore).toBeUndefined()
     expect(root.messageQueue.map(entry => entry.messageId)).toEqual([item.messageId])
-    expect(h.runtime.queuedAgentDeliveryDispatches.has(item.messageId)).toBe(false)
+    expect(sessionRuntimeStateForTest(h.runtime).queuedAgentDeliveryDispatches.has(item.messageId)).toBe(false)
   })
 
   it('rolls back an explicit backend error and complete after child dispatch but before provider handoff', async () => {
@@ -3248,7 +3251,7 @@ describe('bounded automatic admission', () => {
     ))).toBe(false)
     expect(root.messageQueue.map(entry => entry.messageId)).toEqual([item.messageId])
     expect(root.activeAgentDelivery).toBeUndefined()
-    expect(h.runtime.queuedAgentDeliveryDispatches.has(item.messageId)).toBe(false)
+    expect(sessionRuntimeStateForTest(h.runtime).queuedAgentDeliveryDispatches.has(item.messageId)).toBe(false)
     expect(runtimeAgent.onProviderHandoff).toBeNull()
     expect(receipt.agentDelivery?.providerDispatchUncertainAt).toBeUndefined()
   })
@@ -3402,7 +3405,7 @@ describe('bounded automatic admission', () => {
     expect(receipt.agentDelivery?.setupFailureCount).toBe(3)
     expect(receipt.agentDelivery?.lastSetupFailureClass).toBe('timeout')
     expect(receipt.agentDelivery?.setupRetryNotBefore).toBeDefined()
-    expect(h.runtime.queuedAgentDeliveryDispatches.has(item.messageId)).toBe(false)
+    expect(sessionRuntimeStateForTest(h.runtime).queuedAgentDeliveryDispatches.has(item.messageId)).toBe(false)
   })
 
   it('does not replay a queued delivery when Stop wins after out-of-process dispatch but before handoff acknowledgement', async () => {
@@ -3449,7 +3452,7 @@ describe('bounded automatic admission', () => {
 
     h.runtime.processNextQueuedMessage(root.id)
     await entered.promise
-    expect(h.runtime.queuedAgentDeliveryDispatches.get(item.messageId))
+    expect(sessionRuntimeStateForTest(h.runtime).queuedAgentDeliveryDispatches.get(item.messageId))
       .toMatchObject({ providerDispatchUncertain: true, providerStarted: false })
 
     await h.manager.cancelProcessing(root.id)
@@ -3464,10 +3467,10 @@ describe('bounded automatic admission', () => {
     lateProviderHandoff?.()
     expect(receipt.isQueued).toBe(false)
     expect(root.messageQueue).toEqual([])
-    expect(h.runtime.queuedAgentDeliveryDispatches.has(item.messageId)).toBe(false)
+    expect(sessionRuntimeStateForTest(h.runtime).queuedAgentDeliveryDispatches.has(item.messageId)).toBe(false)
 
     await h.manager.flushSession(root.id)
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(root.id)
+    const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(root.id))
     cold.runtime.processNextQueuedMessage = () => {
       throw new Error('Uncertain provider delivery must not replay after restart')
     }
@@ -3522,7 +3525,7 @@ describe('bounded automatic admission', () => {
       },
     })
     expect(root.messageQueue.map(entry => entry.messageId)).toEqual([item.messageId])
-    expect(h.runtime.queuedAgentDeliveryDispatches.has(item.messageId)).toBe(false)
+    expect(sessionRuntimeStateForTest(h.runtime).queuedAgentDeliveryDispatches.has(item.messageId)).toBe(false)
   })
 
   it.each([
@@ -3568,9 +3571,9 @@ describe('bounded automatic admission', () => {
     expect(dispatches).toEqual([progress.messageId])
     expect(root.messageQueue).toEqual([result])
 
-    h.runtime.queuedMessageDispatches.clear()
-    h.runtime.queuedAgentDeliveryDispatches.clear()
-    h.runtime.automaticAdmissionReservations.clear()
+    sessionRuntimeStateForTest(h.runtime).queuedMessageDispatches.clear()
+    sessionRuntimeStateForTest(h.runtime).queuedAgentDeliveryDispatches.clear()
+    sessionRuntimeStateForTest(h.runtime).automaticAdmissionReservations.clear()
     const progressReceipt = root.messages.find(message => message.id === progress.messageId)!
     progressReceipt.isQueued = false
     progressReceipt.agentDelivery!.status = 'processed'
@@ -3620,9 +3623,9 @@ describe('bounded automatic admission', () => {
     h.runtime.processNextQueuedMessage(root.id)
     await tick(); await tick()
     expect(dispatches.map(args => args[5])).toEqual([item.messageId])
-    h.runtime.queuedMessageDispatches.clear()
-    h.runtime.queuedAgentDeliveryDispatches.clear()
-    h.runtime.automaticAdmissionReservations.clear()
+    sessionRuntimeStateForTest(h.runtime).queuedMessageDispatches.clear()
+    sessionRuntimeStateForTest(h.runtime).queuedAgentDeliveryDispatches.clear()
+    sessionRuntimeStateForTest(h.runtime).automaticAdmissionReservations.clear()
     const firstReceipt = root.messages.find(message => message.id === item.messageId)!
     firstReceipt.isQueued = false
     firstReceipt.agentDelivery!.status = 'processed'
@@ -3759,8 +3762,8 @@ describe('bounded automatic admission', () => {
     await h.save(root); await h.save(child)
 
     const cold = h.cold()
-    const restoredRoot = cold.runtime.sessions.get(root.id)
-    const restoredChild = cold.runtime.sessions.get(child.id)
+    const restoredRoot = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(root.id))
+    const restoredChild = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(child.id))
     await cold.runtime.ensureMessagesLoaded(restoredRoot)
     await cold.runtime.ensureMessagesLoaded(restoredChild)
     restoredChild.isProcessing = true
@@ -3831,8 +3834,8 @@ describe('bounded automatic admission', () => {
       isQueued: false,
       agentDelivery: { status: 'failed', attempts: 1 },
     })
-    expect(h.runtime.queuedMessageDispatches.size).toBe(0)
-    expect(h.runtime.queuedAgentDeliveryDispatches.size).toBe(0)
+    expect(sessionRuntimeStateForTest(h.runtime).queuedMessageDispatches.size).toBe(0)
+    expect(sessionRuntimeStateForTest(h.runtime).queuedAgentDeliveryDispatches.size).toBe(0)
   })
 
   it('rechecks stale ancestry after sendMessage hydration and never prepares the provider', async () => {
@@ -3861,7 +3864,7 @@ describe('bounded automatic admission', () => {
       isQueued: false,
       agentDelivery: { status: 'failed', attempts: 1 },
     })
-    expect(h.runtime.queuedMessageDispatches.size).toBe(0)
+    expect(sessionRuntimeStateForTest(h.runtime).queuedMessageDispatches.size).toBe(0)
   })
 
   it('cold-restores, quarantines and drains a stale typed head exactly once', async () => {
@@ -3875,11 +3878,11 @@ describe('bounded automatic admission', () => {
     await h.save(root); await h.save(child); await h.save(relay)
 
     const cold = h.cold()
-    const restoredRoot = cold.runtime.sessions.get(root.id)
+    const restoredRoot = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(root.id))
     await Promise.all([
       cold.runtime.ensureMessagesLoaded(restoredRoot),
-      cold.runtime.ensureMessagesLoaded(cold.runtime.sessions.get(child.id)),
-      cold.runtime.ensureMessagesLoaded(cold.runtime.sessions.get(relay.id)),
+      cold.runtime.ensureMessagesLoaded(sessionRuntimeStateForTest(cold.runtime).sessions.get(child.id)),
+      cold.runtime.ensureMessagesLoaded(sessionRuntimeStateForTest(cold.runtime).sessions.get(relay.id)),
     ])
     const dispatches: string[] = []
     cold.manager.sendMessage = async (...args: any[]) => { dispatches.push(args[5]) }
@@ -3908,7 +3911,7 @@ describe('bounded automatic admission', () => {
     h.runtime.enqueueAutomaticTurnRecovery = async (managed: Managed) => { admitted.push(managed.id); managed.isProcessing = true; return true }
     await h.runtime.resumePendingTurnsAfterRestart(sessions.map(session => session.id))
     expect(admitted).toEqual(sessions.slice(0, 8).map(session => session.id))
-    expect(h.runtime.deferredAutomaticSessions.size).toBe(4)
+    expect(sessionRuntimeStateForTest(h.runtime).deferredAutomaticSessions.size).toBe(4)
     sessions[0]!.pendingTurnRecovery = undefined; h.runtime.setProcessing(sessions[0], false)
     h.runtime.scheduleDeferredAutomaticSessions(); h.runtime.scheduleDeferredAutomaticSessions()
     for (let i = 0; i < 4; i++) await tick()
@@ -3934,7 +3937,7 @@ describe('bounded automatic admission', () => {
     h.runtime.enqueueAutomaticTurnRecovery = async () => { admitted++; return true }
     await h.runtime.resumePendingTurnsAfterRestart(children.map(session => session.id))
     expect(hydrated).toBe(0); expect(admitted).toBe(0)
-    expect(h.runtime.automaticAdmissionReservations.size).toBe(0)
+    expect(sessionRuntimeStateForTest(h.runtime).automaticAdmissionReservations.size).toBe(0)
     expect(children.every(session => session.pendingTurnRecovery?.attempts === 2)).toBe(true)
   })
 
@@ -3988,7 +3991,7 @@ describe('bounded automatic admission', () => {
     await h.save(child)
 
     const cold = h.cold()
-    const restored = cold.runtime.sessions.get(child.id)
+    const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(child.id))
     let providerStarts = 0
     cold.runtime.sendMessage = async () => { providerStarts++ }
 
@@ -4006,8 +4009,8 @@ describe('bounded automatic admission', () => {
       },
     })
     expect(restored.pendingTurnRecovery).toBeUndefined()
-    expect(cold.runtime.deferredAutomaticSessions.has(restored.id)).toBe(false)
-    expect(cold.runtime.automaticAdmissionReservations.has(restored.id)).toBe(false)
+    expect(sessionRuntimeStateForTest(cold.runtime).deferredAutomaticSessions.has(restored.id)).toBe(false)
+    expect(sessionRuntimeStateForTest(cold.runtime).automaticAdmissionReservations.has(restored.id)).toBe(false)
     expect(restored.sessionStatus).not.toBe('in-progress')
     expect(h.events.filter(event => event.type === 'complete' && event.sessionId === restored.id)).toHaveLength(1)
     expect(h.events.some(event => event.type === 'info' && event.sessionId === restored.id
@@ -4032,7 +4035,7 @@ describe('bounded automatic admission', () => {
     await h.save(child)
 
     const cold = h.cold()
-    const restored = cold.runtime.sessions.get(child.id)
+    const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(child.id))
     let providerStarts = 0
     cold.runtime.sendMessage = async () => { providerStarts++ }
 
@@ -4040,11 +4043,11 @@ describe('bounded automatic admission', () => {
 
     expect(providerStarts).toBe(0)
     expect(restored.activeObjective).toMatchObject({ terminalState: 'blocked_policy' })
-    expect(restored.activeObjective.interruptedTurnRecovery).toBeUndefined()
+    expect(requiredTestValue(restored.activeObjective).interruptedTurnRecovery).toBeUndefined()
     expect(restored.pendingTurnRecovery).toBeUndefined()
     expect(cold.runtime.getInterruptedTurnRecovery(restored, `${child.id}-user`)).toBeUndefined()
-    expect(cold.runtime.deferredAutomaticSessions.has(restored.id)).toBe(false)
-    expect(cold.runtime.automaticAdmissionReservations.has(restored.id)).toBe(false)
+    expect(sessionRuntimeStateForTest(cold.runtime).deferredAutomaticSessions.has(restored.id)).toBe(false)
+    expect(sessionRuntimeStateForTest(cold.runtime).automaticAdmissionReservations.has(restored.id)).toBe(false)
     expect(h.events.some(event => event.type === 'info' && event.sessionId === restored.id
       && event.message.includes('stale recovery authority was revoked'))).toBe(true)
   })
@@ -4060,7 +4063,7 @@ describe('bounded automatic admission', () => {
     await h.save(child)
 
     const cold = h.cold()
-    const restored = cold.runtime.sessions.get(child.id)
+    const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(child.id))
     let providerStarts = 0
     cold.runtime.sendMessage = async () => { providerStarts++ }
 
@@ -4068,12 +4071,12 @@ describe('bounded automatic admission', () => {
     for (let index = 0; index < 3; index += 1) await tick()
 
     expect(providerStarts).toBe(0)
-    expect(restored.activeObjective.terminalState).toBe('blocked_policy')
+    expect(requiredTestValue(restored.activeObjective).terminalState).toBe('blocked_policy')
     expect(restored.pendingTurnRecovery).toBeUndefined()
     expect(restored.messageQueue.map((item: any) => item.messageId)).toEqual(['retained-machine-delivery'])
     expect(restored.messages.find((message: any) => message.id === 'retained-machine-delivery')?.isQueued).toBe(true)
-    expect(cold.runtime.deferredAutomaticSessions.has(restored.id)).toBe(false)
-    expect(cold.runtime.automaticAdmissionReservations.has(restored.id)).toBe(false)
+    expect(sessionRuntimeStateForTest(cold.runtime).deferredAutomaticSessions.has(restored.id)).toBe(false)
+    expect(sessionRuntimeStateForTest(cold.runtime).automaticAdmissionReservations.has(restored.id)).toBe(false)
   })
 
   it('reconciles a cold terminal machine inbox without consuming its retained Retry context', async () => {
@@ -4087,7 +4090,7 @@ describe('bounded automatic admission', () => {
     await h.save(target)
 
     const cold = h.cold()
-    const restored = cold.runtime.sessions.get(target.id)
+    const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(target.id))
     let providerStarts = 0
     cold.runtime.sendMessage = async () => { providerStarts++ }
     const completed = deferred()
@@ -4098,15 +4101,15 @@ describe('bounded automatic admission', () => {
     await completed.promise
 
     expect(providerStarts).toBe(0)
-    expect(restored.activeObjective.terminalState).toBe('complete_verified')
+    expect(requiredTestValue(restored.activeObjective).terminalState).toBe('complete_verified')
     expect(restored.messageQueue.map((item: any) => item.messageId)).toEqual(['retained-review-delivery'])
     expect(restored.messages.find((message: any) => message.id === 'retained-review-delivery')?.isQueued).toBe(true)
-    expect(cold.runtime.deferredAutomaticSessions.has(restored.id)).toBe(false)
+    expect(sessionRuntimeStateForTest(cold.runtime).deferredAutomaticSessions.has(restored.id)).toBe(false)
     expect(restored.sessionStatus).not.toBe('in-progress')
     expect(h.events.filter(event => event.type === 'complete' && event.sessionId === restored.id)).toHaveLength(1)
 
     const secondCold = h.cold()
-    const secondRestored = secondCold.runtime.sessions.get(target.id)
+    const secondRestored = requiredTestValue(sessionRuntimeStateForTest(secondCold.runtime).sessions.get(target.id))
     secondCold.runtime.sendMessage = async () => { providerStarts++ }
     await secondCold.runtime.ensureMessagesLoaded(secondRestored)
     for (let index = 0; index < 3; index += 1) await tick()
@@ -4137,16 +4140,16 @@ describe('bounded automatic admission', () => {
     expect(target.messageQueue[0]).toBe(item)
     expect(target.isProcessing).toBe(false)
     expect({ recovery: target.pendingTurnRecovery, objective: target.activeObjective, messages: target.messages }).toEqual(before)
-    expect(h.runtime.automaticAdmissionReservations.has(target.id)).toBe(false)
-    expect(h.runtime.deferredAutomaticSessions.has(target.id)).toBe(true)
+    expect(sessionRuntimeStateForTest(h.runtime).automaticAdmissionReservations.has(target.id)).toBe(false)
+    expect(sessionRuntimeStateForTest(h.runtime).deferredAutomaticSessions.has(target.id)).toBe(true)
   })
 
   it('does not treat a spawned-session inbox index as human authority after hydration', async () => {
     const h = harness(); let parent = h.make('chain-root')
     for (let depth = 1; depth <= 5; depth++) parent = h.make(`chain-${depth}`, parent.id)
     queueMachine(parent, 'delegation'); await h.save(parent)
-    for (const session of h.runtime.sessions.values()) if (session !== parent) await h.save(session)
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(parent.id)
+    for (const session of sessionRuntimeStateForTest(h.runtime).sessions.values()) if (session !== parent) await h.save(session)
+    const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(parent.id))
     expect(restored.pendingQueuedMessageIds).toEqual(['delegation'])
     expect(restored.pendingAgentDeliveryIds ?? []).toEqual([])
     let starts = 0; cold.runtime.sendMessage = async () => { starts++ }
@@ -4233,14 +4236,14 @@ describe('bounded automatic admission', () => {
       target.messageQueue.push({ messageId: 'new-human', message: 'Change the objective.' })
     }
     if (change === 'question') target.userInputRequests = [{ status: 'pending', sessionId: target.id }] as never
-    if (change === 'permission') h.runtime.pendingPermissionRequests.set('new-permission', { sessionId: target.id })
+    if (change === 'permission') sessionRuntimeStateForTest(h.runtime).pendingPermissionRequests.set('new-permission', permissionMetadataFixture(target.id))
     if (change === 'auth') target.pendingAuthRequestId = 'new-auth'
     if (change === 'spoofed-origin') item.options = { internalOrigin: { ...item.options.internalOrigin, senderSessionId: 'different-sender' } }
     release.resolve(); const error = await retry
     expect(error).toBeInstanceOf(Error); expect(preparations).toBe(0)
     expect(target.messageQueue[0]).toBe(item); expect(target.activeObjective?.terminalState).toBe('exhausted')
     expect(target.pendingTurnRecovery?.attempts).toBe(2)
-    h.runtime.pendingPermissionRequests.clear()
+    sessionRuntimeStateForTest(h.runtime).pendingPermissionRequests.clear()
   })
 
   it('refuses a terminal inbox Retry if a human joins the FIFO before its durable acknowledgement', async () => {
@@ -4271,8 +4274,8 @@ describe('bounded automatic admission', () => {
     parent.pendingAuthRequestId = 'new-auth'
     await tick()
     expect(starts).toBe(0); expect(child.messageQueue[0]).toBe(item)
-    expect(h.runtime.queuedMessageDispatches.size).toBe(0)
-    expect(h.runtime.automaticAdmissionReservations.size).toBe(0)
+    expect(sessionRuntimeStateForTest(h.runtime).queuedMessageDispatches.size).toBe(0)
+    expect(sessionRuntimeStateForTest(h.runtime).automaticAdmissionReservations.size).toBe(0)
     parent.pendingAuthRequestId = undefined
     h.runtime.scheduleDeferredAutomaticSessions(); h.runtime.scheduleDeferredAutomaticSessions()
     await tick(); await tick(); await tick()
@@ -4293,7 +4296,7 @@ describe('bounded automatic admission', () => {
     const terminal = h.make('direct-exhausted'); terminal.activeObjective!.terminalState = 'exhausted'
     Object.assign(terminal.pendingTurnRecovery!, { exhaustedAt: 3, validationExhausted: true })
     await h.runtime.resumePendingTurnAfterRestart(terminal.id)
-    expect(h.runtime.automaticAdmissionReservations.has(terminal.id)).toBe(false)
+    expect(sessionRuntimeStateForTest(h.runtime).automaticAdmissionReservations.has(terminal.id)).toBe(false)
   })
 
   it('surfaces an exhausted invalid final after restart as a durable typed validation failure', async () => {
@@ -4311,11 +4314,11 @@ describe('bounded automatic admission', () => {
     await h.save(managed)
     h.events.length = 0
 
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+    const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     await cold.runtime.resumePendingTurnAfterRestart(restored.id)
 
     const diagnostic = 'missing structured objective outcome receipt'
-    expect(restored.activeObjective.terminalState).toBe('exhausted')
+    expect(requiredTestValue(restored.activeObjective).terminalState).toBe('exhausted')
     expect(restored.pendingTurnRecovery).toMatchObject({
       exhaustedAt: expect.any(Number), validationExhausted: true,
       lastCause: 'objective_incomplete', validationGaps: expect.arrayContaining([diagnostic]),
@@ -4347,7 +4350,7 @@ describe('bounded automatic admission', () => {
     await h.save(managed)
     h.events.length = 0
 
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+    const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     await cold.runtime.resumePendingTurnAfterRestart(restored.id)
 
     expect(restored.messages.at(-1)).toMatchObject({ role: 'error' })
@@ -4360,12 +4363,12 @@ describe('bounded automatic admission', () => {
     const h = harness(); const root = h.make('spawn-root'); root.isProcessing = true
     const tokens = Array.from({ length: 3 }, () => h.runtime.reserveSpawnAdmission(root))
     expect(() => h.runtime.reserveSpawnAdmission(root)).toThrow('root_capacity')
-    tokens.forEach(token => h.runtime.pendingSpawnRoots.delete(token))
+    tokens.forEach(token => sessionRuntimeStateForTest(h.runtime).pendingSpawnRoots.delete(token))
     root.pendingAuthRequestId = 'auth'; expect(() => h.runtime.reserveSpawnAdmission(root)).toThrow('decision')
     root.pendingAuthRequestId = undefined
     let parent = root; for (let depth = 1; depth <= 4; depth++) parent = h.make(`spawn-depth-${depth}`, parent.id)
     expect(() => h.runtime.reserveSpawnAdmission(parent)).toThrow('depth')
-    expect(h.runtime.pendingSpawnRoots.size).toBe(0)
+    expect(sessionRuntimeStateForTest(h.runtime).pendingSpawnRoots.size).toBe(0)
   })
 
   it('retains a rejected final behind a new ancestor decision without declaring exhaustion, then wakes once', async () => {
@@ -4391,7 +4394,7 @@ describe('bounded automatic admission', () => {
     expect(child.pendingTurnRecovery?.validationGaps?.length).toBeGreaterThan(0)
     expect(child.pendingTurnRecovery?.exhaustedAt).toBeUndefined()
     expect(h.events.some(event => event.type === 'typed_error' && event.error?.code === 'objective_validation_failed')).toBe(false)
-    expect(h.runtime.deferredAutomaticSessions.has(child.id)).toBe(true)
+    expect(sessionRuntimeStateForTest(h.runtime).deferredAutomaticSessions.has(child.id)).toBe(true)
     expect(child.messageQueue).toHaveLength(0)
     const entered = deferred(), release = deferred(); let preparations = 0; let dispatch: Promise<void> | undefined
     h.runtime.getOrCreateAgent = async () => { preparations++; entered.resolve(); await release.promise; throw new Error('Fixture preparation boundary') }
@@ -4421,7 +4424,7 @@ describe('bounded automatic admission', () => {
     expect(saved.agentDelivery).toMatchObject({ attempts: 0, status: 'queued' })
     expect(child.messageQueue[0]).toMatchObject(item)
     expect(saved.isQueued).toBe(true)
-    expect(h.runtime.automaticAdmissionReservations.size).toBe(0)
+    expect(sessionRuntimeStateForTest(h.runtime).automaticAdmissionReservations.size).toBe(0)
     expect(h.events.some(event => event.type === 'error' || event.type === 'typed_error')).toBe(false)
   })
 
@@ -4437,23 +4440,23 @@ describe('bounded automatic admission', () => {
     expect(await h.manager.retryTurn(managed.id, `${managed.id}-user`)).toEqual({ status: 'started' })
     await entered.promise
     expect(preparations).toBe(1); expect(managed.pendingTurnRecovery?.waitingForPermission).toBeUndefined()
-    expect(h.runtime.pendingPermissionRequests.size).toBe(0)
-    expect(h.runtime.permissionInboxRetryDispatches.size).toBe(0)
+    expect(sessionRuntimeStateForTest(h.runtime).pendingPermissionRequests.size).toBe(0)
+    expect(sessionRuntimeStateForTest(h.runtime).permissionInboxRetryDispatches.size).toBe(0)
     release.resolve(); await dispatch; await h.manager.cleanup()
   })
 
   it('does not lend a concurrent Retry authority to an unrelated automatic dispatch token', async () => {
     const h = harness(); const parent = h.make('token-parent'); const child = h.make('token-child', parent.id)
     const item = queueMachine(child); child.messageQueue.shift()
-    const token = Symbol('automatic-dispatch'); h.runtime.queuedMessageDispatches.set(child.id, token)
-    h.runtime.retryTurnsInFlight.set(child.id, Promise.resolve())
+    const token = Symbol('automatic-dispatch'); sessionRuntimeStateForTest(h.runtime).queuedMessageDispatches.set(child.id, token)
+    sessionRuntimeStateForTest(h.runtime).retryTurnsInFlight.set(child.id, Promise.resolve({ status: 'started' }))
     parent.pendingAuthRequestId = 'new-parent-auth'
     let starts = 0; h.runtime.getOrCreateAgent = async () => { starts++; throw new Error('Must not prepare') }
     await h.manager.sendMessage(child.id, item.message, undefined, item.storedAttachments, item.options, item.messageId,
       false, undefined, undefined, token, item)
     expect(starts).toBe(0); expect(child.messageQueue[0]).toBe(item)
     expect(child.pendingTurnRecovery?.attempts).toBe(2)
-    h.runtime.retryTurnsInFlight.delete(child.id)
+    sessionRuntimeStateForTest(h.runtime).retryTurnsInFlight.delete(child.id)
   })
 
   it('never rolls back a completed Stop when a permission-inbox Retry was awaiting hydration', async () => {
@@ -4474,8 +4477,8 @@ describe('bounded automatic admission', () => {
     expect(managed.messageQueue).toEqual([])
     expect(managed.pendingTurnRecovery).toBeUndefined()
     expect(managed.messages.find(message => message.id === 'cancelled-delivery')?.isQueued).toBe(false)
-    expect(h.runtime.queuedMessageDispatches.size).toBe(0)
-    expect(h.runtime.permissionInboxRetryDispatches.size).toBe(0)
+    expect(sessionRuntimeStateForTest(h.runtime).queuedMessageDispatches.size).toBe(0)
+    expect(sessionRuntimeStateForTest(h.runtime).permissionInboxRetryDispatches.size).toBe(0)
   })
 
   it.each(['permission', 'auth'] as const)('wakes held descendants after a real %s resolution while the parent stays active', async kind => {
@@ -4487,14 +4490,16 @@ describe('bounded automatic admission', () => {
       const requestedAt = Date.now()
       parent.pendingTurnRecovery!.waitingForPermission = { requestId: 'decision', requestedAt, toolName: 'Bash' }
       parent.agent = { respondToPermission: (_id: string, allowed: boolean) => responses.push(allowed) } as never
-      h.runtime.pendingPermissionRequests.set('decision', {
+      sessionRuntimeStateForTest(h.runtime).pendingPermissionRequests.set('decision', {
         sessionId: parent.id,
         requestedAt,
         expiresAt: requestedAt + 60_000,
         toolName: 'Bash',
         processingGeneration: parent.processingGeneration,
         objectiveId: parent.activeObjective?.objectiveId ?? parent.activeObjective?.userMessageId,
-        runtimeAgent: parent.agent,
+        runtimeAgent: parent.agent ?? undefined,
+        request: { requestId: 'decision', sessionId: parent.id, toolName: 'Bash', description: 'Offline decision' },
+        timeout: permissionMetadataFixture(parent.id).timeout,
       })
     } else {
       parent.pendingAuthRequestId = 'decision'
@@ -4512,7 +4517,7 @@ describe('bounded automatic admission', () => {
     expect(sent.filter(id => id === child.id)).toHaveLength(1)
     expect(parent.isProcessing).toBe(true)
     expect(responses).toEqual(kind === 'permission' ? [false] : [])
-    expect(h.runtime.pendingPermissionRequests.size).toBe(0)
+    expect(sessionRuntimeStateForTest(h.runtime).pendingPermissionRequests.size).toBe(0)
   })
 })
 
@@ -4539,8 +4544,8 @@ describe('durable restart recovery', () => {
     })
     await h.save(managed)
     const cold = h.cold()
-    const restored = cold.runtime.sessions.get(managed.id)
-    expect(restored.activeObjective.terminalState).toBe('complete_verified')
+    const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
+    expect(requiredTestValue(restored.activeObjective).terminalState).toBe('complete_verified')
     await cold.runtime.ensureMessagesLoaded(restored)
     expect(restored.activeObjective).toMatchObject({
       terminalState: 'exhausted',
@@ -4548,7 +4553,7 @@ describe('durable restart recovery', () => {
         'Send and verify the first message.', 'Send and verify the second message.',
       ] },
     })
-    expect(restored.activeObjective.completedAt).toBeUndefined()
+    expect(requiredTestValue(restored.activeObjective).completedAt).toBeUndefined()
     const saved = listSessions(h.rootPath).find(meta => meta.id === managed.id)
     expect(saved?.activeObjective?.terminalState).toBe('exhausted')
   })
@@ -4583,7 +4588,7 @@ describe('durable restart recovery', () => {
     }
     runtime.sendEvent = (event: unknown) => h.events.push(event)
     runtime.loadSessionsFromDisk()
-    const restored = runtime.sessions.get(managed.id)!
+    const restored = sessionRuntimeStateForTest(restarted).sessions.get(managed.id)!
     expect(restored.activeObjective).toMatchObject({
       terminalState: 'exhausted',
       lastOutcome: { state: 'continue', remainingWork: [
@@ -4651,12 +4656,12 @@ describe('durable restart recovery', () => {
     runtime.sendEvent = (event: unknown) => h.events.push(event)
     runtime.processNextQueuedMessage = () => {}
     runtime.loadSessionsFromDisk()
-    const recovered = runtime.sessions.get(proven.id)
-    const retained = runtime.sessions.get(unproven.id)
+    const recovered = requiredTestValue(sessionRuntimeStateForTest(restarted).sessions.get(proven.id))
+    const retained = requiredTestValue(sessionRuntimeStateForTest(restarted).sessions.get(unproven.id))
 
-    expect(recovered.userInputRequests[0].status).toBe('cancelled')
+    expect(requiredTestValue(recovered.userInputRequests)[0].status).toBe('cancelled')
     expect(recovered.pendingTurnRecovery).toBeDefined()
-    expect(retained.userInputRequests[0].status).toBe('pending')
+    expect(requiredTestValue(retained.userInputRequests)[0].status).toBe('pending')
     await restarted.flushSession(proven.id)
     const header = JSON.parse(readFileSync(getSessionFilePath(h.rootPath, proven.id), 'utf8').split('\n')[0]!)
     expect(header.userInputRequests[0].status).toBe('cancelled')
@@ -4696,7 +4701,7 @@ describe('durable restart recovery', () => {
     }
     runtime.sendEvent = (event: unknown) => h.events.push(event)
     runtime.loadSessionsFromDisk()
-    const restored = runtime.sessions.get(managed.id)!
+    const restored = sessionRuntimeStateForTest(restarted).sessions.get(managed.id)!
     expect(restored.userInputRequests![0].status).toBe('cancelled')
     expect(restored.activeObjective!.terminalState).toBe('exhausted')
     expect(restored.activeObjective!.interruptedTurnRecovery?.recovery).toMatchObject({
@@ -4748,7 +4753,7 @@ describe('durable restart recovery', () => {
       recoveryDispatch: undefined,
     }
     await h.save(managed)
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+    const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     let directRetryReplays = 0; let scheduled = 0
     cold.runtime.retryTurnInternal = async () => { directRetryReplays++ }
     cold.runtime.processNextQueuedMessage = () => { scheduled++ }
@@ -4768,7 +4773,7 @@ describe('durable restart recovery', () => {
         phase: 'allocated',
       },
     })
-    const dispatch = structuredClone(restored.pendingTurnRecovery.recoveryDispatch)
+    const dispatch = requiredTestValue(structuredClone(requiredTestValue(restored.pendingTurnRecovery).recoveryDispatch))
     expect(dispatch.id).toBeString()
     expect(restored.messageQueue).toHaveLength(1)
     expect(restored.messageQueue[0].message).toContain('attempt="4"')
@@ -4783,8 +4788,8 @@ describe('durable restart recovery', () => {
     // A second startup wake sees the same transient FIFO and must not spend a
     // second attempt or mint another identity.
     await cold.runtime.resumePendingTurnAfterRestart(restored.id)
-    expect(restored.pendingTurnRecovery.recoveryDispatch).toEqual(dispatch)
-    expect(restored.pendingTurnRecovery.attempts).toBe(3)
+    expect(requiredTestValue(restored.pendingTurnRecovery).recoveryDispatch).toEqual(dispatch)
+    expect(requiredTestValue(restored.pendingTurnRecovery).attempts).toBe(3)
     expect(restored.messageQueue).toHaveLength(1)
     expect(scheduled).toBe(1)
   })
@@ -4818,7 +4823,7 @@ describe('durable restart recovery', () => {
       },
     }
     await h.save(managed)
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+    const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     const preparing = deferred(); const release = deferred()
     let preparations = 0; let persistedAtPreparation: any; let sentPrompt = ''; let dispatch: Promise<void> | undefined
     cold.runtime.getOrCreateAgent = async () => {
@@ -4842,13 +4847,13 @@ describe('durable restart recovery', () => {
       expect(preparations).toBe(1)
       expect(sentPrompt).toContain('attempt="4"')
       expect(sentPrompt).toContain('<automatic_structured_fallback failed_tool="mcp__session__browser_tool">')
-      expect(restored.pendingTurnRecovery.attempts).toBe(3)
-      expect(restored.pendingTurnRecovery.recoveryDispatch).toMatchObject({
+      expect(requiredTestValue(restored.pendingTurnRecovery).attempts).toBe(3)
+      expect(requiredTestValue(restored.pendingTurnRecovery).recoveryDispatch).toMatchObject({
         id: 'restart-dispatch-4', attempt: 4, cause: 'runtime_error', origin: 'automatic', phase: 'started',
         fallbackIntent: { kind: 'structured_fallback', failedToolName: 'mcp__session__browser_tool' },
         startedAt: expect.any(Number),
       })
-      expect(persistedAtPreparation.recoveryDispatch).toEqual(restored.pendingTurnRecovery.recoveryDispatch)
+      expect(persistedAtPreparation.recoveryDispatch).toEqual(requiredTestValue(restored.pendingTurnRecovery).recoveryDispatch)
       expect(restored.messages.filter((message: any) => message.hidden
         && message.content.includes('attempt="4"'))).toHaveLength(1)
       const persistedRows = readFileSync(getSessionFilePath(h.rootPath, restored.id), 'utf8')
@@ -4857,7 +4862,7 @@ describe('durable restart recovery', () => {
         && message.content.includes('attempt="4"'))).toHaveLength(1)
       await cold.runtime.resumePendingTurnAfterRestart(restored.id)
       expect(preparations).toBe(1)
-      expect(restored.pendingTurnRecovery.attempts).toBe(3)
+      expect(requiredTestValue(restored.pendingTurnRecovery).attempts).toBe(3)
     } finally {
       release.resolve()
       await dispatch?.catch(() => {})
@@ -4901,7 +4906,7 @@ describe('durable restart recovery', () => {
     })
     await h.save(managed)
 
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+    const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     const preparing = deferred(); const release = deferred()
     let preparations = 0; let persistedAtPreparation: any; let sentPrompt = ''; let dispatch: Promise<void> | undefined
     cold.runtime.getOrCreateAgent = async () => {
@@ -4935,7 +4940,7 @@ describe('durable restart recovery', () => {
           startedAt: expect.any(Number),
         },
       })
-      expect(restored.pendingTurnRecovery.exhaustedAt).toBeUndefined()
+      expect(requiredTestValue(restored.pendingTurnRecovery).exhaustedAt).toBeUndefined()
       expect(restored.messages.filter((message: any) => (
         message.id === 'started-no-output-dispatch-2'
         && message.role === 'user' && message.hidden
@@ -4993,7 +4998,7 @@ describe('durable restart recovery', () => {
     })
     await h.save(managed)
 
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+    const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     let scheduled = 0; let preparations = 0
     cold.runtime.processNextQueuedMessage = () => { scheduled++ }
     cold.runtime.getOrCreateAgent = async () => { preparations++; throw new Error('Historical dispatch must stay spent') }
@@ -5008,7 +5013,7 @@ describe('durable restart recovery', () => {
       exhaustedAt: expect.any(Number),
       recoveryDispatch: { id: dispatchId, attempt: 2, phase: 'started' },
     })
-    expect(restored.pendingTurnRecovery.recoveryDispatch.preToolExecutionReceiptVersion).toBeUndefined()
+    expect(requiredTestValue(requiredTestValue(restored.pendingTurnRecovery).recoveryDispatch).preToolExecutionReceiptVersion).toBeUndefined()
     expect(restored.activeObjective?.terminalState).toBe('exhausted')
   })
 
@@ -5017,12 +5022,12 @@ describe('durable restart recovery', () => {
       const h = harness(); const managed = h.make(`steer-admission-${provider.toLowerCase()}`)
       await h.save(managed)
       const initialText = managed.messages[0]!.content
-      const runtimeAgent = {
+      const runtimeAgent = Object.assign(new ScriptedSessionAgent(h.workspace), {
         redirect: () => true,
         getCurrentTurnUserMessage: () => initialText,
         isProcessing: () => true,
-      }
-      managed.agent = runtimeAgent as never
+      })
+      managed.agent = runtimeAgent
       managed.isProcessing = true
       managed.processingGeneration = 9
       bindToolAdmissionTurn(h.runtime, managed, runtimeAgent, 9)
@@ -5093,8 +5098,8 @@ describe('durable restart recovery', () => {
       depth: 1,
       role: 'worker',
     }
-    const runtimeAgent = { isProcessing: () => true, dispose: async () => {} }
-    parent.agent = runtimeAgent as never
+    const runtimeAgent = Object.assign(new ScriptedSessionAgent(parent.workspace, { async *chat() {}, isProcessing: () => true }), { dispose: async () => {} })
+    parent.agent = runtimeAgent
     parent.isProcessing = true
     parent.processingGeneration = 7
     bindToolAdmissionTurn(h.runtime, parent, runtimeAgent, 7)
@@ -5174,8 +5179,8 @@ describe('durable restart recovery', () => {
       options: { hidden: true, internalOrigin: { kind: 'agent-message', senderSessionId: 'other-child', deliveryId: laterDeliveryId } },
     })
     managed.lastSentOptions = { hidden: true, internalOrigin: delivered.internalOrigin }
-    const runtimeAgent = { isProcessing: () => true, dispose: async () => {} }
-    managed.agent = runtimeAgent as never
+    const runtimeAgent = Object.assign(new ScriptedSessionAgent(managed.workspace, { async *chat() {}, isProcessing: () => true }), { dispose: async () => {} })
+    managed.agent = runtimeAgent
     managed.isProcessing = true
     managed.processingGeneration = 31
     bindToolAdmissionTurn(h.runtime, managed, runtimeAgent, 31, delivered.id)
@@ -5200,8 +5205,8 @@ describe('durable restart recovery', () => {
 
   it('keeps the provider turn after durable criteria registration and fences a later human turn', async () => {
     const h = harness(); const managed = h.make('criteria-registration-tool-admission')
-    const runtimeAgent = { isProcessing: () => true, dispose: async () => {} }
-    managed.agent = runtimeAgent as never
+    const runtimeAgent = Object.assign(new ScriptedSessionAgent(managed.workspace, { async *chat() {}, isProcessing: () => true }), { dispose: async () => {} })
+    managed.agent = runtimeAgent
     managed.isProcessing = true
     managed.processingGeneration = 7
     bindToolAdmissionTurn(h.runtime, managed, runtimeAgent, 7)
@@ -5235,13 +5240,13 @@ describe('durable restart recovery', () => {
     }).then(() => { admitted = true })
     await tick()
     expect(admitted).toBe(false)
-    expect(h.runtime.runtimeToolAdmissionBindings.get(runtimeAgent).activeObjective).toBe(objectiveBefore)
+    expect(requiredTestValue(sessionRuntimeStateForTest(h.runtime).runtimeToolAdmissionBindings.get(runtimeAgent)).activeObjective).toBe(objectiveBefore)
 
     releaseFlush.resolve()
     await registration
     await readAdmission
     h.manager.flushSession = originalFlush
-    expect(h.runtime.runtimeToolAdmissionBindings.get(runtimeAgent).activeObjective).toBe(registered)
+    expect(requiredTestValue(sessionRuntimeStateForTest(h.runtime).runtimeToolAdmissionBindings.get(runtimeAgent)).activeObjective).toBe(registered)
     expect(managed.messages.find(message => message.toolUseId === 'read-after-criteria-registration'))
       .toMatchObject({ toolStatus: 'executing' })
 
@@ -5255,8 +5260,8 @@ describe('durable restart recovery', () => {
 
   it('does not rebind a provider turn when criteria registration fails to persist', async () => {
     const h = harness(); const managed = h.make('criteria-registration-flush-failure')
-    const runtimeAgent = { isProcessing: () => true, dispose: async () => {} }
-    managed.agent = runtimeAgent as never
+    const runtimeAgent = Object.assign(new ScriptedSessionAgent(managed.workspace, { async *chat() {}, isProcessing: () => true }), { dispose: async () => {} })
+    managed.agent = runtimeAgent
     managed.isProcessing = true
     managed.processingGeneration = 7
     bindToolAdmissionTurn(h.runtime, managed, runtimeAgent, 7)
@@ -5268,7 +5273,7 @@ describe('durable restart recovery', () => {
     await expect(h.runtime.persistRegisteredObjectiveForCurrentTurn(
       managed, runtimeAgent, objectiveBefore, registered, 7, 0,
     )).rejects.toThrow('simulated persistence failure')
-    expect(h.runtime.runtimeToolAdmissionBindings.get(runtimeAgent).activeObjective).toBe(objectiveBefore)
+    expect(requiredTestValue(sessionRuntimeStateForTest(h.runtime).runtimeToolAdmissionBindings.get(runtimeAgent)).activeObjective).toBe(objectiveBefore)
     await expect(h.runtime.durablyRecordAutomaticRecoveryToolAdmission(managed, runtimeAgent, {
       toolUseId: 'read-after-failed-registration', toolName: 'Read',
       toolInput: { file_path: '/fixture/must-not-run.txt' },
@@ -5305,8 +5310,8 @@ describe('durable restart recovery', () => {
       },
     }
     await h.save(managed)
-    const runtimeAgent = { isProcessing: () => true, dispose: async () => {} }
-    managed.agent = runtimeAgent as never
+    const runtimeAgent = Object.assign(new ScriptedSessionAgent(managed.workspace, { async *chat() {}, isProcessing: () => true }), { dispose: async () => {} })
+    managed.agent = runtimeAgent
     managed.isProcessing = true
     managed.processingGeneration = 21
     managed.lastSentOptions = {
@@ -5390,8 +5395,8 @@ describe('durable restart recovery', () => {
       },
     }
     await h.save(managed)
-    const runtimeAgent = { isProcessing: () => true, dispose: async () => {} }
-    managed.agent = runtimeAgent as never
+    const runtimeAgent = Object.assign(new ScriptedSessionAgent(managed.workspace, { async *chat() {}, isProcessing: () => true }), { dispose: async () => {} })
+    managed.agent = runtimeAgent
     managed.isProcessing = true
     managed.processingGeneration = 28
     bindToolAdmissionTurn(h.runtime, managed, runtimeAgent, 28, boundaryId)
@@ -5684,14 +5689,14 @@ describe('durable restart recovery', () => {
       toolInput: { file_path: '/fixture/approved-before-row.txt' },
     }
     const objective = managed.activeObjective!
-    h.runtime.checkpointToolStarts.set(managed, {
+    sessionRuntimeStateForTest(h.runtime).checkpointToolStarts.set(managed, {
       generation: 27,
       calls: new Map([[request.toolUseId, {
         objective,
         objectiveId: objective.userMessageId,
         acceptanceRevision: objective.acceptanceRevision ?? objective.userMessageId,
         acceptanceSha256: objectiveReviewBinding(objective).acceptanceSha256,
-        authorityEpoch: h.runtime.objectiveAuthorityEpochs.get(managed) ?? 0,
+        authorityEpoch: sessionRuntimeStateForTest(h.runtime).objectiveAuthorityEpochs.get(managed) ?? 0,
         toolName: request.toolName,
       }]]),
     })
@@ -5946,7 +5951,7 @@ describe('durable restart recovery', () => {
     backend.subprocessRuntimeContext = runtimeContext
     backend.send = (message: any) => backendResponses.push(message)
     const generation = 7
-    managed.agent = runtimeAgent as never
+    managed.agent = runtimeAgent
     managed.isProcessing = true
     managed.processingGeneration = generation
     managed.lastSentOptions = {
@@ -6025,7 +6030,7 @@ describe('durable restart recovery', () => {
     managed.isProcessing = false
     managed.agent = null
 
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+    const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     let scheduled = 0
     cold.runtime.processNextQueuedMessage = () => { scheduled++ }
     await cold.runtime.resumePendingTurnAfterRestart(restored.id)
@@ -6125,7 +6130,7 @@ describe('durable restart recovery', () => {
     backend.subprocessRuntimeContext = runtimeContext
     backend.send = (message: any) => backendResponses.push(message)
     const generation = 11
-    managed.agent = runtimeAgent as never
+    managed.agent = runtimeAgent
     managed.isProcessing = true
     managed.processingGeneration = generation
     managed.lastSentOptions = {
@@ -6189,7 +6194,7 @@ describe('durable restart recovery', () => {
     runtimeAgent.destroy()
     managed.isProcessing = false
     managed.agent = null
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+    const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     let scheduled = 0; let preparations = 0
     cold.runtime.processNextQueuedMessage = () => { scheduled++ }
     cold.runtime.getOrCreateAgent = async () => { preparations++; throw new Error('Collided dispatch must stay spent') }
@@ -6283,7 +6288,7 @@ describe('durable restart recovery', () => {
       })
       await h.save(managed)
 
-      const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+      const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
       await cold.runtime.ensureMessagesLoaded(restored)
       cold.runtime.emitExecutionTelemetry = () => {}
       const runtimeAgent = {} as never
@@ -6294,7 +6299,7 @@ describe('durable restart recovery', () => {
       restored.lastSentOptions = {
         hidden: true,
         automaticRecovery: {
-          originalUserMessageId: restored.pendingTurnRecovery.userMessageId,
+          originalUserMessageId: requiredTestValue(restored.pendingTurnRecovery).userMessageId,
           cause: 'objective_incomplete',
           dispatchId,
           dispatchAttempt: 2,
@@ -6572,7 +6577,7 @@ describe('durable restart recovery', () => {
       }
       await h.save(managed)
 
-      const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+      const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
       let scheduled = 0
       cold.runtime.processNextQueuedMessage = () => { scheduled++ }
       await cold.runtime.resumePendingTurnAfterRestart(restored.id)
@@ -6636,7 +6641,7 @@ describe('durable restart recovery', () => {
     })
 
     const expectedPrompt = managed.messageQueue[0]!.message
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+    const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     cold.runtime.processNextQueuedMessage = () => {}
     await cold.runtime.resumePendingTurnAfterRestart(restored.id)
     expect(restored.pendingTurnRecovery).toMatchObject({
@@ -6889,7 +6894,7 @@ describe('durable restart recovery', () => {
       hardLimitTokens: 100_000, issueCode: 'backend-error',
     }
     const created = await h.runtime.requestUserInput(
-      managed.id, questions, h.runtime.contextLimitUserInputCapability, dispatchId,
+      managed.id, questions, sessionRuntimeStateForTest(h.runtime).contextLimitUserInputCapability, dispatchId,
     )
     expect(managed.userInputRequests?.some(r => r.status === 'pending')).toBe(true)
 
@@ -6981,10 +6986,10 @@ describe('durable restart recovery', () => {
     managed.transferredSessionSummary = 'stale provider summary'
     managed.transferredSessionSummaryApplied = false
     const request = await h.runtime.requestUserInput(
-      managed.id, questions, h.runtime.contextLimitUserInputCapability, dispatchId,
+      managed.id, questions, sessionRuntimeStateForTest(h.runtime).contextLimitUserInputCapability, dispatchId,
     )
 
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+    const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     cold.runtime.processNextQueuedMessage = () => {}
     await cold.runtime.resumePendingTurnAfterRestart(restored.id)
 
@@ -7087,11 +7092,11 @@ describe('durable restart recovery', () => {
       totalTokens: 121_000, contextTokens: 120_000, contextWindow: 200_000, costUsd: 2 }
     managed.sdkSessionId = 'consumed-provider-context'
     const request = await h.runtime.requestUserInput(
-      managed.id, questions, h.runtime.contextLimitUserInputCapability, dispatchId,
+      managed.id, questions, sessionRuntimeStateForTest(h.runtime).contextLimitUserInputCapability, dispatchId,
     )
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+    const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     cold.runtime.processNextQueuedMessage = () => {}
-    cold.runtime.deferredAutomaticSessions.add(restored.id)
+    sessionRuntimeStateForTest(cold.runtime).deferredAutomaticSessions.add(restored.id)
     await cold.runtime.drainDeferredAutomaticSessions()
 
     expect(restored.userInputRequests).toEqual([expect.objectContaining({
@@ -7114,7 +7119,7 @@ describe('durable restart recovery', () => {
     expect(restored.sdkSessionId).toBeUndefined()
     expect(restored.tokenUsage?.contextTokens).toBeLessThan(100_000)
     const successorId = restored.pendingTurnRecovery?.recoveryDispatch?.id
-    const second = h.cold(); const again = second.runtime.sessions.get(managed.id)
+    const second = h.cold(); const again = requiredTestValue(sessionRuntimeStateForTest(second.runtime).sessions.get(managed.id))
     second.runtime.processNextQueuedMessage = () => {}
     await second.runtime.resumePendingTurnAfterRestart(again.id)
     expect(again.pendingTurnRecovery?.recoveryDispatch?.id).toBe(successorId)
@@ -7218,9 +7223,9 @@ describe('durable restart recovery', () => {
       }],
     }]
     const request = await h.runtime.requestUserInput(
-      managed.id, questions, h.runtime.contextLimitUserInputCapability, dispatchId,
+      managed.id, questions, sessionRuntimeStateForTest(h.runtime).contextLimitUserInputCapability, dispatchId,
     )
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+    const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     const entered = deferred(); const release = deferred()
     cold.runtime.getOrCreateAgent = async () => {
       entered.resolve()
@@ -7271,7 +7276,7 @@ describe('durable restart recovery', () => {
       }],
     }]
     const request = await h.runtime.requestUserInput(
-      managed.id, questions, h.runtime.contextLimitUserInputCapability, dispatchId,
+      managed.id, questions, sessionRuntimeStateForTest(h.runtime).contextLimitUserInputCapability, dispatchId,
     )
     const savedQuestion = managed.userInputRequests!.find(item => item.id === request.requestId)!
     savedQuestion.status = 'cancelled'
@@ -7299,7 +7304,7 @@ describe('durable restart recovery', () => {
     }
     await h.save(managed)
 
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+    const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     const entered = deferred(); const release = deferred()
     cold.runtime.getOrCreateAgent = async () => {
       entered.resolve()
@@ -7374,10 +7379,10 @@ describe('durable restart recovery', () => {
     }
     managed.sdkSessionId = 'legacy-retry-provider-session'
     const request = await h.runtime.requestUserInput(
-      managed.id, questions, h.runtime.contextLimitUserInputCapability, dispatchId,
+      managed.id, questions, sessionRuntimeStateForTest(h.runtime).contextLimitUserInputCapability, dispatchId,
     )
 
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+    const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     const providerEntered = deferred(); const releaseProvider = deferred(); const sendInvoked = deferred()
     let dispatch: Promise<void> | undefined
     let admission: {
@@ -7398,10 +7403,10 @@ describe('durable restart recovery', () => {
       admission = {
         existingMessageId: args[5],
         automaticRecovery: args[4]?.automaticRecovery as Record<string, unknown> | undefined,
-        retryInFlight: cold.runtime.retryTurnsInFlight.has(restored.id),
+        retryInFlight: sessionRuntimeStateForTest(cold.runtime).retryTurnsInFlight.has(restored.id),
         allowanceToken,
         allowanceIntent: allowanceToken
-          ? cold.runtime.explicitRetryAllowanceTokens.get(allowanceToken)
+          ? sessionRuntimeStateForTest(cold.runtime).explicitRetryAllowanceTokens.get(allowanceToken)
           : undefined,
       }
       dispatch = send(...args)
@@ -7513,7 +7518,7 @@ describe('durable restart recovery', () => {
         id: 'stop-objective', label: 'Arrêter cette mission',
         description: 'Conserver les résultats actuels sans nouvel appel fournisseur.',
       }],
-    }], h.runtime.contextLimitUserInputCapability, dispatchId)
+    }], sessionRuntimeStateForTest(h.runtime).contextLimitUserInputCapability, dispatchId)
 
     managed.isProcessing = true
     managed.processingGeneration = 1
@@ -7646,12 +7651,12 @@ describe('durable restart recovery', () => {
           description: 'Conserver les résultats actuels sans nouvel appel fournisseur.',
         }],
       }],
-      h.runtime.contextLimitUserInputCapability,
+      sessionRuntimeStateForTest(h.runtime).contextLimitUserInputCapability,
       dispatchId,
     )
     await h.save(parent); await h.save(child)
 
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(parent.id)
+    const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(parent.id))
     await cold.runtime.ensureMessagesLoaded(restored)
     expect(cold.runtime.retryableContextLimitRequest(restored)).toMatchObject({
       id: contextRequest.requestId,
@@ -7698,7 +7703,7 @@ describe('durable restart recovery', () => {
         .toHaveLength(1)
       expect(cleanBoundary?.content).toContain('[host-authenticated-user-answer:v1]')
       expect(cleanBoundary?.content).toContain('Current target')
-      expect(restored.userInputRequests.filter((request: { status: string }) => request.status === 'pending'))
+      expect(requiredTestValue(restored.userInputRequests).filter((request: { status: string }) => request.status === 'pending'))
         .toEqual([])
     } finally {
       releaseProvider.resolve()
@@ -7718,7 +7723,7 @@ describe('durable restart recovery', () => {
         hidden: true, isQueued: true,
         agentDelivery: { id: deliveryId, status: 'queued', attempts: 1 },
       })
-    expect(cold.runtime.deferredAutomaticRetryTimers.has(restored.id)).toBe(true)
+    expect(sessionRuntimeStateForTest(cold.runtime).deferredAutomaticRetryTimers.has(restored.id)).toBe(true)
   })
 
   it('does not spend an agent-delivery attempt when a clean-boundary authentication fails before provider work', async () => {
@@ -7784,13 +7789,13 @@ describe('durable restart recovery', () => {
     }
     managed.providerContextBoundaryMessageId = dispatchId
     const dispatchToken = Symbol('fixture-agent-delivery-dequeue')
-    h.runtime.queuedMessageDispatches.set(managed.id, dispatchToken)
-    h.runtime.queuedAgentDeliveryDispatches.set(deliveryId, {
+    sessionRuntimeStateForTest(h.runtime).queuedMessageDispatches.set(managed.id, dispatchToken)
+    sessionRuntimeStateForTest(h.runtime).queuedAgentDeliveryDispatches.set(deliveryId, {
       sessionId: managed.id,
       deliveryId,
       dispatchToken,
       claimed: false,
-      dispatchSettled: false,
+      providerStarted: false, dispatchSettled: false,
     })
     let preparations = 0
     h.runtime.getOrCreateAgent = async () => {
@@ -7819,9 +7824,9 @@ describe('durable restart recovery', () => {
     })
     expect(managed.isProcessing).toBe(false)
     expect(managed.messageQueue).toEqual([queued])
-    expect(h.runtime.queuedMessageDispatches.has(managed.id)).toBe(false)
-    expect(h.runtime.queuedAgentDeliveryDispatches.has(deliveryId)).toBe(false)
-    expect(h.runtime.automaticAdmissionReservations.has(managed.id)).toBe(false)
+    expect(sessionRuntimeStateForTest(h.runtime).queuedMessageDispatches.has(managed.id)).toBe(false)
+    expect(sessionRuntimeStateForTest(h.runtime).queuedAgentDeliveryDispatches.has(deliveryId)).toBe(false)
+    expect(sessionRuntimeStateForTest(h.runtime).automaticAdmissionReservations.has(managed.id)).toBe(false)
     expect(managed.userInputRequests?.some(request => (
       request.status === 'pending'
       && request.questions.some(question => question.id.startsWith('retry-child-result-'))
@@ -7988,18 +7993,18 @@ describe('durable restart recovery', () => {
     runtime.sendEvent = (event: unknown) => h.events.push(event)
     runtime.processNextQueuedMessage = (id: string) => { dequeues.push(id); scheduled.resolve() }
     runtime.loadSessionsFromDisk()
-    const restored = runtime.sessions.get(managed.id)
+    const restored = requiredTestValue(sessionRuntimeStateForTest(restarted).sessions.get(managed.id))
     await scheduled.promise
     await restarted.flushSession(restored.id)
 
     expect(dequeues).toEqual([managed.id])
-    expect(restored.userInputRequests.find((item: { id: string }) => item.id === request.requestId))
+    expect(requiredTestValue(restored.userInputRequests).find((item: { id: string }) => item.id === request.requestId))
       .toMatchObject({ status: 'answered', responseMessageId: answerId })
     expect(restored.messages.filter((message: { id: string }) => message.id === answerId)).toHaveLength(1)
     expect(restored.messageQueue).toHaveLength(1)
-    expect(restored.messageQueue[0].options.automaticRecovery.cleanContinuationId)
+    expect(requiredTestValue(requiredTestValue(restored.messageQueue[0].options).automaticRecovery).cleanContinuationId)
       .toMatch(/^clean-continuation-v1-/)
-    expect(restored.pendingTurnRecovery.recoveryDispatch.phase).toBe('allocated')
+    expect(requiredTestValue(requiredTestValue(restored.pendingTurnRecovery).recoveryDispatch).phase).toBe('allocated')
     expect(restored.sdkSessionId).toBeUndefined()
     const header = JSON.parse(readFileSync(getSessionFilePath(h.rootPath, managed.id), 'utf8').split('\n')[0]!)
     expect(header.pendingTurnRecovery.recoveryDispatch.cleanContinuationId)
@@ -8054,7 +8059,7 @@ describe('durable restart recovery', () => {
     runtime.sendEvent = (event: unknown) => h.events.push(event)
     runtime.processNextQueuedMessage = () => { throw new Error('Forged answer must not dispatch') }
     runtime.loadSessionsFromDisk()
-    const restored = runtime.sessions.get(managed.id)
+    const restored = requiredTestValue(sessionRuntimeStateForTest(restarted).sessions.get(managed.id))
     await runtime.resumeOrphanedContextAnswerAfterRestart(managed.id)
     await tick(); await tick()
 
@@ -8122,7 +8127,7 @@ describe('durable restart recovery', () => {
     }
     managed.sdkSessionId = 'oversized-answer-provider-context'
     const request = await h.runtime.requestUserInput(
-      managed.id, questions, h.runtime.contextLimitUserInputCapability, oldDispatchId,
+      managed.id, questions, sessionRuntimeStateForTest(h.runtime).contextLimitUserInputCapability, oldDispatchId,
     )
 
     const freshRuntimeEntered = deferred(); const releaseFreshRuntime = deferred()
@@ -8249,7 +8254,7 @@ describe('durable restart recovery', () => {
     }
     managed.sdkSessionId = 'oversized-answer-provider-context'
     const request = await h.runtime.requestUserInput(
-      managed.id, questions, h.runtime.contextLimitUserInputCapability, oldDispatchId,
+      managed.id, questions, sessionRuntimeStateForTest(h.runtime).contextLimitUserInputCapability, oldDispatchId,
     )
 
     let providerBuilds = 0; let dispatch: Promise<void> | undefined
@@ -8294,7 +8299,7 @@ describe('durable restart recovery', () => {
       options: { automaticRecovery: { dispatchId: accepted.responseMessageId } },
     })
 
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+    const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     let coldProviderBuilds = 0
     cold.runtime.getOrCreateAgent = async () => {
       coldProviderBuilds++
@@ -8367,11 +8372,11 @@ describe('durable restart recovery', () => {
     }
     managed.sdkSessionId = 'future-answer-oversized-provider-context'
     const request = await h.runtime.requestUserInput(
-      managed.id, questions, h.runtime.contextLimitUserInputCapability, oldDispatchId,
+      managed.id, questions, sessionRuntimeStateForTest(h.runtime).contextLimitUserInputCapability, oldDispatchId,
     )
 
     const futureAnswerTimestamp = Date.now() + 5 * 60_000
-    h.runtime.lastTimestamp = futureAnswerTimestamp
+    sessionRuntimeStateForTest(h.runtime).lastTimestamp = futureAnswerTimestamp
     const liveFreshRuntimeEntered = deferred(); const releaseLiveFreshRuntime = deferred()
     let liveProviderBuilds = 0; let liveDispatch: Promise<void> | undefined
     const oversizedRuntime = {
@@ -8420,7 +8425,7 @@ describe('durable restart recovery', () => {
       expect(liveHeader.pendingTurnRecovery.recoveryDispatch).toEqual(liveRecoveryDispatch)
       expect(liveHeader.providerContextBoundaryMessageId).toBe(responseMessage.id)
 
-      const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+      const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
       const coldRuntimeEntered = deferred()
       cold.runtime.getOrCreateAgent = async () => {
         coldRuntimeEntered.resolve()
@@ -8438,10 +8443,10 @@ describe('durable restart recovery', () => {
       expect(restored.userInputRequests).toEqual([expect.objectContaining({
         id: request.requestId, status: 'answered', responseMessageId: responseMessage.id,
       })])
-      expect(restored.userInputRequests.some((candidate: any) => candidate.status === 'pending')).toBe(false)
+      expect(requiredTestValue(restored.userInputRequests).some((candidate: any) => candidate.status === 'pending')).toBe(false)
       expect(restored.providerContextBoundaryMessageId).toBe(responseMessage.id)
       expect(restored.sdkSessionId).toBeUndefined()
-      const resumedDispatch = restored.pendingTurnRecovery.recoveryDispatch
+      const resumedDispatch = requiredTestValue(requiredTestValue(restored.pendingTurnRecovery).recoveryDispatch)
       expect(resumedDispatch).toMatchObject({
         id: responseMessage.id, cause: 'user_retry', origin: 'retry', phase: 'started',
       })
@@ -8527,7 +8532,7 @@ describe('durable restart recovery', () => {
     }]
     await h.save(managed)
 
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+    const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     cold.runtime.processNextQueuedMessage = () => {}
     await cold.runtime.ensureMessagesLoaded(restored)
     await cold.manager.flushSession(restored.id)
@@ -8535,21 +8540,21 @@ describe('durable restart recovery', () => {
       userMessageId: originalId, lastUserMessageId: implementationId,
       originalText: originalRequest,
     })
-    expect(restored.activeObjective.amendments).toEqual([
+    expect(requiredTestValue(restored.activeObjective).amendments).toEqual([
       { messageId: implementationId, text: implementationRequest, timestamp: 3 },
     ])
-    expect(restored.activeObjective.acceptanceCriteria).toHaveLength(1)
-    expect(restored.activeObjective.acceptanceCriteria[0]).toMatchObject({ id: 'deployed' })
-    expect(restored.userInputRequests[0].status).toBe('pending')
+    expect(requiredTestValue(restored.activeObjective).acceptanceCriteria).toHaveLength(1)
+    expect(requiredTestValue(requiredTestValue(restored.activeObjective).acceptanceCriteria)[0]).toMatchObject({ id: 'deployed' })
+    expect(requiredTestValue(restored.userInputRequests)[0].status).toBe('pending')
     expect(cold.runtime.retryableContextLimitRequest(restored)).toMatchObject({ id: 'strong-context-question' })
     const debugRemaining = [
       'Resolve host validation gap: required execution evidence is missing',
       'Reconcile the current target state against registered acceptance criterion deployed; only if it is unmet, complete it idempotently, then verify it: Zero is healthy at the deployed revision.',
     ]
     expect(createCleanRecoveryContinuationHandoff({
-      objective: { ...restored.activeObjective, lastOutcome: { state: 'continue', blocker: null,
+      objective: { ...requiredTestValue(restored.activeObjective), lastOutcome: { state: 'continue', blocker: null,
         criteria: [{ id: 'deployed', satisfied: false, evidence: [] }], remainingWork: debugRemaining } },
-      pending: { ...restored.pendingTurnRecovery, lastCause: 'user_retry' },
+      pending: { ...requiredTestValue(restored.pendingTurnRecovery), lastCause: 'user_retry' },
       objectiveText: originalRequest, evidence: [], remainingWork: debugRemaining,
     })).toBeDefined()
     expect(cold.runtime.createContextLimitRetryHandoff(restored, restored.pendingTurnRecovery)).toBeDefined()
@@ -8571,11 +8576,11 @@ describe('durable restart recovery', () => {
       ])
       expect(disposed).toBe(1)
       expect(restored.sdkSessionId).toBeUndefined()
-      expect(restored.providerContextBoundaryMessageId).toBe(restored.pendingTurnRecovery.recoveryDispatch.id)
-      expect(restored.tokenUsage.contextTokens).toBeLessThan(100_000)
-      expect(restored.userInputRequests[0]).toMatchObject({ status: 'cancelled' })
+      expect(restored.providerContextBoundaryMessageId).toBe(requiredTestValue(requiredTestValue(restored.pendingTurnRecovery).recoveryDispatch).id)
+      expect(requiredTestValue(restored.tokenUsage).contextTokens).toBeLessThan(100_000)
+      expect(requiredTestValue(restored.userInputRequests)[0]).toMatchObject({ status: 'cancelled' })
       const boundaries = restored.messages.filter((message: any) => (
-        message.id === restored.pendingTurnRecovery.recoveryDispatch.id
+        message.id === requiredTestValue(requiredTestValue(restored.pendingTurnRecovery).recoveryDispatch).id
       ))
       expect(boundaries).toHaveLength(1)
       expect(boundaries[0]).toMatchObject({ role: 'user', hidden: true })
@@ -8662,7 +8667,7 @@ describe('durable restart recovery', () => {
         }],
       }]
       const created = await h.runtime.requestUserInput(
-        managed.id, questions, h.runtime.contextLimitUserInputCapability, dispatchId,
+        managed.id, questions, sessionRuntimeStateForTest(h.runtime).contextLimitUserInputCapability, dispatchId,
       )
       const request = managed.userInputRequests![0]!
       expect(request).toMatchObject({
@@ -8740,7 +8745,7 @@ describe('durable restart recovery', () => {
       contextTokens: 134_945, costUsd: 1,
     }
     const created = await h.runtime.requestUserInput(
-      managed.id, questions, h.runtime.contextLimitUserInputCapability, dispatchId,
+      managed.id, questions, sessionRuntimeStateForTest(h.runtime).contextLimitUserInputCapability, dispatchId,
     )
     expect(managed.userInputRequests).toHaveLength(2)
     expect(managed.userInputRequests![0]).toMatchObject({
@@ -8856,7 +8861,7 @@ describe('durable restart recovery', () => {
         }],
       }]
       const created = await h.runtime.requestUserInput(
-        managed.id, questions, h.runtime.contextLimitUserInputCapability, dispatchId,
+        managed.id, questions, sessionRuntimeStateForTest(h.runtime).contextLimitUserInputCapability, dispatchId,
       )
       const contextRequest = managed.userInputRequests.find((request: any) => request.id === created.requestId)!
       expect(contextRequest).toMatchObject({
@@ -9071,14 +9076,14 @@ describe('durable restart recovery', () => {
     }]
     await h.save(managed)
 
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+    const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     cold.runtime.processNextQueuedMessage = () => {}
     await cold.runtime.ensureMessagesLoaded(restored)
     await cold.manager.flushSession(restored.id)
     expect(restored.activeObjective).toMatchObject({
       userMessageId: originalId, lastUserMessageId: contextualId, originalText: originalRequest,
     })
-    expect(restored.userInputRequests[0]).toMatchObject({
+    expect(requiredTestValue(restored.userInputRequests)[0]).toMatchObject({
       id: 'business-target-question', status: 'pending', objectiveUserMessageId: originalId,
     })
     const repairedHeader = JSON.parse(
@@ -9092,11 +9097,11 @@ describe('durable restart recovery', () => {
       answers: [{ questionId: 'target', optionIds: ['dev'] }],
     })
     expect(accepted).toMatchObject({ status: 'accepted', delivery: 'queued' })
-    expect(restored.userInputRequests[0]).toMatchObject({
+    expect(requiredTestValue(restored.userInputRequests)[0]).toMatchObject({
       status: 'answered', objectiveUserMessageId: originalId,
     })
     expect(restored.messages.find((message: any) => (
-      message.id === restored.userInputRequests[0].responseMessageId
+      message.id === requiredTestValue(restored.userInputRequests)[0].responseMessageId
     ))).toMatchObject({ role: 'user', hidden: true, isQueued: true,
       internalOrigin: { kind: 'user-input' } })
   })
@@ -9156,7 +9161,7 @@ describe('durable restart recovery', () => {
       }]
       await h.save(managed)
 
-      const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+      const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
       cold.runtime.processNextQueuedMessage = () => {}
       await cold.runtime.ensureMessagesLoaded(restored)
       await cold.manager.flushSession(restored.id)
@@ -9164,10 +9169,10 @@ describe('durable restart recovery', () => {
       expect(restored.activeObjective).toMatchObject({
         userMessageId: originalId, lastUserMessageId: contextualId, originalText: originalRequest,
       })
-      expect(restored.userInputRequests[0]).toMatchObject({
+      expect(requiredTestValue(restored.userInputRequests)[0]).toMatchObject({
         id: requestId, status: 'answered', objectiveUserMessageId: originalId,
       })
-      expect(restored.userInputRequests[1]).toMatchObject({
+      expect(requiredTestValue(restored.userInputRequests)[1]).toMatchObject({
         id: `repaired-root-context-limit-${format}`,
         status: 'pending', objectiveUserMessageId: contextualId,
       })
@@ -9423,12 +9428,12 @@ describe('durable restart recovery', () => {
       expect(freshHeader.tokenUsage.contextTokens).toBeLessThan(100_000)
       expect(freshHeader.providerContextBoundaryMessageId)
         .toBe(managed.pendingTurnRecovery?.recoveryDispatch?.id)
-      const cold = h.cold(); const coldRestored = cold.runtime.sessions.get(managed.id)
+      const cold = h.cold(); const coldRestored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
       await cold.runtime.ensureMessagesLoaded(coldRestored)
       expect(coldRestored.sdkSessionId).toBeUndefined()
       expect(coldRestored.branchFromSdkSessionId).toBeUndefined()
       expect(coldRestored.contextCompactionAttempt).toBeUndefined()
-      expect(coldRestored.tokenUsage.contextTokens).toBeLessThan(100_000)
+      expect(requiredTestValue(coldRestored.tokenUsage).contextTokens).toBeLessThan(100_000)
       expect(coldRestored.messages.filter((entry: any) => (
         entry.id === coldRestored.providerContextBoundaryMessageId
       ))).toHaveLength(1)
@@ -9470,7 +9475,7 @@ describe('durable restart recovery', () => {
       origin: 'automatic', allocatedAt: now - 2_000, phase: 'started', startedAt: now - 1_500,
       preToolExecutionReceiptVersion: 1,
     } }
-    const capability = h.runtime.contextLimitUserInputCapability
+    const capability = sessionRuntimeStateForTest(h.runtime).contextLimitUserInputCapability
     await h.runtime.requestUserInput(managed.id, questions, capability, 'old-context-dispatch')
     managed.pendingTurnRecovery = { ...managed.pendingTurnRecovery, recoveryDispatch: {
       schemaVersion: 1, id: 'new-context-dispatch', attempt: 3, cause: 'objective_incomplete',
@@ -9562,7 +9567,7 @@ describe('durable restart recovery', () => {
       ],
     }]
     expect(managed.pendingTurnRecovery?.recoveryDispatch).toBeUndefined()
-    const capability = h.runtime.contextLimitUserInputCapability
+    const capability = sessionRuntimeStateForTest(h.runtime).contextLimitUserInputCapability
 
     const result = await h.runtime.requestUserInput(managed.id, questions, capability, undefined)
     expect(result.status).toBe('pending')
@@ -9615,30 +9620,28 @@ describe('durable restart recovery', () => {
       && event.error?.code === 'objective_validation_failed')).toBe(false)
 
     await h.save(managed)
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+    const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     await cold.runtime.ensureMessagesLoaded(restored)
     await cold.runtime.resumePendingTurnAfterRestart(restored.id)
     expect(restored.pendingTurnRecovery).toBeUndefined()
-    expect(restored.activeObjective.interruptedTurnRecovery?.recovery).toMatchObject({
+    expect(requiredTestValue(restored.activeObjective).interruptedTurnRecovery?.recovery).toMatchObject({
       attempts: 2, lastCause: 'objective_continue',
       continuationWork: ['Run the final verification'],
       continuationOrigin: 'objective_continue',
     })
-    expect(restored.activeObjective.interruptedTurnRecovery?.recovery.exhaustedAt)
+    expect(requiredTestValue(restored.activeObjective).interruptedTurnRecovery?.recovery.exhaustedAt)
       .toBe(interruptedRecovery?.exhaustedAt)
 
     let retryBudget: Managed['pendingTurnRecovery']
     let retryPrompt = ''
-    const agent = {
-      getModel: () => 'fixture-model', getSessionId: () => null, setAllSources: () => {}, isProcessing: () => false,
-      dispose: () => {},
+    const agent = new ScriptedSessionAgent(restored.workspace, {
       async *chat(message: string) {
         retryBudget = structuredClone(restored.pendingTurnRecovery)
         retryPrompt = message
         yield { type: 'typed_error', error: { code: 'network_error', title: 'Fixture stop', message: 'stop', actions: [], canRetry: true } }
         yield { type: 'complete' }
       },
-    }
+    })
     cold.runtime.getOrCreateAgent = async () => { restored.agent = agent; return agent }
     let dispatch: Promise<void> | undefined
     const send = cold.manager.sendMessage.bind(cold.manager)
@@ -9753,7 +9756,7 @@ describe('durable restart recovery', () => {
     const runtime = restarted as any
     runtime.sendEvent = (event: unknown) => h.events.push(event)
     runtime.loadSessionsFromDisk()
-    const restored = runtime.sessions.get(managed.id)
+    const restored = requiredTestValue(sessionRuntimeStateForTest(restarted).sessions.get(managed.id))
 
     expect(restored.pendingTurnRecovery).toBeUndefined()
     expect(restored.activeObjective).toMatchObject({
@@ -9790,7 +9793,7 @@ describe('durable restart recovery', () => {
     runtime.sendEvent = (event: unknown) => h.events.push(event)
 
     runtime.loadSessionsFromDisk()
-    const restored = runtime.sessions.get(managed.id)
+    const restored = requiredTestValue(sessionRuntimeStateForTest(restarted).sessions.get(managed.id))
 
     expect(restored.pendingTurnRecovery).toBeUndefined()
     expect(restored.activeObjective).toMatchObject({
@@ -9822,12 +9825,12 @@ describe('durable restart recovery', () => {
     runtime.sendEvent = (event: unknown) => h.events.push(event)
 
     runtime.loadSessionsFromDisk()
-    const restored = runtime.sessions.get(managed.id)
+    const restored = requiredTestValue(sessionRuntimeStateForTest(restarted).sessions.get(managed.id))
 
     expect(restored.messagesLoaded).toBe(true)
-    expect(restored.activeObjective.terminalState).toBe('active')
+    expect(requiredTestValue(restored.activeObjective).terminalState).toBe('active')
     expect(restored.pendingTurnRecovery).toBeUndefined()
-    expect(restored.activeObjective.interruptedTurnRecovery).toBeUndefined()
+    expect(requiredTestValue(restored.activeObjective).interruptedTurnRecovery).toBeUndefined()
     expect(runtime.getInterruptedTurnRecovery(restored, `${managed.id}-user`)).toBeUndefined()
     await restarted.flushSession(restored.id)
     const header = JSON.parse(readFileSync(getSessionFilePath(h.rootPath, restored.id), 'utf8').split('\n')[0]!)
@@ -9880,11 +9883,11 @@ describe('durable restart recovery', () => {
     }
 
     runtime.loadSessionsFromDisk()
-    const restored = runtime.sessions.get(managed.id)
+    const restored = requiredTestValue(sessionRuntimeStateForTest(restarted).sessions.get(managed.id))
     // Cold metadata reconciliation is synchronous. It must not archive a
     // committed allocation merely because the Retry grant spent its last pass.
-    expect(restored.activeObjective.terminalState).toBe('active')
-    expect(restored.activeObjective.interruptedTurnRecovery).toBeUndefined()
+    expect(requiredTestValue(restored.activeObjective).terminalState).toBe('active')
+    expect(requiredTestValue(restored.activeObjective).interruptedTurnRecovery).toBeUndefined()
     expect(restored.pendingTurnRecovery).toMatchObject({
       attempts: 4,
       exhaustedAt: managed.pendingTurnRecovery.exhaustedAt,
@@ -9907,7 +9910,7 @@ describe('durable restart recovery', () => {
       dispatchAttempt: 5,
       dispatchOrigin: 'restart',
     })
-    expect(restored.pendingTurnRecovery.attempts).toBe(4)
+    expect(requiredTestValue(restored.pendingTurnRecovery).attempts).toBe(4)
   })
 
   it.each(['tool_checkpoint', 'objective_incomplete', 'evidence_gate', 'premature_final', 'app_restart'])(
@@ -10101,7 +10104,7 @@ describe('durable restart recovery', () => {
       expect(managed.activeObjective).toMatchObject({ userMessageId: beforeObjective!.userMessageId, terminalState: 'active',
         budgetBaselineUsd: beforeObjective!.budgetBaselineUsd, tokenBaseline: beforeObjective!.tokenBaseline })
     }
-    expect(h.runtime.queuedMessageDispatches.has(managed.id)).toBe(false)
+    expect(sessionRuntimeStateForTest(h.runtime).queuedMessageDispatches.has(managed.id)).toBe(false)
     releaseAgent.resolve(); await dispatch; await h.manager.cleanup()
   })
 
@@ -10119,15 +10122,15 @@ describe('durable restart recovery', () => {
       expect(h.events).toEqual([])
       for (const block of ['question', 'permission', 'auth', 'stop', 'shutdown']) {
         if (block === 'question') managed.userInputRequests = [{ status: 'pending', sessionId: managed.id, createdAt: 1 }] as never
-        if (block === 'permission') h.runtime.pendingPermissionRequests.set('approval', { sessionId: managed.id })
+        if (block === 'permission') sessionRuntimeStateForTest(h.runtime).pendingPermissionRequests.set('approval', permissionMetadataFixture(managed.id))
         if (block === 'auth') managed.pendingAuthRequestId = 'auth'
         if (block === 'stop') managed.stopRequested = true
-        if (block === 'shutdown') h.runtime.shuttingDown = true
+        if (block === 'shutdown') sessionRuntimeStateForTest(h.runtime).shuttingDown = true
         expect(await h.runtime.enqueueAutomaticTurnRecovery(managed, cause)).toBe(false)
         expect(managed.pendingTurnRecovery).toBeUndefined()
         expect(managed.messageQueue).toEqual(before.queue)
-        managed.userInputRequests = undefined; h.runtime.pendingPermissionRequests.clear()
-        managed.pendingAuthRequestId = undefined; managed.stopRequested = false; h.runtime.shuttingDown = false
+        managed.userInputRequests = undefined; sessionRuntimeStateForTest(h.runtime).pendingPermissionRequests.clear()
+        managed.pendingAuthRequestId = undefined; managed.stopRequested = false; sessionRuntimeStateForTest(h.runtime).shuttingDown = false
       }
       managed.messages.at(-1)!.hidden = true
       expect(await h.runtime.enqueueAutomaticTurnRecovery(managed, cause)).toBe(false)
@@ -10174,14 +10177,14 @@ describe('durable restart recovery', () => {
     h.manager.sendMessage = async () => { starts++ }
     for (const decision of ['question', 'permission', 'auth', 'stop']) {
       if (decision === 'question') managed.userInputRequests = [{ status: 'pending', sessionId: managed.id, createdAt: 1 }] as never
-      if (decision === 'permission') h.runtime.pendingPermissionRequests.set('approval', { sessionId: managed.id })
+      if (decision === 'permission') sessionRuntimeStateForTest(h.runtime).pendingPermissionRequests.set('approval', permissionMetadataFixture(managed.id))
       if (decision === 'auth') managed.pendingAuthRequestId = 'auth'
       if (decision === 'stop') managed.stopRequested = true
       expect(await h.runtime.enqueueAutomaticTurnRecovery(managed, 'tool_checkpoint')).toBe(false)
       h.runtime.processNextQueuedMessage(managed.id); await tick()
       expect(starts).toBe(0)
       expect(managed.pendingTurnRecovery).toEqual(before)
-      managed.userInputRequests = undefined; h.runtime.pendingPermissionRequests.clear(); managed.pendingAuthRequestId = undefined; managed.stopRequested = false
+      managed.userInputRequests = undefined; sessionRuntimeStateForTest(h.runtime).pendingPermissionRequests.clear(); managed.pendingAuthRequestId = undefined; managed.stopRequested = false
     }
     await h.manager.cancelProcessing(managed.id)
     h.runtime.processNextQueuedMessage(managed.id); await tick()
@@ -10201,11 +10204,11 @@ describe('durable restart recovery', () => {
     cold.runtime.enqueueAutomaticTurnRecovery = async () => { resumed++; return false }
     cold.runtime.getOrCreateAgent = async () => { throw new Error('No provider may run for a persisted final review') }
     await cold.runtime.resumePendingTurnAfterRestart(managed.id)
-    const restored = cold.runtime.sessions.get(managed.id)
+    const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     expect(resumed).toBe(0)
     expect(restored.activeObjective).toMatchObject({ terminalState: 'complete_verified', budgetBaselineUsd: 12, tokenBaseline: 300 })
     expect(restored.messages.map((message: { id: string }) => message.id)).toEqual(['review-child-user', 'review-observation', 'review-final'])
-    expect(restored.messages.at(-1).content).toBe(f.finalText)
+    expect(requiredTestValue(restored.messages.at(-1)).content).toBe(f.finalText)
     expect(restored.pendingTurnRecovery).toBeUndefined()
     expect(h.events.some(event => event.type === 'objective_changed' && event.sessionId === managed.id && event.activeObjective?.terminalState === 'complete_verified')).toBe(true)
   })
@@ -10257,7 +10260,7 @@ describe('durable restart recovery', () => {
     )
     await h.save(managed)
 
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+    const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     await cold.runtime.ensureMessagesLoaded(restored)
     policyRehydrateObjectiveEvidence(restored)
 
@@ -10309,13 +10312,13 @@ describe('durable restart recovery', () => {
     const delivered: string[] = []
     runtime.sendMessage = async (id: string, _text: string, _attachments: unknown, _stored: unknown, _options: unknown, messageId: string) => {
       delivered.push(messageId)
-      const session = runtime.sessions.get(id)
-      session.messages.find((message: any) => message.id === messageId).isQueued = false
-      runtime.queuedMessageDispatches.delete(id)
+      const session = requiredTestValue(sessionRuntimeStateForTest(restarted).sessions.get(id))
+      requiredTestValue(session.messages.find((message: any) => message.id === messageId)).isQueued = false
+      sessionRuntimeStateForTest(restarted).queuedMessageDispatches.delete(id)
       runtime.processNextQueuedMessage(id)
     }
     runtime.loadSessionsFromDisk()
-    const restored = runtime.sessions.get('inbox')
+    const restored = requiredTestValue(sessionRuntimeStateForTest(restarted).sessions.get('inbox'))
     await Promise.all([runtime.ensureMessagesLoaded(restored), runtime.ensureMessagesLoaded(restored)])
     for (let i = 0; i < 5; i++) await tick()
     expect(delivered).toEqual(['a', 'b'])
@@ -10365,7 +10368,7 @@ describe('durable restart recovery', () => {
     releaseHydration.resolve(); await preparing.promise
     expect(automaticPreparations).toBe(0)
     expect(humanPreparations).toBe(1)
-    expect(h.runtime.queuedMessageDispatches.has(managed.id)).toBe(false)
+    expect(sessionRuntimeStateForTest(h.runtime).queuedMessageDispatches.has(managed.id)).toBe(false)
     expect(managed.messageQueue).toEqual([])
     expect(managed.pendingTurnRecovery).toMatchObject({
       userMessageId: queuedId,
@@ -10453,12 +10456,12 @@ describe('durable restart recovery', () => {
     expect(acceptedRows[0].pendingTurnRecovery.recoveryDispatch).toBeUndefined()
     const coldBeforeRelease = h.cold()
     coldBeforeRelease.runtime.processNextQueuedMessage = () => {}
-    const restoredBeforeRelease = coldBeforeRelease.runtime.sessions.get(managed.id)
+    const restoredBeforeRelease = requiredTestValue(sessionRuntimeStateForTest(coldBeforeRelease.runtime).sessions.get(managed.id))
     await coldBeforeRelease.runtime.ensureMessagesLoaded(restoredBeforeRelease)
     expect(restoredBeforeRelease.messages.some((row: any) => row.role === 'user' && row.hidden
       && row.content.includes('<automatic_turn_recovery '))).toBe(false)
     expect(restoredBeforeRelease.messageQueue.some((item: any) => item.messageId === humanId)).toBe(true)
-    expect(restoredBeforeRelease.pendingTurnRecovery.recoveryDispatch).toBeUndefined()
+    expect(requiredTestValue(restoredBeforeRelease.pendingTurnRecovery).recoveryDispatch).toBeUndefined()
 
     releaseDispatchFlush.resolve()
     await preparing.promise
@@ -10544,7 +10547,7 @@ describe('durable restart recovery', () => {
     await cold.runtime.resumePendingTurnAfterRestart(managed.id)
     await tick(); await tick()
     expect(restartPreparations).toBe(0)
-    expect(cold.runtime.sessions.get(managed.id).messageQueue).toEqual([])
+    expect(requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id)).messageQueue).toEqual([])
 
     releaseDispatchFlush.resolve()
     await dispatch
@@ -10605,7 +10608,7 @@ describe('durable restart recovery', () => {
     })
     const cold = h.cold(); cold.runtime.processNextQueuedMessage = () => {}
     await cold.runtime.resumePendingTurnAfterRestart(managed.id)
-    const restored = cold.runtime.sessions.get(managed.id)
+    const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     expect(restored.messageQueue[0]?.options?.automaticRecovery?.dispatchId).toBe(dispatchId)
     expect(restored.messages.some((message: any) => message.role === 'user' && message.hidden
       && message.content.includes('<automatic_turn_recovery '))).toBe(false)
@@ -10671,7 +10674,7 @@ describe('durable restart recovery', () => {
     expect(managed.messages.some(message => message.hidden
       && message.content.includes('<automatic_turn_recovery '))).toBe(false)
     expect(managed.messages.find(message => message.id === 'preserved-hidden-agent-message')).toBeDefined()
-    expect(h.runtime.syntheticAutomaticMessagesInFlight.get(managed)).toBeUndefined()
+    expect(sessionRuntimeStateForTest(h.runtime).syntheticAutomaticMessagesInFlight.get(managed)).toBeUndefined()
     expect(managed.pendingTurnRecovery?.recoveryDispatch?.phase).toBe('allocated')
     expect(managed.messageQueue).toHaveLength(1)
     expect(managed.messageQueue[0]?.options?.automaticRecovery?.dispatchId)
@@ -10721,7 +10724,7 @@ describe('durable restart recovery', () => {
     expect(deferredMessage?.isQueued).toBe(true)
     expect(managed.messageQueue[0]?.messageId).toBe(deferredMessage?.id)
     expect(managed.pendingTurnRecovery?.recoveryDispatch?.phase).toBe('allocated')
-    expect(h.runtime.syntheticAutomaticMessagesInFlight.get(managed)?.has(deferredMessage)).toBe(true)
+    expect(sessionRuntimeStateForTest(h.runtime).syntheticAutomaticMessagesInFlight.get(managed)?.has(requiredTestValue(deferredMessage))).toBe(true)
 
     const chatEntered = deferred()
     const deliveredAgent = {
@@ -10744,7 +10747,7 @@ describe('durable restart recovery', () => {
     await chatEntered.promise
     await dispatches[1]
 
-    expect(h.runtime.syntheticAutomaticMessagesInFlight.get(managed)).toBeUndefined()
+    expect(sessionRuntimeStateForTest(h.runtime).syntheticAutomaticMessagesInFlight.get(managed)).toBeUndefined()
     expect(managed.messages.some(message => message === deferredMessage)).toBe(true)
   })
 
@@ -10795,7 +10798,7 @@ describe('durable restart recovery', () => {
     expect(starts).toBe(0)
     expect(managed.messageQueue).toHaveLength(1)
     expect(managed.messages).toHaveLength(1)
-    expect(h.runtime.queuedMessageDispatches.has(managed.id)).toBe(false)
+    expect(sessionRuntimeStateForTest(h.runtime).queuedMessageDispatches.has(managed.id)).toBe(false)
   })
 
   it('does not clear or complete a replacement reservation when an old dispatch rejects after Stop', async () => {
@@ -10810,11 +10813,11 @@ describe('durable restart recovery', () => {
     await h.manager.cancelProcessing(managed.id)
     managed.messageQueue.push({ message: 'New internal continuation' })
     h.runtime.processNextQueuedMessage(managed.id)
-    const replacement = h.runtime.queuedMessageDispatches.get(managed.id)
+    const replacement = sessionRuntimeStateForTest(h.runtime).queuedMessageDispatches.get(managed.id)
     const eventsBeforeError = h.events.length
     rejectOld(new Error('Old hydration failed'))
     await Promise.resolve(); await Promise.resolve(); await Promise.resolve()
-    expect(h.runtime.queuedMessageDispatches.get(managed.id)).toBe(replacement)
+    expect(sessionRuntimeStateForTest(h.runtime).queuedMessageDispatches.get(managed.id)).toBe(replacement)
     expect(h.events).toHaveLength(eventsBeforeError)
     await tick()
     expect(sends).toBe(2)
@@ -10827,7 +10830,7 @@ describe('durable restart recovery', () => {
     managed.messages.push({ id: 'already-persisted-recovery', role: 'user', hidden: true, isQueued: true, timestamp: Date.now(),
       content: buildAutomaticTurnRecoveryPrompt(managed.pendingTurnRecovery!, 'app_restart') })
     await h.save(managed)
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+    const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     const preparing = deferred(); const releaseAgent = deferred()
     cold.runtime.startGenerationTelemetry = () => {}; cold.runtime.finishGenerationTelemetry = () => {}
     let preparations = 0
@@ -10845,7 +10848,7 @@ describe('durable restart recovery', () => {
     expect(restored.messageQueue).toHaveLength(0)
     expect(restored.messages.filter((message: any) => message.role === 'user' && !message.hidden)).toHaveLength(1)
     expect(restored.messages.filter((message: any) => message.id === 'already-persisted-recovery')).toHaveLength(1)
-    expect(restored.messages.find((message: any) => message.id === 'already-persisted-recovery').isQueued).toBe(false)
+    expect(requiredTestValue(restored.messages.find((message: any) => message.id === 'already-persisted-recovery')).isQueued).toBe(false)
     releaseAgent.resolve(); await dispatch; await cold.manager.cleanup()
   })
 
@@ -10860,7 +10863,7 @@ describe('durable restart recovery', () => {
       })
       await h.save(managed)
 
-      const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+      const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
       const dequeues: string[] = []
       cold.runtime.processNextQueuedMessage = (sessionId: string) => { dequeues.push(sessionId) }
       await cold.runtime.ensureMessagesLoaded(restored)
@@ -10908,7 +10911,7 @@ describe('durable restart recovery', () => {
       })
       await h.save(managed)
 
-      const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+      const cold = h.cold(); const restored = sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id)
       const dequeues: string[] = []
       cold.runtime.processNextQueuedMessage = (sessionId: string) => { dequeues.push(sessionId) }
       await cold.runtime.ensureMessagesLoaded(restored)
@@ -10925,7 +10928,7 @@ describe('durable restart recovery', () => {
     managed.messages.push({ id: 'queued-human', role: 'user', content: 'Apply my review.', timestamp: 2, isQueued: true })
     await h.save(managed)
 
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+    const cold = h.cold(); const restored = sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id)
     const dequeues: string[] = []
     cold.runtime.processNextQueuedMessage = (sessionId: string) => { dequeues.push(sessionId) }
     await cold.runtime.ensureMessagesLoaded(restored)
@@ -10946,7 +10949,7 @@ describe('durable restart recovery', () => {
       })
       await h.save(managed)
 
-      const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+      const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
       const dequeues: string[] = []
       cold.runtime.processNextQueuedMessage = (sessionId: string) => { dequeues.push(sessionId) }
       await cold.runtime.ensureMessagesLoaded(restored)
@@ -10969,7 +10972,7 @@ describe('durable restart recovery', () => {
     })
     await h.save(managed)
 
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+    const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     const dequeues: string[] = []
     cold.runtime.processNextQueuedMessage = (sessionId: string) => { dequeues.push(sessionId) }
     cold.runtime.reconcileRetainedTerminalMachineInbox = async () => {}
@@ -10988,7 +10991,7 @@ describe('durable restart recovery', () => {
     managed.messages.push({ id: 'queued-human', role: 'user', content: 'Continue the legacy task.', timestamp: 2, isQueued: true })
     await h.save(managed)
 
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+    const cold = h.cold(); const restored = sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id)
     const dequeues: string[] = []
     cold.runtime.processNextQueuedMessage = (sessionId: string) => { dequeues.push(sessionId) }
     await cold.runtime.ensureMessagesLoaded(restored)
@@ -11010,7 +11013,7 @@ describe('durable restart recovery', () => {
     }
     await h.save(managed)
 
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+    const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     const resumed: string[] = []
     cold.runtime.enqueueAutomaticTurnRecovery = async (session: Managed) => {
       resumed.push(session.id)
@@ -11021,7 +11024,7 @@ describe('durable restart recovery', () => {
 
     expect(resumed).toEqual([managed.id])
     expect(restored.activeObjective).toMatchObject({ terminalState: 'active' })
-    expect(restored.activeObjective.completedAt).toBeUndefined()
+    expect(requiredTestValue(restored.activeObjective).completedAt).toBeUndefined()
   })
 
   it('lets an authenticated cold pending answer reactivate its terminal objective', async () => {
@@ -11058,7 +11061,7 @@ describe('durable restart recovery', () => {
     }]
     await h.save(managed)
 
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+    const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     const dequeues: string[] = []
     cold.runtime.processNextQueuedMessage = (sessionId: string) => {
       dequeues.push(sessionId)
@@ -11069,7 +11072,7 @@ describe('durable restart recovery', () => {
 
     expect(dequeues).toEqual([managed.id])
     expect(restored.activeObjective).toMatchObject({ terminalState: 'active' })
-    expect(restored.activeObjective.completedAt).toBeUndefined()
+    expect(requiredTestValue(restored.activeObjective).completedAt).toBeUndefined()
   })
 
   it.each(['missing', 'duplicated', 'wrong-objective'] as const)(
@@ -11097,18 +11100,18 @@ describe('durable restart recovery', () => {
       }
       await h.save(managed)
 
-      const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+      const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
       let providerStarts = 0
       cold.runtime.getOrCreateAgent = async () => { providerStarts++; throw new Error('No provider expected') }
-      cold.runtime.deferredAutomaticSessions.add(managed.id)
-      cold.runtime.automaticAdmissionReservations.add(managed.id)
+      sessionRuntimeStateForTest(cold.runtime).deferredAutomaticSessions.add(managed.id)
+      sessionRuntimeStateForTest(cold.runtime).automaticAdmissionReservations.add(managed.id)
       await cold.runtime.resumePendingTurnAfterRestart(managed.id)
 
       expect(providerStarts).toBe(0)
       expect(restored.pendingTurnRecovery).toBeUndefined()
       expect(restored.activeObjective).toMatchObject({ terminalState: 'exhausted', completedAt: 2 })
-      expect(cold.runtime.deferredAutomaticSessions.has(managed.id)).toBe(false)
-      expect(cold.runtime.automaticAdmissionReservations.has(managed.id)).toBe(false)
+      expect(sessionRuntimeStateForTest(cold.runtime).deferredAutomaticSessions.has(managed.id)).toBe(false)
+      expect(sessionRuntimeStateForTest(cold.runtime).automaticAdmissionReservations.has(managed.id)).toBe(false)
       expect(listSessions(h.rootPath).find(meta => meta.id === managed.id)?.pendingTurnRecovery).toBeUndefined()
     },
   )
@@ -11128,18 +11131,18 @@ describe('durable restart recovery', () => {
     }
     await h.save(managed)
 
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+    const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     let providerStarts = 0
     cold.runtime.getOrCreateAgent = async () => { providerStarts++; throw new Error('No provider expected') }
-    cold.runtime.deferredAutomaticSessions.add(managed.id)
-    cold.runtime.automaticAdmissionReservations.add(managed.id)
+    sessionRuntimeStateForTest(cold.runtime).deferredAutomaticSessions.add(managed.id)
+    sessionRuntimeStateForTest(cold.runtime).automaticAdmissionReservations.add(managed.id)
     await cold.runtime.resumePendingTurnAfterRestart(managed.id)
 
     expect(providerStarts).toBe(0)
     expect(restored.pendingTurnRecovery).toBeUndefined()
     expect(restored.activeObjective?.terminalState).toBe('active')
-    expect(cold.runtime.deferredAutomaticSessions.has(managed.id)).toBe(false)
-    expect(cold.runtime.automaticAdmissionReservations.has(managed.id)).toBe(false)
+    expect(sessionRuntimeStateForTest(cold.runtime).deferredAutomaticSessions.has(managed.id)).toBe(false)
+    expect(sessionRuntimeStateForTest(cold.runtime).automaticAdmissionReservations.has(managed.id)).toBe(false)
     expect(listSessions(h.rootPath).find(meta => meta.id === managed.id)?.pendingTurnRecovery).toBeUndefined()
   })
 
@@ -11166,11 +11169,11 @@ describe('durable restart recovery', () => {
     }]
     await h.save(managed)
 
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+    const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     let providerStarts = 0
     cold.runtime.getOrCreateAgent = async () => { providerStarts++; throw new Error('No provider expected') }
-    cold.runtime.deferredAutomaticSessions.add(managed.id)
-    cold.runtime.automaticAdmissionReservations.add(managed.id)
+    sessionRuntimeStateForTest(cold.runtime).deferredAutomaticSessions.add(managed.id)
+    sessionRuntimeStateForTest(cold.runtime).automaticAdmissionReservations.add(managed.id)
     await cold.runtime.resumePendingTurnAfterRestart(managed.id)
 
     expect(providerStarts).toBe(0)
@@ -11178,24 +11181,24 @@ describe('durable restart recovery', () => {
     expect(restored.activeObjective).toMatchObject({ terminalState: 'blocked_human', completedAt: 2 })
     expect(restored.messages.find((message: { id: string; isQueued?: boolean }) => message.id === 'consumed-answer')?.isQueued).toBe(false)
     expect(restored.messageQueue).toEqual([])
-    expect(cold.runtime.deferredAutomaticSessions.has(managed.id)).toBe(false)
-    expect(cold.runtime.automaticAdmissionReservations.has(managed.id)).toBe(false)
+    expect(sessionRuntimeStateForTest(cold.runtime).deferredAutomaticSessions.has(managed.id)).toBe(false)
+    expect(sessionRuntimeStateForTest(cold.runtime).automaticAdmissionReservations.has(managed.id)).toBe(false)
     expect(listSessions(h.rootPath).find(meta => meta.id === managed.id)?.pendingTurnRecovery).toBeUndefined()
   })
 
   it('revalidates the exact managed instance after cold hydration before resuming', async () => {
     const h = harness(); const managed = h.make('replaced-during-hydration')
     await h.save(managed)
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+    const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     const replacement = createManagedSession({ id: managed.id }, h.workspace as never, { messagesLoaded: true })
     let resumed = 0
-    cold.runtime.ensureMessagesLoaded = async () => { cold.runtime.sessions.set(managed.id, replacement) }
+    cold.runtime.ensureMessagesLoaded = async () => { sessionRuntimeStateForTest(cold.runtime).sessions.set(managed.id, replacement) }
     cold.runtime.enqueueAutomaticTurnRecovery = async () => { resumed++; return true }
 
     await cold.runtime.resumePendingTurnAfterRestart(restored.id)
 
     expect(resumed).toBe(0)
-    expect(cold.runtime.sessions.get(managed.id)).toBe(replacement)
+    expect(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id)).toBe(replacement)
   })
 
   it('re-fetches the exact managed instance in the scheduled cold inbox callback', async () => {
@@ -11203,13 +11206,13 @@ describe('durable restart recovery', () => {
     managed.pendingTurnRecovery = undefined
     managed.messages.push({ id: 'queued-human', role: 'user', content: 'Continue.', timestamp: 2, isQueued: true })
     await h.save(managed)
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+    const cold = h.cold(); const restored = sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id)
     const dequeues: string[] = []
     cold.runtime.processNextQueuedMessage = (sessionId: string) => { dequeues.push(sessionId) }
 
     await cold.runtime.ensureMessagesLoaded(restored)
     const replacement = createManagedSession({ id: managed.id }, h.workspace as never, { messagesLoaded: true })
-    cold.runtime.sessions.set(managed.id, replacement)
+    sessionRuntimeStateForTest(cold.runtime).sessions.set(managed.id, replacement)
     await tick(); await tick()
 
     expect(dequeues).toEqual([])
@@ -11229,14 +11232,14 @@ describe('durable restart recovery', () => {
     })
     await h.save(managed)
 
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+    const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     const dequeues: string[] = []
     cold.runtime.processNextQueuedMessage = (sessionId: string) => { dequeues.push(sessionId) }
     await cold.runtime.ensureMessagesLoaded(restored)
     await tick(); await tick()
 
     expect(dequeues).toEqual([])
-    expect(cold.runtime.coldAuthHumanContinuationSessions.has(restored)).toBe(true)
+    expect(sessionRuntimeStateForTest(cold.runtime).coldAuthHumanContinuationSessions.has(restored)).toBe(true)
     expect(restored.pendingAuthRequest).toMatchObject({ requestId: 'stale-auth', type: 'credential' })
   })
 
@@ -11250,7 +11253,7 @@ describe('durable restart recovery', () => {
     })
     await h.save(managed)
 
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+    const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     const dequeues: string[] = []
     cold.runtime.processNextQueuedMessage = (sessionId: string) => { dequeues.push(sessionId) }
     await cold.runtime.ensureMessagesLoaded(restored)
@@ -11265,7 +11268,7 @@ describe('durable restart recovery', () => {
     managed.pendingTurnRecovery = undefined
     managed.messages.push({ id: 'older', role: 'user', content: 'Older instruction', timestamp: 2, isQueued: true })
     await h.save(managed)
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+    const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     // Freeze only the scheduled dispatch to inspect the actual sendMessage admission.
     cold.runtime.processNextQueuedMessage = () => {}
     let preparations = 0
@@ -11286,14 +11289,14 @@ describe('durable restart recovery', () => {
     }
     const cold = h.cold(); const calls: string[] = []
     cold.runtime.sendMessage = async (id: string) => { calls.push(id) }
-    const scheduled = cold.runtime.sessions.get('scheduled-stop')
+    const scheduled = sessionRuntimeStateForTest(cold.runtime).sessions.get('scheduled-stop')
     await cold.runtime.ensureMessagesLoaded(scheduled)
     cold.runtime.processNextQueuedMessage('scheduled-stop')
     await Promise.all([cold.manager.cancelProcessing('cold-stop'), cold.manager.cancelProcessing('scheduled-stop')])
     await tick(); await tick()
     expect(calls).toEqual([])
     for (const id of ['cold-stop', 'scheduled-stop']) {
-      const managed = cold.runtime.sessions.get(id)
+      const managed = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(id))
       expect(managed.messageQueue).toHaveLength(0)
       expect(managed.messages.some((message: any) => message.isQueued)).toBe(false)
       expect(listSessions(h.rootPath).find(meta => meta.id === id)?.pendingQueuedMessageIds).toEqual([])
@@ -11527,7 +11530,7 @@ describe('durable restart recovery', () => {
     const dto = manager.getSessions().find(session => session.id === child.id)!
     expect(dto.pendingTurnRecovery?.waitingForPermission).toEqual({ requestId: 'permission', requestedAt: 2, toolName: 'Bash', recoveryRequired: true })
     expect(dto.parentSessionId).toBe('dto-root')
-    expect(runtime.sessions.get(child.id).messagesLoaded).toBe(false)
+    expect(requiredTestValue(sessionRuntimeStateForTest(manager).sessions.get(child.id)).messagesLoaded).toBe(false)
   })
 
   it('retains an expired permission block across restart without starting a provider', async () => {
@@ -11550,10 +11553,10 @@ describe('durable restart recovery', () => {
     runtime.loadSessionsFromDisk()
     await tick(); await tick()
 
-    const restored = runtime.sessions.get(managed.id)
+    const restored = requiredTestValue(sessionRuntimeStateForTest(manager).sessions.get(managed.id))
     expect(starts).toBe(0)
-    expect(restored.activeObjective.terminalState).toBe('blocked_human')
-    expect(restored.pendingTurnRecovery.waitingForPermission).toEqual({
+    expect(requiredTestValue(restored.activeObjective).terminalState).toBe('blocked_human')
+    expect(requiredTestValue(restored.pendingTurnRecovery).waitingForPermission).toEqual({
       requestId: 'expired-approval', requestedAt: 2, toolName: 'gmail_send',
       toolUseId: 'gmail-call', recoveryRequired: true,
     })
@@ -11581,7 +11584,7 @@ describe('durable restart recovery', () => {
     expect(manager.getSessions().find(session => session.id === resolved.id)?.pendingAuthRequestMessage).toBeUndefined()
     await tick(); await tick()
     expect(starts).toBe(0)
-    expect(runtime.sessions.get(child.id).pendingAuthRequest).toMatchObject({ requestId: 'auth-form', sourceSlug: 'source', type: 'credential' })
+    expect(requiredTestValue(sessionRuntimeStateForTest(manager).sessions.get(child.id)).pendingAuthRequest).toMatchObject({ requestId: 'auth-form', sourceSlug: 'source', type: 'credential' })
   })
 
   it('lets a durable human continuation supersede a restored auth handoff and advance the objective', async () => {
@@ -11601,7 +11604,7 @@ describe('durable restart recovery', () => {
     })
     await h.save(managed)
 
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+    const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     setPermissionMode(restored.id, 'allow-all', { changedBy: 'restore' })
     const preparing = deferred(); const releaseAgent = deferred()
     let preparations = 0; let dispatch: Promise<void> | undefined
@@ -11709,7 +11712,7 @@ describe('durable restart recovery', () => {
     })
     await h.save(managed)
 
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+    const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     setPermissionMode(restored.id, 'allow-all', { changedBy: 'restore' })
     const preparing = deferred(); const releaseAgent = deferred()
     let preparations = 0; let dispatch: Promise<void> | undefined
@@ -11748,7 +11751,7 @@ describe('durable restart recovery', () => {
         userMessageId: 'queued-human-behind-recovery',
         attempts: 1,
       })
-      expect(restored.pendingTurnRecovery.recoveryDispatch).toBeUndefined()
+      expect(requiredTestValue(restored.pendingTurnRecovery).recoveryDispatch).toBeUndefined()
       expect(h.events).toContainEqual(expect.objectContaining({
         type: 'auth_completed', sessionId: managed.id, requestId: 'stale-auth-behind-recovery',
         success: false, cancelled: true,
@@ -11835,7 +11838,7 @@ describe('durable restart recovery', () => {
       }
       await h.save(managed)
 
-      const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+      const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
       setPermissionMode(restored.id, 'allow-all', { changedBy: 'restore' })
       let providerStarts = 0
       cold.runtime.getOrCreateAgent = async () => {
@@ -11859,7 +11862,7 @@ describe('durable restart recovery', () => {
       })
       expect(restored.messages.find((message: { id: string; authStatus?: string }) => message.id === `auth-${blockerKind}`)?.authStatus).toBe('pending')
       expect(restored.permissionMode).toBe('allow-all')
-      expect(restored.pendingTurnRecovery.recoveryDispatch).toBeUndefined()
+      expect(requiredTestValue(restored.pendingTurnRecovery).recoveryDispatch).toBeUndefined()
       expect(h.events.some(event => event.type === 'auth_completed' && event.sessionId === managed.id)).toBe(false)
       await cold.manager.flushSession(restored.id)
       expect(listSessions(h.rootPath).find(meta => meta.id === managed.id)).toMatchObject({
@@ -11883,7 +11886,7 @@ describe('durable restart recovery', () => {
     })
     await cleanup
     expect(acknowledged).not.toBe('')
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+    const cold = h.cold(); const restored = sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id)
     const calls: string[] = []
     cold.runtime.sendMessage = async (...args: any[]) => { calls.push(args[5]) }
     await cold.runtime.ensureMessagesLoaded(restored)
@@ -11908,11 +11911,11 @@ describe('durable restart recovery', () => {
     for (const session of [stopped, exhausted, parent, child, permission, auth, sibling]) await h.save(session)
     const cold = h.cold(); const resumed: string[] = []
     cold.runtime.enqueueAutomaticTurnRecovery = async (session: Managed) => { resumed.push(session.id); return false }
-    await cold.runtime.resumePendingTurnsAfterRestart([...cold.runtime.sessions.keys()])
+    await cold.runtime.resumePendingTurnsAfterRestart([...sessionRuntimeStateForTest(cold.runtime).sessions.keys()])
     expect(resumed).toEqual(['sibling'])
-    expect(cold.runtime.sessions.get('permission').pendingTurnRecovery.waitingForPermission.recoveryRequired).toBe(true)
-    expect(cold.runtime.sessions.get('auth').pendingAuthRequest).toMatchObject({ requestId: 'auth-id', type: 'credential', sourceSlug: 'source', mode: 'bearer' })
-    expect(cold.runtime.sessions.get('exhausted').pendingTurnRecovery).toEqual(exhausted.pendingTurnRecovery)
+    expect(requiredTestValue(requiredTestValue(requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get('permission')).pendingTurnRecovery).waitingForPermission).recoveryRequired).toBe(true)
+    expect(requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get('auth')).pendingAuthRequest).toMatchObject({ requestId: 'auth-id', type: 'credential', sourceSlug: 'source', mode: 'bearer' })
+    expect(requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get('exhausted')).pendingTurnRecovery).toEqual(exhausted.pendingTurnRecovery)
   })
 
   it('reserves one restart attempt when concurrent callers reach an async recovery boundary', async () => {
@@ -11939,7 +11942,7 @@ describe('durable restart recovery', () => {
     expect(calls[0]?.[5]).toBe('followup')
     expect(calls[0]?.[1]).toBe('Keep the existing destination.')
     expect(managed.pendingTurnRecovery?.waitingForPermission).toBeUndefined()
-    expect(h.runtime.pendingPermissionRequests.size).toBe(0)
+    expect(sessionRuntimeStateForTest(h.runtime).pendingPermissionRequests.size).toBe(0)
     expect(managed.messages).toHaveLength(2)
   })
 
@@ -11959,23 +11962,23 @@ describe('durable restart recovery', () => {
 
   it('retries a transient deferred-scheduler failure with backoff and no external wake', async () => {
     const h = harness(); const managed = h.make('scheduler-backoff')
-    h.runtime.deferredAutomaticSessions.add(managed.id)
+    sessionRuntimeStateForTest(h.runtime).deferredAutomaticSessions.add(managed.id)
     let attempts = 0
     h.runtime.resumePendingTurnAfterRestart = async () => {
       attempts++
       if (attempts === 1) throw new Error('transient scheduler fault')
-      h.runtime.deferredAutomaticSessions.delete(managed.id)
+      sessionRuntimeStateForTest(h.runtime).deferredAutomaticSessions.delete(managed.id)
     }
 
     await h.runtime.drainDeferredAutomaticSessions()
     expect(attempts).toBe(1)
-    expect(h.runtime.deferredAutomaticSessions.has(managed.id)).toBe(true)
-    expect(h.runtime.deferredAutomaticRetryTimers.has(managed.id)).toBe(true)
+    expect(sessionRuntimeStateForTest(h.runtime).deferredAutomaticSessions.has(managed.id)).toBe(true)
+    expect(sessionRuntimeStateForTest(h.runtime).deferredAutomaticRetryTimers.has(managed.id)).toBe(true)
     await Bun.sleep(350)
     await tick(); await tick()
     expect(attempts).toBe(2)
-    expect(h.runtime.deferredAutomaticSessions.has(managed.id)).toBe(false)
-    expect(h.runtime.deferredAutomaticRetryTimers.has(managed.id)).toBe(false)
+    expect(sessionRuntimeStateForTest(h.runtime).deferredAutomaticSessions.has(managed.id)).toBe(false)
+    expect(sessionRuntimeStateForTest(h.runtime).deferredAutomaticRetryTimers.has(managed.id)).toBe(false)
   })
 
   it('replays one delegated terminal receipt after a processing crash and consumes it exactly once', async () => {
@@ -12014,8 +12017,8 @@ describe('durable restart recovery', () => {
 
     const cold = h.cold()
     cold.runtime.processNextQueuedMessage = () => {}
-    const restoredParent = cold.runtime.sessions.get(parent.id)
-    const restoredChild = cold.runtime.sessions.get(child.id)
+    const restoredParent = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(parent.id))
+    const restoredChild = sessionRuntimeStateForTest(cold.runtime).sessions.get(child.id)
     await cold.runtime.ensureMessagesLoaded(restoredParent)
     await cold.runtime.ensureMessagesLoaded(restoredChild)
     const restoredReceipts = restoredParent.messages.filter((message: Managed['messages'][number]) => (
@@ -12172,7 +12175,7 @@ describe('durable restart recovery', () => {
     expect(parent.userInputRequests?.filter((request: any) => request.status === 'pending')).toEqual([])
     expect(parent.messageQueue).toEqual([])
     expect(providerDispatches).toBe(0)
-    expect(h.runtime.delegatedTerminalResultRetryTimers.has(child.id)).toBe(false)
+    expect(sessionRuntimeStateForTest(h.runtime).delegatedTerminalResultRetryTimers.has(child.id)).toBe(false)
     expect(await h.runtime.ensureDelegatedTerminalResultDelivery(child)).toBe(false)
     expect(parent.userInputRequests?.filter((request: any) => request.status === 'pending')).toEqual([])
   })
@@ -12208,8 +12211,8 @@ describe('durable restart recovery', () => {
       const restored = h.cold()
       manager = restored.manager
       runtime = restored.runtime
-      parent = runtime.sessions.get(parent.id)
-      child = runtime.sessions.get(child.id)
+      parent = requiredTestValue(sessionRuntimeStateForTest(runtime).sessions.get(parent.id))
+      child = requiredTestValue(sessionRuntimeStateForTest(runtime).sessions.get(child.id))
       await runtime.ensureMessagesLoaded(parent)
       await runtime.ensureMessagesLoaded(child)
     }
@@ -12217,7 +12220,7 @@ describe('durable restart recovery', () => {
     runtime.scheduleDelegatedTerminalResultRetry(child.id)
 
     expect(await runtime.ensureDelegatedTerminalResultDelivery(child)).toBe(false)
-    expect(runtime.delegatedTerminalResultRetryTimers.has(child.id)).toBe(true)
+    expect(sessionRuntimeStateForTest(runtime).delegatedTerminalResultRetryTimers.has(child.id)).toBe(true)
     expect(parent.userInputRequests?.filter((request: any) => request.status === 'pending'))
       .toHaveLength(1)
     expect(parent.messages.filter((message: Managed['messages'][number]) => (
@@ -12232,7 +12235,7 @@ describe('durable restart recovery', () => {
     expect(pending[0]?.questions).toMatchObject([{
       id: `retry-child-result-${child.id}`.slice(0, 80),
     }])
-    expect(runtime.delegatedTerminalResultRetryTimers.has(child.id)).toBe(false)
+    expect(sessionRuntimeStateForTest(runtime).delegatedTerminalResultRetryTimers.has(child.id)).toBe(false)
     expect(parent.messages.filter((message: Managed['messages'][number]) => (
       message.content.startsWith('[host-delegated-terminal-result-v1]')
     ))).toHaveLength(1)
@@ -12286,7 +12289,7 @@ describe('durable restart recovery', () => {
     expect(receipt.agentDelivery!.status).toBe('processed')
     expect(receipt.isQueued).toBe(false)
     expect(parent.activeAgentDelivery).toBeUndefined()
-    expect(h.runtime.delegatedTerminalResultRetryTimers.has(child.id)).toBe(false)
+    expect(sessionRuntimeStateForTest(h.runtime).delegatedTerminalResultRetryTimers.has(child.id)).toBe(false)
     expect(parent.messages.find(message => message.id === 'newer-human-row')?.isQueued).toBe(true)
     expect(nextDispatches).toBe(1)
   })
@@ -12361,7 +12364,7 @@ describe('durable restart recovery', () => {
     expect(receiptB).toMatchObject({ isQueued: true, agentDelivery: { status: 'queued', attempts: 0 } })
     expect(parent.messageQueue.map(item => item.messageId)).toEqual([receiptA.id, receiptB.id])
     expect(observedFronts).toEqual([receiptA.id])
-    expect(h.runtime.delegatedTerminalResultRetryTimers.has(child.id)).toBe(false)
+    expect(sessionRuntimeStateForTest(h.runtime).delegatedTerminalResultRetryTimers.has(child.id)).toBe(false)
   })
 
   it('restores processing delivery A ahead of later queued machine delivery B without treating B as consumption', async () => {
@@ -12385,7 +12388,7 @@ describe('durable restart recovery', () => {
     })
     await h.save(managed)
 
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+    const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     cold.runtime.processNextQueuedMessage = () => {}
     await cold.runtime.ensureMessagesLoaded(restored)
 
@@ -12426,7 +12429,7 @@ describe('durable restart recovery', () => {
     }, activity as never)
     await h.save(managed)
 
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+    const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     let rawDispatches = 0; let schedulerWakes = 0
     cold.runtime.processNextQueuedMessage = () => { rawDispatches++ }
     cold.runtime.scheduleDeferredAutomaticSessions = () => { schedulerWakes++ }
@@ -12442,7 +12445,7 @@ describe('durable restart recovery', () => {
       lastCause: 'app_restart',
       continuationRequired: true,
     })
-    expect(cold.runtime.deferredAutomaticSessions.has(restored.id)).toBe(true)
+    expect(sessionRuntimeStateForTest(cold.runtime).deferredAutomaticSessions.has(restored.id)).toBe(true)
     expect(rawDispatches).toBe(0)
     expect(schedulerWakes).toBe(1)
   })
@@ -12466,7 +12469,7 @@ describe('durable restart recovery', () => {
     managed.pendingTurnRecovery = createPendingTurnRecovery('new-human-objective')
     await h.save(managed)
 
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+    const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     let rawDispatches = 0
     cold.runtime.processNextQueuedMessage = () => { rawDispatches++ }
     cold.runtime.scheduleDeferredAutomaticSessions = () => {}
@@ -12503,7 +12506,7 @@ describe('durable restart recovery', () => {
     })
     await h.save(managed)
 
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+    const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     let providerPreparations = 0
     cold.runtime.processNextQueuedMessage = () => {}
     cold.runtime.scheduleDeferredAutomaticSessions = () => {}
@@ -12530,7 +12533,7 @@ describe('durable restart recovery', () => {
     }, { id: 'terminal-final', role: 'assistant', content: 'Already complete.', timestamp: 3, isIntermediate: false })
     await h.save(managed)
 
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+    const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     let providerPreparations = 0; let rawDispatches = 0
     cold.runtime.processNextQueuedMessage = () => { rawDispatches++ }
     cold.runtime.getOrCreateAgent = async () => { providerPreparations++; throw new Error('provider must not run') }
@@ -12671,7 +12674,7 @@ describe('durable restart recovery', () => {
       },
     })
 
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+    const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     cold.runtime.processNextQueuedMessage = () => {}
     await cold.runtime.ensureMessagesLoaded(restored)
     await cold.manager.flushSession(restored.id)
@@ -12724,7 +12727,7 @@ describe('durable restart recovery', () => {
     } as never)).rejects.toThrow('transient auth continuation preparation failure')
     expect(child.pendingAuthRequestId).toBeUndefined()
     expect(child.pendingTurnRecovery).toBeDefined()
-    expect(h.runtime.deferredAutomaticSessions.has(child.id)).toBe(true)
+    expect(sessionRuntimeStateForTest(h.runtime).deferredAutomaticSessions.has(child.id)).toBe(true)
     expect(h.runtime.activeRelevantDelegatedDescendants(parent).map((session: Managed) => session.id))
       .toEqual([child.id])
     expect(listSessions(h.rootPath).find(meta => meta.id === child.id)?.pendingTurnRecovery).toBeDefined()
@@ -12882,7 +12885,7 @@ describe('automatic channel-fallback kill switch recovery boundaries', () => {
       setAutomaticToolFallback(h, false)
 
       const firstCold = h.cold()
-      const firstRestored = firstCold.runtime.sessions.get(managed.id)
+      const firstRestored = requiredTestValue(sessionRuntimeStateForTest(firstCold.runtime).sessions.get(managed.id))
       firstCold.runtime.processNextQueuedMessage = () => {}
       await firstCold.runtime.ensureMessagesLoaded(firstRestored)
       await firstCold.manager.flushSession(firstRestored.id)
@@ -12915,7 +12918,7 @@ describe('automatic channel-fallback kill switch recovery boundaries', () => {
       expect(firstPersistedMessage.content).not.toContain(failedToolName)
 
       const secondCold = h.cold()
-      const secondRestored = secondCold.runtime.sessions.get(managed.id)
+      const secondRestored = requiredTestValue(sessionRuntimeStateForTest(secondCold.runtime).sessions.get(managed.id))
       secondCold.runtime.processNextQueuedMessage = () => {}
       await secondCold.runtime.ensureMessagesLoaded(secondRestored)
       await secondCold.runtime.resumePendingTurnAfterRestart(secondRestored.id)
@@ -12997,7 +13000,7 @@ describe('automatic channel-fallback kill switch recovery boundaries', () => {
     await h.save(managed)
     setAutomaticToolFallback(h, false)
 
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+    const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     let scheduled = 0
     cold.runtime.processNextQueuedMessage = () => { scheduled++ }
     await cold.runtime.resumePendingTurnAfterRestart(restored.id)
@@ -13015,7 +13018,7 @@ describe('automatic channel-fallback kill switch recovery boundaries', () => {
         cleanContinuationId: expect.stringMatching(/^clean-continuation-v1-[a-f0-9]{24}$/),
       },
     })
-    expect(restored.pendingTurnRecovery.recoveryDispatch.fallbackIntent).toBeUndefined()
+    expect(requiredTestValue(requiredTestValue(restored.pendingTurnRecovery).recoveryDispatch).fallbackIntent).toBeUndefined()
     expect(restored.messageQueue).toHaveLength(1)
     expect(restored.messageQueue[0]?.options?.internalOrigin).toBeUndefined()
     expect(restored.messageQueue[0]?.options?.automaticRecovery).toMatchObject({
@@ -13119,7 +13122,7 @@ describe('automatic channel-fallback kill switch recovery boundaries', () => {
     await h.save(managed)
     setAutomaticToolFallback(h, false)
 
-    const cold = h.cold(); const restored = cold.runtime.sessions.get(managed.id)
+    const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     let scheduled = 0
     cold.runtime.processNextQueuedMessage = () => { scheduled++ }
     await cold.runtime.resumePendingTurnAfterRestart(restored.id)
@@ -13135,10 +13138,10 @@ describe('automatic channel-fallback kill switch recovery boundaries', () => {
         cleanContinuationId: expect.stringMatching(/^clean-continuation-v1-[a-f0-9]{24}$/),
       },
     })
-    const newDispatch = restored.pendingTurnRecovery.recoveryDispatch
+    const newDispatch = requiredTestValue(requiredTestValue(restored.pendingTurnRecovery).recoveryDispatch)
     expect(newDispatch.id).not.toBe(oldDispatchId)
     expect(newDispatch.fallbackIntent).toBeUndefined()
-    expect(restored.pendingTurnRecovery.cleanContextBoundaryMessageId).toBe(newDispatch.id)
+    expect(requiredTestValue(restored.pendingTurnRecovery).cleanContextBoundaryMessageId).toBe(newDispatch.id)
     expect(restored.messages.filter((message: any) => message.id === oldDispatchId)).toHaveLength(1)
     expect(restored.messages.find((message: any) => (
       message.id === 'persisted-provider-intermediate-output'
@@ -13199,11 +13202,11 @@ describe('automatic channel-fallback kill switch recovery boundaries', () => {
       const h = harness(); const managed = h.make(`routing-off-live-redirect-${kind}`)
       setAutomaticToolFallback(h, true)
       const redirected: string[] = []
-      const runtimeAgent = {
+      const runtimeAgent = Object.assign(new ScriptedSessionAgent(h.workspace), {
         redirect: (redirectPrompt: string) => { redirected.push(redirectPrompt); return true },
         dispose: () => {},
-      }
-      managed.agent = runtimeAgent as never
+      })
+      managed.agent = runtimeAgent
       managed.isProcessing = true
       managed.processingGeneration = 29
       bindToolAdmissionTurn(h.runtime, managed, runtimeAgent, managed.processingGeneration)
@@ -13318,7 +13321,7 @@ describe('automatic channel-fallback kill switch recovery boundaries', () => {
     backend.subprocessRuntimeContext = runtimeContext
     backend.send = (message: any) => { backendResponses.push(message); backendResponded.resolve() }
     const generation = 31
-    managed.agent = runtimeAgent as never
+    managed.agent = runtimeAgent
     managed.isProcessing = true
     managed.processingGeneration = generation
     managed.lastSentOptions = {
@@ -13502,7 +13505,7 @@ describe('automatic channel-fallback kill switch recovery boundaries', () => {
       },
     }
     const dispatchToken = Symbol('autonomous-hard-limit-dequeue')
-    h.runtime.queuedMessageDispatches.set(managed.id, dispatchToken)
+    sessionRuntimeStateForTest(h.runtime).queuedMessageDispatches.set(managed.id, dispatchToken)
     const dispatchPromise = h.manager.sendMessage(
       managed.id,
       prompt,

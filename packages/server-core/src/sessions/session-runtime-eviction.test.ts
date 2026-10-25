@@ -1,3 +1,4 @@
+import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, beforeEach, describe, expect, it, jest } from 'bun:test'
 import { SessionManager, createManagedSession } from './SessionManager.ts'
 
@@ -57,7 +58,7 @@ describe('session runtime eviction', () => {
       })
     }
 
-    ;(manager as unknown as { sessions: Map<string, unknown> }).sessions.set(id, managed)
+    ;sessionRuntimeStateForTest(manager).sessions.set(id, managed)
     return { managed, disposeForRestart, stop, disconnectAll }
   }
 
@@ -112,8 +113,7 @@ describe('session runtime eviction', () => {
     const queued = addRuntime(manager, 'queued')
     queued.managed.messageQueue.push({ message: 'next turn' } as never)
     const refreshing = addRuntime(manager, 'refreshing')
-    ;(manager as unknown as { agentRefreshLocks: Map<string, Promise<void>> })
-      .agentRefreshLocks.set('refreshing', Promise.resolve())
+    ;sessionRuntimeStateForTest(manager).agentRefreshLocks.set('refreshing', Promise.resolve())
 
     expect(await (manager as unknown as {
       evictIdleSessionRuntimes: (now: number) => Promise<number>

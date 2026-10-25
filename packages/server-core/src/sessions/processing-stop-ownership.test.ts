@@ -1,3 +1,4 @@
+import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { describe, expect, it } from 'bun:test'
 import { SessionManager, createManagedSession } from './SessionManager'
 import { createPendingTurnRecovery } from './turn-recovery'
@@ -92,6 +93,7 @@ function harness(boundary?: Boundary, rejectBoundary = false) {
     isAutonomousMessage: prototype.isAutonomousMessage,
     hasOnlyMachineInbox: prototype.hasOnlyMachineInbox,
   }
+  Object.defineProperty(runtime, 'runtimeState', { value: runtime, configurable: true });
   if (boundary === 'delivery-flush') {
     managed.lastSentOptions = { internalOrigin: { kind: 'agent-message', deliveryId: 'delivery' } }
     managed.messages.push({ id: 'delivery', role: 'user', content: 'Internal report', timestamp: 2,
@@ -171,7 +173,7 @@ describe('processing stop ownership', () => {
       orchestrationMode: 'mission', risk: 'high-stakes', completionCriteria: ['requested-outcome-delivered'],
       terminalState: 'blocked_human', completedAt: 2,
     }
-    h.runtime.permissionExpiryStopGenerations.set(h.managed, 1)
+    sessionRuntimeStateForTest(h.runtime).permissionExpiryStopGenerations.set(h.managed, 1)
 
     await h.stop(1, 'complete')
 
@@ -198,7 +200,7 @@ describe('processing stop ownership', () => {
     const h = harness('mini-status')
     h.runtime.setSessionStatus = (SessionManager.prototype as any).setSessionStatus
     h.runtime.setMetadataWriteGuard = () => {}
-    h.runtime.configWatchers = new Map()
+    sessionRuntimeStateForTest(h.runtime).configWatchers = new Map()
     h.runtime.flushSession = async () => { h.reached.resolve(); await h.release.promise }
     const stopping = h.stop()
     await h.reached.promise
@@ -259,7 +261,7 @@ describe('processing stop ownership', () => {
     expect(h.events.filter(event => event.type === 'complete')).toHaveLength(1)
     expect(h.events.find(event => event.type === 'complete')?.reason).toBe(fixture.reason)
     expect(h.effects.filter(effect => effect === 'conductor')).toHaveLength(1)
-    expect(h.runtime.deferredAutomaticSessions.has(h.managed.id)).toBe(false)
+    expect(sessionRuntimeStateForTest(h.runtime).deferredAutomaticSessions.has(h.managed.id)).toBe(false)
   })
 
   it('keeps an explicit user Stop interrupted when a blocked objective races with cleanup', async () => {

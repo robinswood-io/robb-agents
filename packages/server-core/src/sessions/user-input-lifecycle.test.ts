@@ -1,3 +1,5 @@
+import { ScriptedSessionAgent } from './testing/scripted-session-agent.ts';
+import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it } from 'bun:test'
 import { mkdirSync, mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -68,7 +70,7 @@ function harness() {
     ensureDelegatedTerminalResultDelivery: (child: Managed, deferRecipientDispatch?: boolean) => Promise<boolean>
     queuedMessageDispatches: Map<string, symbol>
   }
-  internals.sessions.set(managed.id, managed)
+  sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
   internals.enqueuePersist = m => snapshots.push(JSON.parse(JSON.stringify({ ...pickSessionFields(m), messages: m.messages })))
   internals.flushSession = async () => {}
   internals.sendEvent = e => events.push(e)
@@ -208,7 +210,7 @@ describe('durable interactive user questions', () => {
       completedAt: 3,
     }
     child.pendingTurnRecovery = undefined
-    h.internals.sessions.set(child.id, child)
+    sessionRuntimeStateForTest(h.internals).sessions.set(child.id, child)
 
     // Hold the recipient so terminal delivery is durably accepted into FIFO
     // before the user grants the one-use cost continuation.
@@ -287,7 +289,7 @@ describe('durable interactive user questions', () => {
     const restored = readSessionJsonl(path)!
     expect(restored.userInputRequests).toEqual(h.managed.userInputRequests)
     const cold = createManagedSession(restored as never, h.managed.workspace)
-    h.internals.sessions.set(cold.id, cold)
+    sessionRuntimeStateForTest(h.internals).sessions.set(cold.id, cold)
     expect(h.manager.getSessions()[0]?.userInputRequests).toEqual(restored.userInputRequests)
     expect(cold.messages).toEqual([])
   })
@@ -296,7 +298,7 @@ describe('durable interactive user questions', () => {
     const h = harness()
     const child = createManagedSession({ id: 'child', parentSessionId: h.managed.id }, h.managed.workspace, { messagesLoaded: true })
     const foreign = createManagedSession({ id: 'foreign', parentSessionId: h.managed.id }, { ...h.managed.workspace, id: 'elsewhere' }, { messagesLoaded: true })
-    h.internals.sessions.set(child.id, child); h.internals.sessions.set(foreign.id, foreign)
+    sessionRuntimeStateForTest(h.internals).sessions.set(child.id, child); sessionRuntimeStateForTest(h.internals).sessions.set(foreign.id, foreign)
     await h.manager.requestUserInput(child.id, questions)
     await h.manager.requestUserInput(foreign.id, questions)
     const rootDTO = await h.manager.getSession(h.managed.id)
@@ -367,7 +369,7 @@ describe('durable interactive user questions', () => {
       child.activeObjective = { ...h.managed.activeObjective!, objectiveId: 'child-root', userMessageId: 'child-root', lastUserMessageId: 'child-root' }
       child.pendingTurnRecovery = createPendingTurnRecovery('child-root')
       child.isProcessing = true
-      h.internals.sessions.set(child.id, child)
+      sessionRuntimeStateForTest(h.internals).sessions.set(child.id, child)
       const parentQuestion = await h.manager.requestUserInput(h.managed.id, questions)
       const childQuestion = await h.manager.requestUserInput(child.id, questions)
       const receipt = await h.manager.respondToUserInput(h.managed.id, { requestId: parentQuestion.requestId, answers })
@@ -554,7 +556,7 @@ describe('durable interactive user questions', () => {
   it('stops an idle parent and cancels the paused child recovery marker before restart', async () => {
     const h = harness()
     const child = createManagedSession({ id: 'paused-child', parentSessionId: h.managed.id }, h.managed.workspace, { messagesLoaded: true, activeObjective: structuredClone(h.managed.activeObjective), pendingTurnRecovery: structuredClone(h.managed.pendingTurnRecovery) })
-    h.internals.sessions.set(child.id, child)
+    sessionRuntimeStateForTest(h.internals).sessions.set(child.id, child)
     await h.manager.requestUserInput(child.id, questions)
     await h.manager.cancelProcessing(h.managed.id)
     expect(child.userInputRequests?.[0]?.status).toBe('cancelled')
@@ -657,7 +659,7 @@ describe('durable interactive user questions', () => {
     }
     h.internals.processNextQueuedMessage(h.managed.id)
     await entered
-    expect(h.internals.queuedMessageDispatches.has(h.managed.id)).toBe(true)
+    expect(sessionRuntimeStateForTest(h.internals).queuedMessageDispatches.has(h.managed.id)).toBe(true)
     let accepted!: () => void
     const ack = new Promise<void>(resolve => { accepted = resolve })
     const nextTurn = h.manager.sendMessage(h.managed.id, 'continue', undefined, undefined, undefined, undefined, undefined, accepted)
@@ -666,7 +668,7 @@ describe('durable interactive user questions', () => {
     for (let index = 0; index < 20 && !h.managed.isProcessing; index++) await new Promise<void>(resolve => setImmediate(resolve))
     expect(h.managed.messageQueue.filter(item => item.messageId === answer.responseMessageId)).toHaveLength(0)
     expect(h.managed.messageQueue.map(item => item.message)).toEqual(['continue'])
-    expect(h.internals.queuedMessageDispatches.has(h.managed.id)).toBe(false)
+    expect(sessionRuntimeStateForTest(h.internals).queuedMessageDispatches.has(h.managed.id)).toBe(false)
     expect(h.managed.messages.filter(message => message.internalOrigin?.kind === 'user-input')).toHaveLength(1)
     h.internals.processNextQueuedMessage = () => {}
     releaseAgent()
@@ -684,7 +686,7 @@ describe('durable interactive user questions', () => {
     const path = join(sessionDir, 'session.jsonl')
     writeSessionJsonl(path, { ...pickSessionFields(h.managed), pendingAgentDeliveryIds: [result.responseMessageId!], workspaceRootPath: h.managed.workspace.rootPath, createdAt: 1, lastUsedAt: 2, messages: h.managed.messages.map(messageToStored), tokenUsage: usage } as never)
     const restored = createManagedSession(readSessionJsonl(path)! as never, h.managed.workspace)
-    h.internals.sessions.set(restored.id, restored)
+    sessionRuntimeStateForTest(h.internals).sessions.set(restored.id, restored)
     await h.internals.resumePendingTurnAfterRestart(restored.id)
     expect(restored.messageQueue).toHaveLength(1)
     expect(restored.messageQueue[0]).toMatchObject({ messageId: result.responseMessageId, options: { hidden: true, internalOrigin: { kind: 'user-input' } } })
@@ -722,7 +724,7 @@ describe('durable interactive user questions', () => {
     writeSessionJsonl(path, { ...pickSessionFields(h.managed), sdkSessionId: h.managed.sdkSessionId, workspaceRootPath: h.managed.workspace.rootPath, createdAt: 1, lastUsedAt: 2, messages: h.managed.messages.map(messageToStored), tokenUsage: usage } as never)
     const restored = createManagedSession(readSessionJsonl(path)! as never, h.managed.workspace)
     const restarted = harness()
-    restarted.internals.sessions.clear(); restarted.internals.sessions.set(restored.id, restored)
+    sessionRuntimeStateForTest(restarted.internals).sessions.clear(); sessionRuntimeStateForTest(restarted.internals).sessions.set(restored.id, restored)
     let providerPrompt: string | undefined
     let observedRecovery: Managed['pendingTurnRecovery']
     restarted.internals.getOrCreateAgent = async managed => {
@@ -919,14 +921,14 @@ describe('durable interactive user questions', () => {
         options: { internalOrigin: { kind: 'agent-message', senderSessionId: 'child', deliveryId: 'delivery' } },
       })
       const permissionResponses: Array<[string, boolean, boolean]> = []
-      const permissionAgent = {
-        respondToPermission: (id: string, allowed: boolean, always: boolean) => permissionResponses.push([id, allowed, always]),
-      }
-      h.managed.agent = permissionAgent as never
-      ;(h.internals as any).pendingPermissionRequests.set('expired-permission', {
+      const permissionAgent = Object.assign(new ScriptedSessionAgent(h.managed.workspace), {
+        respondToPermission: (id: string, allowed: boolean, always: boolean) => { permissionResponses.push([id, allowed, always]); },
+      })
+      h.managed.agent = permissionAgent
+      ;sessionRuntimeStateForTest(h.internals).pendingPermissionRequests.set('expired-permission', {
         sessionId: h.managed.id, toolName: 'Bash', toolUseId: 'old-tool', processingGeneration: h.managed.processingGeneration,
         runtimeAgent: permissionAgent, requestedAt: 2, expiresAt: Date.now() + 60_000,
-        request: { requestId: 'expired-permission', toolName: 'Bash' }, timeout: setTimeout(() => {}, 60_000),
+        request: { requestId: 'expired-permission', sessionId: h.managed.id, toolName: 'Bash', description: 'Offline permission fixture' }, timeout: setTimeout(() => {}, 60_000),
       })
       h.internals.processNextQueuedMessage = Object.getPrototypeOf(h.manager).processNextQueuedMessage.bind(h.manager)
       const send = h.manager.sendMessage.bind(h.manager)
@@ -950,7 +952,7 @@ describe('durable interactive user questions', () => {
       expect(h.managed.messages.find(message => message.id === replayed[0])?.hidden).toBeUndefined()
       expect(h.managed.messageQueue.map(item => item.messageId)).toEqual(['machine-delivery'])
       expect(h.managed.pendingTurnRecovery?.waitingForPermission).toBeUndefined()
-      expect((h.internals as any).pendingPermissionRequests.size).toBe(0)
+      expect(sessionRuntimeStateForTest(h.internals).pendingPermissionRequests.size).toBe(0)
       expect(permissionResponses).toEqual([['expired-permission', false, false]])
       expect(h.managed.messages.find(message => message.toolUseId === 'old-tool')).toMatchObject({
         toolExecuted: false, toolStatus: 'error', isError: true,
@@ -1044,12 +1046,12 @@ describe('durable interactive user questions', () => {
 
     // Even an injected transient id cannot authenticate an ambiguous transcript.
     h.managed.messages.push({ id: 'cold-human', role: 'user', content: 'old cold row', timestamp: 4, isQueued: true })
-    ;(h.internals as any).liveDirectHumanContinuationIds.set(h.managed, new Set(['cold-human']))
+    ;sessionRuntimeStateForTest(h.internals).liveDirectHumanContinuationIds.set(h.managed, new Set(['cold-human']))
     h.internals.processNextQueuedMessage(h.managed.id)
     await new Promise<void>(resolve => setImmediate(resolve))
     expect(replayed).toEqual([])
     h.managed.messages.pop()
-    ;(h.internals as any).liveDirectHumanContinuationIds.delete(h.managed)
+    ;sessionRuntimeStateForTest(h.internals).liveDirectHumanContinuationIds.delete(h.managed)
 
     let releaseFlush!: () => void
     const flushing = new Promise<void>(resolve => { releaseFlush = resolve })
@@ -1101,21 +1103,21 @@ describe('durable interactive user questions', () => {
       requestId: 'old-permission', requestedAt: 2, toolName: 'Bash', toolUseId: 'old-tool', recoveryRequired: true,
     }
     const permissionResponses: Array<[string, boolean, boolean]> = []
-    const permissionAgent = {
-      respondToPermission: (id: string, allowed: boolean, always: boolean) => permissionResponses.push([id, allowed, always]),
-    }
-    h.managed.agent = permissionAgent as never
-    ;(h.internals as any).pendingPermissionRequests.set('old-permission', {
+    const permissionAgent = Object.assign(new ScriptedSessionAgent(h.managed.workspace), {
+      respondToPermission: (id: string, allowed: boolean, always: boolean) => { permissionResponses.push([id, allowed, always]); },
+    })
+    h.managed.agent = permissionAgent
+    ;sessionRuntimeStateForTest(h.internals).pendingPermissionRequests.set('old-permission', {
       sessionId: h.managed.id, toolName: 'Bash', toolUseId: 'old-tool', processingGeneration: h.managed.processingGeneration,
       runtimeAgent: permissionAgent, requestedAt: 2, expiresAt: Date.now() + 60_000,
-      request: { requestId: 'old-permission', toolName: 'Bash' }, timeout: setTimeout(() => {}, 60_000),
+      request: { requestId: 'old-permission', sessionId: h.managed.id, toolName: 'Bash', description: 'Offline permission fixture' }, timeout: setTimeout(() => {}, 60_000),
     })
     h.internals.flushSession = async () => { throw new Error('disk full') }
 
     await expect(h.manager.sendMessage(h.managed.id, 'unacknowledged replacement')).rejects.toThrow('disk full')
 
     expect(permissionResponses).toEqual([['old-permission', false, false]])
-    expect((h.internals as any).pendingPermissionRequests.size).toBe(0)
+    expect(sessionRuntimeStateForTest(h.internals).pendingPermissionRequests.size).toBe(0)
     expect(h.manager.respondToPermission(h.managed.id, 'old-permission', true, true)).toBe(false)
     expect(h.managed.pendingTurnRecovery?.waitingForPermission).toMatchObject({
       requestId: 'old-permission', toolUseId: 'old-tool', recoveryRequired: true,
@@ -1123,7 +1125,7 @@ describe('durable interactive user questions', () => {
     expect(h.managed.pendingTurnRecovery?.recoveryDispatch).toBeUndefined()
     expect(h.managed.messages.find(message => message.content === 'unacknowledged replacement')).toBeUndefined()
     expect(h.managed.messageQueue).toEqual([])
-    expect((h.internals as any).liveDirectHumanContinuationIds.get(h.managed)).toBeUndefined()
+    expect(sessionRuntimeStateForTest(h.internals).liveDirectHumanContinuationIds.get(h.managed)).toBeUndefined()
   })
 
   it('serializes concurrent direct supersessions so a failed first flush cannot revive the second handoff', async () => {
@@ -1187,8 +1189,8 @@ describe('durable interactive user questions', () => {
       expect(h.events.some(event => event.type === 'user_message'
         && event.status === 'processing'
         && (event.message as { id?: string } | undefined)?.id === 'cold-human')).toBe(false)
-      expect(h.internals.queuedMessageDispatches.has(h.managed.id)).toBe(false)
-      expect((h.internals as any).automaticAdmissionReservations.has(h.managed.id)).toBe(false)
+      expect(sessionRuntimeStateForTest(h.internals).queuedMessageDispatches.has(h.managed.id)).toBe(false)
+      expect(sessionRuntimeStateForTest(h.internals).automaticAdmissionReservations.has(h.managed.id)).toBe(false)
     })
   }
 
@@ -1240,18 +1242,18 @@ describe('durable interactive user questions', () => {
       return send(...args)
     }
     let stopCallback: Promise<void> | undefined
-    const permissionAgent = {
+    const permissionAgent = Object.assign(new ScriptedSessionAgent(h.managed.workspace), {
       redirect: () => true,
       isProcessing: () => false,
       respondToPermission: () => {
         stopCallback = h.internals.onProcessingStopped(h.managed.id, 'interrupted')
       },
-    }
-    h.managed.agent = permissionAgent as never
-    ;(h.internals as any).pendingPermissionRequests.set('expiring', {
+    })
+    h.managed.agent = permissionAgent
+    ;sessionRuntimeStateForTest(h.internals).pendingPermissionRequests.set('expiring', {
       sessionId: h.managed.id, toolName: 'Bash', processingGeneration: h.managed.processingGeneration,
       runtimeAgent: permissionAgent, requestedAt: 2, expiresAt: Date.now() + 60_000,
-      request: { requestId: 'expiring', toolName: 'Bash' }, timeout: setTimeout(() => {}, 60_000),
+      request: { requestId: 'expiring', sessionId: h.managed.id, toolName: 'Bash', description: 'Offline permission fixture' }, timeout: setTimeout(() => {}, 60_000),
     })
     let releaseFlush!: () => void
     const flushing = new Promise<void>(resolve => { releaseFlush = resolve })
@@ -1302,7 +1304,7 @@ describe('durable interactive user questions', () => {
     expect(acknowledgements).toBe(0)
     expect(h.managed.messageQueue).toEqual([])
     expect(h.managed.messages.find(message => message.content === 'continuation stopped during flush')).toBeUndefined()
-    expect((h.internals as any).liveDirectHumanContinuationIds.get(h.managed)).toBeUndefined()
+    expect(sessionRuntimeStateForTest(h.internals).liveDirectHumanContinuationIds.get(h.managed)).toBeUndefined()
   })
 
 })

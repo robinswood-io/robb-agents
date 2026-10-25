@@ -1,3 +1,4 @@
+import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, beforeEach, describe, expect, it, mock } from 'bun:test'
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
@@ -45,7 +46,7 @@ describe('sendMessage durability', () => {
       workspace as never,
       { messagesLoaded: true },
     )
-    ;(sm as unknown as { sessions: Map<string, unknown> }).sessions.set(id, managed)
+    ;sessionRuntimeStateForTest(sm).sessions.set(id, managed)
     return managed
   }
 
@@ -159,7 +160,7 @@ describe('sendMessage durability', () => {
       },
     }, managed.workspace, { messagesLoaded: true })
     reviewer.isProcessing = true
-    ;(sm as unknown as { sessions: Map<string, typeof managed> }).sessions.set(reviewer.id, reviewer)
+    ;sessionRuntimeStateForTest(sm).sessions.set(reviewer.id, reviewer)
     managed.messageQueue.push({
       message: '<automatic_turn_recovery>continue</automatic_turn_recovery>',
       options: {
@@ -257,7 +258,7 @@ describe('sendMessage durability', () => {
       },
     }, managed.workspace, { messagesLoaded: true })
     reviewer.isProcessing = true
-    ;(sm as unknown as { sessions: Map<string, typeof managed> }).sessions.set(reviewer.id, reviewer)
+    ;sessionRuntimeStateForTest(sm).sessions.set(reviewer.id, reviewer)
     const siblingReviewer = createManagedSession({
       id: 'single-slot-sibling-reviewer', parentSessionId: managed.id,
       delegation: {
@@ -266,7 +267,7 @@ describe('sendMessage durability', () => {
       },
     }, managed.workspace, { messagesLoaded: true })
     siblingReviewer.isProcessing = true
-    ;(sm as unknown as { sessions: Map<string, typeof managed> }).sessions.set(siblingReviewer.id, siblingReviewer)
+    ;sessionRuntimeStateForTest(sm).sessions.set(siblingReviewer.id, siblingReviewer)
     managed.messageQueue.push({
       message: '<automatic_turn_recovery>continue</automatic_turn_recovery>',
       options: {

@@ -1,3 +1,4 @@
+import { sessionRuntimeStateForTest , requiredTestValue } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it, spyOn } from 'bun:test'
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -25,7 +26,7 @@ function harness(stallAnswer = false) {
   const manager = new SessionManager(); managers.push(manager)
   const runtime = manager as any
   let managed = createManagedSession({ id: 'native-question' }, workspace, { messagesLoaded: true })
-  runtime.sessions.set(managed.id, managed)
+  sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
   const events: any[] = []
   runtime.sendEvent = (event: any) => events.push(event)
   for (const method of ['startGenerationTelemetry', 'finishGenerationTelemetry', 'finishAllGenerationTelemetry', 'emitExecutionTelemetry']) runtime[method] = () => {}
@@ -68,7 +69,7 @@ function harness(stallAnswer = false) {
     const { messages, ...metadata } = saved
     managed = createManagedSession(metadata, workspace, { messagesLoaded: true })
     managed.messages = messages.map(storedToMessage)
-    runtime.sessions.set(managed.id, managed)
+    sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
   }
   return { manager, runtime, get managed() { return managed }, events, started, answerStarted, chatBudgets, chatPrompts, readHeader, restore, requestId: () => requestId, dispatch: () => dispatch!, chats: () => chats }
 }
@@ -420,7 +421,7 @@ describe('native Stop, Retry and question response', () => {
       runtime.loadSessionsFromDisk()
       await new Promise<void>(resolve => setImmediate(resolve))
 
-      const restored = runtime.sessions.get(h.managed.id)
+      const restored = requiredTestValue(sessionRuntimeStateForTest(restarted).sessions.get(h.managed.id))
       expect(scheduled).toContain(h.managed.id)
       expect(restored.messagesLoaded).toBe(false)
       expect(restored.pendingTurnRecovery).toMatchObject({
@@ -430,7 +431,7 @@ describe('native Stop, Retry and question response', () => {
 
       await runtime.resumePendingTurnAfterRestart(restored.id)
       expect(restored.pendingTurnRecovery).toBeUndefined()
-      expect(restored.activeObjective.interruptedTurnRecovery.recovery).toMatchObject({
+      expect(requiredTestValue(requiredTestValue(restored.activeObjective).interruptedTurnRecovery).recovery).toMatchObject({
         lastCause: 'tool_checkpoint', attempts: 2, exhaustedAt: 99,
         explicitRetryAllowances: [grant],
       })

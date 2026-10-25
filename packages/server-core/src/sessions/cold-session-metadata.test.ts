@@ -1,9 +1,12 @@
+import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'fs'
 import { tmpdir } from 'os'
 import { dirname, join } from 'path'
 import {
   getSessionFilePath,
+  readSessionHeader,
+  type SessionHeader,
   loadSession,
   writeSessionJsonl,
   type StoredSession,
@@ -91,13 +94,14 @@ describe('cold-session metadata persistence', () => {
       buildWorkspace(),
       // messagesLoaded defaults to false — this is the cold-session state.
     )
-    ;(sm as unknown as { sessions: Map<string, unknown> }).sessions.set(sessionId, managed)
+    ;sessionRuntimeStateForTest(sm).sessions.set(sessionId, managed)
   }
 
-  function readDiskHeader(sessionId: string): Record<string, unknown> {
+  function readDiskHeader(sessionId: string): SessionHeader {
     const path = getSessionFilePath(tmpRoot, sessionId)
-    const firstLine = readFileSync(path, 'utf-8').split('\n')[0]
-    return JSON.parse(firstLine)
+    const header = readSessionHeader(path)
+    if (!header) throw new Error('Expected the persisted fixture header')
+    return header
   }
 
   function readDiskMessageIds(sessionId: string): string[] {
@@ -178,9 +182,7 @@ describe('cold-session metadata persistence', () => {
     seedColdSession(sessionId, {
       messages: [makeUserMessage('m1', 'large transcript stays on disk')],
     })
-    const managed = (sm as unknown as {
-      sessions: Map<string, { messagesLoaded: boolean; messages: unknown[] }>
-    }).sessions.get(sessionId)!
+    const managed = sessionRuntimeStateForTest(sm).sessions.get(sessionId)!
 
     expect(managed.messagesLoaded).toBe(false)
     expect(sm.getSessionWorkspaceId(sessionId)).toBe('ws_test')
@@ -221,8 +223,7 @@ describe('cold-session metadata persistence', () => {
     // flushes (e.g. setSessionStatus, or any UI flow that quits the app
     // right after a metadata change). The disk must reflect the new value
     // by the time flushSession resolves — no debounce window.
-    const managed = (sm as unknown as { sessions: Map<string, { sessionStatus?: string }> })
-      .sessions.get(sessionId)!
+    const managed = sessionRuntimeStateForTest(sm).sessions.get(sessionId)!
     managed.sessionStatus = 'cancelled'
     ;(sm as unknown as { persistSession: (m: unknown) => void }).persistSession(managed)
     await sm.flushSession(sessionId)
@@ -237,27 +238,15 @@ describe('cold-session metadata persistence', () => {
 
     await sm.setSessionStatus(sessionId, 'needs-review')
 
-    const managed = (sm as unknown as {
-      sessions: Map<string, {
-        isProcessing: boolean
-        sessionStatus?: string
-        pendingExternalMetadata?: Record<string, unknown>
-      }>
-    }).sessions.get(sessionId)!
+    const managed = sessionRuntimeStateForTest(sm).sessions.get(sessionId)!
     managed.isProcessing = true
     managed.pendingExternalMetadata = {
       ...readDiskHeader(sessionId),
       sessionStatus: 'in-progress',
     }
 
-    const watcher = (sm as unknown as {
-      configWatchers: Map<string, {
-        callbacks: {
-          onSessionMetadataChange?: (id: string, header: Record<string, unknown>) => void
-        }
-      }>
-    }).configWatchers.get(tmpRoot)!
-    watcher.callbacks.onSessionMetadataChange?.(sessionId, readDiskHeader(sessionId))
+    const watcher = sessionRuntimeStateForTest(sm).configWatchers.get(tmpRoot)!
+    watcher['callbacks'].onSessionMetadataChange?.(sessionId, readDiskHeader(sessionId))
 
     expect(managed.pendingExternalMetadata).toBeUndefined()
     expect(managed.sessionStatus).toBe('needs-review')

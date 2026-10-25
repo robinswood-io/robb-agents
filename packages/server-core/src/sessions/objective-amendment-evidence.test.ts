@@ -1,3 +1,4 @@
+import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import {describe,it,expect} from 'bun:test';
 import {transitionObjectiveContract,buildObjectiveContractPrompt,objectiveRequiresExecutionEvidence} from './objective-contract.ts';
 import {requiresStructuredObjectiveOutcome} from './objective-completion-policy.ts';
@@ -41,7 +42,7 @@ describe('accepted amendments promote completion evidence without replacing the 
    appendRunLog(directory,'read-task','run-1',{
     t:'2026-09-11T00:00:00.000Z',kind:'node-spawned',nodeId:'list',sessionId:'task-child',
    });
-   host.sessions.set(parent.id,parent);host.sessions.set(managed.id,managed);host.sendEvent=()=>{};
+   sessionRuntimeStateForTest(manager).sessions.set(parent.id,parent);sessionRuntimeStateForTest(manager).sessions.set(managed.id,managed);host.sendEvent=()=>{};
    host.startGenerationTelemetry=()=>{};host.finishGenerationTelemetry=()=>{};host.finishAllGenerationTelemetry=()=>{};host.emitExecutionTelemetry=()=>{};
    const agent={getModel:()=> 'fixture',getSessionId:()=>null,setAllSources:()=>{},isProcessing:()=>false,forceAbort:()=>{},dispose:()=>{},
     async *chat(){yield {type:'text_complete',text:'Listed.',turnId:'task-final'};yield {type:'complete'};}};
@@ -67,7 +68,7 @@ describe('accepted amendments promote completion evidence without replacing the 
    const managed=createManagedSession({id:'amended-direct',name:'Amended direct'},
     workspace,{messagesLoaded:true});
    managed.activeObjective=original();managed.messages=[{id:'root',role:'user',content:managed.activeObjective.originalText!,timestamp:1}];
-   host.sessions.set(managed.id,managed);host.sendEvent=()=>{};
+   sessionRuntimeStateForTest(manager).sessions.set(managed.id,managed);host.sendEvent=()=>{};
    host.startGenerationTelemetry=()=>{};host.finishGenerationTelemetry=()=>{};host.finishAllGenerationTelemetry=()=>{};host.emitExecutionTelemetry=()=>{};
    const recovery:string[]=[];host.enqueueAutomaticTurnRecovery=async(_session:unknown,cause:string)=>{recovery.push(cause);return false;};
    const agent={getModel:()=> 'fixture',getSessionId:()=>null,setAllSources:()=>{},isProcessing:()=>false,forceAbort:()=>{},dispose:()=>{},

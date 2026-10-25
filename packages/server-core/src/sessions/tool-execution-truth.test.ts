@@ -1,3 +1,4 @@
+import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
 import type { AgentEvent, Message } from '@craft-agent/core/types'
 import {
@@ -58,8 +59,7 @@ describe('tool execution truth', () => {
       content: 'Apply the change.',
       timestamp: 1,
     })
-    ;(manager as unknown as { sessions: Map<string, typeof managed> })
-      .sessions.set(managed.id, managed)
+    ;sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
     const runtime = manager as unknown as {
       processEvent: (session: unknown, agentEvent: AgentEvent, generation: number) => Promise<void>
     }

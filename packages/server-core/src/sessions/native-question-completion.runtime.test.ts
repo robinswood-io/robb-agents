@@ -1,3 +1,4 @@
+import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { describe, expect, it } from 'bun:test';
 import type { SessionEvent } from '@craft-agent/shared/protocol';
 import { SessionManager, createManagedSession } from './SessionManager';
@@ -25,7 +26,7 @@ it('canonically verifies the completed native reply before an unknown budget can
         });
         managed.activeObjective = structuredClone(h.objective);
         managed.messages = structuredClone(h.messages);
-        host['sessions'].set(managed.id, managed);
+        sessionRuntimeStateForTest(host).sessions.set(managed.id, managed);
         managed.messages[0]!.isQueued = false;
         const events: SessionEvent[] = [];
         host['sendEvent'] = (event: SessionEvent) => { events.push(structuredClone(event)); };
@@ -99,7 +100,7 @@ it('does not convert a late provider final after Stop into completion or grant c
         });
         managed.activeObjective = structuredClone(h.objective);
         managed.messages = structuredClone(h.messages);
-        host['sessions'].set(managed.id, managed);
+        sessionRuntimeStateForTest(host).sessions.set(managed.id, managed);
         host['sendEvent'] = () => { };
         for (const name of [
             'startGenerationTelemetry', 'finishGenerationTelemetry', 'finishAllGenerationTelemetry', 'emitExecutionTelemetry'
@@ -154,7 +155,7 @@ it('finishes one explicit legacy Retry without asking again or inventing a recov
         });
         managed.activeObjective = structuredClone(h.objective);
         managed.messages = structuredClone(h.messages);
-        host['sessions'].set(managed.id, managed);
+        sessionRuntimeStateForTest(host).sessions.set(managed.id, managed);
         host['sendEvent'] = () => { };
         for (const name of [
             'startGenerationTelemetry', 'finishGenerationTelemetry', 'finishAllGenerationTelemetry', 'emitExecutionTelemetry'

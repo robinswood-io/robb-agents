@@ -1,3 +1,5 @@
+import { ConfigWatcher } from '@craft-agent/shared/config';
+import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it } from 'bun:test'
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -25,7 +27,7 @@ async function managedSession(name: string) {
     { id: `workspace-${stored.id}`, name: 'Shutdown', rootPath: root, createdAt: 1 } as never,
     { messagesLoaded: true },
   )
-  ;(manager as unknown as { sessions: Map<string, typeof managed> }).sessions.set(managed.id, managed)
+  ;sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
   return { root, manager, managed }
 }
 
@@ -189,7 +191,7 @@ describe('session shutdown operation and runtime fences', () => {
     await manager.flushSession(managed.id)
 
     let watcherStopped = false
-    runtime.configWatchers.set(root, { stop: () => { watcherStopped = true } })
+    sessionRuntimeStateForTest(manager).configWatchers.set(root, Object.assign(new ConfigWatcher(root, {}), { stop: () => { watcherStopped = true } }))
     const cleanup = manager.cleanup()
     expect(watcherStopped).toBe(true)
     await cleanup
@@ -266,11 +268,11 @@ describe('session shutdown operation and runtime fences', () => {
       mkdirSync(metaPath, { recursive: true })
       writeFileSync(join(metaPath, 'shutdown-recovery.json'), '{}')
     })().finally(() => {
-      if (runtime.restartRecoveriesInFlight.get(managed.id) === recovery) {
-        runtime.restartRecoveriesInFlight.delete(managed.id)
+      if (sessionRuntimeStateForTest(manager).restartRecoveriesInFlight.get(managed.id) === recovery) {
+        sessionRuntimeStateForTest(manager).restartRecoveriesInFlight.delete(managed.id)
       }
     })
-    runtime.restartRecoveriesInFlight.set(managed.id, recovery)
+    sessionRuntimeStateForTest(manager).restartRecoveriesInFlight.set(managed.id, recovery)
     await recoveryStarted
 
     let cleanupSettled = false
@@ -371,8 +373,8 @@ describe('session shutdown operation and runtime fences', () => {
     await manager.cleanup()
 
     expect(disposalCalls).toBe(2)
-    expect(runtime.runtimeDisposalBarriers.has(managed.id)).toBe(false)
-    expect(runtime.runtimeDisposalsInFlight.has(managed.id)).toBe(false)
+    expect(sessionRuntimeStateForTest(manager).runtimeDisposalBarriers.has(managed.id)).toBe(false)
+    expect(sessionRuntimeStateForTest(manager).runtimeDisposalsInFlight.has(managed.id)).toBe(false)
   })
 
   it('fails cleanup explicitly when a detached runtime destructor remains unproven', async () => {
@@ -443,14 +445,14 @@ describe('session shutdown operation and runtime fences', () => {
       dispose: () => undefined,
       disposeForRestart: async () => { disposalCalls += 1 },
     } as never
-    runtime.configWatchers.set(root, {
+    sessionRuntimeStateForTest(manager).configWatchers.set(root, Object.assign(new ConfigWatcher(root, {}), {
       stop: () => { throw new Error('fixture watcher stop failure') },
-    })
+    }))
 
     await expect(manager.cleanup()).rejects.toThrow('fixture watcher stop failure')
 
     expect(disposalCalls).toBeGreaterThanOrEqual(1)
-    expect(runtime.configWatchers.size).toBe(0)
+    expect(sessionRuntimeStateForTest(manager).configWatchers.size).toBe(0)
     await expect(manager.restartAgentRuntime(managed.id))
       .rejects.toThrow('session manager is shutting down')
   })

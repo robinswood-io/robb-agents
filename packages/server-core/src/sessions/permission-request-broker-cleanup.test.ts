@@ -1,3 +1,6 @@
+import { objectiveReviewBinding } from './objective-contract.ts';
+import { ScriptedSessionAgent } from './testing/scripted-session-agent.ts';
+import { sessionRuntimeStateForTest, requiredTestValue } from "./testing/runtime-state-access.ts";
 import { describe, expect, it, jest } from 'bun:test'
 import { SessionManager, createManagedSession } from './SessionManager.ts'
 import { createPendingTurnRecovery } from './turn-recovery.ts'
@@ -7,20 +10,19 @@ function harness() {
   const managed = createManagedSession({ id: 'session-a' }, {
     id: 'workspace-a',
     name: 'Workspace A',
+    slug: 'workspace-a',
     rootPath: '/tmp/workspace-a',
     createdAt: 1,
-  } as never, { messagesLoaded: true })
+  }, { messagesLoaded: true })
   const respondToPermission = jest.fn()
   const forceAbort = jest.fn()
-  managed.agent = { respondToPermission, forceAbort, getModel: () => 'fixture-model', dispose: jest.fn() } as never
-  ;(manager as unknown as { sessions: Map<string, unknown> }).sessions.set(managed.id, managed)
+  managed.agent = Object.assign(new ScriptedSessionAgent(managed.workspace), { respondToPermission, forceAbort, getModel: () => 'fixture-model', dispose: jest.fn() })
+  ;sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
 
   const resolveApproval = jest.fn(() => ({ ok: true }))
   const auditEvent = jest.fn()
-  ;(manager as unknown as { privilegedExecutionBroker: unknown }).privilegedExecutionBroker = {
-    resolveApproval,
-    auditEvent,
-  }
+  ;sessionRuntimeStateForTest(manager).privilegedExecutionBroker.resolveApproval = resolveApproval
+  sessionRuntimeStateForTest(manager).privilegedExecutionBroker.auditEvent = auditEvent
 
   const timeout = setTimeout(() => undefined, 60_000)
   timeout.unref?.()
@@ -31,7 +33,7 @@ function harness() {
     commandHash: 'hash-a',
     toolName: 'Bash',
     processingGeneration: 0,
-    runtimeAgent: managed.agent,
+    runtimeAgent: managed.agent ?? undefined,
     requestedAt,
     expiresAt: requestedAt + 60_000,
     request: {
@@ -43,8 +45,7 @@ function harness() {
     },
     timeout,
   }
-  ;(manager as unknown as { pendingPermissionRequests: Map<string, unknown> })
-    .pendingPermissionRequests.set('request-a', metadata)
+  ;sessionRuntimeStateForTest(manager).pendingPermissionRequests.set('request-a', metadata)
 
   return { manager, managed, respondToPermission, forceAbort, resolveApproval, metadata }
 }
@@ -189,13 +190,7 @@ describe('privileged permission lifecycle cleanup', () => {
       rememberForMinutes: 10,
     })).toBe(true)
 
-    const approvals = (h.manager as unknown as {
-      adminRememberApprovals: Map<string, {
-        createdAt: number
-        expiresAt: number
-        sourceRequestId: string
-      }>
-    }).adminRememberApprovals
+    const approvals = sessionRuntimeStateForTest(h.manager).adminRememberApprovals
     expect([...approvals.values()]).toEqual([{
       createdAt: expect.any(Number),
       expiresAt: expect.any(Number),
@@ -300,7 +295,7 @@ describe('privileged permission lifecycle cleanup', () => {
 
     expect(h.respondToPermission).toHaveBeenNthCalledWith(1, 'request-a', false, false)
     expect(h.respondToPermission).toHaveBeenNthCalledWith(2, 'request-late', false, false)
-    expect(h.internals.pendingPermissionRequests.has('request-late')).toBe(false)
+    expect(sessionRuntimeStateForTest(h.internals).pendingPermissionRequests.has('request-late')).toBe(false)
     expect(h.managed.pendingTurnRecovery?.waitingForPermission).toMatchObject({
       requestId: 'request-a',
       toolUseId: 'gmail-call-a',
@@ -398,7 +393,7 @@ describe('privileged permission lifecycle cleanup', () => {
       })
       const timeout = setTimeout(() => undefined, expiresAt)
       timeout.unref?.()
-      h.internals.pendingPermissionRequests.set(requestId, {
+      sessionRuntimeStateForTest(h.internals).pendingPermissionRequests.set(requestId, {
         sessionId: h.managed.id,
         type: 'admin_approval',
         commandHash: `hash-${requestId}`,
@@ -406,7 +401,7 @@ describe('privileged permission lifecycle cleanup', () => {
         toolUseId,
         processingGeneration: 4,
         objectiveId: 'user-a',
-        runtimeAgent: h.managed.agent,
+        runtimeAgent: h.managed.agent ?? undefined,
         requestedAt: 2,
         expiresAt,
         request: {
@@ -434,7 +429,7 @@ describe('privileged permission lifecycle cleanup', () => {
     h.internals.expirePendingPermissionRequest('request-a')
     await tick()
 
-    expect(h.internals.pendingPermissionRequests.size).toBe(0)
+    expect(sessionRuntimeStateForTest(h.internals).pendingPermissionRequests.size).toBe(0)
     expect(h.respondToPermission.mock.calls).toEqual([
       ['request-a', false, false],
       ['request-b', false, false],
@@ -483,14 +478,14 @@ describe('privileged permission lifecycle cleanup', () => {
     }
     const timeout = setTimeout(() => undefined, 60_000)
     timeout.unref?.()
-    h.internals.pendingPermissionRequests.set('request-b', {
+    sessionRuntimeStateForTest(h.internals).pendingPermissionRequests.set('request-b', {
       sessionId: h.managed.id,
       type: 'mcp_mutation',
       toolName: 'calendar_update',
       toolUseId: 'calendar-call-b',
       processingGeneration: 4,
       objectiveId: 'user-a',
-      runtimeAgent: h.managed.agent,
+      runtimeAgent: h.managed.agent ?? undefined,
       requestedAt: 2,
       expiresAt: Date.now() + 60_000,
       request: {
@@ -544,7 +539,7 @@ describe('privileged permission lifecycle cleanup', () => {
 
     await h.manager.cancelProcessing(h.managed.id)
     expect(h.forceAbort).toHaveBeenCalledTimes(1)
-    expect(h.internals.pendingPermissionRequests.size).toBe(0)
+    expect(sessionRuntimeStateForTest(h.internals).pendingPermissionRequests.size).toBe(0)
     expect(h.respondToPermission.mock.calls).toEqual([['request-a', false, false]])
     expect(h.managed.messages.find(message => message.toolUseId === 'gmail-call-a')).toMatchObject({
       toolStatus: 'error',
@@ -559,7 +554,7 @@ describe('privileged permission lifecycle cleanup', () => {
   it('rejects a stale runtime permission through the old runtime without touching the new wait', () => {
     const h = installActivePermissionWait()
     clearTimeout(h.metadata.timeout)
-    h.internals.pendingPermissionRequests.clear()
+    sessionRuntimeStateForTest(h.internals).pendingPermissionRequests.clear()
     const oldAgent = h.managed.agent
     const newRespondToPermission = jest.fn()
     h.managed.agent = { respondToPermission: newRespondToPermission, forceAbort: jest.fn() } as never
@@ -577,14 +572,14 @@ describe('privileged permission lifecycle cleanup', () => {
     }
     const newTimeout = setTimeout(() => undefined, 60_000)
     newTimeout.unref?.()
-    h.internals.pendingPermissionRequests.set('request-new', {
+    sessionRuntimeStateForTest(h.internals).pendingPermissionRequests.set('request-new', {
       sessionId: h.managed.id,
       type: 'mcp_mutation',
       toolName: 'current_mutation',
       toolUseId: 'current-call',
       processingGeneration: 5,
       objectiveId: 'user-a',
-      runtimeAgent: h.managed.agent,
+      runtimeAgent: h.managed.agent ?? undefined,
       requestedAt: 5,
       expiresAt: 60_005,
       request: {
@@ -605,7 +600,7 @@ describe('privileged permission lifecycle cleanup', () => {
 
     expect(h.respondToPermission).toHaveBeenCalledWith('request-old-runtime', false, false)
     expect(newRespondToPermission).not.toHaveBeenCalled()
-    expect([...h.internals.pendingPermissionRequests.keys()]).toEqual(['request-new'])
+    expect([...sessionRuntimeStateForTest(h.internals).pendingPermissionRequests.keys()]).toEqual(['request-new'])
     expect(h.managed.pendingTurnRecovery?.waitingForPermission).toMatchObject({
       requestId: 'request-new',
       toolUseId: 'current-call',
@@ -616,17 +611,16 @@ describe('privileged permission lifecycle cleanup', () => {
   it('does not tombstone a current call when a stale runtime reuses its tool id', async () => {
     const h = installActivePermissionWait()
     clearTimeout(h.metadata.timeout)
-    h.internals.pendingPermissionRequests.clear()
+    sessionRuntimeStateForTest(h.internals).pendingPermissionRequests.clear()
     const oldAgent = h.managed.agent
     const oldRespondToPermission = h.respondToPermission
-    ;(h.manager as unknown as { runtimeProcessingGenerations: WeakMap<object, number> })
-      .runtimeProcessingGenerations.set(oldAgent as object, 4)
+    ;sessionRuntimeStateForTest(h.manager).runtimeProcessingGenerations.set(requiredTestValue(oldAgent), 4)
     const currentRespondToPermission = jest.fn()
-    h.managed.agent = {
+    h.managed.agent = Object.assign(new ScriptedSessionAgent(h.managed.workspace), {
       respondToPermission: currentRespondToPermission,
       forceAbort: jest.fn(),
       getModel: () => 'fixture-model',
-    } as never
+    })
     h.managed.processingGeneration = 5
     h.managed.messages.push({
       id: 'tool-current-shared',
@@ -637,10 +631,14 @@ describe('privileged permission lifecycle cleanup', () => {
       toolUseId: 'call-shared',
       toolStatus: 'executing',
     })
-    h.internals.checkpointToolStarts.set(h.managed, {
+    sessionRuntimeStateForTest(h.internals).checkpointToolStarts.set(h.managed, {
       generation: 5,
       calls: new Map([['call-shared', {
         objectiveId: 'user-a',
+        objective: requiredTestValue(h.managed.activeObjective),
+        acceptanceRevision: requiredTestValue(h.managed.activeObjective).acceptanceRevision ?? 'fixture-revision',
+        acceptanceSha256: objectiveReviewBinding(requiredTestValue(h.managed.activeObjective)).acceptanceSha256,
+        authorityEpoch: 0,
         toolName: 'current_mutation',
       }]]),
     })
@@ -673,7 +671,7 @@ describe('privileged permission lifecycle cleanup', () => {
   it('rejects a permission whose tool start belongs to the objective before a same-generation steer', () => {
     const h = installActivePermissionWait()
     clearTimeout(h.metadata.timeout)
-    h.internals.pendingPermissionRequests.clear()
+    sessionRuntimeStateForTest(h.internals).pendingPermissionRequests.clear()
     h.resolveApproval.mockClear()
     h.respondToPermission.mockClear()
     h.managed.messages.push({
@@ -685,10 +683,14 @@ describe('privileged permission lifecycle cleanup', () => {
       toolUseId: 'call-old-objective',
       toolStatus: 'executing',
     })
-    h.internals.checkpointToolStarts.set(h.managed, {
+    sessionRuntimeStateForTest(h.internals).checkpointToolStarts.set(h.managed, {
       generation: 4,
       calls: new Map([['call-old-objective', {
         objectiveId: 'user-a',
+        objective: requiredTestValue(h.managed.activeObjective),
+        acceptanceRevision: requiredTestValue(h.managed.activeObjective).acceptanceRevision ?? 'fixture-revision',
+        acceptanceSha256: objectiveReviewBinding(requiredTestValue(h.managed.activeObjective)).acceptanceSha256,
+        authorityEpoch: 0,
         toolName: 'old_objective_mutation',
       }]]),
     })
@@ -710,14 +712,14 @@ describe('privileged permission lifecycle cleanup', () => {
     }
     const currentTimeout = setTimeout(() => undefined, 60_000)
     currentTimeout.unref?.()
-    h.internals.pendingPermissionRequests.set('request-b', {
+    sessionRuntimeStateForTest(h.internals).pendingPermissionRequests.set('request-b', {
       sessionId: h.managed.id,
       type: 'mcp_mutation',
       toolName: 'current_mutation',
       toolUseId: 'current-call-b',
       processingGeneration: 4,
       objectiveId: 'user-b',
-      runtimeAgent: h.managed.agent,
+      runtimeAgent: h.managed.agent ?? undefined,
       requestedAt: 5,
       expiresAt: 60_005,
       request: {
@@ -745,7 +747,7 @@ describe('privileged permission lifecycle cleanup', () => {
       ['request-old-objective', false, false],
     ])
     expect(h.resolveApproval).not.toHaveBeenCalled()
-    expect([...h.internals.pendingPermissionRequests.keys()]).toEqual(['request-b'])
+    expect([...sessionRuntimeStateForTest(h.internals).pendingPermissionRequests.keys()]).toEqual(['request-b'])
     expect(h.managed.pendingTurnRecovery?.waitingForPermission).toMatchObject({
       requestId: 'request-b',
       toolUseId: 'current-call-b',
@@ -866,7 +868,7 @@ describe('privileged permission lifecycle cleanup', () => {
     h.internals.flushSession = jest.fn(() => flushGate.promise)
 
     const close = h.internals.closePendingPermissionRequestsForStop(h.managed, 4)
-    expect(h.internals.pendingPermissionRequests.size).toBe(0)
+    expect(sessionRuntimeStateForTest(h.internals).pendingPermissionRequests.size).toBe(0)
     expect(h.managed.messages.find(message => message.toolUseId === 'gmail-call-a')).toMatchObject({
       toolStatus: 'error',
       toolExecuted: false,
@@ -924,11 +926,11 @@ describe('privileged permission lifecycle cleanup', () => {
   it('records and flushes a shutdown-time permission denial before releasing the provider', async () => {
     const h = installActivePermissionWait()
     clearTimeout(h.metadata.timeout)
-    h.internals.pendingPermissionRequests.clear()
+    sessionRuntimeStateForTest(h.internals).pendingPermissionRequests.clear()
     h.respondToPermission.mockClear()
     const flushGate = deferred()
     h.internals.flushSession = jest.fn(() => flushGate.promise)
-    ;(h.manager as unknown as { shuttingDown: boolean }).shuttingDown = true
+    ;sessionRuntimeStateForTest(h.manager).shuttingDown = true
 
     h.internals.denyPermissionRequestDuringShutdown(h.managed, {
       requestId: 'shutdown-late',
@@ -968,7 +970,7 @@ describe('privileged permission lifecycle cleanup', () => {
     await h.manager.cleanup()
 
     expect(h.respondToPermission).toHaveBeenCalledWith('request-a', false, false)
-    expect(h.internals.pendingPermissionRequests.size).toBe(0)
+    expect(sessionRuntimeStateForTest(h.internals).pendingPermissionRequests.size).toBe(0)
     expect(h.managed.messages.find(message => message.toolUseId === 'gmail-call-a')).toMatchObject({
       toolStatus: 'error',
       toolExecuted: false,

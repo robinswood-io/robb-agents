@@ -1,3 +1,4 @@
+import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
@@ -52,7 +53,7 @@ describe('sendMessage OAuth refresh ordering (#710)', () => {
       workspace as never,
       { messagesLoaded: true },
     )
-    ;(sm as unknown as { sessions: Map<string, unknown> }).sessions.set(id, managed)
+    ;sessionRuntimeStateForTest(sm).sessions.set(id, managed)
     return managed
   }
 

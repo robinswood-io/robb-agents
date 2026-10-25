@@ -1,3 +1,4 @@
+import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterAll, beforeAll, expect, it, spyOn } from 'bun:test'
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -56,8 +57,8 @@ function sessions() {
   }
   const child = createManagedSession({ id: 'child', name: 'Child', parentSessionId: 'parent', llmConnection: 'test-route', permissionMode: 'safe' }, workspace, { messagesLoaded: true })
   child.activeObjective = { ...parent.activeObjective, objectiveId: 'child-objective' }
-  manager.sessions.set(parent.id, parent)
-  manager.sessions.set(child.id, child)
+  sessionRuntimeStateForTest(manager).sessions.set(parent.id, parent)
+  sessionRuntimeStateForTest(manager).sessions.set(child.id, child)
   return { manager, parent, child, workspace }
 }
 

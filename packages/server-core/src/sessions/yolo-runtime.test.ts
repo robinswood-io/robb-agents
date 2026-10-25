@@ -1,3 +1,4 @@
+import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it } from 'bun:test';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -30,7 +31,7 @@ function harness(mode: 'safe' | 'ask' | 'allow-all' = 'allow-all') {
     orchestrationMode: 'mission', risk: 'standard', terminalState: 'active',
     completionCriteria: ['requested-outcome-delivered', 'relevant-checks-passed', 'no-safe-work-remaining'] };
   managed.pendingTurnRecovery = { ...createPendingTurnRecovery('request'), attempts: 3, continuationCount: 3 } as never;
-  host.sessions.set(managed.id, managed);
+  sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed);
   return { manager, host, managed, workspace, events };
 }
 const question = [{ id: 'format', question: 'Quel format ?', options: [{ id: 'pdf', label: 'PDF' }] }];
@@ -50,7 +51,7 @@ describe('durable YOLO host boundaries', () => {
     expect(context).toContain('"passed":true');
     expect(context).not.toContain('Fixture result content');
     const observer = createManagedSession({ id: 'observer', permissionMode: 'safe' }, h.workspace);
-    h.host.sessions.set(observer.id, observer);
+    sessionRuntimeStateForTest(h.host).sessions.set(observer.id, observer);
     expect(h.host.getSessionToolInfo(observer, h.managed.id).objectiveEvidenceContext).toBeUndefined();
     h.managed.messagesLoaded = false;
     expect(h.host.getSessionToolInfo(h.managed).objectiveEvidenceContext).toBeUndefined();
@@ -112,7 +113,7 @@ describe('durable YOLO host boundaries', () => {
       delegation: { rootSessionId: 'root', rootObjectiveId: 'objective', parentObjectiveId: 'objective',
         role: 'reviewer', depth: 1, createdAt: 1 } as never }, h.workspace, { messagesLoaded: true });
     child.activeObjective = { ...h.managed.activeObjective!, objectiveId: 'review-objective', userMessageId: 'review-request' };
-    h.host.sessions.set(child.id, child);
+    sessionRuntimeStateForTest(h.host).sessions.set(child.id, child);
     await expect(h.manager.requestUserInput(child.id, question)).rejects.toThrow('YOLO_HUMAN_HANDOFF_DISABLED');
     for (const toolName of ['mcp__session__SubmitPlan', 'mcp__session__source_oauth_trigger', 'request_user_input']) {
       await expect(h.host.admitBackendToolExecution(child, {} as never, { toolName, toolInput: {} }))
@@ -139,7 +140,7 @@ describe('durable YOLO host boundaries', () => {
       expect(saved.userInputRequests ?? []).toHaveLength(0);
       const { messages, ...metadata } = saved;
       const restored = createManagedSession(metadata, h.workspace, { messagesLoaded: true });
-      restored.messages = messages.map(storedToMessage); h.host.sessions.set(restored.id, restored);
+      restored.messages = messages.map(storedToMessage); sessionRuntimeStateForTest(h.host).sessions.set(restored.id, restored);
       let calls = 0; h.host.getOrCreateAgent = async () => { calls++; throw new Error('Unexpected provider replay'); };
       await h.host.resumePendingTurnAfterRestart(restored.id);
       expect(calls).toBe(0);

@@ -1,3 +1,4 @@
+import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import {
   afterAll,
   afterEach,
@@ -191,7 +192,7 @@ describe('public selected-model persistence', () => {
       createdAt: 1,
     }, workspace as never, { messagesLoaded: true });
     managed.agent = createAgentStub() as never;
-    first.runtime.sessions.set(managed.id, managed);
+    sessionRuntimeStateForTest(first.runtime).sessions.set(managed.id, managed);
 
     await routeObjectiveTurn({
       ...first,
@@ -230,7 +231,7 @@ describe('public selected-model persistence', () => {
       messagesLoaded: true,
     });
     reloaded.agent = createAgentStub() as never;
-    resumed.runtime.sessions.set(reloaded.id, reloaded);
+    sessionRuntimeStateForTest(resumed.runtime).sessions.set(reloaded.id, reloaded);
 
     await routeObjectiveTurn({
       ...resumed,

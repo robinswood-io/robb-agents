@@ -1,3 +1,4 @@
+import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it } from 'bun:test'
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -54,7 +55,7 @@ describe('session deletion external-operation fences', () => {
       sessions: Map<string, typeof managed>
       sendEvent: (event: { type: string }) => void
     }
-    runtime.sessions.set(managed.id, managed)
+    sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
     runtime.sendEvent = event => { events.push(event) }
 
     const refresh = manager.refreshTitle(managed.id)
@@ -63,7 +64,7 @@ describe('session deletion external-operation fences', () => {
     const deletion = manager.deleteSession(managed.id).finally(() => { deletionSettled = true })
     await Promise.resolve()
     await Promise.resolve()
-    expect(runtime.sessions.has(managed.id)).toBe(false)
+    expect(sessionRuntimeStateForTest(manager).sessions.has(managed.id)).toBe(false)
     expect(deletionSettled).toBe(false)
     const eventsAtDetach = events.length
 
@@ -110,7 +111,7 @@ describe('session deletion external-operation fences', () => {
       sendEvent: (event: { type: string }) => void
       scheduleTitleGeneration: (session: typeof managed, message: string) => void
     }
-    runtime.sessions.set(managed.id, managed)
+    sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
     runtime.sendEvent = event => { events.push(event) }
 
     runtime.scheduleTitleGeneration(managed, 'Please improve this title')
@@ -119,7 +120,7 @@ describe('session deletion external-operation fences', () => {
     const deletion = manager.deleteSession(managed.id).finally(() => { deletionSettled = true })
     await Promise.resolve()
     await Promise.resolve()
-    expect(runtime.sessions.has(managed.id)).toBe(false)
+    expect(sessionRuntimeStateForTest(manager).sessions.has(managed.id)).toBe(false)
     expect(deletionSettled).toBe(false)
     const eventsAtDetach = events.length
 
@@ -159,7 +160,7 @@ describe('session deletion external-operation fences', () => {
       sendEvent: (event: { type: string }) => void
       tryRefreshAgentRuntime: (session: typeof managed, reason: string) => Promise<void>
     }
-    runtime.sessions.set(managed.id, managed)
+    sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
     runtime.sendEvent = event => { events.push(event) }
     runtime.tryRefreshAgentRuntime = async () => {
       notifyRefreshStarted()
@@ -172,7 +173,7 @@ describe('session deletion external-operation fences', () => {
     const deletion = manager.deleteSession(managed.id).finally(() => { deletionSettled = true })
     await Promise.resolve()
     await Promise.resolve()
-    expect(runtime.sessions.has(managed.id)).toBe(false)
+    expect(sessionRuntimeStateForTest(manager).sessions.has(managed.id)).toBe(false)
     expect(deletionSettled).toBe(false)
     const eventsAtDetach = events.length
 
@@ -209,8 +210,8 @@ describe('session deletion external-operation fences', () => {
         validateAttachmentPath: (path: string, allowed?: string[]) => Promise<string>,
       ) => Promise<unknown>
     }
-    runtime.sessions.set(sender.id, sender)
-    runtime.sessions.set(target.id, target)
+    sessionRuntimeStateForTest(manager).sessions.set(sender.id, sender)
+    sessionRuntimeStateForTest(manager).sessions.set(target.id, target)
 
     let releaseValidation!: () => void
     const validationGate = new Promise<void>(resolve => { releaseValidation = resolve })
@@ -234,7 +235,7 @@ describe('session deletion external-operation fences', () => {
     const deletion = manager.deleteSession(target.id).finally(() => { deletionSettled = true })
     await Promise.resolve()
     await Promise.resolve()
-    expect(runtime.sessions.has(target.id)).toBe(false)
+    expect(sessionRuntimeStateForTest(manager).sessions.has(target.id)).toBe(false)
     expect(deletionSettled).toBe(false)
     expect(existsSync(getSessionPath(root, target.id))).toBe(true)
 
@@ -257,7 +258,7 @@ describe('session deletion external-operation fences', () => {
       { messagesLoaded: true },
     )
     const runtime = manager as unknown as { sessions: Map<string, typeof managed> }
-    runtime.sessions.set(managed.id, managed)
+    sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
 
     let releaseUpload!: () => void
     const uploadGate = new Promise<void>(resolve => { releaseUpload = resolve })
@@ -285,7 +286,7 @@ describe('session deletion external-operation fences', () => {
     const deletion = manager.deleteSession(managed.id).finally(() => { deletionSettled = true })
     await Promise.resolve()
     await Promise.resolve()
-    expect(runtime.sessions.has(managed.id)).toBe(false)
+    expect(sessionRuntimeStateForTest(manager).sessions.has(managed.id)).toBe(false)
     expect(deletionSettled).toBe(false)
     expect(existsSync(getSessionPath(root, managed.id))).toBe(true)
 

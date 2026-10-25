@@ -1,3 +1,4 @@
+import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { describe, expect, it } from 'bun:test';
 import {
   hasMatchingExternalActionAuthorization,
@@ -206,7 +207,7 @@ describe('SessionManager sensitive permission persistence', () => {
       flushSession: (sessionId: string) => Promise<void>;
       emitExecutionTelemetry: () => void;
     };
-    internals.sessions.set(managed.id, managed);
+    sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed);
     const persistedAuthorizations: Array<typeof managed.externalActionAuthorizations> = [];
     internals.persistSession = session => {
       persistedAuthorizations.push(structuredClone(session.externalActionAuthorizations));
@@ -217,13 +218,13 @@ describe('SessionManager sensitive permission persistence', () => {
     const addRequest = (requestId: string) => {
       const timeout = setTimeout(() => undefined, 60_000);
       timeout.unref?.();
-      internals.pendingPermissionRequests.set(requestId, {
+      sessionRuntimeStateForTest(manager).pendingPermissionRequests.set(requestId, {
         sessionId: managed.id,
         type: 'mcp_mutation',
         toolName: 'mcp__gmail__send_email',
         processingGeneration: 1,
         objectiveId: 'user-a',
-        runtimeAgent: managed.agent,
+        runtimeAgent: managed.agent ?? undefined,
         requestedAt: Date.now(),
         expiresAt: Date.now() + 60_000,
         request: {

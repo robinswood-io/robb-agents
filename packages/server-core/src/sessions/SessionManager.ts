@@ -1,85 +1,14 @@
-import {
-  startCompactionTelemetry,
-  getAdminRememberKey,
-  refreshInheritedWorkspaceSources,
-  hasUnscheduledQueuedUserInput,
-  hasPendingLocalUserInput,
-  getQueuedPendingUserInputResponse,
-  queuedCostLimitContinuationForAgentDelivery,
-  providerDispatchesAwaitingColdReconciliation,
-  exactProviderDispatchAcceptanceUnknown,
-  assertRetryTurnAnchor,
-  boundObjectiveForCleanHandoff,
-  queuedDirectHumanContinuationIndex,
-  queuedDirectHumanContinuationIndexForId,
-  nextRecoveryDispatch,
-  validAllocatedRecoveryDispatch,
-  classifyAutomaticRecoveryWorkForSession,
-  cleanSetupRetryDelayMs,
-  cleanRetrySetupFailureSignal,
-  isImmutableAutomaticRecoveryBlock,
-  delegatedTerminalResultDeliveryId,
-  delegatedTerminalResultContent,
-  isDurableProviderActivityOrHumanSupersession,
-  enqueueRecoveredMessageInTranscriptOrder,
-  persistenceRootFor,
-  isExactQueuedSourceActivation,
-  cancelSourceActivationPending,
-  commitSourceActivationPending,
-  releaseSourceActivationClaim,
-  hasAuthenticatedObjectiveRoot,
-  projectLegacyObjectiveForUserTransition,
-  repairLegacyContextualObjectiveAuthority,
-  isClosedColdResumeStatus,
-  isDirectHumanContinuation,
-  getAuthRequestDescription,
-  formatAuthResultMessage,
-  discoverMissionToolCatalog,
-  loadSpecializedMissionSkillPackages,
-  assertSpecializedMissionSourceSelection,
-  captureSpecializedMissionSourceSnapshot,
-  assertMissionDispatchWorkingDirectory,
-  assertOrdinaryMissionRouteProjection,
-  ordinaryMissionSourceBuildOptions,
-  authenticatedTaskFor,
-  reconcileCompletedChatRetention,
-  isLegacyHostObjectiveContractEnabled,
-  rehydrateObjectiveEvidence,
-  resolveAutomationMentions,
-} from './SessionManager/policy.ts';
+import { SessionRuntimeState } from './SessionManager/runtime-state.ts';
+import { startCompactionTelemetry, getAdminRememberKey, refreshInheritedWorkspaceSources, hasUnscheduledQueuedUserInput, hasPendingLocalUserInput, getQueuedPendingUserInputResponse, queuedCostLimitContinuationForAgentDelivery, providerDispatchesAwaitingColdReconciliation, exactProviderDispatchAcceptanceUnknown, assertRetryTurnAnchor, boundObjectiveForCleanHandoff, queuedDirectHumanContinuationIndex, queuedDirectHumanContinuationIndexForId, nextRecoveryDispatch, validAllocatedRecoveryDispatch, classifyAutomaticRecoveryWorkForSession, cleanSetupRetryDelayMs, cleanRetrySetupFailureSignal, isImmutableAutomaticRecoveryBlock, delegatedTerminalResultDeliveryId, delegatedTerminalResultContent, isDurableProviderActivityOrHumanSupersession, enqueueRecoveredMessageInTranscriptOrder, persistenceRootFor, isExactQueuedSourceActivation, cancelSourceActivationPending, commitSourceActivationPending, releaseSourceActivationClaim, hasAuthenticatedObjectiveRoot, projectLegacyObjectiveForUserTransition, repairLegacyContextualObjectiveAuthority, isClosedColdResumeStatus, isDirectHumanContinuation, getAuthRequestDescription, formatAuthResultMessage, discoverMissionToolCatalog, loadSpecializedMissionSkillPackages, assertSpecializedMissionSourceSelection, captureSpecializedMissionSourceSnapshot, assertMissionDispatchWorkingDirectory, assertOrdinaryMissionRouteProjection, ordinaryMissionSourceBuildOptions, authenticatedTaskFor, reconcileCompletedChatRetention, isLegacyHostObjectiveContractEnabled, rehydrateObjectiveEvidence, resolveAutomationMentions } from './SessionManager/policy.ts';
 import { AGENT_RUNTIME_ACTIVITY } from "@craft-agent/core/types";
 import type { JsonSchemaType } from "@modelcontextprotocol/sdk/validation";
 import { loadCollectionCacheSources } from "./collection-cache-sources";
-import {
-  abandonCompletedChatArchive,
-  archiveCompletedChatDirectory,
-  canInjectCompletedChatContext,
-  captureCompletedChatMemory,
-  CompletedChatArchiveError,
-  completedChatContext,
-  finalizeCompletedChatArchive,
-  hasProtectedChatWorktree,
-  isCompletedChatDue,
-  prepareCompletedChatArchive,
-  readCompletedChatMemory,
-  reopenCompletedChat,
-} from "./completed-chat-retention";
-import {
-  agentDeliveryId,
-  acknowledgeDurableDelivery,
-  recoveredInternalMessageOptions,
-  persistAgentDeliveryAttachments,
-  restoreAgentDeliveryAttachments,
-} from "./agent-delivery.ts";
+import { abandonCompletedChatArchive, archiveCompletedChatDirectory, canInjectCompletedChatContext, captureCompletedChatMemory, CompletedChatArchiveError, completedChatContext, finalizeCompletedChatArchive, hasProtectedChatWorktree, isCompletedChatDue, prepareCompletedChatArchive, readCompletedChatMemory, reopenCompletedChat } from "./completed-chat-retention";
+import { agentDeliveryId, acknowledgeDurableDelivery, recoveredInternalMessageOptions, persistAgentDeliveryAttachments, restoreAgentDeliveryAttachments } from "./agent-delivery.ts";
 import { canSteerTextPayload } from "./mid-stream-delivery";
 import type { EventSink, RpcServer } from "@craft-agent/server-core/transport";
 import { CLIENT_BROWSER_INVOKE } from "@craft-agent/server-core/transport";
-import type {
-  ISessionManager,
-  IBrowserPaneManager,
-  BrowserMutationUrlPolicy,
-  ExecutePromptAutomationInput,
-} from "@craft-agent/server-core/handlers";
+import type { ISessionManager, IBrowserPaneManager, BrowserMutationUrlPolicy, ExecutePromptAutomationInput } from "@craft-agent/server-core/handlers";
 import { RemoteBrowserPaneManager } from "./RemoteBrowserPaneManager";
 import { validateFilePath, getWorkspaceAllowedDirs } from "@craft-agent/server-core/handlers";
 import { basename, join } from "path";
@@ -87,150 +16,25 @@ import { existsSync, readFileSync } from "fs";
 import { readFile, writeFile, mkdir } from "fs/promises";
 import { randomUUID, createHash } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
-import {
-  normalizeUserInputQuestions,
-  normalizeUserInputResponse,
-  type UserInputRequest,
-  type UserInputQuestion,
-  type UserInputResponse,
-  type UserInputResponseResult,
-  type AutonomyEvent,
-} from "@craft-agent/core";
+import { normalizeUserInputQuestions, normalizeUserInputResponse, type UserInputRequest, type UserInputQuestion, type UserInputResponse, type UserInputResponseResult, type AutonomyEvent } from "@craft-agent/core";
 import type { AgentEventUsage } from "@craft-agent/core/types";
 import { requirePermissionMode } from "@craft-agent/shared/agent/mode-types";
-import {
-  type AgentEvent,
-  setPermissionMode,
-  hydratePreviousPermissionMode,
-  getPermissionModeDiagnostics,
-  type PermissionMode,
-  unregisterSessionScopedToolCallbacks,
-  mergeSessionScopedToolCallbacks,
-  AbortReason,
-  type AuthRequest,
-  type AuthResult,
-  type CredentialAuthRequest,
-  type BrowserPaneFns,
-  generateConversationSummary,
-  resolveKeepBackgroundTasksAlive,
-  decideAutonomyRecovery,
-  permissionModeAfterPlanApproval,
-  clearObjectiveEvidenceGate,
-  destroyContextualGmailSessionState,
-  getObjectiveEvidenceCompletionGap,
-  recordObjectiveEvidence,
-  assertContextualGmailBrowserMutationTargetAllowed,
-  isContextualGmailBrowserMutationGuardEnabled,
-  resolveBrowserChannelDirective,
-  classifyToolEffect,
-  classifyAgentFailure,
-  isToolResultError,
-  ToolAdmissionRecoveryError,
-  parseCompactCommand,
-} from "@craft-agent/shared/agent";
-import {
-  resolveSessionConnection,
-  createBackendFromConnection,
-  resolveBackendContext,
-  createBackendFromResolvedContext,
-  cleanupSourceRuntimeArtifacts,
-  ProviderDispatchRejectedError,
-} from "@craft-agent/shared/agent/backend";
-import {
-  getLlmConnection,
-  getDefaultLlmConnection,
-  getDefaultThinkingLevel,
-  getBrowserToolEnabled,
-  resetManagedAnthropicAuthEnvVars,
-  resolveMidStreamBehavior,
-  getPersistedUiLanguage,
-  resolveTitleLanguageName,
-  decideCostProviderAdmission,
-  isBrowserFallbackEligibleTool,
-  monetaryBudgetCostUsd,
-  resolveAgentCostBudgetState,
-  resolveAgentCostControlPolicy,
-  resolveEffectiveAgentContextLimits,
-  type CostControlledTurnKind,
-  type LlmConnection,
-} from "@craft-agent/shared/config";
+import { type AgentEvent, setPermissionMode, hydratePreviousPermissionMode, getPermissionModeDiagnostics, type PermissionMode, unregisterSessionScopedToolCallbacks, mergeSessionScopedToolCallbacks, AbortReason, type AuthRequest, type AuthResult, type CredentialAuthRequest, type BrowserPaneFns, generateConversationSummary, decideAutonomyRecovery, permissionModeAfterPlanApproval, clearObjectiveEvidenceGate, destroyContextualGmailSessionState, getObjectiveEvidenceCompletionGap, recordObjectiveEvidence, assertContextualGmailBrowserMutationTargetAllowed, isContextualGmailBrowserMutationGuardEnabled, resolveBrowserChannelDirective, classifyToolEffect, classifyAgentFailure, isToolResultError, ToolAdmissionRecoveryError, parseCompactCommand } from "@craft-agent/shared/agent";
+import { resolveSessionConnection, createBackendFromConnection, resolveBackendContext, createBackendFromResolvedContext, cleanupSourceRuntimeArtifacts, ProviderDispatchRejectedError } from "@craft-agent/shared/agent/backend";
+import { getLlmConnection, getDefaultLlmConnection, getDefaultThinkingLevel, getBrowserToolEnabled, resetManagedAnthropicAuthEnvVars, resolveMidStreamBehavior, getPersistedUiLanguage, resolveTitleLanguageName, decideCostProviderAdmission, isBrowserFallbackEligibleTool, monetaryBudgetCostUsd, resolveAgentCostBudgetState, resolveAgentCostControlPolicy, resolveEffectiveAgentContextLimits, type CostControlledTurnKind, type LlmConnection } from "@craft-agent/shared/config";
 import { formatPlaybookPrompt, getBuiltinPlaybook, loadWorkspacePlaybook } from "@craft-agent/shared/playbooks";
 import { validateSessionExecutionIsolation } from "@craft-agent/shared/tasks";
 
-import {
-  specializedProfileCapabilityEnvelopeIdentity,
-  specializedProfileExecutionRouteIdentity,
-} from "@craft-agent/shared/specialized-profiles";
-import { PrivilegedExecutionBroker } from "@craft-agent/server-core/services";
+import { specializedProfileCapabilityEnvelopeIdentity, specializedProfileExecutionRouteIdentity } from "@craft-agent/shared/specialized-profiles";
+
 import { isValidWorkingDirectory } from "../utils/path-validation";
-import { InitGate } from "@craft-agent/server-core/domain";
+
 import { i18n } from "@craft-agent/shared/i18n";
-import {
-  getWorkspaces,
-  getWorkspaceByNameOrId,
-  loadConfigDefaults,
-  migrateLegacyCredentials,
-  migrateLegacyLlmConnectionsConfig,
-  migrateOrphanedDefaultConnections,
-  MODEL_REGISTRY,
-  type Workspace,
-  type WorkspaceInfo,
-} from "@craft-agent/shared/config";
+import { getWorkspaces, getWorkspaceByNameOrId, loadConfigDefaults, migrateLegacyCredentials, migrateLegacyLlmConnectionsConfig, migrateOrphanedDefaultConnections, MODEL_REGISTRY, type Workspace, type WorkspaceInfo } from "@craft-agent/shared/config";
 import type { ActiveSessionInfo, SessionProcessingStatus } from "@craft-agent/core/types";
-import {
-  isWorkspaceAutomaticToolFallbackEnabled,
-  loadWorkspaceConfig,
-  type ExternalActionPolicy,
-} from "@craft-agent/shared/workspaces";
-import {
-  listSessions as listStoredSessions,
-  loadSession as loadStoredSession,
-  saveSession as saveStoredSession,
-  createSession as createStoredSession,
-  deleteSession as deleteStoredSession,
-  deleteSessionAtomically as deleteStoredSessionAtomically,
-  updateSessionMetadata,
-  setPendingPlanExecution as setStoredPendingPlanExecution,
-  markCompactionComplete as markStoredCompactionComplete,
-  markPendingPlanExecutionDispatched as markStoredPendingPlanExecutionDispatched,
-  clearPendingPlanExecution as clearStoredPendingPlanExecution,
-  getPendingPlanExecution as getStoredPendingPlanExecution,
-  getSessionPath as getSessionStoragePath,
-  ensureSessionDir,
-  getSessionFilePath,
-  generateSessionId,
-  assertSessionPersistenceRootIdentity,
-  captureSessionPersistenceRootIdentity,
-  captureSessionPersistenceRootPath,
-  SessionPersistenceRootIdentityError,
-  sessionPersistenceQueue,
-  getHeaderMetadataSignature,
-  writeSessionJsonl,
-  createImportedSessionIsolation,
-  serializeSession,
-  validateBundle,
-  type SessionBundle,
-  type DispatchMode,
-  type StoredSession,
-  type StoredMessage,
-  type SessionStatus,
-  type SessionHeader,
-  type SessionPersistenceRootIdentity,
-  type PendingTurnRecovery,
-  type ActiveSessionObjective,
-  type SessionDelegation,
-  type ExternalActionAuthorizationCategory,
-  type MissionCapabilityLock,
-  type MissionOrdinaryRouteLock,
-  pickSessionFields,
-} from "@craft-agent/shared/sessions";
-import {
-  loadWorkspaceSources,
-  loadAllSources,
-  getSourcesBySlugs,
-  isSourceUsable,
-  type LoadedSource,
-} from "@craft-agent/shared/sources";
+import { isWorkspaceAutomaticToolFallbackEnabled, loadWorkspaceConfig, type ExternalActionPolicy } from "@craft-agent/shared/workspaces";
+import { listSessions as listStoredSessions, loadSession as loadStoredSession, saveSession as saveStoredSession, createSession as createStoredSession, deleteSession as deleteStoredSession, deleteSessionAtomically as deleteStoredSessionAtomically, updateSessionMetadata, setPendingPlanExecution as setStoredPendingPlanExecution, markCompactionComplete as markStoredCompactionComplete, markPendingPlanExecutionDispatched as markStoredPendingPlanExecutionDispatched, clearPendingPlanExecution as clearStoredPendingPlanExecution, getPendingPlanExecution as getStoredPendingPlanExecution, getSessionPath as getSessionStoragePath, ensureSessionDir, getSessionFilePath, generateSessionId, assertSessionPersistenceRootIdentity, captureSessionPersistenceRootIdentity, captureSessionPersistenceRootPath, SessionPersistenceRootIdentityError, sessionPersistenceQueue, getHeaderMetadataSignature, writeSessionJsonl, createImportedSessionIsolation, serializeSession, validateBundle, type SessionBundle, type DispatchMode, type StoredSession, type StoredMessage, type SessionStatus, type SessionHeader, type SessionPersistenceRootIdentity, type PendingTurnRecovery, type ActiveSessionObjective, type SessionDelegation, type ExternalActionAuthorizationCategory, type MissionCapabilityLock, type MissionOrdinaryRouteLock, pickSessionFields } from "@craft-agent/shared/sessions";
+import { loadWorkspaceSources, loadAllSources, getSourcesBySlugs, isSourceUsable, type LoadedSource } from "@craft-agent/shared/sources";
 import { ConfigWatcher, type ConfigWatcherCallbacks } from "@craft-agent/shared/config";
 import { getValidClaudeOAuthToken } from "@craft-agent/shared/auth";
 import { resolveAuthEnvVars } from "@craft-agent/shared/config";
@@ -238,59 +42,14 @@ import { toolMetadataStore, getLastApiError } from "@craft-agent/shared/intercep
 import { isParentTaskTool } from "@craft-agent/shared/utils/toolNames";
 import { restoreFiles } from "@craft-agent/shared/utils/bundle-files";
 import { getCredentialManager, type LlmCredentialBinding } from "@craft-agent/shared/credentials";
-import {
-  McpClientPool,
-  McpPoolServer,
-  collectionSummaryCache,
-  type CollectionCacheScope,
-} from "@craft-agent/shared/mcp";
-import {
-  getAppPermissionsDir,
-  getWorkspacePermissionsPath,
-  getSourcePermissionsPath,
-} from "@craft-agent/shared/agent/permissions-config";
-import {
-  type Session,
-  type SessionEvent,
-  type CreateSessionOptions,
-  type FileAttachment,
-  type SendMessageOptions,
-  type PermissionRequest,
-  type UnreadSummary,
-  type RemoteSessionTransferPayload,
-  type ImportRemoteSessionTransferResult,
-  CodedError,
-  RPC_CHANNELS,
-  generateMessageId,
-} from "@craft-agent/shared/protocol";
-import {
-  messageToStored,
-  storedToMessage,
-  type Message,
-  type StoredAttachment,
-  type ToolDisplayMeta,
-  type TokenUsage,
-} from "@craft-agent/core/types";
-import {
-  perf,
-  resetSummarizationClient,
-  readFileAttachment,
-  selectSpreadMessages,
-  normalizePath,
-  redactSecretLikeMaterial,
-} from "@craft-agent/shared/utils";
+import { McpClientPool, McpPoolServer, collectionSummaryCache, type CollectionCacheScope } from "@craft-agent/shared/mcp";
+import { getAppPermissionsDir, getWorkspacePermissionsPath, getSourcePermissionsPath } from "@craft-agent/shared/agent/permissions-config";
+import { type Session, type SessionEvent, type CreateSessionOptions, type FileAttachment, type SendMessageOptions, type PermissionRequest, type UnreadSummary, type RemoteSessionTransferPayload, type ImportRemoteSessionTransferResult, CodedError, RPC_CHANNELS, generateMessageId } from "@craft-agent/shared/protocol";
+import { messageToStored, storedToMessage, type Message, type StoredAttachment, type ToolDisplayMeta, type TokenUsage } from "@craft-agent/core/types";
+import { perf, resetSummarizationClient, readFileAttachment, selectSpreadMessages, normalizePath, redactSecretLikeMaterial } from "@craft-agent/shared/utils";
 import { loadSkillBySlug, invalidateSkillsCache } from "@craft-agent/shared/skills";
-import {
-  resolveSpecializedSkillCapabilityIdentity,
-  resolveSpecializedSourceCapabilityIdentity,
-} from "../specialized-profiles/capability-identity.ts";
-import {
-  effectiveOrdinaryMissionSourceSlugs,
-  ordinaryMissionConnectionIdentity,
-  ordinaryMissionRouteConfigIdentity,
-  ordinaryMissionSourceBindings,
-  ordinaryMissionSourceIdentityFromBindings,
-} from "../missions/mission-route-identity.ts";
+import { resolveSpecializedSkillCapabilityIdentity, resolveSpecializedSourceCapabilityIdentity } from "../specialized-profiles/capability-identity.ts";
+import { effectiveOrdinaryMissionSourceSlugs, ordinaryMissionConnectionIdentity, ordinaryMissionRouteConfigIdentity, ordinaryMissionSourceBindings, ordinaryMissionSourceIdentityFromBindings } from "../missions/mission-route-identity.ts";
 
 import { invalidateContextFileCache } from "@craft-agent/shared/prompts/system";
 import { getMiniModel, getGitBashPath } from "@craft-agent/shared/config";
@@ -299,489 +58,76 @@ import { type ThinkingLevel, normalizeThinkingLevel } from "@craft-agent/shared/
 import { SESSION_TOOL_REGISTRY, type AgentMessageType } from "@craft-agent/session-tools-core";
 import { evaluateAutoLabels } from "@craft-agent/shared/labels/auto";
 import { listLabels, loadLabelConfig } from "@craft-agent/shared/labels/storage";
-import {
-  extractLabelId,
-  resolveSessionLabels,
-  findTaskItemLabelId,
-  findLabelById,
-  formatLabelEntry,
-} from "@craft-agent/shared/labels";
+import { extractLabelId, resolveSessionLabels, findTaskItemLabelId, findLabelById, formatLabelEntry } from "@craft-agent/shared/labels";
 import { ensureLabelsExist, ensureTaskItemLabel } from "@craft-agent/shared/labels/crud";
 import { loadStatusConfig } from "@craft-agent/shared/statuses/storage";
-import {
-  AutomationSystem,
-  createPromptHistoryEntry,
-  appendAutomationHistoryEntry,
-} from "@craft-agent/shared/automations";
-import {
-  buildBackendRuntimeSignature,
-  buildRestartRequiredSignature,
-  filterAttachmentsForModelInput,
-} from "./runtime-config";
-import { ExecutionProofCollector } from "./execution-proof-collector";
-import {
-  buildRoutingCostMeta,
-  applyRoutingCostMetaToLatestAssistantMessage,
-  resolveRoutingCostOptions,
-} from "@craft-agent/shared/audit";
-import {
-  GenerationTelemetryLifecycle,
-  LocalJsonlTelemetrySink,
-  OtlpHttpTelemetrySink,
-  parseCompactionInputTokens,
-  resolveOtlpTelemetryConfig,
-  type ExecutionTelemetrySink,
-  type GenerationTerminalName,
-  type RobbExecutionTelemetryEvent,
-} from "@craft-agent/shared/telemetry";
-import {
-  getPlatformSessionAppProvenance,
-  resolveImportedSessionAppProvenance,
-  toRoutingMetaAppProvenance,
-} from "./session-app-provenance";
-import {
-  classifyLatestTurnTerminalState,
-  classifyObjectiveTerminalState,
-  incompletePlanSteps,
-} from "./turn-completion";
+import { AutomationSystem, createPromptHistoryEntry, appendAutomationHistoryEntry } from "@craft-agent/shared/automations";
+import { buildBackendRuntimeSignature, buildRestartRequiredSignature, filterAttachmentsForModelInput } from "./runtime-config";
+
+import { buildRoutingCostMeta, applyRoutingCostMetaToLatestAssistantMessage, resolveRoutingCostOptions } from "@craft-agent/shared/audit";
+import { LocalJsonlTelemetrySink, OtlpHttpTelemetrySink, parseCompactionInputTokens, resolveOtlpTelemetryConfig, type GenerationTerminalName, type RobbExecutionTelemetryEvent } from "@craft-agent/shared/telemetry";
+import { getPlatformSessionAppProvenance, resolveImportedSessionAppProvenance, toRoutingMetaAppProvenance } from "./session-app-provenance";
+import { classifyLatestTurnTerminalState, classifyObjectiveTerminalState, incompletePlanSteps } from "./turn-completion";
 import { isYoloMode, yoloHumanHandoffBlock, YOLO_AUTONOMY_GUIDANCE } from "@craft-agent/shared/agent";
-import {
-  extractObjectiveOutcome,
-  hasCurrentObjectiveIndependentReviewPass,
-  validateObjectiveOutcome,
-} from "./objective-outcome";
+import { extractObjectiveOutcome, hasCurrentObjectiveIndependentReviewPass, validateObjectiveOutcome } from "./objective-outcome";
 import { waitForSessionChange } from "./session-wait";
 import { buildSessionWaitDiagnostic } from "./session-wait-diagnostic";
-import {
-  ActiveDelegationDeduplicator,
-  evaluateReviewDelegation,
-  makeActiveDelegationKey,
-} from "./review-delegation-policy";
-import {
-  canonicalTerminalReconciliationToolInput,
-  isObjectiveShellEvidenceCommand,
-  isProvablyReadOnlyShellCommand,
-  deriveTerminalReconciliationInvocationCapability,
-  TERMINAL_RECONCILIATION_CAPABILITY_FIELD,
-  type SpawnSessionResult,
-  type TerminalReconciliationPolicy,
-} from "@craft-agent/shared/agent";
-import {
-  buildDelegatedReviewPrompt,
-  deriveHostDelegatedReviewSingleTarget,
-  getDelegatedReviewRequest,
-  HOST_PARENT_REVIEW_INSTRUCTION,
-  prependHostDelegatedReviewerScope,
-  validateDelegatedReviewCompletion,
-} from "./delegated-review-outcome";
+import { evaluateReviewDelegation, makeActiveDelegationKey } from "./review-delegation-policy";
+import { canonicalTerminalReconciliationToolInput, isObjectiveShellEvidenceCommand, isProvablyReadOnlyShellCommand, deriveTerminalReconciliationInvocationCapability, TERMINAL_RECONCILIATION_CAPABILITY_FIELD, type SpawnSessionResult, type TerminalReconciliationPolicy } from "@craft-agent/shared/agent";
+import { buildDelegatedReviewPrompt, deriveHostDelegatedReviewSingleTarget, getDelegatedReviewRequest, HOST_PARENT_REVIEW_INSTRUCTION, prependHostDelegatedReviewerScope, validateDelegatedReviewCompletion } from "./delegated-review-outcome";
 import { buildObjectiveValidationEvidenceContext } from "./objective-validation-context";
-import {
-  collectObjectiveAcceptanceObservations,
-  projectObjectiveAcceptanceCriteria,
-  registerObjectiveAcceptanceCriteria,
-} from "./objective-acceptance-criteria";
+import { collectObjectiveAcceptanceObservations, projectObjectiveAcceptanceCriteria, registerObjectiveAcceptanceCriteria } from "./objective-acceptance-criteria";
 import { formatLegacyAcceptanceScalarDiagnostic } from "./legacy-acceptance-scalars";
 import { formatLegacyGscSiteIdentity } from "./legacy-gsc-site-identity";
-import {
-  DELEGATION_LIMITS,
-  DelegationBudget,
-  assertCurrentDelegationObjective,
-  resolveDelegatedPermissionMode,
-} from "./delegation-budget";
+import { DELEGATION_LIMITS, assertCurrentDelegationObjective, resolveDelegatedPermissionMode } from "./delegation-budget";
 import { parseSpawnSessionInput } from "@craft-agent/session-tools-core";
 import { businessProcedureCoverage, bindBusinessProcedure } from "./business-procedures";
-import {
-  captureProjectUserCorrection,
-  captureProjectTerminalLearning,
-  handleProjectLearning,
-  getProjectLearningPolicy,
-} from "./project-learning";
+import { captureProjectUserCorrection, captureProjectTerminalLearning, handleProjectLearning, getProjectLearningPolicy } from "./project-learning";
 import { loadProjectById, loadProjectMemoryV2Context } from "@craft-agent/shared/projects";
 import { demoteLatestCheckpointAssistant, latestFinalAssistantId } from "./tool-checkpoint-visibility";
 import { explicitRetryProgressFingerprint } from "./explicit-retry-progress";
-import {
-  AUTONOMOUS_SESSION_LIMITS,
-  inspectAutonomousLineage,
-  isSessionDescendant,
-  orderAutonomousRestartFrontier,
-} from "./autonomous-session-admission";
+import { AUTONOMOUS_SESSION_LIMITS, inspectAutonomousLineage, isSessionDescendant, orderAutonomousRestartFrontier } from "./autonomous-session-admission";
 import { requiresStructuredObjectiveOutcome } from "./objective-completion-policy";
-import {
-  isClosedSessionStatus,
-  resolveLifecycleStartStatus,
-  resolveLifecycleTerminalStatus,
-  shouldManageSessionStatusLifecycle,
-  type SessionLifecycleStopReason,
-} from "./session-status-lifecycle";
-import {
-  turnRecoveryValidationFingerprint,
-  buildAutomaticTurnRecoveryPrompt,
-  buildCleanRecoveryContinuationPrompt,
-  createCleanRecoveryContinuationHandoff,
-  createPendingTurnRecovery,
-  grantExplicitRetryAllowance,
-  hasAvailableExplicitRetryAllowance,
-  createAutomaticRecoveryToolDeadline,
-  DEFAULT_AUTOMATIC_TURN_RECOVERY_LEASE_MS,
-  MAX_AUTOMATIC_TURN_RECOVERY_ATTEMPTS,
-  MAX_OBJECTIVE_CONTINUATION_ATTEMPTS,
-  exhaustPendingTurnRecovery,
-  hasObjectiveContinuationProvenance,
-  pendingRecoveryRequiresContinuation,
-  reconstructLegacyTurnRecoveryBudget,
-  messagesForPendingRecovery,
-  resolveAutomaticRecoveryInactivityTimeoutMs,
-  planAutomaticTurnRecovery,
-  turnStillNeedsRecovery,
-  withAutomaticRecoveryInactivityTimeout,
-  type AutomaticTurnRecoveryCause,
-} from "./turn-recovery";
-import {
-  hasMatchingExternalActionAuthorization,
-  providerAlwaysAllowForExternalAction,
-  pruneExternalActionAuthorizations,
-  rememberExternalActionAuthorization,
-} from "./external-action-authorization";
-import {
-  pendingPermissionCanReplay,
-  pendingPermissionWatchdogRemainingMs,
-  resolvePermissionRequestTtlMs,
-} from "./permission-request-lifecycle";
-import {
-  buildAutonomyFallbackPrompt,
-  createAutonomyFallbackIntent,
-  isAutonomyBrowserFallbackPrompt,
-  isAutonomyStructuredFallbackPrompt,
-  parseAutonomyFallbackIntent,
-  type AutonomyFallbackIntent,
-} from "./autonomy-browser-fallback";
+import { isClosedSessionStatus, resolveLifecycleStartStatus, resolveLifecycleTerminalStatus, shouldManageSessionStatusLifecycle, type SessionLifecycleStopReason } from "./session-status-lifecycle";
+import { turnRecoveryValidationFingerprint, buildAutomaticTurnRecoveryPrompt, buildCleanRecoveryContinuationPrompt, createCleanRecoveryContinuationHandoff, createPendingTurnRecovery, grantExplicitRetryAllowance, hasAvailableExplicitRetryAllowance, createAutomaticRecoveryToolDeadline, DEFAULT_AUTOMATIC_TURN_RECOVERY_LEASE_MS, MAX_AUTOMATIC_TURN_RECOVERY_ATTEMPTS, MAX_OBJECTIVE_CONTINUATION_ATTEMPTS, exhaustPendingTurnRecovery, hasObjectiveContinuationProvenance, pendingRecoveryRequiresContinuation, reconstructLegacyTurnRecoveryBudget, messagesForPendingRecovery, resolveAutomaticRecoveryInactivityTimeoutMs, planAutomaticTurnRecovery, turnStillNeedsRecovery, withAutomaticRecoveryInactivityTimeout, type AutomaticTurnRecoveryCause } from "./turn-recovery";
+import { hasMatchingExternalActionAuthorization, providerAlwaysAllowForExternalAction, pruneExternalActionAuthorizations, rememberExternalActionAuthorization } from "./external-action-authorization";
+import { pendingPermissionCanReplay, pendingPermissionWatchdogRemainingMs, resolvePermissionRequestTtlMs } from "./permission-request-lifecycle";
+import { buildAutonomyFallbackPrompt, createAutonomyFallbackIntent, isAutonomyBrowserFallbackPrompt, isAutonomyStructuredFallbackPrompt, parseAutonomyFallbackIntent, type AutonomyFallbackIntent } from "./autonomy-browser-fallback";
 import { appendCoalescedInternalMessage, selectInternalMessageCoalesceTarget } from "./internal-message-coalescing";
 import { resolveContextTokenEstimate } from "./context-token-estimate";
-import {
-  buildObjectiveContractPrompt,
-  buildObjectiveScopePrompt,
-  objectiveEvidenceContractSegments,
-  findObjectiveText,
-  hasObjectiveExecutionEvidence,
-  isHostSyntheticObjectiveMessage,
-  isHostSyntheticObjectiveText,
-  objectiveCostUsd,
-  objectiveRequiresExecutionEvidence,
-  objectiveReviewBinding,
-  projectLegacyObjectiveCompletionRequirements,
-  reconstructObjectiveForBranch,
-  isExplicitReadOnlyReview,
-  isExplicitReadOnlyClosureRequest,
-  transitionObjectiveContract,
-  turnProgressFingerprint,
-} from "./objective-contract";
-import {
-  COST_CONTROL_COMPACTION_INSTRUCTIONS,
-  assessContextCompactionResult,
-  captureProviderContextBaseline,
-  classifyContextCompactionFailure,
-  consumeContextProviderBaselineAdmission,
-  decideContextProviderAdmission,
-  isHardLimitFollowUpContextCompaction,
-  isHardLimitRecoveryContextCompaction,
-  shouldAttemptContextCompaction,
-} from "./context-compaction";
+import { buildObjectiveContractPrompt, buildObjectiveScopePrompt, objectiveEvidenceContractSegments, findObjectiveText, hasObjectiveExecutionEvidence, isHostSyntheticObjectiveMessage, isHostSyntheticObjectiveText, objectiveCostUsd, objectiveRequiresExecutionEvidence, objectiveReviewBinding, projectLegacyObjectiveCompletionRequirements, reconstructObjectiveForBranch, isExplicitReadOnlyReview, isExplicitReadOnlyClosureRequest, transitionObjectiveContract, turnProgressFingerprint } from "./objective-contract";
+import { COST_CONTROL_COMPACTION_INSTRUCTIONS, assessContextCompactionResult, captureProviderContextBaseline, classifyContextCompactionFailure, consumeContextProviderBaselineAdmission, decideContextProviderAdmission, isHardLimitFollowUpContextCompaction, isHardLimitRecoveryContextCompaction, shouldAttemptContextCompaction } from "./context-compaction";
 import { buildExtractiveTransferSummary, selectTransferSummaryMessages } from "./transfer-summary-context";
 // Import from server-core domain utilities
 // Import from server-core domain utilities
-import {
-  sanitizeForTitle,
-  shouldActivateBrowserOverlay,
-  rollbackFailedBranchCreation,
-  releaseBrowserOwnershipOnForcedStop,
-} from "@craft-agent/server-core/domain";
+// Import from server-core domain utilities
+// Import from server-core domain utilities
+import { sanitizeForTitle, shouldActivateBrowserOverlay, rollbackFailedBranchCreation, releaseBrowserOwnershipOnForcedStop } from "@craft-agent/server-core/domain";
 import { resizeImageForAPI } from "@craft-agent/server-core/services";
 import { normalizeRecoveryValidationGapsForProgress } from "./recovery-progress";
 import { extractAuthenticatedTaskText } from "@craft-agent/shared/config";
 import type { ManagedSession } from './SessionManager/managed-session.ts';
-import type {
-  MissionSourceToolCatalogCache,
-  MissionSourceToolCatalogDecision,
-  MissionToolPreflightDecision,
-  MissionToolPreflightInput,
-} from './SessionManager/mission-route.ts';
-import {
-  assertValidOrdinaryMissionRouteLock,
-  buildBackendHostRuntimeContext,
-  canonicalMissionSourceSlugs,
-  freezeRuntimeSnapshot,
-  hasImmutableMissionRoute,
-  hasMissionDispatchTriplet,
-  missionMcpInputValidator,
-  specializedRuntimeIdentitySha256,
-} from './SessionManager/mission-route.ts';
-import {
-  delegatedObjectiveRoleForSession,
-  isMissionRuntimeOwnedRecovery,
-  isTerminalReviewSession,
-  terminalReviewExecutionIsolation,
-} from './SessionManager/review-lifecycle.ts';
+import type { MissionSourceToolCatalogCache, MissionSourceToolCatalogDecision, MissionToolPreflightDecision, MissionToolPreflightInput } from './SessionManager/mission-route.ts';
+import { assertValidOrdinaryMissionRouteLock, buildBackendHostRuntimeContext, canonicalMissionSourceSlugs, freezeRuntimeSnapshot, hasImmutableMissionRoute, hasMissionDispatchTriplet, missionMcpInputValidator, specializedRuntimeIdentitySha256 } from './SessionManager/mission-route.ts';
+import { delegatedObjectiveRoleForSession, isMissionRuntimeOwnedRecovery, isTerminalReviewSession, terminalReviewExecutionIsolation } from './SessionManager/review-lifecycle.ts';
 import { _platform, sessionLog, sessionRuntimeHooks } from './SessionManager/runtime-platform.ts';
-import type { PendingDelta } from './SessionManager/runtime-policy.ts';
-import {
-  AGENT_FLAGS,
-  AutomaticRecoverySupersededError,
-  AutonomousAdmissionDeferredError,
-  CleanRecoveryDispatchAuthenticationError,
-  DELEGATED_TERMINAL_RESULT_PROTOCOL,
-  DELTA_BATCH_INTERVAL_MS,
-  DelegatedDispatchSupersededError,
-  InternalContinuationSupersededError,
-  MAX_ADMIN_REMEMBER_MINUTES,
-  MAX_ANNOTATIONS_PER_MESSAGE,
-  MAX_ANNOTATION_JSON_BYTES,
-  METADATA_WRITE_GUARD_MS,
-  MIN_SESSION_RUNTIME_IDLE_TIMEOUT_MS,
-  PLAN_APPROVAL_MESSAGE,
-  RECOVERY_BUDGET_UNAVAILABLE_MESSAGE,
-  RetryTurnAlreadyRunningError,
-  SESSION_RUNTIME_DISPOSE_TIMEOUT_MS,
-  SESSION_RUNTIME_EVICTION_CONCURRENCY,
-  SESSION_RUNTIME_SWEEP_INTERVAL_MS,
-  SourceActivationSupersededError,
-  resolveSessionRuntimeIdleTimeoutMs,
-  withRuntimeDisposeTimeout,
-} from './SessionManager/runtime-policy.ts';
-import type {
-  AgentInstance,
-  CostControlledTurnContext,
-  MissionPendingTurnRecoveryClaim,
-  MissionPendingTurnRecoveryClaimDecision,
-  MissionPendingTurnRecoveryClaimRecord,
-  RunningBackgroundTask,
-  SessionCompletionEvent,
-} from './SessionManager/runtime-types.ts';
-import {
-  createManagedSession,
-  repairPersistedFalseCompletion,
-  resolveCreateSessionRouteProvenance,
-  resolveExplicitSpawnedSessionRoute,
-  sanitizeParentSessionLabels,
-} from './SessionManager/session-creation.ts';
+
+import { AGENT_FLAGS, AutomaticRecoverySupersededError, AutonomousAdmissionDeferredError, CleanRecoveryDispatchAuthenticationError, DELEGATED_TERMINAL_RESULT_PROTOCOL, DELTA_BATCH_INTERVAL_MS, DelegatedDispatchSupersededError, InternalContinuationSupersededError, MAX_ADMIN_REMEMBER_MINUTES, MAX_ANNOTATIONS_PER_MESSAGE, MAX_ANNOTATION_JSON_BYTES, METADATA_WRITE_GUARD_MS, MIN_SESSION_RUNTIME_IDLE_TIMEOUT_MS, PLAN_APPROVAL_MESSAGE, RECOVERY_BUDGET_UNAVAILABLE_MESSAGE, RetryTurnAlreadyRunningError, SESSION_RUNTIME_DISPOSE_TIMEOUT_MS, SESSION_RUNTIME_EVICTION_CONCURRENCY, SESSION_RUNTIME_SWEEP_INTERVAL_MS, SourceActivationSupersededError, withRuntimeDisposeTimeout } from './SessionManager/runtime-policy.ts';
+import type { AgentInstance, CostControlledTurnContext, MissionPendingTurnRecoveryClaim, MissionPendingTurnRecoveryClaimDecision, RunningBackgroundTask, SessionCompletionEvent } from './SessionManager/runtime-types.ts';
+import { createManagedSession, repairPersistedFalseCompletion, resolveCreateSessionRouteProvenance, resolveExplicitSpawnedSessionRoute, sanitizeParentSessionLabels } from './SessionManager/session-creation.ts';
 import { DEFAULT_TOKEN_USAGE, managedToSession } from './SessionManager/session-presentation.ts';
 import type { SourceActivationOrigin } from './SessionManager/source-activation.ts';
-import {
-  PI_SDK_MESSAGE_ID_CACHE_LIMIT,
-  SOURCE_ACTIVATION_DEDUP_WINDOW_MS,
-  SOURCE_ACTIVATION_MAX_DISPATCH_ATTEMPTS,
-  SOURCE_ACTIVATION_PROTOCOL_SUFFIX,
-  SOURCE_ACTIVATION_TOMBSTONE_LIMIT,
-  SOURCE_ACTIVATION_TOMBSTONE_TTL_MS,
-  claimAutoRetryPending,
-  commitRevocableSourceActivationRuntime,
-  isSourceActivationOriginCurrent,
-  pruneAutoRetryTombstones,
-  rememberAutoRetryTombstone,
-  sourceActivationObjectiveBinding,
-} from './SessionManager/source-activation.ts';
+import { PI_SDK_MESSAGE_ID_CACHE_LIMIT, SOURCE_ACTIVATION_DEDUP_WINDOW_MS, SOURCE_ACTIVATION_MAX_DISPATCH_ATTEMPTS, SOURCE_ACTIVATION_PROTOCOL_SUFFIX, SOURCE_ACTIVATION_TOMBSTONE_LIMIT, SOURCE_ACTIVATION_TOMBSTONE_TTL_MS, claimAutoRetryPending, commitRevocableSourceActivationRuntime, isSourceActivationOriginCurrent, pruneAutoRetryTombstones, rememberAutoRetryTombstone, sourceActivationObjectiveBinding } from './SessionManager/source-activation.ts';
 
 import { buildServersFromSources, refreshExpiredCredentials } from './SessionManager/source-build.ts';
-import {
-  resolveBranchedSessionSourceSelection,
-  resolveEffectiveSessionSourceSelection,
-  resolveSupportsBranching,
-  sessionSourceSlugsForPersistence,
-} from './SessionManager/source-selection.ts';
+import { resolveBranchedSessionSourceSelection, resolveEffectiveSessionSourceSelection, resolveSupportsBranching, sessionSourceSlugsForPersistence } from './SessionManager/source-selection.ts';
 import { resolveToolDisplayMeta } from './SessionManager/tool-display.ts';
-import {
-  copyPiTurnAnchorsForBranch,
-  getClaudeTurnAnchor,
-  getPiTurnAnchor,
-  isClaudeMessageUuid,
-  saveClaudeTurnAnchor,
-  savePiTurnAnchor,
-} from './SessionManager/turn-anchors.ts';
-import {
-  AUTHENTICATED_USER_AUTHORIZATION_MARKER,
-  CLEAN_RETRY_CONDITIONAL_SETUP_FAILURE_CLASSES,
-  CLEAN_RETRY_NEVER_SETUP_FAILURE_CLASSES,
-  CLEAN_RETRY_SETUP_FAILURE_CLASSES,
-  CONTEXT_LIMIT_NEXT_STEP_QUESTIONS,
-  COST_LIMIT_NEXT_STEP_QUESTIONS,
-  LEGACY_ALLOCATED_CONTEXT_LIMIT_PROMPT_WINDOW_MS,
-  LEGACY_AUTOMATIC_RECOVERY_NEXT_STEP_QUESTION,
-  MAX_CLEAN_RETRY_CONDITIONAL_SETUP_FAILURES,
-  MAX_CLEAN_RETRY_SAFE_SETUP_FAILURES,
-  MAX_CLEAN_RETRY_SETUP_BACKOFF_MS,
-  authenticatedUserInputAnswerAuthoritySegments,
-  canonicalUserInputAnswerContents,
-  consumeSourceActivationRestart,
-  isCostLimitContinuationAnswer,
-  isExactContextLimitNextStepQuestion,
-  legacyUserInputAnswerMessageContent,
-  resolveManagedSessionContextWindow,
-  userInputAnswerMessageContent,
-} from './SessionManager/user-input-authority.ts';
+import { copyPiTurnAnchorsForBranch, getClaudeTurnAnchor, getPiTurnAnchor, isClaudeMessageUuid, saveClaudeTurnAnchor, savePiTurnAnchor } from './SessionManager/turn-anchors.ts';
+import { AUTHENTICATED_USER_AUTHORIZATION_MARKER, CLEAN_RETRY_CONDITIONAL_SETUP_FAILURE_CLASSES, CLEAN_RETRY_NEVER_SETUP_FAILURE_CLASSES, CLEAN_RETRY_SETUP_FAILURE_CLASSES, CONTEXT_LIMIT_NEXT_STEP_QUESTIONS, COST_LIMIT_NEXT_STEP_QUESTIONS, LEGACY_ALLOCATED_CONTEXT_LIMIT_PROMPT_WINDOW_MS, LEGACY_AUTOMATIC_RECOVERY_NEXT_STEP_QUESTION, MAX_CLEAN_RETRY_CONDITIONAL_SETUP_FAILURES, MAX_CLEAN_RETRY_SAFE_SETUP_FAILURES, MAX_CLEAN_RETRY_SETUP_BACKOFF_MS, authenticatedUserInputAnswerAuthoritySegments, canonicalUserInputAnswerContents, consumeSourceActivationRestart, isCostLimitContinuationAnswer, isExactContextLimitNextStepQuestion, legacyUserInputAnswerMessageContent, resolveManagedSessionContextWindow, userInputAnswerMessageContent } from './SessionManager/user-input-authority.ts';
 
 export class SessionManager implements ISessionManager {
-  private sessions: Map<string, ManagedSession> = new Map()
-  /** Managed objects detached by an explicit deletion. Late completion and
-   * metadata callbacks may still hold the object, but must never persist it. */
-  private readonly retiringSessions = new WeakSet<ManagedSession>()
-  /** Async work which can still touch session-owned files after its callback
-   * has started. Deletion closes admission first, then drains this exact set
-   * before moving the directory. */
-  private readonly sessionOperationsInFlight = new WeakMap<ManagedSession, Set<Promise<unknown>>>()
-  /** Mutations which do not yet own a ManagedSession (notably create/import).
-   * Shutdown closes their admission synchronously and drains them before taking
-   * its session snapshot. */
-  private readonly managerOperationsInFlight = new Set<Promise<unknown>>()
-  /** Deletions detach from `sessions` before awaiting runtime/filesystem work.
-   * Keep their promises visible so shutdown cannot finish before they commit. */
-  private readonly sessionDeletionsInFlight = new Map<string, Promise<void>>()
-  /** In-memory single-owner handoff from MissionRuntime to the generic bounded
-   * recovery engine. The durable PendingTurnRecovery remains the work record. */
-  private readonly missionPendingTurnRecoveryClaims = new Map<
-    string,
-    MissionPendingTurnRecoveryClaimRecord
-  >()
-  private readonly missionRuntimeOwnedRestoredRecoverySessionIds = new Set<string>()
-  /** Non-serializable capability used only by the hard context admission gate. */
-  private readonly contextLimitUserInputCapability = Symbol('context-limit-user-input')
-  private readonly delegationBudget = new DelegationBudget()
-  private objectiveSnapshots = new WeakMap<ManagedSession, string>()
-  private readonly executionProofCollector = new ExecutionProofCollector()
-  // Delta batching for performance - reduces IPC events from 50+/sec to ~20/sec
-  private pendingDeltas: Map<string, PendingDelta> = new Map()
-  private deltaFlushTimers: Map<string, NodeJS.Timeout> = new Map()
-  // Config watchers for live updates (sources, etc.) - one per workspace
-  private configWatchers: Map<string, ConfigWatcher> = new Map()
-  // Automation systems for workspace event automations - one per workspace (includes scheduler, diffing, and handlers)
-  private automationSystems: Map<string, AutomationSystem> = new Map()
-  private completedChatRetentionTimer?: ReturnType<typeof setInterval>
-  private completedChatRetentionSweep?: Promise<void>
-  private retentionDeleting = new Set<string>()
-  private retentionStopping = false
-  // Pending credential request resolvers (keyed by requestId)
-  private pendingCredentialResolvers: Map<string, (response: import('@craft-agent/shared/protocol').CredentialResponse) => void> = new Map()
-  // Unified credential submissions are capabilities bound to one exact pending
-  // request object. Keep the operation one-shot while its secure write is in
-  // flight so a rapid second submit cannot store or complete it twice.
-  private credentialResponsesInFlight: Map<string, {
-    request: AuthRequest
-    operation: Promise<boolean>
-  }> = new Map()
-  private oauthResponsesInFlight: Map<string, {
-    request: AuthRequest
-    flowId: string
-    expiresAt: number
-  }> = new Map()
-  // Permission request metadata tracking (keyed by requestId)
-  private pendingPermissionRequests: Map<string, {
-    sessionId: string
-    type?: 'bash' | 'file_write' | 'mcp_mutation' | 'api_mutation' | 'admin_approval'
-    commandHash?: string
-    toolName?: string
-    toolUseId?: string
-    processingGeneration: number
-    objectiveId?: string
-    runtimeAgent?: AgentInstance
-    requestedAt: number
-    expiresAt: number
-    request: PermissionRequest
-    timeout: ReturnType<typeof setTimeout>
-    sensitiveActionCategory?: ExternalActionAuthorizationCategory
-    sensitiveActionTargets?: string[]
-    sensitiveActionOperationHash?: string
-  }> = new Map()
-  // Workspace-scoped OTLP sinks. A sink is created only after explicit workspace opt-in.
-  private telemetrySinks: Map<string, ExecutionTelemetrySink> = new Map()
-  /** Always-on, privacy-safe local operational telemetry (no prompts/tool payloads). */
-  private localTelemetrySinks: Map<string, ExecutionTelemetrySink> = new Map()
-  // Local privacy-minimal routing observations. They never contain prompt/response bodies.
+  private readonly runtimeState = new SessionRuntimeState();
 
-  // Enforces active → exactly-one-terminal generation telemetry transitions.
-  private generationTelemetryLifecycle = new GenerationTelemetryLifecycle()
-  // Privileged approval binding + audit logger
-  private privilegedExecutionBroker = new PrivilegedExecutionBroker(sessionLog)
-  // Session-local admin remember windows (exact command hash binding)
-  private adminRememberApprovals: Map<string, {
-    createdAt: number
-    expiresAt: number
-    sourceRequestId: string
-  }> = new Map()
-  // Promise deduplication for lazy-loading messages (prevents race conditions)
-  private messageLoadingPromises: Map<string, Promise<void>> = new Map()
-  /**
-   * Track which session the user is actively viewing (per workspace).
-   * Map of workspaceId -> sessionId. Used to determine if a session should be
-   * marked as unread when assistant completes - if user is viewing it, don't mark unread.
-   */
-  private activeViewingSession: Map<string, string> = new Map()
-  /** Coordinates startup initialization waiters from IPC handlers. */
-  private initGate = new InitGate()
-  // O(1) index: taskId → sessionId for background task output lookup (avoids O(n) session scan)
-  private taskOutputIndex: Map<string, string> = new Map()
-  /**
-   * WS2 keep-alive flag (default ON, opt-out via `CRAFT_KEEP_BG_AGENTS_ALIVE=0`).
-   * When true, a persistent streaming query keeps the subprocess alive across
-   * turns so background sub-agents survive, and orphaning is suppressed. When
-   * false (kill-switch), sub-agents are bound to a single turn's subprocess and
-   * die at turn end, so markOrphanedBackgroundTasks() flips still-running registry
-   * entries to `orphaned` on turn completion. Resolved via the shared
-   * `resolveKeepBackgroundTasksAlive` so the main process and the Claude backend
-   * can never disagree about whether keep-alive is on.
-   */
-  private readonly keepBackgroundTasksAlive: boolean = resolveKeepBackgroundTasksAlive()
-  /**
-   * Per-session in-flight runtime-refresh promise. Ensures `updateRuntimeConfig`
-   * (or a dispose) cannot overlap with another refresh OR with a send-path
-   * `getOrCreateAgent` on the same session. Without this serialization, a
-   * `SAVE`-triggered refresh and a `sendMessage`-triggered refresh can both
-   * see `agent.isProcessing()=false`, both fire `updateRuntimeConfig`, and the
-   * subprocess can race the resulting `chat` against the still-pending update.
-   */
-  private agentRefreshLocks: Map<string, Promise<void>> = new Map()
-  /** Periodically releases lazy per-session agents, MCP pools and subprocesses. */
-  private runtimeEvictionTimer: NodeJS.Timeout | null = null
-  private runtimeEvictionSweepInFlight = false
-  private readonly runtimeIdleTimeoutMs = resolveSessionRuntimeIdleTimeoutMs()
-  /** Runtime teardown is part of the strong Task child-retirement proof. The
-   * session is detached synchronously, but its provider subprocess/MCP cleanup
-   * may still be running and must not overlap a replacement attempt. */
-  private readonly runtimeDisposalsInFlight = new Map<string, Set<Promise<void>>>()
-  /** A rejected raw destructor is not proof that its process stopped. Keep the
-   * exact teardown callable as a retryable strong-retirement barrier until one
-   * invocation succeeds. */
-  private readonly runtimeDisposalBarriers = new Map<string, Map<symbol, {
-    label: string
-    dispose: () => void | Promise<void>
-    inFlight?: Promise<void>
-  }>>()
-  /** Coalesce repeated strong Stop attempts while the first durable Stop is
-   * still pending. A timed-out caller may retry the proof without launching a
-   * second concurrent persistence/cancellation transaction. */
-  private readonly strongCancellationStops = new Map<string, {
-    managed: ManagedSession
-    operation: Promise<void>
-    requiresCompletion: boolean
-    generation: number
-    stopCompleted: boolean
-    stopFailed: boolean
-    completionEvent?: SessionCompletionEvent
-    completionGeneration?: number
-    offCompletion: () => void
-  }>()
-  /** Monotonic clock to ensure strictly increasing message timestamps */
-  private lastTimestamp = 0
-
-  /**
-   * Optional binder installed by the messaging-gateway bootstrap. When set,
-   * `executePromptAutomation` calls it after creating a session whose matcher
-   * declared `telegramTopic`, so the new session is bound to a Telegram forum
-   * topic in the workspace's paired supergroup. Best-effort — failures must
-   * not block the session.
-   */
-  private automationBinder?: (input: {
-    workspaceId: string
-    sessionId: string
-    topicName: string
-  }) => Promise<void>
 
   /**
    * Centralized setter for session processing state.
@@ -792,10 +138,10 @@ export class SessionManager implements ISessionManager {
     const was = managed.isProcessing
     managed.isProcessing = processing
     // Actual dispatch supersedes an older deferred marker, including human Retry/new objectives.
-    if (processing) this.deferredAutomaticSessions?.delete(managed.id)
+    if (processing) this.runtimeState.deferredAutomaticSessions?.delete(managed.id)
     managed.runtimeLastActiveAt = Date.now()
     if (!processing) {
-      this.automaticAdmissionReservations?.delete(managed.id)
+      this.runtimeState.automaticAdmissionReservations?.delete(managed.id)
     }
     if (!was && processing) {
       sessionRuntimeHooks.onSessionStarted()
@@ -816,14 +162,14 @@ export class SessionManager implements ISessionManager {
     event: RobbExecutionTelemetryEvent,
   ): void {
     const workspaceId = managed.workspace.id
-    let localSink = this.localTelemetrySinks.get(workspaceId)
+    let localSink = this.runtimeState.localTelemetrySinks.get(workspaceId)
     if (!localSink) {
       localSink = new LocalJsonlTelemetrySink(
         join(managed.workspace.rootPath, 'telemetry', 'execution-quality.jsonl'),
         undefined,
         managed.workspace.rootPath,
       )
-      this.localTelemetrySinks.set(workspaceId, localSink)
+      this.runtimeState.localTelemetrySinks.set(workspaceId, localSink)
     }
     void localSink.emit(event).catch(error => {
       sessionLog.warn('Local execution telemetry write failed', {
@@ -836,10 +182,10 @@ export class SessionManager implements ISessionManager {
     const config = resolveOtlpTelemetryConfig(process.env, workspaceId)
     if (!config.enabled) return
 
-    let sink = this.telemetrySinks.get(workspaceId)
+    let sink = this.runtimeState.telemetrySinks.get(workspaceId)
     if (!sink) {
       sink = new OtlpHttpTelemetrySink(config)
-      this.telemetrySinks.set(workspaceId, sink)
+      this.runtimeState.telemetrySinks.set(workspaceId, sink)
     }
 
     void sink.emit(event).catch(error => {
@@ -851,9 +197,9 @@ export class SessionManager implements ISessionManager {
     })
   }
 
-  private startGenerationTelemetry(managed: ManagedSession, processingGeneration: number, input: { turnId: string; connectionSlug?: string; providerType?: string; model?: string; inputTokens?: number; recordRoutingOutcome?: boolean }): void { const generationId = randomUUID(); const event = this.generationTelemetryLifecycle.start({ eventId: randomUUID(), timestamp: Date.now(), correlation: { workspaceId: managed.workspace.id, sessionId: managed.id, turnId: input.turnId, generationId }, providerType: input.providerType, model: input.model, inputTokens: input.inputTokens }); const generations = managed.executionTelemetryGenerations ?? new Map(); generations.set(processingGeneration,{ generationId, turnId: input.turnId }); managed.executionTelemetryGenerations=generations; this.emitExecutionTelemetry(managed,event); }
+  private startGenerationTelemetry(managed: ManagedSession, processingGeneration: number, input: { turnId: string; connectionSlug?: string; providerType?: string; model?: string; inputTokens?: number; recordRoutingOutcome?: boolean }): void { const generationId = randomUUID(); const event = this.runtimeState.generationTelemetryLifecycle.start({ eventId: randomUUID(), timestamp: Date.now(), correlation: { workspaceId: managed.workspace.id, sessionId: managed.id, turnId: input.turnId, generationId }, providerType: input.providerType, model: input.model, inputTokens: input.inputTokens }); const generations = managed.executionTelemetryGenerations ?? new Map(); generations.set(processingGeneration,{ generationId, turnId: input.turnId }); managed.executionTelemetryGenerations=generations; this.emitExecutionTelemetry(managed,event); }
 
-  private finishGenerationTelemetry(managed: ManagedSession, processingGeneration: number, name: GenerationTerminalName, input?: { usage?: AgentEventUsage; errorCode?: string }): undefined { const reference=managed.executionTelemetryGenerations?.get(processingGeneration); if(!reference) return; const usage=input?.usage; const event=this.generationTelemetryLifecycle.finish(reference.generationId,{ eventId: randomUUID(),timestamp:Date.now(),name,inputTokens:usage?.inputTokens,outputTokens:usage?.outputTokens,cachedInputTokens:usage?.cacheReadTokens,cacheWriteTokens:usage?.cacheCreationTokens,cacheHit:typeof usage?.cacheReadTokens==='number'?usage.cacheReadTokens>0:undefined,errorCode:input?.errorCode }); managed.executionTelemetryGenerations?.delete(processingGeneration); if(managed.executionTelemetryGenerations?.size===0)managed.executionTelemetryGenerations=undefined; if(event)this.emitExecutionTelemetry(managed,event); }
+  private finishGenerationTelemetry(managed: ManagedSession, processingGeneration: number, name: GenerationTerminalName, input?: { usage?: AgentEventUsage; errorCode?: string }): undefined { const reference=managed.executionTelemetryGenerations?.get(processingGeneration); if(!reference) return; const usage=input?.usage; const event=this.runtimeState.generationTelemetryLifecycle.finish(reference.generationId,{ eventId: randomUUID(),timestamp:Date.now(),name,inputTokens:usage?.inputTokens,outputTokens:usage?.outputTokens,cachedInputTokens:usage?.cacheReadTokens,cacheWriteTokens:usage?.cacheCreationTokens,cacheHit:typeof usage?.cacheReadTokens==='number'?usage.cacheReadTokens>0:undefined,errorCode:input?.errorCode }); managed.executionTelemetryGenerations?.delete(processingGeneration); if(managed.executionTelemetryGenerations?.size===0)managed.executionTelemetryGenerations=undefined; if(event)this.emitExecutionTelemetry(managed,event); }
 
   private finishAllGenerationTelemetry(
     managed: ManagedSession,
@@ -951,7 +297,7 @@ export class SessionManager implements ISessionManager {
   /** Wait until initialize() has completed (sessions loaded from disk).
    *  Resolves immediately if already initialized. */
   waitForInit(): Promise<void> {
-    return this.initGate.wait()
+    return this.runtimeState.initGate.wait()
   }
 
   /**
@@ -962,22 +308,15 @@ export class SessionManager implements ISessionManager {
   setAutomationBinder(
     fn: (input: { workspaceId: string; sessionId: string; topicName: string }) => Promise<void>,
   ): void {
-    this.automationBinder = fn
+    this.runtimeState.automationBinder = fn
   }
 
-  private browserPaneManager: IBrowserPaneManager | null = null
-  private rpcServer: RpcServer | null = null
-  private remoteBpms = new Map<string, RemoteBrowserPaneManager>()
-  /** Pinned desktop client per session for `client:browser:invoke` routing. */
-  private browserHostByCanvas = new Map<string, string>()
-  private eventSink: EventSink | null = null
-
   setEventSink(sink: EventSink): void {
-    this.eventSink = sink
+    this.runtimeState.eventSink = sink
   }
 
   setBrowserPaneManager(bpm: IBrowserPaneManager): void {
-    this.browserPaneManager = bpm
+    this.runtimeState.browserPaneManager = bpm
     bpm.setSessionPathResolver((sessionId) => this.getSessionPath(sessionId))
   }
 
@@ -994,7 +333,7 @@ export class SessionManager implements ISessionManager {
    * precedence over the remote bridge in {@link getBrowserPaneManagerForSession}.
    */
   setRpcServer(server: RpcServer): void {
-    this.rpcServer = server
+    this.runtimeState.rpcServer = server
     sessionLog.info('[browser-pane] setRpcServer called — remote browser bridge is now available')
   }
 
@@ -1009,22 +348,22 @@ export class SessionManager implements ISessionManager {
    * 3. `null` when there's neither a local BPM nor an RPC server.
    */
   getBrowserPaneManagerForSession(sid: string): IBrowserPaneManager | null {
-    if (this.browserPaneManager) return this.browserPaneManager
-    if (!this.rpcServer) return null
+    if (this.runtimeState.browserPaneManager) return this.runtimeState.browserPaneManager
+    if (!this.runtimeState.rpcServer) return null
 
-    const cached = this.remoteBpms.get(sid)
+    const cached = this.runtimeState.remoteBpms.get(sid)
     if (cached) return cached
 
-    const session = this.sessions.get(sid)
+    const session = this.runtimeState.sessions.get(sid)
     if (!session) return null
 
     const bridge = new RemoteBrowserPaneManager({
       sessionId: sid,
       workspaceId: session.workspace.id,
-      rpcServer: this.rpcServer,
+      rpcServer: this.runtimeState.rpcServer,
       getHostClient: () => this.getBrowserHostClient(sid),
     })
-    this.remoteBpms.set(sid, bridge)
+    this.runtimeState.remoteBpms.set(sid, bridge)
     return bridge
   }
 
@@ -1038,7 +377,7 @@ export class SessionManager implements ISessionManager {
    */
   private setLastMessageClientId(sid: string, callerClientId: string | undefined): void {
     if (!callerClientId) return
-    this.browserHostByCanvas.set(sid, callerClientId)
+    this.runtimeState.browserHostByCanvas.set(sid, callerClientId)
   }
 
   /**
@@ -1047,8 +386,8 @@ export class SessionManager implements ISessionManager {
    * {@link findClientsWithCapability} instead of trying to ship to a dead client.
    */
   onClientDisconnected(clientId: string): void {
-    for (const [sid, pinned] of this.browserHostByCanvas) {
-      if (pinned === clientId) this.browserHostByCanvas.delete(sid)
+    for (const [sid, pinned] of this.runtimeState.browserHostByCanvas) {
+      if (pinned === clientId) this.runtimeState.browserHostByCanvas.delete(sid)
     }
   }
 
@@ -1058,20 +397,20 @@ export class SessionManager implements ISessionManager {
    * new-clientId so the agent isn't stuck waiting for another user message.
    */
   private getBrowserHostClient(sid: string): string | null {
-    if (!this.rpcServer) return null
-    const pinned = this.browserHostByCanvas.get(sid)
-    if (pinned && this.rpcServer.hasClientCapability(pinned, CLIENT_BROWSER_INVOKE)) {
+    if (!this.runtimeState.rpcServer) return null
+    const pinned = this.runtimeState.browserHostByCanvas.get(sid)
+    if (pinned && this.runtimeState.rpcServer.hasClientCapability(pinned, CLIENT_BROWSER_INVOKE)) {
       return pinned
     }
-    const session = this.sessions.get(sid)
+    const session = this.runtimeState.sessions.get(sid)
     if (!session) return null
-    const candidates = this.rpcServer.findClientsWithCapability(
+    const candidates = this.runtimeState.rpcServer.findClientsWithCapability(
       CLIENT_BROWSER_INVOKE,
       { workspaceId: session.workspace.id },
     )
     const fallback = candidates[0]
     if (!fallback) return null
-    this.browserHostByCanvas.set(sid, fallback)
+    this.runtimeState.browserHostByCanvas.set(sid, fallback)
     return fallback
   }
 
@@ -1079,20 +418,20 @@ export class SessionManager implements ISessionManager {
    *  the previous value, increments by 1 to preserve event ordering. */
   private monotonic(): number {
     const now = Date.now()
-    this.lastTimestamp = now > this.lastTimestamp ? now : this.lastTimestamp + 1
-    return this.lastTimestamp
+    this.runtimeState.lastTimestamp = now > this.runtimeState.lastTimestamp ? now : this.runtimeState.lastTimestamp + 1
+    return this.runtimeState.lastTimestamp
   }
 
   private hasActiveAdminRememberApproval(sessionId: string, commandHash: string): boolean {
     const key = getAdminRememberKey(sessionId, commandHash)
-    const entry = this.adminRememberApprovals.get(key)
+    const entry = this.runtimeState.adminRememberApprovals.get(key)
     if (!entry) {
       return false
     }
 
     if (Date.now() > entry.expiresAt) {
-      this.adminRememberApprovals.delete(key)
-      this.privilegedExecutionBroker.auditEvent('privileged_remember_window_expired', {
+      this.runtimeState.adminRememberApprovals.delete(key)
+      this.runtimeState.privilegedExecutionBroker.auditEvent('privileged_remember_window_expired', {
         sessionId,
         commandHash,
         sourceRequestId: entry.sourceRequestId,
@@ -1109,13 +448,13 @@ export class SessionManager implements ISessionManager {
     const now = Date.now()
     const expiresAt = now + boundedMinutes * 60 * 1000
 
-    this.adminRememberApprovals.set(getAdminRememberKey(sessionId, commandHash), {
+    this.runtimeState.adminRememberApprovals.set(getAdminRememberKey(sessionId, commandHash), {
       createdAt: now,
       expiresAt,
       sourceRequestId,
     })
 
-    this.privilegedExecutionBroker.auditEvent('privileged_remember_window_stored', {
+    this.runtimeState.privilegedExecutionBroker.auditEvent('privileged_remember_window_stored', {
       sessionId,
       commandHash,
       sourceRequestId,
@@ -1127,18 +466,18 @@ export class SessionManager implements ISessionManager {
 
   private clearAdminRememberApprovalsForSession(sessionId: string): void {
     const prefix = `${sessionId}:`
-    for (const key of this.adminRememberApprovals.keys()) {
+    for (const key of this.runtimeState.adminRememberApprovals.keys()) {
       if (key.startsWith(prefix)) {
-        this.adminRememberApprovals.delete(key)
+        this.runtimeState.adminRememberApprovals.delete(key)
       }
     }
   }
 
   private clearPendingPermissionRequestsForSession(sessionId: string): void {
-    for (const [requestId, metadata] of this.pendingPermissionRequests.entries()) {
+    for (const [requestId, metadata] of this.runtimeState.pendingPermissionRequests.entries()) {
       if (metadata.sessionId === sessionId) {
         clearTimeout(metadata.timeout)
-        this.pendingPermissionRequests.delete(requestId)
+        this.runtimeState.pendingPermissionRequests.delete(requestId)
         this.rejectPendingPrivilegedApproval(requestId, metadata)
         // Resolve the provider-side Promise before discarding host metadata so
         // session deletion/runtime disposal cannot leave an agent hung forever.
@@ -1156,7 +495,7 @@ export class SessionManager implements ISessionManager {
     },
   ): void {
     if (metadata.type !== 'admin_approval') return
-    const result = this.privilegedExecutionBroker.resolveApproval(requestId, false, {
+    const result = this.runtimeState.privilegedExecutionBroker.resolveApproval(requestId, false, {
       expectedCommandHash: metadata.commandHash,
       expectedSessionId: metadata.sessionId,
     })
@@ -1169,7 +508,7 @@ export class SessionManager implements ISessionManager {
     requestId: string,
     metadata: { sessionId: string; runtimeAgent?: AgentInstance },
   ): void {
-    const runtimeAgent = metadata.runtimeAgent ?? this.sessions.get(metadata.sessionId)?.agent
+    const runtimeAgent = metadata.runtimeAgent ?? this.runtimeState.sessions.get(metadata.sessionId)?.agent
     try {
       runtimeAgent?.respondToPermission(requestId, false, false)
     } catch (error) {
@@ -1182,24 +521,24 @@ export class SessionManager implements ISessionManager {
   }
 
   private expirePendingPermissionRequest(requestId: string): void {
-    const metadata = this.pendingPermissionRequests.get(requestId)
+    const metadata = this.runtimeState.pendingPermissionRequests.get(requestId)
     if (!metadata) return
     // One expired approval closes the whole generation. Otherwise concurrent
     // requests remain unclickable behind the blocked marker and keep explicit
     // Retry disabled until their (possibly much longer) individual TTLs fire.
     // Delete the complete cohort before notifying the provider so callbacks or
     // UI clicks cannot win a partially-closed generation.
-    const cohort = [...this.pendingPermissionRequests.entries()].filter(([, candidate]) => (
+    const cohort = [...this.runtimeState.pendingPermissionRequests.entries()].filter(([, candidate]) => (
       candidate.sessionId === metadata.sessionId
       && candidate.processingGeneration === metadata.processingGeneration
     ))
     for (const [cohortRequestId, candidate] of cohort) {
-      this.pendingPermissionRequests.delete(cohortRequestId)
+      this.runtimeState.pendingPermissionRequests.delete(cohortRequestId)
       clearTimeout(candidate.timeout)
       this.rejectPendingPrivilegedApproval(cohortRequestId, candidate)
     }
 
-    const managed = this.sessions.get(metadata.sessionId)
+    const managed = this.runtimeState.sessions.get(metadata.sessionId)
     if (!managed) return
     const expiryGeneration = metadata.processingGeneration
     const expiryObjective = managed.activeObjective
@@ -1364,7 +703,7 @@ export class SessionManager implements ISessionManager {
       toolName: request.toolName,
       toolUseId: request.toolUseId,
       processingGeneration: runtimeAgent
-        ? this.runtimeProcessingGenerations.get(runtimeAgent) ?? managed.processingGeneration
+        ? this.runtimeState.runtimeProcessingGenerations.get(runtimeAgent) ?? managed.processingGeneration
         : managed.processingGeneration,
     }
     // Register the denied tool synchronously before the first await, then make
@@ -1439,7 +778,7 @@ export class SessionManager implements ISessionManager {
     }
     objective.terminalState = 'blocked_human'
     objective.completedAt = Date.now()
-    this.permissionExpiryStopGenerations.set(managed, metadata.processingGeneration)
+    this.runtimeState.permissionExpiryStopGenerations.set(managed, metadata.processingGeneration)
     this.persistSession(managed)
     return true
   }
@@ -1449,7 +788,7 @@ export class SessionManager implements ISessionManager {
     generation: number,
     objective: ActiveSessionObjective | undefined,
   ): Promise<void> {
-    const ownsExpiry = () => !this.shuttingDown && this.sessions.get(managed.id) === managed
+    const ownsExpiry = () => !this.runtimeState.shuttingDown && this.runtimeState.sessions.get(managed.id) === managed
       && managed.processingGeneration === generation && managed.activeObjective === objective
       && managed.activeObjective?.terminalState === 'blocked_human'
     if (!ownsExpiry()) return
@@ -1457,7 +796,7 @@ export class SessionManager implements ISessionManager {
   }
 
   private pendingPermissionWatchdogRemainingMs(sessionId: string): number | undefined {
-    const remaining = [...this.pendingPermissionRequests.values()]
+    const remaining = [...this.runtimeState.pendingPermissionRequests.values()]
       .filter(request => request.sessionId === sessionId)
       .map(request => pendingPermissionWatchdogRemainingMs(request.expiresAt))
     return remaining.length ? Math.max(...remaining) : undefined
@@ -1474,9 +813,9 @@ export class SessionManager implements ISessionManager {
   ): boolean {
     const generation = managed.processingGeneration
     const runtimeGeneration = runtimeAgent
-      ? this.runtimeProcessingGenerations.get(runtimeAgent)
+      ? this.runtimeState.runtimeProcessingGenerations.get(runtimeAgent)
       : undefined
-    const startedTools = this.checkpointToolStarts.get(managed)
+    const startedTools = this.runtimeState.checkpointToolStarts.get(managed)
     const toolOwner = request.toolUseId ? startedTools?.calls.get(request.toolUseId) : undefined
     const activeObjectiveId = managed.activeObjective?.userMessageId
     const toolOwnerMismatch = !!toolOwner && (
@@ -1493,7 +832,7 @@ export class SessionManager implements ISessionManager {
       || !managed.isProcessing
       || managed.stopRequested
       || managed.activeObjective?.terminalState !== 'active'
-      || this.permissionExpiryStopGenerations.get(managed) === generation
+      || this.runtimeState.permissionExpiryStopGenerations.get(managed) === generation
       || toolOwnerMismatch
       || expiredToolReceipt
     if (!reject) return false
@@ -1536,14 +875,14 @@ export class SessionManager implements ISessionManager {
     managed: ManagedSession,
     generation: number,
   ): Promise<void> {
-    const cohort = [...this.pendingPermissionRequests.entries()].filter(([, metadata]) => (
+    const cohort = [...this.runtimeState.pendingPermissionRequests.entries()].filter(([, metadata]) => (
       metadata.sessionId === managed.id && metadata.processingGeneration === generation
     ))
     if (!cohort.length) return
 
     // Revoke every approval capability before the first provider callback.
     for (const [requestId, metadata] of cohort) {
-      this.pendingPermissionRequests.delete(requestId)
+      this.runtimeState.pendingPermissionRequests.delete(requestId)
       clearTimeout(metadata.timeout)
       this.rejectPendingPrivilegedApproval(requestId, metadata)
     }
@@ -1609,7 +948,7 @@ export class SessionManager implements ISessionManager {
 
   private replayPendingPermissionRequests(managed: ManagedSession): void {
     const now = Date.now()
-    for (const [requestId, metadata] of this.pendingPermissionRequests.entries()) {
+    for (const [requestId, metadata] of this.runtimeState.pendingPermissionRequests.entries()) {
       if (metadata.sessionId !== managed.id) continue
       if (!pendingPermissionCanReplay(metadata.requestedAt, metadata.expiresAt, now)) {
         this.expirePendingPermissionRequest(requestId)
@@ -1701,9 +1040,9 @@ export class SessionManager implements ISessionManager {
    * workspaceId must be the global config ID (what the renderer knows).
    */
   setupConfigWatcher(workspaceRootPath: string, workspaceId: string): void {
-    if (this.shuttingDown) return
+    if (this.runtimeState.shuttingDown) return
     // Check if already watching this workspace
-    if (this.configWatchers.has(workspaceRootPath)) {
+    if (this.runtimeState.configWatchers.has(workspaceRootPath)) {
       return // Already watching this workspace
     }
 
@@ -1740,7 +1079,7 @@ export class SessionManager implements ISessionManager {
         sessionLog.info(`Label config changed in ${workspaceId}`)
         this.broadcastLabelsChanged(workspaceId)
         // Emit LabelConfigChange event via AutomationSystem
-        const automationSystem = this.automationSystems.get(workspaceRootPath)
+        const automationSystem = this.runtimeState.automationSystems.get(workspaceRootPath)
         if (automationSystem) {
           automationSystem.emitLabelConfigChange().catch((error) => {
             sessionLog.error(`[Automations] Failed to emit LabelConfigChange:`, error)
@@ -1750,7 +1089,7 @@ export class SessionManager implements ISessionManager {
       onAutomationsConfigChange: () => {
         sessionLog.info(`Automations config changed in ${workspaceId}`)
         // Reload automations config via AutomationSystem
-        const automationSystem = this.automationSystems.get(workspaceRootPath)
+        const automationSystem = this.runtimeState.automationSystems.get(workspaceRootPath)
         if (automationSystem) {
           const result = automationSystem.reloadConfig()
           if (result.errors.length === 0) {
@@ -1782,7 +1121,7 @@ export class SessionManager implements ISessionManager {
         sessionLog.info(`Skill '${slug}' changed:`, skill ? 'updated' : 'deleted')
         // Broadcast updated list to UI
         const { loadAllSkills } = await import('@craft-agent/shared/skills')
-        if (this.shuttingDown) return
+        if (this.runtimeState.shuttingDown) return
         const skills = loadAllSkills(workspaceRootPath)
         this.broadcastSkillsChanged(workspaceId, skills)
       },
@@ -1791,7 +1130,7 @@ export class SessionManager implements ISessionManager {
       // Detects changes from both internal writes (self) and external sources
       // (other instances, scripts, manual edits).
       onSessionMetadataChange: (sessionId, header) => {
-        const managed = this.sessions.get(sessionId)
+        const managed = this.runtimeState.sessions.get(sessionId)
         if (!managed) return
 
         // Check if this is our own write echoing back via fs.watch().
@@ -1837,7 +1176,7 @@ export class SessionManager implements ISessionManager {
 
         // Always notify automation system — it does its own diffing and needs
         // to see both self-writes and external changes for event matching.
-        const automationSystem = this.automationSystems.get(managed.workspace.rootPath)
+        const automationSystem = this.runtimeState.automationSystems.get(managed.workspace.rootPath)
         if (automationSystem) {
           automationSystem.updateSessionMetadata(sessionId, {
             permissionMode: header.permissionMode,
@@ -1854,10 +1193,10 @@ export class SessionManager implements ISessionManager {
 
     const watcher = new ConfigWatcher(workspaceRootPath, callbacks)
     watcher.start()
-    this.configWatchers.set(workspaceRootPath, watcher)
+    this.runtimeState.configWatchers.set(workspaceRootPath, watcher)
 
     // Initialize AutomationSystem for this workspace (includes scheduler, handlers, and event logging)
-    if (!this.automationSystems.has(workspaceRootPath)) {
+    if (!this.runtimeState.automationSystems.has(workspaceRootPath)) {
       const automationSystem = new AutomationSystem({
         workspaceRootPath,
         workspaceId,
@@ -1908,7 +1247,7 @@ export class SessionManager implements ISessionManager {
           sessionLog.error(`Automation failed for ${event}:`, error.message)
         },
       })
-      this.automationSystems.set(workspaceRootPath, automationSystem)
+      this.runtimeState.automationSystems.set(workspaceRootPath, automationSystem)
       sessionLog.info(`Initialized AutomationSystem for workspace ${workspaceId}`)
     }
   }
@@ -1918,7 +1257,7 @@ export class SessionManager implements ISessionManager {
    * Workaround for Bun's fs.watch on Linux not detecting atomic renames.
    */
   notifyConfigFileChange(workspaceRootPath: string, relativePath: string): void {
-    const watcher = this.configWatchers.get(workspaceRootPath)
+    const watcher = this.runtimeState.configWatchers.get(workspaceRootPath)
     watcher?.notifyFileChange(relativePath)
   }
 
@@ -1926,9 +1265,9 @@ export class SessionManager implements ISessionManager {
    * Reload sources for all sessions in a workspace, skipping those currently processing.
    */
   private async reloadSourcesForWorkspace(workspaceRootPath: string): Promise<void> {
-    if (this.shuttingDown) return
-    for (const [_, managed] of this.sessions) {
-      if (this.shuttingDown) return
+    if (this.runtimeState.shuttingDown) return
+    for (const [_, managed] of this.runtimeState.sessions) {
+      if (this.runtimeState.shuttingDown) return
       if (managed.workspace.rootPath === workspaceRootPath) {
         if (managed.isProcessing) {
           sessionLog.info(`Skipping source reload for session ${managed.id} (processing)`)
@@ -1944,9 +1283,9 @@ export class SessionManager implements ISessionManager {
           // which was admitted just before that boundary is expected to abort
           // at its next await rather than re-applying source state to the
           // retiring runtime.
-          if (this.shuttingDown || !this.ownsSessionOperation(managed)) {
+          if (this.runtimeState.shuttingDown || !this.ownsSessionOperation(managed)) {
             sessionLog.info(`Cancelled source reload for deleting session ${managed.id}`)
-            if (this.shuttingDown) return
+            if (this.runtimeState.shuttingDown) return
             continue
           }
           throw error
@@ -1956,50 +1295,50 @@ export class SessionManager implements ISessionManager {
   }
 
   private broadcastSourcesChanged(workspaceId: string, sources: LoadedSource[]): void {
-    if (!this.eventSink) return
-    this.eventSink(RPC_CHANNELS.sources.CHANGED, { to: 'workspace', workspaceId }, workspaceId, sources)
+    if (!this.runtimeState.eventSink) return
+    this.runtimeState.eventSink(RPC_CHANNELS.sources.CHANGED, { to: 'workspace', workspaceId }, workspaceId, sources)
   }
 
   private broadcastStatusesChanged(workspaceId: string): void {
-    if (!this.eventSink) return
+    if (!this.runtimeState.eventSink) return
     sessionLog.info(`Broadcasting statuses changed for ${workspaceId}`)
-    this.eventSink(RPC_CHANNELS.statuses.CHANGED, { to: 'workspace', workspaceId }, workspaceId)
+    this.runtimeState.eventSink(RPC_CHANNELS.statuses.CHANGED, { to: 'workspace', workspaceId }, workspaceId)
   }
 
   private broadcastLabelsChanged(workspaceId: string): void {
-    if (!this.eventSink) return
+    if (!this.runtimeState.eventSink) return
     sessionLog.info(`Broadcasting labels changed for ${workspaceId}`)
-    this.eventSink(RPC_CHANNELS.labels.CHANGED, { to: 'workspace', workspaceId }, workspaceId)
+    this.runtimeState.eventSink(RPC_CHANNELS.labels.CHANGED, { to: 'workspace', workspaceId }, workspaceId)
   }
 
   private broadcastAutomationsChanged(workspaceId: string): void {
-    if (!this.eventSink) return
+    if (!this.runtimeState.eventSink) return
     sessionLog.info(`Broadcasting automations changed for ${workspaceId}`)
-    this.eventSink(RPC_CHANNELS.automations.CHANGED, { to: 'workspace', workspaceId }, workspaceId)
+    this.runtimeState.eventSink(RPC_CHANNELS.automations.CHANGED, { to: 'workspace', workspaceId }, workspaceId)
   }
 
   private broadcastAppThemeChanged(theme: import('@craft-agent/shared/config').ThemeOverrides | null): void {
-    if (!this.eventSink) return
+    if (!this.runtimeState.eventSink) return
     sessionLog.info(`Broadcasting app theme changed`)
-    this.eventSink(RPC_CHANNELS.theme.APP_CHANGED, { to: 'all' }, theme)
+    this.runtimeState.eventSink(RPC_CHANNELS.theme.APP_CHANGED, { to: 'all' }, theme)
   }
 
   private broadcastLlmConnectionsChanged(): void {
-    if (!this.eventSink) return
+    if (!this.runtimeState.eventSink) return
     sessionLog.info('Broadcasting LLM connections changed')
-    this.eventSink(RPC_CHANNELS.llmConnections.CHANGED, { to: 'all' })
+    this.runtimeState.eventSink(RPC_CHANNELS.llmConnections.CHANGED, { to: 'all' })
   }
 
   private broadcastSkillsChanged(workspaceId: string, skills: import('@craft-agent/shared/skills').LoadedSkill[]): void {
-    if (!this.eventSink) return
+    if (!this.runtimeState.eventSink) return
     sessionLog.info(`Broadcasting skills changed (${skills.length} skills)`)
-    this.eventSink(RPC_CHANNELS.skills.CHANGED, { to: 'workspace', workspaceId }, workspaceId, skills)
+    this.runtimeState.eventSink(RPC_CHANNELS.skills.CHANGED, { to: 'workspace', workspaceId }, workspaceId, skills)
   }
 
   private broadcastDefaultPermissionsChanged(): void {
-    if (!this.eventSink) return
+    if (!this.runtimeState.eventSink) return
     sessionLog.info('Broadcasting default permissions changed')
-    this.eventSink(RPC_CHANNELS.permissions.DEFAULTS_CHANGED, { to: 'all' }, null)
+    this.runtimeState.eventSink(RPC_CHANNELS.permissions.DEFAULTS_CHANGED, { to: 'all' }, null)
   }
 
   private reloadSessionSources(managed: ManagedSession): Promise<void> {
@@ -2172,9 +1511,9 @@ export class SessionManager implements ISessionManager {
       this.startCompletedChatRetention()
 
       // Signal that initialization is complete — IPC handlers waiting on initGate will proceed
-      this.initGate.markReady()
+      this.runtimeState.initGate.markReady()
     } catch (error) {
-      this.initGate.markFailed(error)
+      this.runtimeState.initGate.markFailed(error)
       throw error
     }
   }
@@ -2317,7 +1656,7 @@ export class SessionManager implements ISessionManager {
               waitingForPermission: { ...managed.pendingTurnRecovery.waitingForPermission, recoveryRequired: true },
             }
           }
-          this.sessions.set(meta.id, managed)
+          this.runtimeState.sessions.set(meta.id, managed)
           // Old hard-limit gates could accept an ordinary structured answer,
           // cancel their follow-up, and leave no recovery marker. The saved
           // transcript authenticates this narrow metadata hint below.
@@ -2406,7 +1745,7 @@ export class SessionManager implements ISessionManager {
             } else if ((!this.hasExhaustedValidation(managed) || humanRecovery)
               && (!pendingRecovery.exhaustedAt || resumableExhaustedRecovery)) {
               if (isMissionRuntimeOwnedRecovery(managed)) {
-                this.missionRuntimeOwnedRestoredRecoverySessionIds.add(managed.id)
+                this.runtimeState.missionRuntimeOwnedRestoredRecoverySessionIds.add(managed.id)
                 sessionLog.info('Deferred Mission recovery to MissionRuntime ownership', {
                   sessionId: managed.id,
                   missionId: managed.missionId,
@@ -2420,7 +1759,7 @@ export class SessionManager implements ISessionManager {
           }
 
           // Initialize session metadata in AutomationSystem for diffing
-          const automationSystem = this.automationSystems.get(workspaceRootPath)
+          const automationSystem = this.runtimeState.automationSystems.get(workspaceRootPath)
           if (automationSystem) {
             automationSystem.setInitialSessionMetadata(meta.id, {
               permissionMode: meta.permissionMode,
@@ -2442,10 +1781,10 @@ export class SessionManager implements ISessionManager {
       // behave exactly like a normal user send.
       setImmediate(() => {
         void (async () => {
-          if (this.shuttingDown) return
+          if (this.runtimeState.shuttingDown) return
           // Retire legacy unanswered handoffs before any provider recovery.
           // Every transition is flushed; cancellation never becomes an answer.
-          for (const managed of this.sessions.values()) {
+          for (const managed of this.runtimeState.sessions.values()) {
             if (this.isManagedSessionYolo(managed)) {
               await this.retireYoloHumanHandoffs(managed)
             }
@@ -2462,19 +1801,19 @@ export class SessionManager implements ISessionManager {
             }
           }
           for (const id of pendingInboxSessionIds) {
-            const managed = this.sessions.get(id)
+            const managed = this.runtimeState.sessions.get(id)
             if (managed) await this.ensureMessagesLoaded(managed)
           }
           // A child may have reached a durable terminal state immediately
           // before the host exited, without appending its parent receipt. The
           // deterministic delivery key makes this reconciliation idempotent.
           for (const id of terminalDelegatedSessionIds) {
-            const child = this.sessions.get(id)
+            const child = this.runtimeState.sessions.get(id)
             if (!child) continue
             try {
               const delivered = await this.ensureDelegatedTerminalResultDelivery(child)
               if (!delivered) {
-                const parent = child.parentSessionId ? this.sessions.get(child.parentSessionId) : undefined
+                const parent = child.parentSessionId ? this.runtimeState.sessions.get(child.parentSessionId) : undefined
                 if (parent && this.isCurrentDelegatedDescendant(parent, child)) {
                   this.scheduleDelegatedTerminalResultRetry(child.id)
                 }
@@ -2487,7 +1826,7 @@ export class SessionManager implements ISessionManager {
               this.scheduleDelegatedTerminalResultRetry(child.id)
             }
           }
-          if (this.deferredAutomaticSessions.size > 0) {
+          if (this.runtimeState.deferredAutomaticSessions.size > 0) {
             await this.drainDeferredAutomaticSessions()
           }
         })().catch(error => sessionLog.error('Durable inbox recovery failed', error))
@@ -2498,7 +1837,7 @@ export class SessionManager implements ISessionManager {
   }
 
   /** Only origin sessions persist requests. Ancestors expose a detached read projection. */
-  private getUserInputRequests(managed: ManagedSession, candidates: Iterable<ManagedSession> = this.sessions.values()): UserInputRequest[] {
+  private getUserInputRequests(managed: ManagedSession, candidates: Iterable<ManagedSession> = this.runtimeState.sessions.values()): UserInputRequest[] {
     const requests: UserInputRequest[] = []
     for (const candidate of candidates) {
       if (!candidate.userInputRequests?.length || candidate.workspace.id !== managed.workspace.id) continue
@@ -2510,7 +1849,7 @@ export class SessionManager implements ISessionManager {
           break
         }
         visited.add(cursor.id)
-        cursor = cursor.parentSessionId ? this.sessions?.get(cursor.parentSessionId) : undefined
+        cursor = cursor.parentSessionId ? this.runtimeState.sessions?.get(cursor.parentSessionId) : undefined
       }
     }
     return JSON.parse(JSON.stringify(requests.sort((a, b) => a.createdAt - b.createdAt)))
@@ -2531,7 +1870,7 @@ export class SessionManager implements ISessionManager {
    * the exact host-authenticated answer row once that fence settles so the
    * durable answer cannot remain orphaned until another restart. */
   private enqueueUnscheduledQueuedUserInputAnswers(managed: ManagedSession): number {
-    if (this.queuedMessageDispatches.has(managed.id)) return 0
+    if (this.runtimeState.queuedMessageDispatches.has(managed.id)) return 0
     let queued = 0
     for (const request of managed.userInputRequests ?? []) {
       if (request.status !== 'answered' || !request.responseMessageId || !request.answers?.length
@@ -2556,14 +1895,14 @@ export class SessionManager implements ISessionManager {
   }
 
   private emitUserInputChanged(managed: ManagedSession): void {
-    for (const wake of this.sessionWaitListeners) wake(managed.id)
+    for (const wake of this.runtimeState.sessionWaitListeners) wake(managed.id)
     this.scheduleDeferredAutomaticSessions()
     let cursor: ManagedSession | undefined = managed
     const visited = new Set<string>()
     while (cursor && !visited.has(cursor.id) && cursor.workspace.id === managed.workspace.id) {
       this.sendEvent({ type: 'user_input_changed', sessionId: cursor.id, requests: this.getUserInputRequests(cursor) }, cursor.workspace.id)
       visited.add(cursor.id)
-      cursor = cursor.parentSessionId ? this.sessions.get(cursor.parentSessionId) : undefined
+      cursor = cursor.parentSessionId ? this.runtimeState.sessions.get(cursor.parentSessionId) : undefined
     }
   }
 
@@ -2593,7 +1932,7 @@ export class SessionManager implements ISessionManager {
       ? new Set(this.getUserInputRequests(managed).map(request => request.sessionId))
       : new Set([managed.id])
     for (const id of origins) {
-      const origin = this.sessions.get(id)
+      const origin = this.runtimeState.sessions.get(id)
       if (!origin || origin.workspace.id !== managed.workspace.id) continue
       let changed = false
       for (const request of origin.userInputRequests ?? []) {
@@ -2626,7 +1965,7 @@ export class SessionManager implements ISessionManager {
     hostCapability?: symbol,
     expectedHostRecoveryDispatchId?: string,
   ): Promise<{ requestId: string; status: 'pending' }> {
-    const managed = this.sessions.get(sessionId)
+    const managed = this.runtimeState.sessions.get(sessionId)
     if (!managed) throw new Error('Question session not found')
     return this.trackSessionOperation(
       managed,
@@ -2655,7 +1994,7 @@ export class SessionManager implements ISessionManager {
       if (hostCapability !== undefined) {
         const boundary = this.contextLimitHostAdmissionBoundary(managed)
         const objectiveId = objective?.objectiveId ?? objective?.userMessageId
-        if (hostCapability !== this.contextLimitUserInputCapability
+        if (hostCapability !== this.runtimeState.contextLimitUserInputCapability
           || expectedHostRecoveryDispatchId !== boundary?.dispatchId
           || pending.hostPrompt?.schemaVersion !== 1
           || pending.hostPrompt.kind !== 'context-limit-next-step'
@@ -2675,14 +2014,14 @@ export class SessionManager implements ISessionManager {
     const hostPrompt = (() => {
       if (hostCapability === undefined) return undefined
       let boundary = this.contextLimitHostAdmissionBoundary(managed)
-      if (!boundary && hostCapability === this.contextLimitUserInputCapability && objective?.terminalState === 'active') {
+      if (!boundary && hostCapability === this.runtimeState.contextLimitUserInputCapability && objective?.terminalState === 'active') {
         const basePending = managed.pendingTurnRecovery ?? createPendingTurnRecovery(objective.userMessageId)
         const allocated = nextRecoveryDispatch(basePending, 'user_retry', 'retry', Date.now())
         allocated.phase = 'allocated'
         managed.pendingTurnRecovery = { ...basePending, recoveryDispatch: allocated }
         boundary = this.contextLimitHostAdmissionBoundary(managed)
       }
-      if (hostCapability !== this.contextLimitUserInputCapability
+      if (hostCapability !== this.runtimeState.contextLimitUserInputCapability
         || (expectedHostRecoveryDispatchId && expectedHostRecoveryDispatchId !== boundary?.dispatchId)
         || JSON.stringify(questions) !== JSON.stringify(CONTEXT_LIMIT_NEXT_STEP_QUESTIONS)
         || !objective || objective.terminalState !== 'active'
@@ -2709,10 +2048,8 @@ export class SessionManager implements ISessionManager {
     return { requestId: request.id, status: 'pending' }
   }
 
-  private readonly userInputResponsesInFlight = new Map<string, Promise<UserInputResponseResult>>()
-
   async respondToUserInput(sessionId: string, value: UserInputResponse, rpcContext?: { callerClientId?: string }): Promise<UserInputResponseResult> {
-    const managed = this.sessions.get(sessionId)
+    const managed = this.runtimeState.sessions.get(sessionId)
     if (!managed) throw new Error('Question session not found')
     return this.trackSessionOperation(
       managed,
@@ -2726,8 +2063,8 @@ export class SessionManager implements ISessionManager {
     rpcContext?: { callerClientId?: string },
   ): Promise<UserInputResponseResult> {
     const sessionId = managed.id
-    if (this.providerRetryReconciliationTransactions.has(sessionId)
-      || this.providerLiveReconciliationTransactions.has(sessionId)) {
+    if (this.runtimeState.providerRetryReconciliationTransactions.has(sessionId)
+      || this.runtimeState.providerLiveReconciliationTransactions.has(sessionId)) {
       throw new Error('Provider reconciliation is still being persisted; answer the question after it completes')
     }
     await this.ensureMessagesLoaded(managed)
@@ -2743,13 +2080,13 @@ export class SessionManager implements ISessionManager {
         const same = request.status === 'cancelled' ? response.cancelled === true
           : !response.cancelled && JSON.stringify(request.answers) === JSON.stringify(response.answers)
         if (!same) throw new Error('This question already has a different response')
-        const inFlight = this.userInputResponsesInFlight.get(request.id)
+        const inFlight = this.runtimeState.userInputResponsesInFlight.get(request.id)
         if (inFlight) return inFlight
         const queuedAnswer = request.responseMessageId
           ? managed.messages.find(message => message.id === request.responseMessageId && message.isQueued
             && message.internalOrigin?.kind === 'user-input') : undefined
         if (queuedAnswer && !managed.messageQueue.some(item => item.messageId === queuedAnswer.id)
-          && !this.queuedMessageDispatches.has(managed.id)) {
+          && !this.runtimeState.queuedMessageDispatches.has(managed.id)) {
           return this.deliverUserInputAnswer(managed, request, queuedAnswer, rpcContext)
         }
         // Re-acknowledge only after durability; never deliver a duplicate human answer.
@@ -2791,8 +2128,8 @@ export class SessionManager implements ISessionManager {
             managed.activeObjective.terminalState = 'exhausted'
             managed.activeObjective.completedAt = Date.now()
             this.clearPendingTurnRecovery(managed)
-            this.deferredAutomaticSessions.delete(managed.id)
-            this.automaticAdmissionReservations.delete(managed.id)
+            this.runtimeState.deferredAutomaticSessions.delete(managed.id)
+            this.runtimeState.automaticAdmissionReservations.delete(managed.id)
           }
         }
       }
@@ -2820,7 +2157,7 @@ export class SessionManager implements ISessionManager {
       const senderSessionId = failedReceipt.internalOrigin?.kind === 'agent-message'
         ? failedReceipt.internalOrigin.senderSessionId
         : undefined
-      const sender = senderSessionId ? this.sessions.get(senderSessionId) : undefined
+      const sender = senderSessionId ? this.runtimeState.sessions.get(senderSessionId) : undefined
       const currentObjective = managed.activeObjective
       if (!currentObjective || !request.objectiveUserMessageId
         || request.objectiveUserMessageId !== currentObjective.userMessageId
@@ -2886,8 +2223,8 @@ export class SessionManager implements ISessionManager {
       request.status = 'answered'
       request.answers = response.answers
       request.answeredAt = Math.max(Date.now(), (request.answeredAt ?? 0) + 1)
-      this.turnCancellationEpochs.set(managed, (this.turnCancellationEpochs.get(managed) ?? 0) + 1)
-      this.objectiveAuthorityEpochs.set(managed, (this.objectiveAuthorityEpochs.get(managed) ?? 0) + 1)
+      this.runtimeState.turnCancellationEpochs.set(managed, (this.runtimeState.turnCancellationEpochs.get(managed) ?? 0) + 1)
+      this.runtimeState.objectiveAuthorityEpochs.set(managed, (this.runtimeState.objectiveAuthorityEpochs.get(managed) ?? 0) + 1)
       objective.terminalState = 'exhausted'
       objective.completedAt = Date.now()
       this.cancelSupersededAutomaticRecoveries(managed)
@@ -2906,8 +2243,8 @@ export class SessionManager implements ISessionManager {
       }
       this.removeInFlightSyntheticAutomaticMessages(managed)
       this.clearPendingTurnRecovery(managed)
-      this.deferredAutomaticSessions.delete(managed.id)
-      this.automaticAdmissionReservations.delete(managed.id)
+      this.runtimeState.deferredAutomaticSessions.delete(managed.id)
+      this.runtimeState.automaticAdmissionReservations.delete(managed.id)
       if (managed.isProcessing) {
         managed.stopRequested = true
         managed.wasInterrupted = true
@@ -2945,7 +2282,7 @@ export class SessionManager implements ISessionManager {
     let parentId = managed.parentSessionId
     while (parentId && !visited.has(parentId)) {
       visited.add(parentId)
-      const parent = this.sessions.get(parentId)
+      const parent = this.runtimeState.sessions.get(parentId)
       if (!parent || parent.workspace.id !== managed.workspace.id) break
       this.wakeDeferredDelegatedTerminalResultRetries(parent)
       this.processNextQueuedMessage(parent.id)
@@ -2959,7 +2296,7 @@ export class SessionManager implements ISessionManager {
    * exact failed receipt immediately. The deterministic delivery ID keeps this
    * kick idempotent and it never restarts child work. */
   private wakeDeferredDelegatedTerminalResultRetries(parent: ManagedSession): void {
-    for (const child of this.sessions.values()) {
+    for (const child of this.runtimeState.sessions.values()) {
       if (child.parentSessionId !== parent.id || child.workspace.id !== parent.workspace.id
         || !this.isCurrentDelegatedDescendant(parent, child)) continue
       const receipt = this.delegatedTerminalResultReceipt(parent, child)
@@ -3048,7 +2385,7 @@ export class SessionManager implements ISessionManager {
   }
 
   private async deliverUserInputAnswer(managed: ManagedSession, request: UserInputRequest, message: Message, rpcContext?: { callerClientId?: string }, recoveryPrompt?: string): Promise<UserInputResponseResult> {
-    const existing = this.userInputResponsesInFlight.get(request.id)
+    const existing = this.runtimeState.userInputResponsesInFlight.get(request.id)
     if (existing) return existing
     const operation = (async (): Promise<UserInputResponseResult> => {
       if (!this.persistSession(managed)) {
@@ -3063,8 +2400,8 @@ export class SessionManager implements ISessionManager {
       ), error => sessionLog.error('Accepted user answer processing failed', { sessionId: managed.id, error }))
       return { status: 'accepted', responseMessageId: message.id, delivery: message.isQueued ? 'queued' : 'started' }
     })()
-    this.userInputResponsesInFlight.set(request.id, operation)
-    try { return await operation } finally { this.userInputResponsesInFlight.delete(request.id) }
+    this.runtimeState.userInputResponsesInFlight.set(request.id, operation)
+    try { return await operation } finally { this.runtimeState.userInputResponsesInFlight.delete(request.id) }
   }
 
   /** Publish the verified receipt on the existing final; no extra message or turn. */
@@ -3149,8 +2486,8 @@ export class SessionManager implements ISessionManager {
 
   private releaseSettledMissionRecoveryOwnership(managed: ManagedSession): void {
     if (managed.pendingTurnRecovery) return
-    this.missionPendingTurnRecoveryClaims.delete(managed.id)
-    this.missionRuntimeOwnedRestoredRecoverySessionIds.delete(managed.id)
+    this.runtimeState.missionPendingTurnRecoveryClaims.delete(managed.id)
+    this.runtimeState.missionRuntimeOwnedRestoredRecoverySessionIds.delete(managed.id)
   }
 
   /** Move an exhausted validated continuation out of the startup replay slot
@@ -3203,7 +2540,7 @@ export class SessionManager implements ISessionManager {
     messages: Message[],
     cancellationEpoch: number,
   ): Promise<'turn'> {
-    if (!messages.length || (this.turnCancellationEpochs.get(managed) ?? 0) !== cancellationEpoch
+    if (!messages.length || (this.runtimeState.turnCancellationEpochs.get(managed) ?? 0) !== cancellationEpoch
       || managed.stopRequested || managed.isProcessing) {
       throw new Error('Retry was cancelled before ambiguous provider reconciliation')
     }
@@ -3269,7 +2606,7 @@ export class SessionManager implements ISessionManager {
         throw new Error('Ambiguous provider reconciliation could not be queued for durable storage')
       }
       await this.flushSessionDurably(managed.id)
-      if ((this.turnCancellationEpochs.get(managed) ?? 0) !== cancellationEpoch
+      if ((this.runtimeState.turnCancellationEpochs.get(managed) ?? 0) !== cancellationEpoch
         || managed.stopRequested) {
         throw new Error('Retry was cancelled during ambiguous provider reconciliation')
       }
@@ -3313,7 +2650,7 @@ export class SessionManager implements ISessionManager {
       || marker.objectiveUserMessageId !== objective.userMessageId) {
       throw new Error('Provider acceptance belongs to a different objective and requires manual reconciliation')
     }
-    if ((this.turnCancellationEpochs.get(managed) ?? 0) !== cancellationEpoch
+    if ((this.runtimeState.turnCancellationEpochs.get(managed) ?? 0) !== cancellationEpoch
       || managed.stopRequested || managed.isProcessing) {
       throw new Error('Retry was cancelled before provider acceptance reconciliation')
     }
@@ -3365,7 +2702,7 @@ export class SessionManager implements ISessionManager {
       }
       await this.flushSessionDurably(managed.id)
       assertStillUnblocked?.()
-      if ((this.turnCancellationEpochs.get(managed) ?? 0) !== cancellationEpoch
+      if ((this.runtimeState.turnCancellationEpochs.get(managed) ?? 0) !== cancellationEpoch
         || managed.stopRequested) {
         throw new Error('Retry was cancelled during provider acceptance reconciliation')
       }
@@ -3380,7 +2717,7 @@ export class SessionManager implements ISessionManager {
       }
       throw error
     }
-    if ((this.turnCancellationEpochs.get(managed) ?? 0) !== cancellationEpoch
+    if ((this.runtimeState.turnCancellationEpochs.get(managed) ?? 0) !== cancellationEpoch
       || managed.stopRequested) {
       throw new Error('Retry was cancelled after provider acceptance reconciliation')
     }
@@ -3401,7 +2738,7 @@ export class SessionManager implements ISessionManager {
     const objectiveId = objective?.objectiveId ?? objective?.userMessageId
     if (!marker || !exactProviderDispatchAcceptanceUnknown(message)
       || marker.userStoppedAt !== undefined
-      || (this.turnCancellationEpochs.get(managed) ?? 0) !== cancellationEpoch
+      || (this.runtimeState.turnCancellationEpochs.get(managed) ?? 0) !== cancellationEpoch
       || managed.stopRequested) return false
 
     const currentBound = !!objective
@@ -3539,7 +2876,7 @@ export class SessionManager implements ISessionManager {
         )
         if (!queued) throw new Error('The provider uncertainty could not allocate a generic continuation')
       }
-      if ((this.turnCancellationEpochs.get(managed) ?? 0) !== cancellationEpoch
+      if ((this.runtimeState.turnCancellationEpochs.get(managed) ?? 0) !== cancellationEpoch
         || managed.stopRequested) {
         throw new Error('Provider uncertainty reconciliation was cancelled')
       }
@@ -3547,7 +2884,7 @@ export class SessionManager implements ISessionManager {
         throw new Error('Provider uncertainty reconciliation could not be queued for durable storage')
       }
       await this.flushSessionDurably(managed.id)
-      if ((this.turnCancellationEpochs.get(managed) ?? 0) !== cancellationEpoch
+      if ((this.runtimeState.turnCancellationEpochs.get(managed) ?? 0) !== cancellationEpoch
         || managed.stopRequested) {
         throw new Error('Provider uncertainty reconciliation was cancelled after persistence')
       }
@@ -3578,22 +2915,12 @@ export class SessionManager implements ISessionManager {
       || pending.lastCause === 'objective_incomplete' || pending.lastCause === 'evidence_gate')
   }
 
-  private readonly retryTurnsInFlight = new Map<string, Promise<import('@craft-agent/shared/protocol').RetryTurnResult>>()
-  /** Short durable transaction that consumes one non-replay provider fence.
-   * Stop records cancellation first and then waits for this promise so it can
-   * tombstone/quarantine the restored marker in its own snapshot. */
-  private readonly providerRetryReconciliationTransactions = new Map<string, Promise<'turn' | undefined>>()
-  /** Live counterpart of the cold non-replay transaction. Stop and new sends
-   * wait behind this short fsync boundary instead of observing a removed WAL
-   * before its generic successor exists. */
-  private readonly providerLiveReconciliationTransactions = new Map<string, Promise<boolean>>()
-
   private runLiveProviderDispatchReconciliation(
     managed: ManagedSession,
     message: Message,
     cancellationEpoch: number,
   ): Promise<boolean> {
-    const existing = this.providerLiveReconciliationTransactions.get(managed.id)
+    const existing = this.runtimeState.providerLiveReconciliationTransactions.get(managed.id)
     if (existing) return existing
     let transaction!: Promise<boolean>
     transaction = (async () => {
@@ -3604,32 +2931,27 @@ export class SessionManager implements ISessionManager {
           cancellationEpoch,
         )
       } finally {
-        if (this.providerLiveReconciliationTransactions.get(managed.id) === transaction) {
-          this.providerLiveReconciliationTransactions.delete(managed.id)
+        if (this.runtimeState.providerLiveReconciliationTransactions.get(managed.id) === transaction) {
+          this.runtimeState.providerLiveReconciliationTransactions.delete(managed.id)
         }
       }
     })()
-    this.providerLiveReconciliationTransactions.set(managed.id, transaction)
+    this.runtimeState.providerLiveReconciliationTransactions.set(managed.id, transaction)
     return transaction
   }
 
-  /** Exact hidden recovery rows appended by sends that have not crossed the
-   * synchronous agent.chat boundary yet. Stop removes these identities in its
-   * own durable snapshot; unrelated hidden/user/agent messages are untouched. */
-  private readonly syntheticAutomaticMessagesInFlight = new WeakMap<ManagedSession, Set<Message>>()
-
   private trackSyntheticAutomaticMessage(managed: ManagedSession, message: Message): void {
-    const tracked = this.syntheticAutomaticMessagesInFlight.get(managed) ?? new Set<Message>()
+    const tracked = this.runtimeState.syntheticAutomaticMessagesInFlight.get(managed) ?? new Set<Message>()
     tracked.add(message)
-    this.syntheticAutomaticMessagesInFlight.set(managed, tracked)
+    this.runtimeState.syntheticAutomaticMessagesInFlight.set(managed, tracked)
   }
 
   private untrackSyntheticAutomaticMessage(managed: ManagedSession, message: Message | undefined): void {
     if (!message) return
-    const tracked = this.syntheticAutomaticMessagesInFlight.get(managed)
+    const tracked = this.runtimeState.syntheticAutomaticMessagesInFlight.get(managed)
     if (!tracked) return
     tracked.delete(message)
-    if (!tracked.size) this.syntheticAutomaticMessagesInFlight.delete(managed)
+    if (!tracked.size) this.runtimeState.syntheticAutomaticMessagesInFlight.delete(managed)
   }
 
   /**
@@ -3658,7 +2980,7 @@ export class SessionManager implements ISessionManager {
   }
 
   private removeInFlightSyntheticAutomaticMessages(managed: ManagedSession, retainQueued = false): number {
-    const tracked = this.syntheticAutomaticMessagesInFlight.get(managed)
+    const tracked = this.runtimeState.syntheticAutomaticMessagesInFlight.get(managed)
     if (!tracked?.size) return 0
     let removed = 0
     const removedIds = new Set<string>()
@@ -3692,31 +3014,10 @@ export class SessionManager implements ISessionManager {
         recoveryDispatch: allocatedDispatch,
       }
     }
-    if (retained.size) this.syntheticAutomaticMessagesInFlight.set(managed, retained)
-    else this.syntheticAutomaticMessagesInFlight.delete(managed)
+    if (retained.size) this.runtimeState.syntheticAutomaticMessagesInFlight.set(managed, retained)
+    else this.runtimeState.syntheticAutomaticMessagesInFlight.delete(managed)
     return removed
   }
-
-  /** Non-serializable authority from an actual Retry invocation or an exact
-   * host-authenticated cold reconstruction, never from a queued option. */
-  private readonly explicitRetryAllowanceTokens = new Map<symbol, {
-    sessionId: string
-    objectiveId: string
-    userMessageId: string
-    cancellationEpoch: number
-    /** Exact host prompt that this Retry may consume while opening one fresh
-     * provider boundary. Neither SendMessageOptions nor prompt text mints it. */
-    contextLimitRequestId?: string
-    cleanBoundaryMessageId?: string
-    cleanContinuationId?: string
-    /** False when resuming an allowance already committed by an earlier
-     * process; cold recovery must not mint or reset a Retry budget. */
-    grantNewAllowance?: boolean
-    /** A recovered clean Retry may cross an already durable machine-only
-     * inbox. The capability never authorizes a human row, question, decision,
-     * or an unverified queue shape. */
-    allowRetainedMachineInbox?: boolean
-  }>()
 
   private isManagedSessionYolo(managed: ManagedSession): boolean {
     const seen = new Set<string>()
@@ -3725,9 +3026,9 @@ export class SessionManager implements ISessionManager {
       seen.add(cursor.id)
       if (cursor.permissionMode === 'allow-all' && isYoloMode(cursor.permissionMode, cursor.pendingExternalActionPolicy
         ?? (cursor.workspace?.rootPath ? loadWorkspaceConfig(cursor.workspace.rootPath)?.defaults?.externalActionPolicy : undefined))) return true
-      const parent: ManagedSession | undefined = cursor.parentSessionId ? this.sessions.get(cursor.parentSessionId) : undefined
+      const parent: ManagedSession | undefined = cursor.parentSessionId ? this.runtimeState.sessions.get(cursor.parentSessionId) : undefined
       const edge = cursor.delegation
-      const root = edge ? this.sessions.get(edge.rootSessionId) : undefined
+      const root = edge ? this.runtimeState.sessions.get(edge.rootSessionId) : undefined
       if (!parent || !root || !edge || parent.workspace.id !== managed.workspace.id
         || root.workspace.id !== managed.workspace.id
         || edge.parentObjectiveId !== (parent.activeObjective?.objectiveId ?? parent.activeObjective?.userMessageId)
@@ -3774,18 +3075,18 @@ export class SessionManager implements ISessionManager {
       || managed.isProcessing || managed.agent?.isProcessing()) return false
     const questions = (managed.userInputRequests ?? []).filter(request => request.status === 'pending'
       && request.sessionId === managed.id && request.originWorkspaceId === managed.workspace.id
-      && !request.responseMessageId && !request.answers && !this.userInputResponsesInFlight.has(request.id))
+      && !request.responseMessageId && !request.answers && !this.runtimeState.userInputResponsesInFlight.has(request.id))
     const hasAuth = !!managed.pendingAuthRequestId || !!managed.pendingAuthRequest
     const permissionWait = managed.pendingTurnRecovery?.waitingForPermission
     if (questions.length === 0 && !hasAuth && !permissionWait) return false
     await this.ensureMessagesLoaded(managed)
-    if (this.sessions.get(managed.id) !== managed || !this.isManagedSessionYolo(managed)
+    if (this.runtimeState.sessions.get(managed.id) !== managed || !this.isManagedSessionYolo(managed)
       || managed.stopRequested || managed.isProcessing || managed.agent?.isProcessing()) return false
     const objective = managed.activeObjective
     let cancelled = 0
     for (const request of questions) {
       if (request.status !== 'pending' || request.responseMessageId || request.answers
-        || this.userInputResponsesInFlight.has(request.id)) continue
+        || this.runtimeState.userInputResponsesInFlight.has(request.id)) continue
       request.status = 'cancelled'
       request.answeredAt = Math.max(Date.now(), (request.answeredAt ?? 0) + 1)
       cancelled++
@@ -3813,7 +3114,7 @@ export class SessionManager implements ISessionManager {
     this.persistSession(managed)
     await this.flushSession(managed.id)
     this.emitUserInputChanged(managed)
-    if (this.sessions.get(managed.id) !== managed || managed.activeObjective !== objective
+    if (this.runtimeState.sessions.get(managed.id) !== managed || managed.activeObjective !== objective
       || !this.isManagedSessionYolo(managed) || managed.isProcessing || managed.stopRequested) return true
     if (resumable) {
       const queued = await this.enqueueAutomaticTurnRecovery(managed, 'app_restart')
@@ -3824,7 +3125,7 @@ export class SessionManager implements ISessionManager {
   }
 
   private getSessionToolInfo(caller: ManagedSession, targetId = caller.id) {
-    const session = this.sessions.get(targetId)
+    const session = this.runtimeState.sessions.get(targetId)
     if (!session) return null
     return {
       id: session.id,
@@ -3860,7 +3161,7 @@ export class SessionManager implements ISessionManager {
   }
 
   private hasOnlyMachineInbox(managed: ManagedSession): boolean {
-    if (!managed.messageQueue.length || this.queuedMessageDispatches.has(managed.id)) return false
+    if (!managed.messageQueue.length || this.runtimeState.queuedMessageDispatches.has(managed.id)) return false
     const queuedIds = new Set<string>()
     for (const item of managed.messageQueue) {
       if (!this.isAutonomousMessage(item.options)) return false
@@ -3887,7 +3188,7 @@ export class SessionManager implements ISessionManager {
   }
 
   private canRetryRetainedMachineInbox(managed: ManagedSession): boolean {
-    return !this.shuttingDown && !managed.stopRequested && !managed.isProcessing
+    return !this.runtimeState.shuttingDown && !managed.stopRequested && !managed.isProcessing
       && ((this.hasTerminalObjectiveState(managed) && this.hasOnlyMachineInbox(managed))
         || (this.hasAnyRetainedStoppedAgentDelivery(managed) && this.hasOnlyMachineInbox(managed)))
   }
@@ -3902,7 +3203,7 @@ export class SessionManager implements ISessionManager {
     const origin = item.options?.internalOrigin
     const messageType = origin?.kind === 'agent-message' ? origin.agentMessageType : undefined
     const sender = origin?.kind === 'agent-message' && origin.senderSessionId
-      ? this.sessions.get(origin.senderSessionId)
+      ? this.runtimeState.sessions.get(origin.senderSessionId)
       : undefined
     if (!item.messageId || item.options?.hidden !== true
       || origin?.kind !== 'agent-message' || !messageType
@@ -3938,7 +3239,7 @@ export class SessionManager implements ISessionManager {
     settleUncertainStopAsConsumed = false,
   ): number {
     let changed = 0
-    for (const [messageId, dispatch] of [...this.queuedAgentDeliveryDispatches.entries()]) {
+    for (const [messageId, dispatch] of [...this.runtimeState.queuedAgentDeliveryDispatches.entries()]) {
       if (dispatch.sessionId !== managed.id) continue
       const receipt = managed.messages.find(message => message.id === messageId)
       const origin = receipt?.internalOrigin
@@ -3993,11 +3294,11 @@ export class SessionManager implements ISessionManager {
           options: recoveredInternalMessageOptions(receipt),
         })
       }
-      if (this.queuedMessageDispatches.get(managed.id) === dispatch.dispatchToken) {
-        this.queuedMessageDispatches.delete(managed.id)
+      if (this.runtimeState.queuedMessageDispatches.get(managed.id) === dispatch.dispatchToken) {
+        this.runtimeState.queuedMessageDispatches.delete(managed.id)
       }
-      this.queuedAgentDeliveryDispatches.delete(messageId)
-      this.automaticAdmissionReservations.delete(managed.id)
+      this.runtimeState.queuedAgentDeliveryDispatches.delete(messageId)
+      this.runtimeState.automaticAdmissionReservations.delete(managed.id)
     }
     return changed
   }
@@ -4109,12 +3410,12 @@ export class SessionManager implements ISessionManager {
    * itself is never replayed into the old provider session.
    */
   private async resumeOrphanedContextAnswerAfterRestart(sessionId: string): Promise<void> {
-    const managed = this.sessions.get(sessionId)
+    const managed = this.runtimeState.sessions.get(sessionId)
     const objective = managed?.activeObjective
     const compaction = managed?.contextCompactionAttempt
     if (!managed || !objective || objective.terminalState !== 'active'
       || managed.pendingTurnRecovery || managed.isProcessing || managed.stopRequested
-      || this.shuttingDown || isMissionRuntimeOwnedRecovery(managed)
+      || this.runtimeState.shuttingDown || isMissionRuntimeOwnedRecovery(managed)
       || isClosedSessionStatus(loadStatusConfig(managed.workspace.rootPath), managed.sessionStatus)
       || compaction?.hardLimitFollowUpAttempted !== true
       || compaction.objectiveRootId !== objective.userMessageId
@@ -4124,9 +3425,9 @@ export class SessionManager implements ISessionManager {
       || objective.lastOutcome.blocker != null) return
 
     await this.ensureMessagesLoaded(managed)
-    if (this.sessions.get(sessionId) !== managed || managed.activeObjective !== objective
+    if (this.runtimeState.sessions.get(sessionId) !== managed || managed.activeObjective !== objective
       || managed.pendingTurnRecovery || managed.isProcessing || managed.stopRequested
-      || this.shuttingDown || managed.messageQueue.length > 0
+      || this.runtimeState.shuttingDown || managed.messageQueue.length > 0
       || this.hasPendingUserInput(managed) || this.hasPendingDecision(managed)
       || managed.pendingAuthRequestId || managed.pendingAuthRequest
       || !hasAuthenticatedObjectiveRoot(managed, objective)) return
@@ -4380,7 +3681,7 @@ export class SessionManager implements ISessionManager {
         : []
       const exactQueuedAnswer = row?.message.isQueued === true
         && queuedAnswerItems.length === 1
-        && !this.queuedMessageDispatches.has(managed.id)
+        && !this.runtimeState.queuedMessageDispatches.has(managed.id)
       if (matches.length !== 1 || !row || row.index <= rootIndex
         || row.message.role !== 'user' || row.message.hidden !== true
         || (row.message.isQueued && !exactQueuedAnswer)
@@ -4712,11 +4013,11 @@ export class SessionManager implements ISessionManager {
       throw new Error('Answer or cancel the pending questions before retrying')
     }
     if (managed.pendingAuthRequestId || managed.pendingAuthRequest
-      || [...this.pendingPermissionRequests.values()].some(request => request.sessionId === managed.id)) {
+      || [...this.runtimeState.pendingPermissionRequests.values()].some(request => request.sessionId === managed.id)) {
       throw new Error('Resolve the pending authentication or approval before retrying')
     }
     if (!allowPermissionInbox && !allowRetainedMachineInbox
-      && !this.canRetryRetainedMachineInbox(managed) && (managed.messageQueue.length > 0 || this.queuedMessageDispatches.has(managed.id)
+      && !this.canRetryRetainedMachineInbox(managed) && (managed.messageQueue.length > 0 || this.runtimeState.queuedMessageDispatches.has(managed.id)
       || managed.messages.some(message => message.isQueued))) {
       throw new Error('Wait for the queued messages before retrying')
     }
@@ -4724,7 +4025,7 @@ export class SessionManager implements ISessionManager {
 
   /** Retry the existing turn, acknowledging its durable marker before model work completes. */
   async retryTurn(sessionId: string, userMessageId: string, rpcContext?: { callerClientId?: string }): Promise<import('@craft-agent/shared/protocol').RetryTurnResult> {
-    const managed = this.sessions.get(sessionId)
+    const managed = this.runtimeState.sessions.get(sessionId)
     if (!managed) throw new Error(`Session ${sessionId} not found`)
     return this.trackSessionOperation(
       managed,
@@ -4733,26 +4034,26 @@ export class SessionManager implements ISessionManager {
   }
 
   private async retryTurnInternal(sessionId: string, userMessageId: string, rpcContext?: { callerClientId?: string }, grantNewAllowance = false): Promise<import('@craft-agent/shared/protocol').RetryTurnResult> {
-    const managedAtEntry = this.sessions.get(sessionId)
+    const managedAtEntry = this.runtimeState.sessions.get(sessionId)
     if (!managedAtEntry) throw new Error(`Session ${sessionId} not found`)
     this.assertStrongCancellationAdmissionOpen(managedAtEntry)
-    const existing = this.retryTurnsInFlight.get(sessionId)
+    const existing = this.runtimeState.retryTurnsInFlight.get(sessionId)
     if (existing) {
       await existing
       return { status: 'already_running' }
     }
     const operation = (async (): Promise<import('@craft-agent/shared/protocol').RetryTurnResult> => {
-      const managed = this.sessions.get(sessionId)
+      const managed = this.runtimeState.sessions.get(sessionId)
       if (!managed) throw new Error(`Session ${sessionId} not found`)
       this.assertStrongCancellationAdmissionOpen(managed)
-      const retryCancellationEpoch = this.turnCancellationEpochs.get(managed) ?? 0
+      const retryCancellationEpoch = this.runtimeState.turnCancellationEpochs.get(managed) ?? 0
       await this.ensureMessagesLoaded(managed)
       this.assertStrongCancellationAdmissionOpen(managed)
-      if ((this.turnCancellationEpochs.get(managed) ?? 0) !== retryCancellationEpoch) throw new Error('Retry was cancelled by Stop')
-      if (this.coldProviderReconciliationsInFlight.has(managed.id)) {
+      if ((this.runtimeState.turnCancellationEpochs.get(managed) ?? 0) !== retryCancellationEpoch) throw new Error('Retry was cancelled by Stop')
+      if (this.runtimeState.coldProviderReconciliationsInFlight.has(managed.id)) {
         throw new Error('Provider reconciliation is still being persisted; retry after the durable transition completes')
       }
-      if (this.providerStopTransitionsInFlight.has(managed.id)) {
+      if (this.runtimeState.providerStopTransitionsInFlight.has(managed.id)) {
         throw new Error('The explicit Stop transition is still being persisted; retry after it completes')
       }
       const anchor = assertRetryTurnAnchor(managed, userMessageId)
@@ -4782,14 +4083,14 @@ export class SessionManager implements ISessionManager {
         const receipt = this.exactQueuedAgentDeliveryReceipt(managed, item)
         return Number.isFinite(receipt?.agentDelivery?.setupRetryBlockedAt)
           || Number.isFinite(receipt?.agentDelivery?.setupPersistenceFencedAt)
-          || !!receipt && this.agentDeliverySetupPersistenceFences.get(managed.id) === receipt.agentDelivery?.id
+          || !!receipt && this.runtimeState.agentDeliverySetupPersistenceFences.get(managed.id) === receipt.agentDelivery?.id
       })
       if (grantNewAllowance && blockedDeliveryItems.length >= 1
         && !managed.isProcessing && !managed.agent?.isProcessing()) {
         if (this.hasPendingUserInput(managed) || this.hasQueuedUserInput(managed)
           || this.hasPendingDecision(managed) || managed.pendingAuthRequestId
           || managed.pendingAuthRequest
-          || [...this.pendingPermissionRequests.values()].some(request => request.sessionId === managed.id)) {
+          || [...this.runtimeState.pendingPermissionRequests.values()].some(request => request.sessionId === managed.id)) {
           throw new Error('Resolve the pending question, authentication, or approval before retrying the queued agent delivery')
         }
         const blockedReceipt = this.exactQueuedAgentDeliveryReceipt(managed, blockedDeliveryItems[0]!)!
@@ -4800,14 +4101,14 @@ export class SessionManager implements ISessionManager {
           setupRetryBlockedAt: blockedReceipt.agentDelivery!.setupRetryBlockedAt,
           setupPersistenceFencedAt: blockedReceipt.agentDelivery!.setupPersistenceFencedAt,
         }
-        const hadRuntimeFence = this.agentDeliverySetupPersistenceFences.get(managed.id)
+        const hadRuntimeFence = this.runtimeState.agentDeliverySetupPersistenceFences.get(managed.id)
           === blockedReceipt.agentDelivery!.id
         blockedReceipt.agentDelivery!.setupFailureCount = undefined
         blockedReceipt.agentDelivery!.lastSetupFailureClass = undefined
         blockedReceipt.agentDelivery!.setupRetryNotBefore = undefined
         blockedReceipt.agentDelivery!.setupRetryBlockedAt = undefined
         blockedReceipt.agentDelivery!.setupPersistenceFencedAt = undefined
-        if (hadRuntimeFence) this.agentDeliverySetupPersistenceFences.delete(managed.id)
+        if (hadRuntimeFence) this.runtimeState.agentDeliverySetupPersistenceFences.delete(managed.id)
         this.clearDeferredAutomaticRetry(managed.id)
         try {
           if (!this.persistSession(managed)) {
@@ -4817,14 +4118,14 @@ export class SessionManager implements ISessionManager {
         } catch (error) {
           Object.assign(blockedReceipt.agentDelivery!, previousSetupState)
           if (hadRuntimeFence) {
-            this.agentDeliverySetupPersistenceFences.set(managed.id, blockedReceipt.agentDelivery!.id)
+            this.runtimeState.agentDeliverySetupPersistenceFences.set(managed.id, blockedReceipt.agentDelivery!.id)
           }
           this.persistSession(managed)
           throw error
         }
-        if ((this.turnCancellationEpochs.get(managed) ?? 0) !== retryCancellationEpoch
+        if ((this.runtimeState.turnCancellationEpochs.get(managed) ?? 0) !== retryCancellationEpoch
           || managed.stopRequested) throw new Error('Retry was cancelled by Stop')
-        this.deferredAutomaticSessions.add(managed.id)
+        this.runtimeState.deferredAutomaticSessions.add(managed.id)
         this.processNextQueuedMessage(managed.id)
         return { status: 'started' }
       }
@@ -4859,7 +4160,7 @@ export class SessionManager implements ISessionManager {
       const contextLimitRequest = contextLimitHandoffCandidate
         ? contextLimitRequestCandidate : undefined
       const resumePermissionInbox = managed.pendingTurnRecovery?.waitingForPermission?.recoveryRequired === true
-        && managed.messageQueue.length > 0 && !this.queuedMessageDispatches.has(managed.id)
+        && managed.messageQueue.length > 0 && !this.runtimeState.queuedMessageDispatches.has(managed.id)
       const retryWithRetainedMachineInbox = this.canRetryRetainedMachineInbox(managed)
         || (!!retryRecoveryCandidate
           && this.pendingRecoveryBelongsToCurrentObjective(managed, retryRecoveryCandidate)
@@ -4879,12 +4180,12 @@ export class SessionManager implements ISessionManager {
           retryCancellationEpoch,
           () => this.assertRetryTurnUnblocked(managed),
         )
-        this.providerRetryReconciliationTransactions.set(managed.id, reconciliation)
+        this.runtimeState.providerRetryReconciliationTransactions.set(managed.id, reconciliation)
         try {
           await reconciliation
         } finally {
-          if (this.providerRetryReconciliationTransactions.get(managed.id) === reconciliation) {
-            this.providerRetryReconciliationTransactions.delete(managed.id)
+          if (this.runtimeState.providerRetryReconciliationTransactions.get(managed.id) === reconciliation) {
+            this.runtimeState.providerRetryReconciliationTransactions.delete(managed.id)
           }
         }
       }
@@ -4895,19 +4196,19 @@ export class SessionManager implements ISessionManager {
         const previousStatus = managed.sessionStatus
         const next = managed.messageQueue.shift()!
         const generation = managed.processingGeneration + 1
-        const cancellationEpoch = this.turnCancellationEpochs.get(managed) ?? 0
+        const cancellationEpoch = this.runtimeState.turnCancellationEpochs.get(managed) ?? 0
         if (previousObjective) managed.activeObjective = { ...previousObjective, terminalState: 'active', completedAt: undefined }
         managed.pendingTurnRecovery = { ...previousRecovery!, waitingForPermission: undefined }
         const dispatchToken = Symbol('permission-inbox-retry')
-        this.queuedMessageDispatches.set(managed.id, dispatchToken)
-        this.permissionInboxRetryDispatches.add(dispatchToken)
+        this.runtimeState.queuedMessageDispatches.set(managed.id, dispatchToken)
+        this.runtimeState.permissionInboxRetryDispatches.add(dispatchToken)
         try {
           await acknowledgeDurableDelivery(ack => this.sendMessage(managed.id, next.message, next.attachments,
             next.storedAttachments, next.options, next.messageId, false, ack, rpcContext, dispatchToken, next, retryCancellationEpoch),
           error => sessionLog.error('Accepted permission-wait continuation failed', { sessionId, error }))
         } catch (error) {
-          if (this.sessions.get(sessionId) === managed && managed.processingGeneration <= generation && !this.shuttingDown
-            && (this.turnCancellationEpochs.get(managed) ?? 0) === cancellationEpoch) {
+          if (this.runtimeState.sessions.get(sessionId) === managed && managed.processingGeneration <= generation && !this.runtimeState.shuttingDown
+            && (this.runtimeState.turnCancellationEpochs.get(managed) ?? 0) === cancellationEpoch) {
             managed.pendingTurnRecovery = previousRecovery
             managed.activeObjective = previousObjective
             managed.sessionStatus = previousStatus
@@ -4915,13 +4216,13 @@ export class SessionManager implements ISessionManager {
             if (!managed.messageQueue.some(item => item.messageId === next.messageId)) managed.messageQueue.unshift(next)
             const saved = managed.messages.find(message => message.id === next.messageId)
             if (saved) saved.isQueued = true
-            this.queuedMessageDispatches.delete(managed.id)
+            this.runtimeState.queuedMessageDispatches.delete(managed.id)
             this.persistSession(managed)
             this.sendEvent({ type: 'session_status_changed', sessionId, sessionStatus: previousStatus ?? 'todo' }, managed.workspace.id)
           }
           throw error
         } finally {
-          this.permissionInboxRetryDispatches.delete(dispatchToken)
+          this.runtimeState.permissionInboxRetryDispatches.delete(dispatchToken)
         }
         return { status: 'started' }
       }
@@ -4966,7 +4267,7 @@ export class SessionManager implements ISessionManager {
           `<existing_user_message id=${JSON.stringify(anchor.id)}>`, anchor.content, '</existing_user_message>',
         ].join('\n\n')
       const allowanceToken = grantNewAllowance && managed.activeObjective ? Symbol('explicit-retry-allowance') : undefined
-      if (allowanceToken) this.explicitRetryAllowanceTokens.set(allowanceToken, {
+      if (allowanceToken) this.runtimeState.explicitRetryAllowanceTokens.set(allowanceToken, {
         sessionId, userMessageId: anchor.id,
         objectiveId: managed.activeObjective!.objectiveId ?? managed.activeObjective!.userMessageId,
         cancellationEpoch: retryCancellationEpoch,
@@ -4999,40 +4300,40 @@ export class SessionManager implements ISessionManager {
         if (error instanceof RetryTurnAlreadyRunningError) return { status: 'already_running' }
         throw error
       } finally {
-        if (allowanceToken) this.explicitRetryAllowanceTokens.delete(allowanceToken)
+        if (allowanceToken) this.runtimeState.explicitRetryAllowanceTokens.delete(allowanceToken)
       }
       return { status: 'started' }
     })()
     // The first await in the operation is hydration; reserve before it resumes.
-    this.retryTurnsInFlight.set(sessionId, operation)
-    try { return await operation } finally { this.retryTurnsInFlight.delete(sessionId) }
+    this.runtimeState.retryTurnsInFlight.set(sessionId, operation)
+    try { return await operation } finally { this.runtimeState.retryTurnsInFlight.delete(sessionId) }
   }
 
   private hasAcceptedHumanContinuationQueued(managed: ManagedSession): boolean {
-    if (this.shuttingDown || managed.stopRequested || this.hasTerminalObjectiveState(managed)) return false
+    if (this.runtimeState.shuttingDown || managed.stopRequested || this.hasTerminalObjectiveState(managed)) return false
     return queuedDirectHumanContinuationIndex(managed) >= 0
   }
 
   private grantLiveDirectHumanContinuation(managed: ManagedSession, messageId: string): boolean {
     if (queuedDirectHumanContinuationIndexForId(managed, messageId) < 0) return false
-    let ids = this.liveDirectHumanContinuationIds.get(managed)
+    let ids = this.runtimeState.liveDirectHumanContinuationIds.get(managed)
     if (!ids) {
       ids = new Set()
-      this.liveDirectHumanContinuationIds.set(managed, ids)
+      this.runtimeState.liveDirectHumanContinuationIds.set(managed, ids)
     }
     ids.add(messageId)
     return true
   }
 
   private liveDirectHumanContinuationIndex(managed: ManagedSession): number {
-    const ids = this.liveDirectHumanContinuationIds.get(managed)
+    const ids = this.runtimeState.liveDirectHumanContinuationIds.get(managed)
     if (!ids?.size) return -1
     for (const id of [...ids]) {
       const index = managed.messageQueue.findIndex(item => item.messageId === id)
       if (index < 0 || queuedDirectHumanContinuationIndexForId(managed, id) < 0) ids.delete(id)
     }
     if (!ids.size) {
-      this.liveDirectHumanContinuationIds.delete(managed)
+      this.runtimeState.liveDirectHumanContinuationIds.delete(managed)
       return -1
     }
     return managed.messageQueue.findIndex(item => !!item.messageId && ids.has(item.messageId)
@@ -5040,9 +4341,9 @@ export class SessionManager implements ISessionManager {
   }
 
   private consumeLiveDirectHumanContinuation(managed: ManagedSession, messageId: string): void {
-    const ids = this.liveDirectHumanContinuationIds.get(managed)
+    const ids = this.runtimeState.liveDirectHumanContinuationIds.get(managed)
     ids?.delete(messageId)
-    if (!ids?.size) this.liveDirectHumanContinuationIds.delete(managed)
+    if (!ids?.size) this.runtimeState.liveDirectHumanContinuationIds.delete(managed)
   }
 
   /** A committed synthetic continuation loses authority as soon as the
@@ -5073,7 +4374,7 @@ export class SessionManager implements ISessionManager {
         || dequeuedAutomaticRecovery.cause !== 'user_retry'
           && (terminalObjective || acceptedHumanTurn || recoveryIsStale(dequeuedAutomaticRecovery)))
     const inFlightRecoverySuperseded = acceptedHumanTurn
-      && !!this.syntheticAutomaticMessagesInFlight.get(managed)?.size
+      && !!this.runtimeState.syntheticAutomaticMessagesInFlight.get(managed)?.size
 
     const queuedCount = managed.messageQueue.length
     // `user_retry` carries explicit human authority and is not a synthetic
@@ -5106,8 +4407,8 @@ export class SessionManager implements ISessionManager {
       this.untrackSyntheticAutomaticMessage(managed, saved)
       managed.messages.splice(managed.messages.indexOf(saved), 1)
     }
-    this.deferredAutomaticSessions.delete(managed.id)
-    this.automaticAdmissionReservations.delete(managed.id)
+    this.runtimeState.deferredAutomaticSessions.delete(managed.id)
+    this.runtimeState.automaticAdmissionReservations.delete(managed.id)
     if (terminalObjective) {
       this.clearPendingTurnRecovery(managed)
     } else if (acceptedHumanTurn && managed.pendingTurnRecovery) {
@@ -5515,7 +4816,7 @@ export class SessionManager implements ISessionManager {
   private requeueAllocatedRecoveryDispatch(managed: ManagedSession, pending: PendingTurnRecovery): boolean {
     pending = this.stripDisabledAllocatedRoutingFallback(managed, pending).pending
     const dispatch = validAllocatedRecoveryDispatch(pending)
-    if (!dispatch || this.queuedMessageDispatches.has(managed.id)) return false
+    if (!dispatch || this.runtimeState.queuedMessageDispatches.has(managed.id)) return false
     const alreadyQueued = managed.messageQueue.some(item => dispatch.cleanContinuationId
       ? this.isExactQueuedCleanRecoveryDispatch(managed, pending, dispatch, item)
       : item.options?.automaticRecovery?.dispatchId === dispatch.id
@@ -5572,7 +4873,7 @@ export class SessionManager implements ISessionManager {
       || this.isCleanSetupRetryBlocked(dispatch)
       || cleanSetupRetryDelayMs(dispatch) > 0
       || this.isCleanSetupPersistenceFenced(managed, dispatch)
-      || this.shuttingDown || managed.stopRequested || managed.isProcessing) {
+      || this.runtimeState.shuttingDown || managed.stopRequested || managed.isProcessing) {
       sessionLog.info('Refused recovered clean Retry before private dispatch', {
         sessionId: managed.id,
         dispatchValid: !!dispatch,
@@ -5580,7 +4881,7 @@ export class SessionManager implements ISessionManager {
         provenanceValid: this.pendingRecoveryBelongsToCurrentObjective(managed, pending),
         setupBlocked: this.isCleanSetupRetryBlocked(dispatch),
         persistenceFenced: this.isCleanSetupPersistenceFenced(managed, dispatch),
-        shuttingDown: this.shuttingDown,
+        shuttingDown: this.runtimeState.shuttingDown,
         stopRequested: managed.stopRequested,
         isProcessing: managed.isProcessing,
       })
@@ -5589,11 +4890,11 @@ export class SessionManager implements ISessionManager {
     // This is deliberately a low-level provider seam. Every caller must first
     // own the scheduler reservation so a reconstructed Retry cannot bypass
     // immutable ancestry or the global/root concurrency limits.
-    if (!this.automaticAdmissionReservations.has(managed.id)) {
+    if (!this.runtimeState.automaticAdmissionReservations.has(managed.id)) {
       sessionLog.info('Refused recovered clean Retry without scheduler reservation', { sessionId: managed.id })
       return false
     }
-    if (this.retryTurnsInFlight.has(managed.id)) return true
+    if (this.runtimeState.retryTurnsInFlight.has(managed.id)) return true
 
     let anchor: Message
     let prompt: string
@@ -5609,7 +4910,7 @@ export class SessionManager implements ISessionManager {
         dispatchId: dispatch.id,
         error: error instanceof Error ? error.message : String(error),
       })
-      this.automaticAdmissionReservations.delete(managed.id)
+      this.runtimeState.automaticAdmissionReservations.delete(managed.id)
       return false
     }
 
@@ -5622,11 +4923,11 @@ export class SessionManager implements ISessionManager {
       && item.options.automaticRecovery.cleanContinuationId === dispatch.cleanContinuationId
       && item.message === prompt
     ))
-    this.deferredAutomaticSessions.delete(managed.id)
-    const retryCancellationEpoch = this.turnCancellationEpochs.get(managed) ?? 0
+    this.runtimeState.deferredAutomaticSessions.delete(managed.id)
+    const retryCancellationEpoch = this.runtimeState.turnCancellationEpochs.get(managed) ?? 0
     const allowanceToken = Symbol('recovered-clean-retry-allowance')
     const allowRetainedMachineInbox = this.hasOnlyMachineInbox(managed)
-    this.explicitRetryAllowanceTokens.set(allowanceToken, {
+    this.runtimeState.explicitRetryAllowanceTokens.set(allowanceToken, {
       sessionId: managed.id,
       userMessageId: anchor.id,
       objectiveId: objective.objectiveId ?? objective.userMessageId,
@@ -5637,9 +4938,9 @@ export class SessionManager implements ISessionManager {
       ...(allowRetainedMachineInbox ? { allowRetainedMachineInbox: true } : {}),
     })
     const operation = Promise.resolve().then(async (): Promise<import('@craft-agent/shared/protocol').RetryTurnResult> => {
-      if (this.sessions.get(managed.id) !== managed || managed.pendingTurnRecovery !== pending
+      if (this.runtimeState.sessions.get(managed.id) !== managed || managed.pendingTurnRecovery !== pending
         || managed.activeObjective !== objective || managed.stopRequested
-        || (this.turnCancellationEpochs.get(managed) ?? 0) !== retryCancellationEpoch) {
+        || (this.runtimeState.turnCancellationEpochs.get(managed) ?? 0) !== retryCancellationEpoch) {
         throw new Error('The recovered clean Retry was superseded before dispatch')
       }
       await acknowledgeDurableDelivery(ack => this.sendMessage(
@@ -5665,14 +4966,14 @@ export class SessionManager implements ISessionManager {
     // Reserve synchronously before the microtask enters sendMessage; its
     // admission gate requires this exact in-flight operation as well as the
     // one-use capability above.
-    this.retryTurnsInFlight.set(managed.id, operation)
+    this.runtimeState.retryTurnsInFlight.set(managed.id, operation)
     void operation.catch(async error => {
       sessionLog.error('Recovered clean Retry admission failed', {
         sessionId: managed.id,
         dispatchId: dispatch.id,
         error: error instanceof Error ? error.message : String(error),
       })
-      if (this.sessions.get(managed.id) === managed && managed.pendingTurnRecovery === pending
+      if (this.runtimeState.sessions.get(managed.id) === managed && managed.pendingTurnRecovery === pending
         && !managed.stopRequested && !managed.isProcessing) {
         // The acknowledged provider-setup path classifies itself inside
         // sendMessage. Rejection here is pre-ACK (usually durability or a
@@ -5688,12 +4989,12 @@ export class SessionManager implements ISessionManager {
         }, managed.workspace.id)
       }
     }).finally(() => {
-      this.explicitRetryAllowanceTokens.delete(allowanceToken)
-      if (this.retryTurnsInFlight.get(managed.id) === operation) {
-        this.retryTurnsInFlight.delete(managed.id)
+      this.runtimeState.explicitRetryAllowanceTokens.delete(allowanceToken)
+      if (this.runtimeState.retryTurnsInFlight.get(managed.id) === operation) {
+        this.runtimeState.retryTurnsInFlight.delete(managed.id)
       }
-      if (!managed.isProcessing && !this.queuedMessageDispatches.has(managed.id)) {
-        this.automaticAdmissionReservations.delete(managed.id)
+      if (!managed.isProcessing && !this.runtimeState.queuedMessageDispatches.has(managed.id)) {
+        this.runtimeState.automaticAdmissionReservations.delete(managed.id)
       }
     })
     return true
@@ -5707,14 +5008,14 @@ export class SessionManager implements ISessionManager {
     if (!dispatch) return false
     if (this.isCleanSetupRetryBlocked(dispatch)
       || this.isCleanSetupPersistenceFenced(managed, dispatch)) {
-      this.deferredAutomaticSessions.delete(managed.id)
-      this.automaticAdmissionReservations.delete(managed.id)
+      this.runtimeState.deferredAutomaticSessions.delete(managed.id)
+      this.runtimeState.automaticAdmissionReservations.delete(managed.id)
       return true
     }
     const setupRetryDelayMs = cleanSetupRetryDelayMs(dispatch)
     if (setupRetryDelayMs > 0) {
-      this.deferredAutomaticSessions.add(managed.id)
-      this.automaticAdmissionReservations.delete(managed.id)
+      this.runtimeState.deferredAutomaticSessions.add(managed.id)
+      this.runtimeState.automaticAdmissionReservations.delete(managed.id)
       this.scheduleDeferredAutomaticRetry(managed.id, setupRetryDelayMs)
       return true
     }
@@ -5724,7 +5025,7 @@ export class SessionManager implements ISessionManager {
           if (messageType !== 'result') return []
           const receipt = this.exactQueuedAgentDeliveryReceipt(managed, item)
           const senderId = item.options?.internalOrigin?.senderSessionId
-          const sender = receipt && senderId ? this.sessions.get(senderId) : undefined
+          const sender = receipt && senderId ? this.runtimeState.sessions.get(senderId) : undefined
           return sender && this.hasTerminalObjectiveState(sender)
             && this.currentDelegatedSenderPath(managed, sender) ? [sender.id] : []
         })
@@ -5759,7 +5060,7 @@ export class SessionManager implements ISessionManager {
     const effectiveFallbackIntent = automaticToolFallbackEnabled
       ? fallbackIntent
       : undefined
-    if (this.shuttingDown || managed.stopRequested) return false
+    if (this.runtimeState.shuttingDown || managed.stopRequested) return false
     if (this.hasTerminalObjectiveState(managed)) return false
     if (this.hasQueuedUserInput(managed)) return true
     if (this.hasPendingUserInput(managed) || this.hasPendingDecision(managed)) return false
@@ -5809,9 +5110,9 @@ export class SessionManager implements ISessionManager {
     if (!pending) return false
     const lineage = inspectAutonomousLineage(
       managed,
-      id => this.sessions.get(id),
+      id => this.runtimeState.sessions.get(id),
       false,
-      id => { const session = this.sessions.get(id); return !!session && this.hasPendingDecision(session) },
+      id => { const session = this.runtimeState.sessions.get(id); return !!session && this.hasPendingDecision(session) },
     )
     if (!lineage.allowed && isImmutableAutomaticRecoveryBlock(lineage.reason)) {
       managed.pendingTurnRecovery = {
@@ -5826,7 +5127,7 @@ export class SessionManager implements ISessionManager {
       return true
     }
     if (!lineage.allowed || this.autonomousAdmissionBlock(managed, false, false)) {
-      this.deferredAutomaticSessions.add(managed.id)
+      this.runtimeState.deferredAutomaticSessions.add(managed.id)
       // Retention is a successful handoff, not a spent retry or contract failure.
       managed.pendingTurnRecovery = {
         ...pending, lastCause: cause, validationGaps: boundedGaps,
@@ -6210,11 +5511,11 @@ export class SessionManager implements ISessionManager {
     sessionId: string,
     missionClaimToken?: symbol,
   ): Promise<void> {
-    if (this.shuttingDown) return
-    const candidate = this.sessions.get(sessionId)
+    if (this.runtimeState.shuttingDown) return
+    const candidate = this.runtimeState.sessions.get(sessionId)
     if (candidate
-      && this.missionRuntimeOwnedRestoredRecoverySessionIds.has(sessionId)) {
-      const claim = this.missionPendingTurnRecoveryClaims.get(sessionId)
+      && this.runtimeState.missionRuntimeOwnedRestoredRecoverySessionIds.has(sessionId)) {
+      const claim = this.runtimeState.missionPendingTurnRecoveryClaims.get(sessionId)
       if (!claim || claim.token !== missionClaimToken) {
         sessionLog.info('Refused generic recovery of a MissionRuntime-owned dispatch', {
           sessionId,
@@ -6225,18 +5526,18 @@ export class SessionManager implements ISessionManager {
         return
       }
     }
-    const running = this.restartRecoveriesInFlight.get(sessionId)
+    const running = this.runtimeState.restartRecoveriesInFlight.get(sessionId)
     if (running) return running
     const operation = this.resumePendingTurnAfterRestartOnce(sessionId)
-    this.restartRecoveriesInFlight.set(sessionId, operation)
+    this.runtimeState.restartRecoveriesInFlight.set(sessionId, operation)
     try { await operation } finally {
-      this.restartRecoveriesInFlight.delete(sessionId)
-      const managed = this.sessions.get(sessionId)
-      if (!managed?.isProcessing && !this.queuedMessageDispatches.has(sessionId)
-        && !this.retryTurnsInFlight.has(sessionId)) this.automaticAdmissionReservations.delete(sessionId)
+      this.runtimeState.restartRecoveriesInFlight.delete(sessionId)
+      const managed = this.runtimeState.sessions.get(sessionId)
+      if (!managed?.isProcessing && !this.runtimeState.queuedMessageDispatches.has(sessionId)
+        && !this.runtimeState.retryTurnsInFlight.has(sessionId)) this.runtimeState.automaticAdmissionReservations.delete(sessionId)
       if (!managed?.pendingTurnRecovery) {
-        this.missionPendingTurnRecoveryClaims.delete(sessionId)
-        this.missionRuntimeOwnedRestoredRecoverySessionIds.delete(sessionId)
+        this.runtimeState.missionPendingTurnRecoveryClaims.delete(sessionId)
+        this.runtimeState.missionRuntimeOwnedRestoredRecoverySessionIds.delete(sessionId)
         this.scheduleDeferredAutomaticSessions()
       }
     }
@@ -6250,7 +5551,7 @@ export class SessionManager implements ISessionManager {
     pending: PendingTurnRecovery,
     reason: string,
   ): Promise<void> {
-    if (this.sessions.get(managed.id) !== managed || managed.pendingTurnRecovery !== pending) return
+    if (this.runtimeState.sessions.get(managed.id) !== managed || managed.pendingTurnRecovery !== pending) return
     for (const message of managed.messages) {
       if (message.id === pending.userMessageId && message.internalOrigin?.kind === 'user-input') {
         message.isQueued = false
@@ -6258,8 +5559,8 @@ export class SessionManager implements ISessionManager {
     }
     managed.messageQueue = managed.messageQueue.filter(item => item.messageId !== pending.userMessageId)
     this.clearPendingTurnRecovery(managed)
-    this.deferredAutomaticSessions.delete(managed.id)
-    this.automaticAdmissionReservations.delete(managed.id)
+    this.runtimeState.deferredAutomaticSessions.delete(managed.id)
+    this.runtimeState.automaticAdmissionReservations.delete(managed.id)
     this.persistSession(managed)
     await this.flushSession(managed.id)
     sessionLog.warn('Revoked stale cold recovery authority', {
@@ -6304,7 +5605,7 @@ export class SessionManager implements ISessionManager {
       || this.getPendingUserInputResponse(managed, true)
       || getQueuedPendingUserInputResponse(managed)
       || !this.coldAutomaticRecoveryLeaseExpired(pending)) return false
-    if (this.sessions.get(managed.id) !== managed || managed.pendingTurnRecovery !== pending) return true
+    if (this.runtimeState.sessions.get(managed.id) !== managed || managed.pendingTurnRecovery !== pending) return true
 
     const objective = managed.activeObjective
     if (!objective || !this.pendingRecoveryBelongsToCurrentObjective(managed, pending)) {
@@ -6322,14 +5623,14 @@ export class SessionManager implements ISessionManager {
     objective.terminalState = 'exhausted'
     objective.completedAt = Date.now()
     managed.pendingTurnRecovery = undefined
-    this.deferredAutomaticSessions.delete(managed.id)
-    this.automaticAdmissionReservations.delete(managed.id)
+    this.runtimeState.deferredAutomaticSessions.delete(managed.id)
+    this.runtimeState.automaticAdmissionReservations.delete(managed.id)
     this.persistSession(managed)
     await this.flushSession(managed.id)
-    if (this.sessions.get(managed.id) !== managed || managed.activeObjective !== objective
+    if (this.runtimeState.sessions.get(managed.id) !== managed || managed.activeObjective !== objective
       || managed.pendingTurnRecovery) return true
     await this.reconcileRecoveredTerminalStatus(managed, 'interrupted')
-    if (this.sessions.get(managed.id) !== managed || managed.activeObjective !== objective
+    if (this.runtimeState.sessions.get(managed.id) !== managed || managed.activeObjective !== objective
       || managed.pendingTurnRecovery) return true
     this.emitObjectiveChanged(managed)
     this.sendEvent({
@@ -6563,7 +5864,7 @@ export class SessionManager implements ISessionManager {
     }
 
     await this.disposeManagedAgentRuntime(managed, 'automatic context-limit question recovery')
-    if (this.sessions.get(managed.id) !== managed || managed.pendingTurnRecovery !== pending
+    if (this.runtimeState.sessions.get(managed.id) !== managed || managed.pendingTurnRecovery !== pending
       || request.status !== 'pending' || managed.stopRequested) return false
     if (syntheticPromptIndex !== undefined) managed.messages.splice(syntheticPromptIndex, 1)
     if (representedAnswerQueueIndex !== undefined && representedAnswerQueueItem
@@ -6596,7 +5897,7 @@ export class SessionManager implements ISessionManager {
     try {
       await this.flushSession(managed.id)
     } catch (error) {
-      if (this.sessions.get(managed.id) === managed
+      if (this.runtimeState.sessions.get(managed.id) === managed
         && managed.pendingTurnRecovery === cleanPending && !managed.stopRequested) {
         if (previous.syntheticPrompt
           && !managed.messages.some(message => message.id === previous.syntheticPrompt!.id)) {
@@ -6659,7 +5960,7 @@ export class SessionManager implements ISessionManager {
       || !dispatch.cleanContinuationId || !Number.isFinite(dispatch.setupPersistenceFencedAt)
       || pending.lastCause === dispatch.cause) return
     await this.ensureMessagesLoaded(managed)
-    if (this.sessions.get(managed.id) !== managed || managed.pendingTurnRecovery !== pending
+    if (this.runtimeState.sessions.get(managed.id) !== managed || managed.pendingTurnRecovery !== pending
       || managed.stopRequested || validAllocatedRecoveryDispatch(pending) !== dispatch
       || !this.pendingRecoveryBelongsToCurrentObjective(managed, pending)) return
     const objective = managed.activeObjective
@@ -6729,19 +6030,19 @@ export class SessionManager implements ISessionManager {
   }
 
   private async resumePendingTurnAfterRestartOnce(sessionId: string): Promise<void> {
-    const managed = this.sessions.get(sessionId)
+    const managed = this.runtimeState.sessions.get(sessionId)
     if (!managed?.pendingTurnRecovery || managed.isProcessing
-      || this.coldProviderReconciliationsInFlight.has(sessionId)) return
+      || this.runtimeState.coldProviderReconciliationsInFlight.has(sessionId)) return
     await this.repairLegacyCleanRetryCauseAfterRestart(managed)
     const restartObjectiveAtEntry = managed.activeObjective
-    const restartCancellationEpoch = this.turnCancellationEpochs.get(managed) ?? 0
+    const restartCancellationEpoch = this.runtimeState.turnCancellationEpochs.get(managed) ?? 0
     const pendingAtEntry = managed.pendingTurnRecovery
     const allocatedCleanHint = validAllocatedRecoveryDispatch(managed.pendingTurnRecovery)
     const blockedSetupHint = this.isCleanSetupRetryBlocked(allocatedCleanHint)
     const persistenceFencedHint = this.isCleanSetupPersistenceFenced(managed, allocatedCleanHint)
     if (this.hasPendingUserInput(managed)) {
       await this.ensureMessagesLoaded(managed)
-      if (this.sessions.get(sessionId) !== managed || managed.isProcessing) return
+      if (this.runtimeState.sessions.get(sessionId) !== managed || managed.isProcessing) return
       if (await this.continueObservedContextLimitQuestionAfterRestart(managed)) return
       if (!await this.healPendingContextLimitQuestionAfterRestart(managed)) return
     }
@@ -6757,7 +6058,7 @@ export class SessionManager implements ISessionManager {
       || !!this.getPendingUserInputResponse(managed, true) || blockedSetupHint
       || terminalAnsweredUserInputHint
     const restartRecoveryStillAuthorized = (): boolean => (
-      this.sessions.get(sessionId) === managed
+      this.runtimeState.sessions.get(sessionId) === managed
       && !managed.stopRequested
       // A setup-blocked clean dispatch may have been written by the brief
       // implementation that also closed the session lifecycle. Let it reach
@@ -6767,20 +6068,20 @@ export class SessionManager implements ISessionManager {
       && (humanRecovery || !this.hasTerminalObjectiveState(managed))
     )
     if (!restartRecoveryStillAuthorized()) {
-      this.deferredAutomaticSessions.delete(sessionId)
-      this.automaticAdmissionReservations.delete(sessionId)
+      this.runtimeState.deferredAutomaticSessions.delete(sessionId)
+      this.runtimeState.automaticAdmissionReservations.delete(sessionId)
       return
     }
 
     // Indexes are hydration hints, never human authority: spawned-session and
     // older agent messages may also appear in pendingQueuedMessageIds.
     const hasInboxHint = !!managed.pendingQueuedMessageIds?.length || !!managed.pendingAgentDeliveryIds?.length
-    const hasDelegatedDescendants = [...this.sessions.values()].some(
+    const hasDelegatedDescendants = [...this.runtimeState.sessions.values()].some(
       candidate => candidate.parentSessionId === managed.id || candidate.delegation?.rootSessionId === managed.id,
     )
     const needsLocalReconciliation = managed.lastMessageRole === 'assistant' || !!managed.lastFinalMessageId
       || !!managed.pendingTurnRecovery.waitingForPermission || !!managed.pendingAuthRequestId
-      || !!managed.parentSessionId && !this.sessions.has(managed.parentSessionId)
+      || !!managed.parentSessionId && !this.runtimeState.sessions.has(managed.parentSessionId)
       || hasDelegatedDescendants
     if (!humanRecovery && !allocatedCleanHint?.cleanContinuationId
       && !hasInboxHint && !needsLocalReconciliation) {
@@ -6794,13 +6095,13 @@ export class SessionManager implements ISessionManager {
     // cold non-replay transaction. Do not inspect or advance its optimistic
     // in-memory successor until that exact snapshot has crossed fsync; the
     // transaction callback will schedule the continuation afterwards.
-    if (this.coldProviderReconciliationsInFlight.has(sessionId)) {
-      this.automaticAdmissionReservations.delete(sessionId)
+    if (this.runtimeState.coldProviderReconciliationsInFlight.has(sessionId)) {
+      this.runtimeState.automaticAdmissionReservations.delete(sessionId)
       return
     }
     if (this.providerDispatchAcceptanceUnknown(managed)) {
-      this.deferredAutomaticSessions.delete(sessionId)
-      this.automaticAdmissionReservations.delete(sessionId)
+      this.runtimeState.deferredAutomaticSessions.delete(sessionId)
+      this.runtimeState.automaticAdmissionReservations.delete(sessionId)
       return
     }
     const pending = managed.pendingTurnRecovery
@@ -6809,10 +6110,10 @@ export class SessionManager implements ISessionManager {
     // cancellation epoch before reading or migrating any pending authority.
     if (!pending
       || managed.activeObjective !== restartObjectiveAtEntry
-      || (this.turnCancellationEpochs.get(managed) ?? 0) !== restartCancellationEpoch
+      || (this.runtimeState.turnCancellationEpochs.get(managed) ?? 0) !== restartCancellationEpoch
       || !restartRecoveryStillAuthorized()) {
-      this.deferredAutomaticSessions.delete(sessionId)
-      this.automaticAdmissionReservations.delete(sessionId)
+      this.runtimeState.deferredAutomaticSessions.delete(sessionId)
+      this.runtimeState.automaticAdmissionReservations.delete(sessionId)
       return
     }
     const pendingResponseCandidate = pending ? this.getPendingUserInputResponse(managed, true) : undefined
@@ -6862,8 +6163,8 @@ export class SessionManager implements ISessionManager {
         await this.revokeStaleColdRecovery(managed, pending, 'terminal_user_input_provenance_mismatch')
         return
       }
-      this.deferredAutomaticSessions.delete(sessionId)
-      this.automaticAdmissionReservations.delete(sessionId)
+      this.runtimeState.deferredAutomaticSessions.delete(sessionId)
+      this.runtimeState.automaticAdmissionReservations.delete(sessionId)
       try {
         if (!this.persistSession(managed)) {
           throw new Error('The consumed answer Retry snapshot could not be queued for durable storage')
@@ -6873,7 +6174,7 @@ export class SessionManager implements ISessionManager {
         // Keep automatic admission closed when migration durability is
         // uncertain. Restore the exact in-memory source only so a later
         // startup/Retry can reconcile it; never continue in this invocation.
-        if (this.sessions.get(sessionId) === managed
+        if (this.runtimeState.sessions.get(sessionId) === managed
           && managed.activeObjective === objective
           && managed.pendingTurnRecovery === undefined) {
           objective.interruptedTurnRecovery = previousInterrupted
@@ -6905,7 +6206,7 @@ export class SessionManager implements ISessionManager {
       return
     }
     humanRecovery = !!pending && (pending.lastCause === 'user_retry' || !!queuedPendingResponse)
-    if (this.shuttingDown || !pending || managed.isProcessing
+    if (this.runtimeState.shuttingDown || !pending || managed.isProcessing
       || this.hasPendingUserInput(managed) || this.hasPendingDecision(managed)) return
     const allocatedCleanRecovery = validAllocatedRecoveryDispatch(pending)
     if (allocatedCleanRecovery?.cleanContinuationId
@@ -6928,14 +6229,14 @@ export class SessionManager implements ISessionManager {
           if (!this.persistSession(managed)) throw new Error('Failed to queue setup-state migration')
           await this.flushSession(managed.id)
         } catch (error) {
-          if (this.sessions.get(sessionId) === managed
+          if (this.runtimeState.sessions.get(sessionId) === managed
             && managed.pendingTurnRecovery === pending
             && managed.activeObjective === migratedObjective) {
             managed.activeObjective = objective
             this.persistSession(managed)
           }
-          this.deferredAutomaticSessions.delete(sessionId)
-          this.automaticAdmissionReservations.delete(sessionId)
+          this.runtimeState.deferredAutomaticSessions.delete(sessionId)
+          this.runtimeState.automaticAdmissionReservations.delete(sessionId)
           this.sendEvent({
             type: 'typed_error', sessionId: managed.id,
             error: {
@@ -6951,15 +6252,15 @@ export class SessionManager implements ISessionManager {
           })
           return
         }
-        if (this.sessions.get(sessionId) !== managed
+        if (this.runtimeState.sessions.get(sessionId) !== managed
           || managed.pendingTurnRecovery !== pending
           || managed.activeObjective?.terminalState !== 'active') return
       } else if (objective?.terminalState !== 'active') {
         await this.revokeStaleColdRecovery(managed, pending, 'setup_block_no_active_objective')
         return
       }
-      this.deferredAutomaticSessions.delete(sessionId)
-      this.automaticAdmissionReservations.delete(sessionId)
+      this.runtimeState.deferredAutomaticSessions.delete(sessionId)
+      this.runtimeState.automaticAdmissionReservations.delete(sessionId)
       this.emitObjectiveChanged(managed)
       this.sendEvent({
         type: 'typed_error', sessionId: managed.id,
@@ -6972,8 +6273,8 @@ export class SessionManager implements ISessionManager {
       return
     }
     if (this.isCleanSetupPersistenceFenced(managed, allocatedCleanRecovery)) {
-      this.deferredAutomaticSessions.delete(sessionId)
-      this.automaticAdmissionReservations.delete(sessionId)
+      this.runtimeState.deferredAutomaticSessions.delete(sessionId)
+      this.runtimeState.automaticAdmissionReservations.delete(sessionId)
       this.sendEvent({
         type: 'typed_error', sessionId: managed.id,
         error: {
@@ -7019,7 +6320,7 @@ export class SessionManager implements ISessionManager {
       const reactivatedObjective = managed.activeObjective
       this.persistSession(managed)
       await this.flushSession(managed.id)
-      if (this.shuttingDown || !restartRecoveryStillAuthorized()
+      if (this.runtimeState.shuttingDown || !restartRecoveryStillAuthorized()
         || managed.activeObjective !== reactivatedObjective
         || managed.pendingTurnRecovery !== pending || managed.isProcessing) return
     }
@@ -7050,7 +6351,7 @@ export class SessionManager implements ISessionManager {
         }
         await this.flushSession(managed.id)
       } catch (error) {
-        if (this.sessions.get(sessionId) === managed
+        if (this.runtimeState.sessions.get(sessionId) === managed
           && managed.pendingTurnRecovery === reclaimedPending && !managed.stopRequested) {
           managed.pendingTurnRecovery = pending
           if (!managed.messages.some(message => message.id === boundaryRow.id)) {
@@ -7062,7 +6363,7 @@ export class SessionManager implements ISessionManager {
           }
           this.persistSession(managed)
         }
-        this.automaticAdmissionReservations.delete(sessionId)
+        this.runtimeState.automaticAdmissionReservations.delete(sessionId)
         sessionLog.warn('Failed to durably reclaim an unobserved clean user-input Retry', {
           sessionId,
           dispatchId: startedCleanAnswerRetry.allocatedDispatch.id,
@@ -7070,10 +6371,10 @@ export class SessionManager implements ISessionManager {
         })
         return
       }
-      if (this.sessions.get(sessionId) !== managed
+      if (this.runtimeState.sessions.get(sessionId) !== managed
         || managed.pendingTurnRecovery !== reclaimedPending || managed.stopRequested) return
       if (!this.resumeAllocatedRecoveryDispatch(managed, reclaimedPending)) {
-        this.deferredAutomaticSessions.add(sessionId)
+        this.runtimeState.deferredAutomaticSessions.add(sessionId)
         this.scheduleDeferredAutomaticSessions()
       }
       return
@@ -7099,7 +6400,7 @@ export class SessionManager implements ISessionManager {
     }
     // Hydration already schedules the durable answer. Do not prepend an
     // automatic nudge that would run before the user's actual clarification.
-    if (managed.messageQueue.length > 0 || this.queuedMessageDispatches.has(managed.id)) {
+    if (managed.messageQueue.length > 0 || this.runtimeState.queuedMessageDispatches.has(managed.id)) {
       await this.stopImmutableRestartRecovery(managed)
       return
     }
@@ -7180,7 +6481,7 @@ export class SessionManager implements ISessionManager {
           // invariant during reconciliation. This path only observes an
           // objective that is still active; it never reopens a terminal one.
           if (await this.deferTerminalOutcomeForActiveDelegations(managed)) return
-          if (this.shuttingDown || this.sessions.get(sessionId) !== managed
+          if (this.runtimeState.shuttingDown || this.runtimeState.sessions.get(sessionId) !== managed
             || managed.activeObjective !== objective || isClosedColdResumeStatus(managed)) return
           deliveredReview = reviewValidation?.valid === true && !pending.continuationRequired
           objective.terminalState = state
@@ -7261,7 +6562,7 @@ export class SessionManager implements ISessionManager {
         const handoff = this.createAutonomousContextLimitHandoff(managed, genericPending)
         if (!handoff || !buildCleanRecoveryContinuationPrompt(handoff)) {
           managed.messages.splice(currentReclaimable.messageIndex, 0, reclaimedPrompt)
-          this.automaticAdmissionReservations.delete(managed.id)
+          this.runtimeState.automaticAdmissionReservations.delete(managed.id)
           sessionLog.error('Refused to replay a disabled started routing fallback without a clean handoff', {
             sessionId: managed.id,
             dispatchId: genericDispatch.id,
@@ -7279,7 +6580,7 @@ export class SessionManager implements ISessionManager {
         if (!finalHandoff || finalHandoff.id !== cleanDispatch.cleanContinuationId
           || !finalPrompt) {
           managed.messages.splice(currentReclaimable.messageIndex, 0, reclaimedPrompt)
-          this.automaticAdmissionReservations.delete(managed.id)
+          this.runtimeState.automaticAdmissionReservations.delete(managed.id)
           sessionLog.error('Refused an unstable clean handoff for a disabled started routing fallback', {
             sessionId: managed.id,
             dispatchId: genericDispatch.id,
@@ -7312,7 +6613,7 @@ export class SessionManager implements ISessionManager {
         // The conversion was not ACKed. Restore the exact pre-conversion state
         // only if it still belongs to this objective; never overwrite a Stop or
         // newer objective that won while the flush was pending.
-        if (this.sessions.get(sessionId) === managed
+        if (this.runtimeState.sessions.get(sessionId) === managed
           && managed.pendingTurnRecovery === reclaimedPending
           && managed.activeObjective === reclaimObjective
           && !managed.stopRequested) {
@@ -7336,7 +6637,7 @@ export class SessionManager implements ISessionManager {
           managed.transferredSessionSummary = providerStateBeforeReclaim.transferredSessionSummary
           managed.transferredSessionSummaryApplied = providerStateBeforeReclaim.transferredSessionSummaryApplied
           managed.tokenUsage = providerStateBeforeReclaim.tokenUsage
-          this.deferredAutomaticSessions.add(sessionId)
+          this.runtimeState.deferredAutomaticSessions.add(sessionId)
           this.persistSession(managed)
           try {
             await this.flushSession(managed.id)
@@ -7350,7 +6651,7 @@ export class SessionManager implements ISessionManager {
         }
         throw error
       }
-      if (this.shuttingDown || !restartRecoveryStillAuthorized()
+      if (this.runtimeState.shuttingDown || !restartRecoveryStillAuthorized()
         || managed.pendingTurnRecovery !== reclaimedPending || managed.activeObjective !== reclaimObjective
         || managed.isProcessing) return
       if (this.resumeAllocatedRecoveryDispatch(managed, reclaimedPending)) {
@@ -7388,7 +6689,7 @@ export class SessionManager implements ISessionManager {
       continuationWork,
       'restart',
     )
-    if (this.shuttingDown || !restartRecoveryStillAuthorized() || managed.stopRequested || managed.processingGeneration !== recoveryGeneration
+    if (this.runtimeState.shuttingDown || !restartRecoveryStillAuthorized() || managed.stopRequested || managed.processingGeneration !== recoveryGeneration
       || managed.activeObjective !== recoveryObjective || this.hasPendingUserInput(managed) || this.hasPendingDecision(managed)) return
     if (queued && !managed.isProcessing) {
       this.processNextQueuedMessage(managed.id)
@@ -7459,56 +6760,22 @@ export class SessionManager implements ISessionManager {
   }
 
   private async resumePendingTurnsAfterRestart(sessionIds: string[]): Promise<void> {
-    if (this.shuttingDown) return
-    for (const id of sessionIds) this.deferredAutomaticSessions.add(id)
+    if (this.runtimeState.shuttingDown) return
+    for (const id of sessionIds) this.runtimeState.deferredAutomaticSessions.add(id)
     await this.drainDeferredAutomaticSessions()
   }
 
-  private readonly deferredAutomaticSessions = new Set<string>()
-  private readonly automaticAdmissionReservations = new Set<string>()
-  /** Hydration has queued one atomic provider-fence -> generic-continuation
-   * snapshot, but the durable barrier has not completed yet. No live admission
-   * may observe the optimistic in-memory state during that window. */
-  private readonly coldProviderReconciliationsInFlight = new Set<string>()
-  /** Every queued snapshot advances this revision, including in-place auth or
-   * question changes whose object references stay stable. Async rollback may
-   * restore an older clone only while this exact revision is still current. */
-  private readonly sessionPersistenceEpochs = new WeakMap<ManagedSession, number>()
-  /** Exact accepted receipts being tombstoned by an explicit user Stop. While
-   * the snapshot is crossing fsync, neither FIFO nor a new human turn may
-   * observe the marker as already retired. */
-  private readonly providerStopTransitionsInFlight = new Set<string>()
-  private readonly pendingSpawnRoots = new Map<symbol, string>()
-  private automaticAdmissionDrain?: Promise<void>
-  private automaticAdmissionWakeScheduled = false
-  private automaticAdmissionDrainWakeRequested = false
-  /** A scheduler I/O/runtime failure must not require an unrelated UI or child
-   * event to wake the retained work. Timers are runtime-only; the durable FIFO
-   * or PendingTurnRecovery remains the source of truth across process restarts. */
-  private readonly deferredAutomaticRetryAttempts = new Map<string, number>()
-  private readonly deferredAutomaticRetryTimers = new Map<string, ReturnType<typeof setTimeout>>()
-  /** A failed fsync must never be followed by provider admission from the
-   * newer in-memory allocation. Only a fresh human Retry may clear this fence. */
-  /** A failed durability write fences only the exact allocation whose bounded
-   * setup failure could not be committed. A later objective/dispatch in the
-   * same session must not inherit that in-memory fault. */
-  private readonly cleanRetrySetupPersistenceFences = new Map<string, string>()
-  /** A restored agent receipt whose rollback fsync was uncertain cannot be
-   * admitted again in this process. The receipt also carries a durable marker
-   * when storage becomes available, so Retry can clear it transactionally. */
-  private readonly agentDeliverySetupPersistenceFences = new Map<string, string>()
-
   private clearDeferredAutomaticRetry(sessionId: string): void {
-    const timer = this.deferredAutomaticRetryTimers.get(sessionId)
+    const timer = this.runtimeState.deferredAutomaticRetryTimers.get(sessionId)
     if (timer) clearTimeout(timer)
-    this.deferredAutomaticRetryTimers.delete(sessionId)
-    this.deferredAutomaticRetryAttempts.delete(sessionId)
+    this.runtimeState.deferredAutomaticRetryTimers.delete(sessionId)
+    this.runtimeState.deferredAutomaticRetryAttempts.delete(sessionId)
   }
 
   private scheduleDeferredAutomaticRetry(sessionId: string, minimumDelayMs = 0): void {
-    if (this.shuttingDown || this.deferredAutomaticRetryTimers.has(sessionId)) return
-    const attempt = (this.deferredAutomaticRetryAttempts.get(sessionId) ?? 0) + 1
-    this.deferredAutomaticRetryAttempts.set(sessionId, attempt)
+    if (this.runtimeState.shuttingDown || this.runtimeState.deferredAutomaticRetryTimers.has(sessionId)) return
+    const attempt = (this.runtimeState.deferredAutomaticRetryAttempts.get(sessionId) ?? 0) + 1
+    this.runtimeState.deferredAutomaticRetryAttempts.set(sessionId, attempt)
     const boundedMinimumDelayMs = Number.isFinite(minimumDelayMs)
       ? Math.min(MAX_CLEAN_RETRY_SETUP_BACKOFF_MS, Math.max(0, Math.floor(minimumDelayMs)))
       : 0
@@ -7517,15 +6784,15 @@ export class SessionManager implements ISessionManager {
       Math.min(30_000, 250 * (2 ** Math.min(attempt - 1, 7))),
     )
     const timer = setTimeout(() => {
-      this.deferredAutomaticRetryTimers.delete(sessionId)
-      if (this.shuttingDown || !this.deferredAutomaticSessions.has(sessionId)) {
-        this.deferredAutomaticRetryAttempts.delete(sessionId)
+      this.runtimeState.deferredAutomaticRetryTimers.delete(sessionId)
+      if (this.runtimeState.shuttingDown || !this.runtimeState.deferredAutomaticSessions.has(sessionId)) {
+        this.runtimeState.deferredAutomaticRetryAttempts.delete(sessionId)
         return
       }
       this.scheduleDeferredAutomaticSessions()
     }, delayMs)
     timer.unref?.()
-    this.deferredAutomaticRetryTimers.set(sessionId, timer)
+    this.runtimeState.deferredAutomaticRetryTimers.set(sessionId, timer)
     sessionLog.warn('Deferred automatic admission retained for autonomous backoff retry', {
       sessionId,
       attempt,
@@ -7548,7 +6815,7 @@ export class SessionManager implements ISessionManager {
     return !!dispatch?.cleanContinuationId && (
       Number.isFinite(dispatch.setupPersistenceFencedAt)
         && dispatch.setupPersistenceFencedAt! > 0
-      || this.cleanRetrySetupPersistenceFences.get(managed.id) === dispatch.id
+      || this.runtimeState.cleanRetrySetupPersistenceFences.get(managed.id) === dispatch.id
     )
   }
 
@@ -7567,10 +6834,10 @@ export class SessionManager implements ISessionManager {
       setupPersistenceFencedAt: dispatch.setupPersistenceFencedAt ?? Date.now(),
     }
     managed.pendingTurnRecovery = { ...pending, recoveryDispatch: fencedDispatch }
-    this.cleanRetrySetupPersistenceFences.set(managed.id, dispatch.id)
+    this.runtimeState.cleanRetrySetupPersistenceFences.set(managed.id, dispatch.id)
     this.clearDeferredAutomaticRetry(managed.id)
-    this.deferredAutomaticSessions.delete(managed.id)
-    this.automaticAdmissionReservations.delete(managed.id)
+    this.runtimeState.deferredAutomaticSessions.delete(managed.id)
+    this.runtimeState.automaticAdmissionReservations.delete(managed.id)
     this.persistSession(managed)
     return true
   }
@@ -7587,7 +6854,7 @@ export class SessionManager implements ISessionManager {
     const pending = managed.pendingTurnRecovery
     const dispatch = pending && validAllocatedRecoveryDispatch(pending)
     if (!pending || !dispatch || dispatch.id !== dispatchId || !dispatch.cleanContinuationId
-      || this.sessions.get(managed.id) !== managed || managed.stopRequested) return
+      || this.runtimeState.sessions.get(managed.id) !== managed || managed.stopRequested) return
 
     const failure = classifyAgentFailure(cleanRetrySetupFailureSignal(error))
     const setupFailureCount = (dispatch.setupFailureCount ?? 0) + 1
@@ -7621,10 +6888,10 @@ export class SessionManager implements ISessionManager {
       item.options?.automaticRecovery?.dispatchId !== dispatch.id
     ))
     this.clearDeferredAutomaticRetry(managed.id)
-    this.deferredAutomaticSessions.delete(managed.id)
-    this.automaticAdmissionReservations.delete(managed.id)
+    this.runtimeState.deferredAutomaticSessions.delete(managed.id)
+    this.runtimeState.automaticAdmissionReservations.delete(managed.id)
     if (!blocked) this.requeueAllocatedRecoveryDispatch(managed, retained)
-    this.cleanRetrySetupPersistenceFences.set(managed.id, dispatch.id)
+    this.runtimeState.cleanRetrySetupPersistenceFences.set(managed.id, dispatch.id)
     const setupFailureEnqueued = this.persistSession(managed)
     if (!setupFailureEnqueued) {
       this.fenceCleanSetupPersistence(managed, dispatch.id)
@@ -7660,10 +6927,10 @@ export class SessionManager implements ISessionManager {
       }, managed.workspace.id)
       return
     }
-    if (this.cleanRetrySetupPersistenceFences.get(managed.id) === dispatch.id) {
-      this.cleanRetrySetupPersistenceFences.delete(managed.id)
+    if (this.runtimeState.cleanRetrySetupPersistenceFences.get(managed.id) === dispatch.id) {
+      this.runtimeState.cleanRetrySetupPersistenceFences.delete(managed.id)
     }
-    if (this.sessions.get(managed.id) !== managed || managed.pendingTurnRecovery !== retained
+    if (this.runtimeState.sessions.get(managed.id) !== managed || managed.pendingTurnRecovery !== retained
       || managed.stopRequested || managed.isProcessing) return
 
     if (blocked) {
@@ -7682,7 +6949,7 @@ export class SessionManager implements ISessionManager {
       return
     }
 
-    this.deferredAutomaticSessions.add(managed.id)
+    this.runtimeState.deferredAutomaticSessions.add(managed.id)
     this.scheduleDeferredAutomaticRetry(
       managed.id,
       Math.max(0, setupRetryNotBefore - Date.now()),
@@ -7764,9 +7031,9 @@ export class SessionManager implements ISessionManager {
     const pending = initialPending
     const currentLineage = inspectAutonomousLineage(
       managed,
-      id => this.sessions.get(id),
+      id => this.runtimeState.sessions.get(id),
       false,
-      id => { const session = this.sessions.get(id); return !!session && this.hasPendingDecision(session) },
+      id => { const session = this.runtimeState.sessions.get(id); return !!session && this.hasPendingDecision(session) },
     )
     if (currentLineage.allowed || !isImmutableAutomaticRecoveryBlock(currentLineage.reason)) return false
 
@@ -7793,8 +7060,8 @@ export class SessionManager implements ISessionManager {
     objective.terminalState = 'blocked_policy'
     objective.completedAt = Date.now()
     managed.pendingTurnRecovery = undefined
-    this.deferredAutomaticSessions.delete(managed.id)
-    this.automaticAdmissionReservations.delete(managed.id)
+    this.runtimeState.deferredAutomaticSessions.delete(managed.id)
+    this.runtimeState.automaticAdmissionReservations.delete(managed.id)
     this.persistSession(managed)
     await this.flushSession(managed.id)
     this.sendEvent({
@@ -7819,14 +7086,14 @@ export class SessionManager implements ISessionManager {
     managed.turnLifecycleManagedStatus = inferredOwnedStatus
     try {
       await this.finishAutomaticSessionStatusLifecycle(managed, reason, () => {
-        if (this.sessions.get(managed.id) !== managed || managed.activeObjective !== objective
+        if (this.runtimeState.sessions.get(managed.id) !== managed || managed.activeObjective !== objective
           || objective?.terminalState === 'active' || managed.isProcessing) {
           throw new Error('Recovered terminal status superseded by active work')
         }
       })
       return managed.sessionStatus !== previousStatus
     } catch (error) {
-      if (this.sessions.get(managed.id) === managed && managed.activeObjective === objective
+      if (this.runtimeState.sessions.get(managed.id) === managed && managed.activeObjective === objective
         && objective?.terminalState !== 'active' && !managed.isProcessing) {
         sessionLog.warn('Recovered terminal status reconciliation failed', {
           sessionId: managed.id,
@@ -7840,20 +7107,20 @@ export class SessionManager implements ISessionManager {
   private async stopImmutableRestartRecovery(managed: ManagedSession): Promise<boolean> {
     const lineage = inspectAutonomousLineage(
       managed,
-      id => this.sessions.get(id),
+      id => this.runtimeState.sessions.get(id),
       false,
-      id => { const session = this.sessions.get(id); return !!session && this.hasPendingDecision(session) },
+      id => { const session = this.runtimeState.sessions.get(id); return !!session && this.hasPendingDecision(session) },
     )
     if (lineage.allowed || !isImmutableAutomaticRecoveryBlock(lineage.reason)) return false
     if (!await this.terminalizeImmutableAutomaticRecoveryBlock(managed, lineage)) return false
     const objective = managed.activeObjective
     await this.reconcileRecoveredTerminalStatus(managed, 'error')
-    if (this.sessions.get(managed.id) !== managed || managed.activeObjective !== objective
+    if (this.runtimeState.sessions.get(managed.id) !== managed || managed.activeObjective !== objective
       || objective?.terminalState === 'active' || managed.isProcessing) return true
     this.emitObjectiveChanged(managed)
     this.sendEvent({
       type: 'complete', sessionId: managed.id, reason: 'error', tokenUsage: managed.tokenUsage,
-      hasUnread: managed.hasUnread, backgroundTasksAlive: this.keepBackgroundTasksAlive,
+      hasUnread: managed.hasUnread, backgroundTasksAlive: this.runtimeState.keepBackgroundTasksAlive,
     }, managed.workspace.id)
     const finalMessageId = this.getLastFinalAssistantMessageId(managed.messages)
     this.emitSessionComplete({
@@ -7872,16 +7139,16 @@ export class SessionManager implements ISessionManager {
     spawningRole?: 'worker' | 'reviewer',
   ): string | undefined {
     if (this.providerDispatchAcceptanceUnknown(managed)) return 'provider_acceptance_unknown'
-    const lineage = inspectAutonomousLineage(managed, id => this.sessions.get(id), spawning,
-      id => { const session = this.sessions.get(id); return !!session && this.hasPendingDecision(session) })
+    const lineage = inspectAutonomousLineage(managed, id => this.runtimeState.sessions.get(id), spawning,
+      id => { const session = this.runtimeState.sessions.get(id); return !!session && this.hasPendingDecision(session) })
     if (!lineage.allowed) return `${lineage.reason}: ${lineage.blockedBy}`
     if (!checkCapacity) return undefined
-    const occupied = new Set([...this.sessions.values()].filter(s => s.isProcessing).map(s => s.id))
-    for (const id of this.automaticAdmissionReservations) occupied.add(id)
+    const occupied = new Set([...this.runtimeState.sessions.values()].filter(s => s.isProcessing).map(s => s.id))
+    for (const id of this.runtimeState.automaticAdmissionReservations) occupied.add(id)
     if (!spawning) occupied.delete(managed.id)
     const reviewerParentsToDiscount = new Set<string>()
     for (const id of occupied) {
-      const session = this.sessions.get(id)
+      const session = this.runtimeState.sessions.get(id)
       if (session?.delegation?.role === 'reviewer' && session.parentSessionId) {
         reviewerParentsToDiscount.add(session.parentSessionId)
       }
@@ -7894,18 +7161,18 @@ export class SessionManager implements ISessionManager {
     for (const parentId of reviewerParentsToDiscount) {
       occupied.delete(parentId)
     }
-    if (occupied.size + this.pendingSpawnRoots.size >= AUTONOMOUS_SESSION_LIMITS.maxRestartConcurrent) return 'global_capacity'
-    let family = [...this.pendingSpawnRoots.values()].filter(root => root === lineage.rootId).length
+    if (occupied.size + this.runtimeState.pendingSpawnRoots.size >= AUTONOMOUS_SESSION_LIMITS.maxRestartConcurrent) return 'global_capacity'
+    let family = [...this.runtimeState.pendingSpawnRoots.values()].filter(root => root === lineage.rootId).length
     for (const id of occupied) {
-      const session = this.sessions.get(id)
-      if (session && inspectAutonomousLineage(session, key => this.sessions.get(key)).rootId === lineage.rootId) family++
+      const session = this.runtimeState.sessions.get(id)
+      if (session && inspectAutonomousLineage(session, key => this.runtimeState.sessions.get(key)).rootId === lineage.rootId) family++
     }
     if (family >= AUTONOMOUS_SESSION_LIMITS.maxPerRoot) return 'root_capacity'
     return undefined
   }
 
   private hasQueuedHumanAuthority(managed: ManagedSession): boolean {
-    if (this.shuttingDown || managed.stopRequested) return false
+    if (this.runtimeState.shuttingDown || managed.stopRequested) return false
     return this.queuedHumanIndex(managed) >= 0
   }
 
@@ -7973,7 +7240,7 @@ export class SessionManager implements ISessionManager {
     // row and FIFO agree with each other.
     if (managed.isProcessing || managed.stopRequested
       || managed.messageQueue.some(item => item.messageId === messageId)
-      || this.queuedMessageDispatches.has(managed.id)) return undefined
+      || this.runtimeState.queuedMessageDispatches.has(managed.id)) return undefined
     const restartRecoveryPrompt = this.authenticatedUserInputRestartPrompt(managed, request)
     return restartRecoveryPrompt
       && content === `${saved.content}\n\n${restartRecoveryPrompt}`
@@ -8021,7 +7288,7 @@ export class SessionManager implements ISessionManager {
       session.activeObjective?.objectiveId ?? session.activeObjective?.userMessageId ?? session.id
     )
     const rootId = managed.delegation?.rootSessionId ?? managed.id
-    const root = this.sessions.get(rootId)
+    const root = this.runtimeState.sessions.get(rootId)
     if (!root || root.workspace.id !== managed.workspace.id
       || root.activeObjective?.terminalState !== 'active') return false
     const rootObjectiveId = objectiveId(root)
@@ -8033,7 +7300,7 @@ export class SessionManager implements ISessionManager {
     let cursor = candidate
     while (cursor.parentSessionId && !seen.has(cursor.parentSessionId)) {
       seen.add(cursor.parentSessionId)
-      const parent = this.sessions.get(cursor.parentSessionId)
+      const parent = this.runtimeState.sessions.get(cursor.parentSessionId)
       const edge = cursor.delegation
       if (!parent || parent.workspace.id !== managed.workspace.id || !edge
         || edge.rootSessionId !== rootId || edge.rootObjectiveId !== rootObjectiveId
@@ -8059,7 +7326,7 @@ export class SessionManager implements ISessionManager {
     while (cursor && cursor.id !== managed.id && !visited.has(cursor.id)) {
       visited.add(cursor.id)
       path.add(cursor.id)
-      cursor = cursor.parentSessionId ? this.sessions.get(cursor.parentSessionId) : undefined
+      cursor = cursor.parentSessionId ? this.runtimeState.sessions.get(cursor.parentSessionId) : undefined
     }
     return cursor?.id === managed.id ? path : undefined
   }
@@ -8076,7 +7343,7 @@ export class SessionManager implements ISessionManager {
     if (origin?.kind !== 'agent-message'
       || !origin.agentMessageType
       || !origin.senderSessionId || !origin.deliveryId || !item.messageId) return undefined
-    const sender = this.sessions.get(origin.senderSessionId)
+    const sender = this.runtimeState.sessions.get(origin.senderSessionId)
     if (!sender || sender.workspace.id !== managed.workspace.id) return undefined
     const receipts = managed.messages.filter(message => message.agentDelivery?.id === origin.deliveryId)
     if (receipts.length !== 1) return undefined
@@ -8090,8 +7357,8 @@ export class SessionManager implements ISessionManager {
       || receipt.internalOrigin.agentMessageType !== origin.agentMessageType
       || receipt.internalOrigin.attachmentsSha256 !== origin.attachmentsSha256) return undefined
     if (ownedDispatchToken) {
-      const dispatch = this.queuedAgentDeliveryDispatches.get(receipt.id)
-      if (this.queuedMessageDispatches.get(managed.id) !== ownedDispatchToken
+      const dispatch = this.runtimeState.queuedAgentDeliveryDispatches.get(receipt.id)
+      if (this.runtimeState.queuedMessageDispatches.get(managed.id) !== ownedDispatchToken
         || dispatch?.dispatchToken !== ownedDispatchToken
         || dispatch.sessionId !== managed.id || dispatch.deliveryId !== origin.deliveryId) return undefined
     } else if (managed.messageQueue.filter(queued => queued.messageId === receipt.id).length !== 1) {
@@ -8109,7 +7376,7 @@ export class SessionManager implements ISessionManager {
     item: ManagedSession['messageQueue'][number],
     ownedDispatchToken?: symbol,
   ): string | undefined {
-    if (this.shuttingDown || managed.stopRequested || managed.isProcessing
+    if (this.runtimeState.shuttingDown || managed.stopRequested || managed.isProcessing
       || managed.activeObjective?.terminalState !== 'active'
       || this.hasPendingDecision(managed) || this.hasPendingUserInput(managed)
       || this.hasQueuedUserInput(managed)) return undefined
@@ -8135,7 +7402,7 @@ export class SessionManager implements ISessionManager {
       return false
     }
     const sender = this.authenticatedTypedAgentDeliverySender(managed, item, ownedDispatchToken)
-    return !sender || isSessionDescendant(sender.id, managed.id, id => this.sessions.get(id))
+    return !sender || isSessionDescendant(sender.id, managed.id, id => this.runtimeState.sessions.get(id))
       && !this.currentDelegatedSenderPath(managed, sender)
   }
 
@@ -8153,9 +7420,9 @@ export class SessionManager implements ISessionManager {
       || (messageType !== 'progress' && messageType !== 'result'
         && messageType !== 'decision' && messageType !== 'question')
       || !origin.senderSessionId || !origin.deliveryId) return false
-    const sender = this.sessions.get(origin.senderSessionId)
+    const sender = this.runtimeState.sessions.get(origin.senderSessionId)
     return !!sender && sender.workspace.id === managed.workspace.id
-      && isSessionDescendant(sender.id, managed.id, id => this.sessions.get(id))
+      && isSessionDescendant(sender.id, managed.id, id => this.runtimeState.sessions.get(id))
       && !this.currentDelegatedSenderPath(managed, sender)
   }
 
@@ -8170,7 +7437,7 @@ export class SessionManager implements ISessionManager {
     ownedDispatchToken?: symbol,
     queueIndex?: number,
   ): Promise<void> {
-    if (this.sessions.get(managed.id) !== managed
+    if (this.runtimeState.sessions.get(managed.id) !== managed
       || !this.isStaleTypedUpwardAgentDelivery(managed, item, ownedDispatchToken)) return
     const receipt = item.messageId
       ? managed.messages.find(message => message.id === item.messageId)
@@ -8189,15 +7456,15 @@ export class SessionManager implements ISessionManager {
     receipt.agentDelivery.attempts = Math.max(1, previousAttempts)
 
     const quarantineToken = ownedDispatchToken ?? Symbol('stale-agent-delivery-quarantine')
-    if (!ownedDispatchToken) this.queuedMessageDispatches.set(managed.id, quarantineToken)
+    if (!ownedDispatchToken) this.runtimeState.queuedMessageDispatches.set(managed.id, quarantineToken)
     this.settleQueuedAgentDeliveryDispatch(item.messageId, ownedDispatchToken)
-    this.automaticAdmissionReservations.delete(managed.id)
+    this.runtimeState.automaticAdmissionReservations.delete(managed.id)
     this.persistSession(managed)
     try {
       await this.flushSession(managed.id)
     } catch (error) {
-      if (this.sessions.get(managed.id) === managed
-        && this.queuedMessageDispatches.get(managed.id) === quarantineToken
+      if (this.runtimeState.sessions.get(managed.id) === managed
+        && this.runtimeState.queuedMessageDispatches.get(managed.id) === quarantineToken
         && receipt.agentDelivery.status === 'failed' && receipt.isQueued === false) {
         receipt.isQueued = true
         receipt.agentDelivery.status = 'queued'
@@ -8213,7 +7480,7 @@ export class SessionManager implements ISessionManager {
         error: error instanceof Error ? error.message : String(error),
       })
       const retry = setTimeout(() => {
-        if (!this.shuttingDown && this.sessions.get(managed.id) === managed
+        if (!this.runtimeState.shuttingDown && this.runtimeState.sessions.get(managed.id) === managed
           && !managed.stopRequested && !managed.isProcessing) {
           this.processNextQueuedMessage(managed.id)
         }
@@ -8221,17 +7488,17 @@ export class SessionManager implements ISessionManager {
       retry.unref?.()
       return
     } finally {
-      if (this.queuedMessageDispatches.get(managed.id) === quarantineToken) {
-        this.queuedMessageDispatches.delete(managed.id)
+      if (this.runtimeState.queuedMessageDispatches.get(managed.id) === quarantineToken) {
+        this.runtimeState.queuedMessageDispatches.delete(managed.id)
       }
     }
 
-    if (this.sessions.get(managed.id) !== managed) return
+    if (this.runtimeState.sessions.get(managed.id) !== managed) return
     this.sendEvent({
       type: 'info', sessionId: managed.id, level: 'warning', timestamp: this.monotonic(),
       message: 'A stale delegated agent handoff was preserved as failed and removed from the active queue; subsequent work will continue.',
     }, managed.workspace.id)
-    if (!this.shuttingDown && !managed.stopRequested && !managed.isProcessing
+    if (!this.runtimeState.shuttingDown && !managed.stopRequested && !managed.isProcessing
       && managed.messageQueue.length > 0) this.processNextQueuedMessage(managed.id)
   }
 
@@ -8274,7 +7541,7 @@ export class SessionManager implements ISessionManager {
         candidate,
       )
       if (candidateActionableSenderId) {
-        const candidateSender = this.sessions.get(candidateActionableSenderId)
+        const candidateSender = this.runtimeState.sessions.get(candidateActionableSenderId)
         const releasedPath = candidateSender
           ? this.currentDelegatedSenderPath(managed, candidateSender)
           : undefined
@@ -8305,14 +7572,14 @@ export class SessionManager implements ISessionManager {
   /** `processing` is deliberately not consumption proof. A crash can happen
    * after queue claim but before the provider has incorporated the result. */
   private hasConsumedDelegatedTerminalResult(ancestor: ManagedSession, child: ManagedSession): boolean {
-    const recipient = child.parentSessionId ? this.sessions.get(child.parentSessionId) : undefined
+    const recipient = child.parentSessionId ? this.runtimeState.sessions.get(child.parentSessionId) : undefined
     if (!recipient || recipient.workspace.id !== ancestor.workspace.id
       || (recipient.id !== ancestor.id && !this.isCurrentDelegatedDescendant(ancestor, recipient))) return false
     return this.delegatedTerminalResultReceipt(recipient, child)?.agentDelivery?.status === 'processed'
   }
 
   private hasDurableDelegatedTerminalResultDelivery(ancestor: ManagedSession, child: ManagedSession): boolean {
-    const recipient = child.parentSessionId ? this.sessions.get(child.parentSessionId) : undefined
+    const recipient = child.parentSessionId ? this.runtimeState.sessions.get(child.parentSessionId) : undefined
     if (!recipient || recipient.workspace.id !== ancestor.workspace.id
       || (recipient.id !== ancestor.id && !this.isCurrentDelegatedDescendant(ancestor, recipient))) return false
     const receipt = this.delegatedTerminalResultReceipt(recipient, child)
@@ -8345,7 +7612,7 @@ export class SessionManager implements ISessionManager {
       const value = item as Record<string, unknown>
       if (typeof value.sessionId !== 'string' || !allowed.has(value.sessionId)
         || typeof value.finalMessageId !== 'string' || typeof value.finalText !== 'string') continue
-      const child = this.sessions.get(value.sessionId)
+      const child = this.runtimeState.sessions.get(value.sessionId)
       if (!child || child.parentSessionId !== parent.id
         || child.workspace.id !== parent.workspace.id
         || !this.isCurrentDelegatedDescendant(parent, child)
@@ -8374,11 +7641,11 @@ export class SessionManager implements ISessionManager {
     deferRecipientDispatch = false,
   ): Promise<boolean> {
     const delegation = child.delegation
-    const parent = child.parentSessionId ? this.sessions.get(child.parentSessionId) : undefined
+    const parent = child.parentSessionId ? this.runtimeState.sessions.get(child.parentSessionId) : undefined
     if (!delegation || !parent || parent.workspace.id !== child.workspace.id) return false
     await Promise.all([this.ensureMessagesLoaded(child), this.ensureMessagesLoaded(parent)])
-    if (this.shuttingDown || this.sessions.get(child.id) !== child
-      || this.sessions.get(parent.id) !== parent
+    if (this.runtimeState.shuttingDown || this.runtimeState.sessions.get(child.id) !== child
+      || this.runtimeState.sessions.get(parent.id) !== parent
       || !this.isCurrentDelegatedDescendant(parent, child)) return false
     if (!child.delegation?.finishedAt && !this.hasTerminalObjectiveState(child)) return false
 
@@ -8439,7 +7706,7 @@ export class SessionManager implements ISessionManager {
           options: recoveredInternalMessageOptions(existing),
         })
       }
-      this.deferredAutomaticSessions.add(parent.id)
+      this.runtimeState.deferredAutomaticSessions.add(parent.id)
       this.persistSession(parent)
       await this.flushSession(parent.id)
       this.clearDelegatedTerminalResultRetry(child.id)
@@ -8476,33 +7743,30 @@ export class SessionManager implements ISessionManager {
     return true
   }
 
-  private readonly delegatedTerminalResultRetryAttempts = new Map<string, number>()
-  private readonly delegatedTerminalResultRetryTimers = new Map<string, ReturnType<typeof setTimeout>>()
-
   private clearDelegatedTerminalResultRetry(childSessionId: string): void {
-    const timer = this.delegatedTerminalResultRetryTimers.get(childSessionId)
+    const timer = this.runtimeState.delegatedTerminalResultRetryTimers.get(childSessionId)
     if (timer) clearTimeout(timer)
-    this.delegatedTerminalResultRetryTimers.delete(childSessionId)
-    this.delegatedTerminalResultRetryAttempts.delete(childSessionId)
+    this.runtimeState.delegatedTerminalResultRetryTimers.delete(childSessionId)
+    this.runtimeState.delegatedTerminalResultRetryAttempts.delete(childSessionId)
   }
 
   private scheduleDelegatedTerminalResultRetry(childSessionId: string): void {
-    if (this.shuttingDown || this.delegatedTerminalResultRetryTimers.has(childSessionId)) return
-    const child = this.sessions.get(childSessionId)
+    if (this.runtimeState.shuttingDown || this.runtimeState.delegatedTerminalResultRetryTimers.has(childSessionId)) return
+    const child = this.runtimeState.sessions.get(childSessionId)
     if (!child?.delegation || (!child.delegation.finishedAt && !this.hasTerminalObjectiveState(child))) return
-    const parent = child.parentSessionId ? this.sessions.get(child.parentSessionId) : undefined
+    const parent = child.parentSessionId ? this.runtimeState.sessions.get(child.parentSessionId) : undefined
     if (!parent || !this.isCurrentDelegatedDescendant(parent, child)) {
-      this.delegatedTerminalResultRetryAttempts.delete(childSessionId)
+      this.runtimeState.delegatedTerminalResultRetryAttempts.delete(childSessionId)
       return
     }
-    const attempt = (this.delegatedTerminalResultRetryAttempts.get(childSessionId) ?? 0) + 1
-    this.delegatedTerminalResultRetryAttempts.set(childSessionId, attempt)
+    const attempt = (this.runtimeState.delegatedTerminalResultRetryAttempts.get(childSessionId) ?? 0) + 1
+    this.runtimeState.delegatedTerminalResultRetryAttempts.set(childSessionId, attempt)
     const delayMs = Math.min(30_000, 250 * (2 ** Math.min(attempt - 1, 7)))
     const timer = setTimeout(() => {
-      this.delegatedTerminalResultRetryTimers.delete(childSessionId)
-      const current = this.sessions.get(childSessionId)
-      if (this.shuttingDown || !current) {
-        this.delegatedTerminalResultRetryAttempts.delete(childSessionId)
+      this.runtimeState.delegatedTerminalResultRetryTimers.delete(childSessionId)
+      const current = this.runtimeState.sessions.get(childSessionId)
+      if (this.runtimeState.shuttingDown || !current) {
+        this.runtimeState.delegatedTerminalResultRetryAttempts.delete(childSessionId)
         return
       }
       void this.ensureDelegatedTerminalResultDelivery(current).then(delivered => {
@@ -8516,7 +7780,7 @@ export class SessionManager implements ISessionManager {
       })
     }, delayMs)
     timer.unref?.()
-    this.delegatedTerminalResultRetryTimers.set(childSessionId, timer)
+    this.runtimeState.delegatedTerminalResultRetryTimers.set(childSessionId, timer)
   }
 
   /** Return only live descendants from the exact current delegated lineage. A
@@ -8526,7 +7790,7 @@ export class SessionManager implements ISessionManager {
     managed: ManagedSession,
     allowExactTerminalReceiptInCurrentTurn = false,
   ): ManagedSession[] {
-    return [...this.sessions.values()].filter(candidate => {
+    return [...this.runtimeState.sessions.values()].filter(candidate => {
       const objectiveState = candidate.activeObjective?.terminalState
       if (candidate.stopRequested || !this.isCurrentDelegatedDescendant(managed, candidate)) return false
       const terminalResultPendingConsumption = (!!objectiveState && objectiveState !== 'active')
@@ -8554,8 +7818,8 @@ export class SessionManager implements ISessionManager {
         }
         return !this.hasConsumedDelegatedTerminalResult(managed, candidate)
       }
-      const runtimeActive = candidate.isProcessing || this.queuedMessageDispatches.has(candidate.id)
-        || this.automaticAdmissionReservations.has(candidate.id)
+      const runtimeActive = candidate.isProcessing || this.runtimeState.queuedMessageDispatches.has(candidate.id)
+        || this.runtimeState.automaticAdmissionReservations.has(candidate.id)
       if (runtimeActive) return true
       // Authentication/approval is a durable child wait, not an idle child. It
       // must keep every ancestor objective open until the exact handoff is
@@ -8580,7 +7844,7 @@ export class SessionManager implements ISessionManager {
     for (const item of managed.messageQueue) {
       const origin = item.options?.internalOrigin
       if (origin?.kind !== 'agent-message' || !origin.deliveryId || !origin.senderSessionId) continue
-      const sender = this.sessions.get(origin.senderSessionId)
+      const sender = this.runtimeState.sessions.get(origin.senderSessionId)
       if (sender && this.isCurrentDelegatedDescendant(managed, sender)) senderIds.add(sender.id)
     }
     return [...senderIds]
@@ -8646,7 +7910,7 @@ export class SessionManager implements ISessionManager {
         // delivery's own turn from validating its final response.
         continuationRequired: pending.continuationRequired === true,
       }
-      this.deferredAutomaticSessions.add(managed.id)
+      this.runtimeState.deferredAutomaticSessions.add(managed.id)
       const checkpoint = demoteLatestCheckpointAssistant(
         managed.messages,
         managed.pendingTurnRecovery.userMessageId,
@@ -8679,7 +7943,7 @@ export class SessionManager implements ISessionManager {
     const block = this.autonomousAdmissionBlock(managed, true, true, spawningRole)
     if (block) throw new Error(`Delegation deferred (${block}). Resolve the ancestor decision or finish an existing delegation before spawning again. For a changed parent objective, create a new scoped delegation. Do not recursively delegate a delegated review.`)
     const token = Symbol('spawn-admission')
-    this.pendingSpawnRoots.set(token, inspectAutonomousLineage(managed, id => this.sessions.get(id)).rootId)
+    this.runtimeState.pendingSpawnRoots.set(token, inspectAutonomousLineage(managed, id => this.runtimeState.sessions.get(id)).rootId)
     return token
   }
 
@@ -8687,8 +7951,8 @@ export class SessionManager implements ISessionManager {
     managed: ManagedSession,
     actionableUpwardSenderId?: string | readonly string[],
   ): boolean {
-    if (this.shuttingDown) return false
-    const alreadyReserved = this.automaticAdmissionReservations.has(managed.id)
+    if (this.runtimeState.shuttingDown) return false
+    const alreadyReserved = this.runtimeState.automaticAdmissionReservations.has(managed.id)
     const block = this.autonomousAdmissionBlock(managed)
     // A reservation was granted only after dependency authentication. Keep it
     // across sendMessage's asynchronous preparation seams while revalidating
@@ -8699,7 +7963,7 @@ export class SessionManager implements ISessionManager {
       ? [actionableUpwardSenderId]
       : actionableUpwardSenderId ?? []
     const releasedSenderPaths = actionableSenderIds.flatMap(senderId => {
-      const sender = this.sessions.get(senderId)
+      const sender = this.runtimeState.sessions.get(senderId)
       const path = sender ? this.currentDelegatedSenderPath(managed, sender) : undefined
       return path ? [path] : []
     })
@@ -8709,12 +7973,12 @@ export class SessionManager implements ISessionManager {
     // Do not consume a slot while a current delegated descendant is still
     // producing the evidence this parent must consume. The parent's bounded
     // recovery or machine FIFO remains durable and wakes after the child stops.
-    const waitingForPersistedChild = !block && [...this.deferredAutomaticSessions].some(id => {
-      const child = this.sessions.get(id)
+    const waitingForPersistedChild = !block && [...this.runtimeState.deferredAutomaticSessions].some(id => {
+      const child = this.runtimeState.sessions.get(id)
       return id !== managed.id && !!child && dependencyRemainsBlocking(child)
         && !!child.pendingTurnRecovery && !this.hasExhaustedValidation(child)
-        && inspectAutonomousLineage(child, key => this.sessions.get(key)).allowed
-        && isSessionDescendant(id, managed.id, key => this.sessions.get(key))
+        && inspectAutonomousLineage(child, key => this.runtimeState.sessions.get(key)).allowed
+        && isSessionDescendant(id, managed.id, key => this.runtimeState.sessions.get(key))
     })
     const waitingForChild = waitingForPersistedChild
       || (!block && this.activeRelevantDelegatedDescendants(managed).some(child => (
@@ -8722,7 +7986,7 @@ export class SessionManager implements ISessionManager {
           && !this.hasDurableDelegatedTerminalResultDelivery(managed, child)
       )))
     if (block || waitingForChild) {
-      this.deferredAutomaticSessions.add(managed.id)
+      this.runtimeState.deferredAutomaticSessions.add(managed.id)
       sessionLog.info('Deferred automatic admission behind lineage, capacity, or delegated work', {
         sessionId: managed.id,
         block,
@@ -8742,34 +8006,34 @@ export class SessionManager implements ISessionManager {
       })
       return false
     }
-    this.automaticAdmissionReservations.add(managed.id)
-    this.deferredAutomaticSessions.delete(managed.id)
+    this.runtimeState.automaticAdmissionReservations.add(managed.id)
+    this.runtimeState.deferredAutomaticSessions.delete(managed.id)
     return true
   }
 
   private scheduleDeferredAutomaticSessions(): void {
-    if (this.shuttingDown || !this.deferredAutomaticSessions?.size || this.automaticAdmissionWakeScheduled) return
-    if (this.automaticAdmissionDrain) { this.automaticAdmissionDrainWakeRequested = true; return }
-    this.automaticAdmissionWakeScheduled = true
+    if (this.runtimeState.shuttingDown || !this.runtimeState.deferredAutomaticSessions?.size || this.runtimeState.automaticAdmissionWakeScheduled) return
+    if (this.runtimeState.automaticAdmissionDrain) { this.runtimeState.automaticAdmissionDrainWakeRequested = true; return }
+    this.runtimeState.automaticAdmissionWakeScheduled = true
     setImmediate(() => {
-      this.automaticAdmissionWakeScheduled = false
-      if (this.shuttingDown) return
-      if (this.automaticAdmissionDrain) this.automaticAdmissionDrainWakeRequested = true
+      this.runtimeState.automaticAdmissionWakeScheduled = false
+      if (this.runtimeState.shuttingDown) return
+      if (this.runtimeState.automaticAdmissionDrain) this.runtimeState.automaticAdmissionDrainWakeRequested = true
       else void this.drainDeferredAutomaticSessions()
     })
   }
 
   private async drainDeferredAutomaticSessions(): Promise<void> {
-    if (this.shuttingDown) return
-    if (this.automaticAdmissionDrain) return this.automaticAdmissionDrain
+    if (this.runtimeState.shuttingDown) return
+    if (this.runtimeState.automaticAdmissionDrain) return this.runtimeState.automaticAdmissionDrain
     const operation = (async () => {
-      const candidates = orderAutonomousRestartFrontier([...this.deferredAutomaticSessions]
-        .map(id => this.sessions.get(id)).filter((s): s is ManagedSession => !!s), id => this.sessions.get(id))
+      const candidates = orderAutonomousRestartFrontier([...this.runtimeState.deferredAutomaticSessions]
+        .map(id => this.runtimeState.sessions.get(id)).filter((s): s is ManagedSession => !!s), id => this.runtimeState.sessions.get(id))
       for (const managed of candidates) {
-        if (this.shuttingDown) return
-        if (this.sessions.get(managed.id) !== managed) continue
-        if (this.deferredAutomaticRetryTimers.has(managed.id)) continue
-        if (managed.isProcessing) { this.deferredAutomaticSessions.delete(managed.id); continue }
+        if (this.runtimeState.shuttingDown) return
+        if (this.runtimeState.sessions.get(managed.id) !== managed) continue
+        if (this.runtimeState.deferredAutomaticRetryTimers.has(managed.id)) continue
+        if (managed.isProcessing) { this.runtimeState.deferredAutomaticSessions.delete(managed.id); continue }
         const allocatedSetupRecovery = managed.pendingTurnRecovery
           ? validAllocatedRecoveryDispatch(managed.pendingTurnRecovery)
           : undefined
@@ -8800,8 +8064,8 @@ export class SessionManager implements ISessionManager {
           && !humanPendingRecovery && !terminalAnsweredUserInputHint
         if (!setupBlocked && !setupPersistenceFenced
           && (isClosedColdResumeStatus(managed) || terminalMachineInbox || terminalPendingRecovery)) {
-          this.deferredAutomaticSessions.delete(managed.id)
-          this.automaticAdmissionReservations.delete(managed.id)
+          this.runtimeState.deferredAutomaticSessions.delete(managed.id)
+          this.runtimeState.automaticAdmissionReservations.delete(managed.id)
           continue
         }
         try {
@@ -8810,32 +8074,32 @@ export class SessionManager implements ISessionManager {
           if (cleanRetryOwnsProviderBoundary) await this.resumePendingTurnAfterRestart(managed.id)
           else if (managed.messageQueue.length) this.processNextQueuedMessage(managed.id)
           else if (managed.pendingTurnRecovery) await this.resumePendingTurnAfterRestart(managed.id)
-          else this.deferredAutomaticSessions.delete(managed.id)
-          if (managed.isProcessing || this.queuedMessageDispatches.has(managed.id)
-            || !this.deferredAutomaticSessions.has(managed.id)) {
+          else this.runtimeState.deferredAutomaticSessions.delete(managed.id)
+          if (managed.isProcessing || this.runtimeState.queuedMessageDispatches.has(managed.id)
+            || !this.runtimeState.deferredAutomaticSessions.has(managed.id)) {
             this.clearDeferredAutomaticRetry(managed.id)
           }
         } catch (error) {
           sessionLog.error('Deferred automatic admission failed', { sessionId: managed.id, error: error instanceof Error ? error.message : String(error) })
-          if (!this.shuttingDown && this.sessions.get(managed.id) === managed
+          if (!this.runtimeState.shuttingDown && this.runtimeState.sessions.get(managed.id) === managed
             && !managed.stopRequested && !this.hasTerminalObjectiveState(managed)
             && (managed.messageQueue.length > 0 || !!managed.pendingTurnRecovery)) {
-            this.deferredAutomaticSessions.add(managed.id)
+            this.runtimeState.deferredAutomaticSessions.add(managed.id)
             this.scheduleDeferredAutomaticRetry(managed.id)
           } else {
             this.clearDeferredAutomaticRetry(managed.id)
           }
         } finally {
-          if (!managed.isProcessing && !this.queuedMessageDispatches.has(managed.id)
-            && !this.retryTurnsInFlight.has(managed.id)) this.automaticAdmissionReservations.delete(managed.id)
+          if (!managed.isProcessing && !this.runtimeState.queuedMessageDispatches.has(managed.id)
+            && !this.runtimeState.retryTurnsInFlight.has(managed.id)) this.runtimeState.automaticAdmissionReservations.delete(managed.id)
         }
       }
     })()
-    this.automaticAdmissionDrain = operation
+    this.runtimeState.automaticAdmissionDrain = operation
     try { await operation } finally {
-      if (this.automaticAdmissionDrain === operation) this.automaticAdmissionDrain = undefined
-      if (this.automaticAdmissionDrainWakeRequested) {
-        this.automaticAdmissionDrainWakeRequested = false
+      if (this.runtimeState.automaticAdmissionDrain === operation) this.runtimeState.automaticAdmissionDrain = undefined
+      if (this.runtimeState.automaticAdmissionDrainWakeRequested) {
+        this.runtimeState.automaticAdmissionDrainWakeRequested = false
         this.scheduleDeferredAutomaticSessions()
       }
     }
@@ -8869,7 +8133,7 @@ export class SessionManager implements ISessionManager {
    * stays sync — no microtask race window between the load and the enqueue.
    */
   private persistSession(managed: ManagedSession): boolean {
-    if (this.retiringSessions.has(managed)) return false
+    if (this.runtimeState.retiringSessions.has(managed)) return false
     if (!managed.messagesLoaded) {
       this.hydrateMessagesForColdPersist(managed)
     }
@@ -8880,7 +8144,7 @@ export class SessionManager implements ISessionManager {
 
   /** Publish nested objective/recovery changes without repeating unchanged tool saves. */
   private emitObjectiveChanged(managed: ManagedSession): void {
-    const previous = this.objectiveSnapshots.get(managed)
+    const previous = this.runtimeState.objectiveSnapshots.get(managed)
     if (previous === undefined && !managed.activeObjective && !managed.pendingTurnRecovery) return
 
     const snapshot = JSON.stringify({
@@ -8892,7 +8156,7 @@ export class SessionManager implements ISessionManager {
     // Detached snapshots cannot change under an already queued transport event.
     const state = JSON.parse(snapshot) as Pick<Extract<SessionEvent, { type: 'objective_changed' }>, 'activeObjective' | 'pendingTurnRecovery'>
     this.sendEvent({ type: 'objective_changed', sessionId: managed.id, ...state }, managed.workspace.id)
-    this.objectiveSnapshots.set(managed, snapshot)
+    this.runtimeState.objectiveSnapshots.set(managed, snapshot)
   }
 
   // Cold-persist hydration. Mirrors the messages/queue-recovery half of
@@ -8937,7 +8201,7 @@ export class SessionManager implements ISessionManager {
   ): void {
     if (managed.autoRetryTimer) clearTimeout(managed.autoRetryTimer)
     managed.autoRetryTimer = setTimeout(() => {
-      const current = this.sessions.get(managed.id)
+      const current = this.runtimeState.sessions.get(managed.id)
       if (current !== managed) return
       current.autoRetryTimer = undefined
       const pending = current.autoRetryPending
@@ -8947,9 +8211,9 @@ export class SessionManager implements ISessionManager {
         .some(message => message.role === 'user' && !message.hidden && !message.internalOrigin)
       const stillCurrent = !!pending && pending.dispatchToken === dispatchToken
         && !pending.cancelled && !pending.committed && !pending.dispatchInFlight
-        && !this.shuttingDown && !current.stopRequested
+        && !this.runtimeState.shuttingDown && !current.stopRequested
         && current.processingGeneration === pending.generation
-        && (this.turnCancellationEpochs.get(current) ?? 0) === pending.cancellationEpoch
+        && (this.runtimeState.turnCancellationEpochs.get(current) ?? 0) === pending.cancellationEpoch
         && !!binding && binding.objectiveId === pending.objectiveId
         && binding.objectiveRevision === pending.objectiveRevision
         && !humanFollowUpArrived
@@ -8979,8 +8243,8 @@ export class SessionManager implements ISessionManager {
         if (latest?.dispatchToken === dispatchToken && !latest.committed && !latest.cancelled) {
           releaseSourceActivationClaim(current, dispatchToken)
           if (latest.dispatchAttempts < SOURCE_ACTIVATION_MAX_DISPATCH_ATTEMPTS
-            && !this.shuttingDown && !current.stopRequested
-            && (this.turnCancellationEpochs.get(current) ?? 0) === latest.cancellationEpoch) {
+            && !this.runtimeState.shuttingDown && !current.stopRequested
+            && (this.runtimeState.turnCancellationEpochs.get(current) ?? 0) === latest.cancellationEpoch) {
             this.scheduleSourceActivationDispatch(current, dispatchToken)
           } else cancelSourceActivationPending(current, latest)
         }
@@ -9124,20 +8388,20 @@ export class SessionManager implements ISessionManager {
     },
   ): string {
     const now = Date.now()
-    for (const [key, capability] of this.terminalInvocationCapabilities) {
-      if (capability.expiresAt <= now) this.terminalInvocationCapabilities.delete(key)
+    for (const [key, capability] of this.runtimeState.terminalInvocationCapabilities) {
+      if (capability.expiresAt <= now) this.runtimeState.terminalInvocationCapabilities.delete(key)
     }
-    while (this.terminalInvocationCapabilities.size >= 256) {
-      const oldest = this.terminalInvocationCapabilities.keys().next().value as string | undefined
+    while (this.runtimeState.terminalInvocationCapabilities.size >= 256) {
+      const oldest = this.runtimeState.terminalInvocationCapabilities.keys().next().value as string | undefined
       if (!oldest) break
-      this.terminalInvocationCapabilities.delete(oldest)
+      this.runtimeState.terminalInvocationCapabilities.delete(oldest)
     }
     const key = randomUUID()
-    this.terminalInvocationCapabilities.set(key, {
+    this.runtimeState.terminalInvocationCapabilities.set(key, {
       managed,
       agent: managed.agent,
       generation: managed.processingGeneration,
-      authorityEpoch: this.objectiveAuthorityEpochs.get(managed) ?? 0,
+      authorityEpoch: this.runtimeState.objectiveAuthorityEpochs.get(managed) ?? 0,
       objective,
       scope: {
         allowInitialCriteriaRegistration: scope.allowInitialCriteriaRegistration,
@@ -9164,9 +8428,9 @@ export class SessionManager implements ISessionManager {
       `mcp__session__${suffix}`,
     ])
     const now = Date.now()
-    for (const [key, capability] of this.terminalInvocationCapabilities) {
+    for (const [key, capability] of this.runtimeState.terminalInvocationCapabilities) {
       if (capability.expiresAt <= now) {
-        this.terminalInvocationCapabilities.delete(key)
+        this.runtimeState.terminalInvocationCapabilities.delete(key)
         continue
       }
       const matches = [...toolAliases].some(alias => (
@@ -9175,7 +8439,7 @@ export class SessionManager implements ISessionManager {
       if (!matches) continue
       // Consume before checking freshness. A stale/foreign invocation never
       // gets a second attempt and the digest is not reusable after an error.
-      this.terminalInvocationCapabilities.delete(key)
+      this.runtimeState.terminalInvocationCapabilities.delete(key)
       const requestedSessionIds = Array.isArray(input.sessionIds) ? input.sessionIds : []
       const scopeAllows = suffix === 'set_completion_criteria'
         ? capability.scope.allowInitialCriteriaRegistration
@@ -9190,7 +8454,7 @@ export class SessionManager implements ISessionManager {
         && scopeAllows
         && capability.agent === managed.agent
         && capability.generation === managed.processingGeneration
-        && capability.authorityEpoch === (this.objectiveAuthorityEpochs.get(managed) ?? 0)
+        && capability.authorityEpoch === (this.runtimeState.objectiveAuthorityEpochs.get(managed) ?? 0)
         && capability.objective === managed.activeObjective
         && capability.objective.terminalState === 'active'
         && !!capability.objective.terminalReconciliation
@@ -9267,7 +8531,7 @@ export class SessionManager implements ISessionManager {
         replayKeys.add(key)
         return [{ toolName: message.toolName, toolInputJson }]
       })
-      const waitReviewerSessionIds = coordination ? [...this.sessions.values()].flatMap(candidate => {
+      const waitReviewerSessionIds = coordination ? [...this.runtimeState.sessions.values()].flatMap(candidate => {
         if (candidate.parentSessionId !== owner.id || candidate.delegation?.role !== 'reviewer'
           || candidate.workspace.id !== owner.workspace.id
           || candidate.delegation.rootSessionId !== owner.id
@@ -9280,7 +8544,7 @@ export class SessionManager implements ISessionManager {
         )) || !!candidate.pendingQueuedMessageIds?.length
           || !!candidate.pendingAgentDeliveryIds?.length
         const activeAttempt = candidate.isProcessing || candidate.messageQueue.length > 0
-          || !!candidate.pendingTurnRecovery || this.automaticAdmissionReservations.has(candidate.id)
+          || !!candidate.pendingTurnRecovery || this.runtimeState.automaticAdmissionReservations.has(candidate.id)
         return persistedAttempt || activeAttempt ? [candidate.id] : []
       }).sort() : []
       const allowReviewerSpawn = reviewerEligible && waitReviewerSessionIds.length === 0
@@ -9310,8 +8574,8 @@ export class SessionManager implements ISessionManager {
     // legacy objective IDs but still require their direct parent and root.
     if (managed.delegation) {
       const delegation = managed.delegation
-      const parent = managed.parentSessionId ? this.sessions.get(managed.parentSessionId) : undefined
-      const root = this.sessions.get(delegation.rootSessionId)
+      const parent = managed.parentSessionId ? this.runtimeState.sessions.get(managed.parentSessionId) : undefined
+      const root = this.runtimeState.sessions.get(delegation.rootSessionId)
       if (!parent || !root || parent.workspace.id !== managed.workspace.id
         || root.workspace.id !== managed.workspace.id) return deny('invalid-lineage')
       const parentObjective = parent.activeObjective
@@ -9806,7 +9070,7 @@ export class SessionManager implements ISessionManager {
       || providerDispatchSnapshotNeedsDurability
       || disabledRoutingFallbackSanitization?.changed === true
     if (recoveredConsumedAgentDeliveryNeedsContinuation || recoveredProviderDispatchNeedsContinuation) {
-      this.deferredAutomaticSessions.add(managed.id)
+      this.runtimeState.deferredAutomaticSessions.add(managed.id)
     }
     const providerBoundaryIndex = managed.providerContextBoundaryMessageId
       ? managed.messages.findIndex(message => message.id === managed.providerContextBoundaryMessageId)
@@ -9856,30 +9120,30 @@ export class SessionManager implements ISessionManager {
       && queuedDirectHumanContinuationIndex(managed) >= 0) {
       // This capability is minted only while reconstructing a durable inbox.
       // A later, live user message cannot obtain the cold-resume downgrade.
-      this.coldAuthHumanContinuationSessions.add(managed)
+      this.runtimeState.coldAuthHumanContinuationSessions.add(managed)
     } else {
-      this.coldAuthHumanContinuationSessions.delete(managed)
+      this.runtimeState.coldAuthHumanContinuationSessions.delete(managed)
     }
     const retainedMachineInbox = (this.hasTerminalObjectiveState(managed)
       && this.hasOnlyMachineInbox(managed))
       || (this.hasAnyRetainedStoppedAgentDelivery(managed) && this.hasOnlyMachineInbox(managed))
     if (providerDispatchSnapshotNeedsDurability) {
-      this.coldProviderReconciliationsInFlight.add(managed.id)
-      this.deferredAutomaticSessions.delete(managed.id)
-      this.automaticAdmissionReservations.delete(managed.id)
-      const reconciliationCancellationEpoch = this.turnCancellationEpochs.get(managed) ?? 0
-      const reconciliationAuthorityEpoch = this.objectiveAuthorityEpochs.get(managed) ?? 0
+      this.runtimeState.coldProviderReconciliationsInFlight.add(managed.id)
+      this.runtimeState.deferredAutomaticSessions.delete(managed.id)
+      this.runtimeState.automaticAdmissionReservations.delete(managed.id)
+      const reconciliationCancellationEpoch = this.runtimeState.turnCancellationEpochs.get(managed) ?? 0
+      const reconciliationAuthorityEpoch = this.runtimeState.objectiveAuthorityEpochs.get(managed) ?? 0
       const reconciliationObjective = managed.activeObjective
       const reconciliationMessages = managed.messages
       const reconciliationQueue = managed.messageQueue
       const reconciliationPending = managed.pendingTurnRecovery
       const reconciliationAutoRetryPending = managed.autoRetryPending
       const persistQueued = this.enqueuePersist(managed)
-      const reconciliationPersistenceEpoch = this.sessionPersistenceEpochs.get(managed) ?? 0
+      const reconciliationPersistenceEpoch = this.runtimeState.sessionPersistenceEpochs.get(managed) ?? 0
       const reconciliationStructurallyCurrent = () => (
-        this.sessions.get(managed.id) === managed
-        && (this.turnCancellationEpochs.get(managed) ?? 0) === reconciliationCancellationEpoch
-        && (this.objectiveAuthorityEpochs.get(managed) ?? 0) === reconciliationAuthorityEpoch
+        this.runtimeState.sessions.get(managed.id) === managed
+        && (this.runtimeState.turnCancellationEpochs.get(managed) ?? 0) === reconciliationCancellationEpoch
+        && (this.runtimeState.objectiveAuthorityEpochs.get(managed) ?? 0) === reconciliationAuthorityEpoch
         && managed.activeObjective === reconciliationObjective
         && managed.messages === reconciliationMessages
         && managed.messageQueue === reconciliationQueue
@@ -9888,13 +9152,13 @@ export class SessionManager implements ISessionManager {
       )
       const reconciliationStillCurrent = () => (
         reconciliationStructurallyCurrent()
-        && (this.sessionPersistenceEpochs.get(managed) ?? 0) === reconciliationPersistenceEpoch
+        && (this.runtimeState.sessionPersistenceEpochs.get(managed) ?? 0) === reconciliationPersistenceEpoch
       )
       const persistRecovery = persistQueued
         ? this.flushSessionDurably(managed.id)
         : Promise.reject(new Error('Failed to queue cold provider reconciliation'))
       void persistRecovery.then(() => {
-        this.coldProviderReconciliationsInFlight.delete(managed.id)
+        this.runtimeState.coldProviderReconciliationsInFlight.delete(managed.id)
         // Stop and newer objective/auth transitions own their state even when
         // they race the storage barrier. Never schedule work from the stale
         // pre-race transaction after its write happens to finish.
@@ -9911,7 +9175,7 @@ export class SessionManager implements ISessionManager {
           return
         }
         if (providerDispatchesAwaitingColdReconciliation(managed).length > 0) {
-          this.deferredAutomaticSessions.delete(managed.id)
+          this.runtimeState.deferredAutomaticSessions.delete(managed.id)
           this.sendEvent({
             type: 'typed_error', sessionId: managed.id,
             error: {
@@ -9934,14 +9198,14 @@ export class SessionManager implements ISessionManager {
         }
         if (managed.pendingTurnRecovery
           && this.pendingRecoveryBelongsToCurrentObjective(managed, managed.pendingTurnRecovery)) {
-          this.deferredAutomaticSessions.add(managed.id)
+          this.runtimeState.deferredAutomaticSessions.add(managed.id)
           if (this.hasPendingUserInput(managed) || this.hasPendingDecision(managed)) return
           this.scheduleDeferredAutomaticSessions()
         } else if (managed.messageQueue.length > 0) {
           this.processNextQueuedMessage(managed.id)
         }
       }, error => {
-        this.coldProviderReconciliationsInFlight.delete(managed.id)
+        this.runtimeState.coldProviderReconciliationsInFlight.delete(managed.id)
         const canRestoreColdSnapshot = reconciliationStillCurrent()
         if (canRestoreColdSnapshot && providerDispatchRollbackSnapshot) {
           managed.messages = providerDispatchRollbackSnapshot.messages
@@ -9979,8 +9243,8 @@ export class SessionManager implements ISessionManager {
         })
       })
     } else if (providerDispatchQuarantineMessage) {
-      this.deferredAutomaticSessions.delete(managed.id)
-      this.automaticAdmissionReservations.delete(managed.id)
+      this.runtimeState.deferredAutomaticSessions.delete(managed.id)
+      this.runtimeState.automaticAdmissionReservations.delete(managed.id)
       this.sendEvent({
         type: 'typed_error', sessionId: managed.id,
         error: {
@@ -10001,8 +9265,8 @@ export class SessionManager implements ISessionManager {
         })
       }
     } else if (retainedMachineInbox) {
-      this.deferredAutomaticSessions.delete(managed.id)
-      this.automaticAdmissionReservations.delete(managed.id)
+      this.runtimeState.deferredAutomaticSessions.delete(managed.id)
+      this.runtimeState.automaticAdmissionReservations.delete(managed.id)
       const reconcile = () => {
         if (!this.hasTerminalObjectiveState(managed)) return
         void this.reconcileRetainedTerminalMachineInbox(managed.id).catch(error => {
@@ -10026,7 +9290,7 @@ export class SessionManager implements ISessionManager {
       // dequeue. A direct human row may open a new objective; a machine-only
       // inbox cannot reopen a terminal objective.
       const resumeQueue = () => {
-        const current = this.sessions.get(managed.id)
+        const current = this.runtimeState.sessions.get(managed.id)
         if (current !== managed || isClosedColdResumeStatus(current)) return
         if ((this.hasTerminalObjectiveState(current) && this.hasOnlyMachineInbox(current))
           || (this.hasAnyRetainedStoppedAgentDelivery(current) && this.hasOnlyMachineInbox(current))) return
@@ -10067,25 +9331,25 @@ export class SessionManager implements ISessionManager {
   }
 
   private async reconcileRetainedTerminalMachineInbox(sessionId: string): Promise<void> {
-    const managed = this.sessions.get(sessionId)
+    const managed = this.runtimeState.sessions.get(sessionId)
     const objective = managed?.activeObjective
     if (!managed || managed.isProcessing || !objective || objective.terminalState === 'active'
       || !this.hasOnlyMachineInbox(managed)) return
-    this.deferredAutomaticSessions.delete(sessionId)
-    this.automaticAdmissionReservations.delete(sessionId)
+    this.runtimeState.deferredAutomaticSessions.delete(sessionId)
+    this.runtimeState.automaticAdmissionReservations.delete(sessionId)
     const reason: SessionLifecycleStopReason = objective.terminalState === 'complete_verified' ? 'complete' : 'error'
     const reconciled = await this.reconcileRecoveredTerminalStatus(managed, reason)
     // The retained machine inbox intentionally survives restart. Publish the
     // reconstructed completion only when this hydration actually repaired a
     // stale lifecycle status; subsequent cold loads are idempotent.
     if (!reconciled) return
-    if (this.sessions.get(sessionId) !== managed || managed.activeObjective !== objective
+    if (this.runtimeState.sessions.get(sessionId) !== managed || managed.activeObjective !== objective
       || managed.activeObjective?.terminalState === 'active' || managed.isProcessing
       || !this.hasOnlyMachineInbox(managed)) return
     this.emitObjectiveChanged(managed)
     this.sendEvent({
       type: 'complete', sessionId, reason, tokenUsage: managed.tokenUsage,
-      hasUnread: managed.hasUnread, backgroundTasksAlive: this.keepBackgroundTasksAlive,
+      hasUnread: managed.hasUnread, backgroundTasksAlive: this.runtimeState.keepBackgroundTasksAlive,
     }, managed.workspace.id)
     const finalMessageId = this.getLastFinalAssistantMessageId(managed.messages)
     this.emitSessionComplete({
@@ -10097,13 +9361,13 @@ export class SessionManager implements ISessionManager {
 
   private hasPendingDecision(managed: ManagedSession): boolean {
     return !!(managed.pendingAuthRequestId || managed.pendingAuthRequest || managed.pendingTurnRecovery?.waitingForPermission
-      || [...this.pendingPermissionRequests.values()].some(request => request.sessionId === managed.id))
+      || [...this.runtimeState.pendingPermissionRequests.values()].some(request => request.sessionId === managed.id))
   }
 
   /** Delete approval capabilities before any redirect/await; durable markers
    * are reconciled later inside the serialized continuation fence. */
   private revokePendingToolPermissionsForDirectContinuation(managed: ManagedSession): void {
-    const generations = new Set([...this.pendingPermissionRequests.values()]
+    const generations = new Set([...this.runtimeState.pendingPermissionRequests.values()]
       .filter(request => request.sessionId === managed.id)
       .map(request => request.processingGeneration))
     for (const generation of generations) {
@@ -10122,7 +9386,7 @@ export class SessionManager implements ISessionManager {
   } {
     let changed = false
     let userInputChanged = false
-    const cancellationEpoch = this.turnCancellationEpochs.get(managed) ?? 0
+    const cancellationEpoch = this.runtimeState.turnCancellationEpochs.get(managed) ?? 0
     const previousRecovery = managed.pendingTurnRecovery
     const previousPermissionWait = previousRecovery?.waitingForPermission
       ? { ...previousRecovery.waitingForPermission }
@@ -10135,7 +9399,7 @@ export class SessionManager implements ISessionManager {
 
     // Revoke provider/admin capabilities before removing the durable marker.
     // The broker helper always responds false and records toolExecuted=false.
-    const pendingPermissions = [...this.pendingPermissionRequests.values()]
+    const pendingPermissions = [...this.runtimeState.pendingPermissionRequests.values()]
       .filter(request => request.sessionId === managed.id)
     const pendingPermissionCount = pendingPermissions.length
     if (pendingPermissionCount) {
@@ -10161,7 +9425,7 @@ export class SessionManager implements ISessionManager {
       if (request.status !== 'pending' || request.sessionId !== managed.id
         || request.originWorkspaceId !== managed.workspace.id
         || request.responseMessageId || request.answers
-        || this.userInputResponsesInFlight.has(request.id)) continue
+        || this.runtimeState.userInputResponsesInFlight.has(request.id)) continue
       const answeredAt = request.answeredAt
       request.status = 'cancelled'
       request.answeredAt = Math.max(Date.now(), (request.answeredAt ?? 0) + 1)
@@ -10186,14 +9450,14 @@ export class SessionManager implements ISessionManager {
         // capabilities. Restore only the local question state and a
         // recoveryRequired permission marker, which is non-authorizing Retry
         // context, when this exact send still owns the cancellation epoch.
-        if (this.shuttingDown || this.sessions.get(managed.id) !== managed
+        if (this.runtimeState.shuttingDown || this.runtimeState.sessions.get(managed.id) !== managed
           || managed.stopRequested
-          || (this.turnCancellationEpochs.get(managed) ?? 0) !== cancellationEpoch) return false
+          || (this.runtimeState.turnCancellationEpochs.get(managed) ?? 0) !== cancellationEpoch) return false
         let restored = false
         for (const { request, answeredAt, cancelledAt } of cancelledUserInputs) {
           if (request.status !== 'cancelled' || request.answeredAt !== cancelledAt
             || request.answers || request.responseMessageId
-            || this.userInputResponsesInFlight.has(request.id)) continue
+            || this.runtimeState.userInputResponsesInFlight.has(request.id)) continue
           request.status = 'pending'
           if (answeredAt === undefined) delete request.answeredAt
           else request.answeredAt = answeredAt
@@ -10227,7 +9491,7 @@ export class SessionManager implements ISessionManager {
     if (!requestId && !managed.pendingAuthRequest && pendingMessages.length === 0) return false
 
     for (const message of pendingMessages) message.authStatus = 'cancelled'
-    if (requestId) this.oauthResponsesInFlight.delete(`${managed.id}\u0000${requestId}`)
+    if (requestId) this.runtimeState.oauthResponsesInFlight.delete(`${managed.id}\u0000${requestId}`)
     managed.pendingAuthRequestId = undefined
     managed.pendingAuthRequest = undefined
     if (requestId) {
@@ -10282,7 +9546,7 @@ export class SessionManager implements ISessionManager {
   }
 
   private clearPermissionWait(managed: ManagedSession, requestId: string): void {
-    if (!this.shuttingDown && managed.pendingTurnRecovery?.waitingForPermission?.requestId === requestId) {
+    if (!this.runtimeState.shuttingDown && managed.pendingTurnRecovery?.waitingForPermission?.requestId === requestId) {
       managed.pendingTurnRecovery = { ...managed.pendingTurnRecovery, waitingForPermission: undefined }
       this.persistSession(managed)
       this.scheduleDeferredAutomaticSessions()
@@ -10292,7 +9556,7 @@ export class SessionManager implements ISessionManager {
   // Build the StoredSession snapshot and hand it to the persistence queue.
   // Caller must ensure `managed.messagesLoaded` is true.
   private enqueuePersist(managed: ManagedSession): boolean {
-    if (this.retiringSessions.has(managed)) return false
+    if (this.runtimeState.retiringSessions.has(managed)) return false
     try {
       // Filter out transient status messages (progress indicators like "Compacting...")
       // Error messages are now persisted with rich fields for diagnostics
@@ -10333,9 +9597,9 @@ export class SessionManager implements ISessionManager {
         persistenceRootFor(managed),
         managed.persistenceRootIdentity,
       )
-      this.sessionPersistenceEpochs.set(
+      this.runtimeState.sessionPersistenceEpochs.set(
         managed,
-        (this.sessionPersistenceEpochs.get(managed) ?? 0) + 1,
+        (this.runtimeState.sessionPersistenceEpochs.get(managed) ?? 0) + 1,
       )
       return true
     } catch (error) {
@@ -10348,14 +9612,14 @@ export class SessionManager implements ISessionManager {
   // Cold-persist hydration is synchronous, so by the time we reach here the
   // queue already has an entry whenever persistSession was just called.
   async flushSession(sessionId: string): Promise<void> {
-    const managed = this.sessions.get(sessionId)
+    const managed = this.runtimeState.sessions.get(sessionId)
     if (!managed) return
     await sessionPersistenceQueue.flush(sessionId, persistenceRootFor(managed))
   }
 
   /** Power-loss durability barrier reserved for exact provider dispatch state. */
   async flushSessionDurably(sessionId: string): Promise<void> {
-    const managed = this.sessions.get(sessionId)
+    const managed = this.runtimeState.sessions.get(sessionId)
     if (!managed) throw new Error(`Cannot durably flush unknown session: ${sessionId}`)
     await sessionPersistenceQueue.flushDurable(sessionId, persistenceRootFor(managed))
   }
@@ -10421,8 +9685,8 @@ export class SessionManager implements ISessionManager {
 
 
   private isExactPendingAuthRequest(managed: ManagedSession, request: AuthRequest): boolean {
-    return !this.shuttingDown
-      && this.sessions.get(managed.id) === managed
+    return !this.runtimeState.shuttingDown
+      && this.runtimeState.sessions.get(managed.id) === managed
       && request.sessionId === managed.id
       && managed.pendingAuthRequestId === request.requestId
       && managed.pendingAuthRequest === request
@@ -10431,12 +9695,12 @@ export class SessionManager implements ISessionManager {
   /** Validate the current server-owned OAuth capability without exposing its
    * contents. OAuth handlers call this on both sides of their async boundaries. */
   isPendingOAuthRequest(sessionId: string, requestId: string, sourceSlug: string, workspaceId: string): boolean {
-    const managed = this.sessions.get(sessionId)
+    const managed = this.runtimeState.sessions.get(sessionId)
     const request = managed?.pendingAuthRequest
     const operationKey = `${sessionId}\u0000${requestId}`
-    let claim = this.oauthResponsesInFlight.get(operationKey)
+    let claim = this.runtimeState.oauthResponsesInFlight.get(operationKey)
     if (claim && claim.expiresAt <= Date.now()) {
-      this.oauthResponsesInFlight.delete(operationKey)
+      this.runtimeState.oauthResponsesInFlight.delete(operationKey)
       claim = undefined
     }
     return !!managed && managed.workspace.id === workspaceId
@@ -10456,15 +9720,15 @@ export class SessionManager implements ISessionManager {
   ): boolean {
     if (!this.isPendingOAuthRequest(sessionId, requestId, sourceSlug, workspaceId)) return false
     const operationKey = `${sessionId}\u0000${requestId}`
-    const existing = this.oauthResponsesInFlight.get(operationKey)
+    const existing = this.runtimeState.oauthResponsesInFlight.get(operationKey)
     if (existing) {
       const ownsClaim = existing.flowId === flowId
-        && existing.request === this.sessions.get(sessionId)?.pendingAuthRequest
+        && existing.request === this.runtimeState.sessions.get(sessionId)?.pendingAuthRequest
       if (ownsClaim) existing.expiresAt = Math.max(existing.expiresAt, expiresAt)
       return ownsClaim
     }
-    this.oauthResponsesInFlight.set(operationKey, {
-      request: this.sessions.get(sessionId)!.pendingAuthRequest!,
+    this.runtimeState.oauthResponsesInFlight.set(operationKey, {
+      request: this.runtimeState.sessions.get(sessionId)!.pendingAuthRequest!,
       flowId,
       expiresAt,
     })
@@ -10473,8 +9737,8 @@ export class SessionManager implements ISessionManager {
 
   releasePendingOAuthRequest(sessionId: string, requestId: string, flowId: string): void {
     const operationKey = `${sessionId}\u0000${requestId}`
-    if (this.oauthResponsesInFlight.get(operationKey)?.flowId === flowId) {
-      this.oauthResponsesInFlight.delete(operationKey)
+    if (this.runtimeState.oauthResponsesInFlight.get(operationKey)?.flowId === flowId) {
+      this.runtimeState.oauthResponsesInFlight.delete(operationKey)
     }
   }
 
@@ -10488,7 +9752,7 @@ export class SessionManager implements ISessionManager {
     result: AuthResult,
     expectedRequest?: AuthRequest,
   ): Promise<boolean> {
-    const managed = this.sessions.get(sessionId)
+    const managed = this.runtimeState.sessions.get(sessionId)
     if (!managed) {
       sessionLog.warn(`Cannot complete auth request - session ${sessionId} not found`)
       return Promise.resolve(false)
@@ -10511,9 +9775,9 @@ export class SessionManager implements ISessionManager {
     result: AuthResult,
     expectedRequest?: AuthRequest,
   ): Promise<boolean> {
-    const ownsSession = (): boolean => !this.shuttingDown
-      && !this.retiringSessions.has(managed)
-      && this.sessions.get(sessionId) === managed
+    const ownsSession = (): boolean => !this.runtimeState.shuttingDown
+      && !this.runtimeState.retiringSessions.has(managed)
+      && this.runtimeState.sessions.get(sessionId) === managed
 
     const pendingRequest = managed.pendingAuthRequest
     if (!ownsSession()
@@ -10533,11 +9797,11 @@ export class SessionManager implements ISessionManager {
 
     const objectiveAtCompletion = managed.activeObjective
     const objectiveBindingAtCompletion = sourceActivationObjectiveBinding(objectiveAtCompletion)
-    const authorityEpochAtCompletion = this.objectiveAuthorityEpochs.get(managed) ?? 0
+    const authorityEpochAtCompletion = this.runtimeState.objectiveAuthorityEpochs.get(managed) ?? 0
 
     // Consume the exact capability before any async work. Neither a repeated UI
     // submit nor an obsolete OAuth callback may complete a later request.
-    this.oauthResponsesInFlight.delete(`${sessionId}\u0000${result.requestId}`)
+    this.runtimeState.oauthResponsesInFlight.delete(`${sessionId}\u0000${result.requestId}`)
     managed.pendingAuthRequestId = undefined
     managed.pendingAuthRequest = undefined
 
@@ -10639,7 +9903,7 @@ export class SessionManager implements ISessionManager {
       if (ownsSession()
         && managed.activeObjective === objectiveAtCompletion
         && sameObjectiveRevision
-        && (this.objectiveAuthorityEpochs.get(managed) ?? 0) === authorityEpochAtCompletion
+        && (this.runtimeState.objectiveAuthorityEpochs.get(managed) ?? 0) === authorityEpochAtCompletion
         && queuedDirectHumanContinuationIndex(managed) < 0) {
         const continuationToken = this.mintAuthenticatedInternalContinuation(managed, 'auth-result')
         if (continuationToken) {
@@ -10671,7 +9935,7 @@ export class SessionManager implements ISessionManager {
       if (ownsSession() && managed.activeObjective?.terminalState === 'active'
         && managed.pendingTurnRecovery && !managed.isProcessing
         && !this.hasPendingDecision(managed) && !this.hasPendingUserInput(managed)) {
-        this.deferredAutomaticSessions.add(managed.id)
+        this.runtimeState.deferredAutomaticSessions.add(managed.id)
         // The authenticated continuation can fail before sendMessage reaches
         // its own durable append boundary (runtime setup, bridge refresh,
         // provider construction). Persist the retained recovery before its
@@ -10713,7 +9977,7 @@ export class SessionManager implements ISessionManager {
     response: import('@craft-agent/shared/protocol').CredentialResponse,
     expectedRequest?: CredentialAuthRequest,
   ): Promise<boolean> {
-    const managed = this.sessions.get(sessionId)
+    const managed = this.runtimeState.sessions.get(sessionId)
     if (!managed?.pendingAuthRequest) {
       sessionLog.warn(`Cannot handle credential input - no pending auth request for session ${sessionId}`)
       return false
@@ -10817,7 +10081,7 @@ export class SessionManager implements ISessionManager {
 
   getActiveSessionCount(workspaceId?: string): number {
     let count = 0
-    for (const managed of this.sessions.values()) {
+    for (const managed of this.runtimeState.sessions.values()) {
       if (workspaceId && managed.workspace.id !== workspaceId) continue
       if (managed.isProcessing) count++
     }
@@ -10828,7 +10092,7 @@ export class SessionManager implements ISessionManager {
     const workspace = getWorkspaceByNameOrId(workspaceId)
     if (!workspace) return { automationCount: 0, schedulerRunning: false }
 
-    const automationSystem = this.automationSystems.get(workspace.rootPath)
+    const automationSystem = this.runtimeState.automationSystems.get(workspace.rootPath)
     if (!automationSystem) return { automationCount: 0, schedulerRunning: false }
 
     const config = automationSystem.getConfig()
@@ -10848,7 +10112,7 @@ export class SessionManager implements ISessionManager {
 
   getActiveSessionsInfo(): ActiveSessionInfo[] {
     const result: ActiveSessionInfo[] = []
-    for (const managed of this.sessions.values()) {
+    for (const managed of this.runtimeState.sessions.values()) {
       if (!managed.isProcessing) continue
 
       let status: SessionProcessingStatus = 'processing'
@@ -10880,7 +10144,7 @@ export class SessionManager implements ISessionManager {
   getSessions(workspaceId?: string): Session[] {
     // Returns session metadata only - messages are NOT included to save memory
     // Use getSession(id) to load messages for a specific session
-    let sessions = Array.from(this.sessions.values())
+    let sessions = Array.from(this.runtimeState.sessions.values())
 
     // Filter by workspace if specified (used when switching workspaces)
     if (workspaceId) {
@@ -10899,7 +10163,7 @@ export class SessionManager implements ISessionManager {
    * intentional lazy-hydration boundary for transcript content.
    */
   getSessionWorkspaceId(sessionId: string): string | null {
-    return this.sessions.get(sessionId)?.workspace.id ?? null
+    return this.runtimeState.sessions.get(sessionId)?.workspace.id ?? null
   }
 
   /**
@@ -10915,7 +10179,7 @@ export class SessionManager implements ISessionManager {
       hasUnreadByWorkspace[workspace.id] = false
     }
 
-    for (const session of this.sessions.values()) {
+    for (const session of this.runtimeState.sessions.values()) {
       // Fail closed for internal work even when the direct parent edge was
       // missing from an older/cold metadata snapshot. These are host-owned
       // provenance fields, unlike labels or user-editable titles.
@@ -10960,10 +10224,10 @@ export class SessionManager implements ISessionManager {
     // Update badge via runtime hook — host decides whether/how to render badges
     sessionRuntimeHooks.updateBadgeCount(summary.totalUnreadSessions)
 
-    if (!this.eventSink) return
+    if (!this.runtimeState.eventSink) return
 
     // Broadcast to renderers for UI updates (session list dots, etc.)
-    this.eventSink(RPC_CHANNELS.sessions.UNREAD_SUMMARY_CHANGED, { to: 'all' }, summary)
+    this.runtimeState.eventSink(RPC_CHANNELS.sessions.UNREAD_SUMMARY_CHANGED, { to: 'all' }, summary)
   }
 
   /**
@@ -10972,7 +10236,7 @@ export class SessionManager implements ISessionManager {
    * Messages are loaded from disk on first access to reduce memory usage.
    */
   async getSession(sessionId: string): Promise<Session | null> {
-    const m = this.sessions.get(sessionId)
+    const m = this.runtimeState.sessions.get(sessionId)
     if (!m || !this.ownsSessionOperation(m)) return null
 
     // A caller comparing a durable execution boundary must observe current
@@ -10992,7 +10256,7 @@ export class SessionManager implements ISessionManager {
     managed: ManagedSession,
     claim: MissionPendingTurnRecoveryClaim,
   ): string | undefined {
-    if (!this.missionRuntimeOwnedRestoredRecoverySessionIds.has(managed.id)) {
+    if (!this.runtimeState.missionRuntimeOwnedRestoredRecoverySessionIds.has(managed.id)) {
       return 'the session has no restored Mission recovery awaiting ownership'
     }
     if (!isMissionRuntimeOwnedRecovery(managed)) {
@@ -11048,7 +10312,7 @@ export class SessionManager implements ISessionManager {
     sessionId: string,
     claim: MissionPendingTurnRecoveryClaim,
   ): Promise<MissionPendingTurnRecoveryClaimDecision> {
-    const managed = this.sessions.get(sessionId)
+    const managed = this.runtimeState.sessions.get(sessionId)
     if (!managed) return { allowed: false, reason: 'Mission recovery session is unavailable' }
     return this.trackSessionOperation(
       managed,
@@ -11066,7 +10330,7 @@ export class SessionManager implements ISessionManager {
       return { allowed: false, reason: `Mission pending-turn recovery claim refused: ${mismatch}` }
     }
 
-    let record = this.missionPendingTurnRecoveryClaims.get(sessionId)
+    let record = this.runtimeState.missionPendingTurnRecoveryClaims.get(sessionId)
     if (record && !isDeepStrictEqual(record.claim, claim)) {
       return {
         allowed: false,
@@ -11075,7 +10339,7 @@ export class SessionManager implements ISessionManager {
     }
     if (!record) {
       record = { token: Symbol(`mission-recovery:${sessionId}`), claim: structuredClone(claim) }
-      this.missionPendingTurnRecoveryClaims.set(sessionId, record)
+      this.runtimeState.missionPendingTurnRecoveryClaims.set(sessionId, record)
     }
 
     if (!record.operation) {
@@ -11083,10 +10347,10 @@ export class SessionManager implements ISessionManager {
       const operation = Promise.resolve()
         .then(() => this.resumePendingTurnAfterRestart(sessionId, exactRecord.token))
         .finally(() => {
-          if (this.missionPendingTurnRecoveryClaims.get(sessionId) !== exactRecord) return
+          if (this.runtimeState.missionPendingTurnRecoveryClaims.get(sessionId) !== exactRecord) return
           exactRecord.operation = undefined
-          if (!this.sessions.get(sessionId)?.pendingTurnRecovery) {
-            this.missionPendingTurnRecoveryClaims.delete(sessionId)
+          if (!this.runtimeState.sessions.get(sessionId)?.pendingTurnRecovery) {
+            this.runtimeState.missionPendingTurnRecoveryClaims.delete(sessionId)
           }
         })
       exactRecord.operation = operation
@@ -11111,9 +10375,9 @@ export class SessionManager implements ISessionManager {
   }
 
   private assertMissionOwnedRecoveryProviderFence(managed: ManagedSession): void {
-    const record = this.missionPendingTurnRecoveryClaims.get(managed.id)
+    const record = this.runtimeState.missionPendingTurnRecoveryClaims.get(managed.id)
     if (!record) {
-      if (!this.missionRuntimeOwnedRestoredRecoverySessionIds.has(managed.id)) return
+      if (!this.runtimeState.missionRuntimeOwnedRestoredRecoverySessionIds.has(managed.id)) return
       throw new Error('Mission recovery has no MissionRuntime ownership claim')
     }
     const mismatch = this.missionPendingTurnRecoveryClaimMismatch(managed, record.claim)
@@ -11394,7 +10658,7 @@ export class SessionManager implements ISessionManager {
     sessionId: string,
     lock: MissionCapabilityLock,
   ): Promise<void> {
-    const managed = this.sessions.get(sessionId)
+    const managed = this.runtimeState.sessions.get(sessionId)
     if (!managed) {
       throw new Error('Specialized Mission capability lock requires an authenticated Mission session')
     }
@@ -11663,7 +10927,7 @@ export class SessionManager implements ISessionManager {
       throw new Error('Ordinary Mission workspace configuration is unavailable')
     }
     const originManaged = snapshot.spec.originSessionId
-      ? this.sessions.get(snapshot.spec.originSessionId)
+      ? this.runtimeState.sessions.get(snapshot.spec.originSessionId)
       : undefined
     const origin = originManaged ? managedToSession(originManaged) : undefined
     if (ordinaryMissionRouteConfigIdentity({
@@ -11763,18 +11027,18 @@ export class SessionManager implements ISessionManager {
     if (managed.messagesLoaded) return
 
     // Deduplicate concurrent loads - return existing promise if already loading
-    const existingPromise = this.messageLoadingPromises.get(managed.id)
+    const existingPromise = this.runtimeState.messageLoadingPromises.get(managed.id)
     if (existingPromise) {
       return existingPromise
     }
 
     const loadPromise = this.loadMessagesFromDisk(managed)
-    this.messageLoadingPromises.set(managed.id, loadPromise)
+    this.runtimeState.messageLoadingPromises.set(managed.id, loadPromise)
 
     try {
       await loadPromise
     } finally {
-      this.messageLoadingPromises.delete(managed.id)
+      this.runtimeState.messageLoadingPromises.delete(managed.id)
     }
   }
 
@@ -11824,7 +11088,7 @@ export class SessionManager implements ISessionManager {
    * Get the filesystem path to a session's folder
    */
   getSessionPath(sessionId: string): string | null {
-    const managed = this.sessions.get(sessionId)
+    const managed = this.runtimeState.sessions.get(sessionId)
     if (!managed || !this.ownsSessionOperation(managed)) return null
     return getSessionStoragePath(persistenceRootFor(managed), sessionId)
   }
@@ -11953,7 +11217,7 @@ export class SessionManager implements ISessionManager {
     // a child of a project-bound task belongs to that project (board quick-add passes none),
     // so project-scoped filtering sees the whole task family.
     const inheritedProjectId = options?.parentSessionId
-      ? this.sessions.get(options.parentSessionId)?.projectId
+      ? this.runtimeState.sessions.get(options.parentSessionId)?.projectId
       : undefined
     const requestedProjectId = options?.projectId ?? inheritedProjectId
     let resolvedProjectId: string | undefined
@@ -12025,7 +11289,7 @@ export class SessionManager implements ISessionManager {
         throw new Error('Invalid branch request: both branchFromSessionId and branchFromMessageId are required')
       }
 
-      const sourceManaged = this.sessions.get(options.branchFromSessionId)
+      const sourceManaged = this.runtimeState.sessions.get(options.branchFromSessionId)
       if (sourceManaged) {
         if (!this.ownsSessionOperation(sourceManaged)) {
           throw new Error(`Invalid branch request: source session ${options.branchFromSessionId} is being deleted`)
@@ -12435,13 +11699,13 @@ export class SessionManager implements ISessionManager {
             workspaceRootPath,
             sessionId: storedSession.id,
             deleteFromRuntimeSessions: (id) => {
-              const m = this.sessions.get(id)
+              const m = this.runtimeState.sessions.get(id)
               if (m?.autoRetryTimer) {
                 clearTimeout(m.autoRetryTimer)
                 m.autoRetryTimer = undefined
               }
               if (m) m.autoRetryPending = undefined
-              this.sessions.delete(id)
+              this.runtimeState.sessions.delete(id)
             },
             deleteStoredSession,
           })
@@ -12460,10 +11724,10 @@ export class SessionManager implements ISessionManager {
       hydratePreviousPermissionMode(storedSession.id, managed.previousPermissionMode)
     }
 
-    this.sessions.set(storedSession.id, managed)
+    this.runtimeState.sessions.set(storedSession.id, managed)
 
     // Initialize session metadata in AutomationSystem for diffing
-    const automationSystem = this.automationSystems.get(workspaceRootPath)
+    const automationSystem = this.runtimeState.automationSystems.get(workspaceRootPath)
     if (automationSystem) {
       automationSystem.setInitialSessionMetadata(storedSession.id, {
         permissionMode: storedSession.permissionMode,
@@ -12514,7 +11778,7 @@ export class SessionManager implements ISessionManager {
   /** Resolved working directory of a live session (used by the Tasks Conductor so child
    *  sessions inherit the orchestrator's cwd). Undefined if the session has none or is unknown. */
   getSessionWorkingDirectory(sessionId: string): string | undefined {
-    return this.sessions.get(sessionId)?.workingDirectory
+    return this.runtimeState.sessions.get(sessionId)?.workingDirectory
   }
 
   /** Durable Tasks-Conductor reviewer lookup. The task metadata is persisted in
@@ -12527,7 +11791,7 @@ export class SessionManager implements ISessionManager {
     taskRunId: string,
     parentSessionId: string,
   ): Array<{ id: string; isProcessing: boolean; tokenUsage?: TokenUsage; finalText?: string }> {
-    return [...this.sessions.values()]
+    return [...this.runtimeState.sessions.values()]
       .filter(session => session.workspace.id === workspaceId
         && session.taskSlug === taskSlug
         && session.taskRunId === taskRunId
@@ -12557,7 +11821,7 @@ export class SessionManager implements ISessionManager {
     taskSlug: string,
     taskRunId: string,
   ): Array<{ id: string; isProcessing: boolean; tokenUsage?: TokenUsage; finalText?: string }> {
-    return [...this.sessions.values()]
+    return [...this.runtimeState.sessions.values()]
       .filter(session => session.workspace.id === workspaceId
         && session.taskSlug === taskSlug
         && session.taskRunId === taskRunId
@@ -12580,7 +11844,7 @@ export class SessionManager implements ISessionManager {
    * soft abort; this stronger primitive proves an old worker/reviewer idle
    * before terminality or a replacement attempt. */
   private assertStrongCancellationAdmissionOpen(managed: ManagedSession): void {
-    const retirement = this.strongCancellationStops.get(managed.id)
+    const retirement = this.runtimeState.strongCancellationStops.get(managed.id)
     if (retirement?.managed !== managed) return
     throw new CodedError(
       'CAPABILITY_UNAVAILABLE',
@@ -12589,7 +11853,7 @@ export class SessionManager implements ISessionManager {
   }
 
   async cancelProcessingAndWait(sessionId: string, timeoutMs: number): Promise<SessionCompletionEvent> {
-    const managed = this.sessions.get(sessionId)
+    const managed = this.runtimeState.sessions.get(sessionId)
     if (!managed) throw new Error(`Session ${sessionId} not found while retiring reviewer`)
     // The strong Stop implementation intentionally uses the silent/untracked
     // cancel path below to avoid nesting a second lease. This outer lease owns
@@ -12632,13 +11896,13 @@ export class SessionManager implements ISessionManager {
         if (timer) clearTimeout(timer)
       }
     }
-    let retirement = this.strongCancellationStops.get(sessionId)
+    let retirement = this.runtimeState.strongCancellationStops.get(sessionId)
     // A completed Stop owns exactly one processing generation. If something
     // escaped the admission fence and advanced the session afterwards, the old
     // proof cannot be reused: a later strong caller must issue a fresh Stop.
     if (retirement?.managed === managed && (retirement.stopFailed
       || (retirement.stopCompleted && retirement.generation !== managed.processingGeneration))) {
-      this.strongCancellationStops.delete(sessionId)
+      this.runtimeState.strongCancellationStops.delete(sessionId)
       retirement.offCompletion()
       retirement = undefined
     }
@@ -12682,35 +11946,35 @@ export class SessionManager implements ISessionManager {
         ownedRetirement.completionEvent = event
         ownedRetirement.completionGeneration = managed.processingGeneration
       })
-      this.strongCancellationStops.set(sessionId, retirement)
+      this.runtimeState.strongCancellationStops.set(sessionId, retirement)
       // Keep both successful and rejected transactions owned. Admission stays
       // fenced after a failed Stop; the next strong caller replaces that failed
       // operation and retries it rather than allowing ordinary work through.
       void operation.catch(() => {})
     }
     const releaseRetirement = (): void => {
-      if (this.strongCancellationStops.get(sessionId) !== retirement) return
-      this.strongCancellationStops.delete(sessionId)
+      if (this.runtimeState.strongCancellationStops.get(sessionId) !== retirement) return
+      this.runtimeState.strongCancellationStops.delete(sessionId)
       retirement.offCompletion()
     }
     const revokeRuntimeAdmissions = (): void => {
       this.clearDeferredAutomaticRetry(sessionId)
-      this.deferredAutomaticSessions.delete(sessionId)
-      this.automaticAdmissionReservations.delete(sessionId)
-      this.queuedMessageDispatches.delete(sessionId)
+      this.runtimeState.deferredAutomaticSessions.delete(sessionId)
+      this.runtimeState.automaticAdmissionReservations.delete(sessionId)
+      this.runtimeState.queuedMessageDispatches.delete(sessionId)
     }
     const isQuiescent = (current: ManagedSession): boolean => (
       !current.isProcessing
-      && !this.deferredAutomaticSessions.has(sessionId)
-      && !this.automaticAdmissionReservations.has(sessionId)
-      && !this.queuedMessageDispatches.has(sessionId)
-      && ![...this.queuedAgentDeliveryDispatches.values()]
+      && !this.runtimeState.deferredAutomaticSessions.has(sessionId)
+      && !this.runtimeState.automaticAdmissionReservations.has(sessionId)
+      && !this.runtimeState.queuedMessageDispatches.has(sessionId)
+      && ![...this.runtimeState.queuedAgentDeliveryDispatches.values()]
         .some(dispatch => dispatch.sessionId === sessionId)
-      && !this.deferredAutomaticRetryTimers.has(sessionId)
-      && !this.retryTurnsInFlight.has(sessionId)
-      && !this.coldProviderReconciliationsInFlight.has(sessionId)
-      && (this.runtimeDisposalsInFlight.get(sessionId)?.size ?? 0) === 0
-      && (this.runtimeDisposalBarriers.get(sessionId)?.size ?? 0) === 0
+      && !this.runtimeState.deferredAutomaticRetryTimers.has(sessionId)
+      && !this.runtimeState.retryTurnsInFlight.has(sessionId)
+      && !this.runtimeState.coldProviderReconciliationsInFlight.has(sessionId)
+      && (this.runtimeState.runtimeDisposalsInFlight.get(sessionId)?.size ?? 0) === 0
+      && (this.runtimeState.runtimeDisposalBarriers.get(sessionId)?.size ?? 0) === 0
       && current.processingGeneration === retirement.generation
       // A processing child is not retired merely because cleanup cleared its
       // boolean marker. Its post-provider lifecycle must reach the completion
@@ -12731,7 +11995,7 @@ export class SessionManager implements ISessionManager {
     revokeRuntimeAdmissions()
     let retriedRuntimeDisposals = false
     while (true) {
-      const current = this.sessions.get(sessionId)
+      const current = this.runtimeState.sessions.get(sessionId)
       if (!current) {
         releaseRetirement()
         throw new Error(`Session ${sessionId} disappeared while retiring reviewer`)
@@ -12745,9 +12009,9 @@ export class SessionManager implements ISessionManager {
         // this generation change, replaces the proof, and reissues Stop.
         throw new Error(`Session ${sessionId} started a newer generation while being retired`)
       }
-      const disposalBarriers = this.runtimeDisposalBarriers.get(sessionId)
+      const disposalBarriers = this.runtimeState.runtimeDisposalBarriers.get(sessionId)
       if (!retriedRuntimeDisposals && disposalBarriers?.size
-        && (this.runtimeDisposalsInFlight.get(sessionId)?.size ?? 0) === 0) {
+        && (this.runtimeState.runtimeDisposalsInFlight.get(sessionId)?.size ?? 0) === 0) {
         retriedRuntimeDisposals = true
         await waitWithinDeadline(this.retryManagedAgentRuntimeDisposals(sessionId))
         continue
@@ -12767,8 +12031,8 @@ export class SessionManager implements ISessionManager {
         // the same Stop and retains its eventual completion receipt.
         throw timeoutError()
       }
-      const pendingRetry = this.retryTurnsInFlight.get(sessionId)
-      const admissionDrain = this.automaticAdmissionDrain
+      const pendingRetry = this.runtimeState.retryTurnsInFlight.get(sessionId)
+      const admissionDrain = this.runtimeState.automaticAdmissionDrain
       await Promise.race([
         ...(pendingRetry ? [pendingRetry.then(() => undefined, () => undefined)] : []),
         ...(admissionDrain ? [admissionDrain.then(() => undefined, () => undefined)] : []),
@@ -12788,10 +12052,10 @@ export class SessionManager implements ISessionManager {
   }
 
   private trackManagedAgentRuntimeDisposal(sessionId: string, operation: Promise<void>): Promise<void> {
-    let operations = this.runtimeDisposalsInFlight.get(sessionId)
+    let operations = this.runtimeState.runtimeDisposalsInFlight.get(sessionId)
     if (!operations) {
       operations = new Set()
-      this.runtimeDisposalsInFlight.set(sessionId, operations)
+      this.runtimeState.runtimeDisposalsInFlight.set(sessionId, operations)
     }
     operations.add(operation)
     void operation.then(
@@ -12802,9 +12066,9 @@ export class SessionManager implements ISessionManager {
   }
 
   private finishManagedAgentRuntimeDisposal(sessionId: string, operation: Promise<void>): void {
-    const operations = this.runtimeDisposalsInFlight.get(sessionId)
+    const operations = this.runtimeState.runtimeDisposalsInFlight.get(sessionId)
     operations?.delete(operation)
-    if (operations?.size === 0) this.runtimeDisposalsInFlight.delete(sessionId)
+    if (operations?.size === 0) this.runtimeState.runtimeDisposalsInFlight.delete(sessionId)
   }
 
   private createManagedAgentRuntimeDisposalBarrier(
@@ -12812,10 +12076,10 @@ export class SessionManager implements ISessionManager {
     label: string,
     dispose: () => void | Promise<void>,
   ): Promise<void> {
-    let barriers = this.runtimeDisposalBarriers.get(sessionId)
+    let barriers = this.runtimeState.runtimeDisposalBarriers.get(sessionId)
     if (!barriers) {
       barriers = new Map()
-      this.runtimeDisposalBarriers.set(sessionId, barriers)
+      this.runtimeState.runtimeDisposalBarriers.set(sessionId, barriers)
     }
     const key = Symbol(label)
     const barrier = { label, dispose, inFlight: undefined as Promise<void> | undefined }
@@ -12843,14 +12107,14 @@ export class SessionManager implements ISessionManager {
     this.trackManagedAgentRuntimeDisposal(sessionId, rawDisposal)
     void rawDisposal.then(
       () => {
-        const barriers = this.runtimeDisposalBarriers.get(sessionId)
+        const barriers = this.runtimeState.runtimeDisposalBarriers.get(sessionId)
         if (barriers?.get(key) !== barrier) return
         barrier.inFlight = undefined
         barriers.delete(key)
-        if (barriers.size === 0) this.runtimeDisposalBarriers.delete(sessionId)
+        if (barriers.size === 0) this.runtimeState.runtimeDisposalBarriers.delete(sessionId)
       },
       () => {
-        const barriers = this.runtimeDisposalBarriers.get(sessionId)
+        const barriers = this.runtimeState.runtimeDisposalBarriers.get(sessionId)
         if (barriers?.get(key) === barrier) barrier.inFlight = undefined
       },
     )
@@ -12858,7 +12122,7 @@ export class SessionManager implements ISessionManager {
   }
 
   private async retryManagedAgentRuntimeDisposals(sessionId: string): Promise<void> {
-    const barriers = this.runtimeDisposalBarriers.get(sessionId)
+    const barriers = this.runtimeState.runtimeDisposalBarriers.get(sessionId)
     if (!barriers?.size) return
     const entries = [...barriers.entries()]
     const results = await Promise.allSettled(entries.map(([key, barrier]) => (
@@ -12877,25 +12141,25 @@ export class SessionManager implements ISessionManager {
    * fields and survives only in the retryable barrier maps. */
   private async proveRuntimeDisposalsForCleanup(): Promise<void> {
     const sessionIds = new Set([
-      ...this.runtimeDisposalsInFlight.keys(),
-      ...this.runtimeDisposalBarriers.keys(),
+      ...this.runtimeState.runtimeDisposalsInFlight.keys(),
+      ...this.runtimeState.runtimeDisposalBarriers.keys(),
     ])
     const failures: Error[] = []
 
     await Promise.all([...sessionIds].map(async sessionId => {
       try {
         await withRuntimeDisposeTimeout((async () => {
-          const inFlight = this.runtimeDisposalsInFlight.get(sessionId)
+          const inFlight = this.runtimeState.runtimeDisposalsInFlight.get(sessionId)
           if (inFlight?.size) await Promise.allSettled([...inFlight])
           // Let the raw-disposal completion handlers clear their in-flight
           // marker before retrying the retained callable.
           await Promise.resolve()
           await this.retryManagedAgentRuntimeDisposals(sessionId)
-          const retried = this.runtimeDisposalsInFlight.get(sessionId)
+          const retried = this.runtimeState.runtimeDisposalsInFlight.get(sessionId)
           if (retried?.size) await Promise.allSettled([...retried])
           await Promise.resolve()
-          const remainingBarriers = this.runtimeDisposalBarriers.get(sessionId)?.size ?? 0
-          const remainingDisposals = this.runtimeDisposalsInFlight.get(sessionId)?.size ?? 0
+          const remainingBarriers = this.runtimeState.runtimeDisposalBarriers.get(sessionId)?.size ?? 0
+          const remainingDisposals = this.runtimeState.runtimeDisposalsInFlight.get(sessionId)?.size ?? 0
           if (remainingBarriers > 0 || remainingDisposals > 0) {
             throw new Error(
               `Runtime destruction for session ${sessionId} remains unproven `
@@ -12993,23 +12257,23 @@ export class SessionManager implements ISessionManager {
    * recreates a clean runtime and resumes the conversation.
    */
   private async evictIdleSessionRuntimes(now = Date.now()): Promise<number> {
-    if (this.runtimeIdleTimeoutMs === 0 || this.runtimeEvictionSweepInFlight) return 0
-    this.runtimeEvictionSweepInFlight = true
+    if (this.runtimeState.runtimeIdleTimeoutMs === 0 || this.runtimeState.runtimeEvictionSweepInFlight) return 0
+    this.runtimeState.runtimeEvictionSweepInFlight = true
     let evicted = 0
 
     try {
-      const candidates = Array.from(this.sessions.values()).filter(managed => {
+      const candidates = Array.from(this.runtimeState.sessions.values()).filter(managed => {
         const hasRuntime = !!managed.agent || !!managed.poolServer || !!managed.mcpPool
         if (!hasRuntime
           || managed.isProcessing
           || managed.messageQueue.length > 0
           || this.hasRunningBackgroundTasks(managed)
-          || this.agentRefreshLocks.has(managed.id)) {
+          || this.runtimeState.agentRefreshLocks.has(managed.id)) {
           return false
         }
 
         const lastActiveAt = managed.runtimeLastActiveAt ?? managed.lastMessageAt
-        return now - lastActiveAt >= this.runtimeIdleTimeoutMs
+        return now - lastActiveAt >= this.runtimeState.runtimeIdleTimeoutMs
       })
 
       // Bound teardown concurrency: serial cleanup is too slow when a leaked
@@ -13026,8 +12290,8 @@ export class SessionManager implements ISessionManager {
             || managed.isProcessing
             || managed.messageQueue.length > 0
             || this.hasRunningBackgroundTasks(managed)
-            || this.agentRefreshLocks.has(managed.id)
-            || now - lastActiveAt < this.runtimeIdleTimeoutMs) {
+            || this.runtimeState.agentRefreshLocks.has(managed.id)
+            || now - lastActiveAt < this.runtimeState.runtimeIdleTimeoutMs) {
             return false
           }
 
@@ -13041,28 +12305,28 @@ export class SessionManager implements ISessionManager {
         evicted += results.filter(Boolean).length
       }
     } finally {
-      this.runtimeEvictionSweepInFlight = false
+      this.runtimeState.runtimeEvictionSweepInFlight = false
     }
 
     return evicted
   }
 
   private startRuntimeEvictionSweep(): void {
-    if (this.runtimeIdleTimeoutMs === 0 || this.runtimeEvictionTimer) return
+    if (this.runtimeState.runtimeIdleTimeoutMs === 0 || this.runtimeState.runtimeEvictionTimer) return
     const intervalMs = Math.min(
       SESSION_RUNTIME_SWEEP_INTERVAL_MS,
-      Math.max(MIN_SESSION_RUNTIME_IDLE_TIMEOUT_MS, Math.floor(this.runtimeIdleTimeoutMs / 3)),
+      Math.max(MIN_SESSION_RUNTIME_IDLE_TIMEOUT_MS, Math.floor(this.runtimeState.runtimeIdleTimeoutMs / 3)),
     )
-    this.runtimeEvictionTimer = setInterval(() => {
+    this.runtimeState.runtimeEvictionTimer = setInterval(() => {
       void this.evictIdleSessionRuntimes().catch(error => {
         sessionLog.warn('Idle runtime eviction sweep failed', {
           error: error instanceof Error ? error.message : String(error),
         })
       })
     }, intervalMs)
-    this.runtimeEvictionTimer.unref?.()
+    this.runtimeState.runtimeEvictionTimer.unref?.()
     sessionLog.info('Session runtime eviction enabled', {
-      idleTimeoutMs: this.runtimeIdleTimeoutMs,
+      idleTimeoutMs: this.runtimeState.runtimeIdleTimeoutMs,
       intervalMs,
     })
   }
@@ -13075,7 +12339,7 @@ export class SessionManager implements ISessionManager {
       while (root.parentSessionId) {
         if (visited.has(root.id)) return undefined
         visited.add(root.id)
-        const parent = this.sessions.get(root.parentSessionId)
+        const parent = this.runtimeState.sessions.get(root.parentSessionId)
         if (!parent || parent.workspace.id !== managed.workspace.id || parent.workspace.rootPath !== managed.workspace.rootPath) return undefined
         root = parent
       }
@@ -13154,7 +12418,7 @@ export class SessionManager implements ISessionManager {
     // Serialize against any in-flight refresh on this session. The waiter
     // doesn't propagate the prior call's errors — those are logged at the
     // origin call site.
-    const inflight = this.agentRefreshLocks.get(managed.id)
+    const inflight = this.runtimeState.agentRefreshLocks.get(managed.id)
     if (inflight) {
       await inflight.catch(() => undefined)
     }
@@ -13218,15 +12482,15 @@ export class SessionManager implements ISessionManager {
     // tracked promise — the awaiter shouldn't get someone else's exception;
     // errors are logged inside `runAgentRuntimeRefresh`.
     const tracked = work.then(() => undefined, () => undefined)
-    this.agentRefreshLocks.set(managed.id, tracked)
+    this.runtimeState.agentRefreshLocks.set(managed.id, tracked)
     try {
       await work
     } finally {
       // Concurrent callers awaited `tracked` before reaching this point and
       // each registered their own work serially, so the slot is always ours
       // to clear when our own work resolves.
-      if (this.agentRefreshLocks.get(managed.id) === tracked) {
-        this.agentRefreshLocks.delete(managed.id)
+      if (this.runtimeState.agentRefreshLocks.get(managed.id) === tracked) {
+        this.runtimeState.agentRefreshLocks.delete(managed.id)
       }
     }
   }
@@ -13303,7 +12567,7 @@ export class SessionManager implements ISessionManager {
   }
 
   private async performRefreshConnectionRuntime(connectionSlug: string): Promise<void> {
-    for (const managed of this.sessions.values()) {
+    for (const managed of this.runtimeState.sessions.values()) {
       if (managed.llmConnection !== connectionSlug) continue
       // The new connection definition no longer has the identity certified for
       // this session. Keep an in-flight runtime on its old immutable config;
@@ -13365,7 +12629,7 @@ export class SessionManager implements ISessionManager {
     workspaceId: string,
     policy: ExternalActionPolicy,
   ): Promise<void> {
-    for (const managed of this.sessions.values()) {
+    for (const managed of this.runtimeState.sessions.values()) {
       if (managed.workspace.id !== workspaceId) continue
       try {
         await this.trackSessionOperation(managed, async () => {
@@ -13380,7 +12644,7 @@ export class SessionManager implements ISessionManager {
   }
 
   async restartAgentRuntime(sessionId: string): Promise<void> {
-    const managed = this.sessions.get(sessionId)
+    const managed = this.runtimeState.sessions.get(sessionId)
     if (!managed) {
       throw new Error(`Session ${sessionId} not found`)
     }
@@ -13390,7 +12654,7 @@ export class SessionManager implements ISessionManager {
   private async performRestartAgentRuntime(managed: ManagedSession): Promise<void> {
     this.assertStrongCancellationAdmissionOpen(managed)
 
-    const inflight = this.agentRefreshLocks.get(managed.id)
+    const inflight = this.runtimeState.agentRefreshLocks.get(managed.id)
     if (inflight) {
       await inflight.catch(() => undefined)
     }
@@ -13403,12 +12667,12 @@ export class SessionManager implements ISessionManager {
 
     const work = this.disposeManagedAgentRuntime(managed, 'manual runtime reconnect')
     const tracked = work.then(() => undefined, () => undefined)
-    this.agentRefreshLocks.set(managed.id, tracked)
+    this.runtimeState.agentRefreshLocks.set(managed.id, tracked)
     try {
       await work
     } finally {
-      if (this.agentRefreshLocks.get(managed.id) === tracked) {
-        this.agentRefreshLocks.delete(managed.id)
+      if (this.runtimeState.agentRefreshLocks.get(managed.id) === tracked) {
+        this.runtimeState.agentRefreshLocks.delete(managed.id)
       }
     }
     this.assertSessionOperationOwner(managed)
@@ -13455,7 +12719,7 @@ export class SessionManager implements ISessionManager {
     // while deliberately keeping this exact ManagedSession retired. Until a
     // later deletion retry proves the old process is gone, no code path may
     // attach a replacement runtime beside that unproven process.
-    if (this.retiringSessions.has(managed)) {
+    if (this.runtimeState.retiringSessions.has(managed)) {
       throw new Error(`Session ${managed.id} runtime is still being retired`)
     }
     assertActivePreparation?.()
@@ -13466,7 +12730,7 @@ export class SessionManager implements ISessionManager {
     // is denied by resolveObjectiveMutationAuthority below.
     const delegation = managed.delegation
     if (delegation) {
-      const authorityOwner = this.sessions.get(delegation.rootSessionId)
+      const authorityOwner = this.runtimeState.sessions.get(delegation.rootSessionId)
       const structurallyBoundReviewer = !!delegation.reviewBinding
         && delegation.role === 'reviewer'
         && delegation.depth === 1
@@ -13845,13 +13109,13 @@ export class SessionManager implements ISessionManager {
         // Claude-specific
         isHeadless: !AGENT_FLAGS.defaultModesEnabled,
         skipConfigWatcher: true, // Server owns workspace-level ConfigWatcher — don't duplicate in agents
-        automationSystem: this.automationSystems.get(managed.workspace.rootPath),
+        automationSystem: this.runtimeState.automationSystems.get(managed.workspace.rootPath),
         systemPromptPreset: managed.systemPromptPreset,
         debugMode: _platform?.isDebugMode ? { enabled: true, logFilePath: _platform.getLogFilePath?.() } : undefined,
         enable1MContext,
         // Image resize callback — prevents oversized images from entering conversation history
         onImageResize: (filePath: string, maxSizeBytes: number): Promise<string | null> => {
-          if (this.retiringSessions.has(managed) || this.sessions.get(managed.id) !== managed) {
+          if (this.runtimeState.retiringSessions.has(managed) || this.runtimeState.sessions.get(managed.id) !== managed) {
             return Promise.resolve(null)
           }
           return this.trackSessionOperation(managed, async () => {
@@ -13984,10 +13248,10 @@ export class SessionManager implements ISessionManager {
       // of "tool unavailable".
       sessionLog.info('[browser-pane] BPF gate check', {
         sessionId: managed.id,
-        hasLocalBpm: !!this.browserPaneManager,
-        hasRpcServer: !!this.rpcServer,
+        hasLocalBpm: !!this.runtimeState.browserPaneManager,
+        hasRpcServer: !!this.runtimeState.rpcServer,
       })
-      if (this.browserPaneManager || this.rpcServer) {
+      if (this.runtimeState.browserPaneManager || this.runtimeState.rpcServer) {
         const sid = managed.id
         const bpm = this.getBrowserPaneManagerForSession(sid)
         if (!bpm) {
@@ -13995,7 +13259,7 @@ export class SessionManager implements ISessionManager {
         }
         sessionLog.info('[browser-pane] BPF block resolved BPM', {
           sessionId: sid,
-          bpmKind: this.browserPaneManager === bpm ? 'local' : 'remote',
+          bpmKind: this.runtimeState.browserPaneManager === bpm ? 'local' : 'remote',
         })
 
         const workspaceId = managed.workspace.id
@@ -14345,8 +13609,8 @@ export class SessionManager implements ISessionManager {
         sensitiveActionTargets?: string[];
         sensitiveActionOperationHash?: string;
       }) => {
-        if (this.shuttingDown || this.retiringSessions.has(managed)
-          || this.sessions.get(managed.id) !== managed) {
+        if (this.runtimeState.shuttingDown || this.runtimeState.retiringSessions.has(managed)
+          || this.runtimeState.sessions.get(managed.id) !== managed) {
           this.denyPermissionRequestDuringShutdown(managed, request, createdAgent)
           return
         }
@@ -14366,7 +13630,7 @@ export class SessionManager implements ISessionManager {
         } = {}
 
         if (request.type === 'admin_approval' && request.command) {
-          const brokerRequest = this.privilegedExecutionBroker.createRequest({
+          const brokerRequest = this.runtimeState.privilegedExecutionBroker.createRequest({
             requestId: request.requestId,
             sessionId: managed.id,
             command: request.command,
@@ -14440,13 +13704,13 @@ export class SessionManager implements ISessionManager {
         }
 
         if (request.type === 'admin_approval' && effectiveCommandHash && this.hasActiveAdminRememberApproval(managed.id, effectiveCommandHash)) {
-          const brokerResult = this.privilegedExecutionBroker.resolveApproval(request.requestId, true, {
+          const brokerResult = this.runtimeState.privilegedExecutionBroker.resolveApproval(request.requestId, true, {
             expectedCommandHash: effectiveCommandHash,
             expectedSessionId: managed.id,
           })
 
           if (brokerResult.ok) {
-            this.privilegedExecutionBroker.auditEvent('privileged_auto_approved_remember_window', {
+            this.runtimeState.privilegedExecutionBroker.auditEvent('privileged_auto_approved_remember_window', {
               sessionId: managed.id,
               requestId: request.requestId,
               commandHash: effectiveCommandHash,
@@ -14480,7 +13744,7 @@ export class SessionManager implements ISessionManager {
           this.expirePendingPermissionRequest(request.requestId)
         }, ttlMs)
         timeout.unref?.()
-        this.pendingPermissionRequests.set(request.requestId, {
+        this.runtimeState.pendingPermissionRequests.set(request.requestId, {
           sessionId: managed.id,
           type: request.type,
           commandHash: effectiveCommandHash,
@@ -14554,7 +13818,7 @@ export class SessionManager implements ISessionManager {
       managed.agent.onPlanSubmitted = async (planPath) => {
         const planGeneration = managed.processingGeneration
         const planAgent = managed.agent
-        const ownsPlan = () => !this.shuttingDown && this.sessions.get(managed.id) === managed
+        const ownsPlan = () => !this.runtimeState.shuttingDown && this.runtimeState.sessions.get(managed.id) === managed
           && managed.processingGeneration === planGeneration && managed.agent === planAgent
         sessionLog.info(`Plan submitted for session ${managed.id}:`, planPath)
         try {
@@ -14616,7 +13880,7 @@ export class SessionManager implements ISessionManager {
             if (!ownsPlan()) return
 
             // Send complete event so renderer knows processing stopped (include tokenUsage for real-time updates)
-            this.sendEvent({ type: 'complete', sessionId: managed.id, reason: 'interrupted', tokenUsage: managed.tokenUsage, backgroundTasksAlive: this.keepBackgroundTasksAlive }, managed.workspace.id)
+            this.sendEvent({ type: 'complete', sessionId: managed.id, reason: 'interrupted', tokenUsage: managed.tokenUsage, backgroundTasksAlive: this.runtimeState.keepBackgroundTasksAlive }, managed.workspace.id)
 
             // Persist session state
             this.persistSession(managed)
@@ -14629,8 +13893,8 @@ export class SessionManager implements ISessionManager {
 
       // Wire up onAuthRequest to add auth message to conversation and pause execution
       managed.agent.onAuthRequest = (request) => {
-        if (this.shuttingDown || this.retiringSessions.has(managed)
-          || this.sessions.get(managed.id) !== managed) return
+        if (this.runtimeState.shuttingDown || this.runtimeState.retiringSessions.has(managed)
+          || this.runtimeState.sessions.get(managed.id) !== managed) return
         if (this.isManagedSessionYolo(managed)) {
           this.recordAutonomyEvent(managed, { phase: 'diagnosis',
             message: `YOLO authentication unavailable for ${request.sourceSlug}: no interactive request was opened. Use existing access or finish independent work and report the unavailable dependency.` })
@@ -14708,7 +13972,7 @@ export class SessionManager implements ISessionManager {
           )
 
           // Send complete event so renderer knows processing stopped (include tokenUsage for real-time updates)
-          this.sendEvent({ type: 'complete', sessionId: managed.id, reason: 'interrupted', tokenUsage: managed.tokenUsage, backgroundTasksAlive: this.keepBackgroundTasksAlive }, managed.workspace.id)
+          this.sendEvent({ type: 'complete', sessionId: managed.id, reason: 'interrupted', tokenUsage: managed.tokenUsage, backgroundTasksAlive: this.runtimeState.keepBackgroundTasksAlive }, managed.workspace.id)
         }
 
         // Emit auth_request event to renderer
@@ -14878,13 +14142,13 @@ export class SessionManager implements ISessionManager {
             throw new Error('A terminal acceptance-registration capability cannot be used outside its bound reconciliation objective.')
           }
           const generationBefore = managed.processingGeneration
-          const authorityEpochBefore = this.objectiveAuthorityEpochs.get(managed) ?? 0
+          const authorityEpochBefore = this.runtimeState.objectiveAuthorityEpochs.get(managed) ?? 0
           const registered = registerObjectiveAcceptanceCriteria(
             objectiveBefore, criteria, this.monotonic(), procedure, managed.messages, managed.id,
           )
           if (managed.agent !== createdAgent || managed.processingGeneration !== generationBefore
             || managed.activeObjective !== objectiveBefore
-            || (this.objectiveAuthorityEpochs.get(managed) ?? 0) !== authorityEpochBefore) {
+            || (this.runtimeState.objectiveAuthorityEpochs.get(managed) ?? 0) !== authorityEpochBefore) {
             throw new Error('The objective changed before acceptance criteria could be registered.')
           }
           if (registered !== objectiveBefore) {
@@ -14894,7 +14158,7 @@ export class SessionManager implements ISessionManager {
           }
           if (managed.agent !== createdAgent || managed.processingGeneration !== generationBefore
             || managed.activeObjective !== registered
-            || (this.objectiveAuthorityEpochs.get(managed) ?? 0) !== authorityEpochBefore) {
+            || (this.runtimeState.objectiveAuthorityEpochs.get(managed) ?? 0) !== authorityEpochBefore) {
             throw new Error('The objective changed while acceptance criteria were being persisted; the stale provider turn receives no registration receipt.')
           }
           // Bind this receipt to the exact registration, even if a newer human
@@ -14913,7 +14177,7 @@ export class SessionManager implements ISessionManager {
           attachments?: Array<{ path: string; name?: string }>,
           messageType: AgentMessageType = 'progress',
         ) => {
-          const target = this.sessions.get(sessionId)
+          const target = this.runtimeState.sessions.get(sessionId)
           if (!target || target.workspace.id !== managed.workspace.id) throw new Error('Target session must belong to the current workspace')
           if (this.hasTerminalObjectiveState(target)) {
             throw new Error(`Target session objective is terminal (${target.activeObjective?.terminalState}); no agent message was queued. Reuse its completed result. A new delegation is valid only when the objective or version genuinely changed, and grants no new authority.`)
@@ -14982,15 +14246,15 @@ export class SessionManager implements ISessionManager {
 
         const activationAgent = createdAgent!
         const activationGeneration = managed.processingGeneration
-        const activationCancellationEpoch = this.turnCancellationEpochs.get(managed) ?? 0
-        const activationAuthorityEpoch = this.objectiveAuthorityEpochs.get(managed) ?? 0
+        const activationCancellationEpoch = this.runtimeState.turnCancellationEpochs.get(managed) ?? 0
+        const activationAuthorityEpoch = this.runtimeState.objectiveAuthorityEpochs.get(managed) ?? 0
         const activationBinding = sourceActivationObjectiveBinding(managed.activeObjective)
         const activationCurrent = () => {
           const currentBinding = sourceActivationObjectiveBinding(managed.activeObjective)
-          return !this.shuttingDown && this.sessions.get(managed.id) === managed
+          return !this.runtimeState.shuttingDown && this.runtimeState.sessions.get(managed.id) === managed
             && managed.agent === activationAgent && managed.processingGeneration === activationGeneration
-            && (this.turnCancellationEpochs.get(managed) ?? 0) === activationCancellationEpoch
-            && (this.objectiveAuthorityEpochs.get(managed) ?? 0) === activationAuthorityEpoch
+            && (this.runtimeState.turnCancellationEpochs.get(managed) ?? 0) === activationCancellationEpoch
+            && (this.runtimeState.objectiveAuthorityEpochs.get(managed) ?? 0) === activationAuthorityEpoch
             && !!activationBinding && !!currentBinding
             && activationBinding.objectiveId === currentBinding.objectiveId
             && activationBinding.objectiveRevision === currentBinding.objectiveRevision
@@ -15229,7 +14493,7 @@ export class SessionManager implements ISessionManager {
   }
 
   async flagSession(sessionId: string): Promise<void> {
-    const managed = this.sessions.get(sessionId)
+    const managed = this.runtimeState.sessions.get(sessionId)
     if (managed) return this.trackSessionOperation(managed, async () => {
       this.assertSessionOperationOwner(managed)
       managed.isFlagged = true
@@ -15241,13 +14505,13 @@ export class SessionManager implements ISessionManager {
       // Workaround: Bun's fs.watch({ recursive: true }) on Linux doesn't track
       // directories created after the watcher started.
       // https://github.com/oven-sh/bun/issues/15939
-      const watcher = this.configWatchers.get(managed.workspace.rootPath)
+      const watcher = this.runtimeState.configWatchers.get(managed.workspace.rootPath)
       watcher?.notifyFileChange(`sessions/${sessionId}/session.jsonl`)
     })
   }
 
   async unflagSession(sessionId: string): Promise<void> {
-    const managed = this.sessions.get(sessionId)
+    const managed = this.runtimeState.sessions.get(sessionId)
     if (managed) return this.trackSessionOperation(managed, async () => {
       this.assertSessionOperationOwner(managed)
       managed.isFlagged = false
@@ -15259,13 +14523,13 @@ export class SessionManager implements ISessionManager {
       // Workaround: Bun's fs.watch({ recursive: true }) on Linux doesn't track
       // directories created after the watcher started.
       // https://github.com/oven-sh/bun/issues/15939
-      const watcher = this.configWatchers.get(managed.workspace.rootPath)
+      const watcher = this.runtimeState.configWatchers.get(managed.workspace.rootPath)
       watcher?.notifyFileChange(`sessions/${sessionId}/session.jsonl`)
     })
   }
 
   async archiveSession(sessionId: string): Promise<void> {
-    const managed = this.sessions.get(sessionId)
+    const managed = this.runtimeState.sessions.get(sessionId)
     if (managed) return this.trackSessionOperation(managed, async () => {
       this.assertSessionOperationOwner(managed)
       managed.isArchived = true
@@ -15280,7 +14544,7 @@ export class SessionManager implements ISessionManager {
   }
 
   async unarchiveSession(sessionId: string): Promise<void> {
-    const managed = this.sessions.get(sessionId)
+    const managed = this.runtimeState.sessions.get(sessionId)
     if (managed) return this.trackSessionOperation(managed, async () => {
       this.assertSessionOperationOwner(managed)
       managed.isArchived = false
@@ -15295,8 +14559,8 @@ export class SessionManager implements ISessionManager {
   }
 
   async setSessionStatus(sessionId: string, sessionStatus: SessionStatus, assertActivePreparation?: () => void): Promise<void> {
-    if (this.retentionDeleting.has(sessionId)) throw new Error('This completed chat is being removed by retention')
-    const managed = this.sessions.get(sessionId)
+    if (this.runtimeState.retentionDeleting.has(sessionId)) throw new Error('This completed chat is being removed by retention')
+    const managed = this.runtimeState.sessions.get(sessionId)
     if (managed) return this.trackSessionOperation(managed, async () => {
       this.assertSessionOperationOwner(managed)
       // Invalidate the previous completion before a reopening is persisted.
@@ -15312,29 +14576,29 @@ export class SessionManager implements ISessionManager {
       // Workaround: Bun's fs.watch({ recursive: true }) on Linux doesn't track
       // directories created after the watcher started.
       // https://github.com/oven-sh/bun/issues/15939
-      const watcher = this.configWatchers.get(managed.workspace.rootPath)
+      const watcher = this.runtimeState.configWatchers.get(managed.workspace.rootPath)
       watcher?.notifyFileChange(`sessions/${sessionId}/session.jsonl`)
       if (sessionStatus === 'done') this.scheduleCompletedChatRetention()
     })
   }
 
   private startCompletedChatRetention(): void {
-    this.retentionStopping = false
+    this.runtimeState.retentionStopping = false
     this.scheduleCompletedChatRetention()
-    this.completedChatRetentionTimer = setInterval(() => this.scheduleCompletedChatRetention(), 60 * 60 * 1000)
-    this.completedChatRetentionTimer.unref?.()
+    this.runtimeState.completedChatRetentionTimer = setInterval(() => this.scheduleCompletedChatRetention(), 60 * 60 * 1000)
+    this.runtimeState.completedChatRetentionTimer.unref?.()
   }
 
   private scheduleCompletedChatRetention(): void {
-    if (this.retentionStopping || this.completedChatRetentionSweep) return
-    this.completedChatRetentionSweep = this.sweepCompletedChats().catch(error => {
+    if (this.runtimeState.retentionStopping || this.runtimeState.completedChatRetentionSweep) return
+    this.runtimeState.completedChatRetentionSweep = this.sweepCompletedChats().catch(error => {
       sessionLog.warn('Completed-chat retention failed; chats preserved', { error: String(error) })
-    }).finally(() => { this.completedChatRetentionSweep = undefined })
+    }).finally(() => { this.runtimeState.completedChatRetentionSweep = undefined })
   }
 
   private canRetainCompletedChat(managed: ManagedSession, detachedForDeletion = false): boolean {
-    const ownsSession = this.sessions.get(managed.id) === managed
-      || (detachedForDeletion && this.retiringSessions.has(managed))
+    const ownsSession = this.runtimeState.sessions.get(managed.id) === managed
+      || (detachedForDeletion && this.runtimeState.retiringSessions.has(managed))
     // Expired/terminal source-activation tombstones are not live work and must
     // not pin an otherwise completed chat forever.
     pruneAutoRetryTombstones(managed, Date.now())
@@ -15342,38 +14606,38 @@ export class SessionManager implements ISessionManager {
     const hasLiveSourceActivation = managed.autoRetryTimer !== undefined
       || !!sourceActivation && (!sourceActivation.cancelled
         || !sourceActivation.committed || sourceActivation.dispatchInFlight)
-    const hasQueuedAgentDeliveryDispatch = [...this.queuedAgentDeliveryDispatches.values()]
+    const hasQueuedAgentDeliveryDispatch = [...this.runtimeState.queuedAgentDeliveryDispatches.values()]
       .some(dispatch => dispatch.sessionId === managed.id)
-    const hasVolatileAdmission = this.deferredAutomaticSessions.has(managed.id)
-      || this.automaticAdmissionReservations.has(managed.id)
-      || this.queuedMessageDispatches.has(managed.id)
+    const hasVolatileAdmission = this.runtimeState.deferredAutomaticSessions.has(managed.id)
+      || this.runtimeState.automaticAdmissionReservations.has(managed.id)
+      || this.runtimeState.queuedMessageDispatches.has(managed.id)
       || hasQueuedAgentDeliveryDispatch
-      || this.deferredAutomaticRetryTimers.has(managed.id)
-      || this.retryTurnsInFlight.has(managed.id)
-      || this.restartRecoveriesInFlight.has(managed.id)
-      || this.coldProviderReconciliationsInFlight.has(managed.id)
-      || this.providerRetryReconciliationTransactions.has(managed.id)
-      || this.providerLiveReconciliationTransactions.has(managed.id)
+      || this.runtimeState.deferredAutomaticRetryTimers.has(managed.id)
+      || this.runtimeState.retryTurnsInFlight.has(managed.id)
+      || this.runtimeState.restartRecoveriesInFlight.has(managed.id)
+      || this.runtimeState.coldProviderReconciliationsInFlight.has(managed.id)
+      || this.runtimeState.providerRetryReconciliationTransactions.has(managed.id)
+      || this.runtimeState.providerLiveReconciliationTransactions.has(managed.id)
       || hasLiveSourceActivation
-    const hasVolatileTransaction = (this.sessionOperationsInFlight.get(managed)?.size ?? 0) > 0
-      || this.directHumanSupersessionsInFlight.has(managed)
-      || this.directHumanSupersessionTransactions.has(managed)
-      || this.sourceActivationTransactions.has(managed)
-      || this.toolAdmissionTransactions.has(managed)
-      || (this.runtimeDisposalsInFlight.get(managed.id)?.size ?? 0) > 0
-      || (this.runtimeDisposalBarriers.get(managed.id)?.size ?? 0) > 0
-    return ownsSession && !this.retentionStopping && !this.shuttingDown
+    const hasVolatileTransaction = (this.runtimeState.sessionOperationsInFlight.get(managed)?.size ?? 0) > 0
+      || this.runtimeState.directHumanSupersessionsInFlight.has(managed)
+      || this.runtimeState.directHumanSupersessionTransactions.has(managed)
+      || this.runtimeState.sourceActivationTransactions.has(managed)
+      || this.runtimeState.toolAdmissionTransactions.has(managed)
+      || (this.runtimeState.runtimeDisposalsInFlight.get(managed.id)?.size ?? 0) > 0
+      || (this.runtimeState.runtimeDisposalBarriers.get(managed.id)?.size ?? 0) > 0
+    return ownsSession && !this.runtimeState.retentionStopping && !this.runtimeState.shuttingDown
       && (!managed.stopRequested || detachedForDeletion)
       && managed.sessionStatus === 'done' && !managed.isProcessing
       && !hasVolatileAdmission && !hasVolatileTransaction
       && (!managed.activeObjective || managed.activeObjective.terminalState === 'complete_verified')
       && !managed.messageQueue.length && !this.hasRunningBackgroundTasks(managed)
-      && !this.agentRefreshLocks.has(managed.id) && !this.hasPendingDecision(managed)
+      && !this.runtimeState.agentRefreshLocks.has(managed.id) && !this.hasPendingDecision(managed)
       && !this.hasPendingUserInput(managed) && !this.hasQueuedUserInput(managed)
       && !managed.pendingQueuedMessageIds?.length
       && !managed.pendingAgentDeliveryIds?.length && !managed.pendingTurnRecovery
-      && ![...this.pendingPermissionRequests.values()].some(request => request.sessionId === managed.id)
-      && ![...this.sessions.values()].some(child => {
+      && ![...this.runtimeState.pendingPermissionRequests.values()].some(request => request.sessionId === managed.id)
+      && ![...this.runtimeState.sessions.values()].some(child => {
         if (child.id === managed.id || child.workspace.id !== managed.workspace.id
           || !(child.isProcessing || child.stopRequested || child.messageQueue.length || this.hasRunningBackgroundTasks(child)
           || this.hasPendingDecision(child) || this.hasQueuedUserInput(child)
@@ -15383,7 +14647,7 @@ export class SessionManager implements ISessionManager {
         while (parentId && !seen.has(parentId)) {
           if (parentId === managed.id) return true
           seen.add(parentId)
-          const parent = this.sessions.get(parentId)
+          const parent = this.runtimeState.sessions.get(parentId)
           if (!parent || parent.workspace.id !== managed.workspace.id) return false
           parentId = parent.parentSessionId
         }
@@ -15401,7 +14665,7 @@ export class SessionManager implements ISessionManager {
     const roots = new Set(getWorkspaces().map(workspace => (
       captureSessionPersistenceRootPath(workspace.rootPath)
     )))
-    for (const managed of this.sessions.values()) {
+    for (const managed of this.runtimeState.sessions.values()) {
       try {
         roots.add(persistenceRootFor(managed))
       } catch (error) {
@@ -15414,8 +14678,8 @@ export class SessionManager implements ISessionManager {
     for (const root of roots) reconcileCompletedChatRetention(root)
 
     // Sequential work keeps historical transcripts out of memory after each capture.
-    for (const managed of [...this.sessions.values()]) {
-      if (this.retentionStopping) return
+    for (const managed of [...this.runtimeState.sessions.values()]) {
+      if (this.runtimeState.retentionStopping) return
       // Retention owns session files and receipts. Use the same captured
       // physical root as persistence/deletion so a retargeted workspace alias
       // cannot redirect archival to a homonymous session in another root.
@@ -15469,7 +14733,7 @@ export class SessionManager implements ISessionManager {
         await this.flushSession(managed.id)
         assertRoot()
         if (!this.canRetainCompletedChat(managed)) continue
-        this.retentionDeleting.add(managed.id)
+        this.runtimeState.retentionDeleting.add(managed.id)
         try {
           // Re-read and verify the durable receipt immediately before deletion.
           assertRoot()
@@ -15521,7 +14785,7 @@ export class SessionManager implements ISessionManager {
           if (archivePath !== intent.targetPath) throw new Error('Chat archival used an unexpected destination')
           finalizeCompletedChatArchive(root, managed.id, archivePath)
           sessionLog.info('Completed chat archived with all attachments preserved', { sessionId: managed.id, archivePath })
-        } finally { this.retentionDeleting.delete(managed.id) }
+        } finally { this.runtimeState.retentionDeleting.delete(managed.id) }
       } catch (error) {
         sessionLog.warn('Completed-chat retention skipped', { sessionId: managed.id, error: String(error) })
       } finally {
@@ -15570,7 +14834,7 @@ export class SessionManager implements ISessionManager {
    * backend on the selected connection with a one-shot summary injection.
    */
   async setSessionConnection(sessionId: string, connectionSlug: string): Promise<void> {
-    const managed = this.sessions.get(sessionId)
+    const managed = this.runtimeState.sessions.get(sessionId)
     if (!managed) {
       sessionLog.warn(`setSessionConnection: session ${sessionId} not found`)
       throw new Error(`Session ${sessionId} not found`)
@@ -15679,7 +14943,7 @@ export class SessionManager implements ISessionManager {
    * so execution can resume after compaction (even if page reloads).
    */
   async setPendingPlanExecution(sessionId: string, planPath: string, draftInputSnapshot?: string): Promise<void> {
-    const managed = this.sessions.get(sessionId)
+    const managed = this.runtimeState.sessions.get(sessionId)
     if (!managed) return
     return this.trackSessionOperation(managed, async () => {
       this.assertSessionOperationOwner(managed)
@@ -15700,7 +14964,7 @@ export class SessionManager implements ISessionManager {
    * to know that compaction finished and plan can be executed.
    */
   async markCompactionComplete(sessionId: string): Promise<void> {
-    const managed = this.sessions.get(sessionId)
+    const managed = this.runtimeState.sessions.get(sessionId)
     if (!managed) return
     return this.trackSessionOperation(managed, async () => {
       this.assertSessionOperationOwner(managed)
@@ -15719,7 +14983,7 @@ export class SessionManager implements ISessionManager {
    * sending succeeded but cleanup failed due a reconnect/disconnect.
    */
   async markPendingPlanExecutionDispatched(sessionId: string): Promise<void> {
-    const managed = this.sessions.get(sessionId)
+    const managed = this.runtimeState.sessions.get(sessionId)
     if (!managed) return
     return this.trackSessionOperation(managed, async () => {
       this.assertSessionOperationOwner(managed)
@@ -15738,7 +15002,7 @@ export class SessionManager implements ISessionManager {
    * or when the pending execution is no longer relevant.
    */
   async clearPendingPlanExecution(sessionId: string): Promise<void> {
-    const managed = this.sessions.get(sessionId)
+    const managed = this.runtimeState.sessions.get(sessionId)
     if (!managed) return
     return this.trackSessionOperation(managed, async () => {
       this.assertSessionOperationOwner(managed)
@@ -15756,7 +15020,7 @@ export class SessionManager implements ISessionManager {
    * Used on reload/init to check if we need to resume plan execution.
    */
   getPendingPlanExecution(sessionId: string): { planPath: string; draftInputSnapshot?: string; awaitingCompaction: boolean; executionDispatched: boolean } | null {
-    const managed = this.sessions.get(sessionId)
+    const managed = this.runtimeState.sessions.get(sessionId)
     if (!managed || !this.ownsSessionOperation(managed)) return null
     return getStoredPendingPlanExecution(
       persistenceRootFor(managed),
@@ -15771,7 +15035,7 @@ export class SessionManager implements ISessionManager {
    * Explore moves to Ask, preserving a per-operation permission boundary.
    */
   async acceptPlan(sessionId: string, _planPath?: string): Promise<void> {
-    const managed = this.sessions.get(sessionId)
+    const managed = this.runtimeState.sessions.get(sessionId)
     if (!managed) {
       sessionLog.warn(`acceptPlan: session ${sessionId} not found`)
       return
@@ -15795,7 +15059,7 @@ export class SessionManager implements ISessionManager {
    * Uploads session data and returns shareable URL
    */
   async shareToViewer(sessionId: string): Promise<import('@craft-agent/shared/protocol').ShareResult> {
-    const managed = this.sessions.get(sessionId)
+    const managed = this.runtimeState.sessions.get(sessionId)
     if (!managed) {
       return { success: false, error: 'Session not found' }
     }
@@ -15862,7 +15126,7 @@ export class SessionManager implements ISessionManager {
    * Re-uploads session data to the same URL
    */
   async updateShare(sessionId: string): Promise<import('@craft-agent/shared/protocol').ShareResult> {
-    const managed = this.sessions.get(sessionId)
+    const managed = this.runtimeState.sessions.get(sessionId)
     if (!managed) {
       return { success: false, error: 'Session not found' }
     }
@@ -15920,7 +15184,7 @@ export class SessionManager implements ISessionManager {
    * Deletes from viewer and clears local shared state
    */
   async revokeShare(sessionId: string): Promise<import('@craft-agent/shared/protocol').ShareResult> {
-    const managed = this.sessions.get(sessionId)
+    const managed = this.runtimeState.sessions.get(sessionId)
     if (!managed) {
       return { success: false, error: 'Session not found' }
     }
@@ -15983,7 +15247,7 @@ export class SessionManager implements ISessionManager {
    * Otherwise, servers will be built fresh on next message.
    */
   async setSessionSources(sessionId: string, sourceSlugs: string[]): Promise<void> {
-    const managed = this.sessions.get(sessionId)
+    const managed = this.runtimeState.sessions.get(sessionId)
     if (!managed) {
       throw new Error(`Session not found: ${sessionId}`)
     }
@@ -16078,7 +15342,7 @@ export class SessionManager implements ISessionManager {
    * Get the enabled source slugs for a session
    */
   getSessionSources(sessionId: string): string[] {
-    const managed = this.sessions.get(sessionId)
+    const managed = this.runtimeState.sessions.get(sessionId)
     if (managed) refreshInheritedWorkspaceSources(managed)
     return managed?.enabledSourceSlugs ?? []
   }
@@ -16108,7 +15372,7 @@ export class SessionManager implements ISessionManager {
    * child node output is read here, not via any tool/RPC.
    */
   getSessionFinalText(sessionId: string): string | undefined {
-    const managed = this.sessions.get(sessionId)
+    const managed = this.runtimeState.sessions.get(sessionId)
     if (!managed) return undefined
     const id = this.getLastFinalAssistantMessageId(managed.messages)
     if (!id) return undefined
@@ -16122,16 +15386,16 @@ export class SessionManager implements ISessionManager {
    */
   setActiveViewingSession(sessionId: string | null, workspaceId: string): void {
     if (sessionId) {
-      this.activeViewingSession.set(workspaceId, sessionId)
+      this.runtimeState.activeViewingSession.set(workspaceId, sessionId)
       // When user starts viewing a session that's not processing, clear unread
-      const managed = this.sessions.get(sessionId)
+      const managed = this.runtimeState.sessions.get(sessionId)
       if (managed && this.ownsSessionOperation(managed) && !managed.isProcessing && managed.hasUnread) {
         void this.markSessionRead(sessionId).catch(error => {
           sessionLog.warn(`Failed to mark viewed session ${sessionId} as read:`, error)
         })
       }
     } else {
-      this.activeViewingSession.delete(workspaceId)
+      this.runtimeState.activeViewingSession.delete(workspaceId)
     }
   }
 
@@ -16140,14 +15404,14 @@ export class SessionManager implements ISessionManager {
    * Called when all windows leave a workspace to ensure read/unread state is correct.
    */
   clearActiveViewingSession(workspaceId: string): void {
-    this.activeViewingSession.delete(workspaceId)
+    this.runtimeState.activeViewingSession.delete(workspaceId)
   }
 
   /**
    * Check if a session is currently being viewed by the user
    */
   private isSessionBeingViewed(sessionId: string, workspaceId: string): boolean {
-    return this.activeViewingSession.get(workspaceId) === sessionId
+    return this.runtimeState.activeViewingSession.get(workspaceId) === sessionId
   }
 
   /**
@@ -16155,7 +15419,7 @@ export class SessionManager implements ISessionManager {
    * Called when user navigates to a session (and it's not processing).
    */
   async markSessionRead(sessionId: string): Promise<void> {
-    const managed = this.sessions.get(sessionId)
+    const managed = this.runtimeState.sessions.get(sessionId)
     if (!managed) return
 
     return this.trackSessionOperation(managed, async () => {
@@ -16203,7 +15467,7 @@ export class SessionManager implements ISessionManager {
    * Called when user manually marks a session as unread via context menu.
    */
   async markSessionUnread(sessionId: string): Promise<void> {
-    const managed = this.sessions.get(sessionId)
+    const managed = this.runtimeState.sessions.get(sessionId)
     if (!managed) return
     return this.trackSessionOperation(managed, async () => {
       this.assertSessionOperationOwner(managed)
@@ -16226,7 +15490,7 @@ export class SessionManager implements ISessionManager {
    */
   async markAllSessionsRead(workspaceId: string): Promise<void> {
     const updates: Promise<void>[] = []
-    for (const managed of this.sessions.values()) {
+    for (const managed of this.runtimeState.sessions.values()) {
       if (managed.workspace.id !== workspaceId) continue
       if (managed.hidden || managed.isArchived) continue
       if (managed.isProcessing) continue
@@ -16250,7 +15514,7 @@ export class SessionManager implements ISessionManager {
   }
 
   async renameSession(sessionId: string, name: string): Promise<void> {
-    const managed = this.sessions.get(sessionId)
+    const managed = this.runtimeState.sessions.get(sessionId)
     if (managed) return this.trackSessionOperation(managed, async () => {
       this.assertSessionOperationOwner(managed)
       managed.name = name
@@ -16260,7 +15524,7 @@ export class SessionManager implements ISessionManager {
       // Workaround: Bun's fs.watch({ recursive: true }) on Linux doesn't track
       // directories created after the watcher started.
       // https://github.com/oven-sh/bun/issues/15939
-      const watcher = this.configWatchers.get(managed.workspace.rootPath)
+      const watcher = this.runtimeState.configWatchers.get(managed.workspace.rootPath)
       watcher?.notifyFileChange(`sessions/${sessionId}/session.jsonl`)
     })
   }
@@ -16272,7 +15536,7 @@ export class SessionManager implements ISessionManager {
    */
   async refreshTitle(sessionId: string): Promise<{ success: boolean; title?: string; error?: string }> {
     sessionLog.info(`refreshTitle called for session ${sessionId}`)
-    const managed = this.sessions.get(sessionId)
+    const managed = this.runtimeState.sessions.get(sessionId)
     if (!managed) {
       sessionLog.warn(`refreshTitle: Session ${sessionId} not found`)
       return { success: false, error: 'Session not found' }
@@ -16434,7 +15698,7 @@ export class SessionManager implements ISessionManager {
    * changes the working directory before their first message.
    */
   updateWorkingDirectory(sessionId: string, path: string): void {
-    const managed = this.sessions.get(sessionId)
+    const managed = this.runtimeState.sessions.get(sessionId)
     if (managed) {
       this.assertSessionMutationAdmissionOpen(managed)
       if ((hasImmutableMissionRoute(managed) || hasMissionDispatchTriplet(managed))
@@ -16493,7 +15757,7 @@ export class SessionManager implements ISessionManager {
    */
   async updateSessionModel(sessionId: string, workspaceId: string, model: string | null, connection?: string): Promise<void> {
     sessionLog.info(`[updateSessionModel] sessionId=${sessionId}, model=${model}, connection=${connection}`)
-    const managed = this.sessions.get(sessionId)
+    const managed = this.runtimeState.sessions.get(sessionId)
     if (!managed) return
     return this.trackSessionOperation(
       managed,
@@ -16563,7 +15827,7 @@ export class SessionManager implements ISessionManager {
    * Used by preview window to save edited content back to the original message
    */
   updateMessageContent(sessionId: string, messageId: string, content: string): void {
-    const managed = this.sessions.get(sessionId)
+    const managed = this.runtimeState.sessions.get(sessionId)
     if (!managed) {
       sessionLog.warn(`Cannot update message: session ${sessionId} not found`)
       return
@@ -16587,7 +15851,7 @@ export class SessionManager implements ISessionManager {
    * Add an annotation to a message and persist the session.
    */
   addMessageAnnotation(sessionId: string, messageId: string, annotation: NonNullable<Message['annotations']>[number]): void {
-    const managed = this.sessions.get(sessionId)
+    const managed = this.runtimeState.sessions.get(sessionId)
     if (!managed) {
       sessionLog.warn(`Cannot add annotation: session ${sessionId} not found`)
       return
@@ -16654,7 +15918,7 @@ export class SessionManager implements ISessionManager {
     annotationId: string,
     patch: Partial<NonNullable<Message['annotations']>[number]>
   ): void {
-    const managed = this.sessions.get(sessionId)
+    const managed = this.runtimeState.sessions.get(sessionId)
     if (!managed) {
       sessionLog.warn(`Cannot update annotation: session ${sessionId} not found`)
       return
@@ -16729,7 +15993,7 @@ export class SessionManager implements ISessionManager {
    * Remove an annotation from a message and persist the session.
    */
   removeMessageAnnotation(sessionId: string, messageId: string, annotationId: string): void {
-    const managed = this.sessions.get(sessionId)
+    const managed = this.runtimeState.sessions.get(sessionId)
     if (!managed) {
       sessionLog.warn(`Cannot remove annotation: session ${sessionId} not found`)
       return
@@ -16790,7 +16054,7 @@ export class SessionManager implements ISessionManager {
 
       // Deletion closes ownership synchronously while attachment validation can
       // yield. Never write a bundle or dispatch after that linearization point.
-      if (this.retiringSessions.has(target) || this.sessions.get(target.id) !== target) {
+      if (this.runtimeState.retiringSessions.has(target) || this.runtimeState.sessions.get(target.id) !== target) {
         throw new Error(`Target session ${target.id} is being deleted`)
       }
       if (this.hasTerminalObjectiveState(target)) {
@@ -16848,7 +16112,7 @@ export class SessionManager implements ISessionManager {
   }
 
   private ownsSessionOperation(managed: ManagedSession): boolean {
-    return !this.retiringSessions.has(managed) && this.sessions.get(managed.id) === managed
+    return !this.runtimeState.retiringSessions.has(managed) && this.runtimeState.sessions.get(managed.id) === managed
   }
 
   private assertSessionOperationOwner(managed: ManagedSession): void {
@@ -16861,7 +16125,7 @@ export class SessionManager implements ISessionManager {
    * already-admitted async operation: those operations retain their lease while
    * shutdown drains them and must keep using assertSessionOperationOwner(). */
   private assertSessionMutationAdmissionOpen(managed: ManagedSession): void {
-    if (this.shuttingDown) {
+    if (this.runtimeState.shuttingDown) {
       throw new Error('Cannot start a session operation while the session manager is shutting down')
     }
     this.assertSessionOperationOwner(managed)
@@ -16882,17 +16146,17 @@ export class SessionManager implements ISessionManager {
     operation: () => Promise<T>,
     allowShutdownTerminalResult = false,
   ): Promise<T> {
-    if (this.shuttingDown
-      && !(allowShutdownTerminalResult && this.shutdownTerminalResultAdmissionOpen)) {
+    if (this.runtimeState.shuttingDown
+      && !(allowShutdownTerminalResult && this.runtimeState.shutdownTerminalResultAdmissionOpen)) {
       return Promise.reject(new Error('Cannot start a session operation while the session manager is shutting down'))
     }
     if (!this.ownsSessionOperation(managed)) {
       return Promise.reject(new Error(`Session ${managed.id} is being deleted`))
     }
-    let operations = this.sessionOperationsInFlight.get(managed)
+    let operations = this.runtimeState.sessionOperationsInFlight.get(managed)
     if (!operations) {
       operations = new Set()
-      this.sessionOperationsInFlight.set(managed, operations)
+      this.runtimeState.sessionOperationsInFlight.set(managed, operations)
     }
     // Preserve the original synchronous admission semantics of async session
     // methods: several private capabilities are valid only until the first
@@ -16906,15 +16170,15 @@ export class SessionManager implements ISessionManager {
     }
     operations.add(tracked)
     void tracked.finally(() => {
-      const current = this.sessionOperationsInFlight.get(managed)
+      const current = this.runtimeState.sessionOperationsInFlight.get(managed)
       current?.delete(tracked)
-      if (current?.size === 0) this.sessionOperationsInFlight.delete(managed)
+      if (current?.size === 0) this.runtimeState.sessionOperationsInFlight.delete(managed)
     }).catch(() => {})
     return tracked
   }
 
   private trackManagerOperation<T>(operation: () => Promise<T>): Promise<T> {
-    if (this.shuttingDown) {
+    if (this.runtimeState.shuttingDown) {
       return Promise.reject(new Error('Cannot start a manager operation while the session manager is shutting down'))
     }
     let tracked: Promise<T>
@@ -16923,14 +16187,14 @@ export class SessionManager implements ISessionManager {
     } catch (error) {
       tracked = Promise.reject(error)
     }
-    this.managerOperationsInFlight.add(tracked)
-    void tracked.finally(() => this.managerOperationsInFlight.delete(tracked)).catch(() => {})
+    this.runtimeState.managerOperationsInFlight.add(tracked)
+    void tracked.finally(() => this.runtimeState.managerOperationsInFlight.delete(tracked)).catch(() => {})
     return tracked
   }
 
   private async drainManagerOperations(): Promise<void> {
-    while (this.managerOperationsInFlight.size > 0) {
-      await Promise.allSettled([...this.managerOperationsInFlight])
+    while (this.runtimeState.managerOperationsInFlight.size > 0) {
+      await Promise.allSettled([...this.runtimeState.managerOperationsInFlight])
     }
   }
 
@@ -16939,11 +16203,11 @@ export class SessionManager implements ISessionManager {
    * so no hydrated callback can persist or emit beyond the final flush. */
   private async drainRestartRecoveries(): Promise<void> {
     while (true) {
-      const admissionDrain = this.automaticAdmissionDrain
+      const admissionDrain = this.runtimeState.automaticAdmissionDrain
       if (admissionDrain) await Promise.allSettled([admissionDrain])
       await Promise.resolve()
-      const recoveries = [...this.restartRecoveriesInFlight.values()]
-      if (recoveries.length === 0 && !this.automaticAdmissionDrain) return
+      const recoveries = [...this.runtimeState.restartRecoveriesInFlight.values()]
+      if (recoveries.length === 0 && !this.runtimeState.automaticAdmissionDrain) return
       await Promise.allSettled(recoveries)
     }
   }
@@ -16954,12 +16218,12 @@ export class SessionManager implements ISessionManager {
   private async drainStrongCancellationStops(): Promise<void> {
     while (true) {
       const operations = [...new Set(
-        [...this.strongCancellationStops.values()].map(retirement => retirement.operation),
+        [...this.runtimeState.strongCancellationStops.values()].map(retirement => retirement.operation),
       )]
       if (operations.length === 0) return
       await Promise.allSettled(operations)
       await Promise.resolve()
-      const current = [...this.strongCancellationStops.values()]
+      const current = [...this.runtimeState.strongCancellationStops.values()]
         .map(retirement => retirement.operation)
       if (current.every(operation => operations.includes(operation))) return
     }
@@ -16967,7 +16231,7 @@ export class SessionManager implements ISessionManager {
 
   private async drainSessionOperations(managed: ManagedSession): Promise<void> {
     while (true) {
-      const operations = this.sessionOperationsInFlight.get(managed)
+      const operations = this.runtimeState.sessionOperationsInFlight.get(managed)
       if (!operations?.size) return
       await Promise.allSettled([...operations])
     }
@@ -16979,11 +16243,11 @@ export class SessionManager implements ISessionManager {
    * a stable barrier rather than a best-effort observation. */
   private async drainAllSessionOperations(): Promise<void> {
     while (true) {
-      const managedSessions = [...this.sessions.values()]
+      const managedSessions = [...this.runtimeState.sessions.values()]
       await Promise.all(managedSessions.map(managed => this.drainSessionOperations(managed)))
       await Promise.resolve()
       if (managedSessions.every(managed => (
-        (this.sessionOperationsInFlight.get(managed)?.size ?? 0) === 0
+        (this.runtimeState.sessionOperationsInFlight.get(managed)?.size ?? 0) === 0
       ))) return
     }
   }
@@ -17005,11 +16269,11 @@ export class SessionManager implements ISessionManager {
     // remain visible only in its fail-closed retired state on rollback.
     state.effectsStarted = true
     this.clearDeferredAutomaticRetry(sessionId)
-    this.deferredAutomaticSessions.delete(sessionId)
-    this.automaticAdmissionReservations.delete(sessionId)
-    this.queuedMessageDispatches.delete(sessionId)
-    for (const [messageId, dispatch] of this.queuedAgentDeliveryDispatches) {
-      if (dispatch.sessionId === sessionId) this.queuedAgentDeliveryDispatches.delete(messageId)
+    this.runtimeState.deferredAutomaticSessions.delete(sessionId)
+    this.runtimeState.automaticAdmissionReservations.delete(sessionId)
+    this.runtimeState.queuedMessageDispatches.delete(sessionId)
+    for (const [messageId, dispatch] of this.runtimeState.queuedAgentDeliveryDispatches) {
+      if (dispatch.sessionId === sessionId) this.runtimeState.queuedAgentDeliveryDispatches.delete(messageId)
     }
 
     // Close provider-side permission promises before tearing down their
@@ -17029,12 +16293,12 @@ export class SessionManager implements ISessionManager {
     )
     await withRuntimeDisposeTimeout(
       Promise.allSettled([
-        this.directHumanSupersessionTransactions.get(managed),
-        this.sourceActivationTransactions.get(managed),
-        this.toolAdmissionTransactions.get(managed),
-        this.agentRefreshLocks.get(sessionId),
-        this.restartRecoveriesInFlight.get(sessionId),
-        this.strongCancellationStops.get(sessionId)?.operation,
+        this.runtimeState.directHumanSupersessionTransactions.get(managed),
+        this.runtimeState.sourceActivationTransactions.get(managed),
+        this.runtimeState.toolAdmissionTransactions.get(managed),
+        this.runtimeState.agentRefreshLocks.get(sessionId),
+        this.runtimeState.restartRecoveriesInFlight.get(sessionId),
+        this.runtimeState.strongCancellationStops.get(sessionId)?.operation,
       ].filter((operation): operation is Promise<void> => operation !== undefined)).then(() => undefined),
       `Session transaction drain for ${sessionId}`,
     )
@@ -17060,32 +16324,32 @@ export class SessionManager implements ISessionManager {
       this.retryManagedAgentRuntimeDisposals(sessionId),
       `Runtime destruction proof for ${sessionId}`,
     )
-    const pendingDisposals = this.runtimeDisposalsInFlight.get(sessionId)
+    const pendingDisposals = this.runtimeState.runtimeDisposalsInFlight.get(sessionId)
     if (pendingDisposals?.size) {
       await withRuntimeDisposeTimeout(
         Promise.allSettled([...pendingDisposals]).then(() => undefined),
         `Runtime disposal drain for ${sessionId}`,
       )
     }
-    if ((this.runtimeDisposalBarriers.get(sessionId)?.size ?? 0) > 0
-      || (this.runtimeDisposalsInFlight.get(sessionId)?.size ?? 0) > 0) {
+    if ((this.runtimeState.runtimeDisposalBarriers.get(sessionId)?.size ?? 0) > 0
+      || (this.runtimeState.runtimeDisposalsInFlight.get(sessionId)?.size ?? 0) > 0) {
       throw new Error(`Runtime destruction for session ${sessionId} is not proven`)
     }
     state.runtimeTeardownProven = true
   }
 
   async deleteSession(sessionId: string, retentionArchive?: () => boolean): Promise<void> {
-    const existing = this.sessionDeletionsInFlight.get(sessionId)
+    const existing = this.runtimeState.sessionDeletionsInFlight.get(sessionId)
     if (existing) {
       await existing
       // An explicit human deletion must not be weakened by joining a
       // conditional retention attempt that ultimately restored the session.
-      if (!retentionArchive && this.sessions.has(sessionId)) {
+      if (!retentionArchive && this.runtimeState.sessions.has(sessionId)) {
         await this.deleteSession(sessionId)
       }
       return
     }
-    if (this.shuttingDown) throw new Error('Cannot delete a session while the session manager is shutting down')
+    if (this.runtimeState.shuttingDown) throw new Error('Cannot delete a session while the session manager is shutting down')
 
     // Register ownership before the implementation can synchronously detach
     // the session or trigger a re-entrant shutdown/delete callback. The
@@ -17099,11 +16363,11 @@ export class SessionManager implements ISessionManager {
     })
     let tracked!: Promise<void>
     tracked = deletion.finally(() => {
-      if (this.sessionDeletionsInFlight.get(sessionId) === tracked) {
-        this.sessionDeletionsInFlight.delete(sessionId)
+      if (this.runtimeState.sessionDeletionsInFlight.get(sessionId) === tracked) {
+        this.runtimeState.sessionDeletionsInFlight.delete(sessionId)
       }
     })
-    this.sessionDeletionsInFlight.set(sessionId, tracked)
+    this.runtimeState.sessionDeletionsInFlight.set(sessionId, tracked)
 
     void this.performSessionDeletion(sessionId, retentionArchive).then(
       resolveDeletion,
@@ -17113,7 +16377,7 @@ export class SessionManager implements ISessionManager {
   }
 
   private async performSessionDeletion(sessionId: string, retentionArchive?: () => boolean): Promise<void> {
-    const managed = this.sessions.get(sessionId)
+    const managed = this.runtimeState.sessions.get(sessionId)
     if (!managed) {
       sessionLog.warn(`Cannot delete session: ${sessionId} not found`)
       return
@@ -17132,8 +16396,8 @@ export class SessionManager implements ISessionManager {
     // Linearize deletion before the first await. Removing the runtime entry
     // invalidates ownsStop()/new RPC work, while the persistence tombstone
     // rejects callbacks that still hold this exact ManagedSession snapshot.
-    this.retiringSessions.add(managed)
-    this.sessions.delete(sessionId)
+    this.runtimeState.retiringSessions.add(managed)
+    this.runtimeState.sessions.delete(sessionId)
     const persistenceRetirement = sessionPersistenceQueue.retire(sessionId, persistenceRootPath)
     const restoreSession = async (
       keepRetired = false,
@@ -17153,8 +16417,8 @@ export class SessionManager implements ISessionManager {
       managed.stopRequested = keepRetired
         ? true
         : quiescence.runtimeTeardownProven ? false : stopRequestedBeforeDeletion
-      if (!keepRetired) this.retiringSessions.delete(managed)
-      this.sessions.set(sessionId, managed)
+      if (!keepRetired) this.runtimeState.retiringSessions.delete(managed)
+      this.runtimeState.sessions.set(sessionId, managed)
       if (keepRetired || !persistRestoredState) return
       if (this.persistSession(managed)) {
         try { await this.flushSession(sessionId) } catch (persistError) {
@@ -17255,10 +16519,10 @@ export class SessionManager implements ISessionManager {
     }
 
     await cleanupAfterCommit('pending state cleanup', () => {
-      const timer = this.deltaFlushTimers.get(sessionId)
+      const timer = this.runtimeState.deltaFlushTimers.get(sessionId)
       if (timer) clearTimeout(timer)
-      this.deltaFlushTimers.delete(sessionId)
-      this.pendingDeltas.delete(sessionId)
+      this.runtimeState.deltaFlushTimers.delete(sessionId)
+      this.runtimeState.pendingDeltas.delete(sessionId)
       this.clearAdminRememberApprovalsForSession(sessionId)
       this.clearPendingPermissionRequestsForSession(sessionId)
     })
@@ -17270,8 +16534,8 @@ export class SessionManager implements ISessionManager {
       try {
         await this.getBrowserPaneManagerForSession(sessionId)?.destroyForSession(sessionId)
       } finally {
-        this.remoteBpms.delete(sessionId)
-        this.browserHostByCanvas.delete(sessionId)
+        this.runtimeState.remoteBpms.delete(sessionId)
+        this.runtimeState.browserHostByCanvas.delete(sessionId)
       }
     })
     await cleanupAfterCommit('context cleanup', () => destroyContextualGmailSessionState(sessionId))
@@ -17280,9 +16544,9 @@ export class SessionManager implements ISessionManager {
       managed.autoRetryTimer = undefined
       managed.autoRetryPending = undefined
     })
-    await cleanupAfterCommit('execution proof cleanup', () => this.executionProofCollector.discard(sessionId))
+    await cleanupAfterCommit('execution proof cleanup', () => this.runtimeState.executionProofCollector.discard(sessionId))
     await cleanupAfterCommit('automation metadata cleanup', () => {
-      this.automationSystems.get(workspaceRootPath)?.removeSessionMetadata(sessionId)
+      this.runtimeState.automationSystems.get(workspaceRootPath)?.removeSessionMetadata(sessionId)
     })
 
     // Notify all windows for this workspace that the session was deleted
@@ -17420,7 +16684,7 @@ export class SessionManager implements ISessionManager {
   }
 
   private async captureUserCorrection(managed: ManagedSession, userMessage: Message): Promise<void> {
-    if (!managed.projectId || this.shuttingDown) return
+    if (!managed.projectId || this.runtimeState.shuttingDown) return
     try {
       const target = this.sessionProjectLearningTarget(managed)
       const messages = [...managed.messages]
@@ -17463,8 +16727,8 @@ export class SessionManager implements ISessionManager {
     authenticatedInternalContinuationToken?: symbol,
     delegatedDispatchContinuationToken?: symbol,
   ): Promise<void> {
-    if (this.shuttingDown) throw new Error('The application is closing; the saved turn will resume after restart')
-    const managed = this.sessions.get(sessionId)
+    if (this.runtimeState.shuttingDown) throw new Error('The application is closing; the saved turn will resume after restart')
+    const managed = this.runtimeState.sessions.get(sessionId)
     if (!managed) throw new Error(`Session ${sessionId} not found`)
     return this.trackSessionOperation(managed, () => this.performSendMessage(
       sessionId,
@@ -17525,19 +16789,19 @@ export class SessionManager implements ISessionManager {
     /** One-use private capability minted by the delegating parent immediately before child dispatch. */
     delegatedDispatchContinuationToken?: symbol,
   ): Promise<void> {
-    if (this.shuttingDown) throw new Error('The application is closing; the saved turn will resume after restart')
-    const managed = this.sessions.get(sessionId)
+    if (this.runtimeState.shuttingDown) throw new Error('The application is closing; the saved turn will resume after restart')
+    const managed = this.runtimeState.sessions.get(sessionId)
     if (!managed) {
       throw new Error(`Session ${sessionId} not found`)
     }
     this.assertStrongCancellationAdmissionOpen(managed)
     const explicitRetryIntentAtEntry = explicitRetryAllowanceToken
-      ? this.explicitRetryAllowanceTokens.get(explicitRetryAllowanceToken)
+      ? this.runtimeState.explicitRetryAllowanceTokens.get(explicitRetryAllowanceToken)
       : undefined
     const authenticatedRetryDispatch = !!explicitRetryIntentAtEntry
-      || !!queuedDispatchToken && this.permissionInboxRetryDispatches.has(queuedDispatchToken)
-    if ((this.providerRetryReconciliationTransactions.has(sessionId)
-      || this.providerLiveReconciliationTransactions.has(sessionId)) && !authenticatedRetryDispatch) {
+      || !!queuedDispatchToken && this.runtimeState.permissionInboxRetryDispatches.has(queuedDispatchToken)
+    if ((this.runtimeState.providerRetryReconciliationTransactions.has(sessionId)
+      || this.runtimeState.providerLiveReconciliationTransactions.has(sessionId)) && !authenticatedRetryDispatch) {
       throw new CodedError(
         'CAPABILITY_UNAVAILABLE',
         'Provider reconciliation is still being persisted; wait for that exact turn before sending more work.',
@@ -17549,13 +16813,13 @@ export class SessionManager implements ISessionManager {
     // original append cannot mistake an owned turn for an abandoned row.
     const queuedAgentDeliveryDispatch = existingMessageId && queuedDispatchToken
       && options?.internalOrigin?.kind === 'agent-message'
-      ? this.queuedAgentDeliveryDispatches.get(existingMessageId)
+      ? this.runtimeState.queuedAgentDeliveryDispatches.get(existingMessageId)
       : undefined
     if (queuedAgentDeliveryDispatch
       && queuedAgentDeliveryDispatch.sessionId === sessionId
       && queuedAgentDeliveryDispatch.dispatchToken === queuedDispatchToken
       && queuedAgentDeliveryDispatch.deliveryId === options?.internalOrigin?.deliveryId
-      && this.queuedMessageDispatches.get(sessionId) === queuedDispatchToken) {
+      && this.runtimeState.queuedMessageDispatches.get(sessionId) === queuedDispatchToken) {
       if (this.hasTerminalObjectiveState(managed)) {
         throw new Error(`Target session objective is terminal (${managed.activeObjective?.terminalState}); no agent message was queued. Reuse its completed result. A new delegation is valid only when the objective or version genuinely changed, and grants no new authority.`)
       }
@@ -17638,7 +16902,7 @@ export class SessionManager implements ISessionManager {
     }
     const durableMessageId = (): string => {
       const privateRetryBoundary = explicitRetryAllowanceToken
-        ? this.explicitRetryAllowanceTokens.get(explicitRetryAllowanceToken)?.cleanBoundaryMessageId
+        ? this.runtimeState.explicitRetryAllowanceTokens.get(explicitRetryAllowanceToken)?.cleanBoundaryMessageId
         : undefined
       const dispatchId = supersedableAutomaticRecovery
         ? options?.automaticRecovery?.dispatchId
@@ -17650,7 +16914,7 @@ export class SessionManager implements ISessionManager {
         ? dispatchId
         : generateMessageId()
     }
-    const cancellationEpochBeforeDispatch = this.turnCancellationEpochs.get(managed) ?? 0
+    const cancellationEpochBeforeDispatch = this.runtimeState.turnCancellationEpochs.get(managed) ?? 0
     const stopRequestedBeforeDispatch = managed.stopRequested === true
     const lastMessageRoleBeforeDispatch = managed.lastMessageRole
     const automaticStateBeforeDispatch = supersedableAutomaticRecovery ? {
@@ -17717,10 +16981,10 @@ export class SessionManager implements ISessionManager {
             : automaticStateBeforeDispatch.wasInterrupted
         }
       }
-      if (queuedDispatchToken && this.queuedMessageDispatches.get(sessionId) === queuedDispatchToken) {
-        this.queuedMessageDispatches.delete(sessionId)
+      if (queuedDispatchToken && this.runtimeState.queuedMessageDispatches.get(sessionId) === queuedDispatchToken) {
+        this.runtimeState.queuedMessageDispatches.delete(sessionId)
       }
-      this.automaticAdmissionReservations.delete(sessionId)
+      this.runtimeState.automaticAdmissionReservations.delete(sessionId)
       this.persistSession(managed)
       await this.flushSession(sessionId)
       if (!managed.isProcessing && managed.messageQueue.length > 0) {
@@ -17731,10 +16995,10 @@ export class SessionManager implements ISessionManager {
       }
       return true
     }
-    if (this.retentionDeleting.has(sessionId)) throw new Error('This completed chat is being removed by retention')
+    if (this.runtimeState.retentionDeleting.has(sessionId)) throw new Error('This completed chat is being removed by retention')
     if (managed.sessionStatus === 'done') reopenCompletedChat(persistenceRootFor(managed), sessionId)
     let authenticatedSourceActivation = false
-    const sourceActivationCancellationEpochAtEntry = this.turnCancellationEpochs.get(managed) ?? 0
+    const sourceActivationCancellationEpochAtEntry = this.runtimeState.turnCancellationEpochs.get(managed) ?? 0
     const expectedAnchor = options?.expectedSessionAnchor
     const assertExpectedAnchor = () => {
       if (!expectedAnchor) return
@@ -17849,9 +17113,9 @@ export class SessionManager implements ISessionManager {
     }
     sanitizeDisabledQueuedFallbackAtAdmission()
     assertAuthenticatedInternalContinuation()
-    if (this.providerStopTransitionsInFlight.has(managed.id)
+    if (this.runtimeState.providerStopTransitionsInFlight.has(managed.id)
       || (!managed.isProcessing && (this.providerDispatchAdmissionBarrier(managed)
-        || this.coldProviderReconciliationsInFlight.has(managed.id)))) {
+        || this.runtimeState.coldProviderReconciliationsInFlight.has(managed.id)))) {
       throw new CodedError(
         'CAPABILITY_UNAVAILABLE',
         'The previous provider dispatch may already have been accepted. Use Retry to reconcile that exact turn before sending more work.',
@@ -17861,11 +17125,11 @@ export class SessionManager implements ISessionManager {
     // evaluating its current admission state.
     assertFreshAgentDeliveryTargetActive()
 
-    if (this.shuttingDown) throw new Error('The application is closing; the saved turn will resume after restart')
-    if (retryCancellationEpoch !== undefined && (this.turnCancellationEpochs.get(managed) ?? 0) !== retryCancellationEpoch) {
+    if (this.runtimeState.shuttingDown) throw new Error('The application is closing; the saved turn will resume after restart')
+    if (retryCancellationEpoch !== undefined && (this.runtimeState.turnCancellationEpochs.get(managed) ?? 0) !== retryCancellationEpoch) {
       throw new Error('Retry was cancelled by Stop')
     }
-    const ownsQueuedDispatch = queuedDispatchToken !== undefined && this.queuedMessageDispatches.get(sessionId) === queuedDispatchToken
+    const ownsQueuedDispatch = queuedDispatchToken !== undefined && this.runtimeState.queuedMessageDispatches.get(sessionId) === queuedDispatchToken
     if (queuedDispatchToken !== undefined && !ownsQueuedDispatch) {
       if (queuedAgentDeliveryDispatch) queuedAgentDeliveryDispatch.claimed = false
       this.settleQueuedAgentDeliveryDispatch(existingMessageId, queuedDispatchToken)
@@ -17876,14 +17140,14 @@ export class SessionManager implements ISessionManager {
     const directHumanStopWon = () => directHumanContinuation && (
       stopRequestedBeforeDispatch
       || managed.stopRequested === true
-      || (this.turnCancellationEpochs.get(managed) ?? 0) !== cancellationEpochBeforeDispatch
+      || (this.runtimeState.turnCancellationEpochs.get(managed) ?? 0) !== cancellationEpochBeforeDispatch
     )
     const freshAgentDelivery = options?.internalOrigin?.kind === 'agent-message'
       && !!options.internalOrigin.deliveryId && !existingMessageId
     const freshAgentDeliveryStopWon = () => freshAgentDelivery && (
       stopRequestedBeforeDispatch
       || managed.stopRequested === true
-      || (this.turnCancellationEpochs.get(managed) ?? 0) !== cancellationEpochBeforeDispatch
+      || (this.runtimeState.turnCancellationEpochs.get(managed) ?? 0) !== cancellationEpochBeforeDispatch
     )
     const stoppedDirectHumanError = () => new Error(
       'The message was cancelled by Stop; resend it after the session is idle',
@@ -17894,9 +17158,9 @@ export class SessionManager implements ISessionManager {
     if (directHumanStopWon()) throw stoppedDirectHumanError()
     if (freshAgentDeliveryStopWon()) throw stoppedFreshAgentDeliveryError()
     if (directHumanContinuation) {
-      this.objectiveAuthorityEpochs.set(
+      this.runtimeState.objectiveAuthorityEpochs.set(
         managed,
-        (this.objectiveAuthorityEpochs.get(managed) ?? 0) + 1,
+        (this.runtimeState.objectiveAuthorityEpochs.get(managed) ?? 0) + 1,
       )
     }
     // Revoke outstanding provider permission capabilities synchronously before
@@ -17939,8 +17203,8 @@ export class SessionManager implements ISessionManager {
             && candidate.internalOrigin?.kind === 'source-activation')
           if (staleIndex >= 0) managed.messages.splice(staleIndex, 1)
         }
-        if (ownsQueuedDispatch) this.queuedMessageDispatches.delete(sessionId)
-        this.automaticAdmissionReservations.delete(sessionId)
+        if (ownsQueuedDispatch) this.runtimeState.queuedMessageDispatches.delete(sessionId)
+        this.runtimeState.automaticAdmissionReservations.delete(sessionId)
         this.persistSession(managed)
         await this.flushSession(sessionId)
         if (!managed.isProcessing && managed.messageQueue.length > 0) this.processNextQueuedMessage(sessionId)
@@ -17953,8 +17217,8 @@ export class SessionManager implements ISessionManager {
       : undefined
     const sourceActivationStillCurrent = (): boolean => {
       if (!sourceActivationOrigin) return true
-      if (this.shuttingDown || this.sessions.get(sessionId) !== managed || managed.stopRequested
-        || (this.turnCancellationEpochs.get(managed) ?? 0) !== sourceActivationCancellationEpochAtEntry
+      if (this.runtimeState.shuttingDown || this.runtimeState.sessions.get(sessionId) !== managed || managed.stopRequested
+        || (this.runtimeState.turnCancellationEpochs.get(managed) ?? 0) !== sourceActivationCancellationEpochAtEntry
         || !isSourceActivationOriginCurrent(managed.activeObjective, sourceActivationOrigin)
         || queuedDirectHumanContinuationIndex(managed) >= 0) return false
       if (!authenticatedSourceActivation) return true
@@ -17971,13 +17235,13 @@ export class SessionManager implements ISessionManager {
       // already-durable user row behind it again.
       this.persistSession(managed)
       await this.flushSession(managed.id)
-      if (this.shuttingDown || this.sessions.get(sessionId) !== managed || managed.stopRequested
-        || (queuedDispatchToken !== undefined && this.queuedMessageDispatches.get(sessionId) !== queuedDispatchToken)) return
+      if (this.runtimeState.shuttingDown || this.runtimeState.sessions.get(sessionId) !== managed || managed.stopRequested
+        || (queuedDispatchToken !== undefined && this.runtimeState.queuedMessageDispatches.get(sessionId) !== queuedDispatchToken)) return
     }
     // A Retry of a restored permission inbox uses its original delivery options.
     // Its exact private dequeue token authenticates that user
     // intent; no public option or message text can mint the exemption.
-    const authorizedRetryDispatch = ownsQueuedDispatch && this.permissionInboxRetryDispatches.has(queuedDispatchToken!)
+    const authorizedRetryDispatch = ownsQueuedDispatch && this.runtimeState.permissionInboxRetryDispatches.has(queuedDispatchToken!)
     const autonomousMessage = (this.isAutonomousMessage(options) || recoveredCleanRetryAtEntry)
       && !authorizedRetryDispatch
     // processNextQueuedMessage authenticates a typed upward result before it
@@ -18002,15 +17266,15 @@ export class SessionManager implements ISessionManager {
     const admissionBlocked = autonomousMessage
       && !this.claimAutomaticAdmission(managed, actionableUpwardSenderId)
     const ownsLiveDirectDispatch = ownsQueuedDispatch && !!existingMessageId && directHumanContinuation
-      && !!this.liveDirectHumanContinuationIds.get(managed)?.has(existingMessageId)
+      && !!this.runtimeState.liveDirectHumanContinuationIds.get(managed)?.has(existingMessageId)
     const queuedUserInputBlocked = hasPendingLocalUserInput(managed)
       || (!ownsLiveDirectDispatch && this.hasPendingUserInput(managed))
     if (ownsQueuedDispatch && (admissionBlocked || managed.stopRequested || queuedUserInputBlocked || this.hasPendingDecision(managed))) {
       if (!managed.messageQueue.some(item => existingMessageId ? item.messageId === existingMessageId : item.message === message)) {
         managed.messageQueue.unshift(queuedItem ?? { message, attachments, storedAttachments, options, messageId: existingMessageId })
       }
-      this.queuedMessageDispatches.delete(sessionId)
-      this.automaticAdmissionReservations.delete(sessionId)
+      this.runtimeState.queuedMessageDispatches.delete(sessionId)
+      this.runtimeState.automaticAdmissionReservations.delete(sessionId)
       if (!managed.isProcessing) this.sendEvent({ type: 'complete', sessionId, reason: 'interrupted', tokenUsage: managed.tokenUsage }, managed.workspace.id)
       return
     }
@@ -18031,7 +17295,7 @@ export class SessionManager implements ISessionManager {
     if (explicitRetry) {
       if ((!cleanExplicitRetry && (!existingMessageId
           || existingMessageId !== options?.automaticRecovery?.originalUserMessageId))
-        || !this.retryTurnsInFlight.has(sessionId)) {
+        || !this.runtimeState.retryTurnsInFlight.has(sessionId)) {
         throw new Error('Use the retry command to resume an existing user turn')
       }
       assertRetryTurnAnchor(managed, options!.automaticRecovery!.originalUserMessageId)
@@ -18062,7 +17326,7 @@ export class SessionManager implements ISessionManager {
         if (!intent || intent.sessionId !== sessionId || intent.userMessageId !== existingMessageId
           && intent.userMessageId !== options?.automaticRecovery?.originalUserMessageId
           || intent.objectiveId !== (managed.activeObjective?.objectiveId ?? managed.activeObjective?.userMessageId)
-          || intent.cancellationEpoch !== (this.turnCancellationEpochs.get(managed) ?? 0)) {
+          || intent.cancellationEpoch !== (this.runtimeState.turnCancellationEpochs.get(managed) ?? 0)) {
           throw new Error('The explicit Retry allowance no longer belongs to this objective')
         }
       }
@@ -18122,7 +17386,7 @@ export class SessionManager implements ISessionManager {
       && !!this.exactQueuedAgentDeliveryReceipt(managed, managed.messageQueue[0])
     const waitingForInbox = !existingMessageId && !ownsQueuedDispatch && !managed.isProcessing
       && (!!deliveryId || admissionBlocked || !cleanRetryWithRetainedMachineInbox
-        && (managed.messageQueue.length > 0 || this.queuedMessageDispatches.has(sessionId))
+        && (managed.messageQueue.length > 0 || this.runtimeState.queuedMessageDispatches.has(sessionId))
         || forceDirectHumanQueue)
     // The supersession/auth checks above can also yield. From this final guard
     // to either queue append or live-turn ownership there is no await, closing
@@ -18145,7 +17409,7 @@ export class SessionManager implements ISessionManager {
           managed.messageQueue.unshift({ message, attachments, storedAttachments, options, messageId: existingMessageId })
         }
         this.settleQueuedAgentDeliveryDispatch(existingMessageId, queuedDispatchToken)
-        this.queuedMessageDispatches.delete(sessionId)
+        this.runtimeState.queuedMessageDispatches.delete(sessionId)
         this.persistSession(managed)
         await this.flushSession(managed.id)
         onAck?.(existingMessageId)
@@ -18260,7 +17524,7 @@ export class SessionManager implements ISessionManager {
             || origin.attachmentsSha256) return false
           const receipt = this.exactQueuedAgentDeliveryReceipt(managed, candidate)
           return !!receipt
-            && !this.queuedAgentDeliveryDispatches.has(receipt.id)
+            && !this.runtimeState.queuedAgentDeliveryDispatches.has(receipt.id)
             && managed.messages.every(existing => existing === receipt || existing.agentDelivery?.id !== deliveryId)
         })
         const receipt = coalesceCandidate
@@ -18286,7 +17550,7 @@ export class SessionManager implements ISessionManager {
       }
 
       const deliverySender = deliveryId && options?.internalOrigin?.senderSessionId
-        ? this.sessions.get(options.internalOrigin.senderSessionId)
+        ? this.runtimeState.sessions.get(options.internalOrigin.senderSessionId)
         : undefined
       const relevantDelegatedDelivery = !!deliverySender
         && this.isCurrentDelegatedDescendant(managed, deliverySender)
@@ -18305,7 +17569,7 @@ export class SessionManager implements ISessionManager {
           return false
         }
         const sender = origin?.kind === 'agent-message' && origin.deliveryId && origin.senderSessionId
-          ? this.sessions.get(origin.senderSessionId) : undefined
+          ? this.runtimeState.sessions.get(origin.senderSessionId) : undefined
         return !!sender && this.isCurrentDelegatedDescendant(managed, sender)
       }).length
       const queuedDelegatedDeliveryCount = relevantDelegatedDelivery
@@ -18353,7 +17617,7 @@ export class SessionManager implements ISessionManager {
         managed.lastSentStoredAttachments = storedAttachments
         managed.lastSentOptions = options
         rehydrateObjectiveEvidence(managed)
-        const admissionBinding = agent ? this.runtimeToolAdmissionBindings.get(agent) : undefined
+        const admissionBinding = agent ? this.runtimeState.runtimeToolAdmissionBindings.get(agent) : undefined
         if (admissionBinding && admissionBinding.managed === managed
           && admissionBinding.generation === managed.processingGeneration) {
           let releaseRebind!: () => void
@@ -18365,14 +17629,14 @@ export class SessionManager implements ISessionManager {
           admissionBinding.pendingRebind = rebindChain
           finishToolAdmissionRebind = committed => {
             if (committed
-              && this.sessions.get(managed.id) === managed
+              && this.runtimeState.sessions.get(managed.id) === managed
               && managed.agent === agent
               && managed.isProcessing
               && admissionBinding.generation === managed.processingGeneration
               && managed.activeObjective === steeredObjective
               && managed.messages.filter(candidate => candidate.role === 'user').at(-1) === userMessage) {
               admissionBinding.activeObjective = steeredObjective
-              admissionBinding.authorityEpoch = this.objectiveAuthorityEpochs.get(managed) ?? 0
+              admissionBinding.authorityEpoch = this.runtimeState.objectiveAuthorityEpochs.get(managed) ?? 0
               admissionBinding.userMessage = userMessage
               admissionBinding.userMessageId = userMessage.id
               admissionBinding.messageCountAtHandoff = managed.messages.length
@@ -18436,7 +17700,7 @@ export class SessionManager implements ISessionManager {
 
       const tracksFreshAgentDeliveryAppend = options?.internalOrigin?.kind === 'agent-message'
         && !existingMessageId && !steered
-      if (tracksFreshAgentDeliveryAppend) this.agentDeliveryAppendsInFlight.add(userMessage.id)
+      if (tracksFreshAgentDeliveryAppend) this.runtimeState.agentDeliveryAppendsInFlight.add(userMessage.id)
       const finishFreshAgentDeliveryAppend = () => {
         if (tracksFreshAgentDeliveryAppend) this.finishAgentDeliveryAppend(userMessage.id)
       }
@@ -18547,7 +17811,7 @@ export class SessionManager implements ISessionManager {
         // A preceding concurrent continuation may already be durable but its
         // wake was fenced by this transaction. Do not strand that exact row.
         if (fenceDirectContinuation && !managed.isProcessing && !managed.stopRequested
-          && !this.directHumanSupersessionsInFlight.has(managed)) {
+          && !this.runtimeState.directHumanSupersessionsInFlight.has(managed)) {
           this.processNextQueuedMessage(sessionId)
         }
         finishFreshAgentDeliveryAppend()
@@ -18564,7 +17828,7 @@ export class SessionManager implements ISessionManager {
         const messageIndex = managed.messages.indexOf(userMessage)
         const untouchedQueuedReceipt = messageIndex >= 0
           && userMessage.isQueued === true && userMessage.agentDelivery?.status === 'queued'
-        const exactDequeuedDispatch = this.queuedAgentDeliveryDispatches.get(userMessage.id)
+        const exactDequeuedDispatch = this.runtimeState.queuedAgentDeliveryDispatches.get(userMessage.id)
         const exactUnclaimedDequeue = exactDequeuedDispatch?.sessionId === sessionId
           && exactDequeuedDispatch.deliveryId === userMessage.agentDelivery?.id
           && exactDequeuedDispatch.claimed === false
@@ -18578,11 +17842,11 @@ export class SessionManager implements ISessionManager {
             // processing belongs to that dispatch and must not be removed here.
             if (queuedIndex >= 0) managed.messageQueue.splice(queuedIndex, 1)
             if (exactUnclaimedDequeue) {
-              if (this.queuedMessageDispatches.get(sessionId) === exactDequeuedDispatch.dispatchToken) {
-                this.queuedMessageDispatches.delete(sessionId)
-                this.automaticAdmissionReservations.delete(sessionId)
-              } else if (!this.queuedMessageDispatches.has(sessionId) && !managed.isProcessing) {
-                this.automaticAdmissionReservations.delete(sessionId)
+              if (this.runtimeState.queuedMessageDispatches.get(sessionId) === exactDequeuedDispatch.dispatchToken) {
+                this.runtimeState.queuedMessageDispatches.delete(sessionId)
+                this.runtimeState.automaticAdmissionReservations.delete(sessionId)
+              } else if (!this.runtimeState.queuedMessageDispatches.has(sessionId) && !managed.isProcessing) {
+                this.runtimeState.automaticAdmissionReservations.delete(sessionId)
               }
               this.completeQueuedAgentDeliveryDispatch(userMessage.id, exactDequeuedDispatch.dispatchToken)
             }
@@ -18616,7 +17880,7 @@ export class SessionManager implements ISessionManager {
       if (fenceDirectContinuation && directHumanStopWon()) {
         await rejectStoppedDirectContinuation()
       }
-      if (fenceDirectContinuation && (this.shuttingDown || this.sessions.get(sessionId) !== managed
+      if (fenceDirectContinuation && (this.runtimeState.shuttingDown || this.runtimeState.sessions.get(sessionId) !== managed
         || (!steered
           && queuedDirectHumanContinuationIndexForId(managed, userMessage.id) < 0))) {
         return
@@ -18628,7 +17892,7 @@ export class SessionManager implements ISessionManager {
       if (steered && !options?.hidden && !options?.internalOrigin) {
         const correctionGeneration = managed.processingGeneration
         await this.captureUserCorrection(managed, userMessage)
-        if (this.shuttingDown || managed.stopRequested || managed.processingGeneration !== correctionGeneration) return
+        if (this.runtimeState.shuttingDown || managed.stopRequested || managed.processingGeneration !== correctionGeneration) return
       }
       // The old provider may finish synchronously when its permission is
       // denied above. Its stop callback sees the durability fence and cannot
@@ -18647,7 +17911,7 @@ export class SessionManager implements ISessionManager {
     const myGeneration = managed.processingGeneration + 1
     if (supersedableAutomaticRecovery) automaticDispatchGeneration = myGeneration
     const diagnosticFromMessageCount = managed.messages.length
-    const ownsActiveTurn = () => !this.shuttingDown && managed.processingGeneration === myGeneration
+    const ownsActiveTurn = () => !this.runtimeState.shuttingDown && managed.processingGeneration === myGeneration
       && managed.isProcessing && !managed.stopRequested
     // Recovery persistence yields; Stop or a newer human turn can take ownership
     // before it returns. Neither a late error nor completion may modify that turn.
@@ -18675,9 +17939,9 @@ export class SessionManager implements ISessionManager {
       // cancellation epoch remains authoritative even if the stop timeout has
       // already reset stopRequested while this I/O was stalled.
       const stoppedAutomaticRecovery = (supersedableAutomaticRecovery || cleanExplicitRetry)
-        && (this.shuttingDown
+        && (this.runtimeState.shuttingDown
           || managed.stopRequested
-          || (this.turnCancellationEpochs.get(managed) ?? 0) !== cancellationEpochBeforeDispatch)
+          || (this.runtimeState.turnCancellationEpochs.get(managed) ?? 0) !== cancellationEpochBeforeDispatch)
       if (stoppedAutomaticRecovery && removeSyntheticAutomaticMessage()) {
         this.persistSession(managed)
         await this.flushSession(sessionId)
@@ -18786,7 +18050,7 @@ export class SessionManager implements ISessionManager {
           if (explicitRetryAllowanceToken && previousObjective) {
             // No await separates capability consumption from the state update.
             // Failed durability rolls back both through existingTurnRollback.
-            this.explicitRetryAllowanceTokens.delete(explicitRetryAllowanceToken)
+            this.runtimeState.explicitRetryAllowanceTokens.delete(explicitRetryAllowanceToken)
             const recoveryPolicy = resolveAgentCostControlPolicy(loadWorkspaceConfig(managed.workspace.rootPath)?.costControl).recovery
             const semanticProgressFingerprint = explicitRetryProgressFingerprint(managed.messages, previousObjective.userMessageId)
             managed.pendingTurnRecovery = grantExplicitRetryAllowance(managed.pendingTurnRecovery, {
@@ -18818,7 +18082,7 @@ export class SessionManager implements ISessionManager {
       this.assertStrongCancellationAdmissionOpen(managed)
       managed.processingGeneration = myGeneration
       this.setProcessing(managed, true)
-      this.queuedMessageDispatches.delete(sessionId)
+      this.runtimeState.queuedMessageDispatches.delete(sessionId)
       assertAuthenticatedInternalContinuation()
     } else {
       // Create new message
@@ -18849,7 +18113,7 @@ export class SessionManager implements ISessionManager {
         const previousRecovery = managed.pendingTurnRecovery
         const previousStatus = managed.sessionStatus
         const previousFencedDispatch = previousRecovery?.recoveryDispatch
-        const previousFencedDispatchId = this.cleanRetrySetupPersistenceFences.get(managed.id)
+        const previousFencedDispatchId = this.runtimeState.cleanRetrySetupPersistenceFences.get(managed.id)
         const previousFencedQueueItems: Array<{
           item: ManagedSession['messageQueue'][number]
           index: number
@@ -18879,7 +18143,7 @@ export class SessionManager implements ISessionManager {
             : undefined,
         }
         const queuedStateRemains = managed.messageQueue.length > 0
-          || this.queuedMessageDispatches.has(managed.id)
+          || this.runtimeState.queuedMessageDispatches.has(managed.id)
           || managed.messages.some(candidate => candidate !== userMessage && candidate.isQueued)
         if (explicitRetryIntent!.allowRetainedMachineInbox === true
           && queuedStateRemains && !this.hasOnlyMachineInbox(managed)) {
@@ -18942,7 +18206,7 @@ export class SessionManager implements ISessionManager {
           userRetryFromMessageCount: diagnosticFromMessageCount,
           continuationRequired: false,
         }
-        this.explicitRetryAllowanceTokens.delete(explicitRetryAllowanceToken!)
+        this.runtimeState.explicitRetryAllowanceTokens.delete(explicitRetryAllowanceToken!)
         if (explicitRetryIntent!.grantNewAllowance !== false) {
           const recoveryPolicy = resolveAgentCostControlPolicy(
             loadWorkspaceConfig(managed.workspace.rootPath)?.costControl,
@@ -19068,7 +18332,7 @@ export class SessionManager implements ISessionManager {
       this.assertStrongCancellationAdmissionOpen(managed)
       managed.processingGeneration = myGeneration
       this.setProcessing(managed, true)
-      this.queuedMessageDispatches.delete(sessionId)
+      this.runtimeState.queuedMessageDispatches.delete(sessionId)
       assertAuthenticatedInternalContinuation()
       if (authenticatedSourceActivation && pendingSourceActivationForStart
         && pendingSourceActivationForStart.dispatchToken === sourceActivationDispatchToken) {
@@ -19120,7 +18384,7 @@ export class SessionManager implements ISessionManager {
             if (!alreadyQueued) {
               managed.messageQueue.unshift(replay)
             }
-            this.deferredAutomaticSessions.add(sessionId)
+            this.runtimeState.deferredAutomaticSessions.add(sessionId)
           }
           this.setProcessing(managed, false)
           this.persistSession(managed)
@@ -19236,7 +18500,7 @@ export class SessionManager implements ISessionManager {
         if (explicitRetryIntent?.grantNewAllowance !== false) {
           // A fresh, durable user Retry supersedes an in-memory fence left by a
           // prior failed fsync. Never clear that fence before this ACK.
-          this.cleanRetrySetupPersistenceFences.delete(managed.id)
+          this.runtimeState.cleanRetrySetupPersistenceFences.delete(managed.id)
         }
       }
 
@@ -19328,8 +18592,8 @@ export class SessionManager implements ISessionManager {
         || !queuedDispatchToken || !dispatch
         || dispatch.dispatchToken !== queuedDispatchToken
         || dispatch.deliveryId !== receipt.id
-        || (this.queuedMessageDispatches.get(sessionId) !== queuedDispatchToken
-          && this.queuedAgentDeliveryDispatches.get(userMessage.id) !== dispatch)) return false
+        || (this.runtimeState.queuedMessageDispatches.get(sessionId) !== queuedDispatchToken
+          && this.runtimeState.queuedAgentDeliveryDispatches.get(userMessage.id) !== dispatch)) return false
       receipt.status = 'queued'
       userMessage.isQueued = true
       if (deliveryAttemptsBeforePreparation !== undefined) {
@@ -19370,17 +18634,17 @@ export class SessionManager implements ISessionManager {
         || item.messageId === queuedItem.messageId)) {
         enqueueRecoveredMessageInTranscriptOrder(managed, queuedItem)
       }
-      if (this.queuedMessageDispatches.get(sessionId) === queuedDispatchToken) {
-        this.queuedMessageDispatches.delete(sessionId)
+      if (this.runtimeState.queuedMessageDispatches.get(sessionId) === queuedDispatchToken) {
+        this.runtimeState.queuedMessageDispatches.delete(sessionId)
       }
       this.completeQueuedAgentDeliveryDispatch(userMessage.id, queuedDispatchToken)
-      this.automaticAdmissionReservations.delete(sessionId)
+      this.runtimeState.automaticAdmissionReservations.delete(sessionId)
       if (managed.processingGeneration === myGeneration && managed.isProcessing) {
         this.setProcessing(managed, false)
       }
       receipt.setupPersistenceFencedAt = undefined
-      if (this.agentDeliverySetupPersistenceFences.get(sessionId) === receipt.id) {
-        this.agentDeliverySetupPersistenceFences.delete(sessionId)
+      if (this.runtimeState.agentDeliverySetupPersistenceFences.get(sessionId) === receipt.id) {
+        this.runtimeState.agentDeliverySetupPersistenceFences.delete(sessionId)
       }
       const rollbackEnqueued = this.persistSession(managed)
       let rollbackDurable = false
@@ -19406,7 +18670,7 @@ export class SessionManager implements ISessionManager {
       }
       if (!rollbackDurable) {
         receipt.setupPersistenceFencedAt = Date.now()
-        this.agentDeliverySetupPersistenceFences.set(sessionId, receipt.id)
+        this.runtimeState.agentDeliverySetupPersistenceFences.set(sessionId, receipt.id)
         // Best effort: when storage recovered after an uncertain first ACK,
         // persist a Retry-only fence. Runtime admission never depends on this
         // second write succeeding.
@@ -19714,10 +18978,10 @@ export class SessionManager implements ISessionManager {
           item.messageId !== allocatedDispatch.id
           && item.options?.automaticRecovery?.dispatchId !== allocatedDispatch.id
         ))
-        if (this.queuedMessageDispatches.get(sessionId) === queuedDispatchToken) {
-          this.queuedMessageDispatches.delete(sessionId)
+        if (this.runtimeState.queuedMessageDispatches.get(sessionId) === queuedDispatchToken) {
+          this.runtimeState.queuedMessageDispatches.delete(sessionId)
         }
-        this.automaticAdmissionReservations.delete(sessionId)
+        this.runtimeState.automaticAdmissionReservations.delete(sessionId)
         this.setProcessing(managed, false)
         return allocatedDispatch.id
       }
@@ -19766,10 +19030,10 @@ export class SessionManager implements ISessionManager {
             managed.messageQueue.unshift(queuedItem)
           }
           userMessage.isQueued = true
-          if (this.queuedMessageDispatches.get(sessionId) === queuedDispatchToken) {
-            this.queuedMessageDispatches.delete(sessionId)
+          if (this.runtimeState.queuedMessageDispatches.get(sessionId) === queuedDispatchToken) {
+            this.runtimeState.queuedMessageDispatches.delete(sessionId)
           }
-          this.automaticAdmissionReservations.delete(sessionId)
+          this.runtimeState.automaticAdmissionReservations.delete(sessionId)
           this.setProcessing(managed, false)
           if (this.persistSession(managed)) {
             try { await this.flushSession(managed.id) }
@@ -19805,7 +19069,7 @@ export class SessionManager implements ISessionManager {
             throw new Error('The exhausted agent-delivery receipt could not be queued for durable storage')
           }
           await this.flushSession(managed.id)
-          const exactDispatch = this.queuedAgentDeliveryDispatches.get(userMessage.id)
+          const exactDispatch = this.runtimeState.queuedAgentDeliveryDispatches.get(userMessage.id)
           if (exactDispatch && exactDispatch.dispatchToken === queuedDispatchToken) {
             exactDispatch.claimDurable = true
           }
@@ -19853,7 +19117,7 @@ export class SessionManager implements ISessionManager {
         throw error
       }
       if (userMessage.agentDelivery) {
-        const exactDispatch = this.queuedAgentDeliveryDispatches.get(userMessage.id)
+        const exactDispatch = this.runtimeState.queuedAgentDeliveryDispatches.get(userMessage.id)
         if (exactDispatch && exactDispatch.dispatchToken === queuedDispatchToken) {
           exactDispatch.claimDurable = true
         }
@@ -19910,7 +19174,7 @@ export class SessionManager implements ISessionManager {
         // human instruction/decision accepted during the flush keeps priority.
         existingTurnRollback?.()
         await this.flushSession(managed.id)
-        this.deferredAutomaticSessions.add(managed.id)
+        this.runtimeState.deferredAutomaticSessions.add(managed.id)
         this.scheduleDeferredAutomaticSessions()
         throw new Error('The inbox changed before Retry was accepted; resolve the newer message or decision first')
       }
@@ -20009,7 +19273,7 @@ export class SessionManager implements ISessionManager {
     const sendSpan = perf.span('session.sendMessage', { sessionId })
     const finishDeferredPreparation = async () => {
       if (!ownsActiveTurn()) return
-      this.deferredAutomaticSessions.add(sessionId)
+      this.runtimeState.deferredAutomaticSessions.add(sessionId)
       restoreStartedAutomaticDispatch()
       userMessage.isQueued = true
       if (userMessage.agentDelivery && deliveryAttemptsBeforePreparation !== undefined) {
@@ -20824,10 +20088,10 @@ export class SessionManager implements ISessionManager {
           })
         }
         const persistenceFenced = Number.isFinite(userMessage.agentDelivery?.setupPersistenceFencedAt)
-          || this.agentDeliverySetupPersistenceFences.get(sessionId) === userMessage.agentDelivery?.id
+          || this.runtimeState.agentDeliverySetupPersistenceFences.get(sessionId) === userMessage.agentDelivery?.id
         const blockedAt = userMessage.agentDelivery?.setupRetryBlockedAt
         if (persistenceFenced) {
-          this.deferredAutomaticSessions.delete(sessionId)
+          this.runtimeState.deferredAutomaticSessions.delete(sessionId)
           this.clearDeferredAutomaticRetry(sessionId)
           this.sendEvent({
             type: 'typed_error', sessionId,
@@ -20847,7 +20111,7 @@ export class SessionManager implements ISessionManager {
             },
           }, managed.workspace.id)
         } else {
-          this.deferredAutomaticSessions.add(sessionId)
+          this.runtimeState.deferredAutomaticSessions.add(sessionId)
           this.scheduleDeferredAutomaticRetry(
             sessionId,
             Math.max(0, (userMessage.agentDelivery?.setupRetryNotBefore ?? Date.now()) - Date.now()),
@@ -21076,7 +20340,7 @@ export class SessionManager implements ISessionManager {
           ? managed.autoRetryPending : undefined
         managed.sourceActivationTurn = {
           generation: myGeneration,
-          cancellationEpoch: this.turnCancellationEpochs.get(managed) ?? 0,
+          cancellationEpoch: this.runtimeState.turnCancellationEpochs.get(managed) ?? 0,
           rawMessage: pendingForTurn?.rawMessage
             ?? (sourceActivationOrigin ? message.replace(SOURCE_ACTIVATION_PROTOCOL_SUFFIX, '') : message),
           ...sourceTurnBinding,
@@ -21096,13 +20360,13 @@ export class SessionManager implements ISessionManager {
       assertActivePreparation()
       this.consumeAuthenticatedInternalContinuation(authenticatedInternalContinuationToken)
       this.consumeDelegatedDispatchContinuation(delegatedDispatchContinuationToken)
-      this.runtimeProcessingGenerations.set(agent, myGeneration)
-      this.runtimeToolAdmissionBindings.set(agent, {
+      this.runtimeState.runtimeProcessingGenerations.set(agent, myGeneration)
+      this.runtimeState.runtimeToolAdmissionBindings.set(agent, {
         managed,
         sessionId: managed.id,
         generation: myGeneration,
         activeObjective: managed.activeObjective,
-        authorityEpoch: this.objectiveAuthorityEpochs.get(managed) ?? 0,
+        authorityEpoch: this.runtimeState.objectiveAuthorityEpochs.get(managed) ?? 0,
         userMessage,
         userMessageId: userMessage.id,
         messageCountAtHandoff: managed.messages.length,
@@ -21117,7 +20381,7 @@ export class SessionManager implements ISessionManager {
       // first-event fallback until they implement that contract.
       const hasExplicitProviderHandoff = !localCompactCommand && 'onProviderHandoff' in agent
       const hasExplicitProviderWriteAhead = !localCompactCommand && 'onBeforeProviderDispatch' in agent
-      providerHandoffCancellationEpoch = this.turnCancellationEpochs.get(managed) ?? 0
+      providerHandoffCancellationEpoch = this.runtimeState.turnCancellationEpochs.get(managed) ?? 0
       const exactProviderHandoffAgent = agent
       const providerDispatchObjectiveId = managed.activeObjective?.objectiveId
         ?? managed.activeObjective?.userMessageId
@@ -21198,11 +20462,11 @@ export class SessionManager implements ISessionManager {
       }
       providerWriteAheadCallback = async () => {
         if (!providerHandoffArmed
-          || this.shuttingDown
-          || this.sessions.get(sessionId) !== managed
+          || this.runtimeState.shuttingDown
+          || this.runtimeState.sessions.get(sessionId) !== managed
           || managed.agent !== exactProviderHandoffAgent
           || managed.processingGeneration !== myGeneration
-          || (this.turnCancellationEpochs.get(managed) ?? 0) !== providerHandoffCancellationEpoch) {
+          || (this.runtimeState.turnCancellationEpochs.get(managed) ?? 0) !== providerHandoffCancellationEpoch) {
           throw new Error('Provider dispatch was cancelled before its durable write-ahead')
         }
         const marker: NonNullable<Message['providerDispatch']> = {
@@ -21234,11 +20498,11 @@ export class SessionManager implements ISessionManager {
           throw new Error('The provider dispatch write-ahead changed before provider dispatch')
         }
         if (!providerHandoffArmed
-          || this.shuttingDown
-          || this.sessions.get(sessionId) !== managed
+          || this.runtimeState.shuttingDown
+          || this.runtimeState.sessions.get(sessionId) !== managed
           || managed.agent !== exactProviderHandoffAgent
           || managed.processingGeneration !== myGeneration
-          || (this.turnCancellationEpochs.get(managed) ?? 0) !== providerHandoffCancellationEpoch) {
+          || (this.runtimeState.turnCancellationEpochs.get(managed) ?? 0) !== providerHandoffCancellationEpoch) {
           await rollbackProviderWriteAhead()
           throw new Error('Provider dispatch was cancelled before its provider write')
         }
@@ -21247,13 +20511,13 @@ export class SessionManager implements ISessionManager {
       const markProviderDispatchUncertainOnce = () => {
         if (
           !providerHandoffArmed
-          || this.shuttingDown
-          || this.sessions.get(sessionId) !== managed
+          || this.runtimeState.shuttingDown
+          || this.runtimeState.sessions.get(sessionId) !== managed
           || managed.agent !== exactProviderHandoffAgent
           || managed.processingGeneration !== myGeneration
-          || (this.turnCancellationEpochs.get(managed) ?? 0) !== providerHandoffCancellationEpoch
+          || (this.runtimeState.turnCancellationEpochs.get(managed) ?? 0) !== providerHandoffCancellationEpoch
         ) return
-        const exactDispatch = this.queuedAgentDeliveryDispatches.get(userMessage.id)
+        const exactDispatch = this.runtimeState.queuedAgentDeliveryDispatches.get(userMessage.id)
         if (exactDispatch && exactDispatch.dispatchToken === queuedDispatchToken
           && exactDispatch.providerStarted !== true) {
           exactDispatch.providerDispatchUncertain = true
@@ -21261,11 +20525,11 @@ export class SessionManager implements ISessionManager {
       }
       providerDispatchRejectedCallback = () => {
         if (!providerHandoffArmed || chatStarted
-          || this.shuttingDown
-          || this.sessions.get(sessionId) !== managed
+          || this.runtimeState.shuttingDown
+          || this.runtimeState.sessions.get(sessionId) !== managed
           || managed.agent !== exactProviderHandoffAgent
           || managed.processingGeneration !== myGeneration
-          || (this.turnCancellationEpochs.get(managed) ?? 0) !== providerHandoffCancellationEpoch
+          || (this.runtimeState.turnCancellationEpochs.get(managed) ?? 0) !== providerHandoffCancellationEpoch
           || !exactProviderWriteAheadMatches()) return
         providerDispatchRejected = true
       }
@@ -21290,11 +20554,11 @@ export class SessionManager implements ISessionManager {
         if (chatStarted || providerHandoffDurabilityPromise) return
         if (
           !providerHandoffArmed
-          || this.shuttingDown
-          || this.sessions.get(sessionId) !== managed
+          || this.runtimeState.shuttingDown
+          || this.runtimeState.sessions.get(sessionId) !== managed
           || managed.agent !== exactProviderHandoffAgent
           || managed.processingGeneration !== myGeneration
-          || (this.turnCancellationEpochs.get(managed) ?? 0) !== providerHandoffCancellationEpoch
+          || (this.runtimeState.turnCancellationEpochs.get(managed) ?? 0) !== providerHandoffCancellationEpoch
         ) return
         // A write-ahead capable backend may acknowledge only the exact marker
         // captured for this message/objective/generation. A stale callback from
@@ -21316,8 +20580,8 @@ export class SessionManager implements ISessionManager {
           delete admittedSetupDispatch.setupRetryNotBefore
           delete admittedSetupDispatch.setupRetryBlockedAt
           delete admittedSetupDispatch.setupPersistenceFencedAt
-          if (this.cleanRetrySetupPersistenceFences.get(sessionId) === admittedSetupDispatch.id) {
-            this.cleanRetrySetupPersistenceFences.delete(sessionId)
+          if (this.runtimeState.cleanRetrySetupPersistenceFences.get(sessionId) === admittedSetupDispatch.id) {
+            this.runtimeState.cleanRetrySetupPersistenceFences.delete(sessionId)
           }
         }
         if (sourceActivationOrigin
@@ -21331,10 +20595,10 @@ export class SessionManager implements ISessionManager {
           delete userMessage.agentDelivery.setupRetryNotBefore
           delete userMessage.agentDelivery.setupRetryBlockedAt
           delete userMessage.agentDelivery.setupPersistenceFencedAt
-          if (this.agentDeliverySetupPersistenceFences.get(sessionId) === userMessage.agentDelivery.id) {
-            this.agentDeliverySetupPersistenceFences.delete(sessionId)
+          if (this.runtimeState.agentDeliverySetupPersistenceFences.get(sessionId) === userMessage.agentDelivery.id) {
+            this.runtimeState.agentDeliverySetupPersistenceFences.delete(sessionId)
           }
-          const exactDispatch = this.queuedAgentDeliveryDispatches.get(userMessage.id)
+          const exactDispatch = this.runtimeState.queuedAgentDeliveryDispatches.get(userMessage.id)
           if (exactDispatch && exactDispatch.dispatchToken === queuedDispatchToken) {
             exactDispatch.providerStarted = true
           }
@@ -21357,11 +20621,11 @@ export class SessionManager implements ISessionManager {
             throw new Error('The provider handoff acknowledgement changed before becoming durable')
           }
           if (!providerHandoffArmed
-            || this.shuttingDown
-            || this.sessions.get(sessionId) !== managed
+            || this.runtimeState.shuttingDown
+            || this.runtimeState.sessions.get(sessionId) !== managed
             || managed.agent !== exactProviderHandoffAgent
             || managed.processingGeneration !== myGeneration
-            || (this.turnCancellationEpochs.get(managed) ?? 0) !== providerHandoffCancellationEpoch) {
+            || (this.runtimeState.turnCancellationEpochs.get(managed) ?? 0) !== providerHandoffCancellationEpoch) {
             throw new Error('Provider handoff became durable after the turn was cancelled')
           }
           chatStarted = true
@@ -21499,7 +20763,7 @@ export class SessionManager implements ISessionManager {
           // a structured answer whose provider already completed.
           if (hasDurableProviderActivity) await clearAcceptedProviderWriteAhead()
         }
-        if (this.shuttingDown) continue
+        if (this.runtimeState.shuttingDown) continue
 
         // Fallback: Capture SDK session ID if the onSdkSessionIdUpdate callback didn't fire.
         // Primary capture happens in getOrCreateAgent() via onSdkSessionIdUpdate callback,
@@ -21588,7 +20852,7 @@ export class SessionManager implements ISessionManager {
             managed.pendingUserSteers?.clear()
             this.sendEvent({
               type: 'complete', sessionId, reason: 'complete', tokenUsage: managed.tokenUsage,
-              backgroundTasksAlive: this.keepBackgroundTasksAlive,
+              backgroundTasksAlive: this.runtimeState.keepBackgroundTasksAlive,
             }, managed.workspace.id)
             this.persistSession(managed)
             if (managed.messageQueue.length > 0) this.processNextQueuedMessage(sessionId)
@@ -21928,7 +21192,7 @@ export class SessionManager implements ISessionManager {
         // This ensures we don't lose in-flight messages.
       }
 
-      if (this.shuttingDown) { sendSpan.end(); return }
+      if (this.runtimeState.shuttingDown) { sendSpan.end(); return }
       if (providerHandoffDurabilityPromise) await providerHandoffDurabilityPromise
       if (!chatStarted && ownsActiveTurn()) {
         throw new Error('Agent stream ended before the first provider event')
@@ -21985,7 +21249,7 @@ export class SessionManager implements ISessionManager {
         await this.onProcessingStopped(sessionId, 'error', myGeneration)
       }
     } catch (error) {
-      if (this.shuttingDown) { sendSpan.end(); return }
+      if (this.runtimeState.shuttingDown) { sendSpan.end(); return }
       // A provider can ACK synchronously and then throw before the ACK fsync
       // promise marks `chatStarted`. Classify that error only after the ACK
       // transaction settles; otherwise the pre-handoff path can race the ACK
@@ -22040,7 +21304,7 @@ export class SessionManager implements ISessionManager {
           try {
             reconciled = await reconciliation
           } catch (reconciliationError) {
-            if ((this.turnCancellationEpochs.get(managed) ?? 0) !== providerHandoffCancellationEpoch
+            if ((this.runtimeState.turnCancellationEpochs.get(managed) ?? 0) !== providerHandoffCancellationEpoch
               || managed.stopRequested) {
               sendSpan.mark('provider.acceptance_unknown.cancelled')
               sendSpan.end()
@@ -22143,10 +21407,10 @@ export class SessionManager implements ISessionManager {
           })
         }
         const persistenceFenced = Number.isFinite(userMessage.agentDelivery?.setupPersistenceFencedAt)
-          || this.agentDeliverySetupPersistenceFences.get(sessionId) === userMessage.agentDelivery?.id
+          || this.runtimeState.agentDeliverySetupPersistenceFences.get(sessionId) === userMessage.agentDelivery?.id
         const blockedAt = userMessage.agentDelivery?.setupRetryBlockedAt
         if (persistenceFenced) {
-          this.deferredAutomaticSessions.delete(sessionId)
+          this.runtimeState.deferredAutomaticSessions.delete(sessionId)
           this.clearDeferredAutomaticRetry(sessionId)
           this.sendEvent({
             type: 'typed_error', sessionId,
@@ -22166,7 +21430,7 @@ export class SessionManager implements ISessionManager {
             },
           }, managed.workspace.id)
         } else {
-          this.deferredAutomaticSessions.add(sessionId)
+          this.runtimeState.deferredAutomaticSessions.add(sessionId)
           this.scheduleDeferredAutomaticRetry(
             sessionId,
             Math.max(0, (userMessage.agentDelivery?.setupRetryNotBefore ?? Date.now()) - Date.now()),
@@ -22296,7 +21560,7 @@ export class SessionManager implements ISessionManager {
   }
 
   async cancelProcessing(sessionId: string, silent = false): Promise<void> {
-    const managed = this.sessions.get(sessionId)
+    const managed = this.runtimeState.sessions.get(sessionId)
     // Strong retirement owns a detached session and calls the silent path after
     // ordinary admission has already been closed. Its enclosing deletion is
     // separately tracked by sessionDeletionsInFlight.
@@ -22308,24 +21572,24 @@ export class SessionManager implements ISessionManager {
   }
 
   private async performCancelProcessing(sessionId: string, silent = false): Promise<void> {
-    const managed = this.sessions.get(sessionId)
+    const managed = this.runtimeState.sessions.get(sessionId)
     let persistExplicitStopSnapshot: (() => Promise<void>) | undefined
     if (managed) {
       // Unlike stopRequested (reset after cleanup), this fence survives a Stop
       // completing while an older retry is still awaiting hydration/durability.
-      this.turnCancellationEpochs.set(managed, (this.turnCancellationEpochs.get(managed) ?? 0) + 1)
+      this.runtimeState.turnCancellationEpochs.set(managed, (this.runtimeState.turnCancellationEpochs.get(managed) ?? 0) + 1)
       this.invalidateSourceActivationRestart(managed)
       // Fence a scheduled inbox dispatch before the first asynchronous save.
       managed.stopRequested = true
       this.restorePreAckAgentDeliveryDequeues(managed, true)
       await this.closePendingPermissionRequestsForStop(managed, managed.processingGeneration)
       await this.ensureMessagesLoaded(managed)
-      const providerReconciliation = this.providerRetryReconciliationTransactions.get(sessionId)
+      const providerReconciliation = this.runtimeState.providerRetryReconciliationTransactions.get(sessionId)
       if (providerReconciliation) {
         try { await providerReconciliation }
         catch { /* cancellation restores the exact marker before Stop snapshots it */ }
       }
-      const liveProviderReconciliation = this.providerLiveReconciliationTransactions.get(sessionId)
+      const liveProviderReconciliation = this.runtimeState.providerLiveReconciliationTransactions.get(sessionId)
       if (liveProviderReconciliation) {
         try { await liveProviderReconciliation }
         catch { /* cancellation restores the exact marker before Stop snapshots it */ }
@@ -22364,7 +21628,7 @@ export class SessionManager implements ISessionManager {
           } : {}),
         }
         accepted.providerDispatch = stoppedMarker
-        this.providerStopTransitionsInFlight.add(managed.id)
+        this.runtimeState.providerStopTransitionsInFlight.add(managed.id)
         try {
           if (!this.persistSession(managed)) {
             throw new Error('The explicit Stop snapshot could not be queued for durable storage')
@@ -22397,7 +21661,7 @@ export class SessionManager implements ISessionManager {
             error: error instanceof Error ? error.message : String(error),
           })
         } finally {
-          this.providerStopTransitionsInFlight.delete(managed.id)
+          this.runtimeState.providerStopTransitionsInFlight.delete(managed.id)
         }
       }
       const acceptanceUnknown = !!this.providerDispatchAcceptanceUnknown(managed)
@@ -22410,7 +21674,7 @@ export class SessionManager implements ISessionManager {
         managed.processingGeneration++
         const { retained } = this.partitionQueueForStop(managed)
         managed.messageQueue = retained
-        this.queuedMessageDispatches.delete(sessionId)
+        this.runtimeState.queuedMessageDispatches.delete(sessionId)
         if (retained.length && managed.activeObjective?.terminalState === 'active'
           && !managed.pendingTurnRecovery) {
           const objectiveAnchor = managed.activeObjective.lastUserMessageId
@@ -22570,12 +21834,12 @@ export class SessionManager implements ISessionManager {
     ))
     const retryObjective = managed.activeObjective
     const retryObjectiveBinding = sourceActivationObjectiveBinding(retryObjective)
-    const retryAuthorityEpoch = this.objectiveAuthorityEpochs.get(managed) ?? 0
+    const retryAuthorityEpoch = this.runtimeState.objectiveAuthorityEpochs.get(managed) ?? 0
     if (!retryUserMessage || !retryObjectiveBinding) return false
-    const retryStillCurrent = () => this.sessions.get(sessionId) === managed
-      && !this.shuttingDown && managed.processingGeneration === generationKey
+    const retryStillCurrent = () => this.runtimeState.sessions.get(sessionId) === managed
+      && !this.runtimeState.shuttingDown && managed.processingGeneration === generationKey
       && managed.activeObjective === retryObjective
-      && (this.objectiveAuthorityEpochs.get(managed) ?? 0) === retryAuthorityEpoch
+      && (this.runtimeState.objectiveAuthorityEpochs.get(managed) ?? 0) === retryAuthorityEpoch
       && !this.hasAcceptedHumanContinuationQueued(managed)
     if (managed.terminalErrorGeneration === generationKey) {
       managed.terminalErrorGeneration = undefined
@@ -22629,7 +21893,7 @@ export class SessionManager implements ISessionManager {
         // and let the new runtime resume from current state instead.
         if (retryUserMessage.providerDispatch?.state === 'accepted'
           && exactProviderDispatchAcceptanceUnknown(retryUserMessage)) {
-          const reconciliationEpoch = this.turnCancellationEpochs.get(managed) ?? 0
+          const reconciliationEpoch = this.runtimeState.turnCancellationEpochs.get(managed) ?? 0
           const reconciled = await this.runLiveProviderDispatchReconciliation(
             managed,
             retryUserMessage,
@@ -22698,19 +21962,10 @@ export class SessionManager implements ISessionManager {
     return true
   }
 
-  /**
-   * Listeners for the in-process session-completion seam (see SessionCompletionEvent).
-   * Used by the Tasks Conductor; empty until something subscribes, so zero overhead otherwise.
-   */
-  private sessionCompletionListeners = new Set<(evt: SessionCompletionEvent) => void>()
-  private sessionWaitListeners = new Set<(sessionId: string) => void>()
-  private activeDelegations = new ActiveDelegationDeduplicator<SpawnSessionResult>()
-  private terminalReviewDispatchReservations = new Set<string>()
-
   private async recordDelegatedDispatchFailure(child: ManagedSession, error: unknown): Promise<void> {
-    if (this.sessions.get(child.id) !== child || !child.delegation) return
+    if (this.runtimeState.sessions.get(child.id) !== child || !child.delegation) return
     await this.ensureMessagesLoaded(child)
-    if (this.sessions.get(child.id) !== child || !child.delegation) return
+    if (this.runtimeState.sessions.get(child.id) !== child || !child.delegation) return
     const detail = redactSecretLikeMaterial(error instanceof Error ? error.message : String(error)).slice(0, 4_000)
     if (!child.messages.some(message => message.role === 'error'
       && message.errorCode === 'delegated_dispatch_failed')) {
@@ -22730,8 +21985,8 @@ export class SessionManager implements ISessionManager {
     }
     child.pendingTurnRecovery = undefined
     child.delegation.finishedAt ??= this.monotonic()
-    this.automaticAdmissionReservations.delete(child.id)
-    this.deferredAutomaticSessions.delete(child.id)
+    this.runtimeState.automaticAdmissionReservations.delete(child.id)
+    this.runtimeState.deferredAutomaticSessions.delete(child.id)
     this.persistSession(child)
     await this.flushSession(child.id)
     try {
@@ -22791,9 +22046,9 @@ export class SessionManager implements ISessionManager {
    * Returns an unsubscribe function. Not a renderer event; not agent-facing.
    */
   onSessionComplete(listener: (evt: SessionCompletionEvent) => void): () => void {
-    this.sessionCompletionListeners.add(listener)
+    this.runtimeState.sessionCompletionListeners.add(listener)
     return () => {
-      this.sessionCompletionListeners.delete(listener)
+      this.runtimeState.sessionCompletionListeners.delete(listener)
     }
   }
 
@@ -22816,8 +22071,8 @@ export class SessionManager implements ISessionManager {
     const objective = managed.activeObjective
     let dispatchChildId: string | undefined
     const assertDispatch = () => {
-      if (this.shuttingDown || this.sessions.get(managed.id) !== managed || managed.stopRequested
-        || this.retentionDeleting.has(managed.id) || managed.processingGeneration !== generation
+      if (this.runtimeState.shuttingDown || this.runtimeState.sessions.get(managed.id) !== managed || managed.stopRequested
+        || this.runtimeState.retentionDeleting.has(managed.id) || managed.processingGeneration !== generation
         || managed.activeObjective !== objective) {
         throw new Error('The originating turn is no longer current; no delegated work was dispatched.')
       }
@@ -22850,7 +22105,7 @@ export class SessionManager implements ISessionManager {
         }
         const objectiveId = objective.objectiveId ?? objective.userMessageId
         const currentReviewBinding = objectiveReviewBinding(objective)
-        const duplicate = [...this.sessions.values()].some(candidate => {
+        const duplicate = [...this.runtimeState.sessions.values()].some(candidate => {
           if (candidate.id === dispatchChildId || candidate.parentSessionId !== managed.id
             || candidate.delegation?.role !== 'reviewer') return false
           const persistedBinding = candidate.delegation.reviewBinding
@@ -22870,7 +22125,7 @@ export class SessionManager implements ISessionManager {
             || !!candidate.pendingAgentDeliveryIds?.length
           const activeAttempt = candidate.isProcessing || candidate.messageQueue.length > 0
             || !!candidate.pendingTurnRecovery
-            || this.automaticAdmissionReservations.has(candidate.id)
+            || this.runtimeState.automaticAdmissionReservations.has(candidate.id)
           if (createdAfterRegistration && !persistedAttempt && !activeAttempt
             && !candidate.delegation.finishedAt) {
             // A crash can persist createSession before the first child prompt.
@@ -22893,10 +22148,10 @@ export class SessionManager implements ISessionManager {
       ? `${managed.id}:${terminalReviewBinding.objectiveId}:${terminalReviewBinding.acceptanceSha256}`
       : undefined
     if (terminalReviewReservation) {
-      if (this.terminalReviewDispatchReservations.has(terminalReviewReservation)) {
+      if (this.runtimeState.terminalReviewDispatchReservations.has(terminalReviewReservation)) {
         throw new Error('Terminal reconciliation already has an in-flight reviewer dispatch for this exact host binding.')
       }
-      this.terminalReviewDispatchReservations.add(terminalReviewReservation)
+      this.runtimeState.terminalReviewDispatchReservations.add(terminalReviewReservation)
     }
     try {
     const sourceSlugs = request.enabledSourceSlugs ?? managed.enabledSourceSlugs
@@ -22960,7 +22215,7 @@ export class SessionManager implements ISessionManager {
     let root = managed
     const visited = new Set<string>([root.id])
     while (root.parentSessionId && !visited.has(root.parentSessionId)) {
-      const parent = this.sessions.get(root.parentSessionId)
+      const parent = this.runtimeState.sessions.get(root.parentSessionId)
       if (!parent || parent.workspace.id !== managed.workspace.id) break
       visited.add(parent.id); root = parent
     }
@@ -22972,9 +22227,9 @@ export class SessionManager implements ISessionManager {
       targetConfiguration: JSON.parse(JSON.stringify({ ...configuration, role: request.role,
         attachmentsSha256: createHash('sha256').update(JSON.stringify({ fileAttachments, attachmentContentHashes })).digest('hex') })),
     })
-    const result = await this.activeDelegations.run(key, async () => {
+    const result = await this.runtimeState.activeDelegations.run(key, async () => {
       assertDispatch()
-      const budget = this.delegationBudget.reserve(managed, this.sessions.values(), request.role)
+      const budget = this.runtimeState.delegationBudget.reserve(managed, this.runtimeState.sessions.values(), request.role)
       let admission: symbol | undefined
       let child: ManagedSession | undefined
       try {
@@ -22983,16 +22238,16 @@ export class SessionManager implements ISessionManager {
           ? { ...budget.delegation, reviewBinding: { ...terminalReviewBinding } }
           : budget.delegation
         const session = await this.createSession(managed.workspace.id, options, { delegation })
-        child = this.sessions.get(session.id)
+        child = this.runtimeState.sessions.get(session.id)
         if (!child) throw new Error('Created delegation is unavailable before dispatch')
         dispatchChildId = child.id
-        this.automaticAdmissionReservations.add(session.id)
-        this.pendingSpawnRoots.delete(admission)
+        this.runtimeState.automaticAdmissionReservations.add(session.id)
+        this.runtimeState.pendingSpawnRoots.delete(admission)
         admission = undefined
         assertDispatch()
         await this.flushSession(child.id)
         assertDispatch()
-        assertCurrentDelegationObjective(managed, this.sessions.values(), delegation)
+        assertCurrentDelegationObjective(managed, this.runtimeState.sessions.values(), delegation)
         // A permission reduction during any asynchronous preparation applies at dispatch.
         const dispatchMode = resolveDelegatedPermissionMode(managed.permissionMode ?? 'ask', child.permissionMode, request.role)
         if (child.permissionMode !== dispatchMode) this.setSessionPermissionMode(child.id, dispatchMode)
@@ -23021,25 +22276,25 @@ export class SessionManager implements ISessionManager {
           )
         } catch (error) {
           await this.recordDelegatedDispatchFailure(child, error)
-          this.activeDelegations.release(session.id)
+          this.runtimeState.activeDelegations.release(session.id)
           throw error
         } finally {
-          this.automaticAdmissionReservations.delete(session.id)
+          this.runtimeState.automaticAdmissionReservations.delete(session.id)
           this.scheduleDeferredAutomaticSessions()
         }
         return { sessionId: session.id, name: session.name || request.name || session.id,
           status: 'started' as const, connection: session.llmConnection, model: session.model }
       } catch (error) {
         if (child?.delegation) await this.recordDelegatedDispatchFailure(child, error)
-        if (child) this.automaticAdmissionReservations.delete(child.id)
+        if (child) this.runtimeState.automaticAdmissionReservations.delete(child.id)
         throw error
       } finally {
-        if (admission) this.pendingSpawnRoots.delete(admission)
+        if (admission) this.runtimeState.pendingSpawnRoots.delete(admission)
         budget.release()
         this.scheduleDeferredAutomaticSessions()
       }
     }, sessionId => {
-      const target = this.sessions.get(sessionId)
+      const target = this.runtimeState.sessions.get(sessionId)
       return !!target && target.workspace.id === managed.workspace.id && !target.delegation?.finishedAt &&
         (target.isProcessing || target.messageQueue.length > 0 || !!target.pendingTurnRecovery ||
           (target.processingGeneration === 0 && !target.lastWaitCompletion))
@@ -23047,7 +22302,7 @@ export class SessionManager implements ISessionManager {
     return { ...result.value, ...(result.reused ? { reused: true } : {}) }
     } finally {
       if (terminalReviewReservation) {
-        this.terminalReviewDispatchReservations.delete(terminalReviewReservation)
+        this.runtimeState.terminalReviewDispatchReservations.delete(terminalReviewReservation)
       }
     }
   }
@@ -23063,9 +22318,9 @@ export class SessionManager implements ISessionManager {
     const ids = [...new Set(sessionIds)]
     if (ids.length < 1 || ids.length > 8 || ids.includes(caller.id)) throw new Error('Invalid delegated wait targets')
     const waitTargetAllowed = (id: string): boolean => {
-      const target = this.sessions.get(id)
+      const target = this.runtimeState.sessions.get(id)
       if (!target || target.workspace.id !== caller.workspace.id
-        || !isSessionDescendant(id, caller.id, candidate => this.sessions.get(candidate))) return false
+        || !isSessionDescendant(id, caller.id, candidate => this.runtimeState.sessions.get(candidate))) return false
       const authority = this.resolveObjectiveMutationAuthority(caller, caller.activeObjective)
       const policy = authority.terminalReconciliationPolicy
       if (policy) return policy.kind === 'terminal-reconciliation'
@@ -23089,8 +22344,8 @@ export class SessionManager implements ISessionManager {
       // be waited on or reused through the legacy lineage fallback.
       if (target.delegation?.reviewBinding) return false
       if (!target.delegation) return false
-      const root = this.sessions.get(target.delegation.rootSessionId)
-      const parent = target.parentSessionId ? this.sessions.get(target.parentSessionId) : undefined
+      const root = this.runtimeState.sessions.get(target.delegation.rootSessionId)
+      const parent = target.parentSessionId ? this.runtimeState.sessions.get(target.parentSessionId) : undefined
       return !!root?.activeObjective && !!parent?.activeObjective
         && root.workspace.id === caller.workspace.id && parent.workspace.id === caller.workspace.id
         && (root.activeObjective.objectiveId ?? root.activeObjective.userMessageId)
@@ -23107,14 +22362,14 @@ export class SessionManager implements ISessionManager {
     // Restore actual persisted final messages only for visible targets. An idle
     // session alone is never upgraded to a verified success receipt.
     await Promise.all(ids.map(async id => {
-      const target = this.sessions.get(id)
+      const target = this.runtimeState.sessions.get(id)
       if (target?.workspace.id === caller.workspace.id && !target.isProcessing) await this.ensureMessagesLoaded(target)
     }))
     assertWaitTargets()
     const waitOnce = (waitTimeoutMs: number, previous: Record<string, string>) => waitForSessionChange({
       previous, timeoutMs: waitTimeoutMs,
       snapshot: () => ids.map(sessionId => {
-        const target = this.sessions.get(sessionId)
+        const target = this.runtimeState.sessions.get(sessionId)
         if (!target || !waitTargetAllowed(sessionId)) return { sessionId, state: 'missing' as const }
         const objectiveState = target.activeObjective?.terminalState
         const terminal = !!objectiveState && objectiveState !== 'active'
@@ -23131,7 +22386,7 @@ export class SessionManager implements ISessionManager {
         const recovering = !!target.pendingTurnRecovery && objectiveState === 'active' && autonomousContinuation
         const active = target.isProcessing || queuedContinuation || recovering
           || (!terminal && !setupBlocked && !setupPersistenceFenced
-            && this.automaticAdmissionReservations.has(target.id))
+            && this.runtimeState.automaticAdmissionReservations.has(target.id))
         const needsAttention = this.hasPendingUserInput(target) || this.hasPendingDecision(target)
           || !!this.providerDispatchAcceptanceUnknown(target)
           || setupBlocked || setupPersistenceFenced
@@ -23164,8 +22419,8 @@ export class SessionManager implements ISessionManager {
       }),
       subscribe: wake => {
         const listener = (id: string) => { if (ids.includes(id)) wake() }
-        this.sessionWaitListeners.add(listener)
-        return () => { this.sessionWaitListeners.delete(listener) }
+        this.runtimeState.sessionWaitListeners.add(listener)
+        return () => { this.runtimeState.sessionWaitListeners.delete(listener) }
       },
     })
     const initialCursors = { ...caller.waitCursors, ...afterCursors }
@@ -23245,13 +22500,13 @@ export class SessionManager implements ISessionManager {
     sessionId: string,
     proof: import('@craft-agent/shared/governance').SignedExecutionProof,
   ): void {
-    const managed = this.sessions.get(sessionId)
+    const managed = this.runtimeState.sessions.get(sessionId)
     const missionId = managed?.missionId ?? managed?.taskSlug
     const nodeId = managed?.missionWorkItemId ?? managed?.taskNodeId
     if (!managed || !missionId || !nodeId) {
       throw new Error('Execution proof can only be recorded for a bound task or mission work session')
     }
-    this.executionProofCollector.record({
+    this.runtimeState.executionProofCollector.record({
       sessionId,
       workspaceId: managed.workspace.id,
       missionId,
@@ -23260,13 +22515,13 @@ export class SessionManager implements ISessionManager {
   }
 
   private emitSessionComplete(evt: SessionCompletionEvent): void {
-    const target = this.sessions.get(evt.sessionId)
+    const target = this.runtimeState.sessions.get(evt.sessionId)
     if (target?.workspace.id === evt.workspaceId) {
       target.lastWaitCompletion = { generation: target.processingGeneration, event: evt }
     }
-    for (const wake of this.sessionWaitListeners) wake(evt.sessionId)
-    if (this.sessionCompletionListeners.size === 0) return
-    for (const listener of this.sessionCompletionListeners) {
+    for (const wake of this.runtimeState.sessionWaitListeners) wake(evt.sessionId)
+    if (this.runtimeState.sessionCompletionListeners.size === 0) return
+    for (const listener of this.runtimeState.sessionCompletionListeners) {
       try {
         listener(evt)
       } catch (err) {
@@ -23288,8 +22543,8 @@ export class SessionManager implements ISessionManager {
     processingGeneration?: number,
     permissionExpiryOwner = false,
   ): Promise<void> {
-    if (this.shuttingDown) return
-    const managed = this.sessions.get(sessionId)
+    if (this.runtimeState.shuttingDown) return
+    const managed = this.runtimeState.sessions.get(sessionId)
     if (!managed) return
 
     const generationKey = processingGeneration ?? managed.processingGeneration
@@ -23297,10 +22552,10 @@ export class SessionManager implements ISessionManager {
     // shutdown and the recovery watchdog may both report a later stop, but
     // neither may reopen, reclassify, or re-run that denied mutation.
     if (!permissionExpiryOwner
-      && this.permissionExpiryStopGenerations.get(managed) === generationKey) return
+      && this.runtimeState.permissionExpiryStopGenerations.get(managed) === generationKey) return
     // Once idle is published, a new request may start while cleanup is awaiting
     // storage or a remote browser. The previous turn no longer owns that session.
-    const ownsStop = () => !this.shuttingDown && this.sessions.get(sessionId) === managed
+    const ownsStop = () => !this.runtimeState.shuttingDown && this.runtimeState.sessions.get(sessionId) === managed
       && managed.processingGeneration === generationKey
     if (!ownsStop()) return
     if (managed.sourceActivationTurn?.generation === generationKey) {
@@ -23346,7 +22601,7 @@ export class SessionManager implements ISessionManager {
     // move it to the explicit-Retry snapshot during this live stop. Waiting for
     // cold-start repair would leave the objective active and its work invisible.
     if (!hasQueuedAutomaticRecovery && !hasQueuedHumanContinuation
-      && !this.deferredAutomaticSessions?.has(sessionId)
+      && !this.runtimeState.deferredAutomaticSessions?.has(sessionId)
       && !this.hasPendingUserInput(managed) && !this.hasQueuedUserInput(managed)
       && !this.hasPendingDecision(managed)) {
       this.preserveInterruptedObjectiveContinuation(managed)
@@ -23385,7 +22640,7 @@ export class SessionManager implements ISessionManager {
     // stopped before persistence so startup cannot replay an already failed
     // attempt whose setup error did not create an assistant transcript entry.
     if (reason !== 'complete' && !hasQueuedAutomaticRecovery && !hasQueuedHumanContinuation
-      && !this.deferredAutomaticSessions?.has(sessionId)
+      && !this.runtimeState.deferredAutomaticSessions?.has(sessionId)
       && !this.hasPendingUserInput(managed) && !this.hasQueuedUserInput(managed)
       && managed.activeObjective?.terminalState === 'active' && this.hasValidationExhaustionMarker(managed)) {
       managed.activeObjective.terminalState = 'exhausted'
@@ -23394,7 +22649,7 @@ export class SessionManager implements ISessionManager {
     managed.pendingRuntimeProviderFallback = undefined
     if (!ownsStop()) return
     if (!hasQueuedAutomaticRecovery && !hasQueuedHumanContinuation && !this.hasPendingUserInput(managed) && !this.hasQueuedUserInput(managed)
-      && !this.deferredAutomaticSessions?.has(sessionId)
+      && !this.runtimeState.deferredAutomaticSessions?.has(sessionId)
       && !this.hasPendingDecision(managed) && !this.hasExhaustedValidation(managed)
       && !this.isCleanSetupRetryBlocked(managed.pendingTurnRecovery?.recoveryDispatch)
       && managed.activeObjective?.terminalState !== 'active') {
@@ -23408,7 +22663,7 @@ export class SessionManager implements ISessionManager {
     // 1. Cleanup state
     this.setProcessing(managed, false)
     const stoppedAdmissionBinding = managed.agent
-      ? this.runtimeToolAdmissionBindings.get(managed.agent)
+      ? this.runtimeState.runtimeToolAdmissionBindings.get(managed.agent)
       : undefined
     if (stoppedAdmissionBinding?.managed === managed
       && stoppedAdmissionBinding.generation === generationKey) {
@@ -23422,8 +22677,8 @@ export class SessionManager implements ISessionManager {
     if (retainedTerminalMachineInbox) {
       // These rows are durable context for an explicit Retry, not runnable
       // work. Keeping them out of admission also releases stale restart slots.
-      this.deferredAutomaticSessions.delete(sessionId)
-      this.automaticAdmissionReservations.delete(sessionId)
+      this.runtimeState.deferredAutomaticSessions.delete(sessionId)
+      this.runtimeState.automaticAdmissionReservations.delete(sessionId)
     }
 
     // 1b. Orphan backstop: with the default per-turn subprocess model, any
@@ -23498,7 +22753,7 @@ export class SessionManager implements ISessionManager {
           && delivered.internalOrigin?.kind === 'agent-message'
           && delivered.internalOrigin.senderSessionId
           && !deliveryWasConsumed) {
-          const child = this.sessions.get(delivered.internalOrigin.senderSessionId)
+          const child = this.runtimeState.sessions.get(delivered.internalOrigin.senderSessionId)
           if (child) {
             try {
               const requeued = await this.ensureDelegatedTerminalResultDelivery(child, true)
@@ -23590,7 +22845,7 @@ export class SessionManager implements ISessionManager {
       || !!this.providerDispatchAcceptanceUnknown(managed)
     if (!setupAttentionRequired
       && (managed.messageQueue.length === 0 || retainedTerminalMachineInbox)
-      && !this.deferredAutomaticSessions?.has(sessionId)) {
+      && !this.runtimeState.deferredAutomaticSessions?.has(sessionId)) {
       try {
         await this.finishAutomaticSessionStatusLifecycle(managed, reason, assertStopOwnership)
       } catch (error) {
@@ -23618,7 +22873,7 @@ export class SessionManager implements ISessionManager {
       if (!ownsStop()) return
       if (this.hasPendingUserInput(managed) || this.hasPendingDecision(managed)) {
         this.sendEvent({ type: 'complete', sessionId, reason: 'interrupted', tokenUsage: managed.tokenUsage,
-          backgroundTasksAlive: this.keepBackgroundTasksAlive }, managed.workspace.id)
+          backgroundTasksAlive: this.runtimeState.keepBackgroundTasksAlive }, managed.workspace.id)
       }
     } else {
       // Session is truly done — release browser ownership.
@@ -23655,15 +22910,15 @@ export class SessionManager implements ISessionManager {
         // turn ending does NOT kill background sub-agents. Tell the renderer so its
         // chip orphan-backstop does not falsely flip live tasks to `orphaned`; a
         // real `task_completed` will arrive when the agent actually finishes.
-        backgroundTasksAlive: this.keepBackgroundTasksAlive,
+        backgroundTasksAlive: this.runtimeState.keepBackgroundTasksAlive,
       }, managed.workspace.id)
 
       // Tasks Conductor seam: signal true completion (queue empty) with the stop
       // reason + this turn's final assistant message, so the Conductor can advance
       // the corresponding node. In-process only; never sent to the renderer/agents.
       if (!setupAttentionRequired && !this.hasPendingUserInput(managed)
-        && !this.hasQueuedUserInput(managed) && !this.deferredAutomaticSessions?.has(sessionId)) {
-        const executionProof = this.executionProofCollector.take(sessionId)
+        && !this.hasQueuedUserInput(managed) && !this.runtimeState.deferredAutomaticSessions?.has(sessionId)) {
+        const executionProof = this.runtimeState.executionProofCollector.take(sessionId)
         this.emitSessionComplete({
           sessionId,
           workspaceId: managed.workspace.id,
@@ -23688,7 +22943,7 @@ export class SessionManager implements ISessionManager {
     // provider boundary. An unauthenticated or ambiguous question remains open.
     if (ownsStop() && this.retryableContextLimitRequest(managed)) {
       queueMicrotask(() => {
-        if (this.sessions.get(sessionId) !== managed || this.shuttingDown
+        if (this.runtimeState.sessions.get(sessionId) !== managed || this.runtimeState.shuttingDown
           || managed.stopRequested || managed.isProcessing
           || managed.processingGeneration !== generationKey) return
         void this.resumePendingTurnAfterRestart(sessionId).catch(error => {
@@ -23700,185 +22955,49 @@ export class SessionManager implements ISessionManager {
     }
   }
 
-  /**
-   * Process the next message in the queue.
-   * Called by onProcessingStopped when queue has messages.
-   */
-  private queuedMessageDispatches = new Map<string, symbol>()
-  /** Exact private ownership for an agent receipt after FIFO dequeue and before
-   * its durable queued -> processing transition. Keyed by the immutable message
-   * id so a late append rollback cannot touch another reservation or turn. */
-  private readonly queuedAgentDeliveryDispatches = new Map<string, {
-    sessionId: string
-    deliveryId: string
-    dispatchToken: symbol
-    claimed: boolean
-    claimDurable?: boolean
-    providerStarted: boolean
-    providerDispatchUncertain?: boolean
-    attemptsBeforeClaim?: number
-    dispatchSettled: boolean
-  }>()
-  /** Fresh append durability fences currently capable of observing and
-   * cancelling an exact unclaimed dequeue. */
-  private readonly agentDeliveryAppendsInFlight = new Set<string>()
-
   private settleQueuedAgentDeliveryDispatch(messageId: string | undefined, dispatchToken: symbol | undefined): void {
     if (!messageId || !dispatchToken) return
-    const dispatch = this.queuedAgentDeliveryDispatches.get(messageId)
+    const dispatch = this.runtimeState.queuedAgentDeliveryDispatches.get(messageId)
     if (!dispatch || dispatch.dispatchToken !== dispatchToken) return
     // Reaching this callback boundary without having removed the reservation
     // at receipt=processing means no turn owns the queued receipt anymore.
     dispatch.claimed = false
     dispatch.dispatchSettled = true
-    if (!this.agentDeliveryAppendsInFlight.has(messageId)) {
-      this.queuedAgentDeliveryDispatches.delete(messageId)
+    if (!this.runtimeState.agentDeliveryAppendsInFlight.has(messageId)) {
+      this.runtimeState.queuedAgentDeliveryDispatches.delete(messageId)
     }
   }
 
   private completeQueuedAgentDeliveryDispatch(messageId: string, dispatchToken: symbol | undefined): void {
     if (!dispatchToken) return
-    const dispatch = this.queuedAgentDeliveryDispatches.get(messageId)
-    if (dispatch?.dispatchToken === dispatchToken) this.queuedAgentDeliveryDispatches.delete(messageId)
+    const dispatch = this.runtimeState.queuedAgentDeliveryDispatches.get(messageId)
+    if (dispatch?.dispatchToken === dispatchToken) this.runtimeState.queuedAgentDeliveryDispatches.delete(messageId)
   }
 
   private finishAgentDeliveryAppend(messageId: string): void {
-    this.agentDeliveryAppendsInFlight.delete(messageId)
-    const dispatch = this.queuedAgentDeliveryDispatches.get(messageId)
-    if (dispatch?.dispatchSettled) this.queuedAgentDeliveryDispatches.delete(messageId)
+    this.runtimeState.agentDeliveryAppendsInFlight.delete(messageId)
+    const dispatch = this.runtimeState.queuedAgentDeliveryDispatches.get(messageId)
+    if (dispatch?.dispatchSettled) this.runtimeState.queuedAgentDeliveryDispatches.delete(messageId)
   }
-  private readonly permissionInboxRetryDispatches = new Set<symbol>()
-  /** One-shot capability reconstructed from an auth-blocked durable human FIFO. */
-  private readonly coldAuthHumanContinuationSessions = new WeakSet<ManagedSession>()
-  /** Non-persisted authority minted only after a live visible message and its
-   * handoff supersession have crossed the durability fence. */
-  private readonly liveDirectHumanContinuationIds = new WeakMap<ManagedSession, Set<string>>()
-  /** Prevent a processing-stop callback from draining the FIFO while the
-   * message + fail-closed handoff transition is still being flushed. */
-  private readonly directHumanSupersessionsInFlight = new WeakSet<ManagedSession>()
-  /** Per-session transaction tail. A later direct send must observe either the
-   * committed supersession or the fully rolled-back handoff of the prior send. */
-  private readonly directHumanSupersessionTransactions = new WeakMap<ManagedSession, Promise<void>>()
-  /** Serializes mid-turn source activation commits and their rollback. A newer
-   * objective can revoke the current transaction, but cannot observe or commit
-   * another source configuration until the revoked transaction restored the
-   * prior runtime snapshot. */
-  private readonly sourceActivationTransactions = new WeakMap<ManagedSession, Promise<void>>()
-  private readonly turnCancellationEpochs = new WeakMap<ManagedSession, number>()
-  /** Invalidates asynchronous tool preparation as soon as a direct human turn
-   * supersedes the instruction that started it, independently of Stop. */
-  private readonly objectiveAuthorityEpochs = new WeakMap<ManagedSession, number>()
-  private readonly terminalInvocationCapabilities = new Map<string, {
-    managed: ManagedSession
-    agent: AgentInstance | null | undefined
-    generation: number
-    authorityEpoch: number
-    objective: ActiveSessionObjective
-    scope: {
-      allowInitialCriteriaRegistration: boolean
-      allowReviewerSpawn: boolean
-      waitReviewerSessionIds: readonly string[]
-    }
-    expiresAt: number
-  }>()
-  /** Private parent-to-child dispatch ownership. The symbol never enters the
-   * child prompt, transcript, persisted metadata or an RPC payload. */
-  private readonly delegatedDispatchContinuations = new Map<symbol, {
-    parent: ManagedSession
-    child: ManagedSession
-    objective: ActiveSessionObjective | undefined
-    authorityEpoch: number
-    parentGeneration: number
-    reviewBinding?: { objectiveId: string; acceptanceSha256: string }
-    expiresAt: number
-  }>()
-  /** Private, non-serializable ownership for an auth result/retry continuation.
-   * The symbol never enters options, transcript or an RPC payload. */
-  private readonly authenticatedInternalContinuations = new Map<symbol, {
-    managed: ManagedSession
-    objective: ActiveSessionObjective
-    objectiveId: string
-    objectiveRevision: string
-    authorityEpoch: number
-    cancellationEpoch: number
-    generation: number
-    agent: AgentInstance | null | undefined
-    kind: 'auth-result' | 'auth-retry'
-    claimedGeneration?: number
-    expiresAt: number
-  }>()
-  /** Runtime ownership only; persisted old tool rows cannot authorize a new continuation. */
-  private readonly checkpointToolStarts = new WeakMap<ManagedSession, {
-    generation: number
-    calls: Map<string, {
-      objective: ActiveSessionObjective
-      objectiveId: string
-      acceptanceRevision: string
-      acceptanceSha256: string
-      authorityEpoch: number
-      toolName: string
-      /** One-shot in-memory claim consumed before the durability await. Pi can
-       * publish tool_start before PreToolUse, but that live row may authorize
-       * exactly one execute callback even while its receipt remains executing. */
-      durableAdmissionClaimed?: true
-    }>
-  }>()
-  private shuttingDown = false
-  /** During orderly shutdown, runtimes may still report the result of a tool
-   * that already executed. This narrow gate remains open only until runtime
-   * destruction is proven; every ordinary operation is rejected immediately. */
-  private shutdownTerminalResultAdmissionOpen = false
-  private cleanupPromise?: Promise<void>
-  private readonly restartRecoveriesInFlight = new Map<string, Promise<void>>()
-  private readonly permissionExpiryStopGenerations = new WeakMap<ManagedSession, number>()
-  private readonly permissionDeniedToolUseIdsByGeneration = new WeakMap<ManagedSession, Map<number, Set<string>>>()
-  private readonly runtimeProcessingGenerations = new WeakMap<AgentInstance, number>()
-  /** Serializes the complete PreToolUse snapshot -> receipt -> fsync fence.
-   * Without this tail, concurrent provider hooks can both inspect the same
-   * pre-receipt snapshot and authorize two recovery mutations. */
-  private readonly toolAdmissionTransactions = new WeakMap<ManagedSession, Promise<void>>()
-  /** Immutable provider-handoff owner for the PreToolUse durability ACK. */
-  private readonly runtimeToolAdmissionBindings = new WeakMap<AgentInstance, {
-    managed: ManagedSession
-    sessionId: string
-    generation: number
-    activeObjective: ActiveSessionObjective | undefined
-    authorityEpoch: number
-    userMessage: Message
-    userMessageId: string
-    messageCountAtHandoff: number
-    lastSentOptions: SendMessageOptions | undefined
-    automaticRecovery: SendMessageOptions['automaticRecovery']
-    pendingTurnRecovery: PendingTurnRecovery | undefined
-    recoveryDispatch: PendingTurnRecovery['recoveryDispatch']
-    /** Host-authenticated fallback injected into the current provider turn.
-     * This closes the ON -> redirect -> OFF admission race without treating
-     * provider text as routing authority. */
-    liveToolFallbackIntent?: AutonomyFallbackIntent
-    /** A live provider steer may replace the objective/user boundary without
-     * replacing the provider generation. Tool admission waits until that
-     * replacement is fsynced, then observes the rebound boundary atomically. */
-    pendingRebind?: Promise<void>
-  }>()
 
   private async serializeDirectHumanSupersession<T>(
     managed: ManagedSession,
     operation: () => Promise<T>,
   ): Promise<T> {
-    const previous = this.directHumanSupersessionTransactions.get(managed) ?? Promise.resolve()
+    const previous = this.runtimeState.directHumanSupersessionTransactions.get(managed) ?? Promise.resolve()
     let release!: () => void
     const turn = new Promise<void>(resolve => { release = resolve })
     const tail = previous.catch(() => {}).then(() => turn)
-    this.directHumanSupersessionTransactions.set(managed, tail)
+    this.runtimeState.directHumanSupersessionTransactions.set(managed, tail)
     await previous.catch(() => {})
-    this.directHumanSupersessionsInFlight.add(managed)
+    this.runtimeState.directHumanSupersessionsInFlight.add(managed)
     try {
       return await operation()
     } finally {
-      this.directHumanSupersessionsInFlight.delete(managed)
+      this.runtimeState.directHumanSupersessionsInFlight.delete(managed)
       release()
-      if (this.directHumanSupersessionTransactions.get(managed) === tail) {
-        this.directHumanSupersessionTransactions.delete(managed)
+      if (this.runtimeState.directHumanSupersessionTransactions.get(managed) === tail) {
+        this.runtimeState.directHumanSupersessionTransactions.delete(managed)
       }
     }
   }
@@ -23887,18 +23006,18 @@ export class SessionManager implements ISessionManager {
     managed: ManagedSession,
     operation: () => Promise<T>,
   ): Promise<T> {
-    const previous = this.sourceActivationTransactions.get(managed) ?? Promise.resolve()
+    const previous = this.runtimeState.sourceActivationTransactions.get(managed) ?? Promise.resolve()
     let release!: () => void
     const transaction = new Promise<void>(resolve => { release = resolve })
     const tail = previous.catch(() => {}).then(() => transaction)
-    this.sourceActivationTransactions.set(managed, tail)
+    this.runtimeState.sourceActivationTransactions.set(managed, tail)
     await previous.catch(() => {})
     try {
       return await operation()
     } finally {
       release()
-      if (this.sourceActivationTransactions.get(managed) === tail) {
-        this.sourceActivationTransactions.delete(managed)
+      if (this.runtimeState.sourceActivationTransactions.get(managed) === tail) {
+        this.runtimeState.sourceActivationTransactions.delete(managed)
       }
     }
   }
@@ -23909,16 +23028,16 @@ export class SessionManager implements ISessionManager {
     objective: ActiveSessionObjective | undefined,
   ): symbol {
     const now = Date.now()
-    for (const [token, capability] of this.delegatedDispatchContinuations) {
-      if (capability.expiresAt <= now) this.delegatedDispatchContinuations.delete(token)
+    for (const [token, capability] of this.runtimeState.delegatedDispatchContinuations) {
+      if (capability.expiresAt <= now) this.runtimeState.delegatedDispatchContinuations.delete(token)
     }
     const token = Symbol('delegated-dispatch')
     const reviewBinding = child.delegation?.reviewBinding
-    this.delegatedDispatchContinuations.set(token, {
+    this.runtimeState.delegatedDispatchContinuations.set(token, {
       parent,
       child,
       objective,
-      authorityEpoch: this.objectiveAuthorityEpochs.get(parent) ?? 0,
+      authorityEpoch: this.runtimeState.objectiveAuthorityEpochs.get(parent) ?? 0,
       parentGeneration: parent.processingGeneration,
       ...(reviewBinding ? { reviewBinding: { ...reviewBinding } } : {}),
       expiresAt: now + 60_000,
@@ -23932,17 +23051,17 @@ export class SessionManager implements ISessionManager {
     senderSessionId: string | undefined,
   ): boolean {
     if (!token || !senderSessionId) return false
-    const capability = this.delegatedDispatchContinuations.get(token)
+    const capability = this.runtimeState.delegatedDispatchContinuations.get(token)
     if (!capability || capability.expiresAt <= Date.now()) {
-      if (capability) this.delegatedDispatchContinuations.delete(token)
+      if (capability) this.runtimeState.delegatedDispatchContinuations.delete(token)
       return false
     }
     const { parent, objective, reviewBinding } = capability
     const objectiveId = objective?.objectiveId ?? objective?.userMessageId
     const currentReviewBinding = objective ? objectiveReviewBinding(objective) : undefined
-    return !this.shuttingDown
-      && this.sessions.get(parent.id) === parent
-      && this.sessions.get(child.id) === child
+    return !this.runtimeState.shuttingDown
+      && this.runtimeState.sessions.get(parent.id) === parent
+      && this.runtimeState.sessions.get(child.id) === child
       && capability.child === child
       && senderSessionId === parent.id
       && child.parentSessionId === parent.id
@@ -23950,7 +23069,7 @@ export class SessionManager implements ISessionManager {
       && parent.processingGeneration === capability.parentGeneration
       && parent.activeObjective === objective
       && (!objective || objective.terminalState === 'active')
-      && (this.objectiveAuthorityEpochs.get(parent) ?? 0) === capability.authorityEpoch
+      && (this.runtimeState.objectiveAuthorityEpochs.get(parent) ?? 0) === capability.authorityEpoch
       && !parent.stopRequested
       && !child.stopRequested
       && !child.delegation?.finishedAt
@@ -23964,7 +23083,7 @@ export class SessionManager implements ISessionManager {
   }
 
   private consumeDelegatedDispatchContinuation(token: symbol | undefined): void {
-    if (token) this.delegatedDispatchContinuations.delete(token)
+    if (token) this.runtimeState.delegatedDispatchContinuations.delete(token)
   }
 
   private mintAuthenticatedInternalContinuation(
@@ -23975,17 +23094,17 @@ export class SessionManager implements ISessionManager {
     const binding = sourceActivationObjectiveBinding(objective)
     if (!objective || objective.terminalState !== 'active' || !binding) return undefined
     const now = Date.now()
-    for (const [token, capability] of this.authenticatedInternalContinuations) {
-      if (capability.expiresAt <= now) this.authenticatedInternalContinuations.delete(token)
+    for (const [token, capability] of this.runtimeState.authenticatedInternalContinuations) {
+      if (capability.expiresAt <= now) this.runtimeState.authenticatedInternalContinuations.delete(token)
     }
     const token = Symbol(kind)
-    this.authenticatedInternalContinuations.set(token, {
+    this.runtimeState.authenticatedInternalContinuations.set(token, {
       managed,
       objective,
       objectiveId: binding.objectiveId,
       objectiveRevision: binding.objectiveRevision,
-      authorityEpoch: this.objectiveAuthorityEpochs.get(managed) ?? 0,
-      cancellationEpoch: this.turnCancellationEpochs.get(managed) ?? 0,
+      authorityEpoch: this.runtimeState.objectiveAuthorityEpochs.get(managed) ?? 0,
+      cancellationEpoch: this.runtimeState.turnCancellationEpochs.get(managed) ?? 0,
       generation: managed.processingGeneration,
       agent: managed.agent,
       kind,
@@ -24000,21 +23119,21 @@ export class SessionManager implements ISessionManager {
     expectedKind: 'auth-result' | 'auth-retry' | undefined,
   ): boolean {
     if (!token || !expectedKind) return token === undefined && expectedKind === undefined
-    const capability = this.authenticatedInternalContinuations.get(token)
+    const capability = this.runtimeState.authenticatedInternalContinuations.get(token)
     const binding = sourceActivationObjectiveBinding(managed.activeObjective)
     if (!capability || capability.expiresAt <= Date.now()) {
-      if (capability) this.authenticatedInternalContinuations.delete(token)
+      if (capability) this.runtimeState.authenticatedInternalContinuations.delete(token)
       return false
     }
     const expectedGeneration = capability.claimedGeneration ?? capability.generation
-    return !this.shuttingDown && this.sessions.get(managed.id) === managed
+    return !this.runtimeState.shuttingDown && this.runtimeState.sessions.get(managed.id) === managed
       && capability.managed === managed && capability.kind === expectedKind
       && managed.activeObjective === capability.objective
       && managed.activeObjective.terminalState === 'active'
       && !!binding && binding.objectiveId === capability.objectiveId
       && binding.objectiveRevision === capability.objectiveRevision
-      && (this.objectiveAuthorityEpochs.get(managed) ?? 0) === capability.authorityEpoch
-      && (this.turnCancellationEpochs.get(managed) ?? 0) === capability.cancellationEpoch
+      && (this.runtimeState.objectiveAuthorityEpochs.get(managed) ?? 0) === capability.authorityEpoch
+      && (this.runtimeState.turnCancellationEpochs.get(managed) ?? 0) === capability.cancellationEpoch
       && managed.processingGeneration === expectedGeneration
       && (capability.claimedGeneration !== undefined || managed.agent === capability.agent)
       && !managed.stopRequested && !this.hasAcceptedHumanContinuationQueued(managed)
@@ -24026,7 +23145,7 @@ export class SessionManager implements ISessionManager {
     generation: number,
   ): boolean {
     if (!token) return false
-    const capability = this.authenticatedInternalContinuations.get(token)
+    const capability = this.runtimeState.authenticatedInternalContinuations.get(token)
     if (!capability || capability.claimedGeneration !== undefined
       || managed.processingGeneration !== capability.generation) return false
     capability.claimedGeneration = generation
@@ -24034,14 +23153,14 @@ export class SessionManager implements ISessionManager {
   }
 
   private consumeAuthenticatedInternalContinuation(token: symbol | undefined): void {
-    if (token) this.authenticatedInternalContinuations.delete(token)
+    if (token) this.runtimeState.authenticatedInternalContinuations.delete(token)
   }
 
   private deniedPermissionToolUseIds(managed: ManagedSession, generation: number): Set<string> {
-    let byGeneration = this.permissionDeniedToolUseIdsByGeneration.get(managed)
+    let byGeneration = this.runtimeState.permissionDeniedToolUseIdsByGeneration.get(managed)
     if (!byGeneration) {
       byGeneration = new Map()
-      this.permissionDeniedToolUseIdsByGeneration.set(managed, byGeneration)
+      this.runtimeState.permissionDeniedToolUseIdsByGeneration.set(managed, byGeneration)
     }
     let toolUseIds = byGeneration.get(generation)
     if (!toolUseIds) {
@@ -24052,15 +23171,15 @@ export class SessionManager implements ISessionManager {
   }
 
   private processNextQueuedMessage(sessionId: string): void {
-    const managed = this.sessions.get(sessionId)
-    if (!managed || this.directHumanSupersessionsInFlight.has(managed)) return
-    if (this.strongCancellationStops.get(sessionId)?.managed === managed) return
+    const managed = this.runtimeState.sessions.get(sessionId)
+    if (!managed || this.runtimeState.directHumanSupersessionsInFlight.has(managed)) return
+    if (this.runtimeState.strongCancellationStops.get(sessionId)?.managed === managed) return
     // No FIFO row may implicitly reconcile a crash between provider write and
     // acknowledgement. Explicit Retry owns the only durable reconciliation.
     if (this.providerDispatchAdmissionBarrier(managed)
-      || this.coldProviderReconciliationsInFlight.has(sessionId)
-      || this.providerStopTransitionsInFlight.has(sessionId)) return
-    const isColdAuthHumanContinuation = this.coldAuthHumanContinuationSessions.has(managed)
+      || this.runtimeState.coldProviderReconciliationsInFlight.has(sessionId)
+      || this.runtimeState.providerStopTransitionsInFlight.has(sessionId)) return
+    const isColdAuthHumanContinuation = this.runtimeState.coldAuthHumanContinuationSessions.has(managed)
     const queuedHumanSupersedesSourceActivation = queuedDirectHumanContinuationIndex(managed) >= 0
     if (this.dropDeferredSourceActivations(managed, queuedHumanSupersedesSourceActivation)) {
       this.persistSession(managed)
@@ -24071,7 +23190,7 @@ export class SessionManager implements ISessionManager {
         })
       })
     }
-    const canAdvanceQueue = !this.shuttingDown && !managed.stopRequested && !managed.isProcessing
+    const canAdvanceQueue = !this.runtimeState.shuttingDown && !managed.stopRequested && !managed.isProcessing
     const cleanRetryDispatch = managed.pendingTurnRecovery
       ? validAllocatedRecoveryDispatch(managed.pendingTurnRecovery)
       : undefined
@@ -24124,8 +23243,8 @@ export class SessionManager implements ISessionManager {
           for (const candidate of rows) candidate.isQueued = false
         }
       }
-      this.automaticAdmissionReservations.delete(sessionId)
-      this.cleanRetrySetupPersistenceFences.set(sessionId, cleanRetryDispatch.id)
+      this.runtimeState.automaticAdmissionReservations.delete(sessionId)
+      this.runtimeState.cleanRetrySetupPersistenceFences.set(sessionId, cleanRetryDispatch.id)
       if (unsafeIdentityCollision) this.fenceCleanSetupPersistence(managed, cleanRetryDispatch.id)
       const enqueued = this.persistSession(managed)
       if (!enqueued) {
@@ -24133,10 +23252,10 @@ export class SessionManager implements ISessionManager {
         return
       }
       void this.flushSession(sessionId).then(() => {
-        if (unsafeIdentityCollision || this.sessions.get(sessionId) !== managed
+        if (unsafeIdentityCollision || this.runtimeState.sessions.get(sessionId) !== managed
           || managed.pendingTurnRecovery?.recoveryDispatch?.id !== cleanRetryDispatch.id) return
-        if (this.cleanRetrySetupPersistenceFences.get(sessionId) === cleanRetryDispatch.id) {
-          this.cleanRetrySetupPersistenceFences.delete(sessionId)
+        if (this.runtimeState.cleanRetrySetupPersistenceFences.get(sessionId) === cleanRetryDispatch.id) {
+          this.runtimeState.cleanRetrySetupPersistenceFences.delete(sessionId)
         }
         this.processNextQueuedMessage(sessionId)
       }).catch(error => {
@@ -24154,16 +23273,16 @@ export class SessionManager implements ISessionManager {
     const setupPersistenceFenced = this.isCleanSetupPersistenceFenced(managed, cleanRetryDispatch)
     if (canAdvanceQueue && setupPersistenceFenced
       && queuedDirectHumanContinuationIndex(managed) < 0) {
-      this.deferredAutomaticSessions.delete(sessionId)
-      this.automaticAdmissionReservations.delete(sessionId)
+      this.runtimeState.deferredAutomaticSessions.delete(sessionId)
+      this.runtimeState.automaticAdmissionReservations.delete(sessionId)
       return
     }
     const durableSetupDelayMs = cleanSetupRetryDelayMs(cleanRetryDispatch)
     if (canAdvanceQueue && !!cleanRetryDispatch?.cleanContinuationId
       && queuedDirectHumanContinuationIndex(managed) < 0
-      && (this.deferredAutomaticRetryTimers.has(sessionId) || durableSetupDelayMs > 0)) {
-      this.deferredAutomaticSessions.add(sessionId)
-      if (!this.deferredAutomaticRetryTimers.has(sessionId)) {
+      && (this.runtimeState.deferredAutomaticRetryTimers.has(sessionId) || durableSetupDelayMs > 0)) {
+      this.runtimeState.deferredAutomaticSessions.add(sessionId)
+      if (!this.runtimeState.deferredAutomaticRetryTimers.has(sessionId)) {
         this.scheduleDeferredAutomaticRetry(sessionId, durableSetupDelayMs)
       }
       return
@@ -24177,12 +23296,12 @@ export class SessionManager implements ISessionManager {
       // Never let a generic FIFO row cross a pending clean provider seam. The
       // exact recovered Retry obtains a one-use private capability above and
       // every legitimate machine delivery remains queued behind it.
-      if (!this.deferredAutomaticRetryTimers.has(sessionId)
-        && !this.retryTurnsInFlight.has(sessionId)) {
+      if (!this.runtimeState.deferredAutomaticRetryTimers.has(sessionId)
+        && !this.runtimeState.retryTurnsInFlight.has(sessionId)) {
         // The shared resume helper owns lineage/capacity admission before the
         // low-level provider seam. A failed claim leaves the candidate deferred.
         if (!this.resumeAllocatedRecoveryDispatch(managed, managed.pendingTurnRecovery!)) {
-          this.deferredAutomaticSessions.add(sessionId)
+          this.runtimeState.deferredAutomaticSessions.add(sessionId)
           this.scheduleDeferredAutomaticSessions()
         }
       }
@@ -24197,7 +23316,7 @@ export class SessionManager implements ISessionManager {
       && liveDirectIndex < 0) {
       if (managed.messageQueue.length && managed.messageQueue.every(item => this.isAutonomousMessage(item.options))
         && managed.pendingTurnRecovery) {
-        this.deferredAutomaticSessions.add(sessionId)
+        this.runtimeState.deferredAutomaticSessions.add(sessionId)
       }
       return
     }
@@ -24209,7 +23328,7 @@ export class SessionManager implements ISessionManager {
     if (canAdvanceQueue && queuedDirectHumanContinuationIndex(managed) === 0
       && this.cancelPendingAuthForHumanContinuation(managed)) {
       if (isColdAuthHumanContinuation) this.downgradeColdAuthResumePermission(managed)
-      this.coldAuthHumanContinuationSessions.delete(managed)
+      this.runtimeState.coldAuthHumanContinuationSessions.delete(managed)
       durableQueueChanged = true
     }
     if (durableQueueChanged) {
@@ -24218,18 +23337,18 @@ export class SessionManager implements ISessionManager {
       // resurrect the obsolete auth handoff or its allow-all authority.
       this.persistSession(managed)
     }
-    if (this.shuttingDown || managed.stopRequested || managed.isProcessing
+    if (this.runtimeState.shuttingDown || managed.stopRequested || managed.isProcessing
       || hasUnscheduledQueuedUserInput(managed)
       || (this.hasPendingUserInput(managed) && liveDirectIndex < 0) || this.hasPendingDecision(managed)
-      || this.queuedMessageDispatches.has(sessionId) || managed.messageQueue.length === 0) return
+      || this.runtimeState.queuedMessageDispatches.has(sessionId) || managed.messageQueue.length === 0) return
 
     // A hydration callback may have been scheduled while the objective was
     // still active, then run after immutable ancestry terminalized it. Machine
     // rows remain durable Retry context; they must not re-enter admission.
     if (((this.hasTerminalObjectiveState(managed) && this.hasOnlyMachineInbox(managed))
         || this.hasAnyRetainedStoppedAgentDelivery(managed)) && liveDirectIndex < 0) {
-      this.deferredAutomaticSessions.delete(sessionId)
-      this.automaticAdmissionReservations.delete(sessionId)
+      this.runtimeState.deferredAutomaticSessions.delete(sessionId)
+      this.runtimeState.automaticAdmissionReservations.delete(sessionId)
       return
     }
 
@@ -24272,7 +23391,7 @@ export class SessionManager implements ISessionManager {
     const queuedHumanWhileDeliveryHeld = selectedDeliverySetup?.status === 'queued'
       && (selectedDeliverySetup.setupFailureCount !== undefined
         || Number.isFinite(selectedDeliverySetup.setupPersistenceFencedAt)
-        || this.agentDeliverySetupPersistenceFences.get(sessionId) === selectedDeliverySetup.id)
+        || this.runtimeState.agentDeliverySetupPersistenceFences.get(sessionId) === selectedDeliverySetup.id)
       ? this.queuedHumanIndex(managed)
       : -1
     if (queuedHumanWhileDeliveryHeld >= 0 && queuedHumanWhileDeliveryHeld !== nextIndex) {
@@ -24283,9 +23402,9 @@ export class SessionManager implements ISessionManager {
     }
     if (selectedDeliverySetup?.status === 'queued'
       && (Number.isFinite(selectedDeliverySetup.setupPersistenceFencedAt)
-        || this.agentDeliverySetupPersistenceFences.get(sessionId) === selectedDeliverySetup.id)) {
-      this.deferredAutomaticSessions.delete(sessionId)
-      this.automaticAdmissionReservations.delete(sessionId)
+        || this.runtimeState.agentDeliverySetupPersistenceFences.get(sessionId) === selectedDeliverySetup.id)) {
+      this.runtimeState.deferredAutomaticSessions.delete(sessionId)
+      this.runtimeState.automaticAdmissionReservations.delete(sessionId)
       this.sendEvent({
         type: 'typed_error', sessionId,
         error: {
@@ -24326,8 +23445,8 @@ export class SessionManager implements ISessionManager {
         this.persistSession(managed)
       }
       if (Number.isFinite(selectedDeliverySetup.setupRetryBlockedAt)) {
-        this.deferredAutomaticSessions.delete(sessionId)
-        this.automaticAdmissionReservations.delete(sessionId)
+        this.runtimeState.deferredAutomaticSessions.delete(sessionId)
+        this.runtimeState.automaticAdmissionReservations.delete(sessionId)
         this.sendEvent({
           type: 'typed_error', sessionId,
           error: {
@@ -24342,9 +23461,9 @@ export class SessionManager implements ISessionManager {
         0,
         (selectedDeliverySetup.setupRetryNotBefore ?? Date.now()) - Date.now(),
       )
-      if (setupDelayMs > 0 || this.deferredAutomaticRetryTimers.has(sessionId)) {
-        this.deferredAutomaticSessions.add(sessionId)
-        if (!this.deferredAutomaticRetryTimers.has(sessionId)) {
+      if (setupDelayMs > 0 || this.runtimeState.deferredAutomaticRetryTimers.has(sessionId)) {
+        this.runtimeState.deferredAutomaticSessions.add(sessionId)
+        if (!this.runtimeState.deferredAutomaticRetryTimers.has(sessionId)) {
           this.scheduleDeferredAutomaticRetry(sessionId, setupDelayMs)
         }
         return
@@ -24379,7 +23498,7 @@ export class SessionManager implements ISessionManager {
     }
 
     const dispatchToken = Symbol('queued-message-dispatch')
-    this.queuedMessageDispatches.set(sessionId, dispatchToken)
+    this.runtimeState.queuedMessageDispatches.set(sessionId, dispatchToken)
     const selectedDirectHumanId = selectedQueueItem.messageId
       && queuedDirectHumanContinuationIndexForId(managed, selectedQueueItem.messageId) === nextIndex
       ? selectedQueueItem.messageId : undefined
@@ -24392,7 +23511,7 @@ export class SessionManager implements ISessionManager {
     if (next.messageId && next.options?.internalOrigin?.kind === 'agent-message'
       && queuedAgentDelivery?.status === 'queued'
       && queuedAgentDelivery.id === next.options.internalOrigin.deliveryId) {
-      this.queuedAgentDeliveryDispatches.set(next.messageId, {
+      this.runtimeState.queuedAgentDeliveryDispatches.set(next.messageId, {
         sessionId,
         deliveryId: queuedAgentDelivery.id,
         dispatchToken,
@@ -24412,7 +23531,7 @@ export class SessionManager implements ISessionManager {
     setImmediate(() => {
       // Stop invalidates even an internal nudge without a transcript message ID.
       // Do not clear a reservation that belongs to a newer generation.
-      if (managed.processingGeneration !== dispatchGeneration || this.queuedMessageDispatches.get(sessionId) !== dispatchToken) {
+      if (managed.processingGeneration !== dispatchGeneration || this.runtimeState.queuedMessageDispatches.get(sessionId) !== dispatchToken) {
         this.settleQueuedAgentDeliveryDispatch(next.messageId, dispatchToken)
         return
       }
@@ -24429,8 +23548,8 @@ export class SessionManager implements ISessionManager {
           next,
         )) {
         managed.messageQueue.splice(Math.min(nextIndex, managed.messageQueue.length), 0, next)
-        this.queuedMessageDispatches.delete(sessionId)
-        this.automaticAdmissionReservations.delete(sessionId)
+        this.runtimeState.queuedMessageDispatches.delete(sessionId)
+        this.runtimeState.automaticAdmissionReservations.delete(sessionId)
         this.processNextQueuedMessage(sessionId)
         return
       }
@@ -24442,8 +23561,8 @@ export class SessionManager implements ISessionManager {
             && candidate.internalOrigin?.kind === 'source-activation')
           if (staleIndex >= 0) managed.messages.splice(staleIndex, 1)
         }
-        this.queuedMessageDispatches.delete(sessionId)
-        this.automaticAdmissionReservations.delete(sessionId)
+        this.runtimeState.queuedMessageDispatches.delete(sessionId)
+        this.runtimeState.automaticAdmissionReservations.delete(sessionId)
         this.persistSession(managed)
         void this.flushSession(sessionId).catch(error => {
           sessionLog.warn('Failed to flush rejected source-activation dequeue', {
@@ -24459,7 +23578,7 @@ export class SessionManager implements ISessionManager {
         && isDirectHumanContinuation(managed, next.message, next.options, selectedDirectHumanId)
         && !managed.messageQueue.some(item => item.messageId === selectedDirectHumanId)
       const selectedLiveDirectStillExact = selectedDirectStillExact && !!selectedLiveDirectId
-        && this.liveDirectHumanContinuationIds.get(managed)?.has(selectedLiveDirectId) === true
+        && this.runtimeState.liveDirectHumanContinuationIds.get(managed)?.has(selectedLiveDirectId) === true
       const reservedColdHumanBecameClosed = !!selectedDirectHumanId
         && (isClosedColdResumeStatus(managed) || this.hasTerminalObjectiveState(managed))
         && !selectedLiveDirectStillExact
@@ -24468,8 +23587,8 @@ export class SessionManager implements ISessionManager {
         if (selectedLiveDirectId) this.consumeLiveDirectHumanContinuation(managed, selectedLiveDirectId)
         const restoredIndex = Math.min(nextIndex, managed.messageQueue.length)
         managed.messageQueue.splice(restoredIndex, 0, next)
-        this.queuedMessageDispatches.delete(sessionId)
-        this.automaticAdmissionReservations.delete(sessionId)
+        this.runtimeState.queuedMessageDispatches.delete(sessionId)
+        this.runtimeState.automaticAdmissionReservations.delete(sessionId)
         this.persistSession(managed)
         // A later exact live row may have arrived while this cold row owned the
         // reservation. Give that capability one prompt chance to drain now.
@@ -24491,10 +23610,10 @@ export class SessionManager implements ISessionManager {
             error: error instanceof Error ? error.message : String(error),
           })
         }).finally(() => {
-          if (this.queuedMessageDispatches.get(sessionId) === dispatchToken) {
-            this.queuedMessageDispatches.delete(sessionId)
+          if (this.runtimeState.queuedMessageDispatches.get(sessionId) === dispatchToken) {
+            this.runtimeState.queuedMessageDispatches.delete(sessionId)
           }
-          this.automaticAdmissionReservations.delete(sessionId)
+          this.runtimeState.automaticAdmissionReservations.delete(sessionId)
           if (!managed.isProcessing && managed.messageQueue.length > 0) {
             this.processNextQueuedMessage(sessionId)
           } else if (!managed.isProcessing) {
@@ -24506,10 +23625,10 @@ export class SessionManager implements ISessionManager {
       const messageStillQueued = !next.messageId || managed.messages.some(message => message.id === next.messageId && message.isQueued)
       const recoveryStillPending = !next.options?.automaticRecovery
         || managed.pendingTurnRecovery?.userMessageId === next.options.automaticRecovery.originalUserMessageId
-      if (this.shuttingDown || managed.stopRequested || !messageStillQueued || !recoveryStillPending) {
+      if (this.runtimeState.shuttingDown || managed.stopRequested || !messageStillQueued || !recoveryStillPending) {
         this.settleQueuedAgentDeliveryDispatch(next.messageId, dispatchToken)
-        this.queuedMessageDispatches.delete(sessionId)
-        this.automaticAdmissionReservations.delete(sessionId)
+        this.runtimeState.queuedMessageDispatches.delete(sessionId)
+        this.runtimeState.automaticAdmissionReservations.delete(sessionId)
         return
       }
       const currentActionableUpwardSenderId = actionableUpwardSenderId
@@ -24536,8 +23655,8 @@ export class SessionManager implements ISessionManager {
       )) {
         managed.messageQueue.unshift(next)
         this.settleQueuedAgentDeliveryDispatch(next.messageId, dispatchToken)
-        this.queuedMessageDispatches.delete(sessionId)
-        this.automaticAdmissionReservations.delete(sessionId)
+        this.runtimeState.queuedMessageDispatches.delete(sessionId)
+        this.runtimeState.automaticAdmissionReservations.delete(sessionId)
         return
       }
       // Publish queued → processing only once every deferred authority and
@@ -24582,10 +23701,10 @@ export class SessionManager implements ISessionManager {
             })
           }
         }
-        const currentReservation = this.queuedMessageDispatches.get(sessionId)
+        const currentReservation = this.runtimeState.queuedMessageDispatches.get(sessionId)
         if ((currentReservation && currentReservation !== dispatchToken)
           || managed.processingGeneration > dispatchGeneration + 1) return
-        if (currentReservation === dispatchToken) this.queuedMessageDispatches.delete(sessionId)
+        if (currentReservation === dispatchToken) this.runtimeState.queuedMessageDispatches.delete(sessionId)
         sessionLog.error('replay failed', {
           sessionId,
           messageId: next.messageId,
@@ -24596,8 +23715,8 @@ export class SessionManager implements ISessionManager {
         if (err instanceof CleanRecoveryDispatchAuthenticationError) {
           // The exact queued receipt was restored by sendMessage. Keep it
           // durable and idle; immediate FIFO redrain would retry forever.
-          this.automaticAdmissionReservations.delete(sessionId)
-          this.deferredAutomaticSessions.delete(sessionId)
+          this.runtimeState.automaticAdmissionReservations.delete(sessionId)
+          this.runtimeState.deferredAutomaticSessions.delete(sessionId)
           this.sendEvent({
             type: 'typed_error', sessionId,
             error: {
@@ -24637,7 +23756,7 @@ export class SessionManager implements ISessionManager {
   }
 
   async killShell(sessionId: string, shellId: string): Promise<{ success: boolean; error?: string }> {
-    const managed = this.sessions.get(sessionId)
+    const managed = this.runtimeState.sessions.get(sessionId)
     if (!managed) {
       return { success: false, error: 'Session not found' }
     }
@@ -24729,7 +23848,7 @@ export class SessionManager implements ISessionManager {
     for (const [tid, info] of managed.backgroundTaskOutputs) {
       if (now - info.completedAt > ONE_HOUR) {
         managed.backgroundTaskOutputs.delete(tid)
-        this.taskOutputIndex.delete(tid)
+        this.runtimeState.taskOutputIndex.delete(tid)
       }
     }
     for (const [tid, info] of managed.backgroundTaskRegistry) {
@@ -24752,8 +23871,8 @@ export class SessionManager implements ISessionManager {
    * genuinely outlive the turn, so `keepBackgroundTasksAlive` short-circuits this.
    */
   private markOrphanedBackgroundTasks(sessionId: string): void {
-    if (this.keepBackgroundTasksAlive) return
-    const managed = this.sessions.get(sessionId)
+    if (this.runtimeState.keepBackgroundTasksAlive) return
+    const managed = this.runtimeState.sessions.get(sessionId)
     if (!managed) return
     const now = Date.now()
     let orphaned = 0
@@ -24778,7 +23897,7 @@ export class SessionManager implements ISessionManager {
    * from a prior, torn-down subprocess).
    */
   listBackgroundTasks(sessionId: string): RunningBackgroundTask[] {
-    const managed = this.sessions.get(sessionId)
+    const managed = this.runtimeState.sessions.get(sessionId)
     if (!managed) return []
     return Array.from(managed.backgroundTaskRegistry.values())
       .map((t) => ({ ...t }))
@@ -24787,7 +23906,7 @@ export class SessionManager implements ISessionManager {
 
   /** Resolve the session owning a completed task without consuming output. */
   getTaskSessionId(taskId: string): string | undefined {
-    return this.taskOutputIndex.get(taskId)
+    return this.runtimeState.taskOutputIndex.get(taskId)
   }
 
   /**
@@ -24802,17 +23921,17 @@ export class SessionManager implements ISessionManager {
    */
   async getTaskOutput(taskId: string): Promise<string | null> {
     // O(1) lookup via taskOutputIndex
-    const sessionId = this.taskOutputIndex.get(taskId)
+    const sessionId = this.runtimeState.taskOutputIndex.get(taskId)
     if (!sessionId) {
       sessionLog.info(`No output found for task: ${taskId} (task may still be running)`)
       return null
     }
 
-    const managed = this.sessions.get(sessionId)
+    const managed = this.runtimeState.sessions.get(sessionId)
     const info = managed?.backgroundTaskOutputs.get(taskId)
     if (!info) {
       // Index out of sync — clean up stale entry
-      this.taskOutputIndex.delete(taskId)
+      this.runtimeState.taskOutputIndex.delete(taskId)
       return null
     }
 
@@ -24821,7 +23940,7 @@ export class SessionManager implements ISessionManager {
       const content = await readFile(info.outputFile, 'utf-8')
       // Delete after successful read to prevent memory leak
       managed!.backgroundTaskOutputs.delete(taskId)
-      this.taskOutputIndex.delete(taskId)
+      this.runtimeState.taskOutputIndex.delete(taskId)
       return content
     } catch (err) {
       sessionLog.error(`Failed to read task output file: ${info.outputFile}`, err)
@@ -24841,10 +23960,10 @@ export class SessionManager implements ISessionManager {
     alwaysAllow: boolean,
     options?: import('@craft-agent/shared/protocol').PermissionResponseOptions,
   ): boolean {
-    const managed = this.sessions.get(sessionId)
-    if (this.shuttingDown || managed?.pendingTurnRecovery?.waitingForPermission?.recoveryRequired) return false
+    const managed = this.runtimeState.sessions.get(sessionId)
+    if (this.runtimeState.shuttingDown || managed?.pendingTurnRecovery?.waitingForPermission?.recoveryRequired) return false
     if (managed?.agent) {
-      const requestMeta = this.pendingPermissionRequests.get(requestId)
+      const requestMeta = this.runtimeState.pendingPermissionRequests.get(requestId)
       if (!requestMeta) {
         sessionLog.warn(`Permission response ignored for unknown or closed request ${requestId}`)
         return false
@@ -24863,9 +23982,9 @@ export class SessionManager implements ISessionManager {
         && managed.activeObjective?.terminalState === 'active'
         && (!requestMeta.objectiveId || requestMeta.objectiveId === objectiveId)
         && managed.agent === requestMeta.runtimeAgent
-        && this.permissionExpiryStopGenerations.get(managed) !== requestMeta.processingGeneration
+        && this.runtimeState.permissionExpiryStopGenerations.get(managed) !== requestMeta.processingGeneration
       if (!ownsRequest) {
-        this.pendingPermissionRequests.delete(requestId)
+        this.runtimeState.pendingPermissionRequests.delete(requestId)
         clearTimeout(requestMeta.timeout)
         this.rejectPendingPrivilegedApproval(requestId, requestMeta)
         this.clearPermissionWait(managed, requestId)
@@ -24882,12 +24001,12 @@ export class SessionManager implements ISessionManager {
         })
         return false
       }
-      this.pendingPermissionRequests.delete(requestId)
+      this.runtimeState.pendingPermissionRequests.delete(requestId)
       this.clearPermissionWait(managed, requestId)
       if (requestMeta) clearTimeout(requestMeta.timeout)
 
       if (requestMeta?.type === 'admin_approval') {
-        const brokerResult = this.privilegedExecutionBroker.resolveApproval(requestId, allowed, {
+        const brokerResult = this.runtimeState.privilegedExecutionBroker.resolveApproval(requestId, allowed, {
           expectedCommandHash: requestMeta.commandHash,
           expectedSessionId: sessionId,
         })
@@ -25009,14 +24128,14 @@ export class SessionManager implements ISessionManager {
    */
   async respondToCredential(sessionId: string, requestId: string, response: import('@craft-agent/shared/protocol').CredentialResponse): Promise<boolean> {
     const operationKey = `${sessionId}\u0000${requestId}`
-    const existingOperation = this.credentialResponsesInFlight.get(operationKey)
+    const existingOperation = this.runtimeState.credentialResponsesInFlight.get(operationKey)
     if (existingOperation) {
       sessionLog.info(`Credential response already in flight for ${requestId}; joining the one-shot operation`)
       return existingOperation.operation
     }
 
     // First, check if this is a new unified auth flow request
-    const managed = this.sessions.get(sessionId)
+    const managed = this.runtimeState.sessions.get(sessionId)
     const request = managed?.pendingAuthRequest
     if (managed && request && this.isExactPendingAuthRequest(managed, request) && request.requestId === requestId) {
       sessionLog.info(`Credential response (unified flow) for ${requestId}: cancelled=${response.cancelled}`)
@@ -25038,12 +24157,12 @@ export class SessionManager implements ISessionManager {
         return false
       })
       const entry = { request, operation }
-      this.credentialResponsesInFlight.set(operationKey, entry)
+      this.runtimeState.credentialResponsesInFlight.set(operationKey, entry)
       try {
         return await operation
       } finally {
-        if (this.credentialResponsesInFlight.get(operationKey) === entry) {
-          this.credentialResponsesInFlight.delete(operationKey)
+        if (this.runtimeState.credentialResponsesInFlight.get(operationKey) === entry) {
+          this.runtimeState.credentialResponsesInFlight.delete(operationKey)
         }
       }
     }
@@ -25053,10 +24172,10 @@ export class SessionManager implements ISessionManager {
     }
 
     // Fall back to legacy callback flow
-    const resolver = this.pendingCredentialResolvers.get(requestId)
+    const resolver = this.runtimeState.pendingCredentialResolvers.get(requestId)
     if (resolver) {
       sessionLog.info(`Credential response (legacy flow) for ${requestId}: cancelled=${response.cancelled}`)
-      this.pendingCredentialResolvers.delete(requestId)
+      this.runtimeState.pendingCredentialResolvers.delete(requestId)
       resolver(response)
       return true
     } else {
@@ -25070,7 +24189,7 @@ export class SessionManager implements ISessionManager {
    */
   setSessionPermissionMode(sessionId: string, mode: PermissionMode): void {
     mode = requirePermissionMode(mode)
-    const managed = this.sessions.get(sessionId)
+    const managed = this.runtimeState.sessions.get(sessionId)
     if (managed) {
       this.assertSessionMutationAdmissionOpen(managed)
       if (isTerminalReviewSession(managed) && mode !== 'safe') throw new Error('Independent reviewer sessions must remain in safe mode')
@@ -25146,7 +24265,7 @@ export class SessionManager implements ISessionManager {
     changedAt: string
     changedBy: 'user' | 'system' | 'restore' | 'automation' | 'unknown'
   } | null {
-    const managed = this.sessions.get(sessionId)
+    const managed = this.runtimeState.sessions.get(sessionId)
     if (!managed || !this.ownsSessionOperation(managed)) return null
 
     let diagnostics = getPermissionModeDiagnostics(sessionId)
@@ -25235,7 +24354,7 @@ export class SessionManager implements ISessionManager {
    * Labels are IDs referencing workspace labels/config.json.
    */
   async setSessionLabels(sessionId: string, labels: string[]): Promise<void> {
-    const managed = this.sessions.get(sessionId)
+    const managed = this.runtimeState.sessions.get(sessionId)
     if (managed) return this.trackSessionOperation(managed, async () => {
       this.assertSessionOperationOwner(managed)
       managed.labels = sanitizeParentSessionLabels(managed.id, managed.parentSessionId, labels) ?? []
@@ -25252,7 +24371,7 @@ export class SessionManager implements ISessionManager {
       // Workaround: Bun's fs.watch({ recursive: true }) on Linux doesn't track
       // directories created after the watcher started.
       // https://github.com/oven-sh/bun/issues/15939
-      const watcher = this.configWatchers.get(managed.workspace.rootPath)
+      const watcher = this.runtimeState.configWatchers.get(managed.workspace.rootPath)
       watcher?.notifyFileChange(`sessions/${sessionId}/session.jsonl`)
     })
   }
@@ -25272,7 +24391,7 @@ export class SessionManager implements ISessionManager {
     sessionId: string,
     opts?: { parentSessionId?: string },
   ): Promise<{ labelId: string } | undefined> {
-    const managed = this.sessions.get(sessionId)
+    const managed = this.runtimeState.sessions.get(sessionId)
     if (!managed) return undefined
     return this.trackSessionOperation(managed, async () => {
       this.assertSessionOperationOwner(managed)
@@ -25289,7 +24408,7 @@ export class SessionManager implements ISessionManager {
       if (existing) return { labelId: existing }
 
       let itemId: string
-      const parent = opts?.parentSessionId ? this.sessions.get(opts.parentSessionId) : undefined
+      const parent = opts?.parentSessionId ? this.runtimeState.sessions.get(opts.parentSessionId) : undefined
       if (parent) {
         const parentItem = itemOf(parent.labels)
         if (parentItem) {
@@ -25315,7 +24434,7 @@ export class SessionManager implements ISessionManager {
    * the project binding is only used as a default for newly created sessions.
    */
   async setSessionProjectId(sessionId: string, projectId: string | null): Promise<void> {
-    const managed = this.sessions.get(sessionId)
+    const managed = this.runtimeState.sessions.get(sessionId)
     if (managed) return this.trackSessionOperation(managed, async () => {
       this.assertSessionOperationOwner(managed)
       managed.projectId = projectId ?? undefined
@@ -25329,7 +24448,7 @@ export class SessionManager implements ISessionManager {
 
       this.persistSession(managed)
       await this.flushSession(managed.id)
-      const watcher = this.configWatchers.get(managed.workspace.rootPath)
+      const watcher = this.runtimeState.configWatchers.get(managed.workspace.rootPath)
       watcher?.notifyFileChange(`sessions/${sessionId}/session.jsonl`)
     })
   }
@@ -25339,7 +24458,7 @@ export class SessionManager implements ISessionManager {
    * Pass `null` to clear (board falls back to the default column). Independent of sessionStatus.
    */
   async setKanbanColumn(sessionId: string, column: string | null): Promise<void> {
-    const managed = this.sessions.get(sessionId)
+    const managed = this.runtimeState.sessions.get(sessionId)
     if (managed) return this.trackSessionOperation(managed, async () => {
       this.assertSessionOperationOwner(managed)
       managed.kanbanColumn = column ?? undefined
@@ -25350,7 +24469,7 @@ export class SessionManager implements ISessionManager {
       // Self-writes don't re-emit through the file watcher (kanbanColumn isn't in the header
       // signature), so push a live metadata event for the board to consume.
       this.sendEvent({ type: 'session_metadata_changed', sessionId, changes: { kanbanColumn: column ?? undefined } }, managed.workspace.id)
-      const watcher = this.configWatchers.get(managed.workspace.rootPath)
+      const watcher = this.runtimeState.configWatchers.get(managed.workspace.rootPath)
       watcher?.notifyFileChange(`sessions/${sessionId}/session.jsonl`)
     })
   }
@@ -25360,7 +24479,7 @@ export class SessionManager implements ISessionManager {
    * stable progress denominator so it doesn't grow as child sessions are spawned lazily at dispatch.
    */
   async setTaskNodeCount(sessionId: string, count: number): Promise<void> {
-    const managed = this.sessions.get(sessionId)
+    const managed = this.runtimeState.sessions.get(sessionId)
     if (managed) return this.trackSessionOperation(managed, async () => {
       this.assertSessionOperationOwner(managed)
       managed.taskNodeCount = count
@@ -25371,7 +24490,7 @@ export class SessionManager implements ISessionManager {
       // Self-writes don't re-emit through the file watcher (taskNodeCount isn't in the header
       // signature), so push a live metadata event so the progress denominator updates immediately.
       this.sendEvent({ type: 'session_metadata_changed', sessionId, changes: { taskNodeCount: count } }, managed.workspace.id)
-      const watcher = this.configWatchers.get(managed.workspace.rootPath)
+      const watcher = this.runtimeState.configWatchers.get(managed.workspace.rootPath)
       watcher?.notifyFileChange(`sessions/${sessionId}/session.jsonl`)
     })
   }
@@ -25393,7 +24512,7 @@ export class SessionManager implements ISessionManager {
     taskSlug: string,
     reconcile?: { name?: string; projectId?: string; workingDirectory?: string; model?: string; llmConnection?: string; permissionMode?: PermissionMode },
   ): Promise<boolean> {
-    const managed = this.sessions.get(sessionId)
+    const managed = this.runtimeState.sessions.get(sessionId)
     if (!managed) {
       sessionLog.warn('adoptGeneratedTaskOrchestrator: session not found', { sessionId, taskSlug })
       return false
@@ -25506,7 +24625,7 @@ export class SessionManager implements ISessionManager {
         supportsBranching: resolveSupportsBranching(managed),
       }, managed.workspace.id)
     }
-    const watcher = this.configWatchers.get(managed.workspace.rootPath)
+    const watcher = this.runtimeState.configWatchers.get(managed.workspace.rootPath)
     watcher?.notifyFileChange(`sessions/${sessionId}/session.jsonl`)
     sessionLog.info('adoptGeneratedTaskOrchestrator: promoted draft', { sessionId, taskSlug, renamed, modelChanged, connectionChanged, cwdChanged, modeChanged })
     return true
@@ -25533,7 +24652,7 @@ export class SessionManager implements ISessionManager {
     taskSlug: string,
     reconcile?: { name?: string; projectId?: string; workingDirectory?: string; model?: string; llmConnection?: string; permissionMode?: PermissionMode },
   ): Promise<boolean> {
-    const managed = this.sessions.get(sessionId)
+    const managed = this.runtimeState.sessions.get(sessionId)
     if (!managed) {
       sessionLog.warn('bindExistingSessionToTask: session not found', { sessionId, taskSlug })
       return false
@@ -25635,7 +24754,7 @@ export class SessionManager implements ISessionManager {
         supportsBranching: resolveSupportsBranching(managed),
       }, managed.workspace.id)
     }
-    const watcher = this.configWatchers.get(managed.workspace.rootPath)
+    const watcher = this.runtimeState.configWatchers.get(managed.workspace.rootPath)
     watcher?.notifyFileChange(`sessions/${sessionId}/session.jsonl`)
     sessionLog.info('bindExistingSessionToTask: bound existing session', { sessionId, taskSlug, renamed, modelChanged, connectionChanged, cwdChanged, modeChanged })
     return true
@@ -25646,7 +24765,7 @@ export class SessionManager implements ISessionManager {
    * This is sticky and persisted across messages.
    */
   setSessionThinkingLevel(sessionId: string, level: ThinkingLevel): void {
-    const managed = this.sessions.get(sessionId)
+    const managed = this.runtimeState.sessions.get(sessionId)
     if (managed) {
       this.assertSessionMutationAdmissionOpen(managed)
       if (hasImmutableMissionRoute(managed)) {
@@ -25811,7 +24930,7 @@ export class SessionManager implements ISessionManager {
     generation: number,
     authorityEpoch: number,
   ): Promise<void> {
-    const admissionBinding = this.runtimeToolAdmissionBindings.get(runtimeAgent)
+    const admissionBinding = this.runtimeState.runtimeToolAdmissionBindings.get(runtimeAgent)
     if (admissionBinding && (admissionBinding.managed !== managed
       || admissionBinding.generation !== generation
       || admissionBinding.activeObjective !== objectiveBefore
@@ -25836,11 +24955,11 @@ export class SessionManager implements ISessionManager {
       await this.flushSession(managed.id)
       if (managed.agent !== runtimeAgent || managed.processingGeneration !== generation
         || managed.activeObjective !== registered
-        || (this.objectiveAuthorityEpochs.get(managed) ?? 0) !== authorityEpoch) {
+        || (this.runtimeState.objectiveAuthorityEpochs.get(managed) ?? 0) !== authorityEpoch) {
         throw new Error('The objective changed while acceptance criteria were being persisted; the stale provider turn receives no registration receipt.')
       }
       if (admissionBinding) {
-        if (this.runtimeToolAdmissionBindings.get(runtimeAgent) !== admissionBinding
+        if (this.runtimeState.runtimeToolAdmissionBindings.get(runtimeAgent) !== admissionBinding
           || admissionBinding.activeObjective !== objectiveBefore) {
           throw new Error('Acceptance registration lost its provider-turn binding.')
         }
@@ -25893,11 +25012,11 @@ export class SessionManager implements ISessionManager {
     runtimeAgent: AgentInstance,
     request: { toolUseId?: string; toolName: string; toolInput: Record<string, unknown> },
   ): Promise<void> {
-    const previous = this.toolAdmissionTransactions.get(managed) ?? Promise.resolve()
+    const previous = this.runtimeState.toolAdmissionTransactions.get(managed) ?? Promise.resolve()
     let release!: () => void
     const turn = new Promise<void>(resolve => { release = resolve })
     const tail = previous.catch(() => {}).then(() => turn)
-    this.toolAdmissionTransactions.set(managed, tail)
+    this.runtimeState.toolAdmissionTransactions.set(managed, tail)
     await previous.catch(() => {})
     try {
       try {
@@ -25911,16 +25030,16 @@ export class SessionManager implements ISessionManager {
           sessionId: managed.id,
           toolName: request.toolName,
           toolUseId: request.toolUseId,
-          generation: this.runtimeProcessingGenerations.get(runtimeAgent),
-          recoveryCause: this.runtimeToolAdmissionBindings.get(runtimeAgent)?.automaticRecovery?.cause,
+          generation: this.runtimeState.runtimeProcessingGenerations.get(runtimeAgent),
+          recoveryCause: this.runtimeState.runtimeToolAdmissionBindings.get(runtimeAgent)?.automaticRecovery?.cause,
           error: error instanceof Error ? error.message : String(error),
         })
         throw error
       }
     } finally {
       release()
-      if (this.toolAdmissionTransactions.get(managed) === tail) {
-        this.toolAdmissionTransactions.delete(managed)
+      if (this.runtimeState.toolAdmissionTransactions.get(managed) === tail) {
+        this.runtimeState.toolAdmissionTransactions.delete(managed)
       }
     }
   }
@@ -25930,7 +25049,7 @@ export class SessionManager implements ISessionManager {
     runtimeAgent: AgentInstance,
     request: { toolUseId?: string; toolName: string; toolInput: Record<string, unknown> },
   ): Promise<void> {
-    let binding = this.runtimeToolAdmissionBindings.get(runtimeAgent)
+    let binding = this.runtimeState.runtimeToolAdmissionBindings.get(runtimeAgent)
     if (!binding) {
       throw new Error('Tool admission has no exact provider-handoff binding')
     }
@@ -25940,11 +25059,11 @@ export class SessionManager implements ISessionManager {
     // the first flush is completing.
     while (binding.pendingRebind) {
       await binding.pendingRebind
-      const current = this.runtimeToolAdmissionBindings.get(runtimeAgent)
+      const current = this.runtimeState.runtimeToolAdmissionBindings.get(runtimeAgent)
       if (!current) throw new Error('Tool admission lost its provider-handoff binding during steer')
       binding = current
     }
-    const generation = this.runtimeProcessingGenerations.get(runtimeAgent)
+    const generation = this.runtimeState.runtimeProcessingGenerations.get(runtimeAgent)
     const recovery = binding.automaticRecovery
     const pending = binding.pendingTurnRecovery
     const dispatch = binding.recoveryDispatch
@@ -26047,10 +25166,10 @@ export class SessionManager implements ISessionManager {
       return exact
     }
     const ownsExactTurn = (): boolean => (
-      !this.shuttingDown
+      !this.runtimeState.shuttingDown
       && binding.managed === managed
       && binding.sessionId === managed.id
-      && this.sessions.get(managed.id) === managed
+      && this.runtimeState.sessions.get(managed.id) === managed
       && managed.agent === runtimeAgent
       && managed.isProcessing
       && !managed.stopRequested
@@ -26058,7 +25177,7 @@ export class SessionManager implements ISessionManager {
       && binding.generation === generation
       && generation === managed.processingGeneration
       && managed.activeObjective === binding.activeObjective
-      && (this.objectiveAuthorityEpochs.get(managed) ?? 0) === binding.authorityEpoch
+      && (this.runtimeState.objectiveAuthorityEpochs.get(managed) ?? 0) === binding.authorityEpoch
       && managed.lastSentOptions === binding.lastSentOptions
       && latestBoundUserMessage() === binding.userMessage
     )
@@ -26099,10 +25218,10 @@ export class SessionManager implements ISessionManager {
         generationMatches: generation !== undefined
           && binding.generation === generation
           && generation === managed.processingGeneration,
-        runtimeMatches: this.sessions.get(managed.id) === managed
+        runtimeMatches: this.runtimeState.sessions.get(managed.id) === managed
           && managed.agent === runtimeAgent && managed.isProcessing && !managed.stopRequested,
         objectiveMatches: managed.activeObjective === binding.activeObjective,
-        authorityMatches: (this.objectiveAuthorityEpochs.get(managed) ?? 0) === binding.authorityEpoch,
+        authorityMatches: (this.runtimeState.objectiveAuthorityEpochs.get(managed) ?? 0) === binding.authorityEpoch,
         optionsMatch: managed.lastSentOptions === binding.lastSentOptions,
         userBoundaryMatches: latestBoundUserMessage() === binding.userMessage,
         queuedMachineInboxCount: managed.messages.filter(isDeferredMachineInboxUser).length,
@@ -26353,7 +25472,7 @@ export class SessionManager implements ISessionManager {
     const existingReceipts = managed.messages.filter(message => message.toolUseId === toolUseId)
     const existingReceipt = existingReceipts[0]
     const existingReceiptIndex = existingReceipt ? managed.messages.indexOf(existingReceipt) : -1
-    const currentStartOwner = this.checkpointToolStarts.get(managed)
+    const currentStartOwner = this.runtimeState.checkpointToolStarts.get(managed)
     const currentStart = currentStartOwner && currentStartOwner.generation === generation
       ? currentStartOwner.calls.get(toolUseId)
       : undefined
@@ -26364,7 +25483,7 @@ export class SessionManager implements ISessionManager {
         === (managed.activeObjective?.acceptanceRevision ?? managed.activeObjective?.userMessageId)
       && currentStart.acceptanceSha256
         === (managed.activeObjective ? objectiveReviewBinding(managed.activeObjective).acceptanceSha256 : undefined)
-      && currentStart.authorityEpoch === (this.objectiveAuthorityEpochs.get(managed) ?? 0)
+      && currentStart.authorityEpoch === (this.runtimeState.objectiveAuthorityEpochs.get(managed) ?? 0)
       && currentStart.toolName === request.toolName
       && currentStart.durableAdmissionClaimed !== true
     // Pi emits tool_execution_start when the SDK begins the invocation, then
@@ -26507,17 +25626,17 @@ export class SessionManager implements ISessionManager {
     assertAutomaticToolFallbackStillEnabled()
     const objectiveAtStart = managed.activeObjective
     if (objectiveAtStart?.terminalState === 'active') {
-      let starts = this.checkpointToolStarts.get(managed)
+      let starts = this.runtimeState.checkpointToolStarts.get(managed)
       if (starts?.generation !== generation) {
         starts = { generation: generation!, calls: new Map() }
-        this.checkpointToolStarts.set(managed, starts)
+        this.runtimeState.checkpointToolStarts.set(managed, starts)
       }
       starts!.calls.set(toolUseId, {
         objective: objectiveAtStart,
         objectiveId: objectiveAtStart.userMessageId,
         acceptanceRevision: objectiveAtStart.acceptanceRevision ?? objectiveAtStart.userMessageId,
         acceptanceSha256: objectiveReviewBinding(objectiveAtStart).acceptanceSha256,
-        authorityEpoch: this.objectiveAuthorityEpochs.get(managed) ?? 0,
+        authorityEpoch: this.runtimeState.objectiveAuthorityEpochs.get(managed) ?? 0,
         toolName: request.toolName,
         durableAdmissionClaimed: true,
       })
@@ -26636,13 +25755,13 @@ export class SessionManager implements ISessionManager {
   ): boolean {
     const agent = managed.agent
     if (!agent) return false
-    const binding = this.runtimeToolAdmissionBindings.get(agent)
+    const binding = this.runtimeState.runtimeToolAdmissionBindings.get(agent)
     if (!binding
       || binding.pendingRebind
       || binding.managed !== managed
       || binding.sessionId !== managed.id
       || binding.generation !== generation
-      || this.runtimeProcessingGenerations.get(agent) !== generation
+      || this.runtimeState.runtimeProcessingGenerations.get(agent) !== generation
       || managed.processingGeneration !== generation
       || !managed.isProcessing) return false
 
@@ -26664,13 +25783,13 @@ export class SessionManager implements ISessionManager {
     event: AgentEvent,
     processingGeneration?: number,
   ): Promise<void> {
-    if (this.retiringSessions.has(managed) || this.sessions.get(managed.id) !== managed) {
+    if (this.runtimeState.retiringSessions.has(managed) || this.runtimeState.sessions.get(managed.id) !== managed) {
       return Promise.resolve()
     }
-    const admitShutdownTerminalResult = this.shuttingDown
+    const admitShutdownTerminalResult = this.runtimeState.shuttingDown
       && event.type === 'tool_result'
-      && this.shutdownTerminalResultAdmissionOpen
-    if (this.shuttingDown && !admitShutdownTerminalResult) return Promise.resolve()
+      && this.runtimeState.shutdownTerminalResultAdmissionOpen
+    if (this.runtimeState.shuttingDown && !admitShutdownTerminalResult) return Promise.resolve()
     return this.trackSessionOperation(
       managed,
       () => this.processEventImpl(managed, event, processingGeneration),
@@ -26696,8 +25815,8 @@ export class SessionManager implements ISessionManager {
     const sessionId = managed.id
     const workspaceId = managed.workspace.id
     const generationKey = processingGeneration ?? managed.processingGeneration
-    if (this.shuttingDown && event.type !== 'tool_result') return
-    const deniedPermissionTools = this.permissionDeniedToolUseIdsByGeneration
+    if (this.runtimeState.shuttingDown && event.type !== 'tool_result') return
+    const deniedPermissionTools = this.runtimeState.permissionDeniedToolUseIdsByGeneration
       .get(managed)?.get(generationKey)
     if ((event.type === 'tool_start' || event.type === 'tool_result')
       && deniedPermissionTools?.has(event.toolUseId)) {
@@ -26714,7 +25833,7 @@ export class SessionManager implements ISessionManager {
     // generation: in particular, a denial result must not overwrite the
     // host-observed non-executed receipt and a late tool_start must not begin a
     // second action while cleanup is in flight.
-    if (this.permissionExpiryStopGenerations.get(managed) === generationKey) {
+    if (this.runtimeState.permissionExpiryStopGenerations.get(managed) === generationKey) {
       if (event.type === 'tool_result'
         && deniedPermissionTools
         && this.persistToolResultAfterPermissionExpiry(managed, event, deniedPermissionTools)) return
@@ -26736,12 +25855,12 @@ export class SessionManager implements ISessionManager {
         break
 
       case 'text_discard': {
-        const pending = this.pendingDeltas.get(sessionId)
+        const pending = this.runtimeState.pendingDeltas.get(sessionId)
         if (pending?.turnId === event.turnId) {
-          const timer = this.deltaFlushTimers.get(sessionId)
+          const timer = this.runtimeState.deltaFlushTimers.get(sessionId)
           if (timer) clearTimeout(timer)
-          this.deltaFlushTimers.delete(sessionId)
-          this.pendingDeltas.delete(sessionId)
+          this.runtimeState.deltaFlushTimers.delete(sessionId)
+          this.runtimeState.pendingDeltas.delete(sessionId)
         }
         if (managed.streamingTurnId === event.turnId) {
           managed.streamingText = ''
@@ -26912,10 +26031,10 @@ export class SessionManager implements ISessionManager {
         if (managed.isProcessing && !managed.stopRequested && generationKey === managed.processingGeneration
           && managed.activeObjective?.terminalState === 'active') {
           const objectiveAtStart = managed.activeObjective
-          let starts = this.checkpointToolStarts.get(managed)
+          let starts = this.runtimeState.checkpointToolStarts.get(managed)
           if (starts?.generation !== generationKey) {
             starts = { generation: generationKey, calls: new Map() }
-            this.checkpointToolStarts.set(managed, starts)
+            this.runtimeState.checkpointToolStarts.set(managed, starts)
           }
           if (!starts.calls.has(event.toolUseId)) {
             starts.calls.set(event.toolUseId, {
@@ -26923,7 +26042,7 @@ export class SessionManager implements ISessionManager {
               objectiveId: objectiveAtStart.userMessageId,
               acceptanceRevision: objectiveAtStart.acceptanceRevision ?? objectiveAtStart.userMessageId,
               acceptanceSha256: objectiveReviewBinding(objectiveAtStart).acceptanceSha256,
-              authorityEpoch: this.objectiveAuthorityEpochs.get(managed) ?? 0,
+              authorityEpoch: this.runtimeState.objectiveAuthorityEpochs.get(managed) ?? 0,
               toolName: event.toolName,
             })
           }
@@ -26963,18 +26082,18 @@ export class SessionManager implements ISessionManager {
         // display-metadata lookup above. Re-check the generation tombstone
         // before inserting/updating a tool row; the denial path has already
         // materialized and flushed the authoritative non-execution receipt.
-        const deniedDuringDisplayResolution = this.permissionDeniedToolUseIdsByGeneration
+        const deniedDuringDisplayResolution = this.runtimeState.permissionDeniedToolUseIdsByGeneration
           .get(managed)?.get(generationKey)?.has(event.toolUseId) === true
-        const startOwner = this.checkpointToolStarts.get(managed)?.calls.get(event.toolUseId)
+        const startOwner = this.runtimeState.checkpointToolStarts.get(managed)?.calls.get(event.toolUseId)
         const startStillCurrent = !!startOwner
           && startOwner.objective === managed.activeObjective
-          && startOwner.authorityEpoch === (this.objectiveAuthorityEpochs.get(managed) ?? 0)
+          && startOwner.authorityEpoch === (this.runtimeState.objectiveAuthorityEpochs.get(managed) ?? 0)
           && startOwner.acceptanceRevision
             === (managed.activeObjective?.acceptanceRevision ?? managed.activeObjective?.userMessageId)
           && startOwner.acceptanceSha256
             === (managed.activeObjective ? objectiveReviewBinding(managed.activeObjective).acceptanceSha256 : undefined)
         if (deniedDuringDisplayResolution) {
-          const starts = this.checkpointToolStarts.get(managed)
+          const starts = this.runtimeState.checkpointToolStarts.get(managed)
           if (starts?.generation === generationKey) starts.calls.delete(event.toolUseId)
           sessionLog.info('Ignoring tool start denied during display resolution', {
             sessionId,
@@ -26989,7 +26108,7 @@ export class SessionManager implements ISessionManager {
           // recovery and duplicate detection can see the uncertain effect, but
           // drop its immutable owner so no later result can become evidence for
           // the replacement objective.
-          const starts = this.checkpointToolStarts.get(managed)
+          const starts = this.runtimeState.checkpointToolStarts.get(managed)
           if (starts?.generation === generationKey) starts.calls.delete(event.toolUseId)
           sessionLog.info('Retaining non-authoritative tool start superseded during display resolution', {
             sessionId,
@@ -27158,7 +26277,7 @@ export class SessionManager implements ISessionManager {
           ? managed.messages.findIndex(message => message.id === managed.activeObjective?.userMessageId)
           : -1
         const startedToolIndex = managed.messages.findIndex(message => message.toolUseId === event.toolUseId)
-        const starts = this.checkpointToolStarts.get(managed)
+        const starts = this.runtimeState.checkpointToolStarts.get(managed)
         const checkpointOwner = starts?.generation === generationKey
           ? starts.calls.get(event.toolUseId)
           : undefined
@@ -27170,7 +26289,7 @@ export class SessionManager implements ISessionManager {
           && starts?.generation === generationKey
           && generationKey === managed.processingGeneration
           && checkpointOwner.objective === managed.activeObjective
-          && checkpointOwner.authorityEpoch === (this.objectiveAuthorityEpochs.get(managed) ?? 0)
+          && checkpointOwner.authorityEpoch === (this.runtimeState.objectiveAuthorityEpochs.get(managed) ?? 0)
           && checkpointOwner.acceptanceRevision
             === (managed.activeObjective?.acceptanceRevision ?? managed.activeObjective?.userMessageId)
           && checkpointOwner.acceptanceSha256
@@ -27191,7 +26310,7 @@ export class SessionManager implements ISessionManager {
         starts?.calls.delete(event.toolUseId)
         if (event.continuationRequired === true && event.executed === false && event.isError !== true
           && event.checkpoint?.schemaVersion === 1 && event.checkpoint.kind === 'tool-call-budget'
-          && !this.shuttingDown && !managed.stopRequested && managed.isProcessing
+          && !this.runtimeState.shuttingDown && !managed.stopRequested && managed.isProcessing
           && generationKey === managed.processingGeneration && starts?.generation === generationKey
           && managed.activeObjective?.terminalState === 'active'
           && !!checkpointOwner
@@ -27231,7 +26350,7 @@ export class SessionManager implements ISessionManager {
           })
         }
 
-        if (!this.shuttingDown && inferredError && belongsToActiveObjective) {
+        if (!this.runtimeState.shuttingDown && inferredError && belongsToActiveObjective) {
           const evidence = formattedResult.slice(0, 1_000)
           const objectiveAuthorizationSegments = managed.activeObjective
             ? objectiveEvidenceContractSegments(managed.messages, managed.activeObjective)
@@ -27599,7 +26718,7 @@ export class SessionManager implements ISessionManager {
           break
         }
 
-        if (this.shuttingDown || managed.stopRequested || !managed.isProcessing
+        if (this.runtimeState.shuttingDown || managed.stopRequested || !managed.isProcessing
           || generationKey !== managed.processingGeneration || managed.activeObjective !== errorObjective) break
 
         sessionLog.error('Agent event failed', {
@@ -27837,7 +26956,7 @@ export class SessionManager implements ISessionManager {
           : undefined
         const wasAlreadyTerminal = priorEntry
           ? priorEntry.status !== 'running'
-          : this.taskOutputIndex.has(event.taskId)
+          : this.runtimeState.taskOutputIndex.has(event.taskId)
 
         // Store output for later retrieval via getTaskOutput()
         if (managed) {
@@ -27848,7 +26967,7 @@ export class SessionManager implements ISessionManager {
             completedAt: Date.now(),
           })
           // O(1) index for getTaskOutput() — avoids scanning all sessions
-          this.taskOutputIndex.set(event.taskId, sessionId)
+          this.runtimeState.taskOutputIndex.set(event.taskId, sessionId)
 
           // Resolve the running-task registry entry to its terminal status so a
           // later "status?" query reflects reality instead of a stale "running".
@@ -27893,7 +27012,7 @@ export class SessionManager implements ISessionManager {
         // the terminal notification reaches the agent through the live stream, so
         // we skip then. Gated on keep-alive because only that mode delivers this
         // event between turns; guarded against duplicate notifications.
-        if (managed && this.keepBackgroundTasksAlive && !managed.isProcessing && !wasAlreadyTerminal) {
+        if (managed && this.runtimeState.keepBackgroundTasksAlive && !managed.isProcessing && !wasAlreadyTerminal) {
           const taskIntent = managed.backgroundTaskRegistry.get(event.taskId)?.intent
           const outputFile = event.outputFile || managed.backgroundTaskOutputs.get(event.taskId)?.outputFile
           const label = taskIntent ? `"${taskIntent}"` : `task ${event.taskId}`
@@ -27945,11 +27064,11 @@ export class SessionManager implements ISessionManager {
         // old renderer to manufacture a visible objective root.
         const objectiveBinding = sourceActivationObjectiveBinding(managed.activeObjective)
         const sourceTurn = managed.sourceActivationTurn
-        const cancellationEpoch = this.turnCancellationEpochs.get(managed) ?? 0
+        const cancellationEpoch = this.runtimeState.turnCancellationEpochs.get(managed) ?? 0
         const validSlug = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(event.sourceSlug)
           && event.sourceSlug.length <= 128
-        const validEvent = !this.shuttingDown && !managed.stopRequested
-          && this.sessions.get(sessionId) === managed
+        const validEvent = !this.runtimeState.shuttingDown && !managed.stopRequested
+          && this.runtimeState.sessions.get(sessionId) === managed
           && managed.processingGeneration === generationKey
           && sourceTurn?.generation === generationKey
           && sourceTurn.cancellationEpoch === cancellationEpoch
@@ -28191,7 +27310,7 @@ export class SessionManager implements ISessionManager {
   }
 
   private sendEvent(event: SessionEvent, workspaceId?: string): void {
-    if (!this.eventSink) {
+    if (!this.runtimeState.eventSink) {
       sessionLog.warn('Cannot send event - no event sink')
       return
     }
@@ -28201,7 +27320,7 @@ export class SessionManager implements ISessionManager {
       return
     }
 
-    this.eventSink(RPC_CHANNELS.sessions.EVENT, { to: 'workspace', workspaceId }, event)
+    this.runtimeState.eventSink(RPC_CHANNELS.sessions.EVENT, { to: 'workspace', workspaceId }, event)
   }
 
   /**
@@ -28209,7 +27328,7 @@ export class SessionManager implements ISessionManager {
    * Instead of sending 50+ IPC events per second, batches deltas and flushes every 50ms
    */
   private queueDelta(sessionId: string, workspaceId: string, delta: string, turnId?: string): void {
-    let existing = this.pendingDeltas.get(sessionId)
+    let existing = this.runtimeState.pendingDeltas.get(sessionId)
     if (existing && existing.turnId !== turnId) {
       this.flushDelta(sessionId, workspaceId)
       existing = undefined
@@ -28221,15 +27340,15 @@ export class SessionManager implements ISessionManager {
       if (turnId) existing.turnId = turnId
     } else {
       // Start new batch
-      this.pendingDeltas.set(sessionId, { delta, turnId })
+      this.runtimeState.pendingDeltas.set(sessionId, { delta, turnId })
     }
 
     // Schedule flush if not already scheduled
-    if (!this.deltaFlushTimers.has(sessionId)) {
+    if (!this.runtimeState.deltaFlushTimers.has(sessionId)) {
       const timer = setTimeout(() => {
         this.flushDelta(sessionId, workspaceId)
       }, DELTA_BATCH_INTERVAL_MS)
-      this.deltaFlushTimers.set(sessionId, timer)
+      this.runtimeState.deltaFlushTimers.set(sessionId, timer)
     }
   }
 
@@ -28239,14 +27358,14 @@ export class SessionManager implements ISessionManager {
    */
   private flushDelta(sessionId: string, workspaceId: string): void {
     // Clear the timer
-    const timer = this.deltaFlushTimers.get(sessionId)
+    const timer = this.runtimeState.deltaFlushTimers.get(sessionId)
     if (timer) {
       clearTimeout(timer)
-      this.deltaFlushTimers.delete(sessionId)
+      this.runtimeState.deltaFlushTimers.delete(sessionId)
     }
 
     // Send batched delta if any
-    const pending = this.pendingDeltas.get(sessionId)
+    const pending = this.runtimeState.pendingDeltas.get(sessionId)
     if (pending && pending.delta) {
       this.sendEvent({
         type: 'text_delta',
@@ -28254,7 +27373,7 @@ export class SessionManager implements ISessionManager {
         delta: pending.delta,
         turnId: pending.turnId
       }, workspaceId)
-      this.pendingDeltas.delete(sessionId)
+      this.runtimeState.pendingDeltas.delete(sessionId)
     }
   }
 
@@ -28323,7 +27442,7 @@ export class SessionManager implements ISessionManager {
 
     // Populate triggeredBy metadata so title generation is explicitly skipped
     // and the session is identifiable as automation-initiated after reload
-    const managed = this.sessions.get(session.id)
+    const managed = this.runtimeState.sessions.get(session.id)
     if (managed) {
       managed.triggeredBy = { automationName, timestamp: Date.now() }
       this.persistSession(managed)
@@ -28336,9 +27455,9 @@ export class SessionManager implements ISessionManager {
     // declared `telegramTopic`. Done before `sendMessage` so the first
     // assistant tokens already route through the bound topic. Failure
     // is logged inside the binder; the session continues unbound.
-    if (this.automationBinder && telegramTopic && telegramTopic.trim().length > 0) {
+    if (this.runtimeState.automationBinder && telegramTopic && telegramTopic.trim().length > 0) {
       try {
-        await this.automationBinder({
+        await this.runtimeState.automationBinder({
           workspaceId,
           sessionId: session.id,
           topicName: telegramTopic.trim(),
@@ -28469,7 +27588,7 @@ export class SessionManager implements ISessionManager {
   }
 
   async exportRemoteSessionTransfer(sessionId: string, workspaceId: string): Promise<RemoteSessionTransferPayload | null> {
-    const managed = this.sessions.get(sessionId)
+    const managed = this.runtimeState.sessions.get(sessionId)
     if (!managed) {
       sessionLog.warn(`[dispatch] Cannot export remote transfer: ${sessionId} not found`)
       return null
@@ -28542,7 +27661,7 @@ export class SessionManager implements ISessionManager {
       labels: payload.labels,
     })
 
-    const managed = this.sessions.get(session.id)
+    const managed = this.runtimeState.sessions.get(session.id)
     if (!managed) {
       throw new Error(`Transferred session ${session.id} was not created`)
     }
@@ -28565,7 +27684,7 @@ export class SessionManager implements ISessionManager {
    * 4. Serialize session directory into a bundle
    */
   async exportSession(sessionId: string, workspaceId: string): Promise<SessionBundle | null> {
-    const managed = this.sessions.get(sessionId)
+    const managed = this.runtimeState.sessions.get(sessionId)
     if (!managed) {
       sessionLog.warn(`[dispatch] Cannot export session: ${sessionId} not found`)
       return null
@@ -28655,7 +27774,7 @@ export class SessionManager implements ISessionManager {
       : generateSessionId(workspaceRootPath)
 
     // Check for ID collision on move
-    if (mode === 'move' && this.sessions.has(sessionId)) {
+    if (mode === 'move' && this.runtimeState.sessions.has(sessionId)) {
       throw new Error(`Session ${sessionId} already exists in target workspace`)
     }
     if (mode === 'move' && sessionPersistenceQueue.isRetired(
@@ -28774,10 +27893,10 @@ export class SessionManager implements ISessionManager {
       hydratePreviousPermissionMode(sessionId, managed.previousPermissionMode)
     }
 
-    this.sessions.set(sessionId, managed)
+    this.runtimeState.sessions.set(sessionId, managed)
 
     // Initialize automation metadata
-    const automationSystem = this.automationSystems.get(workspaceRootPath)
+    const automationSystem = this.runtimeState.automationSystems.get(workspaceRootPath)
     if (automationSystem) {
       automationSystem.setInitialSessionMetadata(sessionId, {
         permissionMode: storedSession.permissionMode,
@@ -28800,11 +27919,11 @@ export class SessionManager implements ISessionManager {
    * Should be called on app shutdown to prevent resource leaks.
    */
   async cleanup(): Promise<void> {
-    if (!this.cleanupPromise) {
+    if (!this.runtimeState.cleanupPromise) {
       // Close every ordinary lease synchronously. Provider runtimes retain one
       // narrow terminal-result channel until their destruction is proven.
-      this.shuttingDown = true
-      this.shutdownTerminalResultAdmissionOpen = true
+      this.runtimeState.shuttingDown = true
+      this.runtimeState.shutdownTerminalResultAdmissionOpen = true
       const watcherStopErrors: unknown[] = []
       let beginResourceCleanup!: () => void
       const watcherStopBarrier = new Promise<void>(resolve => {
@@ -28813,17 +27932,17 @@ export class SessionManager implements ISessionManager {
       // Publish the shared cleanup promise before invoking third-party watcher
       // teardown. A synchronous/re-entrant cleanup call must join this exact
       // operation even when one watcher throws.
-      this.cleanupPromise = watcherStopBarrier
+      this.runtimeState.cleanupPromise = watcherStopBarrier
         .then(() => this.cleanupResources(watcherStopErrors))
         .finally(() => {
           // Also close the gate if an earlier cleanup phase fails unexpectedly.
-          this.shutdownTerminalResultAdmissionOpen = false
+          this.runtimeState.shutdownTerminalResultAdmissionOpen = false
         })
       // Watcher callbacks are ordinary admissions. Stop them at the same
       // synchronous boundary as RPC admission so a debounced config event cannot
       // reject an unobserved trackSessionOperation promise or publish after the
       // final persistence barrier.
-      for (const [path, watcher] of this.configWatchers) {
+      for (const [path, watcher] of this.runtimeState.configWatchers) {
         try {
           watcher.stop()
           sessionLog.info(`Stopped config watcher for ${path}`)
@@ -28832,10 +27951,10 @@ export class SessionManager implements ISessionManager {
           sessionLog.error(`Failed to stop config watcher for ${path}; cleanup will continue:`, error)
         }
       }
-      this.configWatchers.clear()
+      this.runtimeState.configWatchers.clear()
       beginResourceCleanup()
     }
-    return this.cleanupPromise
+    return this.runtimeState.cleanupPromise
   }
 
   private async cleanupResources(initialCleanupErrors: readonly unknown[] = []): Promise<void> {
@@ -28849,20 +27968,20 @@ export class SessionManager implements ISessionManager {
         sessionLog.error(`Failed to flush sessions ${stage}; cleanup will continue:`, error)
       }
     }
-    this.retentionStopping = true
-    for (const timer of this.deferredAutomaticRetryTimers.values()) clearTimeout(timer)
-    this.deferredAutomaticRetryTimers.clear()
-    this.deferredAutomaticRetryAttempts.clear()
-    for (const timer of this.delegatedTerminalResultRetryTimers.values()) clearTimeout(timer)
-    this.delegatedTerminalResultRetryTimers.clear()
-    this.delegatedTerminalResultRetryAttempts.clear()
-    if (this.completedChatRetentionTimer) clearInterval(this.completedChatRetentionTimer)
-    await this.completedChatRetentionSweep
+    this.runtimeState.retentionStopping = true
+    for (const timer of this.runtimeState.deferredAutomaticRetryTimers.values()) clearTimeout(timer)
+    this.runtimeState.deferredAutomaticRetryTimers.clear()
+    this.runtimeState.deferredAutomaticRetryAttempts.clear()
+    for (const timer of this.runtimeState.delegatedTerminalResultRetryTimers.values()) clearTimeout(timer)
+    this.runtimeState.delegatedTerminalResultRetryTimers.clear()
+    this.runtimeState.delegatedTerminalResultRetryAttempts.clear()
+    if (this.runtimeState.completedChatRetentionTimer) clearInterval(this.runtimeState.completedChatRetentionTimer)
+    await this.runtimeState.completedChatRetentionSweep
     // Complete create/import operations admitted before the synchronous
     // shutdown boundary before taking any session or persistence snapshot.
     await this.drainManagerOperations()
-    while (this.sessionDeletionsInFlight.size > 0) {
-      const deletions = [...this.sessionDeletionsInFlight.entries()]
+    while (this.runtimeState.sessionDeletionsInFlight.size > 0) {
+      const deletions = [...this.runtimeState.sessionDeletionsInFlight.entries()]
       const results = await Promise.allSettled(deletions.map(([, operation]) => operation))
       for (let index = 0; index < results.length; index++) {
         const result = results[index]!
@@ -28876,11 +27995,11 @@ export class SessionManager implements ISessionManager {
     }
     await this.drainRestartRecoveries()
     await this.drainStrongCancellationStops()
-    for (const managed of this.sessions.values()) {
+    for (const managed of this.runtimeState.sessions.values()) {
       // Close pre-execution permission waits while their runtime and tool row
       // are still attached. Disposing first can leave a durable `executing`
       // mutation with no receipt even though the host itself denied execution.
-      const permissionGenerations = new Set([...this.pendingPermissionRequests.values()]
+      const permissionGenerations = new Set([...this.runtimeState.pendingPermissionRequests.values()]
         .filter(request => request.sessionId === managed.id)
         .map(request => request.processingGeneration))
       for (const generation of permissionGenerations) {
@@ -28907,12 +28026,12 @@ export class SessionManager implements ISessionManager {
     }
     await flushPersistenceForCleanup('before runtime disposal')
 
-    if (this.runtimeEvictionTimer) {
-      clearInterval(this.runtimeEvictionTimer)
-      this.runtimeEvictionTimer = null
+    if (this.runtimeState.runtimeEvictionTimer) {
+      clearInterval(this.runtimeState.runtimeEvictionTimer)
+      this.runtimeState.runtimeEvictionTimer = null
     }
 
-    for (const managed of this.sessions.values()) {
+    for (const managed of this.runtimeState.sessions.values()) {
       if (managed.autoRetryTimer) {
         clearTimeout(managed.autoRetryTimer)
         managed.autoRetryTimer = undefined
@@ -28925,7 +28044,7 @@ export class SessionManager implements ISessionManager {
       // Run in parallel so shutdown remains bounded even with many historical
       // sessions. Abort before detaching: a live chat iterator may own the very
       // operation lease that shutdown must drain after runtime destruction.
-      await Promise.allSettled(Array.from(this.sessions.values(), async managed => {
+      await Promise.allSettled(Array.from(this.runtimeState.sessions.values(), async managed => {
         const agent = managed.agent
         if (agent && typeof agent.forceAbort === 'function') {
           try {
@@ -28958,8 +28077,8 @@ export class SessionManager implements ISessionManager {
     }
     let operationDrainTimedOut = false
     while (true) {
-      const operations = [...this.sessions.values()].flatMap(managed => (
-        [...(this.sessionOperationsInFlight.get(managed) ?? [])]
+      const operations = [...this.runtimeState.sessions.values()].flatMap(managed => (
+        [...(this.runtimeState.sessionOperationsInFlight.get(managed) ?? [])]
       ))
       if (operations.length === 0) break
       if (Date.now() >= operationDrainDeadline) {
@@ -28999,17 +28118,17 @@ export class SessionManager implements ISessionManager {
       cleanupErrors.push(error)
       sessionLog.error('Session runtime destruction could not be proven during cleanup:', error)
     } finally {
-      this.shutdownTerminalResultAdmissionOpen = false
+      this.runtimeState.shutdownTerminalResultAdmissionOpen = false
     }
     // Destructors may synchronously emit a final tool_result immediately before
     // resolving. Once the narrow gate is closed this drain is stable.
     await this.drainAllSessionOperations()
     // Drain saves from tool results produced while the provider was stopping.
     await flushPersistenceForCleanup('after runtime disposal')
-    this.agentRefreshLocks.clear()
+    this.runtimeState.agentRefreshLocks.clear()
 
     // Dispose all AutomationSystems (includes scheduler, handlers, and event loggers)
-    for (const [workspacePath, automationSystem] of this.automationSystems) {
+    for (const [workspacePath, automationSystem] of this.runtimeState.automationSystems) {
       try {
         automationSystem.dispose()
         sessionLog.info(`Disposed AutomationSystem for ${workspacePath}`)
@@ -29017,26 +28136,26 @@ export class SessionManager implements ISessionManager {
         sessionLog.error(`Failed to dispose AutomationSystem for ${workspacePath}:`, error)
       }
     }
-    this.automationSystems.clear()
+    this.runtimeState.automationSystems.clear()
 
     // Clear all pending delta flush timers
-    for (const [_sessionId, timer] of this.deltaFlushTimers) {
+    for (const [_sessionId, timer] of this.runtimeState.deltaFlushTimers) {
       clearTimeout(timer)
     }
-    this.deltaFlushTimers.clear()
-    this.pendingDeltas.clear()
+    this.runtimeState.deltaFlushTimers.clear()
+    this.runtimeState.pendingDeltas.clear()
 
     // Clear pending credential resolvers (they won't be resolved, but prevents memory leak)
-    this.pendingCredentialResolvers.clear()
-    this.credentialResponsesInFlight.clear()
-    this.oauthResponsesInFlight.clear()
-    for (const [requestId, metadata] of this.pendingPermissionRequests.entries()) {
+    this.runtimeState.pendingCredentialResolvers.clear()
+    this.runtimeState.credentialResponsesInFlight.clear()
+    this.runtimeState.oauthResponsesInFlight.clear()
+    for (const [requestId, metadata] of this.runtimeState.pendingPermissionRequests.entries()) {
       clearTimeout(metadata.timeout)
       this.rejectPendingPrivilegedApproval(requestId, metadata)
       this.denyPermissionOnRecordedRuntime(requestId, metadata)
     }
-    this.pendingPermissionRequests.clear()
-    this.adminRememberApprovals.clear()
+    this.runtimeState.pendingPermissionRequests.clear()
+    this.runtimeState.adminRememberApprovals.clear()
 
     if (cleanupErrors.length === 1) {
       sessionLog.error('Cleanup released resources but one cleanup proof failed')

@@ -49,7 +49,9 @@
     "37 domaines contrôlés par empreintes et résolution des imports ; suite globale, 16 configurations TypeScript, lint des nouveaux modules, contrôle des noms d’outils et build Electron réussis",
     "Gestionnaire : 47 politiques sans this extraites en sept modules de 344 lignes au plus ; appels directs ; 518 membres restants et 106 méthodes publiques conservés et comparés",
     "499 tests ciblés, suite globale, 16 configurations TypeScript, build Electron, lint des nouveaux modules, noms d’outils et IPC réussis après extraction des politiques",
-    "38 domaines contrôlés ; preuve de transformation en chaîne pour la classe conservée, corps des politiques et imports vérifiés"
+    "38 domaines contrôlés ; preuve de transformation en chaîne pour la classe conservée, corps des politiques et imports vérifiés",
+    "Gestionnaire : 96 champs internes séparés dans un module de 407 lignes ; types, initialisations et 106 méthodes publiques comparés structurellement sans changement de comportement",
+    "Fixtures complètes et accès privés explicites ; 27 any supprimés ; 486 scénarios ciblés, suite officielle complète (148,07 s), 16 configurations TypeScript, build Electron et lint ciblé sans avertissement réussis"
   ],
   "pending": [
     "Découpage des autres fichiers au-delà de 500 lignes",
@@ -57,9 +59,9 @@
     "Lint global sans erreur ni avertissement",
     "Parcours complets réels en staging local, compilation signée et intégration"
   ],
-  "updatedAt": "2026-10-25T01:40:48.458246+00:00",
+  "updatedAt": "2026-10-25T02:24:14.142668+00:00",
   "current": {
-    "over500": 217,
-    "explicitAny": 775
+    "oversizedCodeFiles": 217,
+    "explicitAny": 748
   }
 }

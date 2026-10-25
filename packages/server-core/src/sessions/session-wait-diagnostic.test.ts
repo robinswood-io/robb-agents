@@ -1,3 +1,4 @@
+import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
 import { SessionManager, createManagedSession } from './SessionManager'
 import { mkdtempSync, rmSync } from 'node:fs'
@@ -18,7 +19,7 @@ function harness() {
   const workspace = { id: 'diagnostic-test', rootPath, name: 'Wait', createdAt: 1 }
   const make = (id: string) => {
     const session = createManagedSession({ id, name: id }, workspace as never, { messagesLoaded: true })
-    const parent = host.sessions.get('parent')
+    const parent = sessionRuntimeStateForTest(manager).sessions.get('parent')
     if (id === 'parent') {
       session.activeObjective = transitionObjectiveContract({
         messageId: 'parent-request', text: 'Coordinate the delegated reviews.', nowMs: 1,
@@ -35,7 +36,7 @@ function harness() {
         role: 'worker',
       }
     }
-    host.sessions.set(id, session)
+    sessionRuntimeStateForTest(manager).sessions.set(id, session)
     return session
   }
   const parent = make('parent'); const child = make('reviewer')
@@ -130,7 +131,7 @@ describe('unverified delegated diagnostics through the host wait', () => {
     const metadata = listSessions(child.workspace.rootPath).find(session => session.id === child.id)!
     const restored = createManagedSession(metadata, child.workspace, { messagesLoaded: true })
     restored.messages = messages.map(storedToMessage)
-    host.sessions.set(child.id, restored)
+    sessionRuntimeStateForTest(host).sessions.set(child.id, restored)
     expect(restored.processingGeneration).toBe(0)
     expect(restored.pendingTurnRecovery).toEqual(child.pendingTurnRecovery)
     const result = await host.waitForDelegatedSessions(parent, [child.id], 0)
@@ -200,7 +201,7 @@ describe('unverified delegated diagnostics through the host wait', () => {
     expect(first.sessions[0].diagnostic.messageId).toBe('review-final')
     const waiting = host.waitForDelegatedSessions(parent, [child.id, sibling.id], 1000)
     await new Promise(resolve => setImmediate(resolve))
-    expect(host.sessionWaitListeners.size).toBe(1)
+    expect(sessionRuntimeStateForTest(host).sessionWaitListeners.size).toBe(1)
     sibling.isProcessing = false
     host.emitSessionComplete({ sessionId: sibling.id, workspaceId: sibling.workspace.id,
       reason: 'complete', finalMessageId: 'sibling-final', finalText: 'Verified sibling result' })
@@ -208,7 +209,7 @@ describe('unverified delegated diagnostics through the host wait', () => {
     expect(result.sessions[0].changed).toBe(false)
     expect(result.sessions[0].diagnostic.text).toBeUndefined()
     expect(result.sessions[1].finalMessageId).toBe('sibling-final')
-    expect(host.sessionWaitListeners.size).toBe(0)
+    expect(sessionRuntimeStateForTest(host).sessionWaitListeners.size).toBe(0)
   })
 
   it('bounds diagnostics, refuses nested PASS as evidence and leaves an inbox untouched', async () => {

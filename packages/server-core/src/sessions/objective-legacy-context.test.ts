@@ -1,3 +1,4 @@
+import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it } from 'bun:test';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -37,7 +38,7 @@ function harness() {
     terminalState: 'exhausted', continuationCount: 4, completedAt: 30 };
   managed.pendingTurnRecovery = { userMessageId: amendment.id, startedAt: 10, attempts: 8,
     exhaustedAt: 30, leaseExpiresAt: 40, budgetHistoryUnavailable: true, validationExhausted: true };
-  host.sessions.set(managed.id, managed);
+  sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed);
   return { host, managed };
 }
 afterEach(async () => {

@@ -1,3 +1,4 @@
+import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
 import { mkdtempSync, rmSync } from 'fs'
 import { tmpdir } from 'os'
@@ -25,14 +26,14 @@ describe('workflow background-task progress', () => {
   function buildSession(id: string) {
     const workspace = { id: 'ws_test', name: 'Test Workspace', rootPath: tmpRoot, createdAt: Date.now() }
     const managed = createManagedSession({ id, name: 'wf test' }, workspace as never, { messagesLoaded: true })
-    ;(sm as unknown as { sessions: Map<string, unknown> }).sessions.set(id, managed)
+    ;sessionRuntimeStateForTest(sm).sessions.set(id, managed)
     // Stub sendMessage so the idle completion auto-surface doesn't run the full turn path.
     ;(sm as unknown as { sendMessage: (...a: unknown[]) => Promise<void> }).sendMessage = async () => {}
     return managed
   }
 
   function fire(sessionId: string, event: Record<string, unknown>) {
-    const managed = (sm as unknown as { sessions: Map<string, unknown> }).sessions.get(sessionId)!
+    const managed = sessionRuntimeStateForTest(sm).sessions.get(sessionId)!
     return (sm as unknown as { processEvent: (m: unknown, e: unknown) => Promise<void> }).processEvent(managed, event)
   }
 

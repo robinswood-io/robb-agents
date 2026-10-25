@@ -1,3 +1,5 @@
+import { ScriptedSessionAgent } from './testing/scripted-session-agent.ts';
+import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, jest, spyOn } from 'bun:test'
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
@@ -99,7 +101,7 @@ afterAll(() => {
   }
 })
 
-  interface AgentStub {
+  type AgentStub = ScriptedSessionAgent & {
     isProcessing: () => boolean
     updateRuntimeConfig: jest.Mock
     setModel: jest.Mock
@@ -114,7 +116,7 @@ function createAgentStub(opts: {
 } = {}): AgentStub {
   const delay = opts.refreshDelayMs ?? 0
   const result = opts.refreshSucceeds ?? true
-  return {
+  return Object.assign(new ScriptedSessionAgent({ id: 'refresh-fixture', slug: 'refresh-fixture', name: 'Fixture', rootPath: '/tmp/refresh-fixture', createdAt: 1 }), {
     isProcessing: () => opts.isProcessing ?? false,
     updateRuntimeConfig: jest.fn().mockImplementation(async () => {
       if (delay > 0) await new Promise(resolve => setTimeout(resolve, delay))
@@ -122,7 +124,7 @@ function createAgentStub(opts: {
       }),
     setModel: jest.fn(),
     dispose: jest.fn(),
-  }
+  })
 }
 
 function injectSession(
@@ -136,14 +138,15 @@ function injectSession(
   const workspace = {
     id: 'ws_test',
     name: 'Test Workspace',
+    slug: 'ws-test',
     rootPath: workspaceRoot,
     createdAt: Date.now(),
   }
   const managed = createManagedSession(
     { id, name: id, llmConnection },
-    workspace as never,
+    workspace,
     { messagesLoaded: true },
-  ) as unknown as { agent: AgentStub | null; backendRuntimeSignature?: string; backendRestartSignature?: string; isProcessing: boolean; llmConnection?: string }
+  )
   managed.agent = agent
   // Force a stale runtime signature so the helper's comparison always reaches
   // the refresh branch — the signature it computes from real disk config will
@@ -169,7 +172,7 @@ function injectSession(
   }
   managed.isProcessing = opts.isProcessing ?? false
   managed.llmConnection = llmConnection
-  ;(sm as unknown as { sessions: Map<string, unknown> }).sessions.set(id, managed)
+  ;sessionRuntimeStateForTest(sm).sessions.set(id, managed)
   return managed
 }
 
@@ -483,7 +486,7 @@ describe('refreshConnectionRuntime', () => {
       updatedAt: 1,
       automaticRoutingEnabled: true,
     }))
-    const agent = { ...createAgentStub(), setExternalActionPolicy: jest.fn() }
+    const agent = Object.assign(createAgentStub(), { setExternalActionPolicy: jest.fn() })
     const managed = injectSession(sm, 'selected-turn', tmpRoot, 'slug-A', agent) as ReturnType<typeof injectSession> & {
       model?: string
       modelRoutePinned?: boolean
@@ -496,7 +499,7 @@ describe('refreshConnectionRuntime', () => {
     managed.modelRoutePinned = true
     managed.thinkingLevel = 'high'
     managed.thinkingLevelPinned = true
-    managed.tokenUsage = { costUsd: 100_000 }
+    managed.tokenUsage = { inputTokens: 0, outputTokens: 0, totalTokens: 0, contextTokens: 0, costUsd: 100_000 }
     const internal = sm as unknown as {
       tryRefreshAgentRuntime: (session: unknown, reason: string) => Promise<void>
       getOrCreateAgent: (session: unknown, turn: { message: string }) => Promise<unknown>
@@ -525,7 +528,7 @@ describe('refreshConnectionRuntime', () => {
       updatedAt: 1,
       automaticRoutingEnabled: true,
     }))
-    const agent = { ...createAgentStub(), setExternalActionPolicy: jest.fn() }
+    const agent = Object.assign(createAgentStub(), { setExternalActionPolicy: jest.fn() })
     const managed = injectSession(sm, 'specialized-cost', tmpRoot, 'slug-A', agent) as ReturnType<typeof injectSession> & {
       model?: string
       modelRoutePinned?: boolean
@@ -542,7 +545,7 @@ describe('refreshConnectionRuntime', () => {
     managed.connectionRoutePinned = true
     managed.thinkingLevel = 'high'
     managed.thinkingLevelPinned = true
-    managed.tokenUsage = { costUsd: 100_000 }
+    managed.tokenUsage = { inputTokens: 0, outputTokens: 0, totalTokens: 0, contextTokens: 0, costUsd: 100_000 }
     managed.missionRouteLockSha256 = 'a'.repeat(64)
     managed.missionCapabilityLock = {
       schemaVersion: 1,

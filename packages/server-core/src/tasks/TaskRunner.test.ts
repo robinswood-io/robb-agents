@@ -1,3 +1,4 @@
+import { sessionRuntimeStateForTest } from "../sessions/testing/runtime-state-access.ts";
 import { describe, it, expect, beforeEach, afterEach, jest } from 'bun:test';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
@@ -2937,7 +2938,7 @@ describe('TaskRunner (Conductor)', () => {
         dispatchAttempt: 1, dispatchOrigin: 'automatic', dispatchAllocatedAt: 1,
       } },
     } as never);
-    runtime.sessions.set(managed.id, managed);
+    sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed);
     runtime.persistSession = () => true;
     runtime.flushSession = async () => {};
     runtime.flushSessionDurably = async () => {};
@@ -2945,22 +2946,22 @@ describe('TaskRunner (Conductor)', () => {
     runtime.closePendingPermissionRequestsForStop = async () => {};
     runtime.cancelPendingUserInput = async () => {};
     runtime.ensureMessagesLoaded = async () => {};
-    runtime.deferredAutomaticSessions.add(managed.id);
-    runtime.automaticAdmissionReservations.add(managed.id);
+    sessionRuntimeStateForTest(manager).deferredAutomaticSessions.add(managed.id);
+    sessionRuntimeStateForTest(manager).automaticAdmissionReservations.add(managed.id);
     const deferredTimer = setTimeout(() => {}, 10_000);
     deferredTimer.unref?.();
-    runtime.deferredAutomaticRetryTimers.set(managed.id, deferredTimer);
-    const epochBefore = runtime.turnCancellationEpochs.get(managed) ?? 0;
+    sessionRuntimeStateForTest(manager).deferredAutomaticRetryTimers.set(managed.id, deferredTimer);
+    const epochBefore = sessionRuntimeStateForTest(manager).turnCancellationEpochs.get(managed) ?? 0;
 
     const event = await manager.cancelProcessingAndWait(managed.id, 500);
 
     expect(event.reason).toBe('interrupted');
-    expect(runtime.turnCancellationEpochs.get(managed)).toBe(epochBefore + 1);
+    expect(sessionRuntimeStateForTest(manager).turnCancellationEpochs.get(managed)).toBe(epochBefore + 1);
     expect(managed.pendingTurnRecovery).toBeUndefined();
     expect(managed.messageQueue).toEqual([]);
-    expect(runtime.deferredAutomaticSessions.has(managed.id)).toBe(false);
-    expect(runtime.automaticAdmissionReservations.has(managed.id)).toBe(false);
-    expect(runtime.deferredAutomaticRetryTimers.has(managed.id)).toBe(false);
+    expect(sessionRuntimeStateForTest(manager).deferredAutomaticSessions.has(managed.id)).toBe(false);
+    expect(sessionRuntimeStateForTest(manager).automaticAdmissionReservations.has(managed.id)).toBe(false);
+    expect(sessionRuntimeStateForTest(manager).deferredAutomaticRetryTimers.has(managed.id)).toBe(false);
   });
 
   it('enforces the strong retirement deadline while a durable Stop is blocked and coalesces retries', async () => {
@@ -2977,7 +2978,7 @@ describe('TaskRunner (Conductor)', () => {
       const managed = createManagedSession({
         id: 'blocked-stop-child', sessionStatus: 'in-progress',
       } as never, workspace, { messagesLoaded: true });
-      runtime.sessions.set(managed.id, managed);
+      sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed);
       let stopCalls = 0;
       let releaseStop!: () => void;
       const blockedStop = new Promise<void>((resolve) => { releaseStop = resolve; });
@@ -3005,7 +3006,7 @@ describe('TaskRunner (Conductor)', () => {
       await expect(manager.cancelProcessingAndWait(managed.id, 100))
         .resolves.toMatchObject({ sessionId: managed.id, reason: 'interrupted' });
       expect(stopCalls).toBe(1);
-      expect(runtime.strongCancellationStops.has(managed.id)).toBe(false);
+      expect(sessionRuntimeStateForTest(manager).strongCancellationStops.has(managed.id)).toBe(false);
     } finally {
       jest.useRealTimers();
     }
@@ -3020,7 +3021,7 @@ describe('TaskRunner (Conductor)', () => {
     const managed = createManagedSession({
       id: 'rejected-stop-child', sessionStatus: 'in-progress',
     } as never, workspace, { messagesLoaded: true });
-    runtime.sessions.set(managed.id, managed);
+    sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed);
     let stopCalls = 0;
     runtime.cancelProcessing = async () => {
       stopCalls += 1;
@@ -3029,14 +3030,14 @@ describe('TaskRunner (Conductor)', () => {
 
     await expect(manager.cancelProcessingAndWait(managed.id, 100))
       .rejects.toThrow('durable Stop rejected');
-    expect(runtime.strongCancellationStops.has(managed.id)).toBe(true);
+    expect(sessionRuntimeStateForTest(manager).strongCancellationStops.has(managed.id)).toBe(true);
     await expect(manager.sendMessage(managed.id, 'must remain fenced'))
       .rejects.toThrow('session is being retired');
 
     await expect(manager.cancelProcessingAndWait(managed.id, 100))
       .resolves.toMatchObject({ sessionId: managed.id, reason: 'interrupted' });
     expect(stopCalls).toBe(2);
-    expect(runtime.strongCancellationStops.has(managed.id)).toBe(false);
+    expect(sessionRuntimeStateForTest(manager).strongCancellationStops.has(managed.id)).toBe(false);
   });
 
   it('does not prove an idle child retired while its detached runtime is still being destroyed', async () => {
@@ -3050,7 +3051,7 @@ describe('TaskRunner (Conductor)', () => {
       const managed = createManagedSession({
         id: 'disposing-runtime-child', sessionStatus: 'in-progress',
       } as never, workspace, { messagesLoaded: true });
-      runtime.sessions.set(managed.id, managed);
+      sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed);
       let stopCalls = 0;
       runtime.cancelProcessing = async () => { stopCalls += 1; };
       let releaseDisposal!: () => void;
@@ -3060,7 +3061,7 @@ describe('TaskRunner (Conductor)', () => {
       } as never;
 
       const disposal = runtime.disposeManagedAgentRuntime(managed, 'strong retirement fixture') as Promise<void>;
-      expect(runtime.runtimeDisposalsInFlight.get(managed.id)?.size).toBe(2);
+      expect(sessionRuntimeStateForTest(manager).runtimeDisposalsInFlight.get(managed.id)?.size).toBe(2);
       let retirementSettled = false;
       const retirement = manager.cancelProcessingAndWait(managed.id, 5_100).then(
         () => undefined,
@@ -3071,7 +3072,7 @@ describe('TaskRunner (Conductor)', () => {
       jest.advanceTimersByTime(5_000);
       await Promise.resolve();
       expect(retirementSettled).toBe(false);
-      expect(runtime.runtimeDisposalsInFlight.get(managed.id)?.has(blockedDisposal)).toBe(true);
+      expect(sessionRuntimeStateForTest(manager).runtimeDisposalsInFlight.get(managed.id)?.has(blockedDisposal)).toBe(true);
       jest.advanceTimersByTime(100);
       const retirementError = await retirement;
       expect(retirementError).toBeInstanceOf(Error);
@@ -3080,7 +3081,7 @@ describe('TaskRunner (Conductor)', () => {
       releaseDisposal();
       await disposal;
       for (let index = 0; index < 5; index += 1) await Promise.resolve();
-      expect(runtime.runtimeDisposalsInFlight.has(managed.id)).toBe(false);
+      expect(sessionRuntimeStateForTest(manager).runtimeDisposalsInFlight.has(managed.id)).toBe(false);
       await expect(manager.cancelProcessingAndWait(managed.id, 100))
         .resolves.toMatchObject({ sessionId: managed.id, reason: 'interrupted' });
       expect(stopCalls).toBe(1);
@@ -3103,7 +3104,7 @@ describe('TaskRunner (Conductor)', () => {
       const managed = createManagedSession({
         id: 'generation-retirement-child', sessionStatus: 'in-progress',
       } as never, workspace, { messagesLoaded: true });
-      runtime.sessions.set(managed.id, managed);
+      sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed);
       let stopCalls = 0;
       runtime.cancelProcessing = async () => { stopCalls += 1; };
       let releaseDisposal!: () => void;
@@ -3148,7 +3149,7 @@ describe('TaskRunner (Conductor)', () => {
       const managed = createManagedSession({
         id: `rejecting-${kind}-runtime-child`, sessionStatus: 'in-progress',
       } as never, workspace, { messagesLoaded: true });
-      runtime.sessions.set(managed.id, managed);
+      sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed);
       let shouldReject = true;
       let disposalCalls = 0;
       const dispose = async () => {
@@ -3162,17 +3163,17 @@ describe('TaskRunner (Conductor)', () => {
       runtime.cancelProcessing = async () => { stopCalls += 1; };
 
       await runtime.disposeManagedAgentRuntime(managed, `${kind} rejection fixture`);
-      expect(runtime.runtimeDisposalBarriers.get(managed.id)?.size).toBe(1);
+      expect(sessionRuntimeStateForTest(manager).runtimeDisposalBarriers.get(managed.id)?.size).toBe(1);
       await expect(manager.cancelProcessingAndWait(managed.id, 100))
         .rejects.toThrow('Runtime destruction');
-      expect(runtime.strongCancellationStops.has(managed.id)).toBe(true);
+      expect(sessionRuntimeStateForTest(manager).strongCancellationStops.has(managed.id)).toBe(true);
 
       shouldReject = false;
       await expect(manager.cancelProcessingAndWait(managed.id, 100))
         .resolves.toMatchObject({ sessionId: managed.id, reason: 'interrupted' });
       expect(disposalCalls).toBe(3);
       expect(stopCalls).toBe(1);
-      expect(runtime.runtimeDisposalBarriers.has(managed.id)).toBe(false);
+      expect(sessionRuntimeStateForTest(manager).runtimeDisposalBarriers.has(managed.id)).toBe(false);
     }
   });
 
@@ -3192,7 +3193,7 @@ describe('TaskRunner (Conductor)', () => {
     const orchestrator = createManagedSession({
       id: 'orch', workingDirectory: root, sessionStatus: 'in-progress',
     } as never, workspace, { messagesLoaded: true });
-    runtime.sessions.set(orchestrator.id, orchestrator);
+    sessionRuntimeStateForTest(manager).sessions.set(orchestrator.id, orchestrator);
     runtime.sendEvent = () => {};
     for (const method of [
       'startGenerationTelemetry',
@@ -3208,7 +3209,7 @@ describe('TaskRunner (Conductor)', () => {
       const managed = createManagedSession({ id, createdAt: Date.now(), ...options } as never, workspace, {
         messagesLoaded: true,
       });
-      runtime.sessions.set(id, managed);
+      sessionRuntimeStateForTest(manager).sessions.set(id, managed);
       created.set(id, managed);
       return managed;
     };
@@ -3314,7 +3315,7 @@ describe('TaskRunner (Conductor)', () => {
     // SessionManager send/validation/completion lifecycle below.
     const realSendMessage = SessionManager.prototype.sendMessage.bind(manager);
     runtime.sendMessage = async (sessionId: string, ...args: unknown[]) => {
-      const managed = runtime.sessions.get(sessionId) as ReturnType<typeof createManagedSession> | undefined;
+      const managed = sessionRuntimeStateForTest(manager).sessions.get(sessionId) as ReturnType<typeof createManagedSession> | undefined;
       if (managed?.taskNodeId !== '__verdict__') {
         runtime.emitSessionComplete({
           sessionId,

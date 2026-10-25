@@ -1,3 +1,4 @@
+import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it, spyOn } from 'bun:test'
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -58,7 +59,7 @@ function harness() {
     ...recovery.createPendingTurnRecovery('root-user', 10), attempts: 0,
     budgetHistoryUnavailable: true, exhaustedAt: 11,
   }
-  runtime.sessions.set(session.id, session)
+  sessionRuntimeStateForTest(manager).sessions.set(session.id, session)
   let chats = 0
   let dispatch: Promise<void> | undefined
   const agent = {
