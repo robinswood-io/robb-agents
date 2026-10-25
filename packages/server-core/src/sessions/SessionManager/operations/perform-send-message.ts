@@ -1,10 +1,14 @@
+import { admitSessionMessageObjective } from './admit-session-message-objective.ts';
+import { reuseSessionUserMessage } from './reuse-session-user-message.ts';
+import { createNewSessionUserMessage } from './create-new-session-user-message.ts';
+import type { UserMessagePreparationInput } from './user-message-preparation-input.ts';
 import { prepareSessionAgentRuntime } from './prepare-agent-runtime.ts';
 import { executeSessionProviderTurn } from './execute-provider-turn.ts';
 import type { ProviderTurnInput } from './provider-turn-input.ts';
 import { createProviderTurnState } from './provider-turn-state.ts';
 import { enqueueSessionMessage } from './enqueue-session-message.ts';
 import type { SessionOperationContext, SessionMessageState } from '../operation-context.ts';
-import { refreshInheritedWorkspaceSources, hasPendingLocalUserInput, assertRetryTurnAnchor, queuedDirectHumanContinuationIndex, nextRecoveryDispatch, validAllocatedRecoveryDispatch, cleanRetrySetupFailureSignal, enqueueRecoveredMessageInTranscriptOrder, persistenceRootFor, isExactQueuedSourceActivation, cancelSourceActivationPending, commitSourceActivationPending, releaseSourceActivationClaim, projectLegacyObjectiveForUserTransition, repairLegacyContextualObjectiveAuthority, isDirectHumanContinuation, rehydrateObjectiveEvidence } from '../policy.ts';
+import { refreshInheritedWorkspaceSources, hasPendingLocalUserInput, assertRetryTurnAnchor, queuedDirectHumanContinuationIndex, cleanRetrySetupFailureSignal, enqueueRecoveredMessageInTranscriptOrder, persistenceRootFor, isExactQueuedSourceActivation, cancelSourceActivationPending, repairLegacyContextualObjectiveAuthority, isDirectHumanContinuation } from '../policy.ts';
 
 import { reopenCompletedChat } from '../../completed-chat-retention';
 import { restoreAgentDeliveryAttachments } from '../../agent-delivery.ts';
@@ -13,49 +17,38 @@ import type { UserInputRequest } from '@craft-agent/core';
 
 import { classifyAgentFailure, parseCompactCommand } from '@craft-agent/shared/agent';
 
-import { resolveAgentCostControlPolicy } from '@craft-agent/shared/config';
-
-import { loadWorkspaceConfig } from '@craft-agent/shared/workspaces';
 import { clearPendingPlanExecution as clearStoredPendingPlanExecution } from '@craft-agent/shared/sessions';
-import type { PendingTurnRecovery } from '@craft-agent/shared/sessions';
+
 import { getSourcesBySlugs, isSourceUsable } from '@craft-agent/shared/sources';
 
 import type { FileAttachment, SendMessageOptions } from '@craft-agent/shared/protocol';
 import { CodedError, generateMessageId } from '@craft-agent/shared/protocol';
-import type { Message, StoredAttachment } from '@craft-agent/core/types';
+import type { StoredAttachment } from '@craft-agent/core/types';
 import { perf, readFileAttachment } from '@craft-agent/shared/utils';
 import { loadSkillBySlug } from '@craft-agent/shared/skills';
 
-import { bindBusinessProcedure } from '../../business-procedures';
-
-import { explicitRetryProgressFingerprint } from '../../explicit-retry-progress';
-
 import { shouldManageSessionStatusLifecycle } from '../../session-status-lifecycle';
-import { turnRecoveryValidationFingerprint, buildCleanRecoveryContinuationPrompt, createPendingTurnRecovery, grantExplicitRetryAllowance, reconstructLegacyTurnRecoveryBudget } from '../../turn-recovery';
+import { createPendingTurnRecovery } from '../../turn-recovery';
 
-import { isHostSyntheticObjectiveText, transitionObjectiveContract } from '../../objective-contract';
-
-import { sanitizeForTitle } from '@craft-agent/server-core/domain';
-import { normalizeRecoveryValidationGapsForProgress } from '../../recovery-progress';
 import type { ManagedSession } from '../managed-session.ts';
 import { hasImmutableMissionRoute } from '../mission-route.ts';
-import { delegatedObjectiveRoleForSession, isTerminalReviewSession } from '../review-lifecycle.ts';
+
 import { sessionLog } from '../runtime-platform.ts';
-import { AutomaticRecoverySupersededError, AutonomousAdmissionDeferredError, CleanRecoveryDispatchAuthenticationError, DelegatedDispatchSupersededError, InternalContinuationSupersededError, RetryTurnAlreadyRunningError, SourceActivationSupersededError } from '../runtime-policy.ts';
+import { AutomaticRecoverySupersededError, AutonomousAdmissionDeferredError, DelegatedDispatchSupersededError, InternalContinuationSupersededError, RetryTurnAlreadyRunningError, SourceActivationSupersededError } from '../runtime-policy.ts';
 
 import type { SourceActivationOrigin } from '../source-activation.ts';
 import { claimAutoRetryPending, isSourceActivationOriginCurrent, sourceActivationObjectiveBinding } from '../source-activation.ts';
 
-import { MAX_CLEAN_RETRY_CONDITIONAL_SETUP_FAILURES, MAX_CLEAN_RETRY_SAFE_SETUP_FAILURES, canonicalUserInputAnswerContents, isCostLimitContinuationAnswer, isExactContextLimitNextStepQuestion } from '../user-input-authority.ts';
+import { MAX_CLEAN_RETRY_CONDITIONAL_SETUP_FAILURES, MAX_CLEAN_RETRY_SAFE_SETUP_FAILURES, isCostLimitContinuationAnswer } from '../user-input-authority.ts';
 
 import { assertStrongCancellationAdmissionOpen as sessionOpAssertStrongCancellationAdmissionOpen } from './perform-cancel-processing-and-wait.ts';
 import { hasTerminalObjectiveState as sessionOpHasTerminalObjectiveState, repairLegacySyntheticObjectiveAuthority as sessionOpRepairLegacySyntheticObjectiveAuthority, revokePendingToolPermissionsForDirectContinuation as sessionOpRevokePendingToolPermissionsForDirectContinuation, dropDeferredSourceActivations as sessionOpDropDeferredSourceActivations, hasPendingDecision as sessionOpHasPendingDecision } from './repair-legacy-synthetic-objective-authority.ts';
 import { isFreshStaleTypedUpwardAgentDelivery as sessionOpIsFreshStaleTypedUpwardAgentDelivery, releasableUpwardAgentDeliverySenderId as sessionOpReleasableUpwardAgentDeliverySenderId, isStaleTypedUpwardAgentDelivery as sessionOpIsStaleTypedUpwardAgentDelivery, quarantineStaleTypedUpwardAgentDelivery as sessionOpQuarantineStaleTypedUpwardAgentDelivery } from './quarantine-stale-typed-upward-agent-delivery.ts';
 import { authenticatedInternalContinuationCurrent as sessionOpAuthenticatedInternalContinuationCurrent, consumeAuthenticatedInternalContinuation as sessionOpConsumeAuthenticatedInternalContinuation, delegatedDispatchContinuationCurrent as sessionOpDelegatedDispatchContinuationCurrent, consumeDelegatedDispatchContinuation as sessionOpConsumeDelegatedDispatchContinuation, claimAuthenticatedInternalContinuation as sessionOpClaimAuthenticatedInternalContinuation } from './message-authority.ts';
 import { stripDisabledAllocatedRoutingFallback as sessionOpStripDisabledAllocatedRoutingFallback, startRecoveryDispatch as sessionOpStartRecoveryDispatch } from './start-recovery-dispatch.ts';
-import { buildRecoveryDispatchMessage as sessionOpBuildRecoveryDispatchMessage, isExactRepurposedUserInputCleanBoundary as sessionOpIsExactRepurposedUserInputCleanBoundary } from './user-input-recovery.ts';
+import { buildRecoveryDispatchMessage as sessionOpBuildRecoveryDispatchMessage } from './user-input-recovery.ts';
 import { untrackSyntheticAutomaticMessage as sessionOpUntrackSyntheticAutomaticMessage, providerDispatchAdmissionBarrier as sessionOpProviderDispatchAdmissionBarrier } from './reconcile-live-provider-dispatch-uncertainty.ts';
-import { hasAcceptedHumanContinuationQueued as sessionOpHasAcceptedHumanContinuationQueued, cancelSupersededAutomaticRecoveries as sessionOpCancelSupersededAutomaticRecoveries, consumeLiveDirectHumanContinuation as sessionOpConsumeLiveDirectHumanContinuation, assertRetryTurnUnblocked as sessionOpAssertRetryTurnUnblocked, hasConsumedCleanRecoveryDispatch as sessionOpHasConsumedCleanRecoveryDispatch } from './create-autonomous-context-limit-handoff.ts';
+import { hasAcceptedHumanContinuationQueued as sessionOpHasAcceptedHumanContinuationQueued, cancelSupersededAutomaticRecoveries as sessionOpCancelSupersededAutomaticRecoveries, consumeLiveDirectHumanContinuation as sessionOpConsumeLiveDirectHumanContinuation, assertRetryTurnUnblocked as sessionOpAssertRetryTurnUnblocked } from './create-autonomous-context-limit-handoff.ts';
 import { setLastMessageClientId as sessionOpSetLastMessageClientId, monotonic as sessionOpMonotonic } from './runtime-host.ts';
 import { settleQueuedAgentDeliveryDispatch as sessionOpSettleQueuedAgentDeliveryDispatch, completeQueuedAgentDeliveryDispatch as sessionOpCompleteQueuedAgentDeliveryDispatch } from './settle-queued-agent-delivery-dispatch.ts';
 import { cancelPendingAuthForHumanContinuation as sessionOpCancelPendingAuthForHumanContinuation } from './downgrade-cold-auth-resume-permission.ts';
@@ -63,16 +56,11 @@ import { isAutonomousMessage as sessionOpIsAutonomousMessage } from './is-curren
 import { canRetryRetainedMachineInbox as sessionOpCanRetryRetainedMachineInbox, hasOnlyMachineInbox as sessionOpHasOnlyMachineInbox, exactQueuedAgentDeliveryReceipt as sessionOpExactQueuedAgentDeliveryReceipt } from './restore-pre-ack-agent-delivery-dequeues.ts';
 import { retryableContextLimitRequest as sessionOpRetryableContextLimitRequest } from './retryable-context-limit-request.ts';
 import { exactUserInputResponse as sessionOpExactUserInputResponse, autonomousAdmissionBlock as sessionOpAutonomousAdmissionBlock } from './exact-user-input-response.ts';
-import { hasQueuedUserInput as sessionOpHasQueuedUserInput, contextLimitHostAdmissionBoundary as sessionOpContextLimitHostAdmissionBoundary } from './perform-request-user-input.ts';
+import { hasQueuedUserInput as sessionOpHasQueuedUserInput } from './perform-request-user-input.ts';
 
-import { captureUserCorrection as sessionOpCaptureUserCorrection, loadSessionPlaybook as sessionOpLoadSessionPlaybook } from './capture-user-correction.ts';
-import { trackSyntheticAutomaticMessage as sessionOpTrackSyntheticAutomaticMessage, getInterruptedTurnRecovery as sessionOpGetInterruptedTurnRecovery, hasValidationExhaustionMarker as sessionOpHasValidationExhaustionMarker } from './reconcile-provider-acceptance-unknown-for-retry.ts';
-import { objectiveContractTextFor as sessionOpObjectiveContractTextFor } from './try-refresh-agent-runtime.ts';
-import { boundCleanUserInputRequest as sessionOpBoundCleanUserInputRequest } from './context-limit-authenticated-answer-evidence.ts';
-import { scheduleTitleGeneration as sessionOpScheduleTitleGeneration } from './schedule-title-generation.ts';
 import { evaluateAndApplyAutoLabels as sessionOpEvaluateAndApplyAutoLabels } from './perform-adopt-generated-task-orchestrator.ts';
 import { getLastFinalAssistantMessageId as sessionOpGetLastFinalAssistantMessageId } from './session-sources.ts';
-import { createContextLimitRetryHandoff as sessionOpCreateContextLimitRetryHandoff } from './create-context-limit-retry-handoff.ts';
+
 import { reloadSessionSourcesWithinOperation as sessionOpReloadSessionSourcesWithinOperation } from './workspace-configuration.ts';
 import { hasRunningBackgroundTasks as sessionOpHasRunningBackgroundTasks } from './evict-idle-session-runtimes.ts';
 
@@ -760,14 +748,9 @@ delegatedDispatchContinuationToken?: symbol): Promise<void> {
             await sessionOperationContext.owner["onProcessingStopped"](sessionId, 'interrupted', myGeneration);
         }
     };
-    let durablyAcknowledged = false;
-    let userMessage: Message;
+
     let deliveryAttemptsBeforePreparation: number | undefined;
-    let existingTurnRollback: (() => void) | undefined;
-    let cleanExplicitRetrySetupRollback: (() => string | undefined) | undefined;
-    let trustedContextLimitAnswer: UserInputRequest | undefined;
-    let contextLimitAnswerSetupRollback: (() => string | undefined) | undefined;
-    let cleanRecoveryProviderStateAtomized = false;
+
     const resetProviderResumeStateForCleanBoundary = (boundaryMessageId: string) => {
         managed.sdkSessionId = undefined;
         managed.branchFromSdkSessionId = undefined;
@@ -803,549 +786,54 @@ delegatedDispatchContinuationToken?: symbol): Promise<void> {
         }
         managed.pendingTurnRecovery = sessionOpStartRecoveryDispatch(sessionOperationContext, managed.pendingTurnRecovery, activeMessageState.options.automaticRecovery);
     }
-    if (existingMessageId) {
-        // Find existing message (already added when queued)
-        userMessage = managed.messages.find(m => m.id === existingMessageId)!;
-        if (!userMessage) {
-            throw new Error(`Existing message ${existingMessageId} not found`);
-        }
-        if (supersedableAutomaticRecovery && userMessage.role === 'user' && userMessage.hidden) {
-            // A deferred pre-chat recovery reuses its durable message. Adopt the
-            // same identity so Stop/human supersession can still remove it, and so
-            // the provider boundary below releases the original tracking entry.
-            activeMessageState.syntheticAutomaticMessage = userMessage;
-            sessionOpTrackSyntheticAutomaticMessage(sessionOperationContext, managed, userMessage);
-        }
-        if (explicitRetry || trustedUserInput) {
-            const previousObjective = managed.activeObjective;
-            const previousRecovery = managed.pendingTurnRecovery;
-            const previousStatus = managed.sessionStatus;
-            const previousQueued = userMessage.isQueued;
-            if (explicitRetry) {
-                const retryRecovery = previousRecovery ?? sessionOpGetInterruptedTurnRecovery(sessionOperationContext, managed, userMessage.id)
-                    ?? ((previousObjective?.lastUserMessageId ?? previousObjective?.userMessageId) === userMessage.id
-                        ? reconstructLegacyTurnRecoveryBudget(managed.messages, userMessage.id)
-                        : undefined);
-                managed.activeObjective = previousObjective
-                    ? { ...previousObjective, interruptedTurnRecovery: undefined, terminalState: 'active', completedAt: undefined }
-                    : transitionObjectiveContract({
-                        messageId: userMessage.id,
-                        text: sessionOpObjectiveContractTextFor(sessionOperationContext, managed, userMessage),
-                    });
-                managed.pendingTurnRecovery = {
-                    ...(retryRecovery ?? createPendingTurnRecovery(userMessage.id)),
-                    // A human can retry an old objective, but a missing historical
-                    // marker cannot grant that objective a new automatic allowance.
-                    ...(!retryRecovery && previousObjective ? {
-                        budgetHistoryUnavailable: true,
-                        // Older hosts also recognize this stop if the bundle is rolled back.
-                        exhaustedAt: Date.now(),
-                    } : {}),
-                    ...(sessionOpHasValidationExhaustionMarker(sessionOperationContext, managed) ? { validationExhausted: true } : {}),
-                    userMessageId: userMessage.id,
-                    lastCause: 'user_retry',
-                    waitingForPermission: undefined,
-                    userRetryFromMessageCount: managed.messages.length,
-                    continuationRequired: false,
-                };
-                if (explicitRetryAllowanceToken && previousObjective) {
-                    // No await separates capability consumption from the state update.
-                    // Failed durability rolls back both through existingTurnRollback.
-                    sessionOperationContext.state.explicitRetryAllowanceTokens.delete(explicitRetryAllowanceToken);
-                    const recoveryPolicy = resolveAgentCostControlPolicy(loadWorkspaceConfig(managed.workspace.rootPath)?.costControl).recovery;
-                    const semanticProgressFingerprint = explicitRetryProgressFingerprint(managed.messages, previousObjective.userMessageId);
-                    managed.pendingTurnRecovery = grantExplicitRetryAllowance(managed.pendingTurnRecovery, {
-                        id: generateMessageId(), objectiveId: previousObjective.objectiveId ?? previousObjective.userMessageId,
-                        userMessageId: userMessage.id, nowMs: Date.now(), maxAttempts: recoveryPolicy.maxAutomaticAttempts,
-                        progressFingerprint: managed.pendingTurnRecovery.validationGaps?.length
-                            ? turnRecoveryValidationFingerprint(normalizeRecoveryValidationGapsForProgress(managed.pendingTurnRecovery.validationGaps)) : semanticProgressFingerprint,
-                        semanticProgressFingerprint,
-                    });
-                }
-            }
-            existingTurnRollback = () => {
-                if (!ownsActiveTurn())
-                    return;
-                const changedStatus = managed.sessionStatus !== previousStatus;
-                managed.activeObjective = previousObjective;
-                managed.pendingTurnRecovery = previousRecovery;
-                managed.sessionStatus = previousStatus;
-                userMessage.isQueued = trustedUserInput ? true : previousQueued;
-                managed.turnLifecycleManagedStatus = undefined;
-                sessionOperationContext.owner["setProcessing"](managed, false);
-                sessionOperationContext.owner["persistSession"](managed);
-                if (changedStatus) {
-                    sessionOperationContext.owner["sendEvent"]({ type: 'session_status_changed', sessionId, sessionStatus: previousStatus ?? 'todo' }, managed.workspace.id);
-                }
-            };
-        }
-        sessionOpAssertStrongCancellationAdmissionOpen(sessionOperationContext, managed);
-        managed.processingGeneration = myGeneration;
-        sessionOperationContext.owner["setProcessing"](managed, true);
-        sessionOperationContext.state.queuedMessageDispatches.delete(sessionId);
-        assertAuthenticatedInternalContinuation();
-    }
-    else {
-        // Create new message
-        userMessage = {
-            // Bind a deferred automatic recovery to its durable dispatch identity.
-            // Cold restore can then distinguish it from every other hidden message
-            // without trusting prompt text.
-            id: durableMessageId(),
-            role: 'user',
-            content: activeMessageState.message,
-            timestamp: sessionOpMonotonic(sessionOperationContext),
-            attachments: storedAttachments, // Include for persistence (has thumbnailBase64)
-            ...(!activeMessageState.options?.hidden ? { isQueued: true } : {}),
-            badges: activeMessageState.options?.badges, // Include content badges (sources, skills with embedded icons)
-            // Hidden system-generated messages reach the model but never render as a
-            // transcript bubble (e.g. background-task-completion nudge).
-            ...(activeMessageState.options?.hidden ? { hidden: true } : {}),
-            ...(activeMessageState.options?.internalOrigin ? { internalOrigin: activeMessageState.options.internalOrigin } : {}),
-            ...(activeMessageState.options?.internalOrigin?.deliveryId ? {
-                isQueued: true,
-                agentDelivery: { id: activeMessageState.options.internalOrigin.deliveryId, status: 'queued' as const, attempts: 0, attachmentsSha256: activeMessageState.options.internalOrigin.attachmentsSha256 },
-            } : {}),
-        };
-        managed.messages.push(userMessage);
-        if (cleanExplicitRetry) {
-            const retryAnchorId = activeMessageState.options!.automaticRecovery!.originalUserMessageId;
-            const previousObjective = managed.activeObjective;
-            const previousRecovery = managed.pendingTurnRecovery;
-            const previousStatus = managed.sessionStatus;
-            const previousFencedDispatch = previousRecovery?.recoveryDispatch;
-            const previousFencedDispatchId = sessionOperationContext.state.cleanRetrySetupPersistenceFences.get(managed.id);
-            const previousFencedQueueItems: Array<{
-                item: ManagedSession['messageQueue'][number];
-                index: number;
-            }> = [];
-            if (previousFencedDispatch && previousFencedDispatch.id === previousFencedDispatchId) {
-                const fencedCleanContinuationId = previousFencedDispatch.cleanContinuationId;
-                for (const [index, item] of managed.messageQueue.entries()) {
-                    const recovery = item.options?.automaticRecovery;
-                    if (recovery?.dispatchId === previousFencedDispatchId
-                        && recovery.cleanContinuationId === fencedCleanContinuationId) {
-                        previousFencedQueueItems.push({ item, index });
-                    }
-                }
-            }
-            const previousProviderContextBoundaryMessageId = managed.providerContextBoundaryMessageId;
-            const previousProviderResumeState = {
-                sdkSessionId: managed.sdkSessionId,
-                branchFromSdkSessionId: managed.branchFromSdkSessionId,
-                branchFromSessionPath: managed.branchFromSessionPath,
-                branchFromSdkCwd: managed.branchFromSdkCwd,
-                branchFromSdkTurnId: managed.branchFromSdkTurnId,
-                branchContextStrategy: managed.branchContextStrategy,
-                branchSeedApplied: managed.branchSeedApplied,
-                tokenUsage: managed.tokenUsage ? { ...managed.tokenUsage } : undefined,
-                contextCompactionAttempt: managed.contextCompactionAttempt
-                    ? { ...managed.contextCompactionAttempt }
-                    : undefined,
-            };
-            const queuedStateRemains = managed.messageQueue.length > 0
-                || sessionOperationContext.state.queuedMessageDispatches.has(managed.id)
-                || managed.messages.some(candidate => candidate !== userMessage && candidate.isQueued);
-            if (explicitRetryIntent!.allowRetainedMachineInbox === true
-                && queuedStateRemains && !sessionOpHasOnlyMachineInbox(sessionOperationContext, managed)) {
-                managed.messages.splice(managed.messages.indexOf(userMessage), 1);
-                throw new Error('The retained inbox changed before the recovered clean Retry was accepted');
-            }
-            const retryRecovery = previousRecovery ?? sessionOpGetInterruptedTurnRecovery(sessionOperationContext, managed, retryAnchorId)
-                ?? reconstructLegacyTurnRecoveryBudget(managed.messages, retryAnchorId)
-                ?? createPendingTurnRecovery(retryAnchorId);
-            // A cold-resumed context-limit answer has already committed its hidden
-            // response row as the clean dispatch identity. Reclaiming that row and
-            // rebuilding the provider boundary must keep the same host-owned
-            // answer anchor; replacing it with the visible objective root drops the
-            // structured answer evidence and makes the deterministic handoff fail
-            // authentication immediately before agent.chat().
-            const recoveredCleanAnswerSourceId = explicitRetryIntent!.grantNewAllowance === false
-                && previousRecovery?.userMessageId === userMessage.id
-                && previousRecovery.recoveryDispatch?.id === userMessage.id
-                && previousRecovery.recoveryDispatch.cleanContinuationId === explicitRetryIntent!.cleanContinuationId
-                && sessionOpBoundCleanUserInputRequest(sessionOperationContext, managed, previousRecovery)
-                ? previousRecovery.userMessageId
-                : undefined;
-            if (!previousObjective || userMessage.id !== explicitRetryIntent!.cleanBoundaryMessageId
-                || userMessage.id !== activeMessageState.options!.automaticRecovery!.dispatchId
-                || activeMessageState.message !== sessionOpBuildRecoveryDispatchMessage(sessionOperationContext, managed, { ...retryRecovery, lastCause: 'user_retry' }, {
-                    schemaVersion: 1,
-                    id: userMessage.id,
-                    attempt: activeMessageState.options!.automaticRecovery!.dispatchAttempt!,
-                    cause: 'user_retry',
-                    origin: 'retry',
-                    allocatedAt: activeMessageState.options!.automaticRecovery!.dispatchAllocatedAt!,
-                    phase: 'allocated',
-                    cleanContinuationId: explicitRetryIntent!.cleanContinuationId,
-                })) {
-                managed.messages.splice(managed.messages.indexOf(userMessage), 1);
-                throw new Error('The clean Retry boundary failed its private capability binding');
-            }
-            if (previousFencedQueueItems.length) {
-                const fencedItems = new Set(previousFencedQueueItems.map(({ item }) => item));
-                managed.messageQueue = managed.messageQueue.filter(item => !fencedItems.has(item));
-            }
-            managed.activeObjective = {
-                ...previousObjective,
-                interruptedTurnRecovery: undefined,
-                terminalState: 'active',
-                completedAt: undefined,
-            };
-            managed.pendingTurnRecovery = {
-                ...retryRecovery,
-                ...(sessionOpHasValidationExhaustionMarker(sessionOperationContext, managed) ? { validationExhausted: true } : {}),
-                userMessageId: recoveredCleanAnswerSourceId ?? retryAnchorId,
-                lastCause: 'user_retry',
-                waitingForPermission: undefined,
-                // This index is the unique fresh provider boundary row, not a replay
-                // of the earlier accepted human anchor.
-                userRetryFromMessageCount: diagnosticFromMessageCount,
-                continuationRequired: false,
-            };
-            sessionOperationContext.state.explicitRetryAllowanceTokens.delete(explicitRetryAllowanceToken!);
-            if (explicitRetryIntent!.grantNewAllowance !== false) {
-                const recoveryPolicy = resolveAgentCostControlPolicy(loadWorkspaceConfig(managed.workspace.rootPath)?.costControl).recovery;
-                const semanticProgressFingerprint = explicitRetryProgressFingerprint(managed.messages.slice(0, diagnosticFromMessageCount), previousObjective.userMessageId);
-                managed.pendingTurnRecovery = grantExplicitRetryAllowance(managed.pendingTurnRecovery, {
-                    id: generateMessageId(),
-                    objectiveId: previousObjective.objectiveId ?? previousObjective.userMessageId,
-                    userMessageId: retryAnchorId,
-                    nowMs: Date.now(),
-                    maxAttempts: recoveryPolicy.maxAutomaticAttempts,
-                    progressFingerprint: managed.pendingTurnRecovery.validationGaps?.length
-                        ? turnRecoveryValidationFingerprint(normalizeRecoveryValidationGapsForProgress(managed.pendingTurnRecovery.validationGaps)) : semanticProgressFingerprint,
-                    semanticProgressFingerprint,
-                });
-            }
-            managed.pendingTurnRecovery = sessionOpStartRecoveryDispatch(sessionOperationContext, managed.pendingTurnRecovery, activeMessageState.options!.automaticRecovery!);
-            managed.pendingTurnRecovery = {
-                ...managed.pendingTurnRecovery,
-                cleanContextBoundaryMessageId: userMessage.id,
-            };
-            if (explicitRetryContextLimitRequest?.status === 'pending') {
-                explicitRetryContextLimitRequest.status = 'cancelled';
-                explicitRetryContextLimitRequest.answeredAt = Math.max(Date.now(), explicitRetryContextLimitRequest.createdAt + 1, (explicitRetryContextLimitRequest.answeredAt ?? 0) + 1);
-            }
-            // Commit the provider detachment in the same first durable snapshot as
-            // the clean boundary. A crash after that ACK must never reload the old
-            // 134k provider session or its compaction baseline with a fresh prompt.
-            resetProviderResumeStateForCleanBoundary(userMessage.id);
-            cleanRecoveryProviderStateAtomized = true;
-            existingTurnRollback = () => {
-                if (!ownsActiveTurn())
-                    return;
-                const index = managed.messages.indexOf(userMessage);
-                if (index >= 0)
-                    managed.messages.splice(index, 1);
-                managed.activeObjective = previousObjective;
-                managed.pendingTurnRecovery = previousRecovery;
-                managed.providerContextBoundaryMessageId = previousProviderContextBoundaryMessageId;
-                managed.sdkSessionId = previousProviderResumeState.sdkSessionId;
-                managed.branchFromSdkSessionId = previousProviderResumeState.branchFromSdkSessionId;
-                managed.branchFromSessionPath = previousProviderResumeState.branchFromSessionPath;
-                managed.branchFromSdkCwd = previousProviderResumeState.branchFromSdkCwd;
-                managed.branchFromSdkTurnId = previousProviderResumeState.branchFromSdkTurnId;
-                managed.branchContextStrategy = previousProviderResumeState.branchContextStrategy;
-                managed.branchSeedApplied = previousProviderResumeState.branchSeedApplied;
-                managed.tokenUsage = previousProviderResumeState.tokenUsage;
-                managed.contextCompactionAttempt = previousProviderResumeState.contextCompactionAttempt;
-                managed.sessionStatus = previousStatus;
-                managed.messageQueue = managed.messageQueue.filter(item => (item.messageId !== userMessage.id
-                    && item.options?.automaticRecovery?.dispatchId !== userMessage.id));
-                for (const { item, index: previousIndex } of previousFencedQueueItems) {
-                    const dispatchId = item.options?.automaticRecovery?.dispatchId;
-                    if (managed.messageQueue.some(candidate => candidate === item
-                        || dispatchId && candidate.options?.automaticRecovery?.dispatchId === dispatchId))
-                        continue;
-                    managed.messageQueue.splice(Math.min(previousIndex, managed.messageQueue.length), 0, item);
-                }
-                if (explicitRetryContextLimitRequest && explicitRetryContextLimitRequestBefore) {
-                    explicitRetryContextLimitRequest.status = explicitRetryContextLimitRequestBefore.status;
-                    explicitRetryContextLimitRequest.answeredAt = explicitRetryContextLimitRequestBefore.answeredAt;
-                }
-                managed.turnLifecycleManagedStatus = undefined;
-                sessionOperationContext.owner["setProcessing"](managed, false);
-                sessionOperationContext.owner["persistSession"](managed);
-            };
-        }
-        if (!cleanExplicitRetry && supersedableAutomaticRecovery) {
-            const dispatch = managed.pendingTurnRecovery?.recoveryDispatch;
-            if (dispatch?.cleanContinuationId) {
-                let exactCleanBoundary = dispatch.phase === 'started'
-                    && dispatch.id === userMessage.id
-                    && activeMessageState.options?.automaticRecovery?.dispatchId === dispatch.id;
-                if (exactCleanBoundary) {
-                    try {
-                        exactCleanBoundary = activeMessageState.message === sessionOpBuildRecoveryDispatchMessage(sessionOperationContext, managed, managed.pendingTurnRecovery!, dispatch);
-                    }
-                    catch {
-                        exactCleanBoundary = false;
-                    }
-                }
-                if (!exactCleanBoundary) {
-                    managed.messages.splice(managed.messages.indexOf(userMessage), 1);
-                    throw new Error('The automatic clean recovery boundary failed its durable dispatch authentication');
-                }
-                // Automatic clean continuations need the same crash boundary as an
-                // explicit context-limit Retry: the started row and the detached
-                // provider state become durable in one first snapshot. A process
-                // death after that write can never reload the discarded context.
-                resetProviderResumeStateForCleanBoundary(userMessage.id);
-                cleanRecoveryProviderStateAtomized = true;
-            }
-        }
-        const pendingSourceActivationForStart = managed.autoRetryPending;
-        if (authenticatedSourceActivation && pendingSourceActivationForStart
-            && pendingSourceActivationForStart.dispatchToken === sourceActivationDispatchToken) {
-            pendingSourceActivationForStart.messageId = userMessage.id;
-        }
-        if (supersedableAutomaticRecovery || cleanExplicitRetry) {
-            activeMessageState.syntheticAutomaticMessage = userMessage;
-            sessionOpTrackSyntheticAutomaticMessage(sessionOperationContext, managed, userMessage);
-        }
-        // Reserve the turn before the first durability await. Concurrent sends
-        // must queue instead of starting two recipient turns during this flush.
-        sessionOpAssertStrongCancellationAdmissionOpen(sessionOperationContext, managed);
-        managed.processingGeneration = myGeneration;
-        sessionOperationContext.owner["setProcessing"](managed, true);
-        sessionOperationContext.state.queuedMessageDispatches.delete(sessionId);
-        assertAuthenticatedInternalContinuation();
-        if (authenticatedSourceActivation && pendingSourceActivationForStart
-            && pendingSourceActivationForStart.dispatchToken === sourceActivationDispatchToken) {
-            // A fresh restart now owns this generation. If its first durability
-            // fence fails, the bounded retry must compare against that rolled-back
-            // idle generation rather than the provider generation that minted it.
-            pendingSourceActivationForStart.generation = myGeneration;
-        }
-        // Update lastMessageRole for badge display. Skip for hidden messages so the
-        // session-list preview isn't briefly driven by an invisible system nudge.
-        if (!activeMessageState.options?.hidden) {
-            managed.lastMessageRole = 'user';
-        }
-        // Persist + flush before announcing — the user message must be
-        // genuinely on disk before we tell the renderer "accepted", and
-        // `persistSession` is debounced (500ms). #616.
-        try {
-            if (!sessionOperationContext.owner["persistSession"](managed)) {
-                throw new Error('The provider boundary could not be queued for durable storage');
-            }
-            await sessionOperationContext.owner.flushSession(managed.id);
-        }
-        catch (error) {
-            if (ownsActiveTurn()) {
-                if (cleanExplicitRetry)
-                    existingTurnRollback?.();
-                // A failed first flush acknowledged neither storage nor provider
-                // delivery. Remove and untrack only this synthetic recovery so a
-                // later unrelated save cannot make the rejected attempt durable.
-                removeSyntheticAutomaticMessage();
-                if (sourceActivationOrigin) {
-                    const sourceIndex = managed.messages.indexOf(userMessage);
-                    if (sourceIndex >= 0)
-                        managed.messages.splice(sourceIndex, 1);
-                    releaseSourceActivationClaim(managed, sourceActivationDispatchToken);
-                }
-                if (restoreStartedAutomaticDispatch()) {
-                    const replay = queuedItem ?? { message: activeMessageState.message, attachments, storedAttachments, options: activeMessageState.options };
-                    const replayRecovery = replay.options?.automaticRecovery;
-                    const alreadyQueued = managed.messageQueue.some(item => {
-                        const candidate = item.options?.automaticRecovery;
-                        return !!candidate && !!replayRecovery
-                            && (replayRecovery.dispatchId
-                                ? candidate.dispatchId === replayRecovery.dispatchId
-                                : candidate.cause === replayRecovery.cause
-                                    && candidate.originalUserMessageId === replayRecovery.originalUserMessageId
-                                    && item.message === replay.message);
-                    });
-                    if (!alreadyQueued) {
-                        managed.messageQueue.unshift(replay);
-                    }
-                    sessionOperationContext.state.deferredAutomaticSessions.add(sessionId);
-                }
-                sessionOperationContext.owner["setProcessing"](managed, false);
-                sessionOperationContext.owner["persistSession"](managed);
-                try {
-                    await sessionOperationContext.owner.flushSession(managed.id);
-                }
-                catch (cleanupError) {
-                    sessionLog.warn('Failed to flush automatic recovery first-write rollback', {
-                        sessionId,
-                        error: cleanupError instanceof Error ? cleanupError.message : String(cleanupError),
-                    });
-                }
-            }
-            else
-                await abandonStoppedTurn();
-            throw error;
-        }
-        if ((directHumanContinuation && !existingMessageId && directHumanStopWon())
-            || freshAgentDeliveryStopWon()) {
-            // This turn owned isProcessing before its first durability ACK and had
-            // no FIFO row for Stop's partition sweep. Do not acknowledge a message
-            // that Stop has already cancelled: remove the exact pre-provider row,
-            // fsync its deletion, then let the stopped generation finish cleanup.
-            managed.messageQueue = managed.messageQueue.filter(item => item.messageId !== userMessage.id);
-            const messageIndex = managed.messages.indexOf(userMessage);
-            if (messageIndex >= 0)
-                managed.messages.splice(messageIndex, 1);
-            if (directHumanContinuation)
-                managed.lastMessageRole = lastMessageRoleBeforeDispatch;
-            if (!sessionOperationContext.owner["persistSession"](managed)) {
-                throw new Error('The stopped pre-acknowledgement message could not be removed from durable storage');
-            }
-            await sessionOperationContext.owner.flushSession(managed.id);
-            await abandonStoppedTurn();
-            if (freshAgentDeliveryStopWon())
-                throw stoppedFreshAgentDeliveryError();
-            throw stoppedDirectHumanError();
-        }
-        try {
-            assertAuthenticatedInternalContinuation();
-        }
-        catch (error) {
-            const index = managed.messages.indexOf(userMessage);
-            if (index >= 0)
-                managed.messages.splice(index, 1);
-            if (managed.processingGeneration === myGeneration)
-                sessionOperationContext.owner["setProcessing"](managed, false);
-            sessionOperationContext.owner["persistSession"](managed);
-            await sessionOperationContext.owner.flushSession(managed.id);
-            // A newer human turn may have entered the durable FIFO while this
-            // hidden auth-result row was being flushed. Releasing only the stale
-            // generation would otherwise leave that accepted turn stranded until
-            // an unrelated event happens to poke the queue.
-            if (!managed.isProcessing && managed.messageQueue.length > 0) {
-                sessionOperationContext.owner["processNextQueuedMessage"](sessionId);
-            }
-            throw error;
-        }
-        if (activeMessageState.options?.internalOrigin?.kind === 'agent-message' && !existingMessageId
-            && sessionOpHasTerminalObjectiveState(sessionOperationContext, managed)) {
-            const terminalState = managed.activeObjective?.terminalState;
-            const messageIndex = managed.messages.indexOf(userMessage);
-            const untouchedQueuedReceipt = messageIndex >= 0
-                && userMessage.isQueued === true && userMessage.agentDelivery?.status === 'queued';
-            if (untouchedQueuedReceipt) {
-                managed.messages.splice(messageIndex, 1);
-                if (managed.processingGeneration === myGeneration && managed.isProcessing) {
-                    sessionOperationContext.owner["setProcessing"](managed, false);
-                }
-                sessionOperationContext.owner["persistSession"](managed);
-                await sessionOperationContext.owner.flushSession(managed.id);
-            }
-            throw new Error(`Target session objective is terminal (${terminalState}); no agent message was queued. Reuse its completed result. A new delegation is valid only when the objective or version genuinely changed, and grants no new authority.`);
-        }
-        // This ACK confirms storage only. Stop may have cancelled execution while
-        // the flush was pending; the saved user message must still be acknowledged.
-        durablyAcknowledged = true;
-        if (sourceActivationOrigin) {
-            const sourceAccepted = sourceActivationStillCurrent()
-                && (!authenticatedSourceActivation
-                    || commitSourceActivationPending(managed, sourceActivationDispatchToken, userMessage.id));
-            if (!sourceAccepted) {
-                const sourceIndex = managed.messages.indexOf(userMessage);
-                if (sourceIndex >= 0)
-                    managed.messages.splice(sourceIndex, 1);
-                cancelSourceActivationPending(managed);
-                sessionOperationContext.owner["setProcessing"](managed, false);
-                sessionOperationContext.owner["persistSession"](managed);
-                await sessionOperationContext.owner.flushSession(managed.id);
-                if (managed.messageQueue.length > 0)
-                    sessionOperationContext.owner["processNextQueuedMessage"](sessionId);
-                return;
-            }
-        }
-        onAck?.(userMessage.id);
-        if (!ownsActiveTurn()) {
-            await abandonStoppedTurn();
-            return;
-        }
-        if (await finishSupersededAutomaticRecovery())
-            return;
-        if (cleanExplicitRetry) {
-            // The first snapshot is now acknowledged: from this point onward a
-            // setup failure must retain the newly granted Retry and detached
-            // provider boundary, not restore the stale pre-Retry context.
-            cleanExplicitRetrySetupRollback = () => {
-                if (!ownsActiveTurn())
-                    return undefined;
-                const pending = managed.pendingTurnRecovery;
-                const started = pending?.recoveryDispatch;
-                if (!pending || started?.phase !== 'started'
-                    || started.id !== userMessage.id
-                    || started.id !== activeMessageState.options?.automaticRecovery?.dispatchId
-                    || started.cleanContinuationId !== activeMessageState.options?.automaticRecovery?.cleanContinuationId) {
-                    return undefined;
-                }
-                removeSyntheticAutomaticMessage();
-                const allocated = { ...started, phase: 'allocated' as const };
-                delete allocated.startedAt;
-                managed.pendingTurnRecovery = { ...pending, recoveryDispatch: allocated };
-                managed.messageQueue = managed.messageQueue.filter(item => (item.messageId !== allocated.id
-                    && item.options?.automaticRecovery?.dispatchId !== allocated.id));
-                sessionOperationContext.owner["setProcessing"](managed, false);
-                sessionOperationContext.owner["persistSession"](managed);
-                return allocated.id;
-            };
-            if (explicitRetryIntent?.grantNewAllowance !== false) {
-                // A fresh, durable user Retry supersedes an in-memory fence left by a
-                // prior failed fsync. Never clear that fence before this ACK.
-                sessionOperationContext.state.cleanRetrySetupPersistenceFences.delete(managed.id);
-            }
-        }
-        // Emit user_message event so UI can confirm the optimistic message
-        sessionOperationContext.owner["sendEvent"]({
-            type: 'user_message',
-            sessionId,
-            message: userMessage,
-            status: 'accepted',
-            optimisticMessageId: activeMessageState.options?.optimisticMessageId
-        }, managed.workspace.id);
-        // If this is the first user message and no title exists, set one immediately
-        // AI generation will enhance it later, but we always have a title from the start
-        // Automation sessions (triggeredBy set) already have a title and skip AI generation entirely
-        const isFirstUserMessage = managed.messages.filter(m => m.role === 'user').length === 1;
-        if (isFirstUserMessage && !managed.name && !managed.triggeredBy) {
-            // Replace bracket mentions with their display labels (e.g. [skill:ws:commit] -> "Commit")
-            // so titles show human-readable names instead of raw IDs
-            let titleSource = activeMessageState.message;
-            if (activeMessageState.options?.badges) {
-                for (const badge of activeMessageState.options.badges) {
-                    if (badge.rawText && badge.label) {
-                        titleSource = titleSource.replace(badge.rawText, badge.label);
-                    }
-                }
-            }
-            // Sanitize: strip any remaining bracket mentions, XML blocks, tags
-            const sanitized = sanitizeForTitle(titleSource);
-            const initialTitle = sanitized.slice(0, 50) + (sanitized.length > 50 ? '…' : '');
-            managed.name = initialTitle;
-            sessionOperationContext.owner["persistSession"](managed);
-            // Flush immediately so disk is authoritative before notifying renderer
-            try {
-                await sessionOperationContext.owner.flushSession(managed.id);
-            }
-            catch (error) {
-                if (durablyAcknowledged && !ownsActiveTurn()) {
-                    await abandonStoppedTurn();
-                    return;
-                }
-                throw error;
-            }
-            if (!ownsActiveTurn()) {
-                await abandonStoppedTurn();
-                return;
-            }
-            sessionOperationContext.owner["sendEvent"]({
-                type: 'title_generated',
-                sessionId,
-                title: initialTitle,
-            }, managed.workspace.id);
-            // Generate AI title asynchronously using agent's SDK
-            // (waits briefly for agent creation if needed)
-            sessionOpScheduleTitleGeneration(sessionOperationContext, managed, activeMessageState.message);
-        }
+    const userMessagePreparationInput: UserMessagePreparationInput = {
+        managed,
+        existingMessageId,
+        supersedableAutomaticRecovery,
+        activeMessageState,
+        sessionOperationContext,
+        explicitRetry,
+        trustedUserInput,
+        explicitRetryAllowanceToken,
+        ownsActiveTurn,
+        sessionId,
+        myGeneration,
+        assertAuthenticatedInternalContinuation,
+        durableMessageId,
+        storedAttachments,
+        cleanExplicitRetry,
+        explicitRetryIntent,
+        diagnosticFromMessageCount,
+        explicitRetryContextLimitRequest,
+        resetProviderResumeStateForCleanBoundary,
+        explicitRetryContextLimitRequestBefore,
+        authenticatedSourceActivation,
+        sourceActivationDispatchToken,
+        removeSyntheticAutomaticMessage,
+        sourceActivationOrigin,
+        restoreStartedAutomaticDispatch,
+        queuedItem,
+        attachments,
+        abandonStoppedTurn,
+        directHumanContinuation,
+        directHumanStopWon,
+        freshAgentDeliveryStopWon,
+        lastMessageRoleBeforeDispatch,
+        stoppedFreshAgentDeliveryError,
+        stoppedDirectHumanError,
+        sourceActivationStillCurrent,
+        onAck,
+        finishSupersededAutomaticRecovery,
+    };
+    const preparedUserMessage = existingMessageId
+        ? reuseSessionUserMessage(userMessagePreparationInput)
+        : await createNewSessionUserMessage(userMessagePreparationInput);
+    if (!preparedUserMessage) return;
+    const { userMessage, existingTurnRollback, cleanExplicitRetrySetupRollback } = preparedUserMessage;
+    const { durablyAcknowledged, cleanRecoveryProviderStateAtomized } = preparedUserMessage;
+    if (!existingMessageId && !ownsActiveTurn()) {
+        await abandonStoppedTurn();
+        return;
     }
     // Evaluate auto-label rules against the user message (common path for both
     // fresh and queued messages). Scans regex patterns configured on labels,
@@ -1508,475 +996,41 @@ delegatedDispatchContinuationToken?: symbol): Promise<void> {
     // Persist an in-flight marker before model streaming begins. A packaged-app
     // replacement can terminate every subprocess cleanly (exit 0) without the
     // normal completion path running; this marker is the durable resume seam.
-    const authenticatedInternalObjectiveRoot = !managed.activeObjective && !activeMessageState.options?.hidden
-        && !activeMessageState.options?.automaticRecovery && (activeMessageState.options?.internalOrigin?.kind === 'spawned-session'
-        ? !!managed.parentSessionId
-            && managed.parentSessionId !== managed.id
-            && activeMessageState.options.internalOrigin.senderSessionId === managed.parentSessionId
-        : activeMessageState.options?.internalOrigin?.kind === 'automation'
-            && !managed.parentSessionId
-            && !!managed.triggeredBy);
-    if (trustedUserInput) {
-        // Answers refine the existing contract; keep its root, criteria and budgets.
-        const contextLimitBoundary = sessionOpContextLimitHostAdmissionBoundary(sessionOperationContext, managed);
-        const currentObjectiveId = managed.activeObjective?.objectiveId
-            ?? managed.activeObjective?.userMessageId;
-        const resumedPending = managed.pendingTurnRecovery
-            ? {
-                ...managed.pendingTurnRecovery,
-                userMessageId: userMessage.id,
-                userInputFromMessageCount: managed.messages.length,
-                // This newly authenticated answer is the next provider input. Any
-                // earlier continuation marker describes the pre-answer turn and
-                // must not make a pre-provider crash look already consumed.
-                continuationRequired: false,
-            }
-            : { ...createPendingTurnRecovery(userMessage.id), userInputFromMessageCount: managed.messages.length };
-        // Reuse the exact request object already authenticated by
-        // exactUserInputResponse. A second metadata lookup could select a corrupt
-        // duplicate with the same response id and manufacture context-limit
-        // authority for a different question or workspace.
-        const contextLimitAnswer = trustedUserInput.hostPrompt?.schemaVersion === 1
-            && trustedUserInput.hostPrompt.kind === 'context-limit-next-step'
-            && trustedUserInput.objectiveUserMessageId === managed.activeObjective?.userMessageId
-            && trustedUserInput.hostPrompt.objectiveId === currentObjectiveId
-            && trustedUserInput.hostPrompt.recoveryDispatchId === contextLimitBoundary?.dispatchId
-            && trustedUserInput.hostPrompt.issuedAt >= (contextLimitBoundary?.boundaryAt ?? Number.POSITIVE_INFINITY)
-            && trustedUserInput.hostPrompt.issuedAt <= trustedUserInput.createdAt
-            && Number.isFinite(trustedUserInput.answeredAt)
-            && trustedUserInput.answeredAt! >= trustedUserInput.createdAt
-            && isExactContextLimitNextStepQuestion(trustedUserInput)
-            ? trustedUserInput
-            : undefined;
-        if (contextLimitAnswer) {
-            trustedContextLimitAnswer = contextLimitAnswer;
-            const allocated = nextRecoveryDispatch(resumedPending, 'user_retry', 'retry', userMessage.timestamp);
-            // The answered host prompt is already the unique durable boundary row.
-            // Bind the recovery dispatch to that same row so hard-limit admission
-            // can replace it atomically with a clean handoff instead of asking the
-            // user to repeat context the host still owns.
-            allocated.id = userMessage.id;
-            resumedPending.lastCause = 'user_retry';
-            resumedPending.recoveryDispatch = {
-                ...allocated,
-                phase: 'started',
-                startedAt: Math.max(Date.now(), allocated.allocatedAt),
-                preToolExecutionReceiptVersion: 1,
-            };
-        }
-        managed.pendingTurnRecovery = resumedPending;
-    }
-    else if (!localCompactCommand && !activeMessageState.options?.hidden && !activeMessageState.options?.automaticRecovery && !isHostSyntheticObjectiveText(activeMessageState.message)
-        && (!activeMessageState.options?.internalOrigin || authenticatedInternalObjectiveRoot)) {
-        const previousObjective = managed.activeObjective;
-        const nextObjective = transitionObjectiveContract({
-            existing: projectLegacyObjectiveForUserTransition(managed),
-            messageId: userMessage.id,
-            text: sessionOpObjectiveContractTextFor(sessionOperationContext, managed, userMessage),
-            lifetimeCostUsd: managed.tokenUsage?.costUsd,
-            lifetimeTokens: managed.tokenUsage?.totalTokens,
-            delegatedRole: delegatedObjectiveRoleForSession(managed),
-        });
-        const sameActiveObjective = previousObjective?.terminalState === 'active'
-            && previousObjective.userMessageId === nextObjective.userMessageId;
-        const hasPendingContextLimit = (managed.userInputRequests ?? []).some(request => request.status === 'pending' && isExactContextLimitNextStepQuestion(request));
-        const cancelledQuestions = previousObjective?.userMessageId !== nextObjective.userMessageId
-            || hasPendingContextLimit
-            ? sessionOperationContext.owner["cancelPendingUserInput"](managed, true) : undefined;
-        managed.activeObjective = nextObjective;
-        managed.pendingTurnRecovery = sameActiveObjective && managed.pendingTurnRecovery
-            ? { ...managed.pendingTurnRecovery, userMessageId: userMessage.id }
-            : createPendingTurnRecovery(userMessage.id);
-        managed.autonomyFallbackAttemptedTools = new Set();
-        if (cancelledQuestions) {
-            try {
-                await cancelledQuestions;
-            }
-            catch (error) {
-                if (durablyAcknowledged && !ownsActiveTurn()) {
-                    await abandonStoppedTurn();
-                    return;
-                }
-                throw error;
-            }
-            if (!ownsActiveTurn()) {
-                await abandonStoppedTurn();
-                return;
-            }
-        }
-    }
-    if (activeMessageState.options?.automaticRecovery && explicitRetry && managed.pendingTurnRecovery
-        && !(cleanExplicitRetry && managed.pendingTurnRecovery.recoveryDispatch?.phase === 'started')) {
-        managed.pendingTurnRecovery = sessionOpStartRecoveryDispatch(sessionOperationContext, managed.pendingTurnRecovery, activeMessageState.options.automaticRecovery);
-    }
-    if (trustedContextLimitAnswer) {
-        /** The answer is already durably acknowledged, but no provider work has
-         * started yet. If either the legacy runtime build or the fresh-context
-         * rebuild fails, atomically turn this exact host-owned answer into one
-         * allocated clean boundary. This preserves its identity and recovery
-         * attempt while letting the common bounded setup budget own every retry. */
-        contextLimitAnswerSetupRollback = () => {
-            const matchingRequests = (managed.userInputRequests ?? []).filter(candidate => (candidate.status === 'answered'
-                && candidate.responseMessageId === userMessage.id
-                && candidate.sessionId === managed.id
-                && candidate.originWorkspaceId === managed.workspace.id
-                && candidate.objectiveUserMessageId === managed.activeObjective?.userMessageId));
-            if (!ownsActiveTurn() || !trustedContextLimitAnswer
-                || matchingRequests.length !== 1 || matchingRequests[0] !== trustedContextLimitAnswer
-                || !managed.userInputRequests?.includes(trustedContextLimitAnswer)
-                || trustedContextLimitAnswer.status !== 'answered'
-                || trustedContextLimitAnswer.responseMessageId !== userMessage.id
-                || trustedContextLimitAnswer.objectiveUserMessageId !== managed.activeObjective?.userMessageId
-                || !trustedContextLimitAnswer.answers?.length
-                || !isExactContextLimitNextStepQuestion(trustedContextLimitAnswer))
-                return undefined;
-            const pending = managed.pendingTurnRecovery;
-            const started = pending?.recoveryDispatch;
-            if (!pending || started?.phase !== 'started' || started.id !== userMessage.id
-                || started.origin !== 'retry' || started.cause !== 'user_retry'
-                || pending.userMessageId !== userMessage.id || pending.lastCause !== 'user_retry'
-                || !Number.isFinite(started.startedAt))
-                return undefined;
-            const matches = managed.messages.flatMap((candidate, index) => (candidate.id === userMessage.id ? [{ candidate, index }] : []));
-            const match = matches.length === 1 ? matches[0] : undefined;
-            if (!match || match.candidate !== userMessage || match.index !== managed.messages.length - 1
-                || userMessage.role !== 'user' || userMessage.hidden !== true
-                || userMessage.isQueued || userMessage.isPending || userMessage.agentDelivery
-                || userMessage.internalOrigin?.kind !== 'user-input'
-                || (userMessage.attachments?.length ?? 0) > 0
-                || managed.messageQueue.some(item => item.messageId === userMessage.id))
-                return undefined;
-            let allocatedDispatch: NonNullable<PendingTurnRecovery['recoveryDispatch']> | undefined;
-            let allocatedPending: PendingTurnRecovery | undefined;
-            if (started.cleanContinuationId) {
-                // This closure is reachable only from a setup catch before the first
-                // provider event. Lifecycle telemetry may already have emitted an
-                // autonomy event, so cold-restart inference is intentionally too
-                // strict here. Authenticate the exact repurposed row, then derive the
-                // allocated fixed point directly from the live no-provider seam.
-                if (!sessionOpIsExactRepurposedUserInputCleanBoundary(sessionOperationContext, managed, trustedContextLimitAnswer, userMessage))
-                    return undefined;
-                allocatedDispatch = { ...started, phase: 'allocated' as const };
-                delete allocatedDispatch.startedAt;
-                for (let iteration = 0; iteration < 4; iteration += 1) {
-                    const candidate: PendingTurnRecovery = {
-                        ...pending,
-                        recoveryDispatch: allocatedDispatch,
-                    };
-                    const contextLimit = sessionOpCreateContextLimitRetryHandoff(sessionOperationContext, managed, candidate);
-                    const autonomous = sessionOperationContext.owner["createAutonomousContextLimitHandoff"](managed, candidate);
-                    const matching = [autonomous, contextLimit].find(handoff => (handoff?.id === allocatedDispatch!.cleanContinuationId));
-                    if (matching) {
-                        if (validAllocatedRecoveryDispatch(candidate) !== allocatedDispatch
-                            || sessionOpBoundCleanUserInputRequest(sessionOperationContext, managed, candidate) !== trustedContextLimitAnswer) {
-                            return undefined;
-                        }
-                        allocatedPending = candidate;
-                        break;
-                    }
-                    const next = autonomous ?? contextLimit;
-                    if (!next)
-                        return undefined;
-                    allocatedDispatch = { ...allocatedDispatch, cleanContinuationId: next.id };
-                }
-            }
-            else {
-                const canonicalAnswers = canonicalUserInputAnswerContents(trustedContextLimitAnswer);
-                if (!canonicalAnswers.includes(userMessage.content))
-                    return undefined;
-                const cleanPending: PendingTurnRecovery = {
-                    ...pending,
-                    cleanContinuationCount: (pending.cleanContinuationCount ?? 0) + 1,
-                    recoveryDispatch: undefined,
-                };
-                const provisionalHandoff = sessionOperationContext.owner["createAutonomousContextLimitHandoff"](managed, cleanPending);
-                if (!provisionalHandoff)
-                    return undefined;
-                const cleanDispatch = { ...started, cleanContinuationId: provisionalHandoff.id };
-                delete cleanDispatch.fallbackIntent;
-                const nextPending: PendingTurnRecovery = {
-                    ...cleanPending,
-                    recoveryDispatch: cleanDispatch,
-                    cleanContextBoundaryMessageId: userMessage.id,
-                };
-                const finalHandoff = sessionOperationContext.owner["createAutonomousContextLimitHandoff"](managed, nextPending);
-                const cleanPrompt = finalHandoff && buildCleanRecoveryContinuationPrompt(finalHandoff);
-                if (!finalHandoff || !cleanPrompt)
-                    return undefined;
-                nextPending.recoveryDispatch = {
-                    ...cleanDispatch,
-                    cleanContinuationId: finalHandoff.id,
-                };
-                allocatedDispatch = {
-                    ...nextPending.recoveryDispatch,
-                    phase: 'allocated' as const,
-                };
-                delete allocatedDispatch.startedAt;
-                // Changing started -> allocated is part of the deterministic handoff
-                // identity. Rebind from host state without mutating the live session;
-                // only the fully authenticated fixed point is committed below.
-                for (let iteration = 0; iteration < 4; iteration += 1) {
-                    const candidate: PendingTurnRecovery = {
-                        ...nextPending,
-                        recoveryDispatch: allocatedDispatch,
-                    };
-                    const contextLimit = sessionOpCreateContextLimitRetryHandoff(sessionOperationContext, managed, candidate);
-                    const autonomous = sessionOperationContext.owner["createAutonomousContextLimitHandoff"](managed, candidate);
-                    const matching = [autonomous, contextLimit].find(handoff => (handoff?.id === allocatedDispatch!.cleanContinuationId));
-                    if (matching) {
-                        if (validAllocatedRecoveryDispatch(candidate) !== allocatedDispatch
-                            || sessionOpBoundCleanUserInputRequest(sessionOperationContext, managed, candidate) !== trustedContextLimitAnswer) {
-                            return undefined;
-                        }
-                        allocatedPending = candidate;
-                        break;
-                    }
-                    const next = autonomous ?? contextLimit;
-                    if (!next)
-                        return undefined;
-                    allocatedDispatch = { ...allocatedDispatch, cleanContinuationId: next.id };
-                }
-            }
-            if (!allocatedDispatch || !allocatedPending)
-                return undefined;
-            let cleanPrompt: string;
-            try {
-                cleanPrompt = sessionOpBuildRecoveryDispatchMessage(sessionOperationContext, managed, allocatedPending, allocatedDispatch);
-            }
-            catch {
-                return undefined;
-            }
-            managed.messages.splice(match.index, 1);
-            managed.pendingTurnRecovery = allocatedPending;
-            activeMessageState.message = cleanPrompt;
-            managed.lastSentMessage = cleanPrompt;
-            managed.lastSentOptions = activeMessageState.options;
-            resetProviderResumeStateForCleanBoundary(userMessage.id);
-            cleanRecoveryProviderStateAtomized = true;
-            managed.messageQueue = managed.messageQueue.filter(item => (item.messageId !== allocatedDispatch.id
-                && item.options?.automaticRecovery?.dispatchId !== allocatedDispatch.id));
-            if (sessionOperationContext.state.queuedMessageDispatches.get(sessionId) === queuedDispatchToken) {
-                sessionOperationContext.state.queuedMessageDispatches.delete(sessionId);
-            }
-            sessionOperationContext.state.automaticAdmissionReservations.delete(sessionId);
-            sessionOperationContext.owner["setProcessing"](managed, false);
-            return allocatedDispatch.id;
-        };
-    }
-    const cleanRecoveryProviderReset = (() => {
-        const dispatch = managed.pendingTurnRecovery?.recoveryDispatch;
-        if (!activeMessageState.options?.automaticRecovery || dispatch?.phase !== 'started'
-            || !dispatch.cleanContinuationId || dispatch.id !== userMessage.id
-            || activeMessageState.options.automaticRecovery.dispatchId !== dispatch.id)
-            return false;
-        try {
-            return activeMessageState.message === sessionOpBuildRecoveryDispatchMessage(sessionOperationContext, managed, managed.pendingTurnRecovery!, dispatch);
-        }
-        catch {
-            return false;
-        }
-    })();
-
-    if (directHumanContinuation && managed.pendingTurnRecovery?.recoveryDispatch) {
-        managed.pendingTurnRecovery = {
-            ...managed.pendingTurnRecovery,
-            waitingForPermission: undefined,
-            recoveryDispatch: undefined,
-        };
-    }
-    if (managed.pendingTurnRecovery?.recoveryDispatch?.cleanContinuationId
-        && !cleanRecoveryProviderReset
-        && !directHumanContinuation
-        && !sessionOpHasConsumedCleanRecoveryDispatch(sessionOperationContext, managed)
-        && managed.pendingTurnRecovery.exhaustedAt === undefined) {
-        // Authenticate the provider seam before claiming an unrelated queued
-        // agent delivery. A host admission failure must not consume its retry
-        // counter or manufacture a child-result question without provider work.
-        const authenticationError = new CleanRecoveryDispatchAuthenticationError('The clean recovery continuation failed its durable dispatch authentication');
-        if (ownsQueuedDispatch && queuedItem) {
-            const rolledBackDelivery = await rollbackQueuedAgentDeliveryPreparation('clean-boundary authentication');
-            if (!rolledBackDelivery) {
-                if (!managed.messageQueue.some(item => item === queuedItem
-                    || item.messageId && item.messageId === queuedItem.messageId)) {
-                    managed.messageQueue.unshift(queuedItem);
-                }
-                userMessage.isQueued = true;
-                if (sessionOperationContext.state.queuedMessageDispatches.get(sessionId) === queuedDispatchToken) {
-                    sessionOperationContext.state.queuedMessageDispatches.delete(sessionId);
-                }
-                sessionOperationContext.state.automaticAdmissionReservations.delete(sessionId);
-                sessionOperationContext.owner["setProcessing"](managed, false);
-                if (sessionOperationContext.owner["persistSession"](managed)) {
-                    try {
-                        await sessionOperationContext.owner.flushSession(managed.id);
-                    }
-                    catch (error) {
-                        sessionLog.warn('Failed to persist unauthenticated clean-boundary dequeue rollback', {
-                            sessionId,
-                            messageId: userMessage.id,
-                            error: error instanceof Error ? error.message : String(error),
-                        });
-                    }
-                }
-            }
-        }
-        else if (managed.processingGeneration === myGeneration) {
-            removeSyntheticAutomaticMessage();
-            existingTurnRollback?.();
-            sessionOperationContext.owner["setProcessing"](managed, false);
-            sessionOperationContext.owner["persistSession"](managed);
-        }
-        throw authenticationError;
-    }
-    if (userMessage.agentDelivery) {
-        userMessage.agentDelivery.status = 'processing';
-        // Claiming an agent delivery consumes its queue slot atomically with the
-        // durable processing lease. Leaving isQueued=true makes the exact receipt
-        // indistinguishable from a second pending dispatch and can cause terminal
-        // child results to block their own parent completion forever.
-        userMessage.isQueued = false;
-        userMessage.agentDelivery.attempts++;
-        if (userMessage.agentDelivery.attempts > 3) {
-            userMessage.agentDelivery.status = 'failed';
-            try {
-                if (!sessionOperationContext.owner["persistSession"](managed)) {
-                    throw new Error('The exhausted agent-delivery receipt could not be queued for durable storage');
-                }
-                await sessionOperationContext.owner.flushSession(managed.id);
-                const exactDispatch = sessionOperationContext.state.queuedAgentDeliveryDispatches.get(userMessage.id);
-                if (exactDispatch && exactDispatch.dispatchToken === queuedDispatchToken) {
-                    exactDispatch.claimDurable = true;
-                }
-                sessionOpCompleteQueuedAgentDeliveryDispatch(sessionOperationContext, userMessage.id, queuedDispatchToken);
-            }
-            catch (error) {
-                if (durablyAcknowledged && !ownsActiveTurn()) {
-                    await abandonStoppedTurn();
-                    return;
-                }
-                await rollbackQueuedAgentDeliveryPreparation('exhausted-delivery durability fence');
-                throw error;
-            }
-            if (!ownsActiveTurn()) {
-                await abandonStoppedTurn();
-                return;
-            }
-            sessionOperationContext.owner["setProcessing"](managed, false);
-            throw new Error('Agent delivery recovery exhausted after three attempts; inspect the persisted transcript');
-        }
-        managed.activeAgentDelivery = {
-            deliveryId: userMessage.agentDelivery.id,
-            generation: myGeneration,
-        };
-    }
-    else {
-        userMessage.isQueued = false;
-    }
-    if (managed.activeObjective && managed.playbookSlug && !isTerminalReviewSession(managed)) {
-        const selected = sessionOpLoadSessionPlaybook(sessionOperationContext, managed);
-        if (selected?.manifest.procedure && !managed.activeObjective.terminalReconciliation) {
-            managed.activeObjective = bindBusinessProcedure(managed.activeObjective, selected.manifest.procedure);
-        }
-    }
-    managed.waitDiagnosticBoundary = managed.activeObjective ? {
-        generation: myGeneration,
-        objectiveId: managed.activeObjective.objectiveId ?? managed.activeObjective.userMessageId,
-        fromMessageCount: diagnosticFromMessageCount,
-    } : undefined;
-    rehydrateObjectiveEvidence(managed);
-    if (managed.pendingTurnRecovery || userMessage.agentDelivery || existingMessageId) {
-        try {
-            if (!sessionOperationContext.owner["persistSession"](managed)) {
-                throw new Error('The prepared provider turn could not be queued for durable storage');
-            }
-            await sessionOperationContext.owner.flushSession(managed.id);
-        }
-        catch (error) {
-            if (durablyAcknowledged && !ownsActiveTurn()) {
-                await abandonStoppedTurn();
-                return;
-            }
-            await rollbackQueuedAgentDeliveryPreparation('pre-provider durability fence');
-            existingTurnRollback?.();
-            throw error;
-        }
-        if (userMessage.agentDelivery) {
-            const exactDispatch = sessionOperationContext.state.queuedAgentDeliveryDispatches.get(userMessage.id);
-            if (exactDispatch && exactDispatch.dispatchToken === queuedDispatchToken) {
-                exactDispatch.claimDurable = true;
-            }
-        }
-        if (!ownsActiveTurn()) {
-            await abandonStoppedTurn();
-            return;
-        }
-        if (await finishSupersededAutomaticRecovery())
-            return;
-    }
-    if (activeMessageState.options?.automaticRecovery && managed.pendingTurnRecovery?.recoveryDispatch?.phase === 'started') {
-        const dispatch = managed.pendingTurnRecovery.recoveryDispatch;
-        const retryGrant = dispatch.origin === 'retry'
-            ? managed.pendingTurnRecovery.explicitRetryAllowances?.findLast(grant => (grant.userMessageId === managed.pendingTurnRecovery?.userMessageId
-                && grant.authorizedAt >= dispatch.allocatedAt))
-            : undefined;
-        sessionLog.warn('Starting durable automatic turn recovery dispatch', {
-            sessionId: managed.id,
-            originalUserMessageId: managed.pendingTurnRecovery.userMessageId,
-            cause: dispatch.cause,
-            attempt: dispatch.attempt,
-            budgetAttempt: managed.pendingTurnRecovery.attempts,
-            dispatchId: dispatch.id,
-            origin: dispatch.origin,
-            ...(retryGrant ? {
-                retryGrantId: retryGrant.id,
-                retryGrantAttemptBaseline: retryGrant.attemptBaseline,
-                retryGrantMaxAttempts: retryGrant.maxAttempts,
-                retryGrantLeaseExpiresAt: retryGrant.leaseExpiresAt,
-            } : {}),
-        });
-    }
-    if (cleanRecoveryProviderReset) {
-        // Detach the old provider session before any routing, compaction, or
-        // provider call. The exact bounded handoff remains the only user payload
-        // in the new provider context; branch/SDK resume state cannot reattach
-        // discarded transcript history.
-        await sessionOperationContext.owner["disposeManagedAgentRuntime"](managed, 'clean recovery continuation');
-        assertActivePreparation();
-        // Fresh sends already committed this reset atomically with their first
-        // durable boundary. This fallback is only for a queued row written by an
-        // older host, before provider-state atomization existed.
-        if (!cleanRecoveryProviderStateAtomized) {
-            resetProviderResumeStateForCleanBoundary(userMessage.id);
-            sessionOperationContext.owner["persistSession"](managed);
-            await sessionOperationContext.owner.flushSession(managed.id);
-            assertActivePreparation();
-        }
-    }
-    if (existingMessageId) {
-        if (retryWithRetainedInbox && (!sessionOpHasOnlyMachineInbox(sessionOperationContext, managed) || sessionOperationContext.owner["hasPendingUserInput"](managed) || sessionOpHasPendingDecision(sessionOperationContext, managed))) {
-            // The click retries its original anchor, never the machine FIFO. A new
-            // human instruction/decision accepted during the flush keeps priority.
-            existingTurnRollback?.();
-            await sessionOperationContext.owner.flushSession(managed.id);
-            sessionOperationContext.state.deferredAutomaticSessions.add(managed.id);
-            sessionOperationContext.owner["scheduleDeferredAutomaticSessions"]();
-            throw new Error('The inbox changed before Retry was accepted; resolve the newer message or decision first');
-        }
-        if (explicitRetry || trustedUserInput) {
-            // Publish the same message ID: renderer reconciles its state without
-            // adding a transcript bubble, including hidden question responses in
-            // other open windows. Acceptance must also signal that work restarted.
-            sessionOperationContext.owner["sendEvent"]({ type: 'user_message', sessionId, message: userMessage, status: 'processing' }, managed.workspace.id);
-        }
-        durablyAcknowledged = true;
-        onAck?.(userMessage.id);
-    }
-    if (!activeMessageState.options?.hidden && !activeMessageState.options?.internalOrigin) {
-        await sessionOpCaptureUserCorrection(sessionOperationContext, managed, userMessage);
-        if (!ownsActiveTurn()) {
-            await abandonStoppedTurn();
-            return;
-        }
+    const objectiveAdmission = await admitSessionMessageObjective({
+        managed,
+        activeMessageState,
+        trustedUserInput,
+        sessionOperationContext,
+        userMessage,
+        localCompactCommand,
+        durablyAcknowledged,
+        ownsActiveTurn,
+        abandonStoppedTurn,
+        explicitRetry,
+        cleanExplicitRetry,
+        resetProviderResumeStateForCleanBoundary,
+        cleanRecoveryProviderStateAtomized,
+        sessionId,
+        queuedDispatchToken,
+        directHumanContinuation,
+        ownsQueuedDispatch,
+        queuedItem,
+        rollbackQueuedAgentDeliveryPreparation,
+        myGeneration,
+        removeSyntheticAutomaticMessage,
+        existingTurnRollback,
+        diagnosticFromMessageCount,
+        existingMessageId,
+        finishSupersededAutomaticRecovery,
+        assertActivePreparation,
+        retryWithRetainedInbox,
+        onAck,
+    });
+    if (!objectiveAdmission) return;
+    const { trustedContextLimitAnswer, contextLimitAnswerSetupRollback, cleanRecoveryProviderReset } = objectiveAdmission;
+    if (!ownsActiveTurn()) {
+        await abandonStoppedTurn();
+        return;
     }
     const workspaceRootPath = managed.workspace.rootPath;
     const inheritedSourcesChanged = refreshInheritedWorkspaceSources(managed);
@@ -2174,7 +1228,6 @@ delegatedDispatchContinuationToken?: symbol): Promise<void> {
     };
     const enabledSlugs = managed.enabledSourceSlugs ?? [];
     const hasSources = enabledSlugs.length > 0;
-
 
     const runtimePreparation = await prepareSessionAgentRuntime({
         managed,
