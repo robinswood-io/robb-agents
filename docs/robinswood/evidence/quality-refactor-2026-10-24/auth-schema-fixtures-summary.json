@@ -1,0 +1,71 @@
+{
+  "status": "testé dans le candidat local ; chantier global en cours",
+  "scope": "Fixtures OAuth et métadonnées de cache Anthropic",
+  "explicitAnyRemoved": 30,
+  "casesPreserved": 42,
+  "assertionsPreserved": 94,
+  "failures": 0,
+  "skipped": 0,
+  "maximumLines": 378,
+  "nativeTypes": "Quatre fixtures complètent CredentialManager avec des surcharges statiquement vérifiées ; deux fonctions fetch conservent preconnect ; écritures capturées typées avec les paramètres natifs. Le cache utilise Pick<TextBlockParam, cache_control> et CacheControlEphemeral du SDK Anthropic.",
+  "proof": "22 corps complets des scénarios OAuth conservés après normalisation des seules adaptations de fixture ; JavaScript généré du test de cache strictement identique.",
+  "checks": {
+    "auth-schema-fixtures-types": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 15.51,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/auth-schema-fixtures-types.log"
+    },
+    "auth-schema-fixtures-tests": {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "./packages/shared/src/auth/__tests__/state-setup-needs.test.ts",
+        "./packages/shared/src/auth/__tests__/state.test.ts",
+        "./packages/shared/src/__tests__/unified-network-interceptor.schema.test.ts",
+        "--reporter=junit",
+        "--reporter-outfile=/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/auth-schema-after.xml"
+      ],
+      "exitCode": 0,
+      "seconds": 0.23,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/auth-schema-fixtures-tests.log"
+    },
+    "auth-schema-fixtures-lint": {
+      "command": [
+        "rtk",
+        "bunx",
+        "eslint",
+        "--max-warnings",
+        "0",
+        "packages/shared/src/auth/__tests__/state.test.ts",
+        "packages/shared/src/auth/__tests__/state-setup-needs.test.ts",
+        "packages/shared/src/__tests__/unified-network-interceptor.schema.test.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 0.67,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/auth-schema-fixtures-lint.log"
+    },
+    "auth-schema-fixtures-all-tests": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 141.38,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/auth-schema-fixtures-all-tests.log"
+    }
+  },
+  "remaining": {
+    "max-lines": 173,
+    "no-explicit-any": 525
+  },
+  "installedApplication": "inchangée ; missions réelles finales sous nouvelles dépendances non réalisées"
+}

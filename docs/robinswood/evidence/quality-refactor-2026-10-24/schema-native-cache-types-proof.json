@@ -1,0 +1,10 @@
+{
+  "valid": true,
+  "source": "packages/shared/src/__tests__/unified-network-interceptor.schema.test.ts",
+  "explicitAnyRemoved": 19,
+  "nativeTypes": "@anthropic-ai/sdk/resources/messages: Pick<TextBlockParam, 'cache_control'> and CacheControlEphemeral",
+  "reason": "The sanitizer mutates cache metadata in generic JSON blocks; native cache metadata permits optional TTL and absence of cache_control without pretending that incomplete synthetic image blocks are full SDK images.",
+  "runtimeOutputUnchanged": true,
+  "beforeHash": "300038d4fc607b5ab28a553775efdc3de31c2ff357a86bd6be794a1b721abb14",
+  "afterHash": "c07509d19af553d55d63422351c5ff8efdd64e4c2acc4d7348a95b08a498686d"
+}

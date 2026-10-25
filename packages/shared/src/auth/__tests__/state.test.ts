@@ -7,16 +7,8 @@
  * - Migration detection for legacy CLI tokens
  */
 import { describe, it, expect, beforeEach, mock } from 'bun:test';
-import {
-  getSetupNeeds,
-  performTokenRefresh,
-  getValidClaudeOAuthToken,
-  _resetRefreshMutex,
-  type AuthState,
-  type TokenResult,
-  type MigrationInfo,
-} from '../state.ts';
-import { setCredentialManagerForTesting } from '../../credentials/index.ts';
+import { getSetupNeeds, performTokenRefresh, getValidClaudeOAuthToken, _resetRefreshMutex, type AuthState, type TokenResult, type MigrationInfo } from '../state.ts';
+import { CredentialManager, setCredentialManagerForTesting } from '../../credentials/index.ts';
 
 // ============================================
 // Mock credential manager
@@ -43,146 +35,6 @@ function createMockCredentialManager(initialCreds?: {
     getApiKey: async () => null,
   };
 }
-
-// ============================================
-// getSetupNeeds tests (pure function)
-// ============================================
-
-describe('getSetupNeeds', () => {
-  describe('billing configuration', () => {
-    it('should need billing config when type is null', () => {
-      const state: AuthState = {
-        billing: {
-          type: null,
-          hasCredentials: false,
-          apiKey: null,
-          claudeOAuthToken: null,
-        },
-        workspace: { hasWorkspace: false, active: null },
-      };
-
-      const needs = getSetupNeeds(state);
-
-      expect(needs.needsBillingConfig).toBe(true);
-      expect(needs.needsCredentials).toBe(false);
-      expect(needs.isFullyConfigured).toBe(false);
-    });
-
-    it('should not need billing config when type is set', () => {
-      const state: AuthState = {
-        billing: {
-          type: 'api_key',
-          hasCredentials: true,
-          apiKey: 'sk-test',
-          claudeOAuthToken: null,
-        },
-        workspace: { hasWorkspace: false, active: null },
-      };
-
-      const needs = getSetupNeeds(state);
-
-      expect(needs.needsBillingConfig).toBe(false);
-    });
-  });
-
-  describe('credentials', () => {
-    it('should need credentials when type is set but hasCredentials is false', () => {
-      const state: AuthState = {
-        billing: {
-          type: 'oauth_token',
-          hasCredentials: false,
-          apiKey: null,
-          claudeOAuthToken: null,
-        },
-        workspace: { hasWorkspace: false, active: null },
-      };
-
-      const needs = getSetupNeeds(state);
-
-      expect(needs.needsBillingConfig).toBe(false);
-      expect(needs.needsCredentials).toBe(true);
-      expect(needs.isFullyConfigured).toBe(false);
-    });
-
-    it('should not need credentials when hasCredentials is true', () => {
-      const state: AuthState = {
-        billing: {
-          type: 'oauth_token',
-          hasCredentials: true,
-          apiKey: null,
-          claudeOAuthToken: 'valid-token',
-        },
-        workspace: { hasWorkspace: false, active: null },
-      };
-
-      const needs = getSetupNeeds(state);
-
-      expect(needs.needsCredentials).toBe(false);
-      expect(needs.isFullyConfigured).toBe(true);
-    });
-  });
-
-  describe('migration', () => {
-    it('should propagate migration info from auth state', () => {
-      const migrationInfo: MigrationInfo = {
-        reason: 'legacy_token',
-        message: 'Please re-authenticate',
-      };
-
-      const state: AuthState = {
-        billing: {
-          type: 'oauth_token',
-          hasCredentials: false,
-          apiKey: null,
-          claudeOAuthToken: null,
-          migrationRequired: migrationInfo,
-        },
-        workspace: { hasWorkspace: false, active: null },
-      };
-
-      const needs = getSetupNeeds(state);
-
-      expect(needs.needsMigration).toEqual(migrationInfo);
-      expect(needs.needsMigration?.reason).toBe('legacy_token');
-    });
-
-    it('should not have migration info when not present in auth state', () => {
-      const state: AuthState = {
-        billing: {
-          type: 'oauth_token',
-          hasCredentials: true,
-          apiKey: null,
-          claudeOAuthToken: 'valid-token',
-        },
-        workspace: { hasWorkspace: false, active: null },
-      };
-
-      const needs = getSetupNeeds(state);
-
-      expect(needs.needsMigration).toBeUndefined();
-    });
-  });
-
-  describe('fully configured', () => {
-    it('should be fully configured when billing type and credentials are set', () => {
-      const state: AuthState = {
-        billing: {
-          type: 'api_key',
-          hasCredentials: true,
-          apiKey: 'sk-test',
-          claudeOAuthToken: null,
-        },
-        workspace: { hasWorkspace: true, active: null },
-      };
-
-      const needs = getSetupNeeds(state);
-
-      expect(needs.isFullyConfigured).toBe(true);
-      expect(needs.needsBillingConfig).toBe(false);
-      expect(needs.needsCredentials).toBe(false);
-    });
-  });
-});
 
 // ============================================
 // performTokenRefresh tests
@@ -393,32 +245,34 @@ describe('getValidClaudeOAuthToken connectionSlug resolution', () => {
   });
 
   it('performs dual-write to LLM connection and legacy store on refresh', async () => {
-    let legacySet: any = null;
+    const writes: {
+      legacy: Parameters<CredentialManager['setClaudeOAuthCredentials']>[0] | null;
+      llm: Parameters<CredentialManager['refreshLlmOAuth']>[1] | null;
+    } = { legacy: null, llm: null };
     let llmRefreshedSlug = '';
-    let llmRefreshedCreds: any = null;
 
-    const mockManager: any = {
+    const mockManager = Object.assign(new CredentialManager(), {
       getClaudeOAuthCredentials: async () => null,
-      setClaudeOAuthCredentials: async (creds: any) => {
-        legacySet = creds;
+      setClaudeOAuthCredentials: async (creds) => {
+        writes.legacy = creds;
       },
       getLlmOAuth: async () => null,
-      refreshLlmOAuth: async (slug: string, creds: any) => {
+      refreshLlmOAuth: async (slug: string, creds) => {
         llmRefreshedSlug = slug;
-        llmRefreshedCreds = creds;
+        writes.llm = creds;
       },
       deleteLlmCredentials: async () => {},
-    };
+    } satisfies Partial<CredentialManager>);
 
     // Mock fetch for token refresh
     const originalFetch = globalThis.fetch;
-    globalThis.fetch = (async () => {
+    globalThis.fetch = Object.assign((async () => {
       return new Response(JSON.stringify({
         access_token: 'fresh-dual-access-token',
         token_type: 'Bearer',
         expires_in: 3600,
       }), { status: 200, headers: { 'Content-Type': 'application/json' } });
-    }) as any;
+    }), { preconnect: originalFetch.preconnect });
 
     try {
       const result = await performTokenRefresh(
@@ -429,9 +283,9 @@ describe('getValidClaudeOAuthToken connectionSlug resolution', () => {
       );
 
       expect(result.accessToken).toBe('fresh-dual-access-token');
-      expect(legacySet?.accessToken).toBe('fresh-dual-access-token');
+      expect(writes.legacy?.accessToken).toBe('fresh-dual-access-token');
       expect(llmRefreshedSlug).toBe('claude-work-account');
-      expect(llmRefreshedCreds?.accessToken).toBe('fresh-dual-access-token');
+      expect(writes.llm?.accessToken).toBe('fresh-dual-access-token');
     } finally {
       globalThis.fetch = originalFetch;
     }
@@ -441,9 +295,9 @@ describe('getValidClaudeOAuthToken connectionSlug resolution', () => {
     let legacyCleared = false;
     let llmDeletedSlug = '';
 
-    const mockManager: any = {
+    const mockManager = Object.assign(new CredentialManager(), {
       getClaudeOAuthCredentials: async () => null,
-      setClaudeOAuthCredentials: async (creds: any) => {
+      setClaudeOAuthCredentials: async (creds) => {
         if (creds.accessToken === '') legacyCleared = true;
       },
       getLlmOAuth: async () => null,
@@ -451,15 +305,15 @@ describe('getValidClaudeOAuthToken connectionSlug resolution', () => {
       deleteLlmCredentials: async (slug: string) => {
         llmDeletedSlug = slug;
       },
-    };
+    } satisfies Partial<CredentialManager>);
 
     const originalFetch = globalThis.fetch;
-    globalThis.fetch = (async () => {
+    globalThis.fetch = Object.assign((async () => {
       return new Response(JSON.stringify({
         error: 'invalid_grant',
         error_description: 'Refresh token expired or revoked',
       }), { status: 400, headers: { 'Content-Type': 'application/json' } });
-    }) as any;
+    }), { preconnect: originalFetch.preconnect });
 
     try {
       const result = await performTokenRefresh(
@@ -478,7 +332,7 @@ describe('getValidClaudeOAuthToken connectionSlug resolution', () => {
   });
 
   it('resolves valid token from LLM OAuth store for specific connectionSlug', async () => {
-    const mockManager: any = {
+    const mockManager = Object.assign(new CredentialManager(), {
       getLlmOAuth: async (slug: string) => {
         if (slug === 'claude-pro') {
           return {
@@ -492,7 +346,7 @@ describe('getValidClaudeOAuthToken connectionSlug resolution', () => {
       getClaudeOAuthCredentials: async () => ({
         accessToken: 'legacy-token',
       }),
-    };
+    } satisfies Partial<CredentialManager>);
 
     setCredentialManagerForTesting(mockManager);
     try {
@@ -504,13 +358,13 @@ describe('getValidClaudeOAuthToken connectionSlug resolution', () => {
   });
 
   it('falls back to legacy Claude OAuth store when connectionSlug has no LLM OAuth token', async () => {
-    const mockManager: any = {
+    const mockManager = Object.assign(new CredentialManager(), {
       getLlmOAuth: async () => null,
       getClaudeOAuthCredentials: async () => ({
         accessToken: 'fallback-legacy-token',
         expiresAt: Date.now() + 3600000,
       }),
-    };
+    } satisfies Partial<CredentialManager>);
 
     setCredentialManagerForTesting(mockManager);
     try {

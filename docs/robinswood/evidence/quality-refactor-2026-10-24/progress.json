@@ -85,12 +85,12 @@
     "Lint global sans erreur ni avertissement",
     "Parcours complets réels en staging local, compilation signée et intégration"
   ],
-  "updatedAt": "2026-10-25T06:46:29.090899+00:00",
+  "updatedAt": "2026-10-25T06:58:54.562130+00:00",
   "current": {
-    "lastEvidence": "connector-modules-summary.json",
+    "lastEvidence": "auth-schema-fixtures-summary.json",
     "sourceGate": {
-      "max-lines": 174,
-      "no-explicit-any": 555
+      "max-lines": 173,
+      "no-explicit-any": 525
     },
     "globalStatus": "en cours ; validation globale, interface et missions finales restantes"
   }

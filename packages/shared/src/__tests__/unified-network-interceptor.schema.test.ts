@@ -1,3 +1,4 @@
+import type { CacheControlEphemeral, TextBlockParam } from '@anthropic-ai/sdk/resources/messages';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'bun:test';
 import { writeFileSync, unlinkSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
@@ -72,8 +73,8 @@ describe('sanitizeEmptyTextCacheControl', () => {
     const stripped = sanitizeEmptyTextCacheControl(body);
 
     expect(stripped).toBe(1);
-    expect((body.messages[0]!.content as any[])[0].cache_control).toBeUndefined();
-    expect((body.messages[0]!.content as any[])[1].cache_control).toEqual({ type: 'ephemeral' });
+    expect((body.messages[0]!.content as Array<Pick<TextBlockParam, 'cache_control'>>)[0]!.cache_control).toBeUndefined();
+    expect((body.messages[0]!.content as Array<Pick<TextBlockParam, 'cache_control'>>)[1]!.cache_control).toEqual({ type: 'ephemeral' });
   });
 
   it('strips cache_control from whitespace-only text blocks', () => {
@@ -89,7 +90,7 @@ describe('sanitizeEmptyTextCacheControl', () => {
     const stripped = sanitizeEmptyTextCacheControl(body);
 
     expect(stripped).toBe(1);
-    expect((body.messages[0]!.content as any[])[0].cache_control).toBeUndefined();
+    expect((body.messages[0]!.content as Array<Pick<TextBlockParam, 'cache_control'>>)[0]!.cache_control).toBeUndefined();
   });
 
   it('leaves non-text blocks untouched', () => {
@@ -105,7 +106,7 @@ describe('sanitizeEmptyTextCacheControl', () => {
     const stripped = sanitizeEmptyTextCacheControl(body);
 
     expect(stripped).toBe(0);
-    expect((body.messages[0]!.content as any[])[0].cache_control).toEqual({ type: 'ephemeral' });
+    expect((body.messages[0]!.content as Array<Pick<TextBlockParam, 'cache_control'>>)[0]!.cache_control).toEqual({ type: 'ephemeral' });
   });
 
   it('handles messages without content arrays', () => {
@@ -175,7 +176,7 @@ describe('upgradePromptCacheTtl', () => {
     const result = upgradePromptCacheTtl(body);
 
     expect(result).toBe(0);
-    expect((body.messages[0]!.content as any[])[0].cache_control).toEqual({ type: 'ephemeral' });
+    expect((body.messages[0]!.content as Array<Pick<TextBlockParam, 'cache_control'>>)[0]!.cache_control).toEqual({ type: 'ephemeral' });
   });
 
   it('strips ttl from message content when disabled', () => {
@@ -193,8 +194,8 @@ describe('upgradePromptCacheTtl', () => {
     const stripped = upgradePromptCacheTtl(body);
 
     expect(stripped).toBe(2);
-    expect((body.messages[0]!.content as any[])[0].cache_control).toEqual({ type: 'ephemeral' });
-    expect((body.messages[0]!.content as any[])[1].cache_control).toEqual({ type: 'ephemeral' });
+    expect((body.messages[0]!.content as Array<Pick<TextBlockParam, 'cache_control'>>)[0]!.cache_control).toEqual({ type: 'ephemeral' });
+    expect((body.messages[0]!.content as Array<Pick<TextBlockParam, 'cache_control'>>)[1]!.cache_control).toEqual({ type: 'ephemeral' });
   });
 
   it('strips ttl from system prompt when disabled', () => {
@@ -209,7 +210,7 @@ describe('upgradePromptCacheTtl', () => {
     const stripped = upgradePromptCacheTtl(body);
 
     expect(stripped).toBe(1);
-    expect((body.system as any[])[0].cache_control).toEqual({ type: 'ephemeral' });
+    expect((body.system as Array<Pick<TextBlockParam, 'cache_control'>>)[0]!.cache_control).toEqual({ type: 'ephemeral' });
   });
 
   it('strips ttl from top-level cache_control when disabled', () => {
@@ -222,7 +223,7 @@ describe('upgradePromptCacheTtl', () => {
     const stripped = upgradePromptCacheTtl(body);
 
     expect(stripped).toBe(1);
-    expect(body.cache_control as any).toEqual({ type: 'ephemeral' });
+    expect(body.cache_control as CacheControlEphemeral).toEqual({ type: 'ephemeral' });
   });
 
   it('upgrades message content cache_control to 1h when enabled', () => {
@@ -240,8 +241,8 @@ describe('upgradePromptCacheTtl', () => {
     const upgraded = upgradePromptCacheTtl(body);
 
     expect(upgraded).toBe(2);
-    expect((body.messages[0]!.content as any[])[0].cache_control).toEqual({ type: 'ephemeral', ttl: '1h' });
-    expect((body.messages[0]!.content as any[])[1].cache_control).toEqual({ type: 'ephemeral', ttl: '1h' });
+    expect((body.messages[0]!.content as Array<Pick<TextBlockParam, 'cache_control'>>)[0]!.cache_control).toEqual({ type: 'ephemeral', ttl: '1h' });
+    expect((body.messages[0]!.content as Array<Pick<TextBlockParam, 'cache_control'>>)[1]!.cache_control).toEqual({ type: 'ephemeral', ttl: '1h' });
   });
 
   it('upgrades system prompt cache_control to 1h when enabled', () => {
@@ -256,7 +257,7 @@ describe('upgradePromptCacheTtl', () => {
     const upgraded = upgradePromptCacheTtl(body);
 
     expect(upgraded).toBe(1);
-    expect((body.system as any[])[0].cache_control).toEqual({ type: 'ephemeral', ttl: '1h' });
+    expect((body.system as Array<Pick<TextBlockParam, 'cache_control'>>)[0]!.cache_control).toEqual({ type: 'ephemeral', ttl: '1h' });
   });
 
   it('upgrades top-level cache_control (auto-caching mode) when enabled', () => {
@@ -269,7 +270,7 @@ describe('upgradePromptCacheTtl', () => {
     const upgraded = upgradePromptCacheTtl(body);
 
     expect(upgraded).toBe(1);
-    expect(body.cache_control as any).toEqual({ type: 'ephemeral', ttl: '1h' });
+    expect(body.cache_control as CacheControlEphemeral).toEqual({ type: 'ephemeral', ttl: '1h' });
   });
 
   it('leaves blocks without cache_control untouched', () => {
@@ -286,7 +287,7 @@ describe('upgradePromptCacheTtl', () => {
     const upgraded = upgradePromptCacheTtl(body);
 
     expect(upgraded).toBe(0);
-    expect((body.messages[0]!.content as any[])[0].cache_control).toBeUndefined();
+    expect((body.messages[0]!.content as Array<Pick<TextBlockParam, 'cache_control'>>)[0]!.cache_control).toBeUndefined();
   });
 
   it('does not upgrade blocks that already have 1h TTL', () => {
@@ -304,7 +305,7 @@ describe('upgradePromptCacheTtl', () => {
 
     // Still counts as upgraded (idempotent set), but that's fine
     expect(upgraded).toBe(1);
-    expect((body.messages[0]!.content as any[])[0].cache_control).toEqual({ type: 'ephemeral', ttl: '1h' });
+    expect((body.messages[0]!.content as Array<Pick<TextBlockParam, 'cache_control'>>)[0]!.cache_control).toEqual({ type: 'ephemeral', ttl: '1h' });
   });
 
   it('returns 0 when no messages or system prompt', () => {
@@ -332,9 +333,9 @@ describe('upgradePromptCacheTtl', () => {
     const upgraded = upgradePromptCacheTtl(body);
 
     expect(upgraded).toBe(3);
-    expect((body.tools as any[])[0].cache_control).toEqual({ type: 'ephemeral', ttl: '1h' });
-    expect((body.tools as any[])[1].cache_control).toEqual({ type: 'ephemeral', ttl: '1h' });
-    expect((body.system as any[])[0].cache_control).toEqual({ type: 'ephemeral', ttl: '1h' });
+    expect((body.tools as Array<Pick<TextBlockParam, 'cache_control'>>)[0]!.cache_control).toEqual({ type: 'ephemeral', ttl: '1h' });
+    expect((body.tools as Array<Pick<TextBlockParam, 'cache_control'>>)[1]!.cache_control).toEqual({ type: 'ephemeral', ttl: '1h' });
+    expect((body.system as Array<Pick<TextBlockParam, 'cache_control'>>)[0]!.cache_control).toEqual({ type: 'ephemeral', ttl: '1h' });
   });
 
   it('strips ttl from tool cache_control when disabled', () => {
@@ -349,6 +350,6 @@ describe('upgradePromptCacheTtl', () => {
     const stripped = upgradePromptCacheTtl(body);
 
     expect(stripped).toBe(1);
-    expect((body.tools as any[])[0].cache_control).toEqual({ type: 'ephemeral' });
+    expect((body.tools as Array<Pick<TextBlockParam, 'cache_control'>>)[0]!.cache_control).toEqual({ type: 'ephemeral' });
   });
 });
