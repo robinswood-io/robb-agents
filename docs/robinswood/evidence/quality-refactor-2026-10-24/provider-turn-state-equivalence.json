@@ -1,0 +1,9 @@
+{
+  "nativeBodyAndSignaturePreserved": true,
+  "nativeProviderVariables": 23,
+  "nativeRejectionPromiseAndHandlerPreserved": true,
+  "nativeInitialValuesAndMutabilityPreserved": true,
+  "noEarlierObservers": true,
+  "providerReferenceChanges": 138,
+  "stateScope": "one admitted provider turn, no persistence or registry"
+}

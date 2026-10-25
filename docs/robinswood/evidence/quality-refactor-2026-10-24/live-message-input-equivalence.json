@@ -1,0 +1,11 @@
+{
+  "nativeBodyPreservedAfterReversingPropertyReferences": true,
+  "nativeSignaturePreserved": true,
+  "runtimeOwnerAndStateUnchanged": true,
+  "sharedFields": [
+    "message",
+    "options"
+  ],
+  "replacedNativeReferences": 163,
+  "liveCallbacksPreserved": true
+}

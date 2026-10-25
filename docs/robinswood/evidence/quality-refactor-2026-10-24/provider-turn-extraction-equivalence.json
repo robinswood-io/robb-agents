@@ -1,0 +1,14 @@
+{
+  "nativeProviderTryBodyAndOrderPreserved": true,
+  "nativeErrorAndFinallyOrderPreserved": true,
+  "nativeStreamLoopPreserved": true,
+  "nativeEarlyReturnsPropagated": true,
+  "nativeCallbackIdentitiesPreserved": [
+    "hasExplicitProviderHandoff",
+    "commitProviderHandoffOnce"
+  ],
+  "hookInstallationRemainsSynchronous": true,
+  "cleanupRetainsItsNativeAwait": true,
+  "readonlyNativeInputs": 34,
+  "newFilesWithin500Lines": true
+}

@@ -1,0 +1,139 @@
+{
+  "status": "testé localement ; chantier global en cours",
+  "scope": "Découpage du parcours fournisseur de performSendMessage",
+  "changes": [
+    "Paramètres message/options et message synthétique partagés dans un simple objet pour conserver les lectures vivantes des callbacks et du rollback.",
+    "Les 23 variables volatiles existantes du fournisseur gardent leurs valeurs initiales, leur portée de tour et leur promesse de rejet ; aucune persistance ajoutée.",
+    "Boucle de lecture conservée ; installation des callbacks, traitement de fin/reprise, erreurs et nettoyage répartis en appels directs.",
+    "Installation des callbacks sans attente ; attentes du nettoyage et propagation des retours anticipés conservées."
+  ],
+  "sourceGate": {
+    "max-lines": 126,
+    "no-explicit-any": 403
+  },
+  "parentLinesBefore": 4279,
+  "parentLinesAfter": 2968,
+  "newProviderFiles": [
+    {
+      "file": "packages/server-core/src/sessions/SessionManager/operations/provider-turn-hooks.ts",
+      "lines": 302
+    },
+    {
+      "file": "packages/server-core/src/sessions/SessionManager/operations/provider-turn-events.ts",
+      "lines": 426
+    },
+    {
+      "file": "packages/server-core/src/sessions/SessionManager/operations/provider-turn-error.ts",
+      "lines": 316
+    },
+    {
+      "file": "packages/server-core/src/sessions/SessionManager/operations/provider-turn-cleanup.ts",
+      "lines": 40
+    },
+    {
+      "file": "packages/server-core/src/sessions/SessionManager/operations/execute-provider-turn.ts",
+      "lines": 410
+    },
+    {
+      "file": "packages/server-core/src/sessions/SessionManager/operations/provider-turn-input.ts",
+      "lines": 46
+    }
+  ],
+  "maximumNewProviderFileLines": 426,
+  "checks": [
+    {
+      "name": "provider-regions-types",
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 17.87,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/provider-regions-types.log"
+    },
+    {
+      "name": "provider-regions-build",
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 17.87,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/provider-regions-build.log"
+    },
+    {
+      "name": "provider-regions-lint",
+      "command": [
+        "rtk",
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "--config",
+        "eslint.config.mjs",
+        "packages/server-core/src/sessions/SessionManager/operations/provider-turn-state.ts",
+        "packages/server-core/src/sessions/SessionManager/operations/provider-turn-input.ts",
+        "packages/server-core/src/sessions/SessionManager/operations/provider-turn-hooks.ts",
+        "packages/server-core/src/sessions/SessionManager/operations/provider-turn-events.ts",
+        "packages/server-core/src/sessions/SessionManager/operations/provider-turn-error.ts",
+        "packages/server-core/src/sessions/SessionManager/operations/provider-turn-cleanup.ts",
+        "packages/server-core/src/sessions/SessionManager/operations/execute-provider-turn.ts",
+        "packages/server-core/src/sessions/SessionManager/operation-context.ts",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 1.98,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/provider-regions-lint.log"
+    },
+    {
+      "name": "provider-regions-full-test",
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 139.5,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/provider-regions-full-test.log"
+    },
+    {
+      "name": "provider-regions-compat-types",
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "packages/server-core/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 11.1,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/provider-regions-compat-types.log"
+    }
+  ],
+  "equivalenceProofs": [
+    "live-message-input-equivalence.json",
+    "provider-turn-state-equivalence.json",
+    "synthetic-turn-message-equivalence.json",
+    "provider-turn-extraction-equivalence.json",
+    "provider-regions-whitespace-check.json"
+  ],
+  "moduleGraph": {
+    "files": 115,
+    "functions": 467,
+    "runtimeImportCycles": 0
+  },
+  "parentLint": "Échec max-lines uniquement ; aucun autre diagnostic sur le parent.",
+  "installedApplication": "Aucune installation de ce lot effectuée.",
+  "limits": [
+    "Le fichier principal et 125 autres fichiers maintenus dépassent encore 500 lignes.",
+    "403 any explicites subsistent dans le dépôt ; le lint global reste à terminer.",
+    "Les missions réelles et le contrôle visuel final sur cette version restent à effectuer avant installation."
+  ],
+  "updatedAt": "2026-10-25T15:17:09.126882+00:00"
+}

@@ -1,0 +1,45 @@
+import type { SessionOperationContext, SessionMessageState } from '../operation-context.ts';
+import type { FileAttachment } from '@craft-agent/shared/protocol';
+import type { Message } from '@craft-agent/core/types';
+import type { perf } from '@craft-agent/shared/utils';
+import type { ManagedSession } from '../managed-session.ts';
+import type { AgentInstance } from '../runtime-types.ts';
+import type { SourceActivationOrigin } from '../source-activation.ts';
+import type { ProviderTurnState } from './provider-turn-state.ts';
+
+export interface ProviderTurnInput {
+    readonly assertActivePreparation: () => void;
+    readonly sessionId: string;
+    readonly managed: ManagedSession;
+    readonly activeMessageState: SessionMessageState;
+    readonly agent: AgentInstance;
+    readonly attachments: FileAttachment[] | undefined;
+    readonly cleanRecoveryHandoffPrompt: boolean;
+    readonly sessionOperationContext: SessionOperationContext;
+    readonly userMessage: Message;
+    readonly workspaceRootPath: string;
+    readonly sendSpan: ReturnType<typeof perf.span>;
+    readonly sourceActivationOrigin: SourceActivationOrigin | undefined;
+    readonly myGeneration: number;
+    readonly localCompactCommand: boolean;
+    readonly authenticatedInternalContinuationToken: symbol | undefined;
+    readonly delegatedDispatchContinuationToken: symbol | undefined;
+    readonly activeProviderState: ProviderTurnState;
+    readonly deliveryAttemptsBeforePreparation: number | undefined;
+    readonly queuedDispatchToken: symbol | undefined;
+    readonly ownsActiveTurn: () => boolean;
+    readonly abandonStoppedTurn: () => Promise<void>;
+    readonly lastMessageRoleBeforeDispatch: "user" | "assistant" | "plan" | "tool" | "error" | undefined;
+    readonly recoveryHandoffPaused: () => boolean;
+    readonly finishSupersededAuthenticatedInternalContinuation: () => Promise<void>;
+    readonly finishSupersededAutomaticRecovery: () => Promise<boolean>;
+    readonly finishSupersededSourceActivation: () => Promise<void>;
+    readonly finishDeferredPreparation: () => Promise<void>;
+    readonly finishCancelledPreparation: () => Promise<void>;
+    readonly contextLimitAnswerSetupRollback: (() => string | undefined) | undefined;
+    readonly cleanExplicitRetry: boolean;
+    readonly cleanExplicitRetrySetupRollback: (() => string | undefined) | undefined;
+    readonly restoreStartedAutomaticDispatch: () => boolean;
+    readonly removeSyntheticAutomaticMessage: () => boolean;
+    readonly rollbackQueuedAgentDeliveryPreparation: (reason: string, setupError?: unknown) => Promise<boolean>;
+}
