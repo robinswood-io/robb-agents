@@ -43,7 +43,7 @@ beforeEach(() => {
 })
 afterAll(() => { callbackSpy.mockRestore() })
 
-function fixture(authUrl = 'https://auth.example.test/authorize') {
+function fixture(authUrl = 'https://auth.example.test/authorize', replies: Record<string, unknown> = {}) {
   const calls: Array<{ channel: string; args: unknown[] }> = []
   const starts = new Set([
     'oauth:start', 'chatgpt:startOAuth', 'gemini:startOAuth',
@@ -60,6 +60,7 @@ function fixture(authUrl = 'https://auth.example.test/authorize') {
   const client: RpcClient = {
     async invoke(channel: string, ...args: unknown[]): Promise<unknown> {
       calls.push({ channel, args })
+      if (Object.hasOwn(replies, channel)) return replies[channel]
       if (starts.has(channel)) {
         return { success: true, flowId: 'flow-a', state: 'expected-state', authUrl }
       }
@@ -140,6 +141,24 @@ for (const provider of ['chatgpt', 'gemini'] as const) {
       expect(callbackServers.map(server => server.closes)).toEqual([1, 1])
     })
 
+    it('rejects malformed start data before opening the browser and permits a new request', async () => {
+      const replies: Record<string, unknown> = { [`${provider}:startOAuth`]: { flowId: 'flow-a', authUrl: 'https://auth.example.test' } }
+      const { api, calls } = fixture(undefined, replies)
+      expect(await api[method]('connection-a')).toEqual({ success: false, error: 'Invalid OAuth start response' })
+      expect(openedUrls).toHaveLength(0)
+      expect(calls.some(call => call.channel === `${provider}:completeOAuth`)).toBe(false)
+      delete replies[`${provider}:startOAuth`]
+      expect((await api[method]('connection-a')).success).toBe(true)
+      expect(callbackServers.map(server => server.closes)).toEqual([1, 1])
+    })
+
+    it('rejects a malformed exchange result and cancels the pending flow', async () => {
+      const { api, calls } = fixture(undefined, { [`${provider}:completeOAuth`]: { success: 'true' } })
+      expect(await api[method]('connection-a')).toEqual({ success: false, error: 'Invalid OAuth result' })
+      expect(calls.filter(call => call.channel === `${provider}:cancelOAuth`)).toHaveLength(1)
+      expect(callbackServers.map(server => server.closes)).toEqual([1])
+    })
+
     it('releases a timed-out callback and permits the next request', async () => {
       const nativeTimeout = globalThis.setTimeout
       const acceleratedTimeout = new Proxy(nativeTimeout, {
@@ -205,6 +224,18 @@ describe('other configured OAuth entry points', () => {
     expect((await api.startMistralVibeSetup()).success).toBe(false)
     expect(openedUrls).toHaveLength(0)
     expect(calls.some(call => call.channel === 'onboarding:completeMistralVibeSetup')).toBe(false)
+    expect(calls.some(call => call.channel === 'onboarding:cancelMistralVibeSetup')).toBe(true)
+  })
+
+  it('rejects an invalid Claude URL field without opening a browser', async () => {
+    const { api } = fixture(undefined, { 'onboarding:startClaudeOAuth': { success: true, authUrl: 42 } })
+    expect(await api.startClaudeOAuth()).toEqual({ success: false, error: 'Invalid OAuth result field: authUrl' })
+    expect(openedUrls).toHaveLength(0)
+  })
+
+  it('rejects an invalid Mistral completion and cancels the flow', async () => {
+    const { api, calls } = fixture(undefined, { 'onboarding:completeMistralVibeSetup': null })
+    expect(await api.startMistralVibeSetup()).toEqual({ success: false, error: 'Invalid OAuth result' })
     expect(calls.some(call => call.channel === 'onboarding:cancelMistralVibeSetup')).toBe(true)
   })
 })

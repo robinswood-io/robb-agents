@@ -17,7 +17,7 @@ import {
   type ErrorCode,
   type MessageEnvelope,
 } from '@craft-agent/shared/protocol'
-import type { RpcClient } from './types'
+import type { AnyEventListener, CapabilityHandler, RpcClient, RpcListener } from './types'
 import { serializeEnvelope, deserializeEnvelope } from './codec'
 
 // ---------------------------------------------------------------------------
@@ -25,7 +25,7 @@ import { serializeEnvelope, deserializeEnvelope } from './codec'
 // ---------------------------------------------------------------------------
 
 interface PendingRequest {
-  resolve: (value: any) => void
+  resolve: (value: unknown) => void
   reject: (error: Error) => void
   timeout: ReturnType<typeof setTimeout>
 }
@@ -109,10 +109,10 @@ export interface WsRpcClientOptions {
 export class WsRpcClient implements RpcClient {
   private ws: WebSocket | null = null
   private pending = new Map<string, PendingRequest>()
-  private listeners = new Map<string, Set<(...args: any[]) => void>>()
-  private capabilityHandlers = new Map<string, (...args: any[]) => Promise<any> | any>()
+  private listeners = new Map<string, Set<RpcListener>>()
+  private capabilityHandlers = new Map<string, CapabilityHandler>()
   private connectionStateListeners = new Set<(state: TransportConnectionState) => void>()
-  private anyEventListeners = new Set<(channel: string, ...args: any[]) => void>()
+  private anyEventListeners = new Set<AnyEventListener>()
   private clientId: string | null = null
   private _serverVersion: string | null = null
   private connected = false
@@ -174,7 +174,7 @@ export class WsRpcClient implements RpcClient {
   // RpcClient interface
   // -------------------------------------------------------------------------
 
-  async invoke(channel: string, ...args: any[]): Promise<any> {
+  async invoke(channel: string, ...args: unknown[]): Promise<unknown> {
     await this.ensureConnected(channel)
 
     return await new Promise((resolve, reject) => {
@@ -206,7 +206,7 @@ export class WsRpcClient implements RpcClient {
     })
   }
 
-  on(channel: string, callback: (...args: any[]) => void): () => void {
+  on<Arguments extends unknown[]>(channel: string, callback: RpcListener<Arguments>): () => void {
     let set = this.listeners.get(channel)
     if (!set) {
       set = new Set()
@@ -222,7 +222,7 @@ export class WsRpcClient implements RpcClient {
     }
   }
 
-  handleCapability(channel: string, handler: (...args: any[]) => Promise<any> | any): void {
+  handleCapability<Arguments extends unknown[]>(channel: string, handler: CapabilityHandler<Arguments>): void {
     this.capabilityHandlers.set(channel, handler)
   }
 
@@ -267,7 +267,7 @@ export class WsRpcClient implements RpcClient {
   }
 
   /** Subscribe to all push events regardless of channel. Used by RemoteClientBridge for event forwarding. */
-  onAnyEvent(callback: (channel: string, ...args: any[]) => void): () => void {
+  onAnyEvent<Arguments extends unknown[]>(callback: AnyEventListener<Arguments>): () => void {
     this.anyEventListeners.add(callback)
     return () => {
       this.anyEventListeners.delete(callback)
@@ -279,7 +279,7 @@ export class WsRpcClient implements RpcClient {
     const set = this.listeners.get('__transport:reconnected')
     if (set) {
       for (const cb of set) {
-        try { cb(isStale) } catch { /* listener errors must not break transport */ }
+        try { Reflect.apply(cb, undefined, [isStale]) } catch { /* listener errors must not break transport */ }
       }
     }
   }
@@ -342,7 +342,6 @@ export class WsRpcClient implements RpcClient {
     if (needsTlsOptions && typeof process !== 'undefined' && process.versions?.node) {
       // Node.js / Electron main process — use `ws` library for TLS options
       try {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
         const { WebSocket: WsWebSocket } = require('ws') as typeof import('ws')
         return new WsWebSocket(url, { rejectUnauthorized: false }) as unknown as WebSocket
       } catch {
@@ -482,7 +481,7 @@ export class WsRpcClient implements RpcClient {
     this.failReady(new Error('Client destroyed'))
 
     // Reject all pending requests
-    for (const [id, req] of this.pending) {
+    for (const [_id, req] of this.pending) {
       clearTimeout(req.timeout)
       req.reject(new Error('Client destroyed'))
     }
@@ -569,7 +568,7 @@ export class WsRpcClient implements RpcClient {
           const set = this.listeners.get('__transport:reconnected')
           if (set) {
             for (const cb of set) {
-              try { cb(isStale) } catch { /* listener errors must not break transport */ }
+              try { Reflect.apply(cb, undefined, [isStale]) } catch { /* listener errors must not break transport */ }
             }
           }
         }
@@ -582,9 +581,9 @@ export class WsRpcClient implements RpcClient {
           this.pending.delete(envelope.id)
           clearTimeout(req.timeout)
           if (envelope.error) {
-            const err = new Error(envelope.error.message)
-            ;(err as any).code = envelope.error.code
-            ;(err as any).data = envelope.error.data
+            const err: Error & { code?: string; data?: unknown } = new Error(envelope.error.message)
+            ;err.code = envelope.error.code
+            ;err.data = envelope.error.data
             req.reject(err)
           } else {
             req.resolve(envelope.result)
@@ -641,7 +640,7 @@ export class WsRpcClient implements RpcClient {
           if (set) {
             for (const cb of set) {
               try {
-                cb(...(envelope.args ?? []))
+                Reflect.apply(cb, undefined, envelope.args ?? [])
               } catch {
                 // Listener errors shouldn't break the client
               }
@@ -650,7 +649,7 @@ export class WsRpcClient implements RpcClient {
           // Wildcard listeners (used by RemoteClientBridge for event forwarding)
           for (const cb of this.anyEventListeners) {
             try {
-              cb(envelope.channel, ...(envelope.args ?? []))
+              Reflect.apply(cb, undefined, [envelope.channel, ...(envelope.args ?? [])])
             } catch {
               // Listener errors shouldn't break the client
             }
@@ -675,7 +674,7 @@ export class WsRpcClient implements RpcClient {
     }
 
     try {
-      const result = await handler(...(envelope.args ?? []))
+      const result: unknown = await Reflect.apply(handler, undefined, envelope.args ?? [])
       const response: MessageEnvelope = {
         id: envelope.id,
         type: 'response',
@@ -755,7 +754,7 @@ export class WsRpcClient implements RpcClient {
 
     // Reject all pending requests
     if (wasConnected) {
-      for (const [id, req] of this.pending) {
+      for (const [_id, req] of this.pending) {
         clearTimeout(req.timeout)
         req.reject(new Error('Connection lost'))
       }
@@ -944,16 +943,19 @@ export class WsRpcClient implements RpcClient {
   }
 
   private createConnectionError(kind: TransportConnectionErrorKind, message: string, code?: string): Error {
-    const err = new Error(message)
-    ;(err as any).kind = kind
-    if (code) (err as any).code = code
+    const err: Error & { kind?: TransportConnectionErrorKind; code?: string } = new Error(message)
+    ;err.kind = kind
+    if (code) err.code = code
     return err
   }
 
-  private toErrorState(err: Error): TransportConnectionError {
-    const code = (err as any).code ? String((err as any).code) : undefined
-    const kind = (err as any).kind as TransportConnectionErrorKind | undefined
-      ?? this.classifyErrorKindFromCode(code)
+  private toErrorState(err: Error & { code?: unknown; kind?: unknown }): TransportConnectionError {
+    const code = err.code ? String(err.code) : undefined
+    const value = err.kind
+    const kind = value === 'auth' || value === 'protocol' || value === 'timeout'
+      || value === 'network' || value === 'server' || value === 'unknown'
+      ? value
+      : this.classifyErrorKindFromCode(code)
 
     return {
       kind,

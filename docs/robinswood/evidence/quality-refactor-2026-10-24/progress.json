@@ -77,7 +77,8 @@
     "Domaine des reprises sous 500 lignes : 353 mêmes cas, 2329 mêmes assertions, 266 instructions et 15 déclarations partagées identiques ; suite complète, 16 types, build et lint ciblé réussis",
     "Cinq domaines de production : 159 déclarations préservées dans 22 modules ≤327 lignes ; suite complète, 16 types, build et lint ciblé réussis",
     "Pi : 21 any retirés, API defineTool du SDK actuel, 24 contrats isolés ; JavaScript équivalent vérifié, 16 types, suite complète et build réussis ; point d’entrée ensuite décomposé et lint résolu dans le lot Pi runtime",
-    "Entrée Pi et neuf modules de fonctions sous 500 lignes, état de 22 données séparé, 43 fonctions préservées, graphe acyclique ; SDK réel et nouvelles demandes testés, suite complète, 16 types, build et lint du domaine réussis"
+    "Entrée Pi et neuf modules de fonctions sous 500 lignes, état de 22 données séparé, 43 fonctions préservées, graphe acyclique ; SDK réel et nouvelles demandes testés, suite complète, 16 types, build et lint du domaine réussis",
+    "Transport RPC : 72 any retirés, réponses OAuth/natives contrôlées, 103 cas transport et leurs assertions conservés + 11 nouveaux cas ; 24 simulations OAuth, 16 configurations TypeScript, lint sans avertissement, build et suite complète réussis (140,22 s)"
   ],
   "pending": [
     "Découpage des autres fichiers au-delà de 500 lignes",
@@ -85,12 +86,12 @@
     "Lint global sans erreur ni avertissement",
     "Parcours complets réels en staging local, compilation signée et intégration"
   ],
-  "updatedAt": "2026-10-25T08:53:23.552106+00:00",
+  "updatedAt": "2026-10-25T09:25:38.469661+00:00",
   "current": {
-    "lastEvidence": "preload-oauth-summary.json",
+    "lastEvidence": "rpc-native-summary.json",
     "sourceGate": {
       "max-lines": 162,
-      "no-explicit-any": 489
+      "no-explicit-any": 417
     },
     "globalStatus": "en cours ; validation globale, interface et missions finales restantes"
   }

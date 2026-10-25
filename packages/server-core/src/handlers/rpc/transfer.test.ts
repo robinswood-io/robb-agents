@@ -9,11 +9,11 @@ import {
 } from './transfer'
 
 function createHarness() {
-  const handlers = new Map<string, HandlerFn>()
+  const handlers = new Map<string, HandlerFn<unknown[]>>()
 
   const server: RpcServer = {
     handle(channel, handler) {
-      handlers.set(channel, handler)
+      handlers.set(channel, (ctx, ...args): unknown => Reflect.apply(handler, undefined, [ctx, ...args]))
     },
     push() {},
     async invokeClient() {

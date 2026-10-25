@@ -6,13 +6,13 @@ import type { HandlerDeps } from '../handler-deps'
 import { registerSettingsHandlers } from './settings'
 
 function createHarness(updateError?: Error) {
-  const handlers = new Map<string, HandlerFn>()
+  const handlers = new Map<string, HandlerFn<unknown[]>>()
   const modelUpdates: unknown[][] = []
   const reasoningUpdates: ThinkingLevel[] = []
   let thinkingLevel: ThinkingLevel = 'medium'
 
   const server: RpcServer = {
-    handle: (channel, handler) => { handlers.set(channel, handler) },
+    handle: (channel, handler) => { handlers.set(channel, (ctx, ...args): unknown => Reflect.apply(handler, undefined, [ctx, ...args])) },
     push: () => {},
     invokeClient: async () => undefined,
     hasClientCapability: () => false,

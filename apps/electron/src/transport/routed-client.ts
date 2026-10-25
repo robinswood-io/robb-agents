@@ -11,7 +11,7 @@
  */
 
 import type { WsRpcClient, TransportConnectionState } from './client'
-import type { RpcClient } from '@craft-agent/server-core/transport'
+import type { CapabilityHandler, RpcClient, RpcListener } from '@craft-agent/server-core/transport'
 import type { RemoteServerConfig } from '@craft-agent/core/types'
 import { isLocalOnly, RPC_CHANNELS } from '@craft-agent/shared/protocol'
 
@@ -20,7 +20,7 @@ import { isLocalOnly, RPC_CHANNELS } from '@craft-agent/shared/protocol'
 // ---------------------------------------------------------------------------
 
 interface ListenerEntry {
-  callback: (...args: any[]) => void
+  callback: RpcListener
   unsub: () => void
 }
 
@@ -44,7 +44,7 @@ export class RoutedClient implements RpcClient {
   private remoteListeners = new Map<string, Set<ListenerEntry>>()
 
   /** Capability handlers — re-registered on workspace switch. */
-  private capabilities = new Map<string, (...args: any[]) => Promise<any> | any>()
+  private capabilities = new Map<string, CapabilityHandler>()
 
   /** Connection state listeners (delegates to workspaceClient). */
   private connectionStateListeners = new Set<(state: TransportConnectionState) => void>()
@@ -92,7 +92,7 @@ export class RoutedClient implements RpcClient {
   // RpcClient interface
   // -------------------------------------------------------------------------
 
-  async invoke(channel: string, ...args: any[]): Promise<any> {
+  async invoke(channel: string, ...args: unknown[]): Promise<unknown> {
     const isLocal = isLocalOnly(channel)
     const target = isLocal ? this.localClient : this.workspaceClient
 
@@ -122,7 +122,7 @@ export class RoutedClient implements RpcClient {
     return result
   }
 
-  on(channel: string, callback: (...args: any[]) => void): () => void {
+  on<Arguments extends unknown[]>(channel: string, callback: RpcListener<Arguments>): () => void {
     if (isLocalOnly(channel)) {
       return this.localClient.on(channel, callback)
     }
@@ -145,7 +145,7 @@ export class RoutedClient implements RpcClient {
     }
   }
 
-  handleCapability(channel: string, handler: (...args: any[]) => Promise<any> | any): void {
+  handleCapability<Arguments extends unknown[]>(channel: string, handler: CapabilityHandler<Arguments>): void {
     this.capabilities.set(channel, handler)
     // Register on both clients — either server can invoke capabilities
     this.localClient.handleCapability(channel, handler)

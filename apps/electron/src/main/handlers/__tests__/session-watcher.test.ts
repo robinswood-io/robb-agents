@@ -51,12 +51,12 @@ function makeTempSessionDir(): string {
 }
 
 function createTestHarness(sessionPaths: Map<string, string>) {
-  const handlers = new Map<string, HandlerFn>()
+  const handlers = new Map<string, HandlerFn<unknown[]>>()
   const pushCalls: PushCall[] = []
 
   const server: RpcServer = {
     handle(channel: string, handler: HandlerFn) {
-      handlers.set(channel, handler)
+      handlers.set(channel, (ctx, ...args): unknown => Reflect.apply(handler, undefined, [ctx, ...args]))
     },
     push(channel: string, target: PushTarget, ...args: unknown[]) {
       pushCalls.push({ channel, target, args })

@@ -5,12 +5,12 @@ import type { HandlerDeps } from '../handler-deps'
 import { registerSessionsHandlers } from './sessions'
 
 function createHarness(sessionWorkspaceId: string | null = 'workspace') {
-  const handlers = new Map<string, HandlerFn>()
+  const handlers = new Map<string, HandlerFn<unknown[]>>()
   let transcriptHydrations = 0
   let permissionStateReads = 0
 
   const server: RpcServer = {
-    handle: (channel, handler) => { handlers.set(channel, handler) },
+    handle: (channel, handler) => { handlers.set(channel, (ctx, ...args): unknown => Reflect.apply(handler, undefined, [ctx, ...args])) },
     push: () => {},
     invokeClient: async () => undefined,
     hasClientCapability: () => false,

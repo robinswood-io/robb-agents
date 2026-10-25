@@ -1,3 +1,4 @@
+import { strict as assert } from 'node:assert'
 /**
  * Transport layer tests — WsRpcServer + WsRpcClient.
  *
@@ -188,6 +189,7 @@ describe('RPC', () => {
     }))
 
     const result = await client.invoke('whoami')
+    assert(result && typeof result === 'object' && 'clientId' in result && 'workspaceId' in result)
     expect(result.clientId).toBeTruthy()
     expect(result.workspaceId).toBe('test-workspace')
   })

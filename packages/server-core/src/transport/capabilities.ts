@@ -72,7 +72,11 @@ export async function requestClientOpenPath(
 ): Promise<{ error?: string }> {
   try {
     const result = await server.invokeClient(clientId, CLIENT_OPEN_PATH, path)
-    return result ?? {}
+    if (result == null) return {}
+    if (typeof result !== 'object' || ('error' in result && result.error !== undefined && typeof result.error !== 'string')) {
+      throw new Error('Invalid open-path response from client')
+    }
+    return result
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     return { error: message }
@@ -111,7 +115,11 @@ export async function requestClientConfirmDialog(
   clientId: string,
   spec: ConfirmDialogSpec,
 ): Promise<{ response: number }> {
-  return await server.invokeClient(clientId, CLIENT_CONFIRM_DIALOG, spec)
+  const result = await server.invokeClient(clientId, CLIENT_CONFIRM_DIALOG, spec)
+  if (!result || typeof result !== 'object' || !('response' in result) || typeof result.response !== 'number') {
+    throw new Error('Invalid confirmation response from client')
+  }
+  return { ...result, response: result.response }
 }
 
 /** Spec for a file/folder picker dialog (maps to Electron's OpenDialogOptions). */
@@ -131,14 +139,23 @@ export async function requestClientOpenFileDialog(
   clientId: string,
   spec: FileDialogSpec,
 ): Promise<{ canceled: boolean; filePaths: string[] }> {
-  return await server.invokeClient(clientId, CLIENT_OPEN_FILE_DIALOG, spec)
+  const result = await server.invokeClient(clientId, CLIENT_OPEN_FILE_DIALOG, spec)
+  if (!result || typeof result !== 'object' || !('canceled' in result) || typeof result.canceled !== 'boolean'
+    || !('filePaths' in result) || !Array.isArray(result.filePaths)) {
+    throw new Error('Invalid file-dialog response from client')
+  }
+  const filePaths = result.filePaths.map((path: unknown) => {
+    if (typeof path !== 'string') throw new Error('Invalid file path from client')
+    return path
+  })
+  return { ...result, canceled: result.canceled, filePaths }
 }
 
 /**
  * Ask the client to invoke a `BrowserPaneManager` method.
  *
  * Errors propagate with `.code` preserved (see transport error-code preservation
- * in `client.ts` / `server.ts`). Callers can branch on `(err as any).code`.
+ * in `client.ts` / `server.ts`). Callers can inspect the error's `code` field.
  */
 export async function requestClientBrowserInvoke<T>(
   server: RpcServer,

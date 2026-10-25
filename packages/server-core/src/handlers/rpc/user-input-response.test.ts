@@ -6,9 +6,9 @@ import { registerSessionsHandlers } from './sessions'
 
 describe('interactive question response workspace authority', () => {
   it('authorizes an existing-turn retry before dispatch and forwards its exact anchor and caller', async () => {
-    const handlers = new Map<string, HandlerFn>()
+    const handlers = new Map<string, HandlerFn<unknown[]>>()
     const delivered: unknown[] = []
-    const server = { handle: (channel: string, handler: HandlerFn) => handlers.set(channel, handler) } as unknown as RpcServer
+    const server = { handle: (channel: string, handler: HandlerFn) => handlers.set(channel, (ctx, ...args): unknown => Reflect.apply(handler, undefined, [ctx, ...args])) } as unknown as RpcServer
     const deps = {
       platform: { logger: {} },
       sessionManager: {
@@ -28,9 +28,9 @@ describe('interactive question response workspace authority', () => {
   })
 
   it('rejects another workspace before hydration or dispatch and pins a valid response to its actual caller', async () => {
-    const handlers = new Map<string, HandlerFn>()
+    const handlers = new Map<string, HandlerFn<unknown[]>>()
     const delivered: unknown[] = []
-    const server = { handle: (channel: string, handler: HandlerFn) => handlers.set(channel, handler) } as unknown as RpcServer
+    const server = { handle: (channel: string, handler: HandlerFn) => handlers.set(channel, (ctx, ...args): unknown => Reflect.apply(handler, undefined, [ctx, ...args])) } as unknown as RpcServer
     const deps = {
       platform: { logger: {} },
       sessionManager: {

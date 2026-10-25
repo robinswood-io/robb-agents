@@ -6,10 +6,10 @@ import { registerSessionsHandlers } from './sessions'
 
 describe('permission response RPC options', () => {
   it('forwards rememberForMinutes to the session manager unchanged', async () => {
-    const handlers = new Map<string, HandlerFn>()
+    const handlers = new Map<string, HandlerFn<unknown[]>>()
     const delivered: unknown[] = []
     const server = {
-      handle: (channel: string, handler: HandlerFn) => handlers.set(channel, handler),
+      handle: (channel: string, handler: HandlerFn) => handlers.set(channel, (ctx, ...args): unknown => Reflect.apply(handler, undefined, [ctx, ...args])),
     } as unknown as RpcServer
     const deps = {
       platform: { logger: {} },

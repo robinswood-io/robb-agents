@@ -231,7 +231,7 @@ export function registerAutomationsHandlers(server: RpcServer, deps: HandlerDeps
   })
 
   // Read execution history for a specific automation
-  server.handle(RPC_CHANNELS.automations.GET_HISTORY, async (_ctx, workspaceId: string, automationId: string, limit = AUTOMATION_HISTORY_MAX_RUNS_PER_MATCHER) => {
+  server.handle(RPC_CHANNELS.automations.GET_HISTORY, async (_ctx, workspaceId: string, automationId: string, limit: number = AUTOMATION_HISTORY_MAX_RUNS_PER_MATCHER) => {
     const workspace = getWorkspaceByNameOrId(workspaceId)
     if (!workspace) throw new Error('Workspace not found')
 

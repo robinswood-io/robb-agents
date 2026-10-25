@@ -16,12 +16,12 @@ const context: RequestContext = {
   allowedWorkspaceIds: '*',
 }
 
-function captureServer(): { server: RpcServer; handlers: Map<string, HandlerFn> } {
-  const handlers = new Map<string, HandlerFn>()
+function captureServer(): { server: RpcServer; handlers: Map<string, HandlerFn<unknown[]>> } {
+  const handlers = new Map<string, HandlerFn<unknown[]>>()
   return {
     handlers,
     server: {
-      handle: (channel, handler) => { handlers.set(channel, handler) },
+      handle: (channel, handler) => { handlers.set(channel, (ctx, ...args): unknown => Reflect.apply(handler, undefined, [ctx, ...args])) },
       push: () => {},
       invokeClient: async () => undefined,
       hasClientCapability: () => false,

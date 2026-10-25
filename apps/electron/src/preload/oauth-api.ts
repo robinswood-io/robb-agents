@@ -1,3 +1,4 @@
+import { assertOAuthStart, assertOAuthResult } from '@craft-agent/shared/protocol'
 import { shell } from 'electron'
 import { createCallbackServer, type CallbackPayload, type CallbackServer } from '@craft-agent/shared/auth/callback-server'
 import { CHATGPT_OAUTH_CONFIG } from '@craft-agent/shared/auth/chatgpt-oauth-config'
@@ -7,6 +8,7 @@ import type { ElectronAPI } from '../shared/types'
 import { openSafeExternalUrl } from './safe-external-url'
 
 type OAuthApi = Pick<ElectronAPI, "performOAuth" | "startClaudeOAuth" | "startMistralVibeSetup" | "startChatGptOAuth" | "startGeminiOAuth">;
+
 
 export function configureOAuthApi(api: OAuthApi, client: RpcClient): void {
     api.performOAuth = async (args: {
@@ -32,6 +34,7 @@ export function configureOAuthApi(api: OAuthApi, client: RpcClient): void {
                 sessionId: args.sessionId,
                 authRequestId: args.authRequestId,
             });
+            assertOAuthStart(startResult);
             flowId = startResult.flowId;
             state = startResult.state;
             // 3. Open browser for user consent (local — must open on the user's machine, not remote server)
@@ -51,6 +54,7 @@ export function configureOAuthApi(api: OAuthApi, client: RpcClient): void {
             }
             // 6. Send code to server for token exchange + credential storage
             const result = await client.invoke('oauth:complete', { flowId, code, state });
+            assertOAuthResult(result);
             return { success: result.success, error: result.error, email: result.email };
         }
         catch (err) {
@@ -74,6 +78,7 @@ export function configureOAuthApi(api: OAuthApi, client: RpcClient): void {
     }> => {
         try {
             const result = await client.invoke('onboarding:startClaudeOAuth');
+            assertOAuthResult(result);
             if (result.success && result.authUrl) {
                 await openSafeExternalUrl(result.authUrl, (safeUrl) => shell.openExternal(safeUrl));
             }
@@ -93,12 +98,14 @@ export function configureOAuthApi(api: OAuthApi, client: RpcClient): void {
         let flowId: string | undefined;
         try {
             const startResult = await client.invoke('onboarding:startMistralVibeSetup');
+            assertOAuthResult(startResult);
             if (!startResult.success || !startResult.flowId || !startResult.authUrl) {
                 return { success: false, error: startResult.error || 'Mistral Vibe authentication could not start' };
             }
             flowId = startResult.flowId;
             await openSafeExternalUrl(startResult.authUrl, (safeUrl) => shell.openExternal(safeUrl));
             const result = await client.invoke('onboarding:completeMistralVibeSetup', { flowId });
+            assertOAuthResult(result);
             return { success: result.success, error: result.error };
         }
         catch (err) {
@@ -153,6 +160,7 @@ export function configureOAuthApi(api: OAuthApi, client: RpcClient): void {
             }
             // 2. Ask server to prepare the flow (PKCE, auth URL, store pending flow)
             const startResult = await client.invoke('chatgpt:startOAuth', connectionSlug);
+            assertOAuthStart(startResult);
             flowId = startResult.flowId;
             state = startResult.state;
             // 3. Open browser for user consent
@@ -184,6 +192,7 @@ export function configureOAuthApi(api: OAuthApi, client: RpcClient): void {
             }
             // 6. Send code to server for token exchange + credential storage
             const result = await client.invoke('chatgpt:completeOAuth', { flowId, code, state });
+            assertOAuthResult(result);
             return { success: result.success, error: result.error };
         }
         catch (err) {
@@ -238,6 +247,7 @@ export function configureOAuthApi(api: OAuthApi, client: RpcClient): void {
             }
             const redirectUri = `${callbackServer.url}${GOOGLE_GEMINI_OAUTH_CONFIG.CALLBACK_PATH}`;
             const startResult = await client.invoke('gemini:startOAuth', { connectionSlug, redirectUri });
+            assertOAuthStart(startResult);
             flowId = startResult.flowId;
             state = startResult.state;
             await openSafeExternalUrl(startResult.authUrl, (safeUrl) => shell.openExternal(safeUrl));
@@ -265,6 +275,7 @@ export function configureOAuthApi(api: OAuthApi, client: RpcClient): void {
                 return { success: false, error: 'No authorization code received' };
             }
             const result = await client.invoke('gemini:completeOAuth', { flowId, code, state });
+            assertOAuthResult(result);
             return { success: result.success, error: result.error };
         }
         catch (err) {

@@ -86,7 +86,7 @@ export function registerFilesHandlers(server: RpcServer, deps: HandlerDeps): voi
 
   // Read an image file as a small preview data URL for lightweight thumbnail rendering.
   // Returns a PNG data URL resized to fit within maxSize×maxSize.
-  server.handle(RPC_CHANNELS.file.READ_PREVIEW_DATA_URL, async (ctx, path: string, maxSize = 64) => {
+  server.handle(RPC_CHANNELS.file.READ_PREVIEW_DATA_URL, async (ctx, path: string, maxSize: number = 64) => {
     try {
       const workspaceId = ctx.workspaceId ?? deps.windowManager?.getWorkspaceForWindow(ctx.webContentsId!)
       const safePath = await validateFilePath(path, getWorkspaceAllowedDirs(workspaceId))

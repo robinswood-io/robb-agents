@@ -1,5 +1,6 @@
 import { permissionMetadataFixture } from './testing/permission-metadata.ts';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
+import { sessionManagerForTest } from './testing/private-runtime-access.ts';
 import { afterEach, describe, expect, it, spyOn } from 'bun:test'
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -373,10 +374,10 @@ describe('explicit retry of an existing turn', () => {
     }
     h.internals.getOrCreateAgent = async () => { h.managed.agent = currentAgent as never; return currentAgent }
     if (!isRetry) h.managed.sessionStatus = 'todo'
-    const handlers = new Map<string, HandlerFn>()
+    const handlers = new Map<string, HandlerFn<unknown[]>>()
     const rpcEvents: unknown[] = []
     const server = {
-      handle: (channel: string, handler: HandlerFn) => handlers.set(channel, handler),
+      handle: (channel: string, handler: HandlerFn) => handlers.set(channel, (ctx, ...args): unknown => Reflect.apply(handler, undefined, [ctx, ...args])),
       push: (...args: unknown[]) => { rpcEvents.push(args) },
     } as unknown as RpcServer
     registerSessionsHandlers(server, {
@@ -833,7 +834,7 @@ describe('explicit retry of an existing turn', () => {
     h.managed.pendingTurnRecovery = { ...h.managed.pendingTurnRecovery!, userMessageId: 'latest-user', lastCause: 'user_retry', userRetryFromMessageCount: 5 }
     const retries: string[] = []
     h.manager.retryTurn = async () => { throw new Error('Restart must not mint a new explicit Retry allowance') }
-    ;(h.internals as any).retryTurnInternal = async (_id: string, anchor: string, _context: unknown, grantNewAllowance = false) => {
+    sessionManagerForTest(h.manager).retryTurnInternal = async (_id, anchor, _context, grantNewAllowance = false) => {
       expect(grantNewAllowance).toBe(false)
       retries.push(anchor); return { status: 'started' }
     }

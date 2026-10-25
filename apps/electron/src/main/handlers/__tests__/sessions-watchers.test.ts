@@ -33,7 +33,7 @@ function makeCtx(clientId: string): RequestContext {
 }
 
 describe('sessions file watchers', () => {
-  const handlers = new Map<string, HandlerFn>()
+  const handlers = new Map<string, HandlerFn<unknown[]>>()
   const pushed: Array<{ channel: string; target: PushTarget; args: unknown[] }> = []
 
   let tempRoot = ''
@@ -52,7 +52,7 @@ describe('sessions file watchers', () => {
 
     const server: RpcServer = {
       handle(channel, handler) {
-        handlers.set(channel, handler)
+        handlers.set(channel, (ctx, ...args): unknown => Reflect.apply(handler, undefined, [ctx, ...args]))
       },
       push(channel, target, ...args) {
         pushed.push({ channel, target, args })

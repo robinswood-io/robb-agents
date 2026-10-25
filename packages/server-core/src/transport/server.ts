@@ -74,7 +74,7 @@ interface ClientConnection {
 
 interface PendingInvoke {
   clientId: string
-  resolve: (value: any) => void
+  resolve: (value: unknown) => void
   reject: (error: Error) => void
   timeout: ReturnType<typeof setTimeout>
 }
@@ -289,14 +289,14 @@ export class WsRpcServer implements RpcServer {
   // RpcServer interface
   // -------------------------------------------------------------------------
 
-  handle(channel: string, handler: HandlerFn): void {
+  handle<Arguments extends unknown[]>(channel: string, handler: HandlerFn<Arguments>): void {
     if (this.handlers.has(channel)) {
       throw new Error(`Handler already registered for channel: ${channel}`)
     }
     this.handlers.set(channel, handler)
   }
 
-  push(channel: string, target: PushTarget, ...args: any[]): void {
+  push(channel: string, target: PushTarget, ...args: unknown[]): void {
     if (this.clients.size === 0 && this.disconnectedClients.size === 0) return
     const timestamp = Date.now()
 
@@ -339,22 +339,22 @@ export class WsRpcServer implements RpcServer {
     return results
   }
 
-  invokeClient(clientId: string, channel: string, ...args: any[]): Promise<any> {
+  invokeClient(clientId: string, channel: string, ...args: unknown[]): Promise<unknown> {
     return new Promise((resolve, reject) => {
       const client = this.clients.get(clientId)
 
       // Check connection
       if (!client) {
-        const err = new Error(`Client not connected: ${clientId}`)
-        ;(err as any).code = 'CLIENT_DISCONNECTED'
+        const err: Error & { code?: string } = new Error(`Client not connected: ${clientId}`)
+        ;err.code = 'CLIENT_DISCONNECTED'
         reject(err)
         return
       }
 
       // Check capability
       if (!client.capabilities.has(channel)) {
-        const err = new Error(`Client lacks capability: ${channel}`)
-        ;(err as any).code = 'CAPABILITY_UNAVAILABLE'
+        const err: Error & { code?: string } = new Error(`Client lacks capability: ${channel}`)
+        ;err.code = 'CAPABILITY_UNAVAILABLE'
         reject(err)
         return
       }
@@ -362,8 +362,8 @@ export class WsRpcServer implements RpcServer {
       const id = randomUUID()
       const timeout = setTimeout(() => {
         this.pendingInvokes.delete(id)
-        const err = new Error(`Client request timeout: ${channel} (30000ms)`)
-        ;(err as any).code = 'CLIENT_REQUEST_TIMEOUT'
+        const err: Error & { code?: string } = new Error(`Client request timeout: ${channel} (30000ms)`)
+        ;err.code = 'CLIENT_REQUEST_TIMEOUT'
         reject(err)
       }, 30_000)
 
@@ -519,8 +519,8 @@ export class WsRpcServer implements RpcServer {
     // Reject all pending invokes before tearing down connections
     for (const [id, pending] of this.pendingInvokes) {
       clearTimeout(pending.timeout)
-      const err = new Error('Server shutting down')
-      ;(err as any).code = 'CLIENT_DISCONNECTED'
+      const err: Error & { code?: string } = new Error('Server shutting down')
+      ;err.code = 'CLIENT_DISCONNECTED'
       pending.reject(err)
       this.pendingInvokes.delete(id)
     }
@@ -957,8 +957,8 @@ export class WsRpcServer implements RpcServer {
         this.sendResponseError(client.ws, id, channel, 'AUTH_FAILED', `RPC channel denied: ${channel}`)
         return
       }
-      const result = await Promise.race([
-        handler(ctx, ...(args ?? [])),
+      const result: unknown = await Promise.race([
+        Reflect.apply(handler, undefined, [ctx, ...(args ?? [])]),
         new Promise<never>((_, reject) =>
           setTimeout(() => reject(new Error(`Handler timeout: ${channel} (${WsRpcServer.HANDLER_TIMEOUT_MS}ms)`)),
             WsRpcServer.HANDLER_TIMEOUT_MS),
@@ -1055,7 +1055,7 @@ export class WsRpcServer implements RpcServer {
   private bufferAndMaybeSendEvent(
     client: ClientConnection,
     channel: string,
-    args: any[],
+    args: unknown[],
     timestamp: number,
     shouldSend: boolean,
   ): void {
@@ -1228,9 +1228,9 @@ export class WsRpcServer implements RpcServer {
     clearTimeout(pending.timeout)
 
     if (envelope.error) {
-      const err = new Error(envelope.error.message)
-      ;(err as any).code = envelope.error.code
-      ;(err as any).data = envelope.error.data
+      const err: Error & { code?: string; data?: unknown } = new Error(envelope.error.message)
+      ;err.code = envelope.error.code
+      ;err.data = envelope.error.data
       pending.reject(err)
     } else {
       pending.resolve(envelope.result)
@@ -1241,8 +1241,8 @@ export class WsRpcServer implements RpcServer {
     for (const [id, pending] of this.pendingInvokes) {
       if (pending.clientId !== clientId) continue
       clearTimeout(pending.timeout)
-      const err = new Error(`Client disconnected: ${clientId}`)
-      ;(err as any).code = 'CLIENT_DISCONNECTED'
+      const err: Error & { code?: string } = new Error(`Client disconnected: ${clientId}`)
+      ;err.code = 'CLIENT_DISCONNECTED'
       pending.reject(err)
       this.pendingInvokes.delete(id)
     }

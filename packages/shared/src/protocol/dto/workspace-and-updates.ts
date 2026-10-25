@@ -12,7 +12,7 @@ import type { ClaudeOAuthIdentityDto } from './connections.ts';
 export interface GitBashStatus {
   found: boolean
   path: string | null
-  platform: 'win32' | 'darwin' | 'linux'
+  platform: 'win32' | 'darwin' | 'linux' | 'web'
 }
 
 export interface UpdateInfo {

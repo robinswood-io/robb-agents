@@ -99,7 +99,7 @@ function assertTransferOwner(ctx: RequestContext, transfer: TransferState): void
   }
 }
 
-export function setTransferableHandler(channel: string, handler: HandlerFn): void {
+export function setTransferableHandler<Arguments extends unknown[]>(channel: string, handler: HandlerFn<Arguments>): void {
   transferableHandlers.set(channel, handler)
 }
 
@@ -274,7 +274,7 @@ export function registerTransferHandlers(server: RpcServer): void {
     await cleanupTransfer(transfer.id)
 
     try {
-      const result = await handler(ctx, ...args)
+      const result: unknown = await Reflect.apply(handler, undefined, [ctx, ...args])
       console.log(`[Transfer:server] Handler ${transfer.channel} completed successfully`)
       return result
     } catch (err) {

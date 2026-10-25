@@ -8,7 +8,7 @@
 import { RPC_CHANNELS } from '../shared/types'
 import type { ChannelMap } from './build-api'
 
-function invoke(channel: string, transform?: (result: any) => any) {
+function invoke(channel: string, transform?: (result: unknown) => unknown) {
   return { type: 'invoke' as const, channel, ...(transform && { transform }) }
 }
 
@@ -169,7 +169,10 @@ export const CHANNEL_MAP = {
 
   // Onboarding
   getAuthState: invoke(RPC_CHANNELS.onboarding.GET_AUTH_STATE),
-  getSetupNeeds: invoke(RPC_CHANNELS.onboarding.GET_AUTH_STATE, r => r.setupNeeds),
+  getSetupNeeds: invoke(RPC_CHANNELS.onboarding.GET_AUTH_STATE, r => {
+    if (!r || typeof r !== 'object' || !('setupNeeds' in r)) throw new Error('Invalid authentication state response')
+    return r.setupNeeds
+  }),
   startWorkspaceMcpOAuth: invoke(RPC_CHANNELS.onboarding.START_MCP_OAUTH),
   startClaudeOAuth: invoke(RPC_CHANNELS.onboarding.START_CLAUDE_OAUTH),
   exchangeClaudeCode: invoke(RPC_CHANNELS.onboarding.EXCHANGE_CLAUDE_CODE),

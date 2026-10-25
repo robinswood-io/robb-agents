@@ -1,5 +1,6 @@
 import { sessionRuntimeStateForTest } from "../../sessions/testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it } from 'bun:test'
+import { strict as assert } from 'node:assert'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -16,6 +17,32 @@ import { registerSessionsHandlers } from './sessions'
 type Managed = ReturnType<typeof createManagedSession>
 const cleanup: Array<() => void> = []
 afterEach(() => { for (const close of cleanup.splice(0).reverse()) close() })
+
+function sessionIds(value: unknown): string[] {
+  assert(Array.isArray(value))
+  return value.map((session: unknown) => {
+    assert(session && typeof session === 'object' && 'id' in session && typeof session.id === 'string')
+    return session.id
+  })
+}
+
+function inputRequests(value: unknown): Array<Record<string, unknown> & { status: string }> {
+  assert(value && typeof value === 'object' && 'userInputRequests' in value && Array.isArray(value.userInputRequests))
+  return value.userInputRequests.map((request: unknown) => {
+    assert(request && typeof request === 'object' && 'status' in request && typeof request.status === 'string')
+    return { ...request, status: request.status }
+  })
+}
+
+function inputResponse(value: unknown): UserInputResponseResult {
+  assert(value && typeof value === 'object' && 'status' in value)
+  assert(value.status === 'accepted' || value.status === 'already_answered' || value.status === 'cancelled')
+  const responseMessageId = 'responseMessageId' in value ? value.responseMessageId : undefined
+  const delivery = 'delivery' in value ? value.delivery : undefined
+  assert(responseMessageId === undefined || typeof responseMessageId === 'string')
+  assert(delivery === undefined || delivery === 'steered' || delivery === 'queued' || delivery === 'started')
+  return { status: value.status, responseMessageId, delivery }
+}
 
 const questions: UserInputQuestion[] = [
   { id: 'format', question: 'Quel format ?', options: [{ id: 'short', label: 'Court' }, { id: 'long', label: 'Détaillé' }] },
@@ -87,10 +114,10 @@ describe('remote interactive answers across transport and session ownership', ()
   it('loads the pending child card, validates three answers, then returns one durable receipt across retries', async () => {
     const h = await harness()
     const sessions = await h.client.invoke(RPC_CHANNELS.sessions.GET)
-    expect(sessions.map((session: { id: string }) => session.id).sort()).toEqual(['child-origin', 'parent'])
+    expect(sessionIds(sessions).sort()).toEqual(['child-origin', 'parent'])
     const before = await h.client.invoke(RPC_CHANNELS.sessions.GET_MESSAGES, h.parent.id)
-    expect(before.userInputRequests).toHaveLength(1)
-    expect(before.userInputRequests[0]).toMatchObject({ id: h.requestId, sessionId: h.origin.id, status: 'pending', questions })
+    expect(inputRequests(before)).toHaveLength(1)
+    expect(inputRequests(before)[0]).toMatchObject({ id: h.requestId, sessionId: h.origin.id, status: 'pending', questions })
     await expect(h.client.invoke(RPC_CHANNELS.sessions.GET_MESSAGES, h.foreign.id)).rejects.toThrow('Workspace access denied')
     // A parent displays its child's card, but only the actual child owns it.
     await expect(h.client.invoke(RPC_CHANNELS.sessions.RESPOND_TO_USER_INPUT, h.parent.id, { requestId: h.requestId, answers })).rejects.toThrow('does not belong')
@@ -102,14 +129,14 @@ describe('remote interactive answers across transport and session ownership', ()
     expect(h.dispatches).toHaveLength(0)
     expect(h.origin.userInputRequests?.[0]?.status).toBe('pending')
 
-    const response: UserInputResponseResult = await h.client.invoke(RPC_CHANNELS.sessions.RESPOND_TO_USER_INPUT, h.origin.id, { requestId: h.requestId, answers })
+    const response = inputResponse(await h.client.invoke(RPC_CHANNELS.sessions.RESPOND_TO_USER_INPUT, h.origin.id, { requestId: h.requestId, answers }))
     expect(response).toMatchObject({ status: 'accepted', delivery: 'started' })
     expect(response.responseMessageId).toBeTruthy()
     expect(h.dispatches).toEqual([{ id: h.origin.id, messageId: response.responseMessageId, callerClientId: expect.any(String) }])
     expect(h.origin.messages).toHaveLength(1)
     expect(h.snapshots.some(snapshot => snapshot.id === h.origin.id && snapshot.requests?.[0]?.responseMessageId === response.responseMessageId)).toBe(true)
     const after = await h.client.invoke(RPC_CHANNELS.sessions.GET_MESSAGES, h.parent.id)
-    expect(after.userInputRequests[0]).toMatchObject({ status: 'answered', answers: [answers[0], { questionId: 'checks', optionIds: ['amount', 'date'] }, { questionId: 'detail', optionIds: [], text: 'Ajouter le total.' }] })
+    expect(inputRequests(after)[0]).toMatchObject({ status: 'answered', answers: [answers[0], { questionId: 'checks', optionIds: ['amount', 'date'] }, { questionId: 'detail', optionIds: [], text: 'Ajouter le total.' }] })
     expect(await h.client.invoke(RPC_CHANNELS.sessions.RESPOND_TO_USER_INPUT, h.origin.id, { requestId: h.requestId, answers })).toMatchObject({ status: 'already_answered', responseMessageId: response.responseMessageId })
     expect(h.dispatches).toHaveLength(1)
     expect(h.foreign.userInputRequests?.[0]?.status).toBe('pending')
@@ -118,7 +145,7 @@ describe('remote interactive answers across transport and session ownership', ()
   it('revalidates device authority after card hydration and denies a revoked device before receipt creation', async () => {
     const h = await harness()
     const session = await h.client.invoke(RPC_CHANNELS.sessions.GET_MESSAGES, h.parent.id)
-    expect(session.userInputRequests[0].status).toBe('pending')
+    expect(inputRequests(session)[0].status).toBe('pending')
     expect(h.devices.revoke('fixture-device')).toBe(true)
     await expect(h.client.invoke(RPC_CHANNELS.sessions.RESPOND_TO_USER_INPUT, h.origin.id, { requestId: h.requestId, answers })).rejects.toThrow('RPC channel denied')
     expect(h.origin.userInputRequests?.[0]?.status).toBe('pending')
