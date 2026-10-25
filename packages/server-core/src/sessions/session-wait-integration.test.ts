@@ -1,3 +1,4 @@
+import type { SessionManagerTestView } from './testing/private-runtime-access.ts';
 import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it } from 'bun:test'
@@ -7,7 +8,7 @@ import { objectiveReviewBinding, transitionObjectiveContract } from './objective
 const managers: SessionManager[] = []
 function harness() {
   const manager = withSessionOperationsForTest(new SessionManager()); managers.push(manager)
-  const host = manager as any
+  const host = manager as unknown as SessionManagerTestView
   host.sendEvent = () => {}
   const workspace = { id: 'wait-test', rootPath: '/tmp/robb-wait-test', name: 'Wait', createdAt: 1 }
   const make = (id: string, ws = workspace) => {
@@ -80,7 +81,7 @@ describe('delegated waits through SessionManager', () => {
       parent,
       [child.id],
       1_000,
-      { [child.id]: first.sessions[0].cursor },
+      { [child.id]: first.sessions[0].cursor! },
       'all',
     )
     expect(result).toMatchObject({
@@ -95,8 +96,8 @@ describe('delegated waits through SessionManager', () => {
   it('mode:all clears stale attention and diagnostics after a target resumes and succeeds', async () => {
     const { host, make } = harness(); const parent = make('parent'); const a = make('attention-a'); const b = make('attention-b')
     a.processingGeneration = 1
-    a.activeObjective = { terminalState: 'exhausted', startedAt: 1, userMessageId: 'request' } as any
-    a.pendingTurnRecovery = { userMessageId: 'request', attempts: 5, exhaustedAt: 10, validationExhausted: true } as any
+    a.activeObjective = ({ terminalState: 'exhausted', startedAt: 1, userMessageId: 'request' } satisfies Partial<NonNullable<typeof a.activeObjective>>) as NonNullable<typeof a.activeObjective>
+    a.pendingTurnRecovery = ({ userMessageId: 'request', attempts: 5, exhaustedAt: 10, validationExhausted: true } satisfies Partial<NonNullable<typeof a.pendingTurnRecovery>>) as NonNullable<typeof a.pendingTurnRecovery>
     b.processingGeneration = 1; b.isProcessing = true
 
     const pending = host.waitForDelegatedSessions(parent, [a.id, b.id], 1_000, undefined, 'all')
@@ -180,8 +181,8 @@ describe('delegated waits through SessionManager', () => {
   it('keeps a deferred recovery active until its real terminal event', async () => {
     const { host, make } = harness(); const parent = make('parent'); const child = make('deferred')
     parent.isProcessing = true; child.parentSessionId = parent.id; child.processingGeneration = 2
-    child.activeObjective = { terminalState: 'active', startedAt: 1, userMessageId: 'request' } as any
-    child.pendingTurnRecovery = { userMessageId: 'request', attempts: 1, continuationRequired: true } as any
+    child.activeObjective = ({ terminalState: 'active', startedAt: 1, userMessageId: 'request' } satisfies Partial<NonNullable<typeof child.activeObjective>>) as NonNullable<typeof child.activeObjective>
+    child.pendingTurnRecovery = ({ userMessageId: 'request', attempts: 1, continuationRequired: true } satisfies Partial<NonNullable<typeof child.pendingTurnRecovery>>) as NonNullable<typeof child.pendingTurnRecovery>
     sessionRuntimeStateForTest(host).deferredAutomaticSessions.add(child.id)
     const pending = host.waitForDelegatedSessions(parent, [child.id], 1000)
     await new Promise(resolve => setImmediate(resolve))
@@ -196,8 +197,8 @@ describe('delegated waits through SessionManager', () => {
   it('reports an exhausted target with a retained machine inbox and masks its older PASS', async () => {
     const { host, make } = harness(); const parent = make('parent'); const child = make('exhausted-inbox')
     child.processingGeneration = 2
-    child.activeObjective = { terminalState: 'exhausted', startedAt: 1, userMessageId: 'request' } as any
-    child.pendingTurnRecovery = { userMessageId: 'request', attempts: 5, exhaustedAt: 10, validationExhausted: true } as any
+    child.activeObjective = ({ terminalState: 'exhausted', startedAt: 1, userMessageId: 'request' } satisfies Partial<NonNullable<typeof child.activeObjective>>) as NonNullable<typeof child.activeObjective>
+    child.pendingTurnRecovery = ({ userMessageId: 'request', attempts: 5, exhaustedAt: 10, validationExhausted: true } satisfies Partial<NonNullable<typeof child.pendingTurnRecovery>>) as NonNullable<typeof child.pendingTurnRecovery>
     const held = { messageId: 'machine', message: 'Previous delivery', options: { internalOrigin: { kind: 'agent-message' as const, senderSessionId: parent.id } } }
     child.messageQueue.push(held)
     sessionRuntimeStateForTest(host).deferredAutomaticSessions.add(child.id)
@@ -216,7 +217,7 @@ describe('delegated waits through SessionManager', () => {
   it('preserves verified completion when an older machine inbox remains held', async () => {
     const { host, make } = harness(); const parent = make('parent'); const child = make('verified-inbox')
     child.processingGeneration = 2
-    child.activeObjective = { terminalState: 'complete_verified', startedAt: 1, userMessageId: 'request' } as any
+    child.activeObjective = ({ terminalState: 'complete_verified', startedAt: 1, userMessageId: 'request' } satisfies Partial<NonNullable<typeof child.activeObjective>>) as NonNullable<typeof child.activeObjective>
     child.messageQueue.push({ messageId: 'machine', message: 'Previous delivery', options: { internalOrigin: { kind: 'agent-message', senderSessionId: parent.id } } })
     sessionRuntimeStateForTest(host).deferredAutomaticSessions.add(child.id)
     const receipt = '{"status":"PASS","objectiveId":"request"}'
@@ -231,8 +232,8 @@ describe('delegated waits through SessionManager', () => {
   it('keeps an accepted human continuation active beside an exhausted machine inbox', async () => {
     const { host, make } = harness(); const parent = make('parent'); const child = make('human-retry')
     child.processingGeneration = 2
-    child.activeObjective = { terminalState: 'exhausted', startedAt: 1, userMessageId: 'request' } as any
-    child.pendingTurnRecovery = { userMessageId: 'request', attempts: 5, exhaustedAt: 10, validationExhausted: true } as any
+    child.activeObjective = ({ terminalState: 'exhausted', startedAt: 1, userMessageId: 'request' } satisfies Partial<NonNullable<typeof child.activeObjective>>) as NonNullable<typeof child.activeObjective>
+    child.pendingTurnRecovery = ({ userMessageId: 'request', attempts: 5, exhaustedAt: 10, validationExhausted: true } satisfies Partial<NonNullable<typeof child.pendingTurnRecovery>>) as NonNullable<typeof child.pendingTurnRecovery>
     child.messageQueue.push({ messageId: 'machine', message: 'Previous delivery', options: { internalOrigin: { kind: 'agent-message', senderSessionId: parent.id } } })
     child.messages.push({ id: 'human', role: 'user', content: 'Retry the existing objective.', timestamp: 3, isQueued: true })
     child.messageQueue.push({ messageId: 'human', message: 'Retry the existing objective.' })
@@ -267,7 +268,7 @@ describe('delegated waits through SessionManager', () => {
     child.processingGeneration = 1; child.isProcessing = true
     const pending = host.waitForDelegatedSessions(parent, ['child'], 1000)
     await new Promise(resolve => setImmediate(resolve))
-    child.userInputRequests = [{ id: 'question', sessionId: child.id, status: 'pending', createdAt: 1 }] as any
+    child.userInputRequests = ([{ id: 'question', sessionId: child.id, status: 'pending', createdAt: 1 }] satisfies Array<Partial<NonNullable<typeof child.userInputRequests>[number]>>) as NonNullable<typeof child.userInputRequests>
     host.emitUserInputChanged(child)
     const result = await pending
     expect(result.sessions[0].needsAttention).toBe(true)

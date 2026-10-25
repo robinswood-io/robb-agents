@@ -1,0 +1,40 @@
+{
+  "status": "passed",
+  "files": [
+    {
+      "file": "apps/electron/src/main/__tests__/session-branch-rollback.isolated.ts",
+      "explicitAnyRemoved": 15,
+      "runtimeAstIdenticalExceptDocumentedFixtureCorrections": true,
+      "workspaceSlugAdded": false,
+      "asyncPoolStopFixtures": 2,
+      "lines": 385
+    },
+    {
+      "file": "packages/server-core/src/sessions/session-wait-integration.test.ts",
+      "explicitAnyRemoved": 11,
+      "runtimeAstIdenticalExceptDocumentedFixtureCorrections": true,
+      "workspaceSlugAdded": false,
+      "asyncPoolStopFixtures": 0,
+      "lines": 311
+    },
+    {
+      "file": "packages/server-core/src/sessions/session-wait-diagnostic.test.ts",
+      "explicitAnyRemoved": 7,
+      "runtimeAstIdenticalExceptDocumentedFixtureCorrections": true,
+      "workspaceSlugAdded": false,
+      "asyncPoolStopFixtures": 0,
+      "lines": 261
+    },
+    {
+      "file": "packages/server-core/src/sessions/create-managed-session.test.ts",
+      "explicitAnyRemoved": 7,
+      "runtimeAstIdenticalExceptDocumentedFixtureCorrections": true,
+      "workspaceSlugAdded": true,
+      "asyncPoolStopFixtures": 0,
+      "lines": 288
+    }
+  ],
+  "explicitAnyRemoved": 40,
+  "productionRuntimeChanged": false,
+  "additionalRuntimeFunctions": false
+}

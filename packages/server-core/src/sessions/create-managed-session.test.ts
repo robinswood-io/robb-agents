@@ -111,6 +111,7 @@ describe('resolveCreateSessionRouteProvenance', () => {
 describe('createManagedSession', () => {
   const workspace = {
     id: 'ws_test',
+    slug: 'test-workspace',
     name: 'Test Workspace',
     rootPath: '/tmp/test-workspace',
     createdAt: Date.now(),
@@ -119,8 +120,8 @@ describe('createManagedSession', () => {
   it('normalizes legacy thinkingLevel=think on restore', () => {
     const managed = createManagedSession({
       id: 'session_legacy',
-      thinkingLevel: 'think' as any,
-    }, workspace as any)
+      thinkingLevel: 'think' as unknown as Parameters<typeof createManagedSession>[0]['thinkingLevel'],
+    }, workspace)
 
     expect(managed.thinkingLevel).toBe('medium')
   })
@@ -128,8 +129,8 @@ describe('createManagedSession', () => {
   it('drops invalid thinking levels instead of leaking them into runtime state', () => {
     const managed = createManagedSession({
       id: 'session_invalid',
-      thinkingLevel: 'ultra' as any,
-    }, workspace as any)
+      thinkingLevel: 'ultra' as unknown as Parameters<typeof createManagedSession>[0]['thinkingLevel'],
+    }, workspace)
 
     expect(managed.thinkingLevel).toBeUndefined()
   })
@@ -139,7 +140,7 @@ describe('createManagedSession', () => {
       id: 'session_pinned',
       model: 'pi/gpt-5.6-sol',
       modelRoutePinned: true,
-    }, workspace as any)
+    }, workspace)
 
     expect(managed.model).toBe('pi/gpt-5.6-sol')
     expect(managed.modelRoutePinned).toBe(true)
@@ -170,7 +171,7 @@ describe('createManagedSession', () => {
       id: 'session_connection_pinned',
       llmConnection: 'manual-connection',
       connectionRoutePinned: true,
-    }, workspace as any)
+    }, workspace)
 
     expect(managed.llmConnection).toBe('manual-connection')
     expect(managed.connectionRoutePinned).toBe(true)
@@ -181,7 +182,7 @@ describe('createManagedSession', () => {
       id: 'session_thinking_pinned',
       thinkingLevel: 'xhigh',
       thinkingLevelPinned: true,
-    }, workspace as any)
+    }, workspace)
 
     expect(managed.thinkingLevel).toBe('xhigh')
     expect(managed.thinkingLevelPinned).toBe(true)
