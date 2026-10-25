@@ -1,3 +1,4 @@
+import type { SessionEvent as ProtocolSessionEvent } from '@craft-agent/shared/protocol'
 /**
  * Event Processor Types
  *
@@ -5,8 +6,8 @@
  * All agent events flow through a single pure function for consistent state transitions.
  */
 
-import type { Session, Message, PermissionRequest, CredentialRequest, TypedError, PermissionMode, SessionStatus, AuthRequest, ToolDisplayMeta, RoutingMeta, AutonomyEvent } from '../../shared/types'
-import type { UserInputRequest, ToolExecutionCheckpoint } from '@craft-agent/core/types'
+import type { Session, PermissionRequest, CredentialRequest, PermissionMode, ToolDisplayMeta } from '../../shared/types'
+import type { ToolExecutionCheckpoint } from '@craft-agent/core/types'
 
 /**
  * Streaming state for a session - replaces streamingTextRef
@@ -28,39 +29,14 @@ export interface SessionState {
 /**
  * Text delta event - streaming text content
  */
-export interface TextDeltaEvent {
-  type: 'text_delta'
-  sessionId: string
-  delta: string
-  turnId?: string
-}
+export type TextDeltaEvent = Extract<ProtocolSessionEvent, { type: 'text_delta' }>
 
 /**
  * Text complete event - finalizes streaming text
  */
-export interface TextDiscardEvent {
-  type: 'text_discard'
-  sessionId: string
-  turnId: string
-}
+export type TextDiscardEvent = Extract<ProtocolSessionEvent, { type: 'text_discard' }>
 
-export interface TextCompleteEvent {
-  type: 'text_complete'
-  sessionId: string
-  text: string
-  turnId?: string
-  isIntermediate?: boolean
-  parentToolUseId?: string
-  /** Timestamp from main process for consistent ordering with session.jsonl */
-  timestamp?: number
-  /** Authoritative message ID from main process for persistence/branching parity */
-  messageId?: string
-  /** Provider/model routing audit metadata from main process */
-  routingMeta?: RoutingMeta
-  /** Persisted receipt metadata; null explicitly clears an earlier value. */
-  objectiveOutcome?: Message['objectiveOutcome'] | null
-  objectiveOutcomeError?: string | null
-}
+export type TextCompleteEvent = Extract<ProtocolSessionEvent, { type: 'text_complete' }>
 
 /**
  * Tool start event - begins tool execution
@@ -104,22 +80,7 @@ export interface ToolResultEvent {
 /**
  * Complete event - agent loop finished
  */
-export interface CompleteEvent {
-  type: 'complete'
-  sessionId: string
-  /** Authoritative server-side stop reason (legacy servers may omit it). */
-  reason?: 'complete' | 'interrupted' | 'error' | 'timeout'
-  tokenUsage?: Session['tokenUsage']
-  /** Explicit unread flag - set by main process based on viewing state */
-  hasUnread?: boolean
-  /**
-   * WS2 keep-alive: true when the session's persistent query stays open across
-   * turns (`CRAFT_KEEP_BG_AGENTS_ALIVE`). When set, the turn ending does NOT tear
-   * down background sub-agents — so the chip orphan-backstop must NOT fire on this
-   * `complete`; a real `task_completed` will arrive when the agent actually finishes.
-   */
-  backgroundTasksAlive?: boolean
-}
+export type CompleteEvent = Extract<ProtocolSessionEvent, { type: 'complete' }>
 
 /**
  * Error event - agent error occurred
@@ -140,38 +101,22 @@ export interface ErrorEvent {
  * Permission request event
  * Matches SessionEvent shape from shared/types.ts
  */
-export interface PermissionRequestEvent {
-  type: 'permission_request'
-  sessionId: string
-  request: PermissionRequest
-}
+export type PermissionRequestEvent = Extract<ProtocolSessionEvent, { type: 'permission_request' }>
 
 /**
  * Sources changed event
  */
-export interface SourcesChangedEvent {
-  type: 'sources_changed'
-  sessionId: string
-  enabledSourceSlugs: string[]
-}
+export type SourcesChangedEvent = Extract<ProtocolSessionEvent, { type: 'sources_changed' }>
 
 /**
  * Labels changed event
  */
-export interface LabelsChangedEvent {
-  type: 'labels_changed'
-  sessionId: string
-  labels: string[]
-}
+export type LabelsChangedEvent = Extract<ProtocolSessionEvent, { type: 'labels_changed' }>
 
 /**
  * Project id changed event (session bound/unbound to a workspace project)
  */
-export interface ProjectIdChangedEvent {
-  type: 'project_id_changed'
-  sessionId: string
-  projectId: string | null
-}
+export type ProjectIdChangedEvent = Extract<ProtocolSessionEvent, { type: 'project_id_changed' }>
 
 /**
  * Todo state changed event (external metadata change or agent tool)
@@ -186,73 +131,38 @@ export interface SessionStatusChangedEvent {
  * Session metadata changed event — generic live push for programmatic metadata writes
  * (taskNodeCount, kanbanColumn) that don't ride the header-signature file-watch path.
  */
-export interface ObjectiveChangedEvent {
-  type: 'objective_changed'
-  sessionId: string
-  activeObjective: NonNullable<Session['activeObjective']> | null
-  pendingTurnRecovery: NonNullable<Session['pendingTurnRecovery']> | null
-}
+export type ObjectiveChangedEvent = Extract<ProtocolSessionEvent, { type: 'objective_changed' }>
 
-export interface SessionMetadataChangedEvent {
-  type: 'session_metadata_changed'
-  sessionId: string
-  changes: Partial<Pick<Session, 'taskNodeCount' | 'kanbanColumn' | 'taskDraft' | 'taskSlug' | 'projectId' | 'isProcessing'>>
-}
+export type SessionMetadataChangedEvent = Extract<ProtocolSessionEvent, { type: 'session_metadata_changed' }>
 
 /**
  * Session flagged/unflagged events (external metadata change)
  */
-export interface SessionFlaggedEvent {
-  type: 'session_flagged'
-  sessionId: string
-}
+export type SessionFlaggedEvent = Extract<ProtocolSessionEvent, { type: 'session_flagged' }>
 
-export interface SessionUnflaggedEvent {
-  type: 'session_unflagged'
-  sessionId: string
-}
+export type SessionUnflaggedEvent = Extract<ProtocolSessionEvent, { type: 'session_unflagged' }>
 
 /**
  * Session archived/unarchived events (external metadata change)
  */
-export interface SessionArchivedEvent {
-  type: 'session_archived'
-  sessionId: string
-}
+export type SessionArchivedEvent = Extract<ProtocolSessionEvent, { type: 'session_archived' }>
 
-export interface SessionUnarchivedEvent {
-  type: 'session_unarchived'
-  sessionId: string
-}
+export type SessionUnarchivedEvent = Extract<ProtocolSessionEvent, { type: 'session_unarchived' }>
 
 /**
  * Session name changed event (external metadata change)
  */
-export interface NameChangedEvent {
-  type: 'name_changed'
-  sessionId: string
-  name?: string
-}
+export type NameChangedEvent = Extract<ProtocolSessionEvent, { type: 'name_changed' }>
 
 /**
  * Plan submitted event
  */
-export interface PlanSubmittedEvent {
-  type: 'plan_submitted'
-  sessionId: string
-  message: Message
-}
+export type PlanSubmittedEvent = Extract<ProtocolSessionEvent, { type: 'plan_submitted' }>
 
 /**
  * Typed error event
  */
-export interface TypedErrorEvent {
-  type: 'typed_error'
-  sessionId: string
-  error: TypedError
-  /** Timestamp from main process for consistent ordering */
-  timestamp?: number
-}
+export type TypedErrorEvent = Extract<ProtocolSessionEvent, { type: 'typed_error' }>
 
 /**
  * Status event
@@ -269,26 +179,12 @@ export interface StatusEvent {
 /**
  * Info event
  */
-export interface InfoEvent {
-  type: 'info'
-  sessionId: string
-  message: string
-  statusType?: 'compaction_complete'
-  level?: 'info' | 'warning' | 'error' | 'success'
-  /** Timestamp from main process for consistent ordering */
-  timestamp?: number
-}
+export type InfoEvent = Extract<ProtocolSessionEvent, { type: 'info' }>
 
 /**
  * Interrupted event
  */
-export interface InterruptedEvent {
-  type: 'interrupted'
-  sessionId: string
-  message?: Message
-  /** Messages that were queued but not processed — should be restored to input field */
-  queuedMessages?: string[]
-}
+export type InterruptedEvent = Extract<ProtocolSessionEvent, { type: 'interrupted' }>
 
 /**
  * Title generated event
@@ -305,111 +201,54 @@ export interface TitleGeneratedEvent {
  * Used to show shimmer effect on title during regeneration
  * @deprecated Use AsyncOperationEvent instead
  */
-export interface TitleRegeneratingEvent {
-  type: 'title_regenerating'
-  sessionId: string
-  isRegenerating: boolean
-}
+export type TitleRegeneratingEvent = Extract<ProtocolSessionEvent, { type: 'title_regenerating' }>
 
 /**
  * Generic async operation state event
  * Used to show shimmer effect during any async operation (sharing, updating, revoking, title regeneration)
  */
-export interface AsyncOperationEvent {
-  type: 'async_operation'
-  sessionId: string
-  isOngoing: boolean
-}
+export type AsyncOperationEvent = Extract<ProtocolSessionEvent, { type: 'async_operation' }>
 
 /**
  * Working directory changed event (user-initiated via UI)
  */
-export interface WorkingDirectoryChangedEvent {
-  type: 'working_directory_changed'
-  sessionId: string
-  workingDirectory: string
-}
+export type WorkingDirectoryChangedEvent = Extract<ProtocolSessionEvent, { type: 'working_directory_changed' }>
 
 /**
  * Working directory error event - server rejected the path (cross-platform, not found, etc.)
  */
-export interface WorkingDirectoryErrorEvent {
-  type: 'working_directory_error'
-  sessionId: string
-  error: string
-}
+export type WorkingDirectoryErrorEvent = Extract<ProtocolSessionEvent, { type: 'working_directory_error' }>
 
 /**
  * Permission mode changed event
  */
-export interface PermissionModeChangedEvent {
-  type: 'permission_mode_changed'
-  sessionId: string
-  permissionMode: PermissionMode
-  previousPermissionMode?: PermissionMode
-  transitionDisplay?: string
-  modeVersion?: number
-  changedAt?: string
-  changedBy?: 'user' | 'system' | 'restore' | 'automation' | 'unknown'
-}
+export type PermissionModeChangedEvent = Extract<ProtocolSessionEvent, { type: 'permission_mode_changed' }>
 
 /**
  * Session model changed event
  */
-export interface SessionModelChangedEvent {
-  type: 'session_model_changed'
-  sessionId: string
-  model: string | null
-  /** Whether the effective model is an explicit user choice. */
-  modelRoutePinned?: boolean
-}
+export type SessionModelChangedEvent = Extract<ProtocolSessionEvent, { type: 'session_model_changed' }>
 
 /**
  * LLM connection changed event - syncs session.llmConnection to renderer
  */
-export interface LLMConnectionChangedEvent {
-  type: 'connection_changed'
-  sessionId: string
-  connectionSlug: string
-  supportsBranching?: boolean
-}
+export type LLMConnectionChangedEvent = Extract<ProtocolSessionEvent, { type: 'connection_changed' }>
 
 /**
  * Credential request event - prompts user for credentials
  */
-export interface CredentialRequestEvent {
-  type: 'credential_request'
-  sessionId: string
-  request: CredentialRequest
-}
+export type CredentialRequestEvent = Extract<ProtocolSessionEvent, { type: 'credential_request' }>
 
 /**
  * Task backgrounded event - background agent started
  */
-export interface TaskBackgroundedEvent {
-  type: 'task_backgrounded'
-  sessionId: string
-  toolUseId: string
-  taskId: string
-  intent?: string
-  turnId?: string
-  /** 'workflow' marks a fan-out Workflow launch (many sub-agents); undefined = a single Agent/Task. */
-  kind?: 'workflow'
-  /** Workflow run id (wf_...) — correlates workflow_agent_completed events to this chip. */
-  workflowId?: string
-}
+export type TaskBackgroundedEvent = Extract<ProtocolSessionEvent, { type: 'task_backgrounded' }>
 
 /**
  * Workflow agent completed - one sub-agent of a running Workflow finished.
  * Increments the owning workflow chip's completed-agent count.
  */
-export interface WorkflowAgentCompletedEvent {
-  type: 'workflow_agent_completed'
-  sessionId: string
-  workflowId: string
-  agentId: string
-  turnId?: string
-}
+export type WorkflowAgentCompletedEvent = Extract<ProtocolSessionEvent, { type: 'workflow_agent_completed' }>
 
 /**
  * Shell backgrounded event - background bash shell started
@@ -426,128 +265,63 @@ export interface ShellBackgroundedEvent {
 /**
  * Task progress event - live progress updates for background tasks
  */
-export interface TaskProgressEvent {
-  type: 'task_progress'
-  sessionId: string
-  toolUseId: string
-  elapsedSeconds: number
-  turnId?: string
-}
+export type TaskProgressEvent = Extract<ProtocolSessionEvent, { type: 'task_progress' }>
 
 /**
  * Task completed event - background task finished execution
  * Updates the tool message status and result when a background task completes.
  */
-export interface TaskCompletedEvent {
-  type: 'task_completed'
-  sessionId: string
-  taskId: string
-  status: 'completed' | 'failed' | 'stopped'
-  outputFile?: string
-  summary?: string
-  turnId?: string
-}
+export type TaskCompletedEvent = Extract<ProtocolSessionEvent, { type: 'task_completed' }>
 
 /**
  * User message event - backend confirmation of optimistic user message
  * Used for optimistic UI: frontend shows message immediately,
  * backend confirms/updates status via this event
  */
-export interface UserMessageEvent {
-  type: 'user_message'
-  sessionId: string
-  message: Message
-  status: 'accepted' | 'queued' | 'processing'
-  /** Frontend's optimistic message ID for reliable matching */
-  optimisticMessageId?: string
-}
+export type UserMessageEvent = Extract<ProtocolSessionEvent, { type: 'user_message' }>
 
 /**
  * Message annotation update event
  */
-export interface MessageAnnotationsUpdatedEvent {
-  type: 'message_annotations_updated'
-  sessionId: string
-  messageId: string
-  annotations: NonNullable<Message['annotations']>
-}
+export type MessageAnnotationsUpdatedEvent = Extract<ProtocolSessionEvent, { type: 'message_annotations_updated' }>
 
 /**
  * Session shared event - session was shared to viewer
  */
-export interface SessionSharedEvent {
-  type: 'session_shared'
-  sessionId: string
-  sharedUrl: string
-}
+export type SessionSharedEvent = Extract<ProtocolSessionEvent, { type: 'session_shared' }>
 
 /**
  * Session unshared event - session share was revoked
  */
-export interface SessionUnsharedEvent {
-  type: 'session_unshared'
-  sessionId: string
-}
+export type SessionUnsharedEvent = Extract<ProtocolSessionEvent, { type: 'session_unshared' }>
 
 /**
  * Auth request event - unified auth flow (credential or OAuth)
  * Adds auth-request message to session and displays inline auth UI
  */
-export interface UserInputChangedEvent {
-  type: 'user_input_changed'
-  sessionId: string
-  requests: UserInputRequest[]
-}
+export type UserInputChangedEvent = Extract<ProtocolSessionEvent, { type: 'user_input_changed' }>
 
-export interface AuthRequestEvent {
-  type: 'auth_request'
-  sessionId: string
-  message: Message
-  request: AuthRequest
-}
+export type AuthRequestEvent = Extract<ProtocolSessionEvent, { type: 'auth_request' }>
 
 /**
  * Auth completed event - auth request was completed (success, failure, or cancelled)
  * Updates the auth-request message status
  */
-export interface AuthCompletedEvent {
-  type: 'auth_completed'
-  sessionId: string
-  requestId: string
-  success: boolean
-  cancelled?: boolean
-  error?: string
-}
+export type AuthCompletedEvent = Extract<ProtocolSessionEvent, { type: 'auth_completed' }>
 
 /**
  * Source activated event - a source was auto-activated mid-turn.
  * The server owns the auto-retry; renderers should treat this as UI feedback only.
  */
-export interface SourceActivatedEvent {
-  type: 'source_activated'
-  sessionId: string
-  sourceSlug: string
-  originalMessage: string
-}
+export type SourceActivatedEvent = Extract<ProtocolSessionEvent, { type: 'source_activated' }>
 
 /**
  * Usage update event - real-time context usage during processing
  * Allows UI to show growing context as agent processes, not just on complete
  */
-export interface AutonomyEventUpdate {
-  type: 'autonomy_event'
-  sessionId: string
-  event: AutonomyEvent
-}
+export type AutonomyEventUpdate = Extract<ProtocolSessionEvent, { type: 'autonomy_event' }>
 
-export interface UsageUpdateEvent {
-  type: 'usage_update'
-  sessionId: string
-  tokenUsage: {
-    inputTokens: number
-    contextWindow?: number
-  }
-}
+export type UsageUpdateEvent = Extract<ProtocolSessionEvent, { type: 'usage_update' }>
 
 /**
  * Union of all agent events

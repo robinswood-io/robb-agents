@@ -1,0 +1,142 @@
+{
+  "source": "apps/electron/src/renderer/hooks/useSessionSearch.ts",
+  "units": [
+    {
+      "names": [
+        "INITIAL_DISPLAY_LIMIT"
+      ],
+      "group": "matching",
+      "bodySha256": "7e64ea11078395ea7ca03650fd3b9d7ee6f9d1285922206039c0ec604bae8f3f"
+    },
+    {
+      "names": [
+        "BATCH_SIZE"
+      ],
+      "group": "matching",
+      "bodySha256": "c599b3140e7f2748fa880f23b4ffbc2aa4e30104f7178d263302ed7f2986109c"
+    },
+    {
+      "names": [
+        "MAX_SEARCH_RESULTS"
+      ],
+      "group": "matching",
+      "bodySha256": "452b1c45d08c3f85db164081f2a2291eb83fb47f2436079da1d00731607e01a6"
+    },
+    {
+      "names": [
+        "FilterMode"
+      ],
+      "group": "matching",
+      "bodySha256": "409f30ac48fc0050523131c6903ff48be8ad97746877c8ef75e0b446a685de88"
+    },
+    {
+      "names": [
+        "DateGroup"
+      ],
+      "group": "matching",
+      "bodySha256": "99d3964368a0ab4e821e3773002e0439d691480ff23b0a445d30ecd8c257246c"
+    },
+    {
+      "names": [
+        "ContentSearchResult"
+      ],
+      "group": "matching",
+      "bodySha256": "c946fdd0176614df49c986d9a720e97c5c4db214f53fb0ec4348e863a166796f"
+    },
+    {
+      "names": [
+        "CollapsedGroupMeta"
+      ],
+      "group": "matching",
+      "bodySha256": "b7212283ea637eea2c4bc4f055b757a16f89f858d8f6d1e94789ffd013398d6c"
+    },
+    {
+      "names": [
+        "UseSessionSearchOptions"
+      ],
+      "group": "matching",
+      "bodySha256": "174ac37468fdc3ee249fb7c8d30418e8835beafcb45eef1e643cecde9e371cea"
+    },
+    {
+      "names": [
+        "UseSessionSearchResult"
+      ],
+      "group": "matching",
+      "bodySha256": "be73a7d5aaddef87e8c98560f0cbcd480cda0768e765dc86d9816ba01eafcfff"
+    },
+    {
+      "names": [
+        "formatDateHeader"
+      ],
+      "group": "matching",
+      "bodySha256": "755d3cb1477ab099e77d66b18ec198c5f78c7c22fb28027b4ec228d5b4b66981"
+    },
+    {
+      "names": [
+        "groupSessionsByDate"
+      ],
+      "group": "matching",
+      "bodySha256": "d805275e18e69f9015151cf4ed09e2a02e7d355eaacd2d2cff2e4603e54f9ea9"
+    },
+    {
+      "names": [
+        "getCollapseGroupKey"
+      ],
+      "group": "matching",
+      "bodySha256": "e1c5b49f5195ae693ef6865c0f9486fd0ef734a797a3e0111c6576780ce9f825"
+    },
+    {
+      "names": [
+        "CollapsedPaginationResult"
+      ],
+      "group": "matching",
+      "bodySha256": "7e8f1ff5770697bf81b8fa91feecd620f455255436895b1b718c79731428abc2"
+    },
+    {
+      "names": [
+        "computeCollapsedPagination"
+      ],
+      "group": "matching",
+      "bodySha256": "ec91087ba3e2254206838dc5a5638dc22f2b5c4aa88b306c6bd6fcd366e01ed3"
+    },
+    {
+      "names": [
+        "FilterMatchOptions"
+      ],
+      "group": "matching",
+      "bodySha256": "91eb54a7ec5a4c5817e619a877c149e5231f7ce6eaa47674f6d3e0f370950707"
+    },
+    {
+      "names": [
+        "sessionMatchesCurrentFilter"
+      ],
+      "group": "matching",
+      "bodySha256": "ff452506f74da2d511ee787754be1e234c3caf19b1bc6ffd14dc4a2c1c13ea71"
+    },
+    {
+      "names": [
+        "useSessionSearch"
+      ],
+      "group": "search-hook",
+      "bodySha256": "da476873824ba9bd5404366be2833863e29f2e34582f4c4354c260889d20fca4"
+    }
+  ],
+  "modules": [
+    {
+      "name": "matching",
+      "lines": 302
+    },
+    {
+      "name": "search-hook",
+      "lines": 270
+    }
+  ],
+  "dependencies": {
+    "matching": [],
+    "search-hook": [
+      "matching"
+    ]
+  },
+  "unitCycles": [],
+  "moduleCycles": []
+}

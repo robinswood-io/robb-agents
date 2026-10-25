@@ -1,0 +1,235 @@
+{
+  "source": "apps/electron/src/renderer/atoms/sessions.ts",
+  "units": [
+    {
+      "names": [
+        "SessionMeta"
+      ],
+      "group": "metadata",
+      "bodySha256": "9c8c4f6eaf2eb28d4e26a8c3a43d6b1b5219d5cb417d03816f12941c20595080"
+    },
+    {
+      "names": [
+        "findLastFinalMessageId"
+      ],
+      "group": "metadata",
+      "bodySha256": "39e2d916a45d708b84921c1d19feb158f07b69d55d661e11e30e62fed9c099e8"
+    },
+    {
+      "names": [
+        "extractSessionMeta"
+      ],
+      "group": "metadata",
+      "bodySha256": "beecbe3706e65c3f9c14f64a848a2da2e62adf4a88b48c8bd9e0b854f4d9d823"
+    },
+    {
+      "names": [
+        "sessionAtomFamily"
+      ],
+      "group": "state",
+      "bodySha256": "83cc44f8f5661bfbc53aae3091366c69dced8d4cd8eca1af33e98d69e6258c20"
+    },
+    {
+      "names": [
+        "sessionMetaMapAtom"
+      ],
+      "group": "state",
+      "bodySha256": "5a53960a3673951a5066f59ce12ec3e242c3833d98f5058f3bbe74e827bd5d48"
+    },
+    {
+      "names": [
+        "sessionIdsAtom"
+      ],
+      "group": "state",
+      "bodySha256": "4877444a169bdb39c8a90c34b1dd03693d165833e9988019ddd83029b650468f"
+    },
+    {
+      "names": [
+        "loadedSessionsAtom"
+      ],
+      "group": "state",
+      "bodySha256": "57f25c20b5900c0a2553b44bfeedaadad324b48e5bf0974da9ae2700907c5aeb"
+    },
+    {
+      "names": [
+        "sessionLoadingPromises"
+      ],
+      "group": "state",
+      "bodySha256": "20b3bb2970e32bfdefffdd357cdc3adb1152a6bf977e30308a9431fde7a3bf7c"
+    },
+    {
+      "names": [
+        "activeSessionIdAtom"
+      ],
+      "group": "state",
+      "bodySha256": "faaf97161dcaeb9e41f43be0d0f7f857c3800cd3841f04a86ffdf1e860de7bd7"
+    },
+    {
+      "names": [
+        "BackgroundTaskStatus"
+      ],
+      "group": "state",
+      "bodySha256": "d9a840b6b746b86455fca2959dd2d215e3d4145b1599524308a882d2fc387e72"
+    },
+    {
+      "names": [
+        "BackgroundTask"
+      ],
+      "group": "state",
+      "bodySha256": "bbe7e45177642dc128cf9f7113ded744394f9ae8198a4ff9baf284719c16f9e0"
+    },
+    {
+      "names": [
+        "backgroundTasksAtomFamily"
+      ],
+      "group": "state",
+      "bodySha256": "da39d5a583722494b8dbe03e9ff4d3a6a34a51aedeb2e6b120a58b637198035c"
+    },
+    {
+      "names": [
+        "windowWorkspaceIdAtom"
+      ],
+      "group": "state",
+      "bodySha256": "ddf55e9236146bf818b1a2eb7a6c1955e45ba90451e193909786918383ddf0e7"
+    },
+    {
+      "names": [
+        "sendToWorkspaceAtom"
+      ],
+      "group": "state",
+      "bodySha256": "f6adcdd545e12efe33baf6d1c0589959d7b25be19c975ca382e0981113469668"
+    },
+    {
+      "names": [
+        "updateSessionAtom"
+      ],
+      "group": "updates",
+      "bodySha256": "36b2a733bbe9b1288492668c64d9fb9002711ae9a71039b0bdda200dd0410de1"
+    },
+    {
+      "names": [
+        "updateSessionMetaAtom"
+      ],
+      "group": "updates",
+      "bodySha256": "13f2791df8fd12b25df5e0c5338b0d9b59cbc4e4a000d685bd354c428cad4c32"
+    },
+    {
+      "names": [
+        "replaceLoadedSessionAtom"
+      ],
+      "group": "updates",
+      "bodySha256": "0aa8b2761bcc30bc89b88ddffea9813a34fc48c1d0f762a4a92687c0d719a586"
+    },
+    {
+      "names": [
+        "appendMessageAtom"
+      ],
+      "group": "updates",
+      "bodySha256": "bc8c543bf7a836ea61b46397d9af842d8c054be07aba58dac9ab3abc2314af3a"
+    },
+    {
+      "names": [
+        "updateStreamingContentAtom"
+      ],
+      "group": "updates",
+      "bodySha256": "cd1bd5135d07e4399f4dc4e8bb3fa4ccaa2b656cee65bad8f7c0630c4f37005a"
+    },
+    {
+      "names": [
+        "initializeSessionsAtom"
+      ],
+      "group": "updates",
+      "bodySha256": "b673ce9849bd378aa5000e3be4886a5888120b310deb4779eb3d26b40dd4cf62"
+    },
+    {
+      "names": [
+        "refreshSessionsMetadataAtom"
+      ],
+      "group": "updates",
+      "bodySha256": "d05b79be6016f626165d752dfeb560ebb3d815726e0b433d45cb44391fcbb67d"
+    },
+    {
+      "names": [
+        "addSessionAtom"
+      ],
+      "group": "updates",
+      "bodySha256": "cae71a99a38a94cb86d6b761b93ef83b2a93a10abf5b0f64c37d25f723920ada"
+    },
+    {
+      "names": [
+        "removeSessionAtom"
+      ],
+      "group": "updates",
+      "bodySha256": "e9d5fff0e929b93f658eeceec68f7b81a42f1d73e8a532f214202fcc3f946d29"
+    },
+    {
+      "names": [
+        "syncSessionsToAtomsAtom"
+      ],
+      "group": "updates",
+      "bodySha256": "9bd56151c9a477bcea583d0d2aeb39a9efa8d6e473a3c49a1877b60d3dbb3131"
+    },
+    {
+      "names": [
+        "mergeHydratedMessages"
+      ],
+      "group": "hydration",
+      "bodySha256": "68fc5d472ccf821b1c3bfaa967c21bc6b64d54dc4f27ac432ad47f5b92ad696f"
+    },
+    {
+      "names": [
+        "loadSessionMessages"
+      ],
+      "group": "hydration",
+      "bodySha256": "d5a4a38f6b49955a4bfc29dceb6652e8ce2f7a755b05938392430ee5fc1cc1e8"
+    },
+    {
+      "names": [
+        "ensureSessionMessagesLoadedAtom"
+      ],
+      "group": "hydration",
+      "bodySha256": "b1e9b3bd612a122436dd9679e041f6d051684d0e3fbc20cdb9c3789f9c5dfd14"
+    },
+    {
+      "names": [
+        "forceSessionMessagesReloadAtom"
+      ],
+      "group": "hydration",
+      "bodySha256": "d53da5d5be11dc4dd3812fe3a66862de92d37bcdec4375e3bddca7ec6227f924"
+    }
+  ],
+  "modules": [
+    {
+      "name": "metadata",
+      "lines": 144
+    },
+    {
+      "name": "state",
+      "lines": 116
+    },
+    {
+      "name": "updates",
+      "lines": 408
+    },
+    {
+      "name": "hydration",
+      "lines": 213
+    }
+  ],
+  "dependencies": {
+    "metadata": [],
+    "state": [
+      "metadata"
+    ],
+    "updates": [
+      "state",
+      "metadata"
+    ],
+    "hydration": [
+      "state",
+      "metadata"
+    ]
+  },
+  "unitCycles": [],
+  "moduleCycles": []
+}
