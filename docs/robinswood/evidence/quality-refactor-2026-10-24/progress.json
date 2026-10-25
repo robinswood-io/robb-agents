@@ -82,7 +82,8 @@
     "17 suites supplémentaires décomposées, 1 355 cas et 4 042 assertions identiques avant/après ; fichiers extraits ≤440 lignes, 8 any retirés ; 16 typages, lint racine sans avertissement et suite globale réussis (139,61 s)",
     "RPC fichiers/préférences/images : quatre domaines directs, 79 instructions et ordre conservés ; modules ≤400 lignes ; 46 cas et 132 assertions identiques, 16 typages, lint racine, build et suite complète réussis (138,99 s)",
     "10 suites de cycle de vie décomposées avec hooks conservés ; 282 cas et 1 543 assertions identiques, 6 any retirés, trois fixtures agents complètes ; 16 typages, lint racine sans avertissement et suite complète réussis (139,72 s)",
-    "RPC modèles/conversations/tâches : huit domaines directs, 95 instructions et ordre conservés ; modules ≤447 lignes ; 46 cas et 132 assertions identiques, 16 typages, lint racine, build et suite complète réussis (139,53 s)"
+    "RPC modèles/conversations/tâches : huit domaines directs, 95 instructions et ordre conservés ; modules ≤447 lignes ; 46 cas et 132 assertions identiques, 16 typages, lint racine, build et suite complète réussis (139,53 s)",
+    "Trois points d’entrée décomposés, 32 déclarations et démarrage conservés, modules ≤467 lignes ; 243 cas et 612 assertions identiques ; 16 typages, lint racine ciblé, build et suite complète réussis (138,42 s) ; lint global inventorié sans revendiquer sa conformité"
   ],
   "pending": [
     "Découpage des autres fichiers au-delà de 500 lignes",
@@ -90,11 +91,11 @@
     "Lint global sans erreur ni avertissement",
     "Parcours complets réels en staging local, compilation signée et intégration"
   ],
-  "updatedAt": "2026-10-25T10:20:21.323851+00:00",
+  "updatedAt": "2026-10-25T10:50:20.058784+00:00",
   "current": {
-    "lastEvidence": "rpc-runtime-domains-summary.json",
+    "lastEvidence": "entrypoints-summary.json",
     "sourceGate": {
-      "max-lines": 129,
+      "max-lines": 126,
       "no-explicit-any": 403
     },
     "globalStatus": "en cours ; validation globale, interface et missions finales restantes"
