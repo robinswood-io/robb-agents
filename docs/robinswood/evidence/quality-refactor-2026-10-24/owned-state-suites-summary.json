@@ -1,0 +1,209 @@
+{
+  "status": "testé localement ; chantier global en cours",
+  "scope": "Six suites avec fixtures modifiées par leurs hooks",
+  "changes": [
+    "Découpage par scénarios en conservant les variables réassignées par les hooks dans chaque fichier de tests.",
+    "Huit any remplacés par les signatures natives des opérations liées et la projection sessionId des reçus de rétention. Les deux corrections de types conservent le JavaScript émis.",
+    "Correction d’une course du nettoyage de restartAgentRuntime : vidange de la persistance avant suppression du dossier temporaire.",
+    "Suppression d’une liaison de fixture inutilisée ; son import dynamique et son await sont conservés."
+  ],
+  "sourceGate": {
+    "max-lines": 119,
+    "no-explicit-any": 395
+  },
+  "globalLint": {
+    "files": 3232,
+    "errors": 484,
+    "warnings": 137,
+    "fatal": 0,
+    "rules": {
+      "@typescript-eslint/no-explicit-any": 376,
+      "max-lines": 108,
+      "react-hooks/exhaustive-deps": 98,
+      "directive": 12,
+      "craft-agent/no-localstorage": 21,
+      "@typescript-eslint/no-unused-vars": 6
+    }
+  },
+  "checks": [
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "./packages/server-core/src/sessions/completed-chat-retention.test.ts",
+        "./packages/server-core/src/sessions/delegation-host.test.ts",
+        "./packages/server-core/src/sessions/refresh-connection-runtime.test.ts",
+        "./packages/shared/src/projects/__tests__/memory-v2.test.ts",
+        "./packages/shared/src/skills/__tests__/storage.test.ts",
+        "./packages/shared/src/specialized-profiles/registry-store.test.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 1.92,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/stateful-suites-before.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "./packages/server-core/src/sessions/completed-chat-retention-reuses-an-intent-whose-move-never-started-and-completes-it-on-the.test.ts",
+        "./packages/server-core/src/sessions/completed-chat-retention.test.ts",
+        "./packages/server-core/src/sessions/delegation-host.test.ts",
+        "./packages/server-core/src/sessions/refresh-connection-runtime-disposes-the-session-runtime-so-the-next-turn-recreates-it.test.ts",
+        "./packages/server-core/src/sessions/refresh-connection-runtime-pins-the-current-connection-when-a-user-selects-its-model-after-c.test.ts",
+        "./packages/server-core/src/sessions/refresh-connection-runtime.test.ts",
+        "./packages/shared/src/projects/__tests__/memory-v2-ranks-lexical-relevance-plus-recency-and-accepts-optional-vector.test.ts",
+        "./packages/shared/src/projects/__tests__/memory-v2.test.ts",
+        "./packages/shared/src/skills/__tests__/storage-should-delete-an-existing-skill.test.ts",
+        "./packages/shared/src/skills/__tests__/storage-should-list-all-valid-skill-slugs.test.ts",
+        "./packages/shared/src/skills/__tests__/storage-should-load-multiple-skills-from-workspace.test.ts",
+        "./packages/shared/src/skills/__tests__/storage-should-load-workspace-and-project-skills-alongside-any-existing-g.test.ts",
+        "./packages/shared/src/skills/__tests__/storage-should-return-true-for-existing-skill-with-skill-md.test.ts",
+        "./packages/shared/src/skills/__tests__/storage.test.ts",
+        "./packages/shared/src/specialized-profiles/registry-store.test.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 3.28,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/stateful-suites-after.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 16.07,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/stateful-suites-types.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "packages/server-core/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 14.44,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/stateful-suites-compat.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "native",
+        "--noEmit",
+        "-p",
+        "packages/server-core/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 1.55,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/stateful-suites-native-final.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "--config",
+        "eslint.config.mjs",
+        "packages/server-core/src/sessions/completed-chat-retention-reuses-an-intent-whose-move-never-started-and-completes-it-on-the.test.ts",
+        "packages/server-core/src/sessions/completed-chat-retention.test.ts",
+        "packages/server-core/src/sessions/delegation-host.test.ts",
+        "packages/server-core/src/sessions/refresh-connection-runtime-disposes-the-session-runtime-so-the-next-turn-recreates-it.test.ts",
+        "packages/server-core/src/sessions/refresh-connection-runtime-pins-the-current-connection-when-a-user-selects-its-model-after-c.test.ts",
+        "packages/server-core/src/sessions/refresh-connection-runtime.test.ts",
+        "packages/server-core/src/sessions/testing/completed-chat-retention-fixture.ts",
+        "packages/server-core/src/sessions/testing/delegation-host-fixture.ts",
+        "packages/server-core/src/sessions/testing/refresh-connection-runtime-fixture.ts",
+        "packages/shared/src/projects/__tests__/memory-v2-ranks-lexical-relevance-plus-recency-and-accepts-optional-vector.test.ts",
+        "packages/shared/src/projects/__tests__/memory-v2.test.ts",
+        "packages/shared/src/skills/__tests__/storage-should-delete-an-existing-skill.test.ts",
+        "packages/shared/src/skills/__tests__/storage-should-list-all-valid-skill-slugs.test.ts",
+        "packages/shared/src/skills/__tests__/storage-should-load-multiple-skills-from-workspace.test.ts",
+        "packages/shared/src/skills/__tests__/storage-should-load-workspace-and-project-skills-alongside-any-existing-g.test.ts",
+        "packages/shared/src/skills/__tests__/storage-should-return-true-for-existing-skill-with-skill-md.test.ts",
+        "packages/shared/src/skills/__tests__/storage.test.ts",
+        "packages/shared/src/skills/__tests__/testing/storage-fixture.ts",
+        "packages/shared/src/specialized-profiles/registry-store.test.ts",
+        "packages/shared/src/specialized-profiles/testing/registry-store-fixture.ts",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 0.91,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/stateful-suites-lint.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 140.29,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/stateful-suites-test.log"
+    }
+  ],
+  "targetedBeforeAfter": {
+    "before": {
+      "pass": 141,
+      "fail": 0,
+      "skip": 0,
+      "expectCalls": 470
+    },
+    "after": {
+      "pass": 141,
+      "fail": 0,
+      "skip": 0,
+      "expectCalls": 470
+    }
+  },
+  "fullTestSummary": {
+    "pass": 10741,
+    "fail": 0,
+    "skip": 12
+  },
+  "splitTestDeclarations": 130,
+  "proofFiles": [
+    "owned-state-suites-packages-server-core-src-sessions-completed-chat-retention-split-proof.json",
+    "owned-state-suites-packages-server-core-src-sessions-delegation-host-split-proof.json",
+    "owned-state-suites-packages-server-core-src-sessions-refresh-connection-runtime-split-proof.json",
+    "owned-state-suites-packages-shared-src-projects-__tests__-memory-v2-split-proof.json",
+    "owned-state-suites-packages-shared-src-skills-__tests__-storage-split-proof.json",
+    "owned-state-suites-packages-shared-src-specialized-profiles-registry-store-split-proof.json",
+    "retention-types-proof.json",
+    "retention-native-view-bridge-proof.json"
+  ],
+  "initialFailure": {
+    "exitCode": 1,
+    "type": "SessionPersistenceRootIdentityError",
+    "cause": "Suppression du dossier sm-restart avant fin d’une écriture différée dans le nettoyage du test.",
+    "resultAfterFix": "Suite officielle complète réussie, mêmes 10 741 tests réussis et 12 tests ignorés.",
+    "metadata": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 1,
+      "seconds": 69.91,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/stateful-suites-test.log"
+    },
+    "originalRawLogRetained": false
+  },
+  "limits": [
+    "Le contrôle global reste en échec sur 119 fichiers trop longs et 395 any explicites.",
+    "Missions réelles, contrôle UI et installation finale restent à effectuer."
+  ],
+  "installedApplication": "Aucune installation de ce lot effectuée.",
+  "updatedAt": "2026-10-25T16:51:23.066130+00:00"
+}

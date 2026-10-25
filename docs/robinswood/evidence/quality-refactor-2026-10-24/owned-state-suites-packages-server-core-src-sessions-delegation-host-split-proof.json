@@ -1,0 +1,16 @@
+{
+  "valid": true,
+  "source": "packages/server-core/src/sessions/delegation-host.test.ts",
+  "testDeclarationsPreserved": 15,
+  "sharedDeclarationsPreserved": 5,
+  "setupPreservedInEverySuite": true,
+  "documentedPersistenceDrainFix": false,
+  "ownedLocalDeclarationsPreservedPerFile": true,
+  "importsPreserved": true,
+  "maximumLines": 433,
+  "currentSourceHashes": {
+    "packages/server-core/src/sessions/delegation-host.test.ts": "42e6a213a80b3b180f78b3c769fd3f5bcd0286648d81780a5d4693257b309156",
+    "packages/server-core/src/sessions/testing/delegation-host-fixture.ts": "7e1630886316e18c3a4cc80b40f1c56bdea1e70ab5cf5aef21bcaa7d797f8d5e"
+  },
+  "issues": []
+}

@@ -1,0 +1,16 @@
+{
+  "valid": true,
+  "source": "packages/shared/src/projects/__tests__/memory-v2.test.ts",
+  "testDeclarationsPreserved": 18,
+  "sharedDeclarationsPreserved": 0,
+  "setupPreservedInEverySuite": true,
+  "documentedPersistenceDrainFix": false,
+  "ownedLocalDeclarationsPreservedPerFile": true,
+  "importsPreserved": true,
+  "maximumLines": 428,
+  "currentSourceHashes": {
+    "packages/shared/src/projects/__tests__/memory-v2.test.ts": "b40890850f0cb1989e5ea25919009989c7f4ab978e3bf42645f92494caa46fb3",
+    "packages/shared/src/projects/__tests__/memory-v2-ranks-lexical-relevance-plus-recency-and-accepts-optional-vector.test.ts": "336b7634e6fd3d00c8c84c328a03b8ab46e8162317886b8c992aa680cf89f84e"
+  },
+  "issues": []
+}

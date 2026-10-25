@@ -1,122 +1,25 @@
-import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
-import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
-import { mkdtempSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import {
-  cleanupModeState,
-  deriveTerminalReconciliationInvocationCapability,
-  TERMINAL_RECONCILIATION_CAPABILITY_FIELD,
-  type PermissionMode,
-} from '@craft-agent/shared/agent';
-import { pickSessionFields, type SessionDelegation } from '@craft-agent/shared/sessions';
-import { createSession as createStoredSession, loadSession, listSessions } from '@craft-agent/shared/sessions/storage';
-import { createManagedSession, SessionManager } from './SessionManager.ts';
-import { objectiveReviewBinding, transitionObjectiveContract } from './objective-contract.ts';
-import { HOST_DELEGATED_REVIEWER_PREFIX } from './delegated-review-outcome.ts';
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import { deriveTerminalReconciliationInvocationCapability, TERMINAL_RECONCILIATION_CAPABILITY_FIELD } from "@craft-agent/shared/agent";
+import { type SessionDelegation } from "@craft-agent/shared/sessions";
+import { createSession as createStoredSession, loadSession, listSessions } from "@craft-agent/shared/sessions/storage";
+import { createManagedSession, SessionManager } from "./SessionManager.ts";
+import { objectiveReviewBinding, transitionObjectiveContract } from "./objective-contract.ts";
+import { HOST_DELEGATED_REVIEWER_PREFIX } from "./delegated-review-outcome.ts";
+import { type Managed, cleanup, harness, makeInitialTerminalReviewReady } from "./testing/delegation-host-fixture.ts";
 
-type Managed = ReturnType<typeof createManagedSession>;
-type CreateOptions = NonNullable<Parameters<SessionManager['createSession']>[1]>;
-const cleanup: Array<() => void> = [];
+// These fixtures exercise the opt-in historical host contract.
+let previousLegacyContract: string | undefined;
+
 afterEach(() => { for (const dispose of cleanup.splice(0)) dispose(); });
-
-function harness(permissionMode: PermissionMode = 'allow-all') {
-  const rootPath = mkdtempSync(join(tmpdir(), 'robb-delegation-host-'));
-  const workspace = { id: 'workspace', name: 'Test', slug: 'test', rootPath, createdAt: 1 };
-  const parent = createManagedSession({ id: 'root', permissionMode, projectId: 'project-1',
-    llmConnection: 'test-connection', model: 'test-model', enabledSourceSlugs: ['documents'] }, workspace);
-  parent.isProcessing = true;
-  parent.activeObjective = transitionObjectiveContract({ messageId: 'root-request', text: 'Vérifie les documents fournis.', nowMs: 1 });
-  const manager = withSessionOperationsForTest(new SessionManager());
-  const internals = manager as unknown as {
-    sessions: Map<string, Managed>;
-    spawnDelegatedSession: (parent: Managed, input: unknown) => Promise<{ sessionId: string; status: string }>;
-    createSession: (workspaceId: string, options: CreateOptions, internal: { delegation: SessionDelegation }) => Promise<unknown>;
-    flushSession: (sessionId: string) => Promise<void>;
-    persistSession: (session: Managed) => void;
-    sendMessage: (sessionId: string, prompt: string, ...args: unknown[]) => Promise<void>;
-    sendEvent: () => void;
-    resolveObjectiveMutationAuthority: (managed: Managed, objective: Managed['activeObjective']) => {
-      terminalReconciliationPolicy?: {
-        invocationCapabilityKey?: string;
-        waitReviewerSessionIds: string[];
-      };
-    };
-    consumeTerminalInvocationCapability: (
-      managed: Managed,
-      toolName: string,
-      input: Record<string, unknown>,
-      presented?: string,
-    ) => boolean;
-  };
-  sessionRuntimeStateForTest(manager).sessions.set(parent.id, parent);
-  const creations: Array<{ options: CreateOptions; delegation: SessionDelegation }> = [];
-  const sent: Array<{ sessionId: string; prompt: string; permissionMode?: PermissionMode }> = [];
-  const persisted: Array<Pick<Managed, 'id' | 'permissionMode' | 'delegation'>> = [];
-  internals.persistSession = session => { persisted.push(JSON.parse(JSON.stringify(pickSessionFields(session)))); };
-  internals.flushSession = async () => {};
-  internals.sendEvent = () => {};
-  internals.sendMessage = async (sessionId, prompt, ...args) => {
-    sent.push({ sessionId, prompt, permissionMode: sessionRuntimeStateForTest(manager).sessions.get(sessionId)?.permissionMode });
-    const acknowledge = args[5] as ((messageId: string) => void) | undefined;
-    acknowledge?.(`${sessionId}-durable-dispatch`);
-  };
-  // Only external boundaries are replaced: exercise the real host admission, budget,
-  // request parsing, route inheritance, review binding, and dispatch method.
-  internals.createSession = async (_workspaceId, options, internal) => {
-    creations.push({ options, delegation: internal.delegation });
-    const child = createManagedSession({ id: `child-${creations.length}`, ...options,
-      delegation: internal.delegation } as never, workspace);
-    sessionRuntimeStateForTest(manager).sessions.set(child.id, child);
-    internals.persistSession(child);
-    return child;
-  };
-  cleanup.push(() => {
-    for (const id of sessionRuntimeStateForTest(manager).sessions.keys()) cleanupModeState(id);
-    rmSync(rootPath, { recursive: true, force: true });
-  });
-  const spawn = (input: Record<string, unknown> = { prompt: 'Inspecte la cible précise.' }) => {
-    const policy = parent.activeObjective
-      ? internals.resolveObjectiveMutationAuthority(parent, parent.activeObjective)
-        .terminalReconciliationPolicy
-      : undefined;
-    const capability = deriveTerminalReconciliationInvocationCapability(
-      policy?.invocationCapabilityKey,
-      'mcp__session__spawn_session',
-      input,
-    );
-    return internals.spawnDelegatedSession(parent, capability ? {
-      ...input,
-      [TERMINAL_RECONCILIATION_CAPABILITY_FIELD]: capability,
-    } : input);
-  };
-  return { parent, manager, internals, creations, sent, persisted, spawn };
-}
-
-function makeInitialTerminalReviewReady(parent: Managed): void {
-  const objective = parent.activeObjective!;
-  parent.activeObjective = {
-    ...objective,
-    risk: 'high-stakes',
-    requiresAcceptanceCriteria: true,
-    completionCriteria: [...objective.completionCriteria, 'independent-review-passed'],
-    acceptanceCriteria: [{
-      id: 'target-observed',
-      description: 'The exact target state is observed.',
-      toolName: 'mcp__documents__inspect',
-      input: { target: 'document-1' },
-      checks: [{ path: '$.ok', equals: true }],
-    }],
-    acceptanceRegisteredRevision: objective.acceptanceRevision ?? objective.userMessageId,
-    acceptanceRegisteredAt: 3,
-    terminalReconciliation: {
-      messageId: 'terminal-close',
-      timestamp: 2,
-      initialAcceptanceRegistrationRequired: true,
-    },
-  };
-}
+beforeEach(() => {
+  previousLegacyContract = process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT;
+  process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT = '1';
+});
+afterEach(() => {
+  if (previousLegacyContract === undefined) delete process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT;
+  else process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT = previousLegacyContract;
+});
 
 describe('real host delegated-session dispatch', () => {
   it('rejects invalid aliases and model-supplied lineage before any child exists', async () => {
@@ -526,15 +429,4 @@ describe('real host delegated-session dispatch', () => {
     ))).toMatchObject({ errorCanRetry: true });
     expect(h.sent).toHaveLength(0);
   });
-});
-
-// These fixtures exercise the opt-in historical host contract.
-let previousLegacyContract: string | undefined;
-beforeEach(() => {
-  previousLegacyContract = process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT;
-  process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT = '1';
-});
-afterEach(() => {
-  if (previousLegacyContract === undefined) delete process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT;
-  else process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT = previousLegacyContract;
 });

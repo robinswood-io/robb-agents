@@ -1,0 +1,18 @@
+{
+  "valid": true,
+  "source": "packages/server-core/src/sessions/refresh-connection-runtime.test.ts",
+  "testDeclarationsPreserved": 19,
+  "sharedDeclarationsPreserved": 3,
+  "setupPreservedInEverySuite": false,
+  "documentedPersistenceDrainFix": true,
+  "ownedLocalDeclarationsPreservedPerFile": true,
+  "importsPreserved": true,
+  "maximumLines": 431,
+  "currentSourceHashes": {
+    "packages/server-core/src/sessions/refresh-connection-runtime.test.ts": "26922ba42255b37c0a2ed6f27aa87477a4cc87b21e981bb7d34044ebc7884efa",
+    "packages/server-core/src/sessions/refresh-connection-runtime-pins-the-current-connection-when-a-user-selects-its-model-after-c.test.ts": "b12767cfe120f8e905d9b64e893979373a104ff15b52104b1076c5200089eb6e",
+    "packages/server-core/src/sessions/refresh-connection-runtime-disposes-the-session-runtime-so-the-next-turn-recreates-it.test.ts": "39bbd59f433d5dd2e06390431e7e25e22e9ca2a1fd7fbfc6418772de32def9db",
+    "packages/server-core/src/sessions/testing/refresh-connection-runtime-fixture.ts": "1c8c230d83e873e15bc97a7a4f2766c3bd560c7bb05839da668997c186528b3a"
+  },
+  "issues": []
+}
