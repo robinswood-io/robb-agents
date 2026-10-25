@@ -94,7 +94,8 @@
     "Orchestration des messages réduite à 483 lignes ; tous les modules d’opérations du gestionnaire sous 500 lignes et lint strict réussi. Suite officielle complète, deux compilateurs, build, graphe sans cycle et chaîne de preuves AST réussis.",
     "Six suites supplémentaires décomposées ; 141 tests et 470 assertions ciblés identiques, 10 741 tests officiels réussis et 12 ignorés ; 8 any retirés ; course de nettoyage corrigée.",
     "Tests transport décomposés et 19 any retirés : mêmes 42 tests et 65 assertions, lint strict des suites, deux compilateurs et 10 741 tests officiels réussis ; 12 ignorés.",
-    "Client et serveur WebSocket ramenés à 389 et 392 lignes ; 23 corps de méthodes et contrats conservés ; lint strict du transport, deux compilateurs, tests ciblés, build et suite complète réussis."
+    "Client et serveur WebSocket ramenés à 389 et 392 lignes ; 23 corps de méthodes et contrats conservés ; lint strict du transport, deux compilateurs, tests ciblés, build et suite complète réussis.",
+    "Backend Pi ramené à 494 lignes ; 67 corps natifs, 17 contrats, verrou de classe et générateur vérifiés ; 3 any retirés ; compilateurs, lint ciblé, 2465 tests agents, 242 tests Pi, build et suite complète réussis."
   ],
   "pending": [
     "Découpage des autres fichiers au-delà de 500 lignes",
@@ -102,21 +103,21 @@
     "Lint global sans erreur ni avertissement",
     "Parcours complets réels en staging local, compilation signée et intégration"
   ],
-  "updatedAt": "2026-10-25T17:31:38.448944+00:00",
+  "updatedAt": "2026-10-25T18:24:23.017008+00:00",
   "current": {
-    "lastEvidence": "transport-classes-summary.json",
+    "lastEvidence": "pi-class-summary.json",
     "sourceGate": {
-      "max-lines": 116,
-      "no-explicit-any": 376
+      "max-lines": 115,
+      "no-explicit-any": 373
     },
     "globalLint": {
-      "files": 3247,
-      "errors": 462,
+      "files": 3262,
+      "errors": 458,
       "warnings": 137,
       "fatal": 0,
       "rules": {
-        "@typescript-eslint/no-explicit-any": 357,
-        "max-lines": 105,
+        "@typescript-eslint/no-explicit-any": 354,
+        "max-lines": 104,
         "react-hooks/exhaustive-deps": 98,
         "directive": 12,
         "craft-agent/no-localstorage": 21,

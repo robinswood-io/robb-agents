@@ -1,0 +1,17 @@
+{
+  "status": "passed",
+  "nativeMethodBodies": 67,
+  "nativeClassReferenceMethods": 5,
+  "nativeGeneratorDelegates": 1,
+  "nativeBrowserPolicyAndArgumentOrder": true,
+  "nativeFieldsConstructorsAndSuperMethods": true,
+  "nativeSignaturesAndSingleDefaultEvaluation": true,
+  "protocolAliasesExpandedToNativeShapes": 17,
+  "relocatedNativeDynamicImports": 1,
+  "nativePublicExports": true,
+  "noAdditionalSharedState": true,
+  "contextFactoryRuntimeByteIdentical": true,
+  "removedExplicitAny": 3,
+  "runtimeImportCycles": 0,
+  "maximumFileLines": 494
+}

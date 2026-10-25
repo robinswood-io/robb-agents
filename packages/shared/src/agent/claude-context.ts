@@ -75,7 +75,7 @@ export interface ClaudeContextOptions {
   workspacePath: string;
   workspaceId: string;
   onPlanSubmitted: (planPath: string) => void;
-  onAuthRequest: (request: unknown) => void;
+  onAuthRequest: SessionToolCallbacks['onAuthRequest'];
 }
 
 /**
@@ -225,7 +225,7 @@ export function createClaudeContext(options: ClaudeContextOptions): SessionToolC
     validators,
     credentialManager,
     updatePreferences: (updates: Record<string, unknown>) => {
-      updatePreferencesImpl(updates as any);
+      updatePreferencesImpl(updates);
     },
     submitFeedback: (feedback: DeveloperFeedback) => {
       const feedbackDir = join(CONFIG_DIR, 'feedback');
