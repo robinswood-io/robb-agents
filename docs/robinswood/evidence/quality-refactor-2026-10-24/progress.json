@@ -44,7 +44,9 @@
     "Suite complète du dépôt et 16 configurations TypeScript réussies après les lots questions natives et navigateur ; corps JavaScript des 110 scénarios identiques lors de leur décomposition",
     "Tests BrowserCDP : 27 any supprimés ; 23 scénarios conservés dans trois fichiers de 294 lignes au plus ; tests CDP et reçus clavier/presse-papiers, typage Electron et lint réussis",
     "10 suites Pi typées : 87 any supprimés ; 187 tests ciblés, lint sans avertissement et 16 configurations TypeScript réussis",
-    "Suite globale du dépôt réussie après les lots CDP et fixtures Pi ; aucune donnée comptable réelle modifiée"
+    "Suite globale du dépôt réussie après les lots CDP et fixtures Pi ; aucune donnée comptable réelle modifiée",
+    "Gestionnaire de sessions : 146 déclarations de support extraites dans 14 modules de 377 lignes au plus ; corps de la classe inchangé et imports contrôlés",
+    "37 domaines contrôlés par empreintes et résolution des imports ; suite globale, 16 configurations TypeScript, lint des nouveaux modules, contrôle des noms d’outils et build Electron réussis"
   ],
   "pending": [
     "Découpage des autres fichiers au-delà de 500 lignes",
@@ -52,7 +54,7 @@
     "Lint global sans erreur ni avertissement",
     "Parcours complets réels en staging local, compilation signée et intégration"
   ],
-  "updatedAt": "2026-10-25T01:05:38.410477+00:00",
+  "updatedAt": "2026-10-25T01:18:43.229295+00:00",
   "current": {
     "over500": 217,
     "explicitAny": 775
