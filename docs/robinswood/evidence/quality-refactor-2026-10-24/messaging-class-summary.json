@@ -1,0 +1,433 @@
+{
+  "status": "testé localement ; chantier global en cours",
+  "scope": "Passerelle de messagerie : Lark, Telegram, commandes, événements, registre et rendu",
+  "changes": [
+    "Six classes réparties en modules par responsabilité ; mêmes champs, constructeurs, instances, API publiques et implémentations exécutables.",
+    "Trois any historiques retirés de la frontière de diffusion, alignée sur le contrat EventSink natif ; diffusion JavaScript identique.",
+    "Deux chemins de types internes adaptés au déplacement et contrôle de marque orienté vers le module d’appairage qui possède le texte.",
+    "Aucune dépendance ni couche d’orchestration ajoutée."
+  ],
+  "files": [
+    {
+      "file": "apps/electron/src/main/__tests__/robinswood-branding.test.ts",
+      "lines": 227,
+      "sha256": "d3e1312c3d789ec74012b6a0b9ce8460b95ce01048afcb6b96acc9586557da2f"
+    },
+    {
+      "file": "packages/messaging-gateway/src/adapters/lark/index.ts",
+      "lines": 119,
+      "sha256": "f4f3fe6d4e5744c5c910590e6aa04b072db7308c0671a75a485c80ebc0d45fcc"
+    },
+    {
+      "file": "packages/messaging-gateway/src/adapters/lark/lark-adapter/connection.ts",
+      "lines": 76,
+      "sha256": "ae42fa0b6575fa0ec91c882529d8c6211f86863de813d7e07974136526562a0b"
+    },
+    {
+      "file": "packages/messaging-gateway/src/adapters/lark/lark-adapter/incoming.ts",
+      "lines": 246,
+      "sha256": "421fb0c4617c319e909855d445418ab84daf14e59ee16f9870748f6e707b3601"
+    },
+    {
+      "file": "packages/messaging-gateway/src/adapters/lark/lark-adapter/messages.ts",
+      "lines": 254,
+      "sha256": "ce2fb4d794f5b4625499245b6562b96a6594ab837404ec1bd51235450912fb30"
+    },
+    {
+      "file": "packages/messaging-gateway/src/adapters/lark/lark-adapter/shared.ts",
+      "lines": 203,
+      "sha256": "eefbe3b0d902d11d53683ad440af1cbf52063567ec482f4adfd500f29349f3c5"
+    },
+    {
+      "file": "packages/messaging-gateway/src/adapters/telegram/index.ts",
+      "lines": 156,
+      "sha256": "dd89929265ea8ffdeb6724b2a9d8cf251e76e53e5b499d4b02f9d46c28205143"
+    },
+    {
+      "file": "packages/messaging-gateway/src/adapters/telegram/telegram-adapter/connection.ts",
+      "lines": 287,
+      "sha256": "52334ca853ea59856c7c19767bb0ee264e9ea33cf2a02efddba86801a5096a7f"
+    },
+    {
+      "file": "packages/messaging-gateway/src/adapters/telegram/telegram-adapter/incoming.ts",
+      "lines": 151,
+      "sha256": "0721795182a30964d89c21b61ac8c2ffb8ca0fd7e137a0505b91932e31829e8d"
+    },
+    {
+      "file": "packages/messaging-gateway/src/adapters/telegram/telegram-adapter/messages.ts",
+      "lines": 116,
+      "sha256": "5aa36d251e83c37bec191af58ca335e3844c81724ab7ab82888c8a13b568dbac"
+    },
+    {
+      "file": "packages/messaging-gateway/src/adapters/telegram/telegram-adapter/shared.ts",
+      "lines": 148,
+      "sha256": "67fc47532cfffed8ef81982e592df05ca4fb3cfc33a0a04de978683e900fd402"
+    },
+    {
+      "file": "packages/messaging-gateway/src/commands.ts",
+      "lines": 78,
+      "sha256": "49b438981d87d147f32a29758f144449eb81e3ac1021fdb72c3dd5a01095e536"
+    },
+    {
+      "file": "packages/messaging-gateway/src/commands/admission.ts",
+      "lines": 122,
+      "sha256": "b32d9899292db2a26805d36cbdaf83a4322cbb96fd44f5fe301998bb15587c42"
+    },
+    {
+      "file": "packages/messaging-gateway/src/commands/binding.ts",
+      "lines": 240,
+      "sha256": "d56ea534a8a153fb06cfb6f8cf350699bc52572d0393d7b3e8e6b772bbd3eb30"
+    },
+    {
+      "file": "packages/messaging-gateway/src/commands/control.ts",
+      "lines": 77,
+      "sha256": "a332bdfe4a209814542946fd21764eccfcbaf7e70826863664454a099dbc5229"
+    },
+    {
+      "file": "packages/messaging-gateway/src/commands/shared.ts",
+      "lines": 98,
+      "sha256": "2e7f7b27ef139a93642bf62c4403200bf0dad2867b1495559a39db11ef20809b"
+    },
+    {
+      "file": "packages/messaging-gateway/src/event-fanout.ts",
+      "lines": 36,
+      "sha256": "3f9c4da39386fec5da8a849d67f3013251a06903e16ca2a9e6a343f5d083cc9b"
+    },
+    {
+      "file": "packages/messaging-gateway/src/gateway.ts",
+      "lines": 168,
+      "sha256": "03367fc95814d589e8ffc536ea0e0f0620fde198d225c8b3f2bf4f4dd66a44d9"
+    },
+    {
+      "file": "packages/messaging-gateway/src/gateway/buttons.ts",
+      "lines": 204,
+      "sha256": "6e464ae24982c94320fa8f06587639b81a53271d854978f2c6905eafee10e0fe"
+    },
+    {
+      "file": "packages/messaging-gateway/src/gateway/connection.ts",
+      "lines": 93,
+      "sha256": "a5e5cfdb1be650754bfcb3e116d2b18f0b8ab1eb2167a4378a2a6c77b2617fec"
+    },
+    {
+      "file": "packages/messaging-gateway/src/gateway/events.ts",
+      "lines": 53,
+      "sha256": "e1639b89a9ba0121264f4a8236d04eaf41152eecb88d7e0a76ccb0dc86fac27c"
+    },
+    {
+      "file": "packages/messaging-gateway/src/gateway/permissions.ts",
+      "lines": 130,
+      "sha256": "2e7d72f2e820faf49b3f09bf0021559592f93432cc9aa3d62fe45621528b76a9"
+    },
+    {
+      "file": "packages/messaging-gateway/src/gateway/shared.ts",
+      "lines": 103,
+      "sha256": "93710fa615cba6c0903cc7e0531728b222f9bedd547d36dd8fe185ba2baf79c9"
+    },
+    {
+      "file": "packages/messaging-gateway/src/registry.ts",
+      "lines": 337,
+      "sha256": "b160b3a310b17eb49efc4380deebfe7bfe9b5c27653dd565f5c50fba53381e8b"
+    },
+    {
+      "file": "packages/messaging-gateway/src/registry/access.ts",
+      "lines": 207,
+      "sha256": "206f0bcecaebc249c0256fd6ce549ffdc766d9d42fe57625ff67959acfe5df6f"
+    },
+    {
+      "file": "packages/messaging-gateway/src/registry/configuration.ts",
+      "lines": 136,
+      "sha256": "17c1e3b1b47d03bbb9c7a4238c20aafc698a080b3038d3bb113300ea09b8e168"
+    },
+    {
+      "file": "packages/messaging-gateway/src/registry/connections.ts",
+      "lines": 307,
+      "sha256": "fa317425aa880962be7beeb8caa80bd1b859e1038ccf15792dd8b573afc56359"
+    },
+    {
+      "file": "packages/messaging-gateway/src/registry/credentials.ts",
+      "lines": 208,
+      "sha256": "07e8df67f7e743211a51c6f916f08236bd07bc5ace0ae9ff24383994d455543d"
+    },
+    {
+      "file": "packages/messaging-gateway/src/registry/events.ts",
+      "lines": 16,
+      "sha256": "e3185e423d81ef0b51fdf08bdc4f9c07ff937386adb49271ced53c7030f0ecae"
+    },
+    {
+      "file": "packages/messaging-gateway/src/registry/lifecycle.ts",
+      "lines": 176,
+      "sha256": "cc06d87520289012ad1d124b62df453dfed1abcf69fd00a1011bf6aba182e473"
+    },
+    {
+      "file": "packages/messaging-gateway/src/registry/pairing.ts",
+      "lines": 197,
+      "sha256": "c0551e3408e81d1433b30ce1938e24b3ef3daeec008657b64b382977e17b5bd0"
+    },
+    {
+      "file": "packages/messaging-gateway/src/registry/shared.ts",
+      "lines": 133,
+      "sha256": "3d9e3483613ca404ab48a671c0d4269af5c4f9d9b52d6f3a13a9c446944baaf6"
+    },
+    {
+      "file": "packages/messaging-gateway/src/renderer.ts",
+      "lines": 103,
+      "sha256": "3606abec3f7faea31bb27ac4434941e8cb5f2c63238dba7bf6fc9638357b5b51"
+    },
+    {
+      "file": "packages/messaging-gateway/src/renderer/progress.ts",
+      "lines": 120,
+      "sha256": "5e242dfc05693a709415affdb3a4a258dac3d00ceffe434b4e62ebeba70a1bfe"
+    },
+    {
+      "file": "packages/messaging-gateway/src/renderer/responses.ts",
+      "lines": 199,
+      "sha256": "b4de36adc5ee613fec0602ea05f5ddfca17f1fc030b60b7e6a94fbd7e5a5d0ab"
+    },
+    {
+      "file": "packages/messaging-gateway/src/renderer/shared.ts",
+      "lines": 187,
+      "sha256": "e883fba06c085a5935cd15de648fcd8c8a11fb2f3acf37b9b22f80899d9dc446"
+    },
+    {
+      "file": "packages/messaging-gateway/src/renderer/streaming.ts",
+      "lines": 210,
+      "sha256": "6d1c65b3ea424cc997a22cb384f82e2024b7f092f8e508b4f9ae34627be03d25"
+    }
+  ],
+  "checks": [
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 16.78,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/messaging-class-types.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "packages/messaging-gateway/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 9.21,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/messaging-class-compat.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "--config",
+        "eslint.config.mjs",
+        "packages/messaging-gateway/src",
+        "--format",
+        "json",
+        "--output-file",
+        "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/messaging-class-lint-report.json",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 0.98,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/messaging-class-lint.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "./packages/messaging-gateway"
+      ],
+      "exitCode": 0,
+      "seconds": 1.57,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/messaging-class-tests.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "./apps/electron/src/main/__tests__/robinswood-branding.test.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 0.04,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/messaging-class-branding-tests.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "--config",
+        "eslint.config.mjs",
+        "apps/electron/src/main/__tests__/robinswood-branding.test.ts",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 0.9,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/messaging-class-branding-lint.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 16.68,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/messaging-class-build.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 140.6,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/messaging-class-test.log"
+    }
+  ],
+  "proof": {
+    "status": "passed",
+    "classes": [
+      {
+        "source": "packages/messaging-gateway/src/adapters/lark/index.ts",
+        "nativeMethodBodies": 11,
+        "nativeClassReferenceMethods": 0,
+        "nativeGeneratorDelegates": 0,
+        "relocatedNativeDynamicImports": 0,
+        "nativeFieldsConstructorsAndMovedSignatures": true,
+        "retainedTypeOnlyChanges": [],
+        "movedTypeOnlyChanges": [],
+        "nativePublicExports": true,
+        "noAdditionalSharedState": true
+      },
+      {
+        "source": "packages/messaging-gateway/src/adapters/telegram/index.ts",
+        "nativeMethodBodies": 16,
+        "nativeClassReferenceMethods": 0,
+        "nativeGeneratorDelegates": 0,
+        "relocatedNativeDynamicImports": 0,
+        "nativeFieldsConstructorsAndMovedSignatures": true,
+        "retainedTypeOnlyChanges": [],
+        "movedTypeOnlyChanges": [],
+        "nativePublicExports": true,
+        "noAdditionalSharedState": true
+      },
+      {
+        "source": "packages/messaging-gateway/src/commands.ts",
+        "nativeMethodBodies": 13,
+        "nativeClassReferenceMethods": 0,
+        "nativeGeneratorDelegates": 0,
+        "relocatedNativeDynamicImports": 0,
+        "nativeFieldsConstructorsAndMovedSignatures": true,
+        "retainedTypeOnlyChanges": [],
+        "movedTypeOnlyChanges": [],
+        "nativePublicExports": true,
+        "noAdditionalSharedState": true
+      },
+      {
+        "source": "packages/messaging-gateway/src/gateway.ts",
+        "nativeMethodBodies": 13,
+        "nativeClassReferenceMethods": 0,
+        "nativeGeneratorDelegates": 0,
+        "relocatedNativeDynamicImports": 0,
+        "nativeFieldsConstructorsAndMovedSignatures": true,
+        "retainedTypeOnlyChanges": [],
+        "movedTypeOnlyChanges": [
+          "onSessionEvent: forwarded payload matches native EventSink unknown[]"
+        ],
+        "nativePublicExports": true,
+        "noAdditionalSharedState": true
+      },
+      {
+        "source": "packages/messaging-gateway/src/registry.ts",
+        "nativeMethodBodies": 45,
+        "nativeClassReferenceMethods": 0,
+        "nativeGeneratorDelegates": 0,
+        "relocatedNativeDynamicImports": 0,
+        "nativeFieldsConstructorsAndMovedSignatures": true,
+        "retainedTypeOnlyChanges": [],
+        "movedTypeOnlyChanges": [],
+        "nativePublicExports": true,
+        "noAdditionalSharedState": true
+      },
+      {
+        "source": "packages/messaging-gateway/src/renderer.ts",
+        "nativeMethodBodies": 17,
+        "nativeClassReferenceMethods": 0,
+        "nativeGeneratorDelegates": 0,
+        "relocatedNativeDynamicImports": 0,
+        "nativeFieldsConstructorsAndMovedSignatures": true,
+        "retainedTypeOnlyChanges": [],
+        "movedTypeOnlyChanges": [],
+        "nativePublicExports": true,
+        "noAdditionalSharedState": true
+      }
+    ],
+    "runtimeImportCycles": 0,
+    "fanOutRuntimeByteIdentical": true,
+    "maximumFileLines": 338
+  },
+  "fullTestSummary": {
+    "pass": 10741,
+    "fail": 0,
+    "skip": 12
+  },
+  "targeted": {
+    "messaging-class-tests": {
+      "pass": 230,
+      "fail": 0,
+      "skip": 0
+    },
+    "messaging-class-branding-tests": {
+      "pass": 16,
+      "fail": 0,
+      "skip": 0
+    }
+  },
+  "sourceGate": {
+    "max-lines": 108,
+    "no-explicit-any": 366
+  },
+  "globalLint": {
+    "files": 3299,
+    "errors": 444,
+    "warnings": 137,
+    "fatal": 0,
+    "rules": {
+      "@typescript-eslint/no-explicit-any": 347,
+      "max-lines": 97,
+      "react-hooks/exhaustive-deps": 98,
+      "directive": 12,
+      "craft-agent/no-localstorage": 21,
+      "@typescript-eslint/no-unused-vars": 6
+    }
+  },
+  "resolvedFailures": [
+    {
+      "cause": "Contrôle statique de marque cherchant le texte dans l’ancien fichier monolithique.",
+      "fix": "Même assertion conservée sur commands/binding.ts.",
+      "originalResult": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/messaging-class-before-branding-probe-fix-result.json",
+      "originalRawLog": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/messaging-class-before-branding-probe-fix.log"
+    }
+  ],
+  "limits": [
+    "108 fichiers trop longs et 366 any explicites subsistent dans le code maintenu.",
+    "Le lint global reste en échec ; missions avec la connexion habituelle et contrôle UI final encore à effectuer.",
+    "Aucune installation de ce lot effectuée."
+  ],
+  "updatedAt": "2026-10-25T18:55:33.741695+00:00"
+}

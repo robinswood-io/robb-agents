@@ -204,7 +204,7 @@ describe('Robinswood visible branding', () => {
 
   it('uses Robb Agents in visible runtime guidance outside the desktop shell', () => {
     expect(readRepoFile('packages/messaging-gateway/src/access-control.ts')).toContain('Robb Agents app')
-    expect(readRepoFile('packages/messaging-gateway/src/commands.ts')).toContain('Robb Agents app')
+    expect(readRepoFile('packages/messaging-gateway/src/commands/binding.ts')).toContain('Robb Agents app')
     expect(readRepoFile('packages/messaging-whatsapp-worker/src/worker.ts')).toContain("Browsers.macOS('Robb Agents')")
     expect(readRepoFile('packages/server-core/src/sessions/RemoteBrowserPaneManager.ts')).toContain('Robb Agents desktop app')
     expect(readRepoFile('packages/shared/src/sources/builtin-sources.ts')).toContain('Upstream Craft Agents OSS Docs')
