@@ -1,0 +1,214 @@
+{
+  "status": "testé dans le candidat local, non intégré",
+  "explicitAnyRemoved": 19,
+  "piTests": 28,
+  "webFetchTests": 9,
+  "pdf": "Faux DOMMatrix/Path2D retirés ; API et worker PDF.js officiels ; fermeture de la tâche dans finally, succès et erreur ; fichier synthétique téléchargé et sauvegardé à l’identique",
+  "regression": "Transformation de matrice rouge (2,3 au lieu de 8,14), puis verte ; bundle autonome hors node_modules : texte et octets vérifiés",
+  "scopeLimit": "Extraction de texte PDF. Le rendu graphique est hors périmètre ; les avertissements SDK concernant le canvas natif optionnel restent visibles dans le bundle autonome. Aucune dépendance ajoutée.",
+  "webFetchStructure": {
+    "declarationsPreservedDuringSplit": 27,
+    "modules": 6,
+    "maxLines": 167,
+    "cycles": 0
+  },
+  "testReliability": [
+    "Un événement macOS FSEvents manqué lors du premier passage ; test isolé puis suite sans cet échec réussis, aucune temporisation augmentée",
+    "Test de composition de contexte : horloge fixée pour éviter de comparer deux minutes différentes ; assertions complètes conservées"
+  ],
+  "checks": {
+    "pi-final-four-types-2": {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "native",
+        "--noEmit",
+        "-p",
+        "packages/shared/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 1.36,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/pi-final-four-types-2.log"
+    },
+    "pi-final-four-tests-2": {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "packages/shared/src/agent/__tests__/pi-agent-bridge-images.test.ts",
+        "packages/shared/src/agent/__tests__/pi-agent-vibe-steering.test.ts",
+        "packages/shared/src/agent/__tests__/pi-agent-context-preparation.test.ts",
+        "packages/shared/src/agent/__tests__/pi-agent-tool-execution-admission.test.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 0.42,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/pi-final-four-tests-2.log"
+    },
+    "pi-final-four-lint": {
+      "command": [
+        "rtk",
+        "bun",
+        "x",
+        "eslint",
+        "packages/shared/src/agent/__tests__/pi-agent-bridge-images.test.ts",
+        "packages/shared/src/agent/__tests__/pi-agent-vibe-steering.test.ts",
+        "packages/shared/src/agent/__tests__/pi-agent-context-preparation.test.ts",
+        "packages/shared/src/agent/__tests__/pi-agent-tool-execution-admission.test.ts",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 0.9,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/pi-final-four-lint.log"
+    },
+    "web-fetch-pdf-red": {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "packages/pi-agent-server/src/tools/web-fetch-pdf.test.ts"
+      ],
+      "exitCode": 1,
+      "seconds": 0.34,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/web-fetch-pdf-red.log"
+    },
+    "web-fetch-pdf-green-2": {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "packages/pi-agent-server/src/tools/web-fetch-pdf.test.ts",
+        "packages/pi-agent-server/src/tools/web-fetch.test.ts",
+        "packages/pi-agent-server/src/tools/__tests__/web-fetch.test.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 0.36,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/web-fetch-pdf-green-2.log"
+    },
+    "web-fetch-native-types-2": {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "native",
+        "--noEmit",
+        "-p",
+        "packages/pi-agent-server/tsconfig.typecheck.json"
+      ],
+      "exitCode": 0,
+      "seconds": 1.66,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/web-fetch-native-types-2.log"
+    },
+    "web-fetch-pdf-bundle-build-after-split": {
+      "command": [
+        "rtk",
+        "bun",
+        "build",
+        "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/web-fetch-bundle-entry.ts",
+        "--outfile",
+        "/private/tmp/robb-quality-pdf-bundle-20261025-after/web-fetch.js",
+        "--target",
+        "bun",
+        "--format",
+        "esm"
+      ],
+      "exitCode": 0,
+      "seconds": 0.11,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/web-fetch-pdf-bundle-build-after-split.log"
+    },
+    "web-fetch-pdf-bundle-run-after-split": {
+      "command": [
+        "rtk",
+        "bun",
+        "/private/tmp/robb-quality-pdf-bundle-20261025-after/web-fetch.js",
+        "/private/tmp/robb-quality-pdf-bundle-20261025-after/session"
+      ],
+      "exitCode": 0,
+      "seconds": 0.14,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/web-fetch-pdf-bundle-run-after-split.log"
+    },
+    "native-web-pi-types": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 22.17,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/native-web-pi-types.log"
+    },
+    "native-web-pi-lint": {
+      "command": [
+        "rtk",
+        "bun",
+        "x",
+        "eslint",
+        "packages/shared/src/agent/__tests__/pi-agent-bridge-images.test.ts",
+        "packages/shared/src/agent/__tests__/pi-agent-vibe-steering.test.ts",
+        "packages/shared/src/agent/__tests__/pi-agent-context-preparation.test.ts",
+        "packages/shared/src/agent/__tests__/pi-agent-tool-execution-admission.test.ts",
+        "packages/pi-agent-server/src/tools/web-fetch.ts",
+        "packages/pi-agent-server/src/tools/web-fetch",
+        "packages/pi-agent-server/src/tools/web-fetch-pdf.test.ts",
+        "packages/pi-agent-server/src/ambient.d.ts",
+        "packages/pi-agent-server/src/tools/__tests__/web-fetch.test.ts",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 1.79,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/native-web-pi-lint.log"
+    },
+    "native-web-pi-build": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 21.38,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/native-web-pi-build.log"
+    },
+    "native-web-pi-tests-3": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 140.04,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/native-web-pi-tests-3.log"
+    },
+    "native-web-watcher-targeted": {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "apps/electron/src/main/handlers/__tests__/session-watcher.test.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 1.99,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/native-web-watcher-targeted.log"
+    },
+    "prompt-context-fixed-clock": {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "packages/shared/src/agent/__tests__/prompt-builder-context-split.test.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 0.44,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/prompt-context-fixed-clock.log"
+    }
+  },
+  "remaining": {
+    "oversizedCodeFiles": 210,
+    "explicitAny": 729
+  },
+  "installedApplication": "Inchangée"
+}

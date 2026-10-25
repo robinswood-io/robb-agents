@@ -1,0 +1,242 @@
+{
+  "source": "packages/pi-agent-server/src/tools/web-fetch.ts",
+  "units": [
+    {
+      "names": [
+        "INITIAL_GLOBAL_FETCH"
+      ],
+      "group": "socket-fetch",
+      "bodySha256": "0b6f3cd771e768fb8f28b91f43b997decafa5a0d189bf02670e04dee08220206"
+    },
+    {
+      "names": [
+        "createPinnedDnsLookup"
+      ],
+      "group": "socket-fetch",
+      "bodySha256": "cc73e4fe54f8a5cc094d7ea076eb89e78e45ce88bc7155aa611747dbd7b52454"
+    },
+    {
+      "names": [
+        "fetchWithPinnedDns"
+      ],
+      "group": "socket-fetch",
+      "bodySha256": "b7f668882952e6b86c1f27d25267a1003e2401eb9f939e81b92390cd9eefd515"
+    },
+    {
+      "names": [
+        "schema"
+      ],
+      "group": "factory",
+      "bodySha256": "f31a92c24b47dfbc3de23aeab58bf84b7725369ad147784712d465044c37c136"
+    },
+    {
+      "names": [
+        "MAX_DOWNLOAD_SIZE"
+      ],
+      "group": "factory",
+      "bodySha256": "39ad15d18e9b4de125925e8b1b0bffee37a7325d2042519f7131c397d23fed32"
+    },
+    {
+      "names": [
+        "MAX_REDIRECTS"
+      ],
+      "group": "factory",
+      "bodySha256": "9a78cea3b9aa543a77e0808a474d074aca1cbeedeb926539614aab5849bdcc1c"
+    },
+    {
+      "names": [
+        "createWebFetchTool"
+      ],
+      "group": "factory",
+      "bodySha256": "e360d852fffc72ddbd394556320d831a1339ab18a6dcc288019160f4aa13761e"
+    },
+    {
+      "names": [
+        "NOISE_ELEMENTS"
+      ],
+      "group": "html",
+      "bodySha256": "c4c13620f5751903d01e98d233a90fdb49ddaf30cfdbf00273c4be8e8e478090"
+    },
+    {
+      "names": [
+        "turndown"
+      ],
+      "group": "html",
+      "bodySha256": "f89fb99f8115b4c86be354f5d603fe42fa4613788c230607dbb549defc1746b3"
+    },
+    {
+      "names": [
+        "handleHtml"
+      ],
+      "group": "html",
+      "bodySha256": "34270a67103d889edccdec947f3336af98ddf97f44f138e46bb0fa2bb319189c"
+    },
+    {
+      "names": [
+        "MIME_TO_EXT"
+      ],
+      "group": "responses",
+      "bodySha256": "ae54be1f59c61186797a2d10b956ffb897a9b7767fb6b32cb6ecfb7db3d3fe7c"
+    },
+    {
+      "names": [
+        "readResponseBytes"
+      ],
+      "group": "responses",
+      "bodySha256": "0d60ec5bc8387cc4c567f5043f1c1f069cb21a8b415ae672cf23563cbd337c63"
+    },
+    {
+      "names": [
+        "readResponseText"
+      ],
+      "group": "responses",
+      "bodySha256": "383e0d3cb71b3404e5be8d42a4188de2729306b1a76c1a3b21aec615b0ba1245"
+    },
+    {
+      "names": [
+        "result"
+      ],
+      "group": "responses",
+      "bodySha256": "e27b1e9043e980b2a427bfc1ca237a896ca20495b491497e4655e0451d9b2f63"
+    },
+    {
+      "names": [
+        "handleImage"
+      ],
+      "group": "responses",
+      "bodySha256": "8e3a24e36537f89582ec79144bac383fe8a2278d5b8259372df867f8beeb6f90"
+    },
+    {
+      "names": [
+        "handleJson"
+      ],
+      "group": "responses",
+      "bodySha256": "8e932a6fd136784d414a001b3c1a26ef46e72f922ab5f988e3ac2a85fd05a796"
+    },
+    {
+      "names": [
+        "handleText"
+      ],
+      "group": "responses",
+      "bodySha256": "efc872fd1d185460d686070f3b6067e27cd226561bd2bd143cc10924d1f0095a"
+    },
+    {
+      "names": [
+        "parseIpv4Uint32"
+      ],
+      "group": "network-safety",
+      "bodySha256": "e6c073373de02770587713a099d1c65467966aa3e0e4a15955c121118eee7059"
+    },
+    {
+      "names": [
+        "isReservedIpv4Uint32"
+      ],
+      "group": "network-safety",
+      "bodySha256": "ffd024f564b45feb6b37bc7f98a83cf1ba882937bd979c577f0d99b9516429cc"
+    },
+    {
+      "names": [
+        "PRIVATE_IPV6_PATTERNS"
+      ],
+      "group": "network-safety",
+      "bodySha256": "a76ef016a80767f8b37a6b00aa2e531dc61948e28fef71716a2487b527dcc6ad"
+    },
+    {
+      "names": [
+        "extractEmbeddedIpv4FromIpv6"
+      ],
+      "group": "network-safety",
+      "bodySha256": "143cceeaacf76328255106dfdd903ff9b8b314982a2f4006229cc3e9751e6399"
+    },
+    {
+      "names": [
+        "isPrivateIp"
+      ],
+      "group": "network-safety",
+      "bodySha256": "95a10db27bc4f9c8726ac6b14893e3662e5415643f998f5756902e5444ce4816"
+    },
+    {
+      "names": [
+        "DnsLookupFn"
+      ],
+      "group": "network-safety",
+      "bodySha256": "30287b0bf2b271809e67379f9089dba1f5b7cfa05f397cc24a2d75e937906c50"
+    },
+    {
+      "names": [
+        "ValidatedUrlTarget"
+      ],
+      "group": "network-safety",
+      "bodySha256": "7cd239d38933cad8dcee6db83a0219c5b2a45c2eafc9fd71bf35b6072bd22a9c"
+    },
+    {
+      "names": [
+        "validateUrl"
+      ],
+      "group": "network-safety",
+      "bodySha256": "3e1f679f0ebaf510584b6d973f14d9fafc7afe1fd6cbd8febe2f6883f396b3bd"
+    },
+    {
+      "names": [
+        "extractPdfText"
+      ],
+      "group": "pdf",
+      "bodySha256": "eaaa507f61fd55948fa278820d705a84960ef4f2f524de52233b4e901625b0a1"
+    },
+    {
+      "names": [
+        "handlePdf"
+      ],
+      "group": "pdf",
+      "bodySha256": "17675ac3f070404a2863e7c94b08e6174705ad162b1f11ddeebca6136b132644"
+    }
+  ],
+  "modules": [
+    {
+      "name": "socket-fetch",
+      "lines": 130
+    },
+    {
+      "name": "factory",
+      "lines": 167
+    },
+    {
+      "name": "html",
+      "lines": 37
+    },
+    {
+      "name": "responses",
+      "lines": 113
+    },
+    {
+      "name": "network-safety",
+      "lines": 163
+    },
+    {
+      "name": "pdf",
+      "lines": 57
+    }
+  ],
+  "dependencies": {
+    "socket-fetch": [
+      "network-safety"
+    ],
+    "factory": [
+      "network-safety",
+      "responses",
+      "socket-fetch",
+      "pdf",
+      "html"
+    ],
+    "html": [
+      "responses"
+    ],
+    "responses": [],
+    "network-safety": [],
+    "pdf": [
+      "responses"
+    ]
+  },
+  "unitCycles": [],
+  "moduleCycles": []
+}

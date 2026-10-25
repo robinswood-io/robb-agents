@@ -1,3 +1,5 @@
+import { ChildProcess } from 'node:child_process';
+import { McpClientPool } from '../../mcp/mcp-pool.ts';
 import { describe, expect, it } from 'bun:test';
 import { PiAgent } from '../pi-agent.ts';
 import { ToolAdmissionRecoveryError, type BackendConfig } from '../backend/types.ts';
@@ -29,30 +31,30 @@ function config(sessionId: string): BackendConfig {
 function harness(name: string) {
   const sessionId = `${name}-${Date.now()}`;
   const agent = new PiAgent(config(sessionId));
-  const internals = agent as any;
+  const internals = agent;
   const runtime = { runtimeId: `${name}-runtime`, sessionId };
   const sent: Array<Record<string, unknown>> = [];
   let poolCalls = 0;
-  internals.subprocessRuntimeContext = runtime;
-  internals.send = (message: Record<string, unknown>) => sent.push(message);
-  internals.prerequisiteManager = { checkPrerequisites: () => ({ allowed: true }) };
-  internals.config.mcpPool = {
+  internals["subprocessRuntimeContext"] = runtime;
+  internals["send"] = message => { sent.push(message); return true; };
+  internals["prerequisiteManager"].checkPrerequisites = () => ({ allowed: true });
+  internals["config"].mcpPool = Object.assign(new McpClientPool(), {
     isProxyTool: () => true,
     callTool: async () => {
       poolCalls += 1;
       return { content: '{"ok":true}', isError: false };
     },
-  };
-  internals.beginContextualGmailHostExecution = () => ({ applies: false, allowed: true });
-  const admit = (toolUseId: string, args: Record<string, unknown>) => internals.admitToolExecution({
+  });
+  internals["beginContextualGmailHostExecution"] = () => ({ applies: false, allowed: true });
+  const admit = (toolUseId: string, args: Record<string, unknown>) => internals["admitToolExecution"]({
     toolUseId,
     toolName: 'mcp__fixture__read_exact',
     toolInput: args,
     sessionId,
     runtimeId: runtime.runtimeId,
-    authorizationEpoch: internals.promptPreparationRevision,
+    authorizationEpoch: internals["promptPreparationRevision"],
   });
-  const execute = (toolUseId: string, args: Record<string, unknown>) => internals.handleToolExecuteRequest({
+  const execute = (toolUseId: string, args: Record<string, unknown>) => internals["handleToolExecuteRequest"]({
     requestId: `request-${toolUseId}`,
     toolName: 'mcp__fixture__read_exact',
     toolCallId: toolUseId,
@@ -67,19 +69,19 @@ describe('Pi exact PreToolUse execution admission', () => {
     const entered = deferred();
     const release = deferred();
     const observed: Array<Record<string, unknown>> = [];
-    h.internals.config.beforeToolExecution = async (request: Record<string, unknown>) => {
+    h.internals["config"].beforeToolExecution = async (request: Record<string, unknown>) => {
       observed.push(request);
       entered.resolve();
       await release.promise;
     };
 
-    h.internals.sendPreToolUseDecision({
+    h.internals["sendPreToolUseDecision"]({
       requestId: 'pretool-durable',
       toolName: 'mcp__fixture__read_exact',
       toolCallId: 'tool-durable',
       originalInput: { query: 'durable' },
       runtimeContext: h.runtime,
-      authorizationEpoch: h.internals.promptPreparationRevision,
+      authorizationEpoch: h.internals["promptPreparationRevision"],
     }, {
       type: 'pre_tool_use_response', requestId: 'pretool-durable', action: 'allow',
     });
@@ -103,16 +105,16 @@ describe('Pi exact PreToolUse execution admission', () => {
 
   it('blocks execution when the host durability barrier rejects', async () => {
     const h = harness('pi-failed-durable-admission');
-    h.internals.config.beforeToolExecution = async () => {
+    h.internals["config"].beforeToolExecution = async () => {
       throw new Error('Synthetic disk failure');
     };
-    h.internals.sendPreToolUseDecision({
+    h.internals["sendPreToolUseDecision"]({
       requestId: 'pretool-failed-durable',
       toolName: 'mcp__fixture__read_exact',
       toolCallId: 'tool-failed-durable',
       originalInput: { query: 'blocked' },
       runtimeContext: h.runtime,
-      authorizationEpoch: h.internals.promptPreparationRevision,
+      authorizationEpoch: h.internals["promptPreparationRevision"],
     }, {
       type: 'pre_tool_use_response', requestId: 'pretool-failed-durable', action: 'allow',
     });
@@ -129,18 +131,18 @@ describe('Pi exact PreToolUse execution admission', () => {
 
   it('shows only an allowlisted host recovery explanation', async () => {
     const h = harness('pi-safe-recovery-admission');
-    h.internals.config.beforeToolExecution = async () => {
+    h.internals["config"].beforeToolExecution = async () => {
       throw new ToolAdmissionRecoveryError(
         'Automatic recovery exactly-once fence: reuse the persisted receipt; do not retry or request permission.',
       );
     };
-    h.internals.sendPreToolUseDecision({
+    h.internals["sendPreToolUseDecision"]({
       requestId: 'pretool-safe-recovery',
       toolName: 'mcp__fixture__read_exact',
       toolCallId: 'tool-safe-recovery',
       originalInput: { query: 'blocked' },
       runtimeContext: h.runtime,
-      authorizationEpoch: h.internals.promptPreparationRevision,
+      authorizationEpoch: h.internals["promptPreparationRevision"],
     }, {
       type: 'pre_tool_use_response', requestId: 'pretool-safe-recovery', action: 'allow',
     });
@@ -173,11 +175,11 @@ describe('Pi exact PreToolUse execution admission', () => {
   it('hard-stops and revokes an admitted A before a queued B can race its proxy execution', async () => {
     const h = harness('pi-steer-admission');
     let killed = 0;
-    h.internals._isProcessing = true;
-    h.internals.subprocess = {};
-    h.internals.killSubprocess = () => {
+    h.internals["_isProcessing"] = true;
+    h.internals["subprocess"] = new ChildProcess();
+    h.internals["killSubprocess"] = () => {
       killed += 1;
-      h.internals.subprocess = null;
+      h.internals["subprocess"] = null;
     };
     expect(h.admit('tool-a', { query: 'A' })).toBe(true);
 

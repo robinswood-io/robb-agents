@@ -130,6 +130,7 @@ describe('Web Fetch SSRF & Redirect Protection', () => {
     let resolvedFamily = 0;
     lookupFn('example.com', {}, (err, addr, fam) => {
       expect(err).toBeNull();
+      if (typeof addr !== 'string') throw new Error('Expected one pinned address');
       resolvedAddr = addr;
       resolvedFamily = fam ?? 0;
     });
@@ -140,6 +141,7 @@ describe('Web Fetch SSRF & Redirect Protection', () => {
     let allAddrs: Array<{ address: string; family: number }> = [];
     lookupFn('example.com', { all: true }, (err, addrs) => {
       expect(err).toBeNull();
+      if (!Array.isArray(addrs)) throw new Error('Expected all pinned addresses');
       allAddrs = addrs;
     });
     expect(allAddrs).toEqual([

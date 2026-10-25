@@ -53,7 +53,10 @@
     "Gestionnaire : 96 champs internes séparés dans un module de 407 lignes ; types, initialisations et 106 méthodes publiques comparés structurellement sans changement de comportement",
     "Fixtures complètes et accès privés explicites ; 27 any supprimés ; 486 scénarios ciblés, suite officielle complète (148,07 s), 16 configurations TypeScript, build Electron et lint ciblé sans avertissement réussis",
     "Six découpages supplémentaires : reprise, permissions, contrats backend, événements outils, actions sensibles et OAuth ; 244 déclarations préservées, 32 modules de 413 lignes au plus, aucun cycle",
-    "Suite officielle complète (142,66 s), 16 configurations TypeScript, build Electron et lint ciblé sans avertissement réussis après ces six découpages"
+    "Suite officielle complète (142,66 s), 16 configurations TypeScript, build Electron et lint ciblé sans avertissement réussis après ces six découpages",
+    "Quatre suites Pi supplémentaires : 4 any supprimés ; contrats réels, transports avec ACK booléen, mocks MCP et prérequis complets ; 28 scénarios, typage et lint sans avertissement réussis",
+    "Web Fetch : 15 any supprimés ; faux objets PDF retirés, SDK public typé et tâches PDF libérées ; régression rouge/verte et bundle autonome hors node_modules vérifiés ; protections DNS conservées",
+    "Web Fetch séparé en six modules de 167 lignes au plus ; 27 déclarations préservées ; suite complète (140,04 s), 16 configurations TypeScript, build et lint ciblé réussis"
   ],
   "pending": [
     "Découpage des autres fichiers au-delà de 500 lignes",
@@ -61,9 +64,9 @@
     "Lint global sans erreur ni avertissement",
     "Parcours complets réels en staging local, compilation signée et intégration"
   ],
-  "updatedAt": "2026-10-25T02:29:12.070248+00:00",
+  "updatedAt": "2026-10-25T02:47:04.030102+00:00",
   "current": {
-    "oversizedCodeFiles": 211,
-    "explicitAny": 748
+    "oversizedCodeFiles": 210,
+    "explicitAny": 729
   }
 }
