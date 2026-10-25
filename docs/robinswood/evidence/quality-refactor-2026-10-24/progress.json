@@ -38,7 +38,8 @@
     "Adaptateur Pi décomposé en trois fichiers de 436, 251 et 150 lignes ; temporisations et commande de récupération inter-processus retirées",
     "Build Electron complet réussi via la commande canonique ; application installée inchangée",
     "8 découpages supplémentaires de contrats, projets, événements missions, routage, OAuth et revues déléguées ; 194 déclarations et interfaces publiques conservées, sans cycle",
-    "36 domaines extraits contrôlés par empreintes des corps et résolution des imports ; suite complète, 16 configurations TypeScript et lint des nouveaux modules réussis"
+    "36 domaines extraits contrôlés par empreintes des corps et résolution des imports ; suite complète, 16 configurations TypeScript et lint des nouveaux modules réussis",
+    "Tests de clôture par questions natives : 62 any supprimés ; 45 scénarios, typage server-core et lint sans avertissement réussis ; agent hors réseau utilisant le vrai contrat BaseAgent"
   ],
   "pending": [
     "Découpage des autres fichiers au-delà de 500 lignes",
@@ -46,9 +47,9 @@
     "Lint global sans erreur ni avertissement",
     "Parcours complets réels en staging local, compilation signée et intégration"
   ],
-  "updatedAt": "2026-10-25T00:33:25.512336+00:00",
+  "updatedAt": "2026-10-25T00:38:00.076699+00:00",
   "current": {
     "over500": 219,
-    "explicitAny": 1073
+    "explicitAny": 1011
   }
 }
