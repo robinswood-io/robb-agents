@@ -16,15 +16,16 @@
  * connection is established.
  */
 
-import { contextBridge, ipcRenderer, shell, webUtils } from 'electron'
+import { contextBridge, ipcRenderer, shell, webUtils, type IpcRendererEvent } from 'electron'
 import { WsRpcClient, type TransportConnectionState } from '../transport/client'
 import { RoutedClient } from '../transport/routed-client'
 import { buildClientApi } from '../transport/build-api'
+import { configureOAuthApi } from './oauth-api'
 import { CHANNEL_MAP } from '../transport/channel-map'
 import type { LocalRpcEndpoint } from '../transport/local-rpc-endpoint'
-import { createCallbackServer } from '@craft-agent/shared/auth/callback-server'
-import { CHATGPT_OAUTH_CONFIG } from '@craft-agent/shared/auth/chatgpt-oauth-config'
-import { GOOGLE_GEMINI_OAUTH_CONFIG } from '@craft-agent/shared/auth/google-gemini-oauth'
+
+
+
 import { openSafeExternalUrl } from './safe-external-url'
 import {
   CLIENT_OPEN_EXTERNAL,
@@ -38,7 +39,7 @@ import {
 import type { ConfirmDialogSpec, FileDialogSpec, BrowserCapabilityRequest } from '@craft-agent/server-core/transport'
 import type { RpcClient } from '@craft-agent/server-core/transport'
 import type { RemoteServerConfig } from '@craft-agent/core/types'
-import type { ElectronAPI } from '../shared/types'
+
 
 // ---------------------------------------------------------------------------
 // Client interface — common surface for both RoutedClient and WsRpcClient
@@ -194,7 +195,7 @@ client.handleCapability(CLIENT_BROWSER_INVOKE, async (req: BrowserCapabilityRequ
 
 const api = buildClientApi(client, CHANNEL_MAP, (ch) => client.isChannelAvailable(ch))
 
-;(api as any).getRuntimeEnvironment = (): 'electron' | 'web' => 'electron'
+;api.getRuntimeEnvironment = (): 'electron' | 'web' => 'electron'
 
 // ---------------------------------------------------------------------------
 // Transport connection state logging (for remote connections)
@@ -259,11 +260,11 @@ client.onConnectionStateChanged((state) => {
 // Transport state API (exposed to renderer)
 // ---------------------------------------------------------------------------
 
-;(api as any).getTransportConnectionState = async () => client.getConnectionState()
-;(api as any).onTransportConnectionStateChanged = (callback: (state: TransportConnectionState) => void) => {
+;api.getTransportConnectionState = async () => client.getConnectionState()
+;api.onTransportConnectionStateChanged = (callback: (state: TransportConnectionState) => void) => {
   return client.onConnectionStateChanged(callback)
 }
-;(api as any).reconnectTransport = async () => {
+;api.reconnectTransport = async () => {
   client.reconnectNow()
 }
 
@@ -271,333 +272,34 @@ client.onConnectionStateChanged((state) => {
 // Multi-step orchestration: callback server (local) → oauth:start (server) →
 // open browser → wait for callback → oauth:complete (server).
 // Runs client-side because the callback server must receive the redirect.
-;(api as any).performOAuth = async (args: {
-  sourceSlug: string
-  sessionId?: string
-  authRequestId?: string
-}): Promise<{ success: boolean; error?: string; email?: string }> => {
-  let callbackServer: Awaited<ReturnType<typeof createCallbackServer>> | null = null
-  let flowId: string | undefined
-  let state: string | undefined
-
-  try {
-    // 1. Start local callback server to receive OAuth redirect
-    callbackServer = await createCallbackServer({ appType: 'electron' })
-    const callbackUrl = `${callbackServer.url}/callback`
-
-    // 2. Ask server to prepare the flow (PKCE, auth URL, store in flow store)
-    const startResult = await client.invoke('oauth:start', {
-      sourceSlug: args.sourceSlug,
-      callbackUrl,
-      sessionId: args.sessionId,
-      authRequestId: args.authRequestId,
-    })
-    flowId = startResult.flowId
-    state = startResult.state
-
-    // 3. Open browser for user consent (local — must open on the user's machine, not remote server)
-    await openSafeExternalUrl(startResult.authUrl, (safeUrl) => shell.openExternal(safeUrl))
-
-    // 4. Wait for OAuth provider to redirect to our callback server
-    const callback = await callbackServer.promise
-
-    // 5. Check for errors from the provider
-    if (callback.query.error) {
-      const error = callback.query.error_description || callback.query.error
-      await client.invoke('oauth:cancel', { flowId, state })
-      return { success: false, error }
-    }
-
-    const code = callback.query.code
-    if (!code) {
-      await client.invoke('oauth:cancel', { flowId, state })
-      return { success: false, error: 'No authorization code received' }
-    }
-
-    // 6. Send code to server for token exchange + credential storage
-    const result = await client.invoke('oauth:complete', { flowId, code, state })
-    return { success: result.success, error: result.error, email: result.email }
-  } catch (err) {
-    // Clean up server-side flow on error
-    if (flowId && state) {
-      client.invoke('oauth:cancel', { flowId, state }).catch(() => {})
-    }
-    return {
-      success: false,
-      error: err instanceof Error ? err.message : 'OAuth flow failed',
-    }
-  } finally {
-    callbackServer?.close()
-  }
-}
-
-// ── startClaudeOAuth ─────────────────────────────────────────────────────
-// Override the channel-map stub: the server now returns authUrl without opening
-// the browser. We open it locally so it works in remote mode.
-// Claude OAuth is two-step: browser opens → user copies code → pastes in UI.
-;(api as any).startClaudeOAuth = async (): Promise<{
-  success: boolean
-  authUrl?: string
-  error?: string
-}> => {
-  try {
-    const result = await client.invoke('onboarding:startClaudeOAuth')
-    if (result.success && result.authUrl) {
-      await openSafeExternalUrl(result.authUrl, (safeUrl) => shell.openExternal(safeUrl))
-    }
-    return result
-  } catch (err) {
-    return {
-      success: false,
-      error: err instanceof Error ? err.message : 'Claude OAuth failed',
-    }
-  }
-}
-
-// ── startMistralVibeSetup ────────────────────────────────────────────────
-// Vibe's ACP server owns the credential and exposes a delegated browser flow.
-// The server starts/polls that flow; preload opens only the validated public URL
-// on the user's machine so remote Robb servers never try to open a browser.
-;(api as any).startMistralVibeSetup = async (): Promise<{
-  success: boolean
-  error?: string
-}> => {
-  let flowId: string | undefined
-  try {
-    const startResult = await client.invoke('onboarding:startMistralVibeSetup')
-    if (!startResult.success || !startResult.flowId || !startResult.authUrl) {
-      return { success: false, error: startResult.error || 'Mistral Vibe authentication could not start' }
-    }
-    flowId = startResult.flowId
-    await openSafeExternalUrl(startResult.authUrl, (safeUrl) => shell.openExternal(safeUrl))
-    const result = await client.invoke('onboarding:completeMistralVibeSetup', { flowId })
-    return { success: result.success, error: result.error }
-  } catch (err) {
-    if (flowId) {
-      client.invoke('onboarding:cancelMistralVibeSetup', { flowId }).catch(() => {})
-    }
-    return {
-      success: false,
-      error: err instanceof Error ? err.message : 'Mistral Vibe authentication failed',
-    }
-  }
-}
-
-// ── performChatGptOAuth ──────────────────────────────────────────────────
-// Same shape as performOAuth: callback server (port 1455) → chatgpt:startOAuth →
-// browser → callback → chatgpt:completeOAuth.
-// Track active OAuth callback servers so re-invocations cleanly close stale servers
-let activeChatGptCallbackServer: Awaited<ReturnType<typeof createCallbackServer>> | null = null
-let activeGeminiCallbackServer: Awaited<ReturnType<typeof createCallbackServer>> | null = null
-
-// Overrides the startChatGptOAuth API method so the renderer call is unchanged.
-;(api as any).startChatGptOAuth = async (
-  connectionSlug: string,
-): Promise<{ success: boolean; error?: string }> => {
-  if (activeChatGptCallbackServer) {
-    try {
-      activeChatGptCallbackServer.close()
-    } catch {
-      // Ignore cleanup error
-    }
-    activeChatGptCallbackServer = null
-  }
-
-  let callbackServer: Awaited<ReturnType<typeof createCallbackServer>> | null = null
-  let flowId: string | undefined
-  let state: string | undefined
-
-  try {
-    // 1. Start callback server on ChatGPT's fixed port with /auth/callback path
-    try {
-      callbackServer = await createCallbackServer({
-        appType: 'electron',
-        port: CHATGPT_OAUTH_CONFIG.CALLBACK_PORT,
-        callbackPaths: ['/auth/callback'],
-      })
-      activeChatGptCallbackServer = callbackServer
-    } catch (bindErr: any) {
-      const msg = bindErr instanceof Error ? bindErr.message : String(bindErr)
-      if (msg.includes('already in use') || bindErr?.code === 'EADDRINUSE') {
-        throw new Error(
-          `Port ${CHATGPT_OAUTH_CONFIG.CALLBACK_PORT} is in use by another application. Please ensure no other process is using port ${CHATGPT_OAUTH_CONFIG.CALLBACK_PORT} and try again.`
-        )
-      }
-      throw bindErr
-    }
-
-    // 2. Ask server to prepare the flow (PKCE, auth URL, store pending flow)
-    const startResult = await client.invoke('chatgpt:startOAuth', connectionSlug)
-    flowId = startResult.flowId
-    state = startResult.state
-
-    // 3. Open browser for user consent
-    await openSafeExternalUrl(startResult.authUrl, (safeUrl) => shell.openExternal(safeUrl))
-
-    // 4. Wait for OpenAI to redirect to our callback server (with 5-minute timeout)
-    let timeoutId: any
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      timeoutId = setTimeout(() => {
-        reject(new Error('ChatGPT authentication timed out. Please try again.'))
-      }, 300_000)
-    })
-
-    let callback: any
-    try {
-      callback = await Promise.race([callbackServer.promise, timeoutPromise])
-    } finally {
-      clearTimeout(timeoutId)
-    }
-
-    // 5. Check for errors from the provider
-    if (callback.query.error) {
-      const error = callback.query.error_description || callback.query.error
-      await client.invoke('chatgpt:cancelOAuth', { state })
-      return { success: false, error }
-    }
-
-    const code = callback.query.code
-    if (!code) {
-      await client.invoke('chatgpt:cancelOAuth', { state })
-      return { success: false, error: 'No authorization code received' }
-    }
-
-    // 6. Send code to server for token exchange + credential storage
-    const result = await client.invoke('chatgpt:completeOAuth', { flowId, code, state })
-    return { success: result.success, error: result.error }
-  } catch (err) {
-    if (state) {
-      client.invoke('chatgpt:cancelOAuth', { state }).catch(() => {})
-    }
-    return {
-      success: false,
-      error: err instanceof Error ? err.message : 'ChatGPT OAuth flow failed',
-    }
-  } finally {
-    callbackServer?.close()
-    if (activeChatGptCallbackServer === callbackServer) {
-      activeChatGptCallbackServer = null
-    }
-  }
-}
-
-// ── performGeminiOAuth ───────────────────────────────────────────────────
-// Google account / Gemini Code Assist OAuth. Uses a loopback callback, then
-// stores tokens in the LLM connection credential store on the server.
-;(api as any).startGeminiOAuth = async (
-  connectionSlug: string,
-): Promise<{ success: boolean; error?: string }> => {
-  if (activeGeminiCallbackServer) {
-    try {
-      activeGeminiCallbackServer.close()
-    } catch {
-      // Ignore cleanup error
-    }
-    activeGeminiCallbackServer = null
-  }
-
-  let callbackServer: Awaited<ReturnType<typeof createCallbackServer>> | null = null
-  let flowId: string | undefined
-  let state: string | undefined
-
-  try {
-    try {
-      callbackServer = await createCallbackServer({
-        appType: 'electron',
-        port: GOOGLE_GEMINI_OAUTH_CONFIG.CALLBACK_PORT,
-        callbackPaths: [GOOGLE_GEMINI_OAUTH_CONFIG.CALLBACK_PATH],
-        host: '127.0.0.1',
-      })
-      activeGeminiCallbackServer = callbackServer
-    } catch (bindErr: any) {
-      const msg = bindErr instanceof Error ? bindErr.message : String(bindErr)
-      if (msg.includes('already in use') || bindErr?.code === 'EADDRINUSE') {
-        throw new Error(
-          `Port ${GOOGLE_GEMINI_OAUTH_CONFIG.CALLBACK_PORT} is in use by another application. Please ensure no other process is using port ${GOOGLE_GEMINI_OAUTH_CONFIG.CALLBACK_PORT} and try again.`
-        )
-      }
-      throw bindErr
-    }
-
-    const redirectUri = `${callbackServer.url}${GOOGLE_GEMINI_OAUTH_CONFIG.CALLBACK_PATH}`
-
-    const startResult = await client.invoke('gemini:startOAuth', { connectionSlug, redirectUri })
-    flowId = startResult.flowId
-    state = startResult.state
-
-    await openSafeExternalUrl(startResult.authUrl, (safeUrl) => shell.openExternal(safeUrl))
-
-    let timeoutId: any
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      timeoutId = setTimeout(() => {
-        reject(new Error('Google Gemini authentication timed out. Please try again.'))
-      }, 300_000)
-    })
-
-    let callback: any
-    try {
-      callback = await Promise.race([callbackServer.promise, timeoutPromise])
-    } finally {
-      clearTimeout(timeoutId)
-    }
-
-    if (callback.query.error) {
-      const error = callback.query.error_description || callback.query.error
-      await client.invoke('gemini:cancelOAuth', { state })
-      return { success: false, error }
-    }
-
-    const code = callback.query.code
-    if (!code) {
-      await client.invoke('gemini:cancelOAuth', { state })
-      return { success: false, error: 'No authorization code received' }
-    }
-
-    const result = await client.invoke('gemini:completeOAuth', { flowId, code, state })
-    return { success: result.success, error: result.error }
-  } catch (err) {
-    if (state) {
-      client.invoke('gemini:cancelOAuth', { state }).catch(() => {})
-    }
-    return {
-      success: false,
-      error: err instanceof Error ? err.message : 'Google Gemini OAuth flow failed',
-    }
-  } finally {
-    callbackServer?.close()
-    if (activeGeminiCallbackServer === callbackServer) {
-      activeGeminiCallbackServer = null
-    }
-  }
-}
-
-// App lifecycle — direct IPC (not WS RPC) since it restarts the server itself
-;(api as ElectronAPI).relaunchApp = () => ipcRenderer.invoke('app:relaunch')
-;(api as ElectronAPI).removeWorkspace = (workspaceId: string) => ipcRenderer.invoke('workspace:remove', workspaceId)
-;(api as ElectronAPI).invokeOnServer = (url: string, token: string, channel: string, ...args: any[]) =>
+;
+configureOAuthApi(api, client)
+api.relaunchApp = () => ipcRenderer.invoke('app:relaunch')
+;api.removeWorkspace = (workspaceId: string) => ipcRenderer.invoke('workspace:remove', workspaceId)
+;api.invokeOnServer = (url: string, token: string, channel: string, ...args: unknown[]) =>
   ipcRenderer.invoke('server:invokeOnServer', url, token, channel, ...args)
-;(api as ElectronAPI).transferSessionToWorkspace = (sessionId: string, targetWorkspaceId: string, sessionIndex?: number, sessionCount?: number) =>
+;api.transferSessionToWorkspace = (sessionId: string, targetWorkspaceId: string, sessionIndex?: number, sessionCount?: number) =>
   ipcRenderer.invoke('session:transferToRemoteWorkspace', sessionId, targetWorkspaceId, sessionIndex, sessionCount)
-;(api as ElectronAPI).onTransferProgress = (cb: (progress: { sessionIndex: number; sessionCount: number; chunkSent: number; chunkTotal: number }) => void) => {
-  const handler = (_e: any, progress: { sessionIndex: number; sessionCount: number; chunkSent: number; chunkTotal: number }) => cb(progress)
+;api.onTransferProgress = (cb: (progress: { sessionIndex: number; sessionCount: number; chunkSent: number; chunkTotal: number }) => void) => {
+  const handler = (_e: IpcRendererEvent, progress: { sessionIndex: number; sessionCount: number; chunkSent: number; chunkTotal: number }) => cb(progress)
   ipcRenderer.on('transfer:progress', handler)
   return () => { ipcRenderer.removeListener('transfer:progress', handler) }
 }
 
 // System warnings — expose env-based flags set during main process startup
 // (preload-only: reads env var directly, no IPC round-trip needed)
-;(api as ElectronAPI).getSystemWarnings = async () => ({
+;api.getSystemWarnings = async () => ({
   vcredistMissing: process.env.CRAFT_VCREDIST_MISSING === '1',
   downloadUrl: process.env.CRAFT_VCREDIST_URL,
 })
 
 // i18n: sync language changes to main process (for native menus/dialogs)
-;(api as ElectronAPI).changeLanguage = (lang: string) => ipcRenderer.invoke('i18n:changeLanguage', lang)
+;api.changeLanguage = (lang: string) => ipcRenderer.invoke('i18n:changeLanguage', lang)
 
 // webUtils.getPathForFile: returns the absolute OS path of a File object obtained
 // from <input type="file"> or OS drag-drop. Returns null for Files fabricated from
 // Blobs (clipboard paste, web-drag) — those are content-only, no filesystem path.
-;(api as ElectronAPI).getFilePath = (file: File) => {
+;api.getFilePath = (file: File) => {
   try {
     return webUtils.getPathForFile(file) || null
   } catch {

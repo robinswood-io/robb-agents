@@ -85,12 +85,12 @@
     "Lint global sans erreur ni avertissement",
     "Parcours complets réels en staging local, compilation signée et intégration"
   ],
-  "updatedAt": "2026-10-25T07:49:11.633561+00:00",
+  "updatedAt": "2026-10-25T08:53:23.552106+00:00",
   "current": {
-    "lastEvidence": "webhook-history-summary.json",
+    "lastEvidence": "preload-oauth-summary.json",
     "sourceGate": {
-      "max-lines": 163,
-      "no-explicit-any": 506
+      "max-lines": 162,
+      "no-explicit-any": 489
     },
     "globalStatus": "en cours ; validation globale, interface et missions finales restantes"
   }

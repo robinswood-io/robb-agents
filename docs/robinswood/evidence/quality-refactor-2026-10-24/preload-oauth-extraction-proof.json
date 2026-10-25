@@ -1,0 +1,20 @@
+{
+  "valid": true,
+  "source": "apps/electron/src/preload/bootstrap.ts",
+  "helper": "apps/electron/src/preload/oauth-api.ts",
+  "apiMethods": [
+    "performOAuth",
+    "startClaudeOAuth",
+    "startMistralVibeSetup",
+    "startChatGptOAuth",
+    "startGeminiOAuth"
+  ],
+  "oauthStatementsPreserved": 7,
+  "otherStatementsAndOrderPreserved": 27,
+  "callbackState": "The same two lexical callback server variables retain their initialization order and references inside one configuration call per preload.",
+  "beforeHash": "f8bfc308149a6b05c041e5e8a10f0ff4383839427b36b0665f97001b13e01bf2",
+  "afterHash": "7ff3ba291243ae9cb663ae78369a1c28b771cb1a2e172b93865f19b48fe25c19",
+  "helperHash": "452a6b5894cfaf9eaeb84d15c1ea6398e956ce582acc24e857b3e6da6eeb2fc7",
+  "entryLines": 311,
+  "helperLines": 287
+}
