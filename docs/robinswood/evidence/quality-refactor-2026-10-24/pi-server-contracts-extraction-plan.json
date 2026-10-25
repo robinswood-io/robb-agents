@@ -1,0 +1,648 @@
+{
+  "source": "packages/pi-agent-server/src/index.ts",
+  "units": [
+    {
+      "names": [
+        "RuntimeToolDefinition"
+      ],
+      "group": "contracts",
+      "bodySha256": "0ff658e084c2ea6f05a48950cc0fd5400e42671e3ac9d29cdecf088a9ddfb8ab"
+    },
+    {
+      "names": [
+        "CustomEndpointApi"
+      ],
+      "group": "contracts",
+      "bodySha256": "16d202e9b1accaffb276c8cf44610a3c4aabb5e10f106aec6c6502fd8d4e84bf"
+    },
+    {
+      "names": [
+        "InitMessage"
+      ],
+      "group": "contracts",
+      "bodySha256": "00d2a6b5cc87e8a3516adcb3dad4da874be894aa3dc29502be6822211190805a"
+    },
+    {
+      "names": [
+        "RuntimeConfigUpdateMessage"
+      ],
+      "group": "contracts",
+      "bodySha256": "735cd8f6bff1feb2450ae34bb04f28cdfb202b354496f40c99b71678f3fa0762"
+    },
+    {
+      "names": [
+        "InboundMessage"
+      ],
+      "group": "contracts",
+      "bodySha256": "8cf4c8f354d0c1a9cf8a8c3df5bf531c605bc6d1b53e1aef2d859746e790f9e6"
+    },
+    {
+      "names": [
+        "ProxyToolDef"
+      ],
+      "group": "contracts",
+      "bodySha256": "0d6ec50c68aecb307f9012c85e22bd65d35f556d0bf1e3c2c4160f832a7a31b7"
+    },
+    {
+      "names": [
+        "ToolExecutionMetadata"
+      ],
+      "group": "contracts",
+      "bodySha256": "0f640fb58937465f00641312220da6a34fdc4bf2cbef2d1477304419bd18dcc3"
+    },
+    {
+      "names": [
+        "EnrichedToolExecutionStartEvent"
+      ],
+      "group": "contracts",
+      "bodySha256": "327706f52d0e3f1ebe487f469d65d8c53bb336aaaf612cee58388b782b920442"
+    },
+    {
+      "names": [
+        "OutboundAgentEvent"
+      ],
+      "group": "contracts",
+      "bodySha256": "cec4cca2a4bf056b6f4c95e713d11655d1b9f076d493fc9012cb769367dada93"
+    },
+    {
+      "names": [
+        "OutboundReady"
+      ],
+      "group": "contracts",
+      "bodySha256": "45f38de493918f7408926fd18fa4e4b39f82c4f685424adc7e7a4748b836cc0f"
+    },
+    {
+      "names": [
+        "OutboundEvent"
+      ],
+      "group": "contracts",
+      "bodySha256": "c023afd3ae1df3895f4b940eb6abe8f1aab7110815e970c1cd646e16d6bdba48"
+    },
+    {
+      "names": [
+        "OutboundPreToolUseReq"
+      ],
+      "group": "contracts",
+      "bodySha256": "d8af84130936179babce6e7bb58f5cdd9787213a1d2786161d2271eaaefc1ad8"
+    },
+    {
+      "names": [
+        "OutboundToolExecReq"
+      ],
+      "group": "contracts",
+      "bodySha256": "5b092b9589ba00f81c19ad822ea7ba1ab85d59b4bb15d98ede955029cca52f35"
+    },
+    {
+      "names": [
+        "OutboundSessionToolCompleted"
+      ],
+      "group": "contracts",
+      "bodySha256": "e0c4f2965376fd171ec387f78aa92f965e4b98235c601d58a2b9486c8eda2859"
+    },
+    {
+      "names": [
+        "OutboundMiniResult"
+      ],
+      "group": "contracts",
+      "bodySha256": "4c8d994594885e7c7d5ff57495fd8c5a07905349a896c3a57c868c7e6ffee5b8"
+    },
+    {
+      "names": [
+        "OutboundLlmQueryResult"
+      ],
+      "group": "contracts",
+      "bodySha256": "3ae01a213fd7d7b7bf8df800f0c4bd4557060bb7ae6eac37dadb7a631164cf86"
+    },
+    {
+      "names": [
+        "OutboundEnsureSessionReadyResult"
+      ],
+      "group": "contracts",
+      "bodySha256": "58b5057db94249f6e23cc35bb5721eb5f08b5e6b4d0cd6f37b27fe02da2c0426"
+    },
+    {
+      "names": [
+        "OutboundCompactResult"
+      ],
+      "group": "contracts",
+      "bodySha256": "527224378a748b4aecc70c8a480592bdf9ce852c7f2cfbaa6cb45cde8283a6ce"
+    },
+    {
+      "names": [
+        "OutboundSetAutoCompactionResult"
+      ],
+      "group": "contracts",
+      "bodySha256": "01f7ed3b3a2d45d17da450aee3a94b7babfc833c59498f4d4710ee1e95658ef2"
+    },
+    {
+      "names": [
+        "OutboundRuntimeConfigUpdateResult"
+      ],
+      "group": "contracts",
+      "bodySha256": "a76c887820ac6bbc2c2d6d47a4a9728d7e72b37f1bdbf61c32da7b19ef4ead16"
+    },
+    {
+      "names": [
+        "OutboundSessionIdUpdate"
+      ],
+      "group": "contracts",
+      "bodySha256": "6222ec8f5a9ff9e36595bf5c063e35399bf90f8201d5b339ac863c603e13d831"
+    },
+    {
+      "names": [
+        "OutboundProviderHandoff"
+      ],
+      "group": "contracts",
+      "bodySha256": "e0a4f4d233683fb6b3d0b03c8c3e6838bcccd7834c247b832f6f0616ff4b325a"
+    },
+    {
+      "names": [
+        "OutboundError"
+      ],
+      "group": "contracts",
+      "bodySha256": "d4236302b4d1d2c53ad110d0ff98c38bc778f605af8e234cebe4b08fc5d4af56"
+    },
+    {
+      "names": [
+        "OutboundMessage"
+      ],
+      "group": "contracts",
+      "bodySha256": "340c2f802cb2ff816bc5a8e76f55fc54dc6aa5c658984898ea13a25a62727516"
+    },
+    {
+      "names": [
+        "piSession"
+      ],
+      "group": "entry",
+      "bodySha256": "2b98a8aad9dd18549d5b64c27494aebda2aa27d7ed3048a210483d2b40d88767"
+    },
+    {
+      "names": [
+        "systemPromptController"
+      ],
+      "group": "entry",
+      "bodySha256": "fac5444a39cb17a0e92bc2ea6ce637a815320f8dec79a38738655beaa6466ccc"
+    },
+    {
+      "names": [
+        "piModelRegistry"
+      ],
+      "group": "entry",
+      "bodySha256": "f32a6e1b36eeca8e09b6d58ff6bca4029dad2544553250cea929dcd38b7ecc33"
+    },
+    {
+      "names": [
+        "moduleAuthStorage"
+      ],
+      "group": "entry",
+      "bodySha256": "7181e0abc951666077304841c39afcf0778571967cca52902dd21e819bfda954"
+    },
+    {
+      "names": [
+        "unsubscribeEvents"
+      ],
+      "group": "entry",
+      "bodySha256": "7969f0c058001eef524a4efda28d7214da9c521c5211c5c0250efecabc0a1d31"
+    },
+    {
+      "names": [
+        "initConfig"
+      ],
+      "group": "entry",
+      "bodySha256": "fa89ec0658f53bb8ec2c9685b9ed6978783428391846e80605b564a70e6aae84"
+    },
+    {
+      "names": [
+        "currentUserMessage"
+      ],
+      "group": "entry",
+      "bodySha256": "1596582d1374cbd0945a7074c88758ddeb16a17f9a9033757ab64bbe80fed0c4"
+    },
+    {
+      "names": [
+        "sourceToolActivation"
+      ],
+      "group": "entry",
+      "bodySha256": "aa7864af63b7b571ff74be344d924cc2cd704127c5a5b69359adb7616fd78eeb"
+    },
+    {
+      "names": [
+        "incompleteToolTailRecovery"
+      ],
+      "group": "entry",
+      "bodySha256": "9338d794baab33b0204413c5e3aa236ace2fb6f2ae6f124ebca70b2757434e20"
+    },
+    {
+      "names": [
+        "toolLoopBudget"
+      ],
+      "group": "entry",
+      "bodySha256": "adbb6245fd14fd92efd6a15c1ba416081a6ba7c1e7a963e3947808e512e2915e"
+    },
+    {
+      "names": [
+        "pendingPreToolUse"
+      ],
+      "group": "entry",
+      "bodySha256": "83dac8eedb42670f0b4f1a2f6a58d6010d0d1e4e5146fbcdaf6c50e71ba25cf3"
+    },
+    {
+      "names": [
+        "pendingToolExecutions"
+      ],
+      "group": "entry",
+      "bodySha256": "966d8e2cdac0a0c297a4145af373e20597c7c62115d420512a08c237a3bf5622"
+    },
+    {
+      "names": [
+        "pendingSessionToolCalls"
+      ],
+      "group": "entry",
+      "bodySha256": "f6b3851095d0cdb444ffce39035a11f92cc7efeb82f682556f56c171e2c6ee29"
+    },
+    {
+      "names": [
+        "proxyToolDefs"
+      ],
+      "group": "entry",
+      "bodySha256": "615d3c8237989c4a47177d3eb92ac2f88e00e3a7018c7fda9c176a16b324dc19"
+    },
+    {
+      "names": [
+        "toolsChanged"
+      ],
+      "group": "entry",
+      "bodySha256": "680c4459363e41301f60fbb4cc42feeb59bed3c8c6bc5b950803650d0722a02d"
+    },
+    {
+      "names": [
+        "callbackServer"
+      ],
+      "group": "entry",
+      "bodySha256": "d649a1d99d221c1ae8985fa14e8ef0f35f283e85c451a07d2ea608559a9edfde"
+    },
+    {
+      "names": [
+        "callbackPort"
+      ],
+      "group": "entry",
+      "bodySha256": "32ad3536caeee50d830083977221bffbf3815e858fca999db16151ad83c4be8d"
+    },
+    {
+      "names": [
+        "send"
+      ],
+      "group": "entry",
+      "bodySha256": "56ceccef80cbeb944b55efb7cf6e69b8fd3d1c5e721a02c1dbbdb4ef404e9cde"
+    },
+    {
+      "names": [
+        "debugLog"
+      ],
+      "group": "entry",
+      "bodySha256": "07317b9bf639a7dc5498ed82dff08b59647f60a814e19820b5ccb862bc2475c6"
+    },
+    {
+      "names": [
+        "findMostRecentSessionFile"
+      ],
+      "group": "entry",
+      "bodySha256": "1de83d5d675168e8a5aeaf8eac694401bdc005f7801977d45721e05e36e10569"
+    },
+    {
+      "names": [
+        "startCallbackServer"
+      ],
+      "group": "entry",
+      "bodySha256": "f9f5daaaa10dc5e044e76b1f2af9c3d94bc4ada3dc0019622ccffaac5b2a8433"
+    },
+    {
+      "names": [
+        "stopCallbackServer"
+      ],
+      "group": "entry",
+      "bodySha256": "8ef828dc27e4d8b392ac353d646419006bcbc26aceca0b160155cbcda40924aa"
+    },
+    {
+      "names": [
+        "resolvedCwd"
+      ],
+      "group": "entry",
+      "bodySha256": "5d0bd241d18438b1aaf84e49cf761a37ce82732bd88400141ff0e9f16c30a8ab"
+    },
+    {
+      "names": [
+        "shouldPreferCustomEndpoint"
+      ],
+      "group": "entry",
+      "bodySha256": "2160ff7b94dce8805b6fd111721f484eeb779f975eff0f1785749bb437556675"
+    },
+    {
+      "names": [
+        "setInterceptorApiHints"
+      ],
+      "group": "entry",
+      "bodySha256": "61ca883a977976caf047916084dd8a24ddf4b646782c10d5c6c8809bebcfb9ed"
+    },
+    {
+      "names": [
+        "resolveCustomEndpointApiKey"
+      ],
+      "group": "entry",
+      "bodySha256": "0d4b7529ab7da352264d8dc3368a55fa4c41c29fd8ac0c3f8e68436fc56e03c6"
+    },
+    {
+      "names": [
+        "isLocalhostUrl"
+      ],
+      "group": "entry",
+      "bodySha256": "632b6dbe1bdf0ae44ca68ab562d5d1bd1f422fe4f87c89b3175d78fdbdf681e8"
+    },
+    {
+      "names": [
+        "isStrictLocalEndpointMode"
+      ],
+      "group": "entry",
+      "bodySha256": "75e9753e0ebb9dc4951fa994a51a6603ce66830eee5611bea12c4f51f1f74abb"
+    },
+    {
+      "names": [
+        "syncStrictLocalEndpointNetworkGuard"
+      ],
+      "group": "entry",
+      "bodySha256": "4696f34a534585f4689c8dd05cbe65779430452ad7d0a34a3dfcc34296a7dd99"
+    },
+    {
+      "names": [
+        "customEndpointModelIds"
+      ],
+      "group": "entry",
+      "bodySha256": "37080b91e89194c6085e33b6e6f58af146e42aabc6620530c109fecc4edf8e95"
+    },
+    {
+      "names": [
+        "customModelOverrides"
+      ],
+      "group": "entry",
+      "bodySha256": "05e0983a6dfb579fe17566b9e408b77a6145f466efcc44d441fab3f5e8f5df6c"
+    },
+    {
+      "names": [
+        "registerCustomEndpointModels"
+      ],
+      "group": "entry",
+      "bodySha256": "70110c28ff799b1cd62e220e05aefaab37cc0e04b3151ce409962c3caa70c4c6"
+    },
+    {
+      "names": [
+        "createAuthenticatedRegistry"
+      ],
+      "group": "entry",
+      "bodySha256": "48e4efd335c4ee66ce9ed78b74b8376c1f878251e70f37272f6accfd4d331419"
+    },
+    {
+      "names": [
+        "ensureSession"
+      ],
+      "group": "entry",
+      "bodySha256": "53d3ca2468823eac1d26b1a3f164335b372ede78ea4bc4de941577212908b357"
+    },
+    {
+      "names": [
+        "requestPreToolUseApproval"
+      ],
+      "group": "entry",
+      "bodySha256": "d2ea2096d5a7248110af9f60fc37c1a8e85d4456693572a74d37dd389b3787dd"
+    },
+    {
+      "names": [
+        "wrapToolsWithHooks"
+      ],
+      "group": "entry",
+      "bodySha256": "fec7926c03f05383e9ce7458d123361675e5ee14a1925e5e8c01a34851321a7e"
+    },
+    {
+      "names": [
+        "makeErrorResult"
+      ],
+      "group": "entry",
+      "bodySha256": "808ed4ff09c20027ec85523128681ac108ec965e5d2e80a9eefdc430d430fcba"
+    },
+    {
+      "names": [
+        "wrapSingleTool"
+      ],
+      "group": "entry",
+      "bodySha256": "7600ac8fc2e97c827658c90cf3ee7def407a3325f03cbbabbbca4733ce20d36b"
+    },
+    {
+      "names": [
+        "buildProxyTools"
+      ],
+      "group": "entry",
+      "bodySha256": "211e6f3c018f775e6d35ca20f278b159c6b0d8b80dde1fd71bdc95813eb2b307"
+    },
+    {
+      "names": [
+        "queryLlm"
+      ],
+      "group": "entry",
+      "bodySha256": "c5d21d9b63e9f76f6f4ddbbae84e3beadba3e8512c79f1662558e96ec6f089cc"
+    },
+    {
+      "names": [
+        "preExecuteCallLlm"
+      ],
+      "group": "entry",
+      "bodySha256": "80f125ede5f01a7281368f0c268e9280bc1e8b4c878e45324d91cf8b184326ac"
+    },
+    {
+      "names": [
+        "extractToolExecutionMetadata"
+      ],
+      "group": "entry",
+      "bodySha256": "3406501167bccc56ff972f03f1f37a6f06c18a3099ab1ee24e7cf9cbfdfc0ec3"
+    },
+    {
+      "names": [
+        "lastNativeSettlement"
+      ],
+      "group": "entry",
+      "bodySha256": "c18b6c2c02c5fb268031f52878d766997425ef7df2b6e8cf49eafe7e135d6647"
+    },
+    {
+      "names": [
+        "overflowRecoveryAttempted"
+      ],
+      "group": "entry",
+      "bodySha256": "60ddd1246c846219324009a9ebc8b4f10c1843c7acf08a51bc6fe8c906652a80"
+    },
+    {
+      "names": [
+        "sdkMessageCorrelations"
+      ],
+      "group": "entry",
+      "bodySha256": "864e8fba9b7e59aa95f676dd3421f918eb5c4845227e66cd7a08b96a071403aa"
+    },
+    {
+      "names": [
+        "handleSessionEvent"
+      ],
+      "group": "entry",
+      "bodySha256": "b33303a99cac0cf314108688e04972ae677d3af8d5a6ce8eeb202fff11e75eaf"
+    },
+    {
+      "names": [
+        "handleInit"
+      ],
+      "group": "entry",
+      "bodySha256": "e5f21f861a829beab8a9dd2815a661a090950a5083049854e868a7b5f69d5ae4"
+    },
+    {
+      "names": [
+        "waitForCompaction"
+      ],
+      "group": "entry",
+      "bodySha256": "4723b799d2acd91ae13117b21d5aa40fe1b4475295b876eb73a577a0e6dbfb86"
+    },
+    {
+      "names": [
+        "handlePrompt"
+      ],
+      "group": "entry",
+      "bodySha256": "645f948472b481d164d45d13edb6ad6de8d0e1acaf1c48f30008c9569500596d"
+    },
+    {
+      "names": [
+        "handleRegisterTools"
+      ],
+      "group": "entry",
+      "bodySha256": "c7704f0fb7019e5babb5163092ab97d9b60c7266cce93f0e49684fa57929df76"
+    },
+    {
+      "names": [
+        "handleToolExecuteResponse"
+      ],
+      "group": "entry",
+      "bodySha256": "ebf8320e4a6cf1b19905a31af11042e0356865f125fb9003d2c8699c972c4319"
+    },
+    {
+      "names": [
+        "handlePreToolUseResponse"
+      ],
+      "group": "entry",
+      "bodySha256": "2ce8cc334909620c65733d28e5139f3f1b1febbbb85b9605b87149fe5a92c110"
+    },
+    {
+      "names": [
+        "handleAbort"
+      ],
+      "group": "entry",
+      "bodySha256": "00d1809e5ea78d96ecf66ec4ea24aa98823de9d1f5406e7f4dda59fcba04779f"
+    },
+    {
+      "names": [
+        "handleMiniCompletion"
+      ],
+      "group": "entry",
+      "bodySha256": "afa7ce60cc5ab96fcf3aa4fb73a72590dc34b163d22326f154436e75c466bb3d"
+    },
+    {
+      "names": [
+        "handleLlmQuery"
+      ],
+      "group": "entry",
+      "bodySha256": "c54dcffc7b7e5031f839cd9ab8e33c35707fb288adf4da9e20205bd4a5a2f5e5"
+    },
+    {
+      "names": [
+        "handleEnsureSessionReady"
+      ],
+      "group": "entry",
+      "bodySha256": "358a617e2ba668fb631347b4ca48487598c1321e010d04a96c1bfc51d73d2146"
+    },
+    {
+      "names": [
+        "handleCompact"
+      ],
+      "group": "entry",
+      "bodySha256": "d8d30d33565775ce1916b41d4f89f06684c254f706096e2d2bd96ebd12f1454d"
+    },
+    {
+      "names": [
+        "handleAbortCompaction"
+      ],
+      "group": "entry",
+      "bodySha256": "a345987c379b552cdcb0d42ccba99e8c2b94ca78965ce660c92cacb477610a68"
+    },
+    {
+      "names": [
+        "handleSetAutoCompaction"
+      ],
+      "group": "entry",
+      "bodySha256": "e99ef98980ac6b6a953daa663df15a13a3dc1c95336a4cfd6c8fddd3b19654b5"
+    },
+    {
+      "names": [
+        "handleUpdateRuntimeConfig"
+      ],
+      "group": "entry",
+      "bodySha256": "d175b3f7e8174bdd7fc9b65b1836f6bd7122107f6ce7372ed55d3a974ca7ff36"
+    },
+    {
+      "names": [
+        "handleSetModel"
+      ],
+      "group": "entry",
+      "bodySha256": "45d14dc55e26a9d94fdf8442a2004029006bbae0df108c593ff7ccaaa0b6b9b0"
+    },
+    {
+      "names": [
+        "handleSetThinkingLevel"
+      ],
+      "group": "entry",
+      "bodySha256": "19c5cf79327a37e9ecc0f8bbdca42ac1328c7f5e2c7813a9ebad3aca64dc9797"
+    },
+    {
+      "names": [
+        "handleShutdown"
+      ],
+      "group": "entry",
+      "bodySha256": "7d4709df73c0559e5f24a9e49fcf3b3c86b92c36fded54a78dc505d0dad94f38"
+    },
+    {
+      "names": [
+        "processMessage"
+      ],
+      "group": "entry",
+      "bodySha256": "364670aefc75a277c2cdfe806a3def55fefeb0320901ba90b2059a1dd68f9f31"
+    },
+    {
+      "names": [
+        "main"
+      ],
+      "group": "entry",
+      "bodySha256": "8dd5455b3105e8c4e5d3e99b81d34732a7aff517db64bdc680cc13e5c737127e"
+    }
+  ],
+  "modules": [
+    {
+      "name": "contracts",
+      "lines": 196
+    },
+    {
+      "name": "entry",
+      "file": "packages/pi-agent-server/src/index.ts",
+      "retained": true,
+      "lines": 1776
+    }
+  ],
+  "dependencies": {
+    "contracts": [],
+    "entry": [
+      "contracts"
+    ]
+  },
+  "moduleCycles": [],
+  "unitCycles": []
+}

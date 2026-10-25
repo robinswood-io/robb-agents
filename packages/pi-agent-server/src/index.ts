@@ -17,6 +17,20 @@ import { abortSessionWithPendingApprovals } from './tool-approval-abort.ts';
  * separate process, avoiding bundling issues in the Electron main process.
  */
 
+/**
+ * Pi Agent Server
+ *
+ * Out-of-process Pi agent server communicating via JSONL over stdio.
+ * Wraps @earendil-works/pi-coding-agent SDK and communicates with the main
+ * Electron process using a line-delimited JSON protocol.
+ *
+ * The main process spawns this as a child process. All Pi SDK interactions
+ * (session creation, prompting, tool execution, permissions) happen here,
+ * with events forwarded back to the main process for UI rendering.
+ *
+ * This design isolates the Pi SDK's ESM + heavy dependencies into a
+ * separate process, avoiding bundling issues in the Electron main process.
+ */
 import http from 'node:http';
 import { installStructuredToolErrors } from './structured-tool-errors.ts';
 import { createInterface } from 'node:readline';
@@ -25,14 +39,21 @@ import { mkdirSync, readdirSync, statSync, existsSync, readFileSync } from 'node
 import { homedir } from 'node:os';
 
 // Pi SDK
-import { createAgentSession, getAgentDir, SessionManager as PiSessionManager, ModelRegistry as PiModelRegistry, createReadToolDefinition, createBashToolDefinition, createEditToolDefinition, createWriteToolDefinition, createGrepToolDefinition, createFindToolDefinition, createLsToolDefinition } from '@earendil-works/pi-coding-agent';
-import type { AgentSession, AgentSessionEvent, AgentToolResult, CreateAgentSessionOptions, ToolDefinition } from '@earendil-works/pi-coding-agent';
+// Pi SDK
+import { defineTool, createAgentSession, getAgentDir, SessionManager as PiSessionManager, ModelRegistry as PiModelRegistry, createReadToolDefinition, createBashToolDefinition, createEditToolDefinition, createWriteToolDefinition, createGrepToolDefinition, createFindToolDefinition, createLsToolDefinition } from '@earendil-works/pi-coding-agent';
+import type { AgentSession, AgentSessionEvent, AgentToolResult, CreateAgentSessionOptions } from "@earendil-works/pi-coding-agent";
 
 // Pi AI types
+// Pi AI types
 import { InMemoryCredentialStore } from '@earendil-works/pi-ai';
-import type { TextContent as PiTextContent } from '@earendil-works/pi-ai';
+import type { TextContent as PiTextContent } from "@earendil-works/pi-ai";
 import { createAuthenticatedModelRuntime, storePiCredential } from './authenticated-model-runtime.ts';
 
+// Pre-register the Bedrock provider module so the Pi SDK doesn't attempt a
+// dynamic import of "./amazon-bedrock.js" — which fails in the bundled output
+// because bun collapses everything into a single file.
+// pi-ai is deduped (single hoisted copy), so one registration covers both
+// pi-ai and pi-agent-core module scopes.
 // Pre-register the Bedrock provider module so the Pi SDK doesn't attempt a
 // dynamic import of "./amazon-bedrock.js" — which fails in the bundled output
 // because bun collapses everything into a single file.
@@ -43,6 +64,7 @@ import { bedrockProviderModule } from '@earendil-works/pi-ai/bedrock-provider';
 setBedrockProviderModule(bedrockProviderModule);
 
 // Model resolution (extracted for testability + custom-endpoint precedence)
+// Model resolution (extracted for testability + custom-endpoint precedence)
 import { resolvePiModelWithCustomFallback, requireExplicitPiModel } from './model-resolution.ts';
 import { registerSupplementalCatalogModels } from './catalog-model-registration.ts';
 import { activateEphemeralQueryModel, resolveEphemeralQueryThinkingLevel, resolveQueryModel } from './query-model.ts';
@@ -50,12 +72,13 @@ import { applyTokenUpdate, type PiCredential } from './token-update.ts';
 import { buildCustomEndpointModelDef, normalizeCustomEndpointBaseUrl, normalizeCustomEndpointModelEntry, type CustomEndpointModelEntry, type CustomEndpointModelOverrides } from './custom-endpoint-models.ts';
 
 // Direct source imports from shared (bundled by bun build)
+// Direct source imports from shared (bundled by bun build)
 import { handleLargeResponse, estimateTokens, estimateTokensDensityAware, isAlreadyGuardedLargeResponse, tokenLimitFor } from '../../shared/src/utils/large-response.ts';
 import { resolveAgentCostControlPolicy, resolveEffectiveAgentContextLimits } from '../../shared/src/config/agent-cost-control.ts';
 import { loadWorkspaceConfig } from '../../shared/src/workspaces/storage.ts';
 import { getSessionPlansPath, getSessionPath } from '../../shared/src/sessions/storage.ts';
 import { buildCallLlmRequest, withTimeout, LLM_QUERY_TIMEOUT_MS } from '../../shared/src/agent/llm-tool.ts';
-import type { LLMQueryRequest, LLMQueryResult } from '../../shared/src/agent/llm-tool.ts';
+import type { LLMQueryRequest, LLMQueryResult } from "../../shared/src/agent/llm-tool.ts";
 import { PI_TOOL_NAME_MAP, THINKING_TO_PI } from '../../shared/src/agent/backend/pi/constants.ts';
 import { createWebFetchTool } from './tools/web-fetch.ts';
 import { resolveSearchProvider } from './tools/search/resolve-provider.ts';
@@ -78,182 +101,8 @@ import { normalizeSessionPathTokens } from './session-path-normalization.ts';
 import { ReadToolTimeoutError, resolveReadToolTimeoutMs, withReadToolTimeout } from './read-tool-timeout.ts';
 import { extractRecentUserTexts, SourceToolActivationController } from './source-tool-activation.ts';
 import { waitForProxyToolResponse, type PendingProxyToolExecution } from './proxy-tool-response-watchdog.ts';
+import type { RuntimeToolDefinition, CustomEndpointApi, RuntimeConfigUpdateMessage, InboundMessage, ProxyToolDef, ToolExecutionMetadata, OutboundAgentEvent, OutboundMessage } from './index/contracts.ts';
 
-// ============================================================
-// Types — JSONL Protocol
-// ============================================================
-
-/** Custom endpoint protocol — determines which streaming adapter Pi SDK uses */
-type CustomEndpointApi = 'openai-completions' | 'anthropic-messages';
-
-/** Init message from main process — configures the Pi agent server */
-interface InitMessage {
-  type: 'init';
-  apiKey: string;
-  model: string;
-  modelRoutePinned?: boolean;
-  cwd: string;
-  thinkingLevel: string;
-  workspaceRootPath: string;
-  sessionId: string;
-  sessionPath: string;
-  workingDirectory: string;
-  plansFolderPath: string;
-  miniModel?: string;
-  agentDir?: string;
-  providerType?: string;
-  authType?: string;
-  workspaceId?: string;
-  baseUrl?: string;
-  branchFromSdkSessionId?: string;
-  branchFromSessionPath?: string;
-  branchFromSdkTurnId?: string;
-  customEndpoint?: { api: CustomEndpointApi; supportsImages?: boolean };
-  customModels?: Array<string | { id: string; contextWindow?: number; supportsImages?: boolean; supportsThinking?: boolean; maxTokens?: number }>;
-  piAuth?: { provider: string; credential: PiCredential };
-}
-
-interface RuntimeConfigUpdateMessage {
-  type: 'update_runtime_config';
-  id: string;
-  model: string;
-  providerType?: string;
-  authType?: string;
-  baseUrl?: string;
-  customEndpoint?: { api: CustomEndpointApi; supportsImages?: boolean };
-  customModels?: Array<string | { id: string; contextWindow?: number; supportsImages?: boolean; supportsThinking?: boolean; maxTokens?: number }>;
-}
-
-/** Read the workspace-owned kill switch at the last responsible moment. The
- * subprocess can outlive a settings toggle, so the init snapshot is not an
- * authoritative live value. Missing/malformed configuration fails closed. */
-
-
-/** Automatic workspace routing is only model-authoritative while the session
- * has no manual model pin. The prompt/init protocol refreshes that host-owned
- * pin for direct subprocess call_llm callbacks. */
-
-
-/** Messages from main process (stdin) */
-type InboundMessage =
-  | InitMessage
-  | { type: 'prompt'; id: string; message: string; systemPrompt: string; images?: Array<{ type: 'image'; data: string; mimeType: string }>; modelRoutePinned?: boolean }
-  | { type: 'register_tools'; tools: ProxyToolDef[] }
-  | { type: 'tool_execute_response'; requestId: string; result: { content: string; isError: boolean; structuredContent?: Record<string, unknown> } }
-  | { type: 'pre_tool_use_response'; requestId: string; action: 'allow' | 'block' | 'modify'; input?: Record<string, unknown>; reason?: string }
-  | { type: 'abort' }
-  | { type: 'mini_completion'; id: string; prompt: string; allowModelSubstitution?: boolean }
-  | { type: 'llm_query'; id: string; request: LLMQueryRequest; allowModelSubstitution?: boolean }
-  | { type: 'ensure_session_ready'; id: string }
-  | { type: 'set_model'; model: string }
-  | { type: 'set_thinking_level'; level: string }
-  | { type: 'compact'; id: string; customInstructions?: string }
-  | { type: 'abort_compaction'; id: string }
-  | { type: 'set_auto_compaction'; id: string; enabled: boolean }
-  | RuntimeConfigUpdateMessage
-  | { type: 'steer'; message: string }
-  | { type: 'token_update'; piAuth: { provider: string; credential: PiCredential } }
-  | { type: 'shutdown' };
-
-/** Proxy tool definition from main process */
-interface ProxyToolDef {
-  name: string;
-  description: string;
-  inputSchema: Record<string, unknown>;
-  outputSchema?: Record<string, unknown>;
-  readOnly?: boolean;
-  idempotent?: boolean;
-  destructive?: boolean;
-  openWorld?: boolean;
-  parallelSafe?: boolean;
-}
-
-/** Canonical tool metadata propagated on Pi tool start events */
-interface ToolExecutionMetadata {
-  intent?: string;
-  displayName?: string;
-  source: 'interceptor';
-}
-
-type EnrichedToolExecutionStartEvent = Extract<AgentSessionEvent, { type: 'tool_execution_start' }> & {
-  toolMetadata?: ToolExecutionMetadata;
-};
-
-type OutboundAgentEvent = AgentSessionEvent | EnrichedToolExecutionStartEvent
-  | (Extract<AgentSessionEvent, { type: 'message_end' }> & { sdkMessageId: string })
-  | { type: 'pi_turn_anchor'; sdkTurnAnchor: string; sdkMessageId: string };
-
-/** Messages to main process (stdout) */
-interface OutboundReady { type: 'ready'; sessionId: string | null; callbackPort: number }
-interface OutboundEvent { type: 'event'; event: OutboundAgentEvent }
-interface OutboundPreToolUseReq {
-  type: 'pre_tool_use_request';
-  requestId: string;
-  toolName: string;
-  toolCallId?: string;
-  input: Record<string, unknown>;
-}
-interface OutboundToolExecReq {
-  type: 'tool_execute_request';
-  requestId: string;
-  toolName: string;
-  toolCallId?: string;
-  args: Record<string, unknown>;
-}
-interface OutboundSessionToolCompleted { type: 'session_tool_completed'; toolName: string; args: Record<string, unknown>; isError: boolean }
-interface OutboundMiniResult { type: 'mini_completion_result'; id: string; text: string | null }
-interface OutboundLlmQueryResult {
-  type: 'llm_query_result';
-  id: string;
-  result: LLMQueryResult | null;
-  errorMessage?: string;
-  /**
-   * When set, signals the main process that a generic `error` with the same code
-   * was also emitted on the error channel (for centralized auth-refresh detection).
-   */
-  errorCode?: string;
-}
-interface OutboundEnsureSessionReadyResult { type: 'ensure_session_ready_result'; id: string; sessionId: string | null }
-interface OutboundCompactResult {
-  type: 'compact_result';
-  id: string;
-  success: boolean;
-  result?: { summary: string; firstKeptEntryId: string; tokensBefore: number; estimatedTokensAfter?: number; compactionModel?: string };
-  errorMessage?: string;
-}
-interface OutboundSetAutoCompactionResult {
-  type: 'set_auto_compaction_result';
-  id: string;
-  success: boolean;
-  enabled: boolean;
-  errorMessage?: string;
-}
-interface OutboundRuntimeConfigUpdateResult {
-  type: 'update_runtime_config_result';
-  id: string;
-  success: boolean;
-  updated: boolean;
-  errorMessage?: string;
-}
-interface OutboundSessionIdUpdate { type: 'session_id_update'; sessionId: string }
-interface OutboundProviderHandoff { type: 'provider_handoff'; id: string }
-interface OutboundError { type: 'error'; id?: string; message: string; code?: string }
-
-type OutboundMessage =
-  | OutboundReady
-  | OutboundEvent
-  | OutboundPreToolUseReq
-  | OutboundToolExecReq
-  | OutboundSessionToolCompleted
-  | OutboundMiniResult
-  | OutboundLlmQueryResult
-  | OutboundEnsureSessionReadyResult
-  | OutboundCompactResult
-  | OutboundSetAutoCompactionResult
-  | OutboundRuntimeConfigUpdateResult
-  | OutboundSessionIdUpdate
-  | OutboundProviderHandoff
-  | OutboundError;
 
 // ============================================================
 // State
@@ -621,7 +470,7 @@ async function ensureSession(): Promise<AgentSession> {
     && process.env.ROBB_ALLOW_LOCAL_MODEL_WEB_TOOLS !== '1';
   const webTools = isStrictLocalEndpoint ? [] : [searchTool, webFetchTool];
 
-  // Pi SDK 0.70.0 registration contract:
+  // Pi SDK registration contract:
   //   - `customTools` accepts ToolDefinition[] — our hook-wrapped objects go here
   //   - `tools` is a string[] name allowlist — MUST include every tool we want active,
   //     otherwise Pi SDK defaults to the built-in [read, bash, edit, write] set and
@@ -631,13 +480,13 @@ async function ensureSession(): Promise<AgentSession> {
   //   - Do NOT pass tool *objects* to `tools` — `allowedToolNames = new Set(options.tools)`
   //     then `.has(name)` returns false for every string lookup → zero tools active.
   const builtinDefs = [
-    createReadToolDefinition(cwd),
-    createBashToolDefinition(cwd),
-    createEditToolDefinition(cwd),
-    createWriteToolDefinition(cwd),
-    createGrepToolDefinition(cwd),
-    createFindToolDefinition(cwd),
-    createLsToolDefinition(cwd),
+    defineTool(createReadToolDefinition(cwd)),
+    defineTool(createBashToolDefinition(cwd)),
+    defineTool(createEditToolDefinition(cwd)),
+    defineTool(createWriteToolDefinition(cwd)),
+    defineTool(createGrepToolDefinition(cwd)),
+    defineTool(createFindToolDefinition(cwd)),
+    defineTool(createLsToolDefinition(cwd)),
   ];
   const proxyTools = buildProxyTools();
   const wrappedAll = wrapToolsWithHooks([...builtinDefs, ...webTools, ...proxyTools]);
@@ -799,23 +648,23 @@ async function requestPreToolUseApproval(
   return response.action === 'modify' && response.input ? response.input : input;
 }
 
-function wrapToolsWithHooks(tools: ToolDefinition<any, any>[]): ToolDefinition<any, any>[] {
+function wrapToolsWithHooks(tools: RuntimeToolDefinition[]): RuntimeToolDefinition[] {
   return tools.map(tool => wrapSingleTool(tool));
 }
 
-function makeErrorResult(message: string): AgentToolResult<any> {
+function makeErrorResult(message: string): AgentToolResult<unknown> {
   return {
     content: [{ type: 'text', text: message }],
     details: { isError: true },
   };
 }
 
-function wrapSingleTool(tool: ToolDefinition<any, any>): ToolDefinition<any, any> {
+function wrapSingleTool(tool: RuntimeToolDefinition): RuntimeToolDefinition {
   const originalExecute = tool.execute;
   const sdkToolName = PI_TOOL_NAME_MAP[tool.name] || tool.name;
   const parameters = allowCraftMetadataProperties(tool.parameters, sdkToolName);
 
-  const wrappedExecute: ToolDefinition<any, any>['execute'] = async (
+  const wrappedExecute: RuntimeToolDefinition['execute'] = async (
     toolCallId,
     params,
     signal,
@@ -862,14 +711,14 @@ function wrapSingleTool(tool: ToolDefinition<any, any>): ToolDefinition<any, any
         : makeErrorResult(reason);
     }
 
-    const finishResult = (result: AgentToolResult<any>) => finishToolLoopResult(result, loopDecision, {
+    const finishResult = (result: AgentToolResult<unknown>) => finishToolLoopResult(result, loopDecision, {
       session: feedbackSession, isCurrentSession: () => piSession === feedbackSession, toolCallId, signal,
       onHint: message => { if (feedbackSession) handleSessionEvent({ type: 'message_end', message }, feedbackSession); },
       onError: error => debugLog(`Tool-loop guidance unavailable: ${error instanceof Error ? error.message : String(error)}`),
     });
 
     // Execute original tool with (potentially modified) input
-    let result: AgentToolResult<any>;
+    let result: AgentToolResult<unknown>;
     try {
       result = await withReadToolTimeout(
         sdkToolName,
@@ -970,10 +819,10 @@ function wrapSingleTool(tool: ToolDefinition<any, any>): ToolDefinition<any, any
 // Proxy Tools (tools executed in main process)
 // ============================================================
 
-function buildProxyTools(): ToolDefinition<any, any>[] {
+function buildProxyTools(): RuntimeToolDefinition[] {
   debugLog(`Building proxy tools from ${proxyToolDefs.length} definitions: ${proxyToolDefs.map(t => t.name).join(', ')}`);
 
-  return proxyToolDefs.map<ToolDefinition<any, any>>(def => ({
+  return proxyToolDefs.map<RuntimeToolDefinition>(def => ({
     name: def.name,
     label: def.name
       .replace(/^mcp__.*?__/, '')
@@ -991,8 +840,8 @@ function buildProxyTools(): ToolDefinition<any, any>[] {
     parameters: def.inputSchema,
     execute: async (
       toolCallId: string,
-      params: any,
-    ): Promise<AgentToolResult<any>> => {
+      params,
+    ): Promise<AgentToolResult<unknown>> => {
       // Every proxy definition is installed through wrapToolsWithHooks(), whose
       // outer execute wrapper has already completed the host PreToolUse check
       // and passed the approved (possibly modified) input here. Rechecking in
@@ -1865,8 +1714,10 @@ async function processMessage(msg: InboundMessage): Promise<void> {
       handleShutdown();
       break;
 
-    default:
-      debugLog(`Unknown message type: ${(msg as any).type}`);
+    default: {
+      const unrecognizedMessage: { type?: unknown } = msg;
+      debugLog(`Unknown message type: ${unrecognizedMessage.type}`);
+    }
   }
 }
 

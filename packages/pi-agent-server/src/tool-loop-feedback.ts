@@ -52,7 +52,7 @@ export function installToolLoopFeedback(session: NonNullable<ToolLoopFeedbackCha
 }
 
 /** Return the exact authoritative result; model/UI guidance travels separately. */
-export async function finishToolLoopResult<T extends AgentToolResult<any>>(
+export async function finishToolLoopResult<T extends AgentToolResult<unknown>>(
   result: T, decision: ToolLoopDecision, channel: ToolLoopFeedbackChannel,
 ): Promise<T> {
   const { session, signal } = channel;
