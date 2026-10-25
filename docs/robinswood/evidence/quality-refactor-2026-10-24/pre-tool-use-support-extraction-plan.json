@@ -1772,6 +1772,7 @@
   ],
   "moduleCycles": [],
   "retainedTransformProofs": [
-    "pretool-first-phases-body-proof.json"
+    "pretool-first-phases-body-proof.json",
+    "pretool-authorization-body-proof.json"
   ]
 }

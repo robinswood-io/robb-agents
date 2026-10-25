@@ -52,5 +52,8 @@
     "tool-input-preparation": []
   },
   "unitCycles": [],
-  "moduleCycles": []
+  "moduleCycles": [],
+  "retainedTransformProofs": [
+    "pretool-authorization-body-proof.json"
+  ]
 }

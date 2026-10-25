@@ -62,7 +62,9 @@
     "Contrôles avant exécution : 199 déclarations conservées après extraction ; 34 modules de 294 lignes au plus ; pipeline principal inchangé et toujours à décomposer",
     "Corps et imports contrôlés ; cycle interne de nettoyage Gmail conservé dans un même module ; suite complète (142,96 s), 16 configurations TypeScript, build et lint des nouveaux modules sans avertissement réussis",
     "Deux phases du pipeline isolées par appels directs : prérequis (105 lignes), préparation des entrées (132 lignes) ; valeurs d’entrée et union native des résultats préservées ; fichier principal réduit à 1025 lignes et encore à décomposer",
-    "95 scénarios ciblés, preuve indépendante des instructions et de l’ordre, corps et imports, 16 configurations TypeScript, suite globale (141,77 s), build et lint des nouveaux modules réussis"
+    "95 scénarios ciblés, preuve indépendante des instructions et de l’ordre, corps et imports, 16 configurations TypeScript, suite globale (141,77 s), build et lint des nouveaux modules réussis",
+    "Autorisation finale extraite dans un module de 279 lignes ; corps des instructions et ordre conservés ; union native des résultats et références des claims/capacités préservées ; fichier principal réduit à 861 lignes",
+    "95 scénarios ciblés, corps et imports, 16 configurations TypeScript, suite complète (141,28 s), build et lint du module sans avertissement réussis"
   ],
   "pending": [
     "Découpage des autres fichiers au-delà de 500 lignes",
@@ -70,7 +72,7 @@
     "Lint global sans erreur ni avertissement",
     "Parcours complets réels en staging local, compilation signée et intégration"
   ],
-  "updatedAt": "2026-10-25T03:06:39.229553+00:00",
+  "updatedAt": "2026-10-25T03:15:31.248220+00:00",
   "current": {
     "oversizedCodeFiles": 209,
     "explicitAny": 708
