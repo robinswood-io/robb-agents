@@ -74,7 +74,8 @@
     "Gestion des modes et outil LLM décomposés ; surcharges et chargements paresseux vérifiés ; suite complète, 16 types, build et lint ciblé réussis",
     "Preuves de mission : neuf modules ≤391 lignes et zéro any ; 62 annotations contextuelles retirées, JavaScript identique ; 16 types, suite complète et build réussis",
     "Reprises : 60 any supprimés au profit des contrats natifs, mêmes 263 déclarations et capacités optionnelles ; suite complète, 16 types, build et lint des fichiers touchés réussis",
-    "Domaine des reprises sous 500 lignes : 353 mêmes cas, 2329 mêmes assertions, 266 instructions et 15 déclarations partagées identiques ; suite complète, 16 types, build et lint ciblé réussis"
+    "Domaine des reprises sous 500 lignes : 353 mêmes cas, 2329 mêmes assertions, 266 instructions et 15 déclarations partagées identiques ; suite complète, 16 types, build et lint ciblé réussis",
+    "Cinq domaines de production : 159 déclarations préservées dans 22 modules ≤327 lignes ; suite complète, 16 types, build et lint ciblé réussis"
   ],
   "pending": [
     "Découpage des autres fichiers au-delà de 500 lignes",
@@ -82,9 +83,9 @@
     "Lint global sans erreur ni avertissement",
     "Parcours complets réels en staging local, compilation signée et intégration"
   ],
-  "updatedAt": "2026-10-25T04:30:20.318875+00:00",
+  "updatedAt": "2026-10-25T04:34:50.180235+00:00",
   "current": {
-    "oversizedCodeFiles": 204,
+    "oversizedCodeFiles": 199,
     "explicitAny": 586
   }
 }

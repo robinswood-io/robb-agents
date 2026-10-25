@@ -1,0 +1,196 @@
+{
+  "source": "packages/ui/src/lib/tool-parsers.ts",
+  "units": [
+    {
+      "names": [
+        "ReadResult"
+      ],
+      "group": "results",
+      "bodySha256": "d11c0f79ed287e6c9da89fea9ea49d6c00440f947211100c596006fcfbb9905e"
+    },
+    {
+      "names": [
+        "parseReadResult"
+      ],
+      "group": "results",
+      "bodySha256": "eac09ddf5e96ad3b3e22df81bac25a90dcfd51578a51542a871e6dfb41fa575d"
+    },
+    {
+      "names": [
+        "BashResult"
+      ],
+      "group": "results",
+      "bodySha256": "a080073cc8a120183746061ccec02b1c3a266c42ef26196f1b6c3a389cebd8aa"
+    },
+    {
+      "names": [
+        "parseBashResult"
+      ],
+      "group": "results",
+      "bodySha256": "3463e04a4c5eda222a232132de53efbe4ea6594156953a0524b8b8b8b408e0c2"
+    },
+    {
+      "names": [
+        "GrepResult"
+      ],
+      "group": "results",
+      "bodySha256": "53f1767da1658d42b9b19992fa49c58ba6d00983a26c4de718814d6f9f1a04b8"
+    },
+    {
+      "names": [
+        "parseGrepResult"
+      ],
+      "group": "results",
+      "bodySha256": "d2e812c4f61e2c88d7a3229ef172403c3746e446dbfbd21bb370fa0b8c01ad6c"
+    },
+    {
+      "names": [
+        "GlobResult"
+      ],
+      "group": "results",
+      "bodySha256": "a19f3c8647a3a013034c1fd2e9080acf3aabf98d386280873bb0acbd2b9764b9"
+    },
+    {
+      "names": [
+        "parseGlobResult"
+      ],
+      "group": "results",
+      "bodySha256": "b87363caf19ff1fee05ec21115c76d0e7cd48d4515e8e2d2ba387aa0e4edc42f"
+    },
+    {
+      "names": [
+        "parseWebSearchResult"
+      ],
+      "group": "results",
+      "bodySha256": "a1aa91e6087ca94716507d291bd948a6b2abbc2201109002c47f02a6d7be305a"
+    },
+    {
+      "names": [
+        "findJsonArrayEnd"
+      ],
+      "group": "results",
+      "bodySha256": "123a7c9a73459b1c6e8c3ac950d61df9edbb1e7faf1edd6f22f6566fdbfd617a"
+    },
+    {
+      "names": [
+        "isWebSearchLinkArray"
+      ],
+      "group": "results",
+      "bodySha256": "571d3a31afe1a59c227cf95bd0a454a07d2a7c49ee3311848ec1a3f018bb884e"
+    },
+    {
+      "names": [
+        "CodeOverlayData"
+      ],
+      "group": "contracts",
+      "bodySha256": "a6dfbf4d8a8edba726e4e1c536874548c6e0989c3a3121c51cbd0ef9ebd5bd22"
+    },
+    {
+      "names": [
+        "TerminalOverlayData"
+      ],
+      "group": "contracts",
+      "bodySha256": "22b9299673217537b77edd74d9025e8a0f1c98d9321a7a2acec0afd1a7e21ea4"
+    },
+    {
+      "names": [
+        "GenericOverlayData"
+      ],
+      "group": "contracts",
+      "bodySha256": "fc94b8e948f48a9d65fd5f28a345b38fd547d19e3e7f16f9fbb59b591f212caa"
+    },
+    {
+      "names": [
+        "JSONOverlayData"
+      ],
+      "group": "contracts",
+      "bodySha256": "11c32e2f4ba39ede1e0b1cb4d3a6490dc5c7454fd406e8e46ed0bb8a7b126cd7"
+    },
+    {
+      "names": [
+        "DocumentOverlayData"
+      ],
+      "group": "contracts",
+      "bodySha256": "6045e4b56fa594866cfa35b8a596a59c3f6001dd4da19fe99eb728945769ba40"
+    },
+    {
+      "names": [
+        "OverlayData"
+      ],
+      "group": "contracts",
+      "bodySha256": "b99fdad8cf4bafb4070ef2b2bb6ef01ce7e33bf96c09cd3456c8922bffeb4f2c"
+    },
+    {
+      "names": [
+        "OverlayCard"
+      ],
+      "group": "contracts",
+      "bodySha256": "259614a0427643e9a5e16db0117ac3ad58e308d6a0bfe2d36d6d13f6ecd66548"
+    },
+    {
+      "names": [
+        "extractOverlayData"
+      ],
+      "group": "overlays",
+      "bodySha256": "ee9d7c772378399d771a57ba57873868b99d8a82d7539d4dd22db787859c8aa0"
+    },
+    {
+      "names": [
+        "extractOverlayCards"
+      ],
+      "group": "overlays",
+      "bodySha256": "b149b5dcfff3b297cbd0c3e55dc0fb48770862188b95e9aebf304e720a7721c9"
+    },
+    {
+      "names": [
+        "normalizeToolCommandName"
+      ],
+      "group": "command-preview",
+      "bodySha256": "c3fa1972fd8c6e58da9ff49e91b864935cd5194c9e9dd8b149b6a14295912ab5"
+    },
+    {
+      "names": [
+        "formatCliValue"
+      ],
+      "group": "command-preview",
+      "bodySha256": "b991eb9c73bb1b83e3c71b56bc423d651106a004214f00d2baa81a7428695c86"
+    },
+    {
+      "names": [
+        "formatToolCommandPreview"
+      ],
+      "group": "command-preview",
+      "bodySha256": "e56748c2dbc7590de384a3b3bf43ed0015a435493f883ea15e83943e0eff5006"
+    }
+  ],
+  "modules": [
+    {
+      "name": "results",
+      "lines": 223
+    },
+    {
+      "name": "contracts",
+      "lines": 68
+    },
+    {
+      "name": "overlays",
+      "lines": 299
+    },
+    {
+      "name": "command-preview",
+      "lines": 46
+    }
+  ],
+  "dependencies": {
+    "results": [],
+    "contracts": [],
+    "overlays": [
+      "contracts",
+      "results",
+      "command-preview"
+    ],
+    "command-preview": []
+  },
+  "unitCycles": [],
+  "moduleCycles": []
+}

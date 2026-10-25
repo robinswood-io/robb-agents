@@ -1,0 +1,170 @@
+{
+  "source": "packages/shared/src/tasks/mission-control.ts",
+  "units": [
+    {
+      "names": [
+        "MissionBlockerStatus"
+      ],
+      "group": "contracts",
+      "bodySha256": "928026b1d92c48308be2a848db03e45d505400f491ac84ee11beede38c37b0a0"
+    },
+    {
+      "names": [
+        "MissionBlocker"
+      ],
+      "group": "contracts",
+      "bodySha256": "abc2adff902ebb447096a5514e927d5573899d4d6e668cbcce70d31d3bd0ce0d"
+    },
+    {
+      "names": [
+        "MissionApproval"
+      ],
+      "group": "contracts",
+      "bodySha256": "0b4dbe961f6f30155a94d3ccca408c917ca7a500463278313b4d6e29b1f09f7e"
+    },
+    {
+      "names": [
+        "MissionEvaluationStatus"
+      ],
+      "group": "contracts",
+      "bodySha256": "1ae2e983428644d5a80af535256f16e018bd893cdbac9c368b7fbe04969d5ee4"
+    },
+    {
+      "names": [
+        "MissionEvaluationReport"
+      ],
+      "group": "contracts",
+      "bodySha256": "d4d25b8b5f506a0ef32a40b41b23b294ef4ba256308f3309aef03b0f6fd8bd34"
+    },
+    {
+      "names": [
+        "MissionCostReport"
+      ],
+      "group": "contracts",
+      "bodySha256": "e2088bb3dc6891640f2d062751727842d5b66614e8fd77cafb91c9c3e23333af"
+    },
+    {
+      "names": [
+        "MissionControlSnapshot"
+      ],
+      "group": "contracts",
+      "bodySha256": "d7d9b5779799971ef7473501ec789b76a28afc6095ac513cfbe1b293927cb793"
+    },
+    {
+      "names": [
+        "MissionControlTelemetry"
+      ],
+      "group": "contracts",
+      "bodySha256": "cac3ee3e56b0a95c596123bf3270fcd1a47e9431fd29faf1a69fec47b811c66f"
+    },
+    {
+      "names": [
+        "MissionReplayNodePlan"
+      ],
+      "group": "contracts",
+      "bodySha256": "6e2ff688cb060f18152fd507b65d606bd01e05b0b2d77f266b08a54608c749c0"
+    },
+    {
+      "names": [
+        "MissionReplayPlan"
+      ],
+      "group": "contracts",
+      "bodySha256": "ad8ad799244eaf054459f622f6371f42aae7d99e8ff06239f73ddf8496b22081"
+    },
+    {
+      "names": [
+        "resolvedRunStatus"
+      ],
+      "group": "reporting",
+      "bodySha256": "d8aab1c9229378eb3f9f719e319131aa6876035c89a91bd52630a981d016823c"
+    },
+    {
+      "names": [
+        "foldNodeStates"
+      ],
+      "group": "reporting",
+      "bodySha256": "6c95ee939718d13aa12ce1cc561933b010a4f0a7319fec58fa42a5a35205bc5b"
+    },
+    {
+      "names": [
+        "foldApprovals"
+      ],
+      "group": "reporting",
+      "bodySha256": "1ddc26dfb6ab446325706eea968fd7ab0c3ea33d2709df55ec1b7d2cd394ca58"
+    },
+    {
+      "names": [
+        "blockerId"
+      ],
+      "group": "reporting",
+      "bodySha256": "05148826102505977d5af5a60de35c711abee99cd00cf5d61c313067bf54362c"
+    },
+    {
+      "names": [
+        "foldBlockers"
+      ],
+      "group": "reporting",
+      "bodySha256": "c407f63dce5a7b1de83668449003fa6c91c05e4cc4b97ea01939168b34ad67d7"
+    },
+    {
+      "names": [
+        "buildMissionEvaluation"
+      ],
+      "group": "reporting",
+      "bodySha256": "c1e977b6f5a81f6af1b8749c869c763e95e4a03b6ab3525441044fd323564ffc"
+    },
+    {
+      "names": [
+        "buildMissionCostReport"
+      ],
+      "group": "reporting",
+      "bodySha256": "cf675e039267903ea77b207b818062ab572bd6b938bc8b4910798138d0774e80"
+    },
+    {
+      "names": [
+        "buildMissionControlSnapshot"
+      ],
+      "group": "reporting",
+      "bodySha256": "3510f8e877b192886449e98bc2d4c1c67ee311d90c36ed154292eaaf983a1005"
+    },
+    {
+      "names": [
+        "exportMissionReportMarkdown"
+      ],
+      "group": "reporting",
+      "bodySha256": "b488e67ad04431cbc50450d1ae9307d118a3d0bee299eea8df560a60dbec2937"
+    },
+    {
+      "names": [
+        "planMissionReplay"
+      ],
+      "group": "replay",
+      "bodySha256": "8d096580f1321d0edd465ec25a01f69e51ff4f6545ad1789055e6678c401ed74"
+    }
+  ],
+  "modules": [
+    {
+      "name": "contracts",
+      "lines": 105
+    },
+    {
+      "name": "reporting",
+      "lines": 327
+    },
+    {
+      "name": "replay",
+      "lines": 80
+    }
+  ],
+  "dependencies": {
+    "contracts": [],
+    "reporting": [
+      "contracts"
+    ],
+    "replay": [
+      "contracts"
+    ]
+  },
+  "unitCycles": [],
+  "moduleCycles": []
+}
