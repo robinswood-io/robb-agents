@@ -1,0 +1,13 @@
+{
+  "status": "passed",
+  "source": "packages/shared/src/agent/__tests__/browser-tools.test.ts",
+  "nativeSourceHash": "200fb5cfefea46cfe46109f6deb177189e3fd0ed3e69f4f67bf240a165813a42",
+  "typedSourceHash": "97cae6cb7d3e21ce168c248bdbe9772847831c82e3ae22c8e8c4c1f24991d1ed",
+  "explicitAnyRemoved": 9,
+  "emittedJavaScriptUnchanged": true,
+  "nativeSdkExtraParameterPreserved": true,
+  "refinements": [
+    "Explanatory text followed by optional MCP image blocks",
+    "Native screenshot, region screenshot and wait arguments"
+  ]
+}
