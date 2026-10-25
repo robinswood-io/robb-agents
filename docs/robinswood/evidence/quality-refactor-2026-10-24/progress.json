@@ -103,21 +103,21 @@
     "Lint global sans erreur ni avertissement",
     "Parcours complets réels en staging local, compilation signée et intégration"
   ],
-  "updatedAt": "2026-10-25T21:28:27.987614+00:00",
+  "updatedAt": "2026-10-25T21:37:09.778878+00:00",
   "current": {
-    "lastEvidence": "playground-extra-summary.json",
+    "lastEvidence": "sensitive-suite-summary.json",
     "sourceGate": {
-      "max-lines": 79,
+      "max-lines": 78,
       "no-explicit-any": 318
     },
     "globalLint": {
-      "files": 3490,
-      "errors": 367,
+      "files": 3521,
+      "errors": 366,
       "warnings": 137,
       "fatal": 0,
       "rules": {
         "@typescript-eslint/no-explicit-any": 299,
-        "max-lines": 68,
+        "max-lines": 67,
         "react-hooks/exhaustive-deps": 98,
         "directive": 12,
         "craft-agent/no-localstorage": 21,
@@ -126,7 +126,7 @@
     },
     "globalStatus": "en cours ; dernière grande opération des sessions, autres fichiers historiques, any, lint global et missions finales restants",
     "fullTestSummary": {
-      "pass": 10741,
+      "pass": 10743,
       "fail": 0,
       "skip": 12
     }
