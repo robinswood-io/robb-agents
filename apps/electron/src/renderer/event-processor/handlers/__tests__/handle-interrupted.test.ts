@@ -2,14 +2,16 @@ import { describe, expect, it } from 'bun:test'
 import { handleInterrupted } from '../session'
 import type { SessionState, InterruptedEvent } from '../../types'
 
-function makeState(messages: any[]): SessionState {
+function makeState(messages: SessionState['session']['messages']): SessionState {
   return {
     session: {
+      workspaceId: 'qa-workspace',
+      workspaceName: 'QA workspace',
       id: 'session-1',
       messages,
       lastMessageAt: Date.now(),
       isProcessing: true,
-    } as any,
+    },
     streaming: null,
   }
 }
@@ -18,15 +20,15 @@ describe('handleInterrupted (#616)', () => {
   describe('user-initiated stop (event.message present)', () => {
     it('removes queued bubbles AND emits restore_input', () => {
       const state = makeState([
-        { id: 'msg-1', role: 'user', content: 'first' },
-        { id: 'msg-2', role: 'user', content: 'queued one', isQueued: true },
-        { id: 'msg-3', role: 'user', content: 'queued two', isQueued: true },
+        { timestamp: 0, id: 'msg-1', role: 'user', content: 'first' },
+        { timestamp: 0, id: 'msg-2', role: 'user', content: 'queued one', isQueued: true },
+        { timestamp: 0, id: 'msg-3', role: 'user', content: 'queued two', isQueued: true },
       ])
 
       const event: InterruptedEvent = {
         type: 'interrupted',
         sessionId: 'session-1',
-        message: { id: 'info-1', role: 'info', content: 'Response interrupted', timestamp: 0 } as any,
+        message: { id: 'info-1', role: 'info', content: 'Response interrupted', timestamp: 0 },
         queuedMessages: ['queued one', 'queued two'],
       }
 
@@ -48,12 +50,12 @@ describe('handleInterrupted (#616)', () => {
 
     it('still works when no queued bubbles exist', () => {
       const state = makeState([
-        { id: 'msg-1', role: 'user', content: 'first' },
+        { timestamp: 0, id: 'msg-1', role: 'user', content: 'first' },
       ])
       const event: InterruptedEvent = {
         type: 'interrupted',
         sessionId: 'session-1',
-        message: { id: 'info-1', role: 'info', content: 'Response interrupted', timestamp: 0 } as any,
+        message: { id: 'info-1', role: 'info', content: 'Response interrupted', timestamp: 0 },
       }
 
       const next = handleInterrupted(state, event)
@@ -65,8 +67,8 @@ describe('handleInterrupted (#616)', () => {
   describe('silent redirect (event.message absent)', () => {
     it('KEEPS queued bubbles in chat and does NOT emit restore_input (#616 fix)', () => {
       const state = makeState([
-        { id: 'msg-1', role: 'user', content: 'first' },
-        { id: 'msg-2', role: 'user', content: 'queued during run', isQueued: true },
+        { timestamp: 0, id: 'msg-1', role: 'user', content: 'first' },
+        { timestamp: 0, id: 'msg-2', role: 'user', content: 'queued during run', isQueued: true },
       ])
 
       const event: InterruptedEvent = {
@@ -91,7 +93,7 @@ describe('handleInterrupted (#616)', () => {
 
     it('marks running tools as interrupted regardless of redirect type', () => {
       const state = makeState([
-        { id: 'tool-1', role: 'tool', toolStatus: 'executing', toolResult: undefined },
+        { timestamp: 0, content: '', id: 'tool-1', role: 'tool', toolStatus: 'executing', toolResult: undefined },
       ])
       const event: InterruptedEvent = {
         type: 'interrupted',
@@ -99,7 +101,7 @@ describe('handleInterrupted (#616)', () => {
       }
 
       const next = handleInterrupted(state, event)
-      const tool = next.state.session.messages[0] as any
+      const tool = next.state.session.messages[0]!
       expect(tool.toolStatus).toBe('error')
       expect(tool.toolResult).toBe('Interrupted')
       expect(tool.isError).toBe(true)
@@ -108,8 +110,8 @@ describe('handleInterrupted (#616)', () => {
 
   it('always strips transient status messages', () => {
     const state = makeState([
-      { id: 'msg-1', role: 'user', content: 'hi' },
-      { id: 'status-1', role: 'status', content: 'thinking…' },
+      { timestamp: 0, id: 'msg-1', role: 'user', content: 'hi' },
+      { timestamp: 0, id: 'status-1', role: 'status', content: 'thinking…' },
     ])
     const event: InterruptedEvent = {
       type: 'interrupted',

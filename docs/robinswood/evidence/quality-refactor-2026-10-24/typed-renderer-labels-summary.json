@@ -1,0 +1,227 @@
+{
+  "status": "testé localement ; chantier global en cours",
+  "scope": "Types des fixtures de messages, du watchdog navigateur et des labels récursifs",
+  "changes": [
+    "24 any explicites supprimés en réutilisant les contrats natifs de session, message, navigateur et Zod.",
+    "Le schéma de labels utilise sa vraie valeur récursive inférée depuis le schéma de base ; JavaScript produit strictement identique.",
+    "Trois fixtures de session complétées avec 20 champs obligatoires manquants ; deux fixtures navigateur utilisent les valeurs par défaut existantes et les options facultatives du contrat natif.",
+    "Les 62 tests ciblés et 151 assertions sont identiques avant/après ; aucune assertion supprimée ni assouplie.",
+    "Types natifs et compatibles, lint du lot, construction et 10 743 tests globaux réussis."
+  ],
+  "files": [
+    {
+      "file": "apps/electron/src/renderer/event-processor/handlers/__tests__/handle-interrupted.test.ts",
+      "lines": 126,
+      "sha256": "ae15f1eda155aa39fd8d9d279f991112a00fe97aad9ee90b1fbf46ea825831d1"
+    },
+    {
+      "file": "apps/electron/src/renderer/event-processor/handlers/__tests__/message-annotations-updated.test.ts",
+      "lines": 54,
+      "sha256": "2e94ed9f11f9beb98d8ca6ad760efac42ac0050b093e141c8793c18273a054f3"
+    },
+    {
+      "file": "apps/electron/src/renderer/event-processor/handlers/__tests__/text-message-id-sync.test.ts",
+      "lines": 185,
+      "sha256": "3d83effd0790913efccdd7c1710767fb92b73e366d37de8d22a0f71333b2d471"
+    },
+    {
+      "file": "packages/shared/src/agent/__tests__/browser-tool-watchdog.test.ts",
+      "lines": 210,
+      "sha256": "fa5fc7f468f375ffdab013ae954f406f8c5cd2df68b21bf3a989eb7f1a9d781a"
+    },
+    {
+      "file": "packages/shared/src/config/validators/labels.ts",
+      "lines": 248,
+      "sha256": "4525fe9b31ed5ffeab68effe6e9624e6f1eaff7e1e451c2c7fb78da071ed4a28"
+    }
+  ],
+  "checks": [
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 16.87,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/typed-renderer-labels-types.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "packages/shared/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 10.82,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/typed-renderer-labels-compat-shared.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "apps/electron/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 25.37,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/typed-renderer-labels-compat-electron.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "--config",
+        "eslint.config.mjs",
+        "apps/electron/src/renderer/event-processor/handlers/__tests__/text-message-id-sync.test.ts",
+        "apps/electron/src/renderer/event-processor/handlers/__tests__/handle-interrupted.test.ts",
+        "apps/electron/src/renderer/event-processor/handlers/__tests__/message-annotations-updated.test.ts",
+        "packages/shared/src/agent/__tests__/browser-tool-watchdog.test.ts",
+        "packages/shared/src/config/validators/labels.ts",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 1.47,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/typed-renderer-labels-lint.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "apps/electron/src/renderer/event-processor/handlers/__tests__/text-message-id-sync.test.ts",
+        "apps/electron/src/renderer/event-processor/handlers/__tests__/handle-interrupted.test.ts",
+        "apps/electron/src/renderer/event-processor/handlers/__tests__/message-annotations-updated.test.ts",
+        "packages/shared/src/agent/__tests__/browser-tool-watchdog.test.ts",
+        "packages/shared/tests/content-validators.test.ts"
+      ],
+      "exitCode": 0,
+      "seconds": 0.48,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/typed-renderer-labels-targeted.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 12.73,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/typed-renderer-labels-build.log"
+    },
+    {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 138.88,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/typed-renderer-labels-test.log"
+    }
+  ],
+  "proof": {
+    "status": "passed",
+    "files": [
+      {
+        "file": "apps/electron/src/renderer/event-processor/handlers/__tests__/text-message-id-sync.test.ts",
+        "lines": 186,
+        "sha256": "3d83effd0790913efccdd7c1710767fb92b73e366d37de8d22a0f71333b2d471",
+        "nativeSourceHash": "8a84b9335b6026e5da37d09ab727e0b1617cbf5092a382456861c023f82001c9",
+        "runtime": "native statements and assertions preserved; only required fixture fields and existing browser defaults added"
+      },
+      {
+        "file": "apps/electron/src/renderer/event-processor/handlers/__tests__/handle-interrupted.test.ts",
+        "lines": 127,
+        "sha256": "ae15f1eda155aa39fd8d9d279f991112a00fe97aad9ee90b1fbf46ea825831d1",
+        "nativeSourceHash": "4b59e922bc71489936d524c9cbb67dfff77172cae08155bb1ab518afb2bef75e",
+        "runtime": "native statements and assertions preserved; only required fixture fields and existing browser defaults added"
+      },
+      {
+        "file": "apps/electron/src/renderer/event-processor/handlers/__tests__/message-annotations-updated.test.ts",
+        "lines": 55,
+        "sha256": "2e94ed9f11f9beb98d8ca6ad760efac42ac0050b093e141c8793c18273a054f3",
+        "nativeSourceHash": "46f0437a45a87559baa199093c2ebc62d0119177dbecc6eb296000e652c6feca",
+        "runtime": "native statements and assertions preserved; only required fixture fields and existing browser defaults added"
+      },
+      {
+        "file": "packages/shared/src/agent/__tests__/browser-tool-watchdog.test.ts",
+        "lines": 211,
+        "sha256": "fa5fc7f468f375ffdab013ae954f406f8c5cd2df68b21bf3a989eb7f1a9d781a",
+        "nativeSourceHash": "00209e281c347013e5617a73ece59f831888fbd2be303e536c97346c09d328e5",
+        "runtime": "native statements and assertions preserved; only required fixture fields and existing browser defaults added"
+      },
+      {
+        "file": "packages/shared/src/config/validators/labels.ts",
+        "lines": 249,
+        "sha256": "4525fe9b31ed5ffeab68effe6e9624e6f1eaff7e1e451c2c7fb78da071ed4a28",
+        "nativeSourceHash": "fdd6c965734c96eb6818e8edef74f4c138d10971f398dd2345d75d3b3f7a5420",
+        "runtime": "byte-identical JavaScript"
+      }
+    ],
+    "maximumFileLines": 249,
+    "explicitAnyRemaining": 0,
+    "labelValidatorRuntimeByteIdentical": true,
+    "nativeTestStatementsAndAssertionsPreserved": true,
+    "requiredFixtureFieldsAdded": 20,
+    "browserFixturesCompletedWithExistingDefaults": 2,
+    "nativeExpectCalls": 71,
+    "optionalBrowserOptionsHandled": 2,
+    "newApplicationStateOrWorkflow": 0
+  },
+  "fullTestSummary": {
+    "pass": 10743,
+    "fail": 0,
+    "skip": 12
+  },
+  "targeted": {
+    "typed-renderer-labels-targeted": {
+      "pass": 62,
+      "fail": 0,
+      "skip": 0
+    }
+  },
+  "beforeAfter": {
+    "targetedPass": 62,
+    "targetedExpectCalls": 151
+  },
+  "sourceGate": {
+    "max-lines": 63,
+    "no-explicit-any": 245
+  },
+  "globalLint": {
+    "files": 3560,
+    "errors": 278,
+    "warnings": 137,
+    "fatal": 0,
+    "rules": {
+      "@typescript-eslint/no-explicit-any": 226,
+      "max-lines": 52,
+      "react-hooks/exhaustive-deps": 98,
+      "directive": 12,
+      "craft-agent/no-localstorage": 21,
+      "@typescript-eslint/no-unused-vars": 6
+    }
+  },
+  "resolvedFailures": [
+    "Le typage a exposé des options facultatives dans les callbacks navigateur et des lectures d’index bornées dans les tableaux Zod ; corrections vérifiées avec les deux compilateurs."
+  ],
+  "limits": [
+    "63 fichiers trop longs et 245 any explicites subsistent dans le code maintenu.",
+    "Le lint global reste en échec ; missions avec la connexion habituelle et contrôle UI final encore à effectuer.",
+    "Aucune installation de ce lot effectuée."
+  ],
+  "updatedAt": "2026-10-25T23:47:04.545920+00:00"
+}

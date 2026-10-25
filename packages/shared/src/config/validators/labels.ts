@@ -60,17 +60,11 @@ const BaseLabelConfigSchema = z.object({
 
 // Recursive schema: LabelConfig can have children which are also LabelConfigs.
 // Zod supports lazy() for recursive types.
-type LabelConfigSchemaType = z.ZodType<{
-  id: string;
-  name: string;
-  color?: unknown;
-  icon?: string;
-  valueType?: 'string' | 'number' | 'date' | 'link';
-  autoRules?: Array<{ pattern: string; flags?: string; valueTemplate?: string; description?: string }>;
-  children?: LabelConfigSchemaType[];
-}>;
+interface LabelConfigSchemaValue extends z.infer<typeof BaseLabelConfigSchema> {
+  children?: LabelConfigSchemaValue[];
+}
 
-const LabelConfigSchema: z.ZodType<any> = BaseLabelConfigSchema.extend({
+const LabelConfigSchema: z.ZodType<LabelConfigSchemaValue> = BaseLabelConfigSchema.extend({
   children: z.lazy(() => z.array(LabelConfigSchema)).optional(),
 });
 
@@ -161,9 +155,9 @@ export function validateLabelsContent(jsonString: string): ValidationResult {
 
   // 1. Check for globally unique IDs across the entire tree
   const seenIds = new Set<string>();
-  function checkUniqueIds(labels: any[], path: string): void {
+  function checkUniqueIds(labels: LabelConfigSchemaValue[], path: string): void {
     for (let i = 0; i < labels.length; i++) {
-      const label = labels[i];
+      const label = labels[i]!;
       if (seenIds.has(label.id)) {
         errors.push({
           file,
@@ -182,7 +176,7 @@ export function validateLabelsContent(jsonString: string): ValidationResult {
   checkUniqueIds(config.labels, 'labels');
 
   // 2. Check max nesting depth (prevents excessively deep hierarchies)
-  function checkDepth(labels: any[], depth: number, path: string): void {
+  function checkDepth(labels: LabelConfigSchemaValue[], depth: number, path: string): void {
     if (depth > MAX_LABEL_DEPTH) {
       errors.push({
         file,
@@ -194,7 +188,7 @@ export function validateLabelsContent(jsonString: string): ValidationResult {
       return;
     }
     for (let i = 0; i < labels.length; i++) {
-      const label = labels[i];
+      const label = labels[i]!;
       if (label.children && label.children.length > 0) {
         checkDepth(label.children, depth + 1, `${path}[${i}].children`);
       }
@@ -203,12 +197,12 @@ export function validateLabelsContent(jsonString: string): ValidationResult {
   checkDepth(config.labels, 1, 'labels');
 
   // 3. Validate auto-label rules (regex patterns on regular labels)
-  function checkAutoRules(labels: any[], path: string): void {
+  function checkAutoRules(labels: LabelConfigSchemaValue[], path: string): void {
     for (let i = 0; i < labels.length; i++) {
-      const label = labels[i];
+      const label = labels[i]!;
       if (label.autoRules && Array.isArray(label.autoRules)) {
         for (let j = 0; j < label.autoRules.length; j++) {
-          const rule = label.autoRules[j];
+          const rule = label.autoRules[j]!;
           if (rule.pattern) {
             const ruleResult = validateAutoLabelRule(rule.pattern, rule.flags);
             for (const err of ruleResult.errors) {

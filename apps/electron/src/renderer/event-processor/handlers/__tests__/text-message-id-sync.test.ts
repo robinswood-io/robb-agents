@@ -2,13 +2,16 @@ import { describe, expect, it } from 'bun:test'
 import { handleTextComplete } from '../text'
 import type { SessionState, TextCompleteEvent } from '../../types'
 
-function makeState(messages: any[]): SessionState {
+function makeState(messages: SessionState['session']['messages']): SessionState {
   return {
     session: {
+      workspaceId: 'qa-workspace',
+      workspaceName: 'QA workspace',
+      isProcessing: false,
       id: 'session-1',
       messages,
       lastMessageAt: Date.now(),
-    } as any,
+    },
     streaming: null,
   }
 }
@@ -59,7 +62,7 @@ describe('handleTextComplete messageId synchronization', () => {
     }
 
     const next = handleTextComplete(state, event)
-    const msg = next.session.messages[0] as any
+    const msg = next.session.messages[0]!
 
     expect(msg.id).toBe('msg-main-1')
     expect(msg.content).toBe('final response')
@@ -82,7 +85,7 @@ describe('handleTextComplete messageId synchronization', () => {
 
     const next = handleTextComplete(state, event)
     expect(next.session.messages).toHaveLength(1)
-    expect((next.session.messages[0] as any).id).toBe('msg-main-race')
+    expect((next.session.messages[0]!).id).toBe('msg-main-race')
   })
 
   it('preserves routing metadata from main process', () => {
@@ -105,7 +108,7 @@ describe('handleTextComplete messageId synchronization', () => {
     }
 
     const next = handleTextComplete(state, event)
-    expect((next.session.messages[0] as any).routingMeta).toEqual(event.routingMeta)
+    expect((next.session.messages[0]!).routingMeta).toEqual(event.routingMeta)
   })
 
   it('keeps backward compatibility when messageId is missing', () => {
@@ -120,7 +123,7 @@ describe('handleTextComplete messageId synchronization', () => {
     }
 
     const next = handleTextComplete(state, event)
-    const id = (next.session.messages[0] as any).id as string
+    const id = (next.session.messages[0]!).id as string
 
     expect(id.startsWith('msg-')).toBe(true)
     expect(id).not.toBe('')
