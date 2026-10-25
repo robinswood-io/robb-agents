@@ -1770,5 +1770,8 @@
       "clearContextualGmailMutationLifecycleState"
     ]
   ],
-  "moduleCycles": []
+  "moduleCycles": [],
+  "retainedTransformProofs": [
+    "pretool-first-phases-body-proof.json"
+  ]
 }

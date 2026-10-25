@@ -22,40 +22,37 @@ import { yoloHumanHandoffBlock, YOLO_AUTONOMY_GUIDANCE } from "../yolo-policy.ts
 import { isProtectedApplicationPath, APPLICATION_PROTECTION_REASON } from "@craft-agent/session-tools-core";
 import { resolve } from "node:path";
 import { expandPath } from "../../utils/paths.ts";
-import { FEATURE_FLAGS } from "../../feature-flags.ts";
 import { shouldAllowToolInMode, getPermissionModeDiagnostics } from "../mode-manager.ts";
 import { type PermissionsContext } from "../permissions-config.ts";
-import { rewriteBashWithRtk } from "./rtk-rewrite.ts";
-import { enforceTaskToolIsolation } from "./task-tool-isolation.ts";
 import { classifySensitiveExternalAction, contextualGmailExactEffectExpectationFromObjective, contextualGmailReplyPreflightAttestationFromObjective, contextualGmailReplyRecoveryReason, contextualGmailTargetScopedAuthorizationSegments, externalActionAuthorityPolicySegments, hasContextualGmailReplyMention, hasUnresolvedRemoteScopeTarget, hasUnresolvedSensitiveExternalActionTarget, isContextualGmailReplyAuthorizedByObjective, isSensitiveExternalActionAuthorizedByObjective, isSensitiveExternalActionConfirmationRequestedByObjective, isSensitiveExternalActionExplicitlyAuthorized, isSensitiveExternalActionOtherwiseAuthorizedByObjective, parseStructuredGmailSendResumeSegment, signedOssAtomicWriteAuthorizedSessionId, structuredGmailSendAuthorizationDiagnostic, type ContextualGmailReplyPreflightIntent } from "./sensitive-external-action.ts";
 import { checkObjectiveEvidenceBeforeMutation } from "./objective-evidence-gate.ts";
 import { classifyBoundedTargetedRemoteOperationalInspection, classifyReadOnlyRemoteObservationRepair, classifyNestedSshReadOnlyRemoteObservationRepair, containsLocalSshTransportInvocation, isRemoteStaticSourceInspectionCandidate } from "./registered-observation.ts";
-import { shouldPromptInAskMode, wrapCommandForMacAdminPrompt } from './pre-tool-use/ask-prompt.ts';
-import { oversizedRbwOssCatalogReadGuidance, redundantlyAsksPermissionForSellsyReadOnlyOAuth } from './pre-tool-use/autonomy-request-guards.ts';
-import { classifyBrowserObjectiveAuthority } from './pre-tool-use/browser-authority.ts';
-import { commandFromInput, isBrowserLifecycleCommand, resolveBrowserChannelDirective } from './pre-tool-use/browser-channel.ts';
-import { getConfigCliRedirect, getConfigDomainBashRedirect } from './pre-tool-use/cli-redirect.ts';
-import { validateConfigWrite } from './pre-tool-use/config-validation.ts';
-import type { PreToolUseCheckResult, PreToolUseInput, ToolEffectDescriptor } from './pre-tool-use/contracts.ts';
-import { redundantlyAsksAboutEstablishedThirdPartyDependency } from './pre-tool-use/dependency-guards.ts';
-import { observedResolvedThirdPartyDependencies, observedThirdPartyDependencies } from './pre-tool-use/dependency-state.ts';
-import { hashSensitiveExternalActionOperation } from './pre-tool-use/external-action-hash.ts';
-import { explicitlyNamesGmailBrowserMutation, explicitlyNamesNonCanonicalContextualGmailMutation, isBrowserKeyboardText } from './pre-tool-use/gmail-channel.ts';
-import { contextualGmailObjectiveFingerprint, contextualGmailObjectiveProvidesClosedExactHumanAnchor, currentContextualGmailPreflightAttestation, nextContextualGmailPreflightGeneration } from './pre-tool-use/gmail-evidence.ts';
-import { structuredGmailSendDiagnosticInput } from './pre-tool-use/gmail-send-diagnostics.ts';
-import type { ContextualGmailToolUseClaim } from './pre-tool-use/gmail-state.ts';
-import { CONTEXTUAL_GMAIL_BOUND_REPLY_TOOLS, CONTEXTUAL_GMAIL_PREFLIGHT_ATTESTATION_TTL_MS, CONTEXTUAL_GMAIL_PREFLIGHT_TOOLS, contextualGmailPreflightAttestations, contextualGmailPreflightGenerations, contextualGmailSessionsPendingFinalCleanup, contextualGmailToolUseClaims, inFlightContextualGmailReplies, observedContextualGmailReads, pendingContextualGmailPreflights, reservedContextualGmailReplyAttestations } from './pre-tool-use/gmail-state.ts';
-import { expandToolPaths, qualifySkillName, stripToolMetadata } from './pre-tool-use/input-transforms.ts';
-import { readOnlyRemoteObservationRepairReason, withPermissionModeContext } from './pre-tool-use/permission-context.ts';
-import { BOUNDED_OSS_ATOMIC_WRITE_TOOL } from './pre-tool-use/portable-scope.ts';
-import { isBoundedStructuredRemoteTechnicalRead } from './pre-tool-use/remote-observation.ts';
-import { hasTargetBoundOperationalTechnicalReadAuthority } from './pre-tool-use/remote-read-authority.ts';
-import { isBoundedStructuredRemoteTechnicalUpload } from './pre-tool-use/remote-upload.ts';
-import { boundedResumedSharePointCreationContract, isBoundedResumedSharePointCreation } from './pre-tool-use/sharepoint-contract.ts';
-import { isBoundedOrionWorktreeCommand } from './pre-tool-use/signed-resume-targets.ts';
-import { TERMINAL_RECONCILIATION_CAPABILITY_FIELD, deriveTerminalReconciliationInvocationCapability, terminalReconciliationCoordinationTool, terminalReconciliationToolAllowed } from './pre-tool-use/terminal-reconciliation.ts';
-import { classifyToolEffect } from './pre-tool-use/tool-effects.ts';
-import { BUILT_IN_MCP_SERVERS, FILE_WRITE_TOOLS, REMOTE_COMMAND_TOOL_PATTERN, STRUCTURED_REMOTE_READ_LIFECYCLE_TOOLS } from './pre-tool-use/tool-names.ts';
+import { shouldPromptInAskMode, wrapCommandForMacAdminPrompt } from "./pre-tool-use/ask-prompt.ts";
+import { redundantlyAsksPermissionForSellsyReadOnlyOAuth } from "./pre-tool-use/autonomy-request-guards.ts";
+import { classifyBrowserObjectiveAuthority } from "./pre-tool-use/browser-authority.ts";
+import { commandFromInput, isBrowserLifecycleCommand, resolveBrowserChannelDirective } from "./pre-tool-use/browser-channel.ts";
+import type { PreToolUseCheckResult, PreToolUseInput, ToolEffectDescriptor } from "./pre-tool-use/contracts.ts";
+import { redundantlyAsksAboutEstablishedThirdPartyDependency } from "./pre-tool-use/dependency-guards.ts";
+import { observedResolvedThirdPartyDependencies, observedThirdPartyDependencies } from "./pre-tool-use/dependency-state.ts";
+import { hashSensitiveExternalActionOperation } from "./pre-tool-use/external-action-hash.ts";
+import { explicitlyNamesGmailBrowserMutation, explicitlyNamesNonCanonicalContextualGmailMutation, isBrowserKeyboardText } from "./pre-tool-use/gmail-channel.ts";
+import { contextualGmailObjectiveFingerprint, contextualGmailObjectiveProvidesClosedExactHumanAnchor, currentContextualGmailPreflightAttestation, nextContextualGmailPreflightGeneration } from "./pre-tool-use/gmail-evidence.ts";
+import { structuredGmailSendDiagnosticInput } from "./pre-tool-use/gmail-send-diagnostics.ts";
+import type { ContextualGmailToolUseClaim } from "./pre-tool-use/gmail-state.ts";
+import { CONTEXTUAL_GMAIL_BOUND_REPLY_TOOLS, CONTEXTUAL_GMAIL_PREFLIGHT_ATTESTATION_TTL_MS, CONTEXTUAL_GMAIL_PREFLIGHT_TOOLS, contextualGmailPreflightAttestations, contextualGmailPreflightGenerations, contextualGmailSessionsPendingFinalCleanup, contextualGmailToolUseClaims, inFlightContextualGmailReplies, observedContextualGmailReads, pendingContextualGmailPreflights, reservedContextualGmailReplyAttestations } from "./pre-tool-use/gmail-state.ts";
+import { stripToolMetadata } from "./pre-tool-use/input-transforms.ts";
+import { readOnlyRemoteObservationRepairReason, withPermissionModeContext } from "./pre-tool-use/permission-context.ts";
+import { BOUNDED_OSS_ATOMIC_WRITE_TOOL } from "./pre-tool-use/portable-scope.ts";
+import { isBoundedStructuredRemoteTechnicalRead } from "./pre-tool-use/remote-observation.ts";
+import { hasTargetBoundOperationalTechnicalReadAuthority } from "./pre-tool-use/remote-read-authority.ts";
+import { isBoundedStructuredRemoteTechnicalUpload } from "./pre-tool-use/remote-upload.ts";
+import { boundedResumedSharePointCreationContract, isBoundedResumedSharePointCreation } from "./pre-tool-use/sharepoint-contract.ts";
+import { isBoundedOrionWorktreeCommand } from "./pre-tool-use/signed-resume-targets.ts";
+import { TERMINAL_RECONCILIATION_CAPABILITY_FIELD, deriveTerminalReconciliationInvocationCapability, terminalReconciliationCoordinationTool, terminalReconciliationToolAllowed } from "./pre-tool-use/terminal-reconciliation.ts";
+import { classifyToolEffect } from "./pre-tool-use/tool-effects.ts";
+import { BUILT_IN_MCP_SERVERS, FILE_WRITE_TOOLS, REMOTE_COMMAND_TOOL_PATTERN, STRUCTURED_REMOTE_READ_LIFECYCLE_TOOLS } from "./pre-tool-use/tool-names.ts";
+import { checkExecutionPrerequisites } from './pre-tool-use/execution-prerequisites.ts';
+import { prepareToolInput } from './pre-tool-use/tool-input-preparation.ts';
 
 export function runPreToolUseChecks(ctx: PreToolUseInput): PreToolUseCheckResult {
   const {
@@ -652,82 +649,22 @@ export function runPreToolUseChecks(ctx: PreToolUseInput): PreToolUseCheckResult
     return { type: 'block', reason: reasonWithContext };
   }
 
-  // ============================================================
-  // 2. TASK TOOL ISOLATION (persistent host-side boundary)
-  // ============================================================
-  if (executionIsolation) {
-    const isolationInput = expandToolPaths(toolName, input, onDebug).input;
-    const isolationDecision = enforceTaskToolIsolation({
-      toolName,
-      input: isolationInput,
-      workspaceRootPath,
-      workingDirectory,
-      isolation: executionIsolation,
-      missionCapabilityLock,
-    });
-    if (!isolationDecision.allowed) {
-      const reason = `Task execution isolation: ${isolationDecision.reason ?? 'blocked'}`;
-      onDebug?.(`Task isolation: blocking ${toolName} — ${reason}`);
-      return { type: 'block', reason };
-    }
-  }
-
-  // ============================================================
-  // 3. SOURCE BLOCKING (inactive MCP sources)
-  // ============================================================
-  if (toolName.startsWith('mcp__')) {
-    const parts = toolName.split('__');
-    const serverName = parts[1];
-    if (parts.length >= 3 && serverName && !BUILT_IN_MCP_SERVERS.has(serverName)) {
-      const isActive = activeSourceSlugs.includes(serverName);
-      if (!isActive) {
-        const sourceExists = allSourceSlugs.includes(serverName);
-        if (objectiveTerminalReconciliationPolicy) {
-          return {
-            type: 'block',
-            reason: `Terminal reconciliation cannot activate inactive source "${serverName}". Source activation is a configuration mutation outside the exact read-replay capability; reuse preserved evidence or finish with the truthful policy blocker.`,
-          };
-        }
-        if (contextualGmailToolUseClaim) {
-          contextualGmailToolUseClaim.phase = 'awaiting-source-reentry';
-        }
-        onDebug?.(`Source "${serverName}" not active (exists=${sourceExists}, hasActivation=${hasSourceActivation})`);
-        return {
-          type: 'source_activation_needed',
-          sourceSlug: serverName,
-          sourceExists,
-        };
-      }
-    }
-  }
-
-  // ============================================================
-  // 4. PREREQUISITE CHECK (guide.md before source tools)
-  // ============================================================
-  if (prerequisiteManager) {
-    if (preloadedSourceGuidePaths?.length) {
-      prerequisiteManager.markSourceGuidesLoadedInContext?.(preloadedSourceGuidePaths);
-    }
-
-    // Permit a bounded acquisition command; only its successful result earns credit.
-    if (toolName === 'Bash' && prerequisiteManager.trackBashSkillRead(input)) {
-      // Fall through without clearing the prerequisite before execution.
-    } else {
-      const prereqResult = prerequisiteManager.checkPrerequisites(toolName);
-      if (!prereqResult.allowed) {
-        return { type: 'block', reason: prereqResult.blockReason!, source: 'prerequisite' };
-      }
-    }
-  }
-
-  const oversizedCatalogGuidance = oversizedRbwOssCatalogReadGuidance(toolName, input);
-  if (oversizedCatalogGuidance) {
-    onDebug?.(`Bounded connector read: blocking whole OSS catalog read for ${String(input.path)}`);
-    return {
-      type: 'block',
-      reason: `The requested OSS file is a known oversized catalog and this connector read has no enforced offset or byte limit. ${oversizedCatalogGuidance}`,
-    };
-  }
+  const prerequisiteDecision = checkExecutionPrerequisites({
+    executionIsolation,
+    toolName,
+    input,
+    onDebug,
+    workspaceRootPath,
+    workingDirectory,
+    missionCapabilityLock,
+    activeSourceSlugs,
+    allSourceSlugs,
+    objectiveTerminalReconciliationPolicy,
+    hasSourceActivation,
+    prerequisiteManager,
+    preloadedSourceGuidePaths,
+  }, contextualGmailToolUseClaim);
+  if (prerequisiteDecision) return prerequisiteDecision;
 
   // ============================================================
   // 5. HIGH-STAKES EVIDENCE GATE
@@ -860,111 +797,18 @@ export function runPreToolUseChecks(ctx: PreToolUseInput): PreToolUseCheckResult
     return { type: 'spawn_session_intercept', input };
   }
 
-  // ============================================================
-  // 6. INPUT TRANSFORMS
-  // ============================================================
-  let currentInput = input;
-  let wasModified = false;
-
-  // 5a. Path expansion
-  const pathResult = expandToolPaths(toolName, currentInput, onDebug);
-  if (pathResult.modified) {
-    currentInput = pathResult.input;
-    wasModified = true;
-  }
-
-  // Portable session tokens are model-facing only. Once the exact bounded
-  // upload has passed every authority and local realpath check above, hand the
-  // connector the canonical absolute source path rather than a literal token.
-  if (boundedStructuredRemoteTechnicalUploadLocalPath !== undefined
-    && currentInput.localPath !== boundedStructuredRemoteTechnicalUploadLocalPath) {
-    currentInput = {
-      ...currentInput,
-      localPath: boundedStructuredRemoteTechnicalUploadLocalPath,
-    };
-    wasModified = true;
-  }
-
-  // 5b. Config-domain Bash guard (block direct labels/automations path operations unless using craft-agent)
-  if (FEATURE_FLAGS.craftAgentsCli && toolName === 'Bash') {
-    const configDomainBashRedirect = getConfigDomainBashRedirect(currentInput, workspaceRootPath, workingDirectory);
-    if (configDomainBashRedirect) {
-      return { type: 'block', reason: configDomainBashRedirect.message };
-    }
-  }
-
-  // 5c. Config file validation
-  const configResult = validateConfigWrite(toolName, currentInput, workspaceRootPath, onDebug);
-  if (!configResult.valid) {
-    return { type: 'block', reason: configResult.error! };
-  }
-
-  // 5d. Config file CLI redirect (labels + automations)
-  if (FEATURE_FLAGS.craftAgentsCli) {
-    const cliRedirect = getConfigCliRedirect(toolName, currentInput, workspaceRootPath, workingDirectory);
-    if (cliRedirect) {
-      return { type: 'block', reason: cliRedirect.message };
-    }
-  }
-
-  // 5e. Skill qualification
-  if (toolName === 'Skill') {
-    const skillResult = qualifySkillName(
-      currentInput,
-      workspaceId,
-      workspaceRootPath,
-      workingDirectory,
-      onDebug
-    );
-    if (skillResult.modified) {
-      currentInput = skillResult.input;
-      wasModified = true;
-    }
-  }
-
-  // 5f. Metadata stripping
-  const metadataResult = stripToolMetadata(toolName, currentInput, onDebug);
-  if (metadataResult.modified) {
-    currentInput = metadataResult.input;
-    wasModified = true;
-  }
-
-  // 5g. RTK Bash rewrite (last input transform — flows into both 'modify' and 'prompt' results).
-  // Permission decisions above and the ask-mode prompt below operate on the
-  // ORIGINAL `input` parameter, so the LLM still believes it ran the original
-  // command and our permission system gates the original command — only the
-  // SDK's actual execution sees the rewritten form.
-  if (!objectiveTerminalReconciliationPolicy && ctx.rtkContext?.enabled && ctx.rtkContext.path) {
-    const rtkResult = rewriteBashWithRtk(
-      toolName,
-      currentInput,
-      ctx.rtkContext.path,
-      ctx.rtkContext.exclude,
-      onDebug,
-      { dataFolderPath: ctx.dataFolderPath, workingDirectory },
-    );
-    if (rtkResult.modified) {
-      currentInput = rtkResult.input;
-      wasModified = true;
-    }
-  }
-
-  // The capability key applies to the executable input, not merely the model
-  // payload. Built-in path/skill/RTK transforms may not move a terminal read
-  // outside its exact persisted replay. Stripping the two inert UI metadata
-  // fields remains admissible because canonicalization excludes only them.
-  if (objectiveTerminalReconciliationPolicy
-    && !terminalReconciliationToolAllowed(
-      objectiveTerminalReconciliationPolicy,
-      toolName,
-      currentInput,
-      toolEffect,
-    )) {
-    return {
-      type: 'block',
-      reason: 'Terminal reconciliation input normalization changed an operational field outside the exact host capability. The transformed invocation was not executed.',
-    };
-  }
+  const preparation = prepareToolInput({
+    input,
+    toolName,
+    onDebug,
+    workspaceRootPath,
+    workingDirectory,
+    workspaceId,
+    objectiveTerminalReconciliationPolicy,
+  }, ctx, toolEffect, boundedStructuredRemoteTechnicalUploadLocalPath);
+  if (preparation.type === 'block') return preparation;
+  let currentInput = preparation.type === 'modify' ? preparation.input : input;
+  let wasModified = preparation.type === 'modify';
 
   // ============================================================
   // 7. SENSITIVE EXTERNAL-ACTION CONFIRMATION
@@ -1160,7 +1004,7 @@ export function runPreToolUseChecks(ctx: PreToolUseInput): PreToolUseCheckResult
   return { type: 'allow' };
 }
 
-/** Existing tool policy helpers grouped by authority, effect, target, input transformation and lifecycle; main pipeline retained unchanged. */
+/** Existing pipeline with direct prerequisite and input preparation functions; original public exports retained. */
 export type { PreToolUseContext, PathExpansionResult, SkillQualificationResult, MetadataStrippingResult, ConfigValidationResult, DeclaredToolCapabilities, ToolEffectDescriptor, PreToolUseCheckResult, PreToolUseInput, PermissionManagerLike, PrerequisiteManagerLike } from './pre-tool-use/contracts.ts';
 export { BUILT_IN_TOOLS, FILE_PATH_TOOLS, CONFIG_WRITE_TOOLS, LABELS_BLOCKED_FILE_TOOLS } from './pre-tool-use/tool-names.ts';
 export { expandToolPaths, qualifySkillName, stripToolMetadata, stripMcpMetadata } from './pre-tool-use/input-transforms.ts';
