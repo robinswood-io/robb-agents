@@ -42,7 +42,9 @@
     "Tests de clôture par questions natives : 62 any supprimés ; 45 scénarios, typage server-core et lint sans avertissement réussis ; agent hors réseau utilisant le vrai contrat BaseAgent",
     "Tests BrowserPaneManager : 122 any supprimés, 110 scénarios conservés dans neuf fichiers de 363 lignes au plus ; typage Electron et lint sans avertissement réussis",
     "Suite complète du dépôt et 16 configurations TypeScript réussies après les lots questions natives et navigateur ; corps JavaScript des 110 scénarios identiques lors de leur décomposition",
-    "Tests BrowserCDP : 27 any supprimés ; 23 scénarios conservés dans trois fichiers de 294 lignes au plus ; tests CDP et reçus clavier/presse-papiers, typage Electron et lint réussis"
+    "Tests BrowserCDP : 27 any supprimés ; 23 scénarios conservés dans trois fichiers de 294 lignes au plus ; tests CDP et reçus clavier/presse-papiers, typage Electron et lint réussis",
+    "10 suites Pi typées : 87 any supprimés ; 187 tests ciblés, lint sans avertissement et 16 configurations TypeScript réussis",
+    "Suite globale du dépôt réussie après les lots CDP et fixtures Pi ; aucune donnée comptable réelle modifiée"
   ],
   "pending": [
     "Découpage des autres fichiers au-delà de 500 lignes",
@@ -50,9 +52,9 @@
     "Lint global sans erreur ni avertissement",
     "Parcours complets réels en staging local, compilation signée et intégration"
   ],
-  "updatedAt": "2026-10-25T00:55:25.079363+00:00",
+  "updatedAt": "2026-10-25T01:05:38.410477+00:00",
   "current": {
     "over500": 217,
-    "explicitAny": 862
+    "explicitAny": 775
   }
 }

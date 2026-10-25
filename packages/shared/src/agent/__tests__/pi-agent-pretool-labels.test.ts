@@ -26,18 +26,18 @@ function createConfig(overrides?: {
 
   return {
     provider: 'pi',
-    workspace: {
+    workspace: { slug: 'test-workspace', createdAt: 1,
       id: 'ws-test',
       name: 'Test Workspace',
       rootPath: workspaceRootPath,
-    } as any,
+    },
     session: {
       id: 'session-test',
       workspaceRootPath,
       createdAt: Date.now(),
       lastUsedAt: Date.now(),
       workingDirectory,
-    } as any,
+    },
     isHeadless: true,
   }
 }
@@ -49,12 +49,13 @@ describe('PiAgent pre-tool labels guard', () => {
     const agent = new PiAgent(createConfig({ workspaceRootPath, workingDirectory }))
 
     const sent: Array<Record<string, unknown>> = []
-    ;(agent as any).send = (message: Record<string, unknown>) => {
+    ;agent['send'] = (message: Record<string, unknown>) => {
       sent.push(message)
-    }
-    ;(agent as any).emitAutomationEvent = async () => {}
+    return true;
+}
+    ;agent['emitAutomationEvent'] = async () => {}
 
-    await (agent as any).handlePreToolUseRequest({
+    await agent['handlePreToolUseRequest']({
       requestId: 'req-1',
       toolName: 'Read',
       input: { file_path: `${workspaceRootPath}/labels/config.json` },

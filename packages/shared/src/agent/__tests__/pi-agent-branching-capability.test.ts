@@ -5,18 +5,18 @@ import type { BackendConfig } from '../backend/types.ts'
 function createConfig(sessionOverrides?: Record<string, unknown>): BackendConfig {
   return {
     provider: 'pi',
-    workspace: {
+    workspace: { slug: 'test-workspace', createdAt: 1,
       id: 'ws-test',
       name: 'Test Workspace',
       rootPath: '/tmp/craft-agent-test',
-    } as any,
+    },
     session: {
       id: 'session-test',
       workspaceRootPath: '/tmp/craft-agent-test',
       createdAt: Date.now(),
       lastUsedAt: Date.now(),
       ...sessionOverrides,
-    } as any,
+    },
     isHeadless: true,
   }
 }
@@ -46,7 +46,7 @@ describe('PiAgent branching capability', () => {
       })
     )
 
-    ;(agent as any).requestEnsureSessionReady = async () => 'pi-session-123'
+    ;agent['requestEnsureSessionReady'] = async () => 'pi-session-123'
 
     await expect(agent.ensureBranchReady()).resolves.toBeUndefined()
     expect(agent.getSessionId()).toBe('pi-session-123')

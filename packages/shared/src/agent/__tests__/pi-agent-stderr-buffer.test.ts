@@ -14,17 +14,17 @@ import type { BackendConfig } from '../backend/types.ts'
 function createConfig(): BackendConfig {
   return {
     provider: 'pi',
-    workspace: {
+    workspace: { slug: 'test-workspace', createdAt: 1,
       id: 'ws-test',
       name: 'Test Workspace',
       rootPath: '/tmp/craft-agent-test',
-    } as any,
+    },
     session: {
       id: 'session-test',
       workspaceRootPath: '/tmp/craft-agent-test',
       createdAt: Date.now(),
       lastUsedAt: Date.now(),
-    } as any,
+    },
     isHeadless: true,
   }
 }
@@ -32,7 +32,7 @@ function createConfig(): BackendConfig {
 // Private method `recordStderr` is accessed via an unknown-cast to match the
 // pattern used in other pi-agent tests (see pi-agent-error-handling.test.ts).
 const record = (agent: PiAgent, chunk: string): void => {
-  ;(agent as unknown as { recordStderr: (chunk: string) => void }).recordStderr(chunk)
+  ;agent['recordStderr'](chunk)
 }
 
 const handleExit = (
@@ -41,13 +41,7 @@ const handleExit = (
   signal: string | null,
   child?: ChildProcess,
 ): void => {
-  ;(agent as unknown as {
-    handleSubprocessExit: (
-      exitCode: number | null,
-      exitSignal: string | null,
-      exitingChild?: ChildProcess,
-    ) => void
-  }).handleSubprocessExit(code, signal, child)
+  ;agent['handleSubprocessExit'](code, signal, child)
 }
 
 describe('PiAgent stderr ring buffer', () => {
@@ -124,7 +118,7 @@ describe('PiAgent stderr ring buffer', () => {
     const agent = new PiAgent(createConfig())
     const debugMessages: string[] = []
     agent.onDebug = message => debugMessages.push(message)
-    ;(agent as unknown as { _isProcessing: boolean })._isProcessing = true
+    ;agent['_isProcessing'] = true
     const secret = `sk-ant-api03-${'c'.repeat(32)}`
     record(agent, `${'x'.repeat(5_000)}\napi_key=${secret}`)
 
@@ -165,9 +159,9 @@ describe('PiAgent stderr ring buffer', () => {
       subprocess: ChildProcess | null
       killSubprocess: () => void
     }
-    internals.subprocess = fakeChild
+    internals['subprocess'] = fakeChild
 
-    internals.killSubprocess()
+    internals['killSubprocess']()
     handleExit(agent, null, 'SIGTERM', fakeChild)
 
     expect(debugMessages.some(message => message.includes('__RUNTIME_ERROR__'))).toBe(false)
