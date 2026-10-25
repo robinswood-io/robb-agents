@@ -85,12 +85,12 @@
     "Lint global sans erreur ni avertissement",
     "Parcours complets réels en staging local, compilation signée et intégration"
   ],
-  "updatedAt": "2026-10-25T07:13:06.570880+00:00",
+  "updatedAt": "2026-10-25T07:28:28.754158+00:00",
   "current": {
-    "lastEvidence": "policy-storage-modules-summary.json",
+    "lastEvidence": "backend-driver-fixtures-summary.json",
     "sourceGate": {
       "max-lines": 165,
-      "no-explicit-any": 525
+      "no-explicit-any": 506
     },
     "globalStatus": "en cours ; validation globale, interface et missions finales restantes"
   }

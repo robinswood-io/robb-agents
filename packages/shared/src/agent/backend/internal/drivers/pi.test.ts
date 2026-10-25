@@ -1,5 +1,27 @@
+import type { BackendHostRuntimeContext, CoreBackendConfig } from '../../types.ts';
+import type { ModelDefinition } from '../../../../config/models.ts';
 import { afterEach, describe, expect, it, mock } from 'bun:test';
 import { piDriver } from './pi.ts';
+
+
+const hostRuntime: BackendHostRuntimeContext = {
+  appRootPath: '/tmp/robb-driver-fixture', isPackaged: false,
+};
+const coreConfig: CoreBackendConfig = {
+  workspace: {
+    id: 'driver-workspace', slug: 'driver-workspace', name: 'Driver fixture',
+    rootPath: '/tmp/robb-driver-fixture', createdAt: 1,
+  },
+};
+
+function modelFixture(id: string, overrides: Partial<Omit<ModelDefinition, 'id'>> = {}): ModelDefinition {
+  return {
+    id, name: id, shortName: id, description: 'Driver fixture', provider: 'pi',
+    // The driver treats zero as an absent context-window override.
+    contextWindow: 0,
+    ...overrides,
+  };
+}
 
 const originalCopilotKillSwitch = process.env.ROBB_DISABLE_GITHUB_COPILOT_PROXY;
 
@@ -27,15 +49,15 @@ describe('piDriver.buildRuntime custom endpoint models', () => {
           baseUrl: 'http://127.0.0.1:11111/v1',
           customEndpoint: { api: 'anthropic-messages', supportsImages: true },
           models: [
-            { id: 'vision-model', contextWindow: 262_144, supportsImages: true },
-            { id: 'text-only-model', supportsImages: false },
-            { id: 'plain-model' },
+            modelFixture('vision-model', { contextWindow: 262_144, supportsImages: true }),
+            modelFixture('text-only-model', { supportsImages: false }),
+            modelFixture('plain-model'),
           ],
           createdAt: Date.now(),
-        } as any,
+        },
       },
-      coreConfig: {} as any,
-      hostRuntime: {} as any,
+      coreConfig,
+      hostRuntime,
       resolvedPaths: {
         piServerPath: '/tmp/pi-agent-server.js',
         interceptorBundlePath: '/tmp/interceptor.cjs',
@@ -65,13 +87,15 @@ describe('piDriver.buildRuntime custom endpoint models', () => {
           baseUrl: 'http://127.0.0.1:11434/v1',
           customEndpoint: { api: 'openai-completions' },
           models: [
-            { id: 'deepseek-r1-local', contextWindow: 131_072, supportsThinking: true, maxOutputTokens: 32_768 },
+            modelFixture('deepseek-r1-local', {
+              contextWindow: 131_072, supportsThinking: true, maxOutputTokens: 32_768,
+            }),
           ],
           createdAt: Date.now(),
-        } as any,
+        },
       },
-      coreConfig: {} as any,
-      hostRuntime: {} as any,
+      coreConfig,
+      hostRuntime,
       resolvedPaths: {
         piServerPath: '/tmp/pi-agent-server.js',
         interceptorBundlePath: '/tmp/interceptor.cjs',
@@ -93,10 +117,14 @@ describe('piDriver external subscription bridges', () => {
         authType: 'none',
         resolvedModel: 'pi/gemini-3.7-flash-high',
         capabilities: { needsHttpPoolServer: false },
-        connection: { piAuthProvider: 'google-antigravity' } as any,
+        connection: {
+          slug: 'antigravity-fixture', name: 'Antigravity fixture',
+          providerType: 'pi', authType: 'none', createdAt: 1,
+          piAuthProvider: 'google-antigravity',
+        },
       },
-      coreConfig: {} as any,
-      hostRuntime: {} as any,
+      coreConfig,
+      hostRuntime,
       resolvedPaths: {
         piServerPath: '/tmp/pi-agent-server.js',
         antigravityServerPath: '/tmp/antigravity-server.js',
@@ -120,10 +148,10 @@ describe('piDriver GitHub Copilot contract', () => {
         authType: 'oauth',
         piAuthProvider: 'github-copilot',
         createdAt: Date.now(),
-      } as any,
+      },
       credentials: { oauthRefreshToken: 'must-not-be-exchanged' },
       timeoutMs: 100,
-      hostRuntime: {} as any,
+      hostRuntime,
       resolvedPaths: {
         piServerPath: '/tmp/pi-agent-server.js',
         vibeAcpServerPath: '/tmp/vibe-acp-server.js',
@@ -169,10 +197,10 @@ describe('piDriver local & custom endpoint model discovery', () => {
           defaultModel: 'qwen3-coder:30b',
           models: ['custom-local-alias'],
           createdAt: Date.now(),
-        } as any,
+        },
         credentials: {},
         timeoutMs: 2_000,
-        hostRuntime: {} as any,
+        hostRuntime,
         resolvedPaths: {
           piServerPath: '/tmp/pi-agent-server.js',
           interceptorBundlePath: '/tmp/interceptor.cjs',

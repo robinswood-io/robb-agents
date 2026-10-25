@@ -105,7 +105,8 @@ describe('createBackend / createAgent', () => {
 
   describe('Unknown provider', () => {
     it('should throw for unknown provider', () => {
-      const config = createTestConfig({ provider: 'unknown' as any });
+      // @ts-expect-error Deliberately unsupported provider exercises the runtime boundary.
+      const config = createTestConfig({ provider: 'unknown' });
 
       expect(() => createBackend(config)).toThrow('Unknown provider: unknown');
     });
@@ -138,7 +139,8 @@ describe('isProviderAvailable', () => {
   });
 
   it('should return false for unknown provider', () => {
-    expect(isProviderAvailable('unknown' as any)).toBe(false);
+    // @ts-expect-error Deliberately unsupported provider exercises the runtime boundary.
+    expect(isProviderAvailable('unknown')).toBe(false);
   });
 });
 
@@ -156,7 +158,8 @@ describe('connectionTypeToProvider', () => {
   });
 
   it('should default to anthropic for unknown types', () => {
-    expect(connectionTypeToProvider('unknown' as any)).toBe('anthropic');
+    // @ts-expect-error Deliberately unsupported provider exercises the runtime boundary.
+    expect(connectionTypeToProvider('unknown')).toBe('anthropic');
   });
 });
 
