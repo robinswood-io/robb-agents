@@ -35,8 +35,10 @@
     "Tests Claude : 48 any retirés, fixtures historiques bornées et typées à une frontière de test explicite ; 37 scénarios conservés dans trois fichiers de 340 lignes au plus ; tests, typage et lint sans avertissement réussis",
     "Arrêt Pi et reprise nouvelle demande vérifiés avec le SDK réel hors réseau ; deux reproductions rouges puis correctifs verts",
     "Clôture Pi après tous les traitements différés et références exactes du journal ; 87 tests adaptateur, suite worker, tests OAuth sans any, 16 configurations TypeScript et suite globale réussis",
-    "Adaptateur Pi décomposé en trois fichiers de 435, 251 et 150 lignes ; temporisations et commande de récupération inter-processus retirées",
-    "Build Electron complet réussi via la commande canonique ; application installée inchangée"
+    "Adaptateur Pi décomposé en trois fichiers de 436, 251 et 150 lignes ; temporisations et commande de récupération inter-processus retirées",
+    "Build Electron complet réussi via la commande canonique ; application installée inchangée",
+    "8 découpages supplémentaires de contrats, projets, événements missions, routage, OAuth et revues déléguées ; 194 déclarations et interfaces publiques conservées, sans cycle",
+    "36 domaines extraits contrôlés par empreintes des corps et résolution des imports ; suite complète, 16 configurations TypeScript et lint des nouveaux modules réussis"
   ],
   "pending": [
     "Découpage des autres fichiers au-delà de 500 lignes",
@@ -44,9 +46,9 @@
     "Lint global sans erreur ni avertissement",
     "Parcours complets réels en staging local, compilation signée et intégration"
   ],
-  "updatedAt": "2026-10-25T00:28:35.285836+00:00",
+  "updatedAt": "2026-10-25T00:33:25.512336+00:00",
   "current": {
-    "over500": 227,
+    "over500": 219,
     "explicitAny": 1073
   }
 }
