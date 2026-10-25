@@ -1,0 +1,235 @@
+{
+  "source": "packages/shared/src/workspaces/storage.ts",
+  "units": [
+    {
+      "names": [
+        "DEFAULT_WORKSPACES_DIR"
+      ],
+      "group": "paths",
+      "bodySha256": "54eed39872c8d7ee07d38445edbc3dc2259e51d0bb2f9a340dd1f31518364aef"
+    },
+    {
+      "names": [
+        "WORKSPACE_CONFIG_SCHEMA_VERSION"
+      ],
+      "group": "paths",
+      "bodySha256": "83f29a33743db6cab5a7cb83dc7bad02d49d26a570c02b4f1248d63f729d2695"
+    },
+    {
+      "names": [
+        "LEGACY_NULLABLE_WORKSPACE_DEFAULT_KEYS"
+      ],
+      "group": "paths",
+      "bodySha256": "1fa683ab6aee2e56661cce1e7408bbc570c5c23d3154c5f04d112b0d664dc64d"
+    },
+    {
+      "names": [
+        "WorkspaceConfigStorageSchema"
+      ],
+      "group": "paths",
+      "bodySha256": "a6b02be5fd44ce5a6468bf4bfc747951875c93f04c0895a7f144b3d478e1615a"
+    },
+    {
+      "names": [
+        "UnsupportedWorkspaceConfigVersionError"
+      ],
+      "group": "paths",
+      "bodySha256": "628c65c12194ee135923de9d43ba060f69550157cab1f8151b656066f1a87e9f"
+    },
+    {
+      "names": [
+        "getDefaultWorkspacesDir"
+      ],
+      "group": "paths",
+      "bodySha256": "9af69d78b9c95497cd2e49787347d886ff1dcb8a85c979739cc2bb60c4cbcfd8"
+    },
+    {
+      "names": [
+        "ensureDefaultWorkspacesDir"
+      ],
+      "group": "paths",
+      "bodySha256": "5fcc62a4abca294837ed8a1db1873b73d6a3fce256f921a57d1ef462a7db3740"
+    },
+    {
+      "names": [
+        "getWorkspacePath"
+      ],
+      "group": "paths",
+      "bodySha256": "7e3abba08078f07547b35e09da3c60001a0d82a72d52987776b86eb304d851c4"
+    },
+    {
+      "names": [
+        "getWorkspaceSourcesPath"
+      ],
+      "group": "paths",
+      "bodySha256": "4239e5828d929815a201a76e3fa847d15256c2125f2fdf898290dcc9a707433f"
+    },
+    {
+      "names": [
+        "getWorkspaceSessionsPath"
+      ],
+      "group": "paths",
+      "bodySha256": "cb678bf4285096db9b951c7b8cace850c9bc6d4507c0fec2c99062317ddbf1eb"
+    },
+    {
+      "names": [
+        "getWorkspaceSkillsPath"
+      ],
+      "group": "paths",
+      "bodySha256": "ec836d9dc84dde3a61ebf8e2699ba728e6283d17f8fd6e19e6c27e015e7b958c"
+    },
+    {
+      "names": [
+        "loadWorkspaceConfig"
+      ],
+      "group": "config",
+      "bodySha256": "2fb34025ee394590917558608910daed73c5b2d8e94390fa63530b8bbb3fb28c"
+    },
+    {
+      "names": [
+        "saveWorkspaceConfig"
+      ],
+      "group": "config",
+      "bodySha256": "c283e69e8bdc1c55a8e84b4b89a3cb3219f873a469960a81186abb6b23d25477"
+    },
+    {
+      "names": [
+        "countSubdirs"
+      ],
+      "group": "directories",
+      "bodySha256": "23eb7f3edbbe2c742e8e63cfdc099b105984d845205413db0f30a1c5051e0264"
+    },
+    {
+      "names": [
+        "listSubdirNames"
+      ],
+      "group": "directories",
+      "bodySha256": "57fb63c1618f79144fe6eeb066a035cdc4308d9f008faf3f35c29af54a0802aa"
+    },
+    {
+      "names": [
+        "loadWorkspace"
+      ],
+      "group": "directories",
+      "bodySha256": "9a882e1c2fda544fa289e425000d78c5bfff5bf345f11304b83b2ab8b47c20f0"
+    },
+    {
+      "names": [
+        "getWorkspaceSummary"
+      ],
+      "group": "directories",
+      "bodySha256": "cab47f6ce4144c0a766db91de7f4b82621da1d665d39b6142ab8ba314e400b43"
+    },
+    {
+      "names": [
+        "generateSlug"
+      ],
+      "group": "directories",
+      "bodySha256": "2e56519b6eaa8d7389e9e6dcc32f83841e33e094f8fae0c69f616083742bc64d"
+    },
+    {
+      "names": [
+        "generateUniqueWorkspacePath"
+      ],
+      "group": "directories",
+      "bodySha256": "7a8c4fa73dbe6ead86df094bdbce9538727f0c3e86c599cee7090f286a099610"
+    },
+    {
+      "names": [
+        "createWorkspaceAtPath"
+      ],
+      "group": "directories",
+      "bodySha256": "097fe1d4c6015906013dab98be3e797c60ae3d4a5e7bdea2b374bb4b517de49c"
+    },
+    {
+      "names": [
+        "deleteWorkspaceFolder"
+      ],
+      "group": "directories",
+      "bodySha256": "3675ed197f2d1cc859a0a3954961da09e06aaa067b2003dd0853a114d5a0355b"
+    },
+    {
+      "names": [
+        "isValidWorkspace"
+      ],
+      "group": "directories",
+      "bodySha256": "8f4f6eefc83333f21b2fcd9589308ee046ea89af73cc2c8a9f6d05f901193bb9"
+    },
+    {
+      "names": [
+        "renameWorkspaceFolder"
+      ],
+      "group": "directories",
+      "bodySha256": "bff465a8b27f09068a23fc8ec026339cffabf786328625ac23271b727e49f6a7"
+    },
+    {
+      "names": [
+        "discoverWorkspacesInDefaultLocation"
+      ],
+      "group": "directories",
+      "bodySha256": "37b4ebf35ddf06f6a5f58577327c77824e83490f475021103fedd0f9442460e0"
+    },
+    {
+      "names": [
+        "getWorkspaceColorTheme"
+      ],
+      "group": "settings",
+      "bodySha256": "d186c0911cb226ce05f23d0e2e550bdcb3959b212340bf3c2eb90387c41a33ac"
+    },
+    {
+      "names": [
+        "setWorkspaceColorTheme"
+      ],
+      "group": "settings",
+      "bodySha256": "5e05015dd91dd19e6b06a861e39940b91cc39c51d2fc24300b05bece65947e62"
+    },
+    {
+      "names": [
+        "isLocalMcpEnabled"
+      ],
+      "group": "settings",
+      "bodySha256": "12d359971d90f2ae4d68516d371301875630ffef8d651157158a43276f566601"
+    },
+    {
+      "names": [
+        "ensurePluginManifest"
+      ],
+      "group": "settings",
+      "bodySha256": "3bf1eb5816394c1951df648e313f4a2ad52fdbded2f9c063ce003911978ec404"
+    }
+  ],
+  "modules": [
+    {
+      "name": "paths",
+      "lines": 114
+    },
+    {
+      "name": "config",
+      "lines": 153
+    },
+    {
+      "name": "directories",
+      "lines": 272
+    },
+    {
+      "name": "settings",
+      "lines": 125
+    }
+  ],
+  "dependencies": {
+    "paths": [],
+    "config": [
+      "paths"
+    ],
+    "directories": [
+      "config",
+      "settings",
+      "paths"
+    ],
+    "settings": [
+      "config"
+    ]
+  },
+  "unitCycles": [],
+  "moduleCycles": []
+}

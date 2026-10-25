@@ -1,0 +1,324 @@
+{
+  "source": "packages/shared/src/governance/capability-broker.ts",
+  "units": [
+    {
+      "names": [
+        "OPERATION_RISK_LEVELS"
+      ],
+      "group": "contracts",
+      "bodySha256": "890a39ba6b2ac83ee6017b8ef1d915559b942d1842b0da00b96f5afda928f3a0"
+    },
+    {
+      "names": [
+        "AUTONOMY_LEVELS"
+      ],
+      "group": "contracts",
+      "bodySha256": "9769f783ca90351737394b1b2a79791eaaba1f5616cdd9d9bb109cc98b8fe150"
+    },
+    {
+      "names": [
+        "OperationRiskLevelSchema"
+      ],
+      "group": "contracts",
+      "bodySha256": "f12057833ce7cbfdbb3a3b0600f430b169b174f852a9cad9621d676ec8f20763"
+    },
+    {
+      "names": [
+        "AutonomyLevelSchema"
+      ],
+      "group": "contracts",
+      "bodySha256": "77b18882d70ded9f4c6d403811fc9323a89eaca75f826a56b157c9ffdfd81661"
+    },
+    {
+      "names": [
+        "OperationRiskLevel"
+      ],
+      "group": "contracts",
+      "bodySha256": "97e86e8c6f18c4bd04a87fd365c8fd3af85435a0c30953e520806f8c0254d034"
+    },
+    {
+      "names": [
+        "AutonomyLevel"
+      ],
+      "group": "contracts",
+      "bodySha256": "785d080c129d84c6cb939a9178b35c8c67e011fbd80c98aa331704c2b598925d"
+    },
+    {
+      "names": [
+        "RISK_RANK"
+      ],
+      "group": "contracts",
+      "bodySha256": "9c467d046b5251abf54371d93cfd74730d62f76358ac989fc5f605a1ccb8a9ac"
+    },
+    {
+      "names": [
+        "AUTONOMY_MAX_RISK"
+      ],
+      "group": "contracts",
+      "bodySha256": "5da155327bfbf422e5afa33c0aede3a67a4d7cee2151b12de56b37d0c5b20c62"
+    },
+    {
+      "names": [
+        "OperationIdentitySchema"
+      ],
+      "group": "contracts",
+      "bodySha256": "bd76cd4997eed3e1a8efe7d1c2ba579c2985f7bc16817af787e5931863f297df"
+    },
+    {
+      "names": [
+        "OperationTargetSchema"
+      ],
+      "group": "contracts",
+      "bodySha256": "70d8249fc5c4322b877157e72d0000066834c4413b346ee0f0f29bf90b3bb1a2"
+    },
+    {
+      "names": [
+        "OperationBudgetEstimateSchema"
+      ],
+      "group": "contracts",
+      "bodySha256": "bb03cd13c4b890e7721a4c54bd6178281cf1b6fe4e62c8bc142de6d490460511"
+    },
+    {
+      "names": [
+        "OperationCompensationSchema"
+      ],
+      "group": "contracts",
+      "bodySha256": "c0226964cd219ca61092b2a7ce6d3ef132a5f5dd13c54d434211f94b92e10f23"
+    },
+    {
+      "names": [
+        "OperationApprovalContextSchema"
+      ],
+      "group": "contracts",
+      "bodySha256": "5edc6d364361d2757e609117c6ebcff05efc424f1c8ce8c7de6540e2b8e96828"
+    },
+    {
+      "names": [
+        "CapabilityOperationRequestSchema"
+      ],
+      "group": "contracts",
+      "bodySha256": "de377c79e77eb51d27e3d5956bc59f2d8252b382728bd34f4486e2c679388c0a"
+    },
+    {
+      "names": [
+        "CapabilityPolicySchema"
+      ],
+      "group": "contracts",
+      "bodySha256": "f5979bd824a1dfa32bee47057751dcc4d1b8b875251943155cce0f00fe1bf412"
+    },
+    {
+      "names": [
+        "OperationIdentity"
+      ],
+      "group": "contracts",
+      "bodySha256": "f488539d5e686aa97e9513306631ad2fae9b0759f66bdc24b38778e1421dd560"
+    },
+    {
+      "names": [
+        "OperationTarget"
+      ],
+      "group": "contracts",
+      "bodySha256": "adb95f0cb5e7ea17b31f6b81f8514d544c3f98d30f23f316c62e5b1a4a5994af"
+    },
+    {
+      "names": [
+        "OperationBudgetEstimate"
+      ],
+      "group": "contracts",
+      "bodySha256": "1f51cff465833b792b4374067535e25581505928190cbb369a4ea53ed7e5340a"
+    },
+    {
+      "names": [
+        "OperationCompensation"
+      ],
+      "group": "contracts",
+      "bodySha256": "35c5d9b42dda0c62768818c5e1499defe14e6aadadd71921d8390cd74d85fdcc"
+    },
+    {
+      "names": [
+        "OperationApprovalContext"
+      ],
+      "group": "contracts",
+      "bodySha256": "0589636bbee2df402507a3575820066481d37507b84a9ff3ac0152d05981c25b"
+    },
+    {
+      "names": [
+        "CapabilityOperationRequest"
+      ],
+      "group": "contracts",
+      "bodySha256": "4f4e8a6b903b9d72c66778dd53fb4a085747faa49dc267e40baec4d395e3cd65"
+    },
+    {
+      "names": [
+        "CapabilityPolicy"
+      ],
+      "group": "contracts",
+      "bodySha256": "7e38b608a56d4bd43be1a65c400764080c88b6b9c1e48d6535751ef3ab6cc8b3"
+    },
+    {
+      "names": [
+        "CapabilityApprovalRequest"
+      ],
+      "group": "contracts",
+      "bodySha256": "ece9ae75cc3fe1cbf779d6d16c25671e95539f5401592df753bf99e658f33ec5"
+    },
+    {
+      "names": [
+        "CapabilityApprovalReceipt"
+      ],
+      "group": "contracts",
+      "bodySha256": "564a4ac301c7d447205d56afb98dfa2001c56cca21870a3b317c41c4cc90e7bf"
+    },
+    {
+      "names": [
+        "OperationCapabilitySchema"
+      ],
+      "group": "contracts",
+      "bodySha256": "fc1167111988883039be721b84d589f35d1a2e53de4e78cf29177daa659bf859"
+    },
+    {
+      "names": [
+        "OperationCapability"
+      ],
+      "group": "contracts",
+      "bodySha256": "baca3de14fc77fcf646d71a1b8fc0011f6e796567aeff657dacd87fab5e64da5"
+    },
+    {
+      "names": [
+        "CapabilityBrokerDenialCode"
+      ],
+      "group": "contracts",
+      "bodySha256": "2de23b695e23572a5c681df00fc0516ffcc8d69d1c3f3b31e7eeef73e6755418"
+    },
+    {
+      "names": [
+        "CapabilityBrokerDecision"
+      ],
+      "group": "contracts",
+      "bodySha256": "45111ed518b73cead49e34e1eb652a3f27495e88bf39a2f4f3c66f510d934ce6"
+    },
+    {
+      "names": [
+        "CapabilityConsumptionDecision"
+      ],
+      "group": "contracts",
+      "bodySha256": "c7240d3095fc52b215fab3a33da9c7bb683a60770d987558a3c0c1544d8b0cb1"
+    },
+    {
+      "names": [
+        "CapabilityBrokerEvent"
+      ],
+      "group": "contracts",
+      "bodySha256": "9b42b8e2a8fe4cde3921f820f0c916eef4fb05b3c7841dfb5c06e11cdb95fadc"
+    },
+    {
+      "names": [
+        "PendingApproval"
+      ],
+      "group": "contracts",
+      "bodySha256": "a0949de2339818f016f8b2bb20de4210f9faf4fdd12e56a8daf34a4ba843d493"
+    },
+    {
+      "names": [
+        "ApprovedRequest"
+      ],
+      "group": "contracts",
+      "bodySha256": "724037521efb63fbda5943d49c1887eb262ce24f7fb976a3f398f0b25dfd7e5d"
+    },
+    {
+      "names": [
+        "UnsignedOperationCapability"
+      ],
+      "group": "contracts",
+      "bodySha256": "21273dd735c30b1f37e6d2db58c41adce70f700806da797797b9d28450ac01c1"
+    },
+    {
+      "names": [
+        "CapabilityKillSwitches"
+      ],
+      "group": "contracts",
+      "bodySha256": "7ae7897f3d6255e76bc21a4ac75173594bfb2d5a7b3648556e0a1760293eeb73"
+    },
+    {
+      "names": [
+        "stableValue"
+      ],
+      "group": "contracts",
+      "bodySha256": "00496fcb995c9b56f3b5ab3ca8706ab3ccc30623da97996724fd080679c0364b"
+    },
+    {
+      "names": [
+        "canonicalOperationValue"
+      ],
+      "group": "contracts",
+      "bodySha256": "0dfc24cfab3f1382e5db69daa69bf8bda720b9a14464701769be314c1bcaae9d"
+    },
+    {
+      "names": [
+        "operationValueHash"
+      ],
+      "group": "contracts",
+      "bodySha256": "4023ca87391c01ce5cd1ca50f6b7c7c306104b2051239c4d11c15dc42345ba10"
+    },
+    {
+      "names": [
+        "capabilityOperationRequestHash"
+      ],
+      "group": "contracts",
+      "bodySha256": "426b0acbdceab536361c6424498e50b55a52ab9a5e040e2f0be18bc4607c29f3"
+    },
+    {
+      "names": [
+        "parseCapabilityOperationRequest"
+      ],
+      "group": "contracts",
+      "bodySha256": "24ce16c04df2a7bd9d4862fe52446234a46cbd7511766c5408beb84726167030"
+    },
+    {
+      "names": [
+        "parseOperationCapability"
+      ],
+      "group": "contracts",
+      "bodySha256": "c24d5c04224025a64b41d284354a947196a39c5e8b791873492aa7a0d460a8a9"
+    },
+    {
+      "names": [
+        "requiresIdempotency"
+      ],
+      "group": "broker",
+      "bodySha256": "a09486a98ddeb6194cbb990a048db1238e32a85962b4faa86a6707eba2ae5b25"
+    },
+    {
+      "names": [
+        "requiresCompensation"
+      ],
+      "group": "broker",
+      "bodySha256": "783198b988ac08832773f1e29c325bac9d4f910a96c5e3d1e7eed48a059a93a0"
+    },
+    {
+      "names": [
+        "CapabilityBroker"
+      ],
+      "group": "broker",
+      "bodySha256": "7b4d5f61656c6bb2a75476156fa74d38faa85aa3e787bf564370c5df5653ab85"
+    }
+  ],
+  "modules": [
+    {
+      "name": "contracts",
+      "lines": 295
+    },
+    {
+      "name": "broker",
+      "lines": 413
+    }
+  ],
+  "dependencies": {
+    "contracts": [],
+    "broker": [
+      "contracts"
+    ]
+  },
+  "unitCycles": [],
+  "moduleCycles": []
+}
