@@ -1,0 +1,213 @@
+{
+  "source": "packages/shared/src/agent/llm-tool.ts",
+  "units": [
+    {
+      "names": [
+        "ToolResult"
+      ],
+      "group": "contracts",
+      "bodySha256": "7fb35d75db48a3cbc81f96c8311f5ddde4827f2fc27dc0bb61b9cdad769d167a"
+    },
+    {
+      "names": [
+        "LLMQueryRequest"
+      ],
+      "group": "contracts",
+      "bodySha256": "7694639e9cc7b35c05a75f49f122e0fd14392621e9daa79365d70c5a70b110fc"
+    },
+    {
+      "names": [
+        "LLMQueryResult"
+      ],
+      "group": "contracts",
+      "bodySha256": "d7140d96bfbee26cbf2b1e6dfe889df4a746ddbc228ef5a481fb68835595cfa5"
+    },
+    {
+      "names": [
+        "LLM_QUERY_TIMEOUT_MS"
+      ],
+      "group": "contracts",
+      "bodySha256": "f09931b996d8a485b62fdcc4098df7beebca5e93e632d9ab537c468d81630b14"
+    },
+    {
+      "names": [
+        "withTimeout"
+      ],
+      "group": "contracts",
+      "bodySha256": "cfcfab21d47ae2e1aaa0c36983332f5013ef5bb7778657e721f2f8c90026adc9"
+    },
+    {
+      "names": [
+        "IMAGE_EXTENSIONS"
+      ],
+      "group": "attachments",
+      "bodySha256": "8132e943612b712a35a9a0832e36ac60adb3c05ed73031a0b95daf05cb051683"
+    },
+    {
+      "names": [
+        "MAX_FILE_LINES"
+      ],
+      "group": "attachments",
+      "bodySha256": "8d34e8da4872cd99b9dd65bdc27c445e9c1cf64afcdde4be74869e7b115e1b38"
+    },
+    {
+      "names": [
+        "MAX_FILE_BYTES"
+      ],
+      "group": "attachments",
+      "bodySha256": "9d2f82e45e3475b569ed5d6186cad4633298e44c106ff921de93b6ba4bb7ff2a"
+    },
+    {
+      "names": [
+        "MAX_ATTACHMENTS"
+      ],
+      "group": "attachments",
+      "bodySha256": "622efb233dfdc496bc99154bd6da92a32b19f1d519e89eeae063be3e259e284e"
+    },
+    {
+      "names": [
+        "MAX_TOTAL_CONTENT_BYTES"
+      ],
+      "group": "attachments",
+      "bodySha256": "e1abb13c47e6defc1a64ed611664c6d2ee01c5143f912c869dac7197af8b0923"
+    },
+    {
+      "names": [
+        "summarizeSection"
+      ],
+      "group": "attachments",
+      "bodySha256": "d7f67051c983c0aa25ee5d9efd937b12abf347c849a534ef828ec7aa3df68c62"
+    },
+    {
+      "names": [
+        "escapeXml"
+      ],
+      "group": "attachments",
+      "bodySha256": "164c99f73b8af6fbaa65168ea61f635e45d864370c428d524035249b7fa0e8f5"
+    },
+    {
+      "names": [
+        "isBinaryContent"
+      ],
+      "group": "attachments",
+      "bodySha256": "8f2bb553ab1bd40b425cf6ff1959ac9409e3f79ca5a6671fa231b636927ba88f"
+    },
+    {
+      "names": [
+        "AttachmentInput"
+      ],
+      "group": "attachments",
+      "bodySha256": "ec6ef813027d1370396c6f4efd2389a7c1604ec34ddc4f024aa680cf0c7d8509"
+    },
+    {
+      "names": [
+        "AttachmentResult"
+      ],
+      "group": "attachments",
+      "bodySha256": "f92407a9392f7357896c70129404cccba34342c99386e5b68c13a8d9970a7110"
+    },
+    {
+      "names": [
+        "processAttachment"
+      ],
+      "group": "attachments",
+      "bodySha256": "f99e6d6017deaee190305ec34f3e60f9728e8e5a49ca413d0c9b76016344d531"
+    },
+    {
+      "names": [
+        "OUTPUT_FORMATS"
+      ],
+      "group": "formats",
+      "bodySha256": "225f7acc715bed948d5aac1e877b5a613546590d175736abccecda3f7085a278"
+    },
+    {
+      "names": [
+        "BuildCallLlmOptions"
+      ],
+      "group": "requests",
+      "bodySha256": "c7e5943c172b93b053dfe88785c0be3b1ec20eb288369fb6259611a2edb42ec6"
+    },
+    {
+      "names": [
+        "buildCallLlmRequest"
+      ],
+      "group": "requests",
+      "bodySha256": "ccfd6119ea1db8954d7f448461b6bcb5dade3025b723d88cbccccb8f36e899a1"
+    },
+    {
+      "names": [
+        "errorResponse"
+      ],
+      "group": "requests",
+      "bodySha256": "fad58713757df14782c5cfd36a299bb26e1c8b9c3c986fc5f983779ad075ad94"
+    },
+    {
+      "names": [
+        "AttachmentSchema"
+      ],
+      "group": "tool",
+      "bodySha256": "a1dce37383c25c8a9ca5f2a1c3076d1aaedc8bb98f225fa70578203e553cdafb"
+    },
+    {
+      "names": [
+        "OutputSchemaParam"
+      ],
+      "group": "tool",
+      "bodySha256": "b00060d934088bb90cf95a91308b031d8662679ddaba53778f45ee8ff0f2204b"
+    },
+    {
+      "names": [
+        "LLMToolOptions"
+      ],
+      "group": "tool",
+      "bodySha256": "28fc713a5bfb1b91b25648263b6d9580c00b60b6384b66b0e4ebf1e8a65b5908"
+    },
+    {
+      "names": [
+        "createLLMTool"
+      ],
+      "group": "tool",
+      "bodySha256": "b16e15b3c344e98033ec299a8e1d1a3c95929a68e76762c9023c937120623256"
+    }
+  ],
+  "modules": [
+    {
+      "name": "contracts",
+      "lines": 61
+    },
+    {
+      "name": "attachments",
+      "lines": 279
+    },
+    {
+      "name": "formats",
+      "lines": 64
+    },
+    {
+      "name": "requests",
+      "lines": 115
+    },
+    {
+      "name": "tool",
+      "lines": 229
+    }
+  ],
+  "dependencies": {
+    "contracts": [],
+    "attachments": [],
+    "formats": [],
+    "requests": [
+      "contracts",
+      "attachments",
+      "formats"
+    ],
+    "tool": [
+      "contracts",
+      "attachments",
+      "requests",
+      "formats"
+    ]
+  },
+  "unitCycles": [],
+  "moduleCycles": []
+}

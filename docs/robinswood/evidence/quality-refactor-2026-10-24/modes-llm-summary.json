@@ -1,0 +1,66 @@
+{
+  "status": "testé dans le candidat local, non intégré",
+  "scope": "Gestion des modes et outil LLM : modules directs par responsabilité, API et corps conservés",
+  "modules": {
+    "mode-manager": 17,
+    "llm-tool": 5
+  },
+  "proof": "Corps de toutes les déclarations, ordre des surcharges, imports et graphe acyclique vérifiés indépendamment ; chargements CommonJS relatifs conservés comme chargements paresseux",
+  "checks": {
+    "modes-llm-tests-2": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 141.46,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/modes-llm-tests-2.log"
+    },
+    "modes-llm-build-2": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 18.86,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/modes-llm-build-2.log"
+    },
+    "modes-llm-types-2": {
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 20.47,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/modes-llm-types-2.log"
+    },
+    "modes-llm-lint-2": {
+      "command": [
+        "rtk",
+        "bun",
+        "x",
+        "eslint",
+        "packages/shared/src/agent/mode-manager.ts",
+        "packages/shared/src/agent/mode-manager",
+        "packages/shared/src/agent/llm-tool.ts",
+        "packages/shared/src/agent/llm-tool",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 1.17,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/modes-llm-lint-2.log"
+    }
+  },
+  "remaining": {
+    "oversizedCodeFiles": 206,
+    "explicitAny": 708
+  },
+  "installedApplication": "Inchangée"
+}
