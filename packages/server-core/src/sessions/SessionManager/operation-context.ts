@@ -14,4 +14,5 @@ export interface SessionMessageState {
   message: string;
   options: SendMessageOptions | undefined;
   syntheticAutomaticMessage: Message | undefined;
+  automaticDispatchGeneration: number | undefined;
 }

@@ -90,7 +90,8 @@
     "Admission des messages actifs extraite : types natifs, ordre et callbacks conservés ; quatre nouveaux fichiers ≤ 396 lignes, zéro cycle, suite complète et build réussis.",
     "Parcours fournisseur extrait en six fichiers de 40 à 426 lignes ; messages vivants, callbacks, retours et nettoyage préservés ; zéro cycle et contrôles complets réussis.",
     "Préparation du modèle décomposée en modules de moins de 500 lignes : équivalence AST, deux compilateurs TypeScript, build Electron, lint ciblé et suite complète réussis.",
-    "Préparation des messages et admission de leur objectif : 7 nouveaux fichiers de moins de 500 lignes, preuves AST, deux compilateurs, build, lint ciblé et suite complète réussis."
+    "Préparation des messages et admission de leur objectif : 7 nouveaux fichiers de moins de 500 lignes, preuves AST, deux compilateurs, build, lint ciblé et suite complète réussis.",
+    "Orchestration des messages réduite à 483 lignes ; tous les modules d’opérations du gestionnaire sous 500 lignes et lint strict réussi. Suite officielle complète, deux compilateurs, build, graphe sans cycle et chaîne de preuves AST réussis."
   ],
   "pending": [
     "Découpage des autres fichiers au-delà de 500 lignes",
@@ -98,16 +99,26 @@
     "Lint global sans erreur ni avertissement",
     "Parcours complets réels en staging local, compilation signée et intégration"
   ],
-  "updatedAt": "2026-10-25T16:09:23.044245+00:00",
+  "updatedAt": "2026-10-25T16:29:11.938056+00:00",
   "current": {
-    "lastEvidence": "message-preparation-summary.json",
+    "lastEvidence": "message-admission-summary.json",
     "sourceGate": {
-      "max-lines": 126,
+      "max-lines": 125,
       "no-explicit-any": 403
     },
     "globalLint": {
-      "errors": 499,
-      "warnings": 137
+      "files": 3218,
+      "errors": 498,
+      "warnings": 137,
+      "fatal": 0,
+      "rules": {
+        "@typescript-eslint/no-explicit-any": 384,
+        "max-lines": 114,
+        "react-hooks/exhaustive-deps": 98,
+        "directive": 12,
+        "craft-agent/no-localstorage": 21,
+        "@typescript-eslint/no-unused-vars": 6
+      }
     },
     "globalStatus": "en cours ; dernière grande opération des sessions, autres fichiers historiques, any, lint global et missions finales restants"
   }

@@ -1,0 +1,13 @@
+{
+  "status": "passed",
+  "liveAutomaticGenerationReads": 2,
+  "liveAutomaticGenerationWrites": 1,
+  "noEarlierAttachmentClosureObserver": true,
+  "nativeProcessingClaimSequence": true,
+  "ownershipFenceAfterClaimedPreparation": true,
+  "nativeAdmissionFragments": 4,
+  "noNewAwaitOnAcceptedAdmission": true,
+  "nativeRefusalCleanup": true,
+  "originalCallerSequenceRecovered": true,
+  "snapshotHashChain": true
+}
