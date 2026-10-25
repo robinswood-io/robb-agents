@@ -21,6 +21,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[2]
 SHELL_INSTALLER = ROOT / "scripts" / "install-app.sh"
 POWERSHELL_INSTALLER = ROOT / "scripts" / "install-app.ps1"
 ELECTRON_UPDATER = ROOT / "apps" / "electron" / "src" / "main" / "auto-update.ts"
+ELECTRON_UPDATER_MAC = ELECTRON_UPDATER.with_name("auto-update-mac.ts")
 WINDOWS_INSTALLER_E2E = ROOT / "scripts" / "robinswood-windows-installer-e2e.ps1"
 VERSION = "1.2.3"
 SHA512_FIXTURE = f"{'A' * 86}=="
@@ -75,7 +76,7 @@ def write_manifest(path: pathlib.Path, artifact: str) -> None:
 
 class InstallerContractTests(unittest.TestCase):
     def test_electron_updater_uses_single_flight_download_and_transactional_macos_swap(self) -> None:
-        source = ELECTRON_UPDATER.read_text(encoding="utf-8")
+        source = ELECTRON_UPDATER.read_text(encoding="utf-8") + ELECTRON_UPDATER_MAC.read_text(encoding="utf-8")
         required = [
             "let updateDownloadPromise: Promise<UpdateInfo> | null = null",
             "if (updateDownloadPromise) return updateDownloadPromise",
@@ -104,7 +105,7 @@ class InstallerContractTests(unittest.TestCase):
         "Embedded macOS updater syntax validation requires macOS or Linux with bash",
     )
     def test_embedded_macos_updater_has_valid_bash_syntax(self) -> None:
-        source = ELECTRON_UPDATER.read_text(encoding="utf-8")
+        source = ELECTRON_UPDATER_MAC.read_text(encoding="utf-8")
         prefix = "const script = `"
         start = source.index(prefix) + len(prefix)
         end = source.index("`\n  writeFileSync", start)

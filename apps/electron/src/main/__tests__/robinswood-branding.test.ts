@@ -152,6 +152,7 @@ describe('Robinswood visible branding', () => {
 
   it('detects stable updates at launch but requires consent before download', () => {
     const updater = readRepoFile('apps/electron/src/main/auto-update.ts')
+    const macInstaller = readRepoFile('apps/electron/src/main/auto-update-mac.ts')
     const main = readRepoFile('apps/electron/src/main/index.ts')
     const updateHook = readRepoFile('apps/electron/src/renderer/hooks/useUpdateChecker.ts')
     expect(updater).toContain('autoUpdater.autoDownload = false')
@@ -162,10 +163,10 @@ describe('Robinswood visible branding', () => {
     expect(main).toContain('startAutomaticUpdateChecks()')
     expect(updateHook).toContain('await window.electronAPI.checkForUpdates()')
     expect(updateHook).toContain('onClick: onDownload')
-    expect(updater).toContain('/usr/sbin/spctl --assess --type execute')
-    expect(updater).toContain('source=Notarized Developer ID')
-    expect(updater).toContain('^Authority=Developer ID Application: .+$')
-    expect(updater).toContain('^TeamIdentifier=[A-Z0-9]{10}$')
+    expect(macInstaller).toContain('/usr/sbin/spctl --assess --type execute')
+    expect(macInstaller).toContain('source=Notarized Developer ID')
+    expect(macInstaller).toContain('^Authority=Developer ID Application: .+$')
+    expect(macInstaller).toContain('^TeamIdentifier=[A-Z0-9]{10}$')
 
     const menu = readRepoFile('apps/electron/src/main/menu.ts')
     const menuSchema = readRepoFile('apps/electron/src/shared/menu-schema.ts')
