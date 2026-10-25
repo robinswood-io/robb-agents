@@ -1,14 +1,15 @@
+import { enqueueSessionMessage } from './enqueue-session-message.ts';
 import type { SessionOperationContext } from '../operation-context.ts';
-import { refreshInheritedWorkspaceSources, hasPendingLocalUserInput, queuedCostLimitContinuationForAgentDelivery, assertRetryTurnAnchor, queuedDirectHumanContinuationIndex, queuedDirectHumanContinuationIndexForId, nextRecoveryDispatch, validAllocatedRecoveryDispatch, cleanRetrySetupFailureSignal, isDurableProviderActivityOrHumanSupersession, enqueueRecoveredMessageInTranscriptOrder, persistenceRootFor, isExactQueuedSourceActivation, cancelSourceActivationPending, commitSourceActivationPending, releaseSourceActivationClaim, projectLegacyObjectiveForUserTransition, repairLegacyContextualObjectiveAuthority, isDirectHumanContinuation, assertSpecializedMissionSourceSelection, captureSpecializedMissionSourceSnapshot, assertOrdinaryMissionRouteProjection, ordinaryMissionSourceBuildOptions, isLegacyHostObjectiveContractEnabled, rehydrateObjectiveEvidence } from '../policy.ts';
+import { refreshInheritedWorkspaceSources, hasPendingLocalUserInput, queuedCostLimitContinuationForAgentDelivery, assertRetryTurnAnchor, queuedDirectHumanContinuationIndex, nextRecoveryDispatch, validAllocatedRecoveryDispatch, cleanRetrySetupFailureSignal, isDurableProviderActivityOrHumanSupersession, enqueueRecoveredMessageInTranscriptOrder, persistenceRootFor, isExactQueuedSourceActivation, cancelSourceActivationPending, commitSourceActivationPending, releaseSourceActivationClaim, projectLegacyObjectiveForUserTransition, repairLegacyContextualObjectiveAuthority, isDirectHumanContinuation, assertSpecializedMissionSourceSelection, captureSpecializedMissionSourceSnapshot, assertOrdinaryMissionRouteProjection, ordinaryMissionSourceBuildOptions, isLegacyHostObjectiveContractEnabled, rehydrateObjectiveEvidence } from '../policy.ts';
 import { AGENT_RUNTIME_ACTIVITY } from '@craft-agent/core/types';
 import { canInjectCompletedChatContext, completedChatContext, reopenCompletedChat } from '../../completed-chat-retention';
 import { recoveredInternalMessageOptions, restoreAgentDeliveryAttachments } from '../../agent-delivery.ts';
-import { canSteerTextPayload } from '../../mid-stream-delivery';
+
 import type { UserInputRequest } from '@craft-agent/core';
 import type { AgentEvent } from '@craft-agent/shared/agent';
 import { AbortReason, getObjectiveEvidenceCompletionGap, classifyAgentFailure, parseCompactCommand } from '@craft-agent/shared/agent';
 import { resolveSessionConnection, resolveBackendContext, ProviderDispatchRejectedError } from '@craft-agent/shared/agent/backend';
-import { resolveMidStreamBehavior, decideCostProviderAdmission, monetaryBudgetCostUsd, resolveAgentCostBudgetState, resolveAgentCostControlPolicy, resolveEffectiveAgentContextLimits } from '@craft-agent/shared/config';
+import { decideCostProviderAdmission, monetaryBudgetCostUsd, resolveAgentCostBudgetState, resolveAgentCostControlPolicy, resolveEffectiveAgentContextLimits } from '@craft-agent/shared/config';
 import type { CostControlledTurnKind } from '@craft-agent/shared/config';
 import { formatPlaybookPrompt } from '@craft-agent/shared/playbooks';
 import { isWorkspaceAutomaticToolFallbackEnabled, loadWorkspaceConfig } from '@craft-agent/shared/workspaces';
@@ -26,7 +27,7 @@ import { filterAttachmentsForModelInput } from '../../runtime-config';
 import { classifyLatestTurnTerminalState, classifyObjectiveTerminalState, incompletePlanSteps } from '../../turn-completion';
 import { validateObjectiveOutcome } from '../../objective-outcome';
 import { validateDelegatedReviewCompletion } from '../../delegated-review-outcome';
-import { DELEGATION_LIMITS } from '../../delegation-budget';
+
 import { bindBusinessProcedure } from '../../business-procedures';
 import { getProjectLearningPolicy } from '../../project-learning';
 import { explicitRetryProgressFingerprint } from '../../explicit-retry-progress';
@@ -34,7 +35,7 @@ import { requiresStructuredObjectiveOutcome } from '../../objective-completion-p
 import { shouldManageSessionStatusLifecycle } from '../../session-status-lifecycle';
 import { turnRecoveryValidationFingerprint, buildCleanRecoveryContinuationPrompt, createPendingTurnRecovery, grantExplicitRetryAllowance, createAutomaticRecoveryToolDeadline, reconstructLegacyTurnRecoveryBudget, messagesForPendingRecovery, resolveAutomaticRecoveryInactivityTimeoutMs, withAutomaticRecoveryInactivityTimeout } from '../../turn-recovery';
 import type { AutomaticTurnRecoveryCause } from '../../turn-recovery';
-import { appendCoalescedInternalMessage, selectInternalMessageCoalesceTarget } from '../../internal-message-coalescing';
+
 import { resolveContextTokenEstimate } from '../../context-token-estimate';
 import { buildObjectiveScopePrompt, findObjectiveText, hasObjectiveExecutionEvidence, isHostSyntheticObjectiveText, objectiveCostUsd, objectiveRequiresExecutionEvidence, projectLegacyObjectiveCompletionRequirements, transitionObjectiveContract } from '../../objective-contract';
 import { COST_CONTROL_COMPACTION_INSTRUCTIONS, assessContextCompactionResult, classifyContextCompactionFailure, consumeContextProviderBaselineAdmission, decideContextProviderAdmission, isHardLimitFollowUpContextCompaction, isHardLimitRecoveryContextCompaction, shouldAttemptContextCompaction } from '../../context-compaction';
@@ -54,20 +55,20 @@ import type { SessionOperations } from '../operation-types.ts';
 import { assertStrongCancellationAdmissionOpen as sessionOpAssertStrongCancellationAdmissionOpen } from './perform-cancel-processing-and-wait.ts';
 import { hasTerminalObjectiveState as sessionOpHasTerminalObjectiveState, repairLegacySyntheticObjectiveAuthority as sessionOpRepairLegacySyntheticObjectiveAuthority, revokePendingToolPermissionsForDirectContinuation as sessionOpRevokePendingToolPermissionsForDirectContinuation, dropDeferredSourceActivations as sessionOpDropDeferredSourceActivations, hasPendingDecision as sessionOpHasPendingDecision } from './repair-legacy-synthetic-objective-authority.ts';
 import { isFreshStaleTypedUpwardAgentDelivery as sessionOpIsFreshStaleTypedUpwardAgentDelivery, releasableUpwardAgentDeliverySenderId as sessionOpReleasableUpwardAgentDeliverySenderId, isStaleTypedUpwardAgentDelivery as sessionOpIsStaleTypedUpwardAgentDelivery, quarantineStaleTypedUpwardAgentDelivery as sessionOpQuarantineStaleTypedUpwardAgentDelivery } from './quarantine-stale-typed-upward-agent-delivery.ts';
-import { authenticatedInternalContinuationCurrent as sessionOpAuthenticatedInternalContinuationCurrent, consumeAuthenticatedInternalContinuation as sessionOpConsumeAuthenticatedInternalContinuation, delegatedDispatchContinuationCurrent as sessionOpDelegatedDispatchContinuationCurrent, consumeDelegatedDispatchContinuation as sessionOpConsumeDelegatedDispatchContinuation, serializeDirectHumanSupersession as sessionOpSerializeDirectHumanSupersession, claimAuthenticatedInternalContinuation as sessionOpClaimAuthenticatedInternalContinuation } from './message-authority.ts';
+import { authenticatedInternalContinuationCurrent as sessionOpAuthenticatedInternalContinuationCurrent, consumeAuthenticatedInternalContinuation as sessionOpConsumeAuthenticatedInternalContinuation, delegatedDispatchContinuationCurrent as sessionOpDelegatedDispatchContinuationCurrent, consumeDelegatedDispatchContinuation as sessionOpConsumeDelegatedDispatchContinuation, claimAuthenticatedInternalContinuation as sessionOpClaimAuthenticatedInternalContinuation } from './message-authority.ts';
 import { stripDisabledAllocatedRoutingFallback as sessionOpStripDisabledAllocatedRoutingFallback, startRecoveryDispatch as sessionOpStartRecoveryDispatch, fenceCleanSetupPersistence as sessionOpFenceCleanSetupPersistence, clearDeferredAutomaticRetry as sessionOpClearDeferredAutomaticRetry } from './start-recovery-dispatch.ts';
 import { buildRecoveryDispatchMessage as sessionOpBuildRecoveryDispatchMessage, isExactRepurposedUserInputCleanBoundary as sessionOpIsExactRepurposedUserInputCleanBoundary } from './user-input-recovery.ts';
-import { untrackSyntheticAutomaticMessage as sessionOpUntrackSyntheticAutomaticMessage, providerDispatchAdmissionBarrier as sessionOpProviderDispatchAdmissionBarrier, removeInFlightSyntheticAutomaticMessages as sessionOpRemoveInFlightSyntheticAutomaticMessages } from './reconcile-live-provider-dispatch-uncertainty.ts';
-import { hasAcceptedHumanContinuationQueued as sessionOpHasAcceptedHumanContinuationQueued, cancelSupersededAutomaticRecoveries as sessionOpCancelSupersededAutomaticRecoveries, consumeLiveDirectHumanContinuation as sessionOpConsumeLiveDirectHumanContinuation, assertRetryTurnUnblocked as sessionOpAssertRetryTurnUnblocked, grantLiveDirectHumanContinuation as sessionOpGrantLiveDirectHumanContinuation, hasConsumedCleanRecoveryDispatch as sessionOpHasConsumedCleanRecoveryDispatch } from './create-autonomous-context-limit-handoff.ts';
+import { untrackSyntheticAutomaticMessage as sessionOpUntrackSyntheticAutomaticMessage, providerDispatchAdmissionBarrier as sessionOpProviderDispatchAdmissionBarrier } from './reconcile-live-provider-dispatch-uncertainty.ts';
+import { hasAcceptedHumanContinuationQueued as sessionOpHasAcceptedHumanContinuationQueued, cancelSupersededAutomaticRecoveries as sessionOpCancelSupersededAutomaticRecoveries, consumeLiveDirectHumanContinuation as sessionOpConsumeLiveDirectHumanContinuation, assertRetryTurnUnblocked as sessionOpAssertRetryTurnUnblocked, hasConsumedCleanRecoveryDispatch as sessionOpHasConsumedCleanRecoveryDispatch } from './create-autonomous-context-limit-handoff.ts';
 import { setLastMessageClientId as sessionOpSetLastMessageClientId, monotonic as sessionOpMonotonic } from './runtime-host.ts';
-import { settleQueuedAgentDeliveryDispatch as sessionOpSettleQueuedAgentDeliveryDispatch, finishAgentDeliveryAppend as sessionOpFinishAgentDeliveryAppend, completeQueuedAgentDeliveryDispatch as sessionOpCompleteQueuedAgentDeliveryDispatch } from './settle-queued-agent-delivery-dispatch.ts';
+import { settleQueuedAgentDeliveryDispatch as sessionOpSettleQueuedAgentDeliveryDispatch, completeQueuedAgentDeliveryDispatch as sessionOpCompleteQueuedAgentDeliveryDispatch } from './settle-queued-agent-delivery-dispatch.ts';
 import { cancelPendingAuthForHumanContinuation as sessionOpCancelPendingAuthForHumanContinuation } from './downgrade-cold-auth-resume-permission.ts';
-import { isAutonomousMessage as sessionOpIsAutonomousMessage, isCurrentDelegatedDescendant as sessionOpIsCurrentDelegatedDescendant } from './is-current-delegated-descendant.ts';
+import { isAutonomousMessage as sessionOpIsAutonomousMessage } from './is-current-delegated-descendant.ts';
 import { canRetryRetainedMachineInbox as sessionOpCanRetryRetainedMachineInbox, hasOnlyMachineInbox as sessionOpHasOnlyMachineInbox, exactQueuedAgentDeliveryReceipt as sessionOpExactQueuedAgentDeliveryReceipt, buildObjectiveRuntimePrompt as sessionOpBuildObjectiveRuntimePrompt } from './restore-pre-ack-agent-delivery-dequeues.ts';
 import { retryableContextLimitRequest as sessionOpRetryableContextLimitRequest } from './retryable-context-limit-request.ts';
 import { exactUserInputResponse as sessionOpExactUserInputResponse, autonomousAdmissionBlock as sessionOpAutonomousAdmissionBlock } from './exact-user-input-response.ts';
-import { hasQueuedUserInput as sessionOpHasQueuedUserInput, emitUserInputChanged as sessionOpEmitUserInputChanged, contextLimitHostAdmissionBoundary as sessionOpContextLimitHostAdmissionBoundary, consumeQueuedCostLimitContinuation as sessionOpConsumeQueuedCostLimitContinuation } from './perform-request-user-input.ts';
-import { supersedeHumanHandoffsForDirectContinuation as sessionOpSupersedeHumanHandoffsForDirectContinuation } from './resolve-objective-mutation-authority.ts';
+import { hasQueuedUserInput as sessionOpHasQueuedUserInput, contextLimitHostAdmissionBoundary as sessionOpContextLimitHostAdmissionBoundary, consumeQueuedCostLimitContinuation as sessionOpConsumeQueuedCostLimitContinuation } from './perform-request-user-input.ts';
+
 import { captureUserCorrection as sessionOpCaptureUserCorrection, loadSessionPlaybook as sessionOpLoadSessionPlaybook, loadSessionProjectMemoryContext as sessionOpLoadSessionProjectMemoryContext, hasExplicitStructuredObjectiveTracking as sessionOpHasExplicitStructuredObjectiveTracking } from './capture-user-correction.ts';
 import { trackSyntheticAutomaticMessage as sessionOpTrackSyntheticAutomaticMessage, getInterruptedTurnRecovery as sessionOpGetInterruptedTurnRecovery, hasValidationExhaustionMarker as sessionOpHasValidationExhaustionMarker, preserveInterruptedObjectiveContinuation as sessionOpPreserveInterruptedObjectiveContinuation, applyValidatedNativeOutcome as sessionOpApplyValidatedNativeOutcome, runLiveProviderDispatchReconciliation as sessionOpRunLiveProviderDispatchReconciliation } from './reconcile-provider-acceptance-unknown-for-retry.ts';
 import { objectiveContractTextFor as sessionOpObjectiveContractTextFor, getCollectionSummarizer as sessionOpGetCollectionSummarizer } from './try-refresh-agent-runtime.ts';
@@ -693,525 +694,33 @@ delegatedDispatchContinuationToken?: symbol): Promise<void> {
         throw new InternalContinuationSupersededError('The authenticated internal continuation cannot be queued behind another turn.');
     }
     if (managed.isProcessing || waitingForInbox || queueCostLimitContinuationBehindDelivery) {
-        // A user turn may win the race while a dequeued message is awaiting
-        // hydration. Put back the same record instead of manufacturing a copy.
-        if (existingMessageId && !trustedUserInput) {
-            const existing = managed.messages.find(m => m.id === existingMessageId);
-            if (!existing)
-                throw new Error(`Existing message ${existingMessageId} not found`);
-            existing.isQueued = true;
-            if (!managed.messageQueue.some(item => item.messageId === existingMessageId)) {
-                managed.messageQueue.unshift({ message, attachments, storedAttachments, options, messageId: existingMessageId });
-            }
-            sessionOpSettleQueuedAgentDeliveryDispatch(sessionOperationContext, existingMessageId, queuedDispatchToken);
-            sessionOperationContext.state.queuedMessageDispatches.delete(sessionId);
-            sessionOperationContext.owner["persistSession"](managed);
-            await sessionOperationContext.owner.flushSession(managed.id);
-            onAck?.(existingMessageId);
-            return;
-        }
-        if (!options?.hidden) {
-            managed.autonomyFallbackAttemptedTools = new Set();
-        }
-        const connection = resolveSessionConnection(managed.llmConnection, undefined);
-        // Fallback to 'steer' when no connection is resolvable — preserves
-        // today's exact behavior (call redirect, take whatever it returns).
-        const isInternalMessage = Boolean(options?.internalOrigin) && !trustedUserInput;
-        // A question answer must be consumed as a durable turn. A backend may
-        // accept redirect() just before completion yet never read that steer;
-        // late undelivered feedback can arrive after the complete event. Keep
-        // the answer queued until its existing record is actually dispatched.
-        const behavior = waitingForInbox || trustedUserInput || isInternalMessage || forceDirectHumanQueue ? 'queue'
-            : connection ? resolveMidStreamBehavior(connection) : 'steer';
-        const userMessage: Message = trustedUserInput
-            ? managed.messages.find(candidate => candidate.id === existingMessageId)!
-            : {
-                // A queued automatic recovery must keep the same host-issued identity
-                // as its durable dispatch. Cold restore can then distinguish that
-                // exact synthetic FIFO row from user-input and agent deliveries.
-                id: durableMessageId(),
-                role: 'user',
-                content: message,
-                timestamp: sessionOpMonotonic(sessionOperationContext),
-                attachments: storedAttachments,
-                badges: options?.badges,
-                ...(options?.hidden ? { hidden: true } : {}),
-                ...(options?.internalOrigin ? { internalOrigin: options.internalOrigin } : {}),
-                ...(options?.internalOrigin?.deliveryId ? {
-                    isQueued: true,
-                    agentDelivery: { id: options.internalOrigin.deliveryId, status: 'queued' as const, attempts: 0, attachmentsSha256: options.internalOrigin.attachmentsSha256 },
-                } : {}),
-            };
-        const steeredObjective = trustedUserInput ? managed.activeObjective
-            : !options?.hidden && !options?.internalOrigin && !isHostSyntheticObjectiveText(message) ? transitionObjectiveContract({
-                existing: projectLegacyObjectiveForUserTransition(managed),
-                messageId: userMessage.id,
-                text: message,
-                lifetimeCostUsd: managed.tokenUsage?.costUsd,
-                lifetimeTokens: managed.tokenUsage?.totalTokens,
-                delegatedRole: delegatedObjectiveRoleForSession(managed),
-            }) : undefined;
-        const agent = managed.agent;
-        let steered = false;
-        let finishToolAdmissionRebind: ((committed: boolean) => void) | undefined;
-        const steeringMessage = steeredObjective && isLegacyHostObjectiveContractEnabled(managed)
-            ? `${message}\n\n${sessionOpBuildObjectiveRuntimePrompt(sessionOperationContext, managed, steeredObjective)}`
-            : message;
-        // Redirect transports only text. Keep attachments and model-input options
-        // on the durable full-payload queue even when this connection prefers steer.
-        const steerablePayload = canSteerTextPayload(attachments, storedAttachments, options);
-        if (behavior === 'steer' && steerablePayload) {
-            steered = agent?.redirect(steeringMessage) ?? false;
-        }
-        // For 'queue': skip redirect entirely. The current turn is undisturbed.
-        sessionLog.info('mid-stream send', {
+        return enqueueSessionMessage({
+            existingMessageId,
+            trustedUserInput,
+            managed,
+            message,
+            attachments,
+            storedAttachments,
+            options,
+            sessionOperationContext,
+            queuedDispatchToken,
             sessionId,
-            behavior,
-            steered,
-            queueLengthBefore: managed.messageQueue.length,
-            backend: agent ? agent.constructor.name : 'none',
-            connectionSlug: connection?.slug,
+            onAck,
+            waitingForInbox,
+            forceDirectHumanQueue,
+            durableMessageId,
+            deliveryId,
+            authenticatedSourceActivation,
+            sourceActivationDispatchToken,
+            stoppedFreshAgentDeliveryError,
+            directHumanContinuation,
+            stoppedDirectHumanError,
+            directHumanStopWon,
+            freshAgentDeliveryStopWon,
+            sourceActivationOrigin,
+            sourceActivationStillCurrent,
+            queueCostLimitContinuationBehindDelivery,
         });
-        if (isInternalMessage && !deliveryId
-            && options?.internalOrigin?.kind !== 'source-activation') {
-            const workspaceConfig = loadWorkspaceConfig(managed.workspace.rootPath);
-            const maxQueuedMessages = resolveAgentCostControlPolicy(workspaceConfig?.costControl)
-                .coordination.maxQueuedMessages;
-            const senderSessionId = options?.internalOrigin?.senderSessionId;
-            const coalesceTarget = selectInternalMessageCoalesceTarget(managed.messageQueue, senderSessionId, maxQueuedMessages);
-            if (coalesceTarget) {
-                appendCoalescedInternalMessage(coalesceTarget, message);
-                const existingQueuedMessage = coalesceTarget.messageId
-                    ? managed.messages.find(existing => existing.id === coalesceTarget.messageId)
-                    : undefined;
-                if (existingQueuedMessage)
-                    existingQueuedMessage.content = coalesceTarget.message;
-                sessionOperationContext.owner["persistSession"](managed);
-                await sessionOperationContext.owner.flushSession(managed.id);
-                if (coalesceTarget.messageId)
-                    onAck?.(coalesceTarget.messageId);
-                sessionLog.info('coalesced internal agent update', {
-                    sessionId,
-                    senderSessionId,
-                    queueLength: managed.messageQueue.length,
-                });
-                return;
-            }
-        }
-        if (isInternalMessage && deliveryId
-            && options?.internalOrigin?.kind === 'agent-message'
-            && options.internalOrigin.agentMessageType === 'progress'
-            && options.internalOrigin.senderSessionId
-            && !options.internalOrigin.attachmentsSha256
-            && !storedAttachments?.length) {
-            const senderSessionId = options.internalOrigin.senderSessionId;
-            const coalesceCandidate = [...managed.messageQueue].reverse().find(candidate => {
-                const origin = candidate.options?.internalOrigin;
-                if (origin?.kind !== 'agent-message'
-                    || origin.senderSessionId !== senderSessionId
-                    || origin.agentMessageType !== 'progress'
-                    || origin.attachmentsSha256)
-                    return false;
-                const receipt = sessionOpExactQueuedAgentDeliveryReceipt(sessionOperationContext, managed, candidate);
-                return !!receipt
-                    && !sessionOperationContext.state.queuedAgentDeliveryDispatches.has(receipt.id)
-                    && managed.messages.every(existing => existing === receipt || existing.agentDelivery?.id !== deliveryId);
-            });
-            const receipt = coalesceCandidate
-                ? sessionOpExactQueuedAgentDeliveryReceipt(sessionOperationContext, managed, coalesceCandidate)
-                : undefined;
-            if (coalesceCandidate && receipt?.agentDelivery && receipt.internalOrigin?.kind === 'agent-message') {
-                appendCoalescedInternalMessage(coalesceCandidate, message);
-                receipt.content = coalesceCandidate.message;
-                coalesceCandidate.options!.internalOrigin!.deliveryId = deliveryId;
-                receipt.internalOrigin.deliveryId = deliveryId;
-                receipt.agentDelivery.id = deliveryId;
-                sessionOperationContext.owner["persistSession"](managed);
-                await sessionOperationContext.owner.flushSession(managed.id);
-                onAck?.(receipt.id);
-                sessionLog.info('coalesced queued agent progress delivery', {
-                    sessionId,
-                    senderSessionId,
-                    deliveryId,
-                    queueLength: managed.messageQueue.length,
-                });
-                return;
-            }
-        }
-        const deliverySender = deliveryId && options?.internalOrigin?.senderSessionId
-            ? sessionOperationContext.state.sessions.get(options.internalOrigin.senderSessionId)
-            : undefined;
-        const relevantDelegatedDelivery = !!deliverySender
-            && sessionOpIsCurrentDelegatedDescendant(sessionOperationContext, managed, deliverySender);
-        const yieldingRecoveries = relevantDelegatedDelivery ? managed.messageQueue.filter(item => {
-            const recovery = item.options?.automaticRecovery;
-            return !!recovery && recovery.cause !== 'user_retry'
-                && recovery.originalUserMessageId === managed.pendingTurnRecovery?.userMessageId;
-        }) : [];
-        const maxQueuedMessages = deliveryId
-            ? resolveAgentCostControlPolicy(loadWorkspaceConfig(managed.workspace.rootPath)?.costControl)
-                .coordination.maxQueuedMessages
-            : Number.POSITIVE_INFINITY;
-        const countQueuedDelegatedDeliveries = (includeProgress: boolean) => managed.messageQueue.filter(item => {
-            const origin = item.options?.internalOrigin;
-            if (!includeProgress && origin?.kind === 'agent-message' && origin.agentMessageType === 'progress') {
-                return false;
-            }
-            const sender = origin?.kind === 'agent-message' && origin.deliveryId && origin.senderSessionId
-                ? sessionOperationContext.state.sessions.get(origin.senderSessionId) : undefined;
-            return !!sender && sessionOpIsCurrentDelegatedDescendant(sessionOperationContext, managed, sender);
-        }).length;
-        const queuedDelegatedDeliveryCount = relevantDelegatedDelivery
-            ? countQueuedDelegatedDeliveries(options?.internalOrigin?.agentMessageType === 'progress')
-            : 0;
-        const queuedDescendantDeliveriesForNonDescendant = !relevantDelegatedDelivery && deliveryId
-            ? countQueuedDelegatedDeliveries(true)
-            : 0;
-        const inboxFull = relevantDelegatedDelivery
-            // Every bounded child must be able to return one durable result even
-            // when siblings are still active and the ordinary inbox limit is one.
-            ? queuedDelegatedDeliveryCount >= DELEGATION_LIMITS.maxChildren
-            : managed.messageQueue.length - yieldingRecoveries.length - queuedDescendantDeliveriesForNonDescendant >= maxQueuedMessages;
-        if (deliveryId && inboxFull) {
-            throw new Error('Target inbox is full; wait for a terminal result before retrying');
-        }
-        userMessage.isQueued = !steered;
-        if (!trustedUserInput)
-            managed.messages.push(userMessage);
-        const pendingSourceActivationForQueue = managed.autoRetryPending;
-        if (authenticatedSourceActivation && pendingSourceActivationForQueue
-            && pendingSourceActivationForQueue.dispatchToken === sourceActivationDispatchToken) {
-            pendingSourceActivationForQueue.messageId = userMessage.id;
-        }
-        if (steered && steeredObjective) {
-            const cancelledQuestions = !trustedUserInput && managed.activeObjective?.userMessageId !== steeredObjective.userMessageId
-                ? sessionOperationContext.owner["cancelPendingUserInput"](managed, true) : undefined;
-            managed.pendingUserSteers ??= new Map();
-            managed.pendingUserSteers.set(steeringMessage, {
-                queued: { message, attachments, storedAttachments, options, messageId: userMessage.id, optimisticMessageId: options?.optimisticMessageId },
-                messageBefore: agent?.getCurrentTurnUserMessage?.() ?? undefined,
-                objectiveBefore: managed.activeObjective,
-                objectiveAfter: steeredObjective,
-                recoveryBefore: managed.pendingTurnRecovery,
-            });
-            // The accepted user message and its host-side contract must move
-            // together. Queued messages do not supersede the running objective.
-            const sameActiveObjective = managed.activeObjective?.terminalState === 'active'
-                && managed.activeObjective.userMessageId === steeredObjective.userMessageId;
-            managed.activeObjective = steeredObjective;
-            managed.pendingTurnRecovery = sameActiveObjective && managed.pendingTurnRecovery
-                ? { ...managed.pendingTurnRecovery, userMessageId: userMessage.id }
-                : createPendingTurnRecovery(userMessage.id);
-            managed.lastSentMessage = message;
-            managed.lastSentAttachments = attachments;
-            managed.lastSentStoredAttachments = storedAttachments;
-            managed.lastSentOptions = options;
-            rehydrateObjectiveEvidence(managed);
-            const admissionBinding = agent ? sessionOperationContext.state.runtimeToolAdmissionBindings.get(agent) : undefined;
-            if (admissionBinding && admissionBinding.managed === managed
-                && admissionBinding.generation === managed.processingGeneration) {
-                let releaseRebind!: () => void;
-                const rebindStep = new Promise<void>(resolve => { releaseRebind = resolve; });
-                const precedingRebind = admissionBinding.pendingRebind;
-                const rebindChain = precedingRebind
-                    ? precedingRebind.then(() => rebindStep)
-                    : rebindStep;
-                admissionBinding.pendingRebind = rebindChain;
-                finishToolAdmissionRebind = committed => {
-                    if (committed
-                        && sessionOperationContext.state.sessions.get(managed.id) === managed
-                        && managed.agent === agent
-                        && managed.isProcessing
-                        && admissionBinding.generation === managed.processingGeneration
-                        && managed.activeObjective === steeredObjective
-                        && managed.messages.filter(candidate => candidate.role === 'user').at(-1) === userMessage) {
-                        admissionBinding.activeObjective = steeredObjective;
-                        admissionBinding.authorityEpoch = sessionOperationContext.state.objectiveAuthorityEpochs.get(managed) ?? 0;
-                        admissionBinding.userMessage = userMessage;
-                        admissionBinding.userMessageId = userMessage.id;
-                        admissionBinding.messageCountAtHandoff = managed.messages.length;
-                        admissionBinding.lastSentOptions = options;
-                        admissionBinding.automaticRecovery = options?.automaticRecovery;
-                        admissionBinding.pendingTurnRecovery = managed.pendingTurnRecovery;
-                        admissionBinding.recoveryDispatch = managed.pendingTurnRecovery?.recoveryDispatch;
-                        admissionBinding.liveToolFallbackIntent = undefined;
-                    }
-                    releaseRebind();
-                    void rebindChain.finally(() => {
-                        if (admissionBinding.pendingRebind === rebindChain)
-                            admissionBinding.pendingRebind = undefined;
-                    });
-                };
-            }
-            if (cancelledQuestions) {
-                try {
-                    await cancelledQuestions;
-                }
-                catch (error) {
-                    finishToolAdmissionRebind?.(false);
-                    throw error;
-                }
-            }
-        }
-        // Emit to UI — 'accepted' iff a steer succeeded; 'queued' otherwise
-        // (covers both queue-direct and queue-after-abort paths).
-        sessionOperationContext.owner["sendEvent"]({
-            type: 'user_message',
-            sessionId,
-            message: userMessage,
-            status: steered ? 'accepted' : 'queued',
-            optimisticMessageId: options?.optimisticMessageId
-        }, managed.workspace.id);
-        if (!steered) {
-            // Push for FIFO replay on next onProcessingStopped tick. Same shape
-            // for both queue-direct (current turn still running) and
-            // queue-after-abort (backend already aborted) — the replay path in
-            // processNextQueuedMessage is identical.
-            const queuedMessage = { message, attachments, storedAttachments, options, messageId: userMessage.id, optimisticMessageId: options?.optimisticMessageId };
-            if (yieldingRecoveries.length) {
-                // Only a delivery from the exact delegated lineage may move the
-                // synthetic wait. Keep every real inbox record in acceptance order
-                // and retain the already-budgeted recovery behind it. Synthetic
-                // recovery does not consume the child's one durable delivery slot.
-                const yieldingSet = new Set(yieldingRecoveries);
-                managed.messageQueue = managed.messageQueue.filter(item => !yieldingSet.has(item));
-                managed.messageQueue.push(queuedMessage);
-                managed.messageQueue.push(...yieldingRecoveries);
-            }
-            else
-                managed.messageQueue.push(queuedMessage);
-            if (!isInternalMessage && !trustedUserInput && behavior === 'steer' && steerablePayload)
-                managed.wasInterrupted = true;
-            if (!options?.hidden && !isInternalMessage && !trustedUserInput) {
-                // A visible human continuation supersedes a pre-chat automatic
-                // recovery immediately. Its own acknowledgement flush must persist
-                // removal of the exact hidden row even if the older recovery flush
-                // never resumes before the process exits.
-                sessionOpCancelSupersededAutomaticRecoveries(sessionOperationContext, managed);
-                sessionOpRemoveInFlightSyntheticAutomaticMessages(sessionOperationContext, managed);
-            }
-        }
-        const tracksFreshAgentDeliveryAppend = options?.internalOrigin?.kind === 'agent-message'
-            && !existingMessageId && !steered;
-        if (tracksFreshAgentDeliveryAppend)
-            sessionOperationContext.state.agentDeliveryAppendsInFlight.add(userMessage.id);
-        const finishFreshAgentDeliveryAppend = () => {
-            if (tracksFreshAgentDeliveryAppend)
-                sessionOpFinishAgentDeliveryAppend(sessionOperationContext, userMessage.id);
-        };
-        const rejectStoppedFreshAgentDelivery = async (): Promise<never> => {
-            // A sender retries only when no durable ACK was published. Stop may win
-            // after this receipt was appended but before its acceptance flush
-            // returns, so remove that exact object from both inbox representations
-            // and fsync the deletion before rejecting the sender.
-            managed.messageQueue = managed.messageQueue.filter(item => item.messageId !== userMessage.id);
-            const messageIndex = managed.messages.indexOf(userMessage);
-            if (messageIndex >= 0)
-                managed.messages.splice(messageIndex, 1);
-            if (!sessionOperationContext.owner["persistSession"](managed)) {
-                throw new Error('The stopped agent delivery could not be removed from durable storage');
-            }
-            await sessionOperationContext.owner.flushSession(managed.id);
-            throw stoppedFreshAgentDeliveryError();
-        };
-        // A direct human continuation revokes obsolete permission/auth handoffs
-        // even when the provider accepted it as an in-flight steer. Otherwise an
-        // approval minted for the previous objective could execute afterwards.
-        const fenceDirectContinuation = directHumanContinuation;
-        const rejectStoppedDirectContinuation = async (): Promise<never> => {
-            // The visible row is appended before the serialized durability section.
-            // Stop can therefore win while this send waits for an older direct
-            // continuation transaction, or while its own flush is in progress.
-            // Remove this exact, never-ACKed row and fsync the removal: otherwise a
-            // later processing-stop callback or cold start can execute it.
-            managed.messageQueue = managed.messageQueue.filter(item => item.messageId !== userMessage.id);
-            const messageIndex = managed.messages.indexOf(userMessage);
-            if (messageIndex >= 0)
-                managed.messages.splice(messageIndex, 1);
-            const correlatedSteer = managed.pendingUserSteers?.get(steeringMessage);
-            if (correlatedSteer?.queued.messageId === userMessage.id) {
-                managed.pendingUserSteers?.delete(steeringMessage);
-                if (managed.activeObjective === correlatedSteer.objectiveAfter) {
-                    managed.activeObjective = correlatedSteer.objectiveBefore;
-                    // Stop owns recovery cancellation; never resurrect its previous
-                    // automatic allowance while rolling back an unacknowledged steer.
-                    if (managed.pendingTurnRecovery?.userMessageId === userMessage.id) {
-                        managed.pendingTurnRecovery = undefined;
-                    }
-                    rehydrateObjectiveEvidence(managed);
-                }
-            }
-            sessionOpConsumeLiveDirectHumanContinuation(sessionOperationContext, managed, userMessage.id);
-            if (!sessionOperationContext.owner["persistSession"](managed)) {
-                throw new Error('The stopped message could not be removed from durable storage');
-            }
-            await sessionOperationContext.owner.flushSession(managed.id);
-            throw stoppedDirectHumanError();
-        };
-        const persistQueuedTurn = async () => {
-            if (fenceDirectContinuation && directHumanStopWon()) {
-                await rejectStoppedDirectContinuation();
-            }
-            if (freshAgentDeliveryStopWon()) {
-                await rejectStoppedFreshAgentDelivery();
-            }
-            const directHumanSupersession = fenceDirectContinuation
-                ? sessionOpSupersedeHumanHandoffsForDirectContinuation(sessionOperationContext, managed)
-                : undefined;
-            const supersededUserInput = directHumanSupersession?.userInputChanged ?? false;
-            const rollbackFailedDirectSupersession = directHumanSupersession?.rollbackFailedDurability;
-            sessionOperationContext.owner["persistSession"](managed);
-            // Force a synchronous flush so the user message is genuinely on disk
-            // before we tell the renderer "accepted" — `persistSession` only
-            // enqueues with a 500ms debounce. (#616 reliability fix.)
-            try {
-                await sessionOperationContext.owner.flushSession(managed.id);
-            }
-            catch (error) {
-                if (fenceDirectContinuation) {
-                    // The renderer was never acknowledged and no live capability was
-                    // minted. Remove this exact uncommitted row so a processing-stop
-                    // callback cannot treat in-memory state as durable human authority.
-                    managed.messageQueue = managed.messageQueue.filter(item => item.messageId !== userMessage.id);
-                    const messageIndex = managed.messages.indexOf(userMessage);
-                    if (messageIndex >= 0 && userMessage.isQueued)
-                        managed.messages.splice(messageIndex, 1);
-                    rollbackFailedDirectSupersession?.();
-                    sessionOperationContext.owner["persistSession"](managed);
-                    try {
-                        await sessionOperationContext.owner.flushSession(managed.id);
-                    }
-                    catch (rollbackError) {
-                        sessionLog.warn('Failed to flush rejected direct continuation rollback', {
-                            sessionId: managed.id,
-                            messageId: userMessage.id,
-                            error: rollbackError instanceof Error ? rollbackError.message : String(rollbackError),
-                        });
-                    }
-                }
-                if (sourceActivationOrigin) {
-                    managed.messageQueue = managed.messageQueue.filter(item => item.messageId !== userMessage.id);
-                    const messageIndex = managed.messages.indexOf(userMessage);
-                    if (messageIndex >= 0)
-                        managed.messages.splice(messageIndex, 1);
-                    releaseSourceActivationClaim(managed, sourceActivationDispatchToken);
-                    sessionOperationContext.owner["persistSession"](managed);
-                    try {
-                        await sessionOperationContext.owner.flushSession(managed.id);
-                    }
-                    catch { /* The timer catch retains the bounded retry capability. */ }
-                }
-                throw error;
-            }
-            if (supersededUserInput)
-                sessionOpEmitUserInputChanged(sessionOperationContext, managed);
-        };
-        try {
-            if (fenceDirectContinuation)
-                await sessionOpSerializeDirectHumanSupersession(sessionOperationContext, managed, persistQueuedTurn);
-            else
-                await persistQueuedTurn();
-        }
-        catch (error) {
-            finishToolAdmissionRebind?.(false);
-            // A preceding concurrent continuation may already be durable but its
-            // wake was fenced by this transaction. Do not strand that exact row.
-            if (fenceDirectContinuation && !managed.isProcessing && !managed.stopRequested
-                && !sessionOperationContext.state.directHumanSupersessionsInFlight.has(managed)) {
-                sessionOperationContext.owner["processNextQueuedMessage"](sessionId);
-            }
-            finishFreshAgentDeliveryAppend();
-            throw error;
-        }
-        if (freshAgentDeliveryStopWon()) {
-            await rejectStoppedFreshAgentDelivery();
-        }
-        finishToolAdmissionRebind?.(true);
-        if (options?.internalOrigin?.kind === 'agent-message' && !existingMessageId
-            && sessionOpHasTerminalObjectiveState(sessionOperationContext, managed)) {
-            const terminalState = managed.activeObjective?.terminalState;
-            const queuedIndex = managed.messageQueue.findIndex(item => item.messageId === userMessage.id);
-            const messageIndex = managed.messages.indexOf(userMessage);
-            const untouchedQueuedReceipt = messageIndex >= 0
-                && userMessage.isQueued === true && userMessage.agentDelivery?.status === 'queued';
-            const exactDequeuedDispatch = sessionOperationContext.state.queuedAgentDeliveryDispatches.get(userMessage.id);
-            const exactUnclaimedDequeue = exactDequeuedDispatch?.sessionId === sessionId
-                && exactDequeuedDispatch.deliveryId === userMessage.agentDelivery?.id
-                && exactDequeuedDispatch.claimed === false;
-            try {
-                if (untouchedQueuedReceipt && (queuedIndex >= 0 || exactUnclaimedDequeue)) {
-                    // The recipient terminalized while the first durable queue write was
-                    // in flight. The row may still be in FIFO, or processNextQueuedMessage
-                    // may have removed it while its deferred dispatch remains unclaimed.
-                    // Invalidate that reservation and roll back only a receipt whose
-                    // durable status is still queued. A receipt already advanced to
-                    // processing belongs to that dispatch and must not be removed here.
-                    if (queuedIndex >= 0)
-                        managed.messageQueue.splice(queuedIndex, 1);
-                    if (exactUnclaimedDequeue) {
-                        if (sessionOperationContext.state.queuedMessageDispatches.get(sessionId) === exactDequeuedDispatch.dispatchToken) {
-                            sessionOperationContext.state.queuedMessageDispatches.delete(sessionId);
-                            sessionOperationContext.state.automaticAdmissionReservations.delete(sessionId);
-                        }
-                        else if (!sessionOperationContext.state.queuedMessageDispatches.has(sessionId) && !managed.isProcessing) {
-                            sessionOperationContext.state.automaticAdmissionReservations.delete(sessionId);
-                        }
-                        sessionOpCompleteQueuedAgentDeliveryDispatch(sessionOperationContext, userMessage.id, exactDequeuedDispatch.dispatchToken);
-                    }
-                    managed.messages.splice(messageIndex, 1);
-                    sessionOperationContext.owner["persistSession"](managed);
-                    await sessionOperationContext.owner.flushSession(managed.id);
-                }
-            }
-            finally {
-                finishFreshAgentDeliveryAppend();
-            }
-            throw new Error(`Target session objective is terminal (${terminalState}); no agent message was queued. Reuse its completed result. A new delegation is valid only when the objective or version genuinely changed, and grants no new authority.`);
-        }
-        finishFreshAgentDeliveryAppend();
-        if (sourceActivationOrigin) {
-            const sourceAccepted = sourceActivationStillCurrent()
-                && (!authenticatedSourceActivation
-                    || commitSourceActivationPending(managed, sourceActivationDispatchToken, userMessage.id));
-            if (!sourceAccepted) {
-                cancelSourceActivationPending(managed);
-                sessionOpDropDeferredSourceActivations(sessionOperationContext, managed, true);
-                sessionOperationContext.owner["persistSession"](managed);
-                await sessionOperationContext.owner.flushSession(managed.id);
-                return;
-            }
-        }
-        // A provider-accepted steer is durable but intentionally has no FIFO
-        // row (`isQueued=false`). Only the queue path needs the exact-row
-        // capability check before it may wake a closed/interrupted session.
-        // Applying that check to a steer drops its acknowledgement and skips
-        // correction learning even though the flush above already committed it.
-        if (fenceDirectContinuation && directHumanStopWon()) {
-            await rejectStoppedDirectContinuation();
-        }
-        if (fenceDirectContinuation && (sessionOperationContext.state.shuttingDown || sessionOperationContext.state.sessions.get(sessionId) !== managed
-            || (!steered
-                && queuedDirectHumanContinuationIndexForId(managed, userMessage.id) < 0))) {
-            return;
-        }
-        if (fenceDirectContinuation && !steered) {
-            sessionOpGrantLiveDirectHumanContinuation(sessionOperationContext, managed, userMessage.id);
-        }
-        onAck?.(userMessage.id);
-        if (steered && !options?.hidden && !options?.internalOrigin) {
-            const correctionGeneration = managed.processingGeneration;
-            await sessionOpCaptureUserCorrection(sessionOperationContext, managed, userMessage);
-            if (sessionOperationContext.state.shuttingDown || managed.stopRequested || managed.processingGeneration !== correctionGeneration)
-                return;
-        }
-        // The old provider may finish synchronously when its permission is
-        // denied above. Its stop callback sees the durability fence and cannot
-        // dequeue yet, so retry the exact-capability drain after the flush.
-        if (!managed.isProcessing && !managed.stopRequested
-            && (waitingForInbox || fenceDirectContinuation || queueCostLimitContinuationBehindDelivery)) {
-            sessionOperationContext.owner["processNextQueuedMessage"](sessionId);
-        }
-        return;
     }
     // Add user message with stored attachments for persistence
     // Skip if existingMessageId is provided (message was already created when queued)

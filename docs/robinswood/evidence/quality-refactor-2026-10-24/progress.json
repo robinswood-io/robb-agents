@@ -86,7 +86,8 @@
     "Trois points d’entrée décomposés, 32 déclarations et démarrage conservés, modules ≤467 lignes ; 243 cas et 612 assertions identiques ; 16 typages, lint racine ciblé, build et suite complète réussis (138,42 s) ; lint global inventorié sans revendiquer sa conformité",
     "Opérations de SessionManager réparties par responsabilité ; classe de 481 lignes, état runtime unique conservé.",
     "20 événements et 16 phases de runtime/reprise extraits ; 458 corps et paramètres préservés après regroupement des récursions, aucun cycle d’import des opérations.",
-    "132 fichiers du lot sous 500 lignes sans erreur ni avertissement de lint ; 16 compilations, TypeScript 6, build Electron et suite complète réussis."
+    "132 fichiers du lot sous 500 lignes sans erreur ni avertissement de lint ; 16 compilations, TypeScript 6, build Electron et suite complète réussis.",
+    "Admission des messages actifs extraite : types natifs, ordre et callbacks conservés ; quatre nouveaux fichiers ≤ 396 lignes, zéro cycle, suite complète et build réussis."
   ],
   "pending": [
     "Découpage des autres fichiers au-delà de 500 lignes",
@@ -94,9 +95,9 @@
     "Lint global sans erreur ni avertissement",
     "Parcours complets réels en staging local, compilation signée et intégration"
   ],
-  "updatedAt": "2026-10-25T13:20:16.280777+00:00",
+  "updatedAt": "2026-10-25T13:58:00.291952+00:00",
   "current": {
-    "lastEvidence": "session-domains-summary.json",
+    "lastEvidence": "send-queue-summary.json",
     "sourceGate": {
       "max-lines": 126,
       "no-explicit-any": 403

@@ -1,0 +1,16 @@
+{
+  "nativeQueueBodyAndOrderPreserved": true,
+  "nativeSendOutsideQueuePreserved": true,
+  "readonlyNativeCaptures": 25,
+  "capacityRemainsSynchronous": true,
+  "durableResponsesRemainInAdmission": true,
+  "persistenceAlreadyAwaitedOnEveryNativePath": true,
+  "callbackIdentitiesPreserved": [
+    "finishFreshAgentDeliveryAppend",
+    "fenceDirectContinuation",
+    "rejectStoppedDirectContinuation"
+  ],
+  "nativeEmptyArrayIsSuccessfulAdmission": true,
+  "additionalRuntimeState": false,
+  "newFilesWithin500Lines": true
+}
