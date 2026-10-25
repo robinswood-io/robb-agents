@@ -43,3 +43,16 @@ export class ScriptedSessionAgent extends BaseAgent {
     return Promise.reject(new Error('This offline fixture cannot call a model'));
   }
 }
+
+/** Fill a legacy fixture's methods without adding optional dispatch capabilities. */
+export function completeSessionAgentFixture<Fixture extends Partial<BaseAgent>>(
+  workspace: Workspace,
+  fixture: Fixture,
+) {
+  const agent = Object.assign(new ScriptedSessionAgent(workspace), fixture);
+  for (const hook of ['onProviderHandoff', 'onBeforeProviderDispatch',
+    'onProviderDispatchRejected', 'onProviderDispatchUncertain'] as const) {
+    if (!(hook in fixture)) Reflect.deleteProperty(agent, hook);
+  }
+  return agent;
+}

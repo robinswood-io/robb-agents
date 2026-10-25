@@ -12,6 +12,14 @@ function wait(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
+async function waitForNotification(observed: () => boolean): Promise<void> {
+  const deadline = Date.now() + 2_500
+  while (!observed()) {
+    if (Date.now() >= deadline) throw new Error('Session file notification was not delivered')
+    await wait(10)
+  }
+}
+
 function makeCtx(clientId: string): RequestContext {
   return {
     clientId,
@@ -122,7 +130,10 @@ describe('sessions file watchers', () => {
 
     writeFileSync(join(sessionDirA, 'a.txt'), `a-${Date.now()}`)
     writeFileSync(join(sessionDirB, 'b.txt'), `b-${Date.now()}`)
-    await wait(300)
+    await waitForNotification(() => ['client-a', 'client-b'].every(clientId => pushed.some(evt => (
+      evt.channel === RPC_CHANNELS.sessions.FILES_CHANGED
+      && evt.target.to === 'client' && evt.target.clientId === clientId
+    ))))
 
     const aEvents = pushed.filter((evt) => evt.target?.to === 'client' && evt.target?.clientId === 'client-a')
     const bEvents = pushed.filter((evt) => evt.target?.to === 'client' && evt.target?.clientId === 'client-b')
@@ -135,7 +146,10 @@ describe('sessions file watchers', () => {
 
     writeFileSync(join(sessionDirA, 'a.txt'), `a2-${Date.now()}`)
     writeFileSync(join(sessionDirB, 'b.txt'), `b2-${Date.now()}`)
-    await wait(300)
+    await waitForNotification(() => pushed.some(evt => (
+      evt.channel === RPC_CHANNELS.sessions.FILES_CHANGED
+      && evt.target.to === 'client' && evt.target.clientId === 'client-b'
+    )))
 
     const aEventsAfter = pushed.filter((evt) => evt.target.to === 'client' && evt.target.clientId === 'client-a')
     const bEventsAfter = pushed.filter((evt) => evt.target.to === 'client' && evt.target.clientId === 'client-b')

@@ -72,7 +72,8 @@
     "Domaine PreToolUse entièrement sous 500 lignes et sans any explicite : pipeline de 417 lignes ; gardes d’admission dans trois modules de 123, 222 et 136 lignes ; données et instructions comparées indépendamment",
     "Lint de tout le domaine sans erreur ni avertissement ; 95 scénarios ciblés, 16 configurations TypeScript, suite globale (142,56 s) et build réussis après achèvement du découpage",
     "Gestion des modes et outil LLM décomposés ; surcharges et chargements paresseux vérifiés ; suite complète, 16 types, build et lint ciblé réussis",
-    "Preuves de mission : neuf modules ≤391 lignes et zéro any ; 62 annotations contextuelles retirées, JavaScript identique ; 16 types, suite complète et build réussis"
+    "Preuves de mission : neuf modules ≤391 lignes et zéro any ; 62 annotations contextuelles retirées, JavaScript identique ; 16 types, suite complète et build réussis",
+    "Reprises : 60 any supprimés au profit des contrats natifs, mêmes 263 déclarations et capacités optionnelles ; suite complète, 16 types, build et lint des fichiers touchés réussis"
   ],
   "pending": [
     "Découpage des autres fichiers au-delà de 500 lignes",
@@ -80,9 +81,9 @@
     "Lint global sans erreur ni avertissement",
     "Parcours complets réels en staging local, compilation signée et intégration"
   ],
-  "updatedAt": "2026-10-25T04:05:44.239095+00:00",
+  "updatedAt": "2026-10-25T04:24:25.277569+00:00",
   "current": {
     "oversizedCodeFiles": 205,
-    "explicitAny": 646
+    "explicitAny": 586
   }
 }

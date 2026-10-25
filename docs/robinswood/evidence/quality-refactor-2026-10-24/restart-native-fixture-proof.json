@@ -1,0 +1,20 @@
+{
+  "beforeExplicitAny": 60,
+  "afterExplicitAny": 0,
+  "testDeclarations": 263,
+  "testIdentitiesUnchanged": true,
+  "identityHash": "545ebebd3a39b91586e299d880374f621e256474a9926fafaa689a3d42c2b480",
+  "nativePrivateSignatures": true,
+  "legacyCapabilitiesPreserved": [
+    "onProviderHandoff",
+    "onBeforeProviderDispatch",
+    "onProviderDispatchRejected",
+    "onProviderDispatchUncertain"
+  ],
+  "fixtureRepairs": [
+    "Native agent methods completed while preserving the original optional hook presence",
+    "Required event fields made explicit, invalid checkpoint kind kept as an intentional negative fixture",
+    "Captured send arguments and session headers use native contracts; missing expected values now fail explicitly"
+  ],
+  "productionBehaviorChanged": false
+}

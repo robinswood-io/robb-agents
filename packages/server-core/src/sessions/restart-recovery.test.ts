@@ -1,4 +1,6 @@
-import { ScriptedSessionAgent } from './testing/scripted-session-agent.ts';
+import type { SessionHeader, StoredMessage } from '@craft-agent/shared/sessions';
+import { sessionManagerForTest, piAgentForTest, type SessionManagerTestView, type PiAgentTestView, type SessionSendArguments, type SessionSentEvent } from './testing/private-runtime-access.ts';
+import { ScriptedSessionAgent, completeSessionAgentFixture } from './testing/scripted-session-agent.ts';
 import { permissionMetadataFixture } from './testing/permission-metadata.ts';
 import { sessionRuntimeStateForTest , requiredTestValue } from "./testing/runtime-state-access.ts";
 import {
@@ -45,7 +47,7 @@ const tick = () => new Promise<void>(resolve => setImmediate(resolve))
 function deferred() { let resolve!: () => void; const promise = new Promise<void>(done => { resolve = done }); return { resolve, promise } }
 
 function bindToolAdmissionTurn(
-  runtime: any,
+  runtime: SessionManagerTestView,
   managed: Managed,
   runtimeAgent: NonNullable<Managed['agent']>,
   generation: number,
@@ -100,9 +102,9 @@ function harness() {
   }
   registerManager(manager)
   // Exercise storage and real event/queue boundaries, replacing only transport/model work.
-  const runtime = manager as any
-  const events: any[] = []
-  runtime.sendEvent = (event: unknown) => events.push(event)
+  const runtime = sessionManagerForTest(manager)
+  const events: SessionSentEvent[] = []
+  runtime.sendEvent = (event) => events.push(event)
   runtime.startGenerationTelemetry = () => {}
   runtime.finishGenerationTelemetry = () => {}
   runtime.finishAllGenerationTelemetry = () => {}
@@ -122,8 +124,8 @@ function harness() {
   const save = async (managed: Managed) => { runtime.persistSession(managed); await manager.flushSession(managed.id) }
   const cold = () => {
     const next = new SessionManager(); registerManager(next)
-    const coldRuntime = next as any
-    coldRuntime.sendEvent = (event: unknown) => events.push(event)
+    const coldRuntime = sessionManagerForTest(next)
+    coldRuntime.sendEvent = (event) => events.push(event)
     for (const meta of listSessions(rootPath)) sessionRuntimeStateForTest(coldRuntime).sessions.set(meta.id, createManagedSession(meta, workspace as never))
     return { manager: next, runtime: coldRuntime }
   }
@@ -466,14 +468,14 @@ describe('provider dispatch write-ahead recovery', () => {
       const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
       const prompts: string[] = []
       const releaseCompletion = deferred()
-      const runtimeAgent = {
+      const runtimeAgent = completeSessionAgentFixture(h.workspace, {
         onProviderHandoff: null as (() => void) | null,
         onBeforeProviderDispatch: null as (() => Promise<void>) | null,
         onProviderDispatchRejected: null as (() => void) | null,
         onProviderDispatchUncertain: null as (() => void) | null,
         getModel: () => 'fixture-model', getSessionId: () => null,
         setAllSources: () => {}, isProcessing: () => false, forceAbort: () => {}, dispose: async () => {},
-        async *chat(message: string) {
+        async *chat(message: string): ReturnType<ScriptedSessionAgent['chat']> {
           prompts.push(message)
           await runtimeAgent.onBeforeProviderDispatch?.()
           runtimeAgent.onProviderHandoff?.()
@@ -481,7 +483,7 @@ describe('provider dispatch write-ahead recovery', () => {
           yield { type: 'text_complete' as const, text: 'Reconciled the saved answer.', isIntermediate: false }
           yield { type: 'complete' as const }
         },
-      }
+      })
       cold.runtime.getOrCreateAgent = async () => {
         restored.agent = runtimeAgent as never
         return runtimeAgent
@@ -615,14 +617,14 @@ describe('provider dispatch write-ahead recovery', () => {
       const prompts: string[] = []
       const providerHandoff = deferred()
       const releaseCompletion = deferred()
-      const runtimeAgent = {
+      const runtimeAgent = completeSessionAgentFixture(h.workspace, {
         onProviderHandoff: null as (() => void) | null,
         onBeforeProviderDispatch: null as (() => Promise<void>) | null,
         onProviderDispatchRejected: null as (() => void) | null,
         onProviderDispatchUncertain: null as (() => void) | null,
         getModel: () => 'fixture-model', getSessionId: () => null,
         setAllSources: () => {}, isProcessing: () => false, forceAbort: () => {}, dispose: async () => {},
-        async *chat(message: string) {
+        async *chat(message: string): ReturnType<ScriptedSessionAgent['chat']> {
           prompts.push(message)
           await runtimeAgent.onBeforeProviderDispatch?.()
           runtimeAgent.onProviderHandoff?.()
@@ -631,7 +633,7 @@ describe('provider dispatch write-ahead recovery', () => {
           yield { type: 'text_complete' as const, text: 'Recovered generically.', isIntermediate: false }
           yield { type: 'complete' as const }
         },
-      }
+      })
       cold.runtime.getOrCreateAgent = async () => {
         restored.agent = runtimeAgent as never
         return runtimeAgent
@@ -712,7 +714,7 @@ describe('provider dispatch write-ahead recovery', () => {
     const firstCold = h.cold(); const first = requiredTestValue(sessionRuntimeStateForTest(firstCold.runtime).sessions.get(managed.id))
     const firstAck = deferred(); const releaseFirst = deferred()
     const firstPrompts: string[] = []
-    const firstAgent = {
+    const firstAgent = completeSessionAgentFixture(h.workspace, {
       onProviderHandoff: null as (() => void) | null,
       onBeforeProviderDispatch: null as (() => Promise<void>) | null,
       onProviderDispatchRejected: null as (() => void) | null,
@@ -720,7 +722,7 @@ describe('provider dispatch write-ahead recovery', () => {
       getModel: () => 'fixture-model', getSessionId: () => null,
       setAllSources: () => {}, isProcessing: () => true,
       forceAbort: () => { releaseFirst.resolve() }, dispose: async () => { releaseFirst.resolve() },
-      async *chat(message: string) {
+      async *chat(message: string): ReturnType<ScriptedSessionAgent['chat']> {
         firstPrompts.push(message)
         await firstAgent.onBeforeProviderDispatch?.()
         firstAgent.onProviderHandoff?.()
@@ -728,7 +730,7 @@ describe('provider dispatch write-ahead recovery', () => {
         await releaseFirst.promise
         yield { type: 'complete' as const }
       },
-    }
+    })
     firstCold.runtime.getOrCreateAgent = async () => {
       first.agent = firstAgent as never
       return firstAgent
@@ -741,14 +743,14 @@ describe('provider dispatch write-ahead recovery', () => {
     const secondCold = h.cold(); const second = requiredTestValue(sessionRuntimeStateForTest(secondCold.runtime).sessions.get(managed.id))
     const secondPrompts: string[] = []
     const releaseSecond = deferred()
-    const secondAgent = {
+    const secondAgent = completeSessionAgentFixture(h.workspace, {
       onProviderHandoff: null as (() => void) | null,
       onBeforeProviderDispatch: null as (() => Promise<void>) | null,
       onProviderDispatchRejected: null as (() => void) | null,
       onProviderDispatchUncertain: null as (() => void) | null,
       getModel: () => 'fixture-model', getSessionId: () => null,
       setAllSources: () => {}, isProcessing: () => false, forceAbort: () => {}, dispose: async () => {},
-      async *chat(message: string) {
+      async *chat(message: string): ReturnType<ScriptedSessionAgent['chat']> {
         secondPrompts.push(message)
         await secondAgent.onBeforeProviderDispatch?.()
         secondAgent.onProviderHandoff?.()
@@ -756,7 +758,7 @@ describe('provider dispatch write-ahead recovery', () => {
         yield { type: 'text_complete' as const, text: 'Recovered after the second host start.', isIntermediate: false }
         yield { type: 'complete' as const }
       },
-    }
+    })
     secondCold.runtime.getOrCreateAgent = async () => {
       second.agent = secondAgent as never
       return secondAgent
@@ -807,7 +809,7 @@ describe('provider dispatch write-ahead recovery', () => {
         onProviderDispatchUncertain: null as (() => void) | null,
         getModel: () => `${backend.toLowerCase()}-fixture`, getSessionId: () => null,
         setAllSources: () => {}, isProcessing: () => false, forceAbort: () => {}, dispose: async () => {},
-        async *chat() {
+        async *chat(): ReturnType<ScriptedSessionAgent['chat']> {
           sawWriteAheadHook = runtimeAgent.onBeforeProviderDispatch !== null
           sawHandoffHook = runtimeAgent.onProviderHandoff !== null
           yield { type: 'info' as const, message: 'Compacted context to fit within limits' }
@@ -868,7 +870,7 @@ describe('provider dispatch write-ahead recovery', () => {
       onProviderDispatchUncertain: null as (() => void) | null,
       getModel: () => 'fixture-model', getSessionId: () => null,
       setAllSources: () => {}, isProcessing: () => true, forceAbort: () => {}, dispose: async () => {},
-      async *chat() {
+      async *chat(): ReturnType<ScriptedSessionAgent['chat']> {
         await runtimeAgent.onBeforeProviderDispatch?.()
         durabilityOrder.push('provider-write')
         dispatchedMessageId = managed.messages.findLast(message => message.role === 'user')!.id
@@ -929,7 +931,7 @@ describe('provider dispatch write-ahead recovery', () => {
       onProviderDispatchUncertain: null as (() => void) | null,
       getModel: () => 'fixture-model', getSessionId: () => null,
       setAllSources: () => {}, isProcessing: () => false, forceAbort: () => {}, dispose: async () => {},
-      async *chat(message: string) {
+      async *chat(message: string): ReturnType<ScriptedSessionAgent['chat']> {
         prompts.push(message)
         await runtimeAgent.onBeforeProviderDispatch?.()
         runtimeAgent.onProviderHandoff?.()
@@ -980,7 +982,7 @@ describe('provider dispatch write-ahead recovery', () => {
         onProviderDispatchUncertain: null as (() => void) | null,
         getModel: () => 'fixture-model', getSessionId: () => null,
         setAllSources: () => {}, isProcessing: () => false, forceAbort: () => {}, dispose: async () => {},
-        async *chat(message: string) {
+        async *chat(message: string): ReturnType<ScriptedSessionAgent['chat']> {
           prompts.push(message)
           await runtimeAgent.onBeforeProviderDispatch?.()
           runtimeAgent.onProviderHandoff?.()
@@ -1022,7 +1024,7 @@ describe('provider dispatch write-ahead recovery', () => {
         coldStarts++
         throw new Error('completed successor must not replay after restart')
       }
-      await cold.runtime.ensureMessagesLoaded(restored)
+      await cold.runtime.ensureMessagesLoaded(requiredTestValue(restored))
       await tick(); await tick()
       expect(coldStarts).toBe(0)
     })
@@ -1042,14 +1044,14 @@ describe('provider dispatch write-ahead recovery', () => {
       onProviderDispatchUncertain: null as (() => void) | null,
       getModel: () => 'fixture-model', getSessionId: () => null,
       setAllSources: () => {}, isProcessing: () => false, forceAbort: () => {}, dispose: async () => {},
-      async *chat(message: string) {
+      async *chat(message: string): ReturnType<ScriptedSessionAgent['chat']> {
         prompts.push(message)
         await runtimeAgent.onBeforeProviderDispatch?.()
         runtimeAgent.onProviderHandoff?.()
         if (prompts.length === 1) {
           yield {
             type: 'typed_error' as const,
-            error: {
+            error: { actions: [],
               code: 'expired_oauth_token' as const,
               title: 'Authentication expired',
               message: 'The provider token is expired.',
@@ -1106,7 +1108,7 @@ describe('provider dispatch write-ahead recovery', () => {
       getCurrentTurnUserMessage: () => 'Possibly apply objective A exactly once.',
       forceAbort: () => { releaseFirst.resolve() },
       dispose: async () => { releaseFirst.resolve() },
-      async *chat(message: string) {
+      async *chat(message: string): ReturnType<ScriptedSessionAgent['chat']> {
         prompts.push(message)
         await runtimeAgent.onBeforeProviderDispatch?.()
         runtimeAgent.onProviderHandoff?.()
@@ -1120,7 +1122,7 @@ describe('provider dispatch write-ahead recovery', () => {
         }
         yield {
           type: 'typed_error' as const,
-          error: {
+          error: { actions: [],
             code: 'invalid_request' as const,
             title: 'Fixture terminal after successor admission',
             message: 'The durable successor reached the provider exactly once.',
@@ -1169,7 +1171,7 @@ describe('provider dispatch write-ahead recovery', () => {
       onProviderDispatchUncertain: null as (() => void) | null,
       getModel: () => 'fixture-model', getSessionId: () => null,
       setAllSources: () => {}, isProcessing: () => false, forceAbort: () => {}, dispose: async () => {},
-      async *chat(message: string) {
+      async *chat(message: string): ReturnType<ScriptedSessionAgent['chat']> {
         prompts.push(message)
         await runtimeAgent.onBeforeProviderDispatch?.()
         runtimeAgent.onProviderHandoff?.()
@@ -1229,7 +1231,7 @@ describe('provider dispatch write-ahead recovery', () => {
       onProviderDispatchUncertain: null as (() => void) | null,
       getModel: () => 'fixture-model', getSessionId: () => null,
       setAllSources: () => {}, isProcessing: () => false, forceAbort: () => {}, dispose: async () => {},
-      async *chat(message: string) {
+      async *chat(message: string): ReturnType<ScriptedSessionAgent['chat']> {
         prompts.push(message)
         await runtimeAgent.onBeforeProviderDispatch?.()
         runtimeAgent.onProviderHandoff?.()
@@ -1280,7 +1282,7 @@ describe('provider dispatch write-ahead recovery', () => {
       onProviderDispatchUncertain: null as (() => void) | null,
       getModel: () => 'fixture-model', getSessionId: () => null,
       setAllSources: () => {}, isProcessing: () => false, forceAbort: () => {}, dispose: async () => {},
-      async *chat() {
+      async *chat(): ReturnType<ScriptedSessionAgent['chat']> {
         await runtimeAgent.onBeforeProviderDispatch?.()
         providerWrite = true
         yield { type: 'complete' as const }
@@ -1316,7 +1318,7 @@ describe('provider dispatch write-ahead recovery', () => {
       getModel: () => 'fixture-model', getSessionId: () => null,
       setAllSources: () => {}, isProcessing: () => true,
       forceAbort: () => { never.resolve() }, dispose: async () => { never.resolve() },
-      async *chat(message: string) {
+      async *chat(message: string): ReturnType<ScriptedSessionAgent['chat']> {
         prompts.push(message)
         await runtimeAgent.onBeforeProviderDispatch?.()
         runtimeAgent.onProviderHandoff?.()
@@ -1370,7 +1372,7 @@ describe('provider dispatch write-ahead recovery', () => {
       onProviderDispatchUncertain: null as (() => void) | null,
       getModel: () => 'fixture-model', getSessionId: () => null,
       setAllSources: () => {}, isProcessing: () => false, forceAbort: () => {}, dispose: async () => {},
-      async *chat() {
+      async *chat(): ReturnType<ScriptedSessionAgent['chat']> {
         await runtimeAgent.onBeforeProviderDispatch?.()
         dispatchedMessageId = managed.messages.findLast(message => message.role === 'user')!.id
         runtimeAgent.onProviderDispatchRejected?.()
@@ -1402,7 +1404,7 @@ describe('provider dispatch write-ahead recovery', () => {
       onProviderDispatchUncertain: null as (() => void) | null,
       getModel: () => 'fixture-model', getSessionId: () => null,
       setAllSources: () => {}, isProcessing: () => false, forceAbort: () => {}, dispose: async () => {},
-      async *chat(message: string) {
+      async *chat(message: string): ReturnType<ScriptedSessionAgent['chat']> {
         prompts.push(message)
         await runtimeAgent.onBeforeProviderDispatch?.()
         if (prompts.length === 1) {
@@ -1453,7 +1455,7 @@ describe('provider dispatch write-ahead recovery', () => {
     const cold = h.cold(); const restored = sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id)
     let coldContinuations = 0
     cold.runtime.enqueueAutomaticTurnRecovery = async () => { coldContinuations++; return true }
-    await cold.runtime.ensureMessagesLoaded(restored)
+    await cold.runtime.ensureMessagesLoaded(requiredTestValue(restored))
     await tick(); await tick()
     expect(coldContinuations).toBe(0)
   })
@@ -1473,7 +1475,7 @@ describe('provider dispatch write-ahead recovery', () => {
       redirect: () => true,
       getCurrentTurnUserMessage: () => 'Potentially mutate objective A exactly once.',
       forceAbort: () => { releaseFirst.resolve() }, dispose: async () => { releaseFirst.resolve() },
-      async *chat(message: string) {
+      async *chat(message: string): ReturnType<ScriptedSessionAgent['chat']> {
         prompts.push(message)
         await runtimeAgent.onBeforeProviderDispatch?.()
         if (prompts.length === 1) {
@@ -1531,7 +1533,7 @@ describe('provider dispatch write-ahead recovery', () => {
       onProviderDispatchUncertain: null as (() => void) | null,
       getModel: () => 'fixture-model', getSessionId: () => null,
       setAllSources: () => {}, isProcessing: () => true, forceAbort: () => {}, dispose: async () => {},
-      async *chat() {
+      async *chat(): ReturnType<ScriptedSessionAgent['chat']> {
         await runtimeAgent.onBeforeProviderDispatch?.()
         dispatchedMessageId = managed.messages.findLast(message => message.role === 'user')!.id
         runtimeAgent.onProviderDispatchUncertain?.()
@@ -1595,7 +1597,7 @@ describe('provider dispatch write-ahead recovery', () => {
       onProviderDispatchUncertain: null as (() => void) | null,
       getModel: () => 'fixture-model', getSessionId: () => null,
       setAllSources: () => {}, isProcessing: () => true, forceAbort: () => {}, dispose: async () => {},
-      async *chat() {
+      async *chat(): ReturnType<ScriptedSessionAgent['chat']> {
         ready.resolve()
         await release.promise
         await runtimeAgent.onBeforeProviderDispatch?.()
@@ -1670,7 +1672,7 @@ describe('provider dispatch write-ahead recovery', () => {
       const cold = h.cold(); const restored = sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id)
       let continuations = 0
       cold.runtime.enqueueAutomaticTurnRecovery = async () => { continuations++; return true }
-      await cold.runtime.ensureMessagesLoaded(restored)
+      await cold.runtime.ensureMessagesLoaded(requiredTestValue(restored))
       await tick(); await tick()
       expect(continuations).toBe(0)
     })
@@ -1866,21 +1868,21 @@ describe('provider dispatch write-ahead recovery', () => {
     expect(cold.runtime.providerDispatchAdmissionBarrier(restored)).toBeDefined()
 
     const prompts: string[] = []
-    const runtimeAgent = {
+    const runtimeAgent = completeSessionAgentFixture(h.workspace, {
       onProviderHandoff: null as (() => void) | null,
       onBeforeProviderDispatch: null as (() => Promise<void>) | null,
       onProviderDispatchRejected: null as (() => void) | null,
       onProviderDispatchUncertain: null as (() => void) | null,
       getModel: () => 'fixture-model', getSessionId: () => null,
       setAllSources: () => {}, isProcessing: () => false, forceAbort: () => {}, dispose: async () => {},
-      async *chat(message: string) {
+      async *chat(message: string): ReturnType<ScriptedSessionAgent['chat']> {
         prompts.push(message)
         await runtimeAgent.onBeforeProviderDispatch?.()
         runtimeAgent.onProviderHandoff?.()
         yield { type: 'text_complete' as const, text: 'Reconciled the ambiguous receipt from current state.', isIntermediate: false }
         yield { type: 'complete' as const }
       },
-    }
+    })
     cold.runtime.getOrCreateAgent = async () => {
       restored.agent = runtimeAgent as never
       return runtimeAgent
@@ -1953,7 +1955,7 @@ describe('provider dispatch write-ahead recovery', () => {
     expect(sessionRuntimeStateForTest(cold.runtime).turnCancellationEpochs.get(restored)).toBe(stopEpoch)
     expect(restored.pendingTurnRecovery).toBeUndefined()
     expect(restored.activeObjective?.interruptedTurnRecovery).toBeDefined()
-    expect(h.events.some(event => event.error?.title === 'Provider recovery state was not persisted')).toBe(false)
+    expect(h.events.some(event => event.type === 'typed_error' && event.error.title === 'Provider recovery state was not persisted')).toBe(false)
   })
 
   it('continues a successful cold reconciliation across a newer metadata persist', async () => {
@@ -2017,14 +2019,14 @@ describe('provider dispatch write-ahead recovery', () => {
     const entered = deferred(); const release = deferred()
     const prompts: string[] = []
     let providerWrites = 0
-    const runtimeAgent = {
+    const runtimeAgent = completeSessionAgentFixture(h.workspace, {
       onProviderHandoff: null as (() => void) | null,
       onBeforeProviderDispatch: null as (() => Promise<void>) | null,
       onProviderDispatchRejected: null as (() => void) | null,
       onProviderDispatchUncertain: null as (() => void) | null,
       getModel: () => 'fixture-model', getSessionId: () => null,
       setAllSources: () => {}, isProcessing: () => false, forceAbort: () => {}, dispose: async () => {},
-      async *chat(message: string) {
+      async *chat(message: string): ReturnType<ScriptedSessionAgent['chat']> {
         prompts.push(message)
         await runtimeAgent.onBeforeProviderDispatch?.()
         runtimeAgent.onProviderHandoff?.()
@@ -2032,7 +2034,7 @@ describe('provider dispatch write-ahead recovery', () => {
         yield { type: 'text_complete' as const, text: 'Applied the saved answer.', isIntermediate: false }
         yield { type: 'complete' as const }
       },
-    }
+    })
     cold.runtime.getOrCreateAgent = async () => {
       restored.agent = runtimeAgent as never
       return runtimeAgent
@@ -2064,7 +2066,7 @@ describe('provider dispatch write-ahead recovery', () => {
     })
     expect(restored.messages.find((message: Managed['messages'][number]) => message.id === responseMessageId))
       .toMatchObject({ role: 'user', hidden: true, isQueued: true })
-    expect(h.events.some(event => event.error?.title === 'Provider recovery state was not persisted')).toBe(false)
+    expect(h.events.some(event => event.type === 'typed_error' && event.error.title === 'Provider recovery state was not persisted')).toBe(false)
     for (let attempt = 0; attempt < 100 && providerWrites === 0; attempt++) {
       await new Promise<void>(resolve => setTimeout(resolve, 10))
     }
@@ -2108,21 +2110,21 @@ describe('provider dispatch write-ahead recovery', () => {
     expect(restored.pendingTurnRecovery).toBeUndefined()
 
     const prompts: string[] = []
-    const runtimeAgent = {
+    const runtimeAgent = completeSessionAgentFixture(h.workspace, {
       onProviderHandoff: null as (() => void) | null,
       onBeforeProviderDispatch: null as (() => Promise<void>) | null,
       onProviderDispatchRejected: null as (() => void) | null,
       onProviderDispatchUncertain: null as (() => void) | null,
       getModel: () => 'fixture-model', getSessionId: () => null,
       setAllSources: () => {}, isProcessing: () => false, forceAbort: () => {}, dispose: async () => {},
-      async *chat(message: string) {
+      async *chat(message: string): ReturnType<ScriptedSessionAgent['chat']> {
         prompts.push(message)
         await runtimeAgent.onBeforeProviderDispatch?.()
         runtimeAgent.onProviderHandoff?.()
         yield { type: 'text_complete' as const, text: 'Reconciled from current state.', isIntermediate: false }
         yield { type: 'complete' as const }
       },
-    }
+    })
     cold.runtime.getOrCreateAgent = async () => {
       restored.agent = runtimeAgent as never
       return runtimeAgent
@@ -2165,7 +2167,7 @@ describe('provider dispatch write-ahead recovery', () => {
       onProviderDispatchUncertain: null as (() => void) | null,
       getModel: () => 'fixture-model', getSessionId: () => null,
       setAllSources: () => {}, isProcessing: () => false, forceAbort: () => {}, dispose: async () => {},
-      async *chat() {
+      async *chat(): ReturnType<ScriptedSessionAgent['chat']> {
         await runtimeAgent.onBeforeProviderDispatch?.()
         starts++
         runtimeAgent.onProviderHandoff?.()
@@ -2236,20 +2238,20 @@ describe('provider dispatch write-ahead recovery', () => {
         dequeues++
         processNext(sessionId)
       }
-      const runtimeAgent = {
+      const runtimeAgent = completeSessionAgentFixture(h.workspace, {
         onProviderHandoff: null as (() => void) | null,
         onBeforeProviderDispatch: null as (() => Promise<void>) | null,
         onProviderDispatchRejected: null as (() => void) | null,
         onProviderDispatchUncertain: null as (() => void) | null,
         getModel: () => 'fixture-model', getSessionId: () => null,
         setAllSources: () => {}, isProcessing: () => false, forceAbort: () => {}, dispose: async () => {},
-        async *chat() {
+        async *chat(): ReturnType<ScriptedSessionAgent['chat']> {
           await runtimeAgent.onBeforeProviderDispatch?.()
           runtimeAgent.onProviderHandoff?.()
           yield { type: 'text_complete' as const, text: 'New human objective received.', isIntermediate: false }
           yield { type: 'complete' as const }
         },
-      }
+      })
       cold.runtime.getOrCreateAgent = async () => {
         restored.agent = runtimeAgent as never
         return runtimeAgent
@@ -2292,14 +2294,14 @@ describe('provider dispatch write-ahead recovery', () => {
     const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     const entered = deferred(); const release = deferred()
     let providerWrites = 0
-    const runtimeAgent = {
+    const runtimeAgent = completeSessionAgentFixture(h.workspace, {
       onProviderHandoff: null as (() => void) | null,
       onBeforeProviderDispatch: null as (() => Promise<void>) | null,
       onProviderDispatchRejected: null as (() => void) | null,
       onProviderDispatchUncertain: null as (() => void) | null,
       getModel: () => 'fixture-model', getSessionId: () => null,
       setAllSources: () => {}, isProcessing: () => true, forceAbort: () => {}, dispose: async () => {},
-      async *chat() {
+      async *chat(): ReturnType<ScriptedSessionAgent['chat']> {
         await runtimeAgent.onBeforeProviderDispatch?.()
         providerWrites++
         entered.resolve()
@@ -2308,7 +2310,7 @@ describe('provider dispatch write-ahead recovery', () => {
         yield { type: 'error' as const, message: 'End explicit Retry fixture preflight' }
         yield { type: 'complete' as const }
       },
-    }
+    })
     cold.runtime.getOrCreateAgent = async () => {
       restored.agent = runtimeAgent as never
       return runtimeAgent
@@ -2443,7 +2445,7 @@ describe('provider dispatch write-ahead recovery', () => {
       onProviderDispatchUncertain: null as (() => void) | null,
       getModel: () => 'fixture-model', getSessionId: () => null,
       setAllSources: () => {}, isProcessing: () => true, forceAbort: () => {}, dispose: async () => {},
-      async *chat(prompt: string) {
+      async *chat(prompt: string): ReturnType<ScriptedSessionAgent['chat']> {
         deliveredPrompt = prompt
         await runtimeAgent.onBeforeProviderDispatch?.()
         entered.resolve(); await release.promise
@@ -2469,7 +2471,7 @@ describe('authenticated cost checkpoint durability', () => {
   async function checkpoint(h: ReturnType<typeof harness>, managed: Managed, overrides: Record<string, unknown> = {}) {
     await h.runtime.processEvent(managed, { type: 'tool_start', toolName: 'Edit', toolUseId: 'unexecuted-edit',
       input: { file_path: '/fixture/paperbridge-security.yml', old_string: 'output: ../codeql-results', new_string: 'output: codeql-results' } }, 1)
-    await h.runtime.processEvent(managed, { type: 'tool_result', toolName: 'Edit', toolUseId: 'unexecuted-edit',
+    await h.runtime.processEvent(managed, { isError: false, type: 'tool_result', toolName: 'Edit', toolUseId: 'unexecuted-edit',
       result: reason, executed: false, continuationRequired: true,
       checkpoint: { schemaVersion: 1, kind: 'tool-call-budget', reason }, ...overrides }, 1)
   }
@@ -2483,7 +2485,7 @@ describe('authenticated cost checkpoint durability', () => {
     expect(managed.activeObjective?.terminalState).toBe('active')
     expect(managed.pendingTurnRecovery).toBeUndefined()
     expect(managed.isProcessing).toBe(false)
-    await h.runtime.processEvent(managed, { type: 'tool_result', toolName: 'Edit', toolUseId: 'late-call', result: reason,
+    await h.runtime.processEvent(managed, { isError: false, type: 'tool_result', toolName: 'Edit', toolUseId: 'late-call', result: reason,
       executed: false, continuationRequired: true, checkpoint: { schemaVersion: 1, kind: 'tool-call-budget', reason } }, 1)
     expect(managed.pendingTurnRecovery).toBeUndefined()
     expect(managed.messageQueue).toEqual([])
@@ -2594,18 +2596,18 @@ describe('authenticated cost checkpoint durability', () => {
         if (!held && managed.pendingTurnRecovery?.exhaustedAt) { held = true; entered.resolve(); await release.promise }
         await flush(id)
       }
-      const agent = { getModel: () => 'fixture-model', getSessionId: () => null, setAllSources: () => {},
+      const agent = completeSessionAgentFixture(h.workspace, { getModel: () => 'fixture-model', getSessionId: () => null, setAllSources: () => {},
         isProcessing: () => false, forceAbort: () => {}, dispose: () => {},
-        async *chat() {
+        async *chat(): ReturnType<ScriptedSessionAgent['chat']> {
           if (cause === 'tool_checkpoint') {
             yield { type: 'tool_start', toolName: 'Edit', toolUseId: 'live-checkpoint', input: { file_path: '/fixture/pending.json' } }
-            yield { type: 'tool_result', toolName: 'Edit', toolUseId: 'live-checkpoint', result: reason, executed: false,
+            yield { isError: false, type: 'tool_result', toolName: 'Edit', toolUseId: 'live-checkpoint', result: reason, executed: false,
               continuationRequired: true, checkpoint: { schemaVersion: 1, kind: 'tool-call-budget', reason } }
           }
           yield { type: 'text_complete', text: 'Completed.', isIntermediate: false }
           yield { type: 'complete' }
         },
-      }
+      })
       h.runtime.getOrCreateAgent = async () => { managed.agent = agent as never; return agent }
       const sending = h.manager.sendMessage(managed.id, 'Saved scoped internal observation.', undefined, undefined,
         { hidden: true, internalOrigin: { kind: 'agent-message', senderSessionId: 'fixture-child' } })
@@ -2639,19 +2641,19 @@ describe('authenticated cost checkpoint durability', () => {
       managed.activeObjective!.terminalState = 'exhausted'
       managed.activeObjective!.orchestrationMode = 'mission'
       managed.pendingTurnRecovery = undefined
-      const agent = { getModel: () => 'fixture-model', getSessionId: () => null, setAllSources: () => {},
+      const agent = completeSessionAgentFixture(h.workspace, { getModel: () => 'fixture-model', getSessionId: () => null, setAllSources: () => {},
         isProcessing: () => false, forceAbort: () => {}, dispose: () => {},
-        async *chat() {
+        async *chat(): ReturnType<ScriptedSessionAgent['chat']> {
           if (cause === 'tool_checkpoint') {
             yield { type: 'tool_start', toolName: 'Edit', toolUseId: 'live-checkpoint', input: {} }
-            yield { type: 'tool_result', toolName: 'Edit', toolUseId: 'live-checkpoint', result: reason, executed: false,
+            yield { isError: false, type: 'tool_result', toolName: 'Edit', toolUseId: 'live-checkpoint', result: reason, executed: false,
               continuationRequired: true, checkpoint: { schemaVersion: 1, kind: 'tool-call-budget', reason } }
           }
           if (cause !== 'stream_ended') yield { type: 'text_complete',
             text: cause === 'premature_final' ? 'I will now continue the remaining work.' : 'Completed.', isIntermediate: false }
           yield { type: 'complete' }
         },
-      }
+      })
       h.runtime.getOrCreateAgent = async () => { managed.agent = agent as never; return agent }
       let dispatch: Promise<void> | undefined
       const send = h.manager.sendMessage.bind(h.manager)
@@ -2703,9 +2705,12 @@ describe('authenticated cost checkpoint durability', () => {
       if (variant === 'stopped') managed.stopRequested = true
       if (variant === 'terminal') managed.activeObjective!.terminalState = 'complete_verified'
       if (variant === 'changed-objective') managed.activeObjective!.userMessageId = 'another-objective'
-      await h.runtime.processEvent(managed, { type: 'tool_result', toolName: 'Edit', toolUseId: 'unexecuted-edit',
+      const checkpoint = { schemaVersion: 1 as const, kind: 'tool-call-budget' as const, reason }
+      // Deliberately corrupt the external receipt to exercise rejection of an invalid kind.
+      if (variant === 'wrong-kind') Object.defineProperty(checkpoint, 'kind', { value: 'other' })
+      await h.runtime.processEvent(managed, { isError: false, type: 'tool_result', toolName: 'Edit', toolUseId: 'unexecuted-edit',
         result: reason, executed: variant === 'executed', continuationRequired: true,
-        ...(variant === 'unstructured' ? {} : { checkpoint: { schemaVersion: 1, kind: variant === 'wrong-kind' ? 'other' : 'tool-call-budget', reason } }) }, 1)
+        ...(variant === 'unstructured' ? {} : { checkpoint }) }, 1)
       expect(managed.pendingTurnRecovery).toBeUndefined()
       expect(managed.messages.find(m => m.toolUseId === 'unexecuted-edit')?.toolResult).toBe(reason)
     },
@@ -2908,8 +2913,8 @@ describe('bounded automatic admission', () => {
       bindDelegation(root, root, child)
       child.isProcessing = true
       const item = queueTypedUpwardDelivery(root, child, messageType)
-      const dispatches: any[][] = []
-      h.manager.sendMessage = async (...args: any[]) => { dispatches.push(args); args[7]?.(args[5]) }
+      const dispatches: SessionSendArguments[] = []
+      h.manager.sendMessage = async (...args) => { dispatches.push(args); args[7]?.(requiredTestValue(args[5])) }
 
       h.runtime.processNextQueuedMessage(root.id)
       await tick(); await tick()
@@ -3051,7 +3056,7 @@ describe('bounded automatic admission', () => {
     bindDelegation(root, root, child); child.isProcessing = true
     const item = queueTypedUpwardDelivery(root, child, 'result', 'typed-sync-chat-throw-result')
     let chatCalls = 0
-    const runtimeAgent = {
+    const runtimeAgent = completeSessionAgentFixture(h.workspace, {
       getModel: () => 'fixture-model',
       getSessionId: () => null,
       setAllSources: () => {},
@@ -3062,7 +3067,7 @@ describe('bounded automatic admission', () => {
         chatCalls++
         throw new Error('Synthetic synchronous chat construction failure')
       },
-    }
+    })
     h.runtime.getOrCreateAgent = async () => runtimeAgent
     let dispatch: Promise<void> | undefined
     const send = h.manager.sendMessage.bind(h.manager)
@@ -3099,20 +3104,20 @@ describe('bounded automatic admission', () => {
       setupRetryNotBefore: Date.now() - 1,
     })
     let chatCalls = 0
-    const runtimeAgent = {
+    const runtimeAgent = completeSessionAgentFixture(h.workspace, {
       getModel: () => 'fixture-model',
       getSessionId: () => null,
       setAllSources: () => {},
       isProcessing: () => false,
       forceAbort: () => {},
       dispose: async () => {},
-      async *chat() {
+      async *chat(): ReturnType<ScriptedSessionAgent['chat']> {
         chatCalls++
         const error = new Error('Synthetic lazy chat preparation timeout') as Error & { code: string }
         error.code = 'ETIMEDOUT'
         throw error
       },
-    }
+    })
     h.runtime.getOrCreateAgent = async () => runtimeAgent
     let dispatch: Promise<void> | undefined
     const send = h.manager.sendMessage.bind(h.manager)
@@ -3151,7 +3156,7 @@ describe('bounded automatic admission', () => {
       setupRetryNotBefore: Date.now() - 1,
     })
     let chatCalls = 0
-    const runtimeAgent = {
+    const runtimeAgent = completeSessionAgentFixture(h.workspace, {
       onProviderHandoff: null as (() => void) | null,
       getModel: () => 'fixture-model',
       getSessionId: () => null,
@@ -3159,16 +3164,16 @@ describe('bounded automatic admission', () => {
       isProcessing: () => false,
       forceAbort: () => {},
       dispose: async () => {},
-      async *chat() {
+      async *chat(): ReturnType<ScriptedSessionAgent['chat']> {
         chatCalls++
         yield { type: 'info' as const, message: 'Preparing local provider context' }
         const error = new Error('Synthetic explicit-boundary preparation timeout') as Error & { code: string }
         error.code = 'ETIMEDOUT'
         throw error
       },
-    }
+    })
     h.runtime.getOrCreateAgent = async () => {
-      root.agent = runtimeAgent as any
+      root.agent = runtimeAgent
       return runtimeAgent
     }
     let dispatch: Promise<void> | undefined
@@ -3207,7 +3212,7 @@ describe('bounded automatic admission', () => {
       'typed-explicit-local-terminal-result',
     )
     const receipt = root.messages.find(message => message.id === item.messageId)!
-    const runtimeAgent = {
+    const runtimeAgent = completeSessionAgentFixture(h.workspace, {
       onProviderHandoff: null as (() => void) | null,
       onProviderDispatchUncertain: null as (() => void) | null,
       getModel: () => 'fixture-model',
@@ -3216,14 +3221,14 @@ describe('bounded automatic admission', () => {
       isProcessing: () => false,
       forceAbort: () => {},
       dispose: async () => {},
-      async *chat() {
+      async *chat(): ReturnType<ScriptedSessionAgent['chat']> {
         runtimeAgent.onProviderDispatchUncertain?.()
         yield { type: 'error' as const, message: 'Synthetic local validation failure' }
         yield { type: 'complete' as const }
       },
-    }
+    })
     h.runtime.getOrCreateAgent = async () => {
-      root.agent = runtimeAgent as any
+      root.agent = runtimeAgent
       return runtimeAgent
     }
     let dispatch: Promise<void> | undefined
@@ -3268,7 +3273,7 @@ describe('bounded automatic admission', () => {
       setupRetryNotBefore: Date.now() - 1,
     })
     let delayedAcknowledgement: (() => void) | undefined
-    const runtimeAgent = {
+    const runtimeAgent = completeSessionAgentFixture(h.workspace, {
       onProviderHandoff: null as (() => void) | null,
       getModel: () => 'fixture-model',
       getSessionId: () => null,
@@ -3276,15 +3281,15 @@ describe('bounded automatic admission', () => {
       isProcessing: () => false,
       forceAbort: () => {},
       dispose: async () => {},
-      async *chat() {
+      async *chat(): ReturnType<ScriptedSessionAgent['chat']> {
         delayedAcknowledgement = runtimeAgent.onProviderHandoff ?? undefined
         const error = new Error('Synthetic failure before delayed provider acknowledgement') as Error & { code: string }
         error.code = 'ETIMEDOUT'
         throw error
       },
-    }
+    })
     h.runtime.getOrCreateAgent = async () => {
-      root.agent = runtimeAgent as any
+      root.agent = runtimeAgent
       return runtimeAgent
     }
     let dispatch: Promise<void> | undefined
@@ -3321,7 +3326,7 @@ describe('bounded automatic admission', () => {
       setupRetryNotBefore: Date.now() - 1,
     })
     let chatCalls = 0
-    const runtimeAgent = {
+    const runtimeAgent = completeSessionAgentFixture(h.workspace, {
       onProviderHandoff: null as (() => void) | null,
       getModel: () => 'fixture-model',
       getSessionId: () => null,
@@ -3329,16 +3334,16 @@ describe('bounded automatic admission', () => {
       isProcessing: () => false,
       forceAbort: () => {},
       dispose: async () => {},
-      async *chat() {
+      async *chat(): ReturnType<ScriptedSessionAgent['chat']> {
         chatCalls++
         runtimeAgent.onProviderHandoff?.()
         const error = new Error('Synthetic post-provider timeout') as Error & { code: string }
         error.code = 'ETIMEDOUT'
         throw error
       },
-    }
+    })
     h.runtime.getOrCreateAgent = async () => {
-      root.agent = runtimeAgent as any
+      root.agent = runtimeAgent
       return runtimeAgent
     }
     let dispatch: Promise<void> | undefined
@@ -3372,21 +3377,21 @@ describe('bounded automatic admission', () => {
       setupRetryNotBefore: Date.now() - 1,
     })
     const entered = deferred(); const release = deferred()
-    const runtimeAgent = {
+    const runtimeAgent = completeSessionAgentFixture(h.workspace, {
       getModel: () => 'fixture-model',
       getSessionId: () => null,
       setAllSources: () => {},
       isProcessing: () => false,
       forceAbort: () => {},
       dispose: async () => {},
-      async *chat() {
+      async *chat(): ReturnType<ScriptedSessionAgent['chat']> {
         entered.resolve()
         await release.promise
         yield { type: 'info' as const, message: 'Late legacy event after Stop' }
       },
-    }
+    })
     h.runtime.getOrCreateAgent = async () => {
-      root.agent = runtimeAgent as any
+      root.agent = runtimeAgent
       return runtimeAgent
     }
     let dispatch: Promise<void> | undefined
@@ -3421,7 +3426,7 @@ describe('bounded automatic admission', () => {
     const receipt = root.messages.find(message => message.id === item.messageId)!
     const entered = deferred(); const release = deferred()
     let lateProviderHandoff: (() => void) | undefined
-    const runtimeAgent = {
+    const runtimeAgent = completeSessionAgentFixture(h.workspace, {
       onProviderHandoff: null as (() => void) | null,
       onProviderDispatchUncertain: null as (() => void) | null,
       getModel: () => 'fixture-model',
@@ -3430,7 +3435,7 @@ describe('bounded automatic admission', () => {
       isProcessing: () => false,
       forceAbort: () => {},
       dispose: async () => {},
-      async *chat() {
+      async *chat(): ReturnType<ScriptedSessionAgent['chat']> {
         runtimeAgent.onProviderDispatchUncertain?.()
         lateProviderHandoff = runtimeAgent.onProviderHandoff ?? undefined
         entered.resolve()
@@ -3438,9 +3443,9 @@ describe('bounded automatic admission', () => {
         lateProviderHandoff?.()
         yield { type: 'complete' as const }
       },
-    }
+    })
     h.runtime.getOrCreateAgent = async () => {
-      root.agent = runtimeAgent as any
+      root.agent = runtimeAgent
       return runtimeAgent
     }
     let dispatch: Promise<void> | undefined
@@ -3492,17 +3497,17 @@ describe('bounded automatic admission', () => {
     const item = queueTypedUpwardDelivery(root, child, 'result', 'typed-empty-chat-result')
     const receipt = root.messages.find(message => message.id === item.messageId)!
     let chatCalls = 0
-    const runtimeAgent = {
+    const runtimeAgent = completeSessionAgentFixture(h.workspace, {
       getModel: () => 'fixture-model',
       getSessionId: () => null,
       setAllSources: () => {},
       isProcessing: () => false,
       forceAbort: () => {},
       dispose: async () => {},
-      async *chat() {
+      async *chat(): ReturnType<ScriptedSessionAgent['chat']> {
         chatCalls++
       },
-    }
+    })
     h.runtime.getOrCreateAgent = async () => runtimeAgent
     let dispatch: Promise<void> | undefined
     const send = h.manager.sendMessage.bind(h.manager)
@@ -3547,8 +3552,8 @@ describe('bounded automatic admission', () => {
     }
     sender.isProcessing = true
     const item = queueTypedUpwardDelivery(target, sender, messageType)
-    const dispatches: any[][] = []
-    h.manager.sendMessage = async (...args: any[]) => { dispatches.push(args) }
+    const dispatches: SessionSendArguments[] = []
+    h.manager.sendMessage = async (...args) => { dispatches.push(args) }
 
     h.runtime.processNextQueuedMessage(target.id)
     await tick(); await tick()
@@ -3564,7 +3569,7 @@ describe('bounded automatic admission', () => {
     const progress = queueTypedUpwardDelivery(root, child, 'progress', 'typed-progress-before-result')
     const result = queueTypedUpwardDelivery(root, child, 'result', 'typed-result-after-progress')
     const dispatches: string[] = []
-    h.manager.sendMessage = async (...args: any[]) => { dispatches.push(args[5]) }
+    h.manager.sendMessage = async (...args) => { dispatches.push(requiredTestValue(args[5])) }
 
     h.runtime.processNextQueuedMessage(root.id)
     await tick(); await tick()
@@ -3617,8 +3622,8 @@ describe('bounded automatic admission', () => {
     bindDelegation(root, root, middle); bindDelegation(root, middle, sender)
     middle.isProcessing = true; sender.isProcessing = true
     const item = queueTypedUpwardDelivery(root, sender, 'result')
-    const dispatches: any[][] = []
-    h.manager.sendMessage = async (...args: any[]) => { dispatches.push(args); args[7]?.(args[5]) }
+    const dispatches: SessionSendArguments[] = []
+    h.manager.sendMessage = async (...args) => { dispatches.push(args); args[7]?.(requiredTestValue(args[5])) }
 
     h.runtime.processNextQueuedMessage(root.id)
     await tick(); await tick()
@@ -3767,8 +3772,8 @@ describe('bounded automatic admission', () => {
     await cold.runtime.ensureMessagesLoaded(restoredRoot)
     await cold.runtime.ensureMessagesLoaded(restoredChild)
     restoredChild.isProcessing = true
-    const dispatches: any[][] = []
-    cold.manager.sendMessage = async (...args: any[]) => { dispatches.push(args); args[7]?.(args[5]) }
+    const dispatches: SessionSendArguments[] = []
+    cold.manager.sendMessage = async (...args) => { dispatches.push(args); args[7]?.(requiredTestValue(args[5])) }
 
     cold.runtime.processNextQueuedMessage(restoredRoot.id)
     await tick(); await tick()
@@ -3788,7 +3793,7 @@ describe('bounded automatic admission', () => {
     bindDelegation(root, root, child); child.isProcessing = true
     const item = queueTypedUpwardDelivery(root, child, 'result')
     const dispatches: string[] = []
-    h.manager.sendMessage = async (...args: any[]) => { dispatches.push(args[5]) }
+    h.manager.sendMessage = async (...args) => { dispatches.push(requiredTestValue(args[5])) }
     root.userInputRequests = [{ status: 'pending', sessionId: root.id }] as never
     h.runtime.processNextQueuedMessage(root.id); await tick()
     expect(dispatches).toEqual([]); expect(root.messageQueue).toEqual([item])
@@ -3881,11 +3886,11 @@ describe('bounded automatic admission', () => {
     const restoredRoot = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(root.id))
     await Promise.all([
       cold.runtime.ensureMessagesLoaded(restoredRoot),
-      cold.runtime.ensureMessagesLoaded(sessionRuntimeStateForTest(cold.runtime).sessions.get(child.id)),
-      cold.runtime.ensureMessagesLoaded(sessionRuntimeStateForTest(cold.runtime).sessions.get(relay.id)),
+      cold.runtime.ensureMessagesLoaded(requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(child.id))),
+      cold.runtime.ensureMessagesLoaded(requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(relay.id))),
     ])
     const dispatches: string[] = []
-    cold.manager.sendMessage = async (...args: any[]) => { dispatches.push(args[5]) }
+    cold.manager.sendMessage = async (...args) => { dispatches.push(requiredTestValue(args[5])) }
 
     cold.runtime.processNextQueuedMessage(root.id)
     await cold.manager.flushSession(root.id)
@@ -4132,7 +4137,7 @@ describe('bounded automatic admission', () => {
     const dispatches: string[] = []
     // Keep the durable question API, ancestry wake and queue admission real;
     // replace only the provider-facing delivery, acknowledging the child answer.
-    h.runtime.sendMessage = async (...args: any[]) => { dispatches.push(args[0]); args[7]?.(args[5]) }
+    h.runtime.sendMessage = async (...args) => { dispatches.push(args[0]); args[7]?.(requiredTestValue(args[5])) }
     h.runtime.processNextQueuedMessage(target.id); expect(dispatches).toEqual([])
     await h.manager.respondToUserInput(child.id, { requestId: question.requestId, answers: [{ questionId: 'scope', optionIds: ['same'] }] })
     for (let index = 0; index < 4; index++) await tick()
@@ -4167,7 +4172,7 @@ describe('bounded automatic admission', () => {
     child.messages.push({ id: 'human', role: 'user', content: 'New objective: explain the result.', timestamp: 3, isQueued: true })
     child.messageQueue.push({ messageId: 'human', message: 'New objective: explain the result.' })
     h.runtime.grantLiveDirectHumanContinuation(child, 'human')
-    const starts: string[] = []; h.runtime.sendMessage = async (...args: any[]) => { starts.push(args[5]) }
+    const starts: string[] = []; h.runtime.sendMessage = async (...args) => { starts.push(requiredTestValue(args[5])) }
     h.runtime.processNextQueuedMessage(child.id); await tick()
     expect(starts).toEqual(['human'])
     expect(child.messageQueue).toEqual([first])
@@ -4181,7 +4186,7 @@ describe('bounded automatic admission', () => {
     target.messages.push({ id: 'new-human-objective', role: 'user', content: 'New objective: explain this result.', timestamp: 3, isQueued: true })
     target.messageQueue.push({ messageId: 'new-human-objective', message: 'New objective: explain this result.' })
     h.runtime.grantLiveDirectHumanContinuation(target, 'new-human-objective')
-    const dispatches: string[] = []; h.runtime.sendMessage = async (...args: any[]) => { dispatches.push(args[5]) }
+    const dispatches: string[] = []; h.runtime.sendMessage = async (...args) => { dispatches.push(requiredTestValue(args[5])) }
     h.runtime.processNextQueuedMessage(target.id); await tick()
     expect(dispatches).toEqual(['new-human-objective'])
     expect(target.messageQueue[0]).toBe(machine)
@@ -4192,15 +4197,15 @@ describe('bounded automatic admission', () => {
     const h = harness(); const target = h.make('terminal-machine-retry'); target.activeObjective!.terminalState = 'exhausted'
     Object.assign(target.pendingTurnRecovery!, { exhaustedAt: 10, validationExhausted: true, attempts: 5 })
     const item = queueMachine(target, 'retained-machine'); const recovery = structuredClone(target.pendingTurnRecovery!)
-    const entered = deferred(), release = deferred(); let dispatch: Promise<void> | undefined; let received: any[] = []
+    const entered = deferred(), release = deferred(); let dispatch: Promise<void> | undefined; let received: SessionSendArguments | undefined
     h.runtime.getOrCreateAgent = async () => { entered.resolve(); await release.promise; throw new Error('Fixture provider boundary') }
     const send = h.manager.sendMessage.bind(h.manager)
     h.manager.sendMessage = (...args) => { received = args; dispatch = send(...args); return dispatch }
     expect(await h.manager.retryTurn(target.id, `${target.id}-user`)).toEqual({ status: 'started' })
     await entered.promise
-    expect(received[5]).toBe(`${target.id}-user`)
-    expect(received[4].automaticRecovery.cause).toBe('user_retry')
-    expect(received[1]).not.toBe(item.message)
+    expect(requiredTestValue<SessionSendArguments>(received)[5]).toBe(`${target.id}-user`)
+    expect(requiredTestValue<SessionSendArguments>(received)[4]?.automaticRecovery?.cause).toBe('user_retry')
+    expect(requiredTestValue<SessionSendArguments>(received)[1]).not.toBe(item.message)
     expect(target.messageQueue[0]).toBe(item)
     expect(target.messages.find(message => message.id === item.messageId)?.isQueued).toBe(true)
     expect(target.activeObjective).toMatchObject({ terminalState: 'active' })
@@ -4378,13 +4383,13 @@ describe('bounded automatic admission', () => {
     Object.assign(child.pendingTurnRecovery!, { attempts: 0, stagnantAttempts: 0 })
     const before = structuredClone(child.pendingTurnRecovery!)
     let chats = 0
-    const agent = { getModel: () => 'fixture-model', getSessionId: () => null, setAllSources: () => {}, isProcessing: () => false,
+    const agent = completeSessionAgentFixture(h.workspace, { getModel: () => 'fixture-model', getSessionId: () => null, setAllSources: () => {}, isProcessing: () => false,
       dispose: () => {},
-      async *chat() {
+      async *chat(): ReturnType<ScriptedSessionAgent['chat']> {
         chats++; parent.pendingAuthRequestId = 'opened-during-child-turn'
         yield { type: 'text_complete', text: 'The implementation is complete.', isIntermediate: false }
         yield { type: 'complete' }
-      } }
+      } })
     h.runtime.getOrCreateAgent = async () => { child.agent = agent as never; return agent }
     await h.manager.sendMessage(child.id, 'Check the preserved result.', undefined, undefined,
       { hidden: true, automaticRecovery: { originalUserMessageId: child.pendingTurnRecovery!.userMessageId, cause: 'app_restart' } })
@@ -4414,7 +4419,7 @@ describe('bounded automatic admission', () => {
     const saved = child.messages.find(message => message.id === item.messageId)!
     saved.agentDelivery = { id: 'delivery-id', status: 'queued', attempts: 0 }
     const entered = deferred(), release = deferred(); let chats = 0; let dispatch: Promise<void> | undefined
-    const agent = { getModel: () => 'fixture', async *chat() { chats++; yield { type: 'complete' } }, setAllSources: () => {} }
+    const agent = completeSessionAgentFixture(h.workspace, { getModel: () => 'fixture', async *chat(): ReturnType<ScriptedSessionAgent['chat']> { chats++; yield { type: 'complete' } }, setAllSources: () => {} })
     h.runtime.getOrCreateAgent = async () => { entered.resolve(); await release.promise; child.agent = agent as never; return agent }
     const send = h.manager.sendMessage.bind(h.manager)
     h.manager.sendMessage = (...args) => { dispatch = send(...args); return dispatch }
@@ -4582,11 +4587,11 @@ describe('durable restart recovery', () => {
     spies.push(spyOn(config, 'getWorkspaces').mockReturnValue([h.workspace] as never))
     const restarted = new SessionManager(); managers.push(restarted)
     const runtime = restarted as unknown as {
-      sendEvent: (event: unknown) => void
+      sendEvent: (event: SessionSentEvent) => void
       loadSessionsFromDisk: () => void
       sessions: Map<string, Managed>
     }
-    runtime.sendEvent = (event: unknown) => h.events.push(event)
+    runtime.sendEvent = (event) => h.events.push(event)
     runtime.loadSessionsFromDisk()
     const restored = sessionRuntimeStateForTest(restarted).sessions.get(managed.id)!
     expect(restored.activeObjective).toMatchObject({
@@ -4652,8 +4657,8 @@ describe('durable restart recovery', () => {
 
     spies.push(spyOn(config, 'getWorkspaces').mockReturnValue([h.workspace] as never))
     const restarted = new SessionManager(); managers.push(restarted)
-    const runtime = restarted as any
-    runtime.sendEvent = (event: unknown) => h.events.push(event)
+    const runtime = sessionManagerForTest(restarted)
+    runtime.sendEvent = (event) => h.events.push(event)
     runtime.processNextQueuedMessage = () => {}
     runtime.loadSessionsFromDisk()
     const recovered = requiredTestValue(sessionRuntimeStateForTest(restarted).sessions.get(proven.id))
@@ -4695,11 +4700,11 @@ describe('durable restart recovery', () => {
     spies.push(spyOn(config, 'getWorkspaces').mockReturnValue([h.workspace] as never))
     const restarted = new SessionManager(); managers.push(restarted)
     const runtime = restarted as unknown as {
-      sendEvent: (event: unknown) => void
+      sendEvent: (event: SessionSentEvent) => void
       loadSessionsFromDisk: () => void
       sessions: Map<string, Managed>
     }
-    runtime.sendEvent = (event: unknown) => h.events.push(event)
+    runtime.sendEvent = (event) => h.events.push(event)
     runtime.loadSessionsFromDisk()
     const restored = sessionRuntimeStateForTest(restarted).sessions.get(managed.id)!
     expect(restored.userInputRequests![0].status).toBe('cancelled')
@@ -4755,7 +4760,7 @@ describe('durable restart recovery', () => {
     await h.save(managed)
     const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     let directRetryReplays = 0; let scheduled = 0
-    cold.runtime.retryTurnInternal = async () => { directRetryReplays++ }
+    cold.runtime.retryTurnInternal = async () => { directRetryReplays++; return { status: 'started' } }
     cold.runtime.processNextQueuedMessage = () => { scheduled++ }
 
     await cold.runtime.resumePendingTurnAfterRestart(restored.id)
@@ -4825,7 +4830,7 @@ describe('durable restart recovery', () => {
     await h.save(managed)
     const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     const preparing = deferred(); const release = deferred()
-    let preparations = 0; let persistedAtPreparation: any; let sentPrompt = ''; let dispatch: Promise<void> | undefined
+    let preparations = 0; let persistedAtPreparation: Managed['pendingTurnRecovery']; let sentPrompt = ''; let dispatch: Promise<void> | undefined
     cold.runtime.getOrCreateAgent = async () => {
       preparations++
       persistedAtPreparation = JSON.parse(
@@ -4853,12 +4858,12 @@ describe('durable restart recovery', () => {
         fallbackIntent: { kind: 'structured_fallback', failedToolName: 'mcp__session__browser_tool' },
         startedAt: expect.any(Number),
       })
-      expect(persistedAtPreparation.recoveryDispatch).toEqual(requiredTestValue(restored.pendingTurnRecovery).recoveryDispatch)
+      expect(requiredTestValue(persistedAtPreparation).recoveryDispatch).toEqual(requiredTestValue(restored.pendingTurnRecovery).recoveryDispatch)
       expect(restored.messages.filter((message) => message.hidden
         && message.content.includes('attempt="4"'))).toHaveLength(1)
       const persistedRows = readFileSync(getSessionFilePath(h.rootPath, restored.id), 'utf8')
-        .trim().split('\n').map(line => JSON.parse(line))
-      expect(persistedRows.filter((message: any) => message.type === 'user' && message.hidden
+        .trim().split('\n').slice(1).map((line): StoredMessage => JSON.parse(line))
+      expect(persistedRows.filter((message) => message.type === 'user' && message.hidden
         && message.content.includes('attempt="4"'))).toHaveLength(1)
       await cold.runtime.resumePendingTurnAfterRestart(restored.id)
       expect(preparations).toBe(1)
@@ -4908,7 +4913,7 @@ describe('durable restart recovery', () => {
 
     const cold = h.cold(); const restored = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id))
     const preparing = deferred(); const release = deferred()
-    let preparations = 0; let persistedAtPreparation: any; let sentPrompt = ''; let dispatch: Promise<void> | undefined
+    let preparations = 0; let persistedAtPreparation: Managed['pendingTurnRecovery']; let sentPrompt = ''; let dispatch: Promise<void> | undefined
     cold.runtime.getOrCreateAgent = async () => {
       preparations++
       persistedAtPreparation = JSON.parse(
@@ -5945,11 +5950,11 @@ describe('durable restart recovery', () => {
         barrierFinished.resolve()
       },
     } as never)
-    const backend = runtimeAgent as any
+    const backend = piAgentForTest(runtimeAgent)
     const runtimeContext = { runtimeId: 'started-admission-crash-runtime', sessionId: managed.id }
-    const backendResponses: any[] = []
+    const backendResponses: Array<Parameters<PiAgentTestView['send']>[0]> = []
     backend.subprocessRuntimeContext = runtimeContext
-    backend.send = (message: any) => backendResponses.push(message)
+    backend.send = (message) => { backendResponses.push(message); return true }
     const generation = 7
     managed.agent = runtimeAgent
     managed.isProcessing = true
@@ -6008,8 +6013,8 @@ describe('durable restart recovery', () => {
     })).toBe(true)
 
     const persistedJsonl = readFileSync(getSessionFilePath(h.rootPath, managed.id), 'utf8')
-    const persistedBeforeMutation = persistedJsonl.trim().split('\n').map(line => JSON.parse(line))
-    const receipt = persistedBeforeMutation.find((message: any) => (
+    const persistedBeforeMutation = persistedJsonl.trim().split('\n').slice(1).map((line): StoredMessage => JSON.parse(line))
+    const receipt = persistedBeforeMutation.find((message) => (
       message.toolUseId === 'mutation-before-tool-start'
     ))
     expect(receipt).toMatchObject({
@@ -6124,11 +6129,11 @@ describe('durable restart recovery', () => {
         }
       },
     } as never)
-    const backend = runtimeAgent as any
+    const backend = piAgentForTest(runtimeAgent)
     const runtimeContext = { runtimeId: 'historical-collision-runtime', sessionId: managed.id }
-    const backendResponses: any[] = []
+    const backendResponses: Array<Parameters<PiAgentTestView['send']>[0]> = []
     backend.subprocessRuntimeContext = runtimeContext
-    backend.send = (message: any) => backendResponses.push(message)
+    backend.send = (message) => { backendResponses.push(message); return true }
     const generation = 11
     managed.agent = runtimeAgent
     managed.isProcessing = true
@@ -6677,7 +6682,7 @@ describe('durable restart recovery', () => {
       },
     }
     const preparing = deferred(); const release = deferred()
-    let preparations = 0; let persistedAtPreparation: any; let retryPrompt = ''; let dispatch: Promise<void> | undefined
+    let preparations = 0; let persistedAtPreparation: Managed['pendingTurnRecovery']; let retryPrompt = ''; let dispatch: Promise<void> | undefined
     h.runtime.getOrCreateAgent = async () => {
       preparations++
       persistedAtPreparation = JSON.parse(
@@ -6711,7 +6716,7 @@ describe('durable restart recovery', () => {
         },
       })
       expect(managed.pendingTurnRecovery?.recoveryDispatch?.id).not.toBe('automatic-dispatch-2')
-      expect(persistedAtPreparation.recoveryDispatch).toEqual(managed.pendingTurnRecovery?.recoveryDispatch)
+      expect(requiredTestValue(persistedAtPreparation).recoveryDispatch).toEqual(managed.pendingTurnRecovery?.recoveryDispatch)
       expect(await h.manager.retryTurn(managed.id, `${managed.id}-user`)).toEqual({ status: 'already_running' })
       expect(preparations).toBe(1)
     } finally {
@@ -6904,10 +6909,10 @@ describe('durable restart recovery', () => {
     h.runtime.getOrCreateAgent = async () => {
       agentCallCount++
       if (agentCallCount === 1) {
-        return {
+        return completeSessionAgentFixture(h.workspace, {
           sendMessage: async () => {},
           dispose: async () => {},
-        } as any
+        })
       }
       freshRuntimeEntered.resolve()
       await releaseFreshRuntime.promise
@@ -7284,13 +7289,13 @@ describe('durable restart recovery', () => {
     const oldHandoff = h.runtime.createAutonomousContextLimitHandoff(
       managed, managed.pendingTurnRecovery,
     )
-    const oldPrompt = buildCleanRecoveryContinuationPrompt(oldHandoff)!
+    const oldPrompt = buildCleanRecoveryContinuationPrompt(requiredTestValue(oldHandoff))!
     managed.pendingTurnRecovery = {
       ...managed.pendingTurnRecovery!,
       cleanContextBoundaryMessageId: dispatchId,
       recoveryDispatch: {
         ...managed.pendingTurnRecovery!.recoveryDispatch!,
-        cleanContinuationId: oldHandoff.id,
+        cleanContinuationId: requiredTestValue(oldHandoff).id,
         setupPersistenceFencedAt: Date.now(),
       },
     }
@@ -7316,7 +7321,7 @@ describe('durable restart recovery', () => {
       await entered.promise
       const repaired = restored.pendingTurnRecovery!.recoveryDispatch!
       expect(repaired.cleanContinuationId).toMatch(/^clean-continuation-v1-/)
-      expect(repaired.cleanContinuationId).not.toBe(oldHandoff.id)
+      expect(repaired.cleanContinuationId).not.toBe(requiredTestValue(oldHandoff).id)
       expect(repaired.setupPersistenceFencedAt).toBeUndefined()
       expect(restored.pendingTurnRecovery?.lastCause).toBe('user_retry')
       expect(restored.messages.filter((message: Managed['messages'][number]) => (
@@ -7662,7 +7667,7 @@ describe('durable restart recovery', () => {
       id: contextRequest.requestId,
     })
     expect(cold.runtime.createContextLimitRetryHandoff(
-      restored, restored.pendingTurnRecovery,
+      restored, requiredTestValue(restored.pendingTurnRecovery),
     )).toBeDefined()
     expect(restored.messageQueue.map((item: Managed['messageQueue'][number]) => item.messageId))
       .toEqual([answerId, deliveryId])
@@ -7908,11 +7913,11 @@ describe('durable restart recovery', () => {
       id: 'business-files', question: 'May I use the four exact files already shown?',
       options: [{ id: 'yes', label: 'Use those four files' }],
     }])
-    const oversizedRuntime = {
+    const oversizedRuntime = completeSessionAgentFixture(h.workspace, {
       getModel: () => 'fixture-model', getSessionId: () => 'oversized-business-answer-context',
       setAllSources: () => {}, isProcessing: () => false, forceAbort: () => {}, dispose: () => {},
-      async *chat() { throw new Error('The oversized provider context must not receive the answer') },
-    }
+      async *chat(): ReturnType<ScriptedSessionAgent['chat']> { throw new Error('The oversized provider context must not receive the answer') },
+    })
     h.runtime.getOrCreateAgent = async () => {
       managed.agent = oversizedRuntime as never
       return oversizedRuntime
@@ -7962,12 +7967,12 @@ describe('durable restart recovery', () => {
       id: 'business-choice', question: 'Which confirmed source should be used?',
       options: [{ id: 'confirmed', label: 'The confirmed source' }],
     }])
-    h.runtime.getOrCreateAgent = async () => ({
+    h.runtime.getOrCreateAgent = async () => (completeSessionAgentFixture(h.workspace, {
       getModel: () => 'fixture-model', getSessionId: () => null,
       setAllSources: () => {}, isProcessing: () => false,
       forceAbort: () => {}, dispose: () => {},
-      async *chat() { throw new Error('No old provider replay expected') },
-    })
+      async *chat(): ReturnType<ScriptedSessionAgent['chat']> { throw new Error('No old provider replay expected') },
+    }))
     h.runtime.processNextQueuedMessage = () => {}
     await h.manager.respondToUserInput(managed.id, {
       requestId: request.requestId,
@@ -7987,10 +7992,10 @@ describe('durable restart recovery', () => {
 
     spies.push(spyOn(config, 'getWorkspaces').mockReturnValue([h.workspace] as never))
     const restarted = new SessionManager(); managers.push(restarted)
-    const runtime = restarted as any
+    const runtime = sessionManagerForTest(restarted)
     const dequeues: string[] = []
     const scheduled = deferred()
-    runtime.sendEvent = (event: unknown) => h.events.push(event)
+    runtime.sendEvent = (event) => h.events.push(event)
     runtime.processNextQueuedMessage = (id: string) => { dequeues.push(id); scheduled.resolve() }
     runtime.loadSessionsFromDisk()
     const restored = requiredTestValue(sessionRuntimeStateForTest(restarted).sessions.get(managed.id))
@@ -8055,8 +8060,8 @@ describe('durable restart recovery', () => {
 
     spies.push(spyOn(config, 'getWorkspaces').mockReturnValue([h.workspace] as never))
     const restarted = new SessionManager(); managers.push(restarted)
-    const runtime = restarted as any
-    runtime.sendEvent = (event: unknown) => h.events.push(event)
+    const runtime = sessionManagerForTest(restarted)
+    runtime.sendEvent = (event) => h.events.push(event)
     runtime.processNextQueuedMessage = () => { throw new Error('Forged answer must not dispatch') }
     runtime.loadSessionsFromDisk()
     const restored = requiredTestValue(sessionRuntimeStateForTest(restarted).sessions.get(managed.id))
@@ -8132,11 +8137,11 @@ describe('durable restart recovery', () => {
 
     const freshRuntimeEntered = deferred(); const releaseFreshRuntime = deferred()
     let providerBuilds = 0; let dispatch: Promise<void> | undefined
-    const oversizedRuntime = {
+    const oversizedRuntime = completeSessionAgentFixture(h.workspace, {
       getModel: () => 'fixture-model', getSessionId: () => 'oversized-answer-provider-context',
       setAllSources: () => {}, isProcessing: () => false, forceAbort: () => {}, dispose: () => {},
-      async *chat() { throw new Error('The oversized provider context must not receive guidance') },
-    }
+      async *chat(): ReturnType<ScriptedSessionAgent['chat']> { throw new Error('The oversized provider context must not receive guidance') },
+    })
     h.runtime.getOrCreateAgent = async () => {
       providerBuilds++
       if (providerBuilds === 1) {
@@ -8379,11 +8384,11 @@ describe('durable restart recovery', () => {
     sessionRuntimeStateForTest(h.runtime).lastTimestamp = futureAnswerTimestamp
     const liveFreshRuntimeEntered = deferred(); const releaseLiveFreshRuntime = deferred()
     let liveProviderBuilds = 0; let liveDispatch: Promise<void> | undefined
-    const oversizedRuntime = {
+    const oversizedRuntime = completeSessionAgentFixture(h.workspace, {
       getModel: () => 'fixture-model', getSessionId: () => 'future-answer-oversized-provider-context',
       setAllSources: () => {}, isProcessing: () => false, forceAbort: () => {}, dispose: () => {},
-      async *chat() { throw new Error('The oversized provider context must not receive the future answer') },
-    }
+      async *chat(): ReturnType<ScriptedSessionAgent['chat']> { throw new Error('The oversized provider context must not receive the future answer') },
+    })
     h.runtime.getOrCreateAgent = async () => {
       liveProviderBuilds++
       if (liveProviderBuilds === 1) {
@@ -8451,11 +8456,11 @@ describe('durable restart recovery', () => {
         id: responseMessage.id, cause: 'user_retry', origin: 'retry', phase: 'started',
       })
       expect(resumedDispatch.startedAt).toBeGreaterThanOrEqual(resumedDispatch.allocatedAt)
-      const coldHeader = JSON.parse(
+      const coldHeader: SessionHeader = JSON.parse(
         readFileSync(getSessionFilePath(h.rootPath, restored.id), 'utf8').split('\n')[0]!,
       )
-      expect(coldHeader.pendingTurnRecovery.recoveryDispatch).toEqual(resumedDispatch)
-      expect(coldHeader.userInputRequests.some((candidate: any) => candidate.status === 'pending')).toBe(false)
+      expect(requiredTestValue(coldHeader.pendingTurnRecovery).recoveryDispatch).toEqual(resumedDispatch)
+      expect(requiredTestValue(coldHeader.userInputRequests).some((candidate) => candidate.status === 'pending')).toBe(false)
     } finally {
       releaseColdRuntime.resolve()
       await coldDispatch?.catch(() => {})
@@ -8557,7 +8562,7 @@ describe('durable restart recovery', () => {
       pending: { ...requiredTestValue(restored.pendingTurnRecovery), lastCause: 'user_retry' },
       objectiveText: originalRequest, evidence: [], remainingWork: debugRemaining,
     })).toBeDefined()
-    expect(cold.runtime.createContextLimitRetryHandoff(restored, restored.pendingTurnRecovery)).toBeDefined()
+    expect(cold.runtime.createContextLimitRetryHandoff(restored, requiredTestValue(restored.pendingTurnRecovery))).toBeDefined()
 
     let disposed = 0
     cold.runtime.disposeManagedAgentRuntime = async () => { disposed++; restored.agent = null }
@@ -9189,7 +9194,7 @@ describe('durable restart recovery', () => {
       restored.messageQueue = restored.messageQueue.filter((item) => item.messageId !== responseId)
       const authority = cold.runtime.authenticatedObjectiveAuthorizationSegments(
         restored,
-        restored.activeObjective,
+        requiredTestValue(restored.activeObjective),
       )
       expect(authority.authenticatedUserAuthorizationSegments).toHaveLength(1)
       expect(authority.authenticatedUserAuthorizationSegments[0])
@@ -9753,8 +9758,8 @@ describe('durable restart recovery', () => {
     await h.save(managed)
     spies.push(spyOn(config, 'getWorkspaces').mockReturnValue([h.workspace] as never))
     const restarted = new SessionManager(); managers.push(restarted)
-    const runtime = restarted as any
-    runtime.sendEvent = (event: unknown) => h.events.push(event)
+    const runtime = sessionManagerForTest(restarted)
+    runtime.sendEvent = (event) => h.events.push(event)
     runtime.loadSessionsFromDisk()
     const restored = requiredTestValue(sessionRuntimeStateForTest(restarted).sessions.get(managed.id))
 
@@ -9789,8 +9794,8 @@ describe('durable restart recovery', () => {
     await h.save(managed)
     spies.push(spyOn(config, 'getWorkspaces').mockReturnValue([h.workspace] as never))
     const restarted = new SessionManager(); managers.push(restarted)
-    const runtime = restarted as any
-    runtime.sendEvent = (event: unknown) => h.events.push(event)
+    const runtime = sessionManagerForTest(restarted)
+    runtime.sendEvent = (event) => h.events.push(event)
 
     runtime.loadSessionsFromDisk()
     const restored = requiredTestValue(sessionRuntimeStateForTest(restarted).sessions.get(managed.id))
@@ -9821,8 +9826,8 @@ describe('durable restart recovery', () => {
     await h.save(managed)
     spies.push(spyOn(config, 'getWorkspaces').mockReturnValue([h.workspace] as never))
     const restarted = new SessionManager(); managers.push(restarted)
-    const runtime = restarted as any
-    runtime.sendEvent = (event: unknown) => h.events.push(event)
+    const runtime = sessionManagerForTest(restarted)
+    runtime.sendEvent = (event) => h.events.push(event)
 
     runtime.loadSessionsFromDisk()
     const restored = requiredTestValue(sessionRuntimeStateForTest(restarted).sessions.get(managed.id))
@@ -9875,8 +9880,8 @@ describe('durable restart recovery', () => {
     await h.save(managed)
     spies.push(spyOn(config, 'getWorkspaces').mockReturnValue([h.workspace] as never))
     const restarted = new SessionManager(); managers.push(restarted)
-    const runtime = restarted as any
-    runtime.sendEvent = (event: unknown) => h.events.push(event)
+    const runtime = sessionManagerForTest(restarted)
+    runtime.sendEvent = (event) => h.events.push(event)
     const scheduled = deferred(); let starts = 0
     runtime.processNextQueuedMessage = (id: string) => {
       if (id === managed.id) { starts++; scheduled.resolve() }
@@ -9984,7 +9989,7 @@ describe('durable restart recovery', () => {
       expect(managed.messageQueue[0]?.options?.automaticRecovery?.dispatchId).toBe(allocatedDispatchId)
       expect(managed.messageQueue[1]?.messageId).toBe(human.id)
       const preparing = deferred(); const releaseAgent = deferred()
-      let preparations = 0; let dispatch: Promise<void> | undefined; let dispatchedArgs: any[] = []
+      let preparations = 0; let dispatch: Promise<void> | undefined; let dispatchedArgs: SessionSendArguments | undefined
       h.runtime.getOrCreateAgent = async () => {
         preparations++; preparing.resolve(); await releaseAgent.promise
         throw new Error('Synthetic human provider boundary')
@@ -10000,8 +10005,8 @@ describe('durable restart recovery', () => {
         await h.runtime.onProcessingStopped(managed.id, 'interrupted', 1)
         await preparing.promise
         expect(preparations).toBe(1)
-        expect(dispatchedArgs[5]).toBe(human.id)
-        expect(dispatchedArgs[4]?.automaticRecovery).toBeUndefined()
+        expect(requiredTestValue<SessionSendArguments>(dispatchedArgs)[5]).toBe(human.id)
+        expect(requiredTestValue<SessionSendArguments>(dispatchedArgs)[4]?.automaticRecovery).toBeUndefined()
         expect(managed.messageQueue.some(item => item.options?.automaticRecovery)).toBe(false)
         expect(managed.activeObjective?.userMessageId).toBe(human.id)
         expect(managed.pendingTurnRecovery).toMatchObject({ userMessageId: human.id, attempts: 0 })
@@ -10052,7 +10057,7 @@ describe('durable restart recovery', () => {
     })
     managed.messageQueue.push({ messageId: 'later-human', message: 'Nouvel objectif humain.' })
     const starts: string[] = []
-    h.runtime.sendMessage = async (...args: any[]) => { starts.push(args[5]) }
+    h.runtime.sendMessage = async (...args) => { starts.push(requiredTestValue(args[5])) }
 
     await h.runtime.onProcessingStopped(managed.id, 'interrupted', 1)
     await tick()
@@ -10308,7 +10313,7 @@ describe('durable restart recovery', () => {
     expect(listSessions(h.rootPath)[0]?.pendingQueuedMessageIds).toEqual(['a', 'b'])
     spies.push(spyOn(config, 'getWorkspaces').mockReturnValue([h.workspace] as never))
     const restarted = new SessionManager(); managers.push(restarted)
-    const runtime = restarted as any
+    const runtime = sessionManagerForTest(restarted)
     const delivered: string[] = []
     runtime.sendMessage = async (id: string, _text: string, _attachments: unknown, _stored: unknown, _options: unknown, messageId: string) => {
       delivered.push(messageId)
@@ -10332,8 +10337,8 @@ describe('durable restart recovery', () => {
     const hydrationEntered = deferred(); const releaseHydration = deferred(); const preparing = deferred(); const releaseAgent = deferred()
     let hydrations = 0, automaticPreparations = 0, humanPreparations = 0
     h.runtime.ensureMessagesLoaded = async () => { if (++hydrations === 1) { hydrationEntered.resolve(); await releaseHydration.promise } }
-    h.runtime.getOrCreateAgent = async (_session: Managed, request: { message: string }) => {
-      if (request.message.includes('<automatic_turn_recovery')) automaticPreparations++
+    h.runtime.getOrCreateAgent = async (_session, request) => {
+      if (requiredTestValue(request).message.includes('<automatic_turn_recovery')) automaticPreparations++
       else humanPreparations++
       preparing.resolve(); await releaseAgent.promise
       throw new Error('Synthetic provider boundary')
@@ -10415,8 +10420,8 @@ describe('durable restart recovery', () => {
     }
     const preparing = deferred(); const releaseAgent = deferred()
     let automaticPreparations = 0; let humanPreparations = 0
-    h.runtime.getOrCreateAgent = async (_session: Managed, request: { message: string }) => {
-      if (request.message.includes('<automatic_turn_recovery')) automaticPreparations++
+    h.runtime.getOrCreateAgent = async (_session, request) => {
+      if (requiredTestValue(request).message.includes('<automatic_turn_recovery')) automaticPreparations++
       else humanPreparations++
       preparing.resolve(); await releaseAgent.promise
       throw new Error('Synthetic provider boundary')
@@ -10696,10 +10701,10 @@ describe('durable restart recovery', () => {
     }
     expect(await h.runtime.enqueueAutomaticTurnRecovery(managed, 'runtime_error')).toBe(true)
     const preparationEntered = deferred(); const releasePreparation = deferred()
-    const unusedAgent = {
+    const unusedAgent = completeSessionAgentFixture(h.workspace, {
       getModel: () => 'fixture-model', getSessionId: () => null,
       setAllSources: () => {}, isProcessing: () => false, dispose: () => {},
-    }
+    })
     h.runtime.getOrCreateAgent = async () => {
       preparationEntered.resolve()
       await releasePreparation.promise
@@ -10727,20 +10732,20 @@ describe('durable restart recovery', () => {
     expect(sessionRuntimeStateForTest(h.runtime).syntheticAutomaticMessagesInFlight.get(managed)?.has(requiredTestValue(deferredMessage))).toBe(true)
 
     const chatEntered = deferred()
-    const deliveredAgent = {
+    const deliveredAgent = completeSessionAgentFixture(h.workspace, {
       getModel: () => 'fixture-model', getSessionId: () => null,
       setAllSources: () => {}, isProcessing: () => false, dispose: () => {},
-      async *chat() {
+      async *chat(): ReturnType<ScriptedSessionAgent['chat']> {
         chatEntered.resolve()
         yield { type: 'typed_error', error: {
-          code: 'fixture_end', title: 'Fixture end', message: 'stop', actions: [], canRetry: false,
+          code: 'unknown_error', title: 'Fixture end', message: 'stop', actions: [], canRetry: false,
         } }
         yield { type: 'complete' }
       },
-    }
+    })
     parent.pendingAuthRequestId = undefined
     h.runtime.getOrCreateAgent = async () => {
-      managed.agent = deliveredAgent as any
+      managed.agent = deliveredAgent
       return deliveredAgent
     }
     h.runtime.processNextQueuedMessage(managed.id)
@@ -10914,7 +10919,7 @@ describe('durable restart recovery', () => {
       const cold = h.cold(); const restored = sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id)
       const dequeues: string[] = []
       cold.runtime.processNextQueuedMessage = (sessionId: string) => { dequeues.push(sessionId) }
-      await cold.runtime.ensureMessagesLoaded(restored)
+      await cold.runtime.ensureMessagesLoaded(requiredTestValue(restored))
       await tick(); await tick()
 
       expect(dequeues).toEqual([managed.id])
@@ -10931,7 +10936,7 @@ describe('durable restart recovery', () => {
     const cold = h.cold(); const restored = sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id)
     const dequeues: string[] = []
     cold.runtime.processNextQueuedMessage = (sessionId: string) => { dequeues.push(sessionId) }
-    await cold.runtime.ensureMessagesLoaded(restored)
+    await cold.runtime.ensureMessagesLoaded(requiredTestValue(restored))
     await tick(); await tick()
 
     expect(dequeues).toEqual([managed.id])
@@ -10994,7 +10999,7 @@ describe('durable restart recovery', () => {
     const cold = h.cold(); const restored = sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id)
     const dequeues: string[] = []
     cold.runtime.processNextQueuedMessage = (sessionId: string) => { dequeues.push(sessionId) }
-    await cold.runtime.ensureMessagesLoaded(restored)
+    await cold.runtime.ensureMessagesLoaded(requiredTestValue(restored))
     await tick(); await tick()
 
     expect(dequeues).toEqual([managed.id])
@@ -11210,7 +11215,7 @@ describe('durable restart recovery', () => {
     const dequeues: string[] = []
     cold.runtime.processNextQueuedMessage = (sessionId: string) => { dequeues.push(sessionId) }
 
-    await cold.runtime.ensureMessagesLoaded(restored)
+    await cold.runtime.ensureMessagesLoaded(requiredTestValue(restored))
     const replacement = createManagedSession({ id: managed.id }, h.workspace as never, { messagesLoaded: true })
     sessionRuntimeStateForTest(cold.runtime).sessions.set(managed.id, replacement)
     await tick(); await tick()
@@ -11290,7 +11295,7 @@ describe('durable restart recovery', () => {
     const cold = h.cold(); const calls: string[] = []
     cold.runtime.sendMessage = async (id: string) => { calls.push(id) }
     const scheduled = sessionRuntimeStateForTest(cold.runtime).sessions.get('scheduled-stop')
-    await cold.runtime.ensureMessagesLoaded(scheduled)
+    await cold.runtime.ensureMessagesLoaded(requiredTestValue(scheduled))
     cold.runtime.processNextQueuedMessage('scheduled-stop')
     await Promise.all([cold.manager.cancelProcessing('cold-stop'), cold.manager.cancelProcessing('scheduled-stop')])
     await tick(); await tick()
@@ -11524,7 +11529,7 @@ describe('durable restart recovery', () => {
     await h.save(child)
     spies.push(spyOn(config, 'getWorkspaces').mockReturnValue([h.workspace] as never))
     const manager = new SessionManager(); managers.push(manager)
-    const runtime = manager as any
+    const runtime = sessionManagerForTest(manager)
     runtime.resumePendingTurnsAfterRestart = async () => {}
     runtime.loadSessionsFromDisk()
     const dto = manager.getSessions().find(session => session.id === child.id)!
@@ -11548,7 +11553,7 @@ describe('durable restart recovery', () => {
     await h.save(managed)
     spies.push(spyOn(config, 'getWorkspaces').mockReturnValue([h.workspace] as never))
     const manager = new SessionManager(); managers.push(manager)
-    const runtime = manager as any; let starts = 0
+    const runtime = sessionManagerForTest(manager); let starts = 0
     runtime.getOrCreateAgent = async () => { starts++; throw new Error('Expired permission must require explicit Retry') }
     runtime.loadSessionsFromDisk()
     await tick(); await tick()
@@ -11574,7 +11579,7 @@ describe('durable restart recovery', () => {
     await h.save(root); await h.save(child); await h.save(resolved)
     spies.push(spyOn(config, 'getWorkspaces').mockReturnValue([h.workspace] as never))
     const manager = new SessionManager(); managers.push(manager)
-    const runtime = manager as any; let starts = 0
+    const runtime = sessionManagerForTest(manager); let starts = 0
     runtime.getOrCreateAgent = async () => { starts++; throw new Error('No provider should start') }
     runtime.loadSessionsFromDisk()
     const dto = manager.getSessions().find(session => session.id === child.id)!
@@ -11888,8 +11893,8 @@ describe('durable restart recovery', () => {
     expect(acknowledged).not.toBe('')
     const cold = h.cold(); const restored = sessionRuntimeStateForTest(cold.runtime).sessions.get(managed.id)
     const calls: string[] = []
-    cold.runtime.sendMessage = async (...args: any[]) => { calls.push(args[5]) }
-    await cold.runtime.ensureMessagesLoaded(restored)
+    cold.runtime.sendMessage = async (...args) => { calls.push(requiredTestValue(args[5])) }
+    await cold.runtime.ensureMessagesLoaded(requiredTestValue(restored))
     await tick(); await tick()
     expect(calls).toEqual([acknowledged])
   })
@@ -11935,7 +11940,7 @@ describe('durable restart recovery', () => {
     managed.messages.push({ id: 'followup', role: 'user', content: 'Keep the existing destination.', timestamp: 2, isQueued: true })
     managed.messageQueue.push({ messageId: 'followup', message: 'Keep the existing destination.' })
     const calls: unknown[][] = []
-    h.manager.sendMessage = async (...args: any[]) => { calls.push(args); args[7]('followup') }
+    h.manager.sendMessage = async (...args) => { calls.push(args); requiredTestValue(args[7])('followup') }
     h.runtime.processNextQueuedMessage(managed.id); await tick()
     expect(calls).toHaveLength(0)
     expect(await h.manager.retryTurn(managed.id, `${managed.id}-user`)).toEqual({ status: 'started' })
@@ -12020,7 +12025,7 @@ describe('durable restart recovery', () => {
     const restoredParent = requiredTestValue(sessionRuntimeStateForTest(cold.runtime).sessions.get(parent.id))
     const restoredChild = sessionRuntimeStateForTest(cold.runtime).sessions.get(child.id)
     await cold.runtime.ensureMessagesLoaded(restoredParent)
-    await cold.runtime.ensureMessagesLoaded(restoredChild)
+    await cold.runtime.ensureMessagesLoaded(requiredTestValue(restoredChild))
     const restoredReceipts = restoredParent.messages.filter((message: Managed['messages'][number]) => (
       message.content.startsWith('[host-delegated-terminal-result-v1]')
     ))
@@ -12029,8 +12034,8 @@ describe('durable restart recovery', () => {
     expect(restoredParent.messageQueue.map((item: Managed['messageQueue'][number]) => item.messageId))
       .toEqual([restoredReceipts[0]!.id])
 
-    expect(await cold.runtime.ensureDelegatedTerminalResultDelivery(restoredChild)).toBe(true)
-    expect(await cold.runtime.ensureDelegatedTerminalResultDelivery(restoredChild)).toBe(true)
+    expect(await cold.runtime.ensureDelegatedTerminalResultDelivery(requiredTestValue(restoredChild))).toBe(true)
+    expect(await cold.runtime.ensureDelegatedTerminalResultDelivery(requiredTestValue(restoredChild))).toBe(true)
     expect(restoredParent.messages.filter((message: Managed['messages'][number]) => (
       message.content.startsWith('[host-delegated-terminal-result-v1]')
     ))).toHaveLength(1)
@@ -12089,7 +12094,7 @@ describe('durable restart recovery', () => {
         finalMessageId: 'wait-child-final', finalText: 'Exact terminal child result.',
       }],
     })
-    await h.runtime.processEvent(parent, {
+    await h.runtime.processEvent(parent, { isError: false,
       type: 'tool_result', toolName: 'mcp__session__wait_sessions', toolUseId: 'wait-child-tool',
       result: waitResult, executed: true,
     }, 1)
@@ -12605,7 +12610,7 @@ describe('durable restart recovery', () => {
       providerContextBaselineTokens: 120_000,
     }
     const originalFlush = h.manager.flushSession.bind(h.manager)
-    let firstStartedSnapshot: any
+    let firstStartedSnapshot: SessionHeader | undefined
     h.manager.flushSession = async id => {
       await originalFlush(id)
       if (!firstStartedSnapshot
@@ -12645,13 +12650,13 @@ describe('durable restart recovery', () => {
         recoveryDispatch: expect.objectContaining({ id: dispatchId, phase: 'started' }),
       }),
     })
-    expect(firstStartedSnapshot.sdkSessionId).toBeUndefined()
-    expect(firstStartedSnapshot.branchFromSdkSessionId).toBeUndefined()
-    expect(firstStartedSnapshot.branchFromSessionPath).toBeUndefined()
-    expect(firstStartedSnapshot.branchFromSdkCwd).toBeUndefined()
-    expect(firstStartedSnapshot.branchFromSdkTurnId).toBeUndefined()
-    expect(firstStartedSnapshot.branchContextStrategy).toBeUndefined()
-    expect(firstStartedSnapshot.contextCompactionAttempt).toBeUndefined()
+    expect(requiredTestValue(firstStartedSnapshot).sdkSessionId).toBeUndefined()
+    expect(requiredTestValue(firstStartedSnapshot)).not.toHaveProperty('branchFromSdkSessionId')
+    expect(requiredTestValue(firstStartedSnapshot)).not.toHaveProperty('branchFromSessionPath')
+    expect(requiredTestValue(firstStartedSnapshot)).not.toHaveProperty('branchFromSdkCwd')
+    expect(requiredTestValue(firstStartedSnapshot)).not.toHaveProperty('branchFromSdkTurnId')
+    expect(requiredTestValue(firstStartedSnapshot)).not.toHaveProperty('branchContextStrategy')
+    expect(requiredTestValue(firstStartedSnapshot).contextCompactionAttempt).toBeUndefined()
     expect(managed.branchSeedApplied).toBe(true)
     expect(managed.providerContextBoundaryMessageId).toBe(dispatchId)
     expect(managed.pendingTurnRecovery?.recoveryDispatch).toMatchObject({
@@ -12788,9 +12793,9 @@ describe('automatic channel-fallback kill switch recovery boundaries', () => {
       // FIFO record reaches sendMessage. Admission must re-read that live bit.
       setAutomaticToolFallback(h, false)
       const preparationEntered = deferred(); const releasePreparation = deferred()
-      let admittedTurn: { message: string; options?: Record<string, unknown> } | undefined
+      let admittedTurn: Parameters<SessionManagerTestView['getOrCreateAgent']>[1]
       let dispatch: Promise<void> | undefined
-      h.runtime.getOrCreateAgent = async (_session: Managed, turn: typeof admittedTurn) => {
+      h.runtime.getOrCreateAgent = async (_session, turn) => {
         admittedTurn = structuredClone(turn)
         preparationEntered.resolve()
         await releasePreparation.promise
@@ -12817,7 +12822,7 @@ describe('automatic channel-fallback kill switch recovery boundaries', () => {
             dispatchAttempt: allocated.attempt,
           },
         })
-        expect((admittedTurn?.options as any)?.internalOrigin).toBeUndefined()
+        expect(admittedTurn?.options?.internalOrigin).toBeUndefined()
         expect(admittedTurn?.message).toContain('<automatic_turn_recovery')
         expect(admittedTurn?.message).not.toContain(`<${specializedMarker}`)
         expect(admittedTurn?.message).not.toContain(failedToolName)
@@ -12972,7 +12977,7 @@ describe('automatic channel-fallback kill switch recovery boundaries', () => {
     const specializedPrompt = h.runtime.buildRecoveryDispatchMessage(
       managed,
       managed.pendingTurnRecovery,
-      managed.pendingTurnRecovery.recoveryDispatch,
+      requiredTestValue(managed.pendingTurnRecovery.recoveryDispatch),
     )
     managed.messages.push({
       id: dispatchId,
@@ -13088,7 +13093,7 @@ describe('automatic channel-fallback kill switch recovery boundaries', () => {
     const oldFallbackPrompt = h.runtime.buildRecoveryDispatchMessage(
       managed,
       managed.pendingTurnRecovery,
-      managed.pendingTurnRecovery.recoveryDispatch,
+      requiredTestValue(managed.pendingTurnRecovery.recoveryDispatch),
     )
     managed.messages.push({
       id: oldDispatchId,
@@ -13281,7 +13286,7 @@ describe('automatic channel-fallback kill switch recovery boundaries', () => {
     const prompt = h.runtime.buildRecoveryDispatchMessage(
       managed,
       managed.pendingTurnRecovery,
-      managed.pendingTurnRecovery.recoveryDispatch,
+      requiredTestValue(managed.pendingTurnRecovery.recoveryDispatch),
     )
     managed.messages.push({
       id: dispatchId,
@@ -13314,12 +13319,12 @@ describe('automatic channel-fallback kill switch recovery boundaries', () => {
         )
       },
     } as never)
-    const backend = runtimeAgent as any
+    const backend = piAgentForTest(runtimeAgent)
     const runtimeContext = { runtimeId: 'routing-off-live-pretool-runtime', sessionId: managed.id }
-    const backendResponses: any[] = []
+    const backendResponses: Array<Parameters<PiAgentTestView['send']>[0]> = []
     const backendResponded = deferred()
     backend.subprocessRuntimeContext = runtimeContext
-    backend.send = (message: any) => { backendResponses.push(message); backendResponded.resolve() }
+    backend.send = (message) => { backendResponses.push(message); backendResponded.resolve(); return true }
     const generation = 31
     managed.agent = runtimeAgent
     managed.isProcessing = true
@@ -13462,17 +13467,17 @@ describe('automatic channel-fallback kill switch recovery boundaries', () => {
     const freshRuntimeEntered = deferred()
     const releaseFreshRuntime = deferred()
     let providerBuilds = 0
-    const oversizedRuntime = {
+    const oversizedRuntime = completeSessionAgentFixture(h.workspace, {
       getModel: () => 'fixture-model',
       getSessionId: () => 'oversized-provider-session-5',
       setAllSources: () => {},
       isProcessing: () => false,
       forceAbort: () => {},
       dispose: () => {},
-      async *chat() {
+      async *chat(): ReturnType<ScriptedSessionAgent['chat']> {
         throw new Error('Oversized provider session must not be reused')
       },
-    }
+    })
     h.runtime.getOrCreateAgent = async () => {
       providerBuilds++
       if (providerBuilds === 1) {
@@ -13487,7 +13492,7 @@ describe('automatic channel-fallback kill switch recovery boundaries', () => {
     const prompt = h.runtime.buildRecoveryDispatchMessage(
       managed,
       managed.pendingTurnRecovery,
-      managed.pendingTurnRecovery.recoveryDispatch,
+      requiredTestValue(managed.pendingTurnRecovery.recoveryDispatch),
     )
     const queuedItem = {
       message: prompt,
@@ -13561,10 +13566,10 @@ describe('automatic channel-fallback kill switch recovery boundaries', () => {
     h.runtime.getOrCreateAgent = async () => {
       agentCallCount++
       if (agentCallCount === 1) {
-        return {
+        return completeSessionAgentFixture(h.workspace, {
           sendMessage: async () => {},
           dispose: async () => {},
-        } as any
+        })
       }
       freshRuntimeEntered.resolve()
       await releaseFreshRuntime.promise
