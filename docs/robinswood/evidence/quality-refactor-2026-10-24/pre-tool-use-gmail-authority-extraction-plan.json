@@ -51,5 +51,8 @@
     "gmail-authority": []
   },
   "unitCycles": [],
-  "moduleCycles": []
+  "moduleCycles": [],
+  "retainedTransformProofs": [
+    "pretool-admission-body-proof.json"
+  ]
 }

@@ -1,0 +1,135 @@
+{
+  "valid": true,
+  "phases": [
+    {
+      "name": "claimGmailToolUse",
+      "instructions": 10,
+      "dataflow": {
+        "fields": [
+          "toolName",
+          "sessionId",
+          "toolUseId",
+          "input",
+          "sourceActivationReentry",
+          "permissionApprovalReentry"
+        ],
+        "inputs": [
+          "acceptedAuthorizationSegments"
+        ],
+        "outputs": [
+          "contextualGmailPreflightTool",
+          "contextualGmailToolUseClaim"
+        ]
+      }
+    },
+    {
+      "name": "checkBrowserChannelAdmission",
+      "instructions": 4,
+      "dataflow": {
+        "fields": [
+          "objectiveAuthorizationSegments",
+          "toolName",
+          "input",
+          "onDebug"
+        ],
+        "inputs": [
+          "policyCurrentUserRequest",
+          "policyAuthorizationSegments"
+        ],
+        "outputs": []
+      }
+    },
+    {
+      "name": "checkRemoteTransportAdmission",
+      "instructions": 9,
+      "dataflow": {
+        "fields": [
+          "toolName",
+          "input",
+          "workingDirectory",
+          "workspaceRootPath"
+        ],
+        "inputs": [
+          "toolEffect",
+          "isProviderDrivenAutonomy",
+          "rejectedTargetBoundStructuredRemoteTechnicalRead",
+          "sensitiveAction",
+          "shellCommand",
+          "sensitiveActionAuthorizedByObjective"
+        ],
+        "outputs": [
+          "remoteObservationRepair"
+        ]
+      }
+    },
+    {
+      "name": "checkDispatchObjectiveAuthority",
+      "instructions": 18,
+      "dataflow": {
+        "fields": [
+          "toolName",
+          "input",
+          "objectiveMutationAuthorized",
+          "objectiveSensitiveActionAuthorized",
+          "objectiveAuthorizationSegments",
+          "plansFolderPath",
+          "dataFolderPath",
+          "sessionId",
+          "onDebug"
+        ],
+        "inputs": [
+          "toolEffect",
+          "sensitiveAction",
+          "browserObjectiveAuthority",
+          "effectivePermissionMode",
+          "sensitiveActionAuthorizedByObjective",
+          "sensitiveActionHasUnresolvedRemoteScope",
+          "sensitiveActionOtherwiseAuthorizedByObjective",
+          "remoteObservationRepair",
+          "contextualReplyRecovery",
+          "permissionsContext"
+        ],
+        "outputs": [
+          "objectiveRequestsExactExternalConfirmation"
+        ]
+      }
+    }
+  ],
+  "beforeClassHash": "485d066b1875cbc9f70a84590af74488e5e8e4fb565195c42f2ef0681b6e84d0",
+  "afterClassHash": "c7e5271f7f55bee831644532c36fe08cb5be9bd2599c42223b7b683b74e6fc9a",
+  "requiredClassImports": [
+    "PermissionsContext",
+    "PreToolUseCheckResult",
+    "PreToolUseInput",
+    "TERMINAL_RECONCILIATION_CAPABILITY_FIELD",
+    "authorizePreparedTool",
+    "checkBrowserChannelAdmission",
+    "checkDispatchObjectiveAuthority",
+    "checkExecutionPrerequisites",
+    "checkRemoteTransportAdmission",
+    "claimGmailToolUse",
+    "classifyBrowserObjectiveAuthority",
+    "classifyToolAuthority",
+    "contextualGmailTargetScopedAuthorizationSegments",
+    "deriveTerminalReconciliationInvocationCapability",
+    "evaluateGmailAuthority",
+    "explicitlyNamesGmailBrowserMutation",
+    "explicitlyNamesNonCanonicalContextualGmailMutation",
+    "externalActionAuthorityPolicySegments",
+    "getPermissionModeDiagnostics",
+    "hasContextualGmailReplyMention",
+    "hasUnresolvedRemoteScopeTarget",
+    "hasUnresolvedSensitiveExternalActionTarget",
+    "isBrowserKeyboardText",
+    "isSensitiveExternalActionAuthorizedByObjective",
+    "isSensitiveExternalActionOtherwiseAuthorizedByObjective",
+    "prepareToolInput",
+    "readOnlyRemoteObservationRepairReason",
+    "setContextualGmailBrowserMutationGuard",
+    "shouldAllowToolInMode",
+    "stripToolMetadata",
+    "withPermissionModeContext",
+    "yoloHumanHandoffBlock"
+  ],
+  "issues": []
+}

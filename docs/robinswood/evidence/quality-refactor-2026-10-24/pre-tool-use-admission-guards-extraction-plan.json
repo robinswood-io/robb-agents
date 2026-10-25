@@ -1,0 +1,106 @@
+{
+  "source": "packages/shared/src/agent/core/pre-tool-use.ts",
+  "units": [
+    {
+      "names": [
+        "runPreToolUseChecks"
+      ],
+      "group": "pipeline",
+      "bodySha256": "c7e5271f7f55bee831644532c36fe08cb5be9bd2599c42223b7b683b74e6fc9a"
+    },
+    {
+      "names": [
+        "GmailClaimInput"
+      ],
+      "group": "gmail-claims",
+      "bodySha256": "5d5a63eebfb7c0d463f99949ca272d8468abd81b3576247db9e5e0b4ced664bb"
+    },
+    {
+      "names": [
+        "claimGmailToolUse"
+      ],
+      "group": "gmail-claims",
+      "bodySha256": "63865af37fedb413dcb01012ca1b7e2eb83cd2c0f67fd5dca271ef38f478356a"
+    },
+    {
+      "names": [
+        "BrowserAdmissionInput"
+      ],
+      "group": "dispatch-admission",
+      "bodySha256": "d17c27021f49bd8c64a71745bc046e50f51bc80996d2445c3593ee612a67a6a9"
+    },
+    {
+      "names": [
+        "checkBrowserChannelAdmission"
+      ],
+      "group": "dispatch-admission",
+      "bodySha256": "9af7df2a1ac9606745a449fbef4bf3179b02a847a7f08f90f0cfee8bc5843ed0"
+    },
+    {
+      "names": [
+        "ObjectiveAdmissionInput"
+      ],
+      "group": "dispatch-admission",
+      "bodySha256": "a1de0365be05350837854f2bd0519637e4ab4eb616ad9349b86cf246cc74b324"
+    },
+    {
+      "names": [
+        "checkDispatchObjectiveAuthority"
+      ],
+      "group": "dispatch-admission",
+      "bodySha256": "fccd5cb13a4d3689ce5425d5913ce2afcb4f54d654271a40673918f0bd09ed40"
+    },
+    {
+      "names": [
+        "RemoteTransportInput"
+      ],
+      "group": "remote-transport",
+      "bodySha256": "447936aa8c5205a06dc1eb6ac839b00d92810a5bc72ba3764075a637e908a55a"
+    },
+    {
+      "names": [
+        "checkRemoteTransportAdmission"
+      ],
+      "group": "remote-transport",
+      "bodySha256": "1e886c403cb99554ea94a7ea49cf1872393555c2471a400b2f02a13bbea92112"
+    }
+  ],
+  "modules": [
+    {
+      "name": "pipeline",
+      "lines": 398,
+      "file": "packages/shared/src/agent/core/pre-tool-use.ts",
+      "retained": true
+    },
+    {
+      "name": "gmail-claims",
+      "lines": 123,
+      "file": "packages/shared/src/agent/core/pre-tool-use/gmail-claims.ts",
+      "retained": false
+    },
+    {
+      "name": "dispatch-admission",
+      "lines": 222,
+      "file": "packages/shared/src/agent/core/pre-tool-use/dispatch-admission.ts",
+      "retained": false
+    },
+    {
+      "name": "remote-transport",
+      "lines": 136,
+      "file": "packages/shared/src/agent/core/pre-tool-use/remote-transport.ts",
+      "retained": false
+    }
+  ],
+  "dependencies": {
+    "pipeline": [
+      "gmail-claims",
+      "dispatch-admission",
+      "remote-transport"
+    ],
+    "gmail-claims": [],
+    "dispatch-admission": [],
+    "remote-transport": []
+  },
+  "unitCycles": [],
+  "moduleCycles": []
+}
