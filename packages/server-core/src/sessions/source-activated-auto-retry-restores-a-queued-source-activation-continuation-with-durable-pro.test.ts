@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { mkdtempSync, rmSync } from "fs";
@@ -15,7 +16,7 @@ describe('source_activated auto-retry', () => {
 
   beforeEach(() => {
     tmpRoot = mkdtempSync(join(tmpdir(), 'sm-autoretry-'))
-    sm = new SessionManager()
+    sm = withSessionOperationsForTest(new SessionManager())
     const internals = sm as unknown as { enqueuePersist: () => boolean; flushSession: () => Promise<void> }
     internals.enqueuePersist = () => true
     internals.flushSession = async () => {}

@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from '../sessions/testing/session-operation-access.ts';
 import { sessionManagerForTest } from "../sessions/testing/private-runtime-access.ts";
 import { completeSessionAgentFixture } from "../sessions/testing/scripted-session-agent.ts";
 import { managedToSession } from "../sessions/SessionManager/session-presentation.ts";
@@ -33,7 +34,7 @@ describe('TaskRunner (Conductor)', () => {
       acceptance_criteria: 'The durable candidate is present and matches the requested outcome.',
       nodes: [{ id: 'candidate', prompt: 'Produce the candidate result.' }],
     }));
-    const manager = new SessionManager();
+    const manager = withSessionOperationsForTest(new SessionManager());
     const runtime = sessionManagerForTest(manager);
     const workspace = {
       id: 'ws', slug: 'ws', name: 'Task integration', rootPath: root, createdAt: 1,

@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { ScriptedSessionAgent } from './testing/scripted-session-agent.ts';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, jest, spyOn } from 'bun:test'
@@ -183,7 +184,7 @@ describe('refreshConnectionRuntime', () => {
   beforeEach(() => {
     writeTestConfig()
     tmpRoot = mkdtempSync(join(tmpdir(), 'sm-refresh-'))
-    sm = new SessionManager()
+    sm = withSessionOperationsForTest(new SessionManager())
   })
 
   afterEach(() => {
@@ -577,7 +578,7 @@ describe('restartAgentRuntime', () => {
   beforeEach(() => {
     writeTestConfig()
     tmpRoot = mkdtempSync(join(tmpdir(), 'sm-restart-'))
-    sm = new SessionManager()
+    sm = withSessionOperationsForTest(new SessionManager())
   })
 
   afterEach(() => {

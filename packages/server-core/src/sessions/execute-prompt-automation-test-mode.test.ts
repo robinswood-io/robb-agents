@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
 import { mkdtempSync, rmSync } from 'fs'
 import { tmpdir } from 'os'
@@ -26,7 +27,7 @@ describe('executePromptAutomation waitForCompletion', () => {
 
   beforeEach(() => {
     tmpRoot = mkdtempSync(join(tmpdir(), 'exec-prompt-automation-'))
-    sm = new SessionManager()
+    sm = withSessionOperationsForTest(new SessionManager())
     // Stub the collaborators executePromptAutomation touches. With no labels /
     // mentions / llmConnection in the input, everything else is skipped.
     ;(sm as unknown as { createSession: unknown }).createSession = async () => ({ id: 'test-sess' })

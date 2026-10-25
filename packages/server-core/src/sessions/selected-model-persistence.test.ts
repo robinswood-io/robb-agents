@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import {
   afterAll,
@@ -108,7 +109,7 @@ function runtimeFor(manager: Manager) {
 }
 
 function registerManager(): { manager: Manager; runtime: ReturnType<typeof runtimeFor> } {
-  const manager = new SessionManager();
+  const manager = withSessionOperationsForTest(new SessionManager());
   managers.push(manager);
   const runtime = runtimeFor(manager);
   // Keep this integration harness on the real routing and persistence paths;

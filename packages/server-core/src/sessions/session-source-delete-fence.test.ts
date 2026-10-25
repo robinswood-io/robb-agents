@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it } from 'bun:test'
 import { existsSync, mkdtempSync, readFileSync, renameSync, rmSync, symlinkSync } from 'node:fs'
@@ -49,7 +50,7 @@ describe('session source deletion fence', () => {
     const root = mkdtempSync(join(tmpdir(), 'robb-source-selection-delete-'))
     roots.push(root)
     const stored = await createSession(root, { name: 'Source selection race' })
-    const manager = new SessionManager()
+    const manager = withSessionOperationsForTest(new SessionManager())
     managers.push(manager)
     const managed = createManagedSession(
       stored,
@@ -101,7 +102,7 @@ describe('session source deletion fence', () => {
     const preservedSessionBytes = readFileSync(join(preservedSessionPath, 'session.jsonl'))
     symlinkSync(preservedSessionPath, liveSessionPath, 'dir')
 
-    const manager = new SessionManager()
+    const manager = withSessionOperationsForTest(new SessionManager())
     managers.push(manager)
     const managed = createManagedSession(
       stored,
@@ -173,7 +174,7 @@ describe('session source deletion fence', () => {
     const root = mkdtempSync(join(tmpdir(), 'robb-source-reload-delete-'))
     roots.push(root)
     const stored = await createSession(root, { name: 'Source reload race' })
-    const manager = new SessionManager()
+    const manager = withSessionOperationsForTest(new SessionManager())
     managers.push(manager)
     const managed = createManagedSession(
       stored,

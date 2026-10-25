@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { ScriptedSessionAgent } from './testing/scripted-session-agent.ts';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it } from 'bun:test'
@@ -55,7 +56,7 @@ function harness() {
   managed.messages = [{ id: 'objective-root', role: 'user', content: 'Prépare et vérifie le rapport.', timestamp: 1 }]
   managed.activeObjective = { schemaVersion: 1, objectiveId: 'objective-root', userMessageId: 'objective-root', lastUserMessageId: 'objective-root', originalText: 'Prépare et vérifie le rapport.', startedAt: 1, continuationCount: 0, budgetBaselineUsd: 12, tokenBaseline: 300, orchestrationMode: 'mission', risk: 'standard', completionCriteria: ['requested-outcome-delivered'], terminalState: 'active' }
   managed.pendingTurnRecovery = { ...createPendingTurnRecovery('objective-root', 1), attempts: 3, stagnantAttempts: 1, leaseExpiresAt: 123456 }
-  const manager = new SessionManager()
+  const manager = withSessionOperationsForTest(new SessionManager())
   const events: Array<Record<string, unknown>> = []
   const snapshots: Array<Record<string, unknown>> = []
   const internals = manager as unknown as {

@@ -1,0 +1,120 @@
+{
+  "status": "testé localement ; chantier global en cours",
+  "scope": "Décomposition des opérations de SessionManager et de leurs tests, sans installation du candidat",
+  "sourceGate": {
+    "max-lines": 126,
+    "no-explicit-any": 403
+  },
+  "changes": [
+    "Interface existante conservée dans une classe de moins de 500 lignes ; appels directs vers les opérations par responsabilité.",
+    "État runtime unique conservé ; aucun registre, moteur de workflow ou proxy ajouté dans le runtime applicatif.",
+    "Découpage des événements, des callbacks du backend, des reprises à froid, de la création de branche et de la mise en file.",
+    "Fonctions récursives regroupées dans les mêmes modules pour supprimer les cycles d’import.",
+    "Adaptateurs réservés aux tests pour conserver les signatures natives et les points de remplacement des fixtures.",
+    "Suppression d’une liaison de résultat inutilisée et d’un filtrage redondant ; opération asynchrone et contrôles de propriétaire conservés."
+  ],
+  "decomposition": {
+    "nativeMethodsInitiallyVerified": 422,
+    "facadeLines": 481,
+    "eventTypes": 20,
+    "runtimeCallbackPhases": 8,
+    "resumeAndStoragePhases": 8,
+    "bodiesAndParametersVerifiedAfterColocation": 458,
+    "operationModules": 104,
+    "runtimeImportCycles": 0,
+    "remainingOversizedOperation": {
+      "file": "packages/server-core/src/sessions/SessionManager/operations/perform-send-message.ts",
+      "lines": 4770
+    }
+  },
+  "equivalenceProofs": [
+    "docs/robinswood/evidence/quality-refactor-2026-10-24/session-method-extraction-equivalence.json",
+    "docs/robinswood/evidence/quality-refactor-2026-10-24/session-event-handler-equivalence.json",
+    "docs/robinswood/evidence/quality-refactor-2026-10-24/session-runtime-callback-equivalence.json",
+    "docs/robinswood/evidence/quality-refactor-2026-10-24/session-resume-phase-equivalence.json",
+    "docs/robinswood/evidence/quality-refactor-2026-10-24/session-recursion-equivalence.json",
+    "docs/robinswood/evidence/quality-refactor-2026-10-24/session-operation-fixture-adaptations.json",
+    "docs/robinswood/evidence/quality-refactor-2026-10-24/session-operation-lint-cleanup.json"
+  ],
+  "checks": [
+    {
+      "name": "session-acyclic-types",
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "typecheck:all"
+      ],
+      "exitCode": 0,
+      "seconds": 18.73,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/session-acyclic-types.log"
+    },
+    {
+      "name": "session-acyclic-compat-types",
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "compat",
+        "--noEmit",
+        "-p",
+        "packages/server-core/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 11.58,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/session-acyclic-compat-types.log"
+    },
+    {
+      "name": "session-acyclic-build",
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "electron:build"
+      ],
+      "exitCode": 0,
+      "seconds": 17.84,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/session-acyclic-build.log"
+    },
+    {
+      "name": "session-acyclic-full-test",
+      "command": [
+        "rtk",
+        "bun",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "seconds": 139.44,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/session-acyclic-full-test.log"
+    },
+    {
+      "name": "lint des modules de session sous 500 lignes",
+      "exitCode": 0,
+      "files": 132,
+      "configuration": "eslint.config.mjs explicite",
+      "maxWarnings": 0
+    }
+  ],
+  "globalLintInventory": {
+    "files": 3182,
+    "errors": 499,
+    "warnings": 137,
+    "fatalErrors": 0,
+    "rules": {
+      "@typescript-eslint/no-explicit-any": 384,
+      "max-lines": 115,
+      "react-hooks/exhaustive-deps": 98,
+      "directive": 12,
+      "craft-agent/no-localstorage": 21,
+      "@typescript-eslint/no-unused-vars": 6
+    }
+  },
+  "installedApplication": "Aucune installation de ce lot effectuée.",
+  "limits": [
+    "Le chantier global reste ouvert : 126 fichiers maintenus dépassent 500 lignes et 403 any explicites subsistent.",
+    "Le lint global reste en échec : les contrôles verts du lot ne constituent pas une validation globale.",
+    "Les missions réelles et la vérification de l’interface sur cette version des dépendances restent à exécuter avant installation."
+  ],
+  "updatedAt": "2026-10-25T13:20:16.280777+00:00"
+}

@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from '../../../../../packages/server-core/src/sessions/testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "../../../../../packages/server-core/src/sessions/testing/runtime-state-access.ts";
 import { beforeEach, describe, expect, it, mock } from 'bun:test'
 
@@ -290,7 +291,7 @@ describe('session branch rollback on preflight failure', () => {
   })
 
   it('deletes newly created child session when ensureBranchReady throws', async () => {
-    const manager = new SessionManager()
+    const manager = withSessionOperationsForTest(new SessionManager())
 
     let disposeCalled = false
     let poolStopCalled = false
@@ -329,7 +330,7 @@ describe('session branch rollback on preflight failure', () => {
     source.sdkSessionId = undefined
     storedById.set('source-1', source)
 
-    const manager = new SessionManager()
+    const manager = withSessionOperationsForTest(new SessionManager())
 
     await expect(
       manager.createSession('ws-1', {
@@ -345,7 +346,7 @@ describe('session branch rollback on preflight failure', () => {
   it('runs backend preflight for pi branches and rolls back on failure', async () => {
     mockedProvider = 'pi'
 
-    const manager = new SessionManager()
+    const manager = withSessionOperationsForTest(new SessionManager())
     let getOrCreateAgentCalled = false
 
     ;(manager as any).ensureMessagesLoaded = async (_managed: any) => {}

@@ -83,7 +83,10 @@
     "RPC fichiers/préférences/images : quatre domaines directs, 79 instructions et ordre conservés ; modules ≤400 lignes ; 46 cas et 132 assertions identiques, 16 typages, lint racine, build et suite complète réussis (138,99 s)",
     "10 suites de cycle de vie décomposées avec hooks conservés ; 282 cas et 1 543 assertions identiques, 6 any retirés, trois fixtures agents complètes ; 16 typages, lint racine sans avertissement et suite complète réussis (139,72 s)",
     "RPC modèles/conversations/tâches : huit domaines directs, 95 instructions et ordre conservés ; modules ≤447 lignes ; 46 cas et 132 assertions identiques, 16 typages, lint racine, build et suite complète réussis (139,53 s)",
-    "Trois points d’entrée décomposés, 32 déclarations et démarrage conservés, modules ≤467 lignes ; 243 cas et 612 assertions identiques ; 16 typages, lint racine ciblé, build et suite complète réussis (138,42 s) ; lint global inventorié sans revendiquer sa conformité"
+    "Trois points d’entrée décomposés, 32 déclarations et démarrage conservés, modules ≤467 lignes ; 243 cas et 612 assertions identiques ; 16 typages, lint racine ciblé, build et suite complète réussis (138,42 s) ; lint global inventorié sans revendiquer sa conformité",
+    "Opérations de SessionManager réparties par responsabilité ; classe de 481 lignes, état runtime unique conservé.",
+    "20 événements et 16 phases de runtime/reprise extraits ; 458 corps et paramètres préservés après regroupement des récursions, aucun cycle d’import des opérations.",
+    "132 fichiers du lot sous 500 lignes sans erreur ni avertissement de lint ; 16 compilations, TypeScript 6, build Electron et suite complète réussis."
   ],
   "pending": [
     "Découpage des autres fichiers au-delà de 500 lignes",
@@ -91,13 +94,17 @@
     "Lint global sans erreur ni avertissement",
     "Parcours complets réels en staging local, compilation signée et intégration"
   ],
-  "updatedAt": "2026-10-25T10:50:20.058784+00:00",
+  "updatedAt": "2026-10-25T13:20:16.280777+00:00",
   "current": {
-    "lastEvidence": "entrypoints-summary.json",
+    "lastEvidence": "session-domains-summary.json",
     "sourceGate": {
       "max-lines": 126,
       "no-explicit-any": 403
     },
-    "globalStatus": "en cours ; validation globale, interface et missions finales restantes"
+    "globalLint": {
+      "errors": 499,
+      "warnings": 137
+    },
+    "globalStatus": "en cours ; dernière grande opération des sessions, autres fichiers historiques, any, lint global et missions finales restants"
   }
 }

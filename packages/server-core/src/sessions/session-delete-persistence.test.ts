@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs";
@@ -17,7 +18,7 @@ describe('session deletion persistence retirement', () => {
     const root = mkdtempSync(join(tmpdir(), 'robb-session-delete-'))
     roots.push(root)
     const stored = await createSession(root, { name: 'Delete race' })
-    const manager = new SessionManager()
+    const manager = withSessionOperationsForTest(new SessionManager())
     managers.push(manager)
     const managed = createManagedSession(
       stored,
@@ -79,7 +80,7 @@ describe('session deletion persistence retirement', () => {
     const root = mkdtempSync(join(tmpdir(), 'robb-session-delete-direct-write-'))
     roots.push(root)
     const stored = await createSession(root, { name: 'Direct write drain' })
-    const manager = new SessionManager()
+    const manager = withSessionOperationsForTest(new SessionManager())
     managers.push(manager)
     const managed = createManagedSession(
       stored,
@@ -123,7 +124,7 @@ describe('session deletion persistence retirement', () => {
     const root = mkdtempSync(join(tmpdir(), 'robb-session-delete-restart-recovery-'))
     roots.push(root)
     const stored = await createSession(root, { name: 'Restart recovery drain' })
-    const manager = new SessionManager()
+    const manager = withSessionOperationsForTest(new SessionManager())
     managers.push(manager)
     const managed = createManagedSession(
       stored,
@@ -170,7 +171,7 @@ describe('session deletion persistence retirement', () => {
     const root = mkdtempSync(join(tmpdir(), 'robb-session-delete-abort-'))
     roots.push(root)
     const stored = await createSession(root, { name: 'Abort rollback' })
-    const manager = new SessionManager()
+    const manager = withSessionOperationsForTest(new SessionManager())
     managers.push(manager)
     const managed = createManagedSession(
       stored,
@@ -242,7 +243,7 @@ describe('session deletion persistence retirement', () => {
     }
     ensureSessionDir(root, id)
     writeSessionJsonl(getSessionFilePath(root, id), stored)
-    const manager = new SessionManager()
+    const manager = withSessionOperationsForTest(new SessionManager())
     managers.push(manager)
     const { messages: _storedMessages, ...storedMetadata } = stored
     const managed = createManagedSession(
@@ -299,7 +300,7 @@ describe('session deletion persistence retirement', () => {
     writeSessionJsonl(getSessionFilePath(rootA, id), storedA)
     writeSessionJsonl(getSessionFilePath(rootB, id), storedB)
 
-    const manager = new SessionManager()
+    const manager = withSessionOperationsForTest(new SessionManager())
     managers.push(manager)
     const { messages: _messages, ...storedMetadataA } = storedA
     const managed = createManagedSession(
@@ -348,7 +349,7 @@ describe('session deletion persistence retirement', () => {
     ensureSessionDir(workspaceRoot, id)
     writeSessionJsonl(getSessionFilePath(workspaceRoot, id), stored)
 
-    const manager = new SessionManager()
+    const manager = withSessionOperationsForTest(new SessionManager())
     managers.push(manager)
     const managed = createManagedSession(
       { ...stored, messages: undefined } as never,

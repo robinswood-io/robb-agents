@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it, spyOn } from 'bun:test'
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
@@ -25,7 +26,7 @@ function harness() {
   const rootPath = mkdtempSync(join(tmpdir(), 'runtime-error-receipts-'))
   directories.push(rootPath)
   const workspace = { id: 'isolated-watchdog', slug: 'isolated-watchdog', rootPath, name: 'Watchdog fixture', createdAt: 1 }
-  const manager = new SessionManager()
+  const manager = withSessionOperationsForTest(new SessionManager())
   managers.push(manager)
   const runtime = manager as any
   const started = deferred()

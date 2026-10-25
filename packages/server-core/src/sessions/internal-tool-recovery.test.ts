@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it } from 'bun:test'
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
@@ -65,7 +66,7 @@ describe('internal tool failure recovery boundaries', () => {
       updatedAt: 1,
       automaticRoutingEnabled: true,
     }))
-    const manager = new SessionManager()
+    const manager = withSessionOperationsForTest(new SessionManager())
     managers.push(manager)
     const managed = createManagedSession({ id: 'model-auto-only' }, {
       id: 'workspace-fixture', slug: 'workspace-fixture', name: 'Fixture', rootPath, createdAt: 1,
@@ -120,7 +121,7 @@ describe('internal tool failure recovery boundaries', () => {
       updatedAt: 1,
       automaticToolFallbackEnabled: true,
     }))
-    const manager = new SessionManager()
+    const manager = withSessionOperationsForTest(new SessionManager())
     managers.push(manager)
     const managed = createManagedSession({ id: 'campaign-fixture', name: 'Internal tool recovery fixture' },
       { id: 'workspace-fixture', slug: 'workspace-fixture', name: 'Fixture', rootPath, createdAt: 1 },

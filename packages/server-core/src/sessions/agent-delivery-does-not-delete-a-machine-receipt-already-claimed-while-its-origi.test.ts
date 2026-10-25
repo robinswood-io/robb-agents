@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { describe, expect, it } from "bun:test";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
@@ -11,7 +12,7 @@ import { transitionObjectiveContract } from "./objective-contract.ts";
 describe('durable agent inbox — E05 E13', () => {
   it('does not delete a machine receipt already claimed while its original queue flush was in flight', async () => {
     const root = mkdtempSync(join(tmpdir(), 'agent-terminal-claimed-race-'));
-    const manager = new SessionManager();
+    const manager = withSessionOperationsForTest(new SessionManager());
     const managed = createManagedSession({ id: 'terminal-claimed-race', name: 'Terminal claimed race' },
       { id: 'ws', name: 'Workspace', rootPath: root, createdAt: 1 } as never, { messagesLoaded: true });
     const rootMessage: Message = { id: 'objective-root', role: 'user', content: 'Inspect the target.', timestamp: 1 };
@@ -56,7 +57,7 @@ describe('durable agent inbox — E05 E13', () => {
 
   it('deduplicates retries on disk, keeps terminal handoffs separate, and indexes pending deliveries for restart', async () => {
     const root = mkdtempSync(join(tmpdir(), 'agent-inbox-'));
-    const manager = new SessionManager();
+    const manager = withSessionOperationsForTest(new SessionManager());
     const managed = createManagedSession({ id: 'inbox', name: 'Inbox' }, { id: 'ws', name: 'Workspace', rootPath: root, createdAt: 1 } as never, { messagesLoaded: true });
     managed.isProcessing = true;
     sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed);
@@ -87,7 +88,7 @@ describe('durable agent inbox — E05 E13', () => {
 
   it('coalesces repeated queued progress deliveries from the same sender and preserves result capacity', async () => {
     const root = mkdtempSync(join(tmpdir(), 'agent-progress-coalesce-'));
-    const manager = new SessionManager();
+    const manager = withSessionOperationsForTest(new SessionManager());
     const workspace = { id: 'ws', name: 'Workspace', rootPath: root, createdAt: 1 } as never;
     const managed = createManagedSession({ id: 'parent', name: 'Parent' }, workspace, { messagesLoaded: true });
     const sender = createManagedSession({

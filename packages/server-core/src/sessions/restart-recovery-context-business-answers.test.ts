@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
 import { ScriptedSessionAgent, completeSessionAgentFixture } from "./testing/scripted-session-agent.ts";
 import { sessionRuntimeStateForTest, requiredTestValue } from "./testing/runtime-state-access.ts";
@@ -120,7 +121,7 @@ describe('durable restart recovery', () => {
     await h.save(managed)
 
     spies.push(spyOn(config, 'getWorkspaces').mockReturnValue([h.workspace] as never))
-    const restarted = new SessionManager(); managers.push(restarted)
+    const restarted = withSessionOperationsForTest(new SessionManager()); managers.push(restarted)
     const runtime = sessionManagerForTest(restarted)
     const dequeues: string[] = []
     const scheduled = deferred()
@@ -188,7 +189,7 @@ describe('durable restart recovery', () => {
     await h.save(managed)
 
     spies.push(spyOn(config, 'getWorkspaces').mockReturnValue([h.workspace] as never))
-    const restarted = new SessionManager(); managers.push(restarted)
+    const restarted = withSessionOperationsForTest(new SessionManager()); managers.push(restarted)
     const runtime = sessionManagerForTest(restarted)
     runtime.sendEvent = (event) => h.events.push(event)
     runtime.processNextQueuedMessage = () => { throw new Error('Forged answer must not dispatch') }

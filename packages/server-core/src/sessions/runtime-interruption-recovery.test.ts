@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { beforeEach, describe, expect, it } from 'bun:test'
 import type { AgentEvent } from '@craft-agent/shared/agent'
 import { SessionManager, createManagedSession } from './SessionManager.ts'
@@ -6,7 +7,7 @@ describe('runtime interruption recovery seam', () => {
   let sessionManager: SessionManager
 
   beforeEach(() => {
-    sessionManager = new SessionManager()
+    sessionManager = withSessionOperationsForTest(new SessionManager())
     ;(sessionManager as unknown as { persistSession: () => void }).persistSession = () => {}
     ;(sessionManager as unknown as { sendEvent: () => void }).sendEvent = () => {}
     ;(sessionManager as unknown as { emitExecutionTelemetry: () => void }).emitExecutionTelemetry = () => {}

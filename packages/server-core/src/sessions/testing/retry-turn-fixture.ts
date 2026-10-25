@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from './session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "./runtime-state-access.ts";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -54,7 +55,7 @@ export function harness() {
     userMessageId: 'root-user', startedAt: 1, attempts: 5, stagnantAttempts: 2, exhaustedAt: 5,
     leaseExpiresAt: 50, validationGaps: ['relevant-checks-passed'],
   }
-  const manager = new SessionManager()
+  const manager = withSessionOperationsForTest(new SessionManager())
   const events: Array<Record<string, unknown>> = []
   const stopRuntime = deferred()
   const internals = manager as unknown as {

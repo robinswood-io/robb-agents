@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest , requiredTestValue } from "./testing/runtime-state-access.ts";
 import { describe, expect, it } from 'bun:test'
 import { SessionManager, createManagedSession } from './SessionManager.ts'
@@ -15,24 +16,24 @@ describe('adoptGeneratedTaskOrchestrator guards', () => {
   }
 
   it('returns false when the session does not exist', async () => {
-    const sm = new SessionManager()
+    const sm = withSessionOperationsForTest(new SessionManager())
     expect(await sm.adoptGeneratedTaskOrchestrator('missing', 'slug-a')).toBe(false)
   })
 
   it('returns false when the session is not a task draft', async () => {
-    const sm = new SessionManager()
+    const sm = withSessionOperationsForTest(new SessionManager())
     seed(sm, 'plain', { taskDraft: false })
     expect(await sm.adoptGeneratedTaskOrchestrator('plain', 'slug-a')).toBe(false)
   })
 
   it('is an idempotent no-op (true) when already bound to the same slug', async () => {
-    const sm = new SessionManager()
+    const sm = withSessionOperationsForTest(new SessionManager())
     seed(sm, 'orch', { taskDraft: false, taskSlug: 'slug-a' })
     expect(await sm.adoptGeneratedTaskOrchestrator('orch', 'slug-a')).toBe(true)
   })
 
   it('refuses (false) to rebind a session already bound to a different slug', async () => {
-    const sm = new SessionManager()
+    const sm = withSessionOperationsForTest(new SessionManager())
     seed(sm, 'orch', { taskDraft: false, taskSlug: 'slug-a' })
     expect(await sm.adoptGeneratedTaskOrchestrator('orch', 'slug-b')).toBe(false)
     // The existing binding is untouched.
@@ -41,7 +42,7 @@ describe('adoptGeneratedTaskOrchestrator guards', () => {
   })
 
   it('refuses atomically to adopt a specialized Mission session', async () => {
-    const sm = new SessionManager()
+    const sm = withSessionOperationsForTest(new SessionManager())
     seed(sm, 'specialist', {
       taskDraft: true,
       llmConnection: 'sealed-connection',
@@ -72,18 +73,18 @@ describe('bindExistingSessionToTask guards', () => {
   }
 
   it('returns false when the session does not exist', async () => {
-    const sm = new SessionManager()
+    const sm = withSessionOperationsForTest(new SessionManager())
     expect(await sm.bindExistingSessionToTask('missing', 'slug-a')).toBe(false)
   })
 
   it('is an idempotent no-op (true) when already bound to the same slug', async () => {
-    const sm = new SessionManager()
+    const sm = withSessionOperationsForTest(new SessionManager())
     seed(sm, 'orch', { taskSlug: 'slug-a' })
     expect(await sm.bindExistingSessionToTask('orch', 'slug-a')).toBe(true)
   })
 
   it('refuses (false) to rebind a session already owned by a different slug', async () => {
-    const sm = new SessionManager()
+    const sm = withSessionOperationsForTest(new SessionManager())
     seed(sm, 'orch', { taskSlug: 'slug-a' })
     expect(await sm.bindExistingSessionToTask('orch', 'slug-b')).toBe(false)
     // The existing binding is untouched.
@@ -92,7 +93,7 @@ describe('bindExistingSessionToTask guards', () => {
   })
 
   it('refuses atomically to attach a specialized Mission session', async () => {
-    const sm = new SessionManager()
+    const sm = withSessionOperationsForTest(new SessionManager())
     seed(sm, 'specialist', {
       llmConnection: 'sealed-connection',
       missionRouteLockSha256: 'a'.repeat(64),
@@ -116,7 +117,7 @@ describe('bindExistingSessionToTask guards', () => {
 // persistence seam so these tests isolate the delegation contract without full storage wiring.
 describe('adopt/bind route changed fields through canonical live-update mutators', () => {
   function harness(seedFields: Record<string, unknown>) {
-    const sm = new SessionManager()
+    const sm = withSessionOperationsForTest(new SessionManager())
     const calls = { model: [] as unknown[], cwd: [] as unknown[], mode: [] as unknown[] }
     const events: string[] = []
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

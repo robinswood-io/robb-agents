@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { describe, expect, it, spyOn } from 'bun:test';
 import { mkdirSync, mkdtempSync, renameSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
@@ -124,7 +125,7 @@ describe('ordinary Mission route provider fence', () => {
     });
     controller.confirmWorkItemDispatch(spec.id, 'task', 'dispatch-one');
 
-    const host = new SessionManager();
+    const host = withSessionOperationsForTest(new SessionManager());
     const harness = host as unknown as {
       sessions: Map<string, unknown>;
       sendEvent: () => void;
@@ -244,7 +245,7 @@ describe('ordinary Mission route provider fence', () => {
       });
       controller.confirmWorkItemDispatch(spec.id, 'task', 'cwd-dispatch');
 
-      const host = new SessionManager();
+      const host = withSessionOperationsForTest(new SessionManager());
       const harness = host as unknown as {
         sessions: Map<string, unknown>;
         sendEvent: () => void;
@@ -336,12 +337,14 @@ describe('ordinary Mission route provider fence', () => {
 
       const probePath = join(configRoot, 'probe.ts');
       const managerPath = join(import.meta.dir, 'SessionManager.ts');
+      const fixtureAccessPath = join(import.meta.dir, 'testing/session-operation-access.ts');
       const identityPath = join(import.meta.dir, '..', 'missions', 'mission-route-identity.ts');
       const capabilityPath = join(import.meta.dir, '..', 'specialized-profiles', 'capability-identity.ts');
       const sourcesPath = join(import.meta.dir, '..', '..', '..', 'shared', 'src', 'sources', 'index.ts');
       writeFileSync(probePath, `
         import { getSourceCredentialManager, loadWorkspaceSources } from ${JSON.stringify(sourcesPath)};
         import { SessionManager } from ${JSON.stringify(managerPath)};
+        import { withSessionOperationsForTest } from ${JSON.stringify(fixtureAccessPath)};
         import {
           ordinaryMissionSourceBindings,
           ordinaryMissionSourceIdentityFromBindings,
@@ -399,7 +402,7 @@ describe('ordinary Mission route provider fence', () => {
           thinkingLevel: lock.thinkingLevel, workingDirectory: lock.cwd,
           enabledSourceSlugs: effectiveSourceSlugs,
         };
-        const manager = new SessionManager();
+        const manager = withSessionOperationsForTest(new SessionManager());
         const fence = manager.assertOrdinaryMissionSourceBindingAtTransport.bind(manager);
         await fence(managed, 'api-bound');
         await fence(managed, 'mcp-bound');

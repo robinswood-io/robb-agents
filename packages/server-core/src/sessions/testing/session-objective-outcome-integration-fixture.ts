@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from './session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "./runtime-state-access.ts";
 import { scopeReviewFixture } from "../__fixtures__/scope-review.ts";
 import { mkdtempSync, writeFileSync } from "node:fs";
@@ -51,7 +52,7 @@ export function makeHarness(id: string): Harness {
     rootPath,
     createdAt: Date.now(),
   } as never, { messagesLoaded: true })
-  const manager = new SessionManager()
+  const manager = withSessionOperationsForTest(new SessionManager())
   const sentEvents: Array<Record<string, unknown>> = []
   const telemetryNames: string[] = []
   const resumedSessionIds: string[] = []

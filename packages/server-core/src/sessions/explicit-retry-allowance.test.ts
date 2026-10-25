@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it } from 'bun:test'
 import { mkdtempSync, rmSync } from 'node:fs'
@@ -12,7 +13,7 @@ afterEach(async () => { for (const cleanup of cleanups.splice(0)) await cleanup(
 
 function fixture() {
   const rootPath = mkdtempSync(join(tmpdir(), 'explicit-retry-allowance-'))
-  const manager = new SessionManager()
+  const manager = withSessionOperationsForTest(new SessionManager())
   const runtime = manager as any
   const managed = createManagedSession({ id: 'retry-fixture', name: 'Retry fixture' },
     { id: 'retry-workspace', name: 'Retry', rootPath, createdAt: 1 } as never, { messagesLoaded: true })

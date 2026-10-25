@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { describe, expect, it } from 'bun:test'
 import type { Message } from '@craft-agent/core/types'
@@ -18,7 +19,7 @@ describe('pending auth in lightweight session snapshots', () => {
       { id: 'internal-tool', role: 'tool', content: 'Private internal tool output', timestamp: 3 },
     ]
     managed.pendingAuthRequestId = 'oauth-current'
-    const manager = new SessionManager()
+    const manager = withSessionOperationsForTest(new SessionManager())
     const internals = manager as unknown as { sessions: Map<string, typeof managed> }
     sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
 

@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
 import { sessionRuntimeStateForTest, requiredTestValue } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it, spyOn } from "bun:test";
@@ -16,7 +17,7 @@ describe('durable restart recovery', () => {
     child.pendingTurnRecovery!.waitingForPermission = { requestId: 'permission', requestedAt: 2, toolName: 'Bash' }
     await h.save(child)
     spies.push(spyOn(config, 'getWorkspaces').mockReturnValue([h.workspace] as never))
-    const manager = new SessionManager(); managers.push(manager)
+    const manager = withSessionOperationsForTest(new SessionManager()); managers.push(manager)
     const runtime = sessionManagerForTest(manager)
     runtime.resumePendingTurnsAfterRestart = async () => {}
     runtime.loadSessionsFromDisk()
@@ -40,7 +41,7 @@ describe('durable restart recovery', () => {
     }
     await h.save(managed)
     spies.push(spyOn(config, 'getWorkspaces').mockReturnValue([h.workspace] as never))
-    const manager = new SessionManager(); managers.push(manager)
+    const manager = withSessionOperationsForTest(new SessionManager()); managers.push(manager)
     const runtime = sessionManagerForTest(manager); let starts = 0
     runtime.getOrCreateAgent = async () => { starts++; throw new Error('Expired permission must require explicit Retry') }
     runtime.loadSessionsFromDisk()
@@ -66,7 +67,7 @@ describe('durable restart recovery', () => {
     resolved.messages.push({ ...child.messages[1]!, id: 'resolved-message', authRequestId: 'old-auth', authStatus: 'completed' })
     await h.save(root); await h.save(child); await h.save(resolved)
     spies.push(spyOn(config, 'getWorkspaces').mockReturnValue([h.workspace] as never))
-    const manager = new SessionManager(); managers.push(manager)
+    const manager = withSessionOperationsForTest(new SessionManager()); managers.push(manager)
     const runtime = sessionManagerForTest(manager); let starts = 0
     runtime.getOrCreateAgent = async () => { starts++; throw new Error('No provider should start') }
     runtime.loadSessionsFromDisk()

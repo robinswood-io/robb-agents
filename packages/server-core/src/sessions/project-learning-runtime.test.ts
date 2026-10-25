@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import * as configStorage from '@craft-agent/shared/config/storage';
 import { afterEach, describe, expect, it, spyOn } from 'bun:test';
@@ -26,7 +27,7 @@ function harness(stream: AgentEvent[] = [], beforeChat?: () => void) {
   const id = `learning-runtime-${fixtures.length}`;
   fixtures.push({ root, id });
   const project = createProject(root, { name: 'Isolated learning fixture' });
-  const manager = new SessionManager();
+  const manager = withSessionOperationsForTest(new SessionManager());
   const managed = createManagedSession({ id, projectId: project.id }, {
     id: 'learning-workspace', slug: 'learning-workspace', name: 'Learning fixture', rootPath: root, createdAt: 1,
   }, { messagesLoaded: true });

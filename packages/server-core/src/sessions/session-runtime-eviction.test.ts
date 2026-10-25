@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, beforeEach, describe, expect, it, jest } from 'bun:test'
 import { SessionManager, createManagedSession } from './SessionManager.ts'
@@ -63,7 +64,7 @@ describe('session runtime eviction', () => {
   }
 
   it('releases the agent, pool server and MCP clients for an idle session', async () => {
-    const manager = new SessionManager()
+    const manager = withSessionOperationsForTest(new SessionManager())
     const runtime = addRuntime(manager, 'idle', { lastActiveAt: 1 })
 
     const evicted = await (manager as unknown as {
@@ -81,7 +82,7 @@ describe('session runtime eviction', () => {
 
   it('releases default idle runtimes after five minutes while preserving conversation state', async () => {
     delete process.env.CRAFT_SESSION_RUNTIME_IDLE_TIMEOUT_MS
-    const manager = new SessionManager()
+    const manager = withSessionOperationsForTest(new SessionManager())
     const runtime = addRuntime(manager, 'default-idle', { lastActiveAt: 1 })
     const messages = [{ id: 'message-1', role: 'user' as const, content: 'Keep this conversation', timestamp: 1 }]
     runtime.managed.messages = messages
@@ -100,7 +101,7 @@ describe('session runtime eviction', () => {
 
   it('honors explicitly disabled runtime eviction', async () => {
     process.env.CRAFT_SESSION_RUNTIME_IDLE_TIMEOUT_MS = '0'
-    const manager = new SessionManager()
+    const manager = withSessionOperationsForTest(new SessionManager())
     const runtime = addRuntime(manager, 'keep-runtime')
     expect(await (manager as unknown as {
       evictIdleSessionRuntimes: (now: number) => Promise<number>
@@ -109,7 +110,7 @@ describe('session runtime eviction', () => {
   })
 
   it('keeps runtimes with queued messages or an ongoing configuration refresh', async () => {
-    const manager = new SessionManager()
+    const manager = withSessionOperationsForTest(new SessionManager())
     const queued = addRuntime(manager, 'queued')
     queued.managed.messageQueue.push({ message: 'next turn' } as never)
     const refreshing = addRuntime(manager, 'refreshing')
@@ -123,7 +124,7 @@ describe('session runtime eviction', () => {
   })
 
   it('preserves runtimes that are processing or own a running background task', async () => {
-    const manager = new SessionManager()
+    const manager = withSessionOperationsForTest(new SessionManager())
     const processing = addRuntime(manager, 'processing', { processing: true, lastActiveAt: 1 })
     const background = addRuntime(manager, 'background', { runningTask: true, lastActiveAt: 1 })
 
@@ -137,7 +138,7 @@ describe('session runtime eviction', () => {
   })
 
   it('detaches a stale runtime before awaiting its slow subprocess shutdown', async () => {
-    const manager = new SessionManager()
+    const manager = withSessionOperationsForTest(new SessionManager())
     let releaseDisposal!: () => void
     const disposalGate = new Promise<void>(resolve => { releaseDisposal = resolve })
     const runtime = addRuntime(manager, 'replace-during-disposal', {
@@ -163,7 +164,7 @@ describe('session runtime eviction', () => {
   })
 
   it('rechecks later eviction batches when a session becomes active mid-sweep', async () => {
-    const manager = new SessionManager()
+    const manager = withSessionOperationsForTest(new SessionManager())
     let releaseFirstBatch!: () => void
     const firstBatchGate = new Promise<void>(resolve => { releaseFirstBatch = resolve })
     const firstBatch = Array.from({ length: 4 }, (_unused, index) => addRuntime(
@@ -189,7 +190,7 @@ describe('session runtime eviction', () => {
   })
 
   it('disposes every session runtime during shutdown', async () => {
-    const manager = new SessionManager()
+    const manager = withSessionOperationsForTest(new SessionManager())
     const first = addRuntime(manager, 'first')
     const second = addRuntime(manager, 'second')
 

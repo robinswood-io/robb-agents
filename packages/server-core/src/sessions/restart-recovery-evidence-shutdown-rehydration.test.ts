@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionManagerForTest } from "./testing/private-runtime-access.ts";
 import { sessionRuntimeStateForTest, requiredTestValue } from "./testing/runtime-state-access.ts";
 import { rehydrateObjectiveEvidence as policyRehydrateObjectiveEvidence } from "./SessionManager/policy.ts";
@@ -128,10 +129,11 @@ describe('durable restart recovery', () => {
     await h.save(managed)
     expect(listSessions(h.rootPath)[0]?.pendingQueuedMessageIds).toEqual(['a', 'b'])
     spies.push(spyOn(config, 'getWorkspaces').mockReturnValue([h.workspace] as never))
-    const restarted = new SessionManager(); managers.push(restarted)
+    const restarted = withSessionOperationsForTest(new SessionManager()); managers.push(restarted)
     const runtime = sessionManagerForTest(restarted)
     const delivered: string[] = []
-    runtime.sendMessage = async (id: string, _text: string, _attachments: unknown, _stored: unknown, _options: unknown, messageId: string) => {
+    runtime.sendMessage = async (id, _text, _attachments, _stored, _options, existingMessageId) => {
+      const messageId = requiredTestValue(existingMessageId)
       delivered.push(messageId)
       const session = requiredTestValue(sessionRuntimeStateForTest(restarted).sessions.get(id))
       requiredTestValue(session.messages.find((message) => message.id === messageId)).isQueued = false

@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
 import { mkdtempSync, rmSync } from 'fs'
@@ -26,7 +27,7 @@ describe('background task completion surfacing (idle keep-alive)', () => {
 
   beforeEach(() => {
     tmpRoot = mkdtempSync(join(tmpdir(), 'sm-bgsurface-'))
-    sm = new SessionManager()
+    sm = withSessionOperationsForTest(new SessionManager())
   })
 
   afterEach(() => {

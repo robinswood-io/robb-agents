@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { afterEach, describe, expect, it } from 'bun:test'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -62,7 +63,7 @@ describe('SessionManager app provenance persistence', () => {
       createdAt: 1,
     } as never, { messagesLoaded: true })
 
-    const sessionManager = new SessionManager()
+    const sessionManager = withSessionOperationsForTest(new SessionManager())
     ;(sessionManager as unknown as { persistSession: (session: unknown) => void })
       .persistSession(managed)
     await sessionPersistenceQueue.flush(managed.id, managed.workspace.rootPath)

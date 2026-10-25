@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs'
@@ -29,7 +30,7 @@ describe('sendMessage OAuth refresh ordering (#710)', () => {
 
   beforeEach(() => {
     tmpRoot = mkdtempSync(join(tmpdir(), 'sm-oauth-refresh-'))
-    sm = new SessionManager()
+    sm = withSessionOperationsForTest(new SessionManager())
   })
 
   afterEach(async () => {

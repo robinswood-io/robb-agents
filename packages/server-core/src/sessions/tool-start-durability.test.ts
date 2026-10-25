@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
@@ -23,7 +24,7 @@ describe('tool start durability before results arrive', () => {
 
   beforeEach(() => {
     root = mkdtempSync(join(tmpdir(), 'tool-start-durability-'))
-    manager = new SessionManager()
+    manager = withSessionOperationsForTest(new SessionManager())
     managed = createManagedSession({ id: 'tool-start-session', name: 'Durability fixture' }, {
       id: 'test-workspace', slug: 'test', name: 'Test workspace', rootPath: root, createdAt: 1,
     }, { messagesLoaded: true })

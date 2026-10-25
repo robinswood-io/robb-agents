@@ -1,3 +1,4 @@
+import { sessionManagerForTest } from './testing/private-runtime-access.ts';
 import { describe, expect, it } from 'bun:test';
 import Ajv from 'ajv';
 import type { Message, ObjectiveAcceptanceCriterion, ObjectiveOutcomeDeclaration } from '@craft-agent/core/types';
@@ -241,20 +242,22 @@ describe('evaluation-only legacy scalar transport recovery', () => {
     expect(f.objective.acceptanceCriteria![0]!.input.timeout).toBe('120');
   });
 
-  it('uses the same projection in the real SessionManager runtime prompt without creating a manager or agent', async () => {
-    const { SessionManager } = await import('./SessionManager.ts');
+  it('uses the same projection in the real SessionManager runtime prompt without starting a provider or agent', async () => {
+    const { SessionManager, createManagedSession } = await import('./SessionManager.ts');
     const f = fixture();
     const before = JSON.stringify(f);
-    const prototype = SessionManager.prototype as unknown as {
-      buildObjectiveRuntimePrompt(managed: { messages: Message[] }, objective: typeof f.objective): string;
-    };
-    const prompt = prototype.buildObjectiveRuntimePrompt({ messages: f.messages }, f.objective);
+    const manager = sessionManagerForTest(new SessionManager());
+    const runtimePrompt = (messages: Message[]) => manager.buildObjectiveRuntimePrompt(
+      createManagedSession({ id: 'projection' }, {
+        id: 'projection-workspace', slug: 'projection-workspace', name: 'Projection', rootPath: '/tmp/projection-test', createdAt: 1,
+      }, { messagesLoaded: true, messages }), f.objective);
+    const prompt = runtimePrompt(f.messages);
     expect(prompt).toContain('"timeout":120');
     expect(prompt).toContain('"path":"$.count","equals":1');
     expect(prompt).toContain('"registrationMessageId":"registration"');
     expect(prompt).toContain('in memory only');
     expect(JSON.stringify(f)).toBe(before);
-    const ordinary = prototype.buildObjectiveRuntimePrompt({ messages: [root, f.observation] }, f.objective);
+    const ordinary = runtimePrompt([root, f.observation]);
     expect(ordinary).toContain('"timeout":"120"');
     expect(ordinary).not.toContain('legacy-scalar-coercion');
   });

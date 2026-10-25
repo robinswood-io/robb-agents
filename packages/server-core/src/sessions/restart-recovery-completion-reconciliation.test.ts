@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionManagerForTest, type SessionSentEvent } from "./testing/private-runtime-access.ts";
 import { sessionRuntimeStateForTest, requiredTestValue } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it, spyOn } from "bun:test";
@@ -70,7 +71,7 @@ describe('durable restart recovery', () => {
     })
     await h.save(managed)
     spies.push(spyOn(config, 'getWorkspaces').mockReturnValue([h.workspace] as never))
-    const restarted = new SessionManager(); managers.push(restarted)
+    const restarted = withSessionOperationsForTest(new SessionManager()); managers.push(restarted)
     const runtime = restarted as unknown as {
       sendEvent: (event: SessionSentEvent) => void
       loadSessionsFromDisk: () => void
@@ -141,7 +142,7 @@ describe('durable restart recovery', () => {
     )
 
     spies.push(spyOn(config, 'getWorkspaces').mockReturnValue([h.workspace] as never))
-    const restarted = new SessionManager(); managers.push(restarted)
+    const restarted = withSessionOperationsForTest(new SessionManager()); managers.push(restarted)
     const runtime = sessionManagerForTest(restarted)
     runtime.sendEvent = (event) => h.events.push(event)
     runtime.processNextQueuedMessage = () => {}
@@ -183,7 +184,7 @@ describe('durable restart recovery', () => {
     }]
     await h.save(managed)
     spies.push(spyOn(config, 'getWorkspaces').mockReturnValue([h.workspace] as never))
-    const restarted = new SessionManager(); managers.push(restarted)
+    const restarted = withSessionOperationsForTest(new SessionManager()); managers.push(restarted)
     const runtime = restarted as unknown as {
       sendEvent: (event: SessionSentEvent) => void
       loadSessionsFromDisk: () => void

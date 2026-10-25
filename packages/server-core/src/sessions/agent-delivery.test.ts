@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { describe, expect, it } from "bun:test";
 import { mkdtempSync, readFileSync, writeFileSync, rmSync } from "node:fs";
@@ -50,7 +51,7 @@ describe('durable agent inbox — E05 E13', () => {
 
   it('requeues the original message if a user turn wins the dispatch race', async () => {
     const root = mkdtempSync(join(tmpdir(), 'agent-dispatch-race-'));
-    const manager = new SessionManager();
+    const manager = withSessionOperationsForTest(new SessionManager());
     const managed = createManagedSession({ id: 'race', name: 'Race test' }, { id: 'ws', name: 'Workspace', rootPath: root, createdAt: 1 } as never, { messagesLoaded: true });
     sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed);
     managed.messages.push({ id: 'original', role: 'user', content: 'result', timestamp: 1, isQueued: true, hidden: true });
@@ -64,7 +65,7 @@ describe('durable agent inbox — E05 E13', () => {
 
   it('rejects a fresh machine delivery if the target terminalizes during admission', async () => {
     const root = mkdtempSync(join(tmpdir(), 'agent-terminal-race-'));
-    const manager = new SessionManager();
+    const manager = withSessionOperationsForTest(new SessionManager());
     const managed = createManagedSession({ id: 'terminal-race', name: 'Terminal race' },
       { id: 'ws', name: 'Workspace', rootPath: root, createdAt: 1 } as never, { messagesLoaded: true });
     const rootMessage: Message = { id: 'objective-root', role: 'user', content: 'Inspect the target.', timestamp: 1 };
@@ -89,7 +90,7 @@ describe('durable agent inbox — E05 E13', () => {
 
   it('rolls back an unclaimed machine receipt if an idle target terminalizes during its first flush', async () => {
     const root = mkdtempSync(join(tmpdir(), 'agent-idle-terminal-flush-race-'));
-    const manager = new SessionManager();
+    const manager = withSessionOperationsForTest(new SessionManager());
     const managed = createManagedSession({ id: 'idle-terminal-flush-race', name: 'Idle terminal flush race' },
       { id: 'ws', name: 'Workspace', rootPath: root, createdAt: 1 } as never, { messagesLoaded: true });
     const rootMessage: Message = { id: 'objective-root', role: 'user', content: 'Inspect the target.', timestamp: 1 };
@@ -128,7 +129,7 @@ describe('durable agent inbox — E05 E13', () => {
 
   it('rolls back an unclaimed machine receipt if the busy target terminalizes during its queue flush', async () => {
     const root = mkdtempSync(join(tmpdir(), 'agent-terminal-flush-race-'));
-    const manager = new SessionManager();
+    const manager = withSessionOperationsForTest(new SessionManager());
     const managed = createManagedSession({ id: 'terminal-flush-race', name: 'Terminal flush race' },
       { id: 'ws', name: 'Workspace', rootPath: root, createdAt: 1 } as never, { messagesLoaded: true });
     const rootMessage: Message = { id: 'objective-root', role: 'user', content: 'Inspect the target.', timestamp: 1 };
@@ -171,7 +172,7 @@ describe('durable agent inbox — E05 E13', () => {
 
   it('cancels a dequeued but unclaimed machine receipt when the target terminalizes during its queue flush', async () => {
     const root = mkdtempSync(join(tmpdir(), 'agent-terminal-dequeued-race-'));
-    const manager = new SessionManager();
+    const manager = withSessionOperationsForTest(new SessionManager());
     const managed = createManagedSession({ id: 'terminal-dequeued-race', name: 'Terminal dequeued race' },
       { id: 'ws', name: 'Workspace', rootPath: root, createdAt: 1 } as never, { messagesLoaded: true });
     const rootMessage: Message = { id: 'objective-root', role: 'user', content: 'Inspect the target.', timestamp: 1 };
@@ -226,7 +227,7 @@ describe('durable agent inbox — E05 E13', () => {
 
   it('preserves an atomically claimed dispatch while its durable receipt is still queued', async () => {
     const root = mkdtempSync(join(tmpdir(), 'agent-terminal-claimed-transition-'));
-    const manager = new SessionManager();
+    const manager = withSessionOperationsForTest(new SessionManager());
     const managed = createManagedSession({ id: 'terminal-claimed-transition', name: 'Terminal claimed transition' },
       { id: 'ws', name: 'Workspace', rootPath: root, createdAt: 1 } as never, { messagesLoaded: true });
     const rootMessage: Message = { id: 'objective-root', role: 'user', content: 'Inspect the target.', timestamp: 1 };
@@ -286,7 +287,7 @@ describe('durable agent inbox — E05 E13', () => {
 
   it('cancels only the exact unclaimed receipt without disturbing a foreign active turn', async () => {
     const root = mkdtempSync(join(tmpdir(), 'agent-terminal-foreign-turn-'));
-    const manager = new SessionManager();
+    const manager = withSessionOperationsForTest(new SessionManager());
     const managed = createManagedSession({ id: 'terminal-foreign-turn', name: 'Terminal foreign turn' },
       { id: 'ws', name: 'Workspace', rootPath: root, createdAt: 1 } as never, { messagesLoaded: true });
     const rootMessage: Message = { id: 'objective-root', role: 'user', content: 'Inspect the target.', timestamp: 1 };
@@ -351,7 +352,7 @@ describe('durable agent inbox — E05 E13', () => {
 
   it('releases only the exact private dequeue when its callback loses ownership before claim', async () => {
     const root = mkdtempSync(join(tmpdir(), 'agent-lost-dequeue-token-'));
-    const manager = new SessionManager();
+    const manager = withSessionOperationsForTest(new SessionManager());
     const managed = createManagedSession({ id: 'lost-dequeue-token', name: 'Lost dequeue token' },
       { id: 'ws', name: 'Workspace', rootPath: root, createdAt: 1 } as never, { messagesLoaded: true });
     const rootMessage: Message = { id: 'objective-root', role: 'user', content: 'Inspect the target.', timestamp: 1 };
@@ -394,7 +395,7 @@ describe('durable agent inbox — E05 E13', () => {
 
   it('releases the exact private dequeue when its callback rejects before receipt processing', async () => {
     const root = mkdtempSync(join(tmpdir(), 'agent-dequeue-callback-failure-'));
-    const manager = new SessionManager();
+    const manager = withSessionOperationsForTest(new SessionManager());
     const managed = createManagedSession({ id: 'dequeue-callback-failure', name: 'Dequeue callback failure' },
       { id: 'ws', name: 'Workspace', rootPath: root, createdAt: 1 } as never, { messagesLoaded: true });
     const rootMessage: Message = { id: 'objective-root', role: 'user', content: 'Inspect the target.', timestamp: 1 };

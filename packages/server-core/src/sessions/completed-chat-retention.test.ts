@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { permissionMetadataFixture } from './testing/permission-metadata.ts';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, beforeEach, describe, expect, it, spyOn } from 'bun:test'
@@ -21,7 +22,7 @@ const messages = [
 describe('completed-chat memory and retention', () => {
   it.each(['question', 'queued-answer', 'auth-id', 'permission', 'active-objective', 'blocked-objective', 'exhausted-objective', 'stopping', 'queued-metadata'])(
     'preserves a legacy done chat with %s', async blocker => {
-      const manager = new SessionManager(); const runtime = manager as any
+      const manager = withSessionOperationsForTest(new SessionManager()); const runtime = manager as any
       const managed = createManagedSession({ id: 'retained', name: 'Retained' },
         { id: 'ws', name: 'Test', rootPath: root, createdAt: 1 } as never, { messagesLoaded: true })
       sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed); managed.sessionStatus = 'done'
@@ -44,7 +45,7 @@ describe('completed-chat memory and retention', () => {
   )
 
   it('does not let terminal or expired source-activation markers pin retention forever', async () => {
-    const manager = new SessionManager(); const runtime = manager as any
+    const manager = withSessionOperationsForTest(new SessionManager()); const runtime = manager as any
     const managed = createManagedSession({ id: 'terminal-source-activation', name: 'Terminal marker' },
       { id: 'ws', name: 'Test', rootPath: root, createdAt: 1 } as never, { messagesLoaded: true })
     sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
@@ -70,7 +71,7 @@ describe('completed-chat memory and retention', () => {
 
   it.each(['question', 'auth-id', 'active-objective', 'nested-auth-id'])(
     'preserves a done parent whose child still needs %s', async blocker => {
-      const manager = new SessionManager(); const runtime = manager as any
+      const manager = withSessionOperationsForTest(new SessionManager()); const runtime = manager as any
       const workspace = { id: 'ws', name: 'Test', rootPath: root, createdAt: 1 }
       const parent = createManagedSession({ id: 'parent', name: 'Parent' }, workspace as never, { messagesLoaded: true })
       const child = createManagedSession({ id: 'child', parentSessionId: parent.id }, workspace as never, { messagesLoaded: true })
@@ -89,7 +90,7 @@ describe('completed-chat memory and retention', () => {
   )
 
   it('yields between skipped chats instead of monopolizing the event loop', async () => {
-    const manager = new SessionManager(); const runtime = manager as any
+    const manager = withSessionOperationsForTest(new SessionManager()); const runtime = manager as any
     for (let i = 0; i < 50; i++) sessionRuntimeStateForTest(manager).sessions.set(`active-${i}`, createManagedSession({ id: `active-${i}` },
       { id: 'ws', name: 'Test', rootPath: root, createdAt: 1 } as never, { messagesLoaded: true }))
     let yielded = false; setImmediate(() => { yielded = true })
@@ -100,7 +101,7 @@ describe('completed-chat memory and retention', () => {
 
   it('allows a reopening accepted during the final flush to cancel deletion', async () => {
     const stored = await createSession(root, { name: 'Catalogue' })
-    const manager = new SessionManager(); const runtime = manager as any
+    const manager = withSessionOperationsForTest(new SessionManager()); const runtime = manager as any
     const managed = createManagedSession(stored, { id: 'ws', name: 'Test', rootPath: root, createdAt: 1 } as never, { messagesLoaded: true })
     managed.messages = messages; managed.sessionStatus = 'done'; managed.lastMessageAt = 2
     sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
@@ -119,7 +120,7 @@ describe('completed-chat memory and retention', () => {
 
   it('does not consume a latent retry timer or volatile admission before archival', async () => {
     const stored = await createSession(root, { name: 'Latent retry' })
-    const manager = new SessionManager(); const runtime = manager as any
+    const manager = withSessionOperationsForTest(new SessionManager()); const runtime = manager as any
     const managed = createManagedSession(stored,
       { id: 'ws', name: 'Test', rootPath: root, createdAt: 1 } as never,
       { messagesLoaded: true })
@@ -295,7 +296,7 @@ describe('completed-chat memory and retention', () => {
     mkdirSync(join(sessionPath, 'data'), { recursive: true })
     writeFileSync(attachmentPath, Buffer.from('%PDF-1.7\nfixture deliverable\n%%EOF\n'))
     const originalHash = createHash('sha256').update(readFileSync(attachmentPath)).digest('hex')
-    const manager = new SessionManager()
+    const manager = withSessionOperationsForTest(new SessionManager())
     const managed = createManagedSession(stored, { id: 'ws', name: 'Test', rootPath: root, createdAt: 1 } as never, { messagesLoaded: true })
     managed.messages = messages
     managed.sessionStatus = 'done'
@@ -351,7 +352,7 @@ describe('completed-chat memory and retention', () => {
     ensureSessionDir(rootB, storedA.id)
     writeSessionJsonl(getSessionFilePath(rootB, storedA.id), storedB)
 
-    const manager = new SessionManager()
+    const manager = withSessionOperationsForTest(new SessionManager())
     const managed = createManagedSession(
       storedA,
       { id: 'ws', name: 'Alias', rootPath: alias, createdAt: 1 } as never,
@@ -406,7 +407,7 @@ describe('completed-chat memory and retention', () => {
 
     // Simulate startup of a new manager. The disk scan cannot load the moved
     // session, so reconciliation must use the workspace receipt alone.
-    const restarted = new SessionManager()
+    const restarted = withSessionOperationsForTest(new SessionManager())
     const runtime = restarted as unknown as {
       sessions: Map<string, ReturnType<typeof createManagedSession>>
       loadSessionsFromDisk: () => void
@@ -451,7 +452,7 @@ describe('completed-chat memory and retention', () => {
       errors: [],
     })
 
-    const restarted = new SessionManager()
+    const restarted = withSessionOperationsForTest(new SessionManager())
     const managed = createManagedSession(
       stored,
       { id: 'ws', name: 'Test', rootPath: root, createdAt: 1 } as never,
@@ -481,7 +482,7 @@ describe('completed-chat memory and retention', () => {
     const stored = await createSession(root, { name: 'Committed archive receipt', projectId: 'project-a' })
     const sessionPath = getSessionPath(root, stored.id)
     let archivePath: string | undefined
-    const manager = new SessionManager()
+    const manager = withSessionOperationsForTest(new SessionManager())
     const managed = createManagedSession(
       stored,
       { id: 'ws', name: 'Test', rootPath: root, createdAt: 1 } as never,
@@ -605,7 +606,7 @@ describe('completed-chat memory and retention', () => {
 
   it('never automatically archives a chat containing a worktree', async () => {
     const stored = await createSession(root, { name: 'Protected worktree' })
-    const manager = new SessionManager(); const runtime = manager as any
+    const manager = withSessionOperationsForTest(new SessionManager()); const runtime = manager as any
     const managed = createManagedSession(stored, { id: 'ws', name: 'Test', rootPath: root, createdAt: 1 } as never, { messagesLoaded: true })
     managed.messages = messages; managed.sessionStatus = 'done'; managed.lastMessageAt = 2
     sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)

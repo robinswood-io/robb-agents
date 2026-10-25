@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { ScriptedSessionAgent } from './testing/scripted-session-agent.ts';
 import { sessionRuntimeStateForTest , requiredTestValue } from "./testing/runtime-state-access.ts";
 import { expect, it, spyOn } from 'bun:test'
@@ -15,7 +16,7 @@ it('keeps a host-declared reviewer fresh through real spawn, creation and turn p
  const workspace = { id: 'fixture-ws', slug: 'fixture-ws', name: 'Fixture', rootPath, createdAt: 1 }
  const loader = spyOn(storage,'loadStoredConfig').mockReturnValue({ workspaces:[workspace], activeWorkspaceId:null, activeSessionId:null, defaultLlmConnection:'test-route',
   llmConnections:[{ slug:'test-route',name:'Fixture',providerType:'pi_compat',authType:'none',baseUrl:'http://localhost:11434/v1',defaultModel:'test-model',models:['test-model'],customEndpoint:{api:'openai-completions'},createdAt:1 }] } as never)
- const host = new SessionManager() as any
+ const host = withSessionOperationsForTest(new SessionManager()) as any
  try {
   host.sendEvent = () => {}; host.emitUnreadSummaryChanged = () => {}; host.notifySessionCreated = () => {}
   const created = await host.createSession(workspace.id,{name:'Worker',llmConnection:'test-route',model:'test-model',permissionMode:'safe'})

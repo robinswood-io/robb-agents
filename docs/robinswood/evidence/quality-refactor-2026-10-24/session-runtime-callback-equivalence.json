@@ -1,0 +1,104 @@
+{
+  "callbackPhases": [
+    {
+      "name": "createRuntimeIdentityCallbacks",
+      "statements": 3,
+      "nativeBodiesPreserved": true,
+      "captures": [
+        "sessionOperationContext",
+        "managed",
+        "isCurrentRuntime"
+      ],
+      "returned": [
+        "onSdkSessionIdUpdate",
+        "onSdkSessionIdCleared",
+        "onBranchForkInvalidated"
+      ]
+    },
+    {
+      "name": "createRuntimeContextCallbacks",
+      "statements": 8,
+      "nativeBodiesPreserved": true,
+      "captures": [
+        "sessionOperationContext",
+        "managed",
+        "isCurrentRuntime"
+      ],
+      "returned": [
+        "getRecoveryMessages",
+        "getBranchFallbackMessages",
+        "getBranchSeedMessages",
+        "markBranchSeedApplied",
+        "getTransferredSessionSummary",
+        "markTransferredSessionSummaryApplied"
+      ]
+    },
+    {
+      "name": "installRuntimeDebugCallbacks",
+      "statements": 2,
+      "nativeBodiesPreserved": true,
+      "captures": [
+        "sessionOperationContext",
+        "managed",
+        "isCurrentRuntime"
+      ],
+      "returned": []
+    },
+    {
+      "name": "installRuntimeBrowserCallbacks",
+      "statements": 2,
+      "nativeBodiesPreserved": true,
+      "captures": [
+        "sessionOperationContext",
+        "managed"
+      ],
+      "returned": []
+    },
+    {
+      "name": "installRuntimePermissionCallbacks",
+      "statements": 2,
+      "nativeBodiesPreserved": true,
+      "captures": [
+        "sessionOperationContext",
+        "managed",
+        "createdAgent"
+      ],
+      "returned": []
+    },
+    {
+      "name": "installRuntimePlanAuthCallbacks",
+      "statements": 2,
+      "nativeBodiesPreserved": true,
+      "captures": [
+        "sessionOperationContext",
+        "managed"
+      ],
+      "returned": []
+    },
+    {
+      "name": "installRuntimeSessionToolCallbacks",
+      "statements": 1,
+      "nativeBodiesPreserved": true,
+      "captures": [
+        "sessionOperationContext",
+        "managed",
+        "createdAgent"
+      ],
+      "returned": []
+    },
+    {
+      "name": "installRuntimeSourceCallbacks",
+      "statements": 2,
+      "nativeBodiesPreserved": true,
+      "captures": [
+        "sessionOperationContext",
+        "managed",
+        "isCurrentRuntime",
+        "createdAgent"
+      ],
+      "returned": []
+    }
+  ],
+  "initializationOrderPreserved": true,
+  "allFilesWithin500Lines": true
+}

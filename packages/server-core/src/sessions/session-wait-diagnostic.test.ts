@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
 import { SessionManager, createManagedSession } from './SessionManager'
@@ -12,7 +13,7 @@ import { transitionObjectiveContract } from './objective-contract'
 const managers: SessionManager[] = []
 const roots: string[] = []
 function harness() {
-  const manager = new SessionManager(); managers.push(manager)
+  const manager = withSessionOperationsForTest(new SessionManager()); managers.push(manager)
   const host = manager as any
   host.sendEvent = () => {}
   const rootPath = mkdtempSync(join(tmpdir(), 'robb-wait-diagnostic-')); roots.push(rootPath)

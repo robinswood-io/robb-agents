@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import {describe,it,expect} from 'bun:test';
 import {transitionObjectiveContract,buildObjectiveContractPrompt,objectiveRequiresExecutionEvidence} from './objective-contract.ts';
@@ -29,7 +30,7 @@ const original=()=>({...transitionObjectiveContract({messageId:'root',text:'Expl
 describe('accepted amendments promote completion evidence without replacing the root',()=>{
  it('builds an authenticated Task child contract from its semantic assignment only',async()=>{
   const directory=mkdtempSync(join(tmpdir(),'task-objective-contract-'));
-  const manager=new SessionManager();const host=manager as unknown as SessionManagerAmendmentTestHost;
+  const manager=withSessionOperationsForTest(new SessionManager());const host=manager as unknown as SessionManagerAmendmentTestHost;
   try{
    const workspace: Workspace={id:'fixture',slug:'fixture',name:'Fixture',rootPath:directory,createdAt:1};
    const parent=createManagedSession({id:'orchestrator',name:'Orchestrator'},workspace,
@@ -62,7 +63,7 @@ describe('accepted amendments promote completion evidence without replacing the 
  it('the real host refuses an unregistered artifact completion after accepting a new instruction',async()=>{
   process.env.ROBB_LEGACY_HOST_OBJECTIVE_CONTRACT='1';
   const directory=mkdtempSync(join(tmpdir(),'objective-amendment-'));
-  const manager=new SessionManager();const host=manager as unknown as SessionManagerAmendmentTestHost;
+  const manager=withSessionOperationsForTest(new SessionManager());const host=manager as unknown as SessionManagerAmendmentTestHost;
   try{
    const workspace: Workspace={id:'fixture',slug:'fixture',name:'Fixture',rootPath:directory,createdAt:1};
    const managed=createManagedSession({id:'amended-direct',name:'Amended direct'},

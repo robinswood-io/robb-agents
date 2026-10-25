@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { ConfigWatcher } from '@craft-agent/shared/config';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it } from 'bun:test'
@@ -21,7 +22,7 @@ async function managedSession(name: string) {
   const root = mkdtempSync(join(tmpdir(), 'robb-session-shutdown-'))
   roots.push(root)
   const stored = await createSession(root, { name })
-  const manager = new SessionManager()
+  const manager = withSessionOperationsForTest(new SessionManager())
   const managed = createManagedSession(
     stored,
     { id: `workspace-${stored.id}`, name: 'Shutdown', rootPath: root, createdAt: 1 } as never,

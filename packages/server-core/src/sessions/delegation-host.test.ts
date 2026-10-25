@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import { mkdtempSync, rmSync } from 'node:fs';
@@ -27,7 +28,7 @@ function harness(permissionMode: PermissionMode = 'allow-all') {
     llmConnection: 'test-connection', model: 'test-model', enabledSourceSlugs: ['documents'] }, workspace);
   parent.isProcessing = true;
   parent.activeObjective = transitionObjectiveContract({ messageId: 'root-request', text: 'Vérifie les documents fournis.', nowMs: 1 });
-  const manager = new SessionManager();
+  const manager = withSessionOperationsForTest(new SessionManager());
   const internals = manager as unknown as {
     sessions: Map<string, Managed>;
     spawnDelegatedSession: (parent: Managed, input: unknown) => Promise<{ sessionId: string; status: string }>;

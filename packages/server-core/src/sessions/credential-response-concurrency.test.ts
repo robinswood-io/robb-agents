@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it, spyOn } from "bun:test";
 import * as credentials from "@craft-agent/shared/credentials";
@@ -411,7 +412,7 @@ describe('credential response concurrency', () => {
   })
 
   it('consumes a legacy credential callback before invoking it', async () => {
-    const manager = new SessionManager()
+    const manager = withSessionOperationsForTest(new SessionManager())
     managers.push(manager)
 
     let deliveries = 0

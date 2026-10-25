@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { describe, expect, it } from 'bun:test';
 import type { SessionEvent } from '@craft-agent/shared/protocol';
@@ -13,7 +14,7 @@ describe('observed native question-only completion', () => {
 it('canonically verifies the completed native reply before an unknown budget can reject a false policy blocker', async () => {
     const h = fixture();
     const directory = mkdtempSync(join(tmpdir(), 'native-policy-proof-'));
-    const manager = new SessionManager();
+    const manager = withSessionOperationsForTest(new SessionManager());
     const host = manager;
     const reported = falsePolicy(h);
     try {
@@ -87,7 +88,7 @@ it('canonically verifies the completed native reply before an unknown budget can
 
 it('does not convert a late provider final after Stop into completion or grant credit', async () => {
     const h = fixture(), directory = mkdtempSync(join(tmpdir(), 'native-policy-stop-'));
-    const manager = new SessionManager(), host = manager;
+    const manager = withSessionOperationsForTest(new SessionManager()), host = manager;
     let started!: () => void, release!: () => void;
     const ready = new Promise<void>(resolve => { started = resolve; }), gate = new Promise<void>(resolve => { release = resolve; });
     try {
@@ -143,7 +144,7 @@ it('does not convert a late provider final after Stop into completion or grant c
 it('finishes one explicit legacy Retry without asking again or inventing a recovery allowance', async () => {
     const h = fixture();
     const directory = mkdtempSync(join(tmpdir(), 'native-answer-proof-'));
-    const manager = new SessionManager();
+    const manager = withSessionOperationsForTest(new SessionManager());
     const host = manager;
     try {
         const managed = createManagedSession({

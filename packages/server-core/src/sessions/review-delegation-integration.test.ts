@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { mkdtempSync, realpathSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -10,7 +11,7 @@ import { transitionObjectiveContract } from './objective-contract.ts';
 
 type Managed = ReturnType<typeof createManagedSession>;
 function harness(review = false) {
-  const manager = new SessionManager();
+  const manager = withSessionOperationsForTest(new SessionManager());
   const workspace = { id: 'review-integration-workspace', name: 'Isolated fixture', slug: 'review-integration-workspace', rootPath: '/tmp/review-delegation-integration', createdAt: 1 };
   const parent = createManagedSession({ id: 'parent', llmConnection: 'connection-a', model: 'pi/gpt-5.6-sol',
     permissionMode: 'safe', enabledSourceSlugs: ['rbw-servers'],

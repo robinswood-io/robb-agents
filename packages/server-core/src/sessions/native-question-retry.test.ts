@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest , requiredTestValue } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it, spyOn } from 'bun:test'
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
@@ -23,7 +24,7 @@ function deferred() {
 function harness(stallAnswer = false) {
   const rootPath = mkdtempSync(join(tmpdir(), 'native-question-retry-')); roots.push(rootPath)
   const workspace = { id: 'native-fixture', slug: 'native-fixture', name: 'Native fixture', rootPath, createdAt: 1 }
-  const manager = new SessionManager(); managers.push(manager)
+  const manager = withSessionOperationsForTest(new SessionManager()); managers.push(manager)
   const runtime = manager as any
   let managed = createManagedSession({ id: 'native-question' }, workspace, { messagesLoaded: true })
   sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
@@ -413,7 +414,7 @@ describe('native Stop, Retry and question response', () => {
 
     const getWorkspaces = spyOn(config, 'getWorkspaces').mockReturnValue([h.managed.workspace] as never)
     try {
-      const restarted = new SessionManager(); managers.push(restarted)
+      const restarted = withSessionOperationsForTest(new SessionManager()); managers.push(restarted)
       const runtime = restarted as any
       let scheduled: string[] = []
       runtime.resumePendingTurnsAfterRestart = async (ids: string[]) => { scheduled = ids }

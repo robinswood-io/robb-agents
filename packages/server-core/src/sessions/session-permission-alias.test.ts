@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { ScriptedSessionAgent } from './testing/scripted-session-agent.ts';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { describe, expect, it } from 'bun:test'
@@ -15,6 +16,7 @@ describe('SessionManager permission mode boundary', () => {
     }) })
     const host = Object.create(SessionManager.prototype)
   Object.defineProperty(host, 'runtimeState', { value: host, configurable: true });
+  withSessionOperationsForTest(host);
     sessionRuntimeStateForTest(host).sessions = new Map([[id, managed]])
     sessionRuntimeStateForTest(host).shuttingDown = false
     sessionRuntimeStateForTest(host).retiringSessions = new WeakSet()
@@ -42,6 +44,7 @@ describe('SessionManager permission mode boundary', () => {
     }) })
     const host = Object.create(SessionManager.prototype)
   Object.defineProperty(host, 'runtimeState', { value: host, configurable: true });
+  withSessionOperationsForTest(host);
     sessionRuntimeStateForTest(host).sessions = new Map([[id, managed]])
     sessionRuntimeStateForTest(host).shuttingDown = false
     sessionRuntimeStateForTest(host).retiringSessions = new WeakSet()

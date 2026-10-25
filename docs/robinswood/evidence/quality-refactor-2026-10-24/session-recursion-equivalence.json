@@ -1,0 +1,9 @@
+{
+  "nativeBodiesAndParametersPreserved": 458,
+  "operationModuleCount": 104,
+  "runtimeImportCycles": 0,
+  "removedModules": [
+    "packages/server-core/src/sessions/SessionManager/operations/get-pending-user-input-response.ts",
+    "packages/server-core/src/sessions/SessionManager/operations/process-event-impl.ts"
+  ]
+}

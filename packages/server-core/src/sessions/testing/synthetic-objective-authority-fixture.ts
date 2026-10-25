@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from './session-operation-access.ts';
 import { sessionManagerForTest } from "./private-runtime-access.ts";
 import { sessionRuntimeStateForTest } from "./runtime-state-access.ts";
 import { mkdtempSync } from "node:fs";
@@ -17,7 +18,7 @@ export const modeSessionIds: string[] = []
 export function harness(id: string) {
   const rootPath = mkdtempSync(join(tmpdir(), 'synthetic-objective-authority-'))
   roots.push(rootPath)
-  const manager = new SessionManager()
+  const manager = withSessionOperationsForTest(new SessionManager())
   managers.push(manager)
   const host = sessionManagerForTest(manager)
   host.enqueuePersist = () => true

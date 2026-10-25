@@ -3,6 +3,8 @@ import { describe, expect, it } from 'bun:test'
 import { SessionManager, createManagedSession } from './SessionManager'
 import { createPendingTurnRecovery } from './turn-recovery'
 import { USER_INPUT_ANSWER_MESSAGE_PREFIX } from '@craft-agent/core'
+import { SessionRuntimeState } from './SessionManager/runtime-state.ts'
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts'
 
 function deferred() {
   let resolve!: () => void
@@ -25,6 +27,9 @@ function harness(boundary?: Boundary, rejectBoundary = false) {
   managed.isProcessing = true
   managed.processingGeneration = 1
   managed.messages = [{ id: 'human', role: 'user', content: 'Fixture request', timestamp: 1 }]
+  if (boundary === 'read-marker') {
+    managed.messages.push({ id: 'final', role: 'assistant', content: 'Fixture result', timestamp: 2 })
+  }
   const checkpoint = async (name: Boundary) => {
     effects.push(name)
     if (name === boundary) {
@@ -36,6 +41,7 @@ function harness(boundary?: Boundary, rejectBoundary = false) {
   let browserCalls = 0
   const prototype = SessionManager.prototype as any
   const runtime: any = {
+    ...new SessionRuntimeState(),
     hasConsumedCleanRecoveryDispatch: () => false,
     retryableContextLimitRequest: () => undefined,
     isManagedSessionYolo: () => false,
@@ -74,7 +80,6 @@ function harness(boundary?: Boundary, rejectBoundary = false) {
       unbindAllForSession: () => effects.push('unbind'),
     }),
     isSessionBeingViewed: () => true,
-    getLastFinalAssistantMessageId: () => boundary === 'read-marker' ? 'final' : undefined,
     markSessionRead: () => checkpoint('read-marker'),
     flushSession: () => checkpoint('delivery-flush'),
     setSessionStatus: () => checkpoint('mini-status'),
@@ -94,6 +99,7 @@ function harness(boundary?: Boundary, rejectBoundary = false) {
     hasOnlyMachineInbox: prototype.hasOnlyMachineInbox,
   }
   Object.defineProperty(runtime, 'runtimeState', { value: runtime, configurable: true });
+  withSessionOperationsForTest(runtime)
   if (boundary === 'delivery-flush') {
     managed.lastSentOptions = { internalOrigin: { kind: 'agent-message', deliveryId: 'delivery' } }
     managed.messages.push({ id: 'delivery', role: 'user', content: 'Internal report', timestamp: 2,

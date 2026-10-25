@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from '../sessions/testing/session-operation-access.ts';
 import { sessionManagerForTest } from "../sessions/testing/private-runtime-access.ts";
 import { sessionRuntimeStateForTest } from "../sessions/testing/runtime-state-access.ts";
 import { describe, it, expect, beforeEach, afterEach, jest } from "bun:test";
@@ -92,7 +93,7 @@ describe('TaskRunner (Conductor)', () => {
   });
 
   it('strongly retires an idle host session with queued automatic recovery authority', async () => {
-    const manager = new SessionManager();
+    const manager = withSessionOperationsForTest(new SessionManager());
     const runtime = sessionManagerForTest(manager);
     const workspace = {
       id: 'ws', slug: 'ws', name: 'Retirement integration', rootPath: root, createdAt: 1,
@@ -147,7 +148,7 @@ describe('TaskRunner (Conductor)', () => {
       for (let index = 0; index < 10; index += 1) await Promise.resolve();
     };
     try {
-      const manager = new SessionManager();
+      const manager = withSessionOperationsForTest(new SessionManager());
       const runtime = sessionManagerForTest(manager);
       const workspace = {
         id: 'ws', slug: 'ws', name: 'Blocked Stop integration', rootPath: root, createdAt: 1,
@@ -190,7 +191,7 @@ describe('TaskRunner (Conductor)', () => {
   });
 
   it('keeps admission fenced after a rejected Stop until a strong retry succeeds', async () => {
-    const manager = new SessionManager();
+    const manager = withSessionOperationsForTest(new SessionManager());
     const runtime = sessionManagerForTest(manager);
     const workspace = {
       id: 'ws', slug: 'ws', name: 'Rejected Stop integration', rootPath: root, createdAt: 1,
@@ -220,7 +221,7 @@ describe('TaskRunner (Conductor)', () => {
   it('does not prove an idle child retired while its detached runtime is still being destroyed', async () => {
     jest.useFakeTimers();
     try {
-      const manager = new SessionManager();
+      const manager = withSessionOperationsForTest(new SessionManager());
       const runtime = sessionManagerForTest(manager);
       const workspace = {
         id: 'ws', slug: 'ws', name: 'Runtime disposal integration', rootPath: root, createdAt: 1,
@@ -273,7 +274,7 @@ describe('TaskRunner (Conductor)', () => {
       for (let index = 0; index < 10; index += 1) await Promise.resolve();
     };
     try {
-      const manager = new SessionManager();
+      const manager = withSessionOperationsForTest(new SessionManager());
       const runtime = sessionManagerForTest(manager);
       const workspace = {
         id: 'ws', slug: 'ws', name: 'Generation retirement integration', rootPath: root, createdAt: 1,
@@ -318,7 +319,7 @@ describe('TaskRunner (Conductor)', () => {
   it('requires a successful retry of rejected agent, pool, and MCP destructors', async () => {
     const fixtureKinds = ['agent', 'pool', 'mcp'] as const;
     for (const kind of fixtureKinds) {
-      const manager = new SessionManager();
+      const manager = withSessionOperationsForTest(new SessionManager());
       const runtime = sessionManagerForTest(manager);
       const workspace = {
         id: 'ws', slug: 'ws', name: `${kind} disposal integration`, rootPath: root, createdAt: 1,

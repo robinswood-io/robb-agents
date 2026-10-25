@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
 import type { AgentEvent, Message } from '@craft-agent/core/types'
@@ -15,7 +16,7 @@ describe('tool execution truth', () => {
   let telemetry: RobbExecutionTelemetryEvent[]
 
   beforeEach(() => {
-    manager = new SessionManager()
+    manager = withSessionOperationsForTest(new SessionManager())
     sentEvents = []
     telemetry = []
     ;(manager as unknown as { persistSession: () => void }).persistSession = () => {}

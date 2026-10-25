@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from './session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "./runtime-state-access.ts";
 import { SessionManager, createManagedSession } from "../SessionManager";
 import { transitionObjectiveContract } from "../objective-contract";
@@ -17,7 +18,7 @@ export const spies: Array<{ mockRestore(): void }> = []
 
 
 export function harness(id: string) {
-  const manager = new SessionManager()
+  const manager = withSessionOperationsForTest(new SessionManager())
   managers.push(manager)
   const managed = createManagedSession({ id }, {
     id: 'credential-workspace',

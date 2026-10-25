@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { describe, expect, it } from 'bun:test';
 import {
@@ -179,7 +180,7 @@ describe('external action authorization grants', () => {
 
 describe('SessionManager sensitive permission persistence', () => {
   it('persists an exact replay grant only when the human selects Always Allow', () => {
-    const manager = new SessionManager();
+    const manager = withSessionOperationsForTest(new SessionManager());
     const managed = createManagedSession({ id: 'sensitive-permission-session' }, {
       id: 'sensitive-permission-workspace',
       name: 'Sensitive permission workspace',

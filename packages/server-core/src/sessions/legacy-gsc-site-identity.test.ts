@@ -1,3 +1,4 @@
+import { sessionManagerForTest } from './testing/private-runtime-access.ts';
 import { describe, expect, it } from 'bun:test';
 import type { Message, ObjectiveAcceptanceCriterion, ObjectiveOutcomeDeclaration } from '@craft-agent/core/types';
 import { validateObjectiveOutcome } from './objective-outcome.ts';
@@ -180,7 +181,7 @@ describe('historically attested GSC property identity', () => {
   });
 
   it('exposes only the attested mapping in repair/runtime prompts while preserving the original review binding', async () => {
-    const { SessionManager } = await import('./SessionManager.ts');
+    const { SessionManager, createManagedSession } = await import('./SessionManager.ts');
     const f = fixture();
     const before = JSON.stringify(f);
     const context = buildObjectiveValidationEvidenceContext(f.messages, f.objective)!;
@@ -189,10 +190,12 @@ describe('historically attested GSC property identity', () => {
     expect(context).toContain('"force_refresh":true');
     expect(context).toContain('does not establish PASS');
     expect(context).not.toContain(f.original.toolResult!);
-    const prototype = SessionManager.prototype as unknown as {
-      buildObjectiveRuntimePrompt(managed: { messages: Message[] }, objective: typeof f.objective): string;
-    };
-    const prompt = prototype.buildObjectiveRuntimePrompt({ messages: f.messages }, f.objective);
+    const manager = sessionManagerForTest(new SessionManager());
+    const runtimePrompt = (messages: Message[]) => manager.buildObjectiveRuntimePrompt(
+      createManagedSession({ id: 'projection' }, {
+        id: 'projection-workspace', slug: 'projection-workspace', name: 'Projection', rootPath: '/tmp/projection-test', createdAt: 1,
+      }, { messagesLoaded: true, messages }), f.objective);
+    const prompt = runtimePrompt(f.messages);
     expect(prompt).toContain('legacy-gsc-site-identity');
     expect(prompt).toContain('"force_refresh":"true"');
     expect(prompt).toContain('"force_refresh":true');

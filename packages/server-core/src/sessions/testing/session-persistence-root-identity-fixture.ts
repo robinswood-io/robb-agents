@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from './session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "./runtime-state-access.ts";
 import { mkdtempSync, mkdirSync, symlinkSync, unlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -117,7 +118,7 @@ export function registerProjectSession(label: string) {
   saveProjectConfig(fixture.rootB, replacementProject)
   const stored = storedFixture(fixture.alias, `project-session-${label}`, 'Project session A', 'project-content-a')
   stored.projectId = capturedProject.id
-  const manager = new SessionManager()
+  const manager = withSessionOperationsForTest(new SessionManager())
   managers.push(manager)
   const registered = register(manager, stored, fixture.alias, true)
   registered.managed.projectId = capturedProject.id

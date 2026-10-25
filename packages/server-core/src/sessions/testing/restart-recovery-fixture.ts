@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from './session-operation-access.ts';
 import { sessionManagerForTest, type SessionManagerTestView, type SessionSentEvent } from "./private-runtime-access.ts";
 import { ScriptedSessionAgent } from "./scripted-session-agent.ts";
 import { sessionRuntimeStateForTest } from "./runtime-state-access.ts";
@@ -58,7 +59,7 @@ export function harness() {
   const rootPath = mkdtempSync(join(tmpdir(), 'restart-recovery-'))
   roots.push(rootPath)
   const workspace = { id: `restart-${roots.length}`, slug: `restart-${roots.length}`, rootPath, name: 'Restart test', createdAt: 1 }
-  const manager = new SessionManager()
+  const manager = withSessionOperationsForTest(new SessionManager())
   const registerManager = (candidate: SessionManager) => {
     const cleanup = candidate.cleanup.bind(candidate)
     candidate.cleanup = async () => {
@@ -98,7 +99,7 @@ export function harness() {
   }
   const save = async (managed: Managed) => { runtime.persistSession(managed); await manager.flushSession(managed.id) }
   const cold = () => {
-    const next = new SessionManager(); registerManager(next)
+    const next = withSessionOperationsForTest(new SessionManager()); registerManager(next)
     const coldRuntime = sessionManagerForTest(next)
     coldRuntime.sendEvent = (event) => events.push(event)
     for (const meta of listSessions(rootPath)) sessionRuntimeStateForTest(coldRuntime).sessions.set(meta.id, createManagedSession(meta, workspace as never))

@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterAll, beforeAll, expect, it, spyOn } from 'bun:test'
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
@@ -48,7 +49,7 @@ type CacheHost = {
 function sessions() {
   const workspace = { id: 'ws-test', slug: 'ws-test', name: 'Test', rootPath: join(root, 'workspace'), createdAt: 1 }
   mkdirSync(workspace.rootPath, { recursive: true })
-  const manager = new SessionManager() as unknown as CacheHost
+  const manager = withSessionOperationsForTest(new SessionManager()) as unknown as CacheHost
   const parent = createManagedSession({ id: 'parent', name: 'Parent', llmConnection: 'test-route', permissionMode: 'safe' }, workspace, { messagesLoaded: true })
   parent.activeObjective = {
     schemaVersion: 1, objectiveId: 'objective-1', userMessageId: 'message-1', startedAt: 1,

@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it } from 'bun:test';
 import { mkdtempSync, rmSync } from 'node:fs';
@@ -29,7 +30,7 @@ interface SessionManagerLegacyContextTestHost {
 function harness() {
   const rootPath = mkdtempSync(join(tmpdir(), 'legacy-objective-context-')); directories.push(rootPath);
   const workspace = { id: 'legacy-context', slug: 'legacy-context', name: 'Legacy context', rootPath, createdAt: 1 };
-  const manager = new SessionManager(); managers.push(manager);
+  const manager = withSessionOperationsForTest(new SessionManager()); managers.push(manager);
   const host = manager as unknown as SessionManagerLegacyContextTestHost; host.sendEvent = () => {};
   const managed = createManagedSession({ id: 'legacy' }, workspace, { messagesLoaded: true });
   managed.messages = [structuredClone(root), structuredClone(amendment)];

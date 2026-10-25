@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from './session-operation-access.ts';
 import { ScriptedSessionAgent } from "./scripted-session-agent.ts";
 import { sessionRuntimeStateForTest } from "./runtime-state-access.ts";
 import { jest } from "bun:test";
@@ -7,7 +8,7 @@ import { createPendingTurnRecovery } from "../turn-recovery.ts";
 
 
 export function harness() {
-  const manager = new SessionManager()
+  const manager = withSessionOperationsForTest(new SessionManager())
   const managed = createManagedSession({ id: 'session-a' }, {
     id: 'workspace-a',
     name: 'Workspace A',

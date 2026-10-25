@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { ScriptedSessionAgent } from "./testing/scripted-session-agent.ts";
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it } from "bun:test";
@@ -24,7 +25,7 @@ describe('managed session physical persistence root', () => {
     storedFixture(fixture.rootB, id, 'Transcript B', 'content-from-b')
     const replacementFile = getSessionFilePath(fixture.rootB, id)
     const replacementBytes = readFileSync(replacementFile, 'utf8')
-    const manager = new SessionManager()
+    const manager = withSessionOperationsForTest(new SessionManager())
     managers.push(manager)
     const { managed } = register(manager, storedA, fixture.alias, false)
     fixture.retarget()
@@ -67,7 +68,7 @@ describe('managed session physical persistence root', () => {
     storedFixture(fixture.rootB, id, 'Share B', 'share-content-b')
     const replacementFile = getSessionFilePath(fixture.rootB, id)
     const replacementBytes = readFileSync(replacementFile, 'utf8')
-    const manager = new SessionManager()
+    const manager = withSessionOperationsForTest(new SessionManager())
     managers.push(manager)
     register(manager, storedA, fixture.alias, true)
     fixture.retarget()
@@ -101,7 +102,7 @@ describe('managed session physical persistence root', () => {
     const replacementBytes = readFileSync(replacementFile, 'utf8')
     const attachment = join(fixture.container, 'proof.txt')
     writeFileSync(attachment, 'captured attachment')
-    const manager = new SessionManager()
+    const manager = withSessionOperationsForTest(new SessionManager())
     managers.push(manager)
     const sender = register(manager, senderStored, fixture.alias, true).managed
     const target = register(manager, targetStored, fixture.alias, true).managed
@@ -154,7 +155,7 @@ describe('managed session physical persistence root', () => {
     storedFixture(fixture.rootB, id, 'Anchor B', 'anchor-b')
     const replacementFile = getSessionFilePath(fixture.rootB, id)
     const replacementBytes = readFileSync(replacementFile, 'utf8')
-    const manager = new SessionManager()
+    const manager = withSessionOperationsForTest(new SessionManager())
     managers.push(manager)
     const { managed, runtime } = register(manager, storedA, fixture.alias, true)
     managed.piSdkMessageToCraftMessage = new Map([['sdk-message-a', 'craft-message-a']])
@@ -178,7 +179,7 @@ describe('managed session physical persistence root', () => {
     const fixture = retargetFixture('tool-admission')
     const id = 'admission-session'
     const storedA = storedFixture(fixture.alias, id, 'Admission A', 'objective-a')
-    const manager = new SessionManager()
+    const manager = withSessionOperationsForTest(new SessionManager())
     managers.push(manager)
     const { managed, runtime } = register(manager, storedA, fixture.alias, true)
     const userMessage = {

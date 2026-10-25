@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { beforeEach, describe, expect, it } from 'bun:test'
 import { messageToStored } from '@craft-agent/core/types'
@@ -30,7 +31,7 @@ describe('assistant response app provenance', () => {
     }
     setSessionPlatform(platform)
 
-    sessionManager = new SessionManager()
+    sessionManager = withSessionOperationsForTest(new SessionManager())
     ;(sessionManager as unknown as { persistSession: () => void }).persistSession = () => {}
     ;(sessionManager as unknown as { sendEvent: () => void }).sendEvent = () => {}
     ;(sessionManager as unknown as { emitExecutionTelemetry: () => void }).emitExecutionTelemetry = () => {}

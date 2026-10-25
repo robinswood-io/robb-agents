@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from '../../../../../packages/server-core/src/sessions/testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "../../../../../packages/server-core/src/sessions/testing/runtime-state-access.ts";
 import { describe, expect, it, mock } from 'bun:test'
 import type { AnnotationV1 } from '@craft-agent/core/types'
@@ -60,6 +61,7 @@ function createHarness(initialAnnotations: AnnotationV1[] = []) {
 
   const manager = Object.create(SessionManager.prototype) as InstanceType<typeof SessionManager>
   Object.defineProperty(manager, 'runtimeState', { value: manager, configurable: true });
+  withSessionOperationsForTest(manager);
   // Object.create() deliberately bypasses the constructor, so restore the
   // ownership state required by the real synchronous mutation guard.
   sessionRuntimeStateForTest(manager).retiringSessions = new WeakSet()

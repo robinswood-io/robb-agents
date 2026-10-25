@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it } from 'bun:test'
 import { SessionManager, createManagedSession } from './SessionManager'
@@ -5,7 +6,7 @@ import { objectiveReviewBinding, transitionObjectiveContract } from './objective
 
 const managers: SessionManager[] = []
 function harness() {
-  const manager = new SessionManager(); managers.push(manager)
+  const manager = withSessionOperationsForTest(new SessionManager()); managers.push(manager)
   const host = manager as any
   host.sendEvent = () => {}
   const workspace = { id: 'wait-test', rootPath: '/tmp/robb-wait-test', name: 'Wait', createdAt: 1 }

@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it } from 'bun:test'
 import { mkdtempSync, rmSync } from 'node:fs'
@@ -42,7 +43,7 @@ describe('transient network recovery', () => {
         pendingTurnRecovery: createPendingTurnRecovery(userMessage.id, 1),
       },
     )
-    const manager = new SessionManager()
+    const manager = withSessionOperationsForTest(new SessionManager())
     ;sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
     if (retryExisting) {
       managed.messages.push(
@@ -127,7 +128,7 @@ describe('transient network recovery', () => {
         pendingTurnRecovery: createPendingTurnRecovery(userMessage.id, 1),
       },
     )
-    const manager = new SessionManager()
+    const manager = withSessionOperationsForTest(new SessionManager())
     ;sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
     if (retryExisting) {
       managed.messages.push(
@@ -185,7 +186,7 @@ describe('transient network recovery', () => {
           pendingTurnRecovery: createPendingTurnRecovery(userMessage.id, 1),
         },
       )
-      const manager = new SessionManager()
+      const manager = withSessionOperationsForTest(new SessionManager())
       ;sessionRuntimeStateForTest(manager).sessions.set(managed.id, managed)
 
       const event: AgentEvent = {

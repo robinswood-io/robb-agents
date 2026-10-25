@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionManagerForTest, type SessionSendArguments } from "./testing/private-runtime-access.ts";
 import { permissionMetadataFixture } from "./testing/permission-metadata.ts";
 import { sessionRuntimeStateForTest, requiredTestValue } from "./testing/runtime-state-access.ts";
@@ -48,7 +49,7 @@ describe('durable restart recovery', () => {
     }
     await h.save(managed)
     spies.push(spyOn(config, 'getWorkspaces').mockReturnValue([h.workspace] as never))
-    const restarted = new SessionManager(); managers.push(restarted)
+    const restarted = withSessionOperationsForTest(new SessionManager()); managers.push(restarted)
     const runtime = sessionManagerForTest(restarted)
     runtime.sendEvent = (event) => h.events.push(event)
     const scheduled = deferred(); let starts = 0

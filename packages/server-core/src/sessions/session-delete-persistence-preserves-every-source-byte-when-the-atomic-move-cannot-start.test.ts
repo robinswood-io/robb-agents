@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { ConfigWatcher } from "@craft-agent/shared/config";
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it } from "bun:test";
@@ -27,7 +28,7 @@ describe('session deletion persistence retirement', () => {
     renameSync(liveSessionPath, preservedSessionPath)
     const preservedSessionBytes = readFileSync(join(preservedSessionPath, 'session.jsonl'))
     symlinkSync(preservedSessionPath, liveSessionPath, 'dir')
-    const manager = new SessionManager()
+    const manager = withSessionOperationsForTest(new SessionManager())
     managers.push(manager)
     const managed = createManagedSession(
       stored,
@@ -85,7 +86,7 @@ describe('session deletion persistence retirement', () => {
     const preservedSessionPath = join(root, 'preserved-active-session-source')
     renameSync(liveSessionPath, preservedSessionPath)
     symlinkSync(preservedSessionPath, liveSessionPath, 'dir')
-    const manager = new SessionManager()
+    const manager = withSessionOperationsForTest(new SessionManager())
     managers.push(manager)
     const managed = createManagedSession(
       stored,
@@ -134,7 +135,7 @@ describe('session deletion persistence retirement', () => {
     const root = mkdtempSync(join(tmpdir(), 'robb-session-delete-runtime-fence-'))
     roots.push(root)
     const stored = await createSession(root, { name: 'Runtime teardown fence' })
-    const manager = new SessionManager()
+    const manager = withSessionOperationsForTest(new SessionManager())
     managers.push(manager)
     const managed = createManagedSession(
       stored,
@@ -203,7 +204,7 @@ describe('session deletion persistence retirement', () => {
     const root = mkdtempSync(join(tmpdir(), 'robb-session-retention-commit-'))
     roots.push(root)
     const stored = await createSession(root, { name: 'Committed archive' })
-    const manager = new SessionManager()
+    const manager = withSessionOperationsForTest(new SessionManager())
     managers.push(manager)
     const managed = createManagedSession(
       stored,
@@ -238,7 +239,7 @@ describe('session deletion persistence retirement', () => {
     const root = mkdtempSync(join(tmpdir(), 'robb-session-retention-rollback-failed-'))
     roots.push(root)
     const stored = await createSession(root, { name: 'Committed failed rollback' })
-    const manager = new SessionManager()
+    const manager = withSessionOperationsForTest(new SessionManager())
     managers.push(manager)
     const managed = createManagedSession(
       stored,
@@ -268,7 +269,7 @@ describe('session deletion persistence retirement', () => {
     const root = mkdtempSync(join(tmpdir(), 'robb-session-retention-cancel-'))
     roots.push(root)
     const stored = await createSession(root, { name: 'Retention cancellation' })
-    const manager = new SessionManager()
+    const manager = withSessionOperationsForTest(new SessionManager())
     managers.push(manager)
     const managed = createManagedSession(
       stored,
@@ -307,7 +308,7 @@ describe('session deletion persistence retirement', () => {
   it('finishes runtime and watcher cleanup before aggregating persistence flush failures', async () => {
     const root = mkdtempSync(join(tmpdir(), 'robb-session-cleanup-flush-'))
     roots.push(root)
-    const manager = new SessionManager()
+    const manager = withSessionOperationsForTest(new SessionManager())
     const managed = createManagedSession(
       { id: 'cleanup-flush-failure', createdAt: 1 },
       { id: 'workspace-cleanup-flush', name: 'Cleanup flush', rootPath: root, createdAt: 1 } as never,
@@ -356,7 +357,7 @@ describe('session deletion persistence retirement', () => {
   it('consumes background flush rejection while preserving the workspace identity', async () => {
     const root = mkdtempSync(join(tmpdir(), 'robb-session-background-flush-'))
     roots.push(root)
-    const manager = new SessionManager()
+    const manager = withSessionOperationsForTest(new SessionManager())
     managers.push(manager)
     const managed = createManagedSession(
       { id: 'background-flush-failure', createdAt: 1 },

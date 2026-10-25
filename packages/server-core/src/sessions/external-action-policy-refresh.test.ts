@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { describe, expect, it, jest } from 'bun:test'
 import type { ExternalActionPolicy } from '@craft-agent/shared/workspaces'
@@ -26,7 +27,7 @@ function injectSession(
 
 describe('workspace external-action policy runtime refresh', () => {
   it('updates idle agents in the selected workspace immediately', async () => {
-    const manager = new SessionManager()
+    const manager = withSessionOperationsForTest(new SessionManager())
     const idle = injectSession(manager, 'idle', 'workspace-a', { value: false })
     const other = injectSession(manager, 'other', 'workspace-b', { value: false })
 
@@ -38,7 +39,7 @@ describe('workspace external-action policy runtime refresh', () => {
   })
 
   it('does not interrupt an active stream and applies the latest value once idle', async () => {
-    const manager = new SessionManager()
+    const manager = withSessionOperationsForTest(new SessionManager())
     const processing = { value: true }
     const busy = injectSession(manager, 'busy', 'workspace-a', processing)
 

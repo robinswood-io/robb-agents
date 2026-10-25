@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it } from 'bun:test';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
@@ -20,7 +21,7 @@ function harness(mode: 'safe' | 'ask' | 'allow-all' = 'allow-all') {
   const workspace = { id: 'fixture', slug: 'fixture', name: 'Fixture', rootPath, createdAt: 1 };
   writeFileSync(join(rootPath, 'config.json'), JSON.stringify({ ...workspace, schemaVersion: 1, updatedAt: 1,
     defaults: { permissionMode: mode, externalActionPolicy: 'allow-in-execute' } }));
-  const manager = new SessionManager(); managers.push(manager);
+  const manager = withSessionOperationsForTest(new SessionManager()); managers.push(manager);
   const host = manager as any, events: any[] = [];
   host.sendEvent = (event: any) => events.push(event);
   const managed = createManagedSession({ id: 'root', permissionMode: mode }, workspace, { messagesLoaded: true });

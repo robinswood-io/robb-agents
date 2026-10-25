@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it } from 'bun:test'
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
@@ -21,7 +22,7 @@ describe('session deletion external-operation fences', () => {
     const root = mkdtempSync(join(tmpdir(), 'robb-delete-refresh-title-fence-'))
     roots.push(root)
     const stored = await createSession(root, { name: 'Original title' })
-    const manager = new SessionManager()
+    const manager = withSessionOperationsForTest(new SessionManager())
     managers.push(manager)
     const managed = createManagedSession(
       stored,
@@ -82,7 +83,7 @@ describe('session deletion external-operation fences', () => {
     const root = mkdtempSync(join(tmpdir(), 'robb-delete-auto-title-fence-'))
     roots.push(root)
     const stored = await createSession(root, { name: 'Immediate fallback title' })
-    const manager = new SessionManager()
+    const manager = withSessionOperationsForTest(new SessionManager())
     managers.push(manager)
     const managed = createManagedSession(
       stored,
@@ -137,7 +138,7 @@ describe('session deletion external-operation fences', () => {
     const root = mkdtempSync(join(tmpdir(), 'robb-delete-model-route-fence-'))
     roots.push(root)
     const stored = await createSession(root, { name: 'Route race', model: 'model-before' })
-    const manager = new SessionManager()
+    const manager = withSessionOperationsForTest(new SessionManager())
     managers.push(manager)
     const managed = createManagedSession(
       stored,
@@ -194,7 +195,7 @@ describe('session deletion external-operation fences', () => {
     const attachmentPath = join(root, 'delivery-proof.txt')
     writeFileSync(attachmentPath, 'proof')
 
-    const manager = new SessionManager()
+    const manager = withSessionOperationsForTest(new SessionManager())
     managers.push(manager)
     const workspace = { id: 'workspace-delivery-fence', name: 'Delivery', rootPath: root, createdAt: 1 } as never
     const sender = createManagedSession(senderStored, workspace, { messagesLoaded: true })
@@ -250,7 +251,7 @@ describe('session deletion external-operation fences', () => {
     const root = mkdtempSync(join(tmpdir(), 'robb-delete-share-fence-'))
     roots.push(root)
     const stored = await createSession(root, { name: 'Share race' })
-    const manager = new SessionManager()
+    const manager = withSessionOperationsForTest(new SessionManager())
     managers.push(manager)
     const managed = createManagedSession(
       stored,

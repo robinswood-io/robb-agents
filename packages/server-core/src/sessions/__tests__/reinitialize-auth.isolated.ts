@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from '../testing/session-operation-access.ts';
 import { afterEach, beforeEach, describe, expect, it, jest } from 'bun:test'
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
@@ -53,7 +54,7 @@ describe('SessionManager reinitializeAuth', () => {
     const { SessionManager, setSessionPlatform } = await import('../SessionManager.ts')
     setSessionPlatform(platform)
 
-    const sm = new SessionManager()
+    const sm = withSessionOperationsForTest(new SessionManager())
     await sm.reinitializeAuth()
 
     expect(logger.warn).toHaveBeenCalledWith('[session]', 'No LLM connection slug available for reinitializeAuth')

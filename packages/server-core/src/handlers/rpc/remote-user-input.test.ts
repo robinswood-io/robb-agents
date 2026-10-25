@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from '../../sessions/testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "../../sessions/testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it } from 'bun:test'
 import { strict as assert } from 'node:assert'
@@ -64,7 +65,7 @@ async function harness() {
   const parent = createManagedSession({ id: 'parent' }, workspace, { messagesLoaded: true })
   const origin = createManagedSession({ id: 'child-origin', parentSessionId: parent.id }, workspace, { messagesLoaded: true })
   const foreign = createManagedSession({ id: 'foreign-session' }, { ...workspace, id: 'foreign-workspace' }, { messagesLoaded: true })
-  const manager = new SessionManager()
+  const manager = withSessionOperationsForTest(new SessionManager())
   const snapshots: Array<{ id: string; requests: Managed['userInputRequests'] }> = []
   const dispatches: Array<{ id: string; messageId?: string; callerClientId?: string }> = []
   const internals = manager as unknown as {

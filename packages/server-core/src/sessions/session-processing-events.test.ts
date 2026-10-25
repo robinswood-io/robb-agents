@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { describe, expect, it } from 'bun:test'
 import { SessionManager, createManagedSession } from './SessionManager'
 
@@ -7,7 +8,7 @@ describe('authoritative processing state publication', () => {
     const managed = createManagedSession({ id: 'session' }, {
       id: 'workspace', slug: 'workspace', name: 'Fixture', rootPath: '/tmp/processing-events', createdAt: 1,
     })
-    const runtime = new SessionManager()
+    const runtime = withSessionOperationsForTest(new SessionManager())
     runtime['sendEvent'] = (event, workspaceId) => { events.push({ event, workspaceId }) }
     runtime['setProcessing'](managed, true)
     runtime['setProcessing'](managed, true)

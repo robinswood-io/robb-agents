@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest } from "./testing/runtime-state-access.ts";
 import { beforeEach, describe, expect, it } from 'bun:test'
 import { messageToStored } from '@craft-agent/core/types'
@@ -8,7 +9,7 @@ describe('assistant model provenance persistence', () => {
   let sessionManager: SessionManager
 
   beforeEach(() => {
-    sessionManager = new SessionManager()
+    sessionManager = withSessionOperationsForTest(new SessionManager())
     // Keep this unit test focused on the message assembled by processEvent.
     ;(sessionManager as unknown as { persistSession: () => void }).persistSession = () => {}
     ;(sessionManager as unknown as { sendEvent: () => void }).sendEvent = () => {}

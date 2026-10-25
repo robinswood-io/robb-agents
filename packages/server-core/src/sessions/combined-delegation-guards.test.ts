@@ -1,3 +1,4 @@
+import { withSessionOperationsForTest } from './testing/session-operation-access.ts';
 import { sessionRuntimeStateForTest , requiredTestValue } from "./testing/runtime-state-access.ts";
 import { afterEach, describe, expect, it } from 'bun:test'
 import { mkdtempSync, rmSync } from 'node:fs'
@@ -17,7 +18,7 @@ function fixture() {
   parent.isProcessing = true
   parent.processingGeneration = 1
   parent.activeObjective = transitionObjectiveContract({ messageId: 'objective', text: 'Inspect the target files.', nowMs: 1 })
-  const host = new SessionManager() as any
+  const host = withSessionOperationsForTest(new SessionManager()) as any
   sessionRuntimeStateForTest(host).sessions.set(parent.id, parent)
   const created: Managed[] = [], sent: string[] = []
   host.persistSession = () => {}
