@@ -54,6 +54,7 @@
   "unitCycles": [],
   "moduleCycles": [],
   "retainedTransformProofs": [
-    "pretool-authorization-body-proof.json"
+    "pretool-authorization-body-proof.json",
+    "pretool-tool-authority-body-proof.json"
   ]
 }

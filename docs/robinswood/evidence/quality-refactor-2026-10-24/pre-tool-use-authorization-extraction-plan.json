@@ -44,5 +44,8 @@
     "tool-authorization": []
   },
   "unitCycles": [],
-  "moduleCycles": []
+  "moduleCycles": [],
+  "retainedTransformProofs": [
+    "pretool-tool-authority-body-proof.json"
+  ]
 }

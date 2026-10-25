@@ -24,13 +24,13 @@ import { resolve } from "node:path";
 import { expandPath } from "../../utils/paths.ts";
 import { shouldAllowToolInMode, getPermissionModeDiagnostics } from "../mode-manager.ts";
 import { type PermissionsContext } from "../permissions-config.ts";
-import { classifySensitiveExternalAction, contextualGmailExactEffectExpectationFromObjective, contextualGmailReplyPreflightAttestationFromObjective, contextualGmailReplyRecoveryReason, contextualGmailTargetScopedAuthorizationSegments, externalActionAuthorityPolicySegments, hasContextualGmailReplyMention, hasUnresolvedRemoteScopeTarget, hasUnresolvedSensitiveExternalActionTarget, isContextualGmailReplyAuthorizedByObjective, isSensitiveExternalActionAuthorizedByObjective, isSensitiveExternalActionConfirmationRequestedByObjective, isSensitiveExternalActionOtherwiseAuthorizedByObjective, parseStructuredGmailSendResumeSegment, signedOssAtomicWriteAuthorizedSessionId, structuredGmailSendAuthorizationDiagnostic, type ContextualGmailReplyPreflightIntent } from "./sensitive-external-action.ts";
+import { contextualGmailExactEffectExpectationFromObjective, contextualGmailReplyPreflightAttestationFromObjective, contextualGmailReplyRecoveryReason, contextualGmailTargetScopedAuthorizationSegments, externalActionAuthorityPolicySegments, hasContextualGmailReplyMention, hasUnresolvedRemoteScopeTarget, hasUnresolvedSensitiveExternalActionTarget, isContextualGmailReplyAuthorizedByObjective, isSensitiveExternalActionAuthorizedByObjective, isSensitiveExternalActionConfirmationRequestedByObjective, isSensitiveExternalActionOtherwiseAuthorizedByObjective, parseStructuredGmailSendResumeSegment, structuredGmailSendAuthorizationDiagnostic, type ContextualGmailReplyPreflightIntent } from "./sensitive-external-action.ts";
 import { checkObjectiveEvidenceBeforeMutation } from "./objective-evidence-gate.ts";
-import { classifyBoundedTargetedRemoteOperationalInspection, classifyReadOnlyRemoteObservationRepair, classifyNestedSshReadOnlyRemoteObservationRepair, containsLocalSshTransportInvocation, isRemoteStaticSourceInspectionCandidate } from "./registered-observation.ts";
+import { classifyReadOnlyRemoteObservationRepair, classifyNestedSshReadOnlyRemoteObservationRepair, containsLocalSshTransportInvocation } from "./registered-observation.ts";
 import { redundantlyAsksPermissionForSellsyReadOnlyOAuth } from "./pre-tool-use/autonomy-request-guards.ts";
 import { classifyBrowserObjectiveAuthority } from "./pre-tool-use/browser-authority.ts";
-import { commandFromInput, isBrowserLifecycleCommand, resolveBrowserChannelDirective } from "./pre-tool-use/browser-channel.ts";
-import type { PreToolUseCheckResult, PreToolUseInput, ToolEffectDescriptor } from "./pre-tool-use/contracts.ts";
+import { isBrowserLifecycleCommand, resolveBrowserChannelDirective } from "./pre-tool-use/browser-channel.ts";
+import type { PreToolUseCheckResult, PreToolUseInput } from "./pre-tool-use/contracts.ts";
 import { redundantlyAsksAboutEstablishedThirdPartyDependency } from "./pre-tool-use/dependency-guards.ts";
 import { observedResolvedThirdPartyDependencies, observedThirdPartyDependencies } from "./pre-tool-use/dependency-state.ts";
 import { hashSensitiveExternalActionOperation } from "./pre-tool-use/external-action-hash.ts";
@@ -41,18 +41,12 @@ import type { ContextualGmailToolUseClaim } from "./pre-tool-use/gmail-state.ts"
 import { CONTEXTUAL_GMAIL_BOUND_REPLY_TOOLS, CONTEXTUAL_GMAIL_PREFLIGHT_TOOLS, contextualGmailPreflightAttestations, contextualGmailSessionsPendingFinalCleanup, contextualGmailToolUseClaims, inFlightContextualGmailReplies, observedContextualGmailReads, pendingContextualGmailPreflights } from "./pre-tool-use/gmail-state.ts";
 import { stripToolMetadata } from "./pre-tool-use/input-transforms.ts";
 import { readOnlyRemoteObservationRepairReason, withPermissionModeContext } from "./pre-tool-use/permission-context.ts";
-import { BOUNDED_OSS_ATOMIC_WRITE_TOOL } from "./pre-tool-use/portable-scope.ts";
-import { isBoundedStructuredRemoteTechnicalRead } from "./pre-tool-use/remote-observation.ts";
-import { hasTargetBoundOperationalTechnicalReadAuthority } from "./pre-tool-use/remote-read-authority.ts";
-import { isBoundedStructuredRemoteTechnicalUpload } from "./pre-tool-use/remote-upload.ts";
-import { boundedResumedSharePointCreationContract, isBoundedResumedSharePointCreation } from "./pre-tool-use/sharepoint-contract.ts";
-import { isBoundedOrionWorktreeCommand } from "./pre-tool-use/signed-resume-targets.ts";
-import { TERMINAL_RECONCILIATION_CAPABILITY_FIELD, deriveTerminalReconciliationInvocationCapability, terminalReconciliationToolAllowed } from "./pre-tool-use/terminal-reconciliation.ts";
-import { classifyToolEffect } from "./pre-tool-use/tool-effects.ts";
-import { BUILT_IN_MCP_SERVERS, FILE_WRITE_TOOLS, REMOTE_COMMAND_TOOL_PATTERN, STRUCTURED_REMOTE_READ_LIFECYCLE_TOOLS } from "./pre-tool-use/tool-names.ts";
+import { TERMINAL_RECONCILIATION_CAPABILITY_FIELD, deriveTerminalReconciliationInvocationCapability } from "./pre-tool-use/terminal-reconciliation.ts";
+import { BUILT_IN_MCP_SERVERS, FILE_WRITE_TOOLS, REMOTE_COMMAND_TOOL_PATTERN } from "./pre-tool-use/tool-names.ts";
 import { checkExecutionPrerequisites } from "./pre-tool-use/execution-prerequisites.ts";
 import { prepareToolInput } from "./pre-tool-use/tool-input-preparation.ts";
-import { authorizePreparedTool } from './pre-tool-use/tool-authorization.ts';
+import { authorizePreparedTool } from "./pre-tool-use/tool-authorization.ts";
+import { classifyToolAuthority } from './pre-tool-use/tool-authority.ts';
 
 export function runPreToolUseChecks(ctx: PreToolUseInput): PreToolUseCheckResult {
   const {
@@ -201,127 +195,26 @@ export function runPreToolUseChecks(ctx: PreToolUseInput): PreToolUseCheckResult
         : 'Validation failed: another bound Gmail reply is still in flight for this session. Wait for its terminal host result before attempting any later reply; do not start a second mutation or use another send path.',
     };
   }
-  const shellCommand = commandFromInput(input);
-  const classifiedToolEffect = classifyToolEffect(
-    toolName,
+
+  const toolAuthority = classifyToolAuthority({
     input,
-    permissionsContext,
-    ctx.declaredToolCapabilities,
-  );
-  const boundedStructuredRemoteTechnicalRead = ctx.declaredToolCapabilities?.destructive !== true
-    && isBoundedStructuredRemoteTechnicalRead(
-      toolName,
-      input,
-      dataFolderPath,
-      policyAuthorizationSegments,
-    );
-  // An upload is intentionally an external mutation. A correct MCP
-  // `destructiveHint` must strengthen its effect classification, not erase an
-  // otherwise exact human authorization for this server/root pair. The
-  // bounded grammar below still controls authority and every mutation,
-  // application-protection, evidence and permission gate remains active.
-  const boundedStructuredRemoteTechnicalUploadLocalPath = isBoundedStructuredRemoteTechnicalUpload(
     toolName,
-    input,
     dataFolderPath,
-    policyAuthorizationSegments,
     authenticatedUserAuthorizationSegments,
-  );
-  const boundedStructuredRemoteTechnicalUpload =
-    boundedStructuredRemoteTechnicalUploadLocalPath !== undefined;
-  const boundedResumedSharePointCreation = isBoundedResumedSharePointCreation(
-    toolName,
-    input,
-    policyAuthorizationSegments,
-  );
-  const resumedSharePointCreationContract = toolName === 'mcp__plc-microsoft-365__graph_request'
-    ? boundedResumedSharePointCreationContract(policyAuthorizationSegments)
-    : undefined;
-  if (resumedSharePointCreationContract
-    && ['DELETE', 'PATCH', 'POST', 'PUT'].includes(String(input.method).toUpperCase())
-    && !boundedResumedSharePointCreation) {
-    return {
-      type: 'block',
-      reason: [
-        'Closed SharePoint creation contract mismatch: this Graph mutation was not executed.',
-        'Retry only one complete contract shape: an atomic site-bound generic-list POST containing every column, or the exact signed drive-bound folder POST with an empty folder object and conflictBehavior "fail".',
-        'Supported column facets are boolean, choice, personOrGroup, text, dateTime, and number with their bounded Graph fields.',
-        'Do not retry an empty/partial list, split column creation, another site/drive/folder, replacement conflict behavior, multiple column facets, or unknown fields. Reconcile by Graph GET before any retry.',
-      ].join(' '),
-    };
-  }
-  const structuredRemoteStaticSourceCandidate = toolName === 'mcp__rbw-servers__ssh_execute'
-    && !!shellCommand
-    && isRemoteStaticSourceInspectionCandidate(shellCommand);
-  const structuredRemoteOperationalInspectionCandidate = toolName === 'mcp__rbw-servers__ssh_execute'
-    && !!shellCommand
-    && !!classifyBoundedTargetedRemoteOperationalInspection(shellCommand);
-  const rejectedTargetBoundStructuredRemoteTechnicalRead =
-    (structuredRemoteOperationalInspectionCandidate
-      || (STRUCTURED_REMOTE_READ_LIFECYCLE_TOOLS.has(toolName)
-          || structuredRemoteStaticSourceCandidate)
-        && hasTargetBoundOperationalTechnicalReadAuthority(input, policyAuthorizationSegments))
-    && !boundedStructuredRemoteTechnicalRead;
-  // These two connector operations can only inherit read authority from the
-  // closed host grammar above. A trusted/readOnly MCP annotation describes the
-  // remote server's claim, not the destination path or the complete payload,
-  // and therefore cannot downgrade an unbounded download/session invocation.
-  const unboundedStructuredRemoteLifecycleEffect: ToolEffectDescriptor | undefined =
-    STRUCTURED_REMOTE_READ_LIFECYCLE_TOOLS.has(toolName) && classifiedToolEffect.kind === 'read'
-      ? toolName === 'mcp__rbw-servers__ssh_download'
-        ? { kind: 'local-write', reversibility: 'unknown', openWorld: true, source: 'input-semantics' }
-        : { kind: 'external-mutation', reversibility: 'unknown', openWorld: true, source: 'input-semantics' }
-      : undefined;
-  const toolEffect: ToolEffectDescriptor = boundedStructuredRemoteTechnicalRead
-    ? { kind: 'read', reversibility: 'not-applicable', idempotent: true, openWorld: true, source: 'input-semantics' }
-    : unboundedStructuredRemoteLifecycleEffect ?? classifiedToolEffect;
-  // Presence of this policy is the lock. Decide before source activation,
-  // prerequisites, permission prompts or generic read allowances can create a
-  // side effect or interruption. Only exact host capabilities proceed.
-  if (objectiveTerminalReconciliationPolicy
-    && !terminalReconciliationToolAllowed(
-      objectiveTerminalReconciliationPolicy,
-      toolName,
-      input,
-      toolEffect,
-    )) {
-    return {
-      type: 'block',
-      reason: 'Terminal reconciliation is host-locked to exact persisted read replays and exact reviewer coordination. This tool or input is outside that immutable allowlist; reuse admissible receipts and finish the structured outcome without another action, permission request, alternate channel, or broader read.',
-    };
-  }
-  const classifiedSensitiveAction = classifySensitiveExternalAction(toolName, input);
-  // A generic remote-command name such as ssh_execute is not itself evidence
-  // of mutation. Preserve the host's stricter parsed-command proof when it has
-  // established that this exact invocation is read-only.
-  // A connector annotation cannot turn an intrinsically mutating write tool
-  // into a read and thereby skip its signed path/session contract. Remote MCP
-  // metadata is descriptive here; the host-owned tool identity is decisive.
-  const sensitiveAction = classifiedSensitiveAction?.category === 'external_mutation'
-    && toolEffect.kind === 'read'
-    && toolName !== BOUNDED_OSS_ATOMIC_WRITE_TOOL
-    && classifiedSensitiveAction.boundedRemoteReadSideEffect !== true
-    ? null : classifiedSensitiveAction;
-  const boundedOrionWorktreeCommand = sensitiveAction?.category === 'external_mutation'
-    && isBoundedOrionWorktreeCommand(
-      toolName,
-      input,
-      sensitiveAction.boundedRemoteImplementationLifecycle === true,
-      policyAuthorizationSegments,
-    );
-  const signedOssAtomicWriteSessionId = classifiedSensitiveAction?.boundedOssAtomicWrite
-    ? signedOssAtomicWriteAuthorizedSessionId(
-      classifiedSensitiveAction,
-      policyAuthorizationSegments,
-    )
-    : undefined;
-  if (signedOssAtomicWriteSessionId !== undefined
-    && signedOssAtomicWriteSessionId !== sessionId) {
-    return {
-      type: 'block',
-      reason: 'Signed OSS write contract session mismatch: this exact capability belongs to another durable session and cannot be copied or replayed here.',
-    };
-  }
+    objectiveTerminalReconciliationPolicy,
+    sessionId,
+  }, ctx, permissionsContext, policyAuthorizationSegments);
+  if ('type' in toolAuthority) return toolAuthority;
+  const {
+    shellCommand,
+    boundedStructuredRemoteTechnicalUploadLocalPath,
+    boundedStructuredRemoteTechnicalUpload,
+    boundedResumedSharePointCreation,
+    rejectedTargetBoundStructuredRemoteTechnicalRead,
+    toolEffect,
+    sensitiveAction,
+    boundedOrionWorktreeCommand,
+  } = toolAuthority;
   const browserChannelDirective = resolveBrowserChannelDirective(
     policyCurrentUserRequest,
     objectiveAuthorizationSegments === undefined ? undefined : policyAuthorizationSegments,
@@ -840,7 +733,7 @@ export function runPreToolUseChecks(ctx: PreToolUseInput): PreToolUseCheckResult
   });
 }
 
-/** Direct native authorization of a prepared tool; public pipeline and results preserved. */
+/** Direct classification of tool authority with native early block decisions and immutable calculated facts. */
 export type { PreToolUseContext, PathExpansionResult, SkillQualificationResult, MetadataStrippingResult, ConfigValidationResult, DeclaredToolCapabilities, ToolEffectDescriptor, PreToolUseCheckResult, PreToolUseInput, PermissionManagerLike, PrerequisiteManagerLike } from './pre-tool-use/contracts.ts';
 export { BUILT_IN_TOOLS, FILE_PATH_TOOLS, CONFIG_WRITE_TOOLS, LABELS_BLOCKED_FILE_TOOLS } from './pre-tool-use/tool-names.ts';
 export { expandToolPaths, qualifySkillName, stripToolMetadata, stripMcpMetadata } from './pre-tool-use/input-transforms.ts';
