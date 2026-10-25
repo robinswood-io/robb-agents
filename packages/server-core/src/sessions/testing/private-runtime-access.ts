@@ -7,14 +7,17 @@ export type SessionManagerTestView = { [Key in keyof SessionManager]: SessionMan
   activeRelevantDelegatedDescendants: SessionManager['activeRelevantDelegatedDescendants'];
   authenticatedObjectiveAuthorizationSegments: SessionManager['authenticatedObjectiveAuthorizationSegments'];
   beginAutomaticSessionStatusLifecycle: SessionManager['beginAutomaticSessionStatusLifecycle'];
+  cancelPendingUserInput: SessionManager['cancelPendingUserInput'];
   buildRecoveryDispatchMessage: SessionManager['buildRecoveryDispatchMessage'];
   createAutonomousContextLimitHandoff: SessionManager['createAutonomousContextLimitHandoff'];
   createContextLimitRetryHandoff: SessionManager['createContextLimitRetryHandoff'];
+  closePendingPermissionRequestsForStop: SessionManager['closePendingPermissionRequestsForStop'];
   deferTerminalOutcomeForActiveDelegations: SessionManager['deferTerminalOutcomeForActiveDelegations'];
   disposeManagedAgentRuntime: SessionManager['disposeManagedAgentRuntime'];
   drainDeferredAutomaticSessions: SessionManager['drainDeferredAutomaticSessions'];
   durablyRecordAutomaticRecoveryToolAdmission: SessionManager['durablyRecordAutomaticRecoveryToolAdmission'];
   emitExecutionTelemetry: SessionManager['emitExecutionTelemetry'];
+  emitSessionComplete: SessionManager['emitSessionComplete'];
   enqueueAutomaticTurnRecovery: SessionManager['enqueueAutomaticTurnRecovery'];
   ensureDelegatedTerminalResultDelivery: SessionManager['ensureDelegatedTerminalResultDelivery'];
   ensureMessagesLoaded: SessionManager['ensureMessagesLoaded'];
@@ -49,6 +52,7 @@ export type SessionManagerTestView = { [Key in keyof SessionManager]: SessionMan
   sendEvent: SessionManager['sendEvent'];
   setProcessing: SessionManager['setProcessing'];
   startGenerationTelemetry: SessionManager['startGenerationTelemetry'];
+  trackManagedAgentRuntimeDisposal: SessionManager['trackManagedAgentRuntimeDisposal'];
 };
 
 export type PiAgentTestView = { [Key in keyof PiAgent]: PiAgent[Key] } & {

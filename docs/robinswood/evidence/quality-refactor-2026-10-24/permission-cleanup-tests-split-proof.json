@@ -1,0 +1,15 @@
+{
+  "valid": true,
+  "source": "packages/server-core/src/sessions/permission-request-broker-cleanup.test.ts",
+  "testDeclarationsPreserved": 24,
+  "sharedDeclarationsPreserved": 4,
+  "setupPreservedInEverySuite": true,
+  "importsPreserved": true,
+  "maximumLines": 437,
+  "currentSourceHashes": {
+    "packages/server-core/src/sessions/permission-request-broker-cleanup.test.ts": "0d0a98e4eb430838ee5e9a0846c5a47782b70857d559564c6a2344e16cc4dcae",
+    "packages/server-core/src/sessions/permission-request-broker-cleanup-rejects-a-stale-runtime-permission-through-the-old-runtime-withou.test.ts": "0893082e630ee43ae5f65141847056ae5714bc58a8df695ac8b2f01742c1c41b",
+    "packages/server-core/src/sessions/testing/permission-request-broker-cleanup-fixture.ts": "938bf5f6218ffc874ddc0752d62d5ca138017bd0cf97f0bcd9a3743678af71b5"
+  },
+  "issues": []
+}

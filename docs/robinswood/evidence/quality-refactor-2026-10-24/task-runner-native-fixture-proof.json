@@ -1,0 +1,12 @@
+{
+  "valid": true,
+  "casesPreserved": 687,
+  "assertionsPreserved": 3775,
+  "changes": [
+    "Seven manager casts replaced by test view using production method signatures",
+    "Agent map uses native managed agent type; incomplete legacy agent completed by the existing typed fixture without optional handoff capabilities",
+    "Send stub uses contextual native parameters and original send method without cast",
+    "Create-session stub returns the native Session DTO using managedToSession"
+  ],
+  "explicitAnyRemoved": 9
+}

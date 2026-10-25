@@ -85,13 +85,13 @@
     "Lint global sans erreur ni avertissement",
     "Parcours complets réels en staging local, compilation signée et intégration"
   ],
-  "updatedAt": "2026-10-25T06:18:47.915362+00:00",
+  "updatedAt": "2026-10-25T06:32:38.896241+00:00",
   "current": {
-    "lastEvidence": "renderer-modules-summary.json",
+    "lastEvidence": "mission-tests-modules-summary.json",
     "sourceGate": {
-      "max-lines": 192,
-      "no-explicit-any": 564
+      "max-lines": 185,
+      "no-explicit-any": 555
     },
-    "globalStatus": "en cours ; validation finale et missions réelles sous nouvelles dépendances non réalisées"
+    "globalStatus": "en cours ; validation globale et missions réelles finales restantes"
   }
 }

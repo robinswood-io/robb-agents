@@ -1,0 +1,16 @@
+{
+  "valid": true,
+  "source": "packages/server-core/src/sessions/delegated-review-outcome.test.ts",
+  "testDeclarationsPreserved": 51,
+  "sharedDeclarationsPreserved": 15,
+  "setupPreservedInEverySuite": true,
+  "importsPreserved": true,
+  "maximumLines": 428,
+  "currentSourceHashes": {
+    "packages/server-core/src/sessions/delegated-review-outcome.test.ts": "eb03b45dc488e24549058bbd4ba1f08f1262105a8f222070c73caa10da433b85",
+    "packages/server-core/src/sessions/delegated-review-outcome-rejects-all-legacy-host-envelopes-while-treating-canonical-parent.test.ts": "aaffb232b5fb8f31461862fe38371571a3c6ede4e431f61d4d8a2b30fa439935",
+    "packages/server-core/src/sessions/delegated-review-outcome-does-not-erase-an-old-successful-check-on-a-failed-invocation-but.test.ts": "b064a4f8a52978e213f3c09c1f318324bf53a2b1cccf8e9eae1248b3eb5b3c56",
+    "packages/server-core/src/sessions/testing/delegated-review-outcome-fixture.ts": "6df22fa825a056d1bae9073e78c17711cdec864b2ed5e446ebc2ea5cda0b0122"
+  },
+  "issues": []
+}

@@ -1,0 +1,19 @@
+{
+  "valid": true,
+  "source": "packages/server-core/src/sessions/objective-outcome.test.ts",
+  "testDeclarationsPreserved": 55,
+  "sharedDeclarationsPreserved": 4,
+  "setupPreservedInEverySuite": true,
+  "importsPreserved": true,
+  "maximumLines": 418,
+  "currentSourceHashes": {
+    "packages/server-core/src/sessions/objective-outcome.test.ts": "9956640f7919b974933667b5ee9a3d9e975c26a6264b62309e126b7b92f86da4",
+    "packages/server-core/src/sessions/objective-outcome-rejects-empty-auto-completed-and-legacy-checkpoint-results-as-che.test.ts": "526f0e989eebba88233c190c5d52a3a2070aab1ad672aae1c5dc0d9e52313c47",
+    "packages/server-core/src/sessions/objective-outcome-keeps-a-pass-current-across-exact-ssh-reads-ssh-history-and-inter.test.ts": "6a3f38e3144d38454bc410250e41d6f6b65527965f50b8764c53d1037e6a3009",
+    "packages/server-core/src/sessions/objective-outcome-accepts-an-exact-host-policy-denial-and-retires-it-after-the-same.test.ts": "75826add2913750d49c52953e3d9c38cbe9b94a5e1fb7cd8238726be1bcfea7e",
+    "packages/server-core/src/sessions/objective-outcome-keeps-an-auth-start-blocking-after-another-poll-operation-or-iden.test.ts": "07756c43f178872da2f36a57d3b55c8ac72f41e3e2dce5cfbe16c816d2bfd009",
+    "packages/server-core/src/sessions/objective-outcome-resolves-tool-name-evidence-aliases-when-multiple-registered-acce.test.ts": "4a64af4b072353506968a4ed044bb72bc99084f131112e0c510eb6bb2a0fd16e",
+    "packages/server-core/src/sessions/testing/objective-outcome-fixture.ts": "409b724fbc949dd0389977eb145be590b8ca2edc27db7963b31729c85cbccc60"
+  },
+  "issues": []
+}

@@ -1,0 +1,375 @@
+{
+  "source": "packages/server-core/src/sessions/turn-recovery.test.ts",
+  "sourceHash": "65e18df34452f6007af59f11b33deffea709e0d24197e292e0c9db422074e940",
+  "files": [
+    {
+      "file": "packages/server-core/src/sessions/testing/turn-recovery-fixture.ts",
+      "lines": 71
+    },
+    {
+      "file": "packages/server-core/src/sessions/turn-recovery.test.ts",
+      "lines": 413
+    },
+    {
+      "file": "packages/server-core/src/sessions/turn-recovery-fails-closed-instead-of-widening-or-silently-truncating-a-clean-c.test.ts",
+      "lines": 427
+    },
+    {
+      "file": "packages/server-core/src/sessions/turn-recovery-keeps-the-existing-missing-registration-recovery-unchanged-outsid.test.ts",
+      "lines": 116
+    }
+  ],
+  "groups": [
+    {
+      "file": "packages/server-core/src/sessions/turn-recovery.test.ts",
+      "suite": 0,
+      "indices": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16
+      ],
+      "setupIndices": [],
+      "setupHashes": []
+    },
+    {
+      "file": "packages/server-core/src/sessions/turn-recovery-fails-closed-instead-of-widening-or-silently-truncating-a-clean-c.test.ts",
+      "suite": 0,
+      "indices": [
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34
+      ],
+      "setupIndices": [],
+      "setupHashes": []
+    },
+    {
+      "file": "packages/server-core/src/sessions/turn-recovery-keeps-the-existing-missing-registration-recovery-unchanged-outsid.test.ts",
+      "suite": 0,
+      "indices": [
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41
+      ],
+      "setupIndices": [],
+      "setupHashes": []
+    }
+  ],
+  "statements": [
+    {
+      "suite": 0,
+      "index": 0,
+      "destination": "packages/server-core/src/sessions/turn-recovery.test.ts",
+      "hash": "cc27ac4b46c73dcb1a92058aa783de7d8ddb3126109542f5ab7053166bcad2f1"
+    },
+    {
+      "suite": 0,
+      "index": 1,
+      "destination": "packages/server-core/src/sessions/turn-recovery.test.ts",
+      "hash": "f2816f84fe636387286985b8c28bc2aca801bbd0e2912f7779f54c00e9ae13c8"
+    },
+    {
+      "suite": 0,
+      "index": 2,
+      "destination": "packages/server-core/src/sessions/turn-recovery.test.ts",
+      "hash": "75d5c5e5f77ff25897f80bb00655a63210f4328d5dc8ac0e564106dcbb09ebab"
+    },
+    {
+      "suite": 0,
+      "index": 3,
+      "destination": "packages/server-core/src/sessions/turn-recovery.test.ts",
+      "hash": "3cea8d1e82cc493331adc6421b1b1122b366dee928cd336d87347d74e9c1bfb3"
+    },
+    {
+      "suite": 0,
+      "index": 4,
+      "destination": "packages/server-core/src/sessions/turn-recovery.test.ts",
+      "hash": "89b771fc3e796e6a842dbf8fa93b659e317a2d20b74c21af6c1e18dc02fb31aa"
+    },
+    {
+      "suite": 0,
+      "index": 5,
+      "destination": "packages/server-core/src/sessions/turn-recovery.test.ts",
+      "hash": "3933d56342eeb27747f05d49ee3dcaf4faae7bc37db8bf0c7bfe52e641377766"
+    },
+    {
+      "suite": 0,
+      "index": 6,
+      "destination": "packages/server-core/src/sessions/turn-recovery.test.ts",
+      "hash": "4f9a4c7a8980c5c9dc4b4b2b15a9b7dc1de48c5df0aae5bfad1b9257b60a9ae2"
+    },
+    {
+      "suite": 0,
+      "index": 7,
+      "destination": "packages/server-core/src/sessions/turn-recovery.test.ts",
+      "hash": "571191d554c0b8ad97b7f6191ab94d5dd987dfb81e9ac9fb41c1e671c71b2c8e"
+    },
+    {
+      "suite": 0,
+      "index": 8,
+      "destination": "packages/server-core/src/sessions/turn-recovery.test.ts",
+      "hash": "d7f14a4396b722bb7bf0a95f944345358ea231189b086a2e9850f8b08944c658"
+    },
+    {
+      "suite": 0,
+      "index": 9,
+      "destination": "packages/server-core/src/sessions/turn-recovery.test.ts",
+      "hash": "bf8c24055fcf3d4f7018a76bc3431863429c74847b8897f68139450d4c462f19"
+    },
+    {
+      "suite": 0,
+      "index": 10,
+      "destination": "packages/server-core/src/sessions/turn-recovery.test.ts",
+      "hash": "281fa906ca3b98e98aebbcd93f55822fcbf7bad08587dc4c47b31b86d2552c67"
+    },
+    {
+      "suite": 0,
+      "index": 11,
+      "destination": "packages/server-core/src/sessions/turn-recovery.test.ts",
+      "hash": "655a8f33fdf1528eb0886170244603cb99839dd3639f3a0e8377a85b1477178d"
+    },
+    {
+      "suite": 0,
+      "index": 12,
+      "destination": "packages/server-core/src/sessions/turn-recovery.test.ts",
+      "hash": "6b050349d7143d9ed9ce84a8d882443a596fe4a50922695c7c22a0b9550c80e3"
+    },
+    {
+      "suite": 0,
+      "index": 13,
+      "destination": "packages/server-core/src/sessions/turn-recovery.test.ts",
+      "hash": "81e9546e30db28eb5cbe0067455bef1f021cddc812a7c0205d4b1abc99794041"
+    },
+    {
+      "suite": 0,
+      "index": 14,
+      "destination": "packages/server-core/src/sessions/turn-recovery.test.ts",
+      "hash": "e0c04209d0b998a76240e0672b0fe1e9c43986dbe7cd8cd751b358e900949cae"
+    },
+    {
+      "suite": 0,
+      "index": 15,
+      "destination": "packages/server-core/src/sessions/turn-recovery.test.ts",
+      "hash": "04075f2000a840a3036dee7f3213544f42f00ec72f8bbe0c0ec1d94e58b21565"
+    },
+    {
+      "suite": 0,
+      "index": 16,
+      "destination": "packages/server-core/src/sessions/turn-recovery.test.ts",
+      "hash": "a082ff1ac98bf90252279b6bb9e896e4cd8c80d3ca1874770059b15e81f4137c"
+    },
+    {
+      "suite": 0,
+      "index": 17,
+      "destination": "packages/server-core/src/sessions/turn-recovery-fails-closed-instead-of-widening-or-silently-truncating-a-clean-c.test.ts",
+      "hash": "552fd4c7e789949ea389388dc1ebdc981cffa28d08ae05285a108aee5c7db25c"
+    },
+    {
+      "suite": 0,
+      "index": 18,
+      "destination": "packages/server-core/src/sessions/turn-recovery-fails-closed-instead-of-widening-or-silently-truncating-a-clean-c.test.ts",
+      "hash": "fc64feb1cc883dd4103f6151ec26bcec86778248498dfe919e7ea1238d75ce1e"
+    },
+    {
+      "suite": 0,
+      "index": 19,
+      "destination": "packages/server-core/src/sessions/turn-recovery-fails-closed-instead-of-widening-or-silently-truncating-a-clean-c.test.ts",
+      "hash": "509a7104ac6f9b1468e00872ca7fbb6ba0cdb8cfce562177ad99c2af94869e96"
+    },
+    {
+      "suite": 0,
+      "index": 20,
+      "destination": "packages/server-core/src/sessions/turn-recovery-fails-closed-instead-of-widening-or-silently-truncating-a-clean-c.test.ts",
+      "hash": "fbb2789884a5bead9167948c53e0e5906ddc703d2ad614171223865b1dd5acf7"
+    },
+    {
+      "suite": 0,
+      "index": 21,
+      "destination": "packages/server-core/src/sessions/turn-recovery-fails-closed-instead-of-widening-or-silently-truncating-a-clean-c.test.ts",
+      "hash": "42d82c3f87b68f1b3612ace4642385175cd1cb69b8b523f3b51d7fe943e20458"
+    },
+    {
+      "suite": 0,
+      "index": 22,
+      "destination": "packages/server-core/src/sessions/turn-recovery-fails-closed-instead-of-widening-or-silently-truncating-a-clean-c.test.ts",
+      "hash": "c9c4701380c90806f75c3bf7901d81a2695214d50cc876da1d1f1d2eeb9a5569"
+    },
+    {
+      "suite": 0,
+      "index": 23,
+      "destination": "packages/server-core/src/sessions/turn-recovery-fails-closed-instead-of-widening-or-silently-truncating-a-clean-c.test.ts",
+      "hash": "cdafa1ba5d6188f3e2ecc99e483fee097c73be3d290816100c75df75ff81f276"
+    },
+    {
+      "suite": 0,
+      "index": 24,
+      "destination": "packages/server-core/src/sessions/turn-recovery-fails-closed-instead-of-widening-or-silently-truncating-a-clean-c.test.ts",
+      "hash": "bfd172592b97c839620920ab69cfa98a4bfafea52bebc49b1e1f3e50266b7bd7"
+    },
+    {
+      "suite": 0,
+      "index": 25,
+      "destination": "packages/server-core/src/sessions/turn-recovery-fails-closed-instead-of-widening-or-silently-truncating-a-clean-c.test.ts",
+      "hash": "b70d2f052f37dfc6d62d0eae14edfb01effbe065d10153a7f2a3b473a90b1a50"
+    },
+    {
+      "suite": 0,
+      "index": 26,
+      "destination": "packages/server-core/src/sessions/turn-recovery-fails-closed-instead-of-widening-or-silently-truncating-a-clean-c.test.ts",
+      "hash": "cc489fa3c3958dd671d39577f4cf5eb1ca3074db28e74264ae845682478e76ac"
+    },
+    {
+      "suite": 0,
+      "index": 27,
+      "destination": "packages/server-core/src/sessions/turn-recovery-fails-closed-instead-of-widening-or-silently-truncating-a-clean-c.test.ts",
+      "hash": "57b2711a3cca4baa30b53eb8367560ad2854426e27bd49e6b72086c378cc693c"
+    },
+    {
+      "suite": 0,
+      "index": 28,
+      "destination": "packages/server-core/src/sessions/turn-recovery-fails-closed-instead-of-widening-or-silently-truncating-a-clean-c.test.ts",
+      "hash": "108beda3284e782f1f705f5a31a6be937b88d45d07f78359e85770ad9a676f23"
+    },
+    {
+      "suite": 0,
+      "index": 29,
+      "destination": "packages/server-core/src/sessions/turn-recovery-fails-closed-instead-of-widening-or-silently-truncating-a-clean-c.test.ts",
+      "hash": "cac510112a8eaa841a45b8d2f1c28b315ce86e82eaa01e9403c33d566910dab6"
+    },
+    {
+      "suite": 0,
+      "index": 30,
+      "destination": "packages/server-core/src/sessions/turn-recovery-fails-closed-instead-of-widening-or-silently-truncating-a-clean-c.test.ts",
+      "hash": "c62784961558c5ad90bcecfe76f1ab3d733715a10c02ff4c7a96b030bc407eee"
+    },
+    {
+      "suite": 0,
+      "index": 31,
+      "destination": "packages/server-core/src/sessions/turn-recovery-fails-closed-instead-of-widening-or-silently-truncating-a-clean-c.test.ts",
+      "hash": "ccb9722266826e03820ee4e072c3ce02e44f40c0386fc3c1f9b3cc56016bdd50"
+    },
+    {
+      "suite": 0,
+      "index": 32,
+      "destination": "packages/server-core/src/sessions/turn-recovery-fails-closed-instead-of-widening-or-silently-truncating-a-clean-c.test.ts",
+      "hash": "72f094c4a525dfdc7a062d93d52051fc8cbbdd9a8dc5a896cba999f28c8ec073"
+    },
+    {
+      "suite": 0,
+      "index": 33,
+      "destination": "packages/server-core/src/sessions/turn-recovery-fails-closed-instead-of-widening-or-silently-truncating-a-clean-c.test.ts",
+      "hash": "5fea96e6aa9830dde92119379e9799a8b67a347cc5b6f59f3d3142b799e02836"
+    },
+    {
+      "suite": 0,
+      "index": 34,
+      "destination": "packages/server-core/src/sessions/turn-recovery-fails-closed-instead-of-widening-or-silently-truncating-a-clean-c.test.ts",
+      "hash": "e759b174d64bd208ecd29e1444102e1639f5b51efec498f7f10f63c100242b02"
+    },
+    {
+      "suite": 0,
+      "index": 35,
+      "destination": "packages/server-core/src/sessions/turn-recovery-keeps-the-existing-missing-registration-recovery-unchanged-outsid.test.ts",
+      "hash": "3467c87ab2fb64b5faa6f911ae391053a56ce131abc7a8dde11844c90f4bafc6"
+    },
+    {
+      "suite": 0,
+      "index": 36,
+      "destination": "packages/server-core/src/sessions/turn-recovery-keeps-the-existing-missing-registration-recovery-unchanged-outsid.test.ts",
+      "hash": "078e51fc348187b2a4cbbd3b35fb04f3d11f541e66a4049e8cea47373bd73d60"
+    },
+    {
+      "suite": 0,
+      "index": 37,
+      "destination": "packages/server-core/src/sessions/turn-recovery-keeps-the-existing-missing-registration-recovery-unchanged-outsid.test.ts",
+      "hash": "c4362891056236177ac59ce1f9bba001327a8129e835d71b0f349a91d0125808"
+    },
+    {
+      "suite": 0,
+      "index": 38,
+      "destination": "packages/server-core/src/sessions/turn-recovery-keeps-the-existing-missing-registration-recovery-unchanged-outsid.test.ts",
+      "hash": "9b31b34f32d7e6a61033b864d84ac1a1bc94daac38d6a71102def009fe5e0d70"
+    },
+    {
+      "suite": 0,
+      "index": 39,
+      "destination": "packages/server-core/src/sessions/turn-recovery-keeps-the-existing-missing-registration-recovery-unchanged-outsid.test.ts",
+      "hash": "4bc159a2a328535862330ace3d2b2601067a922f58b1548b9dab6d498c495c18"
+    },
+    {
+      "suite": 0,
+      "index": 40,
+      "destination": "packages/server-core/src/sessions/turn-recovery-keeps-the-existing-missing-registration-recovery-unchanged-outsid.test.ts",
+      "hash": "af85abbf86fc9982114dd8741fed52979f5b06639be5860e6387bf43319b3d59"
+    },
+    {
+      "suite": 0,
+      "index": 41,
+      "destination": "packages/server-core/src/sessions/turn-recovery-keeps-the-existing-missing-registration-recovery-unchanged-outsid.test.ts",
+      "hash": "6a7cd4059d329195414f8e15af8dcec5b57699b1bf51c5a888da77938303276d"
+    }
+  ],
+  "setups": [
+    {
+      "suite": 0,
+      "label": "'durable turn recovery'",
+      "hashes": []
+    }
+  ],
+  "sharedDeclarations": [
+    {
+      "name": "message",
+      "hash": "a288ad93626372a9bf01586a5ace0de15109fc936afbc34f0fb3b55e15438323"
+    },
+    {
+      "name": "legacyRecovery",
+      "hash": "e2ff24d32ae974befc96f047625ff1158d96f469007aeadabe5361b420c39b9d"
+    },
+    {
+      "name": "legacyTerminal",
+      "hash": "a022e68cecf9323f6b72fb946ba32b840e98c807a25692eaca88923280f53038"
+    },
+    {
+      "name": "terminalReconciliationObjective",
+      "hash": "3259a1cde04516ea6538327245f89cf512b13d3ad378ed0665a8be6ae32729db"
+    },
+    {
+      "name": "activeSafeContinuationObjective",
+      "hash": "f8466f122296399f0ba5ade907fcb31aefdf9b2d000cf5ff5fb551204a0dca0f"
+    }
+  ],
+  "statementCount": 42,
+  "sharedFixture": "packages/server-core/src/sessions/testing/turn-recovery-fixture.ts"
+}
