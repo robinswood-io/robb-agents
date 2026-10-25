@@ -78,7 +78,8 @@
     "Cinq domaines de production : 159 déclarations préservées dans 22 modules ≤327 lignes ; suite complète, 16 types, build et lint ciblé réussis",
     "Pi : 21 any retirés, API defineTool du SDK actuel, 24 contrats isolés ; JavaScript équivalent vérifié, 16 types, suite complète et build réussis ; point d’entrée ensuite décomposé et lint résolu dans le lot Pi runtime",
     "Entrée Pi et neuf modules de fonctions sous 500 lignes, état de 22 données séparé, 43 fonctions préservées, graphe acyclique ; SDK réel et nouvelles demandes testés, suite complète, 16 types, build et lint du domaine réussis",
-    "Transport RPC : 72 any retirés, réponses OAuth/natives contrôlées, 103 cas transport et leurs assertions conservés + 11 nouveaux cas ; 24 simulations OAuth, 16 configurations TypeScript, lint sans avertissement, build et suite complète réussis (140,22 s)"
+    "Transport RPC : 72 any retirés, réponses OAuth/natives contrôlées, 103 cas transport et leurs assertions conservés + 11 nouveaux cas ; 24 simulations OAuth, 16 configurations TypeScript, lint sans avertissement, build et suite complète réussis (140,22 s)",
+    "17 suites supplémentaires décomposées, 1 355 cas et 4 042 assertions identiques avant/après ; fichiers extraits ≤440 lignes, 8 any retirés ; 16 typages, lint racine sans avertissement et suite globale réussis (139,61 s)"
   ],
   "pending": [
     "Découpage des autres fichiers au-delà de 500 lignes",
@@ -86,12 +87,12 @@
     "Lint global sans erreur ni avertissement",
     "Parcours complets réels en staging local, compilation signée et intégration"
   ],
-  "updatedAt": "2026-10-25T09:25:38.469661+00:00",
+  "updatedAt": "2026-10-25T09:38:19.875627+00:00",
   "current": {
-    "lastEvidence": "rpc-native-summary.json",
+    "lastEvidence": "behavior-suites-summary.json",
     "sourceGate": {
-      "max-lines": 162,
-      "no-explicit-any": 417
+      "max-lines": 145,
+      "no-explicit-any": 409
     },
     "globalStatus": "en cours ; validation globale, interface et missions finales restantes"
   }
