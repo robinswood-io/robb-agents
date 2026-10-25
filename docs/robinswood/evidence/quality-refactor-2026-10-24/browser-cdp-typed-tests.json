@@ -1,0 +1,80 @@
+{
+  "status": "tests ciblés réussis ; candidat isolé non installé",
+  "changes": [
+    "27 any supprimés des tests Chrome DevTools ; un seul interop WebContents simulé, paramètres de protocole en Record<string, unknown>",
+    "23 scénarios décomposés en trois fichiers de 294 lignes au plus, corps JavaScript identiques après décomposition",
+    "Tests voisins des reçus clavier et presse-papiers également exécutés"
+  ],
+  "decomposition": {
+    "outputs": [
+      {
+        "name": "browser-cdp.test.ts",
+        "lines": 78
+      },
+      {
+        "name": "browser-cdp.accessibility.test.ts",
+        "lines": 194
+      },
+      {
+        "name": "browser-cdp.interaction.test.ts",
+        "lines": 294
+      }
+    ],
+    "scenariosBefore": 23,
+    "scenariosAfter": 23,
+    "identicalRuntimeBodies": true
+  },
+  "checks": {
+    "browser-cdp-typed-tests-2": {
+      "command": [
+        "rtk",
+        "bun",
+        "test",
+        "apps/electron/src/main/__tests__/browser-cdp"
+      ],
+      "exitCode": 0,
+      "seconds": 0.12,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/browser-cdp-typed-tests-2.log"
+    },
+    "browser-cdp-typed-types-2": {
+      "command": [
+        "rtk",
+        "node",
+        "scripts/run-typescript.mjs",
+        "native",
+        "--noEmit",
+        "-p",
+        "apps/electron/tsconfig.json"
+      ],
+      "exitCode": 0,
+      "seconds": 4.07,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/browser-cdp-typed-types-2.log"
+    },
+    "browser-cdp-typed-lint-2": {
+      "command": [
+        "rtk",
+        "bun",
+        "x",
+        "eslint",
+        "apps/electron/src/main/__tests__/browser-cdp-input.test.ts",
+        "apps/electron/src/main/__tests__/browser-cdp.accessibility.test.ts",
+        "apps/electron/src/main/__tests__/browser-cdp.interaction.test.ts",
+        "apps/electron/src/main/__tests__/browser-cdp.test.ts",
+        "apps/electron/src/main/__tests__/fixtures/browser-cdp-fixture.ts",
+        "--max-warnings",
+        "0"
+      ],
+      "exitCode": 0,
+      "seconds": 1.77,
+      "log": "/Users/thibault/Documents/Codex/2026-10-23/r-a/work/quality-20261024/browser-cdp-typed-lint-2.log"
+    }
+  },
+  "remaining": {
+    "max-lines": 217,
+    "no-explicit-any": 862
+  },
+  "limits": [
+    "Suite globale à relancer après les prochains lots",
+    "Aucune installation ni test UI réel dans ce lot"
+  ]
+}
